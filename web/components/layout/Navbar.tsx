@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function Navbar() {
   return (
     <header className="fixed inset-x-0 top-0 z-50 h-[96px]">
@@ -10,7 +12,7 @@ export default function Navbar() {
         {/* Middle: pathways */}
         <nav className="hidden gap-24 text-xs font-medium text-zinc-300 md:flex">
           <button className="transition-colors hover:text-white">Nonprofits</button>
-          <button className="transition-colors hover:text-white">Companies</button>
+          <Link href="/Companies" className="transition-colors hover:text-white"> Companies</Link>
           <button className="transition-colors hover:text-white">Sponsors</button>
           <button className="transition-colors hover:text-white">Students</button>
         </nav>
