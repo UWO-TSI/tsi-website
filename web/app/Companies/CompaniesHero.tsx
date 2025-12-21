@@ -35,19 +35,23 @@ export default function CompaniesHero() {
           </h1>
 
           {/* CTAs */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-14">
-            <div className="flex flex-col items-center gap-2">
+          <div className="flex flex-col sm:flex-row items-start justify-center gap-14">
+            <div className="flex flex-col items-center w-[260px]">
               <Button>Start a Project</Button>
-              <ButtonHelperText>
-                Custom software, AI, and design services
-              </ButtonHelperText>
+              <div className="mt-3 min-h-[40px]">
+                <ButtonHelperText>
+                  Custom software, AI, and design services
+                </ButtonHelperText>
+              </div>
             </div>
 
-            <div className="flex flex-col items-center gap-2">
+            <div className="flex flex-col items-center w-[260px]">
               <Button variant="secondary">Partner for Talent</Button>
-              <ButtonHelperText>
-                Access top student developers through our guided summer program
-              </ButtonHelperText>
+              <div className="mt-3 min-h-[40px]">
+                <ButtonHelperText>
+                  Access top student developers through our guided summer program
+                </ButtonHelperText>
+              </div>
             </div>
           </div>
         </div>
