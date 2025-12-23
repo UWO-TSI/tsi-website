@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
@@ -28,20 +28,12 @@ const buildCards: PathwayCard[] = [
 ];
 
 export default function CompaniesBuild() {
-  const [mounted, setMounted] = useState(false);
-
   const sectionRef = useRef<HTMLDivElement>(null);
   const titleRef = useRef<HTMLHeadingElement>(null);
   const subtitleRef = useRef<HTMLParagraphElement>(null);
   const cardsContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (!mounted) return;
-
     gsap.registerPlugin(ScrollTrigger);
 
     const ctx = gsap.context(() => {
@@ -49,9 +41,10 @@ export default function CompaniesBuild() {
         scrollTrigger: {
           trigger: sectionRef.current,
           start: "top top",
-          end: "+=160%",
+          end: "+=120%",
           scrub: 1,
           pin: true,
+          pinReparent: true,
           anticipatePin: 1,
         },
       });
@@ -77,9 +70,7 @@ export default function CompaniesBuild() {
     }, sectionRef);
 
     return () => ctx.revert();
-  }, [mounted]);
-
-  if (!mounted) return null;
+  }, []);
 
   return (
     <section
