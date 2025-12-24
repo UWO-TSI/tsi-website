@@ -12,27 +12,42 @@ if (typeof window !== "undefined") {
 export default function HomeHero() {
   const sectionRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
+  const scrollIndicatorRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const ctx = gsap.context(() => {
-      // Initial entrance animation
-      gsap.from(contentRef.current, {
-        opacity: 0,
-        duration: 1.2,
-        ease: "power3.out",
-        delay: 0.3,
+      // Set initial opacity to 1 (no fade-in on load)
+      gsap.set(contentRef.current, {
+        opacity: 1,
+      });
+
+      // Fade out scroll indicator and text quickly when scrolling starts
+      ScrollTrigger.create({
+        trigger: sectionRef.current,
+        start: "top top",
+        end: "top+=500 top", // Quick fade within first 100px of scroll
+        scrub: true,
+        onUpdate: (self) => {
+          const progress = self.progress;
+          // Quick fade out - fully faded by 100px of scroll
+          const opacity = Math.max(0, 1 - progress);
+          gsap.to(scrollIndicatorRef.current, {
+            opacity: opacity,
+            duration: 0,
+            ease: "none",
+          });
+        },
       });
 
       // Pin section and fade out gradually over scroll distance
       const st = ScrollTrigger.create({
         trigger: sectionRef.current,
         start: "top top",
-        end: "+=350%", // Pin for 3 viewport heights of scrolling (2x of 150%)
+        end: "+=262.5%", // Pin for ~2.6 viewport heights (25% shorter than 350%)
         scrub: true, // Changed to true for immediate, linear response
         pin: true,
         pinSpacing: true,
         anticipatePin: 1,
-        markers: true, // Turn off when working
         onUpdate: (self) => {
           // Linear fade from start to end (opacity 1 → 0)
           const progress = self.progress;
@@ -80,7 +95,7 @@ export default function HomeHero() {
       >
         <div
           ref={contentRef}
-          className="flex flex-col items-center justify-center px-6 text-center w-full max-w-5xl"
+          className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center justify-center px-6 text-center w-full max-w-5xl"
         >
           <h1 className="font-heading mb-8 text-6xl font-semibold leading-tight tracking-tight">
             Technology That Moves People Forwards.
@@ -91,40 +106,18 @@ export default function HomeHero() {
             <br />
             Powered by student developers. Designed for real-world impact.
           </p>
-          
-          {/* Video play button with text */}
-          <div className="flex flex-col items-center gap-3 mb-16">
-            <button className="w-[43px] h-[43px] rounded-full bg-zinc-400/30 hover:bg-zinc-400/40 transition-colors flex items-center justify-center group">
-              <svg
-                className="w-4 h-4 text-white"
-                fill="currentColor"
-                viewBox="0 0 24 24"
-                style={{ marginLeft: '2px' }}
-              >
-                <path d="M8 5v14l11-7z" />
-              </svg>
-            </button>
-            <a
-              href="#"
-              className="text-sm text-white hover:text-zinc-300 transition-colors"
-            >
-              Watch Our Story →
-            </a>
-          </div>
-          
-          {/* Scroll indicator and text */}
-          <div className="flex flex-col items-center gap-2">
-            <ScrollIndicator />
-            <span className="text-xs font-light leading-[1.5] text-[#A1A1AA]">
-              Discover who we serve
-            </span>
-          </div>
         </div>
-      </section>
-
-      {/* Add a placeholder section to test the pin */}
-      <section className="min-h-screen bg-white flex items-center justify-center">
-        <h2 className="text-4xl text-black">Next Section</h2>
+        
+        {/* Scroll indicator and text - positioned at bottom */}
+        <div 
+          ref={scrollIndicatorRef}
+          className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex flex-col items-center gap-2"
+        >
+          <ScrollIndicator />
+          <span className="text-xs font-light leading-[1.5] text-[#A1A1AA]">
+            Discover who we serve
+          </span>
+        </div>
       </section>
     </>
   );

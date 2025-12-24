@@ -4,6 +4,7 @@ import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { useRouter } from "next/navigation";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
@@ -42,8 +43,8 @@ const cards: PathwayCard[] = [
 // BALATRO-INSPIRED CARD HAND CALCULATIONS
 // ============================================
 
-const CARD_WIDTH = 330; // 11 units
-const CARD_HEIGHT = 570; // 19 units (11:19 ratio)
+const CARD_WIDTH = 330; 
+const CARD_HEIGHT = 570; 
 const CARD_SPACING = 0.75; // Closer spacing for overlap (75% of card width)
 const SMALL_LIFT = 30; // Natural arc - outer cards lift UP
 const MAX_FAN_ANGLE = 18; // Fan rotation angle
@@ -70,6 +71,7 @@ function Card3D({ card, index, totalCards }: { card: PathwayCard; index: number;
   const cardRef = useRef<HTMLDivElement>(null);
   const [isHovered, setIsHovered] = useState(false);
   const breathingTween = useRef<gsap.core.Tween | null>(null);
+  const router = useRouter();
   
   // Separate breathing scale from hover scale
   const breathingScale = useMotionValue(1);
@@ -203,6 +205,7 @@ function Card3D({ card, index, totalCards }: { card: PathwayCard; index: number;
           onMouseMove={handleMouseMove}
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={handleMouseLeave}
+          onClick={() => router.push(card.href)}
         />
         {/* Shine overlay effect (appears on hover) */}
         <motion.div
@@ -253,6 +256,7 @@ export default function PathwayCards() {
   const titleRef = useRef<HTMLHeadingElement>(null);
   const helperTextRef = useRef<HTMLParagraphElement>(null);
   const cardsContainerRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
 
   useEffect(() => {
     const ctx = gsap.context(() => {
@@ -340,7 +344,7 @@ export default function PathwayCards() {
         <div ref={cardsContainerRef} className="relative w-full max-w-7xl mx-auto h-[600px]">
           {/* Desktop: Fanned card hand */}
           <div className="hidden md:block relative w-full h-full">
-            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 flex items-end justify-center">
+            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-36 flex items-end justify-center">
               {cards.map((card, index) => (
                 <Card3D
                   key={card.title}
@@ -363,6 +367,7 @@ export default function PathwayCards() {
                   transition: { duration: 0.2 },
                 }}
                 whileTap={{ scale: 0.98 }}
+                onClick={() => router.push(card.href)}
               >
                 <h3 className="font-heading text-xl font-semibold mb-2">
                   {card.title}
@@ -378,7 +383,7 @@ export default function PathwayCards() {
         {/* Helper text */}
         <p
           ref={helperTextRef}
-          className="mt-8 text-sm text-zinc-500 text-center opacity-0"
+          className="mt-0 mb-2 text-sm text-zinc-500 text-center opacity-0"
         >
           Not sure? Start with the card that feels closest to you
         </p>

@@ -1,18 +1,45 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+
 export default function Navbar() {
+  const pathname = usePathname();
+
   return (
     <header className="fixed inset-x-0 top-0 z-50 h-[96px]">
       <div className="flex h-full w-full items-center justify-between pl-[34px] pr-[34px]">
         {/* Left: logo */}
-        <div className="font-heading text-sm font-semibold tracking-wide">
+        <Link href="/" className="font-heading text-sm font-semibold tracking-wide hover:opacity-80 transition-opacity">
           TETHOS
-        </div>
+        </Link>
 
         {/* Middle: pathways */}
         <nav className="hidden gap-24 text-xs font-medium text-zinc-300 md:flex">
-          <button className="transition-colors hover:text-white">Nonprofits</button>
-          <button className="transition-colors hover:text-white">Companies</button>
-          <button className="transition-colors hover:text-white">Sponsors</button>
-          <button className="transition-colors hover:text-white">Students</button>
+          <Link 
+            href="/npo" 
+            className={`transition-colors hover:text-white ${pathname === "/npo" ? "text-white" : ""}`}
+          >
+            Nonprofits
+          </Link>
+          <Link 
+            href="/company" 
+            className={`transition-colors hover:text-white ${pathname === "/company" ? "text-white" : ""}`}
+          >
+            Companies
+          </Link>
+          <Link 
+            href="/sponsor" 
+            className={`transition-colors hover:text-white ${pathname === "/sponsor" ? "text-white" : ""}`}
+          >
+            Sponsors
+          </Link>
+          <Link 
+            href="/student" 
+            className={`transition-colors hover:text-white ${pathname === "/student" ? "text-white" : ""}`}
+          >
+            Students
+          </Link>
         </nav>
 
         {/* Right: actions */}
