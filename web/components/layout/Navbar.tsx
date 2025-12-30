@@ -12,7 +12,7 @@ export default function Navbar() {
         {/* Middle: pathways */}
         <nav className="hidden gap-24 text-xs font-medium text-zinc-300 md:flex">
           <button className="transition-colors hover:text-white">Nonprofits</button>
-          <Link href="/Companies" className="transition-colors hover:text-white"> Companies</Link>
+          <Link href="/companies" className="transition-colors hover:text-white"> Companies</Link>
           <button className="transition-colors hover:text-white">Sponsors</button>
           <button className="transition-colors hover:text-white">Students</button>
         </nav>

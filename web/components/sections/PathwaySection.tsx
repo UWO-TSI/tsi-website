@@ -9,7 +9,7 @@ import type { PathwayCard } from "@/components/cards/types";
 
 const cards: PathwayCard[] = [
   { title: "Nonprofits", subtitle: "Pro bono software support for 1 year", href: "/npo" },
-  { title: "Companies", subtitle: "Hire for scoped project and consulting", href: "/company" },
+  { title: "Companies", subtitle: "Hire for scoped project and consulting", href: "/companies" },
   { title: "Sponsors", subtitle: "Fund tech that drives social impact", href: "/sponsor" },
   { title: "Students", subtitle: "Start a TETHOS Chapter", href: "/student" },
 ];
