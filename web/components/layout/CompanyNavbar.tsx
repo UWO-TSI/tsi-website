@@ -1,14 +1,33 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { useCallback } from "react";
+
+const linkClass =
+  "transition-colors hover:text-white focus:outline-none focus-visible:text-white";
 
 export default function CompanyNavbar() {
-  const pathname = usePathname();
+  const scrollToSection = useCallback((id: string) => {
+    const element = document.getElementById(id);
+    if (!element) return;
+
+    const yOffset = -96; // navbar height
+    const y =
+      element.getBoundingClientRect().top +
+      window.pageYOffset +
+      yOffset;
+
+    window.scrollTo({ top: y, behavior: "smooth" });
+  }, []);
+
+  const handleNavClick = (id: string) => {
+    scrollToSection(id);
+    window.history.pushState(null, "", `#${id}`);
+  };
 
   return (
-    <header className="fixed inset-x-0 top-0 z-50 h-[96px]">
-      <div className="flex h-full w-full items-center justify-between pl-[34px] pr-[34px]">
+    <header className="fixed inset-x-0 top-0 z-50 h-[96px] bg-[#0F0F10]/80 backdrop-blur">
+      <div className="flex h-full w-full items-center justify-between px-[34px]">
         {/* Left: logo */}
         <Link
           href="/"
@@ -17,52 +36,35 @@ export default function CompanyNavbar() {
           TETHOS
         </Link>
 
-        {/* Middle: company sections */}
-        <nav className="hidden gap-24 text-xs font-medium text-zinc-300 md:flex">
-          <Link
-            href="/company#build"
-            className="transition-colors hover:text-white"
-          >
+        {/* Middle: company sections (single-page scroll) */}
+        <nav
+          aria-label="Company sections"
+          className="hidden gap-24 text-xs font-medium text-zinc-300 md:flex"
+        >
+          <button onClick={() => handleNavClick("build")} className={linkClass}>
             Build
-          </Link>
-
-          <Link
-            href="/company#work"
-            className="transition-colors hover:text-white"
-          >
+          </button>
+          <button onClick={() => handleNavClick("work")} className={linkClass}>
             Work
-          </Link>
-
-          <Link
-            href="/company#talent"
-            className="transition-colors hover:text-white"
-          >
+          </button>
+          <button onClick={() => handleNavClick("talent")} className={linkClass}>
             Talent
-          </Link>
-
-          <Link
-            href="/company#team"
-            className="transition-colors hover:text-white"
-          >
+          </button>
+          <button onClick={() => handleNavClick("team")} className={linkClass}>
             Team
-          </Link>
-
-          <Link
-            href="/company#faqs"
-            className="transition-colors hover:text-white"
-          >
+          </button>
+          <button onClick={() => handleNavClick("faqs")} className={linkClass}>
             FAQs
-          </Link>
-          
-          <Link
-            href="/company#getStarted"
-            className="transition-colors hover:text-white"
+          </button>
+          <button
+            onClick={() => handleNavClick("get-started")}
+            className={linkClass}
           >
             Get Started
-          </Link>
+          </button>
         </nav>
 
-        {/* Right: pathway label / CTA */}
+        {/* Right: Company Pathway */}
         <div className="flex items-center gap-3 text-xs">
           <span className="font-heading text-sm font-semibold tracking-wide text-zinc-300">
             Company Pathway
