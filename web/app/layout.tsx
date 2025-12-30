@@ -23,7 +23,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
 
   // Hide default navbar on Companies route
-  const isCompaniesPage = pathname.startsWith("/Companies");
+  const isCompaniesPage = pathname.startsWith("/companies");
 
   return (
     <html lang="en" className={`${inter.variable} ${spaceGrotesk.variable}`}>
