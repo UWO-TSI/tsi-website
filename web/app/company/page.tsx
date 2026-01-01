@@ -2,6 +2,7 @@
 
 import { CompanyHero } from "@/components/hero/CompanyHero";
 import BuildSection from "./build/BuildSection";
+import CompanyTimeline from "./build/CompanyTimeline";
 import WorkSection from "./work/WorkSection";
 import TalentSection from "./talent/TalentSection";
 import TeamSection from "./team/TeamSection";
@@ -37,6 +38,10 @@ export default function CompanyPage() {
 
       <section id="build">
         <BuildSection />
+      </section>
+      
+      <section>
+        <CompanyTimeline />
       </section>
       
       <section id="work">
