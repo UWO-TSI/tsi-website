@@ -415,10 +415,9 @@ export default function Impact() {
 			ref={wrapperRef}
 			className="min-h-screen bg-[#0F0F10] text-white px-0 overflow-hidden"
 		>
-			<div className="w-full px-4 pt-8 pb-0">
-				<header className="mb-4 text-center">
-				<p className="text-xs uppercase tracking-[0.25em]" style={{ color: '#A1A1AA' }}>Impact Gallery</p>
-				<p className="mt-2 text-2xl md:text-3xl font-semibold">2025/2026 Project Gallery</p>
+			<div className="w-full px-4 pt-16 pb-0">
+				<header className="mb-8 text-center">
+				<p className="mt-10 text-2xl md:text-3xl font-semibold">2025/2026 Project Gallery</p>
 			</header>
 		</div>
 

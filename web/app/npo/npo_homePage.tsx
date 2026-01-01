@@ -39,7 +39,7 @@ export default function NPOHomePage({ children }: { children?: ReactNode }) {
 				},
 			});
 
-			// Pin hero and fade content out over scroll
+			// Pin hero while next section reveals (no fade)
 			ScrollTrigger.create({
 				trigger: heroRef.current,
 				start: "top top",
@@ -48,13 +48,6 @@ export default function NPOHomePage({ children }: { children?: ReactNode }) {
 				pin: true,
 				pinSpacing: true,
 				anticipatePin: 1,
-				onUpdate: (self) => {
-					gsap.to(heroContentRef.current, {
-						opacity: 1 - self.progress,
-						duration: 0,
-						ease: "none",
-					});
-				},
 			});
 
 			// Stagger in downstream sections when they enter the viewport
