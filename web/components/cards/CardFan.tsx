@@ -13,20 +13,17 @@ interface Props {
 
 export function CardFan({ cardData }: Props) {
   if (!cardData || cardData.length === 0) return null;
-  
+
   return (
-    <div className="relative" style={{ width: '100%', minHeight: '570px' }}>
-      {cardData.map(({ card, carouselIndex, displayIndex }) => {
-        const key = `card-${carouselIndex}`;
-        return (
-          <Card3D
-            key={key}
-            card={card}
-            index={displayIndex}
-            totalCards={cardData.length}
-          />
-        );
-      })}
+    <div className="relative w-full min-h-[570px]">
+      {cardData.map(({ card, carouselIndex, displayIndex }) => (
+        <Card3D
+          key={`card-${carouselIndex}`}
+          card={card}
+          index={displayIndex}
+          totalCards={cardData.length}
+        />
+      ))}
     </div>
   );
 }
