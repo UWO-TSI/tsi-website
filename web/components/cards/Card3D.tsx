@@ -77,7 +77,7 @@ export default function Card3D({ card, index, totalCards }: Props) {
   return (
     <motion.div
       ref={cardRef}
-      className="pathway-card opacity-0 absolute"
+      className="pathway-card absolute"
       style={{
         width: CARD_WIDTH,
         height: CARD_HEIGHT,
