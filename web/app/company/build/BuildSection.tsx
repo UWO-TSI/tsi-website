@@ -7,19 +7,54 @@ import type { PathwayCard } from "@/components/cards/types";
 const buildCards: PathwayCard[] = [
   {
     title: "Web Development",
-    subtitle: "Modern full-stack apps built to scale",
+    subtitle: "Custom web applications built with modern frameworks and best practices",
     href: "/companies/web",
   },
   {
-    title: "AI & Automation",
-    subtitle: "Intelligent systems that save time",
-    href: "/companies/ai",
+    title: "Mobile Apps",
+    subtitle: "iOS and Android applications designed for performance and user experience",
+    href: "/companies/mobile",
+  },
+  {
+    title: "Consulting",
+    subtitle: "Technical consulting and architecture guidance from experienced developers",
+    href: "/companies/consulting",
+  },
+  {
+    title: "API",
+    subtitle: "Robust backend services and APIs to power your applications",
+    href: "/companies/api",
+  },
+  {
+    title: "DevOps",
+    subtitle: "Infrastructure setup, CI/CD pipelines, and deployment automation",
+    href: "/companies/devops",
+  },
+  {
+    title: "UI/UX Design",
+    subtitle: "Beautiful, intuitive interfaces that users love to interact with",
+    href: "/companies/design",
   },
   {
     title: "Product Design",
     subtitle: "UX, UI, and systems thinking",
     href: "/companies/design",
   },
+  {
+    title: "Product Design",
+    subtitle: "UX, UI, and systems thinking",
+    href: "/companies/design",
+  },
+  {
+    title: "Product Design",
+    subtitle: "UX, UI, and systems thinking",
+    href: "/companies/design",
+  },
+  {
+    title: "Product Design",
+    subtitle: "UX, UI, and systems thinking",
+    href: "/companies/design",
+  }
 ];
 
 export default function CompaniesBuild() {
