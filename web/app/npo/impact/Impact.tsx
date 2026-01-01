@@ -21,7 +21,7 @@ type ProjectCard = {
 function ProjectCard({ card }: { card: ProjectCard }) {
 	return (
 		<article
-			className="group relative overflow-hidden rounded-2xl bg-gradient-to-b from-[#111113] to-[#0F0F10] border border-[#27272A] shadow-[0_16px_40px_rgba(0,0,0,0.3)] transition-transform duration-300 ease-out hover:-translate-y-2 hover:scale-[1.02] min-h-[360px] min-w-[220px] flex-shrink-0"
+			className="group relative overflow-visible rounded-2xl bg-gradient-to-b from-[#111113] to-[#0F0F10] border border-[#27272A] shadow-[0_16px_40px_rgba(0,0,0,0.3)] transition-all duration-300 ease-out hover:shadow-[0_32px_80px_rgba(0,0,0,0.9)] min-h-[360px] min-w-[220px] flex-shrink-0"
 			style={{ perspective: "1200px" }}
 		>
 			<div className="relative p-4 flex flex-col gap-3 h-full">
@@ -55,7 +55,7 @@ function ProjectCard({ card }: { card: ProjectCard }) {
 			</div>
 
 			{/* Hover enlarge effect */}
-			<div className="absolute inset-0 scale-100 group-hover:scale-[1.03] transition-transform duration-300 pointer-events-none" />
+			<div className="absolute inset-0 scale-100 group-hover:[transform:scaleX(2)_scaleY(1.5)] transition-transform duration-300 pointer-events-none" />
 		</article>
 	);
 }
