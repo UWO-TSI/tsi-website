@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode, useRef, useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
@@ -8,39 +8,36 @@ if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
 }
 
+interface PinnedSectionProps {
+  children: React.ReactNode;
+  start?: string;
+  end?: string;
+}
+
 export default function PinnedSection({
-  id,
   children,
-  height = "200%",
-}: {
-  id: string;
-  children: ReactNode;
-  height?: string;
-}) {
+  start = "top top",
+  end = "+=100%",
+}: PinnedSectionProps) {
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!ref.current) return;
+    const st = ScrollTrigger.create({
+      trigger: ref.current,
+      start,
+      end,
+      pin: true,
+      pinSpacing: true,
+      anticipatePin: 1,
+    });
 
-    const ctx = gsap.context(() => {
-      ScrollTrigger.create({
-        trigger: ref.current,
-        start: "top top",
-        end: `+=${height}`,
-        pin: true,
-        scrub: 1,
-        anticipatePin: 1,
-      });
-    }, ref);
-
-    return () => ctx.revert();
-  }, [height]);
+    return () => st.kill();
+  }, [start, end]);
 
   return (
     <section
-      id={id}
       ref={ref}
-      className="relative min-h-screen bg-[#0F0F10]"
+      className="relative h-screen overflow-hidden bg-[#0F0F10]"
     >
       {children}
     </section>
