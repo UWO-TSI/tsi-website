@@ -124,10 +124,8 @@ export default function Card3D({ card, index, totalCards }: Props) {
         />
 
         <div className="relative z-10 pointer-events-none">
-          <h3 className="font-heading text-2xl font-semibold mb-3">
-            {card.title}
-          </h3>
-          <p className="text-sm text-zinc-400">{card.subtitle}</p>
+          <h3 className="font-heading text-2xl font-semibold mb-3">{card.title}</h3>
+          <p className="text-sm text-zinc-400">{card.description}</p>
         </div>
         <motion.div
           className="absolute -inset-2 rounded-[24px] blur-xl pointer-events-none -z-10"
