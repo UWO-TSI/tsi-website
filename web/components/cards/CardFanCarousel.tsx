@@ -57,34 +57,37 @@ export function CardFanCarousel({
 
   return (
     <div className="relative w-full overflow-visible flex items-center justify-center">
-      <div
-        className="relative overflow-visible"
-        style={{
-          width: `${fanWidth}px`,
-          transform: `translateX(${offsetX}px)`,
-        }}
-      >
-        <CardFan cardData={visibleCards} />
+      <div className="relative w-full flex items-center justify-center overflow-visible">
+        <div
+          className="relative overflow-visible"
+          style={{
+            width: `${fanWidth}px`,
+            left: "50%",
+            transform: `translateX(calc(-50% + ${offsetX}px))`,
+          }}
+        >
+          <CardFan cardData={visibleCards} />
 
-        <div className="pointer-events-none absolute inset-y-0 left-0 z-[60] w-full flex items-center">
-          <div className="flex w-full justify-between">
-            <button
-              type="button"
-              onClick={prev}
-              className="pointer-events-auto rounded-full p-2 text-zinc-400 transition hover:bg-white/5 hover:text-white"
-              aria-label="Previous"
-            >
-              <ChevronLeftIcon className="h-6 w-6" />
-            </button>
+          <div className="pointer-events-none absolute inset-y-0 left-0 z-[60] w-full flex items-center">
+            <div className="flex w-full justify-between">
+              <button
+                type="button"
+                onClick={prev}
+                className="pointer-events-auto rounded-full p-2 text-zinc-400 transition hover:bg-white/5 hover:text-white"
+                aria-label="Previous"
+              >
+                <ChevronLeftIcon className="h-6 w-6" />
+              </button>
 
-            <button
-              type="button"
-              onClick={next}
-              className="pointer-events-auto rounded-full p-2 text-zinc-400 transition hover:bg-white/5 hover:text-white"
-              aria-label="Next"
-            >
-              <ChevronRightIcon className="h-6 w-6" />
-            </button>
+              <button
+                type="button"
+                onClick={next}
+                className="pointer-events-auto rounded-full p-2 text-zinc-400 transition hover:bg-white/5 hover:text-white"
+                aria-label="Next"
+              >
+                <ChevronRightIcon className="h-6 w-6" />
+              </button>
+            </div>
           </div>
         </div>
       </div>

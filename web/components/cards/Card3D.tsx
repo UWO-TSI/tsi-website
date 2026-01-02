@@ -1,5 +1,7 @@
 "use client";
 
+// 3D interactive card with hover tilt, breathing scale, shine, and glow effects
+
 import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
@@ -39,7 +41,6 @@ export default function Card3D({ card, index, totalCards }: Props) {
     (b) => (isHovered ? 1.1 : 1) * b
   );
 
-  // Breathing animation
   useEffect(() => {
     const obj = { value: 1 };
 
@@ -111,7 +112,6 @@ export default function Card3D({ card, index, totalCards }: Props) {
           onMouseLeave={() => setIsHovered(false)}
           onClick={() => router.push(card.href)}
         />
-        {/* Shine overlay */}
         <motion.div
           className="absolute inset-0 rounded-[22px] pointer-events-none"
           style={{
@@ -128,7 +128,6 @@ export default function Card3D({ card, index, totalCards }: Props) {
           </h3>
           <p className="text-sm text-zinc-400">{card.subtitle}</p>
         </div>
-        {/* Blue glow */}
         <motion.div
           className="absolute -inset-2 rounded-[24px] blur-xl pointer-events-none -z-10"
           style={{
