@@ -1,29 +1,30 @@
+"use client";
+
 import Card3D from "./Card3D";
 import type { PathwayCard } from "./types";
 
-interface CardData {
+interface FanItem {
   card: PathwayCard;
-  carouselIndex: number;
   displayIndex: number;
 }
 
-interface Props {
-  cardData: CardData[];
+interface CardFanProps {
+  cardData: FanItem[];
 }
 
-export function CardFan({ cardData }: Props) {
-  if (!cardData || cardData.length === 0) return null;
-
+export function CardFan({ cardData }: CardFanProps) {
   return (
-    <div className="relative w-full min-h-[570px]">
-      {cardData.map(({ card, carouselIndex, displayIndex }) => (
-        <Card3D
-          key={`card-${carouselIndex}`}
-          card={card}
-          index={displayIndex}
-          totalCards={cardData.length}
-        />
-      ))}
+    <div className="pointer-events-none flex w-full justify-center">
+      <div className="relative">
+        {cardData.map(({ card, displayIndex }) => (
+          <Card3D
+            key={`${card.title}-${displayIndex}`}
+            card={card}
+            index={displayIndex}
+            totalCards={cardData.length}
+          />
+        ))}
+      </div>
     </div>
   );
 }

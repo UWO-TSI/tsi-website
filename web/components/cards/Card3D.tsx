@@ -82,7 +82,8 @@ export default function Card3D({ card, index, totalCards }: Props) {
       style={{
         width: CARD_WIDTH,
         height: CARD_HEIGHT,
-        x: xOffset,
+        left: "50%",
+        x: xOffset - CARD_WIDTH / 2 + 20,
         scale: combinedScale,
         transformOrigin: "center bottom",
         transformStyle: "preserve-3d",
