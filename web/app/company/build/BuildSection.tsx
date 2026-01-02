@@ -12,27 +12,27 @@ gsap.registerPlugin(ScrollTrigger);
 const buildCards: PathwayCard[] = [
   {
     title: "Web Development",
-    subtitle: "Custom web applications built with modern frameworks and best practices"
+    description: "Custom web applications built with modern frameworks and best practices"
   },
   {
     title: "Mobile Apps",
-    subtitle: "iOS and Android applications designed for performance and user experience",
+    description: "iOS and Android applications designed for performance and user experience",
   },
   {
     title: "Consulting",
-    subtitle: "Technical consulting and architecture guidance from experienced developers",
+    description: "Technical consulting and architecture guidance from experienced developers",
   },
   {
     title: "API",
-    subtitle: "Robust backend services and APIs to power your applications",
+    description: "Robust backend services and APIs to power your applications",
   },
   {
     title: "DevOps",
-    subtitle: "Infrastructure setup, CI/CD pipelines, and deployment automation",
+    description: "Infrastructure setup, CI/CD pipelines, and deployment automation",
   },
   {
     title: "UI/UX Design",
-    subtitle: "Beautiful, intuitive interfaces that users love to interact with",
+    description: "Beautiful, intuitive interfaces that users love to interact with",
   }
 ];
 
