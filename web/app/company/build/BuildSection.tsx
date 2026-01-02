@@ -95,12 +95,12 @@ export default function BuildSection() {
       </div>
 
       {/* Fan + carousel controls positioning */}
-      <div className="absolute inset-x-0 top-[45%] flex justify-center -translate-y-1/2">
+      <div className="absolute inset-x-0 top-[43%] flex justify-center -translate-y-1/2">
         <div className="relative w-[1400px] max-w-[90vw] translate-x-2">
           <CardFanCarousel
             cards={buildCards}
             visibleCount={3}
-            controlsOffsetY="translate-y-60"
+            controlsOffsetY="translate-y-65"
           />
         </div>
       </div>
