@@ -3,66 +3,145 @@
 import { useEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
 import { Draggable } from "gsap/Draggable";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 
 if (typeof window !== "undefined") {
-  gsap.registerPlugin(Draggable);
+  gsap.registerPlugin(Draggable, ScrollTrigger);
 }
 
 const teamPhotos = [
   {
     year: "2024",
-    title: "Annual Conference",
-    description: "Our dedicated team gathered at the 2024 annual conference to celebrate achievements and plan for the future.",
+    title: "Brand & Marketing",
+    description:
+      "Campaign leads, storytellers, and designers shaping our brand voice and outreach.",
   },
   {
     year: "2023",
-    title: "Community Outreach",
-    description: "Team members engaging with local communities to expand our programs and connect with students.",
+    title: "Partnerships & External",
+    description: "Allies building alliances with nonprofits, sponsors, and universities.",
   },
   {
     year: "2022",
-    title: "Program Launch",
-    description: "The founding team celebrating the successful launch of our mentorship program.",
+    title: "Product & Delivery",
+    description: "PMs and engineers shipping features and keeping releases on track.",
   },
   {
     year: "2021",
-    title: "Virtual Summit",
-    description: "Adapting to new challenges, our team connected virtually to continue our mission.",
+    title: "Operations & Finance",
+    description: "People, finance, and ops specialists keeping the engine running smoothly.",
+  },
+  {
+    year: "2020",
+    title: "Data & Insights",
+    description: "Analysts and researchers turning program outcomes into decisions and impact reports.",
+  },
+  {
+    year: "2019",
+    title: "Volunteer Experience",
+    description: "Coordinators designing onboarding, training, and recognition for our volunteers.",
+  },
+  {
+    year: "2018",
+    title: "Student Success",
+    description: "Mentors and coaches supporting learners with pathways, feedback, and community.",
   },
 ];
 
 export default function Team() {
   const containerRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const sectionRef = useRef<HTMLElement>(null);
+  const draggableRef = useRef<Draggable | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
+
+  useEffect(() => {
+    const ctx = gsap.context(() => {
+      // Fade in from top
+      ScrollTrigger.create({
+        trigger: sectionRef.current,
+        start: "top bottom",
+        end: "top center",
+        scrub: 1,
+        onUpdate: (self) => {
+          gsap.to(contentRef.current, {
+            opacity: self.progress,
+            duration: 0,
+            ease: "none",
+          });
+        },
+      });
+
+      // Fade out to bottom
+      ScrollTrigger.create({
+        trigger: sectionRef.current,
+        start: "bottom center",
+        end: "bottom top",
+        scrub: 1,
+        onUpdate: (self) => {
+          gsap.to(contentRef.current, {
+            opacity: 1 - self.progress,
+            duration: 0,
+            ease: "none",
+          });
+        },
+      });
+    }, sectionRef);
+
+    return () => {
+      ctx.revert();
+    };
+  }, []);
 
   useEffect(() => {
     const track = trackRef.current;
     const container = containerRef.current;
     if (!track || !container) return;
 
-    const cardWidth = container.offsetWidth;
-    const totalCards = teamPhotos.length;
-    const maxX = 0;
-    const minX = -(cardWidth * (totalCards - 1));
+    const createDrag = () => {
+      const totalCards = teamPhotos.length;
+      const gap = parseFloat(getComputedStyle(track).gap || "0") || 0;
+      const firstSlide = track.children[0] as HTMLElement | undefined;
+      const cardWidth = firstSlide?.getBoundingClientRect().width || container.offsetWidth;
+      const slideSize = cardWidth + gap;
+      const maxX = 0;
+      const totalWidth = slideSize * totalCards - gap; // last gap not needed visually
+      const minX = Math.min(0, container.offsetWidth - totalWidth);
 
-    const draggable = Draggable.create(track, {
-      type: "x",
-      bounds: { minX, maxX },
-      inertia: true,
-      snap: (endValue) => {
-        const index = Math.round(-endValue / cardWidth);
-        setCurrentIndex(index);
-        return -index * cardWidth;
-      },
-      onDrag() {
-        const index = Math.round(-this.x / cardWidth);
-        setCurrentIndex(index);
-      },
-    });
+      // Kill old instance before creating a new one
+      draggableRef.current?.kill();
+
+      const instance = Draggable.create(track, {
+        type: "x",
+        bounds: { minX, maxX },
+        inertia: true,
+        dragResistance: 0.04,
+        edgeResistance: 0.18,
+        // No snap: allow free, smooth drag with inertia
+        onDrag() {
+          const index = Math.round(-this.x / slideSize);
+          setCurrentIndex(Math.max(0, Math.min(totalCards - 1, index)));
+        },
+        onThrowComplete() {
+          const index = Math.round(-this.x / slideSize);
+          setCurrentIndex(Math.max(0, Math.min(totalCards - 1, index)));
+        },
+      })[0];
+
+      draggableRef.current = instance;
+    };
+
+    createDrag();
+
+    const handleResize = () => {
+      createDrag();
+    };
+    window.addEventListener("resize", handleResize);
 
     return () => {
-      draggable[0].kill();
+      window.removeEventListener("resize", handleResize);
+      draggableRef.current?.kill();
     };
   }, []);
 
@@ -81,99 +160,86 @@ export default function Team() {
   };
 
   return (
-    <section className="relative h-screen flex flex-col" style={{ backgroundColor: '#0F0F10' }}>
-      {/* Title */}
-      <div className="p-12 md:p-16">
-        <h1 
-          className="font-semibold"
-          style={{ 
-            fontSize: '48px',
-            lineHeight: '1.1',
-            color: '#FFFFFF'
-          }}
+    <section
+      ref={sectionRef}
+      className="relative pt-2 pb-5 w-screen h-screen flex flex-col"
+      style={{ backgroundColor: "#0F0F10" }}
+    >
+      <div ref={contentRef} className="flex flex-col h-full">
+
+        {/* Draggable Cards Container */}
+        <div
+          ref={containerRef}
+          className="flex-1 p-10 relative overflow-hidden cursor-grab active:cursor-grabbing select-none"
         >
-          Meet Our Team
-        </h1>
-      </div>
-
-      {/* Draggable Cards Container */}
-      <div ref={containerRef} className="flex-1 relative overflow-hidden cursor-grab active:cursor-grabbing">
-        <div ref={trackRef} className="flex h-full items-center">
-          {teamPhotos.map((photo, index) => (
-            <div
-              key={index}
-              className="flex-shrink-0 h-full px-8 py-8 flex flex-col"
-              style={{ width: '100vw' }}
-            >
-              {/* Photo Container */}
-              <div className="relative flex-1 mx-auto max-w-6xl w-full">
-                {/* Pink Rectangle Placeholder for Team Photo */}
-                <div 
-                  className="w-full h-full rounded-2xl"
-                  style={{ 
-                    backgroundColor: '#EC4899'
-                  }}
-                />
-              </div>
-
-              {/* Description Block */}
-              <div className="mt-6 mx-auto max-w-6xl w-full px-4">
-                <div 
-                  className="rounded-xl p-6"
-                  style={{ backgroundColor: '#111113' }}
-                >
-                  <div className="flex items-baseline gap-4 mb-2">
-                    <span 
-                      className="font-semibold"
-                      style={{ 
-                        fontSize: '36px',
-                        lineHeight: '1.2',
-                        color: '#FFD186'
-                      }}
-                    >
-                      {photo.year}
-                    </span>
-                    <h3 
-                      className="font-medium"
-                      style={{ 
-                        fontSize: '28px',
-                        lineHeight: '1.3',
-                        color: '#FFFFFF'
-                      }}
-                    >
-                      {photo.title}
-                    </h3>
-                  </div>
-                  <p 
-                    className="text-lg leading-relaxed"
-                    style={{ color: '#A1A1AA' }}
-                  >
-                    {photo.description}
-                  </p>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Navigation Dots */}
-      <div className="p-8 flex justify-center gap-3">
-        {teamPhotos.map((_, index) => (
-          <button
-            key={index}
-            onClick={() => goToSlide(index)}
-            className="p-4 transition-all"
-            aria-label={`Go to team photo ${index + 1}`}
+          <div
+            ref={trackRef}
+            className="flex h-full items-center gap-6"
+            style={{ touchAction: "pan-y" }}
           >
-            <div
-              className="w-3 h-3 rounded-full"
-              style={{
-                backgroundColor: currentIndex === index ? '#FFD186' : '#52525B'
-              }}
-            />
-          </button>
-        ))}
+            {teamPhotos.map((photo, index) => (
+              <div
+                key={index}
+                className="flex-shrink-0 h-full py-8 flex flex-col"
+                style={{ width: "88vw", maxWidth: "1080px" }}
+              >
+                {/* Rectangle acting as PNG placeholder */}
+                <div className="relative flex-1 mx-auto max-w-6xl w-full">
+                  <div
+                    className="w-full h-full rounded-2xl shadow-lg"
+                    style={{
+                      backgroundColor: "#0D1B2A",
+                      minHeight: "60vh",
+                      border: "1px solid #111113",
+                    }}
+                  >
+                    <div className="absolute inset-0 rounded-2xl" style={{ border: "1px solid #111113" }} />
+                    <div className="absolute bottom-4 left-4 right-4 flex flex-col gap-2 bg-[#111113]/85 backdrop-blur-sm rounded-lg p-4">
+                      <div className="flex items-center gap-3">
+                        <span
+                          className="font-semibold"
+                          style={{
+                            fontSize: "32px",
+                            lineHeight: "1.1",
+                            color: "#FFD186",
+                            fontFamily:
+                              'Space Grotesk, var(--font-body), system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+                          }}
+                        >
+                          {photo.year}
+                        </span>
+                        <h3
+                          className="font-medium"
+                          style={{
+                            fontSize: "26px",
+                            lineHeight: "1.2",
+                            color: "#FFFFFF",
+                            fontFamily:
+                              'Space Grotesk, var(--font-body), system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+                          }}
+                        >
+                          {photo.title}
+                        </h3>
+                      </div>
+                      <p
+                        className="text-lg leading-relaxed"
+                        style={{
+                          color: "#E4E4E7",
+                          fontFamily:
+                            'Space Grotesk, var(--font-body), system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+                        }}
+                      >
+                        {photo.description}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            ))}
+          </div>
+        </div>
+
       </div>
     </section>
   );
