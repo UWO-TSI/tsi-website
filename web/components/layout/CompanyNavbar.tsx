@@ -1,27 +1,30 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback } from "react";
 
 const linkClass =
   "transition-colors hover:text-white focus:outline-none focus-visible:text-white";
 
 export default function CompanyNavbar() {
-  const scrollToSection = useCallback((id: string) => {
+  const handleNavClick = (id: string) => {
+    if (typeof window === "undefined") return;
+
+    // Force target section to render in its final revealed state
+    (window as any).__FORCE_REVEAL__ = id;
+
     const element = document.getElementById(id);
     if (!element) return;
 
     const yOffset = -96; // navbar height
     const y =
       element.getBoundingClientRect().top +
-      window.pageYOffset +
+      window.scrollY +
       yOffset;
 
-    window.scrollTo({ top: y, behavior: "smooth" });
-  }, []);
+    // IMPORTANT: no smooth scrolling (breaks ScrollTrigger)
+    window.scrollTo({ top: y, behavior: "auto" });
 
-  const handleNavClick = (id: string) => {
-    scrollToSection(id);
+    // Update URL hash without navigation
     window.history.pushState(null, "", `#${id}`);
   };
 
