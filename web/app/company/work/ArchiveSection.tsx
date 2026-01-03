@@ -14,43 +14,57 @@ interface WorkProject extends PathwayCard {
   id: string;
   tags: string[];
   year: string;
+  archived?: boolean;
 }
 
-const workProjects: WorkProject[] = [
+const archivedProjects: WorkProject[] = [
   {
-    id: "1",
-    title: "E-Commerce Platform",
-    description: "Full-stack marketplace with real-time inventory",
-    tags: ["Next.js", "Stripe", "PostgreSQL"],
-    year: "2025",
+    id: "6",
+    title: "Crypto Wallet",
+    description: "Secure blockchain wallet with multi-chain support",
+    tags: ["Web3", "Solidity", "React"],
+    year: "2024",
+    archived: true,
   },
   {
-    id: "2",
-    title: "AI Dashboard",
-    description: "Analytics platform with machine learning insights",
-    tags: ["React", "Python", "TensorFlow"],
-    year: "2025",
+    id: "7",
+    title: "Video Streaming",
+    description: "Netflix-style streaming platform",
+    tags: ["Next.js", "AWS", "Redis"],
+    year: "2024",
+    archived: true,
   },
   {
-    id: "3",
-    title: "Mobile Fitness App",
-    description: "iOS and Android workout tracking application",
-    tags: ["React Native", "Firebase"],
-    year: "2025",
+    id: "8",
+    title: "CRM System",
+    description: "Customer relationship management software",
+    tags: ["Angular", "Django", "PostgreSQL"],
+    year: "2024",
+    archived: true,
   },
   {
-    id: "4",
-    title: "SaaS Platform",
-    description: "B2B software with team collaboration features",
-    tags: ["Vue", "Node.js", "MongoDB"],
-    year: "2025",
+    id: "9",
+    title: "Social Network",
+    description: "Community platform with real-time messaging",
+    tags: ["React", "Socket.io", "Redis"],
+    year: "2024",
+    archived: true,
   },
   {
-    id: "5",
-    title: "Design System",
-    description: "Component library for enterprise applications",
-    tags: ["React", "Storybook", "Figma"],
-    year: "2025",
+    id: "10",
+    title: "Analytics Dashboard",
+    description: "Business intelligence and reporting tool",
+    tags: ["Vue", "D3.js", "Python"],
+    year: "2024",
+    archived: true,
+  },
+  {
+    id: "11",
+    title: "IoT Platform",
+    description: "Device management and monitoring system",
+    tags: ["Node.js", "MQTT", "InfluxDB"],
+    year: "2024",
+    archived: true,
   },
 ];
 
@@ -158,6 +172,9 @@ function ProjectModal({ project, onClose }: { project: WorkProject; onClose: () 
           <div className="space-y-2">
             <div className="flex items-center gap-3 text-sm text-zinc-400">
               <span>{project.year}</span>
+              <span className="px-2 py-1 text-xs rounded-full bg-zinc-800 text-zinc-300">
+                Archived
+              </span>
             </div>
             <h2 className="text-4xl font-bold text-white">{project.title}</h2>
             <p className="text-xl text-zinc-400">{project.description}</p>
@@ -207,14 +224,14 @@ function ProjectModal({ project, onClose }: { project: WorkProject; onClose: () 
   );
 }
 
-export default function WorkSection() {
+export default function ArchiveSection() {
   const sectionRef = useRef<HTMLElement>(null);
   const [selectedProject, setSelectedProject] = useState<WorkProject | null>(null);
 
   useEffect(() => {
     const ctx = gsap.context(() => {
-      gsap.set(".work-header", { opacity: 0, y: 20 });
-      gsap.set(".carousel-section", { opacity: 0, y: 20 });
+      gsap.set(".archive-header", { opacity: 0, y: 20 });
+      gsap.set(".archive-year", { opacity: 0, y: 20 });
       gsap.set(".carousel-section", { opacity: 0, y: 20 });
 
       const tl = gsap.timeline({
@@ -225,13 +242,13 @@ export default function WorkSection() {
         },
       });
 
-      tl.to(".work-header", {
+      tl.to(".archive-header", {
         opacity: 1,
         y: 0,
         duration: 0.6,
         ease: "power2.out",
       })
-        .to(".work-year", {
+        .to(".archive-year", {
           opacity: 1,
           y: 0,
           duration: 0.4,
@@ -257,10 +274,10 @@ export default function WorkSection() {
         {/* TITLE */}
         <div className="pt-25 text-center">
           <h2 className="build-title font-heading text-6xl font-semibold mb-4">
-            Work
+            Archive
           </h2>
           <p className="build-subtitle text-zinc-400 text-lg">
-            2025 Projects
+            2024 Projects
           </p>
         </div>
 
@@ -270,7 +287,7 @@ export default function WorkSection() {
             {/* CARD OFFSET LAYER */}
             <div className="relative">
               <ProjectCarousel
-                projects={workProjects}
+                projects={archivedProjects}
                 onProjectClick={setSelectedProject}
                 cardWidth={280}
                 cardHeight={340}
