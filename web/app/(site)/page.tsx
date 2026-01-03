@@ -5,10 +5,8 @@ import PathwayCards from "@/components/sections/PathwayCards";
 export default function HomePage() {
   return (
     <SmoothScroll>
-      <main className="min-h-screen">
-        <HomeHero />
-        <PathwayCards />
-      </main>
+      <HomeHero />
+      <PathwayCards />
     </SmoothScroll>
   );
 }
