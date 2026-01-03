@@ -85,7 +85,7 @@ export default function BuildSection() {
       className="relative h-screen bg-[#0F0F10] overflow-hidden"
     >
       {/* Title */}
-      <div className="pt-28 text-center">
+      <div className="pt-35 text-center">
         <h2 className="build-title font-heading text-6xl font-semibold mb-4">
           Build with TETHOS
         </h2>
