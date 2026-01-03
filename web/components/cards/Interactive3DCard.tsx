@@ -53,7 +53,9 @@ export default function Interactive3DCard({
       ref={cardRef}
       className={className}
       animate={{
-        scale: isHovered ? 1.1 : 1,
+        scale: isHovered ? 1.15 : 1,
+        y: isHovered ? -50 : 0,
+
       }}
       transition={{
         scale: { type: "spring", stiffness: 300, damping: 25 },
