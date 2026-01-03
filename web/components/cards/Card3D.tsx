@@ -1,23 +1,39 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useRouter } from "next/navigation";
+import { useRef } from "react";
 import { getCardTransform, CARD_WIDTH, CARD_HEIGHT } from "./cardMath";
 import type { PathwayCard } from "./types";
+import { useRouter } from "next/navigation";
 
 interface Props {
   card: PathwayCard;
-  position: -1 | 0 | 1;
+  index: number;
+  totalCards: number;
+  direction: 1 | -1;
 }
 
-export default function Card3D({ card, position }: Props) {
+export default function Card3D({
+  card,
+  index,
+  totalCards,
+  direction,
+}: Props) {
+  const ref = useRef<HTMLDivElement>(null);
   const router = useRouter();
-  const { xOffset, yOffset, rotation } = getCardTransform(position);
+
+  const { xOffset, yOffset, rotation } =
+    getCardTransform(index, totalCards);
 
   return (
     <motion.div
-      className="pathway-card absolute"
-      initial={false} // 🚫 CRITICAL
+      layout
+      ref={ref}
+      className="absolute"
+      initial={{
+        x: (index + direction) * CARD_WIDTH,
+        opacity: 0,
+      }}
       animate={{
         x: xOffset - CARD_WIDTH / 2,
         y: yOffset,
@@ -26,23 +42,23 @@ export default function Card3D({ card, position }: Props) {
       }}
       transition={{
         x: { type: "spring", stiffness: 260, damping: 30 },
-        rotate: { type: "spring", stiffness: 260, damping: 26 },
+        rotate: { type: "spring", stiffness: 300, damping: 25 },
       }}
       style={{
         width: CARD_WIDTH,
         height: CARD_HEIGHT,
         left: "50%",
-        zIndex: 10 - Math.abs(position),
         transformOrigin: "center bottom",
+        zIndex: 20 - Math.abs(index),
         pointerEvents: "auto",
       }}
       onClick={() => card.href && router.push(card.href)}
     >
-      <div className="glass-card w-full h-full rounded-2xl p-8 flex flex-col justify-center">
-        <h3 className="text-2xl font-semibold mb-3 text-white">
+      <div className="glass-card w-full h-full p-8 rounded-2xl flex flex-col justify-center">
+        <h3 className="text-2xl font-semibold mb-3">
           {card.title}
         </h3>
-        <p className="text-sm text-zinc-400">
+        <p className="text-zinc-400 text-sm">
           {card.description}
         </p>
       </div>
