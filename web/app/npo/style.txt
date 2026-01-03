@@ -1,0 +1,46 @@
+========================
+Site Style Guide
+========================
+
+[Website Colors]
+
+Branded Colors
+- #0F0F10
+- #111113
+- #0D1B2A
+- #002FA7
+- #FFD186
+- #FFFFFF
+
+Gray Scale
+- #181B1B
+- #27272A
+- #3F3F46
+- #52525B
+- #71717A
+- #A1A1AA
+
+Additional Accents
+- #22D3EE
+- #F77F35
+
+Semantic Colors
+- #22C55E
+- #FAC015
+- #EF4444
+
+
+[Typography]
+
+Primary Typeface
+- Space Grotesk (body copy)
+- Griffis (accent / headings – text appears as “MILKER - LOREM IPSUM DOLOR SIT AMET, CONSECTETUR ADIPISCING” in the mock)
+
+Display / Headings Scale
+- H0: 64px, weight 600, line-height 1.05
+- H1: 48px, weight 600, line-height 1.1
+- H2: 36px, weight 600, line-height 1.2
+- H3: 30px, weight 500, line-height 1.25
+- H4: 28px, weight 500, line-height 1.3
+
+(Body text settings are not fully legible in the image; fill those in once you have the exact sizes/line-heights.)

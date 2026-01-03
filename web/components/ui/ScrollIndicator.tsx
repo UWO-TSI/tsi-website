@@ -25,7 +25,7 @@ export default function ScrollIndicator({
   return (
     <button
       onClick={handleClick}
-      className={`cursor-none bg-transparent border-0 p-0 flex items-center justify-center ${className}`}
+      className={`cursor-none bg-transparent border-0 p-0 flex items-center justify-center scale-50 ${className}`}
       aria-label="Scroll down"
     >
       <div className="mouse"></div>

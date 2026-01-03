@@ -27,6 +27,12 @@ textarea {
   cursor: none !important;
 }
 
+/* Override cursor-pointer class to still hide cursor */
+.cursor-pointer,
+*[class*="cursor-pointer"] {
+  cursor: none !important;
+}
+
 /* Utility class for headings */
 .font-heading {
   font-family: var(--font-heading);
@@ -257,4 +263,25 @@ textarea {
   60% { transform: translateY(0); }
   80% { transform: translateY(var(--pos-mouse)); }
   90% { transform: translateY(0); }
+}
+
+
+html.lenis {
+  height: auto;
+}
+
+.lenis.lenis-smooth {
+  scroll-behavior: auto;
+}
+
+.lenis.lenis-smooth [data-lenis-prevent] {
+  overscroll-behavior: contain;
+}
+
+.lenis.lenis-stopped {
+  overflow: hidden;
+}
+
+.lenis.lenis-scrolling iframe {
+  pointer-events: none;
 }

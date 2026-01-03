@@ -8,6 +8,7 @@ http://localhost:3000/
 npm install @next/font
 npm install framer-motion lucide-react
 npm install gsap
+npm install lenis
 
 # Animations
 
