@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
-import { CardFanCarousel } from "@/components/cards/CardFanCarousel";
+import { CardCarousel } from "@/components/cards/CardCarousel";
 import type { PathwayCard } from "@/components/cards/types";
 
 gsap.registerPlugin(ScrollTrigger);
@@ -97,11 +97,7 @@ export default function BuildSection() {
       {/* Fan + carousel controls positioning */}
       <div className="absolute inset-x-0 top-[43%] flex justify-center -translate-y-1/2">
         <div className="relative w-[1400px] max-w-[90vw] translate-x-2">
-          <CardFanCarousel
-            cards={buildCards}
-            visibleCount={3}
-            controlsOffsetY="translate-y-65"
-          />
+          <CardCarousel cards={buildCards} />
         </div>
       </div>
     </section>
