@@ -8,6 +8,7 @@ import TalentSection from "./talent/TalentSection";
 import TeamSection from "./team/TeamSection";
 import FAQSection from "./faqs/FAQSection";
 import GetStartedSection from "./get started/GetStartedSection";
+import ArchiveSection from "./work/ArchiveSection";
 
 export default function CompanyPage() {
   return (
@@ -48,6 +49,10 @@ export default function CompanyPage() {
         <WorkSection />
       </section>
 
+      <section>
+        <ArchiveSection />
+      </section>
+     
       <section id="talent">
         <TalentSection />
       </section>
