@@ -13,7 +13,7 @@ gsap.registerPlugin(ScrollTrigger);
 const buildCards: PathwayCard[] = [
   {
     title: "Web Development",
-    description: "Custom web applications built with modern frameworks and best practices"
+    description: "Custom web applications built with modern frameworks and best practices",
   },
   {
     title: "Mobile Apps",
@@ -34,7 +34,7 @@ const buildCards: PathwayCard[] = [
   {
     title: "UI/UX Design",
     description: "Beautiful, intuitive interfaces that users love to interact with",
-  }
+  },
 ];
 
 export default function BuildSection() {
@@ -42,6 +42,10 @@ export default function BuildSection() {
 
   useEffect(() => {
     const ctx = gsap.context(() => {
+      // Initial states (CRITICAL for scrubbed timelines)
+      gsap.set(".build-carousel", { opacity: 0 });
+      gsap.set(".pathway-card", { opacity: 0, y: 24 });
+
       gsap
         .timeline({
           scrollTrigger: {
@@ -52,26 +56,43 @@ export default function BuildSection() {
             pin: true,
           },
         })
+
+        // TITLE
         .from(".build-title", {
           opacity: 0,
           y: 20,
           duration: 0.3,
+          ease: "power2.out",
         })
+
+        // SUBTITLE
         .from(
           ".build-subtitle",
           {
             opacity: 0,
             y: 16,
             duration: 0.25,
+            ease: "power2.out",
           },
           "-=0.15"
         )
-        .from(
+
+        // CAROUSEL CONTAINER
+        .to(".build-carousel", {
+          opacity: 1,
+          duration: 0.2,
+          ease: "power2.out",
+        })
+
+        // CARDS
+        .to(
           ".pathway-card",
           {
-            opacity: 0,
-            stagger: 0.12,
-            duration: 0.2,
+            opacity: 1,
+            y: 0,
+            duration: 0.35,
+            stagger: 0.1,
+            ease: "power2.out",
           },
           "-=0.1"
         );
@@ -85,8 +106,8 @@ export default function BuildSection() {
       ref={sectionRef}
       className="relative h-screen bg-[#0F0F10] overflow-hidden"
     >
-      {/* Title */}
-      <div className="pt-35 text-center">
+      {/* TITLE */}
+      <div className="pt-36 text-center">
         <h2 className="build-title font-heading text-6xl font-semibold mb-4">
           Build with TETHOS
         </h2>
@@ -95,9 +116,9 @@ export default function BuildSection() {
         </p>
       </div>
 
-      {/* Carousel + controls */}
-      <div className="absolute inset-x-0 top-[43%] flex justify-center -translate-y-1/2">
-        <div className="relative w-[1500px] max-w-[90vw]">
+      {/* CAROUSEL + CONTROLS */}
+      <div className="absolute inset-x-0 top-[43%] -translate-y-1/2 flex justify-center">
+        <div className="build-carousel relative w-[1500px] max-w-[90vw]">
           <CardCarousel
             cards={buildCards}
             renderControls={({ onPrev, onNext, isAnimating }) => (
