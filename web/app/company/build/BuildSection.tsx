@@ -105,7 +105,7 @@ export default function BuildSection() {
                 onPrev={onPrev}
                 onNext={onNext}
                 disabled={isAnimating}
-                className="absolute inset-x-0 top-[62%] px-8"
+                className="absolute inset-x-0 top-[50%] translate-y-[250px] px-8"
               />
             )}
           />
