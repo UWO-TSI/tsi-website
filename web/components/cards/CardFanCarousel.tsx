@@ -1,9 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { CardFan } from "./CardFan";
 import type { PathwayCard } from "./types";
-import { ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
+import {
+  ChevronLeftIcon,
+  ChevronRightIcon,
+} from "@heroicons/react/24/outline";
 
 interface Props {
   cards: PathwayCard[];
@@ -11,18 +14,13 @@ interface Props {
 
 export function CardFanCarousel({ cards }: Props) {
   const [activeIndex, setActiveIndex] = useState(0);
-  const [direction, setDirection] = useState<1 | -1>(1);
+  const prevIndex = useRef(activeIndex);
 
   const total = cards.length;
 
-  const next = () => {
-    setDirection(1);
-    setActiveIndex((i) => (i + 1) % total);
-  };
-
-  const prev = () => {
-    setDirection(-1);
-    setActiveIndex((i) => (i - 1 + total) % total);
+  const move = (delta: number) => {
+    prevIndex.current = activeIndex;
+    setActiveIndex((i) => (i + delta + total) % total);
   };
 
   return (
@@ -30,12 +28,12 @@ export function CardFanCarousel({ cards }: Props) {
       <CardFan
         cards={cards}
         activeIndex={activeIndex}
-        direction={direction}
+        prevIndex={prevIndex.current}
       />
 
       <div className="absolute inset-x-0 top-1/2 flex justify-between px-8 pointer-events-none">
         <button
-          onClick={prev}
+          onClick={() => move(-1)}
           className="pointer-events-auto"
           aria-label="Previous"
         >
@@ -43,7 +41,7 @@ export function CardFanCarousel({ cards }: Props) {
         </button>
 
         <button
-          onClick={next}
+          onClick={() => move(1)}
           className="pointer-events-auto"
           aria-label="Next"
         >
