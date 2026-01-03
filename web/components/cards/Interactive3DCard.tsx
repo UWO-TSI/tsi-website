@@ -51,11 +51,10 @@ export default function Interactive3DCard({
   return (
     <motion.div
       ref={cardRef}
-      className={className}
+      className={`pathway-card ${className}`}
       animate={{
         scale: isHovered ? 1.15 : 1,
         y: isHovered ? -50 : 0,
-
       }}
       transition={{
         scale: { type: "spring", stiffness: 300, damping: 25 },

@@ -32,6 +32,7 @@ export default function PositionedCard({
   return (
     <motion.div
       className="absolute"
+      data-stagger-order={index + 1} // Maps -1,0,1 to 0,1,2 for left-to-right order
       initial={initial}
       animate={{
         x: xOffset - CARD_WIDTH / 2,

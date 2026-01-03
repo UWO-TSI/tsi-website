@@ -46,6 +46,14 @@ export default function BuildSection() {
       gsap.set(".build-carousel", { opacity: 0 });
       gsap.set(".pathway-card", { opacity: 0, y: 24 });
 
+      // Sort cards by their visual position (left to right)
+      const cards = gsap.utils.toArray<HTMLElement>(".pathway-card");
+      const sortedCards = cards.sort((a, b) => {
+        const orderA = parseInt(a.parentElement?.getAttribute("data-stagger-order") || "0");
+        const orderB = parseInt(b.parentElement?.getAttribute("data-stagger-order") || "0");
+        return orderA - orderB;
+      });
+
       gsap
         .timeline({
           scrollTrigger: {
@@ -84,9 +92,9 @@ export default function BuildSection() {
           ease: "power2.out",
         })
 
-        // CARDS
+        // CARDS (in correct left-to-right order)
         .to(
-          ".pathway-card",
+          sortedCards,
           {
             opacity: 1,
             y: 0,
