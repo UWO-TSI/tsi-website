@@ -38,16 +38,21 @@ export function CardCarouselLayout({
         <AnimatePresence mode="popLayout">
           {cards.map((card, i) => {
             let offset = i - activeIndex;
+            let prevOffset = i - prevActiveIndex;
 
-            // loop
+            // Handle wrap-around for current position
             if (offset > total / 2) offset -= total;
             if (offset < -total / 2) offset += total;
 
-            // show only 3 cards
-            if (Math.abs(offset) > 1) return null;
+            // Handle wrap-around for previous position  
+            if (prevOffset > total / 2) prevOffset -= total;
+            if (prevOffset < -total / 2) prevOffset += total;
 
-            // Determine if this card is entering the visible area
-            const prevOffset = i - prevActiveIndex;
+            // Show only 3 cards (current position within visible range)
+            const isCurrentlyVisible = Math.abs(offset) <= 1;
+            if (!isCurrentlyVisible) return null;
+
+            // Was it visible before?
             const wasVisible = Math.abs(prevOffset) <= 1;
             const isEntering = !wasVisible;
 

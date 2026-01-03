@@ -17,36 +17,44 @@ export default function PositionedCard({
   card,
   index,
   isEntering,
+  direction,
 }: PositionedCardProps) {
   const router = useRouter();
   const { xOffset, yOffset, rotation } = getCardTransform(index, 3);
 
+  // Calculate starting position for entering cards
+  const getInitialPosition = () => {
+    if (!isEntering || !direction) {
+      return { x: xOffset - CARD_WIDTH / 2, y: yOffset, rotate: rotation, opacity: 1 };
+    }
+
+    // Card slides in from the direction of movement
+    const startMultiplier = direction === "right" ? 1.5 : -1.5;
+    const farTransform = getCardTransform(startMultiplier, 3);
+    
+    return {
+      x: farTransform.xOffset - CARD_WIDTH / 2,
+      y: farTransform.yOffset,
+      rotate: farTransform.rotation,
+      opacity: 0,
+    };
+  };
+
   return (
     <motion.div
       className="absolute"
-      initial={{
-        x: xOffset - CARD_WIDTH / 2,
-        y: yOffset,
-        rotate: rotation,
-        opacity: isEntering ? 0 : 1,
-      }}
+      initial={getInitialPosition()}
       animate={{
         x: xOffset - CARD_WIDTH / 2,
         y: yOffset,
         rotate: rotation,
         opacity: 1,
       }}
-      exit={{
-        x: xOffset - CARD_WIDTH / 2,
-        y: yOffset,
-        rotate: rotation,
-        opacity: 0,
-      }}
       transition={{
         x: { type: "spring", stiffness: 140, damping: 26 },
         y: { type: "spring", stiffness: 140, damping: 26 },
         rotate: { type: "spring", stiffness: 160, damping: 24 },
-        opacity: { duration: 0.3 },
+        opacity: { duration: isEntering ? 0.4 : 0.2 },
       }}
       style={{
         width: CARD_WIDTH,
@@ -54,9 +62,9 @@ export default function PositionedCard({
         left: "50%",
         transformOrigin: "center bottom",
         zIndex: 10 - Math.abs(index),
-        pointerEvents: "auto",
       }}
     >
+
       <Interactive3DCard
         title={card.title}
         description={card.description}
