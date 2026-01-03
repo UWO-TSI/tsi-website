@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import NPOHomePage from "./npo_homePage";
 import NPOaboutProgram from "./about/npo_aboutProgram";
+import CompaniesBuildTimeline from "./about/npo_aboutProgram_cont";
 import NPOFormSubmission from "./about/npo_formSubmission";
 import Impact from "./impact/Impact";
 import Team from "./team/team";
@@ -123,6 +124,14 @@ export default function NonprofitPage() {
         id="application"
         ref={(el) => {
           sectionRefs.current.application = el;
+        }}
+      >
+        <CompaniesBuildTimeline />
+      </div>
+      <div
+        id="form"
+        ref={(el) => {
+          sectionRefs.current.form = el;
         }}
       >
         <NPOFormSubmission />

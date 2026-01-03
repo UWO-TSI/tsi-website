@@ -56,26 +56,26 @@ export default function TimelineWheel() {
 
   const pages: ReactNode[] = [
     <div className="flex flex-col items-center gap-4">
-      <h2 className="text-white text-4xl font-semibold">Application</h2>
-      <p className="text-zinc-300 text-lg max-w-xl text-center">
+      <h2 className="text-white text-4xl font-semibold" style={{ fontFamily: 'Space Grotesk, var(--font-body), system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif' }}>Application</h2>
+      <p className="text-zinc-300 text-lg max-w-xl text-center" style={{ fontFamily: 'Space Grotesk, var(--font-body), system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif' }}>
         Submit your organization’s details and project needs.
       </p>
     </div>,
     <div className="flex flex-col items-center gap-4">
-      <h2 className="text-white text-4xl font-semibold">Discovery</h2>
-      <p className="text-zinc-300 text-lg max-w-xl text-center">
+      <h2 className="text-white text-4xl font-semibold" style={{ fontFamily: 'Space Grotesk, var(--font-body), system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif' }}>Discovery</h2>
+      <p className="text-zinc-300 text-lg max-w-xl text-center" style={{ fontFamily: 'Space Grotesk, var(--font-body), system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif' }}>
         We align on goals, constraints, and success metrics.
       </p>
     </div>,
     <div className="flex flex-col items-center gap-4">
-      <h2 className="text-white text-4xl font-semibold">Design</h2>
-      <p className="text-zinc-300 text-lg max-w-xl text-center">
+      <h2 className="text-white text-4xl font-semibold" style={{ fontFamily: 'Space Grotesk, var(--font-body), system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif' }}>Design</h2>
+      <p className="text-zinc-300 text-lg max-w-xl text-center" style={{ fontFamily: 'Space Grotesk, var(--font-body), system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif' }}>
         Experience and solution design with rapid feedback loops.
       </p>
     </div>,
     <div className="flex flex-col items-center gap-4">
-      <h2 className="text-white text-4xl font-semibold">Development</h2>
-      <p className="text-zinc-300 text-lg max-w-xl text-center">
+      <h2 className="text-white text-4xl font-semibold" style={{ fontFamily: 'Space Grotesk, var(--font-body), system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif' }}>Development</h2>
+      <p className="text-zinc-300 text-lg max-w-xl text-center" style={{ fontFamily: 'Space Grotesk, var(--font-body), system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif' }}>
         Build, test, and launch with ongoing support.
       </p>
     </div>,
@@ -100,3 +100,4 @@ export default function TimelineWheel() {
     </section>
   );
 }
+
