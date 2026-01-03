@@ -7,9 +7,14 @@ import { ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
 
 interface CardCarouselProps {
   cards: PathwayCard[];
+  renderControls?: (props: {
+    onPrev: () => void;
+    onNext: () => void;
+    isAnimating: boolean;
+  }) => React.ReactNode;
 }
 
-export function CardCarousel({ cards }: CardCarouselProps) {
+export function CardCarousel({ cards, renderControls }: CardCarouselProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
   const total = cards.length;
@@ -20,35 +25,22 @@ export function CardCarousel({ cards }: CardCarouselProps) {
     setIsAnimating(true);
     setActiveIndex((i) => (i + delta + total) % total);
 
-    // Allow animations to complete
-    setTimeout(() => {
-      setIsAnimating(false);
-    }, 600);
+    setTimeout(() => setIsAnimating(false), 600);
   };
 
   return (
     <div className="relative">
-      <CardCarouselLayout cards={cards} activeIndex={activeIndex} />
-
-      <div className="absolute inset-x-0 top-1/2 flex justify-between px-8 pointer-events-none">
-        <button
-          onClick={() => slide(-1)}
-          className="pointer-events-auto"
-          aria-label="Previous"
-          disabled={isAnimating}
-        >
-          <ChevronLeftIcon className="h-6 w-6 text-white" />
-        </button>
-
-        <button
-          onClick={() => slide(1)}
-          className="pointer-events-auto"
-          aria-label="Next"
-          disabled={isAnimating}
-        >
-          <ChevronRightIcon className="h-6 w-6 text-white" />
-        </button>
+      {/* Cards */}
+      <div className="relative" style={{ transform: "translateX(35px)" }}>
+        <CardCarouselLayout cards={cards} activeIndex={activeIndex} />
       </div>
+
+      {/* Controls (layout delegated) */}
+      {renderControls?.({
+        onPrev: () => slide(-1),
+        onNext: () => slide(1),
+        isAnimating,
+      })}
     </div>
   );
 }

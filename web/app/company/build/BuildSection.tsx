@@ -5,6 +5,7 @@ import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
 import { CardCarousel } from "@/components/cards/CardCarousel";
+import { CarouselControls } from "@/components/cards/CarouselControls";
 import type { PathwayCard } from "@/components/cards/types";
 
 gsap.registerPlugin(ScrollTrigger);
@@ -41,21 +42,21 @@ export default function BuildSection() {
 
   useEffect(() => {
     const ctx = gsap.context(() => {
-      const tl = gsap.timeline({
-        scrollTrigger: {
-          trigger: sectionRef.current,
-          start: "top top",
-          end: "+=120%",
-          scrub: 1,
-          pin: true,
-        },
-      });
-
-      tl.from(".build-title", {
-        opacity: 0,
-        y: 20,
-        duration: 0.3,
-      })
+      gsap
+        .timeline({
+          scrollTrigger: {
+            trigger: sectionRef.current,
+            start: "top top",
+            end: "+=120%",
+            scrub: 1,
+            pin: true,
+          },
+        })
+        .from(".build-title", {
+          opacity: 0,
+          y: 20,
+          duration: 0.3,
+        })
         .from(
           ".build-subtitle",
           {
@@ -94,10 +95,20 @@ export default function BuildSection() {
         </p>
       </div>
 
-      {/* Fan + carousel controls positioning */}
+      {/* Carousel + controls */}
       <div className="absolute inset-x-0 top-[43%] flex justify-center -translate-y-1/2">
-        <div className="relative w-[1400px] max-w-[90vw] translate-x-2">
-          <CardCarousel cards={buildCards} />
+        <div className="relative w-[1500px] max-w-[90vw]">
+          <CardCarousel
+            cards={buildCards}
+            renderControls={({ onPrev, onNext, isAnimating }) => (
+              <CarouselControls
+                onPrev={onPrev}
+                onNext={onNext}
+                disabled={isAnimating}
+                className="absolute inset-x-0 top-[62%] px-8"
+              />
+            )}
+          />
         </div>
       </div>
     </section>
