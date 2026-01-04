@@ -214,7 +214,7 @@ export default function WorkSection() {
   useEffect(() => {
     const ctx = gsap.context(() => {
       gsap.set(".work-header", { opacity: 0, y: 20 });
-      gsap.set(".carousel-section", { opacity: 0, y: 20 });
+      gsap.set(".work-year", { opacity: 0, y: 20 });
       gsap.set(".carousel-section", { opacity: 0, y: 20 });
 
       const tl = gsap.timeline({
@@ -256,10 +256,10 @@ export default function WorkSection() {
       >
         {/* TITLE */}
         <div className="pt-20 text-center">
-          <h2 className="build-title font-heading text-6xl font-semibold mb-4">
+          <h2 className="work-header font-heading text-6xl font-semibold mb-4">
             Work
           </h2>
-          <p className="build-subtitle text-zinc-400 text-lg">
+          <p className="work-year text-zinc-400 text-lg">
             2025 Projects
           </p>
         </div>
@@ -267,7 +267,6 @@ export default function WorkSection() {
         {/* CAROUSEL */}
         <div className="absolute inset-x-0 top-[52%] -translate-y-1/2 flex justify-center">
           <div className="carousel-section relative w-[1500px] max-w-[90vw]">
-            {/* CARD OFFSET LAYER */}
             <div className="relative">
               <ProjectCarousel
                 projects={workProjects}
@@ -276,12 +275,10 @@ export default function WorkSection() {
                 cardHeight={340}
               />
             </div>
-
           </div>
         </div>
       </section>
 
-      {/* MODAL (unchanged) */}
       <AnimatePresence>
         {selectedProject && (
           <ProjectModal

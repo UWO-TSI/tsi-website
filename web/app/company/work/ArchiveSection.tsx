@@ -19,7 +19,7 @@ interface WorkProject extends PathwayCard {
 
 const archivedProjects: WorkProject[] = [
   {
-    id: "6",
+    id: "1",
     title: "Crypto Wallet",
     description: "Secure blockchain wallet with multi-chain support",
     tags: ["Web3", "Solidity", "React"],
@@ -27,7 +27,7 @@ const archivedProjects: WorkProject[] = [
     archived: true,
   },
   {
-    id: "7",
+    id: "2",
     title: "Video Streaming",
     description: "Netflix-style streaming platform",
     tags: ["Next.js", "AWS", "Redis"],
@@ -35,7 +35,7 @@ const archivedProjects: WorkProject[] = [
     archived: true,
   },
   {
-    id: "8",
+    id: "3",
     title: "CRM System",
     description: "Customer relationship management software",
     tags: ["Angular", "Django", "PostgreSQL"],
@@ -43,7 +43,7 @@ const archivedProjects: WorkProject[] = [
     archived: true,
   },
   {
-    id: "9",
+    id: "4",
     title: "Social Network",
     description: "Community platform with real-time messaging",
     tags: ["React", "Socket.io", "Redis"],
@@ -51,7 +51,7 @@ const archivedProjects: WorkProject[] = [
     archived: true,
   },
   {
-    id: "10",
+    id: "5",
     title: "Analytics Dashboard",
     description: "Business intelligence and reporting tool",
     tags: ["Vue", "D3.js", "Python"],
@@ -59,7 +59,7 @@ const archivedProjects: WorkProject[] = [
     archived: true,
   },
   {
-    id: "11",
+    id: "6",
     title: "IoT Platform",
     description: "Device management and monitoring system",
     tags: ["Node.js", "MQTT", "InfluxDB"],
@@ -172,9 +172,11 @@ function ProjectModal({ project, onClose }: { project: WorkProject; onClose: () 
           <div className="space-y-2">
             <div className="flex items-center gap-3 text-sm text-zinc-400">
               <span>{project.year}</span>
-              <span className="px-2 py-1 text-xs rounded-full bg-zinc-800 text-zinc-300">
-                Archived
-              </span>
+              {project.archived && (
+                <span className="px-2 py-1 text-xs rounded-full bg-zinc-800 text-zinc-300">
+                  Archived
+                </span>
+              )}
             </div>
             <h2 className="text-4xl font-bold text-white">{project.title}</h2>
             <p className="text-xl text-zinc-400">{project.description}</p>
@@ -273,10 +275,10 @@ export default function ArchiveSection() {
       >
         {/* TITLE */}
         <div className="pt-20 text-center">
-          <h2 className="build-title font-heading text-6xl font-semibold mb-4">
+          <h2 className="archive-header font-heading text-6xl font-semibold mb-4">
             Archive
           </h2>
-          <p className="build-subtitle text-zinc-400 text-lg">
+          <p className="archive-year text-zinc-400 text-lg">
             2024 Projects
           </p>
         </div>
@@ -284,7 +286,6 @@ export default function ArchiveSection() {
         {/* CAROUSEL */}
         <div className="absolute inset-x-0 top-[52%] -translate-y-1/2 flex justify-center">
           <div className="carousel-section relative w-[1500px] max-w-[90vw]">
-            {/* CARD OFFSET LAYER */}
             <div className="relative">
               <ProjectCarousel
                 projects={archivedProjects}
@@ -293,12 +294,10 @@ export default function ArchiveSection() {
                 cardHeight={340}
               />
             </div>
-
           </div>
         </div>
       </section>
 
-      {/* MODAL (unchanged) */}
       <AnimatePresence>
         {selectedProject && (
           <ProjectModal
