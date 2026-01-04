@@ -1,115 +1,190 @@
 "use client";
 
-import SmoothScroll from "@/components/SmoothScroll";
 import { useEffect, useRef } from "react";
-import { gsap } from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
-
-if (typeof window !== "undefined") {
-  gsap.registerPlugin(ScrollTrigger);
-}
+import NPOHomePage from "./npo_homePage";
+import NPOaboutProgram from "./about/npo_aboutProgram";
+import CompaniesBuildTimeline from "./about/npo_aboutProgram_cont";
+import NPOFormSubmission from "./about/npo_formSubmission";
+import Impact from "./impact/Impact";
+import Team from "./team/team";
+import Testimonial from "./testimonial/testimonial";
+import CTA from "./CTA/cta";
+import FAQ from "./FAQ/faq";
 
 export default function NonprofitPage() {
-  const heroRef = useRef<HTMLDivElement>(null);
-  const contentRef = useRef<HTMLDivElement>(null);
+  const sectionRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
+  const pendingHash = useRef<string | null>(null);
+
+  // On load, jump to the section indicated by the URL hash (e.g., /npo#faq)
+  useEffect(() => {
+    const hash = window.location.hash.replace("#", "");
+    pendingHash.current = hash || null;
+    if (!hash) return;
+
+    // Wait for refs to be set and layout to complete
+    const scrollToSection = () => {
+      const target = sectionRefs.current[hash];
+      if (target) {
+        // Use instant scroll on initial load for better UX
+        window.scrollTo({
+          top: target.offsetTop,
+          behavior: "instant",
+        });
+      }
+    };
+
+    // Try immediately and also after a short delay to ensure refs are set
+    scrollToSection();
+    const timer = setTimeout(scrollToSection, 100);
+
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
-    const ctx = gsap.context(() => {
-      gsap.fromTo(
-        heroRef.current,
-        { opacity: 0, y: 50 },
-        { opacity: 1, y: 0, duration: 1, ease: "power3.out" }
-      );
+    const updateURL = () => {
+      const sections = Object.entries(sectionRefs.current);
+      const scrollPosition = window.scrollY + window.innerHeight / 2;
 
-      gsap.fromTo(
-        contentRef.current?.children,
-        { opacity: 0, y: 30 },
-        { 
-          opacity: 1, 
-          y: 0, 
-          duration: 0.8, 
-          stagger: 0.2, 
-          ease: "power2.out",
-          scrollTrigger: {
-            trigger: contentRef.current,
-            start: "top 80%",
+      let currentSection = "home";
+
+      for (const [id, element] of sections) {
+        if (element) {
+          const { offsetTop, offsetHeight } = element;
+          if (scrollPosition >= offsetTop && scrollPosition < offsetTop + offsetHeight) {
+            currentSection = id;
+            break;
           }
         }
-      );
-    }, heroRef);
+      }
 
-    return () => ctx.revert();
+      // If navigating directly to a hash, avoid clearing it until that section is reached
+      if (pendingHash.current) {
+        console.log("⏳ Pending hash:", pendingHash.current, "Current section:", currentSection);
+        if (currentSection === pendingHash.current) {
+          const newPath = currentSection === "home" ? "/npo" : `/npo#${currentSection}`;
+          console.log("✅ URL updated to:", newPath);
+          window.history.replaceState(null, "", newPath);
+          pendingHash.current = null;
+        }
+        return;
+      }
+
+      const newPath = currentSection === "home" ? "/npo" : `/npo#${currentSection}`;
+      const currentPath = window.location.pathname + window.location.hash;
+      
+      if (currentPath !== newPath) {
+        console.log("🔄 URL updated to:", newPath);
+        window.history.replaceState(null, "", newPath);
+      }
+    };
+
+    // Update URL on scroll with throttling
+    let ticking = false;
+    const handleScroll = () => {
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          updateURL();
+          ticking = false;
+        });
+        ticking = true;
+      }
+    };
+
+    // Wait a bit before starting to listen to scroll to avoid premature URL changes
+    const startDelay = setTimeout(() => {
+      window.addEventListener("scroll", handleScroll);
+      updateURL(); // Initial check
+    }, 500);
+
+    return () => {
+      clearTimeout(startDelay);
+      window.removeEventListener("scroll", handleScroll);
+    };
   }, []);
 
   return (
-    <SmoothScroll>
-      <main className="min-h-screen bg-[#0F0F10]">
-        {/* Hero Section */}
-        <section 
-          ref={heroRef}
-          className="min-h-screen flex items-center justify-center px-6 pt-32 pb-20"
-        >
-          <div className="max-w-4xl mx-auto text-center">
-            <h1 className="font-heading text-6xl md:text-7xl font-semibold mb-6">
-              For Nonprofits
-            </h1>
-            <p className="text-xl text-zinc-400 mb-8 max-w-2xl mx-auto">
-              Pro bono software support for 1 year. We build modern solutions 
-              that help you serve your community better.
-            </p>
-            <div className="flex gap-4 justify-center">
-              <button className="rounded-full bg-[#002FA7] px-6 py-3 text-sm font-medium text-[#F1FFFF] transition-all hover:bg-[#0039CC]">
-                Apply Now
-              </button>
-              <button className="rounded-full border border-zinc-700 px-6 py-3 text-sm font-medium text-zinc-300 transition-all hover:border-zinc-500 hover:text-white">
-                Learn More
-              </button>
-            </div>
-          </div>
-        </section>
-
-        {/* Content Sections */}
-        <section ref={contentRef} className="max-w-6xl mx-auto px-6 pb-24 space-y-32">
-          <div className="glass-card p-12 rounded-3xl">
-            <h2 className="font-heading text-4xl font-semibold mb-6">What We Offer</h2>
-            <p className="text-lg text-zinc-400 leading-relaxed">
-              Our student developers work with your organization to build custom software 
-              solutions tailored to your needs. From web applications to mobile apps, 
-              we provide full-stack development services at no cost.
-            </p>
-          </div>
-
-          <div className="glass-card p-12 rounded-3xl">
-            <h2 className="font-heading text-4xl font-semibold mb-6">The Process</h2>
-            <div className="grid md:grid-cols-3 gap-8 mt-8">
-              <div>
-                <div className="text-3xl font-bold text-[#002FA7] mb-3">01</div>
-                <h3 className="font-heading text-xl font-semibold mb-2">Apply</h3>
-                <p className="text-zinc-400">Submit your organization's information and project needs.</p>
-              </div>
-              <div>
-                <div className="text-3xl font-bold text-[#002FA7] mb-3">02</div>
-                <h3 className="font-heading text-xl font-semibold mb-2">Match</h3>
-                <p className="text-zinc-400">We pair you with a dedicated team of student developers.</p>
-              </div>
-              <div>
-                <div className="text-3xl font-bold text-[#002FA7] mb-3">03</div>
-                <h3 className="font-heading text-xl font-semibold mb-2">Build</h3>
-                <p className="text-zinc-400">Work together to create impactful software solutions.</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="glass-card p-12 rounded-3xl">
-            <h2 className="font-heading text-4xl font-semibold mb-6">Success Stories</h2>
-            <p className="text-lg text-zinc-400 leading-relaxed">
-              See how we've helped nonprofits across the country leverage technology 
-              to amplify their impact and serve their communities more effectively.
-            </p>
-          </div>
-        </section>
-      </main>
-    </SmoothScroll>
+    <main className="min-h-screen">
+      <div
+        id="home"
+        ref={(el) => {
+          sectionRefs.current.home = el;
+        }}
+      >
+        <NPOHomePage />
+      </div>
+      <div
+        id="about"
+        ref={(el) => {
+          sectionRefs.current.about = el;
+        }}
+      >
+        <NPOaboutProgram />
+      </div>
+      <div
+        id="application"
+        ref={(el) => {
+          sectionRefs.current.application = el;
+        }}
+        style={{ position: "relative", zIndex: 10 }}
+      >
+        <CompaniesBuildTimeline />
+      </div>
+      <div
+        id="form"
+        ref={(el) => {
+          sectionRefs.current.form = el;
+        }}
+        style={{ position: "relative", zIndex: 20 }}
+        className="min-h-screen"
+      >
+        <NPOFormSubmission />
+      </div>
+      <div
+        id="impact"
+        ref={(el) => {
+          sectionRefs.current.impact = el;
+        }}
+      >
+        <Impact />
+      </div>
+      <div
+        id="team"
+        className="min-h-screen"
+        ref={(el) => {
+          sectionRefs.current.team = el;
+        }}
+      >
+        <Team />
+      </div>
+      <div
+        id="testimonial"
+        className="min-h-screen"
+        ref={(el) => {
+          sectionRefs.current.testimonial = el;
+        }}
+      >
+        <Testimonial />
+      </div>
+      <div
+        id="faq"
+        className="min-h-screen"
+        ref={(el) => {
+          sectionRefs.current.faq = el;
+        }}
+      >
+        <FAQ />
+      </div>
+      <div
+        id="cta"
+        className="min-h-screen"
+        ref={(el) => {
+          sectionRefs.current.cta = el;
+        }}
+      >
+        <CTA />
+      </div>
+    </main>
   );
 }
+
 
