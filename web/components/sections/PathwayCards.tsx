@@ -40,7 +40,7 @@ const cards: PathwayCard[] = [
 ];
 
 // ============================================
-// BALATRO-INSPIRED CARD HAND CALCULATIONS
+// HAND CALCULATIONS
 // ============================================
 
 const CARD_WIDTH = 330; 
@@ -64,7 +64,7 @@ function getCardTransform(index: number, totalCards: number) {
 }
 
 // ============================================
-// 3D CARD COMPONENT (Balatro-style)
+// 3D CARD COMPONENT 
 // ============================================
 
 function Card3D({ card, index, totalCards }: { card: PathwayCard; index: number; totalCards: number }) {
@@ -73,34 +73,17 @@ function Card3D({ card, index, totalCards }: { card: PathwayCard; index: number;
   const breathingTween = useRef<gsap.core.Tween | null>(null);
   const router = useRouter();
   
-  // Separate breathing scale from hover scale
-  const breathingScale = useMotionValue(1);
-  
-  // Mouse position relative to card center
-  const mouseX = useMotionValue(0);
-  const mouseY = useMotionValue(0);
-  
-  // Spring physics for smooth 3D rotation (mimics Godot's spring/damp)
-  const rotateX = useSpring(useTransform(mouseY, [-0.5, 0.5], [15, -15]), {
-    stiffness: 150,
-    damping: 20,
-  });
-  const rotateY = useSpring(useTransform(mouseX, [-0.5, 0.5], [-15, 15]), {
-    stiffness: 150,
-    damping: 20,
-  });
-  
   const { xOffset, yOffset, rotation } = getCardTransform(index, totalCards);
   
-  // Combine breathing scale with hover scale
-  const combinedScale = useTransform(
-    breathingScale,
-    (breathing) => (isHovered ? 1.15 : 1) * breathing
-  );
+  // ============================================
+  // IDLE ANIMATIONS
+  // ============================================
+  
+  // Breathing animation scale
+  const breathingScale = useMotionValue(1);
   
   // Setup breathing animation using MotionValue
   useEffect(() => {
-    // Create a simple object to animate
     const breathingObject = { value: 1 };
     
     breathingTween.current = gsap.to(breathingObject, {
@@ -132,7 +115,25 @@ function Card3D({ card, index, totalCards }: { card: PathwayCard; index: number;
         breathingTween.current?.resume();
       }, 300);
     }
-  }, [isHovered]); // Only depend on isHovered
+  }, [isHovered, breathingScale]);
+  
+  // ============================================
+  // HOVER ANIMATIONS
+  // ============================================
+  
+  // Mouse position relative to card center for 3D tilt
+  const mouseX = useMotionValue(0);
+  const mouseY = useMotionValue(0);
+  
+  // Spring physics for smooth 3D rotation (mimics Godot's spring/damp)
+  const rotateX = useSpring(useTransform(mouseY, [-0.5, 0.5], [15, -15]), {
+    stiffness: 150,
+    damping: 20,
+  });
+  const rotateY = useSpring(useTransform(mouseX, [-0.5, 0.5], [-15, 15]), {
+    stiffness: 150,
+    damping: 20,
+  });
   
   // Handle mouse move for 3D tilt effect
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -150,11 +151,78 @@ function Card3D({ card, index, totalCards }: { card: PathwayCard; index: number;
     mouseY.set(y);
   };
   
+  const handleMouseEnter = () => {
+    setIsHovered(true);
+  };
+  
   const handleMouseLeave = () => {
     setIsHovered(false);
     mouseX.set(0);
     mouseY.set(0);
   };
+  
+  // ============================================
+  // CLICK ANIMATIONS
+  // ============================================
+  
+  // Tap/click scale for tactile feedback
+  const tapScale = useMotionValue(1);
+  const springTapScale = useSpring(tapScale, {
+    stiffness: 500,
+    damping: 25,
+    mass: 0.3,
+  });
+  
+  // Handle pointer down for immediate feedback
+  const handlePointerDown = () => {
+    tapScale.set(0.95);
+  };
+  
+  // Handle pointer up
+  const handlePointerUp = () => {
+    // If it was just a press (not a click), reset scale
+    // The click handler will handle the bounce animation
+    if (!isHovered) {
+      tapScale.set(1);
+    }
+  };
+  
+  // Handle click with tactile feedback
+  const handleClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    
+    // Immediate scale down for tactile feel
+    tapScale.set(0.92);
+    
+    // Quick bounce back with slight overshoot
+    setTimeout(() => {
+      tapScale.set(1.05);
+      setTimeout(() => {
+        tapScale.set(1);
+      }, 80);
+    }, 50);
+    
+    // Navigate after a brief delay to allow animation to be visible
+    setTimeout(() => {
+      router.push(card.href);
+    }, 150);
+  };
+  
+  // ============================================
+  // DRAG ANIMATIONS
+  // ============================================
+  
+  // (No drag functionality currently implemented)
+  
+  // ============================================
+  // COMBINED ANIMATIONS
+  // ============================================
+  
+  // Combine breathing scale with hover scale and tap scale
+  const combinedScale = useTransform(
+    [breathingScale, springTapScale],
+    ([breathing, tap]: number[]) => (isHovered ? 1.08 : 1) * breathing * tap
+  );
   
   return (
     <motion.div
@@ -176,7 +244,7 @@ function Card3D({ card, index, totalCards }: { card: PathwayCard; index: number;
         scale: 0.8,
       }}
       animate={{
-        y: isHovered ? yOffset - 60 : yOffset,
+        y: isHovered ? yOffset - 20 : yOffset,
         rotate: isHovered ? rotation * 0.9 : rotation,
       }}
       transition={{
@@ -203,9 +271,11 @@ function Card3D({ card, index, totalCards }: { card: PathwayCard; index: number;
             pointerEvents: "auto", // Enable pointer events only on hitbox
           }}
           onMouseMove={handleMouseMove}
-          onMouseEnter={() => setIsHovered(true)}
+          onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
-          onClick={() => router.push(card.href)}
+          onPointerDown={handlePointerDown}
+          onPointerUp={handlePointerUp}
+          onClick={handleClick}
         />
         {/* Shine overlay effect (appears on hover) */}
         <motion.div
