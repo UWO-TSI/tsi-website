@@ -6,6 +6,7 @@ import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
 interface Interactive3DCardProps {
   title: string;
   description: string;
+  tags?: string[];
   width?: number;
   height?: number;
   className?: string;
@@ -16,6 +17,7 @@ interface Interactive3DCardProps {
 export default function Interactive3DCard({
   title,
   description,
+  tags,
   width = 330,
   height = 570,
   className = "",
@@ -32,6 +34,7 @@ export default function Interactive3DCard({
     stiffness: 150,
     damping: 20,
   });
+
   const rotateY = useSpring(useTransform(mouseX, [-0.5, 0.5], [-15, 15]), {
     stiffness: 150,
     damping: 20,
@@ -47,6 +50,9 @@ export default function Interactive3DCard({
     mouseX.set((e.clientX - rect.left - rect.width / 2) / rect.width);
     mouseY.set((e.clientY - rect.top - rect.height / 2) / rect.height);
   };
+
+  // Calculate responsive image height based on card height
+  const imageHeight = height <= 400 ? '40%' : '45%';
 
   return (
     <motion.div
@@ -67,16 +73,16 @@ export default function Interactive3DCard({
       }}
     >
       <motion.div
-        className="glass-card w-full h-full p-8 rounded-2xl flex flex-col justify-center relative"
+        className="glass-card w-full h-full p-6 rounded-2xl flex flex-col relative"
         style={{
           rotateX: isHovered ? rotateX : 0,
           rotateY: isHovered ? rotateY : 0,
         }}
       >
-        {/* Interactive overlay for mouse tracking */}
+        {/* Mouse tracking overlay */}
         <div
           className="absolute inset-0 cursor-pointer"
-          style={{ borderRadius: 22, pointerEvents: "auto" }}
+          style={{ borderRadius: 22 }}
           onMouseMove={handleMouseMove}
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
@@ -95,9 +101,41 @@ export default function Interactive3DCard({
 
         {/* Card content */}
         {children || (
-          <div className="relative z-10 pointer-events-none">
-            <h3 className="text-2xl font-semibold mb-3">{title}</h3>
-            <p className="text-zinc-400 text-sm">{description}</p>
+          <div className="relative z-10 pointer-events-none flex flex-col h-full">
+            {/* Image block */}
+            <div 
+              className="w-full rounded-lg mb-4 bg-zinc-800 overflow-hidden flex-shrink-0"
+              style={{ height: imageHeight }}
+            >
+              <div className="w-full h-full bg-gradient-to-br from-blue-500/25 to-purple-500/25" />
+            </div>
+
+            {/* Text content */}
+            <div className="flex-1 flex flex-col min-h-0">
+              <h3 className="text-lg font-semibold text-white mb-2">
+                {title}
+              </h3>
+
+              <p className="text-zinc-400 text-sm leading-relaxed mb-3 line-clamp-3 flex-shrink-0">
+                {description}
+              </p>
+
+              {/* Tags */}
+              {tags && tags.length > 0 && (
+                <div className="mt-auto flex flex-wrap gap-1.5">
+                  {tags.slice(0, 3).map((tag) => (
+                    <span
+                      key={tag}
+                      className="px-2 py-1 text-xs rounded-full
+                                 bg-white/10 text-zinc-200
+                                 border border-white/10"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         )}
 
