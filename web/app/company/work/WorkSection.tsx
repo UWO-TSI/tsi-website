@@ -5,7 +5,7 @@ import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { motion, AnimatePresence } from "framer-motion";
 import { XMarkIcon, ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
-import WorkProjectCard from "@/components/cards/WorkProjectCard";
+import Interactive3DCard from "@/components/cards/Interactive3DCard";
 import type { PathwayCard } from "@/components/cards/types";
 
 gsap.registerPlugin(ScrollTrigger);
@@ -95,7 +95,7 @@ function ProjectCarousel({
               exit={{ opacity: 0, x: -50 }}
               transition={{ duration: 0.4, delay: idx * 0.05 }}
             >
-              <WorkProjectCard
+              <Interactive3DCard
                 title={project.title}
                 description={project.description}
                 tags={project.tags}
@@ -255,7 +255,7 @@ export default function WorkSection() {
         className="relative h-screen bg-[#0F0F10] overflow-hidden"
       >
         {/* TITLE */}
-        <div className="pt-25 text-center">
+        <div className="pt-20 text-center">
           <h2 className="build-title font-heading text-6xl font-semibold mb-4">
             Work
           </h2>
@@ -265,7 +265,7 @@ export default function WorkSection() {
         </div>
 
         {/* CAROUSEL */}
-        <div className="absolute inset-x-0 top-[50%] -translate-y-1/2 flex justify-center">
+        <div className="absolute inset-x-0 top-[52%] -translate-y-1/2 flex justify-center">
           <div className="carousel-section relative w-[1500px] max-w-[90vw]">
             {/* CARD OFFSET LAYER */}
             <div className="relative">
