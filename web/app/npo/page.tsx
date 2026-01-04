@@ -125,6 +125,7 @@ export default function NonprofitPage() {
         ref={(el) => {
           sectionRefs.current.application = el;
         }}
+        style={{ position: "relative", zIndex: 10 }}
       >
         <CompaniesBuildTimeline />
       </div>
@@ -133,6 +134,8 @@ export default function NonprofitPage() {
         ref={(el) => {
           sectionRefs.current.form = el;
         }}
+        style={{ position: "relative", zIndex: 20 }}
+        className="min-h-screen"
       >
         <NPOFormSubmission />
       </div>

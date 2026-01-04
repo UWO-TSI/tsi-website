@@ -39,39 +39,47 @@ export default function NPOHomePage({ children }: { children?: ReactNode }) {
 				},
 			});
 
-			// Pin hero while next section reveals (no fade)
+			// Pin hero while next section reveals and fade out content
 			ScrollTrigger.create({
 				trigger: heroRef.current,
 				start: "top top",
-				end: "+=250%",
+				end: "+=100%",
 				scrub: true,
 				pin: true,
 				pinSpacing: true,
 				anticipatePin: 1,
+				onUpdate: (self) => {
+					gsap.to(heroContentRef.current, {
+						opacity: Math.max(0, 1 - self.progress * 2),
+						duration: 0,
+						ease: "none"
+					});
+				},
 			});
 
-			// Stagger in downstream sections when they enter the viewport
+			// Fade-in downstream sections individually on scroll
 			const childSections = sectionsRef.current?.children
 				? Array.from(sectionsRef.current.children)
 				: [];
 
-			if (childSections.length) {
+			childSections.forEach((section, index) => {
 				gsap.fromTo(
-					childSections,
-					{ opacity: 0, y: 30 },
+					section,
+					{ autoAlpha: 0, y: 40 },
 					{
-						opacity: 1,
+						autoAlpha: 1,
 						y: 0,
-						duration: 0.8,
-						stagger: 0.2,
+						duration: 0.9,
 						ease: "power2.out",
+						delay: index * 0.05,
 						scrollTrigger: {
-							trigger: sectionsRef.current,
+							trigger: section,
 							start: "top 80%",
+							toggleActions: "play none none reverse",
 						},
 					}
 				);
-			}
+			});
 		}, heroRef);
 
 		// Refresh after assets load to ensure correct trigger positions
@@ -132,10 +140,8 @@ export default function NPOHomePage({ children }: { children?: ReactNode }) {
 			<section ref={sectionsRef} className="w-full">
 				{Children.count(children) > 0 &&
 					Children.map(children, (child) => (
-						<div className="min-h-screen flex items-center justify-center px-6">
-							<div className="max-w-6xl w-full">
-								{child}
-							</div>
+						<div className="fade-section">
+							{child}
 						</div>
 					))}
 			</section>

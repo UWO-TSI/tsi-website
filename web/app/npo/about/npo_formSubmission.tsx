@@ -91,7 +91,7 @@ export default function TimelineWheel() {
           <div
             key={idx}
             className="min-w-full h-full flex items-center justify-center snap-start"
-            style={{ background: idx % 2 === 0 ? "#1A1A1D" : "#0F1F3A" }}
+            style={{ background: "#0F0F10" }}
           >
             {content}
           </div>

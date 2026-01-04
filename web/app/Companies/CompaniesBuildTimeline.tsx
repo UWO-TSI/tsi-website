@@ -22,40 +22,17 @@ export default function CompaniesBuildTimeline() {
   }, []);
 
   useEffect(() => {
-    gsap.registerPlugin(ScrollTrigger);
-    
-    if (!labelRef.current || !descRef.current || !sectionRef.current) return;
+    if (!labelRef.current || !descRef.current) return;
 
     const ctx = gsap.context(() => {
-      // Pin the section and animate it as next section overlaps
-      ScrollTrigger.create({
-        trigger: sectionRef.current,
-        start: "top top",
-        end: "bottom top",
-        pin: true,
-        pinSpacing: false,
-      });
-
-      // Blur/scale animation as you scroll
-      gsap.to(sectionRef.current, {
-        scrollTrigger: {
-          trigger: sectionRef.current,
-          start: "top top",
-          end: "bottom top",
-          scrub: true,
-        },
-        scale: 0.9,
-        borderRadius: 40,
-        ease: "none",
-      });
-
-      // Content fade-in timeline
       const tl = gsap.timeline({
         scrollTrigger: {
           trigger: sectionRef.current,
           start: "top top",
-          end: "+=60%",
+          end: "+=120%",
           scrub: 1,
+          pin: true,
+          anticipatePin: 1,
         },
       });
 
@@ -86,8 +63,8 @@ export default function CompaniesBuildTimeline() {
   }, []);
 
   return (
-    <section ref={sectionRef} className="sticky top-0 h-screen bg-[#0F0F10] flex items-center overflow-hidden" style={{ zIndex: 10 }}>
-      <div className="max-w-6xl mx-auto w-full px-8 grid grid-cols-2 gap-24">
+    <section ref={sectionRef} className="h-screen bg-[#0F0F10] flex items-center">
+      <div className="max-w-7xl mx-auto w-full px-8 grid grid-cols-2 gap-24">
 
         {/* LEFT */}
         <div className="space-y-8">
