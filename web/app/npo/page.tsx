@@ -153,6 +153,7 @@ export default function NonprofitPage() {
         ref={(el) => {
           sectionRefs.current.team = el;
         }}
+        style={{ position: "relative", zIndex: 20 }}
       >
         <Team />
       </div>

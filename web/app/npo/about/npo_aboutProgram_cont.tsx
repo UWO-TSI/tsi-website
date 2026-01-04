@@ -53,7 +53,7 @@ export default function CompaniesBuildTimeline() {
       const tl = gsap.timeline({
         scrollTrigger: {
           trigger: sectionRef.current,
-          start: "top top",
+          start: "top bottom",
           end: "+=60%",
           scrub: 1,
         },

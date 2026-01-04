@@ -347,77 +347,107 @@ export default function Impact() {
 	const columns = Math.ceil(projects.length / 2);
 
 	useEffect(() => {
+		gsap.registerPlugin(ScrollTrigger);
+
+		const wrapper = wrapperRef.current;
 		const track = trackRef.current;
 		const prevBtn = prevBtnRef.current;
 		const nextBtn = nextBtnRef.current;
 
-		if (!track || !prevBtn || !nextBtn) return;
+		if (!wrapper || !track || !prevBtn || !nextBtn) return;
 
-		// Get the parent container (the relative w-full div)
-		const container = track.parentElement;
-		if (!container) return;
-
-		// Calculate bounds: allow dragging until all content is visible
-		const containerWidth = container.clientWidth;
-		const contentWidth = track.scrollWidth;
-		const minBound = Math.min(0, containerWidth - contentWidth);
-
-		const drag = Draggable.create(track, {
-			type: "x",
-			bounds: { minX: minBound, maxX: 0 },
-			inertia: true,
-			edgeResistance: 0.65,
-			throwProps: true,
-		})[0];
-
-		// Calculate the width of 2.5 projects (each column + gap)
-		// Gap is 24px (gap-6), column width is 25vw approximately
-		const columnWidth = containerWidth * 0.25; // 25vw
-		const gapSize = 24; // gap-6 in tailwind
-		const projectsToScroll = 2.5;
-		const scrollDistance = (columnWidth + gapSize) * projectsToScroll;
-
-		// Navigation button handlers
-		const handlePrev = () => {
-			const currentX = track._gsap?.x || 0;
-			// Left arrow: show earlier projects (move towards x=0)
-			const newX = Math.min(0, currentX + scrollDistance);
-			if (newX === currentX) return; // Already at the start
-			
-			gsap.to(track, {
-				x: newX,
-				duration: 0.6,
-				ease: "power2.inOut",
+		const ctx = gsap.context(() => {
+			// Pin the section and animate it as next section overlaps
+			ScrollTrigger.create({
+				trigger: wrapper,
+				start: "top top",
+				end: "bottom top",
+				pin: true,
+				pinSpacing: false,
 			});
-		};
 
-		const handleNext = () => {
-			const currentX = track._gsap?.x || 0;
-			// Right arrow: show later projects (move towards minBound)
-			const newX = Math.max(minBound, currentX - scrollDistance);
-			if (newX === currentX) return; // Already at the end
-			
-			gsap.to(track, {
-				x: newX,
-				duration: 0.6,
-				ease: "power2.inOut",
+			// Scale and border-radius animation as you scroll
+			gsap.to(wrapper, {
+				scrollTrigger: {
+					trigger: wrapper,
+					start: "top top",
+					end: "bottom top",
+					scrub: true,
+				},
+				scale: 0.9,
+				borderRadius: 40,
+				ease: "none",
 			});
-		};
 
-		prevBtn.addEventListener("click", handlePrev);
-		nextBtn.addEventListener("click", handleNext);
+			// Get the parent container (the relative w-full div)
+			const container = track.parentElement;
+			if (!container) return;
 
-		return () => {
-			drag.kill();
-			prevBtn.removeEventListener("click", handlePrev);
-			nextBtn.removeEventListener("click", handleNext);
-		};
+			// Calculate bounds: allow dragging until all content is visible
+			const containerWidth = container.clientWidth;
+			const contentWidth = track.scrollWidth;
+			const minBound = Math.min(0, containerWidth - contentWidth);
+
+			const drag = Draggable.create(track, {
+				type: "x",
+				bounds: { minX: minBound, maxX: 0 },
+				inertia: true,
+				edgeResistance: 0.65,
+				throwProps: true,
+			})[0];
+
+			// Calculate the width of 2.5 projects (each column + gap)
+			// Gap is 24px (gap-6), column width is 25vw approximately
+			const columnWidth = containerWidth * 0.25; // 25vw
+			const gapSize = 24; // gap-6 in tailwind
+			const projectsToScroll = 2.5;
+			const scrollDistance = (columnWidth + gapSize) * projectsToScroll;
+
+			// Navigation button handlers
+			const handlePrev = () => {
+				const currentX = track._gsap?.x || 0;
+				// Left arrow: show earlier projects (move towards x=0)
+				const newX = Math.min(0, currentX + scrollDistance);
+				if (newX === currentX) return; // Already at the start
+				
+				gsap.to(track, {
+					x: newX,
+					duration: 0.6,
+					ease: "power2.inOut",
+				});
+			};
+
+			const handleNext = () => {
+				const currentX = track._gsap?.x || 0;
+				// Right arrow: show later projects (move towards minBound)
+				const newX = Math.max(minBound, currentX - scrollDistance);
+				if (newX === currentX) return; // Already at the end
+				
+				gsap.to(track, {
+					x: newX,
+					duration: 0.6,
+					ease: "power2.inOut",
+				});
+			};
+
+			prevBtn.addEventListener("click", handlePrev);
+			nextBtn.addEventListener("click", handleNext);
+
+			return () => {
+				drag.kill();
+				prevBtn.removeEventListener("click", handlePrev);
+				nextBtn.removeEventListener("click", handleNext);
+			};
+		});
+
+		return () => ctx.revert();
 	}, []);
 
 	return (
 		<section
 			ref={wrapperRef}
-			className="min-h-screen bg-[#0F0F10] text-white px-0 overflow-hidden"
+			className="sticky top-0 min-h-screen bg-[#0F0F10] text-white px-0 overflow-hidden"
+			style={{ zIndex: 10 }}
 		>
 			<div className="w-full px-4 pt-16 pb-0">
 				<header className="mb-8 text-center">
