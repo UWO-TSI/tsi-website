@@ -40,25 +40,70 @@ const cards: PathwayCard[] = [
 ];
 
 // ============================================
-// HAND CALCULATIONS
+// CIRCULAR ARC BEND CALCULATIONS
 // ============================================
 
-const CARD_WIDTH = 330; 
-const CARD_HEIGHT = 570; 
-const CARD_SPACING = 0.75; // Closer spacing for overlap (75% of card width)
-const SMALL_LIFT = 30; // Natural arc - outer cards lift UP
-const MAX_FAN_ANGLE = 18; // Fan rotation angle
+const CARD_WIDTH = 350; // Card width in pixels (affects card size only)
+const CARD_HEIGHT = 490; // Card height in pixels (affects card size only)
+const CARD_SPACING = 280; // Horizontal spacing between card centers in pixels (independent of card width)
+const BEND = -100; // Arc sagitta (curve depth). Positive = downward curve, negative = upward curve
+// Recommendedrange: 2-5 for moderate curve, 5-10 for strong curve
+const VERTICAL_OFFSET = -200; // Base vertical position offset in pixels. Positive = move down, negative = move up
 
 function getCardTransform(index: number, totalCards: number) {
   const t = index - (totalCards - 1) / 2;
-  const xOffset = t * (CARD_WIDTH * CARD_SPACING);
+  // Use independent spacing value, not tied to card width
+  const xOffset = t * CARD_SPACING;
   
-  // Natural arc: outer cards are HIGHER (positive y = up)
-  const yOffset = Math.abs(t) * SMALL_LIFT;
+  // Calculate H (half viewport width) based on card spread
+  // H is the distance from center to the outermost card
+  const outerCardT = (totalCards - 1) / 2;
+  const H = outerCardT * CARD_SPACING;
   
-  const rotation = totalCards > 1 
-    ? (t * MAX_FAN_ANGLE) / ((totalCards - 1) / 2)
-    : 0;
+  // Handle edge case: flat layout when bend is 0
+  const bend = BEND;
+  if (Math.abs(bend) < 0.001) {
+    return { xOffset, yOffset: 0, rotation: 0 };
+  }
+  
+  // Step 1: Calculate circle radius using sagitta formula
+  // Use absolute value of bend for radius calculation
+  const B_abs = Math.abs(bend);
+  const R = (H * H + B_abs * B_abs) / (2 * B_abs);
+  
+  // Step 2: Clamp x to prevent going beyond the arc (for arc calculation only)
+  // Take absolute value first, then clamp to H
+  const effectiveX = Math.min(Math.abs(xOffset), H);
+  
+  // Step 3: Calculate vertical displacement (arc drop)
+  const arc = R - Math.sqrt(R * R - effectiveX * effectiveX);
+  
+  // Step 4: Apply vertical position (with bend direction)
+  let yOffset: number;
+  if (bend > 0) {
+    yOffset = -arc;  // Curve downward
+  } else {
+    yOffset = arc;   // Curve upward
+  }
+  
+  // Add base vertical offset to move all cards up/down together
+  yOffset += VERTICAL_OFFSET;
+  
+  // Step 5: Calculate and apply rotation angle (tangent to curve)
+  // Use effectiveX (absolute, clamped) for theta calculation
+  // Use original xOffset sign for rotation direction
+  const theta = Math.asin(effectiveX / R);
+  const rotationSign = Math.sign(xOffset);
+  
+  let rotation: number;
+  if (bend > 0) {
+    rotation = -rotationSign * theta;
+  } else {
+    rotation = rotationSign * theta;
+  }
+  
+  // Convert rotation from radians to degrees
+  rotation = (rotation * 180) / Math.PI;
   
   return { xOffset, yOffset, rotation };
 }
@@ -229,8 +274,12 @@ function Card3D({ card, index, totalCards }: { card: PathwayCard; index: number;
       ref={cardRef}
       className="pathway-card absolute opacity-0"
       style={{
-        width: CARD_WIDTH,
-        height: CARD_HEIGHT,
+        width: `${CARD_WIDTH}px`,
+        height: `${CARD_HEIGHT}px`,
+        minWidth: `${CARD_WIDTH}px`,
+        minHeight: `${CARD_HEIGHT}px`,
+        maxWidth: `${CARD_WIDTH}px`,
+        maxHeight: `${CARD_HEIGHT}px`,
         x: xOffset, // Static horizontal position
         scale: combinedScale, // Breathing + hover scale combined
         transformOrigin: "center bottom",
@@ -256,8 +305,10 @@ function Card3D({ card, index, totalCards }: { card: PathwayCard; index: number;
     >
       {/* 3D Card Inner Container */}
       <motion.div
-        className="glass-card w-full h-full p-8 flex flex-col justify-center relative"
+        className="glass-card p-8 flex flex-col justify-center relative"
         style={{
+          width: `${CARD_WIDTH}px`,
+          height: `${CARD_HEIGHT}px`,
           rotateX: isHovered ? rotateX : 0,
           rotateY: isHovered ? rotateY : 0,
           transformStyle: "preserve-3d",
