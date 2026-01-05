@@ -8,7 +8,7 @@ export default function SiteLayout({ children }: { children: ReactNode }) {
     <LoadingScreenWrapper>
       <CustomCursor />
       <Navbar />
-      <main className="pt-[96px]">
+      <main>
         {children}
       </main>
     </LoadingScreenWrapper>
