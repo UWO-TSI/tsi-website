@@ -8,8 +8,11 @@ import NPOFormSubmission from "./about/npo_formSubmission";
 import Impact from "./impact/Impact";
 import Team from "./team/team";
 import Testimonial from "./testimonial/testimonial";
+import TestimonialsSection from "./testimonial/TestimonialsSection";
 import CTA from "./CTA/cta";
 import FAQ from "./FAQ/faq";
+
+
 
 export default function NonprofitPage() {
   const sectionRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
@@ -164,7 +167,7 @@ export default function NonprofitPage() {
           sectionRefs.current.testimonial = el;
         }}
       >
-        <Testimonial />
+        <TestimonialsSection />
       </div>
       <div
         id="faq"
