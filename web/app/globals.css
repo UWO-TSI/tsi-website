@@ -4,16 +4,49 @@
    TETHOS - Global Styles (Cleaned)
    ======================================== */
 
+@font-face {
+  font-family: "Test Sogne";
+  src: url("/font/sohne-font-family/TestSohne-Buch-BF663d89cd32e6a.otf")
+    format("opentype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Test Sogne";
+  src: url("/font/sohne-font-family/TestSohne-Kraftig-BF663d89cd32e6a.otf")
+    format("opentype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Milker";
+  src: url("/font/milker/Milker.otf") format("opentype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 /* Remove conflicting default vars and use tokens.css instead */
 :root {
   /* These come from tokens.css - no need to redefine */
-  font-family: var(--font-body);
+  --font-heading: var(--font-body);
+  --font-highlight: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Monaco,
+    Consolas, "Liberation Mono", "Courier New", monospace;
+
+  /* Default document font */
+  font-family: "Test Sogne", var(--font-body);
 }
 
 body {
   background: var(--color-bg-main); /* Use token instead of hardcode */
   color: var(--color-text-main);
-  font-family: var(--font-body);
+  /* Body copy */
+  font-family: "Test Sogne", var(--font-body);
+  font-weight: 400;
   cursor: none !important;
 }
 
@@ -35,7 +68,179 @@ textarea {
 
 /* Utility class for headings */
 .font-heading {
-  font-family: var(--font-heading);
+  /* Headings */
+  font-family: var(--font-heading, var(--font-body));
+}
+
+/* Native heading elements (in case font-heading class isn't applied) */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-heading, var(--font-body));
+}
+
+/* Highlights / special text */
+.font-highlight,
+.font-mono,
+code,
+pre,
+kbd,
+samp {
+  font-family: var(--font-highlight);
+}
+
+/* ========================================
+   Glass Navbar
+   ======================================== */
+
+/* Main bar — liquid glass */
+.glass-nav-bar {
+  isolation: isolate;
+  background: rgba(167, 167, 167, 0.20);
+  backdrop-filter: blur(32px) saturate(1.4);
+  -webkit-backdrop-filter: blur(32px) saturate(1.4);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  overflow: hidden;
+  box-shadow:
+    0 4px 30px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.08);
+}
+
+/* Top specular highlight on main bar */
+.glass-nav-bar::before {
+  content: '';
+  position: absolute;
+  z-index: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.55) 30%,
+    rgba(255, 255, 255, 0.30) 70%,
+    transparent 100%
+  );
+  pointer-events: none;
+}
+
+/* Dropdown extension — liquid glass continuation */
+.glass-nav-dropdown {
+  position: relative;
+  background: rgba(167, 167, 167, 0.10);
+  backdrop-filter: blur(32px) saturate(1.4);
+  -webkit-backdrop-filter: blur(32px) saturate(1.4);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+  box-shadow:
+    0 12px 40px rgba(0, 0, 0, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    inset 0 0 30px rgba(255, 255, 255, 0.02);
+}
+
+/* Shimmer / refraction highlight on dropdown */
+.glass-nav-dropdown::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.04) 0%,
+    transparent 40%,
+    rgba(255, 255, 255, 0.02) 60%,
+    transparent 100%
+  );
+}
+
+/* Mobile glass panel */
+.glass-nav-mobile {
+  background: rgba(15, 15, 16, 0.88);
+  backdrop-filter: blur(28px) saturate(1.3);
+  -webkit-backdrop-filter: blur(28px) saturate(1.3);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Nav link hover micro-animation */
+.glass-nav-link {
+  position: relative;
+}
+
+.glass-nav-link::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 50%;
+  width: 0;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.6);
+  transition: width 0.3s cubic-bezier(0.25, 0.1, 0.25, 1),
+              left 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+.glass-nav-link:hover::after {
+  width: 100%;
+  left: 0;
+}
+
+/* Dropdown link hover slide-in */
+.glass-nav-dropdown-link {
+  transform: translateX(0);
+  transition: transform 0.25s cubic-bezier(0.25, 0.1, 0.25, 1),
+              color 0.2s ease;
+}
+
+.glass-nav-dropdown-link:hover {
+  transform: translateX(4px);
+}
+
+/* Liquid shimmer that sweeps across the bar on hover */
+.glass-nav-bar::after {
+  content: '';
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    105deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.06) 35%,
+    rgba(255, 255, 255, 0.12) 50%,
+    rgba(255, 255, 255, 0.06) 65%,
+    transparent 100%
+  );
+  background-size: 250% 100%;
+  background-position: 100% 0;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+header:hover .glass-nav-bar::after {
+  opacity: 1;
+  animation: glassShimmer 1.8s ease-in-out forwards;
+}
+
+@keyframes glassShimmer {
+  0%   { background-position: 100% 0; }
+  100% { background-position: -50% 0; }
+}
+
+/* Reduced motion: disable transforms & transitions */
+@media (prefers-reduced-motion: reduce) {
+  .glass-nav-bar,
+  .glass-nav-bar::after,
+  .glass-nav-dropdown,
+  .glass-nav-mobile,
+  .glass-nav-link::after,
+  .glass-nav-dropdown-link {
+    transition: none !important;
+    animation: none !important;
+  }
 }
 
 /* ========================================

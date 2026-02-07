@@ -61,7 +61,7 @@ export default function NPOHomePage() {
 				<div className="w-full flex items-start justify-center py-2">
 					<div className="w-[95%] max-w-[100vw] flex gap-8 items-stretch">
 						{/* Left column (67%) */}
-						<div className="w-[67%] flex flex-col gap-6" style={{ fontFamily: 'Inter, var(--font-body), system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif' }}>
+						<div className="w-[67%] flex flex-col gap-6">
 							{/* Top Paragraph*/}
 							<div className="bg-[#0F0F10] rounded-md pl-6 pt-4 flex items-start justify-start min-h-[24vh]">
 								<div className="text-[#F1FFFF] text-left">
@@ -74,7 +74,7 @@ export default function NPOHomePage() {
 
 							{/* Bottom rectangle: split into two halves */}
 							<div className="bg-[#0F0F10] rounded-md p-4 flex gap-4">
-								<div className="flex-1 p-4 bg-transparent flex flex-col justify-center items-start" style={{ fontFamily: 'var(--font-heading), Space Grotesk, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif' }}>
+								<div className="flex-1 p-4 bg-transparent flex flex-col justify-center items-start">
 									<h3 className="text-white text-2xl font-bold mb-2">20+</h3>
 									<h3 className="text-white text-2xl font-bold mb-2">150+</h3>
 									<h3 className="text-white text-2xl font-bold mb-2">1500+</h3>

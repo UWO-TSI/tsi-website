@@ -24,8 +24,6 @@ function ProjectCard({ card }: { card: ProjectCard }) {
 			className="group relative overflow-visible rounded-2xl bg-gradient-to-b from-[#111113] to-[#0F0F10] border border-[#27272A] shadow-[0_16px_40px_rgba(0,0,0,0.3)] transition-all duration-300 ease-out hover:shadow-[0_32px_80px_rgba(0,0,0,0.9)] min-h-[360px] min-w-[220px] flex-shrink-0"
 			style={{
 				perspective: "1200px",
-				fontFamily:
-					'Space Grotesk, var(--font-body), system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
 			}}
 		>
 			<div className="relative p-4 flex flex-col gap-3 h-full">
@@ -453,10 +451,6 @@ export default function Impact() {
 				<header className="mb-8 text-center">
 					<p
 						className="mt-10 text-2xl md:text-3xl font-semibold"
-						style={{
-							fontFamily:
-								'Space Grotesk, var(--font-body), system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
-						}}
 					>
 						2025/2026 Project Gallery
 					</p>

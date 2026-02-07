@@ -202,8 +202,6 @@ export default function Team() {
                             fontSize: "32px",
                             lineHeight: "1.1",
                             color: "#FFD186",
-                            fontFamily:
-                              'Space Grotesk, var(--font-body), system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
                           }}
                         >
                           {photo.year}
@@ -214,8 +212,6 @@ export default function Team() {
                             fontSize: "26px",
                             lineHeight: "1.2",
                             color: "#FFFFFF",
-                            fontFamily:
-                              'Space Grotesk, var(--font-body), system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
                           }}
                         >
                           {photo.title}
@@ -225,8 +221,6 @@ export default function Team() {
                         className="text-lg leading-relaxed"
                         style={{
                           color: "#E4E4E7",
-                          fontFamily:
-                            'Space Grotesk, var(--font-body), system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
                         }}
                       >
                         {photo.description}

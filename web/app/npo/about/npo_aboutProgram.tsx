@@ -65,8 +65,6 @@ export default function NPOaboutProgram() {
             <div
               className="flex-[1.2] flex flex-col gap-8"
               style={{
-                fontFamily:
-                  'Inter, var(--font-body), system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
               }}
             >
               {/* Top Paragraph*/}
@@ -90,8 +88,6 @@ export default function NPOaboutProgram() {
                   ref={statsContainerRef}
                   className="flex flex-col gap-3"
                   style={{
-                    fontFamily:
-                      'var(--font-heading), Space Grotesk, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
                   }}
                 >
                   <div className="stat-line flex items-start justify-start gap-16 px-2">

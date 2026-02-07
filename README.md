@@ -61,7 +61,7 @@ web/
 | 3D Graphics    | Three.js, React Three Fiber, Drei                           |
 | Scrolling      | Lenis (smooth scroll, GSAP-integrated)                      |
 | Icons          | Lucide React, Heroicons                                     |
-| Fonts          | Inter (body), Space Grotesk (headings) via `next/font`      |
+| Fonts          | Space Grotesk (body), Test Sogne (headings), IBM Plex Mono (highlights) |
 
 ---
 
