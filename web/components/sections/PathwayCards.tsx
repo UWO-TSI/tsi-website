@@ -47,7 +47,7 @@ const CARD_WIDTH = 350; // Card width in pixels (affects card size only)
 const CARD_HEIGHT = 490; // Card height in pixels (affects card size only)
 const CARD_SPACING = 280; // Horizontal spacing between card centers in pixels (independent of card width)
 const BEND = -100; // Arc sagitta (curve depth). Positive = downward curve, negative = upward curve
-// Recommendedrange: 2-5 for moderate curve, 5-10 for strong curve
+// Recommended range: 2-5 for moderate curve, 5-10 for strong curve
 const VERTICAL_OFFSET = -200; // Base vertical position offset in pixels. Positive = move down, negative = move up
 
 function getCardTransform(index: number, totalCards: number) {
@@ -254,12 +254,6 @@ function Card3D({ card, index, totalCards }: { card: PathwayCard; index: number;
   };
   
   // ============================================
-  // DRAG ANIMATIONS
-  // ============================================
-  
-  // (No drag functionality currently implemented)
-  
-  // ============================================
   // COMBINED ANIMATIONS
   // ============================================
   
@@ -430,9 +424,6 @@ export default function PathwayCards() {
         { opacity: 1, duration: 0.2, ease: "power2.inOut" },
         0.8
       );
-      
-      // Note: Breathing animation is now handled in Card3D component
-      // Note: Card positioning is handled by Framer Motion in Card3D
 
     }, sectionRef);
 

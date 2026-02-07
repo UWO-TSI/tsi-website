@@ -5,6 +5,7 @@ import { gsap } from "gsap";
 import Button from "@/components/ui/Button";
 import ButtonHelperText from "@/components/ui/ButtonHelperText";
 import ScrollHint from "@/components/hero/ScrollHint";
+import { EASE_ENTER, DURATION_SECTION } from "@/lib/motion";
 
 type CTA = {
   label: string;
@@ -26,14 +27,16 @@ export function CompanyHero({ title, ctas }: CompanyHeroProps) {
     gsap.fromTo(
       contentRef.current,
       { opacity: 0, y: 16 },
-      { opacity: 1, y: 0, duration: 0.9, ease: "power3.out" }
+      { opacity: 1, y: 0, duration: DURATION_SECTION, ease: EASE_ENTER }
     );
   }, []);
 
   return (
     <section className="relative bg-[#0F0F10] h-[calc(100vh-96px)] flex items-center justify-center">
       <div ref={contentRef} className="text-center max-w-5xl px-6">
-        <h1 className="font-heading text-5xl md:text-6xl mb-14">{title}</h1>
+        <h1 className="font-heading text-5xl md:text-6xl lg:text-7xl font-semibold mb-14 leading-tight">
+          {title}
+        </h1>
 
         <div className="flex flex-col sm:flex-row gap-14 justify-center">
           {ctas.map((cta, i) => (

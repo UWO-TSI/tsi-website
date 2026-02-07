@@ -19,7 +19,7 @@ export default function PylonDemoPage() {
 
         <div className="w-full h-[600px] rounded-lg overflow-hidden border border-zinc-800 bg-zinc-900">
           <InteractivePylon3D
-            modelPath="/models/pylon.glb" // Place your GLTF/GLB file in /public/models/
+            modelPath="/models/pylon.gltf"
             gravity={0.15}
             damping={0.92}
             restoringTorque={0.08}

@@ -1,10 +1,9 @@
 import SmoothScroll from "@/components/SmoothScroll";
 import HomeHero from "@/components/sections/HomeHero";
 import AboutUs from "@/components/sections/AboutUs";
+import ImpactStats from "@/components/sections/ImpactStats";
+import SponsorStrip from "@/components/sections/SponsorStrip";
 import PathwayCards from "@/components/sections/PathwayCards";
-import NPOHomePage from "@/components/sections/NPO/npo_homePage";
-import NPOAboutProgram from "@/components/sections/NPO/npo_aboutProgram";
-import NPOFormSubmission from "@/components/sections/NPO/npo_formSubmission";
 
 export default function HomePage() {
   return (
@@ -12,6 +11,8 @@ export default function HomePage() {
       <main className="min-h-screen">
         <HomeHero />
         <AboutUs />
+        <ImpactStats />
+        <SponsorStrip />
         <PathwayCards />
       </main>
     </SmoothScroll>

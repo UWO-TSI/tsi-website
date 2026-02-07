@@ -1,30 +1,31 @@
 "use client";
 
+import SmoothScroll from "@/components/SmoothScroll";
 import { CompanyHero } from "@/components/hero/CompanyHero";
 import BuildSection from "./build/BuildSection";
-import CompanyTimeline from "./build/CompanyTimeline";
+import ProgramsSection from "./programs/ProgramsSection";
+import AlumniSection from "./alumni/AlumniSection";
 import WorkSection from "./work/WorkSection";
-import TalentSection from "./talent/TalentSection";
-import TeamSection from "./team/TeamSection";
 import FAQSection from "./faqs/FAQSection";
 import GetStartedSection from "./get started/GetStartedSection";
 
 export default function CompanyPage() {
   return (
-    <>
+    <SmoothScroll>
       <section id="hero">
         <CompanyHero
           title={
             <>
-              Technology & Talent
+              Build With Us.
               <br />
-              For Ambitious Companies.
+              Hire From Us.
             </>
           }
           ctas={[
             {
               label: "Start a Project",
-              helperText: "Custom software, AI, and design services",
+              helperText:
+                "Custom software, AI, and design services",
             },
             {
               label: "Partner for Talent",
@@ -39,21 +40,17 @@ export default function CompanyPage() {
       <section id="build">
         <BuildSection />
       </section>
-      
-      <section>
-        <CompanyTimeline />
+
+      <section id="programs">
+        <ProgramsSection />
       </section>
-      
+
+      <section id="alumni">
+        <AlumniSection />
+      </section>
+
       <section id="work">
         <WorkSection />
-      </section>
-
-      <section id="talent">
-        <TalentSection />
-      </section>
-
-      <section id="team">
-        <TeamSection />
       </section>
 
       <section id="faqs">
@@ -63,6 +60,6 @@ export default function CompanyPage() {
       <section id="get-started">
         <GetStartedSection />
       </section>
-    </>
+    </SmoothScroll>
   );
 }

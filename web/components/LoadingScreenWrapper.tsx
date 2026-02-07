@@ -1,44 +1,31 @@
 "use client";
 
-import { useState } from "react";
-import { motion } from "framer-motion";
+import { useState, useCallback } from "react";
 import LoadingScreen from "@/components/ui/LoadingScreen";
 
-export default function LoadingScreenWrapper({ 
-  children 
-}: { 
-  children: React.ReactNode 
+export default function LoadingScreenWrapper({
+  children,
+}: {
+  children: React.ReactNode;
 }) {
   const [isLoading, setIsLoading] = useState(true);
-  const [showContent, setShowContent] = useState(false);
 
-  const handleStartFade = () => {
-    // Start showing home page and fade out loading screen simultaneously
-    setShowContent(true);
-    // After fade completes, remove loading screen
-    setTimeout(() => {
-      setIsLoading(false);
-    }, 1000); // Match fade duration
-  };
+  const handleStartFade = useCallback(() => {
+    // Hard cut — no slow crossfade. Loading disappears, content appears.
+    setIsLoading(false);
+  }, []);
 
   return (
     <>
       {isLoading && (
-        <LoadingScreen 
-          onStartFade={handleStartFade}
-          minLoadTime={2000} 
-        />
+        <LoadingScreen onStartFade={handleStartFade} minLoadTime={2000} />
       )}
-      {showContent && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 1, ease: "easeInOut" }}
-          className="relative"
-        >
-          {children}
-        </motion.div>
-      )}
+      <div
+        className="relative"
+        style={{ visibility: isLoading ? "hidden" : "visible" }}
+      >
+        {children}
+      </div>
     </>
   );
 }
