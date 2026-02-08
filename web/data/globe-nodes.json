@@ -1,0 +1,278 @@
+{
+  "chapters": [
+    {
+      "id": "ch-western",
+      "type": "chapter",
+      "lat": 43.0096,
+      "lng": -81.2737,
+      "label": "Western University",
+      "title": "Western University",
+      "description": "Our founding chapter at Western University in London, Ontario, driving technology solutions for nonprofits.",
+      "image": "/TeamPhoto.JPG",
+      "founded": "May 2024",
+      "active": true,
+      "stats": {
+        "Projects": "20+",
+        "Volunteers": "80+",
+        "Since": "2024"
+      }
+    },
+    {
+      "id": "ch-ubc",
+      "type": "chapter",
+      "lat": 49.2606,
+      "lng": -123.2460,
+      "label": "UBC",
+      "title": "University of British Columbia",
+      "description": "Previously known as Motion. Our Vancouver chapter at UBC expanding impact across the west coast.",
+      "image": "",
+      "founded": "Jan 2025",
+      "active": true,
+      "stats": {
+        "Projects": "5+",
+        "Volunteers": "40+",
+        "Since": "2025"
+      }
+    }
+  ],
+  "partners": [
+    {
+      "id": "pt-daya",
+      "type": "partner",
+      "chapterId": "ch-western",
+      "lat": 43.0082,
+      "lng": -81.2497,
+      "label": "Daya Counselling",
+      "title": "Daya Counselling",
+      "description": "Web revamp for Daya Counselling, improving accessibility to mental health services in London.",
+      "image": "",
+      "semester": "24/25 S1",
+      "active": false,
+      "stats": {
+        "Project": "Web Revamp",
+        "Semester": "24/25 S1"
+      }
+    },
+    {
+      "id": "pt-you",
+      "type": "partner",
+      "chapterId": "ch-western",
+      "lat": 43.0078,
+      "lng": -81.2523,
+      "label": "Youth Opportunities Unlimited",
+      "title": "Youth Opportunities Unlimited (YOU)",
+      "description": "Interactive learning module to support youth education and career development in London.",
+      "image": "",
+      "semester": "24/25 S1",
+      "active": false,
+      "stats": {
+        "Project": "Learning Module",
+        "Semester": "24/25 S1"
+      }
+    },
+    {
+      "id": "pt-bgc",
+      "type": "partner",
+      "chapterId": "ch-western",
+      "lat": 43.0089,
+      "lng": -81.2385,
+      "label": "Boys & Girls Club",
+      "title": "Boys & Girls Club (BGC)",
+      "description": "Web analytics software to help BGC London measure and improve program outcomes.",
+      "image": "",
+      "semester": "24/25 S1",
+      "active": false,
+      "stats": {
+        "Project": "Web Analytics",
+        "Semester": "24/25 S1"
+      }
+    },
+    {
+      "id": "pt-trea",
+      "type": "partner",
+      "chapterId": "ch-western",
+      "lat": 43.0156,
+      "lng": -81.2775,
+      "label": "TREA",
+      "title": "Thames Region Ecological Association (TREA)",
+      "description": "Web revamp for TREA to amplify environmental conservation efforts in the Thames region.",
+      "image": "",
+      "semester": "24/25 S1",
+      "active": false,
+      "stats": {
+        "Project": "Web Revamp",
+        "Semester": "24/25 S1"
+      }
+    },
+    {
+      "id": "pt-united-way",
+      "type": "partner",
+      "chapterId": "ch-western",
+      "lat": 45.4231,
+      "lng": -75.6931,
+      "label": "United Way",
+      "title": "United Way",
+      "description": "Gamified leaderboard webapp for United Way's fundraiser campaigns, driving donor engagement.",
+      "image": "",
+      "semester": "24/25 S1",
+      "active": true,
+      "stats": {
+        "Project": "Gamified Leaderboard",
+        "Semester": "24/25 S1"
+      }
+    },
+    {
+      "id": "pt-jam",
+      "type": "partner",
+      "chapterId": "ch-western",
+      "lat": 43.0367,
+      "lng": -81.1517,
+      "label": "Jet Aircraft Museum",
+      "title": "Jet Aircraft Museum (JAM)",
+      "description": "Website revamp for the Jet Aircraft Museum, preserving Canada's aviation heritage online.",
+      "image": "",
+      "semester": "24/25 S1",
+      "active": false,
+      "stats": {
+        "Project": "Web Revamp",
+        "Semester": "24/25 S1"
+      }
+    },
+    {
+      "id": "pt-gohockey",
+      "type": "partner",
+      "chapterId": "ch-western",
+      "lat": 43.0096,
+      "lng": -81.2737,
+      "label": "GoHockey",
+      "title": "GoHockey",
+      "description": "Web revamp for GoHockey.",
+      "image": "",
+      "semester": "24/25 S1",
+      "active": false,
+      "stats": {
+        "Project": "Web Revamp",
+        "Semester": "24/25 S1"
+      }
+    },
+    {
+      "id": "pt-world-vision",
+      "type": "partner",
+      "chapterId": "ch-western",
+      "lat": 47.3073,
+      "lng": -122.3128,
+      "label": "World Vision",
+      "title": "World Vision",
+      "description": "Agentic AI to accelerate World Vision's discovery pipeline, enhancing global humanitarian aid efficiency.",
+      "image": "",
+      "semester": "25/26",
+      "active": true,
+      "stats": {
+        "Project": "Agentic AI Pipeline",
+        "Semester": "25/26"
+      }
+    },
+    {
+      "id": "pt-irc",
+      "type": "partner",
+      "chapterId": "ch-western",
+      "lat": 40.7527,
+      "lng": -73.9772,
+      "label": "International Rescue Committee",
+      "title": "International Rescue Committee (IRC)",
+      "description": "A mobile app and open-source resource database to help refugees, newcomers, and service providers access essential resources.",
+      "image": "",
+      "semester": "25/26",
+      "active": true,
+      "stats": {
+        "Project": "Refugee Resource App",
+        "Semester": "25/26"
+      }
+    },
+    {
+      "id": "pt-london-children-museum",
+      "type": "partner",
+      "chapterId": "ch-western",
+      "lat": 42.9655,
+      "lng": -81.2117,
+      "label": "London Children Museum",
+      "title": "London Children Museum",
+      "description": "Interactive Space Glove Exhibit — a physical hardware exhibit and game for children exploring space.",
+      "image": "",
+      "semester": "25/26",
+      "active": true,
+      "stats": {
+        "Project": "Space Glove Exhibit",
+        "Semester": "25/26"
+      }
+    },
+    {
+      "id": "pt-plan-international",
+      "type": "partner",
+      "chapterId": "ch-western",
+      "lat": 51.3168,
+      "lng": -0.5610,
+      "label": "Plan International",
+      "title": "Plan International",
+      "description": "Renewing internal systems for Plan International to strengthen global child rights and equality programs.",
+      "image": "",
+      "semester": "25/26",
+      "active": true,
+      "stats": {
+        "Project": "Internal System Renewal",
+        "Semester": "25/26"
+      }
+    },
+    {
+      "id": "pt-plan-catalyst",
+      "type": "partner",
+      "chapterId": "ch-western",
+      "lat": 43.7066,
+      "lng": -79.3986,
+      "label": "Plan Catalyst",
+      "title": "Plan Catalyst",
+      "description": "Technology project with Plan Catalyst in Toronto.",
+      "image": "",
+      "semester": "25/26",
+      "active": true,
+      "stats": {
+        "Project": "TBD",
+        "Semester": "25/26"
+      }
+    },
+    {
+      "id": "pt-childcan",
+      "type": "partner",
+      "chapterId": "ch-western",
+      "lat": 42.9614,
+      "lng": -81.3053,
+      "label": "Childcan",
+      "title": "Childcan",
+      "description": "Website revamp for Childcan, supporting children with cancer and their families.",
+      "image": "",
+      "semester": "25/26",
+      "active": false,
+      "stats": {
+        "Project": "Web Revamp",
+        "Semester": "25/26"
+      }
+    },
+    {
+      "id": "pt-canadian-red-cross",
+      "type": "partner",
+      "chapterId": "ch-western",
+      "lat": 45.4215,
+      "lng": -75.6972,
+      "label": "Canadian Red Cross",
+      "title": "Canadian Red Cross",
+      "description": "Technology partnership with the Canadian Red Cross to support humanitarian relief efforts.",
+      "image": "",
+      "semester": "25/26",
+      "active": true,
+      "stats": {
+        "Project": "TBD",
+        "Semester": "25/26"
+      }
+    }
+  ]
+}

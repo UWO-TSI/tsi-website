@@ -22,13 +22,12 @@ interface GlobeNodeData {
   title: string;
   description: string;
   image?: string;
+  active: boolean;
   stats?: Record<string, string>;
-}
-
-interface GlobeEdgeData {
-  from: string;
-  to: string;
-  arrowDuration?: number;
+  /** Only on partner nodes – links back to the chapter that ran the project */
+  chapterId?: string;
+  founded?: string;
+  semester?: string;
 }
 
 /* ═══════════════════════════════════════════
@@ -36,26 +35,109 @@ interface GlobeEdgeData {
    ═══════════════════════════════════════════ */
 
 const GLOBE_RADIUS = 100; // three-globe native radius – work at native scale
-const NODES = globeData.nodes as GlobeNodeData[];
-const EDGES = globeData.edges as GlobeEdgeData[];
 
-/** Convert latitude / longitude to a position on the sphere surface. */
+/** Merge chapters + partners into a single flat node list for rendering. */
+const ALL_NODES: GlobeNodeData[] = [
+  ...((globeData.chapters ?? []) as GlobeNodeData[]),
+  ...((globeData.partners ?? []) as GlobeNodeData[]),
+];
+
+/** Only show active nodes on the globe. */
+const NODES = ALL_NODES.filter((n) => n.active);
+
+/** Auto-generate edges: each active partner connects to its chapter. */
+const EDGES = NODES.filter((n) => n.type === "partner" && n.chapterId).map(
+  (partner) => ({
+    from: partner.chapterId!,
+    to: partner.id,
+  })
+);
+
+/* ═══════════════════════════════════════════
+   Elevation lookup – approximate average elevation
+   per country in metres (publicly known data).
+   Used to give hex tiles a subtle 3D topology effect.
+   ═══════════════════════════════════════════ */
+
+const COUNTRY_ELEVATION: Record<string, number> = {
+  AFG: 1884, ALB: 708, DZA: 800, AND: 1996, AGO: 1023,
+  ARG: 595, ARM: 1792, AUS: 330, AUT: 910, AZE: 384,
+  BGD: 85, BLR: 160, BEL: 181, BTN: 3280, BOL: 1192,
+  BIH: 500, BWA: 1013, BRA: 320, BGR: 472, BFA: 297,
+  KHM: 48, CMR: 667, CAN: 487, TCD: 543, CHL: 1871,
+  CHN: 1840, COL: 593, COD: 726, CRI: 746, HRV: 331,
+  CUB: 108, CZE: 433, DNK: 34, ECU: 1117, EGY: 321,
+  SLV: 442, ERI: 853, EST: 61, ETH: 1330, FIN: 164,
+  FRA: 375, GAB: 377, GEO: 1432, DEU: 263, GHA: 190,
+  GRC: 498, GTM: 759, GIN: 472, GUY: 207, HTI: 470,
+  HND: 684, HUN: 143, ISL: 557, IND: 621, IDN: 367,
+  IRN: 1305, IRQ: 312, IRL: 118, ISR: 508, ITA: 538,
+  JAM: 340, JPN: 438, JOR: 812, KAZ: 387, KEN: 762,
+  KGZ: 2988, LAO: 710, LVA: 87, LBN: 1250, LSO: 2161,
+  LBR: 243, LBY: 393, LTU: 110, LUX: 325, MKD: 741,
+  MDG: 615, MWI: 779, MYS: 538, MLI: 343, MEX: 1111,
+  MNG: 1528, MAR: 909, MOZ: 345, MMR: 702, NAM: 1141,
+  NPL: 2565, NLD: 30, NZL: 388, NIC: 298, NER: 474,
+  NGA: 380, NOR: 460, OMN: 310, PAK: 900, PAN: 360,
+  PRY: 178, PER: 1555, PHL: 442, POL: 173, PRT: 372,
+  QAT: 28, ROU: 414, RUS: 600, RWA: 1598, SAU: 665,
+  SEN: 69, SRB: 473, SLE: 279, SGP: 15, SVK: 458,
+  SVN: 492, SOM: 410, ZAF: 1034, KOR: 282, ESP: 660,
+  LKA: 228, SDN: 568, SWE: 320, CHE: 1350, SYR: 514,
+  TWN: 1150, TJK: 3186, TZA: 1018, THA: 287, TGO: 236,
+  TUN: 246, TUR: 1132, TKM: 230, UGA: 1100, UKR: 175,
+  ARE: 149, GBR: 162, USA: 760, URY: 109, UZB: 353,
+  VEN: 450, VNM: 398, YEM: 999, ZMB: 1138, ZWE: 961,
+};
+
+const MAX_ELEVATION = 3280; // Bhutan – highest average
+const MIN_ALT = 0.001; // hex altitude floor (globe-radius units)
+const MAX_ALT = 0.006; // hex altitude ceiling
+
+/** Map a country feature to a subtle hex altitude based on its average elevation. */
+function hexAltitudeForFeature(feature: any): number {
+  const iso = feature?.properties?.ISO_A3;
+  const elev = iso && COUNTRY_ELEVATION[iso] !== undefined
+    ? COUNTRY_ELEVATION[iso]
+    : 400; // fallback for unlisted countries
+  const t = Math.min(elev / MAX_ELEVATION, 1);
+  return MIN_ALT + t * (MAX_ALT - MIN_ALT);
+}
+
+/** Map a country feature to a hex color that subtly varies with elevation. */
+function hexColorForFeature(feature: any): string {
+  const iso = feature?.properties?.ISO_A3;
+  const elev = iso && COUNTRY_ELEVATION[iso] !== undefined
+    ? COUNTRY_ELEVATION[iso]
+    : 400;
+  const t = Math.min(elev / MAX_ELEVATION, 1);
+  // Low elevation → lighter/more transparent, high elevation → more saturated/opaque
+  const r = Math.round(90 + (1 - t) * 40);   // 90-130
+  const g = Math.round(120 + (1 - t) * 30);   // 120-150
+  const b = Math.round(180 + (1 - t) * 20);   // 180-200
+  const a = (0.5 + t * 0.4).toFixed(2);       // 0.50-0.90
+  return `rgba(${r},${g},${b}, ${a})`;
+}
+
+/** Convert latitude / longitude to a position on the sphere surface.
+ *  Three-globe convention: prime meridian (lng=0) faces +Z.
+ */
 function latLngToVector3(
   lat: number,
   lng: number,
   radius: number
 ): THREE.Vector3 {
   const phi = (90 - lat) * (Math.PI / 180);
-  const theta = (lng + 180) * (Math.PI / 180);
+  const theta = lng * (Math.PI / 180);
   const r = radius + 1; // slightly above the surface
   return new THREE.Vector3(
-    -r * Math.sin(phi) * Math.cos(theta),
-    r * Math.cos(phi),
-    r * Math.sin(phi) * Math.sin(theta)
+    r * Math.sin(phi) * Math.sin(theta),  // x from sin(theta) - east/west
+    r * Math.cos(phi),                     // y from latitude
+    r * Math.sin(phi) * Math.cos(theta)   // z from cos(theta) - prime meridian faces +Z
   );
 }
 
-/** Build arcsData array for three-globe from our nodes & edges. */
+/** Build arcsData array for three-globe from our auto-generated edges. */
 function buildArcsData() {
   const nodeMap = new Map<string, GlobeNodeData>();
   NODES.forEach((n) => nodeMap.set(n.id, n));
@@ -65,7 +147,7 @@ function buildArcsData() {
     const to = nodeMap.get(edge.to);
     if (!from || !to) return null;
 
-    // Compute arc altitude based on angular distance (longer = higher)
+    // Compute arc altitude based on angular distance (longer arcs fly higher)
     const dLat = Math.abs(from.lat - to.lat);
     const dLng = Math.abs(from.lng - to.lng);
     const angularDist = Math.sqrt(dLat * dLat + dLng * dLng);
@@ -80,7 +162,7 @@ function buildArcsData() {
       order: i + 1,
       status: true,
     };
-  }).filter(Boolean);
+  }).filter((arc): arc is NonNullable<typeof arc> => arc !== null);
 }
 
 const ARCS_DATA = buildArcsData();
@@ -101,20 +183,13 @@ function GlobeSphere() {
         animateIn: true,
       })
         .hexPolygonsData((countries as any).features)
-        .hexPolygonResolution(3)
-        .hexPolygonMargin(0.7)
+        .hexPolygonResolution(4)
+        .hexPolygonMargin(0.15)
+        .hexPolygonAltitude((e: any) => hexAltitudeForFeature(e))
         .showAtmosphere(true)
         .atmosphereColor("#b3c5ff")
         .atmosphereAltitude(0.25)
-        .hexPolygonColor((e: any) => {
-          if (
-            ["KGZ", "KOR", "THA", "RUS", "UZB", "IDN", "KAZ", "MYS"].includes(
-              e.properties.ISO_A3
-            )
-          ) {
-            return "rgba(100,130,200, 0.9)";
-          } else return "rgba(120,140,180, 0.6)";
-        });
+        .hexPolygonColor((e: any) => hexColorForFeature(e));
 
       // Add arcs after globe is ready (like github-globe)
       setTimeout(() => {
@@ -135,10 +210,6 @@ function GlobeSphere() {
       mat.emissive = new THREE.Color(0xd4e0ff);
       mat.emissiveIntensity = 0.1;
       mat.shininess = 0.9;
-
-      // Tilt the globe slightly for visual interest
-      g.rotateY(-Math.PI * (5 / 9));
-      g.rotateZ(-Math.PI / 6);
 
       setGlobe(g);
     });
@@ -278,9 +349,9 @@ function GlobeScene() {
 
   const nodePositions = useMemo(() => {
     const map = new Map<string, THREE.Vector3>();
-    NODES.forEach((n) =>
-      map.set(n.id, latLngToVector3(n.lat, n.lng, GLOBE_RADIUS))
-    );
+    NODES.forEach((n) => {
+      map.set(n.id, latLngToVector3(n.lat, n.lng, GLOBE_RADIUS));
+    });
     return map;
   }, []);
 
@@ -313,19 +384,21 @@ function GlobeScene() {
       {/* Globe with built-in arcs */}
       <GlobeSphere />
 
-      {/* Nodes */}
-      {NODES.map((node) => {
-        const pos = nodePositions.get(node.id);
-        if (!pos) return null;
-        return (
-          <GlobeNode
-            key={node.id}
-            node={node}
-            position={pos}
-            onHoverChange={handleNodeHoverChange}
-          />
-        );
-      })}
+      {/* Chapter and partner nodes */}
+      <group>
+        {NODES.map((node) => {
+          const pos = nodePositions.get(node.id);
+          if (!pos) return null;
+          return (
+            <GlobeNode
+              key={node.id}
+              node={node}
+              position={pos}
+              onHoverChange={handleNodeHoverChange}
+            />
+          );
+        })}
+      </group>
 
       {/* Controls – rotate only, pause auto-rotate when hovering a node */}
       <OrbitControls
