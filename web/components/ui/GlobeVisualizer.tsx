@@ -406,7 +406,7 @@ function GlobeScene() {
         enableZoom={false}
         rotateSpeed={0.5}
         autoRotate={!anyNodeHovered}
-        autoRotateSpeed={0.3}
+        autoRotateSpeed={0.6}
       />
     </>
   );

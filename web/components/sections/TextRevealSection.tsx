@@ -63,7 +63,7 @@ export default function TextRevealSection() {
           ref={(el) => {
             if (el) charsRef.current[i] = el;
           }}
-          style={{ color: COLOR_GREY }}
+          style={{ color: COLOR_GREY, transition: "color 0.15s ease" }}
         >
           {" "}
         </span>
@@ -75,7 +75,7 @@ export default function TextRevealSection() {
         ref={(el) => {
           if (el) charsRef.current[i] = el;
         }}
-        style={{ color: COLOR_GREY }}
+        style={{ color: COLOR_GREY, transition: "color 0.15s ease" }}
       >
         {char}
       </span>

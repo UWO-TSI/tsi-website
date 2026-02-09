@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import GlobeVisualizer from "@/components/ui/GlobeVisualizer";
@@ -15,7 +15,7 @@ if (typeof window !== "undefined") {
 //
 // Layout (no negative margins):
 //   [absolute heading overlay — not in flow]
-//   [50vh spacer — pushes globe to the fold]
+//   [65vh spacer — pushes globe to the fold]
 //   [globe container — in flow, GSAP pins this]
 // ============================================
 
@@ -26,6 +26,7 @@ export default function HomeHero() {
   const topLeftRef = useRef<HTMLDivElement>(null);
   const bottomRightRef = useRef<HTMLDivElement>(null);
   const scrollIndicatorRef = useRef<HTMLDivElement>(null);
+  const [hasInteracted, setHasInteracted] = useState(false);
 
   useEffect(() => {
     if (
@@ -127,25 +128,36 @@ export default function HomeHero() {
         </div>
       </div>
 
-      {/* ── Spacer — pushes globe down so top half sits at the fold ── */}
-      <div style={{ height: "50vh" }} aria-hidden="true" />
+      {/* ── Spacer — pushes globe down so top arc sits near the fold ── */}
+      <div style={{ height: "65vh" }} aria-hidden="true" />
 
-      {/* ── Globe container — in flow, pins at center ── */}
+      {/* ── Globe container — in flow, pins at center.
+           Height = 100vh so when pinned, it fills the viewport exactly. ── */}
       <div
         ref={globeWrapRef}
-        className="relative z-10 mx-auto"
+        className="relative z-10 mx-auto overflow-visible"
         style={{
           width: "min(106vw, 1156px)",
-          height: "min(106vw, 1156px)",
+          height: "100vh",
         }}
       >
-        <GlobeVisualizer className="w-full h-full" />
+        {/* Globe canvas — full size, centered vertically in the viewport-height container */}
+        <div
+          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
+          style={{
+            width: "min(106vw, 1156px)",
+            height: "min(106vw, 1156px)",
+          }}
+          onPointerDown={() => setHasInteracted(true)}
+        >
+          <GlobeVisualizer className="w-full h-full" />
+        </div>
 
         {/* ── Top-left text overlay ── */}
         <div
           ref={topLeftRef}
           className="absolute z-20 pointer-events-none"
-          style={{ top: "12%", left: "3%", maxWidth: "280px", opacity: 0 }}
+          style={{ top: "8%", left: "3%", maxWidth: "280px", opacity: 0 }}
         >
           <p className="text-xl md:text-2xl font-semibold leading-snug text-white">
             Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eius
@@ -156,11 +168,35 @@ export default function HomeHero() {
         <div
           ref={bottomRightRef}
           className="absolute z-20 pointer-events-none text-right"
-          style={{ bottom: "12%", right: "3%", maxWidth: "280px", opacity: 0 }}
+          style={{ bottom: "8%", right: "3%", maxWidth: "280px", opacity: 0 }}
         >
           <p className="text-xl md:text-2xl font-semibold leading-snug text-white">
             Lorem ip dolor sit ame, consectetur adipi elit,sed do eiusm do
           </p>
+        </div>
+
+        {/* ── Rotate prompt — icon above text, centered, mimics ScrollIndicator ── */}
+        <div
+          className="absolute left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-2 pointer-events-none select-none transition-opacity duration-500"
+          style={{ bottom: "12%", opacity: hasInteracted ? 0 : 1 }}
+        >
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#555"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="animate-spin-slow"
+          >
+            <path d="M21 12a9 9 0 1 1-6.22-8.56" />
+            <polyline points="21 3 21 9 15 9" />
+          </svg>
+          <span className="text-xs font-light text-[#3a3a3f]">
+            Drag to rotate
+          </span>
         </div>
       </div>
 
@@ -170,7 +206,7 @@ export default function HomeHero() {
         className="fixed bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 z-30"
       >
         <ScrollIndicator />
-        <span className="text-xs font-light text-[#A1A1AA]">
+        <span className="text-xs font-light text-[#3a3a3f]">
           Scroll to explore
         </span>
       </div>

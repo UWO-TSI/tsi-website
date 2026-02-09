@@ -483,6 +483,14 @@ html.lenis {
   overscroll-behavior: contain;
 }
 
+/* Slow spin for rotate prompt icon */
+@keyframes spin-slow {
+  to { transform: rotate(360deg); }
+}
+.animate-spin-slow {
+  animation: spin-slow 4s linear infinite;
+}
+
 .lenis.lenis-stopped {
   overflow: hidden;
 }
