@@ -1,8 +1,9 @@
 /* eslint-disable react/no-unknown-property */
+/* eslint-disable @typescript-eslint/no-namespace */
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Canvas, extend, useFrame, type ThreeEvent, type Object3DNode } from "@react-three/fiber";
+import { Canvas, extend, useFrame, type ThreeEvent } from "@react-three/fiber";
 import {
   Environment,
   Lightformer,
@@ -20,10 +21,12 @@ import {
 import { MeshLineGeometry, MeshLineMaterial } from "meshline";
 import * as THREE from "three";
 
-declare module "@react-three/fiber" {
-  interface ThreeElements {
-    meshLineGeometry: Object3DNode<MeshLineGeometry, typeof MeshLineGeometry>;
-    meshLineMaterial: Object3DNode<MeshLineMaterial, typeof MeshLineMaterial>;
+declare global {
+  namespace JSX {
+    interface IntrinsicElements {
+      meshLineGeometry: React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement>;
+      meshLineMaterial: React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement> & Record<string, unknown>;
+    }
   }
 }
 
