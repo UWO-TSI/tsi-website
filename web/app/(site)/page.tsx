@@ -1,6 +1,6 @@
 import SmoothScroll from "@/components/SmoothScroll";
 import HomeHero from "@/components/sections/HomeHero";
-import AboutUs from "@/components/sections/AboutUs";
+import TextRevealSection from "@/components/sections/TextRevealSection";
 import ImpactStats from "@/components/sections/ImpactStats";
 import SponsorStrip from "@/components/sections/SponsorStrip";
 import PathwayCards from "@/components/sections/PathwayCards";
@@ -10,7 +10,7 @@ export default function HomePage() {
     <SmoothScroll>
       <main className="min-h-screen">
         <HomeHero />
-        <AboutUs />
+        <TextRevealSection />
         <ImpactStats />
         <SponsorStrip />
         <PathwayCards />
