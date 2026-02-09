@@ -9,7 +9,7 @@ if (typeof window !== "undefined") {
 }
 
 const REVEAL_TEXT =
-  "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.";
+  "Tethos empowers students to deliver pro bono technology solutions for nonprofits, building real-world skills, ethical leadership, and community impact through projects that drives positive social change globally.";
 
 const COLOR_GREY = "#d9d9d9";
 const COLOR_DARK = "#0F0F10";
@@ -21,26 +21,33 @@ export default function TextRevealSection() {
   useEffect(() => {
     if (!sectionRef.current) return;
 
-    const chars = charsRef.current;
+    const chars = charsRef.current.filter(
+      (char): char is HTMLSpanElement => Boolean(char)
+    );
     const totalChars = chars.length;
 
     const ctx = gsap.context(() => {
       ScrollTrigger.create({
         trigger: sectionRef.current,
         start: "top top",
-        end: "+=200%",
+        end: "+=160%",
         pin: true,
         pinSpacing: true,
         anticipatePin: 1,
         onUpdate: (self) => {
-          const filledCount = Math.floor(self.progress * totalChars);
+          const filledCount = Math.min(
+            totalChars,
+            Math.ceil(self.progress * totalChars)
+          );
 
           for (let i = 0; i < totalChars; i++) {
-            if (chars[i]) {
-              chars[i].style.color =
-                i < filledCount ? COLOR_DARK : COLOR_GREY;
-            }
+            chars[i].style.color = i < filledCount ? COLOR_DARK : COLOR_GREY;
           }
+        },
+        onLeave: () => {
+          chars.forEach((char) => {
+            char.style.color = COLOR_DARK;
+          });
         },
       });
     }, sectionRef);
@@ -54,17 +61,11 @@ export default function TextRevealSection() {
   }, []);
 
   // Split every character, rendering spaces as plain text nodes for wrapping
+  charsRef.current = [];
   const charElements = REVEAL_TEXT.split("").map((char, i) => {
     if (char === " ") {
-      // Return a ref'd span with a normal space — allows line break
       return (
-        <span
-          key={i}
-          ref={(el) => {
-            if (el) charsRef.current[i] = el;
-          }}
-          style={{ color: COLOR_GREY, transition: "color 0.15s ease" }}
-        >
+        <span key={i} style={{ color: COLOR_GREY, transition: "color 0.15s ease" }}>
           {" "}
         </span>
       );
