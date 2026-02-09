@@ -2,26 +2,54 @@ import GlassNavbar from "@/components/layout/GlassNavbar";
 
 export default function NavbarTestPage() {
   return (
-    <div className="min-h-[300vh] bg-[#0F0F10]">
+    <div className="min-h-[300vh]">
       <GlassNavbar />
 
-      {/* Spacer so we can test scroll hide/show */}
-      <div className="flex items-center justify-center pt-40">
-        <p className="text-white/40 text-sm">
-          Navbar isolation test — scroll down to test hide, scroll up to test
-          show, hover the glass pill to test dropdown.
-        </p>
-      </div>
-
-      {/* Section markers for scroll testing */}
-      {Array.from({ length: 10 }).map((_, i) => (
-        <div
-          key={i}
-          className="flex h-[30vh] items-center justify-center border-t border-white/5"
-        >
-          <span className="text-white/20 text-xs">Section {i + 1}</span>
+      {/* Dark section */}
+      <section data-navbar-theme="dark" className="bg-[#0F0F10] pt-40 pb-20">
+        <div className="flex items-center justify-center">
+          <p className="text-white/40 text-sm">
+            Dark section — navbar text should be white. Scroll down to see it
+            switch.
+          </p>
         </div>
-      ))}
+      </section>
+
+      {/* Light section */}
+      <section data-navbar-theme="light" className="bg-white py-40">
+        <div className="flex items-center justify-center">
+          <p className="text-[#0F0F10]/40 text-sm">
+            Light section — navbar text should be dark.
+          </p>
+        </div>
+      </section>
+
+      {/* Dark section */}
+      <section data-navbar-theme="dark" className="bg-[#0F0F10] py-40">
+        <div className="flex items-center justify-center">
+          <p className="text-white/40 text-sm">
+            Dark section — navbar text should be white again.
+          </p>
+        </div>
+      </section>
+
+      {/* Light section */}
+      <section data-navbar-theme="light" className="bg-[#F5F5F5] py-40">
+        <div className="flex items-center justify-center">
+          <p className="text-[#0F0F10]/40 text-sm">
+            Another light section — navbar text should be dark.
+          </p>
+        </div>
+      </section>
+
+      {/* Final dark section */}
+      <section data-navbar-theme="dark" className="bg-[#0F0F10] py-60">
+        <div className="flex items-center justify-center">
+          <p className="text-white/40 text-sm">
+            Final dark section — back to white text.
+          </p>
+        </div>
+      </section>
     </div>
   );
 }

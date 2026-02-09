@@ -107,7 +107,7 @@ export default function HomeHero() {
   }, []);
 
   return (
-    <section ref={sectionRef} className="relative bg-[#0F0F10]">
+    <section ref={sectionRef} data-navbar-theme="dark" className="relative bg-[#0F0F10]">
       {/* ── Heading — fixed to viewport, NOT in flow ── */}
       <div
         ref={headingRef}

@@ -91,6 +91,7 @@ export default function ImpactStats() {
   return (
     <section
       ref={sectionRef}
+      data-navbar-theme="dark"
       className="py-32 px-6"
       style={{ background: "var(--color-bg-alt)" }}
     >

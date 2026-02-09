@@ -119,6 +119,54 @@ export default function GlassNavbar({
   /* State ---------------------------------------------------------- */
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  /** "dark" = dark bg (white text), "light" = light bg (dark text) */
+  const [theme, setTheme] = useState<"dark" | "light">("dark");
+
+  /* ----------------------------------------------------------------
+     Background-aware theme detection
+     Watches elements with [data-navbar-theme="light"|"dark"].
+     When a tagged section overlaps the navbar zone (~top 60px),
+     text colours flip automatically.
+     ---------------------------------------------------------------- */
+  useEffect(() => {
+    const sections = document.querySelectorAll<HTMLElement>("[data-navbar-theme]");
+    if (sections.length === 0) return;
+
+    // Map to track which light sections are currently intersecting
+    const visibleLight = new Set<HTMLElement>();
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          const el = entry.target as HTMLElement;
+          const sectionTheme = el.dataset.navbarTheme;
+          if (sectionTheme === "light") {
+            if (entry.isIntersecting) {
+              visibleLight.add(el);
+            } else {
+              visibleLight.delete(el);
+            }
+          }
+        }
+        setTheme(visibleLight.size > 0 ? "light" : "dark");
+      },
+      {
+        // Only trigger when a section enters the top 64px strip (navbar zone)
+        rootMargin: "0px 0px -95% 0px",
+        threshold: 0,
+      }
+    );
+
+    sections.forEach((s) => observer.observe(s));
+    return () => observer.disconnect();
+  }, [pathname]); // re-scan after route change
+
+  /* Derived colour tokens based on active theme */
+  const isDark = theme === "dark";
+  const textPrimary = isDark ? "text-[#F1FFFF]" : "text-[#0F0F10]";
+  const textSecondary = isDark ? "text-[#F1FFFF]/75" : "text-[#0F0F10]/75";
+  const textHover = isDark ? "hover:text-[#F1FFFF]" : "hover:text-[#0F0F10]";
+  const hamburgerBg = isDark ? "bg-white" : "bg-[#0F0F10]";
 
   /* ----------------------------------------------------------------
      Scroll hide / show (reused from existing Navbar)
@@ -257,13 +305,14 @@ export default function GlassNavbar({
     <header
       ref={headerRef}
       className="fixed inset-x-0 top-0 z-50 will-change-transform"
+      data-navbar-active-theme={theme}
     >
       {/* ---- Top row: logo (left) + glass region (right) ---- */}
       <div className="flex items-start justify-between px-6 pt-3 md:px-8">
         {/* Left: logo — outside the glass, vertically aligned with pill center */}
         <Link
           href="/"
-          className="mt-[14px] font-heading text-sm font-semibold tracking-wide text-white transition-opacity hover:opacity-80"
+          className={`mt-[14px] font-heading text-sm font-semibold tracking-wide transition-colors duration-300 hover:opacity-80 ${textPrimary}`}
         >
           TETHOS
         </Link>
@@ -280,7 +329,7 @@ export default function GlassNavbar({
           aria-controls={dropdownId}
         >
           {/* ---- Glass pill (593 x 48, r15) ---- */}
-          <div className="glass-nav-bar relative w-[593px] rounded-[15px]">
+          <div className={`glass-nav-bar relative w-[593px] rounded-[15px] transition-colors duration-300 ${isDark ? "" : "glass-nav-bar--light"}`}>
             <nav
               aria-label="Primary"
               className="relative z-[2] hidden h-[48px] items-center pl-[32px] md:grid"
@@ -290,10 +339,10 @@ export default function GlassNavbar({
                 <Link
                   key={col.heading}
                   href={col.href}
-                  className={`glass-nav-link text-[13px] transition-colors hover:text-[#F1FFFF] ${
+                  className={`glass-nav-link text-[13px] transition-colors duration-300 ${textHover} ${
                     pathname === col.href
-                      ? "text-[#F1FFFF]"
-                      : "text-[#F1FFFF]/75"
+                      ? textPrimary
+                      : textSecondary
                   }`}
                   style={{ fontFamily: '"Test Sogne", sans-serif', fontWeight: 400 }}
                 >
@@ -307,10 +356,10 @@ export default function GlassNavbar({
                 {columns[3] && (
                   <Link
                     href={columns[3].href}
-                    className={`glass-nav-link text-[13px] transition-colors hover:text-[#F1FFFF] ${
+                    className={`glass-nav-link text-[13px] transition-colors duration-300 ${textHover} ${
                       pathname === columns[3].href
-                        ? "text-[#F1FFFF]"
-                        : "text-[#F1FFFF]/75"
+                        ? textPrimary
+                        : textSecondary
                     }`}
                     style={{ fontFamily: '"Test Sogne", sans-serif', fontWeight: 400 }}
                   >
@@ -341,9 +390,17 @@ export default function GlassNavbar({
                 {/* Contact button — 112x32, r12, 15px from pill right edge */}
                 <Link
                   href={ctaHref}
-                  className="ml-auto mr-[15px] flex h-[32px] w-[112px] items-center rounded-[12px] bg-[#F1FFFF] transition-all hover:bg-[#F1FFFF]/90"
+                  className={`ml-auto mr-[15px] flex h-[32px] w-[112px] items-center rounded-[12px] transition-all duration-300 ${
+                    isDark
+                      ? "bg-[#F1FFFF] hover:bg-[#F1FFFF]/90"
+                      : "bg-[#0F0F10] hover:bg-[#0F0F10]/90"
+                  }`}
                 >
-                  <span className="pl-[25px] text-[13px] font-semibold text-[#0F0F10]">
+                  <span
+                    className={`pl-[25px] text-[13px] font-semibold transition-colors duration-300 ${
+                      isDark ? "text-[#0F0F10]" : "text-[#F1FFFF]"
+                    }`}
+                  >
                     {ctaLabel}
                   </span>
                   <Image
@@ -368,17 +425,17 @@ export default function GlassNavbar({
                 aria-controls={mobileMenuId}
               >
                 <span
-                  className={`block w-5 h-[1.5px] bg-white transition-transform duration-300 ${
+                  className={`block w-5 h-[1.5px] ${hamburgerBg} transition-all duration-300 ${
                     mobileOpen ? "translate-y-[6.5px] rotate-45" : ""
                   }`}
                 />
                 <span
-                  className={`block w-5 h-[1.5px] bg-white transition-opacity duration-300 ${
+                  className={`block w-5 h-[1.5px] ${hamburgerBg} transition-all duration-300 ${
                     mobileOpen ? "opacity-0" : ""
                   }`}
                 />
                 <span
-                  className={`block w-5 h-[1.5px] bg-white transition-transform duration-300 ${
+                  className={`block w-5 h-[1.5px] ${hamburgerBg} transition-all duration-300 ${
                     mobileOpen ? "-translate-y-[6.5px] -rotate-45" : ""
                   }`}
                 />
@@ -401,7 +458,9 @@ export default function GlassNavbar({
                     href={item.href}
                     target={item.external ? "_blank" : undefined}
                     rel={item.external ? "noopener noreferrer" : undefined}
-                    className="glass-nav-dropdown-link group flex items-center gap-1.5 text-[13px] text-[#F1FFFF]/60 transition-colors hover:text-[#F1FFFF]"
+                    className={`glass-nav-dropdown-link group flex items-center gap-1.5 text-[13px] transition-colors duration-300 ${
+                      isDark ? "text-[#F1FFFF]/60 hover:text-[#F1FFFF]" : "text-[#0F0F10]/60 hover:text-[#0F0F10]"
+                    }`}
                     style={{ fontFamily: '"Test Sogne", sans-serif', fontWeight: 400 }}
                   >
                     {item.label}
@@ -430,7 +489,9 @@ export default function GlassNavbar({
                     href={item.href}
                     target={item.external ? "_blank" : undefined}
                     rel={item.external ? "noopener noreferrer" : undefined}
-                    className="glass-nav-dropdown-link group flex items-center gap-1.5 text-[13px] text-[#F1FFFF]/60 transition-colors hover:text-[#F1FFFF]"
+                    className={`glass-nav-dropdown-link group flex items-center gap-1.5 text-[13px] transition-colors duration-300 ${
+                      isDark ? "text-[#F1FFFF]/60 hover:text-[#F1FFFF]" : "text-[#0F0F10]/60 hover:text-[#0F0F10]"
+                    }`}
                     style={{ fontFamily: '"Test Sogne", sans-serif', fontWeight: 400 }}
                   >
                     {item.label}

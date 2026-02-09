@@ -59,6 +59,7 @@ export default function SponsorStrip() {
   return (
     <section
       ref={sectionRef}
+      data-navbar-theme="dark"
       className="py-16 overflow-hidden"
       style={{ background: "var(--color-bg-main)" }}
     >

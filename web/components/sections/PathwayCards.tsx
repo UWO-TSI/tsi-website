@@ -441,6 +441,7 @@ export default function PathwayCards() {
   return (
     <section
       ref={sectionRef}
+      data-navbar-theme="dark"
       className="h-screen flex items-center justify-center relative bg-[#0F0F10] overflow-hidden"
     >
       <div className="flex flex-col items-center justify-end h-full px-6 pb-24 w-full">

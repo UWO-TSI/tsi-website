@@ -113,6 +113,7 @@ export default function TextRevealSection() {
   return (
     <section
       ref={sectionRef}
+      data-navbar-theme="light"
       className="h-screen flex items-center px-10 md:px-20 lg:px-28 overflow-hidden"
       style={{ background: "#F5FAFF" }}
     >
