@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Canvas, extend, useFrame, type ThreeEvent } from "@react-three/fiber";
+import { Canvas, extend, useFrame, type ThreeEvent, type Object3DNode } from "@react-three/fiber";
 import {
   Environment,
   Lightformer,
@@ -19,6 +19,13 @@ import {
 } from "@react-three/rapier";
 import { MeshLineGeometry, MeshLineMaterial } from "meshline";
 import * as THREE from "three";
+
+declare module "@react-three/fiber" {
+  interface ThreeElements {
+    meshLineGeometry: Object3DNode<MeshLineGeometry, typeof MeshLineGeometry>;
+    meshLineMaterial: Object3DNode<MeshLineMaterial, typeof MeshLineMaterial>;
+  }
+}
 
 import styles from "./Lanyard.module.css";
 
