@@ -117,13 +117,13 @@ export default function TextRevealSection() {
       className="h-screen flex items-center px-10 md:px-20 lg:px-28 overflow-hidden"
       style={{ background: "#F5FAFF" }}
     >
-      {/* Left: text — takes up ~55% of the width */}
-      <div className="w-[55%] min-w-0 flex-shrink-0">
+      {/* Left: text — responsive width */}
+      <div className="w-full lg:w-[55%] min-w-0 flex-shrink-0">
         <p
           className="leading-[1.15] tracking-tight"
           style={{
             fontFamily: '"Test Sogne", sans-serif',
-            fontSize: "64px",
+            fontSize: "clamp(28px, 5vw, 64px)",
             fontWeight: 400,
             maxWidth: "900px",
             wordBreak: "normal",
@@ -134,8 +134,8 @@ export default function TextRevealSection() {
         </p>
       </div>
 
-      {/* Right: stacked images — fills remaining space */}
-      <div className="hidden lg:flex relative flex-1 h-[700px]">
+      {/* Right: stacked images — responsive sizing, fills remaining space */}
+      <div className="hidden lg:flex relative flex-1 h-[clamp(400px,70vh,700px)]">
         {IMAGES.map((image, idx) => (
           <div
             key={idx}
@@ -146,10 +146,10 @@ export default function TextRevealSection() {
             style={{
               opacity: 0,
               transform: "translateY(40px)",
-              top: `${idx * 220}px`,
+              top: `${idx * 30}%`,
               right: `${idx % 2 === 0 ? 0 : 30}px`,
-              width: "600px",
-              height: "300px",
+              width: "min(600px, 100%)",
+              height: "clamp(180px, 25vh, 300px)",
               borderRadius: "15px",
               zIndex: idx + 1,
             }}
@@ -159,7 +159,7 @@ export default function TextRevealSection() {
               alt={image.alt}
               fill
               className="object-cover"
-              sizes="600px"
+              sizes="(max-width: 1024px) 0px, min(600px, 45vw)"
             />
           </div>
         ))}

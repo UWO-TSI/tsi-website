@@ -100,9 +100,19 @@ export default function HomeHero() {
 
     const refreshTimer = setTimeout(() => ScrollTrigger.refresh(), 150);
 
+    // Refresh ScrollTrigger on resize so pin/layout adapts to new viewport
+    let resizeTimer: ReturnType<typeof setTimeout>;
+    const handleResize = () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => ScrollTrigger.refresh(), 200);
+    };
+    window.addEventListener("resize", handleResize);
+
     return () => {
       ctx.revert();
       clearTimeout(refreshTimer);
+      clearTimeout(resizeTimer);
+      window.removeEventListener("resize", handleResize);
     };
   }, []);
 
@@ -135,18 +145,19 @@ export default function HomeHero() {
            Height = 100vh so when pinned, it fills the viewport exactly. ── */}
       <div
         ref={globeWrapRef}
-        className="relative z-10 mx-auto overflow-visible"
+        className="relative z-10 mx-auto"
         style={{
-          width: "min(106vw, 1156px)",
+          width: "min(120vw, 1400px)",
           height: "100vh",
+          clipPath: "inset(-100% 0 0 0)",
         }}
       >
-        {/* Globe canvas — full size, centered vertically in the viewport-height container */}
+        {/* Globe canvas — sized larger for visual impact, edges clip at container */}
         <div
           className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
           style={{
-            width: "min(106vw, 1156px)",
-            height: "min(106vw, 1156px)",
+            width: "min(130vw, 1500px, 115vh)",
+            height: "min(130vw, 1500px, 115vh)",
           }}
           onPointerDown={() => setHasInteracted(true)}
         >
@@ -156,22 +167,38 @@ export default function HomeHero() {
         {/* ── Top-left text overlay ── */}
         <div
           ref={topLeftRef}
-          className="absolute z-20 pointer-events-none"
-          style={{ top: "8%", left: "3%", maxWidth: "280px", opacity: 0 }}
+          className="absolute z-20 pointer-events-none max-w-[200px] md:max-w-[280px]"
+          style={{
+            top: "8%",
+            left: "clamp(0px, 4vw - 20px, 4%)",
+            opacity: 0,
+          }}
         >
-          <p className="text-xl md:text-2xl font-semibold leading-snug text-white">
-            Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eius
+          <p className="text-lg md:text-xl lg:text-2xl font-semibold leading-snug text-white">
+            Technology has no
+            <br />
+            borders. Neither
+            <br />
+            does impact.
           </p>
         </div>
 
         {/* ── Bottom-right text overlay ── */}
         <div
           ref={bottomRightRef}
-          className="absolute z-20 pointer-events-none text-right"
-          style={{ bottom: "8%", right: "3%", maxWidth: "280px", opacity: 0 }}
+          className="absolute z-20 pointer-events-none max-w-[220px] md:max-w-[300px]"
+          style={{
+            bottom: "8%",
+            right: "clamp(0px, 4vw - 20px, 4%)",
+            opacity: 0,
+          }}
         >
-          <p className="text-xl md:text-2xl font-semibold leading-snug text-white">
-            Lorem ip dolor sit ame, consectetur adipi elit,sed do eiusm do
+          <p className="text-lg md:text-xl lg:text-2xl font-semibold leading-snug text-white text-right">
+            Projects on
+            <br />
+            this map is driven by
+            <br />
+            purpose. Built by students.
           </p>
         </div>
 
@@ -186,7 +213,7 @@ export default function HomeHero() {
             viewBox="0 0 24 24"
             fill="none"
             stroke="#555"
-            strokeWidth="1.5"
+            strokeWidth="2.5"
             strokeLinecap="round"
             strokeLinejoin="round"
             className="animate-spin-slow"
@@ -194,7 +221,7 @@ export default function HomeHero() {
             <path d="M21 12a9 9 0 1 1-6.22-8.56" />
             <polyline points="21 3 21 9 15 9" />
           </svg>
-          <span className="text-xs font-light text-[#3a3a3f]">
+          <span className="text-xs font-semibold text-[#3a3a3f]">
             Drag to rotate
           </span>
         </div>
