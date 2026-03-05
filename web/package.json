@@ -9,11 +9,17 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@ai-sdk/react": "^3.0.118",
+    "@an-sdk/agent": "^0.0.5",
+    "@an-sdk/nextjs": "^0.0.8",
+    "@an-sdk/node": "^0.0.2",
+    "@an-sdk/react": "^0.1.2",
     "@heroicons/react": "^2.2.0",
     "@next/font": "^14.2.15",
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.4.2",
     "@react-three/rapier": "^2.2.0",
+    "ai": "^6.0.116",
     "clsx": "^2.1.1",
     "framer-motion": "^12.23.24",
     "gsap": "^3.13.0",
@@ -23,7 +29,8 @@
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "three": "^0.182.0",
-    "three-globe": "^2.45.0"
+    "three-globe": "^2.45.0",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

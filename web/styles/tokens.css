@@ -22,7 +22,6 @@
   
     /* Accents */
     --color-accent-cyan: #22d3ee;
-    --color-accent-purple: #a855f7;
   
     /* Text */
     --color-text-main: #f1ffff;
@@ -60,8 +59,8 @@
   
     /* ========= TYPOGRAPHY ========= */
   
-    /* NOTE: --font-heading and --font-body are set by Next.js in layout.tsx
-       via next/font/google. Do NOT redefine them here. */
+    /* NOTE: --font-heading is set in globals.css.
+       --font-highlight is set via next/font/google (IBM Plex Mono) in layout.tsx. */
   
     /* Font sizes (desktop base) */
     --font-size-hero: 4rem;        /* 64px */

@@ -1,6 +1,13 @@
 .DS_Store
 *.json
 
+# MCP config (contains API keys)
+.cursor/mcp.json
+
+# Environment files (API keys)
+.env*
+.env.local
+
 # Un-ignore globe data files
 !web/data/globe-nodes.json
 !web/data/globe-countries.json

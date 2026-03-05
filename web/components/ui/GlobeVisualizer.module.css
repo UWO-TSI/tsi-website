@@ -23,7 +23,7 @@
   animation: globeCardFadeIn 0.25s ease-out forwards;
   transform: translateY(-120%);
   color: var(--color-text-main, #f1ffff);
-  font-family: var(--font-body, sans-serif);
+  font-family: "Test Sogne", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   pointer-events: none;
   user-select: none;
 }

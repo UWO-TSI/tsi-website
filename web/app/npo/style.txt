@@ -33,8 +33,8 @@ Semantic Colors
 [Typography]
 
 Primary Typeface
-- Space Grotesk (body copy)
-- Griffis (accent / headings – text appears as “MILKER - LOREM IPSUM DOLOR SIT AMET, CONSECTETUR ADIPISCING” in the mock)
+- Test Söhne (body copy + headings)
+- IBM Plex Mono (code / highlights)
 
 Display / Headings Scale
 - H0: 64px, weight 600, line-height 1.05

@@ -22,30 +22,21 @@
   font-display: swap;
 }
 
-@font-face {
-  font-family: "Milker";
-  src: url("/font/milker/Milker.otf") format("opentype");
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-
 /* Remove conflicting default vars and use tokens.css instead */
 :root {
   /* These come from tokens.css - no need to redefine */
-  --font-heading: var(--font-body);
+  --font-heading: "Test Sogne", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-highlight: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Monaco,
     Consolas, "Liberation Mono", "Courier New", monospace;
 
   /* Default document font */
-  font-family: "Test Sogne", var(--font-body);
+  font-family: "Test Sogne", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 body {
-  background: var(--color-bg-main); /* Use token instead of hardcode */
+  background: var(--color-bg-main);
   color: var(--color-text-main);
-  /* Body copy */
-  font-family: "Test Sogne", var(--font-body);
+  font-family: "Test Sogne", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-weight: 400;
   cursor: none !important;
 }
@@ -69,7 +60,7 @@ textarea {
 /* Utility class for headings */
 .font-heading {
   /* Headings */
-  font-family: var(--font-heading, var(--font-body));
+  font-family: var(--font-heading);
 }
 
 /* Native heading elements (in case font-heading class isn't applied) */
@@ -79,7 +70,7 @@ h3,
 h4,
 h5,
 h6 {
-  font-family: var(--font-heading, var(--font-body));
+  font-family: var(--font-heading);
 }
 
 /* Highlights / special text */
