@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { EASE_ENTER, DURATION_SECTION } from "@/lib/motion";
+import { EASE_SMOOTH, DURATION_CINEMATIC } from "@/lib/motion";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
@@ -28,12 +28,12 @@ export default function DocumentaryEmbed({
     const ctx = gsap.context(() => {
       gsap.fromTo(
         contentRef.current,
-        { opacity: 0, y: 30 },
+        { opacity: 0, scale: 0.92 },
         {
           opacity: 1,
-          y: 0,
-          duration: DURATION_SECTION,
-          ease: EASE_ENTER,
+          scale: 1,
+          duration: DURATION_CINEMATIC,
+          ease: EASE_SMOOTH,
           scrollTrigger: {
             trigger: contentRef.current,
             start: "top 80%",
@@ -53,6 +53,12 @@ export default function DocumentaryEmbed({
       style={{ background: "var(--color-bg-alt)" }}
     >
       <div ref={contentRef} className="max-w-4xl mx-auto" style={{ opacity: 0 }}>
+        <p
+          className="text-center mb-3 text-xs tracking-[0.3em]"
+          style={{ fontFamily: "IBM Plex Mono, monospace", color: "var(--color-text-subtle)" }}
+        >
+          The Work
+        </p>
         <h2 className="font-heading text-3xl md:text-4xl font-semibold text-center mb-4">
           {title}
         </h2>
@@ -75,29 +81,15 @@ export default function DocumentaryEmbed({
             />
           ) : (
             <div
-              className="absolute inset-0 flex items-center justify-center"
+              className="absolute inset-0 flex items-center justify-center px-8"
               style={{ background: "var(--color-surface)" }}
             >
-              <div className="text-center">
-                <div
-                  className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
-                  style={{ background: "var(--color-brand-blue)" }}
-                >
-                  <svg
-                    className="w-6 h-6 text-white ml-1"
-                    fill="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path d="M8 5v14l11-7z" />
-                  </svg>
-                </div>
-                <p
-                  className="text-sm"
-                  style={{ color: "var(--color-text-muted)" }}
-                >
-                  Documentary coming soon
-                </p>
-              </div>
+              <p
+                className="font-heading text-2xl text-center leading-snug"
+                style={{ color: "var(--color-text-soft)" }}
+              >
+                Coming 2026 — A short documentary on what it means to build for social good.
+              </p>
             </div>
           )}
         </div>
