@@ -94,9 +94,9 @@ export default function SignupPage() {
       return;
     }
 
-    if (!authData.user) {
-      // Supabase returns null user (no error) if email already exists
-      setError("An account with this email may already exist. Try logging in.");
+    // Supabase returns a user with empty identities (no error) for duplicate emails
+    if (!authData.user || authData.user.identities?.length === 0) {
+      setError("Account already exists. Log in instead.");
       setLoading(false);
       return;
     }
@@ -191,7 +191,13 @@ export default function SignupPage() {
             </div>
           ))}
 
-          {bootComplete && (
+          {error && (
+            <div className="text-red-400">
+              <span className="text-red-500 mr-2">ERR:</span>{error}
+            </div>
+          )}
+
+          {bootComplete && !error && (
             <div className="mt-1 text-[var(--color-text-muted)]">
               <span className="animate-pulse">█</span>
             </div>
@@ -285,11 +291,6 @@ export default function SignupPage() {
               </p>
             </div>
 
-            {error && (
-              <div className="font-mono text-xs text-red-400 bg-red-400/5 border border-red-400/20 rounded-md px-3 py-2">
-                <span className="text-red-500">err:</span> {error}
-              </div>
-            )}
 
             <button
               type="submit"
