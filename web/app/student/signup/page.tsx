@@ -94,24 +94,29 @@ export default function SignupPage() {
       return;
     }
 
-    if (authData.user) {
-      // Increment invite code uses if used
-      if (inviteCode) {
-        await supabase.rpc("increment_invite_uses", {
-          code_value: inviteCode.toUpperCase().trim(),
-        });
-      }
-
-      // If email confirmation is required, show confirmation message
-      if (!authData.session) {
-        setEmailSent(true);
-        setLoading(false);
-        return;
-      }
-
-      router.push("/student/election");
-      router.refresh();
+    if (!authData.user) {
+      // Supabase returns null user (no error) if email already exists
+      setError("An account with this email may already exist. Try logging in.");
+      setLoading(false);
+      return;
     }
+
+    // Increment invite code uses if used
+    if (inviteCode) {
+      await supabase.rpc("increment_invite_uses", {
+        code_value: inviteCode.toUpperCase().trim(),
+      });
+    }
+
+    // If email confirmation is required, show confirmation message
+    if (!authData.session) {
+      setEmailSent(true);
+      setLoading(false);
+      return;
+    }
+
+    router.push("/student/election");
+    router.refresh();
   }
 
   if (emailSent) {
