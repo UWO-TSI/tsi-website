@@ -55,6 +55,7 @@ export interface Profile {
   // Onboarding
   onboarding_completed: boolean;
   onboarding_step: number;
+  has_voted: boolean;
 
   // Profile fields
   year: string | null;
@@ -158,6 +159,7 @@ export function canAccessFeature(
     announcements_create: [1, 2],
     member_management: [1, 2],
     analytics: [1, 2],
+    election_admin: [1, 2],
   };
 
   return permissions[feature]?.includes(tier) ?? false;

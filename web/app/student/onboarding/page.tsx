@@ -1,78 +1,201 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 
-const SUBCLASS_OPTIONS: Record<string, string[]> = {
-  ENGINEER: ["Frontend", "Backend", "Fullstack", "Mobile", "DevOps", "Data"],
-  OPERATIVE: ["Events", "Outreach", "Content", "Design", "Analytics"],
-  COMMANDER: ["Technical Lead", "Product Lead", "Client Relations"],
-  WARDEN: ["Events", "Outreach", "Content", "Design", "Analytics"],
-  ORACLE: ["Strategy", "Mentorship", "Operations"],
-  STRATEGIST: ["Technical", "Product", "Process"],
-  ARCHITECT: ["Everything"],
-  INITIATE: ["Explorer", "Builder", "Designer", "Analyst"],
-  SCOUT: ["Events", "Outreach", "Community"],
-};
+// ─── ASCII Art ───────────────────────────────────────────────
+const ASCII_WELCOME = `
+ ╔══════════════════════════════════════════╗
+ ║  ████████╗███████╗████████╗██╗  ██╗     ║
+ ║  ╚══██╔══╝██╔════╝╚══██╔══╝██║  ██║     ║
+ ║     ██║   █████╗     ██║   ███████║     ║
+ ║     ██║   ██╔══╝     ██║   ██╔══██║     ║
+ ║     ██║   ███████╗   ██║   ██║  ██║     ║
+ ║     ╚═╝   ╚══════╝   ╚═╝   ╚═╝  ╚═╝     ║
+ ╠══════════════════════════════════════════╣
+ ║   INDUCTION PROTOCOL v3.2.1             ║
+ ║   STATUS: AWAITING NEW AGENT            ║
+ ╚══════════════════════════════════════════╝`;
 
-const BOOT_LINES = [
-  "TETHOS INDUCTION PROTOCOL v3.2.1",
-  "Scanning biometrics...",
-  "Clearance: GRANTED",
-  "Loading agent profile module...",
-  "",
-  ">> INITIATING NEW AGENT",
-  ">> Complete all steps to unlock the system",
+const ASCII_CHARACTER = [
+  "     ╭━━━╮     ",
+  "     ┃ ◉ ◉┃     ",
+  "     ┃  ▽ ┃     ",
+  "     ╰┳━┳╯     ",
+  "    ╭━╋━╋━╮    ",
+  "    ┃ ┃ ┃ ┃    ",
+  "    ╰━╋━╋━╯    ",
+  "      ┃ ┃      ",
+  "     ╭╯ ╰╮     ",
+  "     ╰━━━╯     ",
 ];
 
-interface ProfileData {
-  year: string;
-  program: string;
-  hometown: string;
-  birthday: string;
-  phone: string;
-  preferred_email: string;
-  uwo_email: string;
-  gdrive_email: string;
-  github_username: string;
-  instagram: string;
-  linkedin: string;
-  discord_tag: string;
-  favourite_music: string;
-  dream_retirement: string;
-  spirit_animal: string;
-  fun_fact: string;
+const ASCII_COMPLETE = `
+ ╔══════════════════════════════════════════╗
+ ║         ★ AGENT INITIALIZED ★           ║
+ ╠══════════════════════════════════════════╣
+ ║                                          ║
+ ║   ┌─────────────────────────────────┐   ║
+ ║   │  ⚡ +500 XP EARNED              │   ║
+ ║   │  ₮  +500 TETHOS COINS           │   ║
+ ║   │  🏆 RANK: INITIATE → SCOUT      │   ║
+ ║   │  📊 LEVEL UP! → LV.2            │   ║
+ ║   └─────────────────────────────────┘   ║
+ ║                                          ║
+ ║   Your journey begins now.              ║
+ ╚══════════════════════════════════════════╝`;
+
+const QUEST_SECTIONS = [
+  { label: "// CHAPTER 1: IDENTITY", startIndex: 0, endIndex: 2 },
+  { label: "// CHAPTER 2: CONTACT", startIndex: 2, endIndex: 8 },
+  { label: "// CHAPTER 3: SOCIALS", startIndex: 8, endIndex: 12 },
+  { label: "// CHAPTER 4: PERSONALITY", startIndex: 12, endIndex: 16 },
+];
+
+// ─── Question Definitions ────────────────────────────────────
+type QuestionType = "text" | "select" | "buttons" | "date" | "email";
+
+interface Question {
+  key: string;
+  label: string;
+  prompt: string; // RPG-flavored terminal prompt
+  placeholder?: string;
+  required?: boolean;
+  type?: QuestionType;
+  options?: string[];
 }
 
+const QUESTIONS: Question[] = [
+  {
+    key: "year",
+    label: "Year",
+    prompt: "How many cycles have you trained, agent?",
+    required: true,
+    type: "buttons",
+    options: ["1st Year", "2nd Year", "3rd Year", "4th Year", "5th Year+"],
+  },
+  {
+    key: "program",
+    label: "Program",
+    prompt: "What discipline were you forged in?",
+    required: true,
+    type: "select",
+    options: [
+      "Computer Science",
+      "Software Engineering",
+      "Data Science",
+      "Computer Engineering",
+      "Electrical Engineering",
+      "Mechanical Engineering",
+      "Medical Sciences",
+      "Business (Ivey)",
+      "Business (BMOS)",
+      "Economics",
+      "Mathematics",
+      "Physics",
+      "Biology",
+      "Chemistry",
+      "Psychology",
+      "Political Science",
+      "Media & Information Studies",
+      "Arts & Humanities",
+      "Music",
+      "Other",
+    ],
+  },
+  { key: "hometown", label: "Origin", prompt: "Where does your story begin?", placeholder: "Your hometown" },
+  { key: "birthday", label: "Birth Date", prompt: "When were you brought online?", type: "date" },
+  { key: "phone", label: "Comms", prompt: "Secure communication channel?", placeholder: "+1 (555) 000-0000" },
+  { key: "uwo_email", label: "UWO Email", prompt: "Your institutional signal address?", placeholder: "you@uwo.ca", type: "email" },
+  { key: "preferred_email", label: "Email", prompt: "Preferred hailing frequency?", placeholder: "you@email.com", type: "email" },
+  { key: "gdrive_email", label: "Drive", prompt: "Google Drive access node?", placeholder: "Personal Google account", type: "email" },
+  { key: "github_username", label: "GitHub", prompt: "Your codex archive handle?", placeholder: "@username" },
+  { key: "discord_tag", label: "Discord", prompt: "Discord relay tag?", placeholder: "user#1234" },
+  { key: "instagram", label: "Instagram", prompt: "Visual log transmitter?", placeholder: "@handle" },
+  { key: "linkedin", label: "LinkedIn", prompt: "Professional dossier link?", placeholder: "Profile URL" },
+  { key: "favourite_music", label: "Music", prompt: "What frequencies resonate with your core?", placeholder: "Genre, artist, or song" },
+  { key: "dream_retirement", label: "Retirement", prompt: "Where will you rest when the mission ends?", placeholder: "e.g., Mars" },
+  { key: "spirit_animal", label: "Spirit", prompt: "What creature embodies your essence?", placeholder: "e.g., Capybara" },
+  { key: "fun_fact", label: "Fun Fact", prompt: "Deploy one classified detail about yourself.", placeholder: "Something people wouldn't guess" },
+];
+
+const TOTAL_STEPS = QUESTIONS.length + 2;
+
+// ─── Helpers ─────────────────────────────────────────────────
+function getCurrentChapter(qIndex: number): string {
+  for (const section of QUEST_SECTIONS) {
+    if (qIndex >= section.startIndex && qIndex < section.endIndex) {
+      return section.label;
+    }
+  }
+  return "";
+}
+
+function getXpForQuestion(qIndex: number): number {
+  const q = QUESTIONS[qIndex];
+  return q?.required ? 25 : 15;
+}
+
+// ─── Component ───────────────────────────────────────────────
 export default function OnboardingPage() {
   const [step, setStep] = useState(0);
   const [bootLines, setBootLines] = useState<string[]>([]);
   const [bootComplete, setBootComplete] = useState(false);
-  const [subclass, setSubclass] = useState("");
-  const [userClass, setUserClass] = useState("INITIATE");
   const [loading, setLoading] = useState(false);
-  const [profileData, setProfileData] = useState<ProfileData>({
-    year: "",
-    program: "",
-    hometown: "",
-    birthday: "",
-    phone: "",
-    preferred_email: "",
-    uwo_email: "",
-    gdrive_email: "",
-    github_username: "",
-    instagram: "",
-    linkedin: "",
-    discord_tag: "",
-    favourite_music: "",
-    dream_retirement: "",
-    spirit_animal: "",
-    fun_fact: "",
-  });
+  const [error, setError] = useState("");
+  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [currentValue, setCurrentValue] = useState("");
+  const [displayName, setDisplayName] = useState("AGENT");
+  const [showXpGain, setShowXpGain] = useState<number | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const logRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
-  // Load existing progress
+  // Running XP counter for visual feedback
+  const answeredCount = Object.values(answers).filter(Boolean).length;
+  const accumulatedXp = Object.keys(answers).reduce((sum, key) => {
+    if (!answers[key]) return sum;
+    const idx = QUESTIONS.findIndex((q) => q.key === key);
+    return sum + (idx >= 0 ? getXpForQuestion(idx) : 0);
+  }, 0);
+
+  // ─── Terminal Log ────────────────────────────────────────
+  const terminalLines: { text: string; color: "muted" | "yellow" | "cyan" | "green" | "blue" | "white" }[] = [];
+
+  // Boot sequence
+  terminalLines.push({ text: "$ tethos --init-agent", color: "cyan" });
+  terminalLines.push({ text: "TETHOS INDUCTION PROTOCOL v3.2.1", color: "muted" });
+  terminalLines.push({ text: "Scanning biometrics... GRANTED", color: "muted" });
+  terminalLines.push({ text: "", color: "muted" });
+
+  // Answered questions grouped by chapter
+  let lastChapter = "";
+  for (let i = 0; i < QUESTIONS.length; i++) {
+    if (i >= step - 1) break;
+    const chapter = getCurrentChapter(i);
+    if (chapter !== lastChapter) {
+      terminalLines.push({ text: "", color: "muted" });
+      terminalLines.push({ text: chapter, color: "yellow" });
+      lastChapter = chapter;
+    }
+    const q = QUESTIONS[i];
+    const val = answers[q.key];
+    if (val) {
+      terminalLines.push({ text: `  ${q.label}: ${val}`, color: "green" });
+    } else {
+      terminalLines.push({ text: `  ${q.label}: [skipped]`, color: "muted" });
+    }
+  }
+
+  // Auto-scroll terminal
+  useEffect(() => {
+    if (logRef.current) {
+      logRef.current.scrollTop = logRef.current.scrollHeight;
+    }
+  }, [step, answers]);
+
+  // ─── Load Progress ───────────────────────────────────────
   useEffect(() => {
     async function loadProgress() {
       const supabase = createClient();
@@ -84,548 +207,542 @@ export default function OnboardingPage() {
         return;
       }
 
-      const { data: profile } = await supabase
+      setDisplayName(user.user_metadata?.display_name || user.email?.split("@")[0] || "AGENT");
+
+      let { data: profile } = await supabase
         .from("profiles")
         .select("*")
         .eq("id", user.id)
         .single();
+
+      if (!profile) {
+        const { data: created } = await supabase
+          .from("profiles")
+          .upsert({
+            id: user.id,
+            email: user.email || "",
+            display_name: user.user_metadata?.display_name || user.email || "Agent",
+          })
+          .select("*")
+          .single();
+        profile = created;
+      }
 
       if (profile) {
         if (profile.onboarding_completed) {
           router.push("/student/dashboard");
           return;
         }
-        setStep(profile.onboarding_step || 0);
-        setUserClass(profile.class || "INITIATE");
-        if (profile.subclass) setSubclass(profile.subclass);
+        const savedStep = profile.onboarding_step || 0;
+        setStep(savedStep);
 
-        // Restore saved profile fields
-        setProfileData((prev) => ({
-          ...prev,
-          year: profile.year || "",
-          program: profile.program || "",
-          hometown: profile.hometown || "",
-          birthday: profile.birthday || "",
-          phone: profile.phone || "",
-          preferred_email: profile.preferred_email || "",
-          uwo_email: profile.uwo_email || "",
-          gdrive_email: profile.gdrive_email || "",
-          github_username: profile.github_username || "",
-          instagram: profile.instagram || "",
-          linkedin: profile.linkedin || "",
-          discord_tag: profile.discord_tag || "",
-          favourite_music: profile.favourite_music || "",
-          dream_retirement: profile.dream_retirement || "",
-          spirit_animal: profile.spirit_animal || "",
-          fun_fact: profile.fun_fact || "",
-        }));
+        const restored: Record<string, string> = {};
+        for (const q of QUESTIONS) {
+          if (profile[q.key]) restored[q.key] = profile[q.key];
+        }
+        setAnswers(restored);
+
+        const qIndex = savedStep - 1;
+        if (qIndex >= 0 && qIndex < QUESTIONS.length) {
+          const key = QUESTIONS[qIndex].key;
+          if (profile[key]) setCurrentValue(profile[key]);
+        }
       }
     }
     loadProgress();
   }, [router]);
 
-  // Boot animation
+  // ─── Boot Animation ──────────────────────────────────────
   useEffect(() => {
-    let i = 0;
-    const interval = setInterval(() => {
-      if (i < BOOT_LINES.length) {
-        setBootLines((prev) => [...prev, BOOT_LINES[i]]);
-        i++;
-      } else {
-        clearInterval(interval);
-        setBootComplete(true);
-      }
-    }, 100);
-    return () => clearInterval(interval);
+    const lines = [
+      "$ tethos --init-agent",
+      "TETHOS INDUCTION PROTOCOL v3.2.1",
+      "Scanning biometrics...",
+      "Clearance: GRANTED",
+      "Loading agent profile module...",
+      ">> AWAITING INPUT",
+    ];
+    let cancelled = false;
+    const timers: NodeJS.Timeout[] = [];
+    lines.forEach((line, idx) => {
+      timers.push(
+        setTimeout(() => {
+          if (cancelled) return;
+          setBootLines((prev) => [...prev, line]);
+          if (idx === lines.length - 1) {
+            setTimeout(() => !cancelled && setBootComplete(true), 120);
+          }
+        }, idx * 120)
+      );
+    });
+    return () => {
+      cancelled = true;
+      timers.forEach(clearTimeout);
+    };
   }, []);
 
+  // Auto-focus inputs
+  useEffect(() => {
+    if (!bootComplete || step < 1 || step > QUESTIONS.length) return;
+    const q = QUESTIONS[step - 1];
+    const t = q.type || "text";
+    if (t === "text" || t === "email" || t === "date") {
+      setTimeout(() => inputRef.current?.focus(), 50);
+    }
+  }, [step, bootComplete]);
+
+  // ─── Save / Navigate ────────────────────────────────────
   const saveProgress = useCallback(
     async (nextStep: number, extraData?: Record<string, unknown>) => {
       setLoading(true);
+      setError("");
       const supabase = createClient();
       const {
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) return;
 
-      await supabase
-        .from("profiles")
-        .update({
-          onboarding_step: nextStep,
-          ...extraData,
-        })
-        .eq("id", user.id);
+      await supabase.from("profiles").upsert({
+        id: user.id,
+        email: user.email || "",
+        display_name: user.user_metadata?.display_name || user.email || "Agent",
+        onboarding_step: nextStep,
+        ...extraData,
+      });
 
       setStep(nextStep);
+      setCurrentValue("");
       setLoading(false);
     },
     []
   );
 
+  function goToStep(target: number) {
+    if (target < 0) return;
+    if (target >= 1 && target <= QUESTIONS.length) {
+      const key = QUESTIONS[target - 1].key;
+      setCurrentValue(answers[key] || "");
+    }
+    setStep(target);
+    saveProgress(target);
+  }
+
+  function submitAnswer(key: string, value: string) {
+    const nextStep = step + 1;
+    const newAnswers = { ...answers, [key]: value };
+    setAnswers(newAnswers);
+
+    // XP gain flash
+    const idx = QUESTIONS.findIndex((q) => q.key === key);
+    if (idx >= 0 && value) {
+      const xp = getXpForQuestion(idx);
+      setShowXpGain(xp);
+      setTimeout(() => setShowXpGain(null), 1200);
+    }
+
+    if (nextStep - 1 < QUESTIONS.length) {
+      const nextKey = QUESTIONS[nextStep - 1].key;
+      setCurrentValue(newAnswers[nextKey] || "");
+    }
+
+    saveProgress(nextStep, { [key]: value || null });
+  }
+
+  function handleNext() {
+    const qIndex = step - 1;
+    if (qIndex < 0 || qIndex >= QUESTIONS.length) return;
+    const question = QUESTIONS[qIndex];
+    const value = currentValue.trim();
+    if (question.required && !value) return;
+    submitAnswer(question.key, value);
+  }
+
+  function handleButtonSelect(value: string) {
+    const qIndex = step - 1;
+    if (qIndex < 0 || qIndex >= QUESTIONS.length) return;
+    setCurrentValue(value);
+    submitAnswer(QUESTIONS[qIndex].key, value);
+  }
+
+  function handleSelectChange(value: string) {
+    setCurrentValue(value);
+    if (!value) return;
+    const qIndex = step - 1;
+    if (qIndex < 0 || qIndex >= QUESTIONS.length) return;
+    submitAnswer(QUESTIONS[qIndex].key, value);
+  }
+
+  function handleSkip() {
+    const nextStep = step + 1;
+    if (nextStep - 1 < QUESTIONS.length) {
+      const nextKey = QUESTIONS[nextStep - 1].key;
+      setCurrentValue(answers[nextKey] || "");
+    }
+    saveProgress(nextStep);
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      handleNext();
+    }
+  }
+
   async function completeOnboarding() {
     setLoading(true);
+    setError("");
     const supabase = createClient();
     const {
       data: { user },
     } = await supabase.auth.getUser();
     if (!user) return;
 
-    // Award onboarding XP and TC
-    await supabase
-      .from("profiles")
-      .update({
-        onboarding_completed: true,
-        onboarding_step: 4,
-        xp: 500,
-        tethos_coins: 500,
-        level: 2,
-      })
-      .eq("id", user.id);
-
-    // Log TC transaction
-    await supabase.from("tc_transactions").insert({
-      user_id: user.id,
-      amount: 500,
-      balance_after: 500,
-      type: "earn_quest",
-      description: "Onboarding completion bonus",
+    const { error: upsertErr } = await supabase.from("profiles").upsert({
+      id: user.id,
+      email: user.email || "",
+      display_name: user.user_metadata?.display_name || user.email || "Agent",
+      onboarding_completed: true,
+      onboarding_step: TOTAL_STEPS,
+      xp: 500,
+      tethos_coins: 500,
+      level: 2,
     });
 
-    // Log XP transaction
-    await supabase.from("xp_transactions").insert({
-      user_id: user.id,
-      amount: 500,
-      type: "earn_quest",
-      description: "Onboarding completion bonus",
-    });
+    if (upsertErr) {
+      setError("Could not complete onboarding: " + upsertErr.message);
+      setLoading(false);
+      return;
+    }
 
-    // Create welcome notification
-    await supabase.from("notifications").insert({
-      user_id: user.id,
-      type: "achievement",
-      title: "Welcome to Tethos!",
-      body: "You earned 500 XP and 500 TC for completing onboarding.",
-    });
+    try {
+      await Promise.allSettled([
+        supabase.from("tc_transactions").insert({
+          user_id: user.id, amount: 500, balance_after: 500,
+          type: "earn_quest", description: "Onboarding completion bonus",
+        }),
+        supabase.from("xp_transactions").insert({
+          user_id: user.id, amount: 500,
+          type: "earn_quest", description: "Onboarding completion bonus",
+        }),
+        supabase.from("notifications").insert({
+          user_id: user.id, type: "achievement",
+          title: "Welcome to Tethos!",
+          body: "You earned 500 XP and 500 TC for completing onboarding.",
+        }),
+      ]);
+    } catch {
+      // Non-critical
+    }
 
-    router.push("/student/dashboard");
-    router.refresh();
+    window.location.href = "/student/election";
   }
 
-  function updateField(field: keyof ProfileData, value: string) {
-    setProfileData((prev) => ({ ...prev, [field]: value }));
-  }
+  // ─── Derived State ───────────────────────────────────────
+  const questionIndex = step - 1;
+  const currentQuestion =
+    questionIndex >= 0 && questionIndex < QUESTIONS.length ? QUESTIONS[questionIndex] : null;
+  const isCompletionStep = step === QUESTIONS.length + 1;
+  const progressFraction = step / TOTAL_STEPS;
+  const qType = currentQuestion?.type || "text";
+  const chapter = currentQuestion ? getCurrentChapter(questionIndex) : "";
 
   const inputClass =
-    "w-full bg-[var(--color-bg-main)] border border-[var(--glass-border)] rounded-md px-3 py-2 font-mono text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)]/50 focus:outline-none focus:border-[var(--color-brand-blue)] focus:shadow-[0_0_8px_rgba(0,47,167,0.2)] transition-all";
+    "w-full bg-[var(--color-bg-main)] border border-[var(--glass-border)] rounded-md px-3 py-2.5 font-mono text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)]/50 focus:outline-none focus:border-[var(--color-brand-blue)] focus:shadow-[0_0_8px_rgba(0,47,167,0.2)] transition-all";
+
+  const colorMap: Record<string, string> = {
+    muted: "text-[var(--color-text-muted)]",
+    yellow: "text-[var(--color-brand-yellow)]",
+    cyan: "text-[var(--color-accent-cyan)]",
+    blue: "text-[var(--color-brand-blue)]",
+    green: "text-green-400",
+    white: "text-[var(--color-text-primary)]",
+  };
 
   return (
-    <div className="min-h-screen bg-[var(--color-bg-main)] flex items-center justify-center px-4 py-12">
-      <div className="w-full max-w-lg">
-        {/* Terminal Header */}
-        <div className="bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-lg p-5 mb-6 font-mono text-sm">
-          <div className="flex items-center gap-2 mb-3 pb-2 border-b border-[var(--glass-border)]">
-            <span className="w-3 h-3 rounded-full bg-red-500/80" />
-            <span className="w-3 h-3 rounded-full bg-yellow-500/80" />
-            <span className="w-3 h-3 rounded-full bg-green-500/80" />
-            <span className="ml-2 text-[var(--color-text-muted)] text-xs">
-              tethos://onboarding
-            </span>
-          </div>
-          {bootLines.map((line, i) => (
-            <div
-              key={i}
-              className={`${
-                line.startsWith(">>")
-                  ? "text-[var(--color-brand-yellow)]"
-                  : "text-[var(--color-text-muted)]"
-              } ${line === "" ? "h-2" : ""}`}
-            >
-              {line && !line.startsWith(">>") && (
-                <span className="text-[var(--color-accent-cyan)] mr-2">$</span>
-              )}
-              {line}
+    <div className="min-h-screen bg-[var(--color-bg-main)] flex items-center justify-center px-4 py-8">
+      <div className="w-full max-w-xl">
+
+        {/* ─── Top HUD ─────────────────────────────── */}
+        <div className="flex items-center justify-between mb-4 px-1">
+          <div className="flex items-center gap-3">
+            {/* Mini Character Avatar */}
+            <div className="w-10 h-10 rounded border border-[var(--color-brand-blue)]/30 bg-[var(--color-bg-alt)] flex items-center justify-center font-mono text-[0.5rem] leading-none text-[var(--color-accent-cyan)] overflow-hidden">
+              <pre className="text-[3px] leading-[3.5px]">{ASCII_CHARACTER.join("\n")}</pre>
             </div>
-          ))}
+            <div>
+              <p className="text-xs font-mono font-bold text-[var(--color-text-primary)] uppercase">
+                {displayName}
+              </p>
+              <p className="text-[0.6rem] font-mono text-[var(--color-text-muted)]">
+                LV.1 INITIATE
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-4 text-[0.65rem] font-mono">
+            <div className="flex items-center gap-1">
+              <span className="text-[var(--color-accent-cyan)]">XP</span>
+              <span className="text-[var(--color-text-primary)]">{accumulatedXp}</span>
+              {showXpGain && (
+                <span className="text-green-400 animate-pulse">+{showXpGain}</span>
+              )}
+            </div>
+            <div className="flex items-center gap-1">
+              <span className="text-[var(--color-brand-yellow)]">{"\u20AE"}</span>
+              <span className="text-[var(--color-text-primary)]">0</span>
+            </div>
+            <div className="text-[var(--color-text-muted)]">
+              {answeredCount}/{QUESTIONS.length}
+            </div>
+          </div>
         </div>
 
-        {/* Progress Bar */}
-        <div className="flex items-center gap-2 mb-6">
-          {[0, 1, 2, 3].map((s) => (
+        {/* ─── XP Progress Bar ─────────────────────── */}
+        <div className="flex items-center gap-2 mb-5 px-1">
+          <div className="flex-1 h-1.5 rounded-full bg-white/[0.05] overflow-hidden border border-white/[0.03]">
             <div
-              key={s}
-              className={`flex-1 h-1 rounded-full transition-all ${
-                s <= step
-                  ? "bg-[var(--color-brand-blue)]"
-                  : "bg-white/[0.05]"
-              }`}
+              className="h-full rounded-full transition-all duration-500 bg-gradient-to-r from-[var(--color-brand-blue)] to-[var(--color-accent-cyan)]"
+              style={{ width: `${progressFraction * 100}%` }}
             />
-          ))}
-          <span className="text-xs font-mono text-[var(--color-text-muted)] ml-2">
-            {step + 1}/4
+          </div>
+          <span className="text-[0.6rem] font-mono text-[var(--color-text-muted)] shrink-0">
+            {Math.round(progressFraction * 100)}%
           </span>
         </div>
 
-        {/* Steps */}
+        {/* ─── Terminal Log ─────────────────────────── */}
+        <div className="bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-lg p-4 mb-5 font-mono text-xs">
+          <div className="flex items-center gap-2 mb-2 pb-2 border-b border-[var(--glass-border)]">
+            <span className="w-2.5 h-2.5 rounded-full bg-red-500/80" />
+            <span className="w-2.5 h-2.5 rounded-full bg-yellow-500/80" />
+            <span className="w-2.5 h-2.5 rounded-full bg-green-500/80" />
+            <span className="ml-auto text-[var(--color-text-muted)] text-[0.6rem]">
+              tethos://onboarding
+            </span>
+          </div>
+          <div ref={logRef} className="max-h-32 overflow-y-auto scrollbar-subtle space-y-px">
+            {step === 0 ? (
+              // Show boot animation lines before starting
+              bootLines.map((line, i) => (
+                <div
+                  key={i}
+                  className={
+                    line.startsWith("$")
+                      ? "text-[var(--color-accent-cyan)]"
+                      : line.startsWith(">>")
+                        ? "text-[var(--color-brand-yellow)]"
+                        : "text-[var(--color-text-muted)]"
+                  }
+                >
+                  {line}
+                </div>
+              ))
+            ) : (
+              terminalLines.map((line, i) => (
+                <div
+                  key={i}
+                  className={`${colorMap[line.color]} ${line.text === "" ? "h-1.5" : ""}`}
+                >
+                  {line.text}
+                </div>
+              ))
+            )}
+            {bootComplete && step === 0 && (
+              <span className="text-[var(--color-text-muted)] animate-pulse">█</span>
+            )}
+          </div>
+        </div>
+
+        {/* ─── Step Content ─────────────────────────── */}
         <div
           className={`transition-opacity duration-300 ${
             bootComplete ? "opacity-100" : "opacity-0 pointer-events-none"
           }`}
         >
-          {/* Step 0: Welcome */}
+          {/* ── Welcome ── */}
           {step === 0 && (
             <div className="bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-lg p-6">
-              <h2 className="text-xl font-heading font-bold text-[var(--color-text-primary)] mb-3">
-                AGENT INDUCTION
-              </h2>
-              <p className="text-sm text-[var(--color-text-secondary)] mb-2">
-                Welcome to the Tethos system. You have been selected to join an
-                elite collective of student developers, designers, and operators.
-              </p>
-              <p className="text-sm text-[var(--color-text-secondary)] mb-4">
-                Before you can access the full system, we need to initialize
-                your agent profile. This data helps your team know who you are.
-              </p>
-              <div className="bg-[var(--color-brand-blue)]/5 border border-[var(--color-brand-blue)]/20 rounded-md p-3 mb-6">
-                <p className="text-xs font-mono text-[var(--color-brand-blue)]">
-                  REWARD: Complete all steps to earn 500 XP + 500 TC
+              {/* ASCII Art Banner */}
+              <pre className="text-[0.45rem] sm:text-[0.55rem] leading-tight font-mono text-[var(--color-brand-blue)] mb-5 overflow-x-auto whitespace-pre">
+                {ASCII_WELCOME}
+              </pre>
+
+              <div className="border-t border-[var(--glass-border)] pt-4">
+                <p className="text-sm text-[var(--color-text-secondary)] mb-2">
+                  You have been selected to join an elite collective of student
+                  developers, designers, and operators.
                 </p>
-              </div>
-              <button
-                onClick={() => saveProgress(1)}
-                disabled={loading}
-                className="w-full bg-[var(--color-brand-blue)] hover:bg-[var(--color-brand-blue)]/80 text-white font-mono text-sm py-3 rounded-md transition-all hover:shadow-[0_0_20px_rgba(0,47,167,0.4)] disabled:opacity-50 uppercase tracking-wider"
-              >
-                {loading ? "Loading..." : "Begin Induction →"}
-              </button>
-            </div>
-          )}
+                <p className="text-sm text-[var(--color-text-secondary)] mb-5">
+                  Complete the induction to initialize your agent profile and
+                  unlock the system.
+                </p>
 
-          {/* Step 1: Profile Info */}
-          {step === 1 && (
-            <div className="bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-lg p-6">
-              <h2 className="text-lg font-heading font-bold text-[var(--color-text-primary)] mb-1">
-                AGENT PROFILE
-              </h2>
-              <p className="text-xs font-mono text-[var(--color-text-muted)] mb-5">
-                Initialize your identity in the system
-              </p>
-
-              <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-2">
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-[0.65rem] font-mono text-[var(--color-text-muted)] mb-1 uppercase">
-                      Year
-                    </label>
-                    <input
-                      className={inputClass}
-                      value={profileData.year}
-                      onChange={(e) => updateField("year", e.target.value)}
-                      placeholder="e.g., 2nd Year"
-                    />
+                <div className="bg-[var(--color-brand-yellow)]/5 border border-[var(--color-brand-yellow)]/20 rounded-md p-3 mb-5 font-mono text-xs">
+                  <div className="flex items-center gap-2 text-[var(--color-brand-yellow)] mb-1">
+                    <span>{"["} QUEST REWARD {"]"}</span>
                   </div>
-                  <div>
-                    <label className="block text-[0.65rem] font-mono text-[var(--color-text-muted)] mb-1 uppercase">
-                      Program
-                    </label>
-                    <input
-                      className={inputClass}
-                      value={profileData.program}
-                      onChange={(e) => updateField("program", e.target.value)}
-                      placeholder="e.g., Computer Science"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-[0.65rem] font-mono text-[var(--color-text-muted)] mb-1 uppercase">
-                      Hometown
-                    </label>
-                    <input
-                      className={inputClass}
-                      value={profileData.hometown}
-                      onChange={(e) => updateField("hometown", e.target.value)}
-                      placeholder="Your hometown"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[0.65rem] font-mono text-[var(--color-text-muted)] mb-1 uppercase">
-                      Birthday
-                    </label>
-                    <input
-                      type="date"
-                      className={inputClass}
-                      value={profileData.birthday}
-                      onChange={(e) => updateField("birthday", e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-[0.65rem] font-mono text-[var(--color-text-muted)] mb-1 uppercase">
-                    Phone
-                  </label>
-                  <input
-                    className={inputClass}
-                    value={profileData.phone}
-                    onChange={(e) => updateField("phone", e.target.value)}
-                    placeholder="+1 (555) 000-0000"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-[0.65rem] font-mono text-[var(--color-text-muted)] mb-1 uppercase">
-                      Preferred Email
-                    </label>
-                    <input
-                      type="email"
-                      className={inputClass}
-                      value={profileData.preferred_email}
-                      onChange={(e) =>
-                        updateField("preferred_email", e.target.value)
-                      }
-                      placeholder="you@email.com"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[0.65rem] font-mono text-[var(--color-text-muted)] mb-1 uppercase">
-                      UWO Email
-                    </label>
-                    <input
-                      type="email"
-                      className={inputClass}
-                      value={profileData.uwo_email}
-                      onChange={(e) => updateField("uwo_email", e.target.value)}
-                      placeholder="you@uwo.ca"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-[0.65rem] font-mono text-[var(--color-text-muted)] mb-1 uppercase">
-                    Google Drive Email
-                  </label>
-                  <input
-                    type="email"
-                    className={inputClass}
-                    value={profileData.gdrive_email}
-                    onChange={(e) =>
-                      updateField("gdrive_email", e.target.value)
-                    }
-                    placeholder="Personal Google account"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-[0.65rem] font-mono text-[var(--color-text-muted)] mb-1 uppercase">
-                      GitHub Username
-                    </label>
-                    <input
-                      className={inputClass}
-                      value={profileData.github_username}
-                      onChange={(e) =>
-                        updateField("github_username", e.target.value)
-                      }
-                      placeholder="@username"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[0.65rem] font-mono text-[var(--color-text-muted)] mb-1 uppercase">
-                      Discord Tag
-                    </label>
-                    <input
-                      className={inputClass}
-                      value={profileData.discord_tag}
-                      onChange={(e) =>
-                        updateField("discord_tag", e.target.value)
-                      }
-                      placeholder="user#1234"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-[0.65rem] font-mono text-[var(--color-text-muted)] mb-1 uppercase">
-                      Instagram
-                    </label>
-                    <input
-                      className={inputClass}
-                      value={profileData.instagram}
-                      onChange={(e) => updateField("instagram", e.target.value)}
-                      placeholder="@handle"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[0.65rem] font-mono text-[var(--color-text-muted)] mb-1 uppercase">
-                      LinkedIn
-                    </label>
-                    <input
-                      className={inputClass}
-                      value={profileData.linkedin}
-                      onChange={(e) => updateField("linkedin", e.target.value)}
-                      placeholder="Profile URL"
-                    />
-                  </div>
-                </div>
-
-                <div className="pt-2 border-t border-[var(--glass-border)]">
-                  <p className="text-[0.6rem] font-mono text-[var(--color-brand-yellow)] mb-3 uppercase">
-                    // Fun fields — show your personality
+                  <p className="text-[var(--color-text-muted)]">
+                    +500 XP &middot; +500 {"\u20AE"} &middot; Rank Up to LV.2
                   </p>
                 </div>
 
-                <div>
-                  <label className="block text-[0.65rem] font-mono text-[var(--color-text-muted)] mb-1 uppercase">
-                    Favourite Music
-                  </label>
-                  <input
-                    className={inputClass}
-                    value={profileData.favourite_music}
-                    onChange={(e) =>
-                      updateField("favourite_music", e.target.value)
-                    }
-                    placeholder="Genre, artist, or song"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-[0.65rem] font-mono text-[var(--color-text-muted)] mb-1 uppercase">
-                      Dream Retirement Location
-                    </label>
-                    <input
-                      className={inputClass}
-                      value={profileData.dream_retirement}
-                      onChange={(e) =>
-                        updateField("dream_retirement", e.target.value)
-                      }
-                      placeholder="e.g., Mars"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[0.65rem] font-mono text-[var(--color-text-muted)] mb-1 uppercase">
-                      Spirit Animal
-                    </label>
-                    <input
-                      className={inputClass}
-                      value={profileData.spirit_animal}
-                      onChange={(e) =>
-                        updateField("spirit_animal", e.target.value)
-                      }
-                      placeholder="e.g., Capybara"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-[0.65rem] font-mono text-[var(--color-text-muted)] mb-1 uppercase">
-                    Fun Fact
-                  </label>
-                  <input
-                    className={inputClass}
-                    value={profileData.fun_fact}
-                    onChange={(e) => updateField("fun_fact", e.target.value)}
-                    placeholder="Something people wouldn't guess about you"
-                  />
-                </div>
+                <button
+                  onClick={() => saveProgress(1)}
+                  disabled={loading}
+                  className="w-full bg-[var(--color-brand-blue)] hover:bg-[var(--color-brand-blue)]/80 text-white font-mono text-sm py-3 rounded-md transition-all hover:shadow-[0_0_20px_rgba(0,47,167,0.4)] disabled:opacity-50 uppercase tracking-wider"
+                >
+                  {loading ? "Initializing..." : "[ ACCEPT QUEST ]"}
+                </button>
               </div>
-
-              <button
-                onClick={() =>
-                  saveProgress(2, {
-                    ...profileData,
-                  })
-                }
-                disabled={loading || !profileData.year || !profileData.program}
-                className="w-full mt-5 bg-[var(--color-brand-blue)] hover:bg-[var(--color-brand-blue)]/80 text-white font-mono text-sm py-3 rounded-md transition-all hover:shadow-[0_0_20px_rgba(0,47,167,0.4)] disabled:opacity-50 uppercase tracking-wider"
-              >
-                {loading ? "Saving..." : "Save Profile Data →"}
-              </button>
             </div>
           )}
 
-          {/* Step 2: Subclass Selection */}
-          {step === 2 && (
+          {/* ── Question Steps ── */}
+          {currentQuestion && (
             <div className="bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-lg p-6">
-              <h2 className="text-lg font-heading font-bold text-[var(--color-text-primary)] mb-1">
-                SELECT YOUR SUBCLASS
-              </h2>
-              <p className="text-xs font-mono text-[var(--color-text-muted)] mb-2">
-                Your class:{" "}
-                <span className="text-[var(--color-brand-blue)]">
-                  {userClass}
+              {/* Chapter + Question Counter */}
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-[0.6rem] font-mono text-[var(--color-brand-yellow)] uppercase tracking-wider">
+                  {chapter}
                 </span>
-              </p>
-              <p className="text-sm text-[var(--color-text-secondary)] mb-5">
-                Choose your specialization. This defines your focus within your
-                team.
-              </p>
+                <span className="text-[0.6rem] font-mono text-[var(--color-text-muted)]">
+                  [{questionIndex + 1}/{QUESTIONS.length}]
+                  {currentQuestion.required && (
+                    <span className="text-red-400 ml-1">*</span>
+                  )}
+                </span>
+              </div>
 
-              <div className="grid grid-cols-2 gap-2 mb-6">
-                {(SUBCLASS_OPTIONS[userClass] ?? ["General"]).map((sc) => (
+              {/* RPG Prompt */}
+              <div className="mb-5">
+                <p className="text-[0.65rem] font-mono text-[var(--color-accent-cyan)] mb-1">
+                  {">"} {currentQuestion.prompt}
+                </p>
+                <h2 className="text-lg font-heading font-bold text-[var(--color-text-primary)]">
+                  {currentQuestion.label}
+                </h2>
+              </div>
+
+              {/* XP Preview */}
+              <div className="flex items-center gap-2 mb-4 text-[0.6rem] font-mono">
+                <span className="text-[var(--color-text-muted)]">Reward:</span>
+                <span className="text-[var(--color-accent-cyan)]">+{getXpForQuestion(questionIndex)} XP</span>
+              </div>
+
+              {/* Button Selection */}
+              {qType === "buttons" && currentQuestion.options && (
+                <div className="grid grid-cols-2 gap-2">
+                  {currentQuestion.options.map((opt) => (
+                    <button
+                      key={opt}
+                      onClick={() => handleButtonSelect(opt)}
+                      disabled={loading}
+                      className={`px-4 py-3 rounded-md border font-mono text-sm transition-all ${
+                        currentValue === opt
+                          ? "border-[var(--color-brand-blue)] bg-[var(--color-brand-blue)]/10 text-[var(--color-brand-blue)] shadow-[0_0_8px_rgba(0,47,167,0.2)]"
+                          : "border-[var(--glass-border)] text-[var(--color-text-muted)] hover:border-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
+                      }`}
+                    >
+                      {opt}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Dropdown Select */}
+              {qType === "select" && currentQuestion.options && (
+                <select
+                  className={inputClass + " appearance-none"}
+                  value={currentValue}
+                  onChange={(e) => handleSelectChange(e.target.value)}
+                >
+                  <option value="">Choose...</option>
+                  {currentQuestion.options.map((opt) => (
+                    <option key={opt} value={opt}>{opt}</option>
+                  ))}
+                </select>
+              )}
+
+              {/* Text / Email / Date */}
+              {(qType === "text" || qType === "email" || qType === "date") && (
+                <input
+                  ref={inputRef}
+                  type={qType}
+                  className={inputClass}
+                  value={currentValue}
+                  onChange={(e) => setCurrentValue(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder={currentQuestion.placeholder}
+                  autoFocus
+                />
+              )}
+
+              {/* Navigation */}
+              <div className="flex items-center gap-3 mt-5">
+                {step > 1 && (
                   <button
-                    key={sc}
-                    onClick={() => setSubclass(sc)}
-                    className={`px-4 py-3 rounded-md border font-mono text-sm transition-all ${
-                      subclass === sc
-                        ? "border-[var(--color-brand-blue)] bg-[var(--color-brand-blue)]/10 text-[var(--color-brand-blue)] shadow-[0_0_8px_rgba(0,47,167,0.2)]"
-                        : "border-[var(--glass-border)] text-[var(--color-text-muted)] hover:border-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
-                    }`}
+                    onClick={() => goToStep(step - 1)}
+                    disabled={loading}
+                    className="px-4 py-2.5 font-mono text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors border border-[var(--glass-border)] rounded-md hover:border-[var(--color-text-muted)]"
                   >
-                    {sc}
+                    {"\u2190"} BACK
                   </button>
-                ))}
+                )}
+                {qType !== "buttons" && qType !== "select" && (
+                  <button
+                    onClick={handleNext}
+                    disabled={loading || (currentQuestion.required && !currentValue.trim())}
+                    className="flex-1 bg-[var(--color-brand-blue)] hover:bg-[var(--color-brand-blue)]/80 text-white font-mono text-xs py-2.5 rounded-md transition-all hover:shadow-[0_0_20px_rgba(0,47,167,0.4)] disabled:opacity-50 uppercase tracking-wider"
+                  >
+                    {loading ? "Saving..." : "NEXT \u2192"}
+                  </button>
+                )}
+                {!currentQuestion.required && qType !== "buttons" && (
+                  <button
+                    onClick={handleSkip}
+                    disabled={loading}
+                    className="px-4 py-2.5 font-mono text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
+                  >
+                    SKIP
+                  </button>
+                )}
               </div>
-
-              <button
-                onClick={() => saveProgress(3, { subclass })}
-                disabled={loading || !subclass}
-                className="w-full bg-[var(--color-brand-blue)] hover:bg-[var(--color-brand-blue)]/80 text-white font-mono text-sm py-3 rounded-md transition-all hover:shadow-[0_0_20px_rgba(0,47,167,0.4)] disabled:opacity-50 uppercase tracking-wider"
-              >
-                {loading ? "Saving..." : "Lock In Subclass →"}
-              </button>
             </div>
           )}
 
-          {/* Step 3: Completion */}
-          {step === 3 && (
-            <div className="bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-lg p-6 text-center">
-              <div className="text-4xl mb-4">⚡</div>
-              <h2 className="text-xl font-heading font-bold text-[var(--color-text-primary)] mb-2">
-                AGENT INITIALIZED
-              </h2>
-              <p className="text-sm text-[var(--color-text-secondary)] mb-2">
-                Welcome to Tethos,{" "}
-                <span className="text-[var(--color-brand-blue)] font-mono">
-                  {userClass}
-                </span>
-                .
-              </p>
-              <p className="text-sm text-[var(--color-text-secondary)] mb-6">
-                Your profile is live. The system is yours to explore.
-              </p>
+          {/* ── Completion ── */}
+          {isCompletionStep && (
+            <div className="bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-lg p-6">
+              <pre className="text-[0.45rem] sm:text-[0.5rem] leading-tight font-mono text-[var(--color-brand-yellow)] mb-5 overflow-x-auto whitespace-pre">
+                {ASCII_COMPLETE}
+              </pre>
 
-              <div className="bg-[var(--color-brand-yellow)]/5 border border-[var(--color-brand-yellow)]/20 rounded-md p-4 mb-6">
-                <p className="text-sm font-mono text-[var(--color-brand-yellow)]">
-                  +500 XP earned
+              <div className="border-t border-[var(--glass-border)] pt-4 text-center">
+                <p className="text-sm text-[var(--color-text-secondary)] mb-5">
+                  Welcome to Tethos, <span className="text-[var(--color-brand-blue)] font-mono">{displayName}</span>.
+                  Your profile is initialized and the system is ready.
                 </p>
-                <p className="text-sm font-mono text-[var(--color-brand-yellow)]">
-                  +500 ₮ Tethos Coins earned
-                </p>
+
+                {error && (
+                  <p className="text-xs font-mono text-red-400 mb-4">{error}</p>
+                )}
+
+                <button
+                  onClick={completeOnboarding}
+                  disabled={loading}
+                  className="w-full bg-[var(--color-brand-blue)] hover:bg-[var(--color-brand-blue)]/80 text-white font-mono text-sm py-3 rounded-md transition-all hover:shadow-[0_0_20px_rgba(0,47,167,0.4)] disabled:opacity-50 uppercase tracking-wider"
+                >
+                  {loading ? "[ LAUNCHING... ]" : "[ ENTER THE SYSTEM ]"}
+                </button>
               </div>
-
-              <button
-                onClick={completeOnboarding}
-                disabled={loading}
-                className="w-full bg-[var(--color-brand-blue)] hover:bg-[var(--color-brand-blue)]/80 text-white font-mono text-sm py-3 rounded-md transition-all hover:shadow-[0_0_20px_rgba(0,47,167,0.4)] disabled:opacity-50 uppercase tracking-wider"
-              >
-                {loading ? "Launching..." : "Enter the System →"}
-              </button>
             </div>
           )}
+        </div>
+
+        {/* ─── Bottom Flavor ───────────────────────── */}
+        <div className="mt-4 text-center">
+          <p className="text-[0.55rem] font-mono text-[var(--color-text-muted)]/40">
+            TSI-SYS v3.2.1 &middot; TETHOS INDUCTION MODULE &middot; CLASSIFIED
+          </p>
         </div>
       </div>
     </div>

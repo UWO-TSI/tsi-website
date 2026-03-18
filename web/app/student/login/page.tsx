@@ -49,8 +49,9 @@ export default function LoginPage() {
     let i = 0;
     const interval = setInterval(() => {
       if (i < lines.length) {
-        setBootLines((prev) => [...prev, lines[i]]);
+        const line = lines[i];
         i++;
+        setBootLines((prev) => [...prev, line]);
       } else {
         clearInterval(interval);
         setBootComplete(true);
@@ -87,7 +88,7 @@ export default function LoginPage() {
       return;
     }
 
-    router.push("/student/dashboard");
+    router.push("/student/election");
     router.refresh();
   }
 

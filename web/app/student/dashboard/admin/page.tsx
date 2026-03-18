@@ -11,6 +11,7 @@ import {
   ShoppingBag,
   BarChart3,
   Shield,
+  Vote,
 } from "lucide-react";
 
 interface Stats {
@@ -64,6 +65,13 @@ const adminSections = [
     icon: <BarChart3 size={20} />,
     href: "/student/dashboard/admin/analytics",
     color: "#34d399",
+  },
+  {
+    title: "Election",
+    description: "View presidential election results",
+    icon: <Vote size={20} />,
+    href: "/student/dashboard/admin/election",
+    color: "var(--color-accent-cyan)",
   },
 ];
 

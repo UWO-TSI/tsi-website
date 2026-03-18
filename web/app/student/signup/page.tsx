@@ -29,8 +29,9 @@ export default function SignupPage() {
     let i = 0;
     const interval = setInterval(() => {
       if (i < lines.length) {
-        setBootLines((prev) => [...prev, lines[i]]);
+        const line = lines[i];
         i++;
+        setBootLines((prev) => [...prev, line]);
       } else {
         clearInterval(interval);
         setBootComplete(true);
@@ -93,23 +94,7 @@ export default function SignupPage() {
     }
 
     if (authData.user) {
-      // Create profile
-      const { error: profileError } = await supabase.from("profiles").insert({
-        id: authData.user.id,
-        email,
-        display_name: displayName,
-        tier: 4,
-        position: "general",
-        class: "INITIATE",
-        is_active: inviteCode ? true : false, // Pending approval if no invite code
-      });
-
-      if (profileError) {
-        setError("Account created but profile setup failed. Contact admin.");
-        setLoading(false);
-        return;
-      }
-
+      // Profile is auto-created by database trigger on auth.users INSERT.
       // Increment invite code uses if used
       if (inviteCode) {
         await supabase.rpc("increment_invite_uses", {
@@ -117,7 +102,7 @@ export default function SignupPage() {
         });
       }
 
-      router.push("/student/onboarding");
+      router.push("/student/election");
       router.refresh();
     }
   }
