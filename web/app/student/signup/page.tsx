@@ -13,6 +13,7 @@ export default function SignupPage() {
   const [inviteCode, setInviteCode] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
   const [bootLines, setBootLines] = useState<string[]>([]);
   const [bootComplete, setBootComplete] = useState(false);
   const router = useRouter();
@@ -94,7 +95,6 @@ export default function SignupPage() {
     }
 
     if (authData.user) {
-      // Profile is auto-created by database trigger on auth.users INSERT.
       // Increment invite code uses if used
       if (inviteCode) {
         await supabase.rpc("increment_invite_uses", {
@@ -102,9 +102,56 @@ export default function SignupPage() {
         });
       }
 
+      // If email confirmation is required, show confirmation message
+      if (!authData.session) {
+        setEmailSent(true);
+        setLoading(false);
+        return;
+      }
+
       router.push("/student/election");
       router.refresh();
     }
+  }
+
+  if (emailSent) {
+    return (
+      <div className="min-h-screen bg-[var(--color-bg-main)] flex items-center justify-center px-4">
+        <div className="w-full max-w-md text-center">
+          <div
+            className="inline-flex items-center justify-center w-16 h-16 rounded-full mb-6"
+            style={{
+              background: "rgba(34, 211, 238, 0.1)",
+              border: "1px solid rgba(34, 211, 238, 0.3)",
+              boxShadow: "0 0 40px rgba(34, 211, 238, 0.15)",
+            }}
+          >
+            <span className="text-2xl text-[var(--color-accent-cyan)]">✉</span>
+          </div>
+          <pre className="font-mono text-[0.55rem] text-[var(--color-accent-cyan)] mb-4 leading-tight">
+{`╔═══════════════════════════════╗
+║   VERIFICATION REQUIRED       ║
+║   CHECK YOUR EMAIL INBOX      ║
+╚═══════════════════════════════╝`}
+          </pre>
+          <p className="font-mono text-sm text-[var(--color-text-primary)] mb-2">
+            Confirmation link sent to
+          </p>
+          <p className="font-mono text-sm text-[var(--color-accent-cyan)] mb-4">
+            {email}
+          </p>
+          <p className="font-mono text-xs text-[var(--color-text-muted)] mb-6">
+            Click the link in your email to activate your account, then return here to log in.
+          </p>
+          <Link
+            href="/student/login"
+            className="inline-block bg-[var(--color-brand-blue)] hover:bg-[var(--color-brand-blue)]/80 text-white font-mono text-sm py-3 px-8 rounded-md transition-all hover:shadow-[0_0_20px_rgba(0,47,167,0.4)] uppercase tracking-wider"
+          >
+            Go to Login
+          </Link>
+        </div>
+      </div>
+    );
   }
 
   return (
