@@ -58,65 +58,74 @@ export default function SignupPage() {
 
     setLoading(true);
 
-    const supabase = createClient();
+    try {
+      const supabase = createClient();
 
-    // Validate invite code if provided
-    if (inviteCode) {
-      const { data: code } = await supabase
-        .from("invite_codes")
-        .select("id, is_active")
-        .eq("code", inviteCode.toUpperCase().trim())
-        .eq("is_active", true)
-        .single();
+      // Validate invite code if provided
+      if (inviteCode) {
+        const { data: code } = await supabase
+          .from("invite_codes")
+          .select("id, is_active")
+          .eq("code", inviteCode.toUpperCase().trim())
+          .eq("is_active", true)
+          .single();
 
-      if (!code) {
-        setError("Invalid or expired invite code.");
+        if (!code) {
+          setError("Invalid or expired invite code.");
+          setLoading(false);
+          return;
+        }
+      }
+
+      // Create account
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            display_name: displayName,
+            invite_code: inviteCode || null,
+          },
+        },
+      });
+
+      if (authError) {
+        setError(authError.message);
         setLoading(false);
         return;
       }
-    }
 
-    // Create account
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          display_name: displayName,
-          invite_code: inviteCode || null,
-        },
-      },
-    });
+      // Supabase returns a user with empty identities (no error) for duplicate emails
+      if (!authData.user || authData.user.identities?.length === 0) {
+        setError("Account already exists. Log in instead.");
+        setLoading(false);
+        return;
+      }
 
-    if (authError) {
-      setError(authError.message);
+      // Increment invite code uses if used
+      if (inviteCode) {
+        try {
+          await supabase.rpc("increment_invite_uses", {
+            code_value: inviteCode.toUpperCase().trim(),
+          });
+        } catch {
+          // Non-critical — don't block signup
+        }
+      }
+
+      // If email confirmation is required, show confirmation message
+      if (!authData.session) {
+        setEmailSent(true);
+        setLoading(false);
+        return;
+      }
+
+      router.push("/student/election");
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong.");
       setLoading(false);
-      return;
     }
-
-    // Supabase returns a user with empty identities (no error) for duplicate emails
-    if (!authData.user || authData.user.identities?.length === 0) {
-      setError("Account already exists. Log in instead.");
-      setLoading(false);
-      return;
-    }
-
-    // Increment invite code uses if used
-    if (inviteCode) {
-      await supabase.rpc("increment_invite_uses", {
-        code_value: inviteCode.toUpperCase().trim(),
-      });
-    }
-
-    // If email confirmation is required, show confirmation message
-    if (!authData.session) {
-      setEmailSent(true);
-      setLoading(false);
-      return;
-    }
-
-    router.push("/student/election");
-    router.refresh();
   }
 
   if (emailSent) {
