@@ -148,11 +148,23 @@ export default function ElectionPage() {
     } = await supabase.auth.getUser();
     if (!user) return;
 
-    // Save full name to profile
-    await supabase
+    // Ensure profile exists (upsert), then save full name
+    const { error: upsertErr } = await supabase
       .from("profiles")
-      .update({ display_name: fullName.trim() })
-      .eq("id", user.id);
+      .upsert(
+        {
+          id: user.id,
+          email: user.email ?? "",
+          display_name: fullName.trim(),
+        },
+        { onConflict: "id" }
+      );
+
+    if (upsertErr) {
+      setError("Profile error: " + upsertErr.message);
+      setSubmitting(false);
+      return;
+    }
 
     const { error: insertErr } = await supabase
       .from("election_votes")
