@@ -97,18 +97,7 @@ export async function updateSession(request: NextRequest) {
       return NextResponse.redirect(url);
     }
 
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("has_voted")
-      .eq("id", user.id)
-      .single();
-
-    // Already voted → under construction
-    if (profile?.has_voted === true) {
-      const url = request.nextUrl.clone();
-      url.pathname = "/under-construction";
-      return NextResponse.redirect(url);
-    }
+    // Allow through — election page handles voted vs not-voted state
   }
 
   // Already logged in — redirect away from login/signup
@@ -123,11 +112,7 @@ export async function updateSession(request: NextRequest) {
       .single();
 
     const url = request.nextUrl.clone();
-    if (profile?.has_voted === true) {
-      url.pathname = "/under-construction";
-    } else {
-      url.pathname = "/student/election";
-    }
+    url.pathname = "/student/election";
     return NextResponse.redirect(url);
   }
 

@@ -103,11 +103,6 @@ export default function ElectionPage() {
         .eq("user_id", user.id)
         .single();
 
-      if (existingVote) {
-        window.location.href = "/under-construction";
-        return;
-      }
-
       // Pre-fill name from profile if available
       const { data: profile } = await supabase
         .from("profiles")
@@ -117,6 +112,12 @@ export default function ElectionPage() {
 
       if (profile?.display_name) {
         setFullName(profile.display_name);
+      }
+
+      if (existingVote) {
+        setVoteSuccess(true);
+        setLoading(false);
+        return;
       }
 
       setLoading(false);
