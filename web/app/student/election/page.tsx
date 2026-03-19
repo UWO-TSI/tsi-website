@@ -186,9 +186,6 @@ export default function ElectionPage() {
       .eq("id", user.id);
 
     setVoteSuccess(true);
-    setTimeout(() => {
-      window.location.href = "/under-construction";
-    }, 2000);
   }
 
   if (loading) {
@@ -230,7 +227,7 @@ export default function ElectionPage() {
             Your vote has been cast, {fullName.split(" ")[0]}.
           </p>
           <p className="font-mono text-xs text-[var(--color-text-muted)]">
-            The dashboard is under construction. Redirecting...
+            Thank you for participating in the election.
           </p>
         </div>
       </div>
