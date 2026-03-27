@@ -1,15 +1,24 @@
-# CLAUDE.md — uwotsi Project Bible
+# CLAUDE.md — Tethos (TSI) Project Bible
 
 > **Read-only for all agents. Only Management edits this file.**
 
 ## Project Overview
 
-**uwotsi** is a Next.js web application featuring:
-- Multiple stakeholder pages: Companies, Students, Sponsors, NPOs
-- 3D globe/visual experiences (React Three Fiber, Three.js, Drei)
-- Smooth animations (Framer Motion, GSAP, Lenis scroll)
-- AI-powered agent chat (@an-sdk, ai SDK)
-- Tailwind CSS v4 for styling
+**Tethos (TSI)** — "Technology That Moves People Forward"
+A Next.js 16 multi-audience marketing website deployed on Vercel.
+
+**Audiences:** NPOs, Companies, Sponsors, Students (each has a dedicated page)
+**Repo:** UWO-TSI/tsi-website (web/ folder)
+**Deploy:** Vercel auto-deploy on main push
+
+**Key features:**
+- 5 audience-specific pages with custom navbars and layouts
+- 3D interactive globe (React Three Fiber, three-globe) on homepage
+- Glassmorphism design system with dark theme
+- Sophisticated animations (GSAP ScrollTrigger, Framer Motion, Lenis)
+- ASCII art aesthetic (loading screen, dividers, reveals)
+- AI-powered agent chat (@an-sdk)
+- Custom cursor, smooth scroll, parallax effects
 
 ## Tech Stack
 
@@ -86,11 +95,36 @@ cd web && npm run build  # Production build
 cd web && npm run lint   # Run linter
 ```
 
+## Current State (as of 2026-03-27)
+
+**~75% production ready**
+
+| Area | Status |
+|------|--------|
+| Homepage | Complete — globe hero, text reveal, stats, pathway cards |
+| Student page | Complete — hero, benefits, timeline, CTA |
+| Sponsor page | Mostly done — placeholder logos + gallery images |
+| NPO page | Mostly done — some placeholder data |
+| Company page | Mostly done — some placeholder data |
+| Navigation | Complete — GlassNavbar + audience navbars |
+| Loading/cursor | Complete — ASCII dissolve + custom cursor |
+| Design system | Documented in DESIGN_SYSTEM.md (43KB) |
+| API | Minimal — only /api/an-token exists |
+| Forms/DB/Auth | Not started |
+
+**Known issues:**
+- Footer links to /contact, /about, /projects — routes don't exist (404)
+- Sponsor logos are placeholder text
+- Sponsor gallery is gray placeholder divs
+- No form handling, no database, no CMS, no analytics
+
 ## Current Sprint Priority
 
-> Updated by Management. Check AGENT_LOG.md for latest.
+> Updated by Management. Check AGENT_LOG.md for latest tasks.
 
-1. Audit current state of all pages
-2. Define design system tokens
-3. Ensure all pages build without errors
-4. Improve landing page experience
+1. QA: Get clean build/lint baseline report
+2. UXUI: Audit design consistency + spec missing pages
+3. Frontend: Fix build errors + create stub pages for broken links
+4. Backend: Document API + spec needed endpoints
+
+**Dependency chain:** QA report → Frontend fixes → UXUI specs → Frontend implements → QA retests
