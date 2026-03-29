@@ -90,11 +90,11 @@ Q8 — Sidebar collapse behavior:
 - Collapsed state: icons only, hamburger, overlay?
 
 **Step 3 — Write specs:**
-- [ ] `specs/ux-dashboard.md` — full dashboard layout wireframe, sidebar dimensions, RPG panel design, page structure, navigation flow
-- [ ] `specs/ux-game-world.md` — map layout (which buildings where), terrain, camera angle, player movement feel, building interaction patterns, entry/exit transitions
-- [ ] `specs/ux-directory.md` — RPG stat card wireframe (exact fields, visual hierarchy), profile page layout, search/filter UI, grid layout
-- [ ] `specs/tokens.md` — game-specific design tokens (sidebar width, card dimensions, game world colors, overlay sizes)
-- [ ] Update AGENT_LOG.md with completed specs
+- [x] `specs/ux-dashboard.md` — full dashboard layout wireframe, sidebar dimensions, RPG panel design, page structure, navigation flow
+- [x] `specs/ux-game-world.md` — map layout (which buildings where), terrain, camera angle, player movement feel, building interaction patterns, entry/exit transitions
+- [x] `specs/ux-directory.md` — RPG stat card wireframe (exact fields, visual hierarchy), profile page layout, search/filter UI, grid layout
+- [x] `specs/tokens.md` — game-specific design tokens (sidebar width, card dimensions, game world colors, overlay sizes)
+- [x] Update AGENT_LOG.md with completed specs
 
 **Rules:**
 - Do NOT write code. Write specs only.
@@ -361,7 +361,34 @@ See `specs/asset-stack.md` for the complete confirmed stack:
 
 > UXUI agent writes here. Others: read only.
 
-*(awaiting first entry — start by reading DESIGN_SYSTEM.md, tokens.css, and asset-stack.md, then ask David the 8 design-detail questions)*
+### 2026-03-27 — Design Questions Answered + Specs Written
+
+**Step 1 completed:** Read DESIGN_SYSTEM.md, tokens.css, asset-stack.md.
+
+**Step 2 completed:** Asked David 8 design-detail questions. All answered:
+
+| Question | David's Choice |
+|----------|---------------|
+| Q1 — Sidebar panel style | **Narrow Minimal (240px)** — flat dark panel, 2px left accent bar on active, no section grouping |
+| Q2 — Directory layout | **List view with stats** — horizontal rows (64px), avatar + name + class + tier badge + level + XP bar |
+| Q3 — Terrain style | **Mixed campus** — grass areas with cobblestone walkways connecting buildings, benches, lampposts |
+| Q4 — Avatar creator UI | **Tabbed panel** — centered modal, 3D bust preview top, horizontal tabs (Body/Face/Hair/Outfit) |
+| Q5 — HQ interior | **Single open room + locked Admin room** — main room has stations (bulletin board, trophy, bookshelf, desk), separate locked admin room (T1-T3) with multiple stations (terminal, board, podium, chest) |
+| Q6 — Building transitions | **Quick fade to black** — 0.3s fade out, load, 0.3s fade in (~0.8s total) |
+| Q7 — Overlay panel style | **Solid dark panels** — bg-navy (#0d1b2a), 1px blue glow border, 16px radius, max 800px centered |
+| Q8 — Responsive collapse | **Hamburger at 768px** — full sidebar above, hamburger slide-over overlay below |
+
+**Step 3 completed:** Wrote all 4 spec files:
+
+- [x] `specs/ux-dashboard.md` — dashboard shell layout, sidebar (240px narrow minimal), nav items + states, responsive hamburger, avatar creator tabbed panel, onboarding flow, page routing
+- [x] `specs/ux-game-world.md` — camera (45° FOV 35°), mixed campus terrain, building placement map, player movement (WASD + click), proximity interaction ("Press E"), fade-to-black transitions, HQ interior (main room + locked admin room), overlay panel spec, lighting, asset loading
+- [x] `specs/ux-directory.md` — list view rows (64px), search + filter bar, member row layout, tier color system (T1=gold, T2=blue, T3=cyan, T4=green, T5=gray), profile page layout, edit mode, accessibility
+- [x] `specs/tokens.md` — 13 token categories: sidebar, responsive, game world, transitions, overlays, directory, tiers, interaction prompts, avatar creator, badges, skill tags, z-index scale
+
+**Notes for other agents:**
+- **Frontend:** All 4 specs are implementation-ready. Dimensions, colors, spacing, and interaction states are fully specified with token references. Start with `ux-dashboard.md` (sidebar + shell), then `ux-game-world.md`.
+- **Backend:** Tier color system defined in `specs/tokens.md` Section 8 and `specs/ux-directory.md` Section 5. The 5 tiers map to: T1=gold, T2=blue, T3=cyan, T4=green, T5=gray.
+- **QA:** Responsive breakpoint is 768px for sidebar collapse. Test hamburger menu on mobile viewports.
 
 ---
 
