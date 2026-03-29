@@ -87,96 +87,95 @@ Created shared communication system (CLAUDE.md, AGENT_LOG.md, specs/).
 ### 2026-03-27 — Full Project Audit
 Project is ~75% production ready for marketing pages. See CLAUDE.md for details.
 
-### 2026-03-28 — Student Portal Sprint Launched
+### 2026-03-28/29 — Student Portal Deep Vision (confirmed with David)
 
-**Product vision confirmed with David (T1):**
+**GAME WORLD:**
+- 2.5D isometric, generic RPG style (themeable later)
+- Map: 2-3 screens wide, small campus feel
+- Camera: fixed follow (centers on player, classic RPG)
+- Movement: WASD/Arrows + click-to-move pathfinding
+- Sprites: 48-64px detailed pixel art characters
+- Rendering: PixiJS (Canvas2D), React for UI overlays
+- Nameplate: Name + Level only (no class shown in-world)
+- NPCs: Full population, ambient NPCs fill in when few players online
+- Social: See other players, click for profile, emotes, proximity chat
 
-The student dashboard is a **2.5D isometric MMO game world** (Animal Crossing / Habbo Hotel style):
-- Main area = isometric game world with avatar, buildings, other players
-- Left sidebar = navigation to tools (directory, bounty board, projects, shop, jobs, leaderboard, profile)
-- Dashboard landing = overview hub with game world
+**MAP LAYOUT:**
+- **Buildings (interior scene loads):** HQ, Shop, Oracle Temple
+- **Objects (overlay):** Bounty Board, Job Board
+- **HQ interior:** Member directory, announcements, leaderboard, admin office (T1-T3), alumni network, events board
+- **Shop interior:** Grid catalog — avatar outfits, effects, club merch, profile customization
+- **Oracle Temple:** MBTI test → 4 main RPG classes, 16 subclasses (cosmetic only for now)
 
-**Key features (full scope):**
-1. **MMO Game World** — 2.5D isometric, PixiJS rendering, walk around, visit buildings, see other players
-2. **Member Directory** — chapter-scoped (admins see all), search/filter, full profiles
-3. **Bounty Board** — real commission work from external clients, admin-posted, "Bounty Hunter" title required to claim
-4. **Kanban Board** — per-project, shared with team, task assignment
-5. **Online Shop** — TSI coin currency, avatar cosmetics + club merch
-6. **Job Board** — curated listings + member submissions
-7. **Leaderboard** — XP, badges, levels/ranks
-8. **Profile/Settings** — edit name, bio, skills, avatar, social links
+**SIDEBAR:** RPG menu panel style. Minimal player status at top (avatar + name + level). Items: Home, Directory, Bounty Board, Projects, Shop, Job Board, Leaderboard, Profile/Settings
 
-**MVP (day one): Game world + Directory/Profiles**
-**Phase 2+: Bounty board, kanban, shop, jobs, leaderboard**
+**DIRECTORY:** Chapter-scoped (admins see all). RPG stat cards. Filters: role/tier, year, active/inactive. Full profile: avatar+bio+socials, XP/level/badges, project history. Lives in HQ + sidebar shortcut.
 
-**Tier system (5 tiers):**
-- T1: David only (super admin)
-- T2: Chapter presidents
-- T3: PMs & VPs
-- T4: Directors & developers
-- T5: Volunteers & general members
-*(Note: DB schema currently has CHECK 1-4, needs migration to 1-5)*
+**BOUNTY BOARD:** Admin-posted (T1-T3). Bounty Hunter title required (apply + admin review). Solo or team. Lifecycle: Claim → Timer → Submit → Admin review → Approved/Rejected. Card: title, description, reward, deadline, difficulty+category tags.
 
-**TSI Coin Economy:**
-- Internal currency, earned from events/tasks/work, spent on merch + avatar items
-- Economy details are internal — don't expose conversion rates
+**SHOP/ECONOMY:** TSI coins (internal currency, never expose rates). Earn from events/bounties/tasks/community. Spend on avatar items, merch, profile customization. T1 only: economy god mode.
 
-**Technical decisions:**
-- 2.5D isometric (PixiJS/Canvas2D for game, React for UI overlays)
-- Supabase Auth + DB + Realtime (already set up)
-- Desktop first, mobile later
-- Aesthetic: mix of terminal (admin/settings) + game UI (player-facing)
-- Election system: archive, one-time event
-- Chapters: deferred for MVP
-- Onboarding: mandatory profile setup before dashboard access
+**GAMIFICATION:** XP from events/bounties/projects/community. Levels 1-100 (numeric). Badges: milestone, rare/achievement, seasonal. RPG classes via MBTI at Oracle Temple.
+
+**JOB BOARD:** Curated listings (admin) + member submissions. Card: company, title, link, tags, deadline, status.
+
+**EVENTS:** T1-T3 create. RSVP system. Google Calendar sync. QR check-in (RFID later).
+
+**ONBOARDING (mandatory):** Welcome → Profile setup → Avatar creator (body, skin, hair, face, outfit) → Tutorial → Onboarding quests (visit buildings, complete profile, view directory, interact with player, MBTI test at Oracle Temple)
+
+**TIERS:** T1=David (everything + economy god mode), T2=chapter presidents (admin except economy), T3=PMs/VPs (bounty mgmt + submissions + events), T4=directors/devs, T5=volunteers
+
+**ADMIN OFFICE (HQ, T1-T3):** Member mgmt, bounty mgmt, economy controls, analytics dashboard
+
+**NOTIFICATIONS (deferred):** In-game popups, bell icon, email
+
+**MVP:** Game world + Directory/Profiles
+**Phase 2:** Bounty board, shop, Oracle Temple, job board, leaderboard, onboarding quests, admin tools, events, NPCs, social features, alumni
+**Deferred:** Kanban, chapters, notifications, mobile
 
 ---
 
 ### UXUI Agent: Questions to Ask David
 
-**You MUST ask David these 8 questions in multi-choice format before writing any specs. Use AskUserQuestion tool with options so David can scroll and select.**
+**The big-picture vision is DECIDED (above). Do NOT re-ask those questions. Your job is to ask David about VISUAL DETAILS, INTERACTION MICRO-DETAILS, and WIREFRAME SPECIFICS. Use AskUserQuestion with multi-choice format.**
 
-**Q1 — Dashboard sidebar style:**
-- A) Minimal icon-only sidebar (expandable on hover)
-- B) Full sidebar with icons + labels always visible
-- C) Game-themed sidebar (looks like an RPG inventory/menu)
-- D) Collapsible — full on desktop, icons on smaller screens
+**Ask David these design-detail questions:**
 
-**Q2 — Game world map layout:**
-- A) Small village/campus — compact, all buildings visible on screen
-- B) Larger world — need to scroll/pan to see everything
-- C) Island — surrounded by water, Animal Crossing style
-- D) Floating platforms — futuristic tech aesthetic
+**Q1 — RPG sidebar panel: visual details**
+- What width? Fixed 240px, 280px, 320px?
+- Dividers between nav items? Grouped sections?
+- Active item indicator style: glow, left bar, icon swap, color change?
 
-**Q3 — Avatar style:**
-- A) Pixel art characters (16-32px, retro game style)
-- B) Chibi/cute style (like MapleStory or Habbo)
-- C) Minimalist geometric (circles/shapes with accessories)
-- D) Terminal/ASCII characters (fits existing aesthetic)
+**Q2 — Member RPG stat card: layout specifics**
+- Card dimensions and grid layout (2-col, 3-col, list view?)
+- What stat bars to show and in what order?
+- Color coding for tier/role badges?
 
-**Q4 — Game world color palette:**
-- A) Same dark theme — isometric world is dark/cyberpunk
-- B) Lighter/colorful — game world is vibrant, contrasts with dark UI
-- C) Seasonal — changes with real-world seasons
-- D) Day/night cycle — shifts between light and dark
+**Q3 — Game world tile/building art: reference images**
+- Ask David for reference game screenshots or pixel art styles he likes
+- What tile size? 32x32, 64x64, 128x128?
+- Ground texture style — grass+dirt paths? cobblestone? paved?
 
-**Q5 — Sidebar nav items (confirm order):**
-Home, Directory, Bounty Board, Projects, Shop, Job Board, Leaderboard, Profile/Settings
+**Q4 — Avatar creator UI: layout and flow**
+- How many options per category (hair, skin, face, outfit)?
+- Preview window style: full-body render, bust, rotating?
+- Randomize button?
 
-**Q6 — Profile card: what info shows, what's most prominent?**
-Name, avatar, role/tier, skills, XP level, bio preview
+**Q5 — HQ interior layout: room arrangement**
+- Single large room with stations? Or multiple rooms with hallways?
+- How are the 6 sections (directory, announcements, leaderboard, admin, alumni, events) arranged spatially?
 
-**Q7 — Building interaction in game world:**
-- A) Click/Enter — opens tool as modal/overlay
-- B) Walk inside — transitions to interior scene
-- C) Sidebar auto-switches — proximity highlights sidebar item
-- D) Portal/door animation — zooms into building, loads tool page
+**Q6 — Building entry/exit animation specifics**
+- Fade duration? Transition style for entering a building?
+- How do overlays (bounty board, job board) appear? Slide up? Fade in? Scale from interaction point?
 
-**Q8 — Transitions between game world and tool views:**
-- A) Instant switch (sidebar click swaps main content)
-- B) ASCII dissolve animation (like existing loading screen)
-- C) Game-style transition (fade to black, screen wipe)
-- D) Slide animation (tool slides in from sidebar)
+**Q7 — Overlay panels: visual style**
+- Glassmorphic? Solid dark? RPG wooden frame? Terminal-styled?
+- Size: full-screen modal, centered panel, side panel?
+
+**Q8 — Responsive behavior: sidebar collapse**
+- At what width does sidebar collapse?
+- Collapsed state: icons only? Hidden with hamburger? Overlay?
 
 ---
 
@@ -184,7 +183,7 @@ Name, avatar, role/tier, skills, XP level, bio preview
 
 > UXUI agent writes here. Others: read only.
 
-*(awaiting first entry — start by asking David the 8 questions above)*
+*(awaiting first entry — start by asking David the design-detail questions above)*
 
 ---
 
