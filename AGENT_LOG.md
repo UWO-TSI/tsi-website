@@ -18,24 +18,35 @@
 - [ ] Update AGENT_LOG.md with completed specs
 
 ### Frontend
+- [ ] **READ `specs/asset-stack.md` FIRST** — confirmed tech stack and shader pipeline
 - [ ] Run `cd web && npm run build` + `npm run lint` — fix all errors
+- [ ] Install: `@mesmotronic/three-retropass` (PS1 post-processing)
 - [ ] Create dashboard layout: `web/app/student/dashboard/layout.tsx` (sidebar + main content)
-- [ ] Create `web/components/portal/Sidebar.tsx` — left sidebar navigation
-- [ ] Create 8 dashboard page stubs (home, directory, bounty, projects, shop, jobs, leaderboard, profile)
-- [ ] Create `web/components/game/GameWorld.tsx` — R3F scene with PS1 shader pipeline (low-res render target, vertex snapping shader)
-- [ ] Create directory components: `MemberDirectory.tsx`, `MemberCard.tsx`, `ProfileView.tsx` in `web/components/portal/`
+- [ ] Create `web/components/portal/Sidebar.tsx` — RPG menu panel style sidebar
+- [ ] Create 8 dashboard page stubs (home, directory, bounty, shop, jobs, leaderboard, profile, settings)
+- [ ] Create `web/components/game/GameWorld.tsx` — R3F scene with:
+  - PS1Material shader (bandinopla's approach — vertex snapping, affine textures, dithering)
+  - Low-res FBO render (320x240) via `useFBO` from drei, upscaled with NearestFilter
+  - `<CameraControls>` from drei locked at 45° polar angle, FOV 30-45°
+  - Load Quaternius/Kenney GLB models via `useGLTF`
+- [ ] Create `web/components/game/PlayerAvatar.tsx` — load modular character, skeleton sharing, animations via `useAnimations`
+- [ ] Create directory components: `MemberDirectory.tsx`, `MemberCard.tsx` (RPG stat card), `ProfileView.tsx` in `web/components/portal/`
 - [ ] Update AGENT_LOG.md with progress
 
 ### Backend
+- [ ] **READ `specs/asset-stack.md` FIRST** — critical architecture changes
 - [ ] Migration `004_extend_tiers.sql` — extend tier CHECK to 1-5, add avatar_url, social_links, skills fields
 - [ ] Migration `005_bounty_system.sql` — bounties + bounty_submissions tables with RLS
 - [ ] Migration `006_economy.sql` — coin_balance on profiles, coin_transactions table with RLS
-- [ ] Migration `007_game_state.sql` — player_positions, avatar_items, player_inventory tables
+- [ ] Migration `007_avatar_inventory.sql` — avatar_items, player_inventory tables (NO player_positions — that's Colyseus)
+- [ ] Set up **Colyseus** server for real-time multiplayer (player positions, animation state, presence)
 - [ ] Update `web/lib/supabase/types.ts` with all new table types
 - [ ] Create API routes: `/api/directory`, `/api/profile`, `/api/bounties` (stub)
 - [ ] Update middleware: remove election redirects, add dashboard protection, 5-tier permissions
 - [ ] Document everything in `specs/api.md`
 - [ ] Update AGENT_LOG.md with schema + API docs
+
+**⚠️ ARCHITECTURE NOTE:** Supabase Realtime is TOO EXPENSIVE for position sync ($3,600/hr at 200 CCU). Use **Colyseus** (MIT, $0-15/mo) for all real-time game state. Supabase keeps: auth, profiles, inventory, persistent data. See `specs/asset-stack.md` for details.
 
 ### QA
 - [ ] Run `cd web && npm run build` + `npm run lint` — log ALL errors to `specs/qa.md`
