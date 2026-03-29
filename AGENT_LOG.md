@@ -22,7 +22,7 @@
 - [ ] Create dashboard layout: `web/app/student/dashboard/layout.tsx` (sidebar + main content)
 - [ ] Create `web/components/portal/Sidebar.tsx` — left sidebar navigation
 - [ ] Create 8 dashboard page stubs (home, directory, bounty, projects, shop, jobs, leaderboard, profile)
-- [ ] Create `web/components/game/IsometricWorld.tsx` — canvas placeholder for PixiJS
+- [ ] Create `web/components/game/GameWorld.tsx` — R3F scene with PS1 shader pipeline (low-res render target, vertex snapping shader)
 - [ ] Create directory components: `MemberDirectory.tsx`, `MemberCard.tsx`, `ProfileView.tsx` in `web/components/portal/`
 - [ ] Update AGENT_LOG.md with progress
 
@@ -94,8 +94,10 @@ Project is ~75% production ready for marketing pages. See CLAUDE.md for details.
 - Map: 2-3 screens wide, small campus feel
 - Camera: fixed follow (centers on player, classic RPG)
 - Movement: WASD/Arrows + click-to-move pathfinding
-- Sprites: 48-64px detailed pixel art characters
-- Rendering: PixiJS (Canvas2D), React for UI overlays
+- Characters: Low-poly 3D chibi models (~200-500 polys), PS1 aesthetic — NOT 2D pixel sprites
+- Rendering: React Three Fiber + Three.js + Drei (ALREADY in the project) — NOT PixiJS
+- PS1 shader pipeline: vertex snapping, affine texture mapping, low-res render target scaled up with nearest-neighbor filtering
+- Art reference: PS1 indie games — low-poly but clean enough to look intentional, warm point lighting, textured environments
 - Nameplate: Name + Level only (no class shown in-world)
 - NPCs: Full population, ambient NPCs fill in when few players online
 - Social: See other players, click for profile, emotes, proximity chat
