@@ -95,36 +95,57 @@ cd web && npm run build  # Production build
 cd web && npm run lint   # Run linter
 ```
 
-## Current State (as of 2026-03-27)
+## Current State (as of 2026-03-28)
 
-**~75% production ready**
+**Marketing site:** ~75% production ready (5 audience pages built)
+**Student portal:** Supabase auth exists (signup, login, election), dashboard is under-construction
 
 | Area | Status |
 |------|--------|
-| Homepage | Complete — globe hero, text reveal, stats, pathway cards |
-| Student page | Complete — hero, benefits, timeline, CTA |
-| Sponsor page | Mostly done — placeholder logos + gallery images |
-| NPO page | Mostly done — some placeholder data |
-| Company page | Mostly done — some placeholder data |
-| Navigation | Complete — GlassNavbar + audience navbars |
-| Loading/cursor | Complete — ASCII dissolve + custom cursor |
-| Design system | Documented in DESIGN_SYSTEM.md (43KB) |
+| Marketing pages | Complete (home, student, sponsor, npo, company) |
+| Supabase Auth | Working — email/password + invite codes |
+| Profiles table | Exists — ~30 fields, tier 1-4, gamification fields |
+| Election system | Live, one-time event — archiving |
+| Student dashboard | **NOT BUILT — this is the current sprint** |
 | API | Minimal — only /api/an-token exists |
-| Forms/DB/Auth | Not started |
 
-**Known issues:**
-- Footer links to /contact, /about, /projects — routes don't exist (404)
-- Sponsor logos are placeholder text
-- Sponsor gallery is gray placeholder divs
-- No form handling, no database, no CMS, no analytics
+## Student Portal Vision
+
+The student dashboard is a **2.5D isometric MMO game world** (Animal Crossing / Habbo Hotel):
+
+- **Main area**: Isometric game world (PixiJS) — avatar, buildings, other players
+- **Left sidebar**: Navigation to tools
+- **Sidebar items**: Home, Directory, Bounty Board, Projects, Shop, Job Board, Leaderboard, Profile
+
+**Features (full scope):**
+- MMO game world with walk, explore, visit buildings, see other players
+- Member directory (chapter-scoped, admins see all)
+- Bounty board (real commission work, "Bounty Hunter" title required)
+- Kanban board (per-project, shared with team)
+- Shop (TSI coin currency — avatar cosmetics + merch)
+- Job board (curated + member submissions)
+- Leaderboard (XP, badges, levels)
+- Profile/settings (name, bio, skills, avatar, social links)
+
+**MVP**: Game world + Directory/Profiles
+**Phase 2+**: Bounty board, kanban, shop, jobs, leaderboard
+
+**Tier system (5 tiers):**
+T1 = David (super admin), T2 = chapter presidents, T3 = PMs & VPs, T4 = directors & devs, T5 = volunteers
+
+**Aesthetic:** Mix of terminal (admin/settings) + game UI (player-facing)
+**Onboarding:** Mandatory profile setup before dashboard access
+**Mobile:** Desktop first, mobile later
 
 ## Current Sprint Priority
 
-> Updated by Management. Check AGENT_LOG.md for latest tasks.
+> Updated by Management 2026-03-28. Check AGENT_LOG.md for detailed tasks.
 
-1. QA: Get clean build/lint baseline report
-2. UXUI: Audit design consistency + spec missing pages
-3. Frontend: Fix build errors + create stub pages for broken links
-4. Backend: Document API + spec needed endpoints
+**Phase 1 — Foundation (all agents parallel):**
+1. UXUI: Ask David 8 design questions, then write specs
+2. Frontend: Dashboard shell, routing, sidebar, page stubs, directory components
+3. Backend: DB migrations (tiers, bounty, economy, game state), API routes, middleware update
+4. QA: Build/lint report, auth flow testing, test plan
 
-**Dependency chain:** QA report → Frontend fixes → UXUI specs → Frontend implements → QA retests
+**Merge order:** Backend → Frontend → UXUI specs → QA
+**Dependency chain:** Backend types → Frontend uses them → QA tests both
