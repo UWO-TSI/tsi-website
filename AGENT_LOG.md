@@ -1,59 +1,280 @@
 # AGENT_LOG.md — Team Communication Board
 
 > Every agent reads this at session start. Append to your section only.
+> **ALL AGENTS:** Read `CLAUDE.md`, this file, AND `specs/asset-stack.md` before starting work.
 
 ---
 
-## Active Tasks — Phase 1: Student Portal Foundation
+## Execution Order
 
-> Management updates this section. Agents check off items when done.
+```
+WAVE 1 (parallel, start immediately):
+  QA  ──→ build/lint baseline + auth flow test + document existing profiles schema
+  UXUI ──→ ask David 8 design-detail questions, then write specs
 
-### UXUI
-- [ ] Read `web/DESIGN_SYSTEM.md` and `web/styles/tokens.css` thoroughly
-- [ ] **Ask David 8 design questions** (multi-choice format — see Management section below for the exact questions)
-- [ ] Write `specs/ux.md` — full dashboard layout spec, sidebar spec, game world map spec, building interaction spec
-- [ ] Write `specs/tokens.md` — game world color tokens, avatar size tokens, sidebar dimensions
-- [ ] Write `specs/ux-directory.md` — directory page wireframe, profile card spec, search/filter spec
-- [ ] Write `specs/ux-game-world.md` — isometric world layout, building placement, avatar movement, multiplayer indicators
+WAVE 2 (after QA baseline):
+  Backend ──→ audit profiles table, write migrations, archive election, update middleware, create API routes
+
+WAVE 3 (after Backend types.ts is committed):
+  Frontend ──→ download assets, build dashboard shell, PS1 shader, game world, directory
+
+WAVE 4 (after Frontend commits):
+  QA ──→ retest everything
+```
+
+---
+
+## Active Tasks — Phase 1: MVP (Single-Player Game World + Directory)
+
+### QA — WAVE 1 (start NOW)
+
+**Goal:** Establish baseline, document existing schema, unblock Backend.
+
+- [ ] Run `cd web && npm run build` — log ALL errors/warnings to `specs/qa.md`
+- [ ] Run `cd web && npm run lint` — log ALL errors/warnings to `specs/qa.md`
+- [ ] Test existing auth flow: signup with `TETHOS-W26` → login → election redirect → success screen
+- [ ] Test all 5 marketing pages load: `/`, `/npo`, `/company`, `/sponsor`, `/student`
+- [ ] **CRITICAL:** Read `web/lib/supabase/types.ts` and document the full `Profile` type (all ~30 fields) in `specs/qa.md` — Backend needs this to audit
+- [ ] Read `web/lib/supabase/middleware.ts` and document current routing logic in `specs/qa.md`
+- [ ] Read `web/supabase/migrations/001_initial_schema.sql` (if exists) and document the full profiles table schema
+- [ ] Log your findings in your section of this file
+
+**Output:** `specs/qa.md` with build errors, auth test results, and full existing schema documentation.
+
+---
+
+### UXUI — WAVE 1 (start NOW, parallel with QA)
+
+**Goal:** Ask David visual detail questions, then write specs that Frontend implements from.
+
+**Step 1 — Read these files first:**
+- `web/DESIGN_SYSTEM.md` (43KB — the full design bible)
+- `web/styles/tokens.css` (CSS custom properties)
+- `specs/asset-stack.md` (confirmed assets: Quaternius models, PS1 shader, etc.)
+
+**Step 2 — Ask David these 8 questions using AskUserQuestion with multi-choice options:**
+
+Q1 — RPG sidebar panel visual details:
+- Width? Fixed 240px, 280px, 320px?
+- Dividers between nav items? Grouped sections?
+- Active item indicator: glow, left accent bar, icon swap, color change?
+
+Q2 — Member RPG stat card layout:
+- Grid layout for directory: 2-col, 3-col, or list view?
+- What stat bars to show (XP, level, projects completed)?
+- Color coding for tier/role badges?
+
+Q3 — Game world ground/terrain:
+- Ground style: grass with dirt paths? cobblestone plaza? mixed?
+- Any water features, fences, decorative elements?
+
+Q4 — Avatar creator UI (for onboarding — spec now, build Phase 2):
+- Preview window: full-body render, bust, rotating?
+- Randomize button?
+- How many options per category (hair, skin, face, outfit)?
+
+Q5 — HQ interior layout:
+- Single large room with stations? Or multiple rooms?
+- How are the 6 sections arranged spatially?
+
+Q6 — Building entry/exit transitions:
+- Fade duration and style for entering buildings?
+- Overlay appearance for boards (slide up, fade in, scale)?
+
+Q7 — Overlay panel style (bounty board, job board):
+- Glassmorphic? Solid dark? RPG wooden frame? Terminal?
+- Size: full modal, centered panel, side panel?
+
+Q8 — Sidebar collapse behavior:
+- At what breakpoint?
+- Collapsed state: icons only, hamburger, overlay?
+
+**Step 3 — Write specs:**
+- [ ] `specs/ux-dashboard.md` — full dashboard layout wireframe, sidebar dimensions, RPG panel design, page structure, navigation flow
+- [ ] `specs/ux-game-world.md` — map layout (which buildings where), terrain, camera angle, player movement feel, building interaction patterns, entry/exit transitions
+- [ ] `specs/ux-directory.md` — RPG stat card wireframe (exact fields, visual hierarchy), profile page layout, search/filter UI, grid layout
+- [ ] `specs/tokens.md` — game-specific design tokens (sidebar width, card dimensions, game world colors, overlay sizes)
 - [ ] Update AGENT_LOG.md with completed specs
 
-### Frontend
-- [ ] **READ `specs/asset-stack.md` FIRST** — confirmed tech stack and shader pipeline
-- [ ] Run `cd web && npm run build` + `npm run lint` — fix all errors
-- [ ] Install: `@mesmotronic/three-retropass` (PS1 post-processing)
-- [ ] Create dashboard layout: `web/app/student/dashboard/layout.tsx` (sidebar + main content)
-- [ ] Create `web/components/portal/Sidebar.tsx` — RPG menu panel style sidebar
-- [ ] Create 8 dashboard page stubs (home, directory, bounty, shop, jobs, leaderboard, profile, settings)
-- [ ] Create `web/components/game/GameWorld.tsx` — R3F scene with:
-  - PS1Material shader (bandinopla's approach — vertex snapping, affine textures, dithering)
-  - Low-res FBO render (320x240) via `useFBO` from drei, upscaled with NearestFilter
-  - `<CameraControls>` from drei locked at 45° polar angle, FOV 30-45°
-  - Load Quaternius/Kenney GLB models via `useGLTF`
-- [ ] Create `web/components/game/PlayerAvatar.tsx` — load modular character, skeleton sharing, animations via `useAnimations`
-- [ ] Create directory components: `MemberDirectory.tsx`, `MemberCard.tsx` (RPG stat card), `ProfileView.tsx` in `web/components/portal/`
+**Rules:**
+- Do NOT write code. Write specs only.
+- Reference the confirmed asset stack (Quaternius models, Kenney buildings) in your specs.
+- Be specific enough that Frontend can implement without guessing. Include dimensions, colors (reference tokens.css), spacing, and interaction states.
+
+---
+
+### Backend — WAVE 2 (after QA documents the existing schema)
+
+**Goal:** Clean DB, write migrations, archive election, create API routes. Frontend depends on your types.ts.
+
+**Step 1 — Audit existing profiles table:**
+- [ ] Read QA's schema documentation in `specs/qa.md`
+- [ ] Read `web/lib/supabase/types.ts` — understand current Profile type
+- [ ] Read all migration files in `web/supabase/migrations/`
+- [ ] Decide which of the ~30 fields to keep, remove, or rename
+- [ ] Document audit results at the top of `specs/api.md`
+
+**Step 2 — Write migrations:**
+- [ ] `004_cleanup_and_extend.sql`:
+  - Clean up unused profile fields (based on audit)
+  - ALTER tier CHECK constraint from `BETWEEN 1 AND 4` to `BETWEEN 1 AND 5`
+  - Add new columns: `avatar_config JSONB DEFAULT '{}'`, `xp INTEGER DEFAULT 0`, `level INTEGER DEFAULT 1`, `coin_balance INTEGER DEFAULT 0`, `class TEXT`, `subclass TEXT`, `skills TEXT[] DEFAULT '{}'`, `social_links JSONB DEFAULT '{}'`, `avatar_url TEXT`, `year INTEGER`, `is_active BOOLEAN DEFAULT TRUE`
+  - Add indexes on commonly queried fields
+
+- [ ] `005_avatar_items.sql`:
+  - `avatar_items` table (id, name, type, category, coin_price, sprite_url, rarity, created_at)
+  - `player_inventory` table (id, user_id, item_id, equipped BOOLEAN, acquired_at)
+  - RLS: users can read all items, read/update own inventory
+
+- [ ] `006_bounty_system.sql` (stub — schema only, not wired up yet):
+  - `bounties` table (id, title, description, reward_coins, category, difficulty, timeframe, status, solo_or_team, created_by, claimed_by, created_at, deadline)
+  - `bounty_submissions` table (id, bounty_id, user_id, submission_text, status, reviewed_by, created_at)
+  - RLS: authenticated can read bounties, T1-T3 can insert/update, bounty hunters can claim
+
+**Step 3 — Archive election:**
+- [ ] In `web/lib/supabase/middleware.ts`: wrap ALL election-specific routing logic in `if (process.env.ENABLE_ELECTION === 'true')` check
+- [ ] Do NOT delete any election code or routes — just gate them behind the flag
+- [ ] Default behavior when flag is off: `/student/election` returns 404 or redirects to dashboard
+
+**Step 4 — Update middleware for dashboard:**
+- [ ] Add dashboard route protection:
+  - `/student/dashboard/*` → require auth (redirect to login if not)
+  - `/student/dashboard/*` → require `onboarding_completed === true` (redirect to onboarding if not)
+  - `/student/dashboard/admin/*` → require T1-T3
+  - `/student/login` or `/student/signup` while logged in → redirect to `/student/dashboard`
+- [ ] Keep existing marketing page routes untouched
+
+**Step 5 — Create API routes:**
+- [ ] `web/app/api/directory/route.ts`:
+  - GET: returns members list, chapter-scoped by default
+  - Query params: `?role=`, `?year=`, `?active=`, `?search=`
+  - T1/T2 callers see all members (check tier from session)
+  - Returns: id, display_name, avatar_url, tier, level, xp, class, skills, is_active
+
+- [ ] `web/app/api/profile/route.ts`:
+  - GET: returns own profile (all fields)
+  - PATCH: update own profile (display_name, bio, skills, social_links, avatar_config)
+  - Validate with Zod schema
+
+- [ ] `web/app/api/profile/[id]/route.ts`:
+  - GET: returns another user's public profile (limited fields)
+  - Chapter-scoping enforced (same chapter or T1/T2)
+
+**Step 6 — Update types:**
+- [ ] Update `web/lib/supabase/types.ts` with new Profile fields and new table types
+- [ ] Export clean TypeScript interfaces for Frontend to import
+
+**Step 7 — Document:**
+- [ ] Write complete `specs/api.md` — every route, request/response shapes, auth requirements, error codes
+- [ ] Update AGENT_LOG.md with what you built
+
+**Files you own:**
+- `web/supabase/migrations/004_*`, `005_*`, `006_*`
+- `web/lib/supabase/types.ts`
+- `web/lib/supabase/middleware.ts`
+- `web/app/api/directory/`, `web/app/api/profile/`
+- `specs/api.md`
+
+---
+
+### Frontend — WAVE 3 (after Backend commits types.ts + after UXUI specs)
+
+**Goal:** Build the dashboard shell, PS1 game world renderer, and directory UI.
+
+**Step 0 — Setup:**
+- [ ] Read `specs/asset-stack.md`, `specs/ux-dashboard.md`, `specs/ux-game-world.md`, `specs/ux-directory.md`
+- [ ] Run `cd web && npm run build` — fix any errors
+- [ ] Install: `npm install @mesmotronic/three-retropass`
+- [ ] Download Quaternius + Kenney GLB asset packs → organize in `web/public/assets/`:
+  ```
+  web/public/assets/
+  ├── characters/    ← Quaternius animated characters (.glb)
+  ├── buildings/     ← Kenney Retro Medieval + Quaternius Medieval Village (.glb)
+  ├── terrain/       ← PSX RPG Town Tiles (.glb)
+  ├── props/         ← Quaternius Fantasy Props (.glb)
+  ├── nature/        ← Kenney Nature Kit (.glb/.obj)
+  └── ui/            ← Kenney Pixel UI + Mana Soul GUI (.png)
+  ```
+
+**Step 1 — Dashboard shell:**
+- [ ] `web/app/student/dashboard/layout.tsx`:
+  - RPG-styled sidebar (left) + main content area (right)
+  - Import Sidebar component
+  - Wrap with auth check (redirect if not logged in)
+  - Use existing ASCII loading screen while 3D assets load
+
+- [ ] `web/components/portal/Sidebar.tsx`:
+  - RPG menu panel aesthetic (dark panel, game-style icons, glow on active)
+  - Top section: mini player status (avatar thumbnail + name + level)
+  - Nav items: Home, Directory, Bounty Board, Shop, Job Board, Leaderboard, Profile/Settings
+  - Active item highlighted with glow effect
+  - Collapsible at breakpoint (per UXUI spec)
+
+**Step 2 — Page stubs:**
+- [ ] `web/app/student/dashboard/page.tsx` — home (game world renders here)
+- [ ] `web/app/student/dashboard/directory/page.tsx` — member directory
+- [ ] `web/app/student/dashboard/bounty/page.tsx` — placeholder "Coming Soon"
+- [ ] `web/app/student/dashboard/shop/page.tsx` — placeholder "Coming Soon"
+- [ ] `web/app/student/dashboard/jobs/page.tsx` — placeholder "Coming Soon"
+- [ ] `web/app/student/dashboard/leaderboard/page.tsx` — placeholder "Coming Soon"
+- [ ] `web/app/student/dashboard/profile/page.tsx` — own profile view/edit
+- [ ] `web/app/student/dashboard/settings/page.tsx` — placeholder "Coming Soon"
+
+**Step 3 — PS1 shader pipeline:**
+- [ ] `web/components/game/PS1Pipeline.tsx`:
+  - Implement bandinopla's PS1Material or `onBeforeCompile` approach for vertex snapping + affine textures
+  - `useFBO(320, 240)` from drei for low-res render target
+  - Fullscreen quad with `NearestFilter` upscale
+  - `@mesmotronic/three-retropass` for color quantization + dithering post-processing
+  - All textures loaded with `THREE.NearestFilter`, mipmaps disabled
+
+**Step 4 — Game world:**
+- [ ] `web/components/game/GameWorld.tsx`:
+  - R3F `<Canvas>` with PS1 pipeline wrapping the scene
+  - Load terrain GLBs via `useGLTF` — arrange as campus map
+  - Load building GLBs — place HQ, Shop, Oracle Temple at fixed positions
+  - Place Bounty Board and Job Board objects
+  - `<CameraControls>` from drei — locked polar angle (45°), FOV 35°, smooth follow player
+  - `<fog>` for atmosphere
+  - Warm point lights near buildings
+  - Props and nature assets scattered for decoration
+
+- [ ] `web/components/game/PlayerAvatar.tsx`:
+  - Load Quaternius character GLB via `useGLTF`
+  - Play animations via `useAnimations` (idle, walk)
+  - WASD/Arrow key movement with `useFrame` — update position each frame
+  - Click-to-move: raycaster on ground plane, pathfind to click point
+  - Camera follows player via CameraControls `moveTo()`
+  - Nameplate overlay: player name + level (drei `<Html>` component)
+
+- [ ] `web/components/game/Building.tsx`:
+  - Reusable component for placing buildings
+  - Proximity detection: when player is near, show interaction prompt ("Press E to enter")
+  - On enter: trigger transition (per UXUI spec) → navigate to building's dashboard page or show overlay
+
+**Step 5 — Directory:**
+- [ ] `web/components/portal/MemberDirectory.tsx`:
+  - Fetch from `/api/directory`
+  - Search bar + filter dropdowns (role/tier, year, active/inactive)
+  - Grid of MemberCard components
+
+- [ ] `web/components/portal/MemberCard.tsx`:
+  - RPG stat card layout (per UXUI spec)
+  - Avatar, name, class/role, level, XP bar, tier badge
+  - Click → navigate to full profile
+
+- [ ] `web/components/portal/ProfileView.tsx`:
+  - Fetch from `/api/profile/[id]`
+  - Full profile page: avatar, bio, socials, XP/level/badges, project history
+  - If viewing own profile: edit button → inline editing
+
 - [ ] Update AGENT_LOG.md with progress
 
-### Backend
-- [ ] **READ `specs/asset-stack.md` FIRST** — critical architecture changes
-- [ ] Migration `004_extend_tiers.sql` — extend tier CHECK to 1-5, add avatar_url, social_links, skills fields
-- [ ] Migration `005_bounty_system.sql` — bounties + bounty_submissions tables with RLS
-- [ ] Migration `006_economy.sql` — coin_balance on profiles, coin_transactions table with RLS
-- [ ] Migration `007_avatar_inventory.sql` — avatar_items, player_inventory tables (NO player_positions — that's Colyseus)
-- [ ] Set up **Colyseus** server for real-time multiplayer (player positions, animation state, presence)
-- [ ] Update `web/lib/supabase/types.ts` with all new table types
-- [ ] Create API routes: `/api/directory`, `/api/profile`, `/api/bounties` (stub)
-- [ ] Update middleware: remove election redirects, add dashboard protection, 5-tier permissions
-- [ ] Document everything in `specs/api.md`
-- [ ] Update AGENT_LOG.md with schema + API docs
-
-**⚠️ ARCHITECTURE NOTE:** Supabase Realtime is TOO EXPENSIVE for position sync ($3,600/hr at 200 CCU). Use **Colyseus** (MIT, $0-15/mo) for all real-time game state. Supabase keeps: auth, profiles, inventory, persistent data. See `specs/asset-stack.md` for details.
-
-### QA
-- [ ] Run `cd web && npm run build` + `npm run lint` — log ALL errors to `specs/qa.md`
-- [ ] Test existing auth flow (signup → login → redirect)
-- [ ] Test all 5 marketing pages still load
-- [ ] Document test plan for new dashboard features in `specs/qa.md`
-- [ ] Update AGENT_LOG.md with findings
+**Files you own:**
+- `web/app/student/dashboard/` (all pages)
+- `web/components/portal/` (all portal components)
+- `web/components/game/` (all game components)
+- `web/public/assets/` (downloaded asset files)
 
 ---
 
@@ -64,29 +285,35 @@
 | `specs/ux*.md`, `specs/tokens.md` | UXUI | read only |
 | `specs/api.md` | Backend | read only |
 | `specs/qa.md` | QA | read only |
+| `specs/asset-stack.md` | Management | read only |
 | `web/components/portal/` | Frontend | — |
 | `web/components/game/` | Frontend | — |
 | `web/app/student/dashboard/` | Frontend | — |
-| `web/app/api/` (new routes) | Backend | — |
+| `web/public/assets/` | Frontend | — |
+| `web/app/api/directory/`, `web/app/api/profile/` | Backend | — |
 | `web/lib/supabase/` | Backend | Frontend reads types |
 | `web/supabase/migrations/` | Backend | — |
-| `CLAUDE.md`, `AGENT_LOG.md` | Management | all append to AGENT_LOG |
+| `CLAUDE.md`, `AGENT_LOG.md` structure | Management | all append to own section |
 
 ## Merge Order
-1. **Backend first** (DB schema + types must exist before frontend uses them)
-2. **Frontend second** (uses backend types/API)
-3. **UXUI specs** merge anytime (reference docs)
-4. **QA last** (after testing frontend + backend together)
+1. **QA baseline** merges first (unblocks Backend's audit)
+2. **Backend** merges second (types.ts + migrations must exist before Frontend)
+3. **UXUI specs** merge anytime (reference docs, no code)
+4. **Frontend** merges third (uses Backend types + UXUI specs)
+5. **QA retest** merges last
+
+## Commit Prefixes
+`[QA]`, `[UXUI]`, `[BE]`, `[FE]`, `[MGMT]`
 
 ---
 
 ## Blocked / Needs Attention
 
-| Agent | Blocked On | Waiting For | Date |
-|-------|-----------|-------------|------|
-| Frontend | Game world visuals | UXUI game world spec | 2026-03-28 |
-| Frontend | Directory card design | UXUI directory spec | 2026-03-28 |
-| Frontend | Supabase types for directory | Backend types.ts update | 2026-03-28 |
+| Agent | Blocked On | Waiting For | Status |
+|-------|-----------|-------------|--------|
+| Backend | Existing schema documentation | QA to document profiles table | WAVE 1 |
+| Frontend | Supabase types for directory | Backend to commit types.ts | WAVE 2 |
+| Frontend | Visual specs for dashboard/game/directory | UXUI to write specs | WAVE 1 |
 
 ---
 
@@ -96,99 +323,37 @@
 Created shared communication system (CLAUDE.md, AGENT_LOG.md, specs/).
 
 ### 2026-03-27 — Full Project Audit
-Project is ~75% production ready for marketing pages. See CLAUDE.md for details.
+Project is ~75% production ready for marketing pages.
 
-### 2026-03-28/29 — Student Portal Deep Vision (confirmed with David)
+### 2026-03-28/29 — Student Portal Deep Vision Confirmed
 
-**GAME WORLD:**
-- 2.5D isometric, generic RPG style (themeable later)
-- Map: 2-3 screens wide, small campus feel
-- Camera: fixed follow (centers on player, classic RPG)
-- Movement: WASD/Arrows + click-to-move pathfinding
-- Characters: Low-poly 3D chibi models (~200-500 polys), PS1 aesthetic — NOT 2D pixel sprites
-- Rendering: React Three Fiber + Three.js + Drei (ALREADY in the project) — NOT PixiJS
-- PS1 shader pipeline: vertex snapping, affine texture mapping, low-res render target scaled up with nearest-neighbor filtering
-- Art reference: PS1 indie games — low-poly but clean enough to look intentional, warm point lighting, textured environments
-- Nameplate: Name + Level only (no class shown in-world)
-- NPCs: Full population, ambient NPCs fill in when few players online
-- Social: See other players, click for profile, emotes, proximity chat
+Full vision documented in memory. Key decisions:
+- PS1 low-poly 3D game world (R3F, not PixiJS)
+- Quaternius characters + buildings (CC0, glTF)
+- PS1 shader pipeline (bandinopla PS1Material + retropass + low-res FBO)
+- Single-player MVP (Colyseus multiplayer deferred)
+- 5-tier system (T1=David, T2=presidents, T3=PM/VP, T4=dev/director, T5=volunteer)
+- TSI coin economy (internal currency)
+- MBTI → RPG classes at Oracle Temple
+- Onboarding: welcome → profile → avatar → tutorial → quests
+- ASCII loading screen reused for 3D asset loading
+- Election archived behind env flag
+- Profiles table: audit and clean before adding game columns
+- No kanban, no chapters, no multiplayer, no notifications for MVP
 
-**MAP LAYOUT:**
-- **Buildings (interior scene loads):** HQ, Shop, Oracle Temple
-- **Objects (overlay):** Bounty Board, Job Board
-- **HQ interior:** Member directory, announcements, leaderboard, admin office (T1-T3), alumni network, events board
-- **Shop interior:** Grid catalog — avatar outfits, effects, club merch, profile customization
-- **Oracle Temple:** MBTI test → 4 main RPG classes, 16 subclasses (cosmetic only for now)
+### 2026-03-29 — Asset Stack Confirmed (Deep Research)
 
-**SIDEBAR:** RPG menu panel style. Minimal player status at top (avatar + name + level). Items: Home, Directory, Bounty Board, Projects, Shop, Job Board, Leaderboard, Profile/Settings
-
-**DIRECTORY:** Chapter-scoped (admins see all). RPG stat cards. Filters: role/tier, year, active/inactive. Full profile: avatar+bio+socials, XP/level/badges, project history. Lives in HQ + sidebar shortcut.
-
-**BOUNTY BOARD:** Admin-posted (T1-T3). Bounty Hunter title required (apply + admin review). Solo or team. Lifecycle: Claim → Timer → Submit → Admin review → Approved/Rejected. Card: title, description, reward, deadline, difficulty+category tags.
-
-**SHOP/ECONOMY:** TSI coins (internal currency, never expose rates). Earn from events/bounties/tasks/community. Spend on avatar items, merch, profile customization. T1 only: economy god mode.
-
-**GAMIFICATION:** XP from events/bounties/projects/community. Levels 1-100 (numeric). Badges: milestone, rare/achievement, seasonal. RPG classes via MBTI at Oracle Temple.
-
-**JOB BOARD:** Curated listings (admin) + member submissions. Card: company, title, link, tags, deadline, status.
-
-**EVENTS:** T1-T3 create. RSVP system. Google Calendar sync. QR check-in (RFID later).
-
-**ONBOARDING (mandatory):** Welcome → Profile setup → Avatar creator (body, skin, hair, face, outfit) → Tutorial → Onboarding quests (visit buildings, complete profile, view directory, interact with player, MBTI test at Oracle Temple)
-
-**TIERS:** T1=David (everything + economy god mode), T2=chapter presidents (admin except economy), T3=PMs/VPs (bounty mgmt + submissions + events), T4=directors/devs, T5=volunteers
-
-**ADMIN OFFICE (HQ, T1-T3):** Member mgmt, bounty mgmt, economy controls, analytics dashboard
-
-**NOTIFICATIONS (deferred):** In-game popups, bell icon, email
-
-**MVP:** Game world + Directory/Profiles
-**Phase 2:** Bounty board, shop, Oracle Temple, job board, leaderboard, onboarding quests, admin tools, events, NPCs, social features, alumni
-**Deferred:** Kanban, chapters, notifications, mobile
-
----
-
-### UXUI Agent: Questions to Ask David
-
-**The big-picture vision is DECIDED (above). Do NOT re-ask those questions. Your job is to ask David about VISUAL DETAILS, INTERACTION MICRO-DETAILS, and WIREFRAME SPECIFICS. Use AskUserQuestion with multi-choice format.**
-
-**Ask David these design-detail questions:**
-
-**Q1 — RPG sidebar panel: visual details**
-- What width? Fixed 240px, 280px, 320px?
-- Dividers between nav items? Grouped sections?
-- Active item indicator style: glow, left bar, icon swap, color change?
-
-**Q2 — Member RPG stat card: layout specifics**
-- Card dimensions and grid layout (2-col, 3-col, list view?)
-- What stat bars to show and in what order?
-- Color coding for tier/role badges?
-
-**Q3 — Game world tile/building art: reference images**
-- Ask David for reference game screenshots or pixel art styles he likes
-- What tile size? 32x32, 64x64, 128x128?
-- Ground texture style — grass+dirt paths? cobblestone? paved?
-
-**Q4 — Avatar creator UI: layout and flow**
-- How many options per category (hair, skin, face, outfit)?
-- Preview window style: full-body render, bust, rotating?
-- Randomize button?
-
-**Q5 — HQ interior layout: room arrangement**
-- Single large room with stations? Or multiple rooms with hallways?
-- How are the 6 sections (directory, announcements, leaderboard, admin, alumni, events) arranged spatially?
-
-**Q6 — Building entry/exit animation specifics**
-- Fade duration? Transition style for entering a building?
-- How do overlays (bounty board, job board) appear? Slide up? Fade in? Scale from interaction point?
-
-**Q7 — Overlay panels: visual style**
-- Glassmorphic? Solid dark? RPG wooden frame? Terminal-styled?
-- Size: full-screen modal, centered panel, side panel?
-
-**Q8 — Responsive behavior: sidebar collapse**
-- At what width does sidebar collapse?
-- Collapsed state: icons only? Hidden with hamburger? Overlay?
+See `specs/asset-stack.md` for the complete confirmed stack:
+- Characters: Quaternius Ultimate Animated Characters
+- Buildings: Quaternius Medieval Village + Kenney Retro Medieval Kit
+- Terrain: PSX RPG Town Tiles
+- Props: Quaternius Fantasy Props + Kenney Nature Kit
+- UI: Kenney Pixel UI + Mana Soul GUI
+- Audio: Kenney RPG Audio + xDeviruchi 16-Bit Fantasy Music
+- Shader: bandinopla PS1Material + @mesmotronic/three-retropass
+- Camera: drei CameraControls + BVHEcctrl
+- Multiplayer (deferred): Colyseus (NOT Supabase Realtime)
+- Total asset cost: $0 (all CC0/free)
 
 ---
 
@@ -196,7 +361,7 @@ Project is ~75% production ready for marketing pages. See CLAUDE.md for details.
 
 > UXUI agent writes here. Others: read only.
 
-*(awaiting first entry — start by asking David the design-detail questions above)*
+*(awaiting first entry — start by reading DESIGN_SYSTEM.md, tokens.css, and asset-stack.md, then ask David the 8 design-detail questions)*
 
 ---
 
@@ -204,7 +369,7 @@ Project is ~75% production ready for marketing pages. See CLAUDE.md for details.
 
 > Frontend agent writes here. Others: read only.
 
-*(awaiting first entry)*
+*(awaiting WAVE 3 — blocked on Backend types.ts and UXUI specs)*
 
 ---
 
@@ -212,7 +377,7 @@ Project is ~75% production ready for marketing pages. See CLAUDE.md for details.
 
 > Backend agent writes here. Others: read only.
 
-*(awaiting first entry)*
+*(awaiting WAVE 2 — blocked on QA's schema documentation)*
 
 ---
 
@@ -220,7 +385,7 @@ Project is ~75% production ready for marketing pages. See CLAUDE.md for details.
 
 > QA agent writes here. Others: read only.
 
-*(awaiting first entry)*
+*(awaiting first entry — start immediately with build/lint + schema documentation)*
 
 ---
 
