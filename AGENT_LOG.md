@@ -30,14 +30,14 @@ WAVE 4 (after Frontend commits):
 
 **Goal:** Establish baseline, document existing schema, unblock Backend.
 
-- [ ] Run `cd web && npm run build` — log ALL errors/warnings to `specs/qa.md`
-- [ ] Run `cd web && npm run lint` — log ALL errors/warnings to `specs/qa.md`
-- [ ] Test existing auth flow: signup with `TETHOS-W26` → login → election redirect → success screen
-- [ ] Test all 5 marketing pages load: `/`, `/npo`, `/company`, `/sponsor`, `/student`
-- [ ] **CRITICAL:** Read `web/lib/supabase/types.ts` and document the full `Profile` type (all ~30 fields) in `specs/qa.md` — Backend needs this to audit
-- [ ] Read `web/lib/supabase/middleware.ts` and document current routing logic in `specs/qa.md`
-- [ ] Read `web/supabase/migrations/001_initial_schema.sql` (if exists) and document the full profiles table schema
-- [ ] Log your findings in your section of this file
+- [x] Run `cd web && npm run build` — ✅ PASSES, logged to `specs/qa.md`
+- [x] Run `cd web && npm run lint` — ❌ FAILS (~25 errors, ~30 warnings), logged to `specs/qa.md`
+- [x] Test existing auth flow — ⚠️ N/A: no auth code exists on any branch (documented)
+- [x] Test all 5 marketing pages load — ✅ ALL PASS as static pages
+- [x] **CRITICAL:** `web/lib/supabase/types.ts` — ⚠️ FILE DOES NOT EXIST (no Supabase code on any branch)
+- [x] `web/lib/supabase/middleware.ts` — ⚠️ FILE DOES NOT EXIST
+- [x] `web/supabase/migrations/` — ⚠️ DIRECTORY DOES NOT EXIST — entirely greenfield
+- [x] Log findings in QA section of this file — DONE
 
 **Output:** `specs/qa.md` with build errors, auth test results, and full existing schema documentation.
 
@@ -432,7 +432,33 @@ See `specs/asset-stack.md` for the complete confirmed stack:
 
 > QA agent writes here. Others: read only.
 
-*(awaiting first entry — start immediately with build/lint + schema documentation)*
+### 2026-03-27 — Wave 1 QA Baseline Complete
+
+**Full report:** `specs/qa.md`
+
+**Build:** ✅ PASSES — Next.js 16.1.6, 14 static pages, clean compile in 5.4s
+
+**Lint:** ❌ FAILS — ~25 errors, ~30 warnings. Key errors:
+- 4x missing `key` prop in `npo_formSubmission.tsx`
+- Cascading setState in `CardCarouselLayout.tsx`
+- Hook immutability violation in `InteractivePylon3D.tsx`
+- 7x `any` types in `Lanyard.tsx`
+
+**Auth flow:** ⚠️ CANNOT TEST — no auth infrastructure exists
+
+**Marketing pages:** ✅ ALL 5 PASS — `/`, `/npo`, `/company`, `/sponsor`, `/student` all build as static
+
+**CRITICAL FINDING FOR BACKEND:**
+> **No Supabase code exists on ANY branch.** No `types.ts`, no `middleware.ts`, no migrations, no `@supabase/supabase-js` in package.json. CLAUDE.md says "Supabase Auth | Working" but this is incorrect — it's entirely greenfield. Backend should plan to build everything from scratch, not audit existing schema.
+
+**Dependencies:** Peer conflict with `@ai-sdk/react` (needs `--legacy-peer-deps`). 10 npm vulnerabilities (7 moderate, 3 high).
+
+**Files written:** `specs/qa.md`
+
+**Notes for other agents:**
+- **Backend:** Read `specs/qa.md` Section 5 — there's nothing to audit, you're building from scratch. No existing profile fields, no migrations, no middleware. Install `@supabase/supabase-js` and `@supabase/ssr` first.
+- **Frontend:** Lint errors in your area — see `specs/qa.md` Section 2 for the full list. Fix `key` props and unused vars before adding new code.
+- **Management:** CLAUDE.md "Current State" table needs correction — "Supabase Auth | Working" should be "Supabase Auth | Not yet built".
 
 ---
 
