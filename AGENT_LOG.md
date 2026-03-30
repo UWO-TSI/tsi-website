@@ -43,63 +43,22 @@ WAVE 4 (after Frontend commits):
 
 ---
 
-### UXUI — WAVE 1 (start NOW, parallel with QA)
+### UXUI — ✅ WAVE 1 COMPLETE → PHASE 2 SPECS
 
-**Goal:** Ask David visual detail questions, then write specs that Frontend implements from.
+**Wave 1 delivered:** `ux-dashboard.md`, `ux-game-world.md`, `ux-directory.md`, `tokens.md` — all committed, all checked off.
 
-**Step 1 — Read these files first:**
-- `web/DESIGN_SYSTEM.md` (43KB — the full design bible)
-- `web/styles/tokens.css` (CSS custom properties)
-- `specs/asset-stack.md` (confirmed assets: Quaternius models, PS1 shader, etc.)
+**Phase 2 — Spec the remaining features. Ask David design-detail questions (multi-choice, batched) for each before writing.**
 
-**Step 2 — Ask David these 8 questions using AskUserQuestion with multi-choice options:**
+- [ ] `specs/ux-shop.md` — Shop interior, item grid catalog, item card (icon + name + price + rarity), purchase confirmation, category tabs (outfits, effects, merch, profile), coin balance display
+- [ ] `specs/ux-bounty.md` — Bounty board overlay, bounty card (title, description, reward, deadline, difficulty+category tags, solo/team), claim flow, submission flow, active bounty tracking, Bounty Hunter application form
+- [ ] `specs/ux-leaderboard.md` — Leaderboard overlay, ranked list, your-rank highlight, time period tabs, stats displayed
+- [ ] `specs/ux-jobs.md` — Job board overlay, job listing card, filter/search, member submission form
+- [ ] `specs/ux-oracle.md` — Oracle Temple interior, MBTI quiz flow (question count, question UI, answer format), class reveal animation, 4 main classes + 16 subclass visual identity
+- [ ] `specs/ux-onboarding.md` — Welcome screen → profile form → avatar creator → tutorial → quest checklist with rewards
+- [ ] Design review of Frontend's implementation once building starts
+- [ ] Update AGENT_LOG.md
 
-Q1 — RPG sidebar panel visual details:
-- Width? Fixed 240px, 280px, 320px?
-- Dividers between nav items? Grouped sections?
-- Active item indicator: glow, left accent bar, icon swap, color change?
-
-Q2 — Member RPG stat card layout:
-- Grid layout for directory: 2-col, 3-col, or list view?
-- What stat bars to show (XP, level, projects completed)?
-- Color coding for tier/role badges?
-
-Q3 — Game world ground/terrain:
-- Ground style: grass with dirt paths? cobblestone plaza? mixed?
-- Any water features, fences, decorative elements?
-
-Q4 — Avatar creator UI (for onboarding — spec now, build Phase 2):
-- Preview window: full-body render, bust, rotating?
-- Randomize button?
-- How many options per category (hair, skin, face, outfit)?
-
-Q5 — HQ interior layout:
-- Single large room with stations? Or multiple rooms?
-- How are the 6 sections arranged spatially?
-
-Q6 — Building entry/exit transitions:
-- Fade duration and style for entering buildings?
-- Overlay appearance for boards (slide up, fade in, scale)?
-
-Q7 — Overlay panel style (bounty board, job board):
-- Glassmorphic? Solid dark? RPG wooden frame? Terminal?
-- Size: full modal, centered panel, side panel?
-
-Q8 — Sidebar collapse behavior:
-- At what breakpoint?
-- Collapsed state: icons only, hamburger, overlay?
-
-**Step 3 — Write specs:**
-- [x] `specs/ux-dashboard.md` — full dashboard layout wireframe, sidebar dimensions, RPG panel design, page structure, navigation flow
-- [x] `specs/ux-game-world.md` — map layout (which buildings where), terrain, camera angle, player movement feel, building interaction patterns, entry/exit transitions
-- [x] `specs/ux-directory.md` — RPG stat card wireframe (exact fields, visual hierarchy), profile page layout, search/filter UI, grid layout
-- [x] `specs/tokens.md` — game-specific design tokens (sidebar width, card dimensions, game world colors, overlay sizes)
-- [x] Update AGENT_LOG.md with completed specs
-
-**Rules:**
-- Do NOT write code. Write specs only.
-- Reference the confirmed asset stack (Quaternius models, Kenney buildings) in your specs.
-- Be specific enough that Frontend can implement without guessing. Include dimensions, colors (reference tokens.css), spacing, and interaction states.
+**Rules:** Same as Wave 1 — specs only, no code. Ask David before writing. Multi-choice. Implementation-ready detail.
 
 ---
 
@@ -311,9 +270,9 @@ Q8 — Sidebar collapse behavior:
 
 | Agent | Blocked On | Waiting For | Status |
 |-------|-----------|-------------|--------|
-| Backend | Existing schema documentation | QA to document profiles table | WAVE 1 |
-| Frontend | Supabase types for directory | Backend to commit types.ts | WAVE 2 |
-| Frontend | Visual specs for dashboard/game/directory | UXUI to write specs | **DONE** — specs committed |
+| Backend | Existing schema documentation | **QA to document profiles table** | ⚠️ QA hasn't started — BLOCKING THE CHAIN |
+| Frontend | Supabase types for directory | Backend to commit types.ts | ⏳ Waiting on Backend (which waits on QA) |
+| ~~Frontend~~ | ~~Visual specs~~ | ~~UXUI specs~~ | ✅ RESOLVED — 4 specs delivered |
 
 ---
 
@@ -340,6 +299,21 @@ Full vision documented in memory. Key decisions:
 - Election archived behind env flag
 - Profiles table: audit and clean before adding game columns
 - No kanban, no chapters, no multiplayer, no notifications for MVP
+
+### 2026-03-29 — Wave 1 Status Check
+
+**UXUI: ✅ COMPLETE.** Delivered 4 implementation-ready specs (1,557 lines total):
+- `specs/ux-dashboard.md` — sidebar (240px, narrow minimal, left accent bar), responsive hamburger at 768px
+- `specs/ux-game-world.md` — camera (45° FOV 35°), mixed campus terrain, fade-to-black transitions (0.3s), HQ interior (main room + locked admin room)
+- `specs/ux-directory.md` — list view rows (64px), tier colors (T1=gold, T2=blue, T3=cyan, T4=green, T5=gray)
+- `specs/tokens.md` — 13 token categories, all referencing base tokens.css
+
+**QA: ⚠️ NOT STARTED.** QA is blocking the entire chain. Backend can't audit profiles without QA's schema docs. Frontend can't start without Backend's types.ts. **QA must start immediately.**
+
+**Backend: ⏳ BLOCKED** on QA.
+**Frontend: ⏳ BLOCKED** on Backend.
+
+**UXUI reassigned to Phase 2 spec work** (see updated task list below).
 
 ### 2026-03-29 — Asset Stack Confirmed (Deep Research)
 
