@@ -79,59 +79,45 @@ const SPAWN_POSITION: [number, number, number] = [0, 0, -15];
 function Terrain() {
   return (
     <group>
-      {/* Main grass */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.05, 0]} receiveShadow>
+      {/* Main grass — base layer */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
         <planeGeometry args={[80, 80]} />
         <meshLambertMaterial color="#5da34e" />
       </mesh>
 
-      {/* Lighter grass patches for variety */}
-      {[[-10, 0.01, -15], [12, 0.01, 18], [-18, 0.01, 20], [20, 0.01, -5]].map((pos, i) => (
+      {/* Lighter grass patches — polygonOffset to avoid z-fighting */}
+      {[[-10, 0, -15], [12, 0, 18], [-18, 0, 20], [20, 0, -5]].map((pos, i) => (
         <mesh key={`grass-patch-${i}`} rotation={[-Math.PI / 2, 0, 0]} position={pos as [number, number, number]}>
           <circleGeometry args={[6, 16]} />
-          <meshLambertMaterial color="#6bbf5a" />
+          <meshLambertMaterial color="#6bbf5a" polygonOffset polygonOffsetFactor={-1} polygonOffsetUnits={-1} />
         </mesh>
       ))}
 
-      {/* Main path — N/S */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
-        <planeGeometry args={[3.5, 50]} />
-        <meshLambertMaterial color="#d4c5a0" />
-      </mesh>
-      {/* Path border — N/S */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]}>
-        <planeGeometry args={[4.2, 50]} />
-        <meshLambertMaterial color="#b8a878" />
-      </mesh>
+      {/* Path borders — rendered below paths */}
+      {[[0, 0, 0, 4.2, 50], [0, 0, 10, 35, 4.2], [0, 0, -10, 25, 4.2]].map(([x, y, z, w, h], i) => (
+        <mesh key={`border-${i}`} rotation={[-Math.PI / 2, 0, 0]} position={[x, y, z] as [number, number, number]}>
+          <planeGeometry args={[w, h]} />
+          <meshLambertMaterial color="#b8a878" polygonOffset polygonOffsetFactor={-2} polygonOffsetUnits={-2} />
+        </mesh>
+      ))}
 
-      {/* E/W path upper */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 10]}>
-        <planeGeometry args={[35, 3.5]} />
-        <meshLambertMaterial color="#d4c5a0" />
-      </mesh>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 10]}>
-        <planeGeometry args={[35, 4.2]} />
-        <meshLambertMaterial color="#b8a878" />
-      </mesh>
+      {/* Paths — on top of borders */}
+      {[[0, 0, 0, 3.5, 50], [0, 0, 10, 35, 3.5], [0, 0, -10, 25, 3.5]].map(([x, y, z, w, h], i) => (
+        <mesh key={`path-${i}`} rotation={[-Math.PI / 2, 0, 0]} position={[x, y, z] as [number, number, number]}>
+          <planeGeometry args={[w, h]} />
+          <meshLambertMaterial color="#d4c5a0" polygonOffset polygonOffsetFactor={-3} polygonOffsetUnits={-3} />
+        </mesh>
+      ))}
 
-      {/* E/W path lower */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, -10]}>
-        <planeGeometry args={[25, 3.5]} />
-        <meshLambertMaterial color="#d4c5a0" />
-      </mesh>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, -10]}>
-        <planeGeometry args={[25, 4.2]} />
-        <meshLambertMaterial color="#b8a878" />
-      </mesh>
-
-      {/* Small pond near oracle */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[8, 0.01, 20]}>
-        <circleGeometry args={[3, 24]} />
-        <meshLambertMaterial color="#4a8fa8" />
-      </mesh>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[8, 0.005, 20]}>
+      {/* Pond border */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[8, 0, 20]}>
         <circleGeometry args={[3.4, 24]} />
-        <meshLambertMaterial color="#3a7a90" />
+        <meshLambertMaterial color="#3a7a90" polygonOffset polygonOffsetFactor={-2} polygonOffsetUnits={-2} />
+      </mesh>
+      {/* Pond water */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[8, 0, 20]}>
+        <circleGeometry args={[3, 24]} />
+        <meshLambertMaterial color="#4a8fa8" polygonOffset polygonOffsetFactor={-3} polygonOffsetUnits={-3} />
       </mesh>
     </group>
   );
