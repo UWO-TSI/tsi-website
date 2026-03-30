@@ -49,14 +49,14 @@ WAVE 4 (after Frontend commits):
 
 **Phase 2 — Spec the remaining features. Ask David design-detail questions (multi-choice, batched) for each before writing.**
 
-- [ ] `specs/ux-shop.md` — Shop interior, item grid catalog, item card (icon + name + price + rarity), purchase confirmation, category tabs (outfits, effects, merch, profile), coin balance display
-- [ ] `specs/ux-bounty.md` — Bounty board overlay, bounty card (title, description, reward, deadline, difficulty+category tags, solo/team), claim flow, submission flow, active bounty tracking, Bounty Hunter application form
-- [ ] `specs/ux-leaderboard.md` — Leaderboard overlay, ranked list, your-rank highlight, time period tabs, stats displayed
-- [ ] `specs/ux-jobs.md` — Job board overlay, job listing card, filter/search, member submission form
-- [ ] `specs/ux-oracle.md` — Oracle Temple interior, MBTI quiz flow (question count, question UI, answer format), class reveal animation, 4 main classes + 16 subclass visual identity
-- [ ] `specs/ux-onboarding.md` — Welcome screen → profile form → avatar creator → tutorial → quest checklist with rewards
+- [x] `specs/ux-shop.md` — E-commerce catalog, standard product cards, dual currency, category tabs, product detail, cart stub
+- [x] `specs/ux-bounty.md` — 2-col card grid overlay, claim/submit/review flow, Bounty Hunter application
+- [x] `specs/ux-leaderboard.md` — Ranked table, time period tabs, your-row highlight
+- [x] `specs/ux-jobs.md` — Full-page job board, search + filters, member submission form
+- [x] `specs/ux-oracle.md` — Card-based MBTI quiz (12 Q), 4 classes + 16 subclasses, class reveal animation
+- [x] `specs/ux-onboarding.md` — Welcome → profile → avatar → quest checklist (6 quests, 275 XP)
 - [ ] Design review of Frontend's implementation once building starts
-- [ ] Update AGENT_LOG.md
+- [x] Update AGENT_LOG.md
 
 **Rules:** Same as Wave 1 — specs only, no code. Ask David before writing. Multi-choice. Implementation-ready detail.
 
@@ -409,6 +409,42 @@ See `specs/asset-stack.md` for the complete confirmed stack:
 - Multiplayer presence indicators when Colyseus ships
 
 **No blockers. UXUI is idle and available for Phase 2 spec work or design review.**
+
+### 2026-03-29 — Spec Updates + Phase 2 COMPLETE
+
+**Spec updates for art direction pivot:**
+- Updated `specs/ux-game-world.md` Section 5 — PlayerAvatar rewritten from 3D Quaternius models to 2D billboard sprites (Dave the Diver style). Added sprite sheet animation (8 FPS), layered composition (4 layers at z-offsets), NearestFilter.
+- Updated `specs/ux-dashboard.md` Section 6.2 — Avatar creator preview changed from 3D bust to 2D layered sprite at 4× scale with `image-rendering: pixelated`.
+- Updated `specs/tokens.md` Section 10 — Added sprite layer tokens (z-offset, frame rate, billboard dimensions).
+
+**Phase 2 design questions asked (all answered by David):**
+
+| Question | David's Choice |
+|----------|---------------|
+| Shop layout | **Full-page e-commerce catalog** — real merch, not avatar cosmetics |
+| Product card | **Standard e-commerce card** — photo, name, price, add-to-cart |
+| Shop currency | **Both** — real money (Stripe) + TSI coins |
+| Bounty board | **Card grid overlay** — 2-column cards with filter tabs |
+| Leaderboard | **Ranked table** — simple, time period tabs, your-row highlighted |
+| Oracle quiz | **Card-based** — question presented, 2-4 answer cards in front, click most accurate, progress bar at bottom |
+| Job board | **Full-page** — search + filters, job listing cards, member submission |
+| Onboarding tutorial | **Quest checklist** — self-directed exploration with XP rewards (6 quests, 275 XP total) |
+
+**Phase 2 specs written (all committed, 1,488 lines total):**
+
+- [x] `specs/ux-shop.md` — E-commerce catalog, standard product cards, dual currency (real money + TSI coins), category tabs, product detail page with variants, cart stub
+- [x] `specs/ux-bounty.md` — 2-col card grid overlay, bounty cards (title/reward/deadline/difficulty/tags), claim flow (6 steps), submission form, Bounty Hunter application
+- [x] `specs/ux-leaderboard.md` — Ranked table, time period tabs (weekly/monthly/all-time), your-row sticky highlight, responsive column hiding, gold/silver/bronze rank colors
+- [x] `specs/ux-jobs.md` — Full page with search + filter tabs, job listing cards (company/role/type/location), type-colored badges, member submission form, admin review flow
+- [x] `specs/ux-oracle.md` — Card-based MBTI quiz (12 questions, 2-4 answer cards each), 4 main classes (Warrior/Mage/Healer/Rogue), 16 subclasses, dramatic class reveal animation, post-quiz class info page
+- [x] `specs/ux-onboarding.md` — 3-step flow (welcome → profile → avatar), starter quest checklist widget (6 quests, 275 XP), XP toast notifications, collapsible widget, edge cases
+
+**Notes for other agents:**
+- **Frontend:** All Phase 2 specs are ready. Priority order for building: onboarding first (it's the entry point), then shop and oracle (most complex), then bounty/leaderboard/jobs (overlay-based).
+- **Backend:** Shop needs product catalog API + Stripe integration. Bounty system needs the `bounties` + `bounty_submissions` tables from migration 006. Oracle needs `class`/`subclass` fields on profiles (already in migration 004). Jobs needs a `job_listings` table (not yet specified in migrations — Backend should add).
+- **QA:** Test onboarding flow end-to-end. Test quest completion XP awards. Test Oracle quiz scoring (12 questions → MBTI type → class/subclass mapping).
+
+**UXUI Phase 2 is COMPLETE. All 10 spec files delivered (Wave 1 + Phase 2). Remaining UXUI work: design review once Frontend starts building.**
 
 ---
 
