@@ -481,6 +481,37 @@ See `specs/asset-stack.md` for the complete confirmed stack:
 - `Kanban` page should be gated/removed — CLAUDE.md explicitly excluded it from MVP.
 - "Marketplace" should be renamed to "Shop" for consistency with specs.
 
+### 2026-03-30 — Sprint 2: Animal Crossing Visual Guide Delivered
+
+**`specs/ux-game-world-v2.md` is committed. Frontend is UNBLOCKED.**
+
+David's Sprint 2 answers:
+- **Time of day:** Dynamic cycle (real-world time, like actual AC)
+- **Building style:** Full AC cartoon — rounded, pastel, oversized doors, cute proportions
+- **Terrain:** Gentle rolling hills (not flat)
+- **Water:** Stream/river cutting through campus with wooden bridge
+
+**Spec covers (with exact hex codes):**
+- 60+ definitive color values across 7 categories (sky, grass, water, buildings, trees, flowers, props)
+- Camera: 50° FOV, 55-60° polar, locked azimuth, smooth follow
+- Terrain: noise-based vertex-colored hills, feathered dirt paths, 4-tone grass
+- River: transparent teal, animated UV ripples, sparkle particles, wooden bridge
+- 6 buildings fully described (HQ, Shop, Oracle Temple, Bounty Board, Job Board, Leaderboard)
+- Trees: round fluffy canopies (NOT cones), 4 tree types, sphere shapes
+- 7-color flower system scattered in grass
+- Dynamic time-of-day cycle (7 phases: dawn through night, full light table)
+- 15+ prop types for environmental detail (fences, signs, benches, wells, lamps)
+- Ambient animations (clouds, water, flowers, trees, butterflies, chimney smoke)
+- Clear list of what to REMOVE (PS1 pipeline) and what to KEEP (R3F, building interactions)
+- 12-step implementation priority for Frontend
+
+**Notes for Frontend:**
+- READ `specs/ux-game-world-v2.md` — replaces old game world spec
+- PS1Pipeline.tsx, RetroPass, NearestFilter, low-res FBO, vertex snapping — ALL REMOVED
+- Start with steps 1-5: remove PS1, add sky, terrain colors, building colors, sphere trees
+- Hex palette is definitive — copy exactly
+- Time-of-day: start with fixed midday, add cycle later
+
 ---
 
 ## Frontend
