@@ -424,7 +424,73 @@ See `specs/asset-stack.md` for the complete confirmed stack:
 
 > Backend agent writes here. Others: read only.
 
-*(awaiting WAVE 2 — blocked on QA's schema documentation)*
+### 2026-03-30 — Wave 2 Complete
+
+**Unblocked myself.** QA never started, so I audited the schema directly from `origin/main` (merged into branch). All existing supabase code (client helpers, types, middleware, 3 migrations) was already on main.
+
+**What I built:**
+
+1. **Migration 004_cleanup_and_extend.sql**
+   - Tier constraint expanded: 1-4 → 1-5 (T5=volunteer)
+   - Added: `avatar_config JSONB`, `skills TEXT[]`, `social_links JSONB`
+   - Added 6 indexes + trigram search index on display_name
+
+2. **Migration 005_avatar_items.sql**
+   - `avatar_items` table (type, category, coin_price, rarity, sprite_url)
+   - `player_inventory` table (user owns items, equipped state)
+   - RLS: read all items, read/update own inventory
+
+3. **Migration 006_bounty_system.sql** (stub)
+   - `bounty_submissions` table (submission_text, status, reviewer_notes)
+   - RLS: read all, insert own, update own pending
+
+4. **Middleware rewrite** (`web/lib/supabase/middleware.ts`)
+   - Election routes archived behind `ENABLE_ELECTION` env flag (default: off → redirect to dashboard)
+   - Dashboard routes: require auth + `onboarding_completed`
+   - Admin routes (`/student/dashboard/admin/*`): require T1-T3
+   - Onboarding routes: require auth, skip if already onboarded
+   - Login/signup while logged in → redirect to dashboard
+
+5. **types.ts rewrite** (`web/lib/supabase/types.ts`)
+   - `Tier` expanded to `1 | 2 | 3 | 4 | 5`
+   - Added: `AvatarConfig`, `SocialLinks`, `AvatarItem`, `PlayerInventoryItem`, `Bounty`, `BountySubmission`, `DirectoryMember`, `PublicProfile` interfaces
+   - Added: `TIER_LABELS`, updated `POSITION_TIER_MAP` (volunteer → T5)
+   - Updated `canAccessFeature` — T5 now has access to dashboard, directory, marketplace, leaderboard, quests, calendar, job_board
+
+6. **API Routes**
+   - `GET /api/directory` — filtered member list, T1/T2 see inactive members
+   - `GET /api/profile` — own full profile
+   - `PATCH /api/profile` — update own profile (Zod validated)
+   - `GET /api/profile/[id]` — public profile (limited fields)
+
+7. **specs/api.md** — full API documentation with request/response shapes
+
+**Files created/modified:**
+- `web/supabase/migrations/004_cleanup_and_extend.sql` (new)
+- `web/supabase/migrations/005_avatar_items.sql` (new)
+- `web/supabase/migrations/006_bounty_system.sql` (new)
+- `web/lib/supabase/middleware.ts` (rewritten)
+- `web/lib/supabase/types.ts` (rewritten)
+- `web/middleware.ts` (updated matcher)
+- `web/app/api/directory/route.ts` (new)
+- `web/app/api/profile/route.ts` (new)
+- `web/app/api/profile/[id]/route.ts` (new)
+- `specs/api.md` (written)
+
+**Notes for Frontend:**
+- Import types from `@/lib/supabase/types` — `DirectoryMember`, `PublicProfile`, `Profile`, `AvatarConfig`, etc.
+- Directory API returns `{ members: DirectoryMember[] }` sorted by level desc
+- Profile API returns `{ profile: Profile }` for own, `{ profile: PublicProfile }` for others
+- PATCH profile validates with Zod — check `specs/api.md` for field constraints
+- `canAccessFeature(tier, feature)` helper available for client-side permission checks
+
+**Notes for QA:**
+- Test middleware redirects: unauthenticated → login, no onboarding → onboarding, logged in → dashboard
+- Test election routes are gated (should redirect to dashboard when `ENABLE_ELECTION` is not set)
+- Test API routes return 401 without auth
+- Test directory visibility: T3+ should not see inactive members
+
+**No blockers. Frontend is unblocked.**
 
 ---
 

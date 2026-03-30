@@ -1,4 +1,7 @@
-export type Tier = 1 | 2 | 3 | 4;
+// ─── Tier System ────────────────────────────────────────────────────────────
+// T1=David (super admin), T2=presidents, T3=PM/VP, T4=dev/director, T5=volunteer
+
+export type Tier = 1 | 2 | 3 | 4 | 5;
 
 export type Position =
   | "president"
@@ -34,6 +37,8 @@ export type Side = "operations" | "projects" | null;
 
 export type Portfolio = "external" | "internal" | "marketing" | null;
 
+// ─── Profile ────────────────────────────────────────────────────────────────
+
 export interface Profile {
   id: string;
   email: string;
@@ -56,6 +61,11 @@ export interface Profile {
   onboarding_completed: boolean;
   onboarding_step: number;
   has_voted: boolean;
+
+  // Game world
+  avatar_config: AvatarConfig;
+  skills: string[];
+  social_links: SocialLinks;
 
   // Profile fields
   year: string | null;
@@ -89,7 +99,124 @@ export interface Profile {
   login_streak: number;
 }
 
-// Position to class mapping
+// ─── Avatar & Game Types ────────────────────────────────────────────────────
+
+export interface AvatarConfig {
+  body?: string;
+  hair?: string;
+  face?: string;
+  outfit?: string;
+  accessory?: string;
+  hair_color?: string;
+  skin_color?: string;
+  outfit_color?: string;
+}
+
+export interface SocialLinks {
+  github?: string;
+  linkedin?: string;
+  instagram?: string;
+  discord?: string;
+  twitter?: string;
+  website?: string;
+}
+
+export type ItemType = "hair" | "face" | "outfit" | "accessory" | "effect" | "emote";
+export type ItemCategory = "default" | "shop" | "achievement" | "event" | "admin";
+export type ItemRarity = "common" | "uncommon" | "rare" | "epic" | "legendary";
+
+export interface AvatarItem {
+  id: string;
+  name: string;
+  type: ItemType;
+  category: ItemCategory;
+  coin_price: number;
+  sprite_url: string | null;
+  rarity: ItemRarity;
+  is_available: boolean;
+  created_at: string;
+}
+
+export interface PlayerInventoryItem {
+  id: string;
+  user_id: string;
+  item_id: string;
+  equipped: boolean;
+  acquired_at: string;
+}
+
+// ─── Bounty Types ───────────────────────────────────────────────────────────
+
+export type BountyStatus = "pending" | "open" | "claimed" | "in_progress" | "review" | "completed" | "expired";
+export type SubmissionStatus = "pending" | "approved" | "rejected" | "revision_requested";
+
+export interface Bounty {
+  id: string;
+  title: string;
+  description: string;
+  client_name: string | null;
+  pay_cad: number | null;
+  pay_tc: number | null;
+  xp_reward: number;
+  difficulty: number;
+  deadline: string | null;
+  tech_stack: string[];
+  status: BountyStatus;
+  submitted_by: string | null;
+  approved_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BountySubmission {
+  id: string;
+  bounty_id: string;
+  user_id: string;
+  submission_text: string;
+  attachment_urls: string[];
+  status: SubmissionStatus;
+  reviewer_notes: string | null;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+// ─── Directory (public-facing subset of Profile) ────────────────────────────
+
+export interface DirectoryMember {
+  id: string;
+  display_name: string;
+  avatar_url: string | null;
+  tier: Tier;
+  position: Position | null;
+  class: ClassName | null;
+  level: number;
+  xp: number;
+  skills: string[];
+  is_active: boolean;
+}
+
+export interface PublicProfile {
+  id: string;
+  display_name: string;
+  avatar_url: string | null;
+  tier: Tier;
+  position: Position | null;
+  class: ClassName | null;
+  subclass: string | null;
+  level: number;
+  xp: number;
+  rank: RankTitle;
+  skills: string[];
+  bio: string | null;
+  social_links: SocialLinks;
+  is_active: boolean;
+  created_at: string;
+}
+
+// ─── Mappings ───────────────────────────────────────────────────────────────
+
 export const POSITION_CLASS_MAP: Record<Position, ClassName> = {
   president: "ARCHITECT",
   senior_advisor: "ORACLE",
@@ -102,7 +229,6 @@ export const POSITION_CLASS_MAP: Record<Position, ClassName> = {
   volunteer: "SCOUT",
 };
 
-// Position to tier mapping
 export const POSITION_TIER_MAP: Record<Position, Tier> = {
   president: 1,
   senior_advisor: 2,
@@ -112,10 +238,19 @@ export const POSITION_TIER_MAP: Record<Position, Tier> = {
   developer: 3,
   director: 3,
   general: 4,
-  volunteer: 4,
+  volunteer: 5,
 };
 
-// Level calculation
+export const TIER_LABELS: Record<Tier, string> = {
+  1: "Founder",
+  2: "President",
+  3: "Lead",
+  4: "Member",
+  5: "Volunteer",
+};
+
+// ─── Helpers ────────────────────────────────────────────────────────────────
+
 export function xpForLevel(level: number): number {
   return Math.floor(100 * Math.pow(level, 1.8));
 }
@@ -137,22 +272,21 @@ export function rankFromLevel(level: number): RankTitle {
   return "Initiate";
 }
 
-// Permission helpers
 export function canAccessFeature(
   tier: Tier,
   feature: string
 ): boolean {
   const permissions: Record<string, Tier[]> = {
-    dashboard: [1, 2, 3, 4],
+    dashboard: [1, 2, 3, 4, 5],
     bounty_board: [1, 2, 3],
-    calendar: [1, 2, 3, 4],
+    calendar: [1, 2, 3, 4, 5],
     kanban: [1, 2, 3],
-    marketplace: [1, 2, 3],
-    job_board: [1, 2, 3, 4],
-    directory: [1, 2, 3, 4],
+    marketplace: [1, 2, 3, 4, 5],
+    job_board: [1, 2, 3, 4, 5],
+    directory: [1, 2, 3, 4, 5],
     tools: [1, 2, 3],
-    quests: [1, 2, 3],
-    leaderboard: [1, 2, 3, 4],
+    quests: [1, 2, 3, 4, 5],
+    leaderboard: [1, 2, 3, 4, 5],
     portfolio: [1, 2, 3],
     mentorship: [1, 2, 3],
     admin: [1, 2],
