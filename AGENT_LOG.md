@@ -352,6 +352,80 @@ See `specs/asset-stack.md` for the complete confirmed stack:
 - Multiplayer (deferred): Colyseus (NOT Supabase Realtime)
 - Total asset cost: $0 (all CC0/free)
 
+### 2026-03-30 — SPRINT 2: Animal Crossing Visual Overhaul
+
+**Direction from David:** The game must LOOK and FEEL like Animal Crossing. The current implementation is too dark, too pixelated, too PS1. We're going for cozy, bright, colorful, inviting — not gritty/retro.
+
+**PS1 shader is REMOVED.** No more vertex snapping, no low-res render, no pixelation. Full resolution, antialiased, clean rendering.
+
+**All branches now have the working merged codebase (test-merge).** Game world renders: blue sky, green terrain, placeholder buildings, trees, character sprite walks, building interaction works.
+
+**What needs fixing NOW (in priority order):**
+
+---
+
+#### @UXUI — URGENT: Refined Visual Guide for Animal Crossing Style
+
+**Your existing specs described a PS1/terminal aesthetic. That direction has changed. David wants Animal Crossing.**
+
+Write a NEW spec: `specs/ux-game-world-v2.md` that gives Frontend a **clear visual blueprint** for an Animal Crossing-style world. Include:
+
+1. **Reference images** — describe exactly which Animal Crossing scenes/screenshots to emulate. Name specific games (AC: New Horizons, AC: Wild World, etc.) and describe the camera angle, lighting mood, color palette, and terrain feel.
+
+2. **Camera** — Animal Crossing uses a slightly elevated perspective camera (not true isometric). Describe the exact angle, distance, and FOV that matches. Should camera rotate freely or be locked?
+
+3. **Terrain** — AC has rolling gentle hills, lush multi-tone grass, dirt paths with soft edges, flowers, rivers/ponds with rounded edges, cliffs. Describe what our terrain should look like — flat or with gentle elevation? What ground colors? Path style (dirt, stone, brick)?
+
+4. **Buildings** — AC buildings are rounded, pastel-colored, have cute proportions (slightly oversized doors, small windows, decorative chimneys, awnings). Describe the exact style for each building (HQ, Shop, Oracle Temple). Include colors, proportions, decorative elements.
+
+5. **Trees & vegetation** — AC trees are round and lush (not pointy cones). Describe shape, color variety, size. Include bushes, flowers (multiple colors), stumps, weeds.
+
+6. **Lighting** — AC has bright, warm daylight with soft shadows. Golden hour glow. Describe the exact lighting setup.
+
+7. **Color palette** — provide exact hex colors for: grass (multiple tones), paths, sky, water, building walls, roofs, tree trunks, foliage, flowers. This should be a definitive palette Frontend copies.
+
+8. **Props & details** — fences, signs, wells, bridges, stepping stones, market stalls, streetlamps. What should be scattered around the village?
+
+9. **Overall feel** — describe the MOOD. Cozy, welcoming, playful, lived-in. Not sterile or empty.
+
+**Ask David any clarifying questions FIRST (multi-choice). Then write the spec. Frontend is blocked until you deliver this.**
+
+---
+
+#### @Frontend — BLOCKED on UXUI v2 spec. Prep work:
+
+While waiting for `specs/ux-game-world-v2.md`:
+
+1. **Convert building FBX assets to GLB in Blender** — the Quaternius FBX files have external textures. Write a Blender Python script (or use the Blender CLI) to batch-convert all FBXs in `public/assets/buildings/` to self-contained `.glb` files with textures embedded. This unblocks real 3D models.
+
+2. **Research Animal Crossing R3F implementations** — search GitHub for any existing AC-style Three.js/R3F projects. Look for terrain generation approaches, camera rigs, and lighting setups that match the AC feel.
+
+3. **Once UXUI delivers v2 spec** — implement the visual overhaul. Replace the current placeholder geometry with AC-style terrain, buildings, vegetation per the spec's exact color palette and proportions.
+
+4. **Fix the terrain z-fighting** — paths and grass at the same Y cause flicker. Use proper Y offsets or polygon offset.
+
+5. **Do NOT add PS1 shader back.** Clean, antialiased rendering only.
+
+---
+
+#### @Backend — Continue Phase 2 wiring
+
+1. Wire real Supabase queries into the dashboard pages that are using mock data
+2. Test all API endpoints work with real Supabase (need env vars set)
+3. Implement the MBTI quiz endpoint using `specs/oracle-questions.md`
+4. Add event system API (CRUD events, RSVP)
+
+---
+
+#### @QA — Integration testing
+
+1. Merge all branches into your QA branch
+2. Run `npm run build` — log any new errors
+3. Test the game world in browser — character movement, building interaction, sidebar nav
+4. Test all dashboard pages load without errors
+5. Cross-browser test (Chrome, Safari, Firefox)
+6. Log everything to `specs/qa.md`
+
 ---
 
 ## UXUI
