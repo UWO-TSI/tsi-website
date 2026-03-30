@@ -1,14 +1,14 @@
 import type { ReactNode } from "react";
 import CustomCursor from "@/components/ui/CustomCursor";
 import LoadingScreenWrapper from "@/components/LoadingScreenWrapper";
-import SponsorNavbar from "./SponsorNavbar";
+import GlassNavbar from "@/components/layout/GlassNavbar";
 
 export default function SponsorLayout({ children }: { children: ReactNode }) {
   return (
     <LoadingScreenWrapper>
       <CustomCursor />
-      <SponsorNavbar />
-      <main className="pt-[96px]">{children}</main>
+      <GlassNavbar />
+      <main>{children}</main>
     </LoadingScreenWrapper>
   );
 }

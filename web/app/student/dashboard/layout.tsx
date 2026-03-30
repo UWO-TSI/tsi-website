@@ -11,11 +11,11 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   return (
     <TransitionProvider>
     <div
-      className="fixed inset-0 z-50"
+      className="fixed inset-0 z-50 flex"
       style={{ background: "var(--color-bg-main)" }}
     >
-      {/* Desktop sidebar */}
-      <div className="hidden md:block h-full">
+      {/* Desktop sidebar — fixed width, flex-shrink-0 */}
+      <div className="hidden md:flex h-full flex-shrink-0">
         <Sidebar />
       </div>
 
@@ -41,13 +41,11 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       {/* Mobile sidebar overlay */}
       {mobileOpen && (
         <>
-          {/* Backdrop */}
           <div
             className="fixed inset-0 md:hidden"
             style={{ zIndex: 45, background: "rgba(0, 0, 0, 0.5)" }}
             onClick={() => setMobileOpen(false)}
           />
-          {/* Sidebar slide-over */}
           <div
             className="fixed inset-y-0 left-0 md:hidden"
             style={{
@@ -60,9 +58,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         </>
       )}
 
-      {/* Main content area */}
+      {/* Main content area — flex-1 ensures it fills remaining space */}
       <main
-        className="h-full overflow-y-auto overflow-x-hidden md:ml-[240px]"
+        className="flex-1 h-full overflow-y-auto overflow-x-hidden"
       >
         {children}
       </main>

@@ -444,16 +444,21 @@ export default function Impact() {
 	return (
 		<section
 			ref={wrapperRef}
+			data-navbar-theme="dark"
 			className="sticky top-0 min-h-screen bg-[#0F0F10] text-white px-0 overflow-hidden"
 			style={{ zIndex: 10 }}
 		>
 			<div className="w-full px-4 pt-16 pb-0">
 				<header className="mb-8 text-center">
 					<p
-						className="mt-10 text-2xl md:text-3xl font-semibold"
+						className="mt-10 text-xs tracking-[0.3em] mb-3"
+						style={{ fontFamily: "IBM Plex Mono, monospace", color: "#71717A" }}
 					>
-						2025/2026 Project Gallery
+						Project Gallery · 2025 / 2026
 					</p>
+					<h2 className="font-heading text-3xl font-semibold">
+						2025/2026 Project Gallery
+					</h2>
 				</header>
 		</div>
 

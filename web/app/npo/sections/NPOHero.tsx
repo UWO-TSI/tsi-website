@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { Suspense, useEffect, useRef } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import ScrollIndicator from "@/components/ui/ScrollIndicator";
+import GlobeVisualizer from "@/components/ui/GlobeVisualizer";
 import {
   EASE_ENTER,
   EASE_CINEMATIC,
@@ -19,6 +20,7 @@ export default function NPOHero() {
   const sectionRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const scrollHintRef = useRef<HTMLDivElement>(null);
+  const globeRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const ctx = gsap.context(() => {
@@ -56,6 +58,11 @@ export default function NPOHero() {
             const tg = Math.round(255 - progress * (255 - 15));
             const tb = Math.round(255 - progress * (255 - 16));
             contentRef.current.style.color = `rgb(${tr},${tg},${tb})`;
+          }
+
+          // Sync globe fade with dark→light transition
+          if (globeRef.current) {
+            globeRef.current.style.opacity = String((1 - self.progress) * 0.15);
           }
         },
       });
@@ -96,9 +103,21 @@ export default function NPOHero() {
   return (
     <section
       ref={sectionRef}
+      data-navbar-theme="dark"
       className="h-screen flex items-center justify-center relative overflow-hidden"
       style={{ backgroundColor: "#0F0F10" }}
     >
+      {/* Globe — upper right, pointer-events-none, fades with scroll */}
+      <div
+        ref={globeRef}
+        className="absolute top-8 right-0 pointer-events-none"
+        style={{ opacity: 0.15, width: 340, height: 340 }}
+      >
+        <Suspense fallback={null}>
+          <GlobeVisualizer />
+        </Suspense>
+      </div>
+
       <div
         ref={contentRef}
         className="flex flex-col items-center justify-center px-6 text-center max-w-4xl"
