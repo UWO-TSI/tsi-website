@@ -1,0 +1,266 @@
+"use client";
+
+import { useState, useMemo } from "react";
+import { Search, SlidersHorizontal, SearchX } from "lucide-react";
+import MemberCard from "./MemberCard";
+import {
+  MOCK_MEMBERS,
+  TIER_COLORS,
+  type DirectoryMember,
+  type Tier,
+} from "./types";
+
+export default function MemberDirectory() {
+  const [search, setSearch] = useState("");
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [tierFilter, setTierFilter] = useState<Set<Tier>>(new Set());
+  const [statusFilter, setStatusFilter] = useState<"active" | "all">("active");
+
+  // TODO: fetch from /api/directory when Backend API is ready
+  const members: DirectoryMember[] = MOCK_MEMBERS;
+
+  const filtered = useMemo(() => {
+    return members.filter((m) => {
+      // Search
+      if (search) {
+        const q = search.toLowerCase();
+        const matchesSearch =
+          m.display_name.toLowerCase().includes(q) ||
+          (m.class?.toLowerCase().includes(q) ?? false) ||
+          m.skills.some((s) => s.toLowerCase().includes(q));
+        if (!matchesSearch) return false;
+      }
+      // Tier filter
+      if (tierFilter.size > 0 && !tierFilter.has(m.tier)) return false;
+      // Status filter
+      if (statusFilter === "active" && !m.is_active) return false;
+      return true;
+    });
+  }, [members, search, tierFilter, statusFilter]);
+
+  const toggleTier = (tier: Tier) => {
+    setTierFilter((prev) => {
+      const next = new Set(prev);
+      if (next.has(tier)) next.delete(tier);
+      else next.add(tier);
+      return next;
+    });
+  };
+
+  return (
+    <div
+      className="mx-auto"
+      style={{
+        maxWidth: "960px",
+        padding: "24px",
+      }}
+    >
+      {/* Search + Filter Bar */}
+      <div className="flex gap-3 mb-4">
+        {/* Search input */}
+        <div className="flex-1 relative">
+          <Search
+            className="absolute top-1/2 -translate-y-1/2"
+            style={{
+              left: "12px",
+              width: "16px",
+              height: "16px",
+              color: "var(--color-text-subtle)",
+            }}
+          />
+          <input
+            type="text"
+            placeholder="Search by name, class, or skill..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            aria-label="Search members"
+            className="w-full outline-none transition-shadow"
+            style={{
+              height: "40px",
+              padding: "0 12px 0 36px",
+              background: "var(--color-surface)",
+              border: "1px solid var(--glass-border-soft)",
+              borderRadius: "8px",
+              fontSize: "14px",
+              color: "var(--color-text-main)",
+            }}
+            onFocus={(e) => {
+              e.currentTarget.style.borderColor = "var(--color-brand-blue)";
+              e.currentTarget.style.boxShadow = "0 0 0 2px rgba(0, 47, 167, 0.2)";
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.borderColor = "var(--glass-border-soft)";
+              e.currentTarget.style.boxShadow = "none";
+            }}
+          />
+        </div>
+
+        {/* Filter button */}
+        <button
+          onClick={() => setFilterOpen((f) => !f)}
+          className="flex items-center gap-2 shrink-0 transition-colors"
+          style={{
+            height: "40px",
+            padding: "0 12px",
+            background: "transparent",
+            border: filterOpen
+              ? "1px solid var(--color-brand-blue)"
+              : "1px solid var(--gray-700)",
+            borderRadius: "8px",
+            color: "var(--color-text-muted)",
+            fontSize: "14px",
+          }}
+        >
+          <SlidersHorizontal style={{ width: "16px", height: "16px" }} />
+          Filters
+        </button>
+      </div>
+
+      {/* Filter dropdown */}
+      {filterOpen && (
+        <div
+          className="mb-4 p-3"
+          style={{
+            background: "var(--color-surface)",
+            border: "1px solid var(--glass-border-soft)",
+            borderRadius: "8px",
+            boxShadow: "var(--shadow-soft)",
+          }}
+        >
+          {/* Tier pills */}
+          <div className="mb-3">
+            <label
+              className="block mb-2 font-mono uppercase"
+              style={{
+                fontSize: "12px",
+                color: "var(--color-text-subtle)",
+                letterSpacing: "0.05em",
+              }}
+            >
+              Tier
+            </label>
+            <div className="flex gap-2 flex-wrap">
+              {([1, 2, 3, 4, 5] as Tier[]).map((tier) => {
+                const selected = tierFilter.has(tier);
+                const tc = TIER_COLORS[tier];
+                return (
+                  <button
+                    key={tier}
+                    onClick={() => toggleTier(tier)}
+                    className="font-mono transition-colors"
+                    style={{
+                      height: "28px",
+                      padding: "0 12px",
+                      fontSize: "12px",
+                      borderRadius: "9999px",
+                      background: selected ? tc.bg : "transparent",
+                      border: selected
+                        ? `1px solid ${tc.color}`
+                        : "1px solid var(--gray-700)",
+                      color: selected ? tc.color : "var(--color-text-muted)",
+                    }}
+                  >
+                    T{tier}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Status toggle */}
+          <div>
+            <label
+              className="block mb-2 font-mono uppercase"
+              style={{
+                fontSize: "12px",
+                color: "var(--color-text-subtle)",
+                letterSpacing: "0.05em",
+              }}
+            >
+              Status
+            </label>
+            <div className="flex gap-2">
+              {(["active", "all"] as const).map((s) => (
+                <button
+                  key={s}
+                  onClick={() => setStatusFilter(s)}
+                  className="transition-colors capitalize"
+                  style={{
+                    height: "28px",
+                    padding: "0 12px",
+                    fontSize: "12px",
+                    borderRadius: "9999px",
+                    background:
+                      statusFilter === s
+                        ? "rgba(0, 47, 167, 0.15)"
+                        : "transparent",
+                    border:
+                      statusFilter === s
+                        ? "1px solid var(--color-brand-blue)"
+                        : "1px solid var(--gray-700)",
+                    color:
+                      statusFilter === s
+                        ? "var(--color-text-main)"
+                        : "var(--color-text-muted)",
+                  }}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Results count */}
+      <p
+        className="mb-3"
+        style={{ fontSize: "14px", color: "var(--color-text-muted)" }}
+      >
+        Showing {filtered.length} member{filtered.length !== 1 ? "s" : ""}
+      </p>
+
+      {/* Member list */}
+      {filtered.length > 0 ? (
+        <div role="listbox" aria-label="Member directory">
+          {filtered.map((member) => (
+            <MemberCard key={member.id} member={member} />
+          ))}
+        </div>
+      ) : (
+        // Empty state
+        <div
+          className="flex flex-col items-center justify-center"
+          style={{ padding: "48px" }}
+        >
+          <SearchX
+            style={{
+              width: "32px",
+              height: "32px",
+              color: "var(--color-text-subtle)",
+              marginBottom: "12px",
+            }}
+          />
+          <p
+            style={{
+              fontSize: "16px",
+              color: "var(--color-text-muted)",
+              fontWeight: 500,
+            }}
+          >
+            No members found
+          </p>
+          <p
+            style={{
+              fontSize: "14px",
+              color: "var(--color-text-subtle)",
+              marginTop: "4px",
+            }}
+          >
+            Try adjusting your filters
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
