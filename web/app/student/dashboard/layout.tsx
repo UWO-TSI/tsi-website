@@ -3,11 +3,13 @@
 import { type ReactNode, useState } from "react";
 import { Menu } from "lucide-react";
 import Sidebar from "@/components/portal/Sidebar";
+import { TransitionProvider } from "@/components/game/TransitionOverlay";
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
+    <TransitionProvider>
     <div
       className="fixed inset-0 z-50"
       style={{ background: "var(--color-bg-main)" }}
@@ -72,5 +74,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         }
       `}</style>
     </div>
+    </TransitionProvider>
   );
 }
