@@ -1,82 +1,81 @@
 "use client";
 
-import { useState, useEffect, useRef, Suspense } from "react";
-import { Html, useFBX } from "@react-three/drei";
+import { useState, useEffect, useRef } from "react";
+import { Html } from "@react-three/drei";
 import { useRouter } from "next/navigation";
 import * as THREE from "three";
 
-const INTERACT_RANGE = 3;
+const INTERACT_RANGE = 4;
 
 /**
- * Loads an FBX model from public/assets/ and renders it.
- * Applies NearestFilter to all textures for PS1 look.
+ * Animal Crossing style building — rounded, colorful, cozy
  */
-function FBXModel({ path, scale = 1 }: { path: string; scale?: number }) {
-  const fbx = useFBX(path);
-
-  // Apply PS1 texture filtering to all materials
-  fbx.traverse((child) => {
-    if (child instanceof THREE.Mesh && child.material) {
-      const materials = Array.isArray(child.material)
-        ? child.material
-        : [child.material];
-      for (const mat of materials) {
-        const stdMat = mat as THREE.MeshStandardMaterial;
-        if (stdMat.map) {
-          stdMat.map.minFilter = THREE.NearestFilter;
-          stdMat.map.magFilter = THREE.NearestFilter;
-          stdMat.map.generateMipmaps = false;
-        }
-        stdMat.roughness = Math.max(stdMat.roughness ?? 0.8, 0.7);
-      }
-    }
-  });
-
-  return <primitive object={fbx} scale={scale} />;
-}
-
-/**
- * Placeholder geometry for when FBX model is loading or unavailable.
- */
-function PlaceholderBox({
+function ACBuilding({
   size,
   color,
-  isBoard,
 }: {
   size: [number, number, number];
   color: string;
-  isBoard: boolean;
 }) {
   const [sx, sy, sz] = size;
-
-  if (isBoard) {
-    return (
-      <group>
-        <mesh position={[0, sy / 2, 0]}>
-          <cylinderGeometry args={[0.08, 0.08, sy, 6]} />
-          <meshStandardMaterial color="#5c4a3a" roughness={0.9} />
-        </mesh>
-        <mesh position={[0, sy * 0.75, 0]}>
-          <boxGeometry args={[sx, sy * 0.6, sz]} />
-          <meshStandardMaterial color={color} roughness={0.8} />
-        </mesh>
-      </group>
-    );
-  }
+  const roofHeight = sy * 0.4;
 
   return (
     <group>
-      <mesh position={[0, sy / 2, 0]} castShadow>
+      {/* Walls */}
+      <mesh position={[0, sy / 2, 0]} castShadow receiveShadow>
         <boxGeometry args={[sx, sy, sz]} />
-        <meshStandardMaterial color={color} roughness={0.8} />
+        <meshLambertMaterial color={color} />
       </mesh>
-      <mesh position={[0, sy + 0.3, 0]}>
-        <boxGeometry args={[sx + 0.4, 0.6, sz + 0.4]} />
-        <meshStandardMaterial color={color} roughness={0.7} emissive={color} emissiveIntensity={0.05} />
+
+      {/* Roof */}
+      <mesh position={[0, sy + roofHeight / 2 - 0.1, 0]} castShadow>
+        <coneGeometry args={[Math.max(sx, sz) * 0.75, roofHeight, 4]} />
+        <meshLambertMaterial color={new THREE.Color(color).multiplyScalar(0.6)} />
       </mesh>
+
+      {/* Door */}
       <mesh position={[0, 0.6, sz / 2 + 0.01]}>
         <planeGeometry args={[0.8, 1.2]} />
-        <meshStandardMaterial color="#2a1a0a" roughness={1} />
+        <meshLambertMaterial color="#5a3a1a" />
+      </mesh>
+
+      {/* Windows */}
+      {[-1, 1].map((side) => (
+        <mesh key={side} position={[side * (sx * 0.3), sy * 0.55, sz / 2 + 0.01]}>
+          <planeGeometry args={[0.5, 0.5]} />
+          <meshLambertMaterial color="#a8d8ea" emissive="#ffeecc" emissiveIntensity={0.15} />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
+/**
+ * Board/sign — for Bounty Board, Job Board etc.
+ */
+function BoardSign({
+  size,
+  color,
+}: {
+  size: [number, number, number];
+  color: string;
+}) {
+  const [sx, sy] = size;
+
+  return (
+    <group>
+      {/* Posts */}
+      {[-0.5, 0.5].map((x) => (
+        <mesh key={x} position={[x * sx * 0.6, sy / 2, 0]} castShadow>
+          <cylinderGeometry args={[0.06, 0.06, sy, 8]} />
+          <meshLambertMaterial color="#6b5a3a" />
+        </mesh>
+      ))}
+      {/* Board */}
+      <mesh position={[0, sy * 0.65, 0]} castShadow>
+        <boxGeometry args={[sx, sy * 0.5, 0.15]} />
+        <meshLambertMaterial color={color} />
       </mesh>
     </group>
   );
@@ -88,8 +87,6 @@ interface BuildingProps {
   position: [number, number, number];
   size: [number, number, number];
   color: string;
-  modelPath?: string;
-  modelScale?: number;
   href?: string;
   playerPosition: THREE.Vector3;
 }
@@ -100,8 +97,6 @@ export default function Building({
   position,
   size,
   color,
-  modelPath,
-  modelScale = 0.01,
   href,
   playerPosition,
 }: BuildingProps) {
@@ -131,24 +126,29 @@ export default function Building({
 
   return (
     <group position={position}>
-      {/* Placeholder geometry — FBX models disabled until textures are bundled properly */}
-      <PlaceholderBox size={size} color={color} isBoard={isBoard} />
+      {isBoard ? (
+        <BoardSign size={size} color={color} />
+      ) : (
+        <ACBuilding size={size} color={color} />
+      )}
 
       {/* Building label */}
       <Html
-        position={[0, size[1] + 1.5, 0]}
+        position={[0, size[1] + 1.8, 0]}
         center
-        distanceFactor={10}
+        distanceFactor={12}
         style={{ pointerEvents: "none" }}
       >
         <div
           className="whitespace-nowrap font-mono"
           style={{
-            fontSize: "12px",
-            color: "#f1ffff",
-            background: "rgba(15, 15, 16, 0.7)",
-            padding: "2px 8px",
-            borderRadius: "4px",
+            fontSize: "13px",
+            color: "#2a2a2a",
+            background: "rgba(255, 255, 255, 0.85)",
+            padding: "3px 10px",
+            borderRadius: "6px",
+            fontWeight: 600,
+            boxShadow: "0 1px 4px rgba(0,0,0,0.15)",
           }}
         >
           {name}
@@ -157,21 +157,21 @@ export default function Building({
 
       {/* Interaction prompt */}
       {isNear && (
-        <Html position={[0, size[1] + 0.5, 0]} center style={{ pointerEvents: "none" }}>
+        <Html position={[0, size[1] + 0.8, 0]} center style={{ pointerEvents: "none" }}>
           <div
-            className="whitespace-nowrap animate-pulse"
+            className="whitespace-nowrap animate-bounce"
             style={{
               fontSize: "14px",
-              color: "#f1ffff",
-              background: "#111827",
-              border: "1px solid rgba(241, 255, 255, 0.12)",
-              padding: "4px 12px",
+              color: "#ffffff",
+              background: "#4a6fa5",
+              padding: "5px 14px",
               borderRadius: "8px",
-              transform: "translateY(-4px)",
+              fontWeight: 600,
+              boxShadow: "0 2px 8px rgba(0,0,0,0.25)",
             }}
           >
             Press{" "}
-            <kbd className="font-mono font-bold" style={{ color: "#22d3ee" }}>
+            <kbd className="font-mono font-bold" style={{ color: "#ffdd99" }}>
               E
             </kbd>{" "}
             to {isBoard ? "view" : "enter"}
