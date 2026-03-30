@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, Suspense } from "react";
 import { Html, useFBX } from "@react-three/drei";
 import { useRouter } from "next/navigation";
 import * as THREE from "three";
+import { useTransition } from "./TransitionOverlay";
 
 const INTERACT_RANGE = 3;
 
@@ -106,6 +107,7 @@ export default function Building({
   playerPosition,
 }: BuildingProps) {
   const router = useRouter();
+  const { triggerTransition, isTransitioning } = useTransition();
   const [isNear, setIsNear] = useState(false);
   const buildingCenter = useRef(new THREE.Vector3(...position));
 
@@ -117,15 +119,24 @@ export default function Building({
   }, [near]);
 
   useEffect(() => {
-    if (!isNear) return;
+    if (!isNear || isTransitioning) return;
     const handleKey = (e: KeyboardEvent) => {
       if (e.key.toLowerCase() === "e" && href) {
-        router.push(href);
+        // Buildings with interiors: fade-to-black transition
+        // Boards/objects: direct navigation (overlay handled at page level)
+        const isBoard = size[2] < 1;
+        if (isBoard) {
+          router.push(href);
+        } else {
+          triggerTransition(() => {
+            router.push(href);
+          });
+        }
       }
     };
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [isNear, href, router]);
+  }, [isNear, isTransitioning, href, router, triggerTransition, size]);
 
   const isBoard = size[2] < 1;
 
