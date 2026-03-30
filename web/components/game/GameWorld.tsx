@@ -2,7 +2,7 @@
 
 import { Suspense, useRef, useState, useCallback } from "react";
 import { Canvas } from "@react-three/fiber";
-import { CameraControls, useFBX } from "@react-three/drei";
+import { CameraControls } from "@react-three/drei";
 import * as THREE from "three";
 import PS1Effect from "./PS1Pipeline";
 import PlayerAvatar from "./PlayerAvatar";
@@ -130,36 +130,7 @@ function Lighting() {
   );
 }
 
-/**
- * Loads an FBX prop with PS1 texture filtering.
- */
-function FBXProp({
-  path,
-  position,
-  scale = 0.01,
-  rotation = [0, 0, 0],
-}: {
-  path: string;
-  position: [number, number, number];
-  scale?: number;
-  rotation?: [number, number, number];
-}) {
-  const fbx = useFBX(path);
-  const cloned = fbx.clone();
-
-  cloned.traverse((child) => {
-    if (child instanceof THREE.Mesh && child.material) {
-      const mat = child.material as THREE.MeshStandardMaterial;
-      if (mat.map) {
-        mat.map.minFilter = THREE.NearestFilter;
-        mat.map.magFilter = THREE.NearestFilter;
-        mat.map.generateMipmaps = false;
-      }
-    }
-  });
-
-  return <primitive object={cloned} position={position} scale={scale} rotation={rotation} />;
-}
+/* Props are placeholder meshes for now — real assets will replace them later */
 
 function Decorations() {
   // Placeholder trees (swap for Kenney Nature Kit when available)
@@ -192,15 +163,27 @@ function Decorations() {
 
       {/* Real props from assets */}
       <Suspense fallback={null}>
-        {/* Benches along paths (placeholder boxes until proper GLB assets are added) */}
-        <FBXProp path="/assets/props/Bench.fbx" position={[-3, 0, -5]} scale={0.01} />
-        <FBXProp path="/assets/props/Bench.fbx" position={[3, 0, -5]} scale={0.01} rotation={[0, Math.PI, 0]} />
-        <FBXProp path="/assets/props/Bench.fbx" position={[-3, 0, 5]} scale={0.01} />
-        <FBXProp path="/assets/props/Bench.fbx" position={[3, 0, 5]} scale={0.01} rotation={[0, Math.PI, 0]} />
+        {/* Benches along paths (placeholder meshes) */}
+        {[[-3, 0, -5], [3, 0, -5], [-3, 0, 5], [3, 0, 5]].map((pos, i) => (
+          <mesh key={`bench-${i}`} position={pos as [number, number, number]} castShadow>
+            <boxGeometry args={[1.2, 0.4, 0.5]} />
+            <meshStandardMaterial color="#8B6914" />
+          </mesh>
+        ))}
 
-        {/* Banner near HQ */}
-        <FBXProp path="/assets/props/Banner_1.fbx" position={[3, 0, -1]} scale={0.015} />
-        <FBXProp path="/assets/props/Banner_1.fbx" position={[-3, 0, -1]} scale={0.015} />
+        {/* Banners near HQ (placeholder meshes) */}
+        {[[3, 0, -1], [-3, 0, -1]].map((pos, i) => (
+          <group key={`banner-${i}`} position={pos as [number, number, number]}>
+            <mesh position={[0, 1.5, 0]}>
+              <cylinderGeometry args={[0.05, 0.05, 3, 6]} />
+              <meshStandardMaterial color="#5c3a1a" />
+            </mesh>
+            <mesh position={[0, 2.5, 0]}>
+              <planeGeometry args={[0.6, 0.8]} />
+              <meshStandardMaterial color="#002fa7" side={THREE.DoubleSide} />
+            </mesh>
+          </group>
+        ))}
 
         {/* Torch lights near Oracle (placeholder point lights) */}
         <pointLight position={[-2, 1.5, 24]} color="#ffcc88" intensity={0.8} distance={6} />
