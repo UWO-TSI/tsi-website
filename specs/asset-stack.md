@@ -18,21 +18,31 @@ Self-host on $10 VPS or Colyseus Cloud at $15/month. Tested to 10,000+ CCU.
 
 ---
 
-## Character Models
+## Characters — 2D Sprites in 3D World (Dave the Diver style)
+
+**PIVOT: Characters are 2D sprite sheets on billboarded quads, NOT 3D models.**
+The 3D world (buildings, terrain, props) stays unchanged. Only characters are 2D.
 
 | Asset | License | Format | Use For |
 |-------|---------|--------|---------|
-| Quaternius Ultimate Modular Men/Women | CC0 | glTF | Avatar base — 4 swappable parts (head/torso/legs/feet) |
-| Quaternius Universal Animation Library | CC0 | GLB | 120+ retargetable animations |
-| Mixamo (Adobe) | Free commercial | FBX→GLB | 2,000+ animations, auto-rigging |
-| Styloo Chibi Characters (itch.io) | Free | GLB | Alternative if cuter proportions needed |
-| Nano Banana API | Paid | PNG | Generate texture/skin variants |
+| Nano Banana 2/Pro API | Paid | PNG | Generate character sprite sheets (body, hair, outfits, accessories) |
+| ~~Quaternius Modular Characters~~ | ~~CC0~~ | ~~glTF~~ | ~~NO LONGER NEEDED~~ |
+| ~~Mixamo~~ | ~~Free~~ | ~~FBX~~ | ~~NO LONGER NEEDED~~ |
+| ~~Universal Animation Library~~ | ~~CC0~~ | ~~GLB~~ | ~~NO LONGER NEEDED for characters~~ |
+
+**How 2D sprites work in R3F:**
+- Each character is a `<Billboard>` (from drei) with a textured plane
+- Sprite sheet contains frames: idle (1-2 frames), walk (4-8 frames per direction)
+- Frame cycling in `useFrame()` based on movement state
+- Multiple layers stacked at slight z-offsets: body → hair → outfit → accessories
+- Nameplate via `<Html>` from drei floating above the billboard
 
 **Avatar customization pipeline:**
-1. Load Quaternius modular base skeleton once
-2. Conditionally render different head/torso/legs/feet SkinnedMeshes sharing that skeleton
-3. Non-deforming accessories: `headBone.add(accessoryMesh)`
-4. Color/texture swaps via `mesh.material.color.set()` or Nano Banana-generated textures
+1. Each customization category (hair, outfit, accessory) is a separate sprite sheet PNG
+2. Layers are stacked planes on the billboard group
+3. Swap which PNG is loaded per layer = different look
+4. Color tinting via `material.color.set()` for palette swaps
+5. Nano Banana generates all sprite variants with consistent style via careful prompting
 
 ---
 

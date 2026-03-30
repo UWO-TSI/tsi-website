@@ -198,13 +198,15 @@ WAVE 4 (after Frontend commits):
   - Warm point lights near buildings
   - Props and nature assets scattered for decoration
 
-- [ ] `web/components/game/PlayerAvatar.tsx`:
-  - Load Quaternius character GLB via `useGLTF`
-  - Play animations via `useAnimations` (idle, walk)
-  - WASD/Arrow key movement with `useFrame` — update position each frame
+- [ ] `web/components/game/PlayerAvatar.tsx` — **2D SPRITE in 3D world (Dave the Diver style)**:
+  - `<Billboard>` from drei with textured plane (NOT 3D model)
+  - Sprite sheet frame cycling in `useFrame()` — idle (1-2 frames), walk (4-8 frames per direction)
+  - Layered sprite composition: body + hair + outfit as stacked planes at slight z-offsets
+  - WASD/Arrow key movement — update position each frame
   - Click-to-move: raycaster on ground plane, pathfind to click point
   - Camera follows player via CameraControls `moveTo()`
-  - Nameplate overlay: player name + level (drei `<Html>` component)
+  - Nameplate: player name + level via drei `<Html>`
+  - **Use colored rectangle placeholder sprites until real sprites are generated**
 
 - [ ] `web/components/game/Building.tsx`:
   - Reusable component for placing buildings
@@ -339,7 +341,7 @@ Frontend asked 4 clarifying questions. Management answers:
 ### 2026-03-29 — Asset Stack Confirmed (Deep Research)
 
 See `specs/asset-stack.md` for the complete confirmed stack:
-- Characters: Quaternius Ultimate Animated Characters
+- Characters: **2D sprites on billboards** (generated via Nano Banana) — NOT 3D models
 - Buildings: Quaternius Medieval Village + Kenney Retro Medieval Kit
 - Terrain: PSX RPG Town Tiles
 - Props: Quaternius Fantasy Props + Kenney Nature Kit
