@@ -270,9 +270,10 @@ WAVE 4 (after Frontend commits):
 
 | Agent | Blocked On | Waiting For | Status |
 |-------|-----------|-------------|--------|
-| Backend | Existing schema documentation | **QA to document profiles table** | ⚠️ QA hasn't started — BLOCKING THE CHAIN |
-| Frontend | Supabase types for directory | Backend to commit types.ts | ⏳ Waiting on Backend (which waits on QA) |
-| ~~Frontend~~ | ~~Visual specs~~ | ~~UXUI specs~~ | ✅ RESOLVED — 4 specs delivered |
+| Backend | Existing schema documentation | **QA to document profiles table** | ⚠️ QA hasn't started — BLOCKING BACKEND |
+| Frontend | Supabase types for API integration | Backend to commit types.ts | ⏳ Building with mocks — will swap when types land |
+| ~~Frontend~~ | ~~Visual specs~~ | ~~UXUI specs~~ | ✅ RESOLVED |
+| ~~Frontend~~ | ~~Waiting for wave order~~ | ~~Management approval~~ | ✅ RESOLVED — approved to start early |
 
 ---
 
@@ -314,6 +315,26 @@ Full vision documented in memory. Key decisions:
 **Frontend: ⏳ BLOCKED** on Backend.
 
 **UXUI reassigned to Phase 2 spec work** (see updated task list below).
+**Frontend approved to start early** (see directive below).
+
+### 2026-03-29 — Frontend Early Start Approved
+
+Frontend asked 4 clarifying questions. Management answers:
+
+1. **Supabase auth:** The auth code (`@supabase/ssr`, middleware, client helpers) is on `main` branch — it hasn't been merged into the feature branches. Backend should merge from main or set it up. Frontend: for now, scaffold layout with placeholder auth checks (e.g. `// TODO: wire supabase auth`). Backend will provide the real auth utils.
+
+2. **Asset downloads:** Scaffold with placeholder paths. Use `/assets/characters/character.glb`, `/assets/buildings/hq.glb`, etc. Management will drop the actual GLBs in later. Use placeholder geometry (colored boxes) in the meantime so the game world is testable without real assets.
+
+3. **PS1Material:** Research and implement it yourself. You have full permissions + web access. Find bandinopla's PS1Material.ts GitHub gist and the Codrops PS1 Jitter Shader tutorial. Use whichever integrates best with R3F. The key effects are: vertex snapping to a low-res grid, affine texture mapping, and low-res FBO render (320×240) upscaled with NearestFilter.
+
+4. **Start early: YES.** Do NOT wait for waves. UXUI specs are already committed — read `specs/ux-dashboard.md`, `specs/ux-game-world.md`, `specs/ux-directory.md`, `specs/tokens.md`. Begin immediately:
+   - Dashboard layout + sidebar (from UXUI specs)
+   - All 8 page stubs
+   - PS1 shader pipeline (standalone, no dependencies)
+   - GameWorld + PlayerAvatar skeletons with placeholder box geometry
+   - Directory components (use mock data until Backend API exists)
+
+**Frontend's only real blocker is Backend's types.ts for API integration. Everything else can be built now with mocks/placeholders.**
 
 ### 2026-03-29 — Asset Stack Confirmed (Deep Research)
 
