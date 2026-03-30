@@ -142,14 +142,8 @@ export default function Building({
 
   return (
     <group position={position}>
-      {/* Model — FBX if available, placeholder box otherwise */}
-      <Suspense fallback={<PlaceholderBox size={size} color={color} isBoard={isBoard} />}>
-        {modelPath ? (
-          <FBXModel path={modelPath} scale={modelScale} />
-        ) : (
-          <PlaceholderBox size={size} color={color} isBoard={isBoard} />
-        )}
-      </Suspense>
+      {/* Placeholder geometry — FBX models disabled until textures are bundled properly */}
+      <PlaceholderBox size={size} color={color} isBoard={isBoard} />
 
       {/* Building label */}
       <Html
