@@ -7,7 +7,7 @@ import ProgramsSection from "./programs/ProgramsSection";
 import AlumniSection from "./alumni/AlumniSection";
 import WorkSection from "./work/WorkSection";
 import FAQSection from "./faqs/FAQSection";
-import GetStartedSection from "./get started/GetStartedSection";
+import GetStartedSection from "./get-started/GetStartedSection";
 
 export default function CompanyPage() {
   return (

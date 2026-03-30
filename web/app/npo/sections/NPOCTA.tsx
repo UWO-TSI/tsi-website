@@ -41,7 +41,7 @@ export default function NPOCTA() {
       <AsciiDivider rows={2} cols={40} />
       <section
         ref={sectionRef}
-        className="py-32 px-6"
+        className="py-40 px-6"
         style={{ background: "var(--color-bg-main)" }}
       >
         <div
@@ -49,6 +49,15 @@ export default function NPOCTA() {
           className="max-w-3xl mx-auto text-center"
           style={{ opacity: 0 }}
         >
+          <p
+            className="text-xs tracking-[0.3em] mb-4"
+            style={{
+              fontFamily: "IBM Plex Mono, monospace",
+              color: "var(--color-text-subtle)",
+            }}
+          >
+            Join the Cohort
+          </p>
           <h2 className="font-heading text-4xl md:text-5xl font-semibold mb-6">
             Ready to Transform
             <br />
