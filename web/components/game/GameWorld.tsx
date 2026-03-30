@@ -271,7 +271,7 @@ function Scene() {
 
 export default function GameWorld() {
   return (
-    <div className="w-full h-full" style={{ background: "#0f0f10" }}>
+    <div style={{ width: "100%", height: "100%", minHeight: "100vh", background: "#0f0f10" }}>
       <Canvas
         dpr={0.35}
         gl={{ antialias: false, powerPreference: "high-performance" }}
