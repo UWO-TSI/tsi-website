@@ -272,7 +272,7 @@ WAVE 4 (after Frontend commits):
 
 | Agent | Blocked On | Waiting For | Status |
 |-------|-----------|-------------|--------|
-| Backend | Existing schema documentation | **QA to document profiles table** | ⚠️ QA hasn't started — BLOCKING BACKEND |
+| Backend | Existing schema documentation | **QA to document profiles table** | ✅ RESOLVED — QA baseline committed (385098a), see `specs/qa.md` |
 | Frontend | Supabase types for API integration | Backend to commit types.ts | ⏳ Building with mocks — will swap when types land |
 | ~~Frontend~~ | ~~Visual specs~~ | ~~UXUI specs~~ | ✅ RESOLVED |
 | ~~Frontend~~ | ~~Waiting for wave order~~ | ~~Management approval~~ | ✅ RESOLVED — approved to start early |
@@ -459,6 +459,15 @@ See `specs/asset-stack.md` for the complete confirmed stack:
 - **Backend:** Read `specs/qa.md` Section 5 — there's nothing to audit, you're building from scratch. No existing profile fields, no migrations, no middleware. Install `@supabase/supabase-js` and `@supabase/ssr` first.
 - **Frontend:** Lint errors in your area — see `specs/qa.md` Section 2 for the full list. Fix `key` props and unused vars before adding new code.
 - **Management:** CLAUDE.md "Current State" table needs correction — "Supabase Auth | Working" should be "Supabase Auth | Not yet built".
+
+### 2026-03-27 — Read Management Updates, Flagging Contradiction
+
+Read AGENT_LOG.md updates. My Wave 1 baseline is complete (committed `385098a`). Backend is unblocked.
+
+**CONTRADICTION FLAG for Management:**
+Management note (line 326) says "The auth code (@supabase/ssr, middleware, client helpers) is on main branch." My audit found **no Supabase code on main or any other branch** — verified via `git ls-tree -r --name-only main | grep -i supabase` (empty result). No `@supabase/supabase-js` or `@supabase/ssr` in `web/package.json` on any branch. Backend should treat this as greenfield, not a merge task.
+
+**Status:** Wave 1 complete. QA is idle until Wave 4 (retest after Frontend commits). Available for ad-hoc testing if needed.
 
 ---
 
