@@ -2,7 +2,7 @@
 
 import { Suspense, useRef, useState, useCallback } from "react";
 import { Canvas } from "@react-three/fiber";
-import { CameraControls, useGLTF, useFBX } from "@react-three/drei";
+import { CameraControls, useFBX } from "@react-three/drei";
 import * as THREE from "three";
 import PS1Effect from "./PS1Pipeline";
 import PlayerAvatar from "./PlayerAvatar";
@@ -131,36 +131,8 @@ function Lighting() {
 }
 
 /**
- * Loads a GLTF prop with PS1 texture filtering.
+ * Loads an FBX prop with PS1 texture filtering.
  */
-function GLTFProp({
-  path,
-  position,
-  scale = 0.01,
-  rotation = [0, 0, 0],
-}: {
-  path: string;
-  position: [number, number, number];
-  scale?: number;
-  rotation?: [number, number, number];
-}) {
-  const { scene } = useGLTF(path);
-  const cloned = scene.clone();
-
-  cloned.traverse((child) => {
-    if (child instanceof THREE.Mesh && child.material) {
-      const mat = child.material as THREE.MeshStandardMaterial;
-      if (mat.map) {
-        mat.map.minFilter = THREE.NearestFilter;
-        mat.map.magFilter = THREE.NearestFilter;
-        mat.map.generateMipmaps = false;
-      }
-    }
-  });
-
-  return <primitive object={cloned} position={position} scale={scale} rotation={rotation} />;
-}
-
 function FBXProp({
   path,
   position,
@@ -220,19 +192,19 @@ function Decorations() {
 
       {/* Real props from assets */}
       <Suspense fallback={null}>
-        {/* Benches along paths */}
-        <GLTFProp path="/assets/props/Bench.gltf" position={[-3, 0, -5]} scale={0.5} />
-        <GLTFProp path="/assets/props/Bench.gltf" position={[3, 0, -5]} scale={0.5} rotation={[0, Math.PI, 0]} />
-        <GLTFProp path="/assets/props/Bench.gltf" position={[-3, 0, 5]} scale={0.5} />
-        <GLTFProp path="/assets/props/Bench.gltf" position={[3, 0, 5]} scale={0.5} rotation={[0, Math.PI, 0]} />
+        {/* Benches along paths (placeholder boxes until proper GLB assets are added) */}
+        <FBXProp path="/assets/props/Bench.fbx" position={[-3, 0, -5]} scale={0.01} />
+        <FBXProp path="/assets/props/Bench.fbx" position={[3, 0, -5]} scale={0.01} rotation={[0, Math.PI, 0]} />
+        <FBXProp path="/assets/props/Bench.fbx" position={[-3, 0, 5]} scale={0.01} />
+        <FBXProp path="/assets/props/Bench.fbx" position={[3, 0, 5]} scale={0.01} rotation={[0, Math.PI, 0]} />
 
         {/* Banner near HQ */}
         <FBXProp path="/assets/props/Banner_1.fbx" position={[3, 0, -1]} scale={0.015} />
         <FBXProp path="/assets/props/Banner_1.fbx" position={[-3, 0, -1]} scale={0.015} />
 
-        {/* Candle near Oracle */}
-        <GLTFProp path="/assets/props/Candle_1.gltf" position={[-2, 0, 24]} scale={1} />
-        <GLTFProp path="/assets/props/Candle_1.gltf" position={[2, 0, 24]} scale={1} />
+        {/* Torch lights near Oracle (placeholder point lights) */}
+        <pointLight position={[-2, 1.5, 24]} color="#ffcc88" intensity={0.8} distance={6} />
+        <pointLight position={[2, 1.5, 24]} color="#ffcc88" intensity={0.8} distance={6} />
       </Suspense>
 
       {/* Lampposts with lights */}
