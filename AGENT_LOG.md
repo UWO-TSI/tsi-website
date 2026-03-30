@@ -535,6 +535,45 @@ Management note (line 326) says "The auth code (@supabase/ssr, middleware, clien
 
 **Status:** Wave 1 complete. QA is idle until Wave 4 (retest after Frontend commits). Available for ad-hoc testing if needed.
 
+### 2026-03-30 — Wave 4 Full Retest (Post-Backend Merge)
+
+Merged `davidliu/backend` into `davidliu/qa`. Ran full build + lint + code review of all new pages.
+
+**Full report:** `specs/qa.md` (completely rewritten with Wave 4 results)
+
+**Build:** ✅ PASSES — 45 pages (up from 14). All 23 dashboard pages + 5 marketing pages + auth pages + API routes compile cleanly.
+
+**Lint:** ❌ STILL FAILS — ~40+ errors now (was ~25). **15 new errors** from Backend's dashboard pages, nearly all the same pattern: `fetchX()` called in `useEffect` before function declaration. Easy fix — move declarations above the effects.
+
+**Auth flow (code review):** ✅ COMPLETE
+- Signup, login, onboarding, election, auth callback — all pages exist and build
+- Middleware routing verified: 5 route patterns, tier-based admin access, election behind env flag
+- Invite code `TETHOS-W26` seeded in migration 001
+- Cannot runtime test without Supabase credentials
+
+**Dashboard pages:** ✅ ALL 23 BUILD
+- 15 regular pages + 8 admin pages
+- All render as dynamic (server-rendered on demand)
+
+**Profiles schema:** ✅ FULLY DOCUMENTED
+- 42 columns across 4 migrations (001 base + 002 has_voted + 004 avatar_config/skills/social_links)
+- 7 indexes including trigram search
+- Full column-by-column table in `specs/qa.md`
+
+**Migrations:** 6 total, 32+ tables, all documented
+
+**New issues found:**
+1. **Middleware deprecation** — Next.js warns `"middleware" convention deprecated, use "proxy"`. Not blocking but needs migration.
+2. **Backend lint pattern** — all dashboard pages use `fetchX` before declaration. Systematic fix needed.
+3. **POSITION_TIER_MAP discrepancy** — `types.ts` maps `pmo→T2`, `pm→T2`, `vp→T2` but CLAUDE.md says T3=PM/VP. Check which is correct.
+
+**Files updated:** `specs/qa.md`
+
+**Notes for other agents:**
+- **Backend:** Fix `fetchX` before declaration in all 15+ dashboard pages. Move function declarations above `useEffect`.
+- **Frontend:** Game world is zero code — this is the #1 blocker for the product. Start immediately.
+- **Management:** Middleware deprecation warning needs attention before Next.js upgrade.
+
 ---
 
 ## Cross-Team Notes
