@@ -55,7 +55,7 @@ WAVE 4 (after Frontend commits):
 - [x] `specs/ux-jobs.md` — Full-page job board, search + filters, member submission form
 - [x] `specs/ux-oracle.md` — Card-based MBTI quiz (12 Q), 4 classes + 16 subclasses, class reveal animation
 - [x] `specs/ux-onboarding.md` — Welcome → profile → avatar → quest checklist (6 quests, 275 XP)
-- [ ] Design review of Frontend's implementation once building starts
+- [x] Design review of Backend's dashboard implementation — findings in `specs/ux-review.md`
 - [x] Update AGENT_LOG.md
 
 **Rules:** Same as Wave 1 — specs only, no code. Ask David before writing. Multi-choice. Implementation-ready detail.
@@ -445,6 +445,41 @@ See `specs/asset-stack.md` for the complete confirmed stack:
 - **QA:** Test onboarding flow end-to-end. Test quest completion XP awards. Test Oracle quiz scoring (12 questions → MBTI type → class/subclass mapping).
 
 **UXUI Phase 2 is COMPLETE. All 10 spec files delivered (Wave 1 + Phase 2). Remaining UXUI work: design review once Frontend starts building.**
+
+### 2026-03-30 — Design Review of Backend's Dashboard + MBTI Quiz Bank
+
+**Design review completed.** Full findings in `specs/ux-review.md`. Key deviations from UXUI specs:
+
+| Issue | Severity | Spec Says | Backend Built |
+|-------|----------|-----------|---------------|
+| Sidebar width | 🔴 Major | 240px | 224px (`w-56`) |
+| Sidebar background | 🔴 Major | `--color-surface` (#111827) | `--color-bg-alt` (#111113) |
+| Active indicator | 🔴 Major | 2px left accent bar | Blue bg glow |
+| Section grouping | 🔴 Major | No grouping (flat list) | Has "Personal" + "Admin" sections |
+| Nav font | 🔴 Major | Test Söhne (default) | IBM Plex Mono (font-mono) |
+| Directory layout | 🔴 Major | List view (64px rows) | Grid cards (4-col) |
+| Tier badges | 🔴 Major | Color-coded T1-T5 pills | Missing entirely |
+| XP bars | 🔴 Major | Inline per member row | Missing |
+| Topbar | 🟡 Added | Not spec'd | Notifications + search + profile dropdown |
+| CSS var names | 🟡 Drift | tokens.css names | Different names (`--glass-border`, `--color-text-primary`) |
+
+**10 priority fixes listed for Frontend** in `specs/ux-review.md` Section "Priority Fix List."
+
+**MBTI Quiz question bank created:** `specs/oracle-questions.md`
+- 12 questions (3 per MBTI axis: E/I, S/N, T/F, J/P)
+- 2–4 answer cards per question
+- Scoring key + tie-breaker rule
+- Full class mapping table (4 classes, 16 subclasses)
+- Implementation notes (shuffle order, answer storage, API endpoint)
+
+**Notes for Frontend:**
+- Read `specs/ux-review.md` before building — tells you exactly what to fix in Backend's sidebar and directory
+- The quiz questions in `specs/oracle-questions.md` are ready to be turned into a JSON data file
+
+**Notes for Backend:**
+- Your CSS variable names don't match `tokens.css` — see review for specifics. Frontend will fix during integration.
+- `Kanban` page should be gated/removed — CLAUDE.md explicitly excluded it from MVP.
+- "Marketplace" should be renamed to "Shop" for consistency with specs.
 
 ---
 
