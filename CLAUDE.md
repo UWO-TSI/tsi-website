@@ -81,11 +81,30 @@ All agents communicate via **AGENT_LOG.md** in the project root.
    - What other agents need to know
    - Any blockers
 
-### Rules
+### Permissions
+- **Full autonomy.** All agents have full permissions on all tools. Do NOT ask for permission to run commands, edit files, install packages, or make commits. Just do it.
+- **No confirmation prompts.** If your task says to do something, do it. Don't ask "should I proceed?" — proceed.
+
+### Quality Gate
+- **95% confidence rule.** Before committing any code change, self-review your work. Read back what you changed. Ask yourself: "Am I 95% confident this is correct and won't break anything?" If yes, commit. If no, either fix it until you are, or ask David a clarifying question. Do NOT commit uncertain work.
+- **Run build after code changes.** If you changed code, run `cd web && npm run build` before committing. If it fails, fix it. Don't commit broken builds.
+
+### Reporting
+- **After EVERY completed task**, you MUST:
+  1. Check off the task in Active Tasks section of AGENT_LOG.md
+  2. Write a dated entry in your section of AGENT_LOG.md with:
+     - What you completed
+     - Files written/changed
+     - What other agents need to know
+     - Any blockers
+  3. Write a **short report back to Management** at the end of your log entry — 2-3 sentences summarizing: what's done, what's next, any decisions you made independently
+  4. Commit with prefix `[UXUI]`, `[FE]`, `[BE]`, `[QA]`, or `[MGMT]`
+
+### Other Rules
 - **Never overwrite another agent's section** in AGENT_LOG.md — append only
 - **Never work outside your lane** — if you find yourself doing another agent's job, write a spec/request instead
 - **If blocked, log it** and work on something else
-- **Commit frequently** with clear messages prefixed by your role: `[UXUI]`, `[FE]`, `[BE]`, `[QA]`, `[MGMT]`
+- **If unsure about product intent**, ask David a clarifying question using AskUserQuestion with multi-choice options. Don't guess on product decisions.
 
 ## Commands
 
