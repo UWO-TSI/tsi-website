@@ -416,7 +416,128 @@ See `specs/asset-stack.md` for the complete confirmed stack:
 
 > Frontend agent writes here. Others: read only.
 
-*(awaiting WAVE 3 — blocked on Backend types.ts and UXUI specs)*
+### 2026-03-30 — Dashboard Shell + Game World + Directory Built
+
+**Build status:** `npm run build` passes cleanly. All 8 dashboard routes registered.
+
+**Completed:**
+
+- [x] **Dashboard layout** (`web/app/student/dashboard/layout.tsx`):
+  - Fixed overlay (z-50) covering parent student layout
+  - 240px sidebar (desktop), hamburger slide-over (mobile <768px)
+  - Main content area with independent scroll
+
+- [x] **Sidebar** (`web/components/portal/Sidebar.tsx`):
+  - Matches ux-dashboard.md spec exactly: 240px, var(--color-surface) bg
+  - Brand-blue 2px left accent on active item
+  - Lucide icons: Home, Users, Scroll, ShoppingBag, Briefcase, Trophy, User, Settings
+  - "Soon" badges on Phase 2 items
+  - Player status (avatar + name + level) at top
+  - Responsive: hidden on mobile, X close button in overlay mode
+
+- [x] **All 8 page stubs** with proper routing:
+  - `/student/dashboard` — Game world (dynamic import, no SSR)
+  - `/student/dashboard/directory` — Member directory (list view)
+  - `/student/dashboard/profile` — Profile view/edit
+  - `/student/dashboard/bounty`, `/shop`, `/jobs`, `/leaderboard`, `/settings` — Coming Soon placeholders
+
+- [x] **PS1 shader pipeline** (`web/components/game/PS1Pipeline.tsx`):
+  - Vertex snapping via `onBeforeCompile` GLSL injection (160px grid)
+  - Affine texture mapping support
+  - NearestFilter on all textures, mipmaps disabled
+  - Low-res rendering via Canvas `dpr={0.35}` + CSS `image-rendering: pixelated`
+
+- [x] **Game world** (`web/components/game/GameWorld.tsx`):
+  - R3F Canvas with PS1 pipeline
+  - Terrain: 80x80 grass plane + cobblestone path network
+  - 7 buildings/objects at spec positions (HQ, Shop, Oracle, House, Bounty/Job/Leaderboard boards)
+  - **Real FBX models loaded** for HQ, Shop, Oracle Temple, House (via `useFBX`)
+  - **Real GLTF/FBX props** for Bench, Banner, Candle decorations
+  - 12 placeholder trees, 3 lampposts with point lights
+  - Camera: CameraControls locked at 45° polar, FOV 35°, smooth follow
+  - Fog: linear #0f0f10, near 60 / far 120
+  - Lighting: ambient 0.4 + directional sun + warm building lamps + blue HQ glow
+
+- [x] **Player avatar** (`web/components/game/PlayerAvatar.tsx`):
+  - **2D sprite on Billboard** (Dave the Diver style) using real prototype_character.png sprite sheet
+  - Sprite sheet UV cropping with frame cycling (6 FPS walk animation)
+  - Direction-based frame selection (down/left/right/up)
+  - WASD + Arrow key movement (5 units/sec, clamped to ±38 boundary)
+  - Click-to-move via ground plane raycasting
+  - Ground shadow using static_shadow.png
+  - Nameplate: name + level via drei `<Html>` with distanceFactor
+
+- [x] **Building component** (`web/components/game/Building.tsx`):
+  - FBX model loading with Suspense + placeholder fallback
+  - PS1 texture filtering on loaded models
+  - Floating label (monospace, semi-transparent bg)
+  - Proximity detection (3 unit range)
+  - "Press E to enter/view" interaction prompt with animation
+  - Navigate to dashboard page on interact
+
+- [x] **Member directory** (`web/components/portal/MemberDirectory.tsx`):
+  - List view per ux-directory.md spec (64px rows)
+  - Search bar with debounce, focus ring
+  - Filter dropdown: tier pills (color-coded), status toggle
+  - Results count
+  - Empty state with SearchX icon
+
+- [x] **Member card/row** (`web/components/portal/MemberCard.tsx`):
+  - 64px horizontal row: avatar (tier-colored border) | name+class | tier badge | level | XP bar | arrow
+  - Tier colors from spec (T1=gold, T2=blue, T3=cyan, T4=green, T5=gray)
+  - Hover state, keyboard navigation, focus ring
+  - Click navigates to profile
+
+- [x] **Profile view** (`web/components/portal/ProfileView.tsx`):
+  - 96px avatar with tier border, name, class + tier + role subtitle
+  - Stats row: level, XP, coins
+  - Full-width XP progress bar with "X/Y XP to Level N" label
+  - Skills section with pill tags
+  - Social links with Lucide icons
+  - About section
+  - Edit mode for own profile (name, bio, skills inline editing)
+
+- [x] **Design tokens** (`web/styles/game-tokens.css`):
+  - All 13 token categories from specs/tokens.md
+  - Sidebar, responsive, game world, transitions, overlays, directory, tiers, prompts, z-index scale
+
+- [x] **Temporary types** (`web/components/portal/types.ts`):
+  - Profile, DirectoryMember interfaces matching Backend spec
+  - Tier colors/labels matching ux-directory.md
+  - XP progress utility
+  - Mock data (9 members) for development
+
+**Files created:**
+- `web/app/student/dashboard/layout.tsx`
+- `web/app/student/dashboard/page.tsx`
+- `web/app/student/dashboard/directory/page.tsx`
+- `web/app/student/dashboard/bounty/page.tsx`
+- `web/app/student/dashboard/shop/page.tsx`
+- `web/app/student/dashboard/jobs/page.tsx`
+- `web/app/student/dashboard/leaderboard/page.tsx`
+- `web/app/student/dashboard/profile/page.tsx`
+- `web/app/student/dashboard/settings/page.tsx`
+- `web/components/portal/Sidebar.tsx`
+- `web/components/portal/ComingSoon.tsx`
+- `web/components/portal/MemberDirectory.tsx`
+- `web/components/portal/MemberCard.tsx`
+- `web/components/portal/ProfileView.tsx`
+- `web/components/portal/types.ts`
+- `web/components/game/PS1Pipeline.tsx`
+- `web/components/game/GameWorld.tsx`
+- `web/components/game/PlayerAvatar.tsx`
+- `web/components/game/Building.tsx`
+- `web/styles/game-tokens.css`
+
+**Still waiting on:**
+- Backend types.ts — using temporary types + mock data
+- Backend API routes — directory/profile use mock data
+- Supabase auth — auth guards are TODO placeholders
+
+**Notes for other agents:**
+- **Backend:** When types.ts is ready, Frontend will replace `web/components/portal/types.ts` imports with `web/lib/supabase/types.ts`. Interface shapes are already aligned with the spec.
+- **QA:** Dashboard is at `/student/dashboard`. Test sidebar navigation, responsive hamburger at 768px, game world renders.
+- **UXUI:** Implementation follows all 4 specs. Sprite sheet frame mapping may need tuning once exact grid layout is confirmed.
 
 ---
 
