@@ -492,6 +492,45 @@ See `specs/asset-stack.md` for the complete confirmed stack:
 
 **No blockers. Frontend is unblocked.**
 
+### 2026-03-30 — Phase 2: Bounty System + Economy API
+
+Pushed Wave 2 to remote. Built full bounty and economy API endpoints.
+
+**Bounty system (6 endpoints):**
+- `GET /api/bounties` — list with status/difficulty filters
+- `POST /api/bounties` — create (T1-T3 auto-approved, others → pending)
+- `GET /api/bounties/[id]` — detail with claims + deliverables
+- `PATCH /api/bounties/[id]` — update (T1-T3)
+- `DELETE /api/bounties/[id]` — delete (T1-T2)
+- `POST /api/bounties/[id]/claim` — claim open bounty, creates claim row, sets status to claimed
+- `POST /api/bounties/[id]/submit` — submit deliverables (requires active claim), sets bounty to review
+- `PATCH /api/bounties/[id]/review` — review submission (T1-T3), on approved: awards coins + XP, records transactions, completes bounty
+
+**Economy system (2 endpoints):**
+- `GET /api/economy` — own balance + XP + level + transaction history
+- `POST /api/economy { action: "purchase" }` — atomic shop purchase with refund on failure (validates stock + balance, deducts coins, creates order, decrements stock, records transaction)
+- `POST /api/economy { action: "award" }` — admin coin award (T1-T2), records transaction
+
+**Key improvements over existing client-side code:**
+- Server-side auth + tier permission checks
+- Zod validation on all inputs
+- Atomic-ish purchase flow (deducts coins with `.gte()` guard, refunds on order failure)
+- Transaction logging for all coin movements
+- Bounty approval auto-awards coins + XP on review approval
+
+**Files created:**
+- `web/app/api/bounties/route.ts`
+- `web/app/api/bounties/[id]/route.ts`
+- `web/app/api/bounties/[id]/claim/route.ts`
+- `web/app/api/bounties/[id]/submit/route.ts`
+- `web/app/api/bounties/[id]/review/route.ts`
+- `web/app/api/economy/route.ts`
+- `specs/api.md` (updated with all new endpoints)
+
+**Notes for Frontend:**
+- The existing bounty/marketplace pages use direct Supabase client calls. These still work. The new API routes are available for pages that want server-side validation.
+- Economy purchase endpoint is safer than the client-side approach (uses `.gte()` guard to prevent race conditions).
+
 ---
 
 ## QA

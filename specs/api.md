@@ -254,6 +254,122 @@ Profile not found.
 
 ---
 
+## Bounty System API
+
+### `GET /api/bounties`
+
+List bounties with optional filters.
+
+**Query params:** `?status=open`, `?difficulty=3`
+**Default:** excludes `pending` bounties.
+
+**Response:** `{ "bounties": [...] }`
+
+---
+
+### `POST /api/bounties`
+
+Create a bounty. T1-T3 auto-approved to `open`, others go to `pending`.
+
+**Body:** `{ title, description?, client_name, pay_cad?, pay_tc?, xp_reward?, difficulty?, deadline?, tech_stack? }`
+
+**Response:** `201 { "bounty": {...} }`
+
+---
+
+### `GET /api/bounties/[id]`
+
+Get bounty detail with claims and deliverables.
+
+**Response:** `{ "bounty": { ..., bounty_claims: [...], bounty_deliverables: [...] } }`
+
+---
+
+### `PATCH /api/bounties/[id]`
+
+Update bounty (T1-T3 only). Can update status, title, description, difficulty, pay, deadline, tech_stack.
+
+---
+
+### `DELETE /api/bounties/[id]`
+
+Delete bounty (T1-T2 only).
+
+---
+
+### `POST /api/bounties/[id]/claim`
+
+Claim an open bounty. Creates a `bounty_claims` row, sets bounty to `claimed`.
+
+**Errors:** `409` if already claimed or bounty not open.
+
+---
+
+### `POST /api/bounties/[id]/submit`
+
+Submit deliverables for a claimed bounty. Requires active claim.
+
+**Body:** `{ submission_text, attachment_urls? }`
+
+Sets bounty to `review`.
+
+---
+
+### `PATCH /api/bounties/[id]/review`
+
+Review a submission (T1-T3 only).
+
+**Body:** `{ submission_id, status: "approved"|"rejected"|"revision_requested", reviewer_notes? }`
+
+On `approved`: completes bounty, awards `pay_tc` coins + `xp_reward` XP, records transactions.
+On `revision_requested`: sets bounty back to `in_progress`.
+
+---
+
+## Economy API
+
+### `GET /api/economy`
+
+Get own coin balance and transaction history.
+
+**Query params:** `?limit=50` (max 100)
+
+**Response:**
+```json
+{
+  "balance": 1200,
+  "xp": 3500,
+  "level": 8,
+  "transactions": [
+    { "id": "uuid", "amount": -500, "balance_after": 1200, "type": "spend_marketplace", "description": "Purchased 1x Cyberpunk Theme", "created_at": "..." }
+  ]
+}
+```
+
+---
+
+### `POST /api/economy` — Purchase
+
+Atomic shop purchase: validates stock + balance, deducts coins, creates order, decrements stock, records transaction. Refunds on failure.
+
+**Body:** `{ action: "purchase", item_id: "uuid", quantity?: 1 }`
+
+**Response:** `{ success: true, balance: 700, item_name: "Cyberpunk Theme", total_cost: 500 }`
+
+**Errors:** `404` item not found, `409` insufficient stock/coins.
+
+---
+
+### `POST /api/economy` — Admin Award
+
+Award coins to a user (T1-T2 only).
+
+**Body:** `{ action: "award", user_id: "uuid", amount: 500, description?: "Hackathon prize" }`
+
+**Response:** `{ success: true, user: "uuid", awarded: 500, new_balance: 1700 }`
+
+---
+
 ## Middleware Routing
 
 ### Election (archived behind `ENABLE_ELECTION` env var)
