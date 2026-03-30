@@ -1,8 +1,8 @@
 "use client";
 
-import { Suspense, useRef, useState, useCallback } from "react";
-import { Canvas } from "@react-three/fiber";
-import { CameraControls } from "@react-three/drei";
+import { Suspense, useRef, useState, useCallback, useMemo } from "react";
+import { Canvas, useFrame } from "@react-three/fiber";
+import { CameraControls, SoftShadows, ContactShadows, Cloud, Clouds } from "@react-three/drei";
 import * as THREE from "three";
 import PlayerAvatar from "./PlayerAvatar";
 import Building from "./Building";
@@ -126,25 +126,85 @@ function Terrain() {
 function Lighting() {
   return (
     <>
-      {/* Bright ambient — Animal Crossing is well-lit */}
-      <ambientLight color="#f0f0ff" intensity={0.7} />
-      {/* Warm sun */}
+      {/* Hemisphere light — THE key ingredient for AC warm shadow fill.
+          Sky color (warm cream) bleeds into upper surfaces,
+          ground color (grass green) tints shadows from below. */}
+      <hemisphereLight args={["#ffeeb1", "#7ec850", 0.6]} />
+
+      {/* Ambient fill to prevent any pure black areas */}
+      <ambientLight intensity={0.25} color="#e8d5b7" />
+
+      {/* Warm directional sun */}
       <directionalLight
-        color="#fff5e0"
+        color="#fff5e6"
         intensity={1.0}
-        position={[20, 40, 20]}
+        position={[15, 30, 15]}
         castShadow
         shadow-mapSize-width={2048}
         shadow-mapSize-height={2048}
-        shadow-camera-far={80}
-        shadow-camera-left={-40}
-        shadow-camera-right={40}
-        shadow-camera-top={40}
-        shadow-camera-bottom={-40}
+        shadow-camera-far={60}
+        shadow-camera-left={-30}
+        shadow-camera-right={30}
+        shadow-camera-top={30}
+        shadow-camera-bottom={-30}
+        shadow-bias={-0.0001}
       />
-      {/* Fill light from opposite side */}
-      <directionalLight color="#c0d0ff" intensity={0.3} position={[-15, 20, -10]} />
+
+      {/* Soft fill from opposite side */}
+      <directionalLight color="#c0d0ff" intensity={0.2} position={[-15, 20, -10]} />
     </>
+  );
+}
+
+/**
+ * Gradient sky sphere — AC:NH uses a painted gradient, not physically-based.
+ * Warm cream horizon blending to soft sky blue at zenith.
+ */
+function GradientSky() {
+  const material = useMemo(() => {
+    return new THREE.ShaderMaterial({
+      side: THREE.BackSide,
+      depthWrite: false,
+      uniforms: {
+        topColor: { value: new THREE.Color("#87ceeb") },
+        bottomColor: { value: new THREE.Color("#f0e6d0") },
+      },
+      vertexShader: `
+        varying vec3 vWorldPosition;
+        void main() {
+          vec4 worldPos = modelMatrix * vec4(position, 1.0);
+          vWorldPosition = worldPos.xyz;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `
+        uniform vec3 topColor;
+        uniform vec3 bottomColor;
+        varying vec3 vWorldPosition;
+        void main() {
+          float h = normalize(vWorldPosition).y;
+          float t = smoothstep(-0.1, 0.5, h);
+          gl_FragColor = vec4(mix(bottomColor, topColor, t), 1.0);
+        }
+      `,
+    });
+  }, []);
+
+  return (
+    <mesh scale={[400, 400, 400]}>
+      <sphereGeometry args={[1, 32, 32]} />
+      <primitive object={material} attach="material" />
+    </mesh>
+  );
+}
+
+function ACClouds() {
+  return (
+    <Clouds material={THREE.MeshBasicMaterial}>
+      <Cloud segments={40} bounds={[10, 2, 10]} volume={6} color="#ffffff" position={[-10, 20, -15]} opacity={0.7} speed={0.1} />
+      <Cloud segments={30} bounds={[8, 2, 8]} volume={4} color="#fff8f0" position={[15, 22, 10]} opacity={0.5} speed={0.15} />
+      <Cloud segments={25} bounds={[6, 1.5, 6]} volume={3} color="#ffffff" position={[0, 25, 20]} opacity={0.6} speed={0.08} />
+    </Clouds>
   );
 }
 
@@ -312,17 +372,32 @@ function Scene() {
         makeDefault
       />
 
-      {/* Sky color */}
-      <color attach="background" args={["#87ceeb"]} />
+      {/* Soft shadows — PCF blur for AC feel */}
+      <SoftShadows size={25} samples={16} focus={0.5} />
+
+      {/* Gradient sky — warm horizon to soft blue zenith */}
+      <GradientSky />
 
       {/* Soft fog at edges */}
-      <fog attach="fog" args={["#c0dff0", 50, 90]} />
+      <fog attach="fog" args={["#c8e6c9", 40, 80]} />
 
       <Lighting />
+
+      {/* Contact shadows for ground ambient occlusion */}
+      <ContactShadows
+        position={[0, 0.01, 0]}
+        opacity={0.35}
+        scale={60}
+        blur={2.5}
+        far={6}
+        color="#5c6b4f"
+      />
+
       <Terrain />
       <Trees />
 
       <Suspense fallback={null}>
+        <ACClouds />
         <Decorations />
       </Suspense>
 
