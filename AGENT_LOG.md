@@ -613,6 +613,23 @@ While waiting for `specs/ux-game-world-v2.md`:
 - **QA:** Dashboard is at `/student/dashboard`. Test sidebar navigation, responsive hamburger at 768px, game world renders.
 - **UXUI:** Implementation follows all 4 specs. Sprite sheet frame mapping may need tuning once exact grid layout is confirmed.
 
+### 2026-03-30 — Sprint 2: Animal Crossing Overhaul Prep
+
+**Direction change acknowledged.** PS1 shader removed. Going cozy/bright/AC-style.
+
+**Completed:**
+- [x] `scripts/fbx_to_glb.py` — Blender Python batch converter for FBX → self-contained GLB with embedded textures. Run with: `blender --background --python scripts/fbx_to_glb.py -- --input web/public/assets/buildings --output web/public/assets/buildings`
+- [x] Fixed terrain z-fighting — replaced Y-offset layering with `polygonOffset` on all overlapping terrain materials. All geometry now at Y=0.
+- [x] Installed `@supabase/ssr` + `@supabase/supabase-js` (required by Backend's merged code)
+- [x] Build passes cleanly with all Backend routes (admin, calendar, kanban, marketplace, etc.)
+- [ ] Researching AC-style R3F implementations on GitHub (in progress)
+- [ ] **BLOCKED on UXUI** — waiting for `specs/ux-game-world-v2.md` to implement full visual overhaul
+
+**AC style changes already applied (by management/linter):**
+- Building.tsx → ACBuilding with cone roofs, windows, doors + BoardSign for flat objects
+- GameWorld.tsx → brighter colors (#5da34e grass, #d4c5a0 paths), round trees, pond, warm lighting (0.7 ambient), no PS1 shader
+- Layout.tsx → flex-based sidebar instead of margin-left
+
 ---
 
 ## Backend
