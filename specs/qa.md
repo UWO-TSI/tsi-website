@@ -5,6 +5,64 @@
 
 ---
 
+## Wave 4.1 — Full Combined Retest (Backend + Frontend + Phase 2 APIs)
+
+### Build Report
+
+**Result: ✅ BUILD PASSES — 49 pages**
+
+All Frontend game world + Backend dashboard + Phase 2 API routes compile cleanly.
+
+| Category | Count | Status |
+|----------|-------|--------|
+| Marketing pages | 5 | ✅ Static |
+| Auth pages (login/signup/onboarding/election) | 4 | ✅ Static |
+| Dashboard pages (regular) | 18 | ✅ Static |
+| Dashboard pages (admin) | 8 | ✅ Static |
+| API routes | 10 | ✅ Dynamic |
+| Dev/test pages | 4 | ✅ Static |
+
+**New API routes (Phase 2):**
+- `POST/GET /api/bounties` — list + create
+- `GET/PATCH/DELETE /api/bounties/[id]` — detail + update + delete
+- `POST /api/bounties/[id]/claim` — claim bounty
+- `POST /api/bounties/[id]/submit` — submit deliverables
+- `PATCH /api/bounties/[id]/review` — review submission
+- `GET/POST /api/economy` — balance/transactions + purchase/award
+
+### Lint Report
+
+**Result: ❌ FAILS — 50 errors, 48 warnings across 39 files**
+
+#### Errors by category
+
+| Error Type | Count | Files Affected |
+|-----------|-------|----------------|
+| `fetchX` before declaration (`react-hooks/immutability`) | ~15 | Backend admin + dashboard pages |
+| Ref access during render (`react-hooks/immutability`) | 3 | Building.tsx, AsciiGlobe, GlobeVisualizer |
+| Value modification (`react-hooks/immutability`) | ~10 | PlayerAvatar.tsx, InteractivePylon3D, CustomCursor |
+| setState in effect (`react-hooks/set-state-in-effect`) | 3 | CardCarouselLayout, GlassNavbar, marketplace |
+| JSX comment text nodes (`react/jsx-no-comment-textnodes`) | 3 | MemberCard, TextRevealSection |
+| `no-explicit-any` | ~10 | Lanyard, GlassNavbar, etc. |
+| Misc | ~6 | Various |
+
+#### NEW Frontend game world errors
+
+| File | Line | Error |
+|------|------|-------|
+| `components/game/Building.tsx:112` | Ref access during render | `react-hooks/immutability` |
+| `components/game/Building.tsx:98` | Unused `id` | `@typescript-eslint/no-unused-vars` |
+| `components/game/PlayerAvatar.tsx:68-76` | Modifying values (position, velocity refs) | `react-hooks/immutability` |
+| `components/portal/MemberCard.tsx:33` | Missing `aria-selected` on role="option" | `jsx-a11y/role-has-required-aria-props` |
+
+### Merge Conflict Resolution
+
+Resolved 7 conflicts between Backend and Frontend dashboard pages. **Took Frontend's versions** per file ownership (Frontend owns `web/app/student/dashboard/`). Backend's versions of bounty, directory, jobs, leaderboard, profile pages replaced by Frontend's spec-aligned implementations with game world integration.
+
+Backend's admin pages and pages Frontend didn't build (calendar, kanban, marketplace, mentorship, portfolio, quests, tools) were preserved from Backend.
+
+---
+
 ## Wave 4 — Post-Backend Merge Full Retest
 
 ### Build Report (`npm run build`)

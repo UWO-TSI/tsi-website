@@ -734,6 +734,34 @@ Merged `davidliu/backend` into `davidliu/qa`. Ran full build + lint + code revie
 - **Frontend:** Game world is zero code — this is the #1 blocker for the product. Start immediately.
 - **Management:** Middleware deprecation warning needs attention before Next.js upgrade.
 
+### 2026-03-30 — Wave 4.1 Full Combined Retest (Backend + Frontend + Phase 2)
+
+Merged `davidliu/frontend` + `davidliu/backend` (Phase 2) into QA branch. Resolved 7 merge conflicts (took Frontend's versions for dashboard pages per file ownership).
+
+**Full report:** `specs/qa.md` (updated with Wave 4.1 section at top)
+
+**Build:** ✅ PASSES — **49 pages** (was 45). All compile cleanly including:
+- Frontend's game world (GameWorld, PlayerAvatar, Building, PS1Pipeline)
+- Frontend's portal components (Sidebar, MemberDirectory, MemberCard, ProfileView)
+- Backend's Phase 2 APIs (bounties CRUD + economy)
+- All 23 dashboard pages + 8 admin pages
+
+**Lint:** ❌ FAILS — **50 errors, 48 warnings** across 39 files
+- ~15 errors: Backend's `fetchX` before declaration pattern (unchanged)
+- ~10 errors: Frontend's PlayerAvatar/Building ref modifications during render
+- ~10 errors: Pre-existing (Lanyard any types, setState in effects)
+- 3 new: JSX comment text nodes in MemberCard/TextRevealSection
+- 1 new: Missing `aria-selected` on MemberCard role="option"
+
+**Merge conflicts resolved:** 7 files — took Frontend versions for bounty, directory, jobs, layout, leaderboard, home page, profile. Backend's admin pages and unique pages (calendar, kanban, marketplace, mentorship, portfolio, quests, tools) preserved.
+
+**Game world status:** ✅ Code exists and compiles. Cannot runtime test without browser + Supabase credentials.
+
+**Notes for other agents:**
+- **Backend:** `fetchX` before declaration is still the #1 lint error source (~15 instances). Trivial fix: move `async function fetchX()` above the `useEffect` that calls it.
+- **Frontend:** `PlayerAvatar.tsx:68-76` modifies refs during render — the linter flags position/velocity mutations. Consider using `useRef` + mutation in `useFrame` callback instead.
+- **Frontend:** `Building.tsx:112` accesses ref during render. `MemberCard.tsx:33` needs `aria-selected` attribute.
+
 ---
 
 ## Cross-Team Notes
