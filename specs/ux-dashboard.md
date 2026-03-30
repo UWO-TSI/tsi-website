@@ -277,13 +277,17 @@ While 3D assets load on the Home page, show the existing ASCII loading screen co
 4. **Tutorial** — Brief walkthrough of dashboard features
 5. **First Quests** — Suggested starter tasks
 
-### 6.2 Avatar Creator — Tabbed Panel
+### 6.2 Avatar Creator — Tabbed Panel (2D Sprite Preview)
+
+> **Updated 2026-03-29:** Avatars are 2D sprites (Dave the Diver style), not 3D models. Preview shows layered sprite composition instead of 3D bust.
 
 ```
 +----------------------------+
-|      [3D Bust Preview]     |
-|       (head + torso)       |
-|       slowly rotating      |
+|    [2D Sprite Preview]     |
+|     layered composition:   |
+|     body + outfit + hair   |
+|     + accessories          |
+|     (pixel-crisp, large)   |
 +----------------------------+
 | Body | Face | Hair | Outfit|
 +----------------------------+
@@ -299,29 +303,33 @@ While 3D assets load on the Home page, show the existing ASCII loading screen co
 |----------|-------|
 | Modal width | `min(560px, 90vw)` |
 | Preview area height | `280px` |
-| Preview background | `var(--color-bg-alt)` (#111113) |
+| Preview background | `var(--color-bg-alt)` (#111113) with subtle checkerboard pattern (transparency indicator) |
 | Preview border-radius | `var(--radius-md)` (16px) top corners |
+| Preview rendering | 2D layered sprite at 4× scale (pixel-crisp), centered, `image-rendering: pixelated` |
+| Preview layers | Stacked: body → outfit → hair → accessories (matches in-game z-offset order) |
+| Preview animation | Idle animation loop at 8 FPS (same as in-game) |
 | Tab bar | `40px` height, `var(--color-surface)` background |
 | Active tab | `var(--color-text-main)`, `border-bottom: 2px solid var(--color-brand-blue)` |
 | Inactive tab | `var(--color-text-muted)` |
 | Tab font | `var(--font-size-body-sm)` (14px), weight 500 |
 | Options grid | `4 columns`, `var(--space-2)` (8px) gap |
-| Option tile | `64px × 64px`, `var(--radius-sm)` (8px) radius |
+| Option tile | `64px × 64px`, `var(--radius-sm)` (8px) radius, `image-rendering: pixelated` |
 | Option tile selected | `border: 2px solid var(--color-brand-blue)`, `glow-blue-sm` |
 | Option tile hover | `border: 1px solid var(--glass-border-strong)` |
+| Color picker | For Body tab: skin tone palette (6-8 presets). For Hair tab: hair color palette (8-10 presets) |
 | Randomize button | Ghost button style, left-aligned |
 | Confirm button | Primary button style, right-aligned |
 | Options area | `max-height: 240px`, `overflow-y: auto` |
-| Total categories | Body, Face, Hair, Outfit (4 tabs for MVP) |
+| Total categories | Body (skin tone + body type), Face (eyes + expression), Hair (style + color), Outfit (clothing set) |
 
 ---
 
 ## 7. Visual Reference Summary
 
-**Design decisions (confirmed by David):**
+**Design decisions (confirmed by David + Management):**
 - Sidebar: Narrow minimal, 240px, flat dark, left accent bar active indicator
 - No section grouping in sidebar
 - Responsive: hamburger slide-over at 768px breakpoint
-- Avatar creator: tabbed panel with 3D bust preview
+- Avatar creator: tabbed panel with 2D layered sprite preview (updated from 3D bust — Management directive 2026-03-29)
 - Overlay panels (game interactions): solid dark (#0d1b2a), blue border glow
 - Transitions: quick fade to black (0.3s/0.3s)

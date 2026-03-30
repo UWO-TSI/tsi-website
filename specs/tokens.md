@@ -273,10 +273,12 @@ These tokens extend the base design system (`tokens.css`) with game-specific and
 ## 10. Avatar Creator Tokens (Phase 2)
 
 ```css
-/* Avatar Creator — Tabbed Panel */
+/* Avatar Creator — Tabbed Panel (2D Sprite Preview) */
 --creator-width: min(560px, 90vw);
 --creator-preview-height: 280px;
 --creator-preview-bg: var(--color-bg-alt);  /* #111113 */
+--creator-preview-scale: 4;                 /* 4× pixel scale for sprite preview */
+--creator-preview-rendering: pixelated;     /* image-rendering: pixelated */
 --creator-tab-height: 40px;
 --creator-tab-active-border: 2px solid var(--color-brand-blue);
 --creator-option-grid-cols: 4;
@@ -285,6 +287,13 @@ These tokens extend the base design system (`tokens.css`) with game-specific and
 --creator-option-radius: var(--radius-sm);  /* 8px */
 --creator-option-selected-border: 2px solid var(--color-brand-blue);
 --creator-options-max-height: 240px;
+
+/* Sprite Layer Tokens */
+--sprite-layer-z-offset: 0.001;             /* z-offset between layers */
+--sprite-layer-count: 4;                    /* body, outfit, hair, accessories */
+--sprite-frame-rate: 8;                     /* FPS for sprite animation */
+--sprite-billboard-width: 1.2;              /* units */
+--sprite-billboard-height: 1.8;             /* units */
 ```
 
 ---
