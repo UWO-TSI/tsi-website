@@ -3,103 +3,154 @@
 import { useEffect, useRef } from "react";
 import gsap from "gsap";
 import ScrollTrigger from "gsap/ScrollTrigger";
+import { EASE_ENTER, DURATION_SECTION, STAGGER_NORMAL } from "@/lib/motion";
 
-export type TestimonialProps = {
-	title?: string;
-	subtitle?: string;
-	videoSrc?: string;
-	videoDescription?: string;
+if (typeof window !== "undefined") {
+  gsap.registerPlugin(ScrollTrigger);
+}
+
+export type Quote = {
+  quote: string;
+  author: string;
+  role: string;
+  org: string;
 };
 
-export default function Testimonial({
-	title = "Hear From the Nonprofits We’ve Worked With",
-	subtitle =
-		"Real stories from organizations who partnered with TETHOS for technical support, digital transformation, and long-term impact.",
-	videoSrc,
-	videoDescription = "Video playing in the background – 15–20 second compilation of video testimonials.",
-}: TestimonialProps) {
-	const sectionRef = useRef<HTMLElement>(null);
-	const titleRef = useRef<HTMLHeadingElement>(null);
-	const subtitleRef = useRef<HTMLParagraphElement>(null);
-	const descriptionRef = useRef<HTMLParagraphElement>(null);
+export type TestimonialProps = {
+  quotes?: Quote[];
+};
 
-	useEffect(() => {
-		gsap.registerPlugin(ScrollTrigger);
-	}, []);
+const defaultQuotes: Quote[] = [
+  {
+    quote:
+      "Working with Tethos transformed how we serve our community. They didn't just build software — they took the time to understand our mission and deliver something we could actually sustain.",
+    author: "Maria Chen",
+    role: "Executive Director",
+    org: "BrightAid Foundation",
+  },
+  {
+    quote:
+      "I've worked with agencies that cost ten times as much and delivered half as much. These students are serious professionals. The handoff was impeccable — our staff was trained and ready on day one.",
+    author: "James Okafor",
+    role: "Operations Lead",
+    org: "ShelterNet",
+  },
+];
 
-	useEffect(() => {
-		gsap.registerPlugin(ScrollTrigger);
-		if (!sectionRef.current || !titleRef.current || !subtitleRef.current || !descriptionRef.current) return;
+export default function Testimonial({ quotes = defaultQuotes }: TestimonialProps) {
+  const sectionRef = useRef<HTMLElement>(null);
+  const labelRef = useRef<HTMLParagraphElement>(null);
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  const quotesRef = useRef<(HTMLDivElement | null)[]>([]);
 
-		const ctx = gsap.context(() => {
-			const targets = [titleRef.current, subtitleRef.current, descriptionRef.current];
+  useEffect(() => {
+    const ctx = gsap.context(() => {
+      gsap.fromTo(
+        [labelRef.current, headingRef.current],
+        { opacity: 0, y: 24 },
+        {
+          opacity: 1,
+          y: 0,
+          duration: DURATION_SECTION,
+          ease: EASE_ENTER,
+          stagger: STAGGER_NORMAL,
+          scrollTrigger: {
+            trigger: sectionRef.current,
+            start: "top 80%",
+            toggleActions: "play none none none",
+          },
+        }
+      );
 
-			gsap.set(targets, { autoAlpha: 0, y: 32 });
+      quotesRef.current.forEach((el, i) => {
+        if (!el) return;
+        gsap.fromTo(
+          el,
+          { opacity: 0, y: 24 },
+          {
+            opacity: 1,
+            y: 0,
+            duration: DURATION_SECTION,
+            ease: EASE_ENTER,
+            delay: i * STAGGER_NORMAL,
+            scrollTrigger: {
+              trigger: el,
+              start: "top 85%",
+              toggleActions: "play none none none",
+            },
+          }
+        );
+      });
+    }, sectionRef);
 
-			gsap.timeline({
-				defaults: { ease: "power2.out" },
-				scrollTrigger: {
-					trigger: sectionRef.current,
-					start: "top bottom",
-					end: "center center",
-					scrub: 1,
-					invalidateOnRefresh: true,
-				},
-			})
-				.to(targets, { y: 0, autoAlpha: 1, stagger: 0.2, duration: 0.8 }, 0);
-		});
+    return () => ctx.revert();
+  }, []);
 
-		return () => ctx.revert();
-	}, []);
+  return (
+    <section
+      ref={sectionRef}
+      data-navbar-theme="dark"
+      className="py-32 px-6"
+      style={{ background: "var(--color-bg-alt)" }}
+    >
+      <div className="max-w-5xl mx-auto">
+        <p
+          ref={labelRef}
+          className="text-center text-xs tracking-[0.3em] mb-4"
+          style={{
+            fontFamily: "IBM Plex Mono, monospace",
+            color: "var(--color-text-subtle)",
+            opacity: 0,
+          }}
+        >
+          What Partners Say
+        </p>
+        <h2
+          ref={headingRef}
+          className="font-heading text-3xl md:text-4xl font-semibold text-center mb-16"
+          style={{ opacity: 0 }}
+        >
+          The Impact, In Their Words.
+        </h2>
 
-	return (
-		<section
-			ref={sectionRef}
-			className="relative isolate min-h-screen overflow-hidden bg-gradient-to-b from-[#0F0F10] via-[#181B1B] to-[#111113] text-white before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-24 before:bg-gradient-to-b before:from-[#0F0F10] before:via-[#0F0F10]/70 before:to-transparent"
-		>
-			<div className="absolute inset-0">
-				{videoSrc ? (
-					<video
-						src={videoSrc}
-						className="h-full w-full object-cover"
-						playsInline
-						autoPlay
-						muted
-						loop
-						aria-hidden
-					/>
-				) : (
-					<div
-						className="h-full w-full bg-gradient-to-br from-[#181B1B] via-[#27272A] to-[#3F3F46]"
-						aria-hidden
-					/>
-				)}
-				<div
-					className="absolute inset-0 bg-gradient-to-b from-[#0F0F10]/70 via-[#0D1B2A]/55 to-[#0F0F10]/45"
-					aria-hidden
-				/>
-			</div>
-
-			<div className="relative mx-auto flex min-h-screen max-w-5xl flex-col items-center justify-center px-4 py-16 text-center sm:px-6 lg:px-8">
-				<h1
-					ref={titleRef}
-					className="font-heading text-3xl font-semibold leading-tight text-white opacity-0 sm:text-4xl md:text-5xl"
-				>
-					{title}
-				</h1>
-				<p
-					ref={subtitleRef}
-					className="mt-4 max-w-3xl text-base text-zinc-100 opacity-0 sm:text-lg md:text-xl"
-				>
-					{subtitle}
-				</p>
-				<p
-					ref={descriptionRef}
-					className="mt-8 rounded-full bg-white/85 px-5 py-2 text-sm font-medium text-[#0F0F10] shadow-sm ring-1 ring-black/5 opacity-0"
-				>
-					{videoDescription}
-				</p>
-			</div>
-		</section>
-	);
+        <div className="grid md:grid-cols-2 gap-10">
+          {quotes.map((q, i) => (
+            <div
+              key={i}
+              ref={(el) => { quotesRef.current[i] = el; }}
+              className="flex flex-col gap-6"
+              style={{ opacity: 0 }}
+            >
+              <blockquote
+                className="font-heading text-xl md:text-2xl leading-snug"
+                style={{ color: "var(--color-text-primary)" }}
+              >
+                &ldquo;{q.quote}&rdquo;
+              </blockquote>
+              <footer>
+                <p
+                  className="text-sm font-medium"
+                  style={{
+                    fontFamily: "IBM Plex Mono, monospace",
+                    color: "var(--color-text-muted)",
+                  }}
+                >
+                  {q.author}
+                </p>
+                <p
+                  className="text-xs mt-0.5"
+                  style={{
+                    fontFamily: "IBM Plex Mono, monospace",
+                    color: "var(--color-text-subtle)",
+                  }}
+                >
+                  {q.role} · {q.org}
+                </p>
+              </footer>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
 }
