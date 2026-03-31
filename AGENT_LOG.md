@@ -836,6 +836,47 @@ Merged `davidliu/frontend` + `davidliu/backend` (Phase 2) into QA branch. Resolv
 - **Frontend:** `PlayerAvatar.tsx:68-76` modifies refs during render — the linter flags position/velocity mutations. Consider using `useRef` + mutation in `useFrame` callback instead.
 - **Frontend:** `Building.tsx:112` accesses ref during render. `MemberCard.tsx:33` needs `aria-selected` attribute.
 
+### 2026-03-31 — Wave 5 Full Runtime Test (test-merge, dev server)
+
+Merged all branches (test-merge + Animal Crossing overhaul + latest FE + MGMT fixes). Started dev server, tested every page via HTTP, inspected SSR output, verified game assets, reviewed game component code.
+
+**Full report:** `specs/qa.md` (Wave 5 section at top)
+
+**Build:** ✅ 49 pages, 6.0s compile
+
+**Runtime (dev server):** ✅ ALL 34 pages return HTTP 200
+- 5 marketing, 4 auth, 17 dashboard, 8 admin — all serve correctly
+
+**Game world (SSR + code review):**
+- ✅ Sidebar renders 8 nav items with correct links + Lucide icons + "Soon" badges
+- ✅ Mobile hamburger + slide-in overlay
+- ✅ Canvas bails out to CSR as expected (next/dynamic ssr:false)
+- ✅ Animal Crossing style: blue sky, grass terrain, cobblestone paths, pond, flowers, 3 tree types, benches, lampposts
+- ✅ 7 buildings placed with proximity detection + "Press E" prompt
+- ✅ PlayerAvatar: WASD + click-to-move, sprite sheet cycling, camera follow
+- ✅ TransitionOverlay: fade-to-black state machine (0.3s in → hold → 0.3s out)
+
+**Auth pages:**
+- ✅ Login: email + password + ASCII art terminal aesthetic
+- ✅ Signup: name + email + password + confirm + invite code field (TETHOS-XXXX placeholder)
+
+**API routes:** All return 500 — expected, no Supabase credentials in dev
+
+**Assets:** All 11 files serve correctly (4 character sprites, 4 color variants, 1 shadow, 4 FBX buildings)
+
+**Bugs found (4 new):**
+1. **P2 — Dead code:** `PS1Pipeline.tsx` no longer imported after Animal Crossing overhaul. Delete it.
+2. **P2 — Unused FBX files:** 4 FBX building files (651KB) in `/assets/buildings/` but Building.tsx uses placeholder geometry. Wire them up or delete.
+3. **P2 — No WebGL context loss handler:** If WebGL crashes (Safari/mobile), canvas goes black with no recovery.
+4. **P3 — `Math.random()` in Trees():** Causes hydration mismatch. Use stable values.
+
+**Cross-browser (code analysis):** Chrome ✅, Firefox ✅, Safari ⚠️ (WebGL shadows may be slow, no context loss recovery)
+
+**Notes for other agents:**
+- **Frontend:** Dead code cleanup — remove PS1Pipeline.tsx and unused FBX assets, or wire FBX into Building.tsx. Fix `Math.random()` in Trees for hydration safety.
+- **Backend:** API routes need `.env.local` with Supabase credentials to test. All return 500 currently.
+- **Management:** Safari WebGL performance may need attention before mobile launch. Middleware deprecation still pending.
+
 ---
 
 ## Cross-Team Notes

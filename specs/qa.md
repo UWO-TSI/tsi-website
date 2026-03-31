@@ -1,7 +1,168 @@
 # QA Report
 
 > Owner: QA agent. All agents check this for bugs in their area.
-> Last updated: 2026-03-30
+> Last updated: 2026-03-31
+
+---
+
+## Wave 5 — Full Runtime Test (test-merge, all branches combined)
+
+Merged all branches (Backend + Frontend + MGMT fixes + Animal Crossing style overhaul). Ran build, started dev server, tested every page via HTTP, inspected rendered HTML, verified game assets, tested API routes.
+
+### Build Report
+
+**Result: ✅ BUILD PASSES — 49 pages, 6.0s compile**
+
+No TypeScript errors. All pages generate successfully.
+
+### Dev Server Runtime Test
+
+**All 34 testable pages return HTTP 200:**
+
+| Category | Pages | HTTP Status |
+|----------|-------|-------------|
+| Marketing (5) | `/`, `/npo`, `/company`, `/sponsor`, `/student` | ✅ 200 |
+| Auth (4) | `/student/login`, `/signup`, `/election`, `/onboarding` | ✅ 200 |
+| Dashboard (17) | `/student/dashboard`, `/directory`, `/bounty`, `/jobs`, `/leaderboard`, `/profile`, `/shop`, `/settings`, `/calendar`, `/kanban`, `/marketplace`, `/mentorship`, `/portfolio`, `/quests`, `/tools`, `/tools/ascii`, `/tools/rag` | ✅ 200 |
+| Admin (8) | `/student/dashboard/admin`, `/analytics`, `/announcements`, `/bounties`, `/election`, `/marketplace`, `/members`, `/quests` | ✅ 200 |
+
+### Game World Testing
+
+**Verified via SSR HTML inspection + code review:**
+
+#### Sidebar Navigation ✅
+- **8 nav items rendered** in SSR: Home (active, blue left accent), Directory, Bounty Board (Soon), Shop (Soon), Job Board (Soon), Leaderboard (Soon), Profile, Settings (Soon)
+- Each item has Lucide icon (House, Users, Scroll, ShoppingBag, Briefcase, Trophy, User, Settings)
+- "Soon" badges on Phase 2 items
+- Player status at top: "Player" / "Lv. 1"
+- Links verified: all point to correct `/student/dashboard/*` paths
+- **Mobile hamburger**: `<Menu>` icon at top-left, hidden on md+ breakpoint, slide-in overlay with backdrop
+
+#### Game World Canvas ✅
+- `<Canvas>` element renders via `next/dynamic` with `ssr: false` — correctly bails out to client-side rendering
+- SSR fallback shows "LOADING WORLD..." ASCII art loading screen
+- `data-dgst="BAILOUT_TO_CLIENT_SIDE_RENDERING"` — expected behavior for R3F
+
+#### Game World Components (code review)
+| Component | Status | Details |
+|-----------|--------|---------|
+| `GameWorld.tsx` | ✅ | Animal Crossing style — sky blue bg (#87ceeb), 80x80 grass plane, cobblestone paths, pond, flowers, benches, lampposts, banners, 16 trees (3 types) |
+| `PlayerAvatar.tsx` | ✅ | 2D Billboard sprite, WASD+arrow movement (5 units/sec), click-to-move via raycasting, frame cycling at 6 FPS, nameplate via `<Html>` |
+| `Building.tsx` | ✅ | 7 buildings — ACBuilding (box+cone roof+door+windows) or BoardSign (posts+board). Proximity detection (4 units). "Press E to enter/view" prompt with bounce animation |
+| `TransitionOverlay.tsx` | ✅ | Fade-to-black (0.3s in, 0.2s hold, 0.3s out). State machine: idle→fading-in→black→fading-out→idle |
+| `PS1Pipeline.tsx` | ⚠️ Exists but may be unused | Animal Crossing overhaul removed PS1 filter. File still in repo but GameWorld.tsx no longer imports it |
+
+#### Character Movement (code review)
+- WASD/Arrow keys: handled in `useFrame` loop, updates position at 5 units/sec
+- Boundary clamping: ±38 units
+- Click-to-move: raycast on ground plane, pathfind to click point
+- Direction-based sprite selection: down (row 0-1), left (row 2-3), right (row 4-5), up (row 6-7)
+- Camera follows player via `CameraControls.moveTo()`
+
+#### Building Interaction (code review)
+- Proximity: `distanceTo(playerPosition) < 4` triggers "Press E" prompt
+- E key handler: boards → direct `router.push(href)`, buildings → fade-to-black then navigate
+- 7 buildings placed: HQ (center), Shop (-14,0,10), Oracle (0,0,22), House (14,0,14), Bounty Board (10,0,-2), Job Board (-10,0,-10), Leaderboard (10,0,-10)
+- Buildings with `href`: Shop→`/shop`, Bounty→`/bounty`, Jobs→`/jobs`, Leaderboard→`/leaderboard`
+- Buildings without `href` (HQ, Oracle, House): E key does nothing — expected for Phase 2
+
+### Auth Pages Testing
+
+#### Login Page ✅
+- ASCII art header (TETHOS banner)
+- Terminal-style UI: "tethos://auth/login"
+- Fields: "Agent Email" (email), "Passphrase" (password)
+- "Initialize Session" submit button
+- "New agent? Request Access" → link to signup
+- "Back to Student Home" → link back
+
+#### Signup Page ✅
+- Fields: display name (text), email, password, confirm password
+- **Invite code field** with placeholder "TETHOS-XXXX"
+- Submit button present
+- Invite code `TETHOS-W26` seeded in DB migrations
+
+### API Routes Testing
+
+**All 4 API endpoints return HTTP 500** — expected since no Supabase env vars configured.
+
+| Route | Status | Expected |
+|-------|--------|----------|
+| `GET /api/directory` | 500 | Missing `NEXT_PUBLIC_SUPABASE_URL` |
+| `GET /api/profile` | 500 | Missing `NEXT_PUBLIC_SUPABASE_URL` |
+| `GET /api/bounties` | 500 | Missing `NEXT_PUBLIC_SUPABASE_URL` |
+| `GET /api/economy` | 500 | Missing `NEXT_PUBLIC_SUPABASE_URL` |
+
+**Note:** The middleware gracefully handles missing env vars — when `NEXT_PUBLIC_SUPABASE_URL` or `NEXT_PUBLIC_SUPABASE_ANON_KEY` are not set, it passes through without auth checks. This means dashboard pages load without login in dev mode.
+
+### Static Assets
+
+| Asset | Path | HTTP | Size |
+|-------|------|------|------|
+| Character sprite | `/assets/characters/prototype_character.png` | ✅ 200 | 3.3KB |
+| Character shadow | `/assets/characters/static_shadow.png` | ✅ 200 | 5.1KB |
+| Blue variant | `/assets/characters/prototype_character_blue.png` | ✅ | 3.3KB |
+| Green variant | `/assets/characters/prototype_character_green.png` | ✅ | 3.4KB |
+| Red variant | `/assets/characters/prototype_character_red.png` | ✅ | 3.3KB |
+| Yellow variant | `/assets/characters/prototype_character_yellow.png` | ✅ | 3.3KB |
+| Shadow sprite | `/assets/characters/prototype_character_shadow.png` | ✅ | 514B |
+| HQ building | `/assets/buildings/hq.fbx` | ✅ | 165KB |
+| Shop building | `/assets/buildings/shop.fbx` | ✅ | 166KB |
+| Oracle temple | `/assets/buildings/oracle_temple.fbx` | ✅ | 208KB |
+| House | `/assets/buildings/house_1.fbx` | ✅ | 112KB |
+
+**Note:** Building FBX files exist but `Building.tsx` uses placeholder geometry (ACBuilding/BoardSign), not FBX loading. The FBX files are unused currently.
+
+### Cross-Browser Compatibility (Code Analysis)
+
+Cannot launch actual browser instances (Chrome/Safari/Firefox), but analyzed code for compatibility:
+
+| Feature | Chrome | Safari | Firefox | Notes |
+|---------|--------|--------|---------|-------|
+| WebGL2 (R3F/Three.js) | ✅ | ✅ | ✅ | All modern versions support WebGL2 |
+| CSS `inset: 0` | ✅ | ✅ 14.1+ | ✅ | Used in layout — needs Safari 14.1+ |
+| CSS `gap` in flex | ✅ | ✅ 14.1+ | ✅ | Used in sidebar |
+| `KeyboardEvent.key` | ✅ | ✅ | ✅ | Used for WASD/E detection |
+| `pointer-events` | ✅ | ✅ | ✅ | Used on HTML overlays |
+| CSS custom properties | ✅ | ✅ | ✅ | Used extensively |
+| `next/dynamic` CSR | ✅ | ✅ | ✅ | Standard Next.js pattern |
+| `@react-three/fiber` | ✅ | ⚠️ | ✅ | Safari WebGL can be slower, especially with shadows |
+| `style jsx` | ✅ | ✅ | ✅ | Compiled by Next.js |
+
+**Safari concerns:**
+- Shadow mapping (`shadow-mapSize` 2048x2048) may cause performance issues on older iOS/Safari
+- `CameraControls` touch events should work but haven't been tested
+- WebGL context loss more common on Safari — no recovery handler in GameWorld
+
+**Firefox concerns:**
+- None identified. All APIs used are well-supported.
+
+### Lint Report
+
+**Result: ❌ FAILS — 51 errors, 48 warnings**
+
+Error breakdown unchanged from Wave 4.1 — see that section below for details.
+
+### Directory Page ✅
+- "Search members" input field present
+- Tier filter pills rendered (7 instances of "Tier" text in SSR)
+- Uses mock data (9 members) since no Supabase connection
+
+### Profile Page ✅
+- "Profile", "Edit Profile" button, Level, XP, Skills, Social Links sections all render in SSR
+
+### Bugs & Issues Found
+
+| Severity | Issue | File | Details |
+|----------|-------|------|---------|
+| **P1** | API routes return 500 without Supabase | All `/api/*` routes | Need `.env.local` with Supabase credentials. Expected in dev but blocks runtime auth testing. |
+| **P2** | PS1Pipeline.tsx possibly dead code | `components/game/PS1Pipeline.tsx` | Animal Crossing overhaul removed PS1 filter. GameWorld no longer imports it. Consider deleting. |
+| **P2** | FBX building assets unused | `public/assets/buildings/*.fbx` | 4 FBX files (651KB total) ship to client but Building.tsx uses placeholder geometry. Delete or wire up. |
+| **P2** | No WebGL context loss handler | `GameWorld.tsx` | If WebGL context is lost (common on Safari/mobile), the canvas will go black with no recovery. Add `onCreated` handler. |
+| **P3** | 51 lint errors | Various | ~15 `fetchX` before declaration, ~10 ref mutations, ~10 `any` types. See lint section. |
+| **P3** | Middleware deprecation | `web/middleware.ts` | Next.js 16 warns: use "proxy" instead of "middleware" |
+| **P3** | `Math.random()` in render | `GameWorld.tsx:177` | `Trees()` uses `Math.random()` for scale — causes hydration mismatch warnings. Use seeded random or stable values. |
+| **P3** | Missing `aria-selected` | `MemberCard.tsx:33` | Element with `role="option"` needs `aria-selected` attribute |
 
 ---
 
