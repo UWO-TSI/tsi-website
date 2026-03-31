@@ -49,14 +49,14 @@ WAVE 4 (after Frontend commits):
 
 **Phase 2 — Spec the remaining features. Ask David design-detail questions (multi-choice, batched) for each before writing.**
 
-- [ ] `specs/ux-shop.md` — Shop interior, item grid catalog, item card (icon + name + price + rarity), purchase confirmation, category tabs (outfits, effects, merch, profile), coin balance display
-- [ ] `specs/ux-bounty.md` — Bounty board overlay, bounty card (title, description, reward, deadline, difficulty+category tags, solo/team), claim flow, submission flow, active bounty tracking, Bounty Hunter application form
-- [ ] `specs/ux-leaderboard.md` — Leaderboard overlay, ranked list, your-rank highlight, time period tabs, stats displayed
-- [ ] `specs/ux-jobs.md` — Job board overlay, job listing card, filter/search, member submission form
-- [ ] `specs/ux-oracle.md` — Oracle Temple interior, MBTI quiz flow (question count, question UI, answer format), class reveal animation, 4 main classes + 16 subclass visual identity
-- [ ] `specs/ux-onboarding.md` — Welcome screen → profile form → avatar creator → tutorial → quest checklist with rewards
-- [ ] Design review of Frontend's implementation once building starts
-- [ ] Update AGENT_LOG.md
+- [x] `specs/ux-shop.md` — E-commerce catalog, standard product cards, dual currency, category tabs, product detail, cart stub
+- [x] `specs/ux-bounty.md` — 2-col card grid overlay, claim/submit/review flow, Bounty Hunter application
+- [x] `specs/ux-leaderboard.md` — Ranked table, time period tabs, your-row highlight
+- [x] `specs/ux-jobs.md` — Full-page job board, search + filters, member submission form
+- [x] `specs/ux-oracle.md` — Card-based MBTI quiz (12 Q), 4 classes + 16 subclasses, class reveal animation
+- [x] `specs/ux-onboarding.md` — Welcome → profile → avatar → quest checklist (6 quests, 275 XP)
+- [x] Design review of Backend's dashboard implementation — findings in `specs/ux-review.md`
+- [x] Update AGENT_LOG.md
 
 **Rules:** Same as Wave 1 — specs only, no code. Ask David before writing. Multi-choice. Implementation-ready detail.
 
@@ -483,6 +483,108 @@ While waiting for `specs/ux-game-world-v2.md`:
 - Multiplayer presence indicators when Colyseus ships
 
 **No blockers. UXUI is idle and available for Phase 2 spec work or design review.**
+
+### 2026-03-29 — Spec Updates + Phase 2 COMPLETE
+
+**Spec updates for art direction pivot:**
+- Updated `specs/ux-game-world.md` Section 5 — PlayerAvatar rewritten from 3D Quaternius models to 2D billboard sprites (Dave the Diver style). Added sprite sheet animation (8 FPS), layered composition (4 layers at z-offsets), NearestFilter.
+- Updated `specs/ux-dashboard.md` Section 6.2 — Avatar creator preview changed from 3D bust to 2D layered sprite at 4× scale with `image-rendering: pixelated`.
+- Updated `specs/tokens.md` Section 10 — Added sprite layer tokens (z-offset, frame rate, billboard dimensions).
+
+**Phase 2 design questions asked (all answered by David):**
+
+| Question | David's Choice |
+|----------|---------------|
+| Shop layout | **Full-page e-commerce catalog** — real merch, not avatar cosmetics |
+| Product card | **Standard e-commerce card** — photo, name, price, add-to-cart |
+| Shop currency | **Both** — real money (Stripe) + TSI coins |
+| Bounty board | **Card grid overlay** — 2-column cards with filter tabs |
+| Leaderboard | **Ranked table** — simple, time period tabs, your-row highlighted |
+| Oracle quiz | **Card-based** — question presented, 2-4 answer cards in front, click most accurate, progress bar at bottom |
+| Job board | **Full-page** — search + filters, job listing cards, member submission |
+| Onboarding tutorial | **Quest checklist** — self-directed exploration with XP rewards (6 quests, 275 XP total) |
+
+**Phase 2 specs written (all committed, 1,488 lines total):**
+
+- [x] `specs/ux-shop.md` — E-commerce catalog, standard product cards, dual currency (real money + TSI coins), category tabs, product detail page with variants, cart stub
+- [x] `specs/ux-bounty.md` — 2-col card grid overlay, bounty cards (title/reward/deadline/difficulty/tags), claim flow (6 steps), submission form, Bounty Hunter application
+- [x] `specs/ux-leaderboard.md` — Ranked table, time period tabs (weekly/monthly/all-time), your-row sticky highlight, responsive column hiding, gold/silver/bronze rank colors
+- [x] `specs/ux-jobs.md` — Full page with search + filter tabs, job listing cards (company/role/type/location), type-colored badges, member submission form, admin review flow
+- [x] `specs/ux-oracle.md` — Card-based MBTI quiz (12 questions, 2-4 answer cards each), 4 main classes (Warrior/Mage/Healer/Rogue), 16 subclasses, dramatic class reveal animation, post-quiz class info page
+- [x] `specs/ux-onboarding.md` — 3-step flow (welcome → profile → avatar), starter quest checklist widget (6 quests, 275 XP), XP toast notifications, collapsible widget, edge cases
+
+**Notes for other agents:**
+- **Frontend:** All Phase 2 specs are ready. Priority order for building: onboarding first (it's the entry point), then shop and oracle (most complex), then bounty/leaderboard/jobs (overlay-based).
+- **Backend:** Shop needs product catalog API + Stripe integration. Bounty system needs the `bounties` + `bounty_submissions` tables from migration 006. Oracle needs `class`/`subclass` fields on profiles (already in migration 004). Jobs needs a `job_listings` table (not yet specified in migrations — Backend should add).
+- **QA:** Test onboarding flow end-to-end. Test quest completion XP awards. Test Oracle quiz scoring (12 questions → MBTI type → class/subclass mapping).
+
+**UXUI Phase 2 is COMPLETE. All 10 spec files delivered (Wave 1 + Phase 2). Remaining UXUI work: design review once Frontend starts building.**
+
+### 2026-03-30 — Design Review of Backend's Dashboard + MBTI Quiz Bank
+
+**Design review completed.** Full findings in `specs/ux-review.md`. Key deviations from UXUI specs:
+
+| Issue | Severity | Spec Says | Backend Built |
+|-------|----------|-----------|---------------|
+| Sidebar width | 🔴 Major | 240px | 224px (`w-56`) |
+| Sidebar background | 🔴 Major | `--color-surface` (#111827) | `--color-bg-alt` (#111113) |
+| Active indicator | 🔴 Major | 2px left accent bar | Blue bg glow |
+| Section grouping | 🔴 Major | No grouping (flat list) | Has "Personal" + "Admin" sections |
+| Nav font | 🔴 Major | Test Söhne (default) | IBM Plex Mono (font-mono) |
+| Directory layout | 🔴 Major | List view (64px rows) | Grid cards (4-col) |
+| Tier badges | 🔴 Major | Color-coded T1-T5 pills | Missing entirely |
+| XP bars | 🔴 Major | Inline per member row | Missing |
+| Topbar | 🟡 Added | Not spec'd | Notifications + search + profile dropdown |
+| CSS var names | 🟡 Drift | tokens.css names | Different names (`--glass-border`, `--color-text-primary`) |
+
+**10 priority fixes listed for Frontend** in `specs/ux-review.md` Section "Priority Fix List."
+
+**MBTI Quiz question bank created:** `specs/oracle-questions.md`
+- 12 questions (3 per MBTI axis: E/I, S/N, T/F, J/P)
+- 2–4 answer cards per question
+- Scoring key + tie-breaker rule
+- Full class mapping table (4 classes, 16 subclasses)
+- Implementation notes (shuffle order, answer storage, API endpoint)
+
+**Notes for Frontend:**
+- Read `specs/ux-review.md` before building — tells you exactly what to fix in Backend's sidebar and directory
+- The quiz questions in `specs/oracle-questions.md` are ready to be turned into a JSON data file
+
+**Notes for Backend:**
+- Your CSS variable names don't match `tokens.css` — see review for specifics. Frontend will fix during integration.
+- `Kanban` page should be gated/removed — CLAUDE.md explicitly excluded it from MVP.
+- "Marketplace" should be renamed to "Shop" for consistency with specs.
+
+### 2026-03-30 — Sprint 2: Animal Crossing Visual Guide Delivered
+
+**`specs/ux-game-world-v2.md` is committed. Frontend is UNBLOCKED.**
+
+David's Sprint 2 answers:
+- **Time of day:** Dynamic cycle (real-world time, like actual AC)
+- **Building style:** Full AC cartoon — rounded, pastel, oversized doors, cute proportions
+- **Terrain:** Gentle rolling hills (not flat)
+- **Water:** Stream/river cutting through campus with wooden bridge
+
+**Spec covers (with exact hex codes):**
+- 60+ definitive color values across 7 categories (sky, grass, water, buildings, trees, flowers, props)
+- Camera: 50° FOV, 55-60° polar, locked azimuth, smooth follow
+- Terrain: noise-based vertex-colored hills, feathered dirt paths, 4-tone grass
+- River: transparent teal, animated UV ripples, sparkle particles, wooden bridge
+- 6 buildings fully described (HQ, Shop, Oracle Temple, Bounty Board, Job Board, Leaderboard)
+- Trees: round fluffy canopies (NOT cones), 4 tree types, sphere shapes
+- 7-color flower system scattered in grass
+- Dynamic time-of-day cycle (7 phases: dawn through night, full light table)
+- 15+ prop types for environmental detail (fences, signs, benches, wells, lamps)
+- Ambient animations (clouds, water, flowers, trees, butterflies, chimney smoke)
+- Clear list of what to REMOVE (PS1 pipeline) and what to KEEP (R3F, building interactions)
+- 12-step implementation priority for Frontend
+
+**Notes for Frontend:**
+- READ `specs/ux-game-world-v2.md` — replaces old game world spec
+- PS1Pipeline.tsx, RetroPass, NearestFilter, low-res FBO, vertex snapping — ALL REMOVED
+- Start with steps 1-5: remove PS1, add sky, terrain colors, building colors, sphere trees
+- Hex palette is definitive — copy exactly
+- Time-of-day: start with fixed midday, add cycle later
 
 ---
 
