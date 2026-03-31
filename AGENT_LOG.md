@@ -652,6 +652,27 @@ Pushed Wave 2 to remote. Built full bounty and economy API endpoints.
 - The existing bounty/marketplace pages use direct Supabase client calls. These still work. The new API routes are available for pages that want server-side validation.
 - Economy purchase endpoint is safer than the client-side approach (uses `.gte()` guard to prevent race conditions).
 
+### 2026-03-30 — Sprint 2 Prep: FBX Converter + AC-Style Research
+
+While waiting for UXUI's `ux-game-overhaul.md`:
+
+1. **Blender FBX→GLB batch converter** (`web/scripts/fbx_to_glb.py`)
+   - Converts all 4 FBX building models (hq, shop, oracle_temple, house_1) to self-contained texture-embedded GLB
+   - Packs external textures, converts to PNG for GLB compat, applies transforms
+   - Usage: `blender --background --python web/scripts/fbx_to_glb.py`
+
+2. **AC-style Three.js/R3F research** (`specs/research-ac-style-threejs.md`)
+   - Surveyed 15+ repos and tutorials for terrain, camera, lighting, movement approaches
+   - Top recommendations for our game world:
+     - **Curved world shader** (AC signature) — simple vertex displacement, high visual impact
+     - **BVHEcctrl** over ecctrl — no physics engine needed for our casual RPG
+     - **coldi/r3f-game-demo** patterns — GameObject + Script composition
+     - **PathFinding.js** for click-to-move
+     - **Baked lighting** from Blender for static campus, runtime lights only for dynamic elements
+     - **Day/night cycle** — `threex.daynight` or Complete Sky System
+
+**Blocked on:** `specs/ux-game-overhaul.md` from UXUI — will implement once delivered.
+
 ---
 
 ## QA
