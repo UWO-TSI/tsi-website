@@ -2,7 +2,7 @@
 
 import { Suspense, useRef, useState, useCallback, useMemo } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { CameraControls, SoftShadows, ContactShadows, Cloud, Clouds } from "@react-three/drei";
+import { CameraControls, Cloud, Clouds } from "@react-three/drei";
 import * as THREE from "three";
 import PlayerAvatar from "./PlayerAvatar";
 import Building from "./Building";
@@ -55,7 +55,7 @@ function GradientSky() {
     vertexShader: `varying vec3 vWP; void main(){ vWP=(modelMatrix*vec4(position,1.0)).xyz; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
     fragmentShader: `uniform vec3 topColor,bottomColor; varying vec3 vWP; void main(){ float t=smoothstep(-0.05,0.5,normalize(vWP).y); gl_FragColor=vec4(mix(bottomColor,topColor,t),1.0); }`,
   }), []);
-  return <mesh scale={[300, 300, 300]}><sphereGeometry args={[1, 32, 32]} /><primitive object={mat} attach="material" /></mesh>;
+  return <mesh scale={[100, 100, 100]} renderOrder={-1}><sphereGeometry args={[1, 32, 32]} /><primitive object={mat} attach="material" /></mesh>;
 }
 
 // ─── Terrain (v2 spec Section 4) ────────────────────────────────
@@ -65,7 +65,7 @@ function Terrain() {
       {/* Main grass island — circular for AC feel */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
         <circleGeometry args={[40, 48]} />
-        <meshStandardMaterial color={P.grassPrimary} roughness={0.92} metalness={0} />
+        <meshStandardMaterial color={P.grassPrimary} roughness={0.92} metalness={0} side={THREE.DoubleSide} />
       </mesh>
       {/* Darker edge ring */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]}>
@@ -358,9 +358,6 @@ function Scene() {
 
   return (
     <>
-      {/* v2 spec: PCFSoftShadowMap */}
-      <SoftShadows size={25} samples={16} focus={0.5} />
-
       {/* Camera: FOV 50°, polar 55-60° (~1.0 rad), distance 15, locked azimuth */}
       <CameraControls
         ref={cameraRef}
@@ -374,9 +371,8 @@ function Scene() {
       />
 
       <GradientSky />
-      <fog attach="fog" args={[P.fog, 35, 75]} />
+      <fog attach="fog" args={[P.fog, 50, 100]} />
       <Lighting />
-      <ContactShadows position={[0, 0.01, 0]} opacity={0.25} scale={60} blur={2.5} far={5} color="#3A6B3A" />
 
       <Terrain />
       <River />
@@ -408,14 +404,13 @@ export default function GameWorld() {
   return (
     <div style={{ width: "100%", height: "100%", minHeight: "100vh", background: P.skyBottom }}>
       <Canvas
-        gl={{
-          antialias: true,
-          powerPreference: "high-performance",
-          toneMapping: THREE.ACESFilmicToneMapping,
-          outputColorSpace: THREE.SRGBColorSpace,
+        gl={{ antialias: true, powerPreference: "high-performance" }}
+        camera={{ fov: 50, near: 0.1, far: 300, position: [0, 12, -20] }}
+        shadows
+        onCreated={({ gl }) => {
+          gl.toneMapping = THREE.ACESFilmicToneMapping;
+          gl.outputColorSpace = THREE.SRGBColorSpace;
         }}
-        camera={{ fov: 50, near: 0.1, far: 150, position: [0, 12, -20] }}
-        shadows="soft"
       >
         <Suspense fallback={null}>
           <Scene />
