@@ -673,6 +673,24 @@ While waiting for UXUI's `ux-game-overhaul.md`:
 
 **Blocked on:** `specs/ux-game-overhaul.md` from UXUI — will implement once delivered.
 
+### 2026-04-02 — Onboarding + Quest System APIs
+
+Built while waiting for UXUI overhaul spec.
+
+**Onboarding API (2 endpoints):**
+- `GET /api/onboarding` — current step/completion status
+- `POST /api/onboarding` — advance step (sequential only), save profile data at steps 2-3, awards 100 coins + 50 XP on completion
+
+**Quest system API (4 endpoints):**
+- `GET /api/quests` — list quests with user progress, filter by type/status
+- `POST /api/quests` — create quest (T1-T3)
+- `POST /api/quests/[id]/accept` — accept quest
+- `POST /api/quests/[id]/complete` — complete quest, awards XP + coins, records transactions
+
+**Total API endpoints: 17** (directory 1 + profile 3 + bounty 8 + economy 2 + onboarding 2 + quests 4)
+
+**Still blocked on:** `specs/ux-game-overhaul.md` from UXUI.
+
 ---
 
 ## QA
