@@ -542,6 +542,37 @@ Each interior includes: exact color palettes, furniture list, station interactio
 - Player avatar works the same inside (2D sprite, WASD, proximity detection at 2 unit range)
 - Camera pulls closer in interiors: distance 10, polar 65°
 
+### 2026-04-04 — API-Wired Portal Review (Session 2)
+
+**Review completed:** `specs/ux-review-v3.md` — design review of Frontend's API-wired portal components.
+
+**Score: 9/10.** The API wiring from mock data to real Backend endpoints was done cleanly with no visual regressions. All portal components properly use `@/lib/supabase/types` and fetch from real API routes.
+
+**Key findings:**
+
+| Component | Score | Key Gap |
+|-----------|-------|---------|
+| MemberDirectory | 9/10 | Missing Role/Class and Year filter dropdowns, spinner instead of skeleton loading |
+| MemberCard | 9/10 | Hover border-bottom-color not changing (tiny detail) |
+| ProfileView | 8/10 | Social links not editable in edit mode |
+| Sidebar | 8/10 | Player status hardcoded ("Player", Lv. 1) — not wired to real data |
+| DashboardLayout | 10/10 | Perfect |
+| OverlayPanel | 10/10 | Exact spec match |
+| TransitionOverlay | 10/10 | Exact spec match |
+
+**6 priority fixes for Frontend (in `ux-review-v3.md`):**
+- **P1:** Wire sidebar player status to real profile data
+- **P1:** Add social links editing in profile edit mode
+- **P2:** Add Role/Class + Year filter dropdowns
+- **P2:** Replace spinner with skeleton loading rows
+- **P3:** Hover border-bottom on member rows
+- **P3:** Increase section spacing in profile (py-4 → py-6)
+
+**Notes for Frontend:**
+- Read `specs/ux-review-v3.md` for full findings
+- P1 items should be fixed before shipping — sidebar placeholder is the most visible gap
+- P2 items can wait for Phase 2 feature build-out
+
 ### HANDOFF — Context for New UXUI Session
 
 #### (1) All Spec Files Written (14 files)
@@ -563,6 +594,7 @@ Each interior includes: exact color palettes, furniture list, station interactio
 | `specs/oracle-questions.md` | 12 MBTI quiz questions with answer cards, scoring key, tie-breaker rules, class mapping table |
 | `specs/ux-review.md` | Design review of Backend's initial dashboard (8 major deviations flagged) |
 | `specs/ux-review-v2.md` | Design review of Frontend's AC implementation (score 8/10, 6 priority improvements) |
+| `specs/ux-review-v3.md` | Design review of Frontend's API-wired portal (score 9/10, 6 priority fixes) |
 
 #### (2) Implementation Status
 
