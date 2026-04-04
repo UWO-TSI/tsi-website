@@ -25,12 +25,12 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { label: "Home", href: "/student/dashboard", icon: Home },
   { label: "Directory", href: "/student/dashboard/directory", icon: Users },
-  { label: "Bounty Board", href: "/student/dashboard/bounty", icon: Scroll, comingSoon: true },
-  { label: "Shop", href: "/student/dashboard/shop", icon: ShoppingBag, comingSoon: true },
-  { label: "Job Board", href: "/student/dashboard/jobs", icon: Briefcase, comingSoon: true },
-  { label: "Leaderboard", href: "/student/dashboard/leaderboard", icon: Trophy, comingSoon: true },
+  { label: "Bounty Board", href: "/student/dashboard/bounty", icon: Scroll },
+  { label: "Shop", href: "/student/dashboard/shop", icon: ShoppingBag },
+  { label: "Job Board", href: "/student/dashboard/jobs", icon: Briefcase },
+  { label: "Leaderboard", href: "/student/dashboard/leaderboard", icon: Trophy },
   { label: "Profile", href: "/student/dashboard/profile", icon: User },
-  { label: "Settings", href: "/student/dashboard/settings", icon: Settings, comingSoon: true },
+  { label: "Settings", href: "/student/dashboard/settings", icon: Settings },
 ];
 
 interface SidebarProps {

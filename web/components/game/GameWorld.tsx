@@ -7,6 +7,7 @@ import * as THREE from "three";
 import PlayerAvatar from "./PlayerAvatar";
 import Building from "./Building";
 import { getTerrainHeight, valueNoise } from "./terrain";
+import { NatureTree, NatureBush, NatureFlowerCluster, NatureFence, NatureMushroom, NatureStump } from "./NatureModels";
 
 /**
  * Game World v2 — Animal Crossing: New Horizons visual style.
@@ -320,57 +321,7 @@ function River() {
 
 // (Lighting merged into TimeOfDayCycle above)
 
-// ─── Trees (v2 spec Section 7.1 — sphere canopies) ──────────────
-function Tree({ position, seed }: { position: [number, number, number]; seed: number }) {
-  const canopyRef = useRef<THREE.Group>(null);
-  const scale = 0.85 + (seed % 5) * 0.08;
-  const type = seed % 4;
-  useFrame((s) => {
-    if (canopyRef.current) {
-      const t = s.clock.elapsedTime;
-      canopyRef.current.rotation.z = Math.sin(t * 0.15 + seed * 1.7) * (Math.PI / 90);
-      canopyRef.current.rotation.x = Math.sin(t * 0.1 + seed * 2.3) * (Math.PI / 120);
-    }
-  });
-  return (
-    <group position={position} scale={scale}>
-      <mesh position={[0, 0.8, 0]} castShadow>
-        <cylinderGeometry args={[0.12, 0.18, 1.6, 8]} />
-        <meshStandardMaterial color={P.trunk} roughness={0.9} metalness={0} />
-      </mesh>
-      <group ref={canopyRef}>
-        {type === 0 ? (
-          // Deciduous — single round canopy
-          <mesh position={[0, 2.4, 0]} castShadow>
-            <sphereGeometry args={[1.3, 12, 10]} />
-            <meshStandardMaterial color={P.foliage} roughness={0.88} metalness={0} />
-          </mesh>
-        ) : type === 1 ? (
-          // 3-sphere cluster
-          <>
-            <mesh position={[0, 2.1, 0]} castShadow><sphereGeometry args={[1.1, 10, 8]} /><meshStandardMaterial color={P.foliageShadow} roughness={0.88} metalness={0} /></mesh>
-            <mesh position={[-0.3, 2.8, 0.2]} castShadow><sphereGeometry args={[0.85, 10, 8]} /><meshStandardMaterial color={P.foliage} roughness={0.88} metalness={0} /></mesh>
-            <mesh position={[0.2, 3.1, -0.1]} castShadow><sphereGeometry args={[0.7, 10, 8]} /><meshStandardMaterial color={P.foliageHighlight} roughness={0.88} metalness={0} /></mesh>
-          </>
-        ) : type === 2 ? (
-          // Small sapling
-          <mesh position={[0, 1.6, 0]} castShadow>
-            <sphereGeometry args={[0.7, 10, 8]} />
-            <meshStandardMaterial color={P.foliageHighlight} roughness={0.88} metalness={0} />
-          </mesh>
-        ) : (
-          // Cedar/Pine — rounded layers
-          <>
-            <mesh position={[0, 1.8, 0]} castShadow><coneGeometry args={[1.1, 1.6, 8]} /><meshStandardMaterial color={P.pine} roughness={0.88} metalness={0} /></mesh>
-            <mesh position={[0, 2.7, 0]} castShadow><coneGeometry args={[0.85, 1.4, 8]} /><meshStandardMaterial color={P.pine} roughness={0.88} metalness={0} /></mesh>
-            <mesh position={[0, 3.4, 0]} castShadow><coneGeometry args={[0.55, 1.0, 8]} /><meshStandardMaterial color={P.foliage} roughness={0.88} metalness={0} /></mesh>
-          </>
-        )}
-      </group>
-    </group>
-  );
-}
-
+// (Tree component replaced by NatureTree from NatureModels.tsx)
 const TREE_XZ: [number, number][] = [
   [-7, 16], [7, 16], [-20, 5], [20, 5],
   [-18, -5], [18, -5], [-5, -20], [5, -20],
@@ -391,51 +342,24 @@ function Bushes() {
   return (
     <group>
       {BUSH_XZ.map(([x, z], i) => (
-        <mesh key={i} position={[x, getTerrainHeight(x, z) + 0.25 + (i % 3) * 0.05, z]} castShadow>
-          <sphereGeometry args={[0.4 + (i % 4) * 0.1, 8, 6]} />
-          <meshStandardMaterial
-            color={i % 5 === 0 ? P.bushFlower : P.bush}
-            roughness={0.9} metalness={0}
-          />
-        </mesh>
+        <NatureBush key={i} position={[x, getTerrainHeight(x, z), z]} seed={i} />
       ))}
     </group>
   );
 }
 
 // ─── Flowers (v2 spec Section 7.3) ──────────────────────────────
-const FLOWER_COLORS = [P.flowerRed, P.flowerPink, P.flowerYellow, P.flowerWhite, P.flowerBlue, P.flowerPurple, P.flowerOrange];
 const FLOWER_XZ: [number, number][] = [
   [-4, -3], [4, 6], [-7, 11], [11, -4],
   [-2, 14], [6, -13], [-11, 5], [13, 4],
   [2, 17], [-6, -11], [8, 15], [-14, -6],
 ];
 function Flowers() {
-  const groupRef = useRef<THREE.Group>(null);
-  // Per-cluster sway (v2 spec Section 10: 0.3Hz, 0.05 amplitude)
-  useFrame((state) => {
-    if (!groupRef.current) return;
-    const t = state.clock.elapsedTime;
-    groupRef.current.children.forEach((cluster, i) => {
-      cluster.rotation.z = Math.sin(t * 0.3 + i * 1.5) * 0.05;
-      cluster.rotation.x = Math.sin(t * 0.2 + i * 2.1) * 0.03;
-    });
-  });
   return (
-    <group ref={groupRef}>
-      {FLOWER_XZ.map(([x, z], i) => {
-        const y = getTerrainHeight(x, z);
-        return (
-          <group key={i} position={[x, y, z]}>
-            {[0, 1, 2, 3, 4].map((j) => (
-              <mesh key={j} position={[(j - 2) * 0.28, 0.12, ((j * 7 + i) % 3 - 1) * 0.25]}>
-                <sphereGeometry args={[0.1, 6, 6]} />
-                <meshStandardMaterial color={FLOWER_COLORS[(i + j) % FLOWER_COLORS.length]} roughness={0.75} metalness={0} emissive={FLOWER_COLORS[(i + j) % FLOWER_COLORS.length]} emissiveIntensity={0.08} />
-              </mesh>
-            ))}
-          </group>
-        );
-      })}
+    <group>
+      {FLOWER_XZ.map(([x, z], i) => (
+        <NatureFlowerCluster key={i} position={[x, getTerrainHeight(x, z), z]} seed={i} />
+      ))}
     </group>
   );
 }
@@ -538,15 +462,9 @@ function Props() {
           <pointLight color={P.lampGlow} intensity={0.35} distance={6} position={[0, 3.2, 0]} />
         </group>
       ))}
-      {/* Wooden fences near HQ */}
+      {/* Wooden fences near HQ (Kenney Nature Kit) */}
       {[[-5, -2], [-5, 0], [-5, -4], [5, -2], [5, 0], [5, -4]].map(([x, z], i) => (
-        <group key={`fence-${i}`} position={yAt(x, z)}>
-          {[-0.4, 0.4].map((fx, j) => (
-            <mesh key={j} position={[fx, 0.35, 0]} castShadow><cylinderGeometry args={[0.035, 0.035, 0.7, 6]} /><meshStandardMaterial color={P.fence} roughness={0.9} metalness={0} /></mesh>
-          ))}
-          <mesh position={[0, 0.45, 0]} castShadow><boxGeometry args={[1.0, 0.05, 0.05]} /><meshStandardMaterial color={P.fence} roughness={0.9} metalness={0} /></mesh>
-          <mesh position={[0, 0.25, 0]} castShadow><boxGeometry args={[1.0, 0.05, 0.05]} /><meshStandardMaterial color={P.fence} roughness={0.9} metalness={0} /></mesh>
-        </group>
+        <NatureFence key={`fence-${i}`} position={yAt(x, z)} variant={i} />
       ))}
       {/* Well near HQ */}
       <group position={yAt(4, -6)}>
@@ -554,19 +472,13 @@ function Props() {
         <mesh position={[0, 1.0, 0]} castShadow><cylinderGeometry args={[0.04, 0.04, 1.2, 6]} /><meshStandardMaterial color={P.trunk} roughness={0.9} metalness={0} /></mesh>
         <mesh position={[0, 1.6, 0]}><boxGeometry args={[1.4, 0.08, 0.5]} /><meshStandardMaterial color={P.trunk} roughness={0.9} metalness={0} /></mesh>
       </group>
-      {/* Log stumps */}
+      {/* Log stumps (Kenney Nature Kit) */}
       {[[-16, -10], [18, -16], [-20, 14]].map(([x, z], i) => (
-        <mesh key={`stump-${i}`} position={[x, getTerrainHeight(x, z) + 0.15, z]} castShadow>
-          <cylinderGeometry args={[0.35, 0.4, 0.3, 8]} />
-          <meshStandardMaterial color={P.stumpBrown} roughness={0.95} metalness={0} />
-        </mesh>
+        <NatureStump key={`stump-${i}`} position={yAt(x, z)} />
       ))}
-      {/* Mushrooms under trees */}
+      {/* Mushrooms under trees (Kenney Nature Kit) */}
       {[[-7.5, 15.5], [7.5, 15.5], [-20.5, 4.5], [20.5, 4.5], [-5.5, -19.5]].map(([x, z], i) => (
-        <group key={`mush-${i}`} position={yAt(x, z)}>
-          <mesh position={[0, 0.1, 0]}><cylinderGeometry args={[0.04, 0.05, 0.15, 6]} /><meshStandardMaterial color="#E8DCC8" roughness={0.9} metalness={0} /></mesh>
-          <mesh position={[0, 0.2, 0]}><sphereGeometry args={[0.1, 8, 4, 0, Math.PI * 2, 0, Math.PI / 2]} /><meshStandardMaterial color={i % 2 === 0 ? "#E85050" : "#FFD166"} roughness={0.8} metalness={0} /></mesh>
-        </group>
+        <NatureMushroom key={`mush-${i}`} position={yAt(x, z)} seed={i} />
       ))}
       {/* Banners near HQ */}
       {[[3.5, -7], [-3.5, -7]].map(([x, z], i) => (
@@ -609,7 +521,7 @@ function Scene() {
       <Terrain />
       <River />
 
-      {TREE_XZ.map(([x, z], i) => <Tree key={i} position={[x, getTerrainHeight(x, z), z]} seed={i} />)}
+      {TREE_XZ.map(([x, z], i) => <NatureTree key={i} position={[x, getTerrainHeight(x, z), z]} seed={i} />)}
       <Bushes />
       <Flowers />
       <Butterflies />

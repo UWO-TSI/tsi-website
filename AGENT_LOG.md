@@ -945,6 +945,77 @@ David's Sprint 2 answers:
 
 **Note:** The GLB models are from Quaternius Medieval Village. After material override they render in AC palette colors. If the geometry style doesn't match AC aesthetics well, revert by removing `GLB_PATHS` entries — the Suspense fallback will automatically use the procedural ACBuilding.
 
+### 2026-04-04 — Round 2: 5 Dashboard Pages + Kenney Nature Kit Asset Swap
+
+**Manager directive completed:** Build the 5 pages. Swap primitive nature assets.
+
+**5 Pages Built:**
+
+- [x] **Bounty Board** (`/student/dashboard/bounty/page.tsx`):
+  - Filter tabs: All / Available / My Claims / Completed
+  - 2-column card grid with difficulty icons, reward, deadline, tech stack tags
+  - Detail modal with claim flow (POST /api/bounties/{id}/claim)
+  - Empty states per tab, loading skeletons
+  - Status-based action buttons (Claim / Claimed / Completed / Under Review)
+
+- [x] **Leaderboard** (`/student/dashboard/leaderboard/page.tsx`):
+  - Time period tabs: Weekly / Monthly / All-Time
+  - Ranked table with columns: #, Avatar, Name, Level, XP, Tier
+  - Gold/silver/bronze rank colors for top 3
+  - Tier-colored avatar badges, responsive column hiding
+  - Loading skeleton (10 rows), empty state
+
+- [x] **Shop** (`/student/dashboard/shop/page.tsx`):
+  - Category tabs: All / Apparel / Accessories / Digital / Merch
+  - Product grid (auto-fill, minmax 260px)
+  - Coin balance display in header (GET /api/economy)
+  - Product detail modal with purchase flow (POST /api/economy)
+  - Dual currency display ($CAD + TSI coins)
+  - Insufficient balance handling
+
+- [x] **Job Board** (`/student/dashboard/jobs/page.tsx`):
+  - Search bar + type filter tabs (Internship / Full-Time / Freelance / Part-Time)
+  - Job listing cards with type-colored badges per spec
+  - Apply (external link) + Save/bookmark toggle
+  - Submit Job modal with form (company, role, type, location, URL, description)
+  - Empty/no-results states
+
+- [x] **Settings** (`/student/dashboard/settings/page.tsx`):
+  - Profile section: display name, bio, skills (comma-separated)
+  - Social links: GitHub, LinkedIn, Instagram, Discord, Website (with icons)
+  - Read-only account info: email, tier, position, member since
+  - Save button with success feedback (green "Saved" state)
+  - GET /api/profile → PATCH /api/profile
+
+**Sidebar updated:** Removed "Soon" badges from all 5 pages.
+
+**Kenney Nature Kit Asset Swap:**
+
+- [x] Extracted 24 GLB models from `~/Downloads/kenney_nature-kit.zip` into `web/public/assets/nature/`
+- [x] Created `web/components/game/NatureModels.tsx` — reusable GLB components:
+  - `NatureTree` — 4 tree variants (default, oak, detailed, pine round)
+  - `NatureBush` — 3 bush variants (bush, bushLarge, bushSmall)
+  - `NatureFlowerCluster` — 5 flower variants grouped in clusters of 3
+  - `NatureFence` — simple and plank fence variants
+  - `NatureMushroom` — red and tan variants
+  - `NatureStump` — round stump
+  - `NatureRock` — 2 rock variants
+- [x] GameWorld.tsx updated: primitive sphere/cone/box geometry replaced with GLB models via Suspense loading
+- [x] Removed dead code: old Tree function, FLOWER_COLORS constant
+
+**Files created:**
+- `web/app/student/dashboard/bounty/page.tsx` (rewritten from ComingSoon)
+- `web/app/student/dashboard/leaderboard/page.tsx` (rewritten)
+- `web/app/student/dashboard/shop/page.tsx` (rewritten)
+- `web/app/student/dashboard/jobs/page.tsx` (rewritten)
+- `web/app/student/dashboard/settings/page.tsx` (rewritten)
+- `web/components/game/NatureModels.tsx` (new)
+- `web/public/assets/nature/*.glb` (24 files)
+
+**Files modified:**
+- `web/components/portal/Sidebar.tsx` (removed comingSoon flags)
+- `web/components/game/GameWorld.tsx` (nature model imports, replaced primitives)
+
 ---
 
 ## Backend
