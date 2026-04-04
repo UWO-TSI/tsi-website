@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { awardRewards } from "@/lib/supabase/helpers";
 
 export async function POST(
   _request: Request,
@@ -58,54 +59,27 @@ export async function POST(
     })
     .eq("id", progress.id);
 
-  // Award rewards
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("tethos_coins, xp")
-    .eq("id", user.id)
-    .single();
+  // Award rewards (auto-levels up)
+  const result = await awardRewards(supabase, user.id, {
+    coins: quest.tc_reward ?? 0,
+    xp: quest.xp_reward ?? 0,
+    coinType: "earn_quest",
+    xpType: "quest",
+    referenceId: id,
+    description: `Quest completed: ${quest.title}`,
+  });
 
-  if (profile) {
-    const newCoins = profile.tethos_coins + (quest.tc_reward ?? 0);
-    const newXp = profile.xp + (quest.xp_reward ?? 0);
-
-    await supabase
-      .from("profiles")
-      .update({ tethos_coins: newCoins, xp: newXp })
-      .eq("id", user.id);
-
-    // Record transactions
-    if (quest.tc_reward && quest.tc_reward > 0) {
-      await supabase.from("tc_transactions").insert({
-        user_id: user.id,
-        amount: quest.tc_reward,
-        balance_after: newCoins,
-        type: "earn_quest",
-        reference_id: id,
-        description: `Quest completed: ${quest.title}`,
-      });
-    }
-
-    if (quest.xp_reward && quest.xp_reward > 0) {
-      await supabase.from("xp_transactions").insert({
-        user_id: user.id,
-        amount: quest.xp_reward,
-        type: "quest",
-        reference_id: id,
-        description: `Quest completed: ${quest.title}`,
-      });
-    }
-
-    return NextResponse.json({
-      completed: true,
-      rewards: {
-        coins: quest.tc_reward ?? 0,
-        xp: quest.xp_reward ?? 0,
-        new_balance: newCoins,
-        new_xp: newXp,
-      },
-    });
-  }
-
-  return NextResponse.json({ completed: true, rewards: null });
+  return NextResponse.json({
+    completed: true,
+    rewards: result
+      ? {
+          coins: quest.tc_reward ?? 0,
+          xp: quest.xp_reward ?? 0,
+          new_balance: result.tethos_coins,
+          new_xp: result.xp,
+          new_level: result.level,
+          new_rank: result.rank,
+        }
+      : null,
+  });
 }

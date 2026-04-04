@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { awardRewards } from "@/lib/supabase/helpers";
 import { z } from "zod";
 
 const ReviewSchema = z.object({
@@ -89,45 +90,16 @@ export async function PATCH(
       .eq("bounty_id", id)
       .eq("user_id", submission.user_id);
 
-    // Award coins and XP
+    // Award coins + XP (auto-levels up)
     if (bounty) {
-      const { data: submitterProfile } = await supabase
-        .from("profiles")
-        .select("tethos_coins, xp")
-        .eq("id", submission.user_id)
-        .single();
-
-      if (submitterProfile) {
-        const newCoins = submitterProfile.tethos_coins + (bounty.pay_tc ?? 0);
-        const newXp = submitterProfile.xp + (bounty.xp_reward ?? 0);
-
-        await supabase
-          .from("profiles")
-          .update({ tethos_coins: newCoins, xp: newXp })
-          .eq("id", submission.user_id);
-
-        // Record transactions
-        if (bounty.pay_tc && bounty.pay_tc > 0) {
-          await supabase.from("tc_transactions").insert({
-            user_id: submission.user_id,
-            amount: bounty.pay_tc,
-            balance_after: newCoins,
-            type: "earn_bounty",
-            reference_id: id,
-            description: `Bounty completed: ${id}`,
-          });
-        }
-
-        if (bounty.xp_reward && bounty.xp_reward > 0) {
-          await supabase.from("xp_transactions").insert({
-            user_id: submission.user_id,
-            amount: bounty.xp_reward,
-            type: "bounty",
-            reference_id: id,
-            description: `Bounty completed: ${id}`,
-          });
-        }
-      }
+      await awardRewards(supabase, submission.user_id, {
+        coins: bounty.pay_tc ?? 0,
+        xp: bounty.xp_reward ?? 0,
+        coinType: "earn_bounty",
+        xpType: "bounty",
+        referenceId: id,
+        description: `Bounty completed: ${id}`,
+      });
     }
   }
 

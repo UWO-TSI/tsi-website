@@ -430,9 +430,153 @@ Accept a quest. Creates `quest_progress` row with status `accepted`.
 
 Complete a quest. Awards `xp_reward` + `tc_reward`, records transactions.
 
-**Response:** `{ completed: true, rewards: { coins: 50, xp: 100, new_balance: 650, new_xp: 3600 } }`
+**Response:** `{ completed: true, rewards: { coins: 50, xp: 100, new_balance: 650, new_xp: 3600, new_level: 8, new_rank: "Veteran" } }`
 
 **Errors:** `400` if not accepted, `409` if already completed.
+
+---
+
+## Inventory API
+
+### `GET /api/inventory`
+
+List user's owned avatar items with equipped state.
+
+**Query params:** `?type=hair`, `?equipped=true|false`
+
+**Response:**
+```json
+{
+  "inventory": [
+    {
+      "id": "uuid",
+      "item_id": "uuid",
+      "equipped": true,
+      "acquired_at": "2026-04-01T00:00:00Z",
+      "avatar_items": {
+        "id": "uuid",
+        "name": "Cyber Mohawk",
+        "type": "hair",
+        "category": "shop",
+        "coin_price": 200,
+        "sprite_url": "/assets/items/hair_cyber.png",
+        "rarity": "rare"
+      }
+    }
+  ]
+}
+```
+
+---
+
+### `POST /api/inventory`
+
+Equip or unequip an avatar item. Equipping auto-unequips any other item of the same type (one per slot).
+
+**Body:** `{ action: "equip"|"unequip", item_id: "uuid" }`
+
+**Response:** `{ success: true, action: "equipped", item_id: "uuid", item_name: "Cyber Mohawk" }`
+
+**Errors:** `404` if item not in inventory, `409` if already equipped/unequipped.
+
+---
+
+## Achievement System API
+
+### `GET /api/achievements`
+
+List all achievements with user's unlock status.
+
+**Query params:** `?include_secret=true` (default: false, hides secret achievements)
+
+**Response:**
+```json
+{
+  "achievements": [
+    {
+      "id": "uuid",
+      "name": "first_bounty",
+      "display_name": "Bounty Hunter",
+      "description": "Complete your first bounty",
+      "icon": "🎯",
+      "tc_reward": 50,
+      "xp_reward": 100,
+      "is_secret": false,
+      "criteria_type": "bounties_completed",
+      "criteria_value": 1,
+      "created_at": "2026-01-01T00:00:00Z",
+      "unlocked": true,
+      "unlocked_at": "2026-03-15T12:00:00Z"
+    }
+  ]
+}
+```
+
+---
+
+### `POST /api/achievements`
+
+Create a new achievement (T1-T3 only).
+
+**Body:**
+```json
+{
+  "name": "first_bounty",
+  "display_name": "Bounty Hunter",
+  "description": "Complete your first bounty",
+  "icon": "🎯",
+  "tc_reward": 50,
+  "xp_reward": 100,
+  "is_secret": false,
+  "criteria_type": "bounties_completed",
+  "criteria_value": 1
+}
+```
+
+**Response:** `201 { "achievement": {...} }`
+
+**Errors:** `403` if not T1-T3, `409` if name already exists.
+
+---
+
+### `POST /api/achievements/[id]/award`
+
+Award an achievement to a user (T1-T3 only). Awards associated TC + XP rewards with auto level-up.
+
+**Body:** `{ user_id: "uuid" }`
+
+**Response:**
+```json
+{
+  "success": true,
+  "achievement": "Bounty Hunter",
+  "user": "uuid",
+  "rewards": {
+    "coins": 50,
+    "xp": 100,
+    "new_balance": 650,
+    "new_xp": 3600,
+    "new_level": 8,
+    "new_rank": "Veteran"
+  }
+}
+```
+
+**Errors:** `403` if not T1-T3, `404` if achievement/user not found, `409` if already awarded.
+
+---
+
+## Shared Helper: `awardRewards()`
+
+All XP-granting endpoints (bounty review, quest completion, onboarding, achievement award) use a shared `awardRewards()` helper from `@/lib/supabase/helpers`. This function:
+
+1. Reads current profile (tethos_coins, xp, level, rank)
+2. Computes new XP total
+3. Auto-computes new `level` via `levelFromXp()` and `rank` via `rankFromLevel()`
+4. Updates profile with new coins, xp, level, rank
+5. Records TC transaction and XP transaction
+
+This ensures level-up is automatic and consistent everywhere XP is granted.
 
 ---
 
@@ -473,6 +617,9 @@ ItemType, ItemCategory, ItemRarity
 
 // Bounty
 Bounty, BountySubmission, BountyStatus, SubmissionStatus
+
+// Achievements
+Achievement, UserAchievement, AchievementWithStatus
 
 // Directory views
 DirectoryMember, PublicProfile

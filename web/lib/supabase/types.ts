@@ -182,6 +182,34 @@ export interface BountySubmission {
   updated_at: string;
 }
 
+// ─── Achievement Types ──────────────────────────────────────────────────────
+
+export interface Achievement {
+  id: string;
+  name: string;
+  display_name: string;
+  description: string;
+  icon: string | null;
+  tc_reward: number;
+  xp_reward: number;
+  is_secret: boolean;
+  criteria_type: string | null;
+  criteria_value: number | null;
+  created_at: string;
+}
+
+export interface UserAchievement {
+  id: string;
+  user_id: string;
+  achievement_id: string;
+  unlocked_at: string;
+}
+
+export interface AchievementWithStatus extends Achievement {
+  unlocked: boolean;
+  unlocked_at: string | null;
+}
+
 // ─── Directory (public-facing subset of Profile) ────────────────────────────
 
 export interface DirectoryMember {
