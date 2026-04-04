@@ -1035,6 +1035,114 @@ Merged all branches (test-merge + Animal Crossing overhaul + latest FE + MGMT fi
 - **Backend:** API routes need `.env.local` with Supabase credentials to test. All return 500 currently.
 - **Management:** Safari WebGL performance may need attention before mobile launch. Middleware deprecation still pending.
 
+### 2026-04-04 — Wave 6 Integration Test (v2 AC Overhaul + Backend Phase 2)
+
+Merged all branches. Full build + dev server + runtime testing.
+
+**Build:** ✅ 51 pages (was 49). New: onboarding + quest API routes.
+**Runtime:** ✅ All 34 pages HTTP 200.
+**Game world v2:** Completely rewritten — gradient sky, circular island, river+bridge, 4 tree types with sway animation, bushes, flower clusters, fences, well, mushrooms, clouds. All v2 spec colors implemented. Z-fighting fixed. Tone mapping added.
+**Lint:** ❌ 48 errors, 46 warnings (down from 51/48 — PS1Pipeline errors gone).
+
+**Previous bugs fixed:** PS1Pipeline deleted ✅, Math.random() hydration fixed ✅, onCreated handler added ✅
+
+**Remaining:** FBX files unused (651KB), no WebGL context loss recovery, 48 lint errors, middleware deprecation.
+
+Full report in `specs/qa.md` Wave 6 section.
+
+### HANDOFF — Context for New QA Session
+
+#### 1. Test Waves Completed
+
+| Wave | Date | What Tested | Key Finding |
+|------|------|-------------|-------------|
+| Wave 1 | 2026-03-27 | Build/lint baseline, auth audit, schema docs | No Supabase code existed — entirely greenfield |
+| Wave 4 | 2026-03-30 | Post-Backend merge: 45 pages, auth flow, profiles schema | All 23 dashboard pages + auth + middleware verified |
+| Wave 4.1 | 2026-03-30 | Combined Backend+Frontend: 49 pages, merge conflict resolution | 7 conflicts resolved (Frontend versions for dashboard) |
+| Wave 5 | 2026-03-31 | Dev server runtime: all 34 pages via HTTP, game world code review | Game world, sidebar, auth pages all verified. Found dead code + unused assets |
+| Wave 6 | 2026-04-04 | v2 AC overhaul + Backend Phase 2: 51 pages, full integration | v2 game world verified. PS1Pipeline deleted. Z-fighting fixed. |
+
+#### 2. Current Build Status
+
+- **Build:** ✅ PASSES — 51 pages (Next.js 16.1.6 Turbopack, 6.9s)
+- **Lint:** ❌ FAILS — 48 errors, 46 warnings
+- **TypeScript:** ✅ No type errors
+- **Dev server:** ✅ All 34 testable pages return HTTP 200
+
+#### 3. Known Bugs
+
+| Sev | Issue | Details |
+|-----|-------|---------|
+| **P2** | FBX building files unused | `web/public/assets/buildings/*.fbx` (4 files, 651KB). Building.tsx uses placeholder geometry. Delete or wire up. |
+| **P2** | No WebGL context loss handler | If WebGL context is lost (Safari/mobile), canvas goes black. No recovery. |
+| **P3** | 48 lint errors | ~15 `fetchX` before declaration (Backend pages), ~8 ref mutations (game components), ~8 `any` types, ~3 setState in effects |
+| **P3** | Middleware deprecation | `web/middleware.ts` — Next.js 16 warns to use "proxy" convention |
+| **P3** | All API routes return 500 | Expected — no `.env.local` with Supabase credentials |
+
+#### 4. Lint Error Inventory
+
+| Pattern | Count | Where | Fix |
+|---------|-------|-------|-----|
+| `fetchX` before declaration | ~15 | Backend dashboard/admin pages | Move function declaration above `useEffect` |
+| Ref/value mutation in render | ~8 | PlayerAvatar, Building, InteractivePylon3D, CustomCursor | Use refs + mutate in `useFrame`/callbacks |
+| `no-explicit-any` | ~8 | Lanyard, GlassNavbar | Add proper types |
+| setState in effect | ~3 | CardCarouselLayout, GlassNavbar | Refactor to avoid cascading renders |
+| JSX comment text nodes | ~3 | MemberCard, TextRevealSection | Wrap comments in `{/* */}` |
+| Missing `aria-selected` | 1 | MemberCard role="option" | Add `aria-selected` attribute |
+
+#### 5. What's Been Runtime Tested vs Build-Only
+
+| Area | Runtime Tested | Build-Only |
+|------|---------------|------------|
+| Marketing pages (5) | ✅ HTTP 200 | ✅ |
+| Auth pages (login/signup/onboarding/election) | ✅ HTTP 200 + SSR content verified | ✅ |
+| Dashboard pages (17 regular) | ✅ HTTP 200 + SSR content | ✅ |
+| Admin pages (8) | ✅ HTTP 200 | ✅ |
+| API routes (16) | ✅ All return 500 (expected, no Supabase) | ✅ |
+| Game world R3F canvas | ❌ NOT VISUALLY TESTED (no browser) — code reviewed only | ✅ |
+| Middleware auth redirects | ❌ NOT TESTED (no Supabase creds) — code reviewed only | ✅ |
+| Signup with invite code TETHOS-W26 | ❌ NOT TESTED (no Supabase) | ✅ |
+| Mobile responsive (hamburger menu) | ❌ NOT TESTED | code present |
+
+#### 6. Auth Flow Status
+
+- **Code complete:** signup, login, callback, onboarding, election pages all exist and build
+- **Middleware:** 5 route patterns verified via code review (dashboard→auth, admin→T1-T3, election→env flag, onboarding→skip if done, login→redirect if logged in)
+- **NOT runtime tested:** no Supabase credentials configured. All API routes and auth flows are build-verified only.
+- **Invite code:** `TETHOS-W26` seeded in `001_initial_schema.sql`
+
+#### 7. What To Do Next
+
+1. **Get Supabase credentials** and create `.env.local` — this unblocks runtime auth testing
+2. **Visual browser testing** of game world — I've only verified SSR + code. Need actual WebGL rendering check (Chrome, Safari, Firefox)
+3. **Fix lint errors** — or coordinate with Backend/Frontend to fix their respective patterns
+4. **Test onboarding flow end-to-end** once Supabase is connected
+5. **Mobile responsive testing** — sidebar hamburger, game world on small viewports
+6. **Performance profiling** — game world has 20 trees with sway animation, 20 bushes, 12 flower clusters, 3 clouds, river animation — check FPS
+
+#### 8. Key Files to Read First
+
+| File | What |
+|------|------|
+| `specs/qa.md` | **This is your bible** — full QA report with every wave's results |
+| `AGENT_LOG.md` → QA section | All my test entries + notes for other agents |
+| `web/components/game/GameWorld.tsx` | The game world — 420 lines, v2 AC style |
+| `web/components/game/PlayerAvatar.tsx` | Player movement + sprite sheet |
+| `web/components/game/Building.tsx` | Building rendering + interaction |
+| `web/lib/supabase/middleware.ts` | Auth routing logic (162 lines) |
+| `web/lib/supabase/types.ts` | Profile type (42 fields) + all interfaces |
+| `web/supabase/migrations/001_initial_schema.sql` | DB schema (659 lines, 30+ tables) |
+
+#### 9. Gotchas
+
+1. **`--legacy-peer-deps` required** for npm install — `@ai-sdk/react` conflicts with React 19. `.npmrc` has this configured.
+2. **Dev server may use port 3001** if 3000 is occupied. Check the startup output.
+3. **Middleware gracefully handles missing env vars** — when Supabase URL/key aren't set, auth checks are skipped. Dashboard loads without login in dev.
+4. **Game world uses `next/dynamic` with `ssr: false`** — SSR output shows `data-dgst="BAILOUT_TO_CLIENT_SIDE_RENDERING"`. This is expected, not an error.
+5. **Frontend and Backend both built dashboard pages** with conflicts. Frontend's versions were taken for the 7 conflicting files (bounty, directory, jobs, layout, leaderboard, home, profile). Backend's unique pages (admin/*, calendar, kanban, marketplace, mentorship, portfolio, quests, tools) are preserved.
+6. **POSITION_TIER_MAP discrepancy**: `types.ts` maps PM/VP to T2, CLAUDE.md says T3. Never got clarification — flag to management if it matters.
+7. **FBX files in repo but unused** — Building.tsx renders placeholder geometry. Don't be confused by `public/assets/buildings/*.fbx` — they're not loaded.
+
 ---
 
 ## Cross-Team Notes

@@ -1,7 +1,120 @@
 # QA Report
 
 > Owner: QA agent. All agents check this for bugs in their area.
-> Last updated: 2026-03-31
+> Last updated: 2026-04-04
+
+---
+
+## Wave 6 — Full Integration Test (v2 AC Visual Overhaul + Backend Phase 2)
+
+Merged all branches: Frontend v2 AC visual overhaul, Backend onboarding + quest APIs, UXUI Sprint 2 specs. Full build + dev server + page testing.
+
+### Build
+
+**Result: ✅ PASSES — 51 pages (up from 49), 6.9s compile**
+
+New routes: `/api/onboarding`, `/api/quests`, `/api/quests/[id]/accept`, `/api/quests/[id]/complete`
+
+### Runtime — All 34 Pages HTTP 200 ✅
+
+Every page tested via dev server (localhost:3001) — all return HTTP 200.
+
+### Game World v2 — AC Visual Overhaul (Code Review)
+
+The game world has been completely rewritten to match `specs/ux-game-world-v2.md`. Major improvements:
+
+| Feature | v1 (Wave 5) | v2 (Wave 6) | Status |
+|---------|-------------|-------------|--------|
+| Sky | Flat `#87ceeb` | Gradient shader (skyTop→skyBottom) | ✅ |
+| Terrain | 80x80 square plane | Circular island (r=40) with dark edge ring | ✅ |
+| Grass | Single color | 4 colors (primary/secondary/highlight/shadow) with patches | ✅ |
+| Materials | `meshLambertMaterial` | `meshStandardMaterial` with roughness/metalness | ✅ |
+| River | Small pond only | Full-width river with animated water + bridge with rope railings | ✅ |
+| Trees | 3 types, `Math.random()` scale | 4 types (deciduous/cluster/sapling/cedar), seeded scale, **gentle sway animation** via `useFrame` | ✅ Fixed |
+| Bushes | None | 20 bushes, some with flower colors | ✅ NEW |
+| Flowers | 6 clusters | 12 clusters with 7 colors, slight emissive glow | ✅ Enhanced |
+| Props | Benches + lampposts + banners | + fences, well, log stumps, mushrooms | ✅ Enhanced |
+| Clouds | None | 3 animated `<Cloud>` components from drei | ✅ NEW |
+| Lighting | Ambient + directional | HemisphereLight + ambient + directional + fill + shadow-bias fix | ✅ Enhanced |
+| Tone mapping | None | ACES Filmic + SRGB color space | ✅ NEW |
+| Camera | FOV 40, polar π/4.5, dist 22 | FOV 50, polar π/3–π/3.3, dist 15 (closer, better angle) | ✅ Changed |
+| Oracle Temple | At ground level | Elevated on 3-unit hill (cylinderGeometry) | ✅ Enhanced |
+| Z-fighting | Yes (paths overlapped) | Fixed with `polygonOffset` on all layered planes | ✅ Fixed |
+
+**Previous bugs now fixed:**
+- ✅ `PS1Pipeline.tsx` deleted (was P2 dead code)
+- ✅ `Math.random()` in Trees replaced with seeded deterministic values (`seed % 5`)
+- ✅ `onCreated` handler added to Canvas (tone mapping + color space)
+
+### Building Rendering (v2)
+
+| Building | Position | Color | Roof | Details |
+|----------|----------|-------|------|---------|
+| HQ | (0, 0, -4) | #FFF5E1 (cream) | #E87B5A (coral) | Chimney, oversized door, arched windows with glow |
+| Shop | (-14, 0, 8) | #D4EAD4 (mint) | #5BA086 (green) | Same AC style |
+| Oracle Temple | (0, 3, 22) | #E8DCF0 (lavender) | #7B5EA7 (purple) | On elevated hill |
+| House | (14, 0, 10) | #C8E6C9 (sage) | #7EB8C9 (blue) | Cozy residential |
+| Bounty Board | (10, 0, 8) | dirt path color | N/A | Board sign style |
+| Job Board | (-10, 0, -10) | dirt path color | N/A | Board sign style |
+| Leaderboard | (10, 0, -10) | well stone | N/A | Pillar style |
+
+All buildings have: door frame (#6B4226), door (#8B5E3C), window frames (#FFFFFF), glass (#B8E4F0 with warm emissive).
+
+### Player / Interaction
+
+- ✅ PlayerAvatar: 2D Billboard sprite, WASD+click-to-move, 5 units/sec, ±38 boundary
+- ✅ Building proximity: 4-unit range, "Press E to enter/view" bounce prompt
+- ✅ Transition: fade-to-black for buildings, direct nav for boards
+- ✅ Camera follow: `CameraControls.moveTo()` on player move
+
+### Sidebar Navigation ✅
+
+SSR verified all 8 nav items render with correct text: Player/Lv.1, Home (active), Directory, Bounty Board (Soon), Shop (Soon), Job Board (Soon), Leaderboard (Soon), Profile, Settings (Soon)
+
+### API Routes
+
+| Route | Method | Status |
+|-------|--------|--------|
+| `GET /api/directory` | GET | 500 (no Supabase) |
+| `GET/PATCH /api/profile` | GET/PATCH | 500 |
+| `GET /api/profile/[id]` | GET | 500 |
+| `GET/POST /api/bounties` | GET/POST | 500 |
+| `GET/PATCH/DELETE /api/bounties/[id]` | Various | 500 |
+| `POST /api/bounties/[id]/claim` | POST | 500 |
+| `POST /api/bounties/[id]/submit` | POST | 500 |
+| `PATCH /api/bounties/[id]/review` | PATCH | 500 |
+| `GET/POST /api/economy` | GET/POST | 500 |
+| `GET/PATCH /api/onboarding` | GET/PATCH | 500 NEW |
+| `GET/POST /api/quests` | GET/POST | 500 NEW |
+| `POST /api/quests/[id]/accept` | POST | 500 NEW |
+| `POST /api/quests/[id]/complete` | POST | 500 NEW |
+
+All return 500 — expected without `.env.local` Supabase credentials. 16 API endpoints total.
+
+### Lint
+
+**Result: ❌ FAILS — 48 errors, 46 warnings**
+
+Slight improvement from Wave 5 (was 51 errors, 48 warnings). PS1Pipeline errors gone.
+
+Remaining top error patterns:
+1. ~15 `fetchX` before declaration (Backend dashboard pages)
+2. ~8 ref/value mutations (PlayerAvatar, Building, InteractivePylon3D, CustomCursor)
+3. ~8 `no-explicit-any` (Lanyard, GlassNavbar)
+4. ~3 setState in effect (CardCarouselLayout, GlassNavbar)
+5. ~3 JSX comment text nodes
+
+### Remaining Bugs
+
+| Sev | Issue | File | Status |
+|-----|-------|------|--------|
+| ~~P2~~ | ~~PS1Pipeline.tsx dead code~~ | Deleted | ✅ FIXED |
+| ~~P3~~ | ~~Math.random() hydration~~ | Trees now seeded | ✅ FIXED |
+| **P2** | FBX building files unused | `public/assets/buildings/*.fbx` (651KB) | Still present, unused |
+| **P2** | No WebGL context loss handler | `GameWorld.tsx` | `onCreated` added for tone mapping but no context loss recovery |
+| **P3** | 48 lint errors | Various | Mostly Backend `fetchX` pattern + Frontend ref mutations |
+| **P3** | Middleware deprecation | `web/middleware.ts` | Still using deprecated convention |
+| **P3** | API routes all 500 | All `/api/*` | Need `.env.local` with Supabase credentials |
 
 ---
 
