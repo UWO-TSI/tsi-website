@@ -20,7 +20,7 @@ interface MemberCardProps {
 export default function MemberCard({ member }: MemberCardProps) {
   const router = useRouter();
   const tc = TIER_COLORS[member.tier];
-  const xp = getXpProgress(member.xp);
+  const xp = getXpProgress(member.xp, member.level);
   const initials = member.display_name
     .split(" ")
     .map((n) => n[0])

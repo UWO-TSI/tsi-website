@@ -1050,6 +1050,150 @@ Built while waiting for UXUI overhaul spec.
 
 **Still blocked on:** `specs/ux-game-overhaul.md` from UXUI.
 
+### 2026-04-04 — Wired Frontend to Real Backend APIs
+
+Management directive: wire real Supabase queries into mock-data pages.
+
+**What I changed (Frontend integration):**
+
+1. **`components/portal/types.ts`** — replaced mock types + MOCK_MEMBERS with re-exports from `@/lib/supabase/types`. Kept TIER_COLORS and updated `getXpProgress` to use Backend's power-curve XP formula.
+
+2. **`components/portal/MemberDirectory.tsx`** — removed MOCK_MEMBERS. Now fetches from `GET /api/directory` via useEffect. Added loading spinner and error states.
+
+3. **`components/portal/ProfileView.tsx`** — removed MOCK_PROFILE. Now fetches from `GET /api/profile` (own) or `GET /api/profile/[id]` (other). Implemented `handleSave` with `PATCH /api/profile`. Added saving spinner, success indicator. Fixed `coin_balance` → `tethos_coins`.
+
+4. **`components/portal/MemberCard.tsx`** — updated `getXpProgress` call to new signature.
+
+5. **`app/student/dashboard/profile/page.tsx`** — cleaned up, removed TODO.
+
+6. **`app/student/dashboard/directory/[id]/page.tsx`** — NEW. Member profile page that MemberCard links to. Passes profileId to ProfileView.
+
+**Notes for Frontend:**
+- Directory and profile pages now hit real APIs. If no Supabase env vars are set, they'll show error states gracefully.
+- `portal/types.ts` no longer has mock data. All types come from `@/lib/supabase/types`.
+- ProfileView handles both own profile and other-user profile based on props.
+
+### HANDOFF — Backend Agent Context for New Session
+
+#### (1) All API Endpoints (17 routes across 13 files)
+
+| Route | Method | Purpose | Auth |
+|-------|--------|---------|------|
+| `/api/directory` | GET | List members, filters: `?role=`, `?year=`, `?active=`, `?search=`. T1/T2 see inactive. | Auth required |
+| `/api/profile` | GET | Own full profile (all fields) | Auth required |
+| `/api/profile` | PATCH | Update own profile (Zod validated: name, bio, skills, social_links, avatar_config, etc.) | Auth required |
+| `/api/profile/[id]` | GET | Other user's public profile (limited fields, UUID validated) | Auth required |
+| `/api/bounties` | GET | List bounties, filters: `?status=`, `?difficulty=`. Excludes `pending` by default. | Auth required |
+| `/api/bounties` | POST | Create bounty. T1-T3 auto-approved to `open`, others → `pending`. | Auth required |
+| `/api/bounties/[id]` | GET | Bounty detail with claims + deliverables | Auth required |
+| `/api/bounties/[id]` | PATCH | Update bounty (status, title, pay, etc.) | T1-T3 only |
+| `/api/bounties/[id]` | DELETE | Delete bounty | T1-T2 only |
+| `/api/bounties/[id]/claim` | POST | Claim open bounty. Creates claim row, sets status to `claimed`. | Auth required |
+| `/api/bounties/[id]/submit` | POST | Submit deliverables. Requires active claim. Sets bounty to `review`. | Auth required |
+| `/api/bounties/[id]/review` | PATCH | Review submission. On `approved`: awards coins+XP, records transactions, completes bounty. | T1-T3 only |
+| `/api/economy` | GET | Own balance + XP + level + transaction history. `?limit=50` (max 100). | Auth required |
+| `/api/economy` | POST | `{action:"purchase"}` — atomic shop buy with refund on failure. `{action:"award"}` — admin coin grant. | Auth / T1-T2 for award |
+| `/api/onboarding` | GET | Current onboarding step + completion status | Auth required |
+| `/api/onboarding` | POST | Advance step (sequential). Saves profile data at steps 2-3. Awards 100 coins + 50 XP on completion. | Auth required |
+| `/api/quests` | GET | List quests with user progress. Filters: `?type=`, `?status=`. | Auth required |
+| `/api/quests` | POST | Create quest | T1-T3 only |
+| `/api/quests/[id]/accept` | POST | Accept a quest | Auth required |
+| `/api/quests/[id]/complete` | POST | Complete quest. Awards XP + coins, records transactions. | Auth required |
+
+Plus pre-existing: `/api/an-token` (AI agent token, not ours).
+
+#### (2) All 6 Migrations
+
+| File | What it does |
+|------|-------------|
+| `001_initial_schema.sql` | **Pre-existing.** Profiles (~30 fields), teams, invite_codes, bounties, bounty_claims, bounty_deliverables, events, kanban, marketplace, job_listings, quests, achievements, transactions, notifications, mentorship, portfolios, themes. Full RLS + seed data. |
+| `002_election_votes.sql` | **Pre-existing.** Election voting table, has_voted flag, immutable RLS, `get_election_results()` function. |
+| `003_profile_trigger.sql` | **Pre-existing.** Auto-creates profile row on auth signup via `handle_new_user()` trigger. |
+| `004_cleanup_and_extend.sql` | **Ours.** Tier 1-4 → 1-5. Added `avatar_config JSONB`, `skills TEXT[]`, `social_links JSONB`. 6 indexes + trigram search. |
+| `005_avatar_items.sql` | **Ours.** `avatar_items` (type, category, coin_price, rarity) + `player_inventory` (user items, equipped state). RLS. |
+| `006_bounty_system.sql` | **Ours.** `bounty_submissions` (text, attachments, review workflow). RLS. |
+
+**Note:** Migrations 001-003 came from `main` branch (pre-existing auth/election system). 004-006 are ours.
+
+#### (3) Supabase Setup
+
+| File | Purpose |
+|------|---------|
+| `web/lib/supabase/client.ts` | Browser-side Supabase client (`createBrowserClient` from `@supabase/ssr`) |
+| `web/lib/supabase/server.ts` | Server-side Supabase client (reads cookies via `next/headers`) |
+| `web/lib/supabase/middleware.ts` | Auth routing: election flag, dashboard auth+onboarding, admin tier checks |
+| `web/middleware.ts` | Root Next.js middleware — calls `updateSession()`, matches `/student/*` routes |
+
+**Packages:** `@supabase/supabase-js@^2.99.2`, `@supabase/ssr@^0.9.0` (already in package.json).
+
+**Env vars needed:** `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, optionally `ENABLE_ELECTION=true`.
+
+#### (4) types.ts Interfaces
+
+`web/lib/supabase/types.ts` exports:
+- **Core:** `Profile`, `Tier` (1-5), `Position`, `ClassName`, `RankTitle`, `Side`, `Portfolio`
+- **Game:** `AvatarConfig`, `SocialLinks`, `AvatarItem`, `PlayerInventoryItem`, `ItemType`, `ItemCategory`, `ItemRarity`
+- **Bounty:** `Bounty`, `BountySubmission`, `BountyStatus`, `SubmissionStatus`
+- **Views:** `DirectoryMember` (subset for listings), `PublicProfile` (subset for other-user view)
+- **Maps:** `POSITION_CLASS_MAP`, `POSITION_TIER_MAP`, `TIER_LABELS`
+- **Helpers:** `xpForLevel()`, `levelFromXp()`, `rankFromLevel()`, `canAccessFeature()`
+
+#### (5) What's Wired to Real Supabase vs Mock
+
+**Real Supabase (via API routes):**
+- `MemberDirectory.tsx` → `GET /api/directory`
+- `ProfileView.tsx` → `GET /api/profile`, `PATCH /api/profile`, `GET /api/profile/[id]`
+
+**Real Supabase (direct client calls, pre-existing from main):**
+- All admin pages (analytics, announcements, bounties, election, marketplace, members, quests)
+- bounty/page.tsx, calendar, directory (old version), jobs, kanban, leaderboard, marketplace, mentorship, portfolio, quests
+
+**Still mock/placeholder:**
+- `tools/rag/page.tsx` — canned AI response, no real RAG integration
+- `tools/ascii/page.tsx` — "coming soon" placeholder
+- `tools/page.tsx` — static link grid
+
+#### (6) Election Archival Flag
+
+In `web/lib/supabase/middleware.ts`: all election routes (`/student/election`, `/student/dashboard/admin/election`) are gated behind `process.env.ENABLE_ELECTION === 'true'`. When off (default), both redirect to `/student/dashboard`. No election code was deleted — just gated.
+
+#### (7) Dashboard Pages (26 total)
+
+Pre-existing from main (20): admin panel, admin/analytics, admin/announcements, admin/bounties, admin/election, admin/marketplace, admin/members, admin/quests, bounty, calendar, kanban, marketplace, mentorship, portfolio, quests, tools, tools/ascii, tools/rag, jobs, leaderboard.
+
+Built/modified by us (6): dashboard home (page.tsx), directory, directory/[id], profile, shop, settings.
+
+#### (8) What to Do Next
+
+1. **Onboarding pages** — the API exists (`/api/onboarding`) but no Frontend pages for the onboarding flow (welcome → profile → avatar → tutorial)
+2. **Wire remaining pages to API routes** — bounty board could use `/api/bounties` instead of direct Supabase calls for server-side validation
+3. **Avatar inventory API** — equip/unequip items, integrate with shop purchase flow
+4. **Level-up logic** — when XP crosses a threshold, auto-update `level` and `rank` fields (currently manual)
+5. **Achievement system API** — check/award achievements based on criteria
+6. **Run migrations on Supabase** — 004-006 haven't been applied to production yet
+
+#### (9) Key Files to Read First
+
+1. `CLAUDE.md` — project bible, team roles, tech stack
+2. `AGENT_LOG.md` — this file, full history
+3. `specs/api.md` — all API contracts with request/response shapes
+4. `web/lib/supabase/types.ts` — canonical TypeScript types
+5. `web/lib/supabase/middleware.ts` — auth routing logic
+6. `specs/asset-stack.md` — confirmed asset + tech decisions
+7. `specs/research-ac-style-threejs.md` — AC-style R3F implementation research
+
+#### (10) Gotchas
+
+- **Tier constraint:** Migration 004 changes tier from 1-4 to 1-5. If you're testing against a Supabase instance that hasn't run 004, T5 inserts will fail.
+- **`tethos_coins` not `coin_balance`:** The real DB field is `tethos_coins`. Frontend mock types had `coin_balance` — this was fixed in the API wiring commit but older code may reference the wrong name.
+- **`getXpProgress(xp, level)` takes 2 args now:** The function signature changed from `(xp)` to `(xp, level)` when we switched from linear to power-curve XP. Any callers using the old signature will silently break.
+- **No `npm install` in worktree by default:** After cloning/creating a worktree, you must run `cd web && npm install` before building. The `.npmrc` has `legacy-peer-deps=true` for compatibility.
+- **Middleware requires Supabase env vars:** If `NEXT_PUBLIC_SUPABASE_URL` or `NEXT_PUBLIC_SUPABASE_ANON_KEY` are missing, middleware silently passes through (no auth checks). This is intentional for dev but means routes are unprotected without env vars.
+- **Election code is NOT deleted:** It's behind the `ENABLE_ELECTION` flag. Don't delete election routes/pages — they may be reused.
+- **`bounty_submissions` table depends on 006 migration:** The `/api/bounties/[id]/submit` and `/review` routes will 500 if migration 006 hasn't been run.
+- **Profile trigger (003) runs on signup:** New users auto-get a profile row. Don't try to INSERT profiles manually — use Supabase Auth signup, the trigger handles it.
+- **File ownership:** Backend owns `web/lib/supabase/`, `web/supabase/migrations/`, `web/app/api/`, `specs/api.md`. Portal components in `web/components/portal/` are technically Frontend's area — we modified them per Management directive to wire APIs.
+
 ---
 
 ## QA
