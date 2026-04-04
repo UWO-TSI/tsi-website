@@ -370,6 +370,72 @@ Award coins to a user (T1-T2 only).
 
 ---
 
+## Onboarding API
+
+### `GET /api/onboarding`
+
+Get current onboarding status.
+
+**Response:** `{ completed: false, current_step: 2, total_steps: 4 }`
+
+### `POST /api/onboarding`
+
+Advance to next step. Steps must be completed sequentially (can't skip).
+
+**Steps:** 0=not started, 1=welcome viewed, 2=profile basics, 3=avatar configured, 4=tutorial done (completes onboarding)
+
+**Body:**
+```json
+{
+  "step": 2,
+  "profile_data": {
+    "display_name": "Jane",
+    "bio": "Hi!",
+    "program": "CS",
+    "year": "3",
+    "avatar_config": { "body": "base_f", "hair": "long_1" }
+  }
+}
+```
+
+On step 4 (final): marks `onboarding_completed = true`, awards 100 coins + 50 XP welcome bonus.
+
+**Errors:** `409` if already completed, `400` if skipping steps.
+
+---
+
+## Quest System API
+
+### `GET /api/quests`
+
+List quests with user's progress.
+
+**Query params:** `?type=daily|weekly|seasonal`, `?status=available|in_progress|completed`
+
+**Response:** Each quest includes `user_status`, `user_progress`, `accepted_at`, `completed_at`.
+
+### `POST /api/quests`
+
+Create quest (T1-T3 only).
+
+**Body:** `{ title, description, quest_type, xp_reward?, tc_reward?, criteria?, max_completions?, start_date?, end_date?, is_recurring? }`
+
+### `POST /api/quests/[id]/accept`
+
+Accept a quest. Creates `quest_progress` row with status `accepted`.
+
+**Errors:** `409` if already accepted, `404` if quest inactive.
+
+### `POST /api/quests/[id]/complete`
+
+Complete a quest. Awards `xp_reward` + `tc_reward`, records transactions.
+
+**Response:** `{ completed: true, rewards: { coins: 50, xp: 100, new_balance: 650, new_xp: 3600 } }`
+
+**Errors:** `400` if not accepted, `409` if already completed.
+
+---
+
 ## Middleware Routing
 
 ### Election (archived behind `ENABLE_ELECTION` env var)
