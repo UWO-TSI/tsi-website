@@ -512,6 +512,36 @@ David's Sprint 2 answers:
 - Hex palette is definitive — copy exactly
 - Time-of-day: start with fixed midday, add cycle later
 
+### 2026-04-04 — AC Implementation Review + Building Interiors Spec
+
+**Review of Frontend's AC implementation:** `specs/ux-review-v2.md`
+
+**Score: 8/10.** Frontend did excellent work. Palette matches exactly, sphere trees look great, river/bridge solid, flowers/bushes/props comprehensive. Key gaps:
+- 🟡 Terrain is flat (spec called for gentle rolling hills) — biggest visual gap
+- 🟡 All buildings use generic box+cone shape (spec described unique silhouettes per building)
+- 🟡 Paths have sharp edges (spec called for feathered/blended)
+- 🟡 No time-of-day cycle yet (expected — spec said "start with midday")
+- 6 priority improvements listed for Frontend
+
+**Building interiors spec written:** `specs/ux-interiors.md`
+
+David confirmed: **Full 3D interiors for all buildings** (AC style — walk around, approach stations, interact).
+
+4 interiors fully spec'd:
+1. **HQ Main Room** (16×12) — bulletin board (directory), trophy case (leaderboard), desk (profile), bookshelf (quests), admin door (T1-T3 locked), exit door
+2. **HQ Admin Room** (10×8) — terminal desk (member mgmt), board (bounty approval), podium (announcements), chest (economy controls), purple crystal glow theme
+3. **Shop** (10×10) — counter (browse/buy), shelves, barrels, crates, string lights, cash register
+4. **Oracle Temple** (12×12) — crystal altar (MBTI quiz), scroll shelf (class info), stained glass, runic floor circles, class banners (4 colors), mystical-but-warm mood
+
+Each interior includes: exact color palettes, furniture list, station interactions, decorative elements, lighting setup, shared component architecture, camera adjustments (closer, steeper angle).
+
+**Notes for Frontend:**
+- Read `specs/ux-interiors.md` for full implementation guide
+- Start with HQ Main Room (priority 1 — most visited)
+- Shared components: InteriorFloor, InteriorWalls, InteriorDoor, InteriorStation — build once, reuse across all interiors
+- Player avatar works the same inside (2D sprite, WASD, proximity detection at 2 unit range)
+- Camera pulls closer in interiors: distance 10, polar 65°
+
 ---
 
 ## Frontend
