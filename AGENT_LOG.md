@@ -1481,6 +1481,36 @@ Merged all branches. Full build + dev server + runtime testing.
 
 Full report in `specs/qa.md` Wave 6 section.
 
+### 2026-04-04 — Wave 7: Full Integration + First Visual Browser Test
+
+**Merged ALL branches** (backend API-wiring, frontend API-wiring, UXUI reviews). Resolved 3 merge conflicts.
+
+**Build:** ✅ 55 pages (up from 51), 7.1s
+**Lint:** ❌ 48 errors, 49 warnings (unchanged)
+
+**FIRST VISUAL BROWSER TEST** via Playwright:
+- ✅ Game world renders: sky, terrain, river, bridge, trees, bushes, flowers, clouds, props
+- ✅ Buildings render with correct AC-style geometry (walls, cone roofs, doors, windows, chimneys)
+- ✅ WASD movement works, camera follows player
+- ✅ Building proximity detection + "Press E" prompt works
+- ✅ Sidebar: all 8 items, blue accent on active, "Soon" badges
+- ✅ Mobile responsive: hamburger menu at 375px, slide-over opens/closes
+- ✅ Login/Signup pages: terminal aesthetic, all form fields present
+- ✅ Coming Soon placeholders: ASCII art, correct per-page descriptions
+
+**P1 BUG FIXED — Building roofs were all gray:**
+`roofColor` defined in GameWorld.tsx config but never passed to Building component. ACBuilding was deriving roof from `wallColor * 0.55`. Added `roofColor` prop threading. Buildings now show correct spec colors (coral HQ, green Shop, purple Oracle, blue House).
+
+**New bugs found:**
+- P2: Mobile sidebar z-index — drei `<Html>` prompts bleed through sidebar overlay
+- P2: Directory/Profile show raw "HTTP 500" without Supabase — need graceful offline message
+- P3: Font 404 (`TestSohne-Kraftig`)
+- P3: Player sprite shows as dashed box in headless Playwright — needs real browser verification
+
+**Full report:** `specs/qa.md` Wave 7 section.
+
+---
+
 ### HANDOFF — Context for New QA Session
 
 #### 1. Test Waves Completed

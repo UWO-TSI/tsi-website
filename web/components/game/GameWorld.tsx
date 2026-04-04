@@ -391,7 +391,7 @@ function Scene() {
       </Suspense>
 
       {BUILDINGS.map((b) => (
-        <Building key={b.id} id={b.id} name={b.name} position={b.position} size={b.size} color={b.color} href={b.href} playerPosition={playerPos} />
+        <Building key={b.id} id={b.id} name={b.name} position={b.position} size={b.size} color={b.color} roofColor={b.roofColor} href={b.href} playerPosition={playerPos} />
       ))}
 
       <PlayerAvatar spawnPosition={SPAWN_POSITION} onMove={handlePlayerMove} />

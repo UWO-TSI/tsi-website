@@ -5,6 +5,135 @@
 
 ---
 
+## Wave 7 — Full Integration + Visual Browser Test (All Branches Merged)
+
+Merged ALL branches (backend API-wiring, frontend API-wiring, UXUI reviews) into QA. Resolved 3 merge conflicts (types.ts, MemberDirectory.tsx, ProfileView.tsx — took Frontend versions per file ownership). Ran build + lint + **first real browser testing via Playwright**.
+
+### Build
+
+**Result: ✅ PASSES — 55 pages (up from 51), 7.1s compile**
+
+New routes: `/student/dashboard/directory/[id]` (dynamic profile page from Backend wiring).
+
+### Lint
+
+**Result: ❌ FAILS — 48 errors, 49 warnings across ~39 files**
+
+Same patterns as Wave 6. No regressions from merge.
+
+### Visual Browser Testing (Playwright — FIRST TIME)
+
+This is the first time the game world has been **visually tested in a real browser**. All previous waves were HTTP-status + code-review only.
+
+#### Game World ✅ Renders Correctly
+
+| Feature | Status | Notes |
+|---------|--------|-------|
+| 3D Canvas rendering | ✅ | WebGL context initializes, R3F renders |
+| Gradient sky | ✅ | Blue gradient, correct colors |
+| Circular island terrain | ✅ | Green grass, dirt paths, dark edge ring |
+| River + bridge | ✅ | Visible water, wooden bridge |
+| Trees (4 types) | ✅ | Mix of cone and sphere trees, sway animation |
+| Bushes + flowers | ✅ | Scattered around terrain, colorful |
+| Clouds | ✅ | Animated in sky |
+| Props (benches, fences, well, lampposts) | ✅ | All visible |
+| Building labels | ✅ | White pill labels with dark text (HQ, House, Shop, Bounty Board) |
+| Building proximity detection | ✅ | "Press E to enter" prompt appears when near HQ |
+| Camera angle + follow | ✅ | Correct elevated perspective, follows player |
+| WASD movement | ✅ | Player moves, camera follows |
+| Sidebar navigation | ✅ | 8 items render correctly, "Soon" badges on Phase 2 items |
+| Active nav highlighting | ✅ | Blue left accent on active item |
+
+#### Buildings — Colors
+
+| Building | Walls | Roof | Status |
+|----------|-------|------|--------|
+| HQ | Cream (#FFF5E1) | Coral (#E87B5A) | ✅ FIXED in this wave — was gray before |
+| Shop | Mint (#D4EAD4) | Green (#5BA086) | ✅ FIXED |
+| Oracle Temple | Lavender (#E8DCF0) | Purple (#7B5EA7) | ✅ FIXED |
+| House | Sage (#C8E6C9) | Blue (#7EB8C9) | ✅ FIXED |
+
+**Bug fixed:** `roofColor` was defined in GameWorld.tsx BUILDINGS config but never passed to Building component. ACBuilding was deriving roof color via `color * 0.55` (always gray). Added `roofColor` prop threading through Building → ACBuilding.
+
+#### Player Avatar
+
+| Feature | Status | Notes |
+|---------|--------|-------|
+| Billboard sprite | ⚠️ | Renders as dashed outline box in headless Playwright. Sprite file exists and serves HTTP 200. Likely headless WebGL texture limitation — needs real browser verification. |
+| Nameplate ("Player Lv. 1") | ✅ | Renders correctly |
+| WASD movement | ✅ | Position updates, camera follows |
+| Click-to-move | Not tested | Playwright click goes to DOM, not raycaster |
+| Sprite sheet animation | Not testable | Headless browser limitation |
+
+#### Sidebar Navigation
+
+| Item | Desktop | Mobile (375px) |
+|------|---------|----------------|
+| Player status (Lv. 1) | ✅ | ✅ |
+| Home (active) | ✅ blue accent | ✅ |
+| Directory | ✅ | ✅ |
+| Bounty Board (Soon) | ✅ | ✅ |
+| Shop (Soon) | ✅ | ✅ |
+| Job Board (Soon) | ✅ | ✅ |
+| Leaderboard (Soon) | ✅ | ✅ |
+| Profile | ✅ | ✅ |
+| Settings (Soon) | ✅ | ✅ |
+| Hamburger button | N/A | ✅ visible |
+| Slide-over menu | N/A | ✅ opens with X close |
+
+#### Page Tests
+
+| Page | Status | Notes |
+|------|--------|-------|
+| `/student/dashboard` | ✅ | Game world renders |
+| `/student/dashboard/directory` | ⚠️ | Shows "HTTP 500" — expected (no Supabase), but error message is raw, not user-friendly |
+| `/student/dashboard/profile` | ⚠️ | Shows "HTTP 500" + "Go back" link — expected, same raw error |
+| `/student/dashboard/bounty` | ✅ | Coming Soon placeholder with ASCII art |
+| `/student/login` | ✅ | Terminal aesthetic, email + password form, "Request Access" link |
+| `/student/signup` | ✅ | All 5 fields (name, email, password, confirm, invite code), proper labels |
+
+#### Mobile Responsive (375×812)
+
+| Feature | Status | Notes |
+|---------|--------|-------|
+| Sidebar hidden | ✅ | Correctly hidden below 768px |
+| Hamburger icon | ✅ | Top-left corner |
+| Slide-over opens | ✅ | Full sidebar with X close |
+| Game world fills viewport | ✅ | No overflow/scrolling issues |
+| **Z-index issue** | 🔴 Bug | "Press E to enter" prompt bleeds through open sidebar overlay |
+
+### Bugs Found This Wave
+
+| Sev | Issue | Status | Details |
+|-----|-------|--------|---------|
+| **P1** | Building roofs all gray | ✅ FIXED | `roofColor` prop not threaded from GameWorld config to Building/ACBuilding. Fixed by adding prop. |
+| **P2** | Mobile sidebar z-index | 🔴 Open | Game world "Press E" HTML prompts render ON TOP of the open mobile sidebar overlay. Html elements from drei need higher z-index management. |
+| **P2** | Directory/Profile show raw "HTTP 500" | 🔴 Open | Without Supabase, users see bare "HTTP 500" text. Should show a friendly offline/demo message. Frontend error states exist (Loader2, error message) but the API fetch fails before component renders. |
+| **P3** | Font 404 | 🔴 Open | `TestSohne-Kraftig-BF663d89cd32e6a.otf` returns 404. Missing font file in `/font/sohne-font-family/`. |
+| **P3** | Player sprite invisible in headless | ⚠️ Needs verification | Sprite shows as dashed outline in Playwright. Asset serves HTTP 200. May be headless-only issue. Needs real browser test. |
+
+### Previous Bugs Status
+
+| Bug | Wave Found | Status |
+|-----|-----------|--------|
+| PS1Pipeline dead code | Wave 5 | ✅ Fixed in Wave 6 |
+| Math.random() hydration | Wave 5 | ✅ Fixed in Wave 6 |
+| FBX files unused (651KB) | Wave 5 | 🔴 Still open |
+| No WebGL context loss handler | Wave 5 | 🔴 Still open |
+| 48 lint errors | Wave 4 | 🔴 Still open (same count) |
+| Middleware deprecation warning | Wave 4 | 🔴 Still open |
+| POSITION_TIER_MAP discrepancy | Wave 4 | 🔴 Still open — never clarified |
+
+### Console Errors
+
+| Error | Severity | Notes |
+|-------|----------|-------|
+| `TestSohne-Kraftig...otf 404` | P3 | Missing font file |
+| `/api/profile 500` | Expected | No Supabase credentials |
+| `/api/directory 500` | Expected | No Supabase credentials |
+
+---
+
 ## Wave 6 — Full Integration Test (v2 AC Visual Overhaul + Backend Phase 2)
 
 Merged all branches: Frontend v2 AC visual overhaul, Backend onboarding + quest APIs, UXUI Sprint 2 specs. Full build + dev server + page testing.

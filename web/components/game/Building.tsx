@@ -13,10 +13,10 @@ const INTERACT_RANGE = 4;
  * Pastel walls, bold roof with overhang, oversized door, arched windows,
  * chimney, flower boxes, awning. MeshStandardMaterial throughout.
  */
-function ACBuilding({ size, color }: { size: [number, number, number]; color: string }) {
+function ACBuilding({ size, color, roofColor: roofColorProp }: { size: [number, number, number]; color: string; roofColor?: string }) {
   const [sx, sy, sz] = size;
   const roofH = sy * 0.45;
-  const roofColor = new THREE.Color(color).multiplyScalar(0.55);
+  const roofColor = roofColorProp ? new THREE.Color(roofColorProp) : new THREE.Color(color).multiplyScalar(0.55);
 
   return (
     <group>
@@ -148,11 +148,12 @@ interface BuildingProps {
   position: [number, number, number];
   size: [number, number, number];
   color: string;
+  roofColor?: string;
   href?: string;
   playerPosition: THREE.Vector3;
 }
 
-export default function Building({ id, name, position, size, color, href, playerPosition }: BuildingProps) {
+export default function Building({ id, name, position, size, color, roofColor, href, playerPosition }: BuildingProps) {
   const router = useRouter();
   const { triggerTransition, isTransitioning } = useTransition();
   const [isNear, setIsNear] = useState(false);
@@ -183,7 +184,7 @@ export default function Building({ id, name, position, size, color, href, player
       ) : isLeaderboard ? (
         <LeaderboardMonument size={size} color={color} />
       ) : (
-        <ACBuilding size={size} color={color} />
+        <ACBuilding size={size} color={color} roofColor={roofColor} />
       )}
 
       {/* Label — white pill, dark text */}
