@@ -1511,6 +1511,26 @@ Full report in `specs/qa.md` Wave 6 section.
 
 ---
 
+### 2026-04-04 — Round 2 Task 3: Lint Fixes in Game Components (9 → 0)
+
+Fixed all 9 lint errors in QA-jurisdiction game components:
+
+**Building.tsx (3 errors → 0):**
+- Removed unused `sz` destructure in `LeaderboardMonument`
+- Replaced `center.current` ref access during render with `useMemo` for proximity computation
+- Removed unused `useRef` import
+
+**PlayerAvatar.tsx (6 errors → 0):**
+- Replaced `useTexture` + post-hook mutation with `THREE.TextureLoader` inside `useMemo`
+- Textures now configured during construction (not mutated after hook return)
+- React Compiler `react-hooks/immutability` rule satisfied
+
+**Overall lint: 48 → 40 errors.** Remaining 40 are in Backend admin pages (`fetchX` before declaration) and marketing components (`any` types, jsx comments) — outside QA jurisdiction.
+
+**Waiting on:** Other agents to commit Round 2 work before I can merge + retest.
+
+---
+
 ### HANDOFF — Context for New QA Session
 
 #### 1. Test Waves Completed

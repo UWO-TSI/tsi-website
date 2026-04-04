@@ -160,7 +160,7 @@ This is the first time the game world has been **visually tested in a real brows
 | Math.random() hydration | Wave 5 | ✅ Fixed in Wave 6 |
 | FBX files unused (651KB) | Wave 5 | 🔴 Still open |
 | No WebGL context loss handler | Wave 5 | 🔴 Still open |
-| 48 lint errors | Wave 4 | 🔴 Still open (same count) |
+| 48 lint errors | Wave 4 | ⬇️ Reduced to 40 — 8 game component errors fixed (Building.tsx ref-during-render, PlayerAvatar.tsx hook immutability). Remaining 40 are Backend/marketing — outside QA jurisdiction. |
 | Middleware deprecation warning | Wave 4 | 🔴 Still open |
 | POSITION_TIER_MAP discrepancy | Wave 4 | 🔴 Still open — never clarified |
 
