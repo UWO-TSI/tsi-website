@@ -1,41 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Github, Linkedin, Globe, Twitter, Pencil } from "lucide-react";
+import { ArrowLeft, Github, Linkedin, Globe, Twitter, Pencil, Loader2, Check } from "lucide-react";
 import {
   TIER_COLORS,
   TIER_LABELS,
   getXpProgress,
   type Profile,
+  type PublicProfile,
   type Tier,
 } from "./types";
-
-// Mock profile for development — replace with API fetch
-const MOCK_PROFILE: Profile = {
-  id: "1",
-  display_name: "David Liu",
-  email: "david@tethos.ca",
-  bio: "Building the future of tech for social good. CS student at Western.",
-  avatar_url: undefined,
-  avatar_config: {},
-  tier: 1 as Tier,
-  level: 24,
-  xp: 2380,
-  coin_balance: 1250,
-  class: "Architect",
-  subclass: "Systems Designer",
-  skills: ["React", "Three.js", "TypeScript", "Systems Design", "Node.js", "PostgreSQL"],
-  social_links: {
-    github: "https://github.com/davidliu",
-    linkedin: "https://linkedin.com/in/davidliu",
-    portfolio: "https://davidliu.dev",
-  },
-  year: 3,
-  is_active: true,
-  onboarding_completed: true,
-  created_at: "2026-01-15T00:00:00Z",
-};
 
 const SOCIAL_ICONS: Record<string, typeof Github> = {
   github: Github,
@@ -43,19 +18,119 @@ const SOCIAL_ICONS: Record<string, typeof Github> = {
   portfolio: Globe,
   twitter: Twitter,
   website: Globe,
+  discord: Globe,
+  instagram: Globe,
 };
 
 interface ProfileViewProps {
-  profile?: Profile;
+  profileId?: string;
   isOwnProfile?: boolean;
 }
 
-export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps) {
+export default function ProfileView({ profileId, isOwnProfile }: ProfileViewProps) {
   const router = useRouter();
+  const [profile, setProfile] = useState<Profile | PublicProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
-  const p = profile || MOCK_PROFILE;
+  const [saving, setSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+
+  // Editable fields
+  const [editName, setEditName] = useState("");
+  const [editBio, setEditBio] = useState("");
+  const [editSkills, setEditSkills] = useState("");
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const url = isOwnProfile
+          ? "/api/profile"
+          : `/api/profile/${profileId}`;
+        const res = await fetch(url);
+        if (!res.ok) {
+          if (res.status === 401) {
+            setError("Please log in to view profiles.");
+            return;
+          }
+          if (res.status === 404) {
+            setError("Profile not found.");
+            return;
+          }
+          throw new Error("Failed to load profile");
+        }
+        const data = await res.json();
+        const p = data.profile;
+        setProfile(p);
+        setEditName(p.display_name);
+        setEditBio(p.bio || "");
+        setEditSkills((p.skills ?? []).join(", "));
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to load profile");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProfile();
+  }, [isOwnProfile, profileId]);
+
+  const handleSave = async () => {
+    if (!profile) return;
+    setSaving(true);
+    setSaveSuccess(false);
+    try {
+      const res = await fetch("/api/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          display_name: editName.trim() || undefined,
+          bio: editBio.trim() || undefined,
+          skills: editSkills
+            .split(",")
+            .map((s) => s.trim())
+            .filter(Boolean),
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Save failed");
+      }
+      const data = await res.json();
+      setProfile(data.profile);
+      setEditing(false);
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 2000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Save failed");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center" style={{ padding: "80px 0" }}>
+        <Loader2
+          className="animate-spin"
+          style={{ width: "28px", height: "28px", color: "var(--color-accent-cyan)" }}
+        />
+      </div>
+    );
+  }
+
+  if (error || !profile) {
+    return (
+      <div className="flex flex-col items-center justify-center" style={{ padding: "80px 0" }}>
+        <p style={{ fontSize: "16px", color: "var(--color-text-muted)" }}>
+          {error || "Profile not found"}
+        </p>
+      </div>
+    );
+  }
+
+  const p = profile;
   const tc = TIER_COLORS[p.tier];
-  const xp = getXpProgress(p.xp);
+  const xp = getXpProgress(p.xp, p.level);
   const initials = p.display_name
     .split(" ")
     .map((n) => n[0])
@@ -63,15 +138,7 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
     .toUpperCase()
     .slice(0, 2);
 
-  // Editable state
-  const [editName, setEditName] = useState(p.display_name);
-  const [editBio, setEditBio] = useState(p.bio || "");
-  const [editSkills, setEditSkills] = useState(p.skills.join(", "));
-
-  const handleSave = () => {
-    // TODO: PATCH /api/profile when Backend is ready
-    setEditing(false);
-  };
+  const coins = "tethos_coins" in p ? (p as Profile).tethos_coins : null;
 
   return (
     <div
@@ -192,7 +259,12 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
 
         {/* Edit / Save buttons */}
         {isOwnProfile && (
-          <div className="flex gap-2 shrink-0">
+          <div className="flex gap-2 shrink-0 items-center">
+            {saveSuccess && (
+              <span className="flex items-center gap-1 text-sm" style={{ color: "#22c55e" }}>
+                <Check style={{ width: "14px", height: "14px" }} /> Saved
+              </span>
+            )}
             {editing ? (
               <>
                 <button
@@ -207,13 +279,16 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                 </button>
                 <button
                   onClick={handleSave}
-                  className="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                  disabled={saving}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
                   style={{
                     background: "var(--color-brand-blue)",
                     color: "var(--color-brand-light)",
+                    opacity: saving ? 0.6 : 1,
                   }}
                 >
-                  Save
+                  {saving && <Loader2 className="animate-spin" style={{ width: "14px", height: "14px" }} />}
+                  {saving ? "Saving..." : "Save"}
                 </button>
               </>
             ) : (
@@ -250,13 +325,7 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
           >
             Level
           </p>
-          <p
-            style={{
-              fontSize: "24px",
-              fontWeight: 700,
-              color: "var(--color-text-main)",
-            }}
-          >
+          <p style={{ fontSize: "24px", fontWeight: 700, color: "var(--color-text-main)" }}>
             {p.level}
           </p>
         </div>
@@ -272,38 +341,28 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
           >
             XP
           </p>
-          <p
-            style={{
-              fontSize: "24px",
-              fontWeight: 700,
-              color: "var(--color-text-main)",
-            }}
-          >
+          <p style={{ fontSize: "24px", fontWeight: 700, color: "var(--color-text-main)" }}>
             {p.xp.toLocaleString()}
           </p>
         </div>
-        <div>
-          <p
-            className="font-mono uppercase"
-            style={{
-              fontSize: "12px",
-              color: "var(--color-text-subtle)",
-              letterSpacing: "0.05em",
-              marginBottom: "4px",
-            }}
-          >
-            Coins
-          </p>
-          <p
-            style={{
-              fontSize: "24px",
-              fontWeight: 700,
-              color: "#ffd166",
-            }}
-          >
-            {p.coin_balance.toLocaleString()}
-          </p>
-        </div>
+        {coins !== null && (
+          <div>
+            <p
+              className="font-mono uppercase"
+              style={{
+                fontSize: "12px",
+                color: "var(--color-text-subtle)",
+                letterSpacing: "0.05em",
+                marginBottom: "4px",
+              }}
+            >
+              Coins
+            </p>
+            <p style={{ fontSize: "24px", fontWeight: 700, color: "#ffd166" }}>
+              {coins.toLocaleString()}
+            </p>
+          </div>
+        )}
       </div>
 
       {/* XP Progress Bar */}
@@ -323,10 +382,7 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
         </div>
         <p
           className="text-right mt-1"
-          style={{
-            fontSize: "12px",
-            color: "var(--color-text-muted)",
-          }}
+          style={{ fontSize: "12px", color: "var(--color-text-muted)" }}
         >
           {xp.current} / {xp.needed} XP to Level {xp.level + 1}
         </p>
@@ -364,7 +420,7 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
           />
         ) : (
           <div className="flex flex-wrap gap-2">
-            {p.skills.map((skill) => (
+            {(p.skills ?? []).map((skill) => (
               <span
                 key={skill}
                 style={{
@@ -381,12 +437,17 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
                 {skill}
               </span>
             ))}
+            {(!p.skills || p.skills.length === 0) && (
+              <span style={{ fontSize: "14px", color: "var(--color-text-subtle)" }}>
+                No skills listed
+              </span>
+            )}
           </div>
         )}
       </div>
 
       {/* Social Links Section */}
-      {Object.keys(p.social_links).length > 0 && (
+      {p.social_links && Object.keys(p.social_links).length > 0 && (
         <div
           className="py-4"
           style={{ borderTop: "1px solid rgba(255, 255, 255, 0.06)" }}
@@ -403,18 +464,16 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
           </h3>
           <div className="flex gap-3">
             {Object.entries(p.social_links).map(([key, url]) => {
+              if (!url) return null;
               const Icon = SOCIAL_ICONS[key] || Globe;
               return (
                 <a
                   key={key}
-                  href={url}
+                  href={String(url)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-2 capitalize transition-colors"
-                  style={{
-                    fontSize: "14px",
-                    color: "var(--color-text-muted)",
-                  }}
+                  style={{ fontSize: "14px", color: "var(--color-text-muted)" }}
                   onMouseEnter={(e) =>
                     (e.currentTarget.style.color = "var(--color-accent-cyan)")
                   }
@@ -432,25 +491,26 @@ export default function ProfileView({ profile, isOwnProfile }: ProfileViewProps)
       )}
 
       {/* About Section */}
-      <div
-        className="py-4"
-        style={{ borderTop: "1px solid rgba(255, 255, 255, 0.06)" }}
-      >
-        <h3
-          className="font-mono uppercase mb-3"
-          style={{
-            fontSize: "12px",
-            color: "var(--color-text-subtle)",
-            letterSpacing: "0.05em",
-          }}
+      {"created_at" in p && (
+        <div
+          className="py-4"
+          style={{ borderTop: "1px solid rgba(255, 255, 255, 0.06)" }}
         >
-          About
-        </h3>
-        <p style={{ fontSize: "16px", color: "var(--color-text-soft)" }}>
-          {p.year ? `${p.year}${p.year === 1 ? "st" : p.year === 2 ? "nd" : p.year === 3 ? "rd" : "th"} year student.` : ""}{" "}
-          Joined {new Date(p.created_at).toLocaleDateString("en-US", { month: "long", year: "numeric" })}.
-        </p>
-      </div>
+          <h3
+            className="font-mono uppercase mb-3"
+            style={{
+              fontSize: "12px",
+              color: "var(--color-text-subtle)",
+              letterSpacing: "0.05em",
+            }}
+          >
+            About
+          </h3>
+          <p style={{ fontSize: "16px", color: "var(--color-text-soft)" }}>
+            Joined {new Date(p.created_at).toLocaleDateString("en-US", { month: "long", year: "numeric" })}.
+          </p>
+        </div>
+      )}
     </div>
   );
 }

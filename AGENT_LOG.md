@@ -691,6 +691,29 @@ Built while waiting for UXUI overhaul spec.
 
 **Still blocked on:** `specs/ux-game-overhaul.md` from UXUI.
 
+### 2026-04-04 — Wired Frontend to Real Backend APIs
+
+Management directive: wire real Supabase queries into mock-data pages.
+
+**What I changed (Frontend integration):**
+
+1. **`components/portal/types.ts`** — replaced mock types + MOCK_MEMBERS with re-exports from `@/lib/supabase/types`. Kept TIER_COLORS and updated `getXpProgress` to use Backend's power-curve XP formula.
+
+2. **`components/portal/MemberDirectory.tsx`** — removed MOCK_MEMBERS. Now fetches from `GET /api/directory` via useEffect. Added loading spinner and error states.
+
+3. **`components/portal/ProfileView.tsx`** — removed MOCK_PROFILE. Now fetches from `GET /api/profile` (own) or `GET /api/profile/[id]` (other). Implemented `handleSave` with `PATCH /api/profile`. Added saving spinner, success indicator. Fixed `coin_balance` → `tethos_coins`.
+
+4. **`components/portal/MemberCard.tsx`** — updated `getXpProgress` call to new signature.
+
+5. **`app/student/dashboard/profile/page.tsx`** — cleaned up, removed TODO.
+
+6. **`app/student/dashboard/directory/[id]/page.tsx`** — NEW. Member profile page that MemberCard links to. Passes profileId to ProfileView.
+
+**Notes for Frontend:**
+- Directory and profile pages now hit real APIs. If no Supabase env vars are set, they'll show error states gracefully.
+- `portal/types.ts` no longer has mock data. All types come from `@/lib/supabase/types`.
+- ProfileView handles both own profile and other-user profile based on props.
+
 ---
 
 ## QA

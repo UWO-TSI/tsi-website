@@ -1,23 +1,44 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { Search, SlidersHorizontal, SearchX } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
+import { Search, SlidersHorizontal, SearchX, Loader2 } from "lucide-react";
 import MemberCard from "./MemberCard";
 import {
-  MOCK_MEMBERS,
   TIER_COLORS,
   type DirectoryMember,
   type Tier,
 } from "./types";
 
 export default function MemberDirectory() {
+  const [members, setMembers] = useState<DirectoryMember[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [filterOpen, setFilterOpen] = useState(false);
   const [tierFilter, setTierFilter] = useState<Set<Tier>>(new Set());
   const [statusFilter, setStatusFilter] = useState<"active" | "all">("active");
 
-  // TODO: fetch from /api/directory when Backend API is ready
-  const members: DirectoryMember[] = MOCK_MEMBERS;
+  useEffect(() => {
+    const fetchMembers = async () => {
+      try {
+        const res = await fetch("/api/directory");
+        if (!res.ok) {
+          if (res.status === 401) {
+            setError("Please log in to view the directory.");
+            return;
+          }
+          throw new Error("Failed to load members");
+        }
+        const data = await res.json();
+        setMembers(data.members ?? []);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to load members");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchMembers();
+  }, []);
 
   const filtered = useMemo(() => {
     return members.filter((m) => {
@@ -46,6 +67,25 @@ export default function MemberDirectory() {
       return next;
     });
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center" style={{ padding: "80px 0" }}>
+        <Loader2
+          className="animate-spin"
+          style={{ width: "28px", height: "28px", color: "var(--color-accent-cyan)" }}
+        />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center" style={{ padding: "80px 0" }}>
+        <p style={{ fontSize: "16px", color: "var(--color-text-muted)" }}>{error}</p>
+      </div>
+    );
+  }
 
   return (
     <div
