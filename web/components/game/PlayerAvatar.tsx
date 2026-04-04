@@ -2,7 +2,7 @@
 
 import { useRef, useState, useEffect, useCallback, useMemo } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
-import { Billboard, Html, useTexture } from "@react-three/drei";
+import { Billboard, Html } from "@react-three/drei";
 import * as THREE from "three";
 
 /**
@@ -59,22 +59,24 @@ export default function PlayerAvatar({ spawnPosition, onMove }: PlayerAvatarProp
   const [isMoving, setIsMoving] = useState(false);
   const { camera, gl } = useThree();
 
-  // Load sprite sheet
-  const spriteTexture = useTexture("/assets/characters/prototype_character.png");
-  const shadowTexture = useTexture("/assets/characters/static_shadow.png");
+  // Load and configure textures for pixel art during construction
+  const spriteTexture = useMemo(() => {
+    const tex = new THREE.TextureLoader().load("/assets/characters/prototype_character.png");
+    tex.minFilter = THREE.NearestFilter;
+    tex.magFilter = THREE.NearestFilter;
+    tex.generateMipmaps = false;
+    tex.repeat.set(1 / SHEET_COLS, 1 / SHEET_ROWS);
+    tex.offset.set(0, 1 - 1 / SHEET_ROWS);
+    return tex;
+  }, []);
 
-  // Configure textures for pixel art
-  useMemo(() => {
-    spriteTexture.minFilter = THREE.NearestFilter;
-    spriteTexture.magFilter = THREE.NearestFilter;
-    spriteTexture.generateMipmaps = false;
-    spriteTexture.repeat.set(1 / SHEET_COLS, 1 / SHEET_ROWS);
-    spriteTexture.offset.set(0, 1 - 1 / SHEET_ROWS);
-
-    shadowTexture.minFilter = THREE.NearestFilter;
-    shadowTexture.magFilter = THREE.NearestFilter;
-    shadowTexture.generateMipmaps = false;
-  }, [spriteTexture, shadowTexture]);
+  const shadowTexture = useMemo(() => {
+    const tex = new THREE.TextureLoader().load("/assets/characters/static_shadow.png");
+    tex.minFilter = THREE.NearestFilter;
+    tex.magFilter = THREE.NearestFilter;
+    tex.generateMipmaps = false;
+    return tex;
+  }, []);
 
   // Keyboard input
   useEffect(() => {
