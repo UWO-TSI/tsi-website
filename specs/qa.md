@@ -81,26 +81,65 @@ This is the first time the game world has been **visually tested in a real brows
 | Hamburger button | N/A | ✅ visible |
 | Slide-over menu | N/A | ✅ opens with X close |
 
-#### Page Tests
+#### All Pages — HTTP Status (34 pages tested)
 
-| Page | Status | Notes |
-|------|--------|-------|
-| `/student/dashboard` | ✅ | Game world renders |
-| `/student/dashboard/directory` | ⚠️ | Shows "HTTP 500" — expected (no Supabase), but error message is raw, not user-friendly |
-| `/student/dashboard/profile` | ⚠️ | Shows "HTTP 500" + "Go back" link — expected, same raw error |
-| `/student/dashboard/bounty` | ✅ | Coming Soon placeholder with ASCII art |
-| `/student/login` | ✅ | Terminal aesthetic, email + password form, "Request Access" link |
-| `/student/signup` | ✅ | All 5 fields (name, email, password, confirm, invite code), proper labels |
+**Result: ✅ ALL 34 pages return HTTP 200**
 
-#### Mobile Responsive (375×812)
+| Page | HTTP | Visual | Notes |
+|------|------|--------|-------|
+| `/student/dashboard` | 200 | ✅ | Game world renders with AC-style buildings, terrain, sky |
+| `/student/dashboard/directory` | 200 | ⚠️ | Shows "HTTP 500" error from API — raw, not user-friendly |
+| `/student/dashboard/profile` | 200 | ⚠️ | Shows "HTTP 500" + "Go back" link — same raw error |
+| `/student/dashboard/bounty` | 200 | ✅ | Coming Soon placeholder with ASCII art |
+| `/student/dashboard/shop` | 200 | ✅ | Coming Soon placeholder |
+| `/student/dashboard/jobs` | 200 | ✅ | Coming Soon placeholder |
+| `/student/dashboard/leaderboard` | 200 | ✅ | Coming Soon placeholder |
+| `/student/dashboard/settings` | 200 | ✅ | Coming Soon placeholder |
+| `/student/dashboard/calendar` | 200 | ✅ | Month/Week/List tabs, event category legend, "April 2026", "Loading events..." |
+| `/student/dashboard/kanban` | 200 | ✅ | Renders (Backend page) |
+| `/student/dashboard/marketplace` | 200 | ✅ | "Loading marketplace..." (waiting on Supabase) |
+| `/student/dashboard/mentorship` | 200 | ✅ | Renders (Backend page) |
+| `/student/dashboard/portfolio` | 200 | ✅ | Renders (Backend page) |
+| `/student/dashboard/quests` | 200 | ✅ | "Loading quests..." (waiting on Supabase) |
+| `/student/dashboard/tools` | 200 | ✅ | 2 tool cards: ASCII Converter, TETHOS RAG — both with "Launch →" |
+| `/student/dashboard/tools/ascii` | 200 | ✅ | Renders |
+| `/student/dashboard/tools/rag` | 200 | ✅ | Renders |
+| `/student/dashboard/admin` | 200 | ✅ | "Access Denied — T1/T2 clearance required" — correct client-side tier gate |
+| `/student/dashboard/admin/analytics` | 200 | ✅ | Renders |
+| `/student/dashboard/admin/announcements` | 200 | ✅ | Renders |
+| `/student/dashboard/admin/bounties` | 200 | ✅ | Renders |
+| `/student/dashboard/admin/election` | 200 | ✅ | Renders |
+| `/student/dashboard/admin/marketplace` | 200 | ✅ | Renders |
+| `/student/dashboard/admin/members` | 200 | ✅ | Renders |
+| `/student/dashboard/admin/quests` | 200 | ✅ | Renders |
+| `/student/login` | 200 | ✅ | Terminal aesthetic, email + password, "INITIALIZE SESSION" button |
+| `/student/signup` | 200 | ✅ | 5 fields (name, email, password, confirm, invite code), "REQUEST ACCESS" button |
+| `/student/onboarding` | 200 | ✅ | ASCII art, XP/coin reward display, "ACCEPT QUEST" button, progress bar |
+| `/student/election` | 200 | ⚠️ | Shows "Initializing election protocol..." spinner — should redirect to dashboard when ENABLE_ELECTION is off |
+| `/` | 200 | ✅ | Marketing homepage |
+| `/npo` | 200 | ✅ | NPO landing page |
+| `/company` | 200 | ✅ | Company landing page |
+| `/sponsor` | 200 | ✅ | Sponsor landing page |
+| `/student` | 200 | ✅ | Student landing page |
 
-| Feature | Status | Notes |
-|---------|--------|-------|
-| Sidebar hidden | ✅ | Correctly hidden below 768px |
-| Hamburger icon | ✅ | Top-left corner |
-| Slide-over opens | ✅ | Full sidebar with X close |
-| Game world fills viewport | ✅ | No overflow/scrolling issues |
-| **Z-index issue** | 🔴 Bug | "Press E to enter" prompt bleeds through open sidebar overlay |
+#### Responsive Testing
+
+| Viewport | Sidebar | Game World | Notes |
+|----------|---------|------------|-------|
+| 1280×900 (desktop) | ✅ 240px fixed | ✅ Full render | All elements visible |
+| 768×1024 (tablet/breakpoint) | ✅ 240px fixed | ✅ Full render | Correct — sidebar shows at exactly 768px |
+| 375×812 (mobile) | ✅ Hidden, hamburger | ✅ Full render | Hamburger opens slide-over with X close |
+| **Z-index bug** | — | — | drei `<Html>` "Press E" prompt renders ON TOP of open mobile sidebar overlay |
+
+#### Cross-Browser Testing
+
+| Browser | Method | Status | Notes |
+|---------|--------|--------|-------|
+| Chromium | Playwright (headless) | ✅ | Full visual test — all features working |
+| Firefox | — | ❌ NOT TESTED | Playwright defaults to Chromium only |
+| Safari | — | ❌ NOT TESTED | Cannot test via Playwright; potential WebGL shadow perf concern (code analysis) |
+
+**Limitation:** Playwright MCP runs Chromium only. Safari and Firefox require manual testing or WebKit/Gecko Playwright configs.
 
 ### Bugs Found This Wave
 
@@ -111,6 +150,7 @@ This is the first time the game world has been **visually tested in a real brows
 | **P2** | Directory/Profile show raw "HTTP 500" | 🔴 Open | Without Supabase, users see bare "HTTP 500" text. Should show a friendly offline/demo message. Frontend error states exist (Loader2, error message) but the API fetch fails before component renders. |
 | **P3** | Font 404 | 🔴 Open | `TestSohne-Kraftig-BF663d89cd32e6a.otf` returns 404. Missing font file in `/font/sohne-font-family/`. |
 | **P3** | Player sprite invisible in headless | ⚠️ Needs verification | Sprite shows as dashed outline in Playwright. Asset serves HTTP 200. May be headless-only issue. Needs real browser test. |
+| **P3** | Election page doesn't redirect | 🔴 Open | `/student/election` shows "Initializing election protocol..." spinner instead of redirecting to dashboard when `ENABLE_ELECTION` is not set. Middleware should catch this. |
 
 ### Previous Bugs Status
 
