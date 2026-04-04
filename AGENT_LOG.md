@@ -898,6 +898,127 @@ Each interior includes: exact color palettes, furniture list, station interactio
 - GameWorld.tsx → brighter colors (#5da34e grass, #d4c5a0 paths), round trees, pond, warm lighting (0.7 ambient), no PS1 shader
 - Layout.tsx → flex-based sidebar instead of margin-left
 
+### HANDOFF — Context for New Frontend Agent
+
+**Read these files first (in order):**
+1. `CLAUDE.md` — project overview, tech stack, team roles
+2. `AGENT_LOG.md` — this file, all team communication
+3. `specs/ux-game-world-v2.md` — THE source of truth for game world visuals (AC style)
+4. `specs/ux-dashboard.md` — sidebar/layout spec
+5. `specs/ux-directory.md` — member directory list view spec
+6. `specs/ux-review.md` — UXUI's review of Backend's dashboard (10 priority fixes)
+7. `web/lib/supabase/types.ts` — Backend's canonical type definitions
+
+---
+
+#### 1. Game Components I Built
+
+| Component | File | Status |
+|-----------|------|--------|
+| **GameWorld** | `web/components/game/GameWorld.tsx` | v2 AC overhaul done — terrain, river, bridge, trees (4 types with wind sway), bushes, flowers, props, gradient sky, clouds, hemisphere lighting |
+| **PlayerAvatar** | `web/components/game/PlayerAvatar.tsx` | 2D sprite on Billboard (Dave the Diver style), sprite sheet UV cropping, WASD + click-to-move, nameplate |
+| **Building** | `web/components/game/Building.tsx` | ACBuilding (pastel walls, bold roofs, chimneys, flower boxes, awnings), BoardSign, LeaderboardMonument, proximity "Press E" |
+| **TransitionOverlay** | `web/components/game/TransitionOverlay.tsx` | Fade-to-black state machine (0.3s in/out), TransitionProvider context |
+| **OverlayPanel** | `web/components/game/OverlayPanel.tsx` | Solid dark panel (#0d1b2a) for bounty/job/leaderboard boards, Escape to close |
+| **Sidebar** | `web/components/portal/Sidebar.tsx` | 240px, brand-blue 2px left accent, 8 nav items, player status, responsive hamburger at 768px |
+| **MemberDirectory** | `web/components/portal/MemberDirectory.tsx` | Fetches `/api/directory`, search + tier/status filters, loading/error/empty states |
+| **MemberCard** | `web/components/portal/MemberCard.tsx` | 64px row: avatar, name+class, tier badge, level, XP bar |
+| **ProfileView** | `web/components/portal/ProfileView.tsx` | Fetches `/api/profile` or `/api/profile/[id]`, edit mode, skills, social links |
+| **ComingSoon** | `web/components/portal/ComingSoon.tsx` | Placeholder for Phase 2 pages |
+| **Dashboard Layout** | `web/app/student/dashboard/layout.tsx` | Fixed overlay, sidebar + main, TransitionProvider wrapper |
+
+---
+
+#### 2. Rendering Bugs Found and Fixed
+
+| Bug | Cause | Fix |
+|-----|-------|-----|
+| **Black screen** | SoftShadows/ContactShadows from drei interfering with material pipeline | Removed both components |
+| **Invisible terrain/buildings** | `toneMapping` in Canvas `gl` prop not applied as renderer property | Moved to `onCreated` callback |
+| **Sky sphere invisible** | Scale 300 exceeded camera far clip (150) | Reduced to scale 100, increased far to 300 |
+| **Flat blue background (no gradient)** | Same far clip issue — sky sphere beyond frustum | Fixed with far clip increase |
+| **Z-fighting on terrain** | Paths/grass at same Y with small offsets | Replaced with `polygonOffset` on all overlapping materials |
+| **Fog washing out geometry** | Fog near=35 too close to camera distance=15 | Pushed to near=50, far=100 |
+
+**Current known issue:** The 6 Next.js dev tool errors reported by David haven't been individually diagnosed. Likely hydration warnings or missing keys — needs `npm run dev` testing.
+
+---
+
+#### 3. Placeholder Geometry vs Real Assets
+
+| Element | Status |
+|---------|--------|
+| **Buildings** | ALL placeholder geometry (colored boxes with cone roofs). FBX files exist in `/assets/buildings/` but aren't loaded — FBX loading was disabled due to missing textures. Run `scripts/fbx_to_glb.py` in Blender to convert to GLB. |
+| **Trees** | Placeholder geometry (cylinder trunks + sphere/dodecahedron canopies). No real tree models. |
+| **Character sprite** | Real `prototype_character.png` sprite sheet loaded. Sprite sheet grid layout (cols/rows) is estimated — needs tuning. |
+| **Props** | All placeholder geometry (benches, fences, lamps, well, mushrooms, stumps). GLTF props exist in `/assets/props/` but aren't loaded. |
+| **Terrain** | Flat circle + planes. No heightmap or vertex displacement for rolling hills (v2 spec Section 4.1 wants gentle hills). |
+| **River** | Flat blue plane. No UV animation, no sparkles, no lily pads (v2 spec Section 5 wants animated water). |
+
+---
+
+#### 4. AC v2 Spec Implementation Status
+
+| v2 Spec Section | Status |
+|----------------|--------|
+| Camera (FOV 50°, polar 55-60°, distance 15) | ✅ Done |
+| Color palette (60+ hex values) | ✅ Applied to all geometry |
+| Gradient sky (#87CEEB → #B8E4F0) | ✅ Done (shader sphere) |
+| Clouds | ✅ Done (drei Cloud) |
+| HemisphereLight | ✅ Done |
+| ACES tone mapping | ✅ Done (onCreated) |
+| Terrain (circular island, paths, pond) | ✅ Basic — **missing** gentle rolling hills |
+| River + bridge | ✅ Basic geometry — **missing** water animation, sparkles |
+| Building colors/proportions | ✅ AC palette applied |
+| Trees (sphere canopies, wind sway) | ✅ Done (4 varieties) |
+| Bushes, flowers, fences, props | ✅ Done |
+| Time-of-day cycle | ❌ Not started (v2 spec Section 8.1) |
+| Water animation/sparkles | ❌ Not started |
+| Butterflies/particles | ❌ Not started |
+| Smoke from chimney | ❌ Not started |
+| Audio | ❌ Not started |
+
+---
+
+#### 5. Pages — Mock Data vs Real API
+
+| Page/Component | Data Source |
+|---------------|------------|
+| MemberDirectory | ✅ Real API (`GET /api/directory`) |
+| MemberCard | ✅ Real API (via directory) |
+| ProfileView | ✅ Real API (`GET/PATCH /api/profile`, `GET /api/profile/[id]`) |
+| Sidebar player status | ❌ Hardcoded "Player" / "Lv. 1" — needs auth context |
+| PlayerAvatar nameplate | ❌ Hardcoded "Player" / "Lv. 1" — needs auth context |
+| Game world building data | ❌ Hardcoded in BUILDINGS array |
+| Bounty/Shop/Jobs/Leaderboard/Settings | ❌ ComingSoon placeholder pages |
+
+---
+
+#### 6. What to Do Next (Priority Order)
+
+1. **Fix the 6 Next.js dev errors** — run `npm run dev`, open error overlay, fix each
+2. **Convert FBX → GLB** — run `scripts/fbx_to_glb.py` in Blender, then update Building.tsx to load real `.glb` models
+3. **Wire auth context into Sidebar + PlayerAvatar** — pull user profile from Supabase session, show real name/level
+4. **Implement gentle rolling hills** on terrain (v2 spec Section 4.1 — vertex displacement with Perlin noise)
+5. **Animated water** — UV scroll + sine displacement + sparkle particles (v2 spec Section 5)
+6. **Apply UXUI review fixes** — `specs/ux-review.md` has 10 priority items (sidebar width, bg color, active indicator, etc.)
+7. **Time-of-day cycle** — v2 spec Section 8.1 has full lighting table by hour
+8. **Build onboarding flow** — `specs/ux-onboarding.md` describes welcome → profile → avatar → tutorial → quests
+
+---
+
+#### 7. Gotchas
+
+- **PS1 shader is DEAD.** `PS1Pipeline.tsx` was deleted. Do NOT re-add vertex snapping, low-res FBO, or NearestFilter. Clean antialiased rendering only.
+- **`shadows="soft"` on Canvas** may not work in all R3F versions. Use `shadows` (boolean) and set shadow type via `onCreated`.
+- **toneMapping/outputColorSpace must go in `onCreated`**, not in the `gl` prop object. The gl prop passes to WebGLRenderer constructor which doesn't accept these.
+- **Sky sphere scale must be < camera far clip.** Currently scale=100, far=300. If you change far, adjust sky scale.
+- **drie's `SoftShadows` and `ContactShadows`** caused invisible geometry in testing. Avoid unless confirmed working.
+- **Sprite sheet grid** (SHEET_COLS=3, SHEET_ROWS=10) is estimated. The actual `prototype_character.png` layout hasn't been confirmed — frame cycling may show wrong frames.
+- **The dashboard layout uses `fixed inset-0 z-50`** to overlay the parent student marketing layout. This means the marketing Navbar still renders underneath (hidden). It's a workaround — ideally use route groups.
+- **Building FBX files have external textures** — they render as white/untextured if loaded directly. Must convert to GLB with `scripts/fbx_to_glb.py` first.
+- **`web/components/portal/types.ts`** now re-exports from `@/lib/supabase/types`. Don't add types here — add to Backend's types.ts instead.
+
 ---
 
 ## Backend
