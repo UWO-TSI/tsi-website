@@ -626,7 +626,7 @@ function Scene() {
 
       {BUILDINGS.map((b) => {
         const y = getTerrainHeight(b.position[0], b.position[2]);
-        return <Building key={b.id} id={b.id} name={b.name} position={[b.position[0], y, b.position[2]]} size={b.size} color={b.color} href={b.href} playerPosition={playerPos} />;
+        return <Building key={b.id} id={b.id} name={b.name} position={[b.position[0], y, b.position[2]]} size={b.size} color={b.color} roofColor={b.roofColor} href={b.href} playerPosition={playerPos} />;
       })}
 
       <PlayerAvatar spawnPosition={SPAWN_POSITION} onMove={handlePlayerMove} />

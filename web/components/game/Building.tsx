@@ -1,22 +1,72 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { Html } from "@react-three/drei";
+import { Suspense, useState, useEffect, useRef, useMemo } from "react";
+import { Html, useGLTF } from "@react-three/drei";
 import { useRouter } from "next/navigation";
 import * as THREE from "three";
 import { useTransition } from "./TransitionOverlay";
 
 const INTERACT_RANGE = 4;
 
+// ─── GLB model paths for buildings with real 3D assets ──────────
+const GLB_PATHS: Record<string, string> = {
+  hq: "/assets/buildings/hq.glb",
+  shop: "/assets/buildings/shop.glb",
+  oracle: "/assets/buildings/oracle_temple.glb",
+  house: "/assets/buildings/house_1.glb",
+};
+
+/**
+ * Loads a real GLB model, auto-scales to fit expected dimensions,
+ * and overrides materials with AC palette colors.
+ */
+function GLBBuilding({ id, size, color }: { id: string; size: [number, number, number]; color: string }) {
+  const { scene } = useGLTF(GLB_PATHS[id]);
+
+  const cloned = useMemo(() => {
+    const clone = scene.clone(true);
+
+    // Auto-scale to fit the expected bounding box
+    const box = new THREE.Box3().setFromObject(clone);
+    const modelSize = new THREE.Vector3();
+    box.getSize(modelSize);
+    const maxModel = Math.max(modelSize.x, modelSize.y, modelSize.z);
+    const maxTarget = Math.max(size[0], size[1], size[2]);
+    if (maxModel > 0) clone.scale.setScalar(maxTarget / maxModel);
+
+    // Re-center horizontally, ground at y=0
+    box.setFromObject(clone);
+    const center = box.getCenter(new THREE.Vector3());
+    const min = box.min;
+    clone.position.set(-center.x, -min.y, -center.z);
+
+    // Override materials with AC palette
+    clone.traverse((child) => {
+      if ((child as THREE.Mesh).isMesh) {
+        const mesh = child as THREE.Mesh;
+        mesh.material = new THREE.MeshStandardMaterial({
+          color, roughness: 0.85, metalness: 0,
+        });
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+      }
+    });
+
+    return clone;
+  }, [scene, color, size]);
+
+  return <primitive object={cloned} />;
+}
+
 /**
  * AC-style building per specs/ux-game-world-v2.md Section 6.
  * Pastel walls, bold roof with overhang, oversized door, arched windows,
  * chimney, flower boxes, awning. MeshStandardMaterial throughout.
  */
-function ACBuilding({ size, color }: { size: [number, number, number]; color: string }) {
+function ACBuilding({ size, color, roofColor: roofColorProp }: { size: [number, number, number]; color: string; roofColor?: string }) {
   const [sx, sy, sz] = size;
   const roofH = sy * 0.45;
-  const roofColor = new THREE.Color(color).multiplyScalar(0.55);
+  const roofColor = roofColorProp ? new THREE.Color(roofColorProp) : new THREE.Color(color).multiplyScalar(0.55);
 
   return (
     <group>
@@ -148,11 +198,12 @@ interface BuildingProps {
   position: [number, number, number];
   size: [number, number, number];
   color: string;
+  roofColor?: string;
   href?: string;
   playerPosition: THREE.Vector3;
 }
 
-export default function Building({ id, name, position, size, color, href, playerPosition }: BuildingProps) {
+export default function Building({ id, name, position, size, color, roofColor, href, playerPosition }: BuildingProps) {
   const router = useRouter();
   const { triggerTransition, isTransitioning } = useTransition();
   const [isNear, setIsNear] = useState(false);
@@ -175,6 +226,7 @@ export default function Building({ id, name, position, size, color, href, player
 
   const isBoard = size[2] < 1;
   const isLeaderboard = id === "leaderboard";
+  const hasGLB = id in GLB_PATHS;
 
   return (
     <group position={position}>
@@ -182,8 +234,12 @@ export default function Building({ id, name, position, size, color, href, player
         <BoardSign size={size} color={color} />
       ) : isLeaderboard ? (
         <LeaderboardMonument size={size} color={color} />
+      ) : hasGLB ? (
+        <Suspense fallback={<ACBuilding size={size} color={color} roofColor={roofColor} />}>
+          <GLBBuilding id={id} size={size} color={color} />
+        </Suspense>
       ) : (
-        <ACBuilding size={size} color={color} />
+        <ACBuilding size={size} color={color} roofColor={roofColor} />
       )}
 
       {/* Label — white pill, dark text */}

@@ -903,13 +903,47 @@ David's Sprint 2 answers:
 - `web/components/game/PlayerAvatar.tsx` (ground-following)
 
 **What to do next (updated priority):**
-1. **Convert FBX → GLB** — needs Blender installed, not available on this machine
-2. **Wire auth context** — Sidebar + PlayerAvatar still show hardcoded "Player" / "Lv. 1"
-3. **Building roof colors** — `roofColor` is defined in BUILDINGS array but not passed to Building component (derives from wall color * 0.55 instead)
+1. ~~**Convert FBX → GLB**~~ ✅ Done (see below)
+2. ~~**Building roof colors**~~ ✅ Fixed (see below)
+3. **Wire auth context** — Sidebar + PlayerAvatar still show hardcoded "Player" / "Lv. 1"
 4. **Build onboarding flow** — `specs/ux-onboarding.md`
 5. **Polish terrain** — paths on Oracle hill approach are missing (terrain rises but no visible stone path)
 6. **Night window glow** — buildings should have brighter emissive windows at evening/night
 7. **Audio** — ambient background music + sound effects not started
+
+### 2026-04-04 — FBX→GLB Conversion + Real 3D Model Loading
+
+**Management Sprint 2 task completed:** "Convert building FBX assets to GLB"
+
+**Completed:**
+
+- [x] **FBX→GLB conversion** — used `fbx2gltf` npm package (wraps Facebook's FBX2glTF binary) to batch-convert all 4 building FBX files to self-contained GLB with embedded textures:
+  - `house_1.fbx` → `house_1.glb` (410KB)
+  - `hq.fbx` → `hq.glb` (469KB)
+  - `oracle_temple.fbx` → `oracle_temple.glb` (728KB)
+  - `shop.fbx` → `shop.glb` (671KB)
+  - Conversion script: `web/scripts/convert-fbx-to-glb.js`
+
+- [x] **Real GLB model loading** in Building.tsx:
+  - `GLBBuilding` component: loads GLB via `useGLTF`, auto-scales to fit expected bounding box, centers on ground, overrides all materials with AC palette colors
+  - Wrapped in `<Suspense>` — shows procedural ACBuilding while GLB loads
+  - Only HQ, Shop, Oracle, House have GLB paths; boards/leaderboard stay procedural
+  - `GLB_PATHS` mapping for building ID → asset path
+
+- [x] **Roof color fix** — `roofColor` prop added to Building/ACBuilding. Now uses the exact v2 spec colors from BUILDINGS array (#E87B5A for HQ, #5BA086 for Shop, #7B5EA7 for Oracle) instead of computing `wall × 0.55`.
+
+**Files created:**
+- `web/scripts/convert-fbx-to-glb.js`
+- `web/public/assets/buildings/house_1.glb`
+- `web/public/assets/buildings/hq.glb`
+- `web/public/assets/buildings/oracle_temple.glb`
+- `web/public/assets/buildings/shop.glb`
+
+**Files modified:**
+- `web/components/game/Building.tsx` (GLB loading, roofColor prop, Suspense fallback)
+- `web/components/game/GameWorld.tsx` (pass roofColor to Building)
+
+**Note:** The GLB models are from Quaternius Medieval Village. After material override they render in AC palette colors. If the geometry style doesn't match AC aesthetics well, revert by removing `GLB_PATHS` entries — the Suspense fallback will automatically use the procedural ACBuilding.
 
 ---
 
