@@ -855,6 +855,64 @@ David's Sprint 2 answers:
 
 ---
 
+### 2026-04-04 — Sprint 3: Terrain Hills, Water Animation, Time-of-Day, Ambient Life
+
+**Build status:** `npm run build` passes cleanly.
+
+**Completed:**
+
+- [x] **Rolling hills terrain** — replaced flat circle with 128×128 vertex-displaced PlaneGeometry using FBM noise (4 octaves). Terrain features:
+  - Gentle mounds 0.5–2.0 units across the island
+  - Oracle Temple hill rises 3.5 units (smooth quadratic falloff, 12-unit radius)
+  - River valley dips terrain to 0 near z=3
+  - Paths automatically flattened (92% reduction for N-S, 85% for E-W corridors)
+  - Island edge falloff from radius 32–40
+  - Vertex colors: 4-tone grass blend (primary/secondary/highlight/shadow) driven by height + noise
+  - All objects (trees, bushes, flowers, props, buildings) now placed at terrain height via `getTerrainHeight()`
+
+- [x] **Terrain utility module** (`web/components/game/terrain.ts`):
+  - Exported `getTerrainHeight(x, z)` — used by GameWorld and PlayerAvatar
+  - Exported `valueNoise(x, y)` — used for terrain vertex coloring
+  - Value noise → FBM pipeline for height generation
+
+- [x] **Player ground-following** — PlayerAvatar now sets `pos.y = getTerrainHeight(pos.x, pos.z)` each frame, so player walks up/down hills naturally
+
+- [x] **Animated water** — River replaced with:
+  - 160×6 segment PlaneGeometry for vertex displacement
+  - Triple sine wave ripples at different frequencies/amplitudes
+  - 50 sparkle Points that twinkle on/off (phase-shifted sine visibility)
+  - Water surface at semi-transparent 0.72 opacity with low roughness
+
+- [x] **Time-of-day cycle** — merged GradientSky + Lighting into `TimeOfDayCycle` component:
+  - 7-phase keyframe table (dawn → morning → midday → afternoon → golden hour → evening → night) from v2 spec Section 8.1
+  - Reads real-world `Date` for current hour, interpolates between adjacent phases
+  - Dynamic sky gradient (shader uniform updates), sun color/intensity, ambient color/intensity
+  - Fog color auto-matches sky bottom color
+  - Night→dawn wrap-around interpolation handles midnight crossing
+
+- [x] **Ambient animations** (v2 spec Section 10):
+  - **Flower sway:** per-cluster rotation (0.3Hz, 0.05 amplitude) with phase offsets
+  - **Butterflies:** 5 Points on gentle Lissajous looping paths, terrain-height-aware
+  - **Chimney smoke:** 20 particle Points drifting upward from HQ chimney with lateral sway
+
+**Files created:**
+- `web/components/game/terrain.ts`
+
+**Files modified:**
+- `web/components/game/GameWorld.tsx` (major: terrain, river, time-of-day, ambient)
+- `web/components/game/PlayerAvatar.tsx` (ground-following)
+
+**What to do next (updated priority):**
+1. **Convert FBX → GLB** — needs Blender installed, not available on this machine
+2. **Wire auth context** — Sidebar + PlayerAvatar still show hardcoded "Player" / "Lv. 1"
+3. **Building roof colors** — `roofColor` is defined in BUILDINGS array but not passed to Building component (derives from wall color * 0.55 instead)
+4. **Build onboarding flow** — `specs/ux-onboarding.md`
+5. **Polish terrain** — paths on Oracle hill approach are missing (terrain rises but no visible stone path)
+6. **Night window glow** — buildings should have brighter emissive windows at evening/night
+7. **Audio** — ambient background music + sound effects not started
+
+---
+
 ## Backend
 
 > Backend agent writes here. Others: read only.
