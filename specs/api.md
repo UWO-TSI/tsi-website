@@ -580,6 +580,145 @@ This ensures level-up is automatic and consistent everywhere XP is granted.
 
 ---
 
+## Oracle API
+
+### `GET /api/oracle/quiz`
+
+Returns 12 MBTI-style personality questions. 3 questions per dimension (E/I, S/N, T/F, J/P).
+
+**Response:**
+```json
+{
+  "questions": [
+    {
+      "id": 1,
+      "dimension": "EI",
+      "text": "At a guild meetup, you tend to...",
+      "options": [
+        { "label": "Jump into conversations with strangers", "pole": "E" },
+        { "label": "Stick with people you already know", "pole": "I" }
+      ]
+    }
+  ],
+  "already_classified": false,
+  "current_class": null,
+  "current_subclass": null
+}
+```
+
+---
+
+### `POST /api/oracle/result`
+
+Scores 12 answers → MBTI type → RPG class + subclass. Saves to profile.
+
+**Body:**
+```json
+{
+  "answers": [
+    { "question_id": 1, "pole": "E" },
+    { "question_id": 2, "pole": "I" },
+    ...12 total
+  ]
+}
+```
+
+**Response:** `{ mbti_type: "INTJ", class: "ARCHITECT", subclass: "Mastermind" }`
+
+**MBTI → Class mapping:**
+| MBTI | Class | Subclass |
+|------|-------|----------|
+| INTJ | ARCHITECT | Mastermind |
+| INTP | ORACLE | Sage |
+| ENTJ | COMMANDER | Warlord |
+| ENTP | STRATEGIST | Trickster |
+| INFJ | ORACLE | Mystic |
+| INFP | SCOUT | Dreamwalker |
+| ENFJ | COMMANDER | Herald |
+| ENFP | SCOUT | Wanderer |
+| ISTJ | WARDEN | Sentinel |
+| ISFJ | WARDEN | Guardian |
+| ESTJ | OPERATIVE | Marshal |
+| ESFJ | OPERATIVE | Consul |
+| ISTP | ENGINEER | Artificer |
+| ISFP | INITIATE | Bard |
+| ESTP | ENGINEER | Tinker |
+| ESFP | INITIATE | Jester |
+
+---
+
+## Jobs API
+
+### `GET /api/jobs`
+
+List job listings with optional filters.
+
+**Query params:** `?type=internship|full_time|part_time|contract`, `?search=`, `?category=`, `?limit=50` (max 100)
+
+**Response:** `{ jobs: [...] }`
+
+Excludes flagged listings. Sorted by created_at desc.
+
+---
+
+### `POST /api/jobs`
+
+Create a job listing. Any authenticated user can post.
+
+**Body:**
+```json
+{
+  "title": "Frontend Developer Intern",
+  "company": "TechCorp",
+  "location": "Toronto, ON",
+  "job_type": "internship",
+  "url": "https://techcorp.com/careers/123",
+  "categories": ["engineering", "frontend"],
+  "tags": ["react", "typescript"],
+  "description": "Looking for a frontend intern..."
+}
+```
+
+**Response:** `201 { "job": {...} }`
+
+---
+
+## Leaderboard API
+
+### `GET /api/leaderboard`
+
+Top N profiles sorted by XP desc with rank numbers.
+
+**Query params:** `?limit=50` (max 100)
+
+**Response:**
+```json
+{
+  "leaderboard": [
+    {
+      "rank_position": 1,
+      "id": "uuid",
+      "display_name": "Jane Doe",
+      "avatar_url": null,
+      "tier": 3,
+      "position": "developer",
+      "class": "ENGINEER",
+      "subclass": "Artificer",
+      "level": 12,
+      "xp": 5400,
+      "rank": "Veteran",
+      "is_active": true
+    }
+  ],
+  "your_rank": 15,
+  "total_returned": 50
+}
+```
+
+If the requesting user isn't in the top N, `your_rank` is computed separately.
+
+---
+
 ## Middleware Routing
 
 ### Election (archived behind `ENABLE_ELECTION` env var)
@@ -620,6 +759,15 @@ Bounty, BountySubmission, BountyStatus, SubmissionStatus
 
 // Achievements
 Achievement, UserAchievement, AchievementWithStatus
+
+// Jobs
+JobListing, JobType
+
+// Leaderboard
+LeaderboardEntry
+
+// Oracle
+OracleQuestion, OracleResult
 
 // Directory views
 DirectoryMember, PublicProfile

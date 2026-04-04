@@ -28,10 +28,6 @@ export default function AdminMembersPage() {
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchMembers();
-  }, []);
-
   async function fetchMembers() {
     const supabase = createClient();
     const { data } = await supabase
@@ -44,6 +40,10 @@ export default function AdminMembersPage() {
     setMembers((data as AdminMember[]) ?? []);
     setLoading(false);
   }
+
+  useEffect(() => {
+    fetchMembers();
+  }, []);
 
   async function updateTier(memberId: string, newTier: Tier) {
     setUpdating(memberId);

@@ -182,6 +182,57 @@ export interface BountySubmission {
   updated_at: string;
 }
 
+// ─── Job Listing Types ──────────────────────────────────────────────────────
+
+export type JobType = "internship" | "full_time" | "part_time" | "contract";
+
+export interface JobListing {
+  id: string;
+  title: string;
+  company: string;
+  location: string | null;
+  job_type: JobType;
+  url: string;
+  categories: string[];
+  tags: string[];
+  description: string | null;
+  posted_by: string | null;
+  is_flagged: boolean;
+  created_at: string;
+}
+
+// ─── Leaderboard Types ─────────────────────────────────────────────────────
+
+export interface LeaderboardEntry {
+  rank_position: number;
+  id: string;
+  display_name: string;
+  avatar_url: string | null;
+  tier: Tier;
+  position: Position | null;
+  class: ClassName | null;
+  subclass: string | null;
+  level: number;
+  xp: number;
+  rank: RankTitle;
+  is_active: boolean;
+}
+
+// ─── Oracle Types ───────────────────────────────────────────────────────────
+
+export interface OracleQuestion {
+  id: number;
+  dimension: string;
+  text: string;
+  options: { label: string; pole: string }[];
+}
+
+export interface OracleResult {
+  mbti_type: string;
+  class: ClassName;
+  subclass: string;
+}
+
 // ─── Achievement Types ──────────────────────────────────────────────────────
 
 export interface Achievement {

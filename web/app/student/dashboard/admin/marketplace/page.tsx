@@ -40,10 +40,6 @@ export default function AdminMarketplacePage() {
     category: "merch",
   });
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
   async function fetchData() {
     const supabase = createClient();
     const [{ data: itemsData }, { data: ordersData }] = await Promise.all([
@@ -63,6 +59,10 @@ export default function AdminMarketplacePage() {
     setOrders((ordersData as unknown as Order[]) ?? []);
     setLoading(false);
   }
+
+  useEffect(() => {
+    fetchData();
+  }, []);
 
   async function createItem(e: React.FormEvent) {
     e.preventDefault();

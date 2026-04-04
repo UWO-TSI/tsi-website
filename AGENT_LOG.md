@@ -887,9 +887,68 @@ Executed tasks from HANDOFF items #3, #4, #5.
 - Test achievement award: should return 409 if already awarded.
 - Test level-up: award enough XP to cross a threshold and verify `level` and `rank` update.
 
+### 2026-04-04 — Round 2: Oracle + Jobs + Leaderboard APIs + Lint Fixes
+
+Per Management directive (Round 2 tasks).
+
+**1. Oracle Quiz API** (`web/app/api/oracle/quiz/route.ts`, `web/app/api/oracle/result/route.ts`)
+- `GET /api/oracle/quiz` — returns 12 MBTI-style questions (3 per dimension: E/I, S/N, T/F, J/P). Also returns whether user already has a class.
+- `POST /api/oracle/result` — accepts 12 answers, scores to MBTI type, maps to RPG class + subclass, saves to profile `class` and `subclass` fields.
+- 16 MBTI types map to 9 ClassName values with unique subclass names (e.g. INTJ → ARCHITECT/Mastermind, ISTP → ENGINEER/Artificer).
+- No `specs/oracle-questions.md` existed — built the question set and mapping from AGENT_LOG/CLAUDE.md vision docs.
+
+**2. Jobs API** (`web/app/api/jobs/route.ts`)
+- `GET /api/jobs` — list job listings with filters: `?type=`, `?search=`, `?category=`, `?limit=`. Excludes flagged. Sorted by created_at desc.
+- `POST /api/jobs` — create listing. Zod validated. Any authenticated user can post. Sets `posted_by` to caller.
+- Uses existing `job_listings` table from migration 001 (already has full CRUD RLS).
+
+**3. Leaderboard API** (`web/app/api/leaderboard/route.ts`)
+- `GET /api/leaderboard` — top N profiles sorted by XP desc. Returns `rank_position` per entry.
+- `your_rank` field: if caller isn't in top N, computes their actual rank via count query.
+- Query param: `?limit=50` (max 100).
+
+**4. Lint Fixes**
+- Fixed 5 "fetchX accessed before declaration" errors by moving function declarations above useEffect in:
+  - `admin/announcements/page.tsx` (fetchAnnouncements)
+  - `admin/bounties/page.tsx` (fetchBounties)
+  - `admin/members/page.tsx` (fetchMembers)
+  - `admin/quests/page.tsx` (fetchQuests)
+  - `admin/marketplace/page.tsx` (fetchData)
+- Remaining errors in admin pages are "setState synchronously within effect" (React 19 compiler warnings) — these are false positives on async fetch patterns, not actual bugs.
+
+**5. New TypeScript types** in `web/lib/supabase/types.ts`:
+- `JobListing`, `JobType`
+- `LeaderboardEntry`
+- `OracleQuestion`, `OracleResult`
+
+**Total API endpoints: 28** (was 22, added 6: oracle quiz GET, oracle result POST, jobs GET/POST, leaderboard GET, plus inventory GET was already counted).
+
+**Files created:**
+- `web/app/api/oracle/quiz/route.ts`
+- `web/app/api/oracle/result/route.ts`
+- `web/app/api/jobs/route.ts`
+- `web/app/api/leaderboard/route.ts`
+
+**Files modified:**
+- `web/lib/supabase/types.ts` (added JobListing, LeaderboardEntry, Oracle types)
+- `web/app/student/dashboard/admin/announcements/page.tsx` (lint fix)
+- `web/app/student/dashboard/admin/bounties/page.tsx` (lint fix)
+- `web/app/student/dashboard/admin/members/page.tsx` (lint fix)
+- `web/app/student/dashboard/admin/quests/page.tsx` (lint fix)
+- `web/app/student/dashboard/admin/marketplace/page.tsx` (lint fix)
+- `specs/api.md` (documented all new endpoints)
+
+**Build:** `npm run build` passes cleanly.
+
+**Notes for Frontend:**
+- Oracle quiz: fetch questions from `GET /api/oracle/quiz`, submit answers to `POST /api/oracle/result`. Response includes `mbti_type`, `class`, `subclass`.
+- Jobs page: `GET /api/jobs` returns `{ jobs: [...] }`. `POST /api/jobs` creates listings.
+- Leaderboard: `GET /api/leaderboard?limit=50` returns `{ leaderboard: [...], your_rank: N }`.
+- All types available from `@/lib/supabase/types`.
+
 ### HANDOFF — Backend Agent Context for New Session
 
-#### Updated Endpoint Count: 22
+#### Updated Endpoint Count: 28
 
 | Route | Method | Purpose |
 |-------|--------|---------|
@@ -918,18 +977,11 @@ Executed tasks from HANDOFF items #3, #4, #5.
 | `/api/achievements` | GET | List achievements + status |
 | `/api/achievements` | POST | Create achievement (T1-T3) |
 | `/api/achievements/[id]/award` | POST | Award to user (T1-T3) |
-
-#### 7 Migrations
-
-| File | What it does |
-|------|-------------|
-| `001_initial_schema.sql` | Pre-existing. Profiles, teams, bounties, quests, achievements, transactions, etc. |
-| `002_election_votes.sql` | Pre-existing. Election voting. |
-| `003_profile_trigger.sql` | Pre-existing. Auto-create profile on signup. |
-| `004_cleanup_and_extend.sql` | Tier 1-5, avatar_config, skills, social_links, indexes. |
-| `005_avatar_items.sql` | avatar_items + player_inventory tables with RLS. |
-| `006_bounty_system.sql` | bounty_submissions table with RLS. |
-| `007_achievement_policies.sql` | INSERT/UPDATE RLS for achievements + user_achievements. |
+| `/api/oracle/quiz` | GET | 12 MBTI quiz questions |
+| `/api/oracle/result` | POST | Score answers → class + subclass |
+| `/api/jobs` | GET | List job listings with filters |
+| `/api/jobs` | POST | Create job listing |
+| `/api/leaderboard` | GET | Top N by XP with rank numbers |
 
 #### What to Do Next
 
@@ -938,7 +990,7 @@ Executed tasks from HANDOFF items #3, #4, #5.
 3. **Economy purchase → inventory integration** — after marketplace purchase, auto-add item to player_inventory
 4. **Achievement auto-check** — trigger achievement checks after key events (first bounty completed, level milestones, etc.)
 5. **Run migrations 004-007 on production Supabase**
-6. **Leaderboard API** — dedicated endpoint for ranked player list by XP/level
+6. **Oracle frontend page** — API exists at /api/oracle/*, needs a `/student/dashboard/oracle/page.tsx`
 
 ---
 
