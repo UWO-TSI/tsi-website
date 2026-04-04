@@ -542,6 +542,110 @@ Each interior includes: exact color palettes, furniture list, station interactio
 - Player avatar works the same inside (2D sprite, WASD, proximity detection at 2 unit range)
 - Camera pulls closer in interiors: distance 10, polar 65°
 
+### HANDOFF — Context for New UXUI Session
+
+#### (1) All Spec Files Written (14 files)
+
+| File | Description |
+|------|-------------|
+| `specs/ux-dashboard.md` | Dashboard shell: 240px sidebar, nav items + states, hamburger at 768px, page routing, onboarding flow |
+| `specs/ux-game-world.md` | **DEPRECATED** — original PS1-style game world spec (replaced by v2) |
+| `specs/ux-game-world-v2.md` | **ACTIVE** — Animal Crossing visual guide: 60+ hex colors, camera, terrain, river, buildings, trees, flowers, props, time-of-day cycle, ambient animations |
+| `specs/ux-directory.md` | Member directory: list view (64px rows), search/filter, tier colors (T1=gold→T5=gray), profile page, edit mode |
+| `specs/tokens.md` | Game-specific design tokens: 13 categories of CSS custom properties (sidebar, tiers, overlays, sprites, etc.) |
+| `specs/ux-shop.md` | Real merch e-commerce: product cards, dual currency (real money + TSI coins), category tabs, detail page, cart stub |
+| `specs/ux-bounty.md` | Bounty board: 2-col card grid overlay, claim/submit/review flow, difficulty indicators, Bounty Hunter application |
+| `specs/ux-leaderboard.md` | Ranked table: time period tabs, your-row highlight, gold/silver/bronze colors, responsive column hiding |
+| `specs/ux-jobs.md` | Full-page job board: search + filters, job cards, type badges (color-coded), member submission form |
+| `specs/ux-oracle.md` | Oracle Temple MBTI quiz: 12 questions, 2-4 answer cards, 4 classes (Warrior/Mage/Healer/Rogue), 16 subclasses, class reveal animation |
+| `specs/ux-onboarding.md` | 3-step onboarding (welcome → profile → avatar) + starter quest checklist (6 quests, 275 XP) |
+| `specs/ux-interiors.md` | Full 3D interiors for HQ (main + admin), Shop, Oracle Temple — furniture, stations, colors, lighting |
+| `specs/oracle-questions.md` | 12 MBTI quiz questions with answer cards, scoring key, tie-breaker rules, class mapping table |
+| `specs/ux-review.md` | Design review of Backend's initial dashboard (8 major deviations flagged) |
+| `specs/ux-review-v2.md` | Design review of Frontend's AC implementation (score 8/10, 6 priority improvements) |
+
+#### (2) Implementation Status
+
+| Spec | Status | Notes |
+|------|--------|-------|
+| `ux-dashboard.md` | ✅ Implemented by Frontend | Sidebar, routing, responsive hamburger all built |
+| `ux-game-world-v2.md` | ✅ Mostly implemented | Palette exact, trees/river/props done. Gaps: flat terrain (needs hills), generic building shapes, no time-of-day cycle |
+| `ux-directory.md` | ✅ Implemented by Frontend | List view, tier badges, XP bars, search/filter all built |
+| `tokens.md` | ✅ Implemented | `web/styles/game-tokens.css` created by Frontend |
+| `ux-interiors.md` | ❌ Not started | Full 3D interiors — next major Frontend task |
+| `ux-shop.md` | ❌ Not started | Backend has shop API, Frontend page is "Coming Soon" |
+| `ux-bounty.md` | ❌ Not started | Backend has bounty API, Frontend page is "Coming Soon" |
+| `ux-leaderboard.md` | ❌ Not started | Frontend page is "Coming Soon" |
+| `ux-jobs.md` | ❌ Not started | Frontend page is "Coming Soon" |
+| `ux-oracle.md` | ❌ Not started | Quiz questions ready in `oracle-questions.md` |
+| `ux-onboarding.md` | ❌ Not started | Onboarding flow not built yet |
+
+#### (3) PS1 → Animal Crossing Art Direction Change
+
+- **Sprint 1 (Mar 27-29):** All specs written for PS1 aesthetic — vertex snapping, low-res FBO, NearestFilter, dithering, dark fog, pixel-crisp sprites
+- **Sprint 2 (Mar 30):** David killed PS1. New direction: Animal Crossing: New Horizons — bright, pastel, rounded, cozy
+- **`ux-game-world.md` is DEPRECATED.** `ux-game-world-v2.md` is the active spec
+- Frontend removed PS1Pipeline.tsx, enabled antialias, native resolution
+- Avatar is still 2D billboard sprite in 3D world (Dave the Diver style) — this survived the pivot
+- All other specs (dashboard, directory, tokens, Phase 2 features) are unaffected by the pivot
+
+#### (4) Design Review Findings
+
+**Review v1 (`ux-review.md`):** Backend's initial dashboard — 8 major deviations (sidebar width, bg color, active indicator, section grouping, font, directory layout, tier badges, XP bars). Frontend fixed all of these when rebuilding.
+
+**Review v2 (`ux-review-v2.md`):** Frontend's AC implementation — score 8/10. Palette is perfect. Gaps:
+1. Terrain is flat (needs simplex noise displacement for rolling hills)
+2. Buildings are generic box+cone (need unique silhouettes per building)
+3. Paths have sharp edges (need feathered/alpha-blended edges)
+4. No time-of-day cycle (expected — start with midday)
+5. Missing some props (signposts, stepping stones, butterflies)
+6. River is straight (spec says gently curving)
+
+#### (5) MBTI Quiz Bank
+
+`specs/oracle-questions.md` — Ready for Frontend to implement:
+- 12 questions covering all 4 MBTI dichotomies (E/I, S/N, T/F, J/P — 3 each)
+- 2-4 answer cards per question with scoring mapped to MBTI letters
+- Scoring: majority wins per axis → 4-letter type → class + subclass
+- Tie-breaker: default to first letter (E, S, T, J)
+- 4 classes: Warrior (action), Mage (analysis), Healer (connection), Rogue (craft)
+- 16 subclasses (one per MBTI type) — full mapping table included
+
+#### (6) What To Do Next
+
+1. **Building interiors** — `specs/ux-interiors.md` is written, Frontend needs to build HQ Main Room first
+2. **Terrain elevation** — biggest visual gap, add simplex noise to grass mesh
+3. **Onboarding flow** — `specs/ux-onboarding.md` is ready, needs Frontend implementation
+4. **Oracle quiz** — `specs/ux-oracle.md` + `specs/oracle-questions.md` are ready
+5. **Phase 2 pages** — shop, bounty, leaderboard, jobs all spec'd, Backend APIs exist
+6. **Time-of-day cycle** — spec has full 7-phase light table in `ux-game-world-v2.md` Section 8
+7. **Design review** — once interiors or new pages are built, review against specs
+8. **Mobile specs** — desktop-first for now, mobile specs needed eventually
+
+#### (7) Key Files to Read First
+
+1. `CLAUDE.md` — project bible, team roles, current state
+2. `AGENT_LOG.md` — full team communication history
+3. `specs/ux-game-world-v2.md` — **THE** active visual spec (AC style, 60+ hex codes)
+4. `specs/ux-interiors.md` — building interiors (next major spec for Frontend)
+5. `specs/ux-dashboard.md` — dashboard layout reference
+6. `specs/ux-directory.md` — directory/profile reference
+7. `specs/tokens.md` — all design tokens
+8. `web/DESIGN_SYSTEM.md` — base marketing site design system
+9. `web/styles/tokens.css` — base CSS custom properties
+
+#### (8) Gotchas
+
+- **`ux-game-world.md` is DEPRECATED** — don't reference it, use `ux-game-world-v2.md`
+- **David answers design questions via `AskUserQuestion`** — always use multi-choice format, he prefers scrollable options
+- **UXUI writes specs only, never code** — if you need code changes, write a spec and tell Frontend
+- **File ownership is strict** — UXUI owns `specs/ux*.md` and `specs/tokens.md` only
+- **Backend built 24+ pages** that aren't all spec'd — some are beyond MVP scope (kanban, calendar, mentorship, portfolio, tools)
+- **Shop sells real merchandise** (not avatar cosmetics) — dual currency: real money + TSI coins
+- **Avatar is 2D billboard sprite** even though the world is 3D — Dave the Diver style, layered composition (body/outfit/hair/accessories)
+- **Tier system is 5 tiers** not 4: T1=gold (David), T2=blue (presidents), T3=cyan (PM/VP), T4=green (dev/director), T5=gray (volunteer)
+- **Commit prefix is `[UXUI]`** — always use it
+
 ---
 
 ## Frontend
