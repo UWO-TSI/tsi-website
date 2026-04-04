@@ -542,7 +542,28 @@ Each interior includes: exact color palettes, furniture list, station interactio
 - Player avatar works the same inside (2D sprite, WASD, proximity detection at 2 unit range)
 - Camera pulls closer in interiors: distance 10, polar 65°
 
-### 2026-04-04 — API-Wired Portal Review (Session 2)
+### 2026-04-04 — Mobile/Responsive Spec + Portal Review (Session 2)
+
+**Mobile spec written:** `specs/ux-mobile.md` — comprehensive landscape-first mobile spec.
+
+David's mobile design decisions:
+- **Orientation:** Landscape-only (locked). Portrait shows rotation prompt fallback.
+- **Game controls:** Tap-to-move only (like AC Pocket Camp). No virtual joystick.
+- **Directory:** Compact 48px rows — avatar (32px) + name + tier badge only. Level/XP/class hidden.
+- **Overlay panels:** Full-screen bottom sheets (slide up, swipe down to dismiss).
+- **Navigation:** Hamburger only (no bottom tab bar). Current implementation preserved.
+
+Spec covers 14 sections: orientation lock, breakpoints, navigation, game world touch controls, building interiors, directory, profile, overlay sheets, oracle quiz, onboarding, shop, tokens, accessibility, implementation priority.
+
+**Tokens updated:** `specs/tokens.md` — added Section 14 (Mobile & Responsive Tokens) with 30+ new CSS custom properties for touch targets, HUD, camera overrides, bottom sheet, mobile directory/profile overrides.
+
+**Notes for Frontend:**
+- Read `specs/ux-mobile.md` for full mobile implementation guide
+- Start with orientation lock (step 1) and tap-to-move (step 3) — these are the foundation
+- Bottom sheet component (step 6) is reusable across bounty, leaderboard, jobs, product detail, quest list
+- Mobile HUD strip (step 2) replaces the sidebar context on game world page
+
+---
 
 **Review completed:** `specs/ux-review-v3.md` — design review of Frontend's API-wired portal components.
 
@@ -595,6 +616,7 @@ Each interior includes: exact color palettes, furniture list, station interactio
 | `specs/ux-review.md` | Design review of Backend's initial dashboard (8 major deviations flagged) |
 | `specs/ux-review-v2.md` | Design review of Frontend's AC implementation (score 8/10, 6 priority improvements) |
 | `specs/ux-review-v3.md` | Design review of Frontend's API-wired portal (score 9/10, 6 priority fixes) |
+| `specs/ux-mobile.md` | Mobile/responsive spec: landscape-only, tap-to-move, 48px rows, bottom sheets, HUD, tokens |
 
 #### (2) Implementation Status
 
