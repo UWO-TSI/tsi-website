@@ -131,36 +131,70 @@ Each building has a floating label above it, visible from a distance.
 
 ---
 
-## 5. Player Avatar
+## 5. Player Avatar — 2D Sprite in 3D World (Dave the Diver Style)
 
-### 5.1 Model
+> **Art direction change (2026-03-29):** Avatars are 2D sprites on billboard planes, NOT 3D models. This gives a distinctive mixed-media look — 2D characters walking through a 3D PS1 environment.
+
+### 5.1 Sprite Setup
 
 | Property | Value |
 |----------|-------|
-| Base | Quaternius Ultimate Modular character (GLB) |
-| Parts | 4 swappable SkinnedMeshes: head, torso, legs, feet |
-| Animations | Quaternius Universal Animation Library: `idle`, `walk` |
-| Animation blending | Crossfade `0.2s` between idle ↔ walk |
-| Nameplate | drei `<Html>` above head: name + "Lv.{n}" |
+| Component | drei `<Billboard>` with textured `<planeGeometry>` |
+| Rendering | Always faces camera (billboard behavior) |
+| Size | `~1.2 × 1.8` units (width × height) |
+| Sprite source | Sprite sheets (PNG) — generated via Nano Banana or hand-drawn |
+| Texture filter | `THREE.NearestFilter` (pixel-crisp, matches PS1 aesthetic) |
+| Placeholder | Colored rectangle (`1.2 × 1.8` plane, solid color) until real sprites exist |
 
-### 5.2 Movement
+### 5.2 Sprite Sheet Animation
+
+| Property | Value |
+|----------|-------|
+| Idle | 1–2 frames, subtle breathing/bob loop |
+| Walk | 4–8 frames per direction (down, up, left, right) |
+| Frame rate | `8 FPS` (retro feel) |
+| Frame cycling | `useFrame()` — advance frame index based on delta time |
+| Direction | Flip sprite horizontally for left/right (or use separate sheet columns) |
+| Transition | Instant swap between idle ↔ walk (no blend — sprite style) |
+
+### 5.3 Layered Sprite Composition
+
+Avatar customization via stacked sprite layers at slight z-offsets:
+
+```
+Layer stack (front to back):
+  accessories  (z-offset: +0.003)  — hats, glasses
+  hair         (z-offset: +0.002)  — hair style + color
+  outfit       (z-offset: +0.001)  — clothing
+  body         (z-offset:  0.000)  — base body + skin tone
+```
+
+| Property | Value |
+|----------|-------|
+| Layer count | 4 layers (body, outfit, hair, accessories) |
+| Z-offset per layer | `0.001` units (prevents z-fighting) |
+| Each layer | Separate `<planeGeometry>` with its own sprite sheet texture |
+| Color tinting | `mesh.material.color.set()` for skin tone / hair color variants |
+| Alpha | Each sprite sheet has transparent background (PNG with alpha) |
+
+### 5.4 Movement
 
 | Property | Value |
 |----------|-------|
 | WASD / Arrow keys | Move in 4/8 directions relative to camera |
 | Speed | `5` units/second |
 | Click-to-move | Raycast on ground plane, move toward click point |
-| Controller | BVHEcctrl (pmndrs) for collision + camera separation |
-| Rotation | Character faces movement direction, `lerp` rotation at `10` speed |
-| Animation trigger | Speed > `0.1` → walk, else idle |
+| Direction facing | Sprite flips or swaps sheet row based on movement direction |
+| Animation trigger | Speed > `0.1` → walk frames, else idle frames |
 | Boundary | Clamped to map bounds (±40 on x and z) |
+| Collision | Simple radius check against building positions (no BVHEcctrl needed for 2D sprite) |
 
-### 5.3 Nameplate
+### 5.5 Nameplate
 
 | Property | Value |
 |----------|-------|
 | Component | drei `<Html>` |
-| Position | `1.8` units above player origin |
+| Position | `2.0` units above player origin (above sprite top) |
 | Name | `var(--font-size-body-sm)` (14px), `var(--color-text-main)`, weight 700 |
 | Level | `var(--font-size-label)` (12px), `var(--color-text-muted)`, IBM Plex Mono |
 | Background | `rgba(15, 15, 16, 0.6)` |
@@ -432,11 +466,15 @@ Both HQ rooms use the same visual treatment:
 
 ## 12. Visual Reference Summary
 
-**Design decisions (confirmed by David):**
+**Design decisions (confirmed by David + Management):**
 - Terrain: Mixed campus — grass + cobblestone walkways
+- **Player avatar: 2D sprites on billboard planes (Dave the Diver style) — NOT 3D models** (Management directive 2026-03-29)
+- Sprite composition: 4 stacked layers (body, outfit, hair, accessories) at z-offsets
+- Sprite animation: 8 FPS frame cycling, idle (1-2 frames), walk (4-8 frames per direction)
+- Placeholder: colored rectangles until real sprite sheets are generated
 - HQ: Single open room with stations + separate locked admin room (T1-T3)
 - Admin room: Multiple themed stations (terminal, board, podium, chest)
 - Building transitions: Quick fade to black (0.3s/0.3s, ~0.8s total)
 - Overlay panels: Solid dark (#0d1b2a), blue border glow, max 800px centered
 - Camera: 45° isometric, FOV 35°, smooth follow
-- PS1 shader on everything
+- PS1 shader on 3D environment; sprites are pixel-crisp (NearestFilter)

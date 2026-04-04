@@ -9,43 +9,100 @@ import { useTransition } from "./TransitionOverlay";
 const INTERACT_RANGE = 4;
 
 /**
- * Animal Crossing style building — rounded, colorful, cozy
+ * AC-style building per specs/ux-game-world-v2.md Section 6.
+ * Pastel walls, bold roof with overhang, oversized door, arched windows,
+ * chimney, flower boxes, awning. MeshStandardMaterial throughout.
  */
-function ACBuilding({
-  size,
-  color,
-}: {
-  size: [number, number, number];
-  color: string;
-}) {
+function ACBuilding({ size, color }: { size: [number, number, number]; color: string }) {
   const [sx, sy, sz] = size;
-  const roofHeight = sy * 0.4;
+  const roofH = sy * 0.45;
+  const roofColor = new THREE.Color(color).multiplyScalar(0.55);
 
   return (
     <group>
       {/* Walls */}
       <mesh position={[0, sy / 2, 0]} castShadow receiveShadow>
         <boxGeometry args={[sx, sy, sz]} />
-        <meshLambertMaterial color={color} />
+        <meshStandardMaterial color={color} roughness={0.9} metalness={0} />
       </mesh>
-
-      {/* Roof */}
-      <mesh position={[0, sy + roofHeight / 2 - 0.1, 0]} castShadow>
-        <coneGeometry args={[Math.max(sx, sz) * 0.75, roofHeight, 4]} />
-        <meshLambertMaterial color={new THREE.Color(color).multiplyScalar(0.6)} />
+      {/* Roof with overhang */}
+      <mesh position={[0, sy + roofH / 2 - 0.1, 0]} castShadow>
+        <coneGeometry args={[Math.max(sx, sz) * 0.78, roofH, 4]} />
+        <meshStandardMaterial color={roofColor} roughness={0.85} metalness={0} />
       </mesh>
-
-      {/* Door */}
-      <mesh position={[0, 0.6, sz / 2 + 0.01]}>
-        <planeGeometry args={[0.8, 1.2]} />
-        <meshLambertMaterial color="#5a3a1a" />
+      {/* Chimney — v2 spec: #C4A265 */}
+      <mesh position={[sx * 0.25, sy + roofH * 0.4, -sz * 0.2]} castShadow>
+        <boxGeometry args={[0.4, 0.6, 0.4]} />
+        <meshStandardMaterial color="#C4A265" roughness={0.9} metalness={0} />
       </mesh>
-
-      {/* Windows */}
+      {/* Door frame — #6B4226 */}
+      <mesh position={[0, 0.7, sz / 2 + 0.01]}>
+        <planeGeometry args={[1.2, 1.6]} />
+        <meshStandardMaterial color="#6B4226" roughness={0.9} metalness={0} />
+      </mesh>
+      {/* Door — #8B5E3C, oversized */}
+      <mesh position={[0, 0.7, sz / 2 + 0.02]}>
+        <planeGeometry args={[1.0, 1.4]} />
+        <meshStandardMaterial color="#8B5E3C" roughness={0.85} metalness={0} />
+      </mesh>
+      {/* Windows — #B8E4F0 glass, #FFFFFF frame */}
       {[-1, 1].map((side) => (
-        <mesh key={side} position={[side * (sx * 0.3), sy * 0.55, sz / 2 + 0.01]}>
-          <planeGeometry args={[0.5, 0.5]} />
-          <meshLambertMaterial color="#a8d8ea" emissive="#ffeecc" emissiveIntensity={0.15} />
+        <group key={side}>
+          <mesh position={[side * (sx * 0.3), sy * 0.55, sz / 2 + 0.01]}>
+            <planeGeometry args={[0.65, 0.65]} />
+            <meshStandardMaterial color="#FFFFFF" roughness={0.9} metalness={0} />
+          </mesh>
+          <mesh position={[side * (sx * 0.3), sy * 0.55, sz / 2 + 0.02]}>
+            <planeGeometry args={[0.5, 0.5]} />
+            <meshStandardMaterial color="#B8E4F0" roughness={0.4} metalness={0} emissive="#FFE4B0" emissiveIntensity={0.12} />
+          </mesh>
+        </group>
+      ))}
+      {/* Awning over door */}
+      <mesh position={[0, 1.55, sz / 2 + 0.3]} rotation={[0.3, 0, 0]} castShadow>
+        <planeGeometry args={[1.6, 0.5]} />
+        <meshStandardMaterial color={roofColor} roughness={0.85} metalness={0} side={THREE.DoubleSide} />
+      </mesh>
+      {/* Flower boxes under windows */}
+      {[-1, 1].map((side) => (
+        <group key={`fb-${side}`} position={[side * (sx * 0.3), sy * 0.25, sz / 2 + 0.15]}>
+          <mesh castShadow><boxGeometry args={[0.5, 0.12, 0.15]} /><meshStandardMaterial color="#8B6B4A" roughness={0.9} metalness={0} /></mesh>
+          {[-0.15, 0, 0.15].map((dx, i) => (
+            <mesh key={i} position={[dx, 0.12, 0]}><sphereGeometry args={[0.06, 6, 6]} /><meshStandardMaterial color={i === 1 ? "#FFD166" : "#FF8CB0"} roughness={0.8} metalness={0} /></mesh>
+          ))}
+        </group>
+      ))}
+    </group>
+  );
+}
+
+/**
+ * Board/sign — wooden notice board with roof per v2 spec Section 6.4.
+ */
+function BoardSign({ size, color }: { size: [number, number, number]; color: string }) {
+  const [sx, sy] = size;
+  return (
+    <group>
+      {[-0.5, 0.5].map((x) => (
+        <mesh key={x} position={[x * sx * 0.6, sy / 2, 0]} castShadow>
+          <cylinderGeometry args={[0.06, 0.06, sy, 8]} />
+          <meshStandardMaterial color="#8B6B4A" roughness={0.9} metalness={0} />
+        </mesh>
+      ))}
+      <mesh position={[0, sy * 0.65, 0]} castShadow>
+        <boxGeometry args={[sx, sy * 0.5, 0.15]} />
+        <meshStandardMaterial color={color} roughness={0.85} metalness={0} />
+      </mesh>
+      {/* Small roof */}
+      <mesh position={[0, sy * 0.95, 0]} castShadow>
+        <boxGeometry args={[sx * 1.2, 0.08, 0.35]} />
+        <meshStandardMaterial color="#8B6B4A" roughness={0.9} metalness={0} />
+      </mesh>
+      {/* Pinned notes (colored rectangles) */}
+      {[-0.3, 0, 0.3].map((x, i) => (
+        <mesh key={i} position={[x, sy * 0.65 + (i - 1) * 0.08, 0.09]} rotation={[0, 0, (i - 1) * 0.15]}>
+          <planeGeometry args={[0.25, 0.3]} />
+          <meshStandardMaterial color={["#FFD166", "#FF8CB0", "#6BA3D6"][i]} roughness={0.8} metalness={0} />
         </mesh>
       ))}
     </group>
@@ -53,31 +110,34 @@ function ACBuilding({
 }
 
 /**
- * Board/sign — for Bounty Board, Job Board etc.
+ * Leaderboard monument — v2 spec Section 6.6.
  */
-function BoardSign({
-  size,
-  color,
-}: {
-  size: [number, number, number];
-  color: string;
-}) {
-  const [sx, sy] = size;
-
+function LeaderboardMonument({ size, color }: { size: [number, number, number]; color: string }) {
+  const [sx, sy, sz] = size;
   return (
     <group>
-      {/* Posts */}
-      {[-0.5, 0.5].map((x) => (
-        <mesh key={x} position={[x * sx * 0.6, sy / 2, 0]} castShadow>
-          <cylinderGeometry args={[0.06, 0.06, sy, 8]} />
-          <meshLambertMaterial color="#6b5a3a" />
+      {/* Stone base */}
+      <mesh position={[0, sy * 0.3, 0]} castShadow>
+        <cylinderGeometry args={[sx * 0.5, sx * 0.6, sy * 0.6, 8]} />
+        <meshStandardMaterial color={color} roughness={0.92} metalness={0} />
+      </mesh>
+      {/* Column */}
+      <mesh position={[0, sy * 0.6, 0]} castShadow>
+        <cylinderGeometry args={[sx * 0.3, sx * 0.35, sy * 0.5, 8]} />
+        <meshStandardMaterial color={color} roughness={0.92} metalness={0} />
+      </mesh>
+      {/* Gold trophy */}
+      <mesh position={[0, sy * 0.9, 0]} castShadow>
+        <sphereGeometry args={[0.3, 8, 8]} />
+        <meshStandardMaterial color="#FFD166" roughness={0.4} metalness={0.3} />
+      </mesh>
+      {/* Plaques */}
+      {[-0.2, 0, 0.2].map((y, i) => (
+        <mesh key={i} position={[sx * 0.5 + 0.01, sy * 0.25 + y, 0]}>
+          <planeGeometry args={[0.3, 0.12]} />
+          <meshStandardMaterial color={["#FFD166", "#C0C0C0", "#CD7F32"][i]} roughness={0.5} metalness={0.2} />
         </mesh>
       ))}
-      {/* Board */}
-      <mesh position={[0, sy * 0.65, 0]} castShadow>
-        <boxGeometry args={[sx, sy * 0.5, 0.15]} />
-        <meshLambertMaterial color={color} />
-      </mesh>
     </group>
   );
 }
@@ -92,41 +152,21 @@ interface BuildingProps {
   playerPosition: THREE.Vector3;
 }
 
-export default function Building({
-  id,
-  name,
-  position,
-  size,
-  color,
-  href,
-  playerPosition,
-}: BuildingProps) {
+export default function Building({ id, name, position, size, color, href, playerPosition }: BuildingProps) {
   const router = useRouter();
   const { triggerTransition, isTransitioning } = useTransition();
   const [isNear, setIsNear] = useState(false);
-  const buildingCenter = useRef(new THREE.Vector3(...position));
+  const center = useRef(new THREE.Vector3(...position));
 
-  const dist = buildingCenter.current.distanceTo(playerPosition);
-  const near = dist < INTERACT_RANGE;
-
-  useEffect(() => {
-    setIsNear(near);
-  }, [near]);
+  const near = center.current.distanceTo(playerPosition) < INTERACT_RANGE;
+  useEffect(() => { setIsNear(near); }, [near]);
 
   useEffect(() => {
     if (!isNear || isTransitioning) return;
     const handleKey = (e: KeyboardEvent) => {
       if (e.key.toLowerCase() === "e" && href) {
-        // Buildings with interiors: fade-to-black transition
-        // Boards/objects: direct navigation (overlay handled at page level)
-        const isBoard = size[2] < 1;
-        if (isBoard) {
-          router.push(href);
-        } else {
-          triggerTransition(() => {
-            router.push(href);
-          });
-        }
+        if (size[2] < 1) { router.push(href); }
+        else { triggerTransition(() => { router.push(href); }); }
       }
     };
     window.addEventListener("keydown", handleKey);
@@ -134,58 +174,29 @@ export default function Building({
   }, [isNear, isTransitioning, href, router, triggerTransition, size]);
 
   const isBoard = size[2] < 1;
+  const isLeaderboard = id === "leaderboard";
 
   return (
     <group position={position}>
       {isBoard ? (
         <BoardSign size={size} color={color} />
+      ) : isLeaderboard ? (
+        <LeaderboardMonument size={size} color={color} />
       ) : (
         <ACBuilding size={size} color={color} />
       )}
 
-      {/* Building label */}
-      <Html
-        position={[0, size[1] + 1.8, 0]}
-        center
-        distanceFactor={12}
-        style={{ pointerEvents: "none" }}
-      >
-        <div
-          className="whitespace-nowrap font-mono"
-          style={{
-            fontSize: "13px",
-            color: "#2a2a2a",
-            background: "rgba(255, 255, 255, 0.85)",
-            padding: "3px 10px",
-            borderRadius: "6px",
-            fontWeight: 600,
-            boxShadow: "0 1px 4px rgba(0,0,0,0.15)",
-          }}
-        >
+      {/* Label — white pill, dark text */}
+      <Html position={[0, size[1] + 1.8, 0]} center distanceFactor={12} style={{ pointerEvents: "none" }}>
+        <div style={{ fontSize: "13px", color: "#2a2a2a", background: "rgba(255,255,255,0.88)", padding: "3px 10px", borderRadius: "6px", fontWeight: 600, fontFamily: "'IBM Plex Mono',monospace", boxShadow: "0 1px 4px rgba(0,0,0,0.12)", whiteSpace: "nowrap" }}>
           {name}
         </div>
       </Html>
 
-      {/* Interaction prompt */}
       {isNear && (
         <Html position={[0, size[1] + 0.8, 0]} center style={{ pointerEvents: "none" }}>
-          <div
-            className="whitespace-nowrap animate-bounce"
-            style={{
-              fontSize: "14px",
-              color: "#ffffff",
-              background: "#4a6fa5",
-              padding: "5px 14px",
-              borderRadius: "8px",
-              fontWeight: 600,
-              boxShadow: "0 2px 8px rgba(0,0,0,0.25)",
-            }}
-          >
-            Press{" "}
-            <kbd className="font-mono font-bold" style={{ color: "#ffdd99" }}>
-              E
-            </kbd>{" "}
-            to {isBoard ? "view" : "enter"}
+          <div className="animate-bounce" style={{ fontSize: "14px", color: "#fff", background: "#4a6fa5", padding: "5px 14px", borderRadius: "10px", fontWeight: 600, boxShadow: "0 2px 8px rgba(0,0,0,0.2)", whiteSpace: "nowrap" }}>
+            Press <kbd style={{ color: "#FFD166", fontFamily: "'IBM Plex Mono',monospace", fontWeight: 700 }}>E</kbd> to {isBoard ? "view" : "enter"}
           </div>
         </Html>
       )}
