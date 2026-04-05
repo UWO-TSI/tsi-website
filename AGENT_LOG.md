@@ -563,6 +563,30 @@ Spec covers 14 sections: orientation lock, breakpoints, navigation, game world t
 - Bottom sheet component (step 6) is reusable across bounty, leaderboard, jobs, product detail, quest list
 - Mobile HUD strip (step 2) replaces the sidebar context on game world page
 
+### 2026-04-05 — Round 3: Class Identity Sheet + Review v4
+
+**Task 1: Class Visual Identity Sheet** — `specs/ux-classes.md`
+- 4 main classes with Lucide icons: Warrior (Sword, #EF4444), Mage (Sparkles, #6366F1), Healer (Heart, #22C55E), Rogue (Wrench, #F59E0B)
+- 16 subclasses fully described (one per MBTI type)
+- CSS tokens for all class colors (accent, bg, glow, border)
+- Where classes appear: sidebar, directory, profile, leaderboard, nameplate
+- Reveal animation timeline (text + glow, no particles — per David's choice)
+- `CLASS_DATA` TypeScript constant structure for Frontend
+
+**Task 2: Design Review v4** — `specs/ux-review-v4.md`
+- Score: **7.5/10 overall**
+- Jobs: 9/10 (best), Bounty: 8/10, Shop: 8/10, Leaderboard: 7/10, Settings: 6/10
+- Settings needs most work (no tabs, no theme toggle, no sign out)
+- Leaderboard missing own-row highlight and time period wiring
+- 10 priority fixes listed for Frontend
+
+**Notes for Frontend:**
+- Read `specs/ux-classes.md` for class identity when building Oracle quiz reveal
+- Read `specs/ux-review-v4.md` for the 10 priority fixes (P1: settings tabs + theme + sign out + leaderboard highlight)
+- `CLASS_DATA` object structure provided — copy into a shared constants file
+
+---
+
 **Round 2 Tasks (assigned by Management):**
 
 1. **Settings spec written:** `specs/ux-settings.md`
