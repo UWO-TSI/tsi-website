@@ -580,6 +580,23 @@ Spec covers 14 sections: orientation lock, breakpoints, navigation, game world t
 - Leaderboard missing own-row highlight and time period wiring
 - 10 priority fixes listed for Frontend
 
+### 2026-04-05 — Round 4: Review v5 + Status Report
+
+**Task 1: Design Review v5** — `specs/ux-review-v5.md`
+- Onboarding: 8/10 — clean 3-step flow, quest checklist missing
+- Oracle quiz: 7/10 — correct scoring/reveal, uses v1 layout (not v2 encounter), emoji instead of Lucide
+- Auth context: 10/10 — sidebar P1 fix from review v3 is resolved
+- 7 priority fixes listed
+
+**Task 2: Spec Status Report** — `specs/ux-status.md`
+- 18 spec files audited, ~72% implementation coverage
+- 7 Tier 1 items (fix before merge): settings tabs/sign out, leaderboard highlight, oracle icons/colors/exit
+- 10 Tier 2 items (post-launch): quest checklist, theme toggle, class identity in UI, filters
+- 8 Tier 3 items (future sprints): interiors, oracle v2, mobile, avatar creator
+- Settings is weakest page (6/10). Jobs is strongest (9/10).
+
+---
+
 **Oracle Quiz v2 — Card-Game NPC Encounter:** `specs/ux-oracle-v2.md`
 David provided reference image (card-battle game). Oracle quiz is now a card-game encounter:
 - 2D styled backdrop (CSS gradients, no image assets) of Oracle Temple interior
