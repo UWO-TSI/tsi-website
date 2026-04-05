@@ -251,7 +251,7 @@ WAVE 4 (after Frontend commits):
 | `web/components/game/` | Frontend | — |
 | `web/app/student/dashboard/` | Frontend | — |
 | `web/public/assets/` | Frontend | — |
-| `web/app/api/directory/`, `web/app/api/profile/` | Backend | — |
+| `web/app/api/` (all API routes) | Backend | — |
 | `web/lib/supabase/` | Backend | Frontend reads types |
 | `web/supabase/migrations/` | Backend | — |
 | `CLAUDE.md`, `AGENT_LOG.md` structure | Management | all append to own section |
@@ -265,6 +265,49 @@ WAVE 4 (after Frontend commits):
 
 ## Commit Prefixes
 `[QA]`, `[UXUI]`, `[BE]`, `[FE]`, `[MGMT]`
+
+## Push Protocol (MANDATORY — all agents)
+
+**Rule: Push after every meaningful unit of work. Do NOT batch up a full sprint into one push.**
+
+### Cadence
+- **Push after every completed task or feature** (e.g., one page built, one API endpoint, one spec written)
+- **Maximum gap between pushes: 1 feature or ~30 minutes of work**, whichever comes first
+- **Always push before going idle or finishing your session**
+- If you created or modified >3 files since last push, push NOW
+
+### How to Push Without Conflicts
+1. **Only work on YOUR branch** — never commit to another agent's branch or to `main`
+2. **Only edit files you own** (see File Ownership table above) — this is the #1 conflict prevention rule
+3. **AGENT_LOG.md is the exception** — every agent appends to their own section. Always `git pull` your branch before editing AGENT_LOG.md, and only append (never edit other sections)
+4. **Before pushing:** `git pull --rebase origin <your-branch>` to catch any upstream changes
+5. **If QA needs to merge your work:** QA pulls FROM your branch into theirs — you never push to QA's branch
+
+### What a Good Push Looks Like
+```
+# After building one page:
+git add web/app/student/dashboard/bounty/page.tsx web/components/portal/BountyBoard.tsx
+git commit -m "[FE] Build bounty board page — card grid, filters, claim flow"
+git push origin davidliu/frontend
+
+# After writing one spec:
+git add specs/ux-settings.md
+git commit -m "[UXUI] Settings page spec — profile editing, theme toggle, social links"
+git push origin davidliu/uxui
+
+# After building one endpoint:
+git add web/app/api/oracle/route.ts specs/api.md
+git commit -m "[BE] Oracle MBTI quiz endpoint — 12 questions, scoring, class assignment"
+git push origin davidliu/backend
+```
+
+### What NOT to Do
+- ❌ Build 5 features, then push once at the end
+- ❌ Edit files owned by another agent
+- ❌ Push to `main` or another agent's branch
+- ❌ Forget to push before session ends (causes lost work on next merge)
+
+**Management will check push frequency. Agents that batch their work risk merge conflicts and block QA.**
 
 ---
 
