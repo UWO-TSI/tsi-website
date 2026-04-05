@@ -2078,6 +2078,31 @@ Full report in `specs/qa.md` Wave 9.
 
 ---
 
+### 2026-04-05 — Wave 10: Round 4 Merge Readiness Assessment
+
+Merged all Round 3 work (Frontend: onboarding + oracle + auth context, Backend: events API + lint cleanup, UXUI: class identity + oracle v2 spec + review v4). Full integration test.
+
+**Build:** ✅ 60 routes (up from 58)
+**HTTP:** ✅ 36/36 pages return 200
+**Lint:** ❌ 39 errors, 53 warnings (down from 47 errors — Backend fixed 8)
+
+**Round 3 features verified:**
+- Onboarding (3-step): welcome → profile → avatar ✅
+- Oracle quiz (12 MBTI questions + 5-stage reveal): ✅
+- Auth context (UserContext + dynamic sidebar): ✅
+- Events API (GET/POST + RSVP, tier-gated): ✅
+- GameWorld auth wiring (playerName/playerLevel): ✅
+
+**P1 blockers found (2):**
+1. No `/api/shop` route — returns 404, need stub or route
+2. Directory/Profile show raw "HTTP 500" — need error fallback UI
+
+**VERDICT: CONDITIONAL READY** — fix 2 P1s and portal can merge to main.
+
+Full report in `specs/qa.md` Wave 10.
+
+---
+
 ### HANDOFF — Context for New QA Session
 
 #### 1. Test Waves Completed
@@ -2092,13 +2117,14 @@ Full report in `specs/qa.md` Wave 9.
 | Wave 7 | 2026-04-04 | Full integration + first visual browser test | All pages + game world visually verified. Roof color bug fixed. |
 | Wave 8 | 2026-04-04 | Round 2 integration: 5 new pages, 6 new APIs, cleanup | All 5 new pages + 6 APIs verified. 1,967 lines dead code removed. |
 | Wave 9 | 2026-04-05 | Lint fixes + full visual regression (13 pages) | 6 lint errors fixed. Zero regressions. All Round 2 pages render. |
+| Wave 10 | 2026-04-05 | Round 4 merge readiness — 36 pages, 22 APIs, code review | CONDITIONAL READY. 2 P1 blockers: missing /api/shop, raw HTTP 500 on directory/profile. |
 
 #### 2. Current Build Status
 
-- **Build:** ✅ PASSES — 58 routes (Next.js 16.1.6 Turbopack)
-- **Lint:** ❌ FAILS — 47 errors, 48 warnings
+- **Build:** ✅ PASSES — 60 routes (Next.js 16.1.6 Turbopack)
+- **Lint:** ❌ FAILS — 39 errors, 53 warnings
 - **TypeScript:** ✅ No type errors
-- **Dev server:** ✅ All testable pages return HTTP 200
+- **Dev server:** ✅ 36/36 pages return HTTP 200
 
 #### 3. Known Bugs
 
