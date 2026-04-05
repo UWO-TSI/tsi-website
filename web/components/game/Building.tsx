@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState, useEffect, useRef, useMemo } from "react";
+import { Suspense, useEffect, useMemo } from "react";
 import { Html, useGLTF } from "@react-three/drei";
 import { useRouter } from "next/navigation";
 import * as THREE from "three";
@@ -206,12 +206,9 @@ interface BuildingProps {
 export default function Building({ id, name, position, size, color, roofColor, href, playerPosition }: BuildingProps) {
   const router = useRouter();
   const { triggerTransition, isTransitioning } = useTransition();
-  const [isNear, setIsNear] = useState(false);
-  const center = useMemo(() => new THREE.Vector3(...position), [position]);
-
-  useEffect(() => {
-    setIsNear(center.distanceTo(playerPosition) < INTERACT_RANGE);
-  }, [center, playerPosition]);
+  const isNear = useMemo(() => {
+    return new THREE.Vector3(...position).distanceTo(playerPosition) < INTERACT_RANGE;
+  }, [position, playerPosition]);
 
   useEffect(() => {
     if (!isNear || isTransitioning) return;

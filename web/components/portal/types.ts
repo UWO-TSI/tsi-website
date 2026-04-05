@@ -13,6 +13,7 @@ export type {
   ClassName,
   RankTitle,
   Position,
+  AvatarConfig,
   SocialLinks,
 } from "@/lib/supabase/types";
 

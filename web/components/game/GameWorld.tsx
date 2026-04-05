@@ -18,6 +18,15 @@ import { useUser } from "@/components/portal/UserContext";
  * flowers, props all sourced from the v2 spec hex values.
  */
 
+// Seeded PRNG — deterministic to satisfy React Compiler purity rules
+function seededRandom(seed: number) {
+  let s = seed;
+  return () => {
+    s = (s * 16807 + 0) % 2147483647;
+    return (s - 1) / 2147483646;
+  };
+}
+
 // ─── Palette from v2 spec Section 3 ────────────────────────────
 const P = {
   skyTop: "#87CEEB", skyBottom: "#B8E4F0",
@@ -232,13 +241,14 @@ function River() {
 
   const { sparkleGeo, sparklePhases } = useMemo(() => {
     const count = 50;
+    const rng = seededRandom(42);
     const positions = new Float32Array(count * 3);
     const phases = new Float32Array(count);
     for (let i = 0; i < count; i++) {
-      positions[i * 3] = (Math.random() - 0.5) * 70;
+      positions[i * 3] = (rng() - 0.5) * 70;
       positions[i * 3 + 1] = 0.08;
-      positions[i * 3 + 2] = 3 + (Math.random() - 0.5) * 2.5;
-      phases[i] = Math.random() * Math.PI * 2;
+      positions[i * 3 + 2] = 3 + (rng() - 0.5) * 2.5;
+      phases[i] = rng() * Math.PI * 2;
     }
     const geo = new THREE.BufferGeometry();
     geo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
@@ -370,13 +380,14 @@ const BUTTERFLY_COUNT = 5;
 function Butterflies() {
   const ref = useRef<THREE.Points>(null);
   const { geo, seeds } = useMemo(() => {
+    const rng = seededRandom(99);
     const positions = new Float32Array(BUTTERFLY_COUNT * 3);
     const s = new Float32Array(BUTTERFLY_COUNT);
     for (let i = 0; i < BUTTERFLY_COUNT; i++) {
-      positions[i * 3] = (Math.random() - 0.5) * 30;
+      positions[i * 3] = (rng() - 0.5) * 30;
       positions[i * 3 + 1] = 2;
-      positions[i * 3 + 2] = (Math.random() - 0.5) * 30;
-      s[i] = Math.random() * Math.PI * 2;
+      positions[i * 3 + 2] = (rng() - 0.5) * 30;
+      s[i] = rng() * Math.PI * 2;
     }
     const g = new THREE.BufferGeometry();
     g.setAttribute("position", new THREE.BufferAttribute(positions, 3));

@@ -7,13 +7,13 @@ import { TIER_COLORS } from "./types";
 import type { DirectoryMember, Tier } from "@/lib/supabase/types";
 
 export default function MemberDirectory() {
+  const [members, setMembers] = useState<DirectoryMember[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [filterOpen, setFilterOpen] = useState(false);
   const [tierFilter, setTierFilter] = useState<Set<Tier>>(new Set());
   const [statusFilter, setStatusFilter] = useState<"active" | "all">("active");
-  const [members, setMembers] = useState<DirectoryMember[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   const fetchMembers = useCallback(async () => {
     setLoading(true);
@@ -57,6 +57,25 @@ export default function MemberDirectory() {
       return next;
     });
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center" style={{ padding: "80px 0" }}>
+        <Loader2
+          className="animate-spin"
+          style={{ width: "28px", height: "28px", color: "var(--color-accent-cyan)" }}
+        />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center" style={{ padding: "80px 0" }}>
+        <p style={{ fontSize: "16px", color: "var(--color-text-muted)" }}>{error}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto" style={{ maxWidth: "960px", padding: "24px" }}>

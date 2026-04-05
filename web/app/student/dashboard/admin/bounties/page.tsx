@@ -24,10 +24,6 @@ export default function AdminBountiesPage() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"pending" | "all">("pending");
 
-  useEffect(() => {
-    fetchBounties();
-  }, [filter]);
-
   async function fetchBounties() {
     const supabase = createClient();
     let query = supabase
@@ -43,6 +39,11 @@ export default function AdminBountiesPage() {
     setBounties((data as unknown as PendingBounty[]) ?? []);
     setLoading(false);
   }
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- async fetch, setState is after await
+    fetchBounties();
+  }, [filter]);
 
   async function approveBounty(id: string, difficulty: number) {
     const supabase = createClient();

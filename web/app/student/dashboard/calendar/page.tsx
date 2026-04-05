@@ -147,6 +147,7 @@ export default function CalendarPage() {
   const [exportTooltip, setExportTooltip] = useState(false);
 
   /* fetch events for visible range */
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- async fetch, setState is after await
   useEffect(() => {
     let cancelled = false;
     const supabase = createClient();
