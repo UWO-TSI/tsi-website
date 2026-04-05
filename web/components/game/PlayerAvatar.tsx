@@ -47,9 +47,11 @@ const keys: Record<string, boolean> = {};
 interface PlayerAvatarProps {
   spawnPosition: [number, number, number];
   onMove: (position: THREE.Vector3) => void;
+  playerName?: string;
+  playerLevel?: number;
 }
 
-export default function PlayerAvatar({ spawnPosition, onMove }: PlayerAvatarProps) {
+export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Player", playerLevel = 1 }: PlayerAvatarProps) {
   const groupRef = useRef<THREE.Group>(null);
   const meshRef = useRef<THREE.Mesh>(null);
   const positionRef = useRef(new THREE.Vector3(...spawnPosition));
@@ -256,10 +258,10 @@ export default function PlayerAvatar({ spawnPosition, onMove }: PlayerAvatarProp
           }}
         >
           <div style={{ fontSize: "14px", fontWeight: 700, color: "#f1ffff", lineHeight: 1.2 }}>
-            Player
+            {playerName}
           </div>
           <div style={{ fontSize: "12px", color: "#9ca3af", fontFamily: "'IBM Plex Mono', monospace", lineHeight: 1.2 }}>
-            Lv. 1
+            Lv. {playerLevel}
           </div>
         </div>
       </Html>

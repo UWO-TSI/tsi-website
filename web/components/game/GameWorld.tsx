@@ -8,6 +8,7 @@ import PlayerAvatar from "./PlayerAvatar";
 import Building from "./Building";
 import { getTerrainHeight, valueNoise } from "./terrain";
 import { NatureTree, NatureBush, NatureFlowerCluster, NatureFence, NatureMushroom, NatureStump } from "./NatureModels";
+import { useUser } from "@/components/portal/UserContext";
 
 /**
  * Game World v2 — Animal Crossing: New Horizons visual style.
@@ -503,7 +504,7 @@ function Props() {
 }
 
 // ─── Scene ──────────────────────────────────────────────────────
-function Scene() {
+function Scene({ playerName, playerLevel }: { playerName: string; playerLevel: number }) {
   const cameraRef = useRef<CameraControls>(null);
   const [playerPos, setPlayerPos] = useState<THREE.Vector3>(new THREE.Vector3(...SPAWN_POSITION));
 
@@ -552,13 +553,17 @@ function Scene() {
         return <Building key={b.id} id={b.id} name={b.name} position={[b.position[0], y, b.position[2]]} size={b.size} color={b.color} roofColor={b.roofColor} href={b.href} playerPosition={playerPos} />;
       })}
 
-      <PlayerAvatar spawnPosition={SPAWN_POSITION} onMove={handlePlayerMove} />
+      <PlayerAvatar spawnPosition={SPAWN_POSITION} onMove={handlePlayerMove} playerName={playerName} playerLevel={playerLevel} />
     </>
   );
 }
 
 // ─── Canvas (v2 spec Section 2) ─────────────────────────────────
 export default function GameWorld() {
+  const { profile } = useUser();
+  const playerName = profile?.display_name || "Player";
+  const playerLevel = profile?.level ?? 1;
+
   return (
     <div style={{ width: "100%", height: "100%", minHeight: "100vh", background: P.skyBottom }}>
       <Canvas
@@ -571,7 +576,7 @@ export default function GameWorld() {
         }}
       >
         <Suspense fallback={null}>
-          <Scene />
+          <Scene playerName={playerName} playerLevel={playerLevel} />
         </Suspense>
       </Canvas>
     </div>

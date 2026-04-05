@@ -14,6 +14,7 @@ import {
   X,
 } from "lucide-react";
 import type { ComponentType } from "react";
+import { useUser } from "./UserContext";
 
 interface NavItem {
   label: string;
@@ -39,6 +40,9 @@ interface SidebarProps {
 
 export default function Sidebar({ onClose }: SidebarProps) {
   const pathname = usePathname();
+  const { profile } = useUser();
+  const userName = profile?.display_name || "Player";
+  const userLevel = profile?.level ?? 1;
 
   const isActive = (href: string) => {
     if (href === "/student/dashboard") return pathname === href;
@@ -73,7 +77,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
             className="text-sm truncate"
             style={{ color: "var(--color-text-main)", fontWeight: 700 }}
           >
-            Player
+            {userName}
           </p>
           <p
             className="font-mono"
@@ -82,7 +86,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
               color: "var(--color-text-muted)",
             }}
           >
-            Lv. 1
+            Lv. {userLevel}
           </p>
         </div>
         {/* Close button — only visible in mobile overlay */}
