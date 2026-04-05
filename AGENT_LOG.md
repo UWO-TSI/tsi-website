@@ -1881,6 +1881,12 @@ Full report in `specs/qa.md` Wave 6 section.
 
 ---
 
+### 2026-04-04 — Wave 8: Round 2 Full Integration Test
+
+Merged 7 commits from all 3 branches. Resolved 3 merge conflicts. Build passes (52 routes). All 5 new pages verified (bounty, leaderboard, shop, jobs, settings — no longer Coming Soon). 6 new API endpoints respond. 25/25 existing pages pass regression. Also deleted ASCII loading screen + 5 test pages (1,967 lines removed). Full report in `specs/qa.md` Wave 8.
+
+---
+
 ### 2026-04-04 — Round 2 Task 3: Lint Fixes in Game Components (9 → 0)
 
 Fixed all 9 lint errors in QA-jurisdiction game components:

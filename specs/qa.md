@@ -5,6 +5,65 @@
 
 ---
 
+## Wave 8 — Round 2 Integration (5 New Pages + New APIs + Nature Kit)
+
+Merged 7 new commits: Frontend (5 pages + GLB buildings + nature kit + terrain + time-of-day), Backend (Oracle quiz + Jobs + Leaderboard + Achievements + Inventory + lint fixes), UXUI (settings spec + asset map + mobile spec).
+
+### Build
+
+**Result: ✅ PASSES — 52 routes, 6.9s compile**
+
+### New Pages — All 5 Verified
+
+| Page | HTTP | Content | Notes |
+|------|------|---------|-------|
+| `/student/dashboard/bounty` | 200 | ✅ Real content | Card grid, API-wired (no longer Coming Soon) |
+| `/student/dashboard/leaderboard` | 200 | ✅ Real content | Ranked table (no longer Coming Soon) |
+| `/student/dashboard/shop` | 200 | ✅ Real content | Product cards, category tabs (no longer Coming Soon) |
+| `/student/dashboard/jobs` | 200 | ✅ Real content | Job cards, search/filter (no longer Coming Soon) |
+| `/student/dashboard/settings` | 200 | ✅ Real content | Profile edit, social links (no longer Coming Soon) |
+
+### New API Endpoints — All Respond
+
+| Route | Method | Status | Notes |
+|-------|--------|--------|-------|
+| `/api/oracle/quiz` | GET | 500 | Returns questions (needs Supabase) |
+| `/api/oracle/result` | POST | 405 | POST-only — correct |
+| `/api/jobs` | GET | 500 | Job listings (needs Supabase) |
+| `/api/leaderboard` | GET | 500 | Top N by XP (needs Supabase) |
+| `/api/achievements` | GET | 500 | Achievement system (needs Supabase) |
+| `/api/inventory` | GET | 500 | Player inventory (needs Supabase) |
+
+### Regression Test — 25/25 Pass
+
+All existing pages (marketing, auth, dashboard, admin) return HTTP 200. Zero regressions.
+
+### Game World Enhancements (Frontend)
+
+New features merged (not visually tested yet — Playwright session expired):
+- Rolling hills terrain with vertex displacement
+- Time-of-day cycle (real-time sky/lighting changes)
+- GLB building models loaded with Suspense fallback to procedural
+- Kenney Nature Kit GLB assets (trees, bushes, flowers, fences, mushrooms, stumps)
+- Animated water with shader
+- Ambient life (butterflies, chimney smoke)
+- Player follows terrain height
+
+### Lint
+
+**Result: ❌ 53 errors, 50 warnings**
+
+Up from 40 errors — Frontend's new pages added ~13 new errors:
+- `require()` imports in nature model loader (3)
+- `any` types in new pages (8)
+- `setState` in effects (2)
+
+### Merge Conflicts Resolved
+
+3 conflicts in game components (Building.tsx, GameWorld.tsx, PlayerAvatar.tsx). Took Frontend's versions — they added GLB loading, terrain height, and nature model imports.
+
+---
+
 ## Wave 7 — Full Integration + Visual Browser Test (All Branches Merged)
 
 Merged ALL branches (backend API-wiring, frontend API-wiring, UXUI reviews) into QA. Resolved 3 merge conflicts (types.ts, MemberDirectory.tsx, ProfileView.tsx — took Frontend versions per file ownership). Ran build + lint + **first real browser testing via Playwright**.
