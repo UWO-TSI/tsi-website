@@ -30,14 +30,14 @@ WAVE 4 (after Frontend commits):
 
 **Goal:** Establish baseline, document existing schema, unblock Backend.
 
-- [ ] Run `cd web && npm run build` — log ALL errors/warnings to `specs/qa.md`
-- [ ] Run `cd web && npm run lint` — log ALL errors/warnings to `specs/qa.md`
-- [ ] Test existing auth flow: signup with `TETHOS-W26` → login → election redirect → success screen
-- [ ] Test all 5 marketing pages load: `/`, `/npo`, `/company`, `/sponsor`, `/student`
-- [ ] **CRITICAL:** Read `web/lib/supabase/types.ts` and document the full `Profile` type (all ~30 fields) in `specs/qa.md` — Backend needs this to audit
-- [ ] Read `web/lib/supabase/middleware.ts` and document current routing logic in `specs/qa.md`
-- [ ] Read `web/supabase/migrations/001_initial_schema.sql` (if exists) and document the full profiles table schema
-- [ ] Log your findings in your section of this file
+- [x] Run `cd web && npm run build` — ✅ PASSES, logged to `specs/qa.md`
+- [x] Run `cd web && npm run lint` — ❌ FAILS (~25 errors, ~30 warnings), logged to `specs/qa.md`
+- [x] Test existing auth flow — ⚠️ N/A: no auth code exists on any branch (documented)
+- [x] Test all 5 marketing pages load — ✅ ALL PASS as static pages
+- [x] **CRITICAL:** `web/lib/supabase/types.ts` — ⚠️ FILE DOES NOT EXIST (no Supabase code on any branch)
+- [x] `web/lib/supabase/middleware.ts` — ⚠️ FILE DOES NOT EXIST
+- [x] `web/supabase/migrations/` — ⚠️ DIRECTORY DOES NOT EXIST — entirely greenfield
+- [x] Log findings in QA section of this file — DONE
 
 **Output:** `specs/qa.md` with build errors, auth test results, and full existing schema documentation.
 
@@ -49,14 +49,14 @@ WAVE 4 (after Frontend commits):
 
 **Phase 2 — Spec the remaining features. Ask David design-detail questions (multi-choice, batched) for each before writing.**
 
-- [ ] `specs/ux-shop.md` — Shop interior, item grid catalog, item card (icon + name + price + rarity), purchase confirmation, category tabs (outfits, effects, merch, profile), coin balance display
-- [ ] `specs/ux-bounty.md` — Bounty board overlay, bounty card (title, description, reward, deadline, difficulty+category tags, solo/team), claim flow, submission flow, active bounty tracking, Bounty Hunter application form
-- [ ] `specs/ux-leaderboard.md` — Leaderboard overlay, ranked list, your-rank highlight, time period tabs, stats displayed
-- [ ] `specs/ux-jobs.md` — Job board overlay, job listing card, filter/search, member submission form
-- [ ] `specs/ux-oracle.md` — Oracle Temple interior, MBTI quiz flow (question count, question UI, answer format), class reveal animation, 4 main classes + 16 subclass visual identity
-- [ ] `specs/ux-onboarding.md` — Welcome screen → profile form → avatar creator → tutorial → quest checklist with rewards
-- [ ] Design review of Frontend's implementation once building starts
-- [ ] Update AGENT_LOG.md
+- [x] `specs/ux-shop.md` — E-commerce catalog, standard product cards, dual currency, category tabs, product detail, cart stub
+- [x] `specs/ux-bounty.md` — 2-col card grid overlay, claim/submit/review flow, Bounty Hunter application
+- [x] `specs/ux-leaderboard.md` — Ranked table, time period tabs, your-row highlight
+- [x] `specs/ux-jobs.md` — Full-page job board, search + filters, member submission form
+- [x] `specs/ux-oracle.md` — Card-based MBTI quiz (12 Q), 4 classes + 16 subclasses, class reveal animation
+- [x] `specs/ux-onboarding.md` — Welcome → profile → avatar → quest checklist (6 quests, 275 XP)
+- [x] Design review of Backend's dashboard implementation — findings in `specs/ux-review.md`
+- [x] Update AGENT_LOG.md
 
 **Rules:** Same as Wave 1 — specs only, no code. Ask David before writing. Multi-choice. Implementation-ready detail.
 
@@ -272,7 +272,7 @@ WAVE 4 (after Frontend commits):
 
 | Agent | Blocked On | Waiting For | Status |
 |-------|-----------|-------------|--------|
-| Backend | Existing schema documentation | **QA to document profiles table** | ⚠️ QA hasn't started — BLOCKING BACKEND |
+| Backend | Existing schema documentation | **QA to document profiles table** | ✅ RESOLVED — QA baseline committed (385098a), see `specs/qa.md` |
 | Frontend | Supabase types for API integration | Backend to commit types.ts | ⏳ Building with mocks — will swap when types land |
 | ~~Frontend~~ | ~~Visual specs~~ | ~~UXUI specs~~ | ✅ RESOLVED |
 | ~~Frontend~~ | ~~Waiting for wave order~~ | ~~Management approval~~ | ✅ RESOLVED — approved to start early |
@@ -352,6 +352,80 @@ See `specs/asset-stack.md` for the complete confirmed stack:
 - Multiplayer (deferred): Colyseus (NOT Supabase Realtime)
 - Total asset cost: $0 (all CC0/free)
 
+### 2026-03-30 — SPRINT 2: Animal Crossing Visual Overhaul
+
+**Direction from David:** The game must LOOK and FEEL like Animal Crossing. The current implementation is too dark, too pixelated, too PS1. We're going for cozy, bright, colorful, inviting — not gritty/retro.
+
+**PS1 shader is REMOVED.** No more vertex snapping, no low-res render, no pixelation. Full resolution, antialiased, clean rendering.
+
+**All branches now have the working merged codebase (test-merge).** Game world renders: blue sky, green terrain, placeholder buildings, trees, character sprite walks, building interaction works.
+
+**What needs fixing NOW (in priority order):**
+
+---
+
+#### @UXUI — URGENT: Refined Visual Guide for Animal Crossing Style
+
+**Your existing specs described a PS1/terminal aesthetic. That direction has changed. David wants Animal Crossing.**
+
+Write a NEW spec: `specs/ux-game-world-v2.md` that gives Frontend a **clear visual blueprint** for an Animal Crossing-style world. Include:
+
+1. **Reference images** — describe exactly which Animal Crossing scenes/screenshots to emulate. Name specific games (AC: New Horizons, AC: Wild World, etc.) and describe the camera angle, lighting mood, color palette, and terrain feel.
+
+2. **Camera** — Animal Crossing uses a slightly elevated perspective camera (not true isometric). Describe the exact angle, distance, and FOV that matches. Should camera rotate freely or be locked?
+
+3. **Terrain** — AC has rolling gentle hills, lush multi-tone grass, dirt paths with soft edges, flowers, rivers/ponds with rounded edges, cliffs. Describe what our terrain should look like — flat or with gentle elevation? What ground colors? Path style (dirt, stone, brick)?
+
+4. **Buildings** — AC buildings are rounded, pastel-colored, have cute proportions (slightly oversized doors, small windows, decorative chimneys, awnings). Describe the exact style for each building (HQ, Shop, Oracle Temple). Include colors, proportions, decorative elements.
+
+5. **Trees & vegetation** — AC trees are round and lush (not pointy cones). Describe shape, color variety, size. Include bushes, flowers (multiple colors), stumps, weeds.
+
+6. **Lighting** — AC has bright, warm daylight with soft shadows. Golden hour glow. Describe the exact lighting setup.
+
+7. **Color palette** — provide exact hex colors for: grass (multiple tones), paths, sky, water, building walls, roofs, tree trunks, foliage, flowers. This should be a definitive palette Frontend copies.
+
+8. **Props & details** — fences, signs, wells, bridges, stepping stones, market stalls, streetlamps. What should be scattered around the village?
+
+9. **Overall feel** — describe the MOOD. Cozy, welcoming, playful, lived-in. Not sterile or empty.
+
+**Ask David any clarifying questions FIRST (multi-choice). Then write the spec. Frontend is blocked until you deliver this.**
+
+---
+
+#### @Frontend — BLOCKED on UXUI v2 spec. Prep work:
+
+While waiting for `specs/ux-game-world-v2.md`:
+
+1. **Convert building FBX assets to GLB in Blender** — the Quaternius FBX files have external textures. Write a Blender Python script (or use the Blender CLI) to batch-convert all FBXs in `public/assets/buildings/` to self-contained `.glb` files with textures embedded. This unblocks real 3D models.
+
+2. **Research Animal Crossing R3F implementations** — search GitHub for any existing AC-style Three.js/R3F projects. Look for terrain generation approaches, camera rigs, and lighting setups that match the AC feel.
+
+3. **Once UXUI delivers v2 spec** — implement the visual overhaul. Replace the current placeholder geometry with AC-style terrain, buildings, vegetation per the spec's exact color palette and proportions.
+
+4. **Fix the terrain z-fighting** — paths and grass at the same Y cause flicker. Use proper Y offsets or polygon offset.
+
+5. **Do NOT add PS1 shader back.** Clean, antialiased rendering only.
+
+---
+
+#### @Backend — Continue Phase 2 wiring
+
+1. Wire real Supabase queries into the dashboard pages that are using mock data
+2. Test all API endpoints work with real Supabase (need env vars set)
+3. Implement the MBTI quiz endpoint using `specs/oracle-questions.md`
+4. Add event system API (CRUD events, RSVP)
+
+---
+
+#### @QA — Integration testing
+
+1. Merge all branches into your QA branch
+2. Run `npm run build` — log any new errors
+3. Test the game world in browser — character movement, building interaction, sidebar nav
+4. Test all dashboard pages load without errors
+5. Cross-browser test (Chrome, Safari, Firefox)
+6. Log everything to `specs/qa.md`
+
 ---
 
 ## UXUI
@@ -409,6 +483,377 @@ See `specs/asset-stack.md` for the complete confirmed stack:
 - Multiplayer presence indicators when Colyseus ships
 
 **No blockers. UXUI is idle and available for Phase 2 spec work or design review.**
+
+### 2026-03-29 — Spec Updates + Phase 2 COMPLETE
+
+**Spec updates for art direction pivot:**
+- Updated `specs/ux-game-world.md` Section 5 — PlayerAvatar rewritten from 3D Quaternius models to 2D billboard sprites (Dave the Diver style). Added sprite sheet animation (8 FPS), layered composition (4 layers at z-offsets), NearestFilter.
+- Updated `specs/ux-dashboard.md` Section 6.2 — Avatar creator preview changed from 3D bust to 2D layered sprite at 4× scale with `image-rendering: pixelated`.
+- Updated `specs/tokens.md` Section 10 — Added sprite layer tokens (z-offset, frame rate, billboard dimensions).
+
+**Phase 2 design questions asked (all answered by David):**
+
+| Question | David's Choice |
+|----------|---------------|
+| Shop layout | **Full-page e-commerce catalog** — real merch, not avatar cosmetics |
+| Product card | **Standard e-commerce card** — photo, name, price, add-to-cart |
+| Shop currency | **Both** — real money (Stripe) + TSI coins |
+| Bounty board | **Card grid overlay** — 2-column cards with filter tabs |
+| Leaderboard | **Ranked table** — simple, time period tabs, your-row highlighted |
+| Oracle quiz | **Card-based** — question presented, 2-4 answer cards in front, click most accurate, progress bar at bottom |
+| Job board | **Full-page** — search + filters, job listing cards, member submission |
+| Onboarding tutorial | **Quest checklist** — self-directed exploration with XP rewards (6 quests, 275 XP total) |
+
+**Phase 2 specs written (all committed, 1,488 lines total):**
+
+- [x] `specs/ux-shop.md` — E-commerce catalog, standard product cards, dual currency (real money + TSI coins), category tabs, product detail page with variants, cart stub
+- [x] `specs/ux-bounty.md` — 2-col card grid overlay, bounty cards (title/reward/deadline/difficulty/tags), claim flow (6 steps), submission form, Bounty Hunter application
+- [x] `specs/ux-leaderboard.md` — Ranked table, time period tabs (weekly/monthly/all-time), your-row sticky highlight, responsive column hiding, gold/silver/bronze rank colors
+- [x] `specs/ux-jobs.md` — Full page with search + filter tabs, job listing cards (company/role/type/location), type-colored badges, member submission form, admin review flow
+- [x] `specs/ux-oracle.md` — Card-based MBTI quiz (12 questions, 2-4 answer cards each), 4 main classes (Warrior/Mage/Healer/Rogue), 16 subclasses, dramatic class reveal animation, post-quiz class info page
+- [x] `specs/ux-onboarding.md` — 3-step flow (welcome → profile → avatar), starter quest checklist widget (6 quests, 275 XP), XP toast notifications, collapsible widget, edge cases
+
+**Notes for other agents:**
+- **Frontend:** All Phase 2 specs are ready. Priority order for building: onboarding first (it's the entry point), then shop and oracle (most complex), then bounty/leaderboard/jobs (overlay-based).
+- **Backend:** Shop needs product catalog API + Stripe integration. Bounty system needs the `bounties` + `bounty_submissions` tables from migration 006. Oracle needs `class`/`subclass` fields on profiles (already in migration 004). Jobs needs a `job_listings` table (not yet specified in migrations — Backend should add).
+- **QA:** Test onboarding flow end-to-end. Test quest completion XP awards. Test Oracle quiz scoring (12 questions → MBTI type → class/subclass mapping).
+
+**UXUI Phase 2 is COMPLETE. All 10 spec files delivered (Wave 1 + Phase 2). Remaining UXUI work: design review once Frontend starts building.**
+
+### 2026-03-30 — Design Review of Backend's Dashboard + MBTI Quiz Bank
+
+**Design review completed.** Full findings in `specs/ux-review.md`. Key deviations from UXUI specs:
+
+| Issue | Severity | Spec Says | Backend Built |
+|-------|----------|-----------|---------------|
+| Sidebar width | 🔴 Major | 240px | 224px (`w-56`) |
+| Sidebar background | 🔴 Major | `--color-surface` (#111827) | `--color-bg-alt` (#111113) |
+| Active indicator | 🔴 Major | 2px left accent bar | Blue bg glow |
+| Section grouping | 🔴 Major | No grouping (flat list) | Has "Personal" + "Admin" sections |
+| Nav font | 🔴 Major | Test Söhne (default) | IBM Plex Mono (font-mono) |
+| Directory layout | 🔴 Major | List view (64px rows) | Grid cards (4-col) |
+| Tier badges | 🔴 Major | Color-coded T1-T5 pills | Missing entirely |
+| XP bars | 🔴 Major | Inline per member row | Missing |
+| Topbar | 🟡 Added | Not spec'd | Notifications + search + profile dropdown |
+| CSS var names | 🟡 Drift | tokens.css names | Different names (`--glass-border`, `--color-text-primary`) |
+
+**10 priority fixes listed for Frontend** in `specs/ux-review.md` Section "Priority Fix List."
+
+**MBTI Quiz question bank created:** `specs/oracle-questions.md`
+- 12 questions (3 per MBTI axis: E/I, S/N, T/F, J/P)
+- 2–4 answer cards per question
+- Scoring key + tie-breaker rule
+- Full class mapping table (4 classes, 16 subclasses)
+- Implementation notes (shuffle order, answer storage, API endpoint)
+
+**Notes for Frontend:**
+- Read `specs/ux-review.md` before building — tells you exactly what to fix in Backend's sidebar and directory
+- The quiz questions in `specs/oracle-questions.md` are ready to be turned into a JSON data file
+
+**Notes for Backend:**
+- Your CSS variable names don't match `tokens.css` — see review for specifics. Frontend will fix during integration.
+- `Kanban` page should be gated/removed — CLAUDE.md explicitly excluded it from MVP.
+- "Marketplace" should be renamed to "Shop" for consistency with specs.
+
+### 2026-03-30 — Sprint 2: Animal Crossing Visual Guide Delivered
+
+**`specs/ux-game-world-v2.md` is committed. Frontend is UNBLOCKED.**
+
+David's Sprint 2 answers:
+- **Time of day:** Dynamic cycle (real-world time, like actual AC)
+- **Building style:** Full AC cartoon — rounded, pastel, oversized doors, cute proportions
+- **Terrain:** Gentle rolling hills (not flat)
+- **Water:** Stream/river cutting through campus with wooden bridge
+
+**Spec covers (with exact hex codes):**
+- 60+ definitive color values across 7 categories (sky, grass, water, buildings, trees, flowers, props)
+- Camera: 50° FOV, 55-60° polar, locked azimuth, smooth follow
+- Terrain: noise-based vertex-colored hills, feathered dirt paths, 4-tone grass
+- River: transparent teal, animated UV ripples, sparkle particles, wooden bridge
+- 6 buildings fully described (HQ, Shop, Oracle Temple, Bounty Board, Job Board, Leaderboard)
+- Trees: round fluffy canopies (NOT cones), 4 tree types, sphere shapes
+- 7-color flower system scattered in grass
+- Dynamic time-of-day cycle (7 phases: dawn through night, full light table)
+- 15+ prop types for environmental detail (fences, signs, benches, wells, lamps)
+- Ambient animations (clouds, water, flowers, trees, butterflies, chimney smoke)
+- Clear list of what to REMOVE (PS1 pipeline) and what to KEEP (R3F, building interactions)
+- 12-step implementation priority for Frontend
+
+**Notes for Frontend:**
+- READ `specs/ux-game-world-v2.md` — replaces old game world spec
+- PS1Pipeline.tsx, RetroPass, NearestFilter, low-res FBO, vertex snapping — ALL REMOVED
+- Start with steps 1-5: remove PS1, add sky, terrain colors, building colors, sphere trees
+- Hex palette is definitive — copy exactly
+- Time-of-day: start with fixed midday, add cycle later
+
+### 2026-04-04 — AC Implementation Review + Building Interiors Spec
+
+**Review of Frontend's AC implementation:** `specs/ux-review-v2.md`
+
+**Score: 8/10.** Frontend did excellent work. Palette matches exactly, sphere trees look great, river/bridge solid, flowers/bushes/props comprehensive. Key gaps:
+- 🟡 Terrain is flat (spec called for gentle rolling hills) — biggest visual gap
+- 🟡 All buildings use generic box+cone shape (spec described unique silhouettes per building)
+- 🟡 Paths have sharp edges (spec called for feathered/blended)
+- 🟡 No time-of-day cycle yet (expected — spec said "start with midday")
+- 6 priority improvements listed for Frontend
+
+**Building interiors spec written:** `specs/ux-interiors.md`
+
+David confirmed: **Full 3D interiors for all buildings** (AC style — walk around, approach stations, interact).
+
+4 interiors fully spec'd:
+1. **HQ Main Room** (16×12) — bulletin board (directory), trophy case (leaderboard), desk (profile), bookshelf (quests), admin door (T1-T3 locked), exit door
+2. **HQ Admin Room** (10×8) — terminal desk (member mgmt), board (bounty approval), podium (announcements), chest (economy controls), purple crystal glow theme
+3. **Shop** (10×10) — counter (browse/buy), shelves, barrels, crates, string lights, cash register
+4. **Oracle Temple** (12×12) — crystal altar (MBTI quiz), scroll shelf (class info), stained glass, runic floor circles, class banners (4 colors), mystical-but-warm mood
+
+Each interior includes: exact color palettes, furniture list, station interactions, decorative elements, lighting setup, shared component architecture, camera adjustments (closer, steeper angle).
+
+**Notes for Frontend:**
+- Read `specs/ux-interiors.md` for full implementation guide
+- Start with HQ Main Room (priority 1 — most visited)
+- Shared components: InteriorFloor, InteriorWalls, InteriorDoor, InteriorStation — build once, reuse across all interiors
+- Player avatar works the same inside (2D sprite, WASD, proximity detection at 2 unit range)
+- Camera pulls closer in interiors: distance 10, polar 65°
+
+### 2026-04-04 — Mobile/Responsive Spec + Portal Review (Session 2)
+
+**Mobile spec written:** `specs/ux-mobile.md` — comprehensive landscape-first mobile spec.
+
+David's mobile design decisions:
+- **Orientation:** Landscape-only (locked). Portrait shows rotation prompt fallback.
+- **Game controls:** Tap-to-move only (like AC Pocket Camp). No virtual joystick.
+- **Directory:** Compact 48px rows — avatar (32px) + name + tier badge only. Level/XP/class hidden.
+- **Overlay panels:** Full-screen bottom sheets (slide up, swipe down to dismiss).
+- **Navigation:** Hamburger only (no bottom tab bar). Current implementation preserved.
+
+Spec covers 14 sections: orientation lock, breakpoints, navigation, game world touch controls, building interiors, directory, profile, overlay sheets, oracle quiz, onboarding, shop, tokens, accessibility, implementation priority.
+
+**Tokens updated:** `specs/tokens.md` — added Section 14 (Mobile & Responsive Tokens) with 30+ new CSS custom properties for touch targets, HUD, camera overrides, bottom sheet, mobile directory/profile overrides.
+
+**Notes for Frontend:**
+- Read `specs/ux-mobile.md` for full mobile implementation guide
+- Start with orientation lock (step 1) and tap-to-move (step 3) — these are the foundation
+- Bottom sheet component (step 6) is reusable across bounty, leaderboard, jobs, product detail, quest list
+- Mobile HUD strip (step 2) replaces the sidebar context on game world page
+
+### 2026-04-05 — Round 3: Class Identity Sheet + Review v4
+
+**Task 1: Class Visual Identity Sheet** — `specs/ux-classes.md`
+- 4 main classes with Lucide icons: Warrior (Sword, #EF4444), Mage (Sparkles, #6366F1), Healer (Heart, #22C55E), Rogue (Wrench, #F59E0B)
+- 16 subclasses fully described (one per MBTI type)
+- CSS tokens for all class colors (accent, bg, glow, border)
+- Where classes appear: sidebar, directory, profile, leaderboard, nameplate
+- Reveal animation timeline (text + glow, no particles — per David's choice)
+- `CLASS_DATA` TypeScript constant structure for Frontend
+
+**Task 2: Design Review v4** — `specs/ux-review-v4.md`
+- Score: **7.5/10 overall**
+- Jobs: 9/10 (best), Bounty: 8/10, Shop: 8/10, Leaderboard: 7/10, Settings: 6/10
+- Settings needs most work (no tabs, no theme toggle, no sign out)
+- Leaderboard missing own-row highlight and time period wiring
+- 10 priority fixes listed for Frontend
+
+### 2026-04-05 — Round 4: Review v5 + Status Report
+
+**Task 1: Design Review v5** — `specs/ux-review-v5.md`
+- Onboarding: 8/10 — clean 3-step flow, quest checklist missing
+- Oracle quiz: 7/10 — correct scoring/reveal, uses v1 layout (not v2 encounter), emoji instead of Lucide
+- Auth context: 10/10 — sidebar P1 fix from review v3 is resolved
+- 7 priority fixes listed
+
+**Task 2: Spec Status Report** — `specs/ux-status.md`
+- 18 spec files audited, ~72% implementation coverage
+- 7 Tier 1 items (fix before merge): settings tabs/sign out, leaderboard highlight, oracle icons/colors/exit
+- 10 Tier 2 items (post-launch): quest checklist, theme toggle, class identity in UI, filters
+- 8 Tier 3 items (future sprints): interiors, oracle v2, mobile, avatar creator
+- Settings is weakest page (6/10). Jobs is strongest (9/10).
+
+---
+
+**Oracle Quiz v2 — Card-Game NPC Encounter:** `specs/ux-oracle-v2.md`
+David provided reference image (card-battle game). Oracle quiz is now a card-game encounter:
+- 2D styled backdrop (CSS gradients, no image assets) of Oracle Temple interior
+- Player sprite (bottom-left) facing Monk NPC sprite (top-right)
+- Question appears in speech bubble from monk (typewriter text effect)
+- Answer cards fanned at bottom like a card game hand (rotation, translateY, hover pop-up)
+- "Play" animation: selected card floats up + gold glow, others slide down, next question types in
+- Progress bar + exit button at top
+- `ux-oracle.md` Sections 2-5 are REPLACED by this spec
+
+**Notes for Frontend:**
+- **READ `specs/ux-oracle-v2.md` FIRST** — it replaces the old quiz layout entirely
+- Read `specs/ux-classes.md` for class identity when building Oracle quiz reveal
+- Read `specs/ux-review-v4.md` for the 10 priority fixes (P1: settings tabs + theme + sign out + leaderboard highlight)
+- `CLASS_DATA` object structure provided — copy into a shared constants file
+- Monk sprite: use CSS placeholder (purple robe trapezoid + gold dot eyes) until real art arrives
+
+---
+
+**Round 2 Tasks (assigned by Management):**
+
+1. **Settings spec written:** `specs/ux-settings.md`
+   - Tabbed layout: Profile | Social | Appearance | Account
+   - Inline avatar editor embedded in Profile tab (preview + option grid)
+   - Dark/Light theme toggle with full light CSS overrides
+   - Social links editing (6 platforms: GitHub, LinkedIn, Website, Twitter, Instagram, Discord)
+   - Account info (read-only) + sign out
+   - Save per-section, unsaved changes warning, loading/error states
+   - Mobile adaptations (stacked avatar editor, full-width save button)
+
+2. **Asset map written:** `specs/ux-asset-map.md`
+   - Documents all 24 GLBs already extracted to `web/public/assets/nature/`
+   - All 20 tree positions, 20 bush positions, 12 flower cluster positions, 6 fences, 5 mushrooms, 3 stumps
+   - Scale, rotation, and selection logic for each component
+   - 14 additional GLBs recommended to extract (signs, lily pads, logs, grass, campfire, statues, stepping stones, gate)
+   - Priority 3: 6 more tree models for variety (expand pool from 4 to 8)
+   - Documents which elements are still primitive geometry (buildings, bridge, benches, lampposts, well, banners)
+   - Performance notes: ~100 instances, ~300KB total, `Suspense` progressive loading
+
+**Notes for Frontend:**
+- Settings page: `GET /api/profile` on mount, `PATCH /api/profile` per section
+- Light theme CSS vars in `ux-settings.md` Section 6.4 — add as `[data-theme="light"]` override
+- Asset map Section 3: extract sign.glb, lily_small.glb, lily_large.glb, log.glb, grass.glb first (Priority 1 — fills review v2 gaps)
+- NatureRock component exists in NatureModels.tsx but no rocks are placed in GameWorld — add 5-8 rocks near river and cliff areas
+
+---
+
+**Review completed:** `specs/ux-review-v3.md` — design review of Frontend's API-wired portal components.
+
+**Score: 9/10.** The API wiring from mock data to real Backend endpoints was done cleanly with no visual regressions. All portal components properly use `@/lib/supabase/types` and fetch from real API routes.
+
+**Key findings:**
+
+| Component | Score | Key Gap |
+|-----------|-------|---------|
+| MemberDirectory | 9/10 | Missing Role/Class and Year filter dropdowns, spinner instead of skeleton loading |
+| MemberCard | 9/10 | Hover border-bottom-color not changing (tiny detail) |
+| ProfileView | 8/10 | Social links not editable in edit mode |
+| Sidebar | 8/10 | Player status hardcoded ("Player", Lv. 1) — not wired to real data |
+| DashboardLayout | 10/10 | Perfect |
+| OverlayPanel | 10/10 | Exact spec match |
+| TransitionOverlay | 10/10 | Exact spec match |
+
+**6 priority fixes for Frontend (in `ux-review-v3.md`):**
+- **P1:** Wire sidebar player status to real profile data
+- **P1:** Add social links editing in profile edit mode
+- **P2:** Add Role/Class + Year filter dropdowns
+- **P2:** Replace spinner with skeleton loading rows
+- **P3:** Hover border-bottom on member rows
+- **P3:** Increase section spacing in profile (py-4 → py-6)
+
+**Notes for Frontend:**
+- Read `specs/ux-review-v3.md` for full findings
+- P1 items should be fixed before shipping — sidebar placeholder is the most visible gap
+- P2 items can wait for Phase 2 feature build-out
+
+### HANDOFF — Context for New UXUI Session
+
+#### (1) All Spec Files Written (14 files)
+
+| File | Description |
+|------|-------------|
+| `specs/ux-dashboard.md` | Dashboard shell: 240px sidebar, nav items + states, hamburger at 768px, page routing, onboarding flow |
+| `specs/ux-game-world.md` | **DEPRECATED** — original PS1-style game world spec (replaced by v2) |
+| `specs/ux-game-world-v2.md` | **ACTIVE** — Animal Crossing visual guide: 60+ hex colors, camera, terrain, river, buildings, trees, flowers, props, time-of-day cycle, ambient animations |
+| `specs/ux-directory.md` | Member directory: list view (64px rows), search/filter, tier colors (T1=gold→T5=gray), profile page, edit mode |
+| `specs/tokens.md` | Game-specific design tokens: 13 categories of CSS custom properties (sidebar, tiers, overlays, sprites, etc.) |
+| `specs/ux-shop.md` | Real merch e-commerce: product cards, dual currency (real money + TSI coins), category tabs, detail page, cart stub |
+| `specs/ux-bounty.md` | Bounty board: 2-col card grid overlay, claim/submit/review flow, difficulty indicators, Bounty Hunter application |
+| `specs/ux-leaderboard.md` | Ranked table: time period tabs, your-row highlight, gold/silver/bronze colors, responsive column hiding |
+| `specs/ux-jobs.md` | Full-page job board: search + filters, job cards, type badges (color-coded), member submission form |
+| `specs/ux-oracle.md` | Oracle Temple MBTI quiz: 12 questions, 2-4 answer cards, 4 classes (Warrior/Mage/Healer/Rogue), 16 subclasses, class reveal animation |
+| `specs/ux-onboarding.md` | 3-step onboarding (welcome → profile → avatar) + starter quest checklist (6 quests, 275 XP) |
+| `specs/ux-interiors.md` | Full 3D interiors for HQ (main + admin), Shop, Oracle Temple — furniture, stations, colors, lighting |
+| `specs/oracle-questions.md` | 12 MBTI quiz questions with answer cards, scoring key, tie-breaker rules, class mapping table |
+| `specs/ux-review.md` | Design review of Backend's initial dashboard (8 major deviations flagged) |
+| `specs/ux-review-v2.md` | Design review of Frontend's AC implementation (score 8/10, 6 priority improvements) |
+| `specs/ux-review-v3.md` | Design review of Frontend's API-wired portal (score 9/10, 6 priority fixes) |
+| `specs/ux-mobile.md` | Mobile/responsive spec: landscape-only, tap-to-move, 48px rows, bottom sheets, HUD, tokens |
+| `specs/ux-settings.md` | Settings page: tabbed (Profile/Social/Appearance/Account), inline avatar editor, dark/light toggle |
+| `specs/ux-asset-map.md` | GLB asset mapping: 24 extracted models, positions/scales, 14 recommended additions, primitives inventory |
+
+#### (2) Implementation Status
+
+| Spec | Status | Notes |
+|------|--------|-------|
+| `ux-dashboard.md` | ✅ Implemented by Frontend | Sidebar, routing, responsive hamburger all built |
+| `ux-game-world-v2.md` | ✅ Mostly implemented | Palette exact, trees/river/props done. Gaps: flat terrain (needs hills), generic building shapes, no time-of-day cycle |
+| `ux-directory.md` | ✅ Implemented by Frontend | List view, tier badges, XP bars, search/filter all built |
+| `tokens.md` | ✅ Implemented | `web/styles/game-tokens.css` created by Frontend |
+| `ux-interiors.md` | ❌ Not started | Full 3D interiors — next major Frontend task |
+| `ux-shop.md` | ❌ Not started | Backend has shop API, Frontend page is "Coming Soon" |
+| `ux-bounty.md` | ❌ Not started | Backend has bounty API, Frontend page is "Coming Soon" |
+| `ux-leaderboard.md` | ❌ Not started | Frontend page is "Coming Soon" |
+| `ux-jobs.md` | ❌ Not started | Frontend page is "Coming Soon" |
+| `ux-oracle.md` | ❌ Not started | Quiz questions ready in `oracle-questions.md` |
+| `ux-onboarding.md` | ❌ Not started | Onboarding flow not built yet |
+
+#### (3) PS1 → Animal Crossing Art Direction Change
+
+- **Sprint 1 (Mar 27-29):** All specs written for PS1 aesthetic — vertex snapping, low-res FBO, NearestFilter, dithering, dark fog, pixel-crisp sprites
+- **Sprint 2 (Mar 30):** David killed PS1. New direction: Animal Crossing: New Horizons — bright, pastel, rounded, cozy
+- **`ux-game-world.md` is DEPRECATED.** `ux-game-world-v2.md` is the active spec
+- Frontend removed PS1Pipeline.tsx, enabled antialias, native resolution
+- Avatar is still 2D billboard sprite in 3D world (Dave the Diver style) — this survived the pivot
+- All other specs (dashboard, directory, tokens, Phase 2 features) are unaffected by the pivot
+
+#### (4) Design Review Findings
+
+**Review v1 (`ux-review.md`):** Backend's initial dashboard — 8 major deviations (sidebar width, bg color, active indicator, section grouping, font, directory layout, tier badges, XP bars). Frontend fixed all of these when rebuilding.
+
+**Review v2 (`ux-review-v2.md`):** Frontend's AC implementation — score 8/10. Palette is perfect. Gaps:
+1. Terrain is flat (needs simplex noise displacement for rolling hills)
+2. Buildings are generic box+cone (need unique silhouettes per building)
+3. Paths have sharp edges (need feathered/alpha-blended edges)
+4. No time-of-day cycle (expected — start with midday)
+5. Missing some props (signposts, stepping stones, butterflies)
+6. River is straight (spec says gently curving)
+
+#### (5) MBTI Quiz Bank
+
+`specs/oracle-questions.md` — Ready for Frontend to implement:
+- 12 questions covering all 4 MBTI dichotomies (E/I, S/N, T/F, J/P — 3 each)
+- 2-4 answer cards per question with scoring mapped to MBTI letters
+- Scoring: majority wins per axis → 4-letter type → class + subclass
+- Tie-breaker: default to first letter (E, S, T, J)
+- 4 classes: Warrior (action), Mage (analysis), Healer (connection), Rogue (craft)
+- 16 subclasses (one per MBTI type) — full mapping table included
+
+#### (6) What To Do Next
+
+1. **Building interiors** — `specs/ux-interiors.md` is written, Frontend needs to build HQ Main Room first
+2. **Terrain elevation** — biggest visual gap, add simplex noise to grass mesh
+3. **Onboarding flow** — `specs/ux-onboarding.md` is ready, needs Frontend implementation
+4. **Oracle quiz** — `specs/ux-oracle.md` + `specs/oracle-questions.md` are ready
+5. **Phase 2 pages** — shop, bounty, leaderboard, jobs all spec'd, Backend APIs exist
+6. **Time-of-day cycle** — spec has full 7-phase light table in `ux-game-world-v2.md` Section 8
+7. **Design review** — once interiors or new pages are built, review against specs
+8. **Mobile specs** — desktop-first for now, mobile specs needed eventually
+
+#### (7) Key Files to Read First
+
+1. `CLAUDE.md` — project bible, team roles, current state
+2. `AGENT_LOG.md` — full team communication history
+3. `specs/ux-game-world-v2.md` — **THE** active visual spec (AC style, 60+ hex codes)
+4. `specs/ux-interiors.md` — building interiors (next major spec for Frontend)
+5. `specs/ux-dashboard.md` — dashboard layout reference
+6. `specs/ux-directory.md` — directory/profile reference
+7. `specs/tokens.md` — all design tokens
+8. `web/DESIGN_SYSTEM.md` — base marketing site design system
+9. `web/styles/tokens.css` — base CSS custom properties
+
+#### (8) Gotchas
+
+- **`ux-game-world.md` is DEPRECATED** — don't reference it, use `ux-game-world-v2.md`
+- **David answers design questions via `AskUserQuestion`** — always use multi-choice format, he prefers scrollable options
+- **UXUI writes specs only, never code** — if you need code changes, write a spec and tell Frontend
+- **File ownership is strict** — UXUI owns `specs/ux*.md` and `specs/tokens.md` only
+- **Backend built 24+ pages** that aren't all spec'd — some are beyond MVP scope (kanban, calendar, mentorship, portfolio, tools)
+- **Shop sells real merchandise** (not avatar cosmetics) — dual currency: real money + TSI coins
+- **Avatar is 2D billboard sprite** even though the world is 3D — Dave the Diver style, layered composition (body/outfit/hair/accessories)
+- **Tier system is 5 tiers** not 4: T1=gold (David), T2=blue (presidents), T3=cyan (PM/VP), T4=green (dev/director), T5=gray (volunteer)
+- **Commit prefix is `[UXUI]`** — always use it
 
 ---
 
@@ -538,6 +983,350 @@ See `specs/asset-stack.md` for the complete confirmed stack:
 - **Backend:** When types.ts is ready, Frontend will replace `web/components/portal/types.ts` imports with `web/lib/supabase/types.ts`. Interface shapes are already aligned with the spec.
 - **QA:** Dashboard is at `/student/dashboard`. Test sidebar navigation, responsive hamburger at 768px, game world renders.
 - **UXUI:** Implementation follows all 4 specs. Sprite sheet frame mapping may need tuning once exact grid layout is confirmed.
+
+### 2026-03-30 — Sprint 2: Animal Crossing Overhaul Prep
+
+**Direction change acknowledged.** PS1 shader removed. Going cozy/bright/AC-style.
+
+**Completed:**
+- [x] `scripts/fbx_to_glb.py` — Blender Python batch converter for FBX → self-contained GLB with embedded textures. Run with: `blender --background --python scripts/fbx_to_glb.py -- --input web/public/assets/buildings --output web/public/assets/buildings`
+- [x] Fixed terrain z-fighting — replaced Y-offset layering with `polygonOffset` on all overlapping terrain materials. All geometry now at Y=0.
+- [x] Installed `@supabase/ssr` + `@supabase/supabase-js` (required by Backend's merged code)
+- [x] Build passes cleanly with all Backend routes (admin, calendar, kanban, marketplace, etc.)
+- [ ] Researching AC-style R3F implementations on GitHub (in progress)
+- [ ] **BLOCKED on UXUI** — waiting for `specs/ux-game-world-v2.md` to implement full visual overhaul
+
+**AC style changes already applied (by management/linter):**
+- Building.tsx → ACBuilding with cone roofs, windows, doors + BoardSign for flat objects
+- GameWorld.tsx → brighter colors (#5da34e grass, #d4c5a0 paths), round trees, pond, warm lighting (0.7 ambient), no PS1 shader
+- Layout.tsx → flex-based sidebar instead of margin-left
+
+### HANDOFF — Context for New Frontend Agent
+
+**Read these files first (in order):**
+1. `CLAUDE.md` — project overview, tech stack, team roles
+2. `AGENT_LOG.md` — this file, all team communication
+3. `specs/ux-game-world-v2.md` — THE source of truth for game world visuals (AC style)
+4. `specs/ux-dashboard.md` — sidebar/layout spec
+5. `specs/ux-directory.md` — member directory list view spec
+6. `specs/ux-review.md` — UXUI's review of Backend's dashboard (10 priority fixes)
+7. `web/lib/supabase/types.ts` — Backend's canonical type definitions
+
+---
+
+#### 1. Game Components I Built
+
+| Component | File | Status |
+|-----------|------|--------|
+| **GameWorld** | `web/components/game/GameWorld.tsx` | v2 AC overhaul done — terrain, river, bridge, trees (4 types with wind sway), bushes, flowers, props, gradient sky, clouds, hemisphere lighting |
+| **PlayerAvatar** | `web/components/game/PlayerAvatar.tsx` | 2D sprite on Billboard (Dave the Diver style), sprite sheet UV cropping, WASD + click-to-move, nameplate |
+| **Building** | `web/components/game/Building.tsx` | ACBuilding (pastel walls, bold roofs, chimneys, flower boxes, awnings), BoardSign, LeaderboardMonument, proximity "Press E" |
+| **TransitionOverlay** | `web/components/game/TransitionOverlay.tsx` | Fade-to-black state machine (0.3s in/out), TransitionProvider context |
+| **OverlayPanel** | `web/components/game/OverlayPanel.tsx` | Solid dark panel (#0d1b2a) for bounty/job/leaderboard boards, Escape to close |
+| **Sidebar** | `web/components/portal/Sidebar.tsx` | 240px, brand-blue 2px left accent, 8 nav items, player status, responsive hamburger at 768px |
+| **MemberDirectory** | `web/components/portal/MemberDirectory.tsx` | Fetches `/api/directory`, search + tier/status filters, loading/error/empty states |
+| **MemberCard** | `web/components/portal/MemberCard.tsx` | 64px row: avatar, name+class, tier badge, level, XP bar |
+| **ProfileView** | `web/components/portal/ProfileView.tsx` | Fetches `/api/profile` or `/api/profile/[id]`, edit mode, skills, social links |
+| **ComingSoon** | `web/components/portal/ComingSoon.tsx` | Placeholder for Phase 2 pages |
+| **Dashboard Layout** | `web/app/student/dashboard/layout.tsx` | Fixed overlay, sidebar + main, TransitionProvider wrapper |
+
+---
+
+#### 2. Rendering Bugs Found and Fixed
+
+| Bug | Cause | Fix |
+|-----|-------|-----|
+| **Black screen** | SoftShadows/ContactShadows from drei interfering with material pipeline | Removed both components |
+| **Invisible terrain/buildings** | `toneMapping` in Canvas `gl` prop not applied as renderer property | Moved to `onCreated` callback |
+| **Sky sphere invisible** | Scale 300 exceeded camera far clip (150) | Reduced to scale 100, increased far to 300 |
+| **Flat blue background (no gradient)** | Same far clip issue — sky sphere beyond frustum | Fixed with far clip increase |
+| **Z-fighting on terrain** | Paths/grass at same Y with small offsets | Replaced with `polygonOffset` on all overlapping materials |
+| **Fog washing out geometry** | Fog near=35 too close to camera distance=15 | Pushed to near=50, far=100 |
+
+**Current known issue:** The 6 Next.js dev tool errors reported by David haven't been individually diagnosed. Likely hydration warnings or missing keys — needs `npm run dev` testing.
+
+---
+
+#### 3. Placeholder Geometry vs Real Assets
+
+| Element | Status |
+|---------|--------|
+| **Buildings** | ALL placeholder geometry (colored boxes with cone roofs). FBX files exist in `/assets/buildings/` but aren't loaded — FBX loading was disabled due to missing textures. Run `scripts/fbx_to_glb.py` in Blender to convert to GLB. |
+| **Trees** | Placeholder geometry (cylinder trunks + sphere/dodecahedron canopies). No real tree models. |
+| **Character sprite** | Real `prototype_character.png` sprite sheet loaded. Sprite sheet grid layout (cols/rows) is estimated — needs tuning. |
+| **Props** | All placeholder geometry (benches, fences, lamps, well, mushrooms, stumps). GLTF props exist in `/assets/props/` but aren't loaded. |
+| **Terrain** | Flat circle + planes. No heightmap or vertex displacement for rolling hills (v2 spec Section 4.1 wants gentle hills). |
+| **River** | Flat blue plane. No UV animation, no sparkles, no lily pads (v2 spec Section 5 wants animated water). |
+
+---
+
+#### 4. AC v2 Spec Implementation Status
+
+| v2 Spec Section | Status |
+|----------------|--------|
+| Camera (FOV 50°, polar 55-60°, distance 15) | ✅ Done |
+| Color palette (60+ hex values) | ✅ Applied to all geometry |
+| Gradient sky (#87CEEB → #B8E4F0) | ✅ Done (shader sphere) |
+| Clouds | ✅ Done (drei Cloud) |
+| HemisphereLight | ✅ Done |
+| ACES tone mapping | ✅ Done (onCreated) |
+| Terrain (circular island, paths, pond) | ✅ Basic — **missing** gentle rolling hills |
+| River + bridge | ✅ Basic geometry — **missing** water animation, sparkles |
+| Building colors/proportions | ✅ AC palette applied |
+| Trees (sphere canopies, wind sway) | ✅ Done (4 varieties) |
+| Bushes, flowers, fences, props | ✅ Done |
+| Time-of-day cycle | ❌ Not started (v2 spec Section 8.1) |
+| Water animation/sparkles | ❌ Not started |
+| Butterflies/particles | ❌ Not started |
+| Smoke from chimney | ❌ Not started |
+| Audio | ❌ Not started |
+
+---
+
+#### 5. Pages — Mock Data vs Real API
+
+| Page/Component | Data Source |
+|---------------|------------|
+| MemberDirectory | ✅ Real API (`GET /api/directory`) |
+| MemberCard | ✅ Real API (via directory) |
+| ProfileView | ✅ Real API (`GET/PATCH /api/profile`, `GET /api/profile/[id]`) |
+| Sidebar player status | ❌ Hardcoded "Player" / "Lv. 1" — needs auth context |
+| PlayerAvatar nameplate | ❌ Hardcoded "Player" / "Lv. 1" — needs auth context |
+| Game world building data | ❌ Hardcoded in BUILDINGS array |
+| Bounty/Shop/Jobs/Leaderboard/Settings | ❌ ComingSoon placeholder pages |
+
+---
+
+#### 6. What to Do Next (Priority Order)
+
+1. **Fix the 6 Next.js dev errors** — run `npm run dev`, open error overlay, fix each
+2. **Convert FBX → GLB** — run `scripts/fbx_to_glb.py` in Blender, then update Building.tsx to load real `.glb` models
+3. **Wire auth context into Sidebar + PlayerAvatar** — pull user profile from Supabase session, show real name/level
+4. **Implement gentle rolling hills** on terrain (v2 spec Section 4.1 — vertex displacement with Perlin noise)
+5. **Animated water** — UV scroll + sine displacement + sparkle particles (v2 spec Section 5)
+6. **Apply UXUI review fixes** — `specs/ux-review.md` has 10 priority items (sidebar width, bg color, active indicator, etc.)
+7. **Time-of-day cycle** — v2 spec Section 8.1 has full lighting table by hour
+8. **Build onboarding flow** — `specs/ux-onboarding.md` describes welcome → profile → avatar → tutorial → quests
+
+---
+
+#### 7. Gotchas
+
+- **PS1 shader is DEAD.** `PS1Pipeline.tsx` was deleted. Do NOT re-add vertex snapping, low-res FBO, or NearestFilter. Clean antialiased rendering only.
+- **`shadows="soft"` on Canvas** may not work in all R3F versions. Use `shadows` (boolean) and set shadow type via `onCreated`.
+- **toneMapping/outputColorSpace must go in `onCreated`**, not in the `gl` prop object. The gl prop passes to WebGLRenderer constructor which doesn't accept these.
+- **Sky sphere scale must be < camera far clip.** Currently scale=100, far=300. If you change far, adjust sky scale.
+- **drie's `SoftShadows` and `ContactShadows`** caused invisible geometry in testing. Avoid unless confirmed working.
+- **Sprite sheet grid** (SHEET_COLS=3, SHEET_ROWS=10) is estimated. The actual `prototype_character.png` layout hasn't been confirmed — frame cycling may show wrong frames.
+- **The dashboard layout uses `fixed inset-0 z-50`** to overlay the parent student marketing layout. This means the marketing Navbar still renders underneath (hidden). It's a workaround — ideally use route groups.
+- **Building FBX files have external textures** — they render as white/untextured if loaded directly. Must convert to GLB with `scripts/fbx_to_glb.py` first.
+- **`web/components/portal/types.ts`** now re-exports from `@/lib/supabase/types`. Don't add types here — add to Backend's types.ts instead.
+
+---
+
+### 2026-04-04 — Sprint 3: Terrain Hills, Water Animation, Time-of-Day, Ambient Life
+
+**Build status:** `npm run build` passes cleanly.
+
+**Completed:**
+
+- [x] **Rolling hills terrain** — replaced flat circle with 128×128 vertex-displaced PlaneGeometry using FBM noise (4 octaves). Terrain features:
+  - Gentle mounds 0.5–2.0 units across the island
+  - Oracle Temple hill rises 3.5 units (smooth quadratic falloff, 12-unit radius)
+  - River valley dips terrain to 0 near z=3
+  - Paths automatically flattened (92% reduction for N-S, 85% for E-W corridors)
+  - Island edge falloff from radius 32–40
+  - Vertex colors: 4-tone grass blend (primary/secondary/highlight/shadow) driven by height + noise
+  - All objects (trees, bushes, flowers, props, buildings) now placed at terrain height via `getTerrainHeight()`
+
+- [x] **Terrain utility module** (`web/components/game/terrain.ts`):
+  - Exported `getTerrainHeight(x, z)` — used by GameWorld and PlayerAvatar
+  - Exported `valueNoise(x, y)` — used for terrain vertex coloring
+  - Value noise → FBM pipeline for height generation
+
+- [x] **Player ground-following** — PlayerAvatar now sets `pos.y = getTerrainHeight(pos.x, pos.z)` each frame, so player walks up/down hills naturally
+
+- [x] **Animated water** — River replaced with:
+  - 160×6 segment PlaneGeometry for vertex displacement
+  - Triple sine wave ripples at different frequencies/amplitudes
+  - 50 sparkle Points that twinkle on/off (phase-shifted sine visibility)
+  - Water surface at semi-transparent 0.72 opacity with low roughness
+
+- [x] **Time-of-day cycle** — merged GradientSky + Lighting into `TimeOfDayCycle` component:
+  - 7-phase keyframe table (dawn → morning → midday → afternoon → golden hour → evening → night) from v2 spec Section 8.1
+  - Reads real-world `Date` for current hour, interpolates between adjacent phases
+  - Dynamic sky gradient (shader uniform updates), sun color/intensity, ambient color/intensity
+  - Fog color auto-matches sky bottom color
+  - Night→dawn wrap-around interpolation handles midnight crossing
+
+- [x] **Ambient animations** (v2 spec Section 10):
+  - **Flower sway:** per-cluster rotation (0.3Hz, 0.05 amplitude) with phase offsets
+  - **Butterflies:** 5 Points on gentle Lissajous looping paths, terrain-height-aware
+  - **Chimney smoke:** 20 particle Points drifting upward from HQ chimney with lateral sway
+
+**Files created:**
+- `web/components/game/terrain.ts`
+
+**Files modified:**
+- `web/components/game/GameWorld.tsx` (major: terrain, river, time-of-day, ambient)
+- `web/components/game/PlayerAvatar.tsx` (ground-following)
+
+**What to do next (updated priority):**
+1. ~~**Convert FBX → GLB**~~ ✅ Done (see below)
+2. ~~**Building roof colors**~~ ✅ Fixed (see below)
+3. **Wire auth context** — Sidebar + PlayerAvatar still show hardcoded "Player" / "Lv. 1"
+4. **Build onboarding flow** — `specs/ux-onboarding.md`
+5. **Polish terrain** — paths on Oracle hill approach are missing (terrain rises but no visible stone path)
+6. **Night window glow** — buildings should have brighter emissive windows at evening/night
+7. **Audio** — ambient background music + sound effects not started
+
+### 2026-04-04 — FBX→GLB Conversion + Real 3D Model Loading
+
+**Management Sprint 2 task completed:** "Convert building FBX assets to GLB"
+
+**Completed:**
+
+- [x] **FBX→GLB conversion** — used `fbx2gltf` npm package (wraps Facebook's FBX2glTF binary) to batch-convert all 4 building FBX files to self-contained GLB with embedded textures:
+  - `house_1.fbx` → `house_1.glb` (410KB)
+  - `hq.fbx` → `hq.glb` (469KB)
+  - `oracle_temple.fbx` → `oracle_temple.glb` (728KB)
+  - `shop.fbx` → `shop.glb` (671KB)
+  - Conversion script: `web/scripts/convert-fbx-to-glb.js`
+
+- [x] **Real GLB model loading** in Building.tsx:
+  - `GLBBuilding` component: loads GLB via `useGLTF`, auto-scales to fit expected bounding box, centers on ground, overrides all materials with AC palette colors
+  - Wrapped in `<Suspense>` — shows procedural ACBuilding while GLB loads
+  - Only HQ, Shop, Oracle, House have GLB paths; boards/leaderboard stay procedural
+  - `GLB_PATHS` mapping for building ID → asset path
+
+- [x] **Roof color fix** — `roofColor` prop added to Building/ACBuilding. Now uses the exact v2 spec colors from BUILDINGS array (#E87B5A for HQ, #5BA086 for Shop, #7B5EA7 for Oracle) instead of computing `wall × 0.55`.
+
+**Files created:**
+- `web/scripts/convert-fbx-to-glb.js`
+- `web/public/assets/buildings/house_1.glb`
+- `web/public/assets/buildings/hq.glb`
+- `web/public/assets/buildings/oracle_temple.glb`
+- `web/public/assets/buildings/shop.glb`
+
+**Files modified:**
+- `web/components/game/Building.tsx` (GLB loading, roofColor prop, Suspense fallback)
+- `web/components/game/GameWorld.tsx` (pass roofColor to Building)
+
+**Note:** The GLB models are from Quaternius Medieval Village. After material override they render in AC palette colors. If the geometry style doesn't match AC aesthetics well, revert by removing `GLB_PATHS` entries — the Suspense fallback will automatically use the procedural ACBuilding.
+
+### 2026-04-04 — Round 2: 5 Dashboard Pages + Kenney Nature Kit Asset Swap
+
+**Manager directive completed:** Build the 5 pages. Swap primitive nature assets.
+
+**5 Pages Built:**
+
+- [x] **Bounty Board** (`/student/dashboard/bounty/page.tsx`):
+  - Filter tabs: All / Available / My Claims / Completed
+  - 2-column card grid with difficulty icons, reward, deadline, tech stack tags
+  - Detail modal with claim flow (POST /api/bounties/{id}/claim)
+  - Empty states per tab, loading skeletons
+  - Status-based action buttons (Claim / Claimed / Completed / Under Review)
+
+- [x] **Leaderboard** (`/student/dashboard/leaderboard/page.tsx`):
+  - Time period tabs: Weekly / Monthly / All-Time
+  - Ranked table with columns: #, Avatar, Name, Level, XP, Tier
+  - Gold/silver/bronze rank colors for top 3
+  - Tier-colored avatar badges, responsive column hiding
+  - Loading skeleton (10 rows), empty state
+
+- [x] **Shop** (`/student/dashboard/shop/page.tsx`):
+  - Category tabs: All / Apparel / Accessories / Digital / Merch
+  - Product grid (auto-fill, minmax 260px)
+  - Coin balance display in header (GET /api/economy)
+  - Product detail modal with purchase flow (POST /api/economy)
+  - Dual currency display ($CAD + TSI coins)
+  - Insufficient balance handling
+
+- [x] **Job Board** (`/student/dashboard/jobs/page.tsx`):
+  - Search bar + type filter tabs (Internship / Full-Time / Freelance / Part-Time)
+  - Job listing cards with type-colored badges per spec
+  - Apply (external link) + Save/bookmark toggle
+  - Submit Job modal with form (company, role, type, location, URL, description)
+  - Empty/no-results states
+
+- [x] **Settings** (`/student/dashboard/settings/page.tsx`):
+  - Profile section: display name, bio, skills (comma-separated)
+  - Social links: GitHub, LinkedIn, Instagram, Discord, Website (with icons)
+  - Read-only account info: email, tier, position, member since
+  - Save button with success feedback (green "Saved" state)
+  - GET /api/profile → PATCH /api/profile
+
+**Sidebar updated:** Removed "Soon" badges from all 5 pages.
+
+**Kenney Nature Kit Asset Swap:**
+
+- [x] Extracted 24 GLB models from `~/Downloads/kenney_nature-kit.zip` into `web/public/assets/nature/`
+- [x] Created `web/components/game/NatureModels.tsx` — reusable GLB components:
+  - `NatureTree` — 4 tree variants (default, oak, detailed, pine round)
+  - `NatureBush` — 3 bush variants (bush, bushLarge, bushSmall)
+  - `NatureFlowerCluster` — 5 flower variants grouped in clusters of 3
+  - `NatureFence` — simple and plank fence variants
+  - `NatureMushroom` — red and tan variants
+  - `NatureStump` — round stump
+  - `NatureRock` — 2 rock variants
+- [x] GameWorld.tsx updated: primitive sphere/cone/box geometry replaced with GLB models via Suspense loading
+- [x] Removed dead code: old Tree function, FLOWER_COLORS constant
+
+**Files created:**
+- `web/app/student/dashboard/bounty/page.tsx` (rewritten from ComingSoon)
+- `web/app/student/dashboard/leaderboard/page.tsx` (rewritten)
+- `web/app/student/dashboard/shop/page.tsx` (rewritten)
+- `web/app/student/dashboard/jobs/page.tsx` (rewritten)
+- `web/app/student/dashboard/settings/page.tsx` (rewritten)
+- `web/components/game/NatureModels.tsx` (new)
+- `web/public/assets/nature/*.glb` (24 files)
+
+**Files modified:**
+- `web/components/portal/Sidebar.tsx` (removed comingSoon flags)
+- `web/components/game/GameWorld.tsx` (nature model imports, replaced primitives)
+
+### 2026-04-05 — Round 3: Onboarding Flow, Oracle Quiz, Auth Context
+
+**Manager directive completed:** Core student journey — sign up → onboard → take quiz → get class → explore.
+
+**Completed:**
+
+- [x] **Onboarding flow** (`/student/onboarding/page.tsx` — full rewrite):
+  - 3-step flow: Welcome → Profile Setup → Avatar (placeholder)
+  - Step progress indicator (dots + lines, blue active/completed)
+  - Step 1: Welcome screen with "Let's Go" button
+  - Step 2: Profile form — display name (30 max), bio (200 max), year dropdown, skills multi-select (16 presets, max 10), GitHub/LinkedIn/Website
+  - Step 3: Avatar placeholder with "Enter Campus" button
+  - Saves profile via PATCH /api/profile, sets onboarding_completed=true
+  - Loads existing profile data on mount, redirects if already onboarded
+
+- [x] **Oracle quiz page** (`/student/dashboard/oracle/page.tsx` — new route):
+  - 12 MBTI questions with 2-4 answer cards per question (full question bank from specs/oracle-questions.md)
+  - Card hover/select animations (translateY, border glow)
+  - Progress bar with "{n} of 12" label
+  - Scoring: count E/I, S/N, T/F, J/P → 4-letter MBTI → class + subclass
+  - Dramatic reveal animation (5-stage timeline: "The Oracle has spoken..." → class icon → class name with glow → subclass → description → "Enter Campus" button)
+  - 4 classes (Warrior/Mage/Healer/Rogue) × 16 subclasses with color-coded reveals
+  - Saves class + subclass to profile via PATCH /api/profile
+  - Shows existing class result if already taken, with "Retake Quiz" option
+
+- [x] **Auth context wired** — real user data replaces hardcoded values:
+  - Created `UserContext.tsx` (UserProvider + useUser hook) — fetches /api/profile once, provides to entire dashboard tree
+  - `DashboardLayout` wrapped with `<UserProvider>`
+  - `Sidebar` — shows real display_name + level (was "Player" / "Lv. 1")
+  - `PlayerAvatar` — nameplate shows real name + level via props from GameWorld → Scene → PlayerAvatar
+  - `GameWorld` — reads useUser() outside Canvas, passes name/level as props through Scene
+
+**Files created:**
+- `web/app/student/dashboard/oracle/page.tsx`
+- `web/components/portal/UserContext.tsx`
+
+**Files modified:**
+- `web/app/student/onboarding/page.tsx` (full rewrite from terminal-themed to 3-step flow)
+- `web/app/student/dashboard/layout.tsx` (wrapped with UserProvider)
+- `web/components/portal/Sidebar.tsx` (useUser for real name/level)
+- `web/components/game/GameWorld.tsx` (useUser, pass player data to Scene → PlayerAvatar)
+- `web/components/game/PlayerAvatar.tsx` (accept playerName/playerLevel props)
 
 ---
 
@@ -1084,7 +1873,387 @@ Per Management directive (Round 3 tasks).
 
 > QA agent writes here. Others: read only.
 
-*(awaiting first entry — start immediately with build/lint + schema documentation)*
+### 2026-03-27 — Wave 1 QA Baseline Complete
+
+**Full report:** `specs/qa.md`
+
+**Build:** ✅ PASSES — Next.js 16.1.6, 14 static pages, clean compile in 5.4s
+
+**Lint:** ❌ FAILS — ~25 errors, ~30 warnings. Key errors:
+- 4x missing `key` prop in `npo_formSubmission.tsx`
+- Cascading setState in `CardCarouselLayout.tsx`
+- Hook immutability violation in `InteractivePylon3D.tsx`
+- 7x `any` types in `Lanyard.tsx`
+
+**Auth flow:** ⚠️ CANNOT TEST — no auth infrastructure exists
+
+**Marketing pages:** ✅ ALL 5 PASS — `/`, `/npo`, `/company`, `/sponsor`, `/student` all build as static
+
+**CRITICAL FINDING FOR BACKEND:**
+> **No Supabase code exists on ANY branch.** No `types.ts`, no `middleware.ts`, no migrations, no `@supabase/supabase-js` in package.json. CLAUDE.md says "Supabase Auth | Working" but this is incorrect — it's entirely greenfield. Backend should plan to build everything from scratch, not audit existing schema.
+
+**Dependencies:** Peer conflict with `@ai-sdk/react` (needs `--legacy-peer-deps`). 10 npm vulnerabilities (7 moderate, 3 high).
+
+**Files written:** `specs/qa.md`
+
+**Notes for other agents:**
+- **Backend:** Read `specs/qa.md` Section 5 — there's nothing to audit, you're building from scratch. No existing profile fields, no migrations, no middleware. Install `@supabase/supabase-js` and `@supabase/ssr` first.
+- **Frontend:** Lint errors in your area — see `specs/qa.md` Section 2 for the full list. Fix `key` props and unused vars before adding new code.
+- **Management:** CLAUDE.md "Current State" table needs correction — "Supabase Auth | Working" should be "Supabase Auth | Not yet built".
+
+### 2026-03-27 — Read Management Updates, Flagging Contradiction
+
+Read AGENT_LOG.md updates. My Wave 1 baseline is complete (committed `385098a`). Backend is unblocked.
+
+**CONTRADICTION FLAG for Management:**
+Management note (line 326) says "The auth code (@supabase/ssr, middleware, client helpers) is on main branch." My audit found **no Supabase code on main or any other branch** — verified via `git ls-tree -r --name-only main | grep -i supabase` (empty result). No `@supabase/supabase-js` or `@supabase/ssr` in `web/package.json` on any branch. Backend should treat this as greenfield, not a merge task.
+
+**Status:** Wave 1 complete. QA is idle until Wave 4 (retest after Frontend commits). Available for ad-hoc testing if needed.
+
+### 2026-03-30 — Wave 4 Full Retest (Post-Backend Merge)
+
+Merged `davidliu/backend` into `davidliu/qa`. Ran full build + lint + code review of all new pages.
+
+**Full report:** `specs/qa.md` (completely rewritten with Wave 4 results)
+
+**Build:** ✅ PASSES — 45 pages (up from 14). All 23 dashboard pages + 5 marketing pages + auth pages + API routes compile cleanly.
+
+**Lint:** ❌ STILL FAILS — ~40+ errors now (was ~25). **15 new errors** from Backend's dashboard pages, nearly all the same pattern: `fetchX()` called in `useEffect` before function declaration. Easy fix — move declarations above the effects.
+
+**Auth flow (code review):** ✅ COMPLETE
+- Signup, login, onboarding, election, auth callback — all pages exist and build
+- Middleware routing verified: 5 route patterns, tier-based admin access, election behind env flag
+- Invite code `TETHOS-W26` seeded in migration 001
+- Cannot runtime test without Supabase credentials
+
+**Dashboard pages:** ✅ ALL 23 BUILD
+- 15 regular pages + 8 admin pages
+- All render as dynamic (server-rendered on demand)
+
+**Profiles schema:** ✅ FULLY DOCUMENTED
+- 42 columns across 4 migrations (001 base + 002 has_voted + 004 avatar_config/skills/social_links)
+- 7 indexes including trigram search
+- Full column-by-column table in `specs/qa.md`
+
+**Migrations:** 6 total, 32+ tables, all documented
+
+**New issues found:**
+1. **Middleware deprecation** — Next.js warns `"middleware" convention deprecated, use "proxy"`. Not blocking but needs migration.
+2. **Backend lint pattern** — all dashboard pages use `fetchX` before declaration. Systematic fix needed.
+3. **POSITION_TIER_MAP discrepancy** — `types.ts` maps `pmo→T2`, `pm→T2`, `vp→T2` but CLAUDE.md says T3=PM/VP. Check which is correct.
+
+**Files updated:** `specs/qa.md`
+
+**Notes for other agents:**
+- **Backend:** Fix `fetchX` before declaration in all 15+ dashboard pages. Move function declarations above `useEffect`.
+- **Frontend:** Game world is zero code — this is the #1 blocker for the product. Start immediately.
+- **Management:** Middleware deprecation warning needs attention before Next.js upgrade.
+
+### 2026-03-30 — Wave 4.1 Full Combined Retest (Backend + Frontend + Phase 2)
+
+Merged `davidliu/frontend` + `davidliu/backend` (Phase 2) into QA branch. Resolved 7 merge conflicts (took Frontend's versions for dashboard pages per file ownership).
+
+**Full report:** `specs/qa.md` (updated with Wave 4.1 section at top)
+
+**Build:** ✅ PASSES — **49 pages** (was 45). All compile cleanly including:
+- Frontend's game world (GameWorld, PlayerAvatar, Building, PS1Pipeline)
+- Frontend's portal components (Sidebar, MemberDirectory, MemberCard, ProfileView)
+- Backend's Phase 2 APIs (bounties CRUD + economy)
+- All 23 dashboard pages + 8 admin pages
+
+**Lint:** ❌ FAILS — **50 errors, 48 warnings** across 39 files
+- ~15 errors: Backend's `fetchX` before declaration pattern (unchanged)
+- ~10 errors: Frontend's PlayerAvatar/Building ref modifications during render
+- ~10 errors: Pre-existing (Lanyard any types, setState in effects)
+- 3 new: JSX comment text nodes in MemberCard/TextRevealSection
+- 1 new: Missing `aria-selected` on MemberCard role="option"
+
+**Merge conflicts resolved:** 7 files — took Frontend versions for bounty, directory, jobs, layout, leaderboard, home page, profile. Backend's admin pages and unique pages (calendar, kanban, marketplace, mentorship, portfolio, quests, tools) preserved.
+
+**Game world status:** ✅ Code exists and compiles. Cannot runtime test without browser + Supabase credentials.
+
+**Notes for other agents:**
+- **Backend:** `fetchX` before declaration is still the #1 lint error source (~15 instances). Trivial fix: move `async function fetchX()` above the `useEffect` that calls it.
+- **Frontend:** `PlayerAvatar.tsx:68-76` modifies refs during render — the linter flags position/velocity mutations. Consider using `useRef` + mutation in `useFrame` callback instead.
+- **Frontend:** `Building.tsx:112` accesses ref during render. `MemberCard.tsx:33` needs `aria-selected` attribute.
+
+### 2026-03-31 — Wave 5 Full Runtime Test (test-merge, dev server)
+
+Merged all branches (test-merge + Animal Crossing overhaul + latest FE + MGMT fixes). Started dev server, tested every page via HTTP, inspected SSR output, verified game assets, reviewed game component code.
+
+**Full report:** `specs/qa.md` (Wave 5 section at top)
+
+**Build:** ✅ 49 pages, 6.0s compile
+
+**Runtime (dev server):** ✅ ALL 34 pages return HTTP 200
+- 5 marketing, 4 auth, 17 dashboard, 8 admin — all serve correctly
+
+**Game world (SSR + code review):**
+- ✅ Sidebar renders 8 nav items with correct links + Lucide icons + "Soon" badges
+- ✅ Mobile hamburger + slide-in overlay
+- ✅ Canvas bails out to CSR as expected (next/dynamic ssr:false)
+- ✅ Animal Crossing style: blue sky, grass terrain, cobblestone paths, pond, flowers, 3 tree types, benches, lampposts
+- ✅ 7 buildings placed with proximity detection + "Press E" prompt
+- ✅ PlayerAvatar: WASD + click-to-move, sprite sheet cycling, camera follow
+- ✅ TransitionOverlay: fade-to-black state machine (0.3s in → hold → 0.3s out)
+
+**Auth pages:**
+- ✅ Login: email + password + ASCII art terminal aesthetic
+- ✅ Signup: name + email + password + confirm + invite code field (TETHOS-XXXX placeholder)
+
+**API routes:** All return 500 — expected, no Supabase credentials in dev
+
+**Assets:** All 11 files serve correctly (4 character sprites, 4 color variants, 1 shadow, 4 FBX buildings)
+
+**Bugs found (4 new):**
+1. **P2 — Dead code:** `PS1Pipeline.tsx` no longer imported after Animal Crossing overhaul. Delete it.
+2. **P2 — Unused FBX files:** 4 FBX building files (651KB) in `/assets/buildings/` but Building.tsx uses placeholder geometry. Wire them up or delete.
+3. **P2 — No WebGL context loss handler:** If WebGL crashes (Safari/mobile), canvas goes black with no recovery.
+4. **P3 — `Math.random()` in Trees():** Causes hydration mismatch. Use stable values.
+
+**Cross-browser (code analysis):** Chrome ✅, Firefox ✅, Safari ⚠️ (WebGL shadows may be slow, no context loss recovery)
+
+**Notes for other agents:**
+- **Frontend:** Dead code cleanup — remove PS1Pipeline.tsx and unused FBX assets, or wire FBX into Building.tsx. Fix `Math.random()` in Trees for hydration safety.
+- **Backend:** API routes need `.env.local` with Supabase credentials to test. All return 500 currently.
+- **Management:** Safari WebGL performance may need attention before mobile launch. Middleware deprecation still pending.
+
+### 2026-04-04 — Wave 6 Integration Test (v2 AC Overhaul + Backend Phase 2)
+
+Merged all branches. Full build + dev server + runtime testing.
+
+**Build:** ✅ 51 pages (was 49). New: onboarding + quest API routes.
+**Runtime:** ✅ All 34 pages HTTP 200.
+**Game world v2:** Completely rewritten — gradient sky, circular island, river+bridge, 4 tree types with sway animation, bushes, flower clusters, fences, well, mushrooms, clouds. All v2 spec colors implemented. Z-fighting fixed. Tone mapping added.
+**Lint:** ❌ 48 errors, 46 warnings (down from 51/48 — PS1Pipeline errors gone).
+
+**Previous bugs fixed:** PS1Pipeline deleted ✅, Math.random() hydration fixed ✅, onCreated handler added ✅
+
+**Remaining:** FBX files unused (651KB), no WebGL context loss recovery, 48 lint errors, middleware deprecation.
+
+Full report in `specs/qa.md` Wave 6 section.
+
+### 2026-04-04 — Wave 7: Full Integration + First Visual Browser Test
+
+**Merged ALL branches** (backend API-wiring, frontend API-wiring, UXUI reviews). Resolved 3 merge conflicts.
+
+**Build:** ✅ 55 pages (up from 51), 7.1s
+**Lint:** ❌ 48 errors, 49 warnings (unchanged)
+
+**FIRST VISUAL BROWSER TEST** via Playwright:
+- ✅ Game world renders: sky, terrain, river, bridge, trees, bushes, flowers, clouds, props
+- ✅ Buildings render with correct AC-style geometry (walls, cone roofs, doors, windows, chimneys)
+- ✅ WASD movement works, camera follows player
+- ✅ Building proximity detection + "Press E" prompt works
+- ✅ Sidebar: all 8 items, blue accent on active, "Soon" badges
+- ✅ Mobile responsive: hamburger menu at 375px, slide-over opens/closes
+- ✅ Login/Signup pages: terminal aesthetic, all form fields present
+- ✅ Coming Soon placeholders: ASCII art, correct per-page descriptions
+
+**P1 BUG FIXED — Building roofs were all gray:**
+`roofColor` defined in GameWorld.tsx config but never passed to Building component. ACBuilding was deriving roof from `wallColor * 0.55`. Added `roofColor` prop threading. Buildings now show correct spec colors (coral HQ, green Shop, purple Oracle, blue House).
+
+**New bugs found:**
+- P2: Mobile sidebar z-index — drei `<Html>` prompts bleed through sidebar overlay
+- P2: Directory/Profile show raw "HTTP 500" without Supabase — need graceful offline message
+- P3: Font 404 (`TestSohne-Kraftig`)
+- P3: Player sprite shows as dashed box in headless Playwright — needs real browser verification
+
+**Full report:** `specs/qa.md` Wave 7 section.
+
+---
+
+### 2026-04-04 — Wave 8: Round 2 Full Integration Test
+
+Merged 7 commits from all 3 branches. Resolved 3 merge conflicts. Build passes (52 routes). All 5 new pages verified (bounty, leaderboard, shop, jobs, settings — no longer Coming Soon). 6 new API endpoints respond. 25/25 existing pages pass regression. Also deleted ASCII loading screen + 5 test pages (1,967 lines removed). Full report in `specs/qa.md` Wave 8.
+
+---
+
+### 2026-04-04 — Round 2 Task 3: Lint Fixes in Game Components (9 → 0)
+
+Fixed all 9 lint errors in QA-jurisdiction game components:
+
+**Building.tsx (3 errors → 0):**
+- Removed unused `sz` destructure in `LeaderboardMonument`
+- Replaced `center.current` ref access during render with `useMemo` for proximity computation
+- Removed unused `useRef` import
+
+**PlayerAvatar.tsx (6 errors → 0):**
+- Replaced `useTexture` + post-hook mutation with `THREE.TextureLoader` inside `useMemo`
+- Textures now configured during construction (not mutated after hook return)
+- React Compiler `react-hooks/immutability` rule satisfied
+
+**Overall lint: 48 → 40 errors.** Remaining 40 are in Backend admin pages (`fetchX` before declaration) and marketing components (`any` types, jsx comments) — outside QA jurisdiction.
+
+**Waiting on:** Other agents to commit Round 2 work before I can merge + retest.
+
+---
+
+### 2026-04-05 — Wave 9: Lint Fixes + Full Visual Regression
+
+No new commits on any agent branch since Wave 8. All branches fully merged.
+
+**Lint fixes (QA jurisdiction):**
+- GameWorld.tsx: replaced 6x `Math.random()` in `useMemo` with seeded PRNG (`seededRandom`) — fixes React Compiler purity rule
+- Building.tsx: removed 2 unused imports (`useState`, `useRef`)
+- **Lint: 53 → 47 errors, 50 → 48 warnings**
+
+**Visual regression (Playwright, 13 pages):** Zero regressions. All 5 Round 2 pages render correctly. Game world, login, signup, mobile responsive all pass.
+
+**Build: ✅ 58 routes**
+
+**No new bugs found.**
+
+Full report in `specs/qa.md` Wave 9.
+
+---
+
+### 2026-04-05 — Round 3: Core Student Journey
+
+**Management directive received.** Round 3 focus: sign up → onboard → take quiz → get class → explore.
+
+**QA Round 3 tasks:**
+1. Incremental merge from each agent as they push
+2. Test onboarding flow (3-step: welcome → profile → avatar)
+3. Test oracle quiz flow (12 questions → class reveal)
+4. Test auth context wiring (sidebar shows real user data)
+5. Full lint audit after Backend cleanup (target: significant reduction from 47 errors)
+6. Log everything to `specs/qa.md` Wave 10+
+
+**Other agents' Round 3 assignments:**
+- **Frontend:** Onboarding flow UI, Oracle quiz page, auth context wiring (sidebar/nameplate)
+- **Backend:** Fix ALL Backend lint errors (15 setState-in-effect + misc), Events/Calendar API, Next.js proxy migration research
+- **UXUI:** Class visual identity sheet (4 classes, 16 subclasses), design review v4 of Round 2 pages
+
+**Status:** Waiting for agents to push. Will merge incrementally.
+
+---
+
+### 2026-04-05 — Wave 10: Round 4 Merge Readiness Assessment
+
+Merged all Round 3 work (Frontend: onboarding + oracle + auth context, Backend: events API + lint cleanup, UXUI: class identity + oracle v2 spec + review v4). Full integration test.
+
+**Build:** ✅ 60 routes (up from 58)
+**HTTP:** ✅ 36/36 pages return 200
+**Lint:** ❌ 39 errors, 53 warnings (down from 47 errors — Backend fixed 8)
+
+**Round 3 features verified:**
+- Onboarding (3-step): welcome → profile → avatar ✅
+- Oracle quiz (12 MBTI questions + 5-stage reveal): ✅
+- Auth context (UserContext + dynamic sidebar): ✅
+- Events API (GET/POST + RSVP, tier-gated): ✅
+- GameWorld auth wiring (playerName/playerLevel): ✅
+
+**P1 blockers found (2):**
+1. No `/api/shop` route — returns 404, need stub or route
+2. Directory/Profile show raw "HTTP 500" — need error fallback UI
+
+**VERDICT: CONDITIONAL READY** — fix 2 P1s and portal can merge to main.
+
+Full report in `specs/qa.md` Wave 10.
+
+---
+
+### HANDOFF — Context for New QA Session
+
+#### 1. Test Waves Completed
+
+| Wave | Date | What Tested | Key Finding |
+|------|------|-------------|-------------|
+| Wave 1 | 2026-03-27 | Build/lint baseline, auth audit, schema docs | No Supabase code existed — entirely greenfield |
+| Wave 4 | 2026-03-30 | Post-Backend merge: 45 pages, auth flow, profiles schema | All 23 dashboard pages + auth + middleware verified |
+| Wave 4.1 | 2026-03-30 | Combined Backend+Frontend: 49 pages, merge conflict resolution | 7 conflicts resolved (Frontend versions for dashboard) |
+| Wave 5 | 2026-03-31 | Dev server runtime: all 34 pages via HTTP, game world code review | Game world, sidebar, auth pages all verified. Found dead code + unused assets |
+| Wave 6 | 2026-04-04 | v2 AC overhaul + Backend Phase 2: 51 pages, full integration | v2 game world verified. PS1Pipeline deleted. Z-fighting fixed. |
+| Wave 7 | 2026-04-04 | Full integration + first visual browser test | All pages + game world visually verified. Roof color bug fixed. |
+| Wave 8 | 2026-04-04 | Round 2 integration: 5 new pages, 6 new APIs, cleanup | All 5 new pages + 6 APIs verified. 1,967 lines dead code removed. |
+| Wave 9 | 2026-04-05 | Lint fixes + full visual regression (13 pages) | 6 lint errors fixed. Zero regressions. All Round 2 pages render. |
+| Wave 10 | 2026-04-05 | Round 4 merge readiness — 36 pages, 22 APIs, code review | CONDITIONAL READY. 2 P1 blockers: missing /api/shop, raw HTTP 500 on directory/profile. |
+
+#### 2. Current Build Status
+
+- **Build:** ✅ PASSES — 60 routes (Next.js 16.1.6 Turbopack)
+- **Lint:** ❌ FAILS — 39 errors, 53 warnings
+- **TypeScript:** ✅ No type errors
+- **Dev server:** ✅ 36/36 pages return HTTP 200
+
+#### 3. Known Bugs
+
+| Sev | Issue | Details |
+|-----|-------|---------|
+| **P2** | Directory/Profile show raw "HTTP 500" | No Supabase credentials — need graceful offline fallback |
+| **P2** | FBX building files unused | `web/public/assets/buildings/*.fbx` (4 files, 651KB). Delete or wire up. |
+| **P2** | No WebGL context loss handler | If WebGL context is lost (Safari/mobile), canvas goes black. No recovery. |
+| **P2** | Mobile sidebar z-index | drei `<Html>` prompts bleed through sidebar overlay |
+| **P3** | 47 lint errors | setState in effects (15), any types (~20), hook mutations (4), require imports (3), jsx comments (3), misc (2) |
+| **P3** | Font 404 (`TestSohne-Kraftig`) | Font file missing from repo |
+| **P3** | Middleware deprecation | `web/middleware.ts` — Next.js 16 warns to use "proxy" convention |
+| **P3** | Player sprite dashed box in headless | Needs real browser verification |
+
+#### 4. Lint Error Inventory
+
+| Pattern | Count | Where | Fix |
+|---------|-------|-------|-----|
+| setState in effect | 15 | Backend dashboard/admin pages (12), CardCarouselLayout, GlassNavbar | Refactor fetch patterns |
+| `no-explicit-any` | ~20 | global.d.ts (4), Lanyard (7+), various | Add proper types |
+| Hook return mutation | 4 | Lanyard.tsx | Construct with correct values instead of mutating |
+| `require()` imports | 3 | scripts/convert-fbx-to-glb.js | Convert to ESM or exclude from lint |
+| JSX comment text nodes | 3 | MemberCard, TextRevealSection | Wrap in `{/* */}` |
+| Variable before declaration | 1 | Backend page | Move declaration above usage |
+| Ref access during render | 1 | CustomCursor or InteractivePylon3D | Move to useEffect/callback |
+
+#### 5. What's Been Runtime Tested vs Build-Only
+
+| Area | Runtime Tested | Build-Only |
+|------|---------------|------------|
+| Marketing pages (5) | ✅ HTTP 200 | ✅ |
+| Auth pages (login/signup/onboarding/election) | ✅ HTTP 200 + SSR content verified | ✅ |
+| Dashboard pages (17 regular) | ✅ HTTP 200 + SSR content | ✅ |
+| Admin pages (8) | ✅ HTTP 200 | ✅ |
+| API routes (16) | ✅ All return 500 (expected, no Supabase) | ✅ |
+| Game world R3F canvas | ❌ NOT VISUALLY TESTED (no browser) — code reviewed only | ✅ |
+| Middleware auth redirects | ❌ NOT TESTED (no Supabase creds) — code reviewed only | ✅ |
+| Signup with invite code TETHOS-W26 | ❌ NOT TESTED (no Supabase) | ✅ |
+| Mobile responsive (hamburger menu) | ❌ NOT TESTED | code present |
+
+#### 6. Auth Flow Status
+
+- **Code complete:** signup, login, callback, onboarding, election pages all exist and build
+- **Middleware:** 5 route patterns verified via code review (dashboard→auth, admin→T1-T3, election→env flag, onboarding→skip if done, login→redirect if logged in)
+- **NOT runtime tested:** no Supabase credentials configured. All API routes and auth flows are build-verified only.
+- **Invite code:** `TETHOS-W26` seeded in `001_initial_schema.sql`
+
+#### 7. What To Do Next
+
+1. **Get Supabase credentials** and create `.env.local` — this unblocks runtime auth testing
+2. **Visual browser testing** of game world — I've only verified SSR + code. Need actual WebGL rendering check (Chrome, Safari, Firefox)
+3. **Fix lint errors** — or coordinate with Backend/Frontend to fix their respective patterns
+4. **Test onboarding flow end-to-end** once Supabase is connected
+5. **Mobile responsive testing** — sidebar hamburger, game world on small viewports
+6. **Performance profiling** — game world has 20 trees with sway animation, 20 bushes, 12 flower clusters, 3 clouds, river animation — check FPS
+
+#### 8. Key Files to Read First
+
+| File | What |
+|------|------|
+| `specs/qa.md` | **This is your bible** — full QA report with every wave's results |
+| `AGENT_LOG.md` → QA section | All my test entries + notes for other agents |
+| `web/components/game/GameWorld.tsx` | The game world — 420 lines, v2 AC style |
+| `web/components/game/PlayerAvatar.tsx` | Player movement + sprite sheet |
+| `web/components/game/Building.tsx` | Building rendering + interaction |
+| `web/lib/supabase/middleware.ts` | Auth routing logic (162 lines) |
+| `web/lib/supabase/types.ts` | Profile type (42 fields) + all interfaces |
+| `web/supabase/migrations/001_initial_schema.sql` | DB schema (659 lines, 30+ tables) |
+
+#### 9. Gotchas
+
+1. **`--legacy-peer-deps` required** for npm install — `@ai-sdk/react` conflicts with React 19. `.npmrc` has this configured.
+2. **Dev server may use port 3001** if 3000 is occupied. Check the startup output.
+3. **Middleware gracefully handles missing env vars** — when Supabase URL/key aren't set, auth checks are skipped. Dashboard loads without login in dev.
+4. **Game world uses `next/dynamic` with `ssr: false`** — SSR output shows `data-dgst="BAILOUT_TO_CLIENT_SIDE_RENDERING"`. This is expected, not an error.
+5. **Frontend and Backend both built dashboard pages** with conflicts. Frontend's versions were taken for the 7 conflicting files (bounty, directory, jobs, layout, leaderboard, home, profile). Backend's unique pages (admin/*, calendar, kanban, marketplace, mentorship, portfolio, quests, tools) are preserved.
+6. **POSITION_TIER_MAP discrepancy**: `types.ts` maps PM/VP to T2, CLAUDE.md says T3. Never got clarification — flag to management if it matters.
+7. **FBX files in repo but unused** — Building.tsx renders placeholder geometry. Don't be confused by `public/assets/buildings/*.fbx` — they're not loaded.
 
 ---
 
