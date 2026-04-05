@@ -597,6 +597,112 @@ Build these 5 pages. Each has a UXUI spec and Backend API ready. **Push after ea
 
 ---
 
+### 2026-04-05 — Round 3 Directives (CURRENT SPRINT)
+
+**Round 2 results: ALL AGENTS DELIVERED.** 5 pages built, 6 new API endpoints, 2 specs, QA waves 8+9 complete. Zero "Coming Soon" pages remain. Lint down to 47 errors. Great work.
+
+**Round 3 focus: Onboarding flow, Oracle quiz UI, auth wiring, and lint cleanup.** These close the loop on the core student experience: sign up → onboard → take quiz → get class → explore.
+
+---
+
+#### @Frontend — Onboarding Flow + Oracle Quiz Page + Auth Context
+
+**Push after each feature.**
+
+**Task 1: Onboarding Flow Pages**
+- Read `specs/ux-onboarding.md` (266 lines)
+- The onboarding API already exists: `GET /api/onboarding` (status), `POST /api/onboarding` (advance step)
+- Build the multi-step flow at `/student/onboarding`:
+  - **Step 1 — Welcome:** splash screen, "Begin Your Journey" CTA
+  - **Step 2 — Profile Setup:** display name, bio, skills selection, social links
+  - **Step 3 — Avatar Creator:** avatar customization (for now: just select from prototype sprite colors — red/blue/green/yellow). Save selection to `avatar_config`
+- On completion: `POST /api/onboarding` awards 100 coins + 50 XP, redirects to `/student/dashboard`
+- Use progress indicators (step 1/3, 2/3, 3/3)
+- **Push after onboarding flow works.**
+
+**Task 2: Oracle Temple Quiz Page**
+- Read `specs/ux-oracle.md` (247 lines) and `specs/oracle-questions.md`
+- Build at `/student/dashboard/oracle/page.tsx` (new route)
+- Flow: intro screen → 12 questions (one at a time, answer cards) → scoring animation → class reveal
+- Fetch questions from `GET /api/oracle/quiz`
+- Submit answers to `POST /api/oracle/result` — receives MBTI type, class, subclass
+- Class reveal: show class name, subclass, brief description. Style per class (Warrior=red, Mage=blue, Healer=green, Rogue=purple)
+- If already taken: `GET /api/oracle/result` → show current class, option to retake
+- Add "Oracle Temple" to sidebar nav (replace or repurpose one item, or add new one)
+- **Push after oracle page works.**
+
+**Task 3: Wire Auth Context Into UI**
+- Sidebar currently shows hardcoded "Player Lv. 1" — wire to real Supabase session
+- Use `createBrowserClient` from `@supabase/ssr` to get current user
+- Fetch own profile from `GET /api/profile` on dashboard layout mount
+- Pass profile data to Sidebar (real name, level, tier)
+- Pass to PlayerAvatar (nameplate shows real name + level)
+- If no session: redirect to `/student/login` (middleware already handles this, but add client-side check too)
+- **Push after auth context is wired.**
+
+---
+
+#### @Backend — Lint Cleanup + Wire Remaining Pages + Events API
+
+**Push after each task.**
+
+**Task 1: Fix ALL remaining Backend lint errors**
+- 15 `setState synchronously within an effect` errors in admin pages — refactor to use `useCallback` or move state updates outside effects
+- 1 `Cannot access variable before declaration` error
+- Any `no-explicit-any` types in Backend-owned files — add proper types
+- Target: zero Backend-owned lint errors
+- **Push after lint fixes.**
+
+**Task 2: Events/Calendar API**
+- `events` and `event_attendance` tables exist in migration 001
+- Build: `GET /api/events` (list with date range filter), `POST /api/events` (create, T1-T3), `POST /api/events/[id]/rsvp` (RSVP toggle)
+- Frontend's calendar page exists but uses direct Supabase — give it a proper API
+- **Push after events endpoints work.**
+
+**Task 3: Middleware migration research**
+- Next.js 16 deprecated `middleware.ts` → wants `proxy` convention
+- Research what the `proxy` convention looks like and document a migration plan in `specs/api.md`
+- Do NOT migrate yet — just document how to do it
+- **Push after research is documented.**
+
+---
+
+#### @UXUI — Oracle Visual Identity + Onboarding Polish Review
+
+**Push after each deliverable.**
+
+**Task 1: `specs/ux-oracle-classes.md` — Class Visual Identity Sheet**
+- For each of the 4 classes (Warrior, Mage, Healer, Rogue) and 16 subclasses:
+  - Color palette (primary, secondary, accent)
+  - Icon/emblem description
+  - Class description text (2-3 sentences, RPG flavor)
+  - Subclass description (1 sentence each)
+- Class reveal animation spec: what happens visually when you get your result (particles? glow? emblem fade-in?)
+- This is what Frontend needs to style the Oracle result page
+- **Push after spec is written.**
+
+**Task 2: Design review of Round 2 pages**
+- Review the 5 new pages (bounty, leaderboard, shop, jobs, settings) against your specs
+- Score each page, note deviations, prioritize fixes
+- Write to `specs/ux-review-v4.md`
+- **Push after review is written.**
+
+---
+
+#### @QA — Incremental Merge + Onboarding/Oracle Testing + Lint Audit
+
+**Same workflow as Round 2 — merge and test as pages land.**
+
+1. **Merge from all branches after each push**
+2. **Test onboarding flow end-to-end** — step progression, form validation, completion redirect
+3. **Test oracle quiz** — question display, answer selection, result page, retake flow
+4. **Test auth context** — does sidebar show real user data after login (will need Supabase creds or verify code path)
+5. **Full lint audit** — after Backend fixes their errors, report remaining count and owners
+6. **Regression check** all 25+ existing pages
+7. **Push after every merge/test cycle**
+
+---
+
 ## UXUI
 
 > UXUI agent writes here. Others: read only.
