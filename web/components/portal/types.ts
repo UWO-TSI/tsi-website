@@ -1,52 +1,33 @@
 /**
- * Temporary frontend types — will be replaced when Backend commits
- * web/lib/supabase/types.ts with the real Supabase-generated types.
+ * Portal UI constants — tier colors, labels, and helpers.
+ * All TYPE imports come from @/lib/supabase/types (Backend's canonical source).
+ * This file only contains UI-specific mappings that don't belong in the DB types.
  */
 
-export type Tier = 1 | 2 | 3 | 4 | 5;
+// Re-export Backend types so existing imports still work
+export type {
+  Tier,
+  Profile,
+  DirectoryMember,
+  PublicProfile,
+  ClassName,
+  RankTitle,
+  Position,
+  AvatarConfig,
+  SocialLinks,
+} from "@/lib/supabase/types";
 
-export interface Profile {
-  id: string;
-  display_name: string;
-  email?: string;
-  bio?: string;
-  avatar_url?: string;
-  avatar_config: Record<string, unknown>;
-  tier: Tier;
-  level: number;
-  xp: number;
-  coin_balance: number;
-  class?: string;
-  subclass?: string;
-  skills: string[];
-  social_links: Record<string, string>;
-  year?: number;
-  is_active: boolean;
-  onboarding_completed: boolean;
-  created_at: string;
-}
+export {
+  TIER_LABELS,
+  xpForLevel,
+  levelFromXp,
+  rankFromLevel,
+  canAccessFeature,
+} from "@/lib/supabase/types";
 
-export interface DirectoryMember {
-  id: string;
-  display_name: string;
-  avatar_url?: string;
-  tier: Tier;
-  level: number;
-  xp: number;
-  class?: string;
-  skills: string[];
-  is_active: boolean;
-}
+import type { Tier } from "@/lib/supabase/types";
 
-export const TIER_LABELS: Record<Tier, string> = {
-  1: "Founder",
-  2: "President",
-  3: "PM / VP",
-  4: "Developer",
-  5: "Volunteer",
-};
-
-// Matches specs/ux-directory.md Section 5 and specs/tokens.md Section 8
+// ─── Tier Colors (from specs/ux-directory.md Section 5) ─────────
 export const TIER_COLORS: Record<Tier, { color: string; bg: string; border: string }> = {
   1: { color: "#ffd166", bg: "rgba(255, 209, 102, 0.2)", border: "#ffd166" },
   2: { color: "#4A7AFF", bg: "rgba(0, 47, 167, 0.2)", border: "#002fa7" },
@@ -55,28 +36,19 @@ export const TIER_COLORS: Record<Tier, { color: string; bg: string; border: stri
   5: { color: "#a1a1aa", bg: "rgba(161, 161, 170, 0.15)", border: "#52525b" },
 };
 
-export const XP_PER_LEVEL = 100;
+// ─── XP Progress Helper ─────────────────────────────────────────
+import { xpForLevel } from "@/lib/supabase/types";
 
-export function getXpProgress(xp: number) {
-  const level = Math.floor(xp / XP_PER_LEVEL) + 1;
-  const current = xp % XP_PER_LEVEL;
+export function getXpProgress(xp: number, level: number) {
+  const currentLevelXp = xpForLevel(level);
+  const nextLevelXp = xpForLevel(level + 1);
+  const progress = nextLevelXp > currentLevelXp
+    ? ((xp - currentLevelXp) / (nextLevelXp - currentLevelXp)) * 100
+    : 0;
   return {
     level,
-    current,
-    needed: XP_PER_LEVEL,
-    percent: (current / XP_PER_LEVEL) * 100,
+    current: xp - currentLevelXp,
+    needed: nextLevelXp - currentLevelXp,
+    percent: Math.max(0, Math.min(100, progress)),
   };
 }
-
-// Mock data for development — remove when Backend API is ready
-export const MOCK_MEMBERS: DirectoryMember[] = [
-  { id: "1", display_name: "David Liu", tier: 1, level: 24, xp: 2380, class: "Architect", skills: ["React", "Three.js", "Systems Design"], is_active: true },
-  { id: "2", display_name: "Sarah Chen", tier: 2, level: 18, xp: 1760, class: "Strategist", skills: ["Product", "UX Research", "Figma"], is_active: true },
-  { id: "3", display_name: "Marcus Rivera", tier: 3, level: 14, xp: 1350, class: "Paladin", skills: ["Node.js", "PostgreSQL", "DevOps"], is_active: true },
-  { id: "4", display_name: "Aisha Patel", tier: 4, level: 9, xp: 870, class: "Ranger", skills: ["Python", "Data Science", "ML"], is_active: true },
-  { id: "5", display_name: "Jordan Hayes", tier: 4, level: 7, xp: 680, class: "Mage", skills: ["React", "TypeScript", "CSS"], is_active: true },
-  { id: "6", display_name: "Lily Nakamura", tier: 5, level: 3, xp: 250, class: "Scout", skills: ["UI Design", "Figma"], is_active: true },
-  { id: "7", display_name: "Kai Thompson", tier: 4, level: 11, xp: 1080, class: "Artificer", skills: ["Rust", "WebAssembly", "Systems"], is_active: true },
-  { id: "8", display_name: "Elena Vasquez", tier: 3, level: 15, xp: 1490, class: "Healer", skills: ["Community", "Mentorship", "Writing"], is_active: false },
-  { id: "9", display_name: "Ryan Okafor", tier: 5, level: 2, xp: 140, class: "Apprentice", skills: ["JavaScript", "HTML/CSS"], is_active: true },
-];

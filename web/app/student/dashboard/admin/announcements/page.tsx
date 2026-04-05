@@ -27,10 +27,6 @@ export default function AdminAnnouncementsPage() {
   });
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchAnnouncements();
-  }, []);
-
   async function fetchAnnouncements() {
     const supabase = createClient();
     const { data } = await supabase
@@ -40,6 +36,11 @@ export default function AdminAnnouncementsPage() {
     setAnnouncements((data as Announcement[]) ?? []);
     setLoading(false);
   }
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- async fetch, setState is after await
+    fetchAnnouncements();
+  }, []);
 
   async function createAnnouncement(e: React.FormEvent) {
     e.preventDefault();

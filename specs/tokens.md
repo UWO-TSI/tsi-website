@@ -273,10 +273,12 @@ These tokens extend the base design system (`tokens.css`) with game-specific and
 ## 10. Avatar Creator Tokens (Phase 2)
 
 ```css
-/* Avatar Creator — Tabbed Panel */
+/* Avatar Creator — Tabbed Panel (2D Sprite Preview) */
 --creator-width: min(560px, 90vw);
 --creator-preview-height: 280px;
 --creator-preview-bg: var(--color-bg-alt);  /* #111113 */
+--creator-preview-scale: 4;                 /* 4× pixel scale for sprite preview */
+--creator-preview-rendering: pixelated;     /* image-rendering: pixelated */
 --creator-tab-height: 40px;
 --creator-tab-active-border: 2px solid var(--color-brand-blue);
 --creator-option-grid-cols: 4;
@@ -285,6 +287,13 @@ These tokens extend the base design system (`tokens.css`) with game-specific and
 --creator-option-radius: var(--radius-sm);  /* 8px */
 --creator-option-selected-border: 2px solid var(--color-brand-blue);
 --creator-options-max-height: 240px;
+
+/* Sprite Layer Tokens */
+--sprite-layer-z-offset: 0.001;             /* z-offset between layers */
+--sprite-layer-count: 4;                    /* body, outfit, hair, accessories */
+--sprite-frame-rate: 8;                     /* FPS for sprite animation */
+--sprite-billboard-width: 1.2;              /* units */
+--sprite-billboard-height: 1.8;             /* units */
 ```
 
 ---
@@ -326,9 +335,76 @@ These tokens extend the base design system (`tokens.css`) with game-specific and
 --z-hamburger: 50;
 --z-overlay-panel: 60;
 --z-overlay-backdrop: 55;
+--z-sheet: 60;                             /* mobile bottom sheet */
 --z-transition-overlay: 100;
+--z-orientation-prompt: 9999;              /* landscape-lock fallback prompt */
 --z-building-label: 10;
 --z-interaction-prompt: 15;
+--z-mobile-hud: 40;
+```
+
+---
+
+## 14. Mobile & Responsive Tokens
+
+> **See also:** `specs/ux-mobile.md` for full mobile spec.
+
+```css
+/* Orientation Lock */
+--mobile-orientation: landscape;
+
+/* Touch Targets */
+--touch-target-min: 36px;
+--touch-target-comfortable: 44px;
+--touch-target-large: 48px;
+
+/* Mobile HUD Strip */
+--hud-height: 36px;
+--hud-bg: rgba(15, 15, 16, 0.7);
+--hud-blur: blur(8px);
+--hud-z: var(--z-mobile-hud);
+
+/* Mobile Game Camera Overrides */
+--game-camera-fov-mobile: 55;
+--game-camera-distance-mobile: 18;
+--game-camera-follow-mobile: 0.06;
+--game-camera-distance-interior-mobile: 12;
+--game-interact-range-mobile: 2.5;
+
+/* Tap-to-Move Feedback */
+--tap-indicator-size: 24px;
+--tap-indicator-color: rgba(255, 255, 255, 0.6);
+--tap-indicator-duration: 0.3s;
+
+/* Bottom Sheet (mobile overlay replacement) */
+--sheet-z: var(--z-sheet);
+--sheet-radius: 16px;
+--sheet-header-height: 48px;
+--sheet-handle-width: 32px;
+--sheet-handle-height: 4px;
+--sheet-handle-color: var(--gray-600);
+--sheet-open-duration: 0.3s;
+--sheet-open-ease: cubic-bezier(0.32, 0.72, 0, 1);
+--sheet-close-duration: 0.25s;
+--sheet-close-ease: ease-in;
+--sheet-swipe-velocity: 0.5;              /* px/ms threshold */
+
+/* Mobile Directory Overrides */
+--row-height-mobile: 48px;
+--avatar-size-mobile: 32px;
+--directory-padding-mobile: 12px;
+--tier-badge-height-mobile: 18px;
+
+/* Mobile Profile Overrides */
+--avatar-size-lg-mobile: 64px;
+--avatar-border-lg-mobile: 3px;
+--profile-name-size-mobile: 24px;
+--profile-stat-value-mobile: 20px;
+
+/* Mobile Building Interaction Prompt */
+--building-prompt-height-mobile: 36px;
+--building-prompt-radius-mobile: 18px;
+--building-prompt-bg-mobile: rgba(0, 47, 167, 0.9);
 ```
 
 ---

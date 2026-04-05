@@ -2,8 +2,9 @@
 
 import { useRef, useState, useEffect, useCallback, useMemo } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
-import { Billboard, Html, useTexture } from "@react-three/drei";
+import { Billboard, Html } from "@react-three/drei";
 import * as THREE from "three";
+import { getTerrainHeight } from "./terrain";
 
 /**
  * PlayerAvatar — 2D sprite on Billboard in 3D world (Dave the Diver style)
@@ -46,9 +47,11 @@ const keys: Record<string, boolean> = {};
 interface PlayerAvatarProps {
   spawnPosition: [number, number, number];
   onMove: (position: THREE.Vector3) => void;
+  playerName?: string;
+  playerLevel?: number;
 }
 
-export default function PlayerAvatar({ spawnPosition, onMove }: PlayerAvatarProps) {
+export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Player", playerLevel = 1 }: PlayerAvatarProps) {
   const groupRef = useRef<THREE.Group>(null);
   const meshRef = useRef<THREE.Mesh>(null);
   const positionRef = useRef(new THREE.Vector3(...spawnPosition));
@@ -59,22 +62,24 @@ export default function PlayerAvatar({ spawnPosition, onMove }: PlayerAvatarProp
   const [isMoving, setIsMoving] = useState(false);
   const { camera, gl } = useThree();
 
-  // Load sprite sheet
-  const spriteTexture = useTexture("/assets/characters/prototype_character.png");
-  const shadowTexture = useTexture("/assets/characters/static_shadow.png");
+  // Load and configure textures for pixel art during construction
+  const spriteTexture = useMemo(() => {
+    const tex = new THREE.TextureLoader().load("/assets/characters/prototype_character.png");
+    tex.minFilter = THREE.NearestFilter;
+    tex.magFilter = THREE.NearestFilter;
+    tex.generateMipmaps = false;
+    tex.repeat.set(1 / SHEET_COLS, 1 / SHEET_ROWS);
+    tex.offset.set(0, 1 - 1 / SHEET_ROWS);
+    return tex;
+  }, []);
 
-  // Configure textures for pixel art
-  useMemo(() => {
-    spriteTexture.minFilter = THREE.NearestFilter;
-    spriteTexture.magFilter = THREE.NearestFilter;
-    spriteTexture.generateMipmaps = false;
-    spriteTexture.repeat.set(1 / SHEET_COLS, 1 / SHEET_ROWS);
-    spriteTexture.offset.set(0, 1 - 1 / SHEET_ROWS);
-
-    shadowTexture.minFilter = THREE.NearestFilter;
-    shadowTexture.magFilter = THREE.NearestFilter;
-    shadowTexture.generateMipmaps = false;
-  }, [spriteTexture, shadowTexture]);
+  const shadowTexture = useMemo(() => {
+    const tex = new THREE.TextureLoader().load("/assets/characters/static_shadow.png");
+    tex.minFilter = THREE.NearestFilter;
+    tex.magFilter = THREE.NearestFilter;
+    tex.generateMipmaps = false;
+    return tex;
+  }, []);
 
   // Keyboard input
   useEffect(() => {
@@ -160,6 +165,7 @@ export default function PlayerAvatar({ spawnPosition, onMove }: PlayerAvatarProp
       pos.z += moveDir.z * step;
       pos.x = THREE.MathUtils.clamp(pos.x, -BOUNDARY, BOUNDARY);
       pos.z = THREE.MathUtils.clamp(pos.z, -BOUNDARY, BOUNDARY);
+      pos.y = getTerrainHeight(pos.x, pos.z);
 
       const targetAngle = Math.atan2(moveDir.x, moveDir.z);
       facingRef.current = THREE.MathUtils.lerp(
@@ -252,10 +258,10 @@ export default function PlayerAvatar({ spawnPosition, onMove }: PlayerAvatarProp
           }}
         >
           <div style={{ fontSize: "14px", fontWeight: 700, color: "#f1ffff", lineHeight: 1.2 }}>
-            Player
+            {playerName}
           </div>
           <div style={{ fontSize: "12px", color: "#9ca3af", fontFamily: "'IBM Plex Mono', monospace", lineHeight: 1.2 }}>
-            Lv. 1
+            Lv. {playerLevel}
           </div>
         </div>
       </Html>

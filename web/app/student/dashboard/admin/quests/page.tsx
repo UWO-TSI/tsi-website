@@ -31,10 +31,6 @@ export default function AdminQuestsPage() {
     end_date: "",
   });
 
-  useEffect(() => {
-    fetchQuests();
-  }, []);
-
   async function fetchQuests() {
     const supabase = createClient();
     const { data } = await supabase
@@ -44,6 +40,11 @@ export default function AdminQuestsPage() {
     setQuests((data as Quest[]) ?? []);
     setLoading(false);
   }
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- async fetch, setState is after await
+    fetchQuests();
+  }, []);
 
   async function createQuest(e: React.FormEvent) {
     e.preventDefault();
