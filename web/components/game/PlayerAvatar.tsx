@@ -4,6 +4,7 @@ import { useRef, useState, useEffect, useCallback, useMemo } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { Billboard, Html } from "@react-three/drei";
 import * as THREE from "three";
+import { getTerrainHeight } from "./terrain";
 
 /**
  * PlayerAvatar — 2D sprite on Billboard in 3D world (Dave the Diver style)
@@ -162,6 +163,7 @@ export default function PlayerAvatar({ spawnPosition, onMove }: PlayerAvatarProp
       pos.z += moveDir.z * step;
       pos.x = THREE.MathUtils.clamp(pos.x, -BOUNDARY, BOUNDARY);
       pos.z = THREE.MathUtils.clamp(pos.z, -BOUNDARY, BOUNDARY);
+      pos.y = getTerrainHeight(pos.x, pos.z);
 
       const targetAngle = Math.atan2(moveDir.x, moveDir.z);
       facingRef.current = THREE.MathUtils.lerp(

@@ -1071,6 +1071,169 @@ Spec covers 14 sections: orientation lock, breakpoints, navigation, game world t
 
 ---
 
+### 2026-04-04 — Sprint 3: Terrain Hills, Water Animation, Time-of-Day, Ambient Life
+
+**Build status:** `npm run build` passes cleanly.
+
+**Completed:**
+
+- [x] **Rolling hills terrain** — replaced flat circle with 128×128 vertex-displaced PlaneGeometry using FBM noise (4 octaves). Terrain features:
+  - Gentle mounds 0.5–2.0 units across the island
+  - Oracle Temple hill rises 3.5 units (smooth quadratic falloff, 12-unit radius)
+  - River valley dips terrain to 0 near z=3
+  - Paths automatically flattened (92% reduction for N-S, 85% for E-W corridors)
+  - Island edge falloff from radius 32–40
+  - Vertex colors: 4-tone grass blend (primary/secondary/highlight/shadow) driven by height + noise
+  - All objects (trees, bushes, flowers, props, buildings) now placed at terrain height via `getTerrainHeight()`
+
+- [x] **Terrain utility module** (`web/components/game/terrain.ts`):
+  - Exported `getTerrainHeight(x, z)` — used by GameWorld and PlayerAvatar
+  - Exported `valueNoise(x, y)` — used for terrain vertex coloring
+  - Value noise → FBM pipeline for height generation
+
+- [x] **Player ground-following** — PlayerAvatar now sets `pos.y = getTerrainHeight(pos.x, pos.z)` each frame, so player walks up/down hills naturally
+
+- [x] **Animated water** — River replaced with:
+  - 160×6 segment PlaneGeometry for vertex displacement
+  - Triple sine wave ripples at different frequencies/amplitudes
+  - 50 sparkle Points that twinkle on/off (phase-shifted sine visibility)
+  - Water surface at semi-transparent 0.72 opacity with low roughness
+
+- [x] **Time-of-day cycle** — merged GradientSky + Lighting into `TimeOfDayCycle` component:
+  - 7-phase keyframe table (dawn → morning → midday → afternoon → golden hour → evening → night) from v2 spec Section 8.1
+  - Reads real-world `Date` for current hour, interpolates between adjacent phases
+  - Dynamic sky gradient (shader uniform updates), sun color/intensity, ambient color/intensity
+  - Fog color auto-matches sky bottom color
+  - Night→dawn wrap-around interpolation handles midnight crossing
+
+- [x] **Ambient animations** (v2 spec Section 10):
+  - **Flower sway:** per-cluster rotation (0.3Hz, 0.05 amplitude) with phase offsets
+  - **Butterflies:** 5 Points on gentle Lissajous looping paths, terrain-height-aware
+  - **Chimney smoke:** 20 particle Points drifting upward from HQ chimney with lateral sway
+
+**Files created:**
+- `web/components/game/terrain.ts`
+
+**Files modified:**
+- `web/components/game/GameWorld.tsx` (major: terrain, river, time-of-day, ambient)
+- `web/components/game/PlayerAvatar.tsx` (ground-following)
+
+**What to do next (updated priority):**
+1. ~~**Convert FBX → GLB**~~ ✅ Done (see below)
+2. ~~**Building roof colors**~~ ✅ Fixed (see below)
+3. **Wire auth context** — Sidebar + PlayerAvatar still show hardcoded "Player" / "Lv. 1"
+4. **Build onboarding flow** — `specs/ux-onboarding.md`
+5. **Polish terrain** — paths on Oracle hill approach are missing (terrain rises but no visible stone path)
+6. **Night window glow** — buildings should have brighter emissive windows at evening/night
+7. **Audio** — ambient background music + sound effects not started
+
+### 2026-04-04 — FBX→GLB Conversion + Real 3D Model Loading
+
+**Management Sprint 2 task completed:** "Convert building FBX assets to GLB"
+
+**Completed:**
+
+- [x] **FBX→GLB conversion** — used `fbx2gltf` npm package (wraps Facebook's FBX2glTF binary) to batch-convert all 4 building FBX files to self-contained GLB with embedded textures:
+  - `house_1.fbx` → `house_1.glb` (410KB)
+  - `hq.fbx` → `hq.glb` (469KB)
+  - `oracle_temple.fbx` → `oracle_temple.glb` (728KB)
+  - `shop.fbx` → `shop.glb` (671KB)
+  - Conversion script: `web/scripts/convert-fbx-to-glb.js`
+
+- [x] **Real GLB model loading** in Building.tsx:
+  - `GLBBuilding` component: loads GLB via `useGLTF`, auto-scales to fit expected bounding box, centers on ground, overrides all materials with AC palette colors
+  - Wrapped in `<Suspense>` — shows procedural ACBuilding while GLB loads
+  - Only HQ, Shop, Oracle, House have GLB paths; boards/leaderboard stay procedural
+  - `GLB_PATHS` mapping for building ID → asset path
+
+- [x] **Roof color fix** — `roofColor` prop added to Building/ACBuilding. Now uses the exact v2 spec colors from BUILDINGS array (#E87B5A for HQ, #5BA086 for Shop, #7B5EA7 for Oracle) instead of computing `wall × 0.55`.
+
+**Files created:**
+- `web/scripts/convert-fbx-to-glb.js`
+- `web/public/assets/buildings/house_1.glb`
+- `web/public/assets/buildings/hq.glb`
+- `web/public/assets/buildings/oracle_temple.glb`
+- `web/public/assets/buildings/shop.glb`
+
+**Files modified:**
+- `web/components/game/Building.tsx` (GLB loading, roofColor prop, Suspense fallback)
+- `web/components/game/GameWorld.tsx` (pass roofColor to Building)
+
+**Note:** The GLB models are from Quaternius Medieval Village. After material override they render in AC palette colors. If the geometry style doesn't match AC aesthetics well, revert by removing `GLB_PATHS` entries — the Suspense fallback will automatically use the procedural ACBuilding.
+
+### 2026-04-04 — Round 2: 5 Dashboard Pages + Kenney Nature Kit Asset Swap
+
+**Manager directive completed:** Build the 5 pages. Swap primitive nature assets.
+
+**5 Pages Built:**
+
+- [x] **Bounty Board** (`/student/dashboard/bounty/page.tsx`):
+  - Filter tabs: All / Available / My Claims / Completed
+  - 2-column card grid with difficulty icons, reward, deadline, tech stack tags
+  - Detail modal with claim flow (POST /api/bounties/{id}/claim)
+  - Empty states per tab, loading skeletons
+  - Status-based action buttons (Claim / Claimed / Completed / Under Review)
+
+- [x] **Leaderboard** (`/student/dashboard/leaderboard/page.tsx`):
+  - Time period tabs: Weekly / Monthly / All-Time
+  - Ranked table with columns: #, Avatar, Name, Level, XP, Tier
+  - Gold/silver/bronze rank colors for top 3
+  - Tier-colored avatar badges, responsive column hiding
+  - Loading skeleton (10 rows), empty state
+
+- [x] **Shop** (`/student/dashboard/shop/page.tsx`):
+  - Category tabs: All / Apparel / Accessories / Digital / Merch
+  - Product grid (auto-fill, minmax 260px)
+  - Coin balance display in header (GET /api/economy)
+  - Product detail modal with purchase flow (POST /api/economy)
+  - Dual currency display ($CAD + TSI coins)
+  - Insufficient balance handling
+
+- [x] **Job Board** (`/student/dashboard/jobs/page.tsx`):
+  - Search bar + type filter tabs (Internship / Full-Time / Freelance / Part-Time)
+  - Job listing cards with type-colored badges per spec
+  - Apply (external link) + Save/bookmark toggle
+  - Submit Job modal with form (company, role, type, location, URL, description)
+  - Empty/no-results states
+
+- [x] **Settings** (`/student/dashboard/settings/page.tsx`):
+  - Profile section: display name, bio, skills (comma-separated)
+  - Social links: GitHub, LinkedIn, Instagram, Discord, Website (with icons)
+  - Read-only account info: email, tier, position, member since
+  - Save button with success feedback (green "Saved" state)
+  - GET /api/profile → PATCH /api/profile
+
+**Sidebar updated:** Removed "Soon" badges from all 5 pages.
+
+**Kenney Nature Kit Asset Swap:**
+
+- [x] Extracted 24 GLB models from `~/Downloads/kenney_nature-kit.zip` into `web/public/assets/nature/`
+- [x] Created `web/components/game/NatureModels.tsx` — reusable GLB components:
+  - `NatureTree` — 4 tree variants (default, oak, detailed, pine round)
+  - `NatureBush` — 3 bush variants (bush, bushLarge, bushSmall)
+  - `NatureFlowerCluster` — 5 flower variants grouped in clusters of 3
+  - `NatureFence` — simple and plank fence variants
+  - `NatureMushroom` — red and tan variants
+  - `NatureStump` — round stump
+  - `NatureRock` — 2 rock variants
+- [x] GameWorld.tsx updated: primitive sphere/cone/box geometry replaced with GLB models via Suspense loading
+- [x] Removed dead code: old Tree function, FLOWER_COLORS constant
+
+**Files created:**
+- `web/app/student/dashboard/bounty/page.tsx` (rewritten from ComingSoon)
+- `web/app/student/dashboard/leaderboard/page.tsx` (rewritten)
+- `web/app/student/dashboard/shop/page.tsx` (rewritten)
+- `web/app/student/dashboard/jobs/page.tsx` (rewritten)
+- `web/app/student/dashboard/settings/page.tsx` (rewritten)
+- `web/components/game/NatureModels.tsx` (new)
+- `web/public/assets/nature/*.glb` (24 files)
+
+**Files modified:**
+- `web/components/portal/Sidebar.tsx` (removed comingSoon flags)
+- `web/components/game/GameWorld.tsx` (nature model imports, replaced primitives)
+
+---
+
 ## Backend
 
 > Backend agent writes here. Others: read only.
