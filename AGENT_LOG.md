@@ -1365,6 +1365,163 @@ Built/modified by us (6): dashboard home (page.tsx), directory, directory/[id], 
 - **Profile trigger (003) runs on signup:** New users auto-get a profile row. Don't try to INSERT profiles manually — use Supabase Auth signup, the trigger handles it.
 - **File ownership:** Backend owns `web/lib/supabase/`, `web/supabase/migrations/`, `web/app/api/`, `specs/api.md`. Portal components in `web/components/portal/` are technically Frontend's area — we modified them per Management directive to wire APIs.
 
+### 2026-04-04 — Inventory API + Level-Up Logic + Achievement System
+
+Executed tasks from HANDOFF items #3, #4, #5.
+
+**1. Avatar Inventory API** (`web/app/api/inventory/route.ts`)
+- `GET /api/inventory` — list user's owned items with equipped state. Filters: `?type=`, `?equipped=true|false`. Joins `player_inventory` → `avatar_items`.
+- `POST /api/inventory` — equip/unequip items. Auto-unequips conflicting slot (one item per type). Validates ownership.
+
+**2. Automatic Level-Up Logic** (`web/lib/supabase/helpers.ts`)
+- Created shared `awardRewards()` helper that all XP-granting endpoints now use.
+- Awards coins + XP, then auto-computes `level` via `levelFromXp()` and `rank` via `rankFromLevel()`, writing all 4 fields to the profile in a single UPDATE.
+- Records both `tc_transactions` and `xp_transactions`.
+- Refactored 3 existing endpoints to use it:
+  - `web/app/api/bounties/[id]/review/route.ts`
+  - `web/app/api/quests/[id]/complete/route.ts`
+  - `web/app/api/onboarding/route.ts`
+
+**3. Achievement System API**
+- `GET /api/achievements` — list all achievements with user's unlock status. `?include_secret=true` to show hidden ones.
+- `POST /api/achievements` — create achievement (T1-T3 only). Validates unique name.
+- `POST /api/achievements/[id]/award` — award achievement to user (T1-T3 only). Checks for duplicates. Awards TC + XP rewards via `awardRewards()` with auto level-up.
+- Migration `007_achievement_policies.sql` — adds INSERT/UPDATE RLS policies for `achievements` and `user_achievements` tables.
+- Added TypeScript types: `Achievement`, `UserAchievement`, `AchievementWithStatus`.
+
+**Total API endpoints: 22** (was 17, added 5: inventory GET/POST, achievements GET/POST, achievements award).
+
+**Files created:**
+- `web/lib/supabase/helpers.ts`
+- `web/app/api/inventory/route.ts`
+- `web/app/api/achievements/route.ts`
+- `web/app/api/achievements/[id]/award/route.ts`
+- `web/supabase/migrations/007_achievement_policies.sql`
+
+**Files modified:**
+- `web/lib/supabase/types.ts` (added Achievement, UserAchievement, AchievementWithStatus)
+- `web/app/api/bounties/[id]/review/route.ts` (uses awardRewards)
+- `web/app/api/quests/[id]/complete/route.ts` (uses awardRewards, response includes new_level/new_rank)
+- `web/app/api/onboarding/route.ts` (uses awardRewards)
+- `specs/api.md` (documented all new endpoints)
+
+**Build:** `npm run build` passes cleanly.
+
+**Notes for Frontend:**
+- Quest completion response now includes `new_level` and `new_rank` in rewards object.
+- Inventory API is ready for shop integration — after economy purchase, add item to `player_inventory`, then use `/api/inventory` to manage equip state.
+- Achievement list endpoint shows unlock status per-user — good for a profile badges section.
+
+**Notes for QA:**
+- Test inventory equip/unequip: only one item per type slot.
+- Test achievement award: should return 409 if already awarded.
+- Test level-up: award enough XP to cross a threshold and verify `level` and `rank` update.
+
+### 2026-04-04 — Round 2: Oracle + Jobs + Leaderboard APIs + Lint Fixes
+
+Per Management directive (Round 2 tasks).
+
+**1. Oracle Quiz API** (`web/app/api/oracle/quiz/route.ts`, `web/app/api/oracle/result/route.ts`)
+- `GET /api/oracle/quiz` — returns 12 MBTI-style questions (3 per dimension: E/I, S/N, T/F, J/P). Also returns whether user already has a class.
+- `POST /api/oracle/result` — accepts 12 answers, scores to MBTI type, maps to RPG class + subclass, saves to profile `class` and `subclass` fields.
+- 16 MBTI types map to 9 ClassName values with unique subclass names (e.g. INTJ → ARCHITECT/Mastermind, ISTP → ENGINEER/Artificer).
+- No `specs/oracle-questions.md` existed — built the question set and mapping from AGENT_LOG/CLAUDE.md vision docs.
+
+**2. Jobs API** (`web/app/api/jobs/route.ts`)
+- `GET /api/jobs` — list job listings with filters: `?type=`, `?search=`, `?category=`, `?limit=`. Excludes flagged. Sorted by created_at desc.
+- `POST /api/jobs` — create listing. Zod validated. Any authenticated user can post. Sets `posted_by` to caller.
+- Uses existing `job_listings` table from migration 001 (already has full CRUD RLS).
+
+**3. Leaderboard API** (`web/app/api/leaderboard/route.ts`)
+- `GET /api/leaderboard` — top N profiles sorted by XP desc. Returns `rank_position` per entry.
+- `your_rank` field: if caller isn't in top N, computes their actual rank via count query.
+- Query param: `?limit=50` (max 100).
+
+**4. Lint Fixes**
+- Fixed 5 "fetchX accessed before declaration" errors by moving function declarations above useEffect in:
+  - `admin/announcements/page.tsx` (fetchAnnouncements)
+  - `admin/bounties/page.tsx` (fetchBounties)
+  - `admin/members/page.tsx` (fetchMembers)
+  - `admin/quests/page.tsx` (fetchQuests)
+  - `admin/marketplace/page.tsx` (fetchData)
+- Remaining errors in admin pages are "setState synchronously within effect" (React 19 compiler warnings) — these are false positives on async fetch patterns, not actual bugs.
+
+**5. New TypeScript types** in `web/lib/supabase/types.ts`:
+- `JobListing`, `JobType`
+- `LeaderboardEntry`
+- `OracleQuestion`, `OracleResult`
+
+**Total API endpoints: 28** (was 22, added 6: oracle quiz GET, oracle result POST, jobs GET/POST, leaderboard GET, plus inventory GET was already counted).
+
+**Files created:**
+- `web/app/api/oracle/quiz/route.ts`
+- `web/app/api/oracle/result/route.ts`
+- `web/app/api/jobs/route.ts`
+- `web/app/api/leaderboard/route.ts`
+
+**Files modified:**
+- `web/lib/supabase/types.ts` (added JobListing, LeaderboardEntry, Oracle types)
+- `web/app/student/dashboard/admin/announcements/page.tsx` (lint fix)
+- `web/app/student/dashboard/admin/bounties/page.tsx` (lint fix)
+- `web/app/student/dashboard/admin/members/page.tsx` (lint fix)
+- `web/app/student/dashboard/admin/quests/page.tsx` (lint fix)
+- `web/app/student/dashboard/admin/marketplace/page.tsx` (lint fix)
+- `specs/api.md` (documented all new endpoints)
+
+**Build:** `npm run build` passes cleanly.
+
+**Notes for Frontend:**
+- Oracle quiz: fetch questions from `GET /api/oracle/quiz`, submit answers to `POST /api/oracle/result`. Response includes `mbti_type`, `class`, `subclass`.
+- Jobs page: `GET /api/jobs` returns `{ jobs: [...] }`. `POST /api/jobs` creates listings.
+- Leaderboard: `GET /api/leaderboard?limit=50` returns `{ leaderboard: [...], your_rank: N }`.
+- All types available from `@/lib/supabase/types`.
+
+### HANDOFF — Backend Agent Context for New Session
+
+#### Updated Endpoint Count: 28
+
+| Route | Method | Purpose |
+|-------|--------|---------|
+| `/api/directory` | GET | Member list with filters |
+| `/api/profile` | GET | Own full profile |
+| `/api/profile` | PATCH | Update own profile |
+| `/api/profile/[id]` | GET | Other user's public profile |
+| `/api/bounties` | GET | List bounties |
+| `/api/bounties` | POST | Create bounty |
+| `/api/bounties/[id]` | GET | Bounty detail |
+| `/api/bounties/[id]` | PATCH | Update bounty (T1-T3) |
+| `/api/bounties/[id]` | DELETE | Delete bounty (T1-T2) |
+| `/api/bounties/[id]/claim` | POST | Claim bounty |
+| `/api/bounties/[id]/submit` | POST | Submit deliverables |
+| `/api/bounties/[id]/review` | PATCH | Review submission (T1-T3) |
+| `/api/economy` | GET | Balance + transactions |
+| `/api/economy` | POST | Purchase / admin award |
+| `/api/onboarding` | GET | Onboarding status |
+| `/api/onboarding` | POST | Advance step |
+| `/api/quests` | GET | List quests |
+| `/api/quests` | POST | Create quest (T1-T3) |
+| `/api/quests/[id]/accept` | POST | Accept quest |
+| `/api/quests/[id]/complete` | POST | Complete quest |
+| `/api/inventory` | GET | List owned items |
+| `/api/inventory` | POST | Equip/unequip item |
+| `/api/achievements` | GET | List achievements + status |
+| `/api/achievements` | POST | Create achievement (T1-T3) |
+| `/api/achievements/[id]/award` | POST | Award to user (T1-T3) |
+| `/api/oracle/quiz` | GET | 12 MBTI quiz questions |
+| `/api/oracle/result` | POST | Score answers → class + subclass |
+| `/api/jobs` | GET | List job listings with filters |
+| `/api/jobs` | POST | Create job listing |
+| `/api/leaderboard` | GET | Top N by XP with rank numbers |
+
+#### What to Do Next
+
+1. **Wire remaining dashboard pages to API routes** — bounty board, marketplace, quests pages still use direct Supabase client calls
+2. **Onboarding frontend pages** — API exists, no pages yet
+3. **Economy purchase → inventory integration** — after marketplace purchase, auto-add item to player_inventory
+4. **Achievement auto-check** — trigger achievement checks after key events (first bounty completed, level milestones, etc.)
+5. **Run migrations 004-007 on production Supabase**
+6. **Oracle frontend page** — API exists at /api/oracle/*, needs a `/student/dashboard/oracle/page.tsx`
+
 ---
 
 ## QA

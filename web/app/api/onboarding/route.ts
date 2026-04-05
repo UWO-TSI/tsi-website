@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { awardRewards } from "@/lib/supabase/helpers";
 import { z } from "zod";
 
 // Onboarding steps:
@@ -132,36 +133,6 @@ export async function POST(request: Request) {
   // Final step — mark completed and award starter coins + XP
   if (parsed.data.step === FINAL_STEP) {
     updates.onboarding_completed = true;
-
-    // Award onboarding bonus
-    const { data: currentProfile } = await supabase
-      .from("profiles")
-      .select("tethos_coins, xp")
-      .eq("id", user.id)
-      .single();
-
-    if (currentProfile) {
-      const bonusCoins = 100;
-      const bonusXp = 50;
-      updates.tethos_coins = currentProfile.tethos_coins + bonusCoins;
-      updates.xp = currentProfile.xp + bonusXp;
-
-      // Record transactions
-      await supabase.from("tc_transactions").insert({
-        user_id: user.id,
-        amount: bonusCoins,
-        balance_after: currentProfile.tethos_coins + bonusCoins,
-        type: "earn_achievement",
-        description: "Onboarding completed — welcome bonus!",
-      });
-
-      await supabase.from("xp_transactions").insert({
-        user_id: user.id,
-        amount: bonusXp,
-        type: "achievement",
-        description: "Onboarding completed",
-      });
-    }
   }
 
   const { error } = await supabase
@@ -171,6 +142,17 @@ export async function POST(request: Request) {
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  // Award onboarding bonus after profile update succeeds (auto-levels up)
+  if (parsed.data.step === FINAL_STEP) {
+    await awardRewards(supabase, user.id, {
+      coins: 100,
+      xp: 50,
+      coinType: "earn_achievement",
+      xpType: "achievement",
+      description: "Onboarding completed — welcome bonus!",
+    });
   }
 
   return NextResponse.json({

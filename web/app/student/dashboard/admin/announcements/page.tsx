@@ -27,10 +27,6 @@ export default function AdminAnnouncementsPage() {
   });
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchAnnouncements();
-  }, []);
-
   async function fetchAnnouncements() {
     const supabase = createClient();
     const { data } = await supabase
@@ -40,6 +36,10 @@ export default function AdminAnnouncementsPage() {
     setAnnouncements((data as Announcement[]) ?? []);
     setLoading(false);
   }
+
+  useEffect(() => {
+    fetchAnnouncements();
+  }, []);
 
   async function createAnnouncement(e: React.FormEvent) {
     e.preventDefault();
