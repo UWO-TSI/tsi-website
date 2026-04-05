@@ -1016,6 +1016,49 @@ David's Sprint 2 answers:
 - `web/components/portal/Sidebar.tsx` (removed comingSoon flags)
 - `web/components/game/GameWorld.tsx` (nature model imports, replaced primitives)
 
+### 2026-04-05 — Round 3: Onboarding Flow, Oracle Quiz, Auth Context
+
+**Manager directive completed:** Core student journey — sign up → onboard → take quiz → get class → explore.
+
+**Completed:**
+
+- [x] **Onboarding flow** (`/student/onboarding/page.tsx` — full rewrite):
+  - 3-step flow: Welcome → Profile Setup → Avatar (placeholder)
+  - Step progress indicator (dots + lines, blue active/completed)
+  - Step 1: Welcome screen with "Let's Go" button
+  - Step 2: Profile form — display name (30 max), bio (200 max), year dropdown, skills multi-select (16 presets, max 10), GitHub/LinkedIn/Website
+  - Step 3: Avatar placeholder with "Enter Campus" button
+  - Saves profile via PATCH /api/profile, sets onboarding_completed=true
+  - Loads existing profile data on mount, redirects if already onboarded
+
+- [x] **Oracle quiz page** (`/student/dashboard/oracle/page.tsx` — new route):
+  - 12 MBTI questions with 2-4 answer cards per question (full question bank from specs/oracle-questions.md)
+  - Card hover/select animations (translateY, border glow)
+  - Progress bar with "{n} of 12" label
+  - Scoring: count E/I, S/N, T/F, J/P → 4-letter MBTI → class + subclass
+  - Dramatic reveal animation (5-stage timeline: "The Oracle has spoken..." → class icon → class name with glow → subclass → description → "Enter Campus" button)
+  - 4 classes (Warrior/Mage/Healer/Rogue) × 16 subclasses with color-coded reveals
+  - Saves class + subclass to profile via PATCH /api/profile
+  - Shows existing class result if already taken, with "Retake Quiz" option
+
+- [x] **Auth context wired** — real user data replaces hardcoded values:
+  - Created `UserContext.tsx` (UserProvider + useUser hook) — fetches /api/profile once, provides to entire dashboard tree
+  - `DashboardLayout` wrapped with `<UserProvider>`
+  - `Sidebar` — shows real display_name + level (was "Player" / "Lv. 1")
+  - `PlayerAvatar` — nameplate shows real name + level via props from GameWorld → Scene → PlayerAvatar
+  - `GameWorld` — reads useUser() outside Canvas, passes name/level as props through Scene
+
+**Files created:**
+- `web/app/student/dashboard/oracle/page.tsx`
+- `web/components/portal/UserContext.tsx`
+
+**Files modified:**
+- `web/app/student/onboarding/page.tsx` (full rewrite from terminal-themed to 3-step flow)
+- `web/app/student/dashboard/layout.tsx` (wrapped with UserProvider)
+- `web/components/portal/Sidebar.tsx` (useUser for real name/level)
+- `web/components/game/GameWorld.tsx` (useUser, pass player data to Scene → PlayerAvatar)
+- `web/components/game/PlayerAvatar.tsx` (accept playerName/playerLevel props)
+
 ---
 
 ## Backend

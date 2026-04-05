@@ -4,11 +4,13 @@ import { type ReactNode, useState } from "react";
 import { Menu } from "lucide-react";
 import Sidebar from "@/components/portal/Sidebar";
 import { TransitionProvider } from "@/components/game/TransitionOverlay";
+import { UserProvider } from "@/components/portal/UserContext";
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
+    <UserProvider>
     <TransitionProvider>
     <div
       className="fixed inset-0 z-50 flex"
@@ -73,5 +75,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       `}</style>
     </div>
     </TransitionProvider>
+    </UserProvider>
   );
 }
