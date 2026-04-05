@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { Plus, Trash2, Edit3 } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 
 interface Quest {
   id: string;

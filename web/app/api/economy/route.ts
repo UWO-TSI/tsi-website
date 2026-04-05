@@ -45,6 +45,11 @@ const PurchaseSchema = z.object({
   quantity: z.number().int().min(1).max(10).optional().default(1),
 });
 
+const PurchaseAvatarSchema = z.object({
+  action: z.literal("purchase_avatar"),
+  item_id: z.string().uuid(),
+});
+
 const AwardSchema = z.object({
   action: z.literal("award"),
   user_id: z.string().uuid(),
@@ -52,7 +57,7 @@ const AwardSchema = z.object({
   description: z.string().max(200).optional(),
 });
 
-const ActionSchema = z.discriminatedUnion("action", [PurchaseSchema, AwardSchema]);
+const ActionSchema = z.discriminatedUnion("action", [PurchaseSchema, PurchaseAvatarSchema, AwardSchema]);
 
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -81,6 +86,10 @@ export async function POST(request: Request) {
 
   if (parsed.data.action === "purchase") {
     return handlePurchase(supabase, user.id, parsed.data);
+  }
+
+  if (parsed.data.action === "purchase_avatar") {
+    return handleAvatarPurchase(supabase, user.id, parsed.data);
   }
 
   if (parsed.data.action === "award") {
@@ -178,6 +187,98 @@ async function handlePurchase(
     balance: newBalance,
     item_name: item.name,
     total_cost: totalCost,
+  });
+}
+
+async function handleAvatarPurchase(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  data: z.infer<typeof PurchaseAvatarSchema>
+) {
+  // Get avatar item details
+  const { data: item } = await supabase
+    .from("avatar_items")
+    .select("*")
+    .eq("id", data.item_id)
+    .eq("is_available", true)
+    .single();
+
+  if (!item) {
+    return NextResponse.json({ error: "Avatar item not found or unavailable" }, { status: 404 });
+  }
+
+  // Check if user already owns this item
+  const { data: existing } = await supabase
+    .from("player_inventory")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("item_id", data.item_id)
+    .single();
+
+  if (existing) {
+    return NextResponse.json({ error: "You already own this item" }, { status: 409 });
+  }
+
+  const cost = item.coin_price;
+
+  // Check balance
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("tethos_coins")
+    .eq("id", userId)
+    .single();
+
+  if (!profile || profile.tethos_coins < cost) {
+    return NextResponse.json({ error: "Insufficient coins" }, { status: 409 });
+  }
+
+  const newBalance = profile.tethos_coins - cost;
+
+  // Deduct coins (with race-condition guard)
+  const { error: updateError } = await supabase
+    .from("profiles")
+    .update({ tethos_coins: newBalance })
+    .eq("id", userId)
+    .gte("tethos_coins", cost);
+
+  if (updateError) {
+    return NextResponse.json({ error: "Failed to deduct coins" }, { status: 500 });
+  }
+
+  // Add to inventory
+  const { error: inventoryError } = await supabase
+    .from("player_inventory")
+    .insert({
+      user_id: userId,
+      item_id: data.item_id,
+      equipped: false,
+    });
+
+  if (inventoryError) {
+    // Refund on failure
+    await supabase
+      .from("profiles")
+      .update({ tethos_coins: profile.tethos_coins })
+      .eq("id", userId);
+    return NextResponse.json({ error: "Failed to add to inventory" }, { status: 500 });
+  }
+
+  // Record transaction
+  await supabase.from("tc_transactions").insert({
+    user_id: userId,
+    amount: -cost,
+    balance_after: newBalance,
+    type: "spend_marketplace",
+    reference_id: data.item_id,
+    description: `Purchased avatar item: ${item.name}`,
+  });
+
+  return NextResponse.json({
+    success: true,
+    balance: newBalance,
+    item_name: item.name,
+    item_id: data.item_id,
+    total_cost: cost,
   });
 }
 
