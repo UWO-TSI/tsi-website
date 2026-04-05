@@ -40,13 +40,13 @@ export default function ShopPage() {
   }, []);
 
   useEffect(() => {
-    setLoading(true);
-    // Shop products API may not exist yet — gracefully handle
+    let cancelled = false;
     fetch("/api/shop")
       .then((r) => r.ok ? r.json() : { products: [] })
-      .then((d) => setProducts(d.products ?? d ?? []))
-      .catch(() => setProducts([]))
-      .finally(() => setLoading(false));
+      .then((d) => { if (!cancelled) setProducts(d.products ?? d ?? []); })
+      .catch(() => { if (!cancelled) setProducts([]); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
   }, []);
 
   const filtered = category === "all" ? products : products.filter((p) => p.category === category);
@@ -161,22 +161,24 @@ export default function ShopPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.6)" }} onClick={() => setSelected(null)}>
           <div
             className="w-full rounded-2xl overflow-y-auto"
-            style={{ maxWidth: 480, maxHeight: "80vh", background: "#0d1b2a", border: "1px solid rgba(0, 47, 167, 0.3)", padding: 24 }}
+            style={{ maxWidth: 720, maxHeight: "80vh", background: "#0d1b2a", border: "1px solid rgba(0, 47, 167, 0.3)", padding: 24 }}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex justify-end mb-2">
               <button onClick={() => setSelected(null)} style={{ color: "var(--color-text-muted)" }}><X className="w-5 h-5" /></button>
             </div>
-            <div className="rounded-xl overflow-hidden mb-4" style={{ aspectRatio: "1", background: "#111113" }}>
-              {selected.image_url ? (
-                <img src={selected.image_url} alt={selected.name} className="w-full h-full object-cover" />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center">
-                  <ShoppingBag className="w-16 h-16" style={{ color: "var(--color-text-subtle)", opacity: 0.3 }} />
-                </div>
-              )}
-            </div>
-            <h2 className="text-xl font-bold mb-2" style={{ color: "var(--color-text-main)" }}>{selected.name}</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <div className="rounded-xl overflow-hidden" style={{ aspectRatio: "1", background: "#111113" }}>
+                {selected.image_url ? (
+                  <img src={selected.image_url} alt={selected.name} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <ShoppingBag className="w-16 h-16" style={{ color: "var(--color-text-subtle)", opacity: 0.3 }} />
+                  </div>
+                )}
+              </div>
+              <div>
+            <h2 className="text-2xl font-bold mb-2" style={{ color: "var(--color-text-main)" }}>{selected.name}</h2>
             <div className="flex items-center gap-3 mb-4">
               {selected.price_cad != null && <span className="text-2xl font-bold" style={{ color: "var(--color-text-main)" }}>${selected.price_cad.toFixed(2)}</span>}
               {selected.price_tc != null && <span className="font-mono text-base" style={{ color: "#ffd166" }}>{selected.price_tc} TSI</span>}
@@ -197,6 +199,8 @@ export default function ShopPage() {
                 {purchasing ? "Purchasing..." : balance < (selected.price_tc ?? 0) ? "Not enough coins" : `Buy for ${selected.price_tc} TSI`}
               </button>
             )}
+              </div>
+            </div>
           </div>
         </div>
       )}

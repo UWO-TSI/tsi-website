@@ -1059,6 +1059,34 @@ David's Sprint 2 answers:
 - `web/components/game/GameWorld.tsx` (useUser, pass player data to Scene → PlayerAvatar)
 - `web/components/game/PlayerAvatar.tsx` (accept playerName/playerLevel props)
 
+### 2026-04-05 — Round 4: Lint Fixes, Spec Compliance, Calendar Fix
+
+**Completed:**
+
+- [x] **FE lint errors fixed** — zero FE-owned lint errors remaining:
+  - Bounty, leaderboard, shop, jobs pages: restructured fetch patterns to avoid synchronous `setState` in effects (use `.then()` chains with cancellation)
+  - Building.tsx: replaced ref access during render with `useMemo` + `useEffect` pattern
+  - PlayerAvatar.tsx: moved texture mutations from `useMemo` to `useEffect` (React compiler rule)
+  - Removed unused imports: `AlertCircle`, `useCallback`, `createClient`
+  - Fixed unused destructured variable (`sz` in LeaderboardMonument)
+
+- [x] **Spec compliance fixes** (self-review against UXUI specs):
+  - Bounty detail modal: maxWidth 560→800px (spec: 800px)
+  - Bounty coin icon: w-3.5→w-4 (spec: 16px)
+  - Shop detail modal: maxWidth 480→720px, changed from single-column to 2-column grid layout (image left, info right)
+
+- [x] **Calendar page lint fix** — restructured `fetchEvents` from async function pattern to `.then()` chain with cancellation (Backend Events API doesn't exist yet; calendar still uses direct Supabase)
+
+**Files modified:**
+- `web/app/student/dashboard/bounty/page.tsx` (lint + spec fixes)
+- `web/app/student/dashboard/leaderboard/page.tsx` (lint fix)
+- `web/app/student/dashboard/shop/page.tsx` (lint + spec fixes)
+- `web/app/student/dashboard/jobs/page.tsx` (lint fix)
+- `web/app/student/dashboard/calendar/page.tsx` (lint fix)
+- `web/components/game/Building.tsx` (lint fix)
+- `web/components/game/PlayerAvatar.tsx` (lint fix)
+- `web/components/portal/UserContext.tsx` (unused import)
+
 ---
 
 ## Backend

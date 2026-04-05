@@ -163,7 +163,7 @@ function BoardSign({ size, color }: { size: [number, number, number]; color: str
  * Leaderboard monument — v2 spec Section 6.6.
  */
 function LeaderboardMonument({ size, color }: { size: [number, number, number]; color: string }) {
-  const [sx, sy, sz] = size;
+  const [sx, sy] = size;
   return (
     <group>
       {/* Stone base */}
@@ -207,10 +207,11 @@ export default function Building({ id, name, position, size, color, roofColor, h
   const router = useRouter();
   const { triggerTransition, isTransitioning } = useTransition();
   const [isNear, setIsNear] = useState(false);
-  const center = useRef(new THREE.Vector3(...position));
+  const center = useMemo(() => new THREE.Vector3(...position), [position]);
 
-  const near = center.current.distanceTo(playerPosition) < INTERACT_RANGE;
-  useEffect(() => { setIsNear(near); }, [near]);
+  useEffect(() => {
+    setIsNear(center.distanceTo(playerPosition) < INTERACT_RANGE);
+  }, [center, playerPosition]);
 
   useEffect(() => {
     if (!isNear || isTransitioning) return;

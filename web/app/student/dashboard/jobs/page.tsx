@@ -41,12 +41,13 @@ export default function JobsPage() {
   const [showSubmit, setShowSubmit] = useState(false);
 
   useEffect(() => {
-    setLoading(true);
+    let cancelled = false;
     fetch("/api/jobs")
       .then((r) => r.ok ? r.json() : { jobs: [] })
-      .then((d) => setJobs(d.jobs ?? d ?? []))
-      .catch(() => setJobs([]))
-      .finally(() => setLoading(false));
+      .then((d) => { if (!cancelled) setJobs(d.jobs ?? d ?? []); })
+      .catch(() => { if (!cancelled) setJobs([]); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
   }, []);
 
   const filtered = useMemo(() => {

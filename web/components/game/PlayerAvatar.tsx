@@ -67,16 +67,18 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
   const shadowTexture = useTexture("/assets/characters/static_shadow.png");
 
   // Configure textures for pixel art
-  useMemo(() => {
+  useEffect(() => {
     spriteTexture.minFilter = THREE.NearestFilter;
     spriteTexture.magFilter = THREE.NearestFilter;
     spriteTexture.generateMipmaps = false;
     spriteTexture.repeat.set(1 / SHEET_COLS, 1 / SHEET_ROWS);
     spriteTexture.offset.set(0, 1 - 1 / SHEET_ROWS);
+    spriteTexture.needsUpdate = true;
 
     shadowTexture.minFilter = THREE.NearestFilter;
     shadowTexture.magFilter = THREE.NearestFilter;
     shadowTexture.generateMipmaps = false;
+    shadowTexture.needsUpdate = true;
   }, [spriteTexture, shadowTexture]);
 
   // Keyboard input
