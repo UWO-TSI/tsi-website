@@ -46,8 +46,41 @@ export async function updateSession(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
 
-  // Admin election results — allow T1/T2 through, everyone else blocked
-  if (pathname.startsWith("/student/dashboard/admin/election")) {
+  // ─── Election routes (archived behind env flag) ───────────────────────
+  if (pathname === "/student/election" || pathname.startsWith("/student/dashboard/admin/election")) {
+    if (process.env.ENABLE_ELECTION !== "true") {
+      const url = request.nextUrl.clone();
+      url.pathname = "/student/dashboard";
+      return NextResponse.redirect(url);
+    }
+
+    // Election enabled — require auth
+    if (!user) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/student/login";
+      return NextResponse.redirect(url);
+    }
+
+    // Admin election results — T1/T2 only
+    if (pathname.startsWith("/student/dashboard/admin/election")) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("tier")
+        .eq("id", user.id)
+        .single();
+
+      if (!profile || profile.tier > 2) {
+        const url = request.nextUrl.clone();
+        url.pathname = "/student/dashboard";
+        return NextResponse.redirect(url);
+      }
+    }
+
+    return supabaseResponse;
+  }
+
+  // ─── Dashboard admin routes — require T1-T3 ──────────────────────────
+  if (pathname.startsWith("/student/dashboard/admin")) {
     if (!user) {
       const url = request.nextUrl.clone();
       url.pathname = "/student/login";
@@ -56,63 +89,72 @@ export async function updateSession(request: NextRequest) {
 
     const { data: profile } = await supabase
       .from("profiles")
-      .select("tier")
+      .select("tier, onboarding_completed")
       .eq("id", user.id)
       .single();
 
-    if (!profile || profile.tier > 2) {
+    if (!profile || profile.tier > 3) {
       const url = request.nextUrl.clone();
-      url.pathname = "/under-construction";
+      url.pathname = "/student/dashboard";
       return NextResponse.redirect(url);
     }
 
-    // T1/T2 admin — allow through
     return supabaseResponse;
   }
 
-  // All other dashboard routes → under construction
+  // ─── Dashboard routes — require auth + onboarding ─────────────────────
   if (pathname.startsWith("/student/dashboard")) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/under-construction";
-    return NextResponse.redirect(url);
+    if (!user) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/student/login";
+      return NextResponse.redirect(url);
+    }
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("onboarding_completed")
+      .eq("id", user.id)
+      .single();
+
+    if (profile && !profile.onboarding_completed) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/student/onboarding";
+      return NextResponse.redirect(url);
+    }
+
+    return supabaseResponse;
   }
 
-  // Onboarding → redirect to election
+  // ─── Onboarding — require auth, skip if already completed ─────────────
   if (pathname.startsWith("/student/onboarding")) {
     if (!user) {
       const url = request.nextUrl.clone();
       url.pathname = "/student/login";
       return NextResponse.redirect(url);
     }
-    const url = request.nextUrl.clone();
-    url.pathname = "/student/election";
-    return NextResponse.redirect(url);
-  }
 
-  // Election route
-  if (pathname === "/student/election") {
-    if (!user) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("onboarding_completed")
+      .eq("id", user.id)
+      .single();
+
+    if (profile && profile.onboarding_completed) {
       const url = request.nextUrl.clone();
-      url.pathname = "/student/login";
+      url.pathname = "/student/dashboard";
       return NextResponse.redirect(url);
     }
 
-    // Allow through — election page handles voted vs not-voted state
+    return supabaseResponse;
   }
 
-  // Already logged in — redirect away from login/signup
+  // ─── Already logged in — redirect away from login/signup ──────────────
   if (
     (pathname === "/student/login" || pathname === "/student/signup") &&
     user
   ) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("has_voted")
-      .eq("id", user.id)
-      .single();
-
     const url = request.nextUrl.clone();
-    url.pathname = "/student/election";
+    url.pathname = "/student/dashboard";
     return NextResponse.redirect(url);
   }
 

@@ -1,0 +1,116 @@
+/* ===========================
+   GAME & PORTAL — Design Tokens
+   Extends base tokens.css
+   Loaded within dashboard layout only
+   =========================== */
+
+:root {
+  /* ========= SIDEBAR ========= */
+  --sidebar-width: 240px;
+  --sidebar-bg: var(--color-surface);
+  --sidebar-border: var(--glass-border-soft);
+  --sidebar-z: 40;
+
+  --nav-item-height: 40px;
+  --nav-item-gap: 4px;
+  --nav-item-radius: 8px;
+  --nav-item-icon-size: 18px;
+  --nav-active-accent-color: var(--color-brand-blue);
+  --nav-active-bg: rgba(255, 255, 255, 0.06);
+  --nav-hover-bg: rgba(255, 255, 255, 0.04);
+  --sidebar-avatar-size: 32px;
+
+  /* ========= RESPONSIVE ========= */
+  --hamburger-size: 40px;
+  --hamburger-z: 50;
+  --sidebar-backdrop-bg: rgba(0, 0, 0, 0.5);
+
+  /* ========= GAME WORLD ========= */
+  --game-camera-fov: 35;
+  --game-camera-distance: 20;
+  --game-fog-color: var(--color-bg-main);
+  --game-fog-near: 60;
+  --game-fog-far: 120;
+  --game-map-size: 80;
+  --game-player-speed: 5;
+  --game-interact-range: 3;
+  --game-interact-range-interior: 2;
+
+  /* Lighting */
+  --game-ambient-intensity: 0.4;
+  --game-sun-color: #ffeedd;
+  --game-sun-intensity: 0.8;
+  --game-lamp-color: #ffcc88;
+  --game-lamp-intensity: 0.6;
+  --game-lamp-range: 8;
+
+  /* ========= TRANSITIONS ========= */
+  --transition-fade-in: 0.3s;
+  --transition-fade-out: 0.3s;
+  --transition-overlay-color: #000000;
+  --transition-overlay-z: 100;
+  --overlay-panel-enter: 0.25s;
+  --overlay-panel-exit: 0.15s;
+  --overlay-backdrop-bg: rgba(0, 0, 0, 0.6);
+  --overlay-backdrop-blur: 4px;
+
+  /* ========= OVERLAY PANEL ========= */
+  --panel-bg: var(--color-bg-navy);
+  --panel-radius: 16px;
+  --panel-shadow: var(--shadow-strong);
+  --panel-max-width: 800px;
+  --panel-max-height: 80vh;
+  --panel-padding: 24px;
+  --panel-z: 60;
+
+  /* ========= DIRECTORY ========= */
+  --directory-max-width: 960px;
+  --directory-padding: 24px;
+  --search-height: 40px;
+  --search-bg: var(--color-surface);
+  --search-radius: 8px;
+  --row-height: 64px;
+  --row-border: 1px solid rgba(255, 255, 255, 0.06);
+  --row-hover-bg: rgba(255, 255, 255, 0.04);
+  --row-radius: 8px;
+  --avatar-size-sm: 32px;
+  --avatar-size-md: 40px;
+  --avatar-size-lg: 96px;
+  --xp-bar-width: 80px;
+  --xp-bar-height: 6px;
+  --xp-bar-track: var(--gray-800);
+  --xp-bar-fill: var(--color-brand-blue);
+
+  /* ========= TIER COLORS ========= */
+  --tier-1-color: var(--color-brand-yellow);
+  --tier-1-bg: rgba(255, 209, 102, 0.2);
+  --tier-1-border: var(--color-brand-yellow);
+  --tier-2-color: #4A7AFF;
+  --tier-2-bg: rgba(0, 47, 167, 0.2);
+  --tier-2-border: var(--color-brand-blue);
+  --tier-3-color: var(--color-accent-cyan);
+  --tier-3-bg: rgba(34, 211, 238, 0.2);
+  --tier-3-border: var(--color-accent-cyan);
+  --tier-4-color: var(--color-success);
+  --tier-4-bg: rgba(34, 197, 94, 0.2);
+  --tier-4-border: var(--color-success);
+  --tier-5-color: var(--gray-400);
+  --tier-5-bg: rgba(161, 161, 170, 0.15);
+  --tier-5-border: var(--gray-600);
+
+  /* ========= INTERACTION PROMPTS ========= */
+  --prompt-bg: var(--color-surface);
+  --prompt-border: var(--glass-border-soft);
+  --prompt-radius: 8px;
+  --label-bg: rgba(15, 15, 16, 0.7);
+  --nameplate-bg: rgba(15, 15, 16, 0.6);
+
+  /* ========= Z-INDEX SCALE ========= */
+  --z-sidebar: 40;
+  --z-sidebar-backdrop: 45;
+  --z-sidebar-mobile: 50;
+  --z-hamburger: 50;
+  --z-overlay-backdrop: 55;
+  --z-overlay-panel: 60;
+  --z-transition-overlay: 100;
+}
