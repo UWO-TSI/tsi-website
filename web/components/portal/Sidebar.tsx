@@ -14,6 +14,7 @@ import {
   X,
 } from "lucide-react";
 import type { ComponentType } from "react";
+import { useUser } from "./UserContext";
 
 interface NavItem {
   label: string;
@@ -25,12 +26,12 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { label: "Home", href: "/student/dashboard", icon: Home },
   { label: "Directory", href: "/student/dashboard/directory", icon: Users },
-  { label: "Bounty Board", href: "/student/dashboard/bounty", icon: Scroll, comingSoon: true },
-  { label: "Shop", href: "/student/dashboard/shop", icon: ShoppingBag, comingSoon: true },
-  { label: "Job Board", href: "/student/dashboard/jobs", icon: Briefcase, comingSoon: true },
-  { label: "Leaderboard", href: "/student/dashboard/leaderboard", icon: Trophy, comingSoon: true },
+  { label: "Bounty Board", href: "/student/dashboard/bounty", icon: Scroll },
+  { label: "Shop", href: "/student/dashboard/shop", icon: ShoppingBag },
+  { label: "Job Board", href: "/student/dashboard/jobs", icon: Briefcase },
+  { label: "Leaderboard", href: "/student/dashboard/leaderboard", icon: Trophy },
   { label: "Profile", href: "/student/dashboard/profile", icon: User },
-  { label: "Settings", href: "/student/dashboard/settings", icon: Settings, comingSoon: true },
+  { label: "Settings", href: "/student/dashboard/settings", icon: Settings },
 ];
 
 interface SidebarProps {
@@ -39,6 +40,9 @@ interface SidebarProps {
 
 export default function Sidebar({ onClose }: SidebarProps) {
   const pathname = usePathname();
+  const { profile } = useUser();
+  const userName = profile?.display_name || "Player";
+  const userLevel = profile?.level ?? 1;
 
   const isActive = (href: string) => {
     if (href === "/student/dashboard") return pathname === href;
@@ -73,7 +77,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
             className="text-sm truncate"
             style={{ color: "var(--color-text-main)", fontWeight: 700 }}
           >
-            Player
+            {userName}
           </p>
           <p
             className="font-mono"
@@ -82,7 +86,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
               color: "var(--color-text-muted)",
             }}
           >
-            Lv. 1
+            Lv. {userLevel}
           </p>
         </div>
         {/* Close button — only visible in mobile overlay */}

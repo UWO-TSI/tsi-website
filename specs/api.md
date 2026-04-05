@@ -370,6 +370,427 @@ Award coins to a user (T1-T2 only).
 
 ---
 
+## Onboarding API
+
+### `GET /api/onboarding`
+
+Get current onboarding status.
+
+**Response:** `{ completed: false, current_step: 2, total_steps: 4 }`
+
+### `POST /api/onboarding`
+
+Advance to next step. Steps must be completed sequentially (can't skip).
+
+**Steps:** 0=not started, 1=welcome viewed, 2=profile basics, 3=avatar configured, 4=tutorial done (completes onboarding)
+
+**Body:**
+```json
+{
+  "step": 2,
+  "profile_data": {
+    "display_name": "Jane",
+    "bio": "Hi!",
+    "program": "CS",
+    "year": "3",
+    "avatar_config": { "body": "base_f", "hair": "long_1" }
+  }
+}
+```
+
+On step 4 (final): marks `onboarding_completed = true`, awards 100 coins + 50 XP welcome bonus.
+
+**Errors:** `409` if already completed, `400` if skipping steps.
+
+---
+
+## Quest System API
+
+### `GET /api/quests`
+
+List quests with user's progress.
+
+**Query params:** `?type=daily|weekly|seasonal`, `?status=available|in_progress|completed`
+
+**Response:** Each quest includes `user_status`, `user_progress`, `accepted_at`, `completed_at`.
+
+### `POST /api/quests`
+
+Create quest (T1-T3 only).
+
+**Body:** `{ title, description, quest_type, xp_reward?, tc_reward?, criteria?, max_completions?, start_date?, end_date?, is_recurring? }`
+
+### `POST /api/quests/[id]/accept`
+
+Accept a quest. Creates `quest_progress` row with status `accepted`.
+
+**Errors:** `409` if already accepted, `404` if quest inactive.
+
+### `POST /api/quests/[id]/complete`
+
+Complete a quest. Awards `xp_reward` + `tc_reward`, records transactions.
+
+**Response:** `{ completed: true, rewards: { coins: 50, xp: 100, new_balance: 650, new_xp: 3600, new_level: 8, new_rank: "Veteran" } }`
+
+**Errors:** `400` if not accepted, `409` if already completed.
+
+---
+
+## Events/Calendar API
+
+### `GET /api/events`
+
+List events with optional date range and type filters. Each event includes attendee count and user's RSVP status.
+
+**Query params:** `?type=club|team|bounty|volunteer|social|workshop|meeting`, `?from=ISO`, `?to=ISO`, `?limit=50` (max 200)
+
+**Response:**
+```json
+{
+  "events": [
+    {
+      "id": "uuid",
+      "title": "Weekly Standup",
+      "description": "Team sync",
+      "event_type": "meeting",
+      "start_time": "2026-04-10T14:00:00Z",
+      "end_time": "2026-04-10T15:00:00Z",
+      "location": "Discord",
+      "is_all_day": false,
+      "status": "approved",
+      "tc_reward": 10,
+      "xp_reward": 5,
+      "created_by": "uuid",
+      "attendee_count": 12,
+      "user_rsvp": "registered"
+    }
+  ]
+}
+```
+
+Only shows approved events. Sorted by start_time ascending.
+
+---
+
+### `POST /api/events`
+
+Create an event (T1-T3 only). Auto-approved.
+
+**Body:**
+```json
+{
+  "title": "Hackathon Kickoff",
+  "description": "24-hour build event",
+  "event_type": "club",
+  "start_time": "2026-04-15T09:00:00Z",
+  "end_time": "2026-04-16T09:00:00Z",
+  "location": "SEB 2100",
+  "is_all_day": false,
+  "tc_reward": 100,
+  "xp_reward": 50
+}
+```
+
+**Response:** `201 { "event": {...} }`
+
+---
+
+### `POST /api/events/[id]/rsvp`
+
+Toggle RSVP for an event. If already registered, un-registers. If not registered, registers.
+
+**Response:**
+```json
+{ "action": "registered"|"unregistered", "event_id": "uuid", "event_title": "Hackathon Kickoff" }
+```
+
+**Errors:** `404` if event not found, `400` if event not active.
+
+---
+
+## Inventory API
+
+### `GET /api/inventory`
+
+List user's owned avatar items with equipped state.
+
+**Query params:** `?type=hair`, `?equipped=true|false`
+
+**Response:**
+```json
+{
+  "inventory": [
+    {
+      "id": "uuid",
+      "item_id": "uuid",
+      "equipped": true,
+      "acquired_at": "2026-04-01T00:00:00Z",
+      "avatar_items": {
+        "id": "uuid",
+        "name": "Cyber Mohawk",
+        "type": "hair",
+        "category": "shop",
+        "coin_price": 200,
+        "sprite_url": "/assets/items/hair_cyber.png",
+        "rarity": "rare"
+      }
+    }
+  ]
+}
+```
+
+---
+
+### `POST /api/inventory`
+
+Equip or unequip an avatar item. Equipping auto-unequips any other item of the same type (one per slot).
+
+**Body:** `{ action: "equip"|"unequip", item_id: "uuid" }`
+
+**Response:** `{ success: true, action: "equipped", item_id: "uuid", item_name: "Cyber Mohawk" }`
+
+**Errors:** `404` if item not in inventory, `409` if already equipped/unequipped.
+
+---
+
+## Achievement System API
+
+### `GET /api/achievements`
+
+List all achievements with user's unlock status.
+
+**Query params:** `?include_secret=true` (default: false, hides secret achievements)
+
+**Response:**
+```json
+{
+  "achievements": [
+    {
+      "id": "uuid",
+      "name": "first_bounty",
+      "display_name": "Bounty Hunter",
+      "description": "Complete your first bounty",
+      "icon": "🎯",
+      "tc_reward": 50,
+      "xp_reward": 100,
+      "is_secret": false,
+      "criteria_type": "bounties_completed",
+      "criteria_value": 1,
+      "created_at": "2026-01-01T00:00:00Z",
+      "unlocked": true,
+      "unlocked_at": "2026-03-15T12:00:00Z"
+    }
+  ]
+}
+```
+
+---
+
+### `POST /api/achievements`
+
+Create a new achievement (T1-T3 only).
+
+**Body:**
+```json
+{
+  "name": "first_bounty",
+  "display_name": "Bounty Hunter",
+  "description": "Complete your first bounty",
+  "icon": "🎯",
+  "tc_reward": 50,
+  "xp_reward": 100,
+  "is_secret": false,
+  "criteria_type": "bounties_completed",
+  "criteria_value": 1
+}
+```
+
+**Response:** `201 { "achievement": {...} }`
+
+**Errors:** `403` if not T1-T3, `409` if name already exists.
+
+---
+
+### `POST /api/achievements/[id]/award`
+
+Award an achievement to a user (T1-T3 only). Awards associated TC + XP rewards with auto level-up.
+
+**Body:** `{ user_id: "uuid" }`
+
+**Response:**
+```json
+{
+  "success": true,
+  "achievement": "Bounty Hunter",
+  "user": "uuid",
+  "rewards": {
+    "coins": 50,
+    "xp": 100,
+    "new_balance": 650,
+    "new_xp": 3600,
+    "new_level": 8,
+    "new_rank": "Veteran"
+  }
+}
+```
+
+**Errors:** `403` if not T1-T3, `404` if achievement/user not found, `409` if already awarded.
+
+---
+
+## Shared Helper: `awardRewards()`
+
+All XP-granting endpoints (bounty review, quest completion, onboarding, achievement award) use a shared `awardRewards()` helper from `@/lib/supabase/helpers`. This function:
+
+1. Reads current profile (tethos_coins, xp, level, rank)
+2. Computes new XP total
+3. Auto-computes new `level` via `levelFromXp()` and `rank` via `rankFromLevel()`
+4. Updates profile with new coins, xp, level, rank
+5. Records TC transaction and XP transaction
+
+This ensures level-up is automatic and consistent everywhere XP is granted.
+
+---
+
+## Oracle API
+
+### `GET /api/oracle/quiz`
+
+Returns 12 MBTI-style personality questions. 3 questions per dimension (E/I, S/N, T/F, J/P).
+
+**Response:**
+```json
+{
+  "questions": [
+    {
+      "id": 1,
+      "dimension": "EI",
+      "text": "At a guild meetup, you tend to...",
+      "options": [
+        { "label": "Jump into conversations with strangers", "pole": "E" },
+        { "label": "Stick with people you already know", "pole": "I" }
+      ]
+    }
+  ],
+  "already_classified": false,
+  "current_class": null,
+  "current_subclass": null
+}
+```
+
+---
+
+### `POST /api/oracle/result`
+
+Scores 12 answers → MBTI type → RPG class + subclass. Saves to profile.
+
+**Body:**
+```json
+{
+  "answers": [
+    { "question_id": 1, "pole": "E" },
+    { "question_id": 2, "pole": "I" },
+    ...12 total
+  ]
+}
+```
+
+**Response:** `{ mbti_type: "INTJ", class: "ARCHITECT", subclass: "Mastermind" }`
+
+**MBTI → Class mapping:**
+| MBTI | Class | Subclass |
+|------|-------|----------|
+| INTJ | ARCHITECT | Mastermind |
+| INTP | ORACLE | Sage |
+| ENTJ | COMMANDER | Warlord |
+| ENTP | STRATEGIST | Trickster |
+| INFJ | ORACLE | Mystic |
+| INFP | SCOUT | Dreamwalker |
+| ENFJ | COMMANDER | Herald |
+| ENFP | SCOUT | Wanderer |
+| ISTJ | WARDEN | Sentinel |
+| ISFJ | WARDEN | Guardian |
+| ESTJ | OPERATIVE | Marshal |
+| ESFJ | OPERATIVE | Consul |
+| ISTP | ENGINEER | Artificer |
+| ISFP | INITIATE | Bard |
+| ESTP | ENGINEER | Tinker |
+| ESFP | INITIATE | Jester |
+
+---
+
+## Jobs API
+
+### `GET /api/jobs`
+
+List job listings with optional filters.
+
+**Query params:** `?type=internship|full_time|part_time|contract`, `?search=`, `?category=`, `?limit=50` (max 100)
+
+**Response:** `{ jobs: [...] }`
+
+Excludes flagged listings. Sorted by created_at desc.
+
+---
+
+### `POST /api/jobs`
+
+Create a job listing. Any authenticated user can post.
+
+**Body:**
+```json
+{
+  "title": "Frontend Developer Intern",
+  "company": "TechCorp",
+  "location": "Toronto, ON",
+  "job_type": "internship",
+  "url": "https://techcorp.com/careers/123",
+  "categories": ["engineering", "frontend"],
+  "tags": ["react", "typescript"],
+  "description": "Looking for a frontend intern..."
+}
+```
+
+**Response:** `201 { "job": {...} }`
+
+---
+
+## Leaderboard API
+
+### `GET /api/leaderboard`
+
+Top N profiles sorted by XP desc with rank numbers.
+
+**Query params:** `?limit=50` (max 100)
+
+**Response:**
+```json
+{
+  "leaderboard": [
+    {
+      "rank_position": 1,
+      "id": "uuid",
+      "display_name": "Jane Doe",
+      "avatar_url": null,
+      "tier": 3,
+      "position": "developer",
+      "class": "ENGINEER",
+      "subclass": "Artificer",
+      "level": 12,
+      "xp": 5400,
+      "rank": "Veteran",
+      "is_active": true
+    }
+  ],
+  "your_rank": 15,
+  "total_returned": 50
+}
+```
+
+If the requesting user isn't in the top N, `your_rank` is computed separately.
+
+---
+
 ## Middleware Routing
 
 ### Election (archived behind `ENABLE_ELECTION` env var)
@@ -407,6 +828,21 @@ ItemType, ItemCategory, ItemRarity
 
 // Bounty
 Bounty, BountySubmission, BountyStatus, SubmissionStatus
+
+// Achievements
+Achievement, UserAchievement, AchievementWithStatus
+
+// Jobs
+JobListing, JobType
+
+// Leaderboard
+LeaderboardEntry
+
+// Oracle
+OracleQuestion, OracleResult
+
+// Events
+CalendarEvent, EventType, AttendanceStatus
 
 // Directory views
 DirectoryMember, PublicProfile
