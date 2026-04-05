@@ -580,10 +580,22 @@ Spec covers 14 sections: orientation lock, breakpoints, navigation, game world t
 - Leaderboard missing own-row highlight and time period wiring
 - 10 priority fixes listed for Frontend
 
+**Oracle Quiz v2 — Card-Game NPC Encounter:** `specs/ux-oracle-v2.md`
+David provided reference image (card-battle game). Oracle quiz is now a card-game encounter:
+- 2D styled backdrop (CSS gradients, no image assets) of Oracle Temple interior
+- Player sprite (bottom-left) facing Monk NPC sprite (top-right)
+- Question appears in speech bubble from monk (typewriter text effect)
+- Answer cards fanned at bottom like a card game hand (rotation, translateY, hover pop-up)
+- "Play" animation: selected card floats up + gold glow, others slide down, next question types in
+- Progress bar + exit button at top
+- `ux-oracle.md` Sections 2-5 are REPLACED by this spec
+
 **Notes for Frontend:**
+- **READ `specs/ux-oracle-v2.md` FIRST** — it replaces the old quiz layout entirely
 - Read `specs/ux-classes.md` for class identity when building Oracle quiz reveal
 - Read `specs/ux-review-v4.md` for the 10 priority fixes (P1: settings tabs + theme + sign out + leaderboard highlight)
 - `CLASS_DATA` object structure provided — copy into a shared constants file
+- Monk sprite: use CSS placeholder (purple robe trapezoid + gold dot eyes) until real art arrives
 
 ---
 
