@@ -471,6 +471,132 @@ While waiting for `specs/ux-game-world-v2.md`:
 
 ---
 
+### 2026-04-04 — Round 2 Directives (CURRENT SPRINT)
+
+**READ THE PUSH PROTOCOL ABOVE BEFORE STARTING.** Push after every completed feature. No batching.
+
+**Context:** Round 1 agents went off-script. Frontend built visual polish instead of pages. Backend built future features instead of assigned endpoints. UXUI wrote unassigned specs. Only QA followed instructions. This round, **do ONLY what is listed below. Do not substitute your own backlog items.**
+
+---
+
+#### @Frontend — BUILD THE 5 "COMING SOON" PAGES (this is your ONLY job)
+
+**DO NOT** touch GameWorld.tsx, terrain.ts, PlayerAvatar.tsx, water, lighting, time-of-day, or any visual/3D element. Zero game world changes this round.
+
+Build these 5 pages. Each has a UXUI spec and Backend API ready. **Push after each page.**
+
+**Page 1: `/student/dashboard/bounty/page.tsx`** — Bounty Board
+- Read `specs/ux-bounty.md` (254 lines, implementation-ready)
+- Fetch from `GET /api/bounties` (supports `?status=` and `?difficulty=` filters)
+- Card grid layout with bounty cards (title, description, reward, deadline, difficulty tag, status)
+- Filter bar: status tabs (open/claimed/completed), difficulty filter
+- Claim flow: click card → detail overlay → "Claim" button → `POST /api/bounties/[id]/claim`
+- Submit flow: claimed bounty → "Submit" → `POST /api/bounties/[id]/submit`
+- Show coin reward prominently on each card
+- **Push immediately after this page works.**
+
+**Page 2: `/student/dashboard/leaderboard/page.tsx`** — Leaderboard
+- Read `specs/ux-leaderboard.md` (175 lines)
+- Fetch from `GET /api/directory` — sort client-side by XP descending (or use `GET /api/leaderboard` if Backend builds it this round)
+- Ranked table: position (#1, #2...), avatar, name, class, level, XP, tier badge
+- Gold/silver/bronze styling for top 3
+- Highlight current user's row
+- Time period tabs (all-time / this month / this week) — can be client-side filtered if API doesn't support it
+- **Push immediately after this page works.**
+
+**Page 3: `/student/dashboard/shop/page.tsx`** — Shop
+- Read `specs/ux-shop.md` (288 lines)
+- Fetch marketplace items from existing `marketplace_items` table (direct Supabase call or use `GET /api/economy`)
+- Product card grid: image/icon, name, price (TSI coins), category badge, rarity
+- Category tabs: All, Outfits, Effects, Merch, Profile
+- Purchase: click card → confirm modal → `POST /api/economy { action: "purchase", item_id }`
+- Show user's coin balance in header
+- **Push immediately after this page works.**
+
+**Page 4: `/student/dashboard/jobs/page.tsx`** — Job Board
+- Read `specs/ux-jobs.md` (258 lines)
+- Fetch from `GET /api/jobs` (Backend building this round) or direct Supabase query on `job_listings` table
+- Job cards: title, company, type badge (color-coded: full-time/part-time/internship/co-op), location, posted date
+- Search bar + filter dropdowns (type, location)
+- Click card → detail view with full description + "Apply" / "Submit" button
+- **Push immediately after this page works.**
+
+**Page 5: `/student/dashboard/settings/page.tsx`** — Settings
+- Fetch own profile from `GET /api/profile`
+- Sections: Profile Info (display_name, bio — editable), Social Links (github, linkedin, discord — editable), Account Info (email, tier, joined date — read only)
+- Save button → `PATCH /api/profile`
+- Loading/saving states
+- **Push immediately after this page works.**
+
+**THEN IF TIME:** Extract Kenney Nature Kit GLBs from `~/Downloads/kenney_nature-kit.zip` → `web/public/assets/nature/` and swap primitive trees/flowers/bushes in GameWorld.tsx for real GLB models. This is the ONLY game world change allowed.
+
+---
+
+#### @Backend — Oracle Endpoint + Jobs API + Leaderboard API + Lint Fixes
+
+**Push after each endpoint.**
+
+**Task 1: Oracle/MBTI Quiz API**
+- `GET /api/oracle/quiz` — returns the 12 questions from `specs/oracle-questions.md` with answer options
+- `POST /api/oracle/quiz` — accepts answers array, scores them (majority per MBTI axis, tie-break to E/S/T/J), maps to 4-letter MBTI type → class (Warrior/Mage/Healer/Rogue) + subclass (16 options). Saves `class` and `subclass` to user's profile. Returns result.
+- `GET /api/oracle/result` — returns user's current class/subclass if already taken, or null
+- **Push after oracle endpoints work.**
+
+**Task 2: Jobs API**
+- `GET /api/jobs` — list job_listings with filters: `?type=`, `?location=`, `?search=`. Auth required.
+- `POST /api/jobs` — create job listing (T1-T3 only). Validate with Zod.
+- The `job_listings` table already exists in migration 001.
+- **Push after jobs endpoints work.**
+
+**Task 3: Leaderboard API**
+- `GET /api/leaderboard` — returns top N profiles sorted by XP desc. Query params: `?limit=50` (max 100), `?period=all|month|week`. Returns: rank, display_name, avatar_url, class, level, xp, tier. Include requesting user's rank even if not in top N.
+- **Push after leaderboard endpoint works.**
+
+**Task 4: Fix lint errors**
+- Fix the ~15 `fetchX` before declaration errors in Backend admin/dashboard pages.
+- Move function declarations above `useEffect` calls, or convert to `const fetchX = useCallback(...)`.
+- **Push after lint fixes.**
+
+---
+
+#### @UXUI — Settings Spec + Asset Map
+
+**Push after each spec.**
+
+**Task 1: `specs/ux-settings.md`**
+- Settings page design for Frontend to implement.
+- Sections: (1) Profile Info — display_name, bio edit fields; (2) Social Links — github, linkedin, discord, instagram fields; (3) Account — email (read-only), tier badge, member since date; (4) Preferences — theme toggle (dark/light, future), notification prefs (future, show as disabled); (5) Danger Zone — deactivate account (future, show as disabled)
+- Include exact field layouts, input styles, save button placement, success/error toast specs.
+- Ask David design questions FIRST if needed (multi-choice format).
+- **Push immediately after spec is written.**
+
+**Task 2: `specs/ux-asset-map.md`**
+- Mapping document: which GLB model from each downloaded asset pack corresponds to which game world element.
+- Kenney Nature Kit (GLB, ready to load): map tree_default/tree_oak/tree_detailed → which tree positions, flower_redA/purpleA/yellowA → flower positions, plant_bush/bushLarge → bush positions, fence_simple/planks → fence positions, mushroom_red → mushroom positions, bridge_wood → bridge.
+- Quaternius Medieval Village (FBX→GLB converted): map Inn→HQ or House_1→House, etc. Which building model best fits each game building.
+- Include recommended scale, rotation, and Y-offset for each model (Frontend shouldn't have to guess).
+- Review the current GameWorld.tsx BUILDINGS array positions and map models to them.
+- **Push immediately after spec is written.**
+
+---
+
+#### @QA — Incremental Merge + Test Each Page As It Lands
+
+**New workflow this round:** Because agents are pushing frequently, you don't wait until the end.
+
+1. **Pull from each agent's branch every time they push.** Merge into your QA branch incrementally.
+2. **Test each new page as it arrives:**
+   - Does it build? (`npm run build`)
+   - Does it render? (dev server + Playwright or manual browser check)
+   - Does the API integration work? (will return 500 without Supabase creds, but check that the fetch calls are correct)
+   - Does sidebar navigation to/from the new page work?
+3. **Run full lint after all pages land** — report which errors are new vs pre-existing.
+4. **Regression check:** make sure existing pages (directory, profile, game world) still work after merges.
+5. **Log everything to `specs/qa.md`** — Wave 8 section.
+6. **Push your QA results after each merge/test cycle.**
+
+---
+
 ## UXUI
 
 > UXUI agent writes here. Others: read only.
