@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState, useEffect, useRef, useMemo } from "react";
+import { Suspense, useEffect, useMemo } from "react";
 import { Html, useGLTF } from "@react-three/drei";
 import { useRouter } from "next/navigation";
 import * as THREE from "three";

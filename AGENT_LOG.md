@@ -1907,6 +1907,25 @@ Fixed all 9 lint errors in QA-jurisdiction game components:
 
 ---
 
+### 2026-04-05 — Wave 9: Lint Fixes + Full Visual Regression
+
+No new commits on any agent branch since Wave 8. All branches fully merged.
+
+**Lint fixes (QA jurisdiction):**
+- GameWorld.tsx: replaced 6x `Math.random()` in `useMemo` with seeded PRNG (`seededRandom`) — fixes React Compiler purity rule
+- Building.tsx: removed 2 unused imports (`useState`, `useRef`)
+- **Lint: 53 → 47 errors, 50 → 48 warnings**
+
+**Visual regression (Playwright, 13 pages):** Zero regressions. All 5 Round 2 pages render correctly. Game world, login, signup, mobile responsive all pass.
+
+**Build: ✅ 58 routes**
+
+**No new bugs found.**
+
+Full report in `specs/qa.md` Wave 9.
+
+---
+
 ### HANDOFF — Context for New QA Session
 
 #### 1. Test Waves Completed
@@ -1918,34 +1937,41 @@ Fixed all 9 lint errors in QA-jurisdiction game components:
 | Wave 4.1 | 2026-03-30 | Combined Backend+Frontend: 49 pages, merge conflict resolution | 7 conflicts resolved (Frontend versions for dashboard) |
 | Wave 5 | 2026-03-31 | Dev server runtime: all 34 pages via HTTP, game world code review | Game world, sidebar, auth pages all verified. Found dead code + unused assets |
 | Wave 6 | 2026-04-04 | v2 AC overhaul + Backend Phase 2: 51 pages, full integration | v2 game world verified. PS1Pipeline deleted. Z-fighting fixed. |
+| Wave 7 | 2026-04-04 | Full integration + first visual browser test | All pages + game world visually verified. Roof color bug fixed. |
+| Wave 8 | 2026-04-04 | Round 2 integration: 5 new pages, 6 new APIs, cleanup | All 5 new pages + 6 APIs verified. 1,967 lines dead code removed. |
+| Wave 9 | 2026-04-05 | Lint fixes + full visual regression (13 pages) | 6 lint errors fixed. Zero regressions. All Round 2 pages render. |
 
 #### 2. Current Build Status
 
-- **Build:** ✅ PASSES — 51 pages (Next.js 16.1.6 Turbopack, 6.9s)
-- **Lint:** ❌ FAILS — 48 errors, 46 warnings
+- **Build:** ✅ PASSES — 58 routes (Next.js 16.1.6 Turbopack)
+- **Lint:** ❌ FAILS — 47 errors, 48 warnings
 - **TypeScript:** ✅ No type errors
-- **Dev server:** ✅ All 34 testable pages return HTTP 200
+- **Dev server:** ✅ All testable pages return HTTP 200
 
 #### 3. Known Bugs
 
 | Sev | Issue | Details |
 |-----|-------|---------|
-| **P2** | FBX building files unused | `web/public/assets/buildings/*.fbx` (4 files, 651KB). Building.tsx uses placeholder geometry. Delete or wire up. |
+| **P2** | Directory/Profile show raw "HTTP 500" | No Supabase credentials — need graceful offline fallback |
+| **P2** | FBX building files unused | `web/public/assets/buildings/*.fbx` (4 files, 651KB). Delete or wire up. |
 | **P2** | No WebGL context loss handler | If WebGL context is lost (Safari/mobile), canvas goes black. No recovery. |
-| **P3** | 48 lint errors | ~15 `fetchX` before declaration (Backend pages), ~8 ref mutations (game components), ~8 `any` types, ~3 setState in effects |
+| **P2** | Mobile sidebar z-index | drei `<Html>` prompts bleed through sidebar overlay |
+| **P3** | 47 lint errors | setState in effects (15), any types (~20), hook mutations (4), require imports (3), jsx comments (3), misc (2) |
+| **P3** | Font 404 (`TestSohne-Kraftig`) | Font file missing from repo |
 | **P3** | Middleware deprecation | `web/middleware.ts` — Next.js 16 warns to use "proxy" convention |
-| **P3** | All API routes return 500 | Expected — no `.env.local` with Supabase credentials |
+| **P3** | Player sprite dashed box in headless | Needs real browser verification |
 
 #### 4. Lint Error Inventory
 
 | Pattern | Count | Where | Fix |
 |---------|-------|-------|-----|
-| `fetchX` before declaration | ~15 | Backend dashboard/admin pages | Move function declaration above `useEffect` |
-| Ref/value mutation in render | ~8 | PlayerAvatar, Building, InteractivePylon3D, CustomCursor | Use refs + mutate in `useFrame`/callbacks |
-| `no-explicit-any` | ~8 | Lanyard, GlassNavbar | Add proper types |
-| setState in effect | ~3 | CardCarouselLayout, GlassNavbar | Refactor to avoid cascading renders |
-| JSX comment text nodes | ~3 | MemberCard, TextRevealSection | Wrap comments in `{/* */}` |
-| Missing `aria-selected` | 1 | MemberCard role="option" | Add `aria-selected` attribute |
+| setState in effect | 15 | Backend dashboard/admin pages (12), CardCarouselLayout, GlassNavbar | Refactor fetch patterns |
+| `no-explicit-any` | ~20 | global.d.ts (4), Lanyard (7+), various | Add proper types |
+| Hook return mutation | 4 | Lanyard.tsx | Construct with correct values instead of mutating |
+| `require()` imports | 3 | scripts/convert-fbx-to-glb.js | Convert to ESM or exclude from lint |
+| JSX comment text nodes | 3 | MemberCard, TextRevealSection | Wrap in `{/* */}` |
+| Variable before declaration | 1 | Backend page | Move declaration above usage |
+| Ref access during render | 1 | CustomCursor or InteractivePylon3D | Move to useEffect/callback |
 
 #### 5. What's Been Runtime Tested vs Build-Only
 

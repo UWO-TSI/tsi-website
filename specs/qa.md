@@ -1,7 +1,87 @@
 # QA Report
 
 > Owner: QA agent. All agents check this for bugs in their area.
-> Last updated: 2026-04-04
+> Last updated: 2026-04-05
+
+---
+
+## Wave 9 — Post-Round 2 Lint Fixes + Full Visual Regression (2026-04-05)
+
+No new agent commits since Wave 8. This wave: fix QA-jurisdiction lint errors, run full visual regression via Playwright, update error inventory.
+
+### Build
+
+**Result: ✅ PASSES — 58 routes (up from 52 in Wave 8)**
+
+### Lint Fixes (QA jurisdiction)
+
+**GameWorld.tsx — 6 errors fixed (impure `Math.random()` during render):**
+- `River` sparkle geometry: replaced `Math.random()` with seeded PRNG (`seededRandom(42)`) inside `useMemo`
+- `Butterflies` initial positions: replaced `Math.random()` with seeded PRNG (`seededRandom(99)`) inside `useMemo`
+- React Compiler `react-hooks/purity` rule now satisfied — deterministic output on re-renders
+
+**Building.tsx — 2 warnings fixed (unused imports):**
+- Removed unused `useState` and `useRef` from import
+
+**Lint totals: 53 → 47 errors, 50 → 48 warnings**
+
+### Remaining 47 Lint Errors (outside QA jurisdiction)
+
+| Pattern | Count | Where | Owner |
+|---------|-------|-------|-------|
+| `setState synchronously within an effect` | 15 | Backend dashboard/admin pages (12), CardCarouselLayout, GlassNavbar | Backend/Marketing |
+| `no-explicit-any` | ~20 | global.d.ts (4), Lanyard (7+), various pages | Backend/Marketing |
+| `Cannot call impure function` | 0 | ✅ ALL FIXED (was 6) | QA — done |
+| `This value cannot be modified` | 4 | Lanyard.tsx (hook return mutations) | Marketing |
+| `require()` imports | 3 | scripts/convert-fbx-to-glb.js | Frontend |
+| `jsx-no-comment-textnodes` | 3 | MemberCard, TextRevealSection | Marketing |
+| `Cannot access variable before declaration` | 1 | Backend page | Backend |
+| `Cannot access refs during render` | 1 | CustomCursor or InteractivePylon3D | Marketing |
+
+### Visual Browser Regression Test (Playwright)
+
+**All 13 pages tested. Zero regressions from Wave 8.**
+
+| Page | Status | Notes |
+|------|--------|-------|
+| `/student/dashboard` (game world) | ✅ | Buildings, terrain, trees, river, labels all render. Sidebar 8 items. |
+| `/student/dashboard/bounty` | ✅ | Tabs (All/Available/My Claims/Completed), empty state |
+| `/student/dashboard/leaderboard` | ✅ | Time tabs (Weekly/Monthly/All-Time), table headers, empty state |
+| `/student/dashboard/shop` | ✅ | Category tabs (All/Apparel/Accessories/Digital/Merch), TSI balance, empty state |
+| `/student/dashboard/jobs` | ✅ | Search bar, type filters, "Submit a Job" button, empty state |
+| `/student/dashboard/settings` | ✅ | Profile section (name/bio/skills), Social Links (5 platforms), Save button |
+| `/student/dashboard/directory` | ⚠️ | HTTP 500 — expected (no Supabase credentials) |
+| `/student/dashboard/profile` | ⚠️ | HTTP 500 + "Go back" link — expected (no Supabase) |
+| `/student/login` | ✅ | Terminal aesthetic, email/passphrase, "Initialize Session" |
+| `/student/signup` | ✅ | Name/email/passphrase/confirm/invite code, "Request Access" |
+| Mobile 375px — game world | ✅ | Hamburger menu visible, game fills viewport |
+| Mobile 375px — sidebar open | ✅ | All 8 nav items, close (X) button, Home highlighted |
+| Mobile 375px — sidebar close | ✅ | Tap X closes sidebar |
+
+### Console Errors
+
+| Error | Severity | Known? |
+|-------|----------|--------|
+| Font 404: `TestSohne-Kraftig` | P3 | Yes (Wave 7) |
+
+No new console errors.
+
+### Known Bugs (cumulative)
+
+| Sev | Issue | Status |
+|-----|-------|--------|
+| **P2** | Directory/Profile show raw "HTTP 500" without Supabase | Open — needs graceful offline fallback |
+| **P2** | FBX building files unused (651KB) | Open — delete or wire up |
+| **P2** | No WebGL context loss handler | Open |
+| **P2** | Mobile sidebar z-index — drei `<Html>` prompts bleed through | Open |
+| **P3** | 47 lint errors | Reduced from 53 — remaining outside QA jurisdiction |
+| **P3** | Font 404 (`TestSohne-Kraftig`) | Open |
+| **P3** | Middleware deprecation warning | Open |
+| **P3** | Player sprite shows as dashed box in headless Playwright | Open — needs real browser |
+
+### Summary
+
+All branches fully merged. No new commits pending from any agent. Build stable at 58 routes. Lint reduced to 47 errors (6 fixed this wave). All 5 Round 2 pages render correctly. Zero visual regressions across 13 pages tested including mobile. Waiting on other agents for further work.
 
 ---
 
