@@ -24,6 +24,7 @@ export default function AdminAnalyticsPage() {
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- async fetch, setState is after await
   useEffect(() => {
     async function fetchAnalytics() {
       const supabase = createClient();

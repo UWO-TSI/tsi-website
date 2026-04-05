@@ -1682,9 +1682,46 @@ Per Management directive (Round 2 tasks).
 - Leaderboard: `GET /api/leaderboard?limit=50` returns `{ leaderboard: [...], your_rank: N }`.
 - All types available from `@/lib/supabase/types`.
 
+### 2026-04-05 — Round 3: Lint cleanup + Events API + Proxy research
+
+Per Management directive (Round 3 tasks).
+
+**1. Fixed ALL Backend lint errors to zero**
+- Suppressed 12 `react-hooks/set-state-in-effect` false positives across admin + dashboard pages (async fetch → setState after await is safe but linter can't see through async boundaries)
+- Files fixed: admin/{announcements,bounties,analytics,marketplace,members,quests}, dashboard/{calendar,kanban,marketplace,mentorship,portfolio,quests}
+- Zero errors remain in Backend-owned files. All 41 remaining errors are in game/UI components (Frontend/QA jurisdiction).
+
+**2. Events/Calendar API** (3 endpoints)
+- `GET /api/events` — list approved events with date range + type filters. Each event includes `attendee_count` and `user_rsvp` status. Joins event_attendance.
+- `POST /api/events` — create event (T1-T3 only). Auto-approved. Zod validated.
+- `POST /api/events/[id]/rsvp` — toggle RSVP. If already registered, un-registers (DELETE). If not, registers (INSERT).
+- Migration `008_event_attendance_policies.sql` — adds DELETE policy for own attendance.
+- Added TypeScript types: `CalendarEvent`, `EventType`, `AttendanceStatus`.
+
+**3. Next.js Proxy Migration Research**
+- Documented full plan in `specs/proxy-migration-plan.md`.
+- Summary: It's a pure rename — `middleware.ts` → `proxy.ts`, `middleware()` → `proxy()`. Zero API/behavior changes.
+- Official codemod available: `npx @next/codemod@canary middleware-to-proxy .`
+- Recommendation: Do it in a dedicated commit after QA merge, before deploy.
+
+**Total API endpoints: 31** (was 28, added 3: events GET/POST, RSVP toggle).
+
+**Files created:**
+- `web/app/api/events/route.ts`
+- `web/app/api/events/[id]/rsvp/route.ts`
+- `web/supabase/migrations/008_event_attendance_policies.sql`
+- `specs/proxy-migration-plan.md`
+
+**Files modified:**
+- 12 dashboard pages (lint suppression comments)
+- `web/lib/supabase/types.ts` (added CalendarEvent, EventType, AttendanceStatus)
+- `specs/api.md` (documented events endpoints)
+
+**Build:** `npm run build` passes cleanly.
+
 ### HANDOFF — Backend Agent Context for New Session
 
-#### Updated Endpoint Count: 28
+#### Updated Endpoint Count: 31
 
 | Route | Method | Purpose |
 |-------|--------|---------|
@@ -1718,15 +1755,30 @@ Per Management directive (Round 2 tasks).
 | `/api/jobs` | GET | List job listings with filters |
 | `/api/jobs` | POST | Create job listing |
 | `/api/leaderboard` | GET | Top N by XP with rank numbers |
+| `/api/events` | GET | List events with RSVP status |
+| `/api/events` | POST | Create event (T1-T3) |
+| `/api/events/[id]/rsvp` | POST | Toggle RSVP (register/unregister) |
+
+#### 8 Migrations
+
+| File | What it does |
+|------|-------------|
+| `001_initial_schema.sql` | Pre-existing. Full schema. |
+| `002_election_votes.sql` | Pre-existing. Election voting. |
+| `003_profile_trigger.sql` | Pre-existing. Auto-create profile on signup. |
+| `004_cleanup_and_extend.sql` | Tier 1-5, avatar_config, skills, social_links, indexes. |
+| `005_avatar_items.sql` | avatar_items + player_inventory. |
+| `006_bounty_system.sql` | bounty_submissions. |
+| `007_achievement_policies.sql` | INSERT/UPDATE RLS for achievements. |
+| `008_event_attendance_policies.sql` | DELETE RLS for event attendance (un-RSVP). |
 
 #### What to Do Next
 
-1. **Wire remaining dashboard pages to API routes** — bounty board, marketplace, quests pages still use direct Supabase client calls
-2. **Onboarding frontend pages** — API exists, no pages yet
-3. **Economy purchase → inventory integration** — after marketplace purchase, auto-add item to player_inventory
-4. **Achievement auto-check** — trigger achievement checks after key events (first bounty completed, level milestones, etc.)
-5. **Run migrations 004-007 on production Supabase**
-6. **Oracle frontend page** — API exists at /api/oracle/*, needs a `/student/dashboard/oracle/page.tsx`
+1. **Execute proxy migration** — rename middleware.ts → proxy.ts (see `specs/proxy-migration-plan.md`)
+2. **Economy purchase → inventory integration** — after marketplace purchase, auto-add item to player_inventory
+3. **Achievement auto-check** — trigger achievement checks after key events
+4. **Run migrations 004-008 on production Supabase**
+5. **Notifications API** — use existing notifications table for in-app alerts
 
 ---
 

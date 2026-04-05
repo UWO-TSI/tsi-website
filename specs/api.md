@@ -436,6 +436,78 @@ Complete a quest. Awards `xp_reward` + `tc_reward`, records transactions.
 
 ---
 
+## Events/Calendar API
+
+### `GET /api/events`
+
+List events with optional date range and type filters. Each event includes attendee count and user's RSVP status.
+
+**Query params:** `?type=club|team|bounty|volunteer|social|workshop|meeting`, `?from=ISO`, `?to=ISO`, `?limit=50` (max 200)
+
+**Response:**
+```json
+{
+  "events": [
+    {
+      "id": "uuid",
+      "title": "Weekly Standup",
+      "description": "Team sync",
+      "event_type": "meeting",
+      "start_time": "2026-04-10T14:00:00Z",
+      "end_time": "2026-04-10T15:00:00Z",
+      "location": "Discord",
+      "is_all_day": false,
+      "status": "approved",
+      "tc_reward": 10,
+      "xp_reward": 5,
+      "created_by": "uuid",
+      "attendee_count": 12,
+      "user_rsvp": "registered"
+    }
+  ]
+}
+```
+
+Only shows approved events. Sorted by start_time ascending.
+
+---
+
+### `POST /api/events`
+
+Create an event (T1-T3 only). Auto-approved.
+
+**Body:**
+```json
+{
+  "title": "Hackathon Kickoff",
+  "description": "24-hour build event",
+  "event_type": "club",
+  "start_time": "2026-04-15T09:00:00Z",
+  "end_time": "2026-04-16T09:00:00Z",
+  "location": "SEB 2100",
+  "is_all_day": false,
+  "tc_reward": 100,
+  "xp_reward": 50
+}
+```
+
+**Response:** `201 { "event": {...} }`
+
+---
+
+### `POST /api/events/[id]/rsvp`
+
+Toggle RSVP for an event. If already registered, un-registers. If not registered, registers.
+
+**Response:**
+```json
+{ "action": "registered"|"unregistered", "event_id": "uuid", "event_title": "Hackathon Kickoff" }
+```
+
+**Errors:** `404` if event not found, `400` if event not active.
+
+---
+
 ## Inventory API
 
 ### `GET /api/inventory`
@@ -768,6 +840,9 @@ LeaderboardEntry
 
 // Oracle
 OracleQuestion, OracleResult
+
+// Events
+CalendarEvent, EventType, AttendanceStatus
 
 // Directory views
 DirectoryMember, PublicProfile

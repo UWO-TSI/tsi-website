@@ -233,6 +233,30 @@ export interface OracleResult {
   subclass: string;
 }
 
+// ─── Event Types ────────────────────────────────────────────────────────────
+
+export type EventType = "club" | "team" | "bounty" | "volunteer" | "social" | "workshop" | "meeting";
+export type AttendanceStatus = "registered" | "attended" | "absent";
+
+export interface CalendarEvent {
+  id: string;
+  title: string;
+  description: string | null;
+  event_type: EventType;
+  start_time: string;
+  end_time: string | null;
+  location: string | null;
+  is_all_day: boolean;
+  status: "pending" | "approved" | "cancelled";
+  tc_reward: number;
+  xp_reward: number;
+  created_by: string | null;
+  approved_by: string | null;
+  created_at: string;
+  attendee_count: number;
+  user_rsvp: AttendanceStatus | null;
+}
+
 // ─── Achievement Types ──────────────────────────────────────────────────────
 
 export interface Achievement {

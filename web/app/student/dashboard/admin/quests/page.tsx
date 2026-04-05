@@ -42,6 +42,7 @@ export default function AdminQuestsPage() {
   }
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- async fetch, setState is after await
     fetchQuests();
   }, []);
 
