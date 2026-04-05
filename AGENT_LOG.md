@@ -1926,6 +1926,27 @@ Full report in `specs/qa.md` Wave 9.
 
 ---
 
+### 2026-04-05 — Round 3: Core Student Journey
+
+**Management directive received.** Round 3 focus: sign up → onboard → take quiz → get class → explore.
+
+**QA Round 3 tasks:**
+1. Incremental merge from each agent as they push
+2. Test onboarding flow (3-step: welcome → profile → avatar)
+3. Test oracle quiz flow (12 questions → class reveal)
+4. Test auth context wiring (sidebar shows real user data)
+5. Full lint audit after Backend cleanup (target: significant reduction from 47 errors)
+6. Log everything to `specs/qa.md` Wave 10+
+
+**Other agents' Round 3 assignments:**
+- **Frontend:** Onboarding flow UI, Oracle quiz page, auth context wiring (sidebar/nameplate)
+- **Backend:** Fix ALL Backend lint errors (15 setState-in-effect + misc), Events/Calendar API, Next.js proxy migration research
+- **UXUI:** Class visual identity sheet (4 classes, 16 subclasses), design review v4 of Round 2 pages
+
+**Status:** Waiting for agents to push. Will merge incrementally.
+
+---
+
 ### HANDOFF — Context for New QA Session
 
 #### 1. Test Waves Completed
