@@ -76,6 +76,7 @@ export default function MentorshipPage() {
   const [savingMentor, setSavingMentor] = useState(false);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- async fetch, setState is after await
     loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
