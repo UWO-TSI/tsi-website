@@ -703,6 +703,133 @@ Build these 5 pages. Each has a UXUI spec and Backend API ready. **Push after ea
 
 ---
 
+### 2026-04-05 — Round 4 Directives (CURRENT SPRINT)
+
+**Round 3 results: ALL agents delivered again.** 3/3 rounds of consistent execution.
+
+**Delivered this round:**
+- **Frontend:** Onboarding flow (3-step, 291L), Oracle quiz page (310L, 5-stage reveal animation), UserContext auth wiring (38L) — sidebar+nameplate show real user data
+- **Backend:** Events API (GET/POST events, RSVP toggle), migration 008, ALL 12 BE lint errors suppressed with justification comments, proxy migration plan documented (82L). Total: 31 API endpoints across 23 route files
+- **UXUI:** Class identity sheet (319L, 4 classes + 16 subclasses), design review v4 of Round 2 pages (262L, score 7.5/10), BONUS: Oracle quiz v2 spec (361L, card-game NPC encounter redesign)
+- **QA:** Pre-reviewed onboarding+oracle code paths, ready for Wave 10 merge
+
+**Current numbers after all merges:**
+- Build: ✅ 54 pages
+- Lint: 39 errors, 53 warnings (down from 47 errors — BE suppressions landed)
+- API endpoints: 31
+- GLB assets: 28 (24 nature + 4 buildings)
+- Spec files: 24
+- Zero "Coming Soon" pages
+- Core student journey complete: signup → onboard → quiz → class → explore
+
+**Remaining 39 lint errors by owner:**
+- ~20 `no-explicit-any` — mostly in marketing pages (Lanyard, global.d.ts, NPO sections) — NOBODY'S CURRENT JURISDICTION
+- ~6 `setState in effect` — marketing components (CardCarousel, GlassNavbar) + new FE pages — FRONTEND
+- ~4 `value cannot be modified` — Lanyard.tsx ref mutations — MARKETING (pre-existing)
+- ~3 `jsx-no-comment-textnodes` — marketing components — MARKETING (pre-existing)
+- ~3 `no-require-imports` — convert-fbx-to-glb.js — FRONTEND
+- ~2 `cannot access refs during render` — marketing components — MARKETING (pre-existing)
+- ~1 `variable before declaration` — pre-existing
+
+**~27 of 39 errors are in pre-existing marketing page code that no agent owns.** The portal/dashboard/API code is effectively lint-clean.
+
+---
+
+**Round 4 focus: Polish, consolidation, merge to main prep.** The feature buildout is largely done. Time to clean up, consolidate branches, fix remaining FE lint, and prepare for a production merge.
+
+---
+
+#### @Frontend — Lint Cleanup + UXUI Review Fixes + Calendar Wiring
+
+**Push after each task.**
+
+**Task 1: Fix Frontend-owned lint errors**
+- Fix `setState in effect` errors in bounty/page.tsx, jobs/page.tsx, leaderboard/page.tsx, settings/page.tsx, shop/page.tsx — wrap async fetches properly or move setState
+- Fix `no-require-imports` in `web/scripts/convert-fbx-to-glb.js` — convert to ES module imports or add eslint-disable (it's a Node script, not browser code)
+- Target: zero lint errors in Frontend-owned files
+- **Push after lint fixes.**
+
+**Task 2: Apply UXUI Review v4 priority fixes**
+- Read `specs/ux-review-v4.md` — UXUI scored the Round 2 pages 7.5/10 and flagged specific deviations
+- Apply the top priority fixes (🔴 and 🟡 items) across bounty, leaderboard, shop, jobs, settings pages
+- **Push after fixes.**
+
+**Task 3: Wire calendar page to Events API**
+- `/student/dashboard/calendar/page.tsx` exists but uses direct Supabase
+- Wire to Backend's new `GET /api/events` and `POST /api/events/[id]/rsvp`
+- Show events in a list or simple calendar view with RSVP buttons
+- **Push after calendar is wired.**
+
+**Task 4: Oracle quiz v2 visual upgrade (if time)**
+- Read `specs/ux-oracle-v2.md` — UXUI redesigned the quiz as a card-game NPC encounter
+- Current oracle page is functional but basic. If time permits, upgrade to the v2 card-game layout (monk NPC, speech bubbles, fanned answer cards)
+- This is STRETCH — only if Tasks 1-3 are done
+- **Push after upgrade.**
+
+---
+
+#### @Backend — Consolidate + Handoff Prep + Remaining Lint
+
+**Push after each task.**
+
+**Task 1: Fix marketing page lint errors that Backend created**
+- The admin pages Backend built have eslint-disable comments. Verify those are justified.
+- Check if any of the `no-explicit-any` errors are in Backend-owned files (types.ts, API routes, admin pages) — add proper types
+- **Push after fixes.**
+
+**Task 2: API documentation final pass**
+- `specs/api.md` should document all 31 endpoints with current request/response shapes
+- Verify it's complete and accurate — add any missing endpoints
+- **Push after docs update.**
+
+**Task 3: Create `specs/migration-status.md`**
+- Document which migrations (001-008) exist, what they do, which have been applied to production, and what order to run them
+- Include the Supabase CLI commands needed: `supabase db push` or manual SQL execution order
+- Note any migration that depends on extensions (pg_trgm for 004)
+- **Push after doc is written.**
+
+**Task 4: Wire shop purchase → inventory integration**
+- After `POST /api/economy { action: "purchase" }` succeeds, automatically add the purchased item to `player_inventory`
+- This closes the loop: browse shop → buy → item appears in inventory → equip
+- **Push after integration works.**
+
+---
+
+#### @UXUI — Final Design Review + Onboarding/Oracle Review
+
+**Push after each deliverable.**
+
+**Task 1: Design review of onboarding + oracle pages**
+- Review Frontend's onboarding flow (3-step) and oracle quiz page against `ux-onboarding.md` and `ux-oracle.md`/`ux-oracle-v2.md`
+- Score each, flag deviations, recommend priority fixes
+- Write to `specs/ux-review-v5.md`
+- **Push after review.**
+
+**Task 2: Comprehensive spec status report**
+- Create `specs/ux-status.md` — for each of your 24 spec files, document:
+  - Implementation status (fully implemented / partially / not started)
+  - Which spec deviations have been accepted vs need fixing
+  - Priority items for next sprint
+- This becomes the design debt backlog
+- **Push after report.**
+
+---
+
+#### @QA — Wave 10: Full Integration + Merge-to-Main Readiness
+
+**This is the big one. Assess whether the codebase is ready to merge to main.**
+
+1. **Merge all Round 3+4 work from all branches**
+2. **Full build + lint report** — document exact numbers
+3. **Visual browser test ALL pages** via Playwright — every dashboard page, onboarding, oracle, auth flow
+4. **Test the full student journey:** signup → onboarding (3 steps) → dashboard → oracle quiz → get class → explore game world → visit bounty board → visit shop → check leaderboard → edit profile/settings
+5. **Document any blocking bugs** that would prevent merge to main
+6. **Document non-blocking issues** that can be fixed post-merge
+7. **Verdict: READY or NOT READY for merge to main** — with justification
+8. **Push after each test cycle**
+
+---
+
 ## UXUI
 
 > UXUI agent writes here. Others: read only.
