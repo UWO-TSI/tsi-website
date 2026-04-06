@@ -830,6 +830,73 @@ Build these 5 pages. Each has a UXUI spec and Backend API ready. **Push after ea
 
 ---
 
+### 2026-04-05 — Round 5 Directives (CURRENT SPRINT)
+
+**Round 4 results: All agents delivered.** Backend: avatar purchase flow + migration runbook + lint. Frontend: lint zero on FE files + spec compliance fixes + calendar fix. UXUI: review v5 (8/10) + comprehensive status report (72% coverage, 25 debt items). QA: Wave 10 — verdict **CONDITIONAL READY** with 2 P1 blockers.
+
+**Current state after full merge:**
+- Build: ✅ 54 static pages, 60 routes
+- Lint: 35 errors, 51 warnings (most in marketing code outside portal scope)
+- API: 31 endpoints across 23 route files
+- QA verdict: CONDITIONAL READY — 2 P1 blockers remain
+
+**⚠️ BRANCH STRATEGY CHANGE — READ THIS ⚠️**
+
+**Old model (DEPRECATED):** Long-lived agent branches (`davidliu/frontend`, `davidliu/backend`, etc.) that accumulate drift.
+
+**New model (EFFECTIVE NOW):**
+1. Each task = one short-lived branch off `main` (e.g., `be/shop-api-stub`, `fe/error-fallbacks`)
+2. When task is done: push, PR to main, merge immediately after QA spot-check
+3. Delete the branch after merge
+4. Start next task from fresh `main`
+5. QA tests on `main` after each merge — no more QA merge funnel branch
+
+**Naming convention:** `{agent}/{task-slug}` — e.g., `fe/error-fallbacks`, `be/shop-api`, `qa/lint-cleanup`
+
+**AGENT_LOG.md updates go directly on main** (Management will commit to main).
+
+---
+
+#### PRIORITY: Fix the 2 P1 Blockers (unblocks merge to main)
+
+**@Backend — Branch: `be/shop-api-stub`**
+- Create `GET /api/shop` — returns marketplace items from `marketplace_items` table. Even a stub returning `{ products: [] }` satisfies the blocker, but a real query is better since the table exists.
+- Branch off main, PR when done.
+
+**@Frontend — Branch: `fe/error-fallbacks`**
+- Add user-friendly error fallback to Directory page and Profile page. Replace raw "HTTP 500" with a message like "Unable to load data. Check your connection." with a retry button.
+- Branch off main, PR when done.
+
+**After both PRs merge → the codebase is MERGE-READY per QA Wave 10.**
+
+---
+
+#### THEN: Remaining Round 5 Tasks
+
+**@Frontend — Branch: `fe/oracle-v2-ui` (after P1 is merged)**
+- Read `specs/ux-oracle-v2.md` (361L) — card-game NPC encounter redesign
+- Upgrade the oracle quiz from basic centered layout to the monk NPC + speech bubble + fanned answer cards
+- This is the highest visual-impact remaining spec that's not implemented
+- Branch off main (with P1 fix merged), PR when done.
+
+**@Backend — Branch: `be/remaining-lint` (after P1 is merged)**
+- Fix or suppress remaining Backend-owned lint issues
+- Delete unused FBX files from `web/public/assets/buildings/` (4 files, 651KB) — the GLB versions exist now
+- Branch off main, PR when done.
+
+**@UXUI — Branch: `uxui/design-debt-fixes`**
+- From your `specs/ux-status.md`, pick the top 5 highest-impact design debt items and write detailed fix instructions for Frontend
+- Focus on items that are quick wins (CSS/styling changes, not new features)
+- Commit the updated spec to the branch, PR when done.
+
+**@QA — Test on main after each PR merge**
+- After each PR lands on main, pull main and run: build, lint, visual spot-check of affected pages
+- Report any regressions immediately
+- Once both P1 blockers are merged: run final Wave 11 — full journey test on main
+- If Wave 11 passes: the `davidliu/frontend` and `davidliu/backend` long-lived branches can be deleted
+
+---
+
 ## UXUI
 
 > UXUI agent writes here. Others: read only.
