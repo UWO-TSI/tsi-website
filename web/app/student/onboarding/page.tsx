@@ -24,22 +24,26 @@ export default function OnboardingPage() {
 
   // Load existing profile data
   useEffect(() => {
-    const supabase = createClient();
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) return;
-      supabase.from("profiles").select("display_name, bio, year, skills, social_links, onboarding_completed").eq("id", user.id).single().then(({ data }) => {
-        if (!data) return;
-        if (data.onboarding_completed) { router.replace("/student/dashboard"); return; }
-        if (data.display_name) setDisplayName(data.display_name);
-        if (data.bio) setBio(data.bio);
-        if (data.year) setYear(String(data.year));
-        if (data.skills) setSkills(data.skills);
-        const sl = data.social_links as Record<string, string> | null;
-        if (sl?.github) setGithub(sl.github);
-        if (sl?.linkedin) setLinkedin(sl.linkedin);
-        if (sl?.website) setWebsite(sl.website);
+    try {
+      const supabase = createClient();
+      supabase.auth.getUser().then(({ data: { user } }) => {
+        if (!user) return;
+        supabase.from("profiles").select("display_name, bio, year, skills, social_links, onboarding_completed").eq("id", user.id).single().then(({ data }) => {
+          if (!data) return;
+          if (data.onboarding_completed) { router.replace("/student/dashboard"); return; }
+          if (data.display_name) setDisplayName(data.display_name);
+          if (data.bio) setBio(data.bio);
+          if (data.year) setYear(String(data.year));
+          if (data.skills) setSkills(data.skills);
+          const sl = data.social_links as Record<string, string> | null;
+          if (sl?.github) setGithub(sl.github);
+          if (sl?.linkedin) setLinkedin(sl.linkedin);
+          if (sl?.website) setWebsite(sl.website);
+        });
       });
-    });
+    } catch {
+      // Supabase not configured — proceed with empty defaults
+    }
   }, [router]);
 
   const handleFinish = async () => {

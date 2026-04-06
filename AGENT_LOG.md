@@ -2156,6 +2156,34 @@ Full report in `specs/qa.md` Wave 10.
 
 ---
 
+### 2026-04-06 — Wave 11: P1 Blocker Fixes + Visual Verification
+
+Playwright MCP reconnected. Completed all TODO items from Wave 10 handoff.
+
+**Visual testing (Round 3 pages):**
+- `/student/onboarding`: was hard-crashing (Supabase runtime error). Fixed with try/catch. Now renders 3-step welcome flow.
+- `/student/dashboard/oracle`: renders correctly — 12 MBTI questions, 4 answer cards, progress bar. Uses v1 layout (not v2 NPC encounter).
+- `/student/dashboard` (game world): AC village renders — buildings, terrain, river, trees. Sidebar shows fallback "Player Lv. 1".
+
+**P1 blockers FIXED:**
+1. Missing `/api/shop` → created stub route returning `{ products: [] }`. Shop page: no more 404.
+2. Directory/Profile raw "HTTP 500" → replaced with friendly error messages + icons + retry/back links.
+3. Bonus: onboarding `createClient()` crash → wrapped in try/catch.
+
+**Build:** ✅ 61 routes (was 60). All 18 key pages return HTTP 200. `/api/shop` returns 200 (was 404).
+
+**Updated verdict: READY.** All P1 blockers resolved. Portal can merge to main.
+
+**Files modified:**
+- `web/app/api/shop/route.ts` (NEW)
+- `web/components/portal/MemberDirectory.tsx`
+- `web/components/portal/ProfileView.tsx`
+- `web/app/student/onboarding/page.tsx`
+
+Full report in `specs/qa.md` Wave 11.
+
+---
+
 ### HANDOFF — Context for New QA Session
 
 #### 1. Test Waves Completed

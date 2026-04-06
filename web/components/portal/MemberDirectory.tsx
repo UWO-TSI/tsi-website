@@ -71,8 +71,11 @@ export default function MemberDirectory() {
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center" style={{ padding: "80px 0" }}>
-        <p style={{ fontSize: "16px", color: "var(--color-text-muted)" }}>{error}</p>
+      <div className="flex flex-col items-center justify-center" style={{ padding: "80px 0", gap: "12px" }}>
+        <SearchX style={{ width: "32px", height: "32px", color: "var(--color-text-subtle)", marginBottom: "4px" }} />
+        <p style={{ fontSize: "16px", color: "var(--color-text-muted)", fontWeight: 500 }}>Unable to load directory</p>
+        <p style={{ fontSize: "14px", color: "var(--color-text-subtle)" }}>The server is not available right now. Please try again later.</p>
+        <button onClick={fetchMembers} className="mt-2 text-sm underline" style={{ color: "var(--color-accent-cyan)" }}>Retry</button>
       </div>
     );
   }
