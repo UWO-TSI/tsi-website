@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
-import { Scroll, Clock, Coins, ChevronLeft, X, AlertCircle, SearchX } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Scroll, Clock, Coins, ChevronLeft, X, SearchX } from "lucide-react";
 import type { Bounty } from "@/lib/supabase/types";
 
 type Tab = "all" | "available" | "my_claims" | "completed";
@@ -26,29 +26,27 @@ export default function BountyPage() {
   const [selected, setSelected] = useState<Bounty | null>(null);
   const [claiming, setClaiming] = useState(false);
 
-  const fetchBounties = useCallback(async () => {
-    setLoading(true);
-    try {
-      const params = new URLSearchParams();
-      if (tab === "available") params.set("status", "open");
-      if (tab === "completed") params.set("status", "completed");
-      const res = await fetch(`/api/bounties?${params}`);
-      if (res.ok) {
-        const data = await res.json();
-        setBounties(data.bounties ?? data ?? []);
-      }
-    } catch { /* ignore */ }
-    setLoading(false);
-  }, [tab]);
+  const [fetchKey, setFetchKey] = useState(0);
 
-  useEffect(() => { fetchBounties(); }, [fetchBounties]);
+  useEffect(() => {
+    let cancelled = false;
+    const params = new URLSearchParams();
+    if (tab === "available") params.set("status", "open");
+    if (tab === "completed") params.set("status", "completed");
+    fetch(`/api/bounties?${params}`)
+      .then((r) => r.ok ? r.json() : { bounties: [] })
+      .then((data) => { if (!cancelled) setBounties(data.bounties ?? data ?? []); })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [tab, fetchKey]);
 
   const handleClaim = async (id: string) => {
     setClaiming(true);
     try {
       const res = await fetch(`/api/bounties/${id}/claim`, { method: "POST" });
       if (res.ok) {
-        await fetchBounties();
+        setFetchKey((k) => k + 1);
         setSelected(null);
       }
     } catch { /* ignore */ }
@@ -121,7 +119,7 @@ export default function BountyPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.6)" }} onClick={() => setSelected(null)}>
           <div
             className="w-full rounded-2xl overflow-y-auto"
-            style={{ maxWidth: 560, maxHeight: "80vh", background: "#0d1b2a", border: "1px solid rgba(0, 47, 167, 0.3)", padding: 24 }}
+            style={{ maxWidth: 800, maxHeight: "80vh", background: "#0d1b2a", border: "1px solid rgba(0, 47, 167, 0.3)", padding: 24 }}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-4">
@@ -219,7 +217,7 @@ function BountyCard({ bounty, onClick }: { bounty: Bounty; onClick: () => void }
 
       {/* Reward */}
       <div className="flex items-center gap-1.5 mb-2">
-        <Coins className="w-3.5 h-3.5" style={{ color: "#ffd166" }} />
+        <Coins className="w-4 h-4" style={{ color: "#ffd166" }} />
         <span className="font-mono text-sm" style={{ color: "#ffd166" }}>{bounty.pay_tc ?? 0} TSI coins</span>
       </div>
 
