@@ -936,6 +936,94 @@ Ask David design questions first if needed. Then write the spec. Branch off main
 
 ---
 
+### 2026-04-06 — Round 6 Directives (CURRENT SPRINT)
+
+**P1 blockers are MERGED to main.** PRs #6 (Backend shop API + 503 fallbacks) and #7 (Frontend lint + spec compliance) both landed. All branches synced with main. Zero behind.
+
+**Main now has:** 55 pages, 32 API endpoints, P1 blockers resolved. QA Wave 10 verdict conditions met.
+
+**This round: Game overlays (David's UX change) + merge-to-main cleanup.**
+
+**⚠️ REMINDER: Use short-lived branches. Branch off main → PR → merge → delete. Read the Push Protocol + Branch Strategy Change above.**
+
+---
+
+#### @Frontend — `fe/game-overlays` ⚡ TOP PRIORITY
+
+**David wants:** Bounty Board, Job Board, and Leaderboard open as **overlays on the game world** with dimmed black background. NOT as page navigation. The game stays visible behind a dark backdrop.
+
+`OverlayPanel.tsx` (145L) already exists with dark backdrop, Escape close, click-to-dismiss. Currently unused — boards navigate via `router.push(href)`.
+
+**Implementation:**
+
+1. **Extract reusable content components** from the existing pages:
+   - `web/components/portal/BountyBoard.tsx` ← extract card grid + filters from `bounty/page.tsx`
+   - `web/components/portal/LeaderboardTable.tsx` ← extract ranked table from `leaderboard/page.tsx`
+   - `web/components/portal/JobBoard.tsx` ← extract job listings from `jobs/page.tsx`
+
+2. **Add overlay state** to dashboard home page (`web/app/student/dashboard/page.tsx`):
+   ```
+   const [activeOverlay, setActiveOverlay] = useState<"bounty" | "jobs" | "leaderboard" | null>(null)
+   ```
+
+3. **Change board buildings** in GameWorld — for bounty/jobs/leaderboard:
+   - Remove `href` prop
+   - Add `onInteract` callback that sets `activeOverlay` instead of navigating
+   - Building.tsx `Press E` handler calls `onInteract()` instead of `router.push()`
+
+4. **Render overlays** above the R3F canvas on the dashboard home page:
+   ```tsx
+   <OverlayPanel title="Bounty Board" open={activeOverlay === "bounty"} onClose={() => setActiveOverlay(null)}>
+     <BountyBoard />
+   </OverlayPanel>
+   ```
+
+5. **Keep sub-page routes working** — sidebar nav still links to `/student/dashboard/bounty` etc. as full pages. Both access paths work.
+
+**Branch off main. Push after extraction, push after overlay wiring. PR when done.**
+
+---
+
+#### @UXUI — `uxui/overlay-spec`
+
+Write `specs/ux-overlays.md` — spec the overlay behavior:
+1. Overlay dimensions (max-width, max-height, padding from edges, scrollable inner)
+2. Backdrop darkness — current is `rgba(0,0,0,0.6)`, recommend if should be darker
+3. Entry/exit animation (fade? slide? speed?)
+4. Content layout inside overlay (same as full page or adapted?)
+5. Close behavior (Escape, backdrop click, X button, Press E again?)
+6. Game world behind — freeze or keep animating?
+7. Confirm split: boards = overlay, buildings (HQ/Shop/Oracle) = page transition
+8. Mobile: full-screen overlay or same as desktop?
+
+Ask David design questions first. Branch off main, PR when done.
+
+---
+
+#### @Backend — `be/cleanup`
+
+1. Delete unused FBX files from `web/public/assets/buildings/` — the GLB versions exist now. Saves 651KB.
+2. Fix or suppress any remaining Backend-owned `no-explicit-any` lint errors
+3. Verify `specs/api.md` covers all 32 endpoints after shop was added
+
+Branch off main, PR when done.
+
+---
+
+#### @QA — Wave 11 on main
+
+**The P1 blockers are resolved. Run the final readiness test on main.**
+
+1. Pull latest main
+2. `npm run build` + `npm run lint` — report numbers
+3. Visual browser test: game world, all 5 Round 2 pages, onboarding, oracle, auth
+4. Test `GET /api/shop` returns proper response
+5. Test directory/profile pages show friendly error (not raw 500) without Supabase
+6. **Final verdict: READY or NOT READY** — update `specs/qa.md`
+7. PR your QA report to main when done
+
+---
+
 ## UXUI
 
 > UXUI agent writes here. Others: read only.
