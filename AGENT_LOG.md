@@ -873,7 +873,35 @@ Build these 5 pages. Each has a UXUI spec and Backend API ready. **Push after ea
 
 #### THEN: Remaining Round 5 Tasks
 
-**@Frontend — Branch: `fe/oracle-v2-ui` (after P1 is merged)**
+**@Frontend — Branch: `fe/game-overlays` (after P1 is merged) ⚡ DESIGN CHANGE FROM DAVID**
+
+**Non-building interactives (Bounty Board, Job Board, Leaderboard) should NOT navigate to sub-pages. They should open as OVERLAYS on top of the game world with a dimmed black background.**
+
+The `OverlayPanel.tsx` component (145L) already exists and does exactly this — dark backdrop, centered panel, Escape to close. But the game world currently uses `href` to navigate away. Change this:
+
+1. **Remove `href` from bounty, jobs, leaderboard in the BUILDINGS array** in GameWorld.tsx
+2. **Add overlay state** to the dashboard home page (or GameWorld parent): `activeOverlay: "bounty" | "jobs" | "leaderboard" | null`
+3. **When player interacts (Press E) with a board:** instead of `router.push(href)`, set `activeOverlay` to the board's id
+4. **Render the overlay** above the R3F canvas using `OverlayPanel`:
+   - Bounty Board → show the bounty card grid + filters (reuse content from `bounty/page.tsx`)
+   - Leaderboard → show the ranked table (reuse content from `leaderboard/page.tsx`)
+   - Job Board → show the job listings (reuse content from `jobs/page.tsx`)
+5. **Dim the game world** — OverlayPanel's backdrop already does `rgba(0,0,0,0.6)`. The game world stays visible but darkened behind the overlay.
+6. **Close overlay** → returns to game world. No page navigation, no loading, instant.
+7. **Keep the sub-page routes** (`/student/dashboard/bounty` etc.) working too — sidebar nav still links to them as full pages. The overlay is the IN-GAME way to access them.
+
+**This means:** Extract the content (card grids, tables, filters) from the page files into reusable components that both the overlay AND the sub-page can use. Don't duplicate code.
+
+Example structure:
+```
+web/components/portal/BountyBoard.tsx  ← extracted content component
+web/app/student/dashboard/bounty/page.tsx  ← imports BountyBoard, wraps in page layout
+GameWorld overlay  ← imports BountyBoard, wraps in OverlayPanel
+```
+
+- Branch off main, PR when done.
+
+**@Frontend — Branch: `fe/oracle-v2-ui` (after game-overlays is merged)**
 - Read `specs/ux-oracle-v2.md` (361L) — card-game NPC encounter redesign
 - Upgrade the oracle quiz from basic centered layout to the monk NPC + speech bubble + fanned answer cards
 - This is the highest visual-impact remaining spec that's not implemented
@@ -884,10 +912,21 @@ Build these 5 pages. Each has a UXUI spec and Backend API ready. **Push after ea
 - Delete unused FBX files from `web/public/assets/buildings/` (4 files, 651KB) — the GLB versions exist now
 - Branch off main, PR when done.
 
-**@UXUI — Branch: `uxui/design-debt-fixes`**
-- From your `specs/ux-status.md`, pick the top 5 highest-impact design debt items and write detailed fix instructions for Frontend
-- Focus on items that are quick wins (CSS/styling changes, not new features)
-- Commit the updated spec to the branch, PR when done.
+**@UXUI — Branch: `uxui/overlay-spec` ⚡ DESIGN CHANGE FROM DAVID**
+
+**Write `specs/ux-overlays.md`** — David wants non-building interactives (Bounty Board, Job Board, Leaderboard) to open as **overlays on top of the game world** with a dimmed black background, NOT as separate sub-pages.
+
+Spec should cover:
+1. **Overlay dimensions** — how wide/tall relative to viewport? Max-width? Padding from edges? Scrollable?
+2. **Backdrop** — how dark? (`rgba(0,0,0,0.6)` exists, is that right or darker?) Any blur?
+3. **Entry/exit animation** — fade in? Slide up? How fast?
+4. **Content layout inside overlay** — does the bounty card grid look the same as the full page, or does it need adaptation for the overlay context (narrower, no sidebar)?
+5. **Close behavior** — Escape, click backdrop, X button, Press E again?
+6. **Game world behind** — should it pause/freeze while overlay is open, or keep animating?
+7. **Which objects get overlays vs page navigation** — bounty board, job board, leaderboard = overlay. HQ, Shop, Oracle Temple = page transition (building interiors). Confirm this split.
+8. **Mobile behavior** — on mobile, do overlays go full-screen?
+
+Ask David design questions first if needed. Then write the spec. Branch off main, PR when done.
 
 **@QA — Test on main after each PR merge**
 - After each PR lands on main, pull main and run: build, lint, visual spot-check of affected pages
