@@ -2148,6 +2148,28 @@ Full report in `specs/qa.md` Wave 10.
 
 ---
 
+### 2026-04-05 — Session Note (for next QA session)
+
+**Playwright MCP crashed mid-session.** The `npx @playwright/mcp@latest` child process died (likely browser context timeout). MCP servers can't be restarted mid-conversation — requires a Claude Code session restart. Config is correct in `/Users/DavidLiu/.claude.json` under `mcpServers.playwright`. Playwright will auto-reconnect on next session start.
+
+**What was in progress when it crashed:**
+- Dev server was running on port 3007 (may still be running — check `lsof -ti :3007`)
+- Wave 10 merge readiness assessment was complete
+- Round 4 management directive received — QA tasks:
+  1. Wave 10: merge everything, full visual test ← DONE (HTTP only, no screenshots after crash)
+  2. Test complete student journey e2e ← BLOCKED (need Supabase creds for auth)
+  3. Verdict ← DONE: CONDITIONAL READY, 2 P1 blockers
+- Also merged Frontend Round 4 commit — resolved 2 conflicts (Building.tsx, PlayerAvatar.tsx — kept QA's lint-clean useMemo patterns)
+- Management also wants the 2 P1 blockers fixed before merge to main
+
+**TODO when Playwright is back:**
+1. Visual test the new Round 3 pages: `/student/onboarding`, `/student/dashboard/oracle`
+2. Visual regression on game world (auth context wired — sidebar should show real name/level)
+3. Screenshot the 2 P1 bugs for documentation (directory HTTP 500, shop empty)
+4. Fix the 2 P1 blockers if management approves
+
+---
+
 ### HANDOFF — Context for New QA Session
 
 #### 1. Test Waves Completed
