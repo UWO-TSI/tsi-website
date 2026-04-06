@@ -136,100 +136,51 @@ WAVE 4 (after Frontend commits):
 
 ---
 
-### Frontend — WAVE 3 (after Backend commits types.ts + after UXUI specs)
+### Frontend — WAVE 3 ✅ COMPLETE
 
-**Goal:** Build the dashboard shell, PS1 game world renderer, and directory UI.
+**Goal:** Build the dashboard shell, game world renderer, and directory UI.
 
 **Step 0 — Setup:**
-- [ ] Read `specs/asset-stack.md`, `specs/ux-dashboard.md`, `specs/ux-game-world.md`, `specs/ux-directory.md`
-- [ ] Run `cd web && npm run build` — fix any errors
-- [ ] Install: `npm install @mesmotronic/three-retropass`
-- [ ] Download Quaternius + Kenney GLB asset packs → organize in `web/public/assets/`:
-  ```
-  web/public/assets/
-  ├── characters/    ← Quaternius animated characters (.glb)
-  ├── buildings/     ← Kenney Retro Medieval + Quaternius Medieval Village (.glb)
-  ├── terrain/       ← PSX RPG Town Tiles (.glb)
-  ├── props/         ← Quaternius Fantasy Props (.glb)
-  ├── nature/        ← Kenney Nature Kit (.glb/.obj)
-  └── ui/            ← Kenney Pixel UI + Mana Soul GUI (.png)
-  ```
+- [x] Read all specs
+- [x] Run `cd web && npm run build` — passes
+- [x] ~~Install `@mesmotronic/three-retropass`~~ (PS1 shader removed in Sprint 2)
+- [x] Kenney Nature Kit GLBs extracted to `web/public/assets/nature/` (24 models)
+- [x] Quaternius building FBX→GLB converted to `web/public/assets/buildings/` (4 models)
 
 **Step 1 — Dashboard shell:**
-- [ ] `web/app/student/dashboard/layout.tsx`:
-  - RPG-styled sidebar (left) + main content area (right)
-  - Import Sidebar component
-  - Wrap with auth check (redirect if not logged in)
-  - Use existing ASCII loading screen while 3D assets load
+- [x] `web/app/student/dashboard/layout.tsx` — 240px sidebar + main content, responsive hamburger, TransitionProvider, UserProvider
+- [x] `web/components/portal/Sidebar.tsx` — 2px left accent, Lucide icons, real user name/level via auth context
 
-- [ ] `web/components/portal/Sidebar.tsx`:
-  - RPG menu panel aesthetic (dark panel, game-style icons, glow on active)
-  - Top section: mini player status (avatar thumbnail + name + level)
-  - Nav items: Home, Directory, Bounty Board, Shop, Job Board, Leaderboard, Profile/Settings
-  - Active item highlighted with glow effect
-  - Collapsible at breakpoint (per UXUI spec)
+**Step 2 — Pages (all functional, no more "Coming Soon"):**
+- [x] `/student/dashboard` — AC-style 3D game world (R3F Canvas)
+- [x] `/student/dashboard/directory` — member list, search, tier filters, real API
+- [x] `/student/dashboard/bounty` — card grid, filter tabs, claim flow, detail modal
+- [x] `/student/dashboard/shop` — product grid, category tabs, coin balance, purchase flow
+- [x] `/student/dashboard/jobs` — search/filter, type badges, apply, submit form
+- [x] `/student/dashboard/leaderboard` — ranked table, time tabs, gold/silver/bronze
+- [x] `/student/dashboard/profile` — full profile view/edit, real API
+- [x] `/student/dashboard/settings` — profile edit, social links, save via PATCH
+- [x] `/student/dashboard/oracle` — 12-question MBTI quiz, class reveal animation
+- [x] `/student/dashboard/calendar` — month/week/list views, event dots, side panel
 
-**Step 2 — Page stubs:**
-- [ ] `web/app/student/dashboard/page.tsx` — home (game world renders here)
-- [ ] `web/app/student/dashboard/directory/page.tsx` — member directory
-- [ ] `web/app/student/dashboard/bounty/page.tsx` — placeholder "Coming Soon"
-- [ ] `web/app/student/dashboard/shop/page.tsx` — placeholder "Coming Soon"
-- [ ] `web/app/student/dashboard/jobs/page.tsx` — placeholder "Coming Soon"
-- [ ] `web/app/student/dashboard/leaderboard/page.tsx` — placeholder "Coming Soon"
-- [ ] `web/app/student/dashboard/profile/page.tsx` — own profile view/edit
-- [ ] `web/app/student/dashboard/settings/page.tsx` — placeholder "Coming Soon"
-
-**Step 3 — PS1 shader pipeline:**
-- [ ] `web/components/game/PS1Pipeline.tsx`:
-  - Implement bandinopla's PS1Material or `onBeforeCompile` approach for vertex snapping + affine textures
-  - `useFBO(320, 240)` from drei for low-res render target
-  - Fullscreen quad with `NearestFilter` upscale
-  - `@mesmotronic/three-retropass` for color quantization + dithering post-processing
-  - All textures loaded with `THREE.NearestFilter`, mipmaps disabled
+**Step 3 — PS1 shader:** ~~REMOVED~~ per Sprint 2 directive. AC-style clean rendering instead.
 
 **Step 4 — Game world:**
-- [ ] `web/components/game/GameWorld.tsx`:
-  - R3F `<Canvas>` with PS1 pipeline wrapping the scene
-  - Load terrain GLBs via `useGLTF` — arrange as campus map
-  - Load building GLBs — place HQ, Shop, Oracle Temple at fixed positions
-  - Place Bounty Board and Job Board objects
-  - `<CameraControls>` from drei — locked polar angle (45°), FOV 35°, smooth follow player
-  - `<fog>` for atmosphere
-  - Warm point lights near buildings
-  - Props and nature assets scattered for decoration
-
-- [ ] `web/components/game/PlayerAvatar.tsx` — **2D SPRITE in 3D world (Dave the Diver style)**:
-  - `<Billboard>` from drei with textured plane (NOT 3D model)
-  - Sprite sheet frame cycling in `useFrame()` — idle (1-2 frames), walk (4-8 frames per direction)
-  - Layered sprite composition: body + hair + outfit as stacked planes at slight z-offsets
-  - WASD/Arrow key movement — update position each frame
-  - Click-to-move: raycaster on ground plane, pathfind to click point
-  - Camera follows player via CameraControls `moveTo()`
-  - Nameplate: player name + level via drei `<Html>`
-  - **Use colored rectangle placeholder sprites until real sprites are generated**
-
-- [ ] `web/components/game/Building.tsx`:
-  - Reusable component for placing buildings
-  - Proximity detection: when player is near, show interaction prompt ("Press E to enter")
-  - On enter: trigger transition (per UXUI spec) → navigate to building's dashboard page or show overlay
+- [x] `GameWorld.tsx` — AC palette, terrain with rolling hills (FBM noise), river with animated ripples + sparkles, bridge, time-of-day cycle (7 phases), gradient sky, hemisphere + directional lighting, Kenney Nature Kit trees/bushes/flowers/fences/mushrooms/stumps, clouds, butterflies, chimney smoke
+- [x] `PlayerAvatar.tsx` — 2D sprite on Billboard, WASD + click-to-move, terrain-following, real name/level nameplate
+- [x] `Building.tsx` — ACBuilding procedural geometry + real GLB loading via Suspense, proximity "Press E", fade-to-black transitions, spec roof colors
 
 **Step 5 — Directory:**
-- [ ] `web/components/portal/MemberDirectory.tsx`:
-  - Fetch from `/api/directory`
-  - Search bar + filter dropdowns (role/tier, year, active/inactive)
-  - Grid of MemberCard components
+- [x] `MemberDirectory.tsx` — real API, search + tier/status filters, loading/error/empty states
+- [x] `MemberCard.tsx` — 64px rows, tier-colored badges, XP bar
+- [x] `ProfileView.tsx` — real API, edit mode, skills, social links
 
-- [ ] `web/components/portal/MemberCard.tsx`:
-  - RPG stat card layout (per UXUI spec)
-  - Avatar, name, class/role, level, XP bar, tier badge
-  - Click → navigate to full profile
+**Step 6 — Onboarding + Auth:**
+- [x] `/student/onboarding` — 3-step flow (welcome → profile → avatar placeholder), saves via PATCH
+- [x] `UserContext.tsx` — UserProvider + useUser hook, wraps dashboard
+- [x] Auth wired into Sidebar + PlayerAvatar nameplate
 
-- [ ] `web/components/portal/ProfileView.tsx`:
-  - Fetch from `/api/profile/[id]`
-  - Full profile page: avatar, bio, socials, XP/level/badges, project history
-  - If viewing own profile: edit button → inline editing
-
-- [ ] Update AGENT_LOG.md with progress
+- [x] AGENT_LOG.md updated throughout
 
 **Files you own:**
 - `web/app/student/dashboard/` (all pages)
@@ -272,10 +223,11 @@ WAVE 4 (after Frontend commits):
 
 | Agent | Blocked On | Waiting For | Status |
 |-------|-----------|-------------|--------|
-| Backend | Existing schema documentation | **QA to document profiles table** | ✅ RESOLVED — QA baseline committed (385098a), see `specs/qa.md` |
-| Frontend | Supabase types for API integration | Backend to commit types.ts | ⏳ Building with mocks — will swap when types land |
+| ~~Backend~~ | ~~Existing schema documentation~~ | ~~QA to document profiles table~~ | ✅ RESOLVED |
+| ~~Frontend~~ | ~~Supabase types for API integration~~ | ~~Backend to commit types.ts~~ | ✅ RESOLVED — types.ts committed, real APIs wired |
 | ~~Frontend~~ | ~~Visual specs~~ | ~~UXUI specs~~ | ✅ RESOLVED |
-| ~~Frontend~~ | ~~Waiting for wave order~~ | ~~Management approval~~ | ✅ RESOLVED — approved to start early |
+| ~~Frontend~~ | ~~Waiting for wave order~~ | ~~Management approval~~ | ✅ RESOLVED |
+| Frontend | Events API for calendar | Backend to build GET/POST /api/events | ⏳ Calendar uses direct Supabase for now |
 
 ---
 
