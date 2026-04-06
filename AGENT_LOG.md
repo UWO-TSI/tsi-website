@@ -1806,9 +1806,32 @@ Per Management directive (Round 3 tasks).
 
 **Build:** `npm run build` passes cleanly.
 
+### 2026-04-05 — P1 Blocker Fixes (QA Wave 10)
+
+QA found 2 P1 blockers. Both fixed.
+
+**P1 #1: Missing /api/shop route (404)**
+- Created `GET /api/shop` — unified catalog returning both `marketplace_items` and `avatar_items` normalized to a common Product shape.
+- Response: `{ products: [...] }` with fields: id, name, description, price_tc, image_url, category, stock, source.
+- Supports `?category=` filter.
+
+**P1 #2: Directory/Profile raw HTTP 500**
+- Added try/catch around `createClient()` in GET `/api/directory`, GET/PATCH `/api/profile`, GET `/api/profile/[id]`.
+- When Supabase env vars are missing, returns `503 Service Unavailable` with a friendly message instead of raw 500.
+
+**Files created:**
+- `web/app/api/shop/route.ts`
+
+**Files modified:**
+- `web/app/api/directory/route.ts` (503 fallback)
+- `web/app/api/profile/route.ts` (503 fallback on GET + PATCH)
+- `web/app/api/profile/[id]/route.ts` (503 fallback)
+
+**Total endpoints: 32** (added /api/shop GET).
+
 ### HANDOFF — Backend Agent Context for New Session
 
-#### Updated Endpoint Count: 31
+#### Updated Endpoint Count: 32
 
 | Route | Method | Purpose |
 |-------|--------|---------|
@@ -1845,6 +1868,7 @@ Per Management directive (Round 3 tasks).
 | `/api/events` | GET | List events with RSVP status |
 | `/api/events` | POST | Create event (T1-T3) |
 | `/api/events/[id]/rsvp` | POST | Toggle RSVP (register/unregister) |
+| `/api/shop` | GET | Unified product catalog (marketplace + avatar items) |
 
 #### 8 Migrations
 
