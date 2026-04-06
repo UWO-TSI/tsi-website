@@ -45,7 +45,15 @@ const ProfileUpdateSchema = z.object({
 });
 
 export async function GET() {
-  const supabase = await createClient();
+  let supabase;
+  try {
+    supabase = await createClient();
+  } catch {
+    return NextResponse.json(
+      { error: "Service unavailable — database not configured" },
+      { status: 503 }
+    );
+  }
 
   const {
     data: { user },
@@ -69,7 +77,15 @@ export async function GET() {
 }
 
 export async function PATCH(request: Request) {
-  const supabase = await createClient();
+  let supabase;
+  try {
+    supabase = await createClient();
+  } catch {
+    return NextResponse.json(
+      { error: "Service unavailable — database not configured" },
+      { status: 503 }
+    );
+  }
 
   const {
     data: { user },

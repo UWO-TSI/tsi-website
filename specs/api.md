@@ -520,6 +520,46 @@ Toggle RSVP for an event. If already registered, un-registers. If not registered
 
 ---
 
+## Shop API
+
+### `GET /api/shop`
+
+Unified product catalog combining `marketplace_items` and `avatar_items`.
+
+**Query params:** `?category=` (filter by category)
+
+**Response:**
+```json
+{
+  "products": [
+    {
+      "id": "uuid",
+      "name": "Cyberpunk Theme",
+      "description": "Dark neon theme",
+      "price_tc": 500,
+      "image_url": "/assets/themes/cyber.png",
+      "category": "theme",
+      "stock": 10,
+      "source": "marketplace"
+    },
+    {
+      "id": "uuid",
+      "name": "Cyber Mohawk",
+      "description": "rare hair item",
+      "price_tc": 200,
+      "image_url": "/assets/items/hair_cyber.png",
+      "category": "hair",
+      "stock": null,
+      "source": "avatar"
+    }
+  ]
+}
+```
+
+Returns only available/in-stock items. `source` indicates whether to use `purchase` (marketplace) or `purchase_avatar` (avatar items) action when buying.
+
+---
+
 ## Inventory API
 
 ### `GET /api/inventory`

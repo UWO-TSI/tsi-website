@@ -6,7 +6,15 @@ const DIRECTORY_FIELDS =
   "id, display_name, avatar_url, tier, position, class, level, xp, skills, is_active";
 
 export async function GET(request: NextRequest) {
-  const supabase = await createClient();
+  let supabase;
+  try {
+    supabase = await createClient();
+  } catch {
+    return NextResponse.json(
+      { error: "Service unavailable — database not configured", members: [] },
+      { status: 503 }
+    );
+  }
 
   const {
     data: { user },
