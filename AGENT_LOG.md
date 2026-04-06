@@ -1759,6 +1759,40 @@ Per Management directive (Round 3 tasks).
 
 **Total API endpoints: 31** (was 28, added 3: events GET/POST, RSVP toggle).
 
+### 2026-04-05 — Round 4: Polish + Merge Prep
+
+**1. Lint audit — zero errors in Backend files**
+- Removed unused eslint-disable in analytics page
+- Removed unused imports: `Check`, `Skull` (bounties admin), `Package` (marketplace admin), `Edit3` (quests admin)
+- Removed unused variable `tcSpent` in analytics
+- Backend-owned files: 0 errors, 0 `any` types
+
+**2. API docs audit — all 31 endpoints verified**
+- Cross-checked every route file against specs/api.md — all match.
+
+**3. Migration runbook** (`specs/migration-status.md`)
+- Step-by-step guide for applying migrations 001-008 to production
+- Covers: Supabase Dashboard (SQL Editor) and CLI approaches
+- Includes verification checklist, rollback instructions, seed data examples
+
+**4. Shop purchase → inventory integration**
+- Added `purchase_avatar` action to `POST /api/economy`
+- Buys from `avatar_items` table, deducts coins with race-condition guard
+- Auto-adds to `player_inventory` on success
+- Prevents duplicate ownership (409 if already owned)
+- Refunds coins if inventory insert fails
+
+**Files created:**
+- `specs/migration-status.md`
+
+**Files modified:**
+- `web/app/api/economy/route.ts` (added purchase_avatar handler)
+- `web/app/student/dashboard/admin/analytics/page.tsx` (removed unused code + eslint-disable)
+- `web/app/student/dashboard/admin/bounties/page.tsx` (removed unused imports)
+- `web/app/student/dashboard/admin/marketplace/page.tsx` (removed unused import)
+- `web/app/student/dashboard/admin/quests/page.tsx` (removed unused import)
+- `specs/api.md` (documented purchase_avatar)
+
 **Files created:**
 - `web/app/api/events/route.ts`
 - `web/app/api/events/[id]/rsvp/route.ts`
@@ -1791,7 +1825,7 @@ Per Management directive (Round 3 tasks).
 | `/api/bounties/[id]/submit` | POST | Submit deliverables |
 | `/api/bounties/[id]/review` | PATCH | Review submission (T1-T3) |
 | `/api/economy` | GET | Balance + transactions |
-| `/api/economy` | POST | Purchase / admin award |
+| `/api/economy` | POST | Purchase (marketplace + avatar) / admin award |
 | `/api/onboarding` | GET | Onboarding status |
 | `/api/onboarding` | POST | Advance step |
 | `/api/quests` | GET | List quests |
@@ -1828,10 +1862,10 @@ Per Management directive (Round 3 tasks).
 #### What to Do Next
 
 1. **Execute proxy migration** — rename middleware.ts → proxy.ts (see `specs/proxy-migration-plan.md`)
-2. **Economy purchase → inventory integration** — after marketplace purchase, auto-add item to player_inventory
-3. **Achievement auto-check** — trigger achievement checks after key events
-4. **Run migrations 004-008 on production Supabase**
-5. **Notifications API** — use existing notifications table for in-app alerts
+2. **Run migrations 004-008 on production Supabase** (see `specs/migration-status.md`)
+3. **Achievement auto-check** — trigger achievement checks after key events (first bounty, level milestones)
+4. **Notifications API** — use existing notifications table for in-app alerts
+5. **Announcements API** — dedicated endpoint for announcements (admin pages still use direct Supabase calls)
 
 ---
 

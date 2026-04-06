@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { Check, X, Skull } from "lucide-react";
+import { X } from "lucide-react";
 
 interface PendingBounty {
   id: string;
