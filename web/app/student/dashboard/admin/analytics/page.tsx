@@ -24,7 +24,6 @@ export default function AdminAnalyticsPage() {
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect -- async fetch, setState is after await
   useEffect(() => {
     async function fetchAnalytics() {
       const supabase = createClient();
@@ -50,10 +49,6 @@ export default function AdminAnalyticsPage() {
         totalXP += m.xp || 0;
         totalTC += m.tethos_coins || 0;
       });
-
-      const tcSpent = orderList
-        .filter((o) => o.status !== "cancelled")
-        .reduce((sum, o) => sum + (o.total_tc || 0), 0);
 
       setData({
         totalMembers: members.length,

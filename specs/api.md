@@ -360,6 +360,18 @@ Atomic shop purchase: validates stock + balance, deducts coins, creates order, d
 
 ---
 
+### `POST /api/economy` — Avatar Purchase
+
+Buy an avatar item from the `avatar_items` catalog. Deducts coins and adds item to `player_inventory`. Prevents duplicate ownership.
+
+**Body:** `{ action: "purchase_avatar", item_id: "uuid" }`
+
+**Response:** `{ success: true, balance: 500, item_name: "Cyber Mohawk", item_id: "uuid", total_cost: 200 }`
+
+**Errors:** `404` item not found, `409` already owned or insufficient coins.
+
+---
+
 ### `POST /api/economy` — Admin Award
 
 Award coins to a user (T1-T2 only).
