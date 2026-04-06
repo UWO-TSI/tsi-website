@@ -25,16 +25,18 @@ export default function LeaderboardPage() {
   const [period, setPeriod] = useState<TimePeriod>("all_time");
 
   useEffect(() => {
-    setLoading(true);
+    let cancelled = false;
     fetch("/api/directory")
       .then((r) => r.ok ? r.json() : { members: [] })
       .then((data) => {
+        if (cancelled) return;
         const list: DirectoryMember[] = data.members ?? data ?? [];
         list.sort((a, b) => (b.xp ?? 0) - (a.xp ?? 0));
         setMembers(list);
       })
       .catch(() => {})
-      .finally(() => setLoading(false));
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
   }, [period]);
 
   return (

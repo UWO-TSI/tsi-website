@@ -149,26 +149,25 @@ export default function CalendarPage() {
   /* fetch events for visible range */
   // eslint-disable-next-line react-hooks/set-state-in-effect -- async fetch, setState is after await
   useEffect(() => {
-    async function fetchEvents() {
-      setLoading(true);
-      const supabase = createClient();
-      const rangeStart = new Date(currentYear, currentMonth, 1).toISOString();
-      const rangeEnd = new Date(currentYear, currentMonth + 1, 0, 23, 59, 59).toISOString();
+    let cancelled = false;
+    const supabase = createClient();
+    const rangeStart = new Date(currentYear, currentMonth, 1).toISOString();
+    const rangeEnd = new Date(currentYear, currentMonth + 1, 0, 23, 59, 59).toISOString();
 
-      const { data } = await supabase
-        .from("events")
-        .select(
-          "id, title, type, start_time, end_time, location, description, tc_reward, xp_reward"
-        )
-        .eq("status", "approved")
-        .gte("start_time", rangeStart)
-        .lte("start_time", rangeEnd)
-        .order("start_time");
-
-      setEvents((data as CalendarEvent[]) ?? []);
-      setLoading(false);
-    }
-    fetchEvents();
+    supabase
+      .from("events")
+      .select("id, title, type, start_time, end_time, location, description, tc_reward, xp_reward")
+      .eq("status", "approved")
+      .gte("start_time", rangeStart)
+      .lte("start_time", rangeEnd)
+      .order("start_time")
+      .then(({ data }) => {
+        if (!cancelled) {
+          setEvents((data as CalendarEvent[]) ?? []);
+          setLoading(false);
+        }
+      });
+    return () => { cancelled = true; };
   }, [currentMonth, currentYear]);
 
   /* events for a specific date */
