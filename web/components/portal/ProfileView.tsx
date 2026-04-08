@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Github, Linkedin, Globe, Twitter, Pencil, Loader2 } from "lucide-react";
+import { ArrowLeft, Github, Linkedin, Globe, Twitter, Pencil, Loader2, User } from "lucide-react";
 import { TIER_COLORS, TIER_LABELS, getXpProgress } from "./types";
 import type { Profile, PublicProfile, Tier, SocialLinks } from "@/lib/supabase/types";
 
@@ -84,9 +84,15 @@ export default function ProfileView({ profileId, isOwnProfile }: ProfileViewProp
 
   if (error || !profile) {
     return (
-      <div className="flex flex-col items-center justify-center" style={{ minHeight: "60vh", padding: "24px" }}>
-        <p style={{ fontSize: "16px", color: "var(--color-text-muted)" }}>{error || "Profile not found"}</p>
-        <button onClick={() => router.back()} className="mt-4 text-sm underline" style={{ color: "var(--color-text-subtle)" }}>Go back</button>
+      <div className="flex flex-col items-center justify-center" style={{ minHeight: "60vh", padding: "24px", gap: "8px" }}>
+        <User style={{ width: "32px", height: "32px", color: "var(--color-text-subtle)", marginBottom: "4px" }} />
+        <p style={{ fontSize: "16px", color: "var(--color-text-muted)", fontWeight: 500 }}>
+          {error ? "Unable to load profile" : "Profile not found"}
+        </p>
+        <p style={{ fontSize: "14px", color: "var(--color-text-subtle)" }}>
+          {error ? "The server is not available right now. Please try again later." : "This profile may not exist or you don\u2019t have access."}
+        </p>
+        <button onClick={() => router.back()} className="mt-2 text-sm underline" style={{ color: "var(--color-accent-cyan)" }}>Go back</button>
       </div>
     );
   }

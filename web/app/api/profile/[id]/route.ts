@@ -9,7 +9,15 @@ export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const supabase = await createClient();
+  let supabase;
+  try {
+    supabase = await createClient();
+  } catch {
+    return NextResponse.json(
+      { error: "Service unavailable — database not configured" },
+      { status: 503 }
+    );
+  }
 
   const {
     data: { user },
