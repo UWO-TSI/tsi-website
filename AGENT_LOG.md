@@ -1809,6 +1809,16 @@ QA found 2 P1 blockers. Both fixed.
 
 **Total endpoints: 32** (added /api/shop GET).
 
+### 2026-04-08 — Round 7: Cleanup + PR to main
+
+Per Management directive.
+
+**1. Deleted unused FBX files** — removed 4 FBX files (651KB) from `web/public/assets/buildings/`. GLB versions exist for all 4 (hq, shop, oracle_temple, house_1). No code referenced FBX files.
+
+**2. Verified specs/api.md** — all 32 endpoints (34 method-route combinations) cross-checked against actual route files. Full coverage confirmed.
+
+**3. PR to main** — all Backend work ready to merge.
+
 ### HANDOFF — Backend Agent Context for New Session
 
 #### Updated Endpoint Count: 32
