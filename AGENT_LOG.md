@@ -589,6 +589,21 @@ Spec covers 14 sections: orientation lock, breakpoints, navigation, game world t
 - Bottom sheet component (step 6) is reusable across bounty, leaderboard, jobs, product detail, quest list
 - Mobile HUD strip (step 2) replaces the sidebar context on game world page
 
+### 2026-04-08 — Round 7: Game World Overlay Spec
+
+**Task:** `specs/ux-overlays.md` — overlay system for board objects in game world.
+
+- **Overlays:** Bounty Board, Job Board, Leaderboard → panel on dimmed 3D canvas
+- **Page nav:** HQ, Shop, Oracle → fade-to-black + route change (unchanged)
+- **Sidebar nav:** always full page (both paths coexist)
+- Panel: `min(900px, 92vw)`, `#0d1b2a`, springy open animation, input pausing
+- Building.tsx: new `onInteract` callback for overlay objects (replaces `router.push`)
+- Component extraction: BountyBoard, JobBoard, LeaderboardTable with `context` prop
+- Mobile: full-screen bottom sheets
+- 12 new CSS tokens
+
+---
+
 ### 2026-04-05 — Round 3: Class Identity Sheet + Review v4
 
 **Task 1: Class Visual Identity Sheet** — `specs/ux-classes.md`
