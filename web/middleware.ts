@@ -12,5 +12,7 @@ export const config = {
     "/student/signup",
     "/student/onboarding/:path*",
     "/student/election",
+    "/student/apply/:path*",
+    "/admin/:path*",
   ],
 };
