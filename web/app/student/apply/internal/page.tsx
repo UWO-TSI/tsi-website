@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import SmoothScroll from "@/components/SmoothScroll";
 import PositionCard from "@/components/recruit/PositionCard";
@@ -11,6 +11,20 @@ import { POSITION_SEED_DATA } from "@/lib/recruitment";
 import type { Position } from "@/lib/recruitment";
 
 export default function InternalPositionsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="w-6 h-6 rounded-full border-2 border-[#FFD166] border-t-transparent animate-spin" />
+        </div>
+      }
+    >
+      <InternalPositionsContent />
+    </Suspense>
+  );
+}
+
+function InternalPositionsContent() {
   const searchParams = useSearchParams();
   const codeFromUrl = searchParams.get("code");
 
