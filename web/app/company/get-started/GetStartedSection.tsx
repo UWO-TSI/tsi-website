@@ -3,7 +3,6 @@
 import { useEffect, useRef } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import AsciiDivider from "@/components/ascii/AsciiDivider";
 import { EASE_ENTER, DURATION_SECTION } from "@/lib/motion";
 
 if (typeof window !== "undefined") {
@@ -37,9 +36,7 @@ export default function GetStartedSection() {
   }, []);
 
   return (
-    <>
-      <AsciiDivider rows={2} cols={40} />
-      <section
+    <section
         ref={sectionRef}
         className="py-32 px-6"
         style={{ background: "var(--color-bg-main)" }}
@@ -69,6 +66,5 @@ export default function GetStartedSection() {
           </div>
         </div>
       </section>
-    </>
   );
 }

@@ -1,0 +1,79 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e24]:
+    - banner [ref=e25]:
+      - generic [ref=e26]:
+        - link "TETHOS" [ref=e27]:
+          - /url: /
+        - navigation [ref=e28]:
+          - link "Nonprofits" [ref=e29]:
+            - /url: /npo
+          - link "Companies" [ref=e30]:
+            - /url: /company
+          - link "Sponsors" [ref=e31]:
+            - /url: /sponsor
+          - link "Students" [ref=e32]:
+            - /url: /student
+        - generic [ref=e33]:
+          - button "Contact" [ref=e34]
+          - button "Apply" [ref=e35]
+    - main [ref=e36]:
+      - generic [ref=e37]:
+        - button "All Positions" [ref=e39]:
+          - img [ref=e40]
+          - text: All Positions
+        - generic [ref=e42]:
+          - paragraph [ref=e43]: Apply for
+          - heading "VP Internal" [level=1] [ref=e44]
+          - paragraph [ref=e45]: Lead internal operations, team culture, and member experience. You'll manage onboarding, events, and cross-team coordination.
+        - generic [ref=e46]:
+          - generic [ref=e48]:
+            - button "Personal Info" [disabled] [ref=e49]
+            - button "Resume" [disabled] [ref=e50]
+            - button "Questions" [disabled] [ref=e51]
+            - button "Review" [disabled] [ref=e52]
+          - generic [ref=e62]:
+            - generic [ref=e63]:
+              - generic [ref=e64]:
+                - textbox "Full Name" [ref=e65]
+                - generic: Full Name*
+              - generic [ref=e66]:
+                - textbox "Email" [ref=e67]
+                - generic: Email*
+            - generic [ref=e68]:
+              - generic [ref=e69]:
+                - textbox "Phone" [ref=e70]
+                - generic: Phone*
+              - generic [ref=e71]:
+                - textbox "Program / Major" [ref=e72]
+                - generic: Program / Major*
+            - generic [ref=e73]:
+              - generic [ref=e74]:
+                - combobox [ref=e75]:
+                  - option "Select..." [disabled] [selected]
+                  - option "1st Year"
+                  - option "2nd Year"
+                  - option "3rd Year"
+                  - option "4th Year"
+                  - option "5th Year+"
+                - generic: Year of Study*
+              - generic [ref=e76]:
+                - textbox "https://linkedin.com/in/..." [ref=e77]
+                - generic: LinkedIn (optional)
+            - generic [ref=e78]:
+              - combobox [ref=e79]:
+                - option "Select..." [disabled] [selected]
+                - option "Instagram"
+                - option "LinkedIn"
+                - option "Friend / Word of Mouth"
+                - option "Club Fair / Campus Event"
+                - option "Professor / TA"
+                - option "Website / Google Search"
+                - option "Other"
+              - generic: How did you hear about us?*
+          - button "Next" [ref=e82]:
+            - generic [ref=e83]:
+              - text: Next
+              - img [ref=e84]
+  - button "Open Next.js Dev Tools" [ref=e19] [cursor=pointer]:
+    - img [ref=e20]
+  - alert [ref=e23]

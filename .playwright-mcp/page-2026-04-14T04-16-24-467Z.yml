@@ -1,0 +1,429 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - link [ref=e4]:
+      - /url: /
+      - img [ref=e5]
+    - button "Navigation menu" [ref=e13]:
+      - generic [ref=e15]: Home
+  - main [ref=e16]:
+    - main [ref=e17]:
+      - navigation "Page sections":
+        - list:
+          - listitem:
+            - generic: Home
+            - button "Scroll to Home"
+          - listitem:
+            - generic: Mission
+            - button "Scroll to Mission"
+          - listitem:
+            - generic: Work
+            - button "Scroll to Work"
+          - listitem:
+            - generic: Impact
+            - button "Scroll to Impact"
+          - listitem:
+            - generic: Team
+            - button "Scroll to Team"
+          - listitem:
+            - generic: Partners
+            - button "Scroll to Partners"
+          - listitem:
+            - generic: Get Started
+            - button "Scroll to Get Started"
+      - generic [ref=e18]:
+        - generic:
+          - generic:
+            - heading "Technology That Moves People Forwards." [level=1]:
+              - text: Technology That Moves
+              - text: People Forwards.
+            - paragraph:
+              - text: We build modern software for nonprofits, companies, and communities.
+              - text: Powered by student developers. Designed for real-world impact.
+        - generic [ref=e20]:
+          - generic:
+            - paragraph:
+              - text: Technology has no
+              - text: borders. Neither
+              - text: does impact.
+          - generic:
+            - paragraph:
+              - text: Projects on
+              - text: this map is driven by
+              - text: purpose. Built by students.
+          - generic:
+            - img
+            - generic: Drag to rotate
+        - generic [ref=e22]:
+          - button "Scroll down" [ref=e23]
+          - generic [ref=e25]: Scroll to explore
+      - generic [ref=e27]:
+        - generic [ref=e28]:
+          - paragraph [ref=e29]:
+            - generic [ref=e30]:
+              - generic [ref=e31]: What we do
+              - generic [ref=e32]: What we do
+          - heading "Pro bono software for organizations that matter." [level=2] [ref=e33]:
+            - text: Pro bono software for
+            - text: organizations that
+            - generic [ref=e34]: matter.
+          - paragraph [ref=e35]: Tethos empowers students to deliver production-grade technology solutions for nonprofits, building real-world skills and driving positive social change globally.
+        - generic [ref=e36]:
+          - img "Team photo" [ref=e38]
+          - img "Flag signing" [ref=e41]
+          - img "Team working" [ref=e44]
+      - generic [ref=e47]:
+        - generic [ref=e48]:
+          - paragraph [ref=e49]:
+            - generic [ref=e50]:
+              - generic [ref=e51]: Past work
+              - generic [ref=e52]: Past work
+          - heading "Real projects. Real impact." [level=2] [ref=e53]:
+            - text: Real projects.
+            - generic [ref=e54]: Real impact.
+          - paragraph [ref=e55]: Hover to explore each project
+        - generic [ref=e59]:
+          - generic [ref=e61]:
+            - generic [ref=e62]: Childcan
+            - generic [ref=e63]:
+              - generic [ref=e429]:
+                - generic [ref=e64]: Childcan
+                - heading "Donor management platform" [level=3] [ref=e431]
+                - paragraph [ref=e432]: Full-stack donor tracking and campaign management, replacing manual spreadsheets with a streamlined dashboard.
+                - generic [ref=e433]:
+                  - generic [ref=e65]:
+                    - paragraph [ref=e66]: 40+
+                    - paragraph [ref=e67]: Hours saved / mo
+                  - generic [ref=e68]:
+                    - paragraph [ref=e69]: "15"
+                    - paragraph [ref=e70]: Active users
+              - generic [ref=e434]:
+                - generic [ref=e71]: Next.js
+                - generic [ref=e72]: Supabase
+                - generic [ref=e73]: Tailwind
+          - generic [ref=e75]:
+            - generic [ref=e76]: Red Cross
+            - generic [ref=e77]:
+              - generic [ref=e436]:
+                - generic [ref=e78]: Red Cross
+                - heading "Volunteer coordination tool" [level=3] [ref=e438]
+                - paragraph [ref=e439]: Scheduling and communication platform enabling real-time coordination across 3 regional chapters.
+                - generic [ref=e440]:
+                  - generic [ref=e79]:
+                    - paragraph [ref=e80]: 200+
+                    - paragraph [ref=e81]: Volunteers
+                  - generic [ref=e82]:
+                    - paragraph [ref=e83]: "3"
+                    - paragraph [ref=e84]: Chapters
+              - generic [ref=e441]:
+                - generic [ref=e85]: React
+                - generic [ref=e86]: Node.js
+                - generic [ref=e87]: PostgreSQL
+          - generic [ref=e89]:
+            - generic [ref=e90]: World Vision
+            - generic [ref=e91]:
+              - generic [ref=e443]:
+                - generic [ref=e92]: World Vision
+                - heading "Impact reporting dashboard" [level=3] [ref=e445]
+                - paragraph [ref=e446]: Automated data pipeline and visualization dashboard for program outcomes and donor reporting.
+                - generic [ref=e447]:
+                  - generic [ref=e93]:
+                    - paragraph [ref=e94]: "12"
+                    - paragraph [ref=e95]: Reports / quarter
+                  - generic [ref=e96]:
+                    - paragraph [ref=e97]: "8"
+                    - paragraph [ref=e98]: Data sources
+              - generic [ref=e448]:
+                - generic [ref=e99]: Python
+                - generic [ref=e100]: D3.js
+                - generic [ref=e101]: AWS
+          - generic [ref=e103]:
+            - generic [ref=e104]: Plan Int'l
+            - generic [ref=e105]:
+              - generic [ref=e450]:
+                - generic [ref=e106]: Plan Int'l
+                - heading "Community engagement app" [level=3] [ref=e452]
+                - paragraph [ref=e453]: Mobile-first platform connecting field workers with communities for feedback and resource coordination.
+                - generic [ref=e454]:
+                  - generic [ref=e107]:
+                    - paragraph [ref=e108]: "45"
+                    - paragraph [ref=e109]: Communities
+                  - generic [ref=e110]:
+                    - paragraph [ref=e111]: "120"
+                    - paragraph [ref=e112]: Field workers
+              - generic [ref=e455]:
+                - generic [ref=e113]: React Native
+                - generic [ref=e114]: Firebase
+          - generic [ref=e116]:
+            - generic [ref=e117]: IRC
+            - generic [ref=e118]:
+              - generic [ref=e457]:
+                - generic [ref=e119]: IRC
+                - heading "Case management system" [level=3] [ref=e459]
+                - paragraph [ref=e460]: Intake, tracking, and outcomes system for refugee services, replacing paper-based workflows.
+                - generic [ref=e461]:
+                  - generic [ref=e120]:
+                    - paragraph [ref=e121]: 300+
+                    - paragraph [ref=e122]: Cases / month
+                  - generic [ref=e123]:
+                    - paragraph [ref=e124]: "25"
+                    - paragraph [ref=e125]: Staff
+              - generic [ref=e462]:
+                - generic [ref=e126]: Next.js
+                - generic [ref=e127]: Prisma
+                - generic [ref=e128]: Vercel
+          - generic [ref=e130]:
+            - generic [ref=e131]: Museum
+            - generic [ref=e132]:
+              - generic [ref=e464]:
+                - generic [ref=e133]: Museum
+                - heading "Interactive exhibit guide" [level=3] [ref=e466]
+                - paragraph [ref=e467]: QR-powered mobile guide for exhibits with accessibility features and multilingual support.
+                - generic [ref=e468]:
+                  - generic [ref=e134]:
+                    - paragraph [ref=e135]: 60+
+                    - paragraph [ref=e136]: Exhibits
+                  - generic [ref=e137]:
+                    - paragraph [ref=e138]: "4"
+                    - paragraph [ref=e139]: Languages
+              - generic [ref=e469]:
+                - generic [ref=e140]: PWA
+                - generic [ref=e141]: i18n
+                - generic [ref=e142]: QR API
+      - generic [ref=e144]:
+        - generic [ref=e145]:
+          - paragraph [ref=e146]: Impact
+          - heading "Numbers that speak." [level=2] [ref=e147]
+        - generic [ref=e148]:
+          - generic [ref=e149]:
+            - generic [ref=e150]:
+              - generic [ref=e151]: "0"
+              - text: +
+            - paragraph [ref=e152]: Projects Delivered
+          - generic [ref=e153]:
+            - generic [ref=e154]:
+              - generic [ref=e155]: "0"
+              - text: +
+            - paragraph [ref=e156]: Student Developers
+          - generic [ref=e157]:
+            - generic [ref=e158]:
+              - generic [ref=e159]: "0"
+              - text: +
+            - paragraph [ref=e160]: Community Members
+          - generic [ref=e161]:
+            - generic [ref=e162]:
+              - generic [ref=e163]: "0"
+              - text: K+
+            - paragraph [ref=e164]: In Value Created
+      - generic [ref=e166]:
+        - heading "Built by students who ship." [level=2] [ref=e167]:
+          - text: Built by students
+          - generic [ref=e168]: who ship.
+        - generic [ref=e169]:
+          - generic [ref=e170]:
+            - paragraph [ref=e171]: Our people
+            - generic [ref=e172]:
+              - generic [ref=e173]:
+                - paragraph [ref=e174]: "5"
+                - paragraph [ref=e175]: Active chapters
+              - generic [ref=e176]:
+                - paragraph [ref=e177]: "12"
+                - paragraph [ref=e178]: Avg team size
+              - generic [ref=e179]:
+                - paragraph [ref=e180]: "3"
+                - paragraph [ref=e181]: Countries
+          - generic [ref=e182]:
+            - paragraph [ref=e183]: Our members go on to build at the companies shaping the future. Tethos is where they learn to ship real products, lead teams, and deliver under pressure.
+            - paragraph [ref=e184]: Where our alumni work
+            - generic [ref=e186]:
+              - list [ref=e187]:
+                - listitem [ref=e188]:
+                  - img [ref=e190]:
+                    - generic [ref=e191]: Apple
+                - listitem [ref=e192]:
+                  - img [ref=e194]:
+                    - generic [ref=e195]: YC
+                - listitem [ref=e196]:
+                  - img [ref=e198]:
+                    - generic [ref=e199]: KPMG
+                - listitem [ref=e200]:
+                  - img [ref=e202]:
+                    - generic [ref=e203]: RBC
+                - listitem [ref=e204]:
+                  - img [ref=e206]:
+                    - generic [ref=e207]: BMO
+                - listitem [ref=e208]:
+                  - img [ref=e210]:
+                    - generic [ref=e211]: CIBC
+                - listitem [ref=e212]:
+                  - img [ref=e214]:
+                    - generic [ref=e215]: TD
+                - listitem [ref=e216]:
+                  - img [ref=e218]:
+                    - generic [ref=e219]: IBM
+                - listitem [ref=e220]:
+                  - img [ref=e222]:
+                    - generic [ref=e223]: AMD
+              - list [ref=e224]:
+                - listitem [ref=e225]:
+                  - img [ref=e227]:
+                    - generic [ref=e228]: Apple
+                - listitem [ref=e229]:
+                  - img [ref=e231]:
+                    - generic [ref=e232]: YC
+                - listitem [ref=e233]:
+                  - img [ref=e235]:
+                    - generic [ref=e236]: KPMG
+                - listitem [ref=e237]:
+                  - img [ref=e239]:
+                    - generic [ref=e240]: RBC
+                - listitem [ref=e241]:
+                  - img [ref=e243]:
+                    - generic [ref=e244]: BMO
+                - listitem [ref=e245]:
+                  - img [ref=e247]:
+                    - generic [ref=e248]: CIBC
+                - listitem [ref=e249]:
+                  - img [ref=e251]:
+                    - generic [ref=e252]: TD
+                - listitem [ref=e253]:
+                  - img [ref=e255]:
+                    - generic [ref=e256]: IBM
+                - listitem [ref=e257]:
+                  - img [ref=e259]:
+                    - generic [ref=e260]: AMD
+      - generic [ref=e263]:
+        - heading "Building for organizations that matter" [level=3] [ref=e264]
+        - generic [ref=e265]:
+          - paragraph [ref=e266]: Supported by
+          - generic [ref=e268]:
+            - list [ref=e269]:
+              - listitem [ref=e270]:
+                - img [ref=e272]:
+                  - generic [ref=e273]: Gov of Canada
+              - listitem [ref=e274]:
+                - img [ref=e276]:
+                  - generic [ref=e277]: Morrissette
+              - listitem [ref=e278]:
+                - img [ref=e280]:
+                  - generic [ref=e281]: Ubit
+            - list [ref=e282]:
+              - listitem [ref=e283]:
+                - img [ref=e285]:
+                  - generic [ref=e286]: Gov of Canada
+              - listitem [ref=e287]:
+                - img [ref=e289]:
+                  - generic [ref=e290]: Morrissette
+              - listitem [ref=e291]:
+                - img [ref=e293]:
+                  - generic [ref=e294]: Ubit
+        - generic [ref=e295]:
+          - paragraph [ref=e296]: Organizations we've built for
+          - generic [ref=e298]:
+            - list [ref=e299]:
+              - listitem [ref=e300]:
+                - img [ref=e302]:
+                  - generic [ref=e306]: Red Cross
+              - listitem [ref=e307]:
+                - img [ref=e309]:
+                  - generic [ref=e310]: World Vision
+              - listitem [ref=e311]:
+                - img [ref=e313]:
+                  - generic [ref=e314]: IRC
+              - listitem [ref=e315]:
+                - img [ref=e317]:
+                  - generic [ref=e318]: Plan International
+              - listitem [ref=e319]:
+                - img [ref=e321]:
+                  - generic [ref=e322]: Plan Catalyst
+              - listitem [ref=e323]:
+                - img [ref=e325]:
+                  - generic [ref=e326]: Children's Museum
+            - list [ref=e327]:
+              - listitem [ref=e328]:
+                - img [ref=e330]:
+                  - generic [ref=e334]: Red Cross
+              - listitem [ref=e335]:
+                - img [ref=e337]:
+                  - generic [ref=e338]: World Vision
+              - listitem [ref=e339]:
+                - img [ref=e341]:
+                  - generic [ref=e342]: IRC
+              - listitem [ref=e343]:
+                - img [ref=e345]:
+                  - generic [ref=e346]: Plan International
+              - listitem [ref=e347]:
+                - img [ref=e349]:
+                  - generic [ref=e350]: Plan Catalyst
+              - listitem [ref=e351]:
+                - img [ref=e353]:
+                  - generic [ref=e354]: Children's Museum
+      - generic [ref=e357]:
+        - heading "Who are you?" [level=2] [ref=e358]
+        - generic [ref=e360]:
+          - generic:
+            - generic:
+              - generic:
+                - img "Nonprofits"
+            - generic:
+              - generic:
+                - img "Companies"
+            - generic:
+              - generic:
+                - img "Sponsors"
+            - generic:
+              - generic:
+                - img "Students"
+        - paragraph [ref=e365]: Not sure? Start with the card that feels closest to you
+  - contentinfo [ref=e366]:
+    - generic [ref=e367]:
+      - generic [ref=e368]:
+        - generic [ref=e369]:
+          - link [ref=e370]:
+            - /url: /
+            - img [ref=e371]
+          - paragraph [ref=e378]: Technology that moves people forward. Student-built, real-world impact.
+        - generic [ref=e379]:
+          - paragraph [ref=e380]: Pathways
+          - list [ref=e381]:
+            - listitem [ref=e382]:
+              - link "Nonprofits" [ref=e383]:
+                - /url: /npo
+            - listitem [ref=e384]:
+              - link "Companies" [ref=e385]:
+                - /url: /company
+            - listitem [ref=e386]:
+              - link "Sponsors" [ref=e387]:
+                - /url: /sponsor
+            - listitem [ref=e388]:
+              - link "Students" [ref=e389]:
+                - /url: /student
+        - generic [ref=e390]:
+          - paragraph [ref=e391]: Resources
+          - list [ref=e392]:
+            - listitem [ref=e393]:
+              - link "Contact" [ref=e394]:
+                - /url: /contact
+            - listitem [ref=e395]:
+              - link "About" [ref=e396]:
+                - /url: /about
+            - listitem [ref=e397]:
+              - link "Projects" [ref=e398]:
+                - /url: /projects
+        - generic [ref=e399]:
+          - paragraph [ref=e400]: Connect
+          - list [ref=e401]:
+            - listitem [ref=e402]:
+              - link "GitHub" [ref=e403]:
+                - /url: https://github.com/tethos
+            - listitem [ref=e404]:
+              - link "LinkedIn" [ref=e405]:
+                - /url: https://linkedin.com/company/tethos
+            - listitem [ref=e406]:
+              - link "Instagram" [ref=e407]:
+                - /url: https://instagram.com/tethos
+      - generic [ref=e408]:
+        - paragraph [ref=e409]: © 2026 Tethos. All rights reserved.
+        - paragraph [ref=e410]: Built by students, designed with taste.
+  - button "Open Next.js Dev Tools" [ref=e416] [cursor=pointer]:
+    - img [ref=e417]
+  - alert [ref=e471]

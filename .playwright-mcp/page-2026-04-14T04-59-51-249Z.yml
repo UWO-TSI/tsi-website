@@ -1,0 +1,63 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - link [ref=e4]:
+      - /url: /
+      - img [ref=e5]
+    - button "Navigation menu" [ref=e13]:
+      - generic [ref=e18]: Menu
+  - main [ref=e19]:
+    - generic [ref=e20]:
+      - generic [ref=e22]:
+        - paragraph [ref=e23]:
+          - generic [ref=e24]:
+            - generic [ref=e25]: 2026-27 Recruitment
+            - generic [ref=e26]: 20%=+=> +-<$@!+0#_=
+        - heading "Build what matters. Start here." [level=1] [ref=e27]:
+          - text: Build what matters.
+          - generic [ref=e28]: Start here.
+        - paragraph [ref=e29]: Apply for a leadership role on the 2026-27 executive team. Applications are open.
+        - generic [ref=e30]:
+          - generic [ref=e33]: Phase 01 active
+          - generic [ref=e34]: ·
+          - generic [ref=e35]: 0 positions open
+          - generic [ref=e36]: ·
+          - generic [ref=e37]: deadline May 31
+        - generic [ref=e38]:
+          - link "View Positions →" [ref=e39]:
+            - /url: "#positions"
+          - link "My Applications ↗" [ref=e40]:
+            - /url: /student/apply/dashboard
+      - generic [ref=e45]:
+        - generic [ref=e46]:
+          - generic [ref=e48]: "01"
+          - paragraph [ref=e50]: Executive Applications
+          - paragraph [ref=e51]: May 2026
+          - generic [ref=e52]: Now Open
+        - generic [ref=e53]:
+          - generic [ref=e55]: "02"
+          - paragraph [ref=e56]: PM & Director Applications
+          - paragraph [ref=e57]: September 2026
+      - generic [ref=e60]:
+        - generic [ref=e61]:
+          - paragraph [ref=e62]:
+            - generic [ref=e63]:
+              - generic [ref=e64]: Open Positions
+              - generic [ref=e65]: Open Positions
+          - heading "Find your role" [level=2] [ref=e66]
+        - button "All" [ref=e68]
+      - generic [ref=e74]:
+        - generic [ref=e75]:
+          - generic [ref=e76]:
+            - generic [ref=e77]: $ tethos apply --code
+            - generic [ref=e78]: Internal and invite-only positions
+          - link "Enter Code →" [ref=e79]:
+            - /url: /student/apply/internal
+        - generic [ref=e80]:
+          - generic [ref=e81]:
+            - generic [ref=e82]: $ tethos help
+            - generic [ref=e83]: Not sure which role fits?
+          - link "Get in Touch ↗" [ref=e84]:
+            - /url: mailto:team@tethos.ca
+  - button "Open Next.js Dev Tools" [ref=e90] [cursor=pointer]:
+    - img [ref=e91]
+  - alert [ref=e94]

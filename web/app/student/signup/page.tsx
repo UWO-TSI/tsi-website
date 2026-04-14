@@ -130,7 +130,7 @@ export default function SignupPage() {
 
   if (emailSent) {
     return (
-      <div className="min-h-screen bg-[var(--color-bg-main)] flex items-center justify-center px-4">
+      <div className="min-h-screen bg-[var(--color-bg-main)] flex items-center justify-center px-4 pt-20">
         <div className="w-full max-w-md text-center">
           <div
             className="inline-flex items-center justify-center w-16 h-16 rounded-full mb-6"
@@ -169,7 +169,7 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--color-bg-main)] flex items-center justify-center px-4">
+    <div className="min-h-screen bg-[var(--color-bg-main)] flex items-center justify-center px-4 pt-20">
       <div className="w-full max-w-md">
         {/* Terminal Header */}
         <div className="bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-lg p-6 mb-6 font-mono text-sm">

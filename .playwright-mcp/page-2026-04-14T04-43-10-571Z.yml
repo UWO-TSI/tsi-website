@@ -1,0 +1,108 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - link [ref=e4]:
+      - /url: /
+      - img [ref=e5]
+    - button "Navigation menu" [ref=e13]:
+      - generic [ref=e15]: Menu
+  - main [ref=e16]:
+    - generic [ref=e17]:
+      - generic [ref=e19]:
+        - paragraph [ref=e20]:
+          - generic [ref=e21]:
+            - generic [ref=e22]: 2026-27 Recruitment
+            - generic [ref=e23]: 2026-27 Recruitment
+        - heading "Build what matters. Start here." [level=1] [ref=e24]:
+          - generic [ref=e25]: Build what matters.
+          - generic [ref=e27]: Start here.
+        - paragraph [ref=e28]: We ship real software for real nonprofits. Apply for a leadership role on the 2026-27 executive team. Applications are open.
+        - generic [ref=e29]:
+          - link "View Positions" [ref=e30]:
+            - /url: "#positions"
+            - text: View Positions
+            - img [ref=e31]
+          - link "My Applications" [ref=e34]:
+            - /url: /student/apply/dashboard
+            - text: My Applications
+            - img [ref=e35]
+      - generic [ref=e42]:
+        - generic [ref=e43]:
+          - generic [ref=e46]: "01"
+          - paragraph [ref=e48]: Executive Applications
+          - paragraph [ref=e49]: May 2026
+          - generic [ref=e50]: Now Open
+        - generic [ref=e51]:
+          - generic [ref=e54]: "02"
+          - paragraph [ref=e55]: PM & Director Applications
+          - paragraph [ref=e56]: September 2026
+      - generic [ref=e58]:
+        - generic [ref=e59]:
+          - generic [ref=e60]:
+            - paragraph [ref=e61]:
+              - generic [ref=e62]:
+                - generic [ref=e63]: Open Positions
+                - generic [ref=e64]: Open Positions
+            - heading "Find your role" [level=2] [ref=e65]
+          - generic [ref=e66]:
+            - button "All" [ref=e67]
+            - button "Phase 01Executive" [ref=e102]
+        - generic [ref=e103]:
+          - generic [ref=e107]:
+            - generic [ref=e108]:
+              - generic [ref=e109]: Phase 01
+              - generic [ref=e111]: Open
+            - heading "VP Internal" [level=3] [ref=e115]
+            - paragraph [ref=e116]: Lead internal operations, team culture, and member experience. You'll manage onboarding, events, and cross-team coordination.
+            - generic [ref=e117]:
+              - generic [ref=e118]:
+                - img [ref=e119]
+                - text: Due May 31
+              - generic [ref=e122]:
+                - text: Apply
+                - img [ref=e124]
+          - generic [ref=e129]:
+            - generic [ref=e130]:
+              - generic [ref=e131]: Phase 01
+              - generic [ref=e133]: Open
+            - heading "VP External" [level=3] [ref=e137]
+            - paragraph [ref=e138]: Own partnerships, sponsorships, and external communications. You'll represent Tethos to companies, nonprofits, and the broader community.
+            - generic [ref=e139]:
+              - generic [ref=e140]:
+                - img [ref=e141]
+                - text: Due May 31
+              - generic [ref=e144]:
+                - text: Apply
+                - img [ref=e146]
+          - generic [ref=e151]:
+            - generic [ref=e152]:
+              - generic [ref=e153]: Phase 01
+              - generic [ref=e155]: Open
+            - heading "VP Marketing" [level=3] [ref=e159]
+            - paragraph [ref=e160]: Drive brand strategy, social media, and creative output. You'll shape how Tethos looks, sounds, and reaches its audience.
+            - generic [ref=e161]:
+              - generic [ref=e162]:
+                - img [ref=e163]
+                - text: Due May 31
+              - generic [ref=e166]:
+                - text: Apply
+                - img [ref=e168]
+      - generic [ref=e73]:
+        - generic [ref=e74]:
+          - generic [ref=e75]:
+            - paragraph [ref=e76]: Have an access code?
+            - paragraph [ref=e77]: Internal and invite-only positions require a code from the team.
+          - link "Enter Code" [ref=e79]:
+            - /url: /student/apply/internal
+            - text: Enter Code
+            - img [ref=e80]
+        - generic [ref=e82]:
+          - generic [ref=e83]:
+            - paragraph [ref=e84]: Not sure which role fits?
+            - paragraph [ref=e85]: Reach out and we'll help you find the right position.
+          - link "Get in Touch" [ref=e86]:
+            - /url: mailto:team@tethos.ca
+            - text: Get in Touch
+            - img [ref=e87]
+  - button "Open Next.js Dev Tools" [ref=e95] [cursor=pointer]:
+    - img [ref=e96]
+  - alert [ref=e170]

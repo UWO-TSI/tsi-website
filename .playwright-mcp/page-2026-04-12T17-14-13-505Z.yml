@@ -1,0 +1,10 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - generic [ref=e4]: TETHOS
+    - generic [ref=e5]:
+      - paragraph [ref=e6]: Your page is on the way.
+      - paragraph [ref=e8]: Software is just a tool, humanity is the mission.
+    - generic [ref=e13]: 11%
+  - button "Open Next.js Dev Tools" [ref=e19] [cursor=pointer]:
+    - img [ref=e20]
+  - alert [ref=e23]

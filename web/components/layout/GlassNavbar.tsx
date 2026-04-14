@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import TsiLogo from "@/components/ui/TsiLogo";
 import { usePathname } from "next/navigation";
 import { type FocusEvent, useCallback, useEffect, useId, useRef, useState } from "react";
 import { gsap } from "gsap";
@@ -312,9 +313,9 @@ export default function GlassNavbar({
         {/* Left: logo — outside the glass, vertically aligned with pill center */}
         <Link
           href="/"
-          className={`mt-[14px] font-heading text-sm font-semibold tracking-wide transition-colors duration-300 hover:opacity-80 ${textPrimary}`}
+          className={`mt-[10px] transition-all duration-300 hover:opacity-80 ${isDark ? "text-white" : "text-[#0F0F10]"}`}
         >
-          TETHOS
+          <TsiLogo width={32} height={32} />
         </Link>
 
         {/* Right: glass pill + dropdown wrapper — hover region */}
@@ -344,7 +345,7 @@ export default function GlassNavbar({
                       ? textPrimary
                       : textSecondary
                   }`}
-                  style={{ fontFamily: '"Test Sogne", sans-serif', fontWeight: 400 }}
+                  style={{ fontFamily: '"Test Sohne", sans-serif', fontWeight: 400 }}
                 >
                   {col.heading}
                 </Link>
@@ -361,7 +362,7 @@ export default function GlassNavbar({
                         ? textPrimary
                         : textSecondary
                     }`}
-                    style={{ fontFamily: '"Test Sogne", sans-serif', fontWeight: 400 }}
+                    style={{ fontFamily: '"Test Sohne", sans-serif', fontWeight: 400 }}
                   >
                     {columns[3].heading}
                   </Link>
@@ -461,7 +462,7 @@ export default function GlassNavbar({
                     className={`glass-nav-dropdown-link group flex items-center gap-1.5 text-[13px] transition-colors duration-300 ${
                       isDark ? "text-[#F1FFFF]/60 hover:text-[#F1FFFF]" : "text-[#0F0F10]/60 hover:text-[#0F0F10]"
                     }`}
-                    style={{ fontFamily: '"Test Sogne", sans-serif', fontWeight: 400 }}
+                    style={{ fontFamily: '"Test Sohne", sans-serif', fontWeight: 400 }}
                   >
                     {item.label}
                     {item.external && (
@@ -492,7 +493,7 @@ export default function GlassNavbar({
                     className={`glass-nav-dropdown-link group flex items-center gap-1.5 text-[13px] transition-colors duration-300 ${
                       isDark ? "text-[#F1FFFF]/60 hover:text-[#F1FFFF]" : "text-[#0F0F10]/60 hover:text-[#0F0F10]"
                     }`}
-                    style={{ fontFamily: '"Test Sogne", sans-serif', fontWeight: 400 }}
+                    style={{ fontFamily: '"Test Sohne", sans-serif', fontWeight: 400 }}
                   >
                     {item.label}
                     {item.external && (

@@ -1,0 +1,21 @@
+[     387ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/2374f_next_dist_5b90db1e._.js:2297
+[     478ms] [LOG] [Fast Refresh] done in 194ms @ http://localhost:3000/_next/static/chunks/2374f_next_dist_5b90db1e._.js:2297
+[    1182ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/_next/static/chunks/2374f_next_dist_5b90db1e._.js:2297
+[    1313ms] [LOG] [HMR] connected @ http://localhost:3000/_next/static/chunks/2374f_next_dist_5b90db1e._.js:2297
+[    1493ms] [WARNING] GSAP target  not found. https://gsap.com @ http://localhost:3000/_next/static/chunks/2374f_next_dist_5b90db1e._.js:2297
+[    1495ms] [WARNING] GSAP target  not found. https://gsap.com @ http://localhost:3000/_next/static/chunks/2374f_next_dist_5b90db1e._.js:2297
+[    1496ms] [WARNING] GSAP target  not found. https://gsap.com @ http://localhost:3000/_next/static/chunks/2374f_next_dist_5b90db1e._.js:2297
+[    5792ms] [WARNING] GSAP target  not found. https://gsap.com @ http://localhost:3000/_next/static/chunks/2374f_next_dist_5b90db1e._.js:2297
+[    5809ms] [WARNING] GSAP target  not found. https://gsap.com @ http://localhost:3000/_next/static/chunks/2374f_next_dist_5b90db1e._.js:2297
+[   19520ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/2374f_next_dist_5b90db1e._.js:2297
+[   19585ms] [LOG] [Fast Refresh] done in 166ms @ http://localhost:3000/_next/static/chunks/2374f_next_dist_5b90db1e._.js:2297
+[   78745ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/2374f_next_dist_5b90db1e._.js:2297
+[   78760ms] [LOG] [Fast Refresh] done in 120ms @ http://localhost:3000/_next/static/chunks/2374f_next_dist_5b90db1e._.js:2297
+[   79773ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/2374f_next_dist_5b90db1e._.js:2297
+[   79891ms] [LOG] [Fast Refresh] done in 220ms @ http://localhost:3000/_next/static/chunks/2374f_next_dist_5b90db1e._.js:2297
+[   92575ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/2374f_next_dist_5b90db1e._.js:2297
+[   92641ms] [LOG] [Fast Refresh] done in 169ms @ http://localhost:3000/_next/static/chunks/2374f_next_dist_5b90db1e._.js:2297
+[  110790ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/2374f_next_dist_5b90db1e._.js:2297
+[  110839ms] [LOG] [Fast Refresh] done in 154ms @ http://localhost:3000/_next/static/chunks/2374f_next_dist_5b90db1e._.js:2297
+[  110993ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/2374f_next_dist_5b90db1e._.js:2297
+[  111048ms] [LOG] [Fast Refresh] done in 156ms @ http://localhost:3000/_next/static/chunks/2374f_next_dist_5b90db1e._.js:2297

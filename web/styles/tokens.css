@@ -16,12 +16,13 @@
     --color-surface-soft: #18181b;
   
     /* Brand */
-    --color-brand-blue: #002fa7;
+    --color-brand-blue: #1d9bf0;
     --color-brand-yellow: #ffd166;
     --color-brand-light: #f1ffff;
   
     /* Accents */
     --color-accent-cyan: #22d3ee;
+    --color-accent-blue: #1d9bf0;
   
     /* Text */
     --color-text-main: #f1ffff;

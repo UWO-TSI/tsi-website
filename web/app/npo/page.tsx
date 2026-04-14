@@ -1,26 +1,25 @@
-import SmoothScroll from "@/components/SmoothScroll";
-import NPOHero from "./sections/NPOHero";
-import NPOAbout from "./sections/NPOAbout";
-import NPOTimeline from "./sections/NPOTimeline";
-import NPODeliverables from "./sections/NPODeliverables";
-import Impact from "./impact/Impact";
-import DocumentaryEmbed from "./sections/DocumentaryEmbed";
-import Testimonial from "./testimonial/testimonial";
-import NPOCTA from "./sections/NPOCTA";
+import NPOHeroSection from "./sections/NPOHeroNew";
+import NPOProgramSection from "./sections/NPOProgram";
+import NPODetailsSection from "./sections/NPODetails";
+import NPOApplySection from "./sections/NPOApply";
+import DotNav from "@/components/ui/DotNav";
+import type { DotNavSection } from "@/components/ui/DotNav";
+
+const SECTIONS: DotNavSection[] = [
+  { id: "npo-hero", label: "Overview" },
+  { id: "npo-program", label: "Program" },
+  { id: "npo-details", label: "Details" },
+  { id: "npo-apply", label: "Apply" },
+];
 
 export default function NonprofitPage() {
   return (
-    <SmoothScroll>
-      <main className="min-h-screen">
-        <NPOHero />
-        <NPOAbout />
-        <NPOTimeline />
-        <NPODeliverables />
-        <Impact />
-        <DocumentaryEmbed />
-        <Testimonial />
-        <NPOCTA />
-      </main>
-    </SmoothScroll>
+    <main className="min-h-screen">
+      <DotNav sections={SECTIONS} />
+      <NPOHeroSection />
+      <NPOProgramSection />
+      <NPODetailsSection />
+      <NPOApplySection />
+    </main>
   );
 }

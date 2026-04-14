@@ -1,0 +1,49 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e24]:
+    - banner [ref=e25]:
+      - generic [ref=e26]:
+        - link "TETHOS" [ref=e27]:
+          - /url: /
+        - navigation [ref=e28]:
+          - link "Nonprofits" [ref=e29]:
+            - /url: /npo
+          - link "Companies" [ref=e30]:
+            - /url: /company
+          - link "Sponsors" [ref=e31]:
+            - /url: /sponsor
+          - link "Students" [ref=e32]:
+            - /url: /student
+        - generic [ref=e33]:
+          - button "Contact" [ref=e34]
+          - button "Apply" [ref=e35]
+    - main [ref=e36]:
+      - generic [ref=e37]:
+        - button "All Positions" [ref=e39]:
+          - img [ref=e40]
+          - text: All Positions
+        - generic [ref=e42]:
+          - paragraph [ref=e43]: Apply for
+          - heading "VP Internal" [level=1] [ref=e44]
+          - paragraph [ref=e45]: Lead internal operations, team culture, and member experience. You'll manage onboarding, events, and cross-team coordination.
+        - generic [ref=e188]:
+          - img [ref=e190]
+          - heading "Application Submitted" [level=2] [ref=e192]
+          - paragraph [ref=e193]: Your application for VP Internal has been received. Check your email for a confirmation.
+          - generic [ref=e194]:
+            - heading "What happens next" [level=3] [ref=e195]
+            - list [ref=e196]:
+              - listitem [ref=e197]:
+                - generic [ref=e198]: "1"
+                - generic [ref=e199]: Our team will review your application.
+              - listitem [ref=e200]:
+                - generic [ref=e201]: "2"
+                - generic [ref=e202]: Shortlisted candidates will receive an interview invite.
+              - listitem [ref=e203]:
+                - generic [ref=e204]: "3"
+                - generic [ref=e205]: Track your status on your dashboard anytime.
+          - generic [ref=e206]:
+            - button "Track Application" [ref=e207]
+            - button "View More Roles" [ref=e208]
+  - button "Open Next.js Dev Tools" [ref=e19] [cursor=pointer]:
+    - img [ref=e20]
+  - alert [ref=e23]

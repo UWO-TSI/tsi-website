@@ -100,7 +100,12 @@ export default function AuthModal({
             className="fixed inset-0 z-50 flex items-center justify-center p-4"
           >
             <div
-              className="glass-card w-full max-w-md p-8 relative"
+              className="w-full max-w-md p-8 md:p-10 relative rounded-2xl"
+              style={{
+                background: "linear-gradient(135deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.03) 100%)",
+                border: "1px solid rgba(255,255,255,0.10)",
+                backdropFilter: "blur(24px)",
+              }}
               onClick={(e) => e.stopPropagation()}
             >
               {/* Close button */}

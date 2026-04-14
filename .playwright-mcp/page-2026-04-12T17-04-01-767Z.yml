@@ -1,0 +1,54 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e6]:
+    - navigation [ref=e8]:
+      - link "Supabase Logo" [ref=e11] [cursor=pointer]:
+        - /url: https://supabase.com
+        - img "Supabase Logo" [ref=e12]
+      - link "Documentation" [ref=e14] [cursor=pointer]:
+        - /url: https://supabase.com/docs
+        - img [ref=e16]
+        - generic [ref=e19]: Documentation
+    - main [ref=e21]:
+      - generic [ref=e22]:
+        - generic [ref=e23]:
+          - heading "Welcome back" [level=1] [ref=e24]
+          - heading "Sign in to your account" [level=2] [ref=e25]
+        - generic [ref=e26]:
+          - button "Continue with GitHub" [ref=e29] [cursor=pointer]:
+            - img [ref=e31]
+            - generic [ref=e34]: Continue with GitHub
+          - link "Continue with SSO" [ref=e37] [cursor=pointer]:
+            - /url: /dashboard/sign-in-sso?returnTo=%2Fproject%2Frtbkrngsdbptbjhfbcud%2Fauth%2Fproviders
+            - img [ref=e39]
+            - generic [ref=e42]: Continue with SSO
+          - generic [ref=e47]: or
+          - generic [ref=e48]:
+            - generic [ref=e50]:
+              - generic [ref=e53]: Email
+              - textbox "Email" [ref=e56]:
+                - /placeholder: you@example.com
+            - generic [ref=e57]:
+              - generic [ref=e59]:
+                - generic [ref=e62]: Password
+                - generic [ref=e65]:
+                  - textbox "Password" [ref=e66]:
+                    - /placeholder: ••••••••
+                  - button "Show password" [ref=e67] [cursor=pointer]:
+                    - img [ref=e69]
+              - link "Forgot password?" [ref=e72] [cursor=pointer]:
+                - /url: /dashboard/forgot-password?returnTo=%2Fproject%2Frtbkrngsdbptbjhfbcud%2Fauth%2Fproviders
+            - button "Sign in" [ref=e75] [cursor=pointer]:
+              - generic [ref=e76]: Sign in
+        - generic [ref=e78]:
+          - text: Don’t have an account?
+          - link "Sign up" [ref=e79] [cursor=pointer]:
+            - /url: /dashboard/sign-up?returnTo=%2Fproject%2Frtbkrngsdbptbjhfbcud%2Fauth%2Fproviders
+      - paragraph [ref=e81]:
+        - text: By continuing, you agree to Supabase’s
+        - link "Terms of Service" [ref=e82] [cursor=pointer]:
+          - /url: https://supabase.com/terms
+        - text: and
+        - link "Privacy Policy" [ref=e83] [cursor=pointer]:
+          - /url: https://supabase.com/privacy
+        - text: ", and to receive periodic emails with updates."
+  - alert [ref=e84]: Supabase

@@ -1,227 +1,316 @@
 "use client";
 
-import SmoothScroll from "@/components/SmoothScroll";
 import { useEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import AsciiReveal from "@/components/ascii/AsciiReveal";
-import AsciiDivider from "@/components/ascii/AsciiDivider";
-import {
-  EASE_ENTER,
-  EASE_CINEMATIC,
-  EASE_SMOOTH,
-  DURATION_SECTION,
-  DURATION_CINEMATIC,
-  STAGGER_NORMAL,
-  STAGGER_SLOW,
-} from "@/lib/motion";
+import { motion, AnimatePresence } from "framer-motion";
+import Link from "next/link";
+import GradientText from "@/components/ui/GradientText";
+import SpotlightCard from "@/components/ui/SpotlightCard";
+import DecryptedText from "@/components/ui/DecryptedText";
+import DotNav from "@/components/ui/DotNav";
+import type { DotNavSection } from "@/components/ui/DotNav";
+import LogoLoop from "@/components/ui/LogoLoop";
+import { ALUMNI_LOGOS } from "@/components/ui/PartnerLogos";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
 }
 
-// ============================================
-// Data
-// ============================================
+/* ═══════════════════════════════════════════
+   DATA
+   ═══════════════════════════════════════════ */
 
-const benefits = [
-  {
-    icon: "01",
-    title: "Real Experience",
-    description:
-      "Work on actual projects for real clients. Build your portfolio with meaningful work that matters — not toy apps.",
-  },
-  {
-    icon: "02",
-    title: "Leadership",
-    description:
-      "Manage teams, own deliverables, and navigate client relationships. Skills you can't learn in a lecture hall.",
-  },
-  {
-    icon: "03",
-    title: "Impact",
-    description:
-      "Your code ships to nonprofits that need it. Every line you write has a measurable real-world consequence.",
-  },
-  {
-    icon: "04",
-    title: "Network",
-    description:
-      "Connect with industry professionals, sponsors, and a growing community of student developers nationwide.",
-  },
-  {
-    icon: "05",
-    title: "Career Launch",
-    description:
-      "Our alumni land at Google, Stripe, Microsoft, and more. Tethos is the best line on your resume.",
-  },
-  {
-    icon: "06",
-    title: "Community",
-    description:
-      "Join a culture that values craft, curiosity, and impact. This isn't a club — it's a collective.",
-  },
+const POSITIONS = [
+  { role: "VP Internal", team: "Leadership", status: "open", description: "Lead internal operations, team culture, and member experience." },
+  { role: "VP External", team: "Leadership", status: "open", description: "Manage partnerships, sponsors, and external communications." },
+  { role: "VP Marketing", team: "Leadership", status: "open", description: "Brand strategy, social media, and event promotion." },
+  { role: "Project Manager", team: "Operations", status: "open", description: "Lead a nonprofit project team from discovery to delivery." },
+  { role: "Dev Director", team: "Engineering", status: "open", description: "Technical leadership across all active projects." },
+  { role: "Designer", team: "Design", status: "coming", description: "UX/UI design for nonprofit client projects." },
 ];
 
-const timelineSteps = [
-  {
-    phase: "01",
-    title: "Gather Your Team",
-    description: "Recruit 5-10 committed students passionate about tech and social impact.",
-  },
-  {
-    phase: "02",
-    title: "Submit Application",
-    description: "Fill out our chapter application with team details and university info.",
-  },
-  {
-    phase: "03",
-    title: "Get Approved",
-    description: "Our team reviews your application and provides onboarding support.",
-  },
-  {
-    phase: "04",
-    title: "Start Building",
-    description: "Connect with local nonprofits, receive projects, and begin making an impact.",
-  },
+const STATS = [
+  { value: "150+", label: "Alumni shipped", desc: "Students who've built real products" },
+  { value: "20+", label: "Projects live", desc: "Production software running today" },
+  { value: "$0", label: "Cost to join", desc: "Always free. You bring the talent." },
 ];
 
-const projectTypes = [
-  "Web Applications",
-  "Mobile Apps",
-  "Design Systems",
-  "API Integrations",
-  "Data Dashboards",
-  "Internal Tools",
+const CHAPTER_STEPS = [
+  { cmd: "gather", desc: "Find 5-10 students at your school" },
+  { cmd: "apply", desc: "Submit your team application" },
+  { cmd: "onboard", desc: "Get approved + receive playbook" },
+  { cmd: "build", desc: "Start building for nonprofits" },
 ];
 
-export default function StudentPage() {
-  const heroRef = useRef<HTMLDivElement>(null);
-  const benefitsRef = useRef<HTMLDivElement>(null);
-  const projectsRef = useRef<HTMLDivElement>(null);
-  const timelineRef = useRef<HTMLDivElement>(null);
-  const ctaRef = useRef<HTMLDivElement>(null);
-  const benefitCardsRef = useRef<(HTMLDivElement | null)[]>([]);
-  const timelineItemsRef = useRef<(HTMLDivElement | null)[]>([]);
-  const lineRef = useRef<HTMLDivElement>(null);
+const SECTIONS: DotNavSection[] = [
+  { id: "student-hero", label: "Home" },
+  { id: "student-positions", label: "Positions" },
+  { id: "student-why", label: "Why Join" },
+  { id: "student-chapter", label: "Chapters" },
+];
+
+/* ═══════════════════════════════════════════
+   TERMINAL BOOT HERO
+   ═══════════════════════════════════════════ */
+
+const BOOT_LINES = [
+  { text: "TETHOS SYSTEM v4.0.1", color: "rgba(255,255,255,0.2)", delay: 200 },
+  { text: "Initializing student portal...", color: "rgba(255,255,255,0.15)", delay: 300 },
+  { text: "Loading modules: [recruitment] [chapters] [portal]", color: "rgba(255,255,255,0.15)", delay: 200 },
+  { text: "███████████████████████████████ 100%", color: "rgba(29,155,240,0.5)", delay: 400 },
+  { text: "", color: "", delay: 100 },
+  { text: "System ready. Select a command:", color: "rgba(255,255,255,0.4)", delay: 300 },
+];
+
+function TerminalBoot() {
+  const [visibleLines, setVisibleLines] = useState(0);
+  const [bootDone, setBootDone] = useState(false);
 
   useEffect(() => {
+    if (visibleLines >= BOOT_LINES.length) {
+      setTimeout(() => setBootDone(true), 200);
+      return;
+    }
+    const delay = BOOT_LINES[visibleLines].delay;
+    const timer = setTimeout(() => setVisibleLines((v) => v + 1), delay);
+    return () => clearTimeout(timer);
+  }, [visibleLines]);
+
+  return (
+    <div className="max-w-[600px] mx-auto">
+      {/* Boot sequence */}
+      <div
+        className="rounded-xl overflow-hidden mb-10"
+        style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)" }}
+      >
+        <div className="px-4 py-2.5 flex items-center gap-2" style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+          <div className="w-2 h-2 rounded-full" style={{ background: "rgba(255,255,255,0.08)" }} />
+          <div className="w-2 h-2 rounded-full" style={{ background: "rgba(255,255,255,0.08)" }} />
+          <div className="w-2 h-2 rounded-full" style={{ background: "rgba(255,255,255,0.08)" }} />
+          <span className="ml-2 text-[10px]" style={{ color: "rgba(255,255,255,0.15)", fontFamily: "var(--font-highlight)" }}>
+            tethos-student
+          </span>
+        </div>
+        <div className="p-5 text-xs leading-loose" style={{ fontFamily: "var(--font-highlight)", minHeight: "160px" }}>
+          {BOOT_LINES.slice(0, visibleLines).map((line, i) => (
+            <p key={i} style={{ color: line.color }}>{line.text}</p>
+          ))}
+          {!bootDone && visibleLines < BOOT_LINES.length && (
+            <span className="inline-block w-2 h-3.5 align-middle" style={{ background: "#1d9bf0", animation: "blink 1.2s step-end infinite" }} />
+          )}
+        </div>
+      </div>
+
+      {/* Command CTAs -- appear after boot */}
+      <AnimatePresence>
+        {bootDone && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, ease: "easeOut" }}
+            className="flex flex-col gap-3"
+          >
+            {[
+              { cmd: "tethos apply", label: "Browse open positions", href: "/student/apply", accent: "#22c55e" },
+              { cmd: "tethos login", label: "Sign in to portal", href: "/student/login", accent: "#1d9bf0" },
+              { cmd: "tethos init-chapter", label: "Start a chapter", href: "#student-chapter", accent: "#c9a84c" },
+            ].map((item, i) => (
+              <motion.div
+                key={item.cmd}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: i * 0.12, duration: 0.4 }}
+              >
+                <Link
+                  href={item.href}
+                  className="group flex items-center gap-4 px-5 py-4 rounded-lg transition-all duration-300 cursor-pointer"
+                  style={{
+                    background: "rgba(255,255,255,0.02)",
+                    border: "1px solid rgba(255,255,255,0.06)",
+                  }}
+                  onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = `${item.accent}40`; }}
+                  onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.06)"; }}
+                >
+                  <span
+                    className="text-xs font-medium shrink-0"
+                    style={{ color: item.accent, fontFamily: "var(--font-highlight)" }}
+                  >
+                    $ {item.cmd}
+                  </span>
+                  <span className="text-sm" style={{ color: "rgba(255,255,255,0.4)" }}>
+                    {item.label}
+                  </span>
+                  <span
+                    className="ml-auto text-xs group-hover:translate-x-1 transition-transform duration-200"
+                    style={{ color: `${item.accent}80` }}
+                  >
+                    →
+                  </span>
+                </Link>
+              </motion.div>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <style jsx>{`
+        @keyframes blink {
+          0%, 50% { opacity: 1; }
+          51%, 100% { opacity: 0; }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════
+   POSITION CARD
+   ═══════════════════════════════════════════ */
+
+function PositionCard({ position, index }: { position: typeof POSITIONS[0]; index: number }) {
+  const isOpen = position.status === "open";
+
+  return (
+    <SpotlightCard
+      className="position-card rounded-xl p-0 overflow-hidden cursor-pointer"
+      spotlightColor={isOpen ? "rgba(34,197,94,0.08)" : "rgba(255,255,255,0.04)"}
+      style={{
+        background: "rgba(255,255,255,0.02)",
+        border: `1px solid ${isOpen ? "rgba(34,197,94,0.15)" : "rgba(255,255,255,0.06)"}`,
+        opacity: 0,
+      }}
+    >
+      {/* Terminal-style header */}
+      <div className="px-5 py-3 flex items-center justify-between" style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+        <span className="text-[10px] uppercase tracking-widest" style={{ color: "rgba(255,255,255,0.2)", fontFamily: "var(--font-highlight)" }}>
+          {position.team}
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span
+            className="w-1.5 h-1.5 rounded-full"
+            style={{
+              background: isOpen ? "#22c55e" : "rgba(255,255,255,0.15)",
+              boxShadow: isOpen ? "0 0 6px rgba(34,197,94,0.5)" : "none",
+              animation: isOpen ? "pulse 2s ease-in-out infinite" : "none",
+            }}
+          />
+          <span className="text-[10px] uppercase tracking-widest" style={{ color: isOpen ? "#22c55e" : "rgba(255,255,255,0.25)", fontFamily: "var(--font-highlight)" }}>
+            {isOpen ? "Open" : "Coming"}
+          </span>
+        </span>
+      </div>
+
+      {/* Content */}
+      <div className="p-5">
+        <h3 className="text-base font-medium tracking-tight mb-2" style={{ color: "#F1FFFF", fontWeight: 500 }}>
+          {position.role}
+        </h3>
+        <p className="text-xs leading-relaxed" style={{ color: "rgba(255,255,255,0.4)" }}>
+          {position.description}
+        </p>
+      </div>
+
+      <style jsx>{`
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.4; }
+        }
+      `}</style>
+    </SpotlightCard>
+  );
+}
+
+/* ═══════════════════════════════════════════
+   CHAPTER TERMINAL (typewriter)
+   ═══════════════════════════════════════════ */
+
+function ChapterTerminal() {
+  const [visibleSteps, setVisibleSteps] = useState(0);
+  const [started, setStarted] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting && !started) setStarted(true); },
+      { threshold: 0.5 }
+    );
+    observer.observe(containerRef.current);
+    return () => observer.disconnect();
+  }, [started]);
+
+  useEffect(() => {
+    if (!started || visibleSteps >= CHAPTER_STEPS.length) return;
+    const timer = setTimeout(() => setVisibleSteps((v) => v + 1), 400);
+    return () => clearTimeout(timer);
+  }, [started, visibleSteps]);
+
+  return (
+    <div ref={containerRef} className="p-5 text-xs" style={{ fontFamily: "var(--font-highlight)", minHeight: "140px" }}>
+      {CHAPTER_STEPS.slice(0, visibleSteps).map((step, i) => (
+        <div key={step.cmd} className="flex items-start gap-3 mb-4 last:mb-0">
+          <span style={{ color: "rgba(201,168,76,0.6)" }}>0{i + 1}</span>
+          <div>
+            <p style={{ color: "rgba(201,168,76,0.8)" }}>
+              <span style={{ color: "rgba(255,255,255,0.25)" }}>$</span> tethos chapter {step.cmd}
+            </p>
+            <p className="mt-0.5" style={{ color: "rgba(255,255,255,0.3)" }}># {step.desc}</p>
+          </div>
+        </div>
+      ))}
+      {started && visibleSteps < CHAPTER_STEPS.length && (
+        <span className="inline-block w-2 h-3.5 align-middle" style={{ background: "rgba(201,168,76,0.6)", animation: "blink 1.2s step-end infinite" }} />
+      )}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════
+   PAGE
+   ═══════════════════════════════════════════ */
+
+export default function StudentPage() {
+  const positionsRef = useRef<HTMLDivElement>(null);
+  const whyRef = useRef<HTMLDivElement>(null);
+  const chapterRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
     const ctx = gsap.context(() => {
-      // Hero entrance — bold, energetic
-      if (heroRef.current) {
-        const children = heroRef.current.querySelectorAll("[data-reveal]");
-        gsap.fromTo(
-          children,
-          { opacity: 0, y: 30, scale: 0.98 },
-          {
-            opacity: 1,
-            y: 0,
-            scale: 1,
-            duration: DURATION_SECTION,
-            stagger: 0.1,
-            ease: EASE_ENTER,
-            delay: 0.15,
-          }
-        );
+      if (prefersReducedMotion) {
+        document.querySelectorAll(".position-card, .stat-card, .step-item, [data-reveal]").forEach((el) => {
+          gsap.set(el, { opacity: 1 });
+        });
+        return;
       }
 
-      // Benefit cards — staggered reveal with slight rotation
-      benefitCardsRef.current.forEach((el, i) => {
-        if (!el) return;
-        gsap.fromTo(
-          el,
-          { opacity: 0, y: 40, rotateY: -8 },
-          {
-            opacity: 1,
-            y: 0,
-            rotateY: 0,
-            duration: DURATION_SECTION,
-            ease: EASE_ENTER,
-            scrollTrigger: {
-              trigger: el,
-              start: "top 85%",
-              toggleActions: "play none none none",
-            },
-            delay: i * 0.08,
-          }
-        );
-      });
-
-      // Projects section
-      if (projectsRef.current) {
-        gsap.fromTo(
-          projectsRef.current,
-          { opacity: 0, y: 30 },
-          {
-            opacity: 1,
-            y: 0,
-            duration: DURATION_SECTION,
-            ease: EASE_ENTER,
-            scrollTrigger: {
-              trigger: projectsRef.current,
-              start: "top 80%",
-              toggleActions: "play none none none",
-            },
-          }
-        );
+      // Position cards stagger
+      const cards = positionsRef.current?.querySelectorAll(".position-card");
+      if (cards) {
+        gsap.fromTo(Array.from(cards), { opacity: 0, y: 30, scale: 0.95 }, {
+          opacity: 1, y: 0, scale: 1, duration: 0.6, ease: "power3.out", stagger: 0.08,
+          scrollTrigger: { trigger: positionsRef.current, start: "top 70%", once: true },
+        });
       }
 
-      // Timeline line growth
-      if (lineRef.current) {
-        gsap.fromTo(
-          lineRef.current,
-          { scaleY: 0 },
-          {
-            scaleY: 1,
-            ease: "none",
-            scrollTrigger: {
-              trigger: timelineRef.current,
-              start: "top 60%",
-              end: "bottom 40%",
-              scrub: 1,
-            },
-          }
-        );
+      // Stats slide in from left
+      const stats = whyRef.current?.querySelectorAll(".stat-card");
+      if (stats) {
+        gsap.fromTo(Array.from(stats), { opacity: 0, x: -30 }, {
+          opacity: 1, x: 0, duration: 0.6, ease: "power3.out", stagger: 0.12,
+          scrollTrigger: { trigger: whyRef.current, start: "top 70%", once: true },
+        });
       }
 
-      // Timeline items
-      timelineItemsRef.current.forEach((el, i) => {
-        if (!el) return;
-        gsap.fromTo(
-          el,
-          { opacity: 0, x: -30 },
-          {
-            opacity: 1,
-            x: 0,
-            duration: DURATION_SECTION,
-            ease: EASE_ENTER,
-            scrollTrigger: {
-              trigger: el,
-              start: "top 82%",
-              toggleActions: "play none none none",
-            },
-            delay: i * 0.06,
-          }
-        );
-      });
-
-      // CTA section
-      if (ctaRef.current) {
-        gsap.fromTo(
-          ctaRef.current,
-          { opacity: 0, y: 30 },
-          {
-            opacity: 1,
-            y: 0,
-            duration: DURATION_SECTION,
-            ease: EASE_ENTER,
-            scrollTrigger: {
-              trigger: ctaRef.current,
-              start: "top 80%",
-              toggleActions: "play none none none",
-            },
-          }
-        );
+      // Chapter steps stagger
+      const steps = chapterRef.current?.querySelectorAll(".step-item");
+      if (steps) {
+        gsap.fromTo(Array.from(steps), { opacity: 0, x: 20 }, {
+          opacity: 1, x: 0, duration: 0.5, ease: "power3.out", stagger: 0.1,
+          scrollTrigger: { trigger: chapterRef.current, start: "top 70%", once: true },
+        });
       }
     });
 
@@ -229,214 +318,226 @@ export default function StudentPage() {
   }, []);
 
   return (
-    <SmoothScroll>
-      <main className="min-h-screen" style={{ background: "var(--color-bg-main)" }}>
+    <main className="min-h-screen">
+      <DotNav sections={SECTIONS} />
 
-        {/* ============================================ */}
-        {/* HERO — bold, experimental */}
-        {/* ============================================ */}
-        <section className="min-h-screen flex items-center justify-center px-6 pt-32 pb-20 relative overflow-hidden">
-          {/* Subtle background ASCII texture */}
-          <div className="absolute inset-0 flex items-center justify-center opacity-[0.03] pointer-events-none select-none">
-            <pre className="font-mono text-[8px] leading-[10px] text-white whitespace-pre" style={{ letterSpacing: "2px" }}>
-              {Array.from({ length: 30 }, (_, r) =>
-                Array.from({ length: 80 }, (_, c) =>
-                  "░▒▓█·:;+=#"[(r * 127 + c * 31 + r * c) % 10]
-                ).join("")
-              ).join("\n")}
+      {/* ── HERO: Terminal Boot ── */}
+      <section
+        id="student-hero"
+        data-navbar-theme="dark"
+        className="relative min-h-screen flex items-center justify-center px-8 md:px-20 lg:px-28 overflow-hidden"
+        style={{ background: "#0F0F10" }}
+      >
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none" style={{ width: "800px", height: "600px", background: "radial-gradient(ellipse, rgba(29,155,240,0.06) 0%, transparent 70%)", filter: "blur(40px)" }} />
+
+        <div className="relative w-full py-32 text-center">
+          <h1
+            className="mb-4"
+            style={{
+              fontFamily: '"Test Sohne", sans-serif',
+              fontSize: "clamp(36px, 5.5vw, 68px)",
+              fontWeight: 500,
+              color: "#F1FFFF",
+              lineHeight: 1.08,
+              letterSpacing: "-0.03em",
+            }}
+          >
+            Build real things.
+            <br />
+            <GradientText colors={["#22c55e", "#4ade80", "#22c55e"]} animationSpeed={5}>
+              Ship real code.
+            </GradientText>
+          </h1>
+          <p className="text-base md:text-lg leading-relaxed mb-8 mx-auto" style={{ color: "rgba(255,255,255,0.4)", maxWidth: "480px" }}>
+            Join 150+ students building production software for nonprofits.
+          </p>
+
+          <TerminalBoot />
+        </div>
+      </section>
+
+      {/* ── POSITIONS ── */}
+      <section
+        id="student-positions"
+        data-navbar-theme="dark"
+        className="relative py-32 md:py-44 px-8 md:px-20 lg:px-28 overflow-hidden"
+        style={{ background: "#0a0a0b" }}
+      >
+        <div className="absolute top-0 left-0 right-0 pointer-events-none" style={{ height: "200px", background: "linear-gradient(to bottom, #0F0F10, #0a0a0b)" }} />
+
+        <div ref={positionsRef} className="relative max-w-[1200px] mx-auto">
+          <p className="text-xs tracking-widest uppercase mb-4" style={{ color: "#22c55e", fontFamily: "var(--font-highlight)" }}>
+            <DecryptedText text="Now recruiting" speed={40} maxIterations={12} sequential characters="01!@#$%_-+=<>" className="text-[#22c55e]" encryptedClassName="text-[rgba(34,197,94,0.3)]" animateOn="view" />
+          </p>
+          <h2 className="tracking-tight mb-4" style={{ fontFamily: '"Test Sohne", sans-serif', fontSize: "clamp(28px, 4vw, 48px)", fontWeight: 500, color: "#F1FFFF", lineHeight: 1.1 }}>
+            Open positions.
+          </h2>
+          <p className="text-sm mb-12" style={{ color: "rgba(255,255,255,0.3)", fontFamily: "var(--font-highlight)" }}>
+            2026-27 executive team · Applications close June 2026
+          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {POSITIONS.map((pos, i) => (
+              <Link key={pos.role} href="/student/apply">
+                <PositionCard position={pos} index={i} />
+              </Link>
+            ))}
+          </div>
+
+          <div className="mt-8 text-center">
+            <Link
+              href="/student/apply"
+              className="inline-flex items-center px-7 py-3.5 rounded-lg text-sm font-semibold transition-all duration-300"
+              style={{ background: "#22c55e", color: "#0F0F10" }}
+              onMouseEnter={(e) => { e.currentTarget.style.boxShadow = "0 0 30px rgba(34,197,94,0.3)"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.boxShadow = "none"; }}
+            >
+              View all positions →
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* ── WHY JOIN ── */}
+      <section
+        id="student-why"
+        data-navbar-theme="dark"
+        className="relative py-28 md:py-36 px-8 md:px-20 lg:px-28"
+        style={{ background: "#0F0F10" }}
+      >
+        <div className="absolute top-0 left-0 right-0 pointer-events-none" style={{ height: "200px", background: "linear-gradient(to bottom, #0a0a0b, #0F0F10)" }} />
+
+        <div ref={whyRef} className="relative max-w-[1200px] mx-auto">
+          {/* ASCII art interactive element */}
+          <div className="text-center mb-16">
+            <pre
+              className="inline-block text-[8px] md:text-[10px] leading-tight select-none"
+              style={{ color: "rgba(29,155,240,0.2)", fontFamily: "var(--font-highlight)", letterSpacing: "2px" }}
+            >
+{`  ████████╗███████╗████████╗██╗  ██╗ ██████╗ ███████╗
+  ╚══██╔══╝██╔════╝╚══██╔══╝██║  ██║██╔═══██╗██╔════╝
+     ██║   █████╗     ██║   ███████║██║   ██║███████╗
+     ██║   ██╔══╝     ██║   ██╔══██║██║   ██║╚════██║
+     ██║   ███████╗   ██║   ██║  ██║╚██████╔╝███████║
+     ╚═╝   ╚══════╝   ╚═╝   ╚═╝  ╚═╝ ╚═════╝ ╚══════╝`}
             </pre>
           </div>
 
-          <div ref={heroRef} className="max-w-5xl mx-auto text-center relative z-10">
-            <p
-              data-reveal
-              className="text-xs font-mono uppercase tracking-[0.3em] mb-6"
-              style={{ color: "var(--color-accent-cyan)" }}
-            >
-              For Students
-            </p>
-            <div data-reveal>
-              <AsciiReveal
-                className="font-heading text-5xl md:text-6xl lg:text-7xl font-bold leading-tight mb-6"
-                scrambleDuration={1.0}
-                triggerOnScroll={false}
-              >
-                Build Real Things. Ship Real Code. Make Real Impact.
-              </AsciiReveal>
-            </div>
-            <p
-              data-reveal
-              className="text-lg md:text-xl max-w-2xl mx-auto mb-12 leading-relaxed"
-              style={{ color: "var(--color-text-soft)" }}
-            >
-              Join a nationwide collective of student developers building
-              production software for nonprofits. This isn&apos;t a hackathon — this
-              is your career starting now.
-            </p>
-            <div data-reveal className="flex flex-col sm:flex-row gap-4 justify-center">
-              <button className="rounded-full bg-[#002FA7] px-8 py-4 text-sm font-medium text-[#F1FFFF] transition-all hover:bg-[#0039CC]">
-                Start a Chapter
-              </button>
-              <button className="rounded-full border border-zinc-700 px-8 py-4 text-sm font-medium text-zinc-300 transition-all hover:border-zinc-500 hover:text-white">
-                Find Existing Chapter
-              </button>
-            </div>
-          </div>
-        </section>
-
-        <AsciiDivider rows={3} cols={70} color="var(--color-accent-cyan)" />
-
-        {/* ============================================ */}
-        {/* WHY JOIN — benefit cards */}
-        {/* ============================================ */}
-        <section className="py-32 px-6" style={{ background: "var(--color-bg-alt)" }}>
-          <div ref={benefitsRef} className="max-w-5xl mx-auto">
-            <h2 className="font-heading text-3xl md:text-4xl font-semibold text-center mb-16">
-              Why Join Tethos
-            </h2>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {benefits.map((b, i) => (
-                <div
-                  key={b.title}
-                  ref={(el) => { benefitCardsRef.current[i] = el; }}
-                  className="rounded-2xl border p-6 transition-all duration-300 hover:border-[var(--color-accent-cyan)]/30 hover:shadow-[0_0_30px_rgba(34,211,238,0.05)]"
-                  style={{
-                    background: "var(--color-surface)",
-                    borderColor: "var(--glass-border-soft)",
-                    opacity: 0,
-                    transformStyle: "preserve-3d",
-                  }}
-                >
-                  <span
-                    className="font-mono text-xs font-bold mb-4 block"
-                    style={{ color: "var(--color-accent-cyan)" }}
-                  >
-                    {b.icon}
-                  </span>
-                  <h3 className="font-heading text-lg font-semibold mb-2">
-                    {b.title}
-                  </h3>
-                  <p
-                    className="text-sm leading-relaxed"
-                    style={{ color: "var(--color-text-muted)" }}
-                  >
-                    {b.description}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* ============================================ */}
-        {/* WHAT YOU'LL WORK ON */}
-        {/* ============================================ */}
-        <section className="py-24 px-6" style={{ background: "var(--color-bg-main)" }}>
-          <div ref={projectsRef} className="max-w-4xl mx-auto text-center" style={{ opacity: 0 }}>
-            <h2 className="font-heading text-3xl md:text-4xl font-semibold mb-12">
-              What You&apos;ll Build
-            </h2>
-            <div className="flex flex-wrap justify-center gap-3">
-              {projectTypes.map((type) => (
-                <span
-                  key={type}
-                  className="rounded-full border px-5 py-2.5 text-sm font-medium transition-colors duration-300 hover:border-[var(--color-accent-cyan)]/50 hover:text-[var(--color-accent-cyan)]"
-                  style={{
-                    borderColor: "var(--glass-border-soft)",
-                    color: "var(--color-text-soft)",
-                  }}
-                >
-                  {type}
-                </span>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <AsciiDivider rows={2} cols={50} color="var(--color-accent-purple)" />
-
-        {/* ============================================ */}
-        {/* VERTICAL ANIMATED TIMELINE */}
-        {/* ============================================ */}
-        <section
-          ref={timelineRef}
-          className="py-32 px-6"
-          style={{ background: "var(--color-bg-alt)" }}
-        >
-          <div className="max-w-3xl mx-auto">
-            <h2 className="font-heading text-3xl md:text-4xl font-semibold text-center mb-20">
-              How to Start a Chapter
-            </h2>
-
-            <div className="relative pl-12 md:pl-16">
-              {/* Vertical line */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-14">
+            {STATS.map((stat, i) => (
               <div
-                ref={lineRef}
-                className="absolute left-4 md:left-6 top-0 bottom-0 w-px origin-top"
-                style={{ background: "var(--color-accent-cyan)", opacity: 0.4 }}
-              />
+                key={stat.label}
+                className="stat-card rounded-xl p-8"
+                style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", opacity: 0 }}
+              >
+                <p className="text-4xl md:text-5xl font-medium tracking-tight mb-2 stat-number" style={{ fontWeight: 500 }} data-value={stat.value}>
+                  <GradientText colors={["#1d9bf0", "#60c5ff", "#1d9bf0"]} animationSpeed={6}>
+                    {stat.value}
+                  </GradientText>
+                </p>
+                <p className="text-sm font-medium mb-1" style={{ color: "#F1FFFF", fontWeight: 500 }}>{stat.label}</p>
+                <p className="text-xs" style={{ color: "rgba(255,255,255,0.35)", fontFamily: "var(--font-highlight)" }}>{stat.desc}</p>
+              </div>
+            ))}
+          </div>
 
-              <div className="space-y-14">
-                {timelineSteps.map((step, i) => (
-                  <div
-                    key={step.phase}
-                    ref={(el) => { timelineItemsRef.current[i] = el; }}
-                    className="relative"
-                    style={{ opacity: 0 }}
-                  >
-                    {/* Dot */}
-                    <div
-                      className="absolute w-3 h-3 rounded-full -left-[calc(2rem+6px)] md:-left-[calc(2.5rem+6px)] top-1"
-                      style={{ background: "var(--color-accent-cyan)" }}
-                    />
-                    <span
-                      className="font-mono text-xs font-bold block mb-1"
-                      style={{ color: "var(--color-accent-cyan)" }}
-                    >
-                      {step.phase}
-                    </span>
-                    <h3 className="font-heading text-xl font-semibold mb-2">
-                      {step.title}
-                    </h3>
-                    <p
-                      className="text-sm leading-relaxed"
-                      style={{ color: "var(--color-text-muted)" }}
-                    >
-                      {step.description}
-                    </p>
-                  </div>
-                ))}
+          {/* Alumni destinations */}
+          <div>
+            <p className="text-center text-xs tracking-widest uppercase mb-5" style={{ color: "rgba(255,255,255,0.2)", fontFamily: "var(--font-highlight)" }}>
+              Where our alumni work
+            </p>
+            <LogoLoop
+              logos={ALUMNI_LOGOS}
+              speed={50}
+              gap={60}
+              logoHeight={28}
+              fadeOut
+              fadeOutColor="#0F0F10"
+              pauseOnHover
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* ── START A CHAPTER ── */}
+      <section
+        id="student-chapter"
+        data-navbar-theme="dark"
+        className="relative py-32 md:py-44 px-8 md:px-20 lg:px-28 overflow-hidden"
+        style={{ background: "#0a0a0b" }}
+      >
+        <div className="absolute top-0 left-0 right-0 pointer-events-none" style={{ height: "200px", background: "linear-gradient(to bottom, #0F0F10, #0a0a0b)" }} />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none" style={{ width: "700px", height: "400px", background: "radial-gradient(ellipse, rgba(201,168,76,0.06) 0%, transparent 70%)", filter: "blur(40px)" }} />
+
+        <div ref={chapterRef} className="relative max-w-[800px] mx-auto">
+          <div className="flex flex-col lg:flex-row gap-16">
+            {/* Left: text */}
+            <div className="lg:w-1/2">
+              <p className="text-xs tracking-widest uppercase mb-4" style={{ color: "#c9a84c", fontFamily: "var(--font-highlight)" }}>
+                <DecryptedText text="Expand the network" speed={40} maxIterations={12} sequential characters="01!@#$%_-+=<>" className="text-[#c9a84c]" encryptedClassName="text-[rgba(201,168,76,0.3)]" animateOn="view" />
+              </p>
+              <h2 className="tracking-tight mb-6" style={{ fontFamily: '"Test Sohne", sans-serif', fontSize: "clamp(28px, 4vw, 44px)", fontWeight: 500, color: "#F1FFFF", lineHeight: 1.1 }}>
+                Start a chapter at{" "}
+                <GradientText colors={["#c9a84c", "#e8d48b", "#c9a84c"]} animationSpeed={6}>
+                  your school.
+                </GradientText>
+              </h2>
+              <p className="text-sm leading-relaxed mb-8" style={{ color: "rgba(255,255,255,0.4)" }}>
+                Bring Tethos to your campus. Lead a team of student developers building real software for nonprofits in your community.
+              </p>
+              <a
+                href="mailto:team@tethos.ca?subject=Start%20a%20Chapter"
+                className="inline-flex items-center px-7 py-3.5 rounded-lg text-sm font-semibold transition-all duration-300"
+                style={{ background: "#c9a84c", color: "#0F0F10" }}
+                onMouseEnter={(e) => { e.currentTarget.style.boxShadow = "0 0 30px rgba(201,168,76,0.3)"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.boxShadow = "none"; }}
+              >
+                Get started
+              </a>
+            </div>
+
+            {/* Right: terminal steps */}
+            <div className="lg:w-1/2">
+              <div
+                className="rounded-xl overflow-hidden"
+                style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)" }}
+              >
+                <div className="px-4 py-2.5 flex items-center gap-2" style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                  <div className="w-2 h-2 rounded-full" style={{ background: "rgba(255,255,255,0.08)" }} />
+                  <div className="w-2 h-2 rounded-full" style={{ background: "rgba(255,255,255,0.08)" }} />
+                  <div className="w-2 h-2 rounded-full" style={{ background: "rgba(255,255,255,0.08)" }} />
+                  <span className="ml-2 text-[10px]" style={{ color: "rgba(255,255,255,0.15)", fontFamily: "var(--font-highlight)" }}>
+                    chapter-setup.sh
+                  </span>
+                </div>
+                <ChapterTerminal />
               </div>
             </div>
           </div>
-        </section>
+        </div>
+      </section>
 
-        {/* ============================================ */}
-        {/* CTA */}
-        {/* ============================================ */}
-        <section className="py-32 px-6" style={{ background: "var(--color-bg-main)" }}>
-          <div ref={ctaRef} className="max-w-3xl mx-auto text-center" style={{ opacity: 0 }}>
-            <h2 className="font-heading text-4xl md:text-5xl font-semibold mb-6">
-              Ready to Start?
-            </h2>
-            <p
-              className="text-lg mb-10 max-w-xl mx-auto"
-              style={{ color: "var(--color-text-muted)" }}
-            >
-              Join hundreds of students building the future of technology for
-              social good. Your chapter starts here.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <button className="rounded-full bg-[#002FA7] px-8 py-4 text-sm font-medium text-[#F1FFFF] transition-all hover:bg-[#0039CC]">
-                Apply to Start a Chapter
-              </button>
-              <button className="rounded-full border border-zinc-700 px-8 py-4 text-sm font-medium text-zinc-300 transition-all hover:border-zinc-500 hover:text-white">
-                Sign In
-              </button>
-            </div>
-          </div>
-        </section>
-      </main>
-    </SmoothScroll>
+      {/* ── SIGN IN (compact) ── */}
+      <section
+        data-navbar-theme="dark"
+        className="py-20 px-8 md:px-20 lg:px-28"
+        style={{ background: "#0F0F10" }}
+      >
+        <div className="absolute left-0 right-0 pointer-events-none" style={{ height: "1px", background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.06) 20%, rgba(255,255,255,0.06) 80%, transparent)" }} />
+        <div className="max-w-[600px] mx-auto text-center">
+          <p className="text-sm mb-4" style={{ color: "rgba(255,255,255,0.3)", fontFamily: "var(--font-highlight)" }}>
+            Already a member?
+          </p>
+          <Link
+            href="/student/login"
+            className="inline-flex items-center px-6 py-3 rounded-lg text-sm font-medium transition-all duration-300"
+            style={{ color: "rgba(255,255,255,0.6)", border: "1px solid rgba(255,255,255,0.1)" }}
+          >
+            <span style={{ color: "#1d9bf0", fontFamily: "var(--font-highlight)", marginRight: "8px" }}>$</span>
+            Sign in to portal
+          </Link>
+        </div>
+      </section>
+    </main>
   );
 }

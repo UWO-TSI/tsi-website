@@ -1,0 +1,107 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e24]:
+    - banner [ref=e25]:
+      - generic [ref=e26]:
+        - link "TETHOS" [ref=e27]:
+          - /url: /
+        - navigation [ref=e28]:
+          - link "Nonprofits" [ref=e29]:
+            - /url: /npo
+          - link "Companies" [ref=e30]:
+            - /url: /company
+          - link "Sponsors" [ref=e31]:
+            - /url: /sponsor
+          - link "Students" [ref=e32]:
+            - /url: /student
+        - generic [ref=e33]:
+          - button "Contact" [ref=e34]
+          - button "Apply" [ref=e35]
+    - main [ref=e36]:
+      - generic [ref=e37]:
+        - generic [ref=e39]:
+          - paragraph [ref=e40]: 2026-27 Recruitment
+          - generic [ref=e41]: Join Tethos
+          - paragraph [ref=e42]: We're looking for ambitious builders to lead Tethos into its next chapter. Find your role and make your mark.
+          - link "View Positions" [ref=e44]:
+            - /url: "#positions"
+            - button "View Positions" [ref=e45]
+        - generic:
+          - generic: ░█░;#▒▓·+-▓▒:=░█░;#▒▓·+-▓▒:=░█░;#▒▓·+-▓▒:=░█░;#▒▓·+-▓▒:=░█░;#▒▓·+-▓▒:=░█░;#▒▓·+-
+          - generic: ▒▓·+-▓▒:=░█░;#▒▓·+-▓▒:=░█░;#▒▓·+-▓▒:=░█░;#▒▓·+-▓▒:=░█░;#▒▓·+-▓▒:=░█░;#▒▓·+-▓▒:=░
+          - generic: ▓▒:=░█░;#▒▓·+-▓▒:=░█░;#▒▓·+-▓▒:=░█░;#▒▓·+-▓▒:=░█░;#▒▓·+-▓▒:=░█░;#▒▓·+-▓▒:=░█░;#▒
+        - generic [ref=e47]:
+          - generic [ref=e48]:
+            - paragraph [ref=e49]: Recruitment Timeline
+            - heading "Your path to Tethos" [level=2] [ref=e50]
+          - generic [ref=e53]:
+            - generic [ref=e54]:
+              - img [ref=e57]
+              - generic [ref=e60]:
+                - generic [ref=e61]:
+                  - generic [ref=e62]: Phase 01
+                  - generic [ref=e63]: Now Open
+                - heading "Executive Applications" [level=3] [ref=e64]
+                - paragraph [ref=e65]: VP and leadership roles open for the 2026-27 year.
+                - paragraph [ref=e66]: May 2026
+                - generic [ref=e67]:
+                  - generic [ref=e68]: Vp Internal
+                  - generic [ref=e69]: Vp External
+                  - generic [ref=e70]: Vp Marketing
+            - generic [ref=e71]:
+              - img [ref=e74]
+              - generic [ref=e77]:
+                - generic [ref=e79]: Phase 02
+                - heading "PM & Director Applications" [level=3] [ref=e80]
+                - paragraph [ref=e81]: Project management and technical director positions.
+                - paragraph [ref=e82]: September 2026
+        - generic:
+          - generic: ░█░;#▒▓·+-▓▒:=░█░;#▒▓·+-▓▒:=░█░;#▒▓·+-▓▒:=░█░;#▒▓·+-▓▒:=░█░;#▒▓·+-▓▒:=░█░;#▒▓·+-
+          - generic: ▒▓·+-▓▒:=░█░;#▒▓·+-▓▒:=░█░;#▒▓·+-▓▒:=░█░;#▒▓·+-▓▒:=░█░;#▒▓·+-▓▒:=░█░;#▒▓·+-▓▒:=░
+          - generic: ▓▒:=░█░;#▒▓·+-▓▒:=░█░;#▒▓·+-▓▒:=░█░;#▒▓·+-▓▒:=░█░;#▒▓·+-▓▒:=░█░;#▒▓·+-▓▒:=░█░;#▒
+        - generic [ref=e83]:
+          - generic [ref=e84]:
+            - paragraph [ref=e85]: Open Positions
+            - heading "Find your role" [level=2] [ref=e86]
+          - generic [ref=e87]:
+            - generic [ref=e90]:
+              - generic:
+                - generic:
+                  - generic: Phase 01
+                  - generic: Opens Apr 30
+                - heading "VP Internal" [level=3]
+                - paragraph: Lead internal operations, team culture, and member experience. You'll manage onboarding, events, and cross-team coordination.
+                - generic:
+                  - generic:
+                    - img
+                    - text: Due May 31, 2026
+            - generic [ref=e94]:
+              - generic:
+                - generic:
+                  - generic: Phase 01
+                  - generic: Opens Apr 30
+                - heading "VP External" [level=3]
+                - paragraph: Own partnerships, sponsorships, and external communications. You'll represent Tethos to companies, nonprofits, and the broader community.
+                - generic:
+                  - generic:
+                    - img
+                    - text: Due May 31, 2026
+            - generic [ref=e98]:
+              - generic:
+                - generic:
+                  - generic: Phase 01
+                  - generic: Opens Apr 30
+                - heading "VP Marketing" [level=3]
+                - paragraph: Drive brand strategy, social media, and creative output. You'll shape how Tethos looks, sounds, and reaches its audience.
+                - generic:
+                  - generic:
+                    - img
+                    - text: Due May 31, 2026
+        - generic [ref=e101]:
+          - heading "Not sure which role fits?" [level=2] [ref=e102]
+          - paragraph [ref=e103]: Reach out to us and we'll help you find the right position based on your skills and interests.
+          - link "Get in Touch" [ref=e104]:
+            - /url: mailto:team@tethos.ca
+            - button "Get in Touch" [ref=e105]
+  - button "Open Next.js Dev Tools" [ref=e19] [cursor=pointer]:
+    - img [ref=e20]
+  - alert [ref=e23]

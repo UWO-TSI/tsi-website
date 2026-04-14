@@ -203,7 +203,7 @@ outline-offset: 2px;
 ### 4.1 Font Stack
 
 ```
-Primary:   "Test Söhne" (loaded via @font-face in globals.css as "Test Sogne")
+Primary:   "Test Söhne" (loaded via @font-face in globals.css as "Test Sohne")
            Weights: 400 (Buch), 700 (Kräftig)
            Files: /font/sohne-font-family/TestSohne-*.otf
 
@@ -217,7 +217,7 @@ Monospace: "IBM Plex Mono" (loaded via --font-highlight in globals.css)
 **CSS variable mapping:**
 ```css
 /* globals.css */
-font-family: "Test Sogne", var(--font-body);     /* body default */
+font-family: "Test Sohne", var(--font-body);     /* body default */
 --font-highlight: "IBM Plex Mono", ui-monospace, ...; /* mono */
 ```
 

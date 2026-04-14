@@ -3,11 +3,9 @@
 import { useEffect, useRef } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import AsciiDivider from "@/components/ascii/AsciiDivider";
 import {
   EASE_ENTER,
   DURATION_SECTION,
-  STAGGER_SLOW,
 } from "@/lib/motion";
 
 if (typeof window !== "undefined") {
@@ -310,9 +308,7 @@ export default function NPOTimeline() {
   }, []);
 
   return (
-    <>
-      <AsciiDivider rows={2} cols={50} color="var(--color-text-subtle)" />
-      <section
+    <section
         ref={sectionRef}
         className="py-32 px-6"
         style={{ background: "var(--color-bg-alt)" }}
@@ -412,6 +408,5 @@ export default function NPOTimeline() {
           </div>
         </div>
       </section>
-    </>
   );
 }

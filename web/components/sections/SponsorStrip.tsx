@@ -3,49 +3,65 @@
 import { useRef, useEffect } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { EASE_ENTER, DURATION_SECTION } from "@/lib/motion";
+import LogoLoop from "@/components/ui/LogoLoop";
+import { SPONSOR_LOGOS, NPO_LOGOS } from "@/components/ui/PartnerLogos";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
 }
 
-/**
- * Placeholder logos — replace with real SVGs in /public/logos/.
- * Each entry is { name, src? }. Without `src`, a text placeholder renders.
- */
-const logos = [
-  { name: "Partner 1" },
-  { name: "Partner 2" },
-  { name: "Partner 3" },
-  { name: "Partner 4" },
-  { name: "Partner 5" },
-  { name: "Partner 6" },
-  { name: "Partner 7" },
-  { name: "Partner 8" },
-];
 
 export default function SponsorStrip() {
   const sectionRef = useRef<HTMLDivElement>(null);
-  const titleRef = useRef<HTMLParagraphElement>(null);
-  const stripRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const lineTopRef = useRef<HTMLDivElement>(null);
+  const lineBotRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!sectionRef.current) return;
 
+    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
     const ctx = gsap.context(() => {
-      // Fade in title
+      if (prefersReducedMotion) {
+        gsap.set([lineTopRef.current, lineBotRef.current], { scaleX: 1 });
+        gsap.set(contentRef.current, { opacity: 1 });
+        return;
+      }
+
       gsap.fromTo(
-        titleRef.current,
-        { opacity: 0 },
+        lineTopRef.current,
+        { scaleX: 0 },
+        {
+          scaleX: 1,
+          duration: 1.2,
+          ease: "power3.inOut",
+          scrollTrigger: { trigger: sectionRef.current, start: "top 80%", once: true },
+        }
+      );
+
+      gsap.fromTo(
+        contentRef.current,
+        { opacity: 0, scale: 0.95 },
         {
           opacity: 1,
-          duration: DURATION_SECTION,
-          ease: EASE_ENTER,
-          scrollTrigger: {
-            trigger: sectionRef.current,
-            start: "top 85%",
-            toggleActions: "play none none none",
-          },
+          scale: 1,
+          duration: 0.9,
+          ease: "power3.out",
+          scrollTrigger: { trigger: sectionRef.current, start: "top 75%", once: true },
+          delay: 0.2,
+        }
+      );
+
+      gsap.fromTo(
+        lineBotRef.current,
+        { scaleX: 0 },
+        {
+          scaleX: 1,
+          duration: 1.2,
+          ease: "power3.inOut",
+          scrollTrigger: { trigger: sectionRef.current, start: "top 70%", once: true },
+          delay: 0.4,
         }
       );
     }, sectionRef);
@@ -53,66 +69,86 @@ export default function SponsorStrip() {
     return () => ctx.revert();
   }, []);
 
-  // Double the logos for seamless infinite scroll
-  const allLogos = [...logos, ...logos];
-
   return (
     <section
+      id="partners"
       ref={sectionRef}
       data-navbar-theme="dark"
-      className="py-16 overflow-hidden"
-      style={{ background: "var(--color-bg-main)" }}
+      className="relative py-28 md:py-36 overflow-hidden"
+      style={{ background: "#0F0F10" }}
     >
-      {/* Section label */}
-      <p
-        ref={titleRef}
-        className="text-center text-xs font-medium uppercase tracking-widest mb-10"
-        style={{ color: "var(--color-text-subtle)", opacity: 0 }}
-      >
-        Trusted by organizations nationwide
-      </p>
-
-      {/* Auto-scrolling strip */}
-      <div className="relative">
+      {/* Top divider */}
+      <div className="max-w-[1400px] mx-auto px-8 md:px-20 lg:px-28 mb-16">
         <div
-          ref={stripRef}
-          className="flex gap-16 items-center animate-scroll-strip"
-          style={{ width: "max-content" }}
+          ref={lineTopRef}
+          className="origin-center"
+          style={{
+            height: "1px",
+            background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.08) 20%, rgba(255,255,255,0.08) 80%, transparent)",
+            transform: "scaleX(0)",
+          }}
+        />
+      </div>
+
+      <div ref={contentRef} style={{ opacity: 0 }}>
+        <h3
+          className="text-center text-2xl md:text-3xl font-semibold tracking-tight mb-16"
+          style={{ color: "#F1FFFF", fontFamily: '"Test Sohne", sans-serif' }}
         >
-          {allLogos.map((logo, i) => (
-            <div
-              key={`${logo.name}-${i}`}
-              className="flex-shrink-0 flex items-center justify-center h-12 px-6 rounded-md transition-opacity duration-300 hover:opacity-100 opacity-40"
-            >
-              {/* Replace with <Image src={logo.src} /> when real logos are available */}
-              <span
-                className="font-heading text-sm font-semibold whitespace-nowrap"
-                style={{ color: "var(--color-text-muted)" }}
-              >
-                {logo.name}
-              </span>
-            </div>
-          ))}
+          Building for organizations that matter
+        </h3>
+
+        {/* Supported by */}
+        <div className="mb-14">
+          <p
+            className="text-center text-xs font-medium uppercase tracking-widest mb-6"
+            style={{ color: "rgba(255,255,255,0.25)", fontFamily: "var(--font-highlight)" }}
+          >
+            Supported by
+          </p>
+          <LogoLoop
+            logos={SPONSOR_LOGOS}
+            speed={60}
+            gap={100}
+            logoHeight={28}
+            fadeOut
+            fadeOutColor="#0F0F10"
+            pauseOnHover
+          />
+        </div>
+
+        {/* NPO partners */}
+        <div>
+          <p
+            className="text-center text-xs font-medium uppercase tracking-widest mb-6"
+            style={{ color: "rgba(255,255,255,0.25)", fontFamily: "var(--font-highlight)" }}
+          >
+            Organizations we&apos;ve built for
+          </p>
+          <LogoLoop
+            logos={NPO_LOGOS}
+            speed={70}
+            gap={70}
+            logoHeight={28}
+            fadeOut
+            fadeOutColor="#0F0F10"
+            pauseOnHover
+          />
         </div>
       </div>
 
-      {/* CSS animation for infinite horizontal scroll */}
-      <style jsx>{`
-        @keyframes scrollStrip {
-          0% {
-            transform: translateX(0);
-          }
-          100% {
-            transform: translateX(-50%);
-          }
-        }
-        .animate-scroll-strip {
-          animation: scrollStrip 30s linear infinite;
-        }
-        .animate-scroll-strip:hover {
-          animation-play-state: paused;
-        }
-      `}</style>
+      {/* Bottom divider */}
+      <div className="max-w-[1400px] mx-auto px-8 md:px-20 lg:px-28 mt-16">
+        <div
+          ref={lineBotRef}
+          className="origin-center"
+          style={{
+            height: "1px",
+            background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.08) 20%, rgba(255,255,255,0.08) 80%, transparent)",
+            transform: "scaleX(0)",
+          }}
+        />
+      </div>
     </section>
   );
 }

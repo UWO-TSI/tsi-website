@@ -1,0 +1,20 @@
+[     604ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/_next/static/chunks/2374f_next_dist_5b90db1e._.js:2297
+[     704ms] [LOG] [HMR] connected @ http://localhost:3000/_next/static/chunks/2374f_next_dist_5b90db1e._.js:2297
+[  541508ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/font/sohne-font-family/TestSohne-Kraftig-BF663d89cd32e6a.otf:0
+[  543920ms] [ERROR] WebSocket connection to 'ws://localhost:3000/_next/webpack-hmr?id=qS7YzzRwZZTEpuvdwC8x1' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/_next/static/chunks/2374f_next_dist_client_f123e82e._.js:10878
+[  543974ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/favicon.ico?favicon.0b3bf435.ico:0
+[  544936ms] [ERROR] WebSocket connection to 'ws://localhost:3000/_next/webpack-hmr?id=qS7YzzRwZZTEpuvdwC8x1' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/_next/static/chunks/2374f_next_dist_client_f123e82e._.js:10878
+[  546224ms] [ERROR] WebSocket connection to 'ws://localhost:3000/_next/webpack-hmr?id=qS7YzzRwZZTEpuvdwC8x1' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/_next/static/chunks/2374f_next_dist_client_f123e82e._.js:10878
+[  547226ms] [ERROR] WebSocket connection to 'ws://localhost:3000/_next/webpack-hmr?id=qS7YzzRwZZTEpuvdwC8x1' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/_next/static/chunks/2374f_next_dist_client_f123e82e._.js:10878
+[  549009ms] [LOG] [HMR] connected @ http://localhost:3000/_next/static/chunks/2374f_next_dist_5b90db1e._.js:2297
+[  550307ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/_next/static/chunks/2374f_next_dist_5b90db1e._.js:2297
+[  550351ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/font/sohne-font-family/TestSohne-Kraftig-BF663d89cd32e6a.otf:0
+[  550367ms] [LOG] [HMR] connected @ http://localhost:3000/_next/static/chunks/2374f_next_dist_5b90db1e._.js:2297
+[  566112ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/2374f_next_dist_5b90db1e._.js:2297
+[  566148ms] [LOG] [Fast Refresh] done in 138ms @ http://localhost:3000/_next/static/chunks/2374f_next_dist_5b90db1e._.js:2297
+[  566534ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/2374f_next_dist_5b90db1e._.js:2297
+[  566611ms] [LOG] [Fast Refresh] done in 179ms @ http://localhost:3000/_next/static/chunks/2374f_next_dist_5b90db1e._.js:2297
+[  566728ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/2374f_next_dist_5b90db1e._.js:2297
+[  567144ms] [LOG] [Fast Refresh] done in 518ms @ http://localhost:3000/_next/static/chunks/2374f_next_dist_5b90db1e._.js:2297
+[  567247ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/2374f_next_dist_5b90db1e._.js:2297
+[  567505ms] [LOG] [Fast Refresh] done in 361ms @ http://localhost:3000/_next/static/chunks/2374f_next_dist_5b90db1e._.js:2297

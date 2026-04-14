@@ -320,31 +320,33 @@ export default function CustomCursor() {
   return (
     <>
       <div 
-        ref={dotRef} 
-        className="fixed top-0 left-0 w-0 h-0 pointer-events-none z-[9999]" 
-        style={{ 
-          mixBlendMode: 'difference', 
-          transform: 'translate(-50%, -50%)' 
+        ref={dotRef}
+        className="fixed top-0 left-0 w-0 h-0 pointer-events-none z-[9990]"
+        style={{
+          mixBlendMode: 'difference',
+          transform: 'translate(-50%, -50%)',
+          opacity: 0.85,
         }}
       >
-        <div 
-          className="absolute left-1/2 top-1/2" 
-          style={{ 
-            width: '4px',
-            height: '4px',
+        <div
+          className="absolute left-1/2 top-1/2"
+          style={{
+            width: '3px',
+            height: '3px',
             backgroundColor: '#fff',
             borderRadius: '50%',
             transform: 'translate(-50%, -50%)',
             willChange: 'transform',
-          }} 
+          }}
         />
       </div>
-      <div 
-        ref={cursorRef} 
-        className="fixed top-0 left-0 w-0 h-0 pointer-events-none z-[9999]" 
-        style={{ 
-          mixBlendMode: 'difference', 
-          transform: 'translate(-50%, -50%)' 
+      <div
+        ref={cursorRef}
+        className="fixed top-0 left-0 w-0 h-0 pointer-events-none z-[9990]"
+        style={{
+          mixBlendMode: 'difference',
+          transform: 'translate(-50%, -50%)',
+          opacity: 0.85,
         }}
       >
         <div 
@@ -359,8 +361,8 @@ export default function CustomCursor() {
           <div 
             className="absolute" 
             style={{ 
-              width: '9px',
-              height: '9px',
+              width: '7px',
+              height: '7px',
               borderTop: '2px solid #fff',
               borderLeft: '2px solid #fff',
               borderRight: 'none',
@@ -373,8 +375,8 @@ export default function CustomCursor() {
           <div 
             className="absolute" 
             style={{ 
-              width: '9px',
-              height: '9px',
+              width: '7px',
+              height: '7px',
               borderTop: '2px solid #fff',
               borderRight: '2px solid #fff',
               borderLeft: 'none',
@@ -387,8 +389,8 @@ export default function CustomCursor() {
           <div 
             className="absolute" 
             style={{ 
-              width: '9px',
-              height: '9px',
+              width: '7px',
+              height: '7px',
               borderBottom: '2px solid #fff',
               borderRight: '2px solid #fff',
               borderLeft: 'none',
@@ -401,8 +403,8 @@ export default function CustomCursor() {
           <div 
             className="absolute" 
             style={{ 
-              width: '9px',
-              height: '9px',
+              width: '7px',
+              height: '7px',
               borderBottom: '2px solid #fff',
               borderLeft: '2px solid #fff',
               borderRight: 'none',

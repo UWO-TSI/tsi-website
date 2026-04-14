@@ -2,17 +2,16 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import SmoothScroll from "@/components/SmoothScroll";
 import StatusPipeline from "@/components/recruit/StatusPipeline";
 import StatusBadge from "@/components/recruit/StatusBadge";
 import AuthModal from "@/components/recruit/AuthModal";
-import Button from "@/components/ui/Button";
-import { motion } from "framer-motion";
-import { fadeUpVariants, STAGGER_NORMAL } from "@/lib/motion";
-import { FileText, Calendar, ExternalLink } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { FileText, Calendar, ExternalLink, ArrowLeft, ArrowRight, Lock, Inbox } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { Application } from "@/lib/recruitment";
 import type { User } from "@supabase/supabase-js";
+
+const EASE_OUT: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -35,7 +34,6 @@ export default function DashboardPage() {
         return;
       }
 
-      // Fetch user's applications
       const { data } = await supabase
         .from("applications")
         .select("*, position:positions(*)")
@@ -51,129 +49,216 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="w-6 h-6 rounded-full border-2 border-[#002FA7] border-t-transparent animate-spin" />
+      <div className="min-h-screen bg-[#0F0F10] flex items-center justify-center">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="flex flex-col items-center gap-4"
+        >
+          <div className="w-8 h-8 rounded-full border-2 border-[#002FA7] border-t-transparent animate-spin" />
+          <p className="font-mono text-xs text-[#6B7280] tracking-wider">
+            Loading...
+          </p>
+        </motion.div>
       </div>
     );
   }
 
+  // ── Unauthenticated state ──
   if (!user) {
     return (
-      <SmoothScroll>
-        <div className="min-h-screen bg-[var(--color-bg-main)] flex items-center justify-center px-6">
-          <motion.div
-            variants={fadeUpVariants}
-            initial="hidden"
-            animate="visible"
-            className="glass-card p-8 max-w-md text-center"
+      <div className="min-h-screen bg-[#0F0F10] flex items-center justify-center px-6">
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.7, ease: EASE_OUT }}
+          className="max-w-md w-full text-center"
+        >
+          <div
+            className="rounded-2xl p-8 md:p-10"
+            style={{
+              background:
+                "linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.02) 100%)",
+              border: "1px solid rgba(255,255,255,0.08)",
+            }}
           >
-            <h2 className="text-2xl font-semibold text-[#F1FFFF] mb-3">
-              Sign in to view your applications
+            <div className="w-12 h-12 rounded-full bg-[#002FA7]/15 flex items-center justify-center mx-auto mb-5">
+              <Lock className="w-5 h-5 text-[#002FA7]" />
+            </div>
+
+            <h2 className="text-xl font-semibold text-[#F1FFFF] mb-2">
+              Application Dashboard
             </h2>
-            <p className="text-sm text-[#9CA3AF] mb-6">
-              Track your application status and see updates.
+            <p className="text-sm text-[#6B7280] mb-8">
+              Sign in to track your applications and see status updates.
             </p>
-            <Button variant="primary" onClick={() => setShowAuth(true)}>
+
+            <motion.button
+              onClick={() => setShowAuth(true)}
+              className="group inline-flex items-center gap-2 px-8 py-3.5 rounded-full bg-[#002FA7] text-[#F1FFFF] text-sm font-medium transition-all hover:bg-[#0039CC] hover:shadow-[0_0_30px_rgba(0,47,167,0.25)]"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
               Sign In
-            </Button>
-            <AuthModal
-              isOpen={showAuth}
-              onClose={() => setShowAuth(false)}
-              redirectTo="/student/apply/dashboard"
-            />
-          </motion.div>
-        </div>
-      </SmoothScroll>
+              <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
+            </motion.button>
+
+            <p className="text-[10px] text-[#4B5563] mt-6 font-mono">
+              Google OAuth or email/password
+            </p>
+          </div>
+
+          <motion.button
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.3 }}
+            onClick={() => router.push("/student/apply")}
+            className="group inline-flex items-center gap-2 text-sm text-[#6B7280] hover:text-[#F1FFFF] transition-colors mt-8"
+          >
+            <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
+            Back to Positions
+          </motion.button>
+        </motion.div>
+
+        <AuthModal
+          isOpen={showAuth}
+          onClose={() => setShowAuth(false)}
+          redirectTo="/student/apply/dashboard"
+        />
+      </div>
     );
   }
 
+  // ── Authenticated state ──
   return (
-    <SmoothScroll>
-      <div className="min-h-screen bg-[var(--color-bg-main)] py-8 md:py-16 px-6 md:px-16">
-        <div className="max-w-3xl mx-auto">
-          {/* Header */}
+    <div className="min-h-screen bg-[#0F0F10] py-8 md:py-16 px-6 md:px-16">
+      <div className="max-w-3xl mx-auto">
+        {/* Back link */}
+        <motion.button
+          initial={{ opacity: 0, x: -12 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.5, ease: EASE_OUT }}
+          onClick={() => router.push("/student/apply")}
+          className="group flex items-center gap-2 text-sm text-[#6B7280] hover:text-[#F1FFFF] transition-colors mb-10"
+        >
+          <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
+          All Positions
+        </motion.button>
+
+        {/* Header */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.7, delay: 0.1, ease: EASE_OUT }}
+          className="mb-10"
+        >
+          <p className="font-mono text-[10px] tracking-[0.2em] uppercase text-[#002FA7] mb-2">
+            Application Dashboard
+          </p>
+          <h1 className="text-2xl md:text-3xl font-bold text-[#F1FFFF] tracking-tight">
+            Your Applications
+          </h1>
+        </motion.div>
+
+        <motion.div
+          initial={{ scaleX: 0 }}
+          animate={{ scaleX: 1 }}
+          transition={{ duration: 0.8, delay: 0.2, ease: EASE_OUT }}
+          className="h-px bg-white/[0.06] origin-left mb-10"
+        />
+
+        {/* Applications list */}
+        {applications.length === 0 ? (
           <motion.div
-            variants={fadeUpVariants}
-            initial="hidden"
-            animate="visible"
-            className="mb-12"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, delay: 0.3, ease: EASE_OUT }}
+            className="rounded-2xl p-10 text-center"
+            style={{
+              background:
+                "linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%)",
+              border: "1px solid rgba(255,255,255,0.06)",
+            }}
           >
-            <p className="font-mono text-xs tracking-[0.2em] uppercase text-[#002FA7] mb-3">
-              Application Dashboard
-            </p>
-            <h1 className="text-3xl md:text-4xl font-semibold text-[#F1FFFF]">
-              Your Applications
-            </h1>
-          </motion.div>
-
-          {applications.length === 0 ? (
-            <motion.div
-              variants={fadeUpVariants}
-              initial="hidden"
-              animate="visible"
-              custom={1}
-              className="glass-card p-8 text-center"
-            >
-              <p className="text-[#9CA3AF] mb-4">
-                You haven&apos;t submitted any applications yet.
-              </p>
-              <Button
-                variant="primary"
-                onClick={() => router.push("/student/apply")}
-              >
-                Browse Positions
-              </Button>
-            </motion.div>
-          ) : (
-            <div className="space-y-6">
-              {applications.map((app, i) => (
-                <motion.div
-                  key={app.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * STAGGER_NORMAL }}
-                  className="glass-card p-6 md:p-8"
-                >
-                  {/* App header */}
-                  <div className="flex items-start justify-between mb-6">
-                    <div>
-                      <h3 className="text-xl font-semibold text-[#F1FFFF] mb-1">
-                        {app.position?.title ?? "Position"}
-                      </h3>
-                      <div className="flex items-center gap-3 text-xs text-[#6B7280]">
-                        <span className="flex items-center gap-1">
-                          <Calendar className="w-3.5 h-3.5" />
-                          Submitted{" "}
-                          {new Date(app.submitted_at).toLocaleDateString(
-                            "en-US",
-                            { month: "short", day: "numeric", year: "numeric" }
-                          )}
-                        </span>
-                        {app.resume_drive_url && (
-                          <a
-                            href={app.resume_drive_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-1 text-[#002FA7] hover:underline"
-                          >
-                            <FileText className="w-3.5 h-3.5" />
-                            Resume
-                            <ExternalLink className="w-3 h-3" />
-                          </a>
-                        )}
-                      </div>
-                    </div>
-                    <StatusBadge status={app.status} />
-                  </div>
-
-                  {/* Status pipeline */}
-                  <StatusPipeline currentStatus={app.status} />
-                </motion.div>
-              ))}
+            <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-4">
+              <Inbox className="w-5 h-5 text-[#6B7280]" />
             </div>
-          )}
-        </div>
+            <p className="text-[#9CA3AF] mb-2">No applications yet</p>
+            <p className="text-sm text-[#6B7280] mb-6">
+              Browse open positions and submit your first application.
+            </p>
+            <motion.button
+              onClick={() => router.push("/student/apply")}
+              className="group inline-flex items-center gap-2 px-6 py-3 rounded-full bg-[#002FA7] text-[#F1FFFF] text-sm font-medium transition-all hover:bg-[#0039CC]"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              Browse Positions
+              <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
+            </motion.button>
+          </motion.div>
+        ) : (
+          <div className="space-y-5">
+            {applications.map((app, i) => (
+              <motion.div
+                key={app.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{
+                  delay: 0.3 + i * 0.1,
+                  duration: 0.6,
+                  ease: EASE_OUT,
+                }}
+                className="group rounded-2xl p-6 md:p-8 transition-all duration-300 hover:border-white/12"
+                style={{
+                  background:
+                    "linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.02) 100%)",
+                  border: "1px solid rgba(255,255,255,0.08)",
+                }}
+              >
+                {/* App header */}
+                <div className="flex items-start justify-between mb-6">
+                  <div>
+                    <h3 className="text-lg font-semibold text-[#F1FFFF] mb-2">
+                      {app.position?.title ?? "Position"}
+                    </h3>
+                    <div className="flex items-center gap-4 text-xs text-[#6B7280]">
+                      <span className="flex items-center gap-1.5">
+                        <Calendar className="w-3.5 h-3.5" />
+                        Submitted{" "}
+                        {new Date(app.submitted_at).toLocaleDateString(
+                          "en-US",
+                          {
+                            month: "short",
+                            day: "numeric",
+                            year: "numeric",
+                          }
+                        )}
+                      </span>
+                      {app.resume_drive_url && (
+                        <a
+                          href={app.resume_drive_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1 text-[#002FA7] hover:underline transition-colors"
+                        >
+                          <FileText className="w-3.5 h-3.5" />
+                          Resume
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                  <StatusBadge status={app.status} />
+                </div>
+
+                {/* Status pipeline */}
+                <StatusPipeline currentStatus={app.status} />
+              </motion.div>
+            ))}
+          </div>
+        )}
       </div>
-    </SmoothScroll>
+    </div>
   );
 }

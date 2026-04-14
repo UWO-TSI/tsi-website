@@ -1,0 +1,64 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - link [ref=e4]:
+      - /url: /
+      - img [ref=e5]
+    - button "Navigation menu" [ref=e13]:
+      - generic [ref=e15]: Menu
+  - main [ref=e16]:
+    - generic [ref=e17]:
+      - generic [ref=e19]:
+        - paragraph [ref=e20]:
+          - generic [ref=e21]:
+            - generic [ref=e22]: 2026-27 Recruitment
+            - generic [ref=e23]: 2026-27 Recruitment
+        - heading "Build what matters. Start here." [level=1] [ref=e24]:
+          - generic [ref=e25]: Build what matters.
+          - generic [ref=e27]: Start here.
+        - paragraph [ref=e28]: We ship real software for real nonprofits. Apply for a leadership role on the 2026-27 executive team. Applications are open.
+        - generic [ref=e29]:
+          - link "View Positions" [ref=e30]:
+            - /url: "#positions"
+            - text: View Positions
+            - img [ref=e31]
+          - link "My Applications" [ref=e34]:
+            - /url: /student/apply/dashboard
+            - text: My Applications
+            - img [ref=e35]
+      - generic [ref=e42]:
+        - generic [ref=e43]:
+          - generic [ref=e46]: "01"
+          - paragraph [ref=e48]: Executive Applications
+          - paragraph [ref=e49]: May 2026
+          - generic [ref=e50]: Now Open
+        - generic [ref=e51]:
+          - generic [ref=e54]: "02"
+          - paragraph [ref=e55]: PM & Director Applications
+          - paragraph [ref=e56]: September 2026
+      - generic [ref=e59]:
+        - generic [ref=e60]:
+          - paragraph [ref=e61]:
+            - generic [ref=e62]:
+              - generic [ref=e63]: Open Positions
+              - generic [ref=e64]: Open Positions
+          - heading "Find your role" [level=2] [ref=e65]
+        - button "All" [ref=e67]
+      - generic [ref=e73]:
+        - generic [ref=e74]:
+          - generic [ref=e75]:
+            - paragraph [ref=e76]: Have an access code?
+            - paragraph [ref=e77]: Internal and invite-only positions require a code from the team.
+          - link "Enter Code" [ref=e79]:
+            - /url: /student/apply/internal
+            - text: Enter Code
+            - img [ref=e80]
+        - generic [ref=e82]:
+          - generic [ref=e83]:
+            - paragraph [ref=e84]: Not sure which role fits?
+            - paragraph [ref=e85]: Reach out and we'll help you find the right position.
+          - link "Get in Touch" [ref=e86]:
+            - /url: mailto:team@tethos.ca
+            - text: Get in Touch
+            - img [ref=e87]
+  - button "Open Next.js Dev Tools" [ref=e95] [cursor=pointer]:
+    - img [ref=e96]

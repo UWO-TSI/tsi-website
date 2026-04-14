@@ -3,7 +3,6 @@
 import { useEffect, useRef } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import AsciiDivider from "@/components/ascii/AsciiDivider";
 import {
   EASE_ENTER,
   DURATION_SECTION,
@@ -50,9 +49,7 @@ export default function AboutUs() {
   }, []);
 
   return (
-    <>
-      <AsciiDivider rows={2} cols={60} />
-      <section
+    <section
         ref={sectionRef}
         className="min-h-[70vh] flex items-center justify-center relative py-32 px-6"
         style={{ background: "var(--color-bg-main)" }}
@@ -78,6 +75,5 @@ export default function AboutUs() {
           </p>
         </div>
       </section>
-    </>
   );
 }

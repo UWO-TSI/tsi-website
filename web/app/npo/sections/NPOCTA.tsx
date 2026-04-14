@@ -3,7 +3,6 @@
 import { useEffect, useRef } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import AsciiDivider from "@/components/ascii/AsciiDivider";
 import { EASE_ENTER, DURATION_SECTION } from "@/lib/motion";
 
 if (typeof window !== "undefined") {
@@ -37,9 +36,7 @@ export default function NPOCTA() {
   }, []);
 
   return (
-    <>
-      <AsciiDivider rows={2} cols={40} />
-      <section
+    <section
         ref={sectionRef}
         className="py-40 px-6"
         style={{ background: "var(--color-bg-main)" }}
@@ -71,15 +68,20 @@ export default function NPOCTA() {
             already benefiting from modern technology built by driven students.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button className="rounded-full bg-[#002FA7] px-8 py-4 text-sm font-medium text-[#F1FFFF] transition-all hover:bg-[#0039CC]">
+            <a
+              href="mailto:team@tethos.ca?subject=NPO%20Program%20Application"
+              className="rounded-full bg-[#002FA7] px-8 py-4 text-sm font-medium text-[#F1FFFF] transition-all hover:bg-[#0039CC] hover:shadow-[0_0_30px_rgba(0,47,167,0.25)] inline-flex items-center justify-center"
+            >
               Apply Now
-            </button>
-            <button className="rounded-full border border-zinc-700 px-8 py-4 text-sm font-medium text-zinc-300 transition-all hover:border-zinc-500 hover:text-white">
+            </a>
+            <a
+              href="/sponsor"
+              className="rounded-full border border-white/10 px-8 py-4 text-sm font-medium text-[#9CA3AF] transition-all hover:border-white/20 hover:text-white inline-flex items-center justify-center"
+            >
               Attend Genesis
-            </button>
+            </a>
           </div>
         </div>
       </section>
-    </>
   );
 }

@@ -1,0 +1,207 @@
+- generic [ref=e1]:
+  - region "console.cloud.google.com uses cookies from Google to deliver and enhance the quality of its services and to analyse traffic." [ref=e2]:
+    - paragraph [ref=e3]:
+      - text: console.cloud.google.com uses cookies from Google to deliver and enhance the quality of its services and to analyse traffic.
+      - link "Learn more about how Google uses cookies. Opens in a new tab." [ref=e4] [cursor=pointer]:
+        - /url: https://policies.google.com/technologies/cookies?hl=en-GB
+        - text: Learn more
+    - button "OK, got it" [ref=e5] [cursor=pointer]
+  - generic [ref=e7]:
+    - generic [ref=e8]:
+      - complementary "Skip links" [ref=e9]:
+        - link "Skip to main content" [ref=e10] [cursor=pointer]:
+          - /url: /
+          - generic [ref=e11]: Skip to main content
+        - button "Keyboard shortcuts" [ref=e12]:
+          - generic [ref=e13]: Keyboard shortcuts
+        - link "Accessibility help external, opens in a new window" [ref=e14] [cursor=pointer]:
+          - /url: https://cloud.google.com/docs/accessibility?hl=en_GB
+          - generic [ref=e15]:
+            - text: Accessibility help
+            - generic "external, opens in a new window" [ref=e16]:
+              - img "external, opens in a new window" [ref=e17]:
+                - img [ref=e18]
+        - link "Accessibility feedback external, opens in a new window" [ref=e20] [cursor=pointer]:
+          - /url: https://support.google.com/accessibility/contact/feedback?hl=en_GB
+          - generic [ref=e21]:
+            - text: Accessibility feedback
+            - generic "external, opens in a new window" [ref=e22]:
+              - img "external, opens in a new window" [ref=e23]:
+                - img [ref=e24]
+      - banner [ref=e27]:
+        - generic [ref=e28]:
+          - navigation [ref=e31]:
+            - button "Navigation menu (.)" [ref=e32] [cursor=pointer]:
+              - img [ref=e34]
+          - link "Google Cloud Platform Home" [ref=e36] [cursor=pointer]:
+            - /url: /?project=claude-490322
+            - generic:
+              - img
+          - button "You're currently working in Claude. Hit enter to switch projects, folders or organisations" [ref=e44]:
+            - generic [ref=e45]:
+              - img [ref=e47]
+              - generic [ref=e50]: Claude
+        - search "Google Cloud Platform" [ref=e56]:
+          - combobox [ref=e57]:
+            - searchbox "Enter query to search for resources, docs, products and more" [ref=e58]
+          - button "See all search results" [disabled]:
+            - generic:
+              - img
+            - generic: Search
+        - generic [ref=e59]:
+          - generic [ref=e60]:
+            - button "Open or close Gemini Cloud Assist chat (Option G)" [ref=e64] [cursor=pointer]:
+              - img [ref=e66]
+            - button "Activate Cloud Shell (G then S)" [ref=e71] [cursor=pointer]:
+              - img [ref=e73]
+            - button "2 unread notifications. Open notifications" [ref=e78] [cursor=pointer]:
+              - generic [ref=e81]: "2"
+            - button "Settings and utilities" [ref=e86] [cursor=pointer]:
+              - img [ref=e88]
+          - 'button "Account: David Liu (davidliu8473@gmail.com)" [ref=e94]':
+            - img [ref=e95]
+    - generic [ref=e104]:
+      - navigation "Breadcrumb" [ref=e494]:
+        - link "Google Auth Platform" [ref=e497] [cursor=pointer]:
+          - /url: /auth?project=claude-490322
+          - img [ref=e500]
+          - generic [ref=e504]: Google Auth Platform
+        - list [ref=e505]:
+          - listitem [ref=e506]:
+            - generic [ref=e507]: /
+            - link "Overview" [ref=e510] [cursor=pointer]:
+              - /url: /auth/overview?project=claude-490322
+              - generic [ref=e512]: Overview
+          - listitem [ref=e678]:
+            - generic [ref=e679]: /
+            - link "Create branding" [ref=e682] [cursor=pointer]:
+              - /url: /auth/overview/create?project=claude-490322
+              - generic [ref=e684]: Create branding
+      - generic [ref=e115]:
+        - navigation "Google Auth Platform" [ref=e513]:
+          - generic [ref=e123]:
+            - list "Overview, 1 of 7 More options Branding, 2 of 7 More options Audience, 3 of 7 More options Clients, 4 of 7 More options Data access, 5 of 7 More options Verification centre, 6 of 7 More options Settings, 7 of 7 More options" [ref=e515]:
+              - listitem [ref=e516]:
+                - generic [ref=e519]:
+                  - link "Overview, 1 of 7" [ref=e520] [cursor=pointer]:
+                    - /url: /auth/overview?project=claude-490322
+                    - generic [ref=e521]:
+                      - img [ref=e524]
+                      - generic [ref=e526]: Overview
+                  - button "More options" [ref=e528] [cursor=pointer]:
+                    - img [ref=e530]
+              - listitem [ref=e532]:
+                - generic [ref=e535]:
+                  - link "Branding, 2 of 7" [ref=e536] [cursor=pointer]:
+                    - /url: /auth/branding?project=claude-490322
+                    - generic [ref=e537]:
+                      - img [ref=e540]
+                      - generic [ref=e546]: Branding
+                  - button "More options" [ref=e548] [cursor=pointer]:
+                    - img [ref=e550]
+              - listitem [ref=e552]:
+                - generic [ref=e555]:
+                  - link "Audience, 3 of 7" [ref=e556] [cursor=pointer]:
+                    - /url: /auth/audience?project=claude-490322
+                    - generic [ref=e557]:
+                      - img [ref=e560]
+                      - generic [ref=e562]: Audience
+                  - button "More options" [ref=e564] [cursor=pointer]:
+                    - img [ref=e566]
+              - listitem [ref=e568]:
+                - generic [ref=e571]:
+                  - link "Clients, 4 of 7" [ref=e572] [cursor=pointer]:
+                    - /url: /auth/clients?project=claude-490322
+                    - generic [ref=e573]:
+                      - img [ref=e576]
+                      - generic [ref=e578]: Clients
+                  - button "More options" [ref=e580] [cursor=pointer]:
+                    - img [ref=e582]
+              - listitem [ref=e584]:
+                - generic [ref=e587]:
+                  - link "Data access, 5 of 7" [ref=e588] [cursor=pointer]:
+                    - /url: /auth/scopes?project=claude-490322
+                    - generic [ref=e589]:
+                      - img [ref=e592]
+                      - generic [ref=e595]: Data access
+                  - button "More options" [ref=e597] [cursor=pointer]:
+                    - img [ref=e599]
+              - listitem [ref=e601]:
+                - generic [ref=e604]:
+                  - link "Verification centre, 6 of 7" [ref=e605] [cursor=pointer]:
+                    - /url: /auth/verification?project=claude-490322
+                    - generic [ref=e606]:
+                      - img [ref=e609]
+                      - generic [ref=e612]: Verification centre
+                  - button "More options" [ref=e614] [cursor=pointer]:
+                    - img [ref=e616]
+              - listitem [ref=e618]:
+                - generic [ref=e621]:
+                  - link "Settings, 7 of 7" [ref=e622] [cursor=pointer]:
+                    - /url: /auth/settings?project=claude-490322
+                    - generic [ref=e623]:
+                      - img [ref=e626]
+                      - generic [ref=e628]: Settings
+                  - button "More options" [ref=e630] [cursor=pointer]:
+                    - img [ref=e632]
+            - button "Toggle Google Auth Platform navigation menu" [pressed] [ref=e634] [cursor=pointer]:
+              - img [ref=e224]
+        - main [ref=e227]:
+          - generic [ref=e685]:
+            - heading "Project configuration" [level=1] [ref=e691]:
+              - generic [ref=e692]: Project configuration
+            - generic [ref=e702]:
+              - generic [ref=e704]:
+                - heading "App Information, step 1 of 4, complete" [level=2] [ref=e808]:
+                  - button "App Information, step 1 of 4, complete" [ref=e809] [cursor=pointer]:
+                    - generic [ref=e708]:
+                      - img [ref=e812]:
+                        - img [ref=e813]
+                      - generic [ref=e712]: App Information
+                - generic [ref=e713]: "* *"
+              - heading "Audience, step 2 of 4, complete" [level=2] [ref=e856]:
+                - button "Audience, step 2 of 4, complete" [ref=e857] [cursor=pointer]:
+                  - generic [ref=e756]:
+                    - img [ref=e860]:
+                      - img [ref=e861]
+                    - generic [ref=e760]: Audience
+              - generic [ref=e764]:
+                - heading "Contact Information, step 3 of 4, complete" [level=2] [ref=e885]:
+                  - button "Contact Information, step 3 of 4, complete" [ref=e886] [cursor=pointer]:
+                    - generic [ref=e768]:
+                      - img [ref=e889]:
+                        - img [ref=e890]
+                      - generic [ref=e772]: Contact Information
+                - generic [ref=e773]: "*"
+              - generic [ref=e776]:
+                - heading "Finish, step 4 of 4, in progress" [level=2] [ref=e892]:
+                  - button "Finish, step 4 of 4, in progress" [expanded] [ref=e893] [cursor=pointer]:
+                    - generic [ref=e780]:
+                      - generic [ref=e783]: "4"
+                      - generic [ref=e784]: Finish
+                - generic [ref=e894]:
+                  - generic [ref=e897]:
+                    - generic [ref=e898] [cursor=pointer]:
+                      - checkbox "I agree to the Google API services user data policy. external, opens new window" [checked] [active] [ref=e899]
+                      - generic:
+                        - img
+                    - generic [ref=e900] [cursor=pointer]:
+                      - text: I agree to the
+                      - link "Google API services user data policy. external, opens new window" [ref=e901]:
+                        - /url: https://developers.google.com/terms/api-services-user-data-policy?hl=en_GB
+                        - text: Google API services user data policy.
+                        - img "external, opens new window" [ref=e902]:
+                          - img [ref=e903]
+                  - button "Continue" [ref=e906]:
+                    - generic [ref=e907]: Continue
+              - generic [ref=e786]:
+                - button "Create" [ref=e789]:
+                  - generic [ref=e790]: Create
+                - button "Cancel" [ref=e791]:
+                  - generic [ref=e792]: Cancel
+  - iframe [ref=e486]:
+    
+  - iframe [ref=e487]:
+    
+  - iframe [ref=e489]:
+    

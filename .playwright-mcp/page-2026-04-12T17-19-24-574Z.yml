@@ -1,0 +1,72 @@
+- generic [ref=e1]:
+  - generic [ref=e24]:
+    - banner [ref=e25]:
+      - generic [ref=e26]:
+        - link "TETHOS" [ref=e27]:
+          - /url: /
+        - navigation [ref=e28]:
+          - link "Nonprofits" [ref=e29]:
+            - /url: /npo
+          - link "Companies" [ref=e30]:
+            - /url: /company
+          - link "Sponsors" [ref=e31]:
+            - /url: /sponsor
+          - link "Students" [ref=e32]:
+            - /url: /student
+        - generic [ref=e33]:
+          - button "Contact" [ref=e34]
+          - button "Apply" [ref=e35]
+    - main [ref=e36]:
+      - generic [ref=e37]:
+        - button "All Positions" [ref=e39]:
+          - img [ref=e40]
+          - text: All Positions
+        - generic [ref=e42]:
+          - paragraph [ref=e43]: Apply for
+          - heading "VP Internal" [level=1] [ref=e44]
+          - paragraph [ref=e45]: Lead internal operations, team culture, and member experience. You'll manage onboarding, events, and cross-team coordination.
+        - generic [ref=e46]:
+          - generic [ref=e48]:
+            - button "Personal Info" [disabled] [ref=e49]
+            - button "Resume" [disabled] [ref=e50]
+            - button "Questions" [disabled] [ref=e51]
+            - button "Review" [disabled] [ref=e52]
+          - generic [ref=e154]:
+            - heading "Review your application" [level=3] [ref=e155]
+            - generic [ref=e156]:
+              - generic [ref=e157]: Name
+              - generic [ref=e158]: Test Applicant
+            - generic [ref=e159]:
+              - generic [ref=e160]: Email
+              - generic [ref=e161]: testapplicant@tethos.ca
+            - generic [ref=e162]:
+              - generic [ref=e163]: Phone
+              - generic [ref=e164]: 519-555-0123
+            - generic [ref=e165]:
+              - generic [ref=e166]: Program
+              - generic [ref=e167]: Computer Science
+            - generic [ref=e168]:
+              - generic [ref=e169]: Year
+              - generic [ref=e170]: 3rd Year
+            - generic [ref=e171]:
+              - generic [ref=e172]: Heard via
+              - generic [ref=e173]: Friend / Word of Mouth
+            - generic [ref=e174]:
+              - generic [ref=e175]: Resume
+              - generic [ref=e176]: test_resume.pdf
+            - generic [ref=e177]:
+              - paragraph [ref=e178]: Essay Responses
+              - generic [ref=e179]:
+                - paragraph [ref=e180]: Describe a time you built or improved an internal process for a team or organization. What was the outcome?
+                - paragraph [ref=e181]: At my previous student organization, I noticed our onboarding process was disorganized. New members would join but had no clear path to get involved. I created a structured onboarding pipeline with a welcome guide, assigned mentors, and weekly check-ins during the first month. The result was a 40% increase in member retention and significantly faster time-to-contribution for new members.
+              - generic [ref=e182]:
+                - paragraph [ref=e183]: How would you approach building team culture in a remote-first student organization?
+                - paragraph [ref=e184]: Building culture remotely requires intentional design. I would establish regular virtual touchpoints like weekly standups and monthly team socials. Creating shared rituals, recognizing contributions publicly in Slack, and fostering small-group connections through random coffee chats would be key. The goal is making every member feel seen and valued regardless of physical distance.
+          - generic [ref=e80]:
+            - button "Back" [ref=e119]:
+              - img [ref=e120]
+              - text: Back
+            - button "Submit Application" [active] [ref=e185]
+  - button "Open Next.js Dev Tools" [ref=e19] [cursor=pointer]:
+    - img [ref=e20]
+  - alert [ref=e23]

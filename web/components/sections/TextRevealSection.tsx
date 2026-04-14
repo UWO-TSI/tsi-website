@@ -4,165 +4,242 @@ import { useEffect, useRef } from "react";
 import Image from "next/image";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import DecryptedText from "@/components/ui/DecryptedText";
+import GradientText from "@/components/ui/GradientText";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
 }
 
-const REVEAL_TEXT =
-  "Tethos empowers students to deliver pro bono technology solutions for nonprofits, building real-world skills, ethical leadership, and community impact through projects that drives positive social change globally.";
-
-const COLOR_GREY = "#d9d9d9";
-const COLOR_DARK = "#0F0F10";
-
 const IMAGES = [
-  { src: "/images/TeamPhoto.png", alt: "Team photo" },
-  { src: "/images/flag_signing.png", alt: "Flag signing" },
-  { src: "/images/team.png", alt: "Team working" },
+  { src: "/images/TeamPhoto.jpg", alt: "Team photo" },
+  { src: "/images/flag_signing.jpg", alt: "Flag signing" },
+  { src: "/images/team.jpg", alt: "Team working" },
 ];
 
 export default function TextRevealSection() {
   const sectionRef = useRef<HTMLDivElement>(null);
-  const charsRef = useRef<HTMLSpanElement[]>([]);
-  const imagesRef = useRef<HTMLDivElement[]>([]);
+  const textRef = useRef<HTMLDivElement>(null);
+  const imagesRef = useRef<HTMLDivElement>(null);
+  const lineRef = useRef<HTMLDivElement>(null);
+  const glowRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!sectionRef.current) return;
 
-    const chars = charsRef.current.filter(
-      (char): char is HTMLSpanElement => Boolean(char)
-    );
-    const totalChars = chars.length;
-    const images = imagesRef.current.filter(Boolean);
+    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     const ctx = gsap.context(() => {
-      ScrollTrigger.create({
-        trigger: sectionRef.current,
-        start: "top top",
-        end: "+=160%",
-        pin: true,
-        pinSpacing: true,
-        anticipatePin: 1,
-        onUpdate: (self) => {
-          const progress = self.progress;
+      if (prefersReducedMotion) {
+        // Instant reveal, no animation
+        gsap.set(lineRef.current, { scaleX: 1 });
+        gsap.set(textRef.current, { opacity: 1, y: 0 });
+        const imgs = imagesRef.current?.children;
+        if (imgs) gsap.set(Array.from(imgs), { opacity: 1, clipPath: "inset(0 0 0 0)" });
+        return;
+      }
 
-          // Text reveal
-          const filledCount = Math.min(
-            totalChars,
-            Math.ceil(progress * totalChars)
-          );
-          for (let i = 0; i < totalChars; i++) {
-            chars[i].style.color = i < filledCount ? COLOR_DARK : COLOR_GREY;
+      // Scroll-driven glow breathing
+      if (glowRef.current) {
+        gsap.fromTo(
+          glowRef.current,
+          { opacity: 0.06 },
+          {
+            opacity: 0.15,
+            ease: "none",
+            scrollTrigger: {
+              trigger: sectionRef.current,
+              start: "top bottom",
+              end: "center center",
+              scrub: true,
+            },
           }
+        );
+      }
 
-          // Image reveal — stagger across the scroll progress
-          images.forEach((img, idx) => {
-            const imgStart = idx * 0.25; // each image starts 25% apart
-            const imgEnd = imgStart + 0.3;
-            const imgProgress = Math.min(
-              1,
-              Math.max(0, (progress - imgStart) / (imgEnd - imgStart))
-            );
-            img.style.opacity = String(imgProgress);
-            img.style.transform = `translateY(${(1 - imgProgress) * 40}px)`;
+      // Accent line draws in
+      gsap.fromTo(
+        lineRef.current,
+        { scaleX: 0 },
+        {
+          scaleX: 1,
+          duration: 1.2,
+          ease: "power3.inOut",
+          scrollTrigger: { trigger: sectionRef.current, start: "top 70%", once: true },
+        }
+      );
+
+      // Text slides up
+      gsap.fromTo(
+        textRef.current,
+        { opacity: 0, y: 60 },
+        {
+          opacity: 1,
+          y: 0,
+          duration: 1,
+          ease: "power3.out",
+          scrollTrigger: { trigger: sectionRef.current, start: "top 65%", once: true },
+        }
+      );
+
+      // Images: clip-path reveal (not fade-up)
+      const imgs = imagesRef.current?.children;
+      if (imgs) {
+        gsap.fromTo(
+          Array.from(imgs),
+          { clipPath: "inset(100% 0 0 0)", opacity: 1 },
+          {
+            clipPath: "inset(0% 0 0 0)",
+            duration: 1,
+            ease: "power4.inOut",
+            stagger: 0.18,
+            scrollTrigger: { trigger: imagesRef.current, start: "top 75%", once: true },
+          }
+        );
+      }
+
+      // Parallax: each image moves at a different rate on scroll
+      const imgElements = imagesRef.current?.children;
+      if (imgElements) {
+        Array.from(imgElements).forEach((img, i) => {
+          const speed = [0.15, 0.25, 0.1][i] || 0.15;
+          gsap.to(img, {
+            yPercent: -speed * 100,
+            ease: "none",
+            scrollTrigger: {
+              trigger: sectionRef.current,
+              start: "top bottom",
+              end: "bottom top",
+              scrub: true,
+            },
           });
-        },
-        onLeave: () => {
-          chars.forEach((char) => {
-            char.style.color = COLOR_DARK;
-          });
-          images.forEach((img) => {
-            img.style.opacity = "1";
-            img.style.transform = "translateY(0px)";
-          });
-        },
-      });
+        });
+      }
     }, sectionRef);
 
-    const refreshTimer = setTimeout(() => ScrollTrigger.refresh(), 150);
-
-    return () => {
-      ctx.revert();
-      clearTimeout(refreshTimer);
-    };
+    return () => ctx.revert();
   }, []);
-
-  // Split every character, rendering spaces as plain text nodes for wrapping
-  charsRef.current = [];
-  const charElements = REVEAL_TEXT.split("").map((char, i) => {
-    if (char === " ") {
-      return (
-        <span key={i} style={{ color: COLOR_GREY, transition: "color 0.15s ease" }}>
-          {" "}
-        </span>
-      );
-    }
-    return (
-      <span
-        key={i}
-        ref={(el) => {
-          if (el) charsRef.current[i] = el;
-        }}
-        style={{ color: COLOR_GREY, transition: "color 0.15s ease" }}
-      >
-        {char}
-      </span>
-    );
-  });
 
   return (
     <section
+      id="about"
       ref={sectionRef}
-      data-navbar-theme="light"
-      className="h-screen flex items-center px-10 md:px-20 lg:px-28 overflow-hidden"
-      style={{ background: "#F5FAFF" }}
+      data-navbar-theme="dark"
+      className="relative py-32 md:py-44 px-8 md:px-20 lg:px-28 overflow-hidden"
+      style={{ background: "#0a0a0b" }}
     >
-      {/* Left: text — responsive width */}
-      <div className="w-full lg:w-[55%] min-w-0 flex-shrink-0">
-        <p
-          className="leading-[1.15] tracking-tight"
-          style={{
-            fontFamily: '"Test Sogne", sans-serif',
-            fontSize: "clamp(28px, 5vw, 64px)",
-            fontWeight: 400,
-            maxWidth: "900px",
-            wordBreak: "normal",
-            overflowWrap: "break-word",
-          }}
-        >
-          {charElements}
-        </p>
-      </div>
+      {/* Top gradient blend from hero */}
+      <div
+        className="absolute top-0 left-0 right-0 pointer-events-none"
+        style={{
+          height: "200px",
+          background: "linear-gradient(to bottom, #0F0F10, #0a0a0b)",
+        }}
+      />
 
-      {/* Right: stacked images — responsive sizing, fills remaining space */}
-      <div className="hidden lg:flex relative flex-1 h-[clamp(400px,70vh,700px)]">
-        {IMAGES.map((image, idx) => (
+      {/* Scroll-driven radial glow */}
+      <div
+        ref={glowRef}
+        className="absolute top-1/2 left-1/4 -translate-y-1/2 pointer-events-none"
+        style={{
+          width: "800px",
+          height: "800px",
+          background: "radial-gradient(circle, rgba(29,155,240,0.12) 0%, transparent 70%)",
+          filter: "blur(40px)",
+          opacity: 0.06,
+        }}
+      />
+
+      <div className="relative max-w-[1400px] mx-auto flex flex-col lg:flex-row items-start gap-16 lg:gap-24">
+        {/* Left: mission text */}
+        <div ref={textRef} className="w-full lg:w-[50%] flex-shrink-0" style={{ opacity: 0 }}>
+          <p
+            className="text-sm font-medium tracking-widest uppercase mb-6"
+            style={{ color: "#1d9bf0", fontFamily: "var(--font-highlight)" }}
+          >
+            <DecryptedText text="What we do" speed={40} maxIterations={12} sequential characters="01!@#$%_-+=<>" className="text-[#1d9bf0]" encryptedClassName="text-[rgba(29,155,240,0.3)]" animateOn="view" />
+          </p>
+
+          {/* Accent line */}
           <div
-            key={idx}
-            ref={(el) => {
-              if (el) imagesRef.current[idx] = el;
-            }}
-            className="absolute overflow-hidden shadow-xl"
+            ref={lineRef}
+            className="mb-8 origin-left"
             style={{
-              opacity: 0,
-              transform: "translateY(40px)",
-              top: `${idx * 30}%`,
-              right: `${idx % 2 === 0 ? 0 : 30}px`,
-              width: "min(600px, 100%)",
-              height: "clamp(180px, 25vh, 300px)",
-              borderRadius: "15px",
-              zIndex: idx + 1,
+              width: "60px",
+              height: "2px",
+              background: "linear-gradient(90deg, #1d9bf0, transparent)",
+              transform: "scaleX(0)",
+            }}
+          />
+
+          <h2
+            className="leading-[1.08] tracking-tight mb-8"
+            style={{
+              fontFamily: '"Test Sohne", sans-serif',
+              fontSize: "clamp(32px, 4.5vw, 56px)",
+              fontWeight: 500,
+              color: "#F1FFFF",
             }}
           >
+            Pro bono software for
+            <br />
+            organizations that{" "}
+            <GradientText colors={["#1d9bf0", "#60c5ff", "#1d9bf0"]} animationSpeed={6}>
+              matter.
+            </GradientText>
+          </h2>
+          <p
+            className="leading-relaxed text-lg md:text-xl"
+            style={{
+              color: "rgba(255,255,255,0.5)",
+              fontFamily: '"Test Sohne", sans-serif',
+              maxWidth: "520px",
+            }}
+          >
+            Tethos empowers students to deliver production-grade technology
+            solutions for nonprofits, building real-world skills and driving
+            positive social change globally.
+          </p>
+        </div>
+
+        {/* Right: image grid with clip-path reveals + parallax */}
+        <div ref={imagesRef} className="w-full lg:flex-1 grid grid-cols-2 gap-3">
+          <div
+            className="col-span-2 relative overflow-hidden rounded-xl"
+            style={{ height: "clamp(220px, 30vh, 320px)", clipPath: "inset(100% 0 0 0)" }}
+          >
             <Image
-              src={image.src}
-              alt={image.alt}
+              src={IMAGES[0].src}
+              alt={IMAGES[0].alt}
               fill
               className="object-cover"
-              sizes="(max-width: 1024px) 0px, min(600px, 45vw)"
+              sizes="(max-width: 1024px) 100vw, 50vw"
+            />
+            <div
+              className="absolute inset-0"
+              style={{ background: "linear-gradient(to top, rgba(10,10,11,0.4), transparent)" }}
             />
           </div>
-        ))}
+          {IMAGES.slice(1).map((image, idx) => (
+            <div
+              key={idx}
+              className="relative overflow-hidden rounded-xl"
+              style={{ height: "clamp(160px, 22vh, 240px)", clipPath: "inset(100% 0 0 0)" }}
+            >
+              <Image
+                src={image.src}
+                alt={image.alt}
+                fill
+                className="object-cover"
+                sizes="(max-width: 1024px) 50vw, 25vw"
+              />
+              <div
+                className="absolute inset-0"
+                style={{ background: "linear-gradient(to top, rgba(10,10,11,0.3), transparent)" }}
+              />
+            </div>
+          ))}
+        </div>
       </div>
     </section>
   );

@@ -1,0 +1,37 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - generic [ref=e4]:
+      - progressbar [ref=e6]
+      - main [ref=e83]:
+        - generic [ref=e84]:
+          - img [ref=e87]
+          - generic [ref=e92]:
+            - heading "Hi David" [level=1] [ref=e93]
+            - link "davidliu8473@gmail.com selected. Switch account" [ref=e95] [cursor=pointer]:
+              - generic [ref=e98]: davidliu8473@gmail.com
+              - img [ref=e100]
+        - generic [ref=e107]:
+          - heading "Verifying it’s you..." [level=2] [ref=e109]:
+            - generic [ref=e110]: Verifying it’s you...
+          - generic [ref=e113]: Complete sign-in using your passkey
+        - button "Try another way" [ref=e119] [cursor=pointer]:
+          - generic [ref=e122]: Try another way
+    - contentinfo [ref=e68]:
+      - combobox "Change language English (United States)" [ref=e72] [cursor=pointer]:
+        - generic:
+          - generic: English (United States)
+        - generic:
+          - img
+      - list [ref=e74]:
+        - listitem [ref=e75]:
+          - link "Help" [ref=e76] [cursor=pointer]:
+            - /url: https://support.google.com/accounts?hl=en-US&p=account_iph
+        - listitem [ref=e77]:
+          - link "Privacy" [ref=e78] [cursor=pointer]:
+            - /url: https://accounts.google.com/TOS?loc=CA&hl=en-US&privacy=true
+        - listitem [ref=e79]:
+          - link "Terms" [ref=e80] [cursor=pointer]:
+            - /url: https://accounts.google.com/TOS?loc=CA&hl=en-US
+  - iframe [ref=e81]:
+    
+  - generic [ref=e125]: Hi David

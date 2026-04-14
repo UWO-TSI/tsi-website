@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import TsiLogo from "@/components/ui/TsiLogo";
 
 const pathways = [
   { label: "Nonprofits", href: "/npo" },
@@ -30,9 +31,9 @@ export default function Footer() {
           <div className="col-span-2 md:col-span-1">
             <Link
               href="/"
-              className="font-heading text-sm font-semibold tracking-wide hover:opacity-80 transition-opacity"
+              className="text-white hover:opacity-80 transition-opacity inline-block"
             >
-              TETHOS
+              <TsiLogo width={32} height={32} />
             </Link>
             <p
               className="mt-3 text-xs leading-relaxed max-w-[200px]"

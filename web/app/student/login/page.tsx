@@ -93,7 +93,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--color-bg-main)] flex items-center justify-center px-4">
+    <div className="min-h-screen bg-[var(--color-bg-main)] flex items-center justify-center px-4 pt-20">
       <div className="w-full max-w-md">
         {/* ASCII Logo */}
         <pre className="text-[var(--color-brand-blue)] text-[0.35rem] sm:text-[0.45rem] leading-tight font-mono mb-8 text-center select-none overflow-hidden">
