@@ -12,3 +12,7 @@
 !web/data/globe-nodes.json
 !web/data/globe-countries.json
 .vercel
+*.jpeg
+.playwright-mcp/
+.next/
+__pycache__/
