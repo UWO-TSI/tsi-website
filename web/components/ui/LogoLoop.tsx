@@ -1,14 +1,9 @@
 "use client";
 
-/**
- * LogoLoop - Infinite scrolling logo carousel.
- * Uses pure CSS animation instead of requestAnimationFrame for performance.
- */
-
 import React, { useRef, useEffect, useState } from "react";
 
 export interface LogoItem {
-  node: React.ReactNode;
+  text: string;
   href?: string;
   title?: string;
 }
@@ -17,7 +12,6 @@ export interface LogoLoopProps {
   logos: LogoItem[];
   speed?: number;
   direction?: "left" | "right";
-  logoHeight?: number;
   gap?: number;
   pauseOnHover?: boolean;
   fadeOut?: boolean;
@@ -27,35 +21,40 @@ export interface LogoLoopProps {
 
 export default function LogoLoop({
   logos,
-  speed = 80,
+  speed = 40,
   direction = "left",
-  logoHeight = 28,
   gap = 48,
   pauseOnHover = true,
   fadeOut = true,
   fadeOutColor = "#0F0F10",
   className = "",
 }: LogoLoopProps) {
-  const seqRef = useRef<HTMLUListElement>(null);
-  const [seqWidth, setSeqWidth] = useState(0);
+  const seqRef = useRef<HTMLDivElement>(null);
+  const [duration, setDuration] = useState(20);
 
   useEffect(() => {
     if (!seqRef.current) return;
-    const measure = () => setSeqWidth(seqRef.current?.scrollWidth ?? 0);
+    const measure = () => {
+      const w = seqRef.current?.scrollWidth ?? 0;
+      if (w > 0) setDuration(w / speed);
+    };
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(seqRef.current);
     return () => observer.disconnect();
-  }, [logos]);
+  }, [logos, speed]);
 
-  // Duration = distance / speed
-  const duration = seqWidth > 0 ? seqWidth / speed : 20;
-  const directionValue = direction === "left" ? "normal" : "reverse";
+  const animStyle: React.CSSProperties = {
+    display: "flex",
+    width: "max-content",
+    willChange: "transform",
+    animation: `marquee ${duration}s linear infinite ${direction === "left" ? "normal" : "reverse"}`,
+  };
 
   return (
     <div
-      className={`relative overflow-hidden group ${className}`}
-      style={{ ["--pause" as string]: pauseOnHover ? "paused" : "running" }}
+      className={`relative overflow-hidden ${className}`}
+      style={pauseOnHover ? { ["--hover-state" as string]: "running" } : undefined}
     >
       {fadeOut && (
         <>
@@ -70,40 +69,49 @@ export default function LogoLoop({
         </>
       )}
 
-      <style jsx>{`
-        @keyframes logoScroll {
-          from { transform: translateX(0); }
-          to { transform: translateX(-50%); }
-        }
-        .logo-track {
-          animation: logoScroll ${duration}s linear infinite;
-          animation-direction: ${directionValue};
-        }
-        .group:hover .logo-track {
-          animation-play-state: var(--pause);
-        }
-      `}</style>
-
-      <div className="logo-track flex will-change-transform" style={{ width: "max-content" }}>
-        {/* Two copies for seamless loop */}
-        <ul ref={seqRef} className="flex items-center shrink-0" role="list">
+      <div
+        style={animStyle}
+        onMouseEnter={pauseOnHover ? (e) => (e.currentTarget.style.animationPlayState = "paused") : undefined}
+        onMouseLeave={pauseOnHover ? (e) => (e.currentTarget.style.animationPlayState = "running") : undefined}
+      >
+        {/* First copy */}
+        <div ref={seqRef} className="flex items-center shrink-0">
           {logos.map((item, i) => (
-            <li key={i} className="flex-none" style={{ marginRight: gap, fontSize: logoHeight, lineHeight: 1 }}>
-              <span className="inline-flex items-center" style={{ color: "rgba(255,255,255,0.5)" }}>
-                {item.node}
-              </span>
-            </li>
+            <span
+              key={i}
+              className="flex-none whitespace-nowrap"
+              style={{
+                marginRight: gap,
+                fontSize: 13,
+                fontWeight: 600,
+                fontFamily: "'Test Sohne', -apple-system, sans-serif",
+                color: "rgba(255,255,255,0.45)",
+                letterSpacing: "0.02em",
+              }}
+            >
+              {item.text}
+            </span>
           ))}
-        </ul>
-        <ul className="flex items-center shrink-0" aria-hidden role="list">
+        </div>
+        {/* Second copy for seamless loop */}
+        <div className="flex items-center shrink-0" aria-hidden>
           {logos.map((item, i) => (
-            <li key={i} className="flex-none" style={{ marginRight: gap, fontSize: logoHeight, lineHeight: 1 }}>
-              <span className="inline-flex items-center" style={{ color: "rgba(255,255,255,0.5)" }}>
-                {item.node}
-              </span>
-            </li>
+            <span
+              key={i}
+              className="flex-none whitespace-nowrap"
+              style={{
+                marginRight: gap,
+                fontSize: 13,
+                fontWeight: 600,
+                fontFamily: "'Test Sohne', -apple-system, sans-serif",
+                color: "rgba(255,255,255,0.45)",
+                letterSpacing: "0.02em",
+              }}
+            >
+              {item.text}
+            </span>
           ))}
-        </ul>
+        </div>
       </div>
     </div>
   );

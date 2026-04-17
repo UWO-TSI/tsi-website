@@ -110,7 +110,6 @@ export default function SponsorStrip() {
             logos={SPONSOR_LOGOS}
             speed={60}
             gap={100}
-            logoHeight={28}
             fadeOut
             fadeOutColor="#0F0F10"
             pauseOnHover
@@ -129,7 +128,6 @@ export default function SponsorStrip() {
             logos={NPO_LOGOS}
             speed={70}
             gap={70}
-            logoHeight={28}
             fadeOut
             fadeOutColor="#0F0F10"
             pauseOnHover

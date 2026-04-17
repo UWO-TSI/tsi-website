@@ -450,7 +450,6 @@ export default function StudentPage() {
               logos={ALUMNI_LOGOS}
               speed={50}
               gap={60}
-              logoHeight={28}
               fadeOut
               fadeOutColor="#0F0F10"
               pauseOnHover

@@ -513,6 +513,12 @@ html.lenis {
   animation: spin-slow 4s linear infinite;
 }
 
+/* Infinite marquee scroll */
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
 .lenis.lenis-stopped {
   overflow: hidden;
 }

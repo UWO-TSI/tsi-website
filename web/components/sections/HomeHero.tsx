@@ -1,33 +1,125 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import GlobeVisualizer from "@/components/ui/GlobeVisualizer";
 import ScrollIndicator from "@/components/ui/ScrollIndicator";
+import LogoLoop from "@/components/ui/LogoLoop";
+import { SPONSOR_LOGOS, NPO_LOGOS } from "@/components/ui/PartnerLogos";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
 }
 
-// ============================================
-// HomeHero — heading → globe pin → text reveal
-//
-// Layout (no negative margins):
-//   [absolute heading overlay — not in flow]
-//   [65vh spacer — pushes globe to the fold]
-//   [globe container — in flow, GSAP pins this]
-// ============================================
+/* ── Character-split helper ── */
+function SplitLine({
+  text,
+  className,
+  style,
+}: {
+  text: string;
+  className?: string;
+  style?: React.CSSProperties;
+}) {
+  return (
+    <span className={className} style={{ display: "block", ...style }}>
+      {text.split("").map((ch, i) => (
+        <span
+          key={i}
+          className="hero-char"
+          style={{
+            display: "inline-block",
+            overflow: "hidden",
+          }}
+        >
+          <span
+            className="hero-char-inner"
+            style={{
+              display: "inline-block",
+              transform: "translateY(110%)",
+              willChange: "transform",
+            }}
+          >
+            {ch === " " ? "\u00A0" : ch}
+          </span>
+        </span>
+      ))}
+    </span>
+  );
+}
 
 export default function HomeHero() {
   const sectionRef = useRef<HTMLDivElement>(null);
   const headingRef = useRef<HTMLDivElement>(null);
+  const logoStripRef = useRef<HTMLDivElement>(null);
+  const h1Ref = useRef<HTMLHeadingElement>(null);
+  const lineRef = useRef<HTMLDivElement>(null);
   const globeWrapRef = useRef<HTMLDivElement>(null);
   const topLeftRef = useRef<HTMLDivElement>(null);
   const bottomRightRef = useRef<HTMLDivElement>(null);
   const scrollIndicatorRef = useRef<HTMLDivElement>(null);
   const [hasInteracted, setHasInteracted] = useState(false);
 
+  // ── Entrance animation ──
+  useEffect(() => {
+    if (!h1Ref.current || !scrollIndicatorRef.current) return;
+
+    const chars = h1Ref.current.querySelectorAll(".hero-char-inner");
+    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    if (prefersReducedMotion) {
+      gsap.set(chars, { y: 0 });
+      gsap.set(h1Ref.current, { opacity: 1 });
+      if (logoStripRef.current) gsap.set(logoStripRef.current, { opacity: 1 });
+      if (lineRef.current) gsap.set(lineRef.current, { scaleX: 1, opacity: 1 });
+      gsap.set(scrollIndicatorRef.current, { opacity: 1 });
+      return;
+    }
+
+    const tl = gsap.timeline({ defaults: { ease: "power4.out" } });
+
+    // Credential bar fades in first
+    if (logoStripRef.current) {
+      tl.fromTo(
+        logoStripRef.current,
+        { opacity: 0, y: 8 },
+        { opacity: 1, y: 0, duration: 0.7, ease: "power2.out" },
+        0.1
+      );
+    }
+
+    // Divider draws in
+    if (lineRef.current) {
+      tl.fromTo(
+        lineRef.current,
+        { scaleX: 0, opacity: 0 },
+        { scaleX: 1, opacity: 1, duration: 0.7, ease: "power2.inOut" },
+        0.35
+      );
+    }
+
+    // h1 becomes visible (chars are clipped)
+    tl.set(h1Ref.current, { opacity: 1 }, 0.5);
+
+    // Staggered character reveal - clip from below
+    tl.to(chars, {
+      y: 0,
+      duration: 0.8,
+      stagger: 0.02,
+      ease: "power3.out",
+    }, 0.55);
+
+    // Scroll indicator
+    tl.fromTo(
+      scrollIndicatorRef.current,
+      { opacity: 0 },
+      { opacity: 1, duration: 0.5 },
+      1.2
+    );
+  }, []);
+
+  // ── Scroll animations ──
   useEffect(() => {
     if (
       !sectionRef.current ||
@@ -39,24 +131,22 @@ export default function HomeHero() {
       return;
 
     const ctx = gsap.context(() => {
-      // ── Heading: slides down toward globe and fades, tucking behind it ──
       gsap.fromTo(
         headingRef.current,
         { y: 0, opacity: 1 },
         {
-          y: "15vh",
+          y: 0,
           opacity: 0,
-          ease: "none",
+          ease: "power3.in",
           scrollTrigger: {
             trigger: sectionRef.current,
             start: "top top",
-            end: "top+=20% top",
+            end: "top+=8% top",
             scrub: true,
           },
         }
       );
 
-      // ── Fade out scroll indicator ──
       ScrollTrigger.create({
         trigger: sectionRef.current,
         start: "top top",
@@ -68,7 +158,6 @@ export default function HomeHero() {
         },
       });
 
-      // ── Globe pin + text reveal timeline ──
       const tl = gsap.timeline({
         scrollTrigger: {
           trigger: globeWrapRef.current,
@@ -81,7 +170,6 @@ export default function HomeHero() {
         },
       });
 
-      // First half: top-left text fades in
       tl.fromTo(
         topLeftRef.current,
         { opacity: 0, y: 40 },
@@ -89,7 +177,6 @@ export default function HomeHero() {
         0
       );
 
-      // Second half: bottom-right text fades in
       tl.fromTo(
         bottomRightRef.current,
         { opacity: 0, y: 40 },
@@ -100,7 +187,6 @@ export default function HomeHero() {
 
     const refreshTimer = setTimeout(() => ScrollTrigger.refresh(), 150);
 
-    // Refresh ScrollTrigger on resize so pin/layout adapts to new viewport
     let resizeTimer: ReturnType<typeof setTimeout>;
     const handleResize = () => {
       clearTimeout(resizeTimer);
@@ -117,54 +203,114 @@ export default function HomeHero() {
   }, []);
 
   return (
-    <section id="hero" ref={sectionRef} data-navbar-theme="dark" className="relative bg-[#0F0F10]">
-      {/* ── Heading — fixed to viewport, NOT in flow ── */}
+    <section id="hero" ref={sectionRef} data-navbar-theme="dark" className="relative bg-[#10121a]">
+      {/* Atmospheric radial glow */}
+      <div
+        className="fixed inset-0 pointer-events-none z-0"
+        style={{
+          background:
+            "radial-gradient(ellipse 50% 40% at 50% 38%, rgba(255,255,255,0.022) 0%, transparent 70%)",
+        }}
+      />
+
+      {/* Subtle noise grain overlay */}
+      <div
+        className="fixed inset-0 pointer-events-none z-0"
+        style={{
+          opacity: 0.03,
+          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,
+          backgroundRepeat: "repeat",
+          backgroundSize: "256px 256px",
+        }}
+      />
+
+      {/* ── Heading — fixed to viewport ── */}
       <div
         ref={headingRef}
         className="fixed top-0 left-0 w-full h-screen z-0 flex items-center justify-center pointer-events-none"
       >
-        <div className="flex flex-col items-center justify-center px-6 text-center w-full max-w-5xl">
-          <h1 className="font-heading mb-6 text-5xl md:text-6xl lg:text-7xl font-semibold leading-tight tracking-tight">
-            Technology That Moves
-            <br />
-            People Forwards.
-          </h1>
+        <div
+          className="flex flex-col items-center justify-center px-8 sm:px-6 text-center w-full max-w-5xl"
+          style={{ marginTop: "-5vh" }}
+        >
+          {/* Credential bar */}
+          <div className="w-full max-w-xs md:max-w-md mb-6 md:mb-8" style={{ opacity: 0 }} ref={logoStripRef}>
+            <LogoLoop
+              logos={[...SPONSOR_LOGOS, ...NPO_LOGOS]}
+              speed={35}
+              gap={48}
+              fadeOut
+              fadeOutColor="#10121a"
+              pauseOnHover={false}
+            />
+          </div>
 
-          <p className="max-w-2xl text-base md:text-lg text-zinc-400 mb-0">
-            We build modern software for nonprofits, companies, and communities.
-            <br className="hidden md:block" />
-            Powered by student developers. Designed for real-world impact.
-          </p>
+          {/* Divider */}
+          <div
+            ref={lineRef}
+            style={{
+              width: 80,
+              height: 1,
+              background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent)",
+              marginBottom: 28,
+              transformOrigin: "center",
+              transform: "scaleX(0)",
+              opacity: 0,
+            }}
+          />
+
+          <h1
+            ref={h1Ref}
+            className="font-heading"
+            style={{
+              opacity: 0,
+              fontSize: "clamp(2.25rem, 7.5vw, 6rem)",
+              fontWeight: 600,
+              lineHeight: 1.05,
+              letterSpacing: "-0.035em",
+            }}
+          >
+            <SplitLine
+              text="Where students ship"
+              style={{ color: "rgba(241,255,255,0.55)" }}
+            />
+            <SplitLine
+              text="real software."
+              style={{ color: "#F1FFFF" }}
+            />
+          </h1>
         </div>
       </div>
 
-      {/* ── Spacer — pushes globe down so top arc sits near the fold ── */}
+      {/* ── Spacer ── */}
       <div style={{ height: "65vh" }} aria-hidden="true" />
 
-      {/* ── Globe container — in flow, pins at center.
-           Height = 100vh so when pinned, it fills the viewport exactly. ── */}
+      {/* ── Globe container ── */}
       <div
         ref={globeWrapRef}
-        className="relative z-10 mx-auto"
-        style={{
-          width: "min(120vw, 1400px)",
-          height: "100vh",
-          clipPath: "inset(-100% 0 0 0)",
-        }}
+        className="relative z-10 w-full overflow-visible"
+        style={{ height: "100vh" }}
       >
-        {/* Globe canvas — sized larger for visual impact, edges clip at container */}
         <div
-          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
+          className="absolute inset-0 overflow-visible"
           style={{
-            width: "min(130vw, 1500px, 115vh)",
-            height: "min(130vw, 1500px, 115vh)",
+            maskImage: "radial-gradient(circle at 50% 50%, black 35%, transparent 55%)",
+            WebkitMaskImage: "radial-gradient(circle at 50% 50%, black 35%, transparent 55%)",
           }}
-          onPointerDown={() => setHasInteracted(true)}
         >
-          <GlobeVisualizer className="w-full h-full" />
+          <div
+            className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
+            style={{
+              width: "min(130vw, 1500px, 115vh)",
+              height: "min(130vw, 1500px, 115vh)",
+            }}
+            onPointerDown={() => setHasInteracted(true)}
+          >
+            <GlobeVisualizer className="w-full h-full" />
+          </div>
         </div>
 
-        {/* ── Top-left text overlay ── */}
+        {/* Top-left text overlay */}
         <div
           ref={topLeftRef}
           className="absolute z-20 pointer-events-none max-w-[200px] md:max-w-[280px]"
@@ -183,7 +329,7 @@ export default function HomeHero() {
           </p>
         </div>
 
-        {/* ── Bottom-right text overlay ── */}
+        {/* Bottom-right text overlay */}
         <div
           ref={bottomRightRef}
           className="absolute z-20 pointer-events-none max-w-[220px] md:max-w-[300px]"
@@ -196,13 +342,13 @@ export default function HomeHero() {
           <p className="text-lg md:text-xl lg:text-2xl font-semibold leading-snug text-white text-right">
             Projects on
             <br />
-            this map is driven by
+            this map are driven by
             <br />
             purpose. Built by students.
           </p>
         </div>
 
-        {/* ── Rotate prompt — icon above text, centered, mimics ScrollIndicator ── */}
+        {/* Rotate prompt */}
         <div
           className="absolute left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-2 pointer-events-none select-none transition-opacity duration-500"
           style={{ bottom: "12%", opacity: hasInteracted ? 0 : 1 }}
@@ -212,7 +358,7 @@ export default function HomeHero() {
             height="20"
             viewBox="0 0 24 24"
             fill="none"
-            stroke="#555"
+            stroke="#71717a"
             strokeWidth="2.5"
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -221,16 +367,17 @@ export default function HomeHero() {
             <path d="M21 12a9 9 0 1 1-6.22-8.56" />
             <polyline points="21 3 21 9 15 9" />
           </svg>
-          <span className="text-xs font-semibold text-[#3a3a3f]">
-            Drag to rotate
+          <span className="text-xs font-semibold text-zinc-500">
+            Drag to explore &middot; Hover nodes
           </span>
         </div>
       </div>
 
-      {/* ── Scroll indicator — fixed bottom ── */}
+      {/* Scroll indicator */}
       <div
         ref={scrollIndicatorRef}
         className="fixed bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 z-30"
+        style={{ opacity: 0 }}
       >
         <ScrollIndicator />
         <span className="text-xs font-light text-[#3a3a3f]">
