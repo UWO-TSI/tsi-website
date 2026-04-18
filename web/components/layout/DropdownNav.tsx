@@ -12,6 +12,7 @@ const NAV_ITEMS = [
   { label: "Companies", href: "/company" },
   { label: "Sponsors", href: "/sponsor" },
   { label: "Students", href: "/student" },
+  { label: "Genesis", href: "/genesis" },
 ];
 
 const CONTACT = { label: "Contact", href: "mailto:team@tethos.ca" };

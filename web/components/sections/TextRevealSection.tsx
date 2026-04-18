@@ -12,9 +12,9 @@ if (typeof window !== "undefined") {
 }
 
 const IMAGES = [
-  { src: "/images/TeamPhoto.jpg", alt: "Team photo" },
-  { src: "/images/flag_signing.jpg", alt: "Flag signing" },
-  { src: "/images/team.jpg", alt: "Team working" },
+  { src: "/images/TeamPhoto.webp", alt: "Team photo" },
+  { src: "/images/flag_signing.webp", alt: "Flag signing" },
+  { src: "/images/TeamPhoto.webp", alt: "Team working" },
 ];
 
 export default function TextRevealSection() {

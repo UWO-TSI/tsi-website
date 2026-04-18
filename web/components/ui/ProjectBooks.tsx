@@ -174,37 +174,127 @@ function BookSpine({
   );
 }
 
-/* Mobile card for touch devices */
-function MobileCard({ project }: { project: Project }) {
+/* Mobile: horizontal book spine that expands on tap */
+function MobileBookSpine({
+  project,
+  isActive,
+  onTap,
+}: {
+  project: Project;
+  isActive: boolean;
+  onTap: () => void;
+}) {
   return (
-    <div
-      className="rounded-xl p-6"
+    <motion.div
+      className="relative cursor-pointer overflow-hidden rounded-lg"
       style={{
-        background: "rgba(255,255,255,0.02)",
-        border: "1px solid rgba(255,255,255,0.06)",
-        borderLeft: `3px solid ${project.color}`,
+        background: isActive ? "rgba(255,255,255,0.03)" : "rgba(255,255,255,0.02)",
+        borderTop: `3px solid ${isActive ? project.color : "rgba(255,255,255,0.06)"}`,
+        borderLeft: "1px solid rgba(255,255,255,0.04)",
+        borderRight: "1px solid rgba(255,255,255,0.04)",
+        borderBottom: "1px solid rgba(255,255,255,0.04)",
       }}
+      animate={{
+        height: isActive ? "auto" : 48,
+      }}
+      transition={springTransition}
+      onClick={onTap}
     >
-      <div className="flex items-center gap-3 mb-3">
-        <div className="w-2 h-2 rounded-full" style={{ background: project.color }} />
-        <span className="text-xs font-medium uppercase tracking-widest" style={{ color: project.color, fontFamily: "var(--font-highlight)" }}>
+      {/* Spine label (always visible) */}
+      <div className="flex items-center gap-3 px-4 h-[48px]">
+        <div
+          className="w-2 h-2 rounded-full flex-shrink-0"
+          style={{ background: project.color }}
+        />
+        <span
+          className="text-xs font-medium uppercase tracking-widest flex-1"
+          style={{ color: isActive ? project.color : "rgba(255,255,255,0.35)", fontFamily: "var(--font-highlight)" }}
+        >
           {project.org}
         </span>
+        <motion.span
+          className="text-xs"
+          style={{ color: "rgba(255,255,255,0.2)" }}
+          animate={{ rotate: isActive ? 180 : 0 }}
+          transition={{ duration: 0.2 }}
+        >
+          ▾
+        </motion.span>
       </div>
-      <h3 className="text-base font-medium tracking-tight mb-2" style={{ color: "#F1FFFF", fontWeight: 500 }}>
-        {project.title}
-      </h3>
-      <p className="text-xs leading-relaxed mb-4" style={{ color: "rgba(255,255,255,0.4)" }}>
-        {project.description}
-      </p>
-      <div className="flex flex-wrap gap-1.5">
-        {project.tags.map((tag) => (
-          <span key={tag} className="text-[10px] px-2 py-1 rounded-md" style={{ background: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.35)", border: "1px solid rgba(255,255,255,0.06)", fontFamily: "var(--font-highlight)" }}>
-            {tag}
-          </span>
-        ))}
-      </div>
-    </div>
+
+      {/* Expanded content */}
+      <AnimatePresence>
+        {isActive && (
+          <motion.div
+            className="px-4 pb-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            <h3
+              className="text-base font-medium tracking-tight mb-2"
+              style={{ color: "#F1FFFF", fontWeight: 500 }}
+            >
+              {project.title}
+            </h3>
+            <p
+              className="text-xs leading-relaxed mb-3"
+              style={{ color: "rgba(255,255,255,0.4)" }}
+            >
+              {project.description}
+            </p>
+
+            {project.stats && (
+              <div className="flex gap-6 mb-3">
+                {project.stats.map((stat) => (
+                  <div key={stat.label}>
+                    <p className="text-sm font-medium" style={{ color: "#F1FFFF" }}>
+                      {stat.value}
+                    </p>
+                    <p
+                      className="text-[10px] mt-0.5"
+                      style={{ color: "rgba(255,255,255,0.25)", fontFamily: "var(--font-highlight)" }}
+                    >
+                      {stat.label}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="flex flex-wrap gap-1.5">
+              {project.tags.map((tag) => (
+                <span
+                  key={tag}
+                  className="text-[10px] px-2 py-1 rounded-md"
+                  style={{
+                    background: "rgba(255,255,255,0.04)",
+                    color: "rgba(255,255,255,0.35)",
+                    border: "1px solid rgba(255,255,255,0.06)",
+                    fontFamily: "var(--font-highlight)",
+                  }}
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Hover glow */}
+      {isActive && (
+        <motion.div
+          className="absolute inset-0 pointer-events-none"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          style={{
+            background: `linear-gradient(135deg, ${project.color}08, transparent 60%)`,
+          }}
+        />
+      )}
+    </motion.div>
   );
 }
 
@@ -238,10 +328,15 @@ export default function ProjectBooks({ projects, className = "" }: ProjectBooksP
         </div>
       </div>
 
-      {/* Mobile: stacked cards */}
-      <div className="md:hidden flex flex-col gap-3">
-        {projects.map((project) => (
-          <MobileCard key={project.org} project={project} />
+      {/* Mobile: horizontal spines stacked vertically, tap to open */}
+      <div className="md:hidden flex flex-col gap-1">
+        {projects.map((project, i) => (
+          <MobileBookSpine
+            key={project.org}
+            project={project}
+            isActive={activeIndex === i}
+            onTap={() => setActiveIndex(activeIndex === i ? null : i)}
+          />
         ))}
       </div>
     </div>

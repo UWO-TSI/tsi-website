@@ -549,7 +549,7 @@ function SceneContent() {
     }, [camera, scene]);
 
     useEffect(() => {
-        scene.background = null;
+        scene.background = new Color(CONFIG.background);
     }, [scene]);
 
     useEffect(() => {

@@ -4,7 +4,6 @@ import TextRevealSection from "@/components/sections/TextRevealSection";
 import CaseStudies from "@/components/sections/CaseStudies";
 import ImpactStats from "@/components/sections/ImpactStats";
 import TeamSection from "@/components/sections/TeamSection";
-import SponsorStrip from "@/components/sections/SponsorStrip";
 import PathwayCards from "@/components/sections/PathwayCards";
 import DotNav from "@/components/ui/DotNav";
 import type { DotNavSection } from "@/components/ui/DotNav";
@@ -15,7 +14,6 @@ const SECTIONS: DotNavSection[] = [
   { id: "work", label: "Work" },
   { id: "impact", label: "Impact" },
   { id: "team", label: "Team" },
-  { id: "partners", label: "Partners" },
   { id: "pathways", label: "Get Started" },
 ];
 
@@ -29,7 +27,6 @@ export default function HomePage() {
         <CaseStudies />
         <ImpactStats />
         <TeamSection />
-        <SponsorStrip />
         <PathwayCards />
       </main>
     </SmoothScroll>

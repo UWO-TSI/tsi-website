@@ -64,7 +64,7 @@ export default function DotNav({ sections }: DotNavProps) {
     <nav
       ref={navRef}
       aria-label="Page sections"
-      className="fixed right-6 top-1/2 z-50 -translate-y-1/2 transition-opacity duration-500"
+      className="fixed right-6 top-1/2 z-50 -translate-y-1/2 transition-opacity duration-500 hidden md:block"
       style={{ opacity: visible ? 1 : 0, pointerEvents: visible ? "auto" : "none" }}
     >
       <ul className="flex flex-col items-end gap-5">

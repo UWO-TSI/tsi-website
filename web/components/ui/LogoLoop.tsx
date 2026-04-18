@@ -54,20 +54,18 @@ export default function LogoLoop({
   return (
     <div
       className={`relative overflow-hidden ${className}`}
-      style={pauseOnHover ? { ["--hover-state" as string]: "running" } : undefined}
+      style={{
+        ...(pauseOnHover ? { ["--hover-state" as string]: "running" } : undefined),
+        ...(fadeOut
+          ? {
+              maskImage:
+                "linear-gradient(to right, transparent, black clamp(24px, 8%, 100px), black calc(100% - clamp(24px, 8%, 100px)), transparent)",
+              WebkitMaskImage:
+                "linear-gradient(to right, transparent, black clamp(24px, 8%, 100px), black calc(100% - clamp(24px, 8%, 100px)), transparent)",
+            }
+          : undefined),
+      }}
     >
-      {fadeOut && (
-        <>
-          <div
-            className="pointer-events-none absolute inset-y-0 left-0 z-10"
-            style={{ width: "clamp(24px, 8%, 100px)", background: `linear-gradient(to right, ${fadeOutColor}, transparent)` }}
-          />
-          <div
-            className="pointer-events-none absolute inset-y-0 right-0 z-10"
-            style={{ width: "clamp(24px, 8%, 100px)", background: `linear-gradient(to left, ${fadeOutColor}, transparent)` }}
-          />
-        </>
-      )}
 
       <div
         style={animStyle}

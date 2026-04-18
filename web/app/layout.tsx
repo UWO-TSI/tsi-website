@@ -3,6 +3,7 @@ import "../styles/tokens.css";
 import type { ReactNode } from "react";
 import type { Metadata } from "next";
 import { IBM_Plex_Mono, Space_Grotesk } from "next/font/google";
+import LoadingScreen from "@/components/ui/LoadingScreen";
 
 const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
@@ -44,6 +45,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       className={`${spaceGrotesk.variable} ${ibmPlexMono.variable}`}
     >
       <body className="bg-[#0F0F10] text-[#F1FFFF] font-body">
+        <LoadingScreen />
         {children}
       </body>
     </html>
