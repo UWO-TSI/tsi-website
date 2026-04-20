@@ -25,6 +25,7 @@ if (typeof window !== "undefined") {
 const PROJECTS: Project[] = [
   {
     org: "World Vision",
+    year: 2026,
     title: "Multi-agent research platform",
     description: "Internal multi-agent platform and reusable workflows to speed up research, segmentation, and proposal/project discovery.",
     tags: ["AI", "Multi-Agent", "Python"],
@@ -33,6 +34,7 @@ const PROJECTS: Project[] = [
   },
   {
     org: "IRC",
+    year: 2026,
     title: "LLM data pipeline",
     description: "LLM-assisted pipeline that converts inconsistent CSV/Excel provider data into a standardized schema for reliable database ingestion.",
     tags: ["LLM", "Python", "ETL"],
@@ -41,6 +43,7 @@ const PROJECTS: Project[] = [
   },
   {
     org: "Museum",
+    year: 2026,
     title: "Astronaut spacewalk exhibit",
     description: "Hardware astronaut 'spacewalk repair' exhibit using a sensor glove + joystick to control a virtual hand and complete tasks.",
     tags: ["Hardware", "IoT", "Unity"],
@@ -49,6 +52,7 @@ const PROJECTS: Project[] = [
   },
   {
     org: "Childcan",
+    year: 2026,
     title: "Website redesign & migration",
     description: "Redesigning and migrating their website to improve accessibility, navigation, and donation/resource flows.",
     tags: ["Next.js", "CMS", "A11y"],
@@ -57,6 +61,7 @@ const PROJECTS: Project[] = [
   },
   {
     org: "Plan Int'l",
+    year: 2026,
     title: "FRF reconciliation app",
     description: "Replacing legacy FRF reconciliation tool with a modern web app that automates monthly expense ingestion, calculations, and reporting.",
     tags: ["React", "Node.js", "Finance"],
@@ -65,6 +70,7 @@ const PROJECTS: Project[] = [
   },
   {
     org: "Catalyst",
+    year: 2026,
     title: "ML forecasting dashboard",
     description: "Cloud pipeline and ML forecasting system for public development indicators, delivered through an interactive map-based dashboard.",
     tags: ["ML", "D3.js", "AWS"],
@@ -73,6 +79,7 @@ const PROJECTS: Project[] = [
   },
   {
     org: "Red Cross",
+    year: 2026,
     title: "SharePoint enhancement",
     description: "Enhancing SharePoint with tagging, stronger search, and automated reminders so teams can find accurate internal resources faster.",
     tags: ["SharePoint", "Power Automate"],

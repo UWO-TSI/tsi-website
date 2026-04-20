@@ -5,8 +5,8 @@ import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import GlobeVisualizer from "@/components/ui/GlobeVisualizer";
 import ScrollIndicator from "@/components/ui/ScrollIndicator";
-import LogoLoop from "@/components/ui/LogoLoop";
-import { SPONSOR_LOGOS, NPO_LOGOS } from "@/components/ui/PartnerLogos";
+import GlowLogoCarousel from "@/components/ui/GlowLogoCarousel";
+import { HERO_LOGOS } from "@/components/ui/PartnerLogos";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
@@ -234,24 +234,63 @@ export default function HomeHero() {
           style={{ marginTop: "-5vh" }}
         >
           {/* Credential bar */}
-          <div className="w-full max-w-xs md:max-w-md mb-6 md:mb-8" style={{ opacity: 0 }} ref={logoStripRef}>
-            <LogoLoop
-              logos={[...SPONSOR_LOGOS, ...NPO_LOGOS]}
-              speed={35}
-              gap={48}
-              fadeOut
-              fadeOutColor="#10121a"
-              pauseOnHover={false}
+          <div
+            className="w-full max-w-xl md:max-w-3xl mb-5 md:mb-6 flex flex-col items-center pointer-events-auto"
+            style={{ opacity: 0 }}
+            ref={logoStripRef}
+          >
+            <span
+              aria-hidden="true"
+              style={{
+                fontFamily:
+                  "'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace",
+                fontSize: 10,
+                fontWeight: 500,
+                letterSpacing: "0.22em",
+                textTransform: "uppercase",
+                color: "rgba(141, 168, 204, 0.58)",
+                marginBottom: 14,
+              }}
+            >
+              Builders from
+              <span
+                style={{
+                  fontSize: "0.85em",
+                  opacity: 0.72,
+                  marginLeft: "0.35em",
+                  letterSpacing: 0,
+                  display: "inline-block",
+                  transform: "translateY(-0.5px)",
+                }}
+              >
+                ↗
+              </span>
+            </span>
+            <ul className="sr-only">
+              <li>Our students have shipped software at:</li>
+              {HERO_LOGOS.map((l) => (
+                <li key={l.text}>{l.title || l.text}</li>
+              ))}
+            </ul>
+            <GlowLogoCarousel
+              logos={HERO_LOGOS}
+              speed={22}
+              gap={60}
+              logoHeight={21}
+              hoverGlow="rgba(91, 139, 232, 0.22)"
+              tooltipAccent="#8DA8CC"
+              pauseOnHover
             />
           </div>
 
-          {/* Divider */}
+          {/* Glow divider */}
           <div
             ref={lineRef}
             style={{
               width: 80,
               height: 1,
-              background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent)",
+              background:
+                "linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent)",
               marginBottom: 28,
               transformOrigin: "center",
               transform: "scaleX(0)",

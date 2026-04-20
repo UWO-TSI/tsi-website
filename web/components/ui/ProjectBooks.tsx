@@ -16,6 +16,10 @@ export interface Project {
   tags: string[];
   color: string; // accent color for the spine
   stats?: { label: string; value: string }[];
+  /** Year the project was built. Used for grouping with vertical dividers. */
+  year: number;
+  /** If true, render an empty "future work" slot instead of a real project. */
+  placeholder?: boolean;
 }
 
 interface ProjectBooksProps {
@@ -23,7 +27,7 @@ interface ProjectBooksProps {
   className?: string;
 }
 
-const SPINE_WIDTH = 56;
+const SPINE_WIDTH = 68;
 const EXPANDED_WIDTH = 380;
 const BOOK_HEIGHT = 320;
 
@@ -33,6 +37,71 @@ const springTransition = {
   damping: 40,
   mass: 0.8,
 };
+
+function PlaceholderSpine() {
+  return (
+    <div
+      className="flex-shrink-0 relative rounded-lg flex items-center justify-center"
+      style={{
+        width: SPINE_WIDTH,
+        height: BOOK_HEIGHT,
+        background: "transparent",
+        border: "1px dashed rgba(255,255,255,0.08)",
+      }}
+      aria-hidden
+    >
+      <span
+        className="text-[10px] uppercase tracking-widest"
+        style={{
+          color: "rgba(255,255,255,0.22)",
+          fontFamily: "var(--font-highlight)",
+          writingMode: "vertical-rl",
+          textOrientation: "mixed",
+          transform: "rotate(180deg)",
+        }}
+      >
+        Future work
+      </span>
+    </div>
+  );
+}
+
+function YearDivider({ year }: { year: number }) {
+  return (
+    <div
+      className="flex-shrink-0 relative flex flex-col items-center justify-between mx-2"
+      style={{ height: BOOK_HEIGHT, width: 28 }}
+      aria-hidden
+    >
+      <span
+        className="text-[10px] uppercase tracking-[0.22em]"
+        style={{
+          color: "rgba(255,255,255,0.28)",
+          fontFamily: "var(--font-highlight)",
+        }}
+      >
+        {year}
+      </span>
+      <div
+        className="flex-1 my-2"
+        style={{
+          width: 1,
+          background:
+            "linear-gradient(to bottom, transparent, rgba(255,255,255,0.12) 15%, rgba(255,255,255,0.12) 85%, transparent)",
+        }}
+      />
+      <span
+        className="text-[10px] tracking-widest"
+        style={{
+          color: "rgba(255,255,255,0.18)",
+          fontFamily: "var(--font-highlight)",
+        }}
+      >
+        /
+      </span>
+    </div>
+  );
+}
 
 function BookSpine({
   project,
@@ -298,45 +367,120 @@ function MobileBookSpine({
   );
 }
 
+/** Group consecutive projects by year in the order given. Preserves array order
+ *  (ascending or descending as the caller provides it). */
+function groupByYear(projects: Project[]): { year: number; items: Project[] }[] {
+  const groups: { year: number; items: Project[] }[] = [];
+  for (const p of projects) {
+    const last = groups[groups.length - 1];
+    if (last && last.year === p.year) {
+      last.items.push(p);
+    } else {
+      groups.push({ year: p.year, items: [p] });
+    }
+  }
+  return groups;
+}
+
 export default function ProjectBooks({ projects, className = "" }: ProjectBooksProps) {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const groups = groupByYear(projects);
+
+  // Map each real (non-placeholder) project to its global index for neighbor lift.
+  const indexMap = new Map<Project, number>();
+  let idx = 0;
+  for (const p of projects) {
+    if (!p.placeholder) {
+      indexMap.set(p, idx);
+      idx++;
+    }
+  }
 
   return (
     <div className={className}>
-      {/* Desktop: Books Container */}
+      {/* Desktop: Books Container grouped by year */}
       <div className="hidden md:flex items-center justify-center">
         <div className="flex items-stretch gap-1">
-          {projects.map((project, i) => {
-            // Neighbor lift: slight translateY when adjacent to active
-            const isNeighbor = activeIndex !== null && Math.abs(i - activeIndex) === 1;
-            return (
-              <motion.div
-                key={project.org}
-                animate={{ y: isNeighbor ? -3 : 0 }}
-                transition={{ type: "spring", stiffness: 300, damping: 30 }}
-              >
-                <BookSpine
-                  project={project}
-                  index={i}
-                  isActive={activeIndex === i}
-                  onHover={() => setActiveIndex(i)}
-                  onLeave={() => setActiveIndex(null)}
-                />
-              </motion.div>
-            );
-          })}
+          {groups.map((group, gi) => (
+            <div key={group.year} className="flex items-stretch gap-1">
+              {group.items.map((project) => {
+                if (project.placeholder) {
+                  return (
+                    <PlaceholderSpine
+                      key={`ph-${group.year}-${project.org}`}
+                    />
+                  );
+                }
+                const i = indexMap.get(project)!;
+                const isNeighbor =
+                  activeIndex !== null && Math.abs(i - activeIndex) === 1;
+                return (
+                  <motion.div
+                    key={project.org}
+                    animate={{ y: isNeighbor ? -3 : 0 }}
+                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                  >
+                    <BookSpine
+                      project={project}
+                      index={i}
+                      isActive={activeIndex === i}
+                      onHover={() => setActiveIndex(i)}
+                      onLeave={() => setActiveIndex(null)}
+                    />
+                  </motion.div>
+                );
+              })}
+              {gi < groups.length - 1 ? (
+                <YearDivider year={groups[gi + 1].year} />
+              ) : null}
+            </div>
+          ))}
         </div>
       </div>
 
-      {/* Mobile: horizontal spines stacked vertically, tap to open */}
-      <div className="md:hidden flex flex-col gap-1">
-        {projects.map((project, i) => (
-          <MobileBookSpine
-            key={project.org}
-            project={project}
-            isActive={activeIndex === i}
-            onTap={() => setActiveIndex(activeIndex === i ? null : i)}
-          />
+      {/* Mobile: horizontal spines stacked vertically, tap to open. Year labels
+           become simple section headers instead of vertical dividers. */}
+      <div className="md:hidden flex flex-col gap-4">
+        {groups.map((group) => (
+          <div key={group.year} className="flex flex-col gap-1">
+            <div
+              className="text-[10px] uppercase tracking-[0.22em] mb-1 px-1"
+              style={{ color: "rgba(255,255,255,0.28)", fontFamily: "var(--font-highlight)" }}
+            >
+              {group.year}
+            </div>
+            {group.items.map((project) => {
+              if (project.placeholder) {
+                return (
+                  <div
+                    key={`ph-${group.year}-${project.org}`}
+                    className="rounded-lg flex items-center gap-3 px-4 h-[48px]"
+                    style={{ border: "1px dashed rgba(255,255,255,0.08)" }}
+                    aria-hidden
+                  >
+                    <span
+                      className="text-xs uppercase tracking-widest"
+                      style={{
+                        color: "rgba(255,255,255,0.22)",
+                        fontFamily: "var(--font-highlight)",
+                      }}
+                    >
+                      Future work
+                    </span>
+                  </div>
+                );
+              }
+              const i = indexMap.get(project)!;
+              return (
+                <MobileBookSpine
+                  key={project.org}
+                  project={project}
+                  isActive={activeIndex === i}
+                  onTap={() => setActiveIndex(activeIndex === i ? null : i)}
+                />
+              );
+            })}
+          </div>
         ))}
       </div>
     </div>

@@ -12,78 +12,147 @@ if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
 }
 
+// Most recent year first (left) → past archive on the right. Year dividers are
+// inserted automatically between consecutive different-year groups.
 const PROJECTS: Project[] = [
+  // ── 2026 cohort (most recent — left) ────────────────────────────────────
+  // Placeholder slots for upcoming work show first (leading edge)
   {
-    org: "Childcan",
-    title: "Donor management platform",
-    description:
-      "Full-stack donor tracking and campaign management, replacing manual spreadsheets with a streamlined dashboard.",
-    tags: ["Next.js", "Supabase", "Tailwind"],
-    color: "#1d9bf0",
-    stats: [
-      { label: "Hours saved / mo", value: "40+" },
-      { label: "Active users", value: "15" },
-    ],
+    org: "ph-2026-a",
+    year: 2026,
+    title: "",
+    description: "",
+    tags: [],
+    color: "#ffffff",
+    placeholder: true,
   },
   {
-    org: "Red Cross",
-    title: "Volunteer coordination tool",
-    description:
-      "Scheduling and communication platform enabling real-time coordination across 3 regional chapters.",
-    tags: ["React", "Node.js", "PostgreSQL"],
-    color: "#ef4444",
-    stats: [
-      { label: "Volunteers", value: "200+" },
-      { label: "Chapters", value: "3" },
-    ],
+    org: "ph-2026-b",
+    year: 2026,
+    title: "",
+    description: "",
+    tags: [],
+    color: "#ffffff",
+    placeholder: true,
   },
   {
     org: "World Vision",
-    title: "Impact reporting dashboard",
+    year: 2026,
+    title: "Multi-agent research platform",
     description:
-      "Automated data pipeline and visualization dashboard for program outcomes and donor reporting.",
-    tags: ["Python", "D3.js", "AWS"],
+      "Internal multi-agent platform and reusable workflows to speed up research, segmentation, and proposal/project discovery.",
+    tags: ["AI", "Multi-Agent", "Python"],
     color: "#f59e0b",
-    stats: [
-      { label: "Reports / quarter", value: "12" },
-      { label: "Data sources", value: "8" },
-    ],
-  },
-  {
-    org: "Plan Int'l",
-    title: "Community engagement app",
-    description:
-      "Mobile-first platform connecting field workers with communities for feedback and resource coordination.",
-    tags: ["React Native", "Firebase"],
-    color: "#10b981",
-    stats: [
-      { label: "Communities", value: "45" },
-      { label: "Field workers", value: "120" },
-    ],
   },
   {
     org: "IRC",
-    title: "Case management system",
+    year: 2026,
+    title: "LLM data pipeline",
     description:
-      "Intake, tracking, and outcomes system for refugee services, replacing paper-based workflows.",
-    tags: ["Next.js", "Prisma", "Vercel"],
-    color: "#8b5cf6",
-    stats: [
-      { label: "Cases / month", value: "300+" },
-      { label: "Staff", value: "25" },
-    ],
+      "LLM-assisted pipeline that converts inconsistent CSV/Excel provider data into a standardized schema for reliable database ingestion.",
+    tags: ["LLM", "Python", "ETL"],
+    color: "#1d9bf0",
   },
   {
     org: "Museum",
-    title: "Interactive exhibit guide",
+    year: 2026,
+    title: "Astronaut spacewalk exhibit",
     description:
-      "QR-powered mobile guide for exhibits with accessibility features and multilingual support.",
-    tags: ["PWA", "i18n", "QR API"],
+      "Hardware 'spacewalk repair' exhibit using a sensor glove + joystick to control a virtual hand and complete tasks.",
+    tags: ["Hardware", "IoT", "Unity"],
     color: "#ec4899",
-    stats: [
-      { label: "Exhibits", value: "60+" },
-      { label: "Languages", value: "4" },
-    ],
+  },
+  {
+    org: "Childcan",
+    year: 2026,
+    title: "Website redesign",
+    description:
+      "Full redesign and migration to improve accessibility, navigation, and donation/resource flows.",
+    tags: ["Next.js", "CMS", "A11y"],
+    color: "#22c55e",
+  },
+  {
+    org: "Catalyst",
+    year: 2026,
+    title: "ML forecasting dashboard",
+    description:
+      "Cloud pipeline and ML forecasting system for public development indicators, visualized in an interactive map dashboard.",
+    tags: ["ML", "D3.js", "AWS"],
+    color: "#ef4444",
+  },
+  {
+    org: "Plan Int'l",
+    year: 2026,
+    title: "FRF reconciliation app",
+    description:
+      "Replacing the legacy FRF reconciliation tool with a modern web app that automates monthly expense ingestion, calculations, and reporting.",
+    tags: ["React", "Node.js", "Finance"],
+    color: "#8b5cf6",
+  },
+
+  // ── 2025 cohort (past archive — right) ──────────────────────────────────
+  {
+    org: "GoHockey",
+    year: 2025,
+    title: "Membership website",
+    description:
+      "Member registration and management site for Girls Only Hockey's youth program, with admin controls and e-commerce checkout.",
+    tags: ["UI/UX", "E-Commerce", "Web Dev", "Accounts"],
+    color: "#8b5cf6",
+  },
+  {
+    org: "JAM",
+    year: 2025,
+    title: "RFID interactive exhibit",
+    description:
+      "Hardware + software system for London Jet Aircraft Museum: RFID-tagged exhibits trigger an interactive immersive experience for visitors.",
+    tags: ["RFID", "Hardware", "Full-Stack", "Electronics"],
+    color: "#0ea5e9",
+  },
+  {
+    org: "United Way",
+    year: 2025,
+    title: "StairClimb leaderboard app",
+    description:
+      "Gamified web app for United Way Elgin-Middlesex's TD StairClimb: tracks participants' steps and displays a live leaderboard.",
+    tags: ["React", "SQL", "Game Dev", "UI/UX"],
+    color: "#ef4444",
+  },
+  {
+    org: "TREA",
+    year: 2025,
+    title: "Digital outreach",
+    description:
+      "Tech consulting for Thames Region Ecological Association: social platforms and digital tools to engage youth in environmental initiatives.",
+    tags: ["Consulting", "Social Media", "Strategy"],
+    color: "#4d9c3f",
+  },
+  {
+    org: "BGC",
+    year: 2025,
+    title: "Campaign tracking tool",
+    description:
+      "Marketing-attribution tool for Boys & Girls Club London: unique URLs + QR codes per channel, all landing on a tracked conversion page.",
+    tags: ["Backend", "Analytics", "Database", "QR Codes"],
+    color: "#22c55e",
+  },
+  {
+    org: "YOU",
+    year: 2025,
+    title: "Workflow management software",
+    description:
+      "Internal tool for Youth Opportunities Unlimited to manage workshop tasks, tie them to soft/hard skills, and auto-generate completion e-certificates.",
+    tags: ["Fullstack", "Database", "API", "Automation"],
+    color: "#1d9bf0",
+  },
+  {
+    org: "Daya Counselling",
+    year: 2025,
+    title: "Website modernization",
+    description:
+      "Redesign and upgrade of Daya Counselling Centre's WordPress site for a modern, accessible, user-friendly presence.",
+    tags: ["HTML", "CSS", "Figma", "Web Hosting"],
+    color: "#6b5ce7",
   },
 ];
 

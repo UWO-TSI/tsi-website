@@ -6,6 +6,16 @@ export interface LogoItem {
   text: string;
   href?: string;
   title?: string;
+  icon?: string;
+  /** Visual size multiplier. Some logos look larger/smaller than others at the same px height
+   *  because of bounding-box density. Use 0.85-1.25 to normalize perceived size. */
+  scale?: number;
+  /** Color treatment:
+   *   "solid" → one main blue (for single-color source or enforced uniform).
+   *   "two"   → main blue (dark parts) + very light blue (light parts).
+   *   "multi" → 4-shade ramp from very light to dark blue (source has multiple colors).
+   *  Default: "solid". */
+  colorMode?: "solid" | "two" | "multi";
 }
 
 export interface LogoLoopProps {
@@ -77,17 +87,34 @@ export default function LogoLoop({
           {logos.map((item, i) => (
             <span
               key={i}
-              className="flex-none whitespace-nowrap"
-              style={{
-                marginRight: gap,
-                fontSize: 13,
-                fontWeight: 600,
-                fontFamily: "'Test Sohne', -apple-system, sans-serif",
-                color: "rgba(255,255,255,0.45)",
-                letterSpacing: "0.02em",
-              }}
+              className="flex-none whitespace-nowrap flex items-center"
+              style={{ marginRight: gap }}
             >
-              {item.text}
+              {item.icon ? (
+                <img
+                  src={item.icon}
+                  alt={item.title || item.text}
+                  style={{
+                    height: 18,
+                    width: "auto",
+                    opacity: 0.45,
+                    filter: "brightness(0) invert(1)",
+                  }}
+                  draggable={false}
+                />
+              ) : (
+                <span
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 600,
+                    fontFamily: "'Test Sohne', -apple-system, sans-serif",
+                    color: "rgba(255,255,255,0.45)",
+                    letterSpacing: "0.02em",
+                  }}
+                >
+                  {item.text}
+                </span>
+              )}
             </span>
           ))}
         </div>
@@ -96,17 +123,34 @@ export default function LogoLoop({
           {logos.map((item, i) => (
             <span
               key={i}
-              className="flex-none whitespace-nowrap"
-              style={{
-                marginRight: gap,
-                fontSize: 13,
-                fontWeight: 600,
-                fontFamily: "'Test Sohne', -apple-system, sans-serif",
-                color: "rgba(255,255,255,0.45)",
-                letterSpacing: "0.02em",
-              }}
+              className="flex-none whitespace-nowrap flex items-center"
+              style={{ marginRight: gap }}
             >
-              {item.text}
+              {item.icon ? (
+                <img
+                  src={item.icon}
+                  alt={item.title || item.text}
+                  style={{
+                    height: 18,
+                    width: "auto",
+                    opacity: 0.45,
+                    filter: "brightness(0) invert(1)",
+                  }}
+                  draggable={false}
+                />
+              ) : (
+                <span
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 600,
+                    fontFamily: "'Test Sohne', -apple-system, sans-serif",
+                    color: "rgba(255,255,255,0.45)",
+                    letterSpacing: "0.02em",
+                  }}
+                >
+                  {item.text}
+                </span>
+              )}
             </span>
           ))}
         </div>
