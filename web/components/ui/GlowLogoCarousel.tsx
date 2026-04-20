@@ -35,6 +35,7 @@ export default function GlowLogoCarousel({
   const [hover, setHover] = useState<HoverState>(null);
   const [mounted, setMounted] = useState(false);
 
+  // eslint-disable-next-line react-you-might-not-need-an-effect/you-might-not-need-an-effect
   useEffect(() => setMounted(true), []);
 
   // rAF-driven marquee so speed can ease smoothly on hover.
