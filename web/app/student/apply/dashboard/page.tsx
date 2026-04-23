@@ -6,11 +6,11 @@ import StatusPipeline from "@/components/recruit/StatusPipeline";
 import StatusBadge from "@/components/recruit/StatusBadge";
 import AuthModal from "@/components/recruit/AuthModal";
 import InterviewScheduler from "@/components/recruit/InterviewScheduler";
+import ActivityFeed from "@/components/recruit/ActivityFeed";
+import ResumePreview from "@/components/recruit/ResumePreview";
 import { motion } from "framer-motion";
 import {
-  FileText,
   Calendar,
-  ExternalLink,
   ArrowLeft,
   ArrowRight,
   Lock,
@@ -45,7 +45,9 @@ export default function DashboardPage() {
 
       const { data } = await supabase
         .from("applications")
-        .select("*, position:positions(*)")
+        .select(
+          "*, position:positions(*), releases:status_releases(id, old_status, new_status, released_at)"
+        )
         .eq("user_id", user.id)
         .order("submitted_at", { ascending: false });
 
@@ -244,18 +246,6 @@ export default function DashboardPage() {
                           }
                         )}
                       </span>
-                      {app.resume_drive_url && (
-                        <a
-                          href={app.resume_drive_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-1 text-[#002FA7] hover:underline transition-colors"
-                        >
-                          <FileText className="w-3.5 h-3.5" />
-                          Resume
-                          <ExternalLink className="w-3 h-3" />
-                        </a>
-                      )}
                     </div>
                   </div>
                   <StatusBadge status={app.status} />
@@ -274,6 +264,19 @@ export default function DashboardPage() {
                     />
                   </div>
                 )}
+
+                {/* Resume preview */}
+                {app.resume_drive_url && (
+                  <div className="mt-6">
+                    <ResumePreview
+                      url={app.resume_drive_url}
+                      filename={app.resume_filename}
+                    />
+                  </div>
+                )}
+
+                {/* Activity feed */}
+                <ActivityFeed application={app} />
               </motion.div>
             ))}
           </div>

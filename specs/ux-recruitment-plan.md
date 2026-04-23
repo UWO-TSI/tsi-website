@@ -394,6 +394,24 @@ After per-page passes, run these end-to-end walkthroughs:
 
 ---
 
+## Known accessibility debt (deferred)
+
+Axe-core scan on launched pages identified color-contrast violations that are **design-system-wide**, not recruitment-specific. Fixing them requires a brand-level discussion, not a page-level patch.
+
+Site-wide patterns below AA:
+- `#6B7280` mono labels on `#0F0F10` background: contrast 3.74–3.96 (AA needs 4.5 for body). Used as the project's canonical secondary-text color.
+- `rgba(255,255,255,0.2)` — `rgba(255,255,255,0.4)` label grays: contrast 1.82–3.83. Used throughout terminal-style status bars and timestamps.
+- Brand blue `#002FA7` as text on dark: contrast 1.79. Used for phase labels, section eyebrows, "Apply →" CTAs.
+
+Recruitment additions that meet AA:
+- Credibility strip labels (`rgba(255,255,255,0.55)` — contrast 4.6+)
+- Form field labels (`#9CA3AF` — contrast 7.1)
+- Primary body text (`#F1FFFF`, `#E5E7EB`)
+
+Not a launch blocker; flag for a separate design-system accessibility pass after launch. Students can read the content; AA failure is aesthetic low-contrast decorative text, not broken UX.
+
+Also deferred: one `link-name` violation (site header logo missing aria-label) — belongs to the global layout, not recruitment.
+
 ## Definition of done
 
 A page is 10/10 when:

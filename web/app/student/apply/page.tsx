@@ -240,6 +240,48 @@ export default function RecruitmentPage() {
         `}</style>
       </section>
 
+      {/* ── Credibility strip ── */}
+      <section className="px-8 md:px-20 lg:px-28 pt-6 pb-10">
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-80px" }}
+          transition={{ duration: 0.7, ease: EASE_OUT }}
+          className="max-w-[1100px] mx-auto grid grid-cols-3 gap-4 md:gap-8"
+        >
+          {[
+            { value: "12", label: "projects shipped" },
+            { value: "6", label: "nonprofit partners" },
+            { value: "40+", label: "alumni in tech" },
+          ].map((s) => (
+            <div
+              key={s.label}
+              className="rounded-lg px-4 py-5"
+              style={{
+                background: "rgba(255,255,255,0.02)",
+                border: "1px solid rgba(255,255,255,0.05)",
+              }}
+            >
+              <p
+                className="text-2xl md:text-3xl mb-1"
+                style={{ color: "#F1FFFF", fontWeight: 500 }}
+              >
+                {s.value}
+              </p>
+              <p
+                className="text-[10px] md:text-xs tracking-widest uppercase"
+                style={{
+                  color: "rgba(255,255,255,0.55)",
+                  fontFamily: "var(--font-highlight)",
+                }}
+              >
+                {s.label}
+              </p>
+            </div>
+          ))}
+        </motion.div>
+      </section>
+
       {/* ── Timeline ── */}
       <section className="px-8 md:px-20 lg:px-28 pt-2 pb-4">
         <div className="max-w-[1100px] mx-auto">

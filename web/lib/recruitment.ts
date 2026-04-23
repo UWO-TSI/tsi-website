@@ -102,6 +102,7 @@ export interface Application {
   updated_at: string;
   // Joined fields
   position?: Position;
+  releases?: StatusRelease[];
 }
 
 export interface StatusRelease {
