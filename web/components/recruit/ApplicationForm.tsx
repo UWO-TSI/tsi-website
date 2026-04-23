@@ -124,9 +124,6 @@ export default function ApplicationForm({
 
   // Hydrate from draft + Google session on mount.
   useEffect(() => {
-    if (hydratedRef.current) return;
-    hydratedRef.current = true;
-
     let cancelled = false;
 
     async function hydrate() {
@@ -194,6 +191,7 @@ export default function ApplicationForm({
       } else {
         setFormData((prev) => ({ ...prev, ...sessionDefaults }));
       }
+      hydratedRef.current = true;
     }
 
     hydrate();
@@ -439,13 +437,11 @@ export default function ApplicationForm({
         )}
       </AnimatePresence>
 
-      <div className="flex items-center justify-between mb-4">
-        <FormProgress
-          currentStep={step}
-          totalSteps={STEP_LABELS.length}
-          labels={STEP_LABELS}
-        />
-      </div>
+      <FormProgress
+        currentStep={step}
+        totalSteps={STEP_LABELS.length}
+        labels={STEP_LABELS}
+      />
 
       <div className="flex items-center justify-end mb-6 h-5">
         <AnimatePresence mode="wait">
