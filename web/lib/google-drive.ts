@@ -7,12 +7,18 @@ function getAuth() {
   );
   return new google.auth.GoogleAuth({
     credentials,
-    scopes: ["https://www.googleapis.com/auth/drive.file"],
+    scopes: ["https://www.googleapis.com/auth/drive"],
   });
 }
 
 /**
  * Upload a file buffer to Google Drive.
+ *
+ * Service accounts have no personal storage quota, so the target folder
+ * MUST live in a Shared Drive (Team Drive) where files are collectively
+ * owned. All API calls below set `supportsAllDrives: true` which is
+ * required even when the target folder is in a shared drive.
+ *
  * Returns the web view URL of the uploaded file.
  */
 export async function uploadResumeToDrive(
@@ -39,6 +45,7 @@ export async function uploadResumeToDrive(
       body: Readable.from(fileBuffer),
     },
     fields: "id, webViewLink",
+    supportsAllDrives: true,
   });
 
   // Make file viewable by anyone with the link
@@ -48,6 +55,7 @@ export async function uploadResumeToDrive(
       role: "reader",
       type: "anyone",
     },
+    supportsAllDrives: true,
   });
 
   return {
@@ -70,6 +78,8 @@ async function ensureFolderPath(
     const existing = await drive.files.list({
       q: query,
       fields: "files(id)",
+      supportsAllDrives: true,
+      includeItemsFromAllDrives: true,
     });
 
     if (existing.data.files && existing.data.files.length > 0) {
@@ -82,6 +92,7 @@ async function ensureFolderPath(
           mimeType: "application/vnd.google-apps.folder",
         },
         fields: "id",
+        supportsAllDrives: true,
       });
       currentParent = created.data.id!;
     }

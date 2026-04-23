@@ -39,6 +39,8 @@ async function getSpreadsheetId(): Promise<string> {
   const existing = await drive.files.list({
     q: `name='Tethos Recruitment 2026-27' and '${folderId}' in parents and mimeType='application/vnd.google-apps.spreadsheet' and trashed=false`,
     fields: "files(id)",
+    supportsAllDrives: true,
+    includeItemsFromAllDrives: true,
   });
 
   if (existing.data.files && existing.data.files.length > 0) {
@@ -63,6 +65,7 @@ async function getSpreadsheetId(): Promise<string> {
     addParents: folderId,
     removeParents: "root",
     fields: "id, parents",
+    supportsAllDrives: true,
   });
 
   cachedSpreadsheetId = newId;
