@@ -1,13 +1,21 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import FormField from "./FormField";
 import FormProgress from "./FormProgress";
 import ResumeUpload from "./ResumeUpload";
 import SuccessScreen from "./SuccessScreen";
 import Button from "@/components/ui/Button";
-import { ArrowRight, ArrowLeft } from "lucide-react";
+import {
+  ArrowRight,
+  ArrowLeft,
+  Check,
+  Sparkles,
+  CloudOff,
+  Cloud,
+} from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 import type { Position, EssayAnswer } from "@/lib/recruitment";
 import { HEARD_ABOUT_OPTIONS, YEAR_OPTIONS } from "@/lib/recruitment";
 
@@ -25,6 +33,50 @@ interface FormData {
   linkedin_url: string;
   heard_about_us: string;
   essay_answers: Record<string, string>;
+}
+
+const EMPTY_FORM: FormData = {
+  full_name: "",
+  email: "",
+  phone: "",
+  program_major: "",
+  year_of_study: "",
+  linkedin_url: "",
+  heard_about_us: "",
+  essay_answers: {},
+};
+
+const DRAFT_KEY = (positionId: string) => `tethos:draft:${positionId}`;
+
+interface DraftPayload {
+  form_data: FormData;
+  updated_at: string;
+}
+
+function isEmptyForm(f: FormData): boolean {
+  return (
+    !f.full_name &&
+    !f.email &&
+    !f.phone &&
+    !f.program_major &&
+    !f.year_of_study &&
+    !f.linkedin_url &&
+    !f.heard_about_us &&
+    Object.values(f.essay_answers).every((v) => !v)
+  );
+}
+
+function relativeTime(iso: string): string {
+  const then = new Date(iso).getTime();
+  const now = Date.now();
+  const diff = Math.max(0, now - then);
+  const min = Math.round(diff / 60000);
+  if (min < 1) return "just now";
+  if (min < 60) return `${min} min ago`;
+  const hr = Math.round(min / 60);
+  if (hr < 24) return `${hr} hour${hr === 1 ? "" : "s"} ago`;
+  const day = Math.round(hr / 24);
+  return `${day} day${day === 1 ? "" : "s"} ago`;
 }
 
 const STEP_LABELS = ["Personal Info", "Resume", "Questions", "Review"];
@@ -58,17 +110,153 @@ export default function ApplicationForm({
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [resumeFile, setResumeFile] = useState<File | null>(null);
+  const [confirmChecked, setConfirmChecked] = useState(false);
 
-  const [formData, setFormData] = useState<FormData>({
-    full_name: "",
-    email: "",
-    phone: "",
-    program_major: "",
-    year_of_study: "",
-    linkedin_url: "",
-    heard_about_us: "",
-    essay_answers: {},
-  });
+  const [formData, setFormData] = useState<FormData>(EMPTY_FORM);
+
+  const [draftRestoredAt, setDraftRestoredAt] = useState<string | null>(null);
+  const [draftBannerDismissed, setDraftBannerDismissed] = useState(false);
+  const [draftSyncState, setDraftSyncState] = useState<
+    "idle" | "saving" | "saved" | "offline"
+  >("idle");
+  const hydratedRef = useRef(false);
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Hydrate from draft + Google session on mount.
+  useEffect(() => {
+    if (hydratedRef.current) return;
+    hydratedRef.current = true;
+
+    let cancelled = false;
+
+    async function hydrate() {
+      const supabase = createClient();
+
+      // Start with Google-derived defaults (name/email pre-fill)
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      const meta = user?.user_metadata ?? {};
+      const sessionDefaults: Partial<FormData> = {
+        full_name: meta.full_name ?? meta.name ?? "",
+        email: user?.email ?? "",
+      };
+
+      // Load drafts in parallel: localStorage (fast) + Supabase (authoritative)
+      let localDraft: DraftPayload | null = null;
+      try {
+        const raw = localStorage.getItem(DRAFT_KEY(position.id));
+        if (raw) localDraft = JSON.parse(raw);
+      } catch {
+        localDraft = null;
+      }
+
+      let remoteDraft: DraftPayload | null = null;
+      try {
+        const res = await fetch(
+          `/api/drafts?position_id=${encodeURIComponent(position.id)}`
+        );
+        if (res.ok) {
+          const row = await res.json();
+          if (row && row.form_data) {
+            remoteDraft = {
+              form_data: row.form_data,
+              updated_at: row.updated_at,
+            };
+          }
+        }
+      } catch {
+        // Network failed, rely on localStorage
+      }
+
+      if (cancelled) return;
+
+      // Prefer the most recently updated draft
+      let chosen: DraftPayload | null = null;
+      if (localDraft && remoteDraft) {
+        chosen =
+          new Date(localDraft.updated_at).getTime() >
+          new Date(remoteDraft.updated_at).getTime()
+            ? localDraft
+            : remoteDraft;
+      } else {
+        chosen = localDraft ?? remoteDraft;
+      }
+
+      if (chosen && !isEmptyForm(chosen.form_data)) {
+        setFormData({
+          ...EMPTY_FORM,
+          ...sessionDefaults,
+          ...chosen.form_data,
+          essay_answers: chosen.form_data.essay_answers ?? {},
+        });
+        setDraftRestoredAt(chosen.updated_at);
+      } else {
+        setFormData((prev) => ({ ...prev, ...sessionDefaults }));
+      }
+    }
+
+    hydrate();
+    return () => {
+      cancelled = true;
+    };
+  }, [position.id]);
+
+  // Debounced autosave to localStorage (always) + Supabase (when non-empty).
+  useEffect(() => {
+    if (!hydratedRef.current) return;
+    if (isEmptyForm(formData)) return;
+
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    setDraftSyncState("saving");
+
+    saveTimerRef.current = setTimeout(async () => {
+      const payload: DraftPayload = {
+        form_data: formData,
+        updated_at: new Date().toISOString(),
+      };
+
+      try {
+        localStorage.setItem(DRAFT_KEY(position.id), JSON.stringify(payload));
+      } catch {
+        // Storage may be full or disabled; proceed with remote save.
+      }
+
+      try {
+        const res = await fetch("/api/drafts", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            position_id: position.id,
+            form_data: formData,
+          }),
+        });
+        setDraftSyncState(res.ok ? "saved" : "offline");
+      } catch {
+        setDraftSyncState("offline");
+      }
+    }, 800);
+
+    return () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    };
+  }, [formData, position.id]);
+
+  const clearDraft = useCallback(async () => {
+    try {
+      localStorage.removeItem(DRAFT_KEY(position.id));
+    } catch {
+      // ignore
+    }
+    try {
+      await fetch(
+        `/api/drafts?position_id=${encodeURIComponent(position.id)}`,
+        { method: "DELETE" }
+      );
+    } catch {
+      // Server-side cleanup also happens on successful submit.
+    }
+  }, [position.id]);
 
   const updateField = useCallback((field: keyof FormData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -187,6 +375,7 @@ export default function ApplicationForm({
       });
 
       if (res.ok) {
+        await clearDraft();
         setSubmitted(true);
       } else {
         const errData = await res.json();
@@ -200,16 +389,104 @@ export default function ApplicationForm({
   };
 
   if (submitted) {
-    return <SuccessScreen positionTitle={position.title} />;
+    return (
+      <SuccessScreen
+        positionTitle={position.title}
+        applicantName={formData.full_name}
+        position={position}
+        positionSlug={position.slug}
+      />
+    );
   }
 
   return (
     <div className="max-w-2xl mx-auto">
-      <FormProgress
-        currentStep={step}
-        totalSteps={STEP_LABELS.length}
-        labels={STEP_LABELS}
-      />
+      <AnimatePresence>
+        {draftRestoredAt && !draftBannerDismissed && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.3 }}
+            className="flex items-start gap-3 p-4 rounded-xl mb-6"
+            style={{
+              background: "rgba(0,47,167,0.08)",
+              border: "1px solid rgba(0,47,167,0.25)",
+            }}
+          >
+            <span className="mt-0.5 w-5 h-5 rounded-md bg-[#002FA7]/20 flex items-center justify-center flex-shrink-0">
+              <Check className="w-3 h-3 text-[#002FA7]" />
+            </span>
+            <div className="flex-1">
+              <p className="text-sm text-[#F1FFFF]">
+                Draft restored
+                <span className="text-[#9CA3AF] ml-2 text-xs font-mono">
+                  — last edited {relativeTime(draftRestoredAt)}
+                </span>
+              </p>
+              <p className="text-xs text-[#6B7280] mt-1">
+                We saved your progress automatically. Pick up where you left
+                off.
+              </p>
+            </div>
+            <button
+              onClick={() => setDraftBannerDismissed(true)}
+              className="text-xs text-[#6B7280] hover:text-[#F1FFFF] transition"
+            >
+              Dismiss
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <div className="flex items-center justify-between mb-4">
+        <FormProgress
+          currentStep={step}
+          totalSteps={STEP_LABELS.length}
+          labels={STEP_LABELS}
+        />
+      </div>
+
+      <div className="flex items-center justify-end mb-6 h-5">
+        <AnimatePresence mode="wait">
+          {draftSyncState === "saving" && (
+            <motion.span
+              key="saving"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="text-[10px] font-mono text-[#6B7280] flex items-center gap-1.5"
+            >
+              <span className="w-1 h-1 rounded-full bg-[#FFD166] animate-pulse" />
+              Saving draft…
+            </motion.span>
+          )}
+          {draftSyncState === "saved" && (
+            <motion.span
+              key="saved"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="text-[10px] font-mono text-[#6B7280] flex items-center gap-1.5"
+            >
+              <Cloud className="w-3 h-3 text-[#22C55E]" />
+              Draft saved
+            </motion.span>
+          )}
+          {draftSyncState === "offline" && (
+            <motion.span
+              key="offline"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="text-[10px] font-mono text-[#FFD166] flex items-center gap-1.5"
+            >
+              <CloudOff className="w-3 h-3" />
+              Saved locally — will sync when online
+            </motion.span>
+          )}
+        </AnimatePresence>
+      </div>
 
       <div className="relative overflow-hidden min-h-[400px]">
         <AnimatePresence mode="wait" custom={direction}>
@@ -263,42 +540,77 @@ export default function ApplicationForm({
                   error={errors.program_major}
                 />
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <FormField
-                  label="Year of Study"
-                  name="year_of_study"
-                  type="select"
-                  value={formData.year_of_study}
-                  onChange={(v) => updateField("year_of_study", v)}
-                  required
-                  error={errors.year_of_study}
-                  options={YEAR_OPTIONS.map((y) => ({
-                    value: String(y.value),
-                    label: y.label,
-                  }))}
-                />
-                <FormField
-                  label="LinkedIn (optional)"
-                  name="linkedin_url"
-                  type="url"
-                  value={formData.linkedin_url}
-                  onChange={(v) => updateField("linkedin_url", v)}
-                  placeholder="https://linkedin.com/in/..."
-                />
+              <div>
+                <label className="block font-mono text-xs text-[#9CA3AF] mb-2">
+                  Year of Study <span className="text-[#EF4444]">*</span>
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {YEAR_OPTIONS.map((y) => {
+                    const selected = formData.year_of_study === String(y.value);
+                    return (
+                      <button
+                        key={y.value}
+                        type="button"
+                        onClick={() =>
+                          updateField("year_of_study", String(y.value))
+                        }
+                        className={`px-4 py-2 rounded-full text-sm transition-all ${
+                          selected
+                            ? "bg-[#002FA7] text-[#F1FFFF] border border-[#002FA7]"
+                            : "bg-white/[0.03] text-[#9CA3AF] border border-white/10 hover:border-white/20 hover:text-[#F1FFFF]"
+                        }`}
+                      >
+                        {y.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                {errors.year_of_study && (
+                  <p className="text-xs text-[#EF4444] mt-1.5 ml-1">
+                    {errors.year_of_study}
+                  </p>
+                )}
               </div>
+
               <FormField
-                label="How did you hear about us?"
-                name="heard_about_us"
-                type="select"
-                value={formData.heard_about_us}
-                onChange={(v) => updateField("heard_about_us", v)}
-                required
-                error={errors.heard_about_us}
-                options={HEARD_ABOUT_OPTIONS.map((o) => ({
-                  value: o,
-                  label: o,
-                }))}
+                label="LinkedIn (optional)"
+                name="linkedin_url"
+                type="url"
+                value={formData.linkedin_url}
+                onChange={(v) => updateField("linkedin_url", v)}
+                placeholder="https://linkedin.com/in/..."
               />
+
+              <div>
+                <label className="block font-mono text-xs text-[#9CA3AF] mb-2">
+                  How did you hear about us?{" "}
+                  <span className="text-[#EF4444]">*</span>
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {HEARD_ABOUT_OPTIONS.map((o) => {
+                    const selected = formData.heard_about_us === o;
+                    return (
+                      <button
+                        key={o}
+                        type="button"
+                        onClick={() => updateField("heard_about_us", o)}
+                        className={`px-4 py-2 rounded-full text-sm transition-all ${
+                          selected
+                            ? "bg-[#002FA7] text-[#F1FFFF] border border-[#002FA7]"
+                            : "bg-white/[0.03] text-[#9CA3AF] border border-white/10 hover:border-white/20 hover:text-[#F1FFFF]"
+                        }`}
+                      >
+                        {o}
+                      </button>
+                    );
+                  })}
+                </div>
+                {errors.heard_about_us && (
+                  <p className="text-xs text-[#EF4444] mt-1.5 ml-1">
+                    {errors.heard_about_us}
+                  </p>
+                )}
+              </div>
             </motion.div>
           )}
 
@@ -364,6 +676,25 @@ export default function ApplicationForm({
                   </div>
                 );
               })}
+
+              <div
+                className="flex items-start gap-3 p-4 rounded-xl mt-6"
+                style={{
+                  background: "rgba(255,209,102,0.06)",
+                  border: "1px solid rgba(255,209,102,0.2)",
+                }}
+              >
+                <Sparkles className="w-4 h-4 text-[#FFD166] flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm text-[#F1FFFF] font-medium">
+                    Write in your own voice
+                  </p>
+                  <p className="text-xs text-[#9CA3AF] mt-1 leading-relaxed">
+                    We can tell when essays are AI-written. Short and honest
+                    beats long and polished every time.
+                  </p>
+                </div>
+              </div>
             </motion.div>
           )}
 
@@ -378,48 +709,114 @@ export default function ApplicationForm({
               exit="exit"
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
             >
-              <div className="glass-card p-6 md:p-8 space-y-4">
-                <h3 className="text-lg font-semibold text-[#F1FFFF] mb-4">
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-[#F1FFFF]">
                   Review your application
                 </h3>
 
-                <ReviewRow label="Name" value={formData.full_name} />
-                <ReviewRow label="Email" value={formData.email} />
-                <ReviewRow label="Phone" value={formData.phone} />
-                <ReviewRow label="Program" value={formData.program_major} />
-                <ReviewRow
-                  label="Year"
-                  value={
-                    YEAR_OPTIONS.find(
-                      (y) => String(y.value) === formData.year_of_study
-                    )?.label ?? formData.year_of_study
-                  }
-                />
-                {formData.linkedin_url && (
-                  <ReviewRow label="LinkedIn" value={formData.linkedin_url} />
-                )}
-                <ReviewRow label="Heard via" value={formData.heard_about_us} />
-                <ReviewRow
-                  label="Resume"
-                  value={resumeFile?.name ?? "Not uploaded"}
-                />
-
-                <div className="border-t border-white/10 pt-4 mt-4">
-                  <p className="font-mono text-xs text-[#002FA7] mb-2 uppercase tracking-wider">
-                    Essay Responses
-                  </p>
-                  {position.essay_questions.map((q) => (
-                    <div key={q.id} className="mb-3">
-                      <p className="text-xs text-[#9CA3AF] mb-1">
-                        {q.question}
-                      </p>
-                      <p className="text-sm text-[#E5E7EB] whitespace-pre-wrap">
-                        {formData.essay_answers[q.id] || "—"}
-                      </p>
-                    </div>
-                  ))}
+                <div className="glass-card p-6 md:p-8 space-y-3">
+                  <ReviewSectionHeader
+                    title="Personal"
+                    onEdit={() => {
+                      setDirection(-1);
+                      setStep(0);
+                    }}
+                  />
+                  <ReviewRow label="Name" value={formData.full_name} />
+                  <ReviewRow label="Email" value={formData.email} />
+                  <ReviewRow label="Phone" value={formData.phone} />
+                  <ReviewRow label="Program" value={formData.program_major} />
+                  <ReviewRow
+                    label="Year"
+                    value={
+                      YEAR_OPTIONS.find(
+                        (y) => String(y.value) === formData.year_of_study
+                      )?.label ?? formData.year_of_study
+                    }
+                  />
+                  {formData.linkedin_url && (
+                    <ReviewRow
+                      label="LinkedIn"
+                      value={formData.linkedin_url}
+                    />
+                  )}
+                  <ReviewRow
+                    label="Heard via"
+                    value={formData.heard_about_us}
+                  />
                 </div>
+
+                <div className="glass-card p-6 md:p-8 space-y-3">
+                  <ReviewSectionHeader
+                    title="Resume"
+                    onEdit={() => {
+                      setDirection(-1);
+                      setStep(1);
+                    }}
+                  />
+                  <ReviewRow
+                    label="File"
+                    value={resumeFile?.name ?? "Not uploaded"}
+                  />
+                </div>
+
+                {position.essay_questions.length > 0 && (
+                  <div className="glass-card p-6 md:p-8 space-y-4">
+                    <ReviewSectionHeader
+                      title="Essays"
+                      onEdit={() => {
+                        setDirection(-1);
+                        setStep(2);
+                      }}
+                    />
+                    {position.essay_questions.map((q) => (
+                      <div key={q.id}>
+                        <p className="text-xs text-[#9CA3AF] mb-1.5 font-medium">
+                          {q.question}
+                        </p>
+                        <p className="text-sm text-[#E5E7EB] whitespace-pre-wrap leading-relaxed">
+                          {formData.essay_answers[q.id] || "—"}
+                        </p>
+                        <p className="text-[10px] text-[#6B7280] font-mono mt-1">
+                          {countWords(formData.essay_answers[q.id] ?? "")} /{" "}
+                          {q.max_words} words
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
+
+              <button
+                onClick={() => setConfirmChecked((v) => !v)}
+                className="w-full flex items-start gap-3 p-4 rounded-xl mt-6 text-left transition-colors"
+                style={{
+                  background: confirmChecked
+                    ? "rgba(0,47,167,0.12)"
+                    : "rgba(255,255,255,0.03)",
+                  border: `1px solid ${
+                    confirmChecked
+                      ? "rgba(0,47,167,0.4)"
+                      : "rgba(255,255,255,0.08)"
+                  }`,
+                }}
+              >
+                <span
+                  className={`mt-0.5 flex-shrink-0 w-5 h-5 rounded-md flex items-center justify-center transition-colors ${
+                    confirmChecked
+                      ? "bg-[#002FA7] border-[#002FA7]"
+                      : "border border-white/20"
+                  }`}
+                >
+                  {confirmChecked && (
+                    <Check className="w-3 h-3 text-[#F1FFFF]" />
+                  )}
+                </span>
+                <span className="text-sm text-[#F1FFFF] leading-relaxed">
+                  I confirm the information above is accurate. Once submitted,
+                  I won&apos;t be able to edit this application.
+                </span>
+              </button>
 
               {errors.submit && (
                 <p className="text-sm text-[#EF4444] mt-4 text-center">
@@ -456,6 +853,7 @@ export default function ApplicationForm({
             <Button
               variant="primary"
               onClick={handleSubmit}
+              disabled={!confirmChecked || submitting}
             >
               {submitting ? "Submitting..." : "Submit Application"}
             </Button>
@@ -472,7 +870,30 @@ function ReviewRow({ label, value }: { label: string; value: string }) {
       <span className="font-mono text-xs text-[#6B7280] w-20 flex-shrink-0 pt-0.5">
         {label}
       </span>
-      <span className="text-sm text-[#E5E7EB]">{value}</span>
+      <span className="text-sm text-[#E5E7EB] break-words">{value}</span>
+    </div>
+  );
+}
+
+function ReviewSectionHeader({
+  title,
+  onEdit,
+}: {
+  title: string;
+  onEdit: () => void;
+}) {
+  return (
+    <div className="flex items-center justify-between pb-3 mb-1 border-b border-white/5">
+      <p className="font-mono text-xs text-[#002FA7] uppercase tracking-wider">
+        {title}
+      </p>
+      <button
+        type="button"
+        onClick={onEdit}
+        className="text-xs text-[#9CA3AF] hover:text-[#F1FFFF] transition"
+      >
+        Edit
+      </button>
     </div>
   );
 }

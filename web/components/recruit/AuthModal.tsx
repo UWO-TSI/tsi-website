@@ -22,6 +22,7 @@ export default function AuthModal({
   const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const supabase = createClient();
 
@@ -44,9 +45,10 @@ export default function AuthModal({
     e.preventDefault();
     setLoading(true);
     setError(null);
+    setSuccessMessage(null);
 
     if (mode === "signup") {
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -56,11 +58,13 @@ export default function AuthModal({
       });
       if (error) {
         setError(error.message);
-      } else {
-        setError(null);
+      } else if (data.session) {
         onClose();
-        // Show success -- user needs to verify email
-        alert("Check your email for a verification link.");
+        window.location.href = redirectTo;
+      } else {
+        setSuccessMessage(
+          `We sent a verification link to ${email}. Click it to finish signing up — you'll land right back on your application.`
+        );
       }
     } else {
       const { error } = await supabase.auth.signInWithPassword({
@@ -208,6 +212,13 @@ export default function AuthModal({
                 {error && (
                   <p className="text-sm text-[#EF4444]">{error}</p>
                 )}
+                {successMessage && (
+                  <div className="rounded-xl bg-[#22C55E]/10 border border-[#22C55E]/30 px-4 py-3">
+                    <p className="text-sm text-[#86EFAC] leading-relaxed">
+                      {successMessage}
+                    </p>
+                  </div>
+                )}
 
                 <button
                   type="submit"
@@ -231,6 +242,7 @@ export default function AuthModal({
                       onClick={() => {
                         setMode("signup");
                         setError(null);
+                        setSuccessMessage(null);
                       }}
                       className="text-[#002FA7] hover:underline"
                     >
@@ -244,6 +256,7 @@ export default function AuthModal({
                       onClick={() => {
                         setMode("signin");
                         setError(null);
+                        setSuccessMessage(null);
                       }}
                       className="text-[#002FA7] hover:underline"
                     >

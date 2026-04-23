@@ -8,6 +8,8 @@ interface ButtonProps {
   variant?: "primary" | "secondary";
   className?: string;
   onClick?: () => void;
+  disabled?: boolean;
+  type?: "button" | "submit" | "reset";
 }
 
 export default function Button({
@@ -15,16 +17,23 @@ export default function Button({
   variant = "primary",
   className,
   onClick,
+  disabled = false,
+  type = "button",
 }: ButtonProps) {
   return (
     <button
+      type={type}
       onClick={onClick}
+      disabled={disabled}
       className={clsx(
         "rounded-full px-8 py-4 text-[14px] font-medium transition",
-        variant === "primary" &&
+        !disabled &&
+          variant === "primary" &&
           "bg-[#002FA7] text-[#F1FFFF] hover:bg-[#0039CC]",
-        variant === "secondary" &&
+        !disabled &&
+          variant === "secondary" &&
           "bg-zinc-400/20 text-white hover:bg-zinc-400/30",
+        disabled && "bg-white/5 text-[#6B7280] cursor-not-allowed",
         className
       )}
     >

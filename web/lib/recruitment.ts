@@ -66,6 +66,7 @@ export interface Position {
   closes_at: string | null;
   is_active: boolean;
   created_at: string;
+  calendly_url?: string | null;
 }
 
 // ============================================

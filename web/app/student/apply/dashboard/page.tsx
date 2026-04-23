@@ -5,8 +5,17 @@ import { useRouter } from "next/navigation";
 import StatusPipeline from "@/components/recruit/StatusPipeline";
 import StatusBadge from "@/components/recruit/StatusBadge";
 import AuthModal from "@/components/recruit/AuthModal";
-import { motion, AnimatePresence } from "framer-motion";
-import { FileText, Calendar, ExternalLink, ArrowLeft, ArrowRight, Lock, Inbox } from "lucide-react";
+import InterviewScheduler from "@/components/recruit/InterviewScheduler";
+import { motion } from "framer-motion";
+import {
+  FileText,
+  Calendar,
+  ExternalLink,
+  ArrowLeft,
+  ArrowRight,
+  Lock,
+  Inbox,
+} from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { Application } from "@/lib/recruitment";
 import type { User } from "@supabase/supabase-js";
@@ -254,6 +263,17 @@ export default function DashboardPage() {
 
                 {/* Status pipeline */}
                 <StatusPipeline currentStatus={app.status} />
+
+                {/* Interview scheduling when invited */}
+                {app.status === "interview_invite" && app.position && (
+                  <div className="mt-6">
+                    <InterviewScheduler
+                      applicantName={app.full_name}
+                      applicantEmail={app.email}
+                      calendlyUrl={app.position.calendly_url ?? null}
+                    />
+                  </div>
+                )}
               </motion.div>
             ))}
           </div>

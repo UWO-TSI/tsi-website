@@ -7,7 +7,6 @@ import PositionCard from "@/components/recruit/PositionCard";
 import InternalGate from "@/components/recruit/InternalGate";
 import { motion } from "framer-motion";
 import { fadeUpVariants } from "@/lib/motion";
-import { POSITION_SEED_DATA } from "@/lib/recruitment";
 import type { Position } from "@/lib/recruitment";
 
 export default function InternalPositionsPage() {
@@ -48,27 +47,14 @@ function InternalPositionsContent() {
           setLoading(false);
           return;
         }
+        setError("Invalid access code. Please check and try again.");
+      } else {
+        setError("Couldn't verify access code. Try again in a moment.");
       }
     } catch {
-      // Fallback
+      setError("Couldn't verify access code. Try again in a moment.");
     }
 
-    // Fallback to seed data for demo
-    const seedInternal = POSITION_SEED_DATA.filter(
-      (p) => p.visibility === "internal"
-    ).map((p, i) => ({
-      ...p,
-      id: `seed-int-${i}`,
-      created_at: new Date().toISOString(),
-    }));
-
-    if (seedInternal.length > 0 && code === "tethos-internal-2026") {
-      // Demo code for testing
-      setPositions(seedInternal);
-      setUnlocked(true);
-    } else {
-      setError("Invalid access code. Please check and try again.");
-    }
     setLoading(false);
   };
 

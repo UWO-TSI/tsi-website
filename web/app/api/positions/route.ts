@@ -24,10 +24,17 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  // If code provided, validate it for internal positions
+  // If code provided, validate it for internal positions.
+  // Accepts per-position access_code OR a global INTERNAL_ACCESS_CODE env var
+  // (so the DB doesn't need per-row codes to unlock all internal roles).
   if (code && data) {
+    const globalCode = process.env.INTERNAL_ACCESS_CODE;
+    const globalMatches = !!globalCode && globalCode === code;
     const filtered = data.filter(
-      (p) => p.visibility === "public" || p.access_code === code
+      (p) =>
+        p.visibility === "public" ||
+        p.access_code === code ||
+        (p.visibility === "internal" && globalMatches)
     );
     return NextResponse.json(filtered);
   }

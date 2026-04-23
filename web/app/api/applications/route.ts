@@ -15,6 +15,22 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  // Rate limit: max 3 submissions per user per minute.
+  // Prevents runaway submit-button spam; DB unique constraint
+  // already blocks duplicate (user, position) pairs.
+  const oneMinuteAgo = new Date(Date.now() - 60_000).toISOString();
+  const { count: recentCount } = await supabase
+    .from("applications")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", user.id)
+    .gte("submitted_at", oneMinuteAgo);
+  if ((recentCount ?? 0) >= 3) {
+    return NextResponse.json(
+      { error: "Too many submissions. Please wait a moment and try again." },
+      { status: 429 }
+    );
+  }
+
   const body = await request.json();
 
   // Validate required fields
@@ -73,6 +89,17 @@ export async function POST(request: Request) {
     .select("*")
     .eq("id", body.position_id)
     .single();
+
+  // Clean up draft (non-blocking)
+  try {
+    await supabase
+      .from("application_drafts")
+      .delete()
+      .eq("user_id", user.id)
+      .eq("position_id", body.position_id);
+  } catch (draftErr) {
+    console.error("Draft cleanup error:", draftErr);
+  }
 
   // Sync to Google Sheet (non-blocking)
   try {

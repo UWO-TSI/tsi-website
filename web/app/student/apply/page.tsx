@@ -8,6 +8,7 @@ import type { Position } from "@/lib/recruitment";
 import DecryptedText from "@/components/ui/DecryptedText";
 import GradientText from "@/components/ui/GradientText";
 import SpotlightCard from "@/components/ui/SpotlightCard";
+import Countdown from "@/components/recruit/Countdown";
 
 const EASE_OUT: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
@@ -63,7 +64,49 @@ export default function RecruitmentPage() {
   const phases = [...new Set(positions.map((p) => p.phase))].sort();
   const filtered = activePhase ? positions.filter((p) => p.phase === activePhase) : positions;
   const phaseLabels: Record<number, string> = { 1: "Executive", 2: "PM & Directors" };
-  const openCount = positions.filter((p) => p.is_active).length;
+
+  const now = new Date();
+  const openPositions = positions.filter((p) => {
+    if (!p.is_active) return false;
+    if (p.opens_at && new Date(p.opens_at) > now) return false;
+    if (p.closes_at && new Date(p.closes_at) < now) return false;
+    return true;
+  });
+  const openCount = openPositions.length;
+
+  // Find the next meaningful date: nearest upcoming opens_at if nothing open yet,
+  // else the nearest closes_at among open positions.
+  const upcomingOpens = positions
+    .filter((p) => p.is_active && p.opens_at && new Date(p.opens_at) > now)
+    .map((p) => new Date(p.opens_at!).getTime())
+    .sort((a, b) => a - b);
+  const openClosingSoon = openPositions
+    .filter((p) => p.closes_at)
+    .map((p) => new Date(p.closes_at!).getTime())
+    .sort((a, b) => a - b);
+
+  let statusMode: "opens" | "closes" | "closed" = "closed";
+  let targetDate: Date | null = null;
+  if (openCount > 0 && openClosingSoon.length > 0) {
+    statusMode = "closes";
+    targetDate = new Date(openClosingSoon[0]);
+  } else if (upcomingOpens.length > 0) {
+    statusMode = "opens";
+    targetDate = new Date(upcomingOpens[0]);
+  }
+
+  const statusLabel =
+    statusMode === "closes"
+      ? "Applications close in"
+      : statusMode === "opens"
+        ? "Applications open in"
+        : "Applications closed";
+  const statusColor =
+    statusMode === "closes"
+      ? "#22c55e"
+      : statusMode === "opens"
+        ? "#FFD166"
+        : "#6B7280";
 
   return (
     <div className="min-h-screen bg-[#0F0F10]">
@@ -104,7 +147,13 @@ export default function RecruitmentPage() {
             style={{ color: "rgba(255,255,255,0.4)" }}
           >
             Apply for a leadership role on the 2026-27 executive team.{" "}
-            <span style={{ color: "#22c55e" }}>Applications are open.</span>
+            <span style={{ color: statusColor }}>
+              {statusMode === "closes"
+                ? "Applications are open."
+                : statusMode === "opens"
+                  ? "Applications open soon."
+                  : "This cycle is closed."}
+            </span>
           </motion.p>
 
           {/* Terminal status bar */}
@@ -112,17 +161,52 @@ export default function RecruitmentPage() {
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.45, ease: EASE_OUT }}
-            className="mb-10 px-4 py-3 rounded-lg inline-flex items-center gap-4"
-            style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)", fontFamily: "var(--font-highlight)" }}
+            className="mb-10 px-4 py-3 rounded-lg inline-flex flex-wrap items-center gap-x-4 gap-y-2"
+            style={{
+              background: "rgba(255,255,255,0.02)",
+              border: "1px solid rgba(255,255,255,0.05)",
+              fontFamily: "var(--font-highlight)",
+            }}
           >
             <span className="flex items-center gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#22c55e]" style={{ boxShadow: "0 0 6px rgba(34,197,94,0.5)", animation: "pulse 2s ease-in-out infinite" }} />
-              <span className="text-xs" style={{ color: "rgba(255,255,255,0.3)" }}>Phase 01 active</span>
+              <span
+                className="w-1.5 h-1.5 rounded-full"
+                style={{
+                  background: statusColor,
+                  boxShadow: `0 0 6px ${statusColor}80`,
+                  animation:
+                    statusMode === "closed"
+                      ? "none"
+                      : "pulse 2s ease-in-out infinite",
+                }}
+              />
+              <span
+                className="text-xs"
+                style={{ color: "rgba(255,255,255,0.3)" }}
+              >
+                {statusLabel}
+              </span>
+              {targetDate && (
+                <span
+                  className="text-xs"
+                  style={{ color: statusColor }}
+                >
+                  <Countdown target={targetDate} />
+                </span>
+              )}
             </span>
-            <span className="text-xs" style={{ color: "rgba(255,255,255,0.15)" }}>·</span>
-            <span className="text-xs" style={{ color: "rgba(255,255,255,0.3)" }}>{openCount} positions open</span>
-            <span className="text-xs" style={{ color: "rgba(255,255,255,0.15)" }}>·</span>
-            <span className="text-xs" style={{ color: "rgba(255,255,255,0.25)" }}>deadline May 31</span>
+            <span
+              className="text-xs"
+              style={{ color: "rgba(255,255,255,0.15)" }}
+            >
+              ·
+            </span>
+            <span
+              className="text-xs"
+              style={{ color: "rgba(255,255,255,0.3)" }}
+            >
+              {openCount} position{openCount === 1 ? "" : "s"} open
+            </span>
           </motion.div>
 
           {/* CTAs */}

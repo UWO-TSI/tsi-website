@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useEffect, useState } from "react";
+import { motion, AnimatePresence, useAnimation } from "framer-motion";
 import { Lock, ArrowRight } from "lucide-react";
 import Link from "next/link";
 
@@ -15,6 +15,16 @@ interface InternalGateProps {
 export default function InternalGate({ onUnlock, error }: InternalGateProps) {
   const [code, setCode] = useState("");
   const [focused, setFocused] = useState(false);
+  const shakeControls = useAnimation();
+
+  // Shake the card when an error arrives
+  useEffect(() => {
+    if (!error) return;
+    shakeControls.start({
+      x: [0, -8, 8, -6, 6, -3, 0],
+      transition: { duration: 0.45, ease: "easeInOut" },
+    });
+  }, [error, shakeControls]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,7 +39,8 @@ export default function InternalGate({ onUnlock, error }: InternalGateProps) {
         transition={{ duration: 0.7, ease: EASE_OUT }}
         className="w-full max-w-md"
       >
-        <div
+        <motion.div
+          animate={shakeControls}
           className="rounded-2xl p-8 md:p-10 text-center"
           style={{
             background:
@@ -48,10 +59,10 @@ export default function InternalGate({ onUnlock, error }: InternalGateProps) {
           </motion.div>
 
           <h2 className="text-xl font-semibold text-[#F1FFFF] mb-2">
-            Internal Positions
+            Welcome back
           </h2>
           <p className="text-sm text-[#6B7280] mb-8 max-w-xs mx-auto">
-            These roles are available to current and past Tethos members. Enter
+            These roles are reserved for current and past Tethos members. Enter
             your access code to continue.
           </p>
 
@@ -61,11 +72,13 @@ export default function InternalGate({ onUnlock, error }: InternalGateProps) {
               <input
                 type="text"
                 value={code}
-                onChange={(e) => setCode(e.target.value.toUpperCase())}
+                onChange={(e) => setCode(e.target.value)}
                 onFocus={() => setFocused(true)}
                 onBlur={() => setFocused(false)}
-                placeholder="ACCESS CODE"
-                className="w-full rounded-xl bg-white/5 px-5 py-4 text-center text-sm text-[#F1FFFF] placeholder-[#4B5563] font-mono tracking-[0.3em] transition-all duration-200 focus:outline-none"
+                placeholder="access code"
+                autoComplete="off"
+                spellCheck={false}
+                className="w-full rounded-xl bg-white/5 px-5 py-4 text-center text-sm text-[#F1FFFF] placeholder-[#4B5563] font-mono tracking-[0.15em] transition-all duration-200 focus:outline-none"
                 style={{
                   border: `1px solid ${
                     error
@@ -109,7 +122,19 @@ export default function InternalGate({ onUnlock, error }: InternalGateProps) {
               <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
             </motion.button>
           </form>
-        </div>
+
+          <p className="text-xs text-[#6B7280] mt-6 leading-relaxed">
+            Check <span className="text-[#9CA3AF]">#alumni</span> on Slack for
+            this year&apos;s code, or{" "}
+            <a
+              href="mailto:recruitment@tethos.ca?subject=Internal%20access%20code"
+              className="text-[#FFD166] hover:underline"
+            >
+              request access
+            </a>
+            .
+          </p>
+        </motion.div>
 
         {/* Back link */}
         <motion.div
