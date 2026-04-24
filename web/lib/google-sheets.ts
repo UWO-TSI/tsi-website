@@ -1,17 +1,9 @@
 import { google } from "googleapis";
+import { getOAuthClient } from "./google-oauth";
 import type { Application, Position } from "./recruitment";
 
 function getAuth() {
-  const credentials = JSON.parse(
-    process.env.GOOGLE_DRIVE_CREDENTIALS ?? "{}"
-  );
-  return new google.auth.GoogleAuth({
-    credentials,
-    scopes: [
-      "https://www.googleapis.com/auth/spreadsheets",
-      "https://www.googleapis.com/auth/drive.file",
-    ],
-  });
+  return getOAuthClient();
 }
 
 // In-memory cache for auto-created spreadsheet ID

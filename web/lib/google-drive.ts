@@ -1,23 +1,11 @@
 import { google } from "googleapis";
 import { Readable } from "stream";
-
-function getAuth() {
-  const credentials = JSON.parse(
-    process.env.GOOGLE_DRIVE_CREDENTIALS ?? "{}"
-  );
-  return new google.auth.GoogleAuth({
-    credentials,
-    scopes: ["https://www.googleapis.com/auth/drive"],
-  });
-}
+import { getOAuthClient } from "./google-oauth";
 
 /**
- * Upload a file buffer to Google Drive.
- *
- * Service accounts have no personal storage quota, so the target folder
- * MUST live in a Shared Drive (Team Drive) where files are collectively
- * owned. All API calls below set `supportsAllDrives: true` which is
- * required even when the target folder is in a shared drive.
+ * Upload a file buffer to Google Drive on behalf of the OAuth user.
+ * Files are owned by that user (davidliu8473@gmail.com) and count
+ * against their personal Drive quota.
  *
  * Returns the web view URL of the uploaded file.
  */
@@ -25,13 +13,12 @@ export async function uploadResumeToDrive(
   fileBuffer: Buffer,
   fileName: string,
   mimeType: string,
-  folderPath: string // e.g. "Phase-1/VP-Internal"
+  folderPath: string // e.g. "Recruitment/vp-internal"
 ): Promise<{ fileUrl: string; fileId: string }> {
-  const auth = getAuth();
+  const auth = getOAuthClient();
   const drive = google.drive({ version: "v3", auth });
   const rootFolderId = process.env.GOOGLE_DRIVE_FOLDER_ID!;
 
-  // Ensure nested folder structure exists
   const folderId = await ensureFolderPath(drive, rootFolderId, folderPath);
 
   const response = await drive.files.create({
@@ -45,17 +32,14 @@ export async function uploadResumeToDrive(
       body: Readable.from(fileBuffer),
     },
     fields: "id, webViewLink",
-    supportsAllDrives: true,
   });
 
-  // Make file viewable by anyone with the link
   await drive.permissions.create({
     fileId: response.data.id!,
     requestBody: {
       role: "reader",
       type: "anyone",
     },
-    supportsAllDrives: true,
   });
 
   return {
@@ -64,7 +48,6 @@ export async function uploadResumeToDrive(
   };
 }
 
-/** Recursively ensure a folder path exists, creating folders as needed */
 async function ensureFolderPath(
   drive: ReturnType<typeof google.drive>,
   parentId: string,
@@ -74,12 +57,10 @@ async function ensureFolderPath(
   let currentParent = parentId;
 
   for (const folderName of parts) {
-    const query = `name='${folderName}' and '${currentParent}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`;
+    const query = `name='${folderName.replace(/'/g, "\\'")}' and '${currentParent}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`;
     const existing = await drive.files.list({
       q: query,
       fields: "files(id)",
-      supportsAllDrives: true,
-      includeItemsFromAllDrives: true,
     });
 
     if (existing.data.files && existing.data.files.length > 0) {
@@ -92,7 +73,6 @@ async function ensureFolderPath(
           mimeType: "application/vnd.google-apps.folder",
         },
         fields: "id",
-        supportsAllDrives: true,
       });
       currentParent = created.data.id!;
     }
