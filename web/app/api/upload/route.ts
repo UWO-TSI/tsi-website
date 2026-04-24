@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { uploadResumeToDrive } from "@/lib/google-drive";
+import { uploadResumeToStorage } from "@/lib/resume-storage";
 import { MAX_RESUME_SIZE_BYTES } from "@/lib/recruitment";
 
 export async function POST(request: Request) {
-  // Auth check
   const supabase = await createClient();
   const {
     data: { user },
@@ -22,7 +21,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "No file provided" }, { status: 400 });
   }
 
-  // Validate file type
   if (file.type !== "application/pdf") {
     return NextResponse.json(
       { error: "Only PDF files are accepted" },
@@ -30,7 +28,6 @@ export async function POST(request: Request) {
     );
   }
 
-  // Validate file size
   if (file.size > MAX_RESUME_SIZE_BYTES) {
     return NextResponse.json(
       { error: "File exceeds 5MB limit" },
@@ -40,24 +37,16 @@ export async function POST(request: Request) {
 
   try {
     const buffer = Buffer.from(await file.arrayBuffer());
-    const sanitizedName = applicantName.replace(/[^a-zA-Z0-9\s]/g, "").trim();
-    const date = new Date().toISOString().split("T")[0];
-    const fileName = `${sanitizedName}_${date}.pdf`;
-    const folderPath = `Recruitment/${positionSlug}`;
-
-    const { fileUrl, fileId } = await uploadResumeToDrive(
-      buffer,
-      fileName,
-      "application/pdf",
-      folderPath
-    );
-
-    return NextResponse.json({ fileUrl, fileId });
+    const { fileUrl, path } = await uploadResumeToStorage(buffer, {
+      userId: user.id,
+      positionSlug: positionSlug || "unsorted",
+      applicantName: applicantName || "applicant",
+    });
+    return NextResponse.json({ fileUrl, fileId: path });
   } catch (err) {
-    console.error("Drive upload error:", err);
-    return NextResponse.json(
-      { error: "Failed to upload file" },
-      { status: 500 }
-    );
+    console.error("Resume upload error:", err);
+    const message =
+      err instanceof Error ? err.message : "Failed to upload file";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

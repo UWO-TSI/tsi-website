@@ -9,16 +9,18 @@ interface ResumePreviewProps {
   filename?: string | null;
 }
 
-function toDrivePreviewUrl(webViewUrl: string): string | null {
-  // Convert https://drive.google.com/file/d/{id}/view?... → /preview
-  const match = webViewUrl.match(/drive\.google\.com\/file\/d\/([^/]+)/);
-  if (!match) return null;
-  return `https://drive.google.com/file/d/${match[1]}/preview`;
+function toPreviewUrl(url: string): string | null {
+  // Google Drive view links need /preview to embed
+  const drive = url.match(/drive\.google\.com\/file\/d\/([^/]+)/);
+  if (drive) return `https://drive.google.com/file/d/${drive[1]}/preview`;
+  // Supabase signed storage URLs embed directly — browser renders the PDF
+  if (/\/storage\/v1\/object\/(sign|public)\//.test(url)) return url;
+  return null;
 }
 
 export default function ResumePreview({ url, filename }: ResumePreviewProps) {
   const [open, setOpen] = useState(false);
-  const previewUrl = toDrivePreviewUrl(url);
+  const previewUrl = toPreviewUrl(url);
 
   return (
     <div>
