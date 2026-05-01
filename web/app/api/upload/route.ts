@@ -1,3 +1,8 @@
+// DEPRECATED: As of 2026-05, applicant resumes upload directly to
+// Supabase Storage from the browser (see ResumeUpload.tsx + migration 011).
+// This route is preserved only for the admin Drive-mirror workflow if/when
+// it's reintroduced. The applicant submission flow no longer calls it.
+
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { uploadResumeToDrive } from "@/lib/google-drive";

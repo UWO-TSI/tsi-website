@@ -33,6 +33,9 @@ interface FormData {
   linkedin_url: string;
   heard_about_us: string;
   essay_answers: Record<string, string>;
+  resume_storage_path: string | null;
+  resume_filename: string | null;
+  resume_size_bytes: number | null;
 }
 
 const EMPTY_FORM: FormData = {
@@ -44,6 +47,9 @@ const EMPTY_FORM: FormData = {
   linkedin_url: "",
   heard_about_us: "",
   essay_answers: {},
+  resume_storage_path: null,
+  resume_filename: null,
+  resume_size_bytes: null,
 };
 
 const DRAFT_KEY = (positionId: string) => `tethos:draft:${positionId}`;
@@ -62,6 +68,7 @@ function isEmptyForm(f: FormData): boolean {
     !f.year_of_study &&
     !f.linkedin_url &&
     !f.heard_about_us &&
+    !f.resume_storage_path &&
     Object.values(f.essay_answers).every((v) => !v)
   );
 }
@@ -109,7 +116,6 @@ export default function ApplicationForm({
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [confirmChecked, setConfirmChecked] = useState(false);
 
   const [formData, setFormData] = useState<FormData>(EMPTY_FORM);
@@ -186,6 +192,9 @@ export default function ApplicationForm({
           ...sessionDefaults,
           ...chosen.form_data,
           essay_answers: chosen.form_data.essay_answers ?? {},
+          resume_storage_path: chosen.form_data.resume_storage_path ?? null,
+          resume_filename: chosen.form_data.resume_filename ?? null,
+          resume_size_bytes: chosen.form_data.resume_size_bytes ?? null,
         });
         setDraftRestoredAt(chosen.updated_at);
       } else {
@@ -272,6 +281,23 @@ export default function ApplicationForm({
     }));
   }, []);
 
+  const updateResume = useCallback(
+    (data: { path: string; filename: string; size: number } | null) => {
+      setFormData((prev) => ({
+        ...prev,
+        resume_storage_path: data?.path ?? null,
+        resume_filename: data?.filename ?? null,
+        resume_size_bytes: data?.size ?? null,
+      }));
+      setErrors((prev) => {
+        const next = { ...prev };
+        delete next.resume;
+        return next;
+      });
+    },
+    []
+  );
+
   // Step validation
   const validateStep = (s: number): boolean => {
     const errs: Record<string, string> = {};
@@ -288,7 +314,7 @@ export default function ApplicationForm({
     }
 
     if (s === 1) {
-      if (!resumeFile) errs.resume = "Resume is required";
+      if (!formData.resume_storage_path) errs.resume = "Resume is required";
     }
 
     if (s === 2) {
@@ -318,41 +344,39 @@ export default function ApplicationForm({
   };
 
   const handleSubmit = async () => {
+    // Block double-submit
+    if (submitting) return;
+
+    // Cancel any pending autosave so it can't race the clearDraft call
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = null;
+    }
+
     if (!validateStep(2)) {
       setStep(2);
       return;
     }
 
+    if (!formData.resume_storage_path) {
+      setStep(1);
+      setErrors({ resume: "Resume is required" });
+      return;
+    }
+
     setSubmitting(true);
+    setErrors((prev) => {
+      const next = { ...prev };
+      delete next.submit;
+      return next;
+    });
+
+    const essayAnswers: EssayAnswer[] = position.essay_questions.map((q) => ({
+      question_id: q.id,
+      answer: formData.essay_answers[q.id] ?? "",
+    }));
 
     try {
-      // Upload resume first
-      let resumeUrl = "";
-      let resumeFilename = "";
-      if (resumeFile) {
-        const uploadData = new FormData();
-        uploadData.append("file", resumeFile);
-        uploadData.append("positionSlug", position.slug);
-        uploadData.append("applicantName", formData.full_name);
-
-        const uploadRes = await fetch("/api/upload", {
-          method: "POST",
-          body: uploadData,
-        });
-
-        if (uploadRes.ok) {
-          const uploadJson = await uploadRes.json();
-          resumeUrl = uploadJson.fileUrl;
-          resumeFilename = resumeFile.name;
-        }
-      }
-
-      // Submit application
-      const essayAnswers: EssayAnswer[] = position.essay_questions.map((q) => ({
-        question_id: q.id,
-        answer: formData.essay_answers[q.id] ?? "",
-      }));
-
       const res = await fetch("/api/applications", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -366,8 +390,8 @@ export default function ApplicationForm({
           year_of_study: parseInt(formData.year_of_study),
           linkedin_url: formData.linkedin_url || null,
           heard_about_us: formData.heard_about_us,
-          resume_drive_url: resumeUrl || null,
-          resume_filename: resumeFilename || null,
+          resume_storage_path: formData.resume_storage_path,
+          resume_filename: formData.resume_filename,
           essay_answers: essayAnswers,
         }),
       });
@@ -375,12 +399,34 @@ export default function ApplicationForm({
       if (res.ok) {
         await clearDraft();
         setSubmitted(true);
-      } else {
-        const errData = await res.json();
-        setErrors({ submit: errData.error || "Submission failed. Try again." });
+        setSubmitting(false);
+        return;
       }
+
+      // Map status codes to actionable messages
+      let message: string;
+      try {
+        const errData = await res.json();
+        if (res.status === 409) {
+          message = "You've already applied for this position.";
+        } else if (res.status === 429) {
+          message = "Too many submissions. Wait a moment, then try again.";
+        } else if (res.status === 401) {
+          message = "Your session expired. Please refresh and sign in again.";
+        } else {
+          message =
+            errData?.error ||
+            "Submission failed. Your draft is saved — try again.";
+        }
+      } catch {
+        message = "Submission failed. Your draft is saved — try again.";
+      }
+      setErrors({ submit: message });
     } catch {
-      setErrors({ submit: "Network error. Please try again." });
+      setErrors({
+        submit:
+          "Network error. Your draft is saved — check your connection and try again.",
+      });
     }
 
     setSubmitting(false);
@@ -630,8 +676,11 @@ export default function ApplicationForm({
                   and highlights relevant experience.
                 </p>
                 <ResumeUpload
-                  file={resumeFile}
-                  onFileSelect={setResumeFile}
+                  positionSlug={position.slug}
+                  currentPath={formData.resume_storage_path}
+                  currentFilename={formData.resume_filename}
+                  currentSize={formData.resume_size_bytes}
+                  onChange={updateResume}
                   error={errors.resume}
                 />
               </div>
@@ -752,7 +801,7 @@ export default function ApplicationForm({
                   />
                   <ReviewRow
                     label="File"
-                    value={resumeFile?.name ?? "Not uploaded"}
+                    value={formData.resume_filename ?? "Not uploaded"}
                   />
                 </div>
 
@@ -815,9 +864,25 @@ export default function ApplicationForm({
               </button>
 
               {errors.submit && (
-                <p className="text-sm text-[#EF4444] mt-4 text-center">
-                  {errors.submit}
-                </p>
+                <div
+                  className="flex items-start gap-3 p-4 rounded-xl mt-6"
+                  style={{
+                    background: "rgba(239,68,68,0.08)",
+                    border: "1px solid rgba(239,68,68,0.3)",
+                  }}
+                >
+                  <span className="mt-0.5 w-5 h-5 rounded-md bg-[#EF4444]/20 flex items-center justify-center flex-shrink-0">
+                    <span className="text-xs text-[#EF4444]">!</span>
+                  </span>
+                  <div className="flex-1">
+                    <p className="text-sm text-[#F1FFFF]">
+                      Couldn&apos;t submit
+                    </p>
+                    <p className="text-xs text-[#9CA3AF] mt-1 leading-relaxed">
+                      {errors.submit}
+                    </p>
+                  </div>
+                </div>
               )}
             </motion.div>
           )}

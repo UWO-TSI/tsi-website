@@ -5,6 +5,8 @@ import { getResend, EMAIL_FROM } from "@/lib/resend";
 import { syncApplicationToSheet } from "@/lib/google-sheets";
 import ApplicationConfirmation from "@/emails/ApplicationConfirmation";
 
+const SIGNED_URL_TTL_SECONDS = 60 * 60 * 24 * 7; // 7 days
+
 export async function POST(request: Request) {
   const supabase = await createClient();
   const {
@@ -52,6 +54,43 @@ export async function POST(request: Request) {
     }
   }
 
+  // Resume path validation. Must be in the user's own folder so a
+  // crafted body can't reference someone else's upload.
+  let resumeStoragePath: string | null = null;
+  let resumeSignedUrl: string | null = null;
+  if (body.resume_storage_path) {
+    const path = String(body.resume_storage_path);
+    if (!path.startsWith(`${user.id}/`)) {
+      return NextResponse.json(
+        { error: "Invalid resume path" },
+        { status: 400 }
+      );
+    }
+    resumeStoragePath = path;
+
+    // Generate a 7-day signed URL via service role so it works regardless
+    // of the user's session at view time (admins use it too).
+    const admin = createAdminClient();
+    const { data: signed, error: signErr } = await admin.storage
+      .from("resumes")
+      .createSignedUrl(path, SIGNED_URL_TTL_SECONDS);
+    if (signErr || !signed?.signedUrl) {
+      console.error("Resume signed URL error:", signErr);
+      return NextResponse.json(
+        { error: "Resume not found. Please re-upload and try again." },
+        { status: 400 }
+      );
+    }
+    resumeSignedUrl = signed.signedUrl;
+  } else if (body.resume_drive_url) {
+    // Legacy path — the old form used to POST a Drive URL directly.
+    resumeSignedUrl = body.resume_drive_url;
+  }
+
+  // Path is encoded inside the signed URL (we don't have a separate column),
+  // so dashboards extract it and re-sign as needed when the URL expires.
+  void resumeStoragePath;
+
   // Insert application
   const { data, error } = await supabase
     .from("applications")
@@ -65,7 +104,7 @@ export async function POST(request: Request) {
       year_of_study: body.year_of_study,
       linkedin_url: body.linkedin_url,
       heard_about_us: body.heard_about_us,
-      resume_drive_url: body.resume_drive_url,
+      resume_drive_url: resumeSignedUrl,
       resume_filename: body.resume_filename,
       essay_answers: body.essay_answers ?? [],
     })

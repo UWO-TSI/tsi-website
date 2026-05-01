@@ -17,7 +17,7 @@ import {
   Eye,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { POSITION_SEED_DATA, getPositionStatus } from "@/lib/recruitment";
+import { getPositionStatus } from "@/lib/recruitment";
 import type { Position } from "@/lib/recruitment";
 import type { User } from "@supabase/supabase-js";
 
@@ -42,6 +42,7 @@ export default function RoleApplicationPage() {
   const [position, setPosition] = useState<Position | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
   const [phase, setPhase] = useState<"read" | "apply">("read");
   const [acknowledged, setAcknowledged] = useState(false);
@@ -52,39 +53,38 @@ export default function RoleApplicationPage() {
   const supabase = createClient();
 
   useEffect(() => {
+    let cancelled = false;
     async function init() {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      setUser(user);
+      // Fetch position and user in parallel
+      const [userRes, positionsRes] = await Promise.allSettled([
+        supabase.auth.getUser(),
+        fetch(`/api/positions`).then((r) => {
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          return r.json() as Promise<Position[]>;
+        }),
+      ]);
 
-      try {
-        const res = await fetch(`/api/positions`);
-        if (res.ok) {
-          const positions: Position[] = await res.json();
-          const found = positions.find((p) => p.slug === slug);
-          if (found) {
-            setPosition(found);
-            setLoading(false);
-            return;
-          }
-        }
-      } catch {
-        // Fallback to seed data
+      if (cancelled) return;
+
+      if (userRes.status === "fulfilled") {
+        setUser(userRes.value.data.user);
       }
 
-      const seed = POSITION_SEED_DATA.find((p) => p.slug === slug);
-      if (seed) {
-        setPosition({
-          ...seed,
-          id: `seed-${slug}`,
-          created_at: new Date().toISOString(),
-        });
+      if (positionsRes.status === "fulfilled") {
+        const found = positionsRes.value.find((p) => p.slug === slug);
+        setPosition(found ?? null);
+        setLoadError(false);
+      } else {
+        setLoadError(true);
       }
+
       setLoading(false);
     }
 
     init();
+    return () => {
+      cancelled = true;
+    };
   }, [slug, supabase]);
 
   // Restore acknowledgement across auth redirect
@@ -148,17 +148,34 @@ export default function RoleApplicationPage() {
           transition={{ duration: 0.6, ease: EASE_OUT }}
           className="text-center"
         >
-          <p className="text-[#6B7280] font-mono text-sm mb-2">404</p>
-          <p className="text-[#F1FFFF] text-lg font-medium mb-6">
-            Position not found
+          <p className="text-[#6B7280] font-mono text-sm mb-2">
+            {loadError ? "Couldn't load" : "404"}
           </p>
-          <button
-            onClick={() => router.push("/student/apply")}
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-full border border-white/10 text-sm text-[#9CA3AF] hover:text-[#F1FFFF] hover:border-white/20 transition-all"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back to Positions
-          </button>
+          <p className="text-[#F1FFFF] text-lg font-medium mb-2">
+            {loadError ? "Couldn't reach the server" : "Position not found"}
+          </p>
+          <p className="text-[#9CA3AF] text-sm mb-6 max-w-sm">
+            {loadError
+              ? "Check your connection and try again."
+              : "This role may have been removed or never existed."}
+          </p>
+          <div className="flex items-center justify-center gap-3">
+            {loadError && (
+              <button
+                onClick={() => window.location.reload()}
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-[#002FA7] text-[#F1FFFF] text-sm font-medium transition-all hover:bg-[#0039CC]"
+              >
+                Refresh
+              </button>
+            )}
+            <button
+              onClick={() => router.push("/student/apply")}
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-full border border-white/10 text-sm text-[#9CA3AF] hover:text-[#F1FFFF] hover:border-white/20 transition-all"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back to Positions
+            </button>
+          </div>
         </motion.div>
       </div>
     );

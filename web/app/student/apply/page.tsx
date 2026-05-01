@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { motion, useInView, AnimatePresence } from "framer-motion";
+import { Suspense, useEffect, useRef, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
-import { POSITION_SEED_DATA, RECRUITMENT_PHASES } from "@/lib/recruitment";
+import { useSearchParams } from "next/navigation";
+import { RECRUITMENT_PHASES, isPositionOpen } from "@/lib/recruitment";
 import type { Position } from "@/lib/recruitment";
 import DecryptedText from "@/components/ui/DecryptedText";
 import GradientText from "@/components/ui/GradientText";
@@ -12,53 +13,65 @@ import Countdown from "@/components/recruit/Countdown";
 
 const EASE_OUT: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
-function getCurrentPhaseStatus(phase: number): "active" | "upcoming" | "completed" {
-  const now = new Date();
-  const month = now.getMonth() + 1;
-  const year = now.getFullYear();
-  if (phase === 1) {
-    if (year > 2026 || (year === 2026 && month > 5)) return "completed";
-    if (year === 2026 && month >= 4) return "active";
-    return "upcoming";
-  }
-  if (phase === 2) {
-    if (year > 2026 || (year === 2026 && month > 9)) return "completed";
-    if (year === 2026 && month >= 9) return "active";
-    return "upcoming";
-  }
+function derivePhaseStatus(
+  positions: Position[],
+  phase: number
+): "active" | "upcoming" | "completed" {
+  const inPhase = positions.filter((p) => p.phase === phase);
+  if (inPhase.length === 0) return "upcoming";
+  const now = Date.now();
+  if (inPhase.some((p) => isPositionOpen(p))) return "active";
+  const allClosed = inPhase.every(
+    (p) => p.closes_at && new Date(p.closes_at).getTime() < now
+  );
+  if (allClosed) return "completed";
   return "upcoming";
 }
 
 export default function RecruitmentPage() {
+  return (
+    <Suspense fallback={null}>
+      <RecruitmentPageInner />
+    </Suspense>
+  );
+}
+
+function RecruitmentPageInner() {
+  const searchParams = useSearchParams();
+  const authError = searchParams.get("error") === "auth";
+
   const [positions, setPositions] = useState<Position[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [activePhase, setActivePhase] = useState<number | null>(null);
 
   const positionsRef = useRef<HTMLDivElement>(null);
-  const positionsInView = useInView(positionsRef, { once: true, margin: "-60px" });
 
   useEffect(() => {
+    let cancelled = false;
     fetch("/api/positions")
-      .then((res) => res.json())
+      .then(async (res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
       .then((data) => {
-        if (Array.isArray(data) && data.length > 0) {
+        if (cancelled) return;
+        if (Array.isArray(data)) {
           setPositions(data);
+          setLoadError(false);
         } else {
-          setPositions(
-            POSITION_SEED_DATA.filter((p) => p.visibility === "public").map((p, i) => ({
-              ...p, id: `seed-${i}`, created_at: new Date().toISOString(),
-            }))
-          );
+          setLoadError(true);
         }
       })
       .catch(() => {
-        setPositions(
-          POSITION_SEED_DATA.filter((p) => p.visibility === "public").map((p, i) => ({
-            ...p, id: `seed-${i}`, created_at: new Date().toISOString(),
-          }))
-        );
+        if (!cancelled) setLoadError(true);
       })
-      .finally(() => setLoading(false));
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const phases = [...new Set(positions.map((p) => p.phase))].sort();
@@ -110,8 +123,31 @@ export default function RecruitmentPage() {
 
   return (
     <div className="min-h-screen bg-[#0F0F10]">
+      {/* Auth-error banner — surfaces /api/auth/callback failures */}
+      {authError && (
+        <div className="px-8 md:px-20 lg:px-28 pt-24 md:pt-32">
+          <div
+            className="max-w-[900px] mx-auto rounded-xl px-4 py-3 flex items-start gap-3"
+            style={{
+              background: "rgba(239,68,68,0.08)",
+              border: "1px solid rgba(239,68,68,0.3)",
+            }}
+          >
+            <span className="mt-0.5 w-5 h-5 rounded-md bg-[#EF4444]/20 flex items-center justify-center flex-shrink-0">
+              <span className="text-xs text-[#EF4444]">!</span>
+            </span>
+            <div className="flex-1">
+              <p className="text-sm text-[#F1FFFF]">Sign-in didn&apos;t complete</p>
+              <p className="text-xs text-[#9CA3AF] mt-1">
+                Try again or use a different sign-in method.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Hero ── */}
-      <section className="relative pt-28 pb-8 md:pt-36 md:pb-12 px-8 md:px-20 lg:px-28 overflow-hidden">
+      <section className={`relative ${authError ? "pt-8" : "pt-28 md:pt-36"} pb-8 md:pb-12 px-8 md:px-20 lg:px-28 overflow-hidden`}>
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[500px] pointer-events-none" style={{ background: "radial-gradient(ellipse, rgba(34,197,94,0.06) 0%, transparent 65%)" }} />
 
         <div className="relative max-w-[900px] mx-auto">
@@ -289,7 +325,7 @@ export default function RecruitmentPage() {
             <div className="absolute top-5 left-0 right-0 h-[1px] bg-white/[0.06]" />
             <div className="relative flex justify-between">
               {RECRUITMENT_PHASES.map((phase, i) => {
-                const status = getCurrentPhaseStatus(phase.phase);
+                const status = derivePhaseStatus(positions, phase.phase);
                 const isActive = status === "active";
                 return (
                   <div key={phase.phase} className={`flex flex-col ${i === 0 ? "items-start text-left" : "items-end text-right"}`} style={{ width: `${100 / RECRUITMENT_PHASES.length}%` }}>
@@ -348,6 +384,18 @@ export default function RecruitmentPage() {
             {loading ? (
               <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {[0, 1, 2].map((i) => <div key={i} className="h-56 rounded-xl bg-white/[0.02] border border-white/[0.04] animate-pulse" />)}
+              </motion.div>
+            ) : loadError ? (
+              <motion.div key="error" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="text-center py-16 rounded-xl border" style={{ borderColor: "rgba(239,68,68,0.3)", background: "rgba(239,68,68,0.04)" }}>
+                <p className="text-sm mb-3" style={{ color: "#F1FFFF" }}>Couldn&apos;t load positions.</p>
+                <p className="text-xs mb-5" style={{ color: "rgba(255,255,255,0.5)" }}>Check your connection and try again.</p>
+                <button
+                  onClick={() => window.location.reload()}
+                  className="text-xs px-4 py-2 rounded-md transition-all"
+                  style={{ color: "#F1FFFF", border: "1px solid rgba(255,255,255,0.15)", fontFamily: "var(--font-highlight)" }}
+                >
+                  Refresh
+                </button>
               </motion.div>
             ) : filtered.length === 0 ? (
               <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="text-center py-20 rounded-xl border border-white/[0.06] bg-white/[0.02]">
