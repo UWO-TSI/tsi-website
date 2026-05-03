@@ -19,6 +19,7 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import { getPositionStatus } from "@/lib/recruitment";
 import type { Position } from "@/lib/recruitment";
+import { getRoleContent } from "@/lib/recruitment-content";
 import type { User } from "@supabase/supabase-js";
 
 const EASE_OUT: [number, number, number, number] = [0.16, 1, 0.3, 1];
@@ -193,6 +194,7 @@ export default function RoleApplicationPage() {
   const essayCount = position.essay_questions?.length ?? 0;
   const totalWords =
     position.essay_questions?.reduce((s, q) => s + q.max_words, 0) ?? 0;
+  const roleContent = getRoleContent(slug);
 
   const canStart = acknowledged && scrolledToEnd && !!user;
   const isClosed = status === "closed";
@@ -253,13 +255,19 @@ export default function RoleApplicationPage() {
                         Upcoming
                       </span>
                     )}
+                    {roleContent?.positionsCount && (
+                      <span className="px-2.5 py-1 rounded-full bg-white/5 text-[#9CA3AF] text-[10px] font-mono uppercase tracking-wide">
+                        {roleContent.positionsCount}{" "}
+                        {roleContent.positionsCount === "1" ? "spot" : "spots"}
+                      </span>
+                    )}
                   </div>
 
                   <h1 className="text-4xl md:text-5xl font-semibold text-[#F1FFFF] tracking-tight mb-4">
                     {position.title}
                   </h1>
                   <p className="text-lg text-[#9CA3AF] leading-relaxed max-w-2xl">
-                    {position.description}
+                    {roleContent?.tagline ?? position.description}
                   </p>
 
                   {deadline && (
@@ -294,73 +302,61 @@ export default function RoleApplicationPage() {
               </div>
             </div>
 
-            {/* Long-form content */}
+            {/* Long-form content — driven by lib/recruitment-content.ts when
+                we have a role-specific entry; falls back to a generic block. */}
             <div className="px-6 md:px-16">
               <div className="max-w-3xl mx-auto space-y-14 pb-10">
+                {roleContent?.preApplyNote && (
+                  <PreApplyNote text={roleContent.preApplyNote} delay={0.22} />
+                )}
+
                 <Section
                   eyebrow="01 — What you'll do"
                   title="Responsibilities"
                   delay={0.25}
                 >
-                  <p>
-                    As {position.title}, you&apos;ll own a core area of Tethos.
-                    This isn&apos;t a resume-filler role — you&apos;ll be
-                    expected to make decisions, run meetings, and ship work
-                    that the rest of the team depends on.
-                  </p>
-                  <p>
-                    Expect weekly 1:1s with the founder, a cross-functional
-                    review every two weeks, and real accountability for
-                    outcomes you sign up for.
-                  </p>
+                  {roleContent ? (
+                    <ul className="space-y-3 list-none pl-0">
+                      {roleContent.whatYoullDo.map((item, i) => (
+                        <Bullet key={i}>{item}</Bullet>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p>
+                      As {position.title}, you&apos;ll own a core area of
+                      Tethos. This isn&apos;t a resume-filler role — you&apos;ll
+                      be expected to make decisions, run meetings, and ship
+                      work that the rest of the team depends on.
+                    </p>
+                  )}
                 </Section>
 
                 <Section
-                  eyebrow="02 — What you'll build"
-                  title="In the first 90 days"
+                  eyebrow="02 — Who you are"
+                  title="The kind of person who fits"
                   delay={0.3}
                 >
-                  <ul className="space-y-3 list-none pl-0">
-                    <Bullet>
-                      Ship one visible win your team points to when asked
-                      &quot;what changed this quarter?&quot;
-                    </Bullet>
-                    <Bullet>
-                      Own a dashboard or system of record that outlasts your
-                      tenure.
-                    </Bullet>
-                    <Bullet>
-                      Run at least one process end-to-end without escalation.
-                    </Bullet>
-                  </ul>
+                  {roleContent ? (
+                    <ul className="space-y-3 list-none pl-0">
+                      {roleContent.whoYouAre.map((item, i) => (
+                        <Bullet key={i}>{item}</Bullet>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p>
+                      We hire for judgment and ownership over credentials. The
+                      best Tethos members are people who would have done this
+                      work anyway, club or no club.
+                    </p>
+                  )}
                 </Section>
 
-                <Section
-                  eyebrow="03 — Who we're looking for"
-                  title="The kind of person who fits"
-                  delay={0.35}
-                >
-                  <p>
-                    We hire for judgment and ownership over credentials. The
-                    best Tethos members are people who would have done this
-                    work anyway, club or no club.
-                  </p>
-                  <ul className="space-y-3 list-none pl-0 mt-4">
-                    <Bullet>
-                      You finish things. Even the unglamorous ones.
-                    </Bullet>
-                    <Bullet>
-                      You&apos;d rather ship something imperfect than plan
-                      something perfect.
-                    </Bullet>
-                    <Bullet>
-                      You have opinions and can defend them without ego.
-                    </Bullet>
-                  </ul>
-                </Section>
+                {roleContent?.about && (
+                  <AboutBlock about={roleContent.about} delay={0.35} />
+                )}
 
                 <Section
-                  eyebrow="04 — Before you apply"
+                  eyebrow={roleContent?.about ? "04 — Before you apply" : "03 — Before you apply"}
                   title="What the application looks like"
                   delay={0.4}
                 >
@@ -395,6 +391,23 @@ export default function RoleApplicationPage() {
                       label="Review & submit"
                     />
                   </div>
+
+                  {roleContent?.applyInstructions && (
+                    <div
+                      className="mt-6 rounded-xl px-5 py-4"
+                      style={{
+                        background: "rgba(255,209,102,0.06)",
+                        border: "1px solid rgba(255,209,102,0.25)",
+                      }}
+                    >
+                      <p className="text-xs font-mono uppercase tracking-[0.2em] text-[#FFD166] mb-2">
+                        How to apply
+                      </p>
+                      <p className="text-sm text-[#E5E7EB] leading-relaxed">
+                        {roleContent.applyInstructions}
+                      </p>
+                    </div>
+                  )}
                 </Section>
 
                 {/* End-of-content sentinel for scroll tracking */}
@@ -504,6 +517,76 @@ function MetaCard({ label, value }: { label: string; value: string }) {
       </p>
       <p className="text-[#F1FFFF] text-base font-medium">{value}</p>
     </div>
+  );
+}
+
+function PreApplyNote({ text, delay }: { text: string; delay: number }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: "-80px" }}
+      transition={{ duration: 0.6, delay, ease: EASE_OUT }}
+      className="rounded-2xl p-6"
+      style={{
+        background: "rgba(0,47,167,0.08)",
+        border: "1px solid rgba(0,47,167,0.25)",
+      }}
+    >
+      <p className="font-mono text-[10px] tracking-[0.2em] uppercase text-[#002FA7] mb-3">
+        A note before you apply
+      </p>
+      <p className="text-sm md:text-base text-[#E5E7EB] leading-relaxed">
+        {text}
+      </p>
+    </motion.div>
+  );
+}
+
+function AboutBlock({
+  about,
+  delay,
+}: {
+  about: { title: string; body: string; subtitle?: string; stats?: string[] };
+  delay: number;
+}) {
+  return (
+    <motion.section
+      initial={{ opacity: 0, y: 24 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: "-80px" }}
+      transition={{ duration: 0.7, delay, ease: EASE_OUT }}
+    >
+      <p className="font-mono text-[10px] tracking-[0.2em] uppercase text-[#6B7280] mb-3">
+        03 — About the work
+      </p>
+      <h2 className="text-2xl md:text-3xl font-semibold text-[#F1FFFF] tracking-tight mb-5">
+        {about.title}
+      </h2>
+      <div className="text-[#9CA3AF] leading-relaxed max-w-2xl">
+        <p>{about.body}</p>
+        {about.subtitle && about.stats && about.stats.length > 0 && (
+          <div className="mt-6 rounded-xl p-5"
+            style={{
+              background: "rgba(255,255,255,0.03)",
+              border: "1px solid rgba(255,255,255,0.06)",
+            }}
+          >
+            <p className="font-mono text-[10px] tracking-[0.2em] uppercase text-[#002FA7] mb-3">
+              {about.subtitle}
+            </p>
+            <ul className="space-y-2 list-none pl-0">
+              {about.stats.map((stat, i) => (
+                <li key={i} className="flex items-start gap-3 text-sm text-[#E5E7EB]">
+                  <span className="mt-2 inline-block w-1 h-1 rounded-full bg-[#002FA7] flex-shrink-0" />
+                  <span>{stat}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+    </motion.section>
   );
 }
 
