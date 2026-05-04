@@ -1,11 +1,17 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const code = searchParams.get("code");
 
-  const supabase = await createClient();
+  // Without a code: anon RLS policy already hides internal rows, so the
+  // regular client is fine and gives us a proper public view.
+  // With a code: bypass RLS via service role so we can see internal rows
+  // and then validate the code at the app layer below. RLS would otherwise
+  // pre-filter internals out of unauthenticated requests, regardless of code.
+  const supabase = code ? createAdminClient() : await createClient();
 
   let query = supabase
     .from("positions")
@@ -13,7 +19,6 @@ export async function GET(request: Request) {
     .eq("is_active", true)
     .order("phase", { ascending: true });
 
-  // If no access code, only return public positions
   if (!code) {
     query = query.eq("visibility", "public");
   }
@@ -24,9 +29,8 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  // If code provided, validate it for internal positions.
-  // Accepts per-position access_code OR a global INTERNAL_ACCESS_CODE env var
-  // (so the DB doesn't need per-row codes to unlock all internal roles).
+  // App-layer code validation. Accepts per-position access_code OR a
+  // global INTERNAL_ACCESS_CODE env var.
   if (code && data) {
     const globalCode = process.env.INTERNAL_ACCESS_CODE;
     const globalMatches = !!globalCode && globalCode === code;

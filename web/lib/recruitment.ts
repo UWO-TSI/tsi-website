@@ -357,10 +357,28 @@ export function getPositionStatus(position: Position): PositionStatus {
   return "open";
 }
 
-/** Format the opens_at date for display (e.g. "Opens May 1") */
+/** Format the opens_at date for display (e.g. "Opens May 6").
+ *  Pinned to Toronto time so the displayed date matches the club's
+ *  announced schedule regardless of the visitor's locale. */
 export function formatOpensAt(opensAt: string): string {
   const date = new Date(opensAt);
-  return `Opens ${date.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
+  return `Opens ${date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    timeZone: "America/Toronto",
+  })}`;
+}
+
+/** Format the closes_at date for display (e.g. "May 12").
+ *  Subtracts 30 minutes so a deadline of "May 13 00:10 EDT" reads as
+ *  "May 12" — matching how end-of-day deadlines are usually framed. */
+export function formatClosesAt(closesAt: string): string {
+  const shifted = new Date(new Date(closesAt).getTime() - 30 * 60 * 1000);
+  return shifted.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    timeZone: "America/Toronto",
+  });
 }
 
 /** Get the current recruitment phase based on date */

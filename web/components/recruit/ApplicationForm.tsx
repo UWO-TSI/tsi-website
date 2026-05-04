@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import FormField from "./FormField";
 import FormProgress from "./FormProgress";
 import ResumeUpload from "./ResumeUpload";
+import PortfolioUpload from "./PortfolioUpload";
 import SuccessScreen from "./SuccessScreen";
 import Button from "@/components/ui/Button";
 import {
@@ -31,8 +32,19 @@ interface FormData {
   program_major: string;
   year_of_study: string;
   linkedin_url: string;
+  other_links: string;
+  commitments_next_year: string;
   heard_about_us: string;
   essay_answers: Record<string, string>;
+  resume_storage_path: string | null;
+  resume_filename: string | null;
+  resume_size_bytes: number | null;
+  portfolio_storage_path: string | null;
+  portfolio_filename: string | null;
+  portfolio_size_bytes: number | null;
+  creative_piece_storage_path: string | null;
+  creative_piece_filename: string | null;
+  creative_piece_size_bytes: number | null;
 }
 
 const EMPTY_FORM: FormData = {
@@ -42,11 +54,30 @@ const EMPTY_FORM: FormData = {
   program_major: "",
   year_of_study: "",
   linkedin_url: "",
+  other_links: "",
+  commitments_next_year: "",
   heard_about_us: "",
   essay_answers: {},
+  resume_storage_path: null,
+  resume_filename: null,
+  resume_size_bytes: null,
+  portfolio_storage_path: null,
+  portfolio_filename: null,
+  portfolio_size_bytes: null,
+  creative_piece_storage_path: null,
+  creative_piece_filename: null,
+  creative_piece_size_bytes: null,
 };
 
 const DRAFT_KEY = (positionId: string) => `tethos:draft:${positionId}`;
+
+// Reserved IDs for profile fields stashed inside essay_answers since the
+// applications table doesn't have dedicated columns for them. Admin views
+// and the user's review screen pull these out separately from real essays.
+export const META_OTHER_LINKS_ID = "__profile_other_links";
+export const META_COMMITMENTS_ID = "__profile_commitments_next_year";
+export const META_PORTFOLIO_FILE_ID = "__portfolio_file";
+export const META_CREATIVE_PIECE_FILE_ID = "__creative_piece_file";
 
 interface DraftPayload {
   form_data: FormData;
@@ -61,7 +92,10 @@ function isEmptyForm(f: FormData): boolean {
     !f.program_major &&
     !f.year_of_study &&
     !f.linkedin_url &&
+    !f.other_links &&
+    !f.commitments_next_year &&
     !f.heard_about_us &&
+    !f.resume_storage_path &&
     Object.values(f.essay_answers).every((v) => !v)
   );
 }
@@ -109,7 +143,6 @@ export default function ApplicationForm({
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [confirmChecked, setConfirmChecked] = useState(false);
 
   const [formData, setFormData] = useState<FormData>(EMPTY_FORM);
@@ -186,6 +219,21 @@ export default function ApplicationForm({
           ...sessionDefaults,
           ...chosen.form_data,
           essay_answers: chosen.form_data.essay_answers ?? {},
+          other_links: chosen.form_data.other_links ?? "",
+          commitments_next_year: chosen.form_data.commitments_next_year ?? "",
+          resume_storage_path: chosen.form_data.resume_storage_path ?? null,
+          resume_filename: chosen.form_data.resume_filename ?? null,
+          resume_size_bytes: chosen.form_data.resume_size_bytes ?? null,
+          portfolio_storage_path:
+            chosen.form_data.portfolio_storage_path ?? null,
+          portfolio_filename: chosen.form_data.portfolio_filename ?? null,
+          portfolio_size_bytes: chosen.form_data.portfolio_size_bytes ?? null,
+          creative_piece_storage_path:
+            chosen.form_data.creative_piece_storage_path ?? null,
+          creative_piece_filename:
+            chosen.form_data.creative_piece_filename ?? null,
+          creative_piece_size_bytes:
+            chosen.form_data.creative_piece_size_bytes ?? null,
         });
         setDraftRestoredAt(chosen.updated_at);
       } else {
@@ -272,6 +320,47 @@ export default function ApplicationForm({
     }));
   }, []);
 
+  const updateResume = useCallback(
+    (data: { path: string; filename: string; size: number } | null) => {
+      setFormData((prev) => ({
+        ...prev,
+        resume_storage_path: data?.path ?? null,
+        resume_filename: data?.filename ?? null,
+        resume_size_bytes: data?.size ?? null,
+      }));
+      setErrors((prev) => {
+        const next = { ...prev };
+        delete next.resume;
+        return next;
+      });
+    },
+    []
+  );
+
+  const updatePortfolio = useCallback(
+    (data: { path: string; filename: string; size: number } | null) => {
+      setFormData((prev) => ({
+        ...prev,
+        portfolio_storage_path: data?.path ?? null,
+        portfolio_filename: data?.filename ?? null,
+        portfolio_size_bytes: data?.size ?? null,
+      }));
+    },
+    []
+  );
+
+  const updateCreativePiece = useCallback(
+    (data: { path: string; filename: string; size: number } | null) => {
+      setFormData((prev) => ({
+        ...prev,
+        creative_piece_storage_path: data?.path ?? null,
+        creative_piece_filename: data?.filename ?? null,
+        creative_piece_size_bytes: data?.size ?? null,
+      }));
+    },
+    []
+  );
+
   // Step validation
   const validateStep = (s: number): boolean => {
     const errs: Record<string, string> = {};
@@ -288,12 +377,26 @@ export default function ApplicationForm({
     }
 
     if (s === 1) {
-      if (!resumeFile) errs.resume = "Resume is required";
+      if (!formData.resume_storage_path) errs.resume = "Resume is required";
     }
 
     if (s === 2) {
+      // Roles whose essay step accepts a file upload as a substitute
+      // for written text. Either satisfies validation.
+      const ROLES_WITH_ATTACHMENT = new Set(["vp-marketing", "vp-internal"]);
+      const acceptsAttachment = ROLES_WITH_ATTACHMENT.has(position.slug);
       for (const q of position.essay_questions) {
         const answer = formData.essay_answers[q.id] ?? "";
+        if (acceptsAttachment) {
+          const hasFile = !!formData.creative_piece_storage_path;
+          const hasText = !!answer.trim();
+          if (!hasFile && !hasText) {
+            errs[`essay_${q.id}`] = "Upload a file or paste a link.";
+          } else if (hasText && countWords(answer) > q.max_words) {
+            errs[`essay_${q.id}`] = `Exceeds ${q.max_words} word limit`;
+          }
+          continue;
+        }
         if (!answer.trim()) {
           errs[`essay_${q.id}`] = "Required";
         } else if (countWords(answer) > q.max_words) {
@@ -318,41 +421,83 @@ export default function ApplicationForm({
   };
 
   const handleSubmit = async () => {
+    // Block double-submit
+    if (submitting) return;
+
+    // Cancel any pending autosave so it can't race the clearDraft call
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = null;
+    }
+
     if (!validateStep(2)) {
       setStep(2);
       return;
     }
 
+    if (!formData.resume_storage_path) {
+      setStep(1);
+      setErrors({ resume: "Resume is required" });
+      return;
+    }
+
     setSubmitting(true);
+    setErrors((prev) => {
+      const next = { ...prev };
+      delete next.submit;
+      return next;
+    });
 
-    try {
-      // Upload resume first
-      let resumeUrl = "";
-      let resumeFilename = "";
-      if (resumeFile) {
-        const uploadData = new FormData();
-        uploadData.append("file", resumeFile);
-        uploadData.append("positionSlug", position.slug);
-        uploadData.append("applicantName", formData.full_name);
-
-        const uploadRes = await fetch("/api/upload", {
-          method: "POST",
-          body: uploadData,
-        });
-
-        if (uploadRes.ok) {
-          const uploadJson = await uploadRes.json();
-          resumeUrl = uploadJson.fileUrl;
-          resumeFilename = resumeFile.name;
-        }
-      }
-
-      // Submit application
-      const essayAnswers: EssayAnswer[] = position.essay_questions.map((q) => ({
+    const essayAnswers: EssayAnswer[] = [
+      ...position.essay_questions.map((q) => ({
         question_id: q.id,
         answer: formData.essay_answers[q.id] ?? "",
-      }));
+      })),
+      // Profile fields stashed alongside essays — see META_*_ID constants.
+      ...(formData.other_links.trim()
+        ? [
+            {
+              question_id: META_OTHER_LINKS_ID,
+              answer: formData.other_links.trim(),
+            },
+          ]
+        : []),
+      ...(formData.commitments_next_year.trim()
+        ? [
+            {
+              question_id: META_COMMITMENTS_ID,
+              answer: formData.commitments_next_year.trim(),
+            },
+          ]
+        : []),
+      ...(formData.portfolio_storage_path && formData.portfolio_filename
+        ? [
+            {
+              question_id: META_PORTFOLIO_FILE_ID,
+              answer: JSON.stringify({
+                path: formData.portfolio_storage_path,
+                filename: formData.portfolio_filename,
+                size: formData.portfolio_size_bytes,
+              }),
+            },
+          ]
+        : []),
+      ...(formData.creative_piece_storage_path &&
+      formData.creative_piece_filename
+        ? [
+            {
+              question_id: META_CREATIVE_PIECE_FILE_ID,
+              answer: JSON.stringify({
+                path: formData.creative_piece_storage_path,
+                filename: formData.creative_piece_filename,
+                size: formData.creative_piece_size_bytes,
+              }),
+            },
+          ]
+        : []),
+    ];
 
+    try {
       const res = await fetch("/api/applications", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -366,8 +511,8 @@ export default function ApplicationForm({
           year_of_study: parseInt(formData.year_of_study),
           linkedin_url: formData.linkedin_url || null,
           heard_about_us: formData.heard_about_us,
-          resume_drive_url: resumeUrl || null,
-          resume_filename: resumeFilename || null,
+          resume_storage_path: formData.resume_storage_path,
+          resume_filename: formData.resume_filename,
           essay_answers: essayAnswers,
         }),
       });
@@ -375,12 +520,40 @@ export default function ApplicationForm({
       if (res.ok) {
         await clearDraft();
         setSubmitted(true);
-      } else {
+        setSubmitting(false);
+        return;
+      }
+
+      // Map status codes to actionable messages
+      let message: string;
+      try {
         const errData = await res.json();
-        setErrors({ submit: errData.error || "Submission failed. Try again." });
+        if (res.status === 409) {
+          message =
+            "You've already applied for this position. Track its status in your dashboard.";
+        } else if (res.status === 429) {
+          message = "Too many submissions. Wait a moment, then try again.";
+        } else if (res.status === 401) {
+          message = "Your session expired. Please refresh and sign in again.";
+        } else {
+          message =
+            errData?.error ||
+            "Submission failed. Your draft is saved. Try again.";
+        }
+      } catch {
+        message = "Submission failed. Your draft is saved. Try again.";
+      }
+      setErrors({ submit: message });
+      if (res.status === 409) {
+        // Already applied — clear the local draft so they can't keep
+        // mashing Submit on stale data.
+        await clearDraft().catch(() => {});
       }
     } catch {
-      setErrors({ submit: "Network error. Please try again." });
+      setErrors({
+        submit:
+          "Network error. Your draft is saved. Check your connection and try again.",
+      });
     }
 
     setSubmitting(false);
@@ -419,7 +592,7 @@ export default function ApplicationForm({
               <p className="text-sm text-[#F1FFFF]">
                 Draft restored
                 <span className="text-[#9CA3AF] ml-2 text-xs font-mono">
-                  — last edited {relativeTime(draftRestoredAt)}
+                  · last edited {relativeTime(draftRestoredAt)}
                 </span>
               </p>
               <p className="text-xs text-[#6B7280] mt-1">
@@ -465,7 +638,7 @@ export default function ApplicationForm({
               exit={{ opacity: 0 }}
               className="text-[10px] font-mono text-[#6B7280] flex items-center gap-1.5"
             >
-              <Cloud className="w-3 h-3 text-[#22C55E]" />
+              <Cloud className="w-3 h-3 text-[#1D9BF0]" />
               Draft saved
             </motion.span>
           )}
@@ -478,7 +651,7 @@ export default function ApplicationForm({
               className="text-[10px] font-mono text-[#FFD166] flex items-center gap-1.5"
             >
               <CloudOff className="w-3 h-3" />
-              Saved locally — will sync when online
+              Saved locally. Will sync when online
             </motion.span>
           )}
         </AnimatePresence>
@@ -577,6 +750,26 @@ export default function ApplicationForm({
                 placeholder="https://linkedin.com/in/..."
               />
 
+              <FormField
+                label="Other links (optional)"
+                name="other_links"
+                type="textarea"
+                value={formData.other_links}
+                onChange={(v) => updateField("other_links", v)}
+                placeholder="Portfolio, GitHub, Behance, anywhere else worth showing. One per line."
+                rows={3}
+              />
+
+              <FormField
+                label="Commitments next year (optional)"
+                name="commitments_next_year"
+                type="textarea"
+                value={formData.commitments_next_year}
+                onChange={(v) => updateField("commitments_next_year", v)}
+                placeholder="Other clubs, jobs, internships, or commitments you'll have during the school year"
+                rows={3}
+              />
+
               <div>
                 <label className="block font-mono text-xs text-[#9CA3AF] mb-2">
                   How did you hear about us?{" "}
@@ -630,10 +823,27 @@ export default function ApplicationForm({
                   and highlights relevant experience.
                 </p>
                 <ResumeUpload
-                  file={resumeFile}
-                  onFileSelect={setResumeFile}
+                  positionSlug={position.slug}
+                  currentPath={formData.resume_storage_path}
+                  currentFilename={formData.resume_filename}
+                  currentSize={formData.resume_size_bytes}
+                  onChange={updateResume}
                   error={errors.resume}
                 />
+
+                {position.slug === "vp-marketing" && (
+                  <div className="mt-8 pt-8 border-t border-white/[0.06]">
+                    <PortfolioUpload
+                      positionSlug={`${position.slug}-portfolio`}
+                      currentPath={formData.portfolio_storage_path}
+                      currentFilename={formData.portfolio_filename}
+                      currentSize={formData.portfolio_size_bytes}
+                      onChange={updatePortfolio}
+                      label="Portfolio (optional)"
+                      description="Drop your broader body of work: designs, reels, photos, anything that shows what you've made before. Image, video, PDF, or zip up to 50MB."
+                    />
+                  </div>
+                )}
               </div>
             </motion.div>
           )}
@@ -652,19 +862,59 @@ export default function ApplicationForm({
             >
               {position.essay_questions.map((q, i) => {
                 const answer = formData.essay_answers[q.id] ?? "";
+                // Roles where the essay accepts a file upload as the
+                // submission. Marketing wants a creative piece; Internal
+                // wants the actual planning doc / screenshots.
+                const ATTACHMENT_ROLES: Record<
+                  string,
+                  { label: string; description: string }
+                > = {
+                  "vp-marketing": {
+                    label: "Creative piece",
+                    description:
+                      "Upload the piece you want us to see for this role. Image, video, PDF, or zip up to 50MB. If your file is bigger, paste a hosted link below instead.",
+                  },
+                  "vp-internal": {
+                    label: "Planning doc / screenshots",
+                    description:
+                      "Drop a planning doc, screenshots, spreadsheets, or a zip with everything together. Image, video, PDF, or zip up to 50MB. For larger files, paste a hosted link below instead.",
+                  },
+                };
+                const attachmentMeta = ATTACHMENT_ROLES[position.slug];
+                const acceptsAttachment = !!attachmentMeta;
                 return (
                   <div key={q.id}>
                     <p className="text-sm text-[#F1FFFF] mb-3 font-medium">
                       {i + 1}. {q.question}
                     </p>
+
+                    {acceptsAttachment && (
+                      <div className="mb-4">
+                        <PortfolioUpload
+                          positionSlug={`${position.slug}-creative`}
+                          currentPath={formData.creative_piece_storage_path}
+                          currentFilename={formData.creative_piece_filename}
+                          currentSize={formData.creative_piece_size_bytes}
+                          onChange={updateCreativePiece}
+                          label={attachmentMeta.label}
+                          description={attachmentMeta.description}
+                        />
+                      </div>
+                    )}
+
                     <FormField
                       label=""
                       name={`essay_${q.id}`}
                       type="textarea"
                       value={answer}
                       onChange={(v) => updateEssay(q.id, v)}
-                      required
-                      rows={6}
+                      required={!acceptsAttachment}
+                      placeholder={
+                        acceptsAttachment
+                          ? "Or paste a link if your file is hosted elsewhere"
+                          : undefined
+                      }
+                      rows={q.max_words <= 80 ? 2 : 6}
                       error={errors[`essay_${q.id}`]}
                       wordCount={countWords(answer)}
                       maxWords={q.max_words}
@@ -686,8 +936,8 @@ export default function ApplicationForm({
                     Write in your own voice
                   </p>
                   <p className="text-xs text-[#9CA3AF] mt-1 leading-relaxed">
-                    We can tell when essays are AI-written. Short and honest
-                    beats long and polished every time.
+                    The president spends his whole day on Claude. He&apos;ll
+                    know if it&apos;s AI-generated.
                   </p>
                 </div>
               </div>
@@ -705,12 +955,12 @@ export default function ApplicationForm({
               exit="exit"
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
             >
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-[#F1FFFF]">
+              <div>
+                <h3 className="text-lg font-semibold text-[#F1FFFF] mb-8">
                   Review your application
                 </h3>
 
-                <div className="glass-card p-6 md:p-8 space-y-3">
+                <div className="space-y-3 pb-6 border-b border-white/[0.06]">
                   <ReviewSectionHeader
                     title="Personal"
                     onEdit={() => {
@@ -736,13 +986,25 @@ export default function ApplicationForm({
                       value={formData.linkedin_url}
                     />
                   )}
+                  {formData.other_links.trim() && (
+                    <ReviewRow
+                      label="Links"
+                      value={formData.other_links.trim()}
+                    />
+                  )}
+                  {formData.commitments_next_year.trim() && (
+                    <ReviewRow
+                      label="Commitments"
+                      value={formData.commitments_next_year.trim()}
+                    />
+                  )}
                   <ReviewRow
                     label="Heard via"
                     value={formData.heard_about_us}
                   />
                 </div>
 
-                <div className="glass-card p-6 md:p-8 space-y-3">
+                <div className="space-y-3 py-6 border-b border-white/[0.06]">
                   <ReviewSectionHeader
                     title="Resume"
                     onEdit={() => {
@@ -751,13 +1013,19 @@ export default function ApplicationForm({
                     }}
                   />
                   <ReviewRow
-                    label="File"
-                    value={resumeFile?.name ?? "Not uploaded"}
+                    label="Resume"
+                    value={formData.resume_filename ?? "Not uploaded"}
                   />
+                  {formData.portfolio_filename && (
+                    <ReviewRow
+                      label="Portfolio"
+                      value={formData.portfolio_filename}
+                    />
+                  )}
                 </div>
 
                 {position.essay_questions.length > 0 && (
-                  <div className="glass-card p-6 md:p-8 space-y-4">
+                  <div className="space-y-4 pt-6">
                     <ReviewSectionHeader
                       title="Essays"
                       onEdit={() => {
@@ -765,8 +1033,20 @@ export default function ApplicationForm({
                         setStep(2);
                       }}
                     />
+                    {formData.creative_piece_filename && (
+                      <div className="pt-2">
+                        <p className="text-xs text-[#9CA3AF] mb-1.5 font-medium">
+                          {position.slug === "vp-marketing"
+                            ? "Creative piece (file)"
+                            : "Attachment"}
+                        </p>
+                        <p className="text-sm text-[#E5E7EB]">
+                          {formData.creative_piece_filename}
+                        </p>
+                      </div>
+                    )}
                     {position.essay_questions.map((q) => (
-                      <div key={q.id}>
+                      <div key={q.id} className="pt-2">
                         <p className="text-xs text-[#9CA3AF] mb-1.5 font-medium">
                           {q.question}
                         </p>
@@ -815,9 +1095,25 @@ export default function ApplicationForm({
               </button>
 
               {errors.submit && (
-                <p className="text-sm text-[#EF4444] mt-4 text-center">
-                  {errors.submit}
-                </p>
+                <div
+                  className="flex items-start gap-3 p-4 rounded-xl mt-6"
+                  style={{
+                    background: "rgba(239,68,68,0.08)",
+                    border: "1px solid rgba(239,68,68,0.3)",
+                  }}
+                >
+                  <span className="mt-0.5 w-5 h-5 rounded-md bg-[#EF4444]/20 flex items-center justify-center flex-shrink-0">
+                    <span className="text-xs text-[#EF4444]">!</span>
+                  </span>
+                  <div className="flex-1">
+                    <p className="text-sm text-[#F1FFFF]">
+                      Couldn&apos;t submit
+                    </p>
+                    <p className="text-xs text-[#9CA3AF] mt-1 leading-relaxed">
+                      {errors.submit}
+                    </p>
+                  </div>
+                </div>
               )}
             </motion.div>
           )}

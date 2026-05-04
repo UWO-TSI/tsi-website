@@ -41,6 +41,7 @@ export default function FormField({
   const containerRef = useRef<HTMLDivElement>(null);
   const hasValue = value.length > 0;
   const isValid = hasValue && !error;
+  const showLabel = label.length > 0;
 
   // Shake animation on error
   useEffect(() => {
@@ -55,7 +56,7 @@ export default function FormField({
 
   const baseInputClass = `
     w-full rounded-xl bg-white/5 border px-4 py-3 text-sm text-[#F1FFFF]
-    placeholder-transparent peer
+    placeholder:text-[#4B5563]
     focus:outline-none transition-all duration-300
     ${error
       ? "border-[#EF4444]/60 focus:border-[#EF4444] focus:shadow-[0_0_0_2px_rgba(239,68,68,0.2)]"
@@ -66,100 +67,97 @@ export default function FormField({
   `;
 
   return (
-    <div ref={containerRef} className="relative">
-      {type === "select" ? (
-        <select
-          ref={inputRef as React.RefObject<HTMLSelectElement>}
-          name={name}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          onFocus={() => setIsFocused(true)}
-          onBlur={() => setIsFocused(false)}
-          required={required}
-          className={`${baseInputClass} appearance-none cursor-pointer`}
+    <div ref={containerRef}>
+      {/* Static label, matches the button-group fields elsewhere on the form */}
+      {showLabel && (
+        <label
+          htmlFor={name}
+          className="block font-mono text-xs text-[#9CA3AF] mb-2"
         >
-          <option value="" disabled>
-            {placeholder ?? "Select..."}
-          </option>
-          {options?.map((opt) => (
-            <option key={opt.value} value={opt.value} className="bg-[#18181b]">
-              {opt.label}
-            </option>
-          ))}
-        </select>
-      ) : type === "textarea" ? (
-        <textarea
-          ref={inputRef as React.RefObject<HTMLTextAreaElement>}
-          name={name}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          onFocus={() => setIsFocused(true)}
-          onBlur={() => setIsFocused(false)}
-          placeholder={placeholder ?? label}
-          required={required}
-          maxLength={maxLength}
-          rows={rows}
-          className={`${baseInputClass} resize-none`}
-        />
-      ) : (
-        <input
-          ref={inputRef as React.RefObject<HTMLInputElement>}
-          type={type}
-          name={name}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          onFocus={() => setIsFocused(true)}
-          onBlur={() => setIsFocused(false)}
-          placeholder={placeholder ?? label}
-          required={required}
-          maxLength={maxLength}
-          className={baseInputClass}
-        />
+          {label}
+          {required && <span className="text-[#EF4444] ml-0.5">*</span>}
+        </label>
       )}
 
-      {/* Floating label */}
-      <motion.label
-        htmlFor={name}
-        className="absolute left-4 pointer-events-none font-mono text-xs"
-        animate={{
-          y: isFocused || hasValue ? -24 : 10,
-          scale: isFocused || hasValue ? 0.85 : 1,
-          color: error
-            ? "#EF4444"
-            : isFocused
-              ? "#002FA7"
-              : "#9CA3AF",
-        }}
-        transition={{ type: "spring", stiffness: 300, damping: 25 }}
-      >
-        {label}
-        {required && <span className="text-[#EF4444] ml-0.5">*</span>}
-      </motion.label>
+      <div className="relative">
+        {type === "select" ? (
+          <select
+            ref={inputRef as React.RefObject<HTMLSelectElement>}
+            id={name}
+            name={name}
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            onFocus={() => setIsFocused(true)}
+            onBlur={() => setIsFocused(false)}
+            required={required}
+            className={`${baseInputClass} appearance-none cursor-pointer`}
+          >
+            <option value="" disabled>
+              {placeholder ?? "Select..."}
+            </option>
+            {options?.map((opt) => (
+              <option key={opt.value} value={opt.value} className="bg-[#18181b]">
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        ) : type === "textarea" ? (
+          <textarea
+            ref={inputRef as React.RefObject<HTMLTextAreaElement>}
+            id={name}
+            name={name}
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            onFocus={() => setIsFocused(true)}
+            onBlur={() => setIsFocused(false)}
+            placeholder={placeholder}
+            required={required}
+            maxLength={maxLength}
+            rows={rows}
+            className={`${baseInputClass} resize-none`}
+          />
+        ) : (
+          <input
+            ref={inputRef as React.RefObject<HTMLInputElement>}
+            id={name}
+            type={type}
+            name={name}
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            onFocus={() => setIsFocused(true)}
+            onBlur={() => setIsFocused(false)}
+            placeholder={placeholder}
+            required={required}
+            maxLength={maxLength}
+            className={baseInputClass}
+          />
+        )}
 
-      {/* Validation indicators */}
-      <div className="absolute right-3 top-3">
-        <AnimatePresence mode="wait">
-          {error && (
-            <motion.div
-              key="error"
-              initial={{ opacity: 0, scale: 0.5 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.5 }}
-            >
-              <AlertCircle className="w-4 h-4 text-[#EF4444]" />
-            </motion.div>
-          )}
-          {isValid && !isFocused && (
-            <motion.div
-              key="valid"
-              initial={{ opacity: 0, scale: 0.5 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.5 }}
-            >
-              <Check className="w-4 h-4 text-[#22C55E]" />
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {/* Validation indicators */}
+        <div className="absolute right-3 top-3">
+          <AnimatePresence mode="wait">
+            {error && (
+              <motion.div
+                key="error"
+                initial={{ opacity: 0, scale: 0.5 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.5 }}
+              >
+                <AlertCircle className="w-4 h-4 text-[#EF4444]" />
+              </motion.div>
+            )}
+            {isValid && !isFocused && (
+              <motion.div
+                key="valid"
+                initial={{ opacity: 0, scale: 0.5 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.5 }}
+              >
+                <Check className="w-4 h-4 text-[#1D9BF0]" />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
       </div>
 
       {/* Error message */}

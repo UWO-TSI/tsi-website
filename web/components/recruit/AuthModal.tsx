@@ -213,7 +213,7 @@ export default function AuthModal({
                   <p className="text-sm text-[#EF4444]">{error}</p>
                 )}
                 {successMessage && (
-                  <div className="rounded-xl bg-[#22C55E]/10 border border-[#22C55E]/30 px-4 py-3">
+                  <div className="rounded-xl bg-[#1D9BF0]/10 border border-[#1D9BF0]/30 px-4 py-3">
                     <p className="text-sm text-[#86EFAC] leading-relaxed">
                       {successMessage}
                     </p>

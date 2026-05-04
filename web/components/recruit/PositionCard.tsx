@@ -133,10 +133,10 @@ export default function PositionCard({ position, index }: PositionCardProps) {
                 </span>
               )}
               {status === "open" ? (
-                <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#22C55E]/10 text-[#22C55E] text-[10px] font-mono uppercase tracking-wide">
+                <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#1D9BF0]/10 text-[#1D9BF0] text-[10px] font-mono uppercase tracking-wide">
                   <span className="relative flex h-1.5 w-1.5">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#22C55E] opacity-75" />
-                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[#22C55E]" />
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#1D9BF0] opacity-75" />
+                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[#1D9BF0]" />
                   </span>
                   Open
                 </span>

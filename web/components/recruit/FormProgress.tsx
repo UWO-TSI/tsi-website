@@ -15,15 +15,27 @@ export default function FormProgress({
 }: FormProgressProps) {
   const progress = ((currentStep + 1) / totalSteps) * 100;
 
+  // Grid keeps each label vertically aligned with its dot regardless of
+  // label length. flex justify-between would space by container edges,
+  // not centers, and break alignment when labels differ in width.
+  const gridCols = `grid grid-cols-${labels.length}`;
+  // Tailwind needs literal class names — explicit lookup keeps JIT happy.
+  const colsByCount: Record<number, string> = {
+    3: "grid-cols-3",
+    4: "grid-cols-4",
+    5: "grid-cols-5",
+  };
+  const colsClass = colsByCount[labels.length] ?? gridCols;
+
   return (
     <div className="mb-8">
       {/* Step labels */}
-      <div className="flex justify-between mb-3">
+      <div className={`grid ${colsClass} mb-3`}>
         {labels.map((label, i) => (
-          <button
+          <span
             key={i}
             className={`
-              font-mono text-[10px] tracking-wider uppercase transition-colors duration-300
+              font-mono text-[10px] tracking-wider uppercase text-center transition-colors duration-300
               ${i === currentStep
                 ? "text-[#F1FFFF]"
                 : i < currentStep
@@ -31,10 +43,9 @@ export default function FormProgress({
                   : "text-[#6B7280]"
               }
             `}
-            disabled
           >
             {label}
-          </button>
+          </span>
         ))}
       </div>
 
@@ -61,21 +72,22 @@ export default function FormProgress({
         />
       </div>
 
-      {/* Step dots */}
-      <div className="flex justify-between mt-2">
+      {/* Step dots — same grid so each dot lines up with its label */}
+      <div className={`grid ${colsClass} mt-2`}>
         {labels.map((_, i) => (
-          <motion.div
-            key={i}
-            className="w-2 h-2 rounded-full"
-            animate={{
-              backgroundColor:
-                i <= currentStep
-                  ? "#002FA7"
-                  : "rgba(255,255,255,0.1)",
-              scale: i === currentStep ? 1.3 : 1,
-            }}
-            transition={{ type: "spring", stiffness: 300, damping: 25 }}
-          />
+          <div key={i} className="flex justify-center">
+            <motion.div
+              className="w-2 h-2 rounded-full"
+              animate={{
+                backgroundColor:
+                  i <= currentStep
+                    ? "#002FA7"
+                    : "rgba(255,255,255,0.1)",
+                scale: i === currentStep ? 1.3 : 1,
+              }}
+              transition={{ type: "spring", stiffness: 300, damping: 25 }}
+            />
+          </div>
         ))}
       </div>
     </div>
