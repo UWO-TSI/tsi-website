@@ -45,7 +45,7 @@ const ESSAYS = {
     {
       id: "vp-int-1",
       question:
-        "Plan the TSI Summer Cottage Trip. We're taking 15–20 people to a cottage near Toronto for 2 nights, 3 days (leave on day 3). Budget is $100–$150 per person. Put together an actual planning doc with Airbnb or cottage links, a full day-by-day itinerary, activities, games, food plan, driving plan, interest form links, budget spreadsheets, and anything else you'd need to make it a trip people actually show up for. The more detailed and ready-to-execute, the better. Treat it like you're actually running it. Paste a link to your planning doc below.",
+        "Plan the TSI Summer Cottage Trip. We're taking 15–20 people to a cottage near Toronto for 2 nights, 3 days (leave on day 3). Budget is $100–$150 per person. Put together an actual planning doc with Airbnb or cottage links, a full day-by-day itinerary, activities, games, food plan, driving plan, interest form links, budget spreadsheets, and anything else you'd need to make it a trip people actually show up for. The more detailed and ready-to-execute, the better. Treat it like you're actually running it.",
       max_words: 60,
     },
   ],
@@ -53,7 +53,7 @@ const ESSAYS = {
     {
       id: "vp-mkt-1",
       question:
-        "Show, don't tell. Submit a creative piece, in whatever medium is your strength (design, video, etc.), that makes the case for why you're the one for this role. Paste a link below.",
+        "Show, don't tell. Submit a creative piece, in whatever medium is your strength (design, video, etc.), that makes the case for why you're the one for this role.",
       max_words: 60,
     },
   ],

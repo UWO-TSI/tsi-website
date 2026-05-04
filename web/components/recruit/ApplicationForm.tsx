@@ -794,8 +794,8 @@ export default function ApplicationForm({
                     Write in your own voice
                   </p>
                   <p className="text-xs text-[#9CA3AF] mt-1 leading-relaxed">
-                    We can tell when essays are AI-written. Short and honest
-                    beats long and polished every time.
+                    The president spends his whole day on Claude — he&apos;ll
+                    know if it&apos;s AI-generated.
                   </p>
                 </div>
               </div>
