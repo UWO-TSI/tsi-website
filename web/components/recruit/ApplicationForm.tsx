@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import FormField from "./FormField";
 import FormProgress from "./FormProgress";
 import ResumeUpload from "./ResumeUpload";
+import PortfolioUpload from "./PortfolioUpload";
 import SuccessScreen from "./SuccessScreen";
 import Button from "@/components/ui/Button";
 import {
@@ -38,6 +39,9 @@ interface FormData {
   resume_storage_path: string | null;
   resume_filename: string | null;
   resume_size_bytes: number | null;
+  portfolio_storage_path: string | null;
+  portfolio_filename: string | null;
+  portfolio_size_bytes: number | null;
 }
 
 const EMPTY_FORM: FormData = {
@@ -54,6 +58,9 @@ const EMPTY_FORM: FormData = {
   resume_storage_path: null,
   resume_filename: null,
   resume_size_bytes: null,
+  portfolio_storage_path: null,
+  portfolio_filename: null,
+  portfolio_size_bytes: null,
 };
 
 const DRAFT_KEY = (positionId: string) => `tethos:draft:${positionId}`;
@@ -63,6 +70,7 @@ const DRAFT_KEY = (positionId: string) => `tethos:draft:${positionId}`;
 // and the user's review screen pull these out separately from real essays.
 export const META_OTHER_LINKS_ID = "__profile_other_links";
 export const META_COMMITMENTS_ID = "__profile_commitments_next_year";
+export const META_PORTFOLIO_FILE_ID = "__portfolio_file";
 
 interface DraftPayload {
   form_data: FormData;
@@ -209,6 +217,10 @@ export default function ApplicationForm({
           resume_storage_path: chosen.form_data.resume_storage_path ?? null,
           resume_filename: chosen.form_data.resume_filename ?? null,
           resume_size_bytes: chosen.form_data.resume_size_bytes ?? null,
+          portfolio_storage_path:
+            chosen.form_data.portfolio_storage_path ?? null,
+          portfolio_filename: chosen.form_data.portfolio_filename ?? null,
+          portfolio_size_bytes: chosen.form_data.portfolio_size_bytes ?? null,
         });
         setDraftRestoredAt(chosen.updated_at);
       } else {
@@ -312,6 +324,18 @@ export default function ApplicationForm({
     []
   );
 
+  const updatePortfolio = useCallback(
+    (data: { path: string; filename: string; size: number } | null) => {
+      setFormData((prev) => ({
+        ...prev,
+        portfolio_storage_path: data?.path ?? null,
+        portfolio_filename: data?.filename ?? null,
+        portfolio_size_bytes: data?.size ?? null,
+      }));
+    },
+    []
+  );
+
   // Step validation
   const validateStep = (s: number): boolean => {
     const errs: Record<string, string> = {};
@@ -332,8 +356,21 @@ export default function ApplicationForm({
     }
 
     if (s === 2) {
+      const isMarketing = position.slug === "vp-marketing";
       for (const q of position.essay_questions) {
         const answer = formData.essay_answers[q.id] ?? "";
+        // VP Marketing portfolio question: a file upload satisfies the
+        // requirement; a link in the essay does too. Either is enough.
+        if (isMarketing) {
+          const hasFile = !!formData.portfolio_storage_path;
+          const hasText = !!answer.trim();
+          if (!hasFile && !hasText) {
+            errs[`essay_${q.id}`] = "Upload a file or paste a link.";
+          } else if (hasText && countWords(answer) > q.max_words) {
+            errs[`essay_${q.id}`] = `Exceeds ${q.max_words} word limit`;
+          }
+          continue;
+        }
         if (!answer.trim()) {
           errs[`essay_${q.id}`] = "Required";
         } else if (countWords(answer) > q.max_words) {
@@ -407,6 +444,18 @@ export default function ApplicationForm({
             },
           ]
         : []),
+      ...(formData.portfolio_storage_path && formData.portfolio_filename
+        ? [
+            {
+              question_id: META_PORTFOLIO_FILE_ID,
+              answer: JSON.stringify({
+                path: formData.portfolio_storage_path,
+                filename: formData.portfolio_filename,
+                size: formData.portfolio_size_bytes,
+              }),
+            },
+          ]
+        : []),
     ];
 
     try {
@@ -450,10 +499,10 @@ export default function ApplicationForm({
         } else {
           message =
             errData?.error ||
-            "Submission failed. Your draft is saved — try again.";
+            "Submission failed. Your draft is saved. Try again.";
         }
       } catch {
-        message = "Submission failed. Your draft is saved — try again.";
+        message = "Submission failed. Your draft is saved. Try again.";
       }
       setErrors({ submit: message });
       if (res.status === 409) {
@@ -464,7 +513,7 @@ export default function ApplicationForm({
     } catch {
       setErrors({
         submit:
-          "Network error. Your draft is saved — check your connection and try again.",
+          "Network error. Your draft is saved. Check your connection and try again.",
       });
     }
 
@@ -504,7 +553,7 @@ export default function ApplicationForm({
               <p className="text-sm text-[#F1FFFF]">
                 Draft restored
                 <span className="text-[#9CA3AF] ml-2 text-xs font-mono">
-                  — last edited {relativeTime(draftRestoredAt)}
+                  · last edited {relativeTime(draftRestoredAt)}
                 </span>
               </p>
               <p className="text-xs text-[#6B7280] mt-1">
@@ -563,7 +612,7 @@ export default function ApplicationForm({
               className="text-[10px] font-mono text-[#FFD166] flex items-center gap-1.5"
             >
               <CloudOff className="w-3 h-3" />
-              Saved locally — will sync when online
+              Saved locally. Will sync when online
             </motion.span>
           )}
         </AnimatePresence>
@@ -668,7 +717,7 @@ export default function ApplicationForm({
                 type="textarea"
                 value={formData.other_links}
                 onChange={(v) => updateField("other_links", v)}
-                placeholder="Portfolio, GitHub, Behance, anywhere else worth showing — one per line"
+                placeholder="Portfolio, GitHub, Behance, anywhere else worth showing. One per line."
                 rows={3}
               />
 
@@ -760,19 +809,39 @@ export default function ApplicationForm({
             >
               {position.essay_questions.map((q, i) => {
                 const answer = formData.essay_answers[q.id] ?? "";
+                const isMarketingPortfolioQuestion =
+                  position.slug === "vp-marketing";
                 return (
                   <div key={q.id}>
                     <p className="text-sm text-[#F1FFFF] mb-3 font-medium">
                       {i + 1}. {q.question}
                     </p>
+
+                    {isMarketingPortfolioQuestion && (
+                      <div className="mb-4">
+                        <PortfolioUpload
+                          positionSlug={position.slug}
+                          currentPath={formData.portfolio_storage_path}
+                          currentFilename={formData.portfolio_filename}
+                          currentSize={formData.portfolio_size_bytes}
+                          onChange={updatePortfolio}
+                        />
+                      </div>
+                    )}
+
                     <FormField
                       label=""
                       name={`essay_${q.id}`}
                       type="textarea"
                       value={answer}
                       onChange={(v) => updateEssay(q.id, v)}
-                      required
-                      rows={6}
+                      required={!isMarketingPortfolioQuestion}
+                      placeholder={
+                        isMarketingPortfolioQuestion
+                          ? "Or paste a link if your file is hosted elsewhere"
+                          : undefined
+                      }
+                      rows={q.max_words <= 80 ? 2 : 6}
                       error={errors[`essay_${q.id}`]}
                       wordCount={countWords(answer)}
                       maxWords={q.max_words}
@@ -794,7 +863,7 @@ export default function ApplicationForm({
                     Write in your own voice
                   </p>
                   <p className="text-xs text-[#9CA3AF] mt-1 leading-relaxed">
-                    The president spends his whole day on Claude — he&apos;ll
+                    The president spends his whole day on Claude. He&apos;ll
                     know if it&apos;s AI-generated.
                   </p>
                 </div>
@@ -874,6 +943,12 @@ export default function ApplicationForm({
                     label="File"
                     value={formData.resume_filename ?? "Not uploaded"}
                   />
+                  {formData.portfolio_filename && (
+                    <ReviewRow
+                      label="Portfolio"
+                      value={formData.portfolio_filename}
+                    />
+                  )}
                 </div>
 
                 {position.essay_questions.length > 0 && (

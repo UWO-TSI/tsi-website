@@ -123,7 +123,7 @@ export const ROLE_CONTENT: Record<string, RoleContent> = {
     tagline:
       "This isn't your typical Senior Advisor role. As a TSI Advisor, you're actively involved, have access to TSI chats, and play a real role in high-level decision-making. Think board of advisors, but you're actually doing things.",
     preApplyNote:
-      "How it works: you'll come in with at least one concrete idea you want to build or improve at TSI — your own idea or something from the list — and actually implement it. Highly flexible, perfect for past execs who want to keep contributing to TSI's growth without being tied to a specific project or portfolio.",
+      "How it works: you'll come in with at least one concrete idea you want to build or improve at TSI, whether that's your own idea or something from the list, and actually implement it. Highly flexible, perfect for past execs who want to keep contributing to TSI's growth without being tied to a specific project or portfolio.",
     whatYoullDo: [
       "Bring at least one concrete idea you want to build or improve at TSI, and ship it",
       "Get involved in high-level decisions across the org",
@@ -133,7 +133,7 @@ export const ROLE_CONTENT: Record<string, RoleContent> = {
     whoYouAre: [
       "Past TSI exec who wants to keep contributing",
       "Has at least one concrete idea you've been wanting to ship",
-      "Self-directed — you bring the idea, you do the work",
+      "Self-directed: you bring the idea, you do the work",
       "Comfortable with ambiguity and full ownership",
     ],
     about: {
@@ -147,7 +147,7 @@ export const ROLE_CONTENT: Record<string, RoleContent> = {
         "Develop hardware project training (train incoming hardware devs and PMs)",
         "Automate TSI's grants application process",
         "Make a TSI rap song",
-        "Or something else entirely — bring your own idea",
+        "Or something else entirely, bring your own idea",
       ],
     },
   },
