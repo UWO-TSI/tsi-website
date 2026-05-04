@@ -408,7 +408,8 @@ export default function ApplicationForm({
       try {
         const errData = await res.json();
         if (res.status === 409) {
-          message = "You've already applied for this position.";
+          message =
+            "You've already applied for this position. Track its status in your dashboard.";
         } else if (res.status === 429) {
           message = "Too many submissions. Wait a moment, then try again.";
         } else if (res.status === 401) {
@@ -422,6 +423,11 @@ export default function ApplicationForm({
         message = "Submission failed. Your draft is saved — try again.";
       }
       setErrors({ submit: message });
+      if (res.status === 409) {
+        // Already applied — clear the local draft so they can't keep
+        // mashing Submit on stale data.
+        await clearDraft().catch(() => {});
+      }
     } catch {
       setErrors({
         submit:

@@ -4,9 +4,10 @@ import { Suspense, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Check } from "lucide-react";
 import { isPositionOpen } from "@/lib/recruitment";
 import type { Position } from "@/lib/recruitment";
+import { createClient } from "@/lib/supabase/client";
 import DecryptedText from "@/components/ui/DecryptedText";
 import GradientText from "@/components/ui/GradientText";
 import Countdown from "@/components/recruit/Countdown";
@@ -28,6 +29,9 @@ function RecruitmentPageInner() {
   const [positions, setPositions] = useState<Position[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
+  const [appliedPositionIds, setAppliedPositionIds] = useState<Set<string>>(
+    new Set()
+  );
 
   const positionsRef = useRef<HTMLDivElement>(null);
 
@@ -53,6 +57,29 @@ function RecruitmentPageInner() {
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Look up which positions the signed-in user has already applied to so
+  // we can mark those cards. RLS scopes the query to their own rows.
+  useEffect(() => {
+    let cancelled = false;
+    const supabase = createClient();
+    (async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user || cancelled) return;
+      const { data } = await supabase
+        .from("applications")
+        .select("position_id")
+        .eq("user_id", user.id);
+      if (!cancelled && data) {
+        setAppliedPositionIds(new Set(data.map((a) => a.position_id)));
+      }
+    })();
     return () => {
       cancelled = true;
     };
@@ -384,7 +411,12 @@ function RecruitmentPageInner() {
                 className="grid grid-cols-1 sm:grid-cols-2 gap-4"
               >
                 {positions.map((position, i) => (
-                  <PositionCard key={position.slug} position={position} index={i} />
+                  <PositionCard
+                    key={position.slug}
+                    position={position}
+                    index={i}
+                    hasApplied={appliedPositionIds.has(position.id)}
+                  />
                 ))}
               </motion.div>
             )}
@@ -422,9 +454,11 @@ function RecruitmentPageInner() {
 function PositionCard({
   position,
   index,
+  hasApplied,
 }: {
   position: Position;
   index: number;
+  hasApplied: boolean;
 }) {
   const isOpen = isPositionOpen(position);
   const dueLabel = position.closes_at
@@ -445,16 +479,28 @@ function PositionCard({
         href={`/student/apply/${position.slug}`}
         className="group block rounded-2xl p-6 md:p-7 h-full transition-colors duration-300"
         style={{
-          background: "rgba(255,255,255,0.025)",
-          border: "1px solid rgba(255,255,255,0.06)",
+          background: hasApplied
+            ? "rgba(34,197,94,0.04)"
+            : "rgba(255,255,255,0.025)",
+          border: `1px solid ${
+            hasApplied ? "rgba(34,197,94,0.2)" : "rgba(255,255,255,0.06)"
+          }`,
         }}
         onMouseEnter={(e) => {
-          e.currentTarget.style.background = "rgba(255,255,255,0.04)";
-          e.currentTarget.style.borderColor = "rgba(255,255,255,0.12)";
+          e.currentTarget.style.background = hasApplied
+            ? "rgba(34,197,94,0.07)"
+            : "rgba(255,255,255,0.04)";
+          e.currentTarget.style.borderColor = hasApplied
+            ? "rgba(34,197,94,0.32)"
+            : "rgba(255,255,255,0.12)";
         }}
         onMouseLeave={(e) => {
-          e.currentTarget.style.background = "rgba(255,255,255,0.025)";
-          e.currentTarget.style.borderColor = "rgba(255,255,255,0.06)";
+          e.currentTarget.style.background = hasApplied
+            ? "rgba(34,197,94,0.04)"
+            : "rgba(255,255,255,0.025)";
+          e.currentTarget.style.borderColor = hasApplied
+            ? "rgba(34,197,94,0.2)"
+            : "rgba(255,255,255,0.06)";
         }}
       >
         <div className="flex items-center justify-between mb-5">
@@ -467,7 +513,18 @@ function PositionCard({
           >
             Phase {String(position.phase).padStart(2, "0")}
           </span>
-          {isOpen ? (
+          {hasApplied ? (
+            <span
+              className="flex items-center gap-1.5 text-[10px] uppercase tracking-[0.2em]"
+              style={{
+                color: "#22c55e",
+                fontFamily: "var(--font-highlight)",
+              }}
+            >
+              <Check className="w-3 h-3" />
+              Applied
+            </span>
+          ) : isOpen ? (
             <span
               className="flex items-center gap-1.5 text-[10px] uppercase tracking-[0.2em]"
               style={{
@@ -520,18 +577,16 @@ function PositionCard({
           >
             {dueLabel ? `Due ${dueLabel}` : "Date TBD"}
           </span>
-          {isOpen && (
-            <span
-              className="inline-flex items-center gap-1 text-xs transition-transform group-hover:translate-x-0.5"
-              style={{
-                color: "#F1FFFF",
-                fontFamily: "var(--font-highlight)",
-              }}
-            >
-              Apply
-              <ArrowRight className="w-3.5 h-3.5" />
-            </span>
-          )}
+          <span
+            className="inline-flex items-center gap-1 text-xs transition-transform group-hover:translate-x-0.5"
+            style={{
+              color: hasApplied ? "#22c55e" : "#F1FFFF",
+              fontFamily: "var(--font-highlight)",
+            }}
+          >
+            {hasApplied ? "View" : isOpen ? "Apply" : ""}
+            {(hasApplied || isOpen) && <ArrowRight className="w-3.5 h-3.5" />}
+          </span>
         </div>
       </Link>
     </motion.div>

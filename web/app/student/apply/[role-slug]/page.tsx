@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import ApplicationForm from "@/components/recruit/ApplicationForm";
 import AuthModal from "@/components/recruit/AuthModal";
@@ -42,6 +43,10 @@ export default function RoleApplicationPage() {
 
   const [position, setPosition] = useState<Position | null>(null);
   const [user, setUser] = useState<User | null>(null);
+  const [existingApplication, setExistingApplication] = useState<{
+    id: string;
+    submitted_at: string;
+  } | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
@@ -67,16 +72,36 @@ export default function RoleApplicationPage() {
 
       if (cancelled) return;
 
-      if (userRes.status === "fulfilled") {
-        setUser(userRes.value.data.user);
-      }
+      const currentUser =
+        userRes.status === "fulfilled" ? userRes.value.data.user : null;
+      if (currentUser) setUser(currentUser);
 
+      let foundPosition: Position | null = null;
       if (positionsRes.status === "fulfilled") {
-        const found = positionsRes.value.find((p) => p.slug === slug);
-        setPosition(found ?? null);
+        foundPosition = positionsRes.value.find((p) => p.slug === slug) ?? null;
+        setPosition(foundPosition);
         setLoadError(false);
       } else {
         setLoadError(true);
+      }
+
+      // If signed in and we found the role, check for an existing
+      // application — this gates the apply flow so applicants can't
+      // re-submit (the DB unique constraint would block it anyway,
+      // but reaching the form is bad UX).
+      if (currentUser && foundPosition) {
+        const { data: existing } = await supabase
+          .from("applications")
+          .select("id, submitted_at")
+          .eq("user_id", currentUser.id)
+          .eq("position_id", foundPosition.id)
+          .maybeSingle();
+        if (!cancelled && existing) {
+          setExistingApplication({
+            id: existing.id,
+            submitted_at: existing.submitted_at,
+          });
+        }
       }
 
       setLoading(false);
@@ -106,8 +131,13 @@ export default function RoleApplicationPage() {
     }
   }, [acknowledged, slug]);
 
-  // Scroll-depth sentinel
+  // Scroll-depth sentinel.
+  // `loading` is in the deps because the sentinel only renders once
+  // loading=false; without it, an awaited setState during init can
+  // skip attaching the observer (the deps wouldn't change between the
+  // loading=true and loading=false renders if position was already set).
   useEffect(() => {
+    if (loading) return;
     if (!endSentinelRef.current) return;
     if (scrolledToEnd) return;
     const observer = new IntersectionObserver(
@@ -121,7 +151,7 @@ export default function RoleApplicationPage() {
     );
     observer.observe(endSentinelRef.current);
     return () => observer.disconnect();
-  }, [position, scrolledToEnd]);
+  }, [position, scrolledToEnd, loading]);
 
   if (loading) {
     return (
@@ -438,6 +468,11 @@ export default function RoleApplicationPage() {
                       positionTitle={position.title}
                       opensAt={position.opens_at}
                     />
+                  ) : existingApplication ? (
+                    <AlreadyAppliedCTA
+                      positionTitle={position.title}
+                      submittedAt={existingApplication.submitted_at}
+                    />
                   ) : !user ? (
                     <SignInCTA
                       positionTitle={position.title}
@@ -691,6 +726,52 @@ function SignInCTA({
       <p className="text-[10px] text-[#4B5563] mt-6 font-mono">
         Google OAuth or email/password
       </p>
+    </div>
+  );
+}
+
+function AlreadyAppliedCTA({
+  positionTitle,
+  submittedAt,
+}: {
+  positionTitle: string;
+  submittedAt: string;
+}) {
+  const date = new Date(submittedAt).toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+  return (
+    <div className="text-center">
+      <div className="w-12 h-12 rounded-full bg-[#22C55E]/15 flex items-center justify-center mx-auto mb-5">
+        <Check className="w-5 h-5 text-[#22C55E]" />
+      </div>
+      <h3 className="text-xl font-semibold text-[#F1FFFF] mb-2">
+        Application received
+      </h3>
+      <p className="text-sm text-[#9CA3AF] mb-2 max-w-sm mx-auto">
+        You&apos;ve already applied for{" "}
+        <span className="text-[#F1FFFF]">{positionTitle}</span>.
+      </p>
+      <p className="text-xs text-[#6B7280] font-mono mb-8">
+        Submitted {date}
+      </p>
+      <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+        <Link
+          href="/student/apply/dashboard"
+          className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-[#002FA7] text-[#F1FFFF] text-sm font-medium transition-all hover:bg-[#0039CC] hover:shadow-[0_0_30px_rgba(0,47,167,0.25)]"
+        >
+          Track application
+          <ArrowRight className="w-4 h-4" />
+        </Link>
+        <Link
+          href="/student/apply"
+          className="text-sm text-[#9CA3AF] hover:text-[#F1FFFF] transition-colors"
+        >
+          See other roles →
+        </Link>
+      </div>
     </div>
   );
 }

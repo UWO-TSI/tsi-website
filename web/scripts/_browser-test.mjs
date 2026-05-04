@@ -124,6 +124,9 @@ try {
   await page.click('button[type="submit"]:has-text("Sign In")');
   await page.waitForURL(`**/student/apply/vp-internal**`, { timeout: 10000 });
   await page.waitForLoadState("networkidle");
+  // Wait for the role page's init() async work (auth, positions, applications query)
+  await page.waitForSelector("text=Responsibilities", { timeout: 10000 });
+  await page.waitForTimeout(800);
   console.log("✓ Signed in, back on role page");
 
   console.log("\n=== Step 4: Scroll, ack, start application ===");
