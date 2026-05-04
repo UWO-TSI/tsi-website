@@ -23,7 +23,7 @@ const PIPELINE_STAGES: ApplicationStatus[] = [
   "final_review",
 ];
 
-const PAST_COLOR = "#002FA7";
+const PAST_COLOR = "#1D9BF0";
 const TRACK_COLOR = "rgba(255,255,255,0.08)";
 // First dot center sits at 1/(2N) of width; last dot at 1 − 1/(2N).
 // For N=5 → 10% and 90%. We use these so the connector line endpoints

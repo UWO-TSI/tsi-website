@@ -176,7 +176,7 @@ export default function AuthModal({
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
                       required
-                      className="w-full rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-sm text-[#F1FFFF] placeholder-[#6B7280] focus:outline-none focus:border-[#002FA7] focus:shadow-[0_0_0_2px_rgba(0,47,167,0.3)] transition"
+                      className="w-full rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-sm text-[#F1FFFF] placeholder-[#6B7280] focus:outline-none focus:border-[#1D9BF0] focus:shadow-[0_0_0_2px_rgba(29,155,240,0.3)] transition"
                       placeholder="Your full name"
                     />
                   </div>
@@ -190,7 +190,7 @@ export default function AuthModal({
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
-                    className="w-full rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-sm text-[#F1FFFF] placeholder-[#6B7280] focus:outline-none focus:border-[#002FA7] focus:shadow-[0_0_0_2px_rgba(0,47,167,0.3)] transition"
+                    className="w-full rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-sm text-[#F1FFFF] placeholder-[#6B7280] focus:outline-none focus:border-[#1D9BF0] focus:shadow-[0_0_0_2px_rgba(29,155,240,0.3)] transition"
                     placeholder="you@university.ca"
                   />
                 </div>
@@ -204,7 +204,7 @@ export default function AuthModal({
                     onChange={(e) => setPassword(e.target.value)}
                     required
                     minLength={6}
-                    className="w-full rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-sm text-[#F1FFFF] placeholder-[#6B7280] focus:outline-none focus:border-[#002FA7] focus:shadow-[0_0_0_2px_rgba(0,47,167,0.3)] transition"
+                    className="w-full rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-sm text-[#F1FFFF] placeholder-[#6B7280] focus:outline-none focus:border-[#1D9BF0] focus:shadow-[0_0_0_2px_rgba(29,155,240,0.3)] transition"
                     placeholder="Min 6 characters"
                   />
                 </div>
@@ -223,7 +223,7 @@ export default function AuthModal({
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full rounded-full bg-[#002FA7] hover:bg-[#0039CC] text-[#F1FFFF] px-4 py-3 text-sm font-medium transition disabled:opacity-50"
+                  className="w-full rounded-full bg-[#1D9BF0] hover:bg-[#0e7dbf] text-[#F1FFFF] px-4 py-3 text-sm font-medium transition disabled:opacity-50"
                 >
                   {loading
                     ? "Loading..."
@@ -244,7 +244,7 @@ export default function AuthModal({
                         setError(null);
                         setSuccessMessage(null);
                       }}
-                      className="text-[#002FA7] hover:underline"
+                      className="text-[#1D9BF0] hover:underline"
                     >
                       Sign up
                     </button>
@@ -258,7 +258,7 @@ export default function AuthModal({
                         setError(null);
                         setSuccessMessage(null);
                       }}
-                      className="text-[#002FA7] hover:underline"
+                      className="text-[#1D9BF0] hover:underline"
                     >
                       Sign in
                     </button>

@@ -39,7 +39,7 @@ export default function FormProgress({
               ${i === currentStep
                 ? "text-[#F1FFFF]"
                 : i < currentStep
-                  ? "text-[#002FA7]"
+                  ? "text-[#1D9BF0]"
                   : "text-[#6B7280]"
               }
             `}
@@ -57,7 +57,7 @@ export default function FormProgress({
           transition={{ type: "spring", stiffness: 200, damping: 25 }}
           style={{
             background:
-              "linear-gradient(90deg, #002FA7 0%, #22D3EE 100%)",
+              "linear-gradient(90deg, #1D9BF0 0%, #22D3EE 100%)",
           }}
         />
         {/* Glow on active position */}
@@ -67,7 +67,7 @@ export default function FormProgress({
           transition={{ type: "spring", stiffness: 200, damping: 25 }}
           style={{
             background:
-              "linear-gradient(90deg, rgba(0,47,167,0.5) 0%, rgba(34,211,238,0.5) 100%)",
+              "linear-gradient(90deg, rgba(29,155,240,0.5) 0%, rgba(34,211,238,0.5) 100%)",
           }}
         />
       </div>
@@ -81,7 +81,7 @@ export default function FormProgress({
               animate={{
                 backgroundColor:
                   i <= currentStep
-                    ? "#002FA7"
+                    ? "#1D9BF0"
                     : "rgba(255,255,255,0.1)",
                 scale: i === currentStep ? 1.3 : 1,
               }}

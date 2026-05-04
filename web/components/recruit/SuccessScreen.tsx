@@ -41,7 +41,7 @@ export default function SuccessScreen({
     if (prefersReducedMotion()) return;
 
     const end = Date.now() + 1500;
-    const colors = ["#002FA7", "#FFD166", "#F1FFFF"];
+    const colors = ["#1D9BF0", "#FFD166", "#F1FFFF"];
 
     (function frame() {
       confetti({
@@ -136,7 +136,7 @@ export default function SuccessScreen({
             damping: 15,
             delay: 0.2,
           }}
-          className="mx-auto mb-8 w-20 h-20 rounded-full bg-[#002FA7]/20 border-2 border-[#002FA7] flex items-center justify-center"
+          className="mx-auto mb-8 w-20 h-20 rounded-full bg-[#1D9BF0]/20 border-2 border-[#1D9BF0] flex items-center justify-center"
         >
           <motion.svg
             viewBox="0 0 24 24"
@@ -147,7 +147,7 @@ export default function SuccessScreen({
             <motion.path
               d="M5 13l4 4L19 7"
               fill="none"
-              stroke="#002FA7"
+              stroke="#1D9BF0"
               strokeWidth={2.5}
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -203,7 +203,7 @@ export default function SuccessScreen({
                 <span
                   className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
                     item.status === "current"
-                      ? "bg-[#002FA7] text-[#F1FFFF]"
+                      ? "bg-[#1D9BF0] text-[#F1FFFF]"
                       : "bg-white/5 text-[#6B7280] border border-white/10"
                   }`}
                 >
@@ -247,14 +247,14 @@ export default function SuccessScreen({
           </h3>
           <ul className="space-y-3">
             <li className="text-sm text-[#E5E7EB] flex items-start gap-3 leading-relaxed">
-              <span className="mt-2 inline-block w-1 h-1 rounded-full bg-[#002FA7] flex-shrink-0" />
+              <span className="mt-2 inline-block w-1 h-1 rounded-full bg-[#1D9BF0] flex-shrink-0" />
               <span>
                 Follow{" "}
                 <a
                   href="https://linkedin.com/company/tethos"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-[#F1FFFF] underline underline-offset-2 hover:text-[#002FA7] transition"
+                  className="text-[#F1FFFF] underline underline-offset-2 hover:text-[#1D9BF0] transition"
                 >
                   @tethos on LinkedIn
                 </a>{" "}
@@ -262,14 +262,14 @@ export default function SuccessScreen({
               </span>
             </li>
             <li className="text-sm text-[#E5E7EB] flex items-start gap-3 leading-relaxed">
-              <span className="mt-2 inline-block w-1 h-1 rounded-full bg-[#002FA7] flex-shrink-0" />
+              <span className="mt-2 inline-block w-1 h-1 rounded-full bg-[#1D9BF0] flex-shrink-0" />
               <span>
                 Check your dashboard anytime — we release status changes the
                 moment they&apos;re final.
               </span>
             </li>
             <li className="text-sm text-[#E5E7EB] flex items-start gap-3 leading-relaxed">
-              <span className="mt-2 inline-block w-1 h-1 rounded-full bg-[#002FA7] flex-shrink-0" />
+              <span className="mt-2 inline-block w-1 h-1 rounded-full bg-[#1D9BF0] flex-shrink-0" />
               <span>Know someone who&apos;d be a fit? Share the role.</span>
             </li>
           </ul>

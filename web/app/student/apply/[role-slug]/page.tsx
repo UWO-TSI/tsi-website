@@ -174,7 +174,7 @@ export default function RoleApplicationPage() {
           animate={{ opacity: 1 }}
           className="flex flex-col items-center gap-4"
         >
-          <div className="w-8 h-8 rounded-full border-2 border-[#002FA7] border-t-transparent animate-spin" />
+          <div className="w-8 h-8 rounded-full border-2 border-[#1D9BF0] border-t-transparent animate-spin" />
           <p className="font-mono text-xs text-[#6B7280] tracking-wider">
             Loading position...
           </p>
@@ -207,7 +207,7 @@ export default function RoleApplicationPage() {
             {loadError && (
               <button
                 onClick={() => window.location.reload()}
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-[#002FA7] text-[#F1FFFF] text-sm font-medium transition-all hover:bg-[#0039CC]"
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-[#1D9BF0] text-[#F1FFFF] text-sm font-medium transition-all hover:bg-[#0e7dbf]"
               >
                 Refresh
               </button>
@@ -279,7 +279,7 @@ export default function RoleApplicationPage() {
                   className="mb-8"
                 >
                   <div className="flex items-center gap-3 mb-4 flex-wrap">
-                    <span className="font-mono text-[10px] tracking-[0.2em] uppercase text-[#002FA7]">
+                    <span className="font-mono text-[10px] tracking-[0.2em] uppercase text-[#1D9BF0]">
                       Phase {String(position.phase).padStart(2, "0")}
                     </span>
                     {status === "open" && (
@@ -509,8 +509,8 @@ export default function RoleApplicationPage() {
                   className="rounded-2xl p-8 md:p-10"
                   style={{
                     background:
-                      "linear-gradient(135deg, rgba(0,47,167,0.08) 0%, rgba(255,255,255,0.02) 100%)",
-                    border: "1px solid rgba(0,47,167,0.25)",
+                      "linear-gradient(135deg, rgba(29,155,240,0.08) 0%, rgba(255,255,255,0.02) 100%)",
+                    border: "1px solid rgba(29,155,240,0.25)",
                   }}
                 >
                   {isClosed ? (
@@ -567,7 +567,7 @@ export default function RoleApplicationPage() {
               </button>
 
               <div className="mb-8">
-                <p className="font-mono text-[10px] tracking-[0.2em] uppercase text-[#002FA7] mb-2">
+                <p className="font-mono text-[10px] tracking-[0.2em] uppercase text-[#1D9BF0] mb-2">
                   Applying for
                 </p>
                 <h1 className="text-2xl md:text-3xl font-semibold text-[#F1FFFF]">
@@ -618,11 +618,11 @@ function PreApplyNote({ text, delay }: { text: string; delay: number }) {
       transition={{ duration: 0.6, delay, ease: EASE_OUT }}
       className="rounded-2xl p-6"
       style={{
-        background: "rgba(0,47,167,0.08)",
-        border: "1px solid rgba(0,47,167,0.25)",
+        background: "rgba(29,155,240,0.08)",
+        border: "1px solid rgba(29,155,240,0.25)",
       }}
     >
-      <p className="font-mono text-[10px] tracking-[0.2em] uppercase text-[#002FA7] mb-3">
+      <p className="font-mono text-[10px] tracking-[0.2em] uppercase text-[#1D9BF0] mb-3">
         A note before you apply
       </p>
       <p className="text-sm md:text-base text-[#E5E7EB] leading-relaxed">
@@ -663,13 +663,13 @@ function AboutBlock({
                 border: "1px solid rgba(255,255,255,0.06)",
               }}
             >
-              <p className="font-mono text-[10px] tracking-[0.2em] uppercase text-[#002FA7] mb-3">
+              <p className="font-mono text-[10px] tracking-[0.2em] uppercase text-[#1D9BF0] mb-3">
                 {about.subtitle}
               </p>
               <ul className="space-y-2 list-none pl-0">
                 {about.stats.map((stat, i) => (
                   <li key={i} className="flex items-start gap-3 text-sm text-[#E5E7EB]">
-                    <span className="mt-2 inline-block w-1 h-1 rounded-full bg-[#002FA7] flex-shrink-0" />
+                    <span className="mt-2 inline-block w-1 h-1 rounded-full bg-[#1D9BF0] flex-shrink-0" />
                     <span>{stat}</span>
                   </li>
                 ))}
@@ -679,7 +679,7 @@ function AboutBlock({
             <ul className="mt-4 space-y-3 list-none pl-0">
               {about.stats.map((stat, i) => (
                 <li key={i} className="flex items-start gap-3 text-sm md:text-[15px]">
-                  <span className="mt-2 inline-block w-1 h-1 rounded-full bg-[#002FA7] flex-shrink-0" />
+                  <span className="mt-2 inline-block w-1 h-1 rounded-full bg-[#1D9BF0] flex-shrink-0" />
                   <span>{stat}</span>
                 </li>
               ))}
@@ -725,7 +725,7 @@ function Section({
 function Bullet({ children }: { children: React.ReactNode }) {
   return (
     <li className="flex items-start gap-3">
-      <span className="mt-2 inline-block w-1 h-1 rounded-full bg-[#002FA7] flex-shrink-0" />
+      <span className="mt-2 inline-block w-1 h-1 rounded-full bg-[#1D9BF0] flex-shrink-0" />
       <span>{children}</span>
     </li>
   );
@@ -752,7 +752,7 @@ function StepPreview({
         <span className="font-mono text-[10px] text-[#6B7280]">
           {String(n).padStart(2, "0")}
         </span>
-        <span className="text-[#002FA7]">{icon}</span>
+        <span className="text-[#1D9BF0]">{icon}</span>
       </div>
       <p className="text-sm text-[#F1FFFF]">{label}</p>
     </div>
@@ -768,8 +768,8 @@ function SignInCTA({
 }) {
   return (
     <div className="text-center">
-      <div className="w-12 h-12 rounded-full bg-[#002FA7]/15 flex items-center justify-center mx-auto mb-5">
-        <Lock className="w-5 h-5 text-[#002FA7]" />
+      <div className="w-12 h-12 rounded-full bg-[#1D9BF0]/15 flex items-center justify-center mx-auto mb-5">
+        <Lock className="w-5 h-5 text-[#1D9BF0]" />
       </div>
       <h3 className="text-xl font-semibold text-[#F1FFFF] mb-2">
         Sign in to apply
@@ -780,7 +780,7 @@ function SignInCTA({
       </p>
       <motion.button
         onClick={onSignIn}
-        className="group inline-flex items-center gap-2 px-8 py-3.5 rounded-full bg-[#002FA7] text-[#F1FFFF] text-sm font-medium transition-all hover:bg-[#0039CC] hover:shadow-[0_0_30px_rgba(0,47,167,0.25)]"
+        className="group inline-flex items-center gap-2 px-8 py-3.5 rounded-full bg-[#1D9BF0] text-[#F1FFFF] text-sm font-medium transition-all hover:bg-[#0e7dbf] hover:shadow-[0_0_30px_rgba(29,155,240,0.25)]"
         whileHover={{ scale: 1.02 }}
         whileTap={{ scale: 0.98 }}
       >
@@ -824,7 +824,7 @@ function AlreadyAppliedCTA({
       <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
         <Link
           href="/student/apply/dashboard"
-          className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-[#002FA7] text-[#F1FFFF] text-sm font-medium transition-all hover:bg-[#0039CC] hover:shadow-[0_0_30px_rgba(0,47,167,0.25)]"
+          className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-[#1D9BF0] text-[#F1FFFF] text-sm font-medium transition-all hover:bg-[#0e7dbf] hover:shadow-[0_0_30px_rgba(29,155,240,0.25)]"
         >
           Track application
           <ArrowRight className="w-4 h-4" />
@@ -929,11 +929,11 @@ function ReadyToApply({
             className="w-full flex items-start gap-3 p-4 rounded-xl mb-6 text-left transition-colors"
             style={{
               background: acknowledged
-                ? "rgba(0,47,167,0.12)"
+                ? "rgba(29,155,240,0.12)"
                 : "rgba(255,255,255,0.03)",
               border: `1px solid ${
                 acknowledged
-                  ? "rgba(0,47,167,0.4)"
+                  ? "rgba(29,155,240,0.4)"
                   : "rgba(255,255,255,0.08)"
               }`,
             }}
@@ -941,7 +941,7 @@ function ReadyToApply({
             <span
               className={`mt-0.5 flex-shrink-0 w-5 h-5 rounded-md flex items-center justify-center transition-colors ${
                 acknowledged
-                  ? "bg-[#002FA7] border-[#002FA7]"
+                  ? "bg-[#1D9BF0] border-[#1D9BF0]"
                   : "border border-white/20"
               }`}
             >
@@ -969,7 +969,7 @@ function ReadyToApply({
         whileTap={canStart ? { scale: 0.99 } : {}}
         className={`w-full inline-flex items-center justify-center gap-2 px-6 py-4 rounded-full text-sm font-medium transition-all ${
           canStart
-            ? "bg-[#002FA7] text-[#F1FFFF] hover:bg-[#0039CC] hover:shadow-[0_0_30px_rgba(0,47,167,0.25)] cursor-pointer"
+            ? "bg-[#1D9BF0] text-[#F1FFFF] hover:bg-[#0e7dbf] hover:shadow-[0_0_30px_rgba(29,155,240,0.25)] cursor-pointer"
             : "bg-white/5 text-[#6B7280] cursor-not-allowed"
         }`}
       >

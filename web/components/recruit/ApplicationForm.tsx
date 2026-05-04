@@ -581,12 +581,12 @@ export default function ApplicationForm({
             transition={{ duration: 0.3 }}
             className="flex items-start gap-3 p-4 rounded-xl mb-6"
             style={{
-              background: "rgba(0,47,167,0.08)",
-              border: "1px solid rgba(0,47,167,0.25)",
+              background: "rgba(29,155,240,0.08)",
+              border: "1px solid rgba(29,155,240,0.25)",
             }}
           >
-            <span className="mt-0.5 w-5 h-5 rounded-md bg-[#002FA7]/20 flex items-center justify-center flex-shrink-0">
-              <Check className="w-3 h-3 text-[#002FA7]" />
+            <span className="mt-0.5 w-5 h-5 rounded-md bg-[#1D9BF0]/20 flex items-center justify-center flex-shrink-0">
+              <Check className="w-3 h-3 text-[#1D9BF0]" />
             </span>
             <div className="flex-1">
               <p className="text-sm text-[#F1FFFF]">
@@ -725,7 +725,7 @@ export default function ApplicationForm({
                         }
                         className={`px-4 py-2 rounded-full text-sm transition-all ${
                           selected
-                            ? "bg-[#002FA7] text-[#F1FFFF] border border-[#002FA7]"
+                            ? "bg-[#1D9BF0] text-[#F1FFFF] border border-[#1D9BF0]"
                             : "bg-white/[0.03] text-[#9CA3AF] border border-white/10 hover:border-white/20 hover:text-[#F1FFFF]"
                         }`}
                       >
@@ -785,7 +785,7 @@ export default function ApplicationForm({
                         onClick={() => updateField("heard_about_us", o)}
                         className={`px-4 py-2 rounded-full text-sm transition-all ${
                           selected
-                            ? "bg-[#002FA7] text-[#F1FFFF] border border-[#002FA7]"
+                            ? "bg-[#1D9BF0] text-[#F1FFFF] border border-[#1D9BF0]"
                             : "bg-white/[0.03] text-[#9CA3AF] border border-white/10 hover:border-white/20 hover:text-[#F1FFFF]"
                         }`}
                       >
@@ -1068,11 +1068,11 @@ export default function ApplicationForm({
                 className="w-full flex items-start gap-3 p-4 rounded-xl mt-6 text-left transition-colors"
                 style={{
                   background: confirmChecked
-                    ? "rgba(0,47,167,0.12)"
+                    ? "rgba(29,155,240,0.12)"
                     : "rgba(255,255,255,0.03)",
                   border: `1px solid ${
                     confirmChecked
-                      ? "rgba(0,47,167,0.4)"
+                      ? "rgba(29,155,240,0.4)"
                       : "rgba(255,255,255,0.08)"
                   }`,
                 }}
@@ -1080,7 +1080,7 @@ export default function ApplicationForm({
                 <span
                   className={`mt-0.5 flex-shrink-0 w-5 h-5 rounded-md flex items-center justify-center transition-colors ${
                     confirmChecked
-                      ? "bg-[#002FA7] border-[#002FA7]"
+                      ? "bg-[#1D9BF0] border-[#1D9BF0]"
                       : "border border-white/20"
                   }`}
                 >
@@ -1176,7 +1176,7 @@ function ReviewSectionHeader({
 }) {
   return (
     <div className="flex items-center justify-between pb-3 mb-1 border-b border-white/5">
-      <p className="font-mono text-xs text-[#002FA7] uppercase tracking-wider">
+      <p className="font-mono text-xs text-[#1D9BF0] uppercase tracking-wider">
         {title}
       </p>
       <button

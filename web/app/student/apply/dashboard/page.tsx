@@ -66,7 +66,7 @@ export default function DashboardPage() {
           animate={{ opacity: 1 }}
           className="flex flex-col items-center gap-4"
         >
-          <div className="w-8 h-8 rounded-full border-2 border-[#002FA7] border-t-transparent animate-spin" />
+          <div className="w-8 h-8 rounded-full border-2 border-[#1D9BF0] border-t-transparent animate-spin" />
           <p className="font-mono text-xs text-[#6B7280] tracking-wider">
             Loading...
           </p>
@@ -93,8 +93,8 @@ export default function DashboardPage() {
               border: "1px solid rgba(255,255,255,0.08)",
             }}
           >
-            <div className="w-12 h-12 rounded-full bg-[#002FA7]/15 flex items-center justify-center mx-auto mb-5">
-              <Lock className="w-5 h-5 text-[#002FA7]" />
+            <div className="w-12 h-12 rounded-full bg-[#1D9BF0]/15 flex items-center justify-center mx-auto mb-5">
+              <Lock className="w-5 h-5 text-[#1D9BF0]" />
             </div>
 
             <h2 className="text-xl font-semibold text-[#F1FFFF] mb-2">
@@ -106,7 +106,7 @@ export default function DashboardPage() {
 
             <motion.button
               onClick={() => setShowAuth(true)}
-              className="group inline-flex items-center gap-2 px-8 py-3.5 rounded-full bg-[#002FA7] text-[#F1FFFF] text-sm font-medium transition-all hover:bg-[#0039CC] hover:shadow-[0_0_30px_rgba(0,47,167,0.25)]"
+              className="group inline-flex items-center gap-2 px-8 py-3.5 rounded-full bg-[#1D9BF0] text-[#F1FFFF] text-sm font-medium transition-all hover:bg-[#0e7dbf] hover:shadow-[0_0_30px_rgba(29,155,240,0.25)]"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
@@ -163,7 +163,7 @@ export default function DashboardPage() {
           transition={{ duration: 0.7, delay: 0.1, ease: EASE_OUT }}
           className="mb-10"
         >
-          <p className="font-mono text-[10px] tracking-[0.2em] uppercase text-[#002FA7] mb-2">
+          <p className="font-mono text-[10px] tracking-[0.2em] uppercase text-[#1D9BF0] mb-2">
             Application Dashboard
           </p>
           <h1 className="text-2xl md:text-3xl font-bold text-[#F1FFFF] tracking-tight">
@@ -200,7 +200,7 @@ export default function DashboardPage() {
             </p>
             <motion.button
               onClick={() => router.push("/student/apply")}
-              className="group inline-flex items-center gap-2 px-6 py-3 rounded-full bg-[#002FA7] text-[#F1FFFF] text-sm font-medium transition-all hover:bg-[#0039CC]"
+              className="group inline-flex items-center gap-2 px-6 py-3 rounded-full bg-[#1D9BF0] text-[#F1FFFF] text-sm font-medium transition-all hover:bg-[#0e7dbf]"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >

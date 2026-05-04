@@ -196,7 +196,7 @@ export default function ResumeUpload({
             exit={{ opacity: 0, y: -10 }}
             className="flex items-center gap-3 rounded-xl bg-white/[0.03] border border-white/10 px-4 py-3"
           >
-            <Loader2 className="w-5 h-5 text-[#002FA7] flex-shrink-0 animate-spin" />
+            <Loader2 className="w-5 h-5 text-[#1D9BF0] flex-shrink-0 animate-spin" />
             <div className="flex-1 min-w-0">
               <p className="text-sm text-[#F1FFFF]">Uploading…</p>
               <p className="text-[10px] text-[#6B7280] font-mono">
@@ -210,9 +210,9 @@ export default function ResumeUpload({
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="flex items-center gap-3 rounded-xl bg-[#002FA7]/10 border border-[#002FA7]/30 px-4 py-3"
+            className="flex items-center gap-3 rounded-xl bg-[#1D9BF0]/10 border border-[#1D9BF0]/30 px-4 py-3"
           >
-            <FileText className="w-5 h-5 text-[#002FA7] flex-shrink-0" />
+            <FileText className="w-5 h-5 text-[#1D9BF0] flex-shrink-0" />
             <div className="flex-1 min-w-0">
               <p className="text-sm text-[#F1FFFF] truncate">
                 {currentFilename ?? "Resume"}
@@ -244,7 +244,7 @@ export default function ResumeUpload({
               text-center cursor-pointer transition-all duration-300
               ${
                 isDragOver
-                  ? "border-[#002FA7] bg-[#002FA7]/10"
+                  ? "border-[#1D9BF0] bg-[#1D9BF0]/10"
                   : displayError
                     ? "border-[#EF4444]/40 bg-[#EF4444]/5"
                     : "border-white/10 hover:border-white/20 bg-white/[0.02]"
@@ -270,7 +270,7 @@ export default function ResumeUpload({
             ) : (
               <Upload
                 className={`w-8 h-8 mx-auto mb-3 ${
-                  isDragOver ? "text-[#002FA7]" : "text-[#6B7280]"
+                  isDragOver ? "text-[#1D9BF0]" : "text-[#6B7280]"
                 }`}
               />
             )}

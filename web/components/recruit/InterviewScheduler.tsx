@@ -42,7 +42,7 @@ export default function InterviewScheduler({
   return (
     <div>
       <div className="flex items-center gap-2 mb-3">
-        <Calendar className="w-4 h-4 text-[#002FA7]" />
+        <Calendar className="w-4 h-4 text-[#1D9BF0]" />
         <p className="text-sm text-[#F1FFFF] font-medium">
           Schedule your interview
         </p>
@@ -63,7 +63,7 @@ export default function InterviewScheduler({
           styles={{ height: "680px" }}
           pageSettings={{
             backgroundColor: "0F0F10",
-            primaryColor: "002FA7",
+            primaryColor: "1D9BF0",
             textColor: "F1FFFF",
             hideEventTypeDetails: false,
             hideLandingPageDetails: false,

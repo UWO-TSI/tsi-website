@@ -80,12 +80,12 @@ export default function PositionCard({ position, index }: PositionCardProps) {
         }}
         animate={{
           borderColor: isHovered && open
-            ? "rgba(0,47,167,0.5)"
+            ? "rgba(29,155,240,0.5)"
             : `rgba(255,255,255,${open ? 0.1 : 0.06})`,
           y: isHovered && open ? -4 : 0,
           boxShadow: isHovered && open
-            ? "0 0 40px rgba(0,47,167,0.08), 0 12px 40px rgba(0,0,0,0.3)"
-            : "0 0 0px rgba(0,47,167,0), 0 0px 0px rgba(0,0,0,0)",
+            ? "0 0 40px rgba(29,155,240,0.08), 0 12px 40px rgba(0,0,0,0.3)"
+            : "0 0 0px rgba(29,155,240,0), 0 0px 0px rgba(0,0,0,0)",
         }}
         transition={{
           borderColor: { duration: 0.25 },
@@ -99,7 +99,7 @@ export default function PositionCard({ position, index }: PositionCardProps) {
             className="h-[2px] w-full"
             style={{
               background:
-                "linear-gradient(90deg, transparent 10%, rgba(0,47,167,0.8) 50%, transparent 90%)",
+                "linear-gradient(90deg, transparent 10%, rgba(29,155,240,0.8) 50%, transparent 90%)",
             }}
             animate={{ opacity: isHovered ? 1 : 0.4 }}
             transition={{ duration: 0.25 }}
@@ -111,7 +111,7 @@ export default function PositionCard({ position, index }: PositionCardProps) {
           <motion.div
             className="absolute inset-0 pointer-events-none rounded-2xl"
             style={{
-              background: `radial-gradient(400px circle at ${glowX}% ${glowY}%, rgba(0,47,167,0.10) 0%, transparent 50%)`,
+              background: `radial-gradient(400px circle at ${glowX}% ${glowY}%, rgba(29,155,240,0.10) 0%, transparent 50%)`,
             }}
             animate={{ opacity: isHovered ? 1 : 0 }}
             transition={{ duration: 0.3 }}
@@ -190,11 +190,11 @@ export default function PositionCard({ position, index }: PositionCardProps) {
 
             {open && (
               <motion.span
-                className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#002FA7]/10 text-[#002FA7] text-sm font-medium"
+                className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#1D9BF0]/10 text-[#1D9BF0] text-sm font-medium"
                 animate={{
                   backgroundColor: isHovered
-                    ? "rgba(0,47,167,0.2)"
-                    : "rgba(0,47,167,0.1)",
+                    ? "rgba(29,155,240,0.2)"
+                    : "rgba(29,155,240,0.1)",
                   gap: isHovered ? "10px" : "8px",
                 }}
                 transition={{ duration: 0.2 }}

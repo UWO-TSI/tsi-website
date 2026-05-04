@@ -34,7 +34,7 @@ export const STATUS_COLORS: Record<ApplicationStatus, string> = {
   submitted: "#9CA3AF",      // gray
   screening: "#22D3EE",      // cyan
   interview_invite: "#FFD166", // yellow
-  interview: "#002FA7",      // brand blue
+  interview: "#1D9BF0",      // brand blue
   final_review: "#A78BFA",   // purple
   offer: "#22C55E",          // green
   waitlist: "#F97316",       // orange

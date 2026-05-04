@@ -61,7 +61,7 @@ export default function FormField({
     ${error
       ? "border-[#EF4444]/60 focus:border-[#EF4444] focus:shadow-[0_0_0_2px_rgba(239,68,68,0.2)]"
       : isFocused
-        ? "border-[#002FA7] shadow-[0_0_0_2px_rgba(0,47,167,0.3)]"
+        ? "border-[#1D9BF0] shadow-[0_0_0_2px_rgba(29,155,240,0.3)]"
         : "border-white/10 hover:border-white/20"
     }
   `;

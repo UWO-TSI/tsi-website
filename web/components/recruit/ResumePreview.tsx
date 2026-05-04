@@ -119,7 +119,7 @@ export default function ResumePreview({ url, filename }: ResumePreviewProps) {
               href={resolvedUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-xs text-[#002FA7] hover:underline"
+              className="inline-flex items-center gap-1 text-xs text-[#1D9BF0] hover:underline"
             >
               Open
               <ExternalLink className="w-3 h-3" />
