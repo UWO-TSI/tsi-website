@@ -42,6 +42,8 @@ interface PortfolioUploadProps {
   onChange: (
     data: { path: string; filename: string; size: number } | null
   ) => void;
+  label?: string;
+  description?: string;
 }
 
 type UploadState = "idle" | "uploading" | "complete" | "error";
@@ -52,6 +54,8 @@ export default function PortfolioUpload({
   currentFilename,
   currentSize,
   onChange,
+  label = "Portfolio (optional)",
+  description = "Drop a creative piece (image, video, PDF, or zip up to 50MB), or paste a hosted link in the essay answer if your file is bigger.",
 }: PortfolioUploadProps) {
   const [state, setState] = useState<UploadState>(
     currentPath ? "complete" : "idle"
@@ -185,12 +189,10 @@ export default function PortfolioUpload({
   return (
     <div>
       <label className="block font-mono text-xs text-[#9CA3AF] mb-2">
-        Portfolio (optional)
+        {label}
       </label>
       <p className="text-xs text-[#6B7280] mb-3 leading-relaxed">
-        For VP Marketing applicants. Drop a creative piece (image, video, PDF,
-        or zip up to {MAX_MB}MB), or paste a hosted link in the essay answer
-        if your file is bigger.
+        {description}
       </p>
 
       <AnimatePresence mode="wait">

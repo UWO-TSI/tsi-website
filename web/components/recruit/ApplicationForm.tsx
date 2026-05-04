@@ -42,6 +42,9 @@ interface FormData {
   portfolio_storage_path: string | null;
   portfolio_filename: string | null;
   portfolio_size_bytes: number | null;
+  creative_piece_storage_path: string | null;
+  creative_piece_filename: string | null;
+  creative_piece_size_bytes: number | null;
 }
 
 const EMPTY_FORM: FormData = {
@@ -61,6 +64,9 @@ const EMPTY_FORM: FormData = {
   portfolio_storage_path: null,
   portfolio_filename: null,
   portfolio_size_bytes: null,
+  creative_piece_storage_path: null,
+  creative_piece_filename: null,
+  creative_piece_size_bytes: null,
 };
 
 const DRAFT_KEY = (positionId: string) => `tethos:draft:${positionId}`;
@@ -71,6 +77,7 @@ const DRAFT_KEY = (positionId: string) => `tethos:draft:${positionId}`;
 export const META_OTHER_LINKS_ID = "__profile_other_links";
 export const META_COMMITMENTS_ID = "__profile_commitments_next_year";
 export const META_PORTFOLIO_FILE_ID = "__portfolio_file";
+export const META_CREATIVE_PIECE_FILE_ID = "__creative_piece_file";
 
 interface DraftPayload {
   form_data: FormData;
@@ -221,6 +228,12 @@ export default function ApplicationForm({
             chosen.form_data.portfolio_storage_path ?? null,
           portfolio_filename: chosen.form_data.portfolio_filename ?? null,
           portfolio_size_bytes: chosen.form_data.portfolio_size_bytes ?? null,
+          creative_piece_storage_path:
+            chosen.form_data.creative_piece_storage_path ?? null,
+          creative_piece_filename:
+            chosen.form_data.creative_piece_filename ?? null,
+          creative_piece_size_bytes:
+            chosen.form_data.creative_piece_size_bytes ?? null,
         });
         setDraftRestoredAt(chosen.updated_at);
       } else {
@@ -336,6 +349,18 @@ export default function ApplicationForm({
     []
   );
 
+  const updateCreativePiece = useCallback(
+    (data: { path: string; filename: string; size: number } | null) => {
+      setFormData((prev) => ({
+        ...prev,
+        creative_piece_storage_path: data?.path ?? null,
+        creative_piece_filename: data?.filename ?? null,
+        creative_piece_size_bytes: data?.size ?? null,
+      }));
+    },
+    []
+  );
+
   // Step validation
   const validateStep = (s: number): boolean => {
     const errs: Record<string, string> = {};
@@ -359,10 +384,10 @@ export default function ApplicationForm({
       const isMarketing = position.slug === "vp-marketing";
       for (const q of position.essay_questions) {
         const answer = formData.essay_answers[q.id] ?? "";
-        // VP Marketing portfolio question: a file upload satisfies the
-        // requirement; a link in the essay does too. Either is enough.
+        // VP Marketing creative-piece question: an upload OR a link
+        // satisfies it.
         if (isMarketing) {
-          const hasFile = !!formData.portfolio_storage_path;
+          const hasFile = !!formData.creative_piece_storage_path;
           const hasText = !!answer.trim();
           if (!hasFile && !hasText) {
             errs[`essay_${q.id}`] = "Upload a file or paste a link.";
@@ -452,6 +477,19 @@ export default function ApplicationForm({
                 path: formData.portfolio_storage_path,
                 filename: formData.portfolio_filename,
                 size: formData.portfolio_size_bytes,
+              }),
+            },
+          ]
+        : []),
+      ...(formData.creative_piece_storage_path &&
+      formData.creative_piece_filename
+        ? [
+            {
+              question_id: META_CREATIVE_PIECE_FILE_ID,
+              answer: JSON.stringify({
+                path: formData.creative_piece_storage_path,
+                filename: formData.creative_piece_filename,
+                size: formData.creative_piece_size_bytes,
               }),
             },
           ]
@@ -791,6 +829,20 @@ export default function ApplicationForm({
                   onChange={updateResume}
                   error={errors.resume}
                 />
+
+                {position.slug === "vp-marketing" && (
+                  <div className="mt-8 pt-8 border-t border-white/[0.06]">
+                    <PortfolioUpload
+                      positionSlug={`${position.slug}-portfolio`}
+                      currentPath={formData.portfolio_storage_path}
+                      currentFilename={formData.portfolio_filename}
+                      currentSize={formData.portfolio_size_bytes}
+                      onChange={updatePortfolio}
+                      label="Portfolio (optional)"
+                      description="Drop your broader body of work: designs, reels, photos, anything that shows what you've made before. Image, video, PDF, or zip up to 50MB."
+                    />
+                  </div>
+                )}
               </div>
             </motion.div>
           )}
@@ -820,11 +872,13 @@ export default function ApplicationForm({
                     {isMarketingPortfolioQuestion && (
                       <div className="mb-4">
                         <PortfolioUpload
-                          positionSlug={position.slug}
-                          currentPath={formData.portfolio_storage_path}
-                          currentFilename={formData.portfolio_filename}
-                          currentSize={formData.portfolio_size_bytes}
-                          onChange={updatePortfolio}
+                          positionSlug={`${position.slug}-creative`}
+                          currentPath={formData.creative_piece_storage_path}
+                          currentFilename={formData.creative_piece_filename}
+                          currentSize={formData.creative_piece_size_bytes}
+                          onChange={updateCreativePiece}
+                          label="Creative piece"
+                          description="Upload the piece you want us to see for this role. Image, video, PDF, or zip up to 50MB. If your file is bigger, paste a hosted link below instead."
                         />
                       </div>
                     )}
@@ -940,7 +994,7 @@ export default function ApplicationForm({
                     }}
                   />
                   <ReviewRow
-                    label="File"
+                    label="Resume"
                     value={formData.resume_filename ?? "Not uploaded"}
                   />
                   {formData.portfolio_filename && (
@@ -960,6 +1014,16 @@ export default function ApplicationForm({
                         setStep(2);
                       }}
                     />
+                    {formData.creative_piece_filename && (
+                      <div className="pt-2">
+                        <p className="text-xs text-[#9CA3AF] mb-1.5 font-medium">
+                          Creative piece (file)
+                        </p>
+                        <p className="text-sm text-[#E5E7EB]">
+                          {formData.creative_piece_filename}
+                        </p>
+                      </div>
+                    )}
                     {position.essay_questions.map((q) => (
                       <div key={q.id} className="pt-2">
                         <p className="text-xs text-[#9CA3AF] mb-1.5 font-medium">
