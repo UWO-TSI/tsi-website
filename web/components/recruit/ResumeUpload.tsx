@@ -223,7 +223,7 @@ export default function ResumeUpload({
                   : "uploaded"}
               </p>
             </div>
-            <CheckCircle2 className="w-4 h-4 text-[#22C55E] flex-shrink-0" />
+            <CheckCircle2 className="w-4 h-4 text-[#1D9BF0] flex-shrink-0" />
             <button
               type="button"
               onClick={handleRemove}

@@ -47,6 +47,6 @@ await browser.close();
 // Restore opens_at
 await admin
   .from("positions")
-  .update({ opens_at: "2026-05-04T00:00:00Z" })
+  .update({ opens_at: "2026-05-06T04:00:00Z" })
   .in("slug", ["vp-internal", "vp-external", "vp-marketing"]);
 console.log("\nDone.");

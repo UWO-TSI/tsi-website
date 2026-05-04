@@ -153,7 +153,7 @@ export default function FormField({
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.5 }}
               >
-                <Check className="w-4 h-4 text-[#22C55E]" />
+                <Check className="w-4 h-4 text-[#1D9BF0]" />
               </motion.div>
             )}
           </AnimatePresence>

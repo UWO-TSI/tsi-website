@@ -117,7 +117,7 @@ function RecruitmentPageInner() {
         : "Applications closed";
   const statusColor =
     statusMode === "closes"
-      ? "#22c55e"
+      ? "#1D9BF0"
       : statusMode === "opens"
         ? "#FFD166"
         : "#6B7280";
@@ -167,7 +167,7 @@ function RecruitmentPageInner() {
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5 }}
             className="text-xs tracking-[0.25em] uppercase mb-6"
-            style={{ color: "#22c55e", fontFamily: "var(--font-highlight)" }}
+            style={{ color: "#1D9BF0", fontFamily: "var(--font-highlight)" }}
           >
             <DecryptedText
               text="2026-27 Recruitment"
@@ -175,8 +175,8 @@ function RecruitmentPageInner() {
               maxIterations={12}
               sequential
               characters="01!@#$%_-+=<>"
-              className="text-[#22c55e]"
-              encryptedClassName="text-[rgba(34,197,94,0.3)]"
+              className="text-[#1D9BF0]"
+              encryptedClassName="text-[rgba(29,155,240,0.3)]"
               animateOn="view"
             />
           </motion.p>
@@ -198,7 +198,7 @@ function RecruitmentPageInner() {
             Build what matters.
             <br />
             <GradientText
-              colors={["#22c55e", "#4ade80", "#22c55e"]}
+              colors={["#1D9BF0", "#5DB8F5", "#1D9BF0"]}
               animationSpeed={5}
             >
               Start here.
@@ -261,10 +261,10 @@ function RecruitmentPageInner() {
             <a
               href="#positions"
               className="group inline-flex items-center gap-2 px-6 py-3 rounded-full text-sm font-semibold transition-all duration-300"
-              style={{ background: "#22c55e", color: "#0F0F10" }}
+              style={{ background: "#1D9BF0", color: "#0F0F10" }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.boxShadow =
-                  "0 0 28px rgba(34,197,94,0.32)";
+                  "0 0 28px rgba(29,155,240,0.32)";
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.boxShadow = "none";
@@ -461,12 +461,36 @@ function PositionCard({
   hasApplied: boolean;
 }) {
   const isOpen = isPositionOpen(position);
+  const opensAtMs = position.opens_at ? new Date(position.opens_at).getTime() : null;
+  const closesAtMs = position.closes_at ? new Date(position.closes_at).getTime() : null;
+  const nowMs = Date.now();
+  const isUpcoming =
+    !!position.is_active && !!opensAtMs && opensAtMs > nowMs;
+  const isClosed = !isOpen && !isUpcoming;
+  // Pin date strings to Toronto time so the visual matches the club's
+  // announced schedule regardless of where the applicant lives. The
+  // countdown (real-time delta to a UTC instant) handles their local
+  // perspective.
+  // For the close date, subtract 30 minutes so a deadline of "May 13
+  // 00:10 EDT" reads as "Due May 12" (matches how David framed it and
+  // how applicants think about end-of-day deadlines).
   const dueLabel = position.closes_at
-    ? new Date(position.closes_at).toLocaleDateString("en-US", {
+    ? new Date(new Date(position.closes_at).getTime() - 30 * 60 * 1000)
+        .toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+          timeZone: "America/Toronto",
+        })
+    : null;
+  const opensLabel = position.opens_at
+    ? new Date(position.opens_at).toLocaleDateString("en-US", {
         month: "short",
         day: "numeric",
+        timeZone: "America/Toronto",
       })
     : null;
+  void closesAtMs;
+  void isClosed;
 
   return (
     <motion.div
@@ -480,26 +504,26 @@ function PositionCard({
         className="group block rounded-2xl p-6 md:p-7 h-full transition-colors duration-300"
         style={{
           background: hasApplied
-            ? "rgba(34,197,94,0.04)"
+            ? "rgba(29,155,240,0.04)"
             : "rgba(255,255,255,0.025)",
           border: `1px solid ${
-            hasApplied ? "rgba(34,197,94,0.2)" : "rgba(255,255,255,0.06)"
+            hasApplied ? "rgba(29,155,240,0.2)" : "rgba(255,255,255,0.06)"
           }`,
         }}
         onMouseEnter={(e) => {
           e.currentTarget.style.background = hasApplied
-            ? "rgba(34,197,94,0.07)"
+            ? "rgba(29,155,240,0.07)"
             : "rgba(255,255,255,0.04)";
           e.currentTarget.style.borderColor = hasApplied
-            ? "rgba(34,197,94,0.32)"
+            ? "rgba(29,155,240,0.32)"
             : "rgba(255,255,255,0.12)";
         }}
         onMouseLeave={(e) => {
           e.currentTarget.style.background = hasApplied
-            ? "rgba(34,197,94,0.04)"
+            ? "rgba(29,155,240,0.04)"
             : "rgba(255,255,255,0.025)";
           e.currentTarget.style.borderColor = hasApplied
-            ? "rgba(34,197,94,0.2)"
+            ? "rgba(29,155,240,0.2)"
             : "rgba(255,255,255,0.06)";
         }}
       >
@@ -517,7 +541,7 @@ function PositionCard({
             <span
               className="flex items-center gap-1.5 text-[10px] uppercase tracking-[0.2em]"
               style={{
-                color: "#22c55e",
+                color: "#1D9BF0",
                 fontFamily: "var(--font-highlight)",
               }}
             >
@@ -528,18 +552,28 @@ function PositionCard({
             <span
               className="flex items-center gap-1.5 text-[10px] uppercase tracking-[0.2em]"
               style={{
-                color: "#22c55e",
+                color: "#1D9BF0",
                 fontFamily: "var(--font-highlight)",
               }}
             >
               <span
                 className="w-1.5 h-1.5 rounded-full"
                 style={{
-                  background: "#22c55e",
-                  boxShadow: "0 0 6px rgba(34,197,94,0.5)",
+                  background: "#1D9BF0",
+                  boxShadow: "0 0 6px rgba(29,155,240,0.5)",
                 }}
               />
               Open
+            </span>
+          ) : isUpcoming ? (
+            <span
+              className="text-[10px] uppercase tracking-[0.2em]"
+              style={{
+                color: "#FFD166",
+                fontFamily: "var(--font-highlight)",
+              }}
+            >
+              {opensLabel ? `Opens ${opensLabel}` : "Upcoming"}
             </span>
           ) : (
             <span
@@ -580,12 +614,26 @@ function PositionCard({
           <span
             className="inline-flex items-center gap-1 text-xs transition-transform group-hover:translate-x-0.5"
             style={{
-              color: hasApplied ? "#22c55e" : "#F1FFFF",
+              color: hasApplied
+                ? "#1D9BF0"
+                : isOpen
+                  ? "#F1FFFF"
+                  : isUpcoming
+                    ? "rgba(255,255,255,0.4)"
+                    : "rgba(255,255,255,0.25)",
               fontFamily: "var(--font-highlight)",
             }}
           >
-            {hasApplied ? "View" : isOpen ? "Apply" : ""}
-            {(hasApplied || isOpen) && <ArrowRight className="w-3.5 h-3.5" />}
+            {hasApplied
+              ? "View"
+              : isOpen
+                ? "Apply"
+                : isUpcoming
+                  ? "Read more"
+                  : ""}
+            {(hasApplied || isOpen || isUpcoming) && (
+              <ArrowRight className="w-3.5 h-3.5" />
+            )}
           </span>
         </div>
       </Link>

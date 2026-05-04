@@ -127,6 +127,6 @@ try {
   await admin.auth.admin.deleteUser(userId);
   await admin
     .from("positions")
-    .update({ opens_at: "2026-05-04T00:00:00Z" })
+    .update({ opens_at: "2026-05-06T04:00:00Z" })
     .eq("slug", "vp-internal");
 }

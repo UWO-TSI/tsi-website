@@ -51,7 +51,7 @@ console.log("\n=== B. Upcoming role: UpcomingCTA shown, no Sign-in CTA ===");
   // Ensure opens_at is in future
   await admin
     .from("positions")
-    .update({ opens_at: "2026-05-04T00:00:00Z" })
+    .update({ opens_at: "2026-05-06T04:00:00Z" })
     .eq("slug", "vp-internal");
 
   const ctx = await browser.newContext();
@@ -192,7 +192,7 @@ console.log("\n=== C. Replace upload: old object removed ===");
     // Restore opens_at
     await admin
       .from("positions")
-      .update({ opens_at: "2026-05-04T00:00:00Z" })
+      .update({ opens_at: "2026-05-06T04:00:00Z" })
       .eq("slug", "vp-internal");
   }
 }

@@ -18,7 +18,7 @@ import {
   Eye,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { getPositionStatus } from "@/lib/recruitment";
+import { getPositionStatus, formatClosesAt } from "@/lib/recruitment";
 import type { Position } from "@/lib/recruitment";
 import { getRoleContent } from "@/lib/recruitment-content";
 import type { User } from "@supabase/supabase-js";
@@ -227,12 +227,15 @@ export default function RoleApplicationPage() {
 
   const status = getPositionStatus(position);
   const deadline = position.closes_at
-    ? new Date(position.closes_at).toLocaleDateString("en-US", {
-        month: "long",
-        day: "numeric",
-        year: "numeric",
-      })
+    ? new Date(new Date(position.closes_at).getTime() - 30 * 60 * 1000)
+        .toLocaleDateString("en-US", {
+          month: "long",
+          day: "numeric",
+          year: "numeric",
+          timeZone: "America/Toronto",
+        })
     : null;
+  void formatClosesAt;
   const estMinutes = estimateMinutes(position);
   const essayCount = position.essay_questions?.length ?? 0;
   const totalWords =
@@ -280,10 +283,10 @@ export default function RoleApplicationPage() {
                       Phase {String(position.phase).padStart(2, "0")}
                     </span>
                     {status === "open" && (
-                      <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#22C55E]/10 text-[#22C55E] text-[10px] font-mono uppercase tracking-wide">
+                      <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#1D9BF0]/10 text-[#1D9BF0] text-[10px] font-mono uppercase tracking-wide">
                         <span className="relative flex h-1.5 w-1.5">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#22C55E] opacity-75" />
-                          <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[#22C55E]" />
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#1D9BF0] opacity-75" />
+                          <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[#1D9BF0]" />
                         </span>
                         Open
                       </span>
@@ -805,8 +808,8 @@ function AlreadyAppliedCTA({
   });
   return (
     <div className="text-center">
-      <div className="w-12 h-12 rounded-full bg-[#22C55E]/15 flex items-center justify-center mx-auto mb-5">
-        <Check className="w-5 h-5 text-[#22C55E]" />
+      <div className="w-12 h-12 rounded-full bg-[#1D9BF0]/15 flex items-center justify-center mx-auto mb-5">
+        <Check className="w-5 h-5 text-[#1D9BF0]" />
       </div>
       <h3 className="text-xl font-semibold text-[#F1FFFF] mb-2">
         Application received

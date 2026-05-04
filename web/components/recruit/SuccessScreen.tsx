@@ -301,7 +301,7 @@ export default function SuccessScreen({
             >
               {shared ? (
                 <>
-                  <Check className="w-4 h-4 text-[#22C55E]" />
+                  <Check className="w-4 h-4 text-[#1D9BF0]" />
                   Copied
                 </>
               ) : (

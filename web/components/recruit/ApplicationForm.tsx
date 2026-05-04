@@ -517,7 +517,7 @@ export default function ApplicationForm({
               exit={{ opacity: 0 }}
               className="text-[10px] font-mono text-[#6B7280] flex items-center gap-1.5"
             >
-              <Cloud className="w-3 h-3 text-[#22C55E]" />
+              <Cloud className="w-3 h-3 text-[#1D9BF0]" />
               Draft saved
             </motion.span>
           )}

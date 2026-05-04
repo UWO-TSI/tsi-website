@@ -112,7 +112,7 @@ function TerminalBoot() {
             className="flex flex-col gap-3"
           >
             {[
-              { cmd: "tethos apply", label: "Browse open positions", href: "/student/apply", accent: "#22c55e" },
+              { cmd: "tethos apply", label: "Browse open positions", href: "/student/apply", accent: "#1D9BF0" },
               { cmd: "tethos login", label: "Sign in to portal", href: "/student/login", accent: "#1d9bf0" },
               { cmd: "tethos init-chapter", label: "Start a chapter", href: "#student-chapter", accent: "#c9a84c" },
             ].map((item, i) => (
@@ -174,10 +174,10 @@ function PositionCard({ position, index }: { position: typeof POSITIONS[0]; inde
   return (
     <SpotlightCard
       className="position-card rounded-xl p-0 overflow-hidden cursor-pointer"
-      spotlightColor={isOpen ? "rgba(34,197,94,0.08)" : "rgba(255,255,255,0.04)"}
+      spotlightColor={isOpen ? "rgba(29,155,240,0.08)" : "rgba(255,255,255,0.04)"}
       style={{
         background: "rgba(255,255,255,0.02)",
-        border: `1px solid ${isOpen ? "rgba(34,197,94,0.15)" : "rgba(255,255,255,0.06)"}`,
+        border: `1px solid ${isOpen ? "rgba(29,155,240,0.15)" : "rgba(255,255,255,0.06)"}`,
         opacity: 0,
       }}
     >
@@ -190,12 +190,12 @@ function PositionCard({ position, index }: { position: typeof POSITIONS[0]; inde
           <span
             className="w-1.5 h-1.5 rounded-full"
             style={{
-              background: isOpen ? "#22c55e" : "rgba(255,255,255,0.15)",
-              boxShadow: isOpen ? "0 0 6px rgba(34,197,94,0.5)" : "none",
+              background: isOpen ? "#1D9BF0" : "rgba(255,255,255,0.15)",
+              boxShadow: isOpen ? "0 0 6px rgba(29,155,240,0.5)" : "none",
               animation: isOpen ? "pulse 2s ease-in-out infinite" : "none",
             }}
           />
-          <span className="text-[10px] uppercase tracking-widest" style={{ color: isOpen ? "#22c55e" : "rgba(255,255,255,0.25)", fontFamily: "var(--font-highlight)" }}>
+          <span className="text-[10px] uppercase tracking-widest" style={{ color: isOpen ? "#1D9BF0" : "rgba(255,255,255,0.25)", fontFamily: "var(--font-highlight)" }}>
             {isOpen ? "Open" : "Coming"}
           </span>
         </span>
@@ -344,7 +344,7 @@ export default function StudentPage() {
           >
             Build real things.
             <br />
-            <GradientText colors={["#22c55e", "#4ade80", "#22c55e"]} animationSpeed={5}>
+            <GradientText colors={["#1D9BF0", "#5DB8F5", "#1D9BF0"]} animationSpeed={5}>
               Ship real code.
             </GradientText>
           </h1>
@@ -366,8 +366,8 @@ export default function StudentPage() {
         <div className="absolute top-0 left-0 right-0 pointer-events-none" style={{ height: "200px", background: "linear-gradient(to bottom, #0F0F10, #0a0a0b)" }} />
 
         <div ref={positionsRef} className="relative max-w-[1200px] mx-auto">
-          <p className="text-xs tracking-widest uppercase mb-4" style={{ color: "#22c55e", fontFamily: "var(--font-highlight)" }}>
-            <DecryptedText text="Now recruiting" speed={40} maxIterations={12} sequential characters="01!@#$%_-+=<>" className="text-[#22c55e]" encryptedClassName="text-[rgba(34,197,94,0.3)]" animateOn="view" />
+          <p className="text-xs tracking-widest uppercase mb-4" style={{ color: "#1D9BF0", fontFamily: "var(--font-highlight)" }}>
+            <DecryptedText text="Now recruiting" speed={40} maxIterations={12} sequential characters="01!@#$%_-+=<>" className="text-[#1D9BF0]" encryptedClassName="text-[rgba(29,155,240,0.3)]" animateOn="view" />
           </p>
           <h2 className="tracking-tight mb-4" style={{ fontFamily: '"Test Sohne", sans-serif', fontSize: "clamp(28px, 4vw, 48px)", fontWeight: 500, color: "#F1FFFF", lineHeight: 1.1 }}>
             Open positions.
@@ -388,8 +388,8 @@ export default function StudentPage() {
             <Link
               href="/student/apply"
               className="inline-flex items-center px-7 py-3.5 rounded-lg text-sm font-semibold transition-all duration-300"
-              style={{ background: "#22c55e", color: "#0F0F10" }}
-              onMouseEnter={(e) => { e.currentTarget.style.boxShadow = "0 0 30px rgba(34,197,94,0.3)"; }}
+              style={{ background: "#1D9BF0", color: "#0F0F10" }}
+              onMouseEnter={(e) => { e.currentTarget.style.boxShadow = "0 0 30px rgba(29,155,240,0.3)"; }}
               onMouseLeave={(e) => { e.currentTarget.style.boxShadow = "none"; }}
             >
               View all positions →
