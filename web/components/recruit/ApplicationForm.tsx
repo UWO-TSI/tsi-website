@@ -754,12 +754,12 @@ export default function ApplicationForm({
               exit="exit"
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
             >
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-[#F1FFFF]">
+              <div>
+                <h3 className="text-lg font-semibold text-[#F1FFFF] mb-8">
                   Review your application
                 </h3>
 
-                <div className="glass-card p-6 md:p-8 space-y-3">
+                <div className="space-y-3 pb-6 border-b border-white/[0.06]">
                   <ReviewSectionHeader
                     title="Personal"
                     onEdit={() => {
@@ -791,7 +791,7 @@ export default function ApplicationForm({
                   />
                 </div>
 
-                <div className="glass-card p-6 md:p-8 space-y-3">
+                <div className="space-y-3 py-6 border-b border-white/[0.06]">
                   <ReviewSectionHeader
                     title="Resume"
                     onEdit={() => {
@@ -806,7 +806,7 @@ export default function ApplicationForm({
                 </div>
 
                 {position.essay_questions.length > 0 && (
-                  <div className="glass-card p-6 md:p-8 space-y-4">
+                  <div className="space-y-4 pt-6">
                     <ReviewSectionHeader
                       title="Essays"
                       onEdit={() => {
@@ -815,7 +815,7 @@ export default function ApplicationForm({
                       }}
                     />
                     {position.essay_questions.map((q) => (
-                      <div key={q.id}>
+                      <div key={q.id} className="pt-2">
                         <p className="text-xs text-[#9CA3AF] mb-1.5 font-medium">
                           {q.question}
                         </p>

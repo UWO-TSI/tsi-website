@@ -234,39 +234,43 @@ export default function SuccessScreen({
           </div>
         </motion.div>
 
-        {/* Next steps */}
+        {/* Next steps — flat list, no card chrome */}
         <motion.div
           variants={fadeUpVariants}
           initial="hidden"
           animate="visible"
           custom={3}
-          className="glass-card p-6 text-left mb-8"
+          className="text-left mb-10"
         >
           <h3 className="font-mono text-[10px] tracking-[0.2em] uppercase text-[#6B7280] mb-4">
             While you wait
           </h3>
-          <ul className="space-y-2.5">
-            <li className="text-sm text-[#E5E7EB] flex items-start gap-3">
-              <span className="mt-1.5 inline-block w-1 h-1 rounded-full bg-[#002FA7] flex-shrink-0" />
-              Follow{" "}
-              <a
-                href="https://linkedin.com/company/tethos"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-[#F1FFFF] underline underline-offset-2 hover:text-[#002FA7] transition"
-              >
-                @tethos on LinkedIn
-              </a>{" "}
-              for updates on the cohort.
+          <ul className="space-y-3">
+            <li className="text-sm text-[#E5E7EB] flex items-start gap-3 leading-relaxed">
+              <span className="mt-2 inline-block w-1 h-1 rounded-full bg-[#002FA7] flex-shrink-0" />
+              <span>
+                Follow{" "}
+                <a
+                  href="https://linkedin.com/company/tethos"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[#F1FFFF] underline underline-offset-2 hover:text-[#002FA7] transition"
+                >
+                  @tethos on LinkedIn
+                </a>{" "}
+                for updates on the cohort.
+              </span>
             </li>
-            <li className="text-sm text-[#E5E7EB] flex items-start gap-3">
-              <span className="mt-1.5 inline-block w-1 h-1 rounded-full bg-[#002FA7] flex-shrink-0" />
-              Check your dashboard anytime — we release status changes the
-              moment they&apos;re final.
+            <li className="text-sm text-[#E5E7EB] flex items-start gap-3 leading-relaxed">
+              <span className="mt-2 inline-block w-1 h-1 rounded-full bg-[#002FA7] flex-shrink-0" />
+              <span>
+                Check your dashboard anytime — we release status changes the
+                moment they&apos;re final.
+              </span>
             </li>
-            <li className="text-sm text-[#E5E7EB] flex items-start gap-3">
-              <span className="mt-1.5 inline-block w-1 h-1 rounded-full bg-[#002FA7] flex-shrink-0" />
-              Know someone who&apos;d be a fit? Share the role.
+            <li className="text-sm text-[#E5E7EB] flex items-start gap-3 leading-relaxed">
+              <span className="mt-2 inline-block w-1 h-1 rounded-full bg-[#002FA7] flex-shrink-0" />
+              <span>Know someone who&apos;d be a fit? Share the role.</span>
             </li>
           </ul>
         </motion.div>
