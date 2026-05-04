@@ -1,9 +1,21 @@
 "use client";
 
+// Custom cursor is currently disabled site-wide. The component is kept
+// (and its mounts in each layout) so we can flip this back on by setting
+// CURSOR_DISABLED to false. Also restore the cursor: none rules in
+// globals.css if you re-enable.
+
 import { useEffect, useRef, useCallback, useMemo } from "react";
 import { gsap } from "gsap";
 
+const CURSOR_DISABLED = true;
+
 export default function CustomCursor() {
+  if (CURSOR_DISABLED) return null;
+  return <CustomCursorImpl />;
+}
+
+function CustomCursorImpl() {
   const cursorRef = useRef<HTMLDivElement>(null);
   const cornersRef = useRef<HTMLDivElement>(null);
   const dotRef = useRef<HTMLDivElement>(null);

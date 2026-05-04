@@ -454,7 +454,7 @@ export default function RoleApplicationPage() {
                     Have questions?
                   </p>
                   <p className="text-sm text-[#9CA3AF] leading-relaxed">
-                    Email{" "}
+                    Email Tethos&apos; incoming co-presidents —{" "}
                     <a
                       href="mailto:dliu468@uwo.ca"
                       className="text-[#F1FFFF] underline underline-offset-2 hover:text-[#1d9bf0] transition-colors"

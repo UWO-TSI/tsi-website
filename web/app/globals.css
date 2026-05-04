@@ -47,7 +47,6 @@ body {
   color: var(--color-text-main);
   font-family: "Test Sohne", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-weight: 400;
-  cursor: none !important;
   scrollbar-width: none; /* Firefox */
   -ms-overflow-style: none; /* IE/Edge */
 }
@@ -56,21 +55,10 @@ body::-webkit-scrollbar {
   display: none; /* Chrome/Safari/Opera */
 }
 
-/* Hide default cursor on all interactive elements */
-button,
-a,
-[role="button"],
-input,
-select,
-textarea {
-  cursor: none !important;
-}
-
-/* Override cursor-pointer class to still hide cursor */
-.cursor-pointer,
-*[class*="cursor-pointer"] {
-  cursor: none !important;
-}
+/* Custom cursor disabled site-wide — see components/ui/CustomCursor.tsx.
+   The previous `cursor: none !important` rules on body/inputs/.cursor-pointer
+   were removed so the OS default cursor returns. Re-add them if the
+   custom cursor is brought back. */
 
 /* Utility class for headings */
 .font-heading {
