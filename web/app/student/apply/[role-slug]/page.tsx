@@ -442,6 +442,42 @@ export default function RoleApplicationPage() {
                   )}
                 </Section>
 
+                {/* Contact — same for every role */}
+                <motion.div
+                  initial={{ opacity: 0, y: 16 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: "-80px" }}
+                  transition={{ duration: 0.6, delay: 0.45, ease: EASE_OUT }}
+                  className="pt-2"
+                >
+                  <p className="font-mono text-[10px] tracking-[0.2em] uppercase text-[#6B7280] mb-3">
+                    Have questions?
+                  </p>
+                  <p className="text-sm text-[#9CA3AF] leading-relaxed">
+                    Email{" "}
+                    <a
+                      href="mailto:dliu468@uwo.ca"
+                      className="text-[#F1FFFF] underline underline-offset-2 hover:text-[#1d9bf0] transition-colors"
+                    >
+                      David Liu
+                    </a>{" "}
+                    <span className="font-mono text-xs text-[#6B7280]">
+                      (dliu468@uwo.ca)
+                    </span>{" "}
+                    or{" "}
+                    <a
+                      href="mailto:anguyen.hba2027@ivey.ca"
+                      className="text-[#F1FFFF] underline underline-offset-2 hover:text-[#1d9bf0] transition-colors"
+                    >
+                      Alice Nguyen
+                    </a>{" "}
+                    <span className="font-mono text-xs text-[#6B7280]">
+                      (anguyen.hba2027@ivey.ca)
+                    </span>
+                    .
+                  </p>
+                </motion.div>
+
                 {/* End-of-content sentinel for scroll tracking */}
                 <div ref={endSentinelRef} aria-hidden />
               </div>
