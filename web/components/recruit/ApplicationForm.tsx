@@ -31,6 +31,8 @@ interface FormData {
   program_major: string;
   year_of_study: string;
   linkedin_url: string;
+  other_links: string;
+  commitments_next_year: string;
   heard_about_us: string;
   essay_answers: Record<string, string>;
   resume_storage_path: string | null;
@@ -45,6 +47,8 @@ const EMPTY_FORM: FormData = {
   program_major: "",
   year_of_study: "",
   linkedin_url: "",
+  other_links: "",
+  commitments_next_year: "",
   heard_about_us: "",
   essay_answers: {},
   resume_storage_path: null,
@@ -53,6 +57,12 @@ const EMPTY_FORM: FormData = {
 };
 
 const DRAFT_KEY = (positionId: string) => `tethos:draft:${positionId}`;
+
+// Reserved IDs for profile fields stashed inside essay_answers since the
+// applications table doesn't have dedicated columns for them. Admin views
+// and the user's review screen pull these out separately from real essays.
+export const META_OTHER_LINKS_ID = "__profile_other_links";
+export const META_COMMITMENTS_ID = "__profile_commitments_next_year";
 
 interface DraftPayload {
   form_data: FormData;
@@ -67,6 +77,8 @@ function isEmptyForm(f: FormData): boolean {
     !f.program_major &&
     !f.year_of_study &&
     !f.linkedin_url &&
+    !f.other_links &&
+    !f.commitments_next_year &&
     !f.heard_about_us &&
     !f.resume_storage_path &&
     Object.values(f.essay_answers).every((v) => !v)
@@ -192,6 +204,8 @@ export default function ApplicationForm({
           ...sessionDefaults,
           ...chosen.form_data,
           essay_answers: chosen.form_data.essay_answers ?? {},
+          other_links: chosen.form_data.other_links ?? "",
+          commitments_next_year: chosen.form_data.commitments_next_year ?? "",
           resume_storage_path: chosen.form_data.resume_storage_path ?? null,
           resume_filename: chosen.form_data.resume_filename ?? null,
           resume_size_bytes: chosen.form_data.resume_size_bytes ?? null,
@@ -371,10 +385,29 @@ export default function ApplicationForm({
       return next;
     });
 
-    const essayAnswers: EssayAnswer[] = position.essay_questions.map((q) => ({
-      question_id: q.id,
-      answer: formData.essay_answers[q.id] ?? "",
-    }));
+    const essayAnswers: EssayAnswer[] = [
+      ...position.essay_questions.map((q) => ({
+        question_id: q.id,
+        answer: formData.essay_answers[q.id] ?? "",
+      })),
+      // Profile fields stashed alongside essays — see META_*_ID constants.
+      ...(formData.other_links.trim()
+        ? [
+            {
+              question_id: META_OTHER_LINKS_ID,
+              answer: formData.other_links.trim(),
+            },
+          ]
+        : []),
+      ...(formData.commitments_next_year.trim()
+        ? [
+            {
+              question_id: META_COMMITMENTS_ID,
+              answer: formData.commitments_next_year.trim(),
+            },
+          ]
+        : []),
+    ];
 
     try {
       const res = await fetch("/api/applications", {
@@ -629,6 +662,26 @@ export default function ApplicationForm({
                 placeholder="https://linkedin.com/in/..."
               />
 
+              <FormField
+                label="Other links (optional)"
+                name="other_links"
+                type="textarea"
+                value={formData.other_links}
+                onChange={(v) => updateField("other_links", v)}
+                placeholder="Portfolio, GitHub, Behance, anywhere else worth showing — one per line"
+                rows={3}
+              />
+
+              <FormField
+                label="Commitments next year (optional)"
+                name="commitments_next_year"
+                type="textarea"
+                value={formData.commitments_next_year}
+                onChange={(v) => updateField("commitments_next_year", v)}
+                placeholder="Other clubs, jobs, internships, or commitments you'll have during the school year"
+                rows={3}
+              />
+
               <div>
                 <label className="block font-mono text-xs text-[#9CA3AF] mb-2">
                   How did you hear about us?{" "}
@@ -789,6 +842,18 @@ export default function ApplicationForm({
                     <ReviewRow
                       label="LinkedIn"
                       value={formData.linkedin_url}
+                    />
+                  )}
+                  {formData.other_links.trim() && (
+                    <ReviewRow
+                      label="Links"
+                      value={formData.other_links.trim()}
+                    />
+                  )}
+                  {formData.commitments_next_year.trim() && (
+                    <ReviewRow
+                      label="Commitments"
+                      value={formData.commitments_next_year.trim()}
                     />
                   )}
                   <ReviewRow
