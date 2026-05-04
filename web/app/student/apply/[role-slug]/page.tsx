@@ -258,7 +258,9 @@ export default function RoleApplicationPage() {
                     {roleContent?.positionsCount && (
                       <span className="px-2.5 py-1 rounded-full bg-white/5 text-[#9CA3AF] text-[10px] font-mono uppercase tracking-wide">
                         {roleContent.positionsCount}{" "}
-                        {roleContent.positionsCount === "1" ? "spot" : "spots"}
+                        {roleContent.positionsCount === "1"
+                          ? "Position"
+                          : "Positions"}
                       </span>
                     )}
                   </div>

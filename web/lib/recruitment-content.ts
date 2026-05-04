@@ -4,6 +4,10 @@
 // lives here and is keyed by position slug.
 //
 // Updates require redeploy. That's fine for ~3 roles per cycle.
+//
+// IMPORTANT: copy is reproduced verbatim from the finalized posting.
+// Don't add periods to bullets, don't restructure sentences,
+// don't substitute punctuation. Word-for-word matters here.
 
 export interface AboutCallout {
   title: string;
@@ -13,7 +17,7 @@ export interface AboutCallout {
 }
 
 export interface RoleContent {
-  /** Display string like "2" or "1–2" (em-dash). */
+  /** Display string like "2" or "1–2" (en-dash) — appears next to "Positions". */
   positionsCount: string;
   /** Single-paragraph tagline shown under the role title. */
   tagline: string;
@@ -33,24 +37,24 @@ export const ROLE_CONTENT: Record<string, RoleContent> = {
   "vp-external": {
     positionsCount: "2",
     tagline:
-      "As VP External, you're the face of TSI to the world. You'll build the partnerships that power our projects and lead GENESIS Project Showcase, TSI's biggest and most exciting event of the year, from concept to execution.",
+      "As VP External, you're the face of TSI to the world. You'll build the partnerships that power our projects and lead GENESIS Project Showcase, TSI's biggest & most exciting event of the year, from concept to execution.",
     whatYoullDo: [
-      "Source and secure non-profit project clients locally and globally, from building outreach lists to hopping on calls and closing partnerships over the summer.",
-      "Develop a compelling project partnership package and sponsorship package that represent TSI's value to the outside world.",
-      "Own GENESIS Project Showcase end-to-end, from logistics to sponsorships to all the details that make it unforgettable.",
-      "Work cross-functionally with operations and project teams to keep everything aligned.",
-      "Cultivate relationships with organizations inside and outside of Western and London.",
+      "Source and secure non-profit project clients locally and globally, from building outreach lists to hopping on calls and closing partnerships over the summer",
+      "Develop a compelling project partnership package and sponsorship package that represent TSI's value to the outside world",
+      "Own GENESIS Project Showcase end-to-end, from logistics, sponsorships, to all the details that make it unforgettable",
+      "Work cross-functionally with operations and project teams to keep everything aligned",
+      "Cultivate relationships with organizations inside and outside of Western and London",
     ],
     whoYouAre: [
-      "Organized and on top of your responsibilities.",
-      "A strong communicator who can hold a client call just as well as write an outreach email.",
-      "Detail-oriented, but can still see the bigger picture.",
-      "A leader who knows how to build and motivate a team.",
-      "Someone who brings new ideas to the table and follows through on them.",
+      "Organized and on top of your responsibilities",
+      "A strong communicator who can hold a client call just as well as write an outreach email",
+      "Detail-oriented, but can still see the bigger picture",
+      "A leader who knows how to build and motivate a team",
+      "Someone who brings new ideas to the table and follows through on them",
     ],
     about: {
       title: "About GENESIS",
-      body: "GENESIS is TSI's annual project showcase: a live, interactive demo day where our student teams unveil the software, hardware, and AI systems they've spent the year building for nonprofit partners. Think science fair meets tech conference — attendees walk booth to booth, ask questions, and see the technology working in real time alongside the developers who built it.",
+      body: "GENESIS is TSI's annual project showcase: a live, interactive demo day where our student teams unveil the software, hardware, and AI systems they've spent the year building for nonprofit partners. Think science fair meets tech conference: attendees walk booth to booth, ask questions, and see the technology working in real time alongside the developers who built it.",
       subtitle: "GENESIS 2026 by the numbers",
       stats: [
         "330+ sign-ups",
@@ -63,49 +67,49 @@ export const ROLE_CONTENT: Record<string, RoleContent> = {
   "vp-internal": {
     positionsCount: "1–2",
     tagline:
-      "As VP Internal, you're the heartbeat of TSI. You keep the community alive, the calendar full, and make sure everyone — from first-year developers to execs — feels like they belong here.",
+      "As VP Internal, you're the heartbeat of TSI. You keep the community alive, the calendar full, and make sure everyone from first-year developers to execs feels like they belong here.",
     whatYoullDo: [
-      "Plan summer socials and events to kickstart community connection before the year begins.",
-      "Plan and organize TSI's presence at Clubs Week, including booth logistics and the Annual General Meeting (AGM).",
-      "Run at least one social event a month — potlucks, outings, parties, volunteer days, etc.",
-      "Organize the TSI Cottage Trip from start to finish.",
-      "Own the logistics of sending TSI projects to external demo days like Canadian Tech Summit and Socratica Symposium.",
-      "Build and manage a team of directors, setting them up to do their best work.",
+      "Plan summer socials and events to kickstart community connection before the year begins",
+      "Plan and organize TSI's presence at Clubs Week, including booth logistics and the Annual General Meeting (AGM)",
+      "Run at least one social event a month, could be anything from potlucks, outings, parties, volunteer days, etc.",
+      "Organize the TSI Cottage Trip from start to finish",
+      "Own the logistics of sending TSI projects to external demo days like Canadian Tech Summit and Socratica Symposium",
+      "Build and manage a team of directors, setting them up to do their best work",
     ],
     whoYouAre: [
-      "Organized and on top of your responsibilities.",
-      "Passionate about people and genuinely care about building community.",
-      "A leader who knows how to bring a team together.",
-      "Detail-oriented, but still know how to keep things fun.",
-      "Good vibes.",
+      "Organized and on top of your responsibilities",
+      "Passionate about people and genuinely care about building community",
+      "A leader who knows how to bring a team together",
+      "Detail-oriented, but still know how to keep things fun",
+      "Good vibes",
     ],
   },
 
   "vp-marketing": {
     positionsCount: "2",
     tagline:
-      "As VP Marketing, you own TSI's creative vision — from the posts that stop the scroll to the videos that tell our story. You'll take ideas from concept to execution and make sure TSI looks and feels like the world-class organization it is.",
+      "As VP Marketing, you own TSI's creative vision, from the posts that stop the scroll to the videos that tell our story. You'll take ideas from concept to execution and make sure TSI looks and feels like the world-class organization it is.",
     preApplyNote:
-      "You don't need to do it all. We're not looking for someone who's touched every tool — we're looking for someone who has mastered one skill: design, videography, photography, or content creation. We want you to be genuinely elite at your craft and confident about it. A jack of all trades is not what we need here. If you're the best designer in the room, or you make videos that people actually watch till the end, that's who we're looking for.",
+      "You don't need to do it all. We're not looking for someone who's touched every tool. We're looking for someone who has mastered one skill, whether that's design, videography, photography, or content creation. We want you to be genuinely elite at your craft and confident about it. A jack of all trades is not what we need here. If you're the best designer in the room, or you make videos that people actually watch till the end, that's who we're looking for.",
     whatYoullDo: [
-      "Lead TSI's rebranding package over the summer.",
-      "Design sponsorship and partnership packages that represent TSI professionally.",
-      "Create and design posts for TSI's social media.",
-      "Produce short vlogs and mini-documentaries for each project team and the club overall.",
-      "Make reels that get people talking.",
-      "Design merch materials for GENESIS, TSI's annual project showcase.",
-      "Bring creative ideas that build buzz around TSI.",
-      "Build and manage a team of directors, setting them up to do their best work.",
+      "Lead TSI's rebranding package over the summer",
+      "Design sponsorship and partnership packages that represent TSI professionally",
+      "Create and design posts for TSI's social media",
+      "Produce short vlogs and mini-documentaries for each project team and the club overall",
+      "Make reels that get people talking",
+      "Design merch materials for GENESIS, TSI's annual project showcase",
+      "Bring creative ideas that build buzz around TSI",
+      "Build and manage a team of directors, setting them up to do their best work",
     ],
     whoYouAre: [
-      "Have taste.",
-      "Master of at least one: graphics (Figma, Photoshop), videography, photography, or content creation.",
-      "Bonus points if you bring more than one skill to the table.",
-      "Organized and can manage multiple creative projects at once.",
-      "A leader who can give clear direction to a team.",
+      "Have taste",
+      "You are a master of at least one: graphics (Figma, Photoshop), videography, photography, or content creation",
+      "Bonus points if you bring more than one skill to the table",
+      "Organized and can manage multiple creative projects at once",
+      "A leader who can give clear direction to a team",
     ],
     applyInstructions:
-      "Show us, don't just tell us. Along with your essays, share a link to a creative piece — in whatever medium is your strength — that makes the case for why you're the one for this role.",
+      "Show us, don't just tell us. Submit a creative piece, in whatever medium is your strength, that makes the case for why you're the one for this role.",
   },
 };
 
