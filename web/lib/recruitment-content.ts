@@ -85,6 +85,73 @@ export const ROLE_CONTENT: Record<string, RoleContent> = {
     ],
   },
 
+  "pm-internal": {
+    positionsCount: "Multiple",
+    tagline:
+      "As a Project Manager at TSI, you're the CEO of your own project. You own it end to end, leading a team of developers building real software for real nonprofit clients, from the first kickoff call to the final delivery at GENESIS.",
+    whatYoullDo: [
+      "Own the full project lifecycle, from initiation to delivery, keeping deadlines and quality standards on point",
+      "Lead and mentor your team of developers, helping them grow while keeping the project moving",
+      "Run weekly team meetings and facilitate bi-weekly or monthly client check-ins",
+      "Build and maintain a strong relationship with your nonprofit client, making sure you understand their needs, and they trust your team",
+      "Keep the broader TSI community in the loop on your project's progress, wins, and challenges",
+      "Organize socials within your project team and make sure your team shows up for club-wide events",
+    ],
+    whoYouAre: [
+      "Has strong technical skills",
+      "A strong leader",
+      "Organized",
+      "Goes above and beyond",
+    ],
+    preApplyNote:
+      "One thing to know: this role comes with a high degree of autonomy. You won't be micromanaged. You're expected to make decisions, manage your project independently, and keep both your team and your client moving forward.",
+    about: {
+      title: "What you might build",
+      body: "Projects span multiple disciplines, shaped by what nonprofits need that semester. Recent and upcoming examples:",
+      stats: [
+        "AI",
+        "Web development",
+        "Data dashboards",
+        "Hardware",
+        "Anything else a nonprofit needs",
+      ],
+    },
+  },
+
+  advisor: {
+    positionsCount: "Flexible",
+    tagline:
+      "This isn't your typical Senior Advisor role. As a TSI Advisor, you're actively involved, have access to TSI chats, and play a real role in high-level decision-making. Think board of advisors, but you're actually doing things.",
+    preApplyNote:
+      "How it works: you'll come in with at least one concrete idea you want to build or improve at TSI — your own idea or something from the list — and actually implement it. Highly flexible, perfect for past execs who want to keep contributing to TSI's growth without being tied to a specific project or portfolio.",
+    whatYoullDo: [
+      "Bring at least one concrete idea you want to build or improve at TSI, and ship it",
+      "Get involved in high-level decisions across the org",
+      "Actively participate in TSI chats and ongoing conversations",
+      "Help shape where TSI goes next",
+    ],
+    whoYouAre: [
+      "Past TSI exec who wants to keep contributing",
+      "Has at least one concrete idea you've been wanting to ship",
+      "Self-directed — you bring the idea, you do the work",
+      "Comfortable with ambiguity and full ownership",
+    ],
+    about: {
+      title: "Examples of ideas",
+      body: "Just a starting point. If you've got something you've been wanting to build or improve at TSI, this is your chance.",
+      stats: [
+        "Build out TSI's internal systems",
+        "Develop a TSI Alumni Network on the website",
+        "Create a training program for new PMs and developers",
+        "Run a bi-weekly or monthly workshop series (technical, career, leadership, you pick)",
+        "Develop hardware project training (train incoming hardware devs and PMs)",
+        "Automate TSI's grants application process",
+        "Make a TSI rap song",
+        "Or something else entirely — bring your own idea",
+      ],
+    },
+  },
+
   "vp-marketing": {
     positionsCount: "2",
     tagline:

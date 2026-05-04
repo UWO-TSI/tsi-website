@@ -434,9 +434,9 @@ function RecruitmentPageInner() {
               description="Apply for invite-only positions with an access code."
             />
             <FooterLink
-              href="mailto:team@tethos.ca"
+              href="mailto:dliu468@uwo.ca,anguyen.hba2027@ivey.ca?subject=Tethos%20recruitment%20question"
               label="Not sure which role fits?"
-              description="Get in touch — team@tethos.ca."
+              description="Email Tethos' incoming co-presidents — David Liu and Alice Nguyen."
               external
             />
           </ul>

@@ -45,6 +45,14 @@ function InternalPositionsContent() {
           setPositions(internal);
           setUnlocked(true);
           setLoading(false);
+          // Persist for role-page navigation — without this, clicking a
+          // position card sends the user to /student/apply/{slug} which
+          // refetches /api/positions without the code and 404s.
+          try {
+            sessionStorage.setItem("tethos:internal-code", code);
+          } catch {
+            // sessionStorage may be disabled — non-blocking
+          }
           return;
         }
         setError("Invalid access code. Please check and try again.");

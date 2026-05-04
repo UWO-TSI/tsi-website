@@ -61,10 +61,23 @@ export default function RoleApplicationPage() {
   useEffect(() => {
     let cancelled = false;
     async function init() {
+      // If the user came in via the internal access-code page, the
+      // unlock code is in sessionStorage. Forward it so internal
+      // positions resolve here too.
+      let internalCode: string | null = null;
+      try {
+        internalCode = sessionStorage.getItem("tethos:internal-code");
+      } catch {
+        internalCode = null;
+      }
+      const positionsUrl = internalCode
+        ? `/api/positions?code=${encodeURIComponent(internalCode)}`
+        : `/api/positions`;
+
       // Fetch position and user in parallel
       const [userRes, positionsRes] = await Promise.allSettled([
         supabase.auth.getUser(),
-        fetch(`/api/positions`).then((r) => {
+        fetch(positionsUrl).then((r) => {
           if (!r.ok) throw new Error(`HTTP ${r.status}`);
           return r.json() as Promise<Position[]>;
         }),
@@ -638,25 +651,37 @@ function AboutBlock({
       </h2>
       <div className="text-[#9CA3AF] leading-relaxed max-w-2xl">
         <p>{about.body}</p>
-        {about.subtitle && about.stats && about.stats.length > 0 && (
-          <div className="mt-6 rounded-xl p-5"
-            style={{
-              background: "rgba(255,255,255,0.03)",
-              border: "1px solid rgba(255,255,255,0.06)",
-            }}
-          >
-            <p className="font-mono text-[10px] tracking-[0.2em] uppercase text-[#002FA7] mb-3">
-              {about.subtitle}
-            </p>
-            <ul className="space-y-2 list-none pl-0">
+        {about.stats && about.stats.length > 0 && (
+          about.subtitle ? (
+            <div
+              className="mt-6 rounded-xl p-5"
+              style={{
+                background: "rgba(255,255,255,0.03)",
+                border: "1px solid rgba(255,255,255,0.06)",
+              }}
+            >
+              <p className="font-mono text-[10px] tracking-[0.2em] uppercase text-[#002FA7] mb-3">
+                {about.subtitle}
+              </p>
+              <ul className="space-y-2 list-none pl-0">
+                {about.stats.map((stat, i) => (
+                  <li key={i} className="flex items-start gap-3 text-sm text-[#E5E7EB]">
+                    <span className="mt-2 inline-block w-1 h-1 rounded-full bg-[#002FA7] flex-shrink-0" />
+                    <span>{stat}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : (
+            <ul className="mt-4 space-y-3 list-none pl-0">
               {about.stats.map((stat, i) => (
-                <li key={i} className="flex items-start gap-3 text-sm text-[#E5E7EB]">
+                <li key={i} className="flex items-start gap-3 text-sm md:text-[15px]">
                   <span className="mt-2 inline-block w-1 h-1 rounded-full bg-[#002FA7] flex-shrink-0" />
                   <span>{stat}</span>
                 </li>
               ))}
             </ul>
-          </div>
+          )
         )}
       </div>
     </motion.section>
