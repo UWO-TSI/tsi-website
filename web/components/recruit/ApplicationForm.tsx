@@ -381,12 +381,13 @@ export default function ApplicationForm({
     }
 
     if (s === 2) {
-      const isMarketing = position.slug === "vp-marketing";
+      // Roles whose essay step accepts a file upload as a substitute
+      // for written text. Either satisfies validation.
+      const ROLES_WITH_ATTACHMENT = new Set(["vp-marketing", "vp-internal"]);
+      const acceptsAttachment = ROLES_WITH_ATTACHMENT.has(position.slug);
       for (const q of position.essay_questions) {
         const answer = formData.essay_answers[q.id] ?? "";
-        // VP Marketing creative-piece question: an upload OR a link
-        // satisfies it.
-        if (isMarketing) {
+        if (acceptsAttachment) {
           const hasFile = !!formData.creative_piece_storage_path;
           const hasText = !!answer.trim();
           if (!hasFile && !hasText) {
@@ -861,15 +862,33 @@ export default function ApplicationForm({
             >
               {position.essay_questions.map((q, i) => {
                 const answer = formData.essay_answers[q.id] ?? "";
-                const isMarketingPortfolioQuestion =
-                  position.slug === "vp-marketing";
+                // Roles where the essay accepts a file upload as the
+                // submission. Marketing wants a creative piece; Internal
+                // wants the actual planning doc / screenshots.
+                const ATTACHMENT_ROLES: Record<
+                  string,
+                  { label: string; description: string }
+                > = {
+                  "vp-marketing": {
+                    label: "Creative piece",
+                    description:
+                      "Upload the piece you want us to see for this role. Image, video, PDF, or zip up to 50MB. If your file is bigger, paste a hosted link below instead.",
+                  },
+                  "vp-internal": {
+                    label: "Planning doc / screenshots",
+                    description:
+                      "Drop a planning doc, screenshots, spreadsheets, or a zip with everything together. Image, video, PDF, or zip up to 50MB. For larger files, paste a hosted link below instead.",
+                  },
+                };
+                const attachmentMeta = ATTACHMENT_ROLES[position.slug];
+                const acceptsAttachment = !!attachmentMeta;
                 return (
                   <div key={q.id}>
                     <p className="text-sm text-[#F1FFFF] mb-3 font-medium">
                       {i + 1}. {q.question}
                     </p>
 
-                    {isMarketingPortfolioQuestion && (
+                    {acceptsAttachment && (
                       <div className="mb-4">
                         <PortfolioUpload
                           positionSlug={`${position.slug}-creative`}
@@ -877,8 +896,8 @@ export default function ApplicationForm({
                           currentFilename={formData.creative_piece_filename}
                           currentSize={formData.creative_piece_size_bytes}
                           onChange={updateCreativePiece}
-                          label="Creative piece"
-                          description="Upload the piece you want us to see for this role. Image, video, PDF, or zip up to 50MB. If your file is bigger, paste a hosted link below instead."
+                          label={attachmentMeta.label}
+                          description={attachmentMeta.description}
                         />
                       </div>
                     )}
@@ -889,9 +908,9 @@ export default function ApplicationForm({
                       type="textarea"
                       value={answer}
                       onChange={(v) => updateEssay(q.id, v)}
-                      required={!isMarketingPortfolioQuestion}
+                      required={!acceptsAttachment}
                       placeholder={
-                        isMarketingPortfolioQuestion
+                        acceptsAttachment
                           ? "Or paste a link if your file is hosted elsewhere"
                           : undefined
                       }
@@ -1017,7 +1036,9 @@ export default function ApplicationForm({
                     {formData.creative_piece_filename && (
                       <div className="pt-2">
                         <p className="text-xs text-[#9CA3AF] mb-1.5 font-medium">
-                          Creative piece (file)
+                          {position.slug === "vp-marketing"
+                            ? "Creative piece (file)"
+                            : "Attachment"}
                         </p>
                         <p className="text-sm text-[#E5E7EB]">
                           {formData.creative_piece_filename}
