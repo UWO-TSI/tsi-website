@@ -21,13 +21,31 @@ if (typeof window !== "undefined") {
    DATA
    ═══════════════════════════════════════════ */
 
+// Mirrors the three public positions live at /student/apply for the
+// 2026-27 cycle. Internal roles (PM, Advisor) are intentionally not
+// surfaced here since they're invite-only and gated by access code.
 const POSITIONS = [
-  { role: "VP Internal", team: "Leadership", status: "open", description: "Lead internal operations, team culture, and member experience." },
-  { role: "VP External", team: "Leadership", status: "open", description: "Manage partnerships, sponsors, and external communications." },
-  { role: "VP Marketing", team: "Leadership", status: "open", description: "Brand strategy, social media, and event promotion." },
-  { role: "Project Manager", team: "Operations", status: "open", description: "Lead a nonprofit project team from discovery to delivery." },
-  { role: "Dev Director", team: "Engineering", status: "open", description: "Technical leadership across all active projects." },
-  { role: "Designer", team: "Design", status: "coming", description: "UX/UI design for nonprofit client projects." },
+  {
+    role: "VP Internal",
+    team: "Leadership",
+    status: "open",
+    description:
+      "The heartbeat of TSI. Keep the community alive, the calendar full, and make sure everyone feels like they belong here.",
+  },
+  {
+    role: "VP External",
+    team: "Leadership",
+    status: "open",
+    description:
+      "The face of TSI to the world. Build partnerships and lead GENESIS Project Showcase end-to-end.",
+  },
+  {
+    role: "VP Marketing",
+    team: "Leadership",
+    status: "open",
+    description:
+      "Own TSI's creative vision. Posts that stop the scroll, videos that tell our story, mastery of one craft.",
+  },
 ];
 
 const STATS = [
@@ -373,7 +391,7 @@ export default function StudentPage() {
             Open positions.
           </h2>
           <p className="text-sm mb-12" style={{ color: "rgba(255,255,255,0.3)", fontFamily: "var(--font-highlight)" }}>
-            2026-27 executive team · Applications close June 2026
+            2026-27 executive team · Applications close May 12
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
