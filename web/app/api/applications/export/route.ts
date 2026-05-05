@@ -87,7 +87,30 @@ export async function GET() {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  const rows = data ?? [];
+  // Supabase types the joined-position result loosely; cast to a row
+  // shape we can iterate without TS complaints.
+  type AppRow = {
+    id: string;
+    submitted_at: string;
+    status: string;
+    full_name: string;
+    email: string;
+    phone: string | null;
+    program_major: string;
+    year_of_study: number;
+    linkedin_url: string | null;
+    heard_about_us: string;
+    resume_filename: string | null;
+    resume_drive_url: string | null;
+    essay_answers: { question_id: string; answer: string }[] | null;
+    tags: string[] | null;
+    admin_notes: string | null;
+    position:
+      | { slug?: string; title?: string }
+      | { slug?: string; title?: string }[]
+      | null;
+  };
+  const rows = (data as unknown as AppRow[]) ?? [];
 
   // Collect all unique non-meta question_ids across applications so each
   // gets its own CSV column.
