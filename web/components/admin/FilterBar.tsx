@@ -41,7 +41,7 @@ export default function FilterBar({ positions, onFilterChange }: FilterBarProps)
             value={filters.search}
             onChange={(e) => update("search", e.target.value)}
             placeholder="Search by name or email..."
-            className="w-full pl-9 pr-4 py-2 rounded-lg bg-white/5 border border-white/10 text-sm text-[#F1FFFF] placeholder-[#6B7280] focus:outline-none focus:border-[#002FA7] transition"
+            className="w-full pl-9 pr-4 py-2 rounded-lg bg-white/5 border border-white/10 text-sm text-[#F1FFFF] placeholder-[#6B7280] focus:outline-none focus:border-[#1D9BF0] transition"
           />
         </div>
 
@@ -49,7 +49,7 @@ export default function FilterBar({ positions, onFilterChange }: FilterBarProps)
         <select
           value={filters.role}
           onChange={(e) => update("role", e.target.value)}
-          className="rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm text-[#F1FFFF] focus:outline-none focus:border-[#002FA7] transition appearance-none cursor-pointer"
+          className="rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm text-[#F1FFFF] focus:outline-none focus:border-[#1D9BF0] transition appearance-none cursor-pointer"
         >
           <option value="" className="bg-[#18181b]">All Roles</option>
           {positions.map((p) => (
@@ -63,7 +63,7 @@ export default function FilterBar({ positions, onFilterChange }: FilterBarProps)
         <select
           value={filters.status}
           onChange={(e) => update("status", e.target.value)}
-          className="rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm text-[#F1FFFF] focus:outline-none focus:border-[#002FA7] transition appearance-none cursor-pointer"
+          className="rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm text-[#F1FFFF] focus:outline-none focus:border-[#1D9BF0] transition appearance-none cursor-pointer"
         >
           <option value="" className="bg-[#18181b]">All Statuses</option>
           {APPLICATION_STATUSES.map((s) => (
@@ -79,7 +79,7 @@ export default function FilterBar({ positions, onFilterChange }: FilterBarProps)
           value={filters.tag}
           onChange={(e) => update("tag", e.target.value)}
           placeholder="Filter by tag..."
-          className="rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm text-[#F1FFFF] placeholder-[#6B7280] focus:outline-none focus:border-[#002FA7] transition w-[140px]"
+          className="rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm text-[#F1FFFF] placeholder-[#6B7280] focus:outline-none focus:border-[#1D9BF0] transition w-[140px]"
         />
       </div>
     </div>

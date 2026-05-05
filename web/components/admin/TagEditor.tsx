@@ -59,7 +59,7 @@ export default function TagEditor({
         {tags.map((tag) => (
           <span
             key={tag}
-            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#002FA7]/15 border border-[#002FA7]/30 text-[10px] font-mono text-[#F1FFFF]"
+            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#1D9BF0]/15 border border-[#1D9BF0]/30 text-[10px] font-mono text-[#F1FFFF]"
           >
             {tag}
             <button
@@ -85,7 +85,7 @@ export default function TagEditor({
           onFocus={() => setShowSuggestions(true)}
           onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
           placeholder="Add tag..."
-          className="w-full rounded-lg bg-white/5 border border-white/10 px-3 py-1.5 text-xs text-[#F1FFFF] placeholder-[#6B7280] focus:outline-none focus:border-[#002FA7] transition"
+          className="w-full rounded-lg bg-white/5 border border-white/10 px-3 py-1.5 text-xs text-[#F1FFFF] placeholder-[#6B7280] focus:outline-none focus:border-[#1D9BF0] transition"
         />
 
         {/* Suggestions dropdown */}

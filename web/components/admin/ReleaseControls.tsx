@@ -58,7 +58,7 @@ export default function ReleaseControls({
               <button
                 key={p.id}
                 onClick={() => setConfirming(p.id)}
-                className="rounded-lg bg-[#002FA7]/10 border border-[#002FA7]/30 px-3 py-1.5 text-xs text-[#F1FFFF] font-mono hover:bg-[#002FA7]/20 transition flex items-center gap-1.5"
+                className="rounded-lg bg-[#1D9BF0]/10 border border-[#1D9BF0]/30 px-3 py-1.5 text-xs text-[#F1FFFF] font-mono hover:bg-[#1D9BF0]/20 transition flex items-center gap-1.5"
               >
                 <Send className="w-3 h-3" />
                 Release {p.title} ({p.pendingCount})

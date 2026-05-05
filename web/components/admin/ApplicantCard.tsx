@@ -11,11 +11,66 @@ import {
   Mail,
   Phone,
   Linkedin,
+  Link as LinkIcon,
+  Briefcase,
 } from "lucide-react";
 import StatusDropdown from "./StatusDropdown";
 import StatusBadge from "@/components/recruit/StatusBadge";
 import TagEditor from "./TagEditor";
 import type { Application, ApplicationStatus } from "@/lib/recruitment";
+
+// Reserved IDs the form stuffs into essay_answers because applications
+// has no dedicated columns for them.
+const META_OTHER_LINKS_ID = "__profile_other_links";
+const META_COMMITMENTS_ID = "__profile_commitments_next_year";
+const META_PORTFOLIO_FILES_ID = "__portfolio_files";
+const META_PORTFOLIO_LINK_ID = "__portfolio_link";
+const META_CREATIVE_PIECE_FILES_ID = "__creative_piece_files";
+const META_IDS = new Set([
+  META_OTHER_LINKS_ID,
+  META_COMMITMENTS_ID,
+  META_PORTFOLIO_FILES_ID,
+  META_PORTFOLIO_LINK_ID,
+  META_CREATIVE_PIECE_FILES_ID,
+]);
+
+interface MetaFile {
+  path: string;
+  filename: string;
+  size: number;
+}
+
+function findMeta(
+  answers: { question_id: string; answer: string }[],
+  id: string
+): string | null {
+  return answers.find((a) => a.question_id === id)?.answer ?? null;
+}
+
+function parseFiles(json: string | null): MetaFile[] {
+  if (!json) return [];
+  try {
+    const parsed = JSON.parse(json);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+async function openSigned(path: string, bucket: "portfolios" | "resumes") {
+  try {
+    const res = await fetch("/api/resume-sign", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ mode: "view", bucket, path }),
+    });
+    if (!res.ok) return;
+    const body = await res.json();
+    if (body?.signedUrl) window.open(body.signedUrl, "_blank", "noopener");
+  } catch {
+    // ignore
+  }
+}
 
 interface ApplicantCardProps {
   application: Application;
@@ -44,7 +99,7 @@ export default function ApplicantCard({
     <div
       className={`
         rounded-xl border transition-all duration-200
-        ${isSelected ? "border-[#002FA7]/50 bg-[#002FA7]/5" : "border-white/5 bg-white/[0.02]"}
+        ${isSelected ? "border-[#1D9BF0]/50 bg-[#1D9BF0]/5" : "border-white/5 bg-white/[0.02]"}
         ${hasUnreleased ? "ring-1 ring-[#FFD166]/30" : ""}
       `}
     >
@@ -55,7 +110,7 @@ export default function ApplicantCard({
           type="checkbox"
           checked={isSelected}
           onChange={() => onSelect(application.id)}
-          className="w-4 h-4 rounded border-white/20 bg-white/5 text-[#002FA7] focus:ring-[#002FA7] cursor-pointer"
+          className="w-4 h-4 rounded border-white/20 bg-white/5 text-[#1D9BF0] focus:ring-[#1D9BF0] cursor-pointer"
         />
 
         {/* Name & email */}
@@ -120,7 +175,7 @@ export default function ApplicantCard({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
                 {/* Left: Contact & details */}
                 <div className="space-y-3">
-                  <h4 className="font-mono text-[10px] tracking-wider uppercase text-[#002FA7] mb-2">
+                  <h4 className="font-mono text-[10px] tracking-wider uppercase text-[#1D9BF0] mb-2">
                     Applicant Info
                   </h4>
                   <InfoRow icon={<Mail className="w-3.5 h-3.5" />} value={application.email} />
@@ -133,7 +188,7 @@ export default function ApplicantCard({
                           href={application.linkedin_url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-[#002FA7] hover:underline flex items-center gap-1"
+                          className="text-[#1D9BF0] hover:underline flex items-center gap-1"
                         >
                           LinkedIn <ExternalLink className="w-3 h-3" />
                         </a>
@@ -152,19 +207,120 @@ export default function ApplicantCard({
                       href={application.resume_drive_url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#002FA7]/10 border border-[#002FA7]/30 text-xs text-[#F1FFFF] hover:bg-[#002FA7]/20 transition"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1D9BF0]/10 border border-[#1D9BF0]/30 text-xs text-[#F1FFFF] hover:bg-[#1D9BF0]/20 transition"
                     >
                       <FileText className="w-3.5 h-3.5" />
                       View Resume
                       <ExternalLink className="w-3 h-3" />
                     </a>
                   )}
+
+                  {/* Meta fields stashed in essay_answers */}
+                  {(() => {
+                    const answers = application.essay_answers ?? [];
+                    const otherLinks = findMeta(answers, META_OTHER_LINKS_ID);
+                    const commitments = findMeta(answers, META_COMMITMENTS_ID);
+                    const portfolioLink = findMeta(
+                      answers,
+                      META_PORTFOLIO_LINK_ID
+                    );
+                    const portfolioFiles = parseFiles(
+                      findMeta(answers, META_PORTFOLIO_FILES_ID)
+                    );
+                    const creativeFiles = parseFiles(
+                      findMeta(answers, META_CREATIVE_PIECE_FILES_ID)
+                    );
+                    return (
+                      <>
+                        {otherLinks && (
+                          <div className="text-xs">
+                            <p className="text-[10px] uppercase tracking-wider text-[#6B7280] mb-1 font-mono">
+                              Other links
+                            </p>
+                            <p className="text-[#E5E7EB] whitespace-pre-wrap leading-relaxed">
+                              {otherLinks}
+                            </p>
+                          </div>
+                        )}
+                        {commitments && (
+                          <div className="text-xs">
+                            <p className="text-[10px] uppercase tracking-wider text-[#6B7280] mb-1 font-mono">
+                              Commitments next year
+                            </p>
+                            <p className="text-[#E5E7EB] whitespace-pre-wrap leading-relaxed">
+                              {commitments}
+                            </p>
+                          </div>
+                        )}
+                        {portfolioLink && (
+                          <div className="text-xs">
+                            <p className="text-[10px] uppercase tracking-wider text-[#6B7280] mb-1 font-mono">
+                              Portfolio link
+                            </p>
+                            <a
+                              href={portfolioLink}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-[#1D9BF0] hover:underline inline-flex items-center gap-1 break-all"
+                            >
+                              {portfolioLink}
+                              <ExternalLink className="w-3 h-3 flex-shrink-0" />
+                            </a>
+                          </div>
+                        )}
+                        {portfolioFiles.length > 0 && (
+                          <div>
+                            <p className="text-[10px] uppercase tracking-wider text-[#6B7280] mb-1.5 font-mono">
+                              Portfolio files
+                            </p>
+                            <div className="flex flex-wrap gap-2">
+                              {portfolioFiles.map((f) => (
+                                <button
+                                  key={f.path}
+                                  onClick={() =>
+                                    openSigned(f.path, "portfolios")
+                                  }
+                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs text-[#F1FFFF] hover:bg-white/10 hover:border-white/20 transition"
+                                >
+                                  <Briefcase className="w-3.5 h-3.5" />
+                                  {f.filename}
+                                  <ExternalLink className="w-3 h-3" />
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {creativeFiles.length > 0 && (
+                          <div>
+                            <p className="text-[10px] uppercase tracking-wider text-[#6B7280] mb-1.5 font-mono">
+                              Creative piece / attachment
+                            </p>
+                            <div className="flex flex-wrap gap-2">
+                              {creativeFiles.map((f) => (
+                                <button
+                                  key={f.path}
+                                  onClick={() =>
+                                    openSigned(f.path, "portfolios")
+                                  }
+                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1D9BF0]/10 border border-[#1D9BF0]/30 text-xs text-[#F1FFFF] hover:bg-[#1D9BF0]/20 transition"
+                                >
+                                  <LinkIcon className="w-3.5 h-3.5" />
+                                  {f.filename}
+                                  <ExternalLink className="w-3 h-3" />
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
                 </div>
 
                 {/* Right: Tags & notes */}
                 <div className="space-y-4">
                   <div>
-                    <h4 className="font-mono text-[10px] tracking-wider uppercase text-[#002FA7] mb-2">
+                    <h4 className="font-mono text-[10px] tracking-wider uppercase text-[#1D9BF0] mb-2">
                       Tags
                     </h4>
                     <TagEditor
@@ -173,7 +329,7 @@ export default function ApplicantCard({
                     />
                   </div>
                   <div>
-                    <h4 className="font-mono text-[10px] tracking-wider uppercase text-[#002FA7] mb-2">
+                    <h4 className="font-mono text-[10px] tracking-wider uppercase text-[#1D9BF0] mb-2">
                       Admin Notes
                     </h4>
                     <textarea
@@ -182,7 +338,7 @@ export default function ApplicantCard({
                         onNotesChange(application.id, e.target.value)
                       }
                       rows={3}
-                      className="w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-xs text-[#F1FFFF] placeholder-[#6B7280] focus:outline-none focus:border-[#002FA7] transition resize-none"
+                      className="w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-xs text-[#F1FFFF] placeholder-[#6B7280] focus:outline-none focus:border-[#1D9BF0] transition resize-none"
                       placeholder="Internal notes..."
                     />
                   </div>
@@ -199,10 +355,12 @@ export default function ApplicantCard({
                 </div>
               </div>
 
-              {/* Essays */}
-              {application.essay_answers?.length > 0 && (
+              {/* Essays — meta IDs already rendered above */}
+              {application.essay_answers?.some(
+                (a) => !META_IDS.has(a.question_id) && a.answer?.trim()
+              ) && (
                 <div className="mt-6 pt-4 border-t border-white/5">
-                  <h4 className="font-mono text-[10px] tracking-wider uppercase text-[#002FA7] mb-3">
+                  <h4 className="font-mono text-[10px] tracking-wider uppercase text-[#1D9BF0] mb-3">
                     Essay Responses
                   </h4>
                   <div className="space-y-4">
@@ -212,7 +370,7 @@ export default function ApplicantCard({
                       );
                       return (
                         <div key={q.id}>
-                          <p className="text-[11px] text-[#9CA3AF] mb-1">
+                          <p className="text-[11px] text-[#9CA3AF] mb-1 whitespace-pre-line">
                             {q.question}
                           </p>
                           <p className="text-sm text-[#E5E7EB] whitespace-pre-wrap">

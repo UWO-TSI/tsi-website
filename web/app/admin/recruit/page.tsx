@@ -208,10 +208,14 @@ export default function AdminRecruitPage() {
     setSyncing(false);
   };
 
+  const handleCsvExport = () => {
+    window.open("/api/applications/export", "_blank", "noopener");
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="w-6 h-6 rounded-full border-2 border-[#002FA7] border-t-transparent animate-spin" />
+        <div className="w-6 h-6 rounded-full border-2 border-[#1D9BF0] border-t-transparent animate-spin" />
       </div>
     );
   }
@@ -234,7 +238,7 @@ export default function AdminRecruitPage() {
         className="flex items-center justify-between mb-8"
       >
         <div>
-          <p className="font-mono text-xs tracking-[0.2em] uppercase text-[#002FA7] mb-1">
+          <p className="font-mono text-xs tracking-[0.2em] uppercase text-[#1D9BF0] mb-1">
             Admin
           </p>
           <h1 className="text-2xl md:text-3xl font-semibold text-[#F1FFFF]">
@@ -245,6 +249,13 @@ export default function AdminRecruitPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          <button
+            onClick={handleCsvExport}
+            className="flex items-center gap-1.5 rounded-lg bg-[#1D9BF0]/10 border border-[#1D9BF0]/30 px-3 py-2 text-xs text-[#F1FFFF] hover:bg-[#1D9BF0]/20 transition"
+          >
+            <Download className="w-3.5 h-3.5" />
+            Export CSV
+          </button>
           <button
             onClick={handleSheetsSync}
             disabled={syncing}

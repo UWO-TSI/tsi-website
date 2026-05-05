@@ -9,7 +9,7 @@
 
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createAdminClient, isAdminEmail } from "@/lib/supabase/admin";
 import { MAX_RESUME_SIZE_BYTES } from "@/lib/recruitment";
 
 const VIEW_TTL_SECONDS = 60 * 60;
@@ -112,7 +112,11 @@ export async function POST(request: Request) {
     if (!path || typeof path !== "string") {
       return NextResponse.json({ error: "Missing path" }, { status: 400 });
     }
-    if (!path.startsWith(`${user.id}/`)) {
+    // Owners can view their own files; whitelisted admins can view
+    // anyone's files (needed for the recruitment dashboard).
+    const ownsPath = path.startsWith(`${user.id}/`);
+    const isAdmin = isAdminEmail(user.email ?? "");
+    if (!ownsPath && !isAdmin) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
