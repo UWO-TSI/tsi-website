@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import FilterBar, { type FilterState } from "@/components/admin/FilterBar";
 import ApplicantCard from "@/components/admin/ApplicantCard";
 import ReleaseControls from "@/components/admin/ReleaseControls";
+import RecruitInsights from "@/components/admin/RecruitInsights";
 import { motion } from "framer-motion";
 import { fadeUpVariants } from "@/lib/motion";
 import { RefreshCw, Download } from "lucide-react";
@@ -26,6 +27,7 @@ export default function AdminRecruitPage() {
     tag: "",
   });
   const [syncing, setSyncing] = useState(false);
+  const [tab, setTab] = useState<"dashboard" | "insights">("dashboard");
 
   const supabase = useMemo(() => createClient(), []);
 
@@ -274,42 +276,85 @@ export default function AdminRecruitPage() {
         </div>
       </motion.div>
 
-      {/* Release controls */}
-      <ReleaseControls
-        pendingCount={pendingCount}
-        positions={positionsWithPending}
-        onReleaseAll={handleReleaseAll}
-        onReleaseSelected={handleReleaseSelected}
-        selectedIds={selectedIds}
-      />
-
-      {/* Filters */}
-      <FilterBar
-        positions={positions.map((p) => ({ slug: p.slug, title: p.title }))}
-        onFilterChange={setFilters}
-      />
-
-      {/* Application list */}
-      <div className="space-y-2">
-        {filtered.length === 0 ? (
-          <div className="glass-card p-8 text-center">
-            <p className="text-[#9CA3AF]">No applications match your filters.</p>
-          </div>
-        ) : (
-          filtered.map((app) => (
-            <ApplicantCard
-              key={app.id}
-              application={app}
-              isSelected={selectedIds.includes(app.id)}
-              onSelect={handleSelect}
-              onStatusChange={handleStatusChange}
-              onTagsChange={handleTagsChange}
-              onNotesChange={handleNotesChange}
-              onRelease={handleRelease}
-            />
-          ))
-        )}
+      {/* Tabs */}
+      <div className="flex items-center gap-1 mb-8 border-b border-white/[0.06]">
+        <TabButton
+          label="Dashboard"
+          active={tab === "dashboard"}
+          onClick={() => setTab("dashboard")}
+        />
+        <TabButton
+          label="Insights"
+          active={tab === "insights"}
+          onClick={() => setTab("insights")}
+        />
       </div>
+
+      {tab === "dashboard" ? (
+        <>
+          {/* Release controls */}
+          <ReleaseControls
+            pendingCount={pendingCount}
+            positions={positionsWithPending}
+            onReleaseAll={handleReleaseAll}
+            onReleaseSelected={handleReleaseSelected}
+            selectedIds={selectedIds}
+          />
+
+          {/* Filters */}
+          <FilterBar
+            positions={positions.map((p) => ({ slug: p.slug, title: p.title }))}
+            onFilterChange={setFilters}
+          />
+
+          {/* Application list */}
+          <div className="space-y-2">
+            {filtered.length === 0 ? (
+              <div className="rounded-2xl p-12 text-center" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                <p className="text-[#9CA3AF]">No applications match your filters.</p>
+              </div>
+            ) : (
+              filtered.map((app) => (
+                <ApplicantCard
+                  key={app.id}
+                  application={app}
+                  isSelected={selectedIds.includes(app.id)}
+                  onSelect={handleSelect}
+                  onStatusChange={handleStatusChange}
+                  onTagsChange={handleTagsChange}
+                  onNotesChange={handleNotesChange}
+                  onRelease={handleRelease}
+                />
+              ))
+            )}
+          </div>
+        </>
+      ) : (
+        <RecruitInsights applications={applications} positions={positions} />
+      )}
     </div>
+  );
+}
+
+function TabButton({
+  label,
+  active,
+  onClick,
+}: {
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className="relative px-4 py-2.5 text-sm transition-colors -mb-px"
+      style={{
+        color: active ? "#F1FFFF" : "rgba(255,255,255,0.5)",
+        borderBottom: active ? "2px solid #1D9BF0" : "2px solid transparent",
+      }}
+    >
+      {label}
+    </button>
   );
 }

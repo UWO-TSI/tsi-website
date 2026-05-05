@@ -105,13 +105,27 @@ export default function ApplicantCard({
     >
       {/* Summary row */}
       <div className="flex items-center gap-3 p-4">
-        {/* Checkbox */}
-        <input
-          type="checkbox"
-          checked={isSelected}
-          onChange={() => onSelect(application.id)}
-          className="w-4 h-4 rounded border-white/20 bg-white/5 text-[#1D9BF0] focus:ring-[#1D9BF0] cursor-pointer"
-        />
+        {/* Selection — radio-style filled dot when selected */}
+        <button
+          type="button"
+          role="checkbox"
+          aria-checked={isSelected}
+          onClick={() => onSelect(application.id)}
+          className="flex items-center justify-center w-4 h-4 rounded-full transition-all"
+          style={{
+            border: isSelected
+              ? "1px solid #1D9BF0"
+              : "1px solid rgba(255,255,255,0.25)",
+            background: isSelected ? "rgba(29,155,240,0.12)" : "transparent",
+          }}
+        >
+          {isSelected && (
+            <span
+              className="w-2 h-2 rounded-full"
+              style={{ background: "#1D9BF0" }}
+            />
+          )}
+        </button>
 
         {/* Name & email */}
         <div className="flex-1 min-w-0">
