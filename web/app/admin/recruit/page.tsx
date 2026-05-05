@@ -170,6 +170,20 @@ export default function AdminRecruitPage() {
     }
   };
 
+  const handleDelete = async (id: string) => {
+    const prev = applications;
+    setApplications((apps) => apps.filter((a) => a.id !== id));
+    setSelectedIds((ids) => ids.filter((x) => x !== id));
+
+    const res = await fetch(`/api/applications/${id}`, { method: "DELETE" });
+    if (!res.ok) {
+      // Restore on failure
+      setApplications(prev);
+      const body = await res.json().catch(() => ({}));
+      alert(`Failed to delete: ${body.error ?? res.statusText}`);
+    }
+  };
+
   const handleRelease = async (id: string) => {
     const res = await fetch(`/api/applications/${id}/release`, {
       method: "POST",
@@ -324,6 +338,7 @@ export default function AdminRecruitPage() {
                   onTagsChange={handleTagsChange}
                   onNotesChange={handleNotesChange}
                   onRelease={handleRelease}
+                  onDelete={handleDelete}
                 />
               ))
             )}

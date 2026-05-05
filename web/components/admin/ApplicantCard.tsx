@@ -13,6 +13,7 @@ import {
   Linkedin,
   Link as LinkIcon,
   Briefcase,
+  Trash2,
 } from "lucide-react";
 import StatusDropdown from "./StatusDropdown";
 import StatusBadge from "@/components/recruit/StatusBadge";
@@ -80,6 +81,7 @@ interface ApplicantCardProps {
   onTagsChange: (id: string, tags: string[]) => void;
   onNotesChange: (id: string, notes: string) => void;
   onRelease: (id: string) => void;
+  onDelete: (id: string) => void;
 }
 
 export default function ApplicantCard({
@@ -90,8 +92,10 @@ export default function ApplicantCard({
   onTagsChange,
   onNotesChange,
   onRelease,
+  onDelete,
 }: ApplicantCardProps) {
   const [expanded, setExpanded] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const hasUnreleased =
     application.draft_status && application.draft_status !== application.status;
 
@@ -366,6 +370,45 @@ export default function ApplicantCard({
                       Release: {application.status} → {application.draft_status}
                     </button>
                   )}
+
+                  {/* Delete with two-step confirm */}
+                  <div className="pt-3 mt-3 border-t border-white/5">
+                    {!confirmingDelete ? (
+                      <button
+                        onClick={() => setConfirmingDelete(true)}
+                        className="inline-flex items-center gap-1.5 text-[11px] text-[#6B7280] hover:text-[#EF4444] transition font-mono"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                        Delete applicant
+                      </button>
+                    ) : (
+                      <div className="rounded-lg bg-[#EF4444]/5 border border-[#EF4444]/30 p-3">
+                        <p className="text-xs text-[#F1FFFF] mb-2">
+                          Permanently delete{" "}
+                          <span className="font-medium">{application.full_name}</span>
+                          's application? This removes the resume file and all
+                          status history. Cannot be undone.
+                        </p>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => {
+                              onDelete(application.id);
+                              setConfirmingDelete(false);
+                            }}
+                            className="rounded-md bg-[#EF4444] hover:bg-[#dc2626] text-white px-3 py-1.5 text-xs font-medium transition"
+                          >
+                            Delete permanently
+                          </button>
+                          <button
+                            onClick={() => setConfirmingDelete(false)}
+                            className="rounded-md bg-white/5 border border-white/10 text-[#9CA3AF] hover:text-[#F1FFFF] px-3 py-1.5 text-xs transition"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 

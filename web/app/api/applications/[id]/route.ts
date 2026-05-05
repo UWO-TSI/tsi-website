@@ -78,3 +78,45 @@ export async function PATCH(
 
   return NextResponse.json(data);
 }
+
+export async function DELETE(
+  _request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user || !isAdminEmail(user.email ?? "")) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const admin = createAdminClient();
+
+  // Best-effort: also remove the resume blob if we can parse a path
+  // out of the stored signed URL. Failures here don't block the row delete.
+  const { data: row } = await admin
+    .from("applications")
+    .select("resume_drive_url")
+    .eq("id", id)
+    .single();
+
+  if (row?.resume_drive_url) {
+    const match = row.resume_drive_url.match(
+      /\/object\/sign\/resumes\/([^?]+)/
+    );
+    if (match?.[1]) {
+      await admin.storage.from("resumes").remove([decodeURIComponent(match[1])]);
+    }
+  }
+
+  const { error } = await admin.from("applications").delete().eq("id", id);
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ ok: true });
+}
