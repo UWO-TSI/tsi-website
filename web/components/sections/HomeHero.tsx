@@ -310,11 +310,11 @@ export default function HomeHero() {
             }}
           >
             <SplitLine
-              text="Where students ship"
+              text="We build the software"
               style={{ color: "rgba(241,255,255,0.55)" }}
             />
             <SplitLine
-              text="real software."
+              text="nonprofits can't."
               style={{ color: "#F1FFFF" }}
             />
           </h1>
