@@ -34,7 +34,7 @@ const cards: PathwayCard[] = [
   },
   {
     title: "Students",
-    subtitle: "Start a TETHOS Chapter",
+    subtitle: "Build for the cause",
     href: "/student",
   },
 ];
