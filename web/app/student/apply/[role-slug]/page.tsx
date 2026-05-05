@@ -230,8 +230,6 @@ export default function RoleApplicationPage() {
     : null;
   void formatClosesAt;
   const essayCount = position.essay_questions?.length ?? 0;
-  const totalWords =
-    position.essay_questions?.reduce((s, q) => s + q.max_words, 0) ?? 0;
   const roleContent = getRoleContent(slug);
 
   const canStart = acknowledged && scrolledToEnd && !!user;
@@ -318,26 +316,7 @@ export default function RoleApplicationPage() {
                   )}
                 </motion.div>
 
-                {/* Role meta strip */}
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.7, delay: 0.2, ease: EASE_OUT }}
-                  className="grid grid-cols-3 gap-4 mb-16"
-                >
-                  <MetaCard
-                    label="Essay questions"
-                    value={essayCount === 0 ? "None" : String(essayCount)}
-                  />
-                  <MetaCard
-                    label="Total word limit"
-                    value={totalWords === 0 ? "—" : totalWords.toLocaleString()}
-                  />
-                  <MetaCard
-                    label="Phase"
-                    value={String(position.phase).padStart(2, "0")}
-                  />
-                </motion.div>
+                <div className="mb-16" />
               </div>
             </div>
 
@@ -577,23 +556,6 @@ export default function RoleApplicationPage() {
         onClose={() => setShowAuth(false)}
         redirectTo={`/student/apply/${slug}`}
       />
-    </div>
-  );
-}
-
-function MetaCard({ label, value }: { label: string; value: string }) {
-  return (
-    <div
-      className="rounded-xl px-4 py-4"
-      style={{
-        background: "rgba(255,255,255,0.03)",
-        border: "1px solid rgba(255,255,255,0.06)",
-      }}
-    >
-      <p className="font-mono text-[10px] uppercase tracking-[0.15em] text-[#6B7280] mb-2">
-        {label}
-      </p>
-      <p className="text-[#F1FFFF] text-base font-medium">{value}</p>
     </div>
   );
 }
