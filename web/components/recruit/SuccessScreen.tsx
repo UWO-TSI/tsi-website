@@ -263,12 +263,21 @@ export default function SuccessScreen({
               <span>
                 Follow{" "}
                 <a
-                  href="https://linkedin.com/company/tethos"
+                  href="https://www.linkedin.com/company/tech-for-social-impact-club/"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-[#F1FFFF] underline underline-offset-2 hover:text-[#1D9BF0] transition"
                 >
-                  @tethos on LinkedIn
+                  Tech for Social Impact on LinkedIn
+                </a>{" "}
+                and{" "}
+                <a
+                  href="https://instagram.com/westerntsi"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[#F1FFFF] underline underline-offset-2 hover:text-[#1D9BF0] transition"
+                >
+                  @westerntsi on Instagram
                 </a>{" "}
                 for updates on the cohort.
               </span>
@@ -276,7 +285,7 @@ export default function SuccessScreen({
             <li className="text-sm text-[#E5E7EB] flex items-start gap-3 leading-relaxed">
               <span className="mt-2 inline-block w-1 h-1 rounded-full bg-[#1D9BF0] flex-shrink-0" />
               <span>
-                Check your dashboard anytime — we release status changes the
+                Check your dashboard anytime, we release status changes the
                 moment they&apos;re final.
               </span>
             </li>
