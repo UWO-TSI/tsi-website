@@ -27,14 +27,7 @@ const EASE_OUT: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
 const ACK_KEY = (slug: string) => `tethos:ack:${slug}`;
 
-function estimateMinutes(position: Position): number {
-  const essayMinutes = (position.essay_questions ?? []).reduce(
-    (sum, q) => sum + Math.ceil(q.max_words / 60),
-    0
-  );
-  // +3 for personal info, +2 for resume, +2 for review
-  return Math.max(5, essayMinutes + 7);
-}
+// Time estimates intentionally removed — they were inaccurate and added noise.
 
 export default function RoleApplicationPage() {
   const params = useParams();
@@ -236,7 +229,6 @@ export default function RoleApplicationPage() {
         })
     : null;
   void formatClosesAt;
-  const estMinutes = estimateMinutes(position);
   const essayCount = position.essay_questions?.length ?? 0;
   const totalWords =
     position.essay_questions?.reduce((s, q) => s + q.max_words, 0) ?? 0;
@@ -331,9 +323,8 @@ export default function RoleApplicationPage() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.7, delay: 0.2, ease: EASE_OUT }}
-                  className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-16"
+                  className="grid grid-cols-3 gap-4 mb-16"
                 >
-                  <MetaCard label="Time to apply" value={`~${estMinutes} min`} />
                   <MetaCard
                     label="Essay questions"
                     value={essayCount === 0 ? "None" : String(essayCount)}
@@ -409,9 +400,8 @@ export default function RoleApplicationPage() {
                   delay={0.4}
                 >
                   <p className="mb-6">
-                    Four short steps, about {estMinutes} minutes if you come
-                    prepared. You can save your draft and return anytime —
-                    we&apos;ll restore it automatically.
+                    Four short steps. You can save your draft and return
+                    anytime, we&apos;ll restore it automatically.
                   </p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
                     <StepPreview
@@ -541,7 +531,6 @@ export default function RoleApplicationPage() {
                         // Scroll to form top
                         window.scrollTo({ top: 0, behavior: "smooth" });
                       }}
-                      estMinutes={estMinutes}
                     />
                   )}
                 </motion.div>
@@ -899,14 +888,12 @@ function ReadyToApply({
   canStart,
   onToggleAck,
   onStart,
-  estMinutes,
 }: {
   acknowledged: boolean;
   scrolledToEnd: boolean;
   canStart: boolean;
   onToggleAck: () => void;
   onStart: () => void;
-  estMinutes: number;
 }) {
   return (
     <div>
@@ -914,7 +901,7 @@ function ReadyToApply({
         Ready to apply?
       </h3>
       <p className="text-sm text-[#9CA3AF] mb-6 leading-relaxed">
-        Applications are reviewed by the founding team. Take your time — the
+        Applications are reviewed by the founding team. Take your time, the
         essays are short but we read every word.
       </p>
 
@@ -974,9 +961,6 @@ function ReadyToApply({
         }`}
       >
         Start application
-        <span className="font-mono text-xs opacity-70">
-          ~{estMinutes} min
-        </span>
         <ArrowRight className="w-4 h-4" />
       </motion.button>
 

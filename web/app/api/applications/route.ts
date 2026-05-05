@@ -40,7 +40,6 @@ export async function POST(request: Request) {
     "position_id",
     "full_name",
     "email",
-    "phone",
     "program_major",
     "year_of_study",
     "heard_about_us",

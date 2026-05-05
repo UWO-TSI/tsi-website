@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import FormField from "./FormField";
 import FormProgress from "./FormProgress";
 import ResumeUpload from "./ResumeUpload";
-import PortfolioUpload from "./PortfolioUpload";
+import PortfolioUpload, { type PortfolioFile } from "./PortfolioUpload";
 import SuccessScreen from "./SuccessScreen";
 import Button from "@/components/ui/Button";
 import {
@@ -39,12 +39,12 @@ interface FormData {
   resume_storage_path: string | null;
   resume_filename: string | null;
   resume_size_bytes: number | null;
-  portfolio_storage_path: string | null;
-  portfolio_filename: string | null;
-  portfolio_size_bytes: number | null;
-  creative_piece_storage_path: string | null;
-  creative_piece_filename: string | null;
-  creative_piece_size_bytes: number | null;
+  /** Portfolio files (resume step, VP Marketing). */
+  portfolio_files: PortfolioFile[];
+  /** Optional hosted link instead of (or in addition to) portfolio files. */
+  portfolio_link: string;
+  /** Creative-piece files (essay step, VP Marketing + VP Internal). */
+  creative_piece_files: PortfolioFile[];
 }
 
 const EMPTY_FORM: FormData = {
@@ -61,12 +61,9 @@ const EMPTY_FORM: FormData = {
   resume_storage_path: null,
   resume_filename: null,
   resume_size_bytes: null,
-  portfolio_storage_path: null,
-  portfolio_filename: null,
-  portfolio_size_bytes: null,
-  creative_piece_storage_path: null,
-  creative_piece_filename: null,
-  creative_piece_size_bytes: null,
+  portfolio_files: [],
+  portfolio_link: "",
+  creative_piece_files: [],
 };
 
 const DRAFT_KEY = (positionId: string) => `tethos:draft:${positionId}`;
@@ -76,8 +73,9 @@ const DRAFT_KEY = (positionId: string) => `tethos:draft:${positionId}`;
 // and the user's review screen pull these out separately from real essays.
 export const META_OTHER_LINKS_ID = "__profile_other_links";
 export const META_COMMITMENTS_ID = "__profile_commitments_next_year";
-export const META_PORTFOLIO_FILE_ID = "__portfolio_file";
-export const META_CREATIVE_PIECE_FILE_ID = "__creative_piece_file";
+export const META_PORTFOLIO_FILES_ID = "__portfolio_files";
+export const META_PORTFOLIO_LINK_ID = "__portfolio_link";
+export const META_CREATIVE_PIECE_FILES_ID = "__creative_piece_files";
 
 interface DraftPayload {
   form_data: FormData;
@@ -96,6 +94,9 @@ function isEmptyForm(f: FormData): boolean {
     !f.commitments_next_year &&
     !f.heard_about_us &&
     !f.resume_storage_path &&
+    f.portfolio_files.length === 0 &&
+    !f.portfolio_link &&
+    f.creative_piece_files.length === 0 &&
     Object.values(f.essay_answers).every((v) => !v)
   );
 }
@@ -224,16 +225,9 @@ export default function ApplicationForm({
           resume_storage_path: chosen.form_data.resume_storage_path ?? null,
           resume_filename: chosen.form_data.resume_filename ?? null,
           resume_size_bytes: chosen.form_data.resume_size_bytes ?? null,
-          portfolio_storage_path:
-            chosen.form_data.portfolio_storage_path ?? null,
-          portfolio_filename: chosen.form_data.portfolio_filename ?? null,
-          portfolio_size_bytes: chosen.form_data.portfolio_size_bytes ?? null,
-          creative_piece_storage_path:
-            chosen.form_data.creative_piece_storage_path ?? null,
-          creative_piece_filename:
-            chosen.form_data.creative_piece_filename ?? null,
-          creative_piece_size_bytes:
-            chosen.form_data.creative_piece_size_bytes ?? null,
+          portfolio_files: chosen.form_data.portfolio_files ?? [],
+          portfolio_link: chosen.form_data.portfolio_link ?? "",
+          creative_piece_files: chosen.form_data.creative_piece_files ?? [],
         });
         setDraftRestoredAt(chosen.updated_at);
       } else {
@@ -337,29 +331,13 @@ export default function ApplicationForm({
     []
   );
 
-  const updatePortfolio = useCallback(
-    (data: { path: string; filename: string; size: number } | null) => {
-      setFormData((prev) => ({
-        ...prev,
-        portfolio_storage_path: data?.path ?? null,
-        portfolio_filename: data?.filename ?? null,
-        portfolio_size_bytes: data?.size ?? null,
-      }));
-    },
-    []
-  );
+  const updatePortfolioFiles = useCallback((files: PortfolioFile[]) => {
+    setFormData((prev) => ({ ...prev, portfolio_files: files }));
+  }, []);
 
-  const updateCreativePiece = useCallback(
-    (data: { path: string; filename: string; size: number } | null) => {
-      setFormData((prev) => ({
-        ...prev,
-        creative_piece_storage_path: data?.path ?? null,
-        creative_piece_filename: data?.filename ?? null,
-        creative_piece_size_bytes: data?.size ?? null,
-      }));
-    },
-    []
-  );
+  const updateCreativePieceFiles = useCallback((files: PortfolioFile[]) => {
+    setFormData((prev) => ({ ...prev, creative_piece_files: files }));
+  }, []);
 
   // Step validation
   const validateStep = (s: number): boolean => {
@@ -370,7 +348,6 @@ export default function ApplicationForm({
       if (!formData.email.trim()) errs.email = "Required";
       else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email))
         errs.email = "Invalid email";
-      if (!formData.phone.trim()) errs.phone = "Required";
       if (!formData.program_major.trim()) errs.program_major = "Required";
       if (!formData.year_of_study) errs.year_of_study = "Required";
       if (!formData.heard_about_us) errs.heard_about_us = "Required";
@@ -382,17 +359,15 @@ export default function ApplicationForm({
 
     if (s === 2) {
       // Roles whose essay step accepts a file upload as a substitute
-      // for written text. Either satisfies validation.
+      // for written text. Both inputs are optional — applicant can
+      // submit with neither, either, or both. Word cap still enforced
+      // on whatever text is provided.
       const ROLES_WITH_ATTACHMENT = new Set(["vp-marketing", "vp-internal"]);
       const acceptsAttachment = ROLES_WITH_ATTACHMENT.has(position.slug);
       for (const q of position.essay_questions) {
         const answer = formData.essay_answers[q.id] ?? "";
         if (acceptsAttachment) {
-          const hasFile = !!formData.creative_piece_storage_path;
-          const hasText = !!answer.trim();
-          if (!hasFile && !hasText) {
-            errs[`essay_${q.id}`] = "Upload a file or paste a link.";
-          } else if (hasText && countWords(answer) > q.max_words) {
+          if (answer.trim() && countWords(answer) > q.max_words) {
             errs[`essay_${q.id}`] = `Exceeds ${q.max_words} word limit`;
           }
           continue;
@@ -470,28 +445,27 @@ export default function ApplicationForm({
             },
           ]
         : []),
-      ...(formData.portfolio_storage_path && formData.portfolio_filename
+      ...(formData.portfolio_files.length > 0
         ? [
             {
-              question_id: META_PORTFOLIO_FILE_ID,
-              answer: JSON.stringify({
-                path: formData.portfolio_storage_path,
-                filename: formData.portfolio_filename,
-                size: formData.portfolio_size_bytes,
-              }),
+              question_id: META_PORTFOLIO_FILES_ID,
+              answer: JSON.stringify(formData.portfolio_files),
             },
           ]
         : []),
-      ...(formData.creative_piece_storage_path &&
-      formData.creative_piece_filename
+      ...(formData.portfolio_link.trim()
         ? [
             {
-              question_id: META_CREATIVE_PIECE_FILE_ID,
-              answer: JSON.stringify({
-                path: formData.creative_piece_storage_path,
-                filename: formData.creative_piece_filename,
-                size: formData.creative_piece_size_bytes,
-              }),
+              question_id: META_PORTFOLIO_LINK_ID,
+              answer: formData.portfolio_link.trim(),
+            },
+          ]
+        : []),
+      ...(formData.creative_piece_files.length > 0
+        ? [
+            {
+              question_id: META_CREATIVE_PIECE_FILES_ID,
+              answer: JSON.stringify(formData.creative_piece_files),
             },
           ]
         : []),
@@ -692,12 +666,11 @@ export default function ApplicationForm({
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField
-                  label="Phone"
+                  label="Phone (optional)"
                   name="phone"
                   type="tel"
                   value={formData.phone}
                   onChange={(v) => updateField("phone", v)}
-                  required
                   error={errors.phone}
                 />
                 <FormField
@@ -835,13 +808,21 @@ export default function ApplicationForm({
                   <div className="mt-8 pt-8 border-t border-white/[0.06]">
                     <PortfolioUpload
                       positionSlug={`${position.slug}-portfolio`}
-                      currentPath={formData.portfolio_storage_path}
-                      currentFilename={formData.portfolio_filename}
-                      currentSize={formData.portfolio_size_bytes}
-                      onChange={updatePortfolio}
+                      files={formData.portfolio_files}
+                      onChange={updatePortfolioFiles}
                       label="Portfolio (optional)"
-                      description="Drop your broader body of work: designs, reels, photos, anything that shows what you've made before. Image, video, PDF, or zip up to 50MB."
+                      description="Drop your broader body of work: designs, reels, photos, anything that shows what you've made before. Multiple files OK. Or paste a hosted link below."
                     />
+                    <div className="mt-4">
+                      <FormField
+                        label="Portfolio link (optional)"
+                        name="portfolio_link"
+                        type="url"
+                        value={formData.portfolio_link}
+                        onChange={(v) => updateField("portfolio_link", v)}
+                        placeholder="Behance, Dribbble, personal site, anywhere your work lives"
+                      />
+                    </div>
                   </div>
                 )}
               </div>
@@ -892,10 +873,8 @@ export default function ApplicationForm({
                       <div className="mb-4">
                         <PortfolioUpload
                           positionSlug={`${position.slug}-creative`}
-                          currentPath={formData.creative_piece_storage_path}
-                          currentFilename={formData.creative_piece_filename}
-                          currentSize={formData.creative_piece_size_bytes}
-                          onChange={updateCreativePiece}
+                          files={formData.creative_piece_files}
+                          onChange={updateCreativePieceFiles}
                           label={attachmentMeta.label}
                           description={attachmentMeta.description}
                         />
@@ -1016,10 +995,18 @@ export default function ApplicationForm({
                     label="Resume"
                     value={formData.resume_filename ?? "Not uploaded"}
                   />
-                  {formData.portfolio_filename && (
+                  {formData.portfolio_files.length > 0 && (
                     <ReviewRow
                       label="Portfolio"
-                      value={formData.portfolio_filename}
+                      value={formData.portfolio_files
+                        .map((f) => f.filename)
+                        .join(", ")}
+                    />
+                  )}
+                  {formData.portfolio_link.trim() && (
+                    <ReviewRow
+                      label="Portfolio link"
+                      value={formData.portfolio_link.trim()}
                     />
                   )}
                 </div>
@@ -1033,16 +1020,18 @@ export default function ApplicationForm({
                         setStep(2);
                       }}
                     />
-                    {formData.creative_piece_filename && (
+                    {formData.creative_piece_files.length > 0 && (
                       <div className="pt-2">
                         <p className="text-xs text-[#9CA3AF] mb-1.5 font-medium">
                           {position.slug === "vp-marketing"
-                            ? "Creative piece (file)"
+                            ? "Creative piece"
                             : "Attachment"}
                         </p>
-                        <p className="text-sm text-[#E5E7EB]">
-                          {formData.creative_piece_filename}
-                        </p>
+                        <ul className="text-sm text-[#E5E7EB] space-y-1">
+                          {formData.creative_piece_files.map((f) => (
+                            <li key={f.path}>{f.filename}</li>
+                          ))}
+                        </ul>
                       </div>
                     )}
                     {position.essay_questions.map((q) => (
