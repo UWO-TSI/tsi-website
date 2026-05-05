@@ -62,7 +62,7 @@ export default function InternalGate({ onUnlock, error }: InternalGateProps) {
             Welcome back
           </h2>
           <p className="text-sm text-[#6B7280] mb-8 max-w-xs mx-auto">
-            These roles are reserved for current and past Tethos members. Enter
+            These roles are reserved for current and past TSI members. Enter
             your access code to continue.
           </p>
 
@@ -124,10 +124,10 @@ export default function InternalGate({ onUnlock, error }: InternalGateProps) {
           </form>
 
           <p className="text-xs text-[#6B7280] mt-6 leading-relaxed">
-            Check <span className="text-[#9CA3AF]">#alumni</span> on Slack for
+            Check <span className="text-[#9CA3AF]">#alumni</span> on Discord for
             this year&apos;s code, or{" "}
             <a
-              href="mailto:recruitment@tethos.ca?subject=Internal%20access%20code"
+              href="mailto:dliu468@uwo.ca?subject=Internal%20access%20code"
               className="text-[#FFD166] hover:underline"
             >
               request access

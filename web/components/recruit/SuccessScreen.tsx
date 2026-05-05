@@ -263,21 +263,12 @@ export default function SuccessScreen({
               <span>
                 Follow{" "}
                 <a
-                  href="https://www.linkedin.com/company/tech-for-social-impact-club/"
+                  href="https://instagram.com/uwotsi"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-[#F1FFFF] underline underline-offset-2 hover:text-[#1D9BF0] transition"
                 >
-                  Tech for Social Impact on LinkedIn
-                </a>{" "}
-                and{" "}
-                <a
-                  href="https://instagram.com/westerntsi"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-[#F1FFFF] underline underline-offset-2 hover:text-[#1D9BF0] transition"
-                >
-                  @westerntsi on Instagram
+                  @uwotsi on Instagram
                 </a>{" "}
                 for updates on the cohort.
               </span>
