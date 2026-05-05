@@ -165,7 +165,9 @@ export default function SuccessScreen({
           custom={0}
           className="text-3xl md:text-4xl font-semibold text-[#F1FFFF] mb-3 text-center"
         >
-          {firstName ? `Thanks, ${firstName}.` : "Your application is in."}
+          {firstName
+            ? `Thanks, ${firstName}.`
+            : "Thanks for applying."}
         </motion.h2>
 
         <motion.p
@@ -175,9 +177,19 @@ export default function SuccessScreen({
           custom={1}
           className="text-[#9CA3AF] mb-10 text-center leading-relaxed"
         >
-          Your application for{" "}
+          Thanks for applying to join the TSI Executive Team. Your application
+          for{" "}
           <span className="text-[#F1FFFF] font-medium">{positionTitle}</span>{" "}
-          is in. We sent a confirmation to your email.
+          is in. We&apos;ll be reviewing all applications and contacting
+          shortlisted candidates soon. If you have any questions, feel free to
+          reach out through our Instagram or email{" "}
+          <a
+            href="mailto:davidliu8473@gmail.com"
+            className="text-[#F1FFFF] underline underline-offset-2 hover:text-[#1D9BF0] transition-colors"
+          >
+            davidliu8473@gmail.com
+          </a>
+          .
         </motion.p>
 
         {/* Timeline */}

@@ -884,7 +884,7 @@ export default function ApplicationForm({
                 const acceptsAttachment = !!attachmentMeta;
                 return (
                   <div key={q.id}>
-                    <p className="text-sm text-[#F1FFFF] mb-3 font-medium">
+                    <p className="text-sm text-[#F1FFFF] mb-3 font-medium whitespace-pre-line">
                       {i + 1}. {q.question}
                     </p>
 
@@ -1047,7 +1047,7 @@ export default function ApplicationForm({
                     )}
                     {position.essay_questions.map((q) => (
                       <div key={q.id} className="pt-2">
-                        <p className="text-xs text-[#9CA3AF] mb-1.5 font-medium">
+                        <p className="text-xs text-[#9CA3AF] mb-1.5 font-medium whitespace-pre-line">
                           {q.question}
                         </p>
                         <p className="text-sm text-[#E5E7EB] whitespace-pre-wrap leading-relaxed">
