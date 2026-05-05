@@ -86,6 +86,7 @@ export default function SignupPage() {
             display_name: displayName,
             invite_code: inviteCode || null,
           },
+          emailRedirectTo: `${window.location.origin}/student/auth/callback?next=/student/dashboard`,
         },
       });
 
