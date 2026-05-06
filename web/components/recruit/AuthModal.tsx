@@ -16,7 +16,7 @@ export default function AuthModal({
   onClose,
   redirectTo = "/student/apply/dashboard",
 }: AuthModalProps) {
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const [mode, setMode] = useState<"signin" | "signup" | "forgot">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
@@ -46,6 +46,21 @@ export default function AuthModal({
     setLoading(true);
     setError(null);
     setSuccessMessage(null);
+
+    if (mode === "forgot") {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/api/auth/callback?next=/student/reset-password`,
+      });
+      if (error) {
+        setError(error.message);
+      } else {
+        setSuccessMessage(
+          `Recovery link sent to ${email}. Check your inbox to set a new password.`
+        );
+      }
+      setLoading(false);
+      return;
+    }
 
     if (mode === "signup") {
       const { data, error } = await supabase.auth.signUp({
@@ -122,15 +137,22 @@ export default function AuthModal({
 
               {/* Header */}
               <h2 className="text-2xl font-semibold text-[#F1FFFF] mb-2">
-                {mode === "signin" ? "Sign In" : "Create Account"}
+                {mode === "signin"
+                  ? "Sign In"
+                  : mode === "signup"
+                    ? "Create Account"
+                    : "Reset Password"}
               </h2>
               <p className="text-sm text-[#9CA3AF] mb-6">
                 {mode === "signin"
                   ? "Sign in to submit your application."
-                  : "Create an account to apply to Tethos."}
+                  : mode === "signup"
+                    ? "Create an account to apply to Tethos."
+                    : "Enter your email and we'll send a recovery link."}
               </p>
 
-              {/* Google OAuth */}
+              {/* Google OAuth — hidden in forgot mode */}
+              {mode !== "forgot" && (
               <button
                 onClick={handleGoogleAuth}
                 disabled={loading}
@@ -156,13 +178,16 @@ export default function AuthModal({
                 </svg>
                 Continue with Google
               </button>
+              )}
 
-              {/* Divider */}
+              {/* Divider — hidden in forgot mode */}
+              {mode !== "forgot" && (
               <div className="flex items-center gap-3 mb-6">
                 <div className="flex-1 h-px bg-white/10" />
                 <span className="text-xs text-[#6B7280] font-mono">or</span>
                 <div className="flex-1 h-px bg-white/10" />
               </div>
+              )}
 
               {/* Email form */}
               <form onSubmit={handleEmailAuth} className="space-y-4">
@@ -194,20 +219,37 @@ export default function AuthModal({
                     placeholder="you@university.ca"
                   />
                 </div>
-                <div>
-                  <label className="block text-xs text-[#9CA3AF] mb-1.5 font-mono">
-                    Password
-                  </label>
-                  <input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    minLength={6}
-                    className="w-full rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-sm text-[#F1FFFF] placeholder-[#6B7280] focus:outline-none focus:border-[#1D9BF0] focus:shadow-[0_0_0_2px_rgba(29,155,240,0.3)] transition"
-                    placeholder="Min 6 characters"
-                  />
-                </div>
+                {mode !== "forgot" && (
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="block text-xs text-[#9CA3AF] font-mono">
+                        Password
+                      </label>
+                      {mode === "signin" && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setMode("forgot");
+                            setError(null);
+                            setSuccessMessage(null);
+                          }}
+                          className="text-xs text-[#1D9BF0] hover:underline font-mono"
+                        >
+                          Forgot password?
+                        </button>
+                      )}
+                    </div>
+                    <input
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      minLength={6}
+                      className="w-full rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-sm text-[#F1FFFF] placeholder-[#6B7280] focus:outline-none focus:border-[#1D9BF0] focus:shadow-[0_0_0_2px_rgba(29,155,240,0.3)] transition"
+                      placeholder="Min 6 characters"
+                    />
+                  </div>
+                )}
 
                 {error && (
                   <p className="text-sm text-[#EF4444]">{error}</p>
@@ -229,7 +271,9 @@ export default function AuthModal({
                     ? "Loading..."
                     : mode === "signin"
                       ? "Sign In"
-                      : "Create Account"}
+                      : mode === "signup"
+                        ? "Create Account"
+                        : "Send Recovery Link"}
                 </button>
               </form>
 
@@ -249,7 +293,7 @@ export default function AuthModal({
                       Sign up
                     </button>
                   </>
-                ) : (
+                ) : mode === "signup" ? (
                   <>
                     Already have an account?{" "}
                     <button
@@ -263,6 +307,17 @@ export default function AuthModal({
                       Sign in
                     </button>
                   </>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setMode("signin");
+                      setError(null);
+                      setSuccessMessage(null);
+                    }}
+                    className="text-[#1D9BF0] hover:underline"
+                  >
+                    ← Back to sign in
+                  </button>
                 )}
               </p>
             </div>
