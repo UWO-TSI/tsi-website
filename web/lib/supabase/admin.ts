@@ -11,11 +11,21 @@ export function createAdminClient() {
   );
 }
 
+// Baseline admin list — kept in code so admin access doesn't silently
+// break if the env var is missing or misconfigured on Vercel. The env
+// var is still honored and unioned with this list.
+const BASELINE_ADMINS = [
+  "davidliu8473@gmail.com",
+  "dliu468@uwo.ca",
+  "anguyen.hba2027@ivey.ca",
+];
+
 /** Check if an email is in the admin whitelist */
 export function isAdminEmail(email: string): boolean {
-  const whitelist = (process.env.ADMIN_EMAIL_WHITELIST ?? "")
+  const fromEnv = (process.env.ADMIN_EMAIL_WHITELIST ?? "")
     .split(",")
     .map((e) => e.trim().toLowerCase())
     .filter(Boolean);
-  return whitelist.includes(email.toLowerCase());
+  const whitelist = new Set([...BASELINE_ADMINS, ...fromEnv]);
+  return whitelist.has(email.toLowerCase());
 }
