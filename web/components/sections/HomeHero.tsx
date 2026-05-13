@@ -314,7 +314,7 @@ export default function HomeHero() {
               style={{ color: "rgba(241,255,255,0.55)" }}
             />
             <SplitLine
-              text="nonprofits can't."
+              text="nonprofits need."
               style={{ color: "#F1FFFF" }}
             />
           </h1>
