@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ChevronDown,
@@ -19,6 +19,7 @@ import StatusDropdown from "./StatusDropdown";
 import StatusBadge from "@/components/recruit/StatusBadge";
 import TagEditor from "./TagEditor";
 import type { Application, ApplicationStatus } from "@/lib/recruitment";
+import { parseAdminNotes } from "@/lib/admin-notes";
 
 // Reserved IDs the form stuffs into essay_answers because applications
 // has no dedicated columns for them.
@@ -76,10 +77,11 @@ async function openSigned(path: string, bucket: "portfolios" | "resumes") {
 interface ApplicantCardProps {
   application: Application;
   isSelected: boolean;
+  currentUserEmail: string;
   onSelect: (id: string) => void;
   onStatusChange: (id: string, status: ApplicationStatus) => void;
   onTagsChange: (id: string, tags: string[]) => void;
-  onNotesChange: (id: string, notes: string) => void;
+  onNoteTextChange: (id: string, text: string) => void;
   onRelease: (id: string) => void;
   onDelete: (id: string) => void;
 }
@@ -87,10 +89,11 @@ interface ApplicantCardProps {
 export default function ApplicantCard({
   application,
   isSelected,
+  currentUserEmail,
   onSelect,
   onStatusChange,
   onTagsChange,
-  onNotesChange,
+  onNoteTextChange,
   onRelease,
   onDelete,
 }: ApplicantCardProps) {
@@ -98,6 +101,20 @@ export default function ApplicantCard({
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const hasUnreleased =
     application.draft_status && application.draft_status !== application.status;
+
+  const allNotes = parseAdminNotes(application.admin_notes);
+  const meEmail = currentUserEmail.toLowerCase();
+  const myNote = allNotes.find((n) => n.author_email === meEmail);
+  const otherNotes = allNotes.filter((n) => n.author_email !== meEmail);
+  const [draftNote, setDraftNote] = useState(myNote?.text ?? "");
+
+  // Hydrate draft when a different applicant's data loads (id changes).
+  // Doesn't fire on every parent re-render — only when the underlying
+  // row swaps — so it can't clobber an in-progress edit.
+  useEffect(() => {
+    setDraftNote(myNote?.text ?? "");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [application.id]);
 
   return (
     <div
@@ -350,14 +367,49 @@ export default function ApplicantCard({
                     <h4 className="font-mono text-[10px] tracking-wider uppercase text-[#1D9BF0] mb-2">
                       Admin Notes
                     </h4>
+
+                    {/* Other admins' notes (read-only) */}
+                    {otherNotes.length > 0 && (
+                      <div className="space-y-2 mb-3">
+                        {otherNotes.map((n) => (
+                          <div
+                            key={n.author_email}
+                            className="rounded-lg bg-white/[0.03] border border-white/[0.06] px-3 py-2"
+                          >
+                            <div className="flex items-baseline justify-between mb-1">
+                              <span className="text-[10px] font-mono text-[#9CA3AF]">
+                                {n.author_name ?? n.author_email}
+                              </span>
+                              {n.updated_at && (
+                                <span className="text-[9px] font-mono text-[#6B7280]">
+                                  {new Date(n.updated_at).toLocaleDateString(
+                                    "en-US",
+                                    { month: "short", day: "numeric" }
+                                  )}
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-xs text-[#E5E7EB] whitespace-pre-wrap leading-relaxed">
+                              {n.text}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Your own note (editable) */}
+                    <label className="block text-[10px] font-mono text-[#6B7280] mb-1">
+                      Your note
+                    </label>
                     <textarea
-                      value={application.admin_notes ?? ""}
-                      onChange={(e) =>
-                        onNotesChange(application.id, e.target.value)
-                      }
+                      value={draftNote}
+                      onChange={(e) => {
+                        setDraftNote(e.target.value);
+                        onNoteTextChange(application.id, e.target.value);
+                      }}
                       rows={3}
                       className="w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-xs text-[#F1FFFF] placeholder-[#6B7280] focus:outline-none focus:border-[#1D9BF0] transition resize-none"
-                      placeholder="Internal notes..."
+                      placeholder="Your internal notes (only your own are editable)..."
                     />
                   </div>
 

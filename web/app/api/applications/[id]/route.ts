@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient, isAdminEmail } from "@/lib/supabase/admin";
 import { APPLICATION_STATUSES } from "@/lib/recruitment";
+import {
+  parseAdminNotes,
+  serializeAdminNotes,
+  upsertAdminNote,
+} from "@/lib/admin-notes";
 
 export async function PATCH(
   request: Request,
@@ -39,14 +44,10 @@ export async function PATCH(
     );
   }
 
-  // Validate admin_notes if provided
-  if (
-    body.admin_notes !== undefined &&
-    body.admin_notes !== null &&
-    typeof body.admin_notes !== "string"
-  ) {
+  // Validate note_text if provided (per-admin note upsert)
+  if (body.note_text !== undefined && typeof body.note_text !== "string") {
     return NextResponse.json(
-      { error: "Admin notes must be a string" },
+      { error: "Note text must be a string" },
       { status: 400 }
     );
   }
@@ -56,7 +57,26 @@ export async function PATCH(
   const updateData: Record<string, unknown> = {};
   if (body.draft_status !== undefined) updateData.draft_status = body.draft_status;
   if (body.tags !== undefined) updateData.tags = body.tags;
-  if (body.admin_notes !== undefined) updateData.admin_notes = body.admin_notes;
+
+  // Per-admin notes: fetch current, replace/remove this admin's entry,
+  // serialize back. Atomicity is fine because admins rarely collide on
+  // the same applicant, and worst case is a last-write-wins on one note.
+  if (body.note_text !== undefined) {
+    const { data: current } = await admin
+      .from("applications")
+      .select("admin_notes")
+      .eq("id", id)
+      .single();
+    const notes = parseAdminNotes(current?.admin_notes);
+    const next = upsertAdminNote(
+      notes,
+      (user.email ?? "").toLowerCase(),
+      (user.user_metadata?.full_name as string | undefined) ??
+        (user.user_metadata?.display_name as string | undefined),
+      body.note_text
+    );
+    updateData.admin_notes = serializeAdminNotes(next);
+  }
 
   if (Object.keys(updateData).length === 0) {
     return NextResponse.json(

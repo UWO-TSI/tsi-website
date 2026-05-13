@@ -149,25 +149,31 @@ export default function AdminRecruitPage() {
     }
   };
 
-  const handleNotesChange = async (id: string, notes: string) => {
-    const prev = applications.find((a) => a.id === id);
-    setApplications((apps) =>
-      apps.map((a) => (a.id === id ? { ...a, admin_notes: notes } : a))
-    );
-
-    const res = await fetch(`/api/applications/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ admin_notes: notes }),
-    });
-
-    if (!res.ok && prev) {
-      setApplications((apps) =>
-        apps.map((a) =>
-          a.id === id ? { ...a, admin_notes: prev.admin_notes } : a
-        )
-      );
-    }
+  // Debounced per-applicant note save so typing doesn't hammer the API.
+  // Server picks the author from session, so client just sends the text.
+  const noteTimers = useMemo(
+    () => new Map<string, ReturnType<typeof setTimeout>>(),
+    []
+  );
+  const handleNoteTextChange = (id: string, text: string) => {
+    const existing = noteTimers.get(id);
+    if (existing) clearTimeout(existing);
+    const t = setTimeout(async () => {
+      const res = await fetch(`/api/applications/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ note_text: text }),
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setApplications((apps) =>
+          apps.map((a) =>
+            a.id === id ? { ...a, admin_notes: updated.admin_notes } : a
+          )
+        );
+      }
+    }, 600);
+    noteTimers.set(id, t);
   };
 
   const handleDelete = async (id: string) => {
@@ -333,10 +339,11 @@ export default function AdminRecruitPage() {
                   key={app.id}
                   application={app}
                   isSelected={selectedIds.includes(app.id)}
+                  currentUserEmail={user?.email ?? ""}
                   onSelect={handleSelect}
                   onStatusChange={handleStatusChange}
                   onTagsChange={handleTagsChange}
-                  onNotesChange={handleNotesChange}
+                  onNoteTextChange={handleNoteTextChange}
                   onRelease={handleRelease}
                   onDelete={handleDelete}
                 />

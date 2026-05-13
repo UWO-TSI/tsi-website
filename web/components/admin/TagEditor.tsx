@@ -10,12 +10,40 @@ interface TagEditorProps {
 }
 
 const DEFAULT_SUGGESTIONS = [
+  // Signal
   "strong candidate",
+  "top pick",
+  "shortlist",
   "follow up",
+  "needs review",
+  "maybe",
+  "pass",
+  // Strengths
   "experienced",
-  "referral",
   "technical",
   "leadership",
+  "creative",
+  "strategic",
+  "ops minded",
+  "communicator",
+  "design eye",
+  "writes well",
+  "ships fast",
+  // Background
+  "returning member",
+  "alumni referral",
+  "referral",
+  "western",
+  "ivey",
+  "engineering",
+  "first year",
+  "senior",
+  // Risk / fit
+  "schedule risk",
+  "culture fit",
+  "needs interview",
+  "interviewed",
+  "second round",
 ];
 
 export default function TagEditor({
@@ -90,8 +118,8 @@ export default function TagEditor({
 
         {/* Suggestions dropdown */}
         {showSuggestions && filteredSuggestions.length > 0 && (
-          <div className="absolute z-10 top-full mt-1 w-full rounded-lg bg-[#18181b] border border-white/10 shadow-lg overflow-hidden">
-            {filteredSuggestions.slice(0, 5).map((s) => (
+          <div className="absolute z-10 top-full mt-1 w-full max-h-56 overflow-y-auto rounded-lg bg-[#18181b] border border-white/10 shadow-lg">
+            {filteredSuggestions.slice(0, 12).map((s) => (
               <button
                 key={s}
                 onMouseDown={() => addTag(s)}

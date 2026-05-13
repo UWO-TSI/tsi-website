@@ -5,6 +5,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient, isAdminEmail } from "@/lib/supabase/admin";
+import { parseAdminNotes } from "@/lib/admin-notes";
 
 const META_OTHER_LINKS_ID = "__profile_other_links";
 const META_COMMITMENTS_ID = "__profile_commitments_next_year";
@@ -186,7 +187,9 @@ export async function GET() {
       r.resume_drive_url ?? "",
       r.heard_about_us,
       (r.tags ?? []).join(" | "),
-      r.admin_notes ?? "",
+      parseAdminNotes(r.admin_notes)
+        .map((n) => `[${n.author_name ?? n.author_email}] ${n.text}`)
+        .join("\n\n"),
       ...essayCols.map((id) => findMeta(answers, id)),
     ];
 
