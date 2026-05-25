@@ -80,13 +80,45 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
-*(append your entries below)*
+### 2026-05-21 — Sprint B1: Content pipeline migration
+
+Wrote `web/supabase/migrations/014_content_pipeline.sql` (worktree branch `build/sprint-b1-content-pipeline`). Adds the four content-pipeline tables: `npc_personas`, `shop_items`, `seasonal_palettes`, `content_drafts`. Defines `update_updated_at_column()` (no prior migration ships it) and wires it to `npc_personas` only — `shop_items`, `seasonal_palettes`, and `content_drafts` have no `updated_at` column per spec.
+
+**Decisions / judgment calls:**
+
+- Palette JSONB shape: object with keys `sky / grass / accent / fog / water / building_primary / building_accent` as specified. Not validated by Postgres — game world is the consumer.
+- Single-active palette: enforced via partial unique index `idx_seasonal_palettes_single_active ON (active) WHERE active = TRUE`. Cleaner than a CHECK + trigger, but you can only have one row at all where `active = TRUE`, which is the intent.
+- RLS tier-gating pattern: `(SELECT tier FROM profiles WHERE id = auth.uid()) IN (1, 2)`. `001_initial_schema.sql` doesn't have tier-gated policies — it uses `auth.role() = 'authenticated'` only. I used the subquery pattern because the spec explicitly asked for T1/T2 gating. If you want the bouncer at the API layer instead, easy revert (drop the 12 tier-gated INSERT/UPDATE/DELETE policies, replace with `auth.role() = 'authenticated'`).
+- `content_drafts.author` — `ON DELETE SET NULL` (drafts outlive the author leaving the org). Status check constraint covers `draft / published / discarded`.
+- `content_drafts` SELECT is author-only. T1/T2 can UPDATE/DELETE any draft (review queue). T3+ INSERT works via the generic `authenticated` INSERT policy (spec said "T3+ can INSERT on `content_drafts` only" — covered, since the only INSERT they have privilege for among the four tables is this one).
+- `shop_items.sprite_url` left nullable. Sprite drop is a later sprint; making it NOT NULL would break the workflow where an admin drafts an item before art lands.
+- Seed: 2 NPCs, 3 shop items, 2 palettes. NPC persona prompts written in-line. Halloween palette colors are my own picks within the spec's "orange/purple/black tones" guideline — feel free to recolor.
+- `ON CONFLICT (slug) DO NOTHING` on all seeds, so re-running the migration is safe.
+
+**Did not seed `content_drafts`** — would need a real `profiles.id` UUID, which we can't hardcode.
+
+**Questions for reviewer:**
+
+1. Tier-gated RLS via subquery on every write — OK, or move to API-layer enforcement? Subquery executes per row; if shop_items grows to thousands of rows and writes are common (they won't be — admin-only), worth knowing.
+2. `npc_personas.canned_dialogue` defaulted to `'{}'` not NULL. Spec said `text[]` without nullability — I picked empty-array-as-default because consuming code is simpler.
+3. Should `seasonal_palettes` SELECT policy let authenticated members read inactive ones too (for preview / admin list)? Currently filtered to `active = TRUE` per spec. The admin stub page in B4 will hit this — flagging.
+
+No DROP statements. No code touched. Branch ready for review.
+
+
 
 ---
 
 ## qa
 
 *(append your entries below — log waves continue from Wave 11 in `specs/qa.md`)*
+
+### 2026-05-25 — Wave 12 baseline
+
+- Build PASS on `6393d48`: 84 routes (+23 vs Wave 11), 72 static pages, compiled in 11.4s. Only pre-existing warnings (middleware deprecation, workspace-root inference).
+- Lint: 74 errors / 56 warnings (Wave 11 was 39/53 — **+35 errors**). Mostly recruitment-side `no-explicit-any` + newly-active `react-hooks/set-state-in-effect` and `react-hooks/immutability` rules. Portal-scope files not the dominant offender. Full breakdown in `specs/qa.md` Wave 12.
+- Dev server smoke: `/student/dashboard` returns 307→200 (login redirect via middleware — expected without session); `/` and `/student/login` 200. Pre-existing :3000 dev process belonged to user, not QA.
+- Heads-up to build: new hook rules will fire on any added React effects; re-baseline planned at sprint end.
 
 ---
 

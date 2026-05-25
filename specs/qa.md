@@ -1,7 +1,106 @@
 # QA Report
 
 > Owner: QA agent. All agents check this for bugs in their area.
-> Last updated: 2026-04-06
+> Last updated: 2026-05-25
+
+---
+
+## Wave 12 — 2026-05-25 World-Building Sprint Baseline
+
+"Before" snapshot on `main` at commit `6393d48` for the World-Building + Content Pipeline sprint. Read-only on portal code this round — measurements only, no fixes.
+
+### Environment
+
+- Branch: `main`
+- Commit: `6393d48` ([review] reset env for student game portal: 3-agent setup + community-first sprint pivot)
+- Node modules: existing, refreshed via `npm install --legacy-peer-deps` → `up to date, audited 748 packages`
+- npm vulnerabilities: **19 (14 moderate, 5 high)** — up from Wave 11 (10 total: 7 mod, 3 high). Recruitment dep additions since Wave 11 likely account for the bump.
+
+### Build
+
+**Result: PASSES**
+
+- `npm run build` → `✓ Compiled successfully in 11.4s`
+- Static pages generated: `72/72` in 621.4ms (7 workers)
+- Total routes in tree: **84** (Wave 11: 61; **+23** — recruitment system + admin pages have grown since)
+- Build-time warnings: 2, both pre-existing and non-blocking
+  - Workspace-root inference (two lockfiles: repo root + `web/`)
+  - `middleware` file convention deprecated — migrate to `proxy` (carried from Wave 11, still not actioned)
+- No new build warnings introduced.
+
+### Lint
+
+**Result: 74 errors, 56 warnings** (130 total problems, 5 auto-fixable)
+
+| Metric | Wave 11 | Wave 12 | Delta |
+|--------|---------|---------|-------|
+| Errors | 39 | **74** | **+35** |
+| Warnings | 53 | **56** | +3 |
+| Files with issues | n/a | 52 | — |
+
+Rule frequency (top patterns):
+
+| Rule | Count | Notes |
+|------|-------|-------|
+| `@typescript-eslint/no-explicit-any` | 44 | Largest single bucket — heavily concentrated in recruitment/admin code (`app/api/sheets-sync/route.ts`, `app/admin/recruit/page.tsx`) |
+| `@typescript-eslint/no-unused-vars` | 38 | Spread across recruitment, admin, dashboard pages |
+| `react-hooks/set-state-in-effect` | 11 | **NEW pattern in Wave 12** — not flagged at Wave 11 |
+| `react-hooks/immutability` | 10 | **NEW pattern in Wave 12** — not flagged at Wave 11 |
+| `@next/next` rules | 10 | Mostly img-element + script-ordering nits |
+| `react-hooks/exhaustive-deps` | 4 | Pre-existing |
+| `react/jsx-no-comment-textnodes` | 3 | — |
+| `@typescript-eslint/no-require-imports` | 3 | Likely in `scripts/*.js` |
+| Other (purity, refs, unescaped-entities, etc.) | 7 | Long tail |
+
+File distribution (top folders):
+
+| Folder | Files w/ issues |
+|--------|-----------------|
+| `app/student/` | 11 |
+| `components/ui/` | 10 |
+| `app/npo/` | 4 |
+| `components/cards/` | 3 |
+| `components/recruit/`, `components/portal/`, `components/layout/`, `components/dashboard/`, `components/ascii/` | 2 each |
+| `scripts/` | 5 |
+| Misc | rest |
+
+**Concerns:**
+- The +35 error delta is mostly from the recruitment system (`app/admin/recruit/page.tsx`, `app/api/sheets-sync/route.ts`, `app/student/apply/**`) merging in since Wave 11, plus newer React hook rules (`set-state-in-effect`, `immutability`) firing on existing portal code. Not blocking for this sprint, but the portal-side hook violations are technical debt that should be batched into a dedicated lint-cleanup pass before Phase 2.
+- Portal scope (`app/student/dashboard/**`, `components/portal/**`, `components/game/**`) is not the dominant offender; most new errors are recruitment-adjacent. Build agent's sprint work should not regress this further — re-baseline at sprint end.
+
+### Dev Server Smoke (port 3000)
+
+Note: port 3000 was already bound by a pre-existing `next dev` session (PID 793, running ~1d 17h — not spawned by QA). My background `npm run dev` failed lock-acquire, exited cleanly. Smoke-tested the existing :3000 server instead of restarting.
+
+| URL | Status | Notes |
+|-----|--------|-------|
+| `GET /student/dashboard` | **307 → 200** | Redirects to `/student/login` (200) via middleware — expected behavior without session cookie |
+| `GET /` | 200 | Marketing home OK |
+| `GET /student/login` | 200 | Login page OK |
+
+No 5xx, no hangs, middleware functioning. Baseline runtime: healthy.
+
+### Deltas vs Wave 11 — Summary
+
+| Check | Wave 11 | Wave 12 | Delta |
+|-------|---------|---------|-------|
+| Build | PASS (61 routes) | PASS (84 routes) | +23 routes, still passing |
+| Lint errors | 39 | 74 | **+35** (recruitment + new hook rules) |
+| Lint warnings | 53 | 56 | +3 |
+| npm vulnerabilities | 10 (7 mod, 3 high) | 19 (14 mod, 5 high) | +9 |
+| Dashboard HTTP | 200 (no auth) | 307→200 (login redirect) | Middleware now enforces auth — expected since recruitment auth changes |
+| Build warnings | middleware deprecation | middleware deprecation + workspace-root | +1 (workspace-root is non-blocking lockfile nit) |
+
+### Concerns for the sprint
+
+1. **Lint debt is real but bounded.** +35 errors since Wave 11. Sprint scope (world-building, content pipeline migrations) shouldn't touch these files much — QA-sprint pass at sprint end should confirm error count doesn't climb further.
+2. **`react-hooks/set-state-in-effect` and `react-hooks/immutability` are newly active.** Whatever ESLint/plugin update activated these will flag any new React work the build agent does. Build agent should be aware.
+3. **npm vulnerability count nearly doubled.** Not blocking for dev, but flag for any production-deploy gate.
+4. **Two lockfiles in tree** (root + `web/`). Cosmetic build warning, but worth confirming the right one is the source of truth before Phase 2 dependency churn.
+
+### Verdict
+
+**BASELINE LOCKED.** Build passes, dev server healthy, lint at 74/56. Build agent: proceed with sprint A/B deliverables. QA-sprint wave will re-measure on completion.
 
 ---
 
