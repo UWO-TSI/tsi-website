@@ -1,7 +1,97 @@
 # QA Report
 
 > Owner: QA agent. All agents check this for bugs in their area.
-> Last updated: 2026-05-25
+> Last updated: 2026-05-25 (Wave 13)
+
+---
+
+## Wave 13 — 2026-05-25 B1+B2 Verification
+
+Verification of `1ce7281` (sprint B1: content pipeline migration 014) and `bdd301e` (sprint B2: content loader hooks + palette wiring), with reviewer follow-up at `dbc571f`. Diff against Wave 12 baseline (`507bcb1`).
+
+### Environment
+
+- Branch: `main`
+- HEAD: `dbc571f` ([review] mark B2 done + flag palette-aware TOD as follow-up)
+- Files touched vs Wave 12: `web/supabase/migrations/014_content_pipeline.sql` (new, 193 lines), `web/lib/game/contentLoader.ts` (new, 179), `web/lib/game/contentTypes.ts` (new, 63), `web/data/content-defaults.ts` (new, 136), `web/components/game/GameWorld.tsx` (palette wiring), `web/app/api/shop/route.ts` (shop_items union), `web/package.json` (+`swr ^2.4.1`), `web/package-lock.json`.
+
+### Verdict: **PASS**
+
+No regressions. Migration syntax + RLS structure conforms to spec. Code paths exist and are wired. Runtime smoke green with and without `.env.local`.
+
+### Build
+
+- `cd web && npm run build` → `✓ Compiled successfully in 23.7s`
+- Static pages: `72/72`. Routes (counting `├`/`└` lines in route table): **84** — exact match with Wave 12.
+- Warnings: same two as Wave 12 (workspace-root lockfile inference, `middleware` convention deprecation). No new build warnings.
+
+### Types
+
+- `npx tsc --noEmit` → exit 0, no output. Clean.
+
+### Lint
+
+- `npm run lint` → **130 problems (74 errors, 56 warnings)** — exact match to Wave 12 floor.
+- Rule-frequency table unchanged from Wave 12 (44 `no-explicit-any`, 38 `no-unused-vars`, 11 `set-state-in-effect`, 10 `immutability`, 8 `no-img-element`, etc.).
+- No new lint errors introduced by B1/B2.
+
+### Migration verification (`014_content_pipeline.sql`)
+
+- 4 tables created: ✅ `npc_personas`, ✅ `shop_items`, ✅ `seasonal_palettes`, ✅ `content_drafts`. Columns + types + CHECK constraints match spec.
+- RLS enabled on all 4: ✅ (one `ENABLE ROW LEVEL SECURITY` per table).
+- SELECT policy count: **8** — 4 active-row/author-scoped + 4 T1/T2-all (matches checklist requirement). `content_drafts` active-equivalent SELECT is author-scoped (per spec) instead of `active = TRUE`.
+- All `auth.uid()` and `auth.role()` calls wrapped in `(select ...)`: ✅ verified line-by-line.
+- Partial unique index `idx_seasonal_palettes_single_active ON (active) WHERE active = TRUE`: ✅ present (lines 51-53).
+- Seeds: ✅ 2 NPCs (`mayor`, `shopkeeper`), ✅ 3 shop items (`tsi-hoodie`, `glitch-aura`, `founder-badge`), ✅ 2 palettes (`default` active, `halloween` inactive). All use `ON CONFLICT (slug) DO NOTHING`.
+- Not applied to any DB (syntax-only inspection per directive).
+
+### Code path verification
+
+- `web/lib/game/contentLoader.ts` exports `useNPCPersonas`, `useShopItems`, `useActivePalette`: ✅
+- `web/data/content-defaults.ts` defaults cross-check vs migration seeds:
+  - NPC slugs `mayor` / `shopkeeper` ✅; display names `Mayor Eliza` / `Toren` ✅; persona prompts + canned dialogue match exactly.
+  - Shop slugs `tsi-hoodie` / `glitch-aura` / `founder-badge` ✅; categories, prices (1500/800/5000), rarity, stock all match.
+  - Palette hex codes match exactly across all 7 keys for both `default` and `halloween`.
+- `web/lib/game/contentTypes.ts` types align with migration columns: `NPCPersona.canned_dialogue: string[]` ✅; `SeasonalPalette.palette: PaletteColors` (7-key object) ✅; CHECK-constrained enums (`SpawnZone`, `ShopCategory`, `Rarity`) match.
+- `swr ^2.4.1` in `web/package.json` dependencies: ✅ line 39.
+- `GameWorld.tsx` imports + uses `useActivePalette`: ✅ line 12 import, line 565 hook call, lines 573-574 reference `activePalette.palette.sky` and `activePalette.palette.fog` with fallbacks to existing `P.skyBottom` / `P.fog`. Note: only sky + fog are wired this sprint; reviewer (`dbc571f`) explicitly flagged palette-aware TOD blending as a follow-up — grass/water/buildings not yet driven by palette, which matches the sprint scope.
+
+### Runtime smoke
+
+Port 3000 was free (different from Wave 12 — PID 793 process is no longer running). Spawned dev server on `:3050` via `npm run dev -- -p 3050`.
+
+| URL | Code | Notes |
+|-----|------|-------|
+| `GET /` | 200 | Marketing home OK |
+| `GET /student/dashboard` | **307** | Redirects to login (middleware auth gate) — expected |
+| `GET /student/dashboard/shop` | **307** | Redirects to login — expected |
+| `GET /api/shop` | **401** | `{"error":"Unauthorized"}` — auth-gated, expected without session cookie |
+
+Could not inspect authenticated `/api/shop` response body (no test session). The shop route source (`web/app/api/shop/route.ts` lines 27-43) confirms `shop_items` is queried in parallel with `marketplace_items` + `avatar_items`, mapped through `SHOP_ITEM_CATEGORY_MAP`, and concatenated into the products array (lines 72-100). Path exists.
+
+**Not visually tested** (no browser tool invoked this wave).
+
+### Fallback path (`.env.local` removed)
+
+- Renamed `web/.env.local` → `web/.env.local.bak`, restarted dev server.
+- `GET /student/dashboard` → **200** (middleware bypass when env missing — matches `CLAUDE.md` "Middleware gracefully handles missing Supabase env vars").
+- `GET /student/dashboard/shop` → **200**
+- `GET /api/shop` → **200** with body `{"products":[]}` (the route's `try/createClient/catch` returns empty array early when client can't be built).
+- Restored `.env.local`. Re-smoked: 307/307/401 codes return.
+- Content loader SWR fallback path (defaults from `content-defaults.ts`) is exercised indirectly here. Confirmed by code review: `hasSupabaseEnv()` returns false when env vars are missing, hooks short-circuit to bundled defaults before any network call.
+
+### Regression check vs Wave 12
+
+- Lint count identical (74/56). No new errors.
+- Build route count identical (84).
+- No new console.error or runtime warnings in dev server stdout during smoke tests. Pre-existing warnings only: middleware deprecation, workspace lockfile inference, `@next/font` legacy install, `baseline-browser-mapping` data freshness — all carried from Wave 12.
+- No portal-scope files were touched outside the documented commits.
+
+### Notes for downstream
+
+- Palette wiring only reads `sky` and `fog` in `GameWorld.tsx`. `grass`, `water`, `accent`, `building_primary`, `building_accent` are loaded but unused. Tracked: B2 follow-up "palette-aware TOD" per `dbc571f` reviewer commit. Not a Wave 13 failure.
+- `/api/shop` legacy unioning (3 tables in parallel) means duplicate items will surface if a shop_items row and a marketplace_items row carry overlapping concepts during the migration window. Not in scope; flagging for downstream.
+- B3 (content draft + preview URL system) and A1 (terrain undulation) are unblocked from a QA perspective.
 
 ---
 

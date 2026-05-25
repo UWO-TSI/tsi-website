@@ -120,6 +120,16 @@ No DROP statements. No code touched. Branch ready for review.
 - Dev server smoke: `/student/dashboard` returns 307→200 (login redirect via middleware — expected without session); `/` and `/student/login` 200. Pre-existing :3000 dev process belonged to user, not QA.
 - Heads-up to build: new hook rules will fire on any added React effects; re-baseline planned at sprint end.
 
+### 2026-05-25 — Wave 13: B1+B2 verification — **PASS**
+
+- HEAD `dbc571f`. Verified deltas from `1ce7281` (migration 014) and `bdd301e` (content loader + palette wiring).
+- Build: 84 routes, 72 static, compiled clean. `tsc --noEmit` exit 0.
+- Lint: **130 problems (74/56)** — exact Wave 12 match, zero regressions.
+- Migration 014: 4 tables, RLS on all 4, 8 SELECT policies (4 active + 4 T1/T2-all), `(select auth.…)` wrapping throughout, partial unique index for single-active palette, seeds (2 NPCs / 3 shop items / 2 palettes) match `content-defaults.ts` exactly.
+- Hooks exist (`useNPCPersonas`/`useShopItems`/`useActivePalette`); `swr ^2.4.1` in package.json; GameWorld imports + uses `activePalette.palette.sky`/`.fog` (other palette keys still unused → reviewer-flagged follow-up).
+- Runtime smoke on `:3050`: `/student/dashboard` 307, `/student/dashboard/shop` 307, `/api/shop` 401. With `.env.local` renamed: 200/200/200 with `{"products":[]}` — fallback path works. Restored env. No new runtime warnings.
+- B3 and A1 unblocked from QA side. Full report: `specs/qa.md` Wave 13.
+
 ---
 
 ## reviewer
