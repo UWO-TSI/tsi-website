@@ -7,6 +7,7 @@ import * as THREE from "three";
 import PlayerAvatar from "./PlayerAvatar";
 import Building from "./Building";
 import Path from "./Path";
+import River, { sampleRiverPoint, findRiverTForX } from "./River";
 import { getTerrainHeight, valueNoise, BUILDING_FOOTPRINTS } from "./terrain";
 import { NatureTree, NatureBush, NatureFlowerCluster, NatureFence, NatureMushroom, NatureStump } from "./NatureModels";
 import { useUser } from "@/components/portal/UserContext";
@@ -251,104 +252,50 @@ function Terrain() {
   );
 }
 
-// ─── River + Bridge (v2 spec Section 5 — animated ripples + sparkles) ─
-function River() {
-  const waterRef = useRef<THREE.Mesh>(null);
-  const sparkleRef = useRef<THREE.Points>(null);
-
-  const waterGeo = useMemo(() => {
-    const geo = new THREE.PlaneGeometry(80, 3, 160, 6);
-    geo.rotateX(-Math.PI / 2);
-    return geo;
+// ─── Bridge (v2 spec Section 5.2) ────────────────────────────────
+// Bridge sits where the river spline crosses the N-S path (x=0). We sample
+// the spline once at module-load and orient the bridge along the river's
+// tangent at that point. The bridge group spans the river width (~3.8) +
+// some overhang. Sprint A3.
+function Bridge() {
+  const { position, rotation } = useMemo(() => {
+    const t = findRiverTForX(0);
+    const sample = sampleRiverPoint(t);
+    // Bridge planks should run perpendicular to the river (i.e. parallel to
+    // the path's N-S direction). The bridge's own +Z axis aligns with the
+    // path. Rotate around Y so the bridge's local Z = river's normal.
+    // Atan2 of the river tangent gives the river's heading; the bridge's
+    // heading is perpendicular to that.
+    const heading = Math.atan2(sample.tangent.x, sample.tangent.z);
+    return {
+      position: [sample.position.x, 0.06, sample.position.z] as [number, number, number],
+      rotation: [0, heading + Math.PI / 2, 0] as [number, number, number],
+    };
   }, []);
-
-  const { sparkleGeo, sparklePhases } = useMemo(() => {
-    const count = 50;
-    const rng = seededRandom(42);
-    const positions = new Float32Array(count * 3);
-    const phases = new Float32Array(count);
-    for (let i = 0; i < count; i++) {
-      positions[i * 3] = (rng() - 0.5) * 70;
-      positions[i * 3 + 1] = 0.08;
-      positions[i * 3 + 2] = 3 + (rng() - 0.5) * 2.5;
-      phases[i] = rng() * Math.PI * 2;
-    }
-    const geo = new THREE.BufferGeometry();
-    geo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-    return { sparkleGeo: geo, sparklePhases: phases };
-  }, []);
-
-  useFrame((state) => {
-    const t = state.clock.elapsedTime;
-
-    // Sine vertex displacement for water ripples
-    if (waterRef.current) {
-      const pos = waterRef.current.geometry.attributes.position;
-      for (let i = 0; i < pos.count; i++) {
-        const x = pos.getX(i);
-        const z = pos.getZ(i);
-        const y = Math.sin(x * 0.3 + t * 0.5) * 0.06
-                + Math.sin(z * 0.8 + t * 0.7) * 0.04
-                + Math.sin(x * 0.5 - t * 0.3) * 0.03;
-        pos.setY(i, y);
-      }
-      pos.needsUpdate = true;
-    }
-
-    // Sparkle twinkle — hide/show by moving below water
-    if (sparkleRef.current) {
-      const sp = sparkleRef.current.geometry.attributes.position;
-      for (let i = 0; i < sp.count; i++) {
-        const visible = Math.sin(t * 1.5 + sparklePhases[i]) > 0.5;
-        sp.setY(i, visible ? 0.08 : -1);
-      }
-      sp.needsUpdate = true;
-    }
-  });
 
   return (
-    <group>
-      {/* Riverbed */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.15, 3]}>
-        <planeGeometry args={[80, 4]} />
-        <meshStandardMaterial color={P.riverbed} roughness={0.95} metalness={0} polygonOffset polygonOffsetFactor={-1} polygonOffsetUnits={-1} />
-      </mesh>
-      {/* River banks */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.05, 3]}>
-        <planeGeometry args={[80, 5]} />
-        <meshStandardMaterial color={P.riverEdge} roughness={0.7} metalness={0} transparent opacity={0.6} polygonOffset polygonOffsetFactor={-2} polygonOffsetUnits={-2} />
-      </mesh>
-      {/* Animated water surface */}
-      <mesh ref={waterRef} geometry={waterGeo} position={[0, -0.02, 3]}>
-        <meshStandardMaterial color={P.riverSurface} roughness={0.15} metalness={0.15} transparent opacity={0.72} />
-      </mesh>
-      {/* Water sparkles */}
-      <points ref={sparkleRef} geometry={sparkleGeo}>
-        <pointsMaterial color="#FFFFFF" size={0.12} transparent opacity={0.85} sizeAttenuation depthWrite={false} />
-      </points>
-      {/* Bridge (v2 spec Section 5.2) */}
-      <group position={[0, 0.05, 3]}>
-        {[-1.2, -0.8, -0.4, 0, 0.4, 0.8, 1.2].map((x, i) => (
-          <mesh key={`plank-${i}`} position={[x, 0.02, 0]} castShadow>
-            <boxGeometry args={[0.35, 0.06, 3.2]} />
-            <meshStandardMaterial color={P.bridgeWood} roughness={0.85} metalness={0} />
-          </mesh>
-        ))}
-        {[-1, 1].map((side) => (
-          <group key={`rail-${side}`}>
-            {[-1.3, 0, 1.3].map((x, i) => (
-              <mesh key={i} position={[x, 0.5, side * 1.5]} castShadow>
-                <cylinderGeometry args={[0.04, 0.04, 1, 6]} />
-                <meshStandardMaterial color={P.trunk} roughness={0.9} metalness={0} />
-              </mesh>
-            ))}
-            <mesh position={[0, 0.8, side * 1.5]} rotation={[0, 0, Math.PI / 2]}>
-              <cylinderGeometry args={[0.025, 0.025, 3, 8]} />
-              <meshStandardMaterial color={P.bridgeRope} roughness={0.95} metalness={0} />
+    <group position={position} rotation={rotation}>
+      {/* Planks run along the bridge's local Z, lined up across the river. */}
+      {[-1.4, -1.0, -0.6, -0.2, 0.2, 0.6, 1.0, 1.4].map((x, i) => (
+        <mesh key={`plank-${i}`} position={[x, 0.02, 0]} castShadow>
+          <boxGeometry args={[0.35, 0.06, 4.4]} />
+          <meshStandardMaterial color={P.bridgeWood} roughness={0.85} metalness={0} />
+        </mesh>
+      ))}
+      {[-1, 1].map((side) => (
+        <group key={`rail-${side}`}>
+          {[-1.5, 0, 1.5].map((x, i) => (
+            <mesh key={i} position={[x, 0.5, side * 2.0]} castShadow>
+              <cylinderGeometry args={[0.04, 0.04, 1, 6]} />
+              <meshStandardMaterial color={P.trunk} roughness={0.9} metalness={0} />
             </mesh>
-          </group>
-        ))}
-      </group>
+          ))}
+          <mesh position={[0, 0.8, side * 2.0]} rotation={[0, 0, Math.PI / 2]}>
+            <cylinderGeometry args={[0.025, 0.025, 3.2, 8]} />
+            <meshStandardMaterial color={P.bridgeRope} roughness={0.95} metalness={0} />
+          </mesh>
+        </group>
+      ))}
     </group>
   );
 }
@@ -555,6 +502,7 @@ function Scene({ playerName, playerLevel, fogColor }: { playerName: string; play
 
       <Terrain />
       <River />
+      <Bridge />
 
       {TREE_XZ.map(([x, z], i) => <NatureTree key={i} position={[x, getTerrainHeight(x, z), z]} seed={i} />)}
       <Bushes />

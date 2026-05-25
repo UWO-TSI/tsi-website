@@ -1,0 +1,338 @@
+"use client";
+
+/**
+ * Curved river mesh with animated procedural flow.
+ *
+ * Sprint A3 (2026-05-21). Replaces the previous straight 80×3 plane water
+ * surface in GameWorld.tsx with a Catmull-Rom spline ribbon (same approach
+ * as Path.tsx) plus an onBeforeCompile shader patch that scrolls procedural
+ * waves along the ribbon's length. Spec:
+ * sprint-2026-05-game-look-feel.md §A3 + ux-game-world-v2.md §5.
+ *
+ * Geometry: 96 length-segments × 5 cross-rows of vertices laid out along the
+ * spline. UVs are baked into the position attribute as a custom `riverUv`
+ * vec2 — u is the cross-axis 0→1, v is the cumulative arc length so flow
+ * tiles naturally regardless of bend density.
+ *
+ * Material: MeshBasicMaterial patched via onBeforeCompile. The fragment
+ * shader generates two scrolling sine waves whose product becomes a foam
+ * highlight, blended into a deep→shallow color ramp. A `time` uniform is
+ * ticked from useFrame. Transparency = 0.78, depthWrite false so terrain
+ * shows through subtly.
+ *
+ * Exports `RIVER_CONTROL_POINTS` + `sampleRiverPoint(t)` so the bridge in
+ * GameWorld can sit on the spline at the right tangent / height.
+ */
+
+import { useMemo, useRef } from "react";
+import { useFrame } from "@react-three/fiber";
+import * as THREE from "three";
+
+/** Control points for the river spline. East-west run with gentle bends. */
+export const RIVER_CONTROL_POINTS: [number, number][] = [
+  [-25, 3], [-12, 5], [-3, 1], [5, 4], [16, 2], [25, 5],
+];
+
+/** Default river width — slightly wider than paths (2.8) to feel substantial. */
+const RIVER_WIDTH = 3.8;
+const ROWS = 5; // 5 rows: 2 banks + 3 inner — denser cross-section than Path
+const SEGMENTS = 96;
+
+/** Y offset of the water surface relative to the terrain baseline (y=0). */
+const WATER_Y = -0.04;
+
+const _curve = new THREE.CatmullRomCurve3(
+  RIVER_CONTROL_POINTS.map(([x, z]) => new THREE.Vector3(x, 0, z)),
+  false,
+  "catmullrom",
+  0.5,
+);
+
+/**
+ * Sample the river spline at parameter t∈[0,1]. Returns world-space center
+ * point and unit tangent (XZ). Bridge in GameWorld.tsx uses this to align.
+ */
+export function sampleRiverPoint(t: number): { position: THREE.Vector3; tangent: THREE.Vector3 } {
+  const position = _curve.getPoint(t).clone();
+  position.y = WATER_Y;
+  const tangent = _curve.getTangent(t).clone();
+  tangent.y = 0;
+  tangent.normalize();
+  return { position, tangent };
+}
+
+/**
+ * Find t∈[0,1] where the spline's X coordinate is closest to targetX.
+ * Brute force: 200 samples is plenty for our 6-point spline.
+ */
+export function findRiverTForX(targetX: number): number {
+  let bestT = 0;
+  let bestDist = Infinity;
+  for (let i = 0; i <= 200; i++) {
+    const t = i / 200;
+    const p = _curve.getPoint(t);
+    const d = Math.abs(p.x - targetX);
+    if (d < bestDist) {
+      bestDist = d;
+      bestT = t;
+    }
+  }
+  return bestT;
+}
+
+interface RiverProps {
+  /** Total ribbon width (cross-axis). Default 3.8 — wider than dirt paths. */
+  width?: number;
+  /** Number of length samples along the spline. More = smoother bends. */
+  segments?: number;
+  /** Deep water color (RGB). Used in the wave gradient. */
+  deepColor?: string;
+  /** Shallow / highlight water color (RGB). Blended on wave crests. */
+  shallowColor?: string;
+  /** Overall surface alpha. */
+  opacity?: number;
+}
+
+const DEFAULT_DEEP = "#3A6EA5";    // deeper blue, matches existing P.riverDeep tone
+const DEFAULT_SHALLOW = "#A8D8E8"; // light blue foam highlight
+
+export default function River({
+  width = RIVER_WIDTH,
+  segments = SEGMENTS,
+  deepColor = DEFAULT_DEEP,
+  shallowColor = DEFAULT_SHALLOW,
+  opacity = 0.78,
+}: RiverProps = {}) {
+  // Build geometry: ribbon along spline. Each vertex carries a riverUv (u,v)
+  // attribute: u = 0..1 across width, v = cumulative arc length / total length.
+  const geometry = useMemo(() => {
+    const points3 = RIVER_CONTROL_POINTS.map(([x, z]) => new THREE.Vector3(x, 0, z));
+    const curve = new THREE.CatmullRomCurve3(points3, false, "catmullrom", 0.5);
+
+    const sampleCount = segments + 1;
+    const positions = new Float32Array(sampleCount * ROWS * 3);
+    const uvs = new Float32Array(sampleCount * ROWS * 2);
+    const indices: number[] = [];
+
+    // First pass: compute cumulative arc length so v scales by distance.
+    const centerPoints: THREE.Vector3[] = [];
+    let totalLength = 0;
+    const cumLengths: number[] = [0];
+    for (let i = 0; i < sampleCount; i++) {
+      const t = i / segments;
+      const p = curve.getPoint(t);
+      centerPoints.push(p);
+      if (i > 0) {
+        totalLength += p.distanceTo(centerPoints[i - 1]);
+        cumLengths.push(totalLength);
+      }
+    }
+
+    for (let i = 0; i < sampleCount; i++) {
+      const t = i / segments;
+      const point = centerPoints[i];
+      const tangent = curve.getTangent(t);
+      // Perpendicular in XZ: rotate tangent 90° around Y.
+      const px = -tangent.z;
+      const pz = tangent.x;
+      const plen = Math.hypot(px, pz) || 1;
+      const nx = px / plen;
+      const nz = pz / plen;
+
+      const v = cumLengths[i] / Math.max(totalLength, 0.0001);
+
+      for (let r = 0; r < ROWS; r++) {
+        const u = r / (ROWS - 1); // 0, 0.25, 0.5, 0.75, 1
+        const offset = (u - 0.5) * width;
+        const vx = point.x + nx * offset;
+        const vz = point.z + nz * offset;
+
+        const idx = i * ROWS + r;
+        positions[idx * 3] = vx;
+        positions[idx * 3 + 1] = WATER_Y;
+        positions[idx * 3 + 2] = vz;
+
+        uvs[idx * 2] = u;
+        uvs[idx * 2 + 1] = v;
+      }
+
+      if (i > 0) {
+        for (let r = 0; r < ROWS - 1; r++) {
+          const a0 = (i - 1) * ROWS + r;
+          const a1 = (i - 1) * ROWS + r + 1;
+          const b0 = i * ROWS + r;
+          const b1 = i * ROWS + r + 1;
+          indices.push(a0, b0, b1);
+          indices.push(a0, b1, a1);
+        }
+      }
+    }
+
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+    // Custom attribute name to avoid clobbering Three.js's built-in uv pipeline.
+    geo.setAttribute("riverUv", new THREE.BufferAttribute(uvs, 2));
+    geo.setIndex(indices);
+    geo.computeVertexNormals();
+    return geo;
+  }, [width, segments]);
+
+  // Riverbed geometry — same spline, no animation, sits a hair under the water.
+  // Uses the deepColor's darker companion (we just darken in-shader by reusing
+  // a fixed muted brown via vertex color isn't worth the complexity; one mesh
+  // with sandy brown is enough). Slightly wider than the water so the bank
+  // edge is visible from above.
+  const riverbedGeometry = useMemo(() => {
+    const points3 = RIVER_CONTROL_POINTS.map(([x, z]) => new THREE.Vector3(x, 0, z));
+    const curve = new THREE.CatmullRomCurve3(points3, false, "catmullrom", 0.5);
+    const sampleCount = segments + 1;
+    const positions = new Float32Array(sampleCount * 3 * 3); // 3 rows: left bank, center, right bank
+    const indices: number[] = [];
+    const bedWidth = width * 1.25;
+
+    for (let i = 0; i < sampleCount; i++) {
+      const t = i / segments;
+      const point = curve.getPoint(t);
+      const tangent = curve.getTangent(t);
+      const px = -tangent.z;
+      const pz = tangent.x;
+      const plen = Math.hypot(px, pz) || 1;
+      const nx = px / plen;
+      const nz = pz / plen;
+
+      for (let r = 0; r < 3; r++) {
+        const u = r / 2;
+        const offset = (u - 0.5) * bedWidth;
+        const idx = i * 3 + r;
+        positions[idx * 3] = point.x + nx * offset;
+        positions[idx * 3 + 1] = WATER_Y - 0.08;
+        positions[idx * 3 + 2] = point.z + nz * offset;
+      }
+
+      if (i > 0) {
+        for (let r = 0; r < 2; r++) {
+          const a0 = (i - 1) * 3 + r;
+          const a1 = (i - 1) * 3 + r + 1;
+          const b0 = i * 3 + r;
+          const b1 = i * 3 + r + 1;
+          indices.push(a0, b0, b1);
+          indices.push(a0, b1, a1);
+        }
+      }
+    }
+
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+    geo.setIndex(indices);
+    geo.computeVertexNormals();
+    return geo;
+  }, [width, segments]);
+
+  // Material: MeshBasicMaterial + onBeforeCompile shader patch. Uniforms:
+  //   time     — incremented each frame
+  //   deep     — deep water color
+  //   shallow  — wave crest highlight color
+  // The patched fragment shader generates two scrolling sine waves, multiplies
+  // them into a sharp foam highlight (pow ^4), and blends into a deep→shallow
+  // gradient. Output alpha set to opacity uniform.
+  const material = useMemo(() => {
+    const mat = new THREE.MeshBasicMaterial({
+      color: 0xffffff,
+      transparent: true,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+      polygonOffset: true,
+      polygonOffsetFactor: -1,
+      polygonOffsetUnits: -1,
+    });
+
+    const uniforms = {
+      time: { value: 0 },
+      deep: { value: new THREE.Color(deepColor) },
+      shallow: { value: new THREE.Color(shallowColor) },
+      surfaceAlpha: { value: opacity },
+    };
+
+    mat.onBeforeCompile = (shader) => {
+      shader.uniforms.time = uniforms.time;
+      shader.uniforms.deep = uniforms.deep;
+      shader.uniforms.shallow = uniforms.shallow;
+      shader.uniforms.surfaceAlpha = uniforms.surfaceAlpha;
+
+      shader.vertexShader = shader.vertexShader
+        .replace(
+          "void main() {",
+          "attribute vec2 riverUv;\nvarying vec2 vRiverUv;\nvoid main() {\n  vRiverUv = riverUv;",
+        );
+
+      shader.fragmentShader = shader.fragmentShader
+        .replace(
+          "void main() {",
+          [
+            "uniform float time;",
+            "uniform vec3 deep;",
+            "uniform vec3 shallow;",
+            "uniform float surfaceAlpha;",
+            "varying vec2 vRiverUv;",
+            "void main() {",
+          ].join("\n"),
+        )
+        .replace(
+          "#include <color_fragment>",
+          [
+            "#include <color_fragment>",
+            // Tile density: 8 across width, ~28 along length. v already scales
+            // with arc length so flow density is consistent through bends.
+            "vec2 flowUv = vRiverUv * vec2(8.0, 28.0);",
+            // Two waves drifting in the flow direction (v axis, "downstream").
+            "flowUv.y += time * 0.08;",
+            "float wave1 = sin(flowUv.x * 3.0 + flowUv.y * 2.0) * 0.5 + 0.5;",
+            "float wave2 = sin(flowUv.x * 5.0 - flowUv.y * 3.5 + 1.0) * 0.5 + 0.5;",
+            "float highlight = pow(wave1 * wave2, 4.0);",
+            // Edge falloff so bank rows fade into the water instead of a hard line.
+            "float edge = smoothstep(0.0, 0.18, vRiverUv.x) * smoothstep(0.0, 0.18, 1.0 - vRiverUv.x);",
+            // Color mix: deep base + wave-modulated shallow tone + crest highlight.
+            "vec3 water = mix(deep, shallow, wave1 * 0.35);",
+            "water += highlight * 0.35;",
+            "diffuseColor.rgb = water;",
+            "diffuseColor.a = surfaceAlpha * edge;",
+          ].join("\n"),
+        );
+    };
+
+    // Stash uniforms on the material so the React component can tick `time`
+    // without needing the shader handle (which is created lazily on compile).
+    (mat as THREE.MeshBasicMaterial & { userData: { uniforms: typeof uniforms } }).userData.uniforms = uniforms;
+
+    return mat;
+  }, [deepColor, shallowColor, opacity]);
+
+  const materialRef = useRef(material);
+
+  useFrame((_, delta) => {
+    const mat = materialRef.current as THREE.MeshBasicMaterial & {
+      userData: { uniforms: { time: { value: number } } };
+    };
+    if (mat.userData?.uniforms?.time) {
+      mat.userData.uniforms.time.value += delta;
+    }
+  });
+
+  return (
+    <group>
+      {/* Riverbed — sandy brown plane following the spline, slightly wider. */}
+      <mesh geometry={riverbedGeometry} receiveShadow>
+        <meshStandardMaterial
+          color="#A08B65"
+          roughness={0.95}
+          metalness={0}
+          polygonOffset
+          polygonOffsetFactor={-2}
+          polygonOffsetUnits={-2}
+        />
+      </mesh>
+      {/* Animated water surface — patched MeshBasicMaterial. */}
+      <mesh geometry={geometry} material={material} />
+    </group>
+  );
+}

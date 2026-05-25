@@ -27,7 +27,7 @@
 |---|-------------|-------|--------|
 | A1 | Terrain undulation (rolling hills, building footprints flat) | build | ✅ done — value-noise reused, amplitude 3.5→0.6, building flatten zones with smoothstep blend, path corridors stay flat, player y-damped 0.05s |
 | A2 | Path softening (alpha-blended edges, curved splines) | build | ✅ done — new `Path.tsx` (Catmull-Rom, 48 segs, vec4 vertex-alpha via onBeforeCompile patch on MeshBasicMaterial), 3 curved paths replacing 6 straight quads |
-| A3 | River curve + flow animation + fake sky reflection | build | pending |
+| A3 | River curve + flow animation + fake sky reflection | build | ✅ done — new `River.tsx` (Catmull-Rom 96 segs × 5 rows, procedural water shader with 2 sin-wave flow + foam, bridge auto-aligned to spline); skipped fresnel reflection + terrain valley dip (follow-ups) |
 | A4 | Building silhouette variety (HQ vs Shop vs Oracle Temple) | build | pending |
 | A5 | Ambient props (signposts, stepping stones, fences, lanterns) | build | pending |
 | A6 | Ambient life particles (butterflies/leaves/birds/fireflies) | build | pending |
