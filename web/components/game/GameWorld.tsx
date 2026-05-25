@@ -6,7 +6,7 @@ import { CameraControls, Cloud, Clouds } from "@react-three/drei";
 import * as THREE from "three";
 import PlayerAvatar from "./PlayerAvatar";
 import Building from "./Building";
-import { getTerrainHeight, valueNoise } from "./terrain";
+import { getTerrainHeight, valueNoise, BUILDING_FOOTPRINTS } from "./terrain";
 import { NatureTree, NatureBush, NatureFlowerCluster, NatureFence, NatureMushroom, NatureStump } from "./NatureModels";
 import { useUser } from "@/components/portal/UserContext";
 import { useActivePalette } from "@/lib/game/contentLoader";
@@ -168,9 +168,10 @@ function Terrain() {
       const h = getTerrainHeight(x, z);
       pos.setY(i, h);
 
-      // Vertex color: blend greens by height + noise variation
+      // Vertex color: blend greens by height + noise variation.
+      // A1 retune: amplitude is now ~0.6, so divide by 0.6 not 3.
       const cn = valueNoise(x * 0.15, z * 0.15);
-      const hf = THREE.MathUtils.clamp(h / 3, 0, 1);
+      const hf = THREE.MathUtils.clamp(h / 0.6, 0, 1);
 
       if (dist > 38) {
         tmp.copy(cS);
@@ -203,6 +204,29 @@ function Terrain() {
       <mesh geometry={geometry} receiveShadow>
         <meshStandardMaterial vertexColors roughness={0.92} metalness={0} side={THREE.DoubleSide} />
       </mesh>
+      {/* Building slab patches — flat grass discs slightly above terrain so
+          buildings sit flush with no visible seam. Sprint A1. */}
+      {BUILDING_FOOTPRINTS.map((b, i) => {
+        const y = getTerrainHeight(b.x, b.z);
+        return (
+          <mesh
+            key={`slab-${i}`}
+            rotation={[-Math.PI / 2, 0, 0]}
+            position={[b.x, y + 0.01, b.z]}
+            receiveShadow
+          >
+            <circleGeometry args={[b.radius, 24]} />
+            <meshStandardMaterial
+              color={P.grassPrimary}
+              roughness={0.92}
+              metalness={0}
+              polygonOffset
+              polygonOffsetFactor={-1}
+              polygonOffsetUnits={-1}
+            />
+          </mesh>
+        );
+      })}
       {/* Path borders */}
       {[
         [0, -6, 4.5, 34], // N-S path (spawn to before Oracle)

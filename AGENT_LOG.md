@@ -25,7 +25,7 @@
 
 | # | Deliverable | Owner | Status |
 |---|-------------|-------|--------|
-| A1 | Terrain undulation (rolling hills, building footprints flat) | build | pending |
+| A1 | Terrain undulation (rolling hills, building footprints flat) | build | ✅ done — value-noise reused, amplitude 3.5→0.6, building flatten zones with smoothstep blend, path corridors stay flat, player y-damped 0.05s |
 | A2 | Path softening (alpha-blended edges, curved splines) | build | pending |
 | A3 | River curve + flow animation + fake sky reflection | build | pending |
 | A4 | Building silhouette variety (HQ vs Shop vs Oracle Temple) | build | pending |

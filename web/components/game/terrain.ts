@@ -1,7 +1,14 @@
 /**
  * Terrain height generation for the AC-style game world.
- * Uses value noise with FBM for gentle rolling hills.
- * Spec: ux-game-world-v2.md Section 4.1
+ * Uses value noise with FBM for subtle rolling hills.
+ *
+ * Sprint A1 retune (2026-05-21): max y-displacement ~0.6 units per
+ * sprint-2026-05-game-look-feel.md §A1. Previous version peaked at
+ * ~3.5 (oracle hill) which felt mountainous, not cozy. Buildings now
+ * get an explicit flatten zone so they sit flush on slabs and don't
+ * tilt or float as noise rolls under them.
+ *
+ * Spec: ux-game-world-v2.md Section 4.1, sprint-2026-05-game-look-feel.md §A1
  */
 
 // ─── Value Noise ─────────────────────────────────────────────────
@@ -41,50 +48,102 @@ function fbm(x: number, y: number, octaves: number = 4): number {
 
 export const ISLAND_RADIUS = 40;
 
-// ─── Terrain Height ──────────────────────────────────────────────
+// Noise tuning — sprint A1 target: max ~0.6 displacement
+// fbm returns ~[0, 1]. NOISE_AMPLITUDE caps the height accordingly.
+const NOISE_FREQ = 0.06;
+const NOISE_AMPLITUDE = 0.6;
 
-/**
- * Returns the terrain Y-height at world position (x, z).
- * Used by GameWorld (terrain mesh, object placement) and PlayerAvatar (ground follow).
- */
-export function getTerrainHeight(x: number, z: number): number {
+// Building flatten zones. Each entry: [centerX, centerZ, radius].
+// Inside radius: terrain returns that building's "footprint height"
+// (the noise height sampled at the center). Smoothly blends back to
+// noise out to radius * 1.5. Keep in sync with BUILDINGS in GameWorld.tsx.
+export const BUILDING_FOOTPRINTS: Array<{ x: number; z: number; radius: number }> = [
+  { x: 0, z: -4, radius: 4.5 },   // HQ (size 6x5)
+  { x: -14, z: 8, radius: 3.2 },  // Shop (size 4x4)
+  { x: 0, z: 22, radius: 4.0 },   // Oracle Temple (size 5x5)
+  { x: 14, z: 10, radius: 2.8 },  // House (size 3.5x3.5)
+  { x: 10, z: 8, radius: 1.4 },   // Bounty board
+  { x: -10, z: -10, radius: 1.4 }, // Job board
+  { x: 10, z: -10, radius: 1.4 }, // Leaderboard
+];
+
+// Path corridors — keep paths flat (height = 0). Each entry: axis-aligned rect.
+// [axis, axisPos, halfWidth, otherMin, otherMax, falloff]
+// axis "z" = path runs along Z, so x is the cross-axis at axisPos.
+type PathCorridor = { axis: "x" | "z"; pos: number; halfWidth: number; from: number; to: number; falloff: number };
+const PATH_CORRIDORS: PathCorridor[] = [
+  { axis: "x", pos: 0, halfWidth: 1.75, from: -23, to: 17, falloff: 1.5 },   // N-S spine
+  { axis: "z", pos: 8, halfWidth: 1.75, from: -16, to: 16, falloff: 1.5 },   // E-W at z=8
+  { axis: "z", pos: -10, halfWidth: 1.75, from: -12, to: 12, falloff: 1.5 }, // E-W at z=-10
+];
+
+// ─── Internal: raw noise terrain (no flattening) ─────────────────
+
+function rawNoiseHeight(x: number, z: number): number {
   const dist = Math.sqrt(x * x + z * z);
   if (dist > ISLAND_RADIUS) return 0;
 
-  // Base rolling hills from FBM noise
-  let h = fbm(x * 0.06, z * 0.06, 4) * 2.2;
+  let h = fbm(x * NOISE_FREQ, z * NOISE_FREQ, 4) * NOISE_AMPLITUDE;
 
-  // Oracle hill: elevated area around z=22 (v2 spec: 3–4 units)
-  const oracleDist = Math.sqrt(x * x + (z - 22) * (z - 22));
-  const oracleInfluence = oracleDist < 12 ? 1 - oracleDist / 12 : 0;
-  if (oracleInfluence > 0) {
-    h += oracleInfluence * oracleInfluence * 3.5;
-  }
-
-  // River valley at z≈3: dip terrain
-  const riverProx = Math.abs(z - 3);
-  if (riverProx < 5) {
-    const t = 1 - riverProx / 5;
-    h *= 1 - t * 0.9;
-    h -= t * t * 0.3;
-  }
-
-  // Flatten along main N-S path (x≈0) — weakened near Oracle hill
-  const nsFlat = Math.max(0, 1 - Math.abs(x) / 3);
-  h *= 1 - nsFlat * 0.92 * (1 - oracleInfluence);
-
-  // Flatten along E-W path at z≈8 (Shop → Bounty)
-  const ew1 = Math.max(0, 1 - Math.abs(z - 8) / 2.5);
-  h *= 1 - ew1 * 0.85;
-
-  // Flatten along E-W path at z≈-10 (Jobs → Leaderboard)
-  const ew2 = Math.max(0, 1 - Math.abs(z + 10) / 2.5);
-  h *= 1 - ew2 * 0.85;
-
-  // Island edge falloff
+  // Island edge falloff to keep the perimeter at y=0
   if (dist > 32) {
     h *= Math.max(0, (ISLAND_RADIUS - dist) / 8);
   }
 
   return Math.max(h, 0);
+}
+
+// ─── Public: terrain sampling ────────────────────────────────────
+
+/**
+ * Returns the terrain Y-height at world position (x, z).
+ * Used by GameWorld (terrain mesh, object placement) and PlayerAvatar (ground follow).
+ *
+ * Buildings get flat footprints — see BUILDING_FOOTPRINTS. Paths get
+ * flattened to y=0 with a falloff so the dirt-path quads sit flush.
+ */
+export function getTerrainHeight(x: number, z: number): number {
+  // 1. Building footprint flattening — strongest claim
+  for (const b of BUILDING_FOOTPRINTS) {
+    const dx = x - b.x;
+    const dz = z - b.z;
+    const d = Math.sqrt(dx * dx + dz * dz);
+    if (d < b.radius) {
+      // Solid flat slab at the building's reference height
+      return rawNoiseHeight(b.x, b.z);
+    }
+    if (d < b.radius * 1.5) {
+      // Blend zone — smooth ramp from building height back to noise
+      const t = (d - b.radius) / (b.radius * 0.5);
+      const smooth = t * t * (3 - 2 * t); // smoothstep
+      const buildingH = rawNoiseHeight(b.x, b.z);
+      return buildingH + (rawNoiseHeight(x, z) - buildingH) * smooth;
+    }
+  }
+
+  // 2. Path corridor flattening
+  let pathInfluence = 0;
+  for (const p of PATH_CORRIDORS) {
+    const cross = p.axis === "x" ? x - p.pos : z - p.pos;
+    const along = p.axis === "x" ? z : x;
+    if (along < p.from || along > p.to) continue;
+    const absCross = Math.abs(cross);
+    if (absCross < p.halfWidth) {
+      pathInfluence = Math.max(pathInfluence, 1);
+    } else if (absCross < p.halfWidth + p.falloff) {
+      const t = 1 - (absCross - p.halfWidth) / p.falloff;
+      pathInfluence = Math.max(pathInfluence, t * t * (3 - 2 * t));
+    }
+  }
+
+  const noiseH = rawNoiseHeight(x, z);
+  return noiseH * (1 - pathInfluence);
+}
+
+/**
+ * Convenience alias matching A1 spec naming. Returns the same value as
+ * getTerrainHeight — exists so future code can use the spec-canonical name.
+ */
+export function sampleTerrainHeight(x: number, z: number): number {
+  return getTerrainHeight(x, z);
 }

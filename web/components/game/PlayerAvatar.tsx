@@ -25,6 +25,11 @@ import { getTerrainHeight } from "./terrain";
 const PLAYER_SPEED = 5;
 const BOUNDARY = 38;
 const ROTATION_LERP = 10;
+// Sprint A1: damp time for y-axis ground follow. Lower = snappier, higher
+// = more sluggish. 0.05s keeps the avatar responsive but smooths slope
+// transitions so there's no per-frame popping.
+const Y_DAMP_TIME = 0.05;
+const AVATAR_FOOT_OFFSET = 0;
 
 // Sprite sheet grid config — adjust when exact sheet layout is confirmed
 const SHEET_COLS = 3;
@@ -54,7 +59,13 @@ interface PlayerAvatarProps {
 export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Player", playerLevel = 1 }: PlayerAvatarProps) {
   const groupRef = useRef<THREE.Group>(null);
   const meshRef = useRef<THREE.Mesh>(null);
-  const positionRef = useRef(new THREE.Vector3(...spawnPosition));
+  // Initialize y on the terrain at spawn so the avatar doesn't visibly
+  // drop in from y=0 if the spawn point sits on a slope.
+  const positionRef = useRef(new THREE.Vector3(
+    spawnPosition[0],
+    getTerrainHeight(spawnPosition[0], spawnPosition[2]) + AVATAR_FOOT_OFFSET,
+    spawnPosition[2],
+  ));
   const targetRef = useRef<THREE.Vector3 | null>(null);
   const facingRef = useRef(0);
   const frameTimer = useRef(0);
@@ -158,14 +169,13 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
       }
     }
 
-    // Apply movement
+    // Apply XZ movement
     if (moving) {
       const step = PLAYER_SPEED * delta;
       pos.x += moveDir.x * step;
       pos.z += moveDir.z * step;
       pos.x = THREE.MathUtils.clamp(pos.x, -BOUNDARY, BOUNDARY);
       pos.z = THREE.MathUtils.clamp(pos.z, -BOUNDARY, BOUNDARY);
-      pos.y = getTerrainHeight(pos.x, pos.z);
 
       const targetAngle = Math.atan2(moveDir.x, moveDir.z);
       facingRef.current = THREE.MathUtils.lerp(
@@ -174,6 +184,12 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
         ROTATION_LERP * delta
       );
     }
+
+    // Ground follow — sample terrain every frame (even when idle so the
+    // avatar settles if terrain ever changes) and damp toward it. Damping
+    // keeps slope transitions smooth instead of snapping per step.
+    const targetY = getTerrainHeight(pos.x, pos.z) + AVATAR_FOOT_OFFSET;
+    pos.y = THREE.MathUtils.damp(pos.y, targetY, 1 / Y_DAMP_TIME, delta);
 
     // Determine direction for sprite sheet
     const angle = facingRef.current;
@@ -212,7 +228,10 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
     groupRef.current.position.copy(pos);
 
     if (moving !== isMoving) setIsMoving(moving);
-    if (moving) onMove(pos.clone());
+    // Notify camera/parent when moving, or when y is still settling toward
+    // the terrain (keeps camera in sync after stopping on a slope).
+    const ySettling = Math.abs(pos.y - targetY) > 0.005;
+    if (moving || ySettling) onMove(pos.clone());
   });
 
   return (
