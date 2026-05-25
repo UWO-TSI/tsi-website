@@ -1,7 +1,32 @@
 # STUDENT SYSTEM BIBLE
 
 > Comprehensive specification for the TSI Student Dashboard, Auth, and Gamification System.
-> Every decision documented here was confirmed in the Q&A session. This is the single source of truth.
+> Originally captured during the spec Q&A session. Updated 2026-05-21 to reflect the post-pivot vision.
+
+---
+
+## 🟡 CURRENT VISION DELTAS (updated 2026-05-21)
+
+This bible was written before the 2026-03-29 product pivot to a **2.5D MMO RPG game world**. Most feature specs below (Bounty mechanics, Calendar, Kanban, Marketplace, Job Board, Directory) are still authoritative. The following sections have **drifted** and the corrections live in the sections themselves:
+
+| Section | Original | Current |
+|---------|----------|---------|
+| §1 System Overview | 2D sidebar dashboard | **3D RPG game world** as primary nav; dashboard pages now open as overlays from buildings |
+| §2 Architecture | Next.js + Supabase | + **React Three Fiber + Drei + PS1 shader**; Colyseus deferred for multiplayer |
+| §4 RBAC | 4-tier (T1-T4) | **5-tier (T1-T5)** — T1 David / T2 chapter presidents / T3 PMs+VPs / T4 directors+devs / T5 volunteers+general |
+| §6 Class System | Position-based (`ARCHITECT`, `ORACLE`, etc.) | **MBTI-based** — 4 main classes (Analyst/Diplomat/Sentinel/Explorer) + 16 subclasses, determined via Oracle Temple quiz |
+| §7 Coin Economy | Explicit `100 TC ≈ $1 CAD` reveal | **Internal-only** — never expose conversion rate in user-facing content |
+| §5 Onboarding | Terminal hacker theme | Theme retained; **adds Oracle Temple MBTI step + game-world tutorial** |
+
+**Canonical sources for current state:**
+- `specs/asset-stack.md` — confirmed tech architecture (R3F + Drei + PS1 + Colyseus deferred + 2D sprite chars via Nano Banana)
+- `specs/ux-status.md` — current sprint punch list (Tier-1 design debt, Tier-2 next sprint, Tier-3 future)
+- `specs/ux-game-world-v2.md` — game world spec (AC overhaul)
+- `specs/ux-oracle-v2.md` — MBTI quiz card-game encounter (stretch goal)
+- `specs/ux-classes.md` — 4 main classes + 16 subclasses visual identity
+- Memory file: `project_student_portal_vision.md` (in `~/.claude/projects/-Users-DavidLiu-Documents-GitHub-uwotsi/memory/`)
+
+**Onboarding new agents:** Read `CLAUDE.md` (entry point) → `AGENT_LOG.md` (current sprint + your role) → role-specific specs in `specs/`. Use this bible for feature mechanics; trust the canonical sources above for architecture and class/tier system.
 
 ---
 
@@ -97,7 +122,32 @@ SUPABASE_SERVICE_ROLE_KEY=
 ```
 @supabase/supabase-js    — Supabase client
 @supabase/ssr            — Server-side auth helpers for Next.js
+three                    — 3D rendering (already in repo)
+@react-three/fiber       — React renderer for Three.js (already in repo)
+@react-three/drei        — R3F helpers: Billboard, Html, CameraControls, useFBO (already in repo)
 ```
+
+### Game World Architecture (added 2026-05-21)
+
+The primary student-facing surface is a **2.5D MMO RPG game world** (Dave the Diver / Octopath Traveler aesthetic) rendered via React Three Fiber. The traditional sidebar dashboard is now a **fallback navigation** — members primarily walk their avatar to buildings to access features.
+
+**Rendering pipeline:**
+- 3D buildings/terrain/props (Quaternius + Kenney CC0 packs)
+- 2D sprite characters on billboarded quads (generated via Nano Banana 2/Pro API)
+- PS1-style shader: `PS1Material.ts` (vertex snapping, affine textures, 8x8 Bayer dither, color depth reduction)
+- ACNH-style curved-world shader: `y = -curvature * z²` applied via `onBeforeCompile` (visual only; raycasting on flat plane)
+- Hemisphere lighting + atmospheric fog
+
+**Multiplayer status:** DEFERRED. Phase 1 MVP is **single-player only**. Multiplayer (Colyseus, MIT, ~$15/mo) added in Phase 2. Supabase Realtime is NOT suitable for position sync (cost-prohibitive at 200 CCU).
+
+**Map structure:**
+- 2-3 screens wide, small campus with walking distance between buildings
+- Fixed-follow camera, narrow FOV (30-45°)
+- WASD/Arrow keys + click-to-move
+- Buildings (enter → interior scene): HQ, Shop, Oracle Temple
+- Objects (interact → overlay opens): Bounty Board, Job Board
+
+Canonical spec: `specs/ux-game-world-v2.md` + `specs/asset-stack.md`.
 
 ### File Structure
 ```
@@ -216,14 +266,17 @@ web/components/dashboard/
 
 ## 4. Permission System (RBAC)
 
-### Tier Structure
+### Tier Structure (5-tier, updated 2026-05-21)
 
 | Tier | Roles | Access Level |
 |------|-------|-------------|
-| **T1** | President | Full admin. All features, all data, all controls. God mode. |
-| **T2** | Senior Advisors (SA), PM Officer (PMO), Project Managers (PM), Vice Presidents (VP) | Near-full access. Can manage members, create announcements, approve bounties, manage marketplace, create quests, view analytics. Cannot delete the system. |
-| **T3** | Developers, Directors | Standard member access. Dashboard, bounty board, calendar, kanban, marketplace, quests, directory, tools, leaderboard, portfolio. Can claim bounties, complete quests, earn coins. |
-| **T4** | General Members, Volunteers | Limited access. Can view upcoming club events, volunteer opportunities, basic directory. Cannot access bounty board, kanban, or most dashboard features. |
+| **T1** | David Liu only (President) | Full admin + economy god mode. Create/destroy coins, global settings, all features, all data. |
+| **T2** | Chapter Presidents | Member management, bounty CRUD, analytics, all admin tools **except** economy god mode. |
+| **T3** | Project Managers (PM), Vice Presidents (VP), PM Officer (PMO), Senior Advisors (SA) | Bounty management, submission review, event creation, team-level admin. |
+| **T4** | Directors, Developers | Standard member features. May have special project access. Can claim bounties (if qualified as Bounty Hunter), complete quests, earn coins. |
+| **T5** | Volunteers, General Members | Basic member features. View directory, attend events, basic profile. |
+
+**DB note:** `001_initial_schema.sql` had `CHECK (tier BETWEEN 1 AND 4)`. Confirm migration `004_cleanup_and_extend.sql` updated this to `BETWEEN 1 AND 5`.
 
 ### Permission Matrix
 
@@ -285,28 +338,24 @@ A "hacker initiation" experience. The new member is being "inducted" into the sy
 
 ## 6. Gamification — Classes, XP, Levels
 
-### Class System
-Class is auto-assigned based on the member's position within TSI. Cannot be changed (reflects real role).
+### Class System (MBTI-based, updated 2026-05-21)
 
-| Position | Class Name | Side |
-|----------|-----------|------|
-| President | `ARCHITECT` | — |
-| Senior Advisor | `ORACLE` | Operations |
-| PM Officer | `STRATEGIST` | Projects |
-| Project Manager | `COMMANDER` | Projects |
-| Vice President | `WARDEN` | Operations |
-| Developer | `ENGINEER` | Projects |
-| Director | `OPERATIVE` | Operations |
-| General Member | `INITIATE` | — |
-| Volunteer | `SCOUT` | — |
+Class is determined via the **Oracle Temple MBTI quiz** taken during onboarding (12 questions). Cosmetic only — visual theme + title on profile. Will expand to gameplay impact later. Canonical spec: `specs/ux-classes.md` + `specs/ux-oracle-v2.md`.
 
-### Subclass System
-Members choose their subclass during onboarding. Represents their specialty/focus area within their team.
+**4 Main Classes** (mapped to MBTI temperament groups):
 
-**Example subclasses (expandable by admin):**
-- Engineers: `Frontend`, `Backend`, `Fullstack`, `Mobile`, `DevOps`, `Data`
-- Operatives: `Events`, `Outreach`, `Content`, `Design`, `Analytics`
-- Commanders: `Technical Lead`, `Product Lead`, `Client Relations`
+| Class | MBTI Group | Vibe |
+|-------|-----------|------|
+| **Analyst** | NT (INTJ, INTP, ENTJ, ENTP) | Strategic, logical, system-builders |
+| **Diplomat** | NF (INFJ, INFP, ENFJ, ENFP) | Empathetic, idealistic, connectors |
+| **Sentinel** | SJ (ISTJ, ISFJ, ESTJ, ESFJ) | Reliable, organized, executors |
+| **Explorer** | SP (ISTP, ISFP, ESTP, ESFP) | Adaptable, hands-on, makers |
+
+**16 Subclasses** — one per MBTI type, each with a unique name. See `specs/ux-classes.md` for the full naming table and visual identity (color, icon, lore).
+
+### Legacy Position-Based Classes (DEPRECATED — kept for historical reference)
+
+The original 2026-03 design assigned classes by position (`ARCHITECT`, `ORACLE`, `ENGINEER`, etc.). This was replaced by the MBTI system at the Oracle Temple pivot. Position info still drives **role tags** on profiles (PM, VP, Director, Developer) but is independent from class.
 
 ### XP System
 Experience points earned through platform activity.
@@ -378,7 +427,7 @@ Collaborative achievements that encourage teamwork and engagement.
 ### Currency
 - **Name:** Tethos Coin (TC)
 - **Symbol:** Custom designed (to be created — stylized T with circuit/node motif)
-- **Exchange rate:** ~100 TC ≈ $1 CAD (for admin pricing reference, not a real exchange)
+- **Exchange rate:** Internal-only reference for admin pricing. **NEVER reveal the conversion rate in user-facing content.** Members see only TC values, never CAD equivalents.
 
 ### Earning Tethos Coins
 

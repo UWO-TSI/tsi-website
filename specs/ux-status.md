@@ -89,51 +89,72 @@
 
 ## 3. Design Debt Backlog — Prioritized
 
-### Tier 1: Fix Before Merge to Main
+> **Updated 2026-05-25:** Reframed to community-first hangout (see `CLAUDE.md` design principles). NPCs + ambient life + mobile + presence move ahead of Avatar Creator + Interiors. Tier-1 punch list bumped from "merge blocker" to "post-look-feel polish" — the world-feel sprint comes first.
 
-These are functional or visual issues that should be resolved before the student portal goes live.
+### Current Sprint: Game World Look & Feel (2026-05-25 → ~2026-06-15)
 
-| # | Issue | Spec | Review | Effort |
-|---|-------|------|--------|--------|
-| 1 | Settings page needs tabs (Profile/Social/Appearance/Account) | `ux-settings.md` | v4 | Medium |
-| 2 | Settings: add sign out button | `ux-settings.md` §7.4 | v4 | Small |
-| 3 | Leaderboard: own-row highlight + sticky | `ux-leaderboard.md` §4 | v4 | Small |
-| 4 | Oracle: Lucide icons instead of emoji | `ux-classes.md` | v5 | Small |
-| 5 | Oracle: Mage color → #6366F1 (indigo) | `ux-classes.md` | v5 | Small |
-| 6 | Oracle: exit button with progress save | `ux-oracle-v2.md` §7.2 | v5 | Small |
-| 7 | Bounty: submit deliverables flow | `ux-bounty.md` §6 | v4 | Medium |
+Full spec: `specs/sprint-2026-05-game-look-feel.md`. Deliverables:
+1. AI NPC system (6-8 NPCs, 4 personality presets, scripted α tier)
+2. Ambient life particles (butterflies, leaves, birds, fireflies)
+3. Ambient audio (4 time-of-day loops + footstep/click SFX)
+4. Player movement polish (easing, bob, target indicator)
+5. Transition & loading polish
 
-### Tier 2: Post-Launch Sprint
+### Tier 1: Next Sprint — Polish to Merge-Ready
 
-Important features that enhance the experience but aren't blocking launch.
+7 design-debt items previously labeled "blockers." Now sequenced *after* look-and-feel — the world feeling alive is more important than tabs in settings.
 
 | # | Issue | Spec | Effort |
 |---|-------|------|--------|
-| 8 | Quest checklist widget (6 quests, 275 XP) | `ux-onboarding.md` §5 | Medium |
-| 9 | Dark/light theme toggle | `ux-settings.md` §6 | Medium |
-| 10 | Class identity in sidebar, directory, profile | `ux-classes.md` §4 | Small |
-| 11 | Directory: Role/Class + Year filter dropdowns | `ux-directory.md` §3.4 | Small |
-| 12 | Directory: skeleton loading rows | `ux-directory.md` §6.1 | Small |
-| 13 | Profile: social links editing | `ux-directory.md` §7.5 | Small |
-| 14 | Path softening (alpha-blended edges) | `ux-game-world-v2.md` §4.2 | Medium |
-| 15 | River curve (not straight) | `ux-game-world-v2.md` §5 | Medium |
-| 16 | XP toast notifications | `ux-onboarding.md` §5.3 | Small |
-| 17 | Onboarding: custom skills input | `ux-onboarding.md` | Small |
+| 1 | Settings page needs tabs (Profile/Social/Appearance/Account) | `ux-settings.md` | Medium |
+| 2 | Settings: add sign out button | `ux-settings.md` §7.4 | Small |
+| 3 | Leaderboard: own-row highlight + sticky + top-half-public / bottom-half-anonymized policy | `ux-leaderboard.md` §4 + CLAUDE.md principle #6 | Medium |
+| 4 | Oracle: Lucide icons instead of emoji | `ux-classes.md` | Small |
+| 5 | Oracle: Mage color → #6366F1 (indigo) | `ux-classes.md` | Small |
+| 6 | Oracle: exit button with progress save | `ux-oracle-v2.md` §7.2 | Small |
+| 7 | Bounty: submit deliverables flow | `ux-bounty.md` §6 | Medium |
 
-### Tier 3: Future Sprints
+### Tier 2: Admin Tooling + Community Loops (sprint after Tier 1)
 
-Major features that require dedicated sprints.
+New priority post-reframe. Without admin tooling, the monthly-drop cadence can't sustain. Without community loops, the hangout has no reason to be a hangout.
+
+| # | Feature | Why | Effort |
+|---|---------|-----|--------|
+| 8 | **Admin event CMS** (easy create/edit/delete, QR check-in code generation) | David's monthly-drop requirement. Events are the XP heartbeat. | Medium |
+| 9 | **Emotes + guestbook at HQ** | Cheapest "we talk to each other" delivery. Async, no multiplayer needed. | Medium |
+| 10 | **In-world member presence indicators** (ghost-replay of recent member positions, "Sarah was here 2h ago") | World-never-empty principle. Cheaper than full multiplayer. | Medium |
+| 11 | **Mobile stripped mode** (view-only world + emote + profile + RSVP, no game world rendering) | Mobile-aware principle. Members live on phones. | Medium |
+| 12 | Class identity in sidebar, directory, profile | `ux-classes.md` §4 — cosmetic flair | Small |
+| 13 | Directory: Role/Class + Year filter dropdowns | `ux-directory.md` §3.4 | Small |
+| 14 | Profile: social links editing | `ux-directory.md` §7.5 | Small |
+| 15 | NPC dialogue system (canned lines, rotating monthly) | Phase β NPC — adds personality without LLM cost | Medium |
+| 16 | Admin NPC dialogue editor | Required for monthly content drops | Small |
+| 17 | Shop admin uploader (item CRUD, price set) | Required for monthly drops | Small |
+| 18 | Seasonal palette switcher (admin can toggle Halloween / Frost / Spring) | Monthly content cadence | Small |
+
+### Tier 3: Late-Game (Phase 3+)
+
+Pushed deeper into the future per design principle #4 (cosmetic > functional, rich system is late-game).
 
 | # | Feature | Spec | Effort |
 |---|---------|------|--------|
-| 18 | Building interiors (HQ, HQ Admin, Shop, Oracle Temple) | `ux-interiors.md` | Large |
-| 19 | Oracle v2 card-game encounter (2D backdrop, monk, fanned cards) | `ux-oracle-v2.md` | Large |
-| 20 | Mobile/responsive (landscape lock, touch, bottom sheets) | `ux-mobile.md` | Large |
-| 21 | Avatar creator (inline sprite editor) | `ux-dashboard.md` §6, `ux-settings.md` §4.2 | Large (blocked on sprite assets) |
-| 22 | Building silhouette variety (unique shapes per building) | `ux-game-world-v2.md` §6 | Medium |
-| 23 | Missing props (signposts, stepping stones, butterflies, campfire) | `ux-asset-map.md` §3 | Medium |
-| 24 | Shop: product variants (size/color selectors) | `ux-shop.md` §5.2 | Medium |
-| 25 | Multiplayer presence (Colyseus) | `asset-stack.md` | Large (deferred) |
+| 19 | LLM-driven NPC dialogue (γ tier) | New spec needed | Large |
+| 20 | Building interiors (HQ, HQ Admin, Shop, Oracle Temple) | `ux-interiors.md` | Large |
+| 21 | Oracle v2 card-game encounter | `ux-oracle-v2.md` | Large |
+| 22 | Full mobile responsive (touch controls, landscape lock, in-world rendering) | `ux-mobile.md` | Large |
+| 23 | Avatar creator (rich cosmetic + layered sprites) | `ux-dashboard.md` §6 | Large (blocked on Nano Banana sprite gen) |
+| 24 | Multiplayer presence (Colyseus) | `asset-stack.md` | Large (deferred until usage justifies $15/mo) |
+| 25 | Class system gameplay impact (functional perks per MBTI class) | New spec needed | Large |
+| 26 | Building silhouette variety | `ux-game-world-v2.md` §6 | Medium |
+| 27 | Path softening + river curve | `ux-game-world-v2.md` §4.2/§5 | Medium |
+| 28 | Shop: product variants (size/color selectors) | `ux-shop.md` §5.2 | Medium |
+| 29 | Portfolio auto-build from bounty/project history | New — community-as-credential feature (low priority since David said the portal isn't a career tool) | Medium |
+
+### Removed from backlog (no longer needed)
+
+- ~~Quest checklist widget (6 quests, 275 XP)~~ — **dropped.** Onboarding quests are opt-in, no XP rewards for online activity (principle #3). Replace with a one-time onboarding TC bonus + badge, handled inline in the existing onboarding flow.
+- ~~XP toast notifications for online actions~~ — **dropped.** XP only comes from IRL event check-in; the toast will live in the QR check-in flow.
+- ~~Dark/light theme toggle~~ — **deferred to Tier 3**. Less important than admin tooling and community loops.
 
 ---
 
