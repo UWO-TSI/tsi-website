@@ -35,7 +35,7 @@
 | A8 | Player movement polish (easing, bob, target indicator) | build | pending |
 | A9 | Transition + loading polish (fade, Suspense fallback) | build | pending |
 | B1 | Migration `014_content_pipeline.sql` (npc_personas, shop_items, seasonal_palettes, content_drafts) | build | ✅ done (1ce7281, reviewed + fixed + merged) |
-| B2 | Game world reads from Supabase tables (React Query, JSON fallback) | build | in_progress |
+| B2 | Game world reads from Supabase tables (SWR + JSON fallback) | build | ✅ done (bdd301e, palette-aware TOD = follow-up) |
 | B3 | Content draft + preview URL system | build | pending |
 | B4 | Stub admin pages at `/student/dashboard/admin/content/{npcs,shop,palettes,events}` (read-only this sprint) | build | pending |
 | QA-baseline | Run `npm run build` + `npm run lint` on current main, log to `specs/qa.md` Wave 12 | qa | ✅ done (507bcb1) |
