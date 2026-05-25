@@ -9,6 +9,7 @@ import Building from "./Building";
 import { getTerrainHeight, valueNoise } from "./terrain";
 import { NatureTree, NatureBush, NatureFlowerCluster, NatureFence, NatureMushroom, NatureStump } from "./NatureModels";
 import { useUser } from "@/components/portal/UserContext";
+import { useActivePalette } from "@/lib/game/contentLoader";
 
 /**
  * Game World v2 — Animal Crossing: New Horizons visual style.
@@ -504,7 +505,7 @@ function Props() {
 }
 
 // ─── Scene ──────────────────────────────────────────────────────
-function Scene({ playerName, playerLevel }: { playerName: string; playerLevel: number }) {
+function Scene({ playerName, playerLevel, fogColor }: { playerName: string; playerLevel: number; fogColor: string }) {
   const cameraRef = useRef<CameraControls>(null);
   const [playerPos, setPlayerPos] = useState<THREE.Vector3>(new THREE.Vector3(...SPAWN_POSITION));
 
@@ -528,7 +529,7 @@ function Scene({ playerName, playerLevel }: { playerName: string; playerLevel: n
       />
 
       <TimeOfDayCycle />
-      <fog attach="fog" args={[P.fog, 50, 100]} />
+      <fog attach="fog" args={[fogColor, 50, 100]} />
 
       <Terrain />
       <River />
@@ -561,11 +562,19 @@ function Scene({ playerName, playerLevel }: { playerName: string; playerLevel: n
 // ─── Canvas (v2 spec Section 2) ─────────────────────────────────
 export default function GameWorld() {
   const { profile } = useUser();
+  const { data: activePalette } = useActivePalette();
   const playerName = profile?.display_name || "Player";
   const playerLevel = profile?.level ?? 1;
 
+  // Sky + fog read from the active seasonal palette; everything else still
+  // uses the hardcoded P table for this sprint. Time-of-day cycle continues to
+  // animate sky from TOD_KEYS on top — palette controls only the initial /
+  // fallback color and the fog tone before TOD overwrites it.
+  const skyBase = activePalette.palette.sky || P.skyBottom;
+  const fogColor = activePalette.palette.fog || P.fog;
+
   return (
-    <div style={{ width: "100%", height: "100%", minHeight: "100vh", background: P.skyBottom }}>
+    <div style={{ width: "100%", height: "100%", minHeight: "100vh", background: skyBase }}>
       <Canvas
         gl={{ antialias: true, powerPreference: "high-performance" }}
         camera={{ fov: 50, near: 0.1, far: 300, position: [0, 12, -20] }}
@@ -576,7 +585,7 @@ export default function GameWorld() {
         }}
       >
         <Suspense fallback={null}>
-          <Scene playerName={playerName} playerLevel={playerLevel} />
+          <Scene playerName={playerName} playerLevel={playerLevel} fogColor={fogColor} />
         </Suspense>
       </Canvas>
     </div>

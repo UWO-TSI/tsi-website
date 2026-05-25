@@ -34,11 +34,11 @@
 | A7 | Ambient audio (4 time-of-day loops + footstep/click SFX) | build | pending |
 | A8 | Player movement polish (easing, bob, target indicator) | build | pending |
 | A9 | Transition + loading polish (fade, Suspense fallback) | build | pending |
-| B1 | Migration `014_content_pipeline.sql` (npc_personas, shop_items, seasonal_palettes, content_drafts) | build | pending |
-| B2 | Game world reads from Supabase tables (React Query, JSON fallback) | build | pending |
+| B1 | Migration `014_content_pipeline.sql` (npc_personas, shop_items, seasonal_palettes, content_drafts) | build | ✅ done (1ce7281, reviewed + fixed + merged) |
+| B2 | Game world reads from Supabase tables (React Query, JSON fallback) | build | in_progress |
 | B3 | Content draft + preview URL system | build | pending |
 | B4 | Stub admin pages at `/student/dashboard/admin/content/{npcs,shop,palettes,events}` (read-only this sprint) | build | pending |
-| QA-baseline | Run `npm run build` + `npm run lint` on current main, log to `specs/qa.md` Wave 12 | qa | pending |
+| QA-baseline | Run `npm run build` + `npm run lint` on current main, log to `specs/qa.md` Wave 12 | qa | ✅ done (507bcb1) |
 | QA-sprint | Visual verify 30-second test, FPS ≥ 50 desktop, mobile no-crash, migration apply test | qa | pending |
 
 **Definition of Done:** see sprint spec §"Definition of Done" — visitor feels in-a-place / in-a-world / in-control / in-quality + admin can insert shop_items row via Supabase dashboard and see it appear in-world.
