@@ -63,24 +63,28 @@ export async function POST(
     released_by: user.id,
   });
 
-  // Send status update email (non-blocking)
-  try {
-    const resend = getResend();
-    const positionTitle = app.position?.title ?? "Position";
-    await resend.emails.send({
-      from: EMAIL_FROM,
-      to: app.email,
-      subject: `Application Update: ${positionTitle}`,
-      react: StatusUpdate({
-        applicantName: app.full_name,
-        positionTitle,
-        newStatus,
-        statusMessage: "",
-        dashboardUrl: `${new URL(request.url).origin}/student/apply/dashboard`,
-      }),
-    });
-  } catch (emailErr) {
-    console.error("Status email error:", emailErr);
+  // Send status update email (non-blocking).
+  // Disabled unless RECRUITMENT_EMAILS_ENABLED=true so admins can iterate
+  // on the flow without spamming applicants with test releases.
+  if (process.env.RECRUITMENT_EMAILS_ENABLED === "true") {
+    try {
+      const resend = getResend();
+      const positionTitle = app.position?.title ?? "Position";
+      await resend.emails.send({
+        from: EMAIL_FROM,
+        to: app.email,
+        subject: `Application Update: ${positionTitle}`,
+        react: StatusUpdate({
+          applicantName: app.full_name,
+          positionTitle,
+          newStatus,
+          statusMessage: "",
+          dashboardUrl: `${new URL(request.url).origin}/student/apply/dashboard`,
+        }),
+      });
+    } catch (emailErr) {
+      console.error("Status email error:", emailErr);
+    }
   }
 
   return NextResponse.json({ released: true, oldStatus, newStatus });

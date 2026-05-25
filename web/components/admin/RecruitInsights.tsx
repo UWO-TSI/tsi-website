@@ -14,18 +14,16 @@ import {
 } from "@/lib/recruitment";
 
 const PIPELINE_STAGES: ApplicationStatus[] = [
-  "submitted",
   "screening",
   "interview_invite",
-  "interview",
   "final_review",
-  "offer",
+  "accepted",
 ];
 
 const TERMINAL_STAGES: ApplicationStatus[] = [
-  "offer",
+  "accepted",
   "waitlist",
-  "declined",
+  "rejected",
 ];
 
 interface RecruitInsightsProps {
@@ -137,7 +135,7 @@ function PositionFunnel({
   apps: Application[];
 }) {
   const total = apps.length;
-  const declinedCount = apps.filter((a) => a.status === "declined").length;
+  const declinedCount = apps.filter((a) => a.status === "rejected").length;
   const waitlistCount = apps.filter((a) => a.status === "waitlist").length;
 
   // For each stage, count how many applicants ever reached or passed it.
@@ -169,7 +167,7 @@ function PositionFunnel({
             {position.title}
           </h2>
           <p className="text-xs text-[#6B7280] font-mono mt-0.5">
-            {total} applicant{total === 1 ? "" : "s"} · {declinedCount} declined
+            {total} applicant{total === 1 ? "" : "s"} · {declinedCount} rejected
             {waitlistCount > 0 ? ` · ${waitlistCount} waitlisted` : ""}
           </p>
         </div>
@@ -284,21 +282,10 @@ function PositionFunnel({
 
 // "Reached or passed" stage at index i. Reached means the applicant either:
 // - is currently at stage i or beyond in the linear pipeline, or
-// - has a terminal status and the prior advance brought them past i.
-// We approximate using status_releases: if any release.new_status maps to
-// an index >= i, they reached it. Falls back to current status index.
+// - has a release record that pushed them to/past stage i.
 function hasReachedStage(app: Application, stageIndex: number): boolean {
-  const idx = (s: ApplicationStatus): number => {
-    const i = PIPELINE_STAGES.indexOf(s);
-    if (i >= 0) return i;
-    // Terminal statuses: they came from somewhere. Map "offer" to past
-    // final_review; declined/waitlist count for whatever stage they
-    // were at before the rejection (use releases).
-    if (s === "offer") return PIPELINE_STAGES.length;
-    return -1;
-  };
+  const idx = (s: ApplicationStatus): number => PIPELINE_STAGES.indexOf(s);
   if (idx(app.status) >= stageIndex) return true;
-  // Look at releases to see if they ever hit this stage
   for (const r of app.releases ?? []) {
     if (idx(r.new_status as ApplicationStatus) >= stageIndex) return true;
   }

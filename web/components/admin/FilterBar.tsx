@@ -31,20 +31,20 @@ export default function FilterBar({ positions, onFilterChange }: FilterBarProps)
   };
 
   return (
-    <div className="flex flex-wrap items-center gap-2 mb-6">
+    <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0">
       {/* Search */}
-      <div className="relative flex-1 min-w-[220px] max-w-[400px]">
+      <div className="relative flex-1 min-w-[200px] max-w-[360px]">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#6B7280]" />
         <input
           type="text"
           value={filters.search}
           onChange={(e) => update("search", e.target.value)}
           placeholder="Search name or email"
-          className="w-full pl-9 pr-3 py-2 rounded-full bg-white/[0.04] border border-white/10 text-sm text-[#F1FFFF] placeholder-[#6B7280] focus:outline-none focus:border-[#1D9BF0]/50 focus:bg-white/[0.06] transition"
+          className="w-full pl-9 pr-3 py-1.5 rounded-full bg-white/[0.04] border border-white/10 text-[12px] text-[#F1FFFF] placeholder-[#6B7280] focus:outline-none focus:border-[#1D9BF0]/50 focus:bg-white/[0.06] transition"
         />
       </div>
 
-      <div className="flex items-center gap-1 ml-auto md:ml-0">
+      <div className="flex items-center gap-1">
         <ChipSelect
           value={filters.role}
           options={[

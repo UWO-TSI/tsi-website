@@ -1,7 +1,7 @@
 "use client";
 
 import { InlineWidget } from "react-calendly";
-import { Calendar } from "lucide-react";
+import { Calendar, ExternalLink } from "lucide-react";
 
 interface InterviewSchedulerProps {
   calendlyUrl: string | null;
@@ -27,11 +27,18 @@ export default function InterviewScheduler({
           <Calendar className="w-4 h-4 text-[#FFD166] flex-shrink-0 mt-0.5" />
           <div>
             <p className="text-sm text-[#F1FFFF] font-medium">
-              Interview invite sent
+              You&apos;re through to the interview round
             </p>
             <p className="text-xs text-[#9CA3AF] mt-1 leading-relaxed">
-              Check your email for the scheduling link. If you can&apos;t find
-              it, reach out to recruitment@tethos.ca.
+              A member of the Tethos team will reach out to you directly with
+              interview details. If you have questions, email{" "}
+              <a
+                href="mailto:recruitment@tethos.ca"
+                className="text-[#1D9BF0] hover:underline"
+              >
+                recruitment@tethos.ca
+              </a>
+              .
             </p>
           </div>
         </div>
@@ -41,11 +48,22 @@ export default function InterviewScheduler({
 
   return (
     <div>
-      <div className="flex items-center gap-2 mb-3">
-        <Calendar className="w-4 h-4 text-[#1D9BF0]" />
-        <p className="text-sm text-[#F1FFFF] font-medium">
-          Schedule your interview
-        </p>
+      <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
+        <div className="flex items-center gap-2">
+          <Calendar className="w-4 h-4 text-[#1D9BF0]" />
+          <p className="text-sm text-[#F1FFFF] font-medium">
+            Schedule your interview
+          </p>
+        </div>
+        <a
+          href={calendlyUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1.5 text-[11px] font-mono text-[#1D9BF0] hover:text-[#F1FFFF] transition"
+        >
+          Open in new tab
+          <ExternalLink className="w-3 h-3" />
+        </a>
       </div>
       <div
         className="rounded-xl overflow-hidden"
@@ -60,7 +78,7 @@ export default function InterviewScheduler({
             name: applicantName ?? undefined,
             email: applicantEmail ?? undefined,
           }}
-          styles={{ height: "680px" }}
+          styles={{ height: "1000px", minWidth: "320px" }}
           pageSettings={{
             backgroundColor: "0F0F10",
             primaryColor: "1D9BF0",
@@ -70,6 +88,18 @@ export default function InterviewScheduler({
           }}
         />
       </div>
+      {/* Backup link in case the embed fails (privacy extensions, etc.) */}
+      <p className="text-[11px] text-[#6B7280] mt-3 text-center">
+        Having trouble loading the calendar? Book directly at{" "}
+        <a
+          href={calendlyUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-[#1D9BF0] hover:underline break-all"
+        >
+          {calendlyUrl.replace(/^https?:\/\//, "")}
+        </a>
+      </p>
     </div>
   );
 }

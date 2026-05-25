@@ -22,15 +22,13 @@ const STATUS_MESSAGES: Record<string, string> = {
     "Your application is now being reviewed by our team.",
   interview_invite:
     "Congratulations! You've been selected for an interview. We'll reach out with scheduling details soon.",
-  interview:
-    "Your interview has been scheduled. Check your dashboard for details.",
   final_review:
     "Your interview is complete and your application is in final review.",
-  offer:
+  accepted:
     "Congratulations! We're excited to offer you a position at Tethos. Check your dashboard for next steps.",
   waitlist:
     "Your application has been placed on our waitlist. We'll notify you if a spot opens up.",
-  declined:
+  rejected:
     "After careful consideration, we've decided to move forward with other candidates. We appreciate your interest in Tethos.",
 };
 

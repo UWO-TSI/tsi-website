@@ -14,6 +14,8 @@
     "@an-sdk/nextjs": "^0.0.8",
     "@an-sdk/node": "^0.0.2",
     "@an-sdk/react": "^0.1.2",
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
     "@heroicons/react": "^2.2.0",
     "@next/font": "^14.2.15",
     "@react-email/components": "^1.0.12",

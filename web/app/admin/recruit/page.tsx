@@ -6,6 +6,7 @@ import FilterBar, { type FilterState } from "@/components/admin/FilterBar";
 import ApplicantCard from "@/components/admin/ApplicantCard";
 import ReleaseControls from "@/components/admin/ReleaseControls";
 import RecruitInsights from "@/components/admin/RecruitInsights";
+import RecruitBoard from "@/components/admin/RecruitBoard";
 import { motion } from "framer-motion";
 import { fadeUpVariants } from "@/lib/motion";
 import { RefreshCw, Download } from "lucide-react";
@@ -27,7 +28,7 @@ export default function AdminRecruitPage() {
     tag: "",
   });
   const [syncing, setSyncing] = useState(false);
-  const [tab, setTab] = useState<"dashboard" | "insights">("dashboard");
+  const [tab, setTab] = useState<"dashboard" | "board" | "insights">("dashboard");
 
   const supabase = useMemo(() => createClient(), []);
 
@@ -106,14 +107,17 @@ export default function AdminRecruitPage() {
   }));
 
   // Handlers
-  const handleStatusChange = async (id: string, status: ApplicationStatus) => {
+  // Pass null to clear a pending verdict (undo). Otherwise sets draft_status
+  // to the new value; release later publishes to the student.
+  const handleStatusChange = async (
+    id: string,
+    status: ApplicationStatus | null
+  ) => {
     const prev = applications.find((a) => a.id === id);
-    // Update locally (optimistic)
     setApplications((apps) =>
       apps.map((a) => (a.id === id ? { ...a, draft_status: status } : a))
     );
 
-    // Persist to server
     const res = await fetch(`/api/applications/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -121,7 +125,6 @@ export default function AdminRecruitPage() {
     });
 
     if (!res.ok && prev) {
-      // Revert on failure
       setApplications((apps) =>
         apps.map((a) =>
           a.id === id ? { ...a, draft_status: prev.draft_status } : a
@@ -251,87 +254,137 @@ export default function AdminRecruitPage() {
   }
 
   return (
-    <div className="py-8 md:py-12 px-6 md:px-12 max-w-7xl mx-auto">
-      {/* Header */}
-      <motion.div
+    <div className="py-6 md:py-8 px-6 md:px-10 max-w-[1400px] mx-auto pb-32">
+      {/* Header — compact single row */}
+      <motion.header
         variants={fadeUpVariants}
         initial="hidden"
         animate="visible"
-        className="flex items-center justify-between mb-8"
+        className="flex items-end justify-between gap-4 mb-6 flex-wrap"
       >
-        <div>
-          <p className="font-mono text-xs tracking-[0.2em] uppercase text-[#1D9BF0] mb-1">
-            Admin
-          </p>
-          <h1 className="text-2xl md:text-3xl font-semibold text-[#F1FFFF]">
-            Recruitment Dashboard
-          </h1>
-          <p className="text-sm text-[#6B7280] mt-1">
-            {applications.length} total application{applications.length !== 1 ? "s" : ""}
-          </p>
+        <div className="flex items-end gap-4 min-w-0">
+          {/* Accent bar */}
+          <div
+            className="hidden md:block w-[3px] h-12 rounded-full flex-shrink-0"
+            style={{
+              background:
+                "linear-gradient(180deg, #1D9BF0 0%, rgba(29,155,240,0.2) 100%)",
+            }}
+          />
+          <div className="min-w-0">
+            <p className="font-mono text-[10px] tracking-[0.22em] uppercase text-[#1D9BF0] mb-1.5">
+              Admin · Recruitment
+            </p>
+            <div className="flex items-baseline gap-3 flex-wrap">
+              <h1 className="text-xl md:text-2xl font-semibold text-[#F1FFFF] leading-none">
+                Applications
+              </h1>
+              <span className="text-[11px] font-mono text-[#6B7280] tabular-nums">
+                {applications.length} total
+                {pendingCount > 0 && (
+                  <>
+                    <span className="opacity-50 mx-2">·</span>
+                    <span className="text-[#FFD166]">
+                      {pendingCount} pending
+                    </span>
+                  </>
+                )}
+              </span>
+            </div>
+          </div>
         </div>
-        <div className="flex items-center gap-3">
-          <button
+
+        <div className="flex items-center gap-1">
+          <ToolbarButton
             onClick={handleCsvExport}
-            className="flex items-center gap-1.5 rounded-lg bg-[#1D9BF0]/10 border border-[#1D9BF0]/30 px-3 py-2 text-xs text-[#F1FFFF] hover:bg-[#1D9BF0]/20 transition"
-          >
-            <Download className="w-3.5 h-3.5" />
-            Export CSV
-          </button>
-          <button
+            icon={<Download className="w-3.5 h-3.5" />}
+            label="Export"
+          />
+          <ToolbarButton
             onClick={handleSheetsSync}
             disabled={syncing}
-            className="flex items-center gap-1.5 rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-xs text-[#9CA3AF] hover:text-[#F1FFFF] hover:border-white/20 transition disabled:opacity-50"
-          >
-            <Download className={`w-3.5 h-3.5 ${syncing ? "animate-spin" : ""}`} />
-            Sync to Sheets
-          </button>
-          <button
+            icon={
+              <Download
+                className={`w-3.5 h-3.5 ${syncing ? "animate-spin" : ""}`}
+              />
+            }
+            label="Sheets"
+          />
+          <ToolbarButton
             onClick={() => fetchData()}
-            className="flex items-center gap-1.5 rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-xs text-[#9CA3AF] hover:text-[#F1FFFF] hover:border-white/20 transition"
-          >
-            <RefreshCw className="w-3.5 h-3.5" />
-            Refresh
-          </button>
+            icon={<RefreshCw className="w-3.5 h-3.5" />}
+            label="Refresh"
+          />
         </div>
-      </motion.div>
+      </motion.header>
 
-      {/* Tabs */}
-      <div className="flex items-center gap-1 mb-8 border-b border-white/[0.06]">
-        <TabButton
-          label="Dashboard"
-          active={tab === "dashboard"}
-          onClick={() => setTab("dashboard")}
-        />
-        <TabButton
-          label="Insights"
-          active={tab === "insights"}
-          onClick={() => setTab("insights")}
-        />
+      {/* Tabs — segmented control */}
+      <div className="mb-5">
+        <div
+          className="inline-flex items-center p-1 rounded-full"
+          style={{
+            background: "rgba(255,255,255,0.03)",
+            border: "1px solid rgba(255,255,255,0.06)",
+          }}
+        >
+          <SegmentTab
+            label="List"
+            count={applications.length}
+            active={tab === "dashboard"}
+            onClick={() => setTab("dashboard")}
+          />
+          <SegmentTab
+            label="Board"
+            badge={pendingCount > 0 ? pendingCount : undefined}
+            active={tab === "board"}
+            onClick={() => setTab("board")}
+          />
+          <SegmentTab
+            label="Insights"
+            active={tab === "insights"}
+            onClick={() => setTab("insights")}
+          />
+        </div>
       </div>
 
-      {tab === "dashboard" ? (
-        <>
-          {/* Release controls */}
-          <ReleaseControls
-            pendingCount={pendingCount}
-            positions={positionsWithPending}
-            onReleaseAll={handleReleaseAll}
-            onReleaseSelected={handleReleaseSelected}
-            selectedIds={selectedIds}
-          />
+      {/* Floating release controls — rendered once, fixed bottom-right. */}
+      <ReleaseControls
+        pendingCount={pendingCount}
+        positions={positionsWithPending}
+        onReleaseAll={handleReleaseAll}
+        onReleaseSelected={handleReleaseSelected}
+        selectedIds={selectedIds}
+      />
 
-          {/* Filters */}
-          <FilterBar
-            positions={positions.map((p) => ({ slug: p.slug, title: p.title }))}
-            onFilterChange={setFilters}
-          />
+      {tab === "dashboard" && (
+        <section
+          className="rounded-2xl overflow-hidden"
+          style={{
+            background: "rgba(255,255,255,0.015)",
+            border: "1px solid rgba(255,255,255,0.05)",
+          }}
+        >
+          {/* List toolbar — filters live here so they read as part of the list. */}
+          <div
+            className="px-4 py-3 border-b border-white/[0.05] flex items-center justify-between gap-4 flex-wrap"
+            style={{ background: "rgba(255,255,255,0.015)" }}
+          >
+            <FilterBar
+              positions={positions.map((p) => ({ slug: p.slug, title: p.title }))}
+              onFilterChange={setFilters}
+            />
+            <span className="text-[10px] font-mono text-[#6B7280] tabular-nums whitespace-nowrap">
+              {filtered.length} / {applications.length} shown
+            </span>
+          </div>
 
-          {/* Application list */}
-          <div className="space-y-2">
+          {/* Rows */}
+          <div className="p-3 space-y-1.5">
             {filtered.length === 0 ? (
-              <div className="rounded-2xl p-12 text-center" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }}>
-                <p className="text-[#9CA3AF]">No applications match your filters.</p>
+              <div className="rounded-xl p-12 text-center">
+                <p className="text-sm text-[#6B7280]">
+                  No applications match your filters.
+                </p>
               </div>
             ) : (
               filtered.map((app) => (
@@ -350,32 +403,90 @@ export default function AdminRecruitPage() {
               ))
             )}
           </div>
-        </>
-      ) : (
+        </section>
+      )}
+
+      {tab === "board" && (
+        <RecruitBoard
+          applications={applications}
+          positions={positions}
+          onStatusChange={handleStatusChange}
+        />
+      )}
+
+      {tab === "insights" && (
         <RecruitInsights applications={applications} positions={positions} />
       )}
     </div>
   );
 }
 
-function TabButton({
+function SegmentTab({
   label,
+  count,
+  badge,
   active,
   onClick,
 }: {
   label: string;
+  count?: number;
+  badge?: number;
   active: boolean;
   onClick: () => void;
 }) {
   return (
     <button
       onClick={onClick}
-      className="relative px-4 py-2.5 text-sm transition-colors -mb-px"
+      className="relative inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-[12px] transition-colors"
       style={{
-        color: active ? "#F1FFFF" : "rgba(255,255,255,0.5)",
-        borderBottom: active ? "2px solid #1D9BF0" : "2px solid transparent",
+        background: active ? "rgba(29,155,240,0.14)" : "transparent",
+        color: active ? "#F1FFFF" : "rgba(255,255,255,0.55)",
+        fontFamily: "var(--font-highlight)",
       }}
     >
+      <span className="font-medium tracking-wide">{label}</span>
+      {count !== undefined && (
+        <span
+          className="text-[10px] tabular-nums opacity-60"
+          style={{ color: active ? "#1D9BF0" : "inherit" }}
+        >
+          {count}
+        </span>
+      )}
+      {badge !== undefined && (
+        <span
+          className="inline-flex items-center justify-center min-w-[16px] h-[16px] px-1 rounded-full text-[9px] font-mono"
+          style={{
+            background: "rgba(255,209,102,0.18)",
+            color: "#FFD166",
+            border: "1px solid rgba(255,209,102,0.35)",
+          }}
+        >
+          {badge}
+        </span>
+      )}
+    </button>
+  );
+}
+
+function ToolbarButton({
+  label,
+  icon,
+  onClick,
+  disabled = false,
+}: {
+  label: string;
+  icon: React.ReactNode;
+  onClick: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-mono tracking-wide text-[#9CA3AF] hover:text-[#F1FFFF] hover:bg-white/[0.04] transition disabled:opacity-40 disabled:cursor-not-allowed"
+    >
+      {icon}
       {label}
     </button>
   );

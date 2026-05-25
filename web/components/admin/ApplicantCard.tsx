@@ -14,11 +14,20 @@ import {
   Link as LinkIcon,
   Briefcase,
   Trash2,
+  Check,
+  Clock,
+  X,
+  RotateCcw,
 } from "lucide-react";
-import StatusDropdown from "./StatusDropdown";
 import StatusBadge from "@/components/recruit/StatusBadge";
 import TagEditor from "./TagEditor";
 import type { Application, ApplicationStatus } from "@/lib/recruitment";
+import {
+  STATUS_COLORS,
+  STATUS_LABELS,
+  isTerminalStatus,
+  nextPipelineStatus,
+} from "@/lib/recruitment";
 import { parseAdminNotes } from "@/lib/admin-notes";
 
 // Reserved IDs the form stuffs into essay_answers because applications
@@ -79,7 +88,7 @@ interface ApplicantCardProps {
   isSelected: boolean;
   currentUserEmail: string;
   onSelect: (id: string) => void;
-  onStatusChange: (id: string, status: ApplicationStatus) => void;
+  onStatusChange: (id: string, status: ApplicationStatus | null) => void;
   onTagsChange: (id: string, tags: string[]) => void;
   onNoteTextChange: (id: string, text: string) => void;
   onRelease: (id: string) => void;
@@ -116,22 +125,42 @@ export default function ApplicantCard({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [application.id]);
 
+  // Tint the card by the effective verdict — draft if pending, else released.
+  // Pending decisions get a "unreleased" yellow ring so they're obvious in a
+  // sea of cards.
+  const effectiveStatus = application.draft_status ?? application.status;
+  const tintColor = STATUS_COLORS[effectiveStatus];
+
   return (
     <div
       className={`
         rounded-xl border transition-all duration-200
-        ${isSelected ? "border-[#1D9BF0]/50 bg-[#1D9BF0]/5" : "border-white/5 bg-white/[0.02]"}
-        ${hasUnreleased ? "ring-1 ring-[#FFD166]/30" : ""}
+        ${isSelected ? "border-[#1D9BF0]/50 bg-[#1D9BF0]/5" : ""}
+        ${hasUnreleased ? "ring-1 ring-[#FFD166]/40" : ""}
       `}
+      style={
+        isSelected
+          ? undefined
+          : {
+              borderColor: `${tintColor}55`,
+              background: `linear-gradient(90deg, ${tintColor}14 0%, ${tintColor}06 35%, rgba(255,255,255,0.02) 100%)`,
+            }
+      }
     >
-      {/* Summary row */}
-      <div className="flex items-center gap-3 p-4">
+      {/* Summary row — click anywhere except interactive controls to expand. */}
+      <div
+        className="flex items-center gap-3 p-4 cursor-pointer"
+        onClick={() => setExpanded(!expanded)}
+      >
         {/* Selection — radio-style filled dot when selected */}
         <button
           type="button"
           role="checkbox"
           aria-checked={isSelected}
-          onClick={() => onSelect(application.id)}
+          onClick={(e) => {
+            e.stopPropagation();
+            onSelect(application.id);
+          }}
           className="flex items-center justify-center w-4 h-4 rounded-full transition-all"
           style={{
             border: isSelected
@@ -163,16 +192,20 @@ export default function ApplicantCard({
           {application.position?.title}
         </span>
 
-        {/* Status */}
-        <StatusDropdown
-          currentStatus={application.status}
+        {/* Verdict buttons — internal, become the next student-facing
+            status once released. */}
+        <VerdictButtons
+          releasedStatus={application.status}
           draftStatus={application.draft_status}
           onChange={(s) => onStatusChange(application.id, s)}
         />
 
-        {/* Released status indicator */}
+        {/* Status badge — shows the effective verdict (draft if pending,
+            else released). The "(draft)" tag makes it obvious the student
+            hasn't seen this change yet. */}
         <StatusBadge
-          status={application.status}
+          status={effectiveStatus}
+          isDraft={!!hasUnreleased}
         />
 
         {/* Date */}
@@ -183,9 +216,12 @@ export default function ApplicantCard({
           })}
         </span>
 
-        {/* Expand */}
+        {/* Expand — row-click already toggles, this is visual affordance. */}
         <button
-          onClick={() => setExpanded(!expanded)}
+          onClick={(e) => {
+            e.stopPropagation();
+            setExpanded(!expanded);
+          }}
           className="text-[#6B7280] hover:text-[#F1FFFF] transition"
         >
           {expanded ? (
@@ -511,5 +547,165 @@ function InfoRow({
       {icon}
       <span>{value}</span>
     </div>
+  );
+}
+
+// Three context-aware verdict buttons. Click sets draft_status so the
+// student doesn't see it until "Release" is clicked. The advance button
+// resolves to the next pipeline stage (final_review → accepted).
+//
+// Visual rule: button is filled when its action matches the current draft
+// (or released status, if no draft). Outline otherwise.
+// Toggleable verdict buttons. Clicking the active verdict reverts:
+//   - if there's a pending draft, clears it (so nothing publishes)
+//   - if the verdict is already released, queues a 'screening' draft so
+//     releasing it reopens the applicant for review
+// Advance is never disabled — from a terminal state it also reopens.
+function VerdictButtons({
+  releasedStatus,
+  draftStatus,
+  onChange,
+}: {
+  releasedStatus: ApplicationStatus;
+  draftStatus: ApplicationStatus | null;
+  onChange: (status: ApplicationStatus | null) => void;
+}) {
+  const effective = draftStatus ?? releasedStatus;
+  const terminal = isTerminalStatus(effective);
+  const advanceTarget = nextPipelineStatus(effective);
+  const accepted = effective === "accepted";
+
+  // The "active" state for each button is whether `effective` matches.
+  // Clicking active = revert. Clicking inactive = set draft to that verdict.
+  const revert = () => {
+    if (draftStatus) onChange(null);
+    else onChange("screening");
+  };
+  const setOrRevert = (target: ApplicationStatus, isActive: boolean) => {
+    if (isActive) revert();
+    else onChange(target);
+  };
+
+  const advanceActive =
+    accepted ||
+    (advanceTarget !== null && effective === advanceTarget && !terminal);
+
+  return (
+    <div
+      className="hidden sm:inline-flex items-center gap-1 rounded-full p-0.5"
+      style={{
+        background: "rgba(255,255,255,0.03)",
+        border: "1px solid rgba(255,255,255,0.08)",
+      }}
+      title="Admin verdict (not visible to applicant until released)"
+    >
+      <VerdictButton
+        label={
+          terminal
+            ? "Reopen"
+            : effective === "final_review"
+              ? "Accept"
+              : "Advance"
+        }
+        // Show the target stage inline so the verdict is unambiguous.
+        sublabel={
+          terminal
+            ? "→ Screening"
+            : advanceTarget
+              ? `→ ${STATUS_LABELS[advanceTarget]}`
+              : null
+        }
+        icon={<Check className="w-3 h-3" />}
+        color="#22C55E"
+        active={advanceActive}
+        onClick={() => {
+          if (terminal) {
+            onChange("screening");
+            return;
+          }
+          if (advanceActive) {
+            revert();
+            return;
+          }
+          if (advanceTarget) onChange(advanceTarget);
+        }}
+      />
+      <VerdictButton
+        label="Waitlist"
+        icon={<Clock className="w-3 h-3" />}
+        color="#F97316"
+        active={effective === "waitlist"}
+        onClick={() => setOrRevert("waitlist", effective === "waitlist")}
+      />
+      <VerdictButton
+        label="Reject"
+        icon={<X className="w-3 h-3" />}
+        color="#EF4444"
+        active={effective === "rejected"}
+        onClick={() => setOrRevert("rejected", effective === "rejected")}
+      />
+      {/* Explicit undo arrow: only when a pending draft differs from the
+          released status. Same as clicking the active verdict, kept for
+          discoverability. */}
+      {draftStatus && draftStatus !== releasedStatus && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onChange(null);
+          }}
+          className="ml-0.5 p-1 rounded-full text-[#9CA3AF] hover:text-[#F1FFFF] hover:bg-white/10 transition"
+          title="Discard pending verdict"
+        >
+          <RotateCcw className="w-3 h-3" />
+        </button>
+      )}
+    </div>
+  );
+}
+
+function VerdictButton({
+  label,
+  sublabel,
+  icon,
+  color,
+  active,
+  disabled = false,
+  onClick,
+}: {
+  label: string;
+  sublabel?: string | null;
+  icon: React.ReactNode;
+  color: string;
+  active: boolean;
+  disabled?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick();
+      }}
+      className="inline-flex items-center gap-1 text-[10px] font-mono uppercase tracking-wider px-2 py-1 rounded-full transition disabled:opacity-30 disabled:cursor-not-allowed whitespace-nowrap"
+      style={{
+        color: active ? "#0B0B0E" : color,
+        background: active ? color : "transparent",
+      }}
+      title={sublabel ? `${label} ${sublabel}` : label}
+    >
+      {icon}
+      {label}
+      {sublabel && (
+        <span
+          className="hidden lg:inline opacity-60 normal-case tracking-normal ml-0.5"
+          style={{ fontSize: "9px" }}
+        >
+          {sublabel}
+        </span>
+      )}
+    </button>
   );
 }

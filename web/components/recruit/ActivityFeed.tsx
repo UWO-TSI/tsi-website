@@ -42,12 +42,14 @@ export default function ActivityFeed({ application }: ActivityFeedProps) {
     {
       at: application.submitted_at,
       label: "Application submitted",
-      color: STATUS_COLORS.submitted,
+      color: "#9CA3AF",
       kind: "submit",
     },
   ];
 
   for (const r of application.releases ?? []) {
+    // Waitlist is admin-only context — never surface it to the applicant.
+    if (r.new_status === "waitlist") continue;
     events.push({
       at: r.released_at,
       label: `Moved to ${STATUS_LABELS[r.new_status as ApplicationStatus] ?? r.new_status}`,

@@ -8,6 +8,39 @@ import {
   upsertAdminNote,
 } from "@/lib/admin-notes";
 
+// Admin-only GET: returns a single application with joined position +
+// status_releases. Used by the admin preview page to render what a
+// specific student sees on their dashboard.
+export async function GET(
+  _request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user || !isAdminEmail(user.email ?? "")) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("applications")
+    .select(
+      "*, position:positions(*), releases:status_releases(id, old_status, new_status, released_at)"
+    )
+    .eq("id", id)
+    .single();
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 404 });
+  }
+
+  return NextResponse.json(data);
+}
+
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }

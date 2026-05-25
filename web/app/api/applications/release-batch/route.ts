@@ -82,23 +82,26 @@ export async function POST(request: Request) {
       released_by: user.id,
     });
 
-    // Email
-    try {
-      const positionTitle = app.position?.title ?? "Position";
-      await resend.emails.send({
-        from: EMAIL_FROM,
-        to: app.email,
-        subject: `Application Update: ${positionTitle}`,
-        react: StatusUpdate({
-          applicantName: app.full_name,
-          positionTitle,
-          newStatus,
-          statusMessage: "",
-          dashboardUrl: `${origin}/student/apply/dashboard`,
-        }),
-      });
-    } catch {
-      // Continue even if email fails
+    // Email — gated behind RECRUITMENT_EMAILS_ENABLED so test releases
+    // don't notify real applicants while admins iterate.
+    if (process.env.RECRUITMENT_EMAILS_ENABLED === "true") {
+      try {
+        const positionTitle = app.position?.title ?? "Position";
+        await resend.emails.send({
+          from: EMAIL_FROM,
+          to: app.email,
+          subject: `Application Update: ${positionTitle}`,
+          react: StatusUpdate({
+            applicantName: app.full_name,
+            positionTitle,
+            newStatus,
+            statusMessage: "",
+            dashboardUrl: `${origin}/student/apply/dashboard`,
+          }),
+        });
+      } catch {
+        // Continue even if email fails
+      }
     }
 
     released++;

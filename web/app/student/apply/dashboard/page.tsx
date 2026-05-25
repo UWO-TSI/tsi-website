@@ -17,7 +17,7 @@ import {
   Inbox,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import type { Application } from "@/lib/recruitment";
+import { studentVisibleStatus, type Application } from "@/lib/recruitment";
 import type { User } from "@supabase/supabase-js";
 
 const EASE_OUT: [number, number, number, number] = [0.16, 1, 0.3, 1];
@@ -32,14 +32,17 @@ export default function DashboardPage() {
   const supabase = createClient();
 
   useEffect(() => {
-    async function load() {
+    let cancelled = false;
+
+    async function load(isInitial: boolean) {
       const {
         data: { user },
       } = await supabase.auth.getUser();
-      setUser(user);
+      if (cancelled) return;
+      if (isInitial) setUser(user);
 
       if (!user) {
-        setLoading(false);
+        if (isInitial) setLoading(false);
         return;
       }
 
@@ -51,11 +54,22 @@ export default function DashboardPage() {
         .eq("user_id", user.id)
         .order("submitted_at", { ascending: false });
 
+      if (cancelled) return;
       setApplications((data as Application[]) ?? []);
-      setLoading(false);
+      if (isInitial) setLoading(false);
     }
 
-    load();
+    load(true);
+    // Poll every 15s so status updates show up without a manual reload.
+    // Pause when the tab is hidden to avoid wasted queries.
+    const interval = setInterval(() => {
+      if (document.visibilityState === "visible") load(false);
+    }, 15000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (loading) {
@@ -143,7 +157,7 @@ export default function DashboardPage() {
   // ── Authenticated state ──
   return (
     <div className="min-h-screen bg-[#0F0F10] py-8 md:py-16 px-6 md:px-16">
-      <div className="max-w-3xl mx-auto">
+      <div className="max-w-5xl mx-auto">
         {/* Back link */}
         <motion.button
           initial={{ opacity: 0, x: -12 }}
@@ -210,7 +224,9 @@ export default function DashboardPage() {
           </motion.div>
         ) : (
           <div className="space-y-5">
-            {applications.map((app, i) => (
+            {applications.map((app, i) => {
+              const visibleStatus = studentVisibleStatus(app);
+              return (
               <motion.div
                 key={app.id}
                 initial={{ opacity: 0, y: 20 }}
@@ -248,19 +264,27 @@ export default function DashboardPage() {
                       </span>
                     </div>
                   </div>
-                  <StatusBadge status={app.status} />
+                  <StatusBadge status={visibleStatus} />
                 </div>
 
                 {/* Status pipeline */}
-                <StatusPipeline currentStatus={app.status} />
+                <StatusPipeline currentStatus={visibleStatus} />
 
-                {/* Interview scheduling when invited */}
-                {app.status === "interview_invite" && app.position && (
+                {/* Interview scheduling when invited.
+                    For waitlisted applicants we force the no-calendly
+                    fallback so they don't re-book a slot they've already
+                    used, but still see the "team will reach out" message
+                    consistent with their pipeline position. */}
+                {visibleStatus === "interview_invite" && app.position && (
                   <div className="mt-6">
                     <InterviewScheduler
                       applicantName={app.full_name}
                       applicantEmail={app.email}
-                      calendlyUrl={app.position.calendly_url ?? null}
+                      calendlyUrl={
+                        app.status === "waitlist"
+                          ? null
+                          : app.position.calendly_url ?? null
+                      }
                     />
                   </div>
                 )}
@@ -278,7 +302,8 @@ export default function DashboardPage() {
                 {/* Activity feed */}
                 <ActivityFeed application={app} />
               </motion.div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

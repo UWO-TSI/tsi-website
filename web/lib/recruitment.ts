@@ -7,39 +7,43 @@
 // ============================================
 
 export const APPLICATION_STATUSES = [
-  "submitted",
   "screening",
   "interview_invite",
-  "interview",
   "final_review",
-  "offer",
+  "accepted",
   "waitlist",
-  "declined",
+  "rejected",
 ] as const;
 
 export type ApplicationStatus = (typeof APPLICATION_STATUSES)[number];
 
 export const STATUS_LABELS: Record<ApplicationStatus, string> = {
-  submitted: "Submitted",
   screening: "Screening",
   interview_invite: "Interview Invite",
-  interview: "Interview",
   final_review: "Final Review",
-  offer: "Offer",
+  accepted: "Accepted",
   waitlist: "Waitlist",
-  declined: "Declined",
+  rejected: "Rejected",
 };
 
+// Verdict colors: green=advance/accept, orange=waitlist, red=reject.
+// In-pipeline stages use neutral accents so they don't fight the verdicts.
 export const STATUS_COLORS: Record<ApplicationStatus, string> = {
-  submitted: "#9CA3AF",      // gray
   screening: "#22D3EE",      // cyan
-  interview_invite: "#FFD166", // yellow
-  interview: "#1D9BF0",      // brand blue
+  interview_invite: "#1D9BF0", // brand blue
   final_review: "#A78BFA",   // purple
-  offer: "#22C55E",          // green
+  accepted: "#22C55E",       // green
   waitlist: "#F97316",       // orange
-  declined: "#EF4444",       // red
+  rejected: "#EF4444",       // red
 };
+
+// Linear pipeline used by the Advance verdict.
+// Terminal states (accepted/waitlist/rejected) aren't here.
+export const PIPELINE_ORDER: ApplicationStatus[] = [
+  "screening",
+  "interview_invite",
+  "final_review",
+];
 
 // ============================================
 // POSITION TYPES
@@ -392,18 +396,41 @@ export function getCurrentPhase(): number {
 
 /** Get status index for pipeline visualization */
 export function getStatusIndex(status: ApplicationStatus): number {
-  const pipelineOrder: ApplicationStatus[] = [
-    "submitted",
-    "screening",
-    "interview_invite",
-    "interview",
-    "final_review",
-  ];
-  const idx = pipelineOrder.indexOf(status);
-  return idx === -1 ? pipelineOrder.length : idx;
+  const idx = PIPELINE_ORDER.indexOf(status);
+  return idx === -1 ? PIPELINE_ORDER.length : idx;
 }
 
 /** Check if status is a terminal state */
 export function isTerminalStatus(status: ApplicationStatus): boolean {
-  return ["offer", "waitlist", "declined"].includes(status);
+  return ["accepted", "waitlist", "rejected"].includes(status);
+}
+
+/** Status the applicant sees on their portal. Hides waitlist by surfacing
+ *  the stage they were at before being waitlisted — admins still see the
+ *  true waitlist state on /admin/recruit. */
+export function studentVisibleStatus(app: Application): ApplicationStatus {
+  if (app.status !== "waitlist") return app.status;
+  // Use the most recent release record to find where they were before the
+  // waitlist move. Falls back to final_review if we have no audit row.
+  const releases = [...(app.releases ?? [])].sort(
+    (a, b) => new Date(b.released_at).getTime() - new Date(a.released_at).getTime()
+  );
+  const latest = releases[0];
+  if (latest?.new_status === "waitlist") {
+    return latest.old_status as ApplicationStatus;
+  }
+  const lastNonWaitlist = releases.find((r) => r.new_status !== "waitlist");
+  return (lastNonWaitlist?.new_status as ApplicationStatus) ?? "final_review";
+}
+
+/** Next status when admin clicks "Advance" on a card.
+ *  Returns null for terminal states and for the last pipeline stage
+ *  (final_review advances to accepted via a dedicated accept verdict). */
+export function nextPipelineStatus(
+  status: ApplicationStatus
+): ApplicationStatus | null {
+  if (status === "final_review") return "accepted";
+  const idx = PIPELINE_ORDER.indexOf(status);
+  if (idx === -1) return null;
+  return PIPELINE_ORDER[idx + 1] ?? null;
 }

@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import {
   STATUS_LABELS,
   STATUS_COLORS,
+  PIPELINE_ORDER,
   type ApplicationStatus,
   isTerminalStatus,
   getStatusIndex,
@@ -13,15 +14,9 @@ interface StatusPipelineProps {
   currentStatus: ApplicationStatus;
 }
 
-// Linear stages — terminal states (offer/waitlist/declined) render as a
+// Linear stages — terminal states (accepted/waitlist/rejected) render as a
 // badge below instead of an extra pipeline dot.
-const PIPELINE_STAGES: ApplicationStatus[] = [
-  "submitted",
-  "screening",
-  "interview_invite",
-  "interview",
-  "final_review",
-];
+const PIPELINE_STAGES: ApplicationStatus[] = PIPELINE_ORDER;
 
 const PAST_COLOR = "#1D9BF0";
 const TRACK_COLOR = "rgba(255,255,255,0.08)";
