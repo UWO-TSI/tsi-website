@@ -6,6 +6,7 @@ import { CameraControls, Cloud, Clouds } from "@react-three/drei";
 import * as THREE from "three";
 import PlayerAvatar from "./PlayerAvatar";
 import Building from "./Building";
+import Path from "./Path";
 import { getTerrainHeight, valueNoise, BUILDING_FOOTPRINTS } from "./terrain";
 import { NatureTree, NatureBush, NatureFlowerCluster, NatureFence, NatureMushroom, NatureStump } from "./NatureModels";
 import { useUser } from "@/components/portal/UserContext";
@@ -227,28 +228,25 @@ function Terrain() {
           </mesh>
         );
       })}
-      {/* Path borders */}
-      {[
-        [0, -6, 4.5, 34], // N-S path (spawn to before Oracle)
-        [0, 8, 32, 4.5],  // E-W at z=8
-        [0, -10, 24, 4.5], // E-W at z=-10
-      ].map(([x, z, w, h], i) => (
-        <mesh key={`pb-${i}`} rotation={[-Math.PI / 2, 0, 0]} position={[x, 0.06, z]}>
-          <planeGeometry args={[w, h]} />
-          <meshStandardMaterial color={P.dirtPathEdge} roughness={0.88} metalness={0} polygonOffset polygonOffsetFactor={-2} polygonOffsetUnits={-2} />
-        </mesh>
-      ))}
-      {/* Dirt paths */}
-      {[
-        [0, -6, 3.5, 34],
-        [0, 8, 32, 3.5],
-        [0, -10, 24, 3.5],
-      ].map(([x, z, w, h], i) => (
-        <mesh key={`p-${i}`} rotation={[-Math.PI / 2, 0, 0]} position={[x, 0.08, z]}>
-          <planeGeometry args={[w, h]} />
-          <meshStandardMaterial color={P.dirtPath} roughness={0.85} metalness={0} polygonOffset polygonOffsetFactor={-3} polygonOffsetUnits={-3} />
-        </mesh>
-      ))}
+      {/* Curved alpha-blended paths (sprint A2). PATH_CORRIDORS in terrain.ts
+          still flatten these zones to y≈0 — control points stay within the
+          ±1.75 halfWidth corridor + 1.5 falloff, so we never leave the flat
+          band. See Path.tsx for the spline + soft-edge implementation. */}
+      <Path
+        controlPoints={[[0, -23], [1.5, -10], [-0.5, 4], [0, 17]]}
+        width={2.8}
+        color={P.dirtPath}
+      />
+      <Path
+        controlPoints={[[-16, 8], [-5, 7], [5, 9], [16, 8]]}
+        width={2.8}
+        color={P.dirtPath}
+      />
+      <Path
+        controlPoints={[[-12, -10], [-3, -10.5], [3, -9.5], [12, -10]]}
+        width={2.8}
+        color={P.dirtPath}
+      />
     </group>
   );
 }
