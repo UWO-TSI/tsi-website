@@ -98,15 +98,23 @@ class AudioManagerImpl {
   private missingFiles = new Set<string>();
   private warnedMissing = false;
   private listeners = new Set<Listener>();
+  private cachedSnapshot: AudioState;
 
   constructor() {
     if (typeof window !== "undefined") {
       this.volumes = readStoredVolumes();
     }
+    this.cachedSnapshot = this.computeSnapshot();
+  }
+
+  private computeSnapshot(): AudioState {
+    return { enabled: this.enabled, volumes: { ...this.volumes }, phase: this.phase };
   }
 
   getState(): AudioState {
-    return { enabled: this.enabled, volumes: { ...this.volumes }, phase: this.phase };
+    // Must return a stable reference between mutations — useSyncExternalStore
+    // bails into an infinite loop if every call yields a fresh object.
+    return this.cachedSnapshot;
   }
 
   subscribe(listener: Listener): () => void {
@@ -115,8 +123,8 @@ class AudioManagerImpl {
   }
 
   private notify(): void {
-    const state = this.getState();
-    this.listeners.forEach((l) => l(state));
+    this.cachedSnapshot = this.computeSnapshot();
+    this.listeners.forEach((l) => l(this.cachedSnapshot));
   }
 
   enable(): void {

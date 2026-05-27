@@ -12,6 +12,7 @@ import {
   BarChart3,
   Shield,
   Vote,
+  Sparkles,
 } from "lucide-react";
 
 interface Stats {
@@ -72,6 +73,13 @@ const adminSections = [
     icon: <Vote size={20} />,
     href: "/student/dashboard/admin/election",
     color: "var(--color-accent-cyan)",
+  },
+  {
+    title: "Content",
+    description: "NPCs, shop items, palettes, events (read-only)",
+    icon: <Sparkles size={20} />,
+    href: "/student/dashboard/admin/content/npcs",
+    color: "#f59e0b",
   },
 ];
 
