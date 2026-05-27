@@ -33,7 +33,7 @@ Spec: `specs/sprint-2026-06-admin-tooling.md`. Builds CRUD forms on top of the c
 | C4 | Event editor (+ QR code + printable view + IRL/XP toggle) | build | ✅ done (f1d9d73) — `EventEditor.tsx` in portal/, 3 routes (new + edit + print), added migration `016_events_check_in.sql` (3 missing cols: is_irl/capacity/qr_check_in_code), `qrcode@^1.5.4` dep. XP-disabled-when-not-IRL guard per principle #3 |
 | C5 | Version history + rollback + activity log | build | ✅ done — `VersionHistory.tsx` shared (per-table snapshot renderers: palette swatches/NPC fields+dialogue/shop fields), 3 history routes + activity log w/ filters + pagination, Restore creates a new draft via existing API. Hub gets log card |
 | C6 | (Optional) Image upload to Supabase Storage | build | ✅ done — `ImageUploadButton.tsx` + `POST /api/content/upload` (multipart, T1/T2, 5MB cap, MIME allowlist), migration `017_content_assets_bucket.sql` (bucket + 4 RLS policies). Wired into NPC + Shop editors. Native FormData, no new deps |
-| QA-C | End-of-sprint Wave 15 verification | qa | pending |
+| QA-C | End-of-sprint Wave 15 verification | qa | ✅ done — PASS, zero regressions |
 
 ---
 
@@ -186,6 +186,17 @@ Verification: `tsc --noEmit` clean, `npm run lint` 74 errors / 56 warnings (= Wa
 - Hooks exist (`useNPCPersonas`/`useShopItems`/`useActivePalette`); `swr ^2.4.1` in package.json; GameWorld imports + uses `activePalette.palette.sky`/`.fog` (other palette keys still unused → reviewer-flagged follow-up).
 - Runtime smoke on `:3050`: `/student/dashboard` 307, `/student/dashboard/shop` 307, `/api/shop` 401. With `.env.local` renamed: 200/200/200 with `{"products":[]}` — fallback path works. Restored env. No new runtime warnings.
 - B3 and A1 unblocked from QA side. Full report: `specs/qa.md` Wave 13.
+
+### 2026-05-27 — Wave 15: Admin Tooling sprint verification (C1-C6) — **PASS**
+
+- HEAD `41d9d0a`. End-of-sprint gate for Admin Tooling CRUD sprint.
+- Build: **107 routes, 31.1s** (+16 vs Wave 14, exactly matches sprint scope: 2 NPC + 2 shop + 3 palette + 3 event + 4 history/log + 1 upload + 1 single-draft = 16). `tsc --noEmit` exit 0.
+- Lint: **74 errors / 56 warnings** — exact Wave 14 match, **zero regressions** from a 6-deliverable sprint.
+- All 6 deliverables structurally verified: C1 (NPCEditor + `mode` prop + 2 routes + new `GET /api/content/drafts/[id]`), C2 (ShopEditor + rarity/category/unlimited-stock + sprite preview), C3 (PaletteEditor + 7 HTML5 color pickers via `COLOR_KEYS` × `<ColorRow>` + atomic activate API), C4 (EventEditor + 3 routes + migration 016 + `qrcode@^1.5.4` dep), C5 (VersionHistory + 3 history routes + activity log w/ filters + admin hub card), C6 (ImageUploadButton + multipart upload route w/ T1/T2 gate + migration 017 + wired into NPC/Shop editors).
+- Migration syntax spot-check: 016 uses `ADD COLUMN IF NOT EXISTS` ×3 (idempotent); 017 uses `INSERT … ON CONFLICT DO UPDATE` + `DROP POLICY IF EXISTS` before each `CREATE POLICY` (idempotent), header comment cites Cloud Supabase dashboard-fallback path.
+- Off-limits check: zero editor components in `web/components/admin/` — all 6 editors correctly under `web/components/portal/`. Recruitment scope untouched.
+- Runtime smoke (port 3000): all 5 new admin pages 307 (middleware auth gate), `/api/content/drafts` 401, `/api/content/upload` GET 405 (POST-only export). All match spec.
+- Migrations 016 + 017 not applied (per directive). Full report: `specs/qa.md` Wave 15.
 
 ### 2026-05-27 — Wave 14: End-of-sprint verification (13 deliverables + audio hotfix) — **PASS**
 

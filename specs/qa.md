@@ -1,7 +1,115 @@
 # QA Report
 
 > Owner: QA agent. All agents check this for bugs in their area.
-> Last updated: 2026-05-27 (Wave 14)
+> Last updated: 2026-05-27 (Wave 15)
+
+---
+
+## Wave 15 — 2026-05-27 Admin Tooling Sprint Verification
+
+End-of-sprint verification for Admin Tooling CRUD sprint (C1-C6: NPC + Shop + Palette + Event editors, version history + activity log, image upload). Diff against Wave 14 baseline (`791aa39`).
+
+### Environment
+
+- Branch: `main`
+- HEAD: `41d9d0a` ([build] sprint c6: image upload to Supabase Storage)
+- Working tree: clean apart from unrelated `M web/components/admin/ReleaseControls.tsx` (recruitment scope, out of QA review per `CLAUDE.md`), plus untracked `.claude/scheduled_tasks.lock`, `.claude/worktrees/`, `web/supabase/.temp/` (local-only artifacts).
+
+### Verdict: **PASS**
+
+All 6 deliverables present + structurally correct. Build clean. Lint exactly at Wave 14 baseline. Zero regressions from a 6-deliverable sprint. Runtime smoke all green.
+
+### Build
+
+- `cd web && npm run build` → `✓ Compiled successfully in 31.1s`.
+- Total routes (counting `├`/`└` lines): **107** (+16 vs Wave 14's 91). Matches sprint expectation (~14, allowing for the activity-log page + admin hub card both prerendering).
+- Route delta breakdown:
+  - C1 NPC: `npcs/new`, `npcs/[id]/edit` (+2)
+  - C2 Shop: `shop/new`, `shop/[id]/edit` (+2)
+  - C3 Palette: `palettes/new`, `palettes/[id]/edit`, `api/content/palettes/[id]/activate` (+3)
+  - C4 Event: `events/new`, `events/[id]/edit`, `events/[id]/print` (+3)
+  - C5 History/log: `npcs/[id]/history`, `shop/[id]/history`, `palettes/[id]/history`, `content/log` (+4)
+  - C6 Upload: `api/content/upload` (+1)
+  - C1 extra: `api/content/drafts/[id]` GET single draft (+1)
+  - Total: +16 (matches).
+- Build warnings: same two pre-existing (workspace-root lockfile inference, `middleware` convention deprecation). No new build warnings.
+
+### Types
+
+- `npx tsc --noEmit` → exit 0, no output. Clean.
+
+### Lint
+
+- `npm run lint` → **130 problems (74 errors, 56 warnings)** — **identical to Wave 14 baseline**. Zero regressions from a 6-deliverable sprint.
+- 5 warnings still auto-fixable (unchanged).
+- No new lint rule patterns introduced.
+
+### Deliverable verification
+
+| # | Deliverable | Verified |
+|---|-------------|----------|
+| C1 | `NPCEditor.tsx` (574 lines) with `mode: "new" \| "edit"` prop (34), slug validation (76-77), draft state machine; pages `npcs/new/page.tsx` + `npcs/[id]/edit/page.tsx`, both T1/T2-gated via `useUser` + `tier > 2` block; `GET /api/content/drafts/[id]/route.ts` present | ✅ |
+| C2 | `ShopEditor.tsx` (690 lines) with category dropdown (342), rarity dropdown color-coded (420-428), `unlimited_stock` toggle (439-443) nulling stock, sprite inline preview; 2 routes (`shop/new`, `shop/[id]/edit`) | ✅ |
+| C3 | `PaletteEditor.tsx` (563 lines) — `COLOR_KEYS` array of 7 keys (sky/grass/accent/fog/water/building_primary/building_accent), `<ColorRow>` (`<input type="color">` + swatch + hex label) mapped twice (form + preview); 2 routes; atomic `POST /api/content/palettes/[id]/activate` present | ✅ |
+| C4 | `EventEditor.tsx` (599 lines); 3 routes (`new`, `[id]/edit`, `[id]/print`); migration `016_events_check_in.sql` adds `is_irl` / `capacity` / `qr_check_in_code` with `IF NOT EXISTS` (idempotent); `qrcode@^1.5.4` + `@types/qrcode@^1.5.6` in `package.json` | ✅ |
+| C5 | `VersionHistory.tsx` (514 lines) shared component with per-table snapshot renderers; 3 history routes (`npcs/[id]/history`, `shop/[id]/history`, `palettes/[id]/history`); `content/log/page.tsx` with filters + reset (lines 308-315, 333); admin hub `page.tsx` lines 86-89 has "Content Activity Log" card linking to `/student/dashboard/admin/content/log` | ✅ |
+| C6 | `ImageUploadButton.tsx` (102 lines); `POST /api/content/upload/route.ts` — multipart enforced (line 43), `formData()` parsed (78), T1/T2 gate (`tier !== 1 && tier !== 2` → 403, line 68-71); migration `017_content_assets_bucket.sql` (bucket + 4 RLS policies, dashboard-fallback comment lines 8-14); NPCEditor + ShopEditor both import + render `ImageUploadButton` (NPCEditor:9+390, ShopEditor:9+368) | ✅ |
+
+### Runtime smoke (port 3000, existing dev server)
+
+| URL | Code | Expected | Pass |
+|-----|------|----------|------|
+| `GET /student/dashboard/admin/content/npcs/new` | 307 | 307 or 200 | ✅ |
+| `GET /student/dashboard/admin/content/shop/new` | 307 | 307 or 200 | ✅ |
+| `GET /student/dashboard/admin/content/palettes/new` | 307 | 307 or 200 | ✅ |
+| `GET /student/dashboard/admin/content/events/new` | 307 | 307 or 200 | ✅ |
+| `GET /student/dashboard/admin/content/log` | 307 | 307 or 200 | ✅ |
+| `GET /api/content/drafts` (unauthenticated) | 401 | 401 | ✅ |
+| `GET /api/content/upload` (unauthenticated) | 405 | 405 or 401 | ✅ |
+
+All codes match spec. 307s are middleware auth-gate redirects to `/student/login` (no session); the in-component tier check sits behind that. Upload's 405 is correct — route exports `POST` only, so `GET` is method-not-allowed before any auth runs.
+
+### Off-limits check
+
+- `web/components/admin/` contains only recruitment files (`ApplicantCard`, `FilterBar`, `RecruitBoard`, `RecruitInsights`, `ReleaseControls`, `TagEditor`). **No editor components leaked into admin/**. All 6 editors live in `web/components/portal/`: `NPCEditor.tsx`, `ShopEditor.tsx`, `PaletteEditor.tsx`, `EventEditor.tsx`, `VersionHistory.tsx`, `ImageUploadButton.tsx`. ✅
+- No portal-scope agent touched `web/app/(site)/`, `web/app/student/apply/`, `web/components/sections/`, or the recruitment migration tree (001_recruitment, 009-013). ✅
+
+### Migration syntax spot-check
+
+**`016_events_check_in.sql`** (16 lines):
+- `ALTER TABLE events ADD COLUMN IF NOT EXISTS` ×3 → idempotent ✅
+- Backfill `UPDATE … WHERE qr_check_in_code IS NULL` — safe to re-run ✅
+- No DROPs. Comment cites design principle #3 (XP only on IRL).
+
+**`017_content_assets_bucket.sql`** (65 lines):
+- `INSERT INTO storage.buckets … ON CONFLICT (id) DO UPDATE SET` — idempotent ✅
+- 4 policies all preceded by `DROP POLICY IF EXISTS …` — idempotent re-run ✅
+- T1/T2 gate uses `(SELECT tier FROM profiles WHERE id = (select auth.uid())) IN (1, 2)` — matches the existing pattern from migration 014 ✅
+- Header comment (lines 7-14) explicitly documents the Cloud Supabase fallback: create the bucket from the Dashboard if the postgres role can't INSERT into `storage.buckets`, then re-run the migration so the policies land. ✅
+
+### Regression delta vs Wave 14
+
+| Check | Wave 14 | Wave 15 | Delta |
+|-------|---------|---------|-------|
+| Build | PASS (91 routes, 77 static, 10.1s) | PASS (107 routes, 31.1s) | +16 routes — matches sprint scope |
+| `tsc --noEmit` | Clean | Clean | — |
+| Lint errors | 74 | **74** | **0** |
+| Lint warnings | 56 | **56** | **0** |
+| Build warnings | 2 (workspace-root, middleware) | 2 (same) | — |
+| HTTP smoke | All expected codes | All expected codes | — |
+
+### Anomalies / notes for downstream
+
+- **Build time bounced 10.1s → 31.1s.** Cold turbopack cache after fresh checkout of c6 work; 6 new editor components + 14 new routes also adds compile units. Not concerning.
+- **Migrations 016 + 017 not applied to any DB** — per spec ("Don't apply migrations"). Build agent and reviewer should coordinate the actual apply.
+- **Activate endpoint atomicity caveat** (`api/content/palettes/[id]/activate`): build agent's Wave-C3 note flags the two-UPDATE window as low-concurrency-acceptable. Worth a single-transaction refactor before multi-admin usage (not blocking this sprint).
+- **Upload route service-role write** bypasses RLS — the bucket policies in 017 are belt-and-suspenders for direct authenticated-key writes. Confirmed by comment lines 36-38 in the migration. Intentional.
+- **Working tree has unrelated `M web/components/admin/ReleaseControls.tsx`** (recruitment scope) — carried since Wave 14, not introduced by this sprint, not reviewed.
+- **Palette wiring still consumes only `sky` + `fog`** in `GameWorld.tsx` — Wave 13/14 carryover, out of this sprint's scope.
+
+### Sprint readiness
+
+End-of-sprint gate: green. Build, types, lint, runtime smoke, file structure, migration idempotency, off-limits boundaries — all green. 6/6 deliverables structurally verified against spec. Next sprint may proceed once migrations 016 + 017 are applied.
 
 ---
 
