@@ -100,6 +100,17 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-05-27 — Sprint D4: NPC chat overlay UI
+
+`NPCChatOverlay.tsx` (~470 lines) in `components/game/`. DOM overlay mounted alongside `AudioController` in `GameWorld`, outside R3F Canvas. Props `{ npc, onClose }`; visible when `npc !== null`. State lifted to `GameWorld` via `useState<NPCPersona | null>` so D5 can wire sprite clicks via the existing `setActiveNPC` (currently `void`-suppressed until then).
+
+- History: `GET /api/npc/conversations?npc_id=&limit=10` (new, ~30 lines) — RLS-scoped to user, returns oldest-first turns.
+- Send: `POST /api/npc/chat` (D3). Error mapping: 401 → sign-in msg + auto-close 3s, 404 → close, 429 → rate-limit copy, 400 → server error text, 500/network → "Couldn't reach the server" + Retry button.
+- Report: `POST /api/npc/conversations/[id]/flag` (new, ~45 lines, option **a** from spec). Verifies row ownership via user-scoped client, then service-role UPDATE `flagged=true`. Just-sent turns (no DB id yet) toast "report after refresh".
+- UX: ESC + backdrop click close; portrait is hue-hashed gradient quad with display_name (sprite swap in D5); spawn_zone tag pill; user/NPC bubbles; thinking dots staggered CSS keyframes; spinner on Send while pending; input disabled while sending. Typewriter reveal at 30ms/char via `setInterval` in a child `NPCReplyText` component — `count` only state, `animate=false` short-circuits to full text (avoids `set-state-in-effect` lint rule). Blinking cursor `_` until done.
+
+Verification: `tsc --noEmit` clean. `npm run lint` 74/56 (baseline match). `npm run build` ✓ 18.2s; 3 NPC routes present (`chat`, `conversations`, `conversations/[id]/flag`).
+
 ### 2026-05-27 — Sprint D1: NPC memory migration
 
 Wrote `web/supabase/migrations/018_npc_memories.sql` per spec §D1. Two new tables (`npc_memories`, `npc_conversations`) + RLS + indexes. Not applied anywhere.

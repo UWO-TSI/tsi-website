@@ -13,8 +13,10 @@ import { NatureTree, NatureBush, NatureFlowerCluster, NatureFence, NatureMushroo
 import AmbientProps from "./AmbientProps";
 import AmbientLife from "./AmbientLife";
 import AudioController from "./AudioController";
+import NPCChatOverlay from "./NPCChatOverlay";
 import { useUser } from "@/components/portal/UserContext";
 import { useActivePalette } from "@/lib/game/contentLoader";
+import type { NPCPersona } from "@/lib/game/contentTypes";
 
 /**
  * Game World v2 — Animal Crossing: New Horizons visual style.
@@ -528,6 +530,11 @@ export default function GameWorld() {
   const fogColor = activePalette.palette.fog || P.fog;
   const todPhase = useTodPhase();
 
+  // Active NPC chat target. D5 will wire NPC sprite clicks to setActiveNPC.
+  const [activeNPC, setActiveNPC] = useState<NPCPersona | null>(null);
+  // Suppress unused-var warning until D5 wires the click handler.
+  void setActiveNPC;
+
   return (
     <div style={{ width: "100%", height: "100%", minHeight: "100vh", background: skyBase, position: "relative" }}>
       <Canvas
@@ -544,6 +551,7 @@ export default function GameWorld() {
         </Suspense>
       </Canvas>
       <AudioController phase={todPhase} />
+      <NPCChatOverlay npc={activeNPC} onClose={() => setActiveNPC(null)} />
     </div>
   );
 }
