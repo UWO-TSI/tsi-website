@@ -2,7 +2,7 @@
 
 import { Suspense, useRef, useState, useCallback, useEffect, useMemo } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { CameraControls, Cloud, Clouds } from "@react-three/drei";
+import { CameraControls, Cloud, Clouds, Html } from "@react-three/drei";
 import * as THREE from "three";
 import PlayerAvatar from "./PlayerAvatar";
 import Building from "./Building";
@@ -14,9 +14,10 @@ import AmbientProps from "./AmbientProps";
 import AmbientLife from "./AmbientLife";
 import AudioController from "./AudioController";
 import NPCChatOverlay from "./NPCChatOverlay";
+import NPC from "./NPC";
 import { useUser } from "@/components/portal/UserContext";
-import { useActivePalette } from "@/lib/game/contentLoader";
-import type { NPCPersona } from "@/lib/game/contentTypes";
+import { useActivePalette, useNPCPersonas } from "@/lib/game/contentLoader";
+import type { NPCPersona, SpawnZone } from "@/lib/game/contentTypes";
 
 /**
  * Game World v2 — Animal Crossing: New Horizons visual style.
@@ -458,10 +459,103 @@ function Props() {
   );
 }
 
+// ─── NPC spawn anchors (D5) ─────────────────────────────────────
+// Approximate centers per spawn_zone enum. When >1 NPC shares a zone we
+// offset along +x so they don't visually overlap.
+const NPC_SPAWN_POSITIONS: Record<SpawnZone, [number, number, number]> = {
+  courtyard: [-2, 0, -2],
+  shop: [-14, 0, 6],
+  temple: [0, 0, 18],
+  roaming: [5, 0, 5],
+};
+
+// Generic filler NPCs — design principle #2: world must never feel empty.
+// No persona_prompt / canned_dialogue: clicking shows a brief tooltip, not
+// the chat overlay. Synthetic ids prefixed `filler-` for traceability.
+const FILLER_NPCS: NPCPersona[] = [
+  {
+    id: "filler-wanderer-1",
+    slug: "wanderer-1",
+    display_name: "Wanderer",
+    sprite_url: null,
+    spawn_zone: "courtyard",
+    is_permanent: false,
+    persona_prompt: null,
+    canned_dialogue: [],
+    active: true,
+    created_at: new Date(0).toISOString(),
+    updated_at: new Date(0).toISOString(),
+  },
+  {
+    id: "filler-visitor-1",
+    slug: "visitor-1",
+    display_name: "Visitor",
+    sprite_url: null,
+    spawn_zone: "courtyard",
+    is_permanent: false,
+    persona_prompt: null,
+    canned_dialogue: [],
+    active: true,
+    created_at: new Date(0).toISOString(),
+    updated_at: new Date(0).toISOString(),
+  },
+  {
+    id: "filler-stranger-1",
+    slug: "stranger-1",
+    display_name: "Stranger",
+    sprite_url: null,
+    spawn_zone: "courtyard",
+    is_permanent: false,
+    persona_prompt: null,
+    canned_dialogue: [],
+    active: true,
+    created_at: new Date(0).toISOString(),
+    updated_at: new Date(0).toISOString(),
+  },
+];
+
+const FILLER_POSITIONS: [number, number, number][] = [
+  [3, 0, -4],
+  [-4, 0, -5],
+  [2, 0, -8],
+];
+
 // ─── Scene ──────────────────────────────────────────────────────
-function Scene({ playerName, playerLevel, fogColor, todPhase }: { playerName: string; playerLevel: number; fogColor: string; todPhase: "day" | "night" | "dawn" | "dusk" }) {
+function Scene({
+  playerName,
+  playerLevel,
+  fogColor,
+  todPhase,
+  onNPCClick,
+}: {
+  playerName: string;
+  playerLevel: number;
+  fogColor: string;
+  todPhase: "day" | "night" | "dawn" | "dusk";
+  onNPCClick: (npc: NPCPersona) => void;
+}) {
   const cameraRef = useRef<CameraControls>(null);
   const [playerPos, setPlayerPos] = useState<THREE.Vector3>(new THREE.Vector3(...SPAWN_POSITION));
+  const { data: personas } = useNPCPersonas({ permanentOnly: true });
+  const [fillerToast, setFillerToast] = useState<string | null>(null);
+
+  // Position each permanent NPC by spawn_zone, offsetting duplicates so they
+  // don't overlap. Stable: ordering follows the personas array.
+  const placedPersonas = useMemo(() => {
+    const zoneCount: Partial<Record<SpawnZone, number>> = {};
+    return personas.map((p) => {
+      const base = NPC_SPAWN_POSITIONS[p.spawn_zone] ?? NPC_SPAWN_POSITIONS.courtyard;
+      const idx = zoneCount[p.spawn_zone] ?? 0;
+      zoneCount[p.spawn_zone] = idx + 1;
+      const pos: [number, number, number] = [base[0] + idx * 1.5, base[1], base[2]];
+      return { persona: p, position: pos };
+    });
+  }, [personas]);
+
+  const handleFillerClick = useCallback((name: string) => {
+    setFillerToast(`${name}: ...just passing through.`);
+    setTimeout(() => setFillerToast(null), 2000);
+  }, []);
 
   const handlePlayerMove = useCallback((position: THREE.Vector3) => {
     setPlayerPos(position);
@@ -510,7 +604,46 @@ function Scene({ playerName, playerLevel, fogColor, todPhase }: { playerName: st
         return <Building key={b.id} id={b.id} name={b.name} position={[b.position[0], y, b.position[2]]} size={b.size} color={b.color} roofColor={b.roofColor} href={b.href} playerPosition={playerPos} />;
       })}
 
+      {/* Permanent NPCs from content pipeline. Click → chat overlay. */}
+      {placedPersonas.map(({ persona, position }) => (
+        <NPC
+          key={persona.id}
+          persona={persona}
+          position={position}
+          onClick={() => onNPCClick(persona)}
+        />
+      ))}
+
+      {/* Filler NPCs (design principle #2). Click → brief tooltip, no chat. */}
+      {FILLER_NPCS.map((filler, i) => (
+        <NPC
+          key={filler.id}
+          persona={filler}
+          position={FILLER_POSITIONS[i]}
+          onClick={() => handleFillerClick(filler.display_name)}
+        />
+      ))}
+
       <PlayerAvatar spawnPosition={SPAWN_POSITION} onMove={handlePlayerMove} playerName={playerName} playerLevel={playerLevel} />
+
+      {fillerToast && (
+        <Html position={[0, 4, 0]} center style={{ pointerEvents: "none" }} distanceFactor={10}>
+          <div
+            style={{
+              background: "rgba(15, 15, 16, 0.85)",
+              border: "1px solid rgba(255,255,255,0.18)",
+              borderRadius: 8,
+              padding: "6px 12px",
+              color: "#f1ffff",
+              fontFamily: "'IBM Plex Mono', monospace",
+              fontSize: 12,
+              whiteSpace: "nowrap",
+            }}
+          >
+            {fillerToast}
+          </div>
+        </Html>
+      )}
     </>
   );
 }
@@ -530,10 +663,8 @@ export default function GameWorld() {
   const fogColor = activePalette.palette.fog || P.fog;
   const todPhase = useTodPhase();
 
-  // Active NPC chat target. D5 will wire NPC sprite clicks to setActiveNPC.
+  // Active NPC chat target. D5 wires sprite clicks → setActiveNPC inside Scene.
   const [activeNPC, setActiveNPC] = useState<NPCPersona | null>(null);
-  // Suppress unused-var warning until D5 wires the click handler.
-  void setActiveNPC;
 
   return (
     <div style={{ width: "100%", height: "100%", minHeight: "100vh", background: skyBase, position: "relative" }}>
@@ -547,7 +678,13 @@ export default function GameWorld() {
         }}
       >
         <Suspense fallback={null}>
-          <Scene playerName={playerName} playerLevel={playerLevel} fogColor={fogColor} todPhase={todPhase} />
+          <Scene
+            playerName={playerName}
+            playerLevel={playerLevel}
+            fogColor={fogColor}
+            todPhase={todPhase}
+            onNPCClick={setActiveNPC}
+          />
         </Suspense>
       </Canvas>
       <AudioController phase={todPhase} />
