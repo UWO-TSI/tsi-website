@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Shield, ArrowLeft } from "lucide-react";
+import { Shield, ArrowLeft, Plus, Pencil } from "lucide-react";
 import { useUser } from "@/components/portal/UserContext";
 import { useNPCPersonas } from "@/lib/game/contentLoader";
 
@@ -49,19 +49,21 @@ export default function AdminContentNPCsPage() {
         </Link>
       </div>
 
-      <div className="mb-4">
-        <h1 className="text-2xl font-heading font-bold text-[var(--color-text-primary)]">
-          NPC Personas
-        </h1>
-        <p className="text-sm font-mono text-[var(--color-text-muted)] mt-1">
-          {npcs.length} total · permanent + dynamic-filler characters
-        </p>
-      </div>
-
-      <div className="mb-6 p-3 bg-[var(--color-brand-yellow)]/10 border border-[var(--color-brand-yellow)]/30 rounded-md">
-        <p className="text-xs font-mono text-[var(--color-brand-yellow)]">
-          Read-only this sprint. Editing lands in the admin-tooling sprint.
-        </p>
+      <div className="mb-6 flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-heading font-bold text-[var(--color-text-primary)]">
+            NPC Personas
+          </h1>
+          <p className="text-sm font-mono text-[var(--color-text-muted)] mt-1">
+            {npcs.length} total · permanent + dynamic-filler characters
+          </p>
+        </div>
+        <Link
+          href="/student/dashboard/admin/content/npcs/new"
+          className="inline-flex items-center gap-2 px-4 py-2 bg-[var(--color-accent-cyan)] text-[var(--color-bg)] font-mono text-xs uppercase tracking-wider rounded-md hover:opacity-90 transition-opacity"
+        >
+          <Plus size={14} /> New NPC
+        </Link>
       </div>
 
       {isLoading ? (
@@ -97,6 +99,9 @@ export default function AdminContentNPCsPage() {
                 </th>
                 <th className="text-left px-4 py-3 text-[0.65rem] font-mono uppercase tracking-wider text-[var(--color-text-muted)]">
                   Created
+                </th>
+                <th className="px-4 py-3 text-[0.65rem] font-mono uppercase tracking-wider text-[var(--color-text-muted)]">
+                  <span className="sr-only">Actions</span>
                 </th>
               </tr>
             </thead>
@@ -150,6 +155,14 @@ export default function AdminContentNPCsPage() {
                   </td>
                   <td className="px-4 py-3 font-mono text-[0.65rem] text-[var(--color-text-muted)]">
                     {new Date(npc.created_at).toLocaleDateString()}
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <Link
+                      href={`/student/dashboard/admin/content/npcs/${npc.id}/edit`}
+                      className="inline-flex items-center gap-1 text-xs font-mono text-[var(--color-accent-cyan)] hover:underline"
+                    >
+                      <Pencil size={12} /> Edit
+                    </Link>
                   </td>
                 </tr>
               ))}

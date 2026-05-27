@@ -17,7 +17,27 @@
 
 ---
 
-## Current Sprint — World-Building Polish + Content Pipeline Architecture
+## Previous Sprint — World-Building Polish + Content Pipeline Architecture ✅ CLOSED
+
+All 13 deliverables shipped, QA Wave 14 PASS (commit `001eea8`), zero lint regressions. Sprint log preserved in the table below.
+
+## Current Sprint — Admin Tooling CRUD (started 2026-05-27)
+
+Spec: `specs/sprint-2026-06-admin-tooling.md`. Builds CRUD forms on top of the content pipeline (B3 API routes + B4 listing pages). 6 deliverables (C1-C6), ~4 week window.
+
+| # | Deliverable | Owner | Status |
+|---|-------------|-------|--------|
+| C1 | NPC editor (slug/name/spawn_zone/persona_prompt/canned_dialogue/etc + draft/preview/publish/discard) | build | ✅ done — `NPCEditor.tsx` (480 lines in `components/portal/`), 2 routes (new + edit), inline validation, slug uniqueness check, new GET `/api/content/drafts/[id]` |
+| C2 | Shop item editor (with rarity/stock/sprite_url) | build | pending |
+| C3 | Palette editor (7 color pickers + live preview + set-active) | build | pending |
+| C4 | Event editor (+ QR code + printable view + IRL/XP toggle) | build | pending |
+| C5 | Version history + rollback + activity log | build | pending |
+| C6 | (Optional) Image upload to Supabase Storage | build | pending |
+| QA-C | End-of-sprint Wave 15 verification | qa | pending |
+
+---
+
+## Previous Sprint — World-Building Polish + Content Pipeline Architecture
 
 **Goal:** Make the world feel like a real place AND set up data-driven content architecture so admins can drop monthly content without code pushes. Full spec: `specs/sprint-2026-05-game-look-feel.md`.
 
