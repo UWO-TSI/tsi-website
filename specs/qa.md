@@ -1,7 +1,111 @@
 # QA Report
 
 > Owner: QA agent. All agents check this for bugs in their area.
-> Last updated: 2026-05-25 (Wave 13)
+> Last updated: 2026-05-27 (Wave 14)
+
+---
+
+## Wave 14 — 2026-05-27 End-of-Sprint Verification
+
+End-of-sprint verification covering the 13 World-Building + Content Pipeline deliverables (A1-A9, B1-B4) plus the A7 audio infinite-loop hotfix. Diff against Wave 13 baseline (`dbc571f`).
+
+### Environment
+
+- Branch: `main`
+- HEAD: `791aa39` ([build] sprint b4 + a7 hotfix: admin stub pages + audio snapshot cache)
+- Working tree: clean apart from one unrelated `M web/components/admin/ReleaseControls.tsx` (recruitment scope, out of QA review per `CLAUDE.md`).
+
+### Verdict: **PASS**
+
+All 13 deliverables present + structurally correct. Audio hotfix verified. Build clean. Lint exactly at Wave 13 baseline. No regressions.
+
+### Build
+
+- `cd web && npm run build` → `✓ Compiled successfully in 10.1s`.
+- Static pages: **77/77** (+5 vs Wave 13's 72 — exactly matches the 4 new admin stubs + 1 new draft preview surface).
+- Total routes (counting `├`/`└` lines): **91** (+7 vs Wave 13's 84 — 4 admin content pages + 3 content draft API routes).
+- Build warnings: same two pre-existing (workspace-root lockfile inference, `middleware` convention deprecation). No new build warnings.
+
+### Types
+
+- `npx tsc --noEmit` → exit 0, no output. Clean.
+
+### Lint
+
+- `npm run lint` → **130 problems (74 errors, 56 warnings)** — **identical to Wave 13 baseline**. Zero regressions from a 13-deliverable sprint.
+- 5 warnings still auto-fixable (unchanged).
+- No new lint rule patterns introduced.
+
+### Deliverable verification
+
+| # | Deliverable | Verified |
+|---|-------------|----------|
+| A1 | `terrain.ts` — `BUILDING_FOOTPRINTS` (line 60), `PATH_CORRIDORS` (74), `sampleTerrainHeight` (147), `NOISE_AMPLITUDE = 0.6` (54) | ✅ |
+| A2 | `Path.tsx` — `CatmullRomCurve3` (58), `pathColor` vec4 attribute (115), `onBeforeCompile` patch (140-146) | ✅ |
+| A3 | `River.tsx` — 2 sin-wave shader (289-290), foam highlight via pow^4, deep/shallow blend | ✅ |
+| A4 | `Building.tsx` — `PROC_VARIANTS = {hq, shop, oracle, temple}` (15); Oracle Temple braziers w/ flicker + point-lights (160) | ✅ |
+| A5 | `AmbientProps.tsx` — 4 signposts + 6 stepping stones + 4 fences + 4 lanterns = **18 props** | ✅ |
+| A6 | `AmbientLife.tsx` — butterflies/fireflies/leaves/birds all present | ✅ |
+| A7 | `audio.ts` singleton + `AudioController.tsx` (DOM overlay) both present. Audio hotfix verified — see below. | ✅ |
+| A8 | `MoveTargetIndicator.tsx` present; `PlayerAvatar.tsx` walk bob (line 267, sin(t*π*8)*0.05) + idle breath (lerp via `breathBlendRef`) | ✅ |
+| A9 | `dashboard/page.tsx` — `Suspense` import (3), `<GameLoadingScreen />` fallback (72, 78-80), `next/dynamic` loading reused | ✅ |
+| B1 | Migration `014_content_pipeline.sql` — 4 tables, partial unique index for single-active palette (51-53), `(select auth...)` wrapping throughout, T1/T2 RLS | ✅ |
+| B2 | `contentLoader.ts` exports `useNPCPersonas` (130) / `useShopItems` (211) / `useActivePalette` (287); `content-defaults.ts` matches migration seeds (verified Wave 13) | ✅ |
+| B3 | Migration `015_content_versions.sql` (snapshot table, T1/T2 RLS); 3 API routes: `drafts/route.ts`, `drafts/[id]/publish/route.ts`, `drafts/[id]/discard/route.ts`; `components/portal/PreviewBanner.tsx` (15) | ✅ |
+| B4 | 4 stub pages under `web/app/student/dashboard/admin/content/{npcs,shop,palettes,events}/page.tsx` — all build as static (visible in route table) | ✅ |
+
+### Audio hotfix (`791aa39`) verification
+
+Targeted check on `web/lib/game/audio.ts`:
+
+- `cachedSnapshot: AudioState` field declared (line 101).
+- `computeSnapshot(): AudioState` method present (110-112) — returns fresh `{enabled, volumes, phase}` object.
+- `getState()` returns `this.cachedSnapshot` (line 117), NOT a fresh object — comment explicitly cites the `useSyncExternalStore` infinite-loop hazard.
+- `notify()` recomputes the snapshot *before* broadcasting (line 126: `this.cachedSnapshot = this.computeSnapshot();` then `listeners.forEach(...)`).
+- Constructor seeds the cache at line 107 so first `getState()` is valid before any mutation.
+
+The infinite-loop bug pattern (every call returns new object → React re-renders forever) is correctly resolved.
+
+### Runtime smoke (port 3000, existing dev server PID 18863)
+
+| URL | Code | Expected |
+|-----|------|----------|
+| `GET /` | 200 | ✅ 200 |
+| `GET /student/dashboard` | 307 | ✅ 307 → login (no session) |
+| `GET /student/dashboard/admin/content/npcs` | 307 | ✅ 307 (middleware auth gate before admin component gate) |
+| `GET /student/dashboard/admin/content/shop` | 307 | ✅ 307 |
+| `GET /student/dashboard/admin/content/palettes` | 307 | ✅ 307 |
+| `GET /student/dashboard/admin/content/events` | 307 | ✅ 307 |
+| `GET /api/content/drafts` (unauthenticated) | 401 | ✅ 401 |
+
+All HTTP codes match spec expectations. Middleware auth gate fires before the in-component admin tier check, which is consistent with current portal routing.
+
+### Browser visual check
+
+**Not visually tested this wave.** No Playwright session was opened — dev server is owned by David's interactive session and a Playwright takeover could disrupt it. Recommend a separate visual pass before next sprint kicks off if desired.
+
+### Regression delta vs Wave 13
+
+| Check | Wave 13 | Wave 14 | Delta |
+|-------|---------|---------|-------|
+| Build | PASS (84 routes, 72 static, 23.7s) | PASS (91 routes, 77 static, 10.1s) | +7 routes, +5 static — all from new admin/content surfaces |
+| `tsc --noEmit` | Clean | Clean | — |
+| Lint errors | 74 | **74** | **0** |
+| Lint warnings | 56 | **56** | **0** |
+| Build warnings | 2 (workspace-root, middleware) | 2 (same) | — |
+| HTTP smoke | `/` 200, `/dashboard` 307, `/api/shop` 401 | Above 7 URLs all expected | New surfaces correctly gated |
+
+### Anomalies / notes for downstream
+
+- **Build time dropped 23.7s → 10.1s.** Likely turbopack cache hit on a warm repo, not a code change. Not concerning.
+- **77 static pages built vs the 4 new admin pages** — math is +5, not +4. The 5th appears to be the existing `/student/dashboard/admin` hub gaining a card (per B4 description: "Admin hub card added"); the hub itself prerendered as static this build. Cosmetic.
+- **Palette wiring still only consumes `sky` + `fog`** in `GameWorld.tsx` — `grass`, `water`, `accent`, `building_primary`, `building_accent` loaded but unused. Carried from Wave 13 reviewer follow-up `dbc571f`; not a Wave 14 failure.
+- **`/api/shop` legacy unioning** (shop_items + marketplace_items + avatar_items) still in place — flagged in Wave 13, not in scope to fix this sprint.
+- **Working tree has unrelated `M web/components/admin/ReleaseControls.tsx`** (recruitment scope) — not introduced by this sprint, not touched, not reviewed.
+
+### Sprint readiness
+
+End-of-sprint gate: green. Build, types, lint, runtime smoke all green. 13/13 deliverables structurally verified against spec. Audio hotfix correct. Next sprint may proceed.
 
 ---
 

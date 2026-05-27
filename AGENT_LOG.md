@@ -143,6 +143,17 @@ Verification: `tsc --noEmit` clean, `npm run lint` 74 errors / 56 warnings (= Wa
 - Runtime smoke on `:3050`: `/student/dashboard` 307, `/student/dashboard/shop` 307, `/api/shop` 401. With `.env.local` renamed: 200/200/200 with `{"products":[]}` — fallback path works. Restored env. No new runtime warnings.
 - B3 and A1 unblocked from QA side. Full report: `specs/qa.md` Wave 13.
 
+### 2026-05-27 — Wave 14: End-of-sprint verification (13 deliverables + audio hotfix) — **PASS**
+
+- HEAD `791aa39`. End-of-sprint gate for World-Building + Content Pipeline sprint.
+- Build: **91 routes, 77 static, 10.1s**. `tsc --noEmit` exit 0.
+- Lint: **74 errors / 56 warnings** — exact Wave 13 match, **zero regressions** from a 13-deliverable sprint.
+- All 13 deliverables structurally verified: A1 (terrain amp 0.6 + footprints), A2 (Catmull-Rom Path with vec4 pathColor), A3 (River 2 sin-wave shader), A4 (4 procedural building variants + brazier flicker), A5 (18 ambient props), A6 (butterflies/fireflies/leaves/birds), A7 (audio singleton + AudioController DOM overlay), A8 (MoveTargetIndicator + walk bob + idle breath lerp), A9 (Suspense + GameLoadingScreen), B1 (migration 014 = 4 tables + partial unique index), B2 (3 content hooks), B3 (migration 015 + 3 draft API routes + PreviewBanner), B4 (4 admin stub pages).
+- **Audio hotfix verified**: `cachedSnapshot` field, `computeSnapshot()` method, `getState()` returns cached reference (no infinite loop), `notify()` recomputes before broadcast.
+- Runtime smoke (port 3000, existing server): `/` 200, `/student/dashboard` 307, all 4 admin content stubs 307 (middleware auth gate), `/api/content/drafts` 401. All match spec.
+- Not visually tested (no Playwright session — would conflict with David's interactive dev server). Recommend a visual pass before next sprint if desired.
+- Notes: build dropped 23.7s → 10.1s (likely turbopack cache warm); palette wiring still consumes only sky+fog (Wave 13 carryover). Full report: `specs/qa.md` Wave 14.
+
 ---
 
 ## reviewer
