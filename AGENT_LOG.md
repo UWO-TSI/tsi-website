@@ -28,7 +28,7 @@ Spec: `specs/sprint-2026-06-admin-tooling.md`. Builds CRUD forms on top of the c
 | # | Deliverable | Owner | Status |
 |---|-------------|-------|--------|
 | C1 | NPC editor (slug/name/spawn_zone/persona_prompt/canned_dialogue/etc + draft/preview/publish/discard) | build | ✅ done — `NPCEditor.tsx` (480 lines in `components/portal/`), 2 routes (new + edit), inline validation, slug uniqueness check, new GET `/api/content/drafts/[id]` |
-| C2 | Shop item editor (with rarity/stock/sprite_url) | build | pending |
+| C2 | Shop item editor (with rarity/stock/sprite_url) | build | ✅ done — `ShopEditor.tsx` (~560 lines in portal/), 2 routes (new + edit), rarity dropdown color-coded, sprite_url with 80×80 inline preview, unlimited-stock toggle nulls stock |
 | C3 | Palette editor (7 color pickers + live preview + set-active) | build | pending |
 | C4 | Event editor (+ QR code + printable view + IRL/XP toggle) | build | pending |
 | C5 | Version history + rollback + activity log | build | pending |
