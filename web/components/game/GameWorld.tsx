@@ -10,6 +10,7 @@ import Path from "./Path";
 import River, { sampleRiverPoint, findRiverTForX } from "./River";
 import { getTerrainHeight, valueNoise, BUILDING_FOOTPRINTS } from "./terrain";
 import { NatureTree, NatureBush, NatureFlowerCluster, NatureFence, NatureMushroom, NatureStump } from "./NatureModels";
+import AmbientProps from "./AmbientProps";
 import { useUser } from "@/components/portal/UserContext";
 import { useActivePalette } from "@/lib/game/contentLoader";
 
@@ -517,6 +518,7 @@ function Scene({ playerName, playerLevel, fogColor }: { playerName: string; play
           <Cloud segments={25} bounds={[6, 2, 6]} volume={3} color="#FFFFFF" position={[0, 30, 25]} opacity={0.5} speed={0.08} />
         </Clouds>
         <Props />
+        <AmbientProps />
       </Suspense>
 
       {BUILDINGS.map((b) => {

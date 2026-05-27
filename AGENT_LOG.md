@@ -29,7 +29,7 @@
 | A2 | Path softening (alpha-blended edges, curved splines) | build | ✅ done — new `Path.tsx` (Catmull-Rom, 48 segs, vec4 vertex-alpha via onBeforeCompile patch on MeshBasicMaterial), 3 curved paths replacing 6 straight quads |
 | A3 | River curve + flow animation + fake sky reflection | build | ✅ done — new `River.tsx` (Catmull-Rom 96 segs × 5 rows, procedural water shader with 2 sin-wave flow + foam, bridge auto-aligned to spline); skipped fresnel reflection + terrain valley dip (follow-ups) |
 | A4 | Building silhouette variety (HQ vs Shop vs Oracle Temple) | build | ✅ done — procedural composites for hq/shop/oracle/temple; HQ banner pole+flag, Shop awning+sign, Oracle Temple taller-than-wide with dome+spire+2 brazier flames (flicker animation, point-light at each); house+boards untouched |
-| A5 | Ambient props (signposts, stepping stones, fences, lanterns) | build | pending |
+| A5 | Ambient props (signposts, stepping stones, fences, lanterns) | build | ✅ done — `AmbientProps.tsx` (196 lines, 18 props): 4 signposts (arrow planks rotated via atan2 toward target), 6 stepping stones at river bend (perpendicular to spline tangent), 4 picket fences, 4 lanterns with emissive panes + pointLight |
 | A6 | Ambient life particles (butterflies/leaves/birds/fireflies) | build | pending |
 | A7 | Ambient audio (4 time-of-day loops + footstep/click SFX) | build | pending |
 | A8 | Player movement polish (easing, bob, target indicator) | build | pending |
