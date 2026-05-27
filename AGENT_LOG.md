@@ -36,7 +36,7 @@
 | A9 | Transition + loading polish (fade, Suspense fallback) | build | ✅ done — TransitionOverlay timings retuned (300/200/500), GameLoadingScreen extracted with ASCII banner + 1Hz blinking cursor, Suspense wrap on GameWorld + reused as next/dynamic loading. Sprite placeholder skipped (PlayerAvatar uses non-Suspense TextureLoader — refactor out of budget) |
 | B1 | Migration `014_content_pipeline.sql` (npc_personas, shop_items, seasonal_palettes, content_drafts) | build | ✅ done (1ce7281, reviewed + fixed + merged) |
 | B2 | Game world reads from Supabase tables (SWR + JSON fallback) | build | ✅ done (bdd301e, palette-aware TOD = follow-up) |
-| B3 | Content draft + preview URL system | build | pending |
+| B3 | Content draft + preview URL system | build | ✅ done — migration `015_content_versions.sql` (snapshot table, immutable), 3 API routes (drafts CRUD + publish + discard), PreviewBanner.tsx (yellow fixed-top with Publish/Exit), contentLoader hooks auto-detect `?preview=draft-{id}` and merge draft into live data |
 | B4 | Stub admin pages at `/student/dashboard/admin/content/{npcs,shop,palettes,events}` (read-only this sprint) | build | pending |
 | QA-baseline | Run `npm run build` + `npm run lint` on current main, log to `specs/qa.md` Wave 12 | qa | ✅ done (507bcb1) |
 | QA-sprint | Visual verify 30-second test, FPS ≥ 50 desktop, mobile no-crash, migration apply test | qa | pending |
