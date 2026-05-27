@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useRef, useState, useCallback, useMemo } from "react";
+import { Suspense, useRef, useState, useCallback, useEffect, useMemo } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { CameraControls, Cloud, Clouds } from "@react-three/drei";
 import * as THREE from "three";
@@ -11,6 +11,7 @@ import River, { sampleRiverPoint, findRiverTForX } from "./River";
 import { getTerrainHeight, valueNoise, BUILDING_FOOTPRINTS } from "./terrain";
 import { NatureTree, NatureBush, NatureFlowerCluster, NatureFence, NatureMushroom, NatureStump } from "./NatureModels";
 import AmbientProps from "./AmbientProps";
+import AmbientLife from "./AmbientLife";
 import { useUser } from "@/components/portal/UserContext";
 import { useActivePalette } from "@/lib/game/contentLoader";
 
@@ -21,15 +22,6 @@ import { useActivePalette } from "@/lib/game/contentLoader";
  * Palette, camera, lighting, terrain, river, bridge, trees, bushes,
  * flowers, props all sourced from the v2 spec hex values.
  */
-
-// Seeded PRNG — deterministic to satisfy React Compiler purity rules
-function seededRandom(seed: number) {
-  let s = seed;
-  return () => {
-    s = (s * 16807 + 0) % 2147483647;
-    return (s - 1) / 2147483646;
-  };
-}
 
 // ─── Palette from v2 spec Section 3 ────────────────────────────
 const P = {
@@ -346,44 +338,18 @@ function Flowers() {
   );
 }
 
-// ─── Butterflies (v2 spec Section 10 — gentle looping paths) ────
-const BUTTERFLY_COUNT = 5;
-function Butterflies() {
-  const ref = useRef<THREE.Points>(null);
-  const { geo, seeds } = useMemo(() => {
-    const rng = seededRandom(99);
-    const positions = new Float32Array(BUTTERFLY_COUNT * 3);
-    const s = new Float32Array(BUTTERFLY_COUNT);
-    for (let i = 0; i < BUTTERFLY_COUNT; i++) {
-      positions[i * 3] = (rng() - 0.5) * 30;
-      positions[i * 3 + 1] = 2;
-      positions[i * 3 + 2] = (rng() - 0.5) * 30;
-      s[i] = rng() * Math.PI * 2;
-    }
-    const g = new THREE.BufferGeometry();
-    g.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-    return { geo: g, seeds: s };
-  }, []);
+// Butterflies migrated to AmbientLife.tsx (sprint A6 — day-only group with
+// procedural wing-flap meshes + fireflies/leaves/birds for full ambient life).
 
-  useFrame((state) => {
-    if (!ref.current) return;
-    const t = state.clock.elapsedTime;
-    const pos = ref.current.geometry.attributes.position;
-    for (let i = 0; i < BUTTERFLY_COUNT; i++) {
-      const sd = seeds[i];
-      const x = Math.sin(t * 0.1 + sd) * 12 + Math.cos(t * 0.07 + sd * 2) * 5;
-      const z = Math.cos(t * 0.08 + sd * 1.5) * 12 + Math.sin(t * 0.12 + sd * 3) * 5;
-      const y = getTerrainHeight(x, z) + 1.5 + Math.sin(t * 0.4 + sd) * 0.5;
-      pos.setXYZ(i, x, y, z);
-    }
-    pos.needsUpdate = true;
-  });
-
-  return (
-    <points ref={ref} geometry={geo}>
-      <pointsMaterial color="#FFD166" size={0.25} transparent opacity={0.9} sizeAttenuation depthWrite={false} />
-    </points>
-  );
+// ─── Time-of-day phase helper (sprint A6) ───────────────────────
+// TimeOfDayCycle reads wall-clock directly each frame; we mirror that here at
+// a coarser interval so AmbientLife can swap day/night creatures without
+// refactoring the cycle itself.
+function hourToPhase(h: number): "day" | "night" | "dawn" | "dusk" {
+  if (h >= 5 && h < 7) return "dawn";
+  if (h >= 7 && h < 17) return "day";
+  if (h >= 17 && h < 20) return "dusk";
+  return "night";
 }
 
 // ─── Chimney Smoke (v2 spec Section 10 — slow upward drift) ─────
@@ -478,6 +444,16 @@ function Props() {
 function Scene({ playerName, playerLevel, fogColor }: { playerName: string; playerLevel: number; fogColor: string }) {
   const cameraRef = useRef<CameraControls>(null);
   const [playerPos, setPlayerPos] = useState<THREE.Vector3>(new THREE.Vector3(...SPAWN_POSITION));
+  const [todPhase, setTodPhase] = useState<"day" | "night" | "dawn" | "dusk">(() => hourToPhase(new Date().getHours()));
+
+  // Refresh phase once a minute — coarse enough to skip a setState on every
+  // frame, fine enough to catch transitions while the user is in-world.
+  useEffect(() => {
+    const id = setInterval(() => {
+      setTodPhase(hourToPhase(new Date().getHours()));
+    }, 60_000);
+    return () => clearInterval(id);
+  }, []);
 
   const handlePlayerMove = useCallback((position: THREE.Vector3) => {
     setPlayerPos(position);
@@ -508,7 +484,7 @@ function Scene({ playerName, playerLevel, fogColor }: { playerName: string; play
       {TREE_XZ.map(([x, z], i) => <NatureTree key={i} position={[x, getTerrainHeight(x, z), z]} seed={i} />)}
       <Bushes />
       <Flowers />
-      <Butterflies />
+      <AmbientLife phase={todPhase} />
       <ChimneySmoke />
 
       <Suspense fallback={null}>

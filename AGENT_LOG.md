@@ -30,7 +30,7 @@
 | A3 | River curve + flow animation + fake sky reflection | build | ✅ done — new `River.tsx` (Catmull-Rom 96 segs × 5 rows, procedural water shader with 2 sin-wave flow + foam, bridge auto-aligned to spline); skipped fresnel reflection + terrain valley dip (follow-ups) |
 | A4 | Building silhouette variety (HQ vs Shop vs Oracle Temple) | build | ✅ done — procedural composites for hq/shop/oracle/temple; HQ banner pole+flag, Shop awning+sign, Oracle Temple taller-than-wide with dome+spire+2 brazier flames (flicker animation, point-light at each); house+boards untouched |
 | A5 | Ambient props (signposts, stepping stones, fences, lanterns) | build | ✅ done — `AmbientProps.tsx` (196 lines, 18 props): 4 signposts (arrow planks rotated via atan2 toward target), 6 stepping stones at river bend (perpendicular to spline tangent), 4 picket fences, 4 lanterns with emissive panes + pointLight |
-| A6 | Ambient life particles (butterflies/leaves/birds/fireflies) | build | pending |
+| A6 | Ambient life particles (butterflies/leaves/birds/fireflies) | build | ✅ done — new `AmbientLife.tsx` (5 butterflies w/ flapping wing-quads day, 10 fireflies w/ pulsing emissive night, 40-instance leaf+pollen drift always, 2 background birds day); replaced inline points-based Butterflies; phase derived from wall-clock at 60s interval |
 | A7 | Ambient audio (4 time-of-day loops + footstep/click SFX) | build | pending |
 | A8 | Player movement polish (easing, bob, target indicator) | build | pending |
 | A9 | Transition + loading polish (fade, Suspense fallback) | build | pending |
@@ -105,7 +105,20 @@ Wrote `web/supabase/migrations/014_content_pipeline.sql` (worktree branch `build
 
 No DROP statements. No code touched. Branch ready for review.
 
+### 2026-05-21 — Sprint A6: Ambient life
 
+New `web/components/game/AmbientLife.tsx`. Procedural-only, no asset loads:
+
+- **Butterflies (day, 5):** group per insect with two `planeGeometry` wing-quads hinged off-center, 12Hz flap via `useFrame`, opposing phase. Body is dark box between wings. Pastel color random per butterfly. Sine-wave path around a per-instance home, `atan2` heading. Clamped to ±30 map bounds, terrain-aware y.
+- **Fireflies (night, 10):** small emissive sphere, `emissiveIntensity` pulses 0.7-2.1. Wander pattern via offset sinusoids. Skipped per-firefly point lights for perf (10 dynamic lights stack with existing lamp lights).
+- **Leaf/pollen drift (always, 40):** `InstancedMesh` of 0.06 planes with per-instance vertex colors (50/50 pollen `#E0D090` / leaf `#A8D080`). Falls at delta * 0.5, swayed by `sin(t*0.5+offset)`, respawns at y=8 when below 0.3. Per-instance position state lives in refs (compiler immutability) seeded from useMemo via useEffect.
+- **Birds (day, 2):** V of two angled box-mesh lines, circling at radius 16-20 / y=12, facing heading, wing-flap via `rotation.z = sin(t*8)*0.3`.
+
+TOD phase derived from `new Date().getHours()` mapped via `hourToPhase` (dawn 5-7, day 7-17, dusk 17-20, night otherwise) — refreshes via 60s interval `setInterval`. Did not refactor `TimeOfDayCycle`; it still reads wall-clock independently per the spec.
+
+Removed the old inline points-based `Butterflies` in `GameWorld.tsx` (and orphaned `seededRandom`) since the new component supersedes it.
+
+Verification: `tsc --noEmit` clean, `npm run lint` 74 errors / 56 warnings (= Wave 12 baseline), `npm run build` ✓ 11.1s. One file added, GameWorld lost ~40 lines net.
 
 ---
 
