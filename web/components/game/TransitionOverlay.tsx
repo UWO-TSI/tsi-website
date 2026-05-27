@@ -3,14 +3,23 @@
 import { useState, useCallback, useEffect, createContext, useContext } from "react";
 
 /**
- * Fade-to-black transition overlay per specs/ux-game-world.md Section 7.
+ * Fade-to-black transition overlay per specs/ux-game-world.md Section 7
+ * + sprint A9 timing (300ms in, 500ms out).
  *
  * Timeline:
- *   0.0s  Trigger → input disabled, black overlay fades in (0→1)
+ *   0.0s  Trigger → input disabled, black overlay fades in (0→1, 300ms)
  *   0.3s  Fully black → execute callback (navigate, load scene)
- *   0.5s  Callback done → black overlay fades out (1→0)
- *   0.8s  Complete → input re-enabled
+ *   0.5s  Callback done → black overlay fades out (1→0, 500ms)
+ *   1.0s  Complete → input re-enabled
+ *
+ * Works for both exterior→interior and interior→exterior swaps: the
+ * caller passes whatever scene-swap function is appropriate and it runs
+ * at peak-black. When interior scenes land they wire in the same way.
  */
+
+const FADE_IN_MS = 300;
+const HOLD_MS = 200;
+const FADE_OUT_MS = 500;
 
 type TransitionState = "idle" | "fading-in" | "black" | "fading-out";
 
@@ -48,8 +57,8 @@ export function TransitionProvider({ children }: { children: React.ReactNode }) 
         if (onBlackCallback) {
           await onBlackCallback();
         }
-        setTimeout(() => setState("fading-out"), 200);
-      }, 300);
+        setTimeout(() => setState("fading-out"), HOLD_MS);
+      }, FADE_IN_MS);
       return () => clearTimeout(timer);
     }
 
@@ -57,7 +66,7 @@ export function TransitionProvider({ children }: { children: React.ReactNode }) 
       const timer = setTimeout(() => {
         setState("idle");
         setOnBlackCallback(null);
-      }, 300);
+      }, FADE_OUT_MS);
       return () => clearTimeout(timer);
     }
   }, [state, onBlackCallback]);
@@ -79,9 +88,9 @@ export function TransitionProvider({ children }: { children: React.ReactNode }) 
             opacity: state === "fading-in" ? 1 : state === "black" ? 1 : 0,
             transition:
               state === "fading-in"
-                ? "opacity 0.3s ease-in"
+                ? `opacity ${FADE_IN_MS}ms ease-in`
                 : state === "fading-out"
-                  ? "opacity 0.3s ease-out"
+                  ? `opacity ${FADE_OUT_MS}ms ease-out`
                   : "none",
             pointerEvents: "all",
           }}
