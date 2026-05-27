@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Shield, ArrowLeft } from "lucide-react";
+import { Shield, ArrowLeft, Plus, Pencil, Printer } from "lucide-react";
 import { useUser } from "@/components/portal/UserContext";
 
 interface EventRow {
@@ -102,20 +102,22 @@ export default function AdminContentEventsPage() {
         </Link>
       </div>
 
-      <div className="mb-4">
-        <h1 className="text-2xl font-heading font-bold text-[var(--color-text-primary)]">
-          Events
-        </h1>
-        <p className="text-sm font-mono text-[var(--color-text-muted)] mt-1">
-          {events?.length ?? 0} approved events · QR check-in + reward grant
-          editor lands next sprint
-        </p>
-      </div>
-
-      <div className="mb-6 p-3 bg-[var(--color-brand-yellow)]/10 border border-[var(--color-brand-yellow)]/30 rounded-md">
-        <p className="text-xs font-mono text-[var(--color-brand-yellow)]">
-          Read-only this sprint. Editing lands in the admin-tooling sprint.
-        </p>
+      <div className="mb-6 flex items-end justify-between gap-3 flex-wrap">
+        <div>
+          <h1 className="text-2xl font-heading font-bold text-[var(--color-text-primary)]">
+            Events
+          </h1>
+          <p className="text-sm font-mono text-[var(--color-text-muted)] mt-1">
+            {events?.length ?? 0} approved events · click an event to edit or
+            print its QR check-in code.
+          </p>
+        </div>
+        <Link
+          href="/student/dashboard/admin/content/events/new"
+          className="inline-flex items-center gap-2 px-4 py-2 bg-[var(--color-accent-cyan)] text-[var(--color-bg)] font-mono text-xs uppercase tracking-wider rounded-md hover:opacity-90 transition-opacity"
+        >
+          <Plus size={12} /> New Event
+        </Link>
       </div>
 
       {fetchError && (
@@ -157,6 +159,9 @@ export default function AdminContentEventsPage() {
                 </th>
                 <th className="text-left px-4 py-3 text-[0.65rem] font-mono uppercase tracking-wider text-[var(--color-text-muted)]">
                   Status
+                </th>
+                <th className="text-right px-4 py-3 text-[0.65rem] font-mono uppercase tracking-wider text-[var(--color-text-muted)]">
+                  Actions
                 </th>
               </tr>
             </thead>
@@ -206,6 +211,23 @@ export default function AdminContentEventsPage() {
                     >
                       {ev.status}
                     </span>
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <div className="inline-flex items-center gap-3">
+                      <Link
+                        href={`/student/dashboard/admin/content/events/${ev.id}/edit`}
+                        className="inline-flex items-center gap-1 text-[0.65rem] font-mono text-[var(--color-accent-cyan)] hover:underline"
+                      >
+                        <Pencil size={11} /> Edit
+                      </Link>
+                      <Link
+                        href={`/student/dashboard/admin/content/events/${ev.id}/print`}
+                        target="_blank"
+                        className="inline-flex items-center gap-1 text-[0.65rem] font-mono text-[var(--color-brand-yellow)] hover:underline"
+                      >
+                        <Printer size={11} /> Print QR
+                      </Link>
+                    </div>
                   </td>
                 </tr>
               ))}

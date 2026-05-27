@@ -100,6 +100,18 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-05-27 — Sprint C4: Event editor + QR check-in + printable view
+
+`EventEditor.tsx` in `components/portal/` mirrors NPC/Shop UX but skips the draft pipeline — events live outside `content_drafts` and save directly via supabase client (RLS lets authenticated users insert/update; T1/T2 gate sits at the page level via `UserContext`).
+
+- Schema audit: `events` table in `001_initial_schema.sql` already has `title / description / event_type / start_time / end_time / location / status / xp_reward / tc_reward / created_by`. Missing: `is_irl`, `capacity`, `qr_check_in_code`. Added `016_events_check_in.sql` (NOT applied to any DB).
+- Editor: title, description, event_type dropdown (existing 7-value CHECK), start/end datetime-local, location, unlimited-capacity toggle + capacity, is_irl toggle (xp force-zeroed when off, per design principle #3), xp_reward (disabled when is_irl=false), tc_reward. End-time-after-start validation. Save → direct insert/update; new-event success redirects to `/edit` so admin can grab the auto-generated QR.
+- QR: `qrcode` (^1.5.4, MIT, ~75KB) + `@types/qrcode` installed. `QRCode.toDataURL(checkInUrl, { width: 240 })` rendered in the editor; checkInUrl points at `tethos.org/student/check-in?code=<uuid>` — the runtime route is a later sprint.
+- Print view at `/admin/content/events/[id]/print` overrides dark mode with `bg-white text-black`, renders 400px QR + title + date/time + location + URL fallback. `@media print` hides the "Print" button. `window.print()` on click.
+- Listing: dropped the read-only banner, added "New Event" header button + per-row Edit / Print QR links.
+
+Verification: `tsc --noEmit` clean. `npm run lint` 74 errors / 56 warnings (baseline match — none of mine). `npm run build` ✓, 3 new routes present (`events/new`, `events/[id]/edit`, `events/[id]/print`).
+
 ### 2026-05-27 — Sprint C3: Palette editor
 
 `PaletteEditor.tsx` in `components/portal/` mirrors NPC/Shop pattern: form state, draft state machine, save/preview/publish/discard buttons, slug uniqueness check (live table + open drafts).
