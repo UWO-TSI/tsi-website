@@ -68,6 +68,14 @@ function parseFiles(json: string | null): MetaFile[] {
   }
 }
 
+// Pull the storage path out of a Supabase signed URL so we can re-sign
+// once the original 7-day token expires. Returns null for legacy non-
+// Supabase URLs (e.g. old Drive links).
+function extractResumePath(url: string): string | null {
+  const m = url.match(/\/storage\/v1\/object\/sign\/resumes\/([^?]+)/);
+  return m ? decodeURIComponent(m[1]) : null;
+}
+
 async function openSigned(path: string, bucket: "portfolios" | "resumes") {
   try {
     const res = await fetch("/api/resume-sign", {
@@ -273,18 +281,36 @@ export default function ApplicantCard({
                   <p className="text-[11px] text-[#6B7280]">
                     Heard via: {application.heard_about_us}
                   </p>
-                  {application.resume_drive_url && (
-                    <a
-                      href={application.resume_drive_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1D9BF0]/10 border border-[#1D9BF0]/30 text-xs text-[#F1FFFF] hover:bg-[#1D9BF0]/20 transition"
-                    >
-                      <FileText className="w-3.5 h-3.5" />
-                      View Resume
-                      <ExternalLink className="w-3 h-3" />
-                    </a>
-                  )}
+                  {application.resume_drive_url && (() => {
+                    // The stored resume_drive_url is a 7-day signed URL from
+                    // submission time. For older applications the JWT is
+                    // expired ("exp claim failed"). Always re-sign on click
+                    // via /api/resume-sign instead of using the stored URL.
+                    const path = extractResumePath(application.resume_drive_url);
+                    return (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (path) {
+                            openSigned(path, "resumes");
+                          } else {
+                            // Non-Supabase URL (e.g. legacy Drive link) —
+                            // fall back to opening directly.
+                            window.open(
+                              application.resume_drive_url!,
+                              "_blank",
+                              "noopener"
+                            );
+                          }
+                        }}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1D9BF0]/10 border border-[#1D9BF0]/30 text-xs text-[#F1FFFF] hover:bg-[#1D9BF0]/20 transition"
+                      >
+                        <FileText className="w-3.5 h-3.5" />
+                        View Resume
+                        <ExternalLink className="w-3 h-3" />
+                      </button>
+                    );
+                  })()}
 
                   {/* Meta fields stashed in essay_answers */}
                   {(() => {
