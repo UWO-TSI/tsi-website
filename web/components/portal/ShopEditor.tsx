@@ -6,6 +6,7 @@ import Link from "next/link";
 import { ArrowLeft, ExternalLink } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { ShopItem, ShopCategory, Rarity } from "@/lib/game/contentTypes";
+import ImageUploadButton from "@/components/portal/ImageUploadButton";
 
 // ─── ShopEditor ─────────────────────────────────────────────────────────────
 // Shared form component used by both /new and /[id]/edit. Mirrors NPCEditor:
@@ -354,7 +355,7 @@ export default function ShopEditor({ mode, rowId, initial }: ShopEditorProps) {
 
         <Field
           label="Sprite URL"
-          hint="Leave blank until sprite assets are uploaded"
+          hint="Paste a URL or upload an image (≤ 5MB, PNG/JPEG/WebP/GIF)"
         >
           <input
             type="text"
@@ -364,6 +365,7 @@ export default function ShopEditor({ mode, rowId, initial }: ShopEditorProps) {
             placeholder="https://..."
             spellCheck={false}
           />
+          <ImageUploadButton onUpload={(url) => update("sprite_url", url)} />
           {trimmedSprite ? (
             <div className="mt-2 inline-flex items-center justify-center w-20 h-20 border border-[var(--glass-border)] rounded-md bg-[var(--color-bg)] overflow-hidden">
               {/* eslint-disable-next-line @next/next/no-img-element */}

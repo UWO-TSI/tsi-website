@@ -6,6 +6,7 @@ import Link from "next/link";
 import { ArrowLeft, Plus, Trash2, ExternalLink } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { NPCPersona, SpawnZone } from "@/lib/game/contentTypes";
+import ImageUploadButton from "@/components/portal/ImageUploadButton";
 
 // ─── NPCEditor ──────────────────────────────────────────────────────────────
 // Shared form component used by both /new and /[id]/edit. Renders all NPC
@@ -377,7 +378,7 @@ export default function NPCEditor({ mode, rowId, initial }: NPCEditorProps) {
           </div>
         </Field>
 
-        <Field label="Sprite URL" hint="Leave blank until sprite assets are uploaded">
+        <Field label="Sprite URL" hint="Paste a URL or upload an image (≤ 5MB, PNG/JPEG/WebP/GIF)">
           <input
             type="text"
             value={form.sprite_url}
@@ -386,6 +387,7 @@ export default function NPCEditor({ mode, rowId, initial }: NPCEditorProps) {
             placeholder="https://..."
             spellCheck={false}
           />
+          <ImageUploadButton onUpload={(url) => update("sprite_url", url)} />
         </Field>
 
         <Toggle
