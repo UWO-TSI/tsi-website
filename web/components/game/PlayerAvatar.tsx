@@ -5,6 +5,7 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { Billboard, Html } from "@react-three/drei";
 import * as THREE from "three";
 import { getTerrainHeight } from "./terrain";
+import { useSFX } from "@/lib/game/useAudio";
 
 /**
  * PlayerAvatar — 2D sprite on Billboard in 3D world (Dave the Diver style)
@@ -72,6 +73,8 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
   const currentFrame = useRef(0);
   const [isMoving, setIsMoving] = useState(false);
   const { camera, gl } = useThree();
+  const sfx = useSFX();
+  const footstepTimer = useRef(0);
 
   // Load and configure textures for pixel art during construction
   const spriteTexture = useMemo(() => {
@@ -226,6 +229,18 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
 
     // Update position
     groupRef.current.position.copy(pos);
+
+    // Footstep SFX — fire ~every 0.4s while walking. No-op if audio is muted
+    // or assets aren't shipped (manager silently drops the call).
+    if (moving) {
+      footstepTimer.current += delta;
+      if (footstepTimer.current >= 0.4) {
+        footstepTimer.current = 0;
+        sfx.play("footstep");
+      }
+    } else {
+      footstepTimer.current = 0;
+    }
 
     if (moving !== isMoving) setIsMoving(moving);
     // Notify camera/parent when moving, or when y is still settling toward

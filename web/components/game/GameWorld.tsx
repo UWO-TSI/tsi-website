@@ -12,6 +12,7 @@ import { getTerrainHeight, valueNoise, BUILDING_FOOTPRINTS } from "./terrain";
 import { NatureTree, NatureBush, NatureFlowerCluster, NatureFence, NatureMushroom, NatureStump } from "./NatureModels";
 import AmbientProps from "./AmbientProps";
 import AmbientLife from "./AmbientLife";
+import AudioController from "./AudioController";
 import { useUser } from "@/components/portal/UserContext";
 import { useActivePalette } from "@/lib/game/contentLoader";
 
@@ -352,6 +353,21 @@ function hourToPhase(h: number): "day" | "night" | "dawn" | "dusk" {
   return "night";
 }
 
+// Shared phase hook — used by Scene (for AmbientLife) and the outer GameWorld
+// shell (for the DOM-mounted AudioController). 60s tick matches A6.
+function useTodPhase(): "day" | "night" | "dawn" | "dusk" {
+  const [phase, setPhase] = useState<"day" | "night" | "dawn" | "dusk">(() =>
+    hourToPhase(new Date().getHours()),
+  );
+  useEffect(() => {
+    const id = setInterval(() => {
+      setPhase(hourToPhase(new Date().getHours()));
+    }, 60_000);
+    return () => clearInterval(id);
+  }, []);
+  return phase;
+}
+
 // ─── Chimney Smoke (v2 spec Section 10 — slow upward drift) ─────
 const SMOKE_COUNT = 20;
 function ChimneySmoke() {
@@ -441,19 +457,9 @@ function Props() {
 }
 
 // ─── Scene ──────────────────────────────────────────────────────
-function Scene({ playerName, playerLevel, fogColor }: { playerName: string; playerLevel: number; fogColor: string }) {
+function Scene({ playerName, playerLevel, fogColor, todPhase }: { playerName: string; playerLevel: number; fogColor: string; todPhase: "day" | "night" | "dawn" | "dusk" }) {
   const cameraRef = useRef<CameraControls>(null);
   const [playerPos, setPlayerPos] = useState<THREE.Vector3>(new THREE.Vector3(...SPAWN_POSITION));
-  const [todPhase, setTodPhase] = useState<"day" | "night" | "dawn" | "dusk">(() => hourToPhase(new Date().getHours()));
-
-  // Refresh phase once a minute — coarse enough to skip a setState on every
-  // frame, fine enough to catch transitions while the user is in-world.
-  useEffect(() => {
-    const id = setInterval(() => {
-      setTodPhase(hourToPhase(new Date().getHours()));
-    }, 60_000);
-    return () => clearInterval(id);
-  }, []);
 
   const handlePlayerMove = useCallback((position: THREE.Vector3) => {
     setPlayerPos(position);
@@ -520,9 +526,10 @@ export default function GameWorld() {
   // fallback color and the fog tone before TOD overwrites it.
   const skyBase = activePalette.palette.sky || P.skyBottom;
   const fogColor = activePalette.palette.fog || P.fog;
+  const todPhase = useTodPhase();
 
   return (
-    <div style={{ width: "100%", height: "100%", minHeight: "100vh", background: skyBase }}>
+    <div style={{ width: "100%", height: "100%", minHeight: "100vh", background: skyBase, position: "relative" }}>
       <Canvas
         gl={{ antialias: true, powerPreference: "high-performance" }}
         camera={{ fov: 50, near: 0.1, far: 300, position: [0, 12, -20] }}
@@ -533,9 +540,10 @@ export default function GameWorld() {
         }}
       >
         <Suspense fallback={null}>
-          <Scene playerName={playerName} playerLevel={playerLevel} fogColor={fogColor} />
+          <Scene playerName={playerName} playerLevel={playerLevel} fogColor={fogColor} todPhase={todPhase} />
         </Suspense>
       </Canvas>
+      <AudioController phase={todPhase} />
     </div>
   );
 }
