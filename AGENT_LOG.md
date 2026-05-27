@@ -31,7 +31,7 @@ Spec: `specs/sprint-2026-06-admin-tooling.md`. Builds CRUD forms on top of the c
 | C2 | Shop item editor (with rarity/stock/sprite_url) | build | ✅ done — `ShopEditor.tsx` (~560 lines in portal/), 2 routes (new + edit), rarity dropdown color-coded, sprite_url with 80×80 inline preview, unlimited-stock toggle nulls stock |
 | C3 | Palette editor (7 color pickers + live preview + set-active) | build | ✅ done — `PaletteEditor.tsx` in portal/, 2 routes (new + edit), 7 HTML5 color pickers + swatch row preview, new atomic activate API (`POST /api/content/palettes/[id]/activate`), listing gains New + Edit + Set Active |
 | C4 | Event editor (+ QR code + printable view + IRL/XP toggle) | build | ✅ done (f1d9d73) — `EventEditor.tsx` in portal/, 3 routes (new + edit + print), added migration `016_events_check_in.sql` (3 missing cols: is_irl/capacity/qr_check_in_code), `qrcode@^1.5.4` dep. XP-disabled-when-not-IRL guard per principle #3 |
-| C5 | Version history + rollback + activity log | build | pending |
+| C5 | Version history + rollback + activity log | build | ✅ done — `VersionHistory.tsx` shared (per-table snapshot renderers: palette swatches/NPC fields+dialogue/shop fields), 3 history routes + activity log w/ filters + pagination, Restore creates a new draft via existing API. Hub gets log card |
 | C6 | (Optional) Image upload to Supabase Storage | build | pending |
 | QA-C | End-of-sprint Wave 15 verification | qa | pending |
 

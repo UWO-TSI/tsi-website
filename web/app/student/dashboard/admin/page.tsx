@@ -13,6 +13,7 @@ import {
   Shield,
   Vote,
   Sparkles,
+  History,
 } from "lucide-react";
 
 interface Stats {
@@ -80,6 +81,13 @@ const adminSections = [
     icon: <Sparkles size={20} />,
     href: "/student/dashboard/admin/content/npcs",
     color: "#f59e0b",
+  },
+  {
+    title: "Content Activity Log",
+    description: "Recent publishes across NPCs, shop, palettes",
+    icon: <History size={20} />,
+    href: "/student/dashboard/admin/content/log",
+    color: "#94a3b8",
   },
 ];
 

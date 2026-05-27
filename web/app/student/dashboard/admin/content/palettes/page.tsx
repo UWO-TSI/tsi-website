@@ -267,6 +267,12 @@ export default function AdminContentPalettesPage() {
                       ? "Activating..."
                       : "Set Active"}
                 </button>
+                <Link
+                  href={`/student/dashboard/admin/content/palettes/${p.id}/history`}
+                  className="text-[0.65rem] font-mono uppercase tracking-wider text-[var(--color-text-muted)] hover:text-[var(--color-accent-cyan)] transition-colors"
+                >
+                  History
+                </Link>
               </div>
             </div>
           ))}

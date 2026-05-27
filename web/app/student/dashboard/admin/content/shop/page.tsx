@@ -166,12 +166,20 @@ export default function AdminContentShopPage() {
                     {new Date(item.released_at).toLocaleDateString()}
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <Link
-                      href={`/student/dashboard/admin/content/shop/${item.id}/edit`}
-                      className="inline-flex items-center gap-1 text-xs font-mono text-[var(--color-accent-cyan)] hover:underline"
-                    >
-                      <Pencil size={12} /> Edit
-                    </Link>
+                    <div className="inline-flex items-center gap-3">
+                      <Link
+                        href={`/student/dashboard/admin/content/shop/${item.id}/edit`}
+                        className="inline-flex items-center gap-1 text-xs font-mono text-[var(--color-accent-cyan)] hover:underline"
+                      >
+                        <Pencil size={12} /> Edit
+                      </Link>
+                      <Link
+                        href={`/student/dashboard/admin/content/shop/${item.id}/history`}
+                        className="text-[0.65rem] font-mono uppercase tracking-wider text-[var(--color-text-muted)] hover:text-[var(--color-accent-cyan)] transition-colors"
+                      >
+                        History
+                      </Link>
+                    </div>
                   </td>
                 </tr>
               ))}
