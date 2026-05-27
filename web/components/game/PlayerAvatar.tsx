@@ -6,6 +6,7 @@ import { Billboard, Html } from "@react-three/drei";
 import * as THREE from "three";
 import { getTerrainHeight } from "./terrain";
 import { useSFX } from "@/lib/game/useAudio";
+import MoveTargetIndicator from "./MoveTargetIndicator";
 
 /**
  * PlayerAvatar — 2D sprite on Billboard in 3D world (Dave the Diver style)
@@ -31,6 +32,13 @@ const ROTATION_LERP = 10;
 // transitions so there's no per-frame popping.
 const Y_DAMP_TIME = 0.05;
 const AVATAR_FOOT_OFFSET = 0;
+
+// Sprint A8: visual bob constants. Applied to the sprite mesh inside the
+// Billboard, NOT the group (group.y is ground-follow from A1).
+const SPRITE_BASE_Y = 0.8;
+const WALK_BOB_AMP = 0.05;
+const IDLE_BOB_AMP = 0.02;
+const BREATH_BLEND_LERP = 1 / 0.3; // ~0.3s blend between walk and idle bob
 
 // Sprite sheet grid config — adjust when exact sheet layout is confirmed
 const SHEET_COLS = 3;
@@ -75,6 +83,12 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
   const { camera, gl } = useThree();
   const sfx = useSFX();
   const footstepTimer = useRef(0);
+  // Sprint A8: breath blend (0 = walking bob, 1 = idle bob), elapsed clock for
+  // sine drivers, and active click-to-move ring indicators.
+  const breathBlendRef = useRef(0);
+  const clockRef = useRef(0);
+  const indicatorIdRef = useRef(0);
+  const [indicators, setIndicators] = useState<Array<{ id: number; position: [number, number, number] }>>([]);
 
   // Load and configure textures for pixel art during construction
   const spriteTexture = useMemo(() => {
@@ -131,6 +145,13 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
         intersection.z = THREE.MathUtils.clamp(intersection.z, -BOUNDARY, BOUNDARY);
         intersection.y = 0;
         targetRef.current = intersection;
+        // Sprint A8: spawn expanding ring at click point. Re-clicks spawn new
+        // rings (key by counter so React mounts a fresh component).
+        const id = indicatorIdRef.current++;
+        setIndicators((prev) => [
+          ...prev,
+          { id, position: [intersection.x, 0, intersection.z] },
+        ]);
       }
     },
     [camera, gl]
@@ -145,7 +166,10 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
   useFrame((_, delta) => {
     if (!groupRef.current) return;
 
+    clockRef.current += delta;
     const pos = positionRef.current;
+    const prevX = pos.x;
+    const prevZ = pos.z;
     const moveDir = new THREE.Vector3();
     let moving = false;
 
@@ -207,10 +231,16 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
       anim = moving ? WALK_RIGHT : DIR_RIGHT;
     }
 
-    // Frame cycling
+    // Frame cycling — Sprint A8: scale rate by actual XZ movement speed so
+    // boundary-clamped or slow approach drags the cycle down proportionally.
     if (moving) {
+      const dx = pos.x - prevX;
+      const dz = pos.z - prevZ;
+      const actualSpeed = delta > 0 ? Math.hypot(dx, dz) / delta : 0;
+      const speedRatio = THREE.MathUtils.clamp(actualSpeed / PLAYER_SPEED, 0, 1);
+      const effectiveRate = FRAME_RATE * speedRatio;
       frameTimer.current += delta;
-      if (frameTimer.current > 1 / FRAME_RATE) {
+      if (effectiveRate > 0 && frameTimer.current > 1 / effectiveRate) {
         frameTimer.current = 0;
         currentFrame.current = (currentFrame.current + 1) % anim.frames;
       }
@@ -229,6 +259,23 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
 
     // Update position
     groupRef.current.position.copy(pos);
+
+    // Sprint A8: walk bob (4Hz, 0.05) vs idle breathing (0.5Hz, 0.02), blended
+    // smoothly via breathBlendRef over ~0.3s. Applied to sprite mesh y only so
+    // the group's ground-follow y from A1 is untouched.
+    const t = clockRef.current;
+    const walkBob = Math.sin(t * Math.PI * 8) * WALK_BOB_AMP;
+    const idleBob = Math.sin(t * Math.PI) * IDLE_BOB_AMP;
+    const blendTarget = moving ? 0 : 1;
+    breathBlendRef.current = THREE.MathUtils.lerp(
+      breathBlendRef.current,
+      blendTarget,
+      THREE.MathUtils.clamp(BREATH_BLEND_LERP * delta, 0, 1)
+    );
+    const bobY = THREE.MathUtils.lerp(walkBob, idleBob, breathBlendRef.current);
+    if (meshRef.current) {
+      meshRef.current.position.y = SPRITE_BASE_Y + bobY;
+    }
 
     // Footstep SFX — fire ~every 0.4s while walking. No-op if audio is muted
     // or assets aren't shipped (manager silently drops the call).
@@ -250,7 +297,18 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
   });
 
   return (
-    <group ref={groupRef} position={spawnPosition}>
+    <>
+      {/* Sprint A8: click-to-move target indicators in world space */}
+      {indicators.map((ind) => (
+        <MoveTargetIndicator
+          key={ind.id}
+          position={ind.position}
+          onComplete={() =>
+            setIndicators((prev) => prev.filter((i) => i.id !== ind.id))
+          }
+        />
+      ))}
+      <group ref={groupRef} position={spawnPosition}>
       {/* Character sprite on billboard */}
       <Billboard follow lockX={false} lockY={false} lockZ={false}>
         <mesh ref={meshRef} position={[0, 0.8, 0]}>
@@ -299,6 +357,7 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
           </div>
         </div>
       </Html>
-    </group>
+      </group>
+    </>
   );
 }
