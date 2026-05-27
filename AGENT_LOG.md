@@ -100,6 +100,16 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-05-27 — Sprint D1: NPC memory migration
+
+Wrote `web/supabase/migrations/018_npc_memories.sql` per spec §D1. Two new tables (`npc_memories`, `npc_conversations`) + RLS + indexes. Not applied anywhere.
+
+- `npc_memories`: id, npc_id (CASCADE), user_id (CASCADE), memory_state JSONB default `{}`, last_interaction_at, interaction_count, UNIQUE(npc_id, user_id). Indexes on user_id and last_interaction_at DESC.
+- `npc_conversations`: id, npc_id (SET NULL — keep logs if NPC deleted), user_id (SET NULL), user_message, npc_response, tokens_in/out, flagged, created_at. Composite indexes (user_id, created_at DESC) + (npc_id, created_at DESC) + partial on `flagged = TRUE`.
+- RLS: memories — users SELECT own + T1 SELECT all. Conversations — users SELECT own + T1/T2 SELECT all (moderation). Zero client INSERT/UPDATE/DELETE policies; chat API runs as service role per spec. `auth.uid()` wrapped in `(select auth.uid())` for query caching (014 pattern).
+
+Verification: `tsc --noEmit` clean. `npm run lint` 74/56 (baseline match). `npm run build` ✓ in 20.9s.
+
 ### 2026-05-27 — Sprint C4: Event editor + QR check-in + printable view
 
 `EventEditor.tsx` in `components/portal/` mirrors NPC/Shop UX but skips the draft pipeline — events live outside `content_drafts` and save directly via supabase client (RLS lets authenticated users insert/update; T1/T2 gate sits at the page level via `UserContext`).
