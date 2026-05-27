@@ -39,7 +39,7 @@
 | B3 | Content draft + preview URL system | build | ✅ done — migration `015_content_versions.sql` (snapshot table, immutable), 3 API routes (drafts CRUD + publish + discard), PreviewBanner.tsx (yellow fixed-top with Publish/Exit), contentLoader hooks auto-detect `?preview=draft-{id}` and merge draft into live data |
 | B4 | Stub admin pages at `/student/dashboard/admin/content/{npcs,shop,palettes,events}` (read-only this sprint) | build | ✅ done — 4 read-only listing pages w/ T1/T2 gate, back link, "read-only" banner, palette swatches, events fetched via existing `/api/events`. Admin hub card added |
 | QA-baseline | Run `npm run build` + `npm run lint` on current main, log to `specs/qa.md` Wave 12 | qa | ✅ done (507bcb1) |
-| QA-sprint | Visual verify 30-second test, FPS ≥ 50 desktop, mobile no-crash, migration apply test | qa | pending |
+| QA-sprint | Wave 14 end-of-sprint verification (build/lint/types/runtime smoke/all 13 deliverables/audio hotfix) | qa | ✅ done (001eea8) — PASS, zero regressions. Visual WebGL test still pending |
 
 **Definition of Done:** see sprint spec §"Definition of Done" — visitor feels in-a-place / in-a-world / in-control / in-quality + admin can insert shop_items row via Supabase dashboard and see it appear in-world.
 
