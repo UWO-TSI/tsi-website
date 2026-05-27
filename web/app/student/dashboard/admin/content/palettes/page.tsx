@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { Shield, ArrowLeft } from "lucide-react";
+import { Shield, ArrowLeft, Plus, Pencil, Check } from "lucide-react";
 import { useUser } from "@/components/portal/UserContext";
 import { createClient } from "@/lib/supabase/client";
 import { DEFAULT_PALETTES } from "@/data/content-defaults";
@@ -19,41 +19,68 @@ export default function AdminContentPalettesPage() {
   const { profile, loading } = useUser();
   const [palettes, setPalettes] = useState<SeasonalPalette[] | null>(null);
   const [fetchError, setFetchError] = useState<string | null>(null);
+  const [activating, setActivating] = useState<string | null>(null);
+  const [activateMessage, setActivateMessage] = useState<{
+    kind: "ok" | "err";
+    text: string;
+  } | null>(null);
 
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      if (!hasSupabaseEnv()) {
-        if (!cancelled) setPalettes(DEFAULT_PALETTES);
+  const load = useCallback(async () => {
+    if (!hasSupabaseEnv()) {
+      setPalettes(DEFAULT_PALETTES);
+      return;
+    }
+    try {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from("seasonal_palettes")
+        .select(
+          "id, slug, display_name, palette, active, scheduled_start, scheduled_end, created_at",
+        )
+        .order("created_at", { ascending: false });
+      if (error || !data) {
+        setFetchError(error?.message ?? "unknown");
+        setPalettes(DEFAULT_PALETTES);
         return;
       }
-      try {
-        const supabase = createClient();
-        const { data, error } = await supabase
-          .from("seasonal_palettes")
-          .select(
-            "id, slug, display_name, palette, active, scheduled_start, scheduled_end, created_at",
-          )
-          .order("created_at", { ascending: false });
-        if (cancelled) return;
-        if (error || !data) {
-          setFetchError(error?.message ?? "unknown");
-          setPalettes(DEFAULT_PALETTES);
-          return;
-        }
-        setPalettes(data as unknown as SeasonalPalette[]);
-      } catch (err) {
-        if (!cancelled) {
-          setFetchError(err instanceof Error ? err.message : "unknown");
-          setPalettes(DEFAULT_PALETTES);
-        }
-      }
+      setPalettes(data as unknown as SeasonalPalette[]);
+    } catch (err) {
+      setFetchError(err instanceof Error ? err.message : "unknown");
+      setPalettes(DEFAULT_PALETTES);
     }
-    load();
-    return () => {
-      cancelled = true;
-    };
   }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const handleSetActive = async (id: string) => {
+    if (activating) return;
+    setActivating(id);
+    setActivateMessage(null);
+    try {
+      const res = await fetch(`/api/content/palettes/${id}/activate`, {
+        method: "POST",
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok || !body.ok) {
+        setActivateMessage({
+          kind: "err",
+          text: body.error ?? "Activation failed",
+        });
+        return;
+      }
+      setActivateMessage({ kind: "ok", text: "Palette activated." });
+      await load();
+    } catch (err) {
+      setActivateMessage({
+        kind: "err",
+        text: err instanceof Error ? err.message : "Activation failed",
+      });
+    } finally {
+      setActivating(null);
+    }
+  };
 
   if (loading) {
     return (
@@ -105,20 +132,34 @@ export default function AdminContentPalettesPage() {
         </Link>
       </div>
 
-      <div className="mb-4">
-        <h1 className="text-2xl font-heading font-bold text-[var(--color-text-primary)]">
-          Seasonal Palettes
-        </h1>
-        <p className="text-sm font-mono text-[var(--color-text-muted)] mt-1">
-          {palettes?.length ?? 0} total · only one active at a time
-        </p>
+      <div className="mb-6 flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-heading font-bold text-[var(--color-text-primary)]">
+            Seasonal Palettes
+          </h1>
+          <p className="text-sm font-mono text-[var(--color-text-muted)] mt-1">
+            {palettes?.length ?? 0} total · only one active at a time
+          </p>
+        </div>
+        <Link
+          href="/student/dashboard/admin/content/palettes/new"
+          className="inline-flex items-center gap-2 px-4 py-2 bg-[var(--color-accent-cyan)] text-[var(--color-bg)] font-mono text-xs uppercase tracking-wider rounded-md hover:opacity-90 transition-opacity"
+        >
+          <Plus size={14} /> New Palette
+        </Link>
       </div>
 
-      <div className="mb-6 p-3 bg-[var(--color-brand-yellow)]/10 border border-[var(--color-brand-yellow)]/30 rounded-md">
-        <p className="text-xs font-mono text-[var(--color-brand-yellow)]">
-          Read-only this sprint. Editing lands in the admin-tooling sprint.
-        </p>
-      </div>
+      {activateMessage ? (
+        <div
+          className={`mb-4 p-3 rounded-md text-xs font-mono border ${
+            activateMessage.kind === "ok"
+              ? "bg-green-400/10 border-green-400/30 text-green-400"
+              : "bg-red-400/10 border-red-400/30 text-red-400"
+          }`}
+        >
+          {activateMessage.text}
+        </div>
+      ) : null}
 
       {fetchError && (
         <p className="mb-4 text-xs font-mono text-[var(--color-text-muted)]">
@@ -191,7 +232,7 @@ export default function AdminContentPalettesPage() {
                 })}
               </div>
 
-              <div className="text-[0.65rem] font-mono text-[var(--color-text-muted)] space-y-0.5">
+              <div className="text-[0.65rem] font-mono text-[var(--color-text-muted)] space-y-0.5 mb-3">
                 <p>
                   Start:{" "}
                   {p.scheduled_start
@@ -204,6 +245,28 @@ export default function AdminContentPalettesPage() {
                     ? new Date(p.scheduled_end).toLocaleDateString()
                     : "—"}
                 </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-[var(--glass-border)]/40">
+                <Link
+                  href={`/student/dashboard/admin/content/palettes/${p.id}/edit`}
+                  className="inline-flex items-center gap-1 text-xs font-mono text-[var(--color-accent-cyan)] hover:underline"
+                >
+                  <Pencil size={12} /> Edit
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => handleSetActive(p.id)}
+                  disabled={p.active || activating !== null}
+                  className="inline-flex items-center gap-1 text-xs font-mono text-[var(--color-brand-blue)] hover:underline disabled:opacity-40 disabled:cursor-not-allowed disabled:no-underline"
+                >
+                  <Check size={12} />
+                  {p.active
+                    ? "Active"
+                    : activating === p.id
+                      ? "Activating..."
+                      : "Set Active"}
+                </button>
               </div>
             </div>
           ))}

@@ -29,7 +29,7 @@ Spec: `specs/sprint-2026-06-admin-tooling.md`. Builds CRUD forms on top of the c
 |---|-------------|-------|--------|
 | C1 | NPC editor (slug/name/spawn_zone/persona_prompt/canned_dialogue/etc + draft/preview/publish/discard) | build | ✅ done — `NPCEditor.tsx` (480 lines in `components/portal/`), 2 routes (new + edit), inline validation, slug uniqueness check, new GET `/api/content/drafts/[id]` |
 | C2 | Shop item editor (with rarity/stock/sprite_url) | build | ✅ done — `ShopEditor.tsx` (~560 lines in portal/), 2 routes (new + edit), rarity dropdown color-coded, sprite_url with 80×80 inline preview, unlimited-stock toggle nulls stock |
-| C3 | Palette editor (7 color pickers + live preview + set-active) | build | pending |
+| C3 | Palette editor (7 color pickers + live preview + set-active) | build | ✅ done — `PaletteEditor.tsx` in portal/, 2 routes (new + edit), 7 HTML5 color pickers + swatch row preview, new atomic activate API (`POST /api/content/palettes/[id]/activate`), listing gains New + Edit + Set Active |
 | C4 | Event editor (+ QR code + printable view + IRL/XP toggle) | build | pending |
 | C5 | Version history + rollback + activity log | build | pending |
 | C6 | (Optional) Image upload to Supabase Storage | build | pending |
@@ -99,6 +99,18 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 ---
 
 ## build
+
+### 2026-05-27 — Sprint C3: Palette editor
+
+`PaletteEditor.tsx` in `components/portal/` mirrors NPC/Shop pattern: form state, draft state machine, save/preview/publish/discard buttons, slug uniqueness check (live table + open drafts).
+
+- 7 HTML5 `<input type="color">` pickers (sky/grass/accent/fog/water/building_primary/building_accent) in a 2-col grid, each row shows label + uppercase hex. Swatch-row preview below.
+- `draft_data.palette` is nested JSONB (matches table column).
+- Atomic activate: new `POST /api/content/palettes/[id]/activate` runs two sequential UPDATEs via service role (clear current active → set target). Window between is tiny; comment flags low-concurrency limitation.
+- Listing gains "New Palette" header button, per-card Edit link + Set Active button (disabled when row already active). Read-only banner dropped. Reload after activate.
+- `scheduled_end` must be after `scheduled_start` if both present.
+
+Verification: `tsc --noEmit` clean. `npm run lint` 74/56 (baseline match). `npm run build` ✓, 3 new routes present (`palettes/new`, `palettes/[id]/edit`, `api/content/palettes/[id]/activate`).
 
 ### 2026-05-21 — Sprint B1: Content pipeline migration
 
