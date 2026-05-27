@@ -1,12 +1,204 @@
 "use client";
 
-import { Suspense, useEffect, useMemo } from "react";
+import { Suspense, useEffect, useMemo, useRef } from "react";
 import { Html, useGLTF } from "@react-three/drei";
+import { useFrame } from "@react-three/fiber";
 import { useRouter } from "next/navigation";
 import * as THREE from "three";
 import { useTransition } from "./TransitionOverlay";
 
 const INTERACT_RANGE = 4;
+
+// ─── Procedural variants for HQ / Shop / Oracle Temple (A4) ─────
+// Procedural primitive composites — no GLB. Each variant returns a
+// `<group>` anchored at y=0 (ground), so the parent <group position> applies.
+const PROC_VARIANTS = new Set(["hq", "shop", "oracle", "temple"]);
+
+/** Gable / wedge roof: two sloped slab boxes meeting at a center ridge, plus triangular gable end-caps. */
+function GableRoof({ width, depth, height, color }: { width: number; depth: number; height: number; color: string }) {
+  const slopeLen = Math.sqrt((width / 2) * (width / 2) + height * height);
+  const angle = Math.atan2(height, width / 2);
+  const slabThickness = 0.15;
+  const gableShape = useMemo(() => {
+    const s = new THREE.Shape();
+    s.moveTo(-width / 2, 0);
+    s.lineTo(width / 2, 0);
+    s.lineTo(0, height);
+    s.lineTo(-width / 2, 0);
+    return s;
+  }, [width, height]);
+
+  return (
+    <group>
+      {[-1, 1].map((side) => (
+        <mesh
+          key={side}
+          position={[side * (width / 4), height / 2, 0]}
+          rotation={[0, 0, side * angle]}
+          castShadow
+          receiveShadow
+        >
+          <boxGeometry args={[slopeLen, slabThickness, depth]} />
+          <meshStandardMaterial color={color} roughness={0.85} metalness={0} />
+        </mesh>
+      ))}
+      {[-1, 1].map((side) => (
+        <mesh key={`cap-${side}`} position={[0, 0, side * (depth / 2)]} castShadow receiveShadow>
+          <shapeGeometry args={[gableShape]} />
+          <meshStandardMaterial color={color} roughness={0.85} metalness={0} side={THREE.DoubleSide} />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
+/** HQ — Town Hall: wide base, peaked roof, banner pole + flag. */
+function HQBuilding() {
+  const W = 7, H = 4, D = 5;
+  const roofH = 2;
+  return (
+    <group>
+      <mesh position={[0, H / 2, 0]} castShadow receiveShadow>
+        <boxGeometry args={[W, H, D]} />
+        <meshStandardMaterial color="#D4A574" roughness={0.9} metalness={0} />
+      </mesh>
+      <group position={[0, H, 0]}>
+        <GableRoof width={W} depth={D} height={roofH} color="#8B5A3C" />
+      </group>
+      {/* Banner pole on roof peak */}
+      <mesh position={[0, H + roofH + 1, 0]} castShadow>
+        <cylinderGeometry args={[0.15, 0.15, 2, 8]} />
+        <meshStandardMaterial color="#5C4030" roughness={0.85} metalness={0} />
+      </mesh>
+      {/* Flag */}
+      <mesh position={[0.7, H + roofH + 1.4, 0]} castShadow>
+        <planeGeometry args={[1.2, 0.8]} />
+        <meshStandardMaterial color="#E87B5A" roughness={0.85} metalness={0} side={THREE.DoubleSide} />
+      </mesh>
+      {/* Door */}
+      <mesh position={[0, 1, D / 2 + 0.01]}>
+        <planeGeometry args={[1.2, 2]} />
+        <meshStandardMaterial color="#5C3A26" roughness={0.9} metalness={0} />
+      </mesh>
+    </group>
+  );
+}
+
+/** Shop — small cottage with awning + sign. */
+function ShopBuilding() {
+  const W = 4, H = 3, D = 4;
+  const roofH = 1.4;
+  return (
+    <group>
+      <mesh position={[0, H / 2, 0]} castShadow receiveShadow>
+        <boxGeometry args={[W, H, D]} />
+        <meshStandardMaterial color="#C9A87C" roughness={0.9} metalness={0} />
+      </mesh>
+      <group position={[0, H, 0]}>
+        <GableRoof width={W} depth={D} height={roofH} color="#A0522D" />
+      </group>
+      {/* Awning over front door */}
+      <mesh position={[0, 2.1, D / 2 + 0.4]} castShadow>
+        <boxGeometry args={[3, 0.3, 0.8]} />
+        <meshStandardMaterial color="#8B5A3C" roughness={0.85} metalness={0} />
+      </mesh>
+      {/* Door */}
+      <mesh position={[0, 0.9, D / 2 + 0.01]}>
+        <planeGeometry args={[1, 1.6]} />
+        <meshStandardMaterial color="#5C3A26" roughness={0.9} metalness={0} />
+      </mesh>
+      {/* Shop sign */}
+      <mesh position={[W / 2 - 0.6, 1.6, D / 2 + 0.05]} castShadow>
+        <planeGeometry args={[0.5, 0.9]} />
+        <meshStandardMaterial color="#E87B5A" roughness={0.8} metalness={0} side={THREE.DoubleSide} />
+      </mesh>
+    </group>
+  );
+}
+
+/** Oracle Temple — tall narrow stone tower, dome, spire, flanking braziers. */
+function OracleTemple() {
+  const W = 5, H = 6, D = 5;
+  const flameTime = useRef(0);
+  const flameLeft = useRef<THREE.Group>(null);
+  const flameRight = useRef<THREE.Group>(null);
+
+  useFrame((_, delta) => {
+    flameTime.current += delta;
+    const s = 1 + Math.sin(flameTime.current * 8) * 0.08;
+    if (flameLeft.current) flameLeft.current.scale.y = s;
+    if (flameRight.current) flameRight.current.scale.y = s;
+  });
+
+  return (
+    <group>
+      {/* Tall base (taller than wide — per A1 elevation note) */}
+      <mesh position={[0, H / 2, 0]} castShadow receiveShadow>
+        <boxGeometry args={[W, H, D]} />
+        <meshStandardMaterial color="#B0A89A" roughness={0.92} metalness={0} />
+      </mesh>
+      {/* Dome drum */}
+      <mesh position={[0, H + 0.25, 0]} castShadow receiveShadow>
+        <cylinderGeometry args={[2.5, 2.5, 0.5, 16]} />
+        <meshStandardMaterial color="#B0A89A" roughness={0.92} metalness={0} />
+      </mesh>
+      {/* Dome cap */}
+      <mesh position={[0, H + 0.5, 0]} castShadow receiveShadow>
+        <sphereGeometry args={[2.5, 16, 12, 0, Math.PI * 2, 0, Math.PI / 2]} />
+        <meshStandardMaterial color="#8B6F4E" roughness={0.6} metalness={0.2} />
+      </mesh>
+      {/* Spire */}
+      <mesh position={[0, H + 0.5 + 2.5 + 1.5, 0]} castShadow>
+        <coneGeometry args={[1.5, 3, 12]} />
+        <meshStandardMaterial color="#8B6F4E" roughness={0.6} metalness={0.2} />
+      </mesh>
+      {/* Door */}
+      <mesh position={[0, 1.3, D / 2 + 0.01]}>
+        <planeGeometry args={[1.4, 2.6]} />
+        <meshStandardMaterial color="#3D2817" roughness={0.95} metalness={0} />
+      </mesh>
+      {/* Flanking braziers */}
+      {[-1, 1].map((side, i) => (
+        <group key={side} position={[side * 2.0, 0, D / 2 + 0.6]}>
+          {/* Brazier base */}
+          <mesh position={[0, 0.3, 0]} castShadow receiveShadow>
+            <cylinderGeometry args={[0.3, 0.3, 0.6, 10]} />
+            <meshStandardMaterial color="#3D2817" roughness={0.92} metalness={0} />
+          </mesh>
+          {/* Flame (scale-animated) */}
+          <group ref={i === 0 ? flameLeft : flameRight} position={[0, 0.9, 0]}>
+            <mesh castShadow>
+              <coneGeometry args={[0.25, 0.6, 10]} />
+              <meshStandardMaterial
+                color="#FFA040"
+                emissive="#FF6020"
+                emissiveIntensity={1.5}
+                roughness={0.5}
+                metalness={0}
+              />
+            </mesh>
+          </group>
+          {/* Warm point light for ambience */}
+          <pointLight position={[0, 1.1, 0]} color="#FF8040" intensity={0.6} distance={4} decay={2} />
+        </group>
+      ))}
+    </group>
+  );
+}
+
+function ProceduralBuilding({ id }: { id: string }) {
+  switch (id) {
+    case "hq":
+      return <HQBuilding />;
+    case "shop":
+      return <ShopBuilding />;
+    case "oracle":
+    case "temple":
+      return <OracleTemple />;
+    default:
+      return null;
+  }
+}
 
 // ─── GLB model paths for buildings with real 3D assets ──────────
 const GLB_PATHS: Record<string, string> = {
@@ -224,6 +416,7 @@ export default function Building({ id, name, position, size, color, roofColor, h
 
   const isBoard = size[2] < 1;
   const isLeaderboard = id === "leaderboard";
+  const isProcedural = PROC_VARIANTS.has(id);
   const hasGLB = id in GLB_PATHS;
 
   return (
@@ -232,6 +425,8 @@ export default function Building({ id, name, position, size, color, roofColor, h
         <BoardSign size={size} color={color} />
       ) : isLeaderboard ? (
         <LeaderboardMonument size={size} color={color} />
+      ) : isProcedural ? (
+        <ProceduralBuilding id={id} />
       ) : hasGLB ? (
         <Suspense fallback={<ACBuilding size={size} color={color} roofColor={roofColor} />}>
           <GLBBuilding id={id} size={size} color={color} />
