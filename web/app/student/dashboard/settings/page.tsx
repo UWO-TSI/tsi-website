@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Settings, Save, Github, Linkedin, Instagram, Globe, MessageCircle, Check } from "lucide-react";
+import Link from "next/link";
+import { Settings, Save, Github, Linkedin, Instagram, Globe, MessageCircle, Check, Brain, ChevronRight } from "lucide-react";
 import type { Profile, SocialLinks } from "@/lib/supabase/types";
 
 export default function SettingsPage() {
@@ -129,6 +130,26 @@ export default function SettingsPage() {
           <SocialField icon={Instagram} label="Instagram" value={social.instagram ?? ""} onChange={(v) => setSocial((s) => ({ ...s, instagram: v }))} placeholder="@handle" />
           <SocialField icon={MessageCircle} label="Discord" value={social.discord ?? ""} onChange={(v) => setSocial((s) => ({ ...s, discord: v }))} placeholder="username#1234" />
           <SocialField icon={Globe} label="Website" value={social.website ?? ""} onChange={(v) => setSocial((s) => ({ ...s, website: v }))} placeholder="https://..." />
+        </Section>
+
+        {/* NPC Memories */}
+        <Section title="NPC Memories">
+          <Link
+            href="/student/dashboard/settings/npc-memories"
+            className="flex items-center justify-between gap-3 rounded-lg transition-all hover:bg-white/[0.02]"
+            style={{ padding: "4px 6px", margin: "-4px -6px" }}
+          >
+            <div className="flex items-center gap-3">
+              <Brain className="w-4 h-4 shrink-0" style={{ color: "var(--color-text-muted)" }} />
+              <div>
+                <p className="text-sm font-medium" style={{ color: "var(--color-text-main)" }}>Manage NPC memories</p>
+                <p className="text-xs" style={{ color: "var(--color-text-subtle)" }}>
+                  Wipe an NPC&apos;s memory of you. They&apos;ll greet you as a stranger.
+                </p>
+              </div>
+            </div>
+            <ChevronRight className="w-4 h-4 shrink-0" style={{ color: "var(--color-text-subtle)" }} />
+          </Link>
         </Section>
 
         {/* Account Info (read-only) */}

@@ -100,6 +100,16 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-05-27 — Sprint D6+D7+D8: moderation + memory wipe + spend widget
+
+Closing the LLM-NPC sprint. Three pieces, one commit, all components under `web/components/portal/`.
+
+- D6 moderation: `web/app/student/dashboard/admin/npc-conversations/page.tsx`. T1/T2 gated via `useUser()`. Filters: NPC dropdown (active personas), user search (`ilike display_name`), date range, "flagged only" toggle (default ON). Table: time, user, NPC, user_message (60-char truncate + per-row more/less), npc_response (same), flagged badge, actions. Pagination 25/page (fetch PAGE_SIZE+1 to detect more). Per-row: Mark Resolved (only when flagged) + Wipe Memory (uses D7 endpoint with `user_id` override). Delete button skipped — no DELETE endpoint in spec. Resolve endpoint at `/api/npc/conversations/[id]/resolve` (tier-gate T1/T2, service-role UPDATE flagged=false). Added admin hub card (red icon).
+- D7 memory wipe: standalone page at `web/app/student/dashboard/settings/npc-memories/page.tsx` (settings page is dense — chose discrete page + link card from main settings via Brain icon). Queries `npc_memories` joined with `npc_personas(display_name)` for current user, ordered by `last_interaction_at desc`. Per row: NPC name, interaction_count, relative-time last seen, Wipe button → confirmation modal with spec copy → POST `/api/npc/memories/wipe` body `{ npc_id }`. Endpoint also accepts optional `user_id` (T1 only, used by D6 admin wipe). Auth required, service-role DELETE. Backdrop click + cancel button close modal.
+- D8 spend widget: `web/components/portal/NPCSpendWidget.tsx` rendered on admin hub home above the section grid, only when `userTier === 1`. SWR key `npc-spend` with `refreshInterval: 5min` + manual refresh button (spin animation on isLoading). Shows tokens_in/out (formatted k/M), estimated cost in 4 decimals, top-5 chattiest users, top-5 most-talked-to NPCs side-by-side. Endpoint `/api/npc/spend` (T1-only, current calendar month, aggregates `npc_conversations` in-memory: sums + Map-based counts, sort+slice top 5, hydrates names from `profiles` + `npc_personas`). Cost = (in × 0.25 + out × 1.25) / 1M, rounded to 4 decimals.
+
+Verification: `tsc --noEmit` clean. `npm run lint` 74/58 (errors at baseline). `npm run build` ✓ 46s; 3 new API routes + 2 new pages confirmed in route manifest.
+
 ### 2026-05-27 — Sprint D4: NPC chat overlay UI
 
 `NPCChatOverlay.tsx` (~470 lines) in `components/game/`. DOM overlay mounted alongside `AudioController` in `GameWorld`, outside R3F Canvas. Props `{ npc, onClose }`; visible when `npc !== null`. State lifted to `GameWorld` via `useState<NPCPersona | null>` so D5 can wire sprite clicks via the existing `setActiveNPC` (currently `void`-suppressed until then).

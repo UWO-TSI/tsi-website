@@ -14,7 +14,9 @@ import {
   Vote,
   Sparkles,
   History,
+  MessageSquareWarning,
 } from "lucide-react";
+import NPCSpendWidget from "@/components/portal/NPCSpendWidget";
 
 interface Stats {
   totalMembers: number;
@@ -88,6 +90,13 @@ const adminSections = [
     icon: <History size={20} />,
     href: "/student/dashboard/admin/content/log",
     color: "#94a3b8",
+  },
+  {
+    title: "NPC Conversations",
+    description: "Moderation queue for flagged NPC chats",
+    icon: <MessageSquareWarning size={20} />,
+    href: "/student/dashboard/admin/npc-conversations",
+    color: "#ef4444",
   },
 ];
 
@@ -205,6 +214,13 @@ export default function AdminPage() {
               </p>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* T1-only spend widget */}
+      {userTier === 1 && (
+        <div className="mb-6">
+          <NPCSpendWidget />
         </div>
       )}
 
