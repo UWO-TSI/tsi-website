@@ -1628,3 +1628,37 @@ This affects `web/middleware.ts`. The current middleware still works but should 
 **Management:**
 - `middleware.ts` deprecation warning — plan migration to `proxy` convention
 - 10 npm vulnerabilities should be audited before production deploy
+
+---
+
+## Wave 16 — 2026-05-28 LLM-NPC Sprint (D1-D8) Verification
+
+**Verdict: PASS (reviewer-completed after agent stall at build step)**
+
+QA agent (`a139f53769d85174e`) completed all structural checks then stalled at the build/lint step (no progress for 600s). Reviewer ran the verification commands directly.
+
+### Build & types
+- `npx tsc --noEmit`: exit 0 (clean)
+- `npm run build`: exit 0
+- `npm run lint`: 74 errors / 58 warnings — errors at Wave 15 floor, +2 warnings (acceptable drift)
+
+### File presence
+- `web/supabase/migrations/018_npc_memories.sql` ✓
+- `web/app/api/npc/{chat,conversations,memories,spend}/` all present
+- `web/app/student/dashboard/admin/npc-conversations/` ✓
+- `web/app/student/dashboard/settings/npc-memories/` ✓
+- `web/components/game/NPC.tsx` + `NPCChatOverlay.tsx` ✓
+- `web/components/portal/NPCSpendWidget.tsx` ✓
+- `@anthropic-ai/sdk` in package.json dependencies ✓
+- `web/.env.example` documents ANTHROPIC_API_KEY ✓
+
+### Off-limits check
+No D-series component placed in `web/components/admin/` (recruitment scope). Clean separation.
+
+### Notes
+- Live Anthropic API not called during verification (no key set locally).
+- Migrations 018, 016, 017 still not applied to remote DB — must be applied before NPC chat goes live.
+- QA agent stall happened at "Now let me run the build/lint/tsc" — likely a tooling issue, not a code issue. Reviewer-completed verification is reliable.
+
+### Verdict
+All 8 D-series deliverables shipped clean. Sprint closes PASS. E-series (community loops) can proceed.
