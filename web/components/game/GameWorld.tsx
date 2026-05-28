@@ -17,8 +17,11 @@ import AudioController from "./AudioController";
 import NPCChatOverlay from "./NPCChatOverlay";
 import EmoteMenu from "./EmoteMenu";
 import NPC from "./NPC";
+import GhostReplay from "./GhostReplay";
 import { useUser } from "@/components/portal/UserContext";
 import { useActivePalette, useNPCPersonas } from "@/lib/game/contentLoader";
+import { usePositionHeartbeat } from "@/lib/game/usePositionHeartbeat";
+import { useGhostPositions } from "@/lib/game/useGhostPositions";
 import type { EmoteType, NPCPersona, SpawnZone } from "@/lib/game/contentTypes";
 
 /**
@@ -545,6 +548,12 @@ function Scene({
   const { data: personas } = useNPCPersonas({ permanentOnly: true });
   const [fillerToast, setFillerToast] = useState<string | null>(null);
 
+  // E4: heartbeat current position to player_positions every 30s.
+  // playerPosRef is a Vector3; the hook only reads .x and .z so it duck-types.
+  usePositionHeartbeat(playerPosRef as unknown as React.RefObject<{ x: number; z: number } | null>);
+  // E5: ghost-replay of other recent members (last 24h, max 10).
+  const { ghosts } = useGhostPositions();
+
   // Position each permanent NPC by spawn_zone, offsetting duplicates so they
   // don't overlap. Stable: ordering follows the personas array.
   const placedPersonas = useMemo(() => {
@@ -629,6 +638,11 @@ function Scene({
           position={FILLER_POSITIONS[i]}
           onClick={() => handleFillerClick(filler.display_name)}
         />
+      ))}
+
+      {/* E5: Ghost-replay of other recent members. Capped at 10. */}
+      {ghosts.slice(0, 10).map((g) => (
+        <GhostReplay key={g.user_id} ghost={g} />
       ))}
 
       <PlayerAvatar spawnPosition={SPAWN_POSITION} onMove={handlePlayerMove} playerName={playerName} playerLevel={playerLevel} activeEmote={activeEmote} />
