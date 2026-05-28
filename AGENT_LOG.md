@@ -100,6 +100,21 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-05-28 — Sprint E: Community loops
+
+#### 2026-05-28 — Sprint E1: community loops migration
+
+Wrote `web/supabase/migrations/019_community_loops.sql` per spec §E1. Four tables + RLS + indexes + seed. Not applied anywhere.
+
+- `emote_types`: slug UNIQUE, display_name, animation_key, icon_url, unlock_condition (nullable), active, created_at. Mirrors content-pipeline shape — E8 editor manages later.
+- `emote_logs`: user_id (CASCADE) + emote_type_id (CASCADE) + world_x/z REAL + triggered_at. Indexes on triggered_at DESC and (world_x, world_z) for proximity.
+- `guestbook_entries`: user_id (CASCADE), message TEXT with `length BETWEEN 1 AND 200` CHECK, hidden BOOLEAN DEFAULT FALSE, created_at. Index on created_at DESC.
+- `player_positions`: user_id PRIMARY KEY (upsert path), world_x/z, recorded_at. Index on recorded_at DESC for "recent ghosts" queries.
+- RLS per 014 pattern, `auth.uid()` wrapped in `(select auth.uid())`. emote_types: T1/T2 manage + public SELECT where active. emote_logs: authenticated SELECT (proximity lookups are public), self INSERT, T1/T2 DELETE. guestbook: SELECT where not hidden + T1/T2 SELECT all, self INSERT, T1/T2 UPDATE (flip hidden), T1 DELETE. player_positions: authenticated SELECT, self INSERT/UPDATE only.
+- Seed: 5 emote types (wave/dance/laugh/point/sit) — icon_url + unlock_condition left NULL for E8 fill.
+
+Verification: `tsc --noEmit` clean. `npm run lint` 74/58 (baseline match). `npm run build` ✓.
+
 ### 2026-05-27 — Sprint D6+D7+D8: moderation + memory wipe + spend widget
 
 Closing the LLM-NPC sprint. Three pieces, one commit, all components under `web/components/portal/`.
