@@ -102,7 +102,7 @@ export default function ReleaseControls({
                   </p>
                 </div>
                 <p className="text-[10px] text-[#6B7280] font-mono">
-                  emails fire on release
+                  emails disabled
                 </p>
               </div>
 
@@ -248,8 +248,9 @@ export default function ReleaseControls({
                 </div>
 
                 <p className="text-sm text-[#9CA3AF] leading-relaxed mb-6">
-                  Applicant-facing status will update and a notification email
-                  will be sent to each applicant. This cannot be undone.
+                  Applicant-facing status will update and become visible on
+                  their dashboard. No email is sent — notification emails are
+                  currently disabled. This action cannot be undone.
                 </p>
 
                 <div className="flex justify-end gap-2">

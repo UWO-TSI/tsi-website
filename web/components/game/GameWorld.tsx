@@ -16,6 +16,7 @@ import AmbientLife from "./AmbientLife";
 import AudioController from "./AudioController";
 import NPCChatOverlay from "./NPCChatOverlay";
 import EmoteMenu from "./EmoteMenu";
+import ServerListOverlay from "./ServerListOverlay";
 import GuestbookOverlay from "@/components/portal/GuestbookOverlay";
 import NPC from "./NPC";
 import GhostReplay from "./GhostReplay";
@@ -768,6 +769,8 @@ export default function GameWorld() {
   const [emoteMenuOpen, setEmoteMenuOpen] = useState(false);
   // Sprint E6: guestbook wall overlay state.
   const [guestbookOpen, setGuestbookOpen] = useState(false);
+  // Sprint F1.3: hold-Tab server-list overlay state.
+  const [tabHeld, setTabHeld] = useState(false);
   const [activeEmote, setActiveEmote] = useState<EmoteType | null>(null);
   const emoteClearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const playerPosRef = useRef<THREE.Vector3>(new THREE.Vector3(...SPAWN_POSITION));
@@ -791,6 +794,34 @@ export default function GameWorld() {
   useEffect(() => {
     return () => {
       if (emoteClearTimerRef.current) clearTimeout(emoteClearTimerRef.current);
+    };
+  }, []);
+
+  // Sprint F1.3: hold Tab → show server list overlay; release → hide.
+  // Guarded against typing in inputs so Tab still navigates forms.
+  useEffect(() => {
+    const isTyping = () => {
+      const el = document.activeElement as HTMLElement | null;
+      if (!el) return false;
+      const tag = el.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return true;
+      if (el.isContentEditable) return true;
+      return false;
+    };
+    const down = (e: KeyboardEvent) => {
+      if (e.key === "Tab" && !isTyping()) {
+        e.preventDefault();
+        setTabHeld(true);
+      }
+    };
+    const up = (e: KeyboardEvent) => {
+      if (e.key === "Tab") setTabHeld(false);
+    };
+    window.addEventListener("keydown", down);
+    window.addEventListener("keyup", up);
+    return () => {
+      window.removeEventListener("keydown", down);
+      window.removeEventListener("keyup", up);
     };
   }, []);
 
@@ -850,6 +881,7 @@ export default function GameWorld() {
         open={guestbookOpen}
         onClose={() => setGuestbookOpen(false)}
       />
+      <ServerListOverlay visible={tabHeld} />
       {/* Sprint E2: corner button for mobile / no-keyboard users. Sits left of
           the AudioController widget so they don't overlap. */}
       <button
