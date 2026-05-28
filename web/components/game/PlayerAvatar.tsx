@@ -6,6 +6,7 @@ import { Billboard, Html } from "@react-three/drei";
 import * as THREE from "three";
 import { getTerrainHeight } from "./terrain";
 import { useSFX } from "@/lib/game/useAudio";
+import { getCameraForwardXZ } from "@/lib/game/cameraBasis";
 import MoveTargetIndicator from "./MoveTargetIndicator";
 import type { EmoteType } from "@/lib/game/contentTypes";
 
@@ -121,13 +122,26 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
     return tex;
   }, []);
 
-  // Keyboard input
+  // Keyboard input. Sprint F1.1: track Shift for sprint multiplier and guard
+  // against typing in inputs/textareas/contentEditable so WASD doesn't fire
+  // while the user is filling out a form overlay.
   useEffect(() => {
+    const isTyping = () => {
+      const el = document.activeElement as HTMLElement | null;
+      if (!el) return false;
+      const tag = el.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return true;
+      if (el.isContentEditable) return true;
+      return false;
+    };
     const onKeyDown = (e: KeyboardEvent) => {
+      if (isTyping()) return;
       keys[e.key.toLowerCase()] = true;
+      if (e.key === "Shift") keys["shift"] = true;
     };
     const onKeyUp = (e: KeyboardEvent) => {
       keys[e.key.toLowerCase()] = false;
+      if (e.key === "Shift") keys["shift"] = false;
     };
     window.addEventListener("keydown", onKeyDown);
     window.addEventListener("keyup", onKeyUp);
@@ -182,41 +196,60 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
     const pos = positionRef.current;
     const prevX = pos.x;
     const prevZ = pos.z;
-    const moveDir = new THREE.Vector3();
     let moving = false;
+    let dx = 0;
+    let dz = 0;
 
-    // WASD / Arrow input
-    if (keys["w"] || keys["arrowup"]) { moveDir.z += 1; moving = true; }
-    if (keys["s"] || keys["arrowdown"]) { moveDir.z -= 1; moving = true; }
-    if (keys["a"] || keys["arrowleft"]) { moveDir.x += 1; moving = true; }
-    if (keys["d"] || keys["arrowright"]) { moveDir.x -= 1; moving = true; }
-
-    if (moving) {
+    // Sprint F1.1: camera-relative WASD. Forward = camera direction projected
+    // onto XZ plane; right = forward rotated 90° clockwise. Arrow keys are
+    // reserved for camera rotation (handled in GameWorld).
+    const { fx, fz } = getCameraForwardXZ(camera);
+    const rx = -fz;
+    const rz = fx;
+    const wDown = !!keys["w"];
+    const sDown = !!keys["s"];
+    const aDown = !!keys["a"];
+    const dDown = !!keys["d"];
+    const sprint = !!keys["shift"];
+    if (wDown) { dx += fx; dz += fz; }
+    if (sDown) { dx -= fx; dz -= fz; }
+    if (dDown) { dx += rx; dz += rz; }
+    if (aDown) { dx -= rx; dz -= rz; }
+    const keyMoving = dx !== 0 || dz !== 0;
+    if (keyMoving) {
+      // Keyboard overrides click-to-move (Q3: keep click as alt, but keyboard
+      // takes priority while keys are held).
       targetRef.current = null;
-      moveDir.normalize();
+      const len = Math.hypot(dx, dz);
+      dx /= len;
+      dz /= len;
+      moving = true;
     }
 
-    // Click-to-move
+    // Click-to-move — runs only when no keyboard input is active.
     if (!moving && targetRef.current) {
       const toTarget = targetRef.current.clone().sub(pos);
       toTarget.y = 0;
       if (toTarget.length() > 0.3) {
-        moveDir.copy(toTarget.normalize());
+        toTarget.normalize();
+        dx = toTarget.x;
+        dz = toTarget.z;
         moving = true;
       } else {
         targetRef.current = null;
       }
     }
 
-    // Apply XZ movement
+    // Apply XZ movement. Sprint F1.1: Shift held = 1.6× speed multiplier.
     if (moving) {
-      const step = PLAYER_SPEED * delta;
-      pos.x += moveDir.x * step;
-      pos.z += moveDir.z * step;
+      const speedMult = sprint && keyMoving ? 1.6 : 1;
+      const step = PLAYER_SPEED * speedMult * delta;
+      pos.x += dx * step;
+      pos.z += dz * step;
       pos.x = THREE.MathUtils.clamp(pos.x, -BOUNDARY, BOUNDARY);
       pos.z = THREE.MathUtils.clamp(pos.z, -BOUNDARY, BOUNDARY);
 
-      const targetAngle = Math.atan2(moveDir.x, moveDir.z);
+      const targetAngle = Math.atan2(dx, dz);
       facingRef.current = THREE.MathUtils.lerp(
         facingRef.current,
         targetAngle,

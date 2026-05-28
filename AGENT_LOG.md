@@ -100,6 +100,16 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-05-28 — Sprint F: Action controls
+
+#### 2026-05-21 — Sprint F1.1: camera-relative WASD + mouse-drag camera + scroll zoom + sprint
+
+- New `web/lib/game/cameraBasis.ts` exports `getCameraForwardXZ(camera)` — projects camera forward onto XZ plane, normalized; falls back to `(0,1)` when degenerate.
+- `PlayerAvatar.tsx`: replaced world-absolute WASD with camera-relative basis. `forward = (fx,fz)` from helper, `right = (-fz, fx)`. W/S → ±forward, D/A → ±right. Shift held → 1.6× speed multiplier (only when keyboard moving, not click-to-move). Arrow keys removed from movement — reserved for camera in GameWorld. Keydown/keyup now guards against typing in inputs/textareas/contentEditable. Click-to-move kept as alternative input (Q3=A): keyboard takes priority while held.
+- `GameWorld.tsx`: CameraControls now allows yaw + limited pitch (polar 60°–110°, ~±30°/+20°), distance 8–25, dollySpeed 1.0, azimuthRotateSpeed 1.0, polarRotateSpeed 0.6, draggingSmoothTime 0.05, smoothTime 0.15. `useEffect` rebinds `cc.mouseButtons` imperatively (left=NONE so click-to-move ground raycast fires, right=ROTATE, wheel=DOLLY, middle=NONE). New arrow-key handler + `useFrame` calls `cc.rotate(±0.02, ±0.015, true)` per held arrow, with input-typing guard.
+- FOV widen on sprint skipped this dispatch — requires camera plumbing across components.
+- Verification: `tsc --noEmit` clean, `npm run lint` 74/59 (=cap), `npm run build` ✓.
+
 ### 2026-05-28 — Sprint E: Community loops
 
 #### 2026-05-21 — Sprint E8+E9: emote admin editor + ghost-replay settings toggle

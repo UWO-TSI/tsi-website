@@ -582,17 +582,89 @@ function Scene({
     cameraRef.current?.moveTo(position.x, position.y + 1.5, position.z, true);
   }, [playerPosRef]);
 
+  // Sprint F1.1: rebind mouse buttons via the imperative API. drei's JSX
+  // wrapper doesn't always thread the `mouseButtons` object cleanly, so set
+  // them once the controls instance is mounted.
+  //  - left = NONE  → click-to-move ground raycast can fire without rotating
+  //  - right = ROTATE → right-click drag yaws/pitches the camera
+  //  - wheel = DOLLY → scroll zooms in/out within minDistance/maxDistance
+  //  - middle = NONE
+  useEffect(() => {
+    const cc = cameraRef.current;
+    if (!cc) return;
+    // camera-controls ACTION enum: NONE=0, ROTATE=1, DOLLY=16
+    cc.mouseButtons.left = 0;
+    cc.mouseButtons.middle = 0;
+    cc.mouseButtons.right = 1;
+    cc.mouseButtons.wheel = 16;
+  }, []);
+
+  // Sprint F1.1: arrow-key camera rotation as no-mouse fallback. Tracks
+  // held state via a ref so the rotation rate is consistent per frame.
+  // Guarded against typing in inputs.
+  const arrowKeysRef = useRef({ left: false, right: false, up: false, down: false });
+  useEffect(() => {
+    const isTyping = () => {
+      const el = document.activeElement as HTMLElement | null;
+      if (!el) return false;
+      const tag = el.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return true;
+      if (el.isContentEditable) return true;
+      return false;
+    };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (isTyping()) return;
+      if (e.key === "ArrowLeft") arrowKeysRef.current.left = true;
+      else if (e.key === "ArrowRight") arrowKeysRef.current.right = true;
+      else if (e.key === "ArrowUp") arrowKeysRef.current.up = true;
+      else if (e.key === "ArrowDown") arrowKeysRef.current.down = true;
+    };
+    const onKeyUp = (e: KeyboardEvent) => {
+      if (e.key === "ArrowLeft") arrowKeysRef.current.left = false;
+      else if (e.key === "ArrowRight") arrowKeysRef.current.right = false;
+      else if (e.key === "ArrowUp") arrowKeysRef.current.up = false;
+      else if (e.key === "ArrowDown") arrowKeysRef.current.down = false;
+    };
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("keyup", onKeyUp);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keyup", onKeyUp);
+    };
+  }, []);
+
+  useFrame(() => {
+    const cc = cameraRef.current;
+    if (!cc) return;
+    const k = arrowKeysRef.current;
+    let dAz = 0;
+    let dPol = 0;
+    if (k.left) dAz -= 0.02;
+    if (k.right) dAz += 0.02;
+    if (k.up) dPol -= 0.015;
+    if (k.down) dPol += 0.015;
+    if (dAz !== 0 || dPol !== 0) {
+      cc.rotate(dAz, dPol, true);
+    }
+  });
+
   return (
     <>
-      {/* Camera: FOV 50°, polar 55-60° (~1.0 rad), distance 15, locked azimuth */}
+      {/* Sprint F1.1: camera-relative WASD + right-click drag + scroll zoom +
+          arrow-key fallback. Polar gated to ±20-30° around horizontal so the
+          AC framing is preserved while allowing a peek up/down. */}
       <CameraControls
         ref={cameraRef}
-        minPolarAngle={Math.PI / 3.3}
-        maxPolarAngle={Math.PI / 3}
-        minDistance={15}
-        maxDistance={15}
-        dollySpeed={0}
+        minPolarAngle={Math.PI / 2 - (30 * Math.PI) / 180}
+        maxPolarAngle={Math.PI / 2 + (20 * Math.PI) / 180}
+        minDistance={8}
+        maxDistance={25}
+        dollySpeed={1.0}
         truckSpeed={0}
+        smoothTime={0.15}
+        draggingSmoothTime={0.05}
+        azimuthRotateSpeed={1.0}
+        polarRotateSpeed={0.6}
         makeDefault
       />
 
