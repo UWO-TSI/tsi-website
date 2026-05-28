@@ -3,7 +3,7 @@
 import { Suspense, useRef, useState, useCallback, useEffect, useMemo } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { CameraControls, Cloud, Clouds, Html } from "@react-three/drei";
-import { Smile } from "lucide-react";
+import { Smile, BookOpen } from "lucide-react";
 import * as THREE from "three";
 import PlayerAvatar from "./PlayerAvatar";
 import Building from "./Building";
@@ -16,6 +16,7 @@ import AmbientLife from "./AmbientLife";
 import AudioController from "./AudioController";
 import NPCChatOverlay from "./NPCChatOverlay";
 import EmoteMenu from "./EmoteMenu";
+import GuestbookOverlay from "@/components/portal/GuestbookOverlay";
 import NPC from "./NPC";
 import GhostReplay from "./GhostReplay";
 import { useUser } from "@/components/portal/UserContext";
@@ -689,6 +690,8 @@ export default function GameWorld() {
 
   // Sprint E2 + E3: emote menu state + active emote bubble on the avatar.
   const [emoteMenuOpen, setEmoteMenuOpen] = useState(false);
+  // Sprint E6: guestbook wall overlay state.
+  const [guestbookOpen, setGuestbookOpen] = useState(false);
   const [activeEmote, setActiveEmote] = useState<EmoteType | null>(null);
   const emoteClearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const playerPosRef = useRef<THREE.Vector3>(new THREE.Vector3(...SPAWN_POSITION));
@@ -767,6 +770,10 @@ export default function GameWorld() {
         onClose={() => setEmoteMenuOpen(false)}
         onPick={handleEmotePick}
       />
+      <GuestbookOverlay
+        open={guestbookOpen}
+        onClose={() => setGuestbookOpen(false)}
+      />
       {/* Sprint E2: corner button for mobile / no-keyboard users. Sits left of
           the AudioController widget so they don't overlap. */}
       <button
@@ -794,6 +801,33 @@ export default function GameWorld() {
       >
         <Smile size={14} />
         Emote
+      </button>
+      {/* Sprint E6: guestbook trigger. Sits left of the emote button. */}
+      <button
+        onClick={() => setGuestbookOpen((o) => !o)}
+        aria-label="Open guestbook"
+        title="Guestbook"
+        style={{
+          position: "absolute",
+          bottom: 16,
+          right: 200,
+          zIndex: 50,
+          display: "flex",
+          alignItems: "center",
+          gap: 6,
+          padding: "8px 10px",
+          background: "rgba(15, 15, 16, 0.78)",
+          border: "1px solid rgba(255, 255, 255, 0.15)",
+          borderRadius: 8,
+          color: "#f1ffff",
+          fontFamily: "'IBM Plex Mono', monospace",
+          fontSize: 11,
+          cursor: "pointer",
+          backdropFilter: "blur(6px)",
+        }}
+      >
+        <BookOpen size={14} />
+        Guestbook
       </button>
     </div>
   );
