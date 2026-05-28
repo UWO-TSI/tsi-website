@@ -16,6 +16,7 @@ import AmbientLife from "./AmbientLife";
 import AudioController from "./AudioController";
 import NPCChatOverlay from "./NPCChatOverlay";
 import EmoteMenu from "./EmoteMenu";
+import ControlsOverlay from "./ControlsOverlay";
 import ServerListOverlay from "./ServerListOverlay";
 import GuestbookOverlay from "@/components/portal/GuestbookOverlay";
 import NPC from "./NPC";
@@ -767,6 +768,7 @@ export default function GameWorld() {
 
   // Sprint E2 + E3: emote menu state + active emote bubble on the avatar.
   const [emoteMenuOpen, setEmoteMenuOpen] = useState(false);
+  const [controlsOpen, setControlsOpen] = useState(false);
   // Sprint E6: guestbook wall overlay state.
   const [guestbookOpen, setGuestbookOpen] = useState(false);
   // Sprint F1.3: hold-Tab server-list overlay state.
@@ -776,18 +778,24 @@ export default function GameWorld() {
   const playerPosRef = useRef<THREE.Vector3>(new THREE.Vector3(...SPAWN_POSITION));
 
   // G key toggles the emote menu (was E pre-F1.4 — remapped per David's
-  // sprint F1 ask so E becomes the universal interact key later). Skip when
+  // sprint F1 ask so E becomes the universal interact key later). F1 toggles
+  // the controls overlay so members can discover the new bindings. Skip when
   // the user is typing in an input / textarea / contentEditable so we don't
   // hijack chat or form fields.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key !== "g" && e.key !== "G") return;
       const el = document.activeElement as HTMLElement | null;
       const tag = el?.tagName;
       if (tag === "INPUT" || tag === "TEXTAREA" || el?.isContentEditable) return;
-      if (activeNPC) return; // don't pop emote menu while chatting with an NPC
-      e.preventDefault();
-      setEmoteMenuOpen((o) => !o);
+
+      if (e.key === "g" || e.key === "G") {
+        if (activeNPC) return; // don't pop emote menu while chatting with an NPC
+        e.preventDefault();
+        setEmoteMenuOpen((o) => !o);
+      } else if (e.key === "F1") {
+        e.preventDefault();
+        setControlsOpen((o) => !o);
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -884,12 +892,13 @@ export default function GameWorld() {
         onClose={() => setGuestbookOpen(false)}
       />
       <ServerListOverlay visible={tabHeld} />
+      <ControlsOverlay visible={controlsOpen} onClose={() => setControlsOpen(false)} />
       {/* Sprint E2: corner button for mobile / no-keyboard users. Sits left of
           the AudioController widget so they don't overlap. */}
       <button
         onClick={() => setEmoteMenuOpen((o) => !o)}
         aria-label="Open emote menu"
-        title="Emote (E)"
+        title="Emote (G)"
         style={{
           position: "absolute",
           bottom: 16,
