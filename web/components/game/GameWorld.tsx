@@ -775,11 +775,13 @@ export default function GameWorld() {
   const emoteClearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const playerPosRef = useRef<THREE.Vector3>(new THREE.Vector3(...SPAWN_POSITION));
 
-  // E key toggles the emote menu. Skip when the user is typing in an input /
-  // textarea / contentEditable so we don't hijack chat or form fields.
+  // G key toggles the emote menu (was E pre-F1.4 — remapped per David's
+  // sprint F1 ask so E becomes the universal interact key later). Skip when
+  // the user is typing in an input / textarea / contentEditable so we don't
+  // hijack chat or form fields.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key !== "e" && e.key !== "E") return;
+      if (e.key !== "g" && e.key !== "G") return;
       const el = document.activeElement as HTMLElement | null;
       const tag = el?.tagName;
       if (tag === "INPUT" || tag === "TEXTAREA" || el?.isContentEditable) return;
