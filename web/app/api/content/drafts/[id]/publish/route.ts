@@ -2,7 +2,12 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-const ALLOWED_TABLES = new Set(["npc_personas", "shop_items", "seasonal_palettes"]);
+const ALLOWED_TABLES = new Set([
+  "npc_personas",
+  "shop_items",
+  "seasonal_palettes",
+  "emote_types",
+]);
 
 export async function POST(
   _request: Request,

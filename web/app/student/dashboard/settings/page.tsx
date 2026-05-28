@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Settings, Save, Github, Linkedin, Instagram, Globe, MessageCircle, Check, Brain, ChevronRight } from "lucide-react";
+import { Settings, Save, Github, Linkedin, Instagram, Globe, MessageCircle, Check, Brain, ChevronRight, Users } from "lucide-react";
 import type { Profile, SocialLinks } from "@/lib/supabase/types";
+import { useGhostReplaySetting } from "@/lib/game/useGhostReplaySetting";
 
 export default function SettingsPage() {
   const [profile, setProfile] = useState<Partial<Profile> | null>(null);
@@ -15,6 +16,7 @@ export default function SettingsPage() {
   const [bio, setBio] = useState("");
   const [skills, setSkills] = useState("");
   const [social, setSocial] = useState<SocialLinks>({});
+  const [ghostsEnabled, setGhostsEnabled] = useGhostReplaySetting();
 
   useEffect(() => {
     fetch("/api/profile")
@@ -130,6 +132,41 @@ export default function SettingsPage() {
           <SocialField icon={Instagram} label="Instagram" value={social.instagram ?? ""} onChange={(v) => setSocial((s) => ({ ...s, instagram: v }))} placeholder="@handle" />
           <SocialField icon={MessageCircle} label="Discord" value={social.discord ?? ""} onChange={(v) => setSocial((s) => ({ ...s, discord: v }))} placeholder="username#1234" />
           <SocialField icon={Globe} label="Website" value={social.website ?? ""} onChange={(v) => setSocial((s) => ({ ...s, website: v }))} placeholder="https://..." />
+        </Section>
+
+        {/* World — sprint E9 */}
+        <Section title="World">
+          <div className="flex items-start gap-3">
+            <Users className="w-4 h-4 shrink-0 mt-0.5" style={{ color: "var(--color-text-muted)" }} />
+            <div className="flex-1">
+              <label className="flex items-center justify-between gap-3 cursor-pointer">
+                <div>
+                  <p className="text-sm font-medium" style={{ color: "var(--color-text-main)" }}>
+                    Show ghost replays of past members
+                  </p>
+                  <p className="text-xs mt-0.5" style={{ color: "var(--color-text-subtle)" }}>
+                    Show faded outlines of members who were here recently. Turn off if it&apos;s distracting.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={ghostsEnabled}
+                  onClick={() => setGhostsEnabled(!ghostsEnabled)}
+                  className="relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border transition-colors"
+                  style={{
+                    background: ghostsEnabled ? "#002fa7" : "rgba(255,255,255,0.06)",
+                    borderColor: "var(--glass-border-soft)",
+                  }}
+                >
+                  <span
+                    className="inline-block h-4 w-4 mt-0.5 transform rounded-full bg-white transition-transform"
+                    style={{ transform: ghostsEnabled ? "translateX(24px)" : "translateX(4px)" }}
+                  />
+                </button>
+              </label>
+            </div>
+          </div>
         </Section>
 
         {/* NPC Memories */}

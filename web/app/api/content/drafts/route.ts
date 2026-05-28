@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
-const ALLOWED_TABLES = new Set(["npc_personas", "shop_items", "seasonal_palettes"]);
+const ALLOWED_TABLES = new Set([
+  "npc_personas",
+  "shop_items",
+  "seasonal_palettes",
+  "emote_types",
+]);
 
 // POST — create a new draft
 export async function POST(request: Request) {

@@ -102,6 +102,13 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ### 2026-05-28 — Sprint E: Community loops
 
+#### 2026-05-21 — Sprint E8+E9: emote admin editor + ghost-replay settings toggle
+
+- E8: `EmoteEditor.tsx` mirrors C1 NPCEditor (slug/display_name/animation_key/icon_url+ImageUploadButton/unlock_condition/active). New listing at `/admin/content/emotes` (queries `emote_types` directly to include inactive rows), `/new` and `/[id]/edit` wrappers, both tier-gated. Added Emotes card to admin hub.
+- Allowlisted `emote_types` in `/api/content/drafts` POST and `/api/content/drafts/[id]/publish` (no DB CHECK constraint to touch).
+- E9: `useGhostReplaySetting` hook via `useSyncExternalStore` (avoids set-state-in-effect lint) backed by `localStorage["tsi.ghosts.enabled"]`. `GameWorld.Scene` now gates `ghosts.slice(0,10).map(...)` on the hook. Settings page got a "World" section with the toggle.
+- `tsc --noEmit` clean. `npm run lint` 74/59 (= cap). `npm run build` ✓ — 3 new emote routes registered.
+
 #### 2026-05-21 — Sprint E2+E3: emote menu + player emote animation
 
 - Type: `EmoteType` in `web/lib/game/contentTypes.ts`. Hook: `useEmoteTypes()` in `contentLoader.ts` (SWR, 5-min dedup, falls back to bundled `DEFAULT_EMOTE_TYPES` in `web/data/content-defaults.ts` — 5 emotes matching migration 019 seed).

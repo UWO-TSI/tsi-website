@@ -16,6 +16,7 @@ import {
   History,
   MessageSquareWarning,
   BookOpen,
+  Smile,
 } from "lucide-react";
 import NPCSpendWidget from "@/components/portal/NPCSpendWidget";
 
@@ -105,6 +106,13 @@ const adminSections = [
     icon: <BookOpen size={20} />,
     href: "/student/dashboard/admin/guestbook",
     color: "#fbbf24",
+  },
+  {
+    title: "Emotes",
+    description: "Add or edit emote types (slug, animation, unlock)",
+    icon: <Smile size={20} />,
+    href: "/student/dashboard/admin/content/emotes",
+    color: "#22d3ee",
   },
 ];
 

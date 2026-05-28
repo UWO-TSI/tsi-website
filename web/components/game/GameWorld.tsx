@@ -23,6 +23,7 @@ import { useUser } from "@/components/portal/UserContext";
 import { useActivePalette, useNPCPersonas } from "@/lib/game/contentLoader";
 import { usePositionHeartbeat } from "@/lib/game/usePositionHeartbeat";
 import { useGhostPositions } from "@/lib/game/useGhostPositions";
+import { useGhostReplaySetting } from "@/lib/game/useGhostReplaySetting";
 import type { EmoteType, NPCPersona, SpawnZone } from "@/lib/game/contentTypes";
 
 /**
@@ -554,6 +555,8 @@ function Scene({
   usePositionHeartbeat(playerPosRef as unknown as React.RefObject<{ x: number; z: number } | null>);
   // E5: ghost-replay of other recent members (last 24h, max 10).
   const { ghosts } = useGhostPositions();
+  // E9: settings toggle — members can disable ghost ambience.
+  const [ghostsEnabled] = useGhostReplaySetting();
 
   // Position each permanent NPC by spawn_zone, offsetting duplicates so they
   // don't overlap. Stable: ordering follows the personas array.
@@ -641,8 +644,9 @@ function Scene({
         />
       ))}
 
-      {/* E5: Ghost-replay of other recent members. Capped at 10. */}
-      {ghosts.slice(0, 10).map((g) => (
+      {/* E5: Ghost-replay of other recent members. Capped at 10. E9: gated
+          on the per-user settings toggle (default ON). */}
+      {ghostsEnabled && ghosts.slice(0, 10).map((g) => (
         <GhostReplay key={g.user_id} ghost={g} />
       ))}
 
