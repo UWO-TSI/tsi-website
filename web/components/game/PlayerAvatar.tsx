@@ -7,6 +7,17 @@ import * as THREE from "three";
 import { getTerrainHeight } from "./terrain";
 import { useSFX } from "@/lib/game/useAudio";
 import MoveTargetIndicator from "./MoveTargetIndicator";
+import type { EmoteType } from "@/lib/game/contentTypes";
+
+// Sprint E3: animation_key → emoji glyph for the Html overlay. Real sprite
+// swaps land when avatar sprites do; this is the placeholder.
+const EMOTE_EMOJI: Record<string, string> = {
+  wave: "👋",
+  dance: "🕺",
+  laugh: "😂",
+  point: "👉",
+  sit: "🪑",
+};
 
 /**
  * PlayerAvatar — 2D sprite on Billboard in 3D world (Dave the Diver style)
@@ -63,9 +74,10 @@ interface PlayerAvatarProps {
   onMove: (position: THREE.Vector3) => void;
   playerName?: string;
   playerLevel?: number;
+  activeEmote?: EmoteType | null;
 }
 
-export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Player", playerLevel = 1 }: PlayerAvatarProps) {
+export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Player", playerLevel = 1, activeEmote = null }: PlayerAvatarProps) {
   const groupRef = useRef<THREE.Group>(null);
   const meshRef = useRef<THREE.Mesh>(null);
   // Initialize y on the terrain at spawn so the avatar doesn't visibly
@@ -333,6 +345,46 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
           depthWrite={false}
         />
       </mesh>
+
+      {/* Sprint E3: active emote bubble above the avatar's head. Parent clears
+          activeEmote after 3.5s so this just unmounts automatically. */}
+      {activeEmote && (
+        <Html
+          position={[0, 2.6, 0]}
+          center
+          style={{ pointerEvents: "none" }}
+          distanceFactor={10}
+        >
+          <div
+            className="player-emote-bubble"
+            style={{
+              fontSize: 40,
+              lineHeight: 1,
+              filter: "drop-shadow(0 2px 6px rgba(0,0,0,0.4))",
+              userSelect: "none",
+            }}
+          >
+            {EMOTE_EMOJI[activeEmote.animation_key] ??
+              activeEmote.display_name.charAt(0).toUpperCase()}
+          </div>
+          <style jsx>{`
+            .player-emote-bubble {
+              animation: playerEmoteBounce 600ms ease-in-out infinite;
+            }
+            @keyframes playerEmoteBounce {
+              0% {
+                transform: translateY(0) scale(1);
+              }
+              50% {
+                transform: translateY(-6px) scale(1.08);
+              }
+              100% {
+                transform: translateY(0) scale(1);
+              }
+            }
+          `}</style>
+        </Html>
+      )}
 
       {/* Nameplate */}
       <Html

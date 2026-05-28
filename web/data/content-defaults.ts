@@ -4,6 +4,7 @@
 // so dev mode and prod render identically when Supabase is unreachable.
 
 import type {
+  EmoteType,
   NPCPersona,
   SeasonalPalette,
   ShopItem,
@@ -86,6 +87,60 @@ export const DEFAULT_NPC_PERSONAS: NPCPersona[] = [
     active: true,
     created_at: NOW,
     updated_at: NOW,
+  },
+];
+
+// Sprint E2: mirrors migration 019 seed. All 5 are always-unlocked, active.
+export const DEFAULT_EMOTE_TYPES: EmoteType[] = [
+  {
+    id: "emote-wave-fallback",
+    slug: "wave",
+    display_name: "Wave",
+    animation_key: "wave",
+    icon_url: null,
+    unlock_condition: null,
+    active: true,
+    created_at: NOW,
+  },
+  {
+    id: "emote-dance-fallback",
+    slug: "dance",
+    display_name: "Dance",
+    animation_key: "dance",
+    icon_url: null,
+    unlock_condition: null,
+    active: true,
+    created_at: NOW,
+  },
+  {
+    id: "emote-laugh-fallback",
+    slug: "laugh",
+    display_name: "Laugh",
+    animation_key: "laugh",
+    icon_url: null,
+    unlock_condition: null,
+    active: true,
+    created_at: NOW,
+  },
+  {
+    id: "emote-point-fallback",
+    slug: "point",
+    display_name: "Point",
+    animation_key: "point",
+    icon_url: null,
+    unlock_condition: null,
+    active: true,
+    created_at: NOW,
+  },
+  {
+    id: "emote-sit-fallback",
+    slug: "sit",
+    display_name: "Sit",
+    animation_key: "sit",
+    icon_url: null,
+    unlock_condition: null,
+    active: true,
+    created_at: NOW,
   },
 ];
 

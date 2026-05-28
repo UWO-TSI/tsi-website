@@ -61,3 +61,14 @@ export interface SeasonalPalette {
   scheduled_end: string | null;
   created_at: string;
 }
+
+export interface EmoteType {
+  id: string;
+  slug: string;
+  display_name: string;
+  animation_key: string;
+  icon_url: string | null;
+  unlock_condition: string | null;
+  active: boolean;
+  created_at: string;
+}

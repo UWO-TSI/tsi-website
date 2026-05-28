@@ -3,6 +3,7 @@
 import { Suspense, useRef, useState, useCallback, useEffect, useMemo } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { CameraControls, Cloud, Clouds, Html } from "@react-three/drei";
+import { Smile } from "lucide-react";
 import * as THREE from "three";
 import PlayerAvatar from "./PlayerAvatar";
 import Building from "./Building";
@@ -14,10 +15,11 @@ import AmbientProps from "./AmbientProps";
 import AmbientLife from "./AmbientLife";
 import AudioController from "./AudioController";
 import NPCChatOverlay from "./NPCChatOverlay";
+import EmoteMenu from "./EmoteMenu";
 import NPC from "./NPC";
 import { useUser } from "@/components/portal/UserContext";
 import { useActivePalette, useNPCPersonas } from "@/lib/game/contentLoader";
-import type { NPCPersona, SpawnZone } from "@/lib/game/contentTypes";
+import type { EmoteType, NPCPersona, SpawnZone } from "@/lib/game/contentTypes";
 
 /**
  * Game World v2 — Animal Crossing: New Horizons visual style.
@@ -527,12 +529,16 @@ function Scene({
   fogColor,
   todPhase,
   onNPCClick,
+  activeEmote,
+  playerPosRef,
 }: {
   playerName: string;
   playerLevel: number;
   fogColor: string;
   todPhase: "day" | "night" | "dawn" | "dusk";
   onNPCClick: (npc: NPCPersona) => void;
+  activeEmote: EmoteType | null;
+  playerPosRef: React.MutableRefObject<THREE.Vector3>;
 }) {
   const cameraRef = useRef<CameraControls>(null);
   const [playerPos, setPlayerPos] = useState<THREE.Vector3>(new THREE.Vector3(...SPAWN_POSITION));
@@ -559,8 +565,9 @@ function Scene({
 
   const handlePlayerMove = useCallback((position: THREE.Vector3) => {
     setPlayerPos(position);
+    playerPosRef.current.copy(position);
     cameraRef.current?.moveTo(position.x, position.y + 1.5, position.z, true);
-  }, []);
+  }, [playerPosRef]);
 
   return (
     <>
@@ -624,7 +631,7 @@ function Scene({
         />
       ))}
 
-      <PlayerAvatar spawnPosition={SPAWN_POSITION} onMove={handlePlayerMove} playerName={playerName} playerLevel={playerLevel} />
+      <PlayerAvatar spawnPosition={SPAWN_POSITION} onMove={handlePlayerMove} playerName={playerName} playerLevel={playerLevel} activeEmote={activeEmote} />
 
       {fillerToast && (
         <Html position={[0, 4, 0]} center style={{ pointerEvents: "none" }} distanceFactor={10}>
@@ -666,6 +673,56 @@ export default function GameWorld() {
   // Active NPC chat target. D5 wires sprite clicks → setActiveNPC inside Scene.
   const [activeNPC, setActiveNPC] = useState<NPCPersona | null>(null);
 
+  // Sprint E2 + E3: emote menu state + active emote bubble on the avatar.
+  const [emoteMenuOpen, setEmoteMenuOpen] = useState(false);
+  const [activeEmote, setActiveEmote] = useState<EmoteType | null>(null);
+  const emoteClearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const playerPosRef = useRef<THREE.Vector3>(new THREE.Vector3(...SPAWN_POSITION));
+
+  // E key toggles the emote menu. Skip when the user is typing in an input /
+  // textarea / contentEditable so we don't hijack chat or form fields.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "e" && e.key !== "E") return;
+      const el = document.activeElement as HTMLElement | null;
+      const tag = el?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || el?.isContentEditable) return;
+      if (activeNPC) return; // don't pop emote menu while chatting with an NPC
+      e.preventDefault();
+      setEmoteMenuOpen((o) => !o);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [activeNPC]);
+
+  useEffect(() => {
+    return () => {
+      if (emoteClearTimerRef.current) clearTimeout(emoteClearTimerRef.current);
+    };
+  }, []);
+
+  const handleEmotePick = useCallback((emote: EmoteType) => {
+    setActiveEmote(emote);
+    if (emoteClearTimerRef.current) clearTimeout(emoteClearTimerRef.current);
+    emoteClearTimerRef.current = setTimeout(() => {
+      setActiveEmote(null);
+      emoteClearTimerRef.current = null;
+    }, 3500);
+
+    const pos = playerPosRef.current;
+    void fetch("/api/emotes/log", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        emote_type_id: emote.id,
+        world_x: pos.x,
+        world_z: pos.z,
+      }),
+    }).catch(() => {
+      // Silent — emote played client-side even if log fails.
+    });
+  }, []);
+
   return (
     <div style={{ width: "100%", height: "100%", minHeight: "100vh", background: skyBase, position: "relative" }}>
       <Canvas
@@ -684,11 +741,46 @@ export default function GameWorld() {
             fogColor={fogColor}
             todPhase={todPhase}
             onNPCClick={setActiveNPC}
+            activeEmote={activeEmote}
+            playerPosRef={playerPosRef}
           />
         </Suspense>
       </Canvas>
       <AudioController phase={todPhase} />
       <NPCChatOverlay npc={activeNPC} onClose={() => setActiveNPC(null)} />
+      <EmoteMenu
+        open={emoteMenuOpen}
+        onClose={() => setEmoteMenuOpen(false)}
+        onPick={handleEmotePick}
+      />
+      {/* Sprint E2: corner button for mobile / no-keyboard users. Sits left of
+          the AudioController widget so they don't overlap. */}
+      <button
+        onClick={() => setEmoteMenuOpen((o) => !o)}
+        aria-label="Open emote menu"
+        title="Emote (E)"
+        style={{
+          position: "absolute",
+          bottom: 16,
+          right: 120,
+          zIndex: 50,
+          display: "flex",
+          alignItems: "center",
+          gap: 6,
+          padding: "8px 10px",
+          background: "rgba(15, 15, 16, 0.78)",
+          border: "1px solid rgba(255, 255, 255, 0.15)",
+          borderRadius: 8,
+          color: "#f1ffff",
+          fontFamily: "'IBM Plex Mono', monospace",
+          fontSize: 11,
+          cursor: "pointer",
+          backdropFilter: "blur(6px)",
+        }}
+      >
+        <Smile size={14} />
+        Emote
+      </button>
     </div>
   );
 }

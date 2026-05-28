@@ -102,6 +102,16 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ### 2026-05-28 — Sprint E: Community loops
 
+#### 2026-05-21 — Sprint E2+E3: emote menu + player emote animation
+
+- Type: `EmoteType` in `web/lib/game/contentTypes.ts`. Hook: `useEmoteTypes()` in `contentLoader.ts` (SWR, 5-min dedup, falls back to bundled `DEFAULT_EMOTE_TYPES` in `web/data/content-defaults.ts` — 5 emotes matching migration 019 seed).
+- `EmoteMenu.tsx` (~180 lines): DOM overlay outside R3F, bottom-center row of 5-8 buttons, ESC + backdrop closes, fade-in 200ms, emoji glyph from `animation_key` (👋🕺😂👉🪑) or first-letter pill fallback when no icon.
+- `GameWorld.tsx`: added `emoteMenuOpen` + `activeEmote` state at root (sibling to `activeNPC`), `playerPosRef` (Vector3) lifted out of Scene via prop, E key listener guards `INPUT/TEXTAREA/contentEditable` + active NPC chat. `handleEmotePick` sets emote, auto-clears via timer at 3.5s, POSTs `/api/emotes/log`. Corner Smile button at `bottom: 16, right: 120` (left of AudioController).
+- `PlayerAvatar.tsx`: new optional `activeEmote` prop, renders `<Html>` bubble at `[0, 2.6, 0]` with the matching emoji + 600ms bounce keyframe. Parent clears emote, child unmounts.
+- `POST /api/emotes/log`: SSR `createClient`, validates UUID + world coords in [-50, 50], INSERTs into `emote_logs` with `user_id = auth.uid()` (RLS-enforced via user-scoped client, NOT service role).
+
+No new dependencies. `tsc --noEmit` clean. `npm run lint` 74/58 (= baseline). `npm run build` ✓, `/api/emotes/log` registered as dynamic (ƒ).
+
 #### 2026-05-28 — Sprint E1: community loops migration
 
 Wrote `web/supabase/migrations/019_community_loops.sql` per spec §E1. Four tables + RLS + indexes + seed. Not applied anywhere.

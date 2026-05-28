@@ -12,11 +12,13 @@
 import useSWR from "swr";
 import { createClient } from "@/lib/supabase/client";
 import {
+  DEFAULT_EMOTE_TYPES,
   DEFAULT_NPC_PERSONAS,
   DEFAULT_PALETTES,
   DEFAULT_SHOP_ITEMS,
 } from "@/data/content-defaults";
 import type {
+  EmoteType,
   NPCPersona,
   PaletteColors,
   SeasonalPalette,
@@ -299,6 +301,42 @@ export function useActivePalette(options?: { previewDraftId?: string | null }) {
   );
   return {
     data: data ?? defaultActivePalette(),
+    isLoading,
+    error,
+  };
+}
+
+// ─── Emote types (sprint E2) ────────────────────────────────────────────────
+
+async function fetchEmoteTypes(): Promise<EmoteType[]> {
+  if (!hasSupabaseEnv()) return DEFAULT_EMOTE_TYPES;
+  try {
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from("emote_types")
+      .select(
+        "id, slug, display_name, animation_key, icon_url, unlock_condition, active, created_at",
+      )
+      .eq("active", true);
+    if (error || !data) {
+      console.warn("[contentLoader] emote_types fetch failed, using defaults", error);
+      return DEFAULT_EMOTE_TYPES;
+    }
+    return data as unknown as EmoteType[];
+  } catch (err) {
+    console.warn("[contentLoader] emote_types threw, using defaults", err);
+    return DEFAULT_EMOTE_TYPES;
+  }
+}
+
+export function useEmoteTypes() {
+  const { data, error, isLoading } = useSWR<EmoteType[]>(
+    "emote_types:active",
+    fetchEmoteTypes,
+    SWR_OPTS,
+  );
+  return {
+    data: data ?? DEFAULT_EMOTE_TYPES,
     isLoading,
     error,
   };
