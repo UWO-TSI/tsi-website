@@ -557,6 +557,7 @@ function DebugTracker({
 }) {
   const fpsAccum = useRef({ frames: 0, time: 0, fps: 60 });
   const { gl } = useThree();
+
   useFrame((_, delta) => {
     const acc = fpsAccum.current;
     acc.frames += 1;
@@ -567,6 +568,11 @@ function DebugTracker({
       acc.time = 0;
     }
     const pos = playerPosRef.current;
+    // Note: gl.info.render is auto-reset by Three.js at the start of each
+    // gl.render() call, and useFrame fires BEFORE the render — so these
+    // reads land mid-frame and show 0/1 most of the time. TODO: capture
+    // via the renderer's onAfterRender hook without breaking perf
+    // (autoReset=false + manual reset costs ~10 FPS at our scene size).
     snapshotRef.current = {
       fps: acc.fps,
       x: pos.x,

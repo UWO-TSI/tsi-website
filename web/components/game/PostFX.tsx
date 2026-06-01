@@ -44,14 +44,14 @@ export default function PostFX({ enabled = true, vignetteDarkness = 0.4, bloom =
         eskil={false}
         blendFunction={BlendFunction.NORMAL}
       />
-      {bloom && (
+      {bloom ? (
         <Bloom
           intensity={0.55}
           luminanceThreshold={0.88}
           luminanceSmoothing={0.2}
           kernelSize={KernelSize.SMALL}
         />
-      )}
+      ) : <></>}
     </EffectComposer>
   );
 }
