@@ -31,6 +31,8 @@ import { getGrassTexture } from "@/lib/game/grassTexture";
 import { usePositionHeartbeat } from "@/lib/game/usePositionHeartbeat";
 import { useGhostPositions } from "@/lib/game/useGhostPositions";
 import { useLiteMode } from "@/lib/game/useLiteMode";
+import { useGraphicsSettings } from "@/lib/game/useGraphicsSettings";
+import GraphicsSettingsPanel, { GraphicsButton } from "./GraphicsSettings";
 import { useGhostReplaySetting } from "@/lib/game/useGhostReplaySetting";
 import type { EmoteType, NPCPersona, SpawnZone } from "@/lib/game/contentTypes";
 
@@ -961,6 +963,11 @@ export default function GameWorld() {
   // G4 follow-up: lite mode (auto-detected on first visit if device has
   // ≤4GB RAM). Disables PostFX + ambient particles + ghosts + clouds.
   const [liteMode] = useLiteMode();
+  // G4/G5: full per-device graphics settings (subset of which is liteMode
+  // — left in place for backwards-compat with anything reading the older
+  // hook). New components read via useGraphicsSettings.
+  const [graphicsSettings] = useGraphicsSettings();
+  const [graphicsOpen, setGraphicsOpen] = useState(false);
 
   // Active NPC chat target. D5 wires sprite clicks → setActiveNPC inside Scene.
   const [activeNPC, setActiveNPC] = useState<NPCPersona | null>(null);
@@ -1125,10 +1132,11 @@ export default function GameWorld() {
   // Default OFF. Members with FPS headroom can enable via settings.
   // ?shadow URL param force-enables for testing.
   // ?noshadow URL param force-disables (legacy alias, redundant).
-  const wantShadows = typeof window !== "undefined" && (
+  const wantShadowsURL = typeof window !== "undefined" && (
     window.location.search.includes("shadow") && !window.location.search.includes("noshadow")
   );
-  const shadowsEnabled = !liteMode && wantShadows;
+  // URL param overrides setting. Lite mode forces shadows off.
+  const shadowsEnabled = !liteMode && (graphicsSettings.shadows || wantShadowsURL);
 
   return (
     <div style={{ width: "100%", height: "100%", minHeight: "100vh", background: skyBase, position: "relative" }}>
@@ -1154,8 +1162,9 @@ export default function GameWorld() {
             playerPosRef={playerPosRef}
           />
           {/* G4 — bloom + vignette. Inside Suspense so it doesn't block
-              first paint. Disabled in lite mode for low-end devices. */}
-          <PostFX enabled={!liteMode} />
+              first paint. Bloom respects the graphics setting; vignette
+              always-on (cheap). Lite mode disables the whole pipeline. */}
+          <PostFX enabled={!liteMode} bloom={graphicsSettings.bloom} />
         </Suspense>
       </Canvas>
       {/* F1.4: screenshot mode hides ALL DOM overlays. DebugOverlay also
@@ -1174,6 +1183,7 @@ export default function GameWorld() {
         />
         <ServerListOverlay visible={tabHeld} />
         <ControlsOverlay visible={controlsOpen} onClose={() => setControlsOpen(false)} />
+        <GraphicsSettingsPanel open={graphicsOpen} onClose={() => setGraphicsOpen(false)} />
         <Crosshair active={nearest !== null} hint={nearest?.name ?? null} />
         <DebugOverlay visible={debugOpen} snapshotRef={debugSnapshotRef} />
       </div>
@@ -1256,6 +1266,7 @@ export default function GameWorld() {
         <BookOpen size={14} />
         Guestbook
       </button>
+      <GraphicsButton onClick={() => setGraphicsOpen(true)} />
       </>)}
     </div>
   );
