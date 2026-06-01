@@ -102,6 +102,10 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
   const clockRef = useRef(0);
   const indicatorIdRef = useRef(0);
   const [indicators, setIndicators] = useState<Array<{ id: number; position: [number, number, number] }>>([]);
+  // P28: small dust puffs spawned at the player's feet on each footstep.
+  // Each entry lives ~0.6s then unmounts itself.
+  const puffIdRef = useRef(0);
+  const [puffs, setPuffs] = useState<Array<{ id: number; position: [number, number, number] }>>([]);
   // F1.2: cosmetic jump. Space triggers a brief y-arc on the sprite mesh
   // (NOT the group — group y stays terrain-bound). Doesn't affect collision
   // or click-to-move pathing; pure visual delight.
@@ -361,6 +365,12 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
       if (footstepTimer.current >= footstepInterval) {
         footstepTimer.current = 0;
         sfx.play("footstep");
+        // P28: spawn a dust puff at the player's feet. Trailing slightly
+        // behind the movement direction so it reads as kicked-up dust.
+        const trailX = pos.x - (dx || 0) * 0.2;
+        const trailZ = pos.z - (dz || 0) * 0.2;
+        const id = puffIdRef.current++;
+        setPuffs((prev) => [...prev, { id, position: [trailX, pos.y + 0.02, trailZ] }]);
       }
     } else {
       footstepTimer.current = 0;
@@ -383,6 +393,14 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
           onComplete={() =>
             setIndicators((prev) => prev.filter((i) => i.id !== ind.id))
           }
+        />
+      ))}
+      {/* P28: footstep dust puffs */}
+      {puffs.map((p) => (
+        <FootstepPuff
+          key={p.id}
+          position={p.position}
+          onDone={() => setPuffs((prev) => prev.filter((q) => q.id !== p.id))}
         />
       ))}
       <group ref={groupRef} position={spawnPosition}>
@@ -476,5 +494,41 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
       </Html>
       </group>
     </>
+  );
+}
+
+// P28: a single dust puff at the player's feet. Expands and fades out
+// over 0.6s, then calls onDone so the parent removes it from state.
+function FootstepPuff({ position, onDone }: { position: [number, number, number]; onDone: () => void }) {
+  const ref = useRef<THREE.Mesh>(null);
+  const matRef = useRef<THREE.MeshBasicMaterial>(null);
+  const tRef = useRef(0);
+  useFrame((_, delta) => {
+    tRef.current += delta;
+    const t = tRef.current / 0.6;
+    if (t >= 1) {
+      onDone();
+      return;
+    }
+    if (ref.current) {
+      const s = 0.35 + t * 0.4;
+      ref.current.scale.set(s, s, s);
+    }
+    if (matRef.current) {
+      matRef.current.opacity = 0.55 * (1 - t);
+    }
+  });
+  return (
+    <mesh ref={ref} position={position} rotation={[-Math.PI / 2, 0, 0]}>
+      <circleGeometry args={[1, 12]} />
+      <meshBasicMaterial
+        ref={matRef}
+        color="#D8C8A8"
+        transparent
+        opacity={0.55}
+        depthWrite={false}
+        fog={false}
+      />
+    </mesh>
   );
 }
