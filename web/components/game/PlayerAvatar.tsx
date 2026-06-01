@@ -351,11 +351,13 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
       meshRef.current.position.y = SPRITE_BASE_Y + bobY + jumpY;
     }
 
-    // Footstep SFX — fire ~every 0.4s while walking. No-op if audio is muted
-    // or assets aren't shipped (manager silently drops the call).
+    // Footstep SFX — fire ~every 0.4s walking, ~0.25s when sprinting (F1.6).
+    // No-op if audio is muted or assets aren't shipped (manager silently
+    // drops the call).
     if (moving) {
       footstepTimer.current += delta;
-      if (footstepTimer.current >= 0.4) {
+      const footstepInterval = keys["shift"] ? 0.25 : 0.4;
+      if (footstepTimer.current >= footstepInterval) {
         footstepTimer.current = 0;
         sfx.play("footstep");
       }

@@ -18,6 +18,7 @@ import NPCChatOverlay from "./NPCChatOverlay";
 import EmoteMenu from "./EmoteMenu";
 import ControlsOverlay from "./ControlsOverlay";
 import Crosshair from "./Crosshair";
+import DebugOverlay, { type DebugSnapshot } from "./DebugOverlay";
 import ServerListOverlay from "./ServerListOverlay";
 import GuestbookOverlay from "@/components/portal/GuestbookOverlay";
 import NPC from "./NPC";
@@ -531,6 +532,51 @@ const FILLER_POSITIONS: [number, number, number][] = [
 ];
 
 // ─── Scene ──────────────────────────────────────────────────────
+/**
+ * DebugTracker (F1.4) — invisible R3F component that samples FPS + scene
+ * stats each frame and writes them to a snapshot ref. DebugOverlay reads
+ * the ref on a 4Hz interval, so this stays cheap.
+ */
+function DebugTracker({
+  snapshotRef,
+  playerPosRef,
+  phase,
+  ghosts,
+  npcs,
+}: {
+  snapshotRef: React.MutableRefObject<DebugSnapshot | null>;
+  playerPosRef: React.MutableRefObject<THREE.Vector3>;
+  phase: "day" | "night" | "dawn" | "dusk";
+  ghosts: number;
+  npcs: number;
+}) {
+  const fpsAccum = useRef({ frames: 0, time: 0, fps: 60 });
+  const { gl } = useThree();
+  useFrame((_, delta) => {
+    const acc = fpsAccum.current;
+    acc.frames += 1;
+    acc.time += delta;
+    if (acc.time >= 0.5) {
+      acc.fps = Math.round(acc.frames / acc.time);
+      acc.frames = 0;
+      acc.time = 0;
+    }
+    const pos = playerPosRef.current;
+    snapshotRef.current = {
+      fps: acc.fps,
+      x: pos.x,
+      y: pos.y,
+      z: pos.z,
+      phase,
+      ghosts,
+      npcs,
+      drawCalls: gl.info.render.calls,
+      triangles: gl.info.render.triangles,
+    };
+  });
+  return null;
+}
+
 function Scene({
   playerName,
   playerLevel,
@@ -540,6 +586,7 @@ function Scene({
   activeEmote,
   playerPosRef,
   onNearestInteractable,
+  debugSnapshotRef,
 }: {
   playerName: string;
   playerLevel: number;
@@ -549,6 +596,7 @@ function Scene({
   activeEmote: EmoteType | null;
   playerPosRef: React.MutableRefObject<THREE.Vector3>;
   onNearestInteractable: (n: { kind: "npc" | "building"; id: string; name: string; href?: string; npc?: NPCPersona } | null) => void;
+  debugSnapshotRef: React.MutableRefObject<DebugSnapshot | null>;
 }) {
   const cameraRef = useRef<CameraControls>(null);
   const [playerPos, setPlayerPos] = useState<THREE.Vector3>(new THREE.Vector3(...SPAWN_POSITION));
@@ -702,6 +750,13 @@ function Scene({
       />
 
       <TimeOfDayCycle />
+      <DebugTracker
+        snapshotRef={debugSnapshotRef}
+        playerPosRef={playerPosRef}
+        phase={todPhase}
+        ghosts={ghosts.length}
+        npcs={placedPersonas.length + FILLER_NPCS.length}
+      />
       <fog attach="fog" args={[fogColor, 50, 100]} />
 
       <Terrain />
@@ -800,6 +855,9 @@ export default function GameWorld() {
   // Sprint E2 + E3: emote menu state + active emote bubble on the avatar.
   const [emoteMenuOpen, setEmoteMenuOpen] = useState(false);
   const [controlsOpen, setControlsOpen] = useState(false);
+  // F1.4: F3 debug overlay (Minecraft tradition). Snapshot updated in Scene.
+  const [debugOpen, setDebugOpen] = useState(false);
+  const debugSnapshotRef = useRef<DebugSnapshot | null>(null);
   // Sprint E6: guestbook wall overlay state.
   const [guestbookOpen, setGuestbookOpen] = useState(false);
   // Sprint F1.3: hold-Tab server-list overlay state.
@@ -849,6 +907,17 @@ export default function GameWorld() {
       } else if (e.key === "F1") {
         e.preventDefault();
         setControlsOpen((o) => !o);
+      } else if (e.key === "F3") {
+        e.preventDefault();
+        setDebugOpen((o) => !o);
+      } else if (e.key === "Escape") {
+        // ESC closes any open in-game overlay (precedence: chat > guestbook
+        // > emote menu > server list > controls > debug)
+        if (activeNPC) { setActiveNPC(null); e.preventDefault(); }
+        else if (guestbookOpen) { setGuestbookOpen(false); e.preventDefault(); }
+        else if (emoteMenuOpen) { setEmoteMenuOpen(false); e.preventDefault(); }
+        else if (controlsOpen) { setControlsOpen(false); e.preventDefault(); }
+        else if (debugOpen) { setDebugOpen(false); e.preventDefault(); }
       }
     };
     window.addEventListener("keydown", onKey);
@@ -930,6 +999,7 @@ export default function GameWorld() {
             todPhase={todPhase}
             onNPCClick={setActiveNPC}
             onNearestInteractable={setNearest}
+            debugSnapshotRef={debugSnapshotRef}
             activeEmote={activeEmote}
             playerPosRef={playerPosRef}
           />
@@ -949,6 +1019,7 @@ export default function GameWorld() {
       <ServerListOverlay visible={tabHeld} />
       <ControlsOverlay visible={controlsOpen} onClose={() => setControlsOpen(false)} />
       <Crosshair active={nearest !== null} hint={nearest?.name ?? null} />
+      <DebugOverlay visible={debugOpen} snapshotRef={debugSnapshotRef} />
       {/* Sprint E2: corner button for mobile / no-keyboard users. Sits left of
           the AudioController widget so they don't overlap. */}
       <button
