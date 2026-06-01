@@ -1281,7 +1281,7 @@ export default function GameWorld() {
     <div style={{ width: "100%", height: "100%", minHeight: "100vh", background: skyBase, position: "relative" }}>
       <Canvas
         gl={{ antialias: true, powerPreference: "high-performance" }}
-        camera={{ fov: 50, near: 0.1, far: 300, position: [0, 12, -20] }}
+        camera={{ fov: 58, near: 0.1, far: 300, position: [0, 14, -22] }}
         shadows={shadowsEnabled}
         onCreated={({ gl }) => {
           gl.toneMapping = THREE.ACESFilmicToneMapping;
