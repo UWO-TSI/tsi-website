@@ -345,6 +345,16 @@ fixes · 3106f61 shadow tweak
 - Real multiplayer / Colyseus (deferred per principle)
 - Apply migrations to prod DB (irreversible, David's call)
 
+### 2026-06-01 — Burst 7 (moths + footstep dust)
+
+- **P27 lamp moths** (8a2f219). 3 small white-cream spheres orbit each
+  lit lamp at radius 0.45, phase-offset. Mounted only when the lamp is
+  on (dusk/night/dawn). 3 × 6 lamps = 18 tiny spheres at night only.
+- **P28 footstep dust** (4f720fd). Each footstep tick spawns a small
+  CircleGeometry on the ground behind the player's travel direction.
+  Grows + fades over 0.6s, then unmounts. Reinforces movement weight
+  without touching the avatar sprite.
+
 ### 2026-06-01 — Burst 6 (FOV + dust motes + NPC halo)
 
 - **P22 wider camera** (b9c444e). FOV 50→58, initial position
