@@ -345,6 +345,23 @@ fixes · 3106f61 shadow tweak
 - Real multiplayer / Colyseus (deferred per principle)
 - Apply migrations to prod DB (irreversible, David's call)
 
+### 2026-06-01 — Burst 10 (stats HUD)
+
+- **P33 StatsHUD** (52f0c59). Top-left DOM pill next to the hamburger
+  showing Lv.N + 80px XP progress bar toward the next level + comma-
+  formatted TC balance. Reads from useUser() — silent until profile
+  fetch resolves. Mirrors the sidebar player block so the player can
+  see their stats without opening the menu.
+
+End-of-session running totals (continuation across bursts 2-10):
+- 20 visible features shipped: P8, P9, P10, P13, P15, P16, P18, P19,
+  P21, P22, P23, P25, P27, P28, P29, P30, P31, P32, P33 + import
+  cleanup.
+- 2 attempted+reverted: P12, P17 (sun/moon disc — deferred).
+- 1 scope-killed: P20 (NPC nudge — duplicated existing signaling).
+- Lint baseline: 4 pre-existing errors, 0 warnings (down from 3).
+- Tests still green (32/32).
+
 ### 2026-06-01 — Burst 9 (avatar + TOD badge + cleanup)
 
 David called out the loop stop again. Resumed iteration with concrete
