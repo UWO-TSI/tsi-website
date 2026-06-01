@@ -14,14 +14,21 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "coords out of range" }, { status: 400 });
   }
 
+  const nowIso = new Date().toISOString();
   const { error } = await supabase
     .from("player_positions")
     .upsert({
       user_id: user.id,
       world_x: body.world_x,
       world_z: body.world_z,
-      recorded_at: new Date().toISOString(),
+      recorded_at: nowIso,
     });
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  // Touch last_seen_at on the profile so "world remembers me" features
+  // (returning-player greeting, login streak) have fresh data. Fire and
+  // forget — failure here doesn't break the position heartbeat.
+  void supabase.from("profiles").update({ last_seen_at: nowIso }).eq("id", user.id);
+
   return NextResponse.json({ ok: true });
 }
