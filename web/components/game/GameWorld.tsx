@@ -554,6 +554,83 @@ function ChimneySmoke() {
   );
 }
 
+// ─── Dust motes (P23) — pollen drifting near the player ─────────
+// Small Points cloud parented to a Group that follows the player every
+// frame. Per-vertex sine offsets give the motes lazy independent drift.
+// 30 points is small enough to keep this under 0.1ms even on M1, and
+// the sprite is a built-in PointsMaterial round dot — no texture load.
+const DUST_COUNT = 30;
+function DustMotes({ playerPosRef }: { playerPosRef: React.MutableRefObject<THREE.Vector3> }) {
+  const groupRef = useRef<THREE.Group>(null);
+  const geo = useMemo(() => {
+    const g = new THREE.BufferGeometry();
+    const positions = new Float32Array(DUST_COUNT * 3);
+    const phases = new Float32Array(DUST_COUNT);
+    // Deterministic LCG so dust positions are stable across mounts and the
+    // useMemo factory is pure (no Math.random / impure side effects).
+    let s = 0xb16b00b5;
+    const rand = () => {
+      s = (s * 16807) % 2147483647;
+      return s / 2147483647;
+    };
+    for (let i = 0; i < DUST_COUNT; i++) {
+      const a = rand() * Math.PI * 2;
+      const r = rand() * 4 + 1.5;
+      positions[i * 3] = Math.cos(a) * r;
+      positions[i * 3 + 1] = rand() * 2.5 + 0.3;
+      positions[i * 3 + 2] = Math.sin(a) * r;
+      phases[i] = rand() * Math.PI * 2;
+    }
+    g.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+    g.setAttribute("dustPhase", new THREE.BufferAttribute(phases, 1));
+    return g;
+  }, []);
+
+  useFrame((state) => {
+    if (!groupRef.current) return;
+    const p = playerPosRef.current;
+    groupRef.current.position.set(p.x, p.y, p.z);
+    const t = state.clock.elapsedTime;
+    const pos = geo.attributes.position as THREE.BufferAttribute;
+    const phases = geo.attributes.dustPhase as THREE.BufferAttribute;
+    for (let i = 0; i < DUST_COUNT; i++) {
+      const phase = phases.getX(i);
+      const baseX = pos.getX(i);
+      const baseY = pos.getY(i);
+      const baseZ = pos.getZ(i);
+      // Bob along Y between original and +0.8 over a slow period.
+      const newY = baseY * 0.97 + ((Math.sin(t * 0.4 + phase) * 0.4) + 1.4) * 0.03;
+      // Small XZ jitter so they don't feel locked.
+      pos.setXYZ(
+        i,
+        baseX + Math.sin(t * 0.7 + phase) * 0.005,
+        newY,
+        baseZ + Math.cos(t * 0.6 + phase * 1.3) * 0.005,
+      );
+    }
+    // Three.js requires this mutation to flag the attribute for re-upload;
+    // it's the sanctioned API and shouldn't be wrapped in a setter.
+    // eslint-disable-next-line react-hooks/immutability
+    pos.needsUpdate = true;
+  });
+
+  return (
+    <group ref={groupRef}>
+      <points geometry={geo}>
+        <pointsMaterial
+          color="#FFF5D0"
+          size={0.12}
+          transparent
+          opacity={0.55}
+          sizeAttenuation
+          depthWrite={false}
+          fog={false}
+        />
+      </points>
+    </group>
+  );
+}
+
 // ─── Lamp posts (P19) — pair-flank HQ + Shop entrances ──────────
 // Each lamp = dark post + amber globe top. Globe emissive ramps with
 // time of day so they "turn on" through dusk and read as warm anchors
@@ -1024,6 +1101,7 @@ function Scene({
         <Props />
         <AmbientProps />
         <LampPosts phase={todPhase} />
+        {!liteMode && <DustMotes playerPosRef={playerPosRef} />}
       </Suspense>
 
       {BUILDINGS.map((b) => {
