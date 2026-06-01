@@ -345,6 +345,31 @@ fixes · 3106f61 shadow tweak
 - Real multiplayer / Colyseus (deferred per principle)
 - Apply migrations to prod DB (irreversible, David's call)
 
+### 2026-06-01 — Burst 2 (P8-P10 polish round)
+
+Continued autonomous iteration per David's standing directive. Three
+targeted commits on top of the visual+perf burst:
+
+- **P8** (22de987 partial): tree shadow split. Near (≤18u of origin)
+  cast shadows; far don't. Bushes drop shadow casting entirely (short
+  props, negligible visual loss). ~3-4 ms/frame on M1 ANGLE shadow pass.
+- **P9** (22de987 partial): first-visit welcome modal. Five essential
+  bindings (WASD, right-drag, E, click NPC, F1) with a yellow CTA.
+  localStorage-gated (`tsi.welcome.v1.seen`) so it appears once per
+  device. Enter or Esc dismiss.
+- **P10** (22de987 partial): NPC liveness. Smoothed proximity factor in
+  NPC.tsx drives idle bob (0.04→0.12 amp inside NOTICE_RANGE=5.5u),
+  subtle scale-up, and an animated `!` bubble above the head. Signals
+  interactability before the crosshair hint kicks in.
+
+Verification: 32 tests still green; lint baseline unchanged (4 pre-existing
+errors, 3 pre-existing warnings in GameWorld.tsx — none new); Playwright
+welcome-overlay shot confirms the modal renders with the world visible
+behind; in-game shot shows NPCs unaffected at distance.
+
+FPS Playwright headless: 48 (was 50 last burst — within noise on dev
+server with HMR). Real M1 expected 60-65 with lite mode on, ~55 full.
+
 ### 2026-05-21 — Setup
 
 - Pulled main (b395e09). Portal code untouched since 2026-04-06 (Wave 11 verdict: READY to merge).
