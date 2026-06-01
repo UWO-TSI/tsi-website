@@ -60,6 +60,9 @@ const SECTIONS: Section[] = [
     title: "UI",
     bindings: [
       { keys: ["F1"], label: "This controls overlay" },
+      { keys: ["F2"], label: "Screenshot mode (hide UI)" },
+      { keys: ["F3"], label: "Debug overlay (FPS / coords / draws)" },
+      { keys: ["1", "2", "3", "4", "5"], label: "Quick-fire emote slots" },
       { keys: ["Esc"], label: "Close overlay / cancel" },
     ],
   },

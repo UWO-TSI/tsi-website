@@ -24,7 +24,7 @@ import GuestbookOverlay from "@/components/portal/GuestbookOverlay";
 import NPC from "./NPC";
 import GhostReplay from "./GhostReplay";
 import { useUser } from "@/components/portal/UserContext";
-import { useActivePalette, useNPCPersonas } from "@/lib/game/contentLoader";
+import { useActivePalette, useEmoteTypes, useNPCPersonas } from "@/lib/game/contentLoader";
 import { usePositionHeartbeat } from "@/lib/game/usePositionHeartbeat";
 import { useGhostPositions } from "@/lib/game/useGhostPositions";
 import { useGhostReplaySetting } from "@/lib/game/useGhostReplaySetting";
@@ -858,6 +858,13 @@ export default function GameWorld() {
   // F1.4: F3 debug overlay (Minecraft tradition). Snapshot updated in Scene.
   const [debugOpen, setDebugOpen] = useState(false);
   const debugSnapshotRef = useRef<DebugSnapshot | null>(null);
+  // F1.4: F2 screenshot mode — hide all DOM overlays to get a clean shot.
+  const [screenshotMode, setScreenshotMode] = useState(false);
+  // F1.4: emote types for 1-5 quick-fire slots.
+  const { data: emoteTypes } = useEmoteTypes();
+  // Ref-bridge so the keydown effect (declared before handleEmotePick) can
+  // call the latest version without listing it as a dep.
+  const emotePickRef = useRef<((emote: EmoteType) => void) | null>(null);
   // Sprint E6: guestbook wall overlay state.
   const [guestbookOpen, setGuestbookOpen] = useState(false);
   // Sprint F1.3: hold-Tab server-list overlay state.
@@ -910,19 +917,33 @@ export default function GameWorld() {
       } else if (e.key === "F3") {
         e.preventDefault();
         setDebugOpen((o) => !o);
+      } else if (e.key === "F2") {
+        // F1.4: screenshot mode — toggle all DOM overlays off so members can
+        // grab a clean shot of the world. Press F2 again or ESC to restore.
+        e.preventDefault();
+        setScreenshotMode((s) => !s);
+      } else if (e.key >= "1" && e.key <= "5") {
+        // F1.4: 1-5 quick-fire emote slots. Slot N → emoteTypes[N-1].
+        if (activeNPC) return;
+        const slot = Number(e.key) - 1;
+        const emote = emoteTypes[slot];
+        if (!emote) return;
+        e.preventDefault();
+        emotePickRef.current?.(emote);
       } else if (e.key === "Escape") {
         // ESC closes any open in-game overlay (precedence: chat > guestbook
-        // > emote menu > server list > controls > debug)
+        // > emote menu > server list > controls > debug > screenshot)
         if (activeNPC) { setActiveNPC(null); e.preventDefault(); }
         else if (guestbookOpen) { setGuestbookOpen(false); e.preventDefault(); }
         else if (emoteMenuOpen) { setEmoteMenuOpen(false); e.preventDefault(); }
         else if (controlsOpen) { setControlsOpen(false); e.preventDefault(); }
         else if (debugOpen) { setDebugOpen(false); e.preventDefault(); }
+        else if (screenshotMode) { setScreenshotMode(false); e.preventDefault(); }
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [activeNPC]);
+  }, [activeNPC, emoteTypes, guestbookOpen, emoteMenuOpen, controlsOpen, debugOpen, screenshotMode]);
 
   useEffect(() => {
     return () => {
@@ -979,6 +1000,8 @@ export default function GameWorld() {
       // Silent — emote played client-side even if log fails.
     });
   }, []);
+  // Keep the ref pointed at the latest handler for the keydown effect.
+  emotePickRef.current = handleEmotePick;
 
   return (
     <div style={{ width: "100%", height: "100%", minHeight: "100vh", background: skyBase, position: "relative" }}>
@@ -1005,23 +1028,51 @@ export default function GameWorld() {
           />
         </Suspense>
       </Canvas>
-      <AudioController phase={todPhase} />
-      <NPCChatOverlay npc={activeNPC} onClose={() => setActiveNPC(null)} />
-      <EmoteMenu
-        open={emoteMenuOpen}
-        onClose={() => setEmoteMenuOpen(false)}
-        onPick={handleEmotePick}
-      />
-      <GuestbookOverlay
-        open={guestbookOpen}
-        onClose={() => setGuestbookOpen(false)}
-      />
-      <ServerListOverlay visible={tabHeld} />
-      <ControlsOverlay visible={controlsOpen} onClose={() => setControlsOpen(false)} />
-      <Crosshair active={nearest !== null} hint={nearest?.name ?? null} />
-      <DebugOverlay visible={debugOpen} snapshotRef={debugSnapshotRef} />
+      {/* F1.4: screenshot mode hides ALL DOM overlays. DebugOverlay also
+          stays hidden so the shot is clean. F2 restores. ESC also restores. */}
+      <div style={{ display: screenshotMode ? "none" : "contents" }}>
+        <AudioController phase={todPhase} />
+        <NPCChatOverlay npc={activeNPC} onClose={() => setActiveNPC(null)} />
+        <EmoteMenu
+          open={emoteMenuOpen}
+          onClose={() => setEmoteMenuOpen(false)}
+          onPick={handleEmotePick}
+        />
+        <GuestbookOverlay
+          open={guestbookOpen}
+          onClose={() => setGuestbookOpen(false)}
+        />
+        <ServerListOverlay visible={tabHeld} />
+        <ControlsOverlay visible={controlsOpen} onClose={() => setControlsOpen(false)} />
+        <Crosshair active={nearest !== null} hint={nearest?.name ?? null} />
+        <DebugOverlay visible={debugOpen} snapshotRef={debugSnapshotRef} />
+      </div>
+      {/* F1.4: tiny restore hint in screenshot mode so users know how to exit. */}
+      {screenshotMode && (
+        <div
+          aria-hidden
+          style={{
+            position: "absolute",
+            bottom: 12,
+            left: "50%",
+            transform: "translateX(-50%)",
+            zIndex: 80,
+            padding: "4px 12px",
+            fontSize: 10,
+            color: "rgba(255,255,255,0.55)",
+            background: "rgba(0,0,0,0.4)",
+            borderRadius: 4,
+            fontFamily: "'IBM Plex Mono', monospace",
+            letterSpacing: "0.05em",
+            pointerEvents: "none",
+          }}
+        >
+          F2 / ESC to restore UI
+        </div>
+      )}
       {/* Sprint E2: corner button for mobile / no-keyboard users. Sits left of
-          the AudioController widget so they don't overlap. */}
+          the AudioController widget so they don't overlap. Hidden in screenshot mode. */}
+      {!screenshotMode && (<>
       <button
         onClick={() => setEmoteMenuOpen((o) => !o)}
         aria-label="Open emote menu"
@@ -1075,6 +1126,7 @@ export default function GameWorld() {
         <BookOpen size={14} />
         Guestbook
       </button>
+      </>)}
     </div>
   );
 }
