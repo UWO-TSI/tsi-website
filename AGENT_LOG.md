@@ -345,6 +345,26 @@ fixes · 3106f61 shadow tweak
 - Real multiplayer / Colyseus (deferred per principle)
 - Apply migrations to prod DB (irreversible, David's call)
 
+### 2026-06-01 — Burst 4 (preload + compass)
+
+- **P15** (467c5a2). Side-effect import in GameWorld.tsx kicks off
+  `useGLTF.preload` for 4 buildings + 12 nature kits at module parse
+  time. Cache is warm by the time Canvas suspends, so first-time
+  visitors no longer see the procedural `<ACBuilding>` fallback flash
+  between Suspense mount and GLB load.
+- **P16** (d324de0). Compass HUD at top-center. Yellow 'N' label
+  highlights when facing world-north; E/S/W slide along the strip as
+  the camera rotates. Implemented as CompassFeed (R3F, writes camera
+  azimuth to a shared ref each frame) + Compass (DOM, 12fps rAF poll,
+  no per-frame React rerenders). Auto-hidden in screenshot mode.
+
+End-of-session totals (across bursts 1-4):
+- 4 buckets shipped: P8 shadow split, P9 welcome modal, P10 NPC notice,
+  P13 ambient density, P15 GLB preload, P16 compass HUD.
+- 1 bucket attempted+reverted with design notes: P12 sun/moon disc.
+- Test suite: 32 vitest specs (NPC chat helpers), all green.
+- Lint baseline: 4 errors, 3 warnings in GameWorld.tsx — all pre-existing.
+
 ### 2026-06-01 — Burst 3 (P12 attempt + P13 density)
 
 - **P12 attempted, reverted.** Tried a sun/moon disc as billboarded
