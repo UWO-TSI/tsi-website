@@ -345,6 +345,24 @@ fixes · 3106f61 shadow tweak
 - Real multiplayer / Colyseus (deferred per principle)
 - Apply migrations to prod DB (irreversible, David's call)
 
+### 2026-06-01 — Burst 8 (jump puff + spawn signpost)
+
+- **P29 landing puff** (e48f6ba). Extended the puffs state to carry an
+  optional base scale. On jump-arc completion, push a puff at 1.6×
+  footstep size — completes the footstep / landing kinetic loop.
+- **P30 signpost** (656085f). 4-arm wooden post at the spawn point
+  (0, -12, 0). Each arm rotates to atan2(dx, dz) pointing at HQ,
+  Oracle, Shop, or House — Html labels make the destination explicit.
+  New players can navigate without touching the camera.
+
+End-of-continuation totals: 17 visible features shipped across bursts
+2-8 (P8, P9, P10, P13, P15, P16, P18, P19, P21, P22, P23, P25, P27,
+P28, P29, P30 — plus P12 and P17 deferred). World now reads as alive:
+buildings load instantly, trees sway, moths circle lamps at night,
+dust drifts around the player, NPCs glow when noticed, river chevrons
+show flow direction, and signposts guide first-time visitors. Test
+suite green, lint baseline preserved.
+
 ### 2026-06-01 — Burst 7 (moths + footstep dust)
 
 - **P27 lamp moths** (8a2f219). 3 small white-cream spheres orbit each
