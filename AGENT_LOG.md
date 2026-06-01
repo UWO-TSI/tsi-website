@@ -345,6 +345,33 @@ fixes · 3106f61 shadow tweak
 - Real multiplayer / Colyseus (deferred per principle)
 - Apply migrations to prod DB (irreversible, David's call)
 
+### 2026-06-01 — Burst 5 (wind + lamps + river chevrons)
+
+David came back and called out the conservative loop stop. Resumed
+iteration. Four substantive changes plus one second-revert:
+
+- **P17 attempt 2 + revert again.** Switched plane → sphere geometry,
+  parked at a confirmed-visible diagnostic position (sphere DOES
+  render). But the procedural day-arc kept missing the camera frustum.
+  Removed the code rather than ship a non-working sun. The right
+  solution is a proper sky-shader corona, not more position guessing.
+- **P18 wind sway** (1b5d5ab). InstancedTrees group rotates per-frame
+  on z and x axes with small sine amplitudes (~0.5°) and a ~3.5s
+  period. One matrix per frame on the parent group — no per-instance
+  cost. Reads as a gentle breeze.
+- **P19 lamp posts** (1b5d5ab). 6 lamp posts (3 pairs) flank HQ, Shop,
+  and House entrances. Each is post + arm + amber globe; globe
+  `emissiveIntensity` ramps from 0 at day to 2.2 at dusk/dawn/night
+  with a small warm `pointLight` at night.
+- **P21 river chevrons** (f78a462). V-shape pattern scrolls along the
+  river's arc length so the eye reads "water flows east→west" instead
+  of "water shimmers in place." Mixed at 55% with the shallow color,
+  faded toward the banks. Pure shader uniform — no extra geometry.
+
+P20 deleted: a separate one-time "talk to Mayor" nudge would compete
+with the existing NPC "!" notice + nameplate. Existing signaling is
+enough.
+
 ### 2026-06-01 — Burst 4 (preload + compass)
 
 - **P15** (467c5a2). Side-effect import in GameWorld.tsx kicks off
