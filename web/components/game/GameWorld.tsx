@@ -165,6 +165,7 @@ function TimeOfDayCycle() {
   );
 }
 
+
 // ─── Terrain (v2 spec Section 4 — vertex-displaced rolling hills) ─
 function Terrain() {
   const geometry = useMemo(() => {
@@ -712,6 +713,7 @@ function Scene({
   playerPosRef,
   onNearestInteractable,
   debugSnapshotRef,
+  ambientDensity,
 }: {
   playerName: string;
   playerLevel: number;
@@ -722,6 +724,7 @@ function Scene({
   playerPosRef: React.MutableRefObject<THREE.Vector3>;
   onNearestInteractable: (n: { kind: "npc" | "building"; id: string; name: string; href?: string; npc?: NPCPersona } | null) => void;
   debugSnapshotRef: React.MutableRefObject<DebugSnapshot | null>;
+  ambientDensity: number;
 }) {
   const cameraRef = useRef<CameraControls>(null);
   const [playerPos, setPlayerPos] = useState<THREE.Vector3>(new THREE.Vector3(...SPAWN_POSITION));
@@ -898,7 +901,12 @@ function Scene({
       <InstancedTrees />
       <Bushes />
       <Flowers />
-      {!liteMode && <AmbientLife phase={todPhase} />}
+      {/* P13: when the user has shadows off (or default-off via deviceMemory
+          autodetect), soften ambient density too so the whole scene reads
+          as consistently light-touch. liteMode unmounts AmbientLife entirely. */}
+      {!liteMode && (
+        <AmbientLife phase={todPhase} density={ambientDensity} />
+      )}
       <ChimneySmoke />
 
       <Suspense fallback={null}>
@@ -1185,6 +1193,7 @@ export default function GameWorld() {
             debugSnapshotRef={debugSnapshotRef}
             activeEmote={activeEmote}
             playerPosRef={playerPosRef}
+            ambientDensity={graphicsSettings.shadows ? 1 : 0.7}
           />
           {/* G4 — bloom + vignette. Inside Suspense so it doesn't block
               first paint. Bloom respects the graphics setting; vignette

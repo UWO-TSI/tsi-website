@@ -284,16 +284,27 @@ function Birds({ count = 2 }: { count?: number }) {
 }
 
 // ─── Entry point ────────────────────────────────────────────────
-export default function AmbientLife({ phase }: { phase: "day" | "night" | "dawn" | "dusk" }) {
+// P13: density scales counts. 1 = full (default), 0.5 = half on
+// devices where the parent decides we should soften the particle load
+// without dropping ambient life entirely (full lite mode unmounts this
+// component instead).
+export default function AmbientLife({
+  phase,
+  density = 1,
+}: {
+  phase: "day" | "night" | "dawn" | "dusk";
+  density?: number;
+}) {
   const isDay = phase === "day" || phase === "dawn" || phase === "dusk";
   const isNight = phase === "night";
+  const scale = (n: number) => Math.max(1, Math.round(n * density));
   return (
     <group>
       {/* Particle counts trimmed for 60+ FPS budget on 1440x900 headless. */}
-      {isDay && <Butterflies count={3} />}
-      {isNight && <Fireflies count={7} />}
-      <LeafDrift count={25} />
-      {isDay && <Birds count={2} />}
+      {isDay && <Butterflies count={scale(3)} />}
+      {isNight && <Fireflies count={scale(7)} />}
+      <LeafDrift count={scale(25)} />
+      {isDay && <Birds count={scale(2)} />}
     </group>
   );
 }
