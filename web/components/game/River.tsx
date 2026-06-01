@@ -291,9 +291,18 @@ export default function River({
             "float highlight = pow(wave1 * wave2, 4.0);",
             // Edge falloff so bank rows fade into the water instead of a hard line.
             "float edge = smoothstep(0.0, 0.18, vRiverUv.x) * smoothstep(0.0, 0.18, 1.0 - vRiverUv.x);",
-            // Color mix: deep base + wave-modulated shallow tone + crest highlight.
+            // P21: chevron arrow pattern indicating flow direction. The phase
+            // is a V-shape (`abs(x - 0.5) * 2`) that scrolls along v
+            // (downstream). The crisp band gives the eye a clear cue that
+            // water moves east→west, not just shimmers in place.
+            "float chevX = abs(vRiverUv.x - 0.5) * 2.0;",
+            "float chevPhase = vRiverUv.y * 6.0 - time * 0.10 + chevX * 0.8;",
+            "float chevSaw = abs(fract(chevPhase) - 0.5) * 2.0;",
+            "float chevron = smoothstep(0.38, 0.32, chevSaw) * (1.0 - chevX) * 0.55;",
+            // Color mix: deep base + wave-modulated shallow tone + crest highlight + arrow.
             "vec3 water = mix(deep, shallow, wave1 * 0.35);",
             "water += highlight * 0.35;",
+            "water = mix(water, shallow, chevron);",
             "diffuseColor.rgb = water;",
             "diffuseColor.a = surfaceAlpha * edge;",
           ].join("\n"),
