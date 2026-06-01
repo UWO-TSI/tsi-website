@@ -11,6 +11,7 @@ import Path from "./Path";
 import River, { sampleRiverPoint, findRiverTForX } from "./River";
 import { getTerrainHeight, valueNoise, BUILDING_FOOTPRINTS } from "./terrain";
 import { NatureTree, NatureBush, NatureFlowerCluster, NatureFence, NatureMushroom, NatureStump } from "./NatureModels";
+import InstancedGLB, { type NaturePlacement } from "./InstancedNature";
 import AmbientProps from "./AmbientProps";
 import AmbientLife from "./AmbientLife";
 import AudioController from "./AudioController";
@@ -316,6 +317,7 @@ function Bridge() {
 // (Lighting merged into TimeOfDayCycle above)
 
 // (Tree component replaced by NatureTree from NatureModels.tsx)
+// Then perf 2026-06-01: switched to InstancedGLB for ~5x fewer draws.
 const TREE_XZ: [number, number][] = [
   [-7, 16], [7, 16], [-20, 5], [20, 5],
   [-18, -5], [18, -5], [-5, -20], [5, -20],
@@ -323,6 +325,39 @@ const TREE_XZ: [number, number][] = [
   [-22, -14], [22, -14], [-14, -16], [14, 16],
   [-28, 0], [28, 6], [-8, 26], [8, 26],
 ];
+
+// Tree model assignment by index mod 4 (preserves the old per-seed
+// hash so visual output is stable).
+const TREE_MODELS = [
+  "/assets/nature/tree_default.glb",
+  "/assets/nature/tree_oak.glb",
+  "/assets/nature/tree_detailed.glb",
+  "/assets/nature/tree_pineRoundA.glb",
+];
+
+function buildTreePlacements(): NaturePlacement[][] {
+  const groups: NaturePlacement[][] = TREE_MODELS.map(() => []);
+  TREE_XZ.forEach(([x, z], i) => {
+    const y = getTerrainHeight(x, z);
+    groups[i % TREE_MODELS.length].push({
+      position: [x, y, z],
+      rotation: (i * 137.5 * Math.PI) / 180,
+      scale: 1.0 + (i % 5) * 0.15,
+    });
+  });
+  return groups;
+}
+
+function InstancedTrees() {
+  const groups = useMemo(buildTreePlacements, []);
+  return (
+    <Suspense fallback={null}>
+      {TREE_MODELS.map((url, i) => (
+        <InstancedGLB key={url} url={url} placements={groups[i]} />
+      ))}
+    </Suspense>
+  );
+}
 
 // ─── Bushes (v2 spec Section 7.2) ───────────────────────────────
 const BUSH_XZ: [number, number][] = [
@@ -332,13 +367,32 @@ const BUSH_XZ: [number, number][] = [
   [18, 10], [-6, -14], [6, -14], [-10, 14],
   [10, 14], [-22, 3], [22, 3], [0, 9],
 ];
+const BUSH_MODELS = [
+  "/assets/nature/plant_bush.glb",
+  "/assets/nature/plant_bushLarge.glb",
+  "/assets/nature/plant_bushSmall.glb",
+];
+
+function buildBushPlacements(): NaturePlacement[][] {
+  const groups: NaturePlacement[][] = BUSH_MODELS.map(() => []);
+  BUSH_XZ.forEach(([x, z], i) => {
+    groups[i % BUSH_MODELS.length].push({
+      position: [x, getTerrainHeight(x, z), z],
+      rotation: i * 1.3,
+      scale: 0.7 + (i % 3) * 0.2,
+    });
+  });
+  return groups;
+}
+
 function Bushes() {
+  const groups = useMemo(buildBushPlacements, []);
   return (
-    <group>
-      {BUSH_XZ.map(([x, z], i) => (
-        <NatureBush key={i} position={[x, getTerrainHeight(x, z), z]} seed={i} />
+    <Suspense fallback={null}>
+      {BUSH_MODELS.map((url, i) => (
+        <InstancedGLB key={url} url={url} placements={groups[i]} />
       ))}
-    </group>
+    </Suspense>
   );
 }
 
@@ -348,13 +402,39 @@ const FLOWER_XZ: [number, number][] = [
   [-2, 14], [6, -13], [-11, 5], [13, 4],
   [2, 17], [-6, -11], [8, 15], [-14, -6],
 ];
+const FLOWER_MODELS = [
+  "/assets/nature/flower_redA.glb",
+  "/assets/nature/flower_purpleA.glb",
+  "/assets/nature/flower_yellowA.glb",
+  "/assets/nature/flower_redB.glb",
+  "/assets/nature/flower_purpleB.glb",
+];
+
+function buildFlowerPlacements(): NaturePlacement[][] {
+  const groups: NaturePlacement[][] = FLOWER_MODELS.map(() => []);
+  FLOWER_XZ.forEach(([x, z], seed) => {
+    const y = getTerrainHeight(x, z);
+    // Each "cluster" was 3 sub-flowers — preserve that.
+    for (let j = 0; j < 3; j++) {
+      const model = (seed + j) % FLOWER_MODELS.length;
+      groups[model].push({
+        position: [x + (j - 1) * 0.4, y, z + (((j * 7 + seed) % 3) - 1) * 0.3],
+        rotation: j * 2.1,
+        scale: 0.5,
+      });
+    }
+  });
+  return groups;
+}
+
 function Flowers() {
+  const groups = useMemo(buildFlowerPlacements, []);
   return (
-    <group>
-      {FLOWER_XZ.map(([x, z], i) => (
-        <NatureFlowerCluster key={i} position={[x, getTerrainHeight(x, z), z]} seed={i} />
+    <Suspense fallback={null}>
+      {FLOWER_MODELS.map((url, i) => (
+        <InstancedGLB key={url} url={url} placements={groups[i]} castShadow={false} />
       ))}
-    </group>
+    </Suspense>
   );
 }
 
@@ -777,7 +857,7 @@ function Scene({
       <River />
       <Bridge />
 
-      {TREE_XZ.map(([x, z], i) => <NatureTree key={i} position={[x, getTerrainHeight(x, z), z]} seed={i} />)}
+      <InstancedTrees />
       <Bushes />
       <Flowers />
       {!liteMode && <AmbientLife phase={todPhase} />}
