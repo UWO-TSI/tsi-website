@@ -28,6 +28,7 @@ import { useUser } from "@/components/portal/UserContext";
 import { useActivePalette, useEmoteTypes, useNPCPersonas } from "@/lib/game/contentLoader";
 import { usePositionHeartbeat } from "@/lib/game/usePositionHeartbeat";
 import { useGhostPositions } from "@/lib/game/useGhostPositions";
+import { useLiteMode } from "@/lib/game/useLiteMode";
 import { useGhostReplaySetting } from "@/lib/game/useGhostReplaySetting";
 import type { EmoteType, NPCPersona, SpawnZone } from "@/lib/game/contentTypes";
 
@@ -611,6 +612,9 @@ function Scene({
   const { ghosts } = useGhostPositions();
   // E9: settings toggle — members can disable ghost ambience.
   const [ghostsEnabled] = useGhostReplaySetting();
+  // G4 follow-up: lite mode disables PostFX + ambient particles + ghosts +
+  // clouds. Auto-detects ≤4GB devices on first visit. Settings override.
+  const [liteMode] = useLiteMode();
 
   // Position each permanent NPC by spawn_zone, offsetting duplicates so they
   // don't overlap. Stable: ordering follows the personas array.
@@ -767,15 +771,17 @@ function Scene({
       {TREE_XZ.map(([x, z], i) => <NatureTree key={i} position={[x, getTerrainHeight(x, z), z]} seed={i} />)}
       <Bushes />
       <Flowers />
-      <AmbientLife phase={todPhase} />
+      {!liteMode && <AmbientLife phase={todPhase} />}
       <ChimneySmoke />
 
       <Suspense fallback={null}>
-        <Clouds material={THREE.MeshBasicMaterial}>
-          <Cloud segments={40} bounds={[12, 2, 12]} volume={6} color="#FFFFFF" position={[-12, 25, -10]} opacity={0.6} speed={0.1} />
-          <Cloud segments={30} bounds={[8, 2, 8]} volume={4} color="#FFF8F0" position={[14, 28, 12]} opacity={0.45} speed={0.15} />
-          <Cloud segments={25} bounds={[6, 2, 6]} volume={3} color="#FFFFFF" position={[0, 30, 25]} opacity={0.5} speed={0.08} />
-        </Clouds>
+        {!liteMode && (
+          <Clouds material={THREE.MeshBasicMaterial}>
+            <Cloud segments={40} bounds={[12, 2, 12]} volume={6} color="#FFFFFF" position={[-12, 25, -10]} opacity={0.6} speed={0.1} />
+            <Cloud segments={30} bounds={[8, 2, 8]} volume={4} color="#FFF8F0" position={[14, 28, 12]} opacity={0.45} speed={0.15} />
+            <Cloud segments={25} bounds={[6, 2, 6]} volume={3} color="#FFFFFF" position={[0, 30, 25]} opacity={0.5} speed={0.08} />
+          </Clouds>
+        )}
         <Props />
         <AmbientProps />
       </Suspense>
@@ -807,7 +813,7 @@ function Scene({
 
       {/* E5: Ghost-replay of other recent members. Capped at 10. E9: gated
           on the per-user settings toggle (default ON). */}
-      {ghostsEnabled && ghosts.slice(0, 10).map((g) => (
+      {ghostsEnabled && !liteMode && ghosts.slice(0, 10).map((g) => (
         <GhostReplay key={g.user_id} ghost={g} />
       ))}
 
@@ -849,6 +855,9 @@ export default function GameWorld() {
   const skyBase = activePalette.palette.sky || P.skyBottom;
   const fogColor = activePalette.palette.fog || P.fog;
   const todPhase = useTodPhase();
+  // G4 follow-up: lite mode (auto-detected on first visit if device has
+  // ≤4GB RAM). Disables PostFX + ambient particles + ghosts + clouds.
+  const [liteMode] = useLiteMode();
 
   // Active NPC chat target. D5 wires sprite clicks → setActiveNPC inside Scene.
   const [activeNPC, setActiveNPC] = useState<NPCPersona | null>(null);
@@ -1028,8 +1037,8 @@ export default function GameWorld() {
             playerPosRef={playerPosRef}
           />
           {/* G4 — bloom + vignette. Inside Suspense so it doesn't block
-              first paint. */}
-          <PostFX />
+              first paint. Disabled in lite mode for low-end devices. */}
+          <PostFX enabled={!liteMode} />
         </Suspense>
       </Canvas>
       {/* F1.4: screenshot mode hides ALL DOM overlays. DebugOverlay also
