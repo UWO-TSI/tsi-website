@@ -147,3 +147,79 @@ export function getTerrainHeight(x: number, z: number): number {
 export function sampleTerrainHeight(x: number, z: number): number {
   return getTerrainHeight(x, z);
 }
+
+// ─── Lookup grid (perf — 2026-06-01) ─────────────────────────────
+//
+// getTerrainHeight runs FBM (4 octaves × valueNoise) on every call. At
+// 60fps with player + ~10 ghosts + NPCs + filler NPCs all sampling per
+// frame for ground-follow, that's ~960 FBM invocations/sec. Each FBM is
+// 16 noise samples → ~15K sin/floor calls/sec just for ground follow.
+// Tolerable on desktop, hot on 8GB M1 / Chromebooks.
+//
+// Bake a 257×257 grid covering [-ISLAND_RADIUS, ISLAND_RADIUS] once at
+// module load, then bilinear-sample at runtime. Reduces per-call cost to
+// 4 array reads + 4 lerps. ~50x cheaper.
+//
+// Heights of buildings + path flattening are already in getTerrainHeight,
+// so we bake the FINAL height, not raw noise. That means any future edit
+// to BUILDING_FOOTPRINTS / PATH_CORRIDORS requires rebuilding the grid —
+// but those are static module-level constants, so doing it at module load
+// is fine and the grid never goes stale at runtime.
+
+const GRID_SIZE = 257; // 257 so we have 256 cells with edges at ±ISLAND_RADIUS
+const CELL_SIZE = (ISLAND_RADIUS * 2) / (GRID_SIZE - 1);
+
+// Filled lazily on first sample. Avoids paying the bake cost during SSR.
+let TERRAIN_GRID: Float32Array | null = null;
+
+function bakeGrid(): Float32Array {
+  const grid = new Float32Array(GRID_SIZE * GRID_SIZE);
+  for (let i = 0; i < GRID_SIZE; i++) {
+    const z = -ISLAND_RADIUS + i * CELL_SIZE;
+    for (let j = 0; j < GRID_SIZE; j++) {
+      const x = -ISLAND_RADIUS + j * CELL_SIZE;
+      grid[i * GRID_SIZE + j] = getTerrainHeight(x, z);
+    }
+  }
+  return grid;
+}
+
+/**
+ * Cheap O(1) terrain height sample via bilinear interpolation over a
+ * pre-baked 257×257 grid. ~50x faster than getTerrainHeight() for
+ * per-frame ground-follow callers (player avatar, ghosts, NPCs).
+ *
+ * Use this in `useFrame` loops. Use getTerrainHeight() for one-shot
+ * placement (building y, slab patches, prop spawn) — slightly more
+ * accurate near grid boundaries.
+ */
+export function sampleTerrainHeightFast(x: number, z: number): number {
+  // Out-of-bounds clamp to 0 matches getTerrainHeight's island-edge
+  // behavior (perimeter falls off to y=0 at ISLAND_RADIUS).
+  if (Math.abs(x) > ISLAND_RADIUS || Math.abs(z) > ISLAND_RADIUS) return 0;
+
+  if (!TERRAIN_GRID) {
+    TERRAIN_GRID = bakeGrid();
+  }
+  const grid = TERRAIN_GRID;
+
+  // Map world (x, z) into grid space [0, GRID_SIZE - 1].
+  const gx = (x + ISLAND_RADIUS) / CELL_SIZE;
+  const gz = (z + ISLAND_RADIUS) / CELL_SIZE;
+
+  const i0 = Math.floor(gz);
+  const j0 = Math.floor(gx);
+  const i1 = Math.min(i0 + 1, GRID_SIZE - 1);
+  const j1 = Math.min(j0 + 1, GRID_SIZE - 1);
+  const fz = gz - i0;
+  const fx = gx - j0;
+
+  const h00 = grid[i0 * GRID_SIZE + j0];
+  const h01 = grid[i0 * GRID_SIZE + j1];
+  const h10 = grid[i1 * GRID_SIZE + j0];
+  const h11 = grid[i1 * GRID_SIZE + j1];
+
+  const a = h00 + (h01 - h00) * fx;
+  const b = h10 + (h11 - h10) * fx;
+  return a + (b - a) * fz;
+}

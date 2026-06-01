@@ -4,7 +4,7 @@ import { useRef, useState, useEffect, useCallback, useMemo } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { Billboard, Html } from "@react-three/drei";
 import * as THREE from "three";
-import { getTerrainHeight } from "./terrain";
+import { getTerrainHeight, sampleTerrainHeightFast } from "./terrain";
 import { useSFX } from "@/lib/game/useAudio";
 import { getCameraForwardXZ } from "@/lib/game/cameraBasis";
 import MoveTargetIndicator from "./MoveTargetIndicator";
@@ -274,7 +274,8 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
     // Ground follow — sample terrain every frame (even when idle so the
     // avatar settles if terrain ever changes) and damp toward it. Damping
     // keeps slope transitions smooth instead of snapping per step.
-    const targetY = getTerrainHeight(pos.x, pos.z) + AVATAR_FOOT_OFFSET;
+    // Per-frame: lookup-grid bilinear sample (~50x cheaper than FBM).
+    const targetY = sampleTerrainHeightFast(pos.x, pos.z) + AVATAR_FOOT_OFFSET;
     pos.y = THREE.MathUtils.damp(pos.y, targetY, 1 / Y_DAMP_TIME, delta);
 
     // Determine direction for sprite sheet

@@ -3,7 +3,7 @@
 import { useRef, useMemo, useEffect } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
-import { getTerrainHeight } from "./terrain";
+import { sampleTerrainHeightFast } from "./terrain";
 
 /**
  * Ambient life — sprint A6. Procedural-only (no textures, no asset loads).
@@ -53,7 +53,7 @@ function Butterfly({ seed }: { seed: number }) {
     // Clamp to playable map.
     x = THREE.MathUtils.clamp(x, -30, 30);
     z = THREE.MathUtils.clamp(z, -30, 30);
-    const y = getTerrainHeight(x, z) + 1.0 + Math.sin(t * 1.5 + phase) * 0.35;
+    const y = sampleTerrainHeightFast(x, z) + 1.0 + Math.sin(t * 1.5 + phase) * 0.35;
 
     // Face direction of travel.
     const dx = x - prev.x;
@@ -124,7 +124,7 @@ function Firefly({ seed }: { seed: number }) {
     const t = state.clock.elapsedTime;
     const x = THREE.MathUtils.clamp(home.x + Math.sin(t * 0.3 + phase) * drift + Math.cos(t * 0.17 + phase * 1.4) * (drift * 0.5), -30, 30);
     const z = THREE.MathUtils.clamp(home.z + Math.cos(t * 0.27 + phase * 0.9) * drift + Math.sin(t * 0.19 + phase * 1.7) * (drift * 0.5), -30, 30);
-    const yBase = getTerrainHeight(x, z);
+    const yBase = sampleTerrainHeightFast(x, z);
     const y = yBase + 0.6 + (Math.sin(t * 0.6 + phase) * 0.5 + 0.5) * 1.6;
     ref.current.position.set(x, y, z);
     // Pulse glow.
