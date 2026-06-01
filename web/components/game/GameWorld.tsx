@@ -35,6 +35,10 @@ import { useLiteMode } from "@/lib/game/useLiteMode";
 import { useGraphicsSettings } from "@/lib/game/useGraphicsSettings";
 import GraphicsSettingsPanel, { GraphicsButton } from "./GraphicsSettings";
 import { useGhostReplaySetting } from "@/lib/game/useGhostReplaySetting";
+// P15: side-effect import kicks off useGLTF.preload for buildings + nature
+// at module parse time, so first-render Suspense doesn't flash fallback
+// procedural geometry over real GLBs.
+import "@/lib/game/glbPreload";
 import type { EmoteType, NPCPersona, SpawnZone } from "@/lib/game/contentTypes";
 
 /**
