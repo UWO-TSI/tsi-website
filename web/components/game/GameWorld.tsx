@@ -385,14 +385,27 @@ function buildTreePlacements(): { near: NaturePlacement[][]; far: NaturePlacemen
 
 function InstancedTrees() {
   const { near, far } = useMemo(buildTreePlacements, []);
+  // P18: tiny per-frame rotation of the whole tree group fakes a wind
+  // sway. Z and X axes get gently offset sine waves so the canopy
+  // appears to lean east/west and forward/back. Amplitude ~0.5° feels
+  // alive without seeming wobbly; period ~3.5s reads as a breeze.
+  const groupRef = useRef<THREE.Group>(null);
+  useFrame((state) => {
+    if (!groupRef.current) return;
+    const t = state.clock.elapsedTime;
+    groupRef.current.rotation.z = Math.sin(t * 1.8) * 0.009;
+    groupRef.current.rotation.x = Math.sin(t * 1.3 + 0.7) * 0.006;
+  });
   return (
     <Suspense fallback={null}>
-      {TREE_MODELS.map((url, i) => (
-        <InstancedGLB key={`near-${url}`} url={url} placements={near[i]} />
-      ))}
-      {TREE_MODELS.map((url, i) => (
-        <InstancedGLB key={`far-${url}`} url={url} placements={far[i]} castShadow={false} />
-      ))}
+      <group ref={groupRef}>
+        {TREE_MODELS.map((url, i) => (
+          <InstancedGLB key={`near-${url}`} url={url} placements={near[i]} />
+        ))}
+        {TREE_MODELS.map((url, i) => (
+          <InstancedGLB key={`far-${url}`} url={url} placements={far[i]} castShadow={false} />
+        ))}
+      </group>
     </Suspense>
   );
 }
@@ -538,6 +551,70 @@ function ChimneySmoke() {
     <points ref={ref} geometry={geo}>
       <pointsMaterial color="#D0C8C0" size={0.2} transparent opacity={0.3} sizeAttenuation depthWrite={false} />
     </points>
+  );
+}
+
+// ─── Lamp posts (P19) — pair-flank HQ + Shop entrances ──────────
+// Each lamp = dark post + amber globe top. Globe emissive ramps with
+// time of day so they "turn on" through dusk and read as warm anchors
+// at night. Six instances total (3 pairs), drawn via standard meshes
+// rather than Instances — count is too low to bother instancing.
+const LAMP_POSITIONS: [number, number, number, number][] = [
+  // [x, z, doorFacingDir(z-offset), unused]
+  // HQ at (0, 0, -4), door faces +Z. Lamps flank at ±2 X, +Z forward.
+  [-2.5, -1.0, 1, 0],
+  [2.5, -1.0, 1, 0],
+  // Shop at (-14, 0, 8), door faces +Z. Lamps at ±2 X relative to shop.
+  [-16, 10.5, 1, 0],
+  [-12, 10.5, 1, 0],
+  // House at (14, 0, 10), door faces +Z.
+  [12, 12.5, 1, 0],
+  [16, 12.5, 1, 0],
+];
+
+function LampPosts({ phase }: { phase: "day" | "night" | "dawn" | "dusk" }) {
+  const onAtNight = phase === "night" || phase === "dusk" || phase === "dawn";
+  const emissive = onAtNight ? 2.2 : 0;
+  return (
+    <group>
+      {LAMP_POSITIONS.map(([x, z], i) => {
+        const y = getTerrainHeight(x, z);
+        return (
+          <group key={i} position={[x, y, z]}>
+            {/* Post */}
+            <mesh position={[0, 0.8, 0]} castShadow>
+              <cylinderGeometry args={[0.07, 0.09, 1.6, 8]} />
+              <meshStandardMaterial color="#3D3D3D" roughness={0.9} metalness={0.2} />
+            </mesh>
+            {/* Arm to globe */}
+            <mesh position={[0, 1.6, 0]} castShadow>
+              <cylinderGeometry args={[0.06, 0.06, 0.18, 6]} />
+              <meshStandardMaterial color="#3D3D3D" roughness={0.9} metalness={0.2} />
+            </mesh>
+            {/* Globe */}
+            <mesh position={[0, 1.85, 0]} castShadow>
+              <sphereGeometry args={[0.18, 14, 10]} />
+              <meshStandardMaterial
+                color="#FFE4B0"
+                emissive="#FFB060"
+                emissiveIntensity={emissive}
+                roughness={0.55}
+                metalness={0}
+              />
+            </mesh>
+            {onAtNight && (
+              <pointLight
+                position={[0, 1.85, 0]}
+                color="#FFB060"
+                intensity={0.6}
+                distance={4}
+                decay={2}
+              />
+            )}
+          </group>
+        );
+      })}
+    </group>
   );
 }
 
@@ -946,6 +1023,7 @@ function Scene({
         )}
         <Props />
         <AmbientProps />
+        <LampPosts phase={todPhase} />
       </Suspense>
 
       {BUILDINGS.map((b) => {
