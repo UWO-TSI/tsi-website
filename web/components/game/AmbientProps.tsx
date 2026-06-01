@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import * as THREE from "three";
 import { getTerrainHeight } from "./terrain";
 import { sampleRiverPoint, findRiverTForX } from "./River";
+import { NatureFence, NatureRock } from "./NatureModels";
 
 /**
  * Sprint A5 — ambient scatter props.
@@ -87,42 +88,19 @@ function SteppingStones() {
   return (
     <group>
       {stones.map((s, i) => (
-        <mesh key={i} position={[s.x, 0.05, s.z]} castShadow receiveShadow>
-          <cylinderGeometry args={[0.6, 0.6, 0.2, 12]} />
-          <meshStandardMaterial color={C.stone} roughness={0.95} metalness={0} />
-        </mesh>
+        <NatureRock key={i} position={[s.x, 0.05, s.z]} seed={i * 7 + 3} />
       ))}
     </group>
   );
 }
 
-// ─── Picket fence section ───────────────────────────────────────────────
-// 2 posts, 2 rails, 5 pickets. Section length ≈ 2 units along local X.
-function FenceSection({ position, rotationY }: { position: [number, number, number]; rotationY: number }) {
-  const pickets = [-0.8, -0.4, 0, 0.4, 0.8];
+// ─── Fence section (G2: GLB swap) ───────────────────────────────────────
+// Was procedural posts+rails+pickets; now uses Kenney NatureFence GLBs
+// (fence_simple / fence_planks). Variant alternates per call site.
+function FenceSection({ position, rotationY, variant = 0 }: { position: [number, number, number]; rotationY: number; variant?: number }) {
   return (
     <group position={position} rotation={[0, rotationY, 0]}>
-      {/* End posts */}
-      {[-1, 1].map((side) => (
-        <mesh key={`post-${side}`} position={[side, 0.5, 0]} castShadow receiveShadow>
-          <cylinderGeometry args={[0.08, 0.08, 1.0, 8]} />
-          <meshStandardMaterial color={C.fence} roughness={0.9} metalness={0} />
-        </mesh>
-      ))}
-      {/* Horizontal rails */}
-      {[0.25, 0.75].map((ry, i) => (
-        <mesh key={`rail-${i}`} position={[0, ry, 0]} castShadow receiveShadow>
-          <boxGeometry args={[2.0, 0.06, 0.06]} />
-          <meshStandardMaterial color={C.fence} roughness={0.9} metalness={0} />
-        </mesh>
-      ))}
-      {/* Pickets */}
-      {pickets.map((px) => (
-        <mesh key={`pk-${px}`} position={[px, 0.5, 0]} castShadow receiveShadow>
-          <boxGeometry args={[0.08, 0.7, 0.04]} />
-          <meshStandardMaterial color={C.fence} roughness={0.9} metalness={0} />
-        </mesh>
-      ))}
+      <NatureFence position={[0, 0, 0]} variant={variant} />
     </group>
   );
 }
@@ -198,7 +176,7 @@ export default function AmbientProps() {
       <group name="fences">
         {FENCES.map((f, i) => {
           const y = getTerrainHeight(f.pos[0], f.pos[1]);
-          return <FenceSection key={i} position={[f.pos[0], y, f.pos[1]]} rotationY={f.rot} />;
+          return <FenceSection key={i} position={[f.pos[0], y, f.pos[1]]} rotationY={f.rot} variant={i} />;
         })}
       </group>
 
