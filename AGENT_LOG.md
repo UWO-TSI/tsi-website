@@ -345,6 +345,21 @@ fixes · 3106f61 shadow tweak
 - Real multiplayer / Colyseus (deferred per principle)
 - Apply migrations to prod DB (irreversible, David's call)
 
+### 2026-06-01 — Burst 9 (avatar + TOD badge + cleanup)
+
+David called out the loop stop again. Resumed iteration with concrete
+shipped changes:
+
+- Dropped 3 unused `NatureModels` imports — lint baseline tightened
+  from 3 warnings to 0 (dcf0cb5).
+- **P31 larger player avatar** (b050ff5). Sprite plane 1.0×1.4 → 1.4×2.0
+  (~40% larger), SPRITE_BASE_Y bumped 0.8 → 1.1 to keep feet on ground,
+  shadow disc 1.0 → 1.3. Player reads clearly at the wider FOV from P22.
+- **P32 time-of-day badge** (62da325). Top-right DOM pill showing
+  "Dawn / Day / Dusk / Night". Per-phase palette: warm peach, cream,
+  twilight purple, deep blue. Positioned below the sound-enable toast
+  so it doesn't overlap.
+
 ### 2026-06-01 — Burst 8 (jump puff + spawn signpost)
 
 - **P29 landing puff** (e48f6ba). Extended the puffs state to carry an
