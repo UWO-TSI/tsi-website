@@ -971,6 +971,46 @@ function DebugTracker({
   return null;
 }
 
+// P32: small DOM badge showing the current time-of-day phase. Lives
+// next to the corner buttons so the player can read the world clock
+// at a glance without opening any panel.
+const TOD_LABEL: Record<"day" | "night" | "dawn" | "dusk", { text: string; bg: string; fg: string }> = {
+  dawn: { text: "Dawn", bg: "#FFB68C", fg: "#5A3A26" },
+  day: { text: "Day", bg: "#FFE6A6", fg: "#5A4A2A" },
+  dusk: { text: "Dusk", bg: "#C29ACB", fg: "#3A2A4A" },
+  night: { text: "Night", bg: "#2D3360", fg: "#E6E6FF" },
+};
+function TodBadge({ phase }: { phase: "day" | "night" | "dawn" | "dusk" }) {
+  const cfg = TOD_LABEL[phase];
+  return (
+    <div
+      style={{
+        position: "absolute",
+        // Sit just below the audio-enable toast (which lives top-right
+        // at ~y=12). 48px down avoids the overlap.
+        top: 56,
+        right: 12,
+        padding: "4px 12px",
+        background: cfg.bg,
+        color: cfg.fg,
+        border: "1px solid rgba(255,255,255,0.12)",
+        borderRadius: 999,
+        fontSize: 12,
+        fontWeight: 700,
+        fontFamily: "'IBM Plex Mono', monospace",
+        letterSpacing: "0.05em",
+        textTransform: "uppercase",
+        boxShadow: "0 2px 6px rgba(0,0,0,0.25)",
+        zIndex: 30,
+        pointerEvents: "none",
+        userSelect: "none",
+      }}
+    >
+      {cfg.text}
+    </div>
+  );
+}
+
 // P16: pump the camera's azimuth angle (radians) into a shared ref so the
 // DOM Compass HUD outside the Canvas can render without React rerenders.
 // Camera in this scene is positioned by CameraControls — we read its
@@ -1516,6 +1556,7 @@ export default function GameWorld() {
         <GraphicsSettingsPanel open={graphicsOpen} onClose={() => setGraphicsOpen(false)} />
         <Crosshair active={nearest !== null} hint={nearest?.name ?? null} />
         <Compass azimuthRef={azimuthRef} />
+        <TodBadge phase={todPhase} />
         <DebugOverlay visible={debugOpen} snapshotRef={debugSnapshotRef} />
       </div>
       {/* F1.4: tiny restore hint in screenshot mode so users know how to exit. */}
