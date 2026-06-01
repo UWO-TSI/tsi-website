@@ -631,6 +631,76 @@ function DustMotes({ playerPosRef }: { playerPosRef: React.MutableRefObject<THRE
   );
 }
 
+// ─── Signposts (P30) — central path junction wayfinding ─────────
+// A signpost cluster near the spawn (z=-12, x=0) so the first thing a
+// new player sees is a clear set of arrows: HQ ahead, Shop / Bounty to
+// either side, Oracle past HQ. Reads like AC's wooden trail markers.
+//
+// Each arm is a thin slab rotated to point at its destination. The
+// label text uses an Html overlay because rendering text via a 3D
+// material would mean shipping a font asset for a single use.
+const SIGN_TARGETS: { label: string; x: number; z: number }[] = [
+  { label: "HQ", x: 0, z: -4 },
+  { label: "Oracle", x: 0, z: 22 },
+  { label: "Shop", x: -14, z: 8 },
+  { label: "House", x: 14, z: 10 },
+];
+
+const SIGNPOST_POS = { x: 0, z: -12 };
+function Signpost() {
+  const { x, z } = SIGNPOST_POS;
+  const y = useMemo(() => getTerrainHeight(x, z), [x, z]);
+  return (
+    <group position={[x, y, z]}>
+      {/* Post */}
+      <mesh position={[0, 1.2, 0]} castShadow>
+        <cylinderGeometry args={[0.08, 0.1, 2.4, 8]} />
+        <meshStandardMaterial color="#8B6B4A" roughness={0.9} metalness={0} />
+      </mesh>
+      {/* Arms — one per target, rotated to point at it */}
+      {SIGN_TARGETS.map((t, i) => {
+        const dx = t.x - x;
+        const dz = t.z - z;
+        const heading = Math.atan2(dx, dz);
+        const armY = 1.6 + (SIGN_TARGETS.length - 1 - i) * 0.32;
+        return (
+          <group key={t.label} position={[0, armY, 0]} rotation={[0, heading, 0]}>
+            {/* Slab pointing forward (toward +z in its local frame) */}
+            <mesh position={[0, 0, 0.45]} castShadow>
+              <boxGeometry args={[0.7, 0.22, 0.9]} />
+              <meshStandardMaterial color="#C4A265" roughness={0.85} metalness={0} />
+            </mesh>
+            {/* Arrow tip */}
+            <mesh position={[0, 0, 0.95]} castShadow>
+              <coneGeometry args={[0.22, 0.32, 4]} />
+              <meshStandardMaterial color="#C4A265" roughness={0.85} metalness={0} />
+            </mesh>
+            <Html
+              position={[0, 0, 0.45]}
+              center
+              distanceFactor={9}
+              style={{ pointerEvents: "none" }}
+            >
+              <div
+                style={{
+                  fontFamily: "'IBM Plex Mono', monospace",
+                  fontSize: 13,
+                  fontWeight: 700,
+                  color: "#3D2817",
+                  whiteSpace: "nowrap",
+                  userSelect: "none",
+                }}
+              >
+                {t.label}
+              </div>
+            </Html>
+          </group>
+        );
+      })}
+    </group>
+  );
+}
+
 // ─── Lamp posts (P19) — pair-flank HQ + Shop entrances ──────────
 // Each lamp = dark post + amber globe top. Globe emissive ramps with
 // time of day so they "turn on" through dusk and read as warm anchors
@@ -1140,6 +1210,7 @@ function Scene({
         <Props />
         <AmbientProps />
         <LampPosts phase={todPhase} />
+        <Signpost />
         {!liteMode && <DustMotes playerPosRef={playerPosRef} />}
       </Suspense>
 
