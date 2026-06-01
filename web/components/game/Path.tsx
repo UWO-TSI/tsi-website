@@ -26,7 +26,7 @@
  * fade renders cleanly without z-fighting the terrain underneath.
  */
 
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import * as THREE from "three";
 import { getTerrainHeight } from "./terrain";
 
@@ -153,6 +153,16 @@ export default function Path({
 
     return mat;
   }, []);
+
+  // P4 memory: dispose the BufferGeometry + Material on unmount.
+  // React doesn't auto-dispose Three resources; without this, leaving
+  // and re-entering the scene leaks GPU memory.
+  useEffect(() => {
+    return () => {
+      geometry.dispose();
+      material.dispose();
+    };
+  }, [geometry, material]);
 
   return <mesh geometry={geometry} material={material} receiveShadow />;
 }

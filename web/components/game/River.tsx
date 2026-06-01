@@ -24,7 +24,7 @@
  * GameWorld can sit on the spline at the right tangent / height.
  */
 
-import { useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 
@@ -308,6 +308,15 @@ export default function River({
   }, [deepColor, shallowColor, opacity]);
 
   const materialRef = useRef(material);
+
+  // P4 memory: dispose River's BufferGeometries + Material on unmount.
+  useEffect(() => {
+    return () => {
+      geometry.dispose();
+      riverbedGeometry.dispose();
+      material.dispose();
+    };
+  }, [geometry, riverbedGeometry, material]);
 
   useFrame((_, delta) => {
     const mat = materialRef.current as THREE.MeshBasicMaterial & {

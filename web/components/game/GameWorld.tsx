@@ -219,6 +219,15 @@ function Terrain() {
   }, []);
 
   const grassTex = useMemo(() => getGrassTexture(), []);
+
+  // P4 memory: dispose terrain geometry on unmount. Grass texture is
+  // module-cached (shared across re-mounts) so we don't dispose it.
+  useEffect(() => {
+    return () => {
+      geometry.dispose();
+    };
+  }, [geometry]);
+
   return (
     <group>
       <mesh geometry={geometry} receiveShadow>
