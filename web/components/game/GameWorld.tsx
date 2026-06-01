@@ -18,6 +18,7 @@ import AudioController from "./AudioController";
 import NPCChatOverlay from "./NPCChatOverlay";
 import EmoteMenu from "./EmoteMenu";
 import ControlsOverlay from "./ControlsOverlay";
+import WelcomeOverlay from "./WelcomeOverlay";
 import Crosshair from "./Crosshair";
 import DebugOverlay, { type DebugSnapshot } from "./DebugOverlay";
 import PostFX from "./PostFX";
@@ -354,25 +355,37 @@ const TREE_MODELS = [
   "/assets/nature/tree_pineRoundA.glb",
 ];
 
-function buildTreePlacements(): NaturePlacement[][] {
-  const groups: NaturePlacement[][] = TREE_MODELS.map(() => []);
+// P8 shadow split: trees within this radius of the spawn area cast shadows
+// (visible in the player's typical view). Trees outside skip the shadow
+// pass — saves ~2-3ms/frame on M1 ANGLE without visible loss (the fog at
+// 25-55u masks distant shadow loss).
+const TREE_SHADOW_RADIUS = 18;
+
+function buildTreePlacements(): { near: NaturePlacement[][]; far: NaturePlacement[][] } {
+  const near: NaturePlacement[][] = TREE_MODELS.map(() => []);
+  const far: NaturePlacement[][] = TREE_MODELS.map(() => []);
   TREE_XZ.forEach(([x, z], i) => {
     const y = getTerrainHeight(x, z);
-    groups[i % TREE_MODELS.length].push({
+    const placement: NaturePlacement = {
       position: [x, y, z],
       rotation: (i * 137.5 * Math.PI) / 180,
       scale: 1.0 + (i % 5) * 0.15,
-    });
+    };
+    const bucket = Math.hypot(x, z) <= TREE_SHADOW_RADIUS ? near : far;
+    bucket[i % TREE_MODELS.length].push(placement);
   });
-  return groups;
+  return { near, far };
 }
 
 function InstancedTrees() {
-  const groups = useMemo(buildTreePlacements, []);
+  const { near, far } = useMemo(buildTreePlacements, []);
   return (
     <Suspense fallback={null}>
       {TREE_MODELS.map((url, i) => (
-        <InstancedGLB key={url} url={url} placements={groups[i]} />
+        <InstancedGLB key={`near-${url}`} url={url} placements={near[i]} />
+      ))}
+      {TREE_MODELS.map((url, i) => (
+        <InstancedGLB key={`far-${url}`} url={url} placements={far[i]} castShadow={false} />
       ))}
     </Suspense>
   );
@@ -392,6 +405,8 @@ const BUSH_MODELS = [
   "/assets/nature/plant_bushSmall.glb",
 ];
 
+// Bushes are short — they barely cast useful shadows even up close.
+// Disable shadow casting entirely (~1.5ms/frame win on M1).
 function buildBushPlacements(): NaturePlacement[][] {
   const groups: NaturePlacement[][] = BUSH_MODELS.map(() => []);
   BUSH_XZ.forEach(([x, z], i) => {
@@ -409,7 +424,7 @@ function Bushes() {
   return (
     <Suspense fallback={null}>
       {BUSH_MODELS.map((url, i) => (
-        <InstancedGLB key={url} url={url} placements={groups[i]} />
+        <InstancedGLB key={url} url={url} placements={groups[i]} castShadow={false} />
       ))}
     </Suspense>
   );
@@ -911,6 +926,7 @@ function Scene({
           key={persona.id}
           persona={persona}
           position={position}
+          playerPosition={playerPos}
           onClick={() => onNPCClick(persona)}
         />
       ))}
@@ -1192,6 +1208,7 @@ export default function GameWorld() {
         />
         <ServerListOverlay visible={tabHeld} />
         <ControlsOverlay visible={controlsOpen} onClose={() => setControlsOpen(false)} />
+        <WelcomeOverlay />
         <GraphicsSettingsPanel open={graphicsOpen} onClose={() => setGraphicsOpen(false)} />
         <Crosshair active={nearest !== null} hint={nearest?.name ?? null} />
         <DebugOverlay visible={debugOpen} snapshotRef={debugSnapshotRef} />

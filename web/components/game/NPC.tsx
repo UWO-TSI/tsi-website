@@ -22,12 +22,17 @@ import type { NPCPersona } from "@/lib/game/contentTypes";
 interface NPCProps {
   persona: NPCPersona;
   position: [number, number, number];
+  playerPosition?: THREE.Vector3;
   onClick: () => void;
 }
 
 const QUAD_WIDTH = 1.2;
 const QUAD_HEIGHT = 1.6;
 const NAMEPLATE_OFFSET = QUAD_HEIGHT / 2 + 0.5;
+// P10: how close before the NPC visually "notices" the player (bob + "!"
+// indicator above head). Matches the keyboard-interact range felt in
+// playtest so the cue arrives just before the prompt would.
+const NOTICE_RANGE = 5.5;
 
 // Hue from slug → consistent color per NPC, deterministic across sessions.
 function slugToHue(slug: string): number {
@@ -38,10 +43,16 @@ function slugToHue(slug: string): number {
   return Math.abs(h);
 }
 
-export default function NPC({ persona, position, onClick }: NPCProps) {
+export default function NPC({ persona, position, playerPosition, onClick }: NPCProps) {
   const groupRef = useRef<THREE.Group>(null);
   const meshRef = useRef<THREE.Mesh>(null);
   const [hovered, setHovered] = useState(false);
+  const [noticed, setNoticed] = useState(false);
+  // P10: per-frame bob clock + smoothed proximity factor (0 = far, 1 = next
+  // to the NPC). Drives idle bob amplitude so the NPC subtly leans in as
+  // the player approaches.
+  const clockRef = useRef(0);
+  const proxRef = useRef(0);
 
   // Ground-sample y at mount (and lock in). Wander is intentionally skipped
   // this sprint per scope — static NPCs are fine, polish later.
@@ -53,12 +64,36 @@ export default function NPC({ persona, position, onClick }: NPCProps) {
   const fillColor = useMemo(() => `hsl(${hue}, 50%, 60%)`, [hue]);
   const rimColor = useMemo(() => `hsl(${hue}, 55%, 35%)`, [hue]);
 
-  // Smooth hover scale via damped lerp in useFrame.
+  // Smooth hover scale + idle bob + proximity reaction.
   useFrame((_, delta) => {
-    if (!meshRef.current) return;
-    const target = hovered ? 1.05 : 1;
-    const next = THREE.MathUtils.damp(meshRef.current.scale.x, target, 12, delta);
-    meshRef.current.scale.set(next, next, next);
+    clockRef.current += delta;
+
+    // Distance to player (XZ only — bob is vertical, not 3D).
+    let dist = Infinity;
+    if (playerPosition) {
+      const dx = playerPosition.x - grounded[0];
+      const dz = playerPosition.z - grounded[2];
+      dist = Math.hypot(dx, dz);
+    }
+    const targetProx = THREE.MathUtils.clamp(1 - dist / NOTICE_RANGE, 0, 1);
+    proxRef.current = THREE.MathUtils.damp(proxRef.current, targetProx, 8, delta);
+    const isNoticed = dist <= NOTICE_RANGE;
+    if (isNoticed !== noticed) setNoticed(isNoticed);
+
+    if (meshRef.current) {
+      // Hover takes precedence over notice scale; both feel like attention.
+      const scaleTarget = hovered ? 1.05 : 1 + proxRef.current * 0.04;
+      const next = THREE.MathUtils.damp(meshRef.current.scale.x, scaleTarget, 12, delta);
+      meshRef.current.scale.set(next, next, next);
+    }
+
+    // Idle bob: gentle when alone (amp 0.04), bigger when player is near
+    // (up to 0.12). Slower freq than the player to feel "watching".
+    if (groupRef.current) {
+      const amp = 0.04 + proxRef.current * 0.08;
+      const bob = Math.sin(clockRef.current * Math.PI * 1.8) * amp;
+      groupRef.current.position.y = grounded[1] + bob;
+    }
   });
 
   const handlePointerOver = (e: ThreeEvent<PointerEvent>) => {
@@ -114,6 +149,45 @@ export default function NPC({ persona, position, onClick }: NPCProps) {
         <circleGeometry args={[QUAD_WIDTH * 0.45, 16]} />
         <meshBasicMaterial color="#000000" transparent opacity={0.25} depthWrite={false} />
       </mesh>
+
+      {/* P10: notice indicator — appears when player enters NOTICE_RANGE.
+          A subtle "!" bubble that signals "I see you, click to talk".
+          Mounted/unmounted by `noticed` state so animations restart cleanly. */}
+      {noticed && (
+        <Html
+          position={[0, NAMEPLATE_OFFSET + QUAD_HEIGHT + 0.7, 0]}
+          center
+          style={{ pointerEvents: "none" }}
+          distanceFactor={10}
+        >
+          <div
+            style={{
+              background: "#FFD166",
+              color: "#1A1410",
+              fontFamily: "'IBM Plex Mono', monospace",
+              fontWeight: 800,
+              fontSize: "16px",
+              width: "22px",
+              height: "22px",
+              borderRadius: "50%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              boxShadow: "0 2px 6px rgba(0,0,0,0.35)",
+              animation: "npcNoticeBounce 700ms ease-in-out infinite",
+              userSelect: "none",
+            }}
+          >
+            !
+          </div>
+          <style jsx>{`
+            @keyframes npcNoticeBounce {
+              0%, 100% { transform: translateY(0); }
+              50% { transform: translateY(-4px); }
+            }
+          `}</style>
+        </Html>
+      )}
 
       {/* Nameplate */}
       <Html
