@@ -105,7 +105,7 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
   // P28: small dust puffs spawned at the player's feet on each footstep.
   // Each entry lives ~0.6s then unmounts itself.
   const puffIdRef = useRef(0);
-  const [puffs, setPuffs] = useState<Array<{ id: number; position: [number, number, number] }>>([]);
+  const [puffs, setPuffs] = useState<Array<{ id: number; position: [number, number, number]; scale?: number }>>([]);
   // F1.2: cosmetic jump. Space triggers a brief y-arc on the sprite mesh
   // (NOT the group — group y stays terrain-bound). Doesn't affect collision
   // or click-to-move pathing; pure visual delight.
@@ -346,6 +346,12 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
       if (j >= 1) {
         jumpRef.current.active = false;
         jumpRef.current.t = 0;
+        // P29: landing puff — bigger ring at the player's current spot.
+        const id = puffIdRef.current++;
+        setPuffs((prev) => [
+          ...prev,
+          { id, position: [pos.x, pos.y + 0.02, pos.z], scale: 1.6 },
+        ]);
       } else {
         // 4 * j * (1-j) peaks at j=0.5 with value 1
         jumpY = 4 * j * (1 - j) * 0.6;
@@ -395,11 +401,12 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
           }
         />
       ))}
-      {/* P28: footstep dust puffs */}
+      {/* P28: footstep dust puffs (small) + P29 landing puff (scale > 1) */}
       {puffs.map((p) => (
         <FootstepPuff
           key={p.id}
           position={p.position}
+          baseScale={p.scale ?? 1}
           onDone={() => setPuffs((prev) => prev.filter((q) => q.id !== p.id))}
         />
       ))}
@@ -499,7 +506,7 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
 
 // P28: a single dust puff at the player's feet. Expands and fades out
 // over 0.6s, then calls onDone so the parent removes it from state.
-function FootstepPuff({ position, onDone }: { position: [number, number, number]; onDone: () => void }) {
+function FootstepPuff({ position, onDone, baseScale = 1 }: { position: [number, number, number]; onDone: () => void; baseScale?: number }) {
   const ref = useRef<THREE.Mesh>(null);
   const matRef = useRef<THREE.MeshBasicMaterial>(null);
   const tRef = useRef(0);
@@ -511,7 +518,7 @@ function FootstepPuff({ position, onDone }: { position: [number, number, number]
       return;
     }
     if (ref.current) {
-      const s = 0.35 + t * 0.4;
+      const s = (0.35 + t * 0.4) * baseScale;
       ref.current.scale.set(s, s, s);
     }
     if (matRef.current) {
