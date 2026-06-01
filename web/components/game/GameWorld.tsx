@@ -19,6 +19,7 @@ import NPCChatOverlay from "./NPCChatOverlay";
 import EmoteMenu from "./EmoteMenu";
 import ControlsOverlay from "./ControlsOverlay";
 import WelcomeOverlay from "./WelcomeOverlay";
+import Compass from "./Compass";
 import Crosshair from "./Crosshair";
 import DebugOverlay, { type DebugSnapshot } from "./DebugOverlay";
 import PostFX from "./PostFX";
@@ -707,6 +708,23 @@ function DebugTracker({
   return null;
 }
 
+// P16: pump the camera's azimuth angle (radians) into a shared ref so the
+// DOM Compass HUD outside the Canvas can render without React rerenders.
+// Camera in this scene is positioned by CameraControls — we read its
+// world-space forward vector and convert to azimuth.
+function CompassFeed({ azimuthRef }: { azimuthRef: React.MutableRefObject<number> }) {
+  const { camera } = useThree();
+  const fwd = useRef(new THREE.Vector3());
+  useFrame(() => {
+    camera.getWorldDirection(fwd.current);
+    // atan2(x, z) puts 0 at +Z (south in our world) and grows CCW. We
+    // want 0 at -Z (north) growing CW so it matches a real compass. So
+    // flip sign and add π.
+    azimuthRef.current = Math.atan2(fwd.current.x, fwd.current.z) + Math.PI;
+  });
+  return null;
+}
+
 function Scene({
   playerName,
   playerLevel,
@@ -718,6 +736,7 @@ function Scene({
   onNearestInteractable,
   debugSnapshotRef,
   ambientDensity,
+  azimuthRef,
 }: {
   playerName: string;
   playerLevel: number;
@@ -729,6 +748,7 @@ function Scene({
   onNearestInteractable: (n: { kind: "npc" | "building"; id: string; name: string; href?: string; npc?: NPCPersona } | null) => void;
   debugSnapshotRef: React.MutableRefObject<DebugSnapshot | null>;
   ambientDensity: number;
+  azimuthRef: React.MutableRefObject<number>;
 }) {
   const cameraRef = useRef<CameraControls>(null);
   const [playerPos, setPlayerPos] = useState<THREE.Vector3>(new THREE.Vector3(...SPAWN_POSITION));
@@ -892,6 +912,7 @@ function Scene({
         ghosts={ghosts.length}
         npcs={placedPersonas.length + FILLER_NPCS.length}
       />
+      <CompassFeed azimuthRef={azimuthRef} />
       {/* Fog brought in to 25→55 so the island edge fades cleanly into
           the sky color (ISLAND_RADIUS is 40, so old 50→100 fog barely
           kicked in inside the playable zone). Reads as soft atmospheric
@@ -1029,6 +1050,9 @@ export default function GameWorld() {
   const [activeEmote, setActiveEmote] = useState<EmoteType | null>(null);
   const emoteClearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const playerPosRef = useRef<THREE.Vector3>(new THREE.Vector3(...SPAWN_POSITION));
+  // P16: shared ref pumped by CompassFeed inside Canvas; consumed by the
+  // DOM Compass HUD on the outside. radians, 0 = north, growing clockwise.
+  const azimuthRef = useRef<number>(0);
 
   // F1.2: nearest interactable for crosshair + E-interact. Updated by Scene
   // on each player move via onNearestInteractable. Kept here so Crosshair
@@ -1198,6 +1222,7 @@ export default function GameWorld() {
             activeEmote={activeEmote}
             playerPosRef={playerPosRef}
             ambientDensity={graphicsSettings.shadows ? 1 : 0.7}
+            azimuthRef={azimuthRef}
           />
           {/* G4 — bloom + vignette. Inside Suspense so it doesn't block
               first paint. Bloom respects the graphics setting; vignette
@@ -1224,6 +1249,7 @@ export default function GameWorld() {
         <WelcomeOverlay />
         <GraphicsSettingsPanel open={graphicsOpen} onClose={() => setGraphicsOpen(false)} />
         <Crosshair active={nearest !== null} hint={nearest?.name ?? null} />
+        <Compass azimuthRef={azimuthRef} />
         <DebugOverlay visible={debugOpen} snapshotRef={debugSnapshotRef} />
       </div>
       {/* F1.4: tiny restore hint in screenshot mode so users know how to exit. */}
