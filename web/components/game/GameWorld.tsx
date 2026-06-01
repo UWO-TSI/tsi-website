@@ -649,6 +649,44 @@ const LAMP_POSITIONS: [number, number, number, number][] = [
   [16, 12.5, 1, 0],
 ];
 
+// P27: small moths orbiting each lit lamp. Three per lamp, each with a
+// stable phase so they don't sync into a single ring. Position computed
+// per-frame from lamp center + circular orbit + bobbing y.
+function LampMoths({ center }: { center: [number, number, number] }) {
+  const groupRef = useRef<THREE.Group>(null);
+  const refs = useRef<(THREE.Mesh | null)[]>([null, null, null]);
+  useFrame((state) => {
+    const t = state.clock.elapsedTime;
+    for (let i = 0; i < 3; i++) {
+      const m = refs.current[i];
+      if (!m) continue;
+      const phase = (i / 3) * Math.PI * 2;
+      const a = t * 1.4 + phase;
+      m.position.set(
+        center[0] + Math.cos(a) * 0.45,
+        center[1] + 1.85 + Math.sin(t * 2.3 + phase) * 0.08,
+        center[2] + Math.sin(a) * 0.45,
+      );
+    }
+    void groupRef.current;
+  });
+  return (
+    <group ref={groupRef}>
+      {[0, 1, 2].map((i) => (
+        <mesh
+          key={i}
+          ref={(el) => {
+            refs.current[i] = el;
+          }}
+        >
+          <sphereGeometry args={[0.04, 6, 4]} />
+          <meshBasicMaterial color="#FFF5D0" fog={false} />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
 function LampPosts({ phase }: { phase: "day" | "night" | "dawn" | "dusk" }) {
   const onAtNight = phase === "night" || phase === "dusk" || phase === "dawn";
   const emissive = onAtNight ? 2.2 : 0;
@@ -688,6 +726,7 @@ function LampPosts({ phase }: { phase: "day" | "night" | "dawn" | "dusk" }) {
                 decay={2}
               />
             )}
+            {onAtNight && <LampMoths center={[0, 0, 0]} />}
           </group>
         );
       })}
