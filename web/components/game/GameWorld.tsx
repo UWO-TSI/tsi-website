@@ -19,6 +19,7 @@ import EmoteMenu from "./EmoteMenu";
 import ControlsOverlay from "./ControlsOverlay";
 import Crosshair from "./Crosshair";
 import DebugOverlay, { type DebugSnapshot } from "./DebugOverlay";
+import PostFX from "./PostFX";
 import ServerListOverlay from "./ServerListOverlay";
 import GuestbookOverlay from "@/components/portal/GuestbookOverlay";
 import NPC from "./NPC";
@@ -1026,6 +1027,9 @@ export default function GameWorld() {
             activeEmote={activeEmote}
             playerPosRef={playerPosRef}
           />
+          {/* G4 — bloom + vignette. Inside Suspense so it doesn't block
+              first paint. */}
+          <PostFX />
         </Suspense>
       </Canvas>
       {/* F1.4: screenshot mode hides ALL DOM overlays. DebugOverlay also
