@@ -286,6 +286,65 @@ Verification: `tsc --noEmit` clean, `npm run lint` 74 errors / 56 warnings (= Wa
 
 ## reviewer
 
+### 2026-06-01 — Autonomous Visual + Perf Burst
+
+David authorized sustained autonomous work ("you have unlimited credits
+and time and only this one session, I will be stepping away and I
+expect full product when I'm back"). Output:
+
+**Visual overhaul (G-series):**
+- G1.1 ✅ Empty PROC_VARIANTS in Building.tsx → real GLB buildings load
+  (HQ, Shop, Oracle Temple, House — all ~450-700KB Kenney models)
+- G2 ✅ Swap procedural stones + fences → Kenney NatureRock + NatureFence
+- G4 ✅ PostFX (bloom + vignette) with bloom default-off
+- G5 ✅ Procedural grass texture overlay (256×256 noise, no asset blob)
+  + fog 50→25 / 100→55 (masks island perimeter into sky)
+
+**Performance (P-series):**
+- P2 ✅ Instanced rendering for trees/bushes/flowers via drei <Instances>
+  (one draw per sub-mesh per GLB instead of one per position)
+- P6 ✅ Shadow pass cost identified (~7 FPS); shadows default-OFF
+- P4 ✅ Memory disposal audit — Path/River/Terrain dispose geometry +
+  material on unmount (prevents 30-min M1 leak)
+- shadow-cast disabled on small ground props (flowers/mushrooms/rocks)
+
+**Settings infrastructure:**
+- P3 ✅ In-game graphics settings panel (gear icon, 4 toggles, persists
+  to localStorage). Auto-detect from navigator.deviceMemory.
+- Lite mode auto-on for ≤4GB devices.
+
+**Test infrastructure (other Claude's recommendation):**
+- Extracted NPC chat helpers (containsProfanity, extractMemoryUpdate,
+  mergeMemory, rate limiter, validation) into web/lib/npc/chatHelpers.ts
+- 32 vitest tests, all pass. `npm test` and `npm run test:watch` added.
+
+**FPS measurements (Playwright on M1 ANGLE Metal, 1440×900):**
+- Baseline (start of burst): 47 FPS
+- After full burst: 50-60 FPS (variance from headless env)
+- Lite mode: 60 FPS pegged
+- Real M1 native browsing typically 5-10 FPS faster than headless test.
+
+**Commits this burst (~14):**
+069a1d1 P2 instances · 5b3a2a2 shadow opt-in · dd77b77 grass+fog ·
+cf64c94 graphics panel · 4e6047a dispose audit · 6b1018c 32 tests ·
+006ba79 lint cleanup · bbff2f4 GLB unblock · 062a23f PostFX · 0ada20d
+nature swap · 2f686ec lite mode · 7ed78b7 perf budget · ebb13f6 bug
+fixes · 3106f61 shadow tweak
+
+**What David needs to do on return:**
+1. Apply pending migrations to remote Supabase (016-021 — adds events
+   check-in cols, content_assets storage bucket, npc_memories,
+   community_loops, player_inventory + achievements, profiles bio/year).
+   All syntax-clean, idempotent, NOT applied autonomously (irreversible).
+2. Pull `.env.local` ANTHROPIC_API_KEY if not set (NPC chat needs it).
+3. Eyeball localhost:3000/student/dashboard — see real buildings + grass.
+
+**What's NOT in this burst (out of scope or risky):**
+- Nano Banana sprite generation for NPCs/player (separate sprint)
+- Audio files (silent placeholders — separate content drop)
+- Real multiplayer / Colyseus (deferred per principle)
+- Apply migrations to prod DB (irreversible, David's call)
+
 ### 2026-05-21 — Setup
 
 - Pulled main (b395e09). Portal code untouched since 2026-04-06 (Wave 11 verdict: READY to merge).
