@@ -47,7 +47,7 @@ const AVATAR_FOOT_OFFSET = 0;
 
 // Sprint A8: visual bob constants. Applied to the sprite mesh inside the
 // Billboard, NOT the group (group.y is ground-follow from A1).
-const SPRITE_BASE_Y = 0.8;
+const SPRITE_BASE_Y = 1.1;
 const WALK_BOB_AMP = 0.05;
 const IDLE_BOB_AMP = 0.02;
 const BREATH_BLEND_LERP = 1 / 0.3; // ~0.3s blend between walk and idle bob
@@ -411,10 +411,13 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
         />
       ))}
       <group ref={groupRef} position={spawnPosition}>
-      {/* Character sprite on billboard */}
+      {/* Character sprite on billboard. P31: bumped 1.0×1.4 → 1.4×2.0
+          (~40% larger) so the player reads clearly at default camera
+          distance. Sprite-base-y also pushed up to keep the avatar
+          feet-on-ground. */}
       <Billboard follow lockX={false} lockY={false} lockZ={false}>
-        <mesh ref={meshRef} position={[0, 0.8, 0]}>
-          <planeGeometry args={[1.0, 1.4]} />
+        <mesh ref={meshRef} position={[0, 1.1, 0]}>
+          <planeGeometry args={[1.4, 2.0]} />
           <meshBasicMaterial
             map={spriteTexture}
             transparent
@@ -425,9 +428,9 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
         </mesh>
       </Billboard>
 
-      {/* Ground shadow */}
+      {/* Ground shadow — scaled to match the larger sprite from P31. */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
-        <planeGeometry args={[1.0, 1.0]} />
+        <planeGeometry args={[1.3, 1.3]} />
         <meshBasicMaterial
           map={shadowTexture}
           transparent
