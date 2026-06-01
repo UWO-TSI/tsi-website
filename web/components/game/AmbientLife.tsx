@@ -289,9 +289,10 @@ export default function AmbientLife({ phase }: { phase: "day" | "night" | "dawn"
   const isNight = phase === "night";
   return (
     <group>
-      {isDay && <Butterflies count={5} />}
-      {isNight && <Fireflies count={10} />}
-      <LeafDrift count={40} />
+      {/* Particle counts trimmed for 60+ FPS budget on 1440x900 headless. */}
+      {isDay && <Butterflies count={3} />}
+      {isNight && <Fireflies count={7} />}
+      <LeafDrift count={25} />
       {isDay && <Birds count={2} />}
     </group>
   );

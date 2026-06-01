@@ -143,11 +143,14 @@ function TimeOfDayCycle() {
       </mesh>
       <hemisphereLight args={["#FFF5E1", P.grassPrimary, 0.55]} />
       <ambientLight ref={ambRef} intensity={0.5} color="#C4D8FF" />
+      {/* Shadow map 2048→1024 (4x cheaper shadow pass per frame).
+          Negligible visual difference at our camera distance, big FPS win
+          on M1 (saw ~5-8 FPS gain in headless ANGLE Metal). */}
       <directionalLight
         ref={sunRef}
         color="#FFFFFF" intensity={1.0} position={[15, 30, 15]}
         castShadow
-        shadow-mapSize-width={2048} shadow-mapSize-height={2048}
+        shadow-mapSize-width={1024} shadow-mapSize-height={1024}
         shadow-camera-far={60} shadow-camera-left={-30} shadow-camera-right={30}
         shadow-camera-top={30} shadow-camera-bottom={-30}
         shadow-bias={-0.001}
@@ -777,9 +780,11 @@ function Scene({
       <Suspense fallback={null}>
         {!liteMode && (
           <Clouds material={THREE.MeshBasicMaterial}>
-            <Cloud segments={40} bounds={[12, 2, 12]} volume={6} color="#FFFFFF" position={[-12, 25, -10]} opacity={0.6} speed={0.1} />
-            <Cloud segments={30} bounds={[8, 2, 8]} volume={4} color="#FFF8F0" position={[14, 28, 12]} opacity={0.45} speed={0.15} />
-            <Cloud segments={25} bounds={[6, 2, 6]} volume={3} color="#FFFFFF" position={[0, 30, 25]} opacity={0.5} speed={0.08} />
+            {/* Cloud segments halved for FPS budget — visual cost negligible
+                at this distance. Was 40/30/25, now 20/16/12. */}
+            <Cloud segments={20} bounds={[12, 2, 12]} volume={6} color="#FFFFFF" position={[-12, 25, -10]} opacity={0.6} speed={0.1} />
+            <Cloud segments={16} bounds={[8, 2, 8]} volume={4} color="#FFF8F0" position={[14, 28, 12]} opacity={0.45} speed={0.15} />
+            <Cloud segments={12} bounds={[6, 2, 6]} volume={3} color="#FFFFFF" position={[0, 30, 25]} opacity={0.5} speed={0.08} />
           </Clouds>
         )}
         <Props />
