@@ -114,6 +114,21 @@ export default function NPC({ persona, position, playerPosition, onClick }: NPCP
   return (
     <group ref={groupRef} position={grounded}>
       <Billboard follow lockX={false} lockY={false} lockZ={false}>
+        {/* P25: soft warm glow that fades in when player is near. Sits
+            behind the rim + fill, larger and faded so it reads as a halo
+            rather than a hard outline. Opacity tied to noticed state. */}
+        {noticed && (
+          <mesh position={[0, QUAD_HEIGHT / 2, -0.005]}>
+            <planeGeometry args={[QUAD_WIDTH + 0.9, QUAD_HEIGHT + 0.9]} />
+            <meshBasicMaterial
+              color="#FFE9B5"
+              transparent
+              opacity={0.28}
+              side={THREE.DoubleSide}
+              depthWrite={false}
+            />
+          </mesh>
+        )}
         {/* Rim (slightly larger, darker — sits behind fill) */}
         <mesh position={[0, QUAD_HEIGHT / 2, -0.001]}>
           <planeGeometry args={[QUAD_WIDTH + 0.08, QUAD_HEIGHT + 0.08]} />
