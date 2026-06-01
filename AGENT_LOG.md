@@ -345,6 +345,24 @@ fixes · 3106f61 shadow tweak
 - Real multiplayer / Colyseus (deferred per principle)
 - Apply migrations to prod DB (irreversible, David's call)
 
+### 2026-06-01 — Burst 3 (P12 attempt + P13 density)
+
+- **P12 attempted, reverted.** Tried a sun/moon disc as billboarded
+  textured planes (lookAt the camera, fog=false, depthTest=false) that
+  arced across the sky based on wall-clock hour. Repeated Playwright
+  captures showed nothing — the warm disc color (`#FFE9B5`) sits too
+  close to the fog tone, and the bloom haze further bled them out. The
+  fix isn't more tweaking of plane positions; it's either a high-contrast
+  color, a corona shader, or rendering the disc as part of the sky shader
+  itself. Deferred to a future "sky polish" sprint.
+- **P13 shipped.** AmbientLife now accepts a `density` prop. Scene passes
+  0.7 when the user has shadows off (proxy for "I want lighter visuals"),
+  1.0 otherwise. Floor of 1 per particle channel so the world never
+  becomes lifeless. Lite mode still unmounts AmbientLife entirely — this
+  handles the middle case.
+
+Commits: 4c5d601 (P13 + P12 revert note).
+
 ### 2026-06-01 — Burst 2 (P8-P10 polish round)
 
 Continued autonomous iteration per David's standing directive. Three
