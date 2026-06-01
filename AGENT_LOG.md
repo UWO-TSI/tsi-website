@@ -345,6 +345,30 @@ fixes · 3106f61 shadow tweak
 - Real multiplayer / Colyseus (deferred per principle)
 - Apply migrations to prod DB (irreversible, David's call)
 
+### 2026-06-01 — Burst 6 (FOV + dust motes + NPC halo)
+
+- **P22 wider camera** (b9c444e). FOV 50→58, initial position
+  [0,12,-20]→[0,14,-22]. Significantly more world fits in the default
+  view — buildings, river, paths, and lamp posts all visible at once.
+- **P23 dust motes** (0583252). 30-point Points cloud parented to a
+  group that tracks player position. Deterministic LCG seeds the
+  positions; per-vertex sine drift in useFrame. Reads as pollen / dust
+  hanging in the air. Unmounted in lite mode.
+- **P25 NPC warm halo** (39a1aa7). Behind the existing NPC quads, a
+  large soft warm-cream plane at 28% opacity gated by `noticed` state.
+  Eye picks up the closest character from across the map before
+  reading the nameplate.
+
+Session totals across this continuation (burst 1 was the previous
+session; bursts 2-6 here):
+- 12 visible-feature commits shipped: P8, P9, P10, P13, P15, P16, P18,
+  P19, P21, P22, P23, P25.
+- 2 attempted+reverted: P12, P17 (sun/moon discs — deferred to a sky
+  shader sprint).
+- 1 scope-killed: P20 (NPC nudge — duplicated existing signaling).
+- Test suite still green (32/32). Lint baseline preserved (4 pre-existing
+  errors in GameWorld, 3 pre-existing warnings).
+
 ### 2026-06-01 — Burst 5 (wind + lamps + river chevrons)
 
 David came back and called out the conservative loop stop. Resumed
