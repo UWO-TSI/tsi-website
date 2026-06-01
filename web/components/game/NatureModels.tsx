@@ -8,23 +8,29 @@ import * as THREE from "three";
  * Kenney Nature Kit GLB model loader.
  * Loads, clones, and renders nature assets with shadows.
  */
-function NatureGLB({ url, scale = 1, position, rotation }: {
+function NatureGLB({ url, scale = 1, position, rotation, castShadow = true }: {
   url: string;
   scale?: number;
   position?: [number, number, number];
   rotation?: [number, number, number];
+  /**
+   * When false, the GLB skips the shadow-cast pass. Saves ~1 draw per
+   * sub-mesh per frame. Use false for ground props (flowers, mushrooms,
+   * small rocks) where the shadow is invisible at game camera distance.
+   */
+  castShadow?: boolean;
 }) {
   const { scene } = useGLTF(url);
   const clone = useMemo(() => {
     const c = scene.clone(true);
     c.traverse((child) => {
       if ((child as THREE.Mesh).isMesh) {
-        (child as THREE.Mesh).castShadow = true;
+        (child as THREE.Mesh).castShadow = castShadow;
         (child as THREE.Mesh).receiveShadow = true;
       }
     });
     return c;
-  }, [scene]);
+  }, [scene, castShadow]);
   return <primitive object={clone} scale={scale} position={position} rotation={rotation} />;
 }
 
@@ -83,6 +89,7 @@ export function NatureFlowerCluster({ position, seed }: { position: [number, num
             scale={0.5}
             position={[(j - 1) * 0.4, 0, ((j * 7 + seed) % 3 - 1) * 0.3]}
             rotation={[0, j * 2.1, 0]}
+            castShadow={false}
           />
         ))}
       </Suspense>
@@ -105,7 +112,7 @@ export function NatureMushroom({ position, seed }: { position: [number, number, 
   const url = seed % 2 === 0 ? "/assets/nature/mushroom_red.glb" : "/assets/nature/mushroom_tan.glb";
   return (
     <Suspense fallback={null}>
-      <NatureGLB url={url} scale={0.5} position={position} rotation={[0, seed * 2.7, 0]} />
+      <NatureGLB url={url} scale={0.5} position={position} rotation={[0, seed * 2.7, 0]} castShadow={false} />
     </Suspense>
   );
 }
@@ -124,7 +131,7 @@ export function NatureRock({ position, seed }: { position: [number, number, numb
   const url = seed % 2 === 0 ? "/assets/nature/rock_smallA.glb" : "/assets/nature/rock_smallB.glb";
   return (
     <Suspense fallback={null}>
-      <NatureGLB url={url} scale={0.5 + (seed % 3) * 0.15} position={position} rotation={[0, seed * 1.9, 0]} />
+      <NatureGLB url={url} scale={0.5 + (seed % 3) * 0.15} position={position} rotation={[0, seed * 1.9, 0]} castShadow={false} />
     </Suspense>
   );
 }
