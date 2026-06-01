@@ -9,10 +9,16 @@ import { useTransition } from "./TransitionOverlay";
 
 const INTERACT_RANGE = 4;
 
-// ─── Procedural variants for HQ / Shop / Oracle Temple (A4) ─────
-// Procedural primitive composites — no GLB. Each variant returns a
-// `<group>` anchored at y=0 (ground), so the parent <group position> applies.
-const PROC_VARIANTS = new Set(["hq", "shop", "oracle", "temple"]);
+// ─── Procedural variants — fallback only (G1 visual overhaul) ───
+//
+// As of 2026-06-01: GLB models exist for hq/shop/oracle/house and load via
+// the Suspense + <GLBBuilding> path below. The procedural composites that
+// A4 originally shipped now live as the Suspense fallback (loads while the
+// GLB is fetching) and as the ultimate fallback if a GLB ever fails.
+//
+// To force procedural rendering for a specific id (e.g. for debugging or
+// if a GLB looks worse than the placeholder), add it to this set.
+const PROC_VARIANTS = new Set<string>();
 
 /** Gable / wedge roof: two sloped slab boxes meeting at a center ridge, plus triangular gable end-caps. */
 function GableRoof({ width, depth, height, color }: { width: number; depth: number; height: number; color: string }) {
