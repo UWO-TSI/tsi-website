@@ -166,7 +166,7 @@ describe("buildSystemPrompt", () => {
 
 describe("createRateLimiter", () => {
   it("allows up to RATE_LIMIT_COUNT messages in a window", () => {
-    let now = 1000;
+    const now = 1000;
     const limiter = createRateLimiter(() => now);
     for (let i = 0; i < RATE_LIMIT_COUNT; i++) {
       expect(limiter.check("user1")).toBe(true);
@@ -184,7 +184,7 @@ describe("createRateLimiter", () => {
   });
 
   it("tracks users independently", () => {
-    let now = 1000;
+    const now = 1000;
     const limiter = createRateLimiter(() => now);
     for (let i = 0; i < RATE_LIMIT_COUNT; i++) limiter.check("user1");
     expect(limiter.check("user1")).toBe(false);

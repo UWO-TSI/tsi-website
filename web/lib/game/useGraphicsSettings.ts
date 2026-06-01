@@ -82,6 +82,7 @@ export function useGraphicsSettings(): [GraphicsSettings, GraphicsSettingsAction
     const gb = detectDeviceMemoryGB();
     const autoLite = gb <= 4;
     const autoBloom = gb >= 8;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- localStorage read is a one-shot client-only init; running outside an effect would break SSR
     setState({
       liteMode: readBool(KEYS.liteMode, autoLite),
       bloom: readBool(KEYS.bloom, autoBloom),
