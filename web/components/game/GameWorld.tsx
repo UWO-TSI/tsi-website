@@ -1104,12 +1104,26 @@ export default function GameWorld() {
   // Keep the ref pointed at the latest handler for the keydown effect.
   emotePickRef.current = handleEmotePick;
 
+  // Perf finding (Playwright 2026-06-01): the directional-sun shadow
+  // pass is ~7 FPS on M1 ANGLE Metal at 1440x900. With shadows off the
+  // scene pegs at 60 FPS; with shadows on it dips to ~53. AC-style cozy
+  // lighting still reads well without real-time shadows since the
+  // hemisphere + ambient + sun combo gives plenty of soft shading.
+  //
+  // Default OFF. Members with FPS headroom can enable via settings.
+  // ?shadow URL param force-enables for testing.
+  // ?noshadow URL param force-disables (legacy alias, redundant).
+  const wantShadows = typeof window !== "undefined" && (
+    window.location.search.includes("shadow") && !window.location.search.includes("noshadow")
+  );
+  const shadowsEnabled = !liteMode && wantShadows;
+
   return (
     <div style={{ width: "100%", height: "100%", minHeight: "100vh", background: skyBase, position: "relative" }}>
       <Canvas
         gl={{ antialias: true, powerPreference: "high-performance" }}
         camera={{ fov: 50, near: 0.1, far: 300, position: [0, 12, -20] }}
-        shadows
+        shadows={shadowsEnabled}
         onCreated={({ gl }) => {
           gl.toneMapping = THREE.ACESFilmicToneMapping;
           gl.outputColorSpace = THREE.SRGBColorSpace;
