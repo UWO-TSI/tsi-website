@@ -10,7 +10,7 @@ import Building from "./Building";
 import Path from "./Path";
 import River, { sampleRiverPoint, findRiverTForX } from "./River";
 import { getTerrainHeight, valueNoise, BUILDING_FOOTPRINTS } from "./terrain";
-import { NatureTree, NatureBush, NatureFlowerCluster, NatureFence, NatureMushroom, NatureStump } from "./NatureModels";
+import { NatureFence, NatureMushroom, NatureStump } from "./NatureModels";
 import InstancedGLB, { type NaturePlacement } from "./InstancedNature";
 import AmbientProps from "./AmbientProps";
 import AmbientLife from "./AmbientLife";
