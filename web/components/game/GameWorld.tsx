@@ -27,6 +27,7 @@ import NPC from "./NPC";
 import GhostReplay from "./GhostReplay";
 import { useUser } from "@/components/portal/UserContext";
 import { useActivePalette, useEmoteTypes, useNPCPersonas } from "@/lib/game/contentLoader";
+import { getGrassTexture } from "@/lib/game/grassTexture";
 import { usePositionHeartbeat } from "@/lib/game/usePositionHeartbeat";
 import { useGhostPositions } from "@/lib/game/useGhostPositions";
 import { useLiteMode } from "@/lib/game/useLiteMode";
@@ -215,10 +216,17 @@ function Terrain() {
     return geo;
   }, []);
 
+  const grassTex = useMemo(() => getGrassTexture(), []);
   return (
     <group>
       <mesh geometry={geometry} receiveShadow>
-        <meshStandardMaterial vertexColors roughness={0.92} metalness={0} side={THREE.DoubleSide} />
+        <meshStandardMaterial
+          vertexColors
+          map={grassTex}
+          roughness={0.92}
+          metalness={0}
+          side={THREE.DoubleSide}
+        />
       </mesh>
       {/* Building slab patches — flat grass discs slightly above terrain so
           buildings sit flush with no visible seam. Sprint A1. */}
@@ -851,7 +859,11 @@ function Scene({
         ghosts={ghosts.length}
         npcs={placedPersonas.length + FILLER_NPCS.length}
       />
-      <fog attach="fog" args={[fogColor, 50, 100]} />
+      {/* Fog brought in to 25→55 so the island edge fades cleanly into
+          the sky color (ISLAND_RADIUS is 40, so old 50→100 fog barely
+          kicked in inside the playable zone). Reads as soft atmospheric
+          haze, masks the world's hard boundary. */}
+      <fog attach="fog" args={[fogColor, 25, 55]} />
 
       <Terrain />
       <River />
