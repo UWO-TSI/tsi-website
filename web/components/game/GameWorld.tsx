@@ -17,6 +17,7 @@ import AudioController from "./AudioController";
 import NPCChatOverlay from "./NPCChatOverlay";
 import EmoteMenu from "./EmoteMenu";
 import ControlsOverlay from "./ControlsOverlay";
+import Crosshair from "./Crosshair";
 import ServerListOverlay from "./ServerListOverlay";
 import GuestbookOverlay from "@/components/portal/GuestbookOverlay";
 import NPC from "./NPC";
@@ -538,6 +539,7 @@ function Scene({
   onNPCClick,
   activeEmote,
   playerPosRef,
+  onNearestInteractable,
 }: {
   playerName: string;
   playerLevel: number;
@@ -546,6 +548,7 @@ function Scene({
   onNPCClick: (npc: NPCPersona) => void;
   activeEmote: EmoteType | null;
   playerPosRef: React.MutableRefObject<THREE.Vector3>;
+  onNearestInteractable: (n: { kind: "npc" | "building"; id: string; name: string; href?: string; npc?: NPCPersona } | null) => void;
 }) {
   const cameraRef = useRef<CameraControls>(null);
   const [playerPos, setPlayerPos] = useState<THREE.Vector3>(new THREE.Vector3(...SPAWN_POSITION));
@@ -582,7 +585,35 @@ function Scene({
     setPlayerPos(position);
     playerPosRef.current.copy(position);
     cameraRef.current?.moveTo(position.x, position.y + 1.5, position.z, true);
-  }, [playerPosRef]);
+
+    // F1.2: compute nearest interactable for crosshair + E-interact. Cheap
+    // O(npc + building) sweep every move tick. INTERACT_RADIUS = 3.5 units.
+    const INTERACT_RADIUS = 3.5;
+    let bestDist = INTERACT_RADIUS;
+    let best: { kind: "npc" | "building"; id: string; name: string; href?: string; npc?: NPCPersona } | null = null;
+    for (const { persona, position: p } of placedPersonas) {
+      const dx = p[0] - position.x;
+      const dz = p[2] - position.z;
+      const d = Math.hypot(dx, dz);
+      if (d < bestDist) {
+        bestDist = d;
+        best = { kind: "npc", id: persona.id, name: persona.display_name, npc: persona };
+      }
+    }
+    for (const b of BUILDINGS) {
+      // Only buildings with an href are interactable via E (others handle
+      // entry via the existing Building click handler).
+      if (!b.href) continue;
+      const dx = b.position[0] - position.x;
+      const dz = b.position[2] - position.z;
+      const d = Math.hypot(dx, dz);
+      if (d < bestDist) {
+        bestDist = d;
+        best = { kind: "building", id: b.id, name: b.name, href: b.href };
+      }
+    }
+    onNearestInteractable(best);
+  }, [playerPosRef, placedPersonas, onNearestInteractable]);
 
   // Sprint F1.1: rebind mouse buttons via the imperative API. drei's JSX
   // wrapper doesn't always thread the `mouseButtons` object cleanly, so set
@@ -777,6 +808,13 @@ export default function GameWorld() {
   const emoteClearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const playerPosRef = useRef<THREE.Vector3>(new THREE.Vector3(...SPAWN_POSITION));
 
+  // F1.2: nearest interactable for crosshair + E-interact. Updated by Scene
+  // on each player move via onNearestInteractable. Kept here so Crosshair
+  // (DOM, outside Canvas) can read it.
+  const [nearest, setNearest] = useState<{ kind: "npc" | "building"; id: string; name: string; href?: string; npc?: NPCPersona } | null>(null);
+  const nearestRef = useRef<typeof nearest>(null);
+  useEffect(() => { nearestRef.current = nearest; }, [nearest]);
+
   // G key toggles the emote menu (was E pre-F1.4 — remapped per David's
   // sprint F1 ask so E becomes the universal interact key later). F1 toggles
   // the controls overlay so members can discover the new bindings. Skip when
@@ -787,6 +825,22 @@ export default function GameWorld() {
       const el = document.activeElement as HTMLElement | null;
       const tag = el?.tagName;
       if (tag === "INPUT" || tag === "TEXTAREA" || el?.isContentEditable) return;
+
+      if (e.key === "e" || e.key === "E") {
+        // F1.2: universal interact key. Triggers the current nearest interactable.
+        if (activeNPC) return; // don't hijack while chatting
+        const n = nearestRef.current;
+        if (!n) return;
+        e.preventDefault();
+        if (n.kind === "npc" && n.npc) {
+          setActiveNPC(n.npc);
+        } else if (n.kind === "building" && n.href) {
+          // Building has a destination route — let the existing Building click
+          // path handle the actual navigation by simulating it here.
+          window.location.href = n.href;
+        }
+        return;
+      }
 
       if (e.key === "g" || e.key === "G") {
         if (activeNPC) return; // don't pop emote menu while chatting with an NPC
@@ -875,6 +929,7 @@ export default function GameWorld() {
             fogColor={fogColor}
             todPhase={todPhase}
             onNPCClick={setActiveNPC}
+            onNearestInteractable={setNearest}
             activeEmote={activeEmote}
             playerPosRef={playerPosRef}
           />
@@ -893,6 +948,7 @@ export default function GameWorld() {
       />
       <ServerListOverlay visible={tabHeld} />
       <ControlsOverlay visible={controlsOpen} onClose={() => setControlsOpen(false)} />
+      <Crosshair active={nearest !== null} hint={nearest?.name ?? null} />
       {/* Sprint E2: corner button for mobile / no-keyboard users. Sits left of
           the AudioController widget so they don't overlap. */}
       <button

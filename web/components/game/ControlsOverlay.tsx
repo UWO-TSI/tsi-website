@@ -34,6 +34,7 @@ const SECTIONS: Section[] = [
       { keys: ["S"], label: "Backward" },
       { keys: ["D"], label: "Strafe right" },
       { keys: ["Shift"], label: "Sprint (hold)" },
+      { keys: ["Space"], label: "Jump (cosmetic)" },
       { keys: ["Click"], label: "Walk to point (alternative)" },
     ],
   },
@@ -47,11 +48,12 @@ const SECTIONS: Section[] = [
     ],
   },
   {
-    title: "Social",
+    title: "Interact",
     bindings: [
+      { keys: ["E"], label: "Interact with nearest NPC / enter building" },
       { keys: ["G"], label: "Open emote menu" },
       { keys: ["Tab", "hold"], label: "Show who's online" },
-      { keys: ["Click NPC"], label: "Chat with NPC" },
+      { keys: ["Click NPC"], label: "Chat with NPC (alternative)" },
     ],
   },
   {

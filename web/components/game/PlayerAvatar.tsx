@@ -102,6 +102,10 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
   const clockRef = useRef(0);
   const indicatorIdRef = useRef(0);
   const [indicators, setIndicators] = useState<Array<{ id: number; position: [number, number, number] }>>([]);
+  // F1.2: cosmetic jump. Space triggers a brief y-arc on the sprite mesh
+  // (NOT the group — group y stays terrain-bound). Doesn't affect collision
+  // or click-to-move pathing; pure visual delight.
+  const jumpRef = useRef<{ active: boolean; t: number }>({ active: false, t: 0 });
 
   // Load and configure textures for pixel art during construction
   const spriteTexture = useMemo(() => {
@@ -138,6 +142,16 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
       if (isTyping()) return;
       keys[e.key.toLowerCase()] = true;
       if (e.key === "Shift") keys["shift"] = true;
+      // F1.2: Space triggers cosmetic jump. Ignore key-repeat so holding
+      // Space doesn't loop the arc — only re-fires after the previous
+      // jump finishes.
+      if (e.key === " " || e.code === "Space") {
+        if (!e.repeat && !jumpRef.current.active) {
+          jumpRef.current.active = true;
+          jumpRef.current.t = 0;
+        }
+        e.preventDefault();
+      }
     };
     const onKeyUp = (e: KeyboardEvent) => {
       keys[e.key.toLowerCase()] = false;
@@ -318,8 +332,23 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
       THREE.MathUtils.clamp(BREATH_BLEND_LERP * delta, 0, 1)
     );
     const bobY = THREE.MathUtils.lerp(walkBob, idleBob, breathBlendRef.current);
+
+    // F1.2 jump arc — simple parabola over 0.5s, peak ~0.6 units.
+    let jumpY = 0;
+    if (jumpRef.current.active) {
+      jumpRef.current.t += delta;
+      const j = jumpRef.current.t / 0.5; // 0 → 1 over 0.5s
+      if (j >= 1) {
+        jumpRef.current.active = false;
+        jumpRef.current.t = 0;
+      } else {
+        // 4 * j * (1-j) peaks at j=0.5 with value 1
+        jumpY = 4 * j * (1 - j) * 0.6;
+      }
+    }
+
     if (meshRef.current) {
-      meshRef.current.position.y = SPRITE_BASE_Y + bobY;
+      meshRef.current.position.y = SPRITE_BASE_Y + bobY + jumpY;
     }
 
     // Footstep SFX — fire ~every 0.4s while walking. No-op if audio is muted
