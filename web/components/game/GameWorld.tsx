@@ -20,6 +20,7 @@ import EmoteMenu from "./EmoteMenu";
 import ControlsOverlay from "./ControlsOverlay";
 import WelcomeOverlay from "./WelcomeOverlay";
 import Compass from "./Compass";
+import StatsHUD from "./StatsHUD";
 import Crosshair from "./Crosshair";
 import DebugOverlay, { type DebugSnapshot } from "./DebugOverlay";
 import PostFX from "./PostFX";
@@ -1557,6 +1558,7 @@ export default function GameWorld() {
         <Crosshair active={nearest !== null} hint={nearest?.name ?? null} />
         <Compass azimuthRef={azimuthRef} />
         <TodBadge phase={todPhase} />
+        <StatsHUD />
         <DebugOverlay visible={debugOpen} snapshotRef={debugSnapshotRef} />
       </div>
       {/* F1.4: tiny restore hint in screenshot mode so users know how to exit. */}
