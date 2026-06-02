@@ -6,6 +6,7 @@ import Sidebar from "@/components/portal/Sidebar";
 import { TransitionProvider } from "@/components/game/TransitionOverlay";
 import { UserProvider } from "@/components/portal/UserContext";
 import PreviewBanner from "@/components/portal/PreviewBanner";
+import QuestChecklist from "@/components/portal/QuestChecklist";
 
 const HIDE_DELAY_MS = 250; // grace period when mouse leaves before sidebar tucks away
 
@@ -139,6 +140,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           <main className="flex-1 h-full overflow-y-auto overflow-x-hidden">
             {children}
           </main>
+
+          {/* R3-1: Onboarding quest checklist (floating, opt-in, mute via Settings → Appearance) */}
+          <QuestChecklist />
 
           <style jsx>{`
             @keyframes slideIn {
