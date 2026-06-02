@@ -100,6 +100,25 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-06-02 — Tier-1 punch list #1+#2: Settings tabs + Sign Out
+
+Split the flat-section Settings page into a 4-tab layout per `specs/ux-settings.md` and added the Sign Out button (spec §7.4).
+
+- Single file touched: `web/app/student/dashboard/settings/page.tsx` (now 343 lines, was 264). No new components — kept everything in one file since all panels share the same form state (display_name/bio/skills/social), threading 12 props into a sub-component was strictly worse than inlining.
+- Tabs: Profile / Social / Appearance / Account, each with Lucide icon (User/Link/Palette/Shield per spec §3.4). `role="tablist"` + per-tab `role="tab"`, `aria-selected`, `aria-controls`. Each panel wrapped in `role="tabpanel"` for screen readers.
+- Mobile: tab bar is `flex overflow-x-auto` with `scrollbar-width: none` and per-tab `whiteSpace: nowrap`. **Picked horizontal scroll over vertical stack** because at 320px four ~80-90px icon+label pills fit in a single horizontal scroll without any of them dropping; vertical stacking would have eaten 160px of vertical space above every panel.
+- Profile + Social tabs each get their own Save button (spec §8 "no global save") — both call the same `PATCH /api/profile` since the API merges any subset of fields; saving from Profile preserves social_links because they're already in state.
+- Appearance tab: kept the existing "World" ghost-replay toggle (it lives here cleanly — visual world setting). Added the spec §6.5 "More appearance options coming soon" placeholder since the theme toggle isn't in scope this round.
+- Account tab: read-only info grid + tier color-coding (new `TierField` uses `TIER_COLORS` + `TIER_LABELS` to render "T1 · Founder" in the tier color per spec §7.2), Brain icon link to npc-memories page (preserved from previous layout, per task constraint), Danger Zone with Sign Out button. Sign out uses `createClient().auth.signOut()` then `router.push("/student/login")` + `router.refresh()` — exact pattern from existing `DashboardTopbar.handleLogout`. Hover bg + disabled state covered.
+- Removed the global "Save Changes" button from the page header — each editable tab owns its own save now per spec.
+
+Side fix: replaced the old `SocialField` unused `label` param with `aria-label={label}` + `<label className="sr-only">` so screen readers still announce platform names. Drops one lint warning.
+
+Verification (with unrelated working-tree changes to `oracle/page.tsx` + `leaderboard/page.tsx` stashed — those are off-limits for me this round):
+- `npx tsc --noEmit` → exit 0.
+- `npm run lint` → **78 errors / 59 warnings** (was 78/60 — same errors, one fewer warning from the `label` cleanup). Zero new errors.
+- `npm run build` → ✓, `/student/dashboard/settings` still in route manifest as static (○).
+
 ### 2026-05-28 — Sprint F: Action controls
 
 #### 2026-05-21 — Sprint F1.1: camera-relative WASD + mouse-drag camera + scroll zoom + sprint
