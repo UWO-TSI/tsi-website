@@ -2,7 +2,31 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Sparkles } from "lucide-react";
+import {
+  Sparkles,
+  Sword,
+  Heart,
+  Wrench,
+  X,
+  // subclass icons
+  Crown,
+  Shield,
+  Zap,
+  Brain,
+  Compass,
+  BookOpen,
+  Eye,
+  Feather,
+  Sun,
+  Flame,
+  HeartHandshake,
+  Home,
+  Cog,
+  Palette,
+  Anchor,
+  Mic,
+  type LucideIcon,
+} from "lucide-react";
 
 // ─── Question Bank (specs/oracle-questions.md) ──────────────────
 interface Answer { text: string; value: "E" | "I" | "S" | "N" | "T" | "F" | "J" | "P" }
@@ -76,27 +100,56 @@ const QUESTIONS: Question[] = [
 ];
 
 // ─── Class Mapping ──────────────────────────────────────────────
+// Colors per specs/ux-classes.md §1: Warrior #EF4444, Mage #6366F1, Healer #22C55E, Rogue #F59E0B
 const MBTI_TO_CLASS: Record<string, { class: string; subclass: string; color: string }> = {
-  ENTJ: { class: "Warrior", subclass: "Tactical Commander", color: "#ef4444" },
-  ESTJ: { class: "Warrior", subclass: "Iron Marshal", color: "#ef4444" },
-  ESTP: { class: "Warrior", subclass: "Vanguard Striker", color: "#ef4444" },
-  ENTP: { class: "Warrior", subclass: "Battle Strategist", color: "#ef4444" },
-  INTJ: { class: "Mage", subclass: "Arcane Architect", color: "#002fa7" },
-  INTP: { class: "Mage", subclass: "Lore Seeker", color: "#002fa7" },
-  INFJ: { class: "Mage", subclass: "Oracle Sage", color: "#002fa7" },
-  INFP: { class: "Mage", subclass: "Dream Weaver", color: "#002fa7" },
-  ENFJ: { class: "Healer", subclass: "Beacon Guide", color: "#22c55e" },
-  ENFP: { class: "Healer", subclass: "Spirit Catalyst", color: "#22c55e" },
-  ESFJ: { class: "Healer", subclass: "Shield Warden", color: "#22c55e" },
-  ISFJ: { class: "Healer", subclass: "Sanctuary Keeper", color: "#22c55e" },
-  ISTP: { class: "Rogue", subclass: "Shadow Tinker", color: "#ffd166" },
-  ISFP: { class: "Rogue", subclass: "Wandering Artisan", color: "#ffd166" },
-  ISTJ: { class: "Rogue", subclass: "Silent Sentinel", color: "#ffd166" },
-  ESFP: { class: "Rogue", subclass: "Blaze Performer", color: "#ffd166" },
+  ENTJ: { class: "Warrior", subclass: "Tactical Commander", color: "#EF4444" },
+  ESTJ: { class: "Warrior", subclass: "Iron Marshal", color: "#EF4444" },
+  ESTP: { class: "Warrior", subclass: "Vanguard Striker", color: "#EF4444" },
+  ENTP: { class: "Warrior", subclass: "Battle Strategist", color: "#EF4444" },
+  INTJ: { class: "Mage", subclass: "Arcane Architect", color: "#6366F1" },
+  INTP: { class: "Mage", subclass: "Lore Seeker", color: "#6366F1" },
+  INFJ: { class: "Mage", subclass: "Oracle Sage", color: "#6366F1" },
+  INFP: { class: "Mage", subclass: "Dream Weaver", color: "#6366F1" },
+  ENFJ: { class: "Healer", subclass: "Beacon Guide", color: "#22C55E" },
+  ENFP: { class: "Healer", subclass: "Spirit Catalyst", color: "#22C55E" },
+  ESFJ: { class: "Healer", subclass: "Shield Warden", color: "#22C55E" },
+  ISFJ: { class: "Healer", subclass: "Sanctuary Keeper", color: "#22C55E" },
+  ISTP: { class: "Rogue", subclass: "Shadow Tinker", color: "#F59E0B" },
+  ISFP: { class: "Rogue", subclass: "Wandering Artisan", color: "#F59E0B" },
+  ISTJ: { class: "Rogue", subclass: "Silent Sentinel", color: "#F59E0B" },
+  ESFP: { class: "Rogue", subclass: "Blaze Performer", color: "#F59E0B" },
 };
 
-const CLASS_ICONS: Record<string, string> = {
-  Warrior: "⚔️", Mage: "🔮", Healer: "💚", Rogue: "🗡️",
+// Lucide icons for the 4 main classes (specs/ux-classes.md §1).
+const CLASS_ICONS: Record<string, LucideIcon> = {
+  Warrior: Sword,
+  Mage: Sparkles,
+  Healer: Heart,
+  Rogue: Wrench,
+};
+
+// Lucide icons for the 16 subclasses — semantic picks per name:
+//   Warrior: Crown (commander) / Shield (marshal) / Zap (striker) / Brain (strategist)
+//   Mage:    Compass (architect) / BookOpen (seeker) / Eye (sage) / Feather (weaver)
+//   Healer:  Sun (beacon) / Flame (catalyst) / HeartHandshake (warden) / Home (keeper)
+//   Rogue:   Cog (tinker) / Palette (artisan) / Anchor (sentinel) / Mic (performer)
+const SUBCLASS_ICONS: Record<string, LucideIcon> = {
+  "Tactical Commander": Crown,
+  "Iron Marshal": Shield,
+  "Vanguard Striker": Zap,
+  "Battle Strategist": Brain,
+  "Arcane Architect": Compass,
+  "Lore Seeker": BookOpen,
+  "Oracle Sage": Eye,
+  "Dream Weaver": Feather,
+  "Beacon Guide": Sun,
+  "Spirit Catalyst": Flame,
+  "Shield Warden": HeartHandshake,
+  "Sanctuary Keeper": Home,
+  "Shadow Tinker": Cog,
+  "Wandering Artisan": Palette,
+  "Silent Sentinel": Anchor,
+  "Blaze Performer": Mic,
 };
 
 const CLASS_DESCRIPTIONS: Record<string, string> = {
@@ -106,16 +159,67 @@ const CLASS_DESCRIPTIONS: Record<string, string> = {
   Rogue: "You adapt and craft with precision. Your edge is resourcefulness and independence.",
 };
 
+// ─── Progress persistence ───────────────────────────────────────
+// Per spec ux-oracle-v2 §7.2: "Leave quiz? Your progress will be saved."
+// No quiz_progress table yet — localStorage is the cosmetic-tier home.
+const PROGRESS_KEY = "tsi.oracle.progress.v1";
+interface SavedProgress { qIndex: number; answers: string[]; savedAt: number }
+
+function loadProgress(): SavedProgress | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(PROGRESS_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as SavedProgress;
+    if (typeof parsed?.qIndex !== "number" || !Array.isArray(parsed?.answers)) return null;
+    if (parsed.qIndex < 0 || parsed.qIndex >= QUESTIONS.length) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function saveProgress(qIndex: number, answers: string[]) {
+  if (typeof window === "undefined") return;
+  try {
+    const payload: SavedProgress = { qIndex, answers, savedAt: Date.now() };
+    window.localStorage.setItem(PROGRESS_KEY, JSON.stringify(payload));
+  } catch {
+    /* quota or private mode — silent */
+  }
+}
+
+function clearProgress() {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem(PROGRESS_KEY);
+  } catch {
+    /* silent */
+  }
+}
+
 type Phase = "quiz" | "scoring" | "reveal";
 
 export default function OraclePage() {
   const router = useRouter();
   const [phase, setPhase] = useState<Phase>("quiz");
-  const [qIndex, setQIndex] = useState(0);
-  const [answers, setAnswers] = useState<string[]>([]);
+  // Lazy initializers read saved progress on first render. loadProgress() is
+  // SSR-safe (returns null when window is undefined). We gate rendering of the
+  // quiz UI on `hydrated` to avoid SSR/client mismatch.
+  const [qIndex, setQIndex] = useState<number>(() => loadProgress()?.qIndex ?? 0);
+  const [answers, setAnswers] = useState<string[]>(() => loadProgress()?.answers ?? []);
   const [result, setResult] = useState<{ mbti: string; class: string; subclass: string; color: string } | null>(null);
   const [revealStage, setRevealStage] = useState(0);
   const [existingClass, setExistingClass] = useState<string | null>(null);
+  const [exitConfirmOpen, setExitConfirmOpen] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
+
+  // Mark hydrated after first mount — gates rendering past SSR placeholder
+  // so the localStorage-derived qIndex/answers don't cause a hydration mismatch.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-shot post-mount flag; localStorage isn't available server-side
+    setHydrated(true);
+  }, []);
 
   // Check if user already has a class
   useEffect(() => {
@@ -150,6 +254,9 @@ export default function OraclePage() {
       const classInfo = MBTI_TO_CLASS[mbti] ?? MBTI_TO_CLASS.ENTJ;
       setResult({ mbti, ...classInfo });
 
+      // Quiz done — clear saved progress.
+      clearProgress();
+
       // Save to profile
       fetch("/api/profile", {
         method: "PATCH",
@@ -165,11 +272,14 @@ export default function OraclePage() {
       setTimeout(() => setRevealStage(4), 3300);
       setTimeout(() => setRevealStage(5), 4500);
     } else {
+      // Persist progress before advancing so a refresh/exit resumes here.
+      saveProgress(newAnswers.length, newAnswers);
       setTimeout(() => setQIndex(newAnswers.length), 300);
     }
   };
 
   const startQuiz = () => {
+    clearProgress();
     setPhase("quiz");
     setQIndex(0);
     setAnswers([]);
@@ -178,12 +288,21 @@ export default function OraclePage() {
     setExistingClass(null);
   };
 
+  const confirmExit = () => {
+    // Persist current state defensively in case user opened the modal mid-question.
+    saveProgress(qIndex, answers);
+    setExitConfirmOpen(false);
+    router.push("/student/dashboard");
+  };
+
   // Already has a class — show result page
   if (existingClass && phase === "quiz" && answers.length === 0) {
     const info = Object.values(MBTI_TO_CLASS).find((c) => c.class === existingClass);
+    const ExistingClassIcon = CLASS_ICONS[existingClass] ?? Sword;
+    const existingColor = info?.color ?? "var(--color-text-main)";
     return (
       <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
-        <p className="text-6xl mb-4">{CLASS_ICONS[existingClass] ?? "⚔️"}</p>
+        <ExistingClassIcon className="w-16 h-16 mb-4" style={{ color: existingColor }} aria-label={`${existingClass} class`} />
         <h1 className="text-4xl font-bold uppercase tracking-wider mb-2" style={{ color: "var(--color-text-main)" }}>{existingClass}</h1>
         {info && <p className="text-xl italic mb-4" style={{ color: "var(--color-text-soft)" }}>{info.subclass}</p>}
         <p className="text-base mb-8 max-w-md" style={{ color: "var(--color-text-muted)" }}>{CLASS_DESCRIPTIONS[existingClass]}</p>
@@ -196,18 +315,22 @@ export default function OraclePage() {
 
   // Scoring / Reveal
   if (phase === "scoring" || phase === "reveal") {
+    const RevealClassIcon = result ? CLASS_ICONS[result.class] : null;
+    const SubIcon = result ? SUBCLASS_ICONS[result.subclass] : null;
     return (
-      <div className="flex-1 flex flex-col items-center justify-center p-8 text-center" style={{ background: "radial-gradient(ellipse at center, rgba(0, 47, 167, 0.1) 0%, transparent 50%)" }}>
+      <div className="flex-1 flex flex-col items-center justify-center p-8 text-center" style={{ background: "radial-gradient(ellipse at center, rgba(99, 102, 241, 0.1) 0%, transparent 50%)" }}>
         {revealStage < 2 && (
           <p className="text-lg font-mono italic animate-pulse" style={{ color: "var(--color-text-muted)", opacity: revealStage >= 1 ? 1 : 0, transition: "opacity 0.5s" }}>
             The Oracle has spoken...
           </p>
         )}
-        {revealStage >= 2 && result && (
+        {revealStage >= 2 && result && RevealClassIcon && (
           <>
-            <p className="text-6xl mb-4" style={{ opacity: revealStage >= 2 ? 1 : 0, transition: "opacity 0.5s" }}>
-              {CLASS_ICONS[result.class]}
-            </p>
+            <RevealClassIcon
+              className="w-16 h-16 mb-4"
+              style={{ color: result.color, opacity: revealStage >= 2 ? 1 : 0, transition: "opacity 0.5s" }}
+              aria-label={`${result.class} class`}
+            />
             <h1
               className="text-5xl md:text-6xl font-bold uppercase tracking-widest mb-3"
               style={{
@@ -222,7 +345,8 @@ export default function OraclePage() {
           </>
         )}
         {revealStage >= 3 && result && (
-          <p className="text-2xl italic mb-6" style={{ color: "var(--color-text-soft)", opacity: revealStage >= 3 ? 1 : 0, transition: "opacity 0.5s" }}>
+          <p className="text-2xl italic mb-6 flex items-center gap-2" style={{ color: "var(--color-text-soft)", opacity: revealStage >= 3 ? 1 : 0, transition: "opacity 0.5s" }}>
+            {SubIcon ? <SubIcon className="w-5 h-5" style={{ color: result.color }} aria-hidden /> : null}
             {result.subclass}
           </p>
         )}
@@ -236,11 +360,11 @@ export default function OraclePage() {
             </p>
           </div>
         )}
-        {revealStage >= 5 && (
+        {revealStage >= 5 && result && (
           <button
             onClick={() => router.push("/student/dashboard")}
             className="flex items-center gap-2 rounded-xl text-sm font-semibold transition-all hover:scale-[1.02]"
-            style={{ height: 44, padding: "0 24px", background: "#002fa7", color: "#f1ffff", opacity: revealStage >= 5 ? 1 : 0, transition: "opacity 0.5s" }}
+            style={{ height: 44, padding: "0 24px", background: result.color, color: "#ffffff", opacity: revealStage >= 5 ? 1 : 0, transition: "opacity 0.5s" }}
           >
             Enter the Campus <Sparkles className="w-4 h-4" />
           </button>
@@ -249,16 +373,52 @@ export default function OraclePage() {
     );
   }
 
-  // Quiz phase
+  // Quiz phase — wait for localStorage hydration so qIndex matches resumed value.
+  if (!hydrated) return null;
   const q = QUESTIONS[qIndex];
   if (!q) return null;
 
   return (
-    <div className="flex-1 flex flex-col items-center justify-center p-8" style={{ background: "radial-gradient(ellipse at center, rgba(0, 47, 167, 0.04) 0%, transparent 60%)" }}>
+    <div
+      className="flex-1 flex flex-col items-center justify-center p-8 relative"
+      style={{ background: "radial-gradient(ellipse at center, rgba(99, 102, 241, 0.04) 0%, transparent 60%)" }}
+    >
+      {/* Top bar: Exit (left) + Stage indicator (right) — spec ux-oracle-v2 §7.1/7.2 */}
+      <div
+        className="absolute top-0 left-0 right-0 flex items-center justify-between"
+        style={{
+          height: 48,
+          padding: "0 16px",
+          background: "rgba(10, 10, 26, 0.6)",
+          backdropFilter: "blur(8px)",
+          WebkitBackdropFilter: "blur(8px)",
+          zIndex: 15,
+        }}
+      >
+        <button
+          onClick={() => setExitConfirmOpen(true)}
+          className="flex items-center gap-1.5 rounded-lg text-sm transition-colors hover:border-[var(--color-text-soft)]"
+          style={{
+            height: 28,
+            padding: "0 10px",
+            background: "transparent",
+            border: "1px solid rgba(255, 255, 255, 0.15)",
+            color: "var(--color-text-muted)",
+          }}
+          aria-label="Exit quiz"
+        >
+          <X className="w-4 h-4" />
+          <span>Exit</span>
+        </button>
+        <span className="text-xs sm:text-sm font-mono" style={{ color: "var(--color-text-muted)" }}>
+          Stage {qIndex + 1} / {QUESTIONS.length}
+        </span>
+      </div>
+
       {/* Question */}
       <h2
         key={qIndex}
-        className="text-xl md:text-2xl font-medium text-center mb-8 max-w-[720px]"
+        className="text-xl md:text-2xl font-medium text-center mb-8 max-w-[720px] mt-12"
         style={{ color: "var(--color-text-main)", lineHeight: 1.3, animation: "fadeInUp 0.4s ease-out" }}
       >
         {q.text}
@@ -270,7 +430,7 @@ export default function OraclePage() {
           <button
             key={`${qIndex}-${i}`}
             onClick={() => handleAnswer(a.value)}
-            className="text-left transition-all hover:translate-y-[-4px] hover:border-[rgba(0,47,167,0.4)]"
+            className="text-left transition-all hover:translate-y-[-4px] hover:border-[rgba(99,102,241,0.4)]"
             style={{
               width: 180,
               minHeight: 160,
@@ -294,10 +454,51 @@ export default function OraclePage() {
       {/* Progress Bar */}
       <div style={{ width: "min(400px, 80vw)" }}>
         <div className="rounded-full overflow-hidden" style={{ height: 6, background: "#27272a" }}>
-          <div className="h-full rounded-full transition-all" style={{ width: `${(qIndex / QUESTIONS.length) * 100}%`, background: "#002fa7", transitionDuration: "0.4s" }} />
+          <div className="h-full rounded-full transition-all" style={{ width: `${(qIndex / QUESTIONS.length) * 100}%`, background: "#6366F1", transitionDuration: "0.4s" }} />
         </div>
         <p className="text-right mt-1.5 text-xs font-mono" style={{ color: "var(--color-text-muted)" }}>{qIndex + 1} of {QUESTIONS.length}</p>
       </div>
+
+      {/* Exit confirmation modal */}
+      {exitConfirmOpen && (
+        <div
+          className="fixed inset-0 flex items-center justify-center p-6"
+          style={{ background: "rgba(0, 0, 0, 0.6)", zIndex: 30 }}
+          onClick={() => setExitConfirmOpen(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="oracle-exit-title"
+        >
+          <div
+            className="w-full max-w-sm rounded-2xl p-6 text-center"
+            style={{ background: "var(--color-surface)", border: "1px solid rgba(255, 255, 255, 0.08)" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 id="oracle-exit-title" className="text-lg font-semibold mb-2" style={{ color: "var(--color-text-main)" }}>
+              Leave quiz?
+            </h3>
+            <p className="text-sm mb-6" style={{ color: "var(--color-text-muted)" }}>
+              Your progress will be saved. You can pick up where you left off later.
+            </p>
+            <div className="flex gap-2 justify-center">
+              <button
+                onClick={() => setExitConfirmOpen(false)}
+                className="text-sm font-medium rounded-lg"
+                style={{ height: 36, padding: "0 16px", background: "transparent", border: "1px solid rgba(255,255,255,0.15)", color: "var(--color-text-soft)" }}
+              >
+                Stay
+              </button>
+              <button
+                onClick={confirmExit}
+                className="text-sm font-semibold rounded-lg"
+                style={{ height: 36, padding: "0 16px", background: "#6366F1", color: "#ffffff" }}
+              >
+                Leave
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <style jsx>{`
         @keyframes fadeInUp {

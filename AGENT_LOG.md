@@ -100,6 +100,44 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-06-02 — Tier-1 punch list #4 + #5 + #6: Oracle Lucide icons + Mage indigo + exit-with-save
+
+Three task-list items, one file (`web/app/student/dashboard/oracle/page.tsx`). No new components.
+
+- **#4 Lucide icons.** Replaced the emoji map (`⚔️ 🔮 💚 🗡️`) with Lucide components per `specs/ux-classes.md` §1: `Sword / Sparkles / Heart / Wrench` for Warrior/Mage/Healer/Rogue. Result-page existing-class view + reveal sequence + retake-quiz path all render Lucide instead. Spec only mapped the 4 main classes, so I picked 16 semantic Lucide icons for the subclasses and documented them inline in the file. Picks: Warrior — Crown/Shield/Zap/Brain; Mage — Compass/BookOpen/Eye/Feather; Healer — Sun/Flame/HeartHandshake/Home; Rogue — Cog/Palette/Anchor/Mic. Subclass icon renders next to the subclass title in the reveal at stage 3. All icons get `aria-label` or `aria-hidden`.
+- **#5 Mage color.** Replaced `#002fa7` (old IKB blue) with `#6366F1` (indigo-500) per spec §1.2: in the MBTI map (4 Mage rows), the "Enter the Campus" button background (now uses `result.color` from the class — class-colored CTA per `specs/ux-classes.md` §5.4), the quiz radial-gradient backdrops (`rgba(99, 102, 241, 0.04 / 0.1)`), the progress-bar fill, and the answer-card hover border. Other class colors also normalized to uppercase spec values (`#EF4444 / #22C55E / #F59E0B`) so the "Enter the Campus" button uses the right accent for every class, not just Warrior.
+- **#6 Exit button with progress save.** New top bar (48px, `absolute`, `backdrop-filter: blur(8px)`, `z-15`) per `ux-oracle-v2.md` §7.1 with X Exit on the left and `Stage N / 12` on the right (kept the existing progress-bar above the answer cards too — spec calls for both top-bar text + the existing progress visual). Exit opens a confirmation modal: "Leave quiz? Your progress will be saved." → [Stay] [Leave]. Backdrop click + Stay close it; Leave calls `router.push('/student/dashboard')`.
+- **Progress persistence:** localStorage key `tsi.oracle.progress.v1` per task spec — no migration. `loadProgress / saveProgress / clearProgress` helpers are SSR-safe (window-guarded, try/catch). Save fires after every answer in `handleAnswer` (qIndex + answers + savedAt). Clear fires on quiz completion and on Retake-Quiz. Resume: lazy `useState` initializers read `loadProgress()` for qIndex + answers; a `hydrated` flag gates the quiz JSX so the SSR pass (no localStorage) doesn't mismatch the client hydration pass. Matches the existing `WelcomeOverlay` pattern (one `eslint-disable react-hooks/set-state-in-effect` comment for the post-mount `setHydrated` flag with an inline justification).
+- **Mobile-aware:** top bar uses `sm:text-sm text-xs` for stage label, modal is `max-w-sm` + `p-6`, confirmation buttons are `h-9` so they're thumb-tappable.
+
+Spec deviation noted: `ux-oracle-v2.md` §7.3 calls for a 120px purple `#7B5EA7` progress bar in the top bar. I kept the existing centered progress bar below the cards (it already exists) and added a plain `Stage N / 12` text indicator in the top-right. Replacing the existing bar with the v2 §7.3 spec is a bigger redesign (v2 is a card-game format, not the current emoji-card format) — out of this task's scope per "swap to Lucide / change Mage color / add exit button" wording.
+
+Verification: `tsc --noEmit` exit 0. `npm run lint` 78 errors / 59 warnings (= baseline at session start, zero regressions in oracle file). `npm run build` ✓ 9.9s; `/student/dashboard/oracle` still prerenders static.
+
+No new dependencies. No new migrations. No `origin` push.
+
+### 2026-06-02 — Tier-1 punch list #7: Bounty submit-deliverables flow
+
+Spec: `specs/ux-bounty.md` §6-7. Claimant-side only; admin review surface deferred to a later agent per task scope.
+
+- New `web/components/portal/BountySubmitModal.tsx` (~520 lines). Modal mounted from the bounty page detail view. Fetches the user's existing submissions on mount, then renders one of three states: (a) submit/resubmit form when no submission yet or latest is `revision_requested`; (b) "awaiting review" banner when latest is `pending`; (c) "approved" banner when latest is `approved`. Form: 5000-char textarea with live counter + URL list with native URL validation + member-tier image/PDF upload button. Past submissions render below as collapsed read-only rows with status pill + reviewer notes. ESC + backdrop click close.
+- New `POST /api/bounties/[id]/submissions/upload` (mirrors `/api/content/upload` but **member-tier**: any authenticated user with an `active` `bounty_claim` on the bounty). Uploads to new `bounty-submissions` bucket via service-role client after the API gate. 10MB limit, PNG/JPEG/WebP/GIF/PDF allowlist. Path scheme `bounty-{id}/{user}/{slug}-{ts}-{rand}.{ext}` for moderation/cleanup.
+- New `GET /api/bounties/[id]/submit` (added to the existing POST route file). Returns the caller's submissions for that bounty newest-first. Used by the modal to render submission history + current status. RLS already lets users SELECT their own submissions per migration 006.
+- Extended `GET /api/bounties` to also return `myClaimedBountyIds: string[]` so the page can mark which bounties the caller has actively claimed. Replaces the previously-broken `my_claims` tab filter that was treating bounty.status as a per-user state (it's global). Card now shows "Submit Deliverables" when `mine && (claimed | in_progress)`, "Under Review" when `mine && review`, "Claimed" / "In progress" disabled chip when someone else claimed it. Detail-modal action buttons mirror the same logic and open the modal.
+- Migration `022_bounty_submission_assets.sql` (**NOT applied**). Creates the public `bounty-submissions` bucket + 3 RLS policies on `storage.objects` (public read, authenticated insert, owner-or-T1/T2 delete). Cloud Supabase dashboard fallback noted in the header comment, matching the 017 pattern.
+
+**Schema:** `bounty_submissions` table already existed (migration 006) — `submission_text`, `attachment_urls`, `status`, `reviewer_notes` all present. No DB column additions needed.
+
+**TC payout path (per design principle #3):** the existing `PATCH /api/bounties/[id]/review` already calls `awardRewards(coins=pay_tc, xp=xp_reward)` on `status='approved'`. Confirmed wired — approval grants TC. **Flag for reviewer:** that endpoint also grants XP from `bounty.xp_reward`, but design principle #3 says XP is IRL-event-only. Bounty completion is monetary-value work, not IRL attendance, so the XP grant arguably violates the principle. Out of scope this round (admin review surface is a separate agent); leaving the XP-from-bounty path as a TODO for the review-side agent to either zero out or formally accept.
+
+**TC ↔ CAD:** no UI added that mentions conversion rate. Submission modal references "TSI coins" via the existing bounty card; no new copy added.
+
+**Mobile-aware:** modal max-w 640px, footer flex-col-reverse on `<sm` so primary CTA sits at top, link input + add-button stack vertically on `<sm` via `flex-col sm:flex-row`, attachment list 1-col.
+
+Verification: `tsc --noEmit` clean. `npm run lint` 78 errors / 59 warnings (= baseline at session start). `npm run build` ✓ 10.1s; new route `/api/bounties/[id]/submissions/upload` registered as ƒ dynamic.
+
+Migration not applied. No `origin` push.
+
 ### 2026-06-02 — Tier-1 punch list #3: Leaderboard own-row sticky + half-anonymized policy
 
 Rewrote `web/app/student/dashboard/leaderboard/page.tsx` to cover the three sub-items: own-row highlight + sticky-out-of-view, top-half-public / bottom-half-anonymized for non-T1 viewers, time-period dropdown wiring.
