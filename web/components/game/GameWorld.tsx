@@ -96,15 +96,119 @@ const TOD_KEYS: [number, string, string, string, number, string, number][] = [
 ];
 const _tc = new THREE.Color();
 
+// R3-3 sun/moon disc colors (spec: bright #FFFAE0 sun, cool #E8E8FF moon).
+const SUN_COLOR = new THREE.Color("#FFFAE0");
+const MOON_COLOR = new THREE.Color("#E8E8FF");
+// Disc angular radius. ~0.05 of viewport diameter at fov 58° ≈ ~2.9° diameter
+// → ~1.45° radius → ~0.025 rad. We store cos(radius) in the uniform so the
+// fragment shader can test with a single dot product instead of acos().
+const DISC_ANGULAR_RADIUS_RAD = 0.026;
+const DISC_COS_RADIUS = Math.cos(DISC_ANGULAR_RADIUS_RAD);
+// Soft edge half-width in cos-space so the disc has a 1-pixel-ish AA fade
+// without bleeding into the fog. Tuned by eye against the gradient.
+const DISC_COS_EDGE = Math.cos(DISC_ANGULAR_RADIUS_RAD * 0.85);
+const _sunPos = new THREE.Vector3();
+
+/**
+ * Sun + moon direction from wall-clock hour.
+ *
+ * R3-3 (P12 + P17 redo): two prior attempts billboard-meshed the disc as
+ * scene geometry and lost the frustum / blended into fog. This time the
+ * disc lives inside the sky shader so it's always rendered, additive over
+ * the gradient, never clipped by camera-far.
+ *
+ * Northern-hemisphere convention: noon → sun is high in the southern sky;
+ * midnight → moon is high. The sun arcs east→south→west, moon arcs the
+ * opposite half of the day. Both are unit vectors in world space.
+ */
+function computeSunMoonDirs(hour: number): { sunDir: THREE.Vector3; moonDir: THREE.Vector3 } {
+  // Sun parameter s: 0 at sunrise (6), 0.5 at noon (12), 1 at sunset (18).
+  // Outside 6→18 the sun is below the horizon — we still emit a dir but the
+  // visibility uniform drops to 0 so the disc doesn't show. Moon is the
+  // antipode (180° offset) so when the sun sets the moon rises.
+  const s = (hour - 6) / 12; // 6→0, 12→0.5, 18→1
+  const azimuthDeg = -90 + s * 180; // east (-90) → south (0) → west (+90)
+  const elevationDeg = Math.sin(s * Math.PI) * 60; // 0° at horizon, peaks 60° at noon
+  const az = (azimuthDeg * Math.PI) / 180;
+  const el = (elevationDeg * Math.PI) / 180;
+  // World axes: +X east, +Y up, -Z south (because spec puts Oracle Temple at +Z
+  // labeled "north" via the compass — see CompassFeed). atan2(fwd.x, fwd.z) +
+  // π maps so south sun = +Z. We aim sun toward +Z at az=0.
+  const sunDir = new THREE.Vector3(
+    Math.sin(az) * Math.cos(el),
+    Math.sin(el),
+    Math.cos(az) * Math.cos(el),
+  );
+  // Moon is the antipode in azimuth + mirrored elevation about the hour
+  // 12 offset. Simplest stable form: rotate sun dir 180° around Y and lift it
+  // by the night-portion elevation. At hour=0 (midnight), sun is far below
+  // the horizon at south; moon is high above the south.
+  const ns = (((hour + 12) % 24) - 6) / 12; // moon equivalent of s
+  const mAz = (-90 + ns * 180) * Math.PI / 180;
+  const mEl = Math.sin(ns * Math.PI) * 60 * Math.PI / 180;
+  const moonDir = new THREE.Vector3(
+    Math.sin(mAz) * Math.cos(mEl),
+    Math.sin(mEl),
+    Math.cos(mAz) * Math.cos(mEl),
+  );
+  return { sunDir, moonDir };
+}
+
 function TimeOfDayCycle() {
   const { scene } = useThree();
   const sunRef = useRef<THREE.DirectionalLight>(null);
   const ambRef = useRef<THREE.AmbientLight>(null);
+  // R3-3: extended sky shader. The base gradient is unchanged; sun+moon
+  // discs are layered on top via `smoothstep(cos(r+edge), cos(r-edge), dot)`
+  // so the disc edge AAs against the gradient instead of color-bleeding
+  // (the failure mode that killed the P12 plane attempt). Both discs are
+  // intensity-gated so only the sun shows during the day and only the moon
+  // shows at night.
   const skyMat = useMemo(() => new THREE.ShaderMaterial({
     side: THREE.BackSide, depthWrite: false,
-    uniforms: { topColor: { value: new THREE.Color(P.skyTop) }, bottomColor: { value: new THREE.Color(P.skyBottom) } },
+    uniforms: {
+      topColor: { value: new THREE.Color(P.skyTop) },
+      bottomColor: { value: new THREE.Color(P.skyBottom) },
+      // Body packs intensity into vec4.w so we never reassign a scalar
+      // uniform's `.value` (which the eslint react-hooks/immutability rule
+      // flags on `useMemo`-returned objects). Fragment shader reads .xyz
+      // as the unit direction and .w as the visibility factor.
+      sunBody: { value: new THREE.Vector4(0, 1, 0, 0) },
+      moonBody: { value: new THREE.Vector4(0, -1, 0, 0) },
+      sunColor: { value: SUN_COLOR.clone() },
+      moonColor: { value: MOON_COLOR.clone() },
+      discCosOuter: { value: DISC_COS_RADIUS },
+      discCosInner: { value: DISC_COS_EDGE },
+    },
     vertexShader: `varying vec3 vWP; void main(){ vWP=(modelMatrix*vec4(position,1.0)).xyz; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
-    fragmentShader: `uniform vec3 topColor,bottomColor; varying vec3 vWP; void main(){ float t=smoothstep(-0.05,0.5,normalize(vWP).y); gl_FragColor=vec4(mix(bottomColor,topColor,t),1.0); }`,
+    fragmentShader: `
+      uniform vec3 topColor, bottomColor;
+      uniform vec4 sunBody, moonBody;     // xyz = dir, w = visibility 0-1
+      uniform vec3 sunColor, moonColor;
+      uniform float discCosOuter, discCosInner;
+      varying vec3 vWP;
+      void main(){
+        vec3 viewDir = normalize(vWP);
+        float t = smoothstep(-0.05, 0.5, viewDir.y);
+        vec3 sky = mix(bottomColor, topColor, t);
+
+        // Sun + moon discs. We test cos(angle) against cos(radius) so a
+        // smaller cosine = larger angle = outside the disc. smoothstep
+        // gives a 1-frag-ish soft edge against the sky.
+        float sunDot = dot(viewDir, normalize(sunBody.xyz));
+        float sunMask = smoothstep(discCosOuter, discCosInner, sunDot) * sunBody.w;
+        float moonDot = dot(viewDir, normalize(moonBody.xyz));
+        float moonMask = smoothstep(discCosOuter, discCosInner, moonDot) * moonBody.w;
+
+        // Blend disc over sky (mix preserves the high-contrast disc color
+        // without additive blowout — sun stays #FFFAE0 even over a bright
+        // dawn gradient, moon stays #E8E8FF over the night purple).
+        vec3 col = mix(sky, sunColor, sunMask);
+        col = mix(col, moonColor, moonMask);
+
+        gl_FragColor = vec4(col, 1.0);
+      }
+    `,
   }), []);
 
   useFrame(() => {
@@ -132,10 +236,31 @@ function TimeOfDayCycle() {
     skyMat.uniforms.topColor.value.set(a[1]).lerp(_tc.set(b[1]), t);
     skyMat.uniforms.bottomColor.value.set(a[2]).lerp(_tc.set(b[2]), t);
 
+    // R3-3: sun + moon orbit from wall-clock hour. We pull from the same
+    // wall-clock the TOD palette already uses (`h`), so disc position
+    // stays locked to the sky tone — at hour 17 (sunset key) the sun
+    // sits near the west horizon, just above the orange band.
+    const { sunDir, moonDir } = computeSunMoonDirs(h);
+    // Visibility: sun only when it's above the horizon, moon only when
+    // *it* is. A small smoothstep fade keeps the disc from popping at
+    // y=0 (≈ sunrise/sunset edges where TOD_KEYS already lerps the sky).
+    // We mutate the Vector4 in place via .set(...) so eslint
+    // react-hooks/immutability stays happy (no property reassignment on
+    // the uniforms object returned from useMemo).
+    const sunVis = THREE.MathUtils.smoothstep(sunDir.y, -0.05, 0.15);
+    const moonVis = THREE.MathUtils.smoothstep(moonDir.y, -0.05, 0.15);
+    skyMat.uniforms.sunBody.value.set(sunDir.x, sunDir.y, sunDir.z, sunVis);
+    skyMat.uniforms.moonBody.value.set(moonDir.x, moonDir.y, moonDir.z, moonVis);
+
     // Sun
     if (sunRef.current) {
       sunRef.current.color.set(a[3]).lerp(_tc.set(b[3]), t);
       sunRef.current.intensity = a[4] + (b[4] - a[4]) * t;
+      // R3-3: sync the directional light direction to the visible sun
+      // so cast shadows lean the right way through the day. Position is
+      // sunDir × 30 (light always 30u away from world origin).
+      _sunPos.copy(sunDir).multiplyScalar(30);
+      sunRef.current.position.copy(_sunPos);
     }
     // Ambient
     if (ambRef.current) {
@@ -385,7 +510,7 @@ function buildTreePlacements(): { near: NaturePlacement[][]; far: NaturePlacemen
 }
 
 function InstancedTrees() {
-  const { near, far } = useMemo(buildTreePlacements, []);
+  const { near, far } = useMemo(() => buildTreePlacements(), []);
   // P18: tiny per-frame rotation of the whole tree group fakes a wind
   // sway. Z and X axes get gently offset sine waves so the canopy
   // appears to lean east/west and forward/back. Amplitude ~0.5° feels
@@ -440,7 +565,7 @@ function buildBushPlacements(): NaturePlacement[][] {
 }
 
 function Bushes() {
-  const groups = useMemo(buildBushPlacements, []);
+  const groups = useMemo(() => buildBushPlacements(), []);
   return (
     <Suspense fallback={null}>
       {BUSH_MODELS.map((url, i) => (
@@ -482,7 +607,7 @@ function buildFlowerPlacements(): NaturePlacement[][] {
 }
 
 function Flowers() {
-  const groups = useMemo(buildFlowerPlacements, []);
+  const groups = useMemo(() => buildFlowerPlacements(), []);
   return (
     <Suspense fallback={null}>
       {FLOWER_MODELS.map((url, i) => (
@@ -1489,7 +1614,13 @@ export default function GameWorld() {
     });
   }, []);
   // Keep the ref pointed at the latest handler for the keydown effect.
-  emotePickRef.current = handleEmotePick;
+  // Writing the ref in a layout effect (instead of during render) avoids
+  // the React "no side-effects during render" lint rule. The keydown
+  // listener registered on mount calls `emotePickRef.current?.(emote)`
+  // so it will always see the up-to-date handler.
+  useEffect(() => {
+    emotePickRef.current = handleEmotePick;
+  }, [handleEmotePick]);
 
   // Perf finding (Playwright 2026-06-01): the directional-sun shadow
   // pass is ~7 FPS on M1 ANGLE Metal at 1440x900. With shadows off the
