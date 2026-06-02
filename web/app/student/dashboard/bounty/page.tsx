@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Scroll, Clock, Coins, ChevronLeft, X, SearchX } from "lucide-react";
+import { Scroll, Clock, Coins, ChevronLeft, X, SearchX, Send } from "lucide-react";
 import type { Bounty } from "@/lib/supabase/types";
+import BountySubmitModal from "@/components/portal/BountySubmitModal";
 
 type Tab = "all" | "available" | "my_claims" | "completed";
 
@@ -21,10 +22,12 @@ const TABS: { key: Tab; label: string }[] = [
 
 export default function BountyPage() {
   const [bounties, setBounties] = useState<Bounty[]>([]);
+  const [myClaims, setMyClaims] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<Tab>("all");
   const [selected, setSelected] = useState<Bounty | null>(null);
   const [claiming, setClaiming] = useState(false);
+  const [submitting, setSubmitting] = useState<Bounty | null>(null);
 
   const [fetchKey, setFetchKey] = useState(0);
 
@@ -34,8 +37,12 @@ export default function BountyPage() {
     if (tab === "available") params.set("status", "open");
     if (tab === "completed") params.set("status", "completed");
     fetch(`/api/bounties?${params}`)
-      .then((r) => r.ok ? r.json() : { bounties: [] })
-      .then((data) => { if (!cancelled) setBounties(data.bounties ?? data ?? []); })
+      .then((r) => r.ok ? r.json() : { bounties: [], myClaimedBountyIds: [] })
+      .then((data) => {
+        if (cancelled) return;
+        setBounties(data.bounties ?? data ?? []);
+        setMyClaims(new Set<string>(data.myClaimedBountyIds ?? []));
+      })
       .catch(() => {})
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
@@ -56,7 +63,7 @@ export default function BountyPage() {
   const filtered = bounties.filter((b) => {
     if (tab === "available") return b.status === "open";
     if (tab === "completed") return b.status === "completed";
-    if (tab === "my_claims") return b.status === "claimed" || b.status === "in_progress" || b.status === "review";
+    if (tab === "my_claims") return myClaims.has(b.id);
     return true;
   });
 
@@ -108,7 +115,12 @@ export default function BountyPage() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {filtered.map((b) => (
-              <BountyCard key={b.id} bounty={b} onClick={() => setSelected(b)} />
+              <BountyCard
+                key={b.id}
+                bounty={b}
+                mine={myClaims.has(b.id)}
+                onClick={() => setSelected(b)}
+              />
             ))}
           </div>
         )}
@@ -173,9 +185,33 @@ export default function BountyPage() {
                 {claiming ? "Claiming..." : "Claim This Bounty"}
               </button>
             )}
-            {selected.status === "claimed" && (
+            {myClaims.has(selected.id) && (selected.status === "claimed" || selected.status === "in_progress") && (
+              <button
+                onClick={() => setSubmitting(selected)}
+                className="w-full rounded-xl text-sm font-semibold transition-all inline-flex items-center justify-center gap-2"
+                style={{ height: 44, background: "#002fa7", color: "#f1ffff" }}
+              >
+                <Send className="w-4 h-4" />
+                Submit Deliverables
+              </button>
+            )}
+            {myClaims.has(selected.id) && selected.status === "review" && (
+              <button
+                onClick={() => setSubmitting(selected)}
+                className="w-full rounded-xl text-sm font-medium inline-flex items-center justify-center gap-2"
+                style={{ height: 44, background: "rgba(255, 209, 102, 0.08)", border: "1px solid rgba(255, 209, 102, 0.3)", color: "#ffd166" }}
+              >
+                View Submission Status
+              </button>
+            )}
+            {!myClaims.has(selected.id) && selected.status === "claimed" && (
               <div className="text-center text-sm font-medium py-3 rounded-xl" style={{ background: "rgba(255,255,255,0.04)", color: "var(--color-text-muted)" }}>
-                Already claimed
+                Claimed
+              </div>
+            )}
+            {!myClaims.has(selected.id) && (selected.status === "in_progress" || selected.status === "review") && (
+              <div className="text-center text-sm font-medium py-3 rounded-xl" style={{ background: "rgba(255,255,255,0.04)", color: "var(--color-text-muted)" }}>
+                In progress
               </div>
             )}
             {selected.status === "completed" && (
@@ -186,11 +222,23 @@ export default function BountyPage() {
           </div>
         </div>
       )}
+
+      {/* Submission modal */}
+      {submitting && (
+        <BountySubmitModal
+          bounty={submitting}
+          onClose={() => setSubmitting(null)}
+          onSubmitted={() => {
+            setFetchKey((k) => k + 1);
+            setSelected(null);
+          }}
+        />
+      )}
     </div>
   );
 }
 
-function BountyCard({ bounty, onClick }: { bounty: Bounty; onClick: () => void }) {
+function BountyCard({ bounty, mine, onClick }: { bounty: Bounty; mine?: boolean; onClick: () => void }) {
   const diff = DIFFICULTY_COLORS[bounty.difficulty ?? ""] ?? null;
   const isPastDeadline = bounty.deadline && new Date(bounty.deadline) < new Date();
 
@@ -229,15 +277,33 @@ function BountyCard({ bounty, onClick }: { bounty: Bounty; onClick: () => void }
       )}
 
       {/* Status button */}
-      <div
-        className="mt-3 w-full text-center text-sm font-medium py-2 rounded-lg"
-        style={{
-          background: bounty.status === "open" ? "#002fa7" : bounty.status === "completed" ? "rgba(34, 197, 94, 0.1)" : "rgba(255,255,255,0.04)",
-          color: bounty.status === "open" ? "#f1ffff" : bounty.status === "completed" ? "#22c55e" : "var(--color-text-muted)",
-        }}
-      >
-        {bounty.status === "open" ? "Claim Bounty" : bounty.status === "claimed" ? "Claimed" : bounty.status === "completed" ? "Completed" : bounty.status === "review" ? "Under Review" : bounty.status}
-      </div>
+      {(() => {
+        const isOpen = bounty.status === "open";
+        const isCompleted = bounty.status === "completed";
+        const isReview = bounty.status === "review";
+        const myActive = mine && (bounty.status === "claimed" || bounty.status === "in_progress");
+        const myReview = mine && isReview;
+
+        let bg = "rgba(255,255,255,0.04)";
+        let color = "var(--color-text-muted)";
+        let label: string = bounty.status;
+
+        if (isOpen) { bg = "#002fa7"; color = "#f1ffff"; label = "Claim Bounty"; }
+        else if (myActive) { bg = "#002fa7"; color = "#f1ffff"; label = "Submit Deliverables"; }
+        else if (myReview) { bg = "rgba(255, 209, 102, 0.1)"; color = "#ffd166"; label = "Under Review"; }
+        else if (isCompleted) { bg = "rgba(34, 197, 94, 0.1)"; color = "#22c55e"; label = "Completed"; }
+        else if (bounty.status === "claimed") { label = "Claimed"; }
+        else if (isReview) { label = "Under Review"; }
+
+        return (
+          <div
+            className="mt-3 w-full text-center text-sm font-medium py-2 rounded-lg"
+            style={{ background: bg, color }}
+          >
+            {label}
+          </div>
+        );
+      })()}
     </button>
   );
 }

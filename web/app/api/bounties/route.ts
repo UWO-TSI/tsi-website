@@ -49,7 +49,18 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ bounties: data });
+  // Surface the caller's active claims so the UI can show "Submit
+  // deliverables" vs "Already claimed" without an extra round-trip.
+  const { data: claims } = await supabase
+    .from("bounty_claims")
+    .select("bounty_id, status")
+    .eq("user_id", user.id);
+
+  const myClaimedBountyIds = (claims ?? [])
+    .filter((c) => c.status === "active")
+    .map((c) => c.bounty_id as string);
+
+  return NextResponse.json({ bounties: data, myClaimedBountyIds });
 }
 
 export async function POST(request: Request) {

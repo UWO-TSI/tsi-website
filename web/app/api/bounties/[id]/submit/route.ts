@@ -7,6 +7,39 @@ const SubmissionSchema = z.object({
   attachment_urls: z.array(z.string().url().max(500)).max(10).optional().default([]),
 });
 
+// GET /api/bounties/[id]/submit
+// Returns the current user's submissions on this bounty (newest first) so the
+// claim UI can show pending/approved/revision_requested status + reviewer
+// notes. Empty array when none exist.
+export async function GET(
+  _request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { id } = await params;
+
+  const { data, error } = await supabase
+    .from("bounty_submissions")
+    .select("*")
+    .eq("bounty_id", id)
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ submissions: data ?? [] });
+}
+
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
