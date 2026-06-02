@@ -100,6 +100,27 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-06-02 — Tier-1 punch list #3: Leaderboard own-row sticky + half-anonymized policy
+
+Rewrote `web/app/student/dashboard/leaderboard/page.tsx` to cover the three sub-items: own-row highlight + sticky-out-of-view, top-half-public / bottom-half-anonymized for non-T1 viewers, time-period dropdown wiring.
+
+- **Data source switched** from `/api/directory` → `/api/leaderboard?limit=100`. The leaderboard endpoint already returns `rank_position` per row + `your_rank` for the viewer (covers the "viewer outside top 100" case by querying their own xp count). No DB or API changes.
+- **Own-row highlight:** new shared `Row` sub-component with `isOwn` prop. Highlighted row gets a 3px left border in `#002fa7` (spec §6 + matches the existing time-tab accent), `rgba(0,47,167,0.12)` background, and a "(You)" suffix in muted text after the display name. Every row gets a `borderLeft: 3px solid transparent` so the highlight doesn't shift layout.
+- **Sticky-out-of-view:** capped the row list at `min(60vh, 560px)` overflow-y auto so the inner list is a scroll container. `IntersectionObserver` (root = scroll container, threshold 0.5) watches the viewer's own row; when it leaves view, a duplicate `Row` renders at the bottom with `position: sticky; bottom: 0;`, dashed top border, and slight box-shadow for separation. If the viewer is outside the top 100 entirely, `ownEntry` is null and the sticky synthesizes from `useUser()` profile + `your_rank`. Scroll container gets a `paddingBottom: 72` while sticky shows so the last list entry isn't hidden behind it.
+- **Anonymization:** `Math.ceil(entries.length / 2)` is the top-half cutoff. Any row with `rank > cutoff` AND viewer is not T1 AND row isn't the viewer's own → name becomes `Member #{rank}`, avatar initial becomes `?` with `saturate(0)` greyscale + neutral grey ring, level/XP/tier columns become `—`. Anonymization is purely a UI mask — DB query still fetches the full list (per task constraint). Non-admin viewers get a small "Top half public, bottom half anonymized" subtitle for clarity.
+- **Time periods:** the dropdown was unwired and there's no `xp_log` / `xp_history` table to derive weekly/monthly XP from. Kept the three tabs interactive (they toggle the period state, re-fire the fetch effect on switch), but added a one-line subtitle "Weekly / Monthly XP windows coming soon — showing All-Time totals." when Weekly or Monthly is active. Wiring real period-windowed XP requires a schema change (new `xp_events` table with `granted_at` + `amount`) — out of scope for this punch-list item. Deferred with this note.
+- **Lint avoidance:** dropped the redundant `setLoading(true)` from the fetch effect — initial `useState(true)` covers the first load, and stale-data-then-replace is fine on tab switch. Avoids the `react-hooks/set-state-in-effect` rule. The `IntersectionObserver` callback fires on `observe()` with the initial state so no synchronous reset is needed when the own-row ref changes.
+- **Mobile-aware:** the table card stays at `maxWidth: 800` centered; on `<sm` viewports the Level column hides (spec §8), on `<md` the Tier column hides. Sticky row uses the same grid template so columns align across breakpoints. Touch scroll on the inner container works because it has `overflow-y: auto`.
+
+**Decisions:**
+
+1. Used `LeaderboardEntry` type (from `lib/supabase/types.ts`) instead of `DirectoryMember` — already includes `rank_position` and matches the API shape.
+2. Top half cutoff via `ceil` (e.g. 11 entries → top 6 public, bottom 5 anonymized). Privacy default: when in doubt, more anonymization.
+3. Brand-blue accent: spec calls for `#002fa7` (Tethos brand blue, also used by existing tier-2 border / time-tab active), not `var(--color-brand-blue)` from tokens.css which is `#1d9bf0`. Stuck with `#002fa7` for consistency with the existing time-tab active style on this page.
+4. Sticky row pinned to bottom of the table card, not the viewport — `position: sticky` with no scrolling ancestor between it and the outer page becomes equivalent to `static` at the bottom of the layout flow, which is visually identical to what the spec asks for ("pinned at the bottom of the table frame").
+
+**Verification:** `tsc --noEmit` clean. `npm run lint` 78 errors / 59 warnings — matches the 78-error baseline; warnings dropped 61 → 59 because two stale entries went away with the rewrite (zero new lint issues from my code). `npm run build` ✓ in 14.7s, `/student/dashboard/leaderboard` remains static-prerendered.
+
 ### 2026-06-02 — Tier-1 punch list #1+#2: Settings tabs + Sign Out
 
 Split the flat-section Settings page into a 4-tab layout per `specs/ux-settings.md` and added the Sign Out button (spec §7.4).
