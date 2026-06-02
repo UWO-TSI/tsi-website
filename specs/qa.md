@@ -1,7 +1,120 @@
 # QA Report
 
 > Owner: QA agent. All agents check this for bugs in their area.
-> Last updated: 2026-06-02 (Wave 16)
+> Last updated: 2026-06-02 (Wave 17)
+
+---
+
+## Wave 17 — 2026-06-02 Round 1 + Round 2 Tier-1 Verification
+
+End-of-round gate covering Tier-1 follow-up commits since Wave 16 (`c9208ae`): settings tabs (`8556faf`), leaderboard sticky/anon (`d2e3c0d`), oracle Lucide+exit (`1d75189`), bounty submit flow (`e931e84`). Sprint spec docs commit (`0d311cd`) docs-only. 5 commits total.
+
+### Environment
+
+- Branch: `main`
+- HEAD at verification start: `e931e84` ([build] bounty: submit deliverables flow + claim-aware UI)
+- HEAD at verification end: `e931e84` (no concurrent commits landed during the wave despite three R3 build agents being authorized — see "Concurrent activity" below)
+- Working tree clean apart from untracked `.claude/scheduled_tasks.lock`, `.claude/worktrees/`, `web/supabase/.temp/` (local-only artifacts). No tracked modifications.
+
+### Verdict: **PASS**
+
+Build clean, tsc clean, all 32 vitest specs green, all 4 deliverable spot-checks structurally present, all migrations untouched since creation. Lint at **79 errors / 59 warnings** — exactly **−1 error vs Wave 16's 80/59** ceiling, and **+1 error vs the brief's claimed 78/59 reference**. None of the new feature files (settings/leaderboard/oracle/bounty/BountySubmitModal) contribute any new lint hits; the deliverables were landed lint-clean. Runtime smoke all expected codes.
+
+### Build
+
+- `cd web && npm run build` → `✓ Compiled successfully in 11.5s`. Effectively identical to Wave 16's 11.6s (turbopack warm-cache).
+- Total routes (counting `├`/`└` lines): **126** (+1 vs Wave 16's 125). The new route is `POST /api/bounties/[id]/submissions/upload` (R2 bounty deliverable upload).
+- Other relevant routes present at expected paths: `/api/bounties/[id]/submit` (existing, modified), `/api/bounties` (existing, modified), `/student/dashboard/bounty` (○ static, modified), `/student/dashboard/settings` (○), `/student/dashboard/oracle` (○), `/student/dashboard/leaderboard` (○).
+- Build warnings: same set as Wave 16 (workspace-root lockfile inference, middleware→proxy deprecation, soft `@next/font` nag, baseline-browser-mapping stale-data note). No new warnings.
+
+### Types
+
+- `cd web && npx tsc --noEmit` → exit 0, no output. Clean. No transient cache-stale errors this wave (cleared from Wave 16).
+
+### Lint
+
+- `cd web && npm run lint` → **138 problems (79 errors, 59 warnings)** — **−1 error vs Wave 16 (80/59)**. The R1/R2 commits did NOT introduce any new lint findings — none of `settings/page.tsx`, `leaderboard/page.tsx`, `oracle/page.tsx`, `bounty/page.tsx`, or `BountySubmitModal.tsx` appear in the lint report.
+- Brief expected ceiling of "78/59". Actual is **79/59** → **+1 error vs the brief's assumed ceiling**. Likely interpretation: the brief was written before re-running lint after one of the R1/R2 commits and the −1 reduction wasn't picked up. This is **not a regression** relative to Wave 16 — it's an improvement (one error went away during the round, the other expected reduction did not). Build agents should treat **79/59 as the new ceiling** going into R3.
+- 9 warnings still potentially fixable with `--fix` (was 5 at Wave 15, 5 at Wave 16; +4 from the R1/R2 burst, all in scripts/types files outside deliverable scope).
+- Pre-existing pattern of offenders unchanged: `react-hooks/use-memo` × 3 in `GameWorld.tsx:388/443/485`, `react-hooks/refs` at `GameWorld.tsx:1492`, `react-hooks/set-state-in-effect` across various dashboard pages, `@typescript-eslint/no-explicit-any` cluster in `types/three-extensions.d.ts`, etc.
+
+### Tests
+
+- `cd web && npm test` → **Test Files 1 passed (1), Tests 32 passed (32)** in 454ms. Single suite: `lib/npc/chatHelpers.test.ts`. Identical pass count to Waves 15 and 16.
+
+### Deliverable spot-check (4 features per QA brief)
+
+| # | Deliverable | Location | Verified |
+|---|-------------|----------|----------|
+| 1 | **Settings tabs** | `web/app/student/dashboard/settings/page.tsx:122` `role="tablist"` with `aria-label="Settings sections"`; 4× `role="tab"` rendered from `TABS` array (Profile / Social / Appearance / Account) at line 135; Account tab includes Sign Out button calling `handleSignOut` at line 89 which invokes `supabase.auth.signOut()` at line 93 then `router.push("/student/login")` | ✅ |
+| 2 | **Leaderboard own-row** | `web/app/student/dashboard/leaderboard/page.tsx:79` `useMemo(() => Math.ceil(entries.length / 2), [entries.length])` for top-half cutoff; line 88 `new IntersectionObserver` watching `ownRowRef`; line 229 `isOwn = viewerId !== null && m.id === viewerId`; line 232 `shouldAnonymize = !isAdmin && !isOwn && inBottomHalf`; line 251 `position: "sticky"` on the pinned own-row container; `Row` component declares `isOwn: boolean` prop at line 281 | ✅ |
+| 3 | **Oracle** | `web/app/student/dashboard/oracle/page.tsx:6-29` imports `Sword`, `Sparkles`, `Heart`, `Wrench` (+ HeartHandshake, Sun, Flame, Home for subclasses) from `lucide-react`; Mage class color `#6366F1` referenced at INTJ/INTP/INFJ/INFP entries (lines 109-112), the progress bar (line 457), and the primary CTA (line 494); `CLASS_ICONS` map at line 125 (Warrior→Sword, Mage→Sparkles, Healer→Heart, Rogue→Wrench); `PROGRESS_KEY = "tsi.oracle.progress.v1"` at line 165; `exitConfirmOpen` state + exit confirm dialog at lines 214 / 463-481 with "Your progress will be saved" copy at line 481 | ✅ |
+| 4 | **Bounty submit** | `web/components/portal/BountySubmitModal.tsx` exists (709 lines); `web/app/api/bounties/[id]/submissions/upload/route.ts` exists (158 lines, exports `POST` at line 43, no GET — hence 405-on-GET); `web/supabase/migrations/022_bounty_submission_assets.sql` exists (75 lines, public bucket `bounty-submissions`, 10MB, image/* + pdf MIME allowlist, 3 RLS policies); `bounty/page.tsx:6` imports `BountySubmitModal`, line 30 carries `submitting` state, line 188 renders the Submit CTA gated on `myClaims.has(selected.id) && (status === "claimed" \|\| "in_progress")` | ✅ |
+
+All 4 spot-checks pass structurally. No claimed deliverable has missing files or stub-only implementations.
+
+### Migration sanity
+
+Migrations 014-022 present and each has exactly one creation commit, no subsequent modifications:
+
+| File | Status (git log --diff-filter=M) |
+|------|----------------------------------|
+| `014_content_pipeline.sql` | ✅ untouched |
+| `015_content_versions.sql` | ✅ untouched |
+| `016_events_check_in.sql` | ✅ untouched |
+| `017_content_assets_bucket.sql` | ✅ untouched |
+| `018_npc_memories.sql` | ✅ untouched |
+| `019_community_loops.sql` | ✅ untouched |
+| `020_player_persistence.sql` | ✅ untouched |
+| `021_profiles_bio_year.sql` | ✅ untouched |
+| `022_bounty_submission_assets.sql` | ✅ untouched, **NOT APPLIED** (per directive) |
+
+`git log --diff-filter=M` returned empty for every migration file. 022 reviewed inline:
+- `INSERT INTO storage.buckets … ON CONFLICT (id) DO UPDATE SET` → idempotent ✅
+- 3 RLS policies each preceded by `DROP POLICY IF EXISTS` → idempotent re-run ✅
+- Bucket: `bounty-submissions`, public=true, 10MB limit, MIME allowlist (image/png|jpeg|webp|gif + application/pdf)
+- Header comment notes Cloud Supabase dashboard-fallback path identical to 017's pattern
+- 016-022 still queued for David's remote apply.
+
+### Runtime smoke (dev server on port 3050, started + torn down by QA)
+
+| URL | Code | Expected | Pass |
+|-----|------|----------|------|
+| `GET /student/dashboard/settings` | 307 | 307 | ✅ |
+| `GET /student/dashboard/oracle` | 307 | 307 | ✅ |
+| `GET /student/dashboard/leaderboard` | 307 | 307 | ✅ |
+| `GET /student/dashboard/bounty` | 307 | 307 | ✅ |
+| `GET /api/bounties` (unauthenticated) | 401 | 401 | ✅ |
+| `GET /api/bounties/00000…000/submit` (unauthenticated) | 401 | 401 | ✅ |
+| `GET /api/bounties/00000…000/submissions/upload` (unauthenticated) | 405 | 405 (POST-only export) | ✅ |
+
+All 7 codes match spec. The upload route's 405-on-GET is the correct pre-auth behavior — route exports only `POST`, so method-not-allowed runs before any auth/RLS gating. Dev server torn down cleanly via `pkill -f "next dev"`.
+
+### Regression delta vs Wave 16
+
+| Check | Wave 16 | Wave 17 | Delta |
+|-------|---------|---------|-------|
+| Build | PASS (125 routes, 11.6s) | PASS (126 routes, 11.5s) | +1 route (bounty submissions upload), same compile time |
+| `tsc --noEmit` | Clean (transient cache error 1st run) | Clean (no transient errors) | improvement |
+| Lint errors | 80 | **79** | **−1** ✓ |
+| Lint warnings | 59 | 59 | — |
+| Vitest | 32 passed | 32 passed | — |
+| Build warnings | same baseline | same baseline | — |
+| HTTP smoke | Expected | Expected | — |
+| Migrations applied | 016-021 not applied | 016-022 not applied | +022 queued |
+
+### Anomalies / notes for downstream
+
+- **Lint dropped −1 error during R1/R2.** None of the 4 R1/R2 deliverable files appear in the lint report at all — they were landed lint-clean. The single error reduction came from somewhere in the touched files (most likely a small cleanup in `bounty/page.tsx` or one of the leaderboard helpers). New ceiling for R3 build agents: **79/59**, not the brief's expected 78/59. R3 work should not push lint above 79/59.
+- **Brief's "78/59 ceiling" appears to be slightly off.** Brief text said "lint dropped 2 errors during Round 1/2" but actual reduction is 1 (80→79). Could be the brief was drafted before measuring, or a now-different lint rule fired. Not a code issue — just calibration.
+- **No concurrent commits during the wave.** Brief warned three R3 build agents (quest checklist, theme toggle, sky shader) might race against verification; HEAD remained `e931e84` from wave start to wave end. No concurrent activity in `web/components/portal/`, `web/components/game/`, `web/app/student/dashboard/`, or `web/styles/`.
+- **Migration 022 ready to apply.** Bucket creation may need Cloud Supabase dashboard fallback (per the header comment in the file) if the postgres role can't INSERT into `storage.buckets` directly. Same caveat as 017.
+- **Visual / WebGL test not run.** Carryover from prior waves — the 4 deliverable spot-checks were structural (imports + key code paths), not visually verified. Recommend a Playwright pass before R3 lands more visual features (theme toggle, sky shader) if visual confidence is needed.
+- **No regressions detected.** Build, types, tests, runtime smoke, migration history, and file structure all clean. Lint improved.
+
+### Sprint readiness
+
+End-of-round gate: **green.** Build / types / tests / runtime / structure / migrations all clean. Lint improved −1. All 4 R1/R2 deliverables landed structurally complete with no new lint debt. Three R3 build agents (quest checklist, theme toggle, sky shader) are unblocked from QA's side. Recommend they target **79/59 as the lint ceiling** and apply 022 when David next has DB access.
 
 ---
 

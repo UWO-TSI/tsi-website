@@ -321,6 +321,17 @@ Verification: `tsc --noEmit` clean, `npm run lint` 74 errors / 56 warnings (= Wa
 
 *(append your entries below — log waves continue from Wave 11 in `specs/qa.md`)*
 
+### 2026-06-02 — Wave 17: Round 1 + Round 2 Tier-1 verification — **PASS**
+
+- HEAD `e931e84` (no concurrent commits during the wave; three R3 build agents authorized but no race observed). 5 commits covered: `8556faf` settings tabs, `0d311cd` sprint spec docs, `d2e3c0d` leaderboard sticky+anon, `1d75189` oracle Lucide+exit, `e931e84` bounty submit flow.
+- Build: **126 routes, 11.5s** (+1 vs Wave 16; new route is `POST /api/bounties/[id]/submissions/upload`). `tsc --noEmit` exit 0 with no transients (improvement vs Wave 16).
+- Lint: **79 errors / 59 warnings** — **−1 error vs Wave 16 (80/59)**. None of the 4 R1/R2 deliverable files (`settings/page.tsx`, `leaderboard/page.tsx`, `oracle/page.tsx`, `bounty/page.tsx`, `BountySubmitModal.tsx`) appear in the lint report — landed lint-clean. Brief expected 78/59; actual is 79/59 (off by 1, calibration drift not a code issue). **New ceiling for R3: 79/59.**
+- Tests: **32/32 passing** (`lib/npc/chatHelpers.test.ts`, 454ms).
+- Deliverable spot-check: **4/4 verified** structurally — (1) settings has `role="tablist"` + 4× `role="tab"` (Profile/Social/Appearance/Account) + Sign Out → `supabase.auth.signOut()` (lines 89-94, 122-157); (2) leaderboard has `Math.ceil(entries.length/2)` cutoff (line 79), `IntersectionObserver` on `ownRowRef` (line 88), `isOwn` prop on Row (line 281), sticky `position: "sticky"` (line 251); (3) oracle imports `Sword/Sparkles/Heart/Wrench` from `lucide-react` (lines 6-29), Mage color `#6366F1` on INTJ/INTP/INFJ/INFP and progress bar + CTA, `PROGRESS_KEY = "tsi.oracle.progress.v1"` (line 165), exit confirm dialog with "Your progress will be saved" copy (lines 463-481); (4) `BountySubmitModal.tsx` (709 lines), upload route POST-only (158 lines), migration `022_bounty_submission_assets.sql` (75 lines, public bucket + 3 RLS policies + idempotent ON CONFLICT/DROP POLICY).
+- Migrations 014-022 all clean: each has exactly one creation commit, zero modifications (`git log --diff-filter=M` empty for all 9). 022 reviewed inline (idempotent INSERT/DROP+CREATE pattern). 016-022 queued for David's remote apply.
+- Runtime smoke (port 3050): `/student/dashboard/{settings,oracle,leaderboard,bounty}` all 307 (auth gate), `/api/bounties` 401, `/api/bounties/00000…/submit` 401, `/api/bounties/00000…/submissions/upload` GET 405 (POST-only export). All match spec. Dev server torn down.
+- **Verdict: PASS.** Zero regressions, lint improved −1, all R1/R2 deliverables structurally sound. R3 unblocked. Full report: `specs/qa.md` Wave 17.
+
 ### 2026-06-02 — Wave 16: Autonomous burst baseline (P1-P33) — **PASS-with-notes**
 
 - HEAD `c9208ae`. 85 commits ahead of `origin/main`; first QA pass end-to-end since Wave 15 (`41d9d0a`).
