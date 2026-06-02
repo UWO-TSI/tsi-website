@@ -26,6 +26,7 @@ import { TIER_LABELS } from "@/lib/supabase/types";
 import { TIER_COLORS } from "@/components/portal/types";
 import { createClient } from "@/lib/supabase/client";
 import { useGhostReplaySetting } from "@/lib/game/useGhostReplaySetting";
+import ThemeToggle from "@/components/portal/ThemeToggle";
 
 type TabKey = "profile" | "social" | "appearance" | "account";
 
@@ -211,6 +212,10 @@ export default function SettingsPage() {
 
         {activeTab === "appearance" && (
           <TabPanel id="appearance">
+            <Section title="Theme">
+              <ThemeToggle />
+            </Section>
+
             <Section title="World">
               <div className="flex items-start gap-3">
                 <Users className="w-4 h-4 shrink-0 mt-0.5" style={{ color: "var(--color-text-muted)" }} />
@@ -244,9 +249,6 @@ export default function SettingsPage() {
                 </div>
               </div>
             </Section>
-            <p className="text-sm italic mt-2 mb-6" style={{ color: "var(--color-text-subtle)" }}>
-              More appearance options coming soon.
-            </p>
           </TabPanel>
         )}
 

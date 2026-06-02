@@ -114,3 +114,28 @@
   --z-overlay-panel: 60;
   --z-transition-overlay: 100;
 }
+
+/* ========= LIGHT THEME OVERRIDES (R3-2) =========
+   Applied when ThemeToggle writes data-theme="light" on <html>.
+   Only portal chrome (sidebar, settings, directory, overlay panels) is
+   affected — the 3D game world keeps its own TOD-driven palette and does
+   NOT read these tokens (verified in components/game/**).
+   Brand-blue accent is identical in both themes (not overridden).
+   See specs/ux-settings.md §6.4. */
+[data-theme="light"] {
+  --color-bg-main: #F5F5F5;
+  --color-bg-alt: #FFFFFF;
+  --color-bg-navy: #FFFFFF;
+  --color-surface: #FFFFFF;
+  --color-surface-soft: #F0F0F2;
+  --color-text-main: #1A1A2E;
+  --color-text-soft: #333355;
+  --color-text-muted: #666680;
+  --color-text-subtle: #999AAA;
+  --glass-border-soft: rgba(0, 0, 0, 0.10);
+  --glass-border-strong: rgba(0, 0, 0, 0.18);
+  --gray-700: rgba(0, 0, 0, 0.15);
+  --gray-800: rgba(0, 0, 0, 0.08);
+  --shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.08);
+  --shadow-strong: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
