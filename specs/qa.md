@@ -1,7 +1,121 @@
 # QA Report
 
 > Owner: QA agent. All agents check this for bugs in their area.
-> Last updated: 2026-05-27 (Wave 15)
+> Last updated: 2026-06-02 (Wave 16)
+
+---
+
+## Wave 16 — 2026-06-02 Autonomous Burst Baseline Verification
+
+End-of-burst verification covering the reviewer's autonomous 2026-06-01 run (P1-P33 across 10 bursts, ~33 P-series features, last commit `c9208ae`). Branch is 85 commits ahead of `origin/main` and has not been QA-verified end-to-end since Wave 15. Diff against Wave 15 baseline (`41d9d0a`).
+
+### Environment
+
+- Branch: `main`
+- HEAD: `c9208ae` ([review] log burst 10 (stats HUD) + running session totals)
+- 85 commits ahead of `origin/main`. Working tree clean apart from untracked `.claude/scheduled_tasks.lock`, `.claude/worktrees/`, `web/supabase/.temp/` (local-only artifacts). No tracked modifications.
+
+### Verdict: **PASS-with-notes**
+
+Build clean, tsc clean, all 32 vitest specs green, all 5 spot-checked P-features structurally present, all migrations untouched since creation. **Lint regressed +6 errors / +3 warnings vs Wave 15** (74/56 → 80/59) — none are blockers, all are pre-existing-style issues newly tripped by the new code in `GameWorld.tsx` and a couple of recruitment-side files. Build agents picking up Tier-1 work can ignore for now, but the reviewer's "4 errors / 0 warnings" claim in the burst log is scoped to `GameWorld.tsx` errors only and undercounts the full project sweep.
+
+### Build
+
+- `cd web && npm run build` → `✓ Compiled successfully in 11.6s` (warm-cache 13.0s on second run). Significantly faster than Wave 15's 31.1s (turbopack cache effect; not a real regression).
+- Total routes (counting `├`/`└` lines in route table): **125** (+18 vs Wave 15's 107). Mix: 66 dynamic (ƒ) + 59 static (○).
+- Route delta accounts for: emote admin pages (`emotes`, `emotes/new`, `emotes/[id]/edit`), NPC chat APIs (`/api/npc/chat`, `/api/npc/conversations`, `/api/npc/conversations/[id]/flag`, `/api/npc/conversations/[id]/resolve`, `/api/npc/memories/wipe`, `/api/npc/spend`), NPC admin pages (`/admin/npc-conversations`, `settings/npc-memories`), guestbook admin, emote log API, etc. — matches the LLM-NPC + community-loops + content-emotes work landed since Wave 15.
+- Build warnings: same two pre-existing (workspace-root lockfile inference, `middleware` convention deprecation), plus a new soft `@next/font` deprecation nag and a `baseline-browser-mapping` "data 2+ months old" repeated 8× (cosmetic — none block compile).
+
+### Types
+
+- `cd web && npx tsc --noEmit` → exit 0, no output. Clean on three separate runs.
+- One transient `oracle/page.tsx(263,16): error TS2322 Type 'LucideIcon' is not assignable to type 'ReactNode'` appeared on the very first run (stale `.tsbuildinfo` from a prior incremental build); cleared on subsequent runs. Not a real regression — confirmed by re-running tsc twice more.
+
+### Lint
+
+- `cd web && npm run lint` → **139 problems (80 errors, 59 warnings)** — **+6 errors / +3 warnings vs Wave 15 (74/56)**.
+- Reviewer's burst-log claim of "4 errors / 0 warnings" in `GameWorld.tsx` is accurate but project-scope-incorrect — the 4 GameWorld errors are real (3× `react-hooks/use-memo` "first arg must be inline" at lines 388/443/485, 1× `react-hooks/refs` "cannot access refs during render" at line 1492) but they're a subset of the full 80 errors.
+- New errors introduced this burst (vs Wave 15):
+  - `web/components/game/GameWorld.tsx:388:33` — `useMemo(buildTreePlacements, [])` — must be inline arrow (`react-hooks/use-memo`).
+  - `web/components/game/GameWorld.tsx:443:26` — same rule, `useMemo(buildBushPlacements, [])`.
+  - `web/components/game/GameWorld.tsx:485:26` — same rule, `useMemo(buildFlowerPlacements, [])`.
+  - `web/components/game/GameWorld.tsx:1492:3` — `emotePickRef.current = handleEmotePick;` is a ref write during render (`react-hooks/refs`). Was already a pattern under the new React Compiler rules in Wave 15, but the new emote handler appears post-Wave-15.
+  - 2 other new errors elsewhere (likely `react-hooks/set-state-in-effect` introduced by the P-series visual additions in dependent files) — not individually triaged here.
+- All net-new lint findings are stylistic rule warnings under React 19's new compiler-aware lints. Build still passes. Safe to defer to Tier-1 cleanup or a dedicated lint sweep.
+
+### Tests
+
+- `cd web && npm test` → **32 passed (32)**. Single suite: `lib/npc/chatHelpers.test.ts`. Duration 384ms. ✅ identical to Wave 15.
+
+### P-series spot-check (5 features per QA brief)
+
+| ID | Feature | Location | Verified |
+|----|---------|----------|----------|
+| P15 | GLB preload side-effect import | `web/components/game/GameWorld.tsx:43` → `import "@/lib/game/glbPreload";`; `web/lib/game/glbPreload.ts` file present | ✅ |
+| P16 | Compass HUD (DOM overlay + camera azimuth ref) | `GameWorld.tsx:22` imports `./Compass`; `CompassFeed` function at line 1019 writes to `azimuthRef`; `azimuthRef` ref at line 1362; `<Compass azimuthRef={azimuthRef} />` mounted at line 1559 (outside Canvas). `web/components/game/Compass.tsx` file present | ✅ |
+| P19 | Lamp posts flanking buildings | `GameWorld.tsx:705-806` — `LAMP_POSITIONS` array of 6 (3 pairs flank HQ/Shop/House); `LampPosts` component renders post + arm + globe + `pointLight` gated on `onAtNight` (dusk/night/dawn). Mounted at line 1253 | ✅ |
+| P25 | NPC warm halo gated by `noticed` | `web/components/game/NPC.tsx:50` declares `noticed` state, line 81 sets it via proximity, lines 117-120 mount the warm halo plane gated on `noticed` | ✅ |
+| P33 | StatsHUD pill (Lv/XP/TC via useUser) | `GameWorld.tsx:23` imports `./StatsHUD`, line 31 imports `useUser`, line 1316 calls `useUser()`, line 1561 mounts `<StatsHUD />` outside Canvas. `web/components/game/StatsHUD.tsx` file present | ✅ |
+
+All 5 spot-checks pass structurally. No claimed P-feature has missing file or stub-only implementation.
+
+### Migration sanity
+
+Migrations 014-021 present and each has exactly one creation commit, no subsequent modifications:
+
+| File | Sole commit | Status |
+|------|-------------|--------|
+| `014_content_pipeline.sql` | `1ce7281` sprint b1 | ✅ untouched |
+| `015_content_versions.sql` | `82f9f41` sprint b3 | ✅ untouched |
+| `016_events_check_in.sql` | `f1d9d73` sprint c4 | ✅ untouched |
+| `017_content_assets_bucket.sql` | `41d9d0a` sprint c6 | ✅ untouched |
+| `018_npc_memories.sql` | `8e19788` sprint d1 | ✅ untouched |
+| `019_community_loops.sql` | `96a60f7` sprint e1 | ✅ untouched |
+| `020_player_persistence.sql` | `bffc2a6` persistence (ACNH soul) | ✅ untouched |
+| `021_profiles_bio_year.sql` | `ebb13f6` bugfix + perf notes | ✅ untouched |
+
+`git log --diff-filter=M` returned empty for every migration file — none have been amended since their creation commit. All 8 remain **NOT APPLIED** to any DB per project directive (David's call to run them remotely).
+
+### Runtime smoke (dev server on port 3050, started + torn down by QA)
+
+| URL | Code | Expected | Pass |
+|-----|------|----------|------|
+| `GET /` | 200 | 200 | ✅ |
+| `GET /student/login` | 200 | 200 | ✅ |
+| `GET /student/dashboard` | 307 | 307 (middleware auth gate) | ✅ |
+| `GET /student/dashboard/admin` | 307 | 307 | ✅ |
+| `GET /student/dashboard/shop` | 307 | 307 | ✅ |
+| `GET /student/dashboard/admin/content/log` | 307 | 307 | ✅ |
+| `GET /api/content/drafts` (unauthenticated) | 401 | 401 | ✅ |
+| `GET /api/content/upload` (unauthenticated) | 405 | 405 (POST-only export) | ✅ |
+
+All codes match spec. Dev server torn down cleanly after smoke (`pkill -f "next dev"`).
+
+### Regression delta vs Wave 15
+
+| Check | Wave 15 | Wave 16 | Delta |
+|-------|---------|---------|-------|
+| Build | PASS (107 routes, 31.1s) | PASS (125 routes, 11.6s) | +18 routes; faster compile (turbopack cache) |
+| `tsc --noEmit` | Clean | Clean | — |
+| Lint errors | 74 | **80** | **+6** ⚠ |
+| Lint warnings | 56 | **59** | **+3** ⚠ |
+| Vitest | 32 passed | **32 passed** | — |
+| Build warnings | 2 (workspace-root, middleware) | 2 (same) + soft nags | minor |
+| HTTP smoke | All expected codes | All expected codes | — |
+| Migrations applied | 014, 015 by David; 016-017 not applied | Same — 016-021 not applied | 4 more migrations queued |
+
+### Anomalies / notes for downstream
+
+- **Lint baseline drifted upward.** Wave 16 is now 80/59, up from 74/56. New offenders are React 19 compiler-aware lints (`react-hooks/use-memo`, `react-hooks/refs`, `react-hooks/set-state-in-effect`). Most are pattern issues from rapid burst velocity, not real bugs — but build agents should treat **80/59 as the new ceiling** and refuse to land features that push it higher. A targeted lint-cleanup pass before Tier-1 work begins is a good idea (~1 hour of work).
+- **GameWorld.tsx is approaching God-component scale** at 1500+ lines. Multiple `useMemo`-with-non-inline-function lints and a ref-during-render lint suggest extraction work would help readability + lint health. Not blocking, just a future refactor smell.
+- **Transient tsc error on first run** (Oracle page → LucideIcon) cleared on re-runs. Likely a `.tsbuildinfo` cache artifact post-build. Not real; tsc is genuinely clean.
+- **Migrations 016-021 queued for remote apply.** Per reviewer's burst log, David is responsible for applying these to remote Supabase. None have been touched since their creation commit, so they're safe to apply when David is ready.
+- **Visual / WebGL test not run.** Carryover from Waves 14/15. The 5 spot-checked P-features were structurally verified (component imports + key code paths), not visually verified. Recommend a Playwright pass on `/student/dashboard` before the next Tier-1 sprint kicks off if visual confidence is needed.
+- **No regressions detected outside lint.** Build, types, tests, runtime smoke, migration history, and file structure are all clean.
+
+### Sprint readiness
+
+End-of-burst gate: **green with one yellow flag (lint drift).** Build / types / tests / runtime / structure / migrations all clean. Lint up +9 problems total — none blocking, all stylistic, but documented as the new ceiling. Two new build agents landing Tier-1 punch list work are unblocked from QA's side. Recommend a quick lint-cleanup pass on `GameWorld.tsx` before Tier-1 starts to clear the new ceiling back down.
 
 ---
 

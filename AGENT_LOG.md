@@ -262,6 +262,17 @@ Verification: `tsc --noEmit` clean, `npm run lint` 74 errors / 56 warnings (= Wa
 
 *(append your entries below — log waves continue from Wave 11 in `specs/qa.md`)*
 
+### 2026-06-02 — Wave 16: Autonomous burst baseline (P1-P33) — **PASS-with-notes**
+
+- HEAD `c9208ae`. 85 commits ahead of `origin/main`; first QA pass end-to-end since Wave 15 (`41d9d0a`).
+- Build: **125 routes, 11.6s** (+18 vs Wave 15; turbopack warm-cache faster). `tsc --noEmit` exit 0 (clean on three confirming re-runs; one transient cache-stale error in `oracle/page.tsx` cleared on re-run — not a real regression).
+- Lint: **80 errors / 59 warnings** — **+6 errors / +3 warnings vs Wave 15 (74/56)**. New offenders in `GameWorld.tsx`: 3× `react-hooks/use-memo` (non-inline function arg at lines 388/443/485), 1× `react-hooks/refs` (ref write during render at line 1492), plus 2 elsewhere. Reviewer's burst-log "4/0" claim is GameWorld-scoped, undercounts project sweep.
+- Tests: **32/32 passing** (`lib/npc/chatHelpers.test.ts`, 384ms).
+- P-feature spot-check: **5/5 verified** structurally — P15 (`import "@/lib/game/glbPreload"` at line 43), P16 (`Compass` + `CompassFeed` + `azimuthRef` lines 22/1019/1362/1559), P19 (`LampPosts` lines 705-806, 6 lamps, `pointLight` gated on `onAtNight`), P25 (`NPC.tsx:117-120` warm halo gated on `noticed` state at line 50), P33 (`StatsHUD` + `useUser` lines 23/31/1316/1561).
+- Migrations 014-021 all clean: each has exactly one creation commit, zero modifications (`git log --diff-filter=M` empty for all). 016-021 queued for David's remote apply.
+- Runtime smoke (port 3050): `/` 200, `/student/login` 200, `/student/dashboard` 307, `/api/content/drafts` 401, `/api/content/upload` 405. All expected. Dev server torn down.
+- **Verdict: PASS-with-notes.** Lint drift is the only yellow flag — 80/59 is the new ceiling; recommend a focused cleanup of the 4 new `GameWorld.tsx` lints before Tier-1 work begins so build agents have headroom. Two new build agents are unblocked from QA's side. Full report: `specs/qa.md` Wave 16.
+
 ### 2026-05-25 — Wave 12 baseline
 
 - Build PASS on `6393d48`: 84 routes (+23 vs Wave 11), 72 static pages, compiled in 11.4s. Only pre-existing warnings (middleware deprecation, workspace-root inference).
