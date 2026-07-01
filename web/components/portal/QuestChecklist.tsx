@@ -19,7 +19,7 @@
  *   (full-width, pull-down / handle-tap / backdrop-tap to close).
  */
 
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { CheckSquare, Square, ChevronDown, X, Sparkles } from "lucide-react";
 import { useUser } from "./UserContext";
 

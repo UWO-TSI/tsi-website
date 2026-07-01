@@ -100,6 +100,15 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-01 — R3-1 spec gap: quest mute toggle wired into Settings → Appearance
+
+Onboarding sweep before Wave 18 found the R3-1 mute toggle missing: `QuestChecklist.tsx` exports `useQuestsMuted` and hides when muted (its comments even say "re-enable via Settings"), but nothing consumed the setter — the widget could never be muted from UI, violating the R3-1 spec line ("Settings → Appearance → 'Show onboarding quests' toggle") and design principle #7. David ruled fix-first-then-verify.
+
+- `settings/page.tsx`: new "Show onboarding quests" toggle row in Appearance → World, mirroring the ghost-replay switch pattern exactly. `aria-checked={!questsMuted}`, copy states quests grant no rewards (principle #3). Cross-component reactive — the hook's module-level listener set means toggling live-mounts/unmounts the widget.
+- `QuestChecklist.tsx`: dropped unused `useEffect` import (the +1 lint warning ce4f3b7 introduced).
+
+Verification: `tsc --noEmit` exit 0, `npm run lint` **75 errors / 59 warnings** (Wave 17 ceiling 79/59; R3-3's GameWorld rework cleared that file's 4 pre-existing errors, R3-2's ThemeToggle added 1 `set-state-in-effect` error at 63:7 — net −4). `npm run build` ✓ 12.7s, 126 routes (= Wave 17). Wave 18 runs next against this HEAD.
+
 ### 2026-07-01 — Bounty XP zeroed per David ruling (principle #3 enforcement)
 
 David ruled on the flag raised in the 2026-06-02 bounty-submit entry: bounties pay **TC only**. XP stays IRL-event-only per design principle #3.

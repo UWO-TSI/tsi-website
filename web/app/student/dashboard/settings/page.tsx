@@ -17,6 +17,7 @@ import {
   Users,
   User,
   Link as LinkIcon,
+  ListTodo,
   Palette,
   Shield,
   LogOut,
@@ -27,6 +28,7 @@ import { TIER_COLORS } from "@/components/portal/types";
 import { createClient } from "@/lib/supabase/client";
 import { useGhostReplaySetting } from "@/lib/game/useGhostReplaySetting";
 import ThemeToggle from "@/components/portal/ThemeToggle";
+import { useQuestsMuted } from "@/components/portal/QuestChecklist";
 
 type TabKey = "profile" | "social" | "appearance" | "account";
 
@@ -51,6 +53,7 @@ export default function SettingsPage() {
   const [skills, setSkills] = useState("");
   const [social, setSocial] = useState<SocialLinks>({});
   const [ghostsEnabled, setGhostsEnabled] = useGhostReplaySetting();
+  const [questsMuted, setQuestsMuted] = useQuestsMuted();
 
   useEffect(() => {
     fetch("/api/profile")
@@ -243,6 +246,39 @@ export default function SettingsPage() {
                       <span
                         className="inline-block h-4 w-4 mt-0.5 transform rounded-full bg-white transition-transform"
                         style={{ transform: ghostsEnabled ? "translateX(24px)" : "translateX(4px)" }}
+                      />
+                    </button>
+                  </label>
+                </div>
+              </div>
+
+              {/* R3-1: quest checklist mute — the widget's useQuestsMuted is the single source of truth */}
+              <div className="flex items-start gap-3">
+                <ListTodo className="w-4 h-4 shrink-0 mt-0.5" style={{ color: "var(--color-text-muted)" }} />
+                <div className="flex-1">
+                  <label className="flex items-center justify-between gap-3 cursor-pointer">
+                    <div>
+                      <p className="text-sm font-medium" style={{ color: "var(--color-text-main)" }}>
+                        Show onboarding quests
+                      </p>
+                      <p className="text-xs mt-0.5" style={{ color: "var(--color-text-subtle)" }}>
+                        Floating checklist that walks new members through the portal. Quests are signposts only, no rewards.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={!questsMuted}
+                      onClick={() => setQuestsMuted(!questsMuted)}
+                      className="relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border transition-colors"
+                      style={{
+                        background: !questsMuted ? "#002fa7" : "rgba(255,255,255,0.06)",
+                        borderColor: "var(--glass-border-soft)",
+                      }}
+                    >
+                      <span
+                        className="inline-block h-4 w-4 mt-0.5 transform rounded-full bg-white transition-transform"
+                        style={{ transform: !questsMuted ? "translateX(24px)" : "translateX(4px)" }}
                       />
                     </button>
                   </label>
