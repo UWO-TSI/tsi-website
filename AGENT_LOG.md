@@ -100,6 +100,16 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-01 — Bounty XP zeroed per David ruling (principle #3 enforcement)
+
+David ruled on the flag raised in the 2026-06-02 bounty-submit entry: bounties pay **TC only**. XP stays IRL-event-only per design principle #3.
+
+- `PATCH /api/bounties/[id]/review`: `awardRewards` now passes `xp: 0` on approval (was `bounty.xp_reward ?? 0`); dropped `xp_reward` from the bounty select. Comment cites the ruling.
+- `bounty/page.tsx`: removed the `+N XP` span from the detail view so the UI no longer advertises XP that won't be granted. `bounties.xp_reward` column + create/edit API fields left in place — inert, no migration needed.
+- Also ruled 2026-07-01: migrations 016-022 stay **on hold** (do not apply to remote), portal is pre-launch with no real users. Next gate: QA Wave 18 on the three R3 commits (`ce4f3b7` quest checklist, `13c375a` theme toggle, `4b27a62` sky shader) + close Tier-1 in `specs/ux-status.md`.
+
+Verification: `tsc --noEmit` exit 0, `npm test` 32/32. Lint + build deferred to Wave 18 (run was interrupted).
+
 ### 2026-06-02 — Tier-1 punch list #4 + #5 + #6: Oracle Lucide icons + Mage indigo + exit-with-save
 
 Three task-list items, one file (`web/app/student/dashboard/oracle/page.tsx`). No new components.

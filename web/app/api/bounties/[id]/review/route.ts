@@ -73,7 +73,7 @@ export async function PATCH(
   if (parsed.data.status === "approved" && submission) {
     const { data: bounty } = await supabase
       .from("bounties")
-      .select("pay_tc, xp_reward")
+      .select("pay_tc")
       .eq("id", id)
       .single();
 
@@ -90,11 +90,12 @@ export async function PATCH(
       .eq("bounty_id", id)
       .eq("user_id", submission.user_id);
 
-    // Award coins + XP (auto-levels up)
+    // Award coins only. XP is IRL-event-only per design principle #3 —
+    // bounty xp_reward is intentionally NOT granted (David ruling 2026-07-01).
     if (bounty) {
       await awardRewards(supabase, submission.user_id, {
         coins: bounty.pay_tc ?? 0,
-        xp: bounty.xp_reward ?? 0,
+        xp: 0,
         coinType: "earn_bounty",
         xpType: "bounty",
         referenceId: id,

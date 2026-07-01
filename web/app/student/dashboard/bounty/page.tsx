@@ -160,7 +160,6 @@ export default function BountyPage() {
               <div className="flex items-center gap-2">
                 <Coins className="w-4 h-4" style={{ color: "#ffd166" }} />
                 <span className="font-mono" style={{ color: "#ffd166" }}>{selected.pay_tc ?? 0} TSI coins</span>
-                {selected.xp_reward ? <span className="ml-2 font-mono" style={{ color: "#22c55e" }}>+{selected.xp_reward} XP</span> : null}
               </div>
               {selected.deadline && (
                 <div className="flex items-center gap-2">
