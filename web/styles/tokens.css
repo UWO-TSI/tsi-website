@@ -52,7 +52,12 @@
     --glass-bg-pill: rgba(15, 15, 16, 0.78);
     --glass-border-soft: rgba(241, 255, 255, 0.12);
     --glass-border-strong: rgba(255, 255, 255, 0.18);
-  
+
+    /* Theme-aware white-alpha equivalents (light overrides at bottom of file).
+       --surface-hover: row/button hover wash. --surface-chip: pill + badge bg. */
+    --surface-hover: rgba(255, 255, 255, 0.04);
+    --surface-chip: rgba(255, 255, 255, 0.06);
+
     /* Glows */
     --glow-blue: rgba(0, 47, 167, 0.5);
     --glow-cyan: rgba(34, 211, 238, 0.5);
@@ -182,6 +187,8 @@
   --glass-border-strong: rgba(0, 0, 0, 0.18);
   --gray-700: rgba(0, 0, 0, 0.15);
   --gray-800: rgba(0, 0, 0, 0.08);
+  --surface-hover: rgba(0, 0, 0, 0.05);
+  --surface-chip: rgba(0, 0, 0, 0.07);
   --shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.08);
   --shadow-strong: 0 8px 24px rgba(0, 0, 0, 0.12);
 }

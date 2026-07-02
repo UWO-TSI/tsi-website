@@ -207,7 +207,7 @@ export default function BountySubmitModal({
         style={{
           maxWidth: 640,
           maxHeight: "90vh",
-          background: "#0d1b2a",
+          background: "var(--color-bg-navy)",
           border: "1px solid rgba(0, 47, 167, 0.3)",
         }}
         onClick={(e) => e.stopPropagation()}
@@ -217,7 +217,7 @@ export default function BountySubmitModal({
           className="flex items-center justify-between"
           style={{
             padding: "16px 20px",
-            borderBottom: "1px solid rgba(255,255,255,0.06)",
+            borderBottom: "1px solid var(--glass-border-soft)",
           }}
         >
           <div className="min-w-0">
@@ -323,8 +323,8 @@ export default function BountySubmitModal({
                 maxLength={MAX_TEXT}
                 className="w-full rounded-lg text-sm resize-y"
                 style={{
-                  background: "#111827",
-                  border: "1px solid rgba(255,255,255,0.06)",
+                  background: "var(--color-surface)",
+                  border: "1px solid var(--glass-border-soft)",
                   color: "var(--color-text-main)",
                   padding: "10px 12px",
                   minHeight: 120,
@@ -359,8 +359,8 @@ export default function BountySubmitModal({
                   placeholder="https://github.com/your/repo"
                   className="flex-1 rounded-lg text-sm"
                   style={{
-                    background: "#111827",
-                    border: "1px solid rgba(255,255,255,0.06)",
+                    background: "var(--color-surface)",
+                    border: "1px solid var(--glass-border-soft)",
                     color: "var(--color-text-main)",
                     padding: "10px 12px",
                   }}
@@ -485,7 +485,7 @@ export default function BountySubmitModal({
           className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-2"
           style={{
             padding: "12px 20px",
-            borderTop: "1px solid rgba(255,255,255,0.06)",
+            borderTop: "1px solid var(--glass-border-soft)",
           }}
         >
           <button
@@ -583,8 +583,8 @@ function AttachmentRow({
     <div
       className="flex items-center gap-2 rounded-lg text-xs"
       style={{
-        background: "rgba(255,255,255,0.03)",
-        border: "1px solid rgba(255,255,255,0.06)",
+        background: "var(--surface-hover)",
+        border: "1px solid var(--glass-border-soft)",
         padding: "6px 10px",
       }}
     >
@@ -642,8 +642,8 @@ function PastSubmissionRow({ submission }: { submission: BountySubmission }) {
     <div
       className="rounded-lg text-xs"
       style={{
-        background: "rgba(255,255,255,0.02)",
-        border: "1px solid rgba(255,255,255,0.06)",
+        background: "var(--surface-hover)",
+        border: "1px solid var(--glass-border-soft)",
         padding: 10,
       }}
     >

@@ -158,7 +158,7 @@ export default function ProfileView({ profileId, isOwnProfile }: ProfileViewProp
       </div>
 
       {/* Stats */}
-      <div className="flex gap-6 py-6" style={{ borderTop: "1px solid rgba(255, 255, 255, 0.06)" }}>
+      <div className="flex gap-6 py-6" style={{ borderTop: "1px solid var(--glass-border-soft)" }}>
         <div>
           <p className="font-mono uppercase" style={{ fontSize: "12px", color: "var(--color-text-subtle)", letterSpacing: "0.05em", marginBottom: "4px" }}>Level</p>
           <p style={{ fontSize: "24px", fontWeight: 700, color: "var(--color-text-main)" }}>{p.level}</p>
@@ -186,7 +186,7 @@ export default function ProfileView({ profileId, isOwnProfile }: ProfileViewProp
       </div>
 
       {/* Skills */}
-      <div className="py-4" style={{ borderTop: "1px solid rgba(255, 255, 255, 0.06)" }}>
+      <div className="py-4" style={{ borderTop: "1px solid var(--glass-border-soft)" }}>
         <h3 className="font-mono uppercase mb-3" style={{ fontSize: "12px", color: "var(--color-text-subtle)", letterSpacing: "0.05em" }}>Skills</h3>
         {editing ? (
           <input value={editSkills} onChange={(e) => setEditSkills(e.target.value)} placeholder="Comma-separated skills..." className="w-full outline-none"
@@ -203,7 +203,7 @@ export default function ProfileView({ profileId, isOwnProfile }: ProfileViewProp
 
       {/* Social Links */}
       {Object.keys(socialLinks).length > 0 && (
-        <div className="py-4" style={{ borderTop: "1px solid rgba(255, 255, 255, 0.06)" }}>
+        <div className="py-4" style={{ borderTop: "1px solid var(--glass-border-soft)" }}>
           <h3 className="font-mono uppercase mb-3" style={{ fontSize: "12px", color: "var(--color-text-subtle)", letterSpacing: "0.05em" }}>Social Links</h3>
           <div className="flex gap-3 flex-wrap">
             {Object.entries(socialLinks).filter(([, url]) => url).map(([key, url]) => {
@@ -222,7 +222,7 @@ export default function ProfileView({ profileId, isOwnProfile }: ProfileViewProp
       )}
 
       {/* About */}
-      <div className="py-4" style={{ borderTop: "1px solid rgba(255, 255, 255, 0.06)" }}>
+      <div className="py-4" style={{ borderTop: "1px solid var(--glass-border-soft)" }}>
         <h3 className="font-mono uppercase mb-3" style={{ fontSize: "12px", color: "var(--color-text-subtle)", letterSpacing: "0.05em" }}>About</h3>
         <p style={{ fontSize: "16px", color: "var(--color-text-soft)" }}>
           Joined {new Date(p.created_at).toLocaleDateString("en-US", { month: "long", year: "numeric" })}.

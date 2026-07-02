@@ -100,6 +100,16 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-02 — Light-theme token sweep across portal chrome (Wave 18 follow-up, autonomous loop)
+
+David authorized a continuous work loop ("continue reiterating and refining until I tell you to stop"). First item: the light-theme debt flagged in Wave 18.
+
+- New theme-aware tokens in `tokens.css`: `--surface-hover` (row/button hover wash) and `--surface-chip` (pill/badge bg) — dark values match the old literals so dark mode is pixel-identical; light values flip to black-alpha.
+- Swept 15 files (leaderboard, bounty, shop, jobs, npc-memories, settings, oracle panels, BountySubmitModal, GuestbookOverlay, QuestChecklist, ProfileView, MemberCard, Sidebar, ComingSoon, ThemeToggle): `#0d1b2a` → `var(--color-bg-navy)`, `#111827` → `var(--color-surface)`, `#0f0f10` → `var(--color-bg-main)`, white-alpha borders → `var(--glass-border-soft)`, white-alpha backgrounds → the two new tokens. JS hover handlers included (CSSOM accepts `var()`).
+- Excluded: game world (TOD palette independent by design), modal backdrops (`rgba(0,0,0,0.5/0.6)` dims are theme-agnostic), tier-colored accents, oracle quiz gradients.
+- Verified via Playwright: jobs page light mode clean (white cards, dark text, tokenized chips), dark mode pixel-identical. Earlier "dim overlay" on light screenshots was the route-transition fade caught at 2.2s — false alarm, confirmed by DOM overlay audit at 6s.
+- Gates: `tsc` exit 0, lint 75/59 (unchanged), build ✓ 12.6s.
+
 ### 2026-07-02 — Login discoverability + tier-gated Admin sidebar entry (David-tasked, staff feedback)
 
 Staff reported the login is buried in the Students page and admins have no visible path to admin tools. David explicitly tasked both (DropdownNav is marketing-shared in `components/layout/` — normally hands-off, touched under direct instruction).

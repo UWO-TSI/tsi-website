@@ -429,7 +429,7 @@ function SocialField({ icon: Icon, label, value, onChange, placeholder }: {
           style={{
             height: 36,
             padding: "0 10px",
-            background: "rgba(255,255,255,0.03)",
+            background: "var(--surface-hover)",
             border: "1px solid var(--glass-border-soft)",
             borderRadius: 6,
             color: "var(--color-text-main)",

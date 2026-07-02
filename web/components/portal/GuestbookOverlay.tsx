@@ -145,7 +145,7 @@ export default function GuestbookOverlay({ open, onClose }: GuestbookOverlayProp
           zIndex: 60,
           width: "min(560px, 92vw)",
           maxHeight: "82vh",
-          background: "#0d1b2a",
+          background: "var(--color-bg-navy)",
           border: "1px solid rgba(0, 47, 167, 0.3)",
           borderRadius: 16,
           boxShadow: "0 18px 45px rgba(0, 0, 0, 0.6)",
@@ -164,7 +164,7 @@ export default function GuestbookOverlay({ open, onClose }: GuestbookOverlayProp
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            borderBottom: "1px solid rgba(255,255,255,0.08)",
+            borderBottom: "1px solid var(--glass-border-soft)",
             paddingBottom: 10,
           }}
         >
@@ -269,7 +269,7 @@ export default function GuestbookOverlay({ open, onClose }: GuestbookOverlayProp
             maxLength={MAX_LEN}
             style={{
               resize: "none",
-              background: "rgba(255,255,255,0.04)",
+              background: "var(--surface-hover)",
               border: "1px solid rgba(255,255,255,0.12)",
               borderRadius: 8,
               padding: "8px 10px",
@@ -392,7 +392,7 @@ function EntryBlock({ entry }: { entry: GuestbookEntry }) {
   return (
     <div
       style={{
-        background: "rgba(255,255,255,0.04)",
+        background: "var(--surface-hover)",
         border: "1px solid rgba(255,255,255,0.1)",
         borderRadius: 10,
         padding: "8px 10px",
@@ -451,7 +451,7 @@ function tierBg(tier: number): string {
   if (tier === 1) return "rgba(255, 213, 79, 0.18)";
   if (tier === 2) return "rgba(126, 200, 80, 0.18)";
   if (tier === 3) return "rgba(74, 122, 255, 0.18)";
-  return "rgba(255,255,255,0.08)";
+  return "var(--surface-chip)";
 }
 
 function tierColor(tier: number): string {

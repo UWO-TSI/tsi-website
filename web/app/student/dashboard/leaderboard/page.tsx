@@ -176,7 +176,7 @@ export default function LeaderboardPage() {
         {/* Table */}
         <div
           className="rounded-2xl overflow-hidden relative"
-          style={{ background: "#111827", border: "1px solid rgba(255,255,255,0.06)" }}
+          style={{ background: "var(--color-surface)", border: "1px solid var(--glass-border-soft)" }}
         >
           {/* Header Row */}
           <div
@@ -186,7 +186,7 @@ export default function LeaderboardPage() {
               height: 36,
               padding: "0 16px",
               color: "#6b7280",
-              borderBottom: "1px solid rgba(255,255,255,0.08)",
+              borderBottom: "1px solid var(--glass-border-soft)",
             }}
           >
             <span className="text-right pr-2">#</span>
@@ -210,11 +210,11 @@ export default function LeaderboardPage() {
           >
             {loading ? (
               Array.from({ length: 10 }).map((_, i) => (
-                <div key={i} className="animate-pulse" style={{ height: 56, borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                <div key={i} className="animate-pulse" style={{ height: 56, borderBottom: "1px solid var(--glass-border-soft)" }}>
                   <div className="h-full flex items-center px-4 gap-3">
-                    <div className="w-6 h-3 rounded" style={{ background: "rgba(255,255,255,0.06)" }} />
-                    <div className="w-9 h-9 rounded-full" style={{ background: "rgba(255,255,255,0.06)" }} />
-                    <div className="flex-1 h-3 rounded" style={{ background: "rgba(255,255,255,0.06)", maxWidth: 120 }} />
+                    <div className="w-6 h-3 rounded" style={{ background: "var(--surface-chip)" }} />
+                    <div className="w-9 h-9 rounded-full" style={{ background: "var(--surface-chip)" }} />
+                    <div className="flex-1 h-3 rounded" style={{ background: "var(--surface-chip)", maxWidth: 120 }} />
                   </div>
                 </div>
               ))
@@ -295,7 +295,7 @@ function Row({ entry, rank, isOwn, anonymized, pinned, rowRef }: RowProps) {
   // - XP / Level hidden (privacy: don't leak progress)
   const displayName = anonymized ? `Member #${rank}` : entry.display_name ?? "Unknown";
   const avatarInitial = anonymized ? "?" : (entry.display_name ?? "?")[0]?.toUpperCase();
-  const avatarBg = anonymized ? "rgba(255,255,255,0.04)" : tierStyle.bg;
+  const avatarBg = anonymized ? "var(--surface-hover)" : tierStyle.bg;
   const avatarBorder = anonymized ? "#3f3f46" : tierStyle.border;
   const avatarColor = anonymized ? "#6b7280" : tierStyle.color;
   const nameColor = anonymized ? "var(--color-text-muted)" : "var(--color-text-main)";
@@ -313,7 +313,7 @@ function Row({ entry, rank, isOwn, anonymized, pinned, rowRef }: RowProps) {
         height: 56,
         padding: "0 16px",
         gap: 12,
-        borderBottom: pinned ? "none" : "1px solid rgba(255,255,255,0.04)",
+        borderBottom: pinned ? "none" : "1px solid var(--glass-border-soft)",
         background: isOwn ? ownBg : "transparent",
         borderLeft: isOwn ? `3px solid ${OWN_ROW_ACCENT}` : "3px solid transparent",
       }}

@@ -117,7 +117,7 @@ export default function NPCMemoriesPage() {
         <div className="flex items-center gap-3 mb-6">
           <div
             className="w-10 h-10 rounded-xl flex items-center justify-center"
-            style={{ background: "rgba(255, 255, 255, 0.06)" }}
+            style={{ background: "var(--surface-chip)" }}
           >
             <Brain
               className="w-5 h-5"
@@ -152,8 +152,8 @@ export default function NPCMemoriesPage() {
           <div
             className="text-center py-12 rounded-2xl"
             style={{
-              background: "#111827",
-              border: "1px solid rgba(255,255,255,0.06)",
+              background: "var(--color-surface)",
+              border: "1px solid var(--glass-border-soft)",
             }}
           >
             <p className="text-sm font-mono text-[var(--color-text-muted)]">
@@ -164,13 +164,13 @@ export default function NPCMemoriesPage() {
           <div
             className="rounded-2xl overflow-hidden"
             style={{
-              background: "#111827",
-              border: "1px solid rgba(255,255,255,0.06)",
+              background: "var(--color-surface)",
+              border: "1px solid var(--glass-border-soft)",
             }}
           >
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
+                <tr className="border-b" style={{ borderColor: "var(--glass-border-soft)" }}>
                   <Th>NPC</Th>
                   <Th>Interactions</Th>
                   <Th>Last seen</Th>
@@ -182,7 +182,7 @@ export default function NPCMemoriesPage() {
                   <tr
                     key={r.npc_id}
                     className="border-b last:border-b-0"
-                    style={{ borderColor: "rgba(255,255,255,0.04)" }}
+                    style={{ borderColor: "var(--glass-border-soft)" }}
                   >
                     <td className="px-4 py-3 text-[var(--color-text-main)]">
                       {r.npc_name}
@@ -221,8 +221,8 @@ export default function NPCMemoriesPage() {
           <div
             className="rounded-2xl max-w-md w-full"
             style={{
-              background: "#111827",
-              border: "1px solid rgba(255,255,255,0.08)",
+              background: "var(--color-surface)",
+              border: "1px solid var(--glass-border-soft)",
               padding: 24,
             }}
             onClick={(e) => e.stopPropagation()}

@@ -102,7 +102,7 @@ export default function BountyPage() {
         {loading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="rounded-2xl animate-pulse" style={{ background: "#111827", height: 200 }} />
+              <div key={i} className="rounded-2xl animate-pulse" style={{ background: "var(--color-surface)", height: 200 }} />
             ))}
           </div>
         ) : filtered.length === 0 ? (
@@ -131,7 +131,7 @@ export default function BountyPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.6)" }} onClick={() => setSelected(null)}>
           <div
             className="w-full rounded-2xl overflow-y-auto"
-            style={{ maxWidth: 800, maxHeight: "80vh", background: "#0d1b2a", border: "1px solid rgba(0, 47, 167, 0.3)", padding: 24 }}
+            style={{ maxWidth: 800, maxHeight: "80vh", background: "var(--color-bg-navy)", border: "1px solid rgba(0, 47, 167, 0.3)", padding: 24 }}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-4">
@@ -147,7 +147,7 @@ export default function BountyPage() {
 
             <div className="flex flex-wrap gap-2 mb-4">
               {selected.difficulty && (
-                <span className="text-xs font-mono px-2 py-1 rounded" style={{ color: DIFFICULTY_COLORS[selected.difficulty]?.color ?? "#9ca3af", background: "rgba(255,255,255,0.06)" }}>
+                <span className="text-xs font-mono px-2 py-1 rounded" style={{ color: DIFFICULTY_COLORS[selected.difficulty]?.color ?? "#9ca3af", background: "var(--surface-chip)" }}>
                   {DIFFICULTY_COLORS[selected.difficulty]?.label ?? "?"} {selected.difficulty}
                 </span>
               )}
@@ -204,12 +204,12 @@ export default function BountyPage() {
               </button>
             )}
             {!myClaims.has(selected.id) && selected.status === "claimed" && (
-              <div className="text-center text-sm font-medium py-3 rounded-xl" style={{ background: "rgba(255,255,255,0.04)", color: "var(--color-text-muted)" }}>
+              <div className="text-center text-sm font-medium py-3 rounded-xl" style={{ background: "var(--surface-hover)", color: "var(--color-text-muted)" }}>
                 Claimed
               </div>
             )}
             {!myClaims.has(selected.id) && (selected.status === "in_progress" || selected.status === "review") && (
-              <div className="text-center text-sm font-medium py-3 rounded-xl" style={{ background: "rgba(255,255,255,0.04)", color: "var(--color-text-muted)" }}>
+              <div className="text-center text-sm font-medium py-3 rounded-xl" style={{ background: "var(--surface-hover)", color: "var(--color-text-muted)" }}>
                 In progress
               </div>
             )}
@@ -245,7 +245,7 @@ function BountyCard({ bounty, mine, onClick }: { bounty: Bounty; mine?: boolean;
     <button
       onClick={onClick}
       className="text-left rounded-2xl transition-all hover:border-[rgba(0,47,167,0.3)]"
-      style={{ background: "#111827", border: "1px solid rgba(255,255,255,0.06)", padding: 16 }}
+      style={{ background: "var(--color-surface)", border: "1px solid var(--glass-border-soft)", padding: 16 }}
     >
       {/* Title + difficulty */}
       <div className="flex items-start justify-between gap-2 mb-2">
@@ -283,7 +283,7 @@ function BountyCard({ bounty, mine, onClick }: { bounty: Bounty; mine?: boolean;
         const myActive = mine && (bounty.status === "claimed" || bounty.status === "in_progress");
         const myReview = mine && isReview;
 
-        let bg = "rgba(255,255,255,0.04)";
+        let bg = "var(--surface-hover)";
         let color = "var(--color-text-muted)";
         let label: string = bounty.status;
 

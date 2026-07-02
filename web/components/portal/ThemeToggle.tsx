@@ -147,7 +147,7 @@ export default function ThemeToggle() {
                   padding: "0 12px",
                   background: isActive
                     ? "rgba(29, 155, 240, 0.12)"
-                    : "rgba(255, 255, 255, 0.03)",
+                    : "var(--surface-hover)",
                   border: isActive
                     ? "1px solid var(--color-brand-blue, #1d9bf0)"
                     : "1px solid var(--glass-border-soft)",

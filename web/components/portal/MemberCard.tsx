@@ -27,13 +27,13 @@ export default function MemberCard({ member }: MemberCardProps) {
       className="flex items-center cursor-pointer transition-[background] outline-none focus:outline-2 focus:outline-offset-2"
       style={{
         height: "64px", padding: "0 16px", gap: "12px",
-        borderBottom: "1px solid rgba(255, 255, 255, 0.06)",
+        borderBottom: "1px solid var(--glass-border-soft)",
         borderRadius: "8px", background: "transparent",
         outlineColor: "var(--color-brand-blue)",
       }}
       onClick={() => router.push(`/student/dashboard/directory/${member.id}`)}
       onKeyDown={(e) => { if (e.key === "Enter") router.push(`/student/dashboard/directory/${member.id}`); }}
-      onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(255, 255, 255, 0.04)"; }}
+      onMouseEnter={(e) => { e.currentTarget.style.background = "var(--surface-hover)"; }}
       onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
     >
       {/* Avatar */}

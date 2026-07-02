@@ -488,7 +488,7 @@ function QuestPanelContent({
             flexShrink: 0,
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.background = "rgba(255,255,255,0.06)";
+            e.currentTarget.style.background = "var(--surface-chip)";
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.background = "transparent";
@@ -526,7 +526,7 @@ function QuestPanelContent({
             flex: 1,
             height: 4,
             borderRadius: 2,
-            background: "rgba(255,255,255,0.06)",
+            background: "var(--surface-chip)",
             overflow: "hidden",
           }}
         >
@@ -592,7 +592,7 @@ function QuestPanelContent({
                   transition: "background 0.15s ease, border-color 0.15s ease",
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.background = "rgba(255,255,255,0.03)";
+                  e.currentTarget.style.background = "var(--surface-hover)";
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.background = "transparent";

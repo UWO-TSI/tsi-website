@@ -41,7 +41,7 @@ export default function ComingSoon({ title, description }: ComingSoonProps) {
         <div
           className="font-mono text-xs px-3 py-1.5 rounded-full inline-block"
           style={{
-            background: "rgba(255, 255, 255, 0.05)",
+            background: "var(--surface-chip)",
             color: "var(--color-text-subtle)",
           }}
         >

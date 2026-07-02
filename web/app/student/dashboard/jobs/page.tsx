@@ -105,7 +105,7 @@ export default function JobsPage() {
               height: 40,
               paddingLeft: 36,
               paddingRight: 12,
-              background: "#111827",
+              background: "var(--color-surface)",
               border: "1px solid var(--glass-border-soft)",
               color: "var(--color-text-main)",
             }}
@@ -136,10 +136,10 @@ export default function JobsPage() {
         {loading ? (
           <div className="space-y-4">
             {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="rounded-2xl animate-pulse" style={{ background: "#111827", height: 160, padding: 24 }}>
-                <div className="h-3 rounded mb-3" style={{ background: "rgba(255,255,255,0.06)", width: "30%" }} />
-                <div className="h-5 rounded mb-3" style={{ background: "rgba(255,255,255,0.06)", width: "50%" }} />
-                <div className="h-3 rounded" style={{ background: "rgba(255,255,255,0.06)", width: "70%" }} />
+              <div key={i} className="rounded-2xl animate-pulse" style={{ background: "var(--color-surface)", height: 160, padding: 24 }}>
+                <div className="h-3 rounded mb-3" style={{ background: "var(--surface-chip)", width: "30%" }} />
+                <div className="h-5 rounded mb-3" style={{ background: "var(--surface-chip)", width: "50%" }} />
+                <div className="h-3 rounded" style={{ background: "var(--surface-chip)", width: "70%" }} />
               </div>
             ))}
           </div>
@@ -153,12 +153,12 @@ export default function JobsPage() {
         ) : (
           <div className="space-y-4">
             {filtered.map((job) => {
-              const badge = TYPE_BADGE_STYLES[job.type ?? ""] ?? { bg: "rgba(255,255,255,0.06)", color: "var(--color-text-muted)" };
+              const badge = TYPE_BADGE_STYLES[job.type ?? ""] ?? { bg: "var(--surface-chip)", color: "var(--color-text-muted)" };
               return (
                 <div
                   key={job.id}
                   className="rounded-2xl transition-all hover:border-[rgba(0,47,167,0.2)]"
-                  style={{ background: "#111827", border: "1px solid rgba(255,255,255,0.06)", padding: 24 }}
+                  style={{ background: "var(--color-surface)", border: "1px solid var(--glass-border-soft)", padding: 24 }}
                 >
                   <p className="text-sm font-medium mb-1" style={{ color: "var(--color-text-muted)" }}>{job.company_name}</p>
                   <h3 className="text-lg font-bold mb-2" style={{ color: "var(--color-text-main)" }}>{job.role_title}</h3>
@@ -232,7 +232,7 @@ function SubmitJobModal({ onClose, onSubmit }: { onClose: () => void; onSubmit: 
   const inputStyle = {
     height: 40,
     padding: "0 12px",
-    background: "#111827",
+    background: "var(--color-surface)",
     border: "1px solid var(--glass-border-soft)",
     borderRadius: 8,
     color: "var(--color-text-main)",
@@ -245,7 +245,7 @@ function SubmitJobModal({ onClose, onSubmit }: { onClose: () => void; onSubmit: 
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.6)" }} onClick={onClose}>
       <div
         className="w-full rounded-2xl overflow-y-auto"
-        style={{ maxWidth: 560, maxHeight: "80vh", background: "#0d1b2a", border: "1px solid rgba(0, 47, 167, 0.3)", padding: 24 }}
+        style={{ maxWidth: 560, maxHeight: "80vh", background: "var(--color-bg-navy)", border: "1px solid rgba(0, 47, 167, 0.3)", padding: 24 }}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-6">

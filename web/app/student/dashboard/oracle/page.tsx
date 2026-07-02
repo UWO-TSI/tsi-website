@@ -436,7 +436,7 @@ export default function OraclePage() {
               minHeight: 160,
               padding: 24,
               background: "var(--color-surface)",
-              border: "1px solid rgba(255,255,255,0.08)",
+              border: "1px solid var(--glass-border-soft)",
               borderRadius: 16,
               color: "var(--color-text-soft)",
               fontSize: 16,
@@ -471,7 +471,7 @@ export default function OraclePage() {
         >
           <div
             className="w-full max-w-sm rounded-2xl p-6 text-center"
-            style={{ background: "var(--color-surface)", border: "1px solid rgba(255, 255, 255, 0.08)" }}
+            style={{ background: "var(--color-surface)", border: "1px solid var(--glass-border-soft)" }}
             onClick={(e) => e.stopPropagation()}
           >
             <h3 id="oracle-exit-title" className="text-lg font-semibold mb-2" style={{ color: "var(--color-text-main)" }}>

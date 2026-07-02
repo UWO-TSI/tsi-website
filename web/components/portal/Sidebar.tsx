@@ -178,7 +178,7 @@ function NavLink({
           ? "2px solid var(--color-brand-blue)"
           : "2px solid transparent",
         background: active
-          ? "rgba(255, 255, 255, 0.06)"
+          ? "var(--surface-chip)"
           : "transparent",
         color: active
           ? "var(--color-text-main)"
@@ -189,7 +189,7 @@ function NavLink({
       }}
       onMouseEnter={(e) => {
         if (!active) {
-          e.currentTarget.style.background = "rgba(255,255,255,0.04)";
+          e.currentTarget.style.background = "var(--surface-hover)";
           e.currentTarget.style.color = "var(--color-text-soft)";
         }
       }}
@@ -213,7 +213,7 @@ function NavLink({
           style={{
             fontSize: "12px",
             color: "var(--color-text-subtle)",
-            background: "rgba(255, 255, 255, 0.06)",
+            background: "var(--surface-chip)",
             borderRadius: "9999px",
             padding: "1px 6px",
           }}

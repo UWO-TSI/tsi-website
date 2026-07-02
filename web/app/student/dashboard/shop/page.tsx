@@ -109,11 +109,11 @@ export default function ShopPage() {
         {loading ? (
           <div className="grid gap-6" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))" }}>
             {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="rounded-2xl animate-pulse" style={{ background: "#111827" }}>
+              <div key={i} className="rounded-2xl animate-pulse" style={{ background: "var(--color-surface)" }}>
                 <div style={{ aspectRatio: "1", background: "#111113", borderRadius: "16px 16px 0 0" }} />
                 <div style={{ padding: 16 }}>
-                  <div className="h-4 rounded mb-2" style={{ background: "rgba(255,255,255,0.06)", width: "60%" }} />
-                  <div className="h-3 rounded" style={{ background: "rgba(255,255,255,0.06)", width: "40%" }} />
+                  <div className="h-4 rounded mb-2" style={{ background: "var(--surface-chip)", width: "60%" }} />
+                  <div className="h-3 rounded" style={{ background: "var(--surface-chip)", width: "40%" }} />
                 </div>
               </div>
             ))}
@@ -130,7 +130,7 @@ export default function ShopPage() {
                 key={p.id}
                 onClick={() => setSelected(p)}
                 className="text-left rounded-2xl transition-all hover:translate-y-[-2px]"
-                style={{ background: "#111827", border: "1px solid rgba(255,255,255,0.06)", overflow: "hidden" }}
+                style={{ background: "var(--color-surface)", border: "1px solid var(--glass-border-soft)", overflow: "hidden" }}
               >
                 <div style={{ aspectRatio: "1", background: "#111113" }} className="flex items-center justify-center">
                   {p.image_url ? (
@@ -161,7 +161,7 @@ export default function ShopPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.6)" }} onClick={() => setSelected(null)}>
           <div
             className="w-full rounded-2xl overflow-y-auto"
-            style={{ maxWidth: 720, maxHeight: "80vh", background: "#0d1b2a", border: "1px solid rgba(0, 47, 167, 0.3)", padding: 24 }}
+            style={{ maxWidth: 720, maxHeight: "80vh", background: "var(--color-bg-navy)", border: "1px solid rgba(0, 47, 167, 0.3)", padding: 24 }}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex justify-end mb-2">
@@ -191,7 +191,7 @@ export default function ShopPage() {
                 className="w-full rounded-xl text-sm font-semibold transition-all"
                 style={{
                   height: 44,
-                  background: balance >= (selected.price_tc ?? 0) ? "#002fa7" : "rgba(255,255,255,0.04)",
+                  background: balance >= (selected.price_tc ?? 0) ? "#002fa7" : "var(--surface-hover)",
                   color: balance >= (selected.price_tc ?? 0) ? "#f1ffff" : "var(--color-text-muted)",
                   opacity: purchasing ? 0.6 : 1,
                 }}
