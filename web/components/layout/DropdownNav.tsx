@@ -16,6 +16,7 @@ const NAV_ITEMS = [
 ];
 
 const CONTACT = { label: "Contact", href: "mailto:team@tethos.ca" };
+const LOGIN = { label: "Log in", href: "/student/login" };
 
 /* Spring configs */
 const SPRING_SNAPPY = { type: "spring" as const, stiffness: 500, damping: 30, mass: 0.8 };
@@ -243,12 +244,42 @@ export default function DropdownNav() {
                   }}
                 />
 
-                {/* Contact */}
+                {/* Log in — quiet utility link, same muted treatment as Contact */}
                 <motion.div
                   initial={{ opacity: 0, x: -8 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{
                     delay: NAV_ITEMS.length * 0.04 + 0.1,
+                    duration: 0.25,
+                    ease: [0.25, 0.1, 0.25, 1],
+                  }}
+                >
+                  <Link
+                    href={LOGIN.href}
+                    onClick={() => setOpen(false)}
+                    className="group relative flex items-center gap-3 px-5 py-2.5"
+                  >
+                    <div className="w-1 h-1 flex-shrink-0" />
+                    <motion.span
+                      className="text-[13px] font-medium"
+                      style={{
+                        fontFamily: "var(--font-highlight)",
+                        color: "rgba(255,255,255,0.35)",
+                      }}
+                      whileHover={{ color: "rgba(255,255,255,0.7)", x: 3 }}
+                      transition={{ duration: 0.15 }}
+                    >
+                      {LOGIN.label}
+                    </motion.span>
+                  </Link>
+                </motion.div>
+
+                {/* Contact */}
+                <motion.div
+                  initial={{ opacity: 0, x: -8 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{
+                    delay: NAV_ITEMS.length * 0.04 + 0.14,
                     duration: 0.25,
                     ease: [0.25, 0.1, 0.25, 1],
                   }}

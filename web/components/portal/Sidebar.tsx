@@ -11,6 +11,7 @@ import {
   Trophy,
   User,
   Settings,
+  Shield,
   X,
 } from "lucide-react";
 import type { ComponentType } from "react";
@@ -33,6 +34,14 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Profile", href: "/student/dashboard/profile", icon: User },
   { label: "Settings", href: "/student/dashboard/settings", icon: Settings },
 ];
+
+// Tier gate matches the admin hub page itself (userTier > 2 → Access Denied),
+// so nobody sees a link they can't use.
+const ADMIN_ITEM: NavItem = {
+  label: "Admin Tools",
+  href: "/student/dashboard/admin",
+  icon: Shield,
+};
 
 interface SidebarProps {
   onClose?: () => void;
@@ -109,71 +118,109 @@ export default function Sidebar({ onClose }: SidebarProps) {
 
       {/* Navigation */}
       <nav className="flex-1 flex flex-col gap-1 px-2">
-        {NAV_ITEMS.map((item) => {
-          const Icon = item.icon;
-          const active = isActive(item.href);
+        {NAV_ITEMS.map((item) => (
+          <NavLink
+            key={item.href}
+            item={item}
+            active={isActive(item.href)}
+            onClose={onClose}
+          />
+        ))}
 
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={onClose}
-              className="flex items-center gap-3 rounded-lg transition-[background,color]"
+        {/* Admin section — T1/T2 only, matching the admin hub's own gate */}
+        {(profile?.tier ?? 99) <= 2 && (
+          <>
+            <div
+              className="font-mono uppercase tracking-wider"
               style={{
-                height: "40px",
-                padding: "0 12px",
-                paddingLeft: active ? "10px" : "12px",
-                borderLeft: active
-                  ? "2px solid var(--color-brand-blue)"
-                  : "2px solid transparent",
-                background: active
-                  ? "rgba(255, 255, 255, 0.06)"
-                  : "transparent",
-                color: active
-                  ? "var(--color-text-main)"
-                  : "var(--color-text-muted)",
-                borderRadius: "8px",
-                transitionDuration: "0.15s",
-                transitionTimingFunction: "ease",
-              }}
-              onMouseEnter={(e) => {
-                if (!active) {
-                  e.currentTarget.style.background = "rgba(255,255,255,0.04)";
-                  e.currentTarget.style.color = "var(--color-text-soft)";
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!active) {
-                  e.currentTarget.style.background = "transparent";
-                  e.currentTarget.style.color = "var(--color-text-muted)";
-                }
+                fontSize: "10px",
+                color: "var(--color-text-subtle)",
+                padding: "12px 12px 4px",
+                marginTop: "8px",
+                borderTop: "1px solid var(--glass-border-soft)",
               }}
             >
-              <Icon
-                className="shrink-0"
-                style={{ width: "18px", height: "18px" }}
-              />
-              <span className="text-sm flex-1 truncate" style={{ fontWeight: 400 }}>
-                {item.label}
-              </span>
-              {item.comingSoon && (
-                <span
-                  className="font-mono shrink-0"
-                  style={{
-                    fontSize: "12px",
-                    color: "var(--color-text-subtle)",
-                    background: "rgba(255, 255, 255, 0.06)",
-                    borderRadius: "9999px",
-                    padding: "1px 6px",
-                  }}
-                >
-                  Soon
-                </span>
-              )}
-            </Link>
-          );
-        })}
+              Admin
+            </div>
+            <NavLink
+              item={ADMIN_ITEM}
+              active={isActive(ADMIN_ITEM.href)}
+              onClose={onClose}
+            />
+          </>
+        )}
       </nav>
     </aside>
+  );
+}
+
+function NavLink({
+  item,
+  active,
+  onClose,
+}: {
+  item: NavItem;
+  active: boolean;
+  onClose?: () => void;
+}) {
+  const Icon = item.icon;
+
+  return (
+    <Link
+      href={item.href}
+      onClick={onClose}
+      className="flex items-center gap-3 rounded-lg transition-[background,color]"
+      style={{
+        height: "40px",
+        padding: "0 12px",
+        paddingLeft: active ? "10px" : "12px",
+        borderLeft: active
+          ? "2px solid var(--color-brand-blue)"
+          : "2px solid transparent",
+        background: active
+          ? "rgba(255, 255, 255, 0.06)"
+          : "transparent",
+        color: active
+          ? "var(--color-text-main)"
+          : "var(--color-text-muted)",
+        borderRadius: "8px",
+        transitionDuration: "0.15s",
+        transitionTimingFunction: "ease",
+      }}
+      onMouseEnter={(e) => {
+        if (!active) {
+          e.currentTarget.style.background = "rgba(255,255,255,0.04)";
+          e.currentTarget.style.color = "var(--color-text-soft)";
+        }
+      }}
+      onMouseLeave={(e) => {
+        if (!active) {
+          e.currentTarget.style.background = "transparent";
+          e.currentTarget.style.color = "var(--color-text-muted)";
+        }
+      }}
+    >
+      <Icon
+        className="shrink-0"
+        style={{ width: "18px", height: "18px" }}
+      />
+      <span className="text-sm flex-1 truncate" style={{ fontWeight: 400 }}>
+        {item.label}
+      </span>
+      {item.comingSoon && (
+        <span
+          className="font-mono shrink-0"
+          style={{
+            fontSize: "12px",
+            color: "var(--color-text-subtle)",
+            background: "rgba(255, 255, 255, 0.06)",
+            borderRadius: "9999px",
+            padding: "1px 6px",
+          }}
+        >
+          Soon
+        </span>
+      )}
+    </Link>
   );
 }

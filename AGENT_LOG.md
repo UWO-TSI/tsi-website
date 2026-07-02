@@ -100,6 +100,14 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-02 — Login discoverability + tier-gated Admin sidebar entry (David-tasked, staff feedback)
+
+Staff reported the login is buried in the Students page and admins have no visible path to admin tools. David explicitly tasked both (DropdownNav is marketing-shared in `components/layout/` — normally hands-off, touched under direct instruction).
+
+- `DropdownNav.tsx`: new "Log in" entry → `/student/login`, rendered below the divider next to Contact with the same muted treatment (`rgba(255,255,255,0.35)`, brightens on hover). Visible on every site page via the shared nav, deliberately quiet. Contact's stagger delay bumped 0.10 → 0.14 so the reveal order reads top-down.
+- `Sidebar.tsx` (portal): new ADMIN section (10px mono label + top border) with an "Admin Tools" Shield item → `/student/dashboard/admin`, rendered only when `profile.tier <= 2` — same gate the admin hub itself enforces (`userTier > 2` → Access Denied), so nobody sees a link they can't use. David's "t0/t1 admin rights" maps to T1/T2 in the 5-tier schema (no T0 exists). Nav item markup extracted into a `NavLink` sub-component so the admin entry reuses the exact item styling instead of duplicating it.
+- Verified via Playwright with `/api/profile` route-mocked: Admin Tools visible at tier 1, absent at tier 5; dropdown Log in navigates to `/student/login`. `tsc` exit 0, lint 75/59 (= ceiling), build ✓ 12.8s.
+
 ### 2026-07-02 — R3-2 theme toggle was non-functional: CSS never loaded + no apply-on-load
 
 Wave 18's Playwright pass caught that toggling Light changed `data-theme` + localStorage but zero pixels. Two root causes, both mechanical:
