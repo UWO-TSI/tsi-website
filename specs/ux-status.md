@@ -90,29 +90,28 @@
 ## 3. Design Debt Backlog — Prioritized
 
 > **Updated 2026-05-25:** Reframed to community-first hangout (see `CLAUDE.md` design principles). NPCs + ambient life + mobile + presence move ahead of Avatar Creator + Interiors. Tier-1 punch list bumped from "merge blocker" to "post-look-feel polish" — the world-feel sprint comes first.
+>
+> **Updated 2026-07-02:** The sprints between the reframe and now all shipped: Game World Look & Feel + content pipeline (QA Wave 14), Admin Tooling CRUD (Wave 15), LLM-NPC + community loops + action controls + the 2026-06-01 visual/perf burst (Wave 16), Tier-1 Rounds 1+2 (Wave 17), Tier-1 Round 3 + bounty-XP ruling (Wave 18). **The Tier-1 punch list below is CLOSED** — the portal is merge-ready per the Tier-1 definition.
 
-### Current Sprint: Game World Look & Feel (2026-05-25 → ~2026-06-15)
+### ✅ Tier 1: CLOSED 2026-07-02 (QA Wave 18)
 
-Full spec: `specs/sprint-2026-05-game-look-feel.md`. Deliverables:
-1. AI NPC system (6-8 NPCs, 4 personality presets, scripted α tier)
-2. Ambient life particles (butterflies, leaves, birds, fireflies)
-3. Ambient audio (4 time-of-day loops + footstep/click SFX)
-4. Player movement polish (easing, bob, target indicator)
-5. Transition & loading polish
+All 7 punch-list items shipped and QA-verified (Rounds 1+2, Wave 17 PASS), plus the Round-3 follow-ups (quest checklist `ce4f3b7`, theme toggle `13c375a` + fix `633571d`, sky shader `4b27a62`) and the bounty-XP principle-#3 ruling (`5e5372a`), verified in Wave 18.
 
-### Tier 1: Next Sprint — Polish to Merge-Ready
+| # | Issue | Shipped |
+|---|-------|---------|
+| 1 | Settings tabs (Profile/Social/Appearance/Account) | ✅ `8556faf` (R1) |
+| 2 | Settings: sign out button | ✅ `8556faf` (R1) |
+| 3 | Leaderboard: own-row + sticky + half-anonymized policy | ✅ `d2e3c0d` (R2) |
+| 4 | Oracle: Lucide icons | ✅ `1d75189` (R1) |
+| 5 | Oracle: Mage color #6366F1 | ✅ `1d75189` (R1) |
+| 6 | Oracle: exit button with progress save | ✅ `1d75189` (R1) |
+| 7 | Bounty: submit deliverables flow | ✅ `e931e84` (R2) |
 
-7 design-debt items previously labeled "blockers." Now sequenced *after* look-and-feel — the world feeling alive is more important than tabs in settings.
-
-| # | Issue | Spec | Effort |
-|---|-------|------|--------|
-| 1 | Settings page needs tabs (Profile/Social/Appearance/Account) | `ux-settings.md` | Medium |
-| 2 | Settings: add sign out button | `ux-settings.md` §7.4 | Small |
-| 3 | Leaderboard: own-row highlight + sticky + top-half-public / bottom-half-anonymized policy | `ux-leaderboard.md` §4 + CLAUDE.md principle #6 | Medium |
-| 4 | Oracle: Lucide icons instead of emoji | `ux-classes.md` | Small |
-| 5 | Oracle: Mage color → #6366F1 (indigo) | `ux-classes.md` | Small |
-| 6 | Oracle: exit button with progress save | `ux-oracle-v2.md` §7.2 | Small |
-| 7 | Bounty: submit deliverables flow | `ux-bounty.md` §6 | Medium |
+**Open follow-ups out of Wave 18 (not Tier-1 blockers):**
+- **W18-1:** sky-shader sun/moon disc is code-correct but invisible from the shipped camera rig at every hour (polar clamp + fog silhouette vs 0-60° disc arc). Needs a reviewer ruling on fix direction — see `specs/qa.md` Wave 18.
+- Portal-wide light-theme token sweep: pages outside Settings hardcode dark hex values and will look wrong in light mode.
+- Principle-#3 legacy paths: `POST /api/quests/[id]/complete` (self-serve XP+TC, no UI callers) and onboarding's `xp: 50` welcome grant need a David ruling, same class as the bounty XP zeroing.
+- Shop dual pricing (`$CAD` next to TC) lets members derive the conversion rate — David to rule whether that violates the never-reveal principle.
 
 ### Tier 2: Admin Tooling + Community Loops (sprint after Tier 1)
 
@@ -150,11 +149,11 @@ Pushed deeper into the future per design principle #4 (cosmetic > functional, ri
 | 28 | Shop: product variants (size/color selectors) | `ux-shop.md` §5.2 | Medium |
 | 29 | Portfolio auto-build from bounty/project history | New — community-as-credential feature (low priority since David said the portal isn't a career tool) | Medium |
 
-### Removed from backlog (no longer needed)
+### Removed from backlog — later re-scoped and shipped (2026-07-02 reconcile)
 
-- ~~Quest checklist widget (6 quests, 275 XP)~~ — **dropped.** Onboarding quests are opt-in, no XP rewards for online activity (principle #3). Replace with a one-time onboarding TC bonus + badge, handled inline in the existing onboarding flow.
-- ~~XP toast notifications for online actions~~ — **dropped.** XP only comes from IRL event check-in; the toast will live in the QR check-in flow.
-- ~~Dark/light theme toggle~~ — **deferred to Tier 3**. Less important than admin tooling and community loops.
+- ~~Quest checklist widget (6 quests, 275 XP)~~ — dropped 2026-05-25 because of its XP rewards, then **re-scoped and shipped as R3-1** (`ce4f3b7`): quests are signposts only, zero online rewards, opt-in with a Settings mute toggle (principle #3 + #7 compliant). The original XP-granting design stays dead.
+- ~~XP toast notifications for online actions~~ — **still dropped.** XP only comes from IRL event check-in; the toast will live in the QR check-in flow.
+- ~~Dark/light theme toggle~~ — deferred 2026-05-25, then **re-prioritized and shipped as R3-2** (`13c375a` + fix `633571d`). Menu chrome only; the game world keeps its TOD palette.
 
 ---
 

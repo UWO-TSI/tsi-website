@@ -1,7 +1,90 @@
 # QA Report
 
 > Owner: QA agent. All agents check this for bugs in their area.
-> Last updated: 2026-06-02 (Wave 17)
+> Last updated: 2026-07-02 (Wave 18)
+
+---
+
+## Wave 18 — 2026-07-02 Round 3 Tier-1 Verification + Bounty XP Ruling — Tier-1 CLOSED
+
+End-of-round gate covering the 4 commits since Wave 17 (`e931e84`): quest checklist (`ce4f3b7`, R3-1), theme toggle (`13c375a`, R3-2), sky shader sun/moon (`4b27a62`, R3-3), bounty XP zeroing (`5e5372a`, David's principle-#3 ruling). Two `[build]` fix commits landed **during** the wave under David's fix-first-then-verify ruling (2026-07-01): `c4c8f18` (R3-1 mute toggle gap) and `633571d` (R3-2 non-functional theme). Combined build+qa agent this wave.
+
+### Environment
+
+- Branch: `main`
+- HEAD at wave start: `5e5372a` · HEAD at wave end: `633571d` (both in-wave commits are QA-authored fixes, verified below)
+- Working tree clean apart from the usual untracked local artifacts (`.claude/`, `web/supabase/.temp/`)
+- First full build+lint of `5e5372a` and descendants — the 2026-07-01 build session was interrupted before lint/build ran
+
+### Verdict: **PASS-with-notes** — Tier-1 punch list CLOSED
+
+All four gates green, all 4 deliverables verified (2 after in-wave fixes), migrations untouched, runtime smoke clean. One functional finding stays open (R3-3 disc invisible in practice, below) plus flagged debt items. None block Tier-1 closure: the R3-3 shader is structurally correct and harmless, the debt items predate this round.
+
+### Build / Types / Lint / Tests
+
+- `npm run build` → ✓ Compiled successfully in 11.3s, **126 routes** (= Wave 17; R3 adds no routes). Same warning set as Waves 16-17.
+- `npx tsc --noEmit` → exit 0, clean.
+- `npm run lint` → **134 problems (75 errors / 59 warnings)** — **−4 errors vs Wave 17 (79/59)**. The R3-3 GameWorld rework cleared all 4 pre-existing `GameWorld.tsx` errors (3× `react-hooks/use-memo`, 1× `react-hooks/refs`); R3-2 introduced 1 new error (`ThemeToggle.tsx:63` `react-hooks/set-state-in-effect`); R3-1's unused-import warning was cleaned in `c4c8f18`. **New ceiling: 75/59.**
+- `npm test` → **32/32** (chatHelpers suite), unchanged.
+
+### Deliverable verification
+
+| # | Deliverable | Verdict | Notes |
+|---|-------------|---------|-------|
+| R3-1 | Quest checklist | ✅ PASS (after in-wave fix `c4c8f18`) | 672-line `QuestChecklist.tsx`, wired in `dashboard/layout.tsx:145`, collapsed-icon default, mobile bottom-sheet, `tsi.quests.*` localStorage. **Zero reward grants** (no fetch/award/POST in the component — principle #3 clean). **Found:** spec'd Settings → Appearance "Show onboarding quests" mute toggle didn't exist; `useQuestsMuted` setter had no consumer, so the widget could never be muted (principle #7 violation). Fixed in-wave, visually verified in both themes. |
+| R3-2 | Theme toggle | ✅ PASS (after in-wave fix `633571d`) | Tri-state radio, `tsi.theme` persistence, `data-theme` on `<html>`, system detection, correct a11y. **Found: shipped toggle changed state but zero pixels.** (a) The `[data-theme="light"]` overrides lived in `game-tokens.css`, which is imported **nowhere** — live tokens come from `styles/tokens.css`; (b) `applyTheme` only ran inside `ThemeToggle` (mounts only on Settings → Appearance), so a saved preference reverted on every other page load. Fixed in-wave (block moved to `tokens.css`, new `ThemeInit` in dashboard layout, settings page hardcoded colors tokenized). Light + dark visually verified via Playwright; `data-theme=light` confirmed applied on fresh dashboard load. **Open debt:** other portal pages hardcode dark hex values and will look wrong in light mode — needs a portal-wide token-hygiene sweep (follow-up round). |
+| R3-3 | Sky shader sun/moon | 🟡 Structurally sound, **functionally invisible** (open finding) | Disc lives in the sky-dome fragment shader as spec'd (not a billboard — the P12/P17 failure mode is fixed), spec colors `#FFFAE0`/`#E8E8FF`, wall-clock drive. CPU side verified at runtime via `__THREE_DEVTOOLS__` scene hook: `sunBody`/`moonBody` uniforms carry correct direction + visibility every frame. **But no disc is visible from the shipped camera rig at any hour** — see finding W18-1 below. |
+| Ruling | Bounty XP zeroed | ✅ PASS | `review/route.ts` selects `pay_tc` only and passes `xp: 0` with a comment citing the ruling; `+N XP` span removed from bounty detail. Repo-wide sweep confirms no other code path grants XP from `bounties.xp_reward`; inert `xp_reward` create/edit fields have no award-side readers. |
+
+### Finding W18-1: R3-3 disc unreachable by the player camera (open, needs reviewer ruling)
+
+The deliverable's own DoD ("Playwright screenshot at noon and midnight, confirm visible disc") cannot pass. Diagnosis, all steps reproducible:
+
+- **Shader + uniforms verified correct.** Runtime scene hook confirmed `sunBody = (-0.750, 0.500, 0.433, 1.000)` at stubbed 8:00 (exactly the computed direction, visibility 1), disc-radius uniforms correct, fragment source contains the disc math, material compiles (the TOD gradient renders from the same shader).
+- **The visible "sky" is mostly not the sky dome.** A hemisphere-probe shader swap (red = dome above world y=0, blue = below) showed the fog-colored far terrain masquerades as sky; true upper-dome pixels occupy only a thin band at the very top of the default frame (~6-8° of elevation).
+- **Geometry excludes the disc at every hour.** Camera polar clamp is 60-110°: the rig always looks down at the player (or degenerately up from under the terrain past ~95°). Practical upper-sky reach: ~8-16° of dome elevation. The disc arcs 0→60° elevation; it only crosses the reachable band near sunrise/sunset, where (a) camera-offset parallax (dome radius 100, camera ~25u from origin at y≈14) pushes its apparent position down into the fog-terrain silhouette, and (b) the pale disc color sits against the near-white horizon gradient. Empirically tested at 7:12, 7:30, 8:00, 9:00, noon, 16:00, 17:15 (sun) and 19:00 (moon) across default / eye-level / max-pitch camera poses with matched azimuths: no disc. A diagnostic 17°-radius disc was also not visible in the reachable band.
+- **Recommended follow-up options (reviewer/David to pick):** bias the elevation curve lower (cap ~15-20° so the disc rides the visible band), scale up the disc + brighten against the horizon gradient, reduce the fog-terrain silhouette, or widen the camera pitch range. Code is otherwise healthy — this is visual tuning, not a defect in the shader integration.
+
+### Principle sweeps
+
+- **Principle #3 (XP = IRL only, TC = money-value only) — two pre-existing violations found outside this round's scope, flagged for David:**
+  1. `POST /api/quests/[id]/complete` (old pre-pivot quest system, bible §17) grants `xp_reward` + `tc_reward` to any authenticated user self-serve. **No UI calls it** (repo-wide grep) but the endpoint is live. Recommend zeroing/removing in a follow-up ruling — same class as the bounty XP path David already ruled on.
+  2. `POST /api/onboarding` final step grants `coins: 100, xp: 50`. The TC bonus was explicitly sanctioned (ux-status 2026-05-25 note); the **50 XP grant contradicts XP-is-IRL-only**.
+  - `POST /api/achievements/[id]/award` is T1-T3 gated → OK under "special admin grants."
+- **TC ↔ CAD:** member bounty page clean; admin bounties page shows `$N CAD` (admin-only surface, needed for pricing — OK). **Flag:** the shop page renders `$price_cad` and `price_tc` side by side ("$X or Y TSI") — dual pricing lets any member derive the conversion rate. Whether implied-ratio counts as "revealing" is David's call.
+
+### Migration sanity
+
+014-022 all still have exactly one creation commit, zero modifications (`git log --diff-filter=M` empty for all 9). **Per David's 2026-07-01 ruling, 016-022 are ON HOLD — do not apply to remote Supabase** (portal is pre-launch, no real users). This supersedes the "queued for David's remote apply" wording in Waves 16-17 and the 2026-06-01 reviewer notes.
+
+### Runtime smoke (dev server on port 3050, started + torn down by QA)
+
+| URL | Code | Expected | Pass |
+|-----|------|----------|------|
+| `GET /` | 200 | 200 | ✅ |
+| `GET /student/dashboard{,/settings,/oracle,/leaderboard,/bounty}` | 307 ×5 | 307 (auth gate) | ✅ |
+| `GET /api/bounties` (unauth) | 401 | 401 | ✅ |
+| `PATCH /api/bounties/{id}/review` (unauth) | 401 | 401 | ✅ |
+| `GET /api/quests/{id}/complete` | 405 | 405 (POST-only) | ✅ |
+
+### Visual pass methodology (first wave with one)
+
+Wall-clock-driven shaders were tested by stubbing `window.Date` via Playwright init script (TOD badge, sky gradient, and lamp states all respond correctly — dawn/day/dusk/night palettes verified in passing). Theme verified by toggling and reloading with `.env.local` temporarily renamed so the middleware fallback allows unauthenticated page loads (Wave 13's documented technique; env restored after). Screenshots are session artifacts, not committed.
+
+### Regression delta vs Wave 17
+
+| Check | Wave 17 | Wave 18 | Delta |
+|-------|---------|---------|-------|
+| Build | PASS (126 routes, 11.5s) | PASS (126 routes, 11.3s) | — |
+| `tsc --noEmit` | Clean | Clean | — |
+| Lint errors | 79 | **75** | **−4** ✓ |
+| Lint warnings | 59 | 59 | — |
+| Vitest | 32 passed | 32 passed | — |
+| Migrations applied | none (016-022 queued) | none (016-022 **ON HOLD**) | ruling change |
+
+### Sprint readiness
+
+**Tier-1 punch list is CLOSED** (items 1-7 via Rounds 1+2 / Wave 17; R3-1/2/3 + bounty XP ruling via this wave). `specs/ux-status.md` updated. Open follow-ups carried forward: W18-1 sky-disc visibility (reviewer ruling), portal-wide light-theme token sweep, principle-#3 legacy reward paths (quests API + onboarding XP), shop dual-pricing question. Next gates per sprint spec Round 4+: push to `origin/main` (authorized, done this wave), migrations stay on hold, Nano Banana sprite gen, audio content drop.
 
 ---
 

@@ -351,6 +351,19 @@ Verification: `tsc --noEmit` clean, `npm run lint` 74 errors / 56 warnings (= Wa
 
 *(append your entries below — log waves continue from Wave 11 in `specs/qa.md`)*
 
+### 2026-07-02 — Wave 18: Round 3 verification + bounty XP ruling — **PASS-with-notes, Tier-1 CLOSED**
+
+- HEAD `5e5372a` at start; two QA-authored `[build]` fixes landed in-wave per David's fix-first ruling (`c4c8f18` quest mute toggle, `633571d` theme actually applying). HEAD `633571d` at end. 4 commits covered: `ce4f3b7` R3-1, `13c375a` R3-2, `4b27a62` R3-3, `5e5372a` bounty XP.
+- Build: **126 routes, 11.3s** (= Wave 17, R3 adds no routes). `tsc --noEmit` exit 0. Tests **32/32**.
+- Lint: **75 errors / 59 warnings** — **−4 vs Wave 17 (79/59)**. R3-3's GameWorld rework cleared that file's 4 pre-existing errors; R3-2 added 1 (`ThemeToggle.tsx:63` set-state-in-effect). **New ceiling: 75/59.**
+- **R3-1 PASS after fix:** widget + layout wiring + zero reward grants all clean, but the spec'd Settings mute toggle didn't exist (`useQuestsMuted` setter had no consumer — widget could never be muted, principle #7). Fixed, visually verified.
+- **R3-2 PASS after fix:** toggle state machine was correct but changed zero pixels — light overrides lived in `game-tokens.css` (imported nowhere) and nothing applied the stored theme outside the Settings page. Fixed (block moved to `tokens.css`, `ThemeInit` in dashboard layout, settings colors tokenized). Light/dark verified via Playwright. Portal-wide hardcoded-color sweep flagged as follow-up.
+- **R3-3 open finding (W18-1):** disc is in the sky fragment shader with correct uniforms (runtime-verified via scene hook + clock stubbing), but **invisible from the shipped camera rig at every hour** — polar clamp 60-110° + fog-terrain silhouette leave only ~8-16° of reachable dome elevation, and the 0-60° disc arc only crosses it at sunrise/sunset where parallax pushes it into the fog band. Needs a reviewer ruling on fix direction (lower elevation cap / bigger brighter disc / thinner fog / wider pitch). Full diagnostic in `specs/qa.md` W18-1.
+- **Bounty XP zeroing verified** (xp: 0, pay_tc-only select, UI span gone, no other xp_reward award path).
+- **Principle sweeps:** two pre-existing #3 violations flagged for David — `POST /api/quests/[id]/complete` (self-serve XP+TC, no UI callers but live) and onboarding's `xp: 50` welcome grant (TC 100 was sanctioned, the XP was not). Shop's side-by-side `$CAD / TC` pricing lets members derive the conversion rate — David's call whether that counts as revealing. Achievements award route is T1-T3 gated, OK.
+- Migrations 014-022 unmodified; **ON HOLD per David 2026-07-01** (supersedes "queued for apply" in earlier waves). Runtime smoke all expected codes. First wave with a visual pass (Date-stub methodology documented in the report).
+- `specs/ux-status.md` updated: **Tier-1 punch list CLOSED.** Full report: `specs/qa.md` Wave 18.
+
 ### 2026-06-02 — Wave 17: Round 1 + Round 2 Tier-1 verification — **PASS**
 
 - HEAD `e931e84` (no concurrent commits during the wave; three R3 build agents authorized but no race observed). 5 commits covered: `8556faf` settings tabs, `0d311cd` sprint spec docs, `d2e3c0d` leaderboard sticky+anon, `1d75189` oracle Lucide+exit, `e931e84` bounty submit flow.
