@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useCallback, useSyncExternalStore } from "react";
 import { Sun, Moon, Monitor } from "lucide-react";
 
 // ─── ThemeToggle (R3-2) ─────────────────────────────────────────────────────
@@ -45,6 +45,39 @@ function readStoredPref(): ThemePref | null {
   }
 }
 
+// useSyncExternalStore plumbing — mirrors useQuestsMuted / useGhostReplaySetting.
+// Avoids the setState-on-mount effect (react-hooks/set-state-in-effect) the
+// previous useState + useEffect version tripped.
+type Listener = () => void;
+const prefListeners = new Set<Listener>();
+
+function subscribePref(cb: Listener): () => void {
+  prefListeners.add(cb);
+  const onStorage = (e: StorageEvent) => {
+    if (e.key === STORAGE_KEY) cb();
+  };
+  if (typeof window !== "undefined") {
+    window.addEventListener("storage", onStorage);
+  }
+  return () => {
+    prefListeners.delete(cb);
+    if (typeof window !== "undefined") {
+      window.removeEventListener("storage", onStorage);
+    }
+  };
+}
+
+function getPrefSnapshot(): ThemePref {
+  return readStoredPref() ?? "system";
+}
+
+function getPrefServerSnapshot(): ThemePref {
+  // SSR + first client paint render the "dark" default; the store snapshot
+  // takes over right after hydration (this is what the old `mounted` flag
+  // faked with a setState-in-effect).
+  return "dark";
+}
+
 const OPTIONS: { value: ThemePref; label: string; icon: typeof Sun }[] = [
   { value: "light", label: "Light", icon: Sun },
   { value: "dark", label: "Dark", icon: Moon },
@@ -65,24 +98,16 @@ export function ThemeInit() {
 }
 
 export default function ThemeToggle() {
-  // Initial render uses "dark" so SSR + first paint match the current default.
-  // Real preference is read on mount.
-  const [pref, setPref] = useState<ThemePref>("dark");
-  const [mounted, setMounted] = useState(false);
+  // SSR renders the "dark" default; the localStorage-backed snapshot takes
+  // over after hydration. No mount-time setState needed.
+  const pref = useSyncExternalStore(subscribePref, getPrefSnapshot, getPrefServerSnapshot);
 
+  // Apply on mount + whenever pref changes (external writes included).
+  // ThemeInit covers other pages; this keeps the settings page in sync when
+  // the value changes in another tab.
   useEffect(() => {
-    const stored = readStoredPref();
-    if (stored) {
-      setPref(stored);
-      applyTheme(stored);
-    } else {
-      // First load: pick from system, but don't persist — user hasn't chosen.
-      const systemPick: ThemePref = "system";
-      setPref(systemPick);
-      applyTheme(systemPick);
-    }
-    setMounted(true);
-  }, []);
+    applyTheme(pref);
+  }, [pref]);
 
   // Re-resolve on OS-level change when user is on "system".
   useEffect(() => {
@@ -101,13 +126,13 @@ export default function ThemeToggle() {
   }, [pref]);
 
   const choose = useCallback((next: ThemePref) => {
-    setPref(next);
-    applyTheme(next);
     try {
       window.localStorage.setItem(STORAGE_KEY, next);
     } catch {
       /* ignore */
     }
+    applyTheme(next);
+    for (const l of prefListeners) l();
   }, []);
 
   return (
@@ -131,7 +156,7 @@ export default function ThemeToggle() {
           }}
         >
           {OPTIONS.map(({ value, label, icon: Icon }) => {
-            const isActive = mounted && pref === value;
+            const isActive = pref === value;
             return (
               <button
                 key={value}
