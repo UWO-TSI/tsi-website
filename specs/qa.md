@@ -1,7 +1,39 @@
 # QA Report
 
 > Owner: QA agent. All agents check this for bugs in their area.
-> Last updated: 2026-07-02 (Wave 18)
+> Last updated: 2026-07-02 (Wave 19)
+
+---
+
+## Wave 19 — 2026-07-02 Autonomous Loop Batch Verification
+
+Combined build+qa loop authorized by David ("continue reiterating and refining until I tell you to stop"). Covers 6 commits after Wave 18's closeout (`6aaf440`): nav login + admin sidebar (`c871f15`, David-tasked), light-theme sweep (`87e87fb`), principle-#3 enforcement (`222bed5`), W18-1 sky fix (`5c636be`), middleware fail-open (`54a0ca0`), ThemeToggle lint rework (`e339832`). **All commits local-only** — David is holding push pending his nav review.
+
+### Verdict: **PASS**
+
+### Gates
+
+- Build ✓ 10-12s, 97/97 static pages, no prerender errors (two transient `/admin/recruit` prerender failures during the loop were both my own renamed `.env.local`, clean after restore).
+- `tsc --noEmit` exit 0 throughout (checked after every commit).
+- Lint **74 errors / 59 warnings** — **−1 error vs Wave 18 (75/59). New ceiling: 74/59.** The fix was real (ThemeToggle → `useSyncExternalStore`), not a suppression.
+- Tests 32/32.
+
+### What was verified per commit
+
+1. **Nav (`c871f15`):** dropdown "Log in" muted below the divider, navigates to `/student/login`; sidebar Admin Tools visible with mocked tier-1 profile, absent at tier 5 (route-mocked `/api/profile`).
+2. **Light theme (`87e87fb`):** jobs page pixel-checked in light (white cards, dark text, tokenized chips) and dark (unchanged vs pre-sweep). ~85 hardcoded values across 15 files → tokens; two new tokens `--surface-hover` / `--surface-chip` with dark values matching the old literals.
+3. **Principle #3 (`222bed5`):** quest-complete route grants nothing (status-only, `rewards: null`), onboarding keeps 100 TC / drops 50 XP. Comments cite the ruling. **Needs David's formal sign-off — extends his bounty ruling to paths he flagged but didn't individually rule on.**
+4. **Sky (`5c636be`):** 10:00 sun and 21:00 moon both visually confirmed at look-around camera poses (right-drag). Measured constraint documented: the default top-down pose can never frame the sky (top of frame ≈ −1° camera-relative elevation, probed with a colormap shader) — putting the sun in the default frame requires a default-framing change, David's call.
+5. **Middleware (`54a0ca0`):** with a 60s hang injected into `updateSession`, `/student/dashboard` answered 200 in 4.08s (fail-open race); injection reverted. No-cookie requests short-circuit in ~0.05s (no network), hard connect failures hit the existing catch in ~1.4s. **Shared with live recruitment — David eyeballs before push.**
+6. **ThemeToggle rework (`e339832`):** functional end-to-end in a clean browser context — click Light → stored + applied, persists across page navigation via ThemeInit, aria-checked follows. (First test run showed a scary storage reversion; root cause was my own accumulated Playwright init scripts re-running per navigation, not the app. Noted as a testing-methodology gotcha: reset the browser context between theme tests.)
+
+### Deferred / open
+
+- Push to origin: **blocked on David's nav review** (his explicit hold). 7 local commits queued.
+- Shop dual-pricing (`$CAD` beside TC) still awaits David's ruling.
+- Default-camera framing (sun visible in default pose) — David's design call.
+- Portal light-mode long tail: pages not in the 15-file sweep may still have stragglers; the tokens now exist so fixes are one-liners.
+- Migrations 014-022 remain unmodified and ON HOLD.
 
 ---
 

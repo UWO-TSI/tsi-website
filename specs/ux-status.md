@@ -107,11 +107,12 @@ All 7 punch-list items shipped and QA-verified (Rounds 1+2, Wave 17 PASS), plus 
 | 6 | Oracle: exit button with progress save | ✅ `1d75189` (R1) |
 | 7 | Bounty: submit deliverables flow | ✅ `e931e84` (R2) |
 
-**Open follow-ups out of Wave 18 (not Tier-1 blockers):**
-- **W18-1:** sky-shader sun/moon disc is code-correct but invisible from the shipped camera rig at every hour (polar clamp + fog silhouette vs 0-60° disc arc). Needs a reviewer ruling on fix direction — see `specs/qa.md` Wave 18.
-- Portal-wide light-theme token sweep: pages outside Settings hardcode dark hex values and will look wrong in light mode.
-- Principle-#3 legacy paths: `POST /api/quests/[id]/complete` (self-serve XP+TC, no UI callers) and onboarding's `xp: 50` welcome grant need a David ruling, same class as the bounty XP zeroing.
-- Shop dual pricing (`$CAD` next to TC) lets members derive the conversion rate — David to rule whether that violates the never-reveal principle.
+**Open follow-ups out of Wave 18 — status after the 2026-07-02 autonomous loop (Wave 19):**
+- ~~**W18-1** sky disc invisible~~ — **fixed** (`5c636be`): camera-relative shader test + low 3-8° arc + 2x size; sun/moon verified in-game at look-around poses. Remaining design call for David: the default top-down pose can never frame the sky (measured); putting the sun in the default frame means changing the default camera framing.
+- ~~Portal-wide light-theme token sweep~~ — **done** (`87e87fb`): 15 files, new `--surface-hover`/`--surface-chip` tokens, verified light + dark. Long-tail stragglers on unswept pages are one-line fixes now.
+- ~~Principle-#3 legacy paths~~ — **enforced** (`222bed5`) per David's standing ruling: quest completion is status-only, onboarding keeps 100 TC and drops the 50 XP. Awaiting David's formal sign-off (easy revert if he wants onboarding XP back).
+- Shop dual pricing (`$CAD` next to TC) — still awaits David's ruling.
+- New (from today's Supabase outage): middleware 4s fail-open (`54a0ca0`) — shared recruitment infra, David eyeballs before push.
 
 ### Tier 2: Admin Tooling + Community Loops (sprint after Tier 1)
 

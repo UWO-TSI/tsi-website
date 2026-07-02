@@ -403,6 +403,13 @@ Verification: `tsc --noEmit` clean, `npm run lint` 74 errors / 56 warnings (= Wa
 
 *(append your entries below — log waves continue from Wave 11 in `specs/qa.md`)*
 
+### 2026-07-02 — Wave 19: autonomous-loop batch — **PASS**
+
+- 6 commits verified (nav login/admin sidebar, light-theme sweep, principle-#3 enforcement, W18-1 sky fix, middleware fail-open, ThemeToggle rework). All gates green; lint **74/59, new ceiling** (−1 real fix). All commits **local-only** pending David's nav review; push blocked on him.
+- Highlights: sun + moon now visually confirmed in-game (look-around poses; default pose can never frame sky — measured, David's design call); middleware answers 200 in 4.08s with auth fully hung (was 504 at 25s in today's outage); light theme functional across the 15 swept files; theme prefs persist across pages.
+- Needs David sign-off: principle-#3 extension (quests + onboarding XP), middleware change (shared recruitment infra), push.
+- Full report: `specs/qa.md` Wave 19.
+
 ### 2026-07-02 — Wave 18: Round 3 verification + bounty XP ruling — **PASS-with-notes, Tier-1 CLOSED**
 
 - HEAD `5e5372a` at start; two QA-authored `[build]` fixes landed in-wave per David's fix-first ruling (`c4c8f18` quest mute toggle, `633571d` theme actually applying). HEAD `633571d` at end. 4 commits covered: `ce4f3b7` R3-1, `13c375a` R3-2, `4b27a62` R3-3, `5e5372a` bounty XP.
