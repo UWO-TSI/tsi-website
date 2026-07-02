@@ -100,6 +100,14 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-02 — Bounty submission review surface (Round 4+ queue item)
+
+`admin/bounties/page.tsx` now has a Postings | Submissions view switch. The existing page only approved bounty *postings*; deliverable review had no UI (Wave 17 flagged it as build-D's deferred admin half).
+
+- New `SubmissionsReview` component (same file, same visual language): pending/all filter, rows show bounty title + author + date + TC payout, full submission text, attachment links, status pill. Pending rows get an optional reviewer-notes input + Approve-and-pay-TC / Request revision / Reject buttons.
+- Wired to the existing T1-T3-gated `PATCH /api/bounties/[id]/review` (`submission_id`, `status`, `reviewer_notes`) — the endpoint whose payout path was zeroed to TC-only in `5e5372a`. No new API, no migration; `bounty_submissions` SELECT is already open to authenticated users (006) and middleware gates the route T1-T3.
+- Verified structurally + build (route compiles, tsc clean, lint 74/59 = ceiling). Not runtime-tested against real submissions — the only DB is live prod and I don't write test rows there; first real submission will exercise it, or David can seed one locally.
+
 ### 2026-07-02 — Middleware fail-open deadline (response to today's Supabase outage)
 
 During the 2026-07-02 Supabase incident (project DNS gone), `updateSession`'s `supabase.auth.getUser()` retried the dead endpoint until Vercel killed the invocation at 25s — every matched route 504'd for users with session cookies (22 `ENOTFOUND` + 3 timeout kills in the Vercel error log). Fix in `web/middleware.ts` only; the shared `lib/supabase/middleware.ts` session logic is untouched:
