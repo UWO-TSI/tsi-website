@@ -100,6 +100,15 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-02 — Middleware fail-open deadline (response to today's Supabase outage)
+
+During the 2026-07-02 Supabase incident (project DNS gone), `updateSession`'s `supabase.auth.getUser()` retried the dead endpoint until Vercel killed the invocation at 25s — every matched route 504'd for users with session cookies (22 `ENOTFOUND` + 3 timeout kills in the Vercel error log). Fix in `web/middleware.ts` only; the shared `lib/supabase/middleware.ts` session logic is untouched:
+
+- `Promise.race` between `updateSession(request)` and a 4s fail-open that resolves `NextResponse.next({ request })`. Timer cleared in `finally`.
+- Fail-OPEN matches the file's existing missing-env-vars degradation path: pages serve without a session, data stays behind RLS + per-route API auth, only middleware redirects are skipped during an outage.
+- Verified: with an artificial 60s hang injected into `updateSession`, `/student/dashboard` answered **200 in 4.08s** (injection reverted). Also confirmed the no-cookie path short-circuits without network (0.05s) and hard connection failures hit the existing catch (1.4s) — the deadline only matters for the hanging-retry case that burned prod today.
+- **Touches shared recruitment infra — David should eyeball before this ships.** Commits are local-only this loop per his nav-review hold.
+
 ### 2026-07-02 — W18-1 resolved: sun/moon disc visible in-game (camera-relative + low arc + 2x size)
 
 Three changes to `GameWorld.tsx`, verified with clock-stubbed Playwright screenshots:
