@@ -99,10 +99,13 @@ const _tc = new THREE.Color();
 // R3-3 sun/moon disc colors (spec: bright #FFFAE0 sun, cool #E8E8FF moon).
 const SUN_COLOR = new THREE.Color("#FFFAE0");
 const MOON_COLOR = new THREE.Color("#E8E8FF");
-// Disc angular radius. ~0.05 of viewport diameter at fov 58° ≈ ~2.9° diameter
-// → ~1.45° radius → ~0.025 rad. We store cos(radius) in the uniform so the
-// fragment shader can test with a single dot product instead of acos().
-const DISC_ANGULAR_RADIUS_RAD = 0.026;
+// Disc angular radius. Wave 18 (W18-1) found the original 1.5° disc was
+// unreachable: the camera rig (polar 60-110°) + fog-terrain silhouette leave
+// only ~8-16° of visible dome elevation from the default pose, and a small
+// pale disc washed into the horizon gradient. ~3.2° radius reads as a proper
+// stylized PS1 sun. cos(radius) stored so the fragment shader tests with a
+// single dot product instead of acos().
+const DISC_ANGULAR_RADIUS_RAD = 0.055;
 const DISC_COS_RADIUS = Math.cos(DISC_ANGULAR_RADIUS_RAD);
 // Soft edge half-width in cos-space so the disc has a 1-pixel-ish AA fade
 // without bleeding into the fog. Tuned by eye against the gradient.
@@ -128,7 +131,13 @@ function computeSunMoonDirs(hour: number): { sunDir: THREE.Vector3; moonDir: THR
   // antipode (180° offset) so when the sun sets the moon rises.
   const s = (hour - 6) / 12; // 6→0, 12→0.5, 18→1
   const azimuthDeg = -90 + s * 180; // east (-90) → south (0) → west (+90)
-  const elevationDeg = Math.sin(s * Math.PI) * 60; // 0° at horizon, peaks 60° at noon
+  // Elevation rides a low 5-13° band (was 0-60°). W18-1: the camera rig is
+  // pitched down at the player and only a thin sky sliver above the fog line
+  // is ever in frame, so a high sun was invisible every hour of the day. The
+  // floor keeps the disc above the fog-terrain silhouette at dawn/dusk; the
+  // 13° peak keeps noon inside the visible band. Reads as a stylized
+  // low-hanging PS1 sun arcing east → south → west.
+  const elevationDeg = 3 + Math.sin(s * Math.PI) * 5;
   const az = (azimuthDeg * Math.PI) / 180;
   const el = (elevationDeg * Math.PI) / 180;
   // World axes: +X east, +Y up, -Z south (because spec puts Oracle Temple at +Z
@@ -145,7 +154,7 @@ function computeSunMoonDirs(hour: number): { sunDir: THREE.Vector3; moonDir: THR
   // the horizon at south; moon is high above the south.
   const ns = (((hour + 12) % 24) - 6) / 12; // moon equivalent of s
   const mAz = (-90 + ns * 180) * Math.PI / 180;
-  const mEl = Math.sin(ns * Math.PI) * 60 * Math.PI / 180;
+  const mEl = (3 + Math.sin(ns * Math.PI) * 5) * Math.PI / 180; // same low band as the sun (W18-1)
   const moonDir = new THREE.Vector3(
     Math.sin(mAz) * Math.cos(mEl),
     Math.sin(mEl),
@@ -192,12 +201,16 @@ function TimeOfDayCycle() {
         float t = smoothstep(-0.05, 0.5, viewDir.y);
         vec3 sky = mix(bottomColor, topColor, t);
 
-        // Sun + moon discs. We test cos(angle) against cos(radius) so a
-        // smaller cosine = larger angle = outside the disc. smoothstep
-        // gives a 1-frag-ish soft edge against the sky.
-        float sunDot = dot(viewDir, normalize(sunBody.xyz));
+        // Sun + moon discs. W18-1: test against the CAMERA-relative ray, not
+        // the origin-relative one — the camera sits ~26u from the dome centre
+        // at y≈14, and that parallax shifted the disc out of the thin sky
+        // band the rig can actually see. cos(angle) vs cos(radius) so a
+        // smaller cosine = larger angle = outside the disc; smoothstep gives
+        // a 1-frag-ish soft edge against the sky.
+        vec3 camDir = normalize(vWP - cameraPosition);
+        float sunDot = dot(camDir, normalize(sunBody.xyz));
         float sunMask = smoothstep(discCosOuter, discCosInner, sunDot) * sunBody.w;
-        float moonDot = dot(viewDir, normalize(moonBody.xyz));
+        float moonDot = dot(camDir, normalize(moonBody.xyz));
         float moonMask = smoothstep(discCosOuter, discCosInner, moonDot) * moonBody.w;
 
         // Blend disc over sky (mix preserves the high-contrast disc color

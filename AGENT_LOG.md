@@ -100,6 +100,20 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-02 — W18-1 resolved: sun/moon disc visible in-game (camera-relative + low arc + 2x size)
+
+Three changes to `GameWorld.tsx`, verified with clock-stubbed Playwright screenshots:
+
+- **Camera-relative disc test.** The fragment shader now tests `normalize(vWP - cameraPosition)` against the sun/moon direction instead of `normalize(vWP)` — the origin-relative test painted the disc on the dome as seen from world origin, and the camera's ~26u offset at y≈14 parallax-shifted it out of the thin visible sky band at every hour. (three.js injects `cameraPosition` into ShaderMaterial fragment shaders; verified live.)
+- **Low arc.** Elevation now rides 3-8° (`3 + sin(s·π) · 5`, was 0-60°). Measured via an elevation-colormap shader probe: the default pitched-down pose tops out at ~-1° camera-relative elevation, and even look-around poses cap around +25-30°. A 60° noon sun was geometrically unreachable, full stop.
+- **2x disc size** (angular radius 0.026 → 0.055 rad ≈ 3.2°) so it reads as a stylized PS1 sun instead of washing into the horizon gradient.
+
+Result: 10:00 sun = soft cream disc over the eastern horizon; 21:00 moon = bright pale disc against the night purple. Both verified at eye-level camera poses (right-drag down).
+
+**Design caveat for David:** the *default* top-down pose physically cannot show sky — the whole upward hemisphere is out of frame (measured, not tuned around). Players see the sun/moon when they pitch the camera toward the horizon. If you want it in the default frame, that's a default-framing change (initial camera position / polar clamp) — one-line, but it changes the game's whole look, so it's yours to call.
+
+Verification: `tsc` exit 0, lint 75/59, screenshots archived in session scratchpad. Horizon-hugging discs at night hours self-occlude behind fogged terrain (checked).
+
 ### 2026-07-02 — Principle #3 enforcement: quests + onboarding reward paths (Wave 18 flags)
 
 Applied David's standing 2026-07-01 ruling (XP = IRL check-in only, TC = money-value work only) to the two legacy paths Wave 18 flagged, same pattern as the bounty fix `5e5372a`:
