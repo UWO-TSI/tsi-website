@@ -100,6 +100,17 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-02 — Principle #3 enforcement: quests + onboarding reward paths (Wave 18 flags)
+
+Applied David's standing 2026-07-01 ruling (XP = IRL check-in only, TC = money-value work only) to the two legacy paths Wave 18 flagged, same pattern as the bounty fix `5e5372a`:
+
+- `POST /api/quests/[id]/complete`: no longer grants anything — completion is status-only. Was self-serve `xp_reward` + `tc_reward` for any authenticated user (pre-pivot quest system, zero UI callers, but the endpoint was live). `quests.xp_reward`/`tc_reward` columns left inert, no migration.
+- `POST /api/onboarding` final step: `xp: 50 → 0`; the 100 TC welcome bonus stays (explicitly sanctioned in ux-status 2026-05-25). Comments cite the ruling at both sites.
+
+For David's post-loop review: this extends the bounty ruling to paths he flagged but hasn't individually signed off — flagged here so it's easy to revert if he wants the onboarding XP back.
+
+Verification: `tsc` exit 0, lint 75/59, 32/32 tests, build ✓ (one transient prerender error was my renamed `.env.local` from the visual pass, clean after restore).
+
 ### 2026-07-02 — Light-theme token sweep across portal chrome (Wave 18 follow-up, autonomous loop)
 
 David authorized a continuous work loop ("continue reiterating and refining until I tell you to stop"). First item: the light-theme debt flagged in Wave 18.

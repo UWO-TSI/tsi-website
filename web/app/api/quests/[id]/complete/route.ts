@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { awardRewards } from "@/lib/supabase/helpers";
 
 export async function POST(
   _request: Request,
@@ -17,10 +16,15 @@ export async function POST(
 
   const { id } = await params;
 
-  // Get quest details for rewards
+  // Quest completion grants nothing per design principle #3 (David ruling
+  // 2026-07-01): XP is IRL-event-check-in-only, TC is money-value-work-only.
+  // Completing an online quest is neither. The route still tracks completion
+  // status; xp_reward / tc_reward columns are inert (same treatment as
+  // bounties.xp_reward in the 5e5372a ruling). Pre-pivot quest system has no
+  // UI callers as of 2026-07-02.
   const { data: quest } = await supabase
     .from("quests")
-    .select("id, title, xp_reward, tc_reward")
+    .select("id, title")
     .eq("id", id)
     .single();
 
@@ -59,27 +63,9 @@ export async function POST(
     })
     .eq("id", progress.id);
 
-  // Award rewards (auto-levels up)
-  const result = await awardRewards(supabase, user.id, {
-    coins: quest.tc_reward ?? 0,
-    xp: quest.xp_reward ?? 0,
-    coinType: "earn_quest",
-    xpType: "quest",
-    referenceId: id,
-    description: `Quest completed: ${quest.title}`,
-  });
-
+  // No awardRewards call — completion is status-only per principle #3.
   return NextResponse.json({
     completed: true,
-    rewards: result
-      ? {
-          coins: quest.tc_reward ?? 0,
-          xp: quest.xp_reward ?? 0,
-          new_balance: result.tethos_coins,
-          new_xp: result.xp,
-          new_level: result.level,
-          new_rank: result.rank,
-        }
-      : null,
+    rewards: null,
   });
 }

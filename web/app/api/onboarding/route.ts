@@ -144,11 +144,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  // Award onboarding bonus after profile update succeeds (auto-levels up)
+  // Award onboarding TC bonus after profile update succeeds.
+  // TC-only: the one-time onboarding coin bonus is explicitly sanctioned
+  // (ux-status 2026-05-25 note). XP is IRL-event-only per design principle #3
+  // (David ruling 2026-07-01, same enforcement as the bounty path).
   if (parsed.data.step === FINAL_STEP) {
     await awardRewards(supabase, user.id, {
       coins: 100,
-      xp: 50,
+      xp: 0,
       coinType: "earn_achievement",
       xpType: "achievement",
       description: "Onboarding completed — welcome bonus!",
