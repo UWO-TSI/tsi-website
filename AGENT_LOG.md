@@ -100,6 +100,17 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-02 — R3-2 theme toggle was non-functional: CSS never loaded + no apply-on-load
+
+Wave 18's Playwright pass caught that toggling Light changed `data-theme` + localStorage but zero pixels. Two root causes, both mechanical:
+
+1. **The light overrides lived in a stylesheet that never loads.** `game-tokens.css` is imported nowhere (repo-wide grep: only a comment references it); the portal's live tokens come from `styles/tokens.css` (`:root`, imported in the root layout). Moved the `[data-theme="light"]` block to the end of `tokens.css` (inert for the marketing site — nothing there sets `data-theme`), left a pointer comment in `game-tokens.css`.
+2. **Nothing applied the stored theme on page load.** `applyTheme` only ran inside `ThemeToggle`, which mounts only on Settings → Appearance — a saved "light" preference reverted to dark on every other page. New `ThemeInit` export (same module, reuses `applyTheme`/`readStoredPref`) mounted once in `dashboard/layout.tsx`.
+
+Also tokenized the settings page's hardcoded colors (`#111827` panels/inputs, `rgba(255,255,255,0.06)` borders/switch-off states → `var(--color-surface)` / `var(--glass-border-soft)` / `var(--gray-800)`) — with the vars flipping, dark text was landing on hardcoded-dark cards. Settings is part of R3-2's own file list; the rest of the portal has the same hardcoded-color debt and needs a token-hygiene sweep (flagged in Wave 18, not this commit).
+
+Verified via Playwright: light theme now renders (white cards, dark text), dark unchanged, `data-theme=light` applies on fresh dashboard load before visiting Settings. `tsc --noEmit` exit 0, lint 75/59, `npm test` 32/32, build ✓ 126 routes.
+
 ### 2026-07-01 — R3-1 spec gap: quest mute toggle wired into Settings → Appearance
 
 Onboarding sweep before Wave 18 found the R3-1 mute toggle missing: `QuestChecklist.tsx` exports `useQuestsMuted` and hides when muted (its comments even say "re-enable via Settings"), but nothing consumed the setter — the widget could never be muted from UI, violating the R3-1 spec line ("Settings → Appearance → 'Show onboarding quests' toggle") and design principle #7. David ruled fix-first-then-verify.

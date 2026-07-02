@@ -7,6 +7,7 @@ import { TransitionProvider } from "@/components/game/TransitionOverlay";
 import { UserProvider } from "@/components/portal/UserContext";
 import PreviewBanner from "@/components/portal/PreviewBanner";
 import QuestChecklist from "@/components/portal/QuestChecklist";
+import { ThemeInit } from "@/components/portal/ThemeToggle";
 
 const HIDE_DELAY_MS = 250; // grace period when mouse leaves before sidebar tucks away
 
@@ -143,6 +144,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
           {/* R3-1: Onboarding quest checklist (floating, opt-in, mute via Settings → Appearance) */}
           <QuestChecklist />
+
+          {/* R3-2: apply stored theme on every portal page load, not just Settings */}
+          <ThemeInit />
 
           <style jsx>{`
             @keyframes slideIn {

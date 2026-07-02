@@ -115,7 +115,7 @@ export default function SettingsPage() {
       <div style={{ maxWidth: 720, margin: "0 auto" }}>
         {/* Header */}
         <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "rgba(255, 255, 255, 0.06)" }}>
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "var(--color-surface-soft)" }}>
             <Settings className="w-5 h-5" style={{ color: "var(--color-text-muted)" }} />
           </div>
           <h1 className="text-2xl font-bold" style={{ color: "var(--color-text-main)" }}>Settings</h1>
@@ -127,7 +127,7 @@ export default function SettingsPage() {
           aria-label="Settings sections"
           className="flex mb-6 overflow-x-auto"
           style={{
-            borderBottom: "1px solid rgba(255, 255, 255, 0.06)",
+            borderBottom: "1px solid var(--glass-border-soft)",
             scrollbarWidth: "none",
           }}
         >
@@ -239,7 +239,7 @@ export default function SettingsPage() {
                       onClick={() => setGhostsEnabled(!ghostsEnabled)}
                       className="relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border transition-colors"
                       style={{
-                        background: ghostsEnabled ? "#002fa7" : "rgba(255,255,255,0.06)",
+                        background: ghostsEnabled ? "#002fa7" : "var(--gray-800)",
                         borderColor: "var(--glass-border-soft)",
                       }}
                     >
@@ -272,7 +272,7 @@ export default function SettingsPage() {
                       onClick={() => setQuestsMuted(!questsMuted)}
                       className="relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border transition-colors"
                       style={{
-                        background: !questsMuted ? "#002fa7" : "rgba(255,255,255,0.06)",
+                        background: !questsMuted ? "#002fa7" : "var(--gray-800)",
                         borderColor: "var(--glass-border-soft)",
                       }}
                     >
@@ -370,7 +370,7 @@ export default function SettingsPage() {
 const inputStyle: React.CSSProperties = {
   height: 40,
   padding: "0 12px",
-  background: "#111827",
+  background: "var(--color-surface)",
   border: "1px solid var(--glass-border-soft)",
   borderRadius: 8,
   color: "var(--color-text-main)",
@@ -391,7 +391,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   return (
     <div className="mb-8">
       <h2 className="text-sm font-mono uppercase tracking-wider mb-4" style={{ color: "var(--color-text-subtle)" }}>{title}</h2>
-      <div className="rounded-2xl space-y-4" style={{ background: "#111827", border: "1px solid rgba(255,255,255,0.06)", padding: 20 }}>
+      <div className="rounded-2xl space-y-4" style={{ background: "var(--color-surface)", border: "1px solid var(--glass-border-soft)", padding: 20 }}>
         {children}
       </div>
     </div>

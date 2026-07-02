@@ -158,3 +158,30 @@
     opacity: 0.9;
     pointer-events: none;
   }
+
+/* ========= LIGHT THEME OVERRIDES (R3-2) =========
+   Applied when ThemeToggle (components/portal/ThemeToggle.tsx) writes
+   data-theme="light" on <html>. Lives here — NOT in game-tokens.css —
+   because tokens.css is the stylesheet the root layout actually imports.
+   Inert for the marketing site: nothing there ever sets data-theme.
+   Only portal chrome is affected — the 3D game world keeps its own
+   TOD-driven palette and does not read these tokens.
+   Brand-blue accent is identical in both themes (not overridden).
+   See specs/ux-settings.md §6.4. */
+[data-theme="light"] {
+  --color-bg-main: #F5F5F5;
+  --color-bg-alt: #FFFFFF;
+  --color-bg-navy: #FFFFFF;
+  --color-surface: #FFFFFF;
+  --color-surface-soft: #F0F0F2;
+  --color-text-main: #1A1A2E;
+  --color-text-soft: #333355;
+  --color-text-muted: #666680;
+  --color-text-subtle: #999AAA;
+  --glass-border-soft: rgba(0, 0, 0, 0.10);
+  --glass-border-strong: rgba(0, 0, 0, 0.18);
+  --gray-700: rgba(0, 0, 0, 0.15);
+  --gray-800: rgba(0, 0, 0, 0.08);
+  --shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.08);
+  --shadow-strong: 0 8px 24px rgba(0, 0, 0, 0.12);
+}

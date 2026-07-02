@@ -51,6 +51,19 @@ const OPTIONS: { value: ThemePref; label: string; icon: typeof Sun }[] = [
   { value: "system", label: "System", icon: Monitor },
 ];
 
+/**
+ * Mounts once in the dashboard layout so the stored theme applies on every
+ * portal page load. Without this, data-theme is only set when the user visits
+ * Settings → Appearance (the only place ThemeToggle itself mounts), so a saved
+ * "light" preference silently reverts to dark on any other page.
+ */
+export function ThemeInit() {
+  useEffect(() => {
+    applyTheme(readStoredPref() ?? "system");
+  }, []);
+  return null;
+}
+
 export default function ThemeToggle() {
   // Initial render uses "dark" so SSR + first paint match the current default.
   // Real preference is read on mount.
