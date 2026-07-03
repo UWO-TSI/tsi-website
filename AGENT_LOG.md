@@ -94,7 +94,7 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## Blocked / Needs Attention
 
-*(empty)*
+*(empty — David's 2026-07-02 rulings: push executed (9 commits live, `6aaf440..ab3bb3b`), middleware fail-open KEPT, principle-#3 enforcement KEPT (quests grant nothing, onboarding TC-only), shop dual pricing FINE AS IS, default camera framing UNCHANGED. Migrations 014-022 still on hold.)*
 
 ---
 

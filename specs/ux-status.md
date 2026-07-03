@@ -111,8 +111,10 @@ All 7 punch-list items shipped and QA-verified (Rounds 1+2, Wave 17 PASS), plus 
 - ~~**W18-1** sky disc invisible~~ — **fixed** (`5c636be`): camera-relative shader test + low 3-8° arc + 2x size; sun/moon verified in-game at look-around poses. Remaining design call for David: the default top-down pose can never frame the sky (measured); putting the sun in the default frame means changing the default camera framing.
 - ~~Portal-wide light-theme token sweep~~ — **done** (`87e87fb`): 15 files, new `--surface-hover`/`--surface-chip` tokens, verified light + dark. Long-tail stragglers on unswept pages are one-line fixes now.
 - ~~Principle-#3 legacy paths~~ — **enforced** (`222bed5`) per David's standing ruling: quest completion is status-only, onboarding keeps 100 TC and drops the 50 XP. Awaiting David's formal sign-off (easy revert if he wants onboarding XP back).
-- Shop dual pricing (`$CAD` next to TC) — still awaits David's ruling.
-- New (from today's Supabase outage): middleware 4s fail-open (`54a0ca0`) — shared recruitment infra, David eyeballs before push.
+- ~~Shop dual pricing~~ — **David ruled 2026-07-02: fine as is.** Dual pricing is a deliberate pay-cash-or-coins feature; the implied ratio doesn't count as revealing the internal rate.
+- ~~Middleware 4s fail-open~~ — **David signed off 2026-07-02**, pushed with the batch.
+- ~~Principle-#3 enforcement (quests + onboarding XP)~~ — **David signed off 2026-07-02: keep both.**
+- ~~Default camera framing~~ — **David ruled 2026-07-02: keep current framing.** Sun/moon stay a look-around discovery; no default-frame change.
 
 ### Tier 2: Admin Tooling + Community Loops (sprint after Tier 1)
 
