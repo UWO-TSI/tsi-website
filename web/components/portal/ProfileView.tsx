@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Github, Linkedin, Globe, Twitter, Pencil, Loader2, User } from "lucide-react";
 import { TIER_COLORS, TIER_LABELS, getXpProgress } from "./types";
+import { CLASS_META, ClassBadge } from "./classIdentity";
 import type { Profile, PublicProfile, Tier, SocialLinks } from "@/lib/supabase/types";
 
 const SOCIAL_ICONS: Record<string, typeof Github> = {
@@ -130,7 +131,13 @@ export default function ProfileView({ profileId, isOwnProfile }: ProfileViewProp
               <h1 style={{ fontSize: "30px", fontWeight: 700, color: "var(--color-text-main)", marginBottom: "2px" }}>{p.display_name}</h1>
             )}
             <p style={{ fontSize: "16px", color: "var(--color-text-muted)" }}>
-              {p.class || "Unclassed"} {" · "} <span style={{ color: tc.color }}>Tier {p.tier} · {TIER_LABELS[p.tier]}</span>
+              {/* Class flair per ux-classes.md §4.3 — icon + class accent */}
+              {p.class && CLASS_META[p.class] ? (
+                <ClassBadge cls={p.class} iconSize={16} fontSize={16} />
+              ) : (
+                p.class || "Unclassed"
+              )}
+              {" · "} <span style={{ color: tc.color }}>Tier {p.tier} · {TIER_LABELS[p.tier]}</span>
               {"rank" in p && p.rank && <> {" · "} {p.rank}</>}
             </p>
             {editing ? (

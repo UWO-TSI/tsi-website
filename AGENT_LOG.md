@@ -100,6 +100,17 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-02 — Tier-2 #12: class identity in sidebar, directory, profile
+
+`ux-classes.md` §4.1-4.3, cosmetic only per principle #4. New shared `components/portal/classIdentity.tsx` exporting `CLASS_META` (Warrior Sword `#EF4444`, Mage Sparkles `#6366F1`, Healer Heart `#22C55E`, Rogue Wrench `#F59E0B` — matches the oracle page's map) and a `<ClassBadge>` that renders nothing for unknown/missing classes.
+
+- Sidebar player block: class line under `Lv. N` (§4.1).
+- Directory `MemberCard`: subtitle becomes icon-prefixed class-colored badge when the class is known, falls back to the old class/position/Unclassed text otherwise (§4.2).
+- `ProfileView` subtitle: same treatment at 16px (§4.3).
+- Skipped: leaderboard column (§4.4 optional) and game-world nameplate (§4.5) — separate surfaces, not in the backlog item.
+
+Gates: tsc exit 0, lint 74/59 (= ceiling), build ✓.
+
 ### 2026-07-02 — Bounty submission review surface (Round 4+ queue item)
 
 `admin/bounties/page.tsx` now has a Postings | Submissions view switch. The existing page only approved bounty *postings*; deliverable review had no UI (Wave 17 flagged it as build-D's deferred admin half).

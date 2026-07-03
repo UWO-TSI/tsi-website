@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import type { ComponentType } from "react";
 import { useUser } from "./UserContext";
+import { ClassBadge } from "./classIdentity";
 
 interface NavItem {
   label: string;
@@ -97,6 +98,8 @@ export default function Sidebar({ onClose }: SidebarProps) {
           >
             Lv. {userLevel}
           </p>
+          {/* Class flair per ux-classes.md §4.1 — cosmetic only (principle #4) */}
+          <ClassBadge cls={profile?.class} iconSize={14} fontSize={12} />
         </div>
         {/* Close button — only visible in mobile overlay */}
         {onClose && (

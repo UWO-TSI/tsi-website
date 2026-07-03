@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { ChevronRight } from "lucide-react";
 import { TIER_COLORS, getXpProgress } from "./types";
+import { CLASS_META, ClassBadge } from "./classIdentity";
 import type { DirectoryMember } from "@/lib/supabase/types";
 
 interface MemberCardProps {
@@ -50,7 +51,12 @@ export default function MemberCard({ member }: MemberCardProps) {
           {member.display_name}
         </span>
         <span className="truncate" style={{ fontSize: "12px", color: "var(--color-text-muted)" }}>
-          {member.class || member.position || "Unclassed"}
+          {/* Class flair per ux-classes.md §4.2 — icon-prefixed, class-colored */}
+          {member.class && CLASS_META[member.class] ? (
+            <ClassBadge cls={member.class} iconSize={12} fontSize={12} />
+          ) : (
+            member.class || member.position || "Unclassed"
+          )}
         </span>
       </div>
 
