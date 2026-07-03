@@ -102,6 +102,18 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-03 — Cozy pass 1: lighting, fog, palette (David /ultraplan directive, executed locally)
+
+David's rulings: all four cozy gaps attack-ordered (lighting → fog → terrain → buildings), fog explicitly disliked, CC0 assets only, 60fps M1 floor, soft shadows default-on. Commit `7be772f`:
+
+- **Shadows default ON** (`useGraphicsSettings`): `readBool(shadows, !autoLite)` — ≤4GB devices still auto-off. Canvas `shadows="soft"` (PCFSoft). Measured **60fps headless M1** with shadows on (was ~53 in the June measurement; the fog reduction + prior perf work bought the headroom back).
+- **Fog gutted:** 25-55 → 40-70. The old range washed half the village gray; now it's a far haze only. Known remainder: the terrain-plane edge silhouette peeks at the horizon — next iteration adds an ACNH-style sea/edge treatment instead of re-fogging the village.
+- **TOD palette re-graded** toward ACNH pastels: saturated azure tops, mint-cream horizons (the old `#B8E4F0` horizon doubled as fog color = gray soup), warm golden sun (`#FFF3D6` at noon, intensity 1.05), ambient 0.5 → 0.55 at day keys, hemisphere 0.55 → 0.75 (grass was murky once un-fogged).
+- **Light decoupled from the visual disc:** the W18-1 low disc arc had been driving the directional light, so midday light skimmed from the horizon (flat + gloomy + full-village shadow streaks). Light now rides a classic 15-60° arc; azimuth still tracks the disc so shadows lean correctly. Verified via scene probe: sun casting, 1024 map, correct position; fill light untouched.
+- Verified day (11:00) + dusk (17:30) via clock-stubbed screenshots: spring greens, crisp village, warm peach dusk with lamps.
+
+**Cozy queue (next iterations):** island edge sea ring, terrain grass texture warmth, path edge tidy-up, building dressing from CC0 kits.
+
 ### 2026-07-03 — Nametags punching through overlays (David-reported, screenshot)
 
 drei `<Html>` defaults `zIndexRange` to ~16.7M, so every in-world label (NPC nameplates, building labels, ghost tags, player nameplate, signposts — 9 usages, none capped) rendered ABOVE the welcome modal (z 70) and every other DOM overlay. Capped all 9 with `zIndexRange={[40, 0]}` — below the sidebar backdrop (45) and all overlay layers (55+). Audited the rest of the HUD for the same class of bug: all DOM widgets sit at z ≤ 60, correctly under overlays, so drei Html was the only offender. Verified with a fresh first-visit load: labels now dim behind the modal backdrop. Gates: tsc exit 0, lint 74/59, build ✓ 97/97.
