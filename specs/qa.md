@@ -1,7 +1,20 @@
 # QA Report
 
 > Owner: QA agent. All agents check this for bugs in their area.
-> Last updated: 2026-07-02 (Wave 20)
+> Last updated: 2026-07-03 (Wave 21)
+
+---
+
+## Wave 21 — 2026-07-03 Mobile Stripped Mode (Tier-2 #11)
+
+One commit (`9d91cd7`), pushed. David ruled scope via interactive Qs (minimap / plaza heartbeat / emotes / RSVP cut).
+
+### Verdict: **PASS**
+
+- Gates: tsc exit 0, lint **74/59** (= ceiling), build ✓ 10.7s.
+- Verified at 390×844 with route-mocked APIs: minimap renders (buildings, paths, river), member dots at correct coords with names, own dot at plaza, heartbeat POST body `{"world_x":0,"world_z":-8}` captured, wave emote bubble shows, "Try full 3D" swaps in the WebGL world.
+- Known constraint documented: emote POSTs are local-bubble-only until migration 019 applies (`emote_types` id lookup empty) — identical to desktop's constraint, self-heals on apply.
+- **Tier-2 is now fully closed for unblocked items.** Remaining backlog: Tier-3 Larges (deferred by design / asset-blocked), Year filter + emote persistence + RSVP (all migration-gated), content drops.
 
 ---
 
