@@ -14,6 +14,10 @@ export default function MemberDirectory() {
   const [filterOpen, setFilterOpen] = useState(false);
   const [tierFilter, setTierFilter] = useState<Set<Tier>>(new Set());
   const [statusFilter, setStatusFilter] = useState<"active" | "all">("active");
+  // Class dropdown per ux-directory.md §3.4. Year dropdown from the same spec
+  // is blocked: /api/directory?year= filters on profiles.year (migration 021),
+  // which is ON HOLD and not applied to the remote DB — wire it after apply.
+  const [classFilter, setClassFilter] = useState<string>("all");
 
   const fetchMembers = useCallback(async () => {
     setLoading(true);
@@ -43,11 +47,13 @@ export default function MemberDirectory() {
     return () => clearTimeout(timer);
   }, [fetchMembers]);
 
-  // Client-side tier filter
+  // Client-side tier + class filters
   const filtered = useMemo(() => {
-    if (tierFilter.size === 0) return members;
-    return members.filter((m) => tierFilter.has(m.tier));
-  }, [members, tierFilter]);
+    let out = members;
+    if (tierFilter.size > 0) out = out.filter((m) => tierFilter.has(m.tier));
+    if (classFilter !== "all") out = out.filter((m) => m.class === classFilter);
+    return out;
+  }, [members, tierFilter, classFilter]);
 
   const toggleTier = (tier: Tier) => {
     setTierFilter((prev) => {
@@ -111,6 +117,21 @@ export default function MemberDirectory() {
                   style={{ height: "28px", padding: "0 12px", fontSize: "12px", borderRadius: "9999px", background: selected ? tc.bg : "transparent", border: selected ? `1px solid ${tc.color}` : "1px solid var(--gray-700)", color: selected ? tc.color : "var(--color-text-muted)" }}>T{tier}</button>);
               })}
             </div>
+          </div>
+          <div className="mb-3">
+            <label htmlFor="dir-class-filter" className="block mb-2 font-mono uppercase" style={{ fontSize: "12px", color: "var(--color-text-subtle)", letterSpacing: "0.05em" }}>Class</label>
+            <select
+              id="dir-class-filter"
+              value={classFilter}
+              onChange={(e) => setClassFilter(e.target.value)}
+              style={{ height: "28px", padding: "0 8px", fontSize: "12px", borderRadius: "8px", background: "var(--color-surface)", border: classFilter !== "all" ? "1px solid var(--color-brand-blue)" : "1px solid var(--gray-700)", color: classFilter !== "all" ? "var(--color-text-main)" : "var(--color-text-muted)" }}
+            >
+              <option value="all">All classes</option>
+              <option value="Warrior">Warrior</option>
+              <option value="Mage">Mage</option>
+              <option value="Healer">Healer</option>
+              <option value="Rogue">Rogue</option>
+            </select>
           </div>
           <div>
             <label className="block mb-2 font-mono uppercase" style={{ fontSize: "12px", color: "var(--color-text-subtle)", letterSpacing: "0.05em" }}>Status</label>

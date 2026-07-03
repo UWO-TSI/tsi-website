@@ -100,6 +100,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-02 — Tier-2 #13: directory Class filter dropdown (Year blocked on migration 021)
+
+`ux-directory.md` §3.4. Class dropdown (All/Warrior/Mage/Healer/Rogue) in the directory filter panel, client-side filter chained with the existing tier pills. **Year dropdown deliberately NOT wired:** `/api/directory?year=` filters on `profiles.year` from migration 021, which is ON HOLD and absent from the remote DB — passing the param would 500 in prod. Wire it in the same commit that applies 021 (comment at the state declaration says exactly this). Gates: tsc exit 0, lint 74/59, build ✓.
+
 ### 2026-07-02 — Tier-2 #14: profile social links editable inline
 
 `ux-directory.md` §7.5 lists social links among the inline-editable fields; `ProfileView`'s edit mode only covered name/bio/skills (the Settings → Social tab was the sole editor). Edit mode now shows 5 icon-labeled inputs (github/linkedin/instagram/discord/website) prefilled from `social_links`, saved through the same `PATCH /api/profile` (API already merges subsets — identical pattern to the settings tab). View mode unchanged. Gates: tsc exit 0, lint 74/59, build ✓.
