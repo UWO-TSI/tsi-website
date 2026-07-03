@@ -169,7 +169,7 @@ export default function NPC({ persona, position, playerPosition, onClick }: NPCP
           A subtle "!" bubble that signals "I see you, click to talk".
           Mounted/unmounted by `noticed` state so animations restart cleanly. */}
       {noticed && (
-        <Html
+        <Html zIndexRange={[40, 0]}
           position={[0, NAMEPLATE_OFFSET + QUAD_HEIGHT + 0.7, 0]}
           center
           style={{ pointerEvents: "none" }}
@@ -205,7 +205,7 @@ export default function NPC({ persona, position, playerPosition, onClick }: NPCP
       )}
 
       {/* Nameplate */}
-      <Html
+      <Html zIndexRange={[40, 0]}
         position={[0, NAMEPLATE_OFFSET + QUAD_HEIGHT, 0]}
         center
         style={{ pointerEvents: "none" }}

@@ -102,6 +102,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-03 — Nametags punching through overlays (David-reported, screenshot)
+
+drei `<Html>` defaults `zIndexRange` to ~16.7M, so every in-world label (NPC nameplates, building labels, ghost tags, player nameplate, signposts — 9 usages, none capped) rendered ABOVE the welcome modal (z 70) and every other DOM overlay. Capped all 9 with `zIndexRange={[40, 0]}` — below the sidebar backdrop (45) and all overlay layers (55+). Audited the rest of the HUD for the same class of bug: all DOM widgets sit at z ≤ 60, correctly under overlays, so drei Html was the only offender. Verified with a fresh first-visit load: labels now dim behind the modal backdrop. Gates: tsc exit 0, lint 74/59, build ✓ 97/97.
+
 ### 2026-07-03 — Migration audit + bounty_submissions restore + Year filter (David authorized, watching)
 
 David authorized applying 014-022 to remote. Pre-flight (list_tables + targeted counts) found they were **already applied** — see Blocked/Needs Attention. Actual work:

@@ -54,7 +54,7 @@ export default function GhostReplay({ ghost }: { ghost: GhostPosition }) {
           />
         </mesh>
       </Billboard>
-      <Html
+      <Html zIndexRange={[40, 0]}
         position={[0, QUAD_HEIGHT + 0.6, 0]}
         center
         style={{ pointerEvents: "none" }}

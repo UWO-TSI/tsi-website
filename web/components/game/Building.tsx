@@ -442,14 +442,14 @@ export default function Building({ id, name, position, size, color, roofColor, h
       )}
 
       {/* Label — white pill, dark text */}
-      <Html position={[0, size[1] + 1.8, 0]} center distanceFactor={12} style={{ pointerEvents: "none" }}>
+      <Html zIndexRange={[40, 0]} position={[0, size[1] + 1.8, 0]} center distanceFactor={12} style={{ pointerEvents: "none" }}>
         <div style={{ fontSize: "13px", color: "#2a2a2a", background: "rgba(255,255,255,0.88)", padding: "3px 10px", borderRadius: "6px", fontWeight: 600, fontFamily: "'IBM Plex Mono',monospace", boxShadow: "0 1px 4px rgba(0,0,0,0.12)", whiteSpace: "nowrap" }}>
           {name}
         </div>
       </Html>
 
       {isNear && (
-        <Html position={[0, size[1] + 0.8, 0]} center style={{ pointerEvents: "none" }}>
+        <Html zIndexRange={[40, 0]} position={[0, size[1] + 0.8, 0]} center style={{ pointerEvents: "none" }}>
           <div className="animate-bounce" style={{ fontSize: "14px", color: "#fff", background: "#4a6fa5", padding: "5px 14px", borderRadius: "10px", fontWeight: 600, boxShadow: "0 2px 8px rgba(0,0,0,0.2)", whiteSpace: "nowrap" }}>
             Press <kbd style={{ color: "#FFD166", fontFamily: "'IBM Plex Mono',monospace", fontWeight: 700 }}>E</kbd> to {isBoard ? "view" : "enter"}
           </div>

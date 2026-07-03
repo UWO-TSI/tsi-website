@@ -814,7 +814,7 @@ function Signpost() {
               <coneGeometry args={[0.22, 0.32, 4]} />
               <meshStandardMaterial color="#C4A265" roughness={0.85} metalness={0} />
             </mesh>
-            <Html
+            <Html zIndexRange={[40, 0]}
               position={[0, 0, 0.45]}
               center
               distanceFactor={9}
@@ -1428,7 +1428,7 @@ function Scene({
       <PlayerAvatar spawnPosition={SPAWN_POSITION} onMove={handlePlayerMove} playerName={playerName} playerLevel={playerLevel} activeEmote={activeEmote} />
 
       {fillerToast && (
-        <Html position={[0, 4, 0]} center style={{ pointerEvents: "none" }} distanceFactor={10}>
+        <Html zIndexRange={[40, 0]} position={[0, 4, 0]} center style={{ pointerEvents: "none" }} distanceFactor={10}>
           <div
             style={{
               background: "rgba(15, 15, 16, 0.85)",

@@ -442,7 +442,7 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
       {/* Sprint E3: active emote bubble above the avatar's head. Parent clears
           activeEmote after 3.5s so this just unmounts automatically. */}
       {activeEmote && (
-        <Html
+        <Html zIndexRange={[40, 0]}
           position={[0, 2.6, 0]}
           center
           style={{ pointerEvents: "none" }}
@@ -480,7 +480,7 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
       )}
 
       {/* Nameplate */}
-      <Html
+      <Html zIndexRange={[40, 0]}
         position={[0, 2.0, 0]}
         center
         style={{ pointerEvents: "none" }}
