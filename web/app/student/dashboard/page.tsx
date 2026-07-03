@@ -1,7 +1,31 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useState, useSyncExternalStore } from "react";
 import dynamic from "next/dynamic";
+import MobileWorld from "@/components/portal/MobileWorld";
+
+// ─── Tier-2 #11: stripped mode for phones ────────────────────────────────────
+// Small viewports skip WebGL entirely and get the 2D minimap (MobileWorld).
+// An escape hatch lets capable phones opt into the real 3D world per session.
+function subscribeViewport(cb: () => void): () => void {
+  if (typeof window === "undefined") return () => {};
+  const mq = window.matchMedia("(max-width: 767px)");
+  if (mq.addEventListener) mq.addEventListener("change", cb);
+  else mq.addListener(cb);
+  return () => {
+    if (mq.removeEventListener) mq.removeEventListener("change", cb);
+    else mq.removeListener(cb);
+  };
+}
+
+function getViewportSnapshot(): boolean {
+  if (typeof window === "undefined") return false;
+  return window.matchMedia("(max-width: 767px)").matches;
+}
+
+function getViewportServerSnapshot(): boolean {
+  return false; // SSR renders the desktop shell; GameWorld is ssr:false anyway
+}
 
 /**
  * Sprint A9: branded loading state for the canvas mount.
@@ -73,6 +97,21 @@ const GameWorld = dynamic(() => import("@/components/game/GameWorld"), {
 });
 
 export default function DashboardHome() {
+  const isMobile = useSyncExternalStore(
+    subscribeViewport,
+    getViewportSnapshot,
+    getViewportServerSnapshot
+  );
+  const [force3D, setForce3D] = useState(false);
+
+  if (isMobile && !force3D) {
+    return (
+      <div className="w-full h-full">
+        <MobileWorld onTry3D={() => setForce3D(true)} />
+      </div>
+    );
+  }
+
   return (
     <div className="w-full h-full">
       <Suspense fallback={<GameLoadingScreen />}>

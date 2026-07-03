@@ -100,6 +100,15 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-03 — Tier-2 #11: mobile stripped mode v1 (David-ruled scope)
+
+David's rulings via interactive Qs: 2D SVG minimap with member dots (no WebGL on phones), presence heartbeat at the HQ plaza, emotes from mobile, RSVP cut from v1.
+
+- New `components/portal/MobileWorld.tsx` (~300 lines): stylized SVG village (path cross, river + bridge, 4 labeled buildings matching GameWorld coords/roof colors), recent-member dots from `GET /api/positions/ghosts` (60s poll), own dot at plaza `(0, -8)`, heartbeat `POST /api/positions/heartbeat` every 45s (principle #5: mobile members appear as in-world ghosts to desktop players), 5-emote bar posting `POST /api/emotes/log` at plaza coords with a local bubble either way.
+- `dashboard/page.tsx`: `(max-width: 767px)` via `useSyncExternalStore` renders MobileWorld instead of the GameWorld dynamic import; "Try full 3D" escape hatch flips to the real world per session.
+- **Known constraint:** emote POSTs no-op until migration 019 (`emote_types`) is applied to remote — the id lookup returns nothing, so mobile shows local-only bubbles. Same table gates desktop emotes; self-heals on 019 apply. Heartbeat/ghosts hit `player_positions` (also 019/020 era) — those endpoints already run in prod paths and degrade to empty/no-op the same way desktop does.
+- Verified at 390×844 with route-mocked APIs: minimap + dots + labels render, heartbeat body `{"world_x":0,"world_z":-8}` captured, wave bubble shows, escape hatch loads the 3D world. Gates: tsc exit 0, lint 74/59, build ✓.
+
 ### 2026-07-02 — Tier-2 #13: directory Class filter dropdown (Year blocked on migration 021)
 
 `ux-directory.md` §3.4. Class dropdown (All/Warrior/Mage/Healer/Rogue) in the directory filter panel, client-side filter chained with the existing tier pills. **Year dropdown deliberately NOT wired:** `/api/directory?year=` filters on `profiles.year` from migration 021, which is ON HOLD and absent from the remote DB — passing the param would 500 in prod. Wire it in the same commit that applies 021 (comment at the state declaration says exactly this). Gates: tsc exit 0, lint 74/59, build ✓.
