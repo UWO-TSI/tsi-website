@@ -1,7 +1,21 @@
 # QA Report
 
 > Owner: QA agent. All agents check this for bugs in their area.
-> Last updated: 2026-07-02 (Wave 19)
+> Last updated: 2026-07-02 (Wave 20)
+
+---
+
+## Wave 20 — 2026-07-02 Autonomous Loop Round 3 (Tier-2 Smalls + Review Surface)
+
+Second loop batch after David's rulings (all four 2026-07-02 rulings recorded in `549575a`; push re-authorized and executed). 5 commits, all pushed: rulings record (`549575a`), bounty submission review surface (`ab3bb3b`), class identity (`ba71e77`), profile social editing (`e7b7f9f`), directory class filter (`fe4d0ba`).
+
+### Verdict: **PASS**
+
+- Gates after every commit: tsc exit 0, lint **74/59** (= ceiling, no drift), build ✓, 97/97 static.
+- **Submission review surface:** structural + build only — no runtime data to review against (live prod DB, no test rows written). First real submission exercises it.
+- **Tier-2 trio verified functionally** (env-off server + route-mocked profile/directory): class filter shows only Mage rows when selected; MemberCard renders the indigo Sparkles Mage badge; profile edit mode exposes the 5 social-link inputs; light theme renders the directory correctly (regression bonus).
+- **Directory Year dropdown deliberately not shipped:** `/api/directory?year=` filters `profiles.year` from migration 021 which is ON HOLD — would 500 in prod. Wire alongside the 021 apply.
+- Backlog: Tier-2 #12/#13/#14 done (#13 partially — Year pending 021). Next unblocked Tier-2 items are Medium+ (event CMS shipped earlier as C4; emotes/guestbook/presence shipped in E-series; mobile stripped mode and NPC dialogue remain).
 
 ---
 
