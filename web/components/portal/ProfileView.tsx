@@ -28,6 +28,7 @@ export default function ProfileView({ profileId, isOwnProfile }: ProfileViewProp
   const [editName, setEditName] = useState("");
   const [editBio, setEditBio] = useState("");
   const [editSkills, setEditSkills] = useState("");
+  const [editSocial, setEditSocial] = useState<SocialLinks>({});
 
   useEffect(() => {
     async function fetchProfile() {
@@ -45,6 +46,7 @@ export default function ProfileView({ profileId, isOwnProfile }: ProfileViewProp
         setEditName(p.display_name || "");
         setEditBio(p.bio || "");
         setEditSkills((p.skills || []).join(", "));
+        setEditSocial(p.social_links || {});
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load profile");
       } finally {
@@ -64,6 +66,7 @@ export default function ProfileView({ profileId, isOwnProfile }: ProfileViewProp
           display_name: editName,
           bio: editBio,
           skills: editSkills.split(",").map((s) => s.trim()).filter(Boolean),
+          social_links: editSocial,
         }),
       });
       if (!res.ok) throw new Error("Failed to save");
@@ -208,8 +211,30 @@ export default function ProfileView({ profileId, isOwnProfile }: ProfileViewProp
         )}
       </div>
 
-      {/* Social Links */}
-      {Object.keys(socialLinks).length > 0 && (
+      {/* Social Links — editable inline in edit mode per ux-directory.md §7.5 */}
+      {editing ? (
+        <div className="py-4" style={{ borderTop: "1px solid var(--glass-border-soft)" }}>
+          <h3 className="font-mono uppercase mb-3" style={{ fontSize: "12px", color: "var(--color-text-subtle)", letterSpacing: "0.05em" }}>Social Links</h3>
+          <div className="flex flex-col gap-2" style={{ maxWidth: "480px" }}>
+            {(["github", "linkedin", "instagram", "discord", "website"] as const).map((key) => {
+              const Icon = SOCIAL_ICONS[key] || Globe;
+              return (
+                <div key={key} className="flex items-center gap-2">
+                  <Icon style={{ width: "16px", height: "16px", color: "var(--color-text-muted)" }} aria-hidden />
+                  <input
+                    value={editSocial[key] ?? ""}
+                    onChange={(e) => setEditSocial((s) => ({ ...s, [key]: e.target.value }))}
+                    placeholder={key}
+                    aria-label={key}
+                    className="flex-1 outline-none"
+                    style={{ height: "32px", padding: "0 10px", fontSize: "13px", background: "var(--color-surface)", border: "1px solid var(--glass-border-soft)", borderRadius: "6px", color: "var(--color-text-main)" }}
+                  />
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : Object.keys(socialLinks).length > 0 && (
         <div className="py-4" style={{ borderTop: "1px solid var(--glass-border-soft)" }}>
           <h3 className="font-mono uppercase mb-3" style={{ fontSize: "12px", color: "var(--color-text-subtle)", letterSpacing: "0.05em" }}>Social Links</h3>
           <div className="flex gap-3 flex-wrap">

@@ -100,6 +100,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-02 — Tier-2 #14: profile social links editable inline
+
+`ux-directory.md` §7.5 lists social links among the inline-editable fields; `ProfileView`'s edit mode only covered name/bio/skills (the Settings → Social tab was the sole editor). Edit mode now shows 5 icon-labeled inputs (github/linkedin/instagram/discord/website) prefilled from `social_links`, saved through the same `PATCH /api/profile` (API already merges subsets — identical pattern to the settings tab). View mode unchanged. Gates: tsc exit 0, lint 74/59, build ✓.
+
 ### 2026-07-02 — Tier-2 #12: class identity in sidebar, directory, profile
 
 `ux-classes.md` §4.1-4.3, cosmetic only per principle #4. New shared `components/portal/classIdentity.tsx` exporting `CLASS_META` (Warrior Sword `#EF4444`, Mage Sparkles `#6366F1`, Healer Heart `#22C55E`, Rogue Wrench `#F59E0B` — matches the oracle page's map) and a `<ClassBadge>` that renders nothing for unknown/missing classes.
