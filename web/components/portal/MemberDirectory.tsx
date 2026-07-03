@@ -14,10 +14,11 @@ export default function MemberDirectory() {
   const [filterOpen, setFilterOpen] = useState(false);
   const [tierFilter, setTierFilter] = useState<Set<Tier>>(new Set());
   const [statusFilter, setStatusFilter] = useState<"active" | "all">("active");
-  // Class dropdown per ux-directory.md §3.4. Year dropdown from the same spec
-  // is blocked: /api/directory?year= filters on profiles.year (migration 021),
-  // which is ON HOLD and not applied to the remote DB — wire it after apply.
+  // Class + Year dropdowns per ux-directory.md §3.4. Year filters server-side
+  // (/api/directory?year= on profiles.year, "1"-"5" strings per onboarding);
+  // migration 021 confirmed applied to remote 2026-07-03, unblocking this.
   const [classFilter, setClassFilter] = useState<string>("all");
+  const [yearFilter, setYearFilter] = useState<string>("all");
 
   const fetchMembers = useCallback(async () => {
     setLoading(true);
@@ -26,6 +27,7 @@ export default function MemberDirectory() {
       const params = new URLSearchParams();
       if (search) params.set("search", search);
       if (statusFilter === "active") params.set("active", "true");
+      if (yearFilter !== "all") params.set("year", yearFilter);
       const res = await fetch(`/api/directory?${params}`);
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
@@ -39,7 +41,7 @@ export default function MemberDirectory() {
     } finally {
       setLoading(false);
     }
-  }, [search, statusFilter]);
+  }, [search, statusFilter, yearFilter]);
 
   // Debounced fetch
   useEffect(() => {
@@ -131,6 +133,22 @@ export default function MemberDirectory() {
               <option value="Mage">Mage</option>
               <option value="Healer">Healer</option>
               <option value="Rogue">Rogue</option>
+            </select>
+          </div>
+          <div className="mb-3">
+            <label htmlFor="dir-year-filter" className="block mb-2 font-mono uppercase" style={{ fontSize: "12px", color: "var(--color-text-subtle)", letterSpacing: "0.05em" }}>Year</label>
+            <select
+              id="dir-year-filter"
+              value={yearFilter}
+              onChange={(e) => setYearFilter(e.target.value)}
+              style={{ height: "28px", padding: "0 8px", fontSize: "12px", borderRadius: "8px", background: "var(--color-surface)", border: yearFilter !== "all" ? "1px solid var(--color-brand-blue)" : "1px solid var(--gray-700)", color: yearFilter !== "all" ? "var(--color-text-main)" : "var(--color-text-muted)" }}
+            >
+              <option value="all">All years</option>
+              <option value="1">1st</option>
+              <option value="2">2nd</option>
+              <option value="3">3rd</option>
+              <option value="4">4th</option>
+              <option value="5">5th+</option>
             </select>
           </div>
           <div>

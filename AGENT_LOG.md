@@ -94,11 +94,21 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## Blocked / Needs Attention
 
-*(empty — David's 2026-07-02 rulings: push executed (9 commits live, `6aaf440..ab3bb3b`), middleware fail-open KEPT, principle-#3 enforcement KEPT (quests grant nothing, onboarding TC-only), shop dual pricing FINE AS IS, default camera framing UNCHANGED. Migrations 014-022 still on hold.)*
+- **MIGRATION REALITY CORRECTION (2026-07-03):** remote inspection with David watching found migrations **014-022 were already applied** to remote Supabase (tables, seeds, check-in columns, bio/year, both storage buckets all present) — the "ON HOLD" status across CLAUDE.md/qa.md/ux-status was stale. The one real gap was `bounty_submissions` (remote predated the 006 rewrite; only legacy 001-era `bounty_deliverables` existed, meaning the whole bounty submit/review flow would have erred in prod). Restored via ledger-recorded migration `restore_bounty_submissions`. Emotes + mobile presence + event check-in + NPC memories are all live-capable now.
+- **For David:** empty legacy `public.bounty_deliverables` has RLS DISABLED (Supabase critical advisory). Nothing writes it; one API embeds it read-only. Options: enable RLS (`ALTER TABLE public.bounty_deliverables ENABLE ROW LEVEL SECURITY;` — deny-all, embed returns empty, closes the advisory) or drop the table + the embed. Not auto-applied.
+- **CLAUDE.md** (reviewer-owned) still says migrations are on hold + lists the migration table as ending at 013 — needs a reviewer pass.
 
 ---
 
 ## build
+
+### 2026-07-03 — Migration audit + bounty_submissions restore + Year filter (David authorized, watching)
+
+David authorized applying 014-022 to remote. Pre-flight (list_tables + targeted counts) found they were **already applied** — see Blocked/Needs Attention. Actual work:
+
+- Applied `restore_bounty_submissions` via the management API (ledger-recorded): table per local 006 + 3 indexes + RLS + 3 drop-guarded policies. Verified: table live, RLS on, policies 3, legacy `bounty_deliverables` empty.
+- Wired the directory **Year filter** (blocked yesterday on "021 on hold" — 021 is live): dropdown 1st-5th+, server-side `?year=` on `profiles.year` ("1"-"5" strings per onboarding). Gates: tsc exit 0, lint 74/59, build ✓.
+- No other code changes needed: emotes, mobile plaza presence, event check-in, NPC memories all activate on the existing code paths now that their tables are confirmed live.
 
 ### 2026-07-03 — Tier-2 #11: mobile stripped mode v1 (David-ruled scope)
 

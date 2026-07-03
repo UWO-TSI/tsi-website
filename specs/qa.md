@@ -1,7 +1,20 @@
 # QA Report
 
 > Owner: QA agent. All agents check this for bugs in their area.
-> Last updated: 2026-07-03 (Wave 21)
+> Last updated: 2026-07-03 (Wave 22)
+
+---
+
+## Wave 22 — 2026-07-03 Migration Audit + bounty_submissions Restore
+
+David authorized applying 014-022 to remote; pre-flight inspection found **they were already applied** (tables, seeds, columns, both buckets verified by targeted counts — the ON HOLD status everywhere in the docs was stale). The real find:
+
+- **`bounty_submissions` was missing from prod.** Remote predated the 006 rewrite and had only the legacy 001-era `bounty_deliverables` (empty, RLS disabled — Supabase critical advisory). The entire bounty submit/upload/review flow would have thrown relation-not-found in production. Restored via ledger-recorded migration `restore_bounty_submissions`; verified table + RLS + 3 policies live.
+- Year filter wired in the directory (021 confirmed live). Gates: tsc exit 0, lint 74/59, build ✓.
+- Advisory surfaced to David (not auto-applied): enable RLS on the empty legacy `bounty_deliverables` or drop it + its single read-only API embed.
+- **Doc lesson:** the migration ledger only records API-applied migrations; dashboard-applied SQL is invisible to it. Future waves should verify against `list_tables` + targeted counts, not the ledger or the docs.
+
+### Verdict: **PASS** — prod schema now matches local expectations end to end.
 
 ---
 
