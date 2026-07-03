@@ -85,11 +85,15 @@ const SPAWN_POSITION: [number, number, number] = [0, 0, -15];
 
 // ─── Time-of-Day (v2 spec Section 8.1) ──────────────────────────
 // [hour, skyTop, skyBottom, sunColor, sunIntensity, ambientColor, ambientIntensity]
+// Cozy push 2026-07-03: day keys re-graded toward ACNH pastels — saturated
+// azure tops, soft mint-cream horizons (the old #B8E4F0 horizon doubled as
+// the fog color and read as gray soup), warm golden sun instead of pure
+// white, ambient lifted slightly so default-on soft shadows stay gentle.
 const TOD_KEYS: [number, string, string, string, number, string, number][] = [
-  [5,  "#FFB366", "#FFD4A8", "#FFD4A8", 0.6, "#C4B0FF", 0.4],
-  [7,  "#87CEEB", "#B8E4F0", "#FFF5E1", 0.9, "#B0D4FF", 0.5],
-  [10, "#87CEEB", "#B8E4F0", "#FFFFFF", 1.0, "#C4D8FF", 0.5],
-  [15, "#87CEEB", "#FFD4A8", "#FFE4B0", 0.8, "#D4C8B0", 0.5],
+  [5,  "#FFB366", "#FFD9B0", "#FFD4A8", 0.6, "#C4B0FF", 0.4],
+  [7,  "#6BBDF2", "#D8F0DC", "#FFF0CE", 0.95, "#B0D4FF", 0.55],
+  [10, "#58B5F2", "#D2EED8", "#FFF3D6", 1.05, "#C4D8FF", 0.55],
+  [15, "#63B8EE", "#F5E3C0", "#FFE4B0", 0.85, "#D4C8B0", 0.55],
   [17, "#FF9966", "#FFD4A8", "#FFB366", 0.7, "#FFD4A8", 0.4],
   [19, "#FF9966", "#2D2D6B", "#FF8844", 0.3, "#6B5A8B", 0.3],
   [21, "#1A1A40", "#2D2D6B", "#334466", 0.0, "#334466", 0.25],
@@ -269,10 +273,19 @@ function TimeOfDayCycle() {
     if (sunRef.current) {
       sunRef.current.color.set(a[3]).lerp(_tc.set(b[3]), t);
       sunRef.current.intensity = a[4] + (b[4] - a[4]) * t;
-      // R3-3: sync the directional light direction to the visible sun
-      // so cast shadows lean the right way through the day. Position is
-      // sunDir × 30 (light always 30u away from world origin).
-      _sunPos.copy(sunDir).multiplyScalar(30);
+      // Cozy push 2026-07-03: the LIGHT rides a classic high arc (15-60°)
+      // even though the visible DISC stays low (W18-1 keeps it in the
+      // camera-reachable band). Sharing the low arc made midday light skim
+      // from the horizon — flat, gloomy, and shadow streaks across the whole
+      // village. Azimuth still tracks the disc so shadows lean the right way.
+      const s = (h - 6) / 12;
+      const lightEl = ((15 + Math.sin(Math.min(Math.max(s, 0), 1) * Math.PI) * 45) * Math.PI) / 180;
+      const lightAz = ((-90 + s * 180) * Math.PI) / 180;
+      _sunPos.set(
+        Math.sin(lightAz) * Math.cos(lightEl),
+        Math.sin(lightEl),
+        Math.cos(lightAz) * Math.cos(lightEl)
+      ).multiplyScalar(30);
       sunRef.current.position.copy(_sunPos);
     }
     // Ambient
@@ -290,7 +303,9 @@ function TimeOfDayCycle() {
         <sphereGeometry args={[1, 32, 32]} />
         <primitive object={skyMat} attach="material" />
       </mesh>
-      <hemisphereLight args={["#FFF5E1", P.grassPrimary, 0.55]} />
+      {/* Cozy push: 0.55 → 0.75 lifts the grass out of the murk now that the
+          fog wash no longer brightens the midfield. */}
+      <hemisphereLight args={["#FFF5E1", P.grassPrimary, 0.75]} />
       <ambientLight ref={ambRef} intensity={0.5} color="#C4D8FF" />
       {/* Shadow map 2048→1024 (4x cheaper shadow pass per frame).
           Negligible visual difference at our camera distance, big FPS win
@@ -1359,7 +1374,10 @@ function Scene({
           the sky color (ISLAND_RADIUS is 40, so old 50→100 fog barely
           kicked in inside the playable zone). Reads as soft atmospheric
           haze, masks the world's hard boundary. */}
-      <fog attach="fog" args={[fogColor, 25, 55]} />
+      {/* Cozy push 2026-07-03: was 25-55, which washed half the village gray
+          (David: fog doesn't look good). Now a far soft haze — the village
+          (±30u) stays crisp, the island edge still fades out. */}
+      <fog attach="fog" args={[fogColor, 40, 70]} />
 
       <Terrain />
       <River />
@@ -1655,7 +1673,7 @@ export default function GameWorld() {
       <Canvas
         gl={{ antialias: true, powerPreference: "high-performance" }}
         camera={{ fov: 58, near: 0.1, far: 300, position: [0, 14, -22] }}
-        shadows={shadowsEnabled}
+        shadows={shadowsEnabled ? "soft" : false}
         onCreated={({ gl }) => {
           gl.toneMapping = THREE.ACESFilmicToneMapping;
           gl.outputColorSpace = THREE.SRGBColorSpace;

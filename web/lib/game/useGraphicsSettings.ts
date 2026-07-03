@@ -86,7 +86,10 @@ export function useGraphicsSettings(): [GraphicsSettings, GraphicsSettingsAction
     setState({
       liteMode: readBool(KEYS.liteMode, autoLite),
       bloom: readBool(KEYS.bloom, autoBloom),
-      shadows: readBool(KEYS.shadows, false), // default off for 60-FPS budget
+      // Cozy push (David ruling 2026-07-03): soft shadows ON by default,
+      // auto-off on ≤4GB devices via the lite gate. FPS re-measured against
+      // the 60-on-M1 floor after the change.
+      shadows: readBool(KEYS.shadows, !autoLite),
       ghostsEnabled: readBool(KEYS.ghosts, true),
     });
   }, []);
