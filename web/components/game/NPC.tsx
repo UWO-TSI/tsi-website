@@ -63,6 +63,21 @@ function slugToHue(slug: string): number {
   return Math.abs(h);
 }
 
+// W1: gentle wander. Each NPC drifts within WANDER_RADIUS of its spawn on two
+// slow, coprime-ish sine components (so the path never repeats tightly), with
+// a slower "pause" envelope that eases the drift toward 0 periodically — the
+// ACNH "villager mills about, then stops to look around" feel. The billboard
+// nameplate, speech bubble, and click hitbox all ride the group, so they
+// follow for free. Radius is small enough to stay clear of buildings.
+const WANDER_RADIUS = 1.15;
+function wanderOffset(t: number, phase: number): [number, number] {
+  const pause = 0.5 + 0.5 * Math.sin(t * 0.11 + phase); // 0..1 slow envelope
+  const amp = WANDER_RADIUS * pause;
+  const x = Math.sin(t * 0.23 + phase) * amp;
+  const z = Math.sin(t * 0.31 + phase * 1.7) * amp * 0.8;
+  return [x, z];
+}
+
 export default function NPC({ persona, position, playerPosition, onClick }: NPCProps) {
   const groupRef = useRef<THREE.Group>(null);
   const meshRef = useRef<THREE.Mesh>(null);
@@ -78,11 +93,12 @@ export default function NPC({ persona, position, playerPosition, onClick }: NPCP
   const clockRef = useRef(0);
   const proxRef = useRef(0);
 
-  // Ground-sample y at mount (and lock in). Wander is intentionally skipped
-  // this sprint per scope — static NPCs are fine, polish later.
+  // Spawn base (XZ). W1: the NPC wanders around this within WANDER_RADIUS.
   const grounded: [number, number, number] = useMemo(() => {
     return [position[0], getTerrainHeight(position[0], position[2]), position[2]];
   }, [position]);
+  // Deterministic per-NPC wander phase from the slug hash.
+  const wanderPhase = useMemo(() => slugToHue(persona.slug) * 0.017, [persona.slug]);
 
   const hue = useMemo(() => slugToHue(persona.slug), [persona.slug]);
   const fillColor = useMemo(() => `hsl(${hue}, 50%, 60%)`, [hue]);
@@ -126,15 +142,20 @@ export default function NPC({ persona, position, playerPosition, onClick }: NPCP
     };
   }, [persona.sprite_url]);
 
-  // Smooth hover scale + idle bob + proximity reaction.
+  // Smooth hover scale + idle bob + proximity reaction + W1 wander.
   useFrame((_, delta) => {
     clockRef.current += delta;
 
-    // Distance to player (XZ only — bob is vertical, not 3D).
+    // W1: current wandered XZ around the spawn base.
+    const [wx, wz] = wanderOffset(clockRef.current, wanderPhase);
+    const curX = grounded[0] + wx;
+    const curZ = grounded[2] + wz;
+
+    // Distance to player uses the wandered position (XZ only).
     let dist = Infinity;
     if (playerPosition) {
-      const dx = playerPosition.x - grounded[0];
-      const dz = playerPosition.z - grounded[2];
+      const dx = playerPosition.x - curX;
+      const dz = playerPosition.z - curZ;
       dist = Math.hypot(dx, dz);
     }
     const targetProx = THREE.MathUtils.clamp(1 - dist / NOTICE_RANGE, 0, 1);
@@ -167,12 +188,13 @@ export default function NPC({ persona, position, playerPosition, onClick }: NPCP
       meshRef.current.scale.set(next, next, next);
     }
 
-    // Idle bob: gentle when alone (amp 0.04), bigger when player is near
-    // (up to 0.12). Slower freq than the player to feel "watching".
+    // Idle bob + W1 wander drift. XZ eases to the wandered spot; y resamples
+    // terrain there (+ bob) so the NPC stays grounded on slopes.
     if (groupRef.current) {
       const amp = 0.04 + proxRef.current * 0.08;
       const bob = Math.sin(clockRef.current * Math.PI * 1.8) * amp;
-      groupRef.current.position.y = grounded[1] + bob;
+      const gy = getTerrainHeight(curX, curZ);
+      groupRef.current.position.set(curX, gy + bob, curZ);
     }
 
     // Idle sheets put DIRECTIONS in columns (down/up/left/right), not
