@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useRef, useState, useCallback, useEffect, useMemo } from "react";
+import { Suspense, useRef, useState, useCallback, useEffect, useMemo, useSyncExternalStore } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { CameraControls, Cloud, Clouds, Html } from "@react-three/drei";
 import { Smile, BookOpen } from "lucide-react";
@@ -11,6 +11,8 @@ import Path from "./Path";
 import River, { sampleRiverPoint, findRiverTForX } from "./River";
 import Ocean from "./Ocean";
 import TreeShakeFX from "./TreeShakeFX";
+import FlowerPickFX from "./FlowerPickFX";
+import { pickFlower, subscribeFlowerPicks, getPickedSnapshot, getPickedServerSnapshot } from "@/lib/game/flowerPicks";
 import { getTerrainHeight, valueNoise, BUILDING_FOOTPRINTS } from "./terrain";
 import { NatureFence, NatureMushroom, NatureStump } from "./NatureModels";
 import InstancedGLB, { type NaturePlacement } from "./InstancedNature";
@@ -621,9 +623,11 @@ const FLOWER_MODELS = [
   "/assets/nature/flower_purpleB.glb",
 ];
 
-function buildFlowerPlacements(): NaturePlacement[][] {
+function buildFlowerPlacements(picked: readonly number[]): NaturePlacement[][] {
   const groups: NaturePlacement[][] = FLOWER_MODELS.map(() => []);
+  const pickedSet = new Set(picked);
   FLOWER_XZ.forEach(([x, z], seed) => {
+    if (pickedSet.has(seed)) return; // G4: hidden until respawn
     const y = getTerrainHeight(x, z);
     // Each "cluster" was 3 sub-flowers — preserve that.
     for (let j = 0; j < 3; j++) {
@@ -639,7 +643,12 @@ function buildFlowerPlacements(): NaturePlacement[][] {
 }
 
 function Flowers() {
-  const groups = useMemo(() => buildFlowerPlacements(), []);
+  const picked = useSyncExternalStore(
+    subscribeFlowerPicks,
+    getPickedSnapshot,
+    getPickedServerSnapshot,
+  );
+  const groups = useMemo(() => buildFlowerPlacements(picked), [picked]);
   return (
     <Suspense fallback={null}>
       {FLOWER_MODELS.map((url, i) => (
@@ -1206,7 +1215,7 @@ function Scene({
   onNPCClick: (npc: NPCPersona) => void;
   activeEmote: EmoteType | null;
   playerPosRef: React.MutableRefObject<THREE.Vector3>;
-  onNearestInteractable: (n: { kind: "npc" | "building" | "tree" | "bench"; id: string; name: string; href?: string; npc?: NPCPersona; treePos?: [number, number]; seat?: [number, number] } | null) => void;
+  onNearestInteractable: (n: { kind: "npc" | "building" | "tree" | "bench" | "flower"; id: string; name: string; href?: string; npc?: NPCPersona; treePos?: [number, number]; seat?: [number, number]; flowerIdx?: number; flowerPos?: [number, number] } | null) => void;
   debugSnapshotRef: React.MutableRefObject<DebugSnapshot | null>;
   ambientDensity: number;
   azimuthRef: React.MutableRefObject<number>;
@@ -1254,7 +1263,7 @@ function Scene({
     // O(npc + building) sweep every move tick. INTERACT_RADIUS = 3.5 units.
     const INTERACT_RADIUS = 3.5;
     let bestDist = INTERACT_RADIUS;
-    let best: { kind: "npc" | "building" | "tree" | "bench"; id: string; name: string; href?: string; npc?: NPCPersona; treePos?: [number, number]; seat?: [number, number] } | null = null;
+    let best: { kind: "npc" | "building" | "tree" | "bench" | "flower"; id: string; name: string; href?: string; npc?: NPCPersona; treePos?: [number, number]; seat?: [number, number]; flowerIdx?: number; flowerPos?: [number, number] } | null = null;
     for (const { persona, position: p } of placedPersonas) {
       const dx = p[0] - position.x;
       const dz = p[2] - position.z;
@@ -1274,6 +1283,17 @@ function Scene({
       if (d < bestDist) {
         bestDist = d;
         best = { kind: "building", id: b.id, name: b.name, href: b.href };
+      }
+    }
+    // G4: flowers — pick target (radius 2.0). Skip already-picked clusters.
+    const pickedNow = getPickedSnapshot();
+    for (let i = 0; i < FLOWER_XZ.length; i++) {
+      if (pickedNow.includes(i)) continue;
+      const [fx2, fz2] = FLOWER_XZ[i];
+      const d = Math.hypot(fx2 - position.x, fz2 - position.z);
+      if (d < Math.min(bestDist, 2.0)) {
+        bestDist = d;
+        best = { kind: "flower", id: `flower-${i}`, name: "Pick flower", flowerIdx: i, flowerPos: [fx2, fz2] };
       }
     }
     // G3: benches — sit target. Coords mirror Props()' bench array.
@@ -1406,6 +1426,7 @@ function Scene({
       <Terrain />
       <Ocean />
       <TreeShakeFX />
+      <FlowerPickFX />
       <River />
       <Bridge />
 
@@ -1546,7 +1567,7 @@ export default function GameWorld() {
   // F1.2: nearest interactable for crosshair + E-interact. Updated by Scene
   // on each player move via onNearestInteractable. Kept here so Crosshair
   // (DOM, outside Canvas) can read it.
-  const [nearest, setNearest] = useState<{ kind: "npc" | "building" | "tree" | "bench"; id: string; name: string; href?: string; npc?: NPCPersona; treePos?: [number, number]; seat?: [number, number] } | null>(null);
+  const [nearest, setNearest] = useState<{ kind: "npc" | "building" | "tree" | "bench" | "flower"; id: string; name: string; href?: string; npc?: NPCPersona; treePos?: [number, number]; seat?: [number, number]; flowerIdx?: number; flowerPos?: [number, number] } | null>(null);
   const nearestRef = useRef<typeof nearest>(null);
   useEffect(() => { nearestRef.current = nearest; }, [nearest]);
 
@@ -1569,6 +1590,13 @@ export default function GameWorld() {
         e.preventDefault();
         if (n.kind === "npc" && n.npc) {
           setActiveNPC(n.npc);
+        } else if (n.kind === "flower" && n.flowerIdx !== undefined && n.flowerPos) {
+          // G4: pick — hide the cluster (store) + FX/collect via event.
+          if (pickFlower(n.flowerIdx)) {
+            window.dispatchEvent(
+              new CustomEvent("tsi:flower-pick", { detail: { x: n.flowerPos[0], z: n.flowerPos[1] } })
+            );
+          }
         } else if (n.kind === "bench" && n.seat) {
           // G3: toggle sit at this bench. PlayerAvatar owns the pose + the
           // movement freeze; decoupled via a window event.
