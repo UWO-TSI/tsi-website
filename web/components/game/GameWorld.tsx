@@ -41,6 +41,8 @@ import { useGhostReplaySetting } from "@/lib/game/useGhostReplaySetting";
 // at module parse time, so first-render Suspense doesn't flash fallback
 // procedural geometry over real GLBs.
 import "@/lib/game/glbPreload";
+// V1: curved-world chunk patch — must import before any material compiles.
+import "@/lib/game/curvedWorld";
 import type { EmoteType, NPCPersona, SpawnZone } from "@/lib/game/contentTypes";
 
 /**
