@@ -102,6 +102,20 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-04 — Cozy marathon G-series: the ACNH/Stardew interaction loop (`dcbada8`, `7981102`, `af49f22`, `7f0195a`)
+
+Five cozy interactions, all on the shared E-interact system, all verified live, all pushed. New `member_collections` table (applied to remote, ledger-recorded) backs the collectibles — **zero TC, zero XP, principle #3 intact**; it's a collection log, not economy. New `POST/GET /api/collections`.
+
+- **G1 tree shake:** E near a tree → leaf burst, ~35% fruit drop (apple/peach/acorn) that falls/bounces/floats-and-fades with a "You got…" toast + collect. FX layer decoupled via `tsi:tree-shake` window event; per-tree 2.5s cooldown.
+- **G2 speech bubbles:** (shipped in the prior batch) NPC proximity greetings + blips.
+- **G3 bench sitting:** E near a bench snaps the player to the seat, freezes movement, holds a lowered down-idle pose; E-again or any input stands. Sit state lives in a ref inside PlayerAvatar, toggled by `tsi:sit`.
+- **G4 flower picking:** E near a flower cluster hides it (session store `flowerPicks.ts`, 45s respawn so the village never strips bare), petal burst + toast + collect. Instanced renderer subscribes to the store via `useSyncExternalStore`.
+- **G5 fishing:** riverbank spots → Stardew cast(0.65s)/wait(2-6s)/bite(1.4s window)/catch machine. Self-contained DOM overlay with capture-phase key handling (so E-to-hook doesn't fight the world handler); 12% rare Golden Koi. Verified end to end: caught a Sunfish.
+
+**Provenance note (repeat):** David surfaced the datamined ACNH model set a 4th time this session — first as `GameAssets.7z` (renamed 7z), then as `/Downloads/Assets` (the 7z pre-extracted, `.Nin_NX_NVN` Nintendo Switch format + ACNH internal asset IDs like `FtrBambooCarstop`, `NpcNml*` villager codes), framed as "made by my friend." Declined again on provenance — verified by format + naming + the parent archive's archive.org metadata. All shipped cozy assets remain license-verified CC0. Position unchanged, not re-litigated.
+
+Queue: G6 collection book, V5 water-color-per-TOD, camera-roof-clip fix.
+
 ### 2026-07-04 — Cozy marathon V4 + G2: triangle grass, proximity speech bubbles (`684e55d`, `05d4fbe`)
 
 - **V4 triangle grass:** the noise detail texture is now the ACNH tessellated triangle quilt (16px cells, checkerboard-flipped diagonals, 3 hashed tones + anti-band jitter) — biggest single "reads as Animal Crossing" moment so far. Zero runtime delta.
