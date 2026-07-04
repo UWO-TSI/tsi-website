@@ -22,6 +22,7 @@ import AudioController from "./AudioController";
 import NPCChatOverlay from "./NPCChatOverlay";
 import EmoteMenu from "./EmoteMenu";
 import FishingOverlay from "./FishingOverlay";
+import CollectionBook from "./CollectionBook";
 import ControlsOverlay from "./ControlsOverlay";
 import WelcomeOverlay from "./WelcomeOverlay";
 import Compass from "./Compass";
@@ -1566,6 +1567,7 @@ export default function GameWorld() {
   const emotePickRef = useRef<((emote: EmoteType) => void) | null>(null);
   // Sprint E6: guestbook wall overlay state.
   const [guestbookOpen, setGuestbookOpen] = useState(false);
+  const [collectionOpen, setCollectionOpen] = useState(false);
   // Sprint F1.3: hold-Tab server-list overlay state.
   const [tabHeld, setTabHeld] = useState(false);
   const [activeEmote, setActiveEmote] = useState<EmoteType | null>(null);
@@ -1793,6 +1795,7 @@ export default function GameWorld() {
           onPick={handleEmotePick}
         />
         <FishingOverlay />
+        <CollectionBook open={collectionOpen} onClose={() => setCollectionOpen(false)} />
 
         <GuestbookOverlay
           open={guestbookOpen}
@@ -1886,6 +1889,33 @@ export default function GameWorld() {
       >
         <BookOpen size={14} />
         Guestbook
+      </button>
+      {/* G6: collection book trigger. */}
+      <button
+        onClick={() => setCollectionOpen((o) => !o)}
+        aria-label="Open collection"
+        title="Collection"
+        style={{
+          position: "absolute",
+          bottom: 16,
+          right: 430,
+          zIndex: 50,
+          display: "flex",
+          alignItems: "center",
+          gap: 6,
+          padding: "8px 10px",
+          background: "rgba(15, 15, 16, 0.78)",
+          border: "1px solid rgba(255, 255, 255, 0.15)",
+          borderRadius: 8,
+          color: "#f1ffff",
+          fontFamily: "'IBM Plex Mono', monospace",
+          fontSize: 11,
+          cursor: "pointer",
+          backdropFilter: "blur(6px)",
+        }}
+      >
+        <span style={{ fontSize: 13 }}>🧺</span>
+        Collection
       </button>
       <GraphicsButton onClick={() => setGraphicsOpen(true)} />
       </>)}
