@@ -102,6 +102,14 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-04 — Cozy marathon G6 + V5 + camera fix (`0fdbf45`, `4b57977`, `44111ea`)
+
+- **Camera roof-clip fix:** min-distance 8 → 12 so hard wheel-zoom toward the village stops above building roofs instead of penetrating the interior. Verified.
+- **G6 collection book:** corner "Collection" button opens an ACNH-critterpedia card — fruit/flowers/fish from `member_collections` with emoji icons + counts, undiscovered slots grey "???" with an X/Y-kinds header for completion pull. Button at right:430 to clear the Graphics button (found + fixed a pointer-intercept overlap). ESC/backdrop close.
+- **V5 sea color per TOD:** ocean deep/shallow/foam uniforms ease per-frame toward a per-phase palette (dawn peach-blue / day azure / dusk violet / night navy) so the water matches the sky. Verified: dusk sea reads warm violet.
+
+Queue: V6 river-color-per-TOD (river still fixed blue, clashes at dusk), W1 gentle NPC wander.
+
 ### 2026-07-04 — Cozy marathon G-series: the ACNH/Stardew interaction loop (`dcbada8`, `7981102`, `af49f22`, `7f0195a`)
 
 Five cozy interactions, all on the shared E-interact system, all verified live, all pushed. New `member_collections` table (applied to remote, ledger-recorded) backs the collectibles — **zero TC, zero XP, principle #3 intact**; it's a collection log, not economy. New `POST/GET /api/collections`.
