@@ -102,6 +102,16 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-04 — Cozy marathon V1-V3: curved world, player sprite, ocean (`2620c92`, `76ae5b7`, `3e7371c`)
+
+David authorized a run-until-credits marathon (rulings: look-first, all interactions + fishing with Stardew/Minecraft inspiration, CC0 player swap, continuous push). All three shipped with 60fps verified per commit:
+
+- **V1 curved world:** global `project_vertex` chunk patch, drop = z²·0.002 view-space — the ACNH horizon roll. Sky/custom shaders exempt by construction. 0.0012 read too subtle; 0.002 verified by screenshot.
+- **V2 player sprite:** Ninja Adventure Boy walk sheet (direction COLUMNS × 4 frame ROWS — layout verified by cropping the sheet, not guessed). Idle = row 0 of facing column. Found + fixed the old angle map's up/down swap AND yesterday's NPC bug: idle sheets hold directions-in-columns, so the "idle animation" was spinning NPCs in place — now pinned front-facing. Visitor re-skinned to Hunter so the player isn't duplicated.
+- **V3 ocean + skirt:** 400×400 animated sea (sparkle waves + lapping foam ring on the island's Chebyshev shore), soil cliff skirt under the terrain rim, fog relaxed 40-70 → 45-95 since the sea now masks the edge. Follow-ups queued: sea color per TOD; river toon upgrade.
+
+Next: V4 triangle grass + paths, then G-series (tree shake, speech bubbles, bench sitting, flowers, fishing).
+
 ### 2026-07-03 — Cozy pass 2: CC0 audio content drop + NPC pixel sprites (`02e3672`, `4544c9e`)
 
 Free-pack integration from the research round. All CC0, credits at `web/public/audio/CREDITS.md`.
