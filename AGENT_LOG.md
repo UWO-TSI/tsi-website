@@ -102,6 +102,13 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-04 — Cozy marathon W3 + W4 (`c232265`, `28e40de`)
+
+- **W3 path softening:** paths went from a 3-row hard alpha V to 5 rows with a smoothstep feather (solid core ~55%, gentle edge fade) + slightly wider — reads painted-in against the triangle grass.
+- **W4 evening fireflies:** fireflies now appear at dusk (7) and ramp to 13 at night (was night-only, 7), so golden hour eases into the glow. Day-only creatures (birds/butterflies) no longer linger into dusk. 60fps held at night.
+
+Cozy marathon running total (this session): V1 curved world, V2 player sprite, V3 ocean+skirt, V4 triangle grass, V5 sea-TOD, V6 river-TOD; G1 tree shake, G2 speech bubbles, G3 benches, G4 flowers, G5 fishing, G6 collection book; W1 wander, W2 footsteps (self-activated), W3 paths, W4 fireflies; + camera roof-clip fix. New `member_collections` table + `/api/collections`. All CC0, all pushed, lint held 74/59, 32/32 tests throughout.
+
 ### 2026-07-04 — Cozy marathon V6 + W1 (`27cdce3`, `2cf44f0`)
 
 - **V6 river color per TOD:** river deep/shallow eased to a per-phase palette matching the ocean, so both water bodies read as one at dusk/night. Also removed a stray duplicate `<River>` render that slipped in when Ocean landed. Verified: dusk water unified violet.
