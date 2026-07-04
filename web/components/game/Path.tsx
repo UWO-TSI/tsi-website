@@ -44,11 +44,13 @@ interface PathProps {
 }
 
 const DEFAULT_COLOR = "#C4A265"; // v2 spec §3.2 "Dirt path"
-const ROWS = 3; // left edge, center, right edge
+// W3: 5 cross-rows (was 3) so the edge feathers with a smoothstep ramp
+// instead of a hard linear V — reads painted-in against the triangle grass.
+const ROWS = 5;
 
 export default function Path({
   controlPoints,
-  width = 2.5,
+  width = 2.7,
   color = DEFAULT_COLOR,
   segments = 48,
   yOffset = 0.02,
@@ -78,8 +80,8 @@ export default function Path({
       const nz = pz / plen;
 
       for (let r = 0; r < ROWS; r++) {
-        const u = r / (ROWS - 1); // 0, 0.5, 1
-        const offset = (u - 0.5) * width; // -halfW, 0, +halfW
+        const u = r / (ROWS - 1); // 0 … 1 across width
+        const offset = (u - 0.5) * width;
         const vx = point.x + nx * offset;
         const vz = point.z + nz * offset;
         const vy = getTerrainHeight(vx, vz) + yOffset;
@@ -89,7 +91,11 @@ export default function Path({
         positions[idx * 3 + 1] = vy;
         positions[idx * 3 + 2] = vz;
 
-        const alpha = r === 1 ? 1.0 : 0.0;
+        // W3: smoothstep feather. Solid core across the middle ~55% of the
+        // width, softly fading to alpha 0 at both edges.
+        const edge = Math.abs(u - 0.5) * 2; // 0 center → 1 edge
+        const s = THREE.MathUtils.clamp((edge - 0.45) / 0.55, 0, 1);
+        const alpha = 1 - s * s * (3 - 2 * s); // 1 core → 0 edge
         colors[idx * 4] = baseColor.r;
         colors[idx * 4 + 1] = baseColor.g;
         colors[idx * 4 + 2] = baseColor.b;
