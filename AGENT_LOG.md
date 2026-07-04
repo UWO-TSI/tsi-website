@@ -102,6 +102,14 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-04 — Cozy marathon V6 + W1 (`27cdce3`, `2cf44f0`)
+
+- **V6 river color per TOD:** river deep/shallow eased to a per-phase palette matching the ocean, so both water bodies read as one at dusk/night. Also removed a stray duplicate `<River>` render that slipped in when Ocean landed. Verified: dusk water unified violet.
+- **W1 gentle NPC wander:** NPCs drift within 1.15u of spawn on two slow sine components + a slower pause envelope (mill about, then stop). Terrain resampled at the drifted spot; nameplate/bubble/hitbox ride the group. Verified moving at 60fps. Interact sweep still targets the spawn point — fine, well within the 3.5u E-radius.
+- **W2 footstep polish:** no code needed — `sfx.play("footstep")` + dust puffs were already wired; they self-activated when the CC0 audio landed (`02e3672`). Confirmed footstep.ogg present.
+
+Queue: W3 path edge softening.
+
 ### 2026-07-04 — Cozy marathon G6 + V5 + camera fix (`0fdbf45`, `4b57977`, `44111ea`)
 
 - **Camera roof-clip fix:** min-distance 8 → 12 so hard wheel-zoom toward the village stops above building roofs instead of penetrating the interior. Verified.
