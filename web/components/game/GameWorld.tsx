@@ -9,6 +9,7 @@ import PlayerAvatar from "./PlayerAvatar";
 import Building from "./Building";
 import Path from "./Path";
 import River, { sampleRiverPoint, findRiverTForX } from "./River";
+import Ocean from "./Ocean";
 import { getTerrainHeight, valueNoise, BUILDING_FOOTPRINTS } from "./terrain";
 import { NatureFence, NatureMushroom, NatureStump } from "./NatureModels";
 import InstancedGLB, { type NaturePlacement } from "./InstancedNature";
@@ -1379,9 +1380,10 @@ function Scene({
       {/* Cozy push 2026-07-03: was 25-55, which washed half the village gray
           (David: fog doesn't look good). Now a far soft haze — the village
           (±30u) stays crisp, the island edge still fades out. */}
-      <fog attach="fog" args={[fogColor, 40, 70]} />
+      <fog attach="fog" args={[fogColor, 45, 95]} />
 
       <Terrain />
+      <Ocean />
       <River />
       <Bridge />
 
