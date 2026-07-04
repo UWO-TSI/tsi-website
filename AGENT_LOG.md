@@ -102,6 +102,12 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-04 — Cozy marathon V4 + G2: triangle grass, proximity speech bubbles (`684e55d`, `05d4fbe`)
+
+- **V4 triangle grass:** the noise detail texture is now the ACNH tessellated triangle quilt (16px cells, checkerboard-flipped diagonals, 3 hashed tones + anti-band jitter) — biggest single "reads as Animal Crossing" moment so far. Zero runtime delta.
+- **G2 speech bubbles:** NPCs greet on the noticed rising edge — white rounded bubble with tail (canned_dialogue line or a cozy filler pool for the courtyard fillers), three staggered voice blips, 4.2s display, 22s per-NPC cooldown. Verified live: mayor's canned line fired on approach (DOM probe + screenshot).
+- Known wart for later: wheel-dolly has no camera collision, so zooming toward the village center clips into the HQ roof (repro'd repeatedly during verification).
+
 ### 2026-07-04 — Cozy marathon V1-V3: curved world, player sprite, ocean (`2620c92`, `76ae5b7`, `3e7371c`)
 
 David authorized a run-until-credits marathon (rulings: look-first, all interactions + fishing with Stardew/Minecraft inspiration, CC0 player swap, continuous push). All three shipped with 60fps verified per commit:

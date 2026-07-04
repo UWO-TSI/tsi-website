@@ -10,6 +10,7 @@ import Building from "./Building";
 import Path from "./Path";
 import River, { sampleRiverPoint, findRiverTForX } from "./River";
 import Ocean from "./Ocean";
+import TreeShakeFX from "./TreeShakeFX";
 import { getTerrainHeight, valueNoise, BUILDING_FOOTPRINTS } from "./terrain";
 import { NatureFence, NatureMushroom, NatureStump } from "./NatureModels";
 import InstancedGLB, { type NaturePlacement } from "./InstancedNature";
@@ -1205,7 +1206,7 @@ function Scene({
   onNPCClick: (npc: NPCPersona) => void;
   activeEmote: EmoteType | null;
   playerPosRef: React.MutableRefObject<THREE.Vector3>;
-  onNearestInteractable: (n: { kind: "npc" | "building"; id: string; name: string; href?: string; npc?: NPCPersona } | null) => void;
+  onNearestInteractable: (n: { kind: "npc" | "building" | "tree"; id: string; name: string; href?: string; npc?: NPCPersona; treePos?: [number, number] } | null) => void;
   debugSnapshotRef: React.MutableRefObject<DebugSnapshot | null>;
   ambientDensity: number;
   azimuthRef: React.MutableRefObject<number>;
@@ -1253,7 +1254,7 @@ function Scene({
     // O(npc + building) sweep every move tick. INTERACT_RADIUS = 3.5 units.
     const INTERACT_RADIUS = 3.5;
     let bestDist = INTERACT_RADIUS;
-    let best: { kind: "npc" | "building"; id: string; name: string; href?: string; npc?: NPCPersona } | null = null;
+    let best: { kind: "npc" | "building" | "tree"; id: string; name: string; href?: string; npc?: NPCPersona; treePos?: [number, number] } | null = null;
     for (const { persona, position: p } of placedPersonas) {
       const dx = p[0] - position.x;
       const dz = p[2] - position.z;
@@ -1273,6 +1274,16 @@ function Scene({
       if (d < bestDist) {
         bestDist = d;
         best = { kind: "building", id: b.id, name: b.name, href: b.href };
+      }
+    }
+    // G1: trees — tighter radius (2.6) so NPCs/buildings win when both are
+    // near. Name renders in the E-prompt as "Shake tree".
+    for (let i = 0; i < TREE_XZ.length; i++) {
+      const [tx, tz] = TREE_XZ[i];
+      const d = Math.hypot(tx - position.x, tz - position.z);
+      if (d < Math.min(bestDist, 2.6)) {
+        bestDist = d;
+        best = { kind: "tree", id: `tree-${i}`, name: "Shake tree", treePos: [tx, tz] };
       }
     }
     onNearestInteractable(best);
@@ -1384,6 +1395,7 @@ function Scene({
 
       <Terrain />
       <Ocean />
+      <TreeShakeFX />
       <River />
       <Bridge />
 
@@ -1524,7 +1536,7 @@ export default function GameWorld() {
   // F1.2: nearest interactable for crosshair + E-interact. Updated by Scene
   // on each player move via onNearestInteractable. Kept here so Crosshair
   // (DOM, outside Canvas) can read it.
-  const [nearest, setNearest] = useState<{ kind: "npc" | "building"; id: string; name: string; href?: string; npc?: NPCPersona } | null>(null);
+  const [nearest, setNearest] = useState<{ kind: "npc" | "building" | "tree"; id: string; name: string; href?: string; npc?: NPCPersona; treePos?: [number, number] } | null>(null);
   const nearestRef = useRef<typeof nearest>(null);
   useEffect(() => { nearestRef.current = nearest; }, [nearest]);
 
@@ -1547,6 +1559,13 @@ export default function GameWorld() {
         e.preventDefault();
         if (n.kind === "npc" && n.npc) {
           setActiveNPC(n.npc);
+        } else if (n.kind === "tree" && n.treePos) {
+          // G1: tree shake — FX layer (TreeShakeFX inside the Canvas) owns
+          // the burst + drop; decoupled via a window event so the handler
+          // stays outside the R3F tree.
+          window.dispatchEvent(
+            new CustomEvent("tsi:tree-shake", { detail: { x: n.treePos[0], z: n.treePos[1] } })
+          );
         } else if (n.kind === "building" && n.href) {
           // Building has a destination route — let the existing Building click
           // path handle the actual navigation by simulating it here.
