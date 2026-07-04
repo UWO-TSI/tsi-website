@@ -5,6 +5,7 @@ import { useFrame, ThreeEvent } from "@react-three/fiber";
 import { Billboard, Html } from "@react-three/drei";
 import * as THREE from "three";
 import { getTerrainHeight } from "./terrain";
+import { AudioManager } from "@/lib/game/audio";
 import type { NPCPersona } from "@/lib/game/contentTypes";
 
 /**
@@ -38,6 +39,21 @@ const NAMEPLATE_OFFSET = QUAD_HEIGHT / 2 + 0.5;
 // playtest so the cue arrives just before the prompt would.
 const NOTICE_RANGE = 5.5;
 
+// G2 (cozy marathon): proximity speech bubble. On the noticed rising edge
+// the NPC greets with a floating line + voice blips — the ACNH "villagers
+// talk at you as you pass" beat. Once per approach, cooled down so
+// loitering nearby doesn't spam.
+const BUBBLE_MS = 4200;
+const BUBBLE_COOLDOWN_S = 22;
+// Fillers (no canned_dialogue) draw from a tiny cozy pool.
+const FILLER_LINES = [
+  "Nice day, eh?",
+  "Hm hm hmm ♪",
+  "The bridge creaks a little. I like it.",
+  "Have you talked to the Mayor yet?",
+  "I could watch the river all day.",
+];
+
 // Hue from slug → consistent color per NPC, deterministic across sessions.
 function slugToHue(slug: string): number {
   let h = 0;
@@ -52,6 +68,10 @@ export default function NPC({ persona, position, playerPosition, onClick }: NPCP
   const meshRef = useRef<THREE.Mesh>(null);
   const [hovered, setHovered] = useState(false);
   const [noticed, setNoticed] = useState(false);
+  // G2 speech bubble state + timers (refs so useFrame can read/write freely).
+  const [bubble, setBubble] = useState<string | null>(null);
+  const bubbleUntilRef = useRef(0);
+  const bubbleCooldownRef = useRef(0);
   // P10: per-frame bob clock + smoothed proximity factor (0 = far, 1 = next
   // to the NPC). Drives idle bob amplitude so the NPC subtly leans in as
   // the player approaches.
@@ -121,6 +141,24 @@ export default function NPC({ persona, position, playerPosition, onClick }: NPCP
     proxRef.current = THREE.MathUtils.damp(proxRef.current, targetProx, 8, delta);
     const isNoticed = dist <= NOTICE_RANGE;
     if (isNoticed !== noticed) setNoticed(isNoticed);
+
+    // G2: greet on the noticed rising edge (with cooldown), clear on expiry.
+    const now = clockRef.current;
+    if (isNoticed && !noticed && now >= bubbleCooldownRef.current) {
+      const pool =
+        persona.canned_dialogue && persona.canned_dialogue.length > 0
+          ? persona.canned_dialogue
+          : FILLER_LINES;
+      const line = pool[Math.floor(Math.random() * pool.length)];
+      bubbleUntilRef.current = now + BUBBLE_MS / 1000;
+      bubbleCooldownRef.current = now + BUBBLE_COOLDOWN_S;
+      setBubble(line);
+      // A couple of staggered voice blips sell the "they said something".
+      AudioManager.playBlip();
+      window.setTimeout(() => AudioManager.playBlip(), 140);
+      window.setTimeout(() => AudioManager.playBlip(), 300);
+    }
+    if (bubble && now > bubbleUntilRef.current) setBubble(null);
 
     if (meshRef.current) {
       // Hover takes precedence over notice scale; both feel like attention.
@@ -235,6 +273,60 @@ export default function NPC({ persona, position, playerPosition, onClick }: NPCP
         <circleGeometry args={[QUAD_WIDTH * 0.45, 16]} />
         <meshBasicMaterial color="#000000" transparent opacity={0.25} depthWrite={false} />
       </mesh>
+
+      {/* G2: proximity speech bubble — ACNH-style rounded white bubble with
+          a tail, floating above the nameplate. Pointer-events off so it
+          never blocks the click-to-chat hitbox. */}
+      {bubble && (
+        <Html
+          zIndexRange={[40, 0]}
+          position={[0, NAMEPLATE_OFFSET + QUAD_HEIGHT + 0.6, 0]}
+          center
+          style={{ pointerEvents: "none" }}
+          distanceFactor={10}
+        >
+          <div
+            style={{
+              position: "relative",
+              maxWidth: 210,
+              padding: "8px 12px",
+              background: "#FFFDF5",
+              color: "#4A4034",
+              borderRadius: 14,
+              border: "2px solid #E8DFC8",
+              fontFamily: "var(--font-highlight, sans-serif)",
+              fontSize: 12,
+              lineHeight: 1.35,
+              textAlign: "center",
+              boxShadow: "0 3px 10px rgba(60, 45, 20, 0.18)",
+              animation: "npc-bubble-pop 0.25s ease-out",
+              whiteSpace: "normal",
+              width: "max-content",
+            }}
+          >
+            {bubble}
+            <span
+              style={{
+                position: "absolute",
+                left: "50%",
+                bottom: -7,
+                transform: "translateX(-50%) rotate(45deg)",
+                width: 12,
+                height: 12,
+                background: "#FFFDF5",
+                borderRight: "2px solid #E8DFC8",
+                borderBottom: "2px solid #E8DFC8",
+              }}
+            />
+            <style>{`
+              @keyframes npc-bubble-pop {
+                from { transform: scale(0.6); opacity: 0; }
+                to { transform: scale(1); opacity: 1; }
+              }
+            `}</style>
+          </div>
+        </Html>
+      )}
 
       {/* P10: notice indicator — appears when player enters NOTICE_RANGE.
           A subtle "!" bubble that signals "I see you, click to talk".
