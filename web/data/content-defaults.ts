@@ -56,7 +56,7 @@ export const DEFAULT_NPC_PERSONAS: NPCPersona[] = [
     id: "mayor-fallback",
     slug: "mayor",
     display_name: "Mayor Eliza",
-    sprite_url: null,
+    sprite_url: "/assets/characters/npc/mayor.png",
     spawn_zone: "courtyard",
     is_permanent: true,
     persona_prompt:
@@ -74,7 +74,7 @@ export const DEFAULT_NPC_PERSONAS: NPCPersona[] = [
     id: "shopkeeper-fallback",
     slug: "shopkeeper",
     display_name: "Toren",
-    sprite_url: null,
+    sprite_url: "/assets/characters/npc/shopkeeper.png",
     spawn_zone: "shop",
     is_permanent: true,
     persona_prompt:
