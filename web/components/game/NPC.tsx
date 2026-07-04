@@ -11,9 +11,9 @@ import type { NPCPersona } from "@/lib/game/contentTypes";
  * NPC (sprint D5; sprites landed 2026-07-03 cozy push) — billboard for a
  * non-player character.
  *
- * With `persona.sprite_url` set, renders a pixel-art idle sheet (4 frames of
- * 16x16 across a 64x16 PNG — the Ninja Adventure CC0 layout) animated at
- * ~5fps with NearestFilter. Falls back to the original hue-hashed quad while
+ * With `persona.sprite_url` set, renders the front-facing cell of a 64x16
+ * Ninja Adventure CC0 idle sheet (columns are DIRECTIONS, not frames) with
+ * NearestFilter. Falls back to the original hue-hashed quad while
  * the texture loads, on load error, or when sprite_url is null — the world
  * never shows an empty NPC (principle #2). Non-Suspense TextureLoader,
  * matching PlayerAvatar's pattern.
@@ -21,8 +21,7 @@ import type { NPCPersona } from "@/lib/game/contentTypes";
  * Click fires onClick (GameWorld wires this to setActiveNPC → D4 overlay).
  */
 
-const SPRITE_FRAMES = 4;
-const SPRITE_FPS = 5;
+const SPRITE_FRAMES = 4; // sheet columns (directions); front face = column 0
 
 interface NPCProps {
   persona: NPCPersona;
@@ -76,7 +75,6 @@ export default function NPC({ persona, position, playerPosition, onClick }: NPCP
   // each React Compiler rule sees only its legal access path.
   const spriteTexRef = useRef<THREE.Texture | null>(null);
   const [spriteTex, setSpriteTex] = useState<THREE.Texture | null>(null);
-  const frameRef = useRef(0);
   useEffect(() => {
     if (!persona.sprite_url) return;
     let cancelled = false;
@@ -139,15 +137,11 @@ export default function NPC({ persona, position, playerPosition, onClick }: NPCP
       groupRef.current.position.y = grounded[1] + bob;
     }
 
-    // Sprite idle animation: step through the 4 frames at SPRITE_FPS.
+    // Idle sheets put DIRECTIONS in columns (down/up/left/right), not
+    // animation frames — cycling them made NPCs spin in place (2026-07-04
+    // layout audit). Pin the front-facing column; the bob is the idle life.
     const tex = spriteTexRef.current;
-    if (tex) {
-      const frame = Math.floor(clockRef.current * SPRITE_FPS) % SPRITE_FRAMES;
-      if (frame !== frameRef.current) {
-        frameRef.current = frame;
-        tex.offset.x = frame / SPRITE_FRAMES;
-      }
-    }
+    if (tex && tex.offset.x !== 0) tex.offset.x = 0;
   });
 
   const handlePointerOver = (e: ThreeEvent<PointerEvent>) => {

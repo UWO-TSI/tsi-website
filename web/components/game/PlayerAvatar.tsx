@@ -47,25 +47,27 @@ const AVATAR_FOOT_OFFSET = 0;
 
 // Sprint A8: visual bob constants. Applied to the sprite mesh inside the
 // Billboard, NOT the group (group.y is ground-follow from A1).
-const SPRITE_BASE_Y = 1.1;
+const SPRITE_BASE_Y = 0.95; // square 1.7 plane: feet land at ~0.10 like the old sheet
 const WALK_BOB_AMP = 0.05;
 const IDLE_BOB_AMP = 0.02;
 const BREATH_BLEND_LERP = 1 / 0.3; // ~0.3s blend between walk and idle bob
 
-// Sprite sheet grid config — adjust when exact sheet layout is confirmed
-const SHEET_COLS = 3;
-const SHEET_ROWS = 10;
-const FRAME_RATE = 6; // frames per second for walk animation
+// Sprite sheet grid — Ninja Adventure (CC0) Walk.png: 4 direction COLUMNS
+// (down, up, left, right) x 4 walk-frame ROWS of 16x16. Idle = frame row 0
+// of the facing column, so one texture covers everything.
+const SHEET_COLS = 4;
+const SHEET_ROWS = 4;
+const FRAME_RATE = 8; // frames per second for walk animation
 
-// Direction rows in sprite sheet (approximate — tune to actual sheet)
-const DIR_DOWN = { row: 0, frames: 2 };
-const DIR_LEFT = { row: 4, frames: 2 };
-const DIR_RIGHT = { row: 6, frames: 1 };
-const DIR_UP = { row: 8, frames: 2 };
-const WALK_DOWN = { row: 2, frames: 3 };
-const WALK_LEFT = { row: 4, frames: 3 };
-const WALK_RIGHT = { row: 6, frames: 3 };
-const WALK_UP = { row: 8, frames: 3 };
+// col = direction column; frames = walk cycle length (rows)
+const DIR_DOWN = { col: 0, frames: 1 };
+const DIR_UP = { col: 1, frames: 1 };
+const DIR_LEFT = { col: 2, frames: 1 };
+const DIR_RIGHT = { col: 3, frames: 1 };
+const WALK_DOWN = { col: 0, frames: 4 };
+const WALK_UP = { col: 1, frames: 4 };
+const WALK_LEFT = { col: 2, frames: 4 };
+const WALK_RIGHT = { col: 3, frames: 4 };
 
 // Key state tracking
 const keys: Record<string, boolean> = {};
@@ -113,7 +115,7 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
 
   // Load and configure textures for pixel art during construction
   const spriteTexture = useMemo(() => {
-    const tex = new THREE.TextureLoader().load("/assets/characters/prototype_character.png");
+    const tex = new THREE.TextureLoader().load("/assets/characters/player_walk.png");
     tex.minFilter = THREE.NearestFilter;
     tex.magFilter = THREE.NearestFilter;
     tex.generateMipmaps = false;
@@ -286,11 +288,14 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
     const angle = facingRef.current;
     const normalizedAngle = ((angle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
 
-    let anim = moving ? WALK_DOWN : DIR_DOWN;
+    // facing = atan2(dx, dz): 0 = +z (away from the default camera → back
+    // view), π = toward camera (front). Verified against the Ninja sheet
+    // 2026-07-04 — the old mapping had up/down swapped for this layout.
+    let anim = moving ? WALK_UP : DIR_UP;
     if (normalizedAngle > Math.PI * 0.25 && normalizedAngle <= Math.PI * 0.75) {
       anim = moving ? WALK_LEFT : DIR_LEFT;
     } else if (normalizedAngle > Math.PI * 0.75 && normalizedAngle <= Math.PI * 1.25) {
-      anim = moving ? WALK_UP : DIR_UP;
+      anim = moving ? WALK_DOWN : DIR_DOWN;
     } else if (normalizedAngle > Math.PI * 1.25 && normalizedAngle <= Math.PI * 1.75) {
       anim = moving ? WALK_RIGHT : DIR_RIGHT;
     }
@@ -313,9 +318,9 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
       frameTimer.current = 0;
     }
 
-    // Update UV offset to show current frame
-    const col = currentFrame.current % SHEET_COLS;
-    const row = anim.row;
+    // Update UV offset — direction picks the column, frame picks the row.
+    const col = anim.col;
+    const row = currentFrame.current % anim.frames;
     spriteTexture.offset.set(
       col / SHEET_COLS,
       1 - (row + 1) / SHEET_ROWS
@@ -417,7 +422,7 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
           feet-on-ground. */}
       <Billboard follow lockX={false} lockY={false} lockZ={false}>
         <mesh ref={meshRef} position={[0, 1.1, 0]}>
-          <planeGeometry args={[1.4, 2.0]} />
+          <planeGeometry args={[1.7, 1.7]} />
           <meshBasicMaterial
             map={spriteTexture}
             transparent
