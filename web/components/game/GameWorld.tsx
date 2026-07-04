@@ -1436,7 +1436,7 @@ function Scene({
       <fog attach="fog" args={[fogColor, 45, 95]} />
 
       <Terrain />
-      <Ocean />
+      <Ocean phase={todPhase} />
       <TreeShakeFX />
       <FlowerPickFX />
       <River />

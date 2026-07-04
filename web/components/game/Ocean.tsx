@@ -22,22 +22,37 @@ const OCEAN_SIZE = 400;
 const OCEAN_Y = -0.55;
 const ISLAND_HALF = 41; // terrain is 82x82
 const FOAM_BAND = 2.6; // how far the shore foam reaches out from the island
-const DEEP = "#3D8FC4";
-const SHALLOW = "#7CC4E8";
-const FOAM = "#EAF7FA";
 const SOIL = "#7A5C43";
 const SOIL_DARK = "#5E4632";
 
-export default function Ocean() {
+// V5: sea palette per time-of-day. [deep, shallow, foam]. Day = bright azure,
+// dusk = warm violet, night = deep navy, dawn = soft peach-blue.
+type Phase = "dawn" | "day" | "dusk" | "night";
+const SEA_PALETTE: Record<Phase, [string, string, string]> = {
+  dawn: ["#5E86C4", "#9FC0D8", "#F2E4D8"],
+  day: ["#3D8FC4", "#7CC4E8", "#EAF7FA"],
+  dusk: ["#5A5490", "#9C7FB0", "#F0D8C4"],
+  night: ["#1E2A52", "#354674", "#8FA0C8"],
+};
+
+export default function Ocean({ phase }: { phase: Phase }) {
   const timeUniform = useRef({ value: 0 });
+  // Live uniform refs so the frame loop can lerp toward the phase palette.
+  const deepRef = useRef(new THREE.Color(SEA_PALETTE.day[0]));
+  const shallowRef = useRef(new THREE.Color(SEA_PALETTE.day[1]));
+  const foamRef = useRef(new THREE.Color(SEA_PALETTE.day[2]));
+  const phaseRef = useRef<Phase>(phase);
+  useEffect(() => {
+    phaseRef.current = phase;
+  }, [phase]);
 
   const material = useMemo(() => {
     const mat = new THREE.MeshBasicMaterial({ color: 0xffffff });
     mat.onBeforeCompile = (shader) => {
       shader.uniforms.uTime = timeUniform.current;
-      shader.uniforms.uDeep = { value: new THREE.Color(DEEP) };
-      shader.uniforms.uShallow = { value: new THREE.Color(SHALLOW) };
-      shader.uniforms.uFoam = { value: new THREE.Color(FOAM) };
+      shader.uniforms.uDeep = { value: deepRef.current };
+      shader.uniforms.uShallow = { value: shallowRef.current };
+      shader.uniforms.uFoam = { value: foamRef.current };
 
       shader.vertexShader = shader.vertexShader.replace(
         "#include <common>",
@@ -89,8 +104,15 @@ varying vec2 vOceanXZ;`
 
   useEffect(() => () => material.dispose(), [material]);
 
+  const _tgt = useMemo(() => new THREE.Color(), []);
   useFrame((_, delta) => {
     timeUniform.current.value += delta;
+    // V5: ease the sea palette toward the current phase (~1.5s to settle).
+    const pal = SEA_PALETTE[phaseRef.current];
+    const k = 1 - Math.exp(-delta / 0.5);
+    deepRef.current.lerp(_tgt.set(pal[0]), k);
+    shallowRef.current.lerp(_tgt.set(pal[1]), k);
+    foamRef.current.lerp(_tgt.set(pal[2]), k);
   });
 
   return (
