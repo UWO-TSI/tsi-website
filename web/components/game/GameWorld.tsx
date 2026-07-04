@@ -1206,7 +1206,7 @@ function Scene({
   onNPCClick: (npc: NPCPersona) => void;
   activeEmote: EmoteType | null;
   playerPosRef: React.MutableRefObject<THREE.Vector3>;
-  onNearestInteractable: (n: { kind: "npc" | "building" | "tree"; id: string; name: string; href?: string; npc?: NPCPersona; treePos?: [number, number] } | null) => void;
+  onNearestInteractable: (n: { kind: "npc" | "building" | "tree" | "bench"; id: string; name: string; href?: string; npc?: NPCPersona; treePos?: [number, number]; seat?: [number, number] } | null) => void;
   debugSnapshotRef: React.MutableRefObject<DebugSnapshot | null>;
   ambientDensity: number;
   azimuthRef: React.MutableRefObject<number>;
@@ -1254,7 +1254,7 @@ function Scene({
     // O(npc + building) sweep every move tick. INTERACT_RADIUS = 3.5 units.
     const INTERACT_RADIUS = 3.5;
     let bestDist = INTERACT_RADIUS;
-    let best: { kind: "npc" | "building" | "tree"; id: string; name: string; href?: string; npc?: NPCPersona; treePos?: [number, number] } | null = null;
+    let best: { kind: "npc" | "building" | "tree" | "bench"; id: string; name: string; href?: string; npc?: NPCPersona; treePos?: [number, number]; seat?: [number, number] } | null = null;
     for (const { persona, position: p } of placedPersonas) {
       const dx = p[0] - position.x;
       const dz = p[2] - position.z;
@@ -1274,6 +1274,16 @@ function Scene({
       if (d < bestDist) {
         bestDist = d;
         best = { kind: "building", id: b.id, name: b.name, href: b.href };
+      }
+    }
+    // G3: benches — sit target. Coords mirror Props()' bench array.
+    const BENCHES: [number, number][] = [[-3, -5], [3, -5], [-3, 6], [3, 6]];
+    for (let i = 0; i < BENCHES.length; i++) {
+      const [bx, bz] = BENCHES[i];
+      const d = Math.hypot(bx - position.x, bz - position.z);
+      if (d < Math.min(bestDist, 2.2)) {
+        bestDist = d;
+        best = { kind: "bench", id: `bench-${i}`, name: "Sit", seat: [bx, bz] };
       }
     }
     // G1: trees — tighter radius (2.6) so NPCs/buildings win when both are
@@ -1536,7 +1546,7 @@ export default function GameWorld() {
   // F1.2: nearest interactable for crosshair + E-interact. Updated by Scene
   // on each player move via onNearestInteractable. Kept here so Crosshair
   // (DOM, outside Canvas) can read it.
-  const [nearest, setNearest] = useState<{ kind: "npc" | "building" | "tree"; id: string; name: string; href?: string; npc?: NPCPersona; treePos?: [number, number] } | null>(null);
+  const [nearest, setNearest] = useState<{ kind: "npc" | "building" | "tree" | "bench"; id: string; name: string; href?: string; npc?: NPCPersona; treePos?: [number, number]; seat?: [number, number] } | null>(null);
   const nearestRef = useRef<typeof nearest>(null);
   useEffect(() => { nearestRef.current = nearest; }, [nearest]);
 
@@ -1559,6 +1569,12 @@ export default function GameWorld() {
         e.preventDefault();
         if (n.kind === "npc" && n.npc) {
           setActiveNPC(n.npc);
+        } else if (n.kind === "bench" && n.seat) {
+          // G3: toggle sit at this bench. PlayerAvatar owns the pose + the
+          // movement freeze; decoupled via a window event.
+          window.dispatchEvent(
+            new CustomEvent("tsi:sit", { detail: { x: n.seat[0], z: n.seat[1] } })
+          );
         } else if (n.kind === "tree" && n.treePos) {
           // G1: tree shake — FX layer (TreeShakeFX inside the Canvas) owns
           // the burst + drop; decoupled via a window event so the handler

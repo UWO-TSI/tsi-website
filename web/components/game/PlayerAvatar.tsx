@@ -94,6 +94,10 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
   const facingRef = useRef(0);
   const frameTimer = useRef(0);
   const currentFrame = useRef(0);
+  // G3: bench sitting. When set, movement freezes and the avatar snaps to the
+  // seat with a down-facing idle pose. Toggled by tsi:sit window events from
+  // GameWorld's E handler; any WASD/click input also stands.
+  const sitRef = useRef<{ x: number; z: number } | null>(null);
   const [isMoving, setIsMoving] = useState(false);
   const { camera, gl } = useThree();
   const sfx = useSFX();
@@ -208,6 +212,17 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
     return () => gl.domElement.removeEventListener("click", handleClick);
   }, [gl, handleClick]);
 
+  // G3: sit toggle. Same seat → stand; different/first → sit at that seat.
+  useEffect(() => {
+    const onSit = (e: Event) => {
+      const { x, z } = (e as CustomEvent<{ x: number; z: number }>).detail;
+      const cur = sitRef.current;
+      sitRef.current = cur && cur.x === x && cur.z === z ? null : { x, z };
+    };
+    window.addEventListener("tsi:sit", onSit);
+    return () => window.removeEventListener("tsi:sit", onSit);
+  }, []);
+
   // Movement + sprite animation loop
   useFrame((_, delta) => {
     if (!groupRef.current) return;
@@ -219,6 +234,29 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
     let moving = false;
     let dx = 0;
     let dz = 0;
+
+    // G3: any movement input stands up. Checked before the sit branch so a
+    // held key breaks the pose immediately.
+    if (sitRef.current && (keys["w"] || keys["a"] || keys["s"] || keys["d"] || targetRef.current)) {
+      sitRef.current = null;
+    }
+
+    // G3: seated — snap to the bench seat, freeze, hold down-idle pose.
+    if (sitRef.current) {
+      const seat = sitRef.current;
+      const seatY = sampleTerrainHeightFast(seat.x, seat.z) + AVATAR_FOOT_OFFSET;
+      pos.set(seat.x, seatY, seat.z);
+      groupRef.current.position.copy(pos);
+      facingRef.current = Math.PI; // face the camera (down column, front cell)
+      currentFrame.current = 0;
+      spriteTexture.offset.set(DIR_DOWN.col / SHEET_COLS, 1 - 1 / SHEET_ROWS);
+      if (meshRef.current) {
+        // Lower the sprite so it reads as seated on the bench slats.
+        meshRef.current.position.y = SPRITE_BASE_Y - 0.42;
+      }
+      if (isMoving) setIsMoving(false);
+      return;
+    }
 
     // Sprint F1.1: camera-relative WASD. Forward = camera direction projected
     // onto XZ plane; right = forward rotated 90° clockwise. Arrow keys are
