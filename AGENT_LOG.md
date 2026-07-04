@@ -102,6 +102,16 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-03 — Cozy pass 2: CC0 audio content drop + NPC pixel sprites (`02e3672`, `4544c9e`)
+
+Free-pack integration from the research round. All CC0, credits at `web/public/audio/CREDITS.md`.
+
+- **Audio (A7 infra finally has content):** Ninja Adventure tracks mapped to the four ambient slots (Peaceful/Calm Village/Chill/Dream → dawn/day/dusk/night), Kenney RPG Audio + Interface Sounds for the five SFX. 6.8MB OGG, lazy-loaded behind the sound-enable gesture; the missing-file fallback stays.
+- **Animalese-lite:** five Ninja Adventure voice blips + `AudioManager.playBlip()`; NPC chat typewriter fires a random blip every 4th tick. No-op until sound is enabled.
+- **NPC sprites:** all 5 NPCs (mayor, shopkeeper, 3 courtyard fillers) render 4-frame 16x16 idle sheets (NearestFilter, ~5fps) instead of hue-hashed quads. Fallback quad kept for load errors / null `sprite_url` (principle #2). DB `npc_personas.sprite_url` set for the two seeded rows; bundled defaults + fillers updated in code. React Compiler compliance: texture lives in state (render) + ref alias (frame-loop mutation).
+- **Asset provenance note:** David twice offered the datamined ACNH model archive (7.9GB archive.org rip, once renamed, once pre-extracted). Declined both times — Nintendo's copyrighted files, takedown + reputational risk for TSI. All shipped assets are license-verified CC0.
+- Gates: tsc exit 0, lint 74/59, 32/32 tests, build ✓ (env-less prerender warn on /admin/recruit is the known artifact). Sprites visually verified in-world at dusk.
+
 ### 2026-07-03 — Cozy pass 1: lighting, fog, palette (David /ultraplan directive, executed locally)
 
 David's rulings: all four cozy gaps attack-ordered (lighting → fog → terrain → buildings), fog explicitly disliked, CC0 assets only, 60fps M1 floor, soft shadows default-on. Commit `7be772f`:
