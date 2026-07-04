@@ -295,14 +295,17 @@ export default function AmbientLife({
   phase: "day" | "night" | "dawn" | "dusk";
   density?: number;
 }) {
-  const isDay = phase === "day" || phase === "dawn" || phase === "dusk";
+  const isDay = phase === "day" || phase === "dawn";
   const isNight = phase === "night";
+  // W4: fireflies come out at DUSK too (fewer than full night), so golden hour
+  // eases into the evening glow instead of popping on at night.
+  const isEvening = phase === "night" || phase === "dusk";
   const scale = (n: number) => Math.max(1, Math.round(n * density));
   return (
     <group>
       {/* Particle counts trimmed for 60+ FPS budget on 1440x900 headless. */}
       {isDay && <Butterflies count={scale(3)} />}
-      {isNight && <Fireflies count={scale(7)} />}
+      {isEvening && <Fireflies count={scale(isNight ? 13 : 7)} />}
       <LeafDrift count={scale(25)} />
       {isDay && <Birds count={scale(2)} />}
     </group>
