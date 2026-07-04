@@ -45,13 +45,24 @@ const NOTICE_RANGE = 5.5;
 // loitering nearby doesn't spam.
 const BUBBLE_MS = 4200;
 const BUBBLE_COOLDOWN_S = 22;
-// Fillers (no canned_dialogue) draw from a tiny cozy pool.
+// Fillers (no canned_dialogue) draw from a cozy pool. Original lines, gently
+// TSI-flavored so the courtyard feels lived-in without naming real people.
 const FILLER_LINES = [
   "Nice day, eh?",
   "Hm hm hmm ♪",
   "The bridge creaks a little. I like it.",
   "Have you talked to the Mayor yet?",
   "I could watch the river all day.",
+  "New folks keep arriving. It's good to see.",
+  "The fireflies come out by the water at night.",
+  "Someone shook the whole tree bare this morning!",
+  "If you're building something, the HQ's the place.",
+  "I caught a little one down by the bank earlier.",
+  "The flowers grow back if you're patient.",
+  "Feels like the whole village is waking up lately.",
+  "Pull up a bench, stay a while.",
+  "Heard the Oracle knows what class you'll be.",
+  "Quiet mornings are my favorite kind.",
 ];
 
 // Hue from slug → consistent color per NPC, deterministic across sessions.
