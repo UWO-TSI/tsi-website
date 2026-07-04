@@ -956,12 +956,15 @@ function LampPosts({ phase }: { phase: "day" | "night" | "dawn" | "dusk" }) {
                 metalness={0}
               />
             </mesh>
+            {/* W7: warmer, wider night pool (0.6→0.95, distance 4→5.5). Halo
+                sprite dropped — a textureless sprite renders as a hard square,
+                not a glow; the brighter point light carries the cozy pool. */}
             {onAtNight && (
               <pointLight
                 position={[0, 1.85, 0]}
-                color="#FFB060"
-                intensity={0.6}
-                distance={4}
+                color="#FFC078"
+                intensity={0.95}
+                distance={5.5}
                 decay={2}
               />
             )}
