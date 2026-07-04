@@ -21,6 +21,7 @@ import AmbientLife from "./AmbientLife";
 import AudioController from "./AudioController";
 import NPCChatOverlay from "./NPCChatOverlay";
 import EmoteMenu from "./EmoteMenu";
+import FishingOverlay from "./FishingOverlay";
 import ControlsOverlay from "./ControlsOverlay";
 import WelcomeOverlay from "./WelcomeOverlay";
 import Compass from "./Compass";
@@ -1215,7 +1216,7 @@ function Scene({
   onNPCClick: (npc: NPCPersona) => void;
   activeEmote: EmoteType | null;
   playerPosRef: React.MutableRefObject<THREE.Vector3>;
-  onNearestInteractable: (n: { kind: "npc" | "building" | "tree" | "bench" | "flower"; id: string; name: string; href?: string; npc?: NPCPersona; treePos?: [number, number]; seat?: [number, number]; flowerIdx?: number; flowerPos?: [number, number] } | null) => void;
+  onNearestInteractable: (n: { kind: "npc" | "building" | "tree" | "bench" | "flower" | "fishing"; id: string; name: string; href?: string; npc?: NPCPersona; treePos?: [number, number]; seat?: [number, number]; flowerIdx?: number; flowerPos?: [number, number]; spot?: [number, number] } | null) => void;
   debugSnapshotRef: React.MutableRefObject<DebugSnapshot | null>;
   ambientDensity: number;
   azimuthRef: React.MutableRefObject<number>;
@@ -1263,7 +1264,7 @@ function Scene({
     // O(npc + building) sweep every move tick. INTERACT_RADIUS = 3.5 units.
     const INTERACT_RADIUS = 3.5;
     let bestDist = INTERACT_RADIUS;
-    let best: { kind: "npc" | "building" | "tree" | "bench" | "flower"; id: string; name: string; href?: string; npc?: NPCPersona; treePos?: [number, number]; seat?: [number, number]; flowerIdx?: number; flowerPos?: [number, number] } | null = null;
+    let best: { kind: "npc" | "building" | "tree" | "bench" | "flower" | "fishing"; id: string; name: string; href?: string; npc?: NPCPersona; treePos?: [number, number]; seat?: [number, number]; flowerIdx?: number; flowerPos?: [number, number]; spot?: [number, number] } | null = null;
     for (const { persona, position: p } of placedPersonas) {
       const dx = p[0] - position.x;
       const dz = p[2] - position.z;
@@ -1283,6 +1284,16 @@ function Scene({
       if (d < bestDist) {
         bestDist = d;
         best = { kind: "building", id: b.id, name: b.name, href: b.href };
+      }
+    }
+    // G5: fishing spots on the riverbank (radius 2.4).
+    const FISHING_SPOTS: [number, number][] = [[-12, 7.5], [-3, 4], [5, 7], [16, 5]];
+    for (let i = 0; i < FISHING_SPOTS.length; i++) {
+      const [sx, sz] = FISHING_SPOTS[i];
+      const d = Math.hypot(sx - position.x, sz - position.z);
+      if (d < Math.min(bestDist, 2.4)) {
+        bestDist = d;
+        best = { kind: "fishing", id: `fish-${i}`, name: "Cast line", spot: [sx, sz] };
       }
     }
     // G4: flowers — pick target (radius 2.0). Skip already-picked clusters.
@@ -1567,7 +1578,7 @@ export default function GameWorld() {
   // F1.2: nearest interactable for crosshair + E-interact. Updated by Scene
   // on each player move via onNearestInteractable. Kept here so Crosshair
   // (DOM, outside Canvas) can read it.
-  const [nearest, setNearest] = useState<{ kind: "npc" | "building" | "tree" | "bench" | "flower"; id: string; name: string; href?: string; npc?: NPCPersona; treePos?: [number, number]; seat?: [number, number]; flowerIdx?: number; flowerPos?: [number, number] } | null>(null);
+  const [nearest, setNearest] = useState<{ kind: "npc" | "building" | "tree" | "bench" | "flower" | "fishing"; id: string; name: string; href?: string; npc?: NPCPersona; treePos?: [number, number]; seat?: [number, number]; flowerIdx?: number; flowerPos?: [number, number]; spot?: [number, number] } | null>(null);
   const nearestRef = useRef<typeof nearest>(null);
   useEffect(() => { nearestRef.current = nearest; }, [nearest]);
 
@@ -1590,6 +1601,11 @@ export default function GameWorld() {
         e.preventDefault();
         if (n.kind === "npc" && n.npc) {
           setActiveNPC(n.npc);
+        } else if (n.kind === "fishing" && n.spot) {
+          // G5: start fishing — the overlay owns the cast/wait/bite machine.
+          window.dispatchEvent(
+            new CustomEvent("tsi:fish-start", { detail: { x: n.spot[0], z: n.spot[1] } })
+          );
         } else if (n.kind === "flower" && n.flowerIdx !== undefined && n.flowerPos) {
           // G4: pick — hide the cluster (store) + FX/collect via event.
           if (pickFlower(n.flowerIdx)) {
@@ -1776,6 +1792,8 @@ export default function GameWorld() {
           onClose={() => setEmoteMenuOpen(false)}
           onPick={handleEmotePick}
         />
+        <FishingOverlay />
+
         <GuestbookOverlay
           open={guestbookOpen}
           onClose={() => setGuestbookOpen(false)}
