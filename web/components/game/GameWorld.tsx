@@ -1405,7 +1405,7 @@ function Scene({
         ref={cameraRef}
         minPolarAngle={Math.PI / 2 - (30 * Math.PI) / 180}
         maxPolarAngle={Math.PI / 2 + (20 * Math.PI) / 180}
-        minDistance={8}
+        minDistance={12}
         maxDistance={25}
         dollySpeed={1.0}
         truckSpeed={0}
