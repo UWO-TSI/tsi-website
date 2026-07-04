@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { X, Flag, Loader2, Send } from "lucide-react";
+import { AudioManager } from "@/lib/game/audio";
 import type { NPCPersona } from "@/lib/game/contentTypes";
 
 /**
@@ -672,7 +673,13 @@ function NPCReplyText({ text, animate }: { text: string; animate: boolean }) {
 
   useEffect(() => {
     if (!animate) return;
+    let ticks = 0;
     const id = setInterval(() => {
+      ticks++;
+      // Animalese-lite: a random CC0 voice blip roughly every 4th character
+      // while text reveals. Skips whitespace ticks so pauses stay silent;
+      // no-ops entirely until the user enables sound.
+      if (ticks % 4 === 0) AudioManager.playBlip();
       setCount((c) => {
         if (c >= text.length) {
           clearInterval(id);

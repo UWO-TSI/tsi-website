@@ -1,26 +1,38 @@
 "use client";
 
 /**
- * Audio manager (sprint A7) — infrastructure-only.
+ * Audio manager (sprint A7 infra; content landed 2026-07-03 cozy push).
  *
- * Real Kenney / xDeviruchi audio files aren't yet committed; the paths in
- * MANIFEST below are placeholders that will resolve automatically once
- * content lands in `web/public/audio/`. Until then, the manager logs ONE
- * console warning and runs silently — every public method is a no-op-safe
- * call so consumers never need to feature-detect.
+ * All shipped files are CC0 — no attribution required (see
+ * `web/public/audio/CREDITS.md`): ambient loops from Pixel-boy's Ninja
+ * Adventure pack (Peaceful/Calm Village/Chill/Dream mapped to
+ * dawn/day/dusk/night), SFX from Kenney RPG Audio + Interface Sounds,
+ * dialogue voice blips from Ninja Adventure (animalese-lite for NPC chat).
+ * The missing-file fallback stays: a deleted file just runs silent.
  *
  * Public API:
  *   AudioManager.enable()                        — user gesture unlock
  *   AudioManager.setVolumes({ master, ambient, sfx })
  *   AudioManager.setPhase(phase)                 — crossfade ambient track
  *   AudioManager.playSFX(name)                   — one-shot, overlapping safe
+ *   AudioManager.playBlip()                      — random dialogue voice blip
  *   AudioManager.dispose()
  *   AudioManager.subscribe(listener)             — for React UI sync
  *   AudioManager.getState()
  */
 
 export type AmbientPhase = "dawn" | "day" | "dusk" | "night";
-export type SFXName = "footstep" | "enter" | "exit" | "click" | "confirm";
+export type SFXName =
+  | "footstep"
+  | "enter"
+  | "exit"
+  | "click"
+  | "confirm"
+  | "blip1"
+  | "blip2"
+  | "blip3"
+  | "blip4"
+  | "blip5";
 
 interface AudioManifest {
   ambient: Record<AmbientPhase, string>;
@@ -40,8 +52,15 @@ const MANIFEST: AudioManifest = {
     exit: "/audio/sfx/exit.ogg",
     click: "/audio/sfx/click.ogg",
     confirm: "/audio/sfx/confirm.ogg",
+    blip1: "/audio/sfx/blip1.ogg",
+    blip2: "/audio/sfx/blip2.ogg",
+    blip3: "/audio/sfx/blip3.ogg",
+    blip4: "/audio/sfx/blip4.ogg",
+    blip5: "/audio/sfx/blip5.ogg",
   },
 };
+
+const BLIPS: SFXName[] = ["blip1", "blip2", "blip3", "blip4", "blip5"];
 
 export interface AudioVolumes {
   master: number;  // 0-1
@@ -251,6 +270,11 @@ class AudioManagerImpl {
     if (!el) return;
     el.volume = this.sfxTargetVolume();
     el.play().catch(() => this.markMissing(src));
+  }
+
+  /** Random short voice blip for NPC dialogue reveal (animalese-lite). */
+  playBlip(): void {
+    this.playSFX(BLIPS[Math.floor(Math.random() * BLIPS.length)]);
   }
 
   dispose(): void {
