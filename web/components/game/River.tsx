@@ -91,10 +91,23 @@ interface RiverProps {
   shallowColor?: string;
   /** Overall surface alpha. */
   opacity?: number;
+  /** V6: time-of-day phase; eases water color to match the sea. */
+  phase?: RiverPhase;
 }
 
 const DEFAULT_DEEP = "#3A6EA5";    // deeper blue, matches existing P.riverDeep tone
 const DEFAULT_SHALLOW = "#A8D8E8"; // light blue foam highlight
+
+// V6: river palette per time-of-day [deep, shallow], mirroring Ocean's SEA
+// palette so the water bodies read as one at dusk/night instead of the river
+// staying day-blue.
+type RiverPhase = "dawn" | "day" | "dusk" | "night";
+const RIVER_PALETTE: Record<RiverPhase, [string, string]> = {
+  dawn: ["#5378B0", "#C4D8E8"],
+  day: ["#3A6EA5", "#A8D8E8"],
+  dusk: ["#54507E", "#C0A8C4"],
+  night: ["#22305A", "#5A6E9C"],
+};
 
 export default function River({
   width = RIVER_WIDTH,
@@ -102,7 +115,11 @@ export default function River({
   deepColor = DEFAULT_DEEP,
   shallowColor = DEFAULT_SHALLOW,
   opacity = 0.78,
+  phase = "day",
 }: RiverProps = {}) {
+  const phaseRef = useRef<RiverPhase>(phase);
+  useEffect(() => { phaseRef.current = phase; }, [phase]);
+  const _riverTgt = useMemo(() => new THREE.Color(), []);
   // Build geometry: ribbon along spline. Each vertex carries a riverUv (u,v)
   // attribute: u = 0..1 across width, v = cumulative arc length / total length.
   const geometry = useMemo(() => {
@@ -331,8 +348,14 @@ export default function River({
     const mat = materialRef.current as THREE.MeshBasicMaterial & {
       userData: { uniforms: { time: { value: number } } };
     };
-    if (mat.userData?.uniforms?.time) {
-      mat.userData.uniforms.time.value += delta;
+    const u = (mat.userData as { uniforms?: { time: { value: number }; deep: { value: THREE.Color }; shallow: { value: THREE.Color } } }).uniforms;
+    if (u?.time) {
+      u.time.value += delta;
+      // V6: ease water color toward the current phase (~0.5s constant).
+      const pal = RIVER_PALETTE[phaseRef.current];
+      const k = 1 - Math.exp(-delta / 0.5);
+      u.deep.value.lerp(_riverTgt.set(pal[0]), k);
+      u.shallow.value.lerp(_riverTgt.set(pal[1]), k);
     }
   });
 

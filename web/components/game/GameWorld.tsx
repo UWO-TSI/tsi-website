@@ -1437,9 +1437,9 @@ function Scene({
 
       <Terrain />
       <Ocean phase={todPhase} />
+      <River phase={todPhase} />
       <TreeShakeFX />
       <FlowerPickFX />
-      <River />
       <Bridge />
 
       <InstancedTrees />
