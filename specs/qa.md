@@ -1,7 +1,26 @@
 # QA Report
 
 > Owner: QA agent. All agents check this for bugs in their area.
-> Last updated: 2026-07-03 (Wave 22)
+> Last updated: 2026-07-04 (Wave 23)
+
+---
+
+## Wave 23 — 2026-07-04 Cozy Marathon Consolidation
+
+Verification pass after the ~25-commit cozy/ACNH marathon (V1-V6 visuals, G1-G6 interactions, W1-W5 world life, camera fix). Autonomous run under David's "iterate until out of credits" directive.
+
+### Verdict: **PASS**
+
+- **Prod build (real env):** ✓ Compiled 22.4s, **98/98 static pages**, no prerender error (the /admin/recruit error only appears in the env-off verification state).
+- **tsc:** exit 0. **Lint:** 74/59 (held at ceiling through the whole marathon). **Tests:** 32/32.
+- **FPS at all three phases (headless M1, 1440×900):** day **60**, dusk **60**, night **60** — the 60fps floor held even with default-on soft shadows, ocean, fireflies, and curved-world bend all active.
+- **Interaction spot-checks (all fire correctly):** tree-shake (leaf burst + fruit toast), flower pick ("You picked…"), fishing (cast→waiting overlay), bench sit, collection button present. Speech bubbles + collection book verified in their own commits.
+- **New schema:** `member_collections` (applied to remote, ledger-recorded) + `POST/GET /api/collections`. Collectibles carry **no TC, no XP** — principle #3 intact; verified no reward path added.
+- **All assets CC0** (Ninja Adventure sprites/audio, Kenney SFX) with `web/public/audio/CREDITS.md`. The datamined ACNH set was declined 4× this session on provenance and never entered the tree.
+
+### Cozy marathon inventory (this session, all pushed)
+
+Visuals: curved-world bend, CC0 pixel player + NPC sprites, ocean + island skirt, ACNH triangle-quilt grass, sea/river color per time-of-day. Interactions: tree shake + fruit, proximity speech bubbles + blips, bench sitting, flower picking + respawn, riverbank fishing minigame, collection book. World life: gentle NPC wander, footstep audio/dust (self-activated), softened path edges, dusk/night fireflies, expanded dialogue. Fix: camera roof-clip.
 
 ---
 
