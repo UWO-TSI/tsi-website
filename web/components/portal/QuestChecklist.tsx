@@ -19,7 +19,7 @@
  *   (full-width, pull-down / handle-tap / backdrop-tap to close).
  */
 
-import { useState, useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { CheckSquare, Square, ChevronDown, X, Sparkles } from "lucide-react";
 import { useUser } from "./UserContext";
 
@@ -28,6 +28,8 @@ interface Quest {
   id: string;
   title: string;
   hint: string;
+  /** Optional window event that auto-completes this quest when it fires. */
+  signal?: string;
 }
 
 const QUESTS: readonly Quest[] = [
@@ -55,6 +57,24 @@ const QUESTS: readonly Quest[] = [
     id: "attend_irl_event",
     title: "Attend an IRL event",
     hint: "Scan the QR code at a Tethos event to bank real XP.",
+  },
+  {
+    id: "shake_a_tree",
+    title: "Shake a tree",
+    hint: "Walk up to a tree in the world and press E.",
+    signal: "tsi:tree-shake",
+  },
+  {
+    id: "pick_a_flower",
+    title: "Pick a flower",
+    hint: "Find a flower patch and press E to pick one.",
+    signal: "tsi:flower-pick",
+  },
+  {
+    id: "catch_a_fish",
+    title: "Catch a fish",
+    hint: "Cast a line at the riverbank and reel one in.",
+    signal: "tsi:fish-caught",
   },
 ] as const;
 
@@ -90,6 +110,14 @@ function writeCompleted(next: Set<string>) {
     /* ignore quota / private-mode failures */
   }
   for (const l of completedListeners) l();
+}
+
+// Idempotent add — used by the interaction-signal auto-complete.
+function markComplete(id: string) {
+  const cur = parseCompleted(readCompletedRaw());
+  if (cur.has(id)) return;
+  cur.add(id);
+  writeCompleted(cur);
 }
 
 function subscribeCompleted(cb: Listener): () => void {
@@ -209,6 +237,22 @@ export default function QuestChecklist() {
     getMobileSnapshot,
     getMobileServerSnapshot,
   );
+
+  // Auto-complete cozy quests when their interaction signal fires. Runs while
+  // the widget is mounted (always, in the dashboard layout) even when muted or
+  // collapsed — doing the thing counts, whether or not you're watching the
+  // list. Signals grant nothing but the checkmark (principle #3).
+  useEffect(() => {
+    const wired = QUESTS.filter((q) => q.signal);
+    const handlers = wired.map((q) => {
+      const h = () => markComplete(q.id);
+      window.addEventListener(q.signal as string, h);
+      return [q.signal as string, h] as const;
+    });
+    return () => {
+      for (const [sig, h] of handlers) window.removeEventListener(sig, h);
+    };
+  }, []);
 
   // Hide entirely when:
   //   - User context still loading (avoid pop-in before tier known).

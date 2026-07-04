@@ -89,6 +89,8 @@ export default function FishingOverlay() {
     setCaughtLabel(fish.label);
     setPhase("caught");
     AudioManager.playSFX("confirm");
+    // Signals the "catch a fish" onboarding quest (auto-complete).
+    window.dispatchEvent(new CustomEvent("tsi:fish-caught", { detail: { key: fish.key } }));
     fetch("/api/collections", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
