@@ -34,26 +34,43 @@ export function getGrassTexture(): THREE.DataTexture {
   const data = new Uint8Array(SIZE * SIZE * 4);
   const state = { v: SEED };
 
+  // ACNH triangle quilt (cozy push V4): a grid of TRI-px square cells, each
+  // split by a diagonal into two triangles; the diagonal flips on a
+  // checkerboard so the quilt tessellates the way New Horizons' ground does.
+  // Each triangle takes one of three close brightness tones from a
+  // deterministic hash, plus a whisper of per-pixel noise against banding.
+  // Values stay pre-multiplied (~0.86-1.0) so they modulate the vertex-color
+  // greens rather than replace them.
+  const TRI = 16; // px per cell → 16 cells per tile ≈ 0.5u triangles in-world
+  const TONES = [0.875, 0.93, 1.0];
+
+  const cellHash = (cx: number, cy: number, half: number): number => {
+    let h = (cx * 374761393 + cy * 668265263 + half * 97) | 0;
+    h = ((h ^ (h >>> 13)) * 1274126177) | 0;
+    return (h ^ (h >>> 16)) >>> 0;
+  };
+
   for (let y = 0; y < SIZE; y++) {
     for (let x = 0; x < SIZE; x++) {
       const idx = (y * SIZE + x) * 4;
 
-      // Multi-octave value noise approximation: blend a low-freq base
-      // (~smooth blotches) with a high-freq detail (single-pixel sparkle).
-      const base = rand(state); // [0,1]
-      // Smoothed via 3x3 box blur on x/y position parity.
-      const detail = ((x * 73 + y * 31) & 7) / 7; // crude high-freq pattern
-      const v = 0.85 + (base - 0.5) * 0.18 + (detail - 0.5) * 0.05;
+      const cx = Math.floor(x / TRI);
+      const cy = Math.floor(y / TRI);
+      const lx = x % TRI;
+      const ly = y % TRI;
+      // Checkerboard flips the split diagonal so triangles tessellate.
+      const flip = (cx + cy) % 2 === 0;
+      const half = (flip ? lx + ly < TRI : lx >= ly) ? 0 : 1;
 
-      // RGB tinted slightly green so it doesn't desaturate the underlying
-      // vertex color. Pre-multiplied: ~217-235 across all channels.
-      const r = Math.max(0, Math.min(255, Math.round(v * 232)));
-      const g = Math.max(0, Math.min(255, Math.round(v * 248)));
-      const b = Math.max(0, Math.min(255, Math.round(v * 220)));
+      const tone = TONES[cellHash(cx, cy, half) % 3];
+      const jitter = (rand(state) - 0.5) * 0.03;
+      const v = tone + jitter;
 
-      data[idx] = r;
-      data[idx + 1] = g;
-      data[idx + 2] = b;
+      // Green-biased premultiply: the quilt reads as grass-tone variation,
+      // not desaturation.
+      data[idx] = Math.max(0, Math.min(255, Math.round(v * 232)));
+      data[idx + 1] = Math.max(0, Math.min(255, Math.round(v * 250)));
+      data[idx + 2] = Math.max(0, Math.min(255, Math.round(v * 218)));
       data[idx + 3] = 255;
     }
   }
