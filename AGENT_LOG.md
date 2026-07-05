@@ -102,6 +102,16 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-04 — Cozy marathon W5 + W6 + W7 (`5d4016b`, `9814370`, `18ebd63`)
+
+- **W5 NPC dialogue variety:** courtyard filler pool 5 → 15 original cozy lines (gently TSI/village-flavored, no real names). Named NPCs keep curated `canned_dialogue`.
+- **W6 cozy onboarding quests:** three new auto-completing quests — shake a tree / pick a flower / catch a fish — flip on their interaction window events (`tsi:tree-shake`, flower-pick, new fish-caught event from FishingOverlay). Checkmark only, zero TC/XP (principle #3). Listener runs even when the widget is muted/collapsed, so doing the thing always counts.
+- **W7 night lamp pools:** lamp point-lights 0.6→0.95 intensity, distance 4→5.5, warmer #FFC078 — lamps read as cozy pools at night. Tried a textureless halo sprite, dropped it (renders as a hard square). 60fps held.
+
+QA **Wave 23** ran mid-batch (after W5): PASS — prod build 98/98, 60fps at day/dusk/night, all 6 interactions verified, principle-3 clean (see `specs/qa.md`).
+
+Queue: building dressing (last open item from the cozy-pass-1 queue).
+
 ### 2026-07-04 — Cozy marathon W3 + W4 (`c232265`, `28e40de`)
 
 - **W3 path softening:** paths went from a 3-row hard alpha V to 5 rows with a smoothstep feather (solid core ~55%, gentle edge fade) + slightly wider — reads painted-in against the triangle grass.
