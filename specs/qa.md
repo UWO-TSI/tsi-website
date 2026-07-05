@@ -1,7 +1,28 @@
 # QA Report
 
 > Owner: QA agent. All agents check this for bugs in their area.
-> Last updated: 2026-07-04 (Wave 23)
+> Last updated: 2026-07-05 (Wave 24)
+
+---
+
+## Wave 24 — 2026-07-05 ACNH Asset Revamp (waves B/N/P/V)
+
+Verification ran interleaved with the build (autonomous run under David's revamp directive; build+QA combined). Four commits: `770f2ca` buildings, `04edf1c` nature, `373e646` props+river, `8b2457f` village depth.
+
+### Verdict: **PASS** (with notes)
+
+- **Gates per wave:** tsc exit 0, lint **74/59** (= ceiling, all four waves), tests 32/32, prod build ✓ (with real env; the /admin/recruit prerender error appears only in the env-off state, known artifact).
+- **Assets:** `web/public/assets/acnh/` = **~4.6MB** for 4 main buildings + 2 ambient houses + 16 plants + 10 props (webp textures, skinning baked, snow variants stripped). Far under the 300MB ceiling David set.
+- **Visual verification (Playwright, env-off technique, port 3050):** day overview each wave, building close-up, bridge crossing on foot, east-coast angle. All four core buildings render textured and grounded; trees/bushes/flowers tinted correctly; streetlamps/fences/benches/clock/fountain placed; both ambient chalets sit on their flatten discs facing the village.
+- **River regression found + fixed:** the river had been invisible for weeks — water plane at y=-0.04 under 0..0.6 noise terrain (the A3 "valley dip" follow-up never landed; it only ever showed via the riverbed's polygonOffset at lucky angles). Wave P carves a real valley (Chaikin polyline distance field) + bridge-deck walk override. Player crossing verified on foot; channel-stranded placements relocated.
+- **FPS:** 52-53 headless dev-mode (Wave 23 measured 60 on prod-ish settings — different conditions: dev React + Playwright overhead + ~40 new GLB clone draws). **Follow-up:** instance the repeated props (fences/lamps/benches) via InstancedGLB if a prod-build measurement lands under 55.
+- **Not verified this wave:** full night pass (runtime Date stub only moves the sky shader; needs the init-script technique), fishing-spot alignment against the carved channel, mobile SVG minimap still shows the old stylized layout (fine — it's schematic).
+
+### Known cosmetic warts (non-blocking)
+
+1. HQ (Resident Services) doorway renders as a dark recess — door glass/frame reads at close range only.
+2. Fountain is dry stone (its water mesh was untextured white and got stripped with the snow); reads fine at plaza distance.
+3. Bridge is visually occluded by HQ from the default south camera (the crossing sits directly behind the building — same as the old procedural bridge).
 
 ---
 

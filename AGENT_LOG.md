@@ -102,6 +102,19 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-05 — ACNH asset revamp waves B/N/P/V (`770f2ca`, `04edf1c`, `373e646`, `8b2457f`)
+
+David supplied the full ACNH GLB dump (~11.2K files, 2.2GB) and ruled: use it (IP risk accepted), world-only (player/NPCs stay 2D sprites), ≤300MB shipped, dress the procedural terrain. Autonomous implement→QA→fix marathon. Shipped ~4.6MB curated into `web/public/assets/acnh/`.
+
+- **Wave B buildings:** HQ = Resident Services (a-01), Shop = Nook's Cranny (market a-02), Oracle = Museum (a-02), House = chalet assembled from PA04 wall+thatch-roof+maple-door parts. New `ACNHBuilding` path in Building.tsx (keeps original textures, origin-grounded at the door plane, 180° facing fix); flatten zones + BUILDINGS sizes resynced.
+- **Wave N nature:** hardwood ×2 / blossom / cedar trees, 3 bushes, 8 flower species, stump. Key discovery: ACNH foliage textures are grayscale masks (in-game color comes from the engine's seasonal LUT — matches the old AC-technical research note). Pipeline tints via baseColorFactor with auto role classification (texture-saturation check + avg-vertex-Y band) + luminance normalization; colored textures pass through.
+- **Wave P props + river:** round streetlamps, park/wood benches, country+log fences, wooden bridge GLB, park clock, fountain. **Found + fixed a weeks-old regression: the river was invisible** — water plane y=-0.04 under the 0..0.6 noise terrain (A3's "valley dip" follow-up never landed). Carved a real valley into getTerrainHeight (Chaikin polyline distance field, -0.35 floor) + bridge-deck override in sampleTerrainHeightFast; relocated channel-stranded placements (trees/bushes/flowers/benches/shop NPC anchor).
+- **Wave V village depth:** 2 ambient chalets (red, yellow) with footprints; fountain to spawn plaza. Cut: market stalls (flat-pack kit parts), distant-view backdrops (pivots assume ACNH sea ring → sky streaks).
+- **Pipeline** (scratchpad, gltf-transform + sharp): merge multi-part models, bake skinning into vertices (the dump stores Z-up→Y-up in bind pose — naive unskin mangles geometry; bake is also what makes InstancedGLB work), strip snow-overlay meshes (untextured materials), strip COLOR_0/1 (shader masks that three multiplies to black), tint+normalize, webp/512-1024, world-scale baked into verts.
+- Gates all four waves: tsc 0, lint 74/59 ceiling, 32/32 tests, prod build ✓. QA Wave 24 logged (PASS with notes — see specs/qa.md for warts + follow-ups). FPS 52-53 headless dev-mode; instance repeated props if a prod measurement lands under 55.
+
+**Session ops note:** David's stale dev server (26h, held the Next dev lock) was stopped to run the QA server on 3050; `.env.local` was temporarily renamed during visual passes (Wave 13 technique) and restored for builds — restored at session end.
+
 ### 2026-07-04 — Cozy marathon W5 + W6 + W7 (`5d4016b`, `9814370`, `18ebd63`)
 
 - **W5 NPC dialogue variety:** courtyard filler pool 5 → 15 original cozy lines (gently TSI/village-flavored, no real names). Named NPCs keep curated `canned_dialogue`.
