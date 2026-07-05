@@ -34,17 +34,17 @@ function NatureGLB({ url, scale = 1, position, rotation, castShadow = true }: {
   return <primitive object={clone} scale={scale} position={position} rotation={rotation} />;
 }
 
-// ─── Trees ──────────────────────────────────────────────────────
+// ─── Trees (ACNH revamp 2026-07 — models ship world-scale) ──────
 const TREE_MODELS = [
-  "/assets/nature/tree_default.glb",
-  "/assets/nature/tree_oak.glb",
-  "/assets/nature/tree_detailed.glb",
-  "/assets/nature/tree_pineRoundA.glb",
+  "/assets/acnh/plants/tree-hardwood-a.glb",
+  "/assets/acnh/plants/tree-hardwood-b.glb",
+  "/assets/acnh/plants/tree-blossom.glb",
+  "/assets/acnh/plants/tree-cedar.glb",
 ];
 
 export function NatureTree({ position, seed }: { position: [number, number, number]; seed: number }) {
   const url = TREE_MODELS[seed % TREE_MODELS.length];
-  const s = 1.0 + (seed % 5) * 0.15;
+  const s = 0.85 + (seed % 5) * 0.08;
   const r: [number, number, number] = [0, (seed * 137.5 * Math.PI) / 180, 0];
   return (
     <Suspense fallback={null}>
@@ -55,27 +55,30 @@ export function NatureTree({ position, seed }: { position: [number, number, numb
 
 // ─── Bushes ─────────────────────────────────────────────────────
 const BUSH_MODELS = [
-  "/assets/nature/plant_bush.glb",
-  "/assets/nature/plant_bushLarge.glb",
-  "/assets/nature/plant_bushSmall.glb",
+  "/assets/acnh/plants/bush-azalea.glb",
+  "/assets/acnh/plants/bush-hydrangea.glb",
+  "/assets/acnh/plants/bush-holly.glb",
 ];
 
 export function NatureBush({ position, seed }: { position: [number, number, number]; seed: number }) {
   const url = BUSH_MODELS[seed % BUSH_MODELS.length];
   return (
     <Suspense fallback={null}>
-      <NatureGLB url={url} scale={0.7 + (seed % 3) * 0.2} position={position} rotation={[0, seed * 1.3, 0]} />
+      <NatureGLB url={url} scale={0.9 + (seed % 3) * 0.15} position={position} rotation={[0, seed * 1.3, 0]} />
     </Suspense>
   );
 }
 
 // ─── Flowers ────────────────────────────────────────────────────
 const FLOWER_MODELS = [
-  "/assets/nature/flower_redA.glb",
-  "/assets/nature/flower_purpleA.glb",
-  "/assets/nature/flower_yellowA.glb",
-  "/assets/nature/flower_redB.glb",
-  "/assets/nature/flower_purpleB.glb",
+  "/assets/acnh/plants/flower-cosmos.glb",
+  "/assets/acnh/plants/flower-lily.glb",
+  "/assets/acnh/plants/flower-hyacinth.glb",
+  "/assets/acnh/plants/flower-mum.glb",
+  "/assets/acnh/plants/flower-rose.glb",
+  "/assets/acnh/plants/flower-tulip.glb",
+  "/assets/acnh/plants/flower-pansy.glb",
+  "/assets/acnh/plants/flower-windflower.glb",
 ];
 
 export function NatureFlowerCluster({ position, seed }: { position: [number, number, number]; seed: number }) {
@@ -86,7 +89,7 @@ export function NatureFlowerCluster({ position, seed }: { position: [number, num
           <NatureGLB
             key={j}
             url={FLOWER_MODELS[(seed + j) % FLOWER_MODELS.length]}
-            scale={0.5}
+            scale={0.8}
             position={[(j - 1) * 0.4, 0, ((j * 7 + seed) % 3 - 1) * 0.3]}
             rotation={[0, j * 2.1, 0]}
             castShadow={false}
@@ -121,7 +124,7 @@ export function NatureMushroom({ position, seed }: { position: [number, number, 
 export function NatureStump({ position }: { position: [number, number, number] }) {
   return (
     <Suspense fallback={null}>
-      <NatureGLB url="/assets/nature/stump_round.glb" scale={0.6} position={position} />
+      <NatureGLB url="/assets/acnh/plants/stump.glb" scale={1} position={position} />
     </Suspense>
   );
 }

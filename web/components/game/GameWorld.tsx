@@ -517,12 +517,13 @@ const TREE_XZ: [number, number][] = [
 ];
 
 // Tree model assignment by index mod 4 (preserves the old per-seed
-// hash so visual output is stable).
+// hash so visual output is stable). ACNH revamp 2026-07: hardwood x2 +
+// blossom accent + cedar, already world-scale from the pipeline.
 const TREE_MODELS = [
-  "/assets/nature/tree_default.glb",
-  "/assets/nature/tree_oak.glb",
-  "/assets/nature/tree_detailed.glb",
-  "/assets/nature/tree_pineRoundA.glb",
+  "/assets/acnh/plants/tree-hardwood-a.glb",
+  "/assets/acnh/plants/tree-hardwood-b.glb",
+  "/assets/acnh/plants/tree-blossom.glb",
+  "/assets/acnh/plants/tree-cedar.glb",
 ];
 
 // P8 shadow split: trees within this radius of the spawn area cast shadows
@@ -539,7 +540,8 @@ function buildTreePlacements(): { near: NaturePlacement[][]; far: NaturePlacemen
     const placement: NaturePlacement = {
       position: [x, y, z],
       rotation: (i * 137.5 * Math.PI) / 180,
-      scale: 1.0 + (i % 5) * 0.15,
+      // ACNH models are true-scale (~2.7-4.1u); keep variance subtle.
+      scale: 0.85 + (i % 5) * 0.08,
     };
     const bucket = Math.hypot(x, z) <= TREE_SHADOW_RADIUS ? near : far;
     bucket[i % TREE_MODELS.length].push(placement);
@@ -583,9 +585,9 @@ const BUSH_XZ: [number, number][] = [
   [10, 14], [-22, 3], [22, 3], [0, 9],
 ];
 const BUSH_MODELS = [
-  "/assets/nature/plant_bush.glb",
-  "/assets/nature/plant_bushLarge.glb",
-  "/assets/nature/plant_bushSmall.glb",
+  "/assets/acnh/plants/bush-azalea.glb",
+  "/assets/acnh/plants/bush-hydrangea.glb",
+  "/assets/acnh/plants/bush-holly.glb",
 ];
 
 // Bushes are short — they barely cast useful shadows even up close.
@@ -596,7 +598,7 @@ function buildBushPlacements(): NaturePlacement[][] {
     groups[i % BUSH_MODELS.length].push({
       position: [x, getTerrainHeight(x, z), z],
       rotation: i * 1.3,
-      scale: 0.7 + (i % 3) * 0.2,
+      scale: 0.9 + (i % 3) * 0.15,
     });
   });
   return groups;
@@ -619,12 +621,17 @@ const FLOWER_XZ: [number, number][] = [
   [-2, 14], [6, -13], [-11, 5], [13, 4],
   [2, 17], [-6, -11], [8, 15], [-14, -6],
 ];
+// ACNH flower species (bloom stage). The (seed + j) % length spread
+// keeps clusters mixed regardless of list length.
 const FLOWER_MODELS = [
-  "/assets/nature/flower_redA.glb",
-  "/assets/nature/flower_purpleA.glb",
-  "/assets/nature/flower_yellowA.glb",
-  "/assets/nature/flower_redB.glb",
-  "/assets/nature/flower_purpleB.glb",
+  "/assets/acnh/plants/flower-cosmos.glb",
+  "/assets/acnh/plants/flower-lily.glb",
+  "/assets/acnh/plants/flower-hyacinth.glb",
+  "/assets/acnh/plants/flower-mum.glb",
+  "/assets/acnh/plants/flower-rose.glb",
+  "/assets/acnh/plants/flower-tulip.glb",
+  "/assets/acnh/plants/flower-pansy.glb",
+  "/assets/acnh/plants/flower-windflower.glb",
 ];
 
 function buildFlowerPlacements(picked: readonly number[]): NaturePlacement[][] {
@@ -639,7 +646,7 @@ function buildFlowerPlacements(picked: readonly number[]): NaturePlacement[][] {
       groups[model].push({
         position: [x + (j - 1) * 0.4, y, z + (((j * 7 + seed) % 3) - 1) * 0.3],
         rotation: j * 2.1,
-        scale: 0.5,
+        scale: 0.8,
       });
     }
   });
