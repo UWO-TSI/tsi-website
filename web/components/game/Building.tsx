@@ -1,13 +1,13 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useRef } from "react";
+import { Suspense, useMemo, useRef } from "react";
 import { Html, useGLTF } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
-import { useRouter } from "next/navigation";
 import * as THREE from "three";
-import { useTransition } from "./TransitionOverlay";
 
-const INTERACT_RANGE = 4;
+// Matches GameWorld's central sweep INTERACT_RADIUS so the "Press E"
+// prompt never shows outside the range where E actually fires.
+const INTERACT_RANGE = 3.5;
 
 // ─── Procedural variants — fallback only (G1 visual overhaul) ───
 //
@@ -452,23 +452,14 @@ interface BuildingProps {
 }
 
 export default function Building({ id, name, position, size, color, roofColor, href, playerPosition }: BuildingProps) {
-  const router = useRouter();
-  const { triggerTransition, isTransitioning } = useTransition();
   const isNear = useMemo(() => {
     return new THREE.Vector3(...position).distanceTo(playerPosition) < INTERACT_RANGE;
   }, [position, playerPosition]);
 
-  useEffect(() => {
-    if (!isNear || isTransitioning) return;
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.key.toLowerCase() === "e" && href) {
-        if (size[2] < 1) { router.push(href); }
-        else { triggerTransition(() => { router.push(href); }); }
-      }
-    };
-    window.addEventListener("keydown", handleKey);
-    return () => window.removeEventListener("keydown", handleKey);
-  }, [isNear, isTransitioning, href, router, triggerTransition, size]);
+  // E-navigation lives in GameWorld's central interact sweep (ACNH revamp):
+  // this component's own keydown listener double-fired against the sweep
+  // when a board's range overlapped another interactable. Building renders
+  // the model + prompt only; `href` still gates the prompt copy below.
 
   const isBoard = size[2] < 1;
   const isLeaderboard = id === "leaderboard";
@@ -503,7 +494,7 @@ export default function Building({ id, name, position, size, color, roofColor, h
         </div>
       </Html>
 
-      {isNear && (
+      {isNear && href && (
         <Html zIndexRange={[40, 0]} position={[0, size[1] + 0.8, 0]} center style={{ pointerEvents: "none" }}>
           <div className="animate-bounce" style={{ fontSize: "14px", color: "#fff", background: "#4a6fa5", padding: "5px 14px", borderRadius: "10px", fontWeight: 600, boxShadow: "0 2px 8px rgba(0,0,0,0.2)", whiteSpace: "nowrap" }}>
             Press <kbd style={{ color: "#FFD166", fontFamily: "'IBM Plex Mono',monospace", fontWeight: 700 }}>E</kbd> to {isBoard ? "view" : "enter"}

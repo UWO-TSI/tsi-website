@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useRef, useState, useCallback, useEffect, useMemo, useSyncExternalStore } from "react";
+import { useRouter } from "next/navigation";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { CameraControls, Cloud, Clouds, Html } from "@react-three/drei";
 import { Smile, BookOpen } from "lucide-react";
@@ -11,6 +12,7 @@ import Path from "./Path";
 import River, { sampleRiverPoint, findRiverTForX } from "./River";
 import Ocean from "./Ocean";
 import TreeShakeFX from "./TreeShakeFX";
+import { useTransition } from "./TransitionOverlay";
 import FlowerPickFX from "./FlowerPickFX";
 import { pickFlower, subscribeFlowerPicks, getPickedSnapshot, getPickedServerSnapshot } from "@/lib/game/flowerPicks";
 import { getTerrainHeight, valueNoise, BUILDING_FOOTPRINTS } from "./terrain";
@@ -1610,6 +1612,12 @@ export default function GameWorld() {
   // DOM Compass HUD on the outside. radians, 0 = north, growing clockwise.
   const azimuthRef = useRef<number>(0);
 
+  // Building E-navigation (ACNH revamp): the central sweep is the sole
+  // arbiter — Building.tsx's own keydown listener was removed because it
+  // double-fired against this one when interact ranges overlapped.
+  const router = useRouter();
+  const { triggerTransition, isTransitioning } = useTransition();
+
   // F1.2: nearest interactable for crosshair + E-interact. Updated by Scene
   // on each player move via onNearestInteractable. Kept here so Crosshair
   // (DOM, outside Canvas) can read it.
@@ -1662,9 +1670,14 @@ export default function GameWorld() {
             new CustomEvent("tsi:tree-shake", { detail: { x: n.treePos[0], z: n.treePos[1] } })
           );
         } else if (n.kind === "building" && n.href) {
-          // Building has a destination route — let the existing Building click
-          // path handle the actual navigation by simulating it here.
-          window.location.href = n.href;
+          // Boards (thin z) jump straight; buildings get the fade
+          // transition — same split Building.tsx's removed listener had,
+          // but soft-navigated (router) instead of a hard location set.
+          if (isTransitioning) return;
+          const cfg = BUILDINGS.find((b) => b.id === n.id);
+          const href = n.href;
+          if (cfg && cfg.size[2] < 1) router.push(href);
+          else triggerTransition(() => router.push(href));
         }
         return;
       }
@@ -1705,7 +1718,7 @@ export default function GameWorld() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [activeNPC, emoteTypes, guestbookOpen, emoteMenuOpen, controlsOpen, debugOpen, screenshotMode]);
+  }, [activeNPC, emoteTypes, guestbookOpen, emoteMenuOpen, controlsOpen, debugOpen, screenshotMode, router, triggerTransition, isTransitioning]);
 
   useEffect(() => {
     return () => {
