@@ -27,11 +27,18 @@ const CATALOG: { group: string; items: { key: string; icon: string; name: string
     ],
   },
   {
+    // ACNH revamp 2026-07: species-true entries matching FLOWER_MODELS.
+    // Legacy generic keys retired pre-launch (no real member data).
     group: "Flowers",
     items: [
-      { key: "flower_red", icon: "🌹", name: "Red flower" },
-      { key: "flower_purple", icon: "🌷", name: "Purple flower" },
-      { key: "flower_yellow", icon: "🌼", name: "Yellow flower" },
+      { key: "flower_cosmos", icon: "🌸", name: "Pink cosmos" },
+      { key: "flower_lily", icon: "🌺", name: "White lily" },
+      { key: "flower_hyacinth", icon: "🪻", name: "Blue hyacinth" },
+      { key: "flower_mum", icon: "🌼", name: "Yellow mum" },
+      { key: "flower_rose", icon: "🌹", name: "Red rose" },
+      { key: "flower_tulip", icon: "🌷", name: "Orange tulip" },
+      { key: "flower_pansy", icon: "💮", name: "Purple pansy" },
+      { key: "flower_windflower", icon: "🏵️", name: "Windflower" },
     ],
   },
   {

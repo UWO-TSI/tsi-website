@@ -1645,7 +1645,7 @@ export default function GameWorld() {
           // G4: pick — hide the cluster (store) + FX/collect via event.
           if (pickFlower(n.flowerIdx)) {
             window.dispatchEvent(
-              new CustomEvent("tsi:flower-pick", { detail: { x: n.flowerPos[0], z: n.flowerPos[1] } })
+              new CustomEvent("tsi:flower-pick", { detail: { x: n.flowerPos[0], z: n.flowerPos[1], idx: n.flowerIdx } })
             );
           }
         } else if (n.kind === "bench" && n.seat) {

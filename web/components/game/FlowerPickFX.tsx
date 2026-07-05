@@ -21,10 +21,18 @@ import * as THREE from "three";
 import { getTerrainHeight } from "./terrain";
 import { AudioManager } from "@/lib/game/audio";
 
+// ACNH revamp 2026-07: species-true collection. Index-aligned with
+// GameWorld's FLOWER_MODELS (cluster's lead model = (clusterIdx) % 8).
+// Legacy generic keys (flower_red/purple/yellow) retired pre-launch.
 const FLOWERS = [
-  { key: "flower_red", label: "a red flower", color: "#E85050" },
-  { key: "flower_purple", label: "a purple flower", color: "#A96BD8" },
-  { key: "flower_yellow", label: "a yellow flower", color: "#FFD166" },
+  { key: "flower_cosmos", label: "a pink cosmos", color: "#FF8CB0" },
+  { key: "flower_lily", label: "a white lily", color: "#F5F5F5" },
+  { key: "flower_hyacinth", label: "a blue hyacinth", color: "#6BA3D6" },
+  { key: "flower_mum", label: "a yellow mum", color: "#FFD166" },
+  { key: "flower_rose", label: "a red rose", color: "#E85050" },
+  { key: "flower_tulip", label: "an orange tulip", color: "#FF9944" },
+  { key: "flower_pansy", label: "a purple pansy", color: "#9B6BB0" },
+  { key: "flower_windflower", label: "a windflower", color: "#FF6B8A" },
 ] as const;
 
 const PETALS = 10;
@@ -45,8 +53,8 @@ export default function FlowerPickFX() {
 
   useEffect(() => {
     const onPick = (e: Event) => {
-      const { x, z } = (e as CustomEvent<{ x: number; z: number }>).detail;
-      const flower = FLOWERS[Math.abs(Math.round(x + z)) % FLOWERS.length];
+      const { x, z, idx } = (e as CustomEvent<{ x: number; z: number; idx?: number }>).detail;
+      const flower = FLOWERS[(idx ?? Math.abs(Math.round(x + z))) % FLOWERS.length];
       AudioManager.playSFX("confirm");
       const pk: Pick = {
         id: pickId++,
