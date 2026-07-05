@@ -68,6 +68,8 @@ export const BUILDING_FOOTPRINTS: Array<{ x: number; z: number; radius: number }
   { x: 10, z: 8, radius: 1.4 },   // Bounty board
   { x: -10, z: -10, radius: 1.4 }, // Job board
   { x: 10, z: -10, radius: 1.4 }, // Leaderboard
+  { x: -20.5, z: -13, radius: 3 }, // ambient house (red chalet, wave V)
+  { x: 21.5, z: -14, radius: 3 },  // ambient house (yellow chalet, wave V)
 ];
 
 // ─── River valley (ACNH revamp 2026-07) ─────────────────────────

@@ -499,7 +499,7 @@ const TREE_XZ: [number, number][] = [
   [-7, 16], [7, 16], [-20, 8.5], [20, 7.5],
   [-18, -5], [18, -5], [-5, -20], [5, -20],
   [-24, 12], [24, 12], [-10, 24], [12, 24],
-  [-22, -14], [22, -14], [-14, -16], [14, 16],
+  [-24, -9], [24, -10], [-14, -16], [14, 16],
   [-28, 0], [28, 6], [-8, 26], [8, 26],
 ];
 
@@ -1027,6 +1027,19 @@ function Props() {
       {[[-7.5, 15.5], [7.5, 15.5], [-20.5, 4.5], [20.5, 4.5], [-5.5, -19.5]].map(([x, z], i) => (
         <NatureMushroom key={`mush-${i}`} position={yAt(x, z)} seed={i} />
       ))}
+      {/* Ambient houses (ACNH wave V) — pure scenery flanking the south
+          green, facing the village center. Footprints in terrain.ts. */}
+      <Suspense fallback={null}>
+        <group position={yAt(-19, -13)} rotation={[0, Math.PI / 2, 0]}>
+          <GLBProp url="/assets/acnh/buildings/house-chalet-red.glb" scale={0.1} />
+        </group>
+        <group position={yAt(20, -14)} rotation={[0, -Math.PI / 2, 0]}>
+          <GLBProp url="/assets/acnh/buildings/house-chalet-yellow.glb" scale={0.1} />
+        </group>
+        {/* (Distant-island backdrop pieces tried here rendered as floating
+            streaks — their pivots assume the ACNH sea ring. Cut; the ocean
+            + fog horizon reads fine without them.) */}
+      </Suspense>
       {/* Banners near HQ */}
       {[[3.5, -7], [-3.5, -7]].map(([x, z], i) => (
         <group key={`banner-${i}`} position={yAt(x, z)}>

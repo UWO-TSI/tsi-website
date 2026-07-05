@@ -171,7 +171,7 @@ export default function AmbientProps() {
           fountain on the west green (both off the path corridors). */}
       <group name="plaza">
         <GLBProp url="/assets/acnh/props/park-clock.glb" position={[3, getTerrainHeight(3, 10.2), 10.2]} />
-        <GLBProp url="/assets/acnh/props/fountain.glb" position={[-6, getTerrainHeight(-6, -7.5), -7.5]} />
+        <GLBProp url="/assets/acnh/props/fountain.glb" position={[-5, getTerrainHeight(-5, -14), -14]} />
       </group>
     </group>
   );
