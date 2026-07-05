@@ -5,6 +5,7 @@ import * as THREE from "three";
 import { getTerrainHeight } from "./terrain";
 import { sampleRiverPoint, findRiverTForX } from "./River";
 import { GLBProp, NatureRock } from "./NatureModels";
+import InstancedGLB, { type NaturePlacement } from "./InstancedNature";
 
 /**
  * Sprint A5 — ambient scatter props.
@@ -94,30 +95,32 @@ function SteppingStones() {
   );
 }
 
-// ─── Fence section (ACNH revamp 2026-07) ────────────────────────────────
+// ─── Fences (ACNH revamp 2026-07, instanced) ────────────────────────────
 // ACNH fences are 1-tile (1u) segments; a section = 3 segments in a row.
-// Variant alternates country/log per call site.
-function FenceSection({ position, rotationY, variant = 0 }: { position: [number, number, number]; rotationY: number; variant?: number }) {
-  const url = variant % 2 === 0
-    ? "/assets/acnh/props/fence-country-a.glb"
-    : "/assets/acnh/props/fence-log-a.glb";
-  return (
-    <group position={position} rotation={[0, rotationY, 0]}>
-      {[-1, 0, 1].map((dx) => (
-        <GLBProp key={dx} url={url} position={[dx, 0, 0]} />
-      ))}
-    </group>
-  );
-}
-
-// 4 perimeter sections: south, north-west, east, north-east. Chosen to sit
-// outside the main building cluster but well inside the 40-unit island.
+// Even sections country, odd sections log. All segments of one type render
+// through a single InstancedGLB (one draw per sub-mesh total).
 const FENCES: { pos: [number, number]; rot: number }[] = [
   { pos: [-18, -18], rot: 0 },
   { pos: [18, -18], rot: 0 },
   { pos: [-20, 18], rot: Math.PI / 2 },
   { pos: [20, 18], rot: Math.PI / 2 },
 ];
+
+const FENCE_SEGMENTS: { country: NaturePlacement[]; log: NaturePlacement[] } = (() => {
+  const country: NaturePlacement[] = [];
+  const log: NaturePlacement[] = [];
+  FENCES.forEach((f, i) => {
+    for (const d of [-1, 0, 1]) {
+      const x = f.pos[0] + (f.rot === 0 ? d : 0);
+      const z = f.pos[1] + (f.rot === 0 ? 0 : d);
+      (i % 2 === 0 ? country : log).push({
+        position: [x, getTerrainHeight(x, z), z],
+        rotation: f.rot,
+      });
+    }
+  });
+  return { country, log };
+})();
 
 // ─── Lantern (ACNH round streetlamp) ────────────────────────────────────
 // Model is ~2.7u tall with the globe at the top; the warm point light sits
@@ -154,10 +157,8 @@ export default function AmbientProps() {
       </group>
 
       <group name="fences">
-        {FENCES.map((f, i) => {
-          const y = getTerrainHeight(f.pos[0], f.pos[1]);
-          return <FenceSection key={i} position={[f.pos[0], y, f.pos[1]]} rotationY={f.rot} variant={i} />;
-        })}
+        <InstancedGLB url="/assets/acnh/props/fence-country-a.glb" placements={FENCE_SEGMENTS.country} castShadow={false} />
+        <InstancedGLB url="/assets/acnh/props/fence-log-a.glb" placements={FENCE_SEGMENTS.log} castShadow={false} />
       </group>
 
       <group name="lanterns">

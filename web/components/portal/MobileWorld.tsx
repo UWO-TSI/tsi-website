@@ -18,11 +18,13 @@ const PLAZA: { x: number; z: number } = { x: 0, z: -8 };
 const HEARTBEAT_MS = 45_000;
 const EMOTE_BUBBLE_MS = 3_500;
 
+// Roof colors track the ACNH building models (2026-07 revamp): RS purple,
+// Nook's blue, museum teal, chalet gray thatch.
 const BUILDINGS = [
-  { id: "hq", name: "HQ", x: 0, z: -4, w: 6, h: 5, roof: "#E87B5A" },
-  { id: "shop", name: "Shop", x: -14, z: 8, w: 4, h: 4, roof: "#5BA086" },
-  { id: "oracle", name: "Oracle", x: 0, z: 22, w: 5, h: 5, roof: "#7B5EA7" },
-  { id: "house", name: "House", x: 14, z: 10, w: 3.5, h: 3.5, roof: "#7EB8C9" },
+  { id: "hq", name: "HQ", x: 0, z: -4, w: 6.1, h: 3, roof: "#5B4B9E" },
+  { id: "shop", name: "Shop", x: -14, z: 8, w: 6.6, h: 3.6, roof: "#2B4EA0" },
+  { id: "oracle", name: "Oracle", x: 0, z: 22, w: 6.8, h: 3.4, roof: "#2E8B8B" },
+  { id: "house", name: "House", x: 14, z: 10, w: 5, h: 3.1, roof: "#8A7B6B" },
 ];
 
 // Matches migration 019's seeded emote_types (icon_url NULL → emoji glyphs,

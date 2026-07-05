@@ -14,7 +14,7 @@ import TreeShakeFX from "./TreeShakeFX";
 import FlowerPickFX from "./FlowerPickFX";
 import { pickFlower, subscribeFlowerPicks, getPickedSnapshot, getPickedServerSnapshot } from "@/lib/game/flowerPicks";
 import { getTerrainHeight, valueNoise, BUILDING_FOOTPRINTS } from "./terrain";
-import { GLBProp, NatureFence, NatureMushroom, NatureStump } from "./NatureModels";
+import { GLBProp, NatureMushroom, NatureStump } from "./NatureModels";
 import InstancedGLB, { type NaturePlacement } from "./InstancedNature";
 import AmbientProps from "./AmbientProps";
 import AmbientLife from "./AmbientLife";
@@ -980,6 +980,7 @@ function LampPosts({ phase }: { phase: "day" | "night" | "dawn" | "dusk" }) {
 function yAt(x: number, z: number): [number, number, number] {
   return [x, getTerrainHeight(x, z), z];
 }
+const LAMP_XZ: [number, number][] = [[1.8, -7], [-1.8, 6], [1.8, 13], [-1.8, -12], [1.8, -18]];
 function Props() {
   return (
     <group>
@@ -993,26 +994,32 @@ function Props() {
           </Suspense>
         </group>
       ))}
-      {/* Lampposts — ACNH round streetlamp (globe at ~2.5u) */}
-      {[[1.8, -7], [-1.8, 6], [1.8, 13], [-1.8, -12], [1.8, -18]].map(([x, z], i) => (
-        <group key={`lamp-${i}`} position={yAt(x, z)}>
-          <Suspense fallback={null}>
-            <GLBProp url="/assets/acnh/props/streetlamp.glb" />
-          </Suspense>
-          <pointLight color={P.lampGlow} intensity={0.35} distance={6} position={[0, 2.4, 0]} />
-        </group>
-      ))}
-      {/* Wooden fences flanking the HQ approach — continuous ACNH country
-          fence rows (1u segments) running along Z on both sides. */}
-      {[-5, 5].map((x) => (
-        <group key={`fence-row-${x}`}>
-          {[-4.5, -3.5, -2.5, -1.5, -0.5, 0.5].map((z, i) => (
-            <group key={i} position={yAt(x, z)} rotation={[0, Math.PI / 2, 0]}>
-              <NatureFence position={[0, 0, 0]} variant={0} />
-            </group>
-          ))}
-        </group>
-      ))}
+      {/* Lampposts — ACNH round streetlamps, instanced (one draw per
+          sub-mesh for all 5); point lights stay per-lamp. */}
+      <Suspense fallback={null}>
+        <InstancedGLB
+          url="/assets/acnh/props/streetlamp.glb"
+          placements={LAMP_XZ.map(([x, z]) => ({ position: yAt(x, z) }))}
+        />
+      </Suspense>
+      {LAMP_XZ.map(([x, z], i) => {
+        const [, y] = yAt(x, z);
+        return <pointLight key={`lamp-light-${i}`} color={P.lampGlow} intensity={0.35} distance={6} position={[x, y + 2.4, z]} />;
+      })}
+      {/* Wooden fences flanking the HQ approach — instanced ACNH country
+          fence segments (1u each) running along Z on both sides. */}
+      <Suspense fallback={null}>
+        <InstancedGLB
+          url="/assets/acnh/props/fence-country-a.glb"
+          placements={[-5, 5].flatMap((x) =>
+            [-4.5, -3.5, -2.5, -1.5, -0.5, 0.5].map((z) => ({
+              position: yAt(x, z),
+              rotation: Math.PI / 2,
+            }))
+          )}
+          castShadow={false}
+        />
+      </Suspense>
       {/* Well near HQ */}
       <group position={yAt(4, -6)}>
         <mesh position={[0, 0.4, 0]} castShadow><cylinderGeometry args={[0.6, 0.7, 0.8, 12]} /><meshStandardMaterial color={P.wellStone} roughness={0.92} metalness={0} /></mesh>
@@ -1313,7 +1320,8 @@ function Scene({
       }
     }
     // G5: fishing spots on the riverbank (radius 2.4).
-    const FISHING_SPOTS: [number, number][] = [[-12, 7.5], [-3, 4], [5, 7], [16, 5]];
+    // ACNH revamp: spots hug the carved channel banks (~1.2u off center).
+    const FISHING_SPOTS: [number, number][] = [[-12, 6.2], [-3, 2.6], [5, 5.4], [16, 3.6]];
     for (let i = 0; i < FISHING_SPOTS.length; i++) {
       const [sx, sz] = FISHING_SPOTS[i];
       const d = Math.hypot(sx - position.x, sz - position.z);
