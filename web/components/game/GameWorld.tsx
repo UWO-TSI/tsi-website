@@ -14,7 +14,7 @@ import TreeShakeFX from "./TreeShakeFX";
 import FlowerPickFX from "./FlowerPickFX";
 import { pickFlower, subscribeFlowerPicks, getPickedSnapshot, getPickedServerSnapshot } from "@/lib/game/flowerPicks";
 import { getTerrainHeight, valueNoise, BUILDING_FOOTPRINTS } from "./terrain";
-import { NatureFence, NatureMushroom, NatureStump } from "./NatureModels";
+import { GLBProp, NatureFence, NatureMushroom, NatureStump } from "./NatureModels";
 import InstancedGLB, { type NaturePlacement } from "./InstancedNature";
 import AmbientProps from "./AmbientProps";
 import AmbientLife from "./AmbientLife";
@@ -479,27 +479,12 @@ function Bridge() {
 
   return (
     <group position={position} rotation={rotation}>
-      {/* Planks run along the bridge's local Z, lined up across the river. */}
-      {[-1.4, -1.0, -0.6, -0.2, 0.2, 0.6, 1.0, 1.4].map((x, i) => (
-        <mesh key={`plank-${i}`} position={[x, 0.02, 0]} castShadow>
-          <boxGeometry args={[0.35, 0.06, 4.4]} />
-          <meshStandardMaterial color={P.bridgeWood} roughness={0.85} metalness={0} />
-        </mesh>
-      ))}
-      {[-1, 1].map((side) => (
-        <group key={`rail-${side}`}>
-          {[-1.5, 0, 1.5].map((x, i) => (
-            <mesh key={i} position={[x, 0.5, side * 2.0]} castShadow>
-              <cylinderGeometry args={[0.04, 0.04, 1, 6]} />
-              <meshStandardMaterial color={P.trunk} roughness={0.9} metalness={0} />
-            </mesh>
-          ))}
-          <mesh position={[0, 0.8, side * 2.0]} rotation={[0, 0, Math.PI / 2]}>
-            <cylinderGeometry args={[0.025, 0.025, 3.2, 8]} />
-            <meshStandardMaterial color={P.bridgeRope} roughness={0.95} metalness={0} />
-          </mesh>
-        </group>
-      ))}
+      {/* ACNH wooden bridge GLB. Its span runs along local X; the group's
+          local Z follows the path, so rotate 90°. Slightly sunk so the
+          arched deck center meets the flat path level. */}
+      <Suspense fallback={null}>
+        <GLBProp url="/assets/acnh/props/bridge-wooden.glb" position={[0, 0.02, 0]} rotation={[0, Math.PI / 2, 0]} />
+      </Suspense>
     </group>
   );
 }
@@ -508,8 +493,10 @@ function Bridge() {
 
 // (Tree component replaced by NatureTree from NatureModels.tsx)
 // Then perf 2026-06-01: switched to InstancedGLB for ~5x fewer draws.
+// ACNH revamp: entries that fell inside the carved river channel moved
+// to the banks ([-20,5]→[-20,8.5], [20,5]→[20,7.5]).
 const TREE_XZ: [number, number][] = [
-  [-7, 16], [7, 16], [-20, 5], [20, 5],
+  [-7, 16], [7, 16], [-20, 8.5], [20, 7.5],
   [-18, -5], [18, -5], [-5, -20], [5, -20],
   [-24, 12], [24, 12], [-10, 24], [12, 24],
   [-22, -14], [22, -14], [-14, -16], [14, 16],
@@ -577,12 +564,14 @@ function InstancedTrees() {
 }
 
 // ─── Bushes (v2 spec Section 7.2) ───────────────────────────────
+// ACNH revamp: river-channel entries moved to banks
+// ([-13,6]→[-17,1], [-22,3]→[-22,7.5], [22,3]→[22,7]).
 const BUSH_XZ: [number, number][] = [
-  [-5, -2], [5, -2], [-13, 6], [13, 6],
+  [-5, -2], [5, -2], [-17, 1], [13, 6],
   [-3, -7], [3, -7], [-15, -3], [15, -3],
   [-7, 12], [7, 12], [0, -17], [-18, 10],
   [18, 10], [-6, -14], [6, -14], [-10, 14],
-  [10, 14], [-22, 3], [22, 3], [0, 9],
+  [10, 14], [-22, 7.5], [22, 7], [0, 9],
 ];
 const BUSH_MODELS = [
   "/assets/acnh/plants/bush-azalea.glb",
@@ -616,9 +605,11 @@ function Bushes() {
 }
 
 // ─── Flowers (v2 spec Section 7.3) ──────────────────────────────
+// ACNH revamp: river-channel entries moved to banks
+// ([4,6]→[7,6.8], [-11,5]→[-9,10.5], [13,4]→[16,-2]).
 const FLOWER_XZ: [number, number][] = [
-  [-4, -3], [4, 6], [-7, 11], [11, -4],
-  [-2, 14], [6, -13], [-11, 5], [13, 4],
+  [-4, -3], [7, 6.8], [-7, 11], [11, -4],
+  [-2, 14], [6, -13], [-9, 10.5], [16, -2],
   [2, 17], [-6, -11], [8, 15], [-14, -6],
 ];
 // ACNH flower species (bloom stage). The (seed + j) % length spread
@@ -992,27 +983,35 @@ function yAt(x: number, z: number): [number, number, number] {
 function Props() {
   return (
     <group>
-      {/* Benches */}
-      {[[-3, -5], [3, -5], [-3, 6], [3, 6]].map(([x, z], i) => (
+      {/* Benches — warm wood benches by the HQ approach, white park benches
+          at the north plaza. Sit anchors stay at the same XZ (BENCHES list
+          in the interact sweep mirrors these coords). */}
+      {[[-3, -5], [3, -5], [-3, 7.2], [3, 7.2]].map(([x, z], i) => (
         <group key={`bench-${i}`} position={yAt(x, z)}>
-          <mesh position={[0, 0.4, 0]} castShadow><boxGeometry args={[1.4, 0.1, 0.5]} /><meshStandardMaterial color={P.benchWood} roughness={0.85} metalness={0} /></mesh>
-          <mesh position={[0, 0.7, -0.2]} castShadow><boxGeometry args={[1.4, 0.5, 0.08]} /><meshStandardMaterial color={P.benchWood} roughness={0.85} metalness={0} /></mesh>
-          {[-0.55, 0.55].map((bx, j) => (
-            <mesh key={j} position={[bx, 0.2, 0]} castShadow><boxGeometry args={[0.08, 0.4, 0.5]} /><meshStandardMaterial color={P.trunk} roughness={0.9} metalness={0} /></mesh>
-          ))}
+          <Suspense fallback={null}>
+            <GLBProp url={z < 0 ? "/assets/acnh/props/bench-wood.glb" : "/assets/acnh/props/bench-park.glb"} />
+          </Suspense>
         </group>
       ))}
-      {/* Lampposts */}
+      {/* Lampposts — ACNH round streetlamp (globe at ~2.5u) */}
       {[[1.8, -7], [-1.8, 6], [1.8, 13], [-1.8, -12], [1.8, -18]].map(([x, z], i) => (
         <group key={`lamp-${i}`} position={yAt(x, z)}>
-          <mesh position={[0, 1.6, 0]} castShadow><cylinderGeometry args={[0.05, 0.07, 3.2, 8]} /><meshStandardMaterial color={P.lampPost} roughness={0.7} metalness={0.15} /></mesh>
-          <mesh position={[0, 3.4, 0]}><boxGeometry args={[0.4, 0.3, 0.4]} /><meshStandardMaterial color="#F5E6C8" roughness={0.6} metalness={0} emissive={P.lampGlow} emissiveIntensity={0.2} /></mesh>
-          <pointLight color={P.lampGlow} intensity={0.35} distance={6} position={[0, 3.2, 0]} />
+          <Suspense fallback={null}>
+            <GLBProp url="/assets/acnh/props/streetlamp.glb" />
+          </Suspense>
+          <pointLight color={P.lampGlow} intensity={0.35} distance={6} position={[0, 2.4, 0]} />
         </group>
       ))}
-      {/* Wooden fences near HQ (Kenney Nature Kit) */}
-      {[[-5, -2], [-5, 0], [-5, -4], [5, -2], [5, 0], [5, -4]].map(([x, z], i) => (
-        <NatureFence key={`fence-${i}`} position={yAt(x, z)} variant={i} />
+      {/* Wooden fences flanking the HQ approach — continuous ACNH country
+          fence rows (1u segments) running along Z on both sides. */}
+      {[-5, 5].map((x) => (
+        <group key={`fence-row-${x}`}>
+          {[-4.5, -3.5, -2.5, -1.5, -0.5, 0.5].map((z, i) => (
+            <group key={i} position={yAt(x, z)} rotation={[0, Math.PI / 2, 0]}>
+              <NatureFence position={[0, 0, 0]} variant={0} />
+            </group>
+          ))}
+        </group>
       ))}
       {/* Well near HQ */}
       <group position={yAt(4, -6)}>
@@ -1044,7 +1043,8 @@ function Props() {
 // offset along +x so they don't visually overlap.
 const NPC_SPAWN_POSITIONS: Record<SpawnZone, [number, number, number]> = {
   courtyard: [-2, 0, -2],
-  shop: [-14, 0, 6],
+  // shop anchor pulled off the carved river bank (was [-14, 0, 6])
+  shop: [-12.5, 0, 7.5],
   temple: [0, 0, 18],
   roaming: [5, 0, 5],
 };
@@ -1321,7 +1321,7 @@ function Scene({
       }
     }
     // G3: benches — sit target. Coords mirror Props()' bench array.
-    const BENCHES: [number, number][] = [[-3, -5], [3, -5], [-3, 6], [3, 6]];
+    const BENCHES: [number, number][] = [[-3, -5], [3, -5], [-3, 7.2], [3, 7.2]];
     for (let i = 0; i < BENCHES.length; i++) {
       const [bx, bz] = BENCHES[i];
       const d = Math.hypot(bx - position.x, bz - position.z);

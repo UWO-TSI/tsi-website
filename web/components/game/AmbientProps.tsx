@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import * as THREE from "three";
 import { getTerrainHeight } from "./terrain";
 import { sampleRiverPoint, findRiverTForX } from "./River";
-import { NatureFence, NatureRock } from "./NatureModels";
+import { GLBProp, NatureRock } from "./NatureModels";
 
 /**
  * Sprint A5 — ambient scatter props.
@@ -94,13 +94,18 @@ function SteppingStones() {
   );
 }
 
-// ─── Fence section (G2: GLB swap) ───────────────────────────────────────
-// Was procedural posts+rails+pickets; now uses Kenney NatureFence GLBs
-// (fence_simple / fence_planks). Variant alternates per call site.
+// ─── Fence section (ACNH revamp 2026-07) ────────────────────────────────
+// ACNH fences are 1-tile (1u) segments; a section = 3 segments in a row.
+// Variant alternates country/log per call site.
 function FenceSection({ position, rotationY, variant = 0 }: { position: [number, number, number]; rotationY: number; variant?: number }) {
+  const url = variant % 2 === 0
+    ? "/assets/acnh/props/fence-country-a.glb"
+    : "/assets/acnh/props/fence-log-a.glb";
   return (
     <group position={position} rotation={[0, rotationY, 0]}>
-      <NatureFence position={[0, 0, 0]} variant={variant} />
+      {[-1, 0, 1].map((dx) => (
+        <GLBProp key={dx} url={url} position={[dx, 0, 0]} />
+      ))}
     </group>
   );
 }
@@ -114,39 +119,14 @@ const FENCES: { pos: [number, number]; rot: number }[] = [
   { pos: [20, 18], rot: Math.PI / 2 },
 ];
 
-// ─── Lantern ────────────────────────────────────────────────────────────
+// ─── Lantern (ACNH round streetlamp) ────────────────────────────────────
+// Model is ~2.7u tall with the globe at the top; the warm point light sits
+// in the globe so night pools read like the W7 cozy lamps.
 function Lantern({ position }: { position: [number, number, number] }) {
   return (
     <group position={position}>
-      {/* Post */}
-      <mesh position={[0, 0.8, 0]} castShadow receiveShadow>
-        <cylinderGeometry args={[0.07, 0.07, 1.6, 8]} />
-        <meshStandardMaterial color={C.lanternPost} roughness={0.85} metalness={0.1} />
-      </mesh>
-      {/* Lantern body */}
-      <mesh position={[0, 1.8, 0]} castShadow receiveShadow>
-        <boxGeometry args={[0.3, 0.4, 0.3]} />
-        <meshStandardMaterial color={C.lanternBody} roughness={0.8} metalness={0} />
-      </mesh>
-      {/* Emissive panes on each of the 4 sides */}
-      {[
-        { p: [0, 1.8, 0.151] as [number, number, number], r: [0, 0, 0] as [number, number, number] },
-        { p: [0, 1.8, -0.151] as [number, number, number], r: [0, Math.PI, 0] as [number, number, number] },
-        { p: [0.151, 1.8, 0] as [number, number, number], r: [0, Math.PI / 2, 0] as [number, number, number] },
-        { p: [-0.151, 1.8, 0] as [number, number, number], r: [0, -Math.PI / 2, 0] as [number, number, number] },
-      ].map((pane, i) => (
-        <mesh key={i} position={pane.p} rotation={pane.r}>
-          <planeGeometry args={[0.15, 0.25]} />
-          <meshStandardMaterial
-            color={C.lanternGlow}
-            emissive={C.lanternEmissive}
-            emissiveIntensity={1.2}
-            roughness={0.4}
-            metalness={0}
-          />
-        </mesh>
-      ))}
-      <pointLight color={C.lanternEmissive} intensity={0.4} distance={5} position={[0, 1.8, 0]} />
+      <GLBProp url="/assets/acnh/props/streetlamp.glb" />
+      <pointLight color={C.lanternEmissive} intensity={0.4} distance={5} position={[0, 2.4, 0]} />
     </group>
   );
 }
@@ -185,6 +165,13 @@ export default function AmbientProps() {
           const y = getTerrainHeight(x, z);
           return <Lantern key={i} position={[x, y, z]} />;
         })}
+      </group>
+
+      {/* ACNH revamp 2026-07: plaza dressing — park clock at the crossroads,
+          fountain on the west green (both off the path corridors). */}
+      <group name="plaza">
+        <GLBProp url="/assets/acnh/props/park-clock.glb" position={[3, getTerrainHeight(3, 10.2), 10.2]} />
+        <GLBProp url="/assets/acnh/props/fountain.glb" position={[-6, getTerrainHeight(-6, -7.5), -7.5]} />
       </group>
     </group>
   );

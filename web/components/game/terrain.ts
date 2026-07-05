@@ -70,6 +70,59 @@ export const BUILDING_FOOTPRINTS: Array<{ x: number; z: number; radius: number }
   { x: 10, z: -10, radius: 1.4 }, // Leaderboard
 ];
 
+// ─── River valley (ACNH revamp 2026-07) ─────────────────────────
+// River.tsx draws the water plane at y=-0.04 and the bed at -0.12. The A3
+// "terrain valley dip" follow-up was never built, so the noise terrain
+// (0..0.6) buried the river — it only ever peeked through via the bed's
+// polygonOffset at lucky angles. Carve a real valley along the spline.
+// Polyline mirrors RIVER_CONTROL_POINTS in River.tsx (keep in sync);
+// two Chaikin passes approximate the Catmull-Rom bend closely enough
+// for a distance field.
+const RIVER_BASE: [number, number][] = [
+  [-25, 3], [-12, 5], [-3, 1], [5, 4], [16, 2], [25, 5],
+];
+const RIVER_POLYLINE: [number, number][] = (() => {
+  let pts = RIVER_BASE;
+  for (let pass = 0; pass < 2; pass++) {
+    const out: [number, number][] = [pts[0]];
+    for (let i = 0; i < pts.length - 1; i++) {
+      const [ax, az] = pts[i];
+      const [bx, bz] = pts[i + 1];
+      out.push([ax * 0.75 + bx * 0.25, az * 0.75 + bz * 0.25]);
+      out.push([ax * 0.25 + bx * 0.75, az * 0.25 + bz * 0.75]);
+    }
+    out.push(pts[pts.length - 1]);
+    pts = out;
+  }
+  return pts;
+})();
+const RIVER_DEPTH = -0.35; // valley floor, below the -0.12 riverbed plane
+const RIVER_HALF = 2.2;    // full-depth half-width (water is 1.9 half-wide)
+const RIVER_BLEND = 1.3;   // bank blend distance beyond RIVER_HALF
+
+function distToRiver(x: number, z: number): number {
+  let best = Infinity;
+  for (let i = 0; i < RIVER_POLYLINE.length - 1; i++) {
+    const [ax, az] = RIVER_POLYLINE[i];
+    const [bx, bz] = RIVER_POLYLINE[i + 1];
+    const abx = bx - ax, abz = bz - az;
+    const t = Math.max(0, Math.min(1, ((x - ax) * abx + (z - az) * abz) / (abx * abx + abz * abz)));
+    const dx = x - (ax + abx * t), dz = z - (az + abz * t);
+    const d2 = dx * dx + dz * dz;
+    if (d2 < best) best = d2;
+  }
+  return Math.sqrt(best);
+}
+
+/** 1 inside the channel, smoothstep → 0 across the banks. */
+function riverInfluence(x: number, z: number): number {
+  const d = distToRiver(x, z);
+  if (d >= RIVER_HALF + RIVER_BLEND) return 0;
+  if (d <= RIVER_HALF) return 1;
+  const t = 1 - (d - RIVER_HALF) / RIVER_BLEND;
+  return t * t * (3 - 2 * t);
+}
+
 // Path corridors — keep paths flat (height = 0). Each entry: axis-aligned rect.
 // [axis, axisPos, halfWidth, otherMin, otherMax, falloff]
 // axis "z" = path runs along Z, so x is the cross-axis at axisPos.
@@ -106,6 +159,15 @@ function rawNoiseHeight(x: number, z: number): number {
  * flattened to y=0 with a falloff so the dirt-path quads sit flush.
  */
 export function getTerrainHeight(x: number, z: number): number {
+  // 0. River valley — carves through everything (paths cross via the
+  // bridge; building footprints don't reach the channel core).
+  const ri = riverInfluence(x, z);
+  if (ri >= 1) return RIVER_DEPTH;
+  const base = baseTerrainHeight(x, z);
+  return ri > 0 ? base * (1 - ri) + RIVER_DEPTH * ri : base;
+}
+
+function baseTerrainHeight(x: number, z: number): number {
   // 1. Building footprint flattening — strongest claim
   for (const b of BUILDING_FOOTPRINTS) {
     const dx = x - b.x;
@@ -224,5 +286,12 @@ export function sampleTerrainHeightFast(x: number, z: number): number {
 
   const a = h00 + (h01 - h00) * fx;
   const b = h10 + (h11 - h10) * fx;
-  return a + (b - a) * fz;
+  const h = a + (b - a) * fz;
+
+  // Bridge deck override for walkers: the N-S path crosses the carved
+  // river valley on the wooden bridge (deck top ≈ 0.1). Without this,
+  // ground-follow dips the player under the deck mid-crossing. Cheap
+  // |x| guard keeps riverInfluence out of the common case.
+  if (x > -1.5 && x < 1.5 && riverInfluence(x, z) > 0 && h < 0.12) return 0.12;
+  return h;
 }

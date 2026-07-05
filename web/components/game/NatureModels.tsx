@@ -5,10 +5,11 @@ import { useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 
 /**
- * Kenney Nature Kit GLB model loader.
- * Loads, clones, and renders nature assets with shadows.
+ * GLB model loader (Kenney kits + ACNH pack).
+ * Loads, clones, and renders assets with shadows. Exported as GLBProp for
+ * one-off prop placement (AmbientProps, benches, bridge).
  */
-function NatureGLB({ url, scale = 1, position, rotation, castShadow = true }: {
+export function GLBProp({ url, scale = 1, position, rotation, castShadow = true }: {
   url: string;
   scale?: number;
   position?: [number, number, number];
@@ -48,7 +49,7 @@ export function NatureTree({ position, seed }: { position: [number, number, numb
   const r: [number, number, number] = [0, (seed * 137.5 * Math.PI) / 180, 0];
   return (
     <Suspense fallback={null}>
-      <NatureGLB url={url} scale={s} position={position} rotation={r} />
+      <GLBProp url={url} scale={s} position={position} rotation={r} />
     </Suspense>
   );
 }
@@ -64,7 +65,7 @@ export function NatureBush({ position, seed }: { position: [number, number, numb
   const url = BUSH_MODELS[seed % BUSH_MODELS.length];
   return (
     <Suspense fallback={null}>
-      <NatureGLB url={url} scale={0.9 + (seed % 3) * 0.15} position={position} rotation={[0, seed * 1.3, 0]} />
+      <GLBProp url={url} scale={0.9 + (seed % 3) * 0.15} position={position} rotation={[0, seed * 1.3, 0]} />
     </Suspense>
   );
 }
@@ -86,7 +87,7 @@ export function NatureFlowerCluster({ position, seed }: { position: [number, num
     <group position={position}>
       <Suspense fallback={null}>
         {[0, 1, 2].map((j) => (
-          <NatureGLB
+          <GLBProp
             key={j}
             url={FLOWER_MODELS[(seed + j) % FLOWER_MODELS.length]}
             scale={0.8}
@@ -100,12 +101,14 @@ export function NatureFlowerCluster({ position, seed }: { position: [number, num
   );
 }
 
-// ─── Fence ──────────────────────────────────────────────────────
+// ─── Fence (ACNH 1-tile segments) ───────────────────────────────
 export function NatureFence({ position, variant }: { position: [number, number, number]; variant?: number }) {
-  const url = (variant ?? 0) % 2 === 0 ? "/assets/nature/fence_simple.glb" : "/assets/nature/fence_planks.glb";
+  const url = (variant ?? 0) % 2 === 0
+    ? "/assets/acnh/props/fence-country-a.glb"
+    : "/assets/acnh/props/fence-country-b.glb";
   return (
     <Suspense fallback={null}>
-      <NatureGLB url={url} scale={0.8} position={position} />
+      <GLBProp url={url} scale={1} position={position} />
     </Suspense>
   );
 }
@@ -115,7 +118,7 @@ export function NatureMushroom({ position, seed }: { position: [number, number, 
   const url = seed % 2 === 0 ? "/assets/nature/mushroom_red.glb" : "/assets/nature/mushroom_tan.glb";
   return (
     <Suspense fallback={null}>
-      <NatureGLB url={url} scale={0.5} position={position} rotation={[0, seed * 2.7, 0]} castShadow={false} />
+      <GLBProp url={url} scale={0.5} position={position} rotation={[0, seed * 2.7, 0]} castShadow={false} />
     </Suspense>
   );
 }
@@ -124,7 +127,7 @@ export function NatureMushroom({ position, seed }: { position: [number, number, 
 export function NatureStump({ position }: { position: [number, number, number] }) {
   return (
     <Suspense fallback={null}>
-      <NatureGLB url="/assets/acnh/plants/stump.glb" scale={1} position={position} />
+      <GLBProp url="/assets/acnh/plants/stump.glb" scale={1} position={position} />
     </Suspense>
   );
 }
@@ -134,7 +137,7 @@ export function NatureRock({ position, seed }: { position: [number, number, numb
   const url = seed % 2 === 0 ? "/assets/nature/rock_smallA.glb" : "/assets/nature/rock_smallB.glb";
   return (
     <Suspense fallback={null}>
-      <NatureGLB url={url} scale={0.5 + (seed % 3) * 0.15} position={position} rotation={[0, seed * 1.9, 0]} castShadow={false} />
+      <GLBProp url={url} scale={0.5 + (seed % 3) * 0.15} position={position} rotation={[0, seed * 1.9, 0]} castShadow={false} />
     </Suspense>
   );
 }
