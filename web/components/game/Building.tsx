@@ -214,6 +214,56 @@ const GLB_PATHS: Record<string, string> = {
   house: "/assets/buildings/house_1.glb",
 };
 
+// ─── ACNH textured building models (2026-07 revamp) ─────────────
+// Source pack is authored at ~10 units per meter; ACNH_SCALE brings them
+// into world units. Models keep their own textures/materials (unlike
+// GLBBuilding, which flat-color-overrides). Grounding: ACNH buildings put
+// their walk-in floor at y=0 in model space and extend foundation BELOW
+// (for slope placement), so we scale about the origin and do NOT re-ground
+// by bbox min — that would hoist the foundation into view.
+const ACNH_SCALE = 0.1;
+const ACNH_GLB: Record<string, { url: string; scale?: number; yOffset?: number; rotationY?: number }> = {
+  hq: { url: "/assets/acnh/buildings/hq-office.glb", rotationY: Math.PI },
+  shop: { url: "/assets/acnh/buildings/shop-market.glb", rotationY: Math.PI },
+  oracle: { url: "/assets/acnh/buildings/oracle-museum.glb", rotationY: Math.PI },
+  house: { url: "/assets/acnh/buildings/house-chalet.glb", rotationY: Math.PI },
+};
+
+/** ACNH building: fixed scale, origin-grounded, original materials kept. */
+function ACNHBuilding({ id }: { id: string }) {
+  const cfg = ACNH_GLB[id];
+  const { scene } = useGLTF(cfg.url);
+
+  const cloned = useMemo(() => {
+    const clone = scene.clone(true);
+    clone.scale.setScalar((cfg.scale ?? 1) * ACNH_SCALE);
+    clone.position.y = cfg.yOffset ?? 0;
+    if (cfg.rotationY) clone.rotation.y = cfg.rotationY;
+    clone.traverse((child) => {
+      if ((child as THREE.Mesh).isMesh) {
+        const mesh = child as THREE.Mesh;
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+        const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+        for (const m of mats) {
+          const std = m as THREE.MeshStandardMaterial;
+          if (std.isMeshStandardMaterial) {
+            // ACNH albedo textures carry the full look — kill PBR shine so
+            // the TOD lighting reads matte like the rest of the world.
+            std.metalness = 0;
+            std.roughness = Math.max(std.roughness, 0.85);
+          }
+        }
+      }
+    });
+    return clone;
+  }, [scene, cfg]);
+
+  return <primitive object={cloned} />;
+}
+
+for (const cfg of Object.values(ACNH_GLB)) useGLTF.preload(cfg.url);
+
 /**
  * Loads a real GLB model, auto-scales to fit expected dimensions,
  * and overrides materials with AC palette colors.
@@ -423,6 +473,7 @@ export default function Building({ id, name, position, size, color, roofColor, h
   const isBoard = size[2] < 1;
   const isLeaderboard = id === "leaderboard";
   const isProcedural = PROC_VARIANTS.has(id);
+  const hasACNH = id in ACNH_GLB;
   const hasGLB = id in GLB_PATHS;
 
   return (
@@ -433,6 +484,10 @@ export default function Building({ id, name, position, size, color, roofColor, h
         <LeaderboardMonument size={size} color={color} />
       ) : isProcedural ? (
         <ProceduralBuilding id={id} />
+      ) : hasACNH ? (
+        <Suspense fallback={<ACBuilding size={size} color={color} roofColor={roofColor} />}>
+          <ACNHBuilding id={id} />
+        </Suspense>
       ) : hasGLB ? (
         <Suspense fallback={<ACBuilding size={size} color={color} roofColor={roofColor} />}>
           <GLBBuilding id={id} size={size} color={color} />

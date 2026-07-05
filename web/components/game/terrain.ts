@@ -57,11 +57,14 @@ const NOISE_AMPLITUDE = 0.6;
 // Inside radius: terrain returns that building's "footprint height"
 // (the noise height sampled at the center). Smoothly blends back to
 // noise out to radius * 1.5. Keep in sync with BUILDINGS in GameWorld.tsx.
+// ACNH revamp 2026-07: model origin sits at the door plane and the body
+// extends behind it (+z after the 180° world rotation), so flatten centers
+// are pushed ~1.5-2u toward the body, radii sized to the visual footprints.
 export const BUILDING_FOOTPRINTS: Array<{ x: number; z: number; radius: number }> = [
-  { x: 0, z: -4, radius: 4.5 },   // HQ (size 6x5)
-  { x: -14, z: 8, radius: 3.2 },  // Shop (size 4x4)
-  { x: 0, z: 22, radius: 4.0 },   // Oracle Temple (size 5x5)
-  { x: 14, z: 10, radius: 2.8 },  // House (size 3.5x3.5)
+  { x: 0, z: -2.3, radius: 4.2 },  // HQ office (visual ~6.1x3.0)
+  { x: -14, z: 9.8, radius: 4.2 }, // Shop market (visual ~6.6x3.6)
+  { x: 0, z: 23.8, radius: 4.5 },  // Oracle museum (visual ~6.8x3.4)
+  { x: 14, z: 11.1, radius: 3.2 }, // House chalet (visual ~5.0x3.1)
   { x: 10, z: 8, radius: 1.4 },   // Bounty board
   { x: -10, z: -10, radius: 1.4 }, // Job board
   { x: 10, z: -10, radius: 1.4 }, // Leaderboard
