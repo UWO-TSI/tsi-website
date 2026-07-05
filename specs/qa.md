@@ -24,6 +24,12 @@ Verification ran interleaved with the build (autonomous run under David's revamp
 2. Fountain is dry stone (its water mesh was untextured white and got stripped with the snow); reads fine at plaza distance.
 3. Bridge is visually occluded by HQ from the default south camera (the crossing sits directly behind the building — same as the old procedural bridge).
 
+### Follow-up rounds (same session)
+
+- **Wave F (`824d0cd`):** fences + streetlamps instanced (~30 clones → one draw per sub-mesh), fishing spots onto the carved banks, MobileWorld minimap roofs synced. Prod-mode FPS still unmeasured — prod dashboard needs a session (dev fail-open doesn't apply); run an authenticated pass when convenient.
+- **Flower species (`a784f26`):** collection went species-true (8 ACNH species), verified E2E ("You picked a white lily!" at cluster 9). Legacy flower_red/purple/yellow keys retired pre-launch.
+- **Dual E-handlers (pre-existing, surfaced by the E2E test) — FIXED in `c5805aa`.** Building.tsx registered its own window keydown within 4u, independent of the central sweep; one E press near [-6.5,-11] picked a flower AND entered the Job Board. Local listener removed; the central sweep now owns building navigation (router.push for boards, fade transition for buildings — replacing the old hard `window.location.href`). Prompt radius synced to 3.5 and the E-pill only shows on buildings with a destination. Re-verified both the overlap spot (flower only, no hijack) and Job Board entry.
+
 ---
 
 ## Wave 23 — 2026-07-04 Cozy Marathon Consolidation
