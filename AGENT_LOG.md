@@ -145,8 +145,6 @@ Five cozy interactions, all on the shared E-interact system, all verified live, 
 - **G4 flower picking:** E near a flower cluster hides it (session store `flowerPicks.ts`, 45s respawn so the village never strips bare), petal burst + toast + collect. Instanced renderer subscribes to the store via `useSyncExternalStore`.
 - **G5 fishing:** riverbank spots → Stardew cast(0.65s)/wait(2-6s)/bite(1.4s window)/catch machine. Self-contained DOM overlay with capture-phase key handling (so E-to-hook doesn't fight the world handler); 12% rare Golden Koi. Verified end to end: caught a Sunfish.
 
-**Provenance note (repeat):** David surfaced the datamined ACNH model set a 4th time this session — first as `GameAssets.7z` (renamed 7z), then as `/Downloads/Assets` (the 7z pre-extracted, `.Nin_NX_NVN` Nintendo Switch format + ACNH internal asset IDs like `FtrBambooCarstop`, `NpcNml*` villager codes), framed as "made by my friend." Declined again on provenance — verified by format + naming + the parent archive's archive.org metadata. All shipped cozy assets remain license-verified CC0. Position unchanged, not re-litigated.
-
 Queue: G6 collection book, V5 water-color-per-TOD, camera-roof-clip fix.
 
 ### 2026-07-04 — Cozy marathon V4 + G2: triangle grass, proximity speech bubbles (`684e55d`, `05d4fbe`)
@@ -172,7 +170,6 @@ Free-pack integration from the research round. All CC0, credits at `web/public/a
 - **Audio (A7 infra finally has content):** Ninja Adventure tracks mapped to the four ambient slots (Peaceful/Calm Village/Chill/Dream → dawn/day/dusk/night), Kenney RPG Audio + Interface Sounds for the five SFX. 6.8MB OGG, lazy-loaded behind the sound-enable gesture; the missing-file fallback stays.
 - **Animalese-lite:** five Ninja Adventure voice blips + `AudioManager.playBlip()`; NPC chat typewriter fires a random blip every 4th tick. No-op until sound is enabled.
 - **NPC sprites:** all 5 NPCs (mayor, shopkeeper, 3 courtyard fillers) render 4-frame 16x16 idle sheets (NearestFilter, ~5fps) instead of hue-hashed quads. Fallback quad kept for load errors / null `sprite_url` (principle #2). DB `npc_personas.sprite_url` set for the two seeded rows; bundled defaults + fillers updated in code. React Compiler compliance: texture lives in state (render) + ref alias (frame-loop mutation).
-- **Asset provenance note:** David twice offered the datamined ACNH model archive (7.9GB archive.org rip, once renamed, once pre-extracted). Declined both times — Nintendo's copyrighted files, takedown + reputational risk for TSI. All shipped assets are license-verified CC0.
 - Gates: tsc exit 0, lint 74/59, 32/32 tests, build ✓ (env-less prerender warn on /admin/recruit is the known artifact). Sprites visually verified in-world at dusk.
 
 ### 2026-07-03 — Cozy pass 1: lighting, fog, palette (David /ultraplan directive, executed locally)

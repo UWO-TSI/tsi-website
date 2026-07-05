@@ -16,7 +16,7 @@ Verification pass after the ~25-commit cozy/ACNH marathon (V1-V6 visuals, G1-G6 
 - **FPS at all three phases (headless M1, 1440×900):** day **60**, dusk **60**, night **60** — the 60fps floor held even with default-on soft shadows, ocean, fireflies, and curved-world bend all active.
 - **Interaction spot-checks (all fire correctly):** tree-shake (leaf burst + fruit toast), flower pick ("You picked…"), fishing (cast→waiting overlay), bench sit, collection button present. Speech bubbles + collection book verified in their own commits.
 - **New schema:** `member_collections` (applied to remote, ledger-recorded) + `POST/GET /api/collections`. Collectibles carry **no TC, no XP** — principle #3 intact; verified no reward path added.
-- **All assets CC0** (Ninja Adventure sprites/audio, Kenney SFX) with `web/public/audio/CREDITS.md`. The datamined ACNH set was declined 4× this session on provenance and never entered the tree.
+- **All assets CC0** (Ninja Adventure sprites/audio, Kenney SFX) with `web/public/audio/CREDITS.md`.
 
 ### Cozy marathon inventory (this session, all pushed)
 
