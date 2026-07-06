@@ -24,6 +24,7 @@ const CATALOG: { group: string; items: { key: string; icon: string; name: string
       { key: "apple", icon: "🍎", name: "Apple" },
       { key: "peach", icon: "🍑", name: "Peach" },
       { key: "acorn", icon: "🌰", name: "Acorn" },
+      { key: "petal", icon: "🌸", name: "Cherry petal" },
     ],
   },
   {

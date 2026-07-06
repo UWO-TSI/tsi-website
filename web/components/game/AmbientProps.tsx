@@ -183,6 +183,17 @@ export default function AmbientProps() {
         </group>
       </group>
 
+      {/* Oracle approach — stone lantern pair flanking the museum walk
+          (temple-path read), each with a faint warm glow for night. */}
+      <group name="oracle-approach">
+        {[-2, 2].map((x) => (
+          <group key={x} position={[x, getTerrainHeight(x, 19), 19]}>
+            <GLBProp url="/assets/acnh/props/stone-lantern.glb" />
+            <pointLight color="#FFD9A0" intensity={0.3} distance={3} position={[0, 1.6, 0]} />
+          </group>
+        ))}
+      </group>
+
       {/* HQ entry glow — the RS doorway recess reads as a black hole at
           distance; a warm pane + soft light make it read as an open,
           lit lobby (day and night). Door plane is at z=-4 facing south. */}

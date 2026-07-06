@@ -31,9 +31,18 @@ const FRUITS = [
   { key: "apple", label: "an apple", color: "#E5484D" },
   { key: "peach", label: "a peach", color: "#FFB27D" },
   { key: "acorn", label: "an acorn", color: "#8B6B4A" },
+  { key: "petal", label: "a cherry petal", color: "#FFB7D5" },
 ] as const;
 
-const LEAF_COLORS = ["#6FBF4E", "#8FD46A", "#57A83D", "#A8E08A"];
+// Species-aware shake results (ACNH revamp 2026-07). Index mirrors
+// GameWorld's TREE_MODELS assignment: 0/1 hardwood, 2 blossom, 3 cedar.
+// drops = indices into FRUITS.
+const SPECIES: { leaves: string[]; drops: number[] }[] = [
+  { leaves: ["#6FBF4E", "#8FD46A", "#57A83D", "#A8E08A"], drops: [0, 1] },
+  { leaves: ["#6FBF4E", "#8FD46A", "#57A83D", "#A8E08A"], drops: [0, 1] },
+  { leaves: ["#FFB7D5", "#FFD1E3", "#FF9EC4", "#FFC9DE"], drops: [3] },
+  { leaves: ["#3D7A3D", "#2E5D2E", "#4C8A4C", "#356B35"], drops: [2] },
+];
 
 interface Leaf {
   seed: number;
@@ -61,20 +70,21 @@ export default function TreeShakeFX() {
 
   useEffect(() => {
     const onShake = (e: Event) => {
-      const { x, z } = (e as CustomEvent<{ x: number; z: number }>).detail;
+      const { x, z, species } = (e as CustomEvent<{ x: number; z: number; species?: number }>).detail;
       const key = `${x}:${z}`;
       const now = performance.now();
       if (now - (lastShakeRef.current[key] ?? -Infinity) < SHAKE_COOLDOWN_MS) return;
       lastShakeRef.current[key] = now;
 
+      const sp = SPECIES[(species ?? 0) % SPECIES.length];
       const leaves: Leaf[] = Array.from({ length: LEAVES_PER_SHAKE }, (_, i) => ({
         seed: (i * 733 + x * 31 + z * 17) % 1000,
         x,
         z,
-        color: LEAF_COLORS[i % LEAF_COLORS.length],
+        color: sp.leaves[i % sp.leaves.length],
       }));
       const fruit = Math.random() < FRUIT_CHANCE
-        ? FRUITS[Math.floor(Math.random() * FRUITS.length)]
+        ? FRUITS[sp.drops[Math.floor(Math.random() * sp.drops.length)]]
         : null;
 
       AudioManager.playSFX("exit"); // soft door-thud reads as a trunk knock

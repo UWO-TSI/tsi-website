@@ -1667,7 +1667,16 @@ export default function GameWorld() {
           // the burst + drop; decoupled via a window event so the handler
           // stays outside the R3F tree.
           window.dispatchEvent(
-            new CustomEvent("tsi:tree-shake", { detail: { x: n.treePos[0], z: n.treePos[1] } })
+            new CustomEvent("tsi:tree-shake", {
+              detail: {
+                x: n.treePos[0],
+                z: n.treePos[1],
+                // Species mirrors TREE_MODELS assignment (index mod 4) so
+                // the FX layer can drop the right thing (petals off the
+                // blossom, acorns off the cedar).
+                species: Number(n.id.split("-")[1] ?? 0) % TREE_MODELS.length,
+              },
+            })
           );
         } else if (n.kind === "building" && n.href) {
           // Boards (thin z) jump straight; buildings get the fade
