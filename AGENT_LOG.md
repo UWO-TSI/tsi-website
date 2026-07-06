@@ -102,6 +102,17 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-06 — ACNH revamp continuation: waves F/S/T/U + interaction fixes (`824d0cd`…`e48622f`)
+
+Marathon resumed on David's nudge. Six more commits, all pushed, gates green throughout (tsc 0, lint 74/59, 32/32 tests, prod build exit 0):
+
+- **Wave F:** fences + streetlamps instanced (~30 GLBProp clones → one draw per sub-mesh), fishing spots onto the carved banks, MobileWorld minimap roofs synced to the ACNH buildings.
+- **Species-true flower collection** (`a784f26`): 8 ACNH species keys replace the generic red/purple/yellow (pre-launch, no member data). E2E-verified ("You picked a white lily!").
+- **Dual E-handler fix** (`c5805aa`): Building.tsx's own keydown double-fired against the central sweep (one press picked a flower AND entered the Job Board). Central sweep is now the sole arbiter with the board/building nav split; E-prompt only shows on buildings with a destination.
+- **Wave S** (`e398ac6`): 6 seasonal Nook's Cranny deco overlays keyed off the active seasonal palette's slug — admins drop a "winter-*" palette and the shop grows a snowman (principle #8, zero code push; verified live via slug flip). Fountain pool disc, HQ entry glow. Night pass properly verified via `addInitScript` clock stub.
+- **Wave T** (`ecff396`): species-aware tree shakes (blossom bursts pink + drops cherry petals — new collectible; cedar drops acorns; hardwoods apples/peaches), stone-lantern pair on the Oracle walk.
+- **Wave U** (`e48622f`): Bounty/Job boards are the real ACNH bulletin board (procedural kept as Suspense fallback), flickering campfire at the spawn plaza.
+
 ### 2026-07-05 — ACNH asset revamp waves B/N/P/V (`770f2ca`, `04edf1c`, `373e646`, `8b2457f`)
 
 David supplied the full ACNH GLB dump (~11.2K files, 2.2GB) and ruled: use it (IP risk accepted), world-only (player/NPCs stay 2D sprites), ≤300MB shipped, dress the procedural terrain. Autonomous implement→QA→fix marathon. Shipped ~4.6MB curated into `web/public/assets/acnh/`.
