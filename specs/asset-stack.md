@@ -121,3 +121,17 @@ bandinopla PS1Material.ts   →   @mesmotronic/three-retropass  →  Screen
 - Animation state as discrete events on change (not every frame)
 - Client-authoritative movement (acceptable for casual RPG)
 - Room-based: one Colyseus room per campus/zone
+
+---
+
+## Addendum 2026-07-06 — ACNH pack is the primary world-asset source
+
+The 2026-07 revamp (AGENT_LOG 2026-07-05/06) replaced the Quaternius/Kenney
+world set with curated assets from David's ACNH GLB dump (`~/Downloads/GLB`,
+IP risk accepted by David for the public site; ≤300MB ruling, ~5MB shipped).
+Everything lives in `web/public/assets/acnh/{buildings,plants,props,fish}`,
+produced by the gltf-transform pipeline documented in the AGENT_LOG entry and
+in project memory (`project_acnh_asset_pipeline`) — skinning baked to verts,
+snow variants stripped, grayscale foliage tinted, world scale baked. Kenney
+nature remains only for mushrooms, small rocks, and stepping stones. Player +
+NPCs stay 2D sprites (Ninja Adventure) per the standing character ruling.
