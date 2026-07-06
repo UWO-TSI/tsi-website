@@ -5,6 +5,7 @@ import { Html, useGLTF } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { useActivePalette } from "@/lib/game/contentLoader";
+import { GLBProp } from "./NatureModels";
 
 // Matches GameWorld's central sweep INTERACT_RADIUS so the "Press E"
 // prompt never shows outside the range where E actually fires.
@@ -411,9 +412,11 @@ function ACBuilding({ size, color, roofColor: roofColorProp }: { size: [number, 
 }
 
 /**
- * Board/sign — wooden notice board with roof per v2 spec Section 6.4.
+ * Board/sign — the real ACNH bulletin board (bbs.glb, 1.7×1.8×0.3 at world
+ * scale — a near-exact match for the old procedural sign's footprint).
+ * Procedural composite kept as the Suspense fallback.
  */
-function BoardSign({ size, color }: { size: [number, number, number]; color: string }) {
+function BoardSignProcedural({ size, color }: { size: [number, number, number]; color: string }) {
   const [sx, sy] = size;
   return (
     <group>
@@ -427,12 +430,10 @@ function BoardSign({ size, color }: { size: [number, number, number]; color: str
         <boxGeometry args={[sx, sy * 0.5, 0.15]} />
         <meshStandardMaterial color={color} roughness={0.85} metalness={0} />
       </mesh>
-      {/* Small roof */}
       <mesh position={[0, sy * 0.95, 0]} castShadow>
         <boxGeometry args={[sx * 1.2, 0.08, 0.35]} />
         <meshStandardMaterial color="#8B6B4A" roughness={0.9} metalness={0} />
       </mesh>
-      {/* Pinned notes (colored rectangles) */}
       {[-0.3, 0, 0.3].map((x, i) => (
         <mesh key={i} position={[x, sy * 0.65 + (i - 1) * 0.08, 0.09]} rotation={[0, 0, (i - 1) * 0.15]}>
           <planeGeometry args={[0.25, 0.3]} />
@@ -440,6 +441,14 @@ function BoardSign({ size, color }: { size: [number, number, number]; color: str
         </mesh>
       ))}
     </group>
+  );
+}
+
+function BoardSign({ size, color }: { size: [number, number, number]; color: string }) {
+  return (
+    <Suspense fallback={<BoardSignProcedural size={size} color={color} />}>
+      <GLBProp url="/assets/acnh/props/bulletin-board.glb" rotation={[0, Math.PI, 0]} />
+    </Suspense>
   );
 }
 

@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useRef } from "react";
+import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { getTerrainHeight } from "./terrain";
 import { sampleRiverPoint, findRiverTForX } from "./River";
@@ -142,6 +143,26 @@ const LANTERNS: [number, number][] = [
   [1.5, -13.5], // spawn area
 ];
 
+// ─── Campfire (ACNH events pack) ────────────────────────────────────────
+// The model carries its own fire mesh; a flickering point light sells it.
+function Campfire({ position }: { position: [number, number, number] }) {
+  const lightRef = useRef<THREE.PointLight>(null);
+  const t = useRef(0);
+  useFrame((_, delta) => {
+    t.current += delta;
+    if (lightRef.current) {
+      lightRef.current.intensity =
+        0.75 + Math.sin(t.current * 9) * 0.12 + Math.sin(t.current * 23 + 1.7) * 0.08;
+    }
+  });
+  return (
+    <group position={position}>
+      <GLBProp url="/assets/acnh/props/campfire.glb" />
+      <pointLight ref={lightRef} color="#FF9A4D" intensity={0.75} distance={6} decay={2} position={[0, 0.9, 0]} />
+    </group>
+  );
+}
+
 // ─── Root ───────────────────────────────────────────────────────────────
 export default function AmbientProps() {
   return (
@@ -182,6 +203,10 @@ export default function AmbientProps() {
           </mesh>
         </group>
       </group>
+
+      {/* Spawn campfire — a social anchor by the spawn plaza (principle #1:
+          the world is a hangout). Flickering warm light sells the fire. */}
+      <Campfire position={[4, getTerrainHeight(4, -13.5), -13.5]} />
 
       {/* Oracle approach — stone lantern pair flanking the museum walk
           (temple-path read), each with a faint warm glow for night. */}
