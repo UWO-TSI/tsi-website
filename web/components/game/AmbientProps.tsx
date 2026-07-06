@@ -169,10 +169,29 @@ export default function AmbientProps() {
       </group>
 
       {/* ACNH revamp 2026-07: plaza dressing — park clock at the crossroads,
-          fountain on the west green (both off the path corridors). */}
+          fountain on the spawn plaza. The fountain GLB's water mesh was an
+          untextured white plate (stripped with the snow pass), so a simple
+          translucent disc stands in as the pool. */}
       <group name="plaza">
         <GLBProp url="/assets/acnh/props/park-clock.glb" position={[3, getTerrainHeight(3, 10.2), 10.2]} />
-        <GLBProp url="/assets/acnh/props/fountain.glb" position={[-5, getTerrainHeight(-5, -14), -14]} />
+        <group position={[-5, getTerrainHeight(-5, -14), -14]}>
+          <GLBProp url="/assets/acnh/props/fountain.glb" />
+          <mesh position={[0, 0.42, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+            <circleGeometry args={[1.02, 24]} />
+            <meshStandardMaterial color="#5BB8D4" transparent opacity={0.85} roughness={0.15} metalness={0} />
+          </mesh>
+        </group>
+      </group>
+
+      {/* HQ entry glow — the RS doorway recess reads as a black hole at
+          distance; a warm pane + soft light make it read as an open,
+          lit lobby (day and night). Door plane is at z=-4 facing south. */}
+      <group name="hq-entry">
+        <mesh position={[0, 1.5, -3.2]} rotation={[0, Math.PI, 0]}>
+          <planeGeometry args={[1.7, 2.4]} />
+          <meshStandardMaterial color="#FFE9C0" emissive="#FFC878" emissiveIntensity={0.55} roughness={0.6} metalness={0} />
+        </mesh>
+        <pointLight color="#FFD9A0" intensity={0.5} distance={4.5} position={[0, 1.6, -4.6]} />
       </group>
     </group>
   );

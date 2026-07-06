@@ -4,6 +4,7 @@ import { Suspense, useMemo, useRef } from "react";
 import { Html, useGLTF } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
+import { useActivePalette } from "@/lib/game/contentLoader";
 
 // Matches GameWorld's central sweep INTERACT_RADIUS so the "Press E"
 // prompt never shows outside the range where E actually fires.
@@ -264,6 +265,41 @@ function ACNHBuilding({ id }: { id: string }) {
 
 for (const cfg of Object.values(ACNH_GLB)) useGLTF.preload(cfg.url);
 
+// ─── Seasonal shop deco (principle #8: monthly content, no code pushes) ─
+// The ACNH pack ships Nook's Cranny seasonal overlays that align at
+// identity with the market model. When the admin-activated seasonal
+// palette's slug/name mentions a season, the shop dresses itself to match.
+// Specific holidays win over generic seasons; no match → no deco.
+const SHOP_DECO_SEASONS = ["christmas", "halloween", "winter", "autumn", "summer", "spring"] as const;
+function shopDecoUrl(paletteText: string): string | null {
+  const t = paletteText.toLowerCase();
+  if (t.includes("fall")) return "/assets/acnh/buildings/shop-deco-autumn.glb";
+  for (const s of SHOP_DECO_SEASONS) {
+    if (t.includes(s)) return `/assets/acnh/buildings/shop-deco-${s}.glb`;
+  }
+  return null;
+}
+
+/** Deco overlay: same model space as the shop, so same transform. */
+function ACNHDeco({ id, url }: { id: string; url: string }) {
+  const cfg = ACNH_GLB[id];
+  const { scene } = useGLTF(url);
+  const cloned = useMemo(() => {
+    const clone = scene.clone(true);
+    clone.scale.setScalar((cfg.scale ?? 1) * ACNH_SCALE);
+    clone.position.y = cfg.yOffset ?? 0;
+    if (cfg.rotationY) clone.rotation.y = cfg.rotationY;
+    clone.traverse((child) => {
+      if ((child as THREE.Mesh).isMesh) {
+        (child as THREE.Mesh).castShadow = true;
+        (child as THREE.Mesh).receiveShadow = true;
+      }
+    });
+    return clone;
+  }, [scene, cfg]);
+  return <primitive object={cloned} />;
+}
+
 /**
  * Loads a real GLB model, auto-scales to fit expected dimensions,
  * and overrides materials with AC palette colors.
@@ -456,6 +492,11 @@ export default function Building({ id, name, position, size, color, roofColor, h
     return new THREE.Vector3(...position).distanceTo(playerPosition) < INTERACT_RANGE;
   }, [position, playerPosition]);
 
+  const { data: activePalette } = useActivePalette();
+  const decoUrl = id === "shop"
+    ? shopDecoUrl(`${activePalette?.slug ?? ""} ${activePalette?.display_name ?? ""}`)
+    : null;
+
   // E-navigation lives in GameWorld's central interact sweep (ACNH revamp):
   // this component's own keydown listener double-fired against the sweep
   // when a board's range overlapped another interactable. Building renders
@@ -476,9 +517,16 @@ export default function Building({ id, name, position, size, color, roofColor, h
       ) : isProcedural ? (
         <ProceduralBuilding id={id} />
       ) : hasACNH ? (
-        <Suspense fallback={<ACBuilding size={size} color={color} roofColor={roofColor} />}>
-          <ACNHBuilding id={id} />
-        </Suspense>
+        <>
+          <Suspense fallback={<ACBuilding size={size} color={color} roofColor={roofColor} />}>
+            <ACNHBuilding id={id} />
+          </Suspense>
+          {decoUrl && (
+            <Suspense fallback={null}>
+              <ACNHDeco id={id} url={decoUrl} />
+            </Suspense>
+          )}
+        </>
       ) : hasGLB ? (
         <Suspense fallback={<ACBuilding size={size} color={color} roofColor={roofColor} />}>
           <GLBBuilding id={id} size={size} color={color} />
