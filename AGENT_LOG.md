@@ -112,6 +112,7 @@ Marathon resumed on David's nudge. Six more commits, all pushed, gates green thr
 - **Wave S** (`e398ac6`): 6 seasonal Nook's Cranny deco overlays keyed off the active seasonal palette's slug — admins drop a "winter-*" palette and the shop grows a snowman (principle #8, zero code push; verified live via slug flip). Fountain pool disc, HQ entry glow. Night pass properly verified via `addInitScript` clock stub.
 - **Wave T** (`ecff396`): species-aware tree shakes (blossom bursts pink + drops cherry petals — new collectible; cedar drops acorns; hardwoods apples/peaches), stone-lantern pair on the Oracle walk.
 - **Wave U** (`e48622f`): Bounty/Job boards are the real ACNH bulletin board (procedural kept as Suspense fallback), flickering campfire at the spawn plaza.
+- **Wave W** (`21b0d46`): species-true fishing — 7 real river fish (Golden Koi keeps the 12% rare slot), new FishCatchFX holds the caught species' model above the player ACNH-style. E2E-verified ("You caught a Dace!" + model pop). Collection fish page species-true; legacy keys retired.
 
 ### 2026-07-05 — ACNH asset revamp waves B/N/P/V (`770f2ca`, `04edf1c`, `373e646`, `8b2457f`)
 
