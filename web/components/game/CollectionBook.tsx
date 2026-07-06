@@ -43,11 +43,17 @@ const CATALOG: { group: string; items: { key: string; icon: string; name: string
     ],
   },
   {
+    // ACNH revamp 2026-07: species-true entries matching FishingOverlay.
+    // Legacy generic keys retired pre-launch (no real member data).
     group: "Fish",
     items: [
-      { key: "fish_common", icon: "🐟", name: "Pond fish" },
-      { key: "fish_river", icon: "🎣", name: "River fish" },
-      { key: "fish_rare", icon: "✨", name: "Golden Koi" },
+      { key: "fish_dace", icon: "🐟", name: "Dace" },
+      { key: "fish_crucian_carp", icon: "🐟", name: "Crucian Carp" },
+      { key: "fish_bluegill", icon: "🐠", name: "Bluegill" },
+      { key: "fish_black_bass", icon: "🐡", name: "Black Bass" },
+      { key: "fish_carp", icon: "🐟", name: "Carp" },
+      { key: "fish_goldfish", icon: "🐠", name: "Goldfish" },
+      { key: "fish_golden_koi", icon: "✨", name: "Golden Koi" },
     ],
   },
 ];

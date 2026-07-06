@@ -24,13 +24,19 @@ import { AudioManager } from "@/lib/game/audio";
 
 type Phase = "idle" | "casting" | "waiting" | "bite" | "caught" | "missed";
 
+// ACNH revamp 2026-07: species-true river catches (models shown in-world
+// by FishCatchFX). Golden Koi keeps its rare slot + 12% roll; legacy
+// generic keys (fish_common/river/rare) retired pre-launch.
 const FISH = [
-  { key: "fish_common", label: "a Pond Minnow" },
-  { key: "fish_river", label: "a River Trout" },
-  { key: "fish_river", label: "a Sunfish" },
-  { key: "fish_rare", label: "a Golden Koi" },
+  { key: "fish_dace", label: "a Dace", model: "/assets/acnh/fish/dace.glb" },
+  { key: "fish_crucian_carp", label: "a Crucian Carp", model: "/assets/acnh/fish/crucian-carp.glb" },
+  { key: "fish_bluegill", label: "a Bluegill", model: "/assets/acnh/fish/bluegill.glb" },
+  { key: "fish_black_bass", label: "a Black Bass", model: "/assets/acnh/fish/black-bass.glb" },
+  { key: "fish_carp", label: "a Carp", model: "/assets/acnh/fish/carp.glb" },
+  { key: "fish_goldfish", label: "a Goldfish", model: "/assets/acnh/fish/goldfish.glb" },
+  { key: "fish_golden_koi", label: "a Golden Koi", model: "/assets/acnh/fish/koi.glb" },
 ];
-const RARE_INDEX = 3;
+const RARE_INDEX = 6;
 
 const BITE_WINDOW_MS = 1400;
 
@@ -90,7 +96,7 @@ export default function FishingOverlay() {
     setPhase("caught");
     AudioManager.playSFX("confirm");
     // Signals the "catch a fish" onboarding quest (auto-complete).
-    window.dispatchEvent(new CustomEvent("tsi:fish-caught", { detail: { key: fish.key } }));
+    window.dispatchEvent(new CustomEvent("tsi:fish-caught", { detail: { key: fish.key, model: fish.model } }));
     fetch("/api/collections", {
       method: "POST",
       headers: { "Content-Type": "application/json" },

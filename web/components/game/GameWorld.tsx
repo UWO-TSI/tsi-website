@@ -14,6 +14,7 @@ import Ocean from "./Ocean";
 import TreeShakeFX from "./TreeShakeFX";
 import { useTransition } from "./TransitionOverlay";
 import FlowerPickFX from "./FlowerPickFX";
+import FishCatchFX from "./FishCatchFX";
 import { pickFlower, subscribeFlowerPicks, getPickedSnapshot, getPickedServerSnapshot } from "@/lib/game/flowerPicks";
 import { getTerrainHeight, valueNoise, BUILDING_FOOTPRINTS } from "./terrain";
 import { GLBProp, NatureMushroom, NatureStump } from "./NatureModels";
@@ -1475,6 +1476,7 @@ function Scene({
       <River phase={todPhase} />
       <TreeShakeFX />
       <FlowerPickFX />
+      <FishCatchFX playerPosRef={playerPosRef} />
       <Bridge />
 
       <InstancedTrees />
