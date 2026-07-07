@@ -1340,7 +1340,6 @@ function Scene({
       window.clearTimeout(t);
       finish();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   // G2: world-space anchor for the E-target ground glow.
   const glowTargetRef = useRef<[number, number, number] | null>(null);
@@ -1394,15 +1393,8 @@ function Scene({
     cf.leadX = THREE.MathUtils.damp(cf.leadX, vx * inv * lead, 3, dt);
     cf.leadZ = THREE.MathUtils.damp(cf.leadZ, vz * inv * lead, 3, dt);
     cameraRef.current?.moveTo(position.x + cf.leadX, position.y + 1.5, position.z + cf.leadZ, true);
-    const cam = cameraRef.current?.camera as THREE.PerspectiveCamera | undefined;
-    if (cam && cam.isPerspectiveCamera) {
-      const targetFov = speed > 7.5 ? 51 : 48;
-      const next = THREE.MathUtils.damp(cam.fov, targetFov, 4, dt);
-      if (Math.abs(next - cam.fov) > 0.01) {
-        cam.fov = next;
-        cam.updateProjectionMatrix();
-      }
-    }
+    // (Sprint FOV widen lives in PlayerAvatar's useFrame — the compiler
+    // allows camera mutation there but not in this DOM-side callback.)
 
     // F1.2: compute nearest interactable for crosshair + E-interact. Cheap
     // O(npc + building) sweep every move tick. INTERACT_RADIUS = 3.5 units.

@@ -72,6 +72,21 @@ const WALK_RIGHT = { col: 3, frames: 4 };
 // Key state tracking
 const keys: Record<string, boolean> = {};
 
+// G1 camera feel: FOV widens a touch at sprint speed. Lives at module scope
+// because the react-compiler treats three objects reached through hooks as
+// frozen inside component code; a plain function call is the sanctioned
+// escape hatch for imperative three mutations.
+function applySprintFov(camera: THREE.Camera, speed: number, delta: number) {
+  const pcam = camera as THREE.PerspectiveCamera;
+  if (!pcam.isPerspectiveCamera) return;
+  const targetFov = speed > 7.5 ? 51 : 48;
+  const nextFov = THREE.MathUtils.damp(pcam.fov, targetFov, 4, delta);
+  if (Math.abs(nextFov - pcam.fov) > 0.01) {
+    pcam.fov = nextFov;
+    pcam.updateProjectionMatrix();
+  }
+}
+
 interface PlayerAvatarProps {
   spawnPosition: [number, number, number];
   onMove: (position: THREE.Vector3) => void;
@@ -335,6 +350,7 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
       const latVel = vel.x * rx + vel.y * rz;
       const targetLean = THREE.MathUtils.clamp(-latVel / PLAYER_SPEED, -1, 1) * 0.085;
       leanRef.current = THREE.MathUtils.damp(leanRef.current, targetLean, 10, delta);
+      applySprintFov(camera, Math.hypot(vel.x, vel.y), delta);
     }
 
     // Ground follow — sample terrain every frame (even when idle so the
