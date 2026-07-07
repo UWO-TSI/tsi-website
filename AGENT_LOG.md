@@ -102,6 +102,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-08 — Click-to-move desync fixed + juice round 2 (`c6a373a`)
+
+David-reported: cursor click vs character destination out of sync. Two stacked causes: the pick raycast a flat y=0 plane (terrain is a 0-0.6u heightfield + river carve), and the curved-world shader sinks distant ground in view space (z²·BEND) so the visible ground sits lower than its logical position — clicks landed short, worse with distance. New `lib/game/groundPick.ts` marches the ray against the *visually curved* heightfield (coarse steps + bisection, click-time only). Verified live: far-pixel click walks the player across the river to exactly that spot. Juice: click SFX, twin-ring indicator with popping center dot, jump-land thud, bigger sprint dust. Gates 74/59, build exit 0.
+
 ### 2026-07-07 — Game-feel program: waves G1-G5a (`e50571d`…`473e941`)
 
 David approved the full 27-item feel/UX/visual pitch (multi-choice, all bundles). Shipped in five self-contained commits, gates green throughout, everything verified live on 3050:
