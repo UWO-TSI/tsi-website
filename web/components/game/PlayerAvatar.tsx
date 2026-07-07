@@ -7,6 +7,7 @@ import * as THREE from "three";
 import { getTerrainHeight, sampleTerrainHeightFast } from "./terrain";
 import { useSFX } from "@/lib/game/useAudio";
 import { getCameraForwardXZ } from "@/lib/game/cameraBasis";
+import { pickCurvedGround } from "@/lib/game/groundPick";
 import MoveTargetIndicator from "./MoveTargetIndicator";
 import type { EmoteType } from "@/lib/game/contentTypes";
 
@@ -200,7 +201,6 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
   }, []);
 
   // Click-to-move
-  const groundPlane = useRef(new THREE.Plane(new THREE.Vector3(0, 1, 0), 0));
   const raycaster = useRef(new THREE.Raycaster());
   const mouse = useRef(new THREE.Vector2());
 
@@ -211,14 +211,17 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
       mouse.current.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
 
       raycaster.current.setFromCamera(mouse.current, camera);
-      const intersection = new THREE.Vector3();
-      raycaster.current.ray.intersectPlane(groundPlane.current, intersection);
+      // 2026-07-08 sync fix: pick against the VISUALLY CURVED heightfield
+      // (terrain height + world-bend), not a flat y=0 plane — clicks were
+      // landing short of the point under the cursor.
+      const intersection = pickCurvedGround(raycaster.current.ray, camera);
 
       if (intersection) {
         intersection.x = THREE.MathUtils.clamp(intersection.x, -BOUNDARY, BOUNDARY);
         intersection.z = THREE.MathUtils.clamp(intersection.z, -BOUNDARY, BOUNDARY);
         intersection.y = 0;
         targetRef.current = intersection;
+        sfx.play("click");
         // Sprint A8: spawn expanding ring at click point. Re-clicks spawn new
         // rings (key by counter so React mounts a fresh component).
         const id = indicatorIdRef.current++;
@@ -228,7 +231,7 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
         ]);
       }
     },
-    [camera, gl]
+    [camera, gl, sfx]
   );
 
   useEffect(() => {
@@ -443,6 +446,7 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
         jumpRef.current.active = false;
         jumpRef.current.t = 0;
         squashRef.current = 0.18; // G1: landing squash window
+        sfx.play("footstep"); // land thud
         // P29: landing puff — bigger ring at the player's current spot.
         const id = puffIdRef.current++;
         setPuffs((prev) => [
@@ -487,7 +491,7 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
         const trailX = pos.x - (dx || 0) * 0.2;
         const trailZ = pos.z - (dz || 0) * 0.2;
         const id = puffIdRef.current++;
-        setPuffs((prev) => [...prev, { id, position: [trailX, pos.y + 0.02, trailZ] }]);
+        setPuffs((prev) => [...prev, { id, position: [trailX, pos.y + 0.02, trailZ], scale: keys["shift"] ? 1.3 : 1 }]);
       }
     } else {
       footstepTimer.current = 0;
