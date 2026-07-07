@@ -63,7 +63,7 @@ interface Burst {
 
 let burstId = 0;
 
-export default function TreeShakeFX() {
+export default function TreeShakeFX({ playerPosRef }: { playerPosRef?: React.MutableRefObject<THREE.Vector3> }) {
   const [bursts, setBursts] = useState<Burst[]>([]);
   const lastShakeRef = useRef<Record<string, number>>({});
 
@@ -111,13 +111,13 @@ export default function TreeShakeFX() {
   return (
     <>
       {bursts.map((b) => (
-        <ShakeBurst key={b.id} burst={b} onDone={() => expire(b.id)} />
+        <ShakeBurst key={b.id} burst={b} playerPosRef={playerPosRef} onDone={() => expire(b.id)} />
       ))}
     </>
   );
 }
 
-function ShakeBurst({ burst, onDone }: { burst: Burst; onDone: () => void }) {
+function ShakeBurst({ burst, playerPosRef, onDone }: { burst: Burst; playerPosRef?: React.MutableRefObject<THREE.Vector3>; onDone: () => void }) {
   const groupRef = useRef<THREE.Group>(null);
   const fruitRef = useRef<THREE.Mesh>(null);
   const doneRef = useRef(false);
@@ -159,11 +159,22 @@ function ShakeBurst({ burst, onDone }: { burst: Burst; onDone: () => void }) {
       } else if (t < 1.4) {
         f.position.y = 0.35;
       } else {
-        const k = Math.min((t - 1.4) / 0.8, 1);
-        f.position.y = 0.35 + k * 1.2;
+        // G4 (item 6): the fruit arcs to the player and pops — the ACNH
+        // "into my pockets" beat — instead of floating up in place.
+        const k = Math.min((t - 1.4) / 0.55, 1);
+        const pp = playerPosRef?.current;
+        if (pp) {
+          const ease = k * k * (3 - 2 * k);
+          f.position.x = THREE.MathUtils.lerp(f.position.x, pp.x - burst.x, ease);
+          f.position.z = THREE.MathUtils.lerp(f.position.z, pp.z - burst.z, ease);
+          f.position.y = 0.35 + Math.sin(ease * Math.PI) * 1.1 + (pp.y - burst.groundY + 0.8) * ease;
+          f.scale.setScalar(1 - ease * 0.55);
+        } else {
+          f.position.y = 0.35 + k * 1.2;
+        }
         const m = f.material as THREE.MeshStandardMaterial;
-        m.opacity = 1 - k;
-        if (!collectedRef.current) {
+        m.opacity = 1 - Math.max(0, k - 0.75) * 4;
+        if (!collectedRef.current && k >= 1) {
           collectedRef.current = true;
           window.dispatchEvent(new CustomEvent("tsi:toast", { detail: { text: `You got ${burst.fruit.label}!` } }));
           AudioManager.playSFX("confirm");
@@ -176,7 +187,7 @@ function ShakeBurst({ burst, onDone }: { burst: Burst; onDone: () => void }) {
       }
     }
 
-    const lifetime = burst.fruit ? 3.4 : 1.9;
+    const lifetime = burst.fruit ? 2.6 : 1.9;
     if (t > lifetime && !doneRef.current) {
       doneRef.current = true;
       onDone();

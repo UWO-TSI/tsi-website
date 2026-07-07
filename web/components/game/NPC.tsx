@@ -104,6 +104,9 @@ export default function NPC({ persona, position, playerPosition, onClick }: NPCP
   // the player approaches.
   const clockRef = useRef(0);
   const proxRef = useRef(0);
+  // G4 (item 8): startle hop when the player barges in close — a little
+  // 0.35s bounce with a 3s cooldown.
+  const hopRef = useRef({ t: -1, cooldownUntil: 0 });
 
   // Spawn base (XZ). W1: the NPC wanders around this within WANDER_RADIUS.
   const grounded: [number, number, number] = useMemo(() => {
@@ -175,6 +178,19 @@ export default function NPC({ persona, position, playerPosition, onClick }: NPCP
     const isNoticed = dist <= NOTICE_RANGE;
     if (isNoticed !== noticed) setNoticed(isNoticed);
 
+    // G4 startle hop trigger.
+    const hop = hopRef.current;
+    if (dist < 1.05 && hop.t < 0 && clockRef.current > hop.cooldownUntil) {
+      hop.t = 0;
+      hop.cooldownUntil = clockRef.current + 3;
+    }
+    let hopY = 0;
+    if (hop.t >= 0) {
+      hop.t += delta;
+      if (hop.t > 0.35) hop.t = -1;
+      else hopY = Math.sin((hop.t / 0.35) * Math.PI) * 0.38;
+    }
+
     // G2: greet on the noticed rising edge (with cooldown), clear on expiry.
     const now = clockRef.current;
     if (isNoticed && !noticed && now >= bubbleCooldownRef.current) {
@@ -206,7 +222,7 @@ export default function NPC({ persona, position, playerPosition, onClick }: NPCP
       const amp = 0.04 + proxRef.current * 0.08;
       const bob = Math.sin(clockRef.current * Math.PI * 1.8) * amp;
       const gy = getTerrainHeight(curX, curZ);
-      groupRef.current.position.set(curX, gy + bob, curZ);
+      groupRef.current.position.set(curX, gy + bob + hopY, curZ);
     }
 
     // Idle sheets put DIRECTIONS in columns (down/up/left/right), not

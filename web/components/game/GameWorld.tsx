@@ -1544,7 +1544,7 @@ function Scene({
       {blobShadows && <BlobShadows placements={blobPlacements} />}
       <Ocean phase={todPhase} />
       <River phase={todPhase} />
-      <TreeShakeFX />
+      <TreeShakeFX playerPosRef={playerPosRef} />
       <FlowerPickFX />
       <FishCatchFX playerPosRef={playerPosRef} />
       <Bridge />

@@ -122,6 +122,9 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
   const velRef = useRef(new THREE.Vector2(0, 0));
   const leanRef = useRef(0);
   const squashRef = useRef(0);
+  // G4 (item 7): after ~12s of standing still the sprite looks around —
+  // left, right, then back to front — so idling reads alive (ACNH beat).
+  const idleTimeRef = useRef(0);
 
   // Load and configure textures for pixel art during construction
   const spriteTexture = useMemo(() => {
@@ -355,6 +358,21 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
       anim = moving ? WALK_DOWN : DIR_DOWN;
     } else if (normalizedAngle > Math.PI * 1.25 && normalizedAngle <= Math.PI * 1.75) {
       anim = moving ? WALK_RIGHT : DIR_RIGHT;
+    }
+
+    // G4 idle look-around: 12s still → glance left (1s), right (1s), front
+    // (1s), then rest for another cycle.
+    if (moving) {
+      idleTimeRef.current = 0;
+    } else {
+      idleTimeRef.current += delta;
+      const it = idleTimeRef.current;
+      if (it > 12) {
+        const seq = (it - 12) % 9;
+        if (seq < 1) anim = DIR_LEFT;
+        else if (seq < 2) anim = DIR_RIGHT;
+        else if (seq < 3) anim = DIR_DOWN;
+      }
     }
 
     // Frame cycling — Sprint A8: scale rate by actual XZ movement speed so
