@@ -31,9 +31,11 @@ interface PostFXProps {
    * fireflies) is nice but not worth dropping below 60 FPS by default.
    */
   bloom?: boolean;
+  /** G2: bloom strength by time of day — dusk glows, midday stays flat. */
+  bloomIntensity?: number;
 }
 
-export default function PostFX({ enabled = true, vignetteDarkness = 0.4, bloom = false }: PostFXProps) {
+export default function PostFX({ enabled = true, vignetteDarkness = 0.4, bloom = false, bloomIntensity = 0.55 }: PostFXProps) {
   if (typeof window !== "undefined" && window.location.search.includes("nofx")) return null;
   if (!enabled) return null;
   return (
@@ -46,7 +48,7 @@ export default function PostFX({ enabled = true, vignetteDarkness = 0.4, bloom =
       />
       {bloom ? (
         <Bloom
-          intensity={0.55}
+          intensity={bloomIntensity}
           luminanceThreshold={0.88}
           luminanceSmoothing={0.2}
           kernelSize={KernelSize.SMALL}

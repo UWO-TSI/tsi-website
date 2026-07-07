@@ -21,6 +21,7 @@ import { GLBProp, NatureMushroom, NatureStump } from "./NatureModels";
 import InstancedGLB, { type NaturePlacement } from "./InstancedNature";
 import AmbientProps from "./AmbientProps";
 import BlobShadows from "./BlobShadows";
+import { CloudShadows, NightStars, WaterSparkles, LeafGusts, NightWindows, TargetGlow } from "./AmbienceFX";
 import AmbientLife from "./AmbientLife";
 import AudioController from "./AudioController";
 import NPCChatOverlay from "./NPCChatOverlay";
@@ -1283,6 +1284,8 @@ function Scene({
 }) {
   const cameraRef = useRef<CameraControls>(null);
   const blobPlacements = useMemo(() => buildBlobPlacements(), []);
+  // G2: world-space anchor for the E-target ground glow.
+  const glowTargetRef = useRef<[number, number, number] | null>(null);
   const [playerPos, setPlayerPos] = useState<THREE.Vector3>(new THREE.Vector3(...SPAWN_POSITION));
   const { data: personas } = useNPCPersonas({ permanentOnly: true });
   const [fillerToast, setFillerToast] = useState<string | null>(null);
@@ -1412,6 +1415,22 @@ function Scene({
         best = { kind: "tree", id: `tree-${i}`, name: "Shake tree", treePos: [tx, tz] };
       }
     }
+    {
+      // G2 target glow anchor: resolve `best` to a ground point.
+      let gp: [number, number, number] | null = null;
+      if (best) {
+        const xz = best.treePos ?? best.seat ?? best.flowerPos ?? best.spot ?? null;
+        if (xz) gp = [xz[0], getTerrainHeight(xz[0], xz[1]), xz[1]];
+        else if (best.kind === "building") {
+          const b = BUILDINGS.find((bb) => bb.id === best.id);
+          if (b) gp = [b.position[0], getTerrainHeight(b.position[0], b.position[2]), b.position[2]];
+        } else if (best.kind === "npc") {
+          const pp = placedPersonas.find((q) => q.persona.id === best.id);
+          if (pp) gp = [pp.position[0], getTerrainHeight(pp.position[0], pp.position[2]), pp.position[2]];
+        }
+      }
+      glowTargetRef.current = gp;
+    }
     onNearestInteractable(best);
   }, [playerPosRef, placedPersonas, onNearestInteractable]);
 
@@ -1527,6 +1546,13 @@ function Scene({
       <FlowerPickFX />
       <FishCatchFX playerPosRef={playerPosRef} />
       <Bridge />
+      {/* G2 ambience set (2026-07-07) */}
+      <TargetGlow targetRef={glowTargetRef} />
+      <NightStars phase={todPhase} />
+      <NightWindows phase={todPhase} />
+      {!liteMode && <CloudShadows phase={todPhase} />}
+      {!liteMode && <WaterSparkles />}
+      {!liteMode && <LeafGusts />}
 
       <InstancedTrees />
       <Bushes />
@@ -1885,7 +1911,11 @@ export default function GameWorld() {
           {/* G4 — bloom + vignette. Inside Suspense so it doesn't block
               first paint. Bloom respects the graphics setting; vignette
               always-on (cheap). Lite mode disables the whole pipeline. */}
-          <PostFX enabled={!liteMode} bloom={graphicsSettings.bloom} />
+          <PostFX
+            enabled={!liteMode}
+            bloom={graphicsSettings.bloom}
+            bloomIntensity={todPhase === "dusk" ? 0.75 : todPhase === "night" ? 0.45 : todPhase === "dawn" ? 0.4 : 0.18}
+          />
         </Suspense>
       </Canvas>
       {/* F1.4: screenshot mode hides ALL DOM overlays. DebugOverlay also
