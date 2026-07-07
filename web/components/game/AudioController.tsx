@@ -42,20 +42,21 @@ export default function AudioController({ phase }: { phase: AmbientPhase }) {
             zIndex: 50,
             display: "flex",
             alignItems: "center",
-            gap: 8,
-            padding: "8px 12px",
+            justifyContent: "center",
+            width: 40,
+            height: 40,
             background: "rgba(15, 15, 16, 0.78)",
-            border: "1px solid rgba(255, 255, 255, 0.15)",
-            borderRadius: 8,
-            color: "#f1ffff",
-            fontFamily: "'IBM Plex Mono', monospace",
-            fontSize: 12,
+            border: "1px solid rgba(255, 255, 255, 0.2)",
+            borderRadius: 999,
+            color: "#FFDD87",
             cursor: "pointer",
             backdropFilter: "blur(6px)",
+            animation: "tsi-bell-pulse 2.4s ease-in-out infinite",
           }}
+          title="Turn on sound"
         >
-          <VolumeX size={14} />
-          Click to enable sound
+          <VolumeX size={16} />
+          <style>{`@keyframes tsi-bell-pulse { 0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255,221,135,0.35); } 50% { transform: scale(1.06); box-shadow: 0 0 0 7px rgba(255,221,135,0); } }`}</style>
         </button>
       )}
 

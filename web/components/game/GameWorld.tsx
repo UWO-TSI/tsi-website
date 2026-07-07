@@ -21,6 +21,9 @@ import { GLBProp, NatureMushroom, NatureStump } from "./NatureModels";
 import InstancedGLB, { type NaturePlacement } from "./InstancedNature";
 import AmbientProps from "./AmbientProps";
 import BlobShadows from "./BlobShadows";
+import ToastHub from "./ToastHub";
+import MiniMap from "./MiniMap";
+import { AudioManager } from "@/lib/game/audio";
 import { CloudShadows, NightStars, WaterSparkles, LeafGusts, NightWindows, TargetGlow } from "./AmbienceFX";
 import AmbientLife from "./AmbientLife";
 import AudioController from "./AudioController";
@@ -1288,7 +1291,6 @@ function Scene({
   const glowTargetRef = useRef<[number, number, number] | null>(null);
   const [playerPos, setPlayerPos] = useState<THREE.Vector3>(new THREE.Vector3(...SPAWN_POSITION));
   const { data: personas } = useNPCPersonas({ permanentOnly: true });
-  const [fillerToast, setFillerToast] = useState<string | null>(null);
 
   // E4: heartbeat current position to player_positions every 30s.
   // playerPosRef is a Vector3; the hook only reads .x and .z so it duck-types.
@@ -1315,8 +1317,8 @@ function Scene({
   }, [personas]);
 
   const handleFillerClick = useCallback((name: string) => {
-    setFillerToast(`${name}: ...just passing through.`);
-    setTimeout(() => setFillerToast(null), 2000);
+    // G3: unified toast pipeline.
+    window.dispatchEvent(new CustomEvent("tsi:toast", { detail: { text: `${name}: ...just passing through.` } }));
   }, []);
 
   // G1 camera feel: the target leads ~1.2u in the travel direction and the
@@ -1616,24 +1618,6 @@ function Scene({
 
       <PlayerAvatar spawnPosition={SPAWN_POSITION} onMove={handlePlayerMove} playerName={playerName} playerLevel={playerLevel} activeEmote={activeEmote} />
 
-      {fillerToast && (
-        <Html zIndexRange={[40, 0]} position={[0, 4, 0]} center style={{ pointerEvents: "none" }} distanceFactor={10}>
-          <div
-            style={{
-              background: "rgba(15, 15, 16, 0.85)",
-              border: "1px solid rgba(255,255,255,0.18)",
-              borderRadius: 8,
-              padding: "6px 12px",
-              color: "#f1ffff",
-              fontFamily: "'IBM Plex Mono', monospace",
-              fontSize: 12,
-              whiteSpace: "nowrap",
-            }}
-          >
-            {fillerToast}
-          </div>
-        </Html>
-      )}
     </>
   );
 }
@@ -1682,6 +1666,9 @@ export default function GameWorld() {
   const [collectionOpen, setCollectionOpen] = useState(false);
   // Sprint F1.3: hold-Tab server-list overlay state.
   const [tabHeld, setTabHeld] = useState(false);
+  // G3: HUD auto-fade after 5s of no pointer/key activity; M-key minimap.
+  const [hudDim, setHudDim] = useState(false);
+  const [mapOpen, setMapOpen] = useState(false);
   const [activeEmote, setActiveEmote] = useState<EmoteType | null>(null);
   const emoteClearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const playerPosRef = useRef<THREE.Vector3>(new THREE.Vector3(...SPAWN_POSITION));
@@ -1783,6 +1770,9 @@ export default function GameWorld() {
         // grab a clean shot of the world. Press F2 again or ESC to restore.
         e.preventDefault();
         setScreenshotMode((s) => !s);
+      } else if (e.key === "m" || e.key === "M") {
+        e.preventDefault();
+        setMapOpen((o) => !o);
       } else if (e.key >= "1" && e.key <= "5") {
         // F1.4: 1-5 quick-fire emote slots. Slot N → emoteTypes[N-1].
         if (activeNPC) return;
@@ -1809,6 +1799,25 @@ export default function GameWorld() {
   useEffect(() => {
     return () => {
       if (emoteClearTimerRef.current) clearTimeout(emoteClearTimerRef.current);
+    };
+  }, []);
+
+  // G3 (item 10): dim the corner HUD when the player is just vibing —
+  // any pointer move or key press brings it back.
+  useEffect(() => {
+    let timer: number | undefined;
+    const wake = () => {
+      setHudDim((d) => (d ? false : d));
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => setHudDim(true), 5000);
+    };
+    wake();
+    window.addEventListener("pointermove", wake);
+    window.addEventListener("keydown", wake);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener("pointermove", wake);
+      window.removeEventListener("keydown", wake);
     };
   }, []);
 
@@ -1881,7 +1890,19 @@ export default function GameWorld() {
   // chunky-pixel look IS the optimization (~40-60% fewer fragments than
   // dpr 1-2). DOM UI stays crisp on top. Toggle in Graphics settings.
   return (
-    <div style={{ width: "100%", height: "100%", minHeight: "100vh", background: skyBase, position: "relative" }}>
+    <div
+      style={{
+        width: "100%",
+        height: "100%",
+        minHeight: "100vh",
+        background: skyBase,
+        position: "relative",
+        // G3 (item 18): soft round cursor; a warm ring when E has a target.
+        cursor: nearest
+          ? 'url("data:image/svg+xml;utf8,<svg xmlns=%27http://www.w3.org/2000/svg%27 width=%2724%27 height=%2724%27><circle cx=%2712%27 cy=%2712%27 r=%277%27 fill=%27none%27 stroke=%27%23FFDD87%27 stroke-width=%273%27/><circle cx=%2712%27 cy=%2712%27 r=%272%27 fill=%27%23FFDD87%27/></svg>") 12 12, pointer'
+          : 'url("data:image/svg+xml;utf8,<svg xmlns=%27http://www.w3.org/2000/svg%27 width=%2720%27 height=%2720%27><circle cx=%2710%27 cy=%2710%27 r=%275%27 fill=%27%23FFFFFF%27 fill-opacity=%270.9%27 stroke=%27%233D3A2E%27 stroke-width=%272%27/></svg>") 10 10, auto',
+      }}
+    >
       <Canvas
         gl={{ antialias: false, powerPreference: "high-performance" }}
         dpr={graphicsSettings.pixelated ? 0.66 : [1, 2]}
@@ -1970,7 +1991,11 @@ export default function GameWorld() {
       )}
       {/* Sprint E2: corner button for mobile / no-keyboard users. Sits left of
           the AudioController widget so they don't overlap. Hidden in screenshot mode. */}
-      {!screenshotMode && (<>
+      {!screenshotMode && (
+      <div
+        style={{ opacity: hudDim ? 0.22 : 1, transition: "opacity 0.7s ease" }}
+        onClickCapture={() => AudioManager.playSFX("click")}
+      >
       <button
         onClick={() => setEmoteMenuOpen((o) => !o)}
         aria-label="Open emote menu"
@@ -2052,7 +2077,10 @@ export default function GameWorld() {
         Collection
       </button>
       <GraphicsButton onClick={() => setGraphicsOpen(true)} />
-      </>)}
+      </div>
+      )}
+      <ToastHub />
+      {mapOpen && !screenshotMode && <MiniMap playerPosRef={playerPosRef} />}
     </div>
   );
 }

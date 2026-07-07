@@ -17,7 +17,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
-import { Html } from "@react-three/drei";
 import * as THREE from "three";
 import { getTerrainHeight } from "./terrain";
 import { AudioManager } from "@/lib/game/audio";
@@ -121,7 +120,6 @@ export default function TreeShakeFX() {
 function ShakeBurst({ burst, onDone }: { burst: Burst; onDone: () => void }) {
   const groupRef = useRef<THREE.Group>(null);
   const fruitRef = useRef<THREE.Mesh>(null);
-  const [toast, setToast] = useState<string | null>(null);
   const doneRef = useRef(false);
   const collectedRef = useRef(false);
 
@@ -167,7 +165,7 @@ function ShakeBurst({ burst, onDone }: { burst: Burst; onDone: () => void }) {
         m.opacity = 1 - k;
         if (!collectedRef.current) {
           collectedRef.current = true;
-          setToast(`You got ${burst.fruit.label}!`);
+          window.dispatchEvent(new CustomEvent("tsi:toast", { detail: { text: `You got ${burst.fruit.label}!` } }));
           AudioManager.playSFX("confirm");
           fetch("/api/collections", {
             method: "POST",
@@ -207,31 +205,6 @@ function ShakeBurst({ burst, onDone }: { burst: Burst; onDone: () => void }) {
             transparent
           />
         </mesh>
-      )}
-      {toast && (
-        <Html
-          zIndexRange={[40, 0]}
-          position={[0, 2.2, 0]}
-          center
-          style={{ pointerEvents: "none" }}
-          distanceFactor={10}
-        >
-          <div
-            style={{
-              padding: "6px 12px",
-              background: "#FFFDF5",
-              color: "#4A4034",
-              border: "2px solid #E8DFC8",
-              borderRadius: 12,
-              fontFamily: "var(--font-highlight, sans-serif)",
-              fontSize: 12,
-              whiteSpace: "nowrap",
-              boxShadow: "0 3px 10px rgba(60, 45, 20, 0.18)",
-            }}
-          >
-            {toast}
-          </div>
-        </Html>
       )}
     </group>
   );

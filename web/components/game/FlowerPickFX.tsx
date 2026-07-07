@@ -16,7 +16,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
-import { Html } from "@react-three/drei";
 import * as THREE from "three";
 import { getTerrainHeight } from "./terrain";
 import { AudioManager } from "@/lib/game/audio";
@@ -89,7 +88,12 @@ export default function FlowerPickFX() {
 function PickBurst({ pick, onDone }: { pick: Pick; onDone: () => void }) {
   const groupRef = useRef<THREE.Group>(null);
   const doneRef = useRef(false);
-  const [toast, setToast] = useState<string | null>(pick.flower ? `You picked ${pick.flower.label}!` : null);
+  // G3: toast routed through the unified hub (fires once on mount).
+  useEffect(() => {
+    if (pick.flower) {
+      window.dispatchEvent(new CustomEvent("tsi:toast", { detail: { text: `You picked ${pick.flower.label}!` } }));
+    }
+  }, [pick.flower]);
 
   useFrame(() => {
     const t = (performance.now() - pick.start) / 1000;
@@ -111,7 +115,6 @@ function PickBurst({ pick, onDone }: { pick: Pick; onDone: () => void }) {
       });
     }
     if (t > 1.6) {
-      if (toast) setToast(null);
       if (!doneRef.current) {
         doneRef.current = true;
         onDone();
@@ -132,31 +135,6 @@ function PickBurst({ pick, onDone }: { pick: Pick; onDone: () => void }) {
           />
         </mesh>
       ))}
-      {toast && (
-        <Html
-          zIndexRange={[40, 0]}
-          position={[0, 1.8, 0]}
-          center
-          style={{ pointerEvents: "none" }}
-          distanceFactor={10}
-        >
-          <div
-            style={{
-              padding: "6px 12px",
-              background: "#FFFDF5",
-              color: "#4A4034",
-              border: "2px solid #E8DFC8",
-              borderRadius: 12,
-              fontFamily: "var(--font-highlight, sans-serif)",
-              fontSize: 12,
-              whiteSpace: "nowrap",
-              boxShadow: "0 3px 10px rgba(60, 45, 20, 0.18)",
-            }}
-          >
-            {toast}
-          </div>
-        </Html>
-      )}
     </group>
   );
 }
