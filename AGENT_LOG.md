@@ -102,6 +102,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-08 — Round-world curve (`564e83a`)
+
+David ask: more roll + slight side curve. Shader bend is now `z²·0.0032 + x²·0.0011` view-space (was z²·0.0026) — the horizon arcs down at the screen edges and the island reads as a little planet. groundPick compensates both terms (camera-right projection); far-lateral click verified landing exactly on the Bounty Board. Gates green.
+
 ### 2026-07-08 — Click-to-move desync fixed + juice round 2 (`c6a373a`)
 
 David-reported: cursor click vs character destination out of sync. Two stacked causes: the pick raycast a flat y=0 plane (terrain is a 0-0.6u heightfield + river carve), and the curved-world shader sinks distant ground in view space (z²·BEND) so the visible ground sits lower than its logical position — clicks landed short, worse with distance. New `lib/game/groundPick.ts` marches the ray against the *visually curved* heightfield (coarse steps + bisection, click-time only). Verified live: far-pixel click walks the player across the river to exactly that spot. Juice: click SFX, twin-ring indicator with popping center dot, jump-land thud, bigger sprint dust. Gates 74/59, build exit 0.
