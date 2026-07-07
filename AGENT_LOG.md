@@ -102,6 +102,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-07 — Art pass pt2: game-feel polish (`ea6b62f`)
+
+David's follow-up: hovering building tags, smaller character, faster run, "smooth and well produced." Building/board name pills now proximity-gated at 9u with fade-in (far view carries zero floating labels — verified by screenshot + DOM probe); NPC nameplates reveal with the 5.5u noticed state. Player sprite 1.7→1.45 (feet re-anchored, shadow rescaled), speed 5→6.3. All world GLBs preload at module scope (no piecemeal pop-in after the loading screen). Camera glide 0.15→0.18. Gates green, pushed.
+
 ### 2026-07-07 — Art-direction pass: New Leaf grade + island respace (`2693100`, `c690b16`, `bff06e3`)
 
 David's brief: floating/bopping trees, muddy grade vs New Leaf, cluttered/claustrophobic map; perf-first ("save on graphics", Time on Frog Island reference — low-poly + chunky pixels as the optimization). Rulings collected up front (blob shadows / grow+spread / NL-bright / full camera package). Executed in three commits, all gates green, **52 → 60.7 fps**:
