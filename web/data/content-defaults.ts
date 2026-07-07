@@ -19,7 +19,7 @@ export const DEFAULT_PALETTES: SeasonalPalette[] = [
     display_name: "Default",
     palette: {
       sky: "#BFE9FA",
-      grass: "#7CB342",
+      grass: "#84CB47",
       accent: "#FFD166",
       fog: "#CDEBF7",
       water: "#4A90D9",

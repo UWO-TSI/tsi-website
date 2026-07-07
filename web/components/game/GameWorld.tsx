@@ -413,6 +413,21 @@ function Terrain() {
 
   const grassTex = useMemo(() => getGrassTexture(), []);
 
+  // G5 (item 26): seasonal ground tint. The admin palette's `grass` color
+  // tints the whole island as a ratio against the base green — the default
+  // palette is identity, a winter palette frosts the fields, autumn warms
+  // them. Zero-code monthly content (principle #8).
+  const { data: seasonalPalette } = useActivePalette();
+  const grassTint = useMemo(() => {
+    const base = new THREE.Color(P.grassPrimary);
+    const target = new THREE.Color(seasonalPalette?.palette?.grass || P.grassPrimary);
+    return new THREE.Color(
+      Math.min(target.r / Math.max(base.r, 0.001), 1.6),
+      Math.min(target.g / Math.max(base.g, 0.001), 1.6),
+      Math.min(target.b / Math.max(base.b, 0.001), 1.6)
+    );
+  }, [seasonalPalette]);
+
   // P4 memory: dispose terrain geometry on unmount. Grass texture is
   // module-cached (shared across re-mounts) so we don't dispose it.
   useEffect(() => {
@@ -427,6 +442,7 @@ function Terrain() {
         <meshStandardMaterial
           vertexColors
           map={grassTex}
+          color={grassTint}
           roughness={0.92}
           metalness={0}
           side={THREE.DoubleSide}
@@ -1287,6 +1303,45 @@ function Scene({
 }) {
   const cameraRef = useRef<CameraControls>(null);
   const blobPlacements = useMemo(() => buildBlobPlacements(), []);
+
+  // G5 (item 16): first-visit flythrough — a 6s sweep from over the sea
+  // down to the spawn plaza. Any key/click skips. `?nointro` for tests.
+  useEffect(() => {
+    const cc = cameraRef.current;
+    if (!cc || typeof window === "undefined") return;
+    if (window.location.search.includes("nointro")) return;
+    try {
+      if (localStorage.getItem("tsi.intro.v1")) return;
+      localStorage.setItem("tsi.intro.v1", "1");
+    } catch {
+      return;
+    }
+    const prevSmooth = cc.smoothTime;
+    let done = false;
+    cc.setLookAt(-38, 34, -100, 0, 2, 8, false);
+    cc.smoothTime = 2.6;
+    void cc.setLookAt(0, 16, -41, 0, 1.5, -15, true);
+    const finish = () => {
+      if (done) return;
+      done = true;
+      cc.smoothTime = prevSmooth;
+      window.removeEventListener("keydown", skip, true);
+      window.removeEventListener("pointerdown", skip, true);
+    };
+    const skip = () => {
+      cc.smoothTime = 0.4;
+      void cc.setLookAt(0, 16, -41, 0, 1.5, -15, true);
+      window.setTimeout(finish, 450);
+    };
+    const t = window.setTimeout(finish, 6500);
+    window.addEventListener("keydown", skip, true);
+    window.addEventListener("pointerdown", skip, true);
+    return () => {
+      window.clearTimeout(t);
+      finish();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   // G2: world-space anchor for the E-target ground glow.
   const glowTargetRef = useRef<[number, number, number] | null>(null);
   const [playerPos, setPlayerPos] = useState<THREE.Vector3>(new THREE.Vector3(...SPAWN_POSITION));
