@@ -1,7 +1,29 @@
 # QA Report
 
 > Owner: QA agent. All agents check this for bugs in their area.
-> Last updated: 2026-07-05 (Wave 24)
+> Last updated: 2026-07-07 (Wave 25)
+
+---
+
+## Wave 25 — 2026-07-07 Art-Direction Pass (New Leaf grade + respace)
+
+David's rulings executed in three commits (`2693100`, `c690b16`, `bff06e3`): blob shadows, grow+spread island, NL-bright grade, full camera package, Frog-Island pixel render, perf-first.
+
+### Verdict: **PASS**
+
+- **FPS: 52 → 60.7** headless dev-mode (shadow-map pass removed + 0.66-dpr pixel target — the look IS the optimization). Held 60 after the island respace.
+- **Tree bob root-caused + fixed:** the P18 sway rotated the whole tree group about the world origin — trees translated on a position-length lever arm. Static now.
+- **Muddiness root causes:** warm-cream sun mixing to olive over green + ACES tone-mapping desaturation + the quilt texture multiplying ~9% darkness + slate fog. All four corrected (white sun / NoToneMapping / lifted quilt / sky-tinted fog).
+- **Respace:** island radius 40→52, buildings into the ring, three path corridors rerouted, ~10 subsystems resynced (footprints, NPC anchors, signposts, lamps, benches+sit anchors, mushrooms, stumps, fences, blob discs, mobile minimap). Courtyard decluttered (well + HQ fence rows out).
+- **Night verified** via addInitScript clock stub: hemisphere now rides the sun curve (was static 0.8 — night grass stayed daylight-lit), lamp pools + fireflies + entry glow read correctly.
+- **Scene-graph probe** (THREE_DEVTOOLS hook) used to resolve a suspected player-duplication: no bug — player_walk.png is the orange-haired character; found + removed a genuinely doubled player shadow instead.
+- Gates green on all three commits: tsc 0, lint 74/59 ceiling, 32/32 tests, prod build exit 0.
+
+### Open follow-ups
+
+- Dusk fine-tune not reviewed by David yet (screenshots in session scratchpad).
+- `graphicsSettings.shadows` localStorage key retains its old name (`tsi.shadows.v1`) while now gating blob shadows — harmless, rename someday.
+- Terrain segments 128→156 at size 108 slightly lowers vertex density; river banks still resolve fine visually.
 
 ---
 

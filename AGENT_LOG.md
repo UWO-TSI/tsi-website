@@ -102,6 +102,16 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-07 — Art-direction pass: New Leaf grade + island respace (`2693100`, `c690b16`, `bff06e3`)
+
+David's brief: floating/bopping trees, muddy grade vs New Leaf, cluttered/claustrophobic map; perf-first ("save on graphics", Time on Frog Island reference — low-poly + chunky pixels as the optimization). Rulings collected up front (blob shadows / grow+spread / NL-bright / full camera package). Executed in three commits, all gates green, **52 → 60.7 fps**:
+
+- **Pass 1 — look + perf core:** tree bob root-caused (P18 sway rotated the whole group about the world origin — lever-arm translation, not lean; deleted). Shadow maps replaced by NL blob discs (shared radial texture, one InstancedMesh for ~70 statics + small discs on NPCs; the 3DS-AC trick). Pixel render target (dpr 0.66, nearest upscale, AA off, new "Pixel look" toggle). NL grade: white sun, sky-blue ambient, yellower grass, quilt tones lifted, fog→sky tint, **ACES→NoToneMapping** (ACES desaturation was a hidden muddiness source). Camera: fov 48, zoom to 34, WORLD_BEND 0.0026.
+- **Pass 2 — respace:** island radius 40→52 (terrain 108, boundary 50, fog 55-120, ocean ring + skirt + edge falloff resized). Buildings spread: shop [-24,12], oracle [0,30], house [24,14], boards [±15,-13], chalets [±30,-18]; river spline to ±52; corridors + visual paths rerouted; footprints/NPC anchors/signposts/lanterns/lamps/benches(+sit anchors)/mushrooms/stumps/fences/blob discs/mobile minimap all resynced. Declutter: well + HQ fence rows removed. Night fix: hemisphere light rides the sun curve (was static — night grass stayed lit). Balloon path to the far-north fog band (loomed overhead).
+- **Pass 3:** scene-graph probe (THREE_DEVTOOLS hook) resolved a suspected player duplication — no bug (player_walk.png is the orange-haired sheet; fillers were misread) — but found the player's shadow doubled (pre-existing static_shadow decal + new blob); removed the new one.
+
+QA Wave 25 logged. Dusk-tune awaits David's eyeball; screenshots in session scratchpad.
+
 ### 2026-07-06 — ACNH revamp continuation: waves F/S/T/U + interaction fixes (`824d0cd`…`e48622f`)
 
 Marathon resumed on David's nudge. Six more commits, all pushed, gates green throughout (tsc 0, lint 74/59, 32/32 tests, prod build exit 0):
