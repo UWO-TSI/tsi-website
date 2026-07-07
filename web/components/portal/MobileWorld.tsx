@@ -22,9 +22,9 @@ const EMOTE_BUBBLE_MS = 3_500;
 // Nook's blue, museum teal, chalet gray thatch.
 const BUILDINGS = [
   { id: "hq", name: "HQ", x: 0, z: -4, w: 6.1, h: 3, roof: "#5B4B9E" },
-  { id: "shop", name: "Shop", x: -14, z: 8, w: 6.6, h: 3.6, roof: "#2B4EA0" },
-  { id: "oracle", name: "Oracle", x: 0, z: 22, w: 6.8, h: 3.4, roof: "#2E8B8B" },
-  { id: "house", name: "House", x: 14, z: 10, w: 5, h: 3.1, roof: "#8A7B6B" },
+  { id: "shop", name: "Shop", x: -24, z: 12, w: 6.6, h: 3.6, roof: "#2B4EA0" },
+  { id: "oracle", name: "Oracle", x: 0, z: 30, w: 6.8, h: 3.4, roof: "#2E8B8B" },
+  { id: "house", name: "House", x: 24, z: 14, w: 5, h: 3.1, roof: "#8A7B6B" },
 ];
 
 // Matches migration 019's seeded emote_types (icon_url NULL → emoji glyphs,
@@ -199,7 +199,7 @@ export default function MobileWorld({ onTry3D }: { onTry3D: () => void }) {
       {/* Minimap */}
       <div className="flex-1 px-3 pb-2 min-h-0">
         <svg
-          viewBox="-30 -32 60 62"
+          viewBox="-40 -40 80 78"
           className="w-full h-full rounded-2xl"
           style={{ background: "#7EB86A", border: "1px solid var(--glass-border-soft)" }}
           role="img"

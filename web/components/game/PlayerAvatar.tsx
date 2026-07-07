@@ -38,7 +38,7 @@ const EMOTE_EMOJI: Record<string, string> = {
  */
 
 const PLAYER_SPEED = 5;
-const BOUNDARY = 38;
+const BOUNDARY = 50;
 const ROTATION_LERP = 10;
 // Sprint A1: damp time for y-axis ground follow. Lower = snappier, higher
 // = more sluggish. 0.05s keeps the avatar responsive but smooths slope

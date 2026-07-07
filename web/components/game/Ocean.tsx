@@ -20,7 +20,7 @@ import * as THREE from "three";
 
 const OCEAN_SIZE = 400;
 const OCEAN_Y = -0.55;
-const ISLAND_HALF = 41; // terrain is 82x82
+const ISLAND_HALF = 54; // terrain is 108x108 (2026-07-07 respace)
 const FOAM_BAND = 2.6; // how far the shore foam reaches out from the island
 const SOIL = "#7A5C43";
 const SOIL_DARK = "#5E4632";
@@ -129,8 +129,8 @@ varying vec2 vOceanXZ;`
       {/* Island skirt: soil cliff faces under the terrain perimeter. Slight
           inward tilt-free boxes; tops tucked under the terrain edge. */}
       {([
-        [0, -1.05, -ISLAND_HALF, 82.4, 0.35],
-        [0, -1.05, ISLAND_HALF, 82.4, 0.35],
+        [0, -1.05, -ISLAND_HALF, 108.4, 0.35],
+        [0, -1.05, ISLAND_HALF, 108.4, 0.35],
       ] as const).map(([x, y, z, w], i) => (
         <mesh key={`ns-${i}`} position={[x, y, z]}>
           <boxGeometry args={[w, 2.4, 0.7]} />
@@ -142,7 +142,7 @@ varying vec2 vOceanXZ;`
         [ISLAND_HALF, -1.05, 0],
       ] as const).map(([x, y, z], i) => (
         <mesh key={`ew-${i}`} position={[x, y, z]}>
-          <boxGeometry args={[0.7, 2.4, 82.4]} />
+          <boxGeometry args={[0.7, 2.4, 108.4]} />
           <meshStandardMaterial color={i % 2 ? SOIL : SOIL_DARK} roughness={1} />
         </mesh>
       ))}

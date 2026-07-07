@@ -46,7 +46,7 @@ function fbm(x: number, y: number, octaves: number = 4): number {
 
 // ─── Constants ───────────────────────────────────────────────────
 
-export const ISLAND_RADIUS = 40;
+export const ISLAND_RADIUS = 52;
 
 // Noise tuning — sprint A1 target: max ~0.6 displacement
 // fbm returns ~[0, 1]. NOISE_AMPLITUDE caps the height accordingly.
@@ -60,16 +60,18 @@ const NOISE_AMPLITUDE = 0.6;
 // ACNH revamp 2026-07: model origin sits at the door plane and the body
 // extends behind it (+z after the 180° world rotation), so flatten centers
 // are pushed ~1.5-2u toward the body, radii sized to the visual footprints.
+// Art pass 2026-07-07 (island respace): buildings spread into the ring,
+// island radius 40->52.
 export const BUILDING_FOOTPRINTS: Array<{ x: number; z: number; radius: number }> = [
-  { x: 0, z: -2.3, radius: 4.2 },  // HQ office (visual ~6.1x3.0)
-  { x: -14, z: 9.8, radius: 4.2 }, // Shop market (visual ~6.6x3.6)
-  { x: 0, z: 23.8, radius: 4.5 },  // Oracle museum (visual ~6.8x3.4)
-  { x: 14, z: 11.1, radius: 3.2 }, // House chalet (visual ~5.0x3.1)
-  { x: 10, z: 8, radius: 1.4 },   // Bounty board
-  { x: -10, z: -10, radius: 1.4 }, // Job board
-  { x: 10, z: -10, radius: 1.4 }, // Leaderboard
-  { x: -20.5, z: -13, radius: 3 }, // ambient house (red chalet, wave V)
-  { x: 21.5, z: -14, radius: 3 },  // ambient house (yellow chalet, wave V)
+  { x: 0, z: -2.3, radius: 4.2 },   // HQ office
+  { x: -24, z: 13.8, radius: 4.2 }, // Shop market
+  { x: 0, z: 31.8, radius: 4.5 },   // Oracle museum
+  { x: 24, z: 15.1, radius: 3.2 },  // House chalet
+  { x: 14, z: 9, radius: 1.4 },     // Bounty board
+  { x: -15, z: -13, radius: 1.4 },  // Job board
+  { x: 15, z: -13, radius: 1.4 },   // Leaderboard
+  { x: -31.5, z: -18, radius: 3 },  // ambient house (red chalet)
+  { x: 31.5, z: -19, radius: 3 },   // ambient house (yellow chalet)
 ];
 
 // ─── River valley (ACNH revamp 2026-07) ─────────────────────────
@@ -81,7 +83,7 @@ export const BUILDING_FOOTPRINTS: Array<{ x: number; z: number; radius: number }
 // two Chaikin passes approximate the Catmull-Rom bend closely enough
 // for a distance field.
 const RIVER_BASE: [number, number][] = [
-  [-25, 3], [-12, 5], [-3, 1], [5, 4], [16, 2], [25, 5],
+  [-52, 2], [-30, 5], [-12, 5], [-3, 1], [5, 4], [16, 2], [30, 4], [52, 3],
 ];
 const RIVER_POLYLINE: [number, number][] = (() => {
   let pts = RIVER_BASE;
@@ -130,9 +132,9 @@ function riverInfluence(x: number, z: number): number {
 // axis "z" = path runs along Z, so x is the cross-axis at axisPos.
 type PathCorridor = { axis: "x" | "z"; pos: number; halfWidth: number; from: number; to: number; falloff: number };
 const PATH_CORRIDORS: PathCorridor[] = [
-  { axis: "x", pos: 0, halfWidth: 1.75, from: -23, to: 17, falloff: 1.5 },   // N-S spine
-  { axis: "z", pos: 8, halfWidth: 1.75, from: -16, to: 16, falloff: 1.5 },   // E-W at z=8
-  { axis: "z", pos: -10, halfWidth: 1.75, from: -12, to: 12, falloff: 1.5 }, // E-W at z=-10
+  { axis: "x", pos: 0, halfWidth: 1.75, from: -24, to: 27, falloff: 1.5 },   // N-S spine
+  { axis: "z", pos: 10, halfWidth: 1.75, from: -26, to: 26, falloff: 1.5 },  // E-W at z=10
+  { axis: "z", pos: -13, halfWidth: 1.75, from: -17, to: 17, falloff: 1.5 }, // E-W at z=-13
 ];
 
 // ─── Internal: raw noise terrain (no flattening) ─────────────────
@@ -144,7 +146,7 @@ function rawNoiseHeight(x: number, z: number): number {
   let h = fbm(x * NOISE_FREQ, z * NOISE_FREQ, 4) * NOISE_AMPLITUDE;
 
   // Island edge falloff to keep the perimeter at y=0
-  if (dist > 32) {
+  if (dist > ISLAND_RADIUS - 8) {
     h *= Math.max(0, (ISLAND_RADIUS - dist) / 8);
   }
 

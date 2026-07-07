@@ -39,10 +39,10 @@ const C = {
 // Each entry: post position [x, z] and the building it points to [x, z].
 // Arrow plank rotates around Y so its long axis points at the target.
 const SIGNPOSTS: { pos: [number, number]; target: [number, number] }[] = [
-  { pos: [0, -8], target: [0, -4] },     // south approach to HQ
-  { pos: [-8, 8], target: [-14, 8] },    // east approach to Shop
-  { pos: [0, 17], target: [0, 22] },     // south approach to Oracle Temple
-  { pos: [-1.5, -13], target: [0, -4] }, // spawn area pointing to HQ
+  { pos: [0, -8], target: [0, -4] },      // south approach to HQ
+  { pos: [-13, 11], target: [-24, 12] },  // east approach to Shop
+  { pos: [0, 22], target: [0, 30] },      // south approach to Oracle Temple
+  { pos: [-1.5, -13], target: [0, -4] },  // spawn area pointing to HQ
 ];
 
 function Signpost({ pos, target }: { pos: [number, number]; target: [number, number] }) {
@@ -101,10 +101,10 @@ function SteppingStones() {
 // Even sections country, odd sections log. All segments of one type render
 // through a single InstancedGLB (one draw per sub-mesh total).
 const FENCES: { pos: [number, number]; rot: number }[] = [
-  { pos: [-18, -18], rot: 0 },
-  { pos: [18, -18], rot: 0 },
-  { pos: [-20, 18], rot: Math.PI / 2 },
-  { pos: [20, 18], rot: Math.PI / 2 },
+  { pos: [-22, -25], rot: 0 },
+  { pos: [22, -26], rot: 0 },
+  { pos: [-28, 20], rot: Math.PI / 2 },
+  { pos: [30, 22], rot: Math.PI / 2 },
 ];
 
 const FENCE_SEGMENTS: { country: NaturePlacement[]; log: NaturePlacement[] } = (() => {
@@ -138,8 +138,8 @@ function Lantern({ position }: { position: [number, number, number] }) {
 // Lantern XZ positions (offset slightly off each building's door).
 const LANTERNS: [number, number][] = [
   [2.5, -7],    // HQ door (south face)
-  [-11.5, 8],   // Shop door (east face)
-  [2.5, 19],    // Oracle Temple entrance (south face)
+  [-21.5, 12],  // Shop door
+  [2.5, 27],    // Oracle Temple approach
   [1.5, -13.5], // spawn area
 ];
 
@@ -182,15 +182,17 @@ function DriftingBalloon() {
     }
     ref.current.visible = true;
     const p = tt / FLIGHT;
+    // Far north track, inside the fog band — a soft distant silhouette.
+    // (It originally crossed near the play area and loomed overhead.)
     ref.current.position.set(
-      -48 + p * 96,
-      13.5 + Math.sin(tt * 0.6) * 0.5,
-      -6 + Math.sin(p * Math.PI) * 8
+      -60 + p * 120,
+      16 + Math.sin(tt * 0.6) * 0.5,
+      44 + Math.sin(p * Math.PI) * 6
     );
   });
   return (
     <group ref={ref} visible={false}>
-      <GLBProp url="/assets/acnh/props/balloon.glb" scale={2.2} castShadow={false} />
+      <GLBProp url="/assets/acnh/props/balloon.glb" scale={1.6} castShadow={false} />
     </group>
   );
 }
@@ -226,7 +228,7 @@ export default function AmbientProps() {
           untextured white plate (stripped with the snow pass), so a simple
           translucent disc stands in as the pool. */}
       <group name="plaza">
-        <GLBProp url="/assets/acnh/props/park-clock.glb" position={[3, getTerrainHeight(3, 10.2), 10.2]} />
+        <GLBProp url="/assets/acnh/props/park-clock.glb" position={[3.2, getTerrainHeight(3.2, 12.5), 12.5]} />
         <group position={[-5, getTerrainHeight(-5, -14), -14]}>
           <GLBProp url="/assets/acnh/props/fountain.glb" />
           <mesh position={[0, 0.42, 0]} rotation={[-Math.PI / 2, 0, 0]}>
@@ -245,7 +247,7 @@ export default function AmbientProps() {
           (temple-path read), each with a faint warm glow for night. */}
       <group name="oracle-approach">
         {[-2, 2].map((x) => (
-          <group key={x} position={[x, getTerrainHeight(x, 19), 19]}>
+          <group key={x} position={[x, getTerrainHeight(x, 26.5), 26.5]}>
             <GLBProp url="/assets/acnh/props/stone-lantern.glb" />
             <pointLight color="#FFD9A0" intensity={0.3} distance={3} position={[0, 1.6, 0]} />
           </group>

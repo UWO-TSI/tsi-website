@@ -90,12 +90,12 @@ const BUILDINGS = [
   // Sizes track the ACNH model visuals (0.1 × source bbox) so labels and
   // E-prompts float at the right height. Position = door plane (model origin).
   { id: "hq", name: "HQ", position: [0, 0, -4] as [number, number, number], size: [6.1, 4.8, 3] as [number, number, number], color: "#FFF5E1", roofColor: "#E87B5A", href: undefined },
-  { id: "shop", name: "Shop", position: [-14, 0, 8] as [number, number, number], size: [6.6, 3.5, 3.6] as [number, number, number], color: "#D4EAD4", roofColor: "#5BA086", href: "/student/dashboard/shop" },
-  { id: "oracle", name: "Oracle Temple", position: [0, 3, 22] as [number, number, number], size: [6.8, 3.9, 3.4] as [number, number, number], color: "#E8DCF0", roofColor: "#7B5EA7", href: undefined },
-  { id: "house", name: "House", position: [14, 0, 10] as [number, number, number], size: [5, 4.1, 3.1] as [number, number, number], color: "#C8E6C9", roofColor: "#7EB8C9", href: undefined },
-  { id: "bounty", name: "Bounty Board", position: [10, 0, 8] as [number, number, number], size: [1.5, 1.8, 0.3] as [number, number, number], color: P.dirtPath, href: "/student/dashboard/bounty" },
-  { id: "jobs", name: "Job Board", position: [-10, 0, -10] as [number, number, number], size: [1.5, 1.8, 0.3] as [number, number, number], color: P.dirtPath, href: "/student/dashboard/jobs" },
-  { id: "leaderboard", name: "Leaderboard", position: [10, 0, -10] as [number, number, number], size: [1.2, 2.5, 1.2] as [number, number, number], color: P.wellStone, href: "/student/dashboard/leaderboard" },
+  { id: "shop", name: "Shop", position: [-24, 0, 12] as [number, number, number], size: [6.6, 3.5, 3.6] as [number, number, number], color: "#D4EAD4", roofColor: "#5BA086", href: "/student/dashboard/shop" },
+  { id: "oracle", name: "Oracle Temple", position: [0, 3, 30] as [number, number, number], size: [6.8, 3.9, 3.4] as [number, number, number], color: "#E8DCF0", roofColor: "#7B5EA7", href: undefined },
+  { id: "house", name: "House", position: [24, 0, 14] as [number, number, number], size: [5, 4.1, 3.1] as [number, number, number], color: "#C8E6C9", roofColor: "#7EB8C9", href: undefined },
+  { id: "bounty", name: "Bounty Board", position: [14, 0, 9] as [number, number, number], size: [1.5, 1.8, 0.3] as [number, number, number], color: P.dirtPath, href: "/student/dashboard/bounty" },
+  { id: "jobs", name: "Job Board", position: [-15, 0, -13] as [number, number, number], size: [1.5, 1.8, 0.3] as [number, number, number], color: P.dirtPath, href: "/student/dashboard/jobs" },
+  { id: "leaderboard", name: "Leaderboard", position: [15, 0, -13] as [number, number, number], size: [1.2, 2.5, 1.2] as [number, number, number], color: P.wellStone, href: "/student/dashboard/leaderboard" },
 ];
 
 const SPAWN_POSITION: [number, number, number] = [0, 0, -15];
@@ -113,9 +113,9 @@ const SPAWN_POSITION: [number, number, number] = [0, 0, -15];
 // ACES→None (ACES desaturates midtones — a second muddiness source).
 const TOD_KEYS: [number, string, string, string, number, string, number][] = [
   [5,  "#FFB878", "#FFDDB8", "#FFD9B0", 0.55, "#C8BCFF", 0.42],
-  [7,  "#63C2F7", "#E2F5E6", "#FFF9E8", 0.9,  "#CFE7FF", 0.58],
-  [10, "#4FB6F5", "#DFF3E2", "#FFFDF4", 0.95, "#D6ECFF", 0.6],
-  [15, "#57B9F0", "#F2ECCF", "#FFF6DE", 0.85, "#DDE3D2", 0.58],
+  [7,  "#63C2F7", "#BEE4EE", "#FFF9E8", 0.9,  "#CFE7FF", 0.58],
+  [10, "#4FB6F5", "#A9DCF2", "#FFFDF4", 0.95, "#D6ECFF", 0.6],
+  [15, "#57B9F0", "#E8EDD8", "#FFF6DE", 0.85, "#DDE3D2", 0.58],
   [17, "#FF9966", "#FFD4A8", "#FFC080", 0.65, "#FFD4A8", 0.42],
   [19, "#FF9966", "#2D2D6B", "#FF8844", 0.3,  "#6B5A8B", 0.3],
   [21, "#1A1A40", "#2D2D6B", "#334466", 0.0,  "#334466", 0.25],
@@ -193,6 +193,7 @@ function TimeOfDayCycle() {
   const { scene } = useThree();
   const sunRef = useRef<THREE.DirectionalLight>(null);
   const ambRef = useRef<THREE.AmbientLight>(null);
+  const hemiRef = useRef<THREE.HemisphereLight>(null);
   // R3-3: extended sky shader. The base gradient is unchanged; sun+moon
   // discs are layered on top via `smoothstep(cos(r+edge), cos(r-edge), dot)`
   // so the disc edge AAs against the gradient instead of color-bleeding
@@ -315,6 +316,13 @@ function TimeOfDayCycle() {
       ambRef.current.color.set(a[5]).lerp(_tc.set(b[5]), t);
       ambRef.current.intensity = a[6] + (b[6] - a[6]) * t;
     }
+    // Hemisphere rides the sun curve (art pass 2026-07-07): it was a
+    // static 0.8, which kept night grass daylight-lit under the brighter
+    // NL grade. 0.3 floor at night → ~0.82 at noon.
+    if (hemiRef.current) {
+      const sunI = a[4] + (b[4] - a[4]) * t;
+      hemiRef.current.intensity = 0.3 + sunI * 0.55;
+    }
     // Fog matches sky bottom
     if (scene.fog) (scene.fog as THREE.Fog).color.copy(skyMat.uniforms.bottomColor.value);
   });
@@ -325,9 +333,7 @@ function TimeOfDayCycle() {
         <sphereGeometry args={[1, 32, 32]} />
         <primitive object={skyMat} attach="material" />
       </mesh>
-      {/* Cozy push: 0.55 → 0.75 lifts the grass out of the murk now that the
-          fog wash no longer brightens the midfield. */}
-      <hemisphereLight args={["#EAF6FF", P.grassPrimary, 0.8]} />
+      <hemisphereLight ref={hemiRef} args={["#EAF6FF", P.grassPrimary, 0.8]} />
       <ambientLight ref={ambRef} intensity={0.5} color="#D6ECFF" />
       {/* Shadow map 2048→1024 (4x cheaper shadow pass per frame).
           Negligible visual difference at our camera distance, big FPS win
@@ -350,8 +356,8 @@ function TimeOfDayCycle() {
 // ─── Terrain (v2 spec Section 4 — vertex-displaced rolling hills) ─
 function Terrain() {
   const geometry = useMemo(() => {
-    const size = 82;
-    const segments = 128;
+    const size = 108; // island respace 2026-07-07 (radius 52)
+    const segments = 156;
     const geo = new THREE.PlaneGeometry(size, size, segments, segments);
     geo.rotateX(-Math.PI / 2);
 
@@ -375,7 +381,7 @@ function Terrain() {
       const cn = valueNoise(x * 0.15, z * 0.15);
       const hf = THREE.MathUtils.clamp(h / 0.6, 0, 1);
 
-      if (dist > 38) {
+      if (dist > 50) {
         tmp.copy(cS);
       } else if (hf > 0.5) {
         tmp.lerpColors(c1, cH, (hf - 0.5) * 2);
@@ -387,8 +393,8 @@ function Terrain() {
         tmp.copy(c1);
       }
 
-      if (dist > 34) {
-        tmp.lerp(cS, (dist - 34) / 6);
+      if (dist > 46) {
+        tmp.lerp(cS, (dist - 46) / 6);
       }
 
       colors[i * 3] = tmp.r;
@@ -450,17 +456,17 @@ function Terrain() {
           ±1.75 halfWidth corridor + 1.5 falloff, so we never leave the flat
           band. See Path.tsx for the spline + soft-edge implementation. */}
       <Path
-        controlPoints={[[0, -23], [1.5, -10], [-0.5, 4], [0, 17]]}
+        controlPoints={[[0, -24], [1.2, -12], [-0.5, 2], [0.5, 14], [0, 27]]}
         width={2.8}
         color={P.dirtPath}
       />
       <Path
-        controlPoints={[[-16, 8], [-5, 7], [5, 9], [16, 8]]}
+        controlPoints={[[-26, 10.5], [-10, 9.5], [10, 10.5], [26, 10]]}
         width={2.8}
         color={P.dirtPath}
       />
       <Path
-        controlPoints={[[-12, -10], [-3, -10.5], [3, -9.5], [12, -10]]}
+        controlPoints={[[-17, -13], [-5, -13.5], [5, -12.5], [17, -13]]}
         width={2.8}
         color={P.dirtPath}
       />
@@ -508,11 +514,11 @@ function Bridge() {
 // ACNH revamp: entries that fell inside the carved river channel moved
 // to the banks ([-20,5]→[-20,8.5], [20,5]→[20,7.5]).
 const TREE_XZ: [number, number][] = [
-  [-7, 16], [7, 16], [-20, 8.5], [20, 7.5],
-  [-18, -5], [18, -5], [-5, -20], [5, -20],
-  [-24, 12], [24, 12], [-10, 24], [12, 24],
-  [-24, -9], [24, -10], [-14, -16], [14, 16],
-  [-28, 0], [28, 6], [-8, 26], [8, 26],
+  [-9, 20], [9, 20], [-26, 7], [26, 9],
+  [-23, -7], [23, -7], [-7, -26], [7, -26],
+  [-31, 16], [31, 16], [-13, 31], [15, 31],
+  [-31, -12], [31, -13], [-18, -21], [18, 21],
+  [-36, -2], [36, 8], [-10, 34], [10, 34],
 ];
 
 // Tree model assignment by index mod 4 (preserves the old per-seed
@@ -529,7 +535,7 @@ const TREE_MODELS = [
 // (visible in the player's typical view). Trees outside skip the shadow
 // pass — saves ~2-3ms/frame on M1 ANGLE without visible loss (the fog at
 // 25-55u masks distant shadow loss).
-const TREE_SHADOW_RADIUS = 18;
+const TREE_SHADOW_RADIUS = 22;
 
 function buildTreePlacements(): { near: NaturePlacement[][]; far: NaturePlacement[][] } {
   const near: NaturePlacement[][] = TREE_MODELS.map(() => []);
@@ -584,17 +590,16 @@ function buildBlobPlacements(): import("./BlobShadows").BlobPlacement[] {
     if (b.size[2] < 1) add(b.position[0], b.position[2], 0.55, 0.35); // boards
     else add(b.position[0], b.position[2] + b.size[2] / 2, b.size[0] * 0.58, b.size[2] * 0.75);
   }
-  add(-19, -13, 1.7, 2.7); // ambient house (red, rotated 90°)
-  add(20, -14, 1.7, 2.7);  // ambient house (yellow)
-  [[-3, -5], [3, -5], [-3, 7.2], [3, 7.2]].forEach(([x, z]) => add(x, z, 0.85, 0.5)); // benches
+  add(-30, -18, 1.7, 2.7); // ambient house (red, rotated 90°)
+  add(30, -19, 1.7, 2.7);  // ambient house (yellow)
+  [[-3, -16], [3, -16], [-3.2, 13], [3.2, 13]].forEach(([x, z]) => add(x, z, 0.85, 0.5)); // benches
   LAMP_XZ.forEach(([x, z]) => add(x, z, 0.32));
-  [[2.5, -7], [-11.5, 8], [2.5, 19], [1.5, -13.5]].forEach(([x, z]) => add(x, z, 0.32)); // door lanterns
-  [[-2, 19], [2, 19]].forEach(([x, z]) => add(x, z, 0.38)); // stone lanterns
-  add(3, 10.2, 0.4);   // park clock
+  [[2.5, -7], [-21.5, 12], [2.5, 27], [1.5, -13.5]].forEach(([x, z]) => add(x, z, 0.32)); // door lanterns
+  [[-2, 26.5], [2, 26.5]].forEach(([x, z]) => add(x, z, 0.38)); // stone lanterns
+  add(3.2, 12.5, 0.4); // park clock
   add(-5, -14, 1.5);   // fountain
   add(4, -13.5, 0.85); // campfire
-  add(4, -6, 0.8);     // well
-  [[-16, -10], [18, -16], [-20, 14]].forEach(([x, z]) => add(x, z, 0.35)); // stumps
+  [[-20, -16], [22, -24], [-26, 19]].forEach(([x, z]) => add(x, z, 0.35)); // stumps
   return out;
 }
 
@@ -602,11 +607,11 @@ function buildBlobPlacements(): import("./BlobShadows").BlobPlacement[] {
 // ACNH revamp: river-channel entries moved to banks
 // ([-13,6]→[-17,1], [-22,3]→[-22,7.5], [22,3]→[22,7]).
 const BUSH_XZ: [number, number][] = [
-  [-5, -2], [5, -2], [-17, 1], [13, 6],
-  [-3, -7], [3, -7], [-15, -3], [15, -3],
-  [-7, 12], [7, 12], [0, -17], [-18, 10],
-  [18, 10], [-6, -14], [6, -14], [-10, 14],
-  [10, 14], [-22, 7.5], [22, 7], [0, 9],
+  [-6, -3], [6, -3], [-19, -2], [16, 7],
+  [-4, -9], [4, -9], [-20, -4], [20, -4],
+  [-9, 15], [9, 15], [0, -22], [-24, 16],
+  [24, 18], [-8, -18], [8, -18], [-13, 18],
+  [13, 18], [-28, 10], [28, 12], [0, 14],
 ];
 const BUSH_MODELS = [
   "/assets/acnh/plants/bush-azalea.glb",
@@ -643,9 +648,9 @@ function Bushes() {
 // ACNH revamp: river-channel entries moved to banks
 // ([4,6]→[7,6.8], [-11,5]→[-9,10.5], [13,4]→[16,-2]).
 const FLOWER_XZ: [number, number][] = [
-  [-4, -3], [7, 6.8], [-7, 11], [11, -4],
-  [-2, 14], [6, -13], [-9, 10.5], [16, -2],
-  [2, 17], [-6, -11], [8, 15], [-14, -6],
+  [-5, -4], [8, 8], [-9, 13], [13, -5],
+  [-3, 16], [7, -15], [-12, 12], [19, -3],
+  [3, 20], [-7, -13], [10, 17], [-17, -8],
 ];
 // ACNH flower species (bloom stage). The (seed + j) % length spread
 // keeps clusters mixed regardless of list length.
@@ -1015,14 +1020,14 @@ function LampPosts({ phase }: { phase: "day" | "night" | "dawn" | "dusk" }) {
 function yAt(x: number, z: number): [number, number, number] {
   return [x, getTerrainHeight(x, z), z];
 }
-const LAMP_XZ: [number, number][] = [[1.8, -7], [-1.8, 6], [1.8, 13], [-1.8, -12], [1.8, -18]];
+const LAMP_XZ: [number, number][] = [[1.8, -9], [-1.8, -16], [-1.8, 6.5], [1.8, 17], [-1.8, 24], [-11, 12.2], [11, 12.2]];
 function Props() {
   return (
     <group>
       {/* Benches — warm wood benches by the HQ approach, white park benches
           at the north plaza. Sit anchors stay at the same XZ (BENCHES list
           in the interact sweep mirrors these coords). */}
-      {[[-3, -5], [3, -5], [-3, 7.2], [3, 7.2]].map(([x, z], i) => (
+      {[[-3, -16], [3, -16], [-3.2, 13], [3.2, 13]].map(([x, z], i) => (
         <group key={`bench-${i}`} position={yAt(x, z)}>
           <Suspense fallback={null}>
             <GLBProp url={z < 0 ? "/assets/acnh/props/bench-wood.glb" : "/assets/acnh/props/bench-park.glb"} />
@@ -1041,41 +1046,26 @@ function Props() {
         const [, y] = yAt(x, z);
         return <pointLight key={`lamp-light-${i}`} color={P.lampGlow} intensity={0.35} distance={6} position={[x, y + 2.4, z]} />;
       })}
-      {/* Wooden fences flanking the HQ approach — instanced ACNH country
-          fence segments (1u each) running along Z on both sides. */}
-      <Suspense fallback={null}>
-        <InstancedGLB
-          url="/assets/acnh/props/fence-country-a.glb"
-          placements={[-5, 5].flatMap((x) =>
-            [-4.5, -3.5, -2.5, -1.5, -0.5, 0.5].map((z) => ({
-              position: yAt(x, z),
-              rotation: Math.PI / 2,
-            }))
-          )}
-          castShadow={false}
-        />
-      </Suspense>
-      {/* Well near HQ */}
-      <group position={yAt(4, -6)}>
-        <mesh position={[0, 0.4, 0]} castShadow><cylinderGeometry args={[0.6, 0.7, 0.8, 12]} /><meshStandardMaterial color={P.wellStone} roughness={0.92} metalness={0} /></mesh>
-        <mesh position={[0, 1.0, 0]} castShadow><cylinderGeometry args={[0.04, 0.04, 1.2, 6]} /><meshStandardMaterial color={P.trunk} roughness={0.9} metalness={0} /></mesh>
-        <mesh position={[0, 1.6, 0]}><boxGeometry args={[1.4, 0.08, 0.5]} /><meshStandardMaterial color={P.trunk} roughness={0.9} metalness={0} /></mesh>
-      </group>
+      {/* (HQ approach fence rows removed in the 2026-07-07 declutter —
+          seen end-on from the south camera they read as beaded poles and
+          crowded the door. Perimeter fences live in AmbientProps.) */}
+      {/* (Well removed in the 2026-07-07 declutter — the fountain owns the
+          water-feature slot and the HQ courtyard needed air.) */}
       {/* Log stumps (Kenney Nature Kit) */}
-      {[[-16, -10], [18, -16], [-20, 14]].map(([x, z], i) => (
+      {[[-20, -16], [22, -24], [-26, 19]].map(([x, z], i) => (
         <NatureStump key={`stump-${i}`} position={yAt(x, z)} />
       ))}
       {/* Mushrooms under trees (Kenney Nature Kit) */}
-      {[[-7.5, 15.5], [7.5, 15.5], [-20.5, 4.5], [20.5, 4.5], [-5.5, -19.5]].map(([x, z], i) => (
+      {[[-9.5, 19.5], [9.5, 19.5], [-26.5, 6], [26.5, 8.5], [-7.5, -25.5]].map(([x, z], i) => (
         <NatureMushroom key={`mush-${i}`} position={yAt(x, z)} seed={i} />
       ))}
       {/* Ambient houses (ACNH wave V) — pure scenery flanking the south
           green, facing the village center. Footprints in terrain.ts. */}
       <Suspense fallback={null}>
-        <group position={yAt(-19, -13)} rotation={[0, Math.PI / 2, 0]}>
+        <group position={yAt(-30, -18)} rotation={[0, Math.PI / 2, 0]}>
           <GLBProp url="/assets/acnh/buildings/house-chalet-red.glb" scale={0.1} />
         </group>
-        <group position={yAt(20, -14)} rotation={[0, -Math.PI / 2, 0]}>
+        <group position={yAt(30, -19)} rotation={[0, -Math.PI / 2, 0]}>
           <GLBProp url="/assets/acnh/buildings/house-chalet-yellow.glb" scale={0.1} />
         </group>
         {/* (Distant-island backdrop pieces tried here rendered as floating
@@ -1098,10 +1088,10 @@ function Props() {
 // offset along +x so they don't visually overlap.
 const NPC_SPAWN_POSITIONS: Record<SpawnZone, [number, number, number]> = {
   courtyard: [-2, 0, -2],
-  // shop anchor pulled off the carved river bank (was [-14, 0, 6])
-  shop: [-12.5, 0, 7.5],
-  temple: [0, 0, 18],
-  roaming: [5, 0, 5],
+  shop: [-21, 0, 10],
+  temple: [0, 0, 26],
+  // roaming pulled off the river bank (respace 2026-07-07)
+  roaming: [7, 0, -6],
 };
 
 // Generic filler NPCs — design principle #2: world must never feel empty.
@@ -1380,7 +1370,7 @@ function Scene({
       }
     }
     // G3: benches — sit target. Coords mirror Props()' bench array.
-    const BENCHES: [number, number][] = [[-3, -5], [3, -5], [-3, 7.2], [3, 7.2]];
+    const BENCHES: [number, number][] = [[-3, -16], [3, -16], [-3.2, 13], [3.2, 13]];
     for (let i = 0; i < BENCHES.length; i++) {
       const [bx, bz] = BENCHES[i];
       const d = Math.hypot(bx - position.x, bz - position.z);
@@ -1504,7 +1494,7 @@ function Scene({
       {/* Cozy push 2026-07-03: was 25-55, which washed half the village gray
           (David: fog doesn't look good). Now a far soft haze — the village
           (±30u) stays crisp, the island edge still fades out. */}
-      <fog attach="fog" args={[fogColor, 45, 95]} />
+      <fog attach="fog" args={[fogColor, 55, 120]} />
 
       <Terrain />
       {blobShadows && <BlobShadows placements={blobPlacements} />}

@@ -30,7 +30,7 @@ import * as THREE from "three";
 
 /** Control points for the river spline. East-west run with gentle bends. */
 export const RIVER_CONTROL_POINTS: [number, number][] = [
-  [-25, 3], [-12, 5], [-3, 1], [5, 4], [16, 2], [25, 5],
+  [-52, 2], [-30, 5], [-12, 5], [-3, 1], [5, 4], [16, 2], [30, 4], [52, 3],
 ];
 
 /** Default river width — slightly wider than paths (2.8) to feel substantial. */
