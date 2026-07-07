@@ -88,11 +88,17 @@ export default function GraphicsSettingsPanel({ open, onClose }: GraphicsSetting
           disabled={settings.liteMode}
         />
         <Toggle
-          label="Shadows"
-          hint="Dynamic sun shadows. Costs ~7 FPS on M1."
+          label="Blob shadows"
+          hint="Soft discs that ground trees, buildings and props. Nearly free."
           value={settings.shadows}
           onChange={actions.setShadows}
           disabled={settings.liteMode}
+        />
+        <Toggle
+          label="Pixel look"
+          hint="Chunky retro render (also the fastest mode). Off = crisp."
+          value={settings.pixelated}
+          onChange={actions.setPixelated}
         />
         <Toggle
           label="Ghost replay"

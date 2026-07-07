@@ -25,7 +25,7 @@ import * as THREE from "three";
 // (~70u) that's ~9.8u of sink — a clearly readable ACNH horizon roll that
 // still keeps the playable ±30u gentle (30u → ~1.8u). 0.0012 read as too
 // subtle in the 2026-07-04 screenshot pass.
-export const WORLD_BEND = 0.002;
+export const WORLD_BEND = 0.0026;
 
 const MARKER = "// tsi-curved-world";
 

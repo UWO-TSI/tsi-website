@@ -5,6 +5,7 @@ import { useFrame, ThreeEvent } from "@react-three/fiber";
 import { Billboard, Html } from "@react-three/drei";
 import * as THREE from "three";
 import { getTerrainHeight } from "./terrain";
+import { getBlobTexture } from "./BlobShadows";
 import { AudioManager } from "@/lib/game/audio";
 import type { NPCPersona } from "@/lib/game/contentTypes";
 
@@ -232,6 +233,11 @@ export default function NPC({ persona, position, playerPosition, onClick }: NPCP
 
   return (
     <group ref={groupRef} position={grounded}>
+      {/* Art pass 2026-07-07: New Leaf blob shadow (shadow maps are gone). */}
+      <mesh position={[0, 0.04, 0]} rotation={[-Math.PI / 2, 0, 0]} renderOrder={1}>
+        <planeGeometry args={[0.8, 0.55]} />
+        <meshBasicMaterial map={getBlobTexture()} transparent opacity={0.3} depthWrite={false} polygonOffset polygonOffsetFactor={-2} polygonOffsetUnits={-2} />
+      </mesh>
       <Billboard follow lockX={false} lockY={false} lockZ={false}>
         {/* P25: soft warm glow that fades in when player is near. Sits
             behind the rim + fill, larger and faded so it reads as a halo

@@ -42,7 +42,10 @@ export function getGrassTexture(): THREE.DataTexture {
   // Values stay pre-multiplied (~0.86-1.0) so they modulate the vertex-color
   // greens rather than replace them.
   const TRI = 16; // px per cell → 16 cells per tile ≈ 0.5u triangles in-world
-  const TONES = [0.875, 0.93, 1.0];
+  // NL bright grade 2026-07-07: tones lifted (was 0.875-1.0) — the quilt
+  // was multiplying ~9% darkness into the grass and reading muddy under
+  // the old warm sun. Subtler quilt, brighter field.
+  const TONES = [0.92, 0.96, 1.0];
 
   const cellHash = (cx: number, cy: number, half: number): number => {
     let h = (cx * 374761393 + cy * 668265263 + half * 97) | 0;

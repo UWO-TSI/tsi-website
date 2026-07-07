@@ -27,6 +27,7 @@ const KEYS = {
   bloom: "tsi.bloom.v1",
   shadows: "tsi.shadows.v1",
   ghosts: "tsi.ghosts.enabled",
+  pixelated: "tsi.pixelated.v1",
 };
 
 function detectDeviceMemoryGB(): number {
@@ -58,8 +59,11 @@ function writeBool(key: string, value: boolean): void {
 export interface GraphicsSettings {
   liteMode: boolean;
   bloom: boolean;
+  /** Art pass 2026-07-07: gates the blob-shadow layer (shadow maps are gone). */
   shadows: boolean;
   ghostsEnabled: boolean;
+  /** Render at 0.66 dpr with nearest upscale — the Frog Island chunky-pixel look. */
+  pixelated: boolean;
 }
 
 export interface GraphicsSettingsActions {
@@ -67,6 +71,7 @@ export interface GraphicsSettingsActions {
   setBloom: (v: boolean) => void;
   setShadows: (v: boolean) => void;
   setGhostsEnabled: (v: boolean) => void;
+  setPixelated: (v: boolean) => void;
   resetToAuto: () => void;
 }
 
@@ -76,6 +81,7 @@ export function useGraphicsSettings(): [GraphicsSettings, GraphicsSettingsAction
     bloom: false,
     shadows: false,
     ghostsEnabled: true,
+    pixelated: true,
   });
 
   useEffect(() => {
@@ -91,6 +97,7 @@ export function useGraphicsSettings(): [GraphicsSettings, GraphicsSettingsAction
       // the 60-on-M1 floor after the change.
       shadows: readBool(KEYS.shadows, !autoLite),
       ghostsEnabled: readBool(KEYS.ghosts, true),
+      pixelated: readBool(KEYS.pixelated, true),
     });
   }, []);
 
@@ -111,6 +118,10 @@ export function useGraphicsSettings(): [GraphicsSettings, GraphicsSettingsAction
       setState((s) => ({ ...s, ghostsEnabled: v }));
       writeBool(KEYS.ghosts, v);
     },
+    setPixelated: (v) => {
+      setState((s) => ({ ...s, pixelated: v }));
+      writeBool(KEYS.pixelated, v);
+    },
     resetToAuto: () => {
       try {
         Object.values(KEYS).forEach((k) => localStorage.removeItem(k));
@@ -119,8 +130,9 @@ export function useGraphicsSettings(): [GraphicsSettings, GraphicsSettingsAction
       setState({
         liteMode: gb <= 4,
         bloom: gb >= 8,
-        shadows: false,
+        shadows: !(gb <= 4),
         ghostsEnabled: true,
+        pixelated: true,
       });
     },
   };

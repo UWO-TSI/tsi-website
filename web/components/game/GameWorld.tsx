@@ -20,6 +20,7 @@ import { getTerrainHeight, valueNoise, BUILDING_FOOTPRINTS } from "./terrain";
 import { GLBProp, NatureMushroom, NatureStump } from "./NatureModels";
 import InstancedGLB, { type NaturePlacement } from "./InstancedNature";
 import AmbientProps from "./AmbientProps";
+import BlobShadows from "./BlobShadows";
 import AmbientLife from "./AmbientLife";
 import AudioController from "./AudioController";
 import NPCChatOverlay from "./NPCChatOverlay";
@@ -65,7 +66,9 @@ import type { EmoteType, NPCPersona, SpawnZone } from "@/lib/game/contentTypes";
 // ─── Palette from v2 spec Section 3 ────────────────────────────
 const P = {
   skyTop: "#87CEEB", skyBottom: "#B8E4F0",
-  grassPrimary: "#7EC850", grassSecondary: "#6BB83E", grassHighlight: "#9ADE6B", grassShadow: "#5AA033",
+  // NL bright grade 2026-07-07: grass is the hero color — yellower and a
+  // touch more saturated than the old blue-leaning greens.
+  grassPrimary: "#84CB47", grassSecondary: "#75BC39", grassHighlight: "#9CDF5F", grassShadow: "#63A82F",
   dirtPath: "#C4A265", dirtPathEdge: "#B39355", stonePath: "#B8B0A0",
   riverSurface: "#5BB8D4", riverDeep: "#3A8FB0", riverEdge: "#7CCCE5", riverbed: "#A08B65",
   pondSurface: "#6DC4D8",
@@ -78,7 +81,8 @@ const P = {
   benchWood: "#B8935A", bridgeWood: "#A07850", bridgeRope: "#C4B090",
   wellStone: "#9B9080", stumpBrown: "#8B6B4A",
   windowGlass: "#B8E4F0", windowFrame: "#FFFFFF", chimney: "#C4A265", doorFrame: "#6B4226",
-  fog: "#C8E4D8",
+  // NL bright: fog tinted to horizon sky, not gray-green soup.
+  fog: "#CDEBF7",
 };
 
 // ─── Building config per v2 spec Section 6 ──────────────────────
@@ -102,14 +106,19 @@ const SPAWN_POSITION: [number, number, number] = [0, 0, -15];
 // azure tops, soft mint-cream horizons (the old #B8E4F0 horizon doubled as
 // the fog color and read as gray soup), warm golden sun instead of pure
 // white, ambient lifted slightly so default-on soft shadows stay gentle.
+// Art pass 2026-07-07 (New Leaf bright): the old warm-cream day sun over
+// lavender ambient mixed to olive on the ACNH albedos ("muddy"). NL's
+// actual daytime read is a near-WHITE sun, clean sky-blue ambient bounce,
+// and the saturated grass doing the color work. Tone mapping also moved
+// ACES→None (ACES desaturates midtones — a second muddiness source).
 const TOD_KEYS: [number, string, string, string, number, string, number][] = [
-  [5,  "#FFB366", "#FFD9B0", "#FFD4A8", 0.6, "#C4B0FF", 0.4],
-  [7,  "#6BBDF2", "#D8F0DC", "#FFF0CE", 0.95, "#B0D4FF", 0.55],
-  [10, "#58B5F2", "#D2EED8", "#FFF3D6", 1.05, "#C4D8FF", 0.55],
-  [15, "#63B8EE", "#F5E3C0", "#FFE4B0", 0.85, "#D4C8B0", 0.55],
-  [17, "#FF9966", "#FFD4A8", "#FFB366", 0.7, "#FFD4A8", 0.4],
-  [19, "#FF9966", "#2D2D6B", "#FF8844", 0.3, "#6B5A8B", 0.3],
-  [21, "#1A1A40", "#2D2D6B", "#334466", 0.0, "#334466", 0.25],
+  [5,  "#FFB878", "#FFDDB8", "#FFD9B0", 0.55, "#C8BCFF", 0.42],
+  [7,  "#63C2F7", "#E2F5E6", "#FFF9E8", 0.9,  "#CFE7FF", 0.58],
+  [10, "#4FB6F5", "#DFF3E2", "#FFFDF4", 0.95, "#D6ECFF", 0.6],
+  [15, "#57B9F0", "#F2ECCF", "#FFF6DE", 0.85, "#DDE3D2", 0.58],
+  [17, "#FF9966", "#FFD4A8", "#FFC080", 0.65, "#FFD4A8", 0.42],
+  [19, "#FF9966", "#2D2D6B", "#FF8844", 0.3,  "#6B5A8B", 0.3],
+  [21, "#1A1A40", "#2D2D6B", "#334466", 0.0,  "#334466", 0.25],
 ];
 const _tc = new THREE.Color();
 
@@ -318,8 +327,8 @@ function TimeOfDayCycle() {
       </mesh>
       {/* Cozy push: 0.55 → 0.75 lifts the grass out of the murk now that the
           fog wash no longer brightens the midfield. */}
-      <hemisphereLight args={["#FFF5E1", P.grassPrimary, 0.75]} />
-      <ambientLight ref={ambRef} intensity={0.5} color="#C4D8FF" />
+      <hemisphereLight args={["#EAF6FF", P.grassPrimary, 0.8]} />
+      <ambientLight ref={ambRef} intensity={0.5} color="#D6ECFF" />
       {/* Shadow map 2048→1024 (4x cheaper shadow pass per frame).
           Negligible visual difference at our camera distance, big FPS win
           on M1 (saw ~5-8 FPS gain in headless ANGLE Metal). */}
@@ -541,20 +550,14 @@ function buildTreePlacements(): { near: NaturePlacement[][]; far: NaturePlacemen
 
 function InstancedTrees() {
   const { near, far } = useMemo(() => buildTreePlacements(), []);
-  // P18: tiny per-frame rotation of the whole tree group fakes a wind
-  // sway. Z and X axes get gently offset sine waves so the canopy
-  // appears to lean east/west and forward/back. Amplitude ~0.5° feels
-  // alive without seeming wobbly; period ~3.5s reads as a breeze.
-  const groupRef = useRef<THREE.Group>(null);
-  useFrame((state) => {
-    if (!groupRef.current) return;
-    const t = state.clock.elapsedTime;
-    groupRef.current.rotation.z = Math.sin(t * 1.8) * 0.009;
-    groupRef.current.rotation.x = Math.sin(t * 1.3 + 0.7) * 0.006;
-  });
+  // Art pass 2026-07-07: the old P18 "wind sway" rotated the WHOLE group
+  // about the world origin, so every tree translated on a position-length
+  // lever arm (±0.24u at r=27) — David's "trees floating and bopping".
+  // Trees are static now, New Leaf style; wind stays implied by the
+  // drifting-leaf particles in AmbientLife.
   return (
     <Suspense fallback={null}>
-      <group ref={groupRef}>
+      <group>
         {TREE_MODELS.map((url, i) => (
           <InstancedGLB key={`near-${url}`} url={url} placements={near[i]} />
         ))}
@@ -564,6 +567,35 @@ function InstancedTrees() {
       </group>
     </Suspense>
   );
+}
+
+// ─── Blob shadow placements (art pass 2026-07-07) ────────────────
+// Everything static that needs grounding gets a soft disc. Prop coords
+// that live in AmbientProps are mirrored here — keep in sync (both move
+// together in the phase-C respace anyway).
+function buildBlobPlacements(): import("./BlobShadows").BlobPlacement[] {
+  const out: import("./BlobShadows").BlobPlacement[] = [];
+  const add = (x: number, z: number, rx: number, rz = rx) =>
+    out.push({ x, y: getTerrainHeight(x, z), z, rx, rz });
+
+  TREE_XZ.forEach(([x, z]) => add(x, z, 0.9));
+  BUSH_XZ.forEach(([x, z]) => add(x, z, 0.55));
+  for (const b of BUILDINGS) {
+    if (b.size[2] < 1) add(b.position[0], b.position[2], 0.55, 0.35); // boards
+    else add(b.position[0], b.position[2] + b.size[2] / 2, b.size[0] * 0.58, b.size[2] * 0.75);
+  }
+  add(-19, -13, 1.7, 2.7); // ambient house (red, rotated 90°)
+  add(20, -14, 1.7, 2.7);  // ambient house (yellow)
+  [[-3, -5], [3, -5], [-3, 7.2], [3, 7.2]].forEach(([x, z]) => add(x, z, 0.85, 0.5)); // benches
+  LAMP_XZ.forEach(([x, z]) => add(x, z, 0.32));
+  [[2.5, -7], [-11.5, 8], [2.5, 19], [1.5, -13.5]].forEach(([x, z]) => add(x, z, 0.32)); // door lanterns
+  [[-2, 19], [2, 19]].forEach(([x, z]) => add(x, z, 0.38)); // stone lanterns
+  add(3, 10.2, 0.4);   // park clock
+  add(-5, -14, 1.5);   // fountain
+  add(4, -13.5, 0.85); // campfire
+  add(4, -6, 0.8);     // well
+  [[-16, -10], [18, -16], [-20, 14]].forEach(([x, z]) => add(x, z, 0.35)); // stumps
+  return out;
 }
 
 // ─── Bushes (v2 spec Section 7.2) ───────────────────────────────
@@ -1243,6 +1275,7 @@ function Scene({
   onNearestInteractable,
   debugSnapshotRef,
   ambientDensity,
+  blobShadows,
   azimuthRef,
 }: {
   playerName: string;
@@ -1255,9 +1288,11 @@ function Scene({
   onNearestInteractable: (n: { kind: "npc" | "building" | "tree" | "bench" | "flower" | "fishing"; id: string; name: string; href?: string; npc?: NPCPersona; treePos?: [number, number]; seat?: [number, number]; flowerIdx?: number; flowerPos?: [number, number]; spot?: [number, number] } | null) => void;
   debugSnapshotRef: React.MutableRefObject<DebugSnapshot | null>;
   ambientDensity: number;
+  blobShadows: boolean;
   azimuthRef: React.MutableRefObject<number>;
 }) {
   const cameraRef = useRef<CameraControls>(null);
+  const blobPlacements = useMemo(() => buildBlobPlacements(), []);
   const [playerPos, setPlayerPos] = useState<THREE.Vector3>(new THREE.Vector3(...SPAWN_POSITION));
   const { data: personas } = useNPCPersonas({ permanentOnly: true });
   const [fillerToast, setFillerToast] = useState<string | null>(null);
@@ -1443,7 +1478,7 @@ function Scene({
         minPolarAngle={Math.PI / 2 - (30 * Math.PI) / 180}
         maxPolarAngle={Math.PI / 2 + (20 * Math.PI) / 180}
         minDistance={12}
-        maxDistance={25}
+        maxDistance={34}
         dollySpeed={1.0}
         truckSpeed={0}
         smoothTime={0.15}
@@ -1472,6 +1507,7 @@ function Scene({
       <fog attach="fog" args={[fogColor, 45, 95]} />
 
       <Terrain />
+      {blobShadows && <BlobShadows placements={blobPlacements} />}
       <Ocean phase={todPhase} />
       <River phase={todPhase} />
       <TreeShakeFX />
@@ -1795,30 +1831,27 @@ export default function GameWorld() {
     emotePickRef.current = handleEmotePick;
   }, [handleEmotePick]);
 
-  // Perf finding (Playwright 2026-06-01): the directional-sun shadow
-  // pass is ~7 FPS on M1 ANGLE Metal at 1440x900. With shadows off the
-  // scene pegs at 60 FPS; with shadows on it dips to ~53. AC-style cozy
-  // lighting still reads well without real-time shadows since the
-  // hemisphere + ambient + sun combo gives plenty of soft shading.
+  // Art pass 2026-07-07: shadow maps are gone for good — the New Leaf
+  // look grounds everything on blob discs (BlobShadows), which the 3DS
+  // games used precisely because it's nearly free. The old PCF-soft pass
+  // cost ~7 FPS on M1. graphicsSettings.shadows now gates the blob layer
+  // (and doubles as the ambient-density proxy it already was).
   //
-  // Default OFF. Members with FPS headroom can enable via settings.
-  // ?shadow URL param force-enables for testing.
-  // ?noshadow URL param force-disables (legacy alias, redundant).
-  const wantShadowsURL = typeof window !== "undefined" && (
-    window.location.search.includes("shadow") && !window.location.search.includes("noshadow")
-  );
-  // URL param overrides setting. Lite mode forces shadows off.
-  const shadowsEnabled = !liteMode && (graphicsSettings.shadows || wantShadowsURL);
-
+  // Pixelated render target (Time on Frog Island reference): render at
+  // 0.66 CSS-pixel ratio and let the browser upscale with nearest — the
+  // chunky-pixel look IS the optimization (~40-60% fewer fragments than
+  // dpr 1-2). DOM UI stays crisp on top. Toggle in Graphics settings.
   return (
     <div style={{ width: "100%", height: "100%", minHeight: "100vh", background: skyBase, position: "relative" }}>
       <Canvas
-        gl={{ antialias: true, powerPreference: "high-performance" }}
-        camera={{ fov: 58, near: 0.1, far: 300, position: [0, 14, -22] }}
-        shadows={shadowsEnabled ? "soft" : false}
+        gl={{ antialias: false, powerPreference: "high-performance" }}
+        dpr={graphicsSettings.pixelated ? 0.66 : [1, 2]}
+        camera={{ fov: 48, near: 0.1, far: 300, position: [0, 16, -26] }}
+        shadows={false}
         onCreated={({ gl }) => {
-          gl.toneMapping = THREE.ACESFilmicToneMapping;
+          gl.toneMapping = THREE.NoToneMapping;
           gl.outputColorSpace = THREE.SRGBColorSpace;
+          gl.domElement.style.imageRendering = "pixelated";
         }}
       >
         <Suspense fallback={null}>
@@ -1833,6 +1866,7 @@ export default function GameWorld() {
             activeEmote={activeEmote}
             playerPosRef={playerPosRef}
             ambientDensity={graphicsSettings.shadows ? 1 : 0.7}
+            blobShadows={graphicsSettings.shadows}
             azimuthRef={azimuthRef}
           />
           {/* G4 — bloom + vignette. Inside Suspense so it doesn't block
