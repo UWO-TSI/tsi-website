@@ -1471,7 +1471,7 @@ function Scene({
         maxDistance={34}
         dollySpeed={1.0}
         truckSpeed={0}
-        smoothTime={0.15}
+        smoothTime={0.18}
         draggingSmoothTime={0.05}
         azimuthRotateSpeed={1.0}
         polarRotateSpeed={0.6}

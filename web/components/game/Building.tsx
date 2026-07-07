@@ -10,6 +10,9 @@ import { GLBProp } from "./NatureModels";
 // Matches GameWorld's central sweep INTERACT_RADIUS so the "Press E"
 // prompt never shows outside the range where E actually fires.
 const INTERACT_RANGE = 3.5;
+// Art pass 2026-07-07 pt2: name pills only appear when the player is
+// close — nine always-on floating tags read as UI clutter over the map.
+const LABEL_RANGE = 9;
 
 // ─── Procedural variants — fallback only (G1 visual overhaul) ───
 //
@@ -497,9 +500,11 @@ interface BuildingProps {
 }
 
 export default function Building({ id, name, position, size, color, roofColor, href, playerPosition }: BuildingProps) {
-  const isNear = useMemo(() => {
-    return new THREE.Vector3(...position).distanceTo(playerPosition) < INTERACT_RANGE;
+  const dist = useMemo(() => {
+    return new THREE.Vector3(...position).distanceTo(playerPosition);
   }, [position, playerPosition]);
+  const isNear = dist < INTERACT_RANGE;
+  const labelNear = dist < LABEL_RANGE;
 
   const { data: activePalette } = useActivePalette();
   const decoUrl = id === "shop"
@@ -544,12 +549,16 @@ export default function Building({ id, name, position, size, color, roofColor, h
         <ACBuilding size={size} color={color} roofColor={roofColor} />
       )}
 
-      {/* Label — white pill, dark text */}
-      <Html zIndexRange={[40, 0]} position={[0, size[1] + 1.8, 0]} center distanceFactor={12} style={{ pointerEvents: "none" }}>
-        <div style={{ fontSize: "13px", color: "#2a2a2a", background: "rgba(255,255,255,0.88)", padding: "3px 10px", borderRadius: "6px", fontWeight: 600, fontFamily: "'IBM Plex Mono',monospace", boxShadow: "0 1px 4px rgba(0,0,0,0.12)", whiteSpace: "nowrap" }}>
-          {name}
-        </div>
-      </Html>
+      {/* Label — white pill, dark text. Proximity-gated with a soft
+          fade-in so approaching a building "reveals" its name. */}
+      {labelNear && (
+        <Html zIndexRange={[40, 0]} position={[0, size[1] + 1.8, 0]} center distanceFactor={12} style={{ pointerEvents: "none" }}>
+          <div style={{ fontSize: "13px", color: "#2a2a2a", background: "rgba(255,255,255,0.88)", padding: "3px 10px", borderRadius: "6px", fontWeight: 600, fontFamily: "'IBM Plex Mono',monospace", boxShadow: "0 1px 4px rgba(0,0,0,0.12)", whiteSpace: "nowrap", animation: "tsi-label-in 0.25s ease-out" }}>
+            {name}
+            <style>{`@keyframes tsi-label-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }`}</style>
+          </div>
+        </Html>
+      )}
 
       {isNear && href && (
         <Html zIndexRange={[40, 0]} position={[0, size[1] + 0.8, 0]} center style={{ pointerEvents: "none" }}>

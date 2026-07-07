@@ -132,6 +132,30 @@ export function NatureStump({ position }: { position: [number, number, number] }
   );
 }
 
+// Art pass pt2: preload the whole world set at module scope so props/trees
+// don't pop in one by one after the loading screen ("well produced" = the
+// world arrives assembled). Files are 12-350KB each, ~2MB total.
+const PRELOAD = [
+  ...TREE_MODELS,
+  ...BUSH_MODELS,
+  ...FLOWER_MODELS,
+  "/assets/acnh/plants/stump.glb",
+  "/assets/acnh/props/streetlamp.glb",
+  "/assets/acnh/props/bench-wood.glb",
+  "/assets/acnh/props/bench-park.glb",
+  "/assets/acnh/props/fountain.glb",
+  "/assets/acnh/props/park-clock.glb",
+  "/assets/acnh/props/stone-lantern.glb",
+  "/assets/acnh/props/campfire.glb",
+  "/assets/acnh/props/bulletin-board.glb",
+  "/assets/acnh/props/bridge-wooden.glb",
+  "/assets/acnh/props/fence-country-a.glb",
+  "/assets/acnh/props/fence-log-a.glb",
+  "/assets/acnh/buildings/house-chalet-red.glb",
+  "/assets/acnh/buildings/house-chalet-yellow.glb",
+];
+for (const url of PRELOAD) useGLTF.preload(url);
+
 // ─── Rock ───────────────────────────────────────────────────────
 export function NatureRock({ position, seed }: { position: [number, number, number]; seed: number }) {
   const url = seed % 2 === 0 ? "/assets/nature/rock_smallA.glb" : "/assets/nature/rock_smallB.glb";

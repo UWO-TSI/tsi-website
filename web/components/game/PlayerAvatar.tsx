@@ -36,7 +36,7 @@ const EMOTE_EMOJI: Record<string, string> = {
  * Configurable via SHEET_COLS/SHEET_ROWS constants.
  */
 
-const PLAYER_SPEED = 5;
+const PLAYER_SPEED = 6.3; // art pass pt2: snappier traversal on the bigger island
 const BOUNDARY = 50;
 const ROTATION_LERP = 10;
 // Sprint A1: damp time for y-axis ground follow. Lower = snappier, higher
@@ -47,7 +47,7 @@ const AVATAR_FOOT_OFFSET = 0;
 
 // Sprint A8: visual bob constants. Applied to the sprite mesh inside the
 // Billboard, NOT the group (group.y is ground-follow from A1).
-const SPRITE_BASE_Y = 0.95; // square 1.7 plane: feet land at ~0.10 like the old sheet
+const SPRITE_BASE_Y = 0.82; // square 1.45 plane: feet land at ~0.10 (art pass pt2: smaller avatar)
 const WALK_BOB_AMP = 0.05;
 const IDLE_BOB_AMP = 0.02;
 const BREATH_BLEND_LERP = 1 / 0.3; // ~0.3s blend between walk and idle bob
@@ -462,7 +462,7 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
           feet-on-ground. */}
       <Billboard follow lockX={false} lockY={false} lockZ={false}>
         <mesh ref={meshRef} position={[0, 1.1, 0]}>
-          <planeGeometry args={[1.7, 1.7]} />
+          <planeGeometry args={[1.45, 1.45]} />
           <meshBasicMaterial
             map={spriteTexture}
             transparent
@@ -473,9 +473,9 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
         </mesh>
       </Billboard>
 
-      {/* Ground shadow — scaled to match the larger sprite from P31. */}
+      {/* Ground shadow — scaled to the pt2 smaller sprite. */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
-        <planeGeometry args={[1.3, 1.3]} />
+        <planeGeometry args={[1.1, 1.1]} />
         <meshBasicMaterial
           map={shadowTexture}
           transparent

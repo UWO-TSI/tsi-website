@@ -406,7 +406,9 @@ export default function NPC({ persona, position, playerPosition, onClick }: NPCP
         </Html>
       )}
 
-      {/* Nameplate */}
+      {/* Nameplate — proximity-gated (art pass pt2): always-on plates over
+          every NPC read as map clutter; they reveal alongside the greeting. */}
+      {(noticed || hovered) && (
       <Html zIndexRange={[40, 0]}
         position={[0, NAMEPLATE_OFFSET + QUAD_HEIGHT, 0]}
         center
@@ -435,6 +437,7 @@ export default function NPC({ persona, position, playerPosition, onClick }: NPCP
           </div>
         </div>
       </Html>
+      )}
     </group>
   );
 }
