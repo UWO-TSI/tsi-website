@@ -102,6 +102,18 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-07 — Game-feel program: waves G1-G5a (`e50571d`…`473e941`)
+
+David approved the full 27-item feel/UX/visual pitch (multi-choice, all bundles). Shipped in five self-contained commits, gates green throughout, everything verified live on 3050:
+
+- **G1 handling:** velocity easing (~80ms in / 130ms out), sprite lean + landing squash/stretch, camera leads 1.2u in travel direction, sprint FOV 48→51 (module-scope escape hatch for the react-compiler), fishing-bite canvas thump. Diagonal input was already normalized.
+- **G2 ambience (AmbienceFX.tsx):** drifting cloud shadows, 220 night stars + shooting stars, river sparkles, leaf gusts, night window glow on the four facades, E-target ground glow ring, TOD-scaled bloom. Two lint rounds to appease react-compiler purity/frozen-memo rules (deterministic mulberry32 seeds, module-scope singletons).
+- **G3 UI calm:** HUD auto-fades to 22% after 5s idle, unified ToastHub (fruit/flower/filler all through tsi:toast, bespoke Html toasts deleted), M-key corner minimap with live player dot, pulsing-bell sound opt-in replaces the banner, soft round cursor with target-ring variant, click SFX on HUD buttons.
+- **G4 charm:** shaken fruit arcs to the player and pops on arrival (verified "You got a cherry petal!" E2E), 12s-idle look-around loop, NPC startle hop within ~1u.
+- **G5a:** seasonal ground tint — terrain multiplies by the admin palette's `grass` ratio (Default = identity; verified with a frost value, whole island winters from one palette field — principle #8). First-visit 6s camera flythrough (localStorage-gated, input skips, ?nointro for tests).
+
+**Deferred to next session (approved, not started):** toolbelt dock (12), overlay sheets (14), rain days (21) — each session-class UI/system work that deserves fresh context. Flythrough sweep timing can be tuned (camera-follow contests it mildly).
+
 ### 2026-07-07 — Art pass pt2: game-feel polish (`ea6b62f`)
 
 David's follow-up: hovering building tags, smaller character, faster run, "smooth and well produced." Building/board name pills now proximity-gated at 9u with fade-in (far view carries zero floating labels — verified by screenshot + DOM probe); NPC nameplates reveal with the 5.5u noticed state. Player sprite 1.7→1.45 (feet re-anchored, shadow rescaled), speed 5→6.3. All world GLBs preload at module scope (no piecemeal pop-in after the loading screen). Camera glide 0.15→0.18. Gates green, pushed.
