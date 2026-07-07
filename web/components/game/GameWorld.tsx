@@ -3,7 +3,7 @@
 import { Suspense, useRef, useState, useCallback, useEffect, useMemo, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { CameraControls, Cloud, Clouds, Html } from "@react-three/drei";
+import { CameraControls, Html } from "@react-three/drei";
 import { Smile, BookOpen } from "lucide-react";
 import * as THREE from "three";
 import PlayerAvatar from "./PlayerAvatar";
@@ -1320,7 +1320,7 @@ function Scene({
     let done = false;
     cc.setLookAt(-38, 34, -100, 0, 2, 8, false);
     cc.smoothTime = 2.6;
-    void cc.setLookAt(0, 16, -41, 0, 1.5, -15, true);
+    void cc.setLookAt(0, 19.5, -35, 0, 1.5, -15, true);
     const finish = () => {
       if (done) return;
       done = true;
@@ -1330,7 +1330,7 @@ function Scene({
     };
     const skip = () => {
       cc.smoothTime = 0.4;
-      void cc.setLookAt(0, 16, -41, 0, 1.5, -15, true);
+      void cc.setLookAt(0, 19.5, -35, 0, 1.5, -15, true);
       window.setTimeout(finish, 450);
     };
     const t = window.setTimeout(finish, 6500);
@@ -1554,10 +1554,15 @@ function Scene({
       {/* Sprint F1.1: camera-relative WASD + right-click drag + scroll zoom +
           arrow-key fallback. Polar gated to ±20-30° around horizontal so the
           AC framing is preserved while allowing a peek up/down. */}
+      {/* 2026-07-08 camera ask: steeper default look-down (42° max, was
+          30°) and a hard floor at the horizon — polar can no longer pass
+          90°, so the camera physically cannot dive under the terrain
+          (at 90° it sits at target height, 1.5u over the player, above
+          every hill on the island). */}
       <CameraControls
         ref={cameraRef}
-        minPolarAngle={Math.PI / 2 - (30 * Math.PI) / 180}
-        maxPolarAngle={Math.PI / 2 + (20 * Math.PI) / 180}
+        minPolarAngle={Math.PI / 2 - (42 * Math.PI) / 180}
+        maxPolarAngle={Math.PI / 2}
         minDistance={12}
         maxDistance={34}
         dollySpeed={1.0}
@@ -1614,16 +1619,11 @@ function Scene({
       )}
       <ChimneySmoke />
 
+      {/* (Volumetric drei clouds removed 2026-07-08 — they churned during
+          camera movement and cost billboard re-sorts; David is importing a
+          static sky background instead. The AmbienceFX ground cloud-shadow
+          layer stays — separate system, nearly free.) */}
       <Suspense fallback={null}>
-        {!liteMode && (
-          <Clouds material={THREE.MeshBasicMaterial}>
-            {/* Cloud segments halved for FPS budget — visual cost negligible
-                at this distance. Was 40/30/25, now 20/16/12. */}
-            <Cloud segments={20} bounds={[12, 2, 12]} volume={6} color="#FFFFFF" position={[-12, 25, -10]} opacity={0.6} speed={0.1} />
-            <Cloud segments={16} bounds={[8, 2, 8]} volume={4} color="#FFF8F0" position={[14, 28, 12]} opacity={0.45} speed={0.15} />
-            <Cloud segments={12} bounds={[6, 2, 6]} volume={3} color="#FFFFFF" position={[0, 30, 25]} opacity={0.5} speed={0.08} />
-          </Clouds>
-        )}
         <Props />
         <AmbientProps />
         <LampPosts phase={todPhase} />
@@ -1953,7 +1953,7 @@ export default function GameWorld() {
       <Canvas
         gl={{ antialias: false, powerPreference: "high-performance" }}
         dpr={graphicsSettings.pixelated ? 0.66 : [1, 2]}
-        camera={{ fov: 48, near: 0.1, far: 300, position: [0, 16, -26] }}
+        camera={{ fov: 48, near: 0.1, far: 300, position: [0, 19, -24] }}
         shadows={false}
         onCreated={({ gl }) => {
           gl.toneMapping = THREE.NoToneMapping;
