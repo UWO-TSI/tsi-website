@@ -8,7 +8,6 @@ import { getTerrainHeight, sampleTerrainHeightFast } from "./terrain";
 import { useSFX } from "@/lib/game/useAudio";
 import { getCameraForwardXZ } from "@/lib/game/cameraBasis";
 import MoveTargetIndicator from "./MoveTargetIndicator";
-import { getBlobTexture } from "./BlobShadows";
 import type { EmoteType } from "@/lib/game/contentTypes";
 
 // Sprint E3: animation_key → emoji glyph for the Html overlay. Real sprite
@@ -455,12 +454,8 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
         />
       ))}
       <group ref={groupRef} position={spawnPosition}>
-      {/* Art pass 2026-07-07: New Leaf blob shadow under the player —
-          shadow maps are gone; the disc grounds the sprite for free. */}
-      <mesh position={[0, 0.04, 0]} rotation={[-Math.PI / 2, 0, 0]} renderOrder={1}>
-        <planeGeometry args={[0.9, 0.6]} />
-        <meshBasicMaterial map={getBlobTexture()} transparent opacity={0.32} depthWrite={false} polygonOffset polygonOffsetFactor={-2} polygonOffsetUnits={-2} />
-      </mesh>
+      {/* (Art pass 2026-07-07: the player keeps its ORIGINAL static_shadow
+          decal below — adding a second blob here doubled the shadow.) */}
       {/* Character sprite on billboard. P31: bumped 1.0×1.4 → 1.4×2.0
           (~40% larger) so the player reads clearly at default camera
           distance. Sprite-base-y also pushed up to keep the avatar
