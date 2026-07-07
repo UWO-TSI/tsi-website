@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { sampleTerrainHeightFast } from "@/components/game/terrain";
-import { WORLD_BEND } from "./curvedWorld";
+import { WORLD_BEND, WORLD_BEND_SIDE } from "./curvedWorld";
 
 /**
  * groundPick (game-feel fix, 2026-07-08) — where does a screen ray hit the
@@ -19,17 +19,21 @@ import { WORLD_BEND } from "./curvedWorld";
  */
 
 const _fwd = new THREE.Vector3();
+const _right = new THREE.Vector3();
 const _p = new THREE.Vector3();
 
 export function pickCurvedGround(ray: THREE.Ray, camera: THREE.Camera): THREE.Vector3 | null {
   camera.getWorldDirection(_fwd);
+  _right.setFromMatrixColumn(camera.matrixWorld, 0);
   const co = camera.position;
 
   const heightAbove = (t: number): number => {
     _p.copy(ray.origin).addScaledVector(ray.direction, t);
-    const vz =
-      (_p.x - co.x) * _fwd.x + (_p.y - co.y) * _fwd.y + (_p.z - co.z) * _fwd.z;
-    const visY = sampleTerrainHeightFast(_p.x, _p.z) - WORLD_BEND * vz * vz;
+    const dx = _p.x - co.x, dy = _p.y - co.y, dz = _p.z - co.z;
+    const vz = dx * _fwd.x + dy * _fwd.y + dz * _fwd.z;
+    const vx = dx * _right.x + dy * _right.y + dz * _right.z;
+    const visY =
+      sampleTerrainHeightFast(_p.x, _p.z) - WORLD_BEND * vz * vz - WORLD_BEND_SIDE * vx * vx;
     return _p.y - visY;
   };
 

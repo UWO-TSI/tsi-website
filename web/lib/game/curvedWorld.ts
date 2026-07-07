@@ -21,11 +21,13 @@
 
 import * as THREE from "three";
 
-// Bend strength: drop = z² · BEND (view-space units). At the fog far edge
-// (~70u) that's ~9.8u of sink — a clearly readable ACNH horizon roll that
-// still keeps the playable ±30u gentle (30u → ~1.8u). 0.0012 read as too
-// subtle in the 2026-07-04 screenshot pass.
-export const WORLD_BEND = 0.0026;
+// Bend strength: drop = z² · BEND + x² · SIDE (view-space units). The z
+// term is the ACNH roll-away; the x term (David ask, 2026-07-08) rounds
+// the horizon off at the SIDES too, so the world reads like a little
+// planet instead of a cylinder. Side term kept ~1/3 strength — at ±20u
+// lateral it sinks 0.44u, just enough to bow the skyline.
+export const WORLD_BEND = 0.0032;
+export const WORLD_BEND_SIDE = 0.0011;
 
 const MARKER = "// tsi-curved-world";
 
@@ -35,7 +37,7 @@ if (typeof window !== "undefined") {
     THREE.ShaderChunk.project_vertex = chunk.replace(
       "gl_Position = projectionMatrix * mvPosition;",
       `${MARKER}
-mvPosition.y -= mvPosition.z * mvPosition.z * ${WORLD_BEND.toFixed(6)};
+mvPosition.y -= mvPosition.z * mvPosition.z * ${WORLD_BEND.toFixed(6)} + mvPosition.x * mvPosition.x * ${WORLD_BEND_SIDE.toFixed(6)};
 gl_Position = projectionMatrix * mvPosition;`
     );
   }
