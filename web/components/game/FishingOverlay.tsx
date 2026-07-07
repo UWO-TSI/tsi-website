@@ -63,6 +63,18 @@ export default function FishingOverlay() {
     timersRef.current.push(
       window.setTimeout(() => {
         setPhase("bite");
+        // G1 hit-confirmation: a 130ms screen nudge sells the bite. The
+        // canvas transform is DOM-only — zero render cost.
+        document.querySelector("canvas")?.animate(
+          [
+            { transform: "translate(0,0)" },
+            { transform: "translate(3px,-2px)" },
+            { transform: "translate(-3px,2px)" },
+            { transform: "translate(2px,1px)" },
+            { transform: "translate(0,0)" },
+          ],
+          { duration: 130 }
+        );
         AudioManager.playSFX("confirm");
         biteDeadlineRef.current = performance.now() + BITE_WINDOW_MS;
         // Auto-miss if the window lapses.
@@ -154,7 +166,7 @@ export default function FishingOverlay() {
       : phase === "waiting"
         ? "Waiting for a bite…"
         : phase === "bite"
-          ? "!!  Press E!"
+          ? "!!\u2009 Press E!"
           : phase === "caught"
             ? `You caught ${caughtLabel}!`
             : "It got away…";

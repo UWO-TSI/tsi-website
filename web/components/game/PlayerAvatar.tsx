@@ -116,6 +116,12 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
   // (NOT the group — group y stays terrain-bound). Doesn't affect collision
   // or click-to-move pathing; pure visual delight.
   const jumpRef = useRef<{ active: boolean; t: number }>({ active: false, t: 0 });
+  // Game-feel wave G1 (2026-07-07): velocity with accel/decel easing, screen-
+  // space lean into motion, and a landing squash timer. Linear start/stop was
+  // the last "slides like a cursor" tell in the handling.
+  const velRef = useRef(new THREE.Vector2(0, 0));
+  const leanRef = useRef(0);
+  const squashRef = useRef(0);
 
   // Load and configure textures for pixel art during construction
   const spriteTexture = useMemo(() => {
@@ -254,6 +260,7 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
         // Lower the sprite so it reads as seated on the bench slats.
         meshRef.current.position.y = SPRITE_BASE_Y - 0.42;
       }
+      velRef.current.set(0, 0);
       if (isMoving) setIsMoving(false);
       return;
     }
@@ -298,21 +305,33 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
       }
     }
 
-    // Apply XZ movement. Sprint F1.1: Shift held = 1.6× speed multiplier.
-    if (moving) {
+    // Apply XZ movement with easing (G1): velocity damps toward the input
+    // direction — ~80ms up to speed, ~130ms glide-out. Frame cycling below
+    // already scales by ACTUAL speed, so the walk anim eases in for free.
+    {
       const speedMult = sprint && keyMoving ? 1.6 : 1;
-      const step = PLAYER_SPEED * speedMult * delta;
-      pos.x += dx * step;
-      pos.z += dz * step;
-      pos.x = THREE.MathUtils.clamp(pos.x, -BOUNDARY, BOUNDARY);
-      pos.z = THREE.MathUtils.clamp(pos.z, -BOUNDARY, BOUNDARY);
-
-      const targetAngle = Math.atan2(dx, dz);
-      facingRef.current = THREE.MathUtils.lerp(
-        facingRef.current,
-        targetAngle,
-        ROTATION_LERP * delta
-      );
+      const vel = velRef.current;
+      const lam = moving ? 12 : 7.5;
+      vel.x = THREE.MathUtils.damp(vel.x, moving ? dx * PLAYER_SPEED * speedMult : 0, lam, delta);
+      vel.y = THREE.MathUtils.damp(vel.y, moving ? dz * PLAYER_SPEED * speedMult : 0, lam, delta);
+      if (Math.abs(vel.x) > 0.02 || Math.abs(vel.y) > 0.02) {
+        pos.x += vel.x * delta;
+        pos.z += vel.y * delta;
+        pos.x = THREE.MathUtils.clamp(pos.x, -BOUNDARY, BOUNDARY);
+        pos.z = THREE.MathUtils.clamp(pos.z, -BOUNDARY, BOUNDARY);
+      }
+      if (moving) {
+        const targetAngle = Math.atan2(dx, dz);
+        facingRef.current = THREE.MathUtils.lerp(
+          facingRef.current,
+          targetAngle,
+          ROTATION_LERP * delta
+        );
+      }
+      // Lean into screen-space lateral motion (~5° max), damped.
+      const latVel = vel.x * rx + vel.y * rz;
+      const targetLean = THREE.MathUtils.clamp(-latVel / PLAYER_SPEED, -1, 1) * 0.085;
+      leanRef.current = THREE.MathUtils.damp(leanRef.current, targetLean, 10, delta);
     }
 
     // Ground follow — sample terrain every frame (even when idle so the
@@ -389,6 +408,7 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
       if (j >= 1) {
         jumpRef.current.active = false;
         jumpRef.current.t = 0;
+        squashRef.current = 0.18; // G1: landing squash window
         // P29: landing puff — bigger ring at the player's current spot.
         const id = puffIdRef.current++;
         setPuffs((prev) => [
@@ -403,6 +423,20 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
 
     if (meshRef.current) {
       meshRef.current.position.y = SPRITE_BASE_Y + bobY + jumpY;
+      // G1 squash & stretch: stretch on the way up, squash for ~0.18s on
+      // landing, lean tilt from lateral motion. Billboard makes rotation.z
+      // a clean screen-space tilt.
+      let sx = 1, sy = 1;
+      if (jumpRef.current.active) {
+        sx = 0.96; sy = 1.06;
+      } else if (squashRef.current > 0) {
+        squashRef.current = Math.max(0, squashRef.current - delta);
+        const q = squashRef.current / 0.18;
+        sx = 1 + 0.1 * q;
+        sy = 1 - 0.12 * q;
+      }
+      meshRef.current.scale.set(sx, sy, 1);
+      meshRef.current.rotation.z = leanRef.current;
     }
 
     // Footstep SFX — fire ~every 0.4s walking, ~0.25s when sprinting (F1.6).

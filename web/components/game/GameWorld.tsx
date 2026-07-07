@@ -1316,10 +1316,33 @@ function Scene({
     setTimeout(() => setFillerToast(null), 2000);
   }, []);
 
+  // G1 camera feel: the target leads ~1.2u in the travel direction and the
+  // FOV widens a touch at sprint speed. Both damped so nothing snaps.
+  const camFeelRef = useRef({ lastX: 0, lastZ: 0, lastT: 0, leadX: 0, leadZ: 0, fov: 48 });
   const handlePlayerMove = useCallback((position: THREE.Vector3) => {
     setPlayerPos(position);
     playerPosRef.current.copy(position);
-    cameraRef.current?.moveTo(position.x, position.y + 1.5, position.z, true);
+    const cf = camFeelRef.current;
+    const now = performance.now();
+    const dt = Math.min((now - cf.lastT) / 1000, 0.1) || 0.016;
+    const vx = (position.x - cf.lastX) / dt;
+    const vz = (position.z - cf.lastZ) / dt;
+    cf.lastX = position.x; cf.lastZ = position.z; cf.lastT = now;
+    const speed = Math.hypot(vx, vz);
+    const lead = speed > 1 ? 1.2 : 0;
+    const inv = speed > 0.001 ? 1 / speed : 0;
+    cf.leadX = THREE.MathUtils.damp(cf.leadX, vx * inv * lead, 3, dt);
+    cf.leadZ = THREE.MathUtils.damp(cf.leadZ, vz * inv * lead, 3, dt);
+    cameraRef.current?.moveTo(position.x + cf.leadX, position.y + 1.5, position.z + cf.leadZ, true);
+    const cam = cameraRef.current?.camera as THREE.PerspectiveCamera | undefined;
+    if (cam && cam.isPerspectiveCamera) {
+      const targetFov = speed > 7.5 ? 51 : 48;
+      const next = THREE.MathUtils.damp(cam.fov, targetFov, 4, dt);
+      if (Math.abs(next - cam.fov) > 0.01) {
+        cam.fov = next;
+        cam.updateProjectionMatrix();
+      }
+    }
 
     // F1.2: compute nearest interactable for crosshair + E-interact. Cheap
     // O(npc + building) sweep every move tick. INTERACT_RADIUS = 3.5 units.
