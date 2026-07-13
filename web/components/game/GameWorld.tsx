@@ -56,6 +56,7 @@ import GraphicsSettingsPanel from "./GraphicsSettings";
 import ToolDock from "./ToolDock";
 import OverlaySheet, { sheetKeyForHref, type SheetKey } from "./OverlaySheet";
 import Critters from "./Critters";
+import HQInterior, { type InteriorStation } from "./HQInterior";
 import { getActiveCritters } from "@/lib/game/critterStore";
 import { useGhostReplaySetting } from "@/lib/game/useGhostReplaySetting";
 // P15: side-effect import kicks off useGLTF.preload for buildings + nature
@@ -100,7 +101,7 @@ const P = {
 const BUILDINGS = [
   // Sizes track the ACNH model visuals (0.1 × source bbox) so labels and
   // E-prompts float at the right height. Position = door plane (model origin).
-  { id: "hq", name: "HQ", position: [0, 0, -4] as [number, number, number], size: [6.1, 4.8, 3] as [number, number, number], color: "#FFF5E1", roofColor: "#E87B5A", href: undefined },
+  { id: "hq", name: "HQ", position: [0, 0, -4] as [number, number, number], size: [6.1, 4.8, 3] as [number, number, number], color: "#FFF5E1", roofColor: "#E87B5A", href: undefined, interior: "hq" as const },
   { id: "shop", name: "Shop", position: [-24, 0, 12] as [number, number, number], size: [6.6, 3.5, 3.6] as [number, number, number], color: "#D4EAD4", roofColor: "#5BA086", href: "/student/dashboard/shop" },
   { id: "oracle", name: "Oracle Temple", position: [0, 3, 30] as [number, number, number], size: [6.8, 3.9, 3.4] as [number, number, number], color: "#E8DCF0", roofColor: "#7B5EA7", href: "/student/dashboard/oracle" },
   { id: "house", name: "House", position: [24, 0, 14] as [number, number, number], size: [5, 4.1, 3.1] as [number, number, number], color: "#C8E6C9", roofColor: "#7EB8C9", href: undefined },
@@ -1402,6 +1403,7 @@ function Scene({
   playerName,
   introReady,
   weather,
+  spawn,
   playerLevel,
   fogColor,
   todPhase,
@@ -1417,13 +1419,14 @@ function Scene({
   playerName: string;
   introReady: boolean;
   weather: Weather;
+  spawn?: [number, number, number];
   playerLevel: number;
   fogColor: string;
   todPhase: "day" | "night" | "dawn" | "dusk";
   onNPCClick: (npc: NPCPersona) => void;
   activeEmote: EmoteType | null;
   playerPosRef: React.MutableRefObject<THREE.Vector3>;
-  onNearestInteractable: (n: { kind: "npc" | "building" | "tree" | "bench" | "flower" | "fishing" | "critter"; id: string; name: string; href?: string; npc?: NPCPersona; treePos?: [number, number]; seat?: [number, number]; flowerIdx?: number; flowerPos?: [number, number]; spot?: [number, number]; critterSlot?: number } | null) => void;
+  onNearestInteractable: (n: { kind: "npc" | "building" | "tree" | "bench" | "flower" | "fishing" | "critter" | "station"; id: string; name: string; href?: string; npc?: NPCPersona; treePos?: [number, number]; seat?: [number, number]; flowerIdx?: number; flowerPos?: [number, number]; spot?: [number, number]; critterSlot?: number; interiorId?: string; stationAction?: string } | null) => void;
   debugSnapshotRef: React.MutableRefObject<DebugSnapshot | null>;
   ambientDensity: number;
   blobShadows: boolean;
@@ -1532,7 +1535,7 @@ function Scene({
     // O(npc + building) sweep every move tick. INTERACT_RADIUS = 3.5 units.
     const INTERACT_RADIUS = 3.5;
     let bestDist = INTERACT_RADIUS;
-    let best: { kind: "npc" | "building" | "tree" | "bench" | "flower" | "fishing" | "critter"; id: string; name: string; href?: string; npc?: NPCPersona; treePos?: [number, number]; seat?: [number, number]; flowerIdx?: number; flowerPos?: [number, number]; spot?: [number, number]; critterSlot?: number } | null = null;
+    let best: { kind: "npc" | "building" | "tree" | "bench" | "flower" | "fishing" | "critter" | "station"; id: string; name: string; href?: string; npc?: NPCPersona; treePos?: [number, number]; seat?: [number, number]; flowerIdx?: number; flowerPos?: [number, number]; spot?: [number, number]; critterSlot?: number; interiorId?: string; stationAction?: string } | null = null;
     for (const { persona, position: p } of placedPersonas) {
       const dx = p[0] - position.x;
       const dz = p[2] - position.z;
@@ -1543,15 +1546,16 @@ function Scene({
       }
     }
     for (const b of BUILDINGS) {
-      // Only buildings with an href are interactable via E (others handle
-      // entry via the existing Building click handler).
-      if (!b.href) continue;
+      // Buildings with an href open sheets/routes; ones with an interior
+      // (interiors-lite 2026-07-13) enter the room. Others are decor.
+      const interiorId = (b as { interior?: string }).interior;
+      if (!b.href && !interiorId) continue;
       const dx = b.position[0] - position.x;
       const dz = b.position[2] - position.z;
       const d = Math.hypot(dx, dz);
       if (d < bestDist) {
         bestDist = d;
-        best = { kind: "building", id: b.id, name: b.name, href: b.href };
+        best = { kind: "building", id: b.id, name: b.name, href: b.href, interiorId };
       }
     }
     // G5: fishing spots on the riverbank (radius 2.4).
@@ -1805,7 +1809,7 @@ function Scene({
         <GhostReplay key={g.user_id} ghost={g} />
       ))}
 
-      <PlayerAvatar spawnPosition={SPAWN_POSITION} onMove={handlePlayerMove} playerName={playerName} playerLevel={playerLevel} activeEmote={activeEmote} />
+      <PlayerAvatar spawnPosition={spawn ?? SPAWN_POSITION} onMove={handlePlayerMove} playerName={playerName} playerLevel={playerLevel} activeEmote={activeEmote} />
 
     </>
   );
@@ -1865,6 +1869,13 @@ export default function GameWorld() {
   // Item 14: feature pages as sheets over the living world (Canvas never
   // unmounts). null = no sheet open. ?sheet=jobs etc. opens one on load —
   // the QA hook in the ?nointro / ?rain family.
+  // Interiors-lite (2026-07-13): which room the player is inside. The
+  // exterior Scene unmounts while inside (assets stay cached via useGLTF)
+  // and remounts on exit with the player just outside the HQ door.
+  const [interior, setInterior] = useState<null | "hq">(null);
+  const interiorRef = useRef<null | "hq">(null);
+  useEffect(() => { interiorRef.current = interior; }, [interior]);
+  const [worldSpawn, setWorldSpawn] = useState<[number, number, number] | undefined>(undefined);
   const [sheet, setSheet] = useState<SheetKey | null>(() => {
     if (typeof window === "undefined") return null;
     const m = window.location.search.match(/sheet=(shop|bounty|jobs|leaderboard|oracle)/);
@@ -1892,7 +1903,7 @@ export default function GameWorld() {
   // F1.2: nearest interactable for crosshair + E-interact. Updated by Scene
   // on each player move via onNearestInteractable. Kept here so Crosshair
   // (DOM, outside Canvas) can read it.
-  const [nearest, setNearest] = useState<{ kind: "npc" | "building" | "tree" | "bench" | "flower" | "fishing" | "critter"; id: string; name: string; href?: string; npc?: NPCPersona; treePos?: [number, number]; seat?: [number, number]; flowerIdx?: number; flowerPos?: [number, number]; spot?: [number, number]; critterSlot?: number } | null>(null);
+  const [nearest, setNearest] = useState<{ kind: "npc" | "building" | "tree" | "bench" | "flower" | "fishing" | "critter" | "station"; id: string; name: string; href?: string; npc?: NPCPersona; treePos?: [number, number]; seat?: [number, number]; flowerIdx?: number; flowerPos?: [number, number]; spot?: [number, number]; critterSlot?: number; interiorId?: string; stationAction?: string } | null>(null);
   const nearestRef = useRef<typeof nearest>(null);
   useEffect(() => { nearestRef.current = nearest; }, [nearest]);
 
@@ -1915,6 +1926,9 @@ export default function GameWorld() {
         if (activeNPC) return; // don't hijack while chatting
         const n = nearestRef.current;
         if (!n) return;
+        // Interiors-lite: inside a room only station interactions are valid
+        // (a stale exterior `nearest` could otherwise re-trigger entry).
+        if (interiorRef.current && n.kind !== "station") return;
         e.preventDefault();
         if (n.kind === "npc" && n.npc) {
           setActiveNPC(n.npc);
@@ -1958,6 +1972,30 @@ export default function GameWorld() {
           window.dispatchEvent(
             new CustomEvent("tsi:critter-catch", { detail: { slot: n.critterSlot } })
           );
+        } else if (n.kind === "station" && n.stationAction) {
+          // Interiors-lite: stations resolve to sheets / exit / admin lock.
+          const action = n.stationAction;
+          if (action.startsWith("sheet:")) {
+            AudioManager.playSFX("confirm");
+            setSheet(action.slice(6) as SheetKey);
+          } else if (action === "exit") {
+            triggerTransition(() => {
+              setWorldSpawn([0, 0, -7]); // just outside the HQ door (spec §7.2)
+              setInterior(null);
+              setNearest(null);
+            });
+            AudioManager.playSFX("exit");
+          } else if (action === "admin") {
+            window.dispatchEvent(new CustomEvent("tsi:toast", { detail: { text: "The Admin Room is locked. (T1-T3 access, coming soon)" } }));
+          }
+        } else if (n.kind === "building" && n.interiorId) {
+          // Interiors-lite: enter the room behind the standard fade.
+          if (isTransitioning) return;
+          triggerTransition(() => {
+            setInterior(n.interiorId as "hq");
+            setNearest(null);
+          });
+          AudioManager.playSFX("exit");
         } else if (n.kind === "building" && n.href) {
           // Item 14: mapped targets open as sheets over the world — the
           // Canvas keeps running and close is instant. Unmapped hrefs keep
@@ -2137,11 +2175,22 @@ export default function GameWorld() {
         }}
       >
         <WarmupProbe onReady={() => setWorldReady(true)} />
+        {interior === "hq" && (
+          <HQInterior
+            frozen={sheet !== null || isTransitioning}
+            playerPosRef={playerPosRef}
+            onNearestStation={(st: InteriorStation | null) =>
+              setNearest(st ? { kind: "station", id: `station-${st.id}`, name: st.name, stationAction: st.action } : null)
+            }
+          />
+        )}
+        {interior === null && (
         <Suspense fallback={null}>
           <Scene
             playerName={playerName}
             introReady={gateDone}
             weather={weather}
+            spawn={worldSpawn}
             playerLevel={playerLevel}
             fogColor={fogColor}
             todPhase={todPhase}
@@ -2163,6 +2212,7 @@ export default function GameWorld() {
             bloomIntensity={todPhase === "dusk" ? 0.75 : todPhase === "night" ? 0.45 : todPhase === "dawn" ? 0.4 : 0.18}
           />
         </Suspense>
+        )}
       </Canvas>
       {!gateDone && <LoadGateOverlay ready={worldReady} onGone={() => setGateDone(true)} />}
       {/* F1.4: screenshot mode hides ALL DOM overlays. DebugOverlay also
@@ -2188,8 +2238,8 @@ export default function GameWorld() {
         <GraphicsSettingsPanel open={graphicsOpen} onClose={() => setGraphicsOpen(false)} />
         <OverlaySheet sheet={sheet} onClose={() => setSheet(null)} />
         <Crosshair active={nearest !== null} hint={nearest?.name ?? null} />
-        <Compass azimuthRef={azimuthRef} />
-        <TodBadge phase={todPhase} />
+        {!interior && <Compass azimuthRef={azimuthRef} />}
+        {!interior && <TodBadge phase={todPhase} />}
         <StatsHUD />
         <DebugOverlay visible={debugOpen} snapshotRef={debugSnapshotRef} />
       </div>
@@ -2239,7 +2289,7 @@ export default function GameWorld() {
       </div>
       )}
       <ToastHub />
-      {mapOpen && !screenshotMode && <MiniMap playerPosRef={playerPosRef} />}
+      {mapOpen && !screenshotMode && !interior && <MiniMap playerPosRef={playerPosRef} />}
     </div>
   );
 }

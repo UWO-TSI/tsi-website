@@ -25,6 +25,9 @@ const SheetBounty = dynamic(() => import("@/app/student/dashboard/bounty/page"),
 const SheetJobs = dynamic(() => import("@/app/student/dashboard/jobs/page"), { ssr: false });
 const SheetLeaderboard = dynamic(() => import("@/app/student/dashboard/leaderboard/page"), { ssr: false });
 const SheetOracle = dynamic(() => import("@/app/student/dashboard/oracle/page"), { ssr: false });
+const SheetDirectory = dynamic(() => import("@/app/student/dashboard/directory/page"), { ssr: false });
+const SheetProfile = dynamic(() => import("@/app/student/dashboard/profile/page"), { ssr: false });
+const SheetQuests = dynamic(() => import("@/app/student/dashboard/quests/page"), { ssr: false });
 
 const SHEETS = {
   shop: { Component: SheetShop, title: "Shop" },
@@ -32,6 +35,9 @@ const SHEETS = {
   jobs: { Component: SheetJobs, title: "Job Board" },
   leaderboard: { Component: SheetLeaderboard, title: "Leaderboard" },
   oracle: { Component: SheetOracle, title: "Oracle Temple" },
+  directory: { Component: SheetDirectory, title: "Directory" },
+  profile: { Component: SheetProfile, title: "Profile" },
+  quests: { Component: SheetQuests, title: "Quests" },
 } as const;
 
 export type SheetKey = keyof typeof SHEETS;
@@ -42,6 +48,9 @@ const HREF_TO_SHEET: Record<string, SheetKey> = {
   "/student/dashboard/jobs": "jobs",
   "/student/dashboard/leaderboard": "leaderboard",
   "/student/dashboard/oracle": "oracle",
+  "/student/dashboard/directory": "directory",
+  "/student/dashboard/profile": "profile",
+  "/student/dashboard/quests": "quests",
 };
 
 export function sheetKeyForHref(href: string | undefined): SheetKey | null {
