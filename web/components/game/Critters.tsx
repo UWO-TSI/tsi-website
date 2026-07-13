@@ -47,6 +47,13 @@ const SPECIES: Species[] = [
   { key: "bug_ladybug", label: "a Ladybug", model: "/assets/acnh/critters/ladybug.glb", motion: "crawl", scale: 0.13, baseY: 0.06, phases: ["day"], weight: 2 },
   { key: "bug_brown_cicada", label: "a Brown Cicada", model: "/assets/acnh/critters/brown-cicada.glb", motion: "perch", scale: 0.1, baseY: 1.45, phases: ["day"], weight: 2 },
   { key: "bug_firefly", label: "a Firefly", model: "/assets/acnh/critters/firefly.glb", motion: "drift", scale: 0.1, baseY: 0.6, phases: ["night"], weight: 3 },
+  // Species drop 2 (2026-07-13): monthly-cadence content, principle #8.
+  { key: "bug_monarch_butterfly", label: "a Monarch Butterfly", model: "/assets/acnh/critters/monarch-butterfly.glb", motion: "flutter", scale: 0.09, baseY: 0.78, phases: ["day"], weight: 2 },
+  { key: "bug_tiger_butterfly", label: "a Tiger Butterfly", model: "/assets/acnh/critters/tiger-butterfly.glb", motion: "flutter", scale: 0.09, baseY: 0.82, phases: ["day"], weight: 2 },
+  { key: "bug_peacock_butterfly", label: "a Peacock Butterfly", model: "/assets/acnh/critters/peacock-butterfly.glb", motion: "flutter", scale: 0.09, baseY: 0.8, phases: ["night"], weight: 2 },
+  { key: "bug_red_dragonfly", label: "a Red Dragonfly", model: "/assets/acnh/critters/red-dragonfly.glb", motion: "dart", scale: 0.09, baseY: 0.5, phases: ["day"], weight: 2 },
+  { key: "bug_mantis", label: "a Mantis", model: "/assets/acnh/critters/mantis.glb", motion: "crawl", scale: 0.11, baseY: 0.06, phases: ["day"], weight: 1 },
+  { key: "bug_grasshopper", label: "a Grasshopper", model: "/assets/acnh/critters/grasshopper.glb", motion: "crawl", scale: 0.11, baseY: 0.06, phases: ["day"], weight: 2 },
 ];
 SPECIES.forEach((s) => useGLTF.preload(s.model));
 

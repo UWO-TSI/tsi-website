@@ -34,9 +34,12 @@ const FISH = [
   { key: "fish_black_bass", label: "a Black Bass", model: "/assets/acnh/fish/black-bass.glb" },
   { key: "fish_carp", label: "a Carp", model: "/assets/acnh/fish/carp.glb" },
   { key: "fish_goldfish", label: "a Goldfish", model: "/assets/acnh/fish/goldfish.glb" },
+  { key: "fish_pale_chub", label: "a Pale Chub", model: "/assets/acnh/fish/pale-chub.glb" },
+  { key: "fish_pond_smelt", label: "a Pond Smelt", model: "/assets/acnh/fish/pond-smelt.glb" },
+  { key: "fish_catfish", label: "a Catfish", model: "/assets/acnh/fish/catfish.glb" },
   { key: "fish_golden_koi", label: "a Golden Koi", model: "/assets/acnh/fish/koi.glb" },
 ];
-const RARE_INDEX = 6;
+const RARE_INDEX = 9; // golden koi stays the rare pull
 
 const BITE_WINDOW_MS = 1400;
 
