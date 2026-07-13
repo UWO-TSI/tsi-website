@@ -19,8 +19,9 @@
  * All procedural: zero GLBs, loads instantly behind the 0.3s fade.
  */
 
-import { useEffect, useMemo, useRef } from "react";
+import { Suspense, useEffect, useMemo, useRef } from "react";
 import { useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
+import { useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 import { AudioManager } from "@/lib/game/audio";
 
@@ -191,20 +192,20 @@ function InteriorPlayer({
   );
 }
 
-// ── procedural furniture bits ──
-function Plant({ x, z }: { x: number; z: number }) {
-  return (
-    <group position={[x, 0, z]}>
-      <mesh position={[0, 0.25, 0]}>
-        <cylinderGeometry args={[0.22, 0.28, 0.5, 10]} />
-        <meshStandardMaterial color="#C4825A" roughness={0.9} />
-      </mesh>
-      <mesh position={[0, 0.75, 0]}>
-        <sphereGeometry args={[0.38, 12, 10]} />
-        <meshStandardMaterial color="#5FA850" roughness={0.85} />
-      </mesh>
-    </group>
-  );
+// ── real ACNH furniture (P2 dump extraction 2026-07-13) ──
+// Pieces are floor-origin normalized at extraction; ACNH items face -Z.
+const FURNITURE_BASE = "/assets/acnh/furniture";
+const FURNITURE = [
+  "bulletinboard", "gold-hha-trophy", "silver-hha-trophy", "bronze-hha-trophy",
+  "study-desk", "study-chair", "bookshelf", "acorn-rug", "antique-clock",
+  "plant-monstera", "plant-yucca", "yellow-message-mat", "wooden-chest",
+];
+FURNITURE.forEach((n) => useGLTF.preload(`${FURNITURE_BASE}/${n}.glb`));
+
+function Piece({ name, position, rotY = 0, scale = 0.1 }: { name: string; position: [number, number, number]; rotY?: number; scale?: number }) {
+  const { scene } = useGLTF(`${FURNITURE_BASE}/${name}.glb`);
+  const clone = useMemo(() => scene.clone(true), [scene]);
+  return <primitive object={clone} position={position} rotation={[0, rotY, 0]} scale={[scale, scale, scale]} />;
 }
 
 export default function HQInterior({
@@ -238,7 +239,6 @@ export default function HQInterior({
     AudioManager.playSFX("click");
   };
 
-  const bookColors = ["#E85050", "#4C7DD0", "#5FA850", "#FFD166", "#9B6BB0", "#FF9944"];
 
   return (
     <group>
@@ -260,11 +260,10 @@ export default function HQInterior({
           <meshStandardMaterial color="#C4A878" roughness={0.85} />
         </mesh>
       ))}
-      {/* rug */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.012, 0.6]}>
-        <planeGeometry args={[6.4, 4.4]} />
-        <meshStandardMaterial color="#D4A876" roughness={0.95} />
-      </mesh>
+      {/* acorn rug — warm centerpiece */}
+      <Suspense fallback={null}>
+        <Piece name="acorn-rug" position={[0, 0.015, 0.6]} scale={0.18} />
+      </Suspense>
 
       {/* walls: north full, sides full, south low lip (dollhouse cutaway) */}
       <mesh position={[0, 2, HALF_D + 0.15]}>
@@ -297,83 +296,30 @@ export default function HQInterior({
         <meshStandardMaterial color="#B8935A" roughness={0.9} />
       </mesh>
 
-      {/* Bulletin Board (→ Directory) on the north wall */}
-      <group position={[-4.5, 0, 5.75]}>
-        <mesh position={[0, 1.9, 0]}>
-          <boxGeometry args={[2.6, 1.6, 0.12]} />
-          <meshStandardMaterial color="#8B6B4A" roughness={0.9} />
-        </mesh>
-        <mesh position={[0, 1.9, -0.07]}>
-          <boxGeometry args={[2.3, 1.3, 0.04]} />
-          <meshStandardMaterial color="#C89F70" roughness={1} />
-        </mesh>
-        {[[-0.7, 2.2, "#E85050"], [0.1, 1.75, "#4C7DD0"], [0.7, 2.1, "#FFD166"], [-0.2, 1.6, "#5FA850"]].map(([x, y, c], i) => (
-          <mesh key={i} position={[x as number, y as number, -0.1]}>
-            <planeGeometry args={[0.42, 0.34]} />
-            <meshBasicMaterial color={c as string} side={THREE.DoubleSide} />
-          </mesh>
-        ))}
-      </group>
+      {/* Bulletin Board (→ Directory) hung on the north wall */}
+      <Suspense fallback={null}>
+        <Piece name="bulletinboard" position={[-4.5, 1.15, 5.55]} scale={0.16} />
 
-      {/* Trophy Case (→ Leaderboard) */}
-      <group position={[4.2, 0, 5.4]}>
-        <mesh position={[0, 1.1, 0]}>
-          <boxGeometry args={[2.8, 2.2, 0.9]} />
-          <meshStandardMaterial color="#8B6B4A" roughness={0.85} />
-        </mesh>
-        <mesh position={[0, 1.35, -0.48]}>
-          <planeGeometry args={[2.5, 1.5]} />
-          <meshStandardMaterial color="#BFE3EA" roughness={0.2} metalness={0.1} transparent opacity={0.5} side={THREE.DoubleSide} />
-        </mesh>
-        {[[-0.8, "#FFD166"], [0, "#D8D8E0"], [0.8, "#D08A4E"]].map(([x, c], i) => (
-          <mesh key={i} position={[x as number, 1.62 - (i === 0 ? 0 : 0.08), -0.2]}>
-            <coneGeometry args={[0.16, 0.42, 8]} />
-            <meshStandardMaterial color={c as string} metalness={0.5} roughness={0.35} />
-          </mesh>
-        ))}
-      </group>
+        {/* Trophy display (→ Leaderboard): chest pedestal + the HHA tier set */}
+        <Piece name="wooden-chest" position={[4.2, 0, 5.2]} />
+        <Piece name="gold-hha-trophy" position={[4.2, 0.8, 5.2]} />
+        <Piece name="silver-hha-trophy" position={[3.55, 0.8, 5.35]} scale={0.085} />
+        <Piece name="bronze-hha-trophy" position={[4.85, 0.8, 5.35]} scale={0.085} />
 
-      {/* Front Desk (→ Profile) */}
-      <group position={[-5.2, 0, -2.4]}>
-        <mesh position={[0, 0.55, 0]}>
-          <boxGeometry args={[2.6, 1.1, 1.2]} />
-          <meshStandardMaterial color="#B8935A" roughness={0.85} />
-        </mesh>
-        <mesh position={[0.6, 1.22, 0.1]}>
-          <boxGeometry args={[0.55, 0.14, 0.4]} />
-          <meshStandardMaterial color="#F5F0E6" roughness={0.8} />
-        </mesh>
-        <mesh position={[-0.7, 1.35, -0.05]}>
-          <cylinderGeometry args={[0.09, 0.13, 0.5, 8]} />
-          <meshStandardMaterial color="#3D6B4F" roughness={0.7} />
-        </mesh>
-        <mesh position={[0.2, 0.35, 1.25]}>
-          <boxGeometry args={[0.9, 0.7, 0.8]} />
-          <meshStandardMaterial color="#E87B5A" roughness={0.9} />
-        </mesh>
-      </group>
+        {/* Front Desk (→ Profile) + chair */}
+        <Piece name="study-desk" position={[-5.2, 0, -2.4]} scale={0.11} />
+        <Piece name="study-chair" position={[-5.2, 0, -1.1]} rotY={Math.PI} />
 
-      {/* Bookshelf (→ Quests) against the east wall */}
-      <group position={[5.6, 0, -2.8]}>
-        <mesh position={[0, 1.45, 0]}>
-          <boxGeometry args={[2.2, 2.9, 0.8]} />
-          <meshStandardMaterial color="#8B6B4A" roughness={0.9} />
-        </mesh>
-        {[0.7, 1.5, 2.3].map((y, row) => (
-          <group key={row}>
-            {[-0.75, -0.35, 0.05, 0.45, 0.8].map((x, i) => (
-              <mesh key={i} position={[x, y, -0.42]}>
-                <boxGeometry args={[0.26, 0.5, 0.1]} />
-                <meshStandardMaterial color={bookColors[(row * 5 + i) % bookColors.length]} roughness={0.9} />
-              </mesh>
-            ))}
-          </group>
-        ))}
-        <mesh position={[0, 3.15, 0]}>
-          <sphereGeometry args={[0.25, 10, 8]} />
-          <meshStandardMaterial color="#5FA850" roughness={0.85} />
-        </mesh>
-      </group>
+        {/* Bookshelf (→ Quests) */}
+        <Piece name="bookshelf" position={[5.6, 0, -3.1]} />
+
+        {/* Grandfather clock by the admin door */}
+        <Piece name="antique-clock" position={[-7.1, 0, 3.6]} rotY={-Math.PI / 2} />
+
+        {/* Corner plants */}
+        <Piece name="plant-monstera" position={[-7.2, 0, 5.2]} />
+        <Piece name="plant-yucca" position={[7.2, 0, 5.2]} />
+      </Suspense>
 
       {/* Admin door (locked) on the west wall */}
       <group position={[-7.85, 0, 1.2]} rotation={[0, Math.PI / 2, 0]}>
@@ -387,26 +333,18 @@ export default function HQInterior({
         </mesh>
       </group>
 
-      {/* Exit: welcome mat at the south lip */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.014, -5.2]}>
-        <planeGeometry args={[2.2, 1.2]} />
-        <meshStandardMaterial color="#7EC850" roughness={0.95} />
-      </mesh>
+      {/* Exit: TSI-yellow message mat at the south lip */}
+      <Suspense fallback={null}>
+        <Piece name="yellow-message-mat" position={[0, 0.015, -5.2]} scale={0.14} />
+      </Suspense>
 
-      {/* wall clock + framed pictures on the north wall */}
-      <mesh position={[0, 3.1, 5.68]}>
-        <circleGeometry args={[0.4, 20]} />
-        <meshBasicMaterial color="#FFF5E1" side={THREE.DoubleSide} />
-      </mesh>
+      {/* framed pictures on the north wall */}
       {[[-2, 2.6, "#4C7DD0"], [1.6, 2.8, "#E85050"], [6.8, 2.6, "#5FA850"]].map(([x, y, c], i) => (
         <mesh key={i} position={[x as number, y as number, 5.7]}>
           <planeGeometry args={[0.7, 0.55]} />
           <meshBasicMaterial color={c as string} side={THREE.DoubleSide} />
         </mesh>
       ))}
-
-      <Plant x={-7.2} z={5.2} />
-      <Plant x={7.2} z={5.2} />
 
       <InteriorPlayer frozen={frozen} playerPosRef={playerPosRef} onMove={handleMove} />
     </group>
