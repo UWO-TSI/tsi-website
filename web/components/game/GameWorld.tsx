@@ -4,7 +4,7 @@ import { Suspense, useRef, useState, useCallback, useEffect, useMemo, useSyncExt
 import { useRouter } from "next/navigation";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { CameraControls, Html } from "@react-three/drei";
-import { Smile, BookOpen } from "lucide-react";
+import { Smile, BookOpen, Map as MapIcon, Settings2, Keyboard } from "lucide-react";
 import * as THREE from "three";
 import PlayerAvatar from "./PlayerAvatar";
 import Building from "./Building";
@@ -52,7 +52,8 @@ import { usePositionHeartbeat } from "@/lib/game/usePositionHeartbeat";
 import { useGhostPositions } from "@/lib/game/useGhostPositions";
 import { useLiteMode } from "@/lib/game/useLiteMode";
 import { useGraphicsSettings } from "@/lib/game/useGraphicsSettings";
-import GraphicsSettingsPanel, { GraphicsButton } from "./GraphicsSettings";
+import GraphicsSettingsPanel from "./GraphicsSettings";
+import ToolDock from "./ToolDock";
 import { useGhostReplaySetting } from "@/lib/game/useGhostReplaySetting";
 // P15: side-effect import kicks off useGLTF.preload for buildings + nature
 // at module parse time, so first-render Suspense doesn't flash fallback
@@ -2164,94 +2165,26 @@ export default function GameWorld() {
           F2 / ESC to restore UI
         </div>
       )}
-      {/* Sprint E2: corner button for mobile / no-keyboard users. Sits left of
-          the AudioController widget so they don't overlap. Hidden in screenshot mode. */}
+      {/* Item 12: the toolbelt dock — one bottom-center bar replaces the
+          four buttons that had accreted along the bottom-right (Emote /
+          Guestbook / Collection / Graphics), plus Map and Controls get
+          clickable homes for mouse-only players. Hidden in screenshot mode;
+          rides the same HUD auto-dim. */}
       {!screenshotMode && (
       <div
         style={{ opacity: hudDim ? 0.22 : 1, transition: "opacity 0.7s ease" }}
         onClickCapture={() => AudioManager.playSFX("click")}
       >
-      <button
-        onClick={() => setEmoteMenuOpen((o) => !o)}
-        aria-label="Open emote menu"
-        title="Emote (G)"
-        style={{
-          position: "absolute",
-          bottom: 16,
-          right: 120,
-          zIndex: 50,
-          display: "flex",
-          alignItems: "center",
-          gap: 6,
-          padding: "8px 10px",
-          background: "rgba(15, 15, 16, 0.78)",
-          border: "1px solid rgba(255, 255, 255, 0.15)",
-          borderRadius: 8,
-          color: "#f1ffff",
-          fontFamily: "'IBM Plex Mono', monospace",
-          fontSize: 11,
-          cursor: "pointer",
-          backdropFilter: "blur(6px)",
-        }}
-      >
-        <Smile size={14} />
-        Emote
-      </button>
-      {/* Sprint E6: guestbook trigger. Sits left of the emote button. */}
-      <button
-        onClick={() => setGuestbookOpen((o) => !o)}
-        aria-label="Open guestbook"
-        title="Guestbook"
-        style={{
-          position: "absolute",
-          bottom: 16,
-          right: 200,
-          zIndex: 50,
-          display: "flex",
-          alignItems: "center",
-          gap: 6,
-          padding: "8px 10px",
-          background: "rgba(15, 15, 16, 0.78)",
-          border: "1px solid rgba(255, 255, 255, 0.15)",
-          borderRadius: 8,
-          color: "#f1ffff",
-          fontFamily: "'IBM Plex Mono', monospace",
-          fontSize: 11,
-          cursor: "pointer",
-          backdropFilter: "blur(6px)",
-        }}
-      >
-        <BookOpen size={14} />
-        Guestbook
-      </button>
-      {/* G6: collection book trigger. */}
-      <button
-        onClick={() => setCollectionOpen((o) => !o)}
-        aria-label="Open collection"
-        title="Collection"
-        style={{
-          position: "absolute",
-          bottom: 16,
-          right: 430,
-          zIndex: 50,
-          display: "flex",
-          alignItems: "center",
-          gap: 6,
-          padding: "8px 10px",
-          background: "rgba(15, 15, 16, 0.78)",
-          border: "1px solid rgba(255, 255, 255, 0.15)",
-          borderRadius: 8,
-          color: "#f1ffff",
-          fontFamily: "'IBM Plex Mono', monospace",
-          fontSize: 11,
-          cursor: "pointer",
-          backdropFilter: "blur(6px)",
-        }}
-      >
-        <span style={{ fontSize: 13 }}>🧺</span>
-        Collection
-      </button>
-      <GraphicsButton onClick={() => setGraphicsOpen(true)} />
+        <ToolDock
+          items={[
+            { id: "emote", icon: <Smile size={17} />, label: "Emote", hotkey: "G", onClick: () => setEmoteMenuOpen((o) => !o) },
+            { id: "map", icon: <MapIcon size={17} />, label: "Map", hotkey: "M", onClick: () => setMapOpen((o) => !o) },
+            { id: "collection", icon: <span style={{ fontSize: 16 }}>🧺</span>, label: "Items", onClick: () => setCollectionOpen((o) => !o) },
+            { id: "guestbook", icon: <BookOpen size={17} />, label: "Wall", onClick: () => setGuestbookOpen((o) => !o) },
+            { id: "controls", icon: <Keyboard size={17} />, label: "Keys", hotkey: "F1", onClick: () => setControlsOpen((o) => !o) },
+            { id: "graphics", icon: <Settings2 size={17} />, label: "Video", onClick: () => setGraphicsOpen(true) },
+          ]}
+        />
       </div>
       )}
       <ToastHub />

@@ -48,7 +48,7 @@ export default function ToastHub() {
       aria-live="polite"
       style={{
         position: "absolute",
-        bottom: 74,
+        bottom: 96, // clears the ToolDock (item 12) pill below
         left: "50%",
         transform: "translateX(-50%)",
         zIndex: 65,
