@@ -3,15 +3,15 @@
 /**
  * Ocean + island skirt (cozy push V3) — the ACNH island edge.
  *
- * A 400x400 water plane surrounds the 82x82 terrain, replacing the hard
- * plane-edge-against-sky rim that the fog pullback exposed. Same shader
- * approach as River.tsx: MeshBasicMaterial + onBeforeCompile, two scrolling
- * sine waves for sparkle, plus a foam band that hugs the island's square
- * footprint (Chebyshev distance in world XZ) so waves lap at the shore.
- * Fog + the curved-world chunk apply automatically (built-in material).
+ * A 400x400 water plane surrounds the terrain. Same shader approach as
+ * River.tsx: MeshBasicMaterial + onBeforeCompile, two scrolling sine waves
+ * for sparkle, plus a foam band that laps the shore. Fog + the curved-world
+ * chunk apply automatically (built-in material).
  *
- * The skirt is four soil-colored boxes under the terrain perimeter so the
- * island reads as a chunky cliff over the water instead of a paper edge.
+ * Task 27 (2026-07-12): the island is ROUND now. Shore distance is radial
+ * (length(xz) - SHORE_RADIUS) instead of the old Chebyshev square, and the
+ * four square skirt boxes are gone — the terrain rim itself sinks into a
+ * sand ring under the waterline (see Terrain() in GameWorld.tsx).
  */
 
 import { useEffect, useMemo, useRef } from "react";
@@ -20,10 +20,8 @@ import * as THREE from "three";
 
 const OCEAN_SIZE = 400;
 const OCEAN_Y = -0.55;
-const ISLAND_HALF = 54; // terrain is 108x108 (2026-07-07 respace)
+const SHORE_RADIUS = 51.4; // where the sunken beach ring crosses OCEAN_Y
 const FOAM_BAND = 2.6; // how far the shore foam reaches out from the island
-const SOIL = "#7A5C43";
-const SOIL_DARK = "#5E4632";
 
 // V5: sea palette per time-of-day. [deep, shallow, foam]. Day = bright azure,
 // dusk = warm violet, night = deep navy, dawn = soft peach-blue.
@@ -76,8 +74,8 @@ varying vec2 vOceanXZ;`
         "#include <color_fragment>",
         `#include <color_fragment>
 {
-  // Chebyshev distance to the island footprint: 0 at the shore line.
-  float shore = max(abs(vOceanXZ.x), abs(vOceanXZ.y)) - ${ISLAND_HALF.toFixed(1)};
+  // Radial distance to the round shoreline: 0 at the waterline.
+  float shore = length(vOceanXZ) - ${SHORE_RADIUS.toFixed(1)};
 
   // Depth ramp: shallow near shore -> deep water outward.
   float depthT = smoothstep(0.0, 14.0, shore);
@@ -125,27 +123,6 @@ varying vec2 vOceanXZ;`
         {/* Enough segments for the curved-world bend to roll the sea too */}
         <planeGeometry args={[OCEAN_SIZE, OCEAN_SIZE, 48, 48]} />
       </mesh>
-
-      {/* Island skirt: soil cliff faces under the terrain perimeter. Slight
-          inward tilt-free boxes; tops tucked under the terrain edge. */}
-      {([
-        [0, -1.05, -ISLAND_HALF, 108.4, 0.35],
-        [0, -1.05, ISLAND_HALF, 108.4, 0.35],
-      ] as const).map(([x, y, z, w], i) => (
-        <mesh key={`ns-${i}`} position={[x, y, z]}>
-          <boxGeometry args={[w, 2.4, 0.7]} />
-          <meshStandardMaterial color={i % 2 ? SOIL : SOIL_DARK} roughness={1} />
-        </mesh>
-      ))}
-      {([
-        [-ISLAND_HALF, -1.05, 0],
-        [ISLAND_HALF, -1.05, 0],
-      ] as const).map(([x, y, z], i) => (
-        <mesh key={`ew-${i}`} position={[x, y, z]}>
-          <boxGeometry args={[0.7, 2.4, 108.4]} />
-          <meshStandardMaterial color={i % 2 ? SOIL : SOIL_DARK} roughness={1} />
-        </mesh>
-      ))}
     </group>
   );
 }

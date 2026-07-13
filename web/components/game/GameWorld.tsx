@@ -434,21 +434,38 @@ function Terrain() {
     const cS = new THREE.Color(P.grassShadow);
     const tmp = new THREE.Color();
 
+    // Task 27 (2026-07-12, David: "make game border with ocean… non buggy"):
+    // the island silhouette is now ROUND. Beyond SINK_START the square
+    // plane's rim dives below the ocean surface as a sand ring, so the
+    // visible edge is a radial beach instead of the old square apron +
+    // skirt boxes. Purely cosmetic — logical heights (walk/click) still
+    // come from terrain.ts, and the player clamp (BOUNDARY 50) keeps
+    // everyone on grass.
+    const SINK_START = 49.5;
+    const SINK_END = 56;
+    const SINK_DEPTH = 2.4;
+    const cSand = new THREE.Color("#E2CB93");
+    const cSoil = new THREE.Color("#7A5C43");
+
     for (let i = 0; i < pos.count; i++) {
       const x = pos.getX(i);
       const z = pos.getZ(i);
       const dist = Math.sqrt(x * x + z * z);
       const h = getTerrainHeight(x, z);
-      pos.setY(i, h);
+      let y = h;
+      if (dist > SINK_START) {
+        const t = Math.min((dist - SINK_START) / (SINK_END - SINK_START), 1);
+        const sm = t * t * (3 - 2 * t);
+        y = h - sm * SINK_DEPTH;
+      }
+      pos.setY(i, y);
 
       // Vertex color: blend greens by height + noise variation.
       // A1 retune: amplitude is now ~0.6, so divide by 0.6 not 3.
       const cn = valueNoise(x * 0.15, z * 0.15);
       const hf = THREE.MathUtils.clamp(h / 0.6, 0, 1);
 
-      if (dist > 50) {
-        tmp.copy(cS);
-      } else if (hf > 0.5) {
+      if (hf > 0.5) {
         tmp.lerpColors(c1, cH, (hf - 0.5) * 2);
       } else if (cn > 0.6) {
         tmp.copy(cH);
@@ -458,8 +475,15 @@ function Terrain() {
         tmp.copy(c1);
       }
 
-      if (dist > 46) {
-        tmp.lerp(cS, (dist - 46) / 6);
+      if (dist > 46 && dist <= 48.5) {
+        tmp.lerp(cS, (dist - 46) / 2.5 * 0.4);
+      } else if (dist > 48.5) {
+        // grass → sand across the waterline, sand → wet soil underwater
+        const sandT = Math.min((dist - 48.5) / 2.2, 1);
+        tmp.lerp(cSand, sandT * sandT * (3 - 2 * sandT));
+        if (dist > 52.5) {
+          tmp.lerp(cSoil, Math.min((dist - 52.5) / 3, 1));
+        }
       }
 
       colors[i * 3] = tmp.r;
@@ -536,8 +560,18 @@ function Terrain() {
           still flatten these zones to y≈0 — control points stay within the
           ±1.75 halfWidth corridor + 1.5 falloff, so we never leave the flat
           band. See Path.tsx for the spline + soft-edge implementation. */}
+      {/* Task 27: spine split at the river banks. One continuous spline
+          dipped through the carved valley and drew dirt under the bridge
+          (the "path floats over the river" bug). Two segments end where
+          riverInfluence starts (river z≈2.4 at x=0, ±3.5 bank reach); the
+          bridge deck owns the crossing. */}
       <Path
-        controlPoints={[[0, -24], [1.2, -12], [-0.5, 2], [0.5, 14], [0, 27]]}
+        controlPoints={[[0, -24], [1.2, -12], [0.3, -1.1]]}
+        width={2.8}
+        color={P.dirtPath}
+      />
+      <Path
+        controlPoints={[[0.2, 5.9], [0.5, 14], [0, 27]]}
         width={2.8}
         color={P.dirtPath}
       />
