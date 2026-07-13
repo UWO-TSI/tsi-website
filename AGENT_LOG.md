@@ -113,7 +113,9 @@ David's live-playtest rulings executed same-day (his session on 3000 holds the N
 
 **Dump discovery that reshapes future work: Terrain/ is the complete ACNH ground system** (road tiles ×8 materials, river/cliff/waterfall units, water models, env-maps, proc-grass) — plus Fences/, Furniture/ (2796!), Interiors/ (516), Tools/, Icons/ folders nobody had catalogued. David's standing order: the dump is the MAIN asset source now.
 
-**Next dials awaiting David's feel-check:** water cell size/brightness, road tile tint, env intensity per phase; then Furniture/ for the HQ interior + more road materials (stone/brick) for zone variety.
+**Continued same session (`3998513`, `99967ae`):** HQ interior furnished with 13 real Furniture/ pieces (bulletinboard, HHA trophy set on a chest, study desk+chair, real bookshelf, grandfather clock, plants, acorn rug, yellow message mat — stations keep their wiring). Furniture pipeline learnings: mixed up-axis per piece (explicit Z-up fix list), origins vary (now floor-normalized at extraction), most pieces untextured → spec-palette tints; trophies/rugs/mats textured. Plus 140 seeded ACNH proc-grass tufts as ground detail (roads/river/buildings/rim rejected).
+
+**Next dials awaiting David's feel-check:** water cell size/brightness, road tile tint, env intensity per phase, tuft density. Unexploited dump areas queued: Interiors/ (516 — wall/floor sets for rooms), Tools/ (net + rod props), distant-view backdrops, more road materials (stone/brick) for zone variety.
 
 
 ### 2026-07-12 — Sky system + loading gate + round ocean border (`1ed0d02`, `861f4d9`, `47edb40`)
