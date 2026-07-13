@@ -25,6 +25,8 @@ import ToastHub from "./ToastHub";
 import MiniMap from "./MiniMap";
 import { AudioManager } from "@/lib/game/audio";
 import { WarmupProbe, LoadGateOverlay } from "./LoadGate";
+import RainFX from "./RainFX";
+import { getTodayWeather, type Weather } from "@/lib/game/weather";
 import { CloudShadows, NightStars, WaterSparkles, LeafGusts, NightWindows, TargetGlow } from "./AmbienceFX";
 import AmbientLife from "./AmbientLife";
 import AudioController from "./AudioController";
@@ -185,7 +187,7 @@ function computeSunMoonDirs(hour: number): { sunDir: THREE.Vector3; moonDir: THR
   return { sunDir, moonDir };
 }
 
-function TimeOfDayCycle() {
+function TimeOfDayCycle({ weather }: { weather: Weather }) {
   const { scene } = useThree();
   const sunRef = useRef<THREE.DirectionalLight>(null);
   const ambRef = useRef<THREE.AmbientLight>(null);
@@ -206,18 +208,20 @@ function TimeOfDayCycle() {
       if (wrap) t.wrapS = THREE.RepeatWrapping;
       return t;
     };
+    // Rain days v1: same four phases, weather picks the texture set.
+    // File contract: /assets/sky/sky_{time}_{weather}.webp.
     return {
       phases: [
-        load("/assets/sky/sky_morning_sunny.webp"),
-        load("/assets/sky/sky_afternoon_sunny.webp"),
-        load("/assets/sky/sky_evening_sunny.webp"),
-        load("/assets/sky/sky_night_sunny.webp"),
+        load(`/assets/sky/sky_morning_${weather}.webp`),
+        load(`/assets/sky/sky_afternoon_${weather}.webp`),
+        load(`/assets/sky/sky_evening_${weather}.webp`),
+        load(`/assets/sky/sky_night_${weather}.webp`),
       ],
       clouds: load("/assets/sky/clouds.webp", true),
       sun: load("/assets/sky/sun.png"),
       moon: load("/assets/sky/moon.png"),
     };
-  }, []);
+  }, [weather]);
 
   const skyMat = useMemo(() => new THREE.ShaderMaterial({
     side: THREE.BackSide, depthWrite: false,
@@ -324,30 +328,35 @@ function TimeOfDayCycle() {
     // the uniforms object returned from useMemo).
     const sunVis = THREE.MathUtils.smoothstep(sunDir.y, -0.05, 0.15);
     const moonVis = THREE.MathUtils.smoothstep(moonDir.y, -0.05, 0.15);
+    // Rain days v1: overcast hides the celestial bodies and flattens light.
+    const wDim = weather === "rain" ? 0.5 : 1;
+    const wBody = weather === "rain" ? 0.08 : 1;
     // ACNH sun/moon sprites ride the arc on the pinned dome.
     if (sunSpriteRef.current) {
       sunSpriteRef.current.position.copy(sunDir).multiplyScalar(200);
-      (sunSpriteRef.current.material as THREE.SpriteMaterial).opacity = sunVis;
+      (sunSpriteRef.current.material as THREE.SpriteMaterial).opacity = sunVis * wBody;
     }
     if (moonSpriteRef.current) {
       moonSpriteRef.current.position.copy(moonDir).multiplyScalar(200);
-      (moonSpriteRef.current.material as THREE.SpriteMaterial).opacity = moonVis * 0.95;
+      (moonSpriteRef.current.material as THREE.SpriteMaterial).opacity = moonVis * 0.95 * wBody;
     }
     // Pin the whole sky to the camera: it rotates with the view but never
     // translates — the parallax contrast against the sliding world is what
     // sells infinite distance.
     if (skyGroupRef.current) skyGroupRef.current.position.copy(skyCam.position);
-    // Cloud shell drift + day/night dimming.
+    // Cloud shell drift + day/night dimming. Rain: denser, darker, faster.
     {
-      const sunI = a[4] + (b[4] - a[4]) * t;
+      const sunI = (a[4] + (b[4] - a[4]) * t) * wDim;
       const prev = cloudMat.uniforms.params.value as THREE.Vector4;
-      cloudMat.uniforms.params.value.set(prev.x + 0.000012, 0.85, 0.45 + sunI * 0.55, 0);
+      const drift = weather === "rain" ? 0.00003 : 0.000012;
+      const cOpacity = weather === "rain" ? 0.95 : 0.85;
+      cloudMat.uniforms.params.value.set(prev.x + drift, cOpacity, (0.45 + sunI * 0.55) * (weather === "rain" ? 0.75 : 1), 0);
     }
 
     // Sun
     if (sunRef.current) {
       sunRef.current.color.set(a[3]).lerp(_tc.set(b[3]), t);
-      sunRef.current.intensity = a[4] + (b[4] - a[4]) * t;
+      sunRef.current.intensity = (a[4] + (b[4] - a[4]) * t) * wDim;
       // Cozy push 2026-07-03: the LIGHT rides a classic high arc (15-60°)
       // even though the visible DISC stays low (W18-1 keeps it in the
       // camera-reachable band). Sharing the low arc made midday light skim
@@ -366,18 +375,22 @@ function TimeOfDayCycle() {
     // Ambient
     if (ambRef.current) {
       ambRef.current.color.set(a[5]).lerp(_tc.set(b[5]), t);
-      ambRef.current.intensity = a[6] + (b[6] - a[6]) * t;
+      ambRef.current.intensity = (a[6] + (b[6] - a[6]) * t) * (weather === "rain" ? 0.85 : 1);
     }
     // Hemisphere rides the sun curve (art pass 2026-07-07): it was a
     // static 0.8, which kept night grass daylight-lit under the brighter
     // NL grade. 0.3 floor at night → ~0.82 at noon.
     if (hemiRef.current) {
-      const sunI = a[4] + (b[4] - a[4]) * t;
+      const sunI = (a[4] + (b[4] - a[4]) * t) * wDim;
       hemiRef.current.intensity = 0.3 + sunI * 0.55;
     }
     // Fog still follows the TOD horizon palette (the placeholder skies are
-    // baked from the same table, so they stay in sync).
-    if (scene.fog) (scene.fog as THREE.Fog).color.set(a[2]).lerp(_tc.set(b[2]), t);
+    // baked from the same table, so they stay in sync). Rain pulls it
+    // toward the overcast gray so the haze matches the rain skies.
+    if (scene.fog) {
+      const f = (scene.fog as THREE.Fog).color.set(a[2]).lerp(_tc.set(b[2]), t);
+      if (weather === "rain") f.lerp(_tc.set("#AAB2BC"), 0.65);
+    }
   });
 
   return (
@@ -1372,6 +1385,7 @@ function CompassFeed({ azimuthRef }: { azimuthRef: React.MutableRefObject<number
 function Scene({
   playerName,
   introReady,
+  weather,
   playerLevel,
   fogColor,
   todPhase,
@@ -1386,6 +1400,7 @@ function Scene({
 }: {
   playerName: string;
   introReady: boolean;
+  weather: Weather;
   playerLevel: number;
   fogColor: string;
   todPhase: "day" | "night" | "dawn" | "dusk";
@@ -1674,7 +1689,8 @@ function Scene({
         makeDefault
       />
 
-      <TimeOfDayCycle />
+      <TimeOfDayCycle weather={weather} />
+      {weather === "rain" && !liteMode && <RainFX playerPosRef={playerPosRef} />}
       <DebugTracker
         snapshotRef={debugSnapshotRef}
         playerPosRef={playerPosRef}
@@ -1820,6 +1836,10 @@ export default function GameWorld() {
   // render (shader compile happens behind it), then fades. gateDone unmounts.
   const [worldReady, setWorldReady] = useState(false);
   const [gateDone, setGateDone] = useState(false);
+  // Rain days v1: seeded daily weather with URL overrides (?rain / ?sunny),
+  // resolved once via lazy initializer (GameWorld is ssr:false so window is
+  // available on first render).
+  const [weather] = useState<Weather>(getTodayWeather);
   const [activeEmote, setActiveEmote] = useState<EmoteType | null>(null);
   const emoteClearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const playerPosRef = useRef<THREE.Vector3>(new THREE.Vector3(...SPAWN_POSITION));
@@ -2070,6 +2090,7 @@ export default function GameWorld() {
           <Scene
             playerName={playerName}
             introReady={gateDone}
+            weather={weather}
             playerLevel={playerLevel}
             fogColor={fogColor}
             todPhase={todPhase}

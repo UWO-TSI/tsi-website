@@ -19,7 +19,7 @@
  *   When `ready` flips it fades out over 450ms, then onGone unmounts it.
  */
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import { useProgress } from "@react-three/drei";
 
@@ -30,25 +30,45 @@ export function WarmupProbe({ onReady }: { onReady: () => void }) {
   const framesRef = useRef(0);
   const firedRef = useRef(false);
   const startRef = useRef<number | null>(null);
-  const { active, progress } = useProgress();
 
   useFrame(() => {
     if (firedRef.current) return;
     if (startRef.current === null) startRef.current = performance.now();
     const timedOut = performance.now() - startRef.current > TIMEOUT_MS;
+    // Imperative store read: subscribing via the useProgress() hook made
+    // React update this component while a suspended GLB was mid-render
+    // (the loading manager fires inside that resolution) — the classic
+    // "cannot update while rendering" warning. getState() has no such tie.
+    const { active, progress } = useProgress.getState();
     const loaded = !active && progress >= 100;
     if (loaded || timedOut) framesRef.current += 1;
     else framesRef.current = 0; // a late loader kicked in — keep holding
     if (framesRef.current >= WARMUP_FRAMES) {
       firedRef.current = true;
-      onReady();
+      // Defer out of the R3F frame loop: firing setState synchronously here
+      // can land mid-render of a just-resolved suspended GLB component
+      // ("Cannot update a component while rendering a different component").
+      window.setTimeout(onReady, 0);
     }
   });
   return null;
 }
 
 export function LoadGateOverlay({ ready, onGone }: { ready: boolean; onGone: () => void }) {
-  const { progress } = useProgress();
+  // Poll the progress store (100ms) instead of subscribing — see the note
+  // in WarmupProbe. setState inside an interval callback is safe timing.
+  const [pct, setPct] = useState(0);
+  useEffect(() => {
+    const t = window.setInterval(() => {
+      const { progress } = useProgress.getState();
+      setPct((prev) => {
+        const next = Math.min(100, Math.round(progress));
+        return next > prev ? next : prev;
+      });
+    }, 100);
+    return () => window.clearInterval(t);
+  }, []);
+
   // `ready` itself drives the fade (no mirrored state): opacity transitions
   // to 0 the render it flips, and the timeout only handles the unmount.
   useEffect(() => {
@@ -56,8 +76,6 @@ export function LoadGateOverlay({ ready, onGone }: { ready: boolean; onGone: () 
     const t = window.setTimeout(onGone, 500);
     return () => window.clearTimeout(t);
   }, [ready, onGone]);
-
-  const pct = Math.min(100, Math.round(progress));
 
   return (
     <div
