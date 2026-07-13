@@ -63,6 +63,7 @@ import DistantIsles from "./DistantIsles";
 import RiverMouths from "./RiverMouths";
 import ShoreLife from "./ShoreLife";
 import SeasonalProps from "./SeasonalProps";
+import Landmarks from "./Landmarks";
 import { getActiveCritters } from "@/lib/game/critterStore";
 import { applyEnvironment, disposeEnvironment } from "@/lib/game/envLight";
 import { useGhostReplaySetting } from "@/lib/game/useGhostReplaySetting";
@@ -1743,6 +1744,7 @@ function Scene({
       <RiverMouths />
       <ShoreLife />
       <SeasonalProps />
+      <Landmarks />
       <River phase={todPhase} />
       <TreeShakeFX playerPosRef={playerPosRef} />
       <FlowerPickFX />
