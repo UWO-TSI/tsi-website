@@ -58,6 +58,7 @@ import Critters from "./Critters";
 import HQInterior, { type InteriorStation } from "./HQInterior";
 import RoadTiles from "./RoadTiles";
 import GrassTufts from "./GrassTufts";
+import ToolFlourish from "./ToolFlourish";
 import { getActiveCritters } from "@/lib/game/critterStore";
 import { applyEnvironment, disposeEnvironment } from "@/lib/game/envLight";
 import { useGhostReplaySetting } from "@/lib/game/useGhostReplaySetting";
@@ -1713,6 +1714,7 @@ function Scene({
       <TimeOfDayCycle weather={weather} todPhase={todPhase} />
       {weather === "rain" && !liteMode && <RainFX playerPosRef={playerPosRef} />}
       <Critters todPhase={todPhase} playerPosRef={playerPosRef} flowerAnchors={FLOWER_XZ} treeAnchors={TREE_XZ} />
+      <ToolFlourish playerPosRef={playerPosRef} />
       <DebugTracker
         snapshotRef={debugSnapshotRef}
         playerPosRef={playerPosRef}
