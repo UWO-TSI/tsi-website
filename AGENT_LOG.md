@@ -102,6 +102,18 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-12 — Sky system + loading gate + round ocean border (`1ed0d02`, `861f4d9`, `47edb40`)
+
+Next-phase kickoff per David's multi-choice rulings (all four gameplay pillars approved for coming sessions; ocean/path fixes + loading gate demanded now; sky with my placeholder art approved).
+
+- **Sky (`1ed0d02`):** camera-pinned two-shell dome replaces the gradient+disc shader. Outer shell (r240) binds all four painted equirect panoramas at once and crossfades via a vec4 weight uniform (1.5h windows: morning 5-10 / afternoon 10-17 / evening 17-20.5 / night). Inner shell (r226, custom shader = curved-world-exempt) drifts a transparent cloud band, dimmed at night. ACNH sun/moon sprites ride computeSunMoonDirs at 200u; arc lowered 3-8°→1.5-3.5° because view dir == dome dir now and the default pose tops out ~3° above the horizon. **Key finding for David's AI art:** pixel-sampled the live frame against the texture gradient — the camera only ever sees roughly −15°..+24° elevation, so ALL visual interest (color story, clouds, stars) must sit in the equirect band y≈376-620/1024 (v 0.4-0.63). First placeholder set had clouds at +9..+45° and read as empty sky. Swap path: `/assets/sky/sky_{morning|afternoon|evening|night}_sunny.webp`, 2048×1024.
+- **Loading gate (`861f4d9`):** WarmupProbe (in-Canvas) waits for drei useProgress 100% + 14 rendered frames (shader-compile jank happens behind the overlay), 15s trap-proof timeout; LoadGateOverlay fades 450ms. First-visit flythrough now waits for the gate (introReady prop) instead of burning behind it.
+- **Round border (`47edb40`):** terrain rim beyond r49.5 sinks 2.4u below the waterline as a radial sand ring (grass→sand→wet-soil vertex colors); Ocean shore went Chebyshev-square→radial (length(xz)−51.4); square skirt boxes deleted. N-S spine path split at the river banks so it no longer draws dirt through the carved valley under the bridge.
+
+All three commits: tsc clean, lint 74/59 ceiling, 32/32 tests, build exit 0, 56-60fps on 3050. QA Wave 26 logged in specs/qa.md. One false alarm burned ~20min: a wedged Playwright tab (3 crashed sibling tabs) measured 1.3fps and pointed at the new sky; fresh browser context showed 54fps — check the harness before the code.
+
+**Next up (approved order):** rain days (21) → toolbelt dock (12) → overlay sheets (14) → gameplay pillars (critters/collection → Oracle quiz in-world → daily village life → interiors-lite). Awaiting from David: AI sky art drops + playtest feedback on feel numbers.
+
 ### 2026-07-08 — Round-world curve (`564e83a`)
 
 David ask: more roll + slight side curve. Shader bend is now `z²·0.0032 + x²·0.0011` view-space (was z²·0.0026) — the horizon arcs down at the screen edges and the island reads as a little planet. groundPick compensates both terms (camera-right projection); far-lateral click verified landing exactly on the Bounty Board. Gates green.

@@ -1,7 +1,31 @@
 # QA Report
 
 > Owner: QA agent. All agents check this for bugs in their area.
-> Last updated: 2026-07-07 (Wave 25)
+> Last updated: 2026-07-12 (Wave 26)
+
+---
+
+## Wave 26 — 2026-07-12 Sky System + Loading Gate + Round Ocean Border
+
+Three commits (`1ed0d02`, `861f4d9`, `47edb40`) for the next-phase kickoff David approved.
+
+### Verdict: **PASS**
+
+- **Sky:** all four TOD phases screenshot-verified (morning haze / noon cloud bank / dusk glow / indigo night with stars). Crossfade weights probed live via the THREE_DEVTOOLS scene hook — textures loaded 2048×1024, weights track the clock, cloud drift + night dimming live. Sun/moon sprites confirmed positioned on the arc with correct fade (scene-graph probe; at most hours they hug the horizon by design).
+- **Visible-band finding:** pixel-sampled the rendered frame against the known texture gradient — the rig only ever shows ~−15°..+24° dome elevation. First placeholder set painted clouds at +9..+45° → invisible. Regenerated with everything in equirect y 376-620. **This constraint goes to David's AI art prompts.**
+- **Loading gate:** holds ~1.5s warm-cache with real progress %, fades 450ms, flythrough starts only after lift (screenshot mid-sweep confirms sequencing). 15s timeout so a stuck loader can't trap entry.
+- **Round border:** flythrough + shore close-up screenshots show a circular island in open ocean — sand ring dips under the waterline, radial foam, no square apron/skirt. Bridge crossing clean: spine path ends at the banks, no dirt drawn through the river valley.
+- **FPS: 56-60** with the full two-shell sky (baseline 54-60). Gates green all three commits: tsc 0, lint 74/59 ceiling, 32/32 tests, build exit 0.
+
+### Incident log
+
+- **1.3fps false alarm:** first FPS probe ran in a wedged Playwright browser (3 crashed sibling tabs); sky-hidden bisect showed no change, renderer probe showed real GPU — fresh context measured 54fps. Lesson: verify the measurement harness before bisecting the code.
+
+### Open follow-ups
+
+- River mouths at the rim: the river plane (y −0.04) ends ~0.5u above the ocean where the beach sinks — reads as a small lip behind the fog band. Revisit if David's playtest notices.
+- Night cloud brightness (0.45 tint) may read slightly strong; placeholder-only concern.
+- MiniMap still draws the spine as one unbroken line across the river (cosmetic).
 
 ---
 
