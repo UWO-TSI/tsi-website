@@ -102,7 +102,7 @@ const BUILDINGS = [
   // E-prompts float at the right height. Position = door plane (model origin).
   { id: "hq", name: "HQ", position: [0, 0, -4] as [number, number, number], size: [6.1, 4.8, 3] as [number, number, number], color: "#FFF5E1", roofColor: "#E87B5A", href: undefined },
   { id: "shop", name: "Shop", position: [-24, 0, 12] as [number, number, number], size: [6.6, 3.5, 3.6] as [number, number, number], color: "#D4EAD4", roofColor: "#5BA086", href: "/student/dashboard/shop" },
-  { id: "oracle", name: "Oracle Temple", position: [0, 3, 30] as [number, number, number], size: [6.8, 3.9, 3.4] as [number, number, number], color: "#E8DCF0", roofColor: "#7B5EA7", href: undefined },
+  { id: "oracle", name: "Oracle Temple", position: [0, 3, 30] as [number, number, number], size: [6.8, 3.9, 3.4] as [number, number, number], color: "#E8DCF0", roofColor: "#7B5EA7", href: "/student/dashboard/oracle" },
   { id: "house", name: "House", position: [24, 0, 14] as [number, number, number], size: [5, 4.1, 3.1] as [number, number, number], color: "#C8E6C9", roofColor: "#7EB8C9", href: undefined },
   { id: "bounty", name: "Bounty Board", position: [14, 0, 9] as [number, number, number], size: [1.5, 1.8, 0.3] as [number, number, number], color: P.dirtPath, href: "/student/dashboard/bounty" },
   { id: "jobs", name: "Job Board", position: [-15, 0, -13] as [number, number, number], size: [1.5, 1.8, 0.3] as [number, number, number], color: P.dirtPath, href: "/student/dashboard/jobs" },
@@ -1854,7 +1854,7 @@ export default function GameWorld() {
   // the QA hook in the ?nointro / ?rain family.
   const [sheet, setSheet] = useState<SheetKey | null>(() => {
     if (typeof window === "undefined") return null;
-    const m = window.location.search.match(/sheet=(shop|bounty|jobs|leaderboard)/);
+    const m = window.location.search.match(/sheet=(shop|bounty|jobs|leaderboard|oracle)/);
     return m ? (m[1] as SheetKey) : null;
   });
   const sheetRef = useRef<SheetKey | null>(null);
