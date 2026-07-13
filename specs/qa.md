@@ -1,7 +1,7 @@
 # QA Report
 
 > Owner: QA agent. All agents check this for bugs in their area.
-> Last updated: 2026-07-12 (Wave 26d)
+> Last updated: 2026-07-12 (Wave 26e)
 
 ---
 
@@ -37,6 +37,11 @@ Three commits (`1ed0d02`, `861f4d9`, `47edb40`) for the next-phase kickoff David
 
 - Day spawns screenshot-verified (after a 10x scale fix — ACNH creature GLBs are ~10 units/metre like the buildings; always divide by 10). Catch beat E2E via the event channel: toast + collection POST + arc anim + respawn cycle. 60fps with 6 live critters.
 - Night set (firefly drift + emperor butterfly) not yet eyeballed — verify on the next night pass.
+
+### Wave 26e addendum — Oracle-in-world + village life (`65190d2`, `62f5d2f`)
+
+- Oracle sheet opens via ?sheet=oracle (dialog verified); temple's first E-interact.
+- Night villagers verified at 22:00: clustered in lamp pools (HQ doorstep, awning, braziers, bench) vs the old dark-plaza spots. Eased stroll on phase flip untested live (needs a dusk-boundary session) — logged as soft follow-up.
 
 ### Open follow-ups
 

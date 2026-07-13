@@ -122,7 +122,9 @@ All three commits: tsc clean, lint 74/59 ceiling, 32/32 tests, build exit 0, 56-
 
 **Oracle quiz in-world shipped same session (`65190d2`):** the temple gained its first interaction — E at the doors slides the existing MBTI quiz page up as a sheet over the running world (?sheet=oracle hook). Night critters cleared QA in the same pass.
 
-**Next up (approved order):** gameplay pillars continued (daily village life → interiors-lite). Awaiting from David: AI sky art drops (sunny + rain sets; the sky_{time}_{weather} contract is live) + playtest feedback on feel numbers + a look at the critter/dock/sheet/rain batch.
+**Daily village life v1 shipped same session (`62f5d2f`):** night/dawn spawn-anchor table moves villagers into the lamp pools (HQ doorstep, shop awning, temple braziers, fountain bench); NPC anchors ease (damp 0.55) so phase flips read as strolls. 22:00 screenshot verified vs pre-change night shots.
+
+**Next up (approved order):** interiors-lite (last approved pillar) → then David's playtest round on the whole 2026-07-12 batch. Awaiting from David: AI sky art drops (sunny + rain sets; the sky_{time}_{weather} contract is live) + playtest feedback on feel numbers + a look at the critter/dock/sheet/rain batch.
 
 ### 2026-07-08 — Round-world curve (`564e83a`)
 
