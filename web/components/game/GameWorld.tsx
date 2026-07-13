@@ -54,6 +54,7 @@ import { useLiteMode } from "@/lib/game/useLiteMode";
 import { useGraphicsSettings } from "@/lib/game/useGraphicsSettings";
 import GraphicsSettingsPanel from "./GraphicsSettings";
 import ToolDock from "./ToolDock";
+import OverlaySheet, { sheetKeyForHref, type SheetKey } from "./OverlaySheet";
 import { useGhostReplaySetting } from "@/lib/game/useGhostReplaySetting";
 // P15: side-effect import kicks off useGLTF.preload for buildings + nature
 // at module parse time, so first-render Suspense doesn't flash fallback
@@ -1837,6 +1838,16 @@ export default function GameWorld() {
   // render (shader compile happens behind it), then fades. gateDone unmounts.
   const [worldReady, setWorldReady] = useState(false);
   const [gateDone, setGateDone] = useState(false);
+  // Item 14: feature pages as sheets over the living world (Canvas never
+  // unmounts). null = no sheet open. ?sheet=jobs etc. opens one on load —
+  // the QA hook in the ?nointro / ?rain family.
+  const [sheet, setSheet] = useState<SheetKey | null>(() => {
+    if (typeof window === "undefined") return null;
+    const m = window.location.search.match(/sheet=(shop|bounty|jobs|leaderboard)/);
+    return m ? (m[1] as SheetKey) : null;
+  });
+  const sheetRef = useRef<SheetKey | null>(null);
+  useEffect(() => { sheetRef.current = sheet; }, [sheet]);
   // Rain days v1: seeded daily weather with URL overrides (?rain / ?sunny),
   // resolved once via lazy initializer (GameWorld is ssr:false so window is
   // available on first render).
@@ -1871,6 +1882,9 @@ export default function GameWorld() {
       const el = document.activeElement as HTMLElement | null;
       const tag = el?.tagName;
       if (tag === "INPUT" || tag === "TEXTAREA" || el?.isContentEditable) return;
+      // Item 14: while a sheet is up, game hotkeys stand down (the sheet's
+      // own capture-phase listener handles Escape).
+      if (sheetRef.current) return;
 
       if (e.key === "e" || e.key === "E") {
         // F1.2: universal interact key. Triggers the current nearest interactable.
@@ -1915,9 +1929,15 @@ export default function GameWorld() {
             })
           );
         } else if (n.kind === "building" && n.href) {
-          // Boards (thin z) jump straight; buildings get the fade
-          // transition — same split Building.tsx's removed listener had,
-          // but soft-navigated (router) instead of a hard location set.
+          // Item 14: mapped targets open as sheets over the world — the
+          // Canvas keeps running and close is instant. Unmapped hrefs keep
+          // the old route navigation (boards straight, buildings faded).
+          const key = sheetKeyForHref(n.href);
+          if (key) {
+            AudioManager.playSFX("confirm");
+            setSheet(key);
+            return;
+          }
           if (isTransitioning) return;
           const cfg = BUILDINGS.find((b) => b.id === n.id);
           const href = n.href;
@@ -2136,6 +2156,7 @@ export default function GameWorld() {
         <ControlsOverlay visible={controlsOpen} onClose={() => setControlsOpen(false)} />
         <WelcomeOverlay />
         <GraphicsSettingsPanel open={graphicsOpen} onClose={() => setGraphicsOpen(false)} />
+        <OverlaySheet sheet={sheet} onClose={() => setSheet(null)} />
         <Crosshair active={nearest !== null} hint={nearest?.name ?? null} />
         <Compass azimuthRef={azimuthRef} />
         <TodBadge phase={todPhase} />
