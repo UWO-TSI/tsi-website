@@ -61,6 +61,7 @@ import GrassTufts from "./GrassTufts";
 import ToolFlourish from "./ToolFlourish";
 import DistantIsles from "./DistantIsles";
 import RiverMouths from "./RiverMouths";
+import ShoreLife from "./ShoreLife";
 import { getActiveCritters } from "@/lib/game/critterStore";
 import { applyEnvironment, disposeEnvironment } from "@/lib/game/envLight";
 import { useGhostReplaySetting } from "@/lib/game/useGhostReplaySetting";
@@ -1739,6 +1740,7 @@ function Scene({
       <Ocean phase={todPhase} />
       <DistantIsles />
       <RiverMouths />
+      <ShoreLife />
       <River phase={todPhase} />
       <TreeShakeFX playerPosRef={playerPosRef} />
       <FlowerPickFX />
