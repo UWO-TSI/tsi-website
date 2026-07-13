@@ -102,6 +102,20 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-13 — Playtest polish round: P1 bugs, ACNH water, road tiles, lighting v1 (`2ee18b3`, `6d3e8b8`, `5e8d781`, `0f94bf1`)
+
+David's live-playtest rulings executed same-day (his session on 3000 holds the Next dev lock, so QA ran through a standalone three.js harness + his HMR session instead of the usual 3050 env-dance):
+
+- **P1 bugs:** player sprite now writes depth (path ribbons composited over the body — mesh-center transparency sorting), paths renderOrder -2, building labels range 9→6 + anchored at roofline.
+- **Water:** Terrain/water-model's caustic mask (the real ACNH texture) extracted; ocean runs two drifting copies min()-thresholded into soft light cells, river drifts them downstream. Watch-out: the mask's data range is 0..0.69 — the alpha-composited preview reads inverted; histogram before thresholding.
+- **Road tiles:** unit-road-soil auto-tiling set extracted (20 variants); RoadTiles.tsx rasterizes the corridors to a 0.89u half-cell-offset grid, marching-squares picks interior/edge/corner variants (1-a soft side +Z at rot 0; 2-b is the corner — rotation conventions locked via harness contact sheets). 4 InstancedMeshes replace the painted Path ribbons. Watch-outs: tiles are geometry-only (engine applies field textures at runtime — we tint with material color), already Y-up but nodes carry a legacy bind rotation that must be zeroed, and each tile is 2 primitives (surface + skirt — merge both or you render only the skirt).
+- **Lighting v1 (the polish centerpiece):** ACNH's cozy comes from IBL, not shadows — envLight.ts bakes a TOD-palette equirect through PMREMGenerator into scene.environment, per-phase intensity, regen only on phase flips. All standard materials now catch sky ambience + sun glints at zero per-frame cost.
+
+**Dump discovery that reshapes future work: Terrain/ is the complete ACNH ground system** (road tiles ×8 materials, river/cliff/waterfall units, water models, env-maps, proc-grass) — plus Fences/, Furniture/ (2796!), Interiors/ (516), Tools/, Icons/ folders nobody had catalogued. David's standing order: the dump is the MAIN asset source now.
+
+**Next dials awaiting David's feel-check:** water cell size/brightness, road tile tint, env intensity per phase; then Furniture/ for the HQ interior + more road materials (stone/brick) for zone variety.
+
+
 ### 2026-07-12 — Sky system + loading gate + round ocean border (`1ed0d02`, `861f4d9`, `47edb40`)
 
 Next-phase kickoff per David's multi-choice rulings (all four gameplay pillars approved for coming sessions; ocean/path fixes + loading gate demanded now; sky with my placeholder art approved).
