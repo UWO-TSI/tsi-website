@@ -8,7 +8,6 @@ import { Smile, BookOpen, Map as MapIcon, Settings2, Keyboard } from "lucide-rea
 import * as THREE from "three";
 import PlayerAvatar from "./PlayerAvatar";
 import Building from "./Building";
-import Path from "./Path";
 import River, { sampleRiverPoint, findRiverTForX } from "./River";
 import Ocean from "./Ocean";
 import TreeShakeFX from "./TreeShakeFX";
@@ -57,6 +56,7 @@ import ToolDock from "./ToolDock";
 import OverlaySheet, { sheetKeyForHref, type SheetKey } from "./OverlaySheet";
 import Critters from "./Critters";
 import HQInterior, { type InteriorStation } from "./HQInterior";
+import RoadTiles from "./RoadTiles";
 import { getActiveCritters } from "@/lib/game/critterStore";
 import { useGhostReplaySetting } from "@/lib/game/useGhostReplaySetting";
 // P15: side-effect import kicks off useGLTF.preload for buildings + nature
@@ -578,31 +578,12 @@ function Terrain() {
           still flatten these zones to y≈0 — control points stay within the
           ±1.75 halfWidth corridor + 1.5 falloff, so we never leave the flat
           band. See Path.tsx for the spline + soft-edge implementation. */}
-      {/* Task 27: spine split at the river banks. One continuous spline
-          dipped through the carved valley and drew dirt under the bridge
-          (the "path floats over the river" bug). Two segments end where
-          riverInfluence starts (river z≈2.4 at x=0, ±3.5 bank reach); the
-          bridge deck owns the crossing. */}
-      <Path
-        controlPoints={[[0, -24], [1.2, -12], [0.3, -1.1]]}
-        width={2.8}
-        color={P.dirtPath}
-      />
-      <Path
-        controlPoints={[[0.2, 5.9], [0.5, 14], [0, 27]]}
-        width={2.8}
-        color={P.dirtPath}
-      />
-      <Path
-        controlPoints={[[-26, 10.5], [-10, 9.5], [10, 10.5], [26, 10]]}
-        width={2.8}
-        color={P.dirtPath}
-      />
-      <Path
-        controlPoints={[[-17, -13], [-5, -13.5], [5, -12.5], [17, -13]]}
-        width={2.8}
-        color={P.dirtPath}
-      />
+      {/* P2 polish 2026-07-13: the painted ribbon paths are gone — real
+          ACNH road tiles auto-tiled over the corridors (RoadTiles.tsx).
+          Suspense: tile GLBs stream in behind the load gate. */}
+      <Suspense fallback={null}>
+        <RoadTiles />
+      </Suspense>
     </group>
   );
 }
