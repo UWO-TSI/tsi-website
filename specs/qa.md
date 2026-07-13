@@ -1,7 +1,7 @@
 # QA Report
 
 > Owner: QA agent. All agents check this for bugs in their area.
-> Last updated: 2026-07-12 (Wave 26c)
+> Last updated: 2026-07-12 (Wave 26d)
 
 ---
 
@@ -32,6 +32,11 @@ Three commits (`1ed0d02`, `861f4d9`, `47edb40`) for the next-phase kickoff David
 - Dock: renders bottom-center, Map/Emote slots click-verified, emote palette stacks directly above the pill, hotkey chips G/M/F1 visible, HUD-dim + screenshot-mode respected.
 - Sheets: ?sheet=jobs URL hook + full E2E (feedback-loop walked the player to the Job Board via the F3 debug coords, E opened the sheet, world rendered at 61fps behind it, ESC closed). Game hotkeys correctly suppressed while a sheet is up.
 - Navigator lesson for future QA: with the camera facing +Z, screen-right = −X and southward (−Z) movement needs clicks in the bottom ~10% of the frame — mid-frame clicks land ahead of the player.
+
+### Wave 26d addendum — Critters pillar v1 (`6c26e33`)
+
+- Day spawns screenshot-verified (after a 10x scale fix — ACNH creature GLBs are ~10 units/metre like the buildings; always divide by 10). Catch beat E2E via the event channel: toast + collection POST + arc anim + respawn cycle. 60fps with 6 live critters.
+- Night set (firefly drift + emperor butterfly) not yet eyeballed — verify on the next night pass.
 
 ### Open follow-ups
 
