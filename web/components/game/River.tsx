@@ -27,6 +27,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
+import { getCausticTexture } from "@/lib/game/causticTexture";
 
 /** Control points for the river spline. East-west run with gentle bends. */
 export const RIVER_CONTROL_POINTS: [number, number][] = [
@@ -275,6 +276,7 @@ export default function River({
       shader.uniforms.deep = uniforms.deep;
       shader.uniforms.shallow = uniforms.shallow;
       shader.uniforms.surfaceAlpha = uniforms.surfaceAlpha;
+      shader.uniforms.uCaustic = { value: getCausticTexture() };
 
       shader.vertexShader = shader.vertexShader
         .replace(
@@ -287,6 +289,7 @@ export default function River({
           "void main() {",
           [
             "uniform float time;",
+            "uniform sampler2D uCaustic;",
             "uniform vec3 deep;",
             "uniform vec3 shallow;",
             "uniform float surfaceAlpha;",
@@ -298,6 +301,11 @@ export default function River({
           "#include <color_fragment>",
           [
             "#include <color_fragment>",
+            // P2 polish 2026-07-13: ACNH caustic cells drifting downstream,
+            // layered under the existing waves + chevron.
+            "float caust = texture2D(uCaustic, vec2(vRiverUv.x * 1.4, vRiverUv.y * 10.0 - time * 0.055)).r;",
+            "float caust2 = texture2D(uCaustic, vec2(vRiverUv.x * 2.2 + 0.37, vRiverUv.y * 16.0 - time * 0.085)).r;",
+            "float cells = smoothstep(0.26, 0.58, min(caust, caust2)) * 0.5;",
             // Tile density: 8 across width, ~28 along length. v already scales
             // with arc length so flow density is consistent through bends.
             "vec2 flowUv = vRiverUv * vec2(8.0, 28.0);",
@@ -318,6 +326,7 @@ export default function River({
             "float chevron = smoothstep(0.38, 0.32, chevSaw) * (1.0 - chevX) * 0.55;",
             // Color mix: deep base + wave-modulated shallow tone + crest highlight + arrow.
             "vec3 water = mix(deep, shallow, wave1 * 0.35);",
+            "water = mix(water, vec3(0.92, 0.98, 1.0), cells);",
             "water += highlight * 0.35;",
             "water = mix(water, shallow, chevron);",
             "diffuseColor.rgb = water;",

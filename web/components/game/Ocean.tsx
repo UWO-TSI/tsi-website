@@ -17,6 +17,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
+import { getCausticTexture } from "@/lib/game/causticTexture";
 
 const OCEAN_SIZE = 400;
 const OCEAN_Y = -0.55;
@@ -51,6 +52,7 @@ export default function Ocean({ phase }: { phase: Phase }) {
       shader.uniforms.uDeep = { value: deepRef.current };
       shader.uniforms.uShallow = { value: shallowRef.current };
       shader.uniforms.uFoam = { value: foamRef.current };
+      shader.uniforms.uCaustic = { value: getCausticTexture() };
 
       shader.vertexShader = shader.vertexShader.replace(
         "#include <common>",
@@ -66,6 +68,7 @@ vOceanXZ = (modelMatrix * vec4(position, 1.0)).xz;`
         "#include <common>",
         `#include <common>
 uniform float uTime;
+uniform sampler2D uCaustic;
 uniform vec3 uDeep;
 uniform vec3 uShallow;
 uniform vec3 uFoam;
@@ -86,6 +89,14 @@ varying vec2 vOceanXZ;`
   float w2 = sin((vOceanXZ.x + vOceanXZ.y) * 0.32 + uTime * 0.5);
   float sparkle = pow(max(w1 * w2, 0.0), 3.0) * 0.35;
 
+  // ACNH caustic patches (P2 polish 2026-07-13): the real water-model mask
+  // from the dump, two drifting copies, min() -> soft light cells that
+  // fade toward the horizon. Harness-tuned to the mask's 0..0.69 range.
+  float c1 = texture2D(uCaustic, vOceanXZ * 0.055 + uTime * vec2(0.012, 0.008)).r;
+  float c2 = texture2D(uCaustic, vOceanXZ * 0.089 - uTime * vec2(0.009, 0.013)).r;
+  float web = smoothstep(0.24, 0.60, min(c1, c2)) * 0.8;
+  web *= mix(1.0, 0.2, depthT);
+
   // Shore foam: a lapping band just outside the island, edge animated by a
   // travelling sine so the line breathes like ACNH's beach waves.
   float lap = sin(vOceanXZ.x * 0.9 + vOceanXZ.y * 0.7 + uTime * 1.4) * 0.5;
@@ -93,7 +104,8 @@ varying vec2 vOceanXZ;`
   float foam = 1.0 - smoothstep(0.35, foamEdge, shore);
   foam *= step(0.0, shore); // nothing under the island itself
 
-  diffuseColor.rgb = mix(water + sparkle, uFoam, clamp(foam, 0.0, 1.0));
+  vec3 col = mix(water + sparkle, uFoam, clamp(web, 0.0, 1.0));
+  diffuseColor.rgb = mix(col, uFoam, clamp(foam, 0.0, 1.0));
 }`
       );
     };
