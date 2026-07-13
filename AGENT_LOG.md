@@ -114,7 +114,9 @@ All three commits: tsc clean, lint 74/59 ceiling, 32/32 tests, build exit 0, 56-
 
 **Rain days v1 shipped same session (`88306b6`):** deterministic daily weather (weather.ts, ~22% rain days, ?rain/?sunny overrides), four placeholder rain panoramas on the sky_{time}_{weather} contract, 240-streak instanced RainFX following the player, rain light grade (sun ×0.5, hidden celestial sprites, denser darker clouds, overcast fog). Plus a QA catch in the fresh LoadGate: drei useProgress subscription fired setState mid-render of a resolving GLB — both halves now read the store imperatively. 58-60fps in the rain.
 
-**Next up (approved order):** toolbelt dock (12) → overlay sheets (14) → gameplay pillars (critters/collection → Oracle quiz in-world → daily village life → interiors-lite). Awaiting from David: AI sky art drops (sunny + rain + cloudy/snow sets welcome now that weather picks the set) + playtest feedback on feel numbers.
+**Toolbelt dock shipped same session (`e70eeb4`):** ToolDock.tsx bottom-center glass pill replaces the four accreted bottom-right buttons; six data-driven slots (Emote/Map/Items/Wall/Keys/Video) with hotkey chips, hover lift, HUD-dim + screenshot-mode + click-SFX integration; ToastHub raised to clear it. Map & Controls are mouse-clickable for the first time.
+
+**Next up (approved order):** overlay sheets (14) → gameplay pillars (critters/collection → Oracle quiz in-world → daily village life → interiors-lite). Awaiting from David: AI sky art drops (sunny + rain + cloudy/snow sets welcome now that weather picks the set) + playtest feedback on feel numbers.
 
 ### 2026-07-08 — Round-world curve (`564e83a`)
 
