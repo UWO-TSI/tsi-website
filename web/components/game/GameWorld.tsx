@@ -55,6 +55,8 @@ import { useGraphicsSettings } from "@/lib/game/useGraphicsSettings";
 import GraphicsSettingsPanel from "./GraphicsSettings";
 import ToolDock from "./ToolDock";
 import OverlaySheet, { sheetKeyForHref, type SheetKey } from "./OverlaySheet";
+import Critters from "./Critters";
+import { getActiveCritters } from "@/lib/game/critterStore";
 import { useGhostReplaySetting } from "@/lib/game/useGhostReplaySetting";
 // P15: side-effect import kicks off useGLTF.preload for buildings + nature
 // at module parse time, so first-render Suspense doesn't flash fallback
@@ -1409,7 +1411,7 @@ function Scene({
   onNPCClick: (npc: NPCPersona) => void;
   activeEmote: EmoteType | null;
   playerPosRef: React.MutableRefObject<THREE.Vector3>;
-  onNearestInteractable: (n: { kind: "npc" | "building" | "tree" | "bench" | "flower" | "fishing"; id: string; name: string; href?: string; npc?: NPCPersona; treePos?: [number, number]; seat?: [number, number]; flowerIdx?: number; flowerPos?: [number, number]; spot?: [number, number] } | null) => void;
+  onNearestInteractable: (n: { kind: "npc" | "building" | "tree" | "bench" | "flower" | "fishing" | "critter"; id: string; name: string; href?: string; npc?: NPCPersona; treePos?: [number, number]; seat?: [number, number]; flowerIdx?: number; flowerPos?: [number, number]; spot?: [number, number]; critterSlot?: number } | null) => void;
   debugSnapshotRef: React.MutableRefObject<DebugSnapshot | null>;
   ambientDensity: number;
   blobShadows: boolean;
@@ -1517,7 +1519,7 @@ function Scene({
     // O(npc + building) sweep every move tick. INTERACT_RADIUS = 3.5 units.
     const INTERACT_RADIUS = 3.5;
     let bestDist = INTERACT_RADIUS;
-    let best: { kind: "npc" | "building" | "tree" | "bench" | "flower" | "fishing"; id: string; name: string; href?: string; npc?: NPCPersona; treePos?: [number, number]; seat?: [number, number]; flowerIdx?: number; flowerPos?: [number, number]; spot?: [number, number] } | null = null;
+    let best: { kind: "npc" | "building" | "tree" | "bench" | "flower" | "fishing" | "critter"; id: string; name: string; href?: string; npc?: NPCPersona; treePos?: [number, number]; seat?: [number, number]; flowerIdx?: number; flowerPos?: [number, number]; spot?: [number, number]; critterSlot?: number } | null = null;
     for (const { persona, position: p } of placedPersonas) {
       const dx = p[0] - position.x;
       const dz = p[2] - position.z;
@@ -1559,6 +1561,14 @@ function Scene({
       if (d < Math.min(bestDist, 2.0)) {
         bestDist = d;
         best = { kind: "flower", id: `flower-${i}`, name: "Pick flower", flowerIdx: i, flowerPos: [fx2, fz2] };
+      }
+    }
+    // Critters pillar v1: live insects from the critter store (radius 2.2).
+    for (const c of getActiveCritters()) {
+      const d = Math.hypot(c.x - position.x, c.z - position.z);
+      if (d < Math.min(bestDist, 2.2)) {
+        bestDist = d;
+        best = { kind: "critter", id: `critter-${c.slot}`, name: "Catch it!", critterSlot: c.slot };
       }
     }
     // G3: benches — sit target. Coords mirror Props()' bench array.
@@ -1693,6 +1703,7 @@ function Scene({
 
       <TimeOfDayCycle weather={weather} />
       {weather === "rain" && !liteMode && <RainFX playerPosRef={playerPosRef} />}
+      <Critters todPhase={todPhase} playerPosRef={playerPosRef} flowerAnchors={FLOWER_XZ} treeAnchors={TREE_XZ} />
       <DebugTracker
         snapshotRef={debugSnapshotRef}
         playerPosRef={playerPosRef}
@@ -1868,7 +1879,7 @@ export default function GameWorld() {
   // F1.2: nearest interactable for crosshair + E-interact. Updated by Scene
   // on each player move via onNearestInteractable. Kept here so Crosshair
   // (DOM, outside Canvas) can read it.
-  const [nearest, setNearest] = useState<{ kind: "npc" | "building" | "tree" | "bench" | "flower" | "fishing"; id: string; name: string; href?: string; npc?: NPCPersona; treePos?: [number, number]; seat?: [number, number]; flowerIdx?: number; flowerPos?: [number, number]; spot?: [number, number] } | null>(null);
+  const [nearest, setNearest] = useState<{ kind: "npc" | "building" | "tree" | "bench" | "flower" | "fishing" | "critter"; id: string; name: string; href?: string; npc?: NPCPersona; treePos?: [number, number]; seat?: [number, number]; flowerIdx?: number; flowerPos?: [number, number]; spot?: [number, number]; critterSlot?: number } | null>(null);
   const nearestRef = useRef<typeof nearest>(null);
   useEffect(() => { nearestRef.current = nearest; }, [nearest]);
 
@@ -1927,6 +1938,12 @@ export default function GameWorld() {
                 species: Number(n.id.split("-")[1] ?? 0) % TREE_MODELS.length,
               },
             })
+          );
+        } else if (n.kind === "critter" && n.critterSlot !== undefined) {
+          // Critters pillar: the catch beat — Critters.tsx owns the arc
+          // anim + toast + collection POST.
+          window.dispatchEvent(
+            new CustomEvent("tsi:critter-catch", { detail: { slot: n.critterSlot } })
           );
         } else if (n.kind === "building" && n.href) {
           // Item 14: mapped targets open as sheets over the world — the
