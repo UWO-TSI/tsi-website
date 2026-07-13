@@ -24,6 +24,7 @@ import BlobShadows from "./BlobShadows";
 import ToastHub from "./ToastHub";
 import MiniMap from "./MiniMap";
 import { AudioManager } from "@/lib/game/audio";
+import { WarmupProbe, LoadGateOverlay } from "./LoadGate";
 import { CloudShadows, NightStars, WaterSparkles, LeafGusts, NightWindows, TargetGlow } from "./AmbienceFX";
 import AmbientLife from "./AmbientLife";
 import AudioController from "./AudioController";
@@ -1336,6 +1337,7 @@ function CompassFeed({ azimuthRef }: { azimuthRef: React.MutableRefObject<number
 
 function Scene({
   playerName,
+  introReady,
   playerLevel,
   fogColor,
   todPhase,
@@ -1349,6 +1351,7 @@ function Scene({
   azimuthRef,
 }: {
   playerName: string;
+  introReady: boolean;
   playerLevel: number;
   fogColor: string;
   todPhase: "day" | "night" | "dawn" | "dusk";
@@ -1369,6 +1372,9 @@ function Scene({
   useEffect(() => {
     const cc = cameraRef.current;
     if (!cc || typeof window === "undefined") return;
+    // Task 26: don't burn the flythrough behind the loading gate — this
+    // effect re-runs when the gate finishes and only then starts the sweep.
+    if (!introReady) return;
     if (window.location.search.includes("nointro")) return;
     try {
       if (localStorage.getItem("tsi.intro.v1")) return;
@@ -1400,7 +1406,7 @@ function Scene({
       window.clearTimeout(t);
       finish();
     };
-  }, []);
+  }, [introReady]);
   // G2: world-space anchor for the E-target ground glow.
   const glowTargetRef = useRef<[number, number, number] | null>(null);
   const [playerPos, setPlayerPos] = useState<THREE.Vector3>(new THREE.Vector3(...SPAWN_POSITION));
@@ -1776,6 +1782,10 @@ export default function GameWorld() {
   // G3: HUD auto-fade after 5s of no pointer/key activity; M-key minimap.
   const [hudDim, setHudDim] = useState(false);
   const [mapOpen, setMapOpen] = useState(false);
+  // Task 26 loading gate: overlay holds until assets resolve + warmup frames
+  // render (shader compile happens behind it), then fades. gateDone unmounts.
+  const [worldReady, setWorldReady] = useState(false);
+  const [gateDone, setGateDone] = useState(false);
   const [activeEmote, setActiveEmote] = useState<EmoteType | null>(null);
   const emoteClearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const playerPosRef = useRef<THREE.Vector3>(new THREE.Vector3(...SPAWN_POSITION));
@@ -2021,9 +2031,11 @@ export default function GameWorld() {
           gl.domElement.style.imageRendering = "pixelated";
         }}
       >
+        <WarmupProbe onReady={() => setWorldReady(true)} />
         <Suspense fallback={null}>
           <Scene
             playerName={playerName}
+            introReady={gateDone}
             playerLevel={playerLevel}
             fogColor={fogColor}
             todPhase={todPhase}
@@ -2046,6 +2058,7 @@ export default function GameWorld() {
           />
         </Suspense>
       </Canvas>
+      {!gateDone && <LoadGateOverlay ready={worldReady} onGone={() => setGateDone(true)} />}
       {/* F1.4: screenshot mode hides ALL DOM overlays. DebugOverlay also
           stays hidden so the shot is clean. F2 restores. ESC also restores. */}
       <div style={{ display: screenshotMode ? "none" : "contents" }}>
