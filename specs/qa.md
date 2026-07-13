@@ -1,7 +1,7 @@
 # QA Report
 
 > Owner: QA agent. All agents check this for bugs in their area.
-> Last updated: 2026-07-12 (Wave 26)
+> Last updated: 2026-07-12 (Wave 26b)
 
 ---
 
@@ -20,6 +20,12 @@ Three commits (`1ed0d02`, `861f4d9`, `47edb40`) for the next-phase kickoff David
 ### Incident log
 
 - **1.3fps false alarm:** first FPS probe ran in a wedged Playwright browser (3 crashed sibling tabs); sky-hidden bisect showed no change, renderer probe showed real GPU — fresh context measured 54fps. Lesson: verify the measurement harness before bisecting the code.
+
+### Wave 26b addendum — Rain days v1 (`88306b6`)
+
+- Rain day + night screenshot-verified: overcast grade, dimmed flat light, streaks visible, night rain catches lamplight. 58-60fps with RainFX live.
+- **LoadGate bug caught and fixed here:** the `useProgress()` hook subscription updated WarmupProbe while a suspended GLB was mid-render ("Cannot update a component while rendering a different component" + dev-overlay Issue badge). Both LoadGate halves now read the store imperatively (`useProgress.getState()`), onReady defers via setTimeout(0). Verified zero React errors on a cold load.
+- Weather is client-seeded from the calendar date — QA can force with `?rain=1` / `?sunny=1`.
 
 ### Open follow-ups
 
