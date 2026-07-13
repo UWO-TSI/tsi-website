@@ -535,12 +535,16 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
       <Billboard follow lockX={false} lockY={false} lockZ={false}>
         <mesh ref={meshRef} position={[0, 1.1, 0]}>
           <planeGeometry args={[1.45, 1.45]} />
+          {/* Playtest fix 2026-07-13: depthWrite ON — alphaTest already
+              cuts the sprite out, and without depth the ground path ribbon
+              (transparent, sorted by mesh center) composited over the
+              player's body. Cutout + depth is the standard sprite recipe. */}
           <meshBasicMaterial
             map={spriteTexture}
             transparent
             alphaTest={0.1}
             side={THREE.DoubleSide}
-            depthWrite={false}
+            depthWrite
           />
         </mesh>
       </Billboard>

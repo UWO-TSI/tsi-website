@@ -170,5 +170,8 @@ export default function Path({
     };
   }, [geometry, material]);
 
-  return <mesh geometry={geometry} material={material} receiveShadow />;
+  // renderOrder -2: ground-level transparents must draw before every other
+  // transparent (player sprite, leaves, FX). Mesh-center distance sorting
+  // put whole path ribbons after the player and painted over their feet.
+  return <mesh geometry={geometry} material={material} receiveShadow renderOrder={-2} />;
 }
