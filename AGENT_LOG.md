@@ -117,7 +117,11 @@ David's live-playtest rulings executed same-day (his session on 3000 holds the N
 
 **Round 2, continuous run (`6b20093`…`946c14e`):** HQ north wall gained real window modules + entrance frame (Interiors/basic-wall — module system proven for future room rebuilds); net swing + rod cast flourishes on catch/fish (Tools/); three distant-view isle silhouettes on the horizon (bend with the ocean, fog-veiled); stone plaza at the main crossing (unit-road-stone, zone split before variant selection); river mouths now pour over ACNH waterfall units into the sea (closes the wave-26 lip follow-up); species drop 2 (6 critters, 3 fish — 13 bugs/10 fish total); buoys bobbing off the beach + a flickering campfire by the fountain plaza (principle #1 anchor).
 
-**Next dials awaiting David's feel-check:** water cells, road tints, env intensity, tuft density, waterfall placement (positioned by math, fog-distant — eyeball it). Queued: Events/ seasonal props wired to the admin palette (principle #8), buoy-rope variants, full wall-module room rebuilds, Icons/ for UI.
+**Round 3 (`dc31c4a`…`5c4c769`):** seasonal garlands wired to the admin palette slug (christmas/harvest/carnival at the plaza entrances — a palette activation now decorates the streets, principle #8 with zero code); lighthouse (SE shore) + retro windmill (NW field) landmarks; Kapp'n's ship bobbing at anchor off the lighthouse; species drop 2 landed earlier in round 2. Asset budget: 7.6MB of the 300MB cap.
+
+**⚠ Visual-verification debt for David's next playtest:** round 2/3 placements were positioned by math and gates only — his live session holds the dev lock, so no screenshots were possible. Eyeball specifically: waterfall alignment at both river mouths, garland placement (activate a seasonal palette to see them), lighthouse/windmill/boat siting and scale, window-module alignment in the HQ north wall, tool flourish hand-position during net/rod beats.
+
+**Queued:** buoy-rope variants, windmill blade split (single merged mesh — needs vertex clustering, skipped), full wall-module room rebuilds, Icons/ (3D icon models — need an offline render-to-PNG pass for DOM UI use).
 
 
 ### 2026-07-12 — Sky system + loading gate + round ocean border (`1ed0d02`, `861f4d9`, `47edb40`)

@@ -1,7 +1,20 @@
 # QA Report
 
 > Owner: QA agent. All agents check this for bugs in their area.
-> Last updated: 2026-07-13 (Wave 26f — batch complete)
+> Last updated: 2026-07-13 (Wave 27 — dump program)
+
+---
+
+## Wave 27 — 2026-07-13 Dump Asset Program (playtest polish rounds 1-3)
+
+David's playtest rulings ("ground/water/paths poor, use the asset folder to its fullest, ACNH lighting") executed as a continuous run — 20 commits `2ee18b3`…`5c4c769`+.
+
+### Verdict: **PASS on gates, VISUAL DEBT flagged**
+
+- Every commit: tsc clean, lint at the 74/59 ceiling, 32/32 tests, build exit 0.
+- Harness-verified visually: water caustic shader (5 iterations), road tile layout/rotations (contact sheets + full layout), furniture orientation/origins/tints (lineup renders), wall/window modules.
+- **NOT visually verified** (David's live session holds the Next dev lock — no second dev server, prod needs auth): in-game placement of waterfalls, garlands (needs a seasonal palette active), lighthouse/windmill/boat siting, HQ window-module alignment, tool-flourish hand position, campfire light balance at night. **These need David's eyeball or the next env-dance QA session.**
+- Pipeline learnings recorded in memory (project_acnh_asset_pipeline): per-piece up-axis lists, floor-origin normalization, untextured-piece tinting, road-tile two-prim merge, water-mask histogram-before-threshold.
 
 ---
 
