@@ -58,6 +58,7 @@ import Critters from "./Critters";
 import HQInterior, { type InteriorStation } from "./HQInterior";
 import RoadTiles from "./RoadTiles";
 import { getActiveCritters } from "@/lib/game/critterStore";
+import { applyEnvironment, disposeEnvironment } from "@/lib/game/envLight";
 import { useGhostReplaySetting } from "@/lib/game/useGhostReplaySetting";
 // P15: side-effect import kicks off useGLTF.preload for buildings + nature
 // at module parse time, so first-render Suspense doesn't flash fallback
@@ -192,7 +193,7 @@ function computeSunMoonDirs(hour: number): { sunDir: THREE.Vector3; moonDir: THR
   return { sunDir, moonDir };
 }
 
-function TimeOfDayCycle({ weather }: { weather: Weather }) {
+function TimeOfDayCycle({ weather, todPhase }: { weather: Weather; todPhase: "day" | "night" | "dawn" | "dusk" }) {
   const { scene } = useThree();
   const sunRef = useRef<THREE.DirectionalLight>(null);
   const ambRef = useRef<THREE.AmbientLight>(null);
@@ -274,7 +275,15 @@ function TimeOfDayCycle({ weather }: { weather: Weather }) {
   const skyGroupRef = useRef<THREE.Group>(null);
   const sunSpriteRef = useRef<THREE.Sprite>(null);
   const moonSpriteRef = useRef<THREE.Sprite>(null);
-  const { camera: skyCam } = useThree();
+  const { camera: skyCam, gl } = useThree();
+
+  // P3 (2026-07-13): ACNH cozy-reflection pass — PMREM environment baked
+  // from the TOD palette, regenerated only on phase flips. Every standard
+  // material picks up sky-colored ambience + a warm sun glint.
+  useEffect(() => {
+    applyEnvironment(gl, scene, todPhase);
+  }, [gl, scene, todPhase]);
+  useEffect(() => () => disposeEnvironment(scene), [scene]);
 
   useFrame(() => {
     const now = new Date();
@@ -1699,7 +1708,7 @@ function Scene({
         makeDefault
       />
 
-      <TimeOfDayCycle weather={weather} />
+      <TimeOfDayCycle weather={weather} todPhase={todPhase} />
       {weather === "rain" && !liteMode && <RainFX playerPosRef={playerPosRef} />}
       <Critters todPhase={todPhase} playerPosRef={playerPosRef} flowerAnchors={FLOWER_XZ} treeAnchors={TREE_XZ} />
       <DebugTracker
