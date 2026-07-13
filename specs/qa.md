@@ -1,7 +1,7 @@
 # QA Report
 
 > Owner: QA agent. All agents check this for bugs in their area.
-> Last updated: 2026-07-12 (Wave 26e)
+> Last updated: 2026-07-13 (Wave 26f — batch complete)
 
 ---
 
@@ -42,6 +42,12 @@ Three commits (`1ed0d02`, `861f4d9`, `47edb40`) for the next-phase kickoff David
 
 - Oracle sheet opens via ?sheet=oracle (dialog verified); temple's first E-interact.
 - Night villagers verified at 22:00: clustered in lamp pools (HQ doorstep, awning, braziers, bench) vs the old dark-plaza spots. Eased stroll on phase flip untested live (needs a dusk-boundary session) — logged as soft follow-up.
+
+### Wave 26f addendum — Interiors-lite HQ (`6b107a1`) — APPROVED BATCH COMPLETE
+
+- Full interior loop E2E on 3050: E at the HQ door fades into the room, Front Desk station opened the Profile sheet over the interior, Exit returned the player to just outside the doors ((-0.3,-5.2)). Stale-nearest guard verified (E inside can't re-trigger entry).
+- Watch-out for future rooms: an HMR edit while inside resets `interior` state and dumps you outside — dev-only quirk, not a prod behavior.
+- Deferred to Phase 2: Shop/Oracle interiors, HQ admin room with real T1-T3 gate, ceiling/beams (needs a camera that ducks under the roofline).
 
 ### Open follow-ups
 

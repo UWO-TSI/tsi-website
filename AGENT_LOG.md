@@ -124,7 +124,9 @@ All three commits: tsc clean, lint 74/59 ceiling, 32/32 tests, build exit 0, 56-
 
 **Daily village life v1 shipped same session (`62f5d2f`):** night/dawn spawn-anchor table moves villagers into the lamp pools (HQ doorstep, shop awning, temple braziers, fountain bench); NPC anchors ease (damp 0.55) so phase flips read as strolls. 22:00 screenshot verified vs pre-change night shots.
 
-**Next up (approved order):** interiors-lite (last approved pillar) → then David's playtest round on the whole 2026-07-12 batch. Awaiting from David: AI sky art drops (sunny + rain sets; the sky_{time}_{weather} contract is live) + playtest feedback on feel numbers + a look at the critter/dock/sheet/rain batch.
+**Interiors-lite shipped 2026-07-13 (`6b107a1`) — the 2026-07-12 approved batch is now COMPLETE.** HQ Resident Services room per specs/ux-interiors.md §3 (dollhouse cutaway, all six stations wired to the overlay sheets, locked admin door, exit at the door per §7.2). Full E2E: enter → Front Desk → Profile sheet → exit outside the doors.
+
+**The entire approved next-phase program is done:** sky system, loading gate, round ocean/paths, rain days, toolbelt dock, overlay sheets, critters & collection, Oracle-in-world, daily village life, interiors-lite. **Next:** David's playtest round + AI sky art; then Phase-2 candidates (Shop/Oracle interiors, admin room with tier gate, weather calendar admin tool, critter net/museum). Awaiting from David: AI sky art drops (sunny + rain sets; the sky_{time}_{weather} contract is live) + playtest feedback on feel numbers + a look at the critter/dock/sheet/rain batch.
 
 ### 2026-07-08 — Round-world curve (`564e83a`)
 
