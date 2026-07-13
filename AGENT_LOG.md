@@ -120,7 +120,9 @@ All three commits: tsc clean, lint 74/59 ceiling, 32/32 tests, build exit 0, 56-
 
 **Critters pillar v1 shipped same session (`6c26e33`):** 7 ACNH insects extracted (fresh gltf-transform pipeline in scratchpad — bake skin/Y-up/strip COLOR_*/256px webp), 6 seeded daily spawn slots with species-true motion (flutter/dart/perch/drift/crawl; fireflies night-only with glow), critterStore bridges live positions into the central E sweep, catch arcs to player + toast + /api/collections POST (bug_* keys, zero TC/XP per principle #3), 90s respawn. Watch-out logged: ACNH models are ~10 units/metre — first render had kaiju dragonflies; scales 0.09-0.13.
 
-**Next up (approved order):** gameplay pillars continued (Oracle quiz in-world → daily village life → interiors-lite). Awaiting from David: AI sky art drops (sunny + rain sets; the sky_{time}_{weather} contract is live) + playtest feedback on feel numbers + a look at the critter/dock/sheet/rain batch.
+**Oracle quiz in-world shipped same session (`65190d2`):** the temple gained its first interaction — E at the doors slides the existing MBTI quiz page up as a sheet over the running world (?sheet=oracle hook). Night critters cleared QA in the same pass.
+
+**Next up (approved order):** gameplay pillars continued (daily village life → interiors-lite). Awaiting from David: AI sky art drops (sunny + rain sets; the sky_{time}_{weather} contract is live) + playtest feedback on feel numbers + a look at the critter/dock/sheet/rain batch.
 
 ### 2026-07-08 — Round-world curve (`564e83a`)
 
