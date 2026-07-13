@@ -54,8 +54,9 @@ export default function MiniMap({ playerPosRef }: { playerPosRef: React.MutableR
       <svg viewBox="-55 -55 110 110" style={{ width: "100%", height: "100%", display: "block", background: "#6FB55B" }}>
         {/* island edge */}
         <circle cx="0" cy="0" r="52" fill="#7EC167" stroke="#5E9E4E" strokeWidth="1.5" />
-        {/* paths */}
-        <line x1="0" y1="24" x2="0" y2="-27" stroke="#D9B380" strokeWidth="3" strokeLinecap="round" />
+        {/* paths (spine split at the river banks, matching the world) */}
+        <line x1="0" y1="24" x2="0" y2="1.1" stroke="#D9B380" strokeWidth="3" strokeLinecap="round" />
+        <line x1="0" y1="-5.9" x2="0" y2="-27" stroke="#D9B380" strokeWidth="3" strokeLinecap="round" />
         <line x1="-26" y1="-10" x2="26" y2="-10" stroke="#D9B380" strokeWidth="3" strokeLinecap="round" />
         <line x1="-17" y1="13" x2="17" y2="13" stroke="#D9B380" strokeWidth="3" strokeLinecap="round" />
         {/* river (world z≈1-5 band, drawn at -z) */}
