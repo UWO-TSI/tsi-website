@@ -115,7 +115,9 @@ David's live-playtest rulings executed same-day (his session on 3000 holds the N
 
 **Continued same session (`3998513`, `99967ae`):** HQ interior furnished with 13 real Furniture/ pieces (bulletinboard, HHA trophy set on a chest, study desk+chair, real bookshelf, grandfather clock, plants, acorn rug, yellow message mat — stations keep their wiring). Furniture pipeline learnings: mixed up-axis per piece (explicit Z-up fix list), origins vary (now floor-normalized at extraction), most pieces untextured → spec-palette tints; trophies/rugs/mats textured. Plus 140 seeded ACNH proc-grass tufts as ground detail (roads/river/buildings/rim rejected).
 
-**Next dials awaiting David's feel-check:** water cell size/brightness, road tile tint, env intensity per phase, tuft density. Unexploited dump areas queued: Interiors/ (516 — wall/floor sets for rooms), Tools/ (net + rod props), distant-view backdrops, more road materials (stone/brick) for zone variety.
+**Round 2, continuous run (`6b20093`…`946c14e`):** HQ north wall gained real window modules + entrance frame (Interiors/basic-wall — module system proven for future room rebuilds); net swing + rod cast flourishes on catch/fish (Tools/); three distant-view isle silhouettes on the horizon (bend with the ocean, fog-veiled); stone plaza at the main crossing (unit-road-stone, zone split before variant selection); river mouths now pour over ACNH waterfall units into the sea (closes the wave-26 lip follow-up); species drop 2 (6 critters, 3 fish — 13 bugs/10 fish total); buoys bobbing off the beach + a flickering campfire by the fountain plaza (principle #1 anchor).
+
+**Next dials awaiting David's feel-check:** water cells, road tints, env intensity, tuft density, waterfall placement (positioned by math, fog-distant — eyeball it). Queued: Events/ seasonal props wired to the admin palette (principle #8), buoy-rope variants, full wall-module room rebuilds, Icons/ for UI.
 
 
 ### 2026-07-12 — Sky system + loading gate + round ocean border (`1ed0d02`, `861f4d9`, `47edb40`)
