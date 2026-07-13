@@ -57,6 +57,7 @@ import OverlaySheet, { sheetKeyForHref, type SheetKey } from "./OverlaySheet";
 import Critters from "./Critters";
 import HQInterior, { type InteriorStation } from "./HQInterior";
 import RoadTiles from "./RoadTiles";
+import GrassTufts from "./GrassTufts";
 import { getActiveCritters } from "@/lib/game/critterStore";
 import { applyEnvironment, disposeEnvironment } from "@/lib/game/envLight";
 import { useGhostReplaySetting } from "@/lib/game/useGhostReplaySetting";
@@ -592,6 +593,7 @@ function Terrain() {
           Suspense: tile GLBs stream in behind the load gate. */}
       <Suspense fallback={null}>
         <RoadTiles />
+        <GrassTufts />
       </Suspense>
     </group>
   );
