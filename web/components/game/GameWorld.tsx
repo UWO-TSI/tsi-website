@@ -126,20 +126,6 @@ const TOD_KEYS: [number, string, string, string, number, string, number][] = [
 ];
 const _tc = new THREE.Color();
 
-// R3-3 sun/moon disc colors (spec: bright #FFFAE0 sun, cool #E8E8FF moon).
-const SUN_COLOR = new THREE.Color("#FFFAE0");
-const MOON_COLOR = new THREE.Color("#E8E8FF");
-// Disc angular radius. Wave 18 (W18-1) found the original 1.5° disc was
-// unreachable: the camera rig (polar 60-110°) + fog-terrain silhouette leave
-// only ~8-16° of visible dome elevation from the default pose, and a small
-// pale disc washed into the horizon gradient. ~3.2° radius reads as a proper
-// stylized PS1 sun. cos(radius) stored so the fragment shader tests with a
-// single dot product instead of acos().
-const DISC_ANGULAR_RADIUS_RAD = 0.055;
-const DISC_COS_RADIUS = Math.cos(DISC_ANGULAR_RADIUS_RAD);
-// Soft edge half-width in cos-space so the disc has a 1-pixel-ish AA fade
-// without bleeding into the fog. Tuned by eye against the gradient.
-const DISC_COS_EDGE = Math.cos(DISC_ANGULAR_RADIUS_RAD * 0.85);
 const _sunPos = new THREE.Vector3();
 
 /**
@@ -167,7 +153,12 @@ function computeSunMoonDirs(hour: number): { sunDir: THREE.Vector3; moonDir: THR
   // floor keeps the disc above the fog-terrain silhouette at dawn/dusk; the
   // 13° peak keeps noon inside the visible band. Reads as a stylized
   // low-hanging PS1 sun arcing east → south → west.
-  const elevationDeg = 3 + Math.sin(s * Math.PI) * 5;
+  // Camera-pinned dome (2026-07-12): view direction == dome direction now,
+  // and the default pose tops out ~3° above the geometric horizon. The old
+  // 3-8° band (tuned for the origin-anchored dome) parked the sun just out
+  // of frame all day. 1.5-3.5° keeps the sprite's upper half in the visible
+  // sliver across the arc.
+  const elevationDeg = 1.5 + Math.sin(s * Math.PI) * 2;
   const az = (azimuthDeg * Math.PI) / 180;
   const el = (elevationDeg * Math.PI) / 180;
   // World axes: +X east, +Y up, -Z south (because spec puts Oracle Temple at +Z
@@ -184,7 +175,7 @@ function computeSunMoonDirs(hour: number): { sunDir: THREE.Vector3; moonDir: THR
   // the horizon at south; moon is high above the south.
   const ns = (((hour + 12) % 24) - 6) / 12; // moon equivalent of s
   const mAz = (-90 + ns * 180) * Math.PI / 180;
-  const mEl = (3 + Math.sin(ns * Math.PI) * 5) * Math.PI / 180; // same low band as the sun (W18-1)
+  const mEl = (1.5 + Math.sin(ns * Math.PI) * 2) * Math.PI / 180; // same low band as the sun
   const moonDir = new THREE.Vector3(
     Math.sin(mAz) * Math.cos(mEl),
     Math.sin(mEl),
@@ -198,62 +189,82 @@ function TimeOfDayCycle() {
   const sunRef = useRef<THREE.DirectionalLight>(null);
   const ambRef = useRef<THREE.AmbientLight>(null);
   const hemiRef = useRef<THREE.HemisphereLight>(null);
-  // R3-3: extended sky shader. The base gradient is unchanged; sun+moon
-  // discs are layered on top via `smoothstep(cos(r+edge), cos(r-edge), dot)`
-  // so the disc edge AAs against the gradient instead of color-bleeding
-  // (the failure mode that killed the P12 plane attempt). Both discs are
-  // intensity-gated so only the sun shows during the day and only the moon
-  // shows at night.
+  // Sky system 2026-07-12 (David-approved): painted equirect panoramas on a
+  // CAMERA-PINNED dome (sky never translates → reads infinitely far), all
+  // four time-of-day textures bound at once and crossfaded via a vec4
+  // weight uniform (mutated with .value.set(), never reassigned — the
+  // established compiler-safe pattern). A slightly smaller cloud shell
+  // drifts independently for parallax wind. Sun/moon are ACNH sprites now;
+  // the old in-shader discs are gone. Placeholder skies are baked from the
+  // TOD palette — David's AI art drops into /assets/sky/ as a file swap.
+  const skyTextures = useMemo(() => {
+    const loader = new THREE.TextureLoader();
+    const load = (url: string, wrap = false) => {
+      const t = loader.load(url);
+      t.colorSpace = THREE.SRGBColorSpace;
+      if (wrap) t.wrapS = THREE.RepeatWrapping;
+      return t;
+    };
+    return {
+      phases: [
+        load("/assets/sky/sky_morning_sunny.webp"),
+        load("/assets/sky/sky_afternoon_sunny.webp"),
+        load("/assets/sky/sky_evening_sunny.webp"),
+        load("/assets/sky/sky_night_sunny.webp"),
+      ],
+      clouds: load("/assets/sky/clouds.webp", true),
+      sun: load("/assets/sky/sun.png"),
+      moon: load("/assets/sky/moon.png"),
+    };
+  }, []);
+
   const skyMat = useMemo(() => new THREE.ShaderMaterial({
     side: THREE.BackSide, depthWrite: false,
     uniforms: {
-      topColor: { value: new THREE.Color(P.skyTop) },
-      bottomColor: { value: new THREE.Color(P.skyBottom) },
-      // Body packs intensity into vec4.w so we never reassign a scalar
-      // uniform's `.value` (which the eslint react-hooks/immutability rule
-      // flags on `useMemo`-returned objects). Fragment shader reads .xyz
-      // as the unit direction and .w as the visibility factor.
-      sunBody: { value: new THREE.Vector4(0, 1, 0, 0) },
-      moonBody: { value: new THREE.Vector4(0, -1, 0, 0) },
-      sunColor: { value: SUN_COLOR.clone() },
-      moonColor: { value: MOON_COLOR.clone() },
-      discCosOuter: { value: DISC_COS_RADIUS },
-      discCosInner: { value: DISC_COS_EDGE },
+      t0: { value: skyTextures.phases[0] },
+      t1: { value: skyTextures.phases[1] },
+      t2: { value: skyTextures.phases[2] },
+      t3: { value: skyTextures.phases[3] },
+      weights: { value: new THREE.Vector4(0, 1, 0, 0) },
     },
-    vertexShader: `varying vec3 vWP; void main(){ vWP=(modelMatrix*vec4(position,1.0)).xyz; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
+    vertexShader: `varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
     fragmentShader: `
-      uniform vec3 topColor, bottomColor;
-      uniform vec4 sunBody, moonBody;     // xyz = dir, w = visibility 0-1
-      uniform vec3 sunColor, moonColor;
-      uniform float discCosOuter, discCosInner;
-      varying vec3 vWP;
+      uniform sampler2D t0, t1, t2, t3;
+      uniform vec4 weights;
+      varying vec2 vUv;
       void main(){
-        vec3 viewDir = normalize(vWP);
-        float t = smoothstep(-0.05, 0.5, viewDir.y);
-        vec3 sky = mix(bottomColor, topColor, t);
-
-        // Sun + moon discs. W18-1: test against the CAMERA-relative ray, not
-        // the origin-relative one — the camera sits ~26u from the dome centre
-        // at y≈14, and that parallax shifted the disc out of the thin sky
-        // band the rig can actually see. cos(angle) vs cos(radius) so a
-        // smaller cosine = larger angle = outside the disc; smoothstep gives
-        // a 1-frag-ish soft edge against the sky.
-        vec3 camDir = normalize(vWP - cameraPosition);
-        float sunDot = dot(camDir, normalize(sunBody.xyz));
-        float sunMask = smoothstep(discCosOuter, discCosInner, sunDot) * sunBody.w;
-        float moonDot = dot(camDir, normalize(moonBody.xyz));
-        float moonMask = smoothstep(discCosOuter, discCosInner, moonDot) * moonBody.w;
-
-        // Blend disc over sky (mix preserves the high-contrast disc color
-        // without additive blowout — sun stays #FFFAE0 even over a bright
-        // dawn gradient, moon stays #E8E8FF over the night purple).
-        vec3 col = mix(sky, sunColor, sunMask);
-        col = mix(col, moonColor, moonMask);
-
+        vec3 col = texture2D(t0, vUv).rgb * weights.x
+                 + texture2D(t1, vUv).rgb * weights.y
+                 + texture2D(t2, vUv).rgb * weights.z
+                 + texture2D(t3, vUv).rgb * weights.w;
         gl_FragColor = vec4(col, 1.0);
       }
     `,
-  }), []);
+  }), [skyTextures]);
+
+  const cloudMat = useMemo(() => new THREE.ShaderMaterial({
+    side: THREE.BackSide, depthWrite: false, transparent: true,
+    uniforms: {
+      tex: { value: skyTextures.clouds },
+      // x = u-offset (drift), y = opacity, z = brightness tint
+      params: { value: new THREE.Vector4(0, 0.85, 1, 0) },
+    },
+    vertexShader: `varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
+    fragmentShader: `
+      uniform sampler2D tex;
+      uniform vec4 params;
+      varying vec2 vUv;
+      void main(){
+        vec4 c = texture2D(tex, vec2(vUv.x + params.x, vUv.y));
+        gl_FragColor = vec4(c.rgb * params.z, c.a * params.y);
+      }
+    `,
+  }), [skyTextures]);
+
+  const skyGroupRef = useRef<THREE.Group>(null);
+  const sunSpriteRef = useRef<THREE.Sprite>(null);
+  const moonSpriteRef = useRef<THREE.Sprite>(null);
+  const { camera: skyCam } = useThree();
 
   useFrame(() => {
     const now = new Date();
@@ -276,9 +287,28 @@ function TimeOfDayCycle() {
     }
     t = THREE.MathUtils.clamp(t, 0, 1);
 
-    // Sky
-    skyMat.uniforms.topColor.value.set(a[1]).lerp(_tc.set(b[1]), t);
-    skyMat.uniforms.bottomColor.value.set(a[2]).lerp(_tc.set(b[2]), t);
+    // Sky crossfade: map the hour onto the four panoramas with 1.5h blend
+    // windows (morning 5-10, afternoon 10-17, evening 17-20.5, night rest).
+    {
+      const EDGES = [5, 10, 17, 20.5]; // segment starts for tex 0..3
+      const BLEND = 1.5;
+      let wi = 3; // default night
+      for (let i = 0; i < 4; i++) {
+        const from = EDGES[i];
+        const to = EDGES[(i + 1) % 4];
+        const inSeg = from < to ? h >= from && h < to : h >= from || h < to;
+        if (inSeg) { wi = i; break; }
+      }
+      const next = (wi + 1) % 4;
+      const nextEdge = EDGES[next];
+      let until = nextEdge - h;
+      if (until < 0) until += 24;
+      const blend = until < BLEND ? 1 - until / BLEND : 0;
+      const w = [0, 0, 0, 0];
+      w[wi] = 1 - blend;
+      w[next] = blend;
+      skyMat.uniforms.weights.value.set(w[0], w[1], w[2], w[3]);
+    }
 
     // R3-3: sun + moon orbit from wall-clock hour. We pull from the same
     // wall-clock the TOD palette already uses (`h`), so disc position
@@ -293,8 +323,25 @@ function TimeOfDayCycle() {
     // the uniforms object returned from useMemo).
     const sunVis = THREE.MathUtils.smoothstep(sunDir.y, -0.05, 0.15);
     const moonVis = THREE.MathUtils.smoothstep(moonDir.y, -0.05, 0.15);
-    skyMat.uniforms.sunBody.value.set(sunDir.x, sunDir.y, sunDir.z, sunVis);
-    skyMat.uniforms.moonBody.value.set(moonDir.x, moonDir.y, moonDir.z, moonVis);
+    // ACNH sun/moon sprites ride the arc on the pinned dome.
+    if (sunSpriteRef.current) {
+      sunSpriteRef.current.position.copy(sunDir).multiplyScalar(200);
+      (sunSpriteRef.current.material as THREE.SpriteMaterial).opacity = sunVis;
+    }
+    if (moonSpriteRef.current) {
+      moonSpriteRef.current.position.copy(moonDir).multiplyScalar(200);
+      (moonSpriteRef.current.material as THREE.SpriteMaterial).opacity = moonVis * 0.95;
+    }
+    // Pin the whole sky to the camera: it rotates with the view but never
+    // translates — the parallax contrast against the sliding world is what
+    // sells infinite distance.
+    if (skyGroupRef.current) skyGroupRef.current.position.copy(skyCam.position);
+    // Cloud shell drift + day/night dimming.
+    {
+      const sunI = a[4] + (b[4] - a[4]) * t;
+      const prev = cloudMat.uniforms.params.value as THREE.Vector4;
+      cloudMat.uniforms.params.value.set(prev.x + 0.000012, 0.85, 0.45 + sunI * 0.55, 0);
+    }
 
     // Sun
     if (sunRef.current) {
@@ -327,16 +374,29 @@ function TimeOfDayCycle() {
       const sunI = a[4] + (b[4] - a[4]) * t;
       hemiRef.current.intensity = 0.3 + sunI * 0.55;
     }
-    // Fog matches sky bottom
-    if (scene.fog) (scene.fog as THREE.Fog).color.copy(skyMat.uniforms.bottomColor.value);
+    // Fog still follows the TOD horizon palette (the placeholder skies are
+    // baked from the same table, so they stay in sync).
+    if (scene.fog) (scene.fog as THREE.Fog).color.set(a[2]).lerp(_tc.set(b[2]), t);
   });
 
   return (
     <>
-      <mesh scale={[100, 100, 100]} renderOrder={-1}>
-        <sphereGeometry args={[1, 32, 32]} />
-        <primitive object={skyMat} attach="material" />
-      </mesh>
+      <group ref={skyGroupRef}>
+        <mesh scale={[240, 240, 240]} renderOrder={-3}>
+          <sphereGeometry args={[1, 32, 24]} />
+          <primitive object={skyMat} attach="material" />
+        </mesh>
+        <mesh scale={[226, 226, 226]} renderOrder={-2}>
+          <sphereGeometry args={[1, 32, 24]} />
+          <primitive object={cloudMat} attach="material" />
+        </mesh>
+        <sprite ref={sunSpriteRef} scale={[26, 26, 1]} renderOrder={-1}>
+          <spriteMaterial map={skyTextures.sun} color="#FFEDB8" transparent opacity={0} depthWrite={false} blending={THREE.AdditiveBlending} fog={false} />
+        </sprite>
+        <sprite ref={moonSpriteRef} scale={[15, 15, 1]} renderOrder={-1}>
+          <spriteMaterial map={skyTextures.moon} transparent opacity={0} depthWrite={false} fog={false} />
+        </sprite>
+      </group>
       <hemisphereLight ref={hemiRef} args={["#EAF6FF", P.grassPrimary, 0.8]} />
       <ambientLight ref={ambRef} intensity={0.5} color="#D6ECFF" />
       {/* Shadow map 2048→1024 (4x cheaper shadow pass per frame).
