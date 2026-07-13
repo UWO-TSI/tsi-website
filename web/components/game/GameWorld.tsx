@@ -59,6 +59,7 @@ import HQInterior, { type InteriorStation } from "./HQInterior";
 import RoadTiles from "./RoadTiles";
 import GrassTufts from "./GrassTufts";
 import ToolFlourish from "./ToolFlourish";
+import DistantIsles from "./DistantIsles";
 import { getActiveCritters } from "@/lib/game/critterStore";
 import { applyEnvironment, disposeEnvironment } from "@/lib/game/envLight";
 import { useGhostReplaySetting } from "@/lib/game/useGhostReplaySetting";
@@ -1735,6 +1736,7 @@ function Scene({
       <Terrain />
       {blobShadows && <BlobShadows placements={blobPlacements} />}
       <Ocean phase={todPhase} />
+      <DistantIsles />
       <River phase={todPhase} />
       <TreeShakeFX playerPosRef={playerPosRef} />
       <FlowerPickFX />
