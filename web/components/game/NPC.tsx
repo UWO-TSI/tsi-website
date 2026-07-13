@@ -157,14 +157,23 @@ export default function NPC({ persona, position, playerPosition, onClick }: NPCP
     };
   }, [persona.sprite_url]);
 
+  // Daily village life v1: the anchor eases toward the (phase-dependent)
+  // spawn base so a time-of-day move reads as a slow stroll, not a snap.
+  const easedBaseRef = useRef<[number, number] | null>(null);
+
   // Smooth hover scale + idle bob + proximity reaction + W1 wander.
   useFrame((_, delta) => {
     clockRef.current += delta;
 
-    // W1: current wandered XZ around the spawn base.
+    if (!easedBaseRef.current) easedBaseRef.current = [grounded[0], grounded[2]];
+    const eb = easedBaseRef.current;
+    eb[0] = THREE.MathUtils.damp(eb[0], grounded[0], 0.55, delta);
+    eb[1] = THREE.MathUtils.damp(eb[1], grounded[2], 0.55, delta);
+
+    // W1: current wandered XZ around the (eased) spawn base.
     const [wx, wz] = wanderOffset(clockRef.current, wanderPhase);
-    const curX = grounded[0] + wx;
-    const curZ = grounded[2] + wz;
+    const curX = eb[0] + wx;
+    const curZ = eb[1] + wz;
 
     // Distance to player uses the wandered position (XZ only).
     let dist = Infinity;

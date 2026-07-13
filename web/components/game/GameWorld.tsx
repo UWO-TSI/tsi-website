@@ -1226,6 +1226,18 @@ const NPC_SPAWN_POSITIONS: Record<SpawnZone, [number, number, number]> = {
   roaming: [7, 0, -6],
 };
 
+// Daily village life v1 (2026-07-12): at night the villagers drift to the
+// warm spots — lamp pools, the HQ doorstep, the fountain bench — instead of
+// standing in the daytime plaza. NPC.tsx eases the base change (slow glide)
+// so a phase flip reads as a stroll, not a teleport. Dawn keeps the night
+// spots (early risers haven't left home yet); dusk starts the migration.
+const NPC_SPAWN_POSITIONS_NIGHT: Record<SpawnZone, [number, number, number]> = {
+  courtyard: [1.8, 0, -6.2],   // HQ doorstep lamp
+  shop: [-22.5, 0, 12.5],      // under the shop awning
+  temple: [0, 0, 27.5],        // closer to the temple braziers
+  roaming: [3.4, 0, -15.6],    // fountain bench
+};
+
 // Generic filler NPCs — design principle #2: world must never feel empty.
 // No persona_prompt / canned_dialogue: clicking shows a brief tooltip, not
 // the chat overlay. Synthetic ids prefixed `filler-` for traceability.
@@ -1480,14 +1492,15 @@ function Scene({
   // don't overlap. Stable: ordering follows the personas array.
   const placedPersonas = useMemo(() => {
     const zoneCount: Partial<Record<SpawnZone, number>> = {};
+    const table = todPhase === "night" || todPhase === "dawn" ? NPC_SPAWN_POSITIONS_NIGHT : NPC_SPAWN_POSITIONS;
     return personas.map((p) => {
-      const base = NPC_SPAWN_POSITIONS[p.spawn_zone] ?? NPC_SPAWN_POSITIONS.courtyard;
+      const base = table[p.spawn_zone] ?? table.courtyard;
       const idx = zoneCount[p.spawn_zone] ?? 0;
       zoneCount[p.spawn_zone] = idx + 1;
       const pos: [number, number, number] = [base[0] + idx * 1.5, base[1], base[2]];
       return { persona: p, position: pos };
     });
-  }, [personas]);
+  }, [personas, todPhase]);
 
   const handleFillerClick = useCallback((name: string) => {
     // G3: unified toast pipeline.
