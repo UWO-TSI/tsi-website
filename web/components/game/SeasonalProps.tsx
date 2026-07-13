@@ -1,0 +1,48 @@
+"use client";
+
+/**
+ * SeasonalProps (2026-07-13) — principle #8 made physical.
+ *
+ * The admin's seasonal palette already retints sky/fog/grass; now it
+ * decorates the village too. The active palette's slug picks a garland
+ * set from Events/ (christmas / harvest / carnival strings with their
+ * end posts), strung at the plaza entrances. Default palette = no props.
+ * A monthly content drop is now: admin activates a palette — done, no
+ * code.
+ */
+
+import { Suspense, useMemo } from "react";
+import { useGLTF } from "@react-three/drei";
+import { useActivePalette } from "@/lib/game/contentLoader";
+
+const SETS: { match: RegExp; url: string }[] = [
+  { match: /winter|frost|christmas|holiday|snow/i, url: "/assets/acnh/seasonal/christmas-garland.glb" },
+  { match: /autumn|harvest|fall/i, url: "/assets/acnh/seasonal/harvest-garland-n.glb" },
+  { match: /carnival|festival|spring|fair/i, url: "/assets/acnh/seasonal/carnival-garland.glb" },
+];
+
+// Garland strings (posts included in the models) at the plaza entrances.
+const SPOTS: { pos: [number, number, number]; rotY: number }[] = [
+  { pos: [0, 0, -9.2], rotY: 0 },      // plaza north edge, across the spine
+  { pos: [0, 0, -17], rotY: 0 },       // plaza south edge
+];
+
+function Garland({ url, pos, rotY }: { url: string; pos: [number, number, number]; rotY: number }) {
+  const { scene } = useGLTF(url);
+  const clone = useMemo(() => scene.clone(true), [scene]);
+  return <primitive object={clone} position={pos} rotation={[0, rotY, 0]} scale={[0.1, 0.1, 0.1]} />;
+}
+
+export default function SeasonalProps() {
+  const { data: palette } = useActivePalette();
+  const slug = palette?.slug ?? "";
+  const set = SETS.find((s) => s.match.test(slug));
+  if (!set) return null;
+  return (
+    <Suspense fallback={null}>
+      {SPOTS.map((sp, i) => (
+        <Garland key={i} url={set.url} pos={sp.pos} rotY={sp.rotY} />
+      ))}
+    </Suspense>
+  );
+}
