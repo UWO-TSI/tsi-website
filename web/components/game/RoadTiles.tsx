@@ -41,7 +41,19 @@ const URLS = {
   corner: "/assets/acnh/road/2-b.glb",
   cap: "/assets/acnh/road/0-a.glb",
 } as const;
+// Zone variety (2026-07-13): the plaza around the main crossing is STONE
+// (unit-road-stone), outlying paths stay soil — the ACNH village pattern.
+const STONE_URLS = {
+  interior: "/assets/acnh/road/stone-4-a.glb",
+  edge: "/assets/acnh/road/stone-1-a.glb",
+  corner: "/assets/acnh/road/stone-2-b.glb",
+  cap: "/assets/acnh/road/stone-0-a.glb",
+} as const;
 Object.values(URLS).forEach((u) => useGLTF.preload(u));
+Object.values(STONE_URLS).forEach((u) => useGLTF.preload(u));
+
+const PLAZA = { x0: -5.4, x1: 5.4, z0: -16.6, z1: -9.4 };
+const inPlaza = (x: number, z: number) => x >= PLAZA.x0 && x <= PLAZA.x1 && z >= PLAZA.z0 && z <= PLAZA.z1;
 
 function isRoad(x: number, z: number): boolean {
   return RECTS.some((r) => x >= r.x0 && x <= r.x1 && z >= r.z0 && z <= r.z1);
@@ -65,7 +77,7 @@ function mergedGeometry(scene: THREE.Group): THREE.BufferGeometry {
 
 interface Placement { x: number; z: number; rot: number }
 
-function computePlacements(): Record<keyof typeof URLS, Placement[]> {
+function computePlacements(stone: boolean): Record<keyof typeof URLS, Placement[]> {
   const out: Record<string, Placement[]> = { interior: [], edge: [], corner: [], cap: [] };
   for (let gx = -32; gx <= 32; gx++) {
     for (let gz = -30; gz <= 33; gz++) {
@@ -73,6 +85,7 @@ function computePlacements(): Record<keyof typeof URLS, Placement[]> {
       const cx = (gx + 0.5) * CELL;
       const cz = (gz + 0.5) * CELL;
       if (!isRoad(cx, cz)) continue;
+      if (inPlaza(cx, cz) !== stone) continue;
       const n = isRoad(cx, cz + CELL);
       const s = isRoad(cx, cz - CELL);
       const e = isRoad(cx - CELL, cz);
@@ -104,37 +117,50 @@ export default function RoadTiles() {
   const gEdge = useGLTF(URLS.edge);
   const gCorner = useGLTF(URLS.corner);
   const gCap = useGLTF(URLS.cap);
+  const sInterior = useGLTF(STONE_URLS.interior);
+  const sEdge = useGLTF(STONE_URLS.edge);
+  const sCorner = useGLTF(STONE_URLS.corner);
+  const sCap = useGLTF(STONE_URLS.cap);
 
   const meshes = useMemo(() => {
-    const geos: Record<keyof typeof URLS, THREE.BufferGeometry> = {
+    const soilGeos: Record<keyof typeof URLS, THREE.BufferGeometry> = {
       interior: mergedGeometry(gInterior.scene),
       edge: mergedGeometry(gEdge.scene),
       corner: mergedGeometry(gCorner.scene),
       cap: mergedGeometry(gCap.scene),
     };
-    const mat = new THREE.MeshStandardMaterial({ color: "#C9A66B", roughness: 0.92, metalness: 0 });
-    const placements = computePlacements();
+    const stoneGeos: Record<keyof typeof URLS, THREE.BufferGeometry> = {
+      interior: mergedGeometry(sInterior.scene),
+      edge: mergedGeometry(sEdge.scene),
+      corner: mergedGeometry(sCorner.scene),
+      cap: mergedGeometry(sCap.scene),
+    };
+    const soilMat = new THREE.MeshStandardMaterial({ color: "#C9A66B", roughness: 0.92, metalness: 0 });
+    const stoneMat = new THREE.MeshStandardMaterial({ color: "#B9B4A8", roughness: 0.88, metalness: 0 });
     const m4 = new THREE.Matrix4();
     const q = new THREE.Quaternion();
     const sc = new THREE.Vector3(SCALE, SCALE, SCALE);
     const p = new THREE.Vector3();
     const up = new THREE.Vector3(0, 1, 0);
     const result: THREE.InstancedMesh[] = [];
-    for (const kind of Object.keys(placements) as (keyof typeof URLS)[]) {
-      const list = placements[kind];
-      if (!list.length) continue;
-      const im = new THREE.InstancedMesh(geos[kind], mat, list.length);
-      list.forEach((t, i) => {
-        q.setFromAxisAngle(up, t.rot);
-        p.set(t.x, getTerrainHeight(t.x, t.z) + 0.02, t.z);
-        m4.compose(p, q, sc);
-        im.setMatrixAt(i, m4);
-      });
-      im.instanceMatrix.needsUpdate = true;
-      result.push(im);
+    for (const [stone, geos, mat] of [[false, soilGeos, soilMat], [true, stoneGeos, stoneMat]] as const) {
+      const placements = computePlacements(stone);
+      for (const kind of Object.keys(placements) as (keyof typeof URLS)[]) {
+        const list = placements[kind];
+        if (!list.length) continue;
+        const im = new THREE.InstancedMesh(geos[kind], mat, list.length);
+        list.forEach((t, i) => {
+          q.setFromAxisAngle(up, t.rot);
+          p.set(t.x, getTerrainHeight(t.x, t.z) + 0.02, t.z);
+          m4.compose(p, q, sc);
+          im.setMatrixAt(i, m4);
+        });
+        im.instanceMatrix.needsUpdate = true;
+        result.push(im);
+      }
     }
     return result;
-  }, [gInterior.scene, gEdge.scene, gCorner.scene, gCap.scene]);
+  }, [gInterior.scene, gEdge.scene, gCorner.scene, gCap.scene, sInterior.scene, sEdge.scene, sCorner.scene, sCap.scene]);
 
   return (
     <group>
