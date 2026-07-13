@@ -17,8 +17,10 @@ import * as THREE from "three";
 
 const BUOY_URL = "/assets/acnh/props/buoy.glb";
 const FIRE_URL = "/assets/acnh/props/campfire.glb";
+const BOAT_URL = "/assets/acnh/props/boat.glb";
 useGLTF.preload(BUOY_URL);
 useGLTF.preload(FIRE_URL);
+useGLTF.preload(BOAT_URL);
 
 const BUOYS: { x: number; z: number; phase: number }[] = [
   { x: -38, z: -46, phase: 0.0 },
@@ -38,6 +40,16 @@ function Buoy({ x, z, groupRef }: { x: number; z: number; groupRef: (el: THREE.G
   );
 }
 
+function Boat({ groupRef }: { groupRef: (el: THREE.Group | null) => void }) {
+  const { scene } = useGLTF(BOAT_URL);
+  const clone = useMemo(() => scene.clone(true), [scene]);
+  return (
+    <group ref={groupRef} position={[45, OCEAN_Y - 0.1, -44]} rotation={[0, -Math.PI / 3, 0]}>
+      <primitive object={clone} scale={[0.1, 0.1, 0.1]} />
+    </group>
+  );
+}
+
 function Campfire() {
   const { scene } = useGLTF(FIRE_URL);
   const clone = useMemo(() => scene.clone(true), [scene]);
@@ -46,6 +58,7 @@ function Campfire() {
 
 export default function ShoreLife() {
   const buoyRefs = useRef<(THREE.Group | null)[]>([]);
+  const boatRef = useRef<THREE.Group | null>(null);
   const fireLightRef = useRef<THREE.PointLight>(null);
 
   useFrame(() => {
@@ -57,6 +70,12 @@ export default function ShoreLife() {
       g.rotation.x = Math.sin(t * 0.7 + b.phase) * 0.07;
       g.rotation.z = Math.cos(t * 0.55 + b.phase * 1.3) * 0.07;
     });
+    const boat = boatRef.current;
+    if (boat) {
+      boat.position.y = OCEAN_Y - 0.1 + Math.sin(t * 0.55 + 1.2) * 0.09;
+      boat.rotation.z = Math.sin(t * 0.42) * 0.035;
+      boat.rotation.x = Math.cos(t * 0.35 + 0.7) * 0.028;
+    }
     const fl = fireLightRef.current;
     if (fl) {
       fl.intensity = 6.5 + Math.sin(t * 9.3) * 0.9 + Math.sin(t * 23.7) * 0.5;
@@ -68,6 +87,7 @@ export default function ShoreLife() {
       {BUOYS.map((b, i) => (
         <Buoy key={i} x={b.x} z={b.z} groupRef={(el) => { buoyRefs.current[i] = el; }} />
       ))}
+      <Boat groupRef={(el) => { boatRef.current = el; }} />
       <Campfire />
       <pointLight
         ref={fireLightRef}

@@ -7,10 +7,8 @@
  * windmill blades spin lazily (one ref rotation — the only animation).
  */
 
-import { Suspense, useMemo, useRef } from "react";
-import { useFrame } from "@react-three/fiber";
+import { Suspense, useMemo } from "react";
 import { useGLTF } from "@react-three/drei";
-import * as THREE from "three";
 import { getTerrainHeight } from "./terrain";
 
 const LIGHTHOUSE_URL = "/assets/acnh/furniture/lighthouse.glb";
@@ -27,18 +25,12 @@ function Lighthouse() {
 
 function Windmill() {
   const { scene } = useGLTF(WINDMILL_URL);
-  const groupRef = useRef<THREE.Group>(null);
   const clone = useMemo(() => scene.clone(true), [scene]);
   const y = getTerrainHeight(-30, 22);
-  useFrame((_, delta) => {
-    // whole-model slow yaw is wrong for a windmill; without a rigged blade
-    // node we settle for a gentle sway-free static piece. (Blade spin needs
-    // the sub-node split — logged as a nice-to-have.)
-    void delta;
-    void groupRef;
-  });
+  // Static piece: blade spin needs a sub-node split in the extraction —
+  // logged as a nice-to-have.
   return (
-    <group ref={groupRef} position={[-30, y, 22]} rotation={[0, Math.PI / 3, 0]} scale={[0.14, 0.14, 0.14]}>
+    <group position={[-30, y, 22]} rotation={[0, Math.PI / 3, 0]} scale={[0.14, 0.14, 0.14]}>
       <primitive object={clone} />
     </group>
   );
