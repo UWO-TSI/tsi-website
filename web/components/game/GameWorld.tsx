@@ -60,6 +60,7 @@ import RoadTiles from "./RoadTiles";
 import GrassTufts from "./GrassTufts";
 import ToolFlourish from "./ToolFlourish";
 import DistantIsles from "./DistantIsles";
+import RiverMouths from "./RiverMouths";
 import { getActiveCritters } from "@/lib/game/critterStore";
 import { applyEnvironment, disposeEnvironment } from "@/lib/game/envLight";
 import { useGhostReplaySetting } from "@/lib/game/useGhostReplaySetting";
@@ -1737,6 +1738,7 @@ function Scene({
       {blobShadows && <BlobShadows placements={blobPlacements} />}
       <Ocean phase={todPhase} />
       <DistantIsles />
+      <RiverMouths />
       <River phase={todPhase} />
       <TreeShakeFX playerPosRef={playerPosRef} />
       <FlowerPickFX />
