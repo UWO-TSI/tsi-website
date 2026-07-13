@@ -116,7 +116,9 @@ All three commits: tsc clean, lint 74/59 ceiling, 32/32 tests, build exit 0, 56-
 
 **Toolbelt dock shipped same session (`e70eeb4`):** ToolDock.tsx bottom-center glass pill replaces the four accreted bottom-right buttons; six data-driven slots (Emote/Map/Items/Wall/Keys/Video) with hotkey chips, hover lift, HUD-dim + screenshot-mode + click-SFX integration; ToastHub raised to clear it. Map & Controls are mouse-clickable for the first time.
 
-**Next up (approved order):** overlay sheets (14) → gameplay pillars (critters/collection → Oracle quiz in-world → daily village life → interiors-lite). Awaiting from David: AI sky art drops (sunny + rain + cloudy/snow sets welcome now that weather picks the set) + playtest feedback on feel numbers.
+**Overlay sheets shipped same session (`b839531`):** Shop/Bounty/Jobs/Leaderboard now slide up as sheets OVER the running Canvas instead of route-navigating (world never unmounts, close is instant). OverlaySheet.tsx lazy-mounts the same page components the routes render; routes untouched for deep links. ?sheet= QA hook added. E2E-verified: walked to the Job Board, E opened the sheet at 61fps behind it. All three approved big swings (rain, dock, sheets) are now live.
+
+**Next up (approved order):** gameplay pillars (critters/collection → Oracle quiz in-world → daily village life → interiors-lite). Awaiting from David: AI sky art drops (sunny + rain + cloudy/snow sets welcome now that weather picks the set) + playtest feedback on feel numbers.
 
 ### 2026-07-08 — Round-world curve (`564e83a`)
 

@@ -1,7 +1,7 @@
 # QA Report
 
 > Owner: QA agent. All agents check this for bugs in their area.
-> Last updated: 2026-07-12 (Wave 26b)
+> Last updated: 2026-07-12 (Wave 26c)
 
 ---
 
@@ -26,6 +26,12 @@ Three commits (`1ed0d02`, `861f4d9`, `47edb40`) for the next-phase kickoff David
 - Rain day + night screenshot-verified: overcast grade, dimmed flat light, streaks visible, night rain catches lamplight. 58-60fps with RainFX live.
 - **LoadGate bug caught and fixed here:** the `useProgress()` hook subscription updated WarmupProbe while a suspended GLB was mid-render ("Cannot update a component while rendering a different component" + dev-overlay Issue badge). Both LoadGate halves now read the store imperatively (`useProgress.getState()`), onReady defers via setTimeout(0). Verified zero React errors on a cold load.
 - Weather is client-seeded from the calendar date — QA can force with `?rain=1` / `?sunny=1`.
+
+### Wave 26c addendum — Toolbelt dock + overlay sheets (`e70eeb4`, `b839531`)
+
+- Dock: renders bottom-center, Map/Emote slots click-verified, emote palette stacks directly above the pill, hotkey chips G/M/F1 visible, HUD-dim + screenshot-mode respected.
+- Sheets: ?sheet=jobs URL hook + full E2E (feedback-loop walked the player to the Job Board via the F3 debug coords, E opened the sheet, world rendered at 61fps behind it, ESC closed). Game hotkeys correctly suppressed while a sheet is up.
+- Navigator lesson for future QA: with the camera facing +Z, screen-right = −X and southward (−Z) movement needs clicks in the bottom ~10% of the frame — mid-frame clicks land ahead of the player.
 
 ### Open follow-ups
 
