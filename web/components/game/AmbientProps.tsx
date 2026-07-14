@@ -4,6 +4,7 @@ import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { getTerrainHeight } from "./terrain";
+import { coastDist, rimSink } from "@/lib/game/coast";
 import { sampleRiverPoint, findRiverTForX } from "./River";
 import { GLBProp, NatureRock } from "./NatureModels";
 import InstancedGLB, { type NaturePlacement } from "./InstancedNature";
@@ -210,6 +211,10 @@ export default function AmbientProps() {
       {/* Spawn campfire — a social anchor by the spawn plaza (principle #1:
           the world is a hangout). Flickering warm light sells the fire. */}
       <Campfire position={[4, getTerrainHeight(4, -13.5), -13.5]} />
+
+      {/* Beach campfire (organic-coast loop, iteration 9) — the cove needs
+          a night light pool of its own; second social anchor by the camp. */}
+      <Campfire position={[14.6, getTerrainHeight(14.6, 44.6) - rimSink(coastDist(14.6, 44.6)), 44.6]} />
 
       {/* Oracle approach — stone lantern pair flanking the museum walk
           (temple-path read), each with a faint warm glow for night. */}
