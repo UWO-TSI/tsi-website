@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef } from "react";
+import { Suspense, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { getTerrainHeight } from "./terrain";
@@ -215,6 +215,14 @@ export default function AmbientProps() {
       {/* Beach campfire (organic-coast loop, iteration 9) — the cove needs
           a night light pool of its own; second social anchor by the camp. */}
       <Campfire position={[12.7, getTerrainHeight(12.7, 45.2) - rimSink(coastDist(12.7, 45.2)), 45.2]} />
+
+      {/* Market cart (2026-07-14) — the vendor cart split out of the
+          Events countdown-stall assembly (split_stall.mjs). Parked at the
+          plaza's NW corner facing the crossing: the plaza reads like a
+          little market street, principle #8's future stall row starts here. */}
+      <Suspense fallback={null}>
+        <GLBProp url="/assets/acnh/props/market-cart.glb" position={[-7.8, getTerrainHeight(-7.8, -8.6), -8.6]} rotation={[0, 2.25, 0]} />
+      </Suspense>
 
       {/* Oracle approach — stone lantern pair flanking the museum walk
           (temple-path read), each with a faint warm glow for night. */}

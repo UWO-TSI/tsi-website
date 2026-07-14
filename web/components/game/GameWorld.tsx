@@ -915,6 +915,7 @@ function buildBlobPlacements(): import("./BlobShadows").BlobPlacement[] {
   add(3.2, 12.5, 0.4); // park clock
   add(-5, -14, 1.5);   // fountain
   add(4, -13.5, 0.85); // campfire
+  add(-7.8, -8.6, 1.3, 0.8); // market cart
   [[-20, -16], [22, -24], [-26, 19]].forEach(([x, z]) => add(x, z, 0.35)); // stumps
   return out;
 }
