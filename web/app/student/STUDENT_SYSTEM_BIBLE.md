@@ -5,7 +5,7 @@
 
 ---
 
-## 🟡 CURRENT VISION DELTAS (updated 2026-05-21)
+## 🟡 CURRENT VISION DELTAS (updated 2026-07-13)
 
 This bible was written before the 2026-03-29 product pivot to a **2.5D MMO RPG game world**. Most feature specs below (Bounty mechanics, Calendar, Kanban, Marketplace, Job Board, Directory) are still authoritative. The following sections have **drifted** and the corrections live in the sections themselves:
 
@@ -17,6 +17,17 @@ This bible was written before the 2026-03-29 product pivot to a **2.5D MMO RPG g
 | §6 Class System | Position-based (`ARCHITECT`, `ORACLE`, etc.) | **MBTI-based** — 4 main classes (Analyst/Diplomat/Sentinel/Explorer) + 16 subclasses, determined via Oracle Temple quiz |
 | §7 Coin Economy | Explicit `100 TC ≈ $1 CAD` reveal | **Internal-only** — never expose conversion rate in user-facing content |
 | §5 Onboarding | Terminal hacker theme | Theme retained; **adds Oracle Temple MBTI step + game-world tutorial** |
+
+**Additions since 2026-05-21 (shipped, not yet reflected in sections below):**
+
+| Area | Current state |
+|------|---------------|
+| Overlays | Shop / Bounty / Jobs / Leaderboard / Oracle open as **sheets over the running world** (Canvas never unmounts); other dashboard routes unchanged |
+| Interiors | **HQ Resident Services room is live** (interiors-lite): enter via E at the door, six furnished stations wired to sheets, exit at the door. Shop/Oracle rooms are Phase 2 |
+| Weather | Seeded daily **sunny / cloudy / rain** (58/24/18%), client-side; admin weather calendar is the Phase-2 swap-in |
+| Collections | Fruit + 8 flower species + **10 fish + 13 bugs**, all with rendered ACNH item icons; zero TC/XP (principle #3) |
+| World assets | `~/Downloads/GLB` dump is the **primary asset source** (David ruling 2026-07-13): ACNH road tiles, water caustics, furniture, landmarks, seasonal garlands wired to the admin palette |
+| Lighting | PMREM environment (IBL) from the TOD palette — the "ACNH cozy reflections" pass |
 
 **Canonical sources for current state:**
 - `specs/asset-stack.md` — confirmed tech architecture (R3F + Drei + PS1 + Colyseus deferred + 2D sprite chars via Nano Banana)

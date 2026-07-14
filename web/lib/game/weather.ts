@@ -2,8 +2,8 @@
  * Daily weather (rain days v1, approved big swing #21, 2026-07-12).
  *
  * Deterministic per-calendar-day: every player sees the same weather on the
- * same date with zero backend. ~22% of days rain. `?rain=1` / `?sunny=1`
- * force either state for testing and screenshots.
+ * same date with zero backend. 58% sunny / 24% cloudy / 18% rain.
+ * `?sunny=1` / `?cloudy=1` / `?rain=1` force a state for testing.
  *
  * The hash is one mulberry32 scramble of yyyymmdd — cheap, stable, and the
  * same trick the ambience seeds use. Phase 2 can swap this for an
