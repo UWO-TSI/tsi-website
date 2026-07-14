@@ -9,22 +9,26 @@
 
 import { useEffect, useState } from "react";
 import * as THREE from "three";
-import { COAST_BASE, coastWobble } from "@/lib/game/coast";
+import { coastWobble, beachWidthShift } from "@/lib/game/coast";
 
-// Organic coast outline: sample the shared harmonics into an SVG polygon
-// (module-level — the coastline is static).
-const COAST_POINTS = (() => {
+// Organic coast outline: sample the shared harmonics into SVG polygons
+// (module-level — the coastline is static). Two rings: the sand at the
+// waterline (e≈51.4) under the grass at the sand line (e≈48.5 shifted by
+// the beach-width map), so the minimap shows the beaches too.
+function ringPoints(eFor: (x: number, z: number) => number): string {
   const pts: string[] = [];
   const N = 48;
   for (let i = 0; i < N; i++) {
     const a = (i / N) * Math.PI * 2;
     const x = Math.cos(a);
     const z = Math.sin(a);
-    const r = COAST_BASE + coastWobble(x, z);
+    const r = eFor(x, z) + coastWobble(x, z);
     pts.push(`${(x * r).toFixed(1)},${(-z * r).toFixed(1)}`);
   }
   return pts.join(" ");
-})();
+}
+const SAND_POINTS = ringPoints(() => 51.4);
+const GRASS_POINTS = ringPoints((x, z) => 48.5 - beachWidthShift(x, z));
 
 const BUILDINGS: { x: number; z: number; w: number; h: number; c: string }[] = [
   { x: 0, z: -4, w: 6, h: 3, c: "#5B4B9E" },    // HQ
@@ -68,8 +72,9 @@ export default function MiniMap({ playerPosRef }: { playerPosRef: React.MutableR
       }}
     >
       <svg viewBox="-58 -58 116 116" style={{ width: "100%", height: "100%", display: "block", background: "#6FB55B" }}>
-        {/* island edge — organic coastline from the shared harmonics */}
-        <polygon points={COAST_POINTS} fill="#7EC167" stroke="#5E9E4E" strokeWidth="1.5" strokeLinejoin="round" />
+        {/* island — organic coastline: sand ring under the grass line */}
+        <polygon points={SAND_POINTS} fill="#E4CD96" stroke="#CBB27C" strokeWidth="1" strokeLinejoin="round" />
+        <polygon points={GRASS_POINTS} fill="#7EC167" stroke="#5E9E4E" strokeWidth="1" strokeLinejoin="round" />
         {/* paths (spine split at the river banks, matching the world) */}
         <line x1="0" y1="24" x2="0" y2="1.1" stroke="#D9B380" strokeWidth="3" strokeLinecap="round" />
         <line x1="0" y1="-5.9" x2="0" y2="-27" stroke="#D9B380" strokeWidth="3" strokeLinecap="round" />
