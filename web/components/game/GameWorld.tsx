@@ -67,6 +67,7 @@ import RiverMouths from "./RiverMouths";
 import ShoreLife from "./ShoreLife";
 import BeachCove, { BEACH_PALM_XZ } from "./BeachCove";
 import SandFootprints from "./SandFootprints";
+import RiverBanks from "./RiverBanks";
 import SeasonalProps from "./SeasonalProps";
 import Landmarks from "./Landmarks";
 import { getActiveCritters } from "@/lib/game/critterStore";
@@ -1886,6 +1887,9 @@ function Scene({
       <SeasonalProps />
       <Landmarks />
       <River phase={todPhase} />
+      <Suspense fallback={null}>
+        <RiverBanks />
+      </Suspense>
       <TreeShakeFX playerPosRef={playerPosRef} />
       <FlowerPickFX />
       <FishCatchFX playerPosRef={playerPosRef} />
