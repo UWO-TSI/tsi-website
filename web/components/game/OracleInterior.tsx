@@ -68,11 +68,14 @@ export default function OracleInterior({
 
   return (
     <group>
-      <ambientLight color="#E8DCF5" intensity={0.55} />
-      <pointLight color="#D4B0FF" intensity={30} distance={20} position={[0, 4.2, 0]} />
+      {/* warm-amber pass (2026-07-14, AC interior refs): the temple keeps
+          its violet identity but drops the flat fill — candle pools +
+          crystal glow carry the room. */}
+      <ambientLight color="#D8C4EE" intensity={0.4} />
+      <pointLight color="#D4B0FF" intensity={26} distance={19} position={[0, 4.2, 0]} />
       <pointLight color="#D4B0FF" intensity={10} distance={7} position={[0, 3, 2.6]} />
-      <pointLight color="#FFE4B0" intensity={7} distance={5} position={[-2.2, 1, 2.2]} />
-      <pointLight color="#FFE4B0" intensity={7} distance={5} position={[2.2, 1, 2.2]} />
+      <pointLight color="#FFCF8A" intensity={10} distance={5.5} position={[-2.2, 1, 2.2]} />
+      <pointLight color="#FFCF8A" intensity={10} distance={5.5} position={[2.2, 1, 2.2]} />
 
       {/* stone floor + lavender walls (§6.3) */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} onClick={onFloorClick}>

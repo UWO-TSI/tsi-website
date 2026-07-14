@@ -63,12 +63,15 @@ export default function HQInterior({
 
   return (
     <group>
-      {/* lighting (spec §2.4) */}
-      <ambientLight color="#FFF5E1" intensity={0.6} />
-      <pointLight color="#FFE4B0" intensity={45} distance={22} position={[0, 3.8, 0]} />
-      <directionalLight color="#FFFFFF" intensity={0.3} position={[6, 6, -4]} />
-      <pointLight color="#FFE4B0" intensity={8} distance={5} position={[-4.5, 2.4, 4.6]} />
-      <pointLight color="#FFE4B0" intensity={8} distance={5} position={[4.2, 2.4, 4.6]} />
+      {/* lighting (spec §2.4; warm-amber pass 2026-07-14 — David's AC
+          interior refs: LOW warm ambient, amber lamp pools doing the
+          work, warm key instead of white. Shadow regions glow brown via
+          the pastel grade's lifted blacks, never gray. */}
+      <ambientLight color="#FFD9A0" intensity={0.34} />
+      <pointLight color="#FFC985" intensity={32} distance={20} position={[0, 3.8, 0]} />
+      <directionalLight color="#FFE8C8" intensity={0.18} position={[6, 6, -4]} />
+      <pointLight color="#FFDB98" intensity={11} distance={5.5} position={[-4.5, 2.4, 4.6]} />
+      <pointLight color="#FFDB98" intensity={11} distance={5.5} position={[4.2, 2.4, 4.6]} />
 
       {/* floor: warm planks + alternating strips */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} onClick={onFloorClick}>

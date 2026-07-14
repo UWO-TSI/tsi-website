@@ -43,9 +43,13 @@ export default function ShopInterior({
 
   return (
     <group>
-      <ambientLight color="#FFF5E1" intensity={0.65} />
-      <pointLight color="#FFE4B0" intensity={38} distance={18} position={[0, 3.2, 0]} />
-      <directionalLight color="#FFFFFF" intensity={0.3} position={[5, 6, -3]} />
+      {/* warm-amber pass (2026-07-14, AC interior refs): low warm ambient,
+          the shop keeps a touch more brightness than HQ (retail read) but
+          the light is all amber — plus a warm counter pool. */}
+      <ambientLight color="#FFDCA8" intensity={0.38} />
+      <pointLight color="#FFC985" intensity={28} distance={17} position={[0, 3.2, 0]} />
+      <directionalLight color="#FFE8C8" intensity={0.18} position={[5, 6, -3]} />
+      <pointLight color="#FFDB98" intensity={9} distance={5} position={[0, 2.2, 2.6]} />
 
       {/* floor + mint walls (§5.3) */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} onClick={onFloorClick}>
