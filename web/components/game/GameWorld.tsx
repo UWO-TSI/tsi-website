@@ -147,14 +147,21 @@ function spawnOverride(): [number, number, number] | null {
 // actual daytime read is a near-WHITE sun, clean sky-blue ambient bounce,
 // and the saturated grass doing the color work. Tone mapping also moved
 // ACES→None (ACES desaturates midtones — a second muddiness source).
+// Lighting v3 (2026-07-14 lab, David: "perfect the lighting chemistry"):
+// the lab (water-harness/lighting.html) showed the old triple fill
+// (amb 0.6 + hemi 0.82 + env 0.55) flooded the sun shadows invisible.
+// ACNH's day = STRONG sun over lean fills: sun up ~45%, ambient down
+// ~40% — shadows read soft-but-present, scene stays bright (the grass
+// albedo does the color work). Dawn/dusk hues untouched pending David's
+// AC reference snapshots.
 const TOD_KEYS: [number, string, string, string, number, string, number][] = [
-  [5,  "#FFB878", "#FFDDB8", "#FFD9B0", 0.55, "#C8BCFF", 0.42],
-  [7,  "#63C2F7", "#BEE4EE", "#FFF9E8", 0.9,  "#CFE7FF", 0.58],
-  [10, "#4FB6F5", "#A9DCF2", "#FFFDF4", 0.95, "#D6ECFF", 0.6],
-  [15, "#57B9F0", "#E8EDD8", "#FFF6DE", 0.85, "#DDE3D2", 0.58],
-  [17, "#FF9966", "#FFD4A8", "#FFC080", 0.65, "#FFD4A8", 0.42],
-  [19, "#FF9966", "#2D2D6B", "#FF8844", 0.3,  "#6B5A8B", 0.3],
-  [21, "#1A1A40", "#2D2D6B", "#334466", 0.0,  "#334466", 0.25],
+  [5,  "#FFB878", "#FFDDB8", "#FFD9B0", 0.6,  "#C8BCFF", 0.34],
+  [7,  "#63C2F7", "#BEE4EE", "#FFF9E8", 1.25, "#CFE7FF", 0.38],
+  [10, "#4FB6F5", "#A9DCF2", "#FFFDF4", 1.4,  "#D6ECFF", 0.35],
+  [15, "#57B9F0", "#E8EDD8", "#FFF6DE", 1.15, "#DDE3D2", 0.38],
+  [17, "#FF9966", "#FFD4A8", "#FFC080", 0.75, "#FFD4A8", 0.34],
+  [19, "#FF9966", "#2D2D6B", "#FF8844", 0.32, "#6B5A8B", 0.26],
+  [21, "#1A1A40", "#2D2D6B", "#334466", 0.0,  "#334466", 0.22],
 ];
 const _tc = new THREE.Color();
 
@@ -429,12 +436,12 @@ function TimeOfDayCycle({ weather, todPhase, shadowsOn, playerPosRef }: { weathe
       ambRef.current.color.set(a[5]).lerp(_tc.set(b[5]), t);
       ambRef.current.intensity = (a[6] + (b[6] - a[6]) * t) * (weather === "rain" ? 0.85 : 1);
     }
-    // Hemisphere rides the sun curve (art pass 2026-07-07): it was a
-    // static 0.8, which kept night grass daylight-lit under the brighter
-    // NL grade. 0.3 floor at night → ~0.82 at noon.
+    // Hemisphere rides the sun curve (art pass 2026-07-07). Lighting v3:
+    // retuned for the stronger sun — 0.2 floor at night → ~0.4 at noon
+    // (was 0.3 + sunI×0.55 ≈ 0.82, a shadow-flooding fill).
     if (hemiRef.current) {
       const sunI = (a[4] + (b[4] - a[4]) * t) * wDim;
-      hemiRef.current.intensity = 0.3 + sunI * 0.55;
+      hemiRef.current.intensity = 0.2 + sunI * 0.14;
     }
     // Fog still follows the TOD horizon palette (the placeholder skies are
     // baked from the same table, so they stay in sync). Rain pulls it

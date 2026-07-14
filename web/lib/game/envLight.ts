@@ -24,10 +24,12 @@ export interface EnvPhaseSpec {
   sunElev: number; // 0..1, fraction of height from horizon
 }
 
+// Lighting v3 (2026-07-14 lab): env trimmed with the other fills so the
+// stronger sun's shadows survive — see TOD_KEYS note in GameWorld.
 export const ENV_PHASES: Record<"dawn" | "day" | "dusk" | "night", EnvPhaseSpec> = {
-  dawn: { skyTop: "#C8BCFF", skyBottom: "#FFDDB8", sun: "#FFD9B0", ground: "#7BA55E", intensity: 0.45, sunElev: 0.22 },
-  day: { skyTop: "#4FB6F5", skyBottom: "#A9DCF2", sun: "#FFFDF4", ground: "#84CB47", intensity: 0.55, sunElev: 0.6 },
-  dusk: { skyTop: "#2D2D6B", skyBottom: "#FFD4A8", sun: "#FF9966", ground: "#6E8A50", intensity: 0.6, sunElev: 0.16 },
+  dawn: { skyTop: "#C8BCFF", skyBottom: "#FFDDB8", sun: "#FFD9B0", ground: "#7BA55E", intensity: 0.4, sunElev: 0.22 },
+  day: { skyTop: "#4FB6F5", skyBottom: "#A9DCF2", sun: "#FFFDF4", ground: "#84CB47", intensity: 0.4, sunElev: 0.6 },
+  dusk: { skyTop: "#2D2D6B", skyBottom: "#FFD4A8", sun: "#FF9966", ground: "#6E8A50", intensity: 0.5, sunElev: 0.16 },
   night: { skyTop: "#0E0E28", skyBottom: "#2D2D6B", sun: "#AAB4E8", ground: "#2E4A38", intensity: 0.22, sunElev: 0.4 },
 };
 
