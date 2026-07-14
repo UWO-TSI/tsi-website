@@ -68,6 +68,7 @@ import ShoreLife from "./ShoreLife";
 import BeachCove, { BEACH_PALM_XZ } from "./BeachCove";
 import SandFootprints from "./SandFootprints";
 import RiverBanks from "./RiverBanks";
+import BeachCrabs from "./BeachCrabs";
 import SeasonalProps from "./SeasonalProps";
 import Landmarks from "./Landmarks";
 import { getActiveCritters } from "@/lib/game/critterStore";
@@ -1883,6 +1884,7 @@ function Scene({
       <RiverMouths />
       <ShoreLife />
       <BeachCove />
+      <BeachCrabs />
       <SandFootprints playerPosRef={playerPosRef} />
       <SeasonalProps />
       <Landmarks />
