@@ -121,7 +121,9 @@ David's live-playtest rulings executed same-day (his session on 3000 holds the N
 
 **⚠ Visual-verification debt for David's next playtest:** round 2/3 placements were positioned by math and gates only — his live session holds the dev lock, so no screenshots were possible. Eyeball specifically: waterfall alignment at both river mouths, garland placement (activate a seasonal palette to see them), lighthouse/windmill/boat siting and scale, window-module alignment in the HQ north wall, tool flourish hand-position during net/rod beats.
 
-**Queued:** buoy-rope variants, windmill blade split (single merged mesh — needs vertex clustering, skipped), full wall-module room rebuilds, Icons/ (3D icon models — need an offline render-to-PNG pass for DOM UI use).
+**Round 4 (`1901324`…`b99d98a`):** world-mock harness pass caught + fixed four placement bugs (upside-down windmill — Z-up direction differs per piece!; sliver waterfalls → nonuniform scale; duplicate campfire — AmbientProps had one since an earlier wave; near-black garlands → festive tints). Lighthouse mats identified by debug tint → classic red tower + beacon breath light; night clouds dimmed (wave-26 follow-up closed). **Icons pipeline built:** harness renders GLBs to transparent 128px PNGs — exact fruit/flower icons plus per-species fish (10) and bug (13) icons rendered from their actual models; CollectionBook gained the missing Bugs group and real icons everywhere; reward toasts + the fishing banner now carry the item icon.
+
+**Still queued:** buoy-rope chains, windmill blade split (merged mesh), full wall-module room rebuilds. **Blocked on David:** all feel dials + in-game eyeball of the mock-verified placements + AI sky art (specs/sky-art-prompts.md v2 ready).
 
 
 ### 2026-07-12 — Sky system + loading gate + round ocean border (`1ed0d02`, `861f4d9`, `47edb40`)
