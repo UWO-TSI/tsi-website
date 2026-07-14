@@ -104,10 +104,10 @@ Minecraft packs encode the same taste as literal RGB tables.
 | L1 | A/B `NeutralToneMapping` vs current `NoToneMapping` (emissives clip at 1.0 under flat) | 9 | lighting.html → GameWorld gl |
 | L2 | Densify TOD_KEYS toward hourly (esp. 16-20h), sunset as saturate+darken power ramp with intensity spike | 4, 5 | GameWorld TOD_KEYS |
 | L3 | Adopt BSL-class constants: noon sun slightly BLUE-white (196,220,255), golden sun (255,160,80); noon ambient bluer than ours | 1 | TOD_KEYS + lab sliders |
-| L4 | Wrap-lighting (half-Lambert) injection for foliage/props via onBeforeCompile — kills mud on tree undersides | 3 | new lib/game/wrapLighting.ts |
+| L4 | ~~Wrap-lighting~~ **REJECTED after lab test** (`?wrap=1` in lighting.html): global half-Lambert flattens object form (house reads shapeless) and blows out bright foliage; AC refs show clear form shading — mud was already fixed by v3 fill ratios | 3 | lab only |
 | L5 | Whole-frame soft bloom lerp (12-20%, no threshold) + lamp materials toneMapped=false — atmospheric diffusion + night halos | 7 | PostFX |
 | L6 | Vibrance pass (BSL formula) in the merged EffectPass | 10 | PostFX |
-| L7 | Terminator melt: blend grazing-angle sun toward ambient in the ground/foliage materials | 8 | onBeforeCompile chunk |
+| L7 | Terminator melt — SKIPPED (same family as L4; the pastel grade's lifted blacks already soften the dark side) | 8 | — |
 | L8 | Fog v2: gradient fog (horizon color ≠ zenith) + slight distance desaturation | 6 + theory P8 | Ocean/ground shaders or post |
 | L9 | Night: keep the blue floor (verified in lab); add dark-desaturation later via grading | 3 | done / PostFX later |
 | L10 | Seasonal palettes stay as recolors of the same patterns (validated: exactly ACNH's method) | ACNH | already shipped ✓ |
