@@ -42,10 +42,12 @@ export function getGrassTexture(): THREE.DataTexture {
   // Values stay pre-multiplied (~0.86-1.0) so they modulate the vertex-color
   // greens rather than replace them.
   const TRI = 16; // px per cell → 16 cells per tile ≈ 0.5u triangles in-world
-  // NL bright grade 2026-07-07: tones lifted (was 0.875-1.0) — the quilt
-  // was multiplying ~9% darkness into the grass and reading muddy under
-  // the old warm sun. Subtler quilt, brighter field.
-  const TONES = [0.92, 0.96, 1.0];
+  // Lighting v3 era (2026-07-14, David: "grass texture isn't right"):
+  // the quilt had been subtled to near-invisible (0.92-1.0). ACNH's quilt
+  // is plainly visible — wider tone spread + a hue lean per triangle
+  // (some warmer/yellower, some cooler). Provisional until David's AC
+  // reference snapshots; the stronger v3 sun carries the brightness.
+  const TONES = [0.87, 0.94, 1.0];
 
   const cellHash = (cx: number, cy: number, half: number): number => {
     let h = (cx * 374761393 + cy * 668265263 + half * 97) | 0;
@@ -65,15 +67,19 @@ export function getGrassTexture(): THREE.DataTexture {
       const flip = (cx + cy) % 2 === 0;
       const half = (flip ? lx + ly < TRI : lx >= ly) ? 0 : 1;
 
-      const tone = TONES[cellHash(cx, cy, half) % 3];
+      const h = cellHash(cx, cy, half);
+      const tone = TONES[h % 3];
       const jitter = (rand(state) - 0.5) * 0.03;
       const v = tone + jitter;
 
-      // Green-biased premultiply: the quilt reads as grass-tone variation,
-      // not desaturation.
-      data[idx] = Math.max(0, Math.min(255, Math.round(v * 232)));
+      // Hue lean: a third of triangles warm (yellower), a third cool
+      // (bluer-green) — the AC quilt's color life, not just brightness.
+      const lean = (h >>> 4) % 3; // 0 neutral, 1 warm, 2 cool
+      const rMul = lean === 1 ? 244 : lean === 2 ? 222 : 232;
+      const bMul = lean === 1 ? 206 : lean === 2 ? 232 : 218;
+      data[idx] = Math.max(0, Math.min(255, Math.round(v * rMul)));
       data[idx + 1] = Math.max(0, Math.min(255, Math.round(v * 250)));
-      data[idx + 2] = Math.max(0, Math.min(255, Math.round(v * 218)));
+      data[idx + 2] = Math.max(0, Math.min(255, Math.round(v * bMul)));
       data[idx + 3] = 255;
     }
   }

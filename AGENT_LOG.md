@@ -120,6 +120,13 @@ David's rulings: rain opacity down; "island should not be just a circle — orga
 
 Rain streaks 0.42 → 0.22 (`94b518b`). Loop continues below as it lands.
 
+**David checkpoint (mid-loop):** more dramatic island; cove doesn't read as a cove; terrain/grass/path/river textures wrong (AC snapshots incoming from him); next focus = windmill spin + river v2 + world life + LIGHTING ("perfect the chemistry, isolate development in a separate environment first"); find texture assets in the dump or ask.
+
+**Post-checkpoint (same session):**
+- `9a0e8de` **coast v2** — harmonics +40% (R 45..59) + a BAY gaussian bitten in at the deck with two headland arms: the cove is now concave, water wrapping the deck nose. River mouths pinned by multiplicative masks. Every fixed placement re-solved numerically (`pipeline/coast_solver.py`): camp → inner-bay sand, palms → headland arms, lighthouse → (32.6,−31.6), NE camp reeled in. Clamp 49.4→50.6. Swell 0.5→0.8. Mock aerial + cove verified (concavity visible).
+- `f0a8807` **lighting v3 via the new isolated lab** (`water-harness/lighting.html`: full stack replica + live sliders). Measured finding: old triple fill (amb 0.6/hemi 0.82/env 0.55) flooded sun shadows invisible. Now strong sun (day 1.4) over lean fills (amb ~0.36, hemi 0.4, env 0.4). Dawn/dusk hues held for David's AC snapshots.
+- **Texture-asset hunt result:** the dump's terrain system (unit, cliff kit, river kit, env-maps, roads) ships with ZERO textures — ACNH ground textures live in engine materials that never got ripped. Grass/path/river looks must be generated; David's snapshots will calibrate.
+
 10. `ebf4fd3` riverbank rocks + rushes along the spline (the last bare waterway), skipping bridge + mouths.
 11. `cf3dbd6` moonlight lane: night ocean sparkle brightens in a wedge toward the eastern horizon (uNight eases with phase).
 12. `acc2f78` crabs scuttle on the sand — gazami + hermit (lineup-verified), sideways darts between pauses, ambient-only (catchable shore-critter group would need collection icons — later drop).
