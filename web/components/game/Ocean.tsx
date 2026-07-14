@@ -34,6 +34,89 @@ const SEA_PALETTE: Record<Phase, [string, string, string]> = {
   night: ["#1E2A52", "#354674", "#8FA0C8"],
 };
 
+// ── Sea glints (Beach Cove sweep 2026-07-14) ─────────────────────
+// The dump's actual sea-sparkle sprite (water-model/sea-water-model)
+// as two drifting point clouds twinkling in counter-phase. Two draw
+// calls, no shader work; the whole layer's opacity follows the phase.
+const GLINT_URL = "/assets/acnh/textures/sea-glint.png";
+const GLINT_OPACITY: Record<Phase, number> = { dawn: 0.34, day: 0.5, dusk: 0.28, night: 0.12 };
+
+function seededGlintPositions(seed: number, count: number): Float32Array {
+  const out = new Float32Array(count * 3);
+  let s = seed;
+  const rnd = () => {
+    s = (s * 1664525 + 1013904223) >>> 0;
+    return s / 4294967296;
+  };
+  for (let i = 0; i < count; i++) {
+    const a = rnd() * Math.PI * 2;
+    const r = 54 + rnd() * 34; // past the shore ring, inside the fog
+    out[i * 3] = Math.cos(a) * r;
+    out[i * 3 + 1] = 0.03; // just above the ocean plane (local, pre-rotation Z)
+    out[i * 3 + 2] = Math.sin(a) * r;
+  }
+  return out;
+}
+
+function SeaGlints({ phase }: { phase: Phase }) {
+  const matA = useRef<THREE.PointsMaterial | null>(null);
+  const matB = useRef<THREE.PointsMaterial | null>(null);
+  const groupRef = useRef<THREE.Group | null>(null);
+  const [geoA, geoB, tex] = useMemo(() => {
+    const a = new THREE.BufferGeometry();
+    a.setAttribute("position", new THREE.BufferAttribute(seededGlintPositions(7, 26), 3));
+    const b = new THREE.BufferGeometry();
+    b.setAttribute("position", new THREE.BufferAttribute(seededGlintPositions(1913, 26), 3));
+    const t = new THREE.TextureLoader().load(GLINT_URL);
+    t.colorSpace = THREE.SRGBColorSpace;
+    return [a, b, t];
+  }, []);
+  useEffect(
+    () => () => {
+      geoA.dispose();
+      geoB.dispose();
+      tex.dispose();
+    },
+    [geoA, geoB, tex]
+  );
+  useFrame(({ clock }) => {
+    const t = clock.elapsedTime;
+    const base = GLINT_OPACITY[phase];
+    // counter-phase twinkle so glints pop in/out instead of pulsing as one
+    if (matA.current) matA.current.opacity = base * (0.45 + 0.55 * Math.max(0, Math.sin(t * 0.9)));
+    if (matB.current) matB.current.opacity = base * (0.45 + 0.55 * Math.max(0, Math.sin(t * 0.9 + Math.PI)));
+    if (groupRef.current) groupRef.current.rotation.y = t * 0.004; // slow drift
+  });
+  return (
+    <group ref={groupRef} position={[0, OCEAN_Y + 0.05, 0]}>
+      <points geometry={geoA}>
+        <pointsMaterial
+          ref={matA}
+          map={tex}
+          size={1.15}
+          sizeAttenuation
+          transparent
+          depthWrite={false}
+          blending={THREE.AdditiveBlending}
+          opacity={0}
+        />
+      </points>
+      <points geometry={geoB}>
+        <pointsMaterial
+          ref={matB}
+          map={tex}
+          size={0.85}
+          sizeAttenuation
+          transparent
+          depthWrite={false}
+          blending={THREE.AdditiveBlending}
+          opacity={0}
+        />
+      </points>
+    </group>
+  );
+}
+
 export default function Ocean({ phase }: { phase: Phase }) {
   const timeUniform = useRef({ value: 0 });
   // Live uniform refs so the frame loop can lerp toward the phase palette.
@@ -135,6 +218,7 @@ varying vec2 vOceanXZ;`
         {/* Enough segments for the curved-world bend to roll the sea too */}
         <planeGeometry args={[OCEAN_SIZE, OCEAN_SIZE, 48, 48]} />
       </mesh>
+      <SeaGlints phase={phase} />
     </group>
   );
 }
