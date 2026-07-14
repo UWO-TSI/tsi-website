@@ -165,6 +165,55 @@ function shellPlacements(): NaturePlacement[][] {
   return groups;
 }
 
+// Beach debris (AC reference ref-07): dark kelp scraps + driftwood bits
+// on the wet sand — the references' beaches are never clean. Two
+// instanced meshes (flat kelp ellipses + stick boxes), angle-placed.
+// [angleRad, coastDistE, rot, scale]
+const KELP_SPOTS: [number, number, number, number][] = [
+  [0.5, 50.6, 1.2, 1.0], [0.72, 50.1, 3.4, 0.8], [1.05, 50.8, 0.4, 1.2],
+  [1.28, 50.3, 2.2, 0.9], [1.7, 50.7, 4.8, 1.1], [2.15, 50.2, 1.8, 0.85],
+  [2.75, 50.6, 0.9, 1.0], [3.4, 50.4, 3.0, 0.9], [4.1, 50.7, 5.2, 1.15],
+  [4.7, 50.2, 2.5, 0.8], [5.3, 50.5, 0.2, 1.0], [5.9, 50.8, 4.1, 0.9],
+];
+const STICK_SPOTS: [number, number, number, number][] = [
+  [0.62, 50.4, 0.8, 1.0], [1.5, 50.6, 2.9, 1.3], [2.5, 50.3, 1.1, 0.9],
+  [3.8, 50.5, 4.4, 1.1], [5.1, 50.7, 0.5, 1.2], [6.1, 50.3, 3.3, 0.8],
+];
+
+function buildDebris(): { kelp: THREE.InstancedMesh; sticks: THREE.InstancedMesh } {
+  const place = (spots: [number, number, number, number][], geo: THREE.BufferGeometry, color: string) => {
+    const mat = new THREE.MeshStandardMaterial({ color, roughness: 0.95, metalness: 0 });
+    const im = new THREE.InstancedMesh(geo, mat, spots.length);
+    const m4 = new THREE.Matrix4();
+    const q = new THREE.Quaternion();
+    const p = new THREE.Vector3();
+    const s = new THREE.Vector3();
+    const up = new THREE.Vector3(0, 1, 0);
+    spots.forEach(([a, e, rot, scale], i) => {
+      const ux = Math.cos(a);
+      const uz = Math.sin(a);
+      const r = e + coastWobble(ux, uz);
+      const x = ux * r;
+      const z = uz * r;
+      q.setFromAxisAngle(up, rot);
+      p.set(x, groundY(x, z) + 0.015, z);
+      s.setScalar(scale);
+      m4.compose(p, q, s);
+      im.setMatrixAt(i, m4);
+    });
+    im.instanceMatrix.needsUpdate = true;
+    return im;
+  };
+  const kelpGeo = new THREE.CircleGeometry(0.16, 7);
+  kelpGeo.scale(1, 0.45, 1);
+  kelpGeo.rotateX(-Math.PI / 2);
+  const stickGeo = new THREE.BoxGeometry(0.42, 0.035, 0.045);
+  return {
+    kelp: place(KELP_SPOTS, kelpGeo, "#5E6B42"),
+    sticks: place(STICK_SPOTS, stickGeo, "#8A6F52"),
+  };
+}
+
 // Soft foam rings where the shallow-water outcrops break the swell —
 // one merged geometry, one draw call, static.
 function buildFoamRings(): THREE.BufferGeometry | null {
@@ -220,6 +269,7 @@ export default function BeachCove() {
   const rocks = useMemo(() => buildRockPlacements(), []);
   const shells = useMemo(() => shellPlacements(), []);
   const foamRings = useMemo(() => buildFoamRings(), []);
+  const debris = useMemo(() => buildDebris(), []);
   const bamboo = useMemo<NaturePlacement[][]>(() => {
     const groups: NaturePlacement[][] = [[], []];
     for (const [x, z, rot, scale, model] of BAMBOO_XZ) {
@@ -269,6 +319,8 @@ export default function BeachCove() {
             <meshBasicMaterial color="#F2FBFA" transparent opacity={0.35} depthWrite={false} />
           </mesh>
         )}
+        <primitive object={debris.kelp} />
+        <primitive object={debris.sticks} />
         <InstancedGLB url={FENCE_A} placements={fence} castShadow={false} />
         <GLBProp
           url={FENCE_I}
