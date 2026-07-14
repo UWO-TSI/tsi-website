@@ -213,7 +213,7 @@ export default function PortfolioPage() {
   const [displayName, setDisplayName] = useState("");
   const [saving, setSaving] = useState(false);
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect -- async fetch, setState is after await
+   
   useEffect(() => {
     async function load() {
       const supabase = createClient();

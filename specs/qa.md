@@ -2,6 +2,7 @@
 
 > Owner: QA agent. All agents check this for bugs in their area.
 > Last updated: 2026-07-13 (Wave 27 — dump program)
+> **Lint baseline updated 2026-07-13: 74 errors / 52 warnings** (was 74/59 — seven genuinely-unused eslint-disable directives removed; mentorship/page.tsx keeps its two, the "unused" report there is a react-compiler two-pass quirk shielding a real declaration-order error).
 
 ---
 

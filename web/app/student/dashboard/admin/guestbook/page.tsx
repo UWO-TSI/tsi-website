@@ -84,7 +84,7 @@ export default function AdminGuestbookPage() {
   }, [page, showHidden]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+     
     load();
   }, [load]);
 

@@ -163,7 +163,7 @@ export default function AdminNPCConversationsPage() {
   }, [page, npcFilter, userQuery, dateFrom, dateTo, flaggedOnly]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+     
     load();
   }, [load]);
 

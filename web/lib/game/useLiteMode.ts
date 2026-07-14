@@ -42,7 +42,7 @@ export function useLiteMode(): [boolean, (next: boolean) => void] {
       }
       // No stored value — auto-detect from deviceMemory.
       const auto = detectAutoLite();
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- one-shot SSR-safe init
+       
       setEnabled(auto);
       localStorage.setItem(KEY, String(auto));
     } catch {
