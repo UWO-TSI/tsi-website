@@ -46,7 +46,9 @@ function Fall({ url, pos, rotY }: (typeof FALLS)[number]) {
     });
     return c;
   }, [scene]);
-  return <primitive object={clone} position={pos} rotation={[0, rotY, 0]} scale={[0.06, 0.06, 0.06]} />;
+  // nonuniform: the fall unit is 10 raw wide but must span the ~3.8u
+  // channel — x stretched, y/z at drop scale (mock-verified).
+  return <primitive object={clone} position={pos} rotation={[0, rotY, 0]} scale={[0.38, 0.08, 0.08]} />;
 }
 
 export default function RiverMouths() {

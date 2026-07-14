@@ -13,12 +13,13 @@
 
 import { Suspense, useMemo } from "react";
 import { useGLTF } from "@react-three/drei";
+import * as THREE from "three";
 import { useActivePalette } from "@/lib/game/contentLoader";
 
-const SETS: { match: RegExp; url: string }[] = [
-  { match: /winter|frost|christmas|holiday|snow/i, url: "/assets/acnh/seasonal/christmas-garland.glb" },
-  { match: /autumn|harvest|fall/i, url: "/assets/acnh/seasonal/harvest-garland-n.glb" },
-  { match: /carnival|festival|spring|fair/i, url: "/assets/acnh/seasonal/carnival-garland.glb" },
+const SETS: { match: RegExp; url: string; tint: string }[] = [
+  { match: /winter|frost|christmas|holiday|snow/i, url: "/assets/acnh/seasonal/christmas-garland.glb", tint: "#2E6B3E" },
+  { match: /autumn|harvest|fall/i, url: "/assets/acnh/seasonal/harvest-garland-n.glb", tint: "#C77B3A" },
+  { match: /carnival|festival|spring|fair/i, url: "/assets/acnh/seasonal/carnival-garland.glb", tint: "#C94F8E" },
 ];
 
 // Garland strings (posts included in the models) at the plaza entrances.
@@ -27,9 +28,25 @@ const SPOTS: { pos: [number, number, number]; rotY: number }[] = [
   { pos: [0, 0, -17], rotY: 0 },       // plaza south edge
 ];
 
-function Garland({ url, pos, rotY }: { url: string; pos: [number, number, number]; rotY: number }) {
+function Garland({ url, tint, pos, rotY }: { url: string; tint: string; pos: [number, number, number]; rotY: number }) {
   const { scene } = useGLTF(url);
-  const clone = useMemo(() => scene.clone(true), [scene]);
+  const clone = useMemo(() => {
+    const c = scene.clone(true);
+    // garland foliage/rope parts ship untextured (render near-black) —
+    // tint them per set so the strings read festive, not charred.
+    c.traverse((o) => {
+      const m = o as THREE.Mesh;
+      if (m.isMesh) {
+        const mat = m.material as THREE.MeshStandardMaterial;
+        if (!mat.map) {
+          const cl = mat.clone();
+          cl.color = new THREE.Color(tint);
+          m.material = cl;
+        }
+      }
+    });
+    return c;
+  }, [scene, tint]);
   return <primitive object={clone} position={pos} rotation={[0, rotY, 0]} scale={[0.1, 0.1, 0.1]} />;
 }
 
@@ -41,7 +58,7 @@ export default function SeasonalProps() {
   return (
     <Suspense fallback={null}>
       {SPOTS.map((sp, i) => (
-        <Garland key={i} url={set.url} pos={sp.pos} rotY={sp.rotY} />
+        <Garland key={i} url={set.url} tint={set.tint} pos={sp.pos} rotY={sp.rotY} />
       ))}
     </Suspense>
   );
