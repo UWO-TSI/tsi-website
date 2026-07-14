@@ -86,6 +86,87 @@ const ZONE_COLORS: Record<Zone, string> = {
   wood: "#B5885C",
 };
 
+// Path-texture pass (2026-07-14, David: "path texture needs tuning"):
+// per-zone procedural detail canvases — the kit UVs span each tile, so
+// the pattern repeats per tile. Deterministic; module-cached. Values
+// stay near-white to modulate ZONE_COLORS, same trick as the grass quilt.
+const _zoneTex: Partial<Record<Zone, THREE.CanvasTexture>> = {};
+function getZoneTexture(zone: Zone): THREE.CanvasTexture {
+  const cached = _zoneTex[zone];
+  if (cached) return cached;
+  const S = 64;
+  const cv = document.createElement("canvas");
+  cv.width = cv.height = S;
+  const ctx = cv.getContext("2d")!;
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, S, S);
+  let seed = 811 + zone.length * 37;
+  const rnd = () => {
+    seed = (seed * 1664525 + 1013904223) >>> 0;
+    return seed / 4294967296;
+  };
+  if (zone === "soil") {
+    // warm speckle: scattered darker grains
+    for (let i = 0; i < 260; i++) {
+      const v = 225 + Math.floor(rnd() * 22);
+      ctx.fillStyle = `rgb(${v},${v - 6},${v - 14})`;
+      ctx.fillRect(Math.floor(rnd() * S), Math.floor(rnd() * S), 1 + (rnd() < 0.25 ? 1 : 0), 1);
+    }
+  } else if (zone === "stone") {
+    // mottled patches + faint joint cracks
+    for (let i = 0; i < 26; i++) {
+      const v = 235 + Math.floor(rnd() * 18);
+      ctx.fillStyle = `rgba(${v},${v},${v - 4},0.55)`;
+      const r = 4 + rnd() * 8;
+      ctx.beginPath();
+      ctx.arc(rnd() * S, rnd() * S, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.strokeStyle = "rgba(180,176,168,0.6)";
+    for (let i = 0; i < 5; i++) {
+      ctx.beginPath();
+      ctx.moveTo(rnd() * S, rnd() * S);
+      ctx.lineTo(rnd() * S, rnd() * S);
+      ctx.stroke();
+    }
+  } else if (zone === "sand") {
+    // fine grain + a few darker shell dots
+    for (let i = 0; i < 420; i++) {
+      const v = 236 + Math.floor(rnd() * 18);
+      ctx.fillStyle = `rgb(${v},${v - 2},${v - 8})`;
+      ctx.fillRect(Math.floor(rnd() * S), Math.floor(rnd() * S), 1, 1);
+    }
+    for (let i = 0; i < 6; i++) {
+      ctx.fillStyle = "rgba(190,170,140,0.8)";
+      ctx.fillRect(Math.floor(rnd() * S), Math.floor(rnd() * S), 2, 2);
+    }
+  } else {
+    // wood: four planks with grain + gap lines
+    const plank = S / 4;
+    for (let p = 0; p < 4; p++) {
+      const base = 232 + Math.floor(rnd() * 16);
+      ctx.fillStyle = `rgb(${base},${base - 8},${base - 20})`;
+      ctx.fillRect(p * plank, 0, plank, S);
+      ctx.strokeStyle = `rgba(150,110,70,0.35)`;
+      for (let g = 0; g < 3; g++) {
+        const gx = p * plank + 2 + rnd() * (plank - 4);
+        ctx.beginPath();
+        ctx.moveTo(gx, 0);
+        ctx.bezierCurveTo(gx + 2, S * 0.3, gx - 2, S * 0.7, gx, S);
+        ctx.stroke();
+      }
+      ctx.fillStyle = "rgba(120,90,60,0.65)";
+      ctx.fillRect(p * plank, 0, 1, S);
+    }
+  }
+  const tex = new THREE.CanvasTexture(cv);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 4;
+  _zoneTex[zone] = tex;
+  return tex;
+}
+
 const PLAZA = { x0: -5.4, x1: 5.4, z0: -16.6, z1: -9.4 };
 const SAND_RECTS = [RECTS[4], RECTS[5]];
 const WOOD_PAD = RECTS[6];
@@ -189,7 +270,12 @@ export default function RoadTiles() {
     const result: THREE.InstancedMesh[] = [];
     for (const zone of ZONES) {
       const placements = computePlacements(zone);
-      const mat = new THREE.MeshStandardMaterial({ color: ZONE_COLORS[zone], roughness: 0.9, metalness: 0 });
+      const mat = new THREE.MeshStandardMaterial({
+        color: ZONE_COLORS[zone],
+        map: getZoneTexture(zone),
+        roughness: 0.9,
+        metalness: 0,
+      });
       for (const kind of VARIANTS) {
         const list = placements[kind];
         if (!list.length) continue;
