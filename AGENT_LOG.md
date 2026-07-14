@@ -120,6 +120,11 @@ David's rulings: rain opacity down; "island should not be just a circle — orga
 
 Rain streaks 0.42 → 0.22 (`94b518b`). Loop continues below as it lands.
 
+10. `ebf4fd3` riverbank rocks + rushes along the spline (the last bare waterway), skipping bridge + mouths.
+11. `cf3dbd6` moonlight lane: night ocean sparkle brightens in a wedge toward the eastern horizon (uNight eases with phase).
+12. `acc2f78` crabs scuttle on the sand — gazami + hermit (lineup-verified), sideways darts between pauses, ambient-only (catchable shore-critter group would need collection icons — later drop).
+13. `1b77f94` sun lounger on the NE sweep (beachbed +90X — the towel lesson repeats: Furniture flat-pieces flip direction varies per item).
+
 ### 2026-07-14 (later) — Beach Cove: water/land dump sweep (`6008c1f`)
 
 David's directive: flag every usable water/ocean + land asset in the dump, then use them. Catalog written to **`specs/asset-flags.md`** (233 Terrain entries triaged; out-sea/out-* vista slabs SKIPped per his clear-the-distance ruling). Shipped as one coherent destination — the south-east **Beach Cove**:

@@ -18,7 +18,7 @@ import { useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { getCausticTexture } from "@/lib/game/causticTexture";
-import { COAST_GLSL } from "@/lib/game/coast";
+import { COAST_GLSL, coastWobble as coastWobbleJS } from "@/lib/game/coast";
 
 const OCEAN_SIZE = 400;
 const OCEAN_Y = -0.55;
@@ -115,6 +115,64 @@ function SeaGlints({ phase }: { phase: Phase }) {
         />
       </points>
     </group>
+  );
+}
+
+// Night shore glow (loop iteration 14) — faint cyan sparkles dotted
+// along the waterline after dark, a bioluminescent plankton wash. Same
+// point-cloud trick as SeaGlints; positions ride the organic coast.
+function NightShoreGlow({ phase }: { phase: Phase }) {
+  const mat = useRef<THREE.PointsMaterial | null>(null);
+  const [geo, tex] = useMemo(() => {
+    const g = new THREE.BufferGeometry();
+    const N = 22;
+    const pos = new Float32Array(N * 3);
+    let s = 4211;
+    const rnd = () => {
+      s = (s * 1664525 + 1013904223) >>> 0;
+      return s / 4294967296;
+    };
+    for (let i = 0; i < N; i++) {
+      const a = rnd() * Math.PI * 2;
+      const ux = Math.cos(a);
+      const uz = Math.sin(a);
+      // parked just past the waterline (coast-space 51.7..52.6)
+      const r = 51.7 + rnd() * 0.9 + coastWobbleJS(ux, uz);
+      pos[i * 3] = ux * r;
+      pos[i * 3 + 1] = 0.04;
+      pos[i * 3 + 2] = uz * r;
+    }
+    g.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+    const t = new THREE.TextureLoader().load(GLINT_URL);
+    t.colorSpace = THREE.SRGBColorSpace;
+    return [g, t];
+  }, []);
+  useEffect(
+    () => () => {
+      geo.dispose();
+      tex.dispose();
+    },
+    [geo, tex]
+  );
+  useFrame(({ clock }) => {
+    if (!mat.current) return;
+    const base = phase === "night" ? 0.5 : phase === "dusk" ? 0.16 : 0;
+    mat.current.opacity = base * (0.55 + 0.45 * Math.sin(clock.elapsedTime * 1.7));
+  });
+  return (
+    <points geometry={geo} position={[0, OCEAN_Y + 0.03, 0]}>
+      <pointsMaterial
+        ref={mat}
+        map={tex}
+        color="#7FE8D8"
+        size={0.5}
+        sizeAttenuation
+        transparent
+        depthWrite={false}
+        blending={THREE.AdditiveBlending}
+        opacity={0}
+      />
+    </points>
   );
 }
 
@@ -235,6 +293,7 @@ ${COAST_GLSL}`
         <planeGeometry args={[OCEAN_SIZE, OCEAN_SIZE, 48, 48]} />
       </mesh>
       <SeaGlints phase={phase} />
+      <NightShoreGlow phase={phase} />
     </group>
   );
 }
