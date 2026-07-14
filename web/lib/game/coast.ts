@@ -56,6 +56,17 @@ export function clampToCoast(x: number, z: number, limit: number): [number, numb
   return [x * f, z * f];
 }
 
+/**
+ * Beach WIDTH variation (iteration 2): shifts where the sand color
+ * begins, per angle — wide sandy sweeps on some stretches, grassy banks
+ * that run nearly to the water on others. Purely cosmetic (color bands
+ * in the ground mesh); the waterline itself stays rimSink-defined.
+ */
+export function beachWidthShift(x: number, z: number): number {
+  const a = Math.atan2(z, x);
+  return 1.1 * Math.sin(4 * a + 0.9) + 0.7 * Math.sin(6 * a + 2.6);
+}
+
 // Rim-sink profile (mirrors the ground mesh in GameWorld's Terrain —
 // keep in sync): past SINK_START the beach dives below the ocean.
 const SINK_START = 49.5;

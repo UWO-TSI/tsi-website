@@ -26,7 +26,7 @@ import { AudioManager } from "@/lib/game/audio";
 import { WarmupProbe, LoadGateOverlay } from "./LoadGate";
 import RainFX from "./RainFX";
 import { getTodayWeather, type Weather } from "@/lib/game/weather";
-import { coastDist } from "@/lib/game/coast";
+import { coastDist, beachWidthShift } from "@/lib/game/coast";
 import { CloudShadows, NightStars, WaterSparkles, LeafGusts, NightWindows, TargetGlow } from "./AmbienceFX";
 import AmbientLife from "./AmbientLife";
 import AudioController from "./AudioController";
@@ -532,11 +532,15 @@ function Terrain() {
         tmp.copy(c1);
       }
 
-      if (dist > 46 && dist <= 48.5) {
-        tmp.lerp(cS, (dist - 46) / 2.5 * 0.4);
-      } else if (dist > 48.5) {
+      // Beach width varies per angle (iteration 2): es shifts the color
+      // bands only — wide sand sweeps on some stretches, grassy banks
+      // nearly to the water on others. The waterline stays put.
+      const es = dist + beachWidthShift(x, z);
+      if (es > 46 && es <= 48.5) {
+        tmp.lerp(cS, (es - 46) / 2.5 * 0.4);
+      } else if (es > 48.5) {
         // grass → sand across the waterline, sand → wet soil underwater
-        const sandT = Math.min((dist - 48.5) / 2.2, 1);
+        const sandT = Math.min((es - 48.5) / 2.2, 1);
         tmp.lerp(cSand, sandT * sandT * (3 - 2 * sandT));
         if (dist > 52.5) {
           tmp.lerp(cSoil, Math.min((dist - 52.5) / 3, 1));

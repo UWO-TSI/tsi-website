@@ -21,10 +21,12 @@
 
 import { Suspense, useMemo } from "react";
 import { useGLTF } from "@react-three/drei";
+import * as THREE from "three";
+import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import InstancedGLB, { type NaturePlacement } from "./InstancedNature";
 import { GLBProp } from "./NatureModels";
 import { getTerrainHeight } from "./terrain";
-import { coastDist, rimSink } from "@/lib/game/coast";
+import { coastDist, coastWobble, rimSink } from "@/lib/game/coast";
 
 const PALM_A = "/assets/acnh/plants/tree-palm-a.glb";
 const PALM_B = "/assets/acnh/plants/tree-palm-b.glb";
@@ -32,12 +34,15 @@ const BAMBOO_A = "/assets/acnh/plants/tree-bamboo-a.glb";
 const BAMBOO_B = "/assets/acnh/plants/tree-bamboo-b.glb";
 const HIBISCUS = "/assets/acnh/plants/bush-hibiscus.glb";
 const ROCKS = ["a", "b", "c", "d", "e"].map((k) => `/assets/acnh/props/rock-${k}.glb`);
+const SHELLS = ["scallop", "turban", "whelk", "asari"].map(
+  (k) => `/assets/acnh/props/shell-${k}.glb`
+);
 const FENCE_A = "/assets/acnh/props/fence-rope-a.glb";
 const FENCE_I = "/assets/acnh/props/fence-rope-i.glb";
 const PARASOL = "/assets/acnh/props/beach-parasol.glb";
 const TOWEL = "/assets/acnh/props/beach-towel.glb";
 const BALL = "/assets/acnh/props/beach-ball.glb";
-[PALM_A, PALM_B, BAMBOO_A, BAMBOO_B, HIBISCUS, ...ROCKS, FENCE_A, FENCE_I, PARASOL, TOWEL, BALL].forEach(
+[PALM_A, PALM_B, BAMBOO_A, BAMBOO_B, HIBISCUS, ...ROCKS, ...SHELLS, FENCE_A, FENCE_I, PARASOL, TOWEL, BALL].forEach(
   (u) => useGLTF.preload(u)
 );
 
@@ -115,6 +120,49 @@ const FENCE_X = 16.35;
 const FENCE_Z0 = 27.2;
 const FENCE_COUNT = 11;
 
+// Shells strewn on the sand band all around the island (iteration 2).
+// Placed by angle in coast-space so they ride the organic beach.
+// [angleRad, coastDistE, modelIndex, rotY, scale]
+const SHELL_SPOTS: [number, number, number, number, number][] = [
+  [0.35, 49.6, 0, 2.1, 1.1],
+  [0.95, 49.1, 1, 0.4, 1.0],
+  [1.35, 50.0, 3, 4.4, 1.2],
+  [1.62, 49.4, 2, 1.7, 0.95],
+  [2.35, 49.8, 0, 3.0, 1.25],
+  [2.95, 49.2, 3, 0.9, 1.0],
+  [3.65, 50.1, 1, 5.2, 1.1],
+  [4.35, 49.5, 2, 2.6, 1.0],
+  [4.95, 49.9, 0, 1.2, 0.9],
+  [5.65, 49.3, 3, 3.8, 1.15],
+];
+
+function shellPlacements(): NaturePlacement[][] {
+  const groups: NaturePlacement[][] = SHELLS.map(() => []);
+  for (const [a, e, mi, rot, scale] of SHELL_SPOTS) {
+    const ux = Math.cos(a);
+    const uz = Math.sin(a);
+    const r = e + coastWobble(ux, uz);
+    const x = ux * r;
+    const z = uz * r;
+    groups[mi].push({ position: [x, groundY(x, z) + 0.01, z], rotation: rot, scale });
+  }
+  return groups;
+}
+
+// Soft foam rings where the shallow-water outcrops break the swell —
+// one merged geometry, one draw call, static.
+function buildFoamRings(): THREE.BufferGeometry | null {
+  const geos = SEA_ROCKS.map(([, x, z, , , scale]) => {
+    const inner = 0.42 * scale;
+    const outer = 0.62 * scale;
+    const g = new THREE.RingGeometry(inner, outer, 22);
+    g.rotateX(-Math.PI / 2);
+    g.translate(x, -0.52, z);
+    return g;
+  });
+  return mergeGeometries(geos, false);
+}
+
 function buildRockPlacements(): NaturePlacement[][] {
   const groups: NaturePlacement[][] = ROCKS.map(() => []);
   for (const [mi, x, z, rot, scale] of LAND_ROCKS) {
@@ -146,6 +194,8 @@ export default function BeachCove() {
     []
   );
   const rocks = useMemo(() => buildRockPlacements(), []);
+  const shells = useMemo(() => shellPlacements(), []);
+  const foamRings = useMemo(() => buildFoamRings(), []);
   const bamboo = useMemo<NaturePlacement[][]>(() => {
     const groups: NaturePlacement[][] = [[], []];
     for (const [x, z, rot, scale, model] of BAMBOO_XZ) {
@@ -184,6 +234,16 @@ export default function BeachCove() {
           rocks[i].length ? (
             <InstancedGLB key={url} url={url} placements={rocks[i]} castShadow={false} />
           ) : null
+        )}
+        {SHELLS.map((url, i) =>
+          shells[i].length ? (
+            <InstancedGLB key={url} url={url} placements={shells[i]} castShadow={false} />
+          ) : null
+        )}
+        {foamRings && (
+          <mesh geometry={foamRings} renderOrder={2}>
+            <meshBasicMaterial color="#F2FBFA" transparent opacity={0.35} depthWrite={false} />
+          </mesh>
         )}
         <InstancedGLB url={FENCE_A} placements={fence} castShadow={false} />
         <GLBProp
