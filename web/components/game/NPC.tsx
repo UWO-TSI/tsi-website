@@ -137,6 +137,8 @@ export default function NPC({ persona, position, playerPosition, onClick }: NPCP
           tex.dispose();
           return;
         }
+        // L12 colorspace audit: sprite sheets are albedo → sRGB
+        tex.colorSpace = THREE.SRGBColorSpace;
         tex.magFilter = THREE.NearestFilter;
         tex.minFilter = THREE.NearestFilter;
         tex.generateMipmaps = false;

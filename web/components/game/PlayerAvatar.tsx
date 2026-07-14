@@ -149,6 +149,9 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
   // Load and configure textures for pixel art during construction
   const spriteTexture = useMemo(() => {
     const tex = new THREE.TextureLoader().load("/assets/characters/player_walk.png");
+    // L12 colorspace audit: sprite sheets are albedo — untagged they were
+    // sampled as linear and rendered washed-bright vs everything else.
+    tex.colorSpace = THREE.SRGBColorSpace;
     tex.minFilter = THREE.NearestFilter;
     tex.magFilter = THREE.NearestFilter;
     tex.generateMipmaps = false;
