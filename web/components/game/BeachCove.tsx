@@ -42,7 +42,8 @@ const FENCE_I = "/assets/acnh/props/fence-rope-i.glb";
 const PARASOL = "/assets/acnh/props/beach-parasol.glb";
 const TOWEL = "/assets/acnh/props/beach-towel.glb";
 const BALL = "/assets/acnh/props/beach-ball.glb";
-[PALM_A, PALM_B, BAMBOO_A, BAMBOO_B, HIBISCUS, ...ROCKS, ...SHELLS, FENCE_A, FENCE_I, PARASOL, TOWEL, BALL].forEach(
+const BED = "/assets/acnh/props/beach-bed.glb";
+[PALM_A, PALM_B, BAMBOO_A, BAMBOO_B, HIBISCUS, ...ROCKS, ...SHELLS, FENCE_A, FENCE_I, PARASOL, TOWEL, BALL, BED].forEach(
   (u) => useGLTF.preload(u)
 );
 
@@ -283,6 +284,9 @@ export default function BeachCove() {
         <GLBProp url={PARASOL} position={[17.2, groundY(17.2, 46.8), 46.8]} rotation={[0, 0.5, 0]} />
         <GLBProp url={TOWEL} position={[18.8, groundY(18.8, 46.4) + 0.02, 46.4]} rotation={[0, -0.35, 0]} castShadow={false} />
         <GLBProp url={BALL} position={[15.9, groundY(15.9, 47.6) + 0.02, 47.6]} castShadow={false} />
+        {/* NE sweep mini-camp (iteration 13): a lone sun lounger facing
+            the water — the wide beach gets its own reason to wander over */}
+        <GLBProp url={BED} position={[39.4, groundY(39.4, -22.6), -22.6]} rotation={[0, 2.2, 0]} />
       </group>
     </Suspense>
   );
