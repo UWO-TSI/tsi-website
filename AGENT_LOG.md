@@ -102,6 +102,19 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-14 (later) — Beach Cove: water/land dump sweep (`6008c1f`)
+
+David's directive: flag every usable water/ocean + land asset in the dump, then use them. Catalog written to **`specs/asset-flags.md`** (233 Terrain entries triaged; out-sea/out-* vista slabs SKIPped per his clear-the-distance ruling). Shipped as one coherent destination — the south-east **Beach Cove**:
+
+- **Sand path spur + wood deck** (unit-road-sand/wood): RoadTiles generalized soil/stone → 4 zones with global neighbor checks (materials transition tile-to-tile); corridors added to terrain.ts PATH_CORRIDORS, tuft exclusions, minimap sand lines.
+- **Palms** (palm-tree-3/4): three extraction lessons in one asset — (1) their skin bake lands Y-up (joints carry the rotation; any flip lays them flat) unlike rocks (Z-up, +90X); (2) foliage textures are LUT-coordinate maps stuck in the 0.1–0.3 range — histogram, then luminance-normalize ×tint (new `lumNormalizeMats` pipeline step); (3) frond normals forced up for flat cozy lighting. Hibiscus same treatment.
+- **The 5 classic ACNH rocks** (stone-a..e, textured): NE grass field cluster, two sand strays, and 7 shallow-water outcrops poking through the swell past the rim (fixed-Y placement, tops 0.3–0.6u above the −0.55 surface).
+- **Buoy rope chains** (buoy-main/buoy-rope-nh — the deferred item): 8u swim-border net span per buoy site + smaller partner float, top rope line floating 0.13u above the swell; floats bob independently, net stays taut.
+- **Beach camp**: parasol+lounger/towel/beachball (untextured furniture → tints). Towel needed +90X (misread the lineup's shallow angle as flat — the world-mock top-down caught it standing).
+- Mock-verified: lineup renders (9 iterations) + world.html cove/covetop/chain cams. Gates: tsc clean, 74/52 lint baseline, 32/32, build exit 0. Deployed, tethos.ca 200.
+
+Queued from the flag list: sea sparkle glints (water-model), brick plaza accent, bamboo grove, unit-river v2, plaza-deco event stalls (principle #8 ammo).
+
 ### 2026-07-14 — Stabilize closed + all three buildings get rooms (`56dd351`…`633b299`)
 
 - **Prod pipeline fact established:** Vercel auto-deploys main → production (tethos.ca) on every push — there is NO staging gate. Smoke: tethos.ca + /student/login 200 on latest. Worth a David ruling eventually (preview branches vs straight-to-prod).
