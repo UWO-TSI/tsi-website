@@ -57,8 +57,21 @@ function getShadowMaterial(): THREE.MeshBasicMaterial {
   return _shadowMat;
 }
 
+let _ringGeo: THREE.RingGeometry | null = null;
+function getRingGeometry(): THREE.RingGeometry {
+  if (!_ringGeo) {
+    _ringGeo = new THREE.RingGeometry(0.75, 1, 18);
+    _ringGeo.rotateX(-Math.PI / 2);
+  }
+  return _ringGeo;
+}
+
+const JUMP_PERIOD = 22; // seconds between breaches per fish
+const JUMP_LEN = 0.85;
+
 function RiverFish({ cfg }: { cfg: (typeof RIVER_FISH)[number] }) {
   const ref = useRef<THREE.Mesh>(null);
+  const ringRef = useRef<THREE.Mesh>(null);
   useFrame(({ clock }) => {
     const m = ref.current;
     if (!m) return;
@@ -70,11 +83,45 @@ function RiverFish({ cfg }: { cfg: (typeof RIVER_FISH)[number] }) {
     const { position, tangent } = sampleRiverPoint(t);
     const dir = cyc % 2 < 1 ? -1 : 1;
     const swayN = Math.sin(time * 0.7 + cfg.phase) * 0.6;
-    m.position.set(position.x - tangent.z * swayN, RIVER_FISH_Y, position.z + tangent.x * swayN);
+    const fx = position.x - tangent.z * swayN;
+    const fz = position.z + tangent.x * swayN;
+
+    // Koi breach: once per JUMP_PERIOD the shadow arcs above the surface
+    // with a splash ring — the little "the water is alive" beat.
+    const jt = (time + cfg.phase * 7) % JUMP_PERIOD;
+    let y = RIVER_FISH_Y;
+    if (jt < JUMP_LEN) {
+      const p = jt / JUMP_LEN; // 0..1
+      y = RIVER_FISH_Y + Math.sin(p * Math.PI) * 0.42;
+      m.rotation.x = Math.sin(p * Math.PI * 2) * 0.9; // flip through the arc
+    } else {
+      m.rotation.x = 0;
+    }
+    m.position.set(fx, y, fz);
     m.rotation.y = Math.atan2(tangent.x * dir, tangent.z * dir) + Math.sin(time * 5 + cfg.phase) * 0.14;
     m.scale.setScalar(cfg.size);
+
+    const ring = ringRef.current;
+    if (ring) {
+      if (jt < 1.1) {
+        const rp = jt / 1.1;
+        ring.visible = true;
+        ring.position.set(fx, RIVER_FISH_Y + 0.07, fz);
+        ring.scale.setScalar(0.25 + rp * 1.0);
+        (ring.material as THREE.MeshBasicMaterial).opacity = 0.5 * (1 - rp);
+      } else {
+        ring.visible = false;
+      }
+    }
   });
-  return <mesh ref={ref} geometry={getFishGeometry()} material={getShadowMaterial()} renderOrder={-1} />;
+  return (
+    <group>
+      <mesh ref={ref} geometry={getFishGeometry()} material={getShadowMaterial()} renderOrder={-1} />
+      <mesh ref={ringRef} geometry={getRingGeometry()} visible={false} renderOrder={1}>
+        <meshBasicMaterial color="#EAF7FA" transparent opacity={0} depthWrite={false} />
+      </mesh>
+    </group>
+  );
 }
 
 function SeaFish({ cfg }: { cfg: (typeof SEA_FISH)[number] }) {
