@@ -322,7 +322,7 @@ export default function HQInterior({
 
         {/* Front Desk (→ Profile) + chair */}
         <Piece name="study-desk" position={[-5.2, 0, -2.4]} scale={0.11} />
-        <Piece name="study-chair" position={[-5.2, 0, -1.1]} rotY={Math.PI} />
+        <Piece name="study-chair" position={[-5.2, 0, -0.7]} rotY={Math.PI} />
 
         {/* Bookshelf (→ Quests) */}
         <Piece name="bookshelf" position={[5.6, 0, -3.1]} />
