@@ -100,7 +100,7 @@ const RIVER_POLYLINE: [number, number][] = (() => {
   }
   return pts;
 })();
-const RIVER_DEPTH = -0.35; // valley floor, below the -0.12 riverbed plane
+const RIVER_DEPTH = -0.55; // river v2: deeper valley under the -0.2 water
 const RIVER_HALF = 2.2;    // full-depth half-width (water is 1.9 half-wide)
 const RIVER_BLEND = 1.3;   // bank blend distance beyond RIVER_HALF
 

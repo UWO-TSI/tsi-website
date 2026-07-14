@@ -40,7 +40,9 @@ const ROWS = 5; // 5 rows: 2 banks + 3 inner — denser cross-section than Path
 const SEGMENTS = 96;
 
 /** Y offset of the water surface relative to the terrain baseline (y=0). */
-const WATER_Y = -0.04;
+// River v2 (2026-07-14): water dropped so the new bank walls
+// (RiverBankWalls) get real ACNH presence above the surface.
+const WATER_Y = -0.2;
 
 const _curve = new THREE.CatmullRomCurve3(
   RIVER_CONTROL_POINTS.map(([x, z]) => new THREE.Vector3(x, 0, z)),
