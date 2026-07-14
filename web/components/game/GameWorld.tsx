@@ -801,6 +801,11 @@ function buildBlobPlacements(): import("./BlobShadows").BlobPlacement[] {
 
   TREE_XZ.forEach(([x, z]) => add(x, z, 0.9));
   BEACH_PALM_XZ.forEach(([x, z]) => add(x, z, 0.8));
+  // organic-coast loop props (iteration 15): cove camp + NE lounger +
+  // the Oracle bamboo grove ground too when real shadows are off
+  add(17.2, 46.8, 0.75);  // parasol
+  add(39.4, -22.6, 0.8, 0.45); // sun lounger
+  [[-5.5, 37.2], [-1.2, 37.0], [1.4, 38.8], [5.6, 38.2]].forEach(([x, z]) => add(x, z, 0.4)); // bamboo
   BUSH_XZ.forEach(([x, z]) => add(x, z, 0.55));
   for (const b of BUILDINGS) {
     if (b.size[2] < 1) add(b.position[0], b.position[2], 0.55, 0.35); // boards
