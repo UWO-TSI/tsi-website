@@ -66,6 +66,7 @@ import ToolFlourish from "./ToolFlourish";
 import RiverMouths from "./RiverMouths";
 import ShoreLife from "./ShoreLife";
 import BeachCove, { BEACH_PALM_XZ } from "./BeachCove";
+import SandFootprints from "./SandFootprints";
 import SeasonalProps from "./SeasonalProps";
 import Landmarks from "./Landmarks";
 import { getActiveCritters } from "@/lib/game/critterStore";
@@ -1881,6 +1882,7 @@ function Scene({
       <RiverMouths />
       <ShoreLife />
       <BeachCove />
+      <SandFootprints playerPosRef={playerPosRef} />
       <SeasonalProps />
       <Landmarks />
       <River phase={todPhase} />
