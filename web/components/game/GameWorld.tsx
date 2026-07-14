@@ -1282,6 +1282,11 @@ function LampMoths({ center }: { center: [number, number, number] }) {
   );
 }
 
+// L11 (lighting research, the ACNH lampshade rule): each lamp's pool has
+// its own warmth — peach by the HQ, amber at the shop, deep gold at the
+// house — so night reads as a string of individual hearths, not clones.
+const LAMP_TINTS = ["#FFD9A8", "#FFD9A8", "#FFC985", "#FFC985", "#FFBE74", "#FFBE74"];
+
 function LampPosts({ phase }: { phase: "day" | "night" | "dawn" | "dusk" }) {
   const onAtNight = phase === "night" || phase === "dusk" || phase === "dawn";
   const emissive = onAtNight ? 2.2 : 0;
@@ -1308,7 +1313,7 @@ function LampPosts({ phase }: { phase: "day" | "night" | "dawn" | "dusk" }) {
               <sphereGeometry args={[0.18, 14, 10]} />
               <meshStandardMaterial
                 color="#FFE4B0"
-                emissive="#FFB060"
+                emissive={LAMP_TINTS[i % LAMP_TINTS.length]}
                 emissiveIntensity={emissive}
                 roughness={0.55}
                 metalness={0}
@@ -1321,7 +1326,7 @@ function LampPosts({ phase }: { phase: "day" | "night" | "dawn" | "dusk" }) {
             {onAtNight && (
               <pointLight
                 position={[0, 1.85, 0]}
-                color="#FFC078"
+                color={LAMP_TINTS[i % LAMP_TINTS.length]}
                 intensity={0.95}
                 distance={5.5}
                 decay={2}
