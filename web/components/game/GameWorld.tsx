@@ -1362,12 +1362,29 @@ const FILLER_NPCS: NPCPersona[] = [
     created_at: new Date(0).toISOString(),
     updated_at: new Date(0).toISOString(),
   },
+  {
+    // Beach Cove loop: someone is always at the cove — the world's new
+    // destination shouldn't stand empty (principle #2). Reuses the
+    // visitor sheet; opposite end of the island from its twin.
+    id: "filler-beachgoer-1",
+    slug: "beachgoer-1",
+    display_name: "Beachgoer",
+    sprite_url: "/assets/characters/npc/visitor-1.png",
+    spawn_zone: "courtyard",
+    is_permanent: false,
+    persona_prompt: null,
+    canned_dialogue: [],
+    active: true,
+    created_at: new Date(0).toISOString(),
+    updated_at: new Date(0).toISOString(),
+  },
 ];
 
 const FILLER_POSITIONS: [number, number, number][] = [
   [3, 0, -4],
   [-4, 0, -5],
   [2, 0, -8],
+  [16.6, 0, 45.2], // the cove camp
 ];
 
 // ─── Scene ──────────────────────────────────────────────────────
