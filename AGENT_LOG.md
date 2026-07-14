@@ -102,6 +102,20 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-13 (evening) — Stabilize round: colossus root-cause, sideways audit, P-light v2 (`d899735`…`87b113c`)
+
+David's live session broke ("lagging like crazy, huge assets, pixel look dead, assets sideways"). Root causes, all fixed with evidence:
+
+- **The giant timber = campfire.glb**: round-2 re-extraction overwrote a PRE-SCALED asset that AmbientProps renders at scale 1 → 17-unit log colossus at spawn (also the main fps drain — it filled every pixel). Scale baked back into the file. Rule in memory: check consumers' scale contracts before overwriting assets.
+- **Sideways assets**: skeleton introspection settled the axis question — furniture GLBs are skinned with joint-world × inverseBind = IDENTITY (raw verts are final), but the raw authoring axis varies PER ITEM. bake_skin.mjs + a per-piece Z-up list now; garlands restored upright, desk upright (it's a tall hutch desk), bookshelf/mat correct, chair clear of the desk, white wall-module slabs removed from the HQ (room-shell panels don't inset — Phase-2 rebuild material).
+- **Pixel look + lag**: verified working/60fps on fresh pages — the corruption was the day-long HMR session (plus the colossus). Landmark/garland transforms hardened against R3F HMR re-parenting anyway.
+- **Horizon cleanup (David's picks)**: vista isles cut, balloon cut, fog far 120→100.
+- **F3 profiler fixed** ("instrument first"): gl.info manual-reset mode — real draws/tris/frame-ms/geo/tex counts (the composer had been zeroing them since F1.4).
+- **P-light v2 (the ACNH lighting ask)**: verdict on how ACNH does it = warm sun + real soft shadow maps with shadows lifted by ambient/IBL fill (never black). Shipped: PCFSoft 2048 sun map over the whole island, buildings/trees/landmarks cast, terrain/roads receive, Shadows setting = real map (on) vs blob discs (off). Plus character pop: silhouette halos on player/NPC sprites.
+- Halloween palette activated then deactivated per David (garland demo done; Default active).
+
+**Awaiting David:** F3 numbers with Shadows on vs off on his machine, and the visual verdict on shadows + halos + the cleaned horizon.
+
 ### 2026-07-13 — Playtest polish round: P1 bugs, ACNH water, road tiles, lighting v1 (`2ee18b3`, `6d3e8b8`, `5e8d781`, `0f94bf1`)
 
 David's live-playtest rulings executed same-day (his session on 3000 holds the Next dev lock, so QA ran through a standalone three.js harness + his HMR session instead of the usual 3050 env-dance):
