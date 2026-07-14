@@ -69,6 +69,7 @@ import BeachCove, { BEACH_PALM_XZ } from "./BeachCove";
 import SandFootprints from "./SandFootprints";
 import RiverBanks from "./RiverBanks";
 import RiverBankWalls from "./RiverBankWalls";
+import FishShadows from "./FishShadows";
 import BeachCrabs from "./BeachCrabs";
 import SeasonalProps from "./SeasonalProps";
 import Landmarks from "./Landmarks";
@@ -1912,6 +1913,7 @@ function Scene({
       <Landmarks />
       <River phase={todPhase} />
       <RiverBankWalls />
+      <FishShadows />
       <Suspense fallback={null}>
         <RiverBanks />
       </Suspense>
