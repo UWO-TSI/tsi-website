@@ -120,6 +120,19 @@ const FENCE_X = 16.35;
 const FENCE_Z0 = 27.2;
 const FENCE_COUNT = 11;
 
+// Rocky banks (iteration 4): where beachWidthShift squeezes the sand
+// away (θ≈2.48 west bank, θ≈5.62 by the lighthouse), clusters of rocks
+// sit half-in-half-out of the water — grassy-bank shorelines read
+// rugged instead of bare. [angleRad, coastDistE, modelIndex, rotY, scale]
+const BANK_ROCK_SPOTS: [number, number, number, number, number][] = [
+  [2.44, 50.4, 1, 0.7, 1.5],
+  [2.48, 50.9, 4, 2.2, 1.9],
+  [2.53, 51.3, 3, 4.1, 1.3],
+  [5.58, 50.5, 4, 1.1, 1.7],
+  [5.62, 51.0, 2, 3.4, 1.4],
+  [5.67, 50.6, 0, 5.0, 1.2],
+];
+
 // Shells strewn on the sand band all around the island (iteration 2).
 // Placed by angle in coast-space so they ride the organic beach.
 // [angleRad, coastDistE, modelIndex, rotY, scale]
@@ -170,6 +183,14 @@ function buildRockPlacements(): NaturePlacement[][] {
   }
   for (const [mi, x, z, y, rot, scale] of SEA_ROCKS) {
     groups[mi].push({ position: [x, y, z], rotation: rot, scale });
+  }
+  for (const [a, e, mi, rot, scale] of BANK_ROCK_SPOTS) {
+    const ux = Math.cos(a);
+    const uz = Math.sin(a);
+    const r = e + coastWobble(ux, uz);
+    const x = ux * r;
+    const z = uz * r;
+    groups[mi].push({ position: [x, groundY(x, z), z], rotation: rot, scale });
   }
   return groups;
 }

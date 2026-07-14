@@ -13,7 +13,7 @@ import { useMemo } from "react";
 import { useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 import { getTerrainHeight, BUILDING_FOOTPRINTS } from "./terrain";
-import { coastDist } from "@/lib/game/coast";
+import { coastDist, coastWobble, rimSink } from "@/lib/game/coast";
 
 const VARIANTS = [
   "/assets/acnh/props/grass-tuft-00.glb",
@@ -43,6 +43,22 @@ function mulberry32(a: number) {
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
 }
+
+// Dune grass (iteration 4): dry tufts on the WIDE sand sweeps
+// (beachWidthShift maxima at θ≈1.85 and θ≈4.99), placed by angle in
+// coast-space and colored drier than the meadow tufts.
+// [angleRad, coastDistE, rot, scale]
+const DUNE_SPOTS: [number, number, number, number][] = [
+  [1.77, 48.8, 0.4, 0.55],
+  [1.81, 49.5, 2.1, 0.62],
+  [1.86, 48.9, 3.7, 0.48],
+  [1.9, 49.7, 1.2, 0.58],
+  [1.94, 49.1, 5.1, 0.5],
+  [4.91, 49.0, 0.9, 0.6],
+  [4.96, 49.6, 2.8, 0.52],
+  [5.02, 48.8, 4.4, 0.62],
+  [5.07, 49.4, 1.6, 0.55],
+];
 
 function rejected(x: number, z: number): boolean {
   if (coastDist(x, z) > 47) return true;
@@ -113,8 +129,39 @@ export default function GrassTufts() {
     });
   }, [g0.scene, g1.scene, g2.scene]);
 
+  // Dune grass: one extra InstancedMesh, drier color, on the sand band.
+  const duneMesh = useMemo(() => {
+    const geo = firstGeometry(g0.scene);
+    const mat = new THREE.MeshBasicMaterial({
+      color: "#9AA653",
+      side: THREE.DoubleSide,
+      alphaTest: 0.4,
+    });
+    const im = new THREE.InstancedMesh(geo, mat, DUNE_SPOTS.length);
+    const m4 = new THREE.Matrix4();
+    const q = new THREE.Quaternion();
+    const sc = new THREE.Vector3();
+    const p = new THREE.Vector3();
+    const up = new THREE.Vector3(0, 1, 0);
+    DUNE_SPOTS.forEach(([a, e, rot, s], i) => {
+      const ux = Math.cos(a);
+      const uz = Math.sin(a);
+      const r = e + coastWobble(ux, uz);
+      const x = ux * r;
+      const z = uz * r;
+      q.setFromAxisAngle(up, rot);
+      p.set(x, getTerrainHeight(x, z) - rimSink(e), z);
+      sc.setScalar(SCALE * s);
+      m4.compose(p, q, sc);
+      im.setMatrixAt(i, m4);
+    });
+    im.instanceMatrix.needsUpdate = true;
+    return im;
+  }, [g0.scene]);
+
   return (
     <group>
+      <primitive object={duneMesh} />
       {meshes.map((im, i) => (
         <primitive key={i} object={im} />
       ))}
