@@ -371,7 +371,8 @@ function TimeOfDayCycle({ weather, todPhase }: { weather: Weather; todPhase: "da
       const prev = cloudMat.uniforms.params.value as THREE.Vector4;
       const drift = weather === "rain" ? 0.00003 : 0.000012;
       const cOpacity = weather === "rain" ? 0.95 : 0.85;
-      cloudMat.uniforms.params.value.set(prev.x + drift, cOpacity, (0.45 + sunI * 0.55) * (weather === "rain" ? 0.75 : 1), 0);
+      // wave-26 follow-up: night clouds dimmed (0.45->0.32 floor)
+      cloudMat.uniforms.params.value.set(prev.x + drift, cOpacity, (0.32 + sunI * 0.68) * (weather === "rain" ? 0.75 : 1), 0);
     }
 
     // Sun

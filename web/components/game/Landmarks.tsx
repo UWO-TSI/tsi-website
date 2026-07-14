@@ -7,8 +7,10 @@
  * windmill blades spin lazily (one ref rotation — the only animation).
  */
 
-import { Suspense, useMemo } from "react";
+import { Suspense, useMemo, useRef } from "react";
+import { useFrame } from "@react-three/fiber";
 import { useGLTF } from "@react-three/drei";
+import * as THREE from "three";
 import { getTerrainHeight } from "./terrain";
 
 const LIGHTHOUSE_URL = "/assets/acnh/furniture/lighthouse.glb";
@@ -20,7 +22,19 @@ function Lighthouse() {
   const { scene } = useGLTF(LIGHTHOUSE_URL);
   const clone = useMemo(() => scene.clone(true), [scene]);
   const y = getTerrainHeight(34, -33);
-  return <primitive object={clone} position={[34, y, -33]} rotation={[0, Math.PI / 4, 0]} scale={[0.16, 0.16, 0.16]} />;
+  const beaconRef = useRef<THREE.PointLight>(null);
+  useFrame(() => {
+    const b = beaconRef.current;
+    if (!b) return;
+    // slow beacon breath — reads as the lamp turning without a spot cone
+    b.intensity = 10 + Math.sin(performance.now() / 640) * 7;
+  });
+  return (
+    <group position={[34, y, -33]} rotation={[0, Math.PI / 4, 0]}>
+      <primitive object={clone} scale={[0.16, 0.16, 0.16]} />
+      <pointLight ref={beaconRef} color="#FFE9A8" intensity={10} distance={26} decay={1.6} position={[0, 5.2, 0]} />
+    </group>
+  );
 }
 
 function Windmill() {
