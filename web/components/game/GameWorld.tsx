@@ -82,6 +82,8 @@ import { useGhostReplaySetting } from "@/lib/game/useGhostReplaySetting";
 import "@/lib/game/glbPreload";
 // V1: curved-world chunk patch — must import before any material compiles.
 import "@/lib/game/curvedWorld";
+// L8: aerial-perspective fog (distance desaturation) — same patch rule.
+import "@/lib/game/aerialFog";
 import type { EmoteType, NPCPersona, SpawnZone } from "@/lib/game/contentTypes";
 
 /**
