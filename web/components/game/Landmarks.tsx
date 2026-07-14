@@ -20,7 +20,11 @@ useGLTF.preload(WINDMILL_URL);
 
 function Lighthouse() {
   const { scene } = useGLTF(LIGHTHOUSE_URL);
-  const clone = useMemo(() => scene.clone(true), [scene]);
+  const clone = useMemo(() => {
+    const c = scene.clone(true);
+    c.scale.setScalar(0.16); // baked here: parent-group transforms can be
+    return c;                // dropped by R3F HMR re-parenting (2026-07-13)
+  }, [scene]);
   const y = getTerrainHeight(34, -33);
   const beaconRef = useRef<THREE.PointLight>(null);
   useFrame(() => {
@@ -39,15 +43,16 @@ function Lighthouse() {
 
 function Windmill() {
   const { scene } = useGLTF(WINDMILL_URL);
-  const clone = useMemo(() => scene.clone(true), [scene]);
-  const y = getTerrainHeight(-30, 22);
+  const clone = useMemo(() => {
+    const c = scene.clone(true);
+    c.scale.setScalar(0.14);
+    c.position.set(-30, getTerrainHeight(-30, 22), 22);
+    c.rotation.y = Math.PI / 3;
+    return c;
+  }, [scene]);
   // Static piece: blade spin needs a sub-node split in the extraction —
   // logged as a nice-to-have.
-  return (
-    <group position={[-30, y, 22]} rotation={[0, Math.PI / 3, 0]} scale={[0.14, 0.14, 0.14]}>
-      <primitive object={clone} />
-    </group>
-  );
+  return <primitive object={clone} />;
 }
 
 export default function Landmarks() {

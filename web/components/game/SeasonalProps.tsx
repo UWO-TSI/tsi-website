@@ -45,9 +45,12 @@ function Garland({ url, tint, pos, rotY }: { url: string; tint: string; pos: [nu
         }
       }
     });
+    c.scale.setScalar(0.1);
+    c.position.set(pos[0], pos[1], pos[2]);
+    c.rotation.y = rotY;
     return c;
-  }, [scene, tint]);
-  return <primitive object={clone} position={pos} rotation={[0, rotY, 0]} scale={[0.1, 0.1, 0.1]} />;
+  }, [scene, tint, pos, rotY]);
+  return <primitive object={clone} />;
 }
 
 export default function SeasonalProps() {
