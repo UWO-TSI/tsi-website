@@ -154,7 +154,8 @@ function rawNoiseHeight(x: number, z: number): number {
   // village center stays calm; paths/buildings flatten through it as
   // usual (falloff walls stay gentle).
   const villageCalm = Math.min(Math.max((Math.hypot(x, z + 13) - 12) / 10, 0), 1);
-  h += fbm(x * 0.021 + 7.3, z * 0.021 - 3.1, 2) * 0.5 * villageCalm;
+  // coast v2: David's "more dramatic" — swell raised 0.5 → 0.8
+  h += fbm(x * 0.021 + 7.3, z * 0.021 - 3.1, 2) * 0.8 * villageCalm;
 
   // Island edge falloff to keep the perimeter at y=0
   if (dist > ISLAND_RADIUS - 8) {

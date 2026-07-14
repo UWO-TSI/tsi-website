@@ -40,9 +40,9 @@ const EMOTE_EMOJI: Record<string, string> = {
 
 const PLAYER_SPEED = 6.3; // art pass pt2: snappier traversal on the bigger island
 // Organic coast (2026-07-14): the old ±50 SQUARE clamp let players walk
-// diagonally onto open water. Radial clamp in coast-space instead — 49.4
-// keeps feet on damp sand just short of the waterline (~51.4).
-const BOUNDARY = 49.4;
+// diagonally onto open water. Radial clamp in coast-space instead — 50.6
+// reaches the deck nose + damp sand, still short of the waterline (~51.4).
+const BOUNDARY = 50.6;
 const ROTATION_LERP = 10;
 // Sprint A1: damp time for y-axis ground follow. Lower = snappier, higher
 // = more sluggish. 0.05s keeps the avatar responsive but smooths slope

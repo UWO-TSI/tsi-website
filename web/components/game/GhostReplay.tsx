@@ -34,7 +34,7 @@ export default function GhostReplay({ ghost }: { ghost: GhostPosition }) {
   const grounded = useMemo<[number, number, number]>(() => {
     // Positions recorded before the organic coast (or near the old square
     // clamp's corners) can sit past the new shoreline — pull them back in.
-    const [gx, gz] = clampToCoast(ghost.world_x, ghost.world_z, 49.4);
+    const [gx, gz] = clampToCoast(ghost.world_x, ghost.world_z, 50.6);
     return [gx, getTerrainHeight(gx, gz), gz];
   }, [ghost.world_x, ghost.world_z]);
 

@@ -214,7 +214,7 @@ export default function AmbientProps() {
 
       {/* Beach campfire (organic-coast loop, iteration 9) — the cove needs
           a night light pool of its own; second social anchor by the camp. */}
-      <Campfire position={[14.6, getTerrainHeight(14.6, 44.6) - rimSink(coastDist(14.6, 44.6)), 44.6]} />
+      <Campfire position={[12.7, getTerrainHeight(12.7, 45.2) - rimSink(coastDist(12.7, 45.2)), 45.2]} />
 
       {/* Oracle approach — stone lantern pair flanking the museum walk
           (temple-path read), each with a faint warm glow for night. */}

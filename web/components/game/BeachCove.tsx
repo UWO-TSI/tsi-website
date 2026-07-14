@@ -54,17 +54,19 @@ function groundY(x: number, z: number): number {
 }
 
 // Palms hug the beach band (dist ~48-49.5) — cove cluster + far accents.
+// Coast v2 (bay + headlands): palms frame the cove from the two headland
+// arms + one on the inner-bay sand. All coords from coast_solver.py.
 const PALM_A_XZ: [number, number, number, number][] = [
-  // x, z, rotY, scale — accents re-sited for the organic coast (the west
-  // and NE lobes recede ~3-4u; the old spots ended up in the water)
-  [13, 46.5, 0.4, 1.0],
-  [21, 44.8, 2.1, 0.92],
-  [-18.2, 40.6, 1.0, 1.0],
-  [40.5, -20, 5.2, 0.95],
+  [37.8, 40.3, 0.4, 1.0],   // east headland tip
+  [3.7, 49.8, 2.1, 0.95],   // west headland
+  [11.4, 46.0, 1.2, 0.9],   // inner-bay sand
+  [38.2, -18.9, 5.2, 0.95], // NE sweep accent
+  [-18.1, 40.4, 1.0, 1.0],  // west beach accent
 ];
 const PALM_B_XZ: [number, number, number, number][] = [
-  [24.5, 41.5, 3.6, 1.05],
-  [-44.5, 20, 2.7, 0.95],
+  [40.3, 35.4, 3.6, 1.05],  // east headland pair
+  [24.5, 41.5, 2.9, 0.9],   // spur-side
+  [-44.8, 20.1, 2.7, 0.95],
 ];
 
 // Exported so GameWorld's blob-shadow builder can ground the palms too.
@@ -73,9 +75,9 @@ export const BEACH_PALM_XZ: [number, number][] = [...PALM_A_XZ, ...PALM_B_XZ].ma
 );
 
 const HIBISCUS_XZ: [number, number, number][] = [
-  [14.5, 43, 0.9],
-  [21.5, 40.6, 3.8],
-  [11.9, 45.3, 1.7],
+  [14.6, 43.3, 0.9],
+  [21.7, 40.9, 3.8],
+  [11.9, 45.2, 1.7],
 ];
 
 // Bamboo grove arcing behind the Oracle temple (footprint 0,31.8 r4.5;
@@ -280,13 +282,13 @@ export default function BeachCove() {
           rotation={[0, -Math.PI / 2, 0]}
           castShadow={false}
         />
-        {/* the camp */}
-        <GLBProp url={PARASOL} position={[17.2, groundY(17.2, 46.8), 46.8]} rotation={[0, 0.5, 0]} />
-        <GLBProp url={TOWEL} position={[18.8, groundY(18.8, 46.4) + 0.02, 46.4]} rotation={[0, -0.35, 0]} castShadow={false} />
-        <GLBProp url={BALL} position={[15.9, groundY(15.9, 47.6) + 0.02, 47.6]} castShadow={false} />
+        {/* the camp — on the inner-bay sand (coast v2, solver coords) */}
+        <GLBProp url={PARASOL} position={[13.6, groundY(13.6, 45.9), 45.9]} rotation={[0, 0.5, 0]} />
+        <GLBProp url={TOWEL} position={[15.1, groundY(15.1, 45.5) + 0.02, 45.5]} rotation={[0, -0.35, 0]} castShadow={false} />
+        <GLBProp url={BALL} position={[12.6, groundY(12.6, 47.1) + 0.02, 47.1]} castShadow={false} />
         {/* NE sweep mini-camp (iteration 13): a lone sun lounger facing
             the water — the wide beach gets its own reason to wander over */}
-        <GLBProp url={BED} position={[39.4, groundY(39.4, -22.6), -22.6]} rotation={[0, 2.2, 0]} />
+        <GLBProp url={BED} position={[37.7, groundY(37.7, -21.6), -21.6]} rotation={[0, 2.2, 0]} />
       </group>
     </Suspense>
   );

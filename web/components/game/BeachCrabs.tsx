@@ -24,11 +24,12 @@ const HERMIT = "/assets/acnh/props/crab-hermit.glb";
 useGLTF.preload(GAZAMI);
 useGLTF.preload(HERMIT);
 
-// [anchorX, anchorZ, model] — cove sand + the wide NE sweep
+// [anchorX, anchorZ, model] — inner-bay sand + the wide NE sweep
+// (coast v2 solver coords)
 const CRABS: [number, number, 0 | 1][] = [
-  [19.8, 45.9, 0],
-  [12.2, 47.2, 1],
-  [41.5, -19.2, 0],
+  [15.6, 44.9, 0],
+  [11.9, 47.0, 1],
+  [39.4, -18.3, 0],
 ];
 
 interface CrabState {
