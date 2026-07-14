@@ -149,21 +149,26 @@ function spawnOverride(): [number, number, number] | null {
 // actual daytime read is a near-WHITE sun, clean sky-blue ambient bounce,
 // and the saturated grass doing the color work. Tone mapping also moved
 // ACES→None (ACES desaturates midtones — a second muddiness source).
-// Lighting v3 (2026-07-14 lab, David: "perfect the lighting chemistry"):
-// the lab (water-harness/lighting.html) showed the old triple fill
-// (amb 0.6 + hemi 0.82 + env 0.55) flooded the sun shadows invisible.
-// ACNH's day = STRONG sun over lean fills: sun up ~45%, ambient down
-// ~40% — shadows read soft-but-present, scene stays bright (the grass
-// albedo does the color work). Dawn/dusk hues untouched pending David's
-// AC reference snapshots.
+// Lighting v3 (2026-07-14 lab): strong sun over lean fills — the old
+// triple fill flooded the sun shadows invisible.
+// Lighting v4 (research application, specs/lighting-research.md L2+L3):
+// densified toward ACNH's per-hour grading with the Minecraft-pack color
+// discipline — noon sun slightly COOL-white over blue ambient (warm-cool
+// hue contrast; BSL noon is (196,220,255)), golden hour gets the most
+// keys with a sunset POWER RAMP (color saturates AND darkens together,
+// Complementary-style), dawn eases through cream, night keeps the blue
+// floor. Fog anchors at 7/10-15/17/21 unchanged (sky-art contract).
 const TOD_KEYS: [number, string, string, string, number, string, number][] = [
-  [5,  "#FFB878", "#FFDDB8", "#FFD9B0", 0.6,  "#C8BCFF", 0.34],
+  [5,  "#FFB878", "#FFDDB8", "#FFD9B0", 0.6,  "#C8BCFF", 0.34], // dawn peach
+  [6,  "#8FC4EE", "#F2E2C8", "#FFE7C4", 0.95, "#D8D4F2", 0.36], // sunrise cream
   [7,  "#63C2F7", "#BEE4EE", "#FFF9E8", 1.25, "#CFE7FF", 0.38],
-  [10, "#4FB6F5", "#A9DCF2", "#FFFDF4", 1.4,  "#D6ECFF", 0.35],
-  [15, "#57B9F0", "#E8EDD8", "#FFF6DE", 1.15, "#DDE3D2", 0.38],
-  [17, "#FF9966", "#FFD4A8", "#FFC080", 0.75, "#FFD4A8", 0.34],
-  [19, "#FF9966", "#2D2D6B", "#FF8844", 0.32, "#6B5A8B", 0.26],
-  [21, "#1A1A40", "#2D2D6B", "#334466", 0.0,  "#334466", 0.22],
+  [10, "#4FB6F5", "#A9DCF2", "#EFF5FF", 1.4,  "#CFE2FF", 0.35], // noon: cool-white sun / blue fill
+  [14, "#53B8F2", "#C8E6E4", "#F4F6F2", 1.3,  "#D4E4EC", 0.36],
+  [16, "#7FB4D8", "#F2DCB8", "#FFC98F", 1.05, "#EBD8C0", 0.36], // golden ramp begins
+  [17, "#FF9966", "#FFD4A8", "#FFA35C", 0.95, "#FFD4A8", 0.34], // golden peak (BSL 255,160,80)
+  [18, "#E87A5A", "#F2B888", "#FF8E4A", 0.7,  "#E8B090", 0.3],  // saturate + darken
+  [19, "#FF9966", "#2D2D6B", "#FF7A48", 0.35, "#6B5A8B", 0.26], // last ember
+  [21, "#1A1A40", "#2D2D6B", "#334466", 0.0,  "#334466", 0.22], // blue night floor
 ];
 const _tc = new THREE.Color();
 
@@ -1224,7 +1229,9 @@ function LampPosts({ phase }: { phase: "day" | "night" | "dawn" | "dusk" }) {
               <cylinderGeometry args={[0.06, 0.06, 0.18, 6]} />
               <meshStandardMaterial color="#3D3D3D" roughness={0.9} metalness={0.2} />
             </mesh>
-            {/* Globe */}
+            {/* Globe — toneMapped=false (lighting research L5): the lit
+                globe's emissive sails past 1.0, so Neutral rolls it to a
+                hot white core and the threshold-1 bloom halos it. */}
             <mesh position={[0, 1.85, 0]} castShadow>
               <sphereGeometry args={[0.18, 14, 10]} />
               <meshStandardMaterial
@@ -1233,6 +1240,7 @@ function LampPosts({ phase }: { phase: "day" | "night" | "dawn" | "dusk" }) {
                 emissiveIntensity={emissive}
                 roughness={0.55}
                 metalness={0}
+                toneMapped={false}
               />
             </mesh>
             {/* W7: warmer, wider night pool (0.6→0.95, distance 4→5.5). Halo
@@ -2348,7 +2356,11 @@ export default function GameWorld() {
         camera={{ fov: 48, near: 0.1, far: 300, position: [0, 19, -24] }}
         shadows="soft" /* P-light v2 2026-07-13: PCFSoft maps; the sun only casts when the shadows setting is on */
         onCreated={({ gl }) => {
-          gl.toneMapping = THREE.NoToneMapping;
+          // Lighting research L1 (specs/lighting-research.md): Khronos PBR
+          // Neutral — identical to NoToneMapping in the authored 0-1 range
+          // (lab A/B verified), but emissives/highlights >1 roll to white
+          // instead of clipping. Unlocks toneMapped=false glow materials.
+          gl.toneMapping = THREE.NeutralToneMapping;
           gl.outputColorSpace = THREE.SRGBColorSpace;
           gl.domElement.style.imageRendering = "pixelated";
         }}
