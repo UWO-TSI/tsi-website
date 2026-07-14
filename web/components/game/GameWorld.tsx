@@ -55,7 +55,10 @@ import GraphicsSettingsPanel from "./GraphicsSettings";
 import ToolDock from "./ToolDock";
 import OverlaySheet, { sheetKeyForHref, type SheetKey } from "./OverlaySheet";
 import Critters from "./Critters";
-import HQInterior, { type InteriorStation } from "./HQInterior";
+import HQInterior from "./HQInterior";
+import ShopInterior from "./ShopInterior";
+import OracleInterior from "./OracleInterior";
+import type { InteriorStation } from "./interiorShared";
 import RoadTiles from "./RoadTiles";
 import GrassTufts from "./GrassTufts";
 import ToolFlourish from "./ToolFlourish";
@@ -109,8 +112,8 @@ const BUILDINGS = [
   // Sizes track the ACNH model visuals (0.1 × source bbox) so labels and
   // E-prompts float at the right height. Position = door plane (model origin).
   { id: "hq", name: "HQ", position: [0, 0, -4] as [number, number, number], size: [6.1, 4.8, 3] as [number, number, number], color: "#FFF5E1", roofColor: "#E87B5A", href: undefined, interior: "hq" as const },
-  { id: "shop", name: "Shop", position: [-24, 0, 12] as [number, number, number], size: [6.6, 3.5, 3.6] as [number, number, number], color: "#D4EAD4", roofColor: "#5BA086", href: "/student/dashboard/shop" },
-  { id: "oracle", name: "Oracle Temple", position: [0, 3, 30] as [number, number, number], size: [6.8, 3.9, 3.4] as [number, number, number], color: "#E8DCF0", roofColor: "#7B5EA7", href: "/student/dashboard/oracle" },
+  { id: "shop", name: "Shop", position: [-24, 0, 12] as [number, number, number], size: [6.6, 3.5, 3.6] as [number, number, number], color: "#D4EAD4", roofColor: "#5BA086", href: undefined, interior: "shop" as const },
+  { id: "oracle", name: "Oracle Temple", position: [0, 3, 30] as [number, number, number], size: [6.8, 3.9, 3.4] as [number, number, number], color: "#E8DCF0", roofColor: "#7B5EA7", href: undefined, interior: "oracle" as const },
   { id: "house", name: "House", position: [24, 0, 14] as [number, number, number], size: [5, 4.1, 3.1] as [number, number, number], color: "#C8E6C9", roofColor: "#7EB8C9", href: undefined },
   { id: "bounty", name: "Bounty Board", position: [14, 0, 9] as [number, number, number], size: [1.5, 1.8, 0.3] as [number, number, number], color: P.dirtPath, href: "/student/dashboard/bounty" },
   { id: "jobs", name: "Job Board", position: [-15, 0, -13] as [number, number, number], size: [1.5, 1.8, 0.3] as [number, number, number], color: P.dirtPath, href: "/student/dashboard/jobs" },
@@ -1931,8 +1934,8 @@ export default function GameWorld() {
   // Interiors-lite (2026-07-13): which room the player is inside. The
   // exterior Scene unmounts while inside (assets stay cached via useGLTF)
   // and remounts on exit with the player just outside the HQ door.
-  const [interior, setInterior] = useState<null | "hq">(null);
-  const interiorRef = useRef<null | "hq">(null);
+  const [interior, setInterior] = useState<null | "hq" | "shop" | "oracle">(null);
+  const interiorRef = useRef<null | "hq" | "shop" | "oracle">(null);
   useEffect(() => { interiorRef.current = interior; }, [interior]);
   const [worldSpawn, setWorldSpawn] = useState<[number, number, number] | undefined>(undefined);
   const [sheet, setSheet] = useState<SheetKey | null>(() => {
@@ -2039,7 +2042,11 @@ export default function GameWorld() {
             setSheet(action.slice(6) as SheetKey);
           } else if (action === "exit") {
             triggerTransition(() => {
-              setWorldSpawn([0, 0, -7]); // just outside the HQ door (spec §7.2)
+              // just outside each building's door (spec §7.2)
+              const spawns: Record<string, [number, number, number]> = {
+                hq: [0, 0, -7], shop: [-24, 0, 9], oracle: [0, 0, 26.5],
+              };
+              setWorldSpawn(spawns[interiorRef.current ?? "hq"]);
               setInterior(null);
               setNearest(null);
             });
@@ -2051,7 +2058,7 @@ export default function GameWorld() {
           // Interiors-lite: enter the room behind the standard fade.
           if (isTransitioning) return;
           triggerTransition(() => {
-            setInterior(n.interiorId as "hq");
+            setInterior(n.interiorId as "hq" | "shop" | "oracle");
             setNearest(null);
           });
           AudioManager.playSFX("exit");
@@ -2234,15 +2241,18 @@ export default function GameWorld() {
         }}
       >
         <WarmupProbe onReady={() => setWorldReady(true)} />
-        {interior === "hq" && (
-          <HQInterior
-            frozen={sheet !== null || isTransitioning}
-            playerPosRef={playerPosRef}
-            onNearestStation={(st: InteriorStation | null) =>
-              setNearest(st ? { kind: "station", id: `station-${st.id}`, name: st.name, stationAction: st.action } : null)
-            }
-          />
-        )}
+        {interior !== null && (() => {
+          const Room = interior === "hq" ? HQInterior : interior === "shop" ? ShopInterior : OracleInterior;
+          return (
+            <Room
+              frozen={sheet !== null || isTransitioning}
+              playerPosRef={playerPosRef}
+              onNearestStation={(st: InteriorStation | null) =>
+                setNearest(st ? { kind: "station", id: `station-${st.id}`, name: st.name, stationAction: st.action } : null)
+              }
+            />
+          );
+        })()}
         {interior === null && (
         <Suspense fallback={null}>
           <Scene
