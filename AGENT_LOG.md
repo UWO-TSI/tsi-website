@@ -113,7 +113,7 @@ David's directive: flag every usable water/ocean + land asset in the dump, then 
 - **Beach camp**: parasol+lounger/towel/beachball (untextured furniture → tints). Towel needed +90X (misread the lineup's shallow angle as flat — the world-mock top-down caught it standing).
 - Mock-verified: lineup renders (9 iterations) + world.html cove/covetop/chain cams. Gates: tsc clean, 74/52 lint baseline, 32/32, build exit 0. Deployed, tethos.ca 200.
 
-Queued from the flag list: sea sparkle glints (water-model), brick plaza accent, bamboo grove, unit-river v2, plaza-deco event stalls (principle #8 ammo).
+Follow-ups shipped same session: **sea glints** (`3c80977` — the dump's real sparkle sprite, two counter-phase twinkling point clouds over the ocean, opacity follows TOD) and the **bamboo grove behind the Oracle** (`fbe8dbb` — bamboo 3+4 via the LUT-normalize pipeline; like palms, no flip — joints carry the rotation). Event-stall props inspected and demoted: countdown-board/harvest-light are flat-pack/beam pieces, stall/pinata are session-class jobs (noted in asset-flags.md). Still queued: brick plaza accent, unit-river v2 (hold for David's water verdict), plaza-deco stalls.
 
 ### 2026-07-14 — Stabilize closed + all three buildings get rooms (`56dd351`…`633b299`)
 

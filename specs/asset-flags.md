@@ -69,9 +69,12 @@
 
 ## Events/ (82)
 
-Garlands USED (seasonal). `plaza-deco-*` stalls, `fish-tent`/`insect-tent`,
-`countdown-board` — FLAG: monthly-event props, exactly what principle #8's
-admin drops want. `campfire` USED.
+Garlands USED (seasonal). `plaza-deco-*` stalls, `fish-tent`/`insect-tent` —
+FLAG: monthly-event props, exactly what principle #8's admin drops want.
+Inspected 2026-07-14: `countdown-board` (0.03u-thick part sheet) and
+`harvest-light` (a 9-vert light-beam plane) are flat-pack/effect pieces,
+unusable as props; `countdown-stall`/`pinata` are multi-part with odd
+origins — session-class extraction jobs, not quick wins. `campfire` USED.
 
 ## Characters/ (1216) / Clothing/ (2095) / Creatures/ (278) / Tools/ (373) / Buildings/ (777) / Interiors/ (516)
 
