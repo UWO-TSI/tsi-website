@@ -124,6 +124,8 @@ export default function Ocean({ phase }: { phase: Phase }) {
   const deepRef = useRef(new THREE.Color(SEA_PALETTE.day[0]));
   const shallowRef = useRef(new THREE.Color(SEA_PALETTE.day[1]));
   const foamRef = useRef(new THREE.Color(SEA_PALETTE.day[2]));
+  // Moon glint path (loop iteration 11): 1 at night, a whisper at dusk.
+  const nightRef = useRef({ value: 0 });
   const phaseRef = useRef<Phase>(phase);
   useEffect(() => {
     phaseRef.current = phase;
@@ -137,6 +139,7 @@ export default function Ocean({ phase }: { phase: Phase }) {
       shader.uniforms.uShallow = { value: shallowRef.current };
       shader.uniforms.uFoam = { value: foamRef.current };
       shader.uniforms.uCaustic = { value: getCausticTexture() };
+      shader.uniforms.uNight = nightRef.current;
 
       shader.vertexShader = shader.vertexShader.replace(
         "#include <common>",
@@ -152,6 +155,7 @@ vOceanXZ = (modelMatrix * vec4(position, 1.0)).xz;`
         "#include <common>",
         `#include <common>
 uniform float uTime;
+uniform float uNight;
 uniform sampler2D uCaustic;
 uniform vec3 uDeep;
 uniform vec3 uShallow;
@@ -174,6 +178,13 @@ ${COAST_GLSL}`
   float w1 = sin(vOceanXZ.x * 0.55 + uTime * 0.9) * sin(vOceanXZ.y * 0.5 - uTime * 0.7);
   float w2 = sin((vOceanXZ.x + vOceanXZ.y) * 0.32 + uTime * 0.5);
   float sparkle = pow(max(w1 * w2, 0.0), 3.0) * 0.35;
+
+  // Moonlight path (iteration 11): at night the sparkle brightens inside
+  // a wedge toward the eastern horizon (the moon rises opposite the
+  // sunset), so the sea carries a shimmering moon-glint lane.
+  float moonBand = exp(-abs(1.0 - dot(normalize(vOceanXZ), vec2(0.966, 0.259))) * 7.0);
+  sparkle *= 1.0 + uNight * moonBand * 2.6;
+  sparkle += uNight * moonBand * pow(max(w2, 0.0), 2.0) * 0.10;
 
   // ACNH caustic patches (P2 polish 2026-07-13): the real water-model mask
   // from the dump, two drifting copies, min() -> soft light cells that
@@ -209,6 +220,8 @@ ${COAST_GLSL}`
     deepRef.current.lerp(_tgt.set(pal[0]), k);
     shallowRef.current.lerp(_tgt.set(pal[1]), k);
     foamRef.current.lerp(_tgt.set(pal[2]), k);
+    const nightTarget = phaseRef.current === "night" ? 1 : phaseRef.current === "dusk" ? 0.3 : 0;
+    nightRef.current.value += (nightTarget - nightRef.current.value) * k;
   });
 
   return (
