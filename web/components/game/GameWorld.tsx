@@ -725,7 +725,70 @@ ${COAST_GLSL}`
 // the spline once at module-load and orient the bridge along the river's
 // tangent at that point. The bridge group spans the river width (~3.8) +
 // some overhang. Sprint A3.
-function Bridge() {
+// Bridge string lights (AC-reference ref-08, 2026-07-14): warm bulbs sag
+// between corner posts along both rails — the reference bridges are strung
+// with cafe lights + lanterns, ours was bare. Bulbs overdrive past 1.0 at
+// night (toneMapped=false) so Neutral gives them hot cores.
+const BULBS_PER_STRING = 7;
+const STRING_SAG = 0.32;
+
+// Module singletons (react-compiler escape: memoized meshes are frozen —
+// mutation goes through opaque module fns, same pattern as the shadow rig).
+let _bridgeBulbs: THREE.InstancedMesh | null = null;
+function getBridgeBulbs(): THREE.InstancedMesh {
+  if (_bridgeBulbs) return _bridgeBulbs;
+  const geo = new THREE.SphereGeometry(0.055, 8, 6);
+  const mat = new THREE.MeshStandardMaterial({
+    color: "#FFE8C0",
+    emissive: "#FFC985",
+    emissiveIntensity: 0,
+    roughness: 0.4,
+    toneMapped: false,
+  });
+  const im = new THREE.InstancedMesh(geo, mat, BULBS_PER_STRING * 2);
+  const m4 = new THREE.Matrix4();
+  let i = 0;
+  for (const side of [-0.95, 0.95]) {
+    for (let b = 0; b < BULBS_PER_STRING; b++) {
+      const t = (b + 0.5) / BULBS_PER_STRING;
+      const z = -2.5 + t * 5;
+      const y = 1.78 - Math.sin(t * Math.PI) * STRING_SAG;
+      m4.setPosition(side, y, z);
+      im.setMatrixAt(i++, m4);
+    }
+  }
+  im.instanceMatrix.needsUpdate = true;
+  _bridgeBulbs = im;
+  return im;
+}
+function setBridgeBulbGlow(intensity: number): void {
+  if (_bridgeBulbs) {
+    (_bridgeBulbs.material as THREE.MeshStandardMaterial).emissiveIntensity = intensity;
+  }
+}
+
+function BridgeLights({ phase }: { phase: "day" | "night" | "dawn" | "dusk" }) {
+  const lit = phase === "night" || phase === "dusk" || phase === "dawn";
+  const bulbs = useMemo(() => getBridgeBulbs(), []);
+  useEffect(() => {
+    setBridgeBulbGlow(lit ? 2.4 : 0.12);
+  }, [lit]);
+  return (
+    <group>
+      {/* corner posts */}
+      {[[-0.95, -2.5], [0.95, -2.5], [-0.95, 2.5], [0.95, 2.5]].map(([x, z], i) => (
+        <mesh key={i} position={[x, 0.95, z]} castShadow>
+          <cylinderGeometry args={[0.045, 0.055, 1.9, 6]} />
+          <meshStandardMaterial color="#4A3826" roughness={0.9} />
+        </mesh>
+      ))}
+      <primitive object={bulbs} />
+      {lit && <pointLight position={[0, 1.6, 0]} color="#FFC985" intensity={0.7} distance={5.5} decay={2} />}
+    </group>
+  );
+}
+
+function Bridge({ phase }: { phase: "day" | "night" | "dawn" | "dusk" }) {
   const { position, rotation } = useMemo(() => {
     const t = findRiverTForX(0);
     const sample = sampleRiverPoint(t);
@@ -749,6 +812,7 @@ function Bridge() {
       <Suspense fallback={null}>
         <GLBProp url="/assets/acnh/props/bridge-wooden.glb" position={[0, 0.02, 0]} rotation={[0, Math.PI / 2, 0]} />
       </Suspense>
+      <BridgeLights phase={phase} />
     </group>
   );
 }
@@ -1936,7 +2000,7 @@ function Scene({
       <TreeShakeFX playerPosRef={playerPosRef} />
       <FlowerPickFX />
       <FishCatchFX playerPosRef={playerPosRef} />
-      <Bridge />
+      <Bridge phase={todPhase} />
       {/* G2 ambience set (2026-07-07) */}
       <TargetGlow targetRef={glowTargetRef} />
       <NightStars phase={todPhase} />
