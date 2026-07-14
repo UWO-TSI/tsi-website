@@ -122,6 +122,9 @@ const _catch = new THREE.Vector3();
 // frame loop and the window catch-handler mutate it, and module variables
 // sit outside the react-compiler's effect-immutability tracking entirely.
 const frameState: { source: Spawn[] | null; spawns: Spawn[] | null } = { source: null, spawns: null };
+// Reused registry buffer — rebuilding this array with fresh objects every
+// frame was 60Hz GC churn (perf pass 2026-07-13).
+const _live: ActiveCritter[] = [];
 
 export default function Critters({
   todPhase,
@@ -178,7 +181,7 @@ export default function Critters({
     const now = performance.now();
     const t = now / 1000;
     const pp = playerPosRef.current;
-    const live: ActiveCritter[] = [];
+    _live.length = 0;
 
     for (const s of spawns) {
       const g = groupRefs.current[s.slot];
@@ -261,10 +264,10 @@ export default function Critters({
       g.scale.setScalar(scl);
 
       if (!s.catching && s.caughtAt === null) {
-        live.push({ slot: s.slot, key: s.sp.key, label: s.sp.label, x, z });
+        _live.push({ slot: s.slot, key: s.sp.key, label: s.sp.label, x, z });
       }
     }
-    setActiveCritters(live);
+    setActiveCritters(_live);
   });
 
   return (

@@ -21,7 +21,7 @@ const VARIANTS = [
 ];
 VARIANTS.forEach((u) => useGLTF.preload(u));
 
-const COUNT = 140;
+const COUNT = 90; // perf pass 2026-07-13 (was 140)
 const SCALE = 0.1;
 
 // road corridors (mirror RoadTiles RECTS, padded a touch)
@@ -70,9 +70,10 @@ export default function GrassTufts() {
 
   const meshes = useMemo(() => {
     const geos = [firstGeometry(g0.scene), firstGeometry(g1.scene), firstGeometry(g2.scene)];
-    const mat = new THREE.MeshStandardMaterial({
-      color: "#6FB13E",
-      roughness: 0.95,
+    // Basic material: unlit tufts read the same at this size and skip
+    // per-fragment lighting + env sampling across 90 instances.
+    const mat = new THREE.MeshBasicMaterial({
+      color: "#5E9C34",
       side: THREE.DoubleSide,
       alphaTest: 0.4,
     });
@@ -85,7 +86,7 @@ export default function GrassTufts() {
       const x = (rnd() - 0.5) * 96;
       const z = (rnd() - 0.5) * 96;
       if (rejected(x, z)) continue;
-      buckets[Math.floor(rnd() * 3)].push({ x, z, rot: rnd() * Math.PI * 2, s: 0.8 + rnd() * 0.5 });
+      buckets[Math.floor(rnd() * 3)].push({ x, z, rot: rnd() * Math.PI * 2, s: 0.38 + rnd() * 0.22 }); // knee-high was towering over the sprite
       placed++;
     }
     const m4 = new THREE.Matrix4();

@@ -27,12 +27,12 @@ function Lighthouse() {
     const b = beaconRef.current;
     if (!b) return;
     // slow beacon breath — reads as the lamp turning without a spot cone
-    b.intensity = 10 + Math.sin(performance.now() / 640) * 7;
+    b.intensity = 8 + Math.sin(performance.now() / 640) * 5;
   });
   return (
     <group position={[34, y, -33]} rotation={[0, Math.PI / 4, 0]}>
       <primitive object={clone} scale={[0.16, 0.16, 0.16]} />
-      <pointLight ref={beaconRef} color="#FFE9A8" intensity={10} distance={26} decay={1.6} position={[0, 5.2, 0]} />
+      <pointLight ref={beaconRef} color="#FFE9A8" intensity={8} distance={13} decay={1.8} position={[0, 5.2, 0]} />
     </group>
   );
 }

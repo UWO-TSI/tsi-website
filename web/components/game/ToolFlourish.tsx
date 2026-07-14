@@ -91,10 +91,10 @@ export default function ToolFlourish({ playerPosRef }: { playerPosRef: React.Mut
   return (
     <group ref={groupRef} visible={false}>
       <Suspense fallback={null}>
-        <group ref={netRef} scale={[0.09, 0.09, 0.09]} rotation={[0, 0, 0]}>
+        <group ref={netRef} scale={[0.055, 0.055, 0.055]} rotation={[0, 0, 0]}>
           <ToolModel url={NET_URL} tint="#5A8FD0" />
         </group>
-        <group ref={rodRef} scale={[0.09, 0.09, 0.09]}>
+        <group ref={rodRef} scale={[0.055, 0.055, 0.055]}>
           <ToolModel url={ROD_URL} />
         </group>
       </Suspense>
