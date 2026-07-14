@@ -15,9 +15,11 @@ import { getTerrainHeight } from "./terrain";
 import { coastDist, rimSink } from "@/lib/game/coast";
 
 const LIGHTHOUSE_URL = "/assets/acnh/furniture/lighthouse.glb";
-const WINDMILL_URL = "/assets/acnh/furniture/windmill-retro.glb";
+const WINDMILL_TOWER_URL = "/assets/acnh/props/windmill-tower.glb";
+const WINDMILL_BLADES_URL = "/assets/acnh/props/windmill-blades.glb";
 useGLTF.preload(LIGHTHOUSE_URL);
-useGLTF.preload(WINDMILL_URL);
+useGLTF.preload(WINDMILL_TOWER_URL);
+useGLTF.preload(WINDMILL_BLADES_URL);
 
 function Lighthouse() {
   const { scene } = useGLTF(LIGHTHOUSE_URL);
@@ -45,17 +47,26 @@ function Lighthouse() {
 }
 
 function Windmill() {
-  const { scene } = useGLTF(WINDMILL_URL);
-  const clone = useMemo(() => {
-    const c = scene.clone(true);
-    c.scale.setScalar(0.14);
-    c.position.set(-30, getTerrainHeight(-30, 22), 22);
-    c.rotation.y = Math.PI / 3;
-    return c;
-  }, [scene]);
-  // Static piece: blade spin needs a sub-node split in the extraction —
-  // logged as a nice-to-have.
-  return <primitive object={clone} />;
+  // Blade split (loop, David's pick 2026-07-14): the merged mesh was cut
+  // by rotor-plane predicate (split_windmill.mjs) into tower + blades,
+  // blades recentered on the hub (raw y 27.31, z 5.81) so rotation.z
+  // spins them in place. Lazy 0.6 rad/s — a farm windmill turning.
+  const tower = useGLTF(WINDMILL_TOWER_URL);
+  const blades = useGLTF(WINDMILL_BLADES_URL);
+  const bladesRef = useRef<THREE.Group>(null);
+  const towerClone = useMemo(() => tower.scene.clone(true), [tower.scene]);
+  const bladesClone = useMemo(() => blades.scene.clone(true), [blades.scene]);
+  useFrame((_, delta) => {
+    if (bladesRef.current) bladesRef.current.rotation.z += delta * 0.6;
+  });
+  return (
+    <group position={[-30, getTerrainHeight(-30, 22), 22]} rotation={[0, Math.PI / 3, 0]} scale={[0.14, 0.14, 0.14]}>
+      <primitive object={towerClone} />
+      <group ref={bladesRef} position={[0, 27.31, 5.81]}>
+        <primitive object={bladesClone} />
+      </group>
+    </group>
+  );
 }
 
 export default function Landmarks() {
