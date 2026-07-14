@@ -127,6 +127,15 @@ const BUILDINGS = [
 
 const SPAWN_POSITION: [number, number, number] = [0, 0, -15];
 
+// QA hook (loop iteration 16): `?beach` spawns at the cove deck so the
+// whole shore batch is one URL away. Same family as ?nointro/?rain.
+function spawnOverride(): [number, number, number] | null {
+  if (typeof window !== "undefined" && window.location.search.includes("beach")) {
+    return [18.2, 0, 42.5];
+  }
+  return null;
+}
+
 // ─── Time-of-Day (v2 spec Section 8.1) ──────────────────────────
 // [hour, skyTop, skyBottom, sunColor, sunIntensity, ambientColor, ambientIntensity]
 // Cozy push 2026-07-03: day keys re-graded toward ACNH pastels — saturated
@@ -1964,7 +1973,7 @@ function Scene({
         <GhostReplay key={g.user_id} ghost={g} />
       ))}
 
-      <PlayerAvatar spawnPosition={spawn ?? SPAWN_POSITION} onMove={handlePlayerMove} playerName={playerName} playerLevel={playerLevel} activeEmote={activeEmote} />
+      <PlayerAvatar spawnPosition={spawnOverride() ?? spawn ?? SPAWN_POSITION} onMove={handlePlayerMove} playerName={playerName} playerLevel={playerLevel} activeEmote={activeEmote} />
 
     </>
   );

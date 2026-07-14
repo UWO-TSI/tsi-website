@@ -89,6 +89,9 @@ export default function MiniMap({ playerPosRef }: { playerPosRef: React.MutableR
         {BUILDINGS.map((b, i) => (
           <rect key={i} x={sx(b.x) - b.w / 2} y={sy(b.z) - b.h / 2} width={b.w} height={b.h} rx="1" fill={b.c} stroke="rgba(0,0,0,0.25)" strokeWidth="0.4" />
         ))}
+        {/* landmarks: cove camp + lighthouse */}
+        <circle cx={sx(17.2)} cy={sy(46.8)} r="1.6" fill="#E8705A" stroke="rgba(0,0,0,0.25)" strokeWidth="0.4" />
+        <circle cx={sx(34)} cy={sy(-33)} r="1.6" fill="#C0392B" stroke="rgba(0,0,0,0.25)" strokeWidth="0.4" />
         {/* player */}
         <circle cx={sx(dot[0])} cy={sy(dot[1])} r="2.2" fill="#FFDD57" stroke="#7A5A00" strokeWidth="0.7" />
       </svg>
