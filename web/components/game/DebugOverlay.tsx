@@ -21,6 +21,9 @@ interface DebugSnapshot {
   npcs: number;
   drawCalls?: number;
   triangles?: number;
+  frameMs?: number;
+  geometries?: number;
+  textures?: number;
 }
 
 interface DebugOverlayProps {
@@ -74,6 +77,7 @@ export default function DebugOverlay({ visible, snapshotRef }: DebugOverlayProps
         DEBUG · F3 to close
       </div>
       <Row label="FPS" value={`${snap.fps}`} color={fpsColor} />
+      {snap.frameMs !== undefined && <Row label="Frame" value={`${snap.frameMs}ms`} />}
       <Row label="X" value={snap.x.toFixed(2)} />
       <Row label="Y" value={snap.y.toFixed(2)} />
       <Row label="Z" value={snap.z.toFixed(2)} />
@@ -85,6 +89,12 @@ export default function DebugOverlay({ visible, snapshotRef }: DebugOverlayProps
       )}
       {snap.triangles !== undefined && (
         <Row label="Tris" value={`${(snap.triangles / 1000).toFixed(1)}k`} />
+      )}
+      {snap.geometries !== undefined && (
+        <Row label="Geoms" value={`${snap.geometries}`} />
+      )}
+      {snap.textures !== undefined && (
+        <Row label="Texs" value={`${snap.textures}`} />
       )}
     </div>
   );

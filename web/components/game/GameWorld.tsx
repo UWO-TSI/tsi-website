@@ -1297,6 +1297,23 @@ const FILLER_POSITIONS: [number, number, number][] = [
  * stats each frame and writes them to a snapshot ref. DebugOverlay reads
  * the ref on a 4Hz interval, so this stays cheap.
  */
+// gl.info with autoReset ON gets cleared by EVERY internal render pass
+// (the PostFX composer's final quad left "Draws 1" in the overlay).
+// Manual mode: we read totals once per frame, then reset ourselves.
+// Module fn = compiler-sanctioned imperative three mutation.
+function captureRenderStats(gl: THREE.WebGLRenderer): { calls: number; triangles: number; geometries: number; textures: number; frameMs: number } {
+  gl.info.autoReset = false;
+  const stats = {
+    calls: gl.info.render.calls,
+    triangles: gl.info.render.triangles,
+    geometries: gl.info.memory.geometries,
+    textures: gl.info.memory.textures,
+    frameMs: 0,
+  };
+  gl.info.reset();
+  return stats;
+}
+
 function DebugTracker({
   snapshotRef,
   playerPosRef,
@@ -1323,11 +1340,9 @@ function DebugTracker({
       acc.time = 0;
     }
     const pos = playerPosRef.current;
-    // Note: gl.info.render is auto-reset by Three.js at the start of each
-    // gl.render() call, and useFrame fires BEFORE the render — so these
-    // reads land mid-frame and show 0/1 most of the time. TODO: capture
-    // via the renderer's onAfterRender hook without breaking perf
-    // (autoReset=false + manual reset costs ~10 FPS at our scene size).
+    // Stats read = last frame's full totals (manual reset mode — see
+    // captureRenderStats). frameMs = smoothed CPU frame delta.
+    const stats = captureRenderStats(gl);
     snapshotRef.current = {
       fps: acc.fps,
       x: pos.x,
@@ -1336,8 +1351,11 @@ function DebugTracker({
       phase,
       ghosts,
       npcs,
-      drawCalls: gl.info.render.calls,
-      triangles: gl.info.render.triangles,
+      frameMs: Math.round(delta * 10000) / 10,
+      geometries: stats.geometries,
+      textures: stats.textures,
+      drawCalls: stats.calls,
+      triangles: stats.triangles,
     };
   });
   return null;
