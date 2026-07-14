@@ -26,6 +26,7 @@ import { AudioManager } from "@/lib/game/audio";
 import { WarmupProbe, LoadGateOverlay } from "./LoadGate";
 import RainFX from "./RainFX";
 import { getTodayWeather, type Weather } from "@/lib/game/weather";
+import { coastDist } from "@/lib/game/coast";
 import { CloudShadows, NightStars, WaterSparkles, LeafGusts, NightWindows, TargetGlow } from "./AmbienceFX";
 import AmbientLife from "./AmbientLife";
 import AudioController from "./AudioController";
@@ -491,12 +492,12 @@ function Terrain() {
     const tmp = new THREE.Color();
 
     // Task 27 (2026-07-12, David: "make game border with ocean… non buggy"):
-    // the island silhouette is now ROUND. Beyond SINK_START the square
-    // plane's rim dives below the ocean surface as a sand ring, so the
-    // visible edge is a radial beach instead of the old square apron +
-    // skirt boxes. Purely cosmetic — logical heights (walk/click) still
-    // come from terrain.ts, and the player clamp (BOUNDARY 50) keeps
-    // everyone on grass.
+    // beyond SINK_START the square plane's rim dives below the ocean
+    // surface as a sand ring. Organic coast (2026-07-14, David: "not just
+    // a circle"): the silhouette follows coastDist — a radial harmonic
+    // wobble (lib/game/coast.ts) shared with the ocean foam shader, the
+    // beach placements, and the player clamp. Purely cosmetic — logical
+    // heights (walk/click) still come from terrain.ts.
     const SINK_START = 49.5;
     const SINK_END = 56;
     const SINK_DEPTH = 2.4;
@@ -506,7 +507,7 @@ function Terrain() {
     for (let i = 0; i < pos.count; i++) {
       const x = pos.getX(i);
       const z = pos.getZ(i);
-      const dist = Math.sqrt(x * x + z * z);
+      const dist = coastDist(x, z);
       const h = getTerrainHeight(x, z);
       let y = h;
       if (dist > SINK_START) {

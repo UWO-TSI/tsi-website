@@ -5,6 +5,7 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { Billboard, Html } from "@react-three/drei";
 import * as THREE from "three";
 import { getTerrainHeight, sampleTerrainHeightFast } from "./terrain";
+import { clampToCoast } from "@/lib/game/coast";
 import { useSFX } from "@/lib/game/useAudio";
 import { getCameraForwardXZ } from "@/lib/game/cameraBasis";
 import { pickCurvedGround } from "@/lib/game/groundPick";
@@ -38,7 +39,10 @@ const EMOTE_EMOJI: Record<string, string> = {
  */
 
 const PLAYER_SPEED = 6.3; // art pass pt2: snappier traversal on the bigger island
-const BOUNDARY = 50;
+// Organic coast (2026-07-14): the old ±50 SQUARE clamp let players walk
+// diagonally onto open water. Radial clamp in coast-space instead — 49.4
+// keeps feet on damp sand just short of the waterline (~51.4).
+const BOUNDARY = 49.4;
 const ROTATION_LERP = 10;
 // Sprint A1: damp time for y-axis ground follow. Lower = snappier, higher
 // = more sluggish. 0.05s keeps the avatar responsive but smooths slope
@@ -217,8 +221,9 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
       const intersection = pickCurvedGround(raycaster.current.ray, camera);
 
       if (intersection) {
-        intersection.x = THREE.MathUtils.clamp(intersection.x, -BOUNDARY, BOUNDARY);
-        intersection.z = THREE.MathUtils.clamp(intersection.z, -BOUNDARY, BOUNDARY);
+        const [cix, ciz] = clampToCoast(intersection.x, intersection.z, BOUNDARY);
+        intersection.x = cix;
+        intersection.z = ciz;
         intersection.y = 0;
         targetRef.current = intersection;
         sfx.play("click");
@@ -338,8 +343,9 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
       if (Math.abs(vel.x) > 0.02 || Math.abs(vel.y) > 0.02) {
         pos.x += vel.x * delta;
         pos.z += vel.y * delta;
-        pos.x = THREE.MathUtils.clamp(pos.x, -BOUNDARY, BOUNDARY);
-        pos.z = THREE.MathUtils.clamp(pos.z, -BOUNDARY, BOUNDARY);
+        const [cpx, cpz] = clampToCoast(pos.x, pos.z, BOUNDARY);
+        pos.x = cpx;
+        pos.z = cpz;
       }
       if (moving) {
         const targetAngle = Math.atan2(dx, dz);

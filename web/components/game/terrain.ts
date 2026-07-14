@@ -149,6 +149,13 @@ function rawNoiseHeight(x: number, z: number): number {
 
   let h = fbm(x * NOISE_FREQ, z * NOISE_FREQ, 4) * NOISE_AMPLITUDE;
 
+  // Organic terrain (David 2026-07-14): a broad low-frequency swell adds
+  // rolling meadows to the outskirts. Damped near the plaza so the
+  // village center stays calm; paths/buildings flatten through it as
+  // usual (falloff walls stay gentle).
+  const villageCalm = Math.min(Math.max((Math.hypot(x, z + 13) - 12) / 10, 0), 1);
+  h += fbm(x * 0.021 + 7.3, z * 0.021 - 3.1, 2) * 0.5 * villageCalm;
+
   // Island edge falloff to keep the perimeter at y=0
   if (dist > ISLAND_RADIUS - 8) {
     h *= Math.max(0, (ISLAND_RADIUS - dist) / 8);

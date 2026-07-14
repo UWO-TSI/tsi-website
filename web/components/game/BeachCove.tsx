@@ -24,6 +24,7 @@ import { useGLTF } from "@react-three/drei";
 import InstancedGLB, { type NaturePlacement } from "./InstancedNature";
 import { GLBProp } from "./NatureModels";
 import { getTerrainHeight } from "./terrain";
+import { coastDist, rimSink } from "@/lib/game/coast";
 
 const PALM_A = "/assets/acnh/plants/tree-palm-a.glb";
 const PALM_B = "/assets/acnh/plants/tree-palm-b.glb";
@@ -40,28 +41,20 @@ const BALL = "/assets/acnh/props/beach-ball.glb";
   (u) => useGLTF.preload(u)
 );
 
-// Mirror of GameWorld's ground-mesh rim sink (Task 27) — the beach band
-// dives below the ocean past SINK_START. Keep in sync.
-const SINK_START = 49.5;
-const SINK_END = 56;
-const SINK_DEPTH = 2.4;
+// Visible ground = terrain height minus the beach rim sink, both in
+// coast-space (lib/game/coast.ts owns the profile).
 function groundY(x: number, z: number): number {
-  const dist = Math.hypot(x, z);
-  let y = getTerrainHeight(x, z);
-  if (dist > SINK_START) {
-    const t = Math.min((dist - SINK_START) / (SINK_END - SINK_START), 1);
-    y -= t * t * (3 - 2 * t) * SINK_DEPTH;
-  }
-  return y;
+  return getTerrainHeight(x, z) - rimSink(coastDist(x, z));
 }
 
 // Palms hug the beach band (dist ~48-49.5) — cove cluster + far accents.
 const PALM_A_XZ: [number, number, number, number][] = [
-  // x, z, rotY, scale
+  // x, z, rotY, scale — accents re-sited for the organic coast (the west
+  // and NE lobes recede ~3-4u; the old spots ended up in the water)
   [13, 46.5, 0.4, 1.0],
   [21, 44.8, 2.1, 0.92],
-  [-20, 44.5, 1.0, 1.0],
-  [44, -22, 5.2, 0.95],
+  [-18.2, 40.6, 1.0, 1.0],
+  [40.5, -20, 5.2, 0.95],
 ];
 const PALM_B_XZ: [number, number, number, number][] = [
   [24.5, 41.5, 3.6, 1.05],

@@ -13,6 +13,7 @@ import { useMemo } from "react";
 import { useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 import { getTerrainHeight, BUILDING_FOOTPRINTS } from "./terrain";
+import { coastDist } from "@/lib/game/coast";
 
 const VARIANTS = [
   "/assets/acnh/props/grass-tuft-00.glb",
@@ -44,7 +45,7 @@ function mulberry32(a: number) {
 }
 
 function rejected(x: number, z: number): boolean {
-  if (Math.hypot(x, z) > 47) return true;
+  if (coastDist(x, z) > 47) return true;
   if (ROAD_RECTS.some((r) => x >= r.x0 && x <= r.x1 && z >= r.z0 && z <= r.z1)) return true;
   // river band (spline z 0-6 across the island, generous pad)
   if (z > -1 && z < 7.5) return true;

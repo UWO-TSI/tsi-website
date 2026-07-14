@@ -9,6 +9,22 @@
 
 import { useEffect, useState } from "react";
 import * as THREE from "three";
+import { COAST_BASE, coastWobble } from "@/lib/game/coast";
+
+// Organic coast outline: sample the shared harmonics into an SVG polygon
+// (module-level — the coastline is static).
+const COAST_POINTS = (() => {
+  const pts: string[] = [];
+  const N = 48;
+  for (let i = 0; i < N; i++) {
+    const a = (i / N) * Math.PI * 2;
+    const x = Math.cos(a);
+    const z = Math.sin(a);
+    const r = COAST_BASE + coastWobble(x, z);
+    pts.push(`${(x * r).toFixed(1)},${(-z * r).toFixed(1)}`);
+  }
+  return pts.join(" ");
+})();
 
 const BUILDINGS: { x: number; z: number; w: number; h: number; c: string }[] = [
   { x: 0, z: -4, w: 6, h: 3, c: "#5B4B9E" },    // HQ
@@ -51,9 +67,9 @@ export default function MiniMap({ playerPosRef }: { playerPosRef: React.MutableR
         pointerEvents: "none",
       }}
     >
-      <svg viewBox="-55 -55 110 110" style={{ width: "100%", height: "100%", display: "block", background: "#6FB55B" }}>
-        {/* island edge */}
-        <circle cx="0" cy="0" r="52" fill="#7EC167" stroke="#5E9E4E" strokeWidth="1.5" />
+      <svg viewBox="-58 -58 116 116" style={{ width: "100%", height: "100%", display: "block", background: "#6FB55B" }}>
+        {/* island edge — organic coastline from the shared harmonics */}
+        <polygon points={COAST_POINTS} fill="#7EC167" stroke="#5E9E4E" strokeWidth="1.5" strokeLinejoin="round" />
         {/* paths (spine split at the river banks, matching the world) */}
         <line x1="0" y1="24" x2="0" y2="1.1" stroke="#D9B380" strokeWidth="3" strokeLinecap="round" />
         <line x1="0" y1="-5.9" x2="0" y2="-27" stroke="#D9B380" strokeWidth="3" strokeLinecap="round" />

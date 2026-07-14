@@ -12,6 +12,7 @@ import { useFrame } from "@react-three/fiber";
 import { useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 import { getTerrainHeight } from "./terrain";
+import { coastDist, rimSink } from "@/lib/game/coast";
 
 const LIGHTHOUSE_URL = "/assets/acnh/furniture/lighthouse.glb";
 const WINDMILL_URL = "/assets/acnh/furniture/windmill-retro.glb";
@@ -25,7 +26,9 @@ function Lighthouse() {
     c.scale.setScalar(0.16); // baked here: parent-group transforms can be
     return c;                // dropped by R3F HMR re-parenting (2026-07-13)
   }, [scene]);
-  const y = getTerrainHeight(34, -33);
+  // Organic coast: the lighthouse spot now sits on the beach band —
+  // follow the rim sink so the base stays planted.
+  const y = getTerrainHeight(34, -33) - rimSink(coastDist(34, -33));
   const beaconRef = useRef<THREE.PointLight>(null);
   useFrame(() => {
     const b = beaconRef.current;

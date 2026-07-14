@@ -18,6 +18,7 @@ import { useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { getCausticTexture } from "@/lib/game/causticTexture";
+import { COAST_GLSL } from "@/lib/game/coast";
 
 const OCEAN_SIZE = 400;
 const OCEAN_Y = -0.55;
@@ -155,13 +156,15 @@ uniform sampler2D uCaustic;
 uniform vec3 uDeep;
 uniform vec3 uShallow;
 uniform vec3 uFoam;
-varying vec2 vOceanXZ;`
+varying vec2 vOceanXZ;
+${COAST_GLSL}`
       ).replace(
         "#include <color_fragment>",
         `#include <color_fragment>
 {
-  // Radial distance to the round shoreline: 0 at the waterline.
-  float shore = length(vOceanXZ) - ${SHORE_RADIUS.toFixed(1)};
+  // Distance to the ORGANIC shoreline (coast.ts harmonics): 0 at the
+  // waterline, so the foam band hugs every lobe and bay.
+  float shore = length(vOceanXZ) - (${SHORE_RADIUS.toFixed(1)} + coastWobble(vOceanXZ));
 
   // Depth ramp: shallow near shore -> deep water outward.
   float depthT = smoothstep(0.0, 14.0, shore);

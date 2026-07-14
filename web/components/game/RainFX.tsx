@@ -42,7 +42,8 @@ function getRainMaterial(): THREE.MeshBasicMaterial {
     _rainMat = new THREE.MeshBasicMaterial({
       color: "#AEC6DE",
       transparent: true,
-      opacity: 0.42,
+      // David 2026-07-14: rain read too heavy — was 0.42.
+      opacity: 0.22,
       depthWrite: false,
       side: THREE.DoubleSide,
     });
