@@ -167,37 +167,6 @@ function Campfire({ position }: { position: [number, number, number] }) {
 // The classic ACNH sky beat: a gift balloon drifts across every few
 // minutes. Pure ambience — no popping, no rewards (principle #3). The
 // cycle starts mid-flight so a fresh visitor's first minute includes one.
-function DriftingBalloon() {
-  const ref = useRef<THREE.Group>(null);
-  const t = useRef(14); // start partway into the first crossing
-  useFrame((_, delta) => {
-    t.current += delta;
-    if (!ref.current) return;
-    const CYCLE = 220;  // seconds between crossings
-    const FLIGHT = 75;  // seconds on screen
-    const tt = t.current % CYCLE;
-    if (tt > FLIGHT) {
-      ref.current.visible = false;
-      return;
-    }
-    ref.current.visible = true;
-    const p = tt / FLIGHT;
-    // Far north track, inside the fog band — a soft distant silhouette.
-    // (It originally crossed near the play area and loomed overhead.)
-    ref.current.position.set(
-      -60 + p * 120,
-      16 + Math.sin(tt * 0.6) * 0.5,
-      44 + Math.sin(p * Math.PI) * 6
-    );
-  });
-  return (
-    <group ref={ref} visible={false}>
-      <GLBProp url="/assets/acnh/props/balloon.glb" scale={1.6} castShadow={false} />
-    </group>
-  );
-}
-
-// ─── Root ───────────────────────────────────────────────────────────────
 export default function AmbientProps() {
   return (
     <group>
@@ -241,7 +210,6 @@ export default function AmbientProps() {
       {/* Spawn campfire — a social anchor by the spawn plaza (principle #1:
           the world is a hangout). Flickering warm light sells the fire. */}
       <Campfire position={[4, getTerrainHeight(4, -13.5), -13.5]} />
-      <DriftingBalloon />
 
       {/* Oracle approach — stone lantern pair flanking the museum walk
           (temple-path read), each with a faint warm glow for night. */}

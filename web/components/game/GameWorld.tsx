@@ -59,7 +59,6 @@ import HQInterior, { type InteriorStation } from "./HQInterior";
 import RoadTiles from "./RoadTiles";
 import GrassTufts from "./GrassTufts";
 import ToolFlourish from "./ToolFlourish";
-import DistantIsles from "./DistantIsles";
 import RiverMouths from "./RiverMouths";
 import ShoreLife from "./ShoreLife";
 import SeasonalProps from "./SeasonalProps";
@@ -1739,12 +1738,11 @@ function Scene({
       {/* Cozy push 2026-07-03: was 25-55, which washed half the village gray
           (David: fog doesn't look good). Now a far soft haze — the village
           (±30u) stays crisp, the island edge still fades out. */}
-      <fog attach="fog" args={[fogColor, 55, 120]} />
+      <fog attach="fog" args={[fogColor, 55, 100]} /> {/* far 120->100 (2026-07-13): distant props dissolve into atmosphere sooner */}
 
       <Terrain />
       {blobShadows && <BlobShadows placements={blobPlacements} />}
       <Ocean phase={todPhase} />
-      <DistantIsles />
       <RiverMouths />
       <ShoreLife />
       <SeasonalProps />
