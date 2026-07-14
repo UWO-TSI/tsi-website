@@ -102,6 +102,24 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-14 (evening) — Organic island + continuous game-feel loop (`94b518b`…, ongoing)
+
+David's rulings: rain opacity down; "island should not be just a circle — organic shape, organic terrain"; then a standing loop: find visual inconsistencies + game-feel ideas, implement, screenshot-QA, repeat, do not stop.
+
+**The organic coast** (`94b518b`): `lib/game/coast.ts` — R(θ) = 52 + Σ aₖ·sin(kθ) with zero-phase INTEGER harmonics, so the wobble vanishes at θ=0/π and the river mouths + waterfalls keep their exact coastline. `coastDist()` = distance in a space where the coast is a circle again → every existing threshold (sand 48.5 / sink 49.5 / waterline 51.4) worked unchanged. Wired: ground sink+bands, ocean foam GLSL twin, tufts, cove groundY, lighthouse (now ON the shoreline — scenic), minimap polygon. Player clamp was a ±50 SQUARE (diagonals walked onto open water!) → radial coast clamp 49.4. Terrain got a broad rolling swell, damped near the plaza.
+
+**Loop iterations pushed so far** (each gated + mock-verified where visual):
+2. `b2b82f7` beach-width map (wide sweeps ↔ grassy banks), 10 real shells (Creatures/), foam rings on the outcrops. Shells: scallop/whelk needed +90X — shallow lineup cams misread flat-vs-standing; top-down check added to doctrine.
+3. `87d1f2a` wet-sand wash band phase-matched to the ocean lap (ground onBeforeCompile — global curve chunk untouched); 3 gulls circling the sea lobes.
+4. `d472d38` rocky banks at the two narrowest-beach angles (θ≈2.48, θ≈5.62 under the lighthouse — composition verified from mock cam) + dune grass on the widest sweeps. All angle-placed in coast-space.
+5. `00bf007` two saltwater fishing spots (deck edge + cove sand); minimap now draws sand ring + width-following grass line.
+6. `2314efb` Beachgoer filler NPC at the camp (principle #2). Wander radius 1.15 keeps them dry (checked).
+7. `2064055` ghost replays clamp to the coast (square-era positions stood on water).
+8. `dc5f41e` sand footprints — 28-print instanced ring buffer, beach band only.
+9. `b6bad97` beach campfire — the cove's night light pool.
+
+Rain streaks 0.42 → 0.22 (`94b518b`). Loop continues below as it lands.
+
 ### 2026-07-14 (later) — Beach Cove: water/land dump sweep (`6008c1f`)
 
 David's directive: flag every usable water/ocean + land asset in the dump, then use them. Catalog written to **`specs/asset-flags.md`** (233 Terrain entries triaged; out-sea/out-* vista slabs SKIPped per his clear-the-distance ruling). Shipped as one coherent destination — the south-east **Beach Cove**:
