@@ -199,7 +199,7 @@ function computeSunMoonDirs(hour: number): { sunDir: THREE.Vector3; moonDir: THR
   return { sunDir, moonDir };
 }
 
-function TimeOfDayCycle({ weather, todPhase, shadowsOn }: { weather: Weather; todPhase: "day" | "night" | "dawn" | "dusk"; shadowsOn: boolean }) {
+function TimeOfDayCycle({ weather, todPhase, shadowsOn, playerPosRef }: { weather: Weather; todPhase: "day" | "night" | "dawn" | "dusk"; shadowsOn: boolean; playerPosRef: React.MutableRefObject<THREE.Vector3> }) {
   const { scene } = useThree();
   const sunRef = useRef<THREE.DirectionalLight>(null);
   const ambRef = useRef<THREE.AmbientLight>(null);
@@ -292,6 +292,13 @@ function TimeOfDayCycle({ weather, todPhase, shadowsOn }: { weather: Weather; to
   useEffect(() => {
     applyEnvironment(gl, scene, todPhase);
   }, [gl, scene, todPhase]);
+  // shadow target follows the player; three needs the target in the graph
+  useEffect(() => {
+    const sun = sunRef.current;
+    if (!sun) return;
+    scene.add(sun.target);
+    return () => { scene.remove(sun.target); };
+  }, [scene]);
   useEffect(() => () => disposeEnvironment(scene), [scene]);
 
   useFrame(() => {
@@ -394,7 +401,11 @@ function TimeOfDayCycle({ weather, todPhase, shadowsOn }: { weather: Weather; to
         Math.sin(lightEl),
         Math.cos(lightAz) * Math.cos(lightEl)
       ).multiplyScalar(30);
-      sunRef.current.position.copy(_sunPos);
+      if (shadowsOn) {
+        updateShadowRig(gl, sunRef.current, playerPosRef.current, _sunPos);
+      } else {
+        sunRef.current.position.copy(_sunPos);
+      }
     }
     // Ambient
     if (ambRef.current) {
@@ -447,10 +458,10 @@ function TimeOfDayCycle({ weather, todPhase, shadowsOn }: { weather: Weather; to
         ref={sunRef}
         color="#FFFFFF" intensity={1.0} position={[15, 30, 15]}
         castShadow={shadowsOn}
-        shadow-mapSize-width={2048} shadow-mapSize-height={2048}
-        shadow-camera-near={5} shadow-camera-far={140}
-        shadow-camera-left={-58} shadow-camera-right={58}
-        shadow-camera-top={58} shadow-camera-bottom={-58}
+        shadow-mapSize-width={1024} shadow-mapSize-height={1024}
+        shadow-camera-near={5} shadow-camera-far={90}
+        shadow-camera-left={-22} shadow-camera-right={22}
+        shadow-camera-top={22} shadow-camera-bottom={-22}
         shadow-bias={-0.0004} shadow-normalBias={0.03}
       />
       <directionalLight color="#C0D0FF" intensity={0.15} position={[-12, 18, -8]} />
@@ -1301,6 +1312,23 @@ const FILLER_POSITIONS: [number, number, number][] = [
  * stats each frame and writes them to a snapshot ref. DebugOverlay reads
  * the ref on a 4Hz interval, so this stays cheap.
  */
+// P-light v2 perf (measured: island-wide 2048 map cost 21fps): the shadow
+// frustum follows the player (tight 44u box = crisp + fewer casters) and
+// the depth pass re-renders at 30Hz — the sun moves too slowly to notice.
+let _shadowFrameFlip = false;
+function updateShadowRig(gl: THREE.WebGLRenderer, sun: THREE.DirectionalLight, playerPos: THREE.Vector3, sunWorld: THREE.Vector3) {
+  sun.position.set(playerPos.x + sunWorld.x, sunWorld.y, playerPos.z + sunWorld.z);
+  sun.target.position.set(playerPos.x, 0, playerPos.z);
+  sun.target.updateMatrixWorld();
+  // R3F sets shadow-camera-* props but never calls updateProjectionMatrix —
+  // without this the ortho frustum stays at its construction defaults and
+  // the map renders a tiny box nowhere near the view (classic gotcha).
+  sun.shadow.camera.updateProjectionMatrix();
+  gl.shadowMap.autoUpdate = false;
+  _shadowFrameFlip = !_shadowFrameFlip;
+  if (_shadowFrameFlip) gl.shadowMap.needsUpdate = true;
+}
+
 // gl.info with autoReset ON gets cleared by EVERY internal render pass
 // (the PostFX composer's final quad left "Draws 1" in the overlay).
 // Manual mode: we read totals once per frame, then reset ourselves.
@@ -1741,7 +1769,7 @@ function Scene({
         makeDefault
       />
 
-      <TimeOfDayCycle weather={weather} todPhase={todPhase} shadowsOn={blobShadows} />
+      <TimeOfDayCycle weather={weather} todPhase={todPhase} shadowsOn={blobShadows} playerPosRef={playerPosRef} />
       {weather === "rain" && !liteMode && <RainFX playerPosRef={playerPosRef} />}
       <Critters todPhase={todPhase} playerPosRef={playerPosRef} flowerAnchors={FLOWER_XZ} treeAnchors={TREE_XZ} />
       <ToolFlourish playerPosRef={playerPosRef} />
