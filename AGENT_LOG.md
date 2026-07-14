@@ -125,6 +125,8 @@ Rain streaks 0.42 → 0.22 (`94b518b`). Loop continues below as it lands.
 **Post-checkpoint (same session):**
 - `9a0e8de` **coast v2** — harmonics +40% (R 45..59) + a BAY gaussian bitten in at the deck with two headland arms: the cove is now concave, water wrapping the deck nose. River mouths pinned by multiplicative masks. Every fixed placement re-solved numerically (`pipeline/coast_solver.py`): camp → inner-bay sand, palms → headland arms, lighthouse → (32.6,−31.6), NE camp reeled in. Clamp 49.4→50.6. Swell 0.5→0.8. Mock aerial + cove verified (concavity visible).
 - `f0a8807` **lighting v3 via the new isolated lab** (`water-harness/lighting.html`: full stack replica + live sliders). Measured finding: old triple fill (amb 0.6/hemi 0.82/env 0.55) flooded sun shadows invisible. Now strong sun (day 1.4) over lean fills (amb ~0.36, hemi 0.4, env 0.4). Dawn/dusk hues held for David's AC snapshots.
+- `06f201e` grass quilt punched up (visible tones 0.87-1.0 + warm/cool hue lean per triangle — provisional until the snapshots).
+- `8d26198` **windmill blades spin** (David's pick, long-deferred): rotor-plane predicate split the merged mesh into tower + hub-recentered blades; lazy 0.6 rad/s.
 - **Texture-asset hunt result:** the dump's terrain system (unit, cliff kit, river kit, env-maps, roads) ships with ZERO textures — ACNH ground textures live in engine materials that never got ripped. Grass/path/river looks must be generated; David's snapshots will calibrate.
 
 10. `ebf4fd3` riverbank rocks + rushes along the spline (the last bare waterway), skipping bridge + mouths.
