@@ -14,6 +14,9 @@
  * The sand path + wood deck themselves are RoadTiles zones; corridors
  * live in terrain.ts PATH_CORRIDORS. Everything here is static — no
  * useFrame. Rocks/fences skip the shadow pass (ground-hugging).
+ *
+ * Also hosts the other dump-sweep flora: the bamboo grove behind the
+ * Oracle temple (Plants/bamboo 3+4, same LUT-normalize treatment).
  */
 
 import { Suspense, useMemo } from "react";
@@ -24,6 +27,8 @@ import { getTerrainHeight } from "./terrain";
 
 const PALM_A = "/assets/acnh/plants/tree-palm-a.glb";
 const PALM_B = "/assets/acnh/plants/tree-palm-b.glb";
+const BAMBOO_A = "/assets/acnh/plants/tree-bamboo-a.glb";
+const BAMBOO_B = "/assets/acnh/plants/tree-bamboo-b.glb";
 const HIBISCUS = "/assets/acnh/plants/bush-hibiscus.glb";
 const ROCKS = ["a", "b", "c", "d", "e"].map((k) => `/assets/acnh/props/rock-${k}.glb`);
 const FENCE_A = "/assets/acnh/props/fence-rope-a.glb";
@@ -31,8 +36,8 @@ const FENCE_I = "/assets/acnh/props/fence-rope-i.glb";
 const PARASOL = "/assets/acnh/props/beach-parasol.glb";
 const TOWEL = "/assets/acnh/props/beach-towel.glb";
 const BALL = "/assets/acnh/props/beach-ball.glb";
-[PALM_A, PALM_B, HIBISCUS, ...ROCKS, FENCE_A, FENCE_I, PARASOL, TOWEL, BALL].forEach((u) =>
-  useGLTF.preload(u)
+[PALM_A, PALM_B, BAMBOO_A, BAMBOO_B, HIBISCUS, ...ROCKS, FENCE_A, FENCE_I, PARASOL, TOWEL, BALL].forEach(
+  (u) => useGLTF.preload(u)
 );
 
 // Mirror of GameWorld's ground-mesh rim sink (Task 27) — the beach band
@@ -72,6 +77,19 @@ const HIBISCUS_XZ: [number, number, number][] = [
   [14.5, 43, 0.9],
   [21.5, 40.6, 3.8],
   [11.9, 45.3, 1.7],
+];
+
+// Bamboo grove arcing behind the Oracle temple (footprint 0,31.8 r4.5;
+// entrance faces north — the grove backs the south side).
+// [x, z, rotY, scale, model 0=tall 1=short]
+const BAMBOO_XZ: [number, number, number, number, number][] = [
+  [-5.5, 37.2, 0.3, 1.1, 0],
+  [-3.4, 38.6, 1.8, 0.95, 1],
+  [-1.2, 37.0, 3.1, 1.0, 0],
+  [1.4, 38.8, 0.9, 1.15, 0],
+  [3.4, 37.4, 2.4, 0.9, 1],
+  [5.6, 38.2, 4.2, 1.05, 0],
+  [0.2, 39.7, 5.3, 0.85, 1],
 ];
 
 // The classic ACNH rock cluster in the NE field + two sand strays.
@@ -135,6 +153,13 @@ export default function BeachCove() {
     []
   );
   const rocks = useMemo(() => buildRockPlacements(), []);
+  const bamboo = useMemo<NaturePlacement[][]>(() => {
+    const groups: NaturePlacement[][] = [[], []];
+    for (const [x, z, rot, scale, model] of BAMBOO_XZ) {
+      groups[model].push({ position: [x, getTerrainHeight(x, z), z], rotation: rot, scale });
+    }
+    return groups;
+  }, []);
   const fence = useMemo<NaturePlacement[]>(
     () =>
       Array.from({ length: FENCE_COUNT }, (_, i) => {
@@ -152,6 +177,8 @@ export default function BeachCove() {
       <group>
         <InstancedGLB url={PALM_A} placements={palmsA} />
         <InstancedGLB url={PALM_B} placements={palmsB} />
+        <InstancedGLB url={BAMBOO_A} placements={bamboo[0]} />
+        <InstancedGLB url={BAMBOO_B} placements={bamboo[1]} />
         <InstancedGLB
           url={HIBISCUS}
           placements={HIBISCUS_XZ.map(([x, z, rot]) => ({
