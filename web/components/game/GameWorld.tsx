@@ -222,13 +222,16 @@ function TimeOfDayCycle({ weather, todPhase }: { weather: Weather; todPhase: "da
       return t;
     };
     // Rain days v1: same four phases, weather picks the texture set.
-    // File contract: /assets/sky/sky_{time}_{weather}.webp.
+    // File contract: /assets/sky/sky_{time}_{weather}.webp. Cloudy (v2)
+    // reuses the sunny panoramas — the denser, darker cloud shell and
+    // dimmed sun carry the overcast read until David's cloudy art lands.
+    const texWeather = weather === "cloudy" ? "sunny" : weather;
     return {
       phases: [
-        load(`/assets/sky/sky_morning_${weather}.webp`),
-        load(`/assets/sky/sky_afternoon_${weather}.webp`),
-        load(`/assets/sky/sky_evening_${weather}.webp`),
-        load(`/assets/sky/sky_night_${weather}.webp`),
+        load(`/assets/sky/sky_morning_${texWeather}.webp`),
+        load(`/assets/sky/sky_afternoon_${texWeather}.webp`),
+        load(`/assets/sky/sky_evening_${texWeather}.webp`),
+        load(`/assets/sky/sky_night_${texWeather}.webp`),
       ],
       clouds: load("/assets/sky/clouds.webp", true),
       sun: load("/assets/sky/sun.png"),
@@ -349,9 +352,9 @@ function TimeOfDayCycle({ weather, todPhase }: { weather: Weather; todPhase: "da
     // the uniforms object returned from useMemo).
     const sunVis = THREE.MathUtils.smoothstep(sunDir.y, -0.05, 0.15);
     const moonVis = THREE.MathUtils.smoothstep(moonDir.y, -0.05, 0.15);
-    // Rain days v1: overcast hides the celestial bodies and flattens light.
-    const wDim = weather === "rain" ? 0.5 : 1;
-    const wBody = weather === "rain" ? 0.08 : 1;
+    // Weather grades: rain flattens hard, cloudy softens.
+    const wDim = weather === "rain" ? 0.5 : weather === "cloudy" ? 0.8 : 1;
+    const wBody = weather === "rain" ? 0.08 : weather === "cloudy" ? 0.45 : 1;
     // ACNH sun/moon sprites ride the arc on the pinned dome.
     if (sunSpriteRef.current) {
       sunSpriteRef.current.position.copy(sunDir).multiplyScalar(200);

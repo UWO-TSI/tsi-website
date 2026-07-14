@@ -11,7 +11,7 @@
  * everything reads the Weather type, not the hash.
  */
 
-export type Weather = "sunny" | "rain";
+export type Weather = "sunny" | "cloudy" | "rain";
 
 export function weatherForDate(d: Date): Weather {
   const key = d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
@@ -19,7 +19,9 @@ export function weatherForDate(d: Date): Weather {
   t = Math.imul(t ^ (t >>> 15), t | 1);
   t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
   const r = ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  return r < 0.22 ? "rain" : "sunny";
+  if (r < 0.18) return "rain";
+  if (r < 0.42) return "cloudy";
+  return "sunny";
 }
 
 /** Client-only convenience: today's weather with URL overrides. */
@@ -27,6 +29,7 @@ export function getTodayWeather(): Weather {
   if (typeof window !== "undefined") {
     const q = window.location.search;
     if (q.includes("rain")) return "rain";
+    if (q.includes("cloudy")) return "cloudy";
     if (q.includes("sunny")) return "sunny";
   }
   return weatherForDate(new Date());
