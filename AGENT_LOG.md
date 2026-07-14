@@ -135,7 +135,10 @@ Rain streaks 0.42 → 0.22 (`94b518b`). Loop continues below as it lands.
 - `7f7e02f` **pastel grade**: vibrance REPLACED with a pastel master grade (14% desat toward luma / warm cream cast / lifted warm blacks — three uniforms = three knobs); noon-afternoon key back to warm CREAM over the blue fill (warm key / cool fill, the right way round); grass palette pulled to olive-sage (#8CBA5E family); day sea muted to steel-teal with cream foam.
 - `936bf90` **bridge string lights** (ref-08): 14 instanced cafe bulbs sag between corner posts, toneMapped=false overdrive at night + crossing light pool.
 - `24e113c` **beach debris** (ref-07): kelp scraps + driftwood on the wet sand band.
-- Interior warm-amber pass (refs 02/03/09) queued next; grade knobs await David's re-verdict.
+- `2cc7a56` **interior warm-amber pass** (refs 02/03/09): all three rooms drop the flat cream fill — low warm ambient, amber pools, warm key; Oracle keeps violet identity.
+- `824a562` **L4 wrap-lighting REJECTED in the lab** (?wrap=1): flattens form, blows bright foliage — the negative result is documented in lighting-research.md; L7 skipped with it.
+- `<lamp-tints>` L11 lampshade rule: per-pair lamp warmth (peach/amber/gold).
+- Grade knobs await David's re-verdict.
 
 **Lighting research + v4 (David: "do deep research... and apply"):** four-agent sweep (ACNH internals via DF/GameXplain/CEDEC/dataminers, BSL+Complementary GLSL source, cozy art theory from Valve/Firewatch/Genshin/Project Horseshoe, three.js toolbox) → **`specs/lighting-research.md`** (the ten laws + 12-action map). Applied same session:
 - `d3c4b0a` **lighting v4**: Khronos Neutral tonemap (lab A/B: identical 0-1, highlights roll to white), TOD_KEYS 7→10 with cool-white noon sun over bluer fill + Complementary-style sunset power ramp, PostFX v2 (mipmapBlur bloom threshold-1 selective via materials — still opt-in pending F3 re-measure — + BSL's exact vibrance formula, merged pass), lamp globes toneMapped=false.
