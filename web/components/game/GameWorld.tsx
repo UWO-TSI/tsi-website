@@ -199,7 +199,7 @@ function computeSunMoonDirs(hour: number): { sunDir: THREE.Vector3; moonDir: THR
   return { sunDir, moonDir };
 }
 
-function TimeOfDayCycle({ weather, todPhase }: { weather: Weather; todPhase: "day" | "night" | "dawn" | "dusk" }) {
+function TimeOfDayCycle({ weather, todPhase, shadowsOn }: { weather: Weather; todPhase: "day" | "night" | "dawn" | "dusk"; shadowsOn: boolean }) {
   const { scene } = useThree();
   const sunRef = useRef<THREE.DirectionalLight>(null);
   const ambRef = useRef<THREE.AmbientLight>(null);
@@ -437,17 +437,21 @@ function TimeOfDayCycle({ weather, todPhase }: { weather: Weather; todPhase: "da
       </group>
       <hemisphereLight ref={hemiRef} args={["#EAF6FF", P.grassPrimary, 0.8]} />
       <ambientLight ref={ambRef} intensity={0.5} color="#D6ECFF" />
-      {/* Shadow map 2048→1024 (4x cheaper shadow pass per frame).
-          Negligible visual difference at our camera distance, big FPS win
-          on M1 (saw ~5-8 FPS gain in headless ANGLE Metal). */}
+      {/* P-light v2 (2026-07-13, ACNH lighting deep-dive): one soft PCF
+          shadow map from the sun — buildings/trees/landmarks cast onto
+          terrain+roads. ACNH shadows are never black: the strong
+          ambient/hemi/IBL fill lifts them into warm sky-tinted shade.
+          Gated by the shadows setting; blob discs remain the fallback.
+          Bounds cover the respaced island (was ±30 pre-2026-07-07). */}
       <directionalLight
         ref={sunRef}
         color="#FFFFFF" intensity={1.0} position={[15, 30, 15]}
-        castShadow
-        shadow-mapSize-width={1024} shadow-mapSize-height={1024}
-        shadow-camera-far={60} shadow-camera-left={-30} shadow-camera-right={30}
-        shadow-camera-top={30} shadow-camera-bottom={-30}
-        shadow-bias={-0.001}
+        castShadow={shadowsOn}
+        shadow-mapSize-width={2048} shadow-mapSize-height={2048}
+        shadow-camera-near={5} shadow-camera-far={140}
+        shadow-camera-left={-58} shadow-camera-right={58}
+        shadow-camera-top={58} shadow-camera-bottom={-58}
+        shadow-bias={-0.0004} shadow-normalBias={0.03}
       />
       <directionalLight color="#C0D0FF" intensity={0.15} position={[-12, 18, -8]} />
     </>
@@ -702,7 +706,7 @@ function InstancedTrees() {
           <InstancedGLB key={`near-${url}`} url={url} placements={near[i]} />
         ))}
         {TREE_MODELS.map((url, i) => (
-          <InstancedGLB key={`far-${url}`} url={url} placements={far[i]} castShadow={false} />
+          <InstancedGLB key={`far-${url}`} url={url} placements={far[i]} />
         ))}
       </group>
     </Suspense>
@@ -1737,7 +1741,7 @@ function Scene({
         makeDefault
       />
 
-      <TimeOfDayCycle weather={weather} todPhase={todPhase} />
+      <TimeOfDayCycle weather={weather} todPhase={todPhase} shadowsOn={blobShadows} />
       {weather === "rain" && !liteMode && <RainFX playerPosRef={playerPosRef} />}
       <Critters todPhase={todPhase} playerPosRef={playerPosRef} flowerAnchors={FLOWER_XZ} treeAnchors={TREE_XZ} />
       <ToolFlourish playerPosRef={playerPosRef} />
@@ -1759,7 +1763,10 @@ function Scene({
       <fog attach="fog" args={[fogColor, 55, 100]} /> {/* far 120->100 (2026-07-13): distant props dissolve into atmosphere sooner */}
 
       <Terrain />
-      {blobShadows && <BlobShadows placements={blobPlacements} />}
+      {/* P-light v2: with the shadow map on, the static discs retire —
+          buildings/trees get real shadows; discs remain the low-perf
+          fallback when the setting is off. */}
+      {!blobShadows && <BlobShadows placements={blobPlacements} />}
       <Ocean phase={todPhase} />
       <RiverMouths />
       <ShoreLife />
@@ -2191,7 +2198,7 @@ export default function GameWorld() {
         gl={{ antialias: false, powerPreference: "high-performance" }}
         dpr={graphicsSettings.pixelated ? 0.66 : [1, 2]}
         camera={{ fov: 48, near: 0.1, far: 300, position: [0, 19, -24] }}
-        shadows={false}
+        shadows="soft" /* P-light v2 2026-07-13: PCFSoft maps; the sun only casts when the shadows setting is on */
         onCreated={({ gl }) => {
           gl.toneMapping = THREE.NoToneMapping;
           gl.outputColorSpace = THREE.SRGBColorSpace;

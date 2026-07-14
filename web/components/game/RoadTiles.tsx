@@ -155,6 +155,7 @@ export default function RoadTiles() {
           m4.compose(p, q, sc);
           im.setMatrixAt(i, m4);
         });
+        im.receiveShadow = true; // P-light v2: roads catch the sun shadows
         im.instanceMatrix.needsUpdate = true;
         result.push(im);
       }

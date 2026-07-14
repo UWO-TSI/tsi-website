@@ -88,8 +88,8 @@ export default function GraphicsSettingsPanel({ open, onClose }: GraphicsSetting
           disabled={settings.liteMode}
         />
         <Toggle
-          label="Blob shadows"
-          hint="Soft discs that ground trees, buildings and props. Nearly free."
+          label="Shadows"
+          hint="Real sun shadows from buildings and trees (soft discs when off). Costs a few FPS."
           value={settings.shadows}
           onChange={actions.setShadows}
           disabled={settings.liteMode}
