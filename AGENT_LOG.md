@@ -102,6 +102,14 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-14 — Stabilize closed + all three buildings get rooms (`56dd351`…`633b299`)
+
+- **Prod pipeline fact established:** Vercel auto-deploys main → production (tethos.ca) on every push — there is NO staging gate. Smoke: tethos.ca + /student/login 200 on latest. Worth a David ruling eventually (preview branches vs straight-to-prod).
+- **Shadow rig measured + fixed** (first real use of the F3 profiler): island-wide 2048 rig ran 39fps/32.3ms → tuned to 1024 on a 44u player-following frustum at 30Hz = 60fps/17.3ms with shadows ON. Root cause of invisible shadows: R3F never calls updateProjectionMatrix after shadow-camera-* props — frustum silently stays at construction defaults. Table in qa.md Wave 28.
+- **Shop + Oracle interiors shipped** (task #39): room kit extracted to interiorShared.tsx; Shop (counter-register → shop sheet, color-box shelves, barrels/cardboard/cart) and Oracle Temple (real altar.glb on the magic-circle rug, floating emissive crystal, ruins pillars, candles, class banners → quiz sheet at the altar). Entering shop/oracle buildings now goes inside; sheets open at the stations. 9 pieces extracted with per-piece axis verification. Both rooms mock-verified.
+
+**Awaiting David:** in-game verdict on shadows/halos/rooms; his machine's F3 numbers; the AI sky art.
+
 ### 2026-07-13 (evening) — Stabilize round: colossus root-cause, sideways audit, P-light v2 (`d899735`…`87b113c`)
 
 David's live session broke ("lagging like crazy, huge assets, pixel look dead, assets sideways"). Root causes, all fixed with evidence:
