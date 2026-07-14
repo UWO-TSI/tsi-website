@@ -17,14 +17,15 @@ interface Row {
   count: number;
 }
 
-const CATALOG: { group: string; items: { key: string; icon: string; name: string }[] }[] = [
+// img: rendered ACNH icon (assets/acnh/icons, 2026-07-13); emoji stays the fallback.
+const CATALOG: { group: string; items: { key: string; icon: string; img?: string; name: string }[] }[] = [
   {
     group: "Fruit",
     items: [
-      { key: "apple", icon: "🍎", name: "Apple" },
-      { key: "peach", icon: "🍑", name: "Peach" },
-      { key: "acorn", icon: "🌰", name: "Acorn" },
-      { key: "petal", icon: "🌸", name: "Cherry petal" },
+      { key: "apple", img: "/assets/acnh/icons/apple.png", icon: "🍎", name: "Apple" },
+      { key: "peach", img: "/assets/acnh/icons/peach.png", icon: "🍑", name: "Peach" },
+      { key: "acorn", img: "/assets/acnh/icons/acorn.png", icon: "🌰", name: "Acorn" },
+      { key: "petal", img: "/assets/acnh/icons/petal.png", icon: "🌸", name: "Cherry petal" },
     ],
   },
   {
@@ -32,14 +33,14 @@ const CATALOG: { group: string; items: { key: string; icon: string; name: string
     // Legacy generic keys retired pre-launch (no real member data).
     group: "Flowers",
     items: [
-      { key: "flower_cosmos", icon: "🌸", name: "Pink cosmos" },
-      { key: "flower_lily", icon: "🌺", name: "White lily" },
-      { key: "flower_hyacinth", icon: "🪻", name: "Blue hyacinth" },
-      { key: "flower_mum", icon: "🌼", name: "Yellow mum" },
-      { key: "flower_rose", icon: "🌹", name: "Red rose" },
-      { key: "flower_tulip", icon: "🌷", name: "Orange tulip" },
-      { key: "flower_pansy", icon: "💮", name: "Purple pansy" },
-      { key: "flower_windflower", icon: "🏵️", name: "Windflower" },
+      { key: "flower_cosmos", img: "/assets/acnh/icons/flower_cosmos.png", icon: "🌸", name: "Pink cosmos" },
+      { key: "flower_lily", img: "/assets/acnh/icons/flower_lily.png", icon: "🌺", name: "White lily" },
+      { key: "flower_hyacinth", img: "/assets/acnh/icons/flower_hyacinth.png", icon: "🪻", name: "Blue hyacinth" },
+      { key: "flower_mum", img: "/assets/acnh/icons/flower_mum.png", icon: "🌼", name: "Yellow mum" },
+      { key: "flower_rose", img: "/assets/acnh/icons/flower_rose.png", icon: "🌹", name: "Red rose" },
+      { key: "flower_tulip", img: "/assets/acnh/icons/flower_tulip.png", icon: "🌷", name: "Orange tulip" },
+      { key: "flower_pansy", img: "/assets/acnh/icons/flower_pansy.png", icon: "💮", name: "Purple pansy" },
+      { key: "flower_windflower", img: "/assets/acnh/icons/flower_windflower.png", icon: "🏵️", name: "Windflower" },
     ],
   },
   {
@@ -47,13 +48,35 @@ const CATALOG: { group: string; items: { key: string; icon: string; name: string
     // Legacy generic keys retired pre-launch (no real member data).
     group: "Fish",
     items: [
-      { key: "fish_dace", icon: "🐟", name: "Dace" },
-      { key: "fish_crucian_carp", icon: "🐟", name: "Crucian Carp" },
-      { key: "fish_bluegill", icon: "🐠", name: "Bluegill" },
-      { key: "fish_black_bass", icon: "🐡", name: "Black Bass" },
-      { key: "fish_carp", icon: "🐟", name: "Carp" },
-      { key: "fish_goldfish", icon: "🐠", name: "Goldfish" },
-      { key: "fish_golden_koi", icon: "✨", name: "Golden Koi" },
+      { key: "fish_dace", img: "/assets/acnh/icons/fish.png", icon: "🐟", name: "Dace" },
+      { key: "fish_crucian_carp", img: "/assets/acnh/icons/fish.png", icon: "🐟", name: "Crucian Carp" },
+      { key: "fish_bluegill", img: "/assets/acnh/icons/fish.png", icon: "🐠", name: "Bluegill" },
+      { key: "fish_black_bass", img: "/assets/acnh/icons/fish.png", icon: "🐡", name: "Black Bass" },
+      { key: "fish_carp", img: "/assets/acnh/icons/fish.png", icon: "🐟", name: "Carp" },
+      { key: "fish_goldfish", img: "/assets/acnh/icons/fish.png", icon: "🐠", name: "Goldfish" },
+      { key: "fish_pale_chub", img: "/assets/acnh/icons/fish.png", icon: "🐟", name: "Pale Chub" },
+      { key: "fish_pond_smelt", img: "/assets/acnh/icons/fish.png", icon: "🐟", name: "Pond Smelt" },
+      { key: "fish_catfish", img: "/assets/acnh/icons/fish.png", icon: "🐟", name: "Catfish" },
+      { key: "fish_golden_koi", img: "/assets/acnh/icons/fish.png", icon: "✨", name: "Golden Koi" },
+    ],
+  },
+  {
+    // Critters pillar 2026-07: mirrors Critters.tsx SPECIES keys.
+    group: "Bugs",
+    items: [
+      { key: "bug_common_butterfly", img: "/assets/acnh/icons/insect.png", icon: "🦋", name: "Common Butterfly" },
+      { key: "bug_agrias_butterfly", img: "/assets/acnh/icons/insect.png", icon: "🦋", name: "Agrias Butterfly" },
+      { key: "bug_emperor_butterfly", img: "/assets/acnh/icons/insect.png", icon: "🦋", name: "Emperor Butterfly" },
+      { key: "bug_monarch_butterfly", img: "/assets/acnh/icons/insect.png", icon: "🦋", name: "Monarch Butterfly" },
+      { key: "bug_tiger_butterfly", img: "/assets/acnh/icons/insect.png", icon: "🦋", name: "Tiger Butterfly" },
+      { key: "bug_peacock_butterfly", img: "/assets/acnh/icons/insect.png", icon: "🦋", name: "Peacock Butterfly" },
+      { key: "bug_darner_dragonfly", img: "/assets/acnh/icons/insect.png", icon: "🪰", name: "Darner Dragonfly" },
+      { key: "bug_red_dragonfly", img: "/assets/acnh/icons/insect.png", icon: "🪰", name: "Red Dragonfly" },
+      { key: "bug_ladybug", img: "/assets/acnh/icons/insect.png", icon: "🐞", name: "Ladybug" },
+      { key: "bug_brown_cicada", img: "/assets/acnh/icons/insect.png", icon: "🦗", name: "Brown Cicada" },
+      { key: "bug_grasshopper", img: "/assets/acnh/icons/insect.png", icon: "🦗", name: "Grasshopper" },
+      { key: "bug_mantis", img: "/assets/acnh/icons/insect.png", icon: "🦗", name: "Mantis" },
+      { key: "bug_firefly", img: "/assets/acnh/icons/insect.png", icon: "✨", name: "Firefly" },
     ],
   },
 ];
@@ -180,9 +203,14 @@ export default function CollectionBook({ open, onClose }: { open: boolean; onClo
                       opacity: have ? 1 : 0.5,
                     }}
                   >
-                    <span style={{ fontSize: 26, filter: have ? "none" : "grayscale(1)" }}>
-                      {have ? it.icon : "❔"}
-                    </span>
+                    {have && it.img ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={it.img} alt={it.name} width={34} height={34} style={{ imageRendering: "auto" }} />
+                    ) : (
+                      <span style={{ fontSize: 26, filter: have ? "none" : "grayscale(1)" }}>
+                        {have ? it.icon : "❔"}
+                      </span>
+                    )}
                     <span style={{ fontSize: 11, textAlign: "center", lineHeight: 1.2 }}>
                       {have ? it.name : "???"}
                     </span>
