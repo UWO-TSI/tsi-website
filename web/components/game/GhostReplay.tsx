@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { Billboard, Html } from "@react-three/drei";
 import * as THREE from "three";
 import { getTerrainHeight } from "./terrain";
+import { clampToCoast } from "@/lib/game/coast";
 import type { GhostPosition } from "@/lib/game/useGhostPositions";
 
 /**
@@ -30,10 +31,12 @@ function relativeTime(iso: string): string {
 }
 
 export default function GhostReplay({ ghost }: { ghost: GhostPosition }) {
-  const grounded = useMemo<[number, number, number]>(
-    () => [ghost.world_x, getTerrainHeight(ghost.world_x, ghost.world_z), ghost.world_z],
-    [ghost.world_x, ghost.world_z],
-  );
+  const grounded = useMemo<[number, number, number]>(() => {
+    // Positions recorded before the organic coast (or near the old square
+    // clamp's corners) can sit past the new shoreline — pull them back in.
+    const [gx, gz] = clampToCoast(ghost.world_x, ghost.world_z, 49.4);
+    return [gx, getTerrainHeight(gx, gz), gz];
+  }, [ghost.world_x, ghost.world_z]);
 
   const hue = useMemo(() => userIdToHue(ghost.user_id), [ghost.user_id]);
   // Desaturated vs NPC (50% → 20%) so ghosts read as faded/past.
