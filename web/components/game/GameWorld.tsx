@@ -99,7 +99,10 @@ const P = {
   skyTop: "#87CEEB", skyBottom: "#B8E4F0",
   // NL bright grade 2026-07-07: grass is the hero color — yellower and a
   // touch more saturated than the old blue-leaning greens.
-  grassPrimary: "#84CB47", grassSecondary: "#75BC39", grassHighlight: "#9CDF5F", grassShadow: "#63A82F",
+  // AC-reference calibration (David's snapshots, specs/references/acnh):
+  // outdoor ACNH runs mean saturation 0.24-0.39 — olive-sage greens, never
+  // vivid. Grass pulled from sat ~0.66 toward the reference olive family.
+  grassPrimary: "#8CBA5E", grassSecondary: "#7FAC50", grassHighlight: "#A3CC74", grassShadow: "#6E9A46",
   dirtPath: "#C4A265", dirtPathEdge: "#B39355", stonePath: "#B8B0A0",
   riverSurface: "#5BB8D4", riverDeep: "#3A8FB0", riverEdge: "#7CCCE5", riverbed: "#A08B65",
   pondSurface: "#6DC4D8",
@@ -164,8 +167,11 @@ const TOD_KEYS: [number, string, string, string, number, string, number][] = [
   [5,  "#FFB878", "#FFDDB8", "#FFD9B0", 0.6,  "#C8BCFF", 0.34], // dawn peach
   [6,  "#8FC4EE", "#F2E2C8", "#FFE7C4", 0.95, "#D8D4F2", 0.36], // sunrise cream
   [7,  "#63C2F7", "#BEE4EE", "#FFF9E8", 1.25, "#CFE7FF", 0.38],
-  [10, "#4FB6F5", "#A9DCF2", "#EFF5FF", 1.4,  "#CFE2FF", 0.35], // noon: cool-white sun / blue fill
-  [14, "#53B8F2", "#C8E6E4", "#F4F6F2", 1.3,  "#D4E4EC", 0.36],
+  // AC-ref correction: the BSL cool-white noon was Minecraft's look, not
+  // AC's — the references read WARM cream key over cool fill. Key goes
+  // back to cream; the blue ambient keeps the shadows cool (law 1 intact).
+  [10, "#4FB6F5", "#A9DCF2", "#FFF7E4", 1.4,  "#CFE2FF", 0.35], // noon: cream sun / blue fill
+  [14, "#53B8F2", "#C8E6E4", "#FFF4DC", 1.3,  "#D4E4EC", 0.36],
   [16, "#7FB4D8", "#F2DCB8", "#FFC98F", 1.05, "#EBD8C0", 0.36], // golden ramp begins
   [17, "#FF9966", "#FFD4A8", "#FFA35C", 0.95, "#FFD4A8", 0.34], // golden peak (BSL 255,160,80)
   [18, "#E87A5A", "#F2B888", "#FF8E4A", 0.7,  "#E8B090", 0.3],  // saturate + darken

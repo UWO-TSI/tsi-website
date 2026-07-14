@@ -28,9 +28,12 @@ const FOAM_BAND = 2.6; // how far the shore foam reaches out from the island
 // V5: sea palette per time-of-day. [deep, shallow, foam]. Day = bright azure,
 // dusk = warm violet, night = deep navy, dawn = soft peach-blue.
 type Phase = "dawn" | "day" | "dusk" | "night";
+// AC-reference calibration (specs/references/acnh): the sea in the
+// snapshots is a muted steel-teal, not vivid azure — day palette pulled
+// toward the reference chroma; foam goes cream, not white.
 const SEA_PALETTE: Record<Phase, [string, string, string]> = {
   dawn: ["#5E86C4", "#9FC0D8", "#F2E4D8"],
-  day: ["#3D8FC4", "#7CC4E8", "#EAF7FA"],
+  day: ["#4A85A8", "#8FC2D4", "#F2F5EC"],
   dusk: ["#5A5490", "#9C7FB0", "#F0D8C4"],
   night: ["#1E2A52", "#354674", "#8FA0C8"],
 };

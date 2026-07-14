@@ -23,28 +23,38 @@
 import { useMemo } from "react";
 import { EffectComposer, Bloom, Vignette } from "@react-three/postprocessing";
 import { BlendFunction, Effect } from "postprocessing";
-import { Uniform } from "three";
+import { Uniform, Vector3 } from "three";
 
-// BSL-lineage vibrance (see lighting-research.md law 10): pixels that are
-// dull (low chroma) and mid-bright get pushed toward color; already-vivid
-// or bright pixels are untouched.
-const VIBRANCE_FRAG = /* glsl */ `
-uniform float uStrength;
+// Pastel master grade (AC-reference calibration, 2026-07-14 — David's
+// snapshots in specs/references/acnh measure mean outdoor saturation
+// 0.24-0.39 with a warm cast everywhere; the earlier vibrance pass pushed
+// the OPPOSITE way and read "very saturated"). Three moves, in order:
+//   1. global desaturation toward luma (the milky pastel wash)
+//   2. warm cream cast (whites become cream, blues soften)
+//   3. lifted warm blacks (shadows never crush, they glow faintly brown)
+const PASTEL_FRAG = /* glsl */ `
+uniform float uDesat;
+uniform vec3 uWarmCast;
+uniform vec3 uBlackLift;
 void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor) {
   vec3 c = inputColor.rgb;
-  float mx = max(c.r, max(c.g, c.b));
-  float mn = min(c.r, min(c.g, c.b));
-  float sat = (1.0 - clamp(mx - mn, 0.0, 1.0)) * clamp(1.0 - mx, 0.0, 1.0) * uStrength * 5.0;
   vec3 lum = vec3(dot(c, vec3(0.299, 0.587, 0.114)));
-  outputColor = vec4(mix(lum, c, 1.0 + sat), inputColor.a);
+  c = mix(c, lum, uDesat);
+  c *= uWarmCast;
+  c = c + uBlackLift * (1.0 - c);
+  outputColor = vec4(c, inputColor.a);
 }
 `;
 
-class VibranceEffect extends Effect {
-  constructor(strength = 0.3) {
-    super("Vibrance", VIBRANCE_FRAG, {
+class PastelEffect extends Effect {
+  constructor() {
+    super("PastelGrade", PASTEL_FRAG, {
       blendFunction: BlendFunction.NORMAL,
-      uniforms: new Map<string, Uniform>([["uStrength", new Uniform(strength)]]),
+      uniforms: new Map<string, Uniform>([
+        ["uDesat", new Uniform(0.14)],
+        ["uWarmCast", new Uniform(new Vector3(1.03, 1.0, 0.94))],
+        ["uBlackLift", new Uniform(new Vector3(0.05, 0.042, 0.032))],
+      ]),
     });
   }
 }
@@ -61,7 +71,7 @@ interface PostFXProps {
 }
 
 export default function PostFX({ enabled = true, vignetteDarkness = 0.4, bloom = false, bloomIntensity = 0.55 }: PostFXProps) {
-  const vibrance = useMemo(() => new VibranceEffect(0.3), []);
+  const pastel = useMemo(() => new PastelEffect(), []);
   if (typeof window !== "undefined" && window.location.search.includes("nofx")) return null;
   if (!enabled) return null;
   return (
@@ -72,7 +82,7 @@ export default function PostFX({ enabled = true, vignetteDarkness = 0.4, bloom =
         eskil={false}
         blendFunction={BlendFunction.NORMAL}
       />
-      <primitive object={vibrance} />
+      <primitive object={pastel} />
       {bloom ? (
         <Bloom
           mipmapBlur
