@@ -201,14 +201,6 @@ const FURNITURE = [
   "plant-monstera", "plant-yucca", "yellow-message-mat", "wooden-chest",
 ];
 FURNITURE.forEach((n) => useGLTF.preload(`${FURNITURE_BASE}/${n}.glb`));
-const INTERIOR_BASE = "/assets/acnh/interior";
-["window-wall-square-2-m", "entrance-down-2-m"].forEach((n) => useGLTF.preload(`${INTERIOR_BASE}/${n}.glb`));
-
-function WallModule({ name, position, rotY = 0, scale = 0.045 }: { name: string; position: [number, number, number]; rotY?: number; scale?: number }) {
-  const { scene } = useGLTF(`${INTERIOR_BASE}/${name}.glb`);
-  const clone = useMemo(() => scene.clone(true), [scene]);
-  return <primitive object={clone} position={position} rotation={[0, rotY, 0]} scale={[scale, scale, scale]} />;
-}
 
 function Piece({ name, position, rotY = 0, scale = 0.1 }: { name: string; position: [number, number, number]; rotY?: number; scale?: number }) {
   const { scene } = useGLTF(`${FURNITURE_BASE}/${name}.glb`);
@@ -306,12 +298,10 @@ export default function HQInterior({
 
       {/* Bulletin Board (→ Directory) hung on the north wall */}
       <Suspense fallback={null}>
-        {/* Real ACNH window modules inset in the north wall (basic-wall
-            set — wallpaper face blends with the plaster tone) + the
-            entrance frame dressing the admin door. */}
-        <WallModule name="window-wall-square-2-m" position={[-1.6, 0, 5.58]} />
-        <WallModule name="window-wall-square-2-m" position={[6.6, 0, 5.58]} />
-        <WallModule name="entrance-down-2-m" position={[-7.72, 0, 1.2]} rotY={Math.PI / 2} scale={0.05} />
+        {/* (basic-wall window/entrance modules removed 2026-07-13 — they're
+            room-SHELL panels, and inset against painted walls they read as
+            white slabs. Real windows return with the full module-shell
+            room rebuild in Phase 2.) */}
         <Piece name="bulletinboard" position={[-4.5, 1.15, 5.55]} scale={0.16} />
 
         {/* Trophy display (→ Leaderboard): chest pedestal + the HHA tier set */}
