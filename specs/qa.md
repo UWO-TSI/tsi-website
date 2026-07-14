@@ -13,7 +13,8 @@ David's playtest rulings ("ground/water/paths poor, use the asset folder to its 
 
 - Every commit: tsc clean, lint at the 74/59 ceiling, 32/32 tests, build exit 0.
 - Harness-verified visually: water caustic shader (5 iterations), road tile layout/rotations (contact sheets + full layout), furniture orientation/origins/tints (lineup renders), wall/window modules.
-- **NOT visually verified** (David's live session holds the Next dev lock — no second dev server, prod needs auth): in-game placement of waterfalls, garlands (needs a seasonal palette active), lighthouse/windmill/boat siting, HQ window-module alignment, tool-flourish hand position, campfire light balance at night. **These need David's eyeball or the next env-dance QA session.**
+- **World-mock harness pass (`1901324`)** cleared most of the placement debt: an island-disc mock with the real rim-sink profile + exact prop coordinates caught and fixed four issues — upside-down windmill (Z-up list rotated it backward), sliver waterfalls (now nonuniform-scaled to span the channel), a duplicate plaza campfire (AmbientProps already had one), and near-black garlands (untextured parts now festively tinted). Verified in-mock: buoy/boat siting + scale, lighthouse siting, windmill upright, garland structure.
+- **Still needs an in-game eyeball** (mock can't cover): HQ window-module alignment, tool-flourish hand position, campfire/lamp light balance at night, waterfall y-alignment against the real curved terrain, garlands against real paths (activate a seasonal palette).
 - Pipeline learnings recorded in memory (project_acnh_asset_pipeline): per-piece up-axis lists, floor-origin normalization, untextured-piece tinting, road-tile two-prim merge, water-mask histogram-before-threshold.
 
 ---
