@@ -12,6 +12,7 @@ import {
   User,
   Settings,
   Shield,
+  ClipboardList,
   X,
 } from "lucide-react";
 import type { ComponentType } from "react";
@@ -38,11 +39,20 @@ const NAV_ITEMS: NavItem[] = [
 
 // Tier gate matches the admin hub page itself (userTier > 2 → Access Denied),
 // so nobody sees a link they can't use.
-const ADMIN_ITEM: NavItem = {
-  label: "Admin Tools",
-  href: "/student/dashboard/admin",
-  icon: Shield,
-};
+const ADMIN_ITEMS: NavItem[] = [
+  {
+    label: "Admin Tools",
+    href: "/student/dashboard/admin",
+    icon: Shield,
+  },
+  {
+    // Recruitment kanban as a portal subtab (David, 2026-07-14) — mounts
+    // the live /admin/recruit board inside the dashboard shell.
+    label: "Recruitment",
+    href: "/student/dashboard/admin/recruitment",
+    icon: ClipboardList,
+  },
+];
 
 interface SidebarProps {
   onClose?: () => void;
@@ -145,11 +155,21 @@ export default function Sidebar({ onClose }: SidebarProps) {
             >
               Admin
             </div>
-            <NavLink
-              item={ADMIN_ITEM}
-              active={isActive(ADMIN_ITEM.href)}
-              onClose={onClose}
-            />
+            {ADMIN_ITEMS.map((item) => (
+              <NavLink
+                key={item.href}
+                item={item}
+                active={
+                  // exact-section match: "Admin Tools" must not light up
+                  // when the Recruitment subtab (a child path) is active
+                  item.href === "/student/dashboard/admin"
+                    ? pathname.startsWith(item.href) &&
+                      !pathname.startsWith("/student/dashboard/admin/recruitment")
+                    : isActive(item.href)
+                }
+                onClose={onClose}
+              />
+            ))}
           </>
         )}
       </nav>
