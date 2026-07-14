@@ -29,6 +29,9 @@ const ROAD_RECTS = [
   { x0: -2.4, x1: 2.4, z0: -25, z1: 28 },
   { x0: -27, x1: 27, z0: 7.6, z1: 12.4 },
   { x0: -18, x1: 18, z0: -15.4, z1: -10.6 },
+  // Beach Cove spur + deck pad
+  { x0: 0.5, x1: 20.7, z0: 21.3, z1: 26.2 },
+  { x0: 15.8, x1: 20.7, z0: 26.2, z1: 44.9 },
 ];
 
 function mulberry32(a: number) {

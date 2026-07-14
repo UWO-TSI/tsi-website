@@ -64,6 +64,7 @@ import GrassTufts from "./GrassTufts";
 import ToolFlourish from "./ToolFlourish";
 import RiverMouths from "./RiverMouths";
 import ShoreLife from "./ShoreLife";
+import BeachCove, { BEACH_PALM_XZ } from "./BeachCove";
 import SeasonalProps from "./SeasonalProps";
 import Landmarks from "./Landmarks";
 import { getActiveCritters } from "@/lib/game/critterStore";
@@ -737,6 +738,7 @@ function buildBlobPlacements(): import("./BlobShadows").BlobPlacement[] {
     out.push({ x, y: getTerrainHeight(x, z), z, rx, rz });
 
   TREE_XZ.forEach(([x, z]) => add(x, z, 0.9));
+  BEACH_PALM_XZ.forEach(([x, z]) => add(x, z, 0.8));
   BUSH_XZ.forEach(([x, z]) => add(x, z, 0.55));
   for (const b of BUILDINGS) {
     if (b.size[2] < 1) add(b.position[0], b.position[2], 0.55, 0.35); // boards
@@ -1801,6 +1803,7 @@ function Scene({
       <Ocean phase={todPhase} />
       <RiverMouths />
       <ShoreLife />
+      <BeachCove />
       <SeasonalProps />
       <Landmarks />
       <River phase={todPhase} />

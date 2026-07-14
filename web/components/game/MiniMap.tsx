@@ -59,6 +59,9 @@ export default function MiniMap({ playerPosRef }: { playerPosRef: React.MutableR
         <line x1="0" y1="-5.9" x2="0" y2="-27" stroke="#D9B380" strokeWidth="3" strokeLinecap="round" />
         <line x1="-26" y1="-10" x2="26" y2="-10" stroke="#D9B380" strokeWidth="3" strokeLinecap="round" />
         <line x1="-17" y1="13" x2="17" y2="13" stroke="#D9B380" strokeWidth="3" strokeLinecap="round" />
+        {/* Beach Cove sand spur (world z drawn as -y) */}
+        <line x1="1" y1="-23.75" x2="18.25" y2="-23.75" stroke="#E7D3A0" strokeWidth="3" strokeLinecap="round" />
+        <line x1="18.25" y1="-23.75" x2="18.25" y2="-42" stroke="#E7D3A0" strokeWidth="3" strokeLinecap="round" />
         {/* river (world z≈1-5 band, drawn at -z) */}
         <path d="M -52 -2 C -30 -5, -12 -5, -3 -1 S 16 -2, 30 -4 S 45 -3, 52 -3" fill="none" stroke="#69A8D0" strokeWidth="3.4" strokeLinecap="round" />
         {/* buildings */}

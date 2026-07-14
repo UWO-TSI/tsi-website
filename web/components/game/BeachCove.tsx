@@ -1,0 +1,188 @@
+"use client";
+
+/**
+ * BeachCove (2026-07-14) — the south-east shore destination, built from
+ * the water/land dump sweep (specs/asset-flags.md):
+ *
+ *   - palms (Plants/palm-tree 3+4, LUT textures normalized + tinted)
+ *   - hibiscus bushes at the spur end
+ *   - parasol + towel + beach ball camp on the dry sand band
+ *   - the 5 classic ACNH rocks: NE grass field cluster + sand strays
+ *   - shallow-water outcrops poking through the swell past the rim
+ *   - rope fence lining the sand path (Fences/rope-fence)
+ *
+ * The sand path + wood deck themselves are RoadTiles zones; corridors
+ * live in terrain.ts PATH_CORRIDORS. Everything here is static — no
+ * useFrame. Rocks/fences skip the shadow pass (ground-hugging).
+ */
+
+import { Suspense, useMemo } from "react";
+import { useGLTF } from "@react-three/drei";
+import InstancedGLB, { type NaturePlacement } from "./InstancedNature";
+import { GLBProp } from "./NatureModels";
+import { getTerrainHeight } from "./terrain";
+
+const PALM_A = "/assets/acnh/plants/tree-palm-a.glb";
+const PALM_B = "/assets/acnh/plants/tree-palm-b.glb";
+const HIBISCUS = "/assets/acnh/plants/bush-hibiscus.glb";
+const ROCKS = ["a", "b", "c", "d", "e"].map((k) => `/assets/acnh/props/rock-${k}.glb`);
+const FENCE_A = "/assets/acnh/props/fence-rope-a.glb";
+const FENCE_I = "/assets/acnh/props/fence-rope-i.glb";
+const PARASOL = "/assets/acnh/props/beach-parasol.glb";
+const TOWEL = "/assets/acnh/props/beach-towel.glb";
+const BALL = "/assets/acnh/props/beach-ball.glb";
+[PALM_A, PALM_B, HIBISCUS, ...ROCKS, FENCE_A, FENCE_I, PARASOL, TOWEL, BALL].forEach((u) =>
+  useGLTF.preload(u)
+);
+
+// Mirror of GameWorld's ground-mesh rim sink (Task 27) — the beach band
+// dives below the ocean past SINK_START. Keep in sync.
+const SINK_START = 49.5;
+const SINK_END = 56;
+const SINK_DEPTH = 2.4;
+function groundY(x: number, z: number): number {
+  const dist = Math.hypot(x, z);
+  let y = getTerrainHeight(x, z);
+  if (dist > SINK_START) {
+    const t = Math.min((dist - SINK_START) / (SINK_END - SINK_START), 1);
+    y -= t * t * (3 - 2 * t) * SINK_DEPTH;
+  }
+  return y;
+}
+
+// Palms hug the beach band (dist ~48-49.5) — cove cluster + far accents.
+const PALM_A_XZ: [number, number, number, number][] = [
+  // x, z, rotY, scale
+  [13, 46.5, 0.4, 1.0],
+  [21, 44.8, 2.1, 0.92],
+  [-20, 44.5, 1.0, 1.0],
+  [44, -22, 5.2, 0.95],
+];
+const PALM_B_XZ: [number, number, number, number][] = [
+  [24.5, 41.5, 3.6, 1.05],
+  [-44.5, 20, 2.7, 0.95],
+];
+
+// Exported so GameWorld's blob-shadow builder can ground the palms too.
+export const BEACH_PALM_XZ: [number, number][] = [...PALM_A_XZ, ...PALM_B_XZ].map(
+  ([x, z]) => [x, z]
+);
+
+const HIBISCUS_XZ: [number, number, number][] = [
+  [14.5, 43, 0.9],
+  [21.5, 40.6, 3.8],
+  [11.9, 45.3, 1.7],
+];
+
+// The classic ACNH rock cluster in the NE field + two sand strays.
+// [modelIndex, x, z, rotY, scale]
+const LAND_ROCKS: [number, number, number, number, number][] = [
+  [0, 10, -21, 0.7, 1.0],
+  [1, 11.7, -22.6, 2.1, 1.15],
+  [2, 13.6, -21.2, 4.0, 0.95],
+  [3, 12.2, -19.4, 1.2, 0.8],
+  [4, 15.2, -22.7, 3.3, 1.25],
+  [2, 23.2, 44.9, 0.5, 1.1], // sand stray by the deck
+  [0, 10.6, 48.3, 2.8, 0.9], // sand stray at the waterline
+];
+
+// Shallow-water outcrops past the rim: fixed Y (the seabed has dived),
+// scaled so tops poke 0.3-0.6u above the -0.55 ocean surface.
+// [modelIndex, x, z, y, rotY, scale]
+const SEA_ROCKS: [number, number, number, number, number, number][] = [
+  [3, 53.5, -7, -1.15, 0.4, 2.0],
+  [1, 54.6, -5.2, -1.0, 2.3, 1.5],
+  [0, 52.8, -9.1, -0.95, 1.1, 1.2],
+  [4, -33.5, 42.5, -1.2, 3.0, 2.2],
+  [2, -31.8, 44.2, -0.95, 0.8, 1.4],
+  [1, -11, -53.5, -1.1, 1.9, 1.8],
+  [3, -8.8, -54.8, -0.95, 4.2, 1.3],
+];
+
+// Rope fence along the west edge of the sand path (posts follow terrain).
+const FENCE_X = 16.35;
+const FENCE_Z0 = 27.2;
+const FENCE_COUNT = 11;
+
+function buildRockPlacements(): NaturePlacement[][] {
+  const groups: NaturePlacement[][] = ROCKS.map(() => []);
+  for (const [mi, x, z, rot, scale] of LAND_ROCKS) {
+    groups[mi].push({ position: [x, groundY(x, z), z], rotation: rot, scale });
+  }
+  for (const [mi, x, z, y, rot, scale] of SEA_ROCKS) {
+    groups[mi].push({ position: [x, y, z], rotation: rot, scale });
+  }
+  return groups;
+}
+
+export default function BeachCove() {
+  const palmsA = useMemo<NaturePlacement[]>(
+    () =>
+      PALM_A_XZ.map(([x, z, rot, scale]) => ({
+        position: [x, groundY(x, z), z] as [number, number, number],
+        rotation: rot,
+        scale,
+      })),
+    []
+  );
+  const palmsB = useMemo<NaturePlacement[]>(
+    () =>
+      PALM_B_XZ.map(([x, z, rot, scale]) => ({
+        position: [x, groundY(x, z), z] as [number, number, number],
+        rotation: rot,
+        scale,
+      })),
+    []
+  );
+  const rocks = useMemo(() => buildRockPlacements(), []);
+  const fence = useMemo<NaturePlacement[]>(
+    () =>
+      Array.from({ length: FENCE_COUNT }, (_, i) => {
+        const z = FENCE_Z0 + i;
+        return {
+          position: [FENCE_X, groundY(FENCE_X, z), z] as [number, number, number],
+          rotation: Math.PI / 2,
+        };
+      }),
+    []
+  );
+
+  return (
+    <Suspense fallback={null}>
+      <group>
+        <InstancedGLB url={PALM_A} placements={palmsA} />
+        <InstancedGLB url={PALM_B} placements={palmsB} />
+        <InstancedGLB
+          url={HIBISCUS}
+          placements={HIBISCUS_XZ.map(([x, z, rot]) => ({
+            position: [x, groundY(x, z), z] as [number, number, number],
+            rotation: rot,
+          }))}
+          castShadow={false}
+        />
+        {ROCKS.map((url, i) =>
+          rocks[i].length ? (
+            <InstancedGLB key={url} url={url} placements={rocks[i]} castShadow={false} />
+          ) : null
+        )}
+        <InstancedGLB url={FENCE_A} placements={fence} castShadow={false} />
+        <GLBProp
+          url={FENCE_I}
+          position={[FENCE_X, groundY(FENCE_X, FENCE_Z0 - 0.6), FENCE_Z0 - 0.6]}
+          rotation={[0, Math.PI / 2, 0]}
+          castShadow={false}
+        />
+        <GLBProp
+          url={FENCE_I}
+          position={[FENCE_X, groundY(FENCE_X, FENCE_Z0 + FENCE_COUNT - 0.4), FENCE_Z0 + FENCE_COUNT - 0.4]}
+          rotation={[0, -Math.PI / 2, 0]}
+          castShadow={false}
+        />
+        {/* the camp */}
+        <GLBProp url={PARASOL} position={[17.2, groundY(17.2, 46.8), 46.8]} rotation={[0, 0.5, 0]} />
+        <GLBProp url={TOWEL} position={[18.8, groundY(18.8, 46.4) + 0.02, 46.4]} rotation={[0, -0.35, 0]} castShadow={false} />
+        <GLBProp url={BALL} position={[15.9, groundY(15.9, 47.6) + 0.02, 47.6]} castShadow={false} />
+      </group>
+    </Suspense>
+  );
+}

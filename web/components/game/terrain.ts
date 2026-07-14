@@ -135,6 +135,10 @@ const PATH_CORRIDORS: PathCorridor[] = [
   { axis: "x", pos: 0, halfWidth: 1.75, from: -24, to: 27, falloff: 1.5 },   // N-S spine
   { axis: "z", pos: 10, halfWidth: 1.75, from: -26, to: 26, falloff: 1.5 },  // E-W at z=10
   { axis: "z", pos: -13, halfWidth: 1.75, from: -17, to: 17, falloff: 1.5 }, // E-W at z=-13
+  // Beach Cove spur (2026-07-14): sand path SE off the spine + wood deck.
+  { axis: "z", pos: 23.75, halfWidth: 1.75, from: 1, to: 20, falloff: 1.5 },
+  { axis: "x", pos: 18.25, halfWidth: 1.75, from: 25.5, to: 40, falloff: 1.5 },
+  { axis: "x", pos: 18.25, halfWidth: 2.65, from: 39.9, to: 44.2, falloff: 1.5 },
 ];
 
 // ─── Internal: raw noise terrain (no flattening) ─────────────────
