@@ -18,7 +18,7 @@ import { useActivePalette } from "@/lib/game/contentLoader";
 
 const SETS: { match: RegExp; url: string; tint: string }[] = [
   { match: /winter|frost|christmas|holiday|snow/i, url: "/assets/acnh/seasonal/christmas-garland.glb", tint: "#2E6B3E" },
-  { match: /autumn|harvest|fall/i, url: "/assets/acnh/seasonal/harvest-garland-n.glb", tint: "#C77B3A" },
+  { match: /autumn|harvest|fall|halloween/i, url: "/assets/acnh/seasonal/harvest-garland-n.glb", tint: "#C77B3A" },
   { match: /carnival|festival|spring|fair/i, url: "/assets/acnh/seasonal/carnival-garland.glb", tint: "#C94F8E" },
 ];
 
