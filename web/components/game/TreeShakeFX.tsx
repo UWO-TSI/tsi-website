@@ -176,7 +176,7 @@ function ShakeBurst({ burst, playerPosRef, onDone }: { burst: Burst; playerPosRe
         m.opacity = 1 - Math.max(0, k - 0.75) * 4;
         if (!collectedRef.current && k >= 1) {
           collectedRef.current = true;
-          window.dispatchEvent(new CustomEvent("tsi:toast", { detail: { text: `You got ${burst.fruit.label}!` } }));
+          window.dispatchEvent(new CustomEvent("tsi:toast", { detail: { text: `You got ${burst.fruit.label}!`, icon: `/assets/acnh/icons/${burst.fruit.key}.png` } }));
           AudioManager.playSFX("confirm");
           fetch("/api/collections", {
             method: "POST",

@@ -46,6 +46,7 @@ const BITE_WINDOW_MS = 1400;
 export default function FishingOverlay() {
   const [phase, setPhase] = useState<Phase>("idle");
   const [caughtLabel, setCaughtLabel] = useState<string | null>(null);
+  const [caughtKey, setCaughtKey] = useState<string | null>(null);
   const timersRef = useRef<number[]>([]);
   const biteDeadlineRef = useRef(0);
 
@@ -58,6 +59,7 @@ export default function FishingOverlay() {
     clearTimers();
     setPhase("idle");
     setCaughtLabel(null);
+    setCaughtKey(null);
   };
 
   const beginWait = () => {
@@ -95,6 +97,7 @@ export default function FishingOverlay() {
   const start = () => {
     clearTimers();
     setCaughtLabel(null);
+    setCaughtKey(null);
     setPhase("casting");
     AudioManager.playSFX("click");
     timersRef.current.push(window.setTimeout(beginWait, 650));
@@ -108,6 +111,7 @@ export default function FishingOverlay() {
     const rare = Math.random() < 0.12;
     const fish = rare ? FISH[RARE_INDEX] : FISH[Math.floor(Math.random() * RARE_INDEX)];
     setCaughtLabel(fish.label);
+    setCaughtKey(fish.key);
     setPhase("caught");
     AudioManager.playSFX("confirm");
     // Signals the "catch a fish" onboarding quest (auto-complete).
@@ -173,6 +177,7 @@ export default function FishingOverlay() {
           : phase === "caught"
             ? `You caught ${caughtLabel}!`
             : "It got away…";
+  const icon = phase === "caught" && caughtKey ? `/assets/acnh/icons/${caughtKey}.png` : null;
 
   const accent = phase === "bite" ? "#E5484D" : phase === "caught" ? "#3D8F52" : "#4A4034";
 
@@ -204,8 +209,15 @@ export default function FishingOverlay() {
           whiteSpace: "nowrap",
           boxShadow: "0 4px 14px rgba(60, 45, 20, 0.2)",
           animation: phase === "bite" ? "fish-pulse 0.4s ease-in-out infinite" : undefined,
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
         }}
       >
+        {icon && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={icon} alt="" width={26} height={26} style={{ margin: "-4px 0" }} />
+        )}
         {label}
       </div>
       {(phase === "waiting" || phase === "bite" || phase === "casting") && (

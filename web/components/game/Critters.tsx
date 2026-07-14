@@ -156,7 +156,7 @@ export default function Critters({
       sp.catching = true;
       catchStartRef.current[slot] = performance.now();
       AudioManager.playSFX("confirm");
-      window.dispatchEvent(new CustomEvent("tsi:toast", { detail: { text: `You caught ${sp.sp.label}!` } }));
+      window.dispatchEvent(new CustomEvent("tsi:toast", { detail: { text: `You caught ${sp.sp.label}!`, icon: `/assets/acnh/icons/${sp.sp.key}.png` } }));
       fetch("/api/collections", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

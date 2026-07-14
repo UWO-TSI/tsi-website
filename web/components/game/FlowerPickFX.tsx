@@ -91,7 +91,7 @@ function PickBurst({ pick, onDone }: { pick: Pick; onDone: () => void }) {
   // G3: toast routed through the unified hub (fires once on mount).
   useEffect(() => {
     if (pick.flower) {
-      window.dispatchEvent(new CustomEvent("tsi:toast", { detail: { text: `You picked ${pick.flower.label}!` } }));
+      window.dispatchEvent(new CustomEvent("tsi:toast", { detail: { text: `You picked ${pick.flower.label}!`, icon: `/assets/acnh/icons/${pick.flower.key}.png` } }));
     }
   }, [pick.flower]);
 
