@@ -6,6 +6,23 @@
 
 ---
 
+## Wave 28 — 2026-07-14 Stabilize: measured shadows + prod pipeline
+
+### Verdict: **PASS — measured**
+
+| Config | FPS | Frame | Draws |
+|--------|-----|-------|-------|
+| Shadows v2 as first shipped (2048, island-wide) | 39 | 32.3ms | 374 |
+| Shadows OFF (blob discs) | 60 | 16.6ms | 379 |
+| **Shadows v2 tuned (1024, 44u follow-frustum, 30Hz)** | **60** | **17.3ms** | 316 |
+
+- The F3 profiler (fixed yesterday) caught the regression on its first outing; the tuned rig costs ~0.7ms.
+- Invisible-shadow root cause: R3F never calls updateProjectionMatrix after shadow-camera-* props — the frustum silently stays at construction defaults. The rig updates it per frame now.
+- Visual verify at 16:30 sun: soft warm shadows east of buildings/trees, lifted (never black) — the ACNH read.
+- **Prod pipeline fact:** Vercel auto-deploys main → production (tethos.ca). Every push ships live. Smoke: tethos.ca 200, /student/login 200 on the latest build. There is NO staging gate — worth a David decision eventually.
+
+---
+
 ## Wave 27 — 2026-07-13 Dump Asset Program (playtest polish rounds 1-3)
 
 David's playtest rulings ("ground/water/paths poor, use the asset folder to its fullest, ACNH lighting") executed as a continuous run — 20 commits `2ee18b3`…`5c4c769`+.
