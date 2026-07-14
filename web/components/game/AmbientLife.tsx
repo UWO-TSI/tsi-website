@@ -283,6 +283,65 @@ function Birds({ count = 2 }: { count?: number }) {
   );
 }
 
+// ─── Seagulls (organic-coast loop, iteration 3) ─────────────────
+// White gulls circling fixed anchors over the water — one per lobe of
+// the new coastline. Lower and quicker than the lazy inland birds, with
+// a slow bobbing altitude so they read as riding the sea breeze.
+const GULL_ANCHORS: [number, number][] = [
+  [58, -8],   // east lobe, off the lighthouse
+  [20, 58],   // over the cove swim border
+  [-56, 14],  // west bay mouth
+];
+
+function Gull({ anchor, seed }: { anchor: [number, number]; seed: number }) {
+  const ref = useRef<THREE.Group>(null);
+  const { phase, speed, radius, alt } = useMemo(() => {
+    const rng = seededRandom(seed * 409 + 7);
+    return {
+      phase: rng() * Math.PI * 2,
+      speed: 0.09 + rng() * 0.05,
+      radius: 6.5 + rng() * 3.5,
+      alt: 6.5 + rng() * 2,
+    };
+  }, [seed]);
+
+  useFrame((state) => {
+    if (!ref.current) return;
+    const t = state.clock.elapsedTime;
+    const a = t * speed + phase;
+    ref.current.position.set(
+      anchor[0] + Math.cos(a) * radius,
+      alt + Math.sin(t * 0.35 + phase) * 1.1,
+      anchor[1] + Math.sin(a) * radius
+    );
+    ref.current.rotation.y = -a + Math.PI / 2;
+    ref.current.rotation.z = Math.sin(t * 6.5 + phase) * 0.35;
+  });
+
+  return (
+    <group ref={ref} position={[anchor[0] + radius, 7, anchor[1]]}>
+      <mesh rotation={[0, 0, Math.PI / 7]} position={[0.2, 0, 0]}>
+        <boxGeometry args={[0.46, 0.05, 0.06]} />
+        <meshBasicMaterial color="#F2F3EF" />
+      </mesh>
+      <mesh rotation={[0, 0, -Math.PI / 7]} position={[-0.2, 0, 0]}>
+        <boxGeometry args={[0.46, 0.05, 0.06]} />
+        <meshBasicMaterial color="#F2F3EF" />
+      </mesh>
+    </group>
+  );
+}
+
+function Gulls() {
+  return (
+    <group>
+      {GULL_ANCHORS.map((a, i) => (
+        <Gull key={i} anchor={a} seed={i + 3} />
+      ))}
+    </group>
+  );
+}
+
 // ─── Entry point ────────────────────────────────────────────────
 // P13: density scales counts. 1 = full (default), 0.5 = half on
 // devices where the parent decides we should soften the particle load
@@ -308,6 +367,7 @@ export default function AmbientLife({
       {isEvening && <Fireflies count={scale(isNight ? 13 : 7)} />}
       <LeafDrift count={scale(25)} />
       {isDay && <Birds count={scale(2)} />}
+      {isDay && <Gulls />}
     </group>
   );
 }

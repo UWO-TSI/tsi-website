@@ -26,7 +26,7 @@ import { AudioManager } from "@/lib/game/audio";
 import { WarmupProbe, LoadGateOverlay } from "./LoadGate";
 import RainFX from "./RainFX";
 import { getTodayWeather, type Weather } from "@/lib/game/weather";
-import { coastDist, beachWidthShift } from "@/lib/game/coast";
+import { coastDist, beachWidthShift, COAST_GLSL } from "@/lib/game/coast";
 import { CloudShadows, NightStars, WaterSparkles, LeafGusts, NightWindows, TargetGlow } from "./AmbienceFX";
 import AmbientLife from "./AmbientLife";
 import AudioController from "./AudioController";
@@ -476,6 +476,15 @@ function TimeOfDayCycle({ weather, todPhase, shadowsOn, playerPosRef }: { weathe
 
 
 // ─── Terrain (v2 spec Section 4 — vertex-displaced rolling hills) ─
+// The seasonal tint used to be the material's JSX color prop; with the
+// wet-band material memoized imperatively, apply it as an effect.
+function ApplyGrassTint({ material, tint }: { material: THREE.MeshStandardMaterial; tint: THREE.Color }) {
+  useEffect(() => {
+    material.color.copy(tint);
+  }, [material, tint]);
+  return null;
+}
+
 function Terrain() {
   const geometry = useMemo(() => {
     const size = 108; // island respace 2026-07-07 (radius 52)
@@ -559,6 +568,59 @@ function Terrain() {
 
   const grassTex = useMemo(() => getGrassTexture(), []);
 
+  // Iteration 3 (organic loop): wet-sand lapping band. The beach darkens
+  // in a breathing strip just inside the waterline, phase-matched to the
+  // ocean's foam lap so the wash reads as one motion. Injected via the
+  // material's own onBeforeCompile (the curved-world bend lives in the
+  // global chunk patch, so this slot is free).
+  const groundTime = useRef({ value: 0 });
+  const groundMat = useMemo(() => {
+    const mat = new THREE.MeshStandardMaterial({
+      vertexColors: true,
+      map: grassTex,
+      roughness: 0.92,
+      metalness: 0,
+      side: THREE.DoubleSide,
+    });
+    mat.onBeforeCompile = (shader) => {
+      shader.uniforms.uTime = groundTime.current;
+      shader.vertexShader = shader.vertexShader
+        .replace(
+          "#include <common>",
+          `#include <common>
+varying vec2 vGroundXZ;`
+        )
+        .replace(
+          "#include <begin_vertex>",
+          `#include <begin_vertex>
+vGroundXZ = (modelMatrix * vec4(position, 1.0)).xz;`
+        );
+      shader.fragmentShader = shader.fragmentShader
+        .replace(
+          "#include <common>",
+          `#include <common>
+uniform float uTime;
+varying vec2 vGroundXZ;
+${COAST_GLSL}`
+        )
+        .replace(
+          "#include <color_fragment>",
+          `#include <color_fragment>
+{
+  float e = length(vGroundXZ) - coastWobble(vGroundXZ);
+  float lap = sin(vGroundXZ.x * 0.9 + vGroundXZ.y * 0.7 + uTime * 1.4) * 0.5;
+  float wet = smoothstep(50.1 + lap, 51.2 + lap, e) * (1.0 - smoothstep(51.9, 52.6, e));
+  diffuseColor.rgb *= 1.0 - wet * 0.16;
+}`
+        );
+    };
+    return mat;
+  }, [grassTex]);
+  useEffect(() => () => groundMat.dispose(), [groundMat]);
+  useFrame((_, delta) => {
+    groundTime.current.value += delta;
+  });
+
   // G5 (item 26): seasonal ground tint. The admin palette's `grass` color
   // tints the whole island as a ratio against the base green — the default
   // palette is identity, a winter palette frosts the fields, autumn warms
@@ -584,16 +646,8 @@ function Terrain() {
 
   return (
     <group>
-      <mesh geometry={geometry} receiveShadow>
-        <meshStandardMaterial
-          vertexColors
-          map={grassTex}
-          color={grassTint}
-          roughness={0.92}
-          metalness={0}
-          side={THREE.DoubleSide}
-        />
-      </mesh>
+      <mesh geometry={geometry} material={groundMat} receiveShadow />
+      <ApplyGrassTint material={groundMat} tint={grassTint} />
       {/* Building slab patches — flat grass discs slightly above terrain so
           buildings sit flush with no visible seam. Sprint A1. */}
       {BUILDING_FOOTPRINTS.map((b, i) => {
