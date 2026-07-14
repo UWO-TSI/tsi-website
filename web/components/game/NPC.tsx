@@ -281,7 +281,21 @@ export default function NPC({ persona, position, playerPosition, onClick }: NPCP
         )}
         {spriteTex ? (
           /* Pixel-art idle sprite. Square quad (frames are 16x16); sits with
-             feet at ground. The sheet's own silhouette replaces the rim. */
+             feet at ground. P-light v2: dark silhouette halo behind the
+             sprite (same trick as the player) pops NPCs from the world. */
+          <>
+          <mesh position={[0, QUAD_HEIGHT / 2, -0.012]} scale={[1.07, 1.07, 1]}>
+            <planeGeometry args={[QUAD_HEIGHT, QUAD_HEIGHT]} />
+            <meshBasicMaterial
+              map={spriteTex}
+              color="#2A2118"
+              transparent
+              opacity={0.5}
+              alphaTest={0.05}
+              side={THREE.DoubleSide}
+              depthWrite={false}
+            />
+          </mesh>
           <mesh
             ref={meshRef}
             position={[0, QUAD_HEIGHT / 2, 0]}
@@ -298,6 +312,7 @@ export default function NPC({ persona, position, playerPosition, onClick }: NPCP
               depthWrite={false}
             />
           </mesh>
+          </>
         ) : (
           <>
             {/* Rim (slightly larger, darker — sits behind fill) */}

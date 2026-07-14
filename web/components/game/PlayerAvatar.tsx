@@ -533,6 +533,22 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
           distance. Sprite-base-y also pushed up to keep the avatar
           feet-on-ground. */}
       <Billboard follow lockX={false} lockY={false} lockZ={false}>
+        {/* P-light v2 character pop: dark silhouette halo behind the
+            sprite (same animated texture, black-multiplied, 7% larger) —
+            the classic outline trick that separates characters from the
+            world. One extra draw. */}
+        <mesh position={[0, 1.1, -0.012]} scale={[1.07, 1.07, 1]}>
+          <planeGeometry args={[1.45, 1.45]} />
+          <meshBasicMaterial
+            map={spriteTexture}
+            color="#2A2118"
+            transparent
+            opacity={0.55}
+            alphaTest={0.1}
+            side={THREE.DoubleSide}
+            depthWrite={false}
+          />
+        </mesh>
         <mesh ref={meshRef} position={[0, 1.1, 0]}>
           <planeGeometry args={[1.45, 1.45]} />
           {/* Playtest fix 2026-07-13: depthWrite ON — alphaTest already
