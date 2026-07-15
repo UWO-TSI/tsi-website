@@ -37,6 +37,8 @@ interface Species {
   baseY: number;
   phases: ("day" | "night")[];
   weight: number;
+  /** Shore critters (2026-07-15) anchor to the beach band, not flowers. */
+  zone?: "beach";
 }
 
 const SPECIES: Species[] = [
@@ -54,6 +56,10 @@ const SPECIES: Species[] = [
   { key: "bug_red_dragonfly", label: "a Red Dragonfly", model: "/assets/acnh/critters/red-dragonfly.glb", motion: "dart", scale: 0.09, baseY: 0.5, phases: ["day"], weight: 2 },
   { key: "bug_mantis", label: "a Mantis", model: "/assets/acnh/critters/mantis.glb", motion: "crawl", scale: 0.11, baseY: 0.06, phases: ["day"], weight: 1 },
   { key: "bug_grasshopper", label: "a Grasshopper", model: "/assets/acnh/critters/grasshopper.glb", motion: "crawl", scale: 0.11, baseY: 0.06, phases: ["day"], weight: 2 },
+  // Shore critters v1 (2026-07-15): catchable crabs on the beach band —
+  // models ship PRE-scaled from the beach pipeline (scale 1 here).
+  { key: "shore_gazami_crab", label: "a Gazami Crab", model: "/assets/acnh/props/crab-gazami.glb", motion: "crawl", scale: 1, baseY: 0.03, phases: ["day"], weight: 2, zone: "beach" },
+  { key: "shore_hermit_crab", label: "a Hermit Crab", model: "/assets/acnh/props/crab-hermit.glb", motion: "crawl", scale: 1, baseY: 0.03, phases: ["day", "night"], weight: 2, zone: "beach" },
 ];
 SPECIES.forEach((s) => useGLTF.preload(s.model));
 
@@ -92,12 +98,16 @@ function buildSpawns(
   const spawns: Spawn[] = [];
   // river-adjacent anchor band for dart/drift species
   const riverAnchors: [number, number][] = [[-12, 6.5], [-4, 0.4], [6, 6.2], [17, 1.8], [28, 6.4]];
+  // dry-sand anchors for shore critters (coast-v2 verified: e ≈ 48.4-49.4)
+  const beachAnchors: [number, number][] = [[13, 46], [17, 44.5], [38, -19.5], [-18, 40]];
   for (let i = 0; i < SLOTS; i++) {
     let roll = rnd() * totalW;
     let sp = pool[0];
     for (const s of pool) { roll -= s.weight; if (roll <= 0) { sp = s; break; } }
     let anchor: [number, number];
-    if (sp.motion === "perch") {
+    if (sp.zone === "beach") {
+      anchor = beachAnchors[Math.floor(rnd() * beachAnchors.length)];
+    } else if (sp.motion === "perch") {
       anchor = treeAnchors[Math.floor(rnd() * treeAnchors.length)];
     } else if (sp.motion === "dart" || sp.motion === "drift") {
       anchor = riverAnchors[Math.floor(rnd() * riverAnchors.length)];

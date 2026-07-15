@@ -79,6 +79,14 @@ const CATALOG: { group: string; items: { key: string; icon: string; img?: string
       { key: "bug_firefly", img: "/assets/acnh/icons/bug_firefly.png", icon: "✨", name: "Firefly" },
     ],
   },
+  {
+    // Shore critters v1 (2026-07-15): beach-band catchables.
+    group: "Shore",
+    items: [
+      { key: "shore_gazami_crab", img: "/assets/acnh/icons/shore_gazami_crab.png", icon: "🦀", name: "Gazami Crab" },
+      { key: "shore_hermit_crab", img: "/assets/acnh/icons/shore_hermit_crab.png", icon: "🐚", name: "Hermit Crab" },
+    ],
+  },
 ];
 
 export default function CollectionBook({ open, onClose }: { open: boolean; onClose: () => void }) {
