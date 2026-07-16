@@ -1,6 +1,12 @@
-# UWOTSI
+# tsi-website
 
-A modern, animation-heavy web experience built with Next.js 16, React 19, and Three.js.
+The web home of Tethos (TSI) at Western. One Next.js app, three product surfaces:
+
+1. **Marketing site** (`web/app/(site)/`): public landing pages at tethos.ca
+2. **Recruitment system** (`web/app/student/apply/`, `web/components/recruit/`, `web/components/admin/`): exec hiring portal, live in production
+3. **Student portal** (`web/app/student/dashboard/`, `web/components/game/`): a 2.5D game world for active TSI members: 2D sprite characters in a 3D map, bounty board, marketplace, leaderboards
+
+If you're an agent or contributor, start with `CLAUDE.md`. It's the entry point that explains roles, file ownership, and which parts of the repo are off limits. `AGENT_LOG.md` tracks the current sprint.
 
 ---
 
@@ -14,19 +20,18 @@ A modern, animation-heavy web experience built with Next.js 16, React 19, and Th
 ### Setup
 
 ```bash
-# 1. Clone the repo (if you haven't already)
 git clone https://github.com/UWO-TSI/tsi-website.git
-cd tsi-website
+cd tsi-website/web
 
-# 2. Install dependencies
-cd web
-npm install
+# .npmrc is configured for legacy peer deps; the flag makes it explicit
+npm install --legacy-peer-deps
 
-# 3. Start the dev server
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) — the app hot-reloads on save.
+Open [http://localhost:3000](http://localhost:3000). If 3000 is taken, the dev server falls back to 3001. The app hot-reloads on save.
+
+Supabase env vars are optional in dev: middleware handles a missing `.env.local` gracefully, so the marketing site and game world run without one.
 
 ---
 
@@ -34,20 +39,26 @@ Open [http://localhost:3000](http://localhost:3000) — the app hot-reloads on s
 
 ```
 web/
-├── app/            # Routes and layouts (Next.js App Router)
-│   ├── layout.tsx  # Root layout (fonts, global providers)
-│   ├── page.tsx    # Homepage
-│   └── [route]/    # Additional pages
-├── components/     # Reusable UI components
-│   ├── ui/         # Primitives (buttons, cards, indicators)
-│   ├── layout/     # Header, footer, navigation
-│   └── sections/   # Page sections (hero, features, etc.)
-├── styles/         # Global CSS and design tokens
-│   └── tokens.css  # Colors, spacing, typography variables
-└── public/         # Static assets (images, 3D models, fonts)
-```
+├── app/
+│   ├── (site)/         # Marketing pages (stable, don't touch unless tasked)
+│   ├── student/
+│   │   ├── apply/      # Recruitment portal (live in prod, don't touch unless tasked)
+│   │   └── dashboard/  # Student portal pages (active development)
+│   └── layout.tsx      # Root layout (fonts, global providers)
+├── components/
+│   ├── ui/             # Primitives (buttons, cards, indicators)
+│   ├── layout/         # Header, footer, navigation
+│   ├── sections/       # Marketing page sections
+│   ├── game/           # 3D game world (GameWorld.tsx, PlayerAvatar.tsx)
+│   ├── recruit/        # Recruitment system components
+│   └── portal/         # Student portal components
+├── lib/supabase/       # Supabase clients (client, server, admin) + DB types
+├── supabase/           # Migrations (never edit applied ones, add new)
+├── styles/             # Global CSS and design tokens (tokens.css, game-tokens.css)
+└── public/             # Static assets (images, 3D models, fonts)
 
-> **All frontend work happens inside `web/`.**
+specs/                  # Design specs and UX backlog (index in specs/ux-status.md)
+```
 
 ---
 
@@ -59,56 +70,38 @@ web/
 | Styling        | Tailwind CSS 4, custom tokens (`styles/tokens.css`)         |
 | Animation      | GSAP 3 (+ ScrollTrigger), Framer Motion 12                  |
 | 3D Graphics    | Three.js, React Three Fiber, Drei                           |
+| Backend        | Supabase (auth, Postgres, storage)                          |
 | Scrolling      | Lenis (smooth scroll, GSAP-integrated)                      |
 | Icons          | Lucide React, Heroicons                                     |
 | Fonts          | Space Grotesk (body), Test Sogne (headings), IBM Plex Mono (highlights) |
 
 ---
 
-## Common Tasks
+## Commands
 
-### Running the App
+Run from `web/`:
 
 | Command           | What it does                           |
 | ----------------- | -------------------------------------- |
-| `npm run dev`     | Start dev server at localhost:3000     |
+| `npm run dev`     | Start dev server (3000, falls back to 3001) |
 | `npm run build`   | Create production build                |
 | `npm run start`   | Run production build locally           |
 | `npm run lint`    | Check for ESLint errors                |
 
-### Where to Find Things
-
-| If you need to...                  | Look here                              |
-| ---------------------------------- | -------------------------------------- |
-| Add a new page                     | `app/[your-route]/page.tsx`            |
-| Create a reusable component        | `components/ui/`                       |
-| Edit global colors/fonts           | `styles/tokens.css`                    |
-| Add static images or assets        | `public/`                              |
-| Modify the header/footer           | `components/layout/`                   |
-| Update homepage sections           | `components/sections/`                 |
+Note: `BAILOUT_TO_CLIENT_SIDE_RENDERING` in SSR output is expected for the game world (it renders client-side by design), not an error.
 
 ---
 
-## Development Guidelines
+## Contributing
 
-### Styling
+1. Pull latest: `git pull origin main`
+2. Branch: `git checkout -b feature/your-feature`
+3. Lint before committing: `npm run lint`
+4. Open a PR with screenshots/GIFs for UI changes
 
-- Use **Tailwind classes** for layout and spacing
-- Use **CSS variables** from `tokens.css` for colors and typography
-- Avoid hardcoded hex values — add new colors to the design tokens
+Agents follow the `[build]` / `[qa]` / `[review]` commit prefixes defined in `AGENT_LOG.md`. Human contributors use conventional prefixes (`feat:`, `fix:`, `docs:`, `refactor:`).
 
-### Animations
-
-- **GSAP + ScrollTrigger** powers scroll-based animations
-- **Framer Motion** handles component enter/exit animations
-- Check the browser console for GSAP errors if animations break
-- Make small, incremental changes to animation code
-
-### Components
-
-- Place new components in `components/ui/` (primitives) or `components/sections/` (page blocks)
-- Use TypeScript interfaces for props
-- Keep components focused — split large components into smaller pieces
+Off-limits without an explicit task: marketing site pages, the recruitment system, and applied migrations. See `CLAUDE.md` for the full list.
 
 ---
 
@@ -116,46 +109,19 @@ web/
 
 | Issue                              | Fix                                                        |
 | ---------------------------------- | ---------------------------------------------------------- |
-| `npm install` fails                | Delete `node_modules` and `package-lock.json`, reinstall   |
+| `npm install` fails                | Use `--legacy-peer-deps`; if it still fails, delete `node_modules` and `package-lock.json`, reinstall |
 | Animations not working             | Check console for GSAP errors; ensure ScrollTrigger is imported |
 | Styles not updating                | Hard refresh (`Cmd+Shift+R`) or restart dev server         |
-| Port 3000 already in use           | Kill the process or use `npm run dev -- -p 3001`           |
-
----
-
-## Git Workflow
-
-1. **Pull latest changes**: `git pull origin main`
-2. **Create a feature branch**: `git checkout -b feature/your-feature`
-3. **Make changes and lint**: `npm run lint`
-4. **Commit with a clear message**: `git commit -m "feat: add new hero section"`
-5. **Push and open a PR**: Include screenshots/GIFs for UI changes
-
-### Commit Prefixes
-
-| Prefix     | Use for                        |
-| ---------- | ------------------------------ |
-| `feat:`    | New features                   |
-| `fix:`     | Bug fixes                      |
-| `docs:`    | Documentation changes          |
-| `style:`   | Formatting, styling tweaks     |
-| `refactor:`| Code restructuring             |
+| Port 3000 already in use           | Dev server falls back to 3001 automatically                |
 
 ---
 
 ## Deployment
 
-The app deploys automatically via **Vercel** on pushes to `main`.
-
-For manual deployment to other hosts:
-
-```bash
-npm run build
-npm run start
-```
+Pushes to `main` deploy automatically via **Vercel**.
 
 ---
 
 ## Questions?
 
-Reach out to the team in the TSI Slack or open an issue in this repo.
+Reach out in the TSI Slack or open an issue in this repo.
