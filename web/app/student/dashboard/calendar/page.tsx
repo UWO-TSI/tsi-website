@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { createClient } from "@/lib/supabase/client";
 import {
   ChevronLeft,
   ChevronRight,
@@ -148,22 +147,28 @@ export default function CalendarPage() {
 
   /* fetch events for visible range */
    
+  /* 2026-07-22 fix: goes through /api/events instead of a direct browser
+     supabase query — (a) the page no longer crashes when Supabase env vars
+     are absent (createClient threw in useEffect), (b) the old query selected
+     a `type` column that doesn't exist (schema column is `event_type`), so
+     it silently returned zero events in prod. The API returns full rows;
+     map event_type → type for the local CalendarEvent shape. */
   useEffect(() => {
     let cancelled = false;
-    const supabase = createClient();
     const rangeStart = new Date(currentYear, currentMonth, 1).toISOString();
     const rangeEnd = new Date(currentYear, currentMonth + 1, 0, 23, 59, 59).toISOString();
 
-    supabase
-      .from("events")
-      .select("id, title, type, start_time, end_time, location, description, tc_reward, xp_reward")
-      .eq("status", "approved")
-      .gte("start_time", rangeStart)
-      .lte("start_time", rangeEnd)
-      .order("start_time")
-      .then(({ data }) => {
+    fetch(`/api/events?from=${encodeURIComponent(rangeStart)}&to=${encodeURIComponent(rangeEnd)}&limit=200`)
+      .then((r) => (r.ok ? r.json() : { events: [] }))
+      .then((d) => {
+        if (cancelled) return;
+        const rows = (d?.events ?? []) as (CalendarEvent & { event_type?: EventType })[];
+        setEvents(rows.map((e) => ({ ...e, type: e.event_type ?? e.type })));
+        setLoading(false);
+      })
+      .catch(() => {
         if (!cancelled) {
-          setEvents((data as CalendarEvent[]) ?? []);
+          setEvents([]);
           setLoading(false);
         }
       });
@@ -230,7 +235,7 @@ export default function CalendarPage() {
   return (
     <div>
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-6 pl-14">
         <div>
           <h1 className="text-2xl font-heading font-bold text-[var(--color-text-primary)]">
             Calendar

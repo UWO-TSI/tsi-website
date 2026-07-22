@@ -9,11 +9,15 @@
  */
 
 import { useEffect, useState } from "react";
+import { useCoarsePointer } from "@/lib/game/useMediaQuery";
 
 const STORAGE_KEY = "tsi.welcome.v1.seen";
 
 export default function WelcomeOverlay() {
   const [visible, setVisible] = useState(false);
+  // Touch devices that entered full 3D via MobileWorld's "Try full 3D"
+  // get touch instructions, not WASD + right-click.
+  const coarse = useCoarsePointer();
 
   const dismiss = () => {
     try {
@@ -93,11 +97,22 @@ export default function WelcomeOverlay() {
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "22px" }}>
-          <Row keys={["W", "A", "S", "D"]} label="Walk (camera-relative)" />
-          <Row keys={["Right-click", "drag"]} label="Look around" />
-          <Row keys={["E"]} label="Interact when you see a prompt" />
-          <Row keys={["Click NPC"]} label="Chat with anyone" />
-          <Row keys={["F1"]} label="Full controls list, anytime" />
+          {coarse ? (
+            <>
+              <Row keys={["Tap ground"]} label="Walk there" />
+              <Row keys={["Drag"]} label="Look around" />
+              <Row keys={["Tap NPC"]} label="Chat with anyone" />
+              <Row keys={["Emote button"]} label="Wave, dance, laugh" />
+            </>
+          ) : (
+            <>
+              <Row keys={["W", "A", "S", "D"]} label="Walk (camera-relative)" />
+              <Row keys={["Right-click", "drag"]} label="Look around" />
+              <Row keys={["E"]} label="Interact when you see a prompt" />
+              <Row keys={["Click NPC"]} label="Chat with anyone" />
+              <Row keys={["F1"]} label="Full controls list, anytime" />
+            </>
+          )}
         </div>
 
         <button
@@ -120,9 +135,11 @@ export default function WelcomeOverlay() {
         >
           Start exploring
         </button>
-        <div style={{ marginTop: "10px", textAlign: "center", fontSize: "11px", color: "#8a939a" }}>
-          Press Enter or Esc to dismiss
-        </div>
+        {!coarse && (
+          <div style={{ marginTop: "10px", textAlign: "center", fontSize: "11px", color: "#8a939a" }}>
+            Press Enter or Esc to dismiss
+          </div>
+        )}
       </div>
 
       <style jsx>{`
