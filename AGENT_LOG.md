@@ -21,7 +21,13 @@
 
 All 13 deliverables shipped, QA Wave 14 PASS (commit `001eea8`), zero lint regressions. Sprint log preserved in the table below.
 
-## Current Sprint — Admin Tooling CRUD (started 2026-05-27)
+## Current — Two Tracks (updated 2026-07-22)
+
+**World track (David's standing loop, active since 2026-07-14):** find visual inconsistencies + game-feel ideas, implement, screenshot-QA, repeat. Queue lives in the build entries below + `specs/asset-flags.md`. Next up: cliff system (river-kit archive `7143205` is the prep), lighting-chemistry final verdict, brick plaza, plaza stalls, seasonal variants.
+
+**Launch track (new, spec: `specs/sprint-2026-08-launch-track.md`):** get real members in for the August exec beta → Sept fall-onboarding launch (David's anchor, 2026-07-22). L1 migrations apply + verify, L2 deploy safety ruling, L3 content seeding as CMS dry-run, L4 beta cohort onboarding, L5 feature-loop prod verification, L6 mobile LITE presence. Blockers are David rulings: migration hold, deploy gate, cohort + date.
+
+## Previous Sprint — Admin Tooling CRUD ✅ CLOSED (Wave 15)
 
 Spec: `specs/sprint-2026-06-admin-tooling.md`. Builds CRUD forms on top of the content pipeline (B3 API routes + B4 listing pages). 6 deliverables (C1-C6), ~4 week window.
 
@@ -826,6 +832,16 @@ Verification: `tsc --noEmit` clean, `npm run lint` 74 errors / 56 warnings (= Wa
 ---
 
 ## reviewer
+
+### 2026-07-22 — Restart audit on `7143205` + Launch Track plan
+
+Fresh onboard + Playwright sweep (18 shots, desktop + mobile LITE, env-less server) after David pushed the laptop lineage. Verdict: **the world track is in great shape and self-sustaining; the launch track is untouched and Sept is ~6 weeks out.** David's 2026-07-22 decisions (art focus / overlays / sprites deferred / Sept launch) are mostly already satisfied by the July loop — the remaining risk is all launch-side: migrations ON HOLD, zero seeded content, no real member has ever completed onboarding on prod, main auto-deploys with no gate, admin monthly-drop never dry-run.
+
+- Wrote `specs/sprint-2026-08-launch-track.md` (L1-L7, DoD, sequencing to Aug 31). World/art work explicitly excluded — the standing loop owns it.
+- Updated the stale Current Sprint header to the two-track picture.
+- Bugs found + fixed same session (`0b17a99`, build entry): calendar env crash + phantom `type` column (silently empty in prod — schema is `event_type`; now via `/api/events`), touch welcome copy for LITE→full-3D users, `_check-deps.mjs` hygiene script.
+- Blocking David rulings: lift/scope the migration hold, deploy-safety option, beta cohort + date, prod `ANTHROPIC_API_KEY`. The pastel-grade AC-snapshot verdict is also still open from 2026-07-15.
+- Audit screenshots: job workspace `shots-v2/`. Baselines held: 74/52 lint, 32/32 tests, tsc clean, build ✓.
 
 ### 2026-06-01 — Autonomous Visual + Perf Burst
 
