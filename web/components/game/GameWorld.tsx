@@ -1959,7 +1959,7 @@ function Scene({
         ref={cameraRef}
         minPolarAngle={Math.PI / 2 - (42 * Math.PI) / 180}
         maxPolarAngle={Math.PI / 2}
-        minDistance={12}
+        minDistance={9}
         maxDistance={34}
         dollySpeed={1.0}
         truckSpeed={0}
@@ -2438,7 +2438,7 @@ export default function GameWorld() {
       <Canvas
         gl={{ antialias: false, powerPreference: "high-performance" }}
         dpr={graphicsSettings.pixelated ? 0.66 : [1, 2]}
-        camera={{ fov: 48, near: 0.1, far: 300, position: [0, 19, -24] }}
+        camera={{ fov: 48, near: 0.1, far: 300, position: [0, 16.5, -21] }} // refinement: closer default framing (was 19/-24)
         shadows="soft" /* P-light v2 2026-07-13: PCFSoft maps; the sun only casts when the shadows setting is on */
         onCreated={({ gl }) => {
           // Lighting research L1 (specs/lighting-research.md): Khronos PBR

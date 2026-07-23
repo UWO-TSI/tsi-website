@@ -1,7 +1,8 @@
 "use client";
 
 /**
- * FishingOverlay (cozy marathon G5; reel minigame + rarity 2026-07-22).
+ * FishingOverlay (cozy marathon G5; reel minigame 2026-07-22; refinement
+ * round same day per David's playtest).
  *
  * DOM overlay (outside the Canvas, alongside the emote menu). Listens for
  * `tsi:fish-start` from GameWorld's E handler when the player is at a
@@ -9,38 +10,65 @@
  *
  *   casting → waiting (2-6s) → bite (1.4s window) → REELING → result
  *
- * Hook the bite with E or left-click, then the Stardew-style reel minigame
- * runs: a HORIZONTAL water track, hold left-click (or E/Space) to push the
- * catch bar right, release and it falls back left. Keep the fish icon
- * inside the bar — progress fills while it's inside, drains while it's
- * out. Full bar = caught, empty = it escapes. ESC concedes the fish.
+ * Hook the bite with E or left-click, then the Stardew-style reel runs: a
+ * HORIZONTAL water track, hold left-click (or E/Space) to push the catch
+ * bar right, release and it falls back left. Keep the fish icon inside the
+ * bar — progress fills inside, drains outside. Full = caught, empty = it
+ * escapes. ESC concedes.
  *
- * Fish variety: 4 rarity tiers (weighted rolls, colored chips) + ACNH-style
- * availability windows — some species only bite at night / in daytime, the
- * catfish loves rain, and the Golden Koi's legendary odds double when it
- * rains. Rarity drives the minigame difficulty (fish speed, dart rate,
- * drain rate).
+ * Refinement rulings (David, 2026-07-22 playtest):
+ *  - 6 rarity tiers: common / uncommon / rare / epic / legendary / sea king.
+ *    Legendary sits VACANT until the next marquee extraction (then the new
+ *    fish takes Sea King and the koi drops to legendary — "Both" ruling).
+ *  - Rarity is never announced during the fight. First-time species show as
+ *    "???" with a blacked-out icon silhouette; the name+rarity reveal (and
+ *    NEW! badge) happens on the catch card.
+ *  - Difficulty scales with rarity: bar gets narrower, fish get faster —
+ *    and every species has its OWN movement fields (speed / accel / jitter /
+ *    dart chance / dart burst / retarget cadence), so behavior is
+ *    parameterized per fish, not one memorizable pattern.
+ *  - Sizes make sense: per-species cm ranges, size rolled on catch
+ *    (skewed small; big rolls are the brag).
+ *  - Catch celebration scales with tier: screen shake + card pop always,
+ *    confetti from rare up, gold-glow card + multi-burst for legendary/sea
+ *    king (the dopamine moment).
  *
  * A catch collects to member_collections — cosmetic only, no TC/XP
- * (principle #3). Kept entirely in the DOM: no R3F coupling; the reel loop
- * is a rAF writing styles through refs (zero React re-renders per frame).
+ * (principle #3). The reel loop is a rAF writing styles through refs (zero
+ * React re-renders per frame).
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import confetti from "canvas-confetti";
 import { AudioManager } from "@/lib/game/audio";
 import { getTodayWeather } from "@/lib/game/weather";
 import { getLabHour } from "@/lib/game/devLab";
 
 type Phase = "idle" | "casting" | "waiting" | "bite" | "reeling" | "caught" | "missed";
 
-type Rarity = "common" | "uncommon" | "rare" | "legendary";
+type Rarity = "common" | "uncommon" | "rare" | "epic" | "legendary" | "seaking";
 
-const RARITY_META: Record<Rarity, { label: string; color: string; weight: number }> = {
-  common: { label: "Common", color: "#7C9A62", weight: 100 },
-  uncommon: { label: "Uncommon", color: "#4A90D9", weight: 42 },
-  rare: { label: "Rare", color: "#9B6DD6", weight: 15 },
-  legendary: { label: "Legendary", color: "#E8A93C", weight: 5 },
+const RARITY_META: Record<
+  Rarity,
+  { label: string; color: string; weight: number; barW: number }
+> = {
+  common: { label: "Common", color: "#7C9A62", weight: 100, barW: 0.3 },
+  uncommon: { label: "Uncommon", color: "#4A90D9", weight: 48, barW: 0.27 },
+  rare: { label: "Rare", color: "#9B6DD6", weight: 18, barW: 0.24 },
+  epic: { label: "Epic", color: "#D6598F", weight: 7, barW: 0.21 },
+  legendary: { label: "Legendary", color: "#E8A93C", weight: 2.5, barW: 0.19 },
+  seaking: { label: "Sea King", color: "#1FB6CF", weight: 1, barW: 0.17 },
 };
+
+/** Per-species reel behavior — track space is 0..1, speeds in track/s. */
+interface FishMove {
+  speed: number; // top cruising speed
+  accel: number; // how hard it pulls toward its target (track/s²)
+  jitter: number; // constant nervous wobble amplitude
+  dartChance: number; // chance a retarget is a dart
+  dartMul: number; // speed/accel multiplier while darting
+  retargetMs: number; // base time between new targets
+}
 
 interface FishDef {
   key: string;
@@ -48,27 +76,29 @@ interface FishDef {
   name: string; // "Dace" — reel card
   model: string;
   rarity: Rarity;
-  /** 0-1 → reel difficulty (fish speed, darts, drain). */
-  diff: number;
+  sizeCm: [number, number];
+  move: FishMove;
   /** Availability gate; absent = always biting. Hour is 0-24 local. */
   when?: (hour: number, weather: string) => boolean;
 }
 
 // ACNH revamp 2026-07: species-true river catches (models shown in-world by
-// FishCatchFX). Rarity + availability added with the reel minigame — new
-// species are one row here + one in CollectionBook once their model/icon
-// ships (the dump's Creatures/ set has more to extract).
+// FishCatchFX). Movement personalities, sizes, and the 6-tier ladder added
+// in the refinement round — new species are one row here + one in
+// CollectionBook once their model/icon ships (the dump's Creatures/ set has
+// more to extract; the next marquee fish takes the Sea King crown).
 const FISH: FishDef[] = [
-  { key: "fish_dace", label: "a Dace", name: "Dace", model: "/assets/acnh/fish/dace.glb", rarity: "common", diff: 0.22 },
-  { key: "fish_pale_chub", label: "a Pale Chub", name: "Pale Chub", model: "/assets/acnh/fish/pale-chub.glb", rarity: "common", diff: 0.25, when: (h) => h >= 6 && h < 18 },
-  { key: "fish_pond_smelt", label: "a Pond Smelt", name: "Pond Smelt", model: "/assets/acnh/fish/pond-smelt.glb", rarity: "common", diff: 0.28 },
-  { key: "fish_crucian_carp", label: "a Crucian Carp", name: "Crucian Carp", model: "/assets/acnh/fish/crucian-carp.glb", rarity: "common", diff: 0.3 },
-  { key: "fish_bluegill", label: "a Bluegill", name: "Bluegill", model: "/assets/acnh/fish/bluegill.glb", rarity: "uncommon", diff: 0.38, when: (h) => h >= 9 && h < 16 },
-  { key: "fish_goldfish", label: "a Goldfish", name: "Goldfish", model: "/assets/acnh/fish/goldfish.glb", rarity: "uncommon", diff: 0.42 },
-  { key: "fish_carp", label: "a Carp", name: "Carp", model: "/assets/acnh/fish/carp.glb", rarity: "uncommon", diff: 0.45 },
-  { key: "fish_black_bass", label: "a Black Bass", name: "Black Bass", model: "/assets/acnh/fish/black-bass.glb", rarity: "rare", diff: 0.58 },
-  { key: "fish_catfish", label: "a Catfish", name: "Catfish", model: "/assets/acnh/fish/catfish.glb", rarity: "rare", diff: 0.62, when: (h, w) => h >= 20 || h < 4 || w === "rain" },
-  { key: "fish_golden_koi", label: "a Golden Koi", name: "Golden Koi", model: "/assets/acnh/fish/koi.glb", rarity: "legendary", diff: 0.8 },
+  { key: "fish_dace", label: "a Dace", name: "Dace", model: "/assets/acnh/fish/dace.glb", rarity: "common", sizeCm: [10, 18], move: { speed: 0.2, accel: 0.9, jitter: 0.004, dartChance: 0.08, dartMul: 1.8, retargetMs: 1900 } },
+  { key: "fish_pale_chub", label: "a Pale Chub", name: "Pale Chub", model: "/assets/acnh/fish/pale-chub.glb", rarity: "common", sizeCm: [8, 14], move: { speed: 0.22, accel: 0.9, jitter: 0.006, dartChance: 0.1, dartMul: 1.9, retargetMs: 1800 }, when: (h) => h >= 6 && h < 18 },
+  { key: "fish_pond_smelt", label: "a Pond Smelt", name: "Pond Smelt", model: "/assets/acnh/fish/pond-smelt.glb", rarity: "common", sizeCm: [6, 10], move: { speed: 0.18, accel: 0.7, jitter: 0.005, dartChance: 0.08, dartMul: 1.7, retargetMs: 2000 } },
+  { key: "fish_crucian_carp", label: "a Crucian Carp", name: "Crucian Carp", model: "/assets/acnh/fish/crucian-carp.glb", rarity: "uncommon", sizeCm: [15, 30], move: { speed: 0.26, accel: 1.0, jitter: 0.005, dartChance: 0.14, dartMul: 1.9, retargetMs: 1600 } },
+  { key: "fish_bluegill", label: "a Bluegill", name: "Bluegill", model: "/assets/acnh/fish/bluegill.glb", rarity: "uncommon", sizeCm: [12, 22], move: { speed: 0.3, accel: 1.4, jitter: 0.012, dartChance: 0.18, dartMul: 2.0, retargetMs: 1300 }, when: (h) => h >= 9 && h < 16 },
+  { key: "fish_goldfish", label: "a Goldfish", name: "Goldfish", model: "/assets/acnh/fish/goldfish.glb", rarity: "uncommon", sizeCm: [8, 15], move: { speed: 0.27, accel: 1.1, jitter: 0.008, dartChance: 0.12, dartMul: 1.8, retargetMs: 1500 } },
+  { key: "fish_carp", label: "a Carp", name: "Carp", model: "/assets/acnh/fish/carp.glb", rarity: "rare", sizeCm: [35, 70], move: { speed: 0.3, accel: 1.2, jitter: 0.004, dartChance: 0.16, dartMul: 1.8, retargetMs: 1500 } },
+  { key: "fish_black_bass", label: "a Black Bass", name: "Black Bass", model: "/assets/acnh/fish/black-bass.glb", rarity: "rare", sizeCm: [30, 55], move: { speed: 0.36, accel: 1.8, jitter: 0.01, dartChance: 0.26, dartMul: 2.3, retargetMs: 1150 } },
+  { key: "fish_catfish", label: "a Catfish", name: "Catfish", model: "/assets/acnh/fish/catfish.glb", rarity: "epic", sizeCm: [50, 110], move: { speed: 0.32, accel: 1.5, jitter: 0.006, dartChance: 0.3, dartMul: 2.6, retargetMs: 1300 }, when: (h, w) => h >= 20 || h < 4 || w === "rain" },
+  // Legendary rung intentionally vacant — see header note.
+  { key: "fish_golden_koi", label: "a Golden Koi", name: "Golden Koi", model: "/assets/acnh/fish/koi.glb", rarity: "seaking", sizeCm: [60, 95], move: { speed: 0.44, accel: 2.2, jitter: 0.014, dartChance: 0.34, dartMul: 2.4, retargetMs: 950 } },
 ];
 
 /** Weighted roll over the species available right now. */
@@ -90,10 +120,14 @@ function rollFish(): FishDef {
   return pool[pool.length - 1];
 }
 
+/** Skewed size roll — most catches modest, big ones are the brag. */
+function rollSize([min, max]: [number, number]): number {
+  return Math.round(min + (max - min) * Math.pow(Math.random(), 1.7));
+}
+
 const BITE_WINDOW_MS = 1400;
 
-// ─── Reel minigame tuning (track space is 0..1) ─────────────────────────────
-const BAR_W = 0.25; // catch-bar width as a fraction of the track
+// ─── Reel tuning (track space is 0..1; bar width comes from rarity) ─────────
 const HOLD_ACCEL = 3.6; // hold LMB → push right
 const GRAVITY = 3.1; // release → fall left
 const DAMPING = 1.4; // exponential velocity damping /s
@@ -101,11 +135,68 @@ const EDGE_BOUNCE = 0.35; // left-edge elasticity (Stardew's bottom bounce)
 const FILL_RATE = 0.26; // progress /s while the fish is inside the bar
 const START_PROGRESS = 0.35;
 
+/** Tier-scaled catch celebration: shake px, confetti bursts, card ms. */
+const CELEBRATE: Record<Rarity, { shake: number; bursts: number; cardMs: number; glow: boolean }> = {
+  common: { shake: 4, bursts: 0, cardMs: 2600, glow: false },
+  uncommon: { shake: 4, bursts: 0, cardMs: 2600, glow: false },
+  rare: { shake: 6, bursts: 1, cardMs: 3000, glow: false },
+  epic: { shake: 8, bursts: 2, cardMs: 3200, glow: false },
+  legendary: { shake: 10, bursts: 3, cardMs: 3800, glow: true },
+  seaking: { shake: 12, bursts: 4, cardMs: 4200, glow: true },
+};
+
+function celebrate(rarity: Rarity, color: string) {
+  const c = CELEBRATE[rarity];
+  // Screen shake — amplitude by tier.
+  const a = c.shake;
+  document.querySelector("canvas")?.animate(
+    [
+      { transform: "translate(0,0)" },
+      { transform: `translate(${a}px,${-a / 2}px)` },
+      { transform: `translate(${-a}px,${a / 2}px)` },
+      { transform: `translate(${a / 2}px,${a / 3}px)` },
+      { transform: "translate(0,0)" },
+    ],
+    { duration: 90 + a * 25 }
+  );
+  // Confetti from rare up; gold/tier-tinted for the crown tiers.
+  for (let i = 0; i < c.bursts; i++) {
+    window.setTimeout(() => {
+      confetti({
+        particleCount: 50 + i * 40,
+        spread: 65 + i * 12,
+        startVelocity: 38,
+        origin: { x: 0.5, y: 0.72 },
+        colors: [color, "#FFD166", "#FFFDF5"],
+        disableForReducedMotion: true,
+      });
+    }, i * 220);
+  }
+}
+
 export default function FishingOverlay() {
   const [phase, setPhase] = useState<Phase>("idle");
   const [fish, setFish] = useState<FishDef | null>(null);
+  const [caughtSize, setCaughtSize] = useState<number | null>(null);
+  const [wasNew, setWasNew] = useState(false);
   const timersRef = useRef<number[]>([]);
   const biteDeadlineRef = useRef(0);
+  // Species the member already has — drives the ???-silhouette mystery.
+  // Fails closed to "everything is new" (mystery is the better default).
+  const ownedRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    fetch("/api/collections")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (d?.collections) {
+          ownedRef.current = new Set(
+            (d.collections as { item_key: string }[]).map((c) => c.item_key)
+          );
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const clearTimers = () => {
     timersRef.current.forEach((t) => window.clearTimeout(t));
@@ -116,6 +207,8 @@ export default function FishingOverlay() {
     clearTimers();
     setPhase("idle");
     setFish(null);
+    setCaughtSize(null);
+    setWasNew(false);
   };
 
   const beginWait = () => {
@@ -153,6 +246,8 @@ export default function FishingOverlay() {
   const start = () => {
     clearTimers();
     setFish(null);
+    setCaughtSize(null);
+    setWasNew(false);
     setPhase("casting");
     AudioManager.playSFX("click");
     timersRef.current.push(window.setTimeout(beginWait, 650));
@@ -168,13 +263,18 @@ export default function FishingOverlay() {
     AudioManager.playSFX("click");
   };
 
-  /** Reel finished. Success → collect; fail → it got away. */
+  /** Reel finished. Success → collect + celebrate; fail → it got away. */
   const onReelDone = useCallback(
     (success: boolean) => {
       clearTimers();
       if (success && fish) {
+        const isNew = !ownedRef.current.has(fish.key);
+        ownedRef.current.add(fish.key);
+        setWasNew(isNew);
+        setCaughtSize(rollSize(fish.sizeCm));
         setPhase("caught");
         AudioManager.playSFX("confirm");
+        celebrate(fish.rarity, RARITY_META[fish.rarity].color);
         // Signals the "catch a fish" onboarding quest (auto-complete).
         window.dispatchEvent(new CustomEvent("tsi:fish-caught", { detail: { key: fish.key, model: fish.model } }));
         fetch("/api/collections", {
@@ -182,7 +282,7 @@ export default function FishingOverlay() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ item_key: fish.key }),
         }).catch(() => {});
-        timersRef.current.push(window.setTimeout(cancel, 2600));
+        timersRef.current.push(window.setTimeout(cancel, CELEBRATE[fish.rarity].cardMs));
       } else {
         setPhase("missed");
         AudioManager.playSFX("exit");
@@ -258,12 +358,13 @@ export default function FishingOverlay() {
       : phase === "waiting"
         ? "Waiting for a bite…"
         : phase === "bite"
-          ? "!!  Hook it!"
+          ? "!!  Hook it!"
           : phase === "caught"
             ? `You caught ${fish?.label ?? "a fish"}!`
             : "It got away…";
   const icon = phase === "caught" && fish ? `/assets/acnh/icons/${fish.key}.png` : null;
   const rarity = fish ? RARITY_META[fish.rarity] : null;
+  const glow = phase === "caught" && fish ? CELEBRATE[fish.rarity].glow : false;
 
   const accent = phase === "bite" ? "#E5484D" : phase === "caught" ? "#3D8F52" : "#4A4034";
 
@@ -283,21 +384,28 @@ export default function FishingOverlay() {
       }}
     >
       {phase === "reeling" && fish ? (
-        <ReelMinigame fish={fish} onDone={onReelDone} />
+        <ReelMinigame fish={fish} known={ownedRef.current.has(fish.key)} onDone={onReelDone} />
       ) : (
         <div
           style={{
             padding: "10px 20px",
             background: "#FFFDF5",
             color: accent,
-            border: `2px solid ${phase === "bite" ? "#E5484D" : "#E8DFC8"}`,
+            border: glow ? `2px solid ${rarity!.color}` : `2px solid ${phase === "bite" ? "#E5484D" : "#E8DFC8"}`,
             borderRadius: 14,
             fontFamily: "var(--font-highlight, sans-serif)",
             fontSize: 15,
             fontWeight: 600,
             whiteSpace: "nowrap",
-            boxShadow: "0 4px 14px rgba(60, 45, 20, 0.2)",
-            animation: phase === "bite" ? "fish-pulse 0.4s ease-in-out infinite" : undefined,
+            boxShadow: glow
+              ? `0 4px 24px ${rarity!.color}88, 0 0 0 4px ${rarity!.color}33`
+              : "0 4px 14px rgba(60, 45, 20, 0.2)",
+            animation:
+              phase === "bite"
+                ? "fish-pulse 0.4s ease-in-out infinite"
+                : phase === "caught"
+                  ? "fish-card-pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1)"
+                  : undefined,
             display: "flex",
             alignItems: "center",
             gap: 8,
@@ -308,6 +416,9 @@ export default function FishingOverlay() {
             <img src={icon} alt="" width={26} height={26} style={{ margin: "-4px 0" }} />
           )}
           {label}
+          {phase === "caught" && caughtSize !== null && (
+            <span style={{ fontSize: 12, color: "#8a7f6a", fontWeight: 600 }}>{caughtSize} cm</span>
+          )}
           {phase === "caught" && rarity && (
             <span
               style={{
@@ -322,6 +433,21 @@ export default function FishingOverlay() {
               }}
             >
               {rarity.label}
+            </span>
+          )}
+          {phase === "caught" && wasNew && (
+            <span
+              style={{
+                fontSize: 10,
+                fontWeight: 700,
+                letterSpacing: "0.06em",
+                color: "#1A1410",
+                background: "#FFD166",
+                borderRadius: 999,
+                padding: "3px 8px",
+              }}
+            >
+              NEW!
             </span>
           )}
         </div>
@@ -343,50 +469,63 @@ export default function FishingOverlay() {
           0%, 100% { transform: scale(1); }
           50% { transform: scale(1.08); }
         }
+        @keyframes fish-card-pop {
+          0% { transform: scale(0.6); opacity: 0; }
+          100% { transform: scale(1); opacity: 1; }
+        }
       `}</style>
     </div>
   );
 }
 
-// ─── The Stardew reel, horizontal (2026-07-22) ──────────────────────────────
+// ─── The Stardew reel, horizontal ───────────────────────────────────────────
 //
 // Physics + fish AI run in one rAF; every frame writes styles through refs
 // (no React re-renders). Track space is 0..1 left→right.
 //
 //   bar:  hold → accelerate right; release → gravity pulls left; damped;
-//         bounces softly off the left edge, clamps at the right.
-//   fish: eases toward a target, retargets on a rarity-scaled timer, and
-//         darts (far target, 2.4× speed) more often at higher difficulty.
-//   progress: fills while the fish icon sits inside the bar, drains outside
-//         (drain scales with difficulty). Full = caught, empty = escaped.
+//         bounces softly off the left edge, clamps at the right. Width comes
+//         from the fish's rarity tier (commons are forgiving).
+//   fish: velocity-seeks its target using the species' own move fields
+//         (speed/accel/jitter/darts/retarget) — every fish fights its own way.
+//   progress: fills while the fish sits inside the bar, drains outside;
+//         full = caught, empty = escaped.
+//
+// Mystery: unknown species show "???" + a blacked-out silhouette; rarity is
+// never shown during the fight (reveal happens on the catch card).
 
-function ReelMinigame({ fish, onDone }: { fish: FishDef; onDone: (success: boolean) => void }) {
+function ReelMinigame({
+  fish,
+  known,
+  onDone,
+}: {
+  fish: FishDef;
+  known: boolean;
+  onDone: (success: boolean) => void;
+}) {
   const barRef = useRef<HTMLDivElement>(null);
   const fishRef = useRef<HTMLImageElement>(null);
   const progRef = useRef<HTMLDivElement>(null);
   const holdingRef = useRef(false);
   const doneRef = useRef(false);
 
-  const rarity = RARITY_META[fish.rarity];
-
-  // Difficulty-derived fish behavior.
-  const fishSpeed = 0.16 + 0.42 * fish.diff; // track/s
-  const retargetMs = 1700 - 1000 * fish.diff;
-  const dartChance = 0.12 + 0.55 * fish.diff;
-  const drainRate = 0.17 + 0.09 * fish.diff;
+  const barW = RARITY_META[fish.rarity].barW;
+  const drainRate = 0.17 + 0.09 * (1 - barW / 0.3); // narrower bar ⇒ faster drain
 
   useEffect(() => {
     let raf = 0;
     let last = performance.now();
-    let pos = 0; // bar left edge 0..1-BAR_W
+    let pos = 0; // bar left edge 0..1-barW
     let vel = 0;
-    // Fish spawns near the resting bar (Stardew spawns near the bottom) so
-    // the opening moment is winnable, then wanders out.
+    // Fish spawns near the resting bar (Stardew's bottom spawn) so the
+    // opening moment is winnable, then wanders out.
     let fishPos = 0.15;
+    let fishVel = 0;
     let fishTarget = 0.4;
-    let speedMul = 1;
+    let mul = 1;
     let retargetAt = last + 600;
     let progress = START_PROGRESS;
+    const m = fish.move;
 
     const finish = (success: boolean) => {
       if (doneRef.current) return;
@@ -406,29 +545,29 @@ function ReelMinigame({ fish, onDone }: { fish: FishDef; onDone: (success: boole
       if (pos < 0) {
         pos = 0;
         vel = Math.abs(vel) < 0.12 ? 0 : -vel * EDGE_BOUNCE;
-      } else if (pos > 1 - BAR_W) {
-        pos = 1 - BAR_W;
+      } else if (pos > 1 - barW) {
+        pos = 1 - barW;
         vel = 0;
       }
 
-      // Fish AI
+      // Fish AI — velocity-seek with per-species personality.
       if (now >= retargetAt) {
-        const dart = Math.random() < dartChance;
+        const dart = Math.random() < m.dartChance;
         fishTarget = Math.random();
-        speedMul = dart ? 2.4 : 1;
-        retargetAt = now + retargetMs * (0.6 + 0.8 * Math.random());
+        mul = dart ? m.dartMul : 1;
+        retargetAt = now + m.retargetMs * (0.6 + 0.8 * Math.random());
       }
       const delta = fishTarget - fishPos;
-      const stepLen = fishSpeed * speedMul * dt;
-      if (Math.abs(delta) <= stepLen) {
-        fishPos = fishTarget;
-        speedMul = 1;
-      } else {
-        fishPos += Math.sign(delta) * stepLen;
-      }
+      const maxV = m.speed * mul;
+      fishVel += Math.sign(delta) * m.accel * mul * dt;
+      if (Math.abs(delta) < 0.04) fishVel *= Math.exp(-6 * dt); // arrive
+      fishVel = Math.max(-maxV, Math.min(maxV, fishVel));
+      fishPos += fishVel * dt + Math.sin(now / 90) * m.jitter;
+      if (fishPos < 0) { fishPos = 0; fishVel = 0; }
+      else if (fishPos > 1) { fishPos = 1; fishVel = 0; }
 
       // Progress
-      const inside = fishPos >= pos - 0.015 && fishPos <= pos + BAR_W + 0.015;
+      const inside = fishPos >= pos - 0.015 && fishPos <= pos + barW + 0.015;
       progress += (inside ? FILL_RATE : -drainRate) * dt;
       if (progress >= 1) return finish(true);
       if (progress <= 0) return finish(false);
@@ -452,7 +591,7 @@ function ReelMinigame({ fish, onDone }: { fish: FishDef; onDone: (success: boole
     };
     raf = requestAnimationFrame(step);
 
-    // Input: hold LMB anywhere (capture: the world's click-to-move must not
+    // Input: hold LMB anywhere (capture: the world's handlers must not
     // fire), or hold E / Space. Touch works via Pointer Events (mobile-aware).
     const down = (e: PointerEvent) => {
       if (e.button !== 0) return;
@@ -509,22 +648,10 @@ function ReelMinigame({ fish, onDone }: { fish: FishDef; onDone: (success: boole
         touchAction: "none",
       }}
     >
-      {/* Header: species + rarity chip + hint */}
+      {/* Header: species (or ??? for unknowns — rarity is never shown here) */}
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-        <span style={{ fontSize: 13, fontWeight: 700, color: "#4A4034" }}>{fish.name}</span>
-        <span
-          style={{
-            fontSize: 9,
-            fontWeight: 700,
-            letterSpacing: "0.06em",
-            textTransform: "uppercase",
-            color: "#FFFDF5",
-            background: rarity.color,
-            borderRadius: 999,
-            padding: "2px 7px",
-          }}
-        >
-          {rarity.label}
+        <span style={{ fontSize: 13, fontWeight: 700, color: "#4A4034" }}>
+          {known ? fish.name : "???"}
         </span>
         <span style={{ marginLeft: "auto", fontSize: 10, color: "#8a7f6a" }}>
           hold left-click to push the bar →
@@ -542,7 +669,7 @@ function ReelMinigame({ fish, onDone }: { fish: FishDef; onDone: (success: boole
           overflow: "hidden",
         }}
       >
-        {/* Catch bar */}
+        {/* Catch bar — width from rarity tier */}
         <div
           ref={barRef}
           style={{
@@ -550,13 +677,13 @@ function ReelMinigame({ fish, onDone }: { fish: FishDef; onDone: (success: boole
             top: 3,
             bottom: 3,
             left: 0,
-            width: `${BAR_W * 100}%`,
+            width: `${barW * 100}%`,
             borderRadius: 8,
             background: "rgba(61, 143, 82, 0.3)",
             border: "2px solid #3D8F52",
           }}
         />
-        {/* Fish icon riding the track */}
+        {/* Fish icon riding the track — silhouetted until first caught */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           ref={fishRef}
@@ -570,7 +697,9 @@ function ReelMinigame({ fish, onDone }: { fish: FishDef; onDone: (success: boole
             top: "50%",
             left: "50%",
             transform: "translate(-50%, -50%)",
-            filter: "drop-shadow(0 2px 3px rgba(20, 60, 90, 0.4))",
+            filter: known
+              ? "drop-shadow(0 2px 3px rgba(20, 60, 90, 0.4))"
+              : "brightness(0) opacity(0.75) drop-shadow(0 2px 3px rgba(20, 60, 90, 0.4))",
             pointerEvents: "none",
           }}
         />

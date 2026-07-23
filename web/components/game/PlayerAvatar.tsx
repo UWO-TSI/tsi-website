@@ -38,7 +38,7 @@ const EMOTE_EMOJI: Record<string, string> = {
  * Configurable via SHEET_COLS/SHEET_ROWS constants.
  */
 
-const PLAYER_SPEED = 6.3; // art pass pt2: snappier traversal on the bigger island
+const PLAYER_SPEED = 7.4; // refinement 2026-07-22 (David: walk felt slow) — was 6.3
 // Organic coast (2026-07-14): the old ±50 SQUARE clamp let players walk
 // diagonally onto open water. Radial clamp in coast-space instead — 50.6
 // reaches the deck nose + damp sand, still short of the waterline (~51.4).
@@ -84,7 +84,7 @@ const keys: Record<string, boolean> = {};
 function applySprintFov(camera: THREE.Camera, speed: number, delta: number) {
   const pcam = camera as THREE.PerspectiveCamera;
   if (!pcam.isPerspectiveCamera) return;
-  const targetFov = speed > 7.5 ? 51 : 48;
+  const targetFov = speed > 9 ? 51 : 48; // threshold above new walk speed (7.4)
   const nextFov = THREE.MathUtils.damp(pcam.fov, targetFov, 4, delta);
   if (Math.abs(nextFov - pcam.fov) > 0.01) {
     pcam.fov = nextFov;
@@ -213,6 +213,11 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
 
   const handleClick = useCallback(
     (e: MouseEvent) => {
+      // Refinement 2026-07-22 (David): click-to-move is touch-only now.
+      // On fine-pointer devices misclicks kept sending the player walking;
+      // WASD is the desktop verb. Coarse pointers (phones/tablets in full
+      // 3D) keep tap-to-walk.
+      if (window.matchMedia("(pointer: fine)").matches) return;
       const rect = gl.domElement.getBoundingClientRect();
       mouse.current.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
       mouse.current.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
@@ -338,7 +343,7 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
     // direction — ~80ms up to speed, ~130ms glide-out. Frame cycling below
     // already scales by ACTUAL speed, so the walk anim eases in for free.
     {
-      const speedMult = sprint && keyMoving ? 1.6 : 1;
+      const speedMult = sprint && keyMoving ? 1.85 : 1; // refinement: stronger sprint (was 1.6)
       const vel = velRef.current;
       const lam = moving ? 12 : 7.5;
       vel.x = THREE.MathUtils.damp(vel.x, moving ? dx * PLAYER_SPEED * speedMult : 0, lam, delta);

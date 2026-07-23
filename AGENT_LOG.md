@@ -108,6 +108,16 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-22 — Refinement round from David's playtest interview (fishing v2 + feel pass)
+
+Structured playtest interview → `specs/sprint-2026-07-refinement.md` (includes the new **TSI Art Museum** feature sketch — paint stations, TC donations as votes, year-end permanent archive — 3 economy/placement rulings queued for David). R1 shipped same session:
+
+- **Fishing v2** (`FishingOverlay.tsx`): 6-tier ladder common→uncommon→rare→epic→legendary→**sea king** (weights 100/48/18/7/2.5/1, per-tier bar widths 0.30→0.17; legendary rung vacant per the "Both" ruling — koi holds Sea King until the next marquee extraction). Rarity never shown mid-fight; first-time species are "???" with a blacked-out icon (owned-set from `/api/collections`, fails closed to mystery). Per-species movement fields `{speed, accel, jitter, dartChance, dartMul, retargetMs}` with velocity-seeking AI — each fish fights its own way. Per-species size ranges with skewed rolls, size on the catch card. Celebration scales by tier: shake 4→12px, canvas-confetti bursts from rare up (dep already shipped), gold-glow card + longer hold for legendary/sea-king, card pop, NEW! badge.
+- **Feel pass:** `PLAYER_SPEED` 6.3→7.4, sprint 1.6→1.85 (FOV threshold raised to 9 so walk never triggers it), camera default `[0,19,-24]`→`[0,16.5,-21]` + `minDistance` 12→9, click-to-move gated to coarse pointers (desktop misclicks eliminated; touch keeps taps).
+- **Verified live:** closed-loop controller caught a Carp — mid-reel shot shows ??? + silhouette, catch card shows "41 cm + RARE + NEW!" with confetti visible over the plaza. Zero pageerrors.
+- Gates: `tsc` clean, lint **74/52** (= baseline), tests 32/32.
+- Queued next per the spec: R3 visual-QA hunt (half-buried trees / sideways assets) → R2 cliff highlands (David's retention pick) → R4 fishing follow-ups → Museum sprint after rulings.
+
 ### 2026-07-22 — Fishing reel minigame (Stardew-style, horizontal) + rarity system — David ask
 
 David: "replicate Stardew Valley's fishing mechanic — left click to hold bar, fish icon shows where it needs to be, bar horizontal" + "more fish variety with fish rarity." Rewrote `FishingOverlay.tsx` (243 → ~560 lines); no other game files touched (world E handler contract `tsi:fish-start` / `tsi:fish-caught` and FishCatchFX unchanged).
