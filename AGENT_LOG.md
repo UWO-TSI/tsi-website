@@ -108,6 +108,18 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-22 — Fishing reel minigame (Stardew-style, horizontal) + rarity system — David ask
+
+David: "replicate Stardew Valley's fishing mechanic — left click to hold bar, fish icon shows where it needs to be, bar horizontal" + "more fish variety with fish rarity." Rewrote `FishingOverlay.tsx` (243 → ~560 lines); no other game files touched (world E handler contract `tsi:fish-start` / `tsi:fish-caught` and FishCatchFX unchanged).
+
+- **State machine gains `reeling`:** cast → wait → bite (1.4s, now hookable by E OR left-click, capture-phase so click-to-move can't fire) → **reel** → caught/missed. ESC concedes mid-reel.
+- **The reel (horizontal Stardew):** cozy cream card, water-gradient track, green catch bar (25% width), species icon riding the track. Hold LMB (or E/Space — touch works via Pointer Events) → bar accelerates right; release → gravity pulls it left; damped velocity, soft bounce at the left edge, clamp right. Progress fills while the fish is inside (0.26/s), drains outside (0.17 + 0.09·diff /s), starts at 0.35; full = caught, empty = escaped. Physics + fish AI run in one rAF writing styles via refs — zero React re-renders per frame.
+- **Fish AI:** eases toward retargets on a rarity-scaled timer with darts (2.4× speed, chance 0.12 + 0.55·diff); spawns near the resting bar so the opening moment is winnable (Stardew's bottom spawn).
+- **Rarity system:** 4 weighted tiers over the 10 species — common 100 (dace, pale chub, pond smelt, crucian), uncommon 42 (bluegill, goldfish, carp), rare 15 (black bass, catfish), legendary 5 (golden koi). Colored rarity chips on the reel card + the catch card. ACNH-style availability: pale chub 6-18h, bluegill 9-16h, catfish night-or-rain, koi legendary weight ×2 in rain. Hour source respects the lab clock (`getLabHour`), so /lab/world's time scrub also tests availability windows.
+- New species later = one row in the FISH table (+ CollectionBook entry once model/icon ships; the dump's Creatures/ set has more to extract on David's machine).
+- **Verified live (Playwright):** full flow end-to-end zero pageerrors; a closed-loop bang-bang controller (hold iff fish right of bar center, 60ms tick) actually **caught a Dace** — the reel is winnable by tracking; escape path verified separately ("It got away…"). Fill rate then tuned 0.32→0.26 so perfect play ≈2.5s, human play ≈4-6s per common fish.
+- Gates: `tsc` clean, lint **74/52** (= baseline), tests 32/32, build ✓.
+
 ### 2026-07-22 — TSI Lab: separated local testing unit (/lab) — David ask
 
 David: "local testing environments for different skies, biomes, items — a separated local testing unit for experimental stuff." Successor to the water-harness replicas, mounting the REAL game code so there's no lab↔game drift. Dev-only: layout + assets API 404 in production builds (verified in the build manifest — routes compile but gate on NODE_ENV).
