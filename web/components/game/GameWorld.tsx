@@ -26,6 +26,7 @@ import { AudioManager } from "@/lib/game/audio";
 import { WarmupProbe, LoadGateOverlay } from "./LoadGate";
 import RainFX from "./RainFX";
 import { getTodayWeather, type Weather } from "@/lib/game/weather";
+import { getLabHour, labSubscribe } from "@/lib/game/devLab";
 import { coastDist, beachWidthShift, COAST_GLSL } from "@/lib/game/coast";
 import { CloudShadows, NightStars, WaterSparkles, LeafGusts, NightWindows, TargetGlow } from "./AmbienceFX";
 import AmbientLife from "./AmbientLife";
@@ -342,7 +343,8 @@ function TimeOfDayCycle({ weather, todPhase, shadowsOn, playerPosRef }: { weathe
 
   useFrame(() => {
     const now = new Date();
-    const h = now.getHours() + now.getMinutes() / 60;
+    // /lab/world scrubs time via getLabHour(); null (always, in prod) = wall clock.
+    const h = getLabHour() ?? now.getHours() + now.getMinutes() / 60;
 
     // Find bounding keyframes
     let ai = TOD_KEYS.length - 1, bi = 0;
@@ -1035,13 +1037,18 @@ function hourToPhase(h: number): "day" | "night" | "dawn" | "dusk" {
 // shell (for the DOM-mounted AudioController). 60s tick matches A6.
 function useTodPhase(): "day" | "night" | "dawn" | "dusk" {
   const [phase, setPhase] = useState<"day" | "night" | "dawn" | "dusk">(() =>
-    hourToPhase(new Date().getHours()),
+    hourToPhase(getLabHour() ?? new Date().getHours()),
   );
   useEffect(() => {
-    const id = setInterval(() => {
-      setPhase(hourToPhase(new Date().getHours()));
-    }, 60_000);
-    return () => clearInterval(id);
+    const tick = () => setPhase(hourToPhase(getLabHour() ?? new Date().getHours()));
+    const id = setInterval(tick, 60_000);
+    // /lab/world time scrub: phase flips instantly instead of waiting for
+    // the 60s tick. labSubscribe is a no-op unsubscriber in production.
+    const unsub = labSubscribe(tick);
+    return () => {
+      clearInterval(id);
+      unsub();
+    };
   }, []);
   return phase;
 }

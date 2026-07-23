@@ -108,6 +108,19 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-22 — TSI Lab: separated local testing unit (/lab) — David ask
+
+David: "local testing environments for different skies, biomes, items — a separated local testing unit for experimental stuff." Successor to the water-harness replicas, mounting the REAL game code so there's no lab↔game drift. Dev-only: layout + assets API 404 in production builds (verified in the build manifest — routes compile but gate on NODE_ENV).
+
+- **`/lab/world`** — the actual island + an EXPERIMENT panel: live time-of-day scrub (0-24 + dawn/noon/dusk/night presets), weather force via the existing `?sunny/?cloudy/?rain` QA hooks (remount), spawn presets (village/`?beach`), seasonal-palette override with per-key color pickers (no draft rows needed), pastel-grade sliders (desat / warm-cast / black-lift — answers the open AC verdict in minutes), Copy-values-as-JSON for baking.
+- **`/lab/item`** — isolated GLB inspector: browses every `.glb` under `public/` (dev API `/api/lab/assets`), orbit to top-down (the sideways-skin-bake catcher), +90°X fix toggle, 1.4u player-height reference, bbox + mesh/material readout.
+- **Store:** `web/lib/game/devLab.ts` — module store, cached-snapshot `useSyncExternalStore` (audio-manager pattern), every accessor hard no-ops under `NODE_ENV=production`.
+- **Game hooks (additive, 3 sites):** `TimeOfDayCycle` h + `useTodPhase` read `getLabHour() ?? wall-clock` (with a lab subscription so phase flips instantly on scrub); `useActivePalette` paints a lab palette over the resolved live/preview one; `PostFX` drives the pastel uniforms from lab grade (null restores shipped constants).
+- Verified end-to-end via Playwright: night scrub at 22:00 renders full night (moon, lamps, lit windows), halloween palette override recolors live, stone-lantern loads in the inspector with correct measurements. Zero pageerrors.
+- Gates: `tsc` clean, lint **74/52** (= baseline), tests 32/32, build ✓ with `/lab/*` + `/api/lab/assets` registered.
+
+Roadmap companion written by reviewer: `specs/roadmap-game-world.md` (Lab workflow, Phase A pre-launch polish incl. cliff system, Phase B seasonal content machine, Phase C big rocks).
+
 ### 2026-07-14 (evening) — Organic island + continuous game-feel loop (`94b518b`…, ongoing)
 
 David's rulings: rain opacity down; "island should not be just a circle — organic shape, organic terrain"; then a standing loop: find visual inconsistencies + game-feel ideas, implement, screenshot-QA, repeat, do not stop.

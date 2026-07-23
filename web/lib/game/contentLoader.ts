@@ -9,8 +9,12 @@
 // the named draft row from content_drafts and overlay it on the matching
 // table. Falls back to live data if the draft is missing or shape-mismatched.
 
+import { useSyncExternalStore } from "react";
 import useSWR from "swr";
 import { createClient } from "@/lib/supabase/client";
+import { getLabPalette, labSubscribe } from "./devLab";
+
+const getNullLabPalette = () => null;
 import {
   DEFAULT_EMOTE_TYPES,
   DEFAULT_NPC_PERSONAS,
@@ -299,8 +303,12 @@ export function useActivePalette(options?: { previewDraftId?: string | null }) {
     },
     SWR_OPTS,
   );
+  // /lab/world palette bench: a dev-only override painted over whatever the
+  // live/preview palette resolved to. getLabPalette is null always in prod.
+  const labPalette = useSyncExternalStore(labSubscribe, getLabPalette, getNullLabPalette);
+  const resolved = data ?? defaultActivePalette();
   return {
-    data: data ?? defaultActivePalette(),
+    data: labPalette ? { ...resolved, palette: labPalette } : resolved,
     isLoading,
     error,
   };

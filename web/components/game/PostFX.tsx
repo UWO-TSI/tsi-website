@@ -20,8 +20,9 @@
  *    never garish" law.
  */
 
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { EffectComposer, Bloom, Vignette } from "@react-three/postprocessing";
+import { useLabState } from "@/lib/game/devLab";
 import { BlendFunction, Effect } from "postprocessing";
 import { Uniform, Vector3 } from "three";
 
@@ -72,6 +73,25 @@ interface PostFXProps {
 
 export default function PostFX({ enabled = true, vignetteDarkness = 0.4, bloom = false, bloomIntensity = 0.55 }: PostFXProps) {
   const pastel = useMemo(() => new PastelEffect(), []);
+  // /lab/world grade bench: drive the pastel uniforms live from lab sliders
+  // (serves the open AC-snapshot grade verdict). lab.grade is null always in
+  // production; null restores the shipped constants.
+  const lab = useLabState();
+  useEffect(() => {
+    const g = lab.grade;
+    const desat = pastel.uniforms.get("uDesat")!;
+    const cast = pastel.uniforms.get("uWarmCast")!.value as Vector3;
+    const lift = pastel.uniforms.get("uBlackLift")!.value as Vector3;
+    if (!g) {
+      desat.value = 0.14;
+      cast.set(1.03, 1.0, 0.94);
+      lift.set(0.05, 0.042, 0.032);
+      return;
+    }
+    desat.value = g.desat;
+    cast.set(1 + 0.03 * g.warm, 1.0, 1 - 0.06 * g.warm);
+    lift.set(0.05 * g.lift, 0.042 * g.lift, 0.032 * g.lift);
+  }, [lab, pastel]);
   if (typeof window !== "undefined" && window.location.search.includes("nofx")) return null;
   if (!enabled) return null;
   return (
