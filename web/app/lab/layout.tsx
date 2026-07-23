@@ -35,6 +35,7 @@ export default function LabLayout({ children }: { children: React.ReactNode }) {
         <span style={{ color: "#FFD166", letterSpacing: "0.12em" }}>TSI LAB</span>
         <Link href="/lab" style={{ color: "#c9d1d6" }}>Index</Link>
         <Link href="/lab/world" style={{ color: "#c9d1d6" }}>World bench</Link>
+        <Link href="/lab/fishing" style={{ color: "#c9d1d6" }}>Fishing bench</Link>
         <Link href="/lab/item" style={{ color: "#c9d1d6" }}>Item bench</Link>
         <span style={{ marginLeft: "auto", color: "#8a939a" }}>dev-only · 404 in production</span>
       </nav>

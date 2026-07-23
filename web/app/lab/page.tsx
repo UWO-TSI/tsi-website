@@ -7,6 +7,11 @@ const CARDS = [
     desc: "The real island with experiment knobs: scrub time of day (skies), force weather, override the seasonal palette live, drive the pastel-grade uniforms, spawn presets. Try a look here, screenshot it, get the verdict, bake the values into the game.",
   },
   {
+    href: "/lab/fishing",
+    title: "Fishing bench",
+    desc: "Fight any species directly (no cast RNG), force mystery vs known, preview each tier's catch celebration, and validate rarity odds with a 1000-cast simulator under any hour/weather.",
+  },
+  {
     href: "/lab/item",
     title: "Item bench",
     desc: "Isolated GLB inspector for the asset dump: browse every .glb under public/, orbit + top-down (catches sideways skin-bakes), player-height reference for scale, bounding-box + material readout.",
