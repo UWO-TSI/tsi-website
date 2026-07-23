@@ -12,6 +12,7 @@ export default function OnboardingPage() {
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   // Profile fields
   const [displayName, setDisplayName] = useState("");
@@ -46,24 +47,78 @@ export default function OnboardingPage() {
     }
   }, [router]);
 
+  /**
+   * Soft-lock fix (David report, 2026-07-22). The old finish PATCHed
+   * /api/profile with `onboarding_completed: true` — but that field isn't
+   * in ProfileUpdateSchema, so zod silently STRIPPED it (and numeric
+   * `year` failed validation outright). The flag never persisted, the
+   * middleware bounced /student/dashboard back here, and the button spun
+   * on "Saving..." forever.
+   *
+   * The real contract is POST /api/onboarding: a sequential 4-step machine
+   * that sets onboarding_completed at step 4 and awards the sanctioned
+   * 100 TC welcome bonus. Walk it from wherever the member left off, send
+   * profile basics on step 2 (year stays a STRING — "1st Year"), and send
+   * skills + social links via the profile PATCH (those ARE in its schema,
+   * best-effort). Any hard failure re-enables the button with an error.
+   */
   const handleFinish = async () => {
     setSaving(true);
+    setSaveError(null);
     try {
-      await fetch("/api/profile", {
+      // Best-effort: skills + socials (valid ProfileUpdateSchema fields).
+      // Not worth blocking entry to the game if this one fails.
+      void fetch("/api/profile", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          display_name: displayName || undefined,
-          bio: bio || undefined,
-          year: year ? parseInt(year) || undefined : undefined,
           skills: skills.length > 0 ? skills : undefined,
           social_links: { github: github || undefined, linkedin: linkedin || undefined, website: website || undefined },
-          onboarding_completed: true,
         }),
-      });
+      }).catch(() => {});
+
+      // Where did this member leave off?
+      const statusRes = await fetch("/api/onboarding");
+      if (!statusRes.ok) throw new Error(`status ${statusRes.status}`);
+      const status = (await statusRes.json()) as { completed: boolean; current_step: number; total_steps: number };
+      if (status.completed) {
+        router.push("/student/dashboard");
+        return;
+      }
+
+      // Advance sequentially to the final step (the API enforces order).
+      for (let s = (status.current_step ?? 0) + 1; s <= (status.total_steps ?? 4); s++) {
+        const res = await fetch("/api/onboarding", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            step: s,
+            profile_data:
+              s === 2
+                ? {
+                    display_name: displayName || undefined,
+                    bio: bio || undefined,
+                    year: year || undefined,
+                  }
+                : undefined,
+          }),
+        });
+        // 409 = already completed (double-click / another tab) — that's a win.
+        if (res.status === 409) break;
+        if (!res.ok) {
+          const d = await res.json().catch(() => null);
+          throw new Error(d?.error ?? `step ${s} failed (${res.status})`);
+        }
+      }
+
       router.push("/student/dashboard");
-    } catch {
+    } catch (e) {
       setSaving(false);
+      setSaveError(
+        e instanceof Error && e.message
+          ? `Couldn't save: ${e.message}. Try again — your answers are still here.`
+          : "Couldn't save your profile. Try again — your answers are still here."
+      );
     }
   };
 
@@ -94,6 +149,15 @@ export default function OnboardingPage() {
             onFinish={handleFinish}
             saving={saving}
           />
+        )}
+        {saveError && (
+          <div
+            role="alert"
+            className="mt-4 rounded-lg px-4 py-3 text-sm"
+            style={{ background: "rgba(229, 72, 77, 0.12)", border: "1px solid rgba(229, 72, 77, 0.4)", color: "#E5484D" }}
+          >
+            {saveError}
+          </div>
         )}
       </div>
     </div>

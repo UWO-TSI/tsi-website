@@ -108,6 +108,14 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-22 — CRITICAL: new-user onboarding soft-lock fixed (David report) + /lab/fishing bench
+
+**Soft-lock root cause (every new member hit this):** the onboarding page's finish button PATCHed `/api/profile` with `onboarding_completed: true` — but that field isn't in `ProfileUpdateSchema`, so zod silently STRIPPED it; and it sent `year` as a number (`parseInt("1st Year")` → 1) against a `z.string()` field, a hard 400 for anyone who picked a year. Either way the flag never persisted → `router.push("/student/dashboard")` → middleware bounced back to `/student/onboarding` (same route, no remount) → the button spun "Saving..." forever. Bonus casualty: the dedicated `POST /api/onboarding` 4-step machine (which sets the flag AND awards the sanctioned 100 TC welcome bonus) was never called by the page at all — no new member has ever received the welcome bonus.
+
+**Fix (`onboarding/page.tsx`):** finish now (1) best-effort PATCHes skills + social_links (the fields actually in the profile schema), (2) GETs `/api/onboarding` for `current_step`, (3) POSTs the remaining steps sequentially with profile basics (display_name/bio/year as a STRING) on step 2, treating 409 already-completed as success, (4) routes to the dashboard only after the machine completes. Failures re-enable the button with a visible error banner (`role="alert"`) instead of the infinite spinner.
+
+**/lab/fishing bench (David ask, committed `cb7c72c`):** fishing data extracted to `lib/game/fishing.ts` (single source of truth), `ReelMinigame` exported. Bench: fight any species directly (no cast RNG), mystery toggle, per-tier celebration preview, live roll-% per species under any hour/weather (hour input shares the devLab clock; weather via the existing URL overrides), 1000-cast rarity simulator. Verified live: koi fight in mystery mode, sim distribution matches the weight table, off-window species grey out correctly.
+
 ### 2026-07-22 — Refinement round from David's playtest interview (fishing v2 + feel pass)
 
 Structured playtest interview → `specs/sprint-2026-07-refinement.md` (includes the new **TSI Art Museum** feature sketch — paint stations, TC donations as votes, year-end permanent archive — 3 economy/placement rulings queued for David). R1 shipped same session:
