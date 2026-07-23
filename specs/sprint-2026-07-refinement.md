@@ -41,6 +41,8 @@ David: "trees are cut in half, assets are sideways, needs QA and double look."
 
 ## R4 — Fishing follow-ups (small, after R2/R3)
 
+- **Fish-asset audit result (2026-07-22, subagent sweep):** the repo ships exactly **10 fish** end-to-end (10 GLBs in `assets/acnh/fish/` → 10 icons → 10 FISH/CollectionBook rows). The other ~70 ACNH fish exist only in the external dump (`~/Downloads/GLB`, laptop — not on the desktop, checked). The FBX→GLB converters are committed, but the icon-render harness and the orientation/LUT-normalize steps were ad-hoc and never committed.
+- **Fish expansion plan (blocked on dump access):** David copies the dump's fish set to a reachable path (or runs extraction on the laptop). Then: (1) commit a repeatable icon harness (headless three.js render → transparent 128px PNG — replaces the lost ad-hoc one), (2) batch-verify orientation via the `/lab/item` doctrine, (3) fill the 6-tier ladder with real ACNH species data (legendary gets real fish — stringfish/golden trout class; Sea King crown to coelacanth/oarfish/whale-shark class, koi drops to legendary per the "Both" ruling), (4) FISH + CollectionBook rows, availability windows per species. This is the point where the fishing loop gets ACNH-deep. Subagent-friendly batch job.
 - Marquee fish extraction (David's machine, dump `Creatures/`): the new crown takes Sea King, koi drops to legendary per the "Both" ruling. One FISH row + CollectionBook row + icon render.
 - Personal-best sizes: needs a `member_collections` size column (migration — **on hold** with the rest, fold into the Launch Track L1 batch).
 - Collection Book: show rarity chips + sizes there too once sizes persist.
