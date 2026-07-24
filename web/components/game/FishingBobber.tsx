@@ -17,10 +17,11 @@
  */
 
 import { useEffect, useRef, useState } from "react";
-import { useFrame } from "@react-three/fiber";
+import { useFrame, useThree } from "@react-three/fiber";
 import { Billboard, Html } from "@react-three/drei";
 import * as THREE from "three";
 import { AudioManager } from "@/lib/game/audio";
+import { getCameraForwardXZ } from "@/lib/game/cameraBasis";
 
 interface CastDetail {
   x: number;
@@ -29,6 +30,7 @@ interface CastDetail {
 }
 
 export default function FishingBobber({ playerPosRef }: { playerPosRef: React.MutableRefObject<THREE.Vector3> }) {
+  const { camera } = useThree();
   const [active, setActive] = useState(false);
   const [bite, setBite] = useState(false);
   const [rings, setRings] = useState<{ id: number; x: number; z: number; big: boolean }[]>([]);
@@ -52,7 +54,12 @@ export default function FishingBobber({ playerPosRef }: { playerPosRef: React.Mu
     const onCast = (e: Event) => {
       const d = (e as CustomEvent<CastDetail>).detail;
       const p = playerPosRef.current;
-      const dir = new THREE.Vector3(d.x - p.x, 0, d.z - p.z);
+      // Cast along the CAMERA's forward (bug fix 2026-07-24: spot−player
+      // flipped sign when the player stood past the marker — the hook flew
+      // backwards onto land). The player faces away from the camera, so
+      // forward always throws into the scene.
+      const fwd = getCameraForwardXZ(camera);
+      const dir = new THREE.Vector3(fwd.fx, 0, fwd.fz);
       if (dir.lengthSq() < 0.01) dir.set(0, 0, 1);
       else dir.normalize();
       // Power = visibly longer throw past the spot marker.

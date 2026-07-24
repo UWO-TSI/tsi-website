@@ -25,6 +25,7 @@ import * as THREE from "three";
 import { sampleTerrainHeightFast } from "./terrain";
 import { setActiveCritters, todayCritterSeed, type ActiveCritter } from "@/lib/game/critterStore";
 import { AudioManager } from "@/lib/game/audio";
+import { collect } from "@/lib/game/collections";
 
 type Motion = "flutter" | "dart" | "perch" | "drift" | "crawl";
 
@@ -170,11 +171,7 @@ export default function Critters({
       catchStartRef.current[slot] = performance.now();
       AudioManager.playSFX("confirm");
       window.dispatchEvent(new CustomEvent("tsi:toast", { detail: { text: `You caught ${sp.sp.label}!`, icon: `/assets/acnh/icons/${sp.sp.key}.png` } }));
-      fetch("/api/collections", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ item_key: sp.sp.key }),
-      }).catch(() => {});
+      collect(sp.sp.key);
     };
     window.addEventListener("tsi:critter-catch", onCatch);
     return () => window.removeEventListener("tsi:critter-catch", onCatch);

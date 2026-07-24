@@ -108,6 +108,14 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-24 — Loop iter 4 (David bug batch): collections local-first + bobber direction + instanced culling
+
+1. **Fish/forage/flowers missing from Items** — every catch POSTed /api/collections which 401s without a session (always, on the env-less preview) and the item vanished. New `lib/game/collections.ts`: `collect()` records to localStorage AND posts; all 4 call sites swapped (fishing, critters, flowers, tree-shake); CollectionBook merges local with server (max per key). E2E-verified: bot caught a Black Bass → `tsi.collections.local.v1` holds it.
+2. **Hook thrown backwards onto land** — `spot − player` flipped sign when standing past the marker. Bobber now casts along the CAMERA forward (`getCameraForwardXZ`) — always into the scene.
+3. **Blossom still half-rendered** — second cause beyond FrontSide: drei `<Instances>` shares one geometry bounding sphere, so whole petal sub-meshes frustum-culled at off-center angles. `frustumCulled={false}` on all instanced groups.
+
+Pending from the batch: idle firefly glow around a stationary player (next iter). Gates: tsc clean, 74/52, zero pageerrors in E2E.
+
 ### 2026-07-24 — Loop iter 3: dump→game calibration measured + baked
 
 `scripts/glb-bbox.mjs` (GLB JSON-chunk bounds reader, no engine) measured repo koi 0.393×0.895×0.434 vs dump FishKoi 3.934×4.339×9.004 → the rip is exactly **10× game scale** with long-axis Z (game uses Y): import transform = **scale 0.1 + rotate +90°X**, exported as GAME_CALIBRATION from organize-dump.mjs. Arowana confirms the family pattern (12.3 long-axis Z raw ≈ 1.23 game — big fish, correct). Applies at import time; per-family visual verify via /lab/item.

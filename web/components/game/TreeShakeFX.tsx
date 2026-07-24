@@ -20,6 +20,7 @@ import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { getTerrainHeight } from "./terrain";
 import { AudioManager } from "@/lib/game/audio";
+import { collect } from "@/lib/game/collections";
 
 const CANOPY_Y = 3.1;
 const LEAVES_PER_SHAKE = 12;
@@ -178,11 +179,7 @@ function ShakeBurst({ burst, playerPosRef, onDone }: { burst: Burst; playerPosRe
           collectedRef.current = true;
           window.dispatchEvent(new CustomEvent("tsi:toast", { detail: { text: `You got ${burst.fruit.label}!`, icon: `/assets/acnh/icons/${burst.fruit.key}.png` } }));
           AudioManager.playSFX("confirm");
-          fetch("/api/collections", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ item_key: burst.fruit.key }),
-          }).catch(() => {});
+          collect(burst.fruit.key);
         }
       }
     }

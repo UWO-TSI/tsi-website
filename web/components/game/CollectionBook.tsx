@@ -10,6 +10,7 @@
  */
 
 import { useEffect, useState } from "react";
+import { mergeWithLocal } from "@/lib/game/collections";
 import { X } from "lucide-react";
 
 interface Row {
@@ -100,10 +101,12 @@ export default function CollectionBook({ open, onClose }: { open: boolean; onClo
     let cancelled = false;
     fetch("/api/collections")
       .then((r) => (r.ok ? r.json() : { collections: [] }))
+      .catch(() => ({ collections: [] }))
       .then((d: { collections?: Row[] }) => {
         if (cancelled) return;
         const map: Record<string, number> = {};
         for (const row of d.collections ?? []) map[row.item_key] = row.count;
+        Object.assign(map, mergeWithLocal(map));
         setCounts(map);
       })
       .catch(() => {})

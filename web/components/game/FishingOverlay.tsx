@@ -29,6 +29,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import FishReveal from "./FishReveal";
 import { AudioManager } from "@/lib/game/audio";
+import { collect } from "@/lib/game/collections";
 import { punchZoom, setTensionZoom } from "@/lib/game/cameraJuice";
 import {
   CAST,
@@ -195,11 +196,7 @@ export default function FishingOverlay() {
         setCaughtSize(rollSize(fish.sizeCm));
         // Signals the "catch a fish" onboarding quest (auto-complete).
         window.dispatchEvent(new CustomEvent("tsi:fish-caught", { detail: { key: fish.key, model: fish.model } }));
-        fetch("/api/collections", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ item_key: fish.key }),
-        }).catch(() => {});
+        collect(fish.key);
         if (isNew) {
           // Blind-box ceremony (David 2026-07-23): first catches get the
           // fullscreen staged reveal — it owns the celebration (confetti

@@ -84,6 +84,7 @@ export default function InstancedGLB({
     <>
       {subMeshes.map((sm, i) => (
         <Instances
+          frustumCulled={false}
           key={i}
           // Limit — drei default is 1000, more than enough for our scene.
           limit={Math.max(placements.length, 16)}
