@@ -108,6 +108,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-24 — Loop iter 5: idle fireflies (David ask)
+
+`IdleFireflies.tsx` mounted beside the player: stand still ~3s → six warm glow-motes fade in and orbit WHERE you stopped (anchor is captured, not tracked) — walk away and they stay behind and fade out, never following. Pulsing emissive, all refs in one useFrame, zero per-frame React. Gates: tsc clean, 74/52.
+
 ### 2026-07-24 — Loop iter 4 (David bug batch): collections local-first + bobber direction + instanced culling
 
 1. **Fish/forage/flowers missing from Items** — every catch POSTed /api/collections which 401s without a session (always, on the env-less preview) and the item vanished. New `lib/game/collections.ts`: `collect()` records to localStorage AND posts; all 4 call sites swapped (fishing, critters, flowers, tree-shake); CollectionBook merges local with server (max per key). E2E-verified: bot caught a Black Bass → `tsi.collections.local.v1` holds it.

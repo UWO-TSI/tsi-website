@@ -36,6 +36,7 @@ import NPCChatOverlay from "./NPCChatOverlay";
 import EmoteMenu from "./EmoteMenu";
 import FishingOverlay from "./FishingOverlay";
 import FishingBobber from "./FishingBobber";
+import IdleFireflies from "./IdleFireflies";
 import CollectionBook from "./CollectionBook";
 import ControlsOverlay from "./ControlsOverlay";
 import WelcomeOverlay from "./WelcomeOverlay";
@@ -2096,6 +2097,7 @@ function Scene({
 
       <PlayerAvatar spawnPosition={spawnOverride() ?? spawn ?? SPAWN_POSITION} onMove={handlePlayerMove} playerName={playerName} playerLevel={playerLevel} activeEmote={activeEmote} />
       <FishingBobber playerPosRef={playerPosRef} />
+      <IdleFireflies playerPosRef={playerPosRef} />
 
     </>
   );
