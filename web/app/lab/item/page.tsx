@@ -12,6 +12,7 @@
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls, useGLTF } from "@react-three/drei";
+import { clone as cloneSkeleton } from "three/examples/jsm/utils/SkeletonUtils.js";
 import * as THREE from "three";
 
 interface Measure {
@@ -30,7 +31,9 @@ function Model({
   onMeasure: (m: Measure) => void;
 }) {
   const { scene } = useGLTF(url);
-  const cloned = useMemo(() => scene.clone(true), [scene]);
+  // SkeletonUtils.clone: skinned dump models ignore the fixRot wrapper with
+  // a plain clone (they stay bound to the original skeleton).
+  const cloned = useMemo(() => cloneSkeleton(scene), [scene]);
 
   useEffect(() => {
     const box = new THREE.Box3().setFromObject(cloned);
