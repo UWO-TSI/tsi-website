@@ -108,6 +108,12 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-23 — Blind-box first-catch reveal (David ruling) + holographic Sea King
+
+- **Sea King goes holographic** (`5ff12b8`): animated iridescent gradient chip + shine glow everywhere the tier renders (catch card, bench detail/list/sim), rainbow-cycling halo on Sea King catch cards. `HOLO_GRADIENT` shared from `lib/game/fishing.ts`.
+- **FishReveal.tsx (new, `c5dfd38`)** — the gacha ceremony for FIRST catches only (David's four calls: fullscreen takeover / tier telegraph / cinematic 1→4s + skippable / repeats keep the quick card). Three stages from the shared `REVEAL` config: suspense (dim+blur world, black silhouette shakes with quadratically ramping amplitude via rAF, tier-colored glow builds — Sea King leaks the holo shimmer — rotating gacha rays from rare up), flash (tier-tinted flare + confetti + SFX), landed (silhouette resolves to color with a pop, name + holo/tier chip + NEW! + size slide in, tier-scaled hold). Click/E/Space/Esc skips suspense; prefers-reduced-motion collapses it. FishingOverlay routes `isNew` catches to `revealing` (the reveal owns the celebration); repeats keep the quick card + confetti path. Bench gains "Preview first-catch reveal" per species.
+- Verified live: Sea King preview screenshots show the silhouette+holo-telegraph suspense and the confetti-storm landed frame; zero pageerrors. Gates: tsc clean, lint 74/52 (= baseline).
+
 ### 2026-07-22 — CRITICAL: new-user onboarding soft-lock fixed (David report) + /lab/fishing bench
 
 **Soft-lock root cause (every new member hit this):** the onboarding page's finish button PATCHed `/api/profile` with `onboarding_completed: true` — but that field isn't in `ProfileUpdateSchema`, so zod silently STRIPPED it; and it sent `year` as a number (`parseInt("1st Year")` → 1) against a `z.string()` field, a hard 400 for anyone who picked a year. Either way the flag never persisted → `router.push("/student/dashboard")` → middleware bounced back to `/student/onboarding` (same route, no remount) → the button spun "Saving..." forever. Bonus casualty: the dedicated `POST /api/onboarding` 4-step machine (which sets the flag AND awards the sanctioned 100 TC welcome bonus) was never called by the page at all — no new member has ever received the welcome bonus.
