@@ -10,7 +10,7 @@
  * (?sunny/?cloudy/?rain, ?beach).
  */
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import {
   resetLab,
   setLabFov,
@@ -75,6 +75,17 @@ function setSearchParams(params: Record<string, string | null>) {
 export default function LabPanel({ onRemount }: { onRemount: () => void }) {
   const lab = useLabState();
   const [collapsed, setCollapsed] = useState(false);
+  // Hydration-safe weather: getTodayWeather() reads window.location on the
+  // client but not during SSR, so ?rain=1 sessions mismatched the server
+  // text ("sunny" vs "rain") and threw a hydration pageerror on every
+  // overridden lab load. First client render matches the server, then the
+  // real value swaps in post-mount.
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  );
+  const weather = mounted ? getTodayWeather() : "sunny";
 
   const hourLabel =
     lab.hour === null
@@ -259,7 +270,7 @@ export default function LabPanel({ onRemount }: { onRemount: () => void }) {
           </Section>
 
           {/* Color grade — full slider rig, saved per weather (David 2026-07-23) */}
-          <Section title={`Color grade — tuning for: ${getTodayWeather()}`}>
+          <Section title={`Color grade — tuning for: ${weather}`}>
             <label style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 6 }}>
               <input
                 type="checkbox"
@@ -284,22 +295,22 @@ export default function LabPanel({ onRemount }: { onRemount: () => void }) {
                 <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginTop: 6 }}>
                   <button
                     onClick={() => {
-                      try { localStorage.setItem(gradeStorageKey(getTodayWeather()), JSON.stringify(lab.grade)); } catch { /* ignore */ }
+                      try { localStorage.setItem(gradeStorageKey(weather), JSON.stringify(lab.grade)); } catch { /* ignore */ }
                     }}
                     style={btn(true)}
                   >
-                    Save → {getTodayWeather()}
+                    Save → {weather}
                   </button>
                   <button
                     onClick={() => {
                       try {
-                        const raw = localStorage.getItem(gradeStorageKey(getTodayWeather()));
+                        const raw = localStorage.getItem(gradeStorageKey(weather));
                         if (raw) setLabGrade(JSON.parse(raw) as Grade);
                       } catch { /* ignore */ }
                     }}
                     style={btn()}
                   >
-                    Load {getTodayWeather()}
+                    Load {weather}
                   </button>
                   <button
                     onClick={() => {

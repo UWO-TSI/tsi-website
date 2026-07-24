@@ -108,6 +108,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-24 — Loop wake 32: full-gates verification sweep + lab hydration fix
+
+Periodic full sweep after ~10 loop features: **prod build compiles clean** (first full build since the weather/HUD/fish/brick run), **full-project lint exactly 74/52 = baseline** (zero drift all day), 32/32 tests. Overlay sweep (all 6 dock overlays + chips + emote + jump/sprint, plus the three lab benches) surfaced ONE real bug: /lab/world with a weather override threw a hydration pageerror — LabPanel rendered `getTodayWeather()` during SSR where ?rain=1 is invisible ("sunny" server text vs "rain" client). Fixed with the useSyncExternalStore mount gate (same pattern as the icon stage); all grade save/load spots now read the gated value. Re-swept: zero pageerrors everywhere. Note for David: on /lab/world the minimap + weather chips sit UNDER the experiment panel (panel overlays that corner by design — visible fine in the real game).
+
 ### 2026-07-24 — Loop wake 31: brick plaza footstep taps
 
 Steps on the new brick plaza now play a hard pavement tap (blip3, joining the bridge's wood knock in the surface trio) and dry brick kicks no dust — rain days still splash puddle rings on the pavement. Same cheap AABB check as the bridge inside the existing footstep tick (rect matches RoadTiles' PLAZA). Verified: WASD walk across the spawn plaza + off it, zero pageerrors. Gates: tsc clean, PlayerAvatar lint-clean, 32/32, world 200.
