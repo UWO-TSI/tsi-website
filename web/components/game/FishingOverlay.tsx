@@ -707,25 +707,45 @@ export function ReelMinigame({
           50% { box-shadow: 0 0 10px 2px rgba(255, 209, 102, 0.85); }
         }
       `}</style>
-      {/* Header: species (or ??? for unknowns — rarity is never shown here) */}
+      {/* Header: species (or ??? for unknowns — rarity is never shown here).
+          Zone chip is always safe to show — you know where you cast. */}
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
         <span style={{ fontSize: 13, fontWeight: 700, color: "#4A4034" }}>
           {known ? fish.name : "???"}
+        </span>
+        <span
+          style={{
+            fontSize: 9,
+            fontWeight: 700,
+            padding: "1px 7px",
+            borderRadius: 999,
+            background: (fish.zone ?? "river") === "sea" ? "#D2EDF5" : "#E3EFD9",
+            color: (fish.zone ?? "river") === "sea" ? "#2A6B84" : "#4A7A44",
+          }}
+        >
+          {(fish.zone ?? "river") === "sea" ? "🌊 sea" : "🏞 river"}
         </span>
         <span style={{ marginLeft: "auto", fontSize: 10, color: "#8a7f6a" }}>
           hold left-click to push the bar →
         </span>
       </div>
 
-      {/* Horizontal water track */}
+      {/* Horizontal water track — the water reads as the zone you cast into:
+          fresh river blue vs deeper sea teal. */}
       <div
         ref={trackRef}
         style={{
           position: "relative",
           height: 46,
           borderRadius: 10,
-          background: "linear-gradient(180deg, #BFE9FA 0%, #9ED7F2 70%, #8ECBEC 100%)",
-          boxShadow: "inset 0 2px 6px rgba(30, 80, 120, 0.25)",
+          background:
+            (fish.zone ?? "river") === "sea"
+              ? "linear-gradient(180deg, #A9DCE7 0%, #6FBBD6 60%, #4C9FC2 100%)"
+              : "linear-gradient(180deg, #BFE9FA 0%, #9ED7F2 70%, #8ECBEC 100%)",
+          boxShadow:
+            (fish.zone ?? "river") === "sea"
+              ? "inset 0 2px 7px rgba(16, 60, 95, 0.35)"
+              : "inset 0 2px 6px rgba(30, 80, 120, 0.25)",
           overflow: "hidden",
         }}
       >

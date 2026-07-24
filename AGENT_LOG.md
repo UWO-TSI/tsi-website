@@ -108,6 +108,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-24 — Loop wake 28: zone-flavored reel + skinned-GLB audit (clean)
+
+Stability audit first: scanned every shipped GLB's JSON chunk for skins — skinned models exist ONLY under acnh/fish (71) + acnh/sea (10), all already rendering through the SkeletonUtils-fixed paths; no other component is affected (negative result, no fix needed). Then the beat: the reel card now reads as the water you cast into — sea catches get a deeper teal track + a 🌊 sea chip beside the name (river keeps the fresh blue + 🏞), safe under mystery mode since you always know where you cast. Bench-verified Sea Bass vs Dace chips + track tints, zero pageerrors. Gates: tsc clean, FishingOverlay lint-clean, 32/32.
+
 ### 2026-07-24 — Loop wake 27: collection book per-group completion counts
 
 Every group header now carries a right-aligned x/y count (tabular numerals), turning gold with a ✓ when the group completes — the Critterpedia "how far along am I" read, which matters now that Fish is 81 rows. Hidden while the book is loading. Verified live with seeded local catches: FRUIT ✓ 4/4 gold, FLOWERS 0/8, FISH 2/81, global line intact, zero pageerrors. Gates: tsc clean, CollectionBook lint-clean, 32/32.
