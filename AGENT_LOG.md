@@ -108,6 +108,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-24 — Loop wake 26: cast-splash scatter
+
+The bobber's landing plop now spooks nearby fish shadows (radius 6): each darts away from the splash (faces its flee heading with a nervous wiggle), then drifts back to its patrol line over ~2.8s — river breaches pause while spooked. Membership decided once per splash so late drifters don't flinch; module-scope splash record + per-fish ref state, zero per-frame React. Verified with synthetic tsi:fish-cast events over the river stretch and the cove orbit: both flee cycles + returns run with zero pageerrors. Gates: tsc clean, FishShadows lint-clean, 32/32.
+
 ### 2026-07-24 — Loop wake 25c (David ruling): rarity rerank — tight legendary, Sea King VACATED
 
 Full 91-row proposal tabled for David; his rulings: legendary stays TIGHT and no current fish earns Sea King (he supplies new marquee models for the tier). Applied: **legendary = 7** (Golden Koi/Trout/Arowana + Stringfish + Coelacanth/Hammerhead/Sturgeon); **epic = 16** (Arapaima down from Sea King keeping its king-size fight; Great White/Whale Shark/Oarfish/Saw Shark down from legendary; Barreleye up from rare w/ epic movement); Giant Trevally epic→rare, Salmon+Carp rare→uncommon (ACNH-value-true). Sea King tier/holo/ceremony code stays dormant awaiting the new models. Bench-verified all 12 moved/held rows + zero Sea King rows, zero pageerrors; tsc clean, both tables lint-clean, 32/32.

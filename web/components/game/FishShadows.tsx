@@ -11,10 +11,56 @@
  * the shallows. Pure ambience (catching stays in FishingOverlay).
  */
 
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { sampleRiverPoint } from "./River";
+
+// Splash-scatter (loop wake 26): when a cast plops down near a shadow, it
+// darts away from the splash and swims back — ACNH's "you scared it" beat.
+// One module-scope splash record; each fish decides membership ONCE per
+// splash (drifting into range later doesn't spook it).
+const SPLASH = { x: 0, z: 0, at: 0 };
+const FLEE_RADIUS = 6;
+const FLEE_DIST = 2.6;
+const FLEE_MS = 2800;
+
+interface FleeState {
+  seenAt: number;
+  active: boolean;
+  start: number;
+  dx: number;
+  dz: number;
+}
+export function makeFleeState(): FleeState {
+  return { seenAt: 0, active: false, start: 0, dx: 0, dz: 0 };
+}
+
+/** Offset for this frame + whether the fish is in its dart-out beat. */
+function computeFlee(fs: FleeState, fx: number, fz: number): { ox: number; oz: number; dart: boolean } {
+  if (fs.seenAt !== SPLASH.at) {
+    fs.seenAt = SPLASH.at;
+    const dx = fx - SPLASH.x;
+    const dz = fz - SPLASH.z;
+    const d = Math.hypot(dx, dz);
+    if (d < FLEE_RADIUS) {
+      fs.active = true;
+      fs.start = performance.now();
+      const inv = d > 0.01 ? 1 / d : 1;
+      fs.dx = dx * inv;
+      fs.dz = dz * inv;
+    }
+  }
+  if (!fs.active) return { ox: 0, oz: 0, dart: false };
+  const p = (performance.now() - fs.start) / FLEE_MS;
+  if (p >= 1) {
+    fs.active = false;
+    return { ox: 0, oz: 0, dart: false };
+  }
+  // dart out fast, then drift back to the patrol line
+  const out = p < 0.3 ? 1 - Math.pow(1 - p / 0.3, 3) : 1 - (p - 0.3) / 0.7;
+  return { ox: fs.dx * FLEE_DIST * out, oz: fs.dz * FLEE_DIST * out, dart: p < 0.3 };
+}
 
 const RIVER_FISH: { t0: number; t1: number; speed: number; size: number; phase: number }[] = [
   { t0: 0.1, t1: 0.22, speed: 0.014, size: 0.38, phase: 0 },
@@ -72,6 +118,7 @@ const JUMP_LEN = 0.85;
 function RiverFish({ cfg }: { cfg: (typeof RIVER_FISH)[number] }) {
   const ref = useRef<THREE.Mesh>(null);
   const ringRef = useRef<THREE.Mesh>(null);
+  const fleeRef = useRef<FleeState>(makeFleeState());
   useFrame(({ clock }) => {
     const m = ref.current;
     if (!m) return;
@@ -85,20 +132,24 @@ function RiverFish({ cfg }: { cfg: (typeof RIVER_FISH)[number] }) {
     const swayN = Math.sin(time * 0.7 + cfg.phase) * 0.6;
     const fx = position.x - tangent.z * swayN;
     const fz = position.z + tangent.x * swayN;
+    const flee = computeFlee(fleeRef.current, fx, fz);
 
     // Koi breach: once per JUMP_PERIOD the shadow arcs above the surface
-    // with a splash ring — the little "the water is alive" beat.
+    // with a splash ring — the little "the water is alive" beat. Skipped
+    // while spooked (a fleeing fish doesn't celebrate).
     const jt = (time + cfg.phase * 7) % JUMP_PERIOD;
     let y = RIVER_FISH_Y;
-    if (jt < JUMP_LEN) {
+    if (jt < JUMP_LEN && !fleeRef.current.active) {
       const p = jt / JUMP_LEN; // 0..1
       y = RIVER_FISH_Y + Math.sin(p * Math.PI) * 0.42;
       m.rotation.x = Math.sin(p * Math.PI * 2) * 0.9; // flip through the arc
     } else {
       m.rotation.x = 0;
     }
-    m.position.set(fx, y, fz);
-    m.rotation.y = Math.atan2(tangent.x * dir, tangent.z * dir) + Math.sin(time * 5 + cfg.phase) * 0.14;
+    m.position.set(fx + flee.ox, y, fz + flee.oz);
+    m.rotation.y = flee.dart
+      ? Math.atan2(fleeRef.current.dx, fleeRef.current.dz) + Math.sin(time * 9 + cfg.phase) * 0.2
+      : Math.atan2(tangent.x * dir, tangent.z * dir) + Math.sin(time * 5 + cfg.phase) * 0.14;
     m.scale.setScalar(cfg.size);
 
     const ring = ringRef.current;
@@ -126,20 +177,47 @@ function RiverFish({ cfg }: { cfg: (typeof RIVER_FISH)[number] }) {
 
 function SeaFish({ cfg }: { cfg: (typeof SEA_FISH)[number] }) {
   const ref = useRef<THREE.Mesh>(null);
+  const fleeRef = useRef<FleeState>(makeFleeState());
   useFrame(({ clock }) => {
     const m = ref.current;
     if (!m) return;
     const time = clock.elapsedTime;
     const a = time * cfg.speed + cfg.phase;
-    m.position.set(cfg.x + Math.cos(a) * cfg.r, SEA_FISH_Y, cfg.z + Math.sin(a) * cfg.r);
+    const fx = cfg.x + Math.cos(a) * cfg.r;
+    const fz = cfg.z + Math.sin(a) * cfg.r;
+    const flee = computeFlee(fleeRef.current, fx, fz);
+    m.position.set(fx + flee.ox, SEA_FISH_Y, fz + flee.oz);
     // orbit tangent heading (+ wiggle): d/da of (cos,sin) is (-sin,cos)
-    m.rotation.y = Math.atan2(-Math.sin(a), Math.cos(a)) + Math.sin(time * 4.5 + cfg.phase) * 0.15;
+    m.rotation.y = flee.dart
+      ? Math.atan2(fleeRef.current.dx, fleeRef.current.dz) + Math.sin(time * 9 + cfg.phase) * 0.2
+      : Math.atan2(-Math.sin(a), Math.cos(a)) + Math.sin(time * 4.5 + cfg.phase) * 0.15;
     m.scale.setScalar(cfg.size);
   });
   return <mesh ref={ref} geometry={getFishGeometry()} material={getShadowMaterial()} renderOrder={-1} />;
 }
 
 export default function FishShadows() {
+  // The splash lands ~half a second after the cast fires (bobber flight) —
+  // scatter on the plop, not the throw.
+  useEffect(() => {
+    const timers: number[] = [];
+    const onCast = (e: Event) => {
+      const d = (e as CustomEvent).detail as { x?: number; z?: number } | undefined;
+      if (typeof d?.x !== "number" || typeof d?.z !== "number") return;
+      timers.push(
+        window.setTimeout(() => {
+          SPLASH.x = d.x!;
+          SPLASH.z = d.z!;
+          SPLASH.at = performance.now();
+        }, 480)
+      );
+    };
+    window.addEventListener("tsi:fish-cast", onCast);
+    return () => {
+      window.removeEventListener("tsi:fish-cast", onCast);
+      timers.forEach((t) => window.clearTimeout(t));
+    };
+  }, []);
   return (
     <group>
       {RIVER_FISH.map((cfg, i) => (
