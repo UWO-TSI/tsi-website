@@ -2128,6 +2128,10 @@ export default function GameWorld() {
 
   // Active NPC chat target. D5 wires sprite clicks → setActiveNPC inside Scene.
   const [activeNPC, setActiveNPC] = useState<NPCPersona | null>(null);
+  // Loop iter 8: greeting hop — tell the world which NPC just got engaged.
+  useEffect(() => {
+    if (activeNPC) window.dispatchEvent(new CustomEvent("tsi:npc-greet", { detail: { id: activeNPC.id } }));
+  }, [activeNPC]);
 
   // Sprint E2 + E3: emote menu state + active emote bubble on the avatar.
   const [emoteMenuOpen, setEmoteMenuOpen] = useState(false);

@@ -108,6 +108,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-24 — Loop iter 8 (wake 2): NPC greeting hop
+
+Opening a chat now makes that NPC do a hello bounce — GameWorld dispatches `tsi:npc-greet {id}` on activeNPC, NPC.tsx stamps `greetAtRef` and the frame loop reuses the G4 startle-hop arc (read-only trigger: timestamp window + hop latch, keeps the react-compiler happy). Gates: tsc clean, 74/52, world 200.
+
 ### 2026-07-24 — Loop iter 7 (wake 1): wet-sand footstep rings
 
 Footsteps on the beach band (coast-space distance > 48.5, the sand line) now splash a thin pale-blue water RING (wider, thinner spread) instead of kicking dust — FootstepPuff gains a `wet` variant, spawn site checks `coastDist`. Gates: tsc clean, 74/52, world 200.
