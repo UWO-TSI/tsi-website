@@ -108,6 +108,11 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-24 — Loop wake 24b (David ruling): icons flipped head-side-up
+
+All 91 icons re-rendered head-up. Turned out the two model families hang OPPOSITE ways — raw dump exports come out of calibration nose-down, repo-native originals are head-up natively — so the stage flip is raw-only. Spot-checked dace/salmon/hammerhead: eyes and mouths at the top across both families. Bench: 0 broken, 0 generic, zero pageerrors; tsc clean, stage lint-clean.
+
+
 ### 2026-07-24 — Loop wake 24 (David report "why is there no models"): ICON BATCH DONE — the shelved harness's real root cause found
 
 David's screenshot showed the generic blue placeholder on every dump species. Debugging the shelved icon harness found the TRUE root cause (not just the unembedded textures): **the dump fish are SkinnedMeshes, and `scene.clone(true)` keeps the clone bound to the ORIGINAL skeleton** — the mesh ignores every transform on the clone's wrapper (scale/rotate/center), so the stage framed empty space. Fixed with SkeletonUtils.clone in the icon stage, **FishCatchFX (in-game catch display for raw fish was broken the same way)**, and the item bench's fixRot path; stage bounds now use skinning-aware `SkinnedMesh.computeBoundingBox()`; stage-mode CSS strips the lab layout's dark background so omitBackground shots are truly transparent. Harness rewritten to DERIVE its list from the fish tables (`icon: GENERIC_ICON` rows). **Batch: 81/81 rendered** (128px transparent, ACNH hanging pose matching the originals — salmon/hammerhead/coelacanth spot-checked); all `icon: GENERIC_ICON` overrides removed so iconFor() resolves per-key PNGs. Bench-verified: 92 imgs, 0 broken, 0 generic, zero pageerrors. Icon-stage mount gate also de-linted (useSyncExternalStore). Gates: tsc clean, touched files lint-clean, 32/32.

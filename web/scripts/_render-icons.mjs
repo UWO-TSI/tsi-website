@@ -2,8 +2,8 @@
 // 128px PNGs in public/assets/acnh/icons/.
 //
 // Species list is DERIVED from the fish tables (fishing.ts + fishCatalog.ts):
-// every entry carrying `icon: GENERIC_ICON` still needs a real render. After
-// a successful batch, drop those overrides and this list goes to zero.
+// every row with a key + model renders, so a full batch keeps the whole book
+// visually consistent (one pose change re-renders everyone).
 //
 // Usage: node scripts/_render-icons.mjs [--only fish_key]
 import { chromium } from "/Users/DavidLiu/Documents/GitHub/uwotsi/web/node_modules/playwright/index.mjs";
@@ -13,16 +13,15 @@ import path from "node:path";
 const ROOT = path.dirname(new URL(import.meta.url).pathname); // web/scripts
 const WEB = path.join(ROOT, "..");
 
-// Parse `{ key: "...", ..., model: "...", ... icon: GENERIC_ICON ... }` rows.
-function speciesNeedingIcons() {
+// Parse every `{ key: "...", ..., model: "...", ... }` species row.
+function allSpecies() {
   const src =
     fs.readFileSync(path.join(WEB, "lib/game/fishing.ts"), "utf8") +
     fs.readFileSync(path.join(WEB, "lib/game/fishCatalog.ts"), "utf8");
   const out = [];
   for (const line of src.split("\n")) {
-    if (!line.includes("icon: GENERIC_ICON")) continue;
-    const key = line.match(/key: "([^"]+)"/)?.[1];
-    const model = line.match(/model: "([^"]+)"/)?.[1];
+    const key = line.match(/\{ key: "((?:fish|sea)_[^"]+)"/)?.[1];
+    const model = line.match(/model: "([^"]+\.glb)"/)?.[1];
     const raw = /raw: true/.test(line);
     if (key && model) out.push({ key, model, raw });
   }
@@ -32,7 +31,7 @@ function speciesNeedingIcons() {
 const only = process.argv.includes("--only")
   ? process.argv[process.argv.indexOf("--only") + 1]
   : null;
-let species = speciesNeedingIcons();
+let species = allSpecies();
 if (only) species = species.filter((s) => s.key === only);
 console.log(`${species.length} species to render`);
 

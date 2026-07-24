@@ -63,7 +63,14 @@ function Subject({ url, raw }: { url: string; raw: boolean }) {
     console.log("[icon-stage]", JSON.stringify({ size: size.toArray().map((n) => +n.toFixed(3)), scale: +s.toFixed(3) }));
     return holder;
   }, [scene, raw]);
-  return <primitive object={group} />;
+  // Head-side-up (David ruling 2026-07-24): raw dump models come out of
+  // calibration nose-DOWN, so they get a flip; repo-native models are
+  // already head-up and render as-is.
+  return (
+    <group rotation-z={raw ? Math.PI : 0}>
+      <primitive object={group} />
+    </group>
+  );
 }
 
 export default function IconStage() {
