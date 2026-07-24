@@ -108,6 +108,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-24 — Loop wake 25b (David ask): fishing bench gets a big 3D model view
+
+Clicking a species on /lab/fishing now shows its MODEL large in the detail pane — 260px orbitable stage (slow turntable, drag to orbit, scroll to zoom), fish laid horizontal aquarium-style (raw and native orientations both handled). The clone→calibrate→normalize pipeline is extracted to buildFishStage in components/lab/FishPreview.tsx and shared with /lab/icon (dedupes the SkeletonUtils/skinning-bounds logic). Verified: Dace/Coelacanth/Dungeness Crab all render big and swap on click, zero pageerrors. Gates: tsc clean, all three files lint-clean, 32/32.
+
 ### 2026-07-24 — Loop wake 25: dusk lamplighter moment
 
 Flipping into dusk/night now lights the six lamps in SEQUENCE (400ms apart) — each catches with a flicker-stutter, overshoots warm (1.25×), settles, and plays a soft blip as it takes. Ref-driven envelope in LampPosts' useFrame (globe emissive + pool pointLight together, zero per-frame React); initial night mounts skip the ceremony. Lab-verified live via the clock scrub (noon → night): 350ms post-flip the lamps are still catching, 4s later all settled — the old instant snap is gone; zero pageerrors. Gates: tsc clean, GameWorld lint-clean, 32/32.

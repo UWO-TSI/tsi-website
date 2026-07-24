@@ -13,6 +13,7 @@
 import { useMemo, useState } from "react";
 import { ReelMinigame } from "@/components/game/FishingOverlay";
 import FishReveal from "@/components/game/FishReveal";
+import FishPreview from "@/components/lab/FishPreview";
 import {
   CELEBRATE,
   FISH,
@@ -226,6 +227,9 @@ export default function FishingBench() {
             </span>
             {selected.whenLabel && <span style={{ fontSize: 10, color: "#8a939a" }}>bites: {selected.whenLabel}</span>}
           </div>
+
+          {/* Big model view — click any species on the left to swap it in */}
+          <FishPreview model={selected.model} raw={selected.raw} />
 
           {/* Stats grid */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6, marginBottom: 14, fontSize: 10 }}>

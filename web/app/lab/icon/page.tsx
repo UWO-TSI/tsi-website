@@ -11,58 +11,13 @@
 import { Suspense, useMemo, useSyncExternalStore } from "react";
 import { Canvas } from "@react-three/fiber";
 import { useGLTF } from "@react-three/drei";
-import * as THREE from "three";
-import { clone as cloneSkeleton } from "three/examples/jsm/utils/SkeletonUtils.js";
+import { buildFishStage } from "@/components/lab/FishPreview";
 
 function Subject({ url, raw }: { url: string; raw: boolean }) {
   const { scene } = useGLTF(url);
-  const group = useMemo(() => {
-    // SkeletonUtils.clone, NOT scene.clone: the dump fish are SkinnedMeshes,
-    // and a plain clone keeps pointing at the ORIGINAL skeleton — the mesh
-    // then ignores this holder's scale/rotation entirely (the root cause of
-    // the shelved dark-icon batch).
-    const clone = cloneSkeleton(scene);
-    const holder = new THREE.Group();
-    const inner = new THREE.Group();
-    inner.add(clone);
-    if (raw) {
-      inner.scale.setScalar(0.1);
-      inner.rotation.x = Math.PI / 2;
-    }
-    holder.add(inner);
-    // Skinning-aware bounds: the dump fish are SkinnedMeshes whose rendered
-    // size comes from the BONES, not the bind-pose geometry — plain
-    // Box3.setFromObject reads the wrong extents. computeBoundingBox()
-    // samples actual skinned vertex positions.
-    const measure = (root: THREE.Group): THREE.Box3 => {
-      root.updateMatrixWorld(true);
-      const box = new THREE.Box3();
-      root.traverse((o) => {
-        const mesh = o as THREE.Mesh;
-        if (!mesh.isMesh) return;
-        const skinned = mesh as THREE.SkinnedMesh;
-        if (skinned.isSkinnedMesh) {
-          skinned.computeBoundingBox();
-          box.union(skinned.boundingBox!.clone().applyMatrix4(skinned.matrixWorld));
-        } else {
-          box.union(new THREE.Box3().setFromObject(mesh));
-        }
-      });
-      return box;
-    };
-    // profile view + normalize to ~1.6u so every species fills the frame
-    const size = new THREE.Vector3();
-    measure(holder).getSize(size);
-    const s = 1.6 / Math.max(size.x, size.y, size.z, 0.001);
-    holder.scale.setScalar(s);
-    const c = new THREE.Vector3();
-    measure(holder).getCenter(c);
-    holder.position.sub(c);
-    holder.rotation.y = Math.PI / 2; // face the camera side-on
-    // Render-debug breadcrumb for the batch harness (dev-only page).
-    console.log("[icon-stage]", JSON.stringify({ size: size.toArray().map((n) => +n.toFixed(3)), scale: +s.toFixed(3) }));
-    return holder;
-  }, [scene, raw]);
+  // Shared clone→calibrate→normalize pipeline (SkeletonUtils clone +
+  // skinning-aware bounds) — see buildFishStage for the SkinnedMesh story.
+  const group = useMemo(() => buildFishStage(scene, raw, 1.6), [scene, raw]);
   // Head-side-up (David ruling 2026-07-24): raw dump models come out of
   // calibration nose-DOWN, so they get a flip; repo-native models are
   // already head-up and render as-is.
