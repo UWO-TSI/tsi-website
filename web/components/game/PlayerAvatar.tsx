@@ -153,6 +153,11 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
   // Loop iter 6 (2026-07-24): turn-skid dust — a sharp direction reversal
   // at speed kicks a puff behind the feet. Cooldown stops puff spam.
   const skidCooldownRef = useRef(0);
+  // Loop iter 13 (2026-07-24): sprint wind lines — 4 faint streak rods
+  // around the player at full sprint, aligned to heading, instant fade on
+  // slowdown. All refs; no per-frame React.
+  const windGroupRef = useRef<THREE.Group>(null);
+  const windMatsRef = useRef<THREE.MeshBasicMaterial[]>([]);
   const squashRef = useRef(0);
   // G4 (item 7): after ~12s of standing still the sprite looks around —
   // left, right, then back to front — so idling reads alive (ACNH beat).
@@ -404,6 +409,28 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
       const targetLean = THREE.MathUtils.clamp(-latVel / PLAYER_SPEED, -1, 1) * 0.085;
       leanRef.current = THREE.MathUtils.damp(leanRef.current, targetLean, 10, delta);
       applySprintFov(camera, Math.hypot(vel.x, vel.y), delta);
+
+      // Sprint wind lines: visible only near sprint speed, sliding
+      // backward past the player; opacity collapses fast on slowdown.
+      const wg = windGroupRef.current;
+      if (wg) {
+        const spd = Math.hypot(vel.x, vel.y);
+        const showWind = spd > PLAYER_SPEED * 1.35;
+        let peak = 0;
+        for (const m of windMatsRef.current) {
+          if (!m) continue;
+          m.opacity = THREE.MathUtils.damp(m.opacity, showWind ? 0.2 : 0, showWind ? 8 : 22, delta);
+          peak = Math.max(peak, m.opacity);
+        }
+        wg.visible = peak > 0.015;
+        if (wg.visible) {
+          wg.position.set(pos.x, pos.y, pos.z);
+          wg.rotation.y = Math.atan2(vel.x, vel.y);
+          for (let i = 0; i < wg.children.length; i++) {
+            wg.children[i].position.z = -0.15 - ((clockRef.current * 5 + i * 0.65) % 1) * 1.1;
+          }
+        }
+      }
     }
 
     // Ground follow — sample terrain every frame (even when idle so the
@@ -570,6 +597,22 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
           }
         />
       ))}
+      {/* Loop iter 13: sprint wind streaks (world-space, heading-aligned) */}
+      <group ref={windGroupRef} visible={false}>
+        {[0, 1, 2, 3].map((i) => (
+          <mesh key={i} position={[i % 2 ? 0.45 : -0.45, 0.55 + (i >> 1) * 0.55, -0.4]}>
+            <boxGeometry args={[0.025, 0.025, 0.85]} />
+            <meshBasicMaterial
+              ref={(m) => { if (m) windMatsRef.current[i] = m; }}
+              color="#FFFFFF"
+              transparent
+              opacity={0}
+              depthWrite={false}
+              fog={false}
+            />
+          </mesh>
+        ))}
+      </group>
       {/* P28: footstep dust puffs (small) + P29 landing puff (scale > 1) */}
       {puffs.map((p) => (
         <FootstepPuff

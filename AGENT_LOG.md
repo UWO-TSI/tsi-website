@@ -108,6 +108,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-24 — Loop iter 13 (wake 7): sprint wind lines
+
+Four faint white streak rods materialize around the player above ~1.35× walk speed, aligned to the movement heading and sliding backward on a loop; opacity collapses in a blink on slowdown. World-space group, all refs, zero per-frame React. Gates: tsc clean, PlayerAvatar lint-clean (known project flap only), 32/32, world 200.
+
 ### 2026-07-24 — Loop iter 12 (wake 6): doorway beat
 
 Passing any doorway now pulses a warm light-spill (radial cream flash, 520ms one-shot over the fade) — and entering finally plays the ENTER chime + a soft second note (it was playing the exit sound both ways). Exit keeps its sound + gains the same glow. Gates: tsc clean, lint at the known flap (GameWorld clean), world 200.
