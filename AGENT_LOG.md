@@ -108,6 +108,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-24 — Loop iter 7 (wake 1): wet-sand footstep rings
+
+Footsteps on the beach band (coast-space distance > 48.5, the sand line) now splash a thin pale-blue water RING (wider, thinner spread) instead of kicking dust — FootstepPuff gains a `wet` variant, spawn site checks `coastDist`. Gates: tsc clean, 74/52, world 200.
+
 ### 2026-07-24 — Loop iter 6: turn-skid dust (self-scheduled loop wake 0) — LOOP NOW SELF-PACED
 
 David armed the timer loop (self-paced wakes, one iteration each, full scope incl. dump imports, auto-pause on double-red gates, push every wake). Iter 6: sharp direction reversal at speed (>55% walk speed, desired dir opposing velocity) kicks a dust puff at the feet + footstep scuff, 0.6s cooldown — reuses the P28 puff system, zero new draw cost. Gates: tsc clean, 74/52, world 200.

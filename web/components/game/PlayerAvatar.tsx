@@ -5,7 +5,7 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { Billboard, Html } from "@react-three/drei";
 import * as THREE from "three";
 import { getTerrainHeight, sampleTerrainHeightFast } from "./terrain";
-import { clampToCoast } from "@/lib/game/coast";
+import { clampToCoast, coastDist } from "@/lib/game/coast";
 import { useSFX } from "@/lib/game/useAudio";
 import { getCameraForwardXZ } from "@/lib/game/cameraBasis";
 import { pickCurvedGround } from "@/lib/game/groundPick";
@@ -136,7 +136,7 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
   // P28: small dust puffs spawned at the player's feet on each footstep.
   // Each entry lives ~0.6s then unmounts itself.
   const puffIdRef = useRef(0);
-  const [puffs, setPuffs] = useState<Array<{ id: number; position: [number, number, number]; scale?: number }>>([]);
+  const [puffs, setPuffs] = useState<Array<{ id: number; position: [number, number, number]; scale?: number; wet?: boolean }>>([]);
   // Micro-anim loop iter 1 (2026-07-24): cozy sit beat — settle puff + a
   // brief contented ♪ over the head; standing gives a tiny hop.
   const [sitNote, setSitNote] = useState(false);
@@ -541,7 +541,11 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
         const trailX = pos.x - (dx || 0) * 0.2;
         const trailZ = pos.z - (dz || 0) * 0.2;
         const id = puffIdRef.current++;
-        setPuffs((prev) => [...prev, { id, position: [trailX, pos.y + 0.02, trailZ], scale: keys["shift"] ? 1.3 : 1 }]);
+        // Loop iter 7 (2026-07-24): on the beach band footsteps splash a
+        // wet ring instead of kicking dust (coast-space distance past the
+        // sand line ≈48.5).
+        const wet = coastDist(trailX, trailZ) > 48.5;
+        setPuffs((prev) => [...prev, { id, position: [trailX, pos.y + 0.02, trailZ], scale: keys["shift"] ? 1.3 : 1, wet }]);
       }
     } else {
       footstepTimer.current = 0;
@@ -572,6 +576,7 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
           key={p.id}
           position={p.position}
           baseScale={p.scale ?? 1}
+          wet={p.wet}
           onDone={() => setPuffs((prev) => prev.filter((q) => q.id !== p.id))}
         />
       ))}
@@ -708,7 +713,7 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
 
 // P28: a single dust puff at the player's feet. Expands and fades out
 // over 0.6s, then calls onDone so the parent removes it from state.
-function FootstepPuff({ position, onDone, baseScale = 1 }: { position: [number, number, number]; onDone: () => void; baseScale?: number }) {
+function FootstepPuff({ position, onDone, baseScale = 1, wet = false }: { position: [number, number, number]; onDone: () => void; baseScale?: number; wet?: boolean }) {
   const ref = useRef<THREE.Mesh>(null);
   const matRef = useRef<THREE.MeshBasicMaterial>(null);
   const tRef = useRef(0);
@@ -720,19 +725,20 @@ function FootstepPuff({ position, onDone, baseScale = 1 }: { position: [number, 
       return;
     }
     if (ref.current) {
-      const s = (0.35 + t * 0.4) * baseScale;
+      // Wet rings spread wider and thinner than dust (iter 7).
+      const s = (wet ? 0.3 + t * 0.75 : 0.35 + t * 0.4) * baseScale;
       ref.current.scale.set(s, s, s);
     }
     if (matRef.current) {
-      matRef.current.opacity = 0.55 * (1 - t);
+      matRef.current.opacity = (wet ? 0.45 : 0.55) * (1 - t);
     }
   });
   return (
     <mesh ref={ref} position={position} rotation={[-Math.PI / 2, 0, 0]}>
-      <circleGeometry args={[1, 12]} />
+      {wet ? <ringGeometry args={[0.72, 1, 16]} /> : <circleGeometry args={[1, 12]} />}
       <meshBasicMaterial
         ref={matRef}
-        color="#D8C8A8"
+        color={wet ? "#DFF2FC" : "#D8C8A8"}
         transparent
         opacity={0.55}
         depthWrite={false}
