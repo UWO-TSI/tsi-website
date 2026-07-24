@@ -108,6 +108,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-24 — Loop iter 25 (wake 19): sea-creature staging batch
+
+10 dive creatures converted (-embtex, textures embedded) and staged under `public/assets/acnh/sea/` for the future pier/diving feature — pearl oyster, sweet shrimp, scallop, dungeness crab, sea star, firefly squid, garden eel, giant isopod, abalone, barnacle. 1.8MB; total public assets 17MB (cap 50MB). No gameplay wiring yet — inventory only, GAME_CALIBRATION applies at import like the fish.
+
 ### 2026-07-24 — Loop iter 24 (wake 18): collection book open beat
 
 The book now unfolds open — backdrop fades in, the card springs up with a slight paper rotate (0.32s spring), and a click + page-turn note play on open. Gates: tsc clean, lint at flap, world 200.
