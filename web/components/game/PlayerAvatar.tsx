@@ -570,7 +570,10 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
       const footstepInterval = keys["shift"] ? 0.25 : 0.4;
       if (footstepTimer.current >= footstepInterval) {
         footstepTimer.current = 0;
-        sfx.play("footstep");
+        // Loop iter 26 (2026-07-24): the bridge knocks — steps on the main
+        // river crossing play a wooden note instead of the grass scuff.
+        const onBridge = Math.abs(pos.x) < 2.2 && pos.z > 0 && pos.z < 6.5;
+        sfx.play(onBridge ? "blip4" : "footstep");
         // P28: spawn a dust puff at the player's feet. Trailing slightly
         // behind the movement direction so it reads as kicked-up dust.
         const trailX = pos.x - (dx || 0) * 0.2;
@@ -581,7 +584,7 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
         // sand line ≈48.5). Iter 22: rain days make EVERY step a puddle
         // ripple — the weather reaches the ground.
         const wet = coastDist(trailX, trailZ) > 48.5 || getTodayWeather() === "rain";
-        setPuffs((prev) => [...prev, { id, position: [trailX, pos.y + 0.02, trailZ], scale: keys["shift"] ? 1.3 : 1, wet }]);
+        if (!onBridge) setPuffs((prev) => [...prev, { id, position: [trailX, pos.y + 0.02, trailZ], scale: keys["shift"] ? 1.3 : 1, wet }]);
       }
     } else {
       footstepTimer.current = 0;

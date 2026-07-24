@@ -108,6 +108,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-24 — Loop iter 26 (wake 20): bridge plank knocks
+
+Footsteps on the main river crossing (|x|<2.2, z 0-6.5) now play a wooden knock (blip4) instead of the grass scuff, and planks don't kick dust puffs. Cheap AABB check inside the existing footstep tick. Gates: tsc clean, lint at flap, world 200.
+
 ### 2026-07-24 — Loop iter 25 (wake 19): sea-creature staging batch
 
 10 dive creatures converted (-embtex, textures embedded) and staged under `public/assets/acnh/sea/` for the future pier/diving feature — pearl oyster, sweet shrimp, scallop, dungeness crab, sea star, firefly squid, garden eel, giant isopod, abalone, barnacle. 1.8MB; total public assets 17MB (cap 50MB). No gameplay wiring yet — inventory only, GAME_CALIBRATION applies at import like the fish.
