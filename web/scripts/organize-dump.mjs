@@ -99,7 +99,7 @@ if (ci !== -1 && process.argv[ci + 1]) {
     const dae = fs.readdirSync(src).find((f) => f.endsWith(".dae"));
     if (!dae) continue;
     try {
-      execFileSync("assimp", ["export", path.join(src, dae), path.join(glbDir, `${item}.glb`)], { stdio: "pipe", timeout: 60000 });
+      execFileSync("assimp", ["export", dae, path.join(glbDir, `${item}.glb`), "-embtex"], { stdio: "pipe", timeout: 120000, cwd: fs.realpathSync(src) });
       ok++;
     } catch {
       fail++;

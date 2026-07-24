@@ -108,6 +108,12 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-24 — Loop iter 10 (wake 4): embedded-texture fix + icon harness SHELVED (auto-pause rule)
+
+**Real fix shipped:** the 11 imported fish GLBs referenced EXTERNAL textures (assimp default — 404s in-game, untextured models). All 11 re-converted with `-embtex` (textures embedded, fish dir 3.0MB total); `organize-dump.mjs --convert` now passes `-embtex` + correct cwd for future batches. Icon stage page hydration fixed (client-mount gate).
+
+**Shelved after 2 failed attempts (auto-pause):** the icon-render harness (`/lab/icon` + `scripts/_render-icons.mjs`, both committed as WIP) produces dark/empty canvas shots. Diagnosis so far: dev-overlay badge bleeds into element screenshots and the subject isn't visibly rendering on the transparent stage — needs a headful debug pass (or icon extraction from the dump's numbered Layout_MenuIcon_Fish atlas with an index map). New species keep the generic icon meanwhile.
+
 ### 2026-07-24 — Loop iter 9 (wake 3): FIRST DUMP FISH IMPORT — roster 10 → 21 species
 
 11 calibrated species imported from the organized rip (760K total fish dir, cap fine): killifish + loach (common), sweetfish + rainbow trout (uncommon), salmon + snakehead (rare), gar + king salmon (epic), **stringfish + golden trout fill the vacant LEGENDARY rung**, and the **ARAPAIMA takes the Sea King crown — Golden Koi drops to legendary** (David's "Both" ruling completed). Each has its own sizes (killifish 3-5cm → arapaima 150-300cm), movement personality, and ACNH-style availability windows. Raw dump models carry `raw: true` — FishCatchFX applies GAME_CALIBRATION (0.1 scale, +90°X) at render. Icons = generic fish.png until the icon harness renders real ones (follow-up); `iconFor()` centralizes resolution. CollectionBook +11 rows. Bench-verified: 21 species listed, sim runs, zero pageerrors; gates 74/52, 32/32.
