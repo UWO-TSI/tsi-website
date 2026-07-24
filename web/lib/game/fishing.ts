@@ -92,14 +92,32 @@ export function fishWeight(f: FishDef, weather: string): number {
   return w;
 }
 
-/** Weighted roll over the species available right now. */
-export function rollFish(): FishDef {
+/** Cast-meter tuning (David 2026-07-23): hold E → vertical ping-pong bar,
+ *  release at the tip = MAX CAST. Power scales BOTH luck and bite timing. */
+export const CAST = {
+  cycleMs: 1150, // full up-down ping-pong period
+  maxZone: 0.92, // release at p >= this = MAX CAST
+  maxBonus: 0.3, // extra luck on a MAX release
+  waitScale: 0.5, // max power halves the 2-6s wait
+  biteBonusMs: 800, // max power widens the 1.4s hook window by this
+};
+
+/** Luck-aware weight: cast power inflates rare-and-up odds (max ≈ 2×). */
+function luckWeight(f: FishDef, weather: string, luck: number): number {
+  let w = fishWeight(f, weather);
+  if (luck > 0 && f.rarity !== "common" && f.rarity !== "uncommon") w *= 1 + luck;
+  return w;
+}
+
+/** Weighted roll over the species available right now. luck 0..~1.3 from
+ *  cast power — see CAST. */
+export function rollFish(luck = 0): FishDef {
   const { hour, weather } = currentFishingContext();
   const pool = FISH.filter((f) => !f.when || f.when(hour, weather));
-  const total = pool.reduce((s, f) => s + fishWeight(f, weather), 0);
+  const total = pool.reduce((s, f) => s + luckWeight(f, weather, luck), 0);
   let r = Math.random() * total;
   for (const f of pool) {
-    r -= fishWeight(f, weather);
+    r -= luckWeight(f, weather, luck);
     if (r <= 0) return f;
   }
   return pool[pool.length - 1];

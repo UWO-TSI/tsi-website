@@ -24,6 +24,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AudioManager } from "@/lib/game/audio";
+import { punchZoom } from "@/lib/game/cameraJuice";
 import {
   HOLO_GRADIENT,
   RARITY_META,
@@ -75,6 +76,7 @@ export default function FishReveal({
     timersRef.current = [];
     setStage("flash");
     AudioManager.playSFX("confirm");
+    punchZoom(4); // micro-zoom: the crack
     celebrate(fish.rarity, meta.color);
     timersRef.current.push(
       window.setTimeout(() => {

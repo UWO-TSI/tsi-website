@@ -20,6 +20,8 @@ import {
   type LabPaletteColors,
 } from "@/lib/game/devLab";
 import { DEFAULT_PALETTES } from "@/data/content-defaults";
+import { DEFAULT_GRADE, type Grade } from "@/lib/game/grading";
+import { getTodayWeather } from "@/lib/game/weather";
 
 const PALETTE_KEYS: (keyof LabPaletteColors)[] = [
   "sky",
@@ -32,7 +34,18 @@ const PALETTE_KEYS: (keyof LabPaletteColors)[] = [
 ];
 
 const WEATHERS = ["sunny", "cloudy", "rain"] as const;
-const GRADE_DEFAULT = { desat: 0.14, warm: 1, lift: 1 };
+
+const GRADE_SLIDERS: { key: keyof Grade; label: string; min: number; max: number; step: number }[] = [
+  { key: "exposure", label: "exposure", min: 0.5, max: 1.6, step: 0.02 },
+  { key: "contrast", label: "contrast", min: 0.8, max: 1.25, step: 0.01 },
+  { key: "vibrance", label: "vibrance", min: -0.5, max: 0.5, step: 0.02 },
+  { key: "desat", label: "pastel desat", min: 0, max: 0.5, step: 0.01 },
+  { key: "warmth", label: "warmth", min: 0, max: 2.5, step: 0.05 },
+  { key: "lift", label: "black lift", min: 0, max: 3, step: 0.05 },
+  { key: "vignette", label: "vignette", min: 0, max: 0.8, step: 0.02 },
+];
+
+const gradeStorageKey = (w: string) => `tsi.lab.grade.${w}`;
 
 function setSearchParams(params: Record<string, string | null>) {
   const url = new URL(window.location.href);
@@ -182,33 +195,69 @@ export default function LabPanel({ onRemount }: { onRemount: () => void }) {
             </div>
           </Section>
 
-          {/* Pastel grade */}
-          <Section title="Pastel grade (open AC verdict)">
+          {/* Color grade — full slider rig, saved per weather (David 2026-07-23) */}
+          <Section title={`Color grade — tuning for: ${getTodayWeather()}`}>
             <label style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 6 }}>
               <input
                 type="checkbox"
                 checked={lab.grade !== null}
-                onChange={(e) => setLabGrade(e.target.checked ? { ...GRADE_DEFAULT } : null)}
+                onChange={(e) => setLabGrade(e.target.checked ? { ...DEFAULT_GRADE } : null)}
               />
               Override grade
             </label>
             {lab.grade && (
               <>
-                <Slider
-                  label={`desat ${lab.grade.desat.toFixed(2)} (ship 0.14)`}
-                  min={0} max={0.5} step={0.01} value={lab.grade.desat}
-                  onChange={(v) => setLabGrade({ ...lab.grade!, desat: v })}
-                />
-                <Slider
-                  label={`warm cast ×${lab.grade.warm.toFixed(2)} (ship 1)`}
-                  min={0} max={2.5} step={0.05} value={lab.grade.warm}
-                  onChange={(v) => setLabGrade({ ...lab.grade!, warm: v })}
-                />
-                <Slider
-                  label={`black lift ×${lab.grade.lift.toFixed(2)} (ship 1)`}
-                  min={0} max={3} step={0.05} value={lab.grade.lift}
-                  onChange={(v) => setLabGrade({ ...lab.grade!, lift: v })}
-                />
+                {GRADE_SLIDERS.map((sl) => (
+                  <Slider
+                    key={sl.key}
+                    label={`${sl.label} ${lab.grade![sl.key].toFixed(2)} (ship ${DEFAULT_GRADE[sl.key]})`}
+                    min={sl.min}
+                    max={sl.max}
+                    step={sl.step}
+                    value={lab.grade![sl.key]}
+                    onChange={(v) => setLabGrade({ ...lab.grade!, [sl.key]: v })}
+                  />
+                ))}
+                <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginTop: 6 }}>
+                  <button
+                    onClick={() => {
+                      try { localStorage.setItem(gradeStorageKey(getTodayWeather()), JSON.stringify(lab.grade)); } catch { /* ignore */ }
+                    }}
+                    style={btn(true)}
+                  >
+                    Save → {getTodayWeather()}
+                  </button>
+                  <button
+                    onClick={() => {
+                      try {
+                        const raw = localStorage.getItem(gradeStorageKey(getTodayWeather()));
+                        if (raw) setLabGrade(JSON.parse(raw) as Grade);
+                      } catch { /* ignore */ }
+                    }}
+                    style={btn()}
+                  >
+                    Load {getTodayWeather()}
+                  </button>
+                  <button
+                    onClick={() => {
+                      const out: Record<string, Grade> = {};
+                      for (const w of WEATHERS) {
+                        try {
+                          const raw = localStorage.getItem(gradeStorageKey(w));
+                          out[w] = raw ? (JSON.parse(raw) as Grade) : { ...DEFAULT_GRADE };
+                        } catch { out[w] = { ...DEFAULT_GRADE }; }
+                      }
+                      void navigator.clipboard.writeText(JSON.stringify(out, null, 2));
+                    }}
+                    style={btn()}
+                  >
+                    Export all → clipboard
+                  </button>
+                </div>
+                <div style={{ fontSize: 9, color: "#8a939a", marginTop: 6 }}>
+                  Tune per weather, Save each, Export all — the JSON gets baked
+                  into WEATHER_GRADES in lib/game/grading.ts.
+                </div>
               </>
             )}
           </Section>

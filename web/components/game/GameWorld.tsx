@@ -27,6 +27,7 @@ import { WarmupProbe, LoadGateOverlay } from "./LoadGate";
 import RainFX from "./RainFX";
 import { getTodayWeather, type Weather } from "@/lib/game/weather";
 import { getLabHour, labSubscribe } from "@/lib/game/devLab";
+import { WEATHER_GRADES } from "@/lib/game/grading";
 import { coastDist, beachWidthShift, COAST_GLSL } from "@/lib/game/coast";
 import { CloudShadows, NightStars, WaterSparkles, LeafGusts, NightWindows, TargetGlow } from "./AmbienceFX";
 import AmbientLife from "./AmbientLife";
@@ -2504,6 +2505,7 @@ export default function GameWorld() {
             enabled={!liteMode}
             bloom={graphicsSettings.bloom}
             bloomIntensity={todPhase === "dusk" ? 0.75 : todPhase === "night" ? 0.45 : todPhase === "dawn" ? 0.4 : 0.18}
+            grade={WEATHER_GRADES[weather]}
           />
         </Suspense>
         )}

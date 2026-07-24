@@ -16,15 +16,12 @@
 
 import { useSyncExternalStore } from "react";
 import type { SeasonalPalette } from "./contentTypes";
+import type { Grade } from "./grading";
 
 export type LabPaletteColors = SeasonalPalette["palette"];
 
-/** Scalars over the shipped pastel-grade constants: 1 = shipped look. */
-export interface LabGrade {
-  desat: number; // uDesat direct value (shipped 0.14)
-  warm: number;  // scales the warm-cast deviation from neutral (shipped 1)
-  lift: number;  // scales uBlackLift (shipped 1)
-}
+/** Full color grade override — see lib/game/grading.ts. */
+export type LabGrade = Grade;
 
 export interface LabState {
   hour: number | null;               // 0-24 fractional; null = wall clock

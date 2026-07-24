@@ -108,6 +108,13 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-23 — Grade rig in the lab + cast meter + camera juice (David asks)
+
+- **Color-grade slider rig** (`lib/game/grading.ts` + PostFX + LabPanel): the pastel shader gains uContrast + uVibrance (BSL-style, identity at defaults); a Grade = {exposure, contrast, vibrance, desat, warmth, lift, vignette}. The game reads WEATHER_GRADES[weather] (all three = shipped default until David bakes); /lab/world exposes all 7 as live sliders with per-weather Save/Load (localStorage) + "Export all → clipboard" — David tunes, the JSON gets pasted into WEATHER_GRADES. Lab override beats game grade beats default; exposure via a module-scope setExposure escape hatch.
+- **Cast meter** (hold E at a spot): vertical ping-pong power bar (1.15s cycle, gold tip zone at 92%). Release in the tip = MAX CAST — punch-zoom + gold card + confirm SFX. Power scales BOTH rewards (David ruling): luck (rare+ weights ×(1+luck), max ≈ ×2.2 with the tip bonus) and bite timing (wait scaled down to half, hook window 1.4s → up to 2.2s). Tuning in CAST (lib/game/fishing.ts); rollFish(luck) is the only signature change (bench unaffected — passes no luck).
+- **Camera juice** (`lib/game/cameraJuice.ts`): module store consumed by applySprintFov's FOV pass — punchZoom() impulses decay exponentially; setTensionZoom() creeps in up to 2°. Wired per David's picks: MAX CAST (2.5°), the bite (3°), mid-reel tension (creep while the fish sits in the bar, fast release when it escapes), reveal crack (4°).
+- Verified live: meter renders + full charge→cast→bite→hook→reel flow completes, grade sliders render with ship values and Save→cloudy/Export buttons. Gates: tsc clean, lint 74/52 (= baseline), tests 32/32.
+
 ### 2026-07-23 — Night fog fix (David report) + Sol's-RNG reveal upgrades
 
 - **Fog "weird colors" fixed:** the night wash was linear fog 55/100 covering most of the visible island in indigo (#2D2D6B) stacked on the aerial-desat (35%). Fixes: aerial DESAT 0.35→0.18; fog near/far now recede with the sun (sunNorm formula — exactly 55/100 at full day, 70/130 at night, day chemistry untouched); 21h fog anchor darkened #2D2D6B→#26264A. Night verified clear-and-deep in the lab. `setFogRange` module-scope escape hatch for the react-compiler rule.

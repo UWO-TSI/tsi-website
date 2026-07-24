@@ -9,6 +9,7 @@ import { clampToCoast } from "@/lib/game/coast";
 import { useSFX } from "@/lib/game/useAudio";
 import { getCameraForwardXZ } from "@/lib/game/cameraBasis";
 import { pickCurvedGround } from "@/lib/game/groundPick";
+import { juiceFovOffset } from "@/lib/game/cameraJuice";
 import MoveTargetIndicator from "./MoveTargetIndicator";
 import type { EmoteType } from "@/lib/game/contentTypes";
 
@@ -84,8 +85,10 @@ const keys: Record<string, boolean> = {};
 function applySprintFov(camera: THREE.Camera, speed: number, delta: number) {
   const pcam = camera as THREE.PerspectiveCamera;
   if (!pcam.isPerspectiveCamera) return;
-  const targetFov = speed > 9 ? 51 : 48; // threshold above new walk speed (7.4)
-  const nextFov = THREE.MathUtils.damp(pcam.fov, targetFov, 4, delta);
+  // Fishing micro-zoom (2026-07-23): juice offsets zoom IN on bite / MAX
+  // CAST / reveal crack (decaying punch) and creep in during reel tension.
+  const targetFov = (speed > 9 ? 51 : 48) - juiceFovOffset(delta);
+  const nextFov = THREE.MathUtils.damp(pcam.fov, targetFov, 8, delta);
   if (Math.abs(nextFov - pcam.fov) > 0.01) {
     pcam.fov = nextFov;
     pcam.updateProjectionMatrix();

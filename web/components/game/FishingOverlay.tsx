@@ -29,7 +29,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import FishReveal from "./FishReveal";
 import { AudioManager } from "@/lib/game/audio";
+import { punchZoom, setTensionZoom } from "@/lib/game/cameraJuice";
 import {
+  CAST,
   CELEBRATE,
   DAMPING,
   EDGE_BOUNCE,
@@ -45,7 +47,7 @@ import {
   type FishDef,
 } from "@/lib/game/fishing";
 
-type Phase = "idle" | "casting" | "waiting" | "bite" | "reeling" | "revealing" | "caught" | "missed";
+type Phase = "idle" | "charging" | "casting" | "waiting" | "bite" | "reeling" | "revealing" | "caught" | "missed";
 
 const BITE_WINDOW_MS = 1400;
 
@@ -59,6 +61,10 @@ export default function FishingOverlay() {
   // Species the member already has — drives the ???-silhouette mystery.
   // Fails closed to "everything is new" (mystery is the better default).
   const ownedRef = useRef<Set<string>>(new Set());
+  // Cast meter (David 2026-07-23): hold E → ping-pong power bar, release
+  // at the tip = MAX CAST. Power scales luck AND bite timing.
+  const powerRef = useRef(0);
+  const [maxCast, setMaxCast] = useState(false);
 
   useEffect(() => {
     fetch("/api/collections")
@@ -84,14 +90,19 @@ export default function FishingOverlay() {
     setFish(null);
     setCaughtSize(null);
     setWasNew(false);
+    setMaxCast(false);
+    powerRef.current = 0;
+    setTensionZoom(0);
   };
 
   const beginWait = () => {
     setPhase("waiting");
-    const wait = 2000 + Math.random() * 4000;
+    // Cast power shortens the wait (max cast halves it).
+    const wait = (2000 + Math.random() * 4000) * (1 - CAST.waitScale * powerRef.current);
     timersRef.current.push(
       window.setTimeout(() => {
         setPhase("bite");
+        punchZoom(3); // micro-zoom: the strike
         // G1 hit-confirmation: a 130ms screen nudge sells the bite. The
         // canvas transform is DOM-only — zero render cost.
         document.querySelector("canvas")?.animate(
@@ -105,26 +116,37 @@ export default function FishingOverlay() {
           { duration: 130 }
         );
         AudioManager.playSFX("confirm");
-        biteDeadlineRef.current = performance.now() + BITE_WINDOW_MS;
+        // Cast power widens the hook window (max cast: 1.4s → 2.2s).
+        const windowMs = BITE_WINDOW_MS + CAST.biteBonusMs * powerRef.current;
+        biteDeadlineRef.current = performance.now() + windowMs;
         // Auto-miss if the window lapses.
         timersRef.current.push(
           window.setTimeout(() => {
             setPhase("missed");
             AudioManager.playSFX("exit");
             timersRef.current.push(window.setTimeout(cancel, 1800));
-          }, BITE_WINDOW_MS)
+          }, windowMs)
         );
       }, wait)
     );
   };
 
-  const start = () => {
+  /** Meter released → actually cast, with power locked in. */
+  const castNow = (power: number) => {
     clearTimers();
     setFish(null);
     setCaughtSize(null);
     setWasNew(false);
+    powerRef.current = power;
+    const isMax = power >= CAST.maxZone;
+    setMaxCast(isMax);
+    if (isMax) {
+      punchZoom(2.5); // micro-zoom: nailed the tip
+      AudioManager.playSFX("confirm");
+    } else {
+      AudioManager.playSFX("click");
+    }
     setPhase("casting");
-    AudioManager.playSFX("click");
     timersRef.current.push(window.setTimeout(beginWait, 650));
   };
 
@@ -133,7 +155,8 @@ export default function FishingOverlay() {
     if (phase !== "bite") return;
     if (performance.now() > biteDeadlineRef.current) return;
     clearTimers();
-    setFish(rollFish());
+    const luck = powerRef.current + (powerRef.current >= CAST.maxZone ? CAST.maxBonus : 0);
+    setFish(rollFish(luck));
     setPhase("reeling");
     AudioManager.playSFX("click");
   };
@@ -181,22 +204,12 @@ export default function FishingOverlay() {
   useEffect(() => {
     const onStart = () => {
       // Ignore restart while a cast is live; a fresh start only from idle.
-      setPhase((p) => (p === "idle" ? "casting" : p));
+      // Charging first: the world E keydown opens the meter, keyup casts.
+      setPhase((p) => (p === "idle" ? "charging" : p));
     };
     window.addEventListener("tsi:fish-start", onStart);
     return () => window.removeEventListener("tsi:fish-start", onStart);
   }, []);
-
-  // When phase flips to "casting" via the event, run the cast sequence once.
-  const startedRef = useRef(false);
-  useEffect(() => {
-    if (phase === "casting" && !startedRef.current) {
-      startedRef.current = true;
-      start();
-    }
-    if (phase === "idle") startedRef.current = false;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase]);
 
   // Keyboard: E hooks during bite, ESC cancels (the reel and the reveal
   // each handle their own input). Capture so the world's E handler doesn't
@@ -243,7 +256,9 @@ export default function FishingOverlay() {
 
   const label =
     phase === "casting"
-      ? "Casting…"
+      ? maxCast
+        ? "MAX CAST!!"
+        : "Casting…"
       : phase === "waiting"
         ? "Waiting for a bite…"
         : phase === "bite"
@@ -272,7 +287,9 @@ export default function FishingOverlay() {
         gap: 8,
       }}
     >
-      {phase === "reeling" && fish ? (
+      {phase === "charging" ? (
+        <CastMeter onRelease={castNow} />
+      ) : phase === "reeling" && fish ? (
         <ReelMinigame fish={fish} known={ownedRef.current.has(fish.key)} onDone={onReelDone} />
       ) : (
         <div
@@ -280,7 +297,9 @@ export default function FishingOverlay() {
             padding: "10px 20px",
             background: "#FFFDF5",
             color: accent,
-            border: glow ? `2px solid ${rarity!.color}` : `2px solid ${phase === "bite" ? "#E5484D" : "#E8DFC8"}`,
+            border: glow
+              ? `2px solid ${rarity!.color}`
+              : `2px solid ${phase === "bite" ? "#E5484D" : phase === "casting" && maxCast ? "#FFD166" : "#E8DFC8"}`,
             borderRadius: 14,
             fontFamily: "var(--font-highlight, sans-serif)",
             fontSize: 15,
@@ -351,6 +370,18 @@ export default function FishingOverlay() {
               NEW!
             </span>
           )}
+        </div>
+      )}
+      {phase === "charging" && (
+        <div
+          style={{
+            fontFamily: "var(--font-highlight, sans-serif)",
+            fontSize: 11,
+            color: "rgba(255,255,255,0.7)",
+            textShadow: "0 1px 3px rgba(0,0,0,0.5)",
+          }}
+        >
+          release E at the tip for MAX CAST
         </div>
       )}
       {(phase === "waiting" || phase === "bite" || phase === "casting") && (
@@ -437,6 +468,7 @@ export function ReelMinigame({
     let mul = 1;
     let retargetAt = last + 600;
     let progress = START_PROGRESS;
+    let tension = 0; // micro-zoom creep while the fish sits in the bar
     const m = fish.move;
 
     const finish = (success: boolean) => {
@@ -483,6 +515,11 @@ export function ReelMinigame({
       progress += (inside ? FILL_RATE : -drainRate) * dt;
       if (progress >= 1) return finish(true);
       if (progress <= 0) return finish(false);
+
+      // Mid-reel tension micro-zoom: creeps in while the fish is held,
+      // releases fast when it escapes the bar.
+      tension = inside ? Math.min(1, tension + dt / 1.2) : Math.max(0, tension - dt / 0.5);
+      setTensionZoom(tension);
 
       // DOM writes
       if (barRef.current) {
@@ -536,6 +573,7 @@ export function ReelMinigame({
 
     return () => {
       cancelAnimationFrame(raf);
+      setTensionZoom(0);
       window.removeEventListener("pointerdown", down, true);
       window.removeEventListener("pointerup", up, true);
       window.removeEventListener("pointercancel", up, true);
@@ -637,6 +675,138 @@ export function ReelMinigame({
             transition: "background 0.2s",
           }}
         />
+      </div>
+    </div>
+  );
+}
+
+// ─── Cast meter (David 2026-07-23) ──────────────────────────────────────────
+//
+// Hold E at a fishing spot → this vertical power bar ping-pongs bottom↔top
+// (~1.15s cycle). Release E (or the pointer) to cast with the bar's power:
+// release inside the gold tip zone = MAX CAST (luck bonus + faster bite +
+// wider hook window — see CAST in lib/game/fishing.ts). rAF + refs, zero
+// re-renders per frame; ESC cancels via the parent's key handler.
+
+function CastMeter({ onRelease }: { onRelease: (power: number) => void }) {
+  const fillRef = useRef<HTMLDivElement>(null);
+  const readoutRef = useRef<HTMLDivElement>(null);
+  const pRef = useRef(0);
+  const releasedRef = useRef(false);
+
+  useEffect(() => {
+    let raf = 0;
+    const t0 = performance.now();
+    const step = (now: number) => {
+      // Triangle wave 0→1→0 over CAST.cycleMs.
+      const cyc = ((now - t0) % CAST.cycleMs) / CAST.cycleMs; // 0..1
+      const p = cyc < 0.5 ? cyc * 2 : (1 - cyc) * 2;
+      pRef.current = p;
+      const inTip = p >= CAST.maxZone;
+      if (fillRef.current) {
+        fillRef.current.style.height = `${p * 100}%`;
+        fillRef.current.style.background = inTip
+          ? "linear-gradient(180deg, #FFD166, #E8A93C)"
+          : "linear-gradient(180deg, #7EC850, #3D8F52)";
+        fillRef.current.style.boxShadow = inTip ? "0 0 12px rgba(255, 209, 102, 0.9)" : "none";
+      }
+      if (readoutRef.current) {
+        readoutRef.current.textContent = inTip ? "MAX!" : `${Math.round(p * 100)}%`;
+        readoutRef.current.style.color = inTip ? "#FFD166" : "#FFFDF5";
+      }
+      raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+
+    const release = () => {
+      if (releasedRef.current) return;
+      releasedRef.current = true;
+      cancelAnimationFrame(raf);
+      onRelease(pRef.current);
+    };
+    const onKeyUp = (e: KeyboardEvent) => {
+      if (e.key === "e" || e.key === "E") release();
+    };
+    const onPointerUp = () => release();
+    window.addEventListener("keyup", onKeyUp, true);
+    window.addEventListener("pointerup", onPointerUp, true);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener("keyup", onKeyUp, true);
+      window.removeEventListener("pointerup", onPointerUp, true);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "flex-end",
+        gap: 10,
+        padding: "12px 14px",
+        background: "#FFFDF5",
+        border: "2px solid #E8DFC8",
+        borderRadius: 14,
+        boxShadow: "0 4px 14px rgba(60, 45, 20, 0.2)",
+        pointerEvents: "auto",
+        userSelect: "none",
+      }}
+    >
+      {/* Vertical track */}
+      <div
+        style={{
+          position: "relative",
+          width: 20,
+          height: 170,
+          borderRadius: 10,
+          background: "linear-gradient(180deg, #E8DFC8 0%, #D8CFB8 100%)",
+          boxShadow: "inset 0 2px 5px rgba(60, 45, 20, 0.25)",
+          overflow: "hidden",
+        }}
+      >
+        {/* Gold tip zone */}
+        <div
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            height: `${(1 - CAST.maxZone) * 100}%`,
+            background: "rgba(255, 209, 102, 0.55)",
+            borderBottom: "2px solid #E8A93C",
+          }}
+        />
+        {/* Fill (bottom-up) */}
+        <div
+          ref={fillRef}
+          style={{
+            position: "absolute",
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: "0%",
+            borderRadius: "0 0 10px 10px",
+          }}
+        />
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 6, paddingBottom: 4 }}>
+        <div
+          ref={readoutRef}
+          style={{
+            fontFamily: "'IBM Plex Mono', monospace",
+            fontSize: 15,
+            fontWeight: 800,
+            color: "#FFFDF5",
+            textShadow: "0 1px 3px rgba(60,45,20,0.5)",
+            minWidth: 52,
+          }}
+        >
+          0%
+        </div>
+        <div style={{ fontFamily: "var(--font-highlight, sans-serif)", fontSize: 11, color: "#8a7f6a", maxWidth: 120 }}>
+          hold E — release at the gold tip
+        </div>
       </div>
     </div>
   );
