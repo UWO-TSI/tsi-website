@@ -10,7 +10,7 @@
  */
 
 import { useEffect, useState } from "react";
-import { FISH, iconFor } from "@/lib/game/fishing";
+import { FISH, RARITY_META, iconFor, type FishDef } from "@/lib/game/fishing";
 import { AudioManager } from "@/lib/game/audio";
 import { mergeWithLocal } from "@/lib/game/collections";
 import { X } from "lucide-react";
@@ -19,6 +19,11 @@ interface Row {
   item_key: string;
   count: number;
 }
+
+// Almanac lookup (loop wake 29): clicking a DISCOVERED fish/sea-floor tile
+// shows its field notes — window, size, zone, rarity. Only these two groups
+// carry FishDef data; other groups' tiles stay non-interactive.
+const FISH_BY_KEY = new Map<string, FishDef>(FISH.map((f) => [f.key, f]));
 
 // img: rendered ACNH icon (assets/acnh/icons, 2026-07-13); emoji stays the fallback.
 const CATALOG: { group: string; items: { key: string; icon: string; img?: string; name: string }[] }[] = [
@@ -95,6 +100,8 @@ export default function CollectionBook({ open, onClose }: { open: boolean; onClo
   // Starts true; each open resets it in the fetch's finally. Avoids a
   // synchronous setState-in-effect (react-hooks/set-state-in-effect).
   const [loading, setLoading] = useState(true);
+  // Almanac pick (loop wake 29) — which discovered species' notes are open.
+  const [detailKey, setDetailKey] = useState<string | null>(null);
 
   // Loop iter 24 (2026-07-24): page-open beat — paper pop + page-turn
   // notes when the book opens.
@@ -133,6 +140,7 @@ export default function CollectionBook({ open, onClose }: { open: boolean; onClo
 
   if (!open) return null;
 
+  const detail = detailKey ? FISH_BY_KEY.get(detailKey) ?? null : null;
   const total = Object.values(counts).reduce((a, b) => a + b, 0);
   const discovered = CATALOG.reduce(
     (n, g) => n + g.items.filter((it) => (counts[it.key] ?? 0) > 0).length,
@@ -226,9 +234,19 @@ export default function CollectionBook({ open, onClose }: { open: boolean; onClo
               {g.items.map((it) => {
                 const n = counts[it.key] ?? 0;
                 const have = n > 0;
+                const almanac = have && FISH_BY_KEY.has(it.key);
+                const picked = detailKey === it.key;
                 return (
                   <div
                     key={it.key}
+                    onClick={
+                      almanac
+                        ? () => {
+                            setDetailKey((k) => (k === it.key ? null : it.key));
+                            AudioManager.playSFX("blip1");
+                          }
+                        : undefined
+                    }
                     style={{
                       display: "flex",
                       flexDirection: "column",
@@ -236,9 +254,10 @@ export default function CollectionBook({ open, onClose }: { open: boolean; onClo
                       gap: 4,
                       padding: "12px 6px",
                       borderRadius: 12,
-                      background: have ? "#F3ECD8" : "#F0EEE6",
-                      border: `1px solid ${have ? "#E0D2B0" : "#E8E6DE"}`,
+                      background: picked ? "#F8EFC9" : have ? "#F3ECD8" : "#F0EEE6",
+                      border: `1px solid ${picked ? "#C9962E" : have ? "#E0D2B0" : "#E8E6DE"}`,
                       opacity: have ? 1 : 0.5,
+                      cursor: almanac ? "pointer" : "default",
                     }}
                   >
                     {have && it.img ? (
@@ -271,6 +290,54 @@ export default function CollectionBook({ open, onClose }: { open: boolean; onClo
           </div>
           );
         })}
+
+        {/* Almanac strip — field notes for the picked species, pinned to the
+            bottom of the book while scrolling. */}
+        {detail && (
+          <div
+            style={{
+              position: "sticky",
+              bottom: -20,
+              margin: "8px -8px -8px",
+              padding: "10px 12px",
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              background: "#FBF6E4",
+              border: "2px solid #E0D2B0",
+              borderRadius: 12,
+              boxShadow: "0 -4px 12px rgba(60, 45, 20, 0.12)",
+            }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={iconFor(detail)} alt="" width={40} height={40} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 700 }}>
+                {detail.name}
+                <span
+                  style={{
+                    fontSize: 9,
+                    fontWeight: 700,
+                    textTransform: "uppercase",
+                    padding: "1px 7px",
+                    borderRadius: 999,
+                    color: "#FFFDF5",
+                    background: RARITY_META[detail.rarity].color,
+                  }}
+                >
+                  {RARITY_META[detail.rarity].label}
+                </span>
+                <span style={{ fontSize: 10, fontWeight: 400, color: "#8A7B5E" }}>
+                  {(detail.zone ?? "river") === "sea" ? "🌊 sea" : "🏞 river"}
+                </span>
+              </div>
+              <div style={{ fontSize: 11, color: "#8A7B5E", marginTop: 2 }}>
+                bites: {detail.whenLabel ?? "any time"} · {detail.sizeCm[0]}-{detail.sizeCm[1]} cm · caught ×
+                {counts[detail.key] ?? 0}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

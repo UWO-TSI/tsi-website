@@ -108,6 +108,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-24 — Loop wake 29: collection book almanac strip
+
+Clicking a DISCOVERED fish or sea-floor tile now opens its field notes in a strip pinned to the book's bottom edge (sticky through scroll): icon, name, rarity chip, zone, "bites:" window, size range, times caught — the almanac that teaches windows without leaking anything (undiscovered tiles stay inert ???, and you only see notes for what you've caught). Picked tile gets a gold ring; click again to dismiss; soft blip on pick. Verified live with seeded catches: Dace notes render (window/size/×2), strip pins while scrolling, zero pageerrors. Gates: tsc clean, CollectionBook lint-clean, 32/32.
+
 ### 2026-07-24 — Loop wake 28: zone-flavored reel + skinned-GLB audit (clean)
 
 Stability audit first: scanned every shipped GLB's JSON chunk for skins — skinned models exist ONLY under acnh/fish (71) + acnh/sea (10), all already rendering through the SkeletonUtils-fixed paths; no other component is affected (negative result, no fix needed). Then the beat: the reel card now reads as the water you cast into — sea catches get a deeper teal track + a 🌊 sea chip beside the name (river keeps the fresh blue + 🏞), safe under mystery mode since you always know where you cast. Bench-verified Sea Bass vs Dace chips + track tints, zero pageerrors. Gates: tsc clean, FishingOverlay lint-clean, 32/32.
