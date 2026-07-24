@@ -27,12 +27,13 @@ export interface LabState {
   hour: number | null;               // 0-24 fractional; null = wall clock
   palette: LabPaletteColors | null;  // null = live/active palette
   grade: LabGrade | null;            // null = shipped grade constants
+  fov: number | null;                // base FOV override (ship 48); null = game logic
 }
 
 const IS_DEV = process.env.NODE_ENV !== "production";
-const EMPTY: LabState = { hour: null, palette: null, grade: null };
+const EMPTY: LabState = { hour: null, palette: null, grade: null, fov: null };
 
-const state: LabState = { hour: null, palette: null, grade: null };
+const state: LabState = { hour: null, palette: null, grade: null, fov: null };
 let snapshot: LabState = { ...state };
 const listeners = new Set<() => void>();
 
@@ -58,6 +59,14 @@ export function getLabHour(): number | null {
 export function getLabPalette(): LabPaletteColors | null {
   return IS_DEV ? state.palette : null;
 }
+export function getLabFov(): number | null {
+  return IS_DEV ? state.fov : null;
+}
+export function setLabFov(v: number | null): void {
+  if (!IS_DEV) return;
+  state.fov = v;
+  emit();
+}
 
 export function setLabHour(h: number | null): void {
   if (!IS_DEV) return;
@@ -79,6 +88,7 @@ export function resetLab(): void {
   state.hour = null;
   state.palette = null;
   state.grade = null;
+  state.fov = null;
   emit();
 }
 

@@ -13,12 +13,14 @@
 import { useState } from "react";
 import {
   resetLab,
+  setLabFov,
   setLabGrade,
   setLabHour,
   setLabPalette,
   useLabState,
   type LabPaletteColors,
 } from "@/lib/game/devLab";
+import { punchZoom, setTensionZoom } from "@/lib/game/cameraJuice";
 import { DEFAULT_PALETTES } from "@/data/content-defaults";
 import { DEFAULT_GRADE, type Grade } from "@/lib/game/grading";
 import { getTodayWeather } from "@/lib/game/weather";
@@ -46,6 +48,20 @@ const GRADE_SLIDERS: { key: keyof Grade; label: string; min: number; max: number
 ];
 
 const gradeStorageKey = (w: string) => `tsi.lab.grade.${w}`;
+
+/** Same canvas-transform shake the game uses (bite nudge / celebrations). */
+function testShake(px: number) {
+  document.querySelector("canvas")?.animate(
+    [
+      { transform: "translate(0,0)" },
+      { transform: `translate(${px}px,${-px / 2}px)` },
+      { transform: `translate(${-px}px,${px / 2}px)` },
+      { transform: `translate(${px / 2}px,${px / 3}px)` },
+      { transform: "translate(0,0)" },
+    ],
+    { duration: 90 + px * 25 }
+  );
+}
 
 function setSearchParams(params: Record<string, string | null>) {
   const url = new URL(window.location.href);
@@ -193,6 +209,53 @@ export default function LabPanel({ onRemount }: { onRemount: () => void }) {
             <div style={{ fontSize: 9, color: "#8a939a", marginTop: 6 }}>
               Sky/fog apply at dawn/dusk blends; remount to see a cold load.
             </div>
+          </Section>
+
+          {/* Camera bench (David 2026-07-23): fire the exact juice impulses
+              the game uses + pin the base FOV to feel framings. */}
+          <Section title="Camera">
+            <div style={{ fontSize: 9, color: "#8a939a", marginBottom: 4 }}>micro-zoom punches (decay ~0.5s)</div>
+            <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 8 }}>
+              <button onClick={() => punchZoom(2.5)} style={btn()}>max cast 2.5°</button>
+              <button onClick={() => punchZoom(3)} style={btn()}>bite 3°</button>
+              <button onClick={() => punchZoom(4)} style={btn()}>crack 4°</button>
+              <button onClick={() => punchZoom(6)} style={btn()}>heavy 6°</button>
+            </div>
+            <div style={{ fontSize: 9, color: "#8a939a", marginBottom: 4 }}>reel tension creep (hold)</div>
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.05}
+              defaultValue={0}
+              onChange={(e) => setTensionZoom(Number(e.target.value))}
+              style={{ width: "100%", marginBottom: 8 }}
+            />
+            <div style={{ fontSize: 9, color: "#8a939a", marginBottom: 4 }}>screen shake</div>
+            <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 8 }}>
+              <button onClick={() => testShake(3)} style={btn()}>soft 3px</button>
+              <button onClick={() => testShake(8)} style={btn()}>epic 8px</button>
+              <button onClick={() => testShake(13)} style={btn()}>sea king 13px</button>
+            </div>
+            <label style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 4 }}>
+              <input
+                type="checkbox"
+                checked={lab.fov !== null}
+                onChange={(e) => setLabFov(e.target.checked ? 48 : null)}
+              />
+              Pin base FOV {lab.fov !== null ? `— ${lab.fov.toFixed(0)}° (ship 48)` : ""}
+            </label>
+            {lab.fov !== null && (
+              <input
+                type="range"
+                min={38}
+                max={62}
+                step={1}
+                value={lab.fov}
+                onChange={(e) => setLabFov(Number(e.target.value))}
+                style={{ width: "100%" }}
+              />
+            )}
           </Section>
 
           {/* Color grade — full slider rig, saved per weather (David 2026-07-23) */}

@@ -10,6 +10,7 @@ import { useSFX } from "@/lib/game/useAudio";
 import { getCameraForwardXZ } from "@/lib/game/cameraBasis";
 import { pickCurvedGround } from "@/lib/game/groundPick";
 import { juiceFovOffset } from "@/lib/game/cameraJuice";
+import { getLabFov } from "@/lib/game/devLab";
 import MoveTargetIndicator from "./MoveTargetIndicator";
 import type { EmoteType } from "@/lib/game/contentTypes";
 
@@ -87,7 +88,8 @@ function applySprintFov(camera: THREE.Camera, speed: number, delta: number) {
   if (!pcam.isPerspectiveCamera) return;
   // Fishing micro-zoom (2026-07-23): juice offsets zoom IN on bite / MAX
   // CAST / reveal crack (decaying punch) and creep in during reel tension.
-  const targetFov = (speed > 9 ? 51 : 48) - juiceFovOffset(delta);
+  // /lab/world camera bench can pin the base FOV; juice still applies on top.
+  const targetFov = (getLabFov() ?? (speed > 9 ? 51 : 48)) - juiceFovOffset(delta);
   const nextFov = THREE.MathUtils.damp(pcam.fov, targetFov, 8, delta);
   if (Math.abs(nextFov - pcam.fov) > 0.01) {
     pcam.fov = nextFov;

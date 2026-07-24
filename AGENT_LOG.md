@@ -108,6 +108,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-23 — Camera bench in /lab/world (David ask)
+
+New Camera section in the experiment panel: fire the exact juice impulses the game uses (max-cast 2.5° / bite 3° / crack 4° / heavy 6°, decay ~0.5s), hold the reel-tension creep on a slider, test the three shake magnitudes (soft/epic/sea-king via the same canvas-transform), and pin the base FOV (38-62°, ship 48) — devLab gains a `fov` override consumed by applySprintFov (juice still applies on top). Verified live: FOV 60 visibly widens the rig; zero pageerrors; gates at baseline.
+
 ### 2026-07-23 — Grade rig in the lab + cast meter + camera juice (David asks)
 
 - **Color-grade slider rig** (`lib/game/grading.ts` + PostFX + LabPanel): the pastel shader gains uContrast + uVibrance (BSL-style, identity at defaults); a Grade = {exposure, contrast, vibrance, desat, warmth, lift, vignette}. The game reads WEATHER_GRADES[weather] (all three = shipped default until David bakes); /lab/world exposes all 7 as live sliders with per-weather Save/Load (localStorage) + "Export all → clipboard" — David tunes, the JSON gets pasted into WEATHER_GRADES. Lab override beats game grade beats default; exposure via a module-scope setExposure escape hatch.
