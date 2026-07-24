@@ -95,7 +95,7 @@ export function fishWeight(f: FishDef, weather: string): number {
 /** Cast-meter tuning (David 2026-07-23): hold E → vertical ping-pong bar,
  *  release at the tip = MAX CAST. Power scales BOTH luck and bite timing. */
 export const CAST = {
-  cycleMs: 1150, // full up-down ping-pong period
+  cycleMs: 1400, // base ping-pong period — the meter speeds up 15%/cycle while held
   maxZone: 0.92, // release at p >= this = MAX CAST
   maxBonus: 0.3, // extra luck on a MAX release
   waitScale: 0.5, // max power halves the 2-6s wait

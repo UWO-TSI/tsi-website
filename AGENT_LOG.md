@@ -108,6 +108,20 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-23 — Fishing animation refinement: all 8 beats (David interview, 2 rounds)
+
+Beat-by-beat rulings implemented:
+1. **Meter escalation** — first bounce 1.4s, +15%/completed cycle (cap 2.2×): easy first pass, greedy re-tries punished.
+2. **Bobber** (`FishingBobber.tsx`, R3F, event-driven: tsi:fish-cast/-nibble/-bite/-end): arcs from player past the spot (throw scales with power), splash ring + plop on landing, idle bob during the wait.
+3. **Fake nibbles** — 1-2 false tugs (bobber dip + ripple + blip1 + 1.5px nudge) in [25%, wait−1.2s]; never adjacent to the real bite.
+4. **Big bite** — red "!" pops above the player (ACNH), bobber slams under + big ripple, shake 3→5px, 3° punch.
+5. **Reel feedback kit** — darting fish sprays droplets on the track (imperative spans, self-removing), soft thunk + green flash when the bar slams the left wall (blip3, 250ms rate-limit), heartbeat glow on the progress bar above 75% (period tightens as the catch nears).
+6. **Reel slap-in** — 220ms scale-punch entrance (keyframes local to the component so the bench gets them too).
+7. **Escape** — card jolts + the fish's silhouette leaps off the card and dives away (800ms flee animation).
+8. **SFX pass** — every beat mapped to the shipped CC0 set (cast=click, plop=blip2, nibble=blip1, bite=confirm, wall thunk=blip3, catch=confirm, escape=exit). Dedicated fishing sounds (whoosh/splash/jingle/snap) can drop in later by swapping keys.
+
+Verified live: meter → cast → bobber → bite ("!" visible above player in the shot) → reel (slap-in + droplets) → escape flee; zero pageerrors. Gates: tsc clean, 74/52, 32/32.
+
 ### 2026-07-23 — Camera bench in /lab/world (David ask)
 
 New Camera section in the experiment panel: fire the exact juice impulses the game uses (max-cast 2.5° / bite 3° / crack 4° / heavy 6°, decay ~0.5s), hold the reel-tension creep on a slider, test the three shake magnitudes (soft/epic/sea-king via the same canvas-transform), and pin the base FOV (38-62°, ship 48) — devLab gains a `fov` override consumed by applySprintFov (juice still applies on top). Verified live: FOV 60 visibly widens the rig; zero pageerrors; gates at baseline.

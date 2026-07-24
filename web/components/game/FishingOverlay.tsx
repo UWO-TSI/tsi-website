@@ -65,6 +65,8 @@ export default function FishingOverlay() {
   // at the tip = MAX CAST. Power scales luck AND bite timing.
   const powerRef = useRef(0);
   const [maxCast, setMaxCast] = useState(false);
+  // Fishing spot from the world's E handler — the bobber lands relative to it.
+  const spotRef = useRef<{ x: number; z: number } | null>(null);
 
   useEffect(() => {
     fetch("/api/collections")
@@ -93,27 +95,46 @@ export default function FishingOverlay() {
     setMaxCast(false);
     powerRef.current = 0;
     setTensionZoom(0);
+    window.dispatchEvent(new CustomEvent("tsi:fish-end"));
   };
 
   const beginWait = () => {
     setPhase("waiting");
     // Cast power shortens the wait (max cast halves it).
     const wait = (2000 + Math.random() * 4000) * (1 - CAST.waitScale * powerRef.current);
+    // Fake nibbles (refinement 2026-07-23): 1-2 false-alarm tugs, never in
+    // the last 1.2s before the real bite. Bobber dips + ripple + soft blip.
+    if (wait > 2600) {
+      const count = Math.random() < 0.7 ? 1 : 2;
+      for (let i = 0; i < count; i++) {
+        const at = wait * 0.25 + Math.random() * (wait - 1200 - wait * 0.25);
+        timersRef.current.push(
+          window.setTimeout(() => {
+            window.dispatchEvent(new CustomEvent("tsi:fish-nibble"));
+            document.querySelector("canvas")?.animate(
+              [{ transform: "translate(0,0)" }, { transform: "translate(1.5px,1px)" }, { transform: "translate(0,0)" }],
+              { duration: 90 }
+            );
+          }, at)
+        );
+      }
+    }
     timersRef.current.push(
       window.setTimeout(() => {
         setPhase("bite");
         punchZoom(3); // micro-zoom: the strike
+        window.dispatchEvent(new CustomEvent("tsi:fish-bite")); // bobber slam + "!"
         // G1 hit-confirmation: a 130ms screen nudge sells the bite. The
         // canvas transform is DOM-only — zero render cost.
         document.querySelector("canvas")?.animate(
           [
             { transform: "translate(0,0)" },
-            { transform: "translate(3px,-2px)" },
-            { transform: "translate(-3px,2px)" },
-            { transform: "translate(2px,1px)" },
+            { transform: "translate(5px,-3px)" },
+            { transform: "translate(-5px,3px)" },
+            { transform: "translate(3px,2px)" },
             { transform: "translate(0,0)" },
           ],
-          { duration: 130 }
+          { duration: 150 }
         );
         AudioManager.playSFX("confirm");
         // Cast power widens the hook window (max cast: 1.4s → 2.2s).
@@ -147,6 +168,8 @@ export default function FishingOverlay() {
       AudioManager.playSFX("click");
     }
     setPhase("casting");
+    const spot = spotRef.current ?? { x: 0, z: 0 };
+    window.dispatchEvent(new CustomEvent("tsi:fish-cast", { detail: { x: spot.x, z: spot.z, power } }));
     timersRef.current.push(window.setTimeout(beginWait, 650));
   };
 
@@ -202,7 +225,9 @@ export default function FishingOverlay() {
 
   // Start on the world event.
   useEffect(() => {
-    const onStart = () => {
+    const onStart = (e: Event) => {
+      const d = (e as CustomEvent<{ x: number; z: number }>).detail;
+      if (d && typeof d.x === "number") spotRef.current = { x: d.x, z: d.z };
       // Ignore restart while a cast is live; a fresh start only from idle.
       // Charging first: the world E keydown opens the meter, keyup casts.
       setPhase((p) => (p === "idle" ? "charging" : p));
@@ -315,7 +340,10 @@ export default function FishingOverlay() {
                   ? fish?.rarity === "seaking"
                     ? "fish-card-pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), tsi-holo-glow 2.4s linear infinite"
                     : "fish-card-pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1)"
-                  : undefined,
+                  : phase === "missed"
+                    ? "fish-escape-jolt 0.38s ease-out"
+                    : undefined,
+            position: "relative",
             display: "flex",
             alignItems: "center",
             gap: 8,
@@ -354,6 +382,24 @@ export default function FishingOverlay() {
             >
               {rarity.label}
             </span>
+          )}
+          {phase === "missed" && fish && (
+            // The one that got away — silhouette leaps off the card and dives.
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={`/assets/acnh/icons/${fish.key}.png`}
+              alt=""
+              width={26}
+              height={26}
+              style={{
+                position: "absolute",
+                right: -6,
+                top: -10,
+                filter: "brightness(0) opacity(0.7)",
+                animation: "fish-flee 0.8s ease-in forwards",
+                pointerEvents: "none",
+              }}
+            />
           )}
           {phase === "caught" && wasNew && (
             <span
@@ -405,6 +451,17 @@ export default function FishingOverlay() {
           0% { transform: scale(0.6); opacity: 0; }
           100% { transform: scale(1); opacity: 1; }
         }
+        @keyframes fish-escape-jolt {
+          0% { transform: translateX(0) rotate(0deg); }
+          25% { transform: translateX(-7px) rotate(-2deg); }
+          55% { transform: translateX(5px) rotate(1.5deg); }
+          100% { transform: translateX(0) rotate(0deg); }
+        }
+        @keyframes fish-flee {
+          0% { transform: translate(0, 0) rotate(0deg) scaleX(-1); opacity: 0.85; }
+          45% { transform: translate(46px, -46px) rotate(28deg) scaleX(-1); opacity: 0.85; }
+          100% { transform: translate(110px, 40px) rotate(80deg) scaleX(-1); opacity: 0; }
+        }
         @keyframes tsi-holo-shift {
           0% { background-position: 0% 50%; }
           100% { background-position: 300% 50%; }
@@ -449,8 +506,10 @@ export function ReelMinigame({
   const barRef = useRef<HTMLDivElement>(null);
   const fishRef = useRef<HTMLImageElement>(null);
   const progRef = useRef<HTMLDivElement>(null);
+  const trackRef = useRef<HTMLDivElement>(null);
   const holdingRef = useRef(false);
   const doneRef = useRef(false);
+  const lastThunkRef = useRef(0);
 
   const barW = RARITY_META[fish.rarity].barW;
   const drainRate = 0.17 + 0.09 * (1 - barW / 0.3); // narrower bar ⇒ faster drain
@@ -488,7 +547,22 @@ export function ReelMinigame({
       pos += vel * dt;
       if (pos < 0) {
         pos = 0;
-        vel = Math.abs(vel) < 0.12 ? 0 : -vel * EDGE_BOUNCE;
+        if (Math.abs(vel) < 0.12) {
+          vel = 0;
+        } else {
+          vel = -vel * EDGE_BOUNCE;
+          // Feedback kit: soft thunk when the bar slams the left wall.
+          if (now - lastThunkRef.current > 250) {
+            lastThunkRef.current = now;
+            AudioManager.playSFX("blip3");
+            if (barRef.current) {
+              barRef.current.animate(
+                [{ boxShadow: "0 0 0 0 rgba(61,143,82,0)" }, { boxShadow: "0 0 10px 2px rgba(61,143,82,0.8)" }, { boxShadow: "0 0 0 0 rgba(61,143,82,0)" }],
+                { duration: 200 }
+              );
+            }
+          }
+        }
       } else if (pos > 1 - barW) {
         pos = 1 - barW;
         vel = 0;
@@ -500,6 +574,15 @@ export function ReelMinigame({
         fishTarget = Math.random();
         mul = dart ? m.dartMul : 1;
         retargetAt = now + m.retargetMs * (0.6 + 0.8 * Math.random());
+        // Feedback kit: darting fish sprays droplets on the track.
+        if (dart && trackRef.current) {
+          for (let i = 0; i < 3; i++) {
+            const drop = document.createElement("span");
+            drop.style.cssText = `position:absolute;left:${fishPos * 100}%;top:50%;width:5px;height:5px;border-radius:50%;background:#EAF6FF;pointer-events:none;--dx:${(Math.random() * 2 - 1) * 26}px;animation:reel-droplet 0.45s ease-out forwards;animation-delay:${i * 40}ms;`;
+            trackRef.current.appendChild(drop);
+            window.setTimeout(() => drop.remove(), 600);
+          }
+        }
       }
       const delta = fishTarget - fishPos;
       const maxV = m.speed * mul;
@@ -534,6 +617,10 @@ export function ReelMinigame({
       if (progRef.current) {
         progRef.current.style.width = `${progress * 100}%`;
         progRef.current.style.background = progress < 0.25 ? "#E5484D" : "#FFD166";
+        // Feedback kit: heartbeat pulse as the catch gets close — faster
+        // the closer you are.
+        const beat = progress > 0.75 ? `reel-heartbeat ${(1.35 - progress).toFixed(2)}s ease-in-out infinite` : "";
+        if (progRef.current.style.animation !== beat) progRef.current.style.animation = beat;
       }
 
       raf = requestAnimationFrame(step);
@@ -596,8 +683,24 @@ export function ReelMinigame({
         pointerEvents: "auto",
         userSelect: "none",
         touchAction: "none",
+        animation: "reel-slap-in 0.22s cubic-bezier(0.34, 1.56, 0.64, 1)",
       }}
     >
+      <style>{`
+        @keyframes reel-slap-in {
+          0% { transform: scale(0.7); opacity: 0; }
+          70% { transform: scale(1.05); opacity: 1; }
+          100% { transform: scale(1); opacity: 1; }
+        }
+        @keyframes reel-droplet {
+          0% { transform: translate(-50%, -50%); opacity: 0.95; }
+          100% { transform: translate(calc(-50% + var(--dx)), -26px); opacity: 0; }
+        }
+        @keyframes reel-heartbeat {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(255, 209, 102, 0); }
+          50% { box-shadow: 0 0 10px 2px rgba(255, 209, 102, 0.85); }
+        }
+      `}</style>
       {/* Header: species (or ??? for unknowns — rarity is never shown here) */}
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
         <span style={{ fontSize: 13, fontWeight: 700, color: "#4A4034" }}>
@@ -610,6 +713,7 @@ export function ReelMinigame({
 
       {/* Horizontal water track */}
       <div
+        ref={trackRef}
         style={{
           position: "relative",
           height: 46,
@@ -696,10 +800,24 @@ function CastMeter({ onRelease }: { onRelease: (power: number) => void }) {
 
   useEffect(() => {
     let raf = 0;
-    const t0 = performance.now();
+    let last = performance.now();
+    // Escalating difficulty (refinement 2026-07-23): the first bounce is a
+    // slow 1.4s, then each completed cycle speeds up 15% (cap ~2.2×) — an
+    // easy first pass, greedy re-tries get punished.
+    let vt = 0;
+    let speedMul = 1;
+    let lastCycle = 0;
     const step = (now: number) => {
-      // Triangle wave 0→1→0 over CAST.cycleMs.
-      const cyc = ((now - t0) % CAST.cycleMs) / CAST.cycleMs; // 0..1
+      const dt = now - last;
+      last = now;
+      vt += dt * speedMul;
+      const cycleIdx = Math.floor(vt / CAST.cycleMs);
+      if (cycleIdx > lastCycle) {
+        lastCycle = cycleIdx;
+        speedMul = Math.min(2.2, speedMul * 1.15);
+      }
+      // Triangle wave 0→1→0 over CAST.cycleMs of virtual time.
+      const cyc = (vt % CAST.cycleMs) / CAST.cycleMs; // 0..1
       const p = cyc < 0.5 ? cyc * 2 : (1 - cyc) * 2;
       pRef.current = p;
       const inTip = p >= CAST.maxZone;
