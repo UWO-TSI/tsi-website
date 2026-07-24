@@ -702,21 +702,49 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
           style={{ pointerEvents: "none" }}
           distanceFactor={10}
         >
-          <div
-            className="player-emote-bubble"
-            style={{
-              fontSize: 40,
-              lineHeight: 1,
-              filter: "drop-shadow(0 2px 6px rgba(0,0,0,0.4))",
-              userSelect: "none",
-            }}
-          >
-            {EMOTE_EMOJI[activeEmote.animation_key] ??
-              activeEmote.display_name.charAt(0).toUpperCase()}
+          {/* Loop iter 19 (2026-07-24): burst — six sparks fly radially on
+              emote start so a wave reads across the plaza. One-shot per
+              emote instance (keyed by id + start). */}
+          <div style={{ position: "relative" }}>
+            {Array.from({ length: 6 }).map((_, bi) => (
+              <span
+                key={`${activeEmote.id}-${bi}`}
+                aria-hidden
+                style={{
+                  position: "absolute",
+                  left: "50%",
+                  top: "50%",
+                  width: 6,
+                  height: 6,
+                  borderRadius: "50%",
+                  background: bi % 2 ? "#FFD166" : "#FFFDF5",
+                  ["--ex" as string]: `${Math.cos((bi / 6) * Math.PI * 2) * 34}px`,
+                  ["--ey" as string]: `${Math.sin((bi / 6) * Math.PI * 2) * 26}px`,
+                  animation: "playerEmoteSpark 0.55s ease-out forwards",
+                  pointerEvents: "none",
+                }}
+              />
+            ))}
+            <div
+              className="player-emote-bubble"
+              style={{
+                fontSize: 40,
+                lineHeight: 1,
+                filter: "drop-shadow(0 2px 6px rgba(0,0,0,0.4))",
+                userSelect: "none",
+              }}
+            >
+              {EMOTE_EMOJI[activeEmote.animation_key] ??
+                activeEmote.display_name.charAt(0).toUpperCase()}
+            </div>
           </div>
           <style jsx>{`
             .player-emote-bubble {
               animation: playerEmoteBounce 600ms ease-in-out infinite;
+            }
+            @keyframes playerEmoteSpark {
+              0% { opacity: 0.95; transform: translate(-50%, -50%); }
+              100% { opacity: 0; transform: translate(calc(-50% + var(--ex)), calc(-50% + var(--ey))) scale(0.5); }
             }
             @keyframes playerEmoteBounce {
               0% {

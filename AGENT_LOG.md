@@ -108,6 +108,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-24 — Loop iter 19 (wake 13): emote spark burst
+
+Firing an emote now pops six gold/cream sparks radially from the bubble (0.55s one-shot per emote instance, CSS vars for the fly-out vectors) — a wave or laugh reads across the plaza without extra draw cost (DOM inside the existing Html). Gates: tsc clean, lint at flap, world 200.
+
 ### 2026-07-24 — Loop iter 18 (wake 12): TC balance tick-up
 
 The StatsHUD coin count now counts toward its new value (ease-out cubic, ~0.7s) instead of snapping, with a gold text-glow flash on gains (flash deferred to the first rAF frame per the compiler's cascading-render rule). `useTickUp` is reusable for the XP bar later. Gates: tsc clean, lint at flap (StatsHUD clean), world 200.
