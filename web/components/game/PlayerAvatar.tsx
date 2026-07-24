@@ -137,6 +137,10 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
   // Each entry lives ~0.6s then unmounts itself.
   const puffIdRef = useRef(0);
   const [puffs, setPuffs] = useState<Array<{ id: number; position: [number, number, number]; scale?: number }>>([]);
+  // Micro-anim loop iter 1 (2026-07-24): cozy sit beat — settle puff + a
+  // brief contented ♪ over the head; standing gives a tiny hop.
+  const [sitNote, setSitNote] = useState(false);
+  const sitNoteTimerRef = useRef<number | null>(null);
   // F1.2: cosmetic jump. Space triggers a brief y-arc on the sprite mesh
   // (NOT the group — group y stays terrain-bound). Doesn't affect collision
   // or click-to-move pathing; pure visual delight.
@@ -262,7 +266,20 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
     const onSit = (e: Event) => {
       const { x, z } = (e as CustomEvent<{ x: number; z: number }>).detail;
       const cur = sitRef.current;
-      sitRef.current = cur && cur.x === x && cur.z === z ? null : { x, z };
+      const sittingDown = !(cur && cur.x === x && cur.z === z);
+      sitRef.current = sittingDown ? { x, z } : null;
+      if (sittingDown) {
+        // settle: soft dust puff at the seat + ♪ for a moment
+        const id = puffIdRef.current++;
+        setPuffs((prev) => [...prev, { id, position: [x, getTerrainHeight(x, z) + 0.15, z], scale: 1.3 }]);
+        setSitNote(true);
+        if (sitNoteTimerRef.current) window.clearTimeout(sitNoteTimerRef.current);
+        sitNoteTimerRef.current = window.setTimeout(() => setSitNote(false), 1700);
+      } else {
+        // stand: tiny cosmetic hop (reuses the jump arc at low amplitude)
+        setSitNote(false);
+        if (!jumpRef.current.active) jumpRef.current = { active: true, t: 0.22 };
+      }
     };
     window.addEventListener("tsi:sit", onSit);
     return () => window.removeEventListener("tsi:sit", onSit);
@@ -597,6 +614,18 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
 
       {/* Sprint E3: active emote bubble above the avatar's head. Parent clears
           activeEmote after 3.5s so this just unmounts automatically. */}
+      {sitNote && (
+        <Html position={[0, 2.1, 0]} center zIndexRange={[30, 0]} style={{ pointerEvents: "none" }}>
+          <div style={{ fontSize: 20, animation: "tsi-sit-note 1.7s ease-out forwards" }}>♪</div>
+          <style>{`
+            @keyframes tsi-sit-note {
+              0% { opacity: 0; transform: translateY(6px) rotate(-8deg); }
+              20% { opacity: 0.9; transform: translateY(0) rotate(4deg); }
+              100% { opacity: 0; transform: translateY(-14px) rotate(-4deg); }
+            }
+          `}</style>
+        </Html>
+      )}
       {activeEmote && (
         <Html zIndexRange={[40, 0]}
           position={[0, 2.6, 0]}

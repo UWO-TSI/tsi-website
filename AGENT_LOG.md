@@ -108,6 +108,14 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-24 — Micro-anim loop STARTED (David directive: loop until stop) + dump usable
+
+**Loop charter (David 2026-07-24):** continuously find + implement micro-animations — world interactions → movement/traversal → ambient reactions, cozy ACNH restraint, one commit + log line each, perf floor held, weave in the asset dump. Runs until David says stop.
+
+**Dump status:** 12GB rip landed at `~/Downloads/Assets/Model/` — each `.Nin_NX_NVN` entry is a DIRECTORY with a **.dae + PNG textures** (standard Collada — Blender-convertible; adapt `fbx_to_glb.py`). Spotted: `FtrFishManbou` (sunfish — Sea King crown candidate), `Layout_MenuIcon_Fish61` (real fish menu icons — icon-pipeline shortcut). Fish expansion is UNBLOCKED.
+
+**Iter 1 — bench sit beat** (PlayerAvatar): sitting down → soft dust puff at the seat + a contented ♪ drifts up for 1.7s; standing → tiny cosmetic hop (low-amplitude jump arc reuse). Verified live via tsi:sit events (note shows, clears on stand, zero pageerrors). Gates: tsc clean, 74/52, 32/32.
+
 ### 2026-07-23 — Fishing animation refinement: all 8 beats (David interview, 2 rounds)
 
 Beat-by-beat rulings implemented:
