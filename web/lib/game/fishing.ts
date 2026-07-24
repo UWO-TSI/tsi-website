@@ -19,6 +19,14 @@ import { getLabHour } from "./devLab";
 
 export type Rarity = "common" | "uncommon" | "rare" | "epic" | "legendary" | "seaking";
 
+/**
+ * Sea King is HOLOGRAPHIC (David ruling 2026-07-23): chips render this
+ * animated iridescent gradient instead of the flat tier color. Pair with
+ * the `tsi-holo-shift` keyframes (defined wherever chips render).
+ */
+export const HOLO_GRADIENT =
+  "linear-gradient(115deg, #5EE7F7 0%, #6EA8FF 18%, #B57AFF 38%, #FF7AD9 58%, #7DFFC4 78%, #5EE7F7 100%)";
+
 export const RARITY_META: Record<
   Rarity,
   { label: string; color: string; weight: number; barW: number }

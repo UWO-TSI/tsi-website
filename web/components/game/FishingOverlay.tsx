@@ -35,6 +35,7 @@ import {
   FILL_RATE,
   GRAVITY,
   HOLD_ACCEL,
+  HOLO_GRADIENT,
   RARITY_META,
   START_PROGRESS,
   celebrate,
@@ -277,7 +278,9 @@ export default function FishingOverlay() {
               phase === "bite"
                 ? "fish-pulse 0.4s ease-in-out infinite"
                 : phase === "caught"
-                  ? "fish-card-pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1)"
+                  ? fish?.rarity === "seaking"
+                    ? "fish-card-pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), tsi-holo-glow 2.4s linear infinite"
+                    : "fish-card-pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1)"
                   : undefined,
             display: "flex",
             alignItems: "center",
@@ -300,9 +303,19 @@ export default function FishingOverlay() {
                 letterSpacing: "0.06em",
                 textTransform: "uppercase",
                 color: "#FFFDF5",
-                background: rarity.color,
                 borderRadius: 999,
                 padding: "3px 8px",
+                // Sea King is holographic (David 2026-07-23): animated
+                // iridescent gradient + shine sweep instead of flat teal.
+                ...(fish?.rarity === "seaking"
+                  ? {
+                      background: HOLO_GRADIENT,
+                      backgroundSize: "300% 100%",
+                      animation: "tsi-holo-shift 2.2s linear infinite",
+                      textShadow: "0 1px 2px rgba(20, 40, 60, 0.45)",
+                      boxShadow: "0 0 12px rgba(122, 231, 255, 0.75)",
+                    }
+                  : { background: rarity.color }),
               }}
             >
               {rarity.label}
@@ -345,6 +358,16 @@ export default function FishingOverlay() {
         @keyframes fish-card-pop {
           0% { transform: scale(0.6); opacity: 0; }
           100% { transform: scale(1); opacity: 1; }
+        }
+        @keyframes tsi-holo-shift {
+          0% { background-position: 0% 50%; }
+          100% { background-position: 300% 50%; }
+        }
+        @keyframes tsi-holo-glow {
+          0%, 100% { box-shadow: 0 4px 26px rgba(94, 231, 247, 0.65), 0 0 0 4px rgba(94, 231, 247, 0.28); }
+          25% { box-shadow: 0 4px 26px rgba(181, 122, 255, 0.65), 0 0 0 4px rgba(181, 122, 255, 0.28); }
+          50% { box-shadow: 0 4px 26px rgba(255, 122, 217, 0.65), 0 0 0 4px rgba(255, 122, 217, 0.28); }
+          75% { box-shadow: 0 4px 26px rgba(125, 255, 196, 0.65), 0 0 0 4px rgba(125, 255, 196, 0.28); }
         }
       `}</style>
     </div>
