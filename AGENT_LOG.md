@@ -108,6 +108,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-24 — Loop iter 15 (wake 9): shop purchase beat
+
+Buying was silent (balance ticked, modal closed, nothing else — and failures were swallowed with no message). Now: coin chime + enter-note stagger, a 14-particle gold confetti pinch, and a receipt toast ("Purchased X! −N TC"); failed purchases finally toast too. Gates: tsc clean, lint at flap (shop page clean), shop 200.
+
 ### 2026-07-24 — Loop iter 14 (wake 8): jump takeoff beat (landing reviewed OK)
 
 Review verdict: the landing was already complete (0.18s squash + 1.6× puff + thud). The gap was LIFTOFF — now a small kick-off puff + light hop note fire on Space, completing the arc's symmetry. Keydown effect gains its missing `sfx` dep. Gates: tsc clean, lint at flap (PlayerAvatar clean), world 200.

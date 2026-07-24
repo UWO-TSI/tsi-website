@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import confetti from "canvas-confetti";
+import { AudioManager } from "@/lib/game/audio";
 import { ShoppingBag, Coins, SearchX, X } from "lucide-react";
 
 type Category = "all" | "apparel" | "accessories" | "digital" | "merch";
@@ -63,6 +65,14 @@ export default function ShopPage() {
       if (res.ok) {
         setBalance((b) => b - (product.price_tc ?? 0));
         setSelected(null);
+        // Loop iter 15 (2026-07-24): purchase beat — coin chime, a gold
+        // confetti pinch, and a receipt toast (success was silent).
+        AudioManager.playSFX("confirm");
+        window.setTimeout(() => AudioManager.playSFX("enter"), 150);
+        confetti({ particleCount: 14, spread: 45, startVelocity: 24, origin: { x: 0.5, y: 0.6 }, colors: ["#FFD166", "#E8A93C", "#FFFDF5"], disableForReducedMotion: true });
+        window.dispatchEvent(new CustomEvent("tsi:toast", { detail: { text: `Purchased ${product.name}! −${product.price_tc} TC` } }));
+      } else {
+        window.dispatchEvent(new CustomEvent("tsi:toast", { detail: { text: "Purchase failed — try again." } }));
       }
     } catch { /* ignore */ }
     setPurchasing(false);
