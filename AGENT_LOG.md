@@ -108,6 +108,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-24 — Loop iter 14 (wake 8): jump takeoff beat (landing reviewed OK)
+
+Review verdict: the landing was already complete (0.18s squash + 1.6× puff + thud). The gap was LIFTOFF — now a small kick-off puff + light hop note fire on Space, completing the arc's symmetry. Keydown effect gains its missing `sfx` dep. Gates: tsc clean, lint at flap (PlayerAvatar clean), world 200.
+
 ### 2026-07-24 — Loop iter 13 (wake 7): sprint wind lines
 
 Four faint white streak rods materialize around the player above ~1.35× walk speed, aligned to the movement heading and sliding backward on a loop; opacity collapses in a blink on slowdown. World-space group, all refs, zero per-frame React. Gates: tsc clean, PlayerAvatar lint-clean (known project flap only), 32/32, world 200.

@@ -208,6 +208,13 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
         if (!e.repeat && !jumpRef.current.active) {
           jumpRef.current.active = true;
           jumpRef.current.t = 0;
+          // Loop iter 14 (2026-07-24): takeoff beat — landing had squash +
+          // puff + thud, liftoff had nothing. Small kick-off puff + a light
+          // hop note completes the arc.
+          const jp = positionRef.current;
+          const id = puffIdRef.current++;
+          setPuffs((prev) => [...prev, { id, position: [jp.x, jp.y + 0.02, jp.z], scale: 0.85 }]);
+          sfx.play("blip2");
         }
         e.preventDefault();
       }
@@ -222,7 +229,7 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("keyup", onKeyUp);
     };
-  }, []);
+  }, [sfx]);
 
   // Click-to-move
   const raycaster = useRef(new THREE.Raycaster());
