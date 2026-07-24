@@ -6,6 +6,7 @@ import { Billboard, Html } from "@react-three/drei";
 import * as THREE from "three";
 import { getTerrainHeight, sampleTerrainHeightFast } from "./terrain";
 import { clampToCoast, coastDist } from "@/lib/game/coast";
+import { getTodayWeather } from "@/lib/game/weather";
 import { useSFX } from "@/lib/game/useAudio";
 import { getCameraForwardXZ } from "@/lib/game/cameraBasis";
 import { pickCurvedGround } from "@/lib/game/groundPick";
@@ -577,8 +578,9 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
         const id = puffIdRef.current++;
         // Loop iter 7 (2026-07-24): on the beach band footsteps splash a
         // wet ring instead of kicking dust (coast-space distance past the
-        // sand line ≈48.5).
-        const wet = coastDist(trailX, trailZ) > 48.5;
+        // sand line ≈48.5). Iter 22: rain days make EVERY step a puddle
+        // ripple — the weather reaches the ground.
+        const wet = coastDist(trailX, trailZ) > 48.5 || getTodayWeather() === "rain";
         setPuffs((prev) => [...prev, { id, position: [trailX, pos.y + 0.02, trailZ], scale: keys["shift"] ? 1.3 : 1, wet }]);
       }
     } else {

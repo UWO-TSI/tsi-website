@@ -108,6 +108,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-24 — Loop iter 22 (wake 16): rain puddle ripples
+
+On rain days every footstep splashes the pale-blue wet ring (reuses the iter-7 wet variant; `getTodayWeather() === "rain"` joins the beach-band check) — the weather finally reaches the ground under your feet. Gates: tsc clean, lint at flap, world 200 under ?rain=1.
+
 ### 2026-07-24 — Loop iter 21 (wake 15): XP bar tick + glow
 
 XP gains now roll the StatsHUD bar to its new fill (useTickUp reuse) with a gold glow pulse on the bar while ticking — level progress feels earned instead of teleporting. Gates: tsc clean, lint at flap, world 200.
