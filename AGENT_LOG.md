@@ -108,6 +108,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-24 — Loop iter 20 (wake 14): oracle answer-pick beat
+
+Choosing a quiz answer now presses the card in (scale 0.96 + indigo fill/glow), dims the other three, plays a soft note, and advances after a 260ms beat instead of hard-swapping; double-clicks during the beat are ignored. Progress-save path untouched (commitAnswer split keeps the original logic verbatim). Gates: tsc clean, lint at flap, oracle 200.
+
 ### 2026-07-24 — Loop iter 19 (wake 13): emote spark burst
 
 Firing an emote now pops six gold/cream sparks radially from the bubble (0.55s one-shot per emote instance, CSS vars for the fly-out vectors) — a wave or laugh reads across the plaza without extra draw cost (DOM inside the existing Html). Gates: tsc clean, lint at flap, world 200.
