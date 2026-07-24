@@ -108,6 +108,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-24 — Loop iter 17 (wake 11): minimap discovery pings
+
+First visit to Beach Cove / the Lighthouse / the Windmill / Oracle Temple pulses a gold ring on the minimap, toasts "Discovered: X!", and plays the enter chime — once per device (localStorage `tsi.discovered.v1`), checked in the existing 5Hz player poll (4 zones, negligible cost). New zones are one row in DISCOVER_ZONES (highlands ready). Gates: tsc clean, lint at flap (MiniMap clean), world 200.
+
 ### 2026-07-24 — Loop iter 16 (wake 10): guestbook sign beat
 
 Signing the guestbook now plays a pen-scratch two-blip rolling into a stamp note, and your fresh entry pops into the top of the wall (one-shot spring scale on entry #0 for ~1.2s). Errors already toasted; success finally feels like signing. Gates: tsc clean, lint at flap (file clean), world 200.

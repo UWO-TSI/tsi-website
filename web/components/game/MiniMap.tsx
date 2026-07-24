@@ -9,6 +9,7 @@
 
 import { useEffect, useState } from "react";
 import * as THREE from "three";
+import { AudioManager } from "@/lib/game/audio";
 import { coastWobble, beachWidthShift } from "@/lib/game/coast";
 
 // Organic coast outline: sample the shared harmonics into SVG polygons
@@ -39,13 +40,41 @@ const BUILDINGS: { x: number; z: number; w: number; h: number; c: string }[] = [
   { x: 30, z: -19, w: 4, h: 5, c: "#8A7B6B" },     // yellow chalet
 ];
 
+// Loop iter 17 (2026-07-24): discovery pings — first visit to a landmark
+// pulses a ring on the minimap + a toast + a soft chime. Persisted in
+// localStorage so each discovery only fires once per device.
+const DISCOVER_ZONES: { key: string; label: string; x: number; z: number; r: number }[] = [
+  { key: "cove", label: "Beach Cove", x: 13.6, z: 45.9, r: 8 },
+  { key: "lighthouse", label: "The Lighthouse", x: 32.6, z: -31.6, r: 7 },
+  { key: "windmill", label: "The Windmill", x: -32, z: -26, r: 9 },
+  { key: "oracle", label: "Oracle Temple", x: 0, z: 30, r: 7 },
+];
+const DISCOVER_KEY = "tsi.discovered.v1";
+
 export default function MiniMap({ playerPosRef }: { playerPosRef: React.MutableRefObject<THREE.Vector3> }) {
   const [dot, setDot] = useState<[number, number]>([0, -15]);
+  const [ping, setPing] = useState<{ id: number; x: number; z: number } | null>(null);
 
   useEffect(() => {
     const t = setInterval(() => {
       const p = playerPosRef.current;
       setDot((prev) => (Math.abs(prev[0] - p.x) > 0.2 || Math.abs(prev[1] - p.z) > 0.2 ? [p.x, p.z] : prev));
+      // Discovery check (cheap: 4 zones at 5Hz)
+      try {
+        const seen = new Set<string>(JSON.parse(localStorage.getItem(DISCOVER_KEY) ?? "[]") as string[]);
+        for (const zn of DISCOVER_ZONES) {
+          if (seen.has(zn.key)) continue;
+          if (Math.hypot(p.x - zn.x, p.z - zn.z) < zn.r) {
+            seen.add(zn.key);
+            localStorage.setItem(DISCOVER_KEY, JSON.stringify([...seen]));
+            setPing({ id: Date.now(), x: zn.x, z: zn.z });
+            window.setTimeout(() => setPing(null), 1800);
+            window.dispatchEvent(new CustomEvent("tsi:toast", { detail: { text: `Discovered: ${zn.label}!` } }));
+            AudioManager.playSFX("enter");
+            break;
+          }
+        }
+      } catch { /* private browsing */ }
     }, 200);
     return () => clearInterval(t);
   }, [playerPosRef]);
@@ -92,10 +121,22 @@ export default function MiniMap({ playerPosRef }: { playerPosRef: React.MutableR
         {/* landmarks: cove camp + lighthouse (coast v2 spots) */}
         <circle cx={sx(13.6)} cy={sy(45.9)} r="1.6" fill="#E8705A" stroke="rgba(0,0,0,0.25)" strokeWidth="0.4" />
         <circle cx={sx(32.6)} cy={sy(-31.6)} r="1.6" fill="#C0392B" stroke="rgba(0,0,0,0.25)" strokeWidth="0.4" />
+        {/* discovery ping */}
+        {ping && (
+          <g key={ping.id}>
+            <circle cx={sx(ping.x)} cy={sy(ping.z)} r="3" fill="none" stroke="#FFD166" strokeWidth="1.2" style={{ animation: "tsi-ping 0.9s ease-out 2" }} />
+          </g>
+        )}
         {/* player */}
         <circle cx={sx(dot[0])} cy={sy(dot[1])} r="2.2" fill="#FFDD57" stroke="#7A5A00" strokeWidth="0.7" />
       </svg>
-      <style>{`@keyframes tsi-map-in { from { opacity: 0; transform: scale(0.94); } to { opacity: 1; transform: none; } }`}</style>
+      <style>{`
+        @keyframes tsi-map-in { from { opacity: 0; transform: scale(0.94); } to { opacity: 1; transform: none; } }
+        @keyframes tsi-ping {
+          0% { opacity: 1; transform: scale(0.5); transform-box: fill-box; transform-origin: center; }
+          100% { opacity: 0; transform: scale(2.6); transform-box: fill-box; transform-origin: center; }
+        }
+      `}</style>
     </div>
   );
 }
