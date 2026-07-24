@@ -51,7 +51,14 @@ const CATALOG: { group: string; items: { key: string; icon: string; img?: string
     // Legacy generic keys retired pre-launch (no real member data).
     group: "Fish",
     items: [
-      ...FISH.map((f) => ({ key: f.key, img: iconFor(f), icon: f.rarity === "seaking" ? "👑" : f.rarity === "legendary" ? "✨" : "🐟", name: f.name })),
+      ...FISH.filter((f) => !f.creature).map((f) => ({ key: f.key, img: iconFor(f), icon: f.rarity === "seaking" ? "👑" : f.rarity === "legendary" ? "✨" : "🐟", name: f.name })),
+    ],
+  },
+  {
+    // Sea-floor creatures (2026-07-24): pulled up at the deck + cove spots.
+    group: "Sea Floor",
+    items: [
+      ...FISH.filter((f) => f.creature).map((f) => ({ key: f.key, img: iconFor(f), icon: "🦪", name: f.name })),
     ],
   },
   {

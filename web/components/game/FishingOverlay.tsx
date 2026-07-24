@@ -49,6 +49,8 @@ import {
   type FishDef,
   iconFor,
 } from "@/lib/game/fishing";
+import { weatherMods } from "@/lib/game/weatherPerks";
+import { getTodayWeather } from "@/lib/game/weather";
 
 type Phase = "idle" | "charging" | "casting" | "waiting" | "bite" | "reeling" | "revealing" | "caught" | "missed";
 
@@ -103,8 +105,9 @@ export default function FishingOverlay() {
 
   const beginWait = () => {
     setPhase("waiting");
-    // Cast power shortens the wait (max cast halves it).
-    const wait = (2000 + Math.random() * 4000) * (1 - CAST.waitScale * powerRef.current);
+    // Cast power shortens the wait (max cast halves it); rain days shorten
+    // it further (weather perk).
+    const wait = (2000 + Math.random() * 4000) * (1 - CAST.waitScale * powerRef.current) * weatherMods(getTodayWeather()).biteWaitMul;
     // Fake nibbles (refinement 2026-07-23): 1-2 false-alarm tugs, never in
     // the last 1.2s before the real bite. Bobber dips + ripple + soft blip.
     if (wait > 2600) {
@@ -570,9 +573,10 @@ export function ReelMinigame({
         vel = 0;
       }
 
-      // Fish AI — velocity-seek with per-species personality.
+      // Fish AI — velocity-seek with per-species personality. Cloudy days
+      // calm the darts (weather perk).
       if (now >= retargetAt) {
-        const dart = Math.random() < m.dartChance;
+        const dart = Math.random() < m.dartChance * weatherMods(getTodayWeather()).dartChanceMul;
         fishTarget = Math.random();
         mul = dart ? m.dartMul : 1;
         retargetAt = now + m.retargetMs * (0.6 + 0.8 * Math.random());
@@ -809,17 +813,19 @@ function CastMeter({ onRelease }: { onRelease: (power: number) => void }) {
     let vt = 0;
     let speedMul = 1;
     let lastCycle = 0;
+    // Weather perk: sunny days slow the meter (easier MAX CAST).
+    const cycleMs = CAST.cycleMs * weatherMods(getTodayWeather()).castCycleMul;
     const step = (now: number) => {
       const dt = now - last;
       last = now;
       vt += dt * speedMul;
-      const cycleIdx = Math.floor(vt / CAST.cycleMs);
+      const cycleIdx = Math.floor(vt / cycleMs);
       if (cycleIdx > lastCycle) {
         lastCycle = cycleIdx;
         speedMul = Math.min(2.2, speedMul * 1.15);
       }
-      // Triangle wave 0→1→0 over CAST.cycleMs of virtual time.
-      const cyc = (vt % CAST.cycleMs) / CAST.cycleMs; // 0..1
+      // Triangle wave 0→1→0 over cycleMs of virtual time.
+      const cyc = (vt % cycleMs) / cycleMs; // 0..1
       const p = cyc < 0.5 ? cyc * 2 : (1 - cyc) * 2;
       pRef.current = p;
       const inTip = p >= CAST.maxZone;

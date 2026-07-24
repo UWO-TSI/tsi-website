@@ -42,6 +42,7 @@ import ControlsOverlay from "./ControlsOverlay";
 import WelcomeOverlay from "./WelcomeOverlay";
 import Compass from "./Compass";
 import StatsHUD from "./StatsHUD";
+import WeatherTimeDock from "./WeatherTimeDock";
 import Crosshair from "./Crosshair";
 import DebugOverlay, { type DebugSnapshot } from "./DebugOverlay";
 import PostFX from "./PostFX";
@@ -1611,46 +1612,6 @@ function DebugTracker({
   return null;
 }
 
-// P32: small DOM badge showing the current time-of-day phase. Lives
-// next to the corner buttons so the player can read the world clock
-// at a glance without opening any panel.
-const TOD_LABEL: Record<"day" | "night" | "dawn" | "dusk", { text: string; bg: string; fg: string }> = {
-  dawn: { text: "Dawn", bg: "#FFB68C", fg: "#5A3A26" },
-  day: { text: "Day", bg: "#FFE6A6", fg: "#5A4A2A" },
-  dusk: { text: "Dusk", bg: "#C29ACB", fg: "#3A2A4A" },
-  night: { text: "Night", bg: "#2D3360", fg: "#E6E6FF" },
-};
-function TodBadge({ phase }: { phase: "day" | "night" | "dawn" | "dusk" }) {
-  const cfg = TOD_LABEL[phase];
-  return (
-    <div
-      style={{
-        position: "absolute",
-        // Sit just below the audio-enable toast (which lives top-right
-        // at ~y=12). 48px down avoids the overlap.
-        top: 56,
-        right: 12,
-        padding: "4px 12px",
-        background: cfg.bg,
-        color: cfg.fg,
-        border: "1px solid rgba(255,255,255,0.12)",
-        borderRadius: 999,
-        fontSize: 12,
-        fontWeight: 700,
-        fontFamily: "'IBM Plex Mono', monospace",
-        letterSpacing: "0.05em",
-        textTransform: "uppercase",
-        boxShadow: "0 2px 6px rgba(0,0,0,0.25)",
-        zIndex: 30,
-        pointerEvents: "none",
-        userSelect: "none",
-      }}
-    >
-      {cfg.text}
-    </div>
-  );
-}
-
 // P16: pump the camera's azimuth angle (radians) into a shared ref so the
 // DOM Compass HUD outside the Canvas can render without React rerenders.
 // Camera in this scene is positioned by CameraControls — we read its
@@ -2151,9 +2112,15 @@ export default function GameWorld() {
   const [collectionOpen, setCollectionOpen] = useState(false);
   // Sprint F1.3: hold-Tab server-list overlay state.
   const [tabHeld, setTabHeld] = useState(false);
-  // G3: HUD auto-fade after 5s of no pointer/key activity; M-key minimap.
+  // G3: HUD auto-fade after 5s of no pointer/key activity. Minimap is ON
+  // by default (HUD rework 2026-07-24) — M still toggles, choice persists.
   const [hudDim, setHudDim] = useState(false);
-  const [mapOpen, setMapOpen] = useState(false);
+  const [mapOpen, setMapOpen] = useState(() => {
+    try { return localStorage.getItem("tsi.map.open.v1") !== "0"; } catch { return true; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem("tsi.map.open.v1", mapOpen ? "1" : "0"); } catch { /* private browsing */ }
+  }, [mapOpen]);
   // Task 26 loading gate: overlay holds until assets resolve + warmup frames
   // render (shader compile happens behind it), then fades. gateDone unmounts.
   const [worldReady, setWorldReady] = useState(false);
@@ -2575,7 +2542,7 @@ export default function GameWorld() {
         <OverlaySheet sheet={sheet} onClose={() => setSheet(null)} />
         <Crosshair active={nearest !== null} hint={nearest?.name ?? null} />
         {!interior && <Compass azimuthRef={azimuthRef} />}
-        {!interior && <TodBadge phase={todPhase} />}
+        {!interior && <WeatherTimeDock phase={todPhase} weather={weather} belowMap={mapOpen} />}
         <StatsHUD />
         <DebugOverlay visible={debugOpen} snapshotRef={debugSnapshotRef} />
       </div>

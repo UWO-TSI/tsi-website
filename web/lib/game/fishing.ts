@@ -17,6 +17,7 @@ import confetti from "canvas-confetti";
 import { getTodayWeather } from "./weather";
 import { getLabHour } from "./devLab";
 import { EXTRA_FISH } from "./fishCatalog";
+import { weatherMods } from "./weatherPerks";
 
 export type Rarity = "common" | "uncommon" | "rare" | "epic" | "legendary" | "seaking";
 
@@ -68,6 +69,9 @@ export interface FishDef {
   raw?: boolean;
   /** Habitat: river (default) or sea — spots roll their own zone. */
   zone?: "river" | "sea";
+  /** Sea-floor creature (not a fish): pulled up at sea spots, grouped
+   *  separately in the Collection Book. */
+  creature?: boolean;
 }
 
 /** Resolve a species' reel/book icon. */
@@ -103,6 +107,9 @@ const CORE_FISH: FishDef[] = [
   { key: "fish_king_salmon", label: "a King Salmon", name: "King Salmon", model: "/assets/acnh/fish/king-salmon.glb", rarity: "epic", sizeCm: [70, 120], raw: true, icon: GENERIC_ICON, move: { speed: 0.35, accel: 1.7, jitter: 0.006, dartChance: 0.3, dartMul: 2.4, retargetMs: 1200 } },
   { key: "fish_stringfish", label: "a Stringfish", name: "Stringfish", model: "/assets/acnh/fish/stringfish.glb", rarity: "legendary", sizeCm: [80, 130], raw: true, icon: GENERIC_ICON, move: { speed: 0.4, accel: 2.0, jitter: 0.01, dartChance: 0.32, dartMul: 2.4, retargetMs: 1050 }, when: (h, w) => h >= 21 || h < 4 || w === "rain", whenLabel: "late night or rain" },
   { key: "fish_golden_trout", label: "a Golden Trout", name: "Golden Trout", model: "/assets/acnh/fish/golden-trout.glb", rarity: "legendary", sizeCm: [40, 60], raw: true, icon: GENERIC_ICON, move: { speed: 0.41, accel: 2.1, jitter: 0.012, dartChance: 0.3, dartMul: 2.3, retargetMs: 1000 } },
+  // Golden Arowana (2026-07-24): the last unconverted species model in the
+  // dump (ArowanaGold recolor) — closes the fish roster at 81.
+  { key: "fish_golden_arowana", label: "a Golden Arowana", name: "Golden Arowana", model: "/assets/acnh/fish/golden-arowana.glb", rarity: "legendary", sizeCm: [70, 100], raw: true, icon: GENERIC_ICON, move: { speed: 0.42, accel: 2.1, jitter: 0.01, dartChance: 0.32, dartMul: 2.4, retargetMs: 980 }, when: (h) => h >= 20 || h < 4, whenLabel: "night (20-4h)" },
   // "Both" ruling completed: the marquee arapaima takes the Sea King crown;
   // the Golden Koi drops to legendary.
   { key: "fish_golden_koi", label: "a Golden Koi", name: "Golden Koi", model: "/assets/acnh/fish/koi.glb", rarity: "legendary", sizeCm: [60, 95], move: { speed: 0.44, accel: 2.2, jitter: 0.014, dartChance: 0.34, dartMul: 2.4, retargetMs: 950 } },
@@ -110,7 +117,26 @@ const CORE_FISH: FishDef[] = [
 ];
 
 
-export const FISH: FishDef[] = [...CORE_FISH, ...EXTRA_FISH];
+// Sea-floor creatures (2026-07-24): the 10 dive models staged under
+// assets/acnh/sea/ (loop iter 25) are now IN the game — pulled up at the
+// two sea fishing spots (deck + cove) alongside the sea fish. Slow, heavy
+// reel personalities: bottom dwellers cling, they don't sprint. A future
+// pier/diving feature can move them to their own mechanic without touching
+// these defs.
+const SEA_CREATURES: FishDef[] = [
+  { key: "sea_scallop", label: "a Scallop", name: "Scallop", model: "/assets/acnh/sea/scallop.glb", rarity: "common", zone: "sea", creature: true, sizeCm: [8, 14], raw: true, icon: GENERIC_ICON, move: { speed: 0.15, accel: 0.6, jitter: 0.004, dartChance: 0.06, dartMul: 1.6, retargetMs: 2200 } },
+  { key: "sea_sweet_shrimp", label: "a Sweet Shrimp", name: "Sweet Shrimp", model: "/assets/acnh/sea/sweet-shrimp.glb", rarity: "common", zone: "sea", creature: true, sizeCm: [5, 9], raw: true, icon: GENERIC_ICON, move: { speed: 0.2, accel: 0.85, jitter: 0.008, dartChance: 0.14, dartMul: 2.0, retargetMs: 1700 }, when: (h) => h >= 16 || h < 9, whenLabel: "evening/night" },
+  { key: "sea_sea_star", label: "a Sea Star", name: "Sea Star", model: "/assets/acnh/sea/sea-star.glb", rarity: "common", zone: "sea", creature: true, sizeCm: [8, 15], raw: true, icon: GENERIC_ICON, move: { speed: 0.12, accel: 0.5, jitter: 0.003, dartChance: 0.04, dartMul: 1.4, retargetMs: 2500 } },
+  { key: "sea_barnacle", label: "an Acorn Barnacle", name: "Acorn Barnacle", model: "/assets/acnh/sea/barnacle.glb", rarity: "common", zone: "sea", creature: true, sizeCm: [2, 4], raw: true, icon: GENERIC_ICON, move: { speed: 0.1, accel: 0.45, jitter: 0.003, dartChance: 0.03, dartMul: 1.3, retargetMs: 2600 } },
+  { key: "sea_dungeness_crab", label: "a Dungeness Crab", name: "Dungeness Crab", model: "/assets/acnh/sea/dungeness-crab.glb", rarity: "uncommon", zone: "sea", creature: true, sizeCm: [15, 25], raw: true, icon: GENERIC_ICON, move: { speed: 0.24, accel: 1.0, jitter: 0.007, dartChance: 0.16, dartMul: 1.9, retargetMs: 1500 } },
+  { key: "sea_garden_eel", label: "a Garden Eel", name: "Garden Eel", model: "/assets/acnh/sea/garden-eel.glb", rarity: "uncommon", zone: "sea", creature: true, sizeCm: [30, 40], raw: true, icon: GENERIC_ICON, move: { speed: 0.26, accel: 1.1, jitter: 0.009, dartChance: 0.18, dartMul: 2.0, retargetMs: 1400 }, when: (h) => h >= 6 && h < 18, whenLabel: "day (6-18h)" },
+  { key: "sea_firefly_squid", label: "a Firefly Squid", name: "Firefly Squid", model: "/assets/acnh/sea/firefly-squid.glb", rarity: "uncommon", zone: "sea", creature: true, sizeCm: [5, 8], raw: true, icon: GENERIC_ICON, move: { speed: 0.27, accel: 1.15, jitter: 0.01, dartChance: 0.2, dartMul: 2.1, retargetMs: 1350 }, when: (h) => h >= 21 || h < 4, whenLabel: "late night (21-4h)" },
+  { key: "sea_abalone", label: "an Abalone", name: "Abalone", model: "/assets/acnh/sea/abalone.glb", rarity: "rare", zone: "sea", creature: true, sizeCm: [12, 20], raw: true, icon: GENERIC_ICON, move: { speed: 0.18, accel: 0.8, jitter: 0.004, dartChance: 0.1, dartMul: 1.7, retargetMs: 1900 }, when: (h) => h >= 16 || h < 9, whenLabel: "evening/night" },
+  { key: "sea_pearl_oyster", label: "a Pearl Oyster", name: "Pearl Oyster", model: "/assets/acnh/sea/pearl-oyster.glb", rarity: "rare", zone: "sea", creature: true, sizeCm: [7, 12], raw: true, icon: GENERIC_ICON, move: { speed: 0.2, accel: 0.9, jitter: 0.005, dartChance: 0.12, dartMul: 1.8, retargetMs: 1800 } },
+  { key: "sea_giant_isopod", label: "a Giant Isopod", name: "Giant Isopod", model: "/assets/acnh/sea/giant-isopod.glb", rarity: "epic", zone: "sea", creature: true, sizeCm: [20, 40], raw: true, icon: GENERIC_ICON, move: { speed: 0.3, accel: 1.4, jitter: 0.007, dartChance: 0.26, dartMul: 2.3, retargetMs: 1250 }, when: (h) => h >= 20 || h < 4, whenLabel: "night (20-4h)" },
+];
+
+export const FISH: FishDef[] = [...CORE_FISH, ...EXTRA_FISH, ...SEA_CREATURES];
 
 export function currentFishingContext(): { hour: number; weather: string } {
   const hour = getLabHour() ?? new Date().getHours() + new Date().getMinutes() / 60;
@@ -120,6 +146,7 @@ export function currentFishingContext(): { hour: number; weather: string } {
 export function fishWeight(f: FishDef, weather: string): number {
   let w = RARITY_META[f.rarity].weight;
   if (f.key === "fish_golden_koi" && weather === "rain") w *= 2; // koi loves rain
+  if ((f.zone ?? "river") === "sea") w *= weatherMods(weather).seaWeightMul;
   return w;
 }
 
@@ -144,11 +171,13 @@ function luckWeight(f: FishDef, weather: string, luck: number): number {
  *  cast power — see CAST. */
 export function rollFish(luck = 0, zone: "river" | "sea" = "river"): FishDef {
   const { hour, weather } = currentFishingContext();
+  // Weather perk: rain adds flat luck on top of cast power.
+  const totalLuck = luck + weatherMods(weather).rareLuckBonus;
   const pool = FISH.filter((f) => (f.zone ?? "river") === zone && (!f.when || f.when(hour, weather)));
-  const total = pool.reduce((s, f) => s + luckWeight(f, weather, luck), 0);
+  const total = pool.reduce((s, f) => s + luckWeight(f, weather, totalLuck), 0);
   let r = Math.random() * total;
   for (const f of pool) {
-    r -= luckWeight(f, weather, luck);
+    r -= luckWeight(f, weather, totalLuck);
     if (r <= 0) return f;
   }
   return pool[pool.length - 1];
@@ -201,7 +230,10 @@ export const REVEAL: Record<
 /** "1 in N" odds for a species under the current hour/weather pool. */
 export function fishOdds(fish: FishDef): number {
   const { hour, weather } = currentFishingContext();
-  const pool = FISH.filter((f) => !f.when || f.when(hour, weather));
+  // Odds are within the species' own zone pool (a sea catch competes with
+  // the sea roster, not the whole book).
+  const zone = fish.zone ?? "river";
+  const pool = FISH.filter((f) => (f.zone ?? "river") === zone && (!f.when || f.when(hour, weather)));
   const total = pool.reduce((s, f) => s + fishWeight(f, weather), 0);
   const w = fishWeight(fish, weather);
   return Math.max(1, Math.round(total / w));
