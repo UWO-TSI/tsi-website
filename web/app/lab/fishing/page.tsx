@@ -12,6 +12,7 @@
 
 import { useMemo, useState } from "react";
 import { ReelMinigame } from "@/components/game/FishingOverlay";
+import FishReveal from "@/components/game/FishReveal";
 import {
   CELEBRATE,
   FISH,
@@ -59,6 +60,7 @@ export default function FishingBench() {
   const [reelKey, setReelKey] = useState(0); // remount per run
   const [reelOpen, setReelOpen] = useState(false);
   const [lastResult, setLastResult] = useState<string | null>(null);
+  const [revealOpen, setRevealOpen] = useState(false);
   const [simRows, setSimRows] = useState<{ key: string; name: string; n: number; rarity: string }[] | null>(null);
   // Bumped by weather clicks so availability/sim recompute (weather lives in
   // the URL, which React can't see change).
@@ -245,11 +247,14 @@ export default function FishingBench() {
               <input type="checkbox" checked={mystery} onChange={(e) => setMystery(e.target.checked)} />
               mystery (??? + silhouette)
             </label>
+            <button onClick={() => setRevealOpen(true)} style={btn()}>
+              Preview first-catch reveal
+            </button>
             <button
               onClick={() => celebrate(selected.rarity, RARITY_META[selected.rarity].color)}
               style={btn()}
             >
-              Preview celebration ({CELEBRATE[selected.rarity].bursts} bursts)
+              Repeat-catch confetti ({CELEBRATE[selected.rarity].bursts} bursts)
             </button>
           </div>
 
@@ -270,6 +275,9 @@ export default function FishingBench() {
           </div>
         </div>
       </div>
+      {revealOpen && (
+        <FishReveal fish={selected} sizeCm={rollSize(selected.sizeCm)} onDone={() => setRevealOpen(false)} />
+      )}
     </div>
   );
 }

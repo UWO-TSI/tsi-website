@@ -27,6 +27,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import FishReveal from "./FishReveal";
 import { AudioManager } from "@/lib/game/audio";
 import {
   CELEBRATE,
@@ -44,7 +45,7 @@ import {
   type FishDef,
 } from "@/lib/game/fishing";
 
-type Phase = "idle" | "casting" | "waiting" | "bite" | "reeling" | "caught" | "missed";
+type Phase = "idle" | "casting" | "waiting" | "bite" | "reeling" | "revealing" | "caught" | "missed";
 
 const BITE_WINDOW_MS = 1400;
 
@@ -146,9 +147,6 @@ export default function FishingOverlay() {
         ownedRef.current.add(fish.key);
         setWasNew(isNew);
         setCaughtSize(rollSize(fish.sizeCm));
-        setPhase("caught");
-        AudioManager.playSFX("confirm");
-        celebrate(fish.rarity, RARITY_META[fish.rarity].color);
         // Signals the "catch a fish" onboarding quest (auto-complete).
         window.dispatchEvent(new CustomEvent("tsi:fish-caught", { detail: { key: fish.key, model: fish.model } }));
         fetch("/api/collections", {
@@ -156,7 +154,19 @@ export default function FishingOverlay() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ item_key: fish.key }),
         }).catch(() => {});
-        timersRef.current.push(window.setTimeout(cancel, CELEBRATE[fish.rarity].cardMs));
+        if (isNew) {
+          // Blind-box ceremony (David 2026-07-23): first catches get the
+          // fullscreen staged reveal — it owns the celebration (confetti
+          // fires at its flash) and dismisses back to idle.
+          setPhase("revealing");
+          AudioManager.playSFX("click");
+        } else {
+          // Repeats keep the quick card + tier confetti.
+          setPhase("caught");
+          AudioManager.playSFX("confirm");
+          celebrate(fish.rarity, RARITY_META[fish.rarity].color);
+          timersRef.current.push(window.setTimeout(cancel, CELEBRATE[fish.rarity].cardMs));
+        }
       } else {
         setPhase("missed");
         AudioManager.playSFX("exit");
@@ -188,11 +198,11 @@ export default function FishingOverlay() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase]);
 
-  // Keyboard: E hooks during bite, ESC cancels (the reel handles its own
-  // input + ESC-concede). Capture so the world's E handler doesn't also
-  // fire while fishing.
+  // Keyboard: E hooks during bite, ESC cancels (the reel and the reveal
+  // each handle their own input). Capture so the world's E handler doesn't
+  // also fire while fishing.
   useEffect(() => {
-    if (phase === "idle" || phase === "reeling") return;
+    if (phase === "idle" || phase === "reeling" || phase === "revealing") return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "e" || e.key === "E") {
         e.preventDefault();
@@ -225,6 +235,11 @@ export default function FishingOverlay() {
   useEffect(() => () => clearTimers(), []);
 
   if (phase === "idle") return null;
+
+  // First-catch blind-box ceremony — fullscreen, replaces the bottom card.
+  if (phase === "revealing" && fish && caughtSize !== null) {
+    return <FishReveal fish={fish} sizeCm={caughtSize} onDone={cancel} />;
+  }
 
   const label =
     phase === "casting"

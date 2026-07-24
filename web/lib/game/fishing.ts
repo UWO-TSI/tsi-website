@@ -118,6 +118,25 @@ export const EDGE_BOUNCE = 0.35; // left-edge elasticity (Stardew's bottom bounc
 export const FILL_RATE = 0.26; // progress /s while the fish is inside the bar
 export const START_PROGRESS = 0.35;
 
+/**
+ * Blind-box reveal staging (David ruling 2026-07-23): FIRST catches get a
+ * fullscreen gacha ceremony — black silhouette shakes center-screen while
+ * a tier-colored glow ramps (the telegraph), then a flash, then the fish
+ * lands in color with name/rarity/size. Cinematic pacing, click-to-skip.
+ * Repeats keep the quick bottom card. All times ms, shake in px.
+ */
+export const REVEAL: Record<
+  Rarity,
+  { suspense: number; flash: number; hold: number; shake: number; rays: boolean }
+> = {
+  common: { suspense: 800, flash: 130, hold: 1100, shake: 3, rays: false },
+  uncommon: { suspense: 1100, flash: 150, hold: 1250, shake: 4, rays: false },
+  rare: { suspense: 1700, flash: 170, hold: 1450, shake: 6, rays: true },
+  epic: { suspense: 2300, flash: 190, hold: 1650, shake: 8, rays: true },
+  legendary: { suspense: 3000, flash: 230, hold: 2000, shake: 10, rays: true },
+  seaking: { suspense: 3800, flash: 270, hold: 2400, shake: 13, rays: true },
+};
+
 /** Tier-scaled catch celebration: shake px, confetti bursts, card ms. */
 export const CELEBRATE: Record<Rarity, { shake: number; bursts: number; cardMs: number; glow: boolean }> = {
   common: { shake: 4, bursts: 0, cardMs: 2600, glow: false },
