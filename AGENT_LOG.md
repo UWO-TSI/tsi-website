@@ -108,6 +108,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-24 — Loop wake 25: dusk lamplighter moment
+
+Flipping into dusk/night now lights the six lamps in SEQUENCE (400ms apart) — each catches with a flicker-stutter, overshoots warm (1.25×), settles, and plays a soft blip as it takes. Ref-driven envelope in LampPosts' useFrame (globe emissive + pool pointLight together, zero per-frame React); initial night mounts skip the ceremony. Lab-verified live via the clock scrub (noon → night): 350ms post-flip the lamps are still catching, 4s later all settled — the old instant snap is gone; zero pageerrors. Gates: tsc clean, GameWorld lint-clean, 32/32.
+
 ### 2026-07-24 — Loop wake 24b (David ruling): icons flipped head-side-up
 
 All 91 icons re-rendered head-up. Turned out the two model families hang OPPOSITE ways — raw dump exports come out of calibration nose-down, repo-native originals are head-up natively — so the stage flip is raw-only. Spot-checked dace/salmon/hammerhead: eyes and mouths at the top across both families. Bench: 0 broken, 0 generic, zero pageerrors; tsc clean, stage lint-clean.

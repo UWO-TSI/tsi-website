@@ -1317,6 +1317,46 @@ const LAMP_TINTS = ["#FFD9A8", "#FFD9A8", "#FFC985", "#FFC985", "#FFBE74", "#FFB
 function LampPosts({ phase }: { phase: "day" | "night" | "dawn" | "dusk" }) {
   const onAtNight = phase === "night" || phase === "dusk" || phase === "dawn";
   const emissive = onAtNight ? 2.2 : 0;
+  // Dusk lamplighter moment (loop wake 25): on a LIVE flip into dusk the
+  // lamps don't all snap on — each ignites in sequence (400ms apart) with a
+  // small flicker-stutter and a warm overshoot before settling, plus a soft
+  // blip as it catches. Initial mounts at night skip the ceremony.
+  const globeMats = useRef<(THREE.MeshStandardMaterial | null)[]>([]);
+  const poolLights = useRef<(THREE.PointLight | null)[]>([]);
+  const wasOnRef = useRef(onAtNight);
+  const igniteAtRef = useRef<number | null>(null);
+  const chimedRef = useRef(0);
+  useEffect(() => {
+    if (onAtNight && !wasOnRef.current) {
+      igniteAtRef.current = performance.now();
+      chimedRef.current = 0;
+    }
+    wasOnRef.current = onAtNight;
+  }, [onAtNight]);
+  useFrame(() => {
+    const ig = igniteAtRef.current;
+    for (let i = 0; i < LAMP_POSITIONS.length; i++) {
+      let f = onAtNight ? 1 : 0;
+      if (onAtNight && ig !== null) {
+        const t = (performance.now() - ig - i * 400) / 1000;
+        if (t < 0) f = 0;
+        else if (t < 0.7) {
+          // catch → stutter → overshoot → settle
+          f = t < 0.12 ? 0.55 : t < 0.2 ? 0.12 : t < 0.32 ? 0.75 : t < 0.42 ? 1.25 : 1.25 - ((t - 0.42) / 0.28) * 0.25;
+          if (!(chimedRef.current & (1 << i))) {
+            chimedRef.current |= 1 << i;
+            AudioManager.playSFX("blip2");
+          }
+        } else if (i === LAMP_POSITIONS.length - 1) {
+          igniteAtRef.current = null; // last lamp settled — ceremony over
+        }
+      }
+      const mat = globeMats.current[i];
+      if (mat) mat.emissiveIntensity = 2.2 * f;
+      const light = poolLights.current[i];
+      if (light) light.intensity = 0.95 * f;
+    }
+  });
   return (
     <group>
       {LAMP_POSITIONS.map(([x, z], i) => {
@@ -1339,6 +1379,9 @@ function LampPosts({ phase }: { phase: "day" | "night" | "dawn" | "dusk" }) {
             <mesh position={[0, 1.85, 0]} castShadow>
               <sphereGeometry args={[0.18, 14, 10]} />
               <meshStandardMaterial
+                ref={(m) => {
+                  globeMats.current[i] = m;
+                }}
                 color="#FFE4B0"
                 emissive={LAMP_TINTS[i % LAMP_TINTS.length]}
                 emissiveIntensity={emissive}
@@ -1352,6 +1395,9 @@ function LampPosts({ phase }: { phase: "day" | "night" | "dawn" | "dusk" }) {
                 not a glow; the brighter point light carries the cozy pool. */}
             {onAtNight && (
               <pointLight
+                ref={(l) => {
+                  poolLights.current[i] = l;
+                }}
                 position={[0, 1.85, 0]}
                 color={LAMP_TINTS[i % LAMP_TINTS.length]}
                 intensity={0.95}
