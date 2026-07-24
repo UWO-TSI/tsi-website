@@ -108,6 +108,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-24 — Loop iter 2 (bug): half-missing blossom canopies fixed
+
+David report + screenshot: cherry blossom / some trees rendered only half the canopy. Root cause: the extractor wrote foliage CARDS as FrontSide, so their backfaces culled at half the view angles. Fix: both nature loaders (NatureModels GLBProp traverse + InstancedNature sub-mesh collection) force `material.side = DoubleSide` — standard for stylized foliage, negligible cost on closed trunks. Verified from the previously-culling angle: full canopies. Gates at baseline.
+
 ### 2026-07-24 — Micro-anim loop STARTED (David directive: loop until stop) + dump usable
 
 **Loop charter (David 2026-07-24):** continuously find + implement micro-animations — world interactions → movement/traversal → ambient reactions, cozy ACNH restraint, one commit + log line each, perf floor held, weave in the asset dump. Runs until David says stop.

@@ -43,6 +43,11 @@ function extractSubMeshes(scene: THREE.Object3D): SubMesh[] {
       // For most Kenney/Quaternius kits the material is a single object,
       // not an array. Handle both defensively.
       const mat = Array.isArray(m.material) ? m.material[0] : m.material;
+      // Foliage backface fix (David report 2026-07-24) — see NatureModels.
+      if (mat && mat.side !== THREE.DoubleSide) {
+        mat.side = THREE.DoubleSide;
+        mat.needsUpdate = true;
+      }
       out.push({ geometry: m.geometry, material: mat });
     }
   });
