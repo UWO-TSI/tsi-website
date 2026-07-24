@@ -2182,6 +2182,30 @@ export default function GameWorld() {
   // resolved once via lazy initializer (GameWorld is ssr:false so window is
   // available on first render).
   const [weather] = useState<Weather>(getTodayWeather);
+  // Loop iter 27 (2026-07-24): welcome-back toast — returning after 8h+
+  // greets you by name with the day's weather, right after the load gate.
+  // A 5-min heartbeat keeps last-seen honest for mid-session closes.
+  useEffect(() => {
+    const KEY = "tsi.lastseen.v1";
+    try {
+      const last = Number(localStorage.getItem(KEY) ?? 0);
+      const stamp = () => {
+        try { localStorage.setItem(KEY, String(Date.now())); } catch { /* ignore */ }
+      };
+      stamp();
+      const hb = window.setInterval(stamp, 300_000);
+      if (last && Date.now() - last > 8 * 3_600_000) {
+        const w = getTodayWeather();
+        const wLine = w === "rain" ? "It's raining today ☔" : w === "cloudy" ? "Cloudy skies today ☁️" : "It's a sunny day ☀️";
+        const t = window.setTimeout(() => {
+          window.dispatchEvent(new CustomEvent("tsi:toast", { detail: { text: `Welcome back! ${wLine}` } }));
+          AudioManager.playSFX("enter");
+        }, 2600);
+        return () => { window.clearInterval(hb); window.clearTimeout(t); };
+      }
+      return () => window.clearInterval(hb);
+    } catch { /* private browsing */ }
+  }, []);
   const [activeEmote, setActiveEmote] = useState<EmoteType | null>(null);
   const emoteClearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const playerPosRef = useRef<THREE.Vector3>(new THREE.Vector3(...SPAWN_POSITION));

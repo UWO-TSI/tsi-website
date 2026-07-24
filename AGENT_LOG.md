@@ -108,6 +108,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-24 — Loop iter 27 (wake 21): welcome-back toast
+
+Returning after 8h+ away now greets you ("Welcome back! It's a sunny day ☀️" / rain / cloudy variants) with the enter chime, 2.6s after load so it lands past the gate; a 5-min heartbeat keeps last-seen honest. localStorage `tsi.lastseen.v1`. Gates: tsc clean, lint at flap, world 200.
+
 ### 2026-07-24 — Loop iter 26 (wake 20): bridge plank knocks
 
 Footsteps on the main river crossing (|x|<2.2, z 0-6.5) now play a wooden knock (blip4) instead of the grass scuff, and planks don't kick dust puffs. Cheap AABB check inside the existing footstep tick. Gates: tsc clean, lint at flap, world 200.
