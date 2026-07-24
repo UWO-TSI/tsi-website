@@ -108,6 +108,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-24 — Loop wake 31: brick plaza footstep taps
+
+Steps on the new brick plaza now play a hard pavement tap (blip3, joining the bridge's wood knock in the surface trio) and dry brick kicks no dust — rain days still splash puddle rings on the pavement. Same cheap AABB check as the bridge inside the existing footstep tick (rect matches RoadTiles' PLAZA). Verified: WASD walk across the spawn plaza + off it, zero pageerrors. Gates: tsc clean, PlayerAvatar lint-clean, 32/32, world 200.
+
 ### 2026-07-24 — Loop wake 30: BRICK PLAZA (flag-list item shipped)
 
 The central plaza is now warm terracotta brick — FldUnitRoadBrick kit converted (4 variants, 32KB) and wired as a fifth RoadTiles zone; the PLAZA rect flips stone→brick, neighbor transitions handled by the existing global checks. Detail canvas does running-bond courses: cream mortar at near-full tint, bricks pull redder with per-brick variance + occasional sunken-brick patches for the hand-laid read; tint #D7B29A keeps it pastel-grade friendly. Verified live: plaza reads as brick with visible courses, clean soil transitions, zero pageerrors. Gates: tsc clean, RoadTiles lint-clean, 32/32. Flag-list remaining: plaza stalls, seasonal variants, cliff system.

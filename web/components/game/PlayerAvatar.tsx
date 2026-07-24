@@ -573,7 +573,10 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
         // Loop iter 26 (2026-07-24): the bridge knocks — steps on the main
         // river crossing play a wooden note instead of the grass scuff.
         const onBridge = Math.abs(pos.x) < 2.2 && pos.z > 0 && pos.z < 6.5;
-        sfx.play(onBridge ? "blip4" : "footstep");
+        // Loop wake 31: the brick plaza taps — hard pavement note (matches
+        // RoadTiles' PLAZA rect), and dry brick kicks no dirt.
+        const onBrick = pos.x > -5.4 && pos.x < 5.4 && pos.z > -16.6 && pos.z < -9.4;
+        sfx.play(onBridge ? "blip4" : onBrick ? "blip3" : "footstep");
         // P28: spawn a dust puff at the player's feet. Trailing slightly
         // behind the movement direction so it reads as kicked-up dust.
         const trailX = pos.x - (dx || 0) * 0.2;
@@ -582,9 +585,9 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
         // Loop iter 7 (2026-07-24): on the beach band footsteps splash a
         // wet ring instead of kicking dust (coast-space distance past the
         // sand line ≈48.5). Iter 22: rain days make EVERY step a puddle
-        // ripple — the weather reaches the ground.
+        // ripple — the weather reaches the ground (incl. puddles on brick).
         const wet = coastDist(trailX, trailZ) > 48.5 || getTodayWeather() === "rain";
-        if (!onBridge) setPuffs((prev) => [...prev, { id, position: [trailX, pos.y + 0.02, trailZ], scale: keys["shift"] ? 1.3 : 1, wet }]);
+        if (!onBridge && (!onBrick || wet)) setPuffs((prev) => [...prev, { id, position: [trailX, pos.y + 0.02, trailZ], scale: keys["shift"] ? 1.3 : 1, wet }]);
       }
     } else {
       footstepTimer.current = 0;
