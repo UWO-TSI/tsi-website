@@ -108,6 +108,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-24 — Loop iter 16 (wake 10): guestbook sign beat
+
+Signing the guestbook now plays a pen-scratch two-blip rolling into a stamp note, and your fresh entry pops into the top of the wall (one-shot spring scale on entry #0 for ~1.2s). Errors already toasted; success finally feels like signing. Gates: tsc clean, lint at flap (file clean), world 200.
+
 ### 2026-07-24 — Loop iter 15 (wake 9): shop purchase beat
 
 Buying was silent (balance ticked, modal closed, nothing else — and failures were swallowed with no message). Now: coin chime + enter-note stagger, a 14-particle gold confetti pinch, and a receipt toast ("Purchased X! −N TC"); failed purchases finally toast too. Gates: tsc clean, lint at flap (shop page clean), shop 200.
