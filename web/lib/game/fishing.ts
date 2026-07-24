@@ -2,10 +2,12 @@
  * Fishing data + rules (extracted from FishingOverlay 2026-07-22 so the
  * /lab/fishing bench and the game share ONE source of truth).
  *
- * Refinement rulings (David, 2026-07-22 playtest):
+ * Refinement rulings (David, 2026-07-22 playtest; rerank 2026-07-24):
  *  - 6 rarity tiers: common / uncommon / rare / epic / legendary / sea king.
- *    Legendary sits VACANT until the next marquee extraction (then the new
- *    fish takes Sea King and the koi drops to legendary — "Both" ruling).
+ *    SEA KING sits VACANT (rerank ruling): none of the current roster earns
+ *    it — David is supplying dedicated marquee models for the tier.
+ *    Legendary is deliberately tight (7): the three goldens + Stringfish +
+ *    Coelacanth / Hammerhead / Sturgeon.
  *  - Difficulty scales with rarity: bar narrows, fish speed up — and every
  *    species has its OWN movement fields so behavior is parameterized per
  *    fish, not one memorizable pattern.
@@ -90,7 +92,7 @@ const CORE_FISH: FishDef[] = [
   { key: "fish_crucian_carp", label: "a Crucian Carp", name: "Crucian Carp", model: "/assets/acnh/fish/crucian-carp.glb", rarity: "uncommon", sizeCm: [15, 30], move: { speed: 0.26, accel: 1.0, jitter: 0.005, dartChance: 0.14, dartMul: 1.9, retargetMs: 1600 } },
   { key: "fish_bluegill", label: "a Bluegill", name: "Bluegill", model: "/assets/acnh/fish/bluegill.glb", rarity: "uncommon", sizeCm: [12, 22], move: { speed: 0.3, accel: 1.4, jitter: 0.012, dartChance: 0.18, dartMul: 2.0, retargetMs: 1300 }, when: (h) => h >= 9 && h < 16, whenLabel: "midday (9-16h)" },
   { key: "fish_goldfish", label: "a Goldfish", name: "Goldfish", model: "/assets/acnh/fish/goldfish.glb", rarity: "uncommon", sizeCm: [8, 15], move: { speed: 0.27, accel: 1.1, jitter: 0.008, dartChance: 0.12, dartMul: 1.8, retargetMs: 1500 } },
-  { key: "fish_carp", label: "a Carp", name: "Carp", model: "/assets/acnh/fish/carp.glb", rarity: "rare", sizeCm: [35, 70], move: { speed: 0.3, accel: 1.2, jitter: 0.004, dartChance: 0.16, dartMul: 1.8, retargetMs: 1500 } },
+  { key: "fish_carp", label: "a Carp", name: "Carp", model: "/assets/acnh/fish/carp.glb", rarity: "uncommon", sizeCm: [35, 70], move: { speed: 0.3, accel: 1.2, jitter: 0.004, dartChance: 0.16, dartMul: 1.8, retargetMs: 1500 } },
   { key: "fish_black_bass", label: "a Black Bass", name: "Black Bass", model: "/assets/acnh/fish/black-bass.glb", rarity: "rare", sizeCm: [30, 55], move: { speed: 0.36, accel: 1.8, jitter: 0.01, dartChance: 0.26, dartMul: 2.3, retargetMs: 1150 } },
   { key: "fish_catfish", label: "a Catfish", name: "Catfish", model: "/assets/acnh/fish/catfish.glb", rarity: "epic", sizeCm: [50, 110], move: { speed: 0.32, accel: 1.5, jitter: 0.006, dartChance: 0.3, dartMul: 2.6, retargetMs: 1300 }, when: (h, w) => h >= 20 || h < 4 || w === "rain", whenLabel: "night (20-4h) or rain" },
   // ── Dump import batch 1 (2026-07-24, calibrated rip): 11 new species.
@@ -98,7 +100,7 @@ const CORE_FISH: FishDef[] = [
   { key: "fish_loach", label: "a Loach", name: "Loach", model: "/assets/acnh/fish/loach.glb", rarity: "common", sizeCm: [12, 20], raw: true, move: { speed: 0.21, accel: 0.85, jitter: 0.005, dartChance: 0.1, dartMul: 1.8, retargetMs: 1850 } },
   { key: "fish_sweetfish", label: "a Sweetfish", name: "Sweetfish", model: "/assets/acnh/fish/sweetfish.glb", rarity: "uncommon", sizeCm: [18, 30], raw: true, move: { speed: 0.28, accel: 1.2, jitter: 0.009, dartChance: 0.15, dartMul: 1.9, retargetMs: 1450 } },
   { key: "fish_rainbow_trout", label: "a Rainbow Trout", name: "Rainbow Trout", model: "/assets/acnh/fish/rainbow-trout.glb", rarity: "uncommon", sizeCm: [30, 50], raw: true, move: { speed: 0.29, accel: 1.25, jitter: 0.007, dartChance: 0.16, dartMul: 2.0, retargetMs: 1400 }, when: (h) => h >= 5 && h < 19, whenLabel: "day (5-19h)" },
-  { key: "fish_salmon", label: "a Salmon", name: "Salmon", model: "/assets/acnh/fish/salmon.glb", rarity: "rare", sizeCm: [50, 80], raw: true, move: { speed: 0.33, accel: 1.4, jitter: 0.006, dartChance: 0.2, dartMul: 2.1, retargetMs: 1300 } },
+  { key: "fish_salmon", label: "a Salmon", name: "Salmon", model: "/assets/acnh/fish/salmon.glb", rarity: "uncommon", sizeCm: [50, 80], raw: true, move: { speed: 0.33, accel: 1.4, jitter: 0.006, dartChance: 0.2, dartMul: 2.1, retargetMs: 1300 } },
   { key: "fish_snakehead", label: "a Snakehead", name: "Snakehead", model: "/assets/acnh/fish/snakehead.glb", rarity: "rare", sizeCm: [40, 90], raw: true, move: { speed: 0.34, accel: 1.6, jitter: 0.008, dartChance: 0.24, dartMul: 2.2, retargetMs: 1250 }, when: (h) => h >= 9 && h < 16, whenLabel: "midday (9-16h)" },
   { key: "fish_gar", label: "a Gar", name: "Gar", model: "/assets/acnh/fish/gar.glb", rarity: "epic", sizeCm: [90, 150], raw: true, move: { speed: 0.34, accel: 1.6, jitter: 0.005, dartChance: 0.28, dartMul: 2.5, retargetMs: 1250 }, when: (h, w) => h >= 16 || h < 9 || w === "rain", whenLabel: "evening/night or rain" },
   { key: "fish_king_salmon", label: "a King Salmon", name: "King Salmon", model: "/assets/acnh/fish/king-salmon.glb", rarity: "epic", sizeCm: [70, 120], raw: true, move: { speed: 0.35, accel: 1.7, jitter: 0.006, dartChance: 0.3, dartMul: 2.4, retargetMs: 1200 } },
@@ -107,10 +109,12 @@ const CORE_FISH: FishDef[] = [
   // Golden Arowana (2026-07-24): the last unconverted species model in the
   // dump (ArowanaGold recolor) — closes the fish roster at 81.
   { key: "fish_golden_arowana", label: "a Golden Arowana", name: "Golden Arowana", model: "/assets/acnh/fish/golden-arowana.glb", rarity: "legendary", sizeCm: [70, 100], raw: true, move: { speed: 0.42, accel: 2.1, jitter: 0.01, dartChance: 0.32, dartMul: 2.4, retargetMs: 980 }, when: (h) => h >= 20 || h < 4, whenLabel: "night (20-4h)" },
-  // "Both" ruling completed: the marquee arapaima takes the Sea King crown;
-  // the Golden Koi drops to legendary.
+  // Rarity rerank (David ruling 2026-07-24): SEA KING IS VACANT — David is
+  // supplying new marquee models for the tier; the arapaima drops to epic
+  // (keeping its king-sized fight). Legendary is deliberately tight: the
+  // three goldens + Stringfish + Coelacanth/Hammerhead/Sturgeon.
   { key: "fish_golden_koi", label: "a Golden Koi", name: "Golden Koi", model: "/assets/acnh/fish/koi.glb", rarity: "legendary", sizeCm: [60, 95], move: { speed: 0.44, accel: 2.2, jitter: 0.014, dartChance: 0.34, dartMul: 2.4, retargetMs: 950 } },
-  { key: "fish_arapaima", label: "an Arapaima", name: "Arapaima", model: "/assets/acnh/fish/arapaima.glb", rarity: "seaking", sizeCm: [150, 300], raw: true, move: { speed: 0.46, accel: 2.3, jitter: 0.012, dartChance: 0.36, dartMul: 2.5, retargetMs: 900 }, when: (h, w) => h >= 16 || h < 9 || w === "rain", whenLabel: "evening/night or rain" },
+  { key: "fish_arapaima", label: "an Arapaima", name: "Arapaima", model: "/assets/acnh/fish/arapaima.glb", rarity: "epic", sizeCm: [150, 300], raw: true, move: { speed: 0.46, accel: 2.3, jitter: 0.012, dartChance: 0.36, dartMul: 2.5, retargetMs: 900 }, when: (h, w) => h >= 16 || h < 9 || w === "rain", whenLabel: "evening/night or rain" },
 ];
 
 

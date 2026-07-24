@@ -108,6 +108,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-24 — Loop wake 25c (David ruling): rarity rerank — tight legendary, Sea King VACATED
+
+Full 91-row proposal tabled for David; his rulings: legendary stays TIGHT and no current fish earns Sea King (he supplies new marquee models for the tier). Applied: **legendary = 7** (Golden Koi/Trout/Arowana + Stringfish + Coelacanth/Hammerhead/Sturgeon); **epic = 16** (Arapaima down from Sea King keeping its king-size fight; Great White/Whale Shark/Oarfish/Saw Shark down from legendary; Barreleye up from rare w/ epic movement); Giant Trevally epic→rare, Salmon+Carp rare→uncommon (ACNH-value-true). Sea King tier/holo/ceremony code stays dormant awaiting the new models. Bench-verified all 12 moved/held rows + zero Sea King rows, zero pageerrors; tsc clean, both tables lint-clean, 32/32.
+
 ### 2026-07-24 — Loop wake 25b (David ask): fishing bench gets a big 3D model view
 
 Clicking a species on /lab/fishing now shows its MODEL large in the detail pane — 260px orbitable stage (slow turntable, drag to orbit, scroll to zoom), fish laid horizontal aquarium-style (raw and native orientations both handled). The clone→calibrate→normalize pipeline is extracted to buildFishStage in components/lab/FishPreview.tsx and shared with /lab/icon (dedupes the SkeletonUtils/skinning-bounds logic). Verified: Dace/Coelacanth/Dungeness Crab all render big and swap on click, zero pageerrors. Gates: tsc clean, all three files lint-clean, 32/32.
