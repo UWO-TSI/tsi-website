@@ -108,6 +108,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-24 — Loop wake 30: BRICK PLAZA (flag-list item shipped)
+
+The central plaza is now warm terracotta brick — FldUnitRoadBrick kit converted (4 variants, 32KB) and wired as a fifth RoadTiles zone; the PLAZA rect flips stone→brick, neighbor transitions handled by the existing global checks. Detail canvas does running-bond courses: cream mortar at near-full tint, bricks pull redder with per-brick variance + occasional sunken-brick patches for the hand-laid read; tint #D7B29A keeps it pastel-grade friendly. Verified live: plaza reads as brick with visible courses, clean soil transitions, zero pageerrors. Gates: tsc clean, RoadTiles lint-clean, 32/32. Flag-list remaining: plaza stalls, seasonal variants, cliff system.
+
 ### 2026-07-24 — Loop wake 29: collection book almanac strip
 
 Clicking a DISCOVERED fish or sea-floor tile now opens its field notes in a strip pinned to the book's bottom edge (sticky through scroll): icon, name, rarity chip, zone, "bites:" window, size range, times caught — the almanac that teaches windows without leaking anything (undiscovered tiles stay inert ???, and you only see notes for what you've caught). Picked tile gets a gold ring; click again to dismiss; soft blip on pick. Verified live with seeded catches: Dace notes render (window/size/×2), strip pins while scrolling, zero pageerrors. Gates: tsc clean, CollectionBook lint-clean, 32/32.

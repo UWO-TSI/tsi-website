@@ -46,9 +46,16 @@ const RECTS = [
 ];
 
 type Variant = "interior" | "edge" | "corner" | "cap";
-type Zone = "soil" | "stone" | "sand" | "wood";
+type Zone = "soil" | "stone" | "sand" | "wood" | "brick";
 
 const ZONE_URLS: Record<Zone, Record<Variant, string>> = {
+  // Brick plaza (loop wake 30, David flag-list item): FldUnitRoadBrick kit.
+  brick: {
+    interior: "/assets/acnh/road/brick-4-a.glb",
+    edge: "/assets/acnh/road/brick-1-a.glb",
+    corner: "/assets/acnh/road/brick-2-b.glb",
+    cap: "/assets/acnh/road/brick-0-a.glb",
+  },
   soil: {
     interior: "/assets/acnh/road/4-a.glb",
     edge: "/assets/acnh/road/1-a.glb",
@@ -84,6 +91,9 @@ const ZONE_COLORS: Record<Zone, string> = {
   stone: "#B9B4A8",
   sand: "#E7D3A0",
   wood: "#B5885C",
+  // Light terracotta-cream: the canvas pulls brick pixels redder while the
+  // mortar joints keep this near-full tint (cream), pastel-grade friendly.
+  brick: "#D7B29A",
 };
 
 // Path-texture pass (2026-07-14, David: "path texture needs tuning"):
@@ -128,6 +138,24 @@ function getZoneTexture(zone: Zone): THREE.CanvasTexture {
       ctx.moveTo(rnd() * S, rnd() * S);
       ctx.lineTo(rnd() * S, rnd() * S);
       ctx.stroke();
+    }
+  } else if (zone === "brick") {
+    // running-bond courses: cream mortar (near-white base = full tint),
+    // bricks pull redder (drop G/B) with per-brick value variance.
+    const rowH = 8;
+    const brickW = 16;
+    for (let y = 0; y < S; y += rowH) {
+      const off = (y / rowH) % 2 === 0 ? 0 : brickW / 2;
+      for (let x = -brickW; x < S + brickW; x += brickW) {
+        const v = 232 + Math.floor(rnd() * 18);
+        ctx.fillStyle = `rgb(${v},${v - 30},${v - 44})`;
+        ctx.fillRect(x + off + 1, y + 1, brickW - 2, rowH - 2);
+        // occasional slightly-sunken brick for the hand-laid read
+        if (rnd() < 0.12) {
+          ctx.fillStyle = "rgba(160,120,100,0.25)";
+          ctx.fillRect(x + off + 1, y + 1, brickW - 2, rowH - 2);
+        }
+      }
     }
   } else if (zone === "sand") {
     // fine grain + a few darker shell dots
@@ -176,7 +204,7 @@ const inRect = (r: { x0: number; x1: number; z0: number; z1: number }, x: number
 function zoneAt(x: number, z: number): Zone {
   if (inRect(WOOD_PAD, x, z)) return "wood";
   if (SAND_RECTS.some((r) => inRect(r, x, z))) return "sand";
-  if (inRect(PLAZA, x, z)) return "stone";
+  if (inRect(PLAZA, x, z)) return "brick";
   return "soil";
 }
 
@@ -254,6 +282,10 @@ export default function RoadTiles() {
   const woodE = useGLTF(ZONE_URLS.wood.edge).scene;
   const woodC = useGLTF(ZONE_URLS.wood.corner).scene;
   const woodK = useGLTF(ZONE_URLS.wood.cap).scene;
+  const brickI = useGLTF(ZONE_URLS.brick.interior).scene;
+  const brickE = useGLTF(ZONE_URLS.brick.edge).scene;
+  const brickC = useGLTF(ZONE_URLS.brick.corner).scene;
+  const brickK = useGLTF(ZONE_URLS.brick.cap).scene;
 
   const meshes = useMemo(() => {
     const scenes: Record<Zone, Record<Variant, THREE.Group>> = {
@@ -261,6 +293,7 @@ export default function RoadTiles() {
       stone: { interior: stoneI, edge: stoneE, corner: stoneC, cap: stoneK },
       sand: { interior: sandI, edge: sandE, corner: sandC, cap: sandK },
       wood: { interior: woodI, edge: woodE, corner: woodC, cap: woodK },
+      brick: { interior: brickI, edge: brickE, corner: brickC, cap: brickK },
     };
     const m4 = new THREE.Matrix4();
     const q = new THREE.Quaternion();
@@ -292,7 +325,7 @@ export default function RoadTiles() {
       }
     }
     return result;
-  }, [soilI, soilE, soilC, soilK, stoneI, stoneE, stoneC, stoneK, sandI, sandE, sandC, sandK, woodI, woodE, woodC, woodK]);
+  }, [soilI, soilE, soilC, soilK, stoneI, stoneE, stoneC, stoneK, sandI, sandE, sandC, sandK, woodI, woodE, woodC, woodK, brickI, brickE, brickC, brickK]);
 
   return (
     <group>
