@@ -2165,6 +2165,9 @@ export default function GameWorld() {
   // exterior Scene unmounts while inside (assets stay cached via useGLTF)
   // and remounts on exit with the player just outside the HQ door.
   const [interior, setInterior] = useState<null | "hq" | "shop" | "oracle">(null);
+  // Loop iter 12 (2026-07-24): door beat — a warm light-spill pulse over
+  // the fade when passing a doorway. Key bump remounts the one-shot div.
+  const [doorGlow, setDoorGlow] = useState(0);
   const interiorRef = useRef<null | "hq" | "shop" | "oracle">(null);
   useEffect(() => { interiorRef.current = interior; }, [interior]);
   const [worldSpawn, setWorldSpawn] = useState<[number, number, number] | undefined>(undefined);
@@ -2280,6 +2283,7 @@ export default function GameWorld() {
               setInterior(null);
               setNearest(null);
             });
+            setDoorGlow((k) => k + 1);
             AudioManager.playSFX("exit");
           } else if (action === "admin") {
             window.dispatchEvent(new CustomEvent("tsi:toast", { detail: { text: "The Admin Room is locked. (T1-T3 access, coming soon)" } }));
@@ -2291,7 +2295,11 @@ export default function GameWorld() {
             setInterior(n.interiorId as "hq" | "shop" | "oracle");
             setNearest(null);
           });
-          AudioManager.playSFX("exit");
+          // Door beat: warm light spills from the doorway + the ENTER
+          // chime (was playing the exit sound on the way in).
+          setDoorGlow((k) => k + 1);
+          AudioManager.playSFX("enter");
+          window.setTimeout(() => AudioManager.playSFX("blip2"), 160);
         } else if (n.kind === "building" && n.href) {
           // Item 14: mapped targets open as sheets over the world — the
           // Canvas keeps running and close is instant. Unmapped hrefs keep
@@ -2547,6 +2555,27 @@ export default function GameWorld() {
         <StatsHUD />
         <DebugOverlay visible={debugOpen} snapshotRef={debugSnapshotRef} />
       </div>
+      {doorGlow > 0 && (
+        <div
+          key={doorGlow}
+          aria-hidden
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 45,
+            pointerEvents: "none",
+            background: "radial-gradient(circle at 50% 58%, rgba(255, 222, 150, 0.55) 0%, rgba(255, 222, 150, 0.18) 34%, transparent 62%)",
+            animation: "tsi-door-glow 520ms ease-out forwards",
+          }}
+        />
+      )}
+      <style>{`
+        @keyframes tsi-door-glow {
+          0% { opacity: 0; }
+          30% { opacity: 1; }
+          100% { opacity: 0; }
+        }
+      `}</style>
       {/* F1.4: tiny restore hint in screenshot mode so users know how to exit. */}
       {screenshotMode && (
         <div

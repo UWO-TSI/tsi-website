@@ -108,6 +108,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-24 — Loop iter 12 (wake 6): doorway beat
+
+Passing any doorway now pulses a warm light-spill (radial cream flash, 520ms one-shot over the fade) — and entering finally plays the ENTER chime + a soft second note (it was playing the exit sound both ways). Exit keeps its sound + gains the same glow. Gates: tsc clean, lint at the known flap (GameWorld clean), world 200.
+
 ### 2026-07-24 — Loop iter 11 (wake 5): critter first-catch distinction
 
 Critter catches now know when they're firsts: NEW! prefix on the toast, a cozy 18-particle confetti pinch, and a two-note blip flourish — repeats keep the quiet toast (ACNH restraint). Uses `localCollections()` pre-check before `collect()`. Gates: tsc clean, lint within the known 74/75 flap (zero errors in touched files), world 200.
