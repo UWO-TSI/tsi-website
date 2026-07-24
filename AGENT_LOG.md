@@ -108,6 +108,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-24 — Loop iter 24 (wake 18): collection book open beat
+
+The book now unfolds open — backdrop fades in, the card springs up with a slight paper rotate (0.32s spring), and a click + page-turn note play on open. Gates: tsc clean, lint at flap, world 200.
+
 ### 2026-07-24 — Loop iter 23 (wake 17): NPC thinking mutter + breathe
 
 While an NPC composes a reply, their voice blips mutter at a lazy random rhythm (550-1050ms, same playBlip voice as their answer) and the "is thinking…" row breathes (opacity pulse) — the wait reads as composing, not buffering. Cleans up on send-complete/unmount. Gates: tsc clean, lint at flap, world 200.

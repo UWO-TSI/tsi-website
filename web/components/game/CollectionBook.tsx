@@ -10,6 +10,7 @@
  */
 
 import { useEffect, useState } from "react";
+import { AudioManager } from "@/lib/game/audio";
 import { mergeWithLocal } from "@/lib/game/collections";
 import { X } from "lucide-react";
 
@@ -107,8 +108,12 @@ export default function CollectionBook({ open, onClose }: { open: boolean; onClo
   // synchronous setState-in-effect (react-hooks/set-state-in-effect).
   const [loading, setLoading] = useState(true);
 
+  // Loop iter 24 (2026-07-24): page-open beat — paper pop + page-turn
+  // notes when the book opens.
   useEffect(() => {
     if (!open) return;
+    AudioManager.playSFX("click");
+    window.setTimeout(() => AudioManager.playSFX("blip1"), 110);
     let cancelled = false;
     fetch("/api/collections")
       .then((r) => (r.ok ? r.json() : { collections: [] }))
@@ -159,8 +164,17 @@ export default function CollectionBook({ open, onClose }: { open: boolean; onClo
         alignItems: "center",
         justifyContent: "center",
         backdropFilter: "blur(3px)",
+        animation: "cb-fade 0.18s ease-out",
       }}
     >
+      <style>{`
+        @keyframes cb-fade { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes cb-unfold {
+          0% { opacity: 0; transform: scale(0.92) rotate(-1.2deg) translateY(10px); }
+          70% { opacity: 1; transform: scale(1.015) rotate(0.3deg) translateY(-2px); }
+          100% { opacity: 1; transform: scale(1) rotate(0) translateY(0); }
+        }
+      `}</style>
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
@@ -173,6 +187,7 @@ export default function CollectionBook({ open, onClose }: { open: boolean; onClo
           padding: 20,
           boxShadow: "0 20px 60px rgba(60, 45, 20, 0.35)",
           fontFamily: "var(--font-highlight, sans-serif)",
+          animation: "cb-unfold 0.32s cubic-bezier(0.34, 1.56, 0.64, 1)",
           color: "#4A4034",
         }}
       >
