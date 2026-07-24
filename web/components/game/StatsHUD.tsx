@@ -59,10 +59,14 @@ export default function StatsHUD() {
   const { profile, loading } = useUser();
   const tcTarget = ((profile?.tethos_coins as number | undefined) ?? 0);
   const { value: tcShown, flashing } = useTickUp(tcTarget);
+  // Loop iter 21 (2026-07-24): XP bar rolls to its new fill with a gold
+  // glow on gains — same useTickUp as the coin count.
+  const xpTarget = ((profile?.xp as number | undefined) ?? 0);
+  const { value: xpShown, flashing: xpFlash } = useTickUp(xpTarget);
   if (loading || !profile) return null;
 
   const level = (profile.level as number | undefined) ?? 1;
-  const xp = (profile.xp as number | undefined) ?? 0;
+  const xp = xpShown;
   const tc = tcShown;
 
   // XP progress toward next level. xpForLevel returns total XP needed to
@@ -111,6 +115,7 @@ export default function StatsHUD() {
             height: "100%",
             background: "linear-gradient(90deg, #FFD166, #FFB36A)",
             transition: "width 0.4s ease",
+            boxShadow: xpFlash ? "0 0 8px 1px rgba(255, 209, 102, 0.9)" : "none",
           }}
         />
       </div>

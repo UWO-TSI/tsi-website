@@ -108,6 +108,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-24 — Loop iter 21 (wake 15): XP bar tick + glow
+
+XP gains now roll the StatsHUD bar to its new fill (useTickUp reuse) with a gold glow pulse on the bar while ticking — level progress feels earned instead of teleporting. Gates: tsc clean, lint at flap, world 200.
+
 ### 2026-07-24 — Loop iter 20 (wake 14): oracle answer-pick beat
 
 Choosing a quiz answer now presses the card in (scale 0.96 + indigo fill/glow), dims the other three, plays a soft note, and advances after a 260ms beat instead of hard-swapping; double-clicks during the beat are ignored. Progress-save path untouched (commitAnswer split keeps the original logic verbatim). Gates: tsc clean, lint at flap, oracle 200.
