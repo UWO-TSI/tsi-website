@@ -32,6 +32,7 @@ import {
   celebrate,
   fishOdds,
   type FishDef,
+  iconFor,
 } from "@/lib/game/fishing";
 
 type Stage = "suspense" | "freeze" | "flash" | "landed";
@@ -288,7 +289,7 @@ export default function FishReveal({
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           ref={fishImgRef}
-          src={`/assets/acnh/icons/${fish.key}.png`}
+          src={iconFor(fish)}
           alt=""
           width={150}
           height={150}

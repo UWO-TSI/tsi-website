@@ -61,7 +61,18 @@ export interface FishDef {
   when?: (hour: number, weather: string) => boolean;
   /** Human copy for the availability window (lab bench + future almanac). */
   whenLabel?: string;
+  /** Icon override (dump imports use the generic icon until renders land). */
+  icon?: string;
+  /** Raw dump export: FishCatchFX applies GAME_CALIBRATION (0.1, +90°X). */
+  raw?: boolean;
 }
+
+/** Resolve a species' reel/book icon. */
+export function iconFor(f: FishDef): string {
+  return f.icon ?? `/assets/acnh/icons/${f.key}.png`;
+}
+
+const GENERIC_ICON = "/assets/acnh/icons/fish.png";
 
 // ACNH revamp 2026-07: species-true river catches (models shown in-world by
 // FishCatchFX). New species are one row here + one in CollectionBook once
@@ -77,9 +88,24 @@ export const FISH: FishDef[] = [
   { key: "fish_carp", label: "a Carp", name: "Carp", model: "/assets/acnh/fish/carp.glb", rarity: "rare", sizeCm: [35, 70], move: { speed: 0.3, accel: 1.2, jitter: 0.004, dartChance: 0.16, dartMul: 1.8, retargetMs: 1500 } },
   { key: "fish_black_bass", label: "a Black Bass", name: "Black Bass", model: "/assets/acnh/fish/black-bass.glb", rarity: "rare", sizeCm: [30, 55], move: { speed: 0.36, accel: 1.8, jitter: 0.01, dartChance: 0.26, dartMul: 2.3, retargetMs: 1150 } },
   { key: "fish_catfish", label: "a Catfish", name: "Catfish", model: "/assets/acnh/fish/catfish.glb", rarity: "epic", sizeCm: [50, 110], move: { speed: 0.32, accel: 1.5, jitter: 0.006, dartChance: 0.3, dartMul: 2.6, retargetMs: 1300 }, when: (h, w) => h >= 20 || h < 4 || w === "rain", whenLabel: "night (20-4h) or rain" },
-  // Legendary rung intentionally vacant — see header note.
-  { key: "fish_golden_koi", label: "a Golden Koi", name: "Golden Koi", model: "/assets/acnh/fish/koi.glb", rarity: "seaking", sizeCm: [60, 95], move: { speed: 0.44, accel: 2.2, jitter: 0.014, dartChance: 0.34, dartMul: 2.4, retargetMs: 950 } },
+  // ── Dump import batch 1 (2026-07-24, calibrated rip): 11 new species.
+  // Icons = generic until the icon harness renders real ones (follow-up).
+  { key: "fish_killifish", label: "a Killifish", name: "Killifish", model: "/assets/acnh/fish/killifish.glb", rarity: "common", sizeCm: [3, 5], raw: true, icon: GENERIC_ICON, move: { speed: 0.19, accel: 0.8, jitter: 0.007, dartChance: 0.09, dartMul: 1.7, retargetMs: 1900 }, when: (h) => h >= 6 && h < 20, whenLabel: "day (6-20h)" },
+  { key: "fish_loach", label: "a Loach", name: "Loach", model: "/assets/acnh/fish/loach.glb", rarity: "common", sizeCm: [12, 20], raw: true, icon: GENERIC_ICON, move: { speed: 0.21, accel: 0.85, jitter: 0.005, dartChance: 0.1, dartMul: 1.8, retargetMs: 1850 } },
+  { key: "fish_sweetfish", label: "a Sweetfish", name: "Sweetfish", model: "/assets/acnh/fish/sweetfish.glb", rarity: "uncommon", sizeCm: [18, 30], raw: true, icon: GENERIC_ICON, move: { speed: 0.28, accel: 1.2, jitter: 0.009, dartChance: 0.15, dartMul: 1.9, retargetMs: 1450 } },
+  { key: "fish_rainbow_trout", label: "a Rainbow Trout", name: "Rainbow Trout", model: "/assets/acnh/fish/rainbow-trout.glb", rarity: "uncommon", sizeCm: [30, 50], raw: true, icon: GENERIC_ICON, move: { speed: 0.29, accel: 1.25, jitter: 0.007, dartChance: 0.16, dartMul: 2.0, retargetMs: 1400 }, when: (h) => h >= 5 && h < 19, whenLabel: "day (5-19h)" },
+  { key: "fish_salmon", label: "a Salmon", name: "Salmon", model: "/assets/acnh/fish/salmon.glb", rarity: "rare", sizeCm: [50, 80], raw: true, icon: GENERIC_ICON, move: { speed: 0.33, accel: 1.4, jitter: 0.006, dartChance: 0.2, dartMul: 2.1, retargetMs: 1300 } },
+  { key: "fish_snakehead", label: "a Snakehead", name: "Snakehead", model: "/assets/acnh/fish/snakehead.glb", rarity: "rare", sizeCm: [40, 90], raw: true, icon: GENERIC_ICON, move: { speed: 0.34, accel: 1.6, jitter: 0.008, dartChance: 0.24, dartMul: 2.2, retargetMs: 1250 }, when: (h) => h >= 9 && h < 16, whenLabel: "midday (9-16h)" },
+  { key: "fish_gar", label: "a Gar", name: "Gar", model: "/assets/acnh/fish/gar.glb", rarity: "epic", sizeCm: [90, 150], raw: true, icon: GENERIC_ICON, move: { speed: 0.34, accel: 1.6, jitter: 0.005, dartChance: 0.28, dartMul: 2.5, retargetMs: 1250 }, when: (h, w) => h >= 16 || h < 9 || w === "rain", whenLabel: "evening/night or rain" },
+  { key: "fish_king_salmon", label: "a King Salmon", name: "King Salmon", model: "/assets/acnh/fish/king-salmon.glb", rarity: "epic", sizeCm: [70, 120], raw: true, icon: GENERIC_ICON, move: { speed: 0.35, accel: 1.7, jitter: 0.006, dartChance: 0.3, dartMul: 2.4, retargetMs: 1200 } },
+  { key: "fish_stringfish", label: "a Stringfish", name: "Stringfish", model: "/assets/acnh/fish/stringfish.glb", rarity: "legendary", sizeCm: [80, 130], raw: true, icon: GENERIC_ICON, move: { speed: 0.4, accel: 2.0, jitter: 0.01, dartChance: 0.32, dartMul: 2.4, retargetMs: 1050 }, when: (h, w) => h >= 21 || h < 4 || w === "rain", whenLabel: "late night or rain" },
+  { key: "fish_golden_trout", label: "a Golden Trout", name: "Golden Trout", model: "/assets/acnh/fish/golden-trout.glb", rarity: "legendary", sizeCm: [40, 60], raw: true, icon: GENERIC_ICON, move: { speed: 0.41, accel: 2.1, jitter: 0.012, dartChance: 0.3, dartMul: 2.3, retargetMs: 1000 } },
+  // "Both" ruling completed: the marquee arapaima takes the Sea King crown;
+  // the Golden Koi drops to legendary.
+  { key: "fish_golden_koi", label: "a Golden Koi", name: "Golden Koi", model: "/assets/acnh/fish/koi.glb", rarity: "legendary", sizeCm: [60, 95], move: { speed: 0.44, accel: 2.2, jitter: 0.014, dartChance: 0.34, dartMul: 2.4, retargetMs: 950 } },
+  { key: "fish_arapaima", label: "an Arapaima", name: "Arapaima", model: "/assets/acnh/fish/arapaima.glb", rarity: "seaking", sizeCm: [150, 300], raw: true, icon: GENERIC_ICON, move: { speed: 0.46, accel: 2.3, jitter: 0.012, dartChance: 0.36, dartMul: 2.5, retargetMs: 900 }, when: (h, w) => h >= 16 || h < 9 || w === "rain", whenLabel: "evening/night or rain" },
 ];
+
 
 export function currentFishingContext(): { hour: number; weather: string } {
   const hour = getLabHour() ?? new Date().getHours() + new Date().getMinutes() / 60;

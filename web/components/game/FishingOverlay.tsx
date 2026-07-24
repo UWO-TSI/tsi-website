@@ -46,6 +46,7 @@ import {
   rollFish,
   rollSize,
   type FishDef,
+  iconFor,
 } from "@/lib/game/fishing";
 
 type Phase = "idle" | "charging" | "casting" | "waiting" | "bite" | "reeling" | "revealing" | "caught" | "missed";
@@ -195,7 +196,7 @@ export default function FishingOverlay() {
         setWasNew(isNew);
         setCaughtSize(rollSize(fish.sizeCm));
         // Signals the "catch a fish" onboarding quest (auto-complete).
-        window.dispatchEvent(new CustomEvent("tsi:fish-caught", { detail: { key: fish.key, model: fish.model } }));
+        window.dispatchEvent(new CustomEvent("tsi:fish-caught", { detail: { key: fish.key, model: fish.model, raw: fish.raw } }));
         collect(fish.key);
         if (isNew) {
           // Blind-box ceremony (David 2026-07-23): first catches get the
@@ -288,7 +289,7 @@ export default function FishingOverlay() {
           : phase === "caught"
             ? `You caught ${fish?.label ?? "a fish"}!`
             : "It got away…";
-  const icon = phase === "caught" && fish ? `/assets/acnh/icons/${fish.key}.png` : null;
+  const icon = phase === "caught" && fish ? iconFor(fish) : null;
   const rarity = fish ? RARITY_META[fish.rarity] : null;
   const glow = phase === "caught" && fish ? CELEBRATE[fish.rarity].glow : false;
 
@@ -384,7 +385,7 @@ export default function FishingOverlay() {
             // The one that got away — silhouette leaps off the card and dives.
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={`/assets/acnh/icons/${fish.key}.png`}
+              src={iconFor(fish)}
               alt=""
               width={26}
               height={26}
@@ -738,7 +739,7 @@ export function ReelMinigame({
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           ref={fishRef}
-          src={`/assets/acnh/icons/${fish.key}.png`}
+          src={iconFor(fish)}
           alt=""
           width={30}
           height={30}

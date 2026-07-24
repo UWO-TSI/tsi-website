@@ -108,6 +108,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-24 — Loop iter 9 (wake 3): FIRST DUMP FISH IMPORT — roster 10 → 21 species
+
+11 calibrated species imported from the organized rip (760K total fish dir, cap fine): killifish + loach (common), sweetfish + rainbow trout (uncommon), salmon + snakehead (rare), gar + king salmon (epic), **stringfish + golden trout fill the vacant LEGENDARY rung**, and the **ARAPAIMA takes the Sea King crown — Golden Koi drops to legendary** (David's "Both" ruling completed). Each has its own sizes (killifish 3-5cm → arapaima 150-300cm), movement personality, and ACNH-style availability windows. Raw dump models carry `raw: true` — FishCatchFX applies GAME_CALIBRATION (0.1 scale, +90°X) at render. Icons = generic fish.png until the icon harness renders real ones (follow-up); `iconFor()` centralizes resolution. CollectionBook +11 rows. Bench-verified: 21 species listed, sim runs, zero pageerrors; gates 74/52, 32/32.
+
 ### 2026-07-24 — Loop iter 8 (wake 2): NPC greeting hop
 
 Opening a chat now makes that NPC do a hello bounce — GameWorld dispatches `tsi:npc-greet {id}` on activeNPC, NPC.tsx stamps `greetAtRef` and the frame loop reuses the G4 startle-hop arc (read-only trigger: timestamp window + hop latch, keeps the react-compiler happy). Gates: tsc clean, 74/52, world 200.

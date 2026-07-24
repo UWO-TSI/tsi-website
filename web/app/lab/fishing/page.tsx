@@ -24,6 +24,7 @@ import {
   rollFish,
   rollSize,
   type FishDef,
+  iconFor,
 } from "@/lib/game/fishing";
 import { setLabHour, useLabState } from "@/lib/game/devLab";
 
@@ -177,7 +178,7 @@ export default function FishingBench() {
                 }}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={`/assets/acnh/icons/${f.key}.png`} alt="" width={22} height={22} />
+                <img src={iconFor(f)} alt="" width={22} height={22} />
                 <span style={{ flex: 1, textAlign: "left" }}>{f.name}</span>
                 <span style={{ fontSize: 9, fontWeight: 700, textTransform: "uppercase", ...(f.rarity === "seaking" ? HOLO_TEXT : { color: meta.color }) }}>{meta.label}</span>
                 <span style={{ fontSize: 9, color: "#8a939a", width: 42, textAlign: "right" }}>
@@ -207,7 +208,7 @@ export default function FishingBench() {
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={`/assets/acnh/icons/${selected.key}.png`} alt="" width={34} height={34} />
+            <img src={iconFor(selected)} alt="" width={34} height={34} />
             <span style={{ fontSize: 15, fontWeight: 700 }}>{selected.name}</span>
             <span
               style={{
