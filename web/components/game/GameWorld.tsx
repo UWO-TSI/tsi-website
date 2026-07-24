@@ -164,6 +164,14 @@ function spawnOverride(): [number, number, number] | null {
 // keys with a sunset POWER RAMP (color saturates AND darkens together,
 // Complementary-style), dawn eases through cream, night keeps the blue
 // floor. Fog anchors at 7/10-15/17/21 unchanged (sky-art contract).
+// Module-scope escape hatch (react-compiler immutability rule — same
+// pattern as applySprintFov): three's Fog exposes near/far as plain
+// mutable fields, no setter method.
+function setFogRange(fog: THREE.Fog, near: number, far: number) {
+  fog.near = near;
+  fog.far = far;
+}
+
 const TOD_KEYS: [number, string, string, string, number, string, number][] = [
   [5,  "#FFB878", "#FFDDB8", "#FFD9B0", 0.6,  "#C8BCFF", 0.34], // dawn peach
   [6,  "#8FC4EE", "#F2E2C8", "#FFE7C4", 0.95, "#D8D4F2", 0.36], // sunrise cream
@@ -177,7 +185,7 @@ const TOD_KEYS: [number, string, string, string, number, string, number][] = [
   [17, "#FF9966", "#FFD4A8", "#FFA35C", 0.95, "#FFD4A8", 0.34], // golden peak (BSL 255,160,80)
   [18, "#E87A5A", "#F2B888", "#FF8E4A", 0.7,  "#E8B090", 0.3],  // saturate + darken
   [19, "#FF9966", "#2D2D6B", "#FF7A48", 0.35, "#6B5A8B", 0.26], // last ember
-  [21, "#1A1A40", "#2D2D6B", "#334466", 0.0,  "#334466", 0.22], // blue night floor
+  [21, "#1A1A40", "#26264A", "#334466", 0.0,  "#334466", 0.22], // blue night floor (fog darkened 2026-07-23 — indigo haze was lifting the ground)
 ];
 const _tc = new THREE.Color();
 
@@ -464,8 +472,15 @@ function TimeOfDayCycle({ weather, todPhase, shadowsOn, playerPosRef }: { weathe
     // baked from the same table, so they stay in sync). Rain pulls it
     // toward the overcast gray so the haze matches the rain skies.
     if (scene.fog) {
-      const f = (scene.fog as THREE.Fog).color.set(a[2]).lerp(_tc.set(b[2]), t);
+      const fog = scene.fog as THREE.Fog;
+      const f = fog.color.set(a[2]).lerp(_tc.set(b[2]), t);
       if (weather === "rain") f.lerp(_tc.set("#AAB2BC"), 0.65);
+      // Fog recedes as the sun drops (David report 2026-07-23: the night
+      // haze greyed the whole scene). sunNorm 1 at full day → exactly the
+      // shipped 55/100; sunNorm 0 at night → 70/130, so the dark hours
+      // read clear-and-deep instead of milky. Day chemistry untouched.
+      const sunNorm = Math.min(1, (a[4] + (b[4] - a[4]) * t) / 1.4);
+      setFogRange(fog, 55 + (1 - sunNorm) * 15, 100 + (1 - sunNorm) * 30);
     }
   });
 

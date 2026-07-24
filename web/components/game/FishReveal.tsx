@@ -29,10 +29,11 @@ import {
   RARITY_META,
   REVEAL,
   celebrate,
+  fishOdds,
   type FishDef,
 } from "@/lib/game/fishing";
 
-type Stage = "suspense" | "flash" | "landed";
+type Stage = "suspense" | "freeze" | "flash" | "landed";
 
 export default function FishReveal({
   fish,
@@ -46,6 +47,8 @@ export default function FishReveal({
   const cfg = REVEAL[fish.rarity];
   const meta = RARITY_META[fish.rarity];
   const holo = fish.rarity === "seaking";
+  // "1 in N" — the Sol's-RNG flex number, computed against the live pool.
+  const odds = fishOdds(fish);
 
   const [stage, setStage] = useState<Stage>("suspense");
   const stageRef = useRef<Stage>("suspense");
@@ -66,8 +69,8 @@ export default function FishReveal({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const toFlash = useCallback(() => {
-    if (stageRef.current !== "suspense") return;
+  const crack = useCallback(() => {
+    if (stageRef.current === "flash" || stageRef.current === "landed") return;
     timersRef.current.forEach((t) => window.clearTimeout(t));
     timersRef.current = [];
     setStage("flash");
@@ -79,6 +82,22 @@ export default function FishReveal({
         timersRef.current.push(window.setTimeout(finish, cfg.hold));
       }, cfg.flash)
     );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // End of suspense: epic+ gets the dead-stop gasp (shake halts, faint
+  // fake-out flare for legendary+), then the real crack.
+  const toFlash = useCallback(() => {
+    if (stageRef.current !== "suspense") return;
+    if (cfg.freeze > 0) {
+      timersRef.current.forEach((t) => window.clearTimeout(t));
+      timersRef.current = [];
+      setStage("freeze");
+      AudioManager.playSFX("click");
+      timersRef.current.push(window.setTimeout(crack, cfg.freeze));
+    } else {
+      crack();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -97,6 +116,7 @@ export default function FishReveal({
   useEffect(() => {
     const skip = () => {
       if (stageRef.current === "suspense") toFlash();
+      else if (stageRef.current === "freeze") crack();
       else if (stageRef.current === "landed") finish();
     };
     const onPointer = (e: PointerEvent) => {
@@ -158,6 +178,10 @@ export default function FishReveal({
         background: "rgba(8, 10, 16, 0.82)",
         backdropFilter: "blur(6px)",
         WebkitBackdropFilter: "blur(6px)",
+        // Sol's-RNG monochrome moment: the sea-king crack drains the color
+        // out of the whole screen for a beat, then it floods back.
+        filter: holo && stage === "flash" ? "grayscale(1) contrast(1.15)" : "none",
+        transition: "filter 240ms ease-out",
         animation: "tsi-reveal-in 220ms ease-out",
         cursor: "pointer",
         userSelect: "none",
@@ -185,7 +209,8 @@ export default function FishReveal({
         />
       )}
 
-      {/* Telegraph glow — ramps to tier color during suspense */}
+      {/* Telegraph glow — ramps to tier color during suspense, snaps bright
+          at the freeze */}
       <div
         ref={glowRef}
         aria-hidden
@@ -204,6 +229,43 @@ export default function FishReveal({
           opacity: 0.2,
         }}
       />
+
+      {/* Freeze fake-out flare (legendary+ gasp beat) */}
+      {stage === "freeze" && cfg.doubleFlash && (
+        <div
+          aria-hidden
+          style={{
+            position: "absolute",
+            inset: 0,
+            background: `radial-gradient(circle at 50% 46%, ${meta.color}66 0%, transparent 60%)`,
+            animation: "tsi-reveal-minipop 380ms ease-out forwards",
+            pointerEvents: "none",
+          }}
+        />
+      )}
+
+      {/* Pulse rings at the crack — count = tier flex */}
+      {(stage === "flash" || stage === "landed") &&
+        Array.from({ length: cfg.rings }).map((_, i) => (
+          <div
+            key={i}
+            aria-hidden
+            style={{
+              position: "absolute",
+              left: "50%",
+              top: "46%",
+              width: 180,
+              height: 180,
+              marginLeft: -90,
+              marginTop: -90,
+              borderRadius: "50%",
+              border: `3px solid ${holo ? "#5EE7F7" : meta.color}`,
+              opacity: 0,
+              animation: `tsi-reveal-ring 900ms ease-out ${i * 150}ms forwards`,
+              pointerEvents: "none",
+            }}
+          />
+        ))}
 
       {/* Flash flare — mounts at the crack, fades itself out */}
       {stage !== "suspense" && (
@@ -291,9 +353,50 @@ export default function FishReveal({
               NEW!
             </span>
             <span style={{ fontSize: 13, color: "rgba(255, 253, 245, 0.85)", fontWeight: 600 }}>{sizeCm} cm</span>
+            <span
+              style={{
+                fontSize: 11,
+                fontFamily: "'IBM Plex Mono', monospace",
+                color: "rgba(255,255,255,0.65)",
+                background: "rgba(255,255,255,0.1)",
+                borderRadius: 999,
+                padding: "4px 10px",
+              }}
+            >
+              1 in {odds}
+            </span>
           </div>
         </div>
       </div>
+
+      {/* Server-broadcast-style banner (legendary+) — becomes a real
+          global announcement when multiplayer lands */}
+      {landed && cfg.doubleFlash && (
+        <div
+          style={{
+            position: "absolute",
+            top: 64,
+            left: "50%",
+            transform: "translateX(-50%)",
+            padding: "9px 22px",
+            borderRadius: 999,
+            fontFamily: "'IBM Plex Mono', monospace",
+            fontSize: 12,
+            fontWeight: 700,
+            letterSpacing: "0.06em",
+            color: "#FFFDF5",
+            background: holo ? HOLO_GRADIENT : `linear-gradient(90deg, ${meta.color}, ${meta.color}CC)`,
+            backgroundSize: holo ? "300% 100%" : undefined,
+            animation: holo
+              ? "tsi-reveal-banner 420ms cubic-bezier(0.34, 1.56, 0.64, 1), tsi-holo-shift 2.2s linear infinite"
+              : "tsi-reveal-banner 420ms cubic-bezier(0.34, 1.56, 0.64, 1)",
+            boxShadow: `0 4px 24px ${holo ? "#5EE7F7" : meta.color}66`,
+            whiteSpace: "nowrap",
+          }}
+        >
+          ⚡ {meta.label.toUpperCase()} CATCH — {fish.name}, {sizeCm} cm
+        </div>
+      )}
 
       {/* Skip hint */}
       {!landed && (
@@ -337,6 +440,19 @@ export default function FishReveal({
         @keyframes tsi-holo-shift {
           0% { background-position: 0% 50%; }
           100% { background-position: 300% 50%; }
+        }
+        @keyframes tsi-reveal-minipop {
+          0% { opacity: 0; }
+          30% { opacity: 1; }
+          100% { opacity: 0; }
+        }
+        @keyframes tsi-reveal-ring {
+          0% { opacity: 0.9; transform: scale(0.3); }
+          100% { opacity: 0; transform: scale(2.4); }
+        }
+        @keyframes tsi-reveal-banner {
+          0% { opacity: 0; transform: translateX(-50%) translateY(-18px); }
+          100% { opacity: 1; transform: translateX(-50%) translateY(0); }
         }
       `}</style>
     </div>

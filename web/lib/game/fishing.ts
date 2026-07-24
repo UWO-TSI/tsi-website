@@ -127,15 +127,36 @@ export const START_PROGRESS = 0.35;
  */
 export const REVEAL: Record<
   Rarity,
-  { suspense: number; flash: number; hold: number; shake: number; rays: boolean }
+  {
+    suspense: number;
+    flash: number;
+    hold: number;
+    shake: number;
+    rays: boolean;
+    /** Dead-stop beat before the crack (the gasp) — Sol's RNG pattern. 0 = none. */
+    freeze: number;
+    /** Expanding pulse rings at the crack (count = tier flex). */
+    rings: number;
+    /** Double-flash fake-out (legendary+) + monochrome flick (sea king). */
+    doubleFlash: boolean;
+  }
 > = {
-  common: { suspense: 800, flash: 130, hold: 1100, shake: 3, rays: false },
-  uncommon: { suspense: 1100, flash: 150, hold: 1250, shake: 4, rays: false },
-  rare: { suspense: 1700, flash: 170, hold: 1450, shake: 6, rays: true },
-  epic: { suspense: 2300, flash: 190, hold: 1650, shake: 8, rays: true },
-  legendary: { suspense: 3000, flash: 230, hold: 2000, shake: 10, rays: true },
-  seaking: { suspense: 3800, flash: 270, hold: 2400, shake: 13, rays: true },
+  common: { suspense: 800, flash: 130, hold: 1100, shake: 3, rays: false, freeze: 0, rings: 0, doubleFlash: false },
+  uncommon: { suspense: 1100, flash: 150, hold: 1250, shake: 4, rays: false, freeze: 0, rings: 0, doubleFlash: false },
+  rare: { suspense: 1700, flash: 170, hold: 1450, shake: 6, rays: true, freeze: 0, rings: 2, doubleFlash: false },
+  epic: { suspense: 2300, flash: 190, hold: 1650, shake: 8, rays: true, freeze: 350, rings: 3, doubleFlash: false },
+  legendary: { suspense: 3000, flash: 230, hold: 2200, shake: 10, rays: true, freeze: 450, rings: 4, doubleFlash: true },
+  seaking: { suspense: 3800, flash: 270, hold: 2600, shake: 13, rays: true, freeze: 600, rings: 5, doubleFlash: true },
 };
+
+/** "1 in N" odds for a species under the current hour/weather pool. */
+export function fishOdds(fish: FishDef): number {
+  const { hour, weather } = currentFishingContext();
+  const pool = FISH.filter((f) => !f.when || f.when(hour, weather));
+  const total = pool.reduce((s, f) => s + fishWeight(f, weather), 0);
+  const w = fishWeight(fish, weather);
+  return Math.max(1, Math.round(total / w));
+}
 
 /** Tier-scaled catch celebration: shake px, confetti bursts, card ms. */
 export const CELEBRATE: Record<Rarity, { shake: number; bursts: number; cardMs: number; glow: boolean }> = {

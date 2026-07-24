@@ -108,6 +108,12 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-23 — Night fog fix (David report) + Sol's-RNG reveal upgrades
+
+- **Fog "weird colors" fixed:** the night wash was linear fog 55/100 covering most of the visible island in indigo (#2D2D6B) stacked on the aerial-desat (35%). Fixes: aerial DESAT 0.35→0.18; fog near/far now recede with the sun (sunNorm formula — exactly 55/100 at full day, 70/130 at night, day chemistry untouched); 21h fog anchor darkened #2D2D6B→#26264A. Night verified clear-and-deep in the lab. `setFogRange` module-scope escape hatch for the react-compiler rule.
+- **Reveal upgrades (researched Sol's RNG/Fisch patterns):** "1 in N" odds chip on the landed line (`fishOdds` vs live pool); dead-stop freeze gasp before the crack for epic+ (350/450/600ms, fake-out flare on legendary+); expanding pulse rings at the crack (2-5 by tier); sea-king crack drains the screen monochrome for a beat then color floods back; legendary+ get a broadcast-style top banner ("⚡ SEA KING CATCH — Golden Koi, 85 cm", holo-shifting) — becomes a real global announcement when multiplayer lands. All skippable as before.
+- Gates: tsc clean, lint 74/52 (= baseline). Verified live on the bench (freeze + landed shots, zero pageerrors).
+
 ### 2026-07-23 — Blind-box first-catch reveal (David ruling) + holographic Sea King
 
 - **Sea King goes holographic** (`5ff12b8`): animated iridescent gradient chip + shine glow everywhere the tier renders (catch card, bench detail/list/sim), rainbow-cycling halo on Sea King catch cards. `HOLO_GRADIENT` shared from `lib/game/fishing.ts`.
