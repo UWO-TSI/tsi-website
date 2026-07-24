@@ -31,6 +31,7 @@ import FishReveal from "./FishReveal";
 import { AudioManager } from "@/lib/game/audio";
 import { collect } from "@/lib/game/collections";
 import { punchZoom, setTensionZoom } from "@/lib/game/cameraJuice";
+import { coastDist } from "@/lib/game/coast";
 import {
   CAST,
   CELEBRATE,
@@ -181,7 +182,10 @@ export default function FishingOverlay() {
     if (performance.now() > biteDeadlineRef.current) return;
     clearTimers();
     const luck = powerRef.current + (powerRef.current >= CAST.maxZone ? CAST.maxBonus : 0);
-    setFish(rollFish(luck));
+    // Sea spots (deck + cove, out past the sand line) roll the SEA pool.
+    const sp = spotRef.current;
+    const zone: "river" | "sea" = sp && coastDist(sp.x, sp.z) > 47 ? "sea" : "river";
+    setFish(rollFish(luck, zone));
     setPhase("reeling");
     AudioManager.playSFX("click");
   };

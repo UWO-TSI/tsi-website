@@ -16,6 +16,7 @@
 import confetti from "canvas-confetti";
 import { getTodayWeather } from "./weather";
 import { getLabHour } from "./devLab";
+import { EXTRA_FISH } from "./fishCatalog";
 
 export type Rarity = "common" | "uncommon" | "rare" | "epic" | "legendary" | "seaking";
 
@@ -65,6 +66,8 @@ export interface FishDef {
   icon?: string;
   /** Raw dump export: FishCatchFX applies GAME_CALIBRATION (0.1, +90°X). */
   raw?: boolean;
+  /** Habitat: river (default) or sea — spots roll their own zone. */
+  zone?: "river" | "sea";
 }
 
 /** Resolve a species' reel/book icon. */
@@ -78,7 +81,7 @@ const GENERIC_ICON = "/assets/acnh/icons/fish.png";
 // FishCatchFX). New species are one row here + one in CollectionBook once
 // their model/icon ships (the dump's Creatures/ set has more to extract;
 // the next marquee fish takes the Sea King crown).
-export const FISH: FishDef[] = [
+const CORE_FISH: FishDef[] = [
   { key: "fish_dace", label: "a Dace", name: "Dace", model: "/assets/acnh/fish/dace.glb", rarity: "common", sizeCm: [10, 18], move: { speed: 0.2, accel: 0.9, jitter: 0.004, dartChance: 0.08, dartMul: 1.8, retargetMs: 1900 } },
   { key: "fish_pale_chub", label: "a Pale Chub", name: "Pale Chub", model: "/assets/acnh/fish/pale-chub.glb", rarity: "common", sizeCm: [8, 14], move: { speed: 0.22, accel: 0.9, jitter: 0.006, dartChance: 0.1, dartMul: 1.9, retargetMs: 1800 }, when: (h) => h >= 6 && h < 18, whenLabel: "day (6-18h)" },
   { key: "fish_pond_smelt", label: "a Pond Smelt", name: "Pond Smelt", model: "/assets/acnh/fish/pond-smelt.glb", rarity: "common", sizeCm: [6, 10], move: { speed: 0.18, accel: 0.7, jitter: 0.005, dartChance: 0.08, dartMul: 1.7, retargetMs: 2000 } },
@@ -106,6 +109,8 @@ export const FISH: FishDef[] = [
   { key: "fish_arapaima", label: "an Arapaima", name: "Arapaima", model: "/assets/acnh/fish/arapaima.glb", rarity: "seaking", sizeCm: [150, 300], raw: true, icon: GENERIC_ICON, move: { speed: 0.46, accel: 2.3, jitter: 0.012, dartChance: 0.36, dartMul: 2.5, retargetMs: 900 }, when: (h, w) => h >= 16 || h < 9 || w === "rain", whenLabel: "evening/night or rain" },
 ];
 
+
+export const FISH: FishDef[] = [...CORE_FISH, ...EXTRA_FISH];
 
 export function currentFishingContext(): { hour: number; weather: string } {
   const hour = getLabHour() ?? new Date().getHours() + new Date().getMinutes() / 60;
@@ -137,9 +142,9 @@ function luckWeight(f: FishDef, weather: string, luck: number): number {
 
 /** Weighted roll over the species available right now. luck 0..~1.3 from
  *  cast power — see CAST. */
-export function rollFish(luck = 0): FishDef {
+export function rollFish(luck = 0, zone: "river" | "sea" = "river"): FishDef {
   const { hour, weather } = currentFishingContext();
-  const pool = FISH.filter((f) => !f.when || f.when(hour, weather));
+  const pool = FISH.filter((f) => (f.zone ?? "river") === zone && (!f.when || f.when(hour, weather)));
   const total = pool.reduce((s, f) => s + luckWeight(f, weather, luck), 0);
   let r = Math.random() * total;
   for (const f of pool) {

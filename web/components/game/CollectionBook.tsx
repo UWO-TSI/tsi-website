@@ -10,6 +10,7 @@
  */
 
 import { useEffect, useState } from "react";
+import { FISH, iconFor } from "@/lib/game/fishing";
 import { AudioManager } from "@/lib/game/audio";
 import { mergeWithLocal } from "@/lib/game/collections";
 import { X } from "lucide-react";
@@ -50,27 +51,7 @@ const CATALOG: { group: string; items: { key: string; icon: string; img?: string
     // Legacy generic keys retired pre-launch (no real member data).
     group: "Fish",
     items: [
-      { key: "fish_dace", img: "/assets/acnh/icons/fish_dace.png", icon: "🐟", name: "Dace" },
-      { key: "fish_crucian_carp", img: "/assets/acnh/icons/fish_crucian_carp.png", icon: "🐟", name: "Crucian Carp" },
-      { key: "fish_bluegill", img: "/assets/acnh/icons/fish_bluegill.png", icon: "🐠", name: "Bluegill" },
-      { key: "fish_black_bass", img: "/assets/acnh/icons/fish_black_bass.png", icon: "🐡", name: "Black Bass" },
-      { key: "fish_carp", img: "/assets/acnh/icons/fish_carp.png", icon: "🐟", name: "Carp" },
-      { key: "fish_goldfish", img: "/assets/acnh/icons/fish_goldfish.png", icon: "🐠", name: "Goldfish" },
-      { key: "fish_pale_chub", img: "/assets/acnh/icons/fish_pale_chub.png", icon: "🐟", name: "Pale Chub" },
-      { key: "fish_pond_smelt", img: "/assets/acnh/icons/fish_pond_smelt.png", icon: "🐟", name: "Pond Smelt" },
-      { key: "fish_catfish", img: "/assets/acnh/icons/fish_catfish.png", icon: "🐟", name: "Catfish" },
-      { key: "fish_golden_koi", img: "/assets/acnh/icons/fish_golden_koi.png", icon: "✨", name: "Golden Koi" },
-      { key: "fish_killifish", img: "/assets/acnh/icons/fish.png", icon: "🐟", name: "Killifish" },
-      { key: "fish_loach", img: "/assets/acnh/icons/fish.png", icon: "🐟", name: "Loach" },
-      { key: "fish_sweetfish", img: "/assets/acnh/icons/fish.png", icon: "🐟", name: "Sweetfish" },
-      { key: "fish_rainbow_trout", img: "/assets/acnh/icons/fish.png", icon: "🐠", name: "Rainbow Trout" },
-      { key: "fish_salmon", img: "/assets/acnh/icons/fish.png", icon: "🐟", name: "Salmon" },
-      { key: "fish_snakehead", img: "/assets/acnh/icons/fish.png", icon: "🐟", name: "Snakehead" },
-      { key: "fish_gar", img: "/assets/acnh/icons/fish.png", icon: "🐡", name: "Gar" },
-      { key: "fish_king_salmon", img: "/assets/acnh/icons/fish.png", icon: "🐟", name: "King Salmon" },
-      { key: "fish_stringfish", img: "/assets/acnh/icons/fish.png", icon: "✨", name: "Stringfish" },
-      { key: "fish_golden_trout", img: "/assets/acnh/icons/fish.png", icon: "✨", name: "Golden Trout" },
-      { key: "fish_arapaima", img: "/assets/acnh/icons/fish.png", icon: "👑", name: "Arapaima" },
+      ...FISH.map((f) => ({ key: f.key, img: iconFor(f), icon: f.rarity === "seaking" ? "👑" : f.rarity === "legendary" ? "✨" : "🐟", name: f.name })),
     ],
   },
   {

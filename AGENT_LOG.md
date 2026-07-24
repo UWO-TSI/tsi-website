@@ -108,6 +108,11 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-24 — Loop wake 22 (David directive): ALL FISH IN — roster 21 → 80
+
+David: "all fish in the game + proper models." Verified first: the converted models are NOT plastic bags — the salmon renders beautifully in the item bench (the bad look was the pre-embtex cache / generic icon). Then: all 80 non-Museum dump species converted (-embtex, 20MB fish dir, 34MB total assets of the 50MB cap); 59 new species auto-cataloged in `lib/game/fishCatalog.ts` (English names + zones + rarity tiers + sizes + windows from ACNH data; unknown romaji get prettified defaults); **FishDef gains `zone: river|sea`** — sea spots (coastDist > 47: the deck + cove) roll the SEA pool (Tuna, Blue Marlin, Whale Shark, Oarfish, Great White, Ocean Sunfish…); CollectionBook now DERIVES its fish rows from FISH (stays in sync forever). Bench: 68/80 biting at test hour, zero pageerrors; tsc clean, 32/32.
+Follow-up queued: icon batch re-run (textures now embed — the shelved harness's root cause is fixed; new species use the generic icon until then).
+
 ### 2026-07-24 — Loop iter 27 (wake 21): welcome-back toast
 
 Returning after 8h+ away now greets you ("Welcome back! It's a sunny day ☀️" / rain / cloudy variants) with the enter chime, 2.6s after load so it lands past the gate; a 5-min heartbeat keeps last-seen honest. localStorage `tsi.lastseen.v1`. Gates: tsc clean, lint at flap, world 200.
