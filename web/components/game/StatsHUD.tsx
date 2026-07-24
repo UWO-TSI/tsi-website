@@ -11,16 +11,59 @@
  * middleware).
  */
 
+import { useEffect, useRef, useState } from "react";
 import { useUser } from "@/components/portal/UserContext";
 import { xpForLevel } from "@/lib/supabase/types";
 
+/**
+ * Loop iter 18 (2026-07-24): the TC number counts toward its new value
+ * (ease-out over ~0.7s) with a gold flash on gains, instead of snapping.
+ */
+function useTickUp(target: number): { value: number; flashing: boolean } {
+  const [value, setValue] = useState(target);
+  const [flashing, setFlashing] = useState(false);
+  const fromRef = useRef(target);
+  useEffect(() => {
+    const from = fromRef.current;
+    if (from === target) return;
+    fromRef.current = target;
+    const gained = target > from;
+    const t0 = performance.now();
+    const dur = 700;
+    let raf = 0;
+    let flashed = false;
+    let flashOff = 0;
+    const step = (now: number) => {
+      // Flash kicks in on the first frame (not synchronously in the
+      // effect body — react-compiler cascading-render rule).
+      if (gained && !flashed) {
+        flashed = true;
+        setFlashing(true);
+        flashOff = window.setTimeout(() => setFlashing(false), 900);
+      }
+      const k = Math.min(1, (now - t0) / dur);
+      const eased = 1 - Math.pow(1 - k, 3);
+      setValue(Math.round(from + (target - from) * eased));
+      if (k < 1) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => {
+      cancelAnimationFrame(raf);
+      if (flashOff) window.clearTimeout(flashOff);
+    };
+  }, [target]);
+  return { value, flashing };
+}
+
 export default function StatsHUD() {
   const { profile, loading } = useUser();
+  const tcTarget = ((profile?.tethos_coins as number | undefined) ?? 0);
+  const { value: tcShown, flashing } = useTickUp(tcTarget);
   if (loading || !profile) return null;
 
   const level = (profile.level as number | undefined) ?? 1;
   const xp = (profile.xp as number | undefined) ?? 0;
-  const tc = (profile.tethos_coins as number | undefined) ?? 0;
+  const tc = tcShown;
 
   // XP progress toward next level. xpForLevel returns total XP needed to
   // *reach* that level; we want how far the player is between the
@@ -81,6 +124,8 @@ export default function StatsHUD() {
           borderLeft: "1px solid rgba(255,255,255,0.12)",
           color: "#FFD166",
           fontWeight: 700,
+          textShadow: flashing ? "0 0 10px rgba(255, 209, 102, 0.95)" : "none",
+          transition: "text-shadow 0.35s ease-out",
         }}
       >
         {tc.toLocaleString()} TC
