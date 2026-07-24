@@ -108,6 +108,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-24 — Loop iter 6: turn-skid dust (self-scheduled loop wake 0) — LOOP NOW SELF-PACED
+
+David armed the timer loop (self-paced wakes, one iteration each, full scope incl. dump imports, auto-pause on double-red gates, push every wake). Iter 6: sharp direction reversal at speed (>55% walk speed, desired dir opposing velocity) kicks a dust puff at the feet + footstep scuff, 0.6s cooldown — reuses the P28 puff system, zero new draw cost. Gates: tsc clean, 74/52, world 200.
+
 ### 2026-07-24 — Loop iter 5: idle fireflies (David ask)
 
 `IdleFireflies.tsx` mounted beside the player: stand still ~3s → six warm glow-motes fade in and orbit WHERE you stopped (anchor is captured, not tracked) — walk away and they stay behind and fade out, never following. Pulsing emissive, all refs in one useFrame, zero per-frame React. Gates: tsc clean, 74/52.

@@ -150,6 +150,9 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
   // the last "slides like a cursor" tell in the handling.
   const velRef = useRef(new THREE.Vector2(0, 0));
   const leanRef = useRef(0);
+  // Loop iter 6 (2026-07-24): turn-skid dust — a sharp direction reversal
+  // at speed kicks a puff behind the feet. Cooldown stops puff spam.
+  const skidCooldownRef = useRef(0);
   const squashRef = useRef(0);
   // G4 (item 7): after ~12s of standing still the sprite looks around —
   // left, right, then back to front — so idling reads alive (ACNH beat).
@@ -368,6 +371,17 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
       const speedMult = sprint && keyMoving ? 1.85 : 1; // refinement: stronger sprint (was 1.6)
       const vel = velRef.current;
       const lam = moving ? 12 : 7.5;
+      // Turn-skid: desired dir opposes current velocity while moving fast.
+      skidCooldownRef.current = Math.max(0, skidCooldownRef.current - delta);
+      if (moving && skidCooldownRef.current === 0) {
+        const sp = Math.hypot(vel.x, vel.y);
+        if (sp > PLAYER_SPEED * 0.55 && dx * vel.x + dz * vel.y < -0.4 * sp) {
+          skidCooldownRef.current = 0.6;
+          const id = puffIdRef.current++;
+          setPuffs((prev) => [...prev, { id, position: [pos.x, pos.y + 0.12, pos.z], scale: 1.15 }]);
+          sfx.play("footstep");
+        }
+      }
       vel.x = THREE.MathUtils.damp(vel.x, moving ? dx * PLAYER_SPEED * speedMult : 0, lam, delta);
       vel.y = THREE.MathUtils.damp(vel.y, moving ? dz * PLAYER_SPEED * speedMult : 0, lam, delta);
       if (Math.abs(vel.x) > 0.02 || Math.abs(vel.y) > 0.02) {
