@@ -38,6 +38,24 @@ export default function NPCChatOverlay({ npc, onClose }: NPCChatOverlayProps) {
   const [turns, setTurns] = useState<Turn[]>([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
+  // Loop iter 23 (2026-07-24): while the NPC is "thinking", soft voice
+  // blips mutter at a lazy random rhythm — the same voice they answer
+  // with, so the wait feels like composing, not buffering.
+  useEffect(() => {
+    if (!sending) return;
+    let alive = true;
+    let t = 0;
+    const mutter = () => {
+      if (!alive) return;
+      AudioManager.playBlip();
+      t = window.setTimeout(mutter, 550 + Math.random() * 500);
+    };
+    t = window.setTimeout(mutter, 400);
+    return () => {
+      alive = false;
+      window.clearTimeout(t);
+    };
+  }, [sending]);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [retryPayload, setRetryPayload] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -346,7 +364,7 @@ export default function NPCChatOverlay({ npc, onClose }: NPCChatOverlayProps) {
             />
           ))}
           {sending && (
-            <div style={{ color: "#9ca3af", fontStyle: "italic" }}>
+            <div style={{ color: "#9ca3af", fontStyle: "italic", animation: "npc-think-breathe 1.6s ease-in-out infinite" }}>
               <span>{npc.display_name} is thinking</span>
               <span className="npc-dots">
                 <span>.</span>

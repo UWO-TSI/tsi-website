@@ -108,6 +108,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-24 — Loop iter 23 (wake 17): NPC thinking mutter + breathe
+
+While an NPC composes a reply, their voice blips mutter at a lazy random rhythm (550-1050ms, same playBlip voice as their answer) and the "is thinking…" row breathes (opacity pulse) — the wait reads as composing, not buffering. Cleans up on send-complete/unmount. Gates: tsc clean, lint at flap, world 200.
+
 ### 2026-07-24 — Loop iter 22 (wake 16): rain puddle ripples
 
 On rain days every footstep splashes the pale-blue wet ring (reuses the iter-7 wet variant; `getTodayWeather() === "rain"` joins the beach-band check) — the weather finally reaches the ground under your feet. Gates: tsc clean, lint at flap, world 200 under ?rain=1.
