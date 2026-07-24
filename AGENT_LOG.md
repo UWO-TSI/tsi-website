@@ -108,6 +108,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-24 — Loop iter 11 (wake 5): critter first-catch distinction
+
+Critter catches now know when they're firsts: NEW! prefix on the toast, a cozy 18-particle confetti pinch, and a two-note blip flourish — repeats keep the quiet toast (ACNH restraint). Uses `localCollections()` pre-check before `collect()`. Gates: tsc clean, lint within the known 74/75 flap (zero errors in touched files), world 200.
+
 ### 2026-07-24 — Loop iter 10 (wake 4): embedded-texture fix + icon harness SHELVED (auto-pause rule)
 
 **Real fix shipped:** the 11 imported fish GLBs referenced EXTERNAL textures (assimp default — 404s in-game, untextured models). All 11 re-converted with `-embtex` (textures embedded, fish dir 3.0MB total); `organize-dump.mjs --convert` now passes `-embtex` + correct cwd for future batches. Icon stage page hydration fixed (client-mount gate).

@@ -25,7 +25,8 @@ import * as THREE from "three";
 import { sampleTerrainHeightFast } from "./terrain";
 import { setActiveCritters, todayCritterSeed, type ActiveCritter } from "@/lib/game/critterStore";
 import { AudioManager } from "@/lib/game/audio";
-import { collect } from "@/lib/game/collections";
+import confetti from "canvas-confetti";
+import { collect, localCollections } from "@/lib/game/collections";
 
 type Motion = "flutter" | "dart" | "perch" | "drift" | "crawl";
 
@@ -170,7 +171,15 @@ export default function Critters({
       sp.catching = true;
       catchStartRef.current[slot] = performance.now();
       AudioManager.playSFX("confirm");
-      window.dispatchEvent(new CustomEvent("tsi:toast", { detail: { text: `You caught ${sp.sp.label}!`, icon: `/assets/acnh/icons/${sp.sp.key}.png` } }));
+      // Loop iter 11 (2026-07-24): first catches feel different — NEW!
+      // toast, a cozy confetti pinch, and a two-note flourish. Repeats
+      // keep the quiet toast (ACNH restraint).
+      const isNew = !(sp.sp.key in localCollections());
+      if (isNew) {
+        confetti({ particleCount: 18, spread: 48, startVelocity: 26, origin: { x: 0.5, y: 0.74 }, colors: ["#7C9A62", "#FFD166", "#FFFDF5"], disableForReducedMotion: true });
+        window.setTimeout(() => AudioManager.playSFX("blip3"), 140);
+      }
+      window.dispatchEvent(new CustomEvent("tsi:toast", { detail: { text: `${isNew ? "NEW! " : ""}You caught ${sp.sp.label}!`, icon: `/assets/acnh/icons/${sp.sp.key}.png` } }));
       collect(sp.sp.key);
     };
     window.addEventListener("tsi:critter-catch", onCatch);
