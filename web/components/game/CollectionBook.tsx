@@ -195,10 +195,18 @@ export default function CollectionBook({ open, onClose }: { open: boolean; onClo
             : `${discovered}/${totalKinds} kinds discovered · ${total} collected`}
         </p>
 
-        {CATALOG.map((g) => (
+        {CATALOG.map((g) => {
+          // Loop wake 27: per-group completion count — the Critterpedia
+          // "how far along am I" read; gold ✓ once the group is complete.
+          const got = g.items.filter((it) => (counts[it.key] ?? 0) > 0).length;
+          const done = got === g.items.length;
+          return (
           <div key={g.group} style={{ marginBottom: 16 }}>
             <div
               style={{
+                display: "flex",
+                alignItems: "baseline",
+                justifyContent: "space-between",
                 fontSize: 11,
                 fontWeight: 700,
                 textTransform: "uppercase",
@@ -207,7 +215,12 @@ export default function CollectionBook({ open, onClose }: { open: boolean; onClo
                 marginBottom: 8,
               }}
             >
-              {g.group}
+              <span>{g.group}</span>
+              {!loading && (
+                <span style={{ color: done ? "#C9962E" : "#B0A17C", fontVariantNumeric: "tabular-nums" }}>
+                  {done ? "✓ " : ""}{got}/{g.items.length}
+                </span>
+              )}
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
               {g.items.map((it) => {
@@ -256,7 +269,8 @@ export default function CollectionBook({ open, onClose }: { open: boolean; onClo
               })}
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

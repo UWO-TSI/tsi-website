@@ -108,6 +108,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-24 — Loop wake 27: collection book per-group completion counts
+
+Every group header now carries a right-aligned x/y count (tabular numerals), turning gold with a ✓ when the group completes — the Critterpedia "how far along am I" read, which matters now that Fish is 81 rows. Hidden while the book is loading. Verified live with seeded local catches: FRUIT ✓ 4/4 gold, FLOWERS 0/8, FISH 2/81, global line intact, zero pageerrors. Gates: tsc clean, CollectionBook lint-clean, 32/32.
+
 ### 2026-07-24 — Loop wake 26: cast-splash scatter
 
 The bobber's landing plop now spooks nearby fish shadows (radius 6): each darts away from the splash (faces its flee heading with a nervous wiggle), then drifts back to its patrol line over ~2.8s — river breaches pause while spooked. Membership decided once per splash so late drifters don't flinch; module-scope splash record + per-fish ref state, zero per-frame React. Verified with synthetic tsi:fish-cast events over the river stretch and the cove orbit: both flee cycles + returns run with zero pageerrors. Gates: tsc clean, FishShadows lint-clean, 32/32.
