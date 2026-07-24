@@ -13,6 +13,16 @@ import path from "path";
 import os from "os";
 import { execFileSync } from "child_process";
 
+// ── Game calibration (measured 2026-07-24 via scripts/glb-bbox.mjs) ──
+// Repo koi (shipped, game-scale) long axis 0.895 vs dump FishKoi 9.004:
+// the raw rip is exactly 10× game scale, long axis Z instead of Y.
+//   → import transform: scale 0.1, rotate +90° about X (Z-forward → Y-up),
+//     then verify per family in /lab/item (top-down + player-ref doctrine).
+// assimp can't bake transforms, so this applies at IMPORT time — the step
+// that copies a library GLB into web/public wraps it (scale/rotation on
+// the placement or a one-off gltf-transform pass).
+export const GAME_CALIBRATION = { scale: 0.1, rotateXDeg: 90 };
+
 const SRC = path.join(os.homedir(), "Downloads/Assets/Model");
 const OUT = path.join(os.homedir(), "Downloads/AssetsLibrary");
 

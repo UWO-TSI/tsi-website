@@ -108,6 +108,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-24 — Loop iter 3: dump→game calibration measured + baked
+
+`scripts/glb-bbox.mjs` (GLB JSON-chunk bounds reader, no engine) measured repo koi 0.393×0.895×0.434 vs dump FishKoi 3.934×4.339×9.004 → the rip is exactly **10× game scale** with long-axis Z (game uses Y): import transform = **scale 0.1 + rotate +90°X**, exported as GAME_CALIBRATION from organize-dump.mjs. Arowana confirms the family pattern (12.3 long-axis Z raw ≈ 1.23 game — big fish, correct). Applies at import time; per-family visual verify via /lab/item.
+
 ### 2026-07-24 — Loop iter 2 (bug): half-missing blossom canopies fixed
 
 David report + screenshot: cherry blossom / some trees rendered only half the canopy. Root cause: the extractor wrote foliage CARDS as FrontSide, so their backfaces culled at half the view angles. Fix: both nature loaders (NatureModels GLBProp traverse + InstancedNature sub-mesh collection) force `material.side = DoubleSide` — standard for stylized foliage, negligible cost on closed trunks. Verified from the previously-culling angle: full canopies. Gates at baseline.
