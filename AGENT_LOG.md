@@ -108,6 +108,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-25 — Loop wake 62: ambient batch — the quiet pockets get life
+
+**Reedmarsh dragonflies**: three teal darts (capsule body + shimmer wing planes) flying figure-8s around the pond rims with a nervous tremble, daylight-gated via a new `phase` prop on S7Pockets — verified visible in the low shot, and the marsh reads lovely with cattails around them. **Flats sandpipers**: PlazaSparrows generalized (optional `anchors`/`bounds`/`colors` props, plaza defaults untouched) — a second instance skitters sandy-colored birds along the tidal line with the same peck-hop-flee brain. **Wharf gull**: fourth GULL_ANCHORS entry puts a circling gull over the pier + Shack (same proven Gull component as lighthouse/cove/bay; camera-fishing for a moving bird wasn't worth more shots). Bridge night lamps checked — string-light emissives already phase-driven, no work needed. Gates: tsc clean, 74/52, 32/32. Branch stays merge-ready (Wave 30); next: another ambient batch or David rulings.
+
 ### 2026-07-25 — Loop wake 61: QA Wave 30 mini-sweep — READY for David's eyeball
 
 Re-baselined everything after 15 wakes of change (Wave 29 predates geo S1-S7/river v3/economy/recolor). **All green, zero breaks**: build ✓ 110 pages (+4 since W29); 74/52 + 32/32; 11 routes + 4 APIs 200 env-less; 6/6 sheet deep-links (incl wharfsell), 4/4 interiors (incl wharf), fishing prompt+cast at the bend pool, boat-trip prompt+toast, Reedmarsh discovery ping (last unverified one — fires), zero pageerrors across the whole sweep. One false alarm: first fishing check spawned at the 2.4-radius edge — re-spawned in range, clean. Fresh screenshot pack (7 hero aerials + 4 interiors + ground shots) in the job dir; full detail in specs/qa.md **Wave 30**. Note recorded: env-less builds fail at /admin/recruit static export (needs Supabase env — not a regression). **The branch is ready for David's in-game playtest → merge**; migration 024 stays draft for the launch batch. Next: ambient polish batches while holding for rulings.
