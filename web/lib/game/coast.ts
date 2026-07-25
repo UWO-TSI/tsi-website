@@ -88,7 +88,22 @@ export function beachWidthShift(x: number, z: number): number {
  * Radial scaling keeps θ (and therefore the wobble) unchanged, so one
  * pass is exact. Returns [x, z].
  */
+// GEO S5 (2026-07-25): Isla Chica — the boat islet is its own walkable
+// disc in world space, far outside the main coast field. Keep in sync
+// with IslaChica.tsx (ISLET_CENTER / ISLET_WALK_R re-export these).
+export const ISLET = { x: -24, z: 72, walkR: 5.6 };
+
 export function clampToCoast(x: number, z: number, limit: number): [number, number] {
+  // Islet halo: points near Isla Chica clamp to the islet rim instead of
+  // being dragged back to the main coast. The halo (+4) can never reach
+  // the mainland — the water gap is wider than that.
+  const dix = x - ISLET.x, diz = z - ISLET.z;
+  const di = Math.hypot(dix, diz);
+  if (di < ISLET.walkR + 4) {
+    if (di <= ISLET.walkR) return [x, z];
+    const fi = ISLET.walkR / di;
+    return [ISLET.x + dix * fi, ISLET.z + diz * fi];
+  }
   const d = Math.hypot(x, z);
   if (d < 1e-6) return [x, z];
   const max = (limit + coastWobble(x, z)) * COAST_SCALE;

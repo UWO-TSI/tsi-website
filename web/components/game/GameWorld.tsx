@@ -64,6 +64,7 @@ import Critters from "./Critters";
 import HQInterior from "./HQInterior";
 import ShopInterior from "./ShopInterior";
 import OracleInterior from "./OracleInterior";
+import IslaChica from "./IslaChica";
 import WharfShackInterior from "./WharfShackInterior";
 import type { InteriorStation } from "./interiorShared";
 import RoadTiles from "./RoadTiles";
@@ -149,9 +150,14 @@ const SPAWN_POSITION: [number, number, number] = [0, 0, -15];
 // QA hook (loop iteration 16): `?beach` spawns at the cove deck so the
 // whole shore batch is one URL away. Same family as ?nointro/?rain.
 function spawnOverride(): [number, number, number] | null {
-  if (typeof window !== "undefined" && window.location.search.includes("beach")) {
+  if (typeof window === "undefined") return null;
+  if (window.location.search.includes("beach")) {
     return [18.2, 0, 42.5];
   }
+  // S5 QA hook: ?spawnat=x,z drops the player anywhere (dev/headless
+  // verification — same family as ?nointro / ?rain).
+  const m = window.location.search.match(/spawnat=(-?[\d.]+),(-?[\d.]+)/);
+  if (m) return [Number(m[1]), 0, Number(m[2])];
   return null;
 }
 
@@ -1915,13 +1921,27 @@ function Scene({
     // G5: fishing spots on the riverbank (radius 2.4). Beach Cove loop:
     // plus two saltwater casts — the wood deck edge and the cove sand.
     // ACNH revamp: spots hug the carved channel banks (~1.2u off center).
-    const FISHING_SPOTS: [number, number][] = [[-12, 6.2], [-3, 2.6], [5, 5.4], [16, 3.6], [18.3, 51.2], [15.7, 56.3], [44.2, 4.4], [22, 5.4]]; // S1 sea spots + S3 wharf pier tip + river v3 bend pool
+    const FISHING_SPOTS: [number, number][] = [[-12, 6.2], [-3, 2.6], [5, 5.4], [16, 3.6], [18.3, 51.2], [15.7, 56.3], [44.2, 4.4], [22, 5.4], [-26, 76.5]]; // S1 sea spots + S3 wharf pier tip + river v3 bend pool + S5 islet shore
     for (let i = 0; i < FISHING_SPOTS.length; i++) {
       const [sx, sz] = FISHING_SPOTS[i];
       const d = Math.hypot(sx - position.x, sz - position.z);
       if (d < Math.min(bestDist, 2.4)) {
         bestDist = d;
         best = { kind: "fishing", id: `fish-${i}`, name: "Cast line", spot: [sx, sz] };
+      }
+    }
+    // S5: rowboat travel — mainland beach ↔ Isla Chica (radius 3.0).
+    // Stations reuse the interior-station pipeline: E fires stationAction.
+    const BOAT_TRIPS: { x: number; z: number; name: string; action: string }[] = [
+      { x: -13, z: 52.5, name: "Row to Isla Chica", action: "boat:-21.8,67.2" },
+      { x: -22, z: 66.1, name: "Row back to the village", action: "boat:-12.6,51" },
+    ];
+    for (let i = 0; i < BOAT_TRIPS.length; i++) {
+      const b2 = BOAT_TRIPS[i];
+      const d = Math.hypot(b2.x - position.x, b2.z - position.z);
+      if (d < Math.min(bestDist, 3.0)) {
+        bestDist = d;
+        best = { kind: "station", id: `boat-${i}`, name: b2.name, stationAction: b2.action };
       }
     }
     // G4: flowers — pick target (radius 2.0). Skip already-picked clusters.
@@ -2107,6 +2127,7 @@ function Scene({
       <RiverMouths />
       <ShoreLife />
       <BeachCove />
+      <IslaChica />
       <BeachCrabs />
       {todPhase !== "night" && <PlazaSparrows playerPosRef={playerPosRef} />}
       <PlazaHedges playerPosRef={playerPosRef} />
@@ -2188,7 +2209,7 @@ function Scene({
         <GhostReplay key={g.user_id} ghost={g} />
       ))}
 
-      <PlayerAvatar spawnPosition={spawnOverride() ?? spawn ?? SPAWN_POSITION} onMove={handlePlayerMove} playerName={playerName} playerLevel={playerLevel} activeEmote={activeEmote} />
+      <PlayerAvatar spawnPosition={spawn ?? spawnOverride() ?? SPAWN_POSITION} onMove={handlePlayerMove} playerName={playerName} playerLevel={playerLevel} activeEmote={activeEmote} />
       <FishingBobber playerPosRef={playerPosRef} />
       <IdleFireflies playerPosRef={playerPosRef} />
 
@@ -2408,6 +2429,18 @@ export default function GameWorld() {
             });
             setDoorGlow((k) => k + 1);
             AudioManager.playSFX("exit");
+          } else if (action.startsWith("boat:")) {
+            // S5: rowboat fade-travel. Scene is keyed on worldSpawn, so the
+            // new spawn remounts it behind the standard transition.
+            if (isTransitioning) return;
+            const [bx, bz] = action.slice(5).split(",").map(Number);
+            const toIslet = bz > 60;
+            triggerTransition(() => {
+              setWorldSpawn([bx, 0, bz]);
+              setNearest(null);
+            });
+            AudioManager.playSFX("exit");
+            window.dispatchEvent(new CustomEvent("tsi:toast", { detail: { text: toIslet ? "🚣 Rowed out to Isla Chica" : "🚣 Rowed back to the village" } }));
           } else if (action === "admin") {
             window.dispatchEvent(new CustomEvent("tsi:toast", { detail: { text: "The Admin Room is locked. (T1-T3 access, coming soon)" } }));
           }
@@ -2620,7 +2653,10 @@ export default function GameWorld() {
         })()}
         {interior === null && (
         <Suspense fallback={null}>
+          {/* S5: keyed on spawn so boat travel (exterior→exterior) remounts
+              the Scene behind the fade — same path as interior exits. */}
           <Scene
+            key={worldSpawn ? worldSpawn.join(",") : "init"}
             playerName={playerName}
             introReady={gateDone}
             weather={weather}

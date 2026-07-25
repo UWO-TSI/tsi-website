@@ -47,6 +47,7 @@ const BUILDINGS: { x: number; z: number; w: number; h: number; c: string }[] = [
 const DISCOVER_ZONES: { key: string; label: string; x: number; z: number; r: number }[] = [
   { key: "cove", label: "Beach Cove", x: 16, z: 53.9, r: 8 },
   { key: "lighthouse", label: "The Lighthouse", x: 38.2, z: -37.1, r: 7 },
+  { key: "islet", label: "Isla Chica", x: -24, z: 72, r: 9 },
   { key: "windmill", label: "The Windmill", x: -32, z: -26, r: 9 },
   { key: "oracle", label: "Oracle Temple", x: 0, z: 30, r: 7 },
 ];
@@ -101,7 +102,7 @@ export default function MiniMap({ playerPosRef }: { playerPosRef: React.MutableR
         pointerEvents: "none",
       }}
     >
-      <svg viewBox="-72 -72 144 144" style={{ width: "100%", height: "100%", display: "block", background: "#6FB55B" }}>
+      <svg viewBox="-80 -80 160 160" style={{ width: "100%", height: "100%", display: "block", background: "#6FB55B" }}>
         {/* island — organic coastline: sand ring under the grass line */}
         <polygon points={SAND_POINTS} fill="#E4CD96" stroke="#CBB27C" strokeWidth="1" strokeLinejoin="round" />
         <polygon points={GRASS_POINTS} fill="#7EC167" stroke="#5E9E4E" strokeWidth="1" strokeLinejoin="round" />
@@ -127,6 +128,9 @@ export default function MiniMap({ playerPosRef }: { playerPosRef: React.MutableR
         {BUILDINGS.map((b, i) => (
           <rect key={i} x={sx(b.x) - b.w / 2} y={sy(b.z) - b.h / 2} width={b.w} height={b.h} rx="1" fill={b.c} stroke="rgba(0,0,0,0.25)" strokeWidth="0.4" />
         ))}
+        {/* S5: Isla Chica (boat islet, SSW — map north is -y) */}
+        <ellipse cx={-24} cy={-72} rx={6.5} ry={6} fill="#E4CD96" stroke="#CBB27C" strokeWidth="0.8" />
+        <ellipse cx={-24.3} cy={-71.6} rx={4.1} ry={3.7} fill="#7EC167" stroke="#5E9E4E" strokeWidth="0.8" />
         {/* landmarks: cove camp + lighthouse (coast v2 spots) */}
         <circle cx={sx(16)} cy={sy(53.9)} r="1.6" fill="#E8705A" stroke="rgba(0,0,0,0.25)" strokeWidth="0.4" />
         <circle cx={sx(38.2)} cy={sy(-37.1)} r="1.6" fill="#C0392B" stroke="rgba(0,0,0,0.25)" strokeWidth="0.4" />
