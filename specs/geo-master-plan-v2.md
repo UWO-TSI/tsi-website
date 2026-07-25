@@ -19,14 +19,20 @@
 
 ## My design response
 
-### Scale: +18%
+### Scale: +18% — WITH a coast-character pass (David 2026-07-25)
 
 Coast base radius 52 → 61 (R range 45..59 → 53..70). Everything in
 coast-space scales with one constant, so sand/waterline/clamp thresholds
 ride along; fixed placements re-solve numerically like the coast-v2 pass.
 18% ≈ +39% walkable area — big enough to breathe, small enough that the
-2-3-screen feel survives. Player speed stays; the loop road (below) keeps
-traversal times flat.
+2-3-screen feel survives.
+
+**David's shape note (from the concept-map review): no perfect-oval feel —
+natural inconsistency.** S1 therefore also amps the harmonic character:
+stronger asymmetric harmonics (deeper bays, bolder headlands, one new
+narrow inlet on the NW), so the bigger island reads MORE irregular, not
+just larger. The concept map's oval was schematic shorthand only — the
+shipped coast is and stays organic.
 
 ### Districts — distinct but cohesive (one palette, seven moods)
 
@@ -67,11 +73,29 @@ comes from ground material, density, and one signature prop per district.
   sells rods/accessories (TC sink — clean), displays trophy catches.
 - **ECONOMY RULED (David 2026-07-25):** currencies invert — **Gems** take the money-equivalent tier, **TC** becomes the play currency the Shack pays for fish. Full design: specs/economy-v2-currencies.md (E1-E4).
 
+### River v3 — bend like a river, breathe like a river (David 2026-07-25)
+
+The river keeps its spline bends but gains **natural width variation**:
+narrows (~2.5u) at fast stretches, widens (~7u) into a slow **bend pool**
+mid-island — the pool is a marquee river fishing hole (2 spots, rushes,
+fish shadows cluster there). Width function rides the spline t the same
+way the bank walls do; bridges sit at narrows.
+
 ### Terrain diversity
 
-Temple bluff (cliff system, David-ruled next rock), rolling meadow west,
-wetland pocket at the east mouth (rushes/mud ground zone), cove dunes,
-islet knoll. Verticality north, wetness east, softness west.
+**Temple on a hill — confirmed as ruled**: Temple Rise bluff via the cliff
+system (S6), stairs up, the temple silhouette gains skyline presence.
+Rolling meadow west, wetland pocket at the east mouth (rushes/mud ground
+zone), cove dunes, islet knoll. Verticality north, wetness east, softness
+west.
+
+### The Flats — MAJOR sand fishing area (David 2026-07-25)
+
+Beach Cove's south shore expands into **The Flats**: a broad low-tide sand
+flat with 3-4 sea casting spots, tide pools (shore-critter density up),
+wet-sand sheen, and a bait shack lean-to later. This is the island's
+signature sand fishery — the cove keeps its leisure camp identity beside
+it, distinct but adjoining.
 
 ### Boat travel
 
