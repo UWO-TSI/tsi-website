@@ -69,7 +69,7 @@ const RIVER_FISH: { t0: number; t1: number; speed: number; size: number; phase: 
   { t0: 0.68, t1: 0.8, speed: 0.012, size: 0.44, phase: 1.2 },
   { t0: 0.84, t1: 0.93, speed: 0.015, size: 0.36, phase: 3.3 },
 ];
-const RIVER_FISH_Y = -0.26; // just under the -0.2 water surface
+const RIVER_FISH_Y = -0.38; // just under the -0.32 water surface
 
 const SEA_FISH: { x: number; z: number; r: number; speed: number; size: number; phase: number }[] = [
   { x: 16, z: 51, r: 2.2, speed: 0.22, size: 0.55, phase: 0.5 },   // the cove bay

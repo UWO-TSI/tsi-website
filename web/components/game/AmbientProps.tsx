@@ -91,7 +91,7 @@ function SteppingStones() {
   return (
     <group>
       {stones.map((s, i) => (
-        <NatureRock key={i} position={[s.x, 0.05, s.z]} seed={i * 7 + 3} />
+        <NatureRock key={i} position={[s.x, -0.5, s.z]} seed={i * 7 + 3} />
       ))}
     </group>
   );

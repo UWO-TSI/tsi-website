@@ -108,6 +108,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-25 — Loop wake 46: V1 DEEPER RIVER CHANNEL (David visual-depth directive)
+
+The river now sits carved into the ground: RIVER_DEPTH −0.55 → −0.95, WATER_Y −0.2 → −0.32, bank walls extended to −1.05 — the oblique shot shows tall dark soil walls above the waterline on BOTH banks, the channel reading as a real cut instead of a surface stripe. Dependents re-tuned in the same pass: river fish shadows −0.26 → −0.38, stepping stones dropped into the channel (0.05 → −0.5), bobber float −0.12 → −0.24 (both land + idle-bob sites); foam rides WATER_Y relative; mouths/waterfalls unchanged (coast-pinned). Verified: oblique closeup shows the carved read, zero pageerrors. Gates: tsc clean, all six touched files lint-clean, 32/32. Next: V2 bridge arch.
+
 ### 2026-07-25 — Visual-depth notes (David) queued as loop tasks V1/V2
 
 David: "game lacks visual depth, river should be deeper in the ground, bridges shouldn't just be flat" — kept as LOOP tasks per his instruction (no live implementation). Scouting recorded in the master plan: the bridge is ALREADY the arched ACNH GLB but mounts sunk with a flat 0.12 walker override burying the arch (fix = raise mount + parabolic walk profile ≈0.45 crest); river constants RIVER_DEPTH −0.55 / WATER_Y −0.2 with the dependent list (bank walls, fish-shadow y, foam, mouths, stepping stones, bobber). Queue order now: V1 river depth → V2 bridge arch → S1 coast+18%+character → S2 loop road → E1 Gems rename → onward.

@@ -64,7 +64,7 @@ export default function FishingBobber({ playerPosRef }: { playerPosRef: React.Mu
       else dir.normalize();
       // Power = visibly longer throw past the spot marker.
       const extend = 0.6 + d.power * 2.0;
-      landRef.current.set(d.x + dir.x * extend, -0.12, d.z + dir.z * extend);
+      landRef.current.set(d.x + dir.x * extend, -0.24, d.z + dir.z * extend);
       startRef.current.set(p.x, 0.9, p.z);
       powerRef.current = d.power;
       tRef.current = 0;
@@ -118,7 +118,7 @@ export default function FishingBobber({ playerPosRef }: { playerPosRef: React.Mu
       const dip = performance.now() - nibbleAtRef.current < 420 ? -0.16 : 0;
       g.position.set(
         landRef.current.x,
-        -0.12 + Math.sin(t * 2.6) * 0.05 + dip,
+        -0.24 + Math.sin(t * 2.6) * 0.05 + dip,
         landRef.current.z
       );
     } else {

@@ -21,7 +21,7 @@ import { sampleRiverPoint } from "./River";
 const SEGMENTS = 120;
 const EDGE = 1.95; // wall offset from spline center (just past the water ribbon)
 const WALL_TOP = 0.04;
-const WALL_BOTTOM = -0.62; // tucks under the deepened carve floor
+const WALL_BOTTOM = -1.05; // tucks under the V1 carve floor (-0.95)
 const LIP_INNER = 1.62; // lip overhangs from EDGE toward the channel
 const LIP_Y = 0.05;
 const X_LIMIT = 50.8; // stop at the mouths (waterfalls own the exits)
