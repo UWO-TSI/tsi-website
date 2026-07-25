@@ -108,6 +108,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-25 — Loop wake 67: shoreline seats + palm breeze
+
+Two driftwood-log seats join the BENCHES sit pipeline: one on **The Flats** between the tide pools (36, 46.5), one mid-**Isla Chica** (−26.5, 70.5) — both verified headless (E-Sit prompt + player seated in the screenshots; the islet frame with the log, swaying palms, and the foam ring is a postcard). **Palm sway**: IslaChica's three palms wrapped in phased SwayGroups (two-frequency sine roll around the trunk base, ±0.022 rad — alive, not metronomic). Gates: tsc clean, 74/52, 32/32. Backlog note: the self-directed queue is thinning — remaining meaty work (furnishing, HQ build-out, Sea King, merge) all gates on David.
+
 ### 2026-07-25 — Loop wake 66: launch batch consolidated into one checklist
 
 **Draft migration `025_seasonal_seed.sql`** (NOT applied, pairs with 024): upserts the five seasonal_palettes rows by slug WITHOUT touching `active` (an admin's current season survives re-runs), then activates `default` only when no row is active (fresh DBs — honors the single-active partial index from 014). Seed values verified **byte-identical** to DEFAULT_PALETTES programmatically (regex-extract both sides, compare dicts). **`specs/launch-batch.md`**: the single top-to-bottom beta-day list — apply 024+025, authed smoke (sell decrements + credits atomically, over-sell guard, gear buy/re-buy/poor-wallet, column-REVOKE spot-check), the seasonal flip test (activate autumn → sky/grass/particles/deco all swap within an SWR revalidate), standing rules (no TC→Gems path, prod auto-deploys from main, next migration slot 026). seasonal-palettes.md follow-ups updated (seed = drafted; scheduler = post-launch). Gates: tsc clean, 74/52, 32/32, dashboard 200. Everything a launch needs is now drafted, verified, and in one place.
