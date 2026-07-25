@@ -2138,9 +2138,19 @@ function Scene({
       <BeachCove />
       <IslaChica />
       <TempleRise />
-      <S7Pockets />
+      <S7Pockets phase={todPhase} />
       <BeachCrabs />
       {todPhase !== "night" && <PlazaSparrows playerPosRef={playerPosRef} />}
+      {/* S7 Flats shorebirds (wake 62): same peck-hop-flee birds, sandpiper
+          colors, skittering along the tidal line. */}
+      {todPhase !== "night" && (
+        <PlazaSparrows
+          playerPosRef={playerPosRef}
+          anchors={[[34, 49.5], [38.5, 51.5], [42.5, 47.5]]}
+          bounds={{ x0: 31, x1: 45.5, z0: 44, z1: 53 }}
+          colors={[["#C9B79A", "#D8C8AC"], ["#B8A88C", "#C9B99E"], ["#D2C2A4", "#E0D0B4"]]}
+        />
+      )}
       <PlazaHedges playerPosRef={playerPosRef} />
       <SandFootprints playerPosRef={playerPosRef} />
       <SeasonalProps />

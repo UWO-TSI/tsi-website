@@ -15,7 +15,8 @@
  * geometry, one InstancedMesh per tint). Cozy ACNH restraint throughout.
  */
 
-import { useMemo } from "react";
+import { useMemo, useRef } from "react";
+import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { useGLTF } from "@react-three/drei";
 import { GLBProp } from "./NatureModels";
@@ -159,6 +160,55 @@ function Reedmarsh() {
   );
 }
 
+// Dragonflies (wake 62): three teal darts hovering the pond rims — a slow
+// figure-8 drift with a wing shimmer. Daylight only (parent gates phase).
+function Dragonflies() {
+  const refs = useRef<(THREE.Group | null)[]>([]);
+  const CFG = useMemo(
+    () =>
+      [0, 1, 2].map((i) => ({
+        pond: PONDS[i % PONDS.length],
+        phase: i * 2.4,
+        r: 0.9 + (i % 2) * 0.7,
+        speed: 0.35 + i * 0.08,
+        alt: 0.45 + (i % 2) * 0.2,
+      })),
+    []
+  );
+  useFrame(({ clock }) => {
+    const t = clock.elapsedTime;
+    CFG.forEach((c, i) => {
+      const g = refs.current[i];
+      if (!g) return;
+      const a = t * c.speed + c.phase;
+      // figure-8 around the pond rim + a nervous high-frequency tremble
+      const x = c.pond.x + Math.sin(a) * (c.pond.r + c.r) + Math.sin(t * 5.1 + i) * 0.05;
+      const z = c.pond.z + Math.sin(a * 2) * (c.pond.r * 0.6) + Math.cos(t * 4.3 + i) * 0.05;
+      const y = getTerrainHeight(c.pond.x, c.pond.z) + c.alt + Math.sin(t * 1.7 + c.phase) * 0.1;
+      const px = g.position.x, pz = g.position.z;
+      g.position.set(x, y, z);
+      g.rotation.y = Math.atan2(x - px, z - pz);
+      g.rotation.z = Math.sin(t * 30 + i) * 0.12; // wing shimmer
+    });
+  });
+  return (
+    <group>
+      {CFG.map((c, i) => (
+        <group key={i} ref={(el) => { refs.current[i] = el; }}>
+          <mesh rotation={[Math.PI / 2, 0, 0]}>
+            <capsuleGeometry args={[0.018, 0.2, 3, 6]} />
+            <meshStandardMaterial color="#3E9FB8" roughness={0.6} />
+          </mesh>
+          <mesh position={[0, 0.02, 0.02]} rotation={[-Math.PI / 2, 0, 0]}>
+            <planeGeometry args={[0.3, 0.09]} />
+            <meshStandardMaterial color="#CFEAF2" transparent opacity={0.4} side={THREE.DoubleSide} depthWrite={false} />
+          </mesh>
+        </group>
+      ))}
+    </group>
+  );
+}
+
 // Tide pools on the Flats (terrain is falloff-flat out there — no slabs needed)
 const POOLS: { x: number; z: number; r: number }[] = [
   { x: 37.5, z: 50.5, r: 1.8 },
@@ -213,11 +263,12 @@ function TheFlats() {
   );
 }
 
-export default function S7Pockets() {
+export default function S7Pockets({ phase = "day" }: { phase?: "dawn" | "day" | "dusk" | "night" }) {
   return (
     <group>
       <Reedmarsh />
       <TheFlats />
+      {phase !== "night" && <Dragonflies />}
     </group>
   );
 }

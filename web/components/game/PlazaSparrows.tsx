@@ -42,11 +42,18 @@ function makeState([x, z]: [number, number], i: number): SparrowState {
   return { x, z, tx: x, tz: z, hopT: -1, nextHopAt: 1.5 + i * 0.9, mode: "ground", modeT: 0, returnAt: 0, fleeDir: [1, 0] };
 }
 
-export default function PlazaSparrows({ playerPosRef }: { playerPosRef: React.MutableRefObject<THREE.Vector3> }) {
+export default function PlazaSparrows({ playerPosRef, anchors = ANCHORS, bounds = PLAZA, colors }: {
+  playerPosRef: React.MutableRefObject<THREE.Vector3>;
+  /** S7 reuse (wake 62): drop the same peck-hop-flee birds anywhere —
+   *  the Flats shorebirds are this component with sand anchors/colors. */
+  anchors?: [number, number][];
+  bounds?: { x0: number; x1: number; z0: number; z1: number };
+  colors?: [string, string][];
+}) {
   const refs = useRef<(THREE.Group | null)[]>([]);
   // Mutable frame state lives in a ref (react-compiler: useMemo results are
   // frozen) — same pattern as FishShadows' flee state.
-  const statesRef = useRef<SparrowState[]>(ANCHORS.map((a, i) => makeState(a, i)));
+  const statesRef = useRef<SparrowState[]>(anchors.map((a, i) => makeState(a, i)));
 
   useFrame(({ clock }, dt) => {
     const t = clock.elapsedTime;
@@ -82,8 +89,8 @@ export default function PlazaSparrows({ playerPosRef }: { playerPosRef: React.Mu
           g.position.set(s.x, groundY, s.z);
           g.rotation.x = Math.max(0, Math.sin(t * 2.6 + i * 2.1)) * 0.35;
           if (t > s.nextHopAt) {
-            const nx = Math.min(PLAZA.x1, Math.max(PLAZA.x0, s.x + (Math.random() * 2 - 1) * 1.3));
-            const nz = Math.min(PLAZA.z1, Math.max(PLAZA.z0, s.z + (Math.random() * 2 - 1) * 1.3));
+            const nx = Math.min(bounds.x1, Math.max(bounds.x0, s.x + (Math.random() * 2 - 1) * 1.3));
+            const nz = Math.min(bounds.z1, Math.max(bounds.z0, s.z + (Math.random() * 2 - 1) * 1.3));
             s.tx = nx;
             s.tz = nz;
             s.hopT = 0;
@@ -103,8 +110,8 @@ export default function PlazaSparrows({ playerPosRef }: { playerPosRef: React.Mu
           g.visible = false;
         }
       } else if (s.mode === "gone") {
-        if (t > s.returnAt && Math.hypot(p.x - ANCHORS[i][0], p.z - ANCHORS[i][1]) > FLEE_RADIUS + 1.5) {
-          const [ax, az] = ANCHORS[i];
+        if (t > s.returnAt && Math.hypot(p.x - anchors[i][0], p.z - anchors[i][1]) > FLEE_RADIUS + 1.5) {
+          const [ax, az] = anchors[i];
           s.x = ax;
           s.z = az;
           s.mode = "return";
@@ -128,7 +135,7 @@ export default function PlazaSparrows({ playerPosRef }: { playerPosRef: React.Mu
 
   return (
     <group>
-      {ANCHORS.map(([x, z], i) => (
+      {anchors.map(([x, z], i) => (
         <group
           key={i}
           position={[x, getTerrainHeight(x, z), z]}
@@ -139,12 +146,12 @@ export default function PlazaSparrows({ playerPosRef }: { playerPosRef: React.Mu
           {/* body */}
           <mesh position={[0, 0.07, 0]} castShadow>
             <sphereGeometry args={[0.07, 8, 6]} />
-            <meshStandardMaterial color={i === 1 ? "#8A7B6B" : "#6E625A"} roughness={0.9} />
+            <meshStandardMaterial color={colors?.[i]?.[0] ?? (i === 1 ? "#8A7B6B" : "#6E625A")} roughness={0.9} />
           </mesh>
           {/* head */}
           <mesh position={[0, 0.13, 0.05]}>
             <sphereGeometry args={[0.045, 8, 6]} />
-            <meshStandardMaterial color={i === 1 ? "#9A8B7B" : "#7E726A"} roughness={0.9} />
+            <meshStandardMaterial color={colors?.[i]?.[1] ?? (i === 1 ? "#9A8B7B" : "#7E726A")} roughness={0.9} />
           </mesh>
           {/* beak */}
           <mesh position={[0, 0.125, 0.1]} rotation={[Math.PI / 2, 0, 0]}>

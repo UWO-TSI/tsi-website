@@ -291,6 +291,7 @@ const GULL_ANCHORS: [number, number][] = [
   [68, -9.4],   // east lobe, off the lighthouse (S1 x1.173)
   [23.5, 68],   // over the cove swim border
   [-65.7, 16.4],  // west bay mouth
+  [45, -2],       // S4 wharf — over the pier and the Shack (wake 62)
 ];
 
 // Sea-catch swoop (loop wake 35): a sea-zone catch calls the nearest gull
