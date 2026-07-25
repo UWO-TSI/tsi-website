@@ -108,6 +108,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-24 — Loop wake 33: minimap ground pads
+
+The minimap now shows the brick plaza (terracotta rect at the crossing) and the beach wood deck (timber rect at the cove) — the map stays honest with the new ground. World rects lifted from RoadTiles, drawn under the buildings. Verified on the live dashboard minimap, zero pageerrors. Gates: tsc clean, MiniMap lint-clean, 32/32.
+
 ### 2026-07-24 — Loop wake 32: full-gates verification sweep + lab hydration fix
 
 Periodic full sweep after ~10 loop features: **prod build compiles clean** (first full build since the weather/HUD/fish/brick run), **full-project lint exactly 74/52 = baseline** (zero drift all day), 32/32 tests. Overlay sweep (all 6 dock overlays + chips + emote + jump/sprint, plus the three lab benches) surfaced ONE real bug: /lab/world with a weather override threw a hydration pageerror — LabPanel rendered `getTodayWeather()` during SSR where ?rain=1 is invisible ("sunny" server text vs "rain" client). Fixed with the useSyncExternalStore mount gate (same pattern as the icon stage); all grade save/load spots now read the gated value. Re-swept: zero pageerrors everywhere. Note for David: on /lab/world the minimap + weather chips sit UNDER the experiment panel (panel overlays that corner by design — visible fine in the real game).
