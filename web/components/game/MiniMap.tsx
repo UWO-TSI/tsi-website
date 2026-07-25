@@ -38,6 +38,7 @@ const BUILDINGS: { x: number; z: number; w: number; h: number; c: string }[] = [
   { x: 24, z: 14, w: 5, h: 3.1, c: "#8A7B6B" },    // House
   { x: -30, z: -18, w: 4, h: 5, c: "#7A4A3A" },    // red chalet
   { x: 30, z: -19, w: 4, h: 5, c: "#8A7B6B" },     // yellow chalet
+  { x: 44.5, z: -3.2, w: 3.6, h: 2.6, c: "#8A6A4A" }, // Wharf Shack (S4)
 ];
 
 // Loop iter 17 (2026-07-24): discovery pings — first visit to a landmark
@@ -119,7 +120,8 @@ export default function MiniMap({ playerPosRef }: { playerPosRef: React.MutableR
         <rect x={-5.4} y={9.4} width={10.8} height={7.2} rx="1.2" fill="#C98F73" stroke="#A9714F" strokeWidth="0.5" />
         <rect x={41} y={-0.4} width={6} height={5.4} rx="1" fill="#B98C60" stroke="#96693F" strokeWidth="0.5" />
         <rect x={15.6} y={-51.8} width={5.4} height={4.9} rx="1" fill="#B98C60" stroke="#96693F" strokeWidth="0.5" />
-        {/* river (world z≈1-5 band, drawn at -z) */}
+        {/* river (world z≈1-5 band, drawn at -z); ellipse = the v3 bend pool */}
+        <ellipse cx="22" cy="-2.9" rx="5.4" ry="3.2" fill="#69A8D0" />
         <path d="M -61 -2 C -35 -5, -12 -5, -3 -1 S 16 -2, 30 -4 S 50 -3, 61 -3" fill="none" stroke="#69A8D0" strokeWidth="3.4" strokeLinecap="round" />
         {/* buildings */}
         {BUILDINGS.map((b, i) => (

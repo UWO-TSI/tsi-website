@@ -101,8 +101,21 @@ const RIVER_POLYLINE: [number, number][] = (() => {
   return pts;
 })();
 const RIVER_DEPTH = -0.95; // V1 visual depth (David 2026-07-25): a CARVED channel under the -0.32 water
-const RIVER_HALF = 2.2;    // full-depth half-width (water is 1.9 half-wide)
-const RIVER_BLEND = 1.3;   // bank blend distance beyond RIVER_HALF
+const RIVER_HALF = 2.2;    // base full-depth half-width (water is 1.9 half-wide)
+const RIVER_BLEND = 1.3;   // bank blend distance beyond the local half-width
+
+// River v3 (David 2026-07-25): the run varies in width — tight narrows under
+// both bridge crossings, one wide bend pool on the gentle x≈22 bend (the
+// island's marquee fishing hole; the tight S-bend at x≈0-10 stays base
+// width — wide offsets there fold the bank ribbons across the channel).
+// Single profile: the carve here AND the water/bank ribbons (River.tsx,
+// RiverBankWalls.tsx, RiverBanks.tsx) all multiply their cross-offsets by
+// this, so every layer stays in register.
+export function riverWidthScale(x: number): number {
+  const pool = 0.8 * Math.exp(-(((x - 22) / 4.5) ** 2));
+  const narrows = 0.34 * (Math.exp(-((x / 3) ** 2)) + Math.exp(-(((x - 39.25) / 3) ** 2)));
+  return 1 + pool - narrows;
+}
 
 function distToRiver(x: number, z: number): number {
   let best = Infinity;
@@ -121,9 +134,10 @@ function distToRiver(x: number, z: number): number {
 /** 1 inside the channel, smoothstep → 0 across the banks. */
 function riverInfluence(x: number, z: number): number {
   const d = distToRiver(x, z);
-  if (d >= RIVER_HALF + RIVER_BLEND) return 0;
-  if (d <= RIVER_HALF) return 1;
-  const t = 1 - (d - RIVER_HALF) / RIVER_BLEND;
+  const half = RIVER_HALF * riverWidthScale(x);
+  if (d >= half + RIVER_BLEND) return 0;
+  if (d <= half) return 1;
+  const t = 1 - (d - half) / RIVER_BLEND;
   return t * t * (3 - 2 * t);
 }
 

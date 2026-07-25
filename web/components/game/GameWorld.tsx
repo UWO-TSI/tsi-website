@@ -1915,7 +1915,7 @@ function Scene({
     // G5: fishing spots on the riverbank (radius 2.4). Beach Cove loop:
     // plus two saltwater casts — the wood deck edge and the cove sand.
     // ACNH revamp: spots hug the carved channel banks (~1.2u off center).
-    const FISHING_SPOTS: [number, number][] = [[-12, 6.2], [-3, 2.6], [5, 5.4], [16, 3.6], [18.3, 51.2], [15.7, 56.3], [44.2, 4.4]]; // S1 sea spots + S3 wharf pier tip
+    const FISHING_SPOTS: [number, number][] = [[-12, 6.2], [-3, 2.6], [5, 5.4], [16, 3.6], [18.3, 51.2], [15.7, 56.3], [44.2, 4.4], [22, 5.4]]; // S1 sea spots + S3 wharf pier tip + river v3 bend pool
     for (let i = 0; i < FISHING_SPOTS.length; i++) {
       const [sx, sz] = FISHING_SPOTS[i];
       const d = Math.hypot(sx - position.x, sz - position.z);

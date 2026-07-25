@@ -66,11 +66,12 @@ function Signpost({ pos, target }: { pos: [number, number]; target: [number, num
 }
 
 // ─── Stepping stones ────────────────────────────────────────────────────
-// Lay 6 stones perpendicular to the river tangent at a narrow downstream bend.
-// Picking t≈0.78 (somewhere past control point [16, 2]) avoids the bridge at x=0.
+// Lay 6 stones perpendicular to the river tangent at a base-width stretch.
+// River v3: moved off x=11 — the bend pool (x≈22) owns the east water now;
+// x=-20 is the straight base-width west run, clear of bridges and spots.
 function SteppingStones() {
   const stones = useMemo(() => {
-    const t = findRiverTForX(11);
+    const t = findRiverTForX(-20);
     const { position, tangent } = sampleRiverPoint(t);
     // Perpendicular to tangent in XZ plane = (-tangent.z, tangent.x).
     const normal = new THREE.Vector3(-tangent.z, 0, tangent.x).normalize();

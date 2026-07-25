@@ -17,9 +17,10 @@
 import { useMemo } from "react";
 import * as THREE from "three";
 import { sampleRiverPoint } from "./River";
+import { riverWidthScale } from "./terrain";
 
-const SEGMENTS = 120;
-const EDGE = 1.95; // wall offset from spline center (just past the water ribbon)
+const SEGMENTS = 200; // river v3: dense enough to track the width-profile gradients
+const EDGE = 2.1; // wall offset from spline center (past the water ribbon, inside the 2.2 carve)
 const WALL_TOP = 0.04;
 const WALL_BOTTOM = -1.05; // tucks under the V1 carve floor (-0.95)
 const LIP_INNER = 1.62; // lip overhangs from EDGE toward the channel
@@ -43,10 +44,11 @@ function buildBankGeometry(): { wall: THREE.BufferGeometry; lip: THREE.BufferGeo
       }
       const nx = -tangent.z * side;
       const nz = tangent.x * side;
-      const ex = p.x + nx * EDGE;
-      const ez = p.z + nz * EDGE;
-      const lx = p.x + nx * LIP_INNER;
-      const lz = p.z + nz * LIP_INNER;
+      const wScale = riverWidthScale(p.x);
+      const ex = p.x + nx * EDGE * wScale;
+      const ez = p.z + nz * EDGE * wScale;
+      const lx = p.x + nx * LIP_INNER * wScale;
+      const lz = p.z + nz * LIP_INNER * wScale;
 
       const wBase = wallPos.length / 3;
       wallPos.push(ex, WALL_TOP, ez, ex, WALL_BOTTOM, ez);

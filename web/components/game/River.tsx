@@ -28,6 +28,7 @@ import { useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { getCausticTexture } from "@/lib/game/causticTexture";
+import { riverWidthScale } from "./terrain";
 
 /** Control points for the river spline. East-west run with gentle bends. */
 export const RIVER_CONTROL_POINTS: [number, number][] = [
@@ -39,7 +40,7 @@ export const RIVER_CONTROL_POINTS: [number, number][] = [
 /** Default river width — slightly wider than paths (2.8) to feel substantial. */
 const RIVER_WIDTH = 3.8;
 const ROWS = 5; // 5 rows: 2 banks + 3 inner — denser cross-section than Path
-const SEGMENTS = 96;
+const SEGMENTS = 144; // river v3: denser sampling keeps the narrows/pool edges smooth
 
 /** Y offset of the water surface relative to the terrain baseline (y=0). */
 // River v2 (2026-07-14): water dropped so the new bank walls
@@ -163,9 +164,10 @@ export default function River({
 
       const v = cumLengths[i] / Math.max(totalLength, 0.0001);
 
+      const wScale = riverWidthScale(point.x);
       for (let r = 0; r < ROWS; r++) {
         const u = r / (ROWS - 1); // 0, 0.25, 0.5, 0.75, 1
-        const offset = (u - 0.5) * width;
+        const offset = (u - 0.5) * width * wScale;
         const vx = point.x + nx * offset;
         const vz = point.z + nz * offset;
 
@@ -222,9 +224,10 @@ export default function River({
       const nx = px / plen;
       const nz = pz / plen;
 
+      const wScale = riverWidthScale(point.x);
       for (let r = 0; r < 3; r++) {
         const u = r / 2;
-        const offset = (u - 0.5) * bedWidth;
+        const offset = (u - 0.5) * bedWidth * wScale;
         const idx = i * 3 + r;
         positions[idx * 3] = point.x + nx * offset;
         positions[idx * 3 + 1] = WATER_Y - 0.08;

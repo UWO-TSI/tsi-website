@@ -17,6 +17,7 @@ import * as THREE from "three";
 import InstancedGLB, { type NaturePlacement } from "./InstancedNature";
 import { getTerrainHeight } from "./terrain";
 import { sampleRiverPoint, findRiverTForX } from "./River";
+import { riverWidthScale } from "./terrain";
 
 const ROCKS = ["a", "c", "e"].map((k) => `/assets/acnh/props/rock-${k}.glb`);
 const TUFT = "/assets/acnh/props/grass-tuft-01.glb";
@@ -55,7 +56,7 @@ function buildBankSpots(): { rocks: BankSpot[]; reeds: BankSpot[] } {
     const side = rnd() < 0.5 ? 1 : -1;
     const nx = -tangent.z * side;
     const nz = tangent.x * side;
-    const off = HALF_WIDTH + 0.5 + rnd() * 0.9;
+    const off = HALF_WIDTH * riverWidthScale(position.x) + 0.5 + rnd() * 0.9;
     const x = position.x + nx * off;
     const z = position.z + nz * off;
     const spot = { x, z, rot: rnd() * Math.PI * 2, s: 0 };
