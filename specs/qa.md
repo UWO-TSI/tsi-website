@@ -1,10 +1,28 @@
 # QA Report
 
 > Owner: QA agent. All agents check this for bugs in their area.
-> Last updated: 2026-07-25 (Wave 29 — pre-merge gate, art-cohesion branch)
+> Last updated: 2026-07-25 (Wave 30 — post-geo/economy mini-sweep, art-cohesion branch)
 > **Lint baseline updated 2026-07-13: 74 errors / 52 warnings** (was 74/59 — seven genuinely-unused eslint-disable directives removed; mentorship/page.tsx keeps its two, the "unused" report there is a react-compiler two-pass quirk shielding a real declaration-order error).
 
 ---
+
+## Wave 30 — 2026-07-25 Mini-sweep after wakes 46-60 — **PASS, ready for David's eyeball**
+
+Wave 29 passed but the world changed a LOT since (geo master plan S1-S7, river v3, economy E1-E4, recolor pipeline, polish batches — 15 wakes). This sweep re-baselines everything for David's pre-merge playtest. HEAD `f862f5c`.
+
+- **Build:** ✓ compiled 7.0s, **110** static pages (was 106 — +lab/furniture, +api/sell, +api/gear, +lab growth), zero errors. Note: env-less builds fail at `/admin/recruit` static export (needs Supabase env at build) — NOT a regression, Wave 29 built with env too; only affects env-stripped builds.
+- **Lint:** exactly 74/52 baseline. **Tests:** 32/32.
+- **Runtime smoke (env-less :3099):** 11 routes 200 (incl. the new /lab/furniture), 4 APIs 200 (/api/shop, /api/collections, /api/coins, /api/gear — the last two degrade to null-wallet/null-gear env-less as designed; /api/sell 401s unauthed).
+- **Flow sweep, all headless-verified, zero pageerrors:**
+  - 6/6 sheet deep-links open (shop/bounty/jobs/leaderboard/oracle/**wharfsell**)
+  - 4/4 interiors render via /lab/interior (oracle/shop/hq/**wharf**)
+  - Fishing at the **bend pool** cast spot: prompt + cast-start
+  - **Boat trip**: prompt + "Rowed out" toast (round trip verified wake 55)
+  - **Sell + gear flow**: exact coin math, OWNED persistence (wake 58)
+  - Discovery pings: Isla Chica (w55), The Flats (w57), **The Reedmarsh (this wave)**
+- **Screenshot pack** (job dir `tmp/w61pack/`): hero aerials of village, wharf, Temple Rise, Isla Chica, The Flats, bend pool, whole-island + all 4 interiors + fishing/reedmarsh ground shots.
+- **Breaks found: NONE** (one false alarm — the first fishing check spawned at the 2.4-radius edge; re-spawned in range, clean).
+- **Merge blockers: NONE.** Migration 024 remains DRAFT (launch-window batch: coins, fish_prices, sell_catches, gear, buy_gear). Branch is ready for David's in-game eyeball → merge → smoke tethos.ca (prod auto-deploys from main).
 
 ## Wave 29 — 2026-07-25 Pre-merge gate on restart/art-cohesion-v2 — **PASS, merge-ready**
 
