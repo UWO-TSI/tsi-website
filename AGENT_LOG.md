@@ -108,6 +108,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-24 — Loop wake 40: hedge brush-past rustle
+
+Walking within ~1u of a hedge segment now shivers it for 0.45s (decaying z-wobble) with a leaf-scuff note — per-segment 1.2s cooldown so strolling the run reads as a wave of rustles, not a rattle. PlazaHedges gains playerPosRef + one useFrame over the six segments (refs only). Verified with a stroll along the full south run, zero pageerrors. Gates: tsc clean, both files lint-clean, 32/32.
+
 ### 2026-07-24 — Loop wake 39: plaza hedges (flag-list "hedge/park fences")
 
 FenceIkegaki (the ACNH hedge fence) converted from the dump (11KB, textures embedded, renders green out of the box) and planted as two three-segment runs framing the plaza's south edge, split around the main path. Notable: **the fence is SKINNED** — first skin outside fish/sea (updates the wake-28 audit) — so PlazaHedges clones via SkeletonUtils from the start; DoubleSide per the foliage-card lesson; GAME_CALIBRATION scale, upright with no rotation (bbox-verified 1.1u long × 0.96u tall). Verified live: both runs render green and upright at the south edge, zero pageerrors. Gates: tsc clean, lint clean, 32/32. Six more Ikegaki variants (corners/ends/gate) staged in the dump for future garden runs.

@@ -2046,7 +2046,7 @@ function Scene({
       <BeachCove />
       <BeachCrabs />
       {todPhase !== "night" && <PlazaSparrows playerPosRef={playerPosRef} />}
-      <PlazaHedges />
+      <PlazaHedges playerPosRef={playerPosRef} />
       <SandFootprints playerPosRef={playerPosRef} />
       <SeasonalProps />
       <Landmarks />
