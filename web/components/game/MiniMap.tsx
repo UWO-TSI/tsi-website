@@ -128,6 +128,8 @@ export default function MiniMap({ playerPosRef }: { playerPosRef: React.MutableR
         {BUILDINGS.map((b, i) => (
           <rect key={i} x={sx(b.x) - b.w / 2} y={sy(b.z) - b.h / 2} width={b.w} height={b.h} rx="1" fill={b.c} stroke="rgba(0,0,0,0.25)" strokeWidth="0.4" />
         ))}
+        {/* S6: Temple Rise plateau under the Oracle */}
+        <ellipse cx={0} cy={-31.8} rx={8.2} ry={7.8} fill="#74B25E" stroke="#5E9E4E" strokeWidth="0.9" />
         {/* S5: Isla Chica (boat islet, SSW — map north is -y) */}
         <ellipse cx={-24} cy={-72} rx={6.5} ry={6} fill="#E4CD96" stroke="#CBB27C" strokeWidth="0.8" />
         <ellipse cx={-24.3} cy={-71.6} rx={4.1} ry={3.7} fill="#7EC167" stroke="#5E9E4E" strokeWidth="0.8" />

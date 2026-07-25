@@ -65,6 +65,7 @@ import HQInterior from "./HQInterior";
 import ShopInterior from "./ShopInterior";
 import OracleInterior from "./OracleInterior";
 import IslaChica from "./IslaChica";
+import TempleRise from "./TempleRise";
 import WharfShackInterior from "./WharfShackInterior";
 import type { InteriorStation } from "./interiorShared";
 import RoadTiles from "./RoadTiles";
@@ -2128,6 +2129,7 @@ function Scene({
       <ShoreLife />
       <BeachCove />
       <IslaChica />
+      <TempleRise />
       <BeachCrabs />
       {todPhase !== "night" && <PlazaSparrows playerPosRef={playerPosRef} />}
       <PlazaHedges playerPosRef={playerPosRef} />
@@ -2421,7 +2423,7 @@ export default function GameWorld() {
             triggerTransition(() => {
               // just outside each building's door (spec §7.2)
               const spawns: Record<string, [number, number, number]> = {
-                hq: [0, 0, -7], shop: [-24, 0, 9], oracle: [0, 0, 26.5], wharf: [44.5, 0, -6.4],
+                hq: [0, 0, -7], shop: [-24, 0, 9], oracle: [0, 0, 29.4], wharf: [44.5, 0, -6.4],
               };
               setWorldSpawn(spawns[interiorRef.current ?? "hq"]);
               setInterior(null);

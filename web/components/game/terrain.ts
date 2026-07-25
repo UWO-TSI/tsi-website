@@ -65,7 +65,7 @@ const NOISE_AMPLITUDE = 0.6;
 export const BUILDING_FOOTPRINTS: Array<{ x: number; z: number; radius: number }> = [
   { x: 0, z: -2.3, radius: 4.2 },   // HQ office
   { x: -24, z: 13.8, radius: 4.2 }, // Shop market
-  { x: 0, z: 31.8, radius: 4.5 },   // Oracle museum
+  // Oracle museum footprint removed — Temple Rise (S6) owns that ground.
   { x: 24, z: 15.1, radius: 3.2 },  // House chalet
   { x: 14, z: 9, radius: 1.4 },     // Bounty board
   { x: -15, z: -13, radius: 1.4 },  // Job board
@@ -206,7 +206,37 @@ export function getTerrainHeight(x: number, z: number): number {
   return ri > 0 ? base * (1 - ri) + RIVER_DEPTH * ri : base;
 }
 
+// ─── Temple Rise (GEO S6, 2026-07-25) ────────────────────────────
+// David-ruled: the Oracle Temple sits ON a hill with cliff faces. A flat
+// plateau under the temple, a steep blend the cliff-rock band hides
+// (TempleRise.tsx), and a stair ramp notched into the south face joining
+// the plaza spine. Beats footprints/paths — the oracle footprint entry
+// was removed in favor of this.
+export const TEMPLE_RISE = { x: 0, z: 31.8, topR: 6.6, blend: 1.7, h: 2.3 };
+export const TEMPLE_STAIRS = { halfW: 1.7, z0: 26.3, z1: 28.9 };
+
+export function templeRiseHeight(x: number, z: number): number | null {
+  const R = TEMPLE_RISE;
+  // Stair ramp cuts through the plateau front: smooth 0 → h.
+  if (Math.abs(x - R.x) < TEMPLE_STAIRS.halfW && z > TEMPLE_STAIRS.z0 - 0.3 && z < R.z) {
+    const t = Math.min(Math.max((z - TEMPLE_STAIRS.z0) / (TEMPLE_STAIRS.z1 - TEMPLE_STAIRS.z0), 0), 1);
+    return R.h * t * t * (3 - 2 * t);
+  }
+  const d = Math.hypot(x - R.x, z - R.z);
+  if (d < R.topR) return R.h;
+  if (d < R.topR + R.blend) {
+    const t = 1 - (d - R.topR) / R.blend;
+    return R.h * t * t * (3 - 2 * t);
+  }
+  return null;
+}
+
 function baseTerrainHeight(x: number, z: number): number {
+  // 0. Temple Rise — strongest claim of all (covers the old oracle
+  // footprint region entirely).
+  const rise = templeRiseHeight(x, z);
+  if (rise !== null) return rise;
+
   // 1. Building footprint flattening — strongest claim
   for (const b of BUILDING_FOOTPRINTS) {
     const dx = x - b.x;
