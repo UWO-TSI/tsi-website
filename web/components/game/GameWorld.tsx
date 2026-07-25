@@ -30,7 +30,7 @@ import { getLabHour, labSubscribe } from "@/lib/game/devLab";
 import { WEATHER_GRADES } from "@/lib/game/grading";
 import { coastDist, beachWidthShift, COAST_GLSL } from "@/lib/game/coast";
 import { DEFAULT_PALETTES } from "@/data/content-defaults";
-import { CloudShadows, NightStars, WaterSparkles, LeafGusts, NightWindows, TargetGlow } from "./AmbienceFX";
+import { CloudShadows, NightStars, WaterSparkles, LeafGusts, NightWindows, TargetGlow, SeasonalParticles } from "./AmbienceFX";
 import AmbientLife from "./AmbientLife";
 import AudioController from "./AudioController";
 import NPCChatOverlay from "./NPCChatOverlay";
@@ -2190,6 +2190,7 @@ function Scene({
       {!liteMode && <CloudShadows phase={todPhase} />}
       {!liteMode && <WaterSparkles />}
       {!liteMode && <LeafGusts />}
+      {!liteMode && <SeasonalParticles playerPosRef={playerPosRef} />}
 
       <InstancedTrees />
       <Bushes />
