@@ -108,6 +108,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-25 — Loop wake 63: ambient batch 2 — night beats + the crab
+
+**Temple door braziers**: stone bowl pair flanking the Oracle entrance on the plateau — cone flames + point lights that flicker-breathe at dusk (1.8) and night (3.2), asleep by day; verified via the /lab/world clock scrub at 22:00 (the LabPanel's Time override is drivable headless: click the checkbox, set the range with the native value setter + input event) — the warm pools on the stair landing are exactly the cozy beat. **Bug fixed en route**: NightWindows' oracle glow planes were still at pre-plateau height (y 1.85) — floating inside the hill since S6 lifted the temple 2.3; now y 4.15. **Islet crab**: procedural red crab side-stepping arcs of Isla Chica's sand ring (skitter bursts + freeze pauses, faces along the radius while walking sideways — real crab energy), verified in the islet close-up. Also noted while in the LabPanel: a palette system (live/default/halloween) already exists — seasonal palette groundwork is partially built. Gates: tsc clean, 74/52, 32/32. Branch stays merge-ready.
+
 ### 2026-07-25 — Loop wake 62: ambient batch — the quiet pockets get life
 
 **Reedmarsh dragonflies**: three teal darts (capsule body + shimmer wing planes) flying figure-8s around the pond rims with a nervous tremble, daylight-gated via a new `phase` prop on S7Pockets — verified visible in the low shot, and the marsh reads lovely with cattails around them. **Flats sandpipers**: PlazaSparrows generalized (optional `anchors`/`bounds`/`colors` props, plaza defaults untouched) — a second instance skitters sandy-colored birds along the tidal line with the same peck-hop-flee brain. **Wharf gull**: fourth GULL_ANCHORS entry puts a circling gull over the pier + Shack (same proven Gull component as lighthouse/cove/bay; camera-fishing for a moving bird wasn't worth more shots). Bridge night lamps checked — string-light emissives already phase-driven, no work needed. Gates: tsc clean, 74/52, 32/32. Branch stays merge-ready (Wave 30); next: another ambient batch or David rulings.
