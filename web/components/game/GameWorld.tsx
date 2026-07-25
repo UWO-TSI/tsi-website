@@ -581,6 +581,7 @@ function Terrain() {
     const SINK_END = 56;
     const SINK_DEPTH = 2.4;
     const cSand = new THREE.Color("#E2CB93");
+    const cFlats = new THREE.Color("#F2E4BC");
     const cSoil = new THREE.Color("#7A5C43");
 
     for (let i = 0; i < pos.count; i++) {
@@ -621,6 +622,12 @@ function Terrain() {
         // grass → sand across the waterline, sand → wet soil underwater
         const sandT = Math.min((es - 48.5) / 2.2, 1);
         tmp.lerp(cSand, sandT * sandT * (3 - 2 * sandT));
+        // S7 The Flats: where the beach-width gaussian dominates (shift
+        // beyond the ±1.8 harmonics), push toward bright tidal cream so
+        // the shelf reads as SAND under the grass texture, not olive.
+        const shiftV = es - dist;
+        const flatsT = Math.min(Math.max((shiftV - 2) / 3, 0), 1);
+        if (flatsT > 0) tmp.lerp(cFlats, flatsT * sandT * 0.55);
         if (dist > 52.5) {
           tmp.lerp(cSoil, Math.min((dist - 52.5) / 3, 1));
         }

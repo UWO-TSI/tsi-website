@@ -229,7 +229,12 @@ ${COAST_GLSL}`
 {
   // Distance to the ORGANIC shoreline (coast.ts harmonics): 0 at the
   // waterline, so the foam band hugs every lobe and bay.
-  float shore = length(vOceanXZ) - (${SHORE_RADIUS.toFixed(1)} + coastWobble(vOceanXZ)) * COAST_SCALE;
+  float shoreMain = length(vOceanXZ) - (${SHORE_RADIUS.toFixed(1)} + coastWobble(vOceanXZ)) * COAST_SCALE;
+  // S5 Isla Chica: the islet's skirt crosses the ocean surface at r≈7.4 —
+  // min() folds it into the same field, so foam/shallows/caustics ring it
+  // exactly like the mainland.
+  float shoreIslet = length(vOceanXZ - vec2(-24.0, 72.0)) - 7.4;
+  float shore = min(shoreMain, shoreIslet);
 
   // Depth ramp: shallow near shore -> deep water outward.
   float depthT = smoothstep(0.0, 14.0, shore);

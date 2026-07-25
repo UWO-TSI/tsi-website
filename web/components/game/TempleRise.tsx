@@ -46,8 +46,8 @@ function CliffBand() {
     const eu = new THREE.Euler();
     for (let i = 0; i < SEGS; i++) {
       const a = (i / SEGS) * Math.PI * 2;
-      const wx = R.x + Math.cos(a) * (R.topR + 0.55 + rnd() * 0.35);
-      const wz = R.z + Math.sin(a) * (R.topR + 0.55 + rnd() * 0.35);
+      const wx = R.x + Math.cos(a) * (R.topR + 0.6 + rnd() * 0.18);
+      const wz = R.z + Math.sin(a) * (R.topR + 0.6 + rnd() * 0.18);
       // south stair gap: skip slabs in front of the notch
       if (Math.abs(wx - R.x) < TEMPLE_STAIRS.halfW + 0.7 && wz < R.z - R.topR + 1.6) continue;
       const h = 2.1 + rnd() * 0.7;
@@ -56,7 +56,7 @@ function CliffBand() {
       m.compose(
         new THREE.Vector3(wx, h / 2 - 0.25, wz),
         q,
-        new THREE.Vector3(1.15 + rnd() * 0.5, h, 0.7 + rnd() * 0.3)
+        new THREE.Vector3(1.35 + rnd() * 0.45, h, 0.7 + rnd() * 0.3)
       );
       mats.push(m.clone());
     }
