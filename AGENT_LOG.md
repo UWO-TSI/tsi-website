@@ -108,6 +108,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-25 — Loop wake 52: ECON E2 — the coins wallet (play currency plumbing)
+
+Three pieces, no UI yet: **(1) migration DRAFT `024_game_coins.sql`** (023 was taken by member_collections) — `profiles.coins` with column-level REVOKE so clients can't self-inflate; all earning through a SECURITY DEFINER `earn_coins(amount, reason)` RPC capped at 4000/call (max sale ≈ sea king 2500 × 1.25); explicitly NOT applied, launch-window batch; **(2) `/api/coins`** — GET returns `{coins: null}` when no wallet is reachable (env-less, unauthed, or pre-migration DB → client falls back to local), POST validates shape (amount 1-4000, reason slug) then calls the RPC, 503s gracefully pre-migration; **(3) `lib/game/coins.ts`** local-first mirror (`tsi.coins.local.v1`, earnCoins() bumps local + fire-and-forget POST + `tsi:coins` event for HUD listeners, displayCoins() picks server-else-local). Verified env-less: GET `{"coins":null}`, POSTs 401 at the auth gate, zero errors. Gates: tsc clean, both files lint-clean, 32/32. Next: S4/E3 — the Wharf Shack spends this plumbing.
+
 ### 2026-07-25 — Loop wake 51: GEO S3 — wharf district ground
 
 The Riverside Wharf gets its floor: a wood-decking APRON on the east bridge's south bank (RoadTiles wood zone + corridor), a fixed-height PLANK PIER jutting north over the carved channel (RoadTiles can't decking over water — small static mesh with posts sunk to the bed + an end rail casting perch; flat walker override + plank knocks extended), and a NEW FISHING SPOT at the pier tip. Found + fixed en route: **the RoadTiles placement grid capped at x≈±29 — the S2 avenue extensions east of that had corridors but NO tiles**; grid widened to cover the S1/S2 island. Minimap gains the apron patch. Verified: apron + pier + bridge compose cleanly at the crossing, zero pageerrors. Gates: tsc clean, 6 files lint-clean, 32/32. Next: E2 coins wallet, then the Shack lands on this apron.
