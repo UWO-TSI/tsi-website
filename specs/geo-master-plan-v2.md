@@ -103,6 +103,25 @@ Rowboat at the wharf dock → fade transition (LoadGate reuse) → islet.
 One interaction, no new movement system. Later: the boat becomes the
 Sea-King charter when David's models land.
 
+## Visual depth (standing principle, David 2026-07-25)
+
+"The game lacks visual depth." Everything flat gets challenged: the river
+sits too shallow, the bridge reads flat, terrain verticality is low.
+Wake-sized items queued AHEAD of S1:
+
+- **V1 — deeper river channel**: RIVER_DEPTH −0.55 → ≈−0.95, WATER_Y −0.2
+  → ≈−0.32; extend RiverBankWalls to the new bed; dependents to re-tune:
+  fish-shadow y (−0.26), foam line (WATER_Y−0.08), stepping stones, river
+  mouths, bobber float height. The channel should read CARVED.
+- **V2 — the bridge arch must read**: scouting done — the crossing already
+  uses the ACNH arched GLB (3.79 × 1.86 × 2.9) but it mounts sunk (y 0.02)
+  and walkers cross on a FLAT 0.12 terrain override, burying/clipping the
+  arch. Fix: raise the mount, replace the flat override with a parabolic
+  arch profile (≈0.45 crest at the centerline, smooth ramps), keep the
+  plank-knock zone. Same treatment spec for the future east bridge.
+- S1's terrain pass also reviews swell amplitude (+ hills read from the
+  obliques), and S6 (temple hill) is the big verticality payoff.
+
 ## Implementation stages (each gated, multi-wake)
 
 - **S1** Coast +18% + threshold/placement re-solve (solver rerun) + minimap.

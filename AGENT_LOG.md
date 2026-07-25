@@ -108,6 +108,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-25 — Visual-depth notes (David) queued as loop tasks V1/V2
+
+David: "game lacks visual depth, river should be deeper in the ground, bridges shouldn't just be flat" — kept as LOOP tasks per his instruction (no live implementation). Scouting recorded in the master plan: the bridge is ALREADY the arched ACNH GLB but mounts sunk with a flat 0.12 walker override burying the arch (fix = raise mount + parabolic walk profile ≈0.45 crest); river constants RIVER_DEPTH −0.55 / WATER_Y −0.2 with the dependent list (bank walls, fish-shadow y, foam, mouths, stepping stones, bobber). Queue order now: V1 river depth → V2 bridge arch → S1 coast+18%+character → S2 loop road → E1 Gems rename → onward.
+
 ### 2026-07-25 — HQ FLOOR-PLAN SESSION prepared (collab track item 4) + interiors program v1
 
 Planning continued per David's "keep going": **specs/interiors-program-v1.md** + session page https://claude.ai/code/artifact/1046702e-ca1e-4d83-ab31-e1e3458752ae — three candidate HQ plans over the real 16×12 room with all six feature stations preserved: **A "The Commons"** (lounge-first — walk in and see people), **B "The Guild Hall"** (council table under the banners, trophy wall behind the head seat), **C "The Studio"** (open event floor + stage corner — principle #8's monthly cadence gets a home). Four session questions posed (plan/blend, in-world events, boards indoors vs world-only, extras). Program one-liners recorded for Shop/Oracle refreshes, House show-home, Lighthouse ascent+deck, Wharf Shack counter+gear+tank, future Museum. BUILD NOTHING until David rules; furniture only from his shortlist after the recolor pipeline.
