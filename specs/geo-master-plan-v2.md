@@ -65,15 +65,7 @@ comes from ground material, density, and one signature prop per district.
   pool, boat-only).
 - **Fishing store ("The Wharf Shack")** at Riverside Wharf: enterable,
   sells rods/accessories (TC sink — clean), displays trophy catches.
-- **⚠ ECONOMY FLAG for David:** *buying fish for TC* conflicts with
-  principle #3 ("TC comes only from delivering monetary-value work — never
-  reward online activity"). Options: **(a)** amend the principle for fish
-  (TC trickle, capped daily); **(b)** fish sell for a separate cosmetic
-  currency (Scales) spent only in the Wharf Shack; **(c)** no selling —
-  the Shack COLLECTS species donations for badges/trophies (museum-style).
-  My recommendation: **(b)** — keeps TC's meaning intact, gives fishing a
-  full loop, and the Shack stays interesting. Awaiting the ruling; the
-  store ships selling gear only until then.
+- **ECONOMY RULED (David 2026-07-25):** currencies invert — **Gems** take the money-equivalent tier, **TC** becomes the play currency the Shack pays for fish. Full design: specs/economy-v2-currencies.md (E1-E4).
 
 ### Terrain diversity
 
