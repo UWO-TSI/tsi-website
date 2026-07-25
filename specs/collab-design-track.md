@@ -36,6 +36,29 @@ shortlist (see §3). Nothing placed without a plan David approved.
 - David **shortlists** pieces/sets he loves; rooms are furnished ONLY from
   the shortlist. The shortlist lives in this file once it exists.
 
+### Recolor pipeline (built 2026-07-25, wake 59)
+
+The dump pieces read clay-gray, so recoloring is a prerequisite for
+placement (David-ruled). Tints are **data, not baked assets** — a `Tint`
+maps material-slot names → hexes, applied at clone time (materials are
+cloned per instance; the GLTF cache stays pristine). Fits principle #8:
+monthly palette swaps are a data edit, no binaries.
+
+**How David rules a palette:**
+1. Open `/lab/furniture?piece=<name>` (dev). Left stage = base, right =
+   tinted; the inspector chips list the GLB's material slot names.
+2. Try looks: `&palette=oak|walnut|driftwood|cream|sage|terracotta|navy`
+   or ad-hoc `&tint=slot:RRGGBB,slot:RRGGBB` (`*` = all slots).
+3. Say the word — the ruling lands in
+   `web/lib/game/furniturePalettes.ts` `PIECE_TINTS`, and every room using
+   that piece repaints automatically (Wharf barrels carry a demo ruling
+   now, pending your pass).
+
+One physics note: tints **multiply** over textured pieces (pick light
+hexes, or leave textured pieces alone — the counter-register already
+ships nice wood grain), while flat clay pieces recolor directly and take
+any hex (the study-chair in sage is the reference example).
+
 ## Current sequence (2026-07-24)
 
 1. QA Wave 29 on `restart/art-cohesion-v2` (pre-merge gate — already ruled)

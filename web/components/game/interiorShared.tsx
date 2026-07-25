@@ -10,6 +10,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { useGLTF } from "@react-three/drei";
+import { PIECE_TINTS, type Tint } from "@/lib/game/furniturePalettes";
 import * as THREE from "three";
 
 export interface InteriorStation {
@@ -174,9 +175,39 @@ export function InteriorPlayer({
 
 const FURNITURE_BASE = "/assets/acnh/furniture";
 
-export function Piece({ name, position, rotY = 0, scale = 0.1 }: { name: string; position: [number, number, number]; rotY?: number; scale?: number }) {
+/**
+ * Recolor pipeline (2026-07-25): tint the clone's materials by name.
+ * Materials are CLONED before coloring — scene.clone(true) shares
+ * materials with the GLTF cache, so mutating in place would repaint
+ * every instance of the piece everywhere.
+ */
+export function applyTint(root: THREE.Object3D, tint: Tint): void {
+  root.traverse((o) => {
+    const mesh = o as THREE.Mesh;
+    if (!mesh.isMesh) return;
+    const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+    const tinted = mats.map((m) => {
+      const name = (m.name || "").toLowerCase();
+      const slot = Object.keys(tint).find((k) => k !== "*" && name.includes(k.toLowerCase()));
+      const hex = slot ? tint[slot] : tint["*"];
+      if (!hex) return m;
+      const c = m.clone() as THREE.MeshStandardMaterial;
+      if (c.color) c.color.set(hex);
+      return c;
+    });
+    mesh.material = Array.isArray(mesh.material) ? tinted : tinted[0];
+  });
+}
+
+export function Piece({ name, position, rotY = 0, scale = 0.1, tint }: { name: string; position: [number, number, number]; rotY?: number; scale?: number; tint?: Tint | null }) {
   const { scene } = useGLTF(`${FURNITURE_BASE}/${name}.glb`);
-  const clone = useMemo(() => scene.clone(true), [scene]);
+  const clone = useMemo(() => {
+    const c = scene.clone(true);
+    // undefined = auto-apply the piece's ruled tint; null = force base.
+    const t = tint === null ? undefined : tint ?? PIECE_TINTS[name];
+    if (t) applyTint(c, t);
+    return c;
+  }, [scene, name, tint]);
   return <primitive object={clone} position={position} rotation={[0, rotY, 0]} scale={[scale, scale, scale]} />;
 }
 
