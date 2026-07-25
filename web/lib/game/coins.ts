@@ -50,6 +50,31 @@ export function earnCoins(amount: number, reason: string): number {
   return total;
 }
 
+/**
+ * Spend coins LOCALLY (E4): debit the mirror + notify listeners. Returns
+ * the new local total, or null if the balance is insufficient. No POST —
+ * server debits happen inside the purchase RPCs (buy_gear etc.), so the
+ * wallet is never double-charged.
+ */
+export function spendCoins(amount: number, reason: string): number | null {
+  const amt = Math.max(1, Math.floor(amount));
+  let total: number;
+  try {
+    const have = localCoins();
+    if (have < amt) return null;
+    total = have - amt;
+    localStorage.setItem(KEY, String(total));
+  } catch {
+    return null;
+  }
+  try {
+    window.dispatchEvent(new CustomEvent("tsi:coins", { detail: { coins: total, spent: amt, reason } }));
+  } catch {
+    /* SSR safety */
+  }
+  return total;
+}
+
 /** Display balance: the server wallet when it exists, else the local mirror. */
 export function displayCoins(server: number | null | undefined): number {
   return server ?? localCoins();

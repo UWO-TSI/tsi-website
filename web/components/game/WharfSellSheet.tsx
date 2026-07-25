@@ -11,6 +11,7 @@ import { useState } from "react";
 import { FISH, RARITY_META, SELL_PRICES, HOLO_GRADIENT, iconFor, type FishDef } from "@/lib/game/fishing";
 import { localCollections, spendCollected } from "@/lib/game/collections";
 import { earnCoins, localCoins } from "@/lib/game/coins";
+import { GEAR, buyGear, localGear } from "@/lib/game/gear";
 import { useTickUp } from "./StatsHUD";
 import { AudioManager } from "@/lib/game/audio";
 import { COINS } from "@/lib/economy";
@@ -28,6 +29,7 @@ function sellableRows(): { fish: FishDef; count: number }[] {
 export default function WharfSellSheet() {
   const [rows, setRows] = useState(sellableRows);
   const [coins, setCoins] = useState(localCoins);
+  const [owned, setOwned] = useState<string[]>(localGear);
   const { value: coinsShown, flashing } = useTickUp(coins);
 
   const sell = (fish: FishDef, qty: number) => {
@@ -37,6 +39,13 @@ export default function WharfSellSheet() {
     spendCollected(fish.key, n);
     const paid = SELL_PRICES[fish.rarity] * n;
     const total = earnCoins(paid, "fish_sale");
+    // E4: atomic server sale rides along (price resolves server-side;
+    // pre-migration DBs 503 and the local mirrors stay authoritative).
+    fetch("/api/sell", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ key: fish.key, qty: n }),
+    }).catch(() => {});
     setCoins(total);
     setRows(sellableRows());
     AudioManager.playSFX("confirm");
@@ -50,6 +59,11 @@ export default function WharfSellSheet() {
     for (const r of rows) {
       spendCollected(r.fish.key, r.count);
       paid += SELL_PRICES[r.fish.rarity] * r.count;
+      fetch("/api/sell", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: r.fish.key, qty: r.count }),
+      }).catch(() => {});
     }
     if (paid < 1) return;
     const total = earnCoins(Math.min(paid, 4000), "fish_sale_all");
@@ -60,6 +74,20 @@ export default function WharfSellSheet() {
   };
 
   const totalValue = rows.reduce((s, r) => s + SELL_PRICES[r.fish.rarity] * r.count, 0);
+
+  const buy = (key: string) => {
+    const total = buyGear(key);
+    if (total === null) {
+      AudioManager.playSFX("click");
+      window.dispatchEvent(new CustomEvent("tsi:toast", { detail: { text: "Not enough coins yet — sell some catches!" } }));
+      return;
+    }
+    setCoins(total);
+    setOwned(localGear());
+    AudioManager.playSFX("confirm");
+    const item = GEAR.find((g) => g.key === key);
+    window.dispatchEvent(new CustomEvent("tsi:toast", { detail: { text: `${item?.emoji} ${item?.name} is yours!` } }));
+  };
 
   return (
     <div style={{ fontFamily: "var(--font-highlight, sans-serif)", color: "#4A4034", padding: "4px 2px 14px" }}>
@@ -158,8 +186,41 @@ export default function WharfSellSheet() {
           })}
         </div>
       )}
+      {/* E4: the gear shelf — rods and tackle for coins (cosmetic flair) */}
+      <div style={{ marginTop: 18, borderTop: "2px dashed #E0D2B0", paddingTop: 12 }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: "#8A7B5E", marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+          Gear shelf
+        </div>
+        <div style={{ display: "grid", gap: 8 }}>
+          {GEAR.map((g) => {
+            const has = owned.includes(g.key);
+            return (
+              <div
+                key={g.key}
+                style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", background: has ? "#F4F8EE" : "#FFFDF5", border: "1.5px solid #E0D2B0", borderRadius: 10 }}
+              >
+                <span style={{ fontSize: 22 }}>{g.emoji}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 600, fontSize: 14 }}>{g.name}</div>
+                  <div style={{ fontSize: 11, color: "#8A7B5E" }}>{g.desc}</div>
+                </div>
+                {has ? (
+                  <span style={{ fontSize: 11, fontWeight: 700, color: "#5B8A4A", padding: "4px 10px", background: "#E4F0DC", borderRadius: 7 }}>OWNED</span>
+                ) : (
+                  <button
+                    onClick={() => buy(g.key)}
+                    style={{ padding: "5px 12px", borderRadius: 7, border: "1.5px solid #C9962E", background: "#FFF8E4", color: "#7A5A10", fontWeight: 700, fontSize: 12, cursor: "pointer", whiteSpace: "nowrap" }}
+                  >
+                    {g.price} {COINS.symbol}
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
       <p style={{ marginTop: 14, fontSize: 11, color: "#B0A17C" }}>
-        Coins (TC 🪙) are the island play currency — spend them on rods and gear here soon. They never convert to Gems.
+        Coins (TC 🪙) are the island play currency — earned at this counter, spent on the shelf above. They never convert to Gems.
       </p>
     </div>
   );
