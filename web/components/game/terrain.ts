@@ -143,6 +143,7 @@ const PATH_CORRIDORS: PathCorridor[] = [
   { axis: "z", pos: -13, halfWidth: 1.75, from: -34, to: 41, falloff: 1.5 }, // S2 south avenue
   { axis: "x", pos: 39.25, halfWidth: 1.75, from: -11.25, to: 8.25, falloff: 1.5 }, // S2 east leg (carve wins at the crossing)
   { axis: "x", pos: -31.75, halfWidth: 1.75, from: -26.5, to: -14.75, falloff: 1.5 }, // S2 windmill spur
+  { axis: "x", pos: 44, halfWidth: 3, from: -5, to: 0.4, falloff: 1.5 }, // S3 wharf apron
   // Beach Cove spur (2026-07-14): sand path SE off the spine + wood deck.
   { axis: "z", pos: 23.75, halfWidth: 1.75, from: 1, to: 20, falloff: 1.5 },
   { axis: "x", pos: 18.25, halfWidth: 1.75, from: 25.5, to: 46.9, falloff: 1.5 }, // S1
@@ -315,6 +316,8 @@ export function sampleTerrainHeightFast(x: number, z: number): number {
   // V2 bridge arch (David 2026-07-25) — S2: parameterized for BOTH river
   // crossings (main bridge + the wharf east bridge). Walkers ride a
   // parabolic ≈0.55 crest with smooth ramps at the ends.
+  // S3 wharf pier: fixed plank height over the carved channel.
+  if (x > 43.2 && x < 45.2 && z > 0.4 && z < 5 && h < 0.12) return 0.12;
   for (let bi = 0; bi < BRIDGE_CROSSINGS.length; bi++) {
     const bc = BRIDGE_CROSSINGS[bi];
     if (x > bc.x - 1.6 && x < bc.x + 1.6) {

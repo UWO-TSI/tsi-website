@@ -48,6 +48,8 @@ const RECTS = [
   { x0: 16.5, x1: 20, z0: 25.5, z1: 46.9 }, // S1: spur reaches the new sand line
   // Beach deck pad (wood zone) at the sand line.
   { x0: 15.6, x1: 21, z0: 46.8, z1: 51.8 }, // S1: deck pad at the new shore
+  // S3 wharf apron: wood decking on the east bridge's south bank
+  { x0: 41, x1: 47, z0: -5, z1: 0.4 },
 ];
 
 type Variant = "interior" | "edge" | "corner" | "cap";
@@ -203,11 +205,12 @@ function getZoneTexture(zone: Zone): THREE.CanvasTexture {
 const PLAZA = { x0: -5.4, x1: 5.4, z0: -16.6, z1: -9.4 };
 const SAND_RECTS = [RECTS[7], RECTS[8]]; // S2: indices shifted by the 3 new leg rects
 const WOOD_PAD = RECTS[9];
+const WHARF_APRON = RECTS[10];
 const inRect = (r: { x0: number; x1: number; z0: number; z1: number }, x: number, z: number) =>
   x >= r.x0 && x <= r.x1 && z >= r.z0 && z <= r.z1;
 
 function zoneAt(x: number, z: number): Zone {
-  if (inRect(WOOD_PAD, x, z)) return "wood";
+  if (inRect(WOOD_PAD, x, z) || inRect(WHARF_APRON, x, z)) return "wood";
   if (SAND_RECTS.some((r) => inRect(r, x, z))) return "sand";
   if (inRect(PLAZA, x, z)) return "brick";
   return "soil";
@@ -237,8 +240,10 @@ interface Placement { x: number; z: number; rot: number }
 
 function computePlacements(zone: Zone): Record<Variant, Placement[]> {
   const out: Record<string, Placement[]> = { interior: [], edge: [], corner: [], cap: [] };
-  for (let gx = -32; gx <= 32; gx++) {
-    for (let gz = -30; gz <= 50; gz++) {
+  // S3: grid widened for the S1/S2 island (avenues to x 41, wharf to 47,
+  // cove deck to z 51.8). One-time scan; cost is trivial.
+  for (let gx = -54; gx <= 54; gx++) {
+    for (let gz = -34; gz <= 60; gz++) {
       // half-cell offset: corridors span an even tile count symmetrically
       const cx = (gx + 0.5) * CELL;
       const cz = (gz + 0.5) * CELL;

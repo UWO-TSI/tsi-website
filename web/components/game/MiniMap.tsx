@@ -117,6 +117,7 @@ export default function MiniMap({ playerPosRef }: { playerPosRef: React.MutableR
         {/* Ground pads (loop wake 33: map matches the ground) — the brick
             plaza + the beach wood deck. World rects from RoadTiles. */}
         <rect x={-5.4} y={9.4} width={10.8} height={7.2} rx="1.2" fill="#C98F73" stroke="#A9714F" strokeWidth="0.5" />
+        <rect x={41} y={-0.4} width={6} height={5.4} rx="1" fill="#B98C60" stroke="#96693F" strokeWidth="0.5" />
         <rect x={15.6} y={-51.8} width={5.4} height={4.9} rx="1" fill="#B98C60" stroke="#96693F" strokeWidth="0.5" />
         {/* river (world z≈1-5 band, drawn at -z) */}
         <path d="M -61 -2 C -35 -5, -12 -5, -3 -1 S 16 -2, 30 -4 S 50 -3, 61 -3" fill="none" stroke="#69A8D0" strokeWidth="3.4" strokeLinecap="round" />

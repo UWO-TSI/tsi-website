@@ -108,6 +108,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-25 — Loop wake 51: GEO S3 — wharf district ground
+
+The Riverside Wharf gets its floor: a wood-decking APRON on the east bridge's south bank (RoadTiles wood zone + corridor), a fixed-height PLANK PIER jutting north over the carved channel (RoadTiles can't decking over water — small static mesh with posts sunk to the bed + an end rail casting perch; flat walker override + plank knocks extended), and a NEW FISHING SPOT at the pier tip. Found + fixed en route: **the RoadTiles placement grid capped at x≈±29 — the S2 avenue extensions east of that had corridors but NO tiles**; grid widened to cover the S1/S2 island. Minimap gains the apron patch. Verified: apron + pier + bridge compose cleanly at the crossing, zero pageerrors. Gates: tsc clean, 6 files lint-clean, 32/32. Next: E2 coins wallet, then the Shack lands on this apron.
+
 ### 2026-07-25 — Loop wake 50: ECON E1 — Gems 💎 display rename (money tier)
 
 Economy v2 lands its first stage: **lib/economy.ts** (GEMS/COINS display constants + the loud tc_*==GEMS schema-mapping warning + fmt helpers + the no-conversion guardrail note) and the display rename across every user-facing surface — StatsHUD balance, shop price chips (was rendering "N TSI") + purchase toast, calendar event rewards ×2, quest widget, admin bounty review copy + "Approve + pay Gems", CMS EventEditor/ShopEditor labels. ZERO schema changes (tc_* columns untouched per the spec). **Bonus catch: CoinWidget was PRINTING THE CAD CONVERSION RATE** ("≈ $X.XX CAD value", /100) — a standing-rule violation that predates today; line removed. Verified live: no stray "N TC" renders, no CAD leak, zero pageerrors (StatsHUD's 💎 shows with an authed profile; each string edit assert-verified at apply). Gates: tsc clean, 9 files lint-clean, 32/32. Next: S3 wharf ground + E2 coins wallet.

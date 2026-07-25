@@ -572,7 +572,7 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
         footstepTimer.current = 0;
         // Loop iter 26 (2026-07-24): the bridge knocks — steps on the main
         // river crossing play a wooden note instead of the grass scuff.
-        const onBridge = (Math.abs(pos.x) < 2.2 && pos.z > 0 && pos.z < 6.5) || (Math.abs(pos.x - 39.25) < 1.8 && pos.z > 0.9 && pos.z < 6.6); // S2: both crossings knock
+        const onBridge = (Math.abs(pos.x) < 2.2 && pos.z > 0 && pos.z < 6.5) || (Math.abs(pos.x - 39.25) < 1.8 && pos.z > 0.9 && pos.z < 6.6) || (pos.x > 43.2 && pos.x < 45.2 && pos.z > 0.4 && pos.z < 5); // S2+S3: crossings + pier knock
         // Loop wake 31: the brick plaza taps — hard pavement note (matches
         // RoadTiles' PLAZA rect), and dry brick kicks no dirt.
         const onBrick = pos.x > -5.4 && pos.x < 5.4 && pos.z > -16.6 && pos.z < -9.4;
