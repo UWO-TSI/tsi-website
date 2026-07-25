@@ -100,8 +100,12 @@ function buildSpawns(
   // species drop from the pool; dragonflies, beetles, and shore critters
   // keep the world alive. Weather is per-day, so spawns stay deterministic.
   const rainDay = getTodayWeather() === "rain";
+  // Wake 38 bookend: sunny days bring the butterflies out in force (×2
+  // flutter weight) — rain hides them, sun multiplies them.
+  const sunnyDay = getTodayWeather() === "sunny";
+  const wOf = (s: Species) => (sunnyDay && s.motion === "flutter" ? s.weight * 2 : s.weight);
   const pool = SPECIES.filter((s) => s.phases.includes(phase) && !(rainDay && s.motion === "flutter"));
-  const totalW = pool.reduce((a, s) => a + s.weight, 0);
+  const totalW = pool.reduce((a, s) => a + wOf(s), 0);
   const spawns: Spawn[] = [];
   // river-adjacent anchor band for dart/drift species
   const riverAnchors: [number, number][] = [[-12, 6.5], [-4, 0.4], [6, 6.2], [17, 1.8], [28, 6.4]];
@@ -110,7 +114,7 @@ function buildSpawns(
   for (let i = 0; i < SLOTS; i++) {
     let roll = rnd() * totalW;
     let sp = pool[0];
-    for (const s of pool) { roll -= s.weight; if (roll <= 0) { sp = s; break; } }
+    for (const s of pool) { roll -= wOf(s); if (roll <= 0) { sp = s; break; } }
     let anchor: [number, number];
     if (sp.zone === "beach") {
       anchor = beachAnchors[Math.floor(rnd() * beachAnchors.length)];

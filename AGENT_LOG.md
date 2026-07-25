@@ -108,6 +108,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-24 — Loop wake 38: sunny days bring the butterflies out
+
+The wake-37 bookend: sunny days DOUBLE every flutter species' spawn weight — rain hides the butterflies, sun multiplies them — via an effective-weight function in buildSpawns (deterministic, weather is per-day). Sunny tooltip gains "Butterflies are out in force today". Verified: sunny tooltip lists the line (hover), world loads clean, zero pageerrors. Gates: tsc clean, both files lint-clean, 32/32.
+
 ### 2026-07-24 — Loop wake 37: butterflies sit out the rain
 
 ACNH-true: rain days drop every flutter species from the critter spawn pool (dragonflies, beetles, cicadas, fireflies, and shore critters keep the world alive) — one weather filter in buildSpawns, deterministic since weather is per-day. The rain weather tooltip gains the honest line "Butterflies are hiding from the rain" (per David's rule: the chip lists REAL modifications). Verified: rain + sunny world loads clean, zero pageerrors. Gates: tsc clean, both files lint-clean, 32/32.

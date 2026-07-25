@@ -34,7 +34,10 @@ export const WEATHER_PERKS: Record<
 > = {
   sunny: {
     title: "Sunny",
-    perks: ["Calm casting: the cast meter swings 12% slower, so MAX CAST is easier to hit"],
+    perks: [
+      "Calm casting: the cast meter swings 12% slower, so MAX CAST is easier to hit",
+      "Butterflies are out in force today",
+    ],
     mods: { ...NEUTRAL, castCycleMul: 1.12 },
   },
   cloudy: {
