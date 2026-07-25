@@ -273,9 +273,10 @@ const WINDOWS: { x: number; y: number; z: number; w: number; h: number }[] = [
   // Shop (facade at z=12)
   { x: -26.35, y: 1.35, z: 11.96, w: 0.95, h: 0.8 },
   { x: -21.7, y: 1.35, z: 11.96, w: 0.95, h: 0.8 },
-  // Oracle museum (facade at z=30)
-  { x: -2.5, y: 1.85, z: 29.96, w: 0.6, h: 1.1 },
-  { x: 2.5, y: 1.85, z: 29.96, w: 0.6, h: 1.1 },
+  // Oracle museum (facade at z=30; S6 Temple Rise lifted the building
+  // onto the 2.3 plateau — the glow rides up with it)
+  { x: -2.5, y: 4.15, z: 29.96, w: 0.6, h: 1.1 },
+  { x: 2.5, y: 4.15, z: 29.96, w: 0.6, h: 1.1 },
   // House chalet (facade plane x=24 area faces -x… rotated house; front at x≈22.9)
   { x: 22.92, y: 1.5, z: 12.9, w: 0.7, h: 0.8 },
   { x: 22.92, y: 1.5, z: 15.1, w: 0.7, h: 0.8 },

@@ -2137,7 +2137,7 @@ function Scene({
       <ShoreLife />
       <BeachCove />
       <IslaChica />
-      <TempleRise />
+      <TempleRise phase={todPhase} />
       <S7Pockets phase={todPhase} />
       <BeachCrabs />
       {todPhase !== "night" && <PlazaSparrows playerPosRef={playerPosRef} />}

@@ -12,7 +12,8 @@
  * One instanced draw + a handful of props — cozy ACNH restraint.
  */
 
-import { useMemo } from "react";
+import { useMemo, useRef } from "react";
+import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { useGLTF } from "@react-three/drei";
 import { GLBProp } from "./NatureModels";
@@ -105,12 +106,63 @@ function Stairs() {
   );
 }
 
-export default function TempleRise() {
+// Door braziers (wake 63): a warm flame pair flanking the temple entrance
+// on the plateau. Lights breathe at dusk/night, sleep by day.
+function Braziers({ phase }: { phase: "dawn" | "day" | "dusk" | "night" }) {
+  const lightRefs = useRef<(THREE.PointLight | null)[]>([]);
+  const flameRefs = useRef<(THREE.Mesh | null)[]>([]);
+  const XS = [-2.1, 2.1];
+  useFrame(({ clock }) => {
+    const t = clock.elapsedTime;
+    const base = phase === "night" ? 3.2 : phase === "dusk" ? 1.8 : 0;
+    XS.forEach((_, i) => {
+      const flick = 1 + Math.sin(t * 7.3 + i * 2.6) * 0.14 + Math.sin(t * 13.7 + i) * 0.07;
+      const l = lightRefs.current[i];
+      if (l) l.intensity = base * flick;
+      const f = flameRefs.current[i];
+      if (f) {
+        (f.material as THREE.MeshBasicMaterial).opacity = base > 0 ? 0.85 * flick : 0;
+        f.scale.setScalar(0.9 + flick * 0.1);
+      }
+    });
+  });
+  return (
+    <group>
+      {XS.map((x, i) => (
+        <group key={i} position={[TEMPLE_RISE.x + x, TEMPLE_RISE.h, 29.2]}>
+          {/* stone bowl on a squat plinth */}
+          <mesh position={[0, 0.22, 0]}>
+            <cylinderGeometry args={[0.16, 0.2, 0.44, 8]} />
+            <meshStandardMaterial color="#8F877A" roughness={0.95} flatShading />
+          </mesh>
+          <mesh position={[0, 0.5, 0]}>
+            <cylinderGeometry args={[0.26, 0.18, 0.16, 8]} />
+            <meshStandardMaterial color="#7E766A" roughness={0.95} flatShading />
+          </mesh>
+          <mesh position={[0, 0.66, 0]} ref={(el) => { flameRefs.current[i] = el; }}>
+            <coneGeometry args={[0.12, 0.3, 6]} />
+            <meshBasicMaterial color="#FFB454" transparent opacity={0} depthWrite={false} />
+          </mesh>
+          <pointLight
+            ref={(el) => { lightRefs.current[i] = el; }}
+            color="#FFAE5E"
+            intensity={0}
+            distance={7}
+            position={[0, 0.8, 0]}
+          />
+        </group>
+      ))}
+    </group>
+  );
+}
+
+export default function TempleRise({ phase = "day" }: { phase?: "dawn" | "day" | "dusk" | "night" }) {
   const R = TEMPLE_RISE;
   return (
     <group>
       <CliffBand />
       <Stairs />
+      <Braziers phase={phase} />
       {/* big rocks anchor the stair mouth + the back face (David: big-rock cliffs) */}
       <GLBProp url={ROCK_A} position={[R.x - 2.9, 0.02, R.z - R.topR + 0.2]} rotation={[0, 0.6, 0]} scale={1.9} />
       <GLBProp url={ROCK_C} position={[R.x + 2.9, 0.05, R.z - R.topR + 0.4]} rotation={[0, 2.3, 0]} scale={1.7} />

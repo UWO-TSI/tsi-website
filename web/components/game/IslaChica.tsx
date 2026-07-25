@@ -14,6 +14,9 @@
  * rowboats, and a two-plank landing. The far shore hosts a sea cast spot.
  */
 
+import { useRef } from "react";
+import { useFrame } from "@react-three/fiber";
+import * as THREE from "three";
 import { useGLTF } from "@react-three/drei";
 import { GLBProp } from "./NatureModels";
 
@@ -38,9 +41,62 @@ export const MAINLAND_BOAT: [number, number] = [-13, 52.5];
 // Islet landing faces the mainland (direction +x/-z from center).
 const LANDING: [number, number] = [CX + 2.0, CZ - 5.9];
 
+// Crab scuttle (wake 63): one little red crab side-stepping arcs of the
+// sand ring — skitter bursts with freeze pauses, ACNH beach-crab energy.
+function IsletCrab() {
+  const ref = useRef<THREE.Group>(null);
+  const st = useRef({ a: 0.8, dir: 1, moving: true, nextFlipAt: 3 });
+  useFrame(({ clock }, dt) => {
+    const g = ref.current;
+    if (!g) return;
+    const t = clock.elapsedTime;
+    const s = st.current;
+    if (t > s.nextFlipAt) {
+      s.moving = !s.moving;
+      if (s.moving && Math.random() < 0.45) s.dir *= -1;
+      s.nextFlipAt = t + (s.moving ? 1.2 + Math.random() * 1.8 : 0.7 + Math.random() * 1.1);
+    }
+    if (s.moving) s.a += s.dir * dt * 0.32;
+    const r = 5.4;
+    const x = CX + Math.cos(s.a) * r;
+    const z = CZ + Math.sin(s.a) * r;
+    const skitter = s.moving ? Math.sin(t * 26) * 0.02 : 0;
+    g.position.set(x + skitter, -0.015 + (s.moving ? Math.abs(Math.sin(t * 18)) * 0.015 : 0), z);
+    // crabs face ALONG the radius while walking sideways around the arc
+    g.rotation.y = Math.atan2(x - CX, z - CZ);
+  });
+  return (
+    <group ref={ref}>
+      <mesh position={[0, 0.05, 0]}>
+        <sphereGeometry args={[0.09, 8, 6]} />
+        <meshStandardMaterial color="#D25438" roughness={0.85} />
+      </mesh>
+      {/* claws */}
+      <mesh position={[-0.09, 0.06, 0.06]}>
+        <sphereGeometry args={[0.035, 6, 5]} />
+        <meshStandardMaterial color="#E06844" roughness={0.85} />
+      </mesh>
+      <mesh position={[0.09, 0.06, 0.06]}>
+        <sphereGeometry args={[0.035, 6, 5]} />
+        <meshStandardMaterial color="#E06844" roughness={0.85} />
+      </mesh>
+      {/* eye stalks */}
+      <mesh position={[-0.03, 0.12, 0.04]}>
+        <sphereGeometry args={[0.016, 5, 4]} />
+        <meshStandardMaterial color="#3A2A22" roughness={0.7} />
+      </mesh>
+      <mesh position={[0.03, 0.12, 0.04]}>
+        <sphereGeometry args={[0.016, 5, 4]} />
+        <meshStandardMaterial color="#3A2A22" roughness={0.7} />
+      </mesh>
+    </group>
+  );
+}
+
 export default function IslaChica() {
   return (
     <group>
+      <IsletCrab />
       {/* island body: sand skirt diving under the ocean + flat walk pads */}
       <mesh position={[CX, -0.59, CZ]}>
         <cylinderGeometry args={[6.5, 8.4, 1.1, 40]} />
