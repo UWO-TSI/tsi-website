@@ -16,8 +16,9 @@ import * as THREE from "three";
 import HQInterior from "@/components/game/HQInterior";
 import ShopInterior from "@/components/game/ShopInterior";
 import OracleInterior from "@/components/game/OracleInterior";
+import WharfShackInterior from "@/components/game/WharfShackInterior";
 
-const ROOMS = ["oracle", "shop", "hq"] as const;
+const ROOMS = ["oracle", "shop", "hq", "wharf"] as const;
 
 export default function InteriorBench() {
   // Client-only mount gate: room comes from window.location.
@@ -29,7 +30,7 @@ export default function InteriorBench() {
   const playerPosRef = useRef(new THREE.Vector3(0, 0, -4.2));
   if (!ready) return null;
   const room = new URLSearchParams(window.location.search).get("room") ?? "oracle";
-  const Room = room === "hq" ? HQInterior : room === "shop" ? ShopInterior : OracleInterior;
+  const Room = room === "hq" ? HQInterior : room === "shop" ? ShopInterior : room === "wharf" ? WharfShackInterior : OracleInterior;
   return (
     <div style={{ height: "calc(100vh - 40px)", position: "relative" }}>
       <div style={{ position: "absolute", top: 10, left: 12, zIndex: 10, display: "flex", gap: 6, fontFamily: "'IBM Plex Mono', monospace", fontSize: 11 }}>

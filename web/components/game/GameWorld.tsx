@@ -64,6 +64,7 @@ import Critters from "./Critters";
 import HQInterior from "./HQInterior";
 import ShopInterior from "./ShopInterior";
 import OracleInterior from "./OracleInterior";
+import WharfShackInterior from "./WharfShackInterior";
 import type { InteriorStation } from "./interiorShared";
 import RoadTiles from "./RoadTiles";
 import GrassTufts from "./GrassTufts";
@@ -136,6 +137,8 @@ const BUILDINGS = [
   { id: "shop", name: "Shop", position: [-24, 0, 12] as [number, number, number], size: [6.6, 3.5, 3.6] as [number, number, number], color: "#D4EAD4", roofColor: "#5BA086", href: undefined, interior: "shop" as const },
   { id: "oracle", name: "Oracle Temple", position: [0, 3, 30] as [number, number, number], size: [6.8, 3.9, 3.4] as [number, number, number], color: "#E8DCF0", roofColor: "#7B5EA7", href: undefined, interior: "oracle" as const },
   { id: "house", name: "House", position: [24, 0, 14] as [number, number, number], size: [5, 4.1, 3.1] as [number, number, number], color: "#C8E6C9", roofColor: "#7EB8C9", href: undefined },
+  // S4 (economy v2): the Wharf Shack on the dock apron — sells your catches.
+  { id: "wharf", name: "Wharf Shack", position: [44.5, 0, -3.2] as [number, number, number], size: [3.6, 2.7, 2.6] as [number, number, number], color: "#D8C4A0", roofColor: "#7A5A3A", href: undefined, interior: "wharf" as const },
   { id: "bounty", name: "Bounty Board", position: [14, 0, 9] as [number, number, number], size: [1.5, 1.8, 0.3] as [number, number, number], color: P.dirtPath, href: "/student/dashboard/bounty" },
   { id: "jobs", name: "Job Board", position: [-15, 0, -13] as [number, number, number], size: [1.5, 1.8, 0.3] as [number, number, number], color: P.dirtPath, href: "/student/dashboard/jobs" },
   { id: "leaderboard", name: "Leaderboard", position: [15, 0, -13] as [number, number, number], size: [1.2, 2.5, 1.2] as [number, number, number], color: P.wellStone, href: "/student/dashboard/leaderboard" },
@@ -2260,16 +2263,16 @@ export default function GameWorld() {
   // Interiors-lite (2026-07-13): which room the player is inside. The
   // exterior Scene unmounts while inside (assets stay cached via useGLTF)
   // and remounts on exit with the player just outside the HQ door.
-  const [interior, setInterior] = useState<null | "hq" | "shop" | "oracle">(null);
+  const [interior, setInterior] = useState<null | "hq" | "shop" | "oracle" | "wharf">(null);
   // Loop iter 12 (2026-07-24): door beat — a warm light-spill pulse over
   // the fade when passing a doorway. Key bump remounts the one-shot div.
   const [doorGlow, setDoorGlow] = useState(0);
-  const interiorRef = useRef<null | "hq" | "shop" | "oracle">(null);
+  const interiorRef = useRef<null | "hq" | "shop" | "oracle" | "wharf">(null);
   useEffect(() => { interiorRef.current = interior; }, [interior]);
   const [worldSpawn, setWorldSpawn] = useState<[number, number, number] | undefined>(undefined);
   const [sheet, setSheet] = useState<SheetKey | null>(() => {
     if (typeof window === "undefined") return null;
-    const m = window.location.search.match(/sheet=(shop|bounty|jobs|leaderboard|oracle)/);
+    const m = window.location.search.match(/sheet=(shop|bounty|jobs|leaderboard|oracle|wharfsell)/);
     return m ? (m[1] as SheetKey) : null;
   });
   const sheetRef = useRef<SheetKey | null>(null);
@@ -2397,7 +2400,7 @@ export default function GameWorld() {
             triggerTransition(() => {
               // just outside each building's door (spec §7.2)
               const spawns: Record<string, [number, number, number]> = {
-                hq: [0, 0, -7], shop: [-24, 0, 9], oracle: [0, 0, 26.5],
+                hq: [0, 0, -7], shop: [-24, 0, 9], oracle: [0, 0, 26.5], wharf: [44.5, 0, -6.4],
               };
               setWorldSpawn(spawns[interiorRef.current ?? "hq"]);
               setInterior(null);
@@ -2412,7 +2415,7 @@ export default function GameWorld() {
           // Interiors-lite: enter the room behind the standard fade.
           if (isTransitioning) return;
           triggerTransition(() => {
-            setInterior(n.interiorId as "hq" | "shop" | "oracle");
+            setInterior(n.interiorId as "hq" | "shop" | "oracle" | "wharf");
             setNearest(null);
           });
           // Door beat: warm light spills from the doorway + the ENTER
@@ -2604,7 +2607,7 @@ export default function GameWorld() {
       >
         <WarmupProbe onReady={() => setWorldReady(true)} />
         {interior !== null && (() => {
-          const Room = interior === "hq" ? HQInterior : interior === "shop" ? ShopInterior : OracleInterior;
+          const Room = interior === "hq" ? HQInterior : interior === "shop" ? ShopInterior : interior === "wharf" ? WharfShackInterior : OracleInterior;
           return (
             <Room
               frozen={sheet !== null || isTransitioning}

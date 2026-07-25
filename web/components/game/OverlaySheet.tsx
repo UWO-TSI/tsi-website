@@ -28,6 +28,7 @@ const SheetOracle = dynamic(() => import("@/app/student/dashboard/oracle/page"),
 const SheetDirectory = dynamic(() => import("@/app/student/dashboard/directory/page"), { ssr: false });
 const SheetProfile = dynamic(() => import("@/app/student/dashboard/profile/page"), { ssr: false });
 const SheetQuests = dynamic(() => import("@/app/student/dashboard/quests/page"), { ssr: false });
+const SheetWharfSell = dynamic(() => import("./WharfSellSheet"), { ssr: false });
 
 const SHEETS = {
   shop: { Component: SheetShop, title: "Shop" },
@@ -38,6 +39,7 @@ const SHEETS = {
   directory: { Component: SheetDirectory, title: "Directory" },
   profile: { Component: SheetProfile, title: "Profile" },
   quests: { Component: SheetQuests, title: "Quests" },
+  wharfsell: { Component: SheetWharfSell, title: "Wharf Shack — Sell Catches" },
 } as const;
 
 export type SheetKey = keyof typeof SHEETS;

@@ -8,7 +8,6 @@
  * the channel bed. Walk support lives in terrain.ts (flat 0.12 override).
  */
 
-import * as THREE from "three";
 
 const X0 = 43.2;
 const X1 = 45.2;

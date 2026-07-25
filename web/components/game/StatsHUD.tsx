@@ -19,7 +19,7 @@ import { xpForLevel } from "@/lib/supabase/types";
  * Loop iter 18 (2026-07-24): the TC number counts toward its new value
  * (ease-out over ~0.7s) with a gold flash on gains, instead of snapping.
  */
-function useTickUp(target: number): { value: number; flashing: boolean } {
+export function useTickUp(target: number): { value: number; flashing: boolean } {
   const [value, setValue] = useState(target);
   const [flashing, setFlashing] = useState(false);
   const fromRef = useRef(target);
