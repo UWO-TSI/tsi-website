@@ -108,6 +108,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-24 — Loop wake 41: oracle candle embers (+ dead-brazier finding)
+
+Started as brazier embers — then discovered the procedural OracleTemple (braziers, flames) is DEAD CODE: PROC_VARIANTS is empty since the 2026-06-01 GLB switch, so nothing renders it (reverted that edit; the composite stays as the documented Suspense fallback). Pivoted to the room that renders: the Oracle interior's four candle clusters now shed rising ember motes (3 per cluster, staggered drift/shrink/fade, refs-only useFrame, same pattern as the shipped idle fireflies). VERIFICATION GAP, logged honestly: interior entry via E does not fire under the headless harness (3 attempts: prompt arms, no transition) — embers ship on gates evidence (tsc clean, lint clean, 32/32, zero world-side pageerrors); David sees them on the next temple visit. Doctrine note: an /lab/interior bench would close this class of gap.
+
 ### 2026-07-24 — Loop wake 40: hedge brush-past rustle
 
 Walking within ~1u of a hedge segment now shivers it for 0.45s (decaying z-wobble) with a leaf-scuff note — per-segment 1.2s cooldown so strolling the run reads as a wave of rustles, not a rattle. PlazaHedges gains playerPosRef + one useFrame over the six segments (refs only). Verified with a stroll along the full south run, zero pageerrors. Gates: tsc clean, both files lint-clean, 32/32.
