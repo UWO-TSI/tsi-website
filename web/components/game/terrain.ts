@@ -46,7 +46,7 @@ function fbm(x: number, y: number, octaves: number = 4): number {
 
 // ─── Constants ───────────────────────────────────────────────────
 
-export const ISLAND_RADIUS = 52;
+export const ISLAND_RADIUS = 61; // GEO S1: +18% island
 
 // Noise tuning — sprint A1 target: max ~0.6 displacement
 // fbm returns ~[0, 1]. NOISE_AMPLITUDE caps the height accordingly.
@@ -137,8 +137,8 @@ const PATH_CORRIDORS: PathCorridor[] = [
   { axis: "z", pos: -13, halfWidth: 1.75, from: -17, to: 17, falloff: 1.5 }, // E-W at z=-13
   // Beach Cove spur (2026-07-14): sand path SE off the spine + wood deck.
   { axis: "z", pos: 23.75, halfWidth: 1.75, from: 1, to: 20, falloff: 1.5 },
-  { axis: "x", pos: 18.25, halfWidth: 1.75, from: 25.5, to: 40, falloff: 1.5 },
-  { axis: "x", pos: 18.25, halfWidth: 2.65, from: 39.9, to: 44.2, falloff: 1.5 },
+  { axis: "x", pos: 18.25, halfWidth: 1.75, from: 25.5, to: 46.9, falloff: 1.5 }, // S1
+  { axis: "x", pos: 18.25, halfWidth: 2.65, from: 46.8, to: 51.8, falloff: 1.5 }, // S1
 ];
 
 // ─── Internal: raw noise terrain (no flattening) ─────────────────

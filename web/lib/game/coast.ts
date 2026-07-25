@@ -18,20 +18,28 @@
  */
 
 export const COAST_BASE = 52;
+// GEO S1 (David 2026-07-25): the island grows +18% — all coast-space
+// thresholds stay in the legacy 52-basis; world positions are legacy ×
+// COAST_SCALE. coastDist divides back so every consumer keeps working.
+export const COAST_SCALE = 61 / 52;
 
-// [harmonic k, amplitude]
+// [harmonic k, amplitude] — S1 character pass: amplitudes +35% so the
+// bigger island reads MORE irregular, not just larger (never oval).
 const HARMONICS: [number, number][] = [
-  [2, 3.4],
-  [3, 2.4],
-  [5, 1.4],
-  [8, 0.7],
+  [2, 4.6],
+  [3, 3.3],
+  [5, 1.9],
+  [8, 0.9],
 ];
 
-// [center angle, sigma, amplitude] — cove bay + framing headlands
+// [center angle, sigma, amplitude] — cove bay + framing headlands, plus
+// the S1 NW INLET (a narrow deep bite with a small framing headland).
 const GAUSSIANS: [number, number, number][] = [
-  [1.16, 0.13, -2.4],
-  [0.8, 0.1, 2.8],
-  [1.54, 0.1, 2.8],
+  [1.16, 0.14, -3.2],
+  [0.8, 0.1, 3.4],
+  [1.54, 0.1, 3.4],
+  [2.35, 0.09, -4.2],
+  [2.62, 0.08, 1.6],
 ];
 
 // [center angle, sigma] — river mouths (east θ≈0.055, west θ≈3.093)
@@ -58,9 +66,10 @@ export function coastWobble(x: number, z: number): number {
   return w;
 }
 
-/** Distance from origin in coast-space: the coast sits at COAST_BASE. */
+/** Distance from origin in coast-space (legacy 52-basis): the coast sits
+ *  at COAST_BASE regardless of COAST_SCALE. */
 export function coastDist(x: number, z: number): number {
-  return Math.hypot(x, z) - coastWobble(x, z);
+  return Math.hypot(x, z) / COAST_SCALE - coastWobble(x, z);
 }
 
 /**
@@ -82,7 +91,7 @@ export function beachWidthShift(x: number, z: number): number {
 export function clampToCoast(x: number, z: number, limit: number): [number, number] {
   const d = Math.hypot(x, z);
   if (d < 1e-6) return [x, z];
-  const max = limit + coastWobble(x, z);
+  const max = (limit + coastWobble(x, z)) * COAST_SCALE;
   if (d <= max) return [x, z];
   const f = max / d;
   return [x * f, z * f];
@@ -101,8 +110,10 @@ export function rimSink(e: number): number {
   return t * t * (3 - 2 * t) * SINK_DEPTH;
 }
 
-/** The same wobble as a GLSL function (vec2 p in world XZ). */
+/** The same wobble as a GLSL function (vec2 p in world XZ). Wobble is in
+ *  the LEGACY basis — shaders convert world radius via COAST_SCALE. */
 export const COAST_GLSL = `
+const float COAST_SCALE = ${COAST_SCALE.toFixed(5)};
 float coastWobble(vec2 p) {
   float a = atan(p.y, p.x);
   float w = ${HARMONICS.map(([k, amp]) => `${amp.toFixed(2)} * sin(${k.toFixed(1)} * a)`).join(" + ")};

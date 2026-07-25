@@ -30,7 +30,7 @@ function Lighthouse() {
   }, [scene]);
   // Organic coast v2: pulled to (32.6, -31.6) — the old spot drowned when
   // the harmonics grew. Sits on the beach band; rim sink keeps it planted.
-  const y = getTerrainHeight(32.6, -31.6) - rimSink(coastDist(32.6, -31.6));
+  const y = getTerrainHeight(38.2, -37.1) - rimSink(coastDist(38.2, -37.1));
   const beaconRef = useRef<THREE.PointLight>(null);
   useFrame(() => {
     const b = beaconRef.current;
@@ -39,7 +39,7 @@ function Lighthouse() {
     b.intensity = 8 + Math.sin(performance.now() / 640) * 5;
   });
   return (
-    <group position={[32.6, y, -31.6]} rotation={[0, Math.PI / 4, 0]}>
+    <group position={[38.2, y, -37.1]} rotation={[0, Math.PI / 4, 0]}>
       <primitive object={clone} scale={[0.16, 0.16, 0.16]} />
       <pointLight ref={beaconRef} color="#FFE9A8" intensity={8} distance={13} decay={1.8} position={[0, 5.2, 0]} />
     </group>

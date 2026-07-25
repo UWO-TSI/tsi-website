@@ -10,7 +10,7 @@
 import { useEffect, useState } from "react";
 import * as THREE from "three";
 import { AudioManager } from "@/lib/game/audio";
-import { coastWobble, beachWidthShift } from "@/lib/game/coast";
+import { coastWobble, beachWidthShift, COAST_SCALE } from "@/lib/game/coast";
 
 // Organic coast outline: sample the shared harmonics into SVG polygons
 // (module-level — the coastline is static). Two rings: the sand at the
@@ -23,7 +23,7 @@ function ringPoints(eFor: (x: number, z: number) => number): string {
     const a = (i / N) * Math.PI * 2;
     const x = Math.cos(a);
     const z = Math.sin(a);
-    const r = eFor(x, z) + coastWobble(x, z);
+    const r = (eFor(x, z) + coastWobble(x, z)) * COAST_SCALE;
     pts.push(`${(x * r).toFixed(1)},${(-z * r).toFixed(1)}`);
   }
   return pts.join(" ");
@@ -44,8 +44,8 @@ const BUILDINGS: { x: number; z: number; w: number; h: number; c: string }[] = [
 // pulses a ring on the minimap + a toast + a soft chime. Persisted in
 // localStorage so each discovery only fires once per device.
 const DISCOVER_ZONES: { key: string; label: string; x: number; z: number; r: number }[] = [
-  { key: "cove", label: "Beach Cove", x: 13.6, z: 45.9, r: 8 },
-  { key: "lighthouse", label: "The Lighthouse", x: 32.6, z: -31.6, r: 7 },
+  { key: "cove", label: "Beach Cove", x: 16, z: 53.9, r: 8 },
+  { key: "lighthouse", label: "The Lighthouse", x: 38.2, z: -37.1, r: 7 },
   { key: "windmill", label: "The Windmill", x: -32, z: -26, r: 9 },
   { key: "oracle", label: "Oracle Temple", x: 0, z: 30, r: 7 },
 ];
@@ -100,7 +100,7 @@ export default function MiniMap({ playerPosRef }: { playerPosRef: React.MutableR
         pointerEvents: "none",
       }}
     >
-      <svg viewBox="-58 -58 116 116" style={{ width: "100%", height: "100%", display: "block", background: "#6FB55B" }}>
+      <svg viewBox="-72 -72 144 144" style={{ width: "100%", height: "100%", display: "block", background: "#6FB55B" }}>
         {/* island — organic coastline: sand ring under the grass line */}
         <polygon points={SAND_POINTS} fill="#E4CD96" stroke="#CBB27C" strokeWidth="1" strokeLinejoin="round" />
         <polygon points={GRASS_POINTS} fill="#7EC167" stroke="#5E9E4E" strokeWidth="1" strokeLinejoin="round" />
@@ -111,20 +111,20 @@ export default function MiniMap({ playerPosRef }: { playerPosRef: React.MutableR
         <line x1="-17" y1="13" x2="17" y2="13" stroke="#D9B380" strokeWidth="3" strokeLinecap="round" />
         {/* Beach Cove sand spur (world z drawn as -y) */}
         <line x1="1" y1="-23.75" x2="18.25" y2="-23.75" stroke="#E7D3A0" strokeWidth="3" strokeLinecap="round" />
-        <line x1="18.25" y1="-23.75" x2="18.25" y2="-42" stroke="#E7D3A0" strokeWidth="3" strokeLinecap="round" />
+        <line x1="18.25" y1="-23.75" x2="18.25" y2="-49.5" stroke="#E7D3A0" strokeWidth="3" strokeLinecap="round" />
         {/* Ground pads (loop wake 33: map matches the ground) — the brick
             plaza + the beach wood deck. World rects from RoadTiles. */}
         <rect x={-5.4} y={9.4} width={10.8} height={7.2} rx="1.2" fill="#C98F73" stroke="#A9714F" strokeWidth="0.5" />
-        <rect x={15.6} y={-44.2} width={5.4} height={4.3} rx="1" fill="#B98C60" stroke="#96693F" strokeWidth="0.5" />
+        <rect x={15.6} y={-51.8} width={5.4} height={4.9} rx="1" fill="#B98C60" stroke="#96693F" strokeWidth="0.5" />
         {/* river (world z≈1-5 band, drawn at -z) */}
-        <path d="M -52 -2 C -30 -5, -12 -5, -3 -1 S 16 -2, 30 -4 S 45 -3, 52 -3" fill="none" stroke="#69A8D0" strokeWidth="3.4" strokeLinecap="round" />
+        <path d="M -61 -2 C -35 -5, -12 -5, -3 -1 S 16 -2, 30 -4 S 50 -3, 61 -3" fill="none" stroke="#69A8D0" strokeWidth="3.4" strokeLinecap="round" />
         {/* buildings */}
         {BUILDINGS.map((b, i) => (
           <rect key={i} x={sx(b.x) - b.w / 2} y={sy(b.z) - b.h / 2} width={b.w} height={b.h} rx="1" fill={b.c} stroke="rgba(0,0,0,0.25)" strokeWidth="0.4" />
         ))}
         {/* landmarks: cove camp + lighthouse (coast v2 spots) */}
-        <circle cx={sx(13.6)} cy={sy(45.9)} r="1.6" fill="#E8705A" stroke="rgba(0,0,0,0.25)" strokeWidth="0.4" />
-        <circle cx={sx(32.6)} cy={sy(-31.6)} r="1.6" fill="#C0392B" stroke="rgba(0,0,0,0.25)" strokeWidth="0.4" />
+        <circle cx={sx(16)} cy={sy(53.9)} r="1.6" fill="#E8705A" stroke="rgba(0,0,0,0.25)" strokeWidth="0.4" />
+        <circle cx={sx(38.2)} cy={sy(-37.1)} r="1.6" fill="#C0392B" stroke="rgba(0,0,0,0.25)" strokeWidth="0.4" />
         {/* discovery ping */}
         {ping && (
           <g key={ping.id}>

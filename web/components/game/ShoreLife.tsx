@@ -96,7 +96,7 @@ function Boat({ groupRef }: { groupRef: (el: THREE.Group | null) => void }) {
   const { scene } = useGLTF(BOAT_URL);
   const clone = useMemo(() => scene.clone(true), [scene]);
   return (
-    <group ref={groupRef} position={[45, OCEAN_Y - 0.1, -44]} rotation={[0, -Math.PI / 3, 0]}>
+    <group ref={groupRef} position={[52.8, OCEAN_Y - 0.1, -51.6]} rotation={[0, -Math.PI / 3, 0]}>
       <primitive object={clone} scale={[0.1, 0.1, 0.1]} />
     </group>
   );

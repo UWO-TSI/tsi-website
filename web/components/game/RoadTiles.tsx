@@ -40,9 +40,9 @@ const RECTS = [
   { x0: -17, x1: 17, z0: -14.75, z1: -11.25 },
   // Beach Cove spur: east off the south spine, then south to the shore.
   { x0: 1.2, x1: 20, z0: 22, z1: 25.5 },
-  { x0: 16.5, x1: 20, z0: 25.5, z1: 40 },
+  { x0: 16.5, x1: 20, z0: 25.5, z1: 46.9 }, // S1: spur reaches the new sand line
   // Beach deck pad (wood zone) at the sand line.
-  { x0: 15.6, x1: 21, z0: 39.9, z1: 44.2 },
+  { x0: 15.6, x1: 21, z0: 46.8, z1: 51.8 }, // S1: deck pad at the new shore
 ];
 
 type Variant = "interior" | "edge" | "corner" | "cap";

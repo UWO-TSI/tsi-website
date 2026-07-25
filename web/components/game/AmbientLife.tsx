@@ -288,9 +288,9 @@ function Birds({ count = 2 }: { count?: number }) {
 // the new coastline. Lower and quicker than the lazy inland birds, with
 // a slow bobbing altitude so they read as riding the sea breeze.
 const GULL_ANCHORS: [number, number][] = [
-  [58, -8],   // east lobe, off the lighthouse
-  [20, 58],   // over the cove swim border
-  [-56, 14],  // west bay mouth
+  [68, -9.4],   // east lobe, off the lighthouse (S1 x1.173)
+  [23.5, 68],   // over the cove swim border
+  [-65.7, 16.4],  // west bay mouth
 ];
 
 // Sea-catch swoop (loop wake 35): a sea-zone catch calls the nearest gull

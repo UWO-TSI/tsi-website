@@ -72,9 +72,9 @@ const RIVER_FISH: { t0: number; t1: number; speed: number; size: number; phase: 
 const RIVER_FISH_Y = -0.38; // just under the -0.32 water surface
 
 const SEA_FISH: { x: number; z: number; r: number; speed: number; size: number; phase: number }[] = [
-  { x: 16, z: 51, r: 2.2, speed: 0.22, size: 0.55, phase: 0.5 },   // the cove bay
-  { x: 42, z: -27, r: 2.8, speed: 0.17, size: 0.6, phase: 2.8 },   // NE sweep
-  { x: -40, z: 34, r: 2.4, speed: 0.2, size: 0.5, phase: 4.4 },    // west bank
+  { x: 18.8, z: 59.8, r: 2.2, speed: 0.22, size: 0.55, phase: 0.5 },   // the cove bay (S1)
+  { x: 49.3, z: -31.7, r: 2.8, speed: 0.17, size: 0.6, phase: 2.8 },   // NE sweep (S1)
+  { x: -46.9, z: 39.9, r: 2.4, speed: 0.2, size: 0.5, phase: 4.4 },    // west bank (S1)
 ];
 const SEA_FISH_Y = -0.62; // just under the -0.55 ocean surface
 

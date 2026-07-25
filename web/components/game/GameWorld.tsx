@@ -545,8 +545,8 @@ function ApplyGrassTint({ material, tint }: { material: THREE.MeshStandardMateri
 
 function Terrain() {
   const geometry = useMemo(() => {
-    const size = 108; // island respace 2026-07-07 (radius 52)
-    const segments = 156;
+    const size = 150; // GEO S1: covers the +18% island (coast to ~70 + sink band)
+    const segments = 216;
     const geo = new THREE.PlaneGeometry(size, size, segments, segments);
     geo.rotateX(-Math.PI / 2);
 
@@ -665,7 +665,7 @@ ${COAST_GLSL}`
           "#include <color_fragment>",
           `#include <color_fragment>
 {
-  float e = length(vGroundXZ) - coastWobble(vGroundXZ);
+  float e = length(vGroundXZ) / COAST_SCALE - coastWobble(vGroundXZ);
   float lap = sin(vGroundXZ.x * 0.9 + vGroundXZ.y * 0.7 + uTime * 1.4) * 0.5;
   float wet = smoothstep(50.1 + lap, 51.2 + lap, e) * (1.0 - smoothstep(51.9, 52.6, e));
   diffuseColor.rgb *= 1.0 - wet * 0.16;
@@ -1909,7 +1909,7 @@ function Scene({
     // G5: fishing spots on the riverbank (radius 2.4). Beach Cove loop:
     // plus two saltwater casts — the wood deck edge and the cove sand.
     // ACNH revamp: spots hug the carved channel banks (~1.2u off center).
-    const FISHING_SPOTS: [number, number][] = [[-12, 6.2], [-3, 2.6], [5, 5.4], [16, 3.6], [18.3, 43.6], [13.4, 48]];
+    const FISHING_SPOTS: [number, number][] = [[-12, 6.2], [-3, 2.6], [5, 5.4], [16, 3.6], [18.3, 51.2], [15.7, 56.3]]; // S1: sea spots follow the deck/cove
     for (let i = 0; i < FISHING_SPOTS.length; i++) {
       const [sx, sz] = FISHING_SPOTS[i];
       const d = Math.hypot(sx - position.x, sz - position.z);

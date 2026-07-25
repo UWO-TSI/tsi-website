@@ -18,7 +18,7 @@ import { useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { getCausticTexture } from "@/lib/game/causticTexture";
-import { COAST_GLSL, coastWobble as coastWobbleJS } from "@/lib/game/coast";
+import { COAST_GLSL, coastWobble as coastWobbleJS, COAST_SCALE } from "@/lib/game/coast";
 
 const OCEAN_SIZE = 400;
 const OCEAN_Y = -0.55;
@@ -140,7 +140,7 @@ function NightShoreGlow({ phase }: { phase: Phase }) {
       const ux = Math.cos(a);
       const uz = Math.sin(a);
       // parked just past the waterline (coast-space 51.7..52.6)
-      const r = 51.7 + rnd() * 0.9 + coastWobbleJS(ux, uz);
+      const r = (51.7 + rnd() * 0.9 + coastWobbleJS(ux, uz)) * COAST_SCALE;
       pos[i * 3] = ux * r;
       pos[i * 3 + 1] = 0.04;
       pos[i * 3 + 2] = uz * r;
@@ -229,7 +229,7 @@ ${COAST_GLSL}`
 {
   // Distance to the ORGANIC shoreline (coast.ts harmonics): 0 at the
   // waterline, so the foam band hugs every lobe and bay.
-  float shore = length(vOceanXZ) - (${SHORE_RADIUS.toFixed(1)} + coastWobble(vOceanXZ));
+  float shore = length(vOceanXZ) - (${SHORE_RADIUS.toFixed(1)} + coastWobble(vOceanXZ)) * COAST_SCALE;
 
   // Depth ramp: shallow near shore -> deep water outward.
   float depthT = smoothstep(0.0, 14.0, shore);

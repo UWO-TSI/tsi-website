@@ -31,7 +31,9 @@ import { getCausticTexture } from "@/lib/game/causticTexture";
 
 /** Control points for the river spline. East-west run with gentle bends. */
 export const RIVER_CONTROL_POINTS: [number, number][] = [
-  [-52, 2], [-30, 5], [-12, 5], [-3, 1], [5, 4], [16, 2], [30, 4], [52, 3],
+  // GEO S1: endpoints pushed to the new coast; interior bends unchanged
+  // so the bridge/spots/stones keep their exact geometry.
+  [-61, 2], [-40, 4], [-30, 5], [-12, 5], [-3, 1], [5, 4], [16, 2], [30, 4], [45, 3.5], [61, 3],
 ];
 
 /** Default river width — slightly wider than paths (2.8) to feel substantial. */

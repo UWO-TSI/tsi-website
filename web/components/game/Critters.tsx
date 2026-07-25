@@ -110,7 +110,7 @@ function buildSpawns(
   // river-adjacent anchor band for dart/drift species
   const riverAnchors: [number, number][] = [[-12, 6.5], [-4, 0.4], [6, 6.2], [17, 1.8], [28, 6.4]];
   // dry-sand anchors for shore critters (coast-v2 verified: e ≈ 48.4-49.4)
-  const beachAnchors: [number, number][] = [[13, 46], [17, 44.5], [38, -19.5], [-18, 40]];
+  const beachAnchors: [number, number][] = [[15.3, 54], [19.9, 52.2], [44.6, -22.9], [-21.1, 46.9]]; // S1 x1.173
   for (let i = 0; i < SLOTS; i++) {
     let roll = rnd() * totalW;
     let sp = pool[0];

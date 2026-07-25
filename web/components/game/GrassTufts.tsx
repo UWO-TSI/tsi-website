@@ -13,7 +13,7 @@ import { useMemo } from "react";
 import { useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 import { getTerrainHeight, BUILDING_FOOTPRINTS } from "./terrain";
-import { coastDist, coastWobble, rimSink } from "@/lib/game/coast";
+import { coastDist, coastWobble, rimSink, COAST_SCALE } from "@/lib/game/coast";
 
 const VARIANTS = [
   "/assets/acnh/props/grass-tuft-00.glb",
@@ -146,7 +146,7 @@ export default function GrassTufts() {
     DUNE_SPOTS.forEach(([a, e, rot, s], i) => {
       const ux = Math.cos(a);
       const uz = Math.sin(a);
-      const r = e + coastWobble(ux, uz);
+      const r = (e + coastWobble(ux, uz)) * COAST_SCALE;
       const x = ux * r;
       const z = uz * r;
       q.setFromAxisAngle(up, rot);

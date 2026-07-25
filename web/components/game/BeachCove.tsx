@@ -26,7 +26,7 @@ import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js
 import InstancedGLB, { type NaturePlacement } from "./InstancedNature";
 import { GLBProp } from "./NatureModels";
 import { getTerrainHeight } from "./terrain";
-import { coastDist, coastWobble, rimSink } from "@/lib/game/coast";
+import { coastDist, coastWobble, rimSink, COAST_SCALE } from "@/lib/game/coast";
 
 const PALM_A = "/assets/acnh/plants/tree-palm-a.glb";
 const PALM_B = "/assets/acnh/plants/tree-palm-b.glb";
@@ -119,8 +119,8 @@ const SEA_ROCKS: [number, number, number, number, number, number][] = [
 ];
 
 // Rope fence along the west edge of the sand path (posts follow terrain).
-const FENCE_X = 16.35;
-const FENCE_Z0 = 27.2;
+const FENCE_X = 19.2; // S1 x1.173
+const FENCE_Z0 = 31.9; // S1
 const FENCE_COUNT = 11;
 
 // Rocky banks (iteration 4): where beachWidthShift squeezes the sand
@@ -157,7 +157,7 @@ function shellPlacements(): NaturePlacement[][] {
   for (const [a, e, mi, rot, scale] of SHELL_SPOTS) {
     const ux = Math.cos(a);
     const uz = Math.sin(a);
-    const r = e + coastWobble(ux, uz);
+    const r = (e + coastWobble(ux, uz)) * COAST_SCALE;
     const x = ux * r;
     const z = uz * r;
     groups[mi].push({ position: [x, groundY(x, z) + 0.01, z], rotation: rot, scale });
@@ -192,7 +192,7 @@ function buildDebris(): { kelp: THREE.InstancedMesh; sticks: THREE.InstancedMesh
     spots.forEach(([a, e, rot, scale], i) => {
       const ux = Math.cos(a);
       const uz = Math.sin(a);
-      const r = e + coastWobble(ux, uz);
+      const r = (e + coastWobble(ux, uz)) * COAST_SCALE;
       const x = ux * r;
       const z = uz * r;
       q.setFromAxisAngle(up, rot);
@@ -239,7 +239,7 @@ function buildRockPlacements(): NaturePlacement[][] {
   for (const [a, e, mi, rot, scale] of BANK_ROCK_SPOTS) {
     const ux = Math.cos(a);
     const uz = Math.sin(a);
-    const r = e + coastWobble(ux, uz);
+    const r = (e + coastWobble(ux, uz)) * COAST_SCALE;
     const x = ux * r;
     const z = uz * r;
     groups[mi].push({ position: [x, groundY(x, z), z], rotation: rot, scale });
@@ -335,12 +335,12 @@ export default function BeachCove() {
           castShadow={false}
         />
         {/* the camp — on the inner-bay sand (coast v2, solver coords) */}
-        <GLBProp url={PARASOL} position={[13.6, groundY(13.6, 45.9), 45.9]} rotation={[0, 0.5, 0]} />
-        <GLBProp url={TOWEL} position={[15.1, groundY(15.1, 45.5) + 0.02, 45.5]} rotation={[0, -0.35, 0]} castShadow={false} />
-        <GLBProp url={BALL} position={[12.6, groundY(12.6, 47.1) + 0.02, 47.1]} castShadow={false} />
+        <GLBProp url={PARASOL} position={[16, groundY(16, 53.9), 53.9]} rotation={[0, 0.5, 0]} />
+        <GLBProp url={TOWEL} position={[17.7, groundY(17.7, 53.4) + 0.02, 53.4]} rotation={[0, -0.35, 0]} castShadow={false} />
+        <GLBProp url={BALL} position={[14.8, groundY(14.8, 55.3) + 0.02, 55.3]} castShadow={false} />
         {/* NE sweep mini-camp (iteration 13): a lone sun lounger facing
             the water — the wide beach gets its own reason to wander over */}
-        <GLBProp url={BED} position={[37.7, groundY(37.7, -21.6), -21.6]} rotation={[0, 2.2, 0]} />
+        <GLBProp url={BED} position={[44.2, groundY(44.2, -25.3), -25.3]} rotation={[0, 2.2, 0]} />
       </group>
     </Suspense>
   );
