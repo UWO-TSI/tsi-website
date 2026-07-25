@@ -108,6 +108,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-24 — Loop wake 36: NPCs shelter from the rain
+
+Rain days now move the villagers under cover — pressed into the HQ doorway, deep under the shop awning, the temple portico by the braziers, and the market-cart canopy for the roamers — via a third spawn table beside day/night (night still wins after dark; NPC.tsx's slow base-glide makes the migration read as a dash for shelter). One table + a weather branch in placedPersonas. Verified on ?rain=1: world renders with the rain table active, zero pageerrors. Gates: tsc clean, GameWorld lint-clean, 32/32.
+
 ### 2026-07-24 — Loop wake 35: sea-catch gull swoop
 
 Landing a SEA catch now calls the nearest gull down from its patrol — it banks into a fast low circle over the catch spot (harder flap at low altitude), then climbs back to its lobe over ~4s. The tsi:fish-caught event gained zone + spot coords (world-reaction channel; FishCatchFX unaffected); Gulls parent picks the closest anchor, one guest of honor at a time, river catches ignored. Exercised via synthetic cove + NE-sweep catches with an interleaved river catch: full swoop cycles, zero pageerrors. Gates: tsc clean, both files lint-clean, 32/32.

@@ -1504,6 +1504,18 @@ const NPC_SPAWN_POSITIONS_NIGHT: Record<SpawnZone, [number, number, number]> = {
   roaming: [3.4, 0, -15.6],    // fountain bench
 };
 
+// Rain shelter (loop wake 36): on rain days the villagers tuck under cover —
+// doorways, the shop awning, the market-cart canopy — instead of standing
+// in the open. NPC.tsx's slow base-glide makes the migration read as a
+// dash for shelter, not a teleport. Night spots win after dark (they're
+// already the covered warm spots).
+const NPC_SPAWN_POSITIONS_RAIN: Record<SpawnZone, [number, number, number]> = {
+  courtyard: [0.8, 0, -5.4],   // pressed into the HQ doorway
+  shop: [-22.8, 0, 12.2],      // deep under the shop awning
+  temple: [0, 0, 28.2],        // the temple portico, by the braziers
+  roaming: [-7.2, 0, -8.0],    // under the market-cart canopy
+};
+
 // Generic filler NPCs — design principle #2: world must never feel empty.
 // No persona_prompt / canned_dialogue: clicking shows a brief tooltip, not
 // the chat overlay. Synthetic ids prefixed `filler-` for traceability.
@@ -1772,7 +1784,12 @@ function Scene({
   // don't overlap. Stable: ordering follows the personas array.
   const placedPersonas = useMemo(() => {
     const zoneCount: Partial<Record<SpawnZone, number>> = {};
-    const table = todPhase === "night" || todPhase === "dawn" ? NPC_SPAWN_POSITIONS_NIGHT : NPC_SPAWN_POSITIONS;
+    const table =
+      todPhase === "night" || todPhase === "dawn"
+        ? NPC_SPAWN_POSITIONS_NIGHT
+        : weather === "rain"
+          ? NPC_SPAWN_POSITIONS_RAIN
+          : NPC_SPAWN_POSITIONS;
     return personas.map((p) => {
       const base = table[p.spawn_zone] ?? table.courtyard;
       const idx = zoneCount[p.spawn_zone] ?? 0;
@@ -1780,7 +1797,7 @@ function Scene({
       const pos: [number, number, number] = [base[0] + idx * 1.5, base[1], base[2]];
       return { persona: p, position: pos };
     });
-  }, [personas, todPhase]);
+  }, [personas, todPhase, weather]);
 
   const handleFillerClick = useCallback((name: string) => {
     // G3: unified toast pipeline.
