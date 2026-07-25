@@ -52,6 +52,7 @@ export const WEATHER_PERKS: Record<
       "+10% luck for rare-and-up fish",
       "Rain-only fish are biting (Stringfish, Gar, Catfish…)",
       "The Golden Koi appears twice as often",
+      "Butterflies are hiding from the rain",
     ],
     mods: { ...NEUTRAL, rareLuckBonus: 0.1, biteWaitMul: 0.75 },
   },

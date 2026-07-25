@@ -27,6 +27,7 @@ import { setActiveCritters, todayCritterSeed, type ActiveCritter } from "@/lib/g
 import { AudioManager } from "@/lib/game/audio";
 import confetti from "canvas-confetti";
 import { collect, localCollections } from "@/lib/game/collections";
+import { getTodayWeather } from "@/lib/game/weather";
 
 type Motion = "flutter" | "dart" | "perch" | "drift" | "crawl";
 
@@ -95,7 +96,11 @@ function buildSpawns(
   treeAnchors: readonly [number, number][],
 ): Spawn[] {
   const rnd = mulberry32(dayKey * 7 + (phase === "day" ? 1 : 5));
-  const pool = SPECIES.filter((s) => s.phases.includes(phase));
+  // Loop wake 37 (ACNH-true): butterflies sit out rain days — the flutter
+  // species drop from the pool; dragonflies, beetles, and shore critters
+  // keep the world alive. Weather is per-day, so spawns stay deterministic.
+  const rainDay = getTodayWeather() === "rain";
+  const pool = SPECIES.filter((s) => s.phases.includes(phase) && !(rainDay && s.motion === "flutter"));
   const totalW = pool.reduce((a, s) => a + s.weight, 0);
   const spawns: Spawn[] = [];
   // river-adjacent anchor band for dart/drift species

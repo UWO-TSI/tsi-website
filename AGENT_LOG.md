@@ -108,6 +108,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-24 — Loop wake 37: butterflies sit out the rain
+
+ACNH-true: rain days drop every flutter species from the critter spawn pool (dragonflies, beetles, cicadas, fireflies, and shore critters keep the world alive) — one weather filter in buildSpawns, deterministic since weather is per-day. The rain weather tooltip gains the honest line "Butterflies are hiding from the rain" (per David's rule: the chip lists REAL modifications). Verified: rain + sunny world loads clean, zero pageerrors. Gates: tsc clean, both files lint-clean, 32/32.
+
 ### 2026-07-24 — Loop wake 36: NPCs shelter from the rain
 
 Rain days now move the villagers under cover — pressed into the HQ doorway, deep under the shop awning, the temple portico by the braziers, and the market-cart canopy for the roamers — via a third spawn table beside day/night (night still wins after dark; NPC.tsx's slow base-glide makes the migration read as a dash for shelter). One table + a weather branch in placedPersonas. Verified on ?rain=1: world renders with the rain table active, zero pageerrors. Gates: tsc clean, GameWorld lint-clean, 32/32.
