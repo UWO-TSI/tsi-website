@@ -3,7 +3,7 @@
 import { Suspense, useRef, useState, useCallback, useEffect, useMemo, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { CameraControls, Html } from "@react-three/drei";
+import { CameraControls, Html, useGLTF } from "@react-three/drei";
 import { Smile, BookOpen, Map as MapIcon, Settings2, Keyboard } from "lucide-react";
 import * as THREE from "three";
 import PlayerAvatar from "./PlayerAvatar";
@@ -78,6 +78,7 @@ import FishShadows from "./FishShadows";
 import BeachCrabs from "./BeachCrabs";
 import PlazaSparrows from "./PlazaSparrows";
 import PlazaHedges from "./PlazaHedges";
+import { clone as cloneSkeleton } from "three/examples/jsm/utils/SkeletonUtils.js";
 import SeasonalProps from "./SeasonalProps";
 import Landmarks from "./Landmarks";
 import { getActiveCritters } from "@/lib/game/critterStore";
@@ -829,13 +830,25 @@ function Bridge({ phase }: { phase: "day" | "night" | "dawn" | "dusk" }) {
 
   return (
     <group position={position} rotation={rotation}>
-      {/* ACNH wooden bridge GLB. Its span runs along local X; the group's
-          local Z follows the path, so rotate 90°. Slightly sunk so the
-          arched deck center meets the flat path level. */}
+      {/* V2 (David 2026-07-25): the flat plank bridge never read as a
+          bridge. Swapped for the REAL ACNH structure bridge (BridgeWood05,
+          5.8u arched span, real albedo). SKINNED model — SkeletonUtils
+          clone, not GLBProp (wake-24 lesson). Span runs raw X → rotate 90°
+          so it crosses along the path; Y-up family, scale-only calibration. */}
       <Suspense fallback={null}>
-        <GLBProp url="/assets/acnh/props/bridge-wooden.glb" position={[0, 0.02, 0]} rotation={[0, Math.PI / 2, 0]} />
+        <ArchedBridgeModel />
       </Suspense>
       <BridgeLights phase={phase} />
+    </group>
+  );
+}
+
+function ArchedBridgeModel() {
+  const { scene } = useGLTF("/assets/acnh/props/bridge-arch-wood.glb");
+  const clone = useMemo(() => cloneSkeleton(scene), [scene]);
+  return (
+    <group position={[0, -0.12, 0]} rotation={[0, Math.PI / 2, 0]} scale={0.1}>
+      <primitive object={clone} />
     </group>
   );
 }

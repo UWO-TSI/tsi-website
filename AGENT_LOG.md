@@ -108,6 +108,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-25 — Loop wake 47: V2 BRIDGE ARCH (David visual-depth directive)
+
+The flat plank raft is gone: the crossing now uses the REAL ACNH structure bridge (BridgeWood05 from the dump — 5.8u arched span, real albedo, log railings; 1.8MB). Notable: structure bridges are SKINNED like the fish/fence — mounted via SkeletonUtils clone, NOT GLBProp (the wake-24 bug would have eaten the placement). Walkers ride a parabolic ≈0.55 crest (terrain.ts override replaces the flat 0.12 deck; smooth ramps at both ends; plank knocks unchanged). Profile shot shows a real bridge with railings over the V1-carved channel; WASD crossing clean, zero pageerrors. Old bridge-wooden.glb prop stays for decorative reuse elsewhere. Gates: tsc clean, GameWorld + terrain lint-clean, 32/32. Next: GEO S1 (+18% coast + character pass).
+
 ### 2026-07-25 — Loop wake 46: V1 DEEPER RIVER CHANNEL (David visual-depth directive)
 
 The river now sits carved into the ground: RIVER_DEPTH −0.55 → −0.95, WATER_Y −0.2 → −0.32, bank walls extended to −1.05 — the oblique shot shows tall dark soil walls above the waterline on BOTH banks, the channel reading as a real cut instead of a surface stripe. Dependents re-tuned in the same pass: river fish shadows −0.26 → −0.38, stepping stones dropped into the channel (0.05 → −0.5), bobber float −0.12 → −0.24 (both land + idle-bob sites); foam rides WATER_Y relative; mouths/waterfalls unchanged (coast-pinned). Verified: oblique closeup shows the carved read, zero pageerrors. Gates: tsc clean, all six touched files lint-clean, 32/32. Next: V2 bridge arch.

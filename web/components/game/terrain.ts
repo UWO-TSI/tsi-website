@@ -304,10 +304,16 @@ export function sampleTerrainHeightFast(x: number, z: number): number {
   const b = h10 + (h11 - h10) * fx;
   const h = a + (b - a) * fz;
 
-  // Bridge deck override for walkers: the N-S path crosses the carved
-  // river valley on the wooden bridge (deck top ≈ 0.1). Without this,
-  // ground-follow dips the player under the deck mid-crossing. Cheap
-  // |x| guard keeps riverInfluence out of the common case.
-  if (x > -1.5 && x < 1.5 && riverInfluence(x, z) > 0 && h < 0.12) return 0.12;
+  // V2 bridge arch (David 2026-07-25): walkers ride a parabolic crest over
+  // the arched BridgeWood span instead of the old flat 0.12 deck — crest
+  // ≈0.55 at the crossing centerline (z≈3.25), smooth ramps to ground at
+  // the ends. Cheap |x| guard keeps this out of the common case.
+  if (x > -1.6 && x < 1.6) {
+    const dz = (z - 3.25) / 3.3;
+    if (dz > -1 && dz < 1) {
+      const arch = 0.55 * (1 - dz * dz) + 0.02;
+      if (arch > h) return arch;
+    }
+  }
   return h;
 }
