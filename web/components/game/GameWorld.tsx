@@ -1672,6 +1672,43 @@ function DebugTracker({
   return null;
 }
 
+// Aerial survey camera (collab track 2026-07-25): ?aerial=1 pins a fixed
+// top-down (or oblique, via dir=n|s|e|w) camera for the geography review
+// pack. Used from /lab/world capture scripts; never linked in product UI.
+// Params: ax/az = look target, ah = altitude.
+function getAerialParams(): { x: number; z: number; h: number; dir: string | null } | null {
+  if (typeof window === "undefined") return null;
+  const q = new URLSearchParams(window.location.search);
+  if (q.get("aerial") !== "1") return null;
+  return {
+    x: Number(q.get("ax") ?? 0),
+    z: Number(q.get("az") ?? 8),
+    h: Number(q.get("ah") ?? 140),
+    dir: q.get("dir"),
+  };
+}
+
+const AERIAL_DIRS: Record<string, [number, number]> = { s: [0, -1], n: [0, 1], e: [1, 0], w: [-1, 0] };
+
+function AerialCamera({ cfg }: { cfg: { x: number; z: number; h: number; dir: string | null } }) {
+  const { camera, scene } = useThree();
+  // Priority 1: runs AFTER TimeOfDayCycle's default-priority frame write,
+  // so the survey camera wins the fog fight — at 140u altitude the whole
+  // island sits past the day fog far (100) and would render as flat wash.
+  useFrame(() => {
+    const off = cfg.dir ? AERIAL_DIRS[cfg.dir] : null;
+    if (off) {
+      camera.position.set(cfg.x + off[0] * cfg.h * 0.9, cfg.h * 0.72, cfg.z + off[1] * cfg.h * 0.9);
+    } else {
+      camera.position.set(cfg.x, cfg.h, cfg.z + 0.02);
+    }
+    camera.lookAt(cfg.x, 0, cfg.z);
+    if (scene.fog instanceof THREE.Fog) setFogRange(scene.fog, 800, 1000);
+    // (far stays at the Canvas default 300 — max survey distance ≈ 200.)
+  }, 1);
+  return null;
+}
+
 // P16: pump the camera's azimuth angle (radians) into a shared ref so the
 // DOM Compass HUD outside the Canvas can render without React rerenders.
 // Camera in this scene is positioned by CameraControls — we read its
@@ -1723,6 +1760,9 @@ function Scene({
   azimuthRef: React.MutableRefObject<number>;
 }) {
   const cameraRef = useRef<CameraControls>(null);
+  // Aerial survey mode: fixed camera replaces CameraControls entirely
+  // (the follow moveTo no-ops on the null ref).
+  const aerial = useMemo(() => getAerialParams(), []);
   const blobPlacements = useMemo(() => buildBlobPlacements(), []);
 
   // G5 (item 16): first-visit flythrough — a 6s sweep from over the sea
@@ -1999,6 +2039,9 @@ function Scene({
           90°, so the camera physically cannot dive under the terrain
           (at 90° it sits at target height, 1.5u over the player, above
           every hill on the island). */}
+      {aerial ? (
+        <AerialCamera cfg={aerial} />
+      ) : (
       <CameraControls
         ref={cameraRef}
         minPolarAngle={Math.PI / 2 - (42 * Math.PI) / 180}
@@ -2013,6 +2056,7 @@ function Scene({
         polarRotateSpeed={0.6}
         makeDefault
       />
+      )}
 
       <TimeOfDayCycle weather={weather} todPhase={todPhase} shadowsOn={blobShadows} playerPosRef={playerPosRef} />
       {weather === "rain" && !liteMode && <RainFX playerPosRef={playerPosRef} />}

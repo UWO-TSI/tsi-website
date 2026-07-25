@@ -32,12 +32,19 @@ export const WORLD_BEND_SIDE = 0.0011;
 const MARKER = "// tsi-curved-world";
 
 if (typeof window !== "undefined") {
+  // Aerial survey loads (?aerial=1, collab track) compile a FLAT world —
+  // the curvature is constant-baked into every program, and from 140u up
+  // it warps the map into a fisheye. Product loads are untouched: the
+  // param is read once at module init, before any material compiles.
+  const aerialSurvey = new URLSearchParams(window.location.search).get("aerial") === "1";
+  const bend = aerialSurvey ? 0 : WORLD_BEND;
+  const bendSide = aerialSurvey ? 0 : WORLD_BEND_SIDE;
   const chunk = THREE.ShaderChunk.project_vertex;
   if (!chunk.includes(MARKER)) {
     THREE.ShaderChunk.project_vertex = chunk.replace(
       "gl_Position = projectionMatrix * mvPosition;",
       `${MARKER}
-mvPosition.y -= mvPosition.z * mvPosition.z * ${WORLD_BEND.toFixed(6)} + mvPosition.x * mvPosition.x * ${WORLD_BEND_SIDE.toFixed(6)};
+mvPosition.y -= mvPosition.z * mvPosition.z * ${bend.toFixed(6)} + mvPosition.x * mvPosition.x * ${bendSide.toFixed(6)};
 gl_Position = projectionMatrix * mvPosition;`
     );
   }
