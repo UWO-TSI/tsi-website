@@ -108,6 +108,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-24 — Collab design track established (David in the loop as the taste layer)
+
+David's rulings on human-in-the-loop work: **(1) geography** — review-pack workflow (loop builds an aerial lab camera + captures a full map pack; David marks imbalances in chat; CLIFFS WAIT for his geo notes since cliffs are geography); **(2) interiors** — delicate floor-plan sessions, purpose-first, HQ FIRST (session doc with candidate plans + purpose questions incoming); enterable roadmap grows: House + Lighthouse now, Museum & civic buildings later in the game's life; **(3) furnishing** — catalog-first: the dump holds 10,293 Ftr* pieces; loop renders a browsable category catalog (icon-harness pattern), David shortlists, rooms furnish ONLY from the shortlist. Contract + sequence written to specs/collab-design-track.md. Queue now: QA Wave 29 → aerial mode + geo pack → furniture catalog batches → HQ session doc → geo fixes → cliffs.
+
 ### 2026-07-24 — Direction session (David): cliffs next, QA wave → merge, ruling doc written
 
 David's four rulings on the loop's future: **(1)** next big rock = CLIFF SYSTEM (multi-wake, river-kit prep at 7143205); **(2)** launch blockers get a ruling session — decision one-pager written to `specs/rulings-2026-07-24-launch.md` (lift the moot migration hold, convention+smoke for deploy safety, 5-8 execs week of Aug 17, confirm prod ANTHROPIC_API_KEY); **(3)** merge path = full QA wave on this branch → David's in-game eyeball → merge to main before beta prep (next loop wake runs the QA wave); **(4)** Sea King stays vacant until David supplies marquee models. Loop queue reordered accordingly: QA wave → cliff system runs → launch buildables once rulings land.
