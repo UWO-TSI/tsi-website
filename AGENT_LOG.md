@@ -108,6 +108,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-25 — Loop wake 43: QA WAVE 29 — PASS, merge-ready (2 fixes in-wave)
+
+The David-ordered pre-merge gate ran clean end to end: build ✓ (106 pages), tests 32/32, and the widest visual sweep yet (3 weathers × noon+night, 6 overlays, 3 interiors via the new bench, 4 lab benches) with ZERO pageerrors. Two finds fixed in-wave: **(1) /api/collections still whitelisted the retired legacy keys — the server was 400-ing every modern catch (fish_dace, sea_*, bug_*…), masked by local-first storage; prod collection sync was dead and would have hit the beta.** Now shape-validated (reward-free cosmetics need no whitelist) + env-less GET returns an empty book instead of 500. **(2)** PlazaSparrows carried a react-compiler error (mutable state in useMemo → useRef; wake-34's lint grep missed the format) — full-project lint back to EXACTLY 74/52. Report: specs/qa.md Wave 29. **No merge blockers — awaiting David's in-game eyeball per his ruling.** Next: geography review pack.
+
 ### 2026-07-24 — Collab design track established (David in the loop as the taste layer)
 
 David's rulings on human-in-the-loop work: **(1) geography** — review-pack workflow (loop builds an aerial lab camera + captures a full map pack; David marks imbalances in chat; CLIFFS WAIT for his geo notes since cliffs are geography); **(2) interiors** — delicate floor-plan sessions, purpose-first, HQ FIRST (session doc with candidate plans + purpose questions incoming); enterable roadmap grows: House + Lighthouse now, Museum & civic buildings later in the game's life; **(3) furnishing** — catalog-first: the dump holds 10,293 Ftr* pieces; loop renders a browsable category catalog (icon-harness pattern), David shortlists, rooms furnish ONLY from the shortlist. Contract + sequence written to specs/collab-design-track.md. Queue now: QA Wave 29 → aerial mode + geo pack → furniture catalog batches → HQ session doc → geo fixes → cliffs.

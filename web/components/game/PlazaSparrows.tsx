@@ -9,7 +9,7 @@
  * All movement lives in one useFrame writing refs — zero per-frame React.
  */
 
-import { useMemo, useRef } from "react";
+import { useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { getTerrainHeight } from "./terrain";
@@ -44,11 +44,14 @@ function makeState([x, z]: [number, number], i: number): SparrowState {
 
 export default function PlazaSparrows({ playerPosRef }: { playerPosRef: React.MutableRefObject<THREE.Vector3> }) {
   const refs = useRef<(THREE.Group | null)[]>([]);
-  const states = useMemo(() => ANCHORS.map((a, i) => makeState(a, i)), []);
+  // Mutable frame state lives in a ref (react-compiler: useMemo results are
+  // frozen) — same pattern as FishShadows' flee state.
+  const statesRef = useRef<SparrowState[]>(ANCHORS.map((a, i) => makeState(a, i)));
 
   useFrame(({ clock }, dt) => {
     const t = clock.elapsedTime;
     const p = playerPosRef.current;
+    const states = statesRef.current;
     for (let i = 0; i < states.length; i++) {
       const g = refs.current[i];
       const s = states[i];
