@@ -1,10 +1,22 @@
 # QA Report
 
 > Owner: QA agent. All agents check this for bugs in their area.
-> Last updated: 2026-07-13 (Wave 27 — dump program)
+> Last updated: 2026-07-25 (Wave 29 — pre-merge gate, art-cohesion branch)
 > **Lint baseline updated 2026-07-13: 74 errors / 52 warnings** (was 74/59 — seven genuinely-unused eslint-disable directives removed; mentorship/page.tsx keeps its two, the "unused" report there is a react-compiler two-pass quirk shielding a real declaration-order error).
 
 ---
+
+## Wave 29 — 2026-07-25 Pre-merge gate on restart/art-cohesion-v2 — **PASS, merge-ready**
+
+David-ordered pre-merge wave on the art-cohesion branch (HEAD `2a9052e` at start; two QA-authored fixes landed in-wave, commit `6fe182a`). Scope: full static gates + runtime smoke + the widest visual sweep to date.
+
+- **Build:** ✓ compiled 9.0s, 106 static pages, zero errors.
+- **Lint:** found **75/52** (+1 vs baseline) — `PlazaSparrows.tsx` react-compiler error (mutable frame state in a useMemo; wake-34's targeted grep missed the two-line format). Fixed in-wave (useRef pattern per FishShadows). **Now exactly 74/52 = baseline.**
+- **Tests:** 32/32.
+- **Runtime smoke (env-less dev :3099):** all 10 routes 200 (/, login, dashboard, shop, bounty, all 5 lab pages), /api/shop 200.
+- **REAL BUG FOUND + FIXED — `/api/collections` stale key enum:** the POST schema still whitelisted the RETIRED legacy keys (apple/fish_common/flower_red…), so the server 400-rejected every modern catch key (`fish_dace`, `sea_scallop`, `bug_*`, `shore_*`, species flowers) — silently masked by the local-first localStorage fallback, but **server-side collection persistence was dead on prod** and would have shipped broken into the beta (no cross-device sync). Fixed: shape validation (`^[a-z0-9_]+$`, ≤64 chars — collections are reward-free per principle #3, a whitelist buys nothing and rots every content drop). Also: GET 500'd env-less (createClient throw) — now returns an empty book like /api/shop's fallback; POST env-less 401s. Verified: GET 200, auth gate intact.
+- **Visual sweep, zero pageerrors across all of it:** world under sunny/cloudy/rain each at noon AND night (lab clock scrub), all 6 dock overlays open/close, all 3 interiors via the new /lab/interior bench, all 4 lab benches incl. the icon stage.
+- **Merge blockers: NONE.** Branch is merge-ready pending David's in-game eyeball (his ruling: QA wave → his playtest → merge). Note for the merge moment: prod deploys from main on push — merge when David is available to smoke tethos.ca after.
 
 ## Wave 28 — 2026-07-14 Stabilize: measured shadows + prod pipeline
 
