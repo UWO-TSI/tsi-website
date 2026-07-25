@@ -108,6 +108,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-24 — Loop wake 42: /lab/interior bench — wake-41 gap CLOSED
+
+New dev-only bench mounts any of the three rooms directly (?room=oracle|shop|hq) with the game's tone mapping, the room's own InteriorPlayer (WASD/click-move works), and OrbitControls for inspection — no world-walk + E-entry, which the headless harness can't drive. Lab nav gains an Interior bench link. Verified: all three rooms load with zero pageerrors, and the oracle shot retroactively confirms wake 41 — candle embers visibly rising over all four clusters. Interior changes are now screenshot-verifiable forever. Gates: tsc clean, both files lint-clean, 32/32.
+
 ### 2026-07-24 — Loop wake 41: oracle candle embers (+ dead-brazier finding)
 
 Started as brazier embers — then discovered the procedural OracleTemple (braziers, flames) is DEAD CODE: PROC_VARIANTS is empty since the 2026-06-01 GLB switch, so nothing renders it (reverted that edit; the composite stays as the documented Suspense fallback). Pivoted to the room that renders: the Oracle interior's four candle clusters now shed rising ember motes (3 per cluster, staggered drift/shrink/fade, refs-only useFrame, same pattern as the shipped idle fireflies). VERIFICATION GAP, logged honestly: interior entry via E does not fire under the headless harness (3 attempts: prompt arms, no transition) — embers ship on gates evidence (tsc clean, lint clean, 32/32, zero world-side pageerrors); David sees them on the next temple visit. Doctrine note: an /lab/interior bench would close this class of gap.
