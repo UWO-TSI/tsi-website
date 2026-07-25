@@ -108,6 +108,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-25 — Loop wake 61: QA Wave 30 mini-sweep — READY for David's eyeball
+
+Re-baselined everything after 15 wakes of change (Wave 29 predates geo S1-S7/river v3/economy/recolor). **All green, zero breaks**: build ✓ 110 pages (+4 since W29); 74/52 + 32/32; 11 routes + 4 APIs 200 env-less; 6/6 sheet deep-links (incl wharfsell), 4/4 interiors (incl wharf), fishing prompt+cast at the bend pool, boat-trip prompt+toast, Reedmarsh discovery ping (last unverified one — fires), zero pageerrors across the whole sweep. One false alarm: first fishing check spawned at the 2.4-radius edge — re-spawned in range, clean. Fresh screenshot pack (7 hero aerials + 4 interiors + ground shots) in the job dir; full detail in specs/qa.md **Wave 30**. Note recorded: env-less builds fail at /admin/recruit static export (needs Supabase env — not a regression). **The branch is ready for David's in-game playtest → merge**; migration 024 stays draft for the launch batch. Next: ambient polish batches while holding for rulings.
+
 ### 2026-07-25 — Loop wake 60: polish batch ×4
 
 **Islet shore treatment**: one `min()` in the ocean fragment shader folds Isla Chica (circle r 7.4 at −24,72) into the same shoreline distance field as the wobbled mainland — foam lap, shallow-water ramp, AND caustic fade all ring the islet automatically, pixel-matched to the mainland treatment. **Temple Rise**: cliff-slab band tightened (radial jitter 0.35→0.18, slabs 1.35-1.8 wide) — the ring reads near-continuous stone with the stair notch clean. **The Flats**: new `cFlats` cream (#F2E4BC) lerp where the beach-width gaussian dominates (shift>2 → up to 55% at full sandT) — the shelf finally reads SAND under the grass texture instead of olive wash. **Minimap**: stair tick on the Temple Rise ellipse. All verified by aerials. Gates: tsc clean, 74/52, 32/32. Next: QA mini-sweep prep for David's Wave 29 merge eyeball.
