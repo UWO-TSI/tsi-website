@@ -29,6 +29,7 @@ import { getTodayWeather, type Weather } from "@/lib/game/weather";
 import { getLabHour, labSubscribe } from "@/lib/game/devLab";
 import { WEATHER_GRADES } from "@/lib/game/grading";
 import { coastDist, beachWidthShift, COAST_GLSL } from "@/lib/game/coast";
+import { DEFAULT_PALETTES } from "@/data/content-defaults";
 import { CloudShadows, NightStars, WaterSparkles, LeafGusts, NightWindows, TargetGlow } from "./AmbienceFX";
 import AmbientLife from "./AmbientLife";
 import AudioController from "./AudioController";
@@ -556,6 +557,18 @@ function ApplyGrassTint({ material, tint }: { material: THREE.MeshStandardMateri
 }
 
 function Terrain() {
+  // Wake 64: seasonal grass — the active palette's grass slot tints the
+  // meadow vertex colors at build time (sand/soil bands still win below).
+  // Default season = no tint, so the shipped look is byte-identical.
+  const { data: activePalette } = useActivePalette();
+  // Compare by VALUE, not slug — the lab preview override swaps palette
+  // while keeping the resolved slug, and the default season must stay
+  // byte-identical to the shipped look.
+  const defaultGrass = DEFAULT_PALETTES[0].palette.grass.toLowerCase();
+  const seasonGrass =
+    activePalette.palette.grass && activePalette.palette.grass.toLowerCase() !== defaultGrass
+      ? activePalette.palette.grass
+      : null;
   const geometry = useMemo(() => {
     const size = 150; // GEO S1: covers the +18% island (coast to ~70 + sink band)
     const segments = 216;
@@ -612,6 +625,9 @@ function Terrain() {
         tmp.copy(c1);
       }
 
+      // Seasonal tint rides over the grass pick, under the beach bands.
+      if (seasonGrass) tmp.lerp(new THREE.Color(seasonGrass), 0.62);
+
       // Beach width varies per angle (iteration 2): es shifts the color
       // bands only — wide sand sweeps on some stretches, grassy banks
       // nearly to the water on others. The waterline stays put.
@@ -641,7 +657,7 @@ function Terrain() {
     geo.setAttribute("color", new THREE.BufferAttribute(colors, 3));
     geo.computeVertexNormals();
     return geo;
-  }, []);
+  }, [seasonGrass]);
 
   const grassTex = useMemo(() => getGrassTexture(), []);
 
