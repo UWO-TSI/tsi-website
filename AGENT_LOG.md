@@ -108,6 +108,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-24 — Direction session (David): cliffs next, QA wave → merge, ruling doc written
+
+David's four rulings on the loop's future: **(1)** next big rock = CLIFF SYSTEM (multi-wake, river-kit prep at 7143205); **(2)** launch blockers get a ruling session — decision one-pager written to `specs/rulings-2026-07-24-launch.md` (lift the moot migration hold, convention+smoke for deploy safety, 5-8 execs week of Aug 17, confirm prod ANTHROPIC_API_KEY); **(3)** merge path = full QA wave on this branch → David's in-game eyeball → merge to main before beta prep (next loop wake runs the QA wave); **(4)** Sea King stays vacant until David supplies marquee models. Loop queue reordered accordingly: QA wave → cliff system runs → launch buildables once rulings land.
+
 ### 2026-07-24 — Loop wake 42: /lab/interior bench — wake-41 gap CLOSED
 
 New dev-only bench mounts any of the three rooms directly (?room=oracle|shop|hq) with the game's tone mapping, the room's own InteriorPlayer (WASD/click-move works), and OrbitControls for inspection — no world-walk + E-entry, which the headless harness can't drive. Lab nav gains an Interior bench link. Verified: all three rooms load with zero pageerrors, and the oracle shot retroactively confirms wake 41 — candle embers visibly rising over all four clusters. Interior changes are now screenshot-verifiable forever. Gates: tsc clean, both files lint-clean, 32/32.
