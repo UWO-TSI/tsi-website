@@ -133,7 +133,7 @@ export default function StatsHUD() {
           transition: "text-shadow 0.35s ease-out",
         }}
       >
-        {tc.toLocaleString()} TC
+        {tc.toLocaleString()} 💎
       </span>
     </div>
   );

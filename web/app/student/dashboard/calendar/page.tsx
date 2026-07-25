@@ -547,7 +547,7 @@ export default function CalendarPage() {
                         {ev.tc_reward && (
                           <span className="flex items-center gap-0.5 text-[0.65rem] font-mono text-[var(--color-brand-yellow)]">
                             <Zap size={10} />
-                            {ev.tc_reward} TC
+                            {ev.tc_reward} 💎
                           </span>
                         )}
                         {ev.xp_reward && (
@@ -655,7 +655,7 @@ export default function CalendarPage() {
                             {ev.tc_reward && (
                               <span className="flex items-center gap-1 text-[0.65rem] font-mono text-[var(--color-brand-yellow)]">
                                 <Zap size={11} />
-                                +{ev.tc_reward} TC
+                                +{ev.tc_reward} 💎
                               </span>
                             )}
                             {ev.xp_reward && (

@@ -72,7 +72,7 @@ export default function QuestWidget({ quests }: { quests: QuestProgress[] }) {
                     {qp.quest.quest_type}
                   </span>
                   <span className="text-[0.6rem] font-mono text-[var(--color-text-muted)]">
-                    +{qp.quest.xp_reward} XP · +{qp.quest.tc_reward} TC
+                    +{qp.quest.xp_reward} XP · +{qp.quest.tc_reward} 💎
                   </span>
                 </div>
               </div>

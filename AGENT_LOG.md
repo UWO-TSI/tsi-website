@@ -108,6 +108,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-25 — Loop wake 50: ECON E1 — Gems 💎 display rename (money tier)
+
+Economy v2 lands its first stage: **lib/economy.ts** (GEMS/COINS display constants + the loud tc_*==GEMS schema-mapping warning + fmt helpers + the no-conversion guardrail note) and the display rename across every user-facing surface — StatsHUD balance, shop price chips (was rendering "N TSI") + purchase toast, calendar event rewards ×2, quest widget, admin bounty review copy + "Approve + pay Gems", CMS EventEditor/ShopEditor labels. ZERO schema changes (tc_* columns untouched per the spec). **Bonus catch: CoinWidget was PRINTING THE CAD CONVERSION RATE** ("≈ $X.XX CAD value", /100) — a standing-rule violation that predates today; line removed. Verified live: no stray "N TC" renders, no CAD leak, zero pageerrors (StatsHUD's 💎 shows with an authed profile; each string edit assert-verified at apply). Gates: tsc clean, 9 files lint-clean, 32/32. Next: S3 wharf ground + E2 coins wallet.
+
 ### 2026-07-25 — Loop wake 49: GEO S2 — road network v2 (avenues + east crossing + windmill spur)
 
 The cross becomes a NETWORK: both avenues extended across the bigger island (x −34..41 — Shop and House now sit ON the north avenue, chalets/windmill corridor on the south), a new EAST LEG at x 39.25 connecting the avenues across the river via the SECOND ARCHED BRIDGE (Bridge component parameterized: xAt + lights props; string-light singleton stays main-bridge-only until the wharf district lights its own; BRIDGE_CROSSINGS in terrain.ts drives the parabolic walker crest at BOTH crossings; plank knocks cover both), and a WINDMILL SPUR finally putting the windmill on the network. RoadTiles RECTS + PATH_CORRIDORS in sync (single-run corridors — the river carve wins at crossings; SAND/WOOD rect indices re-pointed); minimap redrawn. Aerial-verified: ladder network + second bridge visible top-down, east-bridge closeup shows the arch spanning the channel; zero pageerrors. Gates: tsc clean, 5 files lint-clean, 32/32. Note: the full west-side ring closure lands with the West Green district pass.

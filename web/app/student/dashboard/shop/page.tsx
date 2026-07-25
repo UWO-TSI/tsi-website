@@ -70,7 +70,7 @@ export default function ShopPage() {
         AudioManager.playSFX("confirm");
         window.setTimeout(() => AudioManager.playSFX("enter"), 150);
         confetti({ particleCount: 14, spread: 45, startVelocity: 24, origin: { x: 0.5, y: 0.6 }, colors: ["#FFD166", "#E8A93C", "#FFFDF5"], disableForReducedMotion: true });
-        window.dispatchEvent(new CustomEvent("tsi:toast", { detail: { text: `Purchased ${product.name}! −${product.price_tc} TC` } }));
+        window.dispatchEvent(new CustomEvent("tsi:toast", { detail: { text: `Purchased ${product.name}! −${product.price_tc} 💎` } }));
       } else {
         window.dispatchEvent(new CustomEvent("tsi:toast", { detail: { text: "Purchase failed — try again." } }));
       }
@@ -155,7 +155,7 @@ export default function ShopPage() {
                     {p.price_cad != null && <span className="text-base font-bold" style={{ color: "#f1ffff" }}>${p.price_cad.toFixed(2)}</span>}
                     {p.price_tc != null && (
                       <span className="font-mono text-sm" style={{ color: "#ffd166" }}>
-                        {p.price_cad != null ? "or " : ""}{p.price_tc} TSI
+                        {p.price_cad != null ? "or " : ""}{p.price_tc} 💎
                       </span>
                     )}
                   </div>
@@ -191,7 +191,7 @@ export default function ShopPage() {
             <h2 className="text-2xl font-bold mb-2" style={{ color: "var(--color-text-main)" }}>{selected.name}</h2>
             <div className="flex items-center gap-3 mb-4">
               {selected.price_cad != null && <span className="text-2xl font-bold" style={{ color: "var(--color-text-main)" }}>${selected.price_cad.toFixed(2)}</span>}
-              {selected.price_tc != null && <span className="font-mono text-base" style={{ color: "#ffd166" }}>{selected.price_tc} TSI</span>}
+              {selected.price_tc != null && <span className="font-mono text-base" style={{ color: "#ffd166" }}>{selected.price_tc} 💎</span>}
             </div>
             {selected.description && <p className="text-sm mb-6" style={{ color: "var(--color-text-soft)" }}>{selected.description}</p>}
             {selected.price_tc != null && (

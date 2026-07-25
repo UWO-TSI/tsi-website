@@ -403,7 +403,7 @@ export default function ShopEditor({ mode, rowId, initial }: ShopEditorProps) {
           </p>
         </Field>
 
-        <Field label="TC Price" error={errors.tc_price}>
+        <Field label="Gem Price" error={errors.tc_price}>
           <input
             type="number"
             min={0}
