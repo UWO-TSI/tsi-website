@@ -257,6 +257,17 @@ function TheFlats() {
       {shells.map((sh, i) => (
         <GLBProp key={i} url={sh.url} position={[sh.x, groundY(sh.x, sh.z) + 0.01, sh.z]} rotation={[0, sh.rot, 0]} scale={sh.s} castShadow={false} />
       ))}
+      {/* driftwood log seat (wake 67) — sit spot at [36, 46.5] in BENCHES */}
+      <group position={[36, groundY(36, 46.5) + 0.16, 46.5]} rotation={[0, 0.5, Math.PI / 2]}>
+        <mesh>
+          <cylinderGeometry args={[0.17, 0.2, 2.1, 8]} />
+          <meshStandardMaterial color="#9C8468" roughness={0.95} flatShading />
+        </mesh>
+        <mesh position={[0, 1.05, 0]}>
+          <cylinderGeometry args={[0.17, 0.17, 0.02, 8]} />
+          <meshStandardMaterial color="#B39B7C" roughness={0.9} />
+        </mesh>
+      </group>
       {/* a stranded sea star by the big pool — the tide left it behind */}
       <GLBProp url={SEA_STAR} position={[39.2, groundY(39.2, 51.4) + 0.02, 51.4]} rotation={[0, 0.8, 0]} scale={0.5} castShadow={false} />
     </group>

@@ -41,6 +41,25 @@ export const MAINLAND_BOAT: [number, number] = [-13, 52.5];
 // Islet landing faces the mainland (direction +x/-z from center).
 const LANDING: [number, number] = [CX + 2.0, CZ - 5.9];
 
+// Palm sway (wake 67): a gentle breeze roll around the trunk base —
+// different phase per palm so the islet reads alive, not metronomic.
+function SwayPalm({ url, position, rotY, scale, phase }: {
+  url: string; position: [number, number, number]; rotY: number; scale: number; phase: number;
+}) {
+  const ref = useRef<THREE.Group>(null);
+  useFrame(({ clock }) => {
+    const g = ref.current;
+    if (!g) return;
+    const t = clock.elapsedTime;
+    g.rotation.z = Math.sin(t * 0.55 + phase) * 0.022 + Math.sin(t * 1.7 + phase * 2) * 0.006;
+  });
+  return (
+    <group ref={ref} position={position}>
+      <GLBProp url={url} position={[0, 0, 0]} rotation={[0, rotY, 0]} scale={scale} />
+    </group>
+  );
+}
+
 // Crab scuttle (wake 63): one little red crab side-stepping arcs of the
 // sand ring — skitter bursts with freeze pauses, ACNH beach-crab energy.
 function IsletCrab() {
@@ -111,10 +130,10 @@ export default function IslaChica() {
         <meshStandardMaterial color="#6FBF5A" roughness={0.92} />
       </mesh>
 
-      {/* palms frame the back rim; rocks anchor the far edge */}
-      <GLBProp url={PALM_A} position={[CX - 3.2, -0.02, CZ + 2.6]} rotation={[0, 0.7, 0]} scale={1.0} />
-      <GLBProp url={PALM_A} position={[CX + 2.9, -0.02, CZ + 3.1]} rotation={[0, 3.4, 0]} scale={0.9} />
-      <GLBProp url={PALM_B} position={[CX - 1.1, -0.02, CZ - 3.6]} rotation={[0, 5.1, 0]} scale={0.95} />
+      {/* palms frame the back rim (breeze-swayed); rocks anchor the far edge */}
+      <SwayPalm url={PALM_A} position={[CX - 3.2, -0.02, CZ + 2.6]} rotY={0.7} scale={1.0} phase={0} />
+      <SwayPalm url={PALM_A} position={[CX + 2.9, -0.02, CZ + 3.1]} rotY={3.4} scale={0.9} phase={2.2} />
+      <SwayPalm url={PALM_B} position={[CX - 1.1, -0.02, CZ - 3.6]} rotY={5.1} scale={0.95} phase={4.1} />
       <GLBProp url={ROCK_B} position={[CX - 4.6, -0.03, CZ - 1.4]} rotation={[0, 1.9, 0]} scale={1.1} castShadow={false} />
       <GLBProp url={ROCK_D} position={[CX + 4.3, -0.03, CZ + 0.9]} rotation={[0, 0.4, 0]} scale={0.85} castShadow={false} />
       <GLBProp url={SHELL_SCALLOP} position={[CX + 0.8, -0.02, CZ - 4.9]} rotation={[0, 2.2, 0]} scale={0.9} castShadow={false} />
@@ -142,6 +161,13 @@ export default function IslaChica() {
       {/* boat.glb is a 20x39u model — 0.06 reads as a village rowboat */}
       <GLBProp url={BOAT} position={[LANDING[0] + 1.1, -0.5, LANDING[1] - 3.1]} rotation={[0, 2.85, 0]} scale={0.06} />
       <GLBProp url={BOAT} position={[MAINLAND_BOAT[0] + 0.6, -0.38, MAINLAND_BOAT[1] + 1.6]} rotation={[0, -0.5, 0]} scale={0.06} />
+      {/* driftwood log seat (wake 67) — sit spot at [-26.5, 70.5] in BENCHES */}
+      <group position={[-26.5, 0.14, 70.5]} rotation={[0, -0.7, Math.PI / 2]}>
+        <mesh>
+          <cylinderGeometry args={[0.16, 0.19, 1.9, 8]} />
+          <meshStandardMaterial color="#A08B6E" roughness={0.95} flatShading />
+        </mesh>
+      </group>
       {/* mooring posts */}
       <mesh position={[LANDING[0] - 0.5, 0.16, LANDING[1] - 2.6]}>
         <cylinderGeometry args={[0.09, 0.11, 0.66, 8]} />
