@@ -107,8 +107,10 @@ export default function MiniMap({ playerPosRef }: { playerPosRef: React.MutableR
         {/* paths (spine split at the river banks, matching the world) */}
         <line x1="0" y1="24" x2="0" y2="1.1" stroke="#D9B380" strokeWidth="3" strokeLinecap="round" />
         <line x1="0" y1="-5.9" x2="0" y2="-27" stroke="#D9B380" strokeWidth="3" strokeLinecap="round" />
-        <line x1="-26" y1="-10" x2="26" y2="-10" stroke="#D9B380" strokeWidth="3" strokeLinecap="round" />
-        <line x1="-17" y1="13" x2="17" y2="13" stroke="#D9B380" strokeWidth="3" strokeLinecap="round" />
+        <line x1="-34" y1="-10" x2="41" y2="-10" stroke="#D9B380" strokeWidth="3" strokeLinecap="round" />
+        <line x1="-34" y1="13" x2="41" y2="13" stroke="#D9B380" strokeWidth="3" strokeLinecap="round" />
+        <line x1="39.25" y1="13" x2="39.25" y2="-10" stroke="#D9B380" strokeWidth="3" strokeLinecap="round" />
+        <line x1="-31.75" y1="13" x2="-31.75" y2="26.5" stroke="#D9B380" strokeWidth="3" strokeLinecap="round" />
         {/* Beach Cove sand spur (world z drawn as -y) */}
         <line x1="1" y1="-23.75" x2="18.25" y2="-23.75" stroke="#E7D3A0" strokeWidth="3" strokeLinecap="round" />
         <line x1="18.25" y1="-23.75" x2="18.25" y2="-49.5" stroke="#E7D3A0" strokeWidth="3" strokeLinecap="round" />

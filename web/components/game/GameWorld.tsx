@@ -812,9 +812,9 @@ function BridgeLights({ phase }: { phase: "day" | "night" | "dawn" | "dusk" }) {
   );
 }
 
-function Bridge({ phase }: { phase: "day" | "night" | "dawn" | "dusk" }) {
+function Bridge({ phase, xAt = 0, lights = true }: { phase: "day" | "night" | "dawn" | "dusk"; xAt?: number; lights?: boolean }) {
   const { position, rotation } = useMemo(() => {
-    const t = findRiverTForX(0);
+    const t = findRiverTForX(xAt);
     const sample = sampleRiverPoint(t);
     // Bridge planks should run perpendicular to the river (i.e. parallel to
     // the path's N-S direction). The bridge's own +Z axis aligns with the
@@ -826,7 +826,7 @@ function Bridge({ phase }: { phase: "day" | "night" | "dawn" | "dusk" }) {
       position: [sample.position.x, 0.06, sample.position.z] as [number, number, number],
       rotation: [0, heading + Math.PI / 2, 0] as [number, number, number],
     };
-  }, []);
+  }, [xAt]);
 
   return (
     <group position={position} rotation={rotation}>
@@ -838,7 +838,9 @@ function Bridge({ phase }: { phase: "day" | "night" | "dawn" | "dusk" }) {
       <Suspense fallback={null}>
         <ArchedBridgeModel />
       </Suspense>
-      <BridgeLights phase={phase} />
+      {/* String lights are a module-singleton InstancedMesh — main bridge
+          only; the wharf bridge gets its own lighting with the S3 district. */}
+      {lights && <BridgeLights phase={phase} />}
     </group>
   );
 }
@@ -2117,6 +2119,7 @@ function Scene({
       <FlowerPickFX />
       <FishCatchFX playerPosRef={playerPosRef} />
       <Bridge phase={todPhase} />
+      <Bridge phase={todPhase} xAt={39.25} lights={false} />
       {/* G2 ambience set (2026-07-07) */}
       <TargetGlow targetRef={glowTargetRef} />
       <NightStars phase={todPhase} />

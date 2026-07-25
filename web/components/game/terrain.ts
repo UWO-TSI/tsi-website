@@ -131,10 +131,18 @@ function riverInfluence(x: number, z: number): number {
 // [axis, axisPos, halfWidth, otherMin, otherMax, falloff]
 // axis "z" = path runs along Z, so x is the cross-axis at axisPos.
 type PathCorridor = { axis: "x" | "z"; pos: number; halfWidth: number; from: number; to: number; falloff: number };
+// S2: the two arched river crossings (walker crest centers).
+export const BRIDGE_CROSSINGS = [
+  { x: 0, zc: 3.25 },
+  { x: 39.25, zc: 3.7 },
+];
+
 const PATH_CORRIDORS: PathCorridor[] = [
   { axis: "x", pos: 0, halfWidth: 1.75, from: -24, to: 27, falloff: 1.5 },   // N-S spine
-  { axis: "z", pos: 10, halfWidth: 1.75, from: -26, to: 26, falloff: 1.5 },  // E-W at z=10
-  { axis: "z", pos: -13, halfWidth: 1.75, from: -17, to: 17, falloff: 1.5 }, // E-W at z=-13
+  { axis: "z", pos: 10, halfWidth: 1.75, from: -34, to: 41, falloff: 1.5 },  // S2 north avenue
+  { axis: "z", pos: -13, halfWidth: 1.75, from: -34, to: 41, falloff: 1.5 }, // S2 south avenue
+  { axis: "x", pos: 39.25, halfWidth: 1.75, from: -11.25, to: 8.25, falloff: 1.5 }, // S2 east leg (carve wins at the crossing)
+  { axis: "x", pos: -31.75, halfWidth: 1.75, from: -26.5, to: -14.75, falloff: 1.5 }, // S2 windmill spur
   // Beach Cove spur (2026-07-14): sand path SE off the spine + wood deck.
   { axis: "z", pos: 23.75, halfWidth: 1.75, from: 1, to: 20, falloff: 1.5 },
   { axis: "x", pos: 18.25, halfWidth: 1.75, from: 25.5, to: 46.9, falloff: 1.5 }, // S1
@@ -304,15 +312,17 @@ export function sampleTerrainHeightFast(x: number, z: number): number {
   const b = h10 + (h11 - h10) * fx;
   const h = a + (b - a) * fz;
 
-  // V2 bridge arch (David 2026-07-25): walkers ride a parabolic crest over
-  // the arched BridgeWood span instead of the old flat 0.12 deck — crest
-  // ≈0.55 at the crossing centerline (z≈3.25), smooth ramps to ground at
-  // the ends. Cheap |x| guard keeps this out of the common case.
-  if (x > -1.6 && x < 1.6) {
-    const dz = (z - 3.25) / 3.3;
-    if (dz > -1 && dz < 1) {
-      const arch = 0.55 * (1 - dz * dz) + 0.02;
-      if (arch > h) return arch;
+  // V2 bridge arch (David 2026-07-25) — S2: parameterized for BOTH river
+  // crossings (main bridge + the wharf east bridge). Walkers ride a
+  // parabolic ≈0.55 crest with smooth ramps at the ends.
+  for (let bi = 0; bi < BRIDGE_CROSSINGS.length; bi++) {
+    const bc = BRIDGE_CROSSINGS[bi];
+    if (x > bc.x - 1.6 && x < bc.x + 1.6) {
+      const dz = (z - bc.zc) / 3.3;
+      if (dz > -1 && dz < 1) {
+        const arch = 0.55 * (1 - dz * dz) + 0.02;
+        if (arch > h) return arch;
+      }
     }
   }
   return h;

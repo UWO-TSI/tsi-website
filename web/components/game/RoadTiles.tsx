@@ -36,8 +36,13 @@ const SCALE = 0.1;
 const RECTS = [
   { x0: -1.75, x1: 1.75, z0: -24, z1: -1.1 },
   { x0: -1.75, x1: 1.75, z0: 5.9, z1: 27 },
-  { x0: -26, x1: 26, z0: 8.25, z1: 11.75 },
-  { x0: -17, x1: 17, z0: -14.75, z1: -11.25 },
+  { x0: -34, x1: 41, z0: 8.25, z1: 11.75 }, // S2: north avenue, shop→house→wharf leg
+  { x0: -34, x1: 41, z0: -14.75, z1: -11.25 }, // S2: south avenue, windmill→plaza→east
+  // S2 east leg: the wharf connector, split at the river (east bridge owns it)
+  { x0: 37.5, x1: 41, z0: -11.25, z1: 0.4 },
+  { x0: 37.5, x1: 41, z0: 7.0, z1: 8.25 },
+  // S2 windmill spur off the south avenue
+  { x0: -33.5, x1: -30, z0: -26.5, z1: -14.75 },
   // Beach Cove spur: east off the south spine, then south to the shore.
   { x0: 1.2, x1: 20, z0: 22, z1: 25.5 },
   { x0: 16.5, x1: 20, z0: 25.5, z1: 46.9 }, // S1: spur reaches the new sand line
@@ -196,8 +201,8 @@ function getZoneTexture(zone: Zone): THREE.CanvasTexture {
 }
 
 const PLAZA = { x0: -5.4, x1: 5.4, z0: -16.6, z1: -9.4 };
-const SAND_RECTS = [RECTS[4], RECTS[5]];
-const WOOD_PAD = RECTS[6];
+const SAND_RECTS = [RECTS[7], RECTS[8]]; // S2: indices shifted by the 3 new leg rects
+const WOOD_PAD = RECTS[9];
 const inRect = (r: { x0: number; x1: number; z0: number; z1: number }, x: number, z: number) =>
   x >= r.x0 && x <= r.x1 && z >= r.z0 && z <= r.z1;
 
