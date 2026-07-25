@@ -72,6 +72,10 @@ export const BUILDING_FOOTPRINTS: Array<{ x: number; z: number; radius: number }
   { x: 15, z: -13, radius: 1.4 },   // Leaderboard
   { x: -31.5, z: -18, radius: 3 },  // ambient house (red chalet)
   { x: 31.5, z: -19, radius: 3 },   // ambient house (yellow chalet)
+  // S7 Reedmarsh ponds — flatten slabs so the water discs sit clean
+  // (S7Pockets.tsx PONDS mirrors these centers).
+  { x: -43, z: 9, radius: 2.5 },
+  { x: -38.3, z: 11.2, radius: 1.9 },
 ];
 
 // ─── River valley (ACNH revamp 2026-07) ─────────────────────────

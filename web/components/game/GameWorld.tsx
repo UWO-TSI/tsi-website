@@ -66,6 +66,7 @@ import ShopInterior from "./ShopInterior";
 import OracleInterior from "./OracleInterior";
 import IslaChica from "./IslaChica";
 import TempleRise from "./TempleRise";
+import S7Pockets from "./S7Pockets";
 import WharfShackInterior from "./WharfShackInterior";
 import type { InteriorStation } from "./interiorShared";
 import RoadTiles from "./RoadTiles";
@@ -1922,7 +1923,7 @@ function Scene({
     // G5: fishing spots on the riverbank (radius 2.4). Beach Cove loop:
     // plus two saltwater casts — the wood deck edge and the cove sand.
     // ACNH revamp: spots hug the carved channel banks (~1.2u off center).
-    const FISHING_SPOTS: [number, number][] = [[-12, 6.2], [-3, 2.6], [5, 5.4], [16, 3.6], [18.3, 51.2], [15.7, 56.3], [44.2, 4.4], [22, 5.4], [-26, 76.5]]; // S1 sea spots + S3 wharf pier tip + river v3 bend pool + S5 islet shore
+    const FISHING_SPOTS: [number, number][] = [[-12, 6.2], [-3, 2.6], [5, 5.4], [16, 3.6], [18.3, 51.2], [15.7, 56.3], [44.2, 4.4], [22, 5.4], [-26, 76.5], [33.5, 51], [40, 47.5], [45.5, 44.5]]; // S1 sea + S3 pier + v3 bend pool + S5 islet + S7 Flats ×3
     for (let i = 0; i < FISHING_SPOTS.length; i++) {
       const [sx, sz] = FISHING_SPOTS[i];
       const d = Math.hypot(sx - position.x, sz - position.z);
@@ -2130,6 +2131,7 @@ function Scene({
       <BeachCove />
       <IslaChica />
       <TempleRise />
+      <S7Pockets />
       <BeachCrabs />
       {todPhase !== "night" && <PlazaSparrows playerPosRef={playerPosRef} />}
       <PlazaHedges playerPosRef={playerPosRef} />

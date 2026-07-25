@@ -48,6 +48,8 @@ const DISCOVER_ZONES: { key: string; label: string; x: number; z: number; r: num
   { key: "cove", label: "Beach Cove", x: 16, z: 53.9, r: 8 },
   { key: "lighthouse", label: "The Lighthouse", x: 38.2, z: -37.1, r: 7 },
   { key: "islet", label: "Isla Chica", x: -24, z: 72, r: 9 },
+  { key: "flats", label: "The Flats", x: 38.5, z: 46.5, r: 9 },
+  { key: "reedmarsh", label: "The Reedmarsh", x: -41.5, z: 9.5, r: 7 },
   { key: "windmill", label: "The Windmill", x: -32, z: -26, r: 9 },
   { key: "oracle", label: "Oracle Temple", x: 0, z: 30, r: 7 },
 ];
@@ -128,6 +130,11 @@ export default function MiniMap({ playerPosRef }: { playerPosRef: React.MutableR
         {BUILDINGS.map((b, i) => (
           <rect key={i} x={sx(b.x) - b.w / 2} y={sy(b.z) - b.h / 2} width={b.w} height={b.h} rx="1" fill={b.c} stroke="rgba(0,0,0,0.25)" strokeWidth="0.4" />
         ))}
+        {/* S7: Reedmarsh ponds + Flats tide pools */}
+        <circle cx={-43} cy={-9} r={1.9} fill="#7FB5C9" />
+        <circle cx={-38.3} cy={-11.2} r={1.4} fill="#7FB5C9" />
+        <circle cx={37.5} cy={-50.5} r={1.6} fill="#8FC4D4" />
+        <circle cx={42.5} cy={-46.5} r={1.2} fill="#8FC4D4" />
         {/* S6: Temple Rise plateau under the Oracle */}
         <ellipse cx={0} cy={-31.8} rx={8.2} ry={7.8} fill="#74B25E" stroke="#5E9E4E" strokeWidth="0.9" />
         {/* S5: Isla Chica (boat islet, SSW — map north is -y) */}

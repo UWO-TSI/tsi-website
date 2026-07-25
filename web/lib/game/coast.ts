@@ -80,7 +80,10 @@ export function coastDist(x: number, z: number): number {
  */
 export function beachWidthShift(x: number, z: number): number {
   const a = Math.atan2(z, x);
-  return 1.1 * Math.sin(4 * a + 0.9) + 0.7 * Math.sin(6 * a + 2.6);
+  // S7 The Flats: the SE bulge (θ≈0.94) gets a broad tidal-sand shelf —
+  // the sand line pulls ~5 legacy units inland across the walkable shelf.
+  const flats = 5 * Math.exp(-(((a - 0.94) / 0.22) ** 2));
+  return 1.1 * Math.sin(4 * a + 0.9) + 0.7 * Math.sin(6 * a + 2.6) + flats;
 }
 
 /**
