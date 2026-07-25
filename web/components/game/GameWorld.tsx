@@ -76,6 +76,7 @@ import RiverBanks from "./RiverBanks";
 import RiverBankWalls from "./RiverBankWalls";
 import FishShadows from "./FishShadows";
 import BeachCrabs from "./BeachCrabs";
+import PlazaSparrows from "./PlazaSparrows";
 import SeasonalProps from "./SeasonalProps";
 import Landmarks from "./Landmarks";
 import { getActiveCritters } from "@/lib/game/critterStore";
@@ -2026,6 +2027,7 @@ function Scene({
       <ShoreLife />
       <BeachCove />
       <BeachCrabs />
+      {todPhase !== "night" && <PlazaSparrows playerPosRef={playerPosRef} />}
       <SandFootprints playerPosRef={playerPosRef} />
       <SeasonalProps />
       <Landmarks />

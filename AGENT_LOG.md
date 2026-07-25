@@ -108,6 +108,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-24 — Loop wake 34: plaza sparrows
+
+Three sparrows now live on the brick plaza (dawn/day/dusk; asleep at night) — pecking head-dips, short hops to new spots, and a frantic climbing flee-burst when the player walks within 2.6u, returning to their corner anchors 8-16s after the coast is clear. Procedural 4-mesh birds, corner anchors clear of the spawn point, one useFrame over all three (refs only). The ACNH plaza-pigeon read completes the brick-plaza arc (ground → footsteps → map → life). Verified: idle peck visible by the fountain, approach-flee path exercised, zero pageerrors. Gates: tsc clean, both files lint-clean, 32/32.
+
 ### 2026-07-24 — Loop wake 33: minimap ground pads
 
 The minimap now shows the brick plaza (terracotta rect at the crossing) and the beach wood deck (timber rect at the cove) — the map stays honest with the new ground. World rects lifted from RoadTiles, drawn under the buildings. Verified on the live dashboard minimap, zero pageerrors. Gates: tsc clean, MiniMap lint-clean, 32/32.
