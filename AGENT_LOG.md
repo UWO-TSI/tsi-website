@@ -108,6 +108,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-24 — Loop wake 35: sea-catch gull swoop
+
+Landing a SEA catch now calls the nearest gull down from its patrol — it banks into a fast low circle over the catch spot (harder flap at low altitude), then climbs back to its lobe over ~4s. The tsi:fish-caught event gained zone + spot coords (world-reaction channel; FishCatchFX unaffected); Gulls parent picks the closest anchor, one guest of honor at a time, river catches ignored. Exercised via synthetic cove + NE-sweep catches with an interleaved river catch: full swoop cycles, zero pageerrors. Gates: tsc clean, both files lint-clean, 32/32.
+
 ### 2026-07-24 — Loop wake 34: plaza sparrows
 
 Three sparrows now live on the brick plaza (dawn/day/dusk; asleep at night) — pecking head-dips, short hops to new spots, and a frantic climbing flee-burst when the player walks within 2.6u, returning to their corner anchors 8-16s after the coast is clear. Procedural 4-mesh birds, corner anchors clear of the spawn point, one useFrame over all three (refs only). The ACNH plaza-pigeon read completes the brick-plaza arc (ground → footsteps → map → life). Verified: idle peck visible by the fountain, approach-flee path exercised, zero pageerrors. Gates: tsc clean, both files lint-clean, 32/32.

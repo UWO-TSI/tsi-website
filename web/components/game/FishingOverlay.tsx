@@ -203,7 +203,12 @@ export default function FishingOverlay() {
         setWasNew(isNew);
         setCaughtSize(rollSize(fish.sizeCm));
         // Signals the "catch a fish" onboarding quest (auto-complete).
-        window.dispatchEvent(new CustomEvent("tsi:fish-caught", { detail: { key: fish.key, model: fish.model, raw: fish.raw } }));
+        // zone + spot coords ride along for world reactions (gull swoop).
+        window.dispatchEvent(
+          new CustomEvent("tsi:fish-caught", {
+            detail: { key: fish.key, model: fish.model, raw: fish.raw, zone: fish.zone ?? "river", x: spotRef.current?.x, z: spotRef.current?.z },
+          })
+        );
         collect(fish.key);
         if (isNew) {
           // Blind-box ceremony (David 2026-07-23): first catches get the
