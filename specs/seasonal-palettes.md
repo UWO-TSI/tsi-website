@@ -40,9 +40,15 @@
 
 ## Open follow-ups
 
-- Launch-batch migration seeding the five rows (join it with 024).
+- ~~Launch-batch migration seeding the five rows~~ → **drafted**:
+  `web/supabase/migrations/025_seasonal_seed.sql` (see specs/launch-batch.md
+  for the apply checklist).
 - Scheduler: auto-activate by `scheduled_start/end` (currently manual
   `active` flag; a tiny cron or a `WHERE now() BETWEEN` in
-  fetchActivePalette would close it).
+  fetchActivePalette would close it). Not a launch blocker.
 - David's pass on the four seasonal hexsets in `/lab/world` (buttons:
-  Default / Halloween / Autumn Harvest / Winter Frost / Spring Sakura).
+  default / halloween / autumn / winter / spring).
+- Seasonal particles (wake 65) ride the same palette: snow/leaves/petals
+  resolve by slug with a value fallback — if an admin custom-edits the
+  grass/accent hexes away from the seeded values AND uses a nonstandard
+  slug, particles won't fire (slugs from the seeded set always work).
