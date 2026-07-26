@@ -108,6 +108,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-25 — Loop wake 69: every room has a person now
+
+Wake 68's keeper generalized into `InteriorKeeper` (interiorShared): position/rotY/watch-point/colors + four hat variants — **straw** (Wharf fisherman), **cap** (Shop keeper, market-green apron behind the register), **bun** (HQ front-desk receptionist, navy blazer), **hood** (Oracle altar attendant, robe purple). All share the idle bob + damped lean-toward-customer; playerPosRef threads through cleanly (first draft used a module-var hack — replaced before commit). Wharf swapped to the shared component, net-negative LOC. All four rooms verified in the interior bench — the shop keeper peeking over the register and the hooded figure under the floating crystal both read instantly. Principle #2 satisfied indoors: no empty rooms. Gates: tsc clean, 74/52, 32/32. Hourly holding pattern continues.
+
 ### 2026-07-25 — Loop wake 68: the Shack gets its keeper (hourly cadence)
 
 First staffed interior: a procedural fisherman behind the Wharf counter — straw hat (brim + crown), apron over a warm shirt, arms resting on the counter, gentle idle bob, and a damped friendly LEAN toward the player when they step into counter range. No chat (the counter action stays the sell sheet); pure presence per principle #2. Verified in the interior bench — he reads instantly under the lantern. Pattern note: interiors had NO npc pattern before this; WharfKeeper is the template if David wants the Shop/HQ/Oracle staffed the same way pre-avatar-system. Gates: tsc clean, 74/52, 32/32. Loop cadence is hourly now (wake 67 note) — all major tracks hold for David.
