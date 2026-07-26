@@ -288,12 +288,25 @@ function Birds({ count = 2 }: { count?: number }) {
 // the new coastline. Lower and quicker than the lazy inland birds, with
 // a slow bobbing altitude so they read as riding the sea breeze.
 const GULL_ANCHORS: [number, number][] = [
-  [58, -8],   // east lobe, off the lighthouse
-  [20, 58],   // over the cove swim border
-  [-56, 14],  // west bay mouth
+  [68, -9.4],   // east lobe, off the lighthouse (S1 x1.173)
+  [23.5, 68],   // over the cove swim border
+  [-65.7, 16.4],  // west bay mouth
+  [45, -2],       // S4 wharf — over the pier and the Shack (wake 62)
 ];
 
-function Gull({ anchor, seed }: { anchor: [number, number]; seed: number }) {
+// Sea-catch swoop (loop wake 35): a sea-zone catch calls the nearest gull
+// down for a low celebratory pass over the spot before it climbs back to
+// its patrol. One shared record set by the Gulls parent; the owning gull
+// blends its orbit toward a fast low circle around the catch point.
+interface GullSwoop {
+  idx: number;
+  x: number;
+  z: number;
+  at: number; // performance.now ms
+}
+const SWOOP_MS = 4200;
+
+function Gull({ anchor, seed, idx, swoopRef }: { anchor: [number, number]; seed: number; idx: number; swoopRef: React.MutableRefObject<GullSwoop | null> }) {
   const ref = useRef<THREE.Group>(null);
   const { phase, speed, radius, alt } = useMemo(() => {
     const rng = seededRandom(seed * 409 + 7);
@@ -309,11 +322,29 @@ function Gull({ anchor, seed }: { anchor: [number, number]; seed: number }) {
     if (!ref.current) return;
     const t = state.clock.elapsedTime;
     const a = t * speed + phase;
-    ref.current.position.set(
-      anchor[0] + Math.cos(a) * radius,
-      alt + Math.sin(t * 0.35 + phase) * 1.1,
-      anchor[1] + Math.sin(a) * radius
-    );
+    const ox = anchor[0] + Math.cos(a) * radius;
+    const oy = alt + Math.sin(t * 0.35 + phase) * 1.1;
+    const oz = anchor[1] + Math.sin(a) * radius;
+
+    const sw = swoopRef.current;
+    if (sw && sw.idx === idx) {
+      const p = (performance.now() - sw.at) / SWOOP_MS;
+      if (p >= 1) {
+        swoopRef.current = null;
+      } else {
+        // fast low circle over the catch point; blend in and out of orbit
+        const sa = t * 1.6 + phase;
+        const sx = sw.x + Math.cos(sa) * 1.9;
+        const sy = 2.4 + Math.sin(t * 2.2) * 0.25;
+        const sz = sw.z + Math.sin(sa) * 1.9;
+        const w = p < 0.25 ? p / 0.25 : p > 0.72 ? (1 - p) / 0.28 : 1;
+        ref.current.position.set(ox + (sx - ox) * w, oy + (sy - oy) * w, oz + (sz - oz) * w);
+        ref.current.rotation.y = w > 0.5 ? -sa + Math.PI / 2 : -a + Math.PI / 2;
+        ref.current.rotation.z = Math.sin(t * (6.5 + w * 6)) * (0.35 + w * 0.2); // harder flap low
+        return;
+      }
+    }
+    ref.current.position.set(ox, oy, oz);
     ref.current.rotation.y = -a + Math.PI / 2;
     ref.current.rotation.z = Math.sin(t * 6.5 + phase) * 0.35;
   });
@@ -333,10 +364,30 @@ function Gull({ anchor, seed }: { anchor: [number, number]; seed: number }) {
 }
 
 function Gulls() {
+  const swoopRef = useRef<GullSwoop | null>(null);
+  useEffect(() => {
+    const onCatch = (e: Event) => {
+      const d = (e as CustomEvent).detail as { zone?: string; x?: number; z?: number } | undefined;
+      if (d?.zone !== "sea" || typeof d.x !== "number" || typeof d.z !== "number") return;
+      if (swoopRef.current) return; // one guest of honor at a time
+      let best = 0;
+      let bestD = Infinity;
+      GULL_ANCHORS.forEach(([ax, az], i) => {
+        const dist = Math.hypot(ax - d.x!, az - d.z!);
+        if (dist < bestD) {
+          bestD = dist;
+          best = i;
+        }
+      });
+      swoopRef.current = { idx: best, x: d.x, z: d.z, at: performance.now() };
+    };
+    window.addEventListener("tsi:fish-caught", onCatch);
+    return () => window.removeEventListener("tsi:fish-caught", onCatch);
+  }, []);
   return (
     <group>
       {GULL_ANCHORS.map((a, i) => (
-        <Gull key={i} anchor={a} seed={i + 3} />
+        <Gull key={i} anchor={a} seed={i + 3} idx={i} swoopRef={swoopRef} />
       ))}
     </group>
   );

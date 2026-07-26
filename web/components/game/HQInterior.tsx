@@ -11,6 +11,7 @@ import { useThree, type ThreeEvent } from "@react-three/fiber";
 import * as THREE from "three";
 import { AudioManager } from "@/lib/game/audio";
 import {
+  InteriorKeeper,
   InteriorPlayer, Piece, applyInteriorBackdrop, nearestStation, preloadPieces,
   type InteriorStation, type RoomBounds,
 } from "./interiorShared";
@@ -174,6 +175,8 @@ export default function HQInterior({
         </mesh>
       ))}
 
+      {/* wake 69: front-desk receptionist (navy blazer, hair bun) */}
+      <InteriorKeeper position={[-6.3, 0, -2.4]} rotY={Math.PI / 2} watch={[-5.2, -2.4]} colors={{ apron: "#2E3E5C", shirt: "#F0E6D2" }} hat="bun" playerPosRef={playerPosRef} />
       <InteriorPlayer frozen={frozen} bounds={BOUNDS} playerPosRef={playerPosRef} onMove={handleMove} />
     </group>
   );

@@ -21,7 +21,13 @@
 
 All 13 deliverables shipped, QA Wave 14 PASS (commit `001eea8`), zero lint regressions. Sprint log preserved in the table below.
 
-## Current Sprint — Admin Tooling CRUD (started 2026-05-27)
+## Current — Two Tracks (updated 2026-07-22)
+
+**World track (David's standing loop, active since 2026-07-14):** find visual inconsistencies + game-feel ideas, implement, screenshot-QA, repeat. Queue lives in the build entries below + `specs/asset-flags.md`. Next up: cliff system (river-kit archive `7143205` is the prep), lighting-chemistry final verdict, brick plaza, plaza stalls, seasonal variants.
+
+**Launch track (new, spec: `specs/sprint-2026-08-launch-track.md`):** get real members in for the August exec beta → Sept fall-onboarding launch (David's anchor, 2026-07-22). L1 migrations apply + verify, L2 deploy safety ruling, L3 content seeding as CMS dry-run, L4 beta cohort onboarding, L5 feature-loop prod verification, L6 mobile LITE presence. Blockers are David rulings: migration hold, deploy gate, cohort + date.
+
+## Previous Sprint — Admin Tooling CRUD ✅ CLOSED (Wave 15)
 
 Spec: `specs/sprint-2026-06-admin-tooling.md`. Builds CRUD forms on top of the content pipeline (B3 API routes + B4 listing pages). 6 deliverables (C1-C6), ~4 week window.
 
@@ -101,6 +107,446 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 ---
 
 ## build
+
+### 2026-07-25 — Loop wake 71: collection-book fish filters
+
+The Fish group grew to ~78 species (wake 22's full-dump import) — one flat grid was a wall. Added filter chips on the Fish group only: **All / 🏞 River / 🌊 Sea / ✓ Caught** (fish items now carry their zone through the catalog map; other groups untouched). Verified headless with seeded catches: Sea shows Horse Mackerel + hides Stringfish, Caught shows exactly the three seeded species. Gates: tsc clean, 74/52, 32/32. Hourly holding pattern continues.
+
+### 2026-07-25 — Loop wake 70: bible drift banner caught up (docs wake)
+
+STUDENT_SYSTEM_BIBLE's CURRENT VISION DELTAS banner was 12 days stale — it predated the entire wakes-46-69 era. Updated: the **§7 economy row now carries the v2 doctrine** (Gems 💎 = money tier on legacy tc_* columns, TC 🪙 = play currency, never converting — the old row's "internal-only rate" framing was obsolete), a new additions table covering geo v2 (all S-items + river v3), 91-species fishing with the vacant Sea King tier, draft migrations 024/025, the Wharf Shack + gear shelf, staffed interiors, the end-to-end seasonal system, the recolor pipeline, discovery zones, and the QA hooks; canonical-sources list gains the five new specs. Onboarding agents now land on accurate ground. Gates: tsc clean, 32/32 (docs-only change). Hourly holding pattern continues — all major tracks still gate on David.
+
+### 2026-07-25 — Loop wake 69: every room has a person now
+
+Wake 68's keeper generalized into `InteriorKeeper` (interiorShared): position/rotY/watch-point/colors + four hat variants — **straw** (Wharf fisherman), **cap** (Shop keeper, market-green apron behind the register), **bun** (HQ front-desk receptionist, navy blazer), **hood** (Oracle altar attendant, robe purple). All share the idle bob + damped lean-toward-customer; playerPosRef threads through cleanly (first draft used a module-var hack — replaced before commit). Wharf swapped to the shared component, net-negative LOC. All four rooms verified in the interior bench — the shop keeper peeking over the register and the hooded figure under the floating crystal both read instantly. Principle #2 satisfied indoors: no empty rooms. Gates: tsc clean, 74/52, 32/32. Hourly holding pattern continues.
+
+### 2026-07-25 — Loop wake 68: the Shack gets its keeper (hourly cadence)
+
+First staffed interior: a procedural fisherman behind the Wharf counter — straw hat (brim + crown), apron over a warm shirt, arms resting on the counter, gentle idle bob, and a damped friendly LEAN toward the player when they step into counter range. No chat (the counter action stays the sell sheet); pure presence per principle #2. Verified in the interior bench — he reads instantly under the lantern. Pattern note: interiors had NO npc pattern before this; WharfKeeper is the template if David wants the Shop/HQ/Oracle staffed the same way pre-avatar-system. Gates: tsc clean, 74/52, 32/32. Loop cadence is hourly now (wake 67 note) — all major tracks hold for David.
+
+### 2026-07-25 — Loop wake 67: shoreline seats + palm breeze
+
+Two driftwood-log seats join the BENCHES sit pipeline: one on **The Flats** between the tide pools (36, 46.5), one mid-**Isla Chica** (−26.5, 70.5) — both verified headless (E-Sit prompt + player seated in the screenshots; the islet frame with the log, swaying palms, and the foam ring is a postcard). **Palm sway**: IslaChica's three palms wrapped in phased SwayGroups (two-frequency sine roll around the trunk base, ±0.022 rad — alive, not metronomic). Gates: tsc clean, 74/52, 32/32. Backlog note: the self-directed queue is thinning — remaining meaty work (furnishing, HQ build-out, Sea King, merge) all gates on David.
+
+### 2026-07-25 — Loop wake 66: launch batch consolidated into one checklist
+
+**Draft migration `025_seasonal_seed.sql`** (NOT applied, pairs with 024): upserts the five seasonal_palettes rows by slug WITHOUT touching `active` (an admin's current season survives re-runs), then activates `default` only when no row is active (fresh DBs — honors the single-active partial index from 014). Seed values verified **byte-identical** to DEFAULT_PALETTES programmatically (regex-extract both sides, compare dicts). **`specs/launch-batch.md`**: the single top-to-bottom beta-day list — apply 024+025, authed smoke (sell decrements + credits atomically, over-sell guard, gear buy/re-buy/poor-wallet, column-REVOKE spot-check), the seasonal flip test (activate autumn → sky/grass/particles/deco all swap within an SWR revalidate), standing rules (no TC→Gems path, prod auto-deploys from main, next migration slot 026). seasonal-palettes.md follow-ups updated (seed = drafted; scheduler = post-launch). Gates: tsc clean, 74/52, 32/32, dashboard 200. Everything a launch needs is now drafted, verified, and in one place.
+
+### 2026-07-25 — Loop wake 65: seasonal particles — weather that matches the season
+
+One `SeasonalParticles` InstancedMesh (130 quads, player-following box, module-scope scratch objects — no per-frame allocs) with three looks: **snowfall** (small white, slow, gentle sway) for winter, **leaf-fall** (orange, spinning, drifty) for autumn, **petal-drift** (sakura pink, fluttery) for spring. Mode resolves from the active palette by slug regex with a VALUE fallback (grass/accent hexes) — the same lesson as wake 64: /lab/world palette previews swap colors but keep the resolved slug, so slug-only detection would never fire in previews. All three verified ground-level via the lab palette buttons + weather remount: snow over the frost village, leaves through the golden one, petals through fresh spring — each scene reads cohesively ACNH. Default/live palette = zero particles, zero cost (component returns null). Gates: tsc clean, 74/52, 32/32. The seasonal system is now palette + terrain + particles end-to-end; an admin row flip changes all three.
+
+### 2026-07-25 — Loop wake 64: seasonal palettes — the island changes with the year
+
+Investigation first: the palette SYSTEM already existed (seasonal_palettes DB table with active flag + scheduled windows, useActivePalette SWR + admin draft preview, LabPanel dev override) — but only sky/fog + shop deco consumed it; the grass slot went nowhere. Shipped: **(1)** three seasonal palettes as data in DEFAULT_PALETTES (Autumn Harvest Sep-Nov golden/pumpkin, Winter Frost Dec-Feb snow/holly, Spring Sakura Mar-May fresh/pink) — they auto-appear as /lab/world preview buttons; **(2)** the missing wire: terrain vertex colors now lerp toward the active palette's grass (0.62) at build time — beach/soil bands still win, and the guard compares grass VALUE against the default (not slug — the lab preview override swaps palette while keeping the resolved slug, which silently blocked a slug guard on the first attempt) so the shipped look stays byte-identical on default; **(3)** specs/seasonal-palettes.md documents the no-code admin flow (activate a table row → SWR revalidation, no deploy) + follow-ups (seed migration for the launch batch, window-based auto-scheduler). Verified cold-load: autumn turns the whole meadow golden-olive, winter goes frost-pale — both read wonderfully ACNH. Gates: tsc clean, 74/52, 32/32. Principle #8's monthly cadence now has real teeth.
+
+### 2026-07-25 — Loop wake 63: ambient batch 2 — night beats + the crab
+
+**Temple door braziers**: stone bowl pair flanking the Oracle entrance on the plateau — cone flames + point lights that flicker-breathe at dusk (1.8) and night (3.2), asleep by day; verified via the /lab/world clock scrub at 22:00 (the LabPanel's Time override is drivable headless: click the checkbox, set the range with the native value setter + input event) — the warm pools on the stair landing are exactly the cozy beat. **Bug fixed en route**: NightWindows' oracle glow planes were still at pre-plateau height (y 1.85) — floating inside the hill since S6 lifted the temple 2.3; now y 4.15. **Islet crab**: procedural red crab side-stepping arcs of Isla Chica's sand ring (skitter bursts + freeze pauses, faces along the radius while walking sideways — real crab energy), verified in the islet close-up. Also noted while in the LabPanel: a palette system (live/default/halloween) already exists — seasonal palette groundwork is partially built. Gates: tsc clean, 74/52, 32/32. Branch stays merge-ready.
+
+### 2026-07-25 — Loop wake 62: ambient batch — the quiet pockets get life
+
+**Reedmarsh dragonflies**: three teal darts (capsule body + shimmer wing planes) flying figure-8s around the pond rims with a nervous tremble, daylight-gated via a new `phase` prop on S7Pockets — verified visible in the low shot, and the marsh reads lovely with cattails around them. **Flats sandpipers**: PlazaSparrows generalized (optional `anchors`/`bounds`/`colors` props, plaza defaults untouched) — a second instance skitters sandy-colored birds along the tidal line with the same peck-hop-flee brain. **Wharf gull**: fourth GULL_ANCHORS entry puts a circling gull over the pier + Shack (same proven Gull component as lighthouse/cove/bay; camera-fishing for a moving bird wasn't worth more shots). Bridge night lamps checked — string-light emissives already phase-driven, no work needed. Gates: tsc clean, 74/52, 32/32. Branch stays merge-ready (Wave 30); next: another ambient batch or David rulings.
+
+### 2026-07-25 — Loop wake 61: QA Wave 30 mini-sweep — READY for David's eyeball
+
+Re-baselined everything after 15 wakes of change (Wave 29 predates geo S1-S7/river v3/economy/recolor). **All green, zero breaks**: build ✓ 110 pages (+4 since W29); 74/52 + 32/32; 11 routes + 4 APIs 200 env-less; 6/6 sheet deep-links (incl wharfsell), 4/4 interiors (incl wharf), fishing prompt+cast at the bend pool, boat-trip prompt+toast, Reedmarsh discovery ping (last unverified one — fires), zero pageerrors across the whole sweep. One false alarm: first fishing check spawned at the 2.4-radius edge — re-spawned in range, clean. Fresh screenshot pack (7 hero aerials + 4 interiors + ground shots) in the job dir; full detail in specs/qa.md **Wave 30**. Note recorded: env-less builds fail at /admin/recruit static export (needs Supabase env — not a regression). **The branch is ready for David's in-game playtest → merge**; migration 024 stays draft for the launch batch. Next: ambient polish batches while holding for rulings.
+
+### 2026-07-25 — Loop wake 60: polish batch ×4
+
+**Islet shore treatment**: one `min()` in the ocean fragment shader folds Isla Chica (circle r 7.4 at −24,72) into the same shoreline distance field as the wobbled mainland — foam lap, shallow-water ramp, AND caustic fade all ring the islet automatically, pixel-matched to the mainland treatment. **Temple Rise**: cliff-slab band tightened (radial jitter 0.35→0.18, slabs 1.35-1.8 wide) — the ring reads near-continuous stone with the stair notch clean. **The Flats**: new `cFlats` cream (#F2E4BC) lerp where the beach-width gaussian dominates (shift>2 → up to 55% at full sandT) — the shelf finally reads SAND under the grass texture instead of olive wash. **Minimap**: stair tick on the Temple Rise ellipse. All verified by aerials. Gates: tsc clean, 74/52, 32/32. Next: QA mini-sweep prep for David's Wave 29 merge eyeball.
+
+### 2026-07-25 — Loop wake 59: furniture-recolor pipeline (David's furnishing prerequisite)
+
+Tints are **data, not baked GLBs** (no gltf-transform on this machine, and binaries would fight the monthly content cadence anyway): `lib/game/furniturePalettes.ts` holds 7 named presets + `PIECE_TINTS` per-piece rulings; interiorShared's `Piece` grew a `tint` prop (undefined = auto-apply ruling, null = force base) with **per-instance material cloning** — scene.clone(true) shares materials with the GLTF cache, so in-place mutation would have repainted every instance everywhere. New `/lab/furniture` bench: 24-piece picker, preset row, ad-hoc `?tint=slot:RRGGBB`, **material-slot inspector** (lists the GLB's material names + current colors — David rules palettes without ever reading a GLB), base-vs-tinted side-by-side stages. Physics note discovered + documented: tints MULTIPLY over textured pieces (light hexes or hands-off) but recolor flat clay pieces directly (sage study-chair = the reference). Workflow documented in specs/collab-design-track.md §3; Wharf barrels carry the demo ruling. Verified: bench default/preset/custom shots + wharf room auto-applies. Gates: tsc clean, 74/52, 32/32. Pipeline unblocks room furnishing — now holding for David's HQ floor-plan ruling + furniture shortlist before placing anything.
+
+### 2026-07-25 — Loop wake 58: E4 — economy hardening + the gear shelf
+
+**Migration 024 (still DRAFT, unapplied — extended in place)**: `fish_prices` reference table seeded with all **91** keys/rarities generated from the FISH table (legendary counts 7 — matches David's tight rerank; sea king vacant); `sell_catches(key, qty)` SECURITY DEFINER RPC — row-locked atomic decrement of member_collections + coin credit, price resolved server-side so clients can never name one; `profiles.gear` JSONB (column-level REVOKE like coins) + `gear_prices` + `buy_gear(item)` (debit + append atomically, rejects owned/insufficient). **Routes**: `/api/sell` and `/api/gear` (GET mirror-fallback null, POST → RPC, 503 pre-migration). **Client**: `spendCoins()` in coins.ts (local-only debit — server debits live inside the RPCs so no double-charge), `lib/game/gear.ts` (3-item catalog: Cedar Rod 350 / Lucky Bobber 600 / Glass Rod 1200, local-first buyGear), WharfSellSheet grew the **Gear shelf** section + every sale now fires `/api/sell` alongside the local path. Verified headless: poor-toast at 100 coins, sell Stringfish → 700, buy Cedar → exactly 350 + OWNED chip + persistence across reload, both API calls observed firing, env-less endpoints degrade (401 / gear:null). Gates: tsc clean, 74/52, 32/32. Economy v2 E1-E4 complete. Next: furniture-recolor pipeline.
+
+### 2026-07-25 — Loop wake 57: S7 — The Reedmarsh + The Flats
+
+**The Reedmarsh** (west river run south bank, ~x −47..−36): two shallow ponds on new flatten slabs (BUILDING_FOOTPRINTS entries), thin mud lips, ringed by stretched reed tufts + procedural cattails (stem + brown capsule head — no cattail GLB exists, and they read instantly), tall meadow grass via the RiverBanks tuft-instancing trick, stump + rock. First cut had chocolate-donut mud rings crowding the shop district — shrunk, lightened, moved 3u west. **The Flats** (SE coast bulge past the cove): David's major sand fishery — a new gaussian in `beachWidthShift` (θ≈0.94, +5 legacy units) pulls the sand line inland across the whole walkable shelf (minimap grass boundary follows automatically since it derives from the same fn); two tide pools tilted to the local beach slope via ground-normal quaternions (flat discs knifed into the sand on the first pass — half-moon bug), wet-sand halos, shell + sea-star scatter, THREE new sea cast spots (checked each rolls the sea zone: coastDist > 47 after wobble), "Discovered: The Flats!" ping verified firing headless. Both pockets on the minimap (pond/pool dots + discovery zones). All S-items of geo master plan v2 are now DONE (S1-S7). Gates: tsc clean, 74/52, 32/32. Next: E4 server-side atomic sale + gear shop.
+
+### 2026-07-25 — Loop wake 56: S6 Temple Rise — the Oracle is ON the hill
+
+**terrain.ts**: new highest-priority `templeRiseHeight` stage — flat 2.3u plateau (r 6.6) under the temple, steep 1.7u blend the rock band hides, and a smooth stair ramp notched into the north face joining the plaza spine; the old oracle BUILDING_FOOTPRINTS entry retired (the rise owns that ground). Temple rides up automatically (Building y = terrain sample). **TempleRise.tsx**: one InstancedMesh of ~48 faceted stone slabs ringing the plateau edge (seeded jitter in radius/rotation/height, gap at the stair notch), 8 chunky stone steps tracking the ramp height, 4 oversized dump rocks anchoring the stair mouth + back face. Oracle interior exit now spawns on the plateau landing (0, 29.4) instead of stair-bottom. Minimap gets the plateau ellipse. Caught my own silent no-op: the `<TempleRise />` insert first missed on indentation — always assert replacements landed. Verified: aerial (ring + stairs + notch read clean), 3/4 approach shot (stairs climb between rock walls — the money view from the plaza), player walk-up over ramp+plateau headless. Gates: tsc clean, 74/52, 32/32. Next: S7 wetland/meadow + The Flats sand fishery.
+
+### 2026-07-25 — Loop wake 55: S5 Isla Chica — the boat islet is real
+
+**IslaChica.tsx**: a self-contained islet mesh off the SSW coast (center −24,72 — outside the baked terrain grid, so the walk surface sits flush at y≈0 with zero terrain changes): sand skirt diving under the Ocean plane, off-center grass pad, 3 palms, rock pair, shells, plank landing, and the rowboat pair (boat.glb is a 20×39u model — scale 0.06 reads as a village rowboat; first render at 1.0 was a ferry squatting on the whole islet). **Walkability**: islet halo in `clampToCoast` (coast.ts) — points near the islet clamp to its rim instead of being dragged to the mainland. **Travel**: BOAT_TRIPS exterior stations reuse the interior-station pipeline (E → `boat:x,z` action → fade + Scene remount via a new `key={worldSpawn}`); mainland put-in gets a sand apron (the shader's sand band starts past the walk clamp at that angle). Discovery ping ("Discovered: Isla Chica!" — verified firing), minimap blob (viewBox grew to −80), islet sea cast spot. **QA hooks hardened**: new `?spawnat=x,z` dev param; found+fixed a real precedence bug (spawnOverride beat in-session worldSpawn — every boat/interior exit would have teleported QA sessions back to the param spot); headless key events must be dispatched via `window.dispatchEvent(new KeyboardEvent(...))` — Playwright's keyboard.press never reaches the app (this was the long-standing "E doesn't work headless" gap); the interact scan + follow-cam need one movement nudge after spawn. Round trip verified both ways headless (prompts + toasts + islet screenshot). Gates: tsc clean, 74/52, 32/32. Next: S6 Temple Rise cliffs.
+
+### 2026-07-25 — Loop wake 54: river v3 — the run varies in width (David-ruled)
+
+One exported profile `riverWidthScale(x)` in terrain.ts drives every layer — carve, water ribbon, riverbed, bank walls + grass lips, bank rocks/reeds — so the channel pinches to ~2.5u under BOTH bridge crossings (classic hourglass reads on the aerials) and swells to a ~7u **bend pool at x≈22** (the marquee fishing hole; new cast spot [22, 5.4] + a pool bulge on the minimap). Two design corrections along the way: the pool first sat on the tight S-bend at x≈10 where wide bank-lip offsets FOLD across the channel (curvature radius < offset) — moved to the gentle [16,2]→[30,4] bend and the S-bend stays base width; lip margin over the water edge widened (EDGE 1.95→2.1) + ribbon sampling densified (River 96→144 segs, walls 120→200) so steep width gradients can't push water past the lip. Stepping stones moved off the pool water to the straight west run (x=−20, verified spanning). Wharf Shack added to the minimap while in there. Gates: tsc clean, 74/52 baseline, 32/32; aerial pack re-shot (pool/narrow-west/narrow-east). Next: S5 Isla Chica + boat travel.
+
+### 2026-07-25 — Loop wake 53: S4/E3 — the Wharf Shack (fishing store, sell flow live)
+
+The economy loop closes: catch → sell → coins. Enterable **Wharf Shack** shell on the wharf apron (44.5, -3.2, procedural ACBuilding, interior id `wharf`); 8×8 driftwood interior via the interiorShared kit (counter station → `sheet:wharfsell`, exit spawns you at the apron door, barrels/crates + one warm lantern); **WharfSellSheet** lists local-collection fish sorted by price (common 8 → sea king 2500 🪙), Sell 1 / All / Sell-everything, pays via earnCoins() with wallet tick-up + toast; new `spendCollected()` in collections.ts decrements local counts (server-side atomic sale = E4). Also swept a stray unused import in WharfPier (lint back to 74/52 baseline). Verified headless: `/lab/interior?room=wharf` renders; seeded sell flow on `?sheet=wharfsell` — 120 → 720 after selling a Stringfish (600), → 1000 after Sell all (880 total matches sheet button), collections drain to empty-state. Gates: tsc clean, 74/52, 32/32. Next: river v3 width variation + bend pool.
+
+### 2026-07-25 — Loop wake 52: ECON E2 — the coins wallet (play currency plumbing)
+
+Three pieces, no UI yet: **(1) migration DRAFT `024_game_coins.sql`** (023 was taken by member_collections) — `profiles.coins` with column-level REVOKE so clients can't self-inflate; all earning through a SECURITY DEFINER `earn_coins(amount, reason)` RPC capped at 4000/call (max sale ≈ sea king 2500 × 1.25); explicitly NOT applied, launch-window batch; **(2) `/api/coins`** — GET returns `{coins: null}` when no wallet is reachable (env-less, unauthed, or pre-migration DB → client falls back to local), POST validates shape (amount 1-4000, reason slug) then calls the RPC, 503s gracefully pre-migration; **(3) `lib/game/coins.ts`** local-first mirror (`tsi.coins.local.v1`, earnCoins() bumps local + fire-and-forget POST + `tsi:coins` event for HUD listeners, displayCoins() picks server-else-local). Verified env-less: GET `{"coins":null}`, POSTs 401 at the auth gate, zero errors. Gates: tsc clean, both files lint-clean, 32/32. Next: S4/E3 — the Wharf Shack spends this plumbing.
+
+### 2026-07-25 — Loop wake 51: GEO S3 — wharf district ground
+
+The Riverside Wharf gets its floor: a wood-decking APRON on the east bridge's south bank (RoadTiles wood zone + corridor), a fixed-height PLANK PIER jutting north over the carved channel (RoadTiles can't decking over water — small static mesh with posts sunk to the bed + an end rail casting perch; flat walker override + plank knocks extended), and a NEW FISHING SPOT at the pier tip. Found + fixed en route: **the RoadTiles placement grid capped at x≈±29 — the S2 avenue extensions east of that had corridors but NO tiles**; grid widened to cover the S1/S2 island. Minimap gains the apron patch. Verified: apron + pier + bridge compose cleanly at the crossing, zero pageerrors. Gates: tsc clean, 6 files lint-clean, 32/32. Next: E2 coins wallet, then the Shack lands on this apron.
+
+### 2026-07-25 — Loop wake 50: ECON E1 — Gems 💎 display rename (money tier)
+
+Economy v2 lands its first stage: **lib/economy.ts** (GEMS/COINS display constants + the loud tc_*==GEMS schema-mapping warning + fmt helpers + the no-conversion guardrail note) and the display rename across every user-facing surface — StatsHUD balance, shop price chips (was rendering "N TSI") + purchase toast, calendar event rewards ×2, quest widget, admin bounty review copy + "Approve + pay Gems", CMS EventEditor/ShopEditor labels. ZERO schema changes (tc_* columns untouched per the spec). **Bonus catch: CoinWidget was PRINTING THE CAD CONVERSION RATE** ("≈ $X.XX CAD value", /100) — a standing-rule violation that predates today; line removed. Verified live: no stray "N TC" renders, no CAD leak, zero pageerrors (StatsHUD's 💎 shows with an authed profile; each string edit assert-verified at apply). Gates: tsc clean, 9 files lint-clean, 32/32. Next: S3 wharf ground + E2 coins wallet.
+
+### 2026-07-25 — Loop wake 49: GEO S2 — road network v2 (avenues + east crossing + windmill spur)
+
+The cross becomes a NETWORK: both avenues extended across the bigger island (x −34..41 — Shop and House now sit ON the north avenue, chalets/windmill corridor on the south), a new EAST LEG at x 39.25 connecting the avenues across the river via the SECOND ARCHED BRIDGE (Bridge component parameterized: xAt + lights props; string-light singleton stays main-bridge-only until the wharf district lights its own; BRIDGE_CROSSINGS in terrain.ts drives the parabolic walker crest at BOTH crossings; plank knocks cover both), and a WINDMILL SPUR finally putting the windmill on the network. RoadTiles RECTS + PATH_CORRIDORS in sync (single-run corridors — the river carve wins at crossings; SAND/WOOD rect indices re-pointed); minimap redrawn. Aerial-verified: ladder network + second bridge visible top-down, east-bridge closeup shows the arch spanning the channel; zero pageerrors. Gates: tsc clean, 5 files lint-clean, 32/32. Note: the full west-side ring closure lands with the West Green district pass.
+
+### 2026-07-25 — Loop wake 48: GEO S1 SHIPPED — the island grows +18% with the character pass
+
+The big one: **COAST_SCALE = 61/52** — coastDist stays in the legacy 52-basis (every threshold consumer untouched), world positions scale through one knob. Character pass per David: harmonics +35%, deeper cove bay, bolder headlands, and the NEW NW INLET (θ≈2.35 narrow bite + framing headland) — the bigger island reads MORE irregular, never oval. Landed across 15 files: 8 legacy→world conversion sites (minimap ring, tufts, cove solver ×4 auto, ocean rocks, ground+ocean GLSL via the injected COAST_SCALE const), terrain ISLAND_RADIUS 61 + ground plane 108→150 (the first aerial exposed a SQUARE-cropped mesh — classic), river spline endpoints pushed to ±61 with interior bends untouched (bridge/spots/stones keep exact geometry), waterfalls ±61.4, spur+deck corridors extended to the new sand line (RoadTiles + terrain in sync), and coast-anchored placements rescaled ×1.173 (lighthouse, camp cluster, fence, lounger, boat, buoy… critter/seafish/gull anchors, sea fishing spots, minimap dots + discovery zones + viewBox). Aerial-verified: whole organic island, NW inlet visible, zero pageerrors; **geo pack v2 republished to the same URL** for David's next notes. Gates: tsc clean, all 15 files lint-clean, 32/32. Known follow-ups: fresh outer ring is intentionally sparse (future districts), shallow-water rock outcrops + moonlight-lane extents unreviewed.
+
+### 2026-07-25 — Loop wake 47: V2 BRIDGE ARCH (David visual-depth directive)
+
+The flat plank raft is gone: the crossing now uses the REAL ACNH structure bridge (BridgeWood05 from the dump — 5.8u arched span, real albedo, log railings; 1.8MB). Notable: structure bridges are SKINNED like the fish/fence — mounted via SkeletonUtils clone, NOT GLBProp (the wake-24 bug would have eaten the placement). Walkers ride a parabolic ≈0.55 crest (terrain.ts override replaces the flat 0.12 deck; smooth ramps at both ends; plank knocks unchanged). Profile shot shows a real bridge with railings over the V1-carved channel; WASD crossing clean, zero pageerrors. Old bridge-wooden.glb prop stays for decorative reuse elsewhere. Gates: tsc clean, GameWorld + terrain lint-clean, 32/32. Next: GEO S1 (+18% coast + character pass).
+
+### 2026-07-25 — Loop wake 46: V1 DEEPER RIVER CHANNEL (David visual-depth directive)
+
+The river now sits carved into the ground: RIVER_DEPTH −0.55 → −0.95, WATER_Y −0.2 → −0.32, bank walls extended to −1.05 — the oblique shot shows tall dark soil walls above the waterline on BOTH banks, the channel reading as a real cut instead of a surface stripe. Dependents re-tuned in the same pass: river fish shadows −0.26 → −0.38, stepping stones dropped into the channel (0.05 → −0.5), bobber float −0.12 → −0.24 (both land + idle-bob sites); foam rides WATER_Y relative; mouths/waterfalls unchanged (coast-pinned). Verified: oblique closeup shows the carved read, zero pageerrors. Gates: tsc clean, all six touched files lint-clean, 32/32. Next: V2 bridge arch.
+
+### 2026-07-25 — Visual-depth notes (David) queued as loop tasks V1/V2
+
+David: "game lacks visual depth, river should be deeper in the ground, bridges shouldn't just be flat" — kept as LOOP tasks per his instruction (no live implementation). Scouting recorded in the master plan: the bridge is ALREADY the arched ACNH GLB but mounts sunk with a flat 0.12 walker override burying the arch (fix = raise mount + parabolic walk profile ≈0.45 crest); river constants RIVER_DEPTH −0.55 / WATER_Y −0.2 with the dependent list (bank walls, fish-shadow y, foam, mouths, stepping stones, bobber). Queue order now: V1 river depth → V2 bridge arch → S1 coast+18%+character → S2 loop road → E1 Gems rename → onward.
+
+### 2026-07-25 — HQ FLOOR-PLAN SESSION prepared (collab track item 4) + interiors program v1
+
+Planning continued per David's "keep going": **specs/interiors-program-v1.md** + session page https://claude.ai/code/artifact/1046702e-ca1e-4d83-ab31-e1e3458752ae — three candidate HQ plans over the real 16×12 room with all six feature stations preserved: **A "The Commons"** (lounge-first — walk in and see people), **B "The Guild Hall"** (council table under the banners, trophy wall behind the head seat), **C "The Studio"** (open event floor + stage corner — principle #8's monthly cadence gets a home). Four session questions posed (plan/blend, in-world events, boards indoors vs world-only, extras). Program one-liners recorded for Shop/Oracle refreshes, House show-home, Lighthouse ascent+deck, Wharf Shack counter+gear+tank, future Museum. BUILD NOTHING until David rules; furniture only from his shortlist after the recolor pipeline.
+
+### 2026-07-25 — ECONOMY V2 ruled (David): currency tiers invert — Gems 💎 / TC 🪙 / XP ⭐
+
+David's call on the fish-economy flag: TC demotes to the in-game play currency; a premium money-like currency takes the money tier ("gems or some sort, you think for me"). Design authored to **specs/economy-v2-currencies.md**: Gems = money-equivalent (bounties/paid work only, CAD rate stays secret, existing tc_* DB columns display-renamed — NO live column renames pre-beta, lib/economy.ts owns the mapping); TC = soft currency earned by SELLING CATCHES at the Wharf Shack (per-rarity pricing table, never passive earning, never converts to Gems/CAD); XP unchanged (IRL only). New wallet = migration 023 draft + local-first coins lib. Stages E1-E4 join the queue after geo S1-S2; principle #3 rewrite drafted for David's CLAUDE.md pass (reviewer-owned). Geo master plan updated: the Wharf Shack buys fish for TC.
+
+### 2026-07-25 — GEO REVIEW SESSION (David) → Master Plan v2 authored
+
+David's verdicts on the aerial pack: island too small/cramped (+15-20%), path structure needs a redesign (delegated to me), map the game's sections incl. fishing areas + a FISHING STORE (buys fish, sells rods/accessories), more diverse terrain, a far-off boat-only islet, districts distinct-yet-cohesive; furniture = simple logical pieces per house for now + fix the clay/untextured look before placement. My response: **specs/geo-master-plan-v2.md** + concept map https://claude.ai/code/artifact/449e9adc-4e84-446d-882c-d69f1f7ff8fe — +18% coast (R 52→61, +39% area), LOOP-road network replacing the cross (every major building on the ring; two bridges close it), seven districts (Village Core / Riverside Wharf w/ the new fishing store / West Green / Temple Rise bluff = cliff system home / Beach Cove / Lighthouse Pt / Isla Chica islet via rowboat), terrain diversity (bluff north, wetland east, meadow west, dunes south). **ECONOMY FLAG raised to David:** fish-buying for TC collides with principle #3 — recommended a separate cosmetic currency (Scales); store ships gear-only until ruled. Stages S1-S7; S1 (coast scale) starts next wake. Furniture-texture pipeline recorded as the furnishing prerequisite.
+
+### 2026-07-25 — Loop wake 45: FURNITURE CATALOG batch 1 published (collab track item 3)
+
+284 living pieces (82 chairs/stools, 16 sofas, 116 tables/desks, 44 beds, 26 shelves) converted from the dump (284/284 clean), rendered as CLAY MAQUETTES, and published for David's shortlist: https://claude.ai/code/artifact/6634086e-cc55-4135-902a-0cc7abe272c6 — reply with mono IDs or vibes ("everything Log + Antique"); the shortlist becomes the ONLY furnishing palette. Stage work: /lab/icon gains view=obj (3/4 yaw, elevated camera, size param, no fish flip) + the clay finding: ACNH furniture albedos are gray recolor bases (color lives in ReBody variants — per-piece colorway counts shown on cards), so a uniform warm-bone tint reads as an intentional form catalog instead of clinical white. Staging GLBs (86MB) rendered then DELETED — nothing ships in the bundle. Batch 2 queued: lamps/stools/benches/kitchen/clocks (~120). Gates: tsc clean, icon page lint-clean, 32/32.
+
+### 2026-07-25 — Loop wake 44: GEOGRAPHY REVIEW PACK published (collab track item 1)
+
+Aerial survey camera shipped: `?aerial=1&ax&az&ah[&dir=n|s|e|w]` on any GameWorld URL pins a fixed top-down/oblique camera (replaces CameraControls; follow no-ops). Two rendering fights won: **(1)** the day fog washed the island to flat tan from 140u — AerialCamera runs at useFrame priority 1 and pushes fog to 800/1000 via the setFogRange escape hatch (beats TimeOfDayCycle's per-frame write); **(2)** the curved-world bend (constant-baked into the global shader chunk) fisheyed the survey — aerial page loads now compile a FLAT world (param read at module init, product loads untouched). 9-shot pack captured (full top-down, 4 quadrants, 4 cardinal obliques, HUD hidden via F2, dashboard route so no lab chrome) and published as a review page with shot IDs GEO-01..09 + note protocol: https://claude.ai/code/artifact/20e7e2a2-16e9-4d01-8c42-968128ba650b — David's imbalance notes become work items; cliff placement follows his calls. Gates: tsc clean, GameWorld + curvedWorld lint-clean, 32/32, zero pageerrors across all 9 captures.
+
+### 2026-07-25 — Loop wake 43: QA WAVE 29 — PASS, merge-ready (2 fixes in-wave)
+
+The David-ordered pre-merge gate ran clean end to end: build ✓ (106 pages), tests 32/32, and the widest visual sweep yet (3 weathers × noon+night, 6 overlays, 3 interiors via the new bench, 4 lab benches) with ZERO pageerrors. Two finds fixed in-wave: **(1) /api/collections still whitelisted the retired legacy keys — the server was 400-ing every modern catch (fish_dace, sea_*, bug_*…), masked by local-first storage; prod collection sync was dead and would have hit the beta.** Now shape-validated (reward-free cosmetics need no whitelist) + env-less GET returns an empty book instead of 500. **(2)** PlazaSparrows carried a react-compiler error (mutable state in useMemo → useRef; wake-34's lint grep missed the format) — full-project lint back to EXACTLY 74/52. Report: specs/qa.md Wave 29. **No merge blockers — awaiting David's in-game eyeball per his ruling.** Next: geography review pack.
+
+### 2026-07-24 — Collab design track established (David in the loop as the taste layer)
+
+David's rulings on human-in-the-loop work: **(1) geography** — review-pack workflow (loop builds an aerial lab camera + captures a full map pack; David marks imbalances in chat; CLIFFS WAIT for his geo notes since cliffs are geography); **(2) interiors** — delicate floor-plan sessions, purpose-first, HQ FIRST (session doc with candidate plans + purpose questions incoming); enterable roadmap grows: House + Lighthouse now, Museum & civic buildings later in the game's life; **(3) furnishing** — catalog-first: the dump holds 10,293 Ftr* pieces; loop renders a browsable category catalog (icon-harness pattern), David shortlists, rooms furnish ONLY from the shortlist. Contract + sequence written to specs/collab-design-track.md. Queue now: QA Wave 29 → aerial mode + geo pack → furniture catalog batches → HQ session doc → geo fixes → cliffs.
+
+### 2026-07-24 — Direction session (David): cliffs next, QA wave → merge, ruling doc written
+
+David's four rulings on the loop's future: **(1)** next big rock = CLIFF SYSTEM (multi-wake, river-kit prep at 7143205); **(2)** launch blockers get a ruling session — decision one-pager written to `specs/rulings-2026-07-24-launch.md` (lift the moot migration hold, convention+smoke for deploy safety, 5-8 execs week of Aug 17, confirm prod ANTHROPIC_API_KEY); **(3)** merge path = full QA wave on this branch → David's in-game eyeball → merge to main before beta prep (next loop wake runs the QA wave); **(4)** Sea King stays vacant until David supplies marquee models. Loop queue reordered accordingly: QA wave → cliff system runs → launch buildables once rulings land.
+
+### 2026-07-24 — Loop wake 42: /lab/interior bench — wake-41 gap CLOSED
+
+New dev-only bench mounts any of the three rooms directly (?room=oracle|shop|hq) with the game's tone mapping, the room's own InteriorPlayer (WASD/click-move works), and OrbitControls for inspection — no world-walk + E-entry, which the headless harness can't drive. Lab nav gains an Interior bench link. Verified: all three rooms load with zero pageerrors, and the oracle shot retroactively confirms wake 41 — candle embers visibly rising over all four clusters. Interior changes are now screenshot-verifiable forever. Gates: tsc clean, both files lint-clean, 32/32.
+
+### 2026-07-24 — Loop wake 41: oracle candle embers (+ dead-brazier finding)
+
+Started as brazier embers — then discovered the procedural OracleTemple (braziers, flames) is DEAD CODE: PROC_VARIANTS is empty since the 2026-06-01 GLB switch, so nothing renders it (reverted that edit; the composite stays as the documented Suspense fallback). Pivoted to the room that renders: the Oracle interior's four candle clusters now shed rising ember motes (3 per cluster, staggered drift/shrink/fade, refs-only useFrame, same pattern as the shipped idle fireflies). VERIFICATION GAP, logged honestly: interior entry via E does not fire under the headless harness (3 attempts: prompt arms, no transition) — embers ship on gates evidence (tsc clean, lint clean, 32/32, zero world-side pageerrors); David sees them on the next temple visit. Doctrine note: an /lab/interior bench would close this class of gap.
+
+### 2026-07-24 — Loop wake 40: hedge brush-past rustle
+
+Walking within ~1u of a hedge segment now shivers it for 0.45s (decaying z-wobble) with a leaf-scuff note — per-segment 1.2s cooldown so strolling the run reads as a wave of rustles, not a rattle. PlazaHedges gains playerPosRef + one useFrame over the six segments (refs only). Verified with a stroll along the full south run, zero pageerrors. Gates: tsc clean, both files lint-clean, 32/32.
+
+### 2026-07-24 — Loop wake 39: plaza hedges (flag-list "hedge/park fences")
+
+FenceIkegaki (the ACNH hedge fence) converted from the dump (11KB, textures embedded, renders green out of the box) and planted as two three-segment runs framing the plaza's south edge, split around the main path. Notable: **the fence is SKINNED** — first skin outside fish/sea (updates the wake-28 audit) — so PlazaHedges clones via SkeletonUtils from the start; DoubleSide per the foliage-card lesson; GAME_CALIBRATION scale, upright with no rotation (bbox-verified 1.1u long × 0.96u tall). Verified live: both runs render green and upright at the south edge, zero pageerrors. Gates: tsc clean, lint clean, 32/32. Six more Ikegaki variants (corners/ends/gate) staged in the dump for future garden runs.
+
+### 2026-07-24 — Loop wake 38: sunny days bring the butterflies out
+
+The wake-37 bookend: sunny days DOUBLE every flutter species' spawn weight — rain hides the butterflies, sun multiplies them — via an effective-weight function in buildSpawns (deterministic, weather is per-day). Sunny tooltip gains "Butterflies are out in force today". Verified: sunny tooltip lists the line (hover), world loads clean, zero pageerrors. Gates: tsc clean, both files lint-clean, 32/32.
+
+### 2026-07-24 — Loop wake 37: butterflies sit out the rain
+
+ACNH-true: rain days drop every flutter species from the critter spawn pool (dragonflies, beetles, cicadas, fireflies, and shore critters keep the world alive) — one weather filter in buildSpawns, deterministic since weather is per-day. The rain weather tooltip gains the honest line "Butterflies are hiding from the rain" (per David's rule: the chip lists REAL modifications). Verified: rain + sunny world loads clean, zero pageerrors. Gates: tsc clean, both files lint-clean, 32/32.
+
+### 2026-07-24 — Loop wake 36: NPCs shelter from the rain
+
+Rain days now move the villagers under cover — pressed into the HQ doorway, deep under the shop awning, the temple portico by the braziers, and the market-cart canopy for the roamers — via a third spawn table beside day/night (night still wins after dark; NPC.tsx's slow base-glide makes the migration read as a dash for shelter). One table + a weather branch in placedPersonas. Verified on ?rain=1: world renders with the rain table active, zero pageerrors. Gates: tsc clean, GameWorld lint-clean, 32/32.
+
+### 2026-07-24 — Loop wake 35: sea-catch gull swoop
+
+Landing a SEA catch now calls the nearest gull down from its patrol — it banks into a fast low circle over the catch spot (harder flap at low altitude), then climbs back to its lobe over ~4s. The tsi:fish-caught event gained zone + spot coords (world-reaction channel; FishCatchFX unaffected); Gulls parent picks the closest anchor, one guest of honor at a time, river catches ignored. Exercised via synthetic cove + NE-sweep catches with an interleaved river catch: full swoop cycles, zero pageerrors. Gates: tsc clean, both files lint-clean, 32/32.
+
+### 2026-07-24 — Loop wake 34: plaza sparrows
+
+Three sparrows now live on the brick plaza (dawn/day/dusk; asleep at night) — pecking head-dips, short hops to new spots, and a frantic climbing flee-burst when the player walks within 2.6u, returning to their corner anchors 8-16s after the coast is clear. Procedural 4-mesh birds, corner anchors clear of the spawn point, one useFrame over all three (refs only). The ACNH plaza-pigeon read completes the brick-plaza arc (ground → footsteps → map → life). Verified: idle peck visible by the fountain, approach-flee path exercised, zero pageerrors. Gates: tsc clean, both files lint-clean, 32/32.
+
+### 2026-07-24 — Loop wake 33: minimap ground pads
+
+The minimap now shows the brick plaza (terracotta rect at the crossing) and the beach wood deck (timber rect at the cove) — the map stays honest with the new ground. World rects lifted from RoadTiles, drawn under the buildings. Verified on the live dashboard minimap, zero pageerrors. Gates: tsc clean, MiniMap lint-clean, 32/32.
+
+### 2026-07-24 — Loop wake 32: full-gates verification sweep + lab hydration fix
+
+Periodic full sweep after ~10 loop features: **prod build compiles clean** (first full build since the weather/HUD/fish/brick run), **full-project lint exactly 74/52 = baseline** (zero drift all day), 32/32 tests. Overlay sweep (all 6 dock overlays + chips + emote + jump/sprint, plus the three lab benches) surfaced ONE real bug: /lab/world with a weather override threw a hydration pageerror — LabPanel rendered `getTodayWeather()` during SSR where ?rain=1 is invisible ("sunny" server text vs "rain" client). Fixed with the useSyncExternalStore mount gate (same pattern as the icon stage); all grade save/load spots now read the gated value. Re-swept: zero pageerrors everywhere. Note for David: on /lab/world the minimap + weather chips sit UNDER the experiment panel (panel overlays that corner by design — visible fine in the real game).
+
+### 2026-07-24 — Loop wake 31: brick plaza footstep taps
+
+Steps on the new brick plaza now play a hard pavement tap (blip3, joining the bridge's wood knock in the surface trio) and dry brick kicks no dust — rain days still splash puddle rings on the pavement. Same cheap AABB check as the bridge inside the existing footstep tick (rect matches RoadTiles' PLAZA). Verified: WASD walk across the spawn plaza + off it, zero pageerrors. Gates: tsc clean, PlayerAvatar lint-clean, 32/32, world 200.
+
+### 2026-07-24 — Loop wake 30: BRICK PLAZA (flag-list item shipped)
+
+The central plaza is now warm terracotta brick — FldUnitRoadBrick kit converted (4 variants, 32KB) and wired as a fifth RoadTiles zone; the PLAZA rect flips stone→brick, neighbor transitions handled by the existing global checks. Detail canvas does running-bond courses: cream mortar at near-full tint, bricks pull redder with per-brick variance + occasional sunken-brick patches for the hand-laid read; tint #D7B29A keeps it pastel-grade friendly. Verified live: plaza reads as brick with visible courses, clean soil transitions, zero pageerrors. Gates: tsc clean, RoadTiles lint-clean, 32/32. Flag-list remaining: plaza stalls, seasonal variants, cliff system.
+
+### 2026-07-24 — Loop wake 29: collection book almanac strip
+
+Clicking a DISCOVERED fish or sea-floor tile now opens its field notes in a strip pinned to the book's bottom edge (sticky through scroll): icon, name, rarity chip, zone, "bites:" window, size range, times caught — the almanac that teaches windows without leaking anything (undiscovered tiles stay inert ???, and you only see notes for what you've caught). Picked tile gets a gold ring; click again to dismiss; soft blip on pick. Verified live with seeded catches: Dace notes render (window/size/×2), strip pins while scrolling, zero pageerrors. Gates: tsc clean, CollectionBook lint-clean, 32/32.
+
+### 2026-07-24 — Loop wake 28: zone-flavored reel + skinned-GLB audit (clean)
+
+Stability audit first: scanned every shipped GLB's JSON chunk for skins — skinned models exist ONLY under acnh/fish (71) + acnh/sea (10), all already rendering through the SkeletonUtils-fixed paths; no other component is affected (negative result, no fix needed). Then the beat: the reel card now reads as the water you cast into — sea catches get a deeper teal track + a 🌊 sea chip beside the name (river keeps the fresh blue + 🏞), safe under mystery mode since you always know where you cast. Bench-verified Sea Bass vs Dace chips + track tints, zero pageerrors. Gates: tsc clean, FishingOverlay lint-clean, 32/32.
+
+### 2026-07-24 — Loop wake 27: collection book per-group completion counts
+
+Every group header now carries a right-aligned x/y count (tabular numerals), turning gold with a ✓ when the group completes — the Critterpedia "how far along am I" read, which matters now that Fish is 81 rows. Hidden while the book is loading. Verified live with seeded local catches: FRUIT ✓ 4/4 gold, FLOWERS 0/8, FISH 2/81, global line intact, zero pageerrors. Gates: tsc clean, CollectionBook lint-clean, 32/32.
+
+### 2026-07-24 — Loop wake 26: cast-splash scatter
+
+The bobber's landing plop now spooks nearby fish shadows (radius 6): each darts away from the splash (faces its flee heading with a nervous wiggle), then drifts back to its patrol line over ~2.8s — river breaches pause while spooked. Membership decided once per splash so late drifters don't flinch; module-scope splash record + per-fish ref state, zero per-frame React. Verified with synthetic tsi:fish-cast events over the river stretch and the cove orbit: both flee cycles + returns run with zero pageerrors. Gates: tsc clean, FishShadows lint-clean, 32/32.
+
+### 2026-07-24 — Loop wake 25c (David ruling): rarity rerank — tight legendary, Sea King VACATED
+
+Full 91-row proposal tabled for David; his rulings: legendary stays TIGHT and no current fish earns Sea King (he supplies new marquee models for the tier). Applied: **legendary = 7** (Golden Koi/Trout/Arowana + Stringfish + Coelacanth/Hammerhead/Sturgeon); **epic = 16** (Arapaima down from Sea King keeping its king-size fight; Great White/Whale Shark/Oarfish/Saw Shark down from legendary; Barreleye up from rare w/ epic movement); Giant Trevally epic→rare, Salmon+Carp rare→uncommon (ACNH-value-true). Sea King tier/holo/ceremony code stays dormant awaiting the new models. Bench-verified all 12 moved/held rows + zero Sea King rows, zero pageerrors; tsc clean, both tables lint-clean, 32/32.
+
+### 2026-07-24 — Loop wake 25b (David ask): fishing bench gets a big 3D model view
+
+Clicking a species on /lab/fishing now shows its MODEL large in the detail pane — 260px orbitable stage (slow turntable, drag to orbit, scroll to zoom), fish laid horizontal aquarium-style (raw and native orientations both handled). The clone→calibrate→normalize pipeline is extracted to buildFishStage in components/lab/FishPreview.tsx and shared with /lab/icon (dedupes the SkeletonUtils/skinning-bounds logic). Verified: Dace/Coelacanth/Dungeness Crab all render big and swap on click, zero pageerrors. Gates: tsc clean, all three files lint-clean, 32/32.
+
+### 2026-07-24 — Loop wake 25: dusk lamplighter moment
+
+Flipping into dusk/night now lights the six lamps in SEQUENCE (400ms apart) — each catches with a flicker-stutter, overshoots warm (1.25×), settles, and plays a soft blip as it takes. Ref-driven envelope in LampPosts' useFrame (globe emissive + pool pointLight together, zero per-frame React); initial night mounts skip the ceremony. Lab-verified live via the clock scrub (noon → night): 350ms post-flip the lamps are still catching, 4s later all settled — the old instant snap is gone; zero pageerrors. Gates: tsc clean, GameWorld lint-clean, 32/32.
+
+### 2026-07-24 — Loop wake 24b (David ruling): icons flipped head-side-up
+
+All 91 icons re-rendered head-up. Turned out the two model families hang OPPOSITE ways — raw dump exports come out of calibration nose-down, repo-native originals are head-up natively — so the stage flip is raw-only. Spot-checked dace/salmon/hammerhead: eyes and mouths at the top across both families. Bench: 0 broken, 0 generic, zero pageerrors; tsc clean, stage lint-clean.
+
+
+### 2026-07-24 — Loop wake 24 (David report "why is there no models"): ICON BATCH DONE — the shelved harness's real root cause found
+
+David's screenshot showed the generic blue placeholder on every dump species. Debugging the shelved icon harness found the TRUE root cause (not just the unembedded textures): **the dump fish are SkinnedMeshes, and `scene.clone(true)` keeps the clone bound to the ORIGINAL skeleton** — the mesh ignores every transform on the clone's wrapper (scale/rotate/center), so the stage framed empty space. Fixed with SkeletonUtils.clone in the icon stage, **FishCatchFX (in-game catch display for raw fish was broken the same way)**, and the item bench's fixRot path; stage bounds now use skinning-aware `SkinnedMesh.computeBoundingBox()`; stage-mode CSS strips the lab layout's dark background so omitBackground shots are truly transparent. Harness rewritten to DERIVE its list from the fish tables (`icon: GENERIC_ICON` rows). **Batch: 81/81 rendered** (128px transparent, ACNH hanging pose matching the originals — salmon/hammerhead/coelacanth spot-checked); all `icon: GENERIC_ICON` overrides removed so iconFor() resolves per-key PNGs. Bench-verified: 92 imgs, 0 broken, 0 generic, zero pageerrors. Icon-stage mount gate also de-linted (useSyncExternalStore). Gates: tsc clean, touched files lint-clean, 32/32.
+
+### 2026-07-24 — Loop wake 23: fish naming pass — all 15 romaji placeholders resolved
+
+David's mapping applied: Coelacanth (legendary, sea, RAINY NIGHTS only), Hammerhead Shark (legendary sea), Sturgeon (legendary river), Mahi-Mahi (rare sea), Red Snapper / Seahorse / Moray Eel / Sea Bass to the sea pool, Soft-shelled Turtle / Mitten Crab / Bitterling / Tilapia / Yamame Trout / Yellow Perch / Crayfish to river with true rarities+sizes (seahorse gets a gentle drift personality). GLBs + keys renamed to match (pre-launch, no member data to orphan). Bench-verified: all new names listed, romaji gone, renamed models 200, zero pageerrors. Gates: tsc clean, catalog lint-clean, 32/32. Next queued: icon batch re-run, dusk lamplighter.
+
+### 2026-07-24 — David session: weather perks + HUD dock + last models in (roster 91)
+
+David: "a large amount of fish models is not added" + HUD rework ask. Audit first: all 80 fish GLBs on disk WERE wired (the dump's other 99 FtrFish entries are toys/food/posters/wall mounts) — the actually-unwired models were the 10 staged sea creatures and the one unconverted species recolor. Shipped: **(1)** Golden Arowana converted (-embtex) + cataloged legendary/night; **(2)** the 10 sea creatures are now CATCHABLE at the deck/cove sea spots (`creature: true` on FishDef, slow bottom-dweller reel personalities, own "Sea Floor" book group) — FISH roster 80 → 91; **(3)** `lib/game/weatherPerks.ts` — per-weather WIRED modifiers: rain = bites 25% sooner + +10% rare luck (+ existing rain-only windows/koi ×2), cloudy = darts ×0.8 + sea weights ×1.15, sunny = cast meter ×1.12 slower (easier MAX); consumed in rollFish/fishWeight/FishingOverlay (wait, dart, meter cycle); fishOdds also fixed to roll within the species' own zone pool; **(4)** HUD rework: minimap now ON by default (M toggles, persisted `tsi.map.open.v1`), TodBadge pill replaced by `WeatherTimeDock.tsx` — two circle chips under the map (TOD sun/moon + weather) whose hover/tap tooltip lists the day's REAL perks. Verified via Playwright on the live dev server: chips + tooltip render (rain lists all 4 perks), map-off slide-up works, bench lists Golden Arowana + all 10 sea creatures, zero pageerrors. Gates: tsc clean, touched files lint-clean, 32/32.
+
+### 2026-07-24 — Loop wake 22 (David directive): ALL FISH IN — roster 21 → 80
+
+David: "all fish in the game + proper models." Verified first: the converted models are NOT plastic bags — the salmon renders beautifully in the item bench (the bad look was the pre-embtex cache / generic icon). Then: all 80 non-Museum dump species converted (-embtex, 20MB fish dir, 34MB total assets of the 50MB cap); 59 new species auto-cataloged in `lib/game/fishCatalog.ts` (English names + zones + rarity tiers + sizes + windows from ACNH data; unknown romaji get prettified defaults); **FishDef gains `zone: river|sea`** — sea spots (coastDist > 47: the deck + cove) roll the SEA pool (Tuna, Blue Marlin, Whale Shark, Oarfish, Great White, Ocean Sunfish…); CollectionBook now DERIVES its fish rows from FISH (stays in sync forever). Bench: 68/80 biting at test hour, zero pageerrors; tsc clean, 32/32.
+Follow-up queued: icon batch re-run (textures now embed — the shelved harness's root cause is fixed; new species use the generic icon until then).
+
+### 2026-07-24 — Loop iter 27 (wake 21): welcome-back toast
+
+Returning after 8h+ away now greets you ("Welcome back! It's a sunny day ☀️" / rain / cloudy variants) with the enter chime, 2.6s after load so it lands past the gate; a 5-min heartbeat keeps last-seen honest. localStorage `tsi.lastseen.v1`. Gates: tsc clean, lint at flap, world 200.
+
+### 2026-07-24 — Loop iter 26 (wake 20): bridge plank knocks
+
+Footsteps on the main river crossing (|x|<2.2, z 0-6.5) now play a wooden knock (blip4) instead of the grass scuff, and planks don't kick dust puffs. Cheap AABB check inside the existing footstep tick. Gates: tsc clean, lint at flap, world 200.
+
+### 2026-07-24 — Loop iter 25 (wake 19): sea-creature staging batch
+
+10 dive creatures converted (-embtex, textures embedded) and staged under `public/assets/acnh/sea/` for the future pier/diving feature — pearl oyster, sweet shrimp, scallop, dungeness crab, sea star, firefly squid, garden eel, giant isopod, abalone, barnacle. 1.8MB; total public assets 17MB (cap 50MB). No gameplay wiring yet — inventory only, GAME_CALIBRATION applies at import like the fish.
+
+### 2026-07-24 — Loop iter 24 (wake 18): collection book open beat
+
+The book now unfolds open — backdrop fades in, the card springs up with a slight paper rotate (0.32s spring), and a click + page-turn note play on open. Gates: tsc clean, lint at flap, world 200.
+
+### 2026-07-24 — Loop iter 23 (wake 17): NPC thinking mutter + breathe
+
+While an NPC composes a reply, their voice blips mutter at a lazy random rhythm (550-1050ms, same playBlip voice as their answer) and the "is thinking…" row breathes (opacity pulse) — the wait reads as composing, not buffering. Cleans up on send-complete/unmount. Gates: tsc clean, lint at flap, world 200.
+
+### 2026-07-24 — Loop iter 22 (wake 16): rain puddle ripples
+
+On rain days every footstep splashes the pale-blue wet ring (reuses the iter-7 wet variant; `getTodayWeather() === "rain"` joins the beach-band check) — the weather finally reaches the ground under your feet. Gates: tsc clean, lint at flap, world 200 under ?rain=1.
+
+### 2026-07-24 — Loop iter 21 (wake 15): XP bar tick + glow
+
+XP gains now roll the StatsHUD bar to its new fill (useTickUp reuse) with a gold glow pulse on the bar while ticking — level progress feels earned instead of teleporting. Gates: tsc clean, lint at flap, world 200.
+
+### 2026-07-24 — Loop iter 20 (wake 14): oracle answer-pick beat
+
+Choosing a quiz answer now presses the card in (scale 0.96 + indigo fill/glow), dims the other three, plays a soft note, and advances after a 260ms beat instead of hard-swapping; double-clicks during the beat are ignored. Progress-save path untouched (commitAnswer split keeps the original logic verbatim). Gates: tsc clean, lint at flap, oracle 200.
+
+### 2026-07-24 — Loop iter 19 (wake 13): emote spark burst
+
+Firing an emote now pops six gold/cream sparks radially from the bubble (0.55s one-shot per emote instance, CSS vars for the fly-out vectors) — a wave or laugh reads across the plaza without extra draw cost (DOM inside the existing Html). Gates: tsc clean, lint at flap, world 200.
+
+### 2026-07-24 — Loop iter 18 (wake 12): TC balance tick-up
+
+The StatsHUD coin count now counts toward its new value (ease-out cubic, ~0.7s) instead of snapping, with a gold text-glow flash on gains (flash deferred to the first rAF frame per the compiler's cascading-render rule). `useTickUp` is reusable for the XP bar later. Gates: tsc clean, lint at flap (StatsHUD clean), world 200.
+
+### 2026-07-24 — Loop iter 17 (wake 11): minimap discovery pings
+
+First visit to Beach Cove / the Lighthouse / the Windmill / Oracle Temple pulses a gold ring on the minimap, toasts "Discovered: X!", and plays the enter chime — once per device (localStorage `tsi.discovered.v1`), checked in the existing 5Hz player poll (4 zones, negligible cost). New zones are one row in DISCOVER_ZONES (highlands ready). Gates: tsc clean, lint at flap (MiniMap clean), world 200.
+
+### 2026-07-24 — Loop iter 16 (wake 10): guestbook sign beat
+
+Signing the guestbook now plays a pen-scratch two-blip rolling into a stamp note, and your fresh entry pops into the top of the wall (one-shot spring scale on entry #0 for ~1.2s). Errors already toasted; success finally feels like signing. Gates: tsc clean, lint at flap (file clean), world 200.
+
+### 2026-07-24 — Loop iter 15 (wake 9): shop purchase beat
+
+Buying was silent (balance ticked, modal closed, nothing else — and failures were swallowed with no message). Now: coin chime + enter-note stagger, a 14-particle gold confetti pinch, and a receipt toast ("Purchased X! −N TC"); failed purchases finally toast too. Gates: tsc clean, lint at flap (shop page clean), shop 200.
+
+### 2026-07-24 — Loop iter 14 (wake 8): jump takeoff beat (landing reviewed OK)
+
+Review verdict: the landing was already complete (0.18s squash + 1.6× puff + thud). The gap was LIFTOFF — now a small kick-off puff + light hop note fire on Space, completing the arc's symmetry. Keydown effect gains its missing `sfx` dep. Gates: tsc clean, lint at flap (PlayerAvatar clean), world 200.
+
+### 2026-07-24 — Loop iter 13 (wake 7): sprint wind lines
+
+Four faint white streak rods materialize around the player above ~1.35× walk speed, aligned to the movement heading and sliding backward on a loop; opacity collapses in a blink on slowdown. World-space group, all refs, zero per-frame React. Gates: tsc clean, PlayerAvatar lint-clean (known project flap only), 32/32, world 200.
+
+### 2026-07-24 — Loop iter 12 (wake 6): doorway beat
+
+Passing any doorway now pulses a warm light-spill (radial cream flash, 520ms one-shot over the fade) — and entering finally plays the ENTER chime + a soft second note (it was playing the exit sound both ways). Exit keeps its sound + gains the same glow. Gates: tsc clean, lint at the known flap (GameWorld clean), world 200.
+
+### 2026-07-24 — Loop iter 11 (wake 5): critter first-catch distinction
+
+Critter catches now know when they're firsts: NEW! prefix on the toast, a cozy 18-particle confetti pinch, and a two-note blip flourish — repeats keep the quiet toast (ACNH restraint). Uses `localCollections()` pre-check before `collect()`. Gates: tsc clean, lint within the known 74/75 flap (zero errors in touched files), world 200.
+
+### 2026-07-24 — Loop iter 10 (wake 4): embedded-texture fix + icon harness SHELVED (auto-pause rule)
+
+**Real fix shipped:** the 11 imported fish GLBs referenced EXTERNAL textures (assimp default — 404s in-game, untextured models). All 11 re-converted with `-embtex` (textures embedded, fish dir 3.0MB total); `organize-dump.mjs --convert` now passes `-embtex` + correct cwd for future batches. Icon stage page hydration fixed (client-mount gate).
+
+**Shelved after 2 failed attempts (auto-pause):** the icon-render harness (`/lab/icon` + `scripts/_render-icons.mjs`, both committed as WIP) produces dark/empty canvas shots. Diagnosis so far: dev-overlay badge bleeds into element screenshots and the subject isn't visibly rendering on the transparent stage — needs a headful debug pass (or icon extraction from the dump's numbered Layout_MenuIcon_Fish atlas with an index map). New species keep the generic icon meanwhile.
+
+### 2026-07-24 — Loop iter 9 (wake 3): FIRST DUMP FISH IMPORT — roster 10 → 21 species
+
+11 calibrated species imported from the organized rip (760K total fish dir, cap fine): killifish + loach (common), sweetfish + rainbow trout (uncommon), salmon + snakehead (rare), gar + king salmon (epic), **stringfish + golden trout fill the vacant LEGENDARY rung**, and the **ARAPAIMA takes the Sea King crown — Golden Koi drops to legendary** (David's "Both" ruling completed). Each has its own sizes (killifish 3-5cm → arapaima 150-300cm), movement personality, and ACNH-style availability windows. Raw dump models carry `raw: true` — FishCatchFX applies GAME_CALIBRATION (0.1 scale, +90°X) at render. Icons = generic fish.png until the icon harness renders real ones (follow-up); `iconFor()` centralizes resolution. CollectionBook +11 rows. Bench-verified: 21 species listed, sim runs, zero pageerrors; gates 74/52, 32/32.
+
+### 2026-07-24 — Loop iter 8 (wake 2): NPC greeting hop
+
+Opening a chat now makes that NPC do a hello bounce — GameWorld dispatches `tsi:npc-greet {id}` on activeNPC, NPC.tsx stamps `greetAtRef` and the frame loop reuses the G4 startle-hop arc (read-only trigger: timestamp window + hop latch, keeps the react-compiler happy). Gates: tsc clean, 74/52, world 200.
+
+### 2026-07-24 — Loop iter 7 (wake 1): wet-sand footstep rings
+
+Footsteps on the beach band (coast-space distance > 48.5, the sand line) now splash a thin pale-blue water RING (wider, thinner spread) instead of kicking dust — FootstepPuff gains a `wet` variant, spawn site checks `coastDist`. Gates: tsc clean, 74/52, world 200.
+
+### 2026-07-24 — Loop iter 6: turn-skid dust (self-scheduled loop wake 0) — LOOP NOW SELF-PACED
+
+David armed the timer loop (self-paced wakes, one iteration each, full scope incl. dump imports, auto-pause on double-red gates, push every wake). Iter 6: sharp direction reversal at speed (>55% walk speed, desired dir opposing velocity) kicks a dust puff at the feet + footstep scuff, 0.6s cooldown — reuses the P28 puff system, zero new draw cost. Gates: tsc clean, 74/52, world 200.
+
+### 2026-07-24 — Loop iter 5: idle fireflies (David ask)
+
+`IdleFireflies.tsx` mounted beside the player: stand still ~3s → six warm glow-motes fade in and orbit WHERE you stopped (anchor is captured, not tracked) — walk away and they stay behind and fade out, never following. Pulsing emissive, all refs in one useFrame, zero per-frame React. Gates: tsc clean, 74/52.
+
+### 2026-07-24 — Loop iter 4 (David bug batch): collections local-first + bobber direction + instanced culling
+
+1. **Fish/forage/flowers missing from Items** — every catch POSTed /api/collections which 401s without a session (always, on the env-less preview) and the item vanished. New `lib/game/collections.ts`: `collect()` records to localStorage AND posts; all 4 call sites swapped (fishing, critters, flowers, tree-shake); CollectionBook merges local with server (max per key). E2E-verified: bot caught a Black Bass → `tsi.collections.local.v1` holds it.
+2. **Hook thrown backwards onto land** — `spot − player` flipped sign when standing past the marker. Bobber now casts along the CAMERA forward (`getCameraForwardXZ`) — always into the scene.
+3. **Blossom still half-rendered** — second cause beyond FrontSide: drei `<Instances>` shares one geometry bounding sphere, so whole petal sub-meshes frustum-culled at off-center angles. `frustumCulled={false}` on all instanced groups.
+
+Pending from the batch: idle firefly glow around a stationary player (next iter). Gates: tsc clean, 74/52, zero pageerrors in E2E.
+
+### 2026-07-24 — Loop iter 3: dump→game calibration measured + baked
+
+`scripts/glb-bbox.mjs` (GLB JSON-chunk bounds reader, no engine) measured repo koi 0.393×0.895×0.434 vs dump FishKoi 3.934×4.339×9.004 → the rip is exactly **10× game scale** with long-axis Z (game uses Y): import transform = **scale 0.1 + rotate +90°X**, exported as GAME_CALIBRATION from organize-dump.mjs. Arowana confirms the family pattern (12.3 long-axis Z raw ≈ 1.23 game — big fish, correct). Applies at import time; per-family visual verify via /lab/item.
+
+### 2026-07-24 — Loop iter 2 (bug): half-missing blossom canopies fixed
+
+David report + screenshot: cherry blossom / some trees rendered only half the canopy. Root cause: the extractor wrote foliage CARDS as FrontSide, so their backfaces culled at half the view angles. Fix: both nature loaders (NatureModels GLBProp traverse + InstancedNature sub-mesh collection) force `material.side = DoubleSide` — standard for stylized foliage, negligible cost on closed trunks. Verified from the previously-culling angle: full canopies. Gates at baseline.
+
+### 2026-07-24 — Micro-anim loop STARTED (David directive: loop until stop) + dump usable
+
+**Loop charter (David 2026-07-24):** continuously find + implement micro-animations — world interactions → movement/traversal → ambient reactions, cozy ACNH restraint, one commit + log line each, perf floor held, weave in the asset dump. Runs until David says stop.
+
+**Dump status:** 12GB rip landed at `~/Downloads/Assets/Model/` — each `.Nin_NX_NVN` entry is a DIRECTORY with a **.dae + PNG textures** (standard Collada — Blender-convertible; adapt `fbx_to_glb.py`). Spotted: `FtrFishManbou` (sunfish — Sea King crown candidate), `Layout_MenuIcon_Fish61` (real fish menu icons — icon-pipeline shortcut). Fish expansion is UNBLOCKED.
+
+**Iter 1 — bench sit beat** (PlayerAvatar): sitting down → soft dust puff at the seat + a contented ♪ drifts up for 1.7s; standing → tiny cosmetic hop (low-amplitude jump arc reuse). Verified live via tsi:sit events (note shows, clears on stand, zero pageerrors). Gates: tsc clean, 74/52, 32/32.
+
+### 2026-07-23 — Fishing animation refinement: all 8 beats (David interview, 2 rounds)
+
+Beat-by-beat rulings implemented:
+1. **Meter escalation** — first bounce 1.4s, +15%/completed cycle (cap 2.2×): easy first pass, greedy re-tries punished.
+2. **Bobber** (`FishingBobber.tsx`, R3F, event-driven: tsi:fish-cast/-nibble/-bite/-end): arcs from player past the spot (throw scales with power), splash ring + plop on landing, idle bob during the wait.
+3. **Fake nibbles** — 1-2 false tugs (bobber dip + ripple + blip1 + 1.5px nudge) in [25%, wait−1.2s]; never adjacent to the real bite.
+4. **Big bite** — red "!" pops above the player (ACNH), bobber slams under + big ripple, shake 3→5px, 3° punch.
+5. **Reel feedback kit** — darting fish sprays droplets on the track (imperative spans, self-removing), soft thunk + green flash when the bar slams the left wall (blip3, 250ms rate-limit), heartbeat glow on the progress bar above 75% (period tightens as the catch nears).
+6. **Reel slap-in** — 220ms scale-punch entrance (keyframes local to the component so the bench gets them too).
+7. **Escape** — card jolts + the fish's silhouette leaps off the card and dives away (800ms flee animation).
+8. **SFX pass** — every beat mapped to the shipped CC0 set (cast=click, plop=blip2, nibble=blip1, bite=confirm, wall thunk=blip3, catch=confirm, escape=exit). Dedicated fishing sounds (whoosh/splash/jingle/snap) can drop in later by swapping keys.
+
+Verified live: meter → cast → bobber → bite ("!" visible above player in the shot) → reel (slap-in + droplets) → escape flee; zero pageerrors. Gates: tsc clean, 74/52, 32/32.
+
+### 2026-07-23 — Camera bench in /lab/world (David ask)
+
+New Camera section in the experiment panel: fire the exact juice impulses the game uses (max-cast 2.5° / bite 3° / crack 4° / heavy 6°, decay ~0.5s), hold the reel-tension creep on a slider, test the three shake magnitudes (soft/epic/sea-king via the same canvas-transform), and pin the base FOV (38-62°, ship 48) — devLab gains a `fov` override consumed by applySprintFov (juice still applies on top). Verified live: FOV 60 visibly widens the rig; zero pageerrors; gates at baseline.
+
+### 2026-07-23 — Grade rig in the lab + cast meter + camera juice (David asks)
+
+- **Color-grade slider rig** (`lib/game/grading.ts` + PostFX + LabPanel): the pastel shader gains uContrast + uVibrance (BSL-style, identity at defaults); a Grade = {exposure, contrast, vibrance, desat, warmth, lift, vignette}. The game reads WEATHER_GRADES[weather] (all three = shipped default until David bakes); /lab/world exposes all 7 as live sliders with per-weather Save/Load (localStorage) + "Export all → clipboard" — David tunes, the JSON gets pasted into WEATHER_GRADES. Lab override beats game grade beats default; exposure via a module-scope setExposure escape hatch.
+- **Cast meter** (hold E at a spot): vertical ping-pong power bar (1.15s cycle, gold tip zone at 92%). Release in the tip = MAX CAST — punch-zoom + gold card + confirm SFX. Power scales BOTH rewards (David ruling): luck (rare+ weights ×(1+luck), max ≈ ×2.2 with the tip bonus) and bite timing (wait scaled down to half, hook window 1.4s → up to 2.2s). Tuning in CAST (lib/game/fishing.ts); rollFish(luck) is the only signature change (bench unaffected — passes no luck).
+- **Camera juice** (`lib/game/cameraJuice.ts`): module store consumed by applySprintFov's FOV pass — punchZoom() impulses decay exponentially; setTensionZoom() creeps in up to 2°. Wired per David's picks: MAX CAST (2.5°), the bite (3°), mid-reel tension (creep while the fish sits in the bar, fast release when it escapes), reveal crack (4°).
+- Verified live: meter renders + full charge→cast→bite→hook→reel flow completes, grade sliders render with ship values and Save→cloudy/Export buttons. Gates: tsc clean, lint 74/52 (= baseline), tests 32/32.
+
+### 2026-07-23 — Night fog fix (David report) + Sol's-RNG reveal upgrades
+
+- **Fog "weird colors" fixed:** the night wash was linear fog 55/100 covering most of the visible island in indigo (#2D2D6B) stacked on the aerial-desat (35%). Fixes: aerial DESAT 0.35→0.18; fog near/far now recede with the sun (sunNorm formula — exactly 55/100 at full day, 70/130 at night, day chemistry untouched); 21h fog anchor darkened #2D2D6B→#26264A. Night verified clear-and-deep in the lab. `setFogRange` module-scope escape hatch for the react-compiler rule.
+- **Reveal upgrades (researched Sol's RNG/Fisch patterns):** "1 in N" odds chip on the landed line (`fishOdds` vs live pool); dead-stop freeze gasp before the crack for epic+ (350/450/600ms, fake-out flare on legendary+); expanding pulse rings at the crack (2-5 by tier); sea-king crack drains the screen monochrome for a beat then color floods back; legendary+ get a broadcast-style top banner ("⚡ SEA KING CATCH — Golden Koi, 85 cm", holo-shifting) — becomes a real global announcement when multiplayer lands. All skippable as before.
+- Gates: tsc clean, lint 74/52 (= baseline). Verified live on the bench (freeze + landed shots, zero pageerrors).
+
+### 2026-07-23 — Blind-box first-catch reveal (David ruling) + holographic Sea King
+
+- **Sea King goes holographic** (`5ff12b8`): animated iridescent gradient chip + shine glow everywhere the tier renders (catch card, bench detail/list/sim), rainbow-cycling halo on Sea King catch cards. `HOLO_GRADIENT` shared from `lib/game/fishing.ts`.
+- **FishReveal.tsx (new, `c5dfd38`)** — the gacha ceremony for FIRST catches only (David's four calls: fullscreen takeover / tier telegraph / cinematic 1→4s + skippable / repeats keep the quick card). Three stages from the shared `REVEAL` config: suspense (dim+blur world, black silhouette shakes with quadratically ramping amplitude via rAF, tier-colored glow builds — Sea King leaks the holo shimmer — rotating gacha rays from rare up), flash (tier-tinted flare + confetti + SFX), landed (silhouette resolves to color with a pop, name + holo/tier chip + NEW! + size slide in, tier-scaled hold). Click/E/Space/Esc skips suspense; prefers-reduced-motion collapses it. FishingOverlay routes `isNew` catches to `revealing` (the reveal owns the celebration); repeats keep the quick card + confetti path. Bench gains "Preview first-catch reveal" per species.
+- Verified live: Sea King preview screenshots show the silhouette+holo-telegraph suspense and the confetti-storm landed frame; zero pageerrors. Gates: tsc clean, lint 74/52 (= baseline).
+
+### 2026-07-22 — CRITICAL: new-user onboarding soft-lock fixed (David report) + /lab/fishing bench
+
+**Soft-lock root cause (every new member hit this):** the onboarding page's finish button PATCHed `/api/profile` with `onboarding_completed: true` — but that field isn't in `ProfileUpdateSchema`, so zod silently STRIPPED it; and it sent `year` as a number (`parseInt("1st Year")` → 1) against a `z.string()` field, a hard 400 for anyone who picked a year. Either way the flag never persisted → `router.push("/student/dashboard")` → middleware bounced back to `/student/onboarding` (same route, no remount) → the button spun "Saving..." forever. Bonus casualty: the dedicated `POST /api/onboarding` 4-step machine (which sets the flag AND awards the sanctioned 100 TC welcome bonus) was never called by the page at all — no new member has ever received the welcome bonus.
+
+**Fix (`onboarding/page.tsx`):** finish now (1) best-effort PATCHes skills + social_links (the fields actually in the profile schema), (2) GETs `/api/onboarding` for `current_step`, (3) POSTs the remaining steps sequentially with profile basics (display_name/bio/year as a STRING) on step 2, treating 409 already-completed as success, (4) routes to the dashboard only after the machine completes. Failures re-enable the button with a visible error banner (`role="alert"`) instead of the infinite spinner.
+
+**/lab/fishing bench (David ask, committed `cb7c72c`):** fishing data extracted to `lib/game/fishing.ts` (single source of truth), `ReelMinigame` exported. Bench: fight any species directly (no cast RNG), mystery toggle, per-tier celebration preview, live roll-% per species under any hour/weather (hour input shares the devLab clock; weather via the existing URL overrides), 1000-cast rarity simulator. Verified live: koi fight in mystery mode, sim distribution matches the weight table, off-window species grey out correctly.
+
+### 2026-07-22 — Refinement round from David's playtest interview (fishing v2 + feel pass)
+
+Structured playtest interview → `specs/sprint-2026-07-refinement.md` (includes the new **TSI Art Museum** feature sketch — paint stations, TC donations as votes, year-end permanent archive — 3 economy/placement rulings queued for David). R1 shipped same session:
+
+- **Fishing v2** (`FishingOverlay.tsx`): 6-tier ladder common→uncommon→rare→epic→legendary→**sea king** (weights 100/48/18/7/2.5/1, per-tier bar widths 0.30→0.17; legendary rung vacant per the "Both" ruling — koi holds Sea King until the next marquee extraction). Rarity never shown mid-fight; first-time species are "???" with a blacked-out icon (owned-set from `/api/collections`, fails closed to mystery). Per-species movement fields `{speed, accel, jitter, dartChance, dartMul, retargetMs}` with velocity-seeking AI — each fish fights its own way. Per-species size ranges with skewed rolls, size on the catch card. Celebration scales by tier: shake 4→12px, canvas-confetti bursts from rare up (dep already shipped), gold-glow card + longer hold for legendary/sea-king, card pop, NEW! badge.
+- **Feel pass:** `PLAYER_SPEED` 6.3→7.4, sprint 1.6→1.85 (FOV threshold raised to 9 so walk never triggers it), camera default `[0,19,-24]`→`[0,16.5,-21]` + `minDistance` 12→9, click-to-move gated to coarse pointers (desktop misclicks eliminated; touch keeps taps).
+- **Verified live:** closed-loop controller caught a Carp — mid-reel shot shows ??? + silhouette, catch card shows "41 cm + RARE + NEW!" with confetti visible over the plaza. Zero pageerrors.
+- Gates: `tsc` clean, lint **74/52** (= baseline), tests 32/32.
+- Queued next per the spec: R3 visual-QA hunt (half-buried trees / sideways assets) → R2 cliff highlands (David's retention pick) → R4 fishing follow-ups → Museum sprint after rulings.
+
+### 2026-07-22 — Fishing reel minigame (Stardew-style, horizontal) + rarity system — David ask
+
+David: "replicate Stardew Valley's fishing mechanic — left click to hold bar, fish icon shows where it needs to be, bar horizontal" + "more fish variety with fish rarity." Rewrote `FishingOverlay.tsx` (243 → ~560 lines); no other game files touched (world E handler contract `tsi:fish-start` / `tsi:fish-caught` and FishCatchFX unchanged).
+
+- **State machine gains `reeling`:** cast → wait → bite (1.4s, now hookable by E OR left-click, capture-phase so click-to-move can't fire) → **reel** → caught/missed. ESC concedes mid-reel.
+- **The reel (horizontal Stardew):** cozy cream card, water-gradient track, green catch bar (25% width), species icon riding the track. Hold LMB (or E/Space — touch works via Pointer Events) → bar accelerates right; release → gravity pulls it left; damped velocity, soft bounce at the left edge, clamp right. Progress fills while the fish is inside (0.26/s), drains outside (0.17 + 0.09·diff /s), starts at 0.35; full = caught, empty = escaped. Physics + fish AI run in one rAF writing styles via refs — zero React re-renders per frame.
+- **Fish AI:** eases toward retargets on a rarity-scaled timer with darts (2.4× speed, chance 0.12 + 0.55·diff); spawns near the resting bar so the opening moment is winnable (Stardew's bottom spawn).
+- **Rarity system:** 4 weighted tiers over the 10 species — common 100 (dace, pale chub, pond smelt, crucian), uncommon 42 (bluegill, goldfish, carp), rare 15 (black bass, catfish), legendary 5 (golden koi). Colored rarity chips on the reel card + the catch card. ACNH-style availability: pale chub 6-18h, bluegill 9-16h, catfish night-or-rain, koi legendary weight ×2 in rain. Hour source respects the lab clock (`getLabHour`), so /lab/world's time scrub also tests availability windows.
+- New species later = one row in the FISH table (+ CollectionBook entry once model/icon ships; the dump's Creatures/ set has more to extract on David's machine).
+- **Verified live (Playwright):** full flow end-to-end zero pageerrors; a closed-loop bang-bang controller (hold iff fish right of bar center, 60ms tick) actually **caught a Dace** — the reel is winnable by tracking; escape path verified separately ("It got away…"). Fill rate then tuned 0.32→0.26 so perfect play ≈2.5s, human play ≈4-6s per common fish.
+- Gates: `tsc` clean, lint **74/52** (= baseline), tests 32/32, build ✓.
+
+### 2026-07-22 — TSI Lab: separated local testing unit (/lab) — David ask
+
+David: "local testing environments for different skies, biomes, items — a separated local testing unit for experimental stuff." Successor to the water-harness replicas, mounting the REAL game code so there's no lab↔game drift. Dev-only: layout + assets API 404 in production builds (verified in the build manifest — routes compile but gate on NODE_ENV).
+
+- **`/lab/world`** — the actual island + an EXPERIMENT panel: live time-of-day scrub (0-24 + dawn/noon/dusk/night presets), weather force via the existing `?sunny/?cloudy/?rain` QA hooks (remount), spawn presets (village/`?beach`), seasonal-palette override with per-key color pickers (no draft rows needed), pastel-grade sliders (desat / warm-cast / black-lift — answers the open AC verdict in minutes), Copy-values-as-JSON for baking.
+- **`/lab/item`** — isolated GLB inspector: browses every `.glb` under `public/` (dev API `/api/lab/assets`), orbit to top-down (the sideways-skin-bake catcher), +90°X fix toggle, 1.4u player-height reference, bbox + mesh/material readout.
+- **Store:** `web/lib/game/devLab.ts` — module store, cached-snapshot `useSyncExternalStore` (audio-manager pattern), every accessor hard no-ops under `NODE_ENV=production`.
+- **Game hooks (additive, 3 sites):** `TimeOfDayCycle` h + `useTodPhase` read `getLabHour() ?? wall-clock` (with a lab subscription so phase flips instantly on scrub); `useActivePalette` paints a lab palette over the resolved live/preview one; `PostFX` drives the pastel uniforms from lab grade (null restores shipped constants).
+- Verified end-to-end via Playwright: night scrub at 22:00 renders full night (moon, lamps, lit windows), halloween palette override recolors live, stone-lantern loads in the inspector with correct measurements. Zero pageerrors.
+- Gates: `tsc` clean, lint **74/52** (= baseline), tests 32/32, build ✓ with `/lab/*` + `/api/lab/assets` registered.
+
+Roadmap companion written by reviewer: `specs/roadmap-game-world.md` (Lab workflow, Phase A pre-launch polish incl. cliff system, Phase B seasonal content machine, Phase C big rocks).
 
 ### 2026-07-14 (evening) — Organic island + continuous game-feel loop (`94b518b`…, ongoing)
 
@@ -826,6 +1272,16 @@ Verification: `tsc --noEmit` clean, `npm run lint` 74 errors / 56 warnings (= Wa
 ---
 
 ## reviewer
+
+### 2026-07-22 — Restart audit on `7143205` + Launch Track plan
+
+Fresh onboard + Playwright sweep (18 shots, desktop + mobile LITE, env-less server) after David pushed the laptop lineage. Verdict: **the world track is in great shape and self-sustaining; the launch track is untouched and Sept is ~6 weeks out.** David's 2026-07-22 decisions (art focus / overlays / sprites deferred / Sept launch) are mostly already satisfied by the July loop — the remaining risk is all launch-side: migrations ON HOLD, zero seeded content, no real member has ever completed onboarding on prod, main auto-deploys with no gate, admin monthly-drop never dry-run.
+
+- Wrote `specs/sprint-2026-08-launch-track.md` (L1-L7, DoD, sequencing to Aug 31). World/art work explicitly excluded — the standing loop owns it.
+- Updated the stale Current Sprint header to the two-track picture.
+- Bugs found + fixed same session (`0b17a99`, build entry): calendar env crash + phantom `type` column (silently empty in prod — schema is `event_type`; now via `/api/events`), touch welcome copy for LITE→full-3D users, `_check-deps.mjs` hygiene script.
+- Blocking David rulings: lift/scope the migration hold, deploy-safety option, beta cohort + date, prod `ANTHROPIC_API_KEY`. The pastel-grade AC-snapshot verdict is also still open from 2026-07-15.
+- Audit screenshots: job workspace `shots-v2/`. Baselines held: 74/52 lint, 32/32 tests, tsc clean, build ✓.
 
 ### 2026-06-01 — Autonomous Visual + Perf Burst
 

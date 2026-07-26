@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { AudioManager } from "@/lib/game/audio";
 import { useRouter } from "next/navigation";
 import {
   Sparkles,
@@ -243,7 +244,24 @@ export default function OraclePage() {
     return ei + sn + tf + jp;
   }, []);
 
-  const handleAnswer = (value: string) => {
+  // Loop iter 20 (2026-07-24): answer-pick beat — the chosen card presses
+  // in with an indigo glow + a soft note, then the quiz advances after a
+  // 260ms beat instead of hard-swapping.
+  const [picked, setPicked] = useState<number | null>(null);
+  const handleAnswer = (value: string, pickedIdx?: number) => {
+    if (picked !== null) return; // ignore double-clicks during the beat
+    if (typeof pickedIdx === "number") {
+      setPicked(pickedIdx);
+      AudioManager.playSFX("blip2");
+      window.setTimeout(() => {
+        setPicked(null);
+        commitAnswer(value);
+      }, 260);
+      return;
+    }
+    commitAnswer(value);
+  };
+  const commitAnswer = (value: string) => {
     const newAnswers = [...answers, value];
     setAnswers(newAnswers);
 
@@ -429,20 +447,23 @@ export default function OraclePage() {
         {q.answers.map((a, i) => (
           <button
             key={`${qIndex}-${i}`}
-            onClick={() => handleAnswer(a.value)}
+            onClick={() => handleAnswer(a.value, i)}
             className="text-left transition-all hover:translate-y-[-4px] hover:border-[rgba(99,102,241,0.4)]"
             style={{
               width: 180,
               minHeight: 160,
               padding: 24,
-              background: "var(--color-surface)",
-              border: "1px solid var(--glass-border-soft)",
+              background: picked === i ? "rgba(99, 102, 241, 0.12)" : "var(--color-surface)",
+              border: picked === i ? "1px solid rgba(99, 102, 241, 0.65)" : "1px solid var(--glass-border-soft)",
               borderRadius: 16,
               color: "var(--color-text-soft)",
               fontSize: 16,
               fontWeight: 500,
               lineHeight: 1.5,
               cursor: "pointer",
+              transform: picked === i ? "scale(0.96)" : undefined,
+              boxShadow: picked === i ? "0 0 18px rgba(99, 102, 241, 0.35)" : undefined,
+              opacity: picked !== null && picked !== i ? 0.45 : 1,
               animation: `fadeInUp 0.3s ease-out ${i * 0.08}s both`,
             }}
           >

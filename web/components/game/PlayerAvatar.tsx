@@ -5,10 +5,13 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { Billboard, Html } from "@react-three/drei";
 import * as THREE from "three";
 import { getTerrainHeight, sampleTerrainHeightFast } from "./terrain";
-import { clampToCoast } from "@/lib/game/coast";
+import { clampToCoast, coastDist } from "@/lib/game/coast";
+import { getTodayWeather } from "@/lib/game/weather";
 import { useSFX } from "@/lib/game/useAudio";
 import { getCameraForwardXZ } from "@/lib/game/cameraBasis";
 import { pickCurvedGround } from "@/lib/game/groundPick";
+import { juiceFovOffset } from "@/lib/game/cameraJuice";
+import { getLabFov } from "@/lib/game/devLab";
 import MoveTargetIndicator from "./MoveTargetIndicator";
 import type { EmoteType } from "@/lib/game/contentTypes";
 
@@ -38,7 +41,7 @@ const EMOTE_EMOJI: Record<string, string> = {
  * Configurable via SHEET_COLS/SHEET_ROWS constants.
  */
 
-const PLAYER_SPEED = 6.3; // art pass pt2: snappier traversal on the bigger island
+const PLAYER_SPEED = 7.4; // refinement 2026-07-22 (David: walk felt slow) — was 6.3
 // Organic coast (2026-07-14): the old ±50 SQUARE clamp let players walk
 // diagonally onto open water. Radial clamp in coast-space instead — 50.6
 // reaches the deck nose + damp sand, still short of the waterline (~51.4).
@@ -84,8 +87,11 @@ const keys: Record<string, boolean> = {};
 function applySprintFov(camera: THREE.Camera, speed: number, delta: number) {
   const pcam = camera as THREE.PerspectiveCamera;
   if (!pcam.isPerspectiveCamera) return;
-  const targetFov = speed > 7.5 ? 51 : 48;
-  const nextFov = THREE.MathUtils.damp(pcam.fov, targetFov, 4, delta);
+  // Fishing micro-zoom (2026-07-23): juice offsets zoom IN on bite / MAX
+  // CAST / reveal crack (decaying punch) and creep in during reel tension.
+  // /lab/world camera bench can pin the base FOV; juice still applies on top.
+  const targetFov = (getLabFov() ?? (speed > 9 ? 51 : 48)) - juiceFovOffset(delta);
+  const nextFov = THREE.MathUtils.damp(pcam.fov, targetFov, 8, delta);
   if (Math.abs(nextFov - pcam.fov) > 0.01) {
     pcam.fov = nextFov;
     pcam.updateProjectionMatrix();
@@ -131,7 +137,11 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
   // P28: small dust puffs spawned at the player's feet on each footstep.
   // Each entry lives ~0.6s then unmounts itself.
   const puffIdRef = useRef(0);
-  const [puffs, setPuffs] = useState<Array<{ id: number; position: [number, number, number]; scale?: number }>>([]);
+  const [puffs, setPuffs] = useState<Array<{ id: number; position: [number, number, number]; scale?: number; wet?: boolean }>>([]);
+  // Micro-anim loop iter 1 (2026-07-24): cozy sit beat — settle puff + a
+  // brief contented ♪ over the head; standing gives a tiny hop.
+  const [sitNote, setSitNote] = useState(false);
+  const sitNoteTimerRef = useRef<number | null>(null);
   // F1.2: cosmetic jump. Space triggers a brief y-arc on the sprite mesh
   // (NOT the group — group y stays terrain-bound). Doesn't affect collision
   // or click-to-move pathing; pure visual delight.
@@ -141,6 +151,14 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
   // the last "slides like a cursor" tell in the handling.
   const velRef = useRef(new THREE.Vector2(0, 0));
   const leanRef = useRef(0);
+  // Loop iter 6 (2026-07-24): turn-skid dust — a sharp direction reversal
+  // at speed kicks a puff behind the feet. Cooldown stops puff spam.
+  const skidCooldownRef = useRef(0);
+  // Loop iter 13 (2026-07-24): sprint wind lines — 4 faint streak rods
+  // around the player at full sprint, aligned to heading, instant fade on
+  // slowdown. All refs; no per-frame React.
+  const windGroupRef = useRef<THREE.Group>(null);
+  const windMatsRef = useRef<THREE.MeshBasicMaterial[]>([]);
   const squashRef = useRef(0);
   // G4 (item 7): after ~12s of standing still the sprite looks around —
   // left, right, then back to front — so idling reads alive (ACNH beat).
@@ -191,6 +209,13 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
         if (!e.repeat && !jumpRef.current.active) {
           jumpRef.current.active = true;
           jumpRef.current.t = 0;
+          // Loop iter 14 (2026-07-24): takeoff beat — landing had squash +
+          // puff + thud, liftoff had nothing. Small kick-off puff + a light
+          // hop note completes the arc.
+          const jp = positionRef.current;
+          const id = puffIdRef.current++;
+          setPuffs((prev) => [...prev, { id, position: [jp.x, jp.y + 0.02, jp.z], scale: 0.85 }]);
+          sfx.play("blip2");
         }
         e.preventDefault();
       }
@@ -205,7 +230,7 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("keyup", onKeyUp);
     };
-  }, []);
+  }, [sfx]);
 
   // Click-to-move
   const raycaster = useRef(new THREE.Raycaster());
@@ -213,6 +238,11 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
 
   const handleClick = useCallback(
     (e: MouseEvent) => {
+      // Refinement 2026-07-22 (David): click-to-move is touch-only now.
+      // On fine-pointer devices misclicks kept sending the player walking;
+      // WASD is the desktop verb. Coarse pointers (phones/tablets in full
+      // 3D) keep tap-to-walk.
+      if (window.matchMedia("(pointer: fine)").matches) return;
       const rect = gl.domElement.getBoundingClientRect();
       mouse.current.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
       mouse.current.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
@@ -252,7 +282,20 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
     const onSit = (e: Event) => {
       const { x, z } = (e as CustomEvent<{ x: number; z: number }>).detail;
       const cur = sitRef.current;
-      sitRef.current = cur && cur.x === x && cur.z === z ? null : { x, z };
+      const sittingDown = !(cur && cur.x === x && cur.z === z);
+      sitRef.current = sittingDown ? { x, z } : null;
+      if (sittingDown) {
+        // settle: soft dust puff at the seat + ♪ for a moment
+        const id = puffIdRef.current++;
+        setPuffs((prev) => [...prev, { id, position: [x, getTerrainHeight(x, z) + 0.15, z], scale: 1.3 }]);
+        setSitNote(true);
+        if (sitNoteTimerRef.current) window.clearTimeout(sitNoteTimerRef.current);
+        sitNoteTimerRef.current = window.setTimeout(() => setSitNote(false), 1700);
+      } else {
+        // stand: tiny cosmetic hop (reuses the jump arc at low amplitude)
+        setSitNote(false);
+        if (!jumpRef.current.active) jumpRef.current = { active: true, t: 0.22 };
+      }
     };
     window.addEventListener("tsi:sit", onSit);
     return () => window.removeEventListener("tsi:sit", onSit);
@@ -338,9 +381,20 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
     // direction — ~80ms up to speed, ~130ms glide-out. Frame cycling below
     // already scales by ACTUAL speed, so the walk anim eases in for free.
     {
-      const speedMult = sprint && keyMoving ? 1.6 : 1;
+      const speedMult = sprint && keyMoving ? 1.85 : 1; // refinement: stronger sprint (was 1.6)
       const vel = velRef.current;
       const lam = moving ? 12 : 7.5;
+      // Turn-skid: desired dir opposes current velocity while moving fast.
+      skidCooldownRef.current = Math.max(0, skidCooldownRef.current - delta);
+      if (moving && skidCooldownRef.current === 0) {
+        const sp = Math.hypot(vel.x, vel.y);
+        if (sp > PLAYER_SPEED * 0.55 && dx * vel.x + dz * vel.y < -0.4 * sp) {
+          skidCooldownRef.current = 0.6;
+          const id = puffIdRef.current++;
+          setPuffs((prev) => [...prev, { id, position: [pos.x, pos.y + 0.12, pos.z], scale: 1.15 }]);
+          sfx.play("footstep");
+        }
+      }
       vel.x = THREE.MathUtils.damp(vel.x, moving ? dx * PLAYER_SPEED * speedMult : 0, lam, delta);
       vel.y = THREE.MathUtils.damp(vel.y, moving ? dz * PLAYER_SPEED * speedMult : 0, lam, delta);
       if (Math.abs(vel.x) > 0.02 || Math.abs(vel.y) > 0.02) {
@@ -363,6 +417,28 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
       const targetLean = THREE.MathUtils.clamp(-latVel / PLAYER_SPEED, -1, 1) * 0.085;
       leanRef.current = THREE.MathUtils.damp(leanRef.current, targetLean, 10, delta);
       applySprintFov(camera, Math.hypot(vel.x, vel.y), delta);
+
+      // Sprint wind lines: visible only near sprint speed, sliding
+      // backward past the player; opacity collapses fast on slowdown.
+      const wg = windGroupRef.current;
+      if (wg) {
+        const spd = Math.hypot(vel.x, vel.y);
+        const showWind = spd > PLAYER_SPEED * 1.35;
+        let peak = 0;
+        for (const m of windMatsRef.current) {
+          if (!m) continue;
+          m.opacity = THREE.MathUtils.damp(m.opacity, showWind ? 0.2 : 0, showWind ? 8 : 22, delta);
+          peak = Math.max(peak, m.opacity);
+        }
+        wg.visible = peak > 0.015;
+        if (wg.visible) {
+          wg.position.set(pos.x, pos.y, pos.z);
+          wg.rotation.y = Math.atan2(vel.x, vel.y);
+          for (let i = 0; i < wg.children.length; i++) {
+            wg.children[i].position.z = -0.15 - ((clockRef.current * 5 + i * 0.65) % 1) * 1.1;
+          }
+        }
+      }
     }
 
     // Ground follow — sample terrain every frame (even when idle so the
@@ -494,13 +570,24 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
       const footstepInterval = keys["shift"] ? 0.25 : 0.4;
       if (footstepTimer.current >= footstepInterval) {
         footstepTimer.current = 0;
-        sfx.play("footstep");
+        // Loop iter 26 (2026-07-24): the bridge knocks — steps on the main
+        // river crossing play a wooden note instead of the grass scuff.
+        const onBridge = (Math.abs(pos.x) < 2.2 && pos.z > 0 && pos.z < 6.5) || (Math.abs(pos.x - 39.25) < 1.8 && pos.z > 0.9 && pos.z < 6.6) || (pos.x > 43.2 && pos.x < 45.2 && pos.z > 0.4 && pos.z < 5); // S2+S3: crossings + pier knock
+        // Loop wake 31: the brick plaza taps — hard pavement note (matches
+        // RoadTiles' PLAZA rect), and dry brick kicks no dirt.
+        const onBrick = pos.x > -5.4 && pos.x < 5.4 && pos.z > -16.6 && pos.z < -9.4;
+        sfx.play(onBridge ? "blip4" : onBrick ? "blip3" : "footstep");
         // P28: spawn a dust puff at the player's feet. Trailing slightly
         // behind the movement direction so it reads as kicked-up dust.
         const trailX = pos.x - (dx || 0) * 0.2;
         const trailZ = pos.z - (dz || 0) * 0.2;
         const id = puffIdRef.current++;
-        setPuffs((prev) => [...prev, { id, position: [trailX, pos.y + 0.02, trailZ], scale: keys["shift"] ? 1.3 : 1 }]);
+        // Loop iter 7 (2026-07-24): on the beach band footsteps splash a
+        // wet ring instead of kicking dust (coast-space distance past the
+        // sand line ≈48.5). Iter 22: rain days make EVERY step a puddle
+        // ripple — the weather reaches the ground (incl. puddles on brick).
+        const wet = coastDist(trailX, trailZ) > 48.5 || getTodayWeather() === "rain";
+        if (!onBridge && (!onBrick || wet)) setPuffs((prev) => [...prev, { id, position: [trailX, pos.y + 0.02, trailZ], scale: keys["shift"] ? 1.3 : 1, wet }]);
       }
     } else {
       footstepTimer.current = 0;
@@ -525,12 +612,29 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
           }
         />
       ))}
+      {/* Loop iter 13: sprint wind streaks (world-space, heading-aligned) */}
+      <group ref={windGroupRef} visible={false}>
+        {[0, 1, 2, 3].map((i) => (
+          <mesh key={i} position={[i % 2 ? 0.45 : -0.45, 0.55 + (i >> 1) * 0.55, -0.4]}>
+            <boxGeometry args={[0.025, 0.025, 0.85]} />
+            <meshBasicMaterial
+              ref={(m) => { if (m) windMatsRef.current[i] = m; }}
+              color="#FFFFFF"
+              transparent
+              opacity={0}
+              depthWrite={false}
+              fog={false}
+            />
+          </mesh>
+        ))}
+      </group>
       {/* P28: footstep dust puffs (small) + P29 landing puff (scale > 1) */}
       {puffs.map((p) => (
         <FootstepPuff
           key={p.id}
           position={p.position}
           baseScale={p.scale ?? 1}
+          wet={p.wet}
           onDone={() => setPuffs((prev) => prev.filter((q) => q.id !== p.id))}
         />
       ))}
@@ -587,6 +691,18 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
 
       {/* Sprint E3: active emote bubble above the avatar's head. Parent clears
           activeEmote after 3.5s so this just unmounts automatically. */}
+      {sitNote && (
+        <Html position={[0, 2.1, 0]} center zIndexRange={[30, 0]} style={{ pointerEvents: "none" }}>
+          <div style={{ fontSize: 20, animation: "tsi-sit-note 1.7s ease-out forwards" }}>♪</div>
+          <style>{`
+            @keyframes tsi-sit-note {
+              0% { opacity: 0; transform: translateY(6px) rotate(-8deg); }
+              20% { opacity: 0.9; transform: translateY(0) rotate(4deg); }
+              100% { opacity: 0; transform: translateY(-14px) rotate(-4deg); }
+            }
+          `}</style>
+        </Html>
+      )}
       {activeEmote && (
         <Html zIndexRange={[40, 0]}
           position={[0, 2.6, 0]}
@@ -594,21 +710,49 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
           style={{ pointerEvents: "none" }}
           distanceFactor={10}
         >
-          <div
-            className="player-emote-bubble"
-            style={{
-              fontSize: 40,
-              lineHeight: 1,
-              filter: "drop-shadow(0 2px 6px rgba(0,0,0,0.4))",
-              userSelect: "none",
-            }}
-          >
-            {EMOTE_EMOJI[activeEmote.animation_key] ??
-              activeEmote.display_name.charAt(0).toUpperCase()}
+          {/* Loop iter 19 (2026-07-24): burst — six sparks fly radially on
+              emote start so a wave reads across the plaza. One-shot per
+              emote instance (keyed by id + start). */}
+          <div style={{ position: "relative" }}>
+            {Array.from({ length: 6 }).map((_, bi) => (
+              <span
+                key={`${activeEmote.id}-${bi}`}
+                aria-hidden
+                style={{
+                  position: "absolute",
+                  left: "50%",
+                  top: "50%",
+                  width: 6,
+                  height: 6,
+                  borderRadius: "50%",
+                  background: bi % 2 ? "#FFD166" : "#FFFDF5",
+                  ["--ex" as string]: `${Math.cos((bi / 6) * Math.PI * 2) * 34}px`,
+                  ["--ey" as string]: `${Math.sin((bi / 6) * Math.PI * 2) * 26}px`,
+                  animation: "playerEmoteSpark 0.55s ease-out forwards",
+                  pointerEvents: "none",
+                }}
+              />
+            ))}
+            <div
+              className="player-emote-bubble"
+              style={{
+                fontSize: 40,
+                lineHeight: 1,
+                filter: "drop-shadow(0 2px 6px rgba(0,0,0,0.4))",
+                userSelect: "none",
+              }}
+            >
+              {EMOTE_EMOJI[activeEmote.animation_key] ??
+                activeEmote.display_name.charAt(0).toUpperCase()}
+            </div>
           </div>
           <style jsx>{`
             .player-emote-bubble {
               animation: playerEmoteBounce 600ms ease-in-out infinite;
+            }
+            @keyframes playerEmoteSpark {
+              0% { opacity: 0.95; transform: translate(-50%, -50%); }
+              100% { opacity: 0; transform: translate(calc(-50% + var(--ex)), calc(-50% + var(--ey))) scale(0.5); }
             }
             @keyframes playerEmoteBounce {
               0% {
@@ -655,7 +799,7 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
 
 // P28: a single dust puff at the player's feet. Expands and fades out
 // over 0.6s, then calls onDone so the parent removes it from state.
-function FootstepPuff({ position, onDone, baseScale = 1 }: { position: [number, number, number]; onDone: () => void; baseScale?: number }) {
+function FootstepPuff({ position, onDone, baseScale = 1, wet = false }: { position: [number, number, number]; onDone: () => void; baseScale?: number; wet?: boolean }) {
   const ref = useRef<THREE.Mesh>(null);
   const matRef = useRef<THREE.MeshBasicMaterial>(null);
   const tRef = useRef(0);
@@ -667,19 +811,20 @@ function FootstepPuff({ position, onDone, baseScale = 1 }: { position: [number, 
       return;
     }
     if (ref.current) {
-      const s = (0.35 + t * 0.4) * baseScale;
+      // Wet rings spread wider and thinner than dust (iter 7).
+      const s = (wet ? 0.3 + t * 0.75 : 0.35 + t * 0.4) * baseScale;
       ref.current.scale.set(s, s, s);
     }
     if (matRef.current) {
-      matRef.current.opacity = 0.55 * (1 - t);
+      matRef.current.opacity = (wet ? 0.45 : 0.55) * (1 - t);
     }
   });
   return (
     <mesh ref={ref} position={position} rotation={[-Math.PI / 2, 0, 0]}>
-      <circleGeometry args={[1, 12]} />
+      {wet ? <ringGeometry args={[0.72, 1, 16]} /> : <circleGeometry args={[1, 12]} />}
       <meshBasicMaterial
         ref={matRef}
-        color="#D8C8A8"
+        color={wet ? "#DFF2FC" : "#D8C8A8"}
         transparent
         opacity={0.55}
         depthWrite={false}

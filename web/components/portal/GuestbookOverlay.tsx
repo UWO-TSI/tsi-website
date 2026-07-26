@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { X, Send, Loader2 } from "lucide-react";
+import { AudioManager } from "@/lib/game/audio";
 
 /**
  * GuestbookOverlay (sprint E6) — DOM overlay rendered alongside the game
@@ -30,6 +31,7 @@ interface GuestbookOverlayProps {
 
 export default function GuestbookOverlay({ open, onClose }: GuestbookOverlayProps) {
   const [entries, setEntries] = useState<GuestbookEntry[] | null>(null);
+  const [justSigned, setJustSigned] = useState(false);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -108,6 +110,13 @@ export default function GuestbookOverlay({ open, onClose }: GuestbookOverlayProp
       }
       setInput("");
       setToast("Thanks!");
+      // Loop iter 16 (2026-07-24): sign beat — pen-scratch two-blip into a
+      // stamp note, and the fresh entry pops into the wall below.
+      AudioManager.playSFX("blip1");
+      window.setTimeout(() => AudioManager.playSFX("blip3"), 120);
+      window.setTimeout(() => AudioManager.playSFX("confirm"), 280);
+      setJustSigned(true);
+      window.setTimeout(() => setJustSigned(false), 1200);
       await loadEntries();
     } catch {
       setErrorMsg("Couldn't reach the server. Try again.");
@@ -208,6 +217,13 @@ export default function GuestbookOverlay({ open, onClose }: GuestbookOverlayProp
             fontSize: 13,
           }}
         >
+          <style>{`
+            @keyframes gb-pop {
+              0% { transform: scale(0.85) translateY(6px); opacity: 0; }
+              70% { transform: scale(1.02) translateY(-1px); opacity: 1; }
+              100% { transform: scale(1) translateY(0); opacity: 1; }
+            }
+          `}</style>
           {entries === null ? (
             <div
               style={{
@@ -231,7 +247,11 @@ export default function GuestbookOverlay({ open, onClose }: GuestbookOverlayProp
               Be the first to sign the wall.
             </div>
           ) : (
-            entries.map((entry) => <EntryBlock key={entry.id} entry={entry} />)
+            entries.map((entry, i) => (
+              <div key={entry.id} style={i === 0 && justSigned ? { animation: "gb-pop 0.32s cubic-bezier(0.34, 1.56, 0.64, 1)" } : undefined}>
+                <EntryBlock entry={entry} />
+              </div>
+            ))
           )}
         </div>
 

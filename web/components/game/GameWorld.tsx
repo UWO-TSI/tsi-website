@@ -3,7 +3,7 @@
 import { Suspense, useRef, useState, useCallback, useEffect, useMemo, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { CameraControls, Html } from "@react-three/drei";
+import { CameraControls, Html, useGLTF } from "@react-three/drei";
 import { Smile, BookOpen, Map as MapIcon, Settings2, Keyboard } from "lucide-react";
 import * as THREE from "three";
 import PlayerAvatar from "./PlayerAvatar";
@@ -26,18 +26,24 @@ import { AudioManager } from "@/lib/game/audio";
 import { WarmupProbe, LoadGateOverlay } from "./LoadGate";
 import RainFX from "./RainFX";
 import { getTodayWeather, type Weather } from "@/lib/game/weather";
+import { getLabHour, labSubscribe } from "@/lib/game/devLab";
+import { WEATHER_GRADES } from "@/lib/game/grading";
 import { coastDist, beachWidthShift, COAST_GLSL } from "@/lib/game/coast";
-import { CloudShadows, NightStars, WaterSparkles, LeafGusts, NightWindows, TargetGlow } from "./AmbienceFX";
+import { DEFAULT_PALETTES } from "@/data/content-defaults";
+import { CloudShadows, NightStars, WaterSparkles, LeafGusts, NightWindows, TargetGlow, SeasonalParticles } from "./AmbienceFX";
 import AmbientLife from "./AmbientLife";
 import AudioController from "./AudioController";
 import NPCChatOverlay from "./NPCChatOverlay";
 import EmoteMenu from "./EmoteMenu";
 import FishingOverlay from "./FishingOverlay";
+import FishingBobber from "./FishingBobber";
+import IdleFireflies from "./IdleFireflies";
 import CollectionBook from "./CollectionBook";
 import ControlsOverlay from "./ControlsOverlay";
 import WelcomeOverlay from "./WelcomeOverlay";
 import Compass from "./Compass";
 import StatsHUD from "./StatsHUD";
+import WeatherTimeDock from "./WeatherTimeDock";
 import Crosshair from "./Crosshair";
 import DebugOverlay, { type DebugSnapshot } from "./DebugOverlay";
 import PostFX from "./PostFX";
@@ -59,6 +65,10 @@ import Critters from "./Critters";
 import HQInterior from "./HQInterior";
 import ShopInterior from "./ShopInterior";
 import OracleInterior from "./OracleInterior";
+import IslaChica from "./IslaChica";
+import TempleRise from "./TempleRise";
+import S7Pockets from "./S7Pockets";
+import WharfShackInterior from "./WharfShackInterior";
 import type { InteriorStation } from "./interiorShared";
 import RoadTiles from "./RoadTiles";
 import GrassTufts from "./GrassTufts";
@@ -71,6 +81,10 @@ import RiverBanks from "./RiverBanks";
 import RiverBankWalls from "./RiverBankWalls";
 import FishShadows from "./FishShadows";
 import BeachCrabs from "./BeachCrabs";
+import PlazaSparrows from "./PlazaSparrows";
+import PlazaHedges from "./PlazaHedges";
+import WharfPier from "./WharfPier";
+import { clone as cloneSkeleton } from "three/examples/jsm/utils/SkeletonUtils.js";
 import SeasonalProps from "./SeasonalProps";
 import Landmarks from "./Landmarks";
 import { getActiveCritters } from "@/lib/game/critterStore";
@@ -127,6 +141,8 @@ const BUILDINGS = [
   { id: "shop", name: "Shop", position: [-24, 0, 12] as [number, number, number], size: [6.6, 3.5, 3.6] as [number, number, number], color: "#D4EAD4", roofColor: "#5BA086", href: undefined, interior: "shop" as const },
   { id: "oracle", name: "Oracle Temple", position: [0, 3, 30] as [number, number, number], size: [6.8, 3.9, 3.4] as [number, number, number], color: "#E8DCF0", roofColor: "#7B5EA7", href: undefined, interior: "oracle" as const },
   { id: "house", name: "House", position: [24, 0, 14] as [number, number, number], size: [5, 4.1, 3.1] as [number, number, number], color: "#C8E6C9", roofColor: "#7EB8C9", href: undefined },
+  // S4 (economy v2): the Wharf Shack on the dock apron — sells your catches.
+  { id: "wharf", name: "Wharf Shack", position: [44.5, 0, -3.2] as [number, number, number], size: [3.6, 2.7, 2.6] as [number, number, number], color: "#D8C4A0", roofColor: "#7A5A3A", href: undefined, interior: "wharf" as const },
   { id: "bounty", name: "Bounty Board", position: [14, 0, 9] as [number, number, number], size: [1.5, 1.8, 0.3] as [number, number, number], color: P.dirtPath, href: "/student/dashboard/bounty" },
   { id: "jobs", name: "Job Board", position: [-15, 0, -13] as [number, number, number], size: [1.5, 1.8, 0.3] as [number, number, number], color: P.dirtPath, href: "/student/dashboard/jobs" },
   { id: "leaderboard", name: "Leaderboard", position: [15, 0, -13] as [number, number, number], size: [1.2, 2.5, 1.2] as [number, number, number], color: P.wellStone, href: "/student/dashboard/leaderboard" },
@@ -137,9 +153,14 @@ const SPAWN_POSITION: [number, number, number] = [0, 0, -15];
 // QA hook (loop iteration 16): `?beach` spawns at the cove deck so the
 // whole shore batch is one URL away. Same family as ?nointro/?rain.
 function spawnOverride(): [number, number, number] | null {
-  if (typeof window !== "undefined" && window.location.search.includes("beach")) {
+  if (typeof window === "undefined") return null;
+  if (window.location.search.includes("beach")) {
     return [18.2, 0, 42.5];
   }
+  // S5 QA hook: ?spawnat=x,z drops the player anywhere (dev/headless
+  // verification — same family as ?nointro / ?rain).
+  const m = window.location.search.match(/spawnat=(-?[\d.]+),(-?[\d.]+)/);
+  if (m) return [Number(m[1]), 0, Number(m[2])];
   return null;
 }
 
@@ -163,6 +184,14 @@ function spawnOverride(): [number, number, number] | null {
 // keys with a sunset POWER RAMP (color saturates AND darkens together,
 // Complementary-style), dawn eases through cream, night keeps the blue
 // floor. Fog anchors at 7/10-15/17/21 unchanged (sky-art contract).
+// Module-scope escape hatch (react-compiler immutability rule — same
+// pattern as applySprintFov): three's Fog exposes near/far as plain
+// mutable fields, no setter method.
+function setFogRange(fog: THREE.Fog, near: number, far: number) {
+  fog.near = near;
+  fog.far = far;
+}
+
 const TOD_KEYS: [number, string, string, string, number, string, number][] = [
   [5,  "#FFB878", "#FFDDB8", "#FFD9B0", 0.6,  "#C8BCFF", 0.34], // dawn peach
   [6,  "#8FC4EE", "#F2E2C8", "#FFE7C4", 0.95, "#D8D4F2", 0.36], // sunrise cream
@@ -176,7 +205,7 @@ const TOD_KEYS: [number, string, string, string, number, string, number][] = [
   [17, "#FF9966", "#FFD4A8", "#FFA35C", 0.95, "#FFD4A8", 0.34], // golden peak (BSL 255,160,80)
   [18, "#E87A5A", "#F2B888", "#FF8E4A", 0.7,  "#E8B090", 0.3],  // saturate + darken
   [19, "#FF9966", "#2D2D6B", "#FF7A48", 0.35, "#6B5A8B", 0.26], // last ember
-  [21, "#1A1A40", "#2D2D6B", "#334466", 0.0,  "#334466", 0.22], // blue night floor
+  [21, "#1A1A40", "#26264A", "#334466", 0.0,  "#334466", 0.22], // blue night floor (fog darkened 2026-07-23 — indigo haze was lifting the ground)
 ];
 const _tc = new THREE.Color();
 
@@ -342,7 +371,8 @@ function TimeOfDayCycle({ weather, todPhase, shadowsOn, playerPosRef }: { weathe
 
   useFrame(() => {
     const now = new Date();
-    const h = now.getHours() + now.getMinutes() / 60;
+    // /lab/world scrubs time via getLabHour(); null (always, in prod) = wall clock.
+    const h = getLabHour() ?? now.getHours() + now.getMinutes() / 60;
 
     // Find bounding keyframes
     let ai = TOD_KEYS.length - 1, bi = 0;
@@ -462,8 +492,15 @@ function TimeOfDayCycle({ weather, todPhase, shadowsOn, playerPosRef }: { weathe
     // baked from the same table, so they stay in sync). Rain pulls it
     // toward the overcast gray so the haze matches the rain skies.
     if (scene.fog) {
-      const f = (scene.fog as THREE.Fog).color.set(a[2]).lerp(_tc.set(b[2]), t);
+      const fog = scene.fog as THREE.Fog;
+      const f = fog.color.set(a[2]).lerp(_tc.set(b[2]), t);
       if (weather === "rain") f.lerp(_tc.set("#AAB2BC"), 0.65);
+      // Fog recedes as the sun drops (David report 2026-07-23: the night
+      // haze greyed the whole scene). sunNorm 1 at full day → exactly the
+      // shipped 55/100; sunNorm 0 at night → 70/130, so the dark hours
+      // read clear-and-deep instead of milky. Day chemistry untouched.
+      const sunNorm = Math.min(1, (a[4] + (b[4] - a[4]) * t) / 1.4);
+      setFogRange(fog, 55 + (1 - sunNorm) * 15, 100 + (1 - sunNorm) * 30);
     }
   });
 
@@ -520,9 +557,21 @@ function ApplyGrassTint({ material, tint }: { material: THREE.MeshStandardMateri
 }
 
 function Terrain() {
+  // Wake 64: seasonal grass — the active palette's grass slot tints the
+  // meadow vertex colors at build time (sand/soil bands still win below).
+  // Default season = no tint, so the shipped look is byte-identical.
+  const { data: activePalette } = useActivePalette();
+  // Compare by VALUE, not slug — the lab preview override swaps palette
+  // while keeping the resolved slug, and the default season must stay
+  // byte-identical to the shipped look.
+  const defaultGrass = DEFAULT_PALETTES[0].palette.grass.toLowerCase();
+  const seasonGrass =
+    activePalette.palette.grass && activePalette.palette.grass.toLowerCase() !== defaultGrass
+      ? activePalette.palette.grass
+      : null;
   const geometry = useMemo(() => {
-    const size = 108; // island respace 2026-07-07 (radius 52)
-    const segments = 156;
+    const size = 150; // GEO S1: covers the +18% island (coast to ~70 + sink band)
+    const segments = 216;
     const geo = new THREE.PlaneGeometry(size, size, segments, segments);
     geo.rotateX(-Math.PI / 2);
 
@@ -545,6 +594,7 @@ function Terrain() {
     const SINK_END = 56;
     const SINK_DEPTH = 2.4;
     const cSand = new THREE.Color("#E2CB93");
+    const cFlats = new THREE.Color("#F2E4BC");
     const cSoil = new THREE.Color("#7A5C43");
 
     for (let i = 0; i < pos.count; i++) {
@@ -575,6 +625,9 @@ function Terrain() {
         tmp.copy(c1);
       }
 
+      // Seasonal tint rides over the grass pick, under the beach bands.
+      if (seasonGrass) tmp.lerp(new THREE.Color(seasonGrass), 0.62);
+
       // Beach width varies per angle (iteration 2): es shifts the color
       // bands only — wide sand sweeps on some stretches, grassy banks
       // nearly to the water on others. The waterline stays put.
@@ -585,6 +638,12 @@ function Terrain() {
         // grass → sand across the waterline, sand → wet soil underwater
         const sandT = Math.min((es - 48.5) / 2.2, 1);
         tmp.lerp(cSand, sandT * sandT * (3 - 2 * sandT));
+        // S7 The Flats: where the beach-width gaussian dominates (shift
+        // beyond the ±1.8 harmonics), push toward bright tidal cream so
+        // the shelf reads as SAND under the grass texture, not olive.
+        const shiftV = es - dist;
+        const flatsT = Math.min(Math.max((shiftV - 2) / 3, 0), 1);
+        if (flatsT > 0) tmp.lerp(cFlats, flatsT * sandT * 0.55);
         if (dist > 52.5) {
           tmp.lerp(cSoil, Math.min((dist - 52.5) / 3, 1));
         }
@@ -598,7 +657,7 @@ function Terrain() {
     geo.setAttribute("color", new THREE.BufferAttribute(colors, 3));
     geo.computeVertexNormals();
     return geo;
-  }, []);
+  }, [seasonGrass]);
 
   const grassTex = useMemo(() => getGrassTexture(), []);
 
@@ -641,7 +700,7 @@ ${COAST_GLSL}`
           "#include <color_fragment>",
           `#include <color_fragment>
 {
-  float e = length(vGroundXZ) - coastWobble(vGroundXZ);
+  float e = length(vGroundXZ) / COAST_SCALE - coastWobble(vGroundXZ);
   float lap = sin(vGroundXZ.x * 0.9 + vGroundXZ.y * 0.7 + uTime * 1.4) * 0.5;
   float wet = smoothstep(50.1 + lap, 51.2 + lap, e) * (1.0 - smoothstep(51.9, 52.6, e));
   diffuseColor.rgb *= 1.0 - wet * 0.16;
@@ -788,9 +847,9 @@ function BridgeLights({ phase }: { phase: "day" | "night" | "dawn" | "dusk" }) {
   );
 }
 
-function Bridge({ phase }: { phase: "day" | "night" | "dawn" | "dusk" }) {
+function Bridge({ phase, xAt = 0, lights = true }: { phase: "day" | "night" | "dawn" | "dusk"; xAt?: number; lights?: boolean }) {
   const { position, rotation } = useMemo(() => {
-    const t = findRiverTForX(0);
+    const t = findRiverTForX(xAt);
     const sample = sampleRiverPoint(t);
     // Bridge planks should run perpendicular to the river (i.e. parallel to
     // the path's N-S direction). The bridge's own +Z axis aligns with the
@@ -802,17 +861,31 @@ function Bridge({ phase }: { phase: "day" | "night" | "dawn" | "dusk" }) {
       position: [sample.position.x, 0.06, sample.position.z] as [number, number, number],
       rotation: [0, heading + Math.PI / 2, 0] as [number, number, number],
     };
-  }, []);
+  }, [xAt]);
 
   return (
     <group position={position} rotation={rotation}>
-      {/* ACNH wooden bridge GLB. Its span runs along local X; the group's
-          local Z follows the path, so rotate 90°. Slightly sunk so the
-          arched deck center meets the flat path level. */}
+      {/* V2 (David 2026-07-25): the flat plank bridge never read as a
+          bridge. Swapped for the REAL ACNH structure bridge (BridgeWood05,
+          5.8u arched span, real albedo). SKINNED model — SkeletonUtils
+          clone, not GLBProp (wake-24 lesson). Span runs raw X → rotate 90°
+          so it crosses along the path; Y-up family, scale-only calibration. */}
       <Suspense fallback={null}>
-        <GLBProp url="/assets/acnh/props/bridge-wooden.glb" position={[0, 0.02, 0]} rotation={[0, Math.PI / 2, 0]} />
+        <ArchedBridgeModel />
       </Suspense>
-      <BridgeLights phase={phase} />
+      {/* String lights are a module-singleton InstancedMesh — main bridge
+          only; the wharf bridge gets its own lighting with the S3 district. */}
+      {lights && <BridgeLights phase={phase} />}
+    </group>
+  );
+}
+
+function ArchedBridgeModel() {
+  const { scene } = useGLTF("/assets/acnh/props/bridge-arch-wood.glb");
+  const clone = useMemo(() => cloneSkeleton(scene), [scene]);
+  return (
+    <group position={[0, -0.12, 0]} rotation={[0, Math.PI / 2, 0]} scale={0.1}>
+      <primitive object={clone} />
     </group>
   );
 }
@@ -1035,13 +1108,18 @@ function hourToPhase(h: number): "day" | "night" | "dawn" | "dusk" {
 // shell (for the DOM-mounted AudioController). 60s tick matches A6.
 function useTodPhase(): "day" | "night" | "dawn" | "dusk" {
   const [phase, setPhase] = useState<"day" | "night" | "dawn" | "dusk">(() =>
-    hourToPhase(new Date().getHours()),
+    hourToPhase(getLabHour() ?? new Date().getHours()),
   );
   useEffect(() => {
-    const id = setInterval(() => {
-      setPhase(hourToPhase(new Date().getHours()));
-    }, 60_000);
-    return () => clearInterval(id);
+    const tick = () => setPhase(hourToPhase(getLabHour() ?? new Date().getHours()));
+    const id = setInterval(tick, 60_000);
+    // /lab/world time scrub: phase flips instantly instead of waiting for
+    // the 60s tick. labSubscribe is a no-op unsubscriber in production.
+    const unsub = labSubscribe(tick);
+    return () => {
+      clearInterval(id);
+      unsub();
+    };
   }, []);
   return phase;
 }
@@ -1291,6 +1369,46 @@ const LAMP_TINTS = ["#FFD9A8", "#FFD9A8", "#FFC985", "#FFC985", "#FFBE74", "#FFB
 function LampPosts({ phase }: { phase: "day" | "night" | "dawn" | "dusk" }) {
   const onAtNight = phase === "night" || phase === "dusk" || phase === "dawn";
   const emissive = onAtNight ? 2.2 : 0;
+  // Dusk lamplighter moment (loop wake 25): on a LIVE flip into dusk the
+  // lamps don't all snap on — each ignites in sequence (400ms apart) with a
+  // small flicker-stutter and a warm overshoot before settling, plus a soft
+  // blip as it catches. Initial mounts at night skip the ceremony.
+  const globeMats = useRef<(THREE.MeshStandardMaterial | null)[]>([]);
+  const poolLights = useRef<(THREE.PointLight | null)[]>([]);
+  const wasOnRef = useRef(onAtNight);
+  const igniteAtRef = useRef<number | null>(null);
+  const chimedRef = useRef(0);
+  useEffect(() => {
+    if (onAtNight && !wasOnRef.current) {
+      igniteAtRef.current = performance.now();
+      chimedRef.current = 0;
+    }
+    wasOnRef.current = onAtNight;
+  }, [onAtNight]);
+  useFrame(() => {
+    const ig = igniteAtRef.current;
+    for (let i = 0; i < LAMP_POSITIONS.length; i++) {
+      let f = onAtNight ? 1 : 0;
+      if (onAtNight && ig !== null) {
+        const t = (performance.now() - ig - i * 400) / 1000;
+        if (t < 0) f = 0;
+        else if (t < 0.7) {
+          // catch → stutter → overshoot → settle
+          f = t < 0.12 ? 0.55 : t < 0.2 ? 0.12 : t < 0.32 ? 0.75 : t < 0.42 ? 1.25 : 1.25 - ((t - 0.42) / 0.28) * 0.25;
+          if (!(chimedRef.current & (1 << i))) {
+            chimedRef.current |= 1 << i;
+            AudioManager.playSFX("blip2");
+          }
+        } else if (i === LAMP_POSITIONS.length - 1) {
+          igniteAtRef.current = null; // last lamp settled — ceremony over
+        }
+      }
+      const mat = globeMats.current[i];
+      if (mat) mat.emissiveIntensity = 2.2 * f;
+      const light = poolLights.current[i];
+      if (light) light.intensity = 0.95 * f;
+    }
+  });
   return (
     <group>
       {LAMP_POSITIONS.map(([x, z], i) => {
@@ -1313,6 +1431,9 @@ function LampPosts({ phase }: { phase: "day" | "night" | "dawn" | "dusk" }) {
             <mesh position={[0, 1.85, 0]} castShadow>
               <sphereGeometry args={[0.18, 14, 10]} />
               <meshStandardMaterial
+                ref={(m) => {
+                  globeMats.current[i] = m;
+                }}
                 color="#FFE4B0"
                 emissive={LAMP_TINTS[i % LAMP_TINTS.length]}
                 emissiveIntensity={emissive}
@@ -1326,6 +1447,9 @@ function LampPosts({ phase }: { phase: "day" | "night" | "dawn" | "dusk" }) {
                 not a glow; the brighter point light carries the cozy pool. */}
             {onAtNight && (
               <pointLight
+                ref={(l) => {
+                  poolLights.current[i] = l;
+                }}
                 position={[0, 1.85, 0]}
                 color={LAMP_TINTS[i % LAMP_TINTS.length]}
                 intensity={0.95}
@@ -1429,6 +1553,18 @@ const NPC_SPAWN_POSITIONS_NIGHT: Record<SpawnZone, [number, number, number]> = {
   shop: [-22.5, 0, 12.5],      // under the shop awning
   temple: [0, 0, 27.5],        // closer to the temple braziers
   roaming: [3.4, 0, -15.6],    // fountain bench
+};
+
+// Rain shelter (loop wake 36): on rain days the villagers tuck under cover —
+// doorways, the shop awning, the market-cart canopy — instead of standing
+// in the open. NPC.tsx's slow base-glide makes the migration read as a
+// dash for shelter, not a teleport. Night spots win after dark (they're
+// already the covered warm spots).
+const NPC_SPAWN_POSITIONS_RAIN: Record<SpawnZone, [number, number, number]> = {
+  courtyard: [0.8, 0, -5.4],   // pressed into the HQ doorway
+  shop: [-22.8, 0, 12.2],      // deep under the shop awning
+  temple: [0, 0, 28.2],        // the temple portico, by the braziers
+  roaming: [-7.2, 0, -8.0],    // under the market-cart canopy
 };
 
 // Generic filler NPCs — design principle #2: world must never feel empty.
@@ -1586,44 +1722,41 @@ function DebugTracker({
   return null;
 }
 
-// P32: small DOM badge showing the current time-of-day phase. Lives
-// next to the corner buttons so the player can read the world clock
-// at a glance without opening any panel.
-const TOD_LABEL: Record<"day" | "night" | "dawn" | "dusk", { text: string; bg: string; fg: string }> = {
-  dawn: { text: "Dawn", bg: "#FFB68C", fg: "#5A3A26" },
-  day: { text: "Day", bg: "#FFE6A6", fg: "#5A4A2A" },
-  dusk: { text: "Dusk", bg: "#C29ACB", fg: "#3A2A4A" },
-  night: { text: "Night", bg: "#2D3360", fg: "#E6E6FF" },
-};
-function TodBadge({ phase }: { phase: "day" | "night" | "dawn" | "dusk" }) {
-  const cfg = TOD_LABEL[phase];
-  return (
-    <div
-      style={{
-        position: "absolute",
-        // Sit just below the audio-enable toast (which lives top-right
-        // at ~y=12). 48px down avoids the overlap.
-        top: 56,
-        right: 12,
-        padding: "4px 12px",
-        background: cfg.bg,
-        color: cfg.fg,
-        border: "1px solid rgba(255,255,255,0.12)",
-        borderRadius: 999,
-        fontSize: 12,
-        fontWeight: 700,
-        fontFamily: "'IBM Plex Mono', monospace",
-        letterSpacing: "0.05em",
-        textTransform: "uppercase",
-        boxShadow: "0 2px 6px rgba(0,0,0,0.25)",
-        zIndex: 30,
-        pointerEvents: "none",
-        userSelect: "none",
-      }}
-    >
-      {cfg.text}
-    </div>
-  );
+// Aerial survey camera (collab track 2026-07-25): ?aerial=1 pins a fixed
+// top-down (or oblique, via dir=n|s|e|w) camera for the geography review
+// pack. Used from /lab/world capture scripts; never linked in product UI.
+// Params: ax/az = look target, ah = altitude.
+function getAerialParams(): { x: number; z: number; h: number; dir: string | null } | null {
+  if (typeof window === "undefined") return null;
+  const q = new URLSearchParams(window.location.search);
+  if (q.get("aerial") !== "1") return null;
+  return {
+    x: Number(q.get("ax") ?? 0),
+    z: Number(q.get("az") ?? 8),
+    h: Number(q.get("ah") ?? 140),
+    dir: q.get("dir"),
+  };
+}
+
+const AERIAL_DIRS: Record<string, [number, number]> = { s: [0, -1], n: [0, 1], e: [1, 0], w: [-1, 0] };
+
+function AerialCamera({ cfg }: { cfg: { x: number; z: number; h: number; dir: string | null } }) {
+  const { camera, scene } = useThree();
+  // Priority 1: runs AFTER TimeOfDayCycle's default-priority frame write,
+  // so the survey camera wins the fog fight — at 140u altitude the whole
+  // island sits past the day fog far (100) and would render as flat wash.
+  useFrame(() => {
+    const off = cfg.dir ? AERIAL_DIRS[cfg.dir] : null;
+    if (off) {
+      camera.position.set(cfg.x + off[0] * cfg.h * 0.9, cfg.h * 0.72, cfg.z + off[1] * cfg.h * 0.9);
+    } else {
+      camera.position.set(cfg.x, cfg.h, cfg.z + 0.02);
+    }
+    camera.lookAt(cfg.x, 0, cfg.z);
+    if (scene.fog instanceof THREE.Fog) setFogRange(scene.fog, 800, 1000);
+    // (far stays at the Canvas default 300 — max survey distance ≈ 200.)
+  }, 1);
+  return null;
 }
 
 // P16: pump the camera's azimuth angle (radians) into a shared ref so the
@@ -1677,6 +1810,9 @@ function Scene({
   azimuthRef: React.MutableRefObject<number>;
 }) {
   const cameraRef = useRef<CameraControls>(null);
+  // Aerial survey mode: fixed camera replaces CameraControls entirely
+  // (the follow moveTo no-ops on the null ref).
+  const aerial = useMemo(() => getAerialParams(), []);
   const blobPlacements = useMemo(() => buildBlobPlacements(), []);
 
   // G5 (item 16): first-visit flythrough — a 6s sweep from over the sea
@@ -1739,7 +1875,12 @@ function Scene({
   // don't overlap. Stable: ordering follows the personas array.
   const placedPersonas = useMemo(() => {
     const zoneCount: Partial<Record<SpawnZone, number>> = {};
-    const table = todPhase === "night" || todPhase === "dawn" ? NPC_SPAWN_POSITIONS_NIGHT : NPC_SPAWN_POSITIONS;
+    const table =
+      todPhase === "night" || todPhase === "dawn"
+        ? NPC_SPAWN_POSITIONS_NIGHT
+        : weather === "rain"
+          ? NPC_SPAWN_POSITIONS_RAIN
+          : NPC_SPAWN_POSITIONS;
     return personas.map((p) => {
       const base = table[p.spawn_zone] ?? table.courtyard;
       const idx = zoneCount[p.spawn_zone] ?? 0;
@@ -1747,7 +1888,7 @@ function Scene({
       const pos: [number, number, number] = [base[0] + idx * 1.5, base[1], base[2]];
       return { persona: p, position: pos };
     });
-  }, [personas, todPhase]);
+  }, [personas, todPhase, weather]);
 
   const handleFillerClick = useCallback((name: string) => {
     // G3: unified toast pipeline.
@@ -1805,13 +1946,27 @@ function Scene({
     // G5: fishing spots on the riverbank (radius 2.4). Beach Cove loop:
     // plus two saltwater casts — the wood deck edge and the cove sand.
     // ACNH revamp: spots hug the carved channel banks (~1.2u off center).
-    const FISHING_SPOTS: [number, number][] = [[-12, 6.2], [-3, 2.6], [5, 5.4], [16, 3.6], [18.3, 43.6], [13.4, 48]];
+    const FISHING_SPOTS: [number, number][] = [[-12, 6.2], [-3, 2.6], [5, 5.4], [16, 3.6], [18.3, 51.2], [15.7, 56.3], [44.2, 4.4], [22, 5.4], [-26, 76.5], [33.5, 51], [40, 47.5], [45.5, 44.5]]; // S1 sea + S3 pier + v3 bend pool + S5 islet + S7 Flats ×3
     for (let i = 0; i < FISHING_SPOTS.length; i++) {
       const [sx, sz] = FISHING_SPOTS[i];
       const d = Math.hypot(sx - position.x, sz - position.z);
       if (d < Math.min(bestDist, 2.4)) {
         bestDist = d;
         best = { kind: "fishing", id: `fish-${i}`, name: "Cast line", spot: [sx, sz] };
+      }
+    }
+    // S5: rowboat travel — mainland beach ↔ Isla Chica (radius 3.0).
+    // Stations reuse the interior-station pipeline: E fires stationAction.
+    const BOAT_TRIPS: { x: number; z: number; name: string; action: string }[] = [
+      { x: -13, z: 52.5, name: "Row to Isla Chica", action: "boat:-21.8,67.2" },
+      { x: -22, z: 66.1, name: "Row back to the village", action: "boat:-12.6,51" },
+    ];
+    for (let i = 0; i < BOAT_TRIPS.length; i++) {
+      const b2 = BOAT_TRIPS[i];
+      const d = Math.hypot(b2.x - position.x, b2.z - position.z);
+      if (d < Math.min(bestDist, 3.0)) {
+        bestDist = d;
+        best = { kind: "station", id: `boat-${i}`, name: b2.name, stationAction: b2.action };
       }
     }
     // G4: flowers — pick target (radius 2.0). Skip already-picked clusters.
@@ -1834,7 +1989,9 @@ function Scene({
       }
     }
     // G3: benches — sit target. Coords mirror Props()' bench array.
-    const BENCHES: [number, number][] = [[-3, -16], [3, -16], [-3.2, 13], [3.2, 13]];
+    // Wake 67: +2 shoreline driftwood-log seats (Flats + Isla Chica) —
+    // meshes live in S7Pockets / IslaChica; same tsi:sit pipeline.
+    const BENCHES: [number, number][] = [[-3, -16], [3, -16], [-3.2, 13], [3.2, 13], [36, 46.5], [-26.5, 70.5]];
     for (let i = 0; i < BENCHES.length; i++) {
       const [bx, bz] = BENCHES[i];
       const d = Math.hypot(bx - position.x, bz - position.z);
@@ -1948,11 +2105,14 @@ function Scene({
           90°, so the camera physically cannot dive under the terrain
           (at 90° it sits at target height, 1.5u over the player, above
           every hill on the island). */}
+      {aerial ? (
+        <AerialCamera cfg={aerial} />
+      ) : (
       <CameraControls
         ref={cameraRef}
         minPolarAngle={Math.PI / 2 - (42 * Math.PI) / 180}
         maxPolarAngle={Math.PI / 2}
-        minDistance={12}
+        minDistance={9}
         maxDistance={34}
         dollySpeed={1.0}
         truckSpeed={0}
@@ -1962,6 +2122,7 @@ function Scene({
         polarRotateSpeed={0.6}
         makeDefault
       />
+      )}
 
       <TimeOfDayCycle weather={weather} todPhase={todPhase} shadowsOn={blobShadows} playerPosRef={playerPosRef} />
       {weather === "rain" && !liteMode && <RainFX playerPosRef={playerPosRef} />}
@@ -1993,7 +2154,22 @@ function Scene({
       <RiverMouths />
       <ShoreLife />
       <BeachCove />
+      <IslaChica />
+      <TempleRise phase={todPhase} />
+      <S7Pockets phase={todPhase} />
       <BeachCrabs />
+      {todPhase !== "night" && <PlazaSparrows playerPosRef={playerPosRef} />}
+      {/* S7 Flats shorebirds (wake 62): same peck-hop-flee birds, sandpiper
+          colors, skittering along the tidal line. */}
+      {todPhase !== "night" && (
+        <PlazaSparrows
+          playerPosRef={playerPosRef}
+          anchors={[[34, 49.5], [38.5, 51.5], [42.5, 47.5]]}
+          bounds={{ x0: 31, x1: 45.5, z0: 44, z1: 53 }}
+          colors={[["#C9B79A", "#D8C8AC"], ["#B8A88C", "#C9B99E"], ["#D2C2A4", "#E0D0B4"]]}
+        />
+      )}
+      <PlazaHedges playerPosRef={playerPosRef} />
       <SandFootprints playerPosRef={playerPosRef} />
       <SeasonalProps />
       <Landmarks />
@@ -2007,6 +2183,8 @@ function Scene({
       <FlowerPickFX />
       <FishCatchFX playerPosRef={playerPosRef} />
       <Bridge phase={todPhase} />
+      <Bridge phase={todPhase} xAt={39.25} lights={false} />
+      <WharfPier />
       {/* G2 ambience set (2026-07-07) */}
       <TargetGlow targetRef={glowTargetRef} />
       <NightStars phase={todPhase} />
@@ -2014,6 +2192,7 @@ function Scene({
       {!liteMode && <CloudShadows phase={todPhase} />}
       {!liteMode && <WaterSparkles />}
       {!liteMode && <LeafGusts />}
+      {!liteMode && <SeasonalParticles playerPosRef={playerPosRef} />}
 
       <InstancedTrees />
       <Bushes />
@@ -2070,7 +2249,9 @@ function Scene({
         <GhostReplay key={g.user_id} ghost={g} />
       ))}
 
-      <PlayerAvatar spawnPosition={spawnOverride() ?? spawn ?? SPAWN_POSITION} onMove={handlePlayerMove} playerName={playerName} playerLevel={playerLevel} activeEmote={activeEmote} />
+      <PlayerAvatar spawnPosition={spawn ?? spawnOverride() ?? SPAWN_POSITION} onMove={handlePlayerMove} playerName={playerName} playerLevel={playerLevel} activeEmote={activeEmote} />
+      <FishingBobber playerPosRef={playerPosRef} />
+      <IdleFireflies playerPosRef={playerPosRef} />
 
     </>
   );
@@ -2101,6 +2282,10 @@ export default function GameWorld() {
 
   // Active NPC chat target. D5 wires sprite clicks → setActiveNPC inside Scene.
   const [activeNPC, setActiveNPC] = useState<NPCPersona | null>(null);
+  // Loop iter 8: greeting hop — tell the world which NPC just got engaged.
+  useEffect(() => {
+    if (activeNPC) window.dispatchEvent(new CustomEvent("tsi:npc-greet", { detail: { id: activeNPC.id } }));
+  }, [activeNPC]);
 
   // Sprint E2 + E3: emote menu state + active emote bubble on the avatar.
   const [emoteMenuOpen, setEmoteMenuOpen] = useState(false);
@@ -2120,9 +2305,15 @@ export default function GameWorld() {
   const [collectionOpen, setCollectionOpen] = useState(false);
   // Sprint F1.3: hold-Tab server-list overlay state.
   const [tabHeld, setTabHeld] = useState(false);
-  // G3: HUD auto-fade after 5s of no pointer/key activity; M-key minimap.
+  // G3: HUD auto-fade after 5s of no pointer/key activity. Minimap is ON
+  // by default (HUD rework 2026-07-24) — M still toggles, choice persists.
   const [hudDim, setHudDim] = useState(false);
-  const [mapOpen, setMapOpen] = useState(false);
+  const [mapOpen, setMapOpen] = useState(() => {
+    try { return localStorage.getItem("tsi.map.open.v1") !== "0"; } catch { return true; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem("tsi.map.open.v1", mapOpen ? "1" : "0"); } catch { /* private browsing */ }
+  }, [mapOpen]);
   // Task 26 loading gate: overlay holds until assets resolve + warmup frames
   // render (shader compile happens behind it), then fades. gateDone unmounts.
   const [worldReady, setWorldReady] = useState(false);
@@ -2133,13 +2324,16 @@ export default function GameWorld() {
   // Interiors-lite (2026-07-13): which room the player is inside. The
   // exterior Scene unmounts while inside (assets stay cached via useGLTF)
   // and remounts on exit with the player just outside the HQ door.
-  const [interior, setInterior] = useState<null | "hq" | "shop" | "oracle">(null);
-  const interiorRef = useRef<null | "hq" | "shop" | "oracle">(null);
+  const [interior, setInterior] = useState<null | "hq" | "shop" | "oracle" | "wharf">(null);
+  // Loop iter 12 (2026-07-24): door beat — a warm light-spill pulse over
+  // the fade when passing a doorway. Key bump remounts the one-shot div.
+  const [doorGlow, setDoorGlow] = useState(0);
+  const interiorRef = useRef<null | "hq" | "shop" | "oracle" | "wharf">(null);
   useEffect(() => { interiorRef.current = interior; }, [interior]);
   const [worldSpawn, setWorldSpawn] = useState<[number, number, number] | undefined>(undefined);
   const [sheet, setSheet] = useState<SheetKey | null>(() => {
     if (typeof window === "undefined") return null;
-    const m = window.location.search.match(/sheet=(shop|bounty|jobs|leaderboard|oracle)/);
+    const m = window.location.search.match(/sheet=(shop|bounty|jobs|leaderboard|oracle|wharfsell)/);
     return m ? (m[1] as SheetKey) : null;
   });
   const sheetRef = useRef<SheetKey | null>(null);
@@ -2148,6 +2342,30 @@ export default function GameWorld() {
   // resolved once via lazy initializer (GameWorld is ssr:false so window is
   // available on first render).
   const [weather] = useState<Weather>(getTodayWeather);
+  // Loop iter 27 (2026-07-24): welcome-back toast — returning after 8h+
+  // greets you by name with the day's weather, right after the load gate.
+  // A 5-min heartbeat keeps last-seen honest for mid-session closes.
+  useEffect(() => {
+    const KEY = "tsi.lastseen.v1";
+    try {
+      const last = Number(localStorage.getItem(KEY) ?? 0);
+      const stamp = () => {
+        try { localStorage.setItem(KEY, String(Date.now())); } catch { /* ignore */ }
+      };
+      stamp();
+      const hb = window.setInterval(stamp, 300_000);
+      if (last && Date.now() - last > 8 * 3_600_000) {
+        const w = getTodayWeather();
+        const wLine = w === "rain" ? "It's raining today ☔" : w === "cloudy" ? "Cloudy skies today ☁️" : "It's a sunny day ☀️";
+        const t = window.setTimeout(() => {
+          window.dispatchEvent(new CustomEvent("tsi:toast", { detail: { text: `Welcome back! ${wLine}` } }));
+          AudioManager.playSFX("enter");
+        }, 2600);
+        return () => { window.clearInterval(hb); window.clearTimeout(t); };
+      }
+      return () => window.clearInterval(hb);
+    } catch { /* private browsing */ }
+  }, []);
   const [activeEmote, setActiveEmote] = useState<EmoteType | null>(null);
   const emoteClearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const playerPosRef = useRef<THREE.Vector3>(new THREE.Vector3(...SPAWN_POSITION));
@@ -2243,13 +2461,26 @@ export default function GameWorld() {
             triggerTransition(() => {
               // just outside each building's door (spec §7.2)
               const spawns: Record<string, [number, number, number]> = {
-                hq: [0, 0, -7], shop: [-24, 0, 9], oracle: [0, 0, 26.5],
+                hq: [0, 0, -7], shop: [-24, 0, 9], oracle: [0, 0, 29.4], wharf: [44.5, 0, -6.4],
               };
               setWorldSpawn(spawns[interiorRef.current ?? "hq"]);
               setInterior(null);
               setNearest(null);
             });
+            setDoorGlow((k) => k + 1);
             AudioManager.playSFX("exit");
+          } else if (action.startsWith("boat:")) {
+            // S5: rowboat fade-travel. Scene is keyed on worldSpawn, so the
+            // new spawn remounts it behind the standard transition.
+            if (isTransitioning) return;
+            const [bx, bz] = action.slice(5).split(",").map(Number);
+            const toIslet = bz > 60;
+            triggerTransition(() => {
+              setWorldSpawn([bx, 0, bz]);
+              setNearest(null);
+            });
+            AudioManager.playSFX("exit");
+            window.dispatchEvent(new CustomEvent("tsi:toast", { detail: { text: toIslet ? "🚣 Rowed out to Isla Chica" : "🚣 Rowed back to the village" } }));
           } else if (action === "admin") {
             window.dispatchEvent(new CustomEvent("tsi:toast", { detail: { text: "The Admin Room is locked. (T1-T3 access, coming soon)" } }));
           }
@@ -2257,10 +2488,14 @@ export default function GameWorld() {
           // Interiors-lite: enter the room behind the standard fade.
           if (isTransitioning) return;
           triggerTransition(() => {
-            setInterior(n.interiorId as "hq" | "shop" | "oracle");
+            setInterior(n.interiorId as "hq" | "shop" | "oracle" | "wharf");
             setNearest(null);
           });
-          AudioManager.playSFX("exit");
+          // Door beat: warm light spills from the doorway + the ENTER
+          // chime (was playing the exit sound on the way in).
+          setDoorGlow((k) => k + 1);
+          AudioManager.playSFX("enter");
+          window.setTimeout(() => AudioManager.playSFX("blip2"), 160);
         } else if (n.kind === "building" && n.href) {
           // Item 14: mapped targets open as sheets over the world — the
           // Canvas keeps running and close is instant. Unmapped hrefs keep
@@ -2431,7 +2666,7 @@ export default function GameWorld() {
       <Canvas
         gl={{ antialias: false, powerPreference: "high-performance" }}
         dpr={graphicsSettings.pixelated ? 0.66 : [1, 2]}
-        camera={{ fov: 48, near: 0.1, far: 300, position: [0, 19, -24] }}
+        camera={{ fov: 48, near: 0.1, far: 300, position: [0, 16.5, -21] }} // refinement: closer default framing (was 19/-24)
         shadows="soft" /* P-light v2 2026-07-13: PCFSoft maps; the sun only casts when the shadows setting is on */
         onCreated={({ gl }) => {
           // Lighting research L1 (specs/lighting-research.md): Khronos PBR
@@ -2445,7 +2680,7 @@ export default function GameWorld() {
       >
         <WarmupProbe onReady={() => setWorldReady(true)} />
         {interior !== null && (() => {
-          const Room = interior === "hq" ? HQInterior : interior === "shop" ? ShopInterior : OracleInterior;
+          const Room = interior === "hq" ? HQInterior : interior === "shop" ? ShopInterior : interior === "wharf" ? WharfShackInterior : OracleInterior;
           return (
             <Room
               frozen={sheet !== null || isTransitioning}
@@ -2458,7 +2693,10 @@ export default function GameWorld() {
         })()}
         {interior === null && (
         <Suspense fallback={null}>
+          {/* S5: keyed on spawn so boat travel (exterior→exterior) remounts
+              the Scene behind the fade — same path as interior exits. */}
           <Scene
+            key={worldSpawn ? worldSpawn.join(",") : "init"}
             playerName={playerName}
             introReady={gateDone}
             weather={weather}
@@ -2482,6 +2720,7 @@ export default function GameWorld() {
             enabled={!liteMode}
             bloom={graphicsSettings.bloom}
             bloomIntensity={todPhase === "dusk" ? 0.75 : todPhase === "night" ? 0.45 : todPhase === "dawn" ? 0.4 : 0.18}
+            grade={WEATHER_GRADES[weather]}
           />
         </Suspense>
         )}
@@ -2511,10 +2750,31 @@ export default function GameWorld() {
         <OverlaySheet sheet={sheet} onClose={() => setSheet(null)} />
         <Crosshair active={nearest !== null} hint={nearest?.name ?? null} />
         {!interior && <Compass azimuthRef={azimuthRef} />}
-        {!interior && <TodBadge phase={todPhase} />}
+        {!interior && <WeatherTimeDock phase={todPhase} weather={weather} belowMap={mapOpen} />}
         <StatsHUD />
         <DebugOverlay visible={debugOpen} snapshotRef={debugSnapshotRef} />
       </div>
+      {doorGlow > 0 && (
+        <div
+          key={doorGlow}
+          aria-hidden
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 45,
+            pointerEvents: "none",
+            background: "radial-gradient(circle at 50% 58%, rgba(255, 222, 150, 0.55) 0%, rgba(255, 222, 150, 0.18) 34%, transparent 62%)",
+            animation: "tsi-door-glow 520ms ease-out forwards",
+          }}
+        />
+      )}
+      <style>{`
+        @keyframes tsi-door-glow {
+          0% { opacity: 0; }
+          30% { opacity: 1; }
+          100% { opacity: 0; }
+        }
+      `}</style>
       {/* F1.4: tiny restore hint in screenshot mode so users know how to exit. */}
       {screenshotMode && (
         <div

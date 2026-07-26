@@ -17,8 +17,8 @@ import { useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 
 const FALLS = [
-  { url: "/assets/acnh/props/waterfall-a.glb", pos: [-52.4, -1.55, 2.6] as [number, number, number], rotY: Math.PI / 2 },
-  { url: "/assets/acnh/props/waterfall-b.glb", pos: [52.4, -1.55, 3.2] as [number, number, number], rotY: -Math.PI / 2 },
+  { url: "/assets/acnh/props/waterfall-a.glb", pos: [-61.4, -1.55, 2.6] as [number, number, number], rotY: Math.PI / 2 },
+  { url: "/assets/acnh/props/waterfall-b.glb", pos: [61.4, -1.55, 3.2] as [number, number, number], rotY: -Math.PI / 2 },
 ];
 FALLS.forEach((f) => useGLTF.preload(f.url));
 

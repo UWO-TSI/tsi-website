@@ -19,6 +19,7 @@ import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { getTerrainHeight } from "./terrain";
 import { AudioManager } from "@/lib/game/audio";
+import { collect } from "@/lib/game/collections";
 
 // ACNH revamp 2026-07: species-true collection. Index-aligned with
 // GameWorld's FLOWER_MODELS (cluster's lead model = (clusterIdx) % 8).
@@ -64,11 +65,7 @@ export default function FlowerPickFX() {
         flower,
       };
       setPicks((p) => [...p.slice(-3), pk]);
-      fetch("/api/collections", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ item_key: flower.key }),
-      }).catch(() => {});
+      collect(flower.key);
     };
     window.addEventListener("tsi:flower-pick", onPick);
     return () => window.removeEventListener("tsi:flower-pick", onPick);

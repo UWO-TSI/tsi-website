@@ -13,6 +13,7 @@
 import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
+import { useActivePalette } from "@/lib/game/contentLoader";
 import { sampleRiverPoint } from "./River";
 
 // Deterministic PRNG — react-compiler forbids Math.random() during render,
@@ -273,9 +274,10 @@ const WINDOWS: { x: number; y: number; z: number; w: number; h: number }[] = [
   // Shop (facade at z=12)
   { x: -26.35, y: 1.35, z: 11.96, w: 0.95, h: 0.8 },
   { x: -21.7, y: 1.35, z: 11.96, w: 0.95, h: 0.8 },
-  // Oracle museum (facade at z=30)
-  { x: -2.5, y: 1.85, z: 29.96, w: 0.6, h: 1.1 },
-  { x: 2.5, y: 1.85, z: 29.96, w: 0.6, h: 1.1 },
+  // Oracle museum (facade at z=30; S6 Temple Rise lifted the building
+  // onto the 2.3 plateau — the glow rides up with it)
+  { x: -2.5, y: 4.15, z: 29.96, w: 0.6, h: 1.1 },
+  { x: 2.5, y: 4.15, z: 29.96, w: 0.6, h: 1.1 },
   // House chalet (facade plane x=24 area faces -x… rotated house; front at x≈22.9)
   { x: 22.92, y: 1.5, z: 12.9, w: 0.7, h: 0.8 },
   { x: 22.92, y: 1.5, z: 15.1, w: 0.7, h: 0.8 },
@@ -344,5 +346,84 @@ export function TargetGlow({ targetRef }: { targetRef: React.MutableRefObject<[n
         <meshBasicMaterial ref={matRef} color="#FFE9A8" transparent opacity={0} depthWrite={false} blending={THREE.AdditiveBlending} side={THREE.DoubleSide} />
       </mesh>
     </group>
+  );
+}
+
+// ─── Seasonal particles (wake 65) ───────────────────────────────────────
+// Snowfall (winter), leaf-fall (autumn), petal-drift (spring sakura) —
+// one InstancedMesh in a player-following box. Mode resolves from the
+// ACTIVE PALETTE by slug when a real season row is live, with a value
+// fallback (grass/accent hexes) so /lab/world palette previews — which
+// swap colors but keep the resolved slug — trigger the same weather.
+const FLAKE_COUNT = 130;
+const FLAKE_SEEDS = Array.from({ length: FLAKE_COUNT }, (_, i) => {
+  const a = Math.sin(i * 127.1) * 43758.5453;
+  return a - Math.floor(a);
+});
+const _fp = new THREE.Vector3();
+const _fe = new THREE.Euler();
+const _fq = new THREE.Quaternion();
+const _fs = new THREE.Vector3(1, 1, 1);
+const _fm = new THREE.Matrix4();
+
+type ParticleMode = "snow" | "leaves" | "petals" | null;
+
+const PARTICLE_LOOKS: Record<Exclude<ParticleMode, null>, { color: string; size: number; fall: number; sway: number; spin: number; opacity: number }> = {
+  snow: { color: "#F4F8FC", size: 0.09, fall: 1.15, sway: 0.55, spin: 2, opacity: 0.9 },
+  leaves: { color: "#C7823A", size: 0.15, fall: 0.7, sway: 1.1, spin: 9, opacity: 0.92 },
+  petals: { color: "#F5B8CC", size: 0.11, fall: 0.55, sway: 1.4, spin: 6, opacity: 0.9 },
+};
+
+function resolveParticleMode(slug: string, palette: { grass: string; accent: string }): ParticleMode {
+  if (/winter|frost|snow|christmas/i.test(slug)) return "snow";
+  if (/autumn|harvest|fall/i.test(slug)) return "leaves";
+  if (/spring|sakura/i.test(slug)) return "petals";
+  const g = palette.grass?.toLowerCase();
+  if (g === "#e8eef2") return "snow";
+  if (g === "#9fa23f") return "leaves";
+  if (palette.accent?.toLowerCase() === "#f5a9c4") return "petals";
+  return null;
+}
+
+export function SeasonalParticles({ playerPosRef }: { playerPosRef: React.MutableRefObject<THREE.Vector3> }) {
+  const { data: activePalette } = useActivePalette();
+  const mode = resolveParticleMode(activePalette.slug, activePalette.palette);
+  const meshRef = useRef<THREE.InstancedMesh>(null);
+
+  useFrame(({ clock }) => {
+    const mesh = meshRef.current;
+    if (!mesh || !mode) return;
+    const look = PARTICLE_LOOKS[mode];
+    const t = clock.elapsedTime;
+    const p = playerPosRef.current;
+    const H = 11; // fall column height
+    const R = 26; // half-extent of the box around the player
+    for (let i = 0; i < FLAKE_COUNT; i++) {
+      const seed = FLAKE_SEEDS[i];
+      const seed2 = FLAKE_SEEDS[(i + 61) % FLAKE_COUNT];
+      const y = H - ((t * look.fall * (0.75 + seed * 0.5) + seed * H * 3) % H);
+      _fp.set(
+        p.x + (seed * 2 - 1) * R + Math.sin(t * 0.7 + seed * 20) * look.sway,
+        y,
+        p.z + (seed2 * 2 - 1) * R + Math.cos(t * 0.55 + seed * 14) * look.sway * 0.7
+      );
+      _fe.set(Math.sin(t + seed * 9) * 0.6, seed * 6 + t * look.spin * 0.1 * (seed > 0.5 ? 1 : -1), t * look.spin * 0.12 * (0.4 + seed));
+      _fq.setFromEuler(_fe);
+      _fs.setScalar(look.size * (0.7 + seed * 0.6));
+      _fm.compose(_fp, _fq, _fs);
+      mesh.setMatrixAt(i, _fm);
+    }
+    const mat = mesh.material as THREE.MeshBasicMaterial;
+    mat.color.set(look.color);
+    mat.opacity = look.opacity;
+    mesh.instanceMatrix.needsUpdate = true;
+  });
+
+  if (!mode) return null;
+  return (
+    <instancedMesh ref={meshRef} args={[undefined, undefined, FLAKE_COUNT]} frustumCulled={false}>
+      <planeGeometry args={[1, 1]} />
+      <meshBasicMaterial transparent opacity={0} depthWrite={false} side={THREE.DoubleSide} />
+    </instancedMesh>
   );
 }

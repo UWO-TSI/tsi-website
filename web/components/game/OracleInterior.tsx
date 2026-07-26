@@ -14,6 +14,7 @@ import { useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
 import * as THREE from "three";
 import { AudioManager } from "@/lib/game/audio";
 import {
+  InteriorKeeper,
   InteriorPlayer, Piece, applyInteriorBackdrop, nearestStation, preloadPieces,
   type InteriorStation, type RoomBounds,
 } from "./interiorShared";
@@ -31,6 +32,54 @@ const BANNERS = [
   { x: -5.7, color: "#E85050" }, { x: -1.9, color: "#002FA7" },
   { x: 1.9, color: "#22C55E" }, { x: 5.7, color: "#FFD166" },
 ];
+
+// Candle embers (loop wake 41): three warm motes per cluster rise from the
+// flames, drift, shrink, and fade on staggered loops — the temple's candle
+// pools get living fire. Refs only, one useFrame.
+const CANDLE_XZ: [number, number][] = [
+  [-1.5, 1.4],
+  [1.6, 1.5],
+  [-1.2, 3.9],
+  [1.3, 3.8],
+];
+
+function CandleEmbers() {
+  const refs = useRef<(THREE.Mesh | null)[]>([]);
+  useFrame(({ clock }) => {
+    const t = clock.elapsedTime;
+    for (let k = 0; k < refs.current.length; k++) {
+      const m = refs.current[k];
+      if (!m) continue;
+      const cluster = CANDLE_XZ[Math.floor(k / 3)];
+      const speed = 0.3 + (k % 3) * 0.08;
+      const p = (t * speed + k * 0.71) % 1;
+      m.position.set(
+        cluster[0] + Math.sin(t * 1.6 + k * 2.1) * 0.06 * p,
+        0.34 + p * 0.6,
+        cluster[1] + Math.cos(t * 1.2 + k * 1.7) * 0.05 * p
+      );
+      m.scale.setScalar(1 - p * 0.7);
+      (m.material as THREE.MeshBasicMaterial).opacity = 0.8 * (1 - p);
+    }
+  });
+  return (
+    <group>
+      {CANDLE_XZ.flatMap((_, i) =>
+        [0, 1, 2].map((j) => (
+          <mesh
+            key={`${i}-${j}`}
+            ref={(el) => {
+              refs.current[i * 3 + j] = el;
+            }}
+          >
+            <sphereGeometry args={[0.02, 6, 4]} />
+            <meshBasicMaterial color="#FFC070" transparent opacity={0} depthWrite={false} toneMapped={false} />
+          </mesh>
+        ))
+      )}
+    </group>
+  );
+}
 
 function FloatingCrystal() {
   const ref = useRef<THREE.Mesh>(null);
@@ -119,10 +168,13 @@ export default function OracleInterior({
         <Piece name="candle" position={[1.6, 0, 1.5]} rotY={1.2} scale={0.08} />
         <Piece name="candle" position={[-1.2, 0, 3.9]} rotY={2.2} scale={0.08} />
         <Piece name="candle" position={[1.3, 0, 3.8]} rotY={0.4} scale={0.09} />
+        <CandleEmbers />
         {/* exit mat */}
         <Piece name="yellow-message-mat" position={[0, 0.015, -5.3]} scale={0.12} />
       </Suspense>
 
+      {/* wake 69: hooded altar attendant */}
+      <InteriorKeeper position={[1.9, 0, 3.6]} rotY={Math.PI + 0.4} watch={[0, 2.6]} colors={{ apron: "#5A4A7E", shirt: "#8E7BB0" }} hat="hood" playerPosRef={playerPosRef} />
       <InteriorPlayer
         frozen={frozen}
         bounds={BOUNDS}

@@ -9,6 +9,7 @@ import { getBlobTexture } from "./BlobShadows";
 import { AudioManager } from "@/lib/game/audio";
 import type { NPCPersona } from "@/lib/game/contentTypes";
 
+
 /**
  * NPC (sprint D5; sprites landed 2026-07-03 cozy push) — billboard for a
  * non-player character.
@@ -104,9 +105,25 @@ export default function NPC({ persona, position, playerPosition, onClick }: NPCP
   // the player approaches.
   const clockRef = useRef(0);
   const proxRef = useRef(0);
+  // Loop iter 8 (2026-07-24): greeting hop — when a chat opens with this
+  // NPC (tsi:npc-greet {id}), fire the same hop as the startle. Cheap
+  // delight: they bounce hello as the overlay slides in.
+  useEffect(() => {
+    const onGreet = (e: Event) => {
+      const d = (e as CustomEvent<{ id: string }>).detail;
+      if (d?.id === persona.id) greetAtRef.current = performance.now();
+    };
+    window.addEventListener("tsi:npc-greet", onGreet);
+    return () => window.removeEventListener("tsi:npc-greet", onGreet);
+  }, [persona.id]);
+
   // G4 (item 8): startle hop when the player barges in close — a little
   // 0.35s bounce with a 3s cooldown.
   const hopRef = useRef({ t: -1, cooldownUntil: 0 });
+  // Greet hop trigger: listener stamps the time; the frame loop only READS
+  // it (react-compiler forbids frame-writes to effect-shared refs) — the
+  // 150ms window + the hop.t latch make it one-shot.
+  const greetAtRef = useRef(0);
 
   // Spawn base (XZ). W1: the NPC wanders around this within WANDER_RADIUS.
   const grounded: [number, number, number] = useMemo(() => {
@@ -191,6 +208,11 @@ export default function NPC({ persona, position, playerPosition, onClick }: NPCP
 
     // G4 startle hop trigger.
     const hop = hopRef.current;
+    const greeted = performance.now() - greetAtRef.current < 150;
+    if (greeted && hop.t < 0) {
+      hop.t = 0;
+      hop.cooldownUntil = clockRef.current + 2;
+    }
     if (dist < 1.05 && hop.t < 0 && clockRef.current > hop.cooldownUntil) {
       hop.t = 0;
       hop.cooldownUntil = clockRef.current + 3;

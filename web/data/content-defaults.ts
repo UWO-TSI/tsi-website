@@ -49,6 +49,63 @@ export const DEFAULT_PALETTES: SeasonalPalette[] = [
     scheduled_end: "2026-11-07T23:59:59Z",
     created_at: NOW,
   },
+  // Seasonal set (wake 64, specs/seasonal-palettes.md): the monthly-cadence
+  // palettes per principle #8. An admin flips the season by activating the
+  // matching seasonal_palettes row — these are the fallback/seed values.
+  {
+    id: "autumn-palette-fallback",
+    slug: "autumn",
+    display_name: "Autumn Harvest",
+    palette: {
+      sky: "#D8E4EE",
+      grass: "#9FA23F",
+      accent: "#E07B39",
+      fog: "#E4D9BF",
+      water: "#4E7FA8",
+      building_primary: "#C08A52",
+      building_accent: "#7A5230",
+    },
+    active: false,
+    scheduled_start: "2026-09-15T00:00:00Z",
+    scheduled_end: "2026-11-30T23:59:59Z",
+    created_at: NOW,
+  },
+  {
+    id: "winter-palette-fallback",
+    slug: "winter",
+    display_name: "Winter Frost",
+    palette: {
+      sky: "#C7D8E8",
+      grass: "#E8EEF2",
+      accent: "#E86A6A",
+      fog: "#DCE8F2",
+      water: "#3A5F80",
+      building_primary: "#B9C4CE",
+      building_accent: "#6E7E8A",
+    },
+    active: false,
+    scheduled_start: "2026-12-01T00:00:00Z",
+    scheduled_end: "2027-02-28T23:59:59Z",
+    created_at: NOW,
+  },
+  {
+    id: "spring-palette-fallback",
+    slug: "spring",
+    display_name: "Spring Sakura",
+    palette: {
+      sky: "#CFE8F7",
+      grass: "#8FD16A",
+      accent: "#F5A9C4",
+      fog: "#EBD9E4",
+      water: "#5A9FD4",
+      building_primary: "#D9B08C",
+      building_accent: "#8B6F5E",
+    },
+    active: false,
+    scheduled_start: "2027-03-15T00:00:00Z",
+    scheduled_end: "2027-05-15T23:59:59Z",
+    created_at: NOW,
+  },
 ];
 
 export const DEFAULT_NPC_PERSONAS: NPCPersona[] = [

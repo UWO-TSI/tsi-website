@@ -28,21 +28,24 @@ import { useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { getCausticTexture } from "@/lib/game/causticTexture";
+import { riverWidthScale } from "./terrain";
 
 /** Control points for the river spline. East-west run with gentle bends. */
 export const RIVER_CONTROL_POINTS: [number, number][] = [
-  [-52, 2], [-30, 5], [-12, 5], [-3, 1], [5, 4], [16, 2], [30, 4], [52, 3],
+  // GEO S1: endpoints pushed to the new coast; interior bends unchanged
+  // so the bridge/spots/stones keep their exact geometry.
+  [-61, 2], [-40, 4], [-30, 5], [-12, 5], [-3, 1], [5, 4], [16, 2], [30, 4], [45, 3.5], [61, 3],
 ];
 
 /** Default river width — slightly wider than paths (2.8) to feel substantial. */
 const RIVER_WIDTH = 3.8;
 const ROWS = 5; // 5 rows: 2 banks + 3 inner — denser cross-section than Path
-const SEGMENTS = 96;
+const SEGMENTS = 144; // river v3: denser sampling keeps the narrows/pool edges smooth
 
 /** Y offset of the water surface relative to the terrain baseline (y=0). */
 // River v2 (2026-07-14): water dropped so the new bank walls
 // (RiverBankWalls) get real ACNH presence above the surface.
-const WATER_Y = -0.2;
+const WATER_Y = -0.32; // V1: water sits deeper in the carved channel
 
 const _curve = new THREE.CatmullRomCurve3(
   RIVER_CONTROL_POINTS.map(([x, z]) => new THREE.Vector3(x, 0, z)),
@@ -161,9 +164,10 @@ export default function River({
 
       const v = cumLengths[i] / Math.max(totalLength, 0.0001);
 
+      const wScale = riverWidthScale(point.x);
       for (let r = 0; r < ROWS; r++) {
         const u = r / (ROWS - 1); // 0, 0.25, 0.5, 0.75, 1
-        const offset = (u - 0.5) * width;
+        const offset = (u - 0.5) * width * wScale;
         const vx = point.x + nx * offset;
         const vz = point.z + nz * offset;
 
@@ -220,9 +224,10 @@ export default function River({
       const nx = px / plen;
       const nz = pz / plen;
 
+      const wScale = riverWidthScale(point.x);
       for (let r = 0; r < 3; r++) {
         const u = r / 2;
-        const offset = (u - 0.5) * bedWidth;
+        const offset = (u - 0.5) * bedWidth * wScale;
         const idx = i * 3 + r;
         positions[idx * 3] = point.x + nx * offset;
         positions[idx * 3 + 1] = WATER_Y - 0.08;

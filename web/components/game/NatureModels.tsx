@@ -26,8 +26,21 @@ export function GLBProp({ url, scale = 1, position, rotation, castShadow = true 
     const c = scene.clone(true);
     c.traverse((child) => {
       if ((child as THREE.Mesh).isMesh) {
-        (child as THREE.Mesh).castShadow = castShadow;
-        (child as THREE.Mesh).receiveShadow = true;
+        const mesh = child as THREE.Mesh;
+        mesh.castShadow = castShadow;
+        mesh.receiveShadow = true;
+        // David bug report 2026-07-24: blossom/leaf canopies vanished from
+        // half the view angles — the extractor wrote foliage CARDS as
+        // FrontSide, so their backfaces culled. Render nature materials
+        // double-sided (standard for stylized foliage; closed trunk meshes
+        // cost next to nothing).
+        const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+        for (const mat of mats) {
+          if (mat && mat.side !== THREE.DoubleSide) {
+            mat.side = THREE.DoubleSide;
+            mat.needsUpdate = true;
+          }
+        }
       }
     });
     return c;

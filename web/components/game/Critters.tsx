@@ -25,6 +25,9 @@ import * as THREE from "three";
 import { sampleTerrainHeightFast } from "./terrain";
 import { setActiveCritters, todayCritterSeed, type ActiveCritter } from "@/lib/game/critterStore";
 import { AudioManager } from "@/lib/game/audio";
+import confetti from "canvas-confetti";
+import { collect, localCollections } from "@/lib/game/collections";
+import { getTodayWeather } from "@/lib/game/weather";
 
 type Motion = "flutter" | "dart" | "perch" | "drift" | "crawl";
 
@@ -93,17 +96,25 @@ function buildSpawns(
   treeAnchors: readonly [number, number][],
 ): Spawn[] {
   const rnd = mulberry32(dayKey * 7 + (phase === "day" ? 1 : 5));
-  const pool = SPECIES.filter((s) => s.phases.includes(phase));
-  const totalW = pool.reduce((a, s) => a + s.weight, 0);
+  // Loop wake 37 (ACNH-true): butterflies sit out rain days — the flutter
+  // species drop from the pool; dragonflies, beetles, and shore critters
+  // keep the world alive. Weather is per-day, so spawns stay deterministic.
+  const rainDay = getTodayWeather() === "rain";
+  // Wake 38 bookend: sunny days bring the butterflies out in force (×2
+  // flutter weight) — rain hides them, sun multiplies them.
+  const sunnyDay = getTodayWeather() === "sunny";
+  const wOf = (s: Species) => (sunnyDay && s.motion === "flutter" ? s.weight * 2 : s.weight);
+  const pool = SPECIES.filter((s) => s.phases.includes(phase) && !(rainDay && s.motion === "flutter"));
+  const totalW = pool.reduce((a, s) => a + wOf(s), 0);
   const spawns: Spawn[] = [];
   // river-adjacent anchor band for dart/drift species
   const riverAnchors: [number, number][] = [[-12, 6.5], [-4, 0.4], [6, 6.2], [17, 1.8], [28, 6.4]];
   // dry-sand anchors for shore critters (coast-v2 verified: e ≈ 48.4-49.4)
-  const beachAnchors: [number, number][] = [[13, 46], [17, 44.5], [38, -19.5], [-18, 40]];
+  const beachAnchors: [number, number][] = [[15.3, 54], [19.9, 52.2], [44.6, -22.9], [-21.1, 46.9]]; // S1 x1.173
   for (let i = 0; i < SLOTS; i++) {
     let roll = rnd() * totalW;
     let sp = pool[0];
-    for (const s of pool) { roll -= s.weight; if (roll <= 0) { sp = s; break; } }
+    for (const s of pool) { roll -= wOf(s); if (roll <= 0) { sp = s; break; } }
     let anchor: [number, number];
     if (sp.zone === "beach") {
       anchor = beachAnchors[Math.floor(rnd() * beachAnchors.length)];
@@ -169,12 +180,16 @@ export default function Critters({
       sp.catching = true;
       catchStartRef.current[slot] = performance.now();
       AudioManager.playSFX("confirm");
-      window.dispatchEvent(new CustomEvent("tsi:toast", { detail: { text: `You caught ${sp.sp.label}!`, icon: `/assets/acnh/icons/${sp.sp.key}.png` } }));
-      fetch("/api/collections", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ item_key: sp.sp.key }),
-      }).catch(() => {});
+      // Loop iter 11 (2026-07-24): first catches feel different — NEW!
+      // toast, a cozy confetti pinch, and a two-note flourish. Repeats
+      // keep the quiet toast (ACNH restraint).
+      const isNew = !(sp.sp.key in localCollections());
+      if (isNew) {
+        confetti({ particleCount: 18, spread: 48, startVelocity: 26, origin: { x: 0.5, y: 0.74 }, colors: ["#7C9A62", "#FFD166", "#FFFDF5"], disableForReducedMotion: true });
+        window.setTimeout(() => AudioManager.playSFX("blip3"), 140);
+      }
+      window.dispatchEvent(new CustomEvent("tsi:toast", { detail: { text: `${isNew ? "NEW! " : ""}You caught ${sp.sp.label}!`, icon: `/assets/acnh/icons/${sp.sp.key}.png` } }));
+      collect(sp.sp.key);
     };
     window.addEventListener("tsi:critter-catch", onCatch);
     return () => window.removeEventListener("tsi:critter-catch", onCatch);
