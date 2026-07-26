@@ -432,48 +432,77 @@ export function autotile(mask: number): TileChoice {
 
 // ── Config -> kit piece ──────────────────────────────────────────
 //
-// UNRESOLVED, DELIBERATELY. The solver above is math and it is settled. Which
-// FILE each of the 47 configurations should load is an art convention only
-// Nintendo knows, and it cannot be read off the filenames. Measured evidence:
+// DERIVED BY MEASUREMENT, not guessed and not eyeballed.
 //
-//   class | my configs | my rotated | kit shapes | kit pieces
-//       0 |          1 |          1 |          1 |          1   match
-//       1 |          1 |          4 |          1 |          4   match
-//       2 |          2 |          6 |          3 |         10   differ
-//       3 |          2 |          8 |          3 |         12   differ
-//       4 |          3 |          9 |          3 |          9   match
-//       5 |          2 |          8 |          2 |          5   differ
-//       6 |          2 |          6 |          2 |          2   differ
-//       7 |          1 |          4 |          1 |          1   differ
-//       8 |          1 |          1 |          - |          -   river only
-//   total |         15 |         47 |         16 |    44 / 45
+// A cliff piece carries rock wall EXACTLY where its neighbour is lower — that
+// is what a cliff is — so the position of the `mCliff` geometry inside the
+// 10x10 footprint encodes the neighbour mask directly. Wall on the north edge
+// means the north neighbour is lower, which means that mask bit is clear.
+// `scripts/derive-kit-mapping.mjs` reads it off every piece and prints this
+// table; re-run it if the kit is ever re-extracted.
 //
-// Degrees 0, 1 and 4 line up exactly; the rest do not, and mine run HIGHER at
-// 5-7 while running LOWER at 2-3. So the kit's leading digit is not the
-// post-blob neighbour count, whatever else it is. Guessing a mapping here
-// would bake a wrong assumption into the renderer.
+// That measurement also corrected a wrong assumption from M2. The trailing
+// number in `2-b-0` is NOT a rotation — it is a VISUAL VARIANT. All four files
+// in a family share the same wall centroid and extents, and a 90-degree
+// rotation would move the centroid. ACNH varies the rock detail so a long
+// cliff run does not look tiled, and the engine applies rotation itself. So
+// the renderer picks a variant for flavour and applies `rotation` as a
+// transform.
 //
-// M6 (`/lab/map`) renders each of the 47 configurations beside every candidate
-// piece so the table below gets filled by eye — the same way the road kit's
-// rotation conventions were originally locked in the tile harness. Until then
-// `pieceFileFor` returns null and the renderer falls back to a plain quad,
-// which is exactly what a flat cell should look like anyway.
+// Coverage: 14 of the 15 canonical configurations are answered by the cliff
+// kit. Config 14 (fully enclosed, no wall anywhere) has no piece because it
+// needs none — an interior cell is just ground.
 export type KitName = "cliff" | "river" | "fall";
 
-/** config id -> `{class}-{variant}` stem, per kit. Filled in M6. */
-export const CONFIG_TO_PIECE: Record<KitName, Record<number, string>> = {
-  cliff: {},
+export interface KitPiece {
+  /** `{class}-{variant}` filename stem. */
+  stem: string;
+  /** How many visual variants ship, i.e. `-0` .. `-(variants-1)`. */
+  variants: number;
+}
+
+export const CONFIG_TO_PIECE: Record<KitName, Record<number, KitPiece>> = {
+  cliff: {
+    0: { stem: "0-a", variants: 1 },
+    1: { stem: "1-a", variants: 4 },
+    2: { stem: "2-c", variants: 4 },
+    3: { stem: "3-c", variants: 4 },
+    4: { stem: "2-a", variants: 2 },
+    5: { stem: "3-a", variants: 4 },
+    6: { stem: "4-b", variants: 4 },
+    7: { stem: "4-a", variants: 4 },
+    8: { stem: "5-b", variants: 4 },
+    9: { stem: "4-c", variants: 1 },
+    10: { stem: "2-b", variants: 4 },
+    11: { stem: "6-b", variants: 1 },
+    12: { stem: "3-b", variants: 4 },
+    13: { stem: "7-a", variants: 1 },
+  },
+  // The river and fall kits share the vocabulary but their wall material and
+  // conventions differ; derive them the same way when they get wired.
   river: {},
   fall: {},
 };
 
 /**
- * `cliff/2-b-0.glb` style filename for a resolved config, or null while the
- * mapping for that configuration is still unknown.
+ * Filename for a resolved config, or null when the kit needs no piece there
+ * (an interior cell with no exposed side).
+ *
+ * `seed` picks the visual variant deterministically — pass something derived
+ * from the cell so a given cell always looks the same, and neighbouring cells
+ * differ. The caller applies `choice.rotation` quarter-turns about Y.
  */
-export function pieceFileFor(kit: KitName, choice: TileChoice): string | null {
-  const stem = CONFIG_TO_PIECE[kit][choice.config];
-  return stem ? `${stem}-${choice.rotation}.glb` : null;
+export function pieceFileFor(kit: KitName, choice: TileChoice, seed = 0): string | null {
+  const piece = CONFIG_TO_PIECE[kit][choice.config];
+  if (!piece) return null;
+  const variant = piece.variants > 1 ? Math.abs(seed) % piece.variants : 0;
+  return `${piece.stem}-${variant}.glb`;
+}
+
+/** Stable per-cell seed, so variant choice does not shimmer between frames. */
+export function cellSeed(cx: number, cz: number): number {
+  const h = (cx * 73856093) ^ (cz * 19349663);
+  return h < 0 ? -h : h;
 }
 
 /**

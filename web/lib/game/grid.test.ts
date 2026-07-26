@@ -29,6 +29,7 @@ import {
   autotile,
   listConfigs,
   popcount8,
+  cellSeed,
   pieceFileFor,
   CONFIG_TO_PIECE,
   neighbourMask,
@@ -289,18 +290,50 @@ describe("autotile", () => {
     }
   });
 
-  // The art mapping is intentionally empty until M6 locks it visually. The
-  // renderer must degrade to a plain quad rather than guess a filename — see
-  // the CONFIG_TO_PIECE note in grid.ts for the measured mismatch between the
-  // 47 configurations and the kit's 44/45 pieces.
-  it("returns no piece while the kit mapping is unresolved", () => {
-    expect(pieceFileFor("cliff", autotile(0b00000101))).toBeNull();
+  // The cliff mapping is derived by measuring where each piece carries wall
+  // geometry — see scripts/derive-kit-mapping.mjs. 14 of 15 configs are
+  // answered; the 15th is the fully-enclosed cell, which needs no piece.
+  it("answers every config the cliff kit covers", () => {
+    let answered = 0;
+    for (let i = 0; i < listConfigs().length; i++) {
+      if (CONFIG_TO_PIECE.cliff[i]) answered++;
+    }
+    expect(answered).toBe(14);
   });
 
-  it("names a file once a config is mapped", () => {
-    CONFIG_TO_PIECE.cliff[3] = "2-b";
-    expect(pieceFileFor("cliff", { config: 3, rotation: 2, canonicalMask: 0, degree: 2 })).toBe("2-b-2.glb");
-    delete CONFIG_TO_PIECE.cliff[3];
+  it("emits no piece for the fully enclosed cell", () => {
+    const enclosed = autotile(0xff);
+    expect(pieceFileFor("cliff", enclosed)).toBeNull();
+  });
+
+  it("names a real file for every mapped config", () => {
+    for (let mask = 0; mask < 256; mask++) {
+      const c = autotile(mask);
+      const f = pieceFileFor("cliff", c, cellSeed(mask, 3));
+      if (f === null) continue;
+      expect(f).toMatch(/^\d-[a-c]-\d\.glb$/);
+    }
+  });
+
+  // The trailing number is a VISUAL VARIANT, not a rotation — measured: all
+  // four files in a family share a wall centroid, which a rotation would move.
+  // So the variant must never exceed what the kit ships.
+  it("keeps the variant index inside what the kit ships", () => {
+    for (let seed = 0; seed < 50; seed++) {
+      for (let cfg = 0; cfg < listConfigs().length; cfg++) {
+        const piece = CONFIG_TO_PIECE.cliff[cfg];
+        if (!piece) continue;
+        const f = pieceFileFor("cliff", { config: cfg, rotation: 0, canonicalMask: 0, degree: 0 }, seed);
+        expect(f).not.toBeNull();
+        const idx = Number(/-(\d)\.glb$/.exec(f as string)![1]);
+        expect(idx).toBeLessThan(piece.variants);
+      }
+    }
+  });
+
+  it("picks a stable variant per cell", () => {
+    expect(cellSeed(4, 9)).toBe(cellSeed(4, 9));
+    expect(cellSeed(4, 9)).not.toBe(cellSeed(9, 4));
   });
 });
 
