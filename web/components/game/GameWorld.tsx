@@ -7,7 +7,7 @@ import { CameraControls, Html, useGLTF } from "@react-three/drei";
 import { Smile, BookOpen, Map as MapIcon, Settings2, Keyboard } from "lucide-react";
 import * as THREE from "three";
 import PlayerAvatar from "./PlayerAvatar";
-import Building from "./Building";
+import Building, { ACNHParts, CHALET_VARIANTS } from "./Building";
 import River, { sampleRiverPoint, findRiverTForX } from "./River";
 import Ocean from "./Ocean";
 import TreeShakeFX from "./TreeShakeFX";
@@ -1536,11 +1536,14 @@ function Props() {
       {/* Ambient houses (ACNH wave V) — pure scenery flanking the south
           green, facing the village center. Footprints in terrain.ts. */}
       <Suspense fallback={null}>
+        {/* M1: composed from wall + roof + door parts. The old single-file
+            chalets were merged by the lost pipeline and lost their windows,
+            curtains and lamp in the process. */}
         <group position={yAt(-30, -18)} rotation={[0, Math.PI / 2, 0]}>
-          <GLBProp url="/assets/acnh/buildings/house-chalet-red.glb" scale={0.1} />
+          <ACNHParts parts={CHALET_VARIANTS.red} />
         </group>
         <group position={yAt(30, -19)} rotation={[0, -Math.PI / 2, 0]}>
-          <GLBProp url="/assets/acnh/buildings/house-chalet-yellow.glb" scale={0.1} />
+          <ACNHParts parts={CHALET_VARIANTS.yellow} />
         </group>
         {/* (Distant-island backdrop pieces tried here rendered as floating
             streaks — their pivots assume the ACNH sea ring. Cut; the ocean

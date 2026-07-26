@@ -230,47 +230,107 @@ const GLB_PATHS: Record<string, string> = {
 // (for slope placement), so we scale about the origin and do NOT re-ground
 // by bbox min — that would hoist the foundation into view.
 const ACNH_SCALE = 0.1;
-const ACNH_GLB: Record<string, { url: string; scale?: number; yOffset?: number; rotationY?: number }> = {
-  hq: { url: "/assets/acnh/buildings/hq-office.glb", rotationY: Math.PI },
-  shop: { url: "/assets/acnh/buildings/shop-market.glb", rotationY: Math.PI },
-  oracle: { url: "/assets/acnh/buildings/oracle-museum.glb", rotationY: Math.PI },
-  house: { url: "/assets/acnh/buildings/house-chalet.glb", rotationY: Math.PI },
+
+// M1 (2026-07-26): buildings are composed from PARTS, not one merged file.
+//
+// ACNH authors a building as separate wall / roof / door assets in a SHARED
+// coordinate space — the roof already sits at its correct height in its own
+// file, so the parts need no transform, only mounting in one group. The
+// previous single-file exports were merged by the lost ad-hoc pipeline, which
+// dropped meshes doing it: the chalet shipped with 7 of its 15 meshes, missing
+// mWindowGlass, mSideWindow, mCurtain and mLamp. The houses had no windows.
+//
+// Composing at load time instead of merging offline keeps the extractor honest
+// (one .dae in, one .glb out, mesh-count gated) and costs a few extra draw
+// calls, which the grid renderer's batching pass addresses globally.
+const B = "/assets/acnh/buildings";
+
+/** Chalet variants are a wall + roof pairing over the shared standard door. */
+function chaletParts(wall: string, roof: string): string[] {
+  return [`${B}/chalet-wall-${wall}.glb`, `${B}/chalet-roof-${roof}.glb`, `${B}/chalet-door.glb`];
+}
+
+/** Ambient chalet colourways (scenery only — see GameWorld's south green). */
+export const CHALET_VARIANTS = {
+  brown: chaletParts("a", "b"),
+  red: chaletParts("c", "g"),
+  yellow: chaletParts("e", "e"),
+} as const;
+
+const ACNH_GLB: Record<string, { parts: string[]; scale?: number; yOffset?: number; rotationY?: number }> = {
+  hq: { parts: [`${B}/hq-office.glb`, `${B}/hq-office-door.glb`], rotationY: Math.PI },
+  shop: { parts: [`${B}/shop-market.glb`, `${B}/shop-market-door.glb`], rotationY: Math.PI },
+  oracle: { parts: [`${B}/oracle-museum.glb`], rotationY: Math.PI },
+  house: { parts: CHALET_VARIANTS.brown, rotationY: Math.PI },
 };
+
+/** Shared material pass: ACNH albedo carries the look, so kill PBR shine. */
+function matteACNH(root: THREE.Object3D, castShadow: boolean) {
+  root.traverse((child) => {
+    if (!(child as THREE.Mesh).isMesh) return;
+    const mesh = child as THREE.Mesh;
+    mesh.castShadow = castShadow;
+    mesh.receiveShadow = true;
+    const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+    for (const m of mats) {
+      const std = m as THREE.MeshStandardMaterial;
+      if (std.isMeshStandardMaterial) {
+        std.metalness = 0;
+        std.roughness = Math.max(std.roughness, 0.85);
+      }
+    }
+  });
+}
+
+/**
+ * Mounts a part list as one group. Parts share the source coordinate space.
+ *
+ * Plain `.clone(true)` is safe here ONLY because the extractor strips skinning
+ * (see stripSkinning in scripts/extract-acnh-kit.mjs). Skinned clones do not
+ * rebind their skeleton and explode into shards.
+ */
+export function ACNHParts({
+  parts,
+  scale = 1,
+  yOffset = 0,
+  rotationY = 0,
+  castShadow = true,
+}: {
+  parts: readonly string[];
+  scale?: number;
+  yOffset?: number;
+  rotationY?: number;
+  castShadow?: boolean;
+}) {
+  const gltfs = useGLTF(parts as string[]);
+  const group = useMemo(() => {
+    const g = new THREE.Group();
+    for (const { scene } of gltfs) g.add(scene.clone(true));
+    g.scale.setScalar(scale * ACNH_SCALE);
+    g.position.y = yOffset;
+    g.rotation.y = rotationY;
+    matteACNH(g, castShadow);
+    return g;
+  }, [gltfs, scale, yOffset, rotationY, castShadow]);
+
+  return <primitive object={group} />;
+}
 
 /** ACNH building: fixed scale, origin-grounded, original materials kept. */
 function ACNHBuilding({ id }: { id: string }) {
   const cfg = ACNH_GLB[id];
-  const { scene } = useGLTF(cfg.url);
-
-  const cloned = useMemo(() => {
-    const clone = scene.clone(true);
-    clone.scale.setScalar((cfg.scale ?? 1) * ACNH_SCALE);
-    clone.position.y = cfg.yOffset ?? 0;
-    if (cfg.rotationY) clone.rotation.y = cfg.rotationY;
-    clone.traverse((child) => {
-      if ((child as THREE.Mesh).isMesh) {
-        const mesh = child as THREE.Mesh;
-        mesh.castShadow = true;
-        mesh.receiveShadow = true;
-        const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
-        for (const m of mats) {
-          const std = m as THREE.MeshStandardMaterial;
-          if (std.isMeshStandardMaterial) {
-            // ACNH albedo textures carry the full look — kill PBR shine so
-            // the TOD lighting reads matte like the rest of the world.
-            std.metalness = 0;
-            std.roughness = Math.max(std.roughness, 0.85);
-          }
-        }
-      }
-    });
-    return clone;
-  }, [scene, cfg]);
-
-  return <primitive object={cloned} />;
+  return (
+    <ACNHParts
+      parts={cfg.parts}
+      scale={cfg.scale ?? 1}
+      yOffset={cfg.yOffset ?? 0}
+      rotationY={cfg.rotationY ?? 0}
+    />
+  );
 }
 
-for (const cfg of Object.values(ACNH_GLB)) useGLTF.preload(cfg.url);
+for (const cfg of Object.values(ACNH_GLB)) for (const url of cfg.parts) useGLTF.preload(url);
+for (const parts of Object.values(CHALET_VARIANTS)) for (const url of parts) useGLTF.preload(url);
 
 // ─── Seasonal shop deco (principle #8: monthly content, no code pushes) ─
 // The ACNH pack ships Nook's Cranny seasonal overlays that align at

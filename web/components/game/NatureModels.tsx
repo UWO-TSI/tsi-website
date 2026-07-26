@@ -164,8 +164,8 @@ const PRELOAD = [
   "/assets/acnh/props/bridge-wooden.glb",
   "/assets/acnh/props/fence-country-a.glb",
   "/assets/acnh/props/fence-log-a.glb",
-  "/assets/acnh/buildings/house-chalet-red.glb",
-  "/assets/acnh/buildings/house-chalet-yellow.glb",
+  // (ambient chalets moved to Building.tsx CHALET_VARIANTS — they are
+  // composed from wall + roof + door parts now, and preloaded there)
 ];
 for (const url of PRELOAD) useGLTF.preload(url);
 
