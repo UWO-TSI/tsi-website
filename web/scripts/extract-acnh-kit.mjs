@@ -217,11 +217,21 @@ async function satisfyExternalImages(file, srcDir) {
  * static, so the rig is dead weight anyway. Drop the joint bindings and let
  * prune() collect the skeleton.
  */
+// (name kept: it also drops COLOR_0, see below)
 function stripSkinning(doc) {
   for (const mesh of doc.getRoot().listMeshes()) {
     for (const prim of mesh.listPrimitives()) {
       prim.setAttribute("JOINTS_0", null);
       prim.setAttribute("WEIGHTS_0", null);
+      // COLOR_0 is the same class of problem. ACNH stores per-vertex WIND SWAY
+      // weights there, not colour — but glTF says COLOR_0 multiplies base
+      // colour, and GLTFLoader turns on vertexColors whenever the attribute
+      // exists. The sway data then renders as neon yellow/cyan/green canopies
+      // that bloom (David report, 2026-07-26: "the trees are glowing lime
+      // green"). Buildings were unaffected because they carry no COLOR_0.
+      // The previously shipped plants have no COLOR_0 either — dropping it was
+      // load-bearing, exactly like the skinning strip.
+      prim.setAttribute("COLOR_0", null);
     }
   }
   for (const node of doc.getRoot().listNodes()) node.setSkin(null);
