@@ -108,6 +108,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-25 — Loop wake 71: collection-book fish filters
+
+The Fish group grew to ~78 species (wake 22's full-dump import) — one flat grid was a wall. Added filter chips on the Fish group only: **All / 🏞 River / 🌊 Sea / ✓ Caught** (fish items now carry their zone through the catalog map; other groups untouched). Verified headless with seeded catches: Sea shows Horse Mackerel + hides Stringfish, Caught shows exactly the three seeded species. Gates: tsc clean, 74/52, 32/32. Hourly holding pattern continues.
+
 ### 2026-07-25 — Loop wake 70: bible drift banner caught up (docs wake)
 
 STUDENT_SYSTEM_BIBLE's CURRENT VISION DELTAS banner was 12 days stale — it predated the entire wakes-46-69 era. Updated: the **§7 economy row now carries the v2 doctrine** (Gems 💎 = money tier on legacy tc_* columns, TC 🪙 = play currency, never converting — the old row's "internal-only rate" framing was obsolete), a new additions table covering geo v2 (all S-items + river v3), 91-species fishing with the vacant Sea King tier, draft migrations 024/025, the Wharf Shack + gear shelf, staffed interiors, the end-to-end seasonal system, the recolor pipeline, discovery zones, and the QA hooks; canonical-sources list gains the five new specs. Onboarding agents now land on accurate ground. Gates: tsc clean, 32/32 (docs-only change). Hourly holding pattern continues — all major tracks still gate on David.
