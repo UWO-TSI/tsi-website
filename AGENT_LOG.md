@@ -108,6 +108,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-25 — Loop wake 68: the Shack gets its keeper (hourly cadence)
+
+First staffed interior: a procedural fisherman behind the Wharf counter — straw hat (brim + crown), apron over a warm shirt, arms resting on the counter, gentle idle bob, and a damped friendly LEAN toward the player when they step into counter range. No chat (the counter action stays the sell sheet); pure presence per principle #2. Verified in the interior bench — he reads instantly under the lantern. Pattern note: interiors had NO npc pattern before this; WharfKeeper is the template if David wants the Shop/HQ/Oracle staffed the same way pre-avatar-system. Gates: tsc clean, 74/52, 32/32. Loop cadence is hourly now (wake 67 note) — all major tracks hold for David.
+
 ### 2026-07-25 — Loop wake 67: shoreline seats + palm breeze
 
 Two driftwood-log seats join the BENCHES sit pipeline: one on **The Flats** between the tide pools (36, 46.5), one mid-**Isla Chica** (−26.5, 70.5) — both verified headless (E-Sit prompt + player seated in the screenshots; the islet frame with the log, swaying palms, and the foam ring is a postcard). **Palm sway**: IslaChica's three palms wrapped in phased SwayGroups (two-frequency sine roll around the trunk base, ±0.022 rad — alive, not metronomic). Gates: tsc clean, 74/52, 32/32. Backlog note: the self-directed queue is thinning — remaining meaty work (furnishing, HQ build-out, Sea King, merge) all gates on David.
