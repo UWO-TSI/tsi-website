@@ -56,7 +56,7 @@ const CATALOG: { group: string; items: { key: string; icon: string; img?: string
     // Legacy generic keys retired pre-launch (no real member data).
     group: "Fish",
     items: [
-      ...FISH.filter((f) => !f.creature).map((f) => ({ key: f.key, img: iconFor(f), icon: f.rarity === "seaking" ? "👑" : f.rarity === "legendary" ? "✨" : "🐟", name: f.name })),
+      ...FISH.filter((f) => !f.creature).map((f) => ({ key: f.key, img: iconFor(f), icon: f.rarity === "seaking" ? "👑" : f.rarity === "legendary" ? "✨" : "🐟", name: f.name, zone: f.zone ?? "river" })),
     ],
   },
   {
@@ -102,6 +102,8 @@ export default function CollectionBook({ open, onClose }: { open: boolean; onClo
   const [loading, setLoading] = useState(true);
   // Almanac pick (loop wake 29) — which discovered species' notes are open.
   const [detailKey, setDetailKey] = useState<string | null>(null);
+  // Wake 71: the Fish group is ~78 species — habitat/caught filter chips.
+  const [fishFilter, setFishFilter] = useState<"all" | "river" | "sea" | "caught">("all");
 
   // Loop iter 24 (2026-07-24): page-open beat — paper pop + page-turn
   // notes when the book opens.
@@ -208,6 +210,16 @@ export default function CollectionBook({ open, onClose }: { open: boolean; onClo
           // "how far along am I" read; gold ✓ once the group is complete.
           const got = g.items.filter((it) => (counts[it.key] ?? 0) > 0).length;
           const done = got === g.items.length;
+          const isFish = g.group === "Fish";
+          const shown = isFish
+            ? g.items.filter((it) => {
+                const zone = (it as { zone?: string }).zone;
+                if (fishFilter === "river") return zone !== "sea";
+                if (fishFilter === "sea") return zone === "sea";
+                if (fishFilter === "caught") return (counts[it.key] ?? 0) > 0;
+                return true;
+              })
+            : g.items;
           return (
           <div key={g.group} style={{ marginBottom: 16 }}>
             <div
@@ -230,8 +242,30 @@ export default function CollectionBook({ open, onClose }: { open: boolean; onClo
                 </span>
               )}
             </div>
+            {isFish && (
+              <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
+                {([["all", "All"], ["river", "🏞 River"], ["sea", "🌊 Sea"], ["caught", "✓ Caught"]] as const).map(([k, label]) => (
+                  <button
+                    key={k}
+                    onClick={() => setFishFilter(k)}
+                    style={{
+                      padding: "3px 10px",
+                      borderRadius: 7,
+                      fontSize: 11,
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      border: `1.5px solid ${fishFilter === k ? "#C9962E" : "#E0D2B0"}`,
+                      background: fishFilter === k ? "#F8EFC9" : "#FFFDF5",
+                      color: fishFilter === k ? "#7A5A10" : "#8A7B5E",
+                    }}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            )}
             <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
-              {g.items.map((it) => {
+              {shown.map((it) => {
                 const n = counts[it.key] ?? 0;
                 const have = n > 0;
                 const almanac = have && FISH_BY_KEY.has(it.key);
