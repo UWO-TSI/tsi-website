@@ -1,0 +1,425 @@
+/**
+ * grid — the ACNH tile substrate (M2, 2026-07-26).
+ *
+ * The world is a grid of cells at integer elevation levels, not a deformed
+ * surface. ACNH's entire ground plane is `FldUnit/Base_0.dae`: one 4-vertex
+ * 10x10 quad. Every visual comes from choosing which piece goes in which cell.
+ *
+ * This module is pure data — no React, no three.js. It owns:
+ *   · the measured constants
+ *   · the map representation (two flat Uint8Arrays)
+ *   · cell <-> world conversion and height lookup
+ *   · the autotile solver shared by the cliff, river and road kits
+ *
+ * See `specs/acnh-system-reference.md` for where the constants come from and
+ * `CLAUDE.md` § "World model" for the rules that follow from them.
+ */
+
+// ── Measured constants ───────────────────────────────────────────
+// Raw dump units are 10x world units. These were measured off the kit meshes,
+// not chosen: Cliff0A_0 puts its top grass at y=0 and the lower level's grass
+// at exactly y=-15, and every kit piece bboxes to exactly 10 x 10.
+
+/** One cell, world units. Raw 10.0. */
+export const TILE = 1.0;
+
+/** One elevation step, world units. Raw 15.0. */
+export const LEVEL_STEP = 1.5;
+
+/** River surface below its own ground level, world units. Raw 0.78. */
+export const WATER_DROP = 0.078;
+
+/** Cells per chunk edge. One ACNH acre, and the culling/merge unit. */
+export const CHUNK = 16;
+
+/** Ground plus three cliff tiers; ACNH's top tier is unusable. */
+export const MAX_LEVEL = 3;
+
+// ── Surfaces ─────────────────────────────────────────────────────
+// Values are stable — they are persisted in the map file. Append only.
+
+export const Surface = {
+  Grass: 0,
+  Soil: 1,
+  Stone: 2,
+  Sand: 3,
+  Wood: 4,
+  Brick: 5,
+  River: 6,
+} as const;
+export type SurfaceId = (typeof Surface)[keyof typeof Surface];
+
+/** Road-kit material folder per surface, or null when it is not a road. */
+export const SURFACE_ROAD_KIT: Record<SurfaceId, string | null> = {
+  [Surface.Grass]: null,
+  [Surface.Soil]: "",
+  [Surface.Stone]: "stone-",
+  [Surface.Sand]: "sand-",
+  [Surface.Wood]: "wood-",
+  [Surface.Brick]: "brick-",
+  [Surface.River]: null,
+};
+
+export function isRiver(s: number): boolean {
+  return s === Surface.River;
+}
+
+// ── Map ──────────────────────────────────────────────────────────
+
+export interface IslandMap {
+  /** Cells along +X. */
+  width: number;
+  /** Cells along +Z. */
+  depth: number;
+  /** World X of the CENTRE of cell (0, 0). */
+  originX: number;
+  /** World Z of the CENTRE of cell (0, 0). */
+  originZ: number;
+  /** Elevation level per cell, 0..MAX_LEVEL. Row-major, z-major. */
+  levels: Uint8Array;
+  /** Surface per cell. Row-major, z-major. */
+  surfaces: Uint8Array;
+}
+
+export function createMap(width: number, depth: number, originX = 0, originZ = 0): IslandMap {
+  return {
+    width,
+    depth,
+    originX,
+    originZ,
+    levels: new Uint8Array(width * depth),
+    surfaces: new Uint8Array(width * depth),
+  };
+}
+
+/** Centres a map of the given cell extent on the world origin. */
+export function createCenteredMap(width: number, depth: number): IslandMap {
+  return createMap(width, depth, (-(width - 1) / 2) * TILE, (-(depth - 1) / 2) * TILE);
+}
+
+export function inBounds(map: IslandMap, cx: number, cz: number): boolean {
+  return cx >= 0 && cz >= 0 && cx < map.width && cz < map.depth;
+}
+
+export function cellIndex(map: IslandMap, cx: number, cz: number): number {
+  return cz * map.width + cx;
+}
+
+/** Level at a cell. Out of bounds reads as level 0 (the sea-level apron). */
+export function levelAt(map: IslandMap, cx: number, cz: number): number {
+  return inBounds(map, cx, cz) ? map.levels[cellIndex(map, cx, cz)] : 0;
+}
+
+/** Surface at a cell. Out of bounds reads as grass. */
+export function surfaceAt(map: IslandMap, cx: number, cz: number): number {
+  return inBounds(map, cx, cz) ? map.surfaces[cellIndex(map, cx, cz)] : Surface.Grass;
+}
+
+export function setCell(map: IslandMap, cx: number, cz: number, level: number, surface: number): void {
+  if (!inBounds(map, cx, cz)) return;
+  const i = cellIndex(map, cx, cz);
+  map.levels[i] = Math.max(0, Math.min(MAX_LEVEL, level | 0));
+  map.surfaces[i] = surface | 0;
+}
+
+/**
+ * Walkable height at a cell. This replaces the entire FBM heightfield: an
+ * array read and a multiply, with no noise, no bake and no interpolation.
+ * River cells sit at their ground level; the water SURFACE is WATER_DROP
+ * below that, which is the renderer's concern, not the collision height.
+ */
+export function heightAt(map: IslandMap, cx: number, cz: number): number {
+  return levelAt(map, cx, cz) * LEVEL_STEP;
+}
+
+/** Water surface height for a river cell. */
+export function waterHeightAt(map: IslandMap, cx: number, cz: number): number {
+  return heightAt(map, cx, cz) - WATER_DROP;
+}
+
+// ── Cell <-> world ───────────────────────────────────────────────
+// Cell (0,0)'s CENTRE sits at (originX, originZ); a cell spans +/- TILE/2.
+
+export function cellToWorldX(map: IslandMap, cx: number): number {
+  return map.originX + cx * TILE;
+}
+
+export function cellToWorldZ(map: IslandMap, cz: number): number {
+  return map.originZ + cz * TILE;
+}
+
+export function worldToCellX(map: IslandMap, x: number): number {
+  return Math.round((x - map.originX) / TILE);
+}
+
+export function worldToCellZ(map: IslandMap, z: number): number {
+  return Math.round((z - map.originZ) / TILE);
+}
+
+/** Height under a world position. The per-frame ground-follow entry point. */
+export function heightAtWorld(map: IslandMap, x: number, z: number): number {
+  return heightAt(map, worldToCellX(map, x), worldToCellZ(map, z));
+}
+
+// ── Chunks ───────────────────────────────────────────────────────
+// Chunking is what makes the world cullable. The old single 150x150 terrain
+// plane was one geometry, so the GPU processed all of it regardless of where
+// the camera looked, and ~48% of it lay outside the island entirely.
+
+export interface ChunkRef {
+  /** Chunk coordinates, not cells. */
+  chunkX: number;
+  chunkZ: number;
+  /** Inclusive cell range covered. */
+  minCellX: number;
+  minCellZ: number;
+  maxCellX: number;
+  maxCellZ: number;
+}
+
+export function chunkCountX(map: IslandMap): number {
+  return Math.ceil(map.width / CHUNK);
+}
+
+export function chunkCountZ(map: IslandMap): number {
+  return Math.ceil(map.depth / CHUNK);
+}
+
+export function listChunks(map: IslandMap): ChunkRef[] {
+  const out: ChunkRef[] = [];
+  for (let chunkZ = 0; chunkZ < chunkCountZ(map); chunkZ++) {
+    for (let chunkX = 0; chunkX < chunkCountX(map); chunkX++) {
+      out.push({
+        chunkX,
+        chunkZ,
+        minCellX: chunkX * CHUNK,
+        minCellZ: chunkZ * CHUNK,
+        maxCellX: Math.min((chunkX + 1) * CHUNK - 1, map.width - 1),
+        maxCellZ: Math.min((chunkZ + 1) * CHUNK - 1, map.depth - 1),
+      });
+    }
+  }
+  return out;
+}
+
+// ── Autotile ─────────────────────────────────────────────────────
+//
+// One solver drives cliff, river and road, because all three kits share the
+// `{Kit}{Class}{Variant}_{Rotation}` vocabulary (44 / 45 / 20 pieces).
+//
+// NEIGHBOUR BITS, clockwise from north, where north is -Z and east is +X:
+//
+//        NW  N  NE            7  0  1
+//         W  ·  E     bits    6  ·  2
+//        SW  S  SE            5  4  3
+//
+// A 90-degree clockwise rotation about Y maps N->E->S->W, which is a rotation
+// of the mask by two bit positions. That is the whole trick: we normalise a
+// mask to its smallest rotation, look the canonical form up once, and report
+// how many quarter-turns it took to get there.
+//
+// BLOB RULE: a diagonal only counts when BOTH orthogonals flanking it are
+// also set. A diagonal neighbour touching nothing else cannot change the
+// silhouette, and folding those cases together is what collapses 256 raw
+// masks down to the kit's piece count. This is the standard blob-tileset
+// rule and it is what produces ACNH's rounded outer corners.
+
+export const enum Dir {
+  N = 0,
+  NE = 1,
+  E = 2,
+  SE = 3,
+  S = 4,
+  SW = 5,
+  W = 6,
+  NW = 7,
+}
+
+/** Cell offsets per direction bit, in the order above. */
+export const DIR_OFFSETS: ReadonlyArray<readonly [number, number]> = [
+  [0, -1], // N
+  [1, -1], // NE
+  [1, 0], // E
+  [1, 1], // SE
+  [0, 1], // S
+  [-1, 1], // SW
+  [-1, 0], // W
+  [-1, -1], // NW
+];
+
+/** Rotate a neighbour mask by `quarters` clockwise 90-degree turns. */
+export function rotateMask(mask: number, quarters: number): number {
+  const s = ((quarters % 4) + 4) % 4;
+  const shift = s * 2;
+  return ((mask << shift) | (mask >>> (8 - shift))) & 0xff;
+}
+
+/**
+ * Zero any diagonal bit whose two flanking orthogonals are not both set.
+ * Applying this first is what makes the mask space finite and small.
+ */
+export function canonicaliseDiagonals(mask: number): number {
+  let out = mask;
+  for (let d = 1; d < 8; d += 2) {
+    const before = (d + 7) % 8; // the orthogonal counter-clockwise of d
+    const after = (d + 1) % 8; // the orthogonal clockwise of d
+    const flanked = (mask & (1 << before)) !== 0 && (mask & (1 << after)) !== 0;
+    if (!flanked) out &= ~(1 << d);
+  }
+  return out & 0xff;
+}
+
+export interface TileChoice {
+  /**
+   * Which of the 47 distinct neighbourhoods this is, 0..46, assigned in
+   * ascending canonical-mask order. This is MATH and it is stable.
+   */
+  config: number;
+  /** Quarter-turns clockwise about Y to apply, 0..3. */
+  rotation: number;
+  /** The rotation-normalised mask this resolved through. */
+  canonicalMask: number;
+  /** Set neighbours after the blob rule, 0..8. Useful for debugging. */
+  degree: number;
+}
+
+/**
+ * Rotation-normalise a mask: return the smallest value across the four
+ * rotations, plus the number of quarter-turns needed to get from that
+ * canonical orientation back to the input.
+ */
+export function normaliseMask(mask: number): { canonical: number; rotation: number } {
+  const m = canonicaliseDiagonals(mask);
+  let canonical = m;
+  let rotation = 0;
+  for (let q = 1; q < 4; q++) {
+    const r = rotateMask(m, q);
+    if (r < canonical) {
+      canonical = r;
+      // r === rotateMask(m, q) means applying (4 - q) turns to the canonical
+      // form reproduces the input.
+      rotation = (4 - q) % 4;
+    }
+  }
+  return { canonical, rotation };
+}
+
+/**
+ * Canonical masks in ascending order. Index = config id.
+ *
+ * The blob rule collapses all 256 raw masks into 15 ROTATION-CLASSES, which
+ * expand to 47 distinct (config, rotation) tiles — the textbook 47-tile blob
+ * set. Those two numbers are easy to confuse; the kit ships 16 base shapes and
+ * 44 pieces, so both are close but neither is an exact match. Built lazily.
+ */
+let CONFIGS: number[] | null = null;
+let CONFIG_OF_MASK: Map<number, number> | null = null;
+
+function buildConfigs(): void {
+  const set = new Set<number>();
+  for (let mask = 0; mask < 256; mask++) set.add(normaliseMask(mask).canonical);
+  CONFIGS = [...set].sort((a, b) => a - b);
+  CONFIG_OF_MASK = new Map(CONFIGS.map((c, i) => [c, i]));
+}
+
+/** The 47 canonical neighbourhoods, ascending. */
+export function listConfigs(): readonly number[] {
+  if (!CONFIGS) buildConfigs();
+  return CONFIGS!;
+}
+
+export function popcount8(mask: number): number {
+  let n = 0;
+  for (let i = 0; i < 8; i++) if (mask & (1 << i)) n++;
+  return n;
+}
+
+/**
+ * Resolve a neighbour mask to a canonical configuration plus a rotation.
+ * Total over all 256 masks, and provably rotation-stable — see grid.test.ts.
+ */
+export function autotile(mask: number): TileChoice {
+  if (!CONFIG_OF_MASK) buildConfigs();
+  const { canonical, rotation } = normaliseMask(mask);
+  return {
+    config: CONFIG_OF_MASK!.get(canonical) ?? 0,
+    rotation,
+    canonicalMask: canonical,
+    degree: popcount8(canonical),
+  };
+}
+
+// ── Config -> kit piece ──────────────────────────────────────────
+//
+// UNRESOLVED, DELIBERATELY. The solver above is math and it is settled. Which
+// FILE each of the 47 configurations should load is an art convention only
+// Nintendo knows, and it cannot be read off the filenames. Measured evidence:
+//
+//   class | my configs | my rotated | kit shapes | kit pieces
+//       0 |          1 |          1 |          1 |          1   match
+//       1 |          1 |          4 |          1 |          4   match
+//       2 |          2 |          6 |          3 |         10   differ
+//       3 |          2 |          8 |          3 |         12   differ
+//       4 |          3 |          9 |          3 |          9   match
+//       5 |          2 |          8 |          2 |          5   differ
+//       6 |          2 |          6 |          2 |          2   differ
+//       7 |          1 |          4 |          1 |          1   differ
+//       8 |          1 |          1 |          - |          -   river only
+//   total |         15 |         47 |         16 |    44 / 45
+//
+// Degrees 0, 1 and 4 line up exactly; the rest do not, and mine run HIGHER at
+// 5-7 while running LOWER at 2-3. So the kit's leading digit is not the
+// post-blob neighbour count, whatever else it is. Guessing a mapping here
+// would bake a wrong assumption into the renderer.
+//
+// M6 (`/lab/map`) renders each of the 47 configurations beside every candidate
+// piece so the table below gets filled by eye — the same way the road kit's
+// rotation conventions were originally locked in the tile harness. Until then
+// `pieceFileFor` returns null and the renderer falls back to a plain quad,
+// which is exactly what a flat cell should look like anyway.
+export type KitName = "cliff" | "river" | "fall";
+
+/** config id -> `{class}-{variant}` stem, per kit. Filled in M6. */
+export const CONFIG_TO_PIECE: Record<KitName, Record<number, string>> = {
+  cliff: {},
+  river: {},
+  fall: {},
+};
+
+/**
+ * `cliff/2-b-0.glb` style filename for a resolved config, or null while the
+ * mapping for that configuration is still unknown.
+ */
+export function pieceFileFor(kit: KitName, choice: TileChoice): string | null {
+  const stem = CONFIG_TO_PIECE[kit][choice.config];
+  return stem ? `${stem}-${choice.rotation}.glb` : null;
+}
+
+/**
+ * Build a neighbour mask for a cell using an arbitrary "same region" test.
+ * Cliffs pass a level comparison, rivers a surface comparison, roads a
+ * material comparison — one solver, three questions.
+ */
+export function neighbourMask(
+  map: IslandMap,
+  cx: number,
+  cz: number,
+  same: (map: IslandMap, nx: number, nz: number) => boolean
+): number {
+  let mask = 0;
+  for (let d = 0; d < 8; d++) {
+    const [dx, dz] = DIR_OFFSETS[d];
+    if (same(map, cx + dx, cz + dz)) mask |= 1 << d;
+  }
+  return mask;
+}
+
+/** Same-or-higher level: the test that decides where a cliff face goes. */
+export function sameLevelOrHigher(level: number) {
+  return (map: IslandMap, nx: number, nz: number) => levelAt(map, nx, nz) >= level;
+}
+
+/** Same surface: the test roads and rivers tile against. */
+export function sameSurface(surface: number) {
+  return (map: IslandMap, nx: number, nz: number) => surfaceAt(map, nx, nz) === surface;
+}
