@@ -28,7 +28,22 @@ import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { getTerrainHeight } from "./terrain";
 
-const CELL = 0.89; // one ACNH road unit (8.9 raw) at world scale 0.1
+// ⚠️ MEASURED BUG (2026-07-26): CELL is wrong. The ACNH tile pitch is exactly
+// 10.0 raw = 1.0u, confirmed on every kit piece — Cliff*, River* and the road
+// interior tile all bbox to exactly 10.0 in Z. 0.89 was almost certainly read
+// off `road/1-a.glb`, the EDGE variant, which measures 8.906 x 9.453 because
+// its soft grass-meeting edge deliberately insets. `road/4-a.glb` (interior)
+// is 9.453 x 0.005 x 10.0.
+//
+// Consequence: the network steps 11% short of its own tile size, so every road
+// tile OVERLAPS its neighbour. These tiles are 0.0005u thick, so overlapping
+// coplanar pairs z-fight — that is the shimmer on every path. It also means
+// the road grid can never register with the terrain grid.
+//
+// Fix is `CELL = 1.0`, then re-lock the layout in the tile harness (the
+// rotation conventions stay valid; only the pitch changes).
+// See specs/acnh-system-reference.md and CLAUDE.md § "World model".
+const CELL = 0.89; // one ACNH road unit — WRONG, should be 1.0 (see note above)
 const SCALE = 0.1;
 
 // Corridor rectangles in world XZ — keep in sync with PATH_CORRIDORS in

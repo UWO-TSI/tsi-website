@@ -11,8 +11,39 @@
  *
  * Deliberately NOT applied to custom ShaderMaterials (sky dome, river) —
  * the sky must stay put, and the near-center river shows no visible seam at
- * this strength. Shadow depth passes stay unbent too; at 0.0012 the offset
- * at shadow distances is sub-pixel.
+ * this strength.
+ *
+ * ⚠️ THE "SHADOW DEPTH PASSES STAY UNBENT" CLAIM BELOW IS FALSE (verified
+ * 2026-07-26). It was the original rationale and it does not hold:
+ *
+ *   - three r182 `ShaderLib/depth.glsl.js:37` includes <project_vertex>, so
+ *     patching the SHARED chunk bends the shadow caster too — in the LIGHT's
+ *     view space, which is a completely different bend from the camera's.
+ *   - The receiver disagrees. `meshphysical.glsl.js` runs project_vertex at
+ *     line 44 and worldpos_vertex at line 50, and worldpos_vertex.glsl.js
+ *     builds `vec4 worldPosition = vec4(transformed, 1.0)` — the UNBENT
+ *     position. shadowmap_vertex then derives vDirectionalShadowCoord from
+ *     that. So the lookup coordinate is unbent while the stored depth came
+ *     from bent geometry.
+ *   - Magnitude is not sub-pixel. Displacement is
+ *     `lightViewZ² * 0.0032 + lightViewX² * 0.0011` and the sun rig sits 30u
+ *     out (GameWorld updateShadowRig), so casters land several units off in
+ *     the shadow map, by an amount that grows quadratically with distance
+ *     from the shadow camera centre. The rig follows the player, so the error
+ *     CHANGES AS YOU WALK: shadows slide relative to their objects.
+ *   - The "0.0012" in the original note also predates WORLD_BEND being raised
+ *     to 0.0032.
+ *
+ * Fix options, in preference order:
+ *   a) Bend in WORLD space relative to the player instead of view space. That
+ *      is camera-independent, so the depth pass and the colour pass agree, and
+ *      it also removes the screen-edge fisheye that the wide FOV amplifies.
+ *   b) Guard the patch so it no-ops for the depth/distance materials.
+ *
+ * Note also that ACNH bakes contact shadows into the assets as `mShadow`
+ * meshes (see scripts/organize-dump.mjs). Restoring those removes the need
+ * for the realtime shadow map entirely, which by the project's own
+ * measurement costs ~7 FPS on M1. See specs/acnh-system-reference.md §4.
  *
  * Import once (side effect) before the Canvas mounts — GameWorld does this.
  * Must run before the first material compiles; three caches programs per

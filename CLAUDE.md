@@ -20,8 +20,11 @@ The team has 3 agents: `build`, `qa`, `reviewer`. See `AGENT_LOG.md` Team sectio
 2. **`AGENT_LOG.md`** — current sprint, your role, file ownership, commit prefixes
 3. **`web/app/student/STUDENT_SYSTEM_BIBLE.md`** — feature mechanics (Bounty, Calendar, Kanban, Marketplace, Job Board, Directory). Read the "CURRENT VISION DELTAS" banner at the top first — it lists what's drifted.
 4. **`specs/ux-status.md`** — current design-debt backlog, prioritized into Tier-1/2/3. The sprint pulls from Tier-1.
-5. **`specs/asset-stack.md`** — confirmed tech architecture: R3F + Drei + PS1 shader, Quaternius/Kenney assets, 2D sprite chars via Nano Banana, Colyseus deferred.
-6. **Role-specific specs** in `specs/` — `ux-game-world-v2.md`, `ux-oracle-v2.md`, `ux-classes.md`, `ux-dashboard.md`, `ux-directory.md`, etc. Use the index in `specs/ux-status.md` §1 to find the right one.
+5. **`specs/acnh-system-reference.md`** — **the world model.** ACNH's grid, level, autotile, placement, material and rendering rules, measured from the dump. David ruled 2026-07-26 that the world follows ACNH grid logic. Read before touching terrain, water, cliffs, roads or placement.
+6. **`specs/asset-stack.md`** — tech architecture: R3F + Drei, 2D sprite chars, Colyseus deferred. **Its asset table is superseded** — see the banner at its top.
+7. **Role-specific specs** in `specs/` — `ux-game-world-v2.md`, `ux-oracle-v2.md`, `ux-classes.md`, `ux-dashboard.md`, `ux-directory.md`, etc. Use the index in `specs/ux-status.md` §1 to find the right one.
+
+Background on why the world model changed: `specs/investigation-2026-07-26-foundations.md` (the defects) and `specs/investigation-2026-07-26-systems.md` (how ACNH/Minecraft/Roblox solve them).
 
 ## Project vision (TL;DR)
 
@@ -32,6 +35,45 @@ The team has 3 agents: `build`, `qa`, `reviewer`. See `AGENT_LOG.md` Team sectio
 - **Economy:** TSI Coins, never reveal conversion rate.
 - **Phase 1 (current):** single-player game world, directory, all feature pages as overlays. Close Tier-1 punch list to merge to main.
 - **Phase 2 (deferred):** multiplayer (Colyseus), Avatar creator (Nano Banana sprites), building interiors, Oracle v2 card-game, mobile.
+
+## World model — ACNH grid law (David ruling, 2026-07-26)
+
+**The world is a grid of cells, not a deformed surface.** ACNH's entire ground plane is
+`FldUnit/Base_0.dae`: one 4-vertex quad, 10x10 raw, material `mGrass`. Every visual
+comes from choosing which piece goes in which cell. Nothing is displaced.
+
+Canonical constants (raw dump units; world = raw x 0.1). These are measured, not chosen:
+
+| Constant | Raw | World |
+|---|---|---|
+| Tile pitch | 10.0 | **1.0u** |
+| Elevation step | 15.0 | **1.5u** |
+| River water surface, below its ground level | 0.78 | **0.078u** |
+| Grass top lip | 0.39 | 0.039u |
+| Cliff grass drape down the face | 1.88 | 0.188u |
+| Chunk / acre | 160 | 16 x 16 cells |
+
+Rules that follow, all enforced by ACNH and none of them optional if the art is to fit:
+
+1. **Integer cells, integer levels.** Position is `(cellX, cellZ, level)`. No float
+   placement. Max 4 levels.
+2. **One autotile vocabulary.** `{Kit}{Class}{Variant}_{Rotation}`; class 0-8 from the
+   8 neighbours, A/B/C for diagonals, 0-3 pre-baked rotations. The same function drives
+   cliff (44 pieces), river (45), waterfall (47) and road (20 per material).
+3. **Each cliff level insets at least 1 tile** from the level below.
+4. **Waterfalls are derived, not placed.** A river cell bordering a lower level emits a
+   Fall piece. Multi-step drops stack single-step pieces.
+5. **Buildings, bridges and inclines have integer footprints and a 1-tile gap.**
+   `house-chalet.glb` already measures exactly 5.00 x 4.21 cells. Bridges ship in 3/4/5
+   tile lengths; inclines are 2x4.
+6. **Seasons are a tint on greyscale albedo** (`_AlbGry`), with explicit `Snow`
+   variants only where the pattern changes, not the colour.
+7. **Shadows are baked into the assets** as `mShadow` meshes. No realtime shadow map.
+8. **Animation is a separate model** (`*Anim` variants), swapped in, not always paid for.
+
+Anything that needs a flatten zone, a blend radius, a slab disc, a bank ribbon or a
+rock band to hide a seam is fighting this model. Fix the model instead of adding another
+cover layer.
 
 ## Where to find things
 
@@ -73,6 +115,28 @@ These guide every scope and design decision. When trade-offs arise, choose the o
 - **Never** edit applied migrations. Add new ones (next slot: `013_*`).
 - **Never** reveal the TC ≈ CAD conversion rate in user-facing strings.
 - Build agents: when scope is unclear, ask reviewer (David) before guessing. Don't add features the spec doesn't list.
+
+## Known foundational defects (measured 2026-07-26, not yet fixed)
+
+Do not "fix" the symptoms of these by adding another layer. Each has a documented
+root cause in the file that owns it. Full detail:
+`specs/investigation-2026-07-26-foundations.md`.
+
+| # | Defect | Owner file | Evidence |
+|---|---|---|---|
+| D1 | Curved-world patch corrupts the shadow map — caster bent in light space, receiver looks up unbent, error grows with distance and changes as the player walks | `lib/game/curvedWorld.ts` | header note; three r182 `depth.glsl.js:37` |
+| D2 | Road tiles overlap 11% — `CELL = 0.89` on a 1.0u tile, coplanar at 0.0005u thick, z-fights | `components/game/RoadTiles.tsx` | header note |
+| D3 | Key:fill is 1.08:1 → a 2.2:1 contrast ratio, ~1.1 stops. Form cannot read. Key 1.40 vs ambient 0.35 + hemi 0.40 + 2nd directional 0.15 + env IBL 0.40 | `GameWorld.tsx` `TOD_KEYS` + lights | target ≈ 4:1, cut fill to ~0.50 |
+| D4 | Grade compensates in the WRONG direction — `uDesat 0.14` and `uBlackLift` on an already-flat render | `components/game/PostFX.tsx` | retune after D3, not before |
+| D5 | 12 shipped GLBs are missing meshes, including all 4 river banks (lost their ground plane) and the trees' baked `mShadow` layers | `scripts/organize-dump.mjs` | header note |
+| D6 | Camera FOV 48 is a wide lens; the diorama read needs ~28-32° and more distance. Wide FOV also amplifies the view-space bend at screen edges | `GameWorld.tsx:2668` | pairs with D1 fix (a) |
+| D7 | React setState on the per-frame path — `onMove(pos.clone())` inside useFrame re-renders 7 Buildings with `<Html>` pills at 60fps. `playerPosRef` already exists next to it | `components/game/PlayerAvatar.tsx:600` | read the ref; throttle the setState |
+| D8 | M1 budget: `dpr={[1,2]}` = 4x fragments on Retina; realtime shadow map still on despite the ~7 FPS note; bloom auto-enables because `navigator.deviceMemory` is absent in Safari and capped at 8 in Chrome | `GameWorld.tsx:2668`, `lib/game/useGraphicsSettings.ts` | gate on a real FPS probe |
+
+Live-scene budget for context: 108 GLB URLs carrying 220 primitives, **209 distinct
+materials**, 134,817 vertices. Vertices are free on an M1; the ~400-500 draw calls with
+a material change on each are the wall. `THREE.BatchedMesh` and `THREE.LOD` both ship
+in the installed three r182 and are unused; there is no texture atlas.
 
 ## Commit prefixes
 

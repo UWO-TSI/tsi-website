@@ -1,6 +1,41 @@
 "use client";
 
 /**
+ * ⚠️ WORLD MODEL NOTICE (David ruling 2026-07-26) — the river is a SPLINE here
+ * and ACNH's is a TILE CHAIN. Read `specs/acnh-system-reference.md` before
+ * editing. Three problems, all structural:
+ *
+ * 1. THREE CONFLICTING DATUMS. The ACNH kit puts ground at 0, the water
+ *    surface at -0.078u and the bed walls down to -1.125u (measured from
+ *    River0A_0: Grass__mGrass y[-0.78, 0], RiverAC__mRiver y[-11.25, -0.78],
+ *    raw). terrain.ts carves the channel to -0.95u. This file floats water at
+ *    WATER_Y = -0.32u. The water therefore sits 0.63u above the carved floor
+ *    and 0.24u below where the kit's grass fringe expects it. RiverBanks.tsx
+ *    and RiverBankWalls.tsx exist only to paper that gap, which is why the
+ *    banks read as applied decoration instead of as the edge of the water.
+ *
+ * 2. THE CORRECT KIT IS ON DISK AND UNUSED. `public/assets/acnh/river/*.glb`
+ *    holds 12 extracted autotile pieces. grep across components/, lib/ and
+ *    app/ returns ZERO references. The full kit is 45 pieces in
+ *    `FldUnitRiver` and it shares the class/variant/rotation vocabulary with
+ *    the cliff and road kits. The four extracted bank-*.glb pieces are also
+ *    missing their own ground surface (mesh index 0 was dropped at export —
+ *    see scripts/organize-dump.mjs).
+ *
+ * 3. NO GRADIENT, SO NO REAL FLOW. RIVER_DEPTH is constant across the whole
+ *    island, so the river is a level channel coast to coast and motion is a
+ *    scrolling texture over flat geometry. ACNH's river descends through
+ *    waterfall pieces at level boundaries; the 47-piece FldUnitFall kit is not
+ *    extracted at all. Flow direction should be a property of the level map,
+ *    not a shader uniform.
+ *
+ * Target replacement: river becomes a `surface` cell type on the tile grid at
+ * the kit's own datum, with Fall pieces emitted wherever a river cell borders
+ * a lower level. That deletes WATER_Y, RIVER_DEPTH, RiverBanks and
+ * RiverBankWalls.
+ *
+ * ── Original header ──────────────────────────────────────────────
+ *
  * Curved river mesh with animated procedural flow.
  *
  * Sprint A3 (2026-05-21). Replaces the previous straight 80×3 plane water

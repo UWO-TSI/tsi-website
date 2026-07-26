@@ -1,4 +1,45 @@
 /**
+ * ⚠️ WORLD MODEL NOTICE (David ruling 2026-07-26) — this file implements the
+ * WRONG model and is scheduled for replacement. Read
+ * `specs/acnh-system-reference.md` + CLAUDE.md § "World model" before editing.
+ *
+ * ACNH is a grid of cells at integer levels. Its whole ground plane is
+ * `FldUnit/Base_0.dae`: one 4-vertex quad, 10x10 raw, material mGrass. Height
+ * is `level * 1.5u`, an array read. Cliffs, rivers and roads are autotile
+ * pieces chosen from the 8 neighbours.
+ *
+ * This file is instead a continuous FBM heightfield, and the mismatch is the
+ * root cause of most of the world's visual debt:
+ *
+ *  - NOISE_AMPLITUDE 0.6 + the 0.8 outskirt swell puts the ENTIRE island
+ *    inside a range of ~1.4u. One ACNH elevation step is 1.5u. Nothing can
+ *    read as a level because nothing is a level.
+ *  - `Math.max(h, 0)` in rawNoiseHeight means the terrain has no dips at all.
+ *    Everything is bumps above a plane; the only concavity is the river carve.
+ *  - The consuming mesh is PlaneGeometry(150,150,216,216) = 0.694u per vertex.
+ *    The river channel is 2.9-4.4u wide with 1.3u bank blends, so it is
+ *    sampled by ~4 vertices and the deepest sample rarely lands on the
+ *    centreline. The channel is a faceted asymmetric trench by construction.
+ *  - BUILDING_FOOTPRINTS flattens to `rawNoiseHeight(b.x, b.z)`, which ignores
+ *    PATH_CORRIDORS entirely, so a building next to a path sits at a different
+ *    height than the path meeting it. The slab discs in GameWorld's Terrain()
+ *    exist only to hide that seam.
+ *  - TEMPLE_RISE.h = 2.3 is not a multiple of 1.5, so the ACNH cliff kit
+ *    cannot sit on it even in principle. TempleRise.tsx's rock band is a cover
+ *    for a smooth radial cone.
+ *  - getTerrainHeight and sampleTerrainHeightFast disagree: only the fast path
+ *    applies the bridge arch, so one-shot prop placement sinks into bridges.
+ *
+ * Target replacement: `level: Uint8Array` + `surface: Uint8Array` on a 1.0u
+ * grid, height = level * 1.5, chunked 16x16 (one ACNH acre) so it culls.
+ * That deletes BUILDING_FOOTPRINTS, PATH_CORRIDORS, RIVER_DEPTH, the 257 grid
+ * bake, and the slab discs.
+ *
+ * Until then: do not add new flatten zones, blend radii or cover layers here.
+ * Every one of those is a symptom of the model, not a fix.
+ *
+ * ── Original header ──────────────────────────────────────────────
+ *
  * Terrain height generation for the AC-style game world.
  * Uses value noise with FBM for subtle rolling hills.
  *
