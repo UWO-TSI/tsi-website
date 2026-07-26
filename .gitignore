@@ -16,3 +16,4 @@
 .playwright-mcp/
 .next/
 __pycache__/
+.gstack/

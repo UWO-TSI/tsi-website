@@ -34,11 +34,14 @@
  *   - The "0.0012" in the original note also predates WORLD_BEND being raised
  *     to 0.0032.
  *
- * Fix options, in preference order:
- *   a) Bend in WORLD space relative to the player instead of view space. That
- *      is camera-independent, so the depth pass and the colour pass agree, and
- *      it also removes the screen-edge fisheye that the wide FOV amplifies.
- *   b) Guard the patch so it no-ops for the depth/distance materials.
+ * FIXED 2026-07-26 (D1) by guarding the patch so it no-ops for the depth and
+ * distance materials — see the SHADOW_PASS_DEFINE block below. Casters and
+ * receivers now agree on the unbent world.
+ *
+ * Still open, and deliberately deferred: bending in WORLD space relative to
+ * the player instead of view space. That is camera-independent and also
+ * removes the screen-edge fisheye that the wide FOV amplifies, so it belongs
+ * with the M8 camera pass (FOV 48 -> ~30), not here.
  *
  * Note also that ACNH bakes contact shadows into the assets as `mShadow`
  * meshes (see scripts/organize-dump.mjs). Restoring those removes the need
@@ -62,6 +65,21 @@ export const WORLD_BEND_SIDE = 0.0011;
 
 const MARKER = "// tsi-curved-world";
 
+// D1 fix (2026-07-26): the shadow passes must NOT bend.
+//
+// project_vertex is shared with the depth and distance shaders, so the bend
+// was being applied in the LIGHT's view space while receivers looked their
+// shadows up with the unbent world position (worldpos_vertex uses
+// `transformed`). Casters landed several units off in the shadow map, by an
+// amount that grew quadratically and changed as the player walked.
+//
+// MeshDistanceMaterial already self-declares DISTANCE on line 2 of its vertex
+// shader. MeshDepthMaterial has no distinguishing define in the VERTEX stage —
+// three only emits DEPTH_PACKING into the fragment prefix (WebGLProgram.js:778,
+// inside prefixFragment) — so we stamp our own onto ShaderLib.depth, which is
+// what WebGLPrograms maps MeshDepthMaterial to (WebGLPrograms.js:23).
+const SHADOW_PASS_DEFINE = "TSI_SHADOW_PASS";
+
 if (typeof window !== "undefined") {
   // Aerial survey loads (?aerial=1, collab track) compile a FLAT world —
   // the curvature is constant-baked into every program, and from 140u up
@@ -70,12 +88,22 @@ if (typeof window !== "undefined") {
   const aerialSurvey = new URLSearchParams(window.location.search).get("aerial") === "1";
   const bend = aerialSurvey ? 0 : WORLD_BEND;
   const bendSide = aerialSurvey ? 0 : WORLD_BEND_SIDE;
+
+  // Mark the depth pass. Must happen before the first material compiles;
+  // three caches programs, so a later patch would only affect new materials.
+  const depthShader = THREE.ShaderLib.depth;
+  if (depthShader && !depthShader.vertexShader.includes(SHADOW_PASS_DEFINE)) {
+    depthShader.vertexShader = `#define ${SHADOW_PASS_DEFINE}\n${depthShader.vertexShader}`;
+  }
+
   const chunk = THREE.ShaderChunk.project_vertex;
   if (!chunk.includes(MARKER)) {
     THREE.ShaderChunk.project_vertex = chunk.replace(
       "gl_Position = projectionMatrix * mvPosition;",
       `${MARKER}
+#if !defined( ${SHADOW_PASS_DEFINE} ) && !defined( DISTANCE )
 mvPosition.y -= mvPosition.z * mvPosition.z * ${bend.toFixed(6)} + mvPosition.x * mvPosition.x * ${bendSide.toFixed(6)};
+#endif
 gl_Position = projectionMatrix * mvPosition;`
     );
   }

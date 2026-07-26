@@ -476,17 +476,39 @@ function TimeOfDayCycle({ weather, todPhase, shadowsOn, playerPosRef }: { weathe
         sunRef.current.position.copy(_sunPos);
       }
     }
-    // Ambient
+    // ── Fill budget (D3 fix, 2026-07-26) ────────────────────────────
+    // Measured before: key 1.40 vs total fill 1.30 (ambient 0.35 + hemi 0.40 +
+    // 2nd directional 0.15 + env IBL 0.40). Key:fill 1.08:1 gives a 2.2:1
+    // contrast ratio, about 1.1 stops — form cannot read at that ratio, which
+    // is the flatness David reported.
+    //
+    // The fix is not a flat cut: at night there IS no key, so fill is the only
+    // light and cutting it 3x would make the dark hours unplayable. Fill now
+    // scales INVERSELY with the sun — small when the key is strong, full when
+    // the key is gone. Night chemistry is deliberately left as shipped.
+    //
+    //            noon (sunNorm 1)      night (sunNorm 0)
+    //   ambient  0.35 x 0.32 = 0.11    0.22 x 1.00 = 0.22   (table value preserved)
+    //   hemi                    0.15                  0.20
+    //   env IBL                 0.20                  0.22   (see envLight.ts)
+    //   total fill              0.46                  0.64
+    //   key                     1.40                  0.00
+    //   contrast           ~4.0 : 1              unchanged
+    //
+    // sunNorm matches the fog block below: sun intensity over the 1.4 noon peak.
+    const sunNorm = Math.min(1, (a[4] + (b[4] - a[4]) * t) / 1.4);
+    // Ambient — TOD table still owns the colour AND the per-hour ratios the art
+    // pass tuned; we only scale the whole curve down as the sun comes up.
     if (ambRef.current) {
       ambRef.current.color.set(a[5]).lerp(_tc.set(b[5]), t);
-      ambRef.current.intensity = (a[6] + (b[6] - a[6]) * t) * (weather === "rain" ? 0.85 : 1);
+      const tableAmb = a[6] + (b[6] - a[6]) * t;
+      ambRef.current.intensity =
+        tableAmb * (0.32 + (1 - sunNorm) * 0.68) * (weather === "rain" ? 0.85 : 1);
     }
-    // Hemisphere rides the sun curve (art pass 2026-07-07). Lighting v3:
-    // retuned for the stronger sun — 0.2 floor at night → ~0.4 at noon
-    // (was 0.3 + sunI×0.55 ≈ 0.82, a shadow-flooding fill).
+    // Hemisphere: was `0.2 + sunI * 0.14`, which added the MOST fill exactly
+    // when the key was strongest — backwards. Now it recedes as the sun rises.
     if (hemiRef.current) {
-      const sunI = (a[4] + (b[4] - a[4]) * t) * wDim;
-      hemiRef.current.intensity = 0.2 + sunI * 0.14;
+      hemiRef.current.intensity = 0.20 - sunNorm * 0.05;
     }
     // Fog still follows the TOD horizon palette (the placeholder skies are
     // baked from the same table, so they stay in sync). Rain pulls it
@@ -499,7 +521,7 @@ function TimeOfDayCycle({ weather, todPhase, shadowsOn, playerPosRef }: { weathe
       // haze greyed the whole scene). sunNorm 1 at full day → exactly the
       // shipped 55/100; sunNorm 0 at night → 70/130, so the dark hours
       // read clear-and-deep instead of milky. Day chemistry untouched.
-      const sunNorm = Math.min(1, (a[4] + (b[4] - a[4]) * t) / 1.4);
+      // (sunNorm is computed once in the fill-budget block above.)
       setFogRange(fog, 55 + (1 - sunNorm) * 15, 100 + (1 - sunNorm) * 30);
     }
   });
@@ -540,7 +562,10 @@ function TimeOfDayCycle({ weather, todPhase, shadowsOn, playerPosRef }: { weathe
         shadow-camera-top={22} shadow-camera-bottom={-22}
         shadow-bias={-0.0004} shadow-normalBias={0.03}
       />
-      <directionalLight color="#C0D0FF" intensity={0.15} position={[-12, 18, -8]} />
+      {/* D3 (2026-07-26): the second cool fill directional is gone. At 0.15 it
+          was pure shadow-flooding — it lit the exact surfaces the key does not,
+          which is what collapses contrast. The hemisphere light already
+          supplies the cool-from-above tint that gave shadows their colour. */}
     </>
   );
 }

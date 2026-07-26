@@ -26,10 +26,18 @@ export interface EnvPhaseSpec {
 
 // Lighting v3 (2026-07-14 lab): env trimmed with the other fills so the
 // stronger sun's shadows survive — see TOD_KEYS note in GameWorld.
+//
+// D3 retune (2026-07-26): the IBL is part of the fill budget, and the budget
+// was measured at 1.30 against a key of 1.40 (a 2.2:1 contrast ratio). Day is
+// cut hardest because that is where a key exists to carve form; night is left
+// as shipped because there the IBL IS the lighting. Dawn and dusk sit between,
+// scaled by how much sun they actually have.
+//   day  0.40 -> 0.20 · dawn 0.40 -> 0.26 · dusk 0.50 -> 0.30 · night 0.22 kept
+// See the fill-budget block in GameWorld.tsx for the full arithmetic.
 export const ENV_PHASES: Record<"dawn" | "day" | "dusk" | "night", EnvPhaseSpec> = {
-  dawn: { skyTop: "#C8BCFF", skyBottom: "#FFDDB8", sun: "#FFD9B0", ground: "#7BA55E", intensity: 0.4, sunElev: 0.22 },
-  day: { skyTop: "#4FB6F5", skyBottom: "#A9DCF2", sun: "#FFFDF4", ground: "#84CB47", intensity: 0.4, sunElev: 0.6 },
-  dusk: { skyTop: "#2D2D6B", skyBottom: "#FFD4A8", sun: "#FF9966", ground: "#6E8A50", intensity: 0.5, sunElev: 0.16 },
+  dawn: { skyTop: "#C8BCFF", skyBottom: "#FFDDB8", sun: "#FFD9B0", ground: "#7BA55E", intensity: 0.26, sunElev: 0.22 },
+  day: { skyTop: "#4FB6F5", skyBottom: "#A9DCF2", sun: "#FFFDF4", ground: "#84CB47", intensity: 0.2, sunElev: 0.6 },
+  dusk: { skyTop: "#2D2D6B", skyBottom: "#FFD4A8", sun: "#FF9966", ground: "#6E8A50", intensity: 0.3, sunElev: 0.16 },
   night: { skyTop: "#0E0E28", skyBottom: "#2D2D6B", sun: "#AAB4E8", ground: "#2E4A38", intensity: 0.22, sunElev: 0.4 },
 };
 

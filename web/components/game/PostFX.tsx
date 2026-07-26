@@ -68,10 +68,26 @@ class PastelEffect extends Effect {
   constructor() {
     super("PastelGrade", PASTEL_FRAG, {
       blendFunction: BlendFunction.NORMAL,
+      // D4 retune (2026-07-26). These were calibrated on 2026-07-14 against a
+      // render whose key:fill was 1.08:1 — a washed, highlight-clipped image.
+      // Both uDesat and uBlackLift were pushing the SAME direction as that
+      // defect, so with the D3 fill cut (contrast now ~4:1) they would flatten
+      // the contrast we just bought back.
+      //   uDesat     0.14  -> 0.08   the wash it was taming is largely gone;
+      //                              lit surfaces now sit below the tone-map
+      //                              knee instead of clipping into it
+      //   uBlackLift 0.05  -> 0.025  halved. ACNH shadows genuinely never
+      //                              crush, so the lift stays — it just no
+      //                              longer has to hide flat shadows
+      // uWarmCast is UNCHANGED: it came from measuring David's ACNH reference
+      // snapshots, not from compensating for the lighting, so it still holds.
+      //
+      // If this reads dark on the M1, exposure is the knob (already a slider in
+      // /lab/world), not these two.
       uniforms: new Map<string, Uniform>([
-        ["uDesat", new Uniform(0.14)],
+        ["uDesat", new Uniform(0.08)],
         ["uWarmCast", new Uniform(new Vector3(1.03, 1.0, 0.94))],
-        ["uBlackLift", new Uniform(new Vector3(0.05, 0.042, 0.032))],
+        ["uBlackLift", new Uniform(new Vector3(0.025, 0.021, 0.016))],
         ["uContrast", new Uniform(1)],
         ["uVibrance", new Uniform(0)],
       ]),
