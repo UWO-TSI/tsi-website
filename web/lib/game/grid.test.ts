@@ -19,6 +19,10 @@ import {
   worldToCellX,
   worldToCellZ,
   listChunks,
+  parseIslandMap,
+  serialiseIslandMap,
+  isVoid,
+  isRiver,
   rotateMask,
   canonicaliseDiagonals,
   normaliseMask,
@@ -105,11 +109,58 @@ describe("cell <-> world", () => {
     expect(cellToWorldZ(map, 4)).toBeCloseTo(0, 6);
   });
 
+  // The naive `-(n-1)/2` centring puts every cell centre of an EVEN map on a
+  // half-integer. The existing world places essentially everything on
+  // integers, so that offset made all 68 snapped props miss by sqrt(2)/2.
+  it("puts cell centres on integers for an even map too", () => {
+    const map = createCenteredMap(128, 128);
+    expect(cellToWorldX(map, 64)).toBe(0);
+    expect(cellToWorldX(map, 0)).toBe(-64);
+    for (let cx = 0; cx < 8; cx++) expect(Number.isInteger(cellToWorldX(map, cx))).toBe(true);
+  });
+
   it("looks height up from a world position", () => {
     const map = createCenteredMap(9, 9);
     setCell(map, 4, 4, 3, Surface.Grass);
     expect(heightAtWorld(map, 0, 0)).toBeCloseTo(3 * LEVEL_STEP, 6);
   });
+});
+
+describe("serialisation", () => {
+  it("round-trips a map through the row-string form", () => {
+    const map = createCenteredMap(6, 4);
+    setCell(map, 1, 1, 2, Surface.Stone);
+    setCell(map, 5, 3, 3, Surface.Void);
+    setCell(map, 0, 0, 1, Surface.River);
+
+    const { map: back } = parseIslandMap(serialiseIslandMap(map));
+    expect(back.width).toBe(map.width);
+    expect(back.originX).toBe(map.originX);
+    expect(Array.from(back.levels)).toEqual(Array.from(map.levels));
+    expect(Array.from(back.surfaces)).toEqual(Array.from(map.surfaces));
+  });
+
+  it("carries props through unchanged", () => {
+    const map = createCenteredMap(4, 4);
+    const props = [{ kind: "tree", cell: [1, 2] as [number, number], level: 0 }];
+    const { props: back } = parseIslandMap(serialiseIslandMap(map, props));
+    expect(back).toEqual(props);
+  });
+});
+
+describe("void", () => {
+  it("marks cells with no ground", () => {
+    const map = createCenteredMap(4, 4);
+    setCell(map, 0, 0, 0, Surface.Void);
+    expect(isVoid(surfaceAt(map, 0, 0))).toBe(true);
+    expect(isVoid(surfaceAt(map, 1, 1))).toBe(false);
+  });
+
+  it("is distinct from river", () => {
+    expect(isVoid(Surface.River)).toBe(false);
+    expect(isRiver(Surface.Void)).toBe(false);
+  });
+
 });
 
 describe("chunks", () => {

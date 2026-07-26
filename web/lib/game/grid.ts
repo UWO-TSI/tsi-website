@@ -46,6 +46,13 @@ export const Surface = {
   Wood: 4,
   Brick: 5,
   River: 6,
+  /**
+   * No ground here — open sea beyond the coastline. A map is a rectangle but
+   * an island is not, so roughly half of a square map is water. Void cells
+   * emit no quad at all, which is both correct and the cheapest thing to
+   * render. Distinct from River, which is water WITH a bed inside the island.
+   */
+  Void: 7,
 } as const;
 export type SurfaceId = (typeof Surface)[keyof typeof Surface];
 
@@ -58,10 +65,16 @@ export const SURFACE_ROAD_KIT: Record<SurfaceId, string | null> = {
   [Surface.Wood]: "wood-",
   [Surface.Brick]: "brick-",
   [Surface.River]: null,
+  [Surface.Void]: null,
 };
 
 export function isRiver(s: number): boolean {
   return s === Surface.River;
+}
+
+/** True where the map has no ground at all — nothing to draw, nothing to walk. */
+export function isVoid(s: number): boolean {
+  return s === Surface.Void;
 }
 
 // ── Map ──────────────────────────────────────────────────────────
@@ -92,9 +105,16 @@ export function createMap(width: number, depth: number, originX = 0, originZ = 0
   };
 }
 
-/** Centres a map of the given cell extent on the world origin. */
+/**
+ * Centres a map on the world origin with cell CENTRES on integer coordinates.
+ *
+ * `-floor(n/2)` rather than `-(n-1)/2`: an even-sized map centred the naive
+ * way puts every cell centre on a half-integer, and the existing world places
+ * essentially everything on integers, so every single prop snapped exactly
+ * sqrt(2)/2 away. Both parities now put a cell centre exactly on 0.
+ */
 export function createCenteredMap(width: number, depth: number): IslandMap {
-  return createMap(width, depth, (-(width - 1) / 2) * TILE, (-(depth - 1) / 2) * TILE);
+  return createMap(width, depth, -Math.floor(width / 2) * TILE, -Math.floor(depth / 2) * TILE);
 }
 
 export function inBounds(map: IslandMap, cx: number, cz: number): boolean {
@@ -135,6 +155,63 @@ export function heightAt(map: IslandMap, cx: number, cz: number): number {
 /** Water surface height for a river cell. */
 export function waterHeightAt(map: IslandMap, cx: number, cz: number): number {
   return heightAt(map, cx, cz) - WATER_DROP;
+}
+
+// ── Serialised form ──────────────────────────────────────────────
+// `data/island-map.json`: one row per line, one digit per cell. Compact
+// enough to version, readable enough to review — a terrace edit shows up as a
+// legible diff instead of an opaque blob.
+
+export interface PlacedProp {
+  kind: string;
+  id?: string;
+  cell: [number, number];
+  level: number;
+}
+
+export interface IslandMapDoc {
+  width: number;
+  depth: number;
+  originX: number;
+  originZ: number;
+  levels: string[];
+  surfaces: string[];
+  props?: PlacedProp[];
+}
+
+export function parseIslandMap(doc: IslandMapDoc): { map: IslandMap; props: PlacedProp[] } {
+  const map = createMap(doc.width, doc.depth, doc.originX, doc.originZ);
+  for (let cz = 0; cz < doc.depth; cz++) {
+    const lvlRow = doc.levels[cz] ?? "";
+    const surfRow = doc.surfaces[cz] ?? "";
+    for (let cx = 0; cx < doc.width; cx++) {
+      const i = cz * doc.width + cx;
+      map.levels[i] = Number(lvlRow[cx] ?? "0") || 0;
+      map.surfaces[i] = Number(surfRow[cx] ?? "0") || 0;
+    }
+  }
+  return { map, props: doc.props ?? [] };
+}
+
+export function serialiseIslandMap(map: IslandMap, props: PlacedProp[] = []): IslandMapDoc {
+  const rows = (arr: Uint8Array) => {
+    const out: string[] = [];
+    for (let cz = 0; cz < map.depth; cz++) {
+      let s = "";
+      for (let cx = 0; cx < map.width; cx++) s += String(arr[cz * map.width + cx]);
+      out.push(s);
+    }
+    return out;
+  };
+  return {
+    width: map.width,
+    depth: map.depth,
+    originX: map.originX,
+    originZ: map.originZ,
+    levels: rows(map.levels),
+    surfaces: rows(map.surfaces),
+    props,
+  };
 }
 
 // ── Cell <-> world ───────────────────────────────────────────────
@@ -224,16 +301,20 @@ export function listChunks(map: IslandMap): ChunkRef[] {
 // masks down to the kit's piece count. This is the standard blob-tileset
 // rule and it is what produces ACNH's rounded outer corners.
 
-export const enum Dir {
-  N = 0,
-  NE = 1,
-  E = 2,
-  SE = 3,
-  S = 4,
-  SW = 5,
-  W = 6,
-  NW = 7,
-}
+// A plain object rather than a TS enum: `const enum` cannot be type-stripped,
+// so it breaks `node script.mjs` importing this module directly — which the
+// M3 snap script does. Same shape as Surface above.
+export const Dir = {
+  N: 0,
+  NE: 1,
+  E: 2,
+  SE: 3,
+  S: 4,
+  SW: 5,
+  W: 6,
+  NW: 7,
+} as const;
+export type DirId = (typeof Dir)[keyof typeof Dir];
 
 /** Cell offsets per direction bit, in the order above. */
 export const DIR_OFFSETS: ReadonlyArray<readonly [number, number]> = [
