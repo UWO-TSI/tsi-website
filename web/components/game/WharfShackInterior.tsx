@@ -8,12 +8,11 @@
  * Purpose-first per the collab contract: this room's job is SELLING.
  */
 
-import { Suspense, useEffect, useRef } from "react";
-import { useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
-import * as THREE from "three";
+import { Suspense, useEffect } from "react";
+import { useThree, type ThreeEvent } from "@react-three/fiber";
 import { AudioManager } from "@/lib/game/audio";
 import {
-  InteriorPlayer, Piece, applyInteriorBackdrop, nearestStation, preloadPieces,
+  InteriorKeeper, InteriorPlayer, Piece, applyInteriorBackdrop, nearestStation, preloadPieces,
   type InteriorStation, type RoomBounds,
 } from "./interiorShared";
 
@@ -25,66 +24,6 @@ export const WHARF_STATIONS: InteriorStation[] = [
 ];
 
 preloadPieces(["counter-register", "barrel", "cardboard-pile", "yellow-message-mat"]);
-
-// The Shack keeper (wake 68) — a procedural fisherman behind the counter:
-// straw hat, apron, gentle idle bob, and a friendly lean toward customers
-// who step up to sell. First staffed room (principle #2 — never empty).
-function WharfKeeper({ playerPosRef }: { playerPosRef: React.MutableRefObject<THREE.Vector3> }) {
-  const ref = useRef<THREE.Group>(null);
-  useFrame(({ clock }) => {
-    const g = ref.current;
-    if (!g) return;
-    const t = clock.elapsedTime;
-    g.position.y = Math.sin(t * 1.6) * 0.03;
-    // lean toward the room when the player is at the counter
-    const p = playerPosRef.current;
-    const near = Math.hypot(p.x - 0, p.z - 2.2) < 2.6;
-    g.rotation.x = THREE.MathUtils.damp(g.rotation.x, near ? 0.12 : 0, 3, 0.016);
-    g.rotation.z = Math.sin(t * 0.9) * 0.02;
-  });
-  return (
-    <group position={[0, 0, 3.35]} rotation={[0, Math.PI, 0]}>
-      <group ref={ref}>
-        {/* body: apron blue over a warm shirt */}
-        <mesh position={[0, 0.52, 0]}>
-          <capsuleGeometry args={[0.26, 0.5, 4, 10]} />
-          <meshStandardMaterial color="#3E5C7A" roughness={0.9} />
-        </mesh>
-        <mesh position={[0, 0.62, -0.02]}>
-          <capsuleGeometry args={[0.235, 0.3, 4, 10]} />
-          <meshStandardMaterial color="#C97E5A" roughness={0.9} />
-        </mesh>
-        {/* head + nose */}
-        <mesh position={[0, 1.12, 0]}>
-          <sphereGeometry args={[0.21, 12, 10]} />
-          <meshStandardMaterial color="#F0C8A0" roughness={0.85} />
-        </mesh>
-        <mesh position={[0, 1.09, 0.2]}>
-          <sphereGeometry args={[0.045, 8, 6]} />
-          <meshStandardMaterial color="#E5B48C" roughness={0.85} />
-        </mesh>
-        {/* straw hat: brim + crown */}
-        <mesh position={[0, 1.3, 0]}>
-          <cylinderGeometry args={[0.34, 0.36, 0.035, 12]} />
-          <meshStandardMaterial color="#C9AE6A" roughness={0.95} flatShading />
-        </mesh>
-        <mesh position={[0, 1.38, 0]}>
-          <cylinderGeometry args={[0.15, 0.19, 0.14, 10]} />
-          <meshStandardMaterial color="#BFA35E" roughness={0.95} flatShading />
-        </mesh>
-        {/* arms resting on the counter side */}
-        <mesh position={[-0.3, 0.62, 0.1]} rotation={[0.5, 0, 0.35]}>
-          <capsuleGeometry args={[0.07, 0.3, 3, 8]} />
-          <meshStandardMaterial color="#C97E5A" roughness={0.9} />
-        </mesh>
-        <mesh position={[0.3, 0.62, 0.1]} rotation={[0.5, 0, -0.35]}>
-          <capsuleGeometry args={[0.07, 0.3, 3, 8]} />
-          <meshStandardMaterial color="#C97E5A" roughness={0.9} />
-        </mesh>
-      </group>
-    </group>
-  );
-}
 
 export default function WharfShackInterior({
   frozen,
@@ -129,7 +68,7 @@ export default function WharfShackInterior({
         </mesh>
       ))}
 
-      <WharfKeeper playerPosRef={playerPosRef} />
+      <InteriorKeeper position={[0, 0, 3.35]} watch={[0, 2.2]} colors={{ apron: "#3E5C7A", shirt: "#C97E5A" }} hat="straw" playerPosRef={playerPosRef} />
 
       <Suspense fallback={null}>
         {/* the counter — selling happens here */}

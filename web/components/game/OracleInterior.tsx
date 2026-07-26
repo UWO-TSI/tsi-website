@@ -14,6 +14,7 @@ import { useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
 import * as THREE from "three";
 import { AudioManager } from "@/lib/game/audio";
 import {
+  InteriorKeeper,
   InteriorPlayer, Piece, applyInteriorBackdrop, nearestStation, preloadPieces,
   type InteriorStation, type RoomBounds,
 } from "./interiorShared";
@@ -172,6 +173,8 @@ export default function OracleInterior({
         <Piece name="yellow-message-mat" position={[0, 0.015, -5.3]} scale={0.12} />
       </Suspense>
 
+      {/* wake 69: hooded altar attendant */}
+      <InteriorKeeper position={[1.9, 0, 3.6]} rotY={Math.PI + 0.4} watch={[0, 2.6]} colors={{ apron: "#5A4A7E", shirt: "#8E7BB0" }} hat="hood" playerPosRef={playerPosRef} />
       <InteriorPlayer
         frozen={frozen}
         bounds={BOUNDS}
