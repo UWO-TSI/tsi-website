@@ -209,6 +209,41 @@ function Dragonflies() {
   );
 }
 
+// Marsh fireflies (wake 72): a soft cluster wandering over the ponds at
+// night — the Reedmarsh becomes the island's firefly spot. Dusk fades in.
+const FLY_COUNT = 9;
+function MarshFireflies({ phase }: { phase: "dawn" | "day" | "dusk" | "night" }) {
+  const refs = useRef<(THREE.Mesh | null)[]>([]);
+  const target = phase === "night" ? 0.95 : phase === "dusk" ? 0.45 : 0;
+  useFrame(({ clock }) => {
+    const t = clock.elapsedTime;
+    for (let i = 0; i < FLY_COUNT; i++) {
+      const m = refs.current[i];
+      if (!m) return;
+      const pond = PONDS[i % PONDS.length];
+      const a = t * (0.12 + (i % 4) * 0.04) + i * 2.1;
+      m.position.set(
+        pond.x + Math.cos(a) * (pond.r + 0.8 + Math.sin(t * 0.4 + i) * 0.9),
+        getTerrainHeight(pond.x, pond.z) + 0.5 + Math.sin(t * 0.9 + i * 1.7) * 0.35,
+        pond.z + Math.sin(a) * (pond.r + 0.6 + Math.cos(t * 0.33 + i * 2) * 0.8)
+      );
+      const mat = m.material as THREE.MeshBasicMaterial;
+      const blink = 0.55 + 0.45 * Math.sin(t * (1.3 + (i % 3) * 0.5) + i * 3.1);
+      mat.opacity = THREE.MathUtils.damp(mat.opacity, target * blink, 2, 0.016);
+    }
+  });
+  return (
+    <group>
+      {Array.from({ length: FLY_COUNT }, (_, i) => (
+        <mesh key={i} ref={(el) => { refs.current[i] = el; }}>
+          <sphereGeometry args={[0.045, 6, 5]} />
+          <meshBasicMaterial color="#D8F090" transparent opacity={0} depthWrite={false} />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
 // Tide pools on the Flats (terrain is falloff-flat out there — no slabs needed)
 const POOLS: { x: number; z: number; r: number }[] = [
   { x: 37.5, z: 50.5, r: 1.8 },
@@ -280,6 +315,7 @@ export default function S7Pockets({ phase = "day" }: { phase?: "dawn" | "day" | 
       <Reedmarsh />
       <TheFlats />
       {phase !== "night" && <Dragonflies />}
+      <MarshFireflies phase={phase} />
     </group>
   );
 }

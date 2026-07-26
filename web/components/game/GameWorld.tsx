@@ -1991,7 +1991,7 @@ function Scene({
     // G3: benches — sit target. Coords mirror Props()' bench array.
     // Wake 67: +2 shoreline driftwood-log seats (Flats + Isla Chica) —
     // meshes live in S7Pockets / IslaChica; same tsi:sit pipeline.
-    const BENCHES: [number, number][] = [[-3, -16], [3, -16], [-3.2, 13], [3.2, 13], [36, 46.5], [-26.5, 70.5]];
+    const BENCHES: [number, number][] = [[-3, -16], [3, -16], [-3.2, 13], [3.2, 13], [36, 46.5], [-26.5, 70.5], [-45.6, 12]];
     for (let i = 0; i < BENCHES.length; i++) {
       const [bx, bz] = BENCHES[i];
       const d = Math.hypot(bx - position.x, bz - position.z);
