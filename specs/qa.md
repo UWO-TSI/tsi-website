@@ -6,6 +6,56 @@
 
 ---
 
+## Wave 31 — 2026-07-26 M0/M1 foundations + FPS A/B — **PASS**
+
+Branch `feat/acnh-tile-grid` (off `restart/art-cohesion-v2`). David asked for a
+performance check after the M1 asset re-export.
+
+**Method.** Headed Chromium via gstack browse (real WebGL — headless has no GL
+context here and silently renders nothing), `/lab/world`, player at spawn
+`[0, 0, -15]`, clock forced to Noon so lighting is identical between runs,
+F3 overlay sampled 4-6 times per config. Dev build, so treat absolute numbers
+as relative-only.
+
+**M1 is performance-neutral vs M0.** Same camera, same settings:
+
+| | FPS (median) | Draws | Tris | Geoms | Texs |
+|---|---|---|---|---|---|
+| M0 `1dd1dda` | ~49 | 243-353 | 308-415k | 255-259 | 128-129 |
+| M1 `b90ad41` | ~49 | 242-357 | 305-414k | 263-267 | 123-124 |
+
+Geoms up slightly (buildings now composed from parts), Texs down slightly
+(texture slimming). Draw/tri figures oscillate between two bands as ambient
+life moves in and out of frustum.
+
+**Lever A/B — bloom is the entire gap.**
+
+| Config | FPS | Frame |
+|---|---|---|
+| default (bloom on, shadows on, dpr 2) | ~49 | 21.4ms |
+| `pixelated` on (dpr 0.66) | ~48 | 19.3ms |
+| shadows off | ~47 | 21.6ms |
+| **bloom off** | **60 (vsync cap)** | **16.7ms** |
+| **defaults after the fix** | **60** | **16.1-16.8ms** |
+
+dpr and the realtime shadow map — the two obvious suspects, and the ones the
+foundations doc flagged as D8 — cost almost nothing here. Bloom costs ~11 FPS.
+
+**Root cause.** `useGraphicsSettings` enabled bloom when
+`navigator.deviceMemory >= 8`. Chrome CAPS that value at 8 regardless of real
+RAM, and Safari/Firefox do not implement it at all so the 8 fallback applies.
+The condition was true for essentially every visitor. Bloom now defaults OFF,
+opt-in via Settings → Graphics. A real fix probes frame time; deviceMemory
+cannot answer the question it was being asked.
+
+**Also verified this wave:** shaders compile with the D1 depth-pass guard,
+zero asset 404s, `--audit` clean (no dropped meshes, no dangling texture refs),
+trees render normal green after the COLOR_0 strip.
+
+Gates: tsc clean, tests 32/32, lint 74/52 (= baseline).
+
+---
+
 ## Wave 30 — 2026-07-25 Mini-sweep after wakes 46-60 — **PASS, ready for David's eyeball**
 
 Wave 29 passed but the world changed a LOT since (geo master plan S1-S7, river v3, economy E1-E4, recolor pipeline, polish batches — 15 wakes). This sweep re-baselines everything for David's pre-merge playtest. HEAD `f862f5c`.

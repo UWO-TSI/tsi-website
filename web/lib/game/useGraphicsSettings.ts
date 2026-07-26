@@ -87,7 +87,29 @@ export function useGraphicsSettings(): [GraphicsSettings, GraphicsSettingsAction
   useEffect(() => {
     const gb = detectDeviceMemoryGB();
     const autoLite = gb <= 4;
-    const autoBloom = gb >= 8;
+    // ── Bloom now defaults OFF (measured 2026-07-26) ──────────────
+    //
+    // `gb >= 8` never meant what it looks like: Chrome CAPS
+    // navigator.deviceMemory at 8 no matter how much RAM the machine has, and
+    // Safari and Firefox do not implement it at all, so detectDeviceMemoryGB()
+    // returns the 8 fallback. The check was therefore true for essentially
+    // every visitor, and bloom shipped on by default.
+    //
+    // A/B on David's M1 at /lab/world, same camera and forced noon, 4 samples
+    // each — bloom is the ONLY lever that moves the needle:
+    //
+    //   default (bloom on, shadows on, dpr 2) ~49 FPS   21.4ms
+    //   pixelated on (dpr 0.66)               ~48 FPS   19.3ms
+    //   shadows off                           ~47 FPS   21.6ms
+    //   bloom OFF                              60 FPS   16.7ms  (vsync cap)
+    //
+    // ~11 FPS, and the file's own note already put the old kernel bloom at
+    // ~12 FPS on 4GB devices. dpr and the shadow map, which looked like the
+    // obvious suspects, cost almost nothing here.
+    //
+    // Opt-in via Settings → Graphics. A real fix would probe actual frame time
+    // and enable it when there is headroom; deviceMemory cannot answer that.
+    const autoBloom = false;
     // eslint-disable-next-line react-hooks/set-state-in-effect -- localStorage read is a one-shot client-only init; running outside an effect would break SSR
     setState({
       liteMode: readBool(KEYS.liteMode, autoLite),
