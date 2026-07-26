@@ -108,6 +108,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-07-25 — Loop wake 70: bible drift banner caught up (docs wake)
+
+STUDENT_SYSTEM_BIBLE's CURRENT VISION DELTAS banner was 12 days stale — it predated the entire wakes-46-69 era. Updated: the **§7 economy row now carries the v2 doctrine** (Gems 💎 = money tier on legacy tc_* columns, TC 🪙 = play currency, never converting — the old row's "internal-only rate" framing was obsolete), a new additions table covering geo v2 (all S-items + river v3), 91-species fishing with the vacant Sea King tier, draft migrations 024/025, the Wharf Shack + gear shelf, staffed interiors, the end-to-end seasonal system, the recolor pipeline, discovery zones, and the QA hooks; canonical-sources list gains the five new specs. Onboarding agents now land on accurate ground. Gates: tsc clean, 32/32 (docs-only change). Hourly holding pattern continues — all major tracks still gate on David.
+
 ### 2026-07-25 — Loop wake 69: every room has a person now
 
 Wake 68's keeper generalized into `InteriorKeeper` (interiorShared): position/rotY/watch-point/colors + four hat variants — **straw** (Wharf fisherman), **cap** (Shop keeper, market-green apron behind the register), **bun** (HQ front-desk receptionist, navy blazer), **hood** (Oracle altar attendant, robe purple). All share the idle bob + damped lean-toward-customer; playerPosRef threads through cleanly (first draft used a module-var hack — replaced before commit). Wharf swapped to the shared component, net-negative LOC. All four rooms verified in the interior bench — the shop keeper peeking over the register and the hooded figure under the floating crystal both read instantly. Principle #2 satisfied indoors: no empty rooms. Gates: tsc clean, 74/52, 32/32. Hourly holding pattern continues.
