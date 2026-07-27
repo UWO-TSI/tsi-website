@@ -600,3 +600,93 @@ export function cliffPieceFor(
 export function sameSurface(surface: number) {
   return (map: IslandMap, nx: number, nz: number) => surfaceAt(map, nx, nz) === surface;
 }
+
+// ── Corner easing ────────────────────────────────────────────────
+//
+// WHY THIS EXISTS. David, 2026-07-27: "game looks like minecraft now, need you
+// to have logic that eases land connections."
+//
+// Every boundary on a tile grid is made of axis-aligned cell edges, so a
+// diagonal run comes out as a pixel staircase and every corner is a hard 90
+// degrees. That is the Minecraft read, and it was worst at the coastline: a
+// level-0 cell next to open sea gets no cliff piece, so the island silhouette
+// was bare square quads and rendered as a 45-degree flight of stairs.
+//
+// ACNH never shows that edge because every one of its boundaries is drawn by an
+// autotile whose corner pieces are ROUNDED. We do not have a fringe kit for
+// grass-on-sand or for the shoreline, so we round the GEOMETRY instead: a cell
+// on a boundary gets its convex corners cut by a quarter-circle.
+//
+// The useful property is that a full-tile cut turns a staircase into an exact
+// straight diagonal. Take the blob { x >= z }: cell (1,1) spans [0.5,1.5]^2 and
+// its NW corner is convex, so cutting it leaves the hypotenuse (0.5,0.5) ->
+// (1.5,1.5); cell (2,2) contributes (1.5,1.5) -> (2.5,2.5); and cell (2,1)
+// between them is interior and untouched. The segments meet exactly. Below a
+// full tile the diagonal is scalloped rather than straight, which is the ACNH
+// coastline look and why EASE_RADIUS is not 1.0.
+
+/** How far into the cell a convex corner is cut, in tiles. */
+export const EASE_RADIUS = 0.72;
+
+/** Segments per rounded corner. 3 is smooth at our texel density; 1 is a bevel. */
+export const EASE_SEGMENTS = 3;
+
+/**
+ * Corner traversal order, as (signX, signZ).
+ *
+ * Counter-clockwise in the XZ plane, which is what makes a centre-fan wind
+ * +Y-up: for a triangle (centre, b, c) the normal's Y component is
+ * `b.z * c.x - b.x * c.z`, and this order keeps it positive.
+ */
+const EASE_CORNERS: ReadonlyArray<readonly [number, number]> = [
+  [-1, -1],
+  [-1, 1],
+  [1, 1],
+  [1, -1],
+];
+
+/** Membership test for one draw layer: is this cell part of it? */
+export type LayerTest = (cx: number, cz: number) => boolean;
+
+/**
+ * The cell's footprint as (x, z) offsets from its centre, in tiles.
+ *
+ * Returns null for a fully interior cell — the caller should emit a plain quad
+ * and skip the fan, which keeps the extra triangles on the boundary where they
+ * do something instead of on all 11k land cells.
+ */
+export function easedCellOutline(inLayer: LayerTest, cx: number, cz: number): number[][] | null {
+  const half = TILE / 2;
+  const r = EASE_RADIUS * TILE;
+
+  // A corner is convex when both of the cells flanking it are outside the
+  // layer. The diagonal must be outside too: when it is inside, the two cells
+  // meet at a point, and cutting both corners would open a visible pinhole.
+  const cut = EASE_CORNERS.map(
+    ([sx, sz]) =>
+      !inLayer(cx + sx, cz) && !inLayer(cx, cz + sz) && !inLayer(cx + sx, cz + sz)
+  );
+  if (!cut.some(Boolean)) return null;
+
+  const out: number[][] = [];
+  for (let i = 0; i < EASE_CORNERS.length; i++) {
+    const [sx, sz] = EASE_CORNERS[i];
+    if (!cut[i]) {
+      out.push([sx * half, sz * half]);
+      continue;
+    }
+    // Quarter-circle centred inside the cell, from the z-edge to the x-edge.
+    const cxp = sx * (half - r);
+    const czp = sz * (half - r);
+    const arc: number[][] = [];
+    for (let s = 0; s <= EASE_SEGMENTS; s++) {
+      const th = (s / EASE_SEGMENTS) * (Math.PI / 2);
+      arc.push([cxp + sx * r * Math.sin(th), czp + sz * r * Math.cos(th)]);
+    }
+    // The traversal enters diagonally-opposite corners from opposite edges, so
+    // half of them walk the arc backwards. sx*sz picks which.
+    if (sx * sz < 0) arc.reverse();
+    out.push(...arc);
+  }
+  return out;
+}

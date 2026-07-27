@@ -1,8 +1,79 @@
 # QA Report
 
 > Owner: QA agent. All agents check this for bugs in their area.
-> Last updated: 2026-07-26 (Wave 32 — visual QA of the tile world, art-cohesion branch)
+> Last updated: 2026-07-27 (Wave 33 — corner easing + coastal apron, art-cohesion branch)
 > **Lint baseline updated 2026-07-13: 74 errors / 52 warnings** (was 74/59 — seven genuinely-unused eslint-disable directives removed; mentorship/page.tsx keeps its two, the "unused" report there is a react-compiler two-pass quirk shielding a real declaration-order error).
+
+---
+
+## Wave 33 — 2026-07-27 "looks like Minecraft" — easing land connections
+
+David: "game looks like minecraft now, need you to have logic that eases land
+connections." Two mechanisms landed, both measured.
+
+**What was actually blocky, measured rather than assumed.** The autotiler was
+NOT at fault: sampling the west-coast run shows it picking corner pieces (`3`,
+`7`) at every turn and straight walls (`5`) along runs, which is correct. And
+the four straight-wall variants have **byte-identical edge profiles** at the
+tiling seam (`-3.67,-14.84,5.00 | -4.22,-0.39,5.00 | ...` on all of
+`5-b-0..3`), so they tile exactly and mixing them opens no gap.
+
+The blockiness was two other things:
+
+1. **The ground plane had no corner geometry at all.** Every boundary on a tile
+   grid is axis-aligned cell edges, so grass/sand, road/grass and the shoreline
+   all came out as pixel staircases.
+2. **Elevation ran straight into the sea.** 243 cliff cells sat within 4 cells
+   of open water, so the island's own SILHOUETTE was a flight of rock stairs
+   descending one cell per row. ACNH never shows this: its shoreline is always a
+   flat level-0 beach and cliffs only start inland, which is why its outline
+   against the sea is a curve the engine can round rather than a stack of square
+   pieces it cannot.
+
+**Fix 1 — corner easing (`easedCellOutline` in `lib/game/grid.ts`).** A cell on a
+boundary gets its convex corners cut by a quarter-circle. Interior cells keep the
+cheap two-triangle quad, so the extra geometry stays where it does something.
+The useful property: a full-tile cut turns a staircase into an exact straight
+diagonal (blob `{x >= z}` — cell (1,1) contributes the hypotenuse (0.5,0.5) →
+(1.5,1.5), cell (2,2) contributes (1.5,1.5) → (2.5,2.5), and they meet exactly).
+`EASE_RADIUS` is 0.72, below a full tile, which leaves the gentle scallop ACNH
+coastlines have.
+
+This forced `GridTerrain` into **two layers instead of seven buckets**: grass
+everywhere, other surfaces painted on top. Cutting a corner off a sand cell has
+to reveal something, and in a one-layer world it revealed a hole. It is also
+ACNH's own model — `Base_0` is grass and roads are autotiled decals over it.
+River is deliberately NOT eased and drawn full-square: nothing is beneath the
+water, so cutting its corners would show sky; the rounded grass bank overlaps it
+from above instead.
+
+**Fix 2 — a coastal beach apron (`COAST_APRON = 4`).** No elevation within 4
+cells of the sea. **243 → 0 cliff cells at the waterline.** The shelf features
+from the 2026-07-26 ask moved from `coastDist` 47.5 to 42 so they still read as
+a low rock bluff overlooking the sand rather than as the sand's own edge.
+
+**Fix 3 — `straighten(2)`, and an honest note on it.** A 3×3 majority vote on
+the level field. It flipped **14 cells** and took one-cell ridges 2 → 0, and
+that is all: a 45° boundary is already a fixed point of a majority filter, so
+the diagonal stairs are a real diagonal and not noise. Kept as a cheap guard,
+not as the fix it was intended to be.
+
+| | before | after |
+|---|---|---|
+| cliff cells inside the 4-cell beach apron | 243 | **0** |
+| one-cell-wide ridges | 2 | **0** |
+| edge cells / raised cells | 21% | 20% |
+| corner (wall turns here) cells | 27% of perimeter | 27% |
+
+**Still blocky, and why.** The cliff FACE still reads as 1×1 blocks. That is not
+geometry — the pieces tile exactly, measured above. It is shading: the rock
+relief has no ambient occlusion, no baked contact shadow (the extractor drops
+`mShadow`, which needs multiply blending and renders as opaque white under
+standard PBR), and faces pointing away from the sun get key ≈ 0. Fixing it means
+restoring `mShadow` with a `THREE.MultiplyBlending` material, which is the same
+thing V7 in Wave 32 needs.
+
+Gates: tsc clean, tests 70/70, lint 74/52 (= baseline).
 
 ---
 

@@ -125,6 +125,51 @@ const isLand = (cx, cz) => grid.inBounds(map, cx, cz) && !grid.isVoid(grid.surfa
 // to touch the coast.
 const MARGIN = 3;
 
+/**
+ * Cells of flat beach between the elevation and the sea.
+ *
+ * David, 2026-07-27: "game looks like minecraft now". The dominant blocky read
+ * was the island's own SILHOUETTE — level-1 land ran straight into the water,
+ * so the coast was a flight of cliff stairs descending one cell per row. ACNH
+ * never shows that, for a reason that is a rule and not an accident: its
+ * shoreline is always a flat level-0 beach, and cliffs only ever start inland.
+ * The outline you see against the sea is therefore a smooth sand curve, which
+ * `easedCellOutline` can round, rather than a stack of square rock pieces,
+ * which it cannot.
+ */
+const COAST_APRON = 4;
+
+/** Chebyshev distance to the open sea, so the apron can be enforced. */
+const seaDist = (() => {
+  const d = new Int32Array(map.width * map.depth).fill(1 << 29);
+  const queue = [];
+  for (let cz = 0; cz < map.depth; cz++) {
+    for (let cx = 0; cx < map.width; cx++) {
+      const i = grid.cellIndex(map, cx, cz);
+      if (grid.isVoid(map.surfaces[i])) {
+        d[i] = 0;
+        queue.push(i);
+      }
+    }
+  }
+  for (let head = 0; head < queue.length; head++) {
+    const i = queue[head];
+    const cz = Math.floor(i / map.width);
+    const cx = i % map.width;
+    for (let dz = -1; dz <= 1; dz++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        if (!grid.inBounds(map, cx + dx, cz + dz)) continue;
+        const n = grid.cellIndex(map, cx + dx, cz + dz);
+        if (d[n] > d[i] + 1) {
+          d[n] = d[i] + 1;
+          queue.push(n);
+        }
+      }
+    }
+  }
+  return d;
+})();
+
 const clearance = (() => {
   const d = new Int32Array(map.width * map.depth).fill(1 << 29);
   const queue = [];
@@ -156,7 +201,9 @@ const clearance = (() => {
 })();
 
 const canRaise = (cx, cz) =>
-  isLand(cx, cz) && clearance[grid.cellIndex(map, cx, cz)] >= MARGIN;
+  isLand(cx, cz) &&
+  clearance[grid.cellIndex(map, cx, cz)] >= MARGIN &&
+  seaDist[grid.cellIndex(map, cx, cz)] >= COAST_APRON;
 
 // ── Features ─────────────────────────────────────────────────────
 // World coordinates throughout, so these read against the same numbers the
@@ -357,7 +404,11 @@ for (const [name, x, z, r] of FARSIDE) report.push(blob(name, x, z, r, 1));
 // distance from the water — at angles where the coast bulges, radius 46 sits
 // well inland, which is exactly how the first attempt ended up as bumps in a
 // field. Solve for the radius where coastDist hits the target instead.
-const SHELF_COAST_DIST = 47.5; // just inside the 48.5 grass->sand blend
+// Pulled in from 47.5 to 42 on 2026-07-27. At 47.5 the shelves sat ON the
+// beach, which is what made the island's outline a flight of stairs. At 42 they
+// stand a few cells inland and read as a low rock bluff LOOKING OVER the sand,
+// which is the same silhouette ACNH gets and still answers the original ask.
+const SHELF_COAST_DIST = 42;
 function radiusAtCoastDist(deg, target) {
   const a = (deg * Math.PI) / 180;
   let lo = 10;
@@ -422,6 +473,57 @@ function enforceSteps() {
   }
 }
 
+/**
+ * Straighten level boundaries — the other half of "eases land connections".
+ *
+ * A blob rasterised onto a grid gives an edge that jitters by one cell every
+ * row or two, and a one-cell jitter renders as one square rock piece jutting
+ * out of an otherwise straight wall. Fifty of those in a row is the staircase.
+ *
+ * A 3x3 majority vote fixes it: a cell joins the plateau when 5 or more of its
+ * nine neighbours (itself included) are raised, and leaves when fewer are. On a
+ * straight edge every cell already has exactly the majority it needs, so
+ * straight edges are FIXED POINTS and only the jitter moves. Two rounds settle
+ * it; more would start rounding off deliberate corners.
+ *
+ * Bounded by `canRaise` on the way up so this cannot walk a plateau back over a
+ * road or into the coastal apron.
+ */
+function straighten(rounds) {
+  let flipped = 0;
+  for (let r = 0; r < rounds; r++) {
+    const next = Uint8Array.from(map.levels);
+    for (let cz = 0; cz < map.depth; cz++) {
+      for (let cx = 0; cx < map.width; cx++) {
+        if (!isLand(cx, cz) || isProtected(cx, cz)) continue;
+        const i = grid.cellIndex(map, cx, cz);
+        const lvl = map.levels[i];
+        // Vote on the boundary of THIS cell's own tier, so a level-2 summit
+        // straightens against level 1 rather than against the sea.
+        const tier = Math.max(1, lvl === 0 ? 1 : lvl);
+        let votes = 0;
+        for (let dz = -1; dz <= 1; dz++) {
+          for (let dx = -1; dx <= 1; dx++) {
+            const nx = cx + dx;
+            const nz = cz + dz;
+            // Off-map reads as sea, i.e. not part of the tier.
+            if (!isLand(nx, nz)) continue;
+            if (map.levels[grid.cellIndex(map, nx, nz)] >= tier) votes++;
+          }
+        }
+        const want = votes >= 5;
+        const has = lvl >= tier;
+        if (want === has) continue;
+        if (want && !canRaise(cx, cz)) continue;
+        next[i] = want ? tier : tier - 1;
+        flipped++;
+      }
+    }
+    map.levels.set(next);
+  }
+  return flipped;
+}
+
 /** A single raised cell with no raised neighbour is noise, not a landform. */
 function removeSpecks() {
   let removed = 0;
@@ -447,6 +549,7 @@ function removeSpecks() {
 // Open first: deleting ribbons before terracing means enforceSteps only has
 // to resolve real terraces, not artifacts.
 const opened = open(2);
+const flipped = straighten(2);
 const stepFix = enforceSteps();
 const specks = removeSpecks();
 enforceSteps();
@@ -479,7 +582,7 @@ for (let i = 0; i < map.levels.length; i++) {
 console.log("features applied:");
 for (const r of report) console.log(`  ${r.name.padEnd(26)} ${String(r.cells).padStart(5)} cells raised`);
 console.log(
-  `\nopen(2) dropped: ${opened} · constraint passes: ${stepFix.passes} (settled: ${stepFix.settled}) · specks removed: ${specks}`
+  `\nopen(2) dropped: ${opened} · straighten(2) flipped: ${flipped} · constraint passes: ${stepFix.passes} (settled: ${stepFix.settled}) · specks removed: ${specks}`
 );
 console.log(`protected cells modified: ${violations}${violations ? "  <<< BUG" : ""}`);
 console.log("\nlevels over land:");
@@ -510,6 +613,8 @@ for (let cz = 0; cz < map.depth; cz++) {
 let raisedCells = 0;
 let edgeCells = 0;
 let thinCells = 0;
+let cornerCells = 0;
+let coastCliff = 0;
 for (let cz = 0; cz < map.depth; cz++) {
   for (let cx = 0; cx < map.width; cx++) {
     if (!isLand(cx, cz)) continue;
@@ -518,8 +623,20 @@ for (let cz = 0; cz < map.depth; cz++) {
     raisedCells++;
     const below = (dx, dz) =>
       (isLand(cx + dx, cz + dz) ? map.levels[grid.cellIndex(map, cx + dx, cz + dz)] : 0) < lvl;
+    const orth = [
+      [1, 0],
+      [-1, 0],
+      [0, 1],
+      [0, -1],
+    ].filter(([dx, dz]) => below(dx, dz)).length;
     if (grid.DIR_OFFSETS.some(([dx, dz]) => below(dx, dz))) edgeCells++;
+    // Two or more lower orthogonals means the wall TURNS here. A long straight
+    // run has one; a staircase has one at every single cell, which is what
+    // reads as Minecraft. This is the number `straighten()` exists to drive
+    // down.
+    if (orth >= 2) cornerCells++;
     if ((below(-1, 0) && below(1, 0)) || (below(0, -1) && below(0, 1))) thinCells++;
+    if (seaDist[grid.cellIndex(map, cx, cz)] < COAST_APRON) coastCliff++;
   }
 }
 console.log(
@@ -527,6 +644,12 @@ console.log(
     (100 * edgeCells) /
     Math.max(1, raisedCells)
   ).toFixed(0)}% · 1-cell-wide ridges: ${thinCells}`
+);
+console.log(
+  `corner (wall turns here) cells: ${cornerCells}/${edgeCells} = ${(
+    (100 * cornerCells) /
+    Math.max(1, edgeCells)
+  ).toFixed(0)}% of the perimeter · cliff inside the ${COAST_APRON}-cell beach apron: ${coastCliff}`
 );
 
 if (dry) {
