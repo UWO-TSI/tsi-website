@@ -1,15 +1,30 @@
 "use client";
 
-import { useRef, useMemo, useEffect } from "react";
+import { Suspense, useRef, useMemo, useEffect } from "react";
 import { useFrame } from "@react-three/fiber";
+import { useGLTF } from "@react-three/drei";
+import { clone as cloneSkeleton } from "three/examples/jsm/utils/SkeletonUtils.js";
 import * as THREE from "three";
 import { sampleTerrainHeightFast } from "./terrain";
 
 /**
- * Ambient life — sprint A6. Procedural-only (no textures, no asset loads).
- * Butterflies (day), fireflies (night), leaves/pollen drift (always),
- * background birds (day). Phase prop comes from the parent.
+ * Ambient life — sprint A6. Butterflies (day), fireflies (night),
+ * leaves/pollen drift (always), background birds (day). Phase prop comes from
+ * the parent.
+ *
+ * Mostly procedural, with one real asset: the seagulls now use a rigged model
+ * (see SEAGULL_URL). Everything else in here is still built from primitives —
+ * `specs/asset-needs.md` tracks what that costs and which ones are worth
+ * replacing.
  */
+
+// Seagull: a rigged, animated low-poly bird (David supplied, 2026-07-26).
+// Sketchfab export, slimmed to 153KB (normal map dropped, colour capped at
+// 512) with the skin and the flap animation deliberately KEPT — the flap is
+// the whole point, unlike the static ACNH props where stripping skinning was
+// the fix for exploding clones.
+const SEAGULL_URL = "/assets/fauna/seagull.glb";
+useGLTF.preload(SEAGULL_URL);
 
 // Seeded PRNG so per-mount values are deterministic.
 function seededRandom(seed: number) {
@@ -340,27 +355,77 @@ function Gull({ anchor, seed, idx, swoopRef }: { anchor: [number, number]; seed:
         const w = p < 0.25 ? p / 0.25 : p > 0.72 ? (1 - p) / 0.28 : 1;
         ref.current.position.set(ox + (sx - ox) * w, oy + (sy - oy) * w, oz + (sz - oz) * w);
         ref.current.rotation.y = w > 0.5 ? -sa + Math.PI / 2 : -a + Math.PI / 2;
-        ref.current.rotation.z = Math.sin(t * (6.5 + w * 6)) * (0.35 + w * 0.2); // harder flap low
+        // Bank into the turn. Was a fake 6.5Hz wing-flap oscillation; the
+        // model animates its own wings now, so this reads as a lean instead.
+        ref.current.rotation.z = -0.22 - w * 0.16 + Math.sin(t * 1.4) * 0.05;
         return;
       }
     }
     ref.current.position.set(ox, oy, oz);
     ref.current.rotation.y = -a + Math.PI / 2;
-    ref.current.rotation.z = Math.sin(t * 6.5 + phase) * 0.35;
+    ref.current.rotation.z = -0.16 + Math.sin(t * 0.9 + phase) * 0.07; // lazy bank
   });
 
   return (
     <group ref={ref} position={[anchor[0] + radius, 7, anchor[1]]}>
-      <mesh rotation={[0, 0, Math.PI / 7]} position={[0.2, 0, 0]}>
-        <boxGeometry args={[0.46, 0.05, 0.06]} />
-        <meshBasicMaterial color="#F2F3EF" />
-      </mesh>
-      <mesh rotation={[0, 0, -Math.PI / 7]} position={[-0.2, 0, 0]}>
-        <boxGeometry args={[0.46, 0.05, 0.06]} />
-        <meshBasicMaterial color="#F2F3EF" />
-      </mesh>
+      <Suspense fallback={null}>
+        <SeagullModel seed={seed} />
+      </Suspense>
     </group>
   );
+}
+
+/**
+ * The gull body. Each instance needs its OWN skeleton and mixer:
+ * `SkeletonUtils.clone` rather than `Object3D.clone`, because a plain clone
+ * stays bound to the source skeleton and every copy then resolves against the
+ * same bones. That is the identical trap the ACNH props hit in M1, where it
+ * showed up as models exploding into screen-filling shards.
+ *
+ * Wing phase is offset per gull so the flock does not beat in lockstep.
+ */
+const SEAGULL_SCALE = 0.075; // source wingspan is ~9.3u; a gull wants ~0.7u
+const SEAGULL_YAW = -Math.PI / 2; // model faces +X, our orbit code faces -Z
+
+function SeagullModel({ seed }: { seed: number }) {
+  const { scene, animations } = useGLTF(SEAGULL_URL);
+  const mixerRef = useRef<THREE.AnimationMixer | null>(null);
+
+  const body = useMemo(() => {
+    const c = cloneSkeleton(scene);
+    c.scale.setScalar(SEAGULL_SCALE);
+    c.rotation.y = SEAGULL_YAW;
+    c.traverse((o) => {
+      const mesh = o as THREE.Mesh;
+      if (!mesh.isMesh) return;
+      // Gulls read as silhouettes against the sky; a shadow pass on four
+      // birds circling offshore buys nothing.
+      mesh.castShadow = false;
+      mesh.receiveShadow = false;
+      mesh.frustumCulled = false; // skinned bounds do not follow the animation
+    });
+    return c;
+  }, [scene]);
+
+  useEffect(() => {
+    if (!animations.length) return;
+    const mixer = new THREE.AnimationMixer(body);
+    const action = mixer.clipAction(animations[0]);
+    action.play();
+    // Stagger both the start point and the rate so the flock looks alive.
+    action.time = (seed * 0.37) % (animations[0].duration || 1);
+    mixer.timeScale = 0.85 + ((seed * 13) % 7) * 0.05;
+    mixerRef.current = mixer;
+    return () => {
+      action.stop();
+      mixer.uncacheRoot(body);
+      mixerRef.current = null;
+    };
+  }, [body, animations, seed]);
+
+  useFrame((_, delta) => mixerRef.current?.update(delta));
+
+  return <primitive object={body} />;
 }
 
 function Gulls() {
