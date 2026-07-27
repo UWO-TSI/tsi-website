@@ -11,6 +11,10 @@
 # Un-ignore globe data files
 !web/data/globe-nodes.json
 !web/data/globe-countries.json
+
+# The tile map IS the world. The blanket *.json above was silently keeping it
+# out of every commit, so the grid island existed only on one machine.
+!web/data/island-map.json
 .vercel
 *.jpeg
 .playwright-mcp/

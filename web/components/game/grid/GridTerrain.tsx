@@ -63,7 +63,7 @@ const SURFACES_DRAWN = [
 // 0..1 UVs put the WHOLE texture on every single cell, which turned the lawn
 // into hard green/yellow stripes — an ACNH ground texture is a tiling pattern
 // meant to run continuously across the terrain, not a per-tile decal.
-const UV_CELLS_PER_REPEAT = 4;
+const UV_CELLS_PER_REPEAT = 2;
 
 /** One flat quad, +Y up, centred on the cell, with continuous world UVs. */
 function quad(x: number, y: number, z: number): THREE.BufferGeometry {
@@ -126,6 +126,10 @@ export default function GridTerrain({ map }: { map: IslandMap }) {
     // ground matches the cliff tops exactly — the cliff kit's own grass top is
     // the same mGrass_Grd. The rest stay flat colour until their road-kit
     // textures are wired.
+    // Names, not files — terrainMaterial() decides whether a surface gets an
+    // ACNH texture or a procedural one, because two of the ACNH files are not
+    // what their names imply (mGrass_Grd is a colour ramp, mRiver_Alb is the
+    // riverbed). See terrainMaterials.ts.
     const SHARED: Partial<Record<number, string>> = {
       [Surface.Grass]: "mGrass",
       [Surface.Sand]: "mSand",

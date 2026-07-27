@@ -50,6 +50,7 @@ export function isGridEnabled(): boolean {
 
 export default function GridWorld() {
   const { map } = useMemo(() => getIslandMap(), []);
+
   return (
     <group>
       <GridTerrain map={map} />

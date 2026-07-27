@@ -471,24 +471,35 @@ export interface KitPiece {
   stem: string;
   /** How many visual variants ship, i.e. `-0` .. `-(variants-1)`. */
   variants: number;
+  /**
+   * The rotation the FILE is already modelled at, in quarter-turns.
+   *
+   * A piece is not authored facing the canonical direction. `7-a` — the most
+   * used piece on the map — sits at 3 quarter-turns from canonical. Placing
+   * it at the solver's rotation without subtracting this put every wall on
+   * the wrong side, which showed up in game as sky visible through the ground:
+   * the exposed side was left open while a wall was built into the hillside.
+   * Measured by scripts/derive-kit-mapping.mjs alongside the config.
+   */
+  baseRotation: number;
 }
 
 export const CONFIG_TO_PIECE: Record<KitName, Record<number, KitPiece>> = {
   cliff: {
-    0: { stem: "0-a", variants: 1 },
-    1: { stem: "1-a", variants: 4 },
-    2: { stem: "2-c", variants: 4 },
-    3: { stem: "3-c", variants: 4 },
-    4: { stem: "2-a", variants: 2 },
-    5: { stem: "3-a", variants: 4 },
-    6: { stem: "4-b", variants: 4 },
-    7: { stem: "4-a", variants: 4 },
-    8: { stem: "5-b", variants: 4 },
-    9: { stem: "4-c", variants: 1 },
-    10: { stem: "2-b", variants: 4 },
-    11: { stem: "6-b", variants: 1 },
-    12: { stem: "3-b", variants: 4 },
-    13: { stem: "7-a", variants: 1 },
+    0: { stem: "0-a", variants: 1, baseRotation: 0 },
+    1: { stem: "1-a", variants: 4, baseRotation: 2 },
+    2: { stem: "2-c", variants: 4, baseRotation: 1 },
+    3: { stem: "3-c", variants: 4, baseRotation: 1 },
+    4: { stem: "2-a", variants: 2, baseRotation: 0 },
+    5: { stem: "3-a", variants: 4, baseRotation: 0 },
+    6: { stem: "4-b", variants: 4, baseRotation: 0 },
+    7: { stem: "4-a", variants: 4, baseRotation: 0 },
+    8: { stem: "5-b", variants: 4, baseRotation: 0 },
+    9: { stem: "4-c", variants: 1, baseRotation: 0 },
+    10: { stem: "2-b", variants: 4, baseRotation: 3 },
+    11: { stem: "6-b", variants: 1, baseRotation: 3 },
+    12: { stem: "3-b", variants: 4, baseRotation: 3 },
+    13: { stem: "7-a", variants: 1, baseRotation: 3 },
   },
   // The river and fall kits share the vocabulary but their wall material and
   // conventions differ; derive them the same way when they get wired.
@@ -575,10 +586,14 @@ export function cliffPieceFor(
   const choice = autotile(mask);
   const file = pieceFileFor("cliff", choice, cellSeed(cx, cz));
   if (!file) return null;
+  // Subtract the rotation the file is already modelled at. Without this the
+  // walls land on the wrong sides — see KitPiece.baseRotation.
+  const base = CONFIG_TO_PIECE.cliff[choice.config]?.baseRotation ?? 0;
+  const rotation = (((choice.rotation - base) % 4) + 4) % 4;
   // The piece's origin sits on its own TOP surface: Cliff0A_0 puts its top
   // grass at y=0 and drops the wall to y=-15 raw. So it mounts at the cell's
   // own walking height and hangs down toward whatever is below.
-  return { file, rotation: choice.rotation, y: level * LEVEL_STEP };
+  return { file, rotation, y: level * LEVEL_STEP };
 }
 
 /** Same surface: the test roads and rivers tile against. */

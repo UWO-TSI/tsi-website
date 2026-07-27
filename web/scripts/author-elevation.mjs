@@ -106,34 +106,176 @@ const isProtected = (cx, cz) =>
   !grid.inBounds(map, cx, cz) || protectedCells[grid.cellIndex(map, cx, cz)] === 1;
 const isLand = (cx, cz) => grid.inBounds(map, cx, cz) && !grid.isVoid(grid.surfaceAt(map, cx, cz));
 
+// ── Clearance ────────────────────────────────────────────────────
+//
+// WHY THIS EXISTS. The first pass just skipped protected cells inside the
+// blob loop, which meant every road punched a level-0 slot straight through
+// whatever plateau it crossed. The result measured 42% of raised cells sitting
+// on a cliff edge: the uplands came out as ribbons two or three cells wide
+// wrapping the road network, and in 3D they read as garden edging and as
+// canyon walls flanking the main avenue. Not terrain.
+//
+// A landform needs a FLAT APRON between it and anything that assumes flat
+// ground. So: Chebyshev distance from every cell to the nearest protected one,
+// and a blob may only raise a cell that is at least MARGIN away. The plateau
+// edge is then its own smooth offset curve rather than the road's outline.
+//
+// The sea is NOT a blocker here. A shelf that runs into the water and drops a
+// rock face onto the beach is the point (David's ask), so it must be allowed
+// to touch the coast.
+const MARGIN = 3;
+
+const clearance = (() => {
+  const d = new Int32Array(map.width * map.depth).fill(1 << 29);
+  const queue = [];
+  for (let cz = 0; cz < map.depth; cz++) {
+    for (let cx = 0; cx < map.width; cx++) {
+      const i = grid.cellIndex(map, cx, cz);
+      if (protectedCells[i]) {
+        d[i] = 0;
+        queue.push(i);
+      }
+    }
+  }
+  for (let head = 0; head < queue.length; head++) {
+    const i = queue[head];
+    const cz = Math.floor(i / map.width);
+    const cx = i % map.width;
+    for (let dz = -1; dz <= 1; dz++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        if (!grid.inBounds(map, cx + dx, cz + dz)) continue;
+        const n = grid.cellIndex(map, cx + dx, cz + dz);
+        if (d[n] > d[i] + 1) {
+          d[n] = d[i] + 1;
+          queue.push(n);
+        }
+      }
+    }
+  }
+  return d;
+})();
+
+const canRaise = (cx, cz) =>
+  isLand(cx, cz) && clearance[grid.cellIndex(map, cx, cz)] >= MARGIN;
+
 // ── Features ─────────────────────────────────────────────────────
 // World coordinates throughout, so these read against the same numbers the
 // rest of the codebase uses. +Z is "north" in GameWorld's naming.
 
-/** Raise land inside a soft-edged blob, tapering so the rim insets naturally. */
-function blob(name, x, z, radius, level) {
-  const applied = [];
+/**
+ * Raise land inside a blob, keeping MARGIN cells of flat apron around anything
+ * protected.
+ *
+ * A level-1 blob fills its whole radius. Only level 2 and up taper, because
+ * only then is there a lower terrace for the rim to inset onto — the earlier
+ * `t < 0.55` taper applied to level 1 meant the outer 45% of every radius
+ * resolved to level 0, so every stated radius was silently 45% too small and
+ * the uplands came out as coins.
+ */
+function blob(name, x, z, radius, level, force = false) {
+  let applied = 0;
   const r2 = radius * radius;
   for (let cz = 0; cz < map.depth; cz++) {
     for (let cx = 0; cx < map.width; cx++) {
-      if (!isLand(cx, cz) || isProtected(cx, cz)) continue;
+      if (force ? !isLand(cx, cz) : !canRaise(cx, cz)) continue;
       const dx = wx(cx) - x;
       const dz = wz(cz) - z;
       const d2 = dx * dx + dz * dz;
       if (d2 > r2) continue;
-      // Inner core gets the full level, outer band one step less. The
-      // constraint pass below cleans up whatever this leaves ragged.
       const t = Math.sqrt(d2) / radius;
-      const want = t < 0.55 ? level : level - 1;
+      const want = level === 1 ? 1 : t < 0.62 ? level : level - 1;
       if (want <= 0) continue;
       const i = grid.cellIndex(map, cx, cz);
+      if (force) forced[i] = 1;
       if (map.levels[i] < want) {
         map.levels[i] = want;
-        applied.push(i);
+        applied++;
       }
     }
   }
-  return { name, cells: applied.length };
+  return { name, cells: applied };
+}
+
+/**
+ * Morphological OPEN (erode then dilate) on the raised set.
+ *
+ * Overlapping blobs minus the road apron still leaves isthmuses and spurs a
+ * cell or two wide. Those are the fragments that render as a brown box dropped
+ * on the lawn. Opening at radius R deletes anything thinner than 2R+1 cells
+ * and leaves everything fatter untouched, which is exactly the filter wanted.
+ *
+ * Erosion treats the SEA as solid so a shelf that meets the water keeps its
+ * mass; dilation is masked by `canRaise` so nothing grows back over a road.
+ */
+function open(radius) {
+  const raised = new Uint8Array(map.width * map.depth);
+  for (let i = 0; i < map.levels.length; i++) raised[i] = map.levels[i] > 0 ? 1 : 0;
+
+  // Erosion: keep a cell only if it and all 8 neighbours are set. Off-map and
+  // sea read as set, so the seaward lip of a coastal shelf survives.
+  const erode = (src) => {
+    const out = new Uint8Array(src.length);
+    for (let cz = 0; cz < map.depth; cz++) {
+      for (let cx = 0; cx < map.width; cx++) {
+        const i = grid.cellIndex(map, cx, cz);
+        if (!src[i]) continue;
+        let all = true;
+        for (let dz = -1; dz <= 1 && all; dz++) {
+          for (let dx = -1; dx <= 1; dx++) {
+            const nx = cx + dx;
+            const nz = cz + dz;
+            if (!grid.inBounds(map, nx, nz) || !isLand(nx, nz)) continue;
+            if (!src[grid.cellIndex(map, nx, nz)]) {
+              all = false;
+              break;
+            }
+          }
+        }
+        out[i] = all ? 1 : 0;
+      }
+    }
+    return out;
+  };
+
+  // Dilation: set a cell if it or any neighbour is set.
+  const dilate = (src) => {
+    const out = new Uint8Array(src.length);
+    for (let cz = 0; cz < map.depth; cz++) {
+      for (let cx = 0; cx < map.width; cx++) {
+        let any = false;
+        for (let dz = -1; dz <= 1 && !any; dz++) {
+          for (let dx = -1; dx <= 1; dx++) {
+            const nx = cx + dx;
+            const nz = cz + dz;
+            if (grid.inBounds(map, nx, nz) && src[grid.cellIndex(map, nx, nz)]) {
+              any = true;
+              break;
+            }
+          }
+        }
+        out[grid.cellIndex(map, cx, cz)] = any ? 1 : 0;
+      }
+    }
+    return out;
+  };
+
+  let cur = raised;
+  for (let r = 0; r < radius; r++) cur = erode(cur);
+  for (let r = 0; r < radius; r++) cur = dilate(cur);
+
+  let dropped = 0;
+  for (let cz = 0; cz < map.depth; cz++) {
+    for (let cx = 0; cx < map.width; cx++) {
+      const i = grid.cellIndex(map, cx, cz);
+      if (isProtected(cx, cz) || !isLand(cx, cz)) continue;
+      const want = cur[i] && canRaise(cx, cz);
+      if (!want && map.levels[i] > 0) {
+        map.levels[i] = 0;
+        dropped++;
+      }
+    }
+  }
+  return dropped;
 }
 
 // Elevation is authored HERE and nowhere else. Reset unprotected land to zero
@@ -148,6 +290,8 @@ for (let cz = 0; cz < map.depth; cz++) {
 }
 
 const levelsBefore = Uint8Array.from(map.levels);
+/** Cells a `force` feature deliberately claimed, exempt from the audit below. */
+const forced = new Uint8Array(map.width * map.depth);
 const report = [];
 
 // 1. UPLAND. Deliberately NOT a half-plane: cutting the island at a fixed Z
@@ -160,21 +304,46 @@ const report = [];
 // Equal circles in a row still read as coins. Vary the radii, overlap them
 // hard, and run the mass into the west coast so it terminates in a headland
 // rather than floating in a field.
+// Sited on the widest open pockets the clearance field actually reports, not
+// on eyeballed coordinates: the centres below are the local maxima of distance
+// to the nearest road, bank or building, so each blob has room to be a mass
+// rather than a ribbon squeezed between two paths.
 const UPLAND = [
-  ["upland headland", -42, -14, 12],
-  ["upland west", -30, -28, 17],
-  ["upland w-mid", -14, -36, 15],
-  ["upland centre", 2, -40, 13],
-  ["upland e-mid", 16, -33, 12],
-  ["upland east", 28, -26, 10],
-  ["upland saddle", -22, -18, 9],
+  ["upland west", -24, -42, 14],
+  ["upland centre", -10, -44, 14],
+  ["upland c-east", 4, -41, 13],
+  ["upland east", 17, -32, 12],
+  ["upland saddle", -16, -30, 11],
+  ["upland headland", -38, -36, 9],
 ];
 for (const [name, x, z, r] of UPLAND) report.push(blob(name, x, z, r, 1));
 
-// 2. Temple Rise. The snap left its platform at level 2 sitting directly on
-//    level 0, which is an illegal 2-step face — there is no cliff piece for it.
-//    Author the missing level-1 shoulder so it terraces properly.
-report.push(blob("temple shoulder", 0, 31.8, 12, 1));
+// A second level so the island has a summit and not just one flat shelf. It
+// insets off the level-1 mass it sits inside, which is the ACNH rule and also
+// what makes the terrace read as terrain from ground level.
+report.push(blob("upland summit", -12, -42, 11, 2));
+
+// 2. Temple Rise. Its platform is level 2 sitting directly on level 0, which
+//    is an illegal 2-step face — there is no cliff piece for it. The shoulder
+//    that fixes it has to be FORCED past the margin rule, because the platform
+//    is ringed by its own building clearance and the shoulder would otherwise
+//    be pushed 3 cells out and leave the illegal face standing.
+//
+//    Forcing is safe here for the reason the clearance exists at all: a
+//    building apron must be FLAT, not level 0. Raising the whole apron one
+//    step keeps it flat. What is forbidden is a level change inside the apron,
+//    and a blob wider than the apron cannot make one.
+report.push(blob("temple shoulder", 0, 31.8, 13, 1, true));
+
+// 3. The far side needs relief too, or half the island is a lawn. Same rule:
+//    the widest pockets clear of the road grid.
+const FARSIDE = [
+  ["farside east", 37, 32, 12],
+  ["farside e-spur", 48, 23, 9],
+  ["farside west", -35, 26, 10],
+  ["farside w-spur", -46, 17, 9],
+];
+for (const [name, x, z, r] of FARSIDE) report.push(blob(name, x, z, r, 1));
 
 // 3. ROCKY SHELVES AT THE WATERLINE — the specific ask. These have to STRADDLE
 //    the coast to read as rocks at the water: sand starts at coastDist 48.5
@@ -275,6 +444,9 @@ function removeSpecks() {
   return removed;
 }
 
+// Open first: deleting ribbons before terracing means enforceSteps only has
+// to resolve real terraces, not artifacts.
+const opened = open(2);
 const stepFix = enforceSteps();
 const specks = removeSpecks();
 enforceSteps();
@@ -286,6 +458,7 @@ let violations = 0;
 for (let cz = 0; cz < map.depth; cz++) {
   for (let cx = 0; cx < map.width; cx++) {
     const i = grid.cellIndex(map, cx, cz);
+    if (forced[i]) continue;
     if (isProtected(cx, cz) && isLand(cx, cz) && map.levels[i] !== levelsBefore[i]) violations++;
   }
 }
@@ -305,7 +478,9 @@ for (let i = 0; i < map.levels.length; i++) {
 
 console.log("features applied:");
 for (const r of report) console.log(`  ${r.name.padEnd(26)} ${String(r.cells).padStart(5)} cells raised`);
-console.log(`\nconstraint passes: ${stepFix.passes} (settled: ${stepFix.settled}) · specks removed: ${specks}`);
+console.log(
+  `\nopen(2) dropped: ${opened} · constraint passes: ${stepFix.passes} (settled: ${stepFix.settled}) · specks removed: ${specks}`
+);
 console.log(`protected cells modified: ${violations}${violations ? "  <<< BUG" : ""}`);
 console.log("\nlevels over land:");
 for (const [lvl, n] of [...hist].sort((a, b) => a[0] - b[0])) {
@@ -329,7 +504,30 @@ for (let cz = 0; cz < map.depth; cz++) {
     }
   }
 }
-console.log(`cliff edges: ${cliffEdges}`);
+// The shape metric that actually predicts how it reads in 3D. A plateau whose
+// cells are mostly edge is a ribbon, and a ribbon renders as a wall standing in
+// a field. The first pass measured 42%; anything under ~25% is a landform.
+let raisedCells = 0;
+let edgeCells = 0;
+let thinCells = 0;
+for (let cz = 0; cz < map.depth; cz++) {
+  for (let cx = 0; cx < map.width; cx++) {
+    if (!isLand(cx, cz)) continue;
+    const lvl = map.levels[grid.cellIndex(map, cx, cz)];
+    if (lvl === 0) continue;
+    raisedCells++;
+    const below = (dx, dz) =>
+      (isLand(cx + dx, cz + dz) ? map.levels[grid.cellIndex(map, cx + dx, cz + dz)] : 0) < lvl;
+    if (grid.DIR_OFFSETS.some(([dx, dz]) => below(dx, dz))) edgeCells++;
+    if ((below(-1, 0) && below(1, 0)) || (below(0, -1) && below(0, 1))) thinCells++;
+  }
+}
+console.log(
+  `cliff edges: ${cliffEdges} · edge cells ${edgeCells}/${raisedCells} = ${(
+    (100 * edgeCells) /
+    Math.max(1, raisedCells)
+  ).toFixed(0)}% · 1-cell-wide ridges: ${thinCells}`
+);
 
 if (dry) {
   console.log("\n--dry: not written");

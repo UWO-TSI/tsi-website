@@ -1,8 +1,58 @@
 # QA Report
 
 > Owner: QA agent. All agents check this for bugs in their area.
-> Last updated: 2026-07-25 (Wave 30 — post-geo/economy mini-sweep, art-cohesion branch)
+> Last updated: 2026-07-26 (Wave 32 — visual QA of the tile world, art-cohesion branch)
 > **Lint baseline updated 2026-07-13: 74 errors / 52 warnings** (was 74/59 — seven genuinely-unused eslint-disable directives removed; mentorship/page.tsx keeps its two, the "unused" report there is a react-compiler two-pass quirk shielding a real declaration-order error).
+
+---
+
+## Wave 32 — 2026-07-26 Visual QA of `?grid=1` — **FAIL, 6 open defects**
+
+David: "qa and see whats wrong visually". Headed Chromium via gstack browse,
+`/lab/world?grid=1`, aerial rig at several azimuths, clock forced so lighting
+is constant between shots. Perf sampled with F3.
+
+Perf at the player camera: **60 FPS · 439 draws · 339.7k tris** (dev build,
+non-M1 hardware, so relative only).
+
+### Fixed this wave
+
+- **V0 — cliff walls landed on the wrong sides.** `derive-kit-mapping.mjs`
+  reports each piece's INTRINSIC rotation and the config table discarded it.
+  `7-a` (134 placements) is modelled at rotation 3, so a third of the cliff
+  runs faced inward and the map showed sky through the gaps. Added
+  `baseRotation` to all 14 entries and subtract it in `cliffPieceFor`. This had
+  been misdiagnosed twice as a material problem.
+- **V1 — the uplands were ribbons, not landforms.** `author-elevation.mjs`
+  skipped protected cells *inside* the blob loop, so every road punched a
+  level-0 slot through whatever plateau it crossed. Measured **42% of raised
+  cells sitting on a cliff edge**: two-to-three-cell ribbons wrapping the road
+  network, which rendered as garden edging and as canyon walls flanking the
+  main avenue. Also found: the `t < 0.55` taper was applied at level 1, where
+  there is no lower terrace to inset onto, so every stated radius was silently
+  45% too small.
+  Fix: a Chebyshev clearance field (blobs need MARGIN=3 cells of flat apron
+  from any road, bank or building), no taper at level 1, a morphological
+  open(2) to delete anything thinner than 5 cells, and re-siting on the
+  clearance field's own local maxima instead of eyeballed coordinates.
+  **42% → 21% edge · 5 → 2 one-cell ridges · raised land 12% → 33%**, and the
+  island now has a level-2 summit and relief on both halves instead of one.
+- **V2 — `web/data/island-map.json` was never committable.** The repo-root
+  `.gitignore` has a blanket `*.json`; the map — the entire world — existed on
+  one machine only. Added the un-ignore next to the globe-data ones.
+
+### Open
+
+| # | Defect | Root cause | Where |
+|---|---|---|---|
+| V3 | The river is a painted stripe: flat quad at ground −0.078u, hard stair-step edges, no bank, no depth, no waterfall. Reads as a canal, and it is the most broken thing in frame | the 45-piece river kit and 47-piece fall kit are extracted but not wired; `GridTerrain` draws river cells as plain quads | `grid/GridTerrain.tsx` |
+| V4 | The river bisects the island edge-to-edge, 5-9 cells wide, no source and no mouth — it stops in grass at both ends | inherited from the pre-grid `riverInfluence` field, snapped verbatim | `data/island-map.json` |
+| V5 | Roads render as flat untextured colour, and the N-S spine is a different grey from the brown avenues | `SURFACE_COLOR` fallback; the road kit is not on the grid | `grid/GridTerrain.tsx` |
+| V6 | The coastline is a 45° pixel staircase with a uniform-width sand ring | the coast is the grid's own cell edge; no beach/cliff kit at the waterline | `data/island-map.json` |
+| V7 | The new plateau is a large empty lawn. Shape now measures correct but it still does not *read* as terrain: nothing lives on the upper level, and upper and lower grass are the same value with no contact shadow at the cliff base | content, not geometry. ACNH sells the level with baked `mShadow` contact darkening plus stuff on top; our extractor drops `mShadow` (they need multiply blending, not standard PBR) | M7 |
+| V8 | Draw calls **439** vs 227-360 on the legacy world | chunking without a texture atlas costs more than it saves; one material per surface per chunk | atlas pass |
+
+Gates: tsc clean, tests 70/70, lint 74/52 (= baseline).
 
 ---
 
