@@ -8,6 +8,7 @@ import { Smile, BookOpen, Map as MapIcon, Settings2, Keyboard } from "lucide-rea
 import * as THREE from "three";
 import PlayerAvatar from "./PlayerAvatar";
 import Building, { ACNHParts, CHALET_VARIANTS } from "./Building";
+import GridWorld, { isGridEnabled } from "./grid/GridWorld";
 import River, { sampleRiverPoint, findRiverTForX } from "./River";
 import Ocean from "./Ocean";
 import TreeShakeFX from "./TreeShakeFX";
@@ -797,7 +798,9 @@ ${COAST_GLSL}`
           ACNH road tiles auto-tiled over the corridors (RoadTiles.tsx).
           Suspense: tile GLBs stream in behind the load gate. */}
       <Suspense fallback={null}>
-        <RoadTiles />
+        {/* Roads are a surface type on the grid, so the corridor tiler retires
+            with the old terrain. Grass tufts stay either way. */}
+        {!isGridEnabled() && <RoadTiles />}
         <GrassTufts />
       </Suspense>
     </group>
@@ -1925,6 +1928,9 @@ function Scene({
 
   // G1 camera feel: the target leads ~1.2u in the travel direction and the
   // FOV widens a touch at sprint speed. Both damped so nothing snaps.
+  // M5: read once per mount. Plain function, not a hook — see isGridEnabled.
+  const gridEnabled = isGridEnabled();
+
   const camFeelRef = useRef({ lastX: 0, lastZ: 0, lastT: 0, leadX: 0, leadZ: 0, fov: 48 });
   const handlePlayerMove = useCallback((position: THREE.Vector3) => {
     setPlayerPos(position);
@@ -2173,7 +2179,12 @@ function Scene({
           (±30u) stays crisp, the island edge still fades out. */}
       <fog attach="fog" args={[fogColor, 55, 100]} /> {/* far 120->100 (2026-07-13): distant props dissolve into atmosphere sooner */}
 
-      <Terrain />
+      {/* M5 (2026-07-26): `?grid=1` swaps the substrate for the ACNH tile
+          world — chunked cell quads plus the autotiled cliff kit — while every
+          prop, NPC, sky and weather system around it stays put. The default
+          URL is byte-identical until David approves the slice. See
+          specs/acnh-system-reference.md and CLAUDE.md § "World model". */}
+      {gridEnabled ? <GridWorld /> : <Terrain />}
       {/* P-light v2: with the shadow map on, the static discs retire —
           buildings/trees get real shadows; discs remain the low-perf
           fallback when the setting is off. */}
@@ -2201,12 +2212,17 @@ function Scene({
       <SandFootprints playerPosRef={playerPosRef} />
       <SeasonalProps />
       <Landmarks />
-      <River phase={todPhase} />
-      <RiverBankWalls />
+      {/* The grid owns water: river cells are a surface type sitting at their
+          own level minus WATER_DROP, so the spline river and the bank ribbons
+          that papered over its seams both retire with it. */}
+      {!gridEnabled && <River phase={todPhase} />}
+      {!gridEnabled && <RiverBankWalls />}
       <FishShadows />
-      <Suspense fallback={null}>
-        <RiverBanks />
-      </Suspense>
+      {!gridEnabled && (
+        <Suspense fallback={null}>
+          <RiverBanks />
+        </Suspense>
+      )}
       <TreeShakeFX playerPosRef={playerPosRef} />
       <FlowerPickFX />
       <FishCatchFX playerPosRef={playerPosRef} />

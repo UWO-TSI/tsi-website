@@ -169,6 +169,12 @@ export interface PlacedProp {
   level: number;
 }
 
+/**
+ * The on-disk shape. `props[].cell` is typed loosely as `number[]` because
+ * that is what a JSON import actually gives us — TypeScript cannot know a
+ * parsed array has exactly two entries. Narrowing belongs here, in the parser
+ * that owns validating external data, not at every call site via a cast.
+ */
 export interface IslandMapDoc {
   width: number;
   depth: number;
@@ -176,7 +182,7 @@ export interface IslandMapDoc {
   originZ: number;
   levels: string[];
   surfaces: string[];
-  props?: PlacedProp[];
+  props?: { kind: string; id?: string; cell: number[]; level: number }[];
 }
 
 export function parseIslandMap(doc: IslandMapDoc): { map: IslandMap; props: PlacedProp[] } {
@@ -190,7 +196,13 @@ export function parseIslandMap(doc: IslandMapDoc): { map: IslandMap; props: Plac
       map.surfaces[i] = Number(surfRow[cx] ?? "0") || 0;
     }
   }
-  return { map, props: doc.props ?? [] };
+  const props: PlacedProp[] = (doc.props ?? []).map((p) => ({
+    kind: p.kind,
+    ...(p.id ? { id: p.id } : {}),
+    cell: [p.cell[0] ?? 0, p.cell[1] ?? 0],
+    level: p.level ?? 0,
+  }));
+  return { map, props };
 }
 
 export function serialiseIslandMap(map: IslandMap, props: PlacedProp[] = []): IslandMapDoc {
@@ -527,6 +539,46 @@ export function neighbourMask(
 /** Same-or-higher level: the test that decides where a cliff face goes. */
 export function sameLevelOrHigher(level: number) {
   return (map: IslandMap, nx: number, nz: number) => levelAt(map, nx, nz) >= level;
+}
+
+/**
+ * Does this cell need a cliff piece?
+ *
+ * True when any of the 8 neighbours sits lower — that exposed side is what a
+ * cliff face IS. Void and off-map both read as level 0, so a raised cell at
+ * the coastline is exposed and gets its face, which is exactly the "rocks at
+ * the water" silhouette.
+ *
+ * GridTerrain skips these cells and GridCliffs draws them, because an ACNH
+ * cliff piece carries its own grass top and a quad underneath would z-fight.
+ */
+export function needsCliff(map: IslandMap, cx: number, cz: number): boolean {
+  const s = surfaceAt(map, cx, cz);
+  if (isVoid(s)) return false;
+  const level = levelAt(map, cx, cz);
+  if (level === 0) return false; // nothing below sea level to expose
+  for (const [dx, dz] of DIR_OFFSETS) {
+    if (levelAt(map, cx + dx, cz + dz) < level) return true;
+  }
+  return false;
+}
+
+/** The cliff piece for a cell, plus how to place it. Null when none is needed. */
+export function cliffPieceFor(
+  map: IslandMap,
+  cx: number,
+  cz: number
+): { file: string; rotation: number; y: number } | null {
+  if (!needsCliff(map, cx, cz)) return null;
+  const level = levelAt(map, cx, cz);
+  const mask = neighbourMask(map, cx, cz, sameLevelOrHigher(level));
+  const choice = autotile(mask);
+  const file = pieceFileFor("cliff", choice, cellSeed(cx, cz));
+  if (!file) return null;
+  // The piece's origin sits on its own TOP surface: Cliff0A_0 puts its top
+  // grass at y=0 and drops the wall to y=-15 raw. So it mounts at the cell's
+  // own walking height and hangs down toward whatever is below.
+  return { file, rotation: choice.rotation, y: level * LEVEL_STEP };
 }
 
 /** Same surface: the test roads and rivers tile against. */

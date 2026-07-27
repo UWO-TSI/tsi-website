@@ -175,17 +175,25 @@ function droppedMeshIndices(file) {
  * In practice the stubs are harmless: all but `mCurtain_Alb` are Nrm/Mix maps
  * we drop anyway, and curtains sit behind window glass.
  */
+// The Fld* terrain kits do NOT carry their own textures. mCliff_Alb.png,
+// mGrass_Grd.png, mRiver_Alb.png and the rest all live in the shared FldUnit
+// asset — that is what FldUnit IS, the material library every Fld kit draws
+// from. Looking only beside the .dae stubbed all of them with 1x1
+// transparents, and the cliff kit came out untextured and pure black.
+const SHARED_TEXTURE_DIRS = [path.join(DUMP, "FldUnit.Nin_NX_NVN")];
+
 async function satisfyExternalImages(file, srcDir) {
   const dir = path.dirname(file);
   const stubbed = [];
+  const searchDirs = [srcDir, ...SHARED_TEXTURE_DIRS];
   for (const im of glbJson(file).images || []) {
     if (!im.uri || im.uri.startsWith("data:")) continue;
     const dest = path.join(dir, im.uri);
     if (fs.existsSync(dest)) continue;
-    const fromDump = path.join(srcDir, im.uri);
     fs.mkdirSync(path.dirname(dest), { recursive: true });
-    if (fs.existsSync(fromDump)) {
-      fs.copyFileSync(fromDump, dest);
+    const found = searchDirs.map((d) => path.join(d, im.uri)).find((p) => fs.existsSync(p));
+    if (found) {
+      fs.copyFileSync(found, dest);
       continue;
     }
     const jpeg = /\.jpe?g$/i.test(im.uri);
@@ -272,6 +280,16 @@ async function slimTextures(file, srcDir, scaleFactor) {
   const io = new NodeIO();
   const doc = await io.read(file);
   stripSkinning(doc);
+
+  // assimp maps a Collada material's diffuse COLOUR onto baseColorFactor. The
+  // ACNH terrain materials set diffuse to 0 and rely entirely on their
+  // texture, so the export arrives with baseColorFactor [0,0,0,0] — which
+  // multiplies whatever texture is present down to pure black. Every cliff
+  // face rendered as a black slab. When a base colour texture exists, the
+  // factor must be white so the texture is what you see.
+  for (const material of doc.getRoot().listMaterials()) {
+    if (material.getBaseColorTexture()) material.setBaseColorFactor([1, 1, 1, 1]);
+  }
 
   // Drop the effect layers (see EFFECT_MATERIALS). Report them so this stays
   // an explicit exclusion rather than a silent one.
