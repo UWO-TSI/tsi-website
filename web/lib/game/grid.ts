@@ -508,24 +508,68 @@ export const CONFIG_TO_PIECE: Record<KitName, Record<number, KitPiece>> = {
 };
 
 /**
+ * The variants of a family, in the order their UVs sit on the shared texture.
+ *
+ * MEASURED, and it corrects a wrong assumption. The four variants are not four
+ * interchangeable rocks — they are four CONSECUTIVE QUARTERS of one 4-cell rock
+ * strip. Every multi-variant family in the kit reports the same thing:
+ *
+ *     5-b-0  u 0.500..0.750     3-c-0  u 0.467..0.500
+ *     5-b-3  u 0.750..1.000     3-c-3  u 0.500..0.750
+ *     5-b-2  u 1.000..1.250     3-c-2  u 0.750..1.000
+ *     5-b-1  u 1.250..1.500     3-c-1  u 1.000..1.250
+ *
+ * u-min steps by exactly 0.25 and the file order is 0,3,2,1 across all ten
+ * families. So ACNH lays them in sequence ALONG a wall and a long run reads as
+ * one continuous band of rock that repeats every 4 cells.
+ *
+ * Picking them with a per-cell hash — which is what this did — makes
+ * neighbouring cells grab random quarters, so the rock pattern jumps
+ * discontinuously at every cell boundary. That is what made a cliff face read
+ * as a row of 1x1 blocks, and it is the same class of mistake as giving every
+ * ground cell its own 0..1 UV.
+ *
+ * Re-derive with `scripts/derive-kit-mapping.mjs --variants` if the kit is
+ * re-extracted.
+ */
+export const VARIANT_TEXTURE_ORDER = [0, 3, 2, 1] as const;
+
+/**
  * Filename for a resolved config, or null when the kit needs no piece there
  * (an interior cell with no exposed side).
  *
- * `seed` picks the visual variant deterministically — pass something derived
- * from the cell so a given cell always looks the same, and neighbouring cells
- * differ. The caller applies `choice.rotation` quarter-turns about Y.
+ * `run` is the cell's position ALONG the wall, not a hash — see
+ * VARIANT_TEXTURE_ORDER. The caller applies `choice.rotation` quarter-turns
+ * about Y.
  */
-export function pieceFileFor(kit: KitName, choice: TileChoice, seed = 0): string | null {
+export function pieceFileFor(kit: KitName, choice: TileChoice, run = 0): string | null {
   const piece = CONFIG_TO_PIECE[kit][choice.config];
   if (!piece) return null;
-  const variant = piece.variants > 1 ? Math.abs(seed) % piece.variants : 0;
+  const n = piece.variants;
+  const variant = n > 1 ? VARIANT_TEXTURE_ORDER[(((run % n) + n) % n) % VARIANT_TEXTURE_ORDER.length] % n : 0;
   return `${piece.stem}-${variant}.glb`;
 }
 
-/** Stable per-cell seed, so variant choice does not shimmer between frames. */
-export function cellSeed(cx: number, cz: number): number {
-  const h = (cx * 73856093) ^ (cz * 19349663);
-  return h < 0 ? -h : h;
+/**
+ * Which cell axis runs ALONG a piece's wall, given the rotation applied to it.
+ * Returns the coordinate to feed `pieceFileFor` as `run`.
+ *
+ * MEASURED, not derived. Reading the canonical masks says config 8 clears S,
+ * SW and SE, which puts the wall on the south face and should make the run
+ * east-west — so the first version of this returned `cx` at even rotations.
+ * Checking it against the real map says the opposite, and not marginally:
+ *
+ *     axis cz : 271 / 278 adjacent same-config wall pairs continuous  (97%)
+ *     axis cx :   7 / 278                                             ( 3%)
+ *     old per-cell hash : 123 / 278                                   (44%)
+ *
+ * Somewhere between the bit order, `normaliseMask`'s rotation sign and the
+ * renderer's `-rotation * 90` there is a half-turn this reasoning does not
+ * capture. The measurement decides it. Re-run the check in
+ * `scripts/derive-kit-mapping.mjs` if any of those three change.
+ */
+export function runAlongWall(rotation: number, cx: number, cz: number): number {
+  return rotation % 2 === 0 ? cz : cx;
 }
 
 /**
@@ -584,7 +628,7 @@ export function cliffPieceFor(
   const level = levelAt(map, cx, cz);
   const mask = neighbourMask(map, cx, cz, sameLevelOrHigher(level));
   const choice = autotile(mask);
-  const file = pieceFileFor("cliff", choice, cellSeed(cx, cz));
+  const file = pieceFileFor("cliff", choice, runAlongWall(choice.rotation, cx, cz));
   if (!file) return null;
   // Subtract the rotation the file is already modelled at. Without this the
   // walls land on the wrong sides — see KitPiece.baseRotation.

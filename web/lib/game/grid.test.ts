@@ -29,7 +29,7 @@ import {
   autotile,
   listConfigs,
   popcount8,
-  cellSeed,
+  runAlongWall,
   pieceFileFor,
   CONFIG_TO_PIECE,
   neighbourMask,
@@ -309,7 +309,7 @@ describe("autotile", () => {
   it("names a real file for every mapped config", () => {
     for (let mask = 0; mask < 256; mask++) {
       const c = autotile(mask);
-      const f = pieceFileFor("cliff", c, cellSeed(mask, 3));
+      const f = pieceFileFor("cliff", c, mask);
       if (f === null) continue;
       expect(f).toMatch(/^\d-[a-c]-\d\.glb$/);
     }
@@ -331,9 +331,38 @@ describe("autotile", () => {
     }
   });
 
-  it("picks a stable variant per cell", () => {
-    expect(cellSeed(4, 9)).toBe(cellSeed(4, 9));
-    expect(cellSeed(4, 9)).not.toBe(cellSeed(9, 4));
+  // The four variants are consecutive quarters of ONE rock strip (u-min steps
+  // by 0.25 across every family), so consecutive cells ALONG a wall must get
+  // consecutive quarters or the rock pattern jumps at every cell boundary.
+  it("walks the texture strip in order along a wall", () => {
+    const straight = { config: 8, rotation: 0, canonicalMask: 31, degree: 5 };
+    const seq = [0, 1, 2, 3, 4].map((run) => pieceFileFor("cliff", straight, run));
+    expect(seq).toEqual([
+      "5-b-0.glb",
+      "5-b-3.glb",
+      "5-b-2.glb",
+      "5-b-1.glb",
+      "5-b-0.glb",
+    ]);
+  });
+
+  it("runs along Z unrotated and along X at a quarter-turn", () => {
+    // Which axis this is was MEASURED against the real map, not derived —
+    // cz gives 97% continuous seams where cx gives 3%. See runAlongWall.
+    expect(runAlongWall(0, 7, 3)).toBe(3);
+    expect(runAlongWall(2, 7, 3)).toBe(3);
+    expect(runAlongWall(1, 7, 3)).toBe(7);
+    expect(runAlongWall(3, 7, 3)).toBe(7);
+  });
+
+  it("is stable for a cell and continuous between its neighbours", () => {
+    const straight = { config: 8, rotation: 0, canonicalMask: 31, degree: 5 };
+    const at = (cx: number, cz: number) =>
+      pieceFileFor("cliff", straight, runAlongWall(straight.rotation, cx, cz));
+    expect(at(4, 9)).toBe(at(4, 9));
+    // Neighbours along the wall differ; neighbours across it do not.
+    expect(at(4, 9)).not.toBe(at(4, 10));
+    expect(at(4, 9)).toBe(at(5, 9));
   });
 });
 
