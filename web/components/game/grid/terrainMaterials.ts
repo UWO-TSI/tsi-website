@@ -73,6 +73,40 @@ const TINT_FOR: Record<string, number> = {
 const ALPHA_MATERIALS = new Set(["mGrassCliffXlu", "mGrassRiverXlu", "mProcGrass"]);
 
 let cache: Map<string, THREE.Material> | null = null;
+let grassNrm: THREE.Texture | null = null;
+
+/**
+ * `mGrass_Nrm.png` — the detail that makes ACNH ground look like ground.
+ *
+ * Its blue channel is zeroed (mean 128,128,0), which is a two-channel normal
+ * map: Z is meant to be reconstructed. Three's standard material does not do
+ * that, so the raw texture would flatten the lighting instead of adding to it.
+ * `normalScale` therefore starts at 0 and `applyGrassNormalStrength` drives it,
+ * which also makes it a single number the bench can move.
+ */
+function grassNormal(): THREE.Texture {
+  if (grassNrm) return grassNrm;
+  const t = new THREE.TextureLoader().load(TEX_DIR + "mGrass_Nrm.png");
+  t.wrapS = THREE.RepeatWrapping;
+  t.wrapT = THREE.RepeatWrapping;
+  grassNrm = t;
+  return t;
+}
+
+/**
+ * Push the bench's normal-map settings onto the shared grass material.
+ * Called from the render tree so a slider move shows up without a remount.
+ */
+export function applyGrassNormalStrength(strength: number, worldUnitsPerRepeat: number): void {
+  const mat = cache?.get("mGrass") as THREE.MeshStandardMaterial | undefined;
+  if (!mat || !mat.normalMap) return;
+  mat.normalScale.set(strength, strength);
+  // The ground's UVs are already world-continuous at UV_CELLS_PER_REPEAT, so
+  // this repeat is relative to that, not to the tile.
+  const r = Math.max(0.01, 2 / worldUnitsPerRepeat);
+  mat.normalMap.repeat.set(r, r);
+  mat.normalMap.needsUpdate = true;
+}
 
 function loadTexture(loader: THREE.TextureLoader, file: string): THREE.Texture {
   const t = loader.load(TEX_DIR + file);
@@ -120,6 +154,12 @@ export function terrainMaterial(name: string): THREE.Material | null {
     const isWater = procKey === "mRiver";
     const mat = new THREE.MeshStandardMaterial({
       map: isWater ? undefined : getGrassTexture(),
+      // ACNH's grass has NO albedo texture — the colour comes from the ramp.
+      // What gives its ground blade detail is `mGrass_Nrm`, a 256x256 tangent
+      // normal map we were not using at all, which is why the lawn read as one
+      // flat green. Strength is on the bench (`tuning.grass.normalStrength`).
+      normalMap: isWater ? undefined : grassNormal(),
+      normalScale: isWater ? undefined : new THREE.Vector2(0, 0),
       color: isWater ? 0x568cb2 : 0x7cae56,
       roughness: isWater ? 0.4 : 0.92,
       metalness: 0,

@@ -17,6 +17,9 @@ import { parseIslandMap, heightAtWorld, type IslandMap, type PlacedProp } from "
 import { setTerrainHeightProvider } from "../terrain";
 import GridTerrain from "./GridTerrain";
 import GridCliffs from "./GridCliffs";
+import GrassTufts from "./GrassTufts";
+import { applyGrassNormalStrength } from "./terrainMaterials";
+import { useTuning } from "@/lib/game/tuning";
 
 let cached: { map: IslandMap; props: PlacedProp[] } | null = null;
 
@@ -51,6 +54,14 @@ export function isGridEnabled(): boolean {
 
 export default function GridWorld() {
   const { map } = useMemo(() => getIslandMap(), []);
+  const t = useTuning();
+
+  // The ground material is shared and cached, so the normal-map settings are
+  // pushed onto it rather than recreated — a slider move must not rebuild every
+  // chunk's material.
+  useEffect(() => {
+    applyGrassNormalStrength(t.grass.normalStrength, t.grass.normalScale);
+  }, [t.grass.normalStrength, t.grass.normalScale]);
 
   /**
    * Take over ground height for everything that asks terrain.ts for it — the
@@ -70,6 +81,7 @@ export default function GridWorld() {
     <group>
       <GridTerrain map={map} />
       <GridCliffs map={map} />
+      <GrassTufts map={map} />
     </group>
   );
 }

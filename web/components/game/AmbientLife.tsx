@@ -6,6 +6,7 @@ import { useGLTF } from "@react-three/drei";
 import { clone as cloneSkeleton } from "three/examples/jsm/utils/SkeletonUtils.js";
 import * as THREE from "three";
 import { sampleTerrainHeightFast } from "./terrain";
+import { tune } from "@/lib/game/tuning";
 
 /**
  * Ambient life — sprint A6. Butterflies (day), fireflies (night),
@@ -323,22 +324,29 @@ const SWOOP_MS = 4200;
 
 function Gull({ anchor, seed, idx, swoopRef }: { anchor: [number, number]; seed: number; idx: number; swoopRef: React.MutableRefObject<GullSwoop | null> }) {
   const ref = useRef<THREE.Group>(null);
-  const { phase, speed, radius, alt } = useMemo(() => {
+  // Per-bird jitter only. The BASE of each of these is on the bench
+  // (`tuning.gull`) and read per frame, so a slider move is immediate and does
+  // not have to re-seed and re-place every gull.
+  const { phase, jSpeed, jRadius, jAlt } = useMemo(() => {
     const rng = seededRandom(seed * 409 + 7);
     return {
       phase: rng() * Math.PI * 2,
-      speed: 0.09 + rng() * 0.05,
-      radius: 6.5 + rng() * 3.5,
-      alt: 6.5 + rng() * 2,
+      jSpeed: rng() * 0.05,
+      jRadius: rng() * 3.5,
+      jAlt: rng() * 2,
     };
   }, [seed]);
 
   useFrame((state) => {
     if (!ref.current) return;
     const t = state.clock.elapsedTime;
+    const g = tune().gull;
+    const speed = g.orbitSpeed + jSpeed;
+    const radius = g.orbitRadius + jRadius;
+    const alt = g.altitude + jAlt;
     const a = t * speed + phase;
     const ox = anchor[0] + Math.cos(a) * radius;
-    const oy = alt + Math.sin(t * 0.35 + phase) * 1.1;
+    const oy = alt + Math.sin(t * 0.35 + phase) * g.bob;
     const oz = anchor[1] + Math.sin(a) * radius;
 
     const sw = swoopRef.current;
@@ -363,11 +371,11 @@ function Gull({ anchor, seed, idx, swoopRef }: { anchor: [number, number]; seed:
     }
     ref.current.position.set(ox, oy, oz);
     ref.current.rotation.y = -a + Math.PI / 2;
-    ref.current.rotation.z = -0.16 + Math.sin(t * 0.9 + phase) * 0.07; // lazy bank
+    ref.current.rotation.z = -g.bank + Math.sin(t * 0.9 + phase) * 0.07; // lazy bank
   });
 
   return (
-    <group ref={ref} position={[anchor[0] + radius, 7, anchor[1]]}>
+    <group ref={ref} position={[anchor[0] + tune().gull.orbitRadius + jRadius, 7, anchor[1]]}>
       <Suspense fallback={null}>
         <SeagullModel seed={seed} />
       </Suspense>
@@ -384,7 +392,6 @@ function Gull({ anchor, seed, idx, swoopRef }: { anchor: [number, number]; seed:
  *
  * Wing phase is offset per gull so the flock does not beat in lockstep.
  */
-const SEAGULL_SCALE = 0.075; // source wingspan is ~9.3u; a gull wants ~0.7u
 const SEAGULL_YAW = -Math.PI / 2; // model faces +X, our orbit code faces -Z
 
 function SeagullModel({ seed }: { seed: number }) {
@@ -393,7 +400,7 @@ function SeagullModel({ seed }: { seed: number }) {
 
   const body = useMemo(() => {
     const c = cloneSkeleton(scene);
-    c.scale.setScalar(SEAGULL_SCALE);
+    c.scale.setScalar(tune().gull.scale);
     c.rotation.y = SEAGULL_YAW;
     c.traverse((o) => {
       const mesh = o as THREE.Mesh;
@@ -414,7 +421,9 @@ function SeagullModel({ seed }: { seed: number }) {
     action.play();
     // Stagger both the start point and the rate so the flock looks alive.
     action.time = (seed * 0.37) % (animations[0].duration || 1);
-    mixer.timeScale = 0.85 + ((seed * 13) % 7) * 0.05;
+    // Flap rate. Re-read every frame below so the bench is live; this just
+    // seeds the per-bird offset within the spread.
+    mixer.timeScale = tune().gull.flap;
     mixerRef.current = mixer;
     return () => {
       action.stop();
@@ -423,7 +432,14 @@ function SeagullModel({ seed }: { seed: number }) {
     };
   }, [body, animations, seed]);
 
-  useFrame((_, delta) => mixerRef.current?.update(delta));
+  useFrame((_, delta) => {
+    const m = mixerRef.current;
+    if (!m) return;
+    const g = tune().gull;
+    // Spread keeps the flock out of lockstep; the seed picks a fixed slot in it.
+    m.timeScale = g.flap + ((seed * 13) % 7) * (g.flapSpread / 7);
+    m.update(delta);
+  });
 
   return <primitive object={body} />;
 }

@@ -1,0 +1,380 @@
+"use client";
+
+/**
+ * /lab/tune — the tuning bench (David, 2026-07-28).
+ *
+ * "Take out individual assets and animations, put it on the bench for me to
+ * tweak manually with a slider and i will give you screenshots of the correct
+ * values."
+ *
+ * So the two rules this page follows:
+ *
+ *  1. EVERY VALUE IS ON SCREEN, next to its slider, at the precision it is
+ *     stored. A screenshot of this page is a complete record of the settings —
+ *     which is the whole point, because a screenshot is what comes back.
+ *  2. One specimen at a time, isolated on a plain stage. The world is a bad
+ *     place to judge a wing-flap rate.
+ *
+ * "Copy source" puts the current numbers on the clipboard already shaped as the
+ * `TUNING_DEFAULTS` literal in `lib/game/tuning.ts`, so a session ends in a
+ * paste rather than in retyping numbers off a picture.
+ */
+
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { Canvas, useFrame } from "@react-three/fiber";
+import { OrbitControls, useGLTF } from "@react-three/drei";
+import { clone as cloneSkeleton } from "three/examples/jsm/utils/SkeletonUtils.js";
+import * as THREE from "three";
+import {
+  TUNING_DEFAULTS,
+  setTuning,
+  resetTuning,
+  tune,
+  tuningSource,
+  useTuning,
+  type Tuning,
+} from "@/lib/game/tuning";
+import { patchWind, tuftGeometry } from "@/components/game/grid/GrassTufts";
+import { terrainMaterial, applyGrassNormalStrength } from "@/components/game/grid/terrainMaterials";
+
+type Specimen = "gull" | "grass";
+
+// ── Specimens ────────────────────────────────────────────────────
+
+const SEAGULL_URL = "/assets/fauna/seagull.glb";
+
+/** One gull, flying its real orbit, alone. */
+function GullSpecimen() {
+  const group = useRef<THREE.Group>(null);
+  const { scene, animations } = useGLTF(SEAGULL_URL);
+  const mixerRef = useRef<THREE.AnimationMixer | null>(null);
+
+  const body = useMemo(() => {
+    const c = cloneSkeleton(scene) as THREE.Group;
+    c.rotation.y = -Math.PI / 2;
+    return c;
+  }, [scene]);
+
+  useEffect(() => {
+    if (!animations.length) return;
+    const mixer = new THREE.AnimationMixer(body);
+    mixer.clipAction(animations[0]).play();
+    mixerRef.current = mixer;
+    return () => {
+      mixer.stopAllAction();
+      mixer.uncacheRoot(body);
+      mixerRef.current = null;
+    };
+  }, [body, animations]);
+
+  useFrame((state, delta) => {
+    const g = tune().gull;
+    body.scale.setScalar(g.scale);
+    if (mixerRef.current) {
+      mixerRef.current.timeScale = g.flap;
+      mixerRef.current.update(delta);
+    }
+    if (!group.current) return;
+    const t = state.clock.elapsedTime;
+    const a = t * g.orbitSpeed;
+    group.current.position.set(
+      Math.cos(a) * g.orbitRadius,
+      2 + Math.sin(t * 0.35) * g.bob,
+      Math.sin(a) * g.orbitRadius
+    );
+    group.current.rotation.y = -a + Math.PI / 2;
+    group.current.rotation.z = -g.bank;
+  });
+
+  return (
+    <group ref={group}>
+      <primitive object={body} />
+    </group>
+  );
+}
+
+/**
+ * A patch of ground with the real grass material and the real tuft shader, so
+ * sway and normal strength are judged against each other rather than in
+ * isolation. Deliberately NOT the island: a 12x12 patch fills the frame.
+ */
+function GrassSpecimen() {
+  const t = useTuning();
+  // Refs, matching the pattern Ocean.tsx already uses for its animated
+  // uniforms: the react-compiler lint forbids mutating a useMemo result, and a
+  // uniform object exists precisely to be mutated every frame.
+  const uTime = useRef({ value: 0 });
+  const uWind = useRef({ value: new THREE.Vector3(0.09, 1.1, 9) });
+
+  // Same crossed-card geometry the world uses.
+  const geometry = useMemo(() => tuftGeometry(t.grass.tuftHeight), [t.grass.tuftHeight]);
+
+  const material = useMemo(
+    () =>
+      new THREE.MeshStandardMaterial({
+        color: 0x86b862,
+        roughness: 0.95,
+        metalness: 0,
+        side: THREE.DoubleSide,
+      }),
+    []
+  );
+
+  // The SAME patch the world uses, not a copy of it — see GrassTufts.
+  useEffect(() => {
+    patchWind(material, uTime.current, uWind.current);
+  }, [material]);
+
+  const count = Math.max(1, Math.round(t.grass.tuftDensity * 24));
+
+  /**
+   * The bench floor uses the WORLD's shared grass material, with world-scale
+   * UVs rewritten onto the plane the same way GridTerrain does. Without this the
+   * "ground detail" slider moved a normal map that was not on screen, and the
+   * whole point of the bench is that what you see is what ships.
+   */
+  const floor = useMemo(() => {
+    const g = new THREE.PlaneGeometry(12, 12);
+    g.rotateX(-Math.PI / 2);
+    const pos = g.attributes.position;
+    const uv = g.attributes.uv;
+    for (let i = 0; i < pos.count; i++) uv.setXY(i, pos.getX(i) / 2, pos.getZ(i) / 2);
+    uv.needsUpdate = true;
+    return g;
+  }, []);
+  const floorMat = useMemo(() => terrainMaterial("mGrass"), []);
+
+  useEffect(() => {
+    applyGrassNormalStrength(t.grass.normalStrength, t.grass.normalScale);
+  }, [t.grass.normalStrength, t.grass.normalScale]);
+
+  useFrame((state) => {
+    uTime.current.value = state.clock.elapsedTime;
+    uWind.current.value.set(t.grass.swayAmount, t.grass.swaySpeed, t.grass.gustLength);
+  });
+
+  return (
+    <group>
+      <mesh geometry={floor} material={floorMat ?? undefined} receiveShadow />
+      <instancedMesh
+        key={`${count}-${t.grass.tuftHeight}`}
+        args={[geometry, material, count]}
+        frustumCulled={false}
+        ref={(inst) => {
+          if (!inst) return;
+          const m = new THREE.Matrix4();
+          const q = new THREE.Quaternion();
+          const e = new THREE.Euler();
+          const p = new THREE.Vector3();
+          const s = new THREE.Vector3();
+          for (let i = 0; i < count; i++) {
+            // Deterministic scatter, so a density change does not reshuffle
+            // the whole patch under the reviewer.
+            const a = (i * 2.399963) % (Math.PI * 2);
+            const r = Math.sqrt((i + 0.5) / count) * 5.6;
+            e.set(0, a * 3, 0);
+            q.setFromEuler(e);
+            p.set(Math.cos(a) * r, 0, Math.sin(a) * r);
+            s.setScalar(0.75 + ((i * 37) % 10) / 20);
+            m.compose(p, q, s);
+            inst.setMatrixAt(i, m);
+          }
+          inst.instanceMatrix.needsUpdate = true;
+        }}
+      />
+    </group>
+  );
+}
+
+// ── Controls ─────────────────────────────────────────────────────
+
+interface Row {
+  group: keyof Tuning;
+  key: string;
+  label: string;
+  min: number;
+  max: number;
+  step: number;
+  /** What the number means, shown under the label. */
+  note: string;
+}
+
+const ROWS: Record<Specimen, Row[]> = {
+  gull: [
+    { group: "gull", key: "flap", label: "wing flap", min: 0.2, max: 6, step: 0.05, note: "animation speed multiplier" },
+    { group: "gull", key: "flapSpread", label: "flap spread", min: 0, max: 2, step: 0.05, note: "per-bird variation, keeps the flock out of lockstep" },
+    { group: "gull", key: "orbitSpeed", label: "fly speed", min: 0.02, max: 1.5, step: 0.01, note: "radians/sec around its anchor" },
+    { group: "gull", key: "orbitRadius", label: "orbit radius", min: 2, max: 20, step: 0.5, note: "world units" },
+    { group: "gull", key: "altitude", label: "altitude", min: 1, max: 20, step: 0.5, note: "world units above the water" },
+    { group: "gull", key: "bob", label: "altitude bob", min: 0, max: 4, step: 0.1, note: "slow rise and fall on the breeze" },
+    { group: "gull", key: "scale", label: "scale", min: 0.02, max: 0.25, step: 0.005, note: "model is ~9.3u wingspan raw" },
+    { group: "gull", key: "bank", label: "bank", min: 0, max: 0.8, step: 0.02, note: "lean into the turn, radians" },
+  ],
+  grass: [
+    { group: "grass", key: "normalStrength", label: "ground detail", min: 0, max: 3, step: 0.05, note: "ACNH mGrass_Nrm strength — 0 is the flat green" },
+    { group: "grass", key: "normalScale", label: "detail scale", min: 0.5, max: 12, step: 0.25, note: "world units per repeat" },
+    { group: "grass", key: "tuftDensity", label: "tuft density", min: 0, max: 40, step: 1, note: "tufts per 100 grass cells — this is the perf knob" },
+    { group: "grass", key: "tuftHeight", label: "tuft height", min: 0.08, max: 1.2, step: 0.02, note: "world units" },
+    { group: "grass", key: "swayAmount", label: "sway amount", min: 0, max: 0.5, step: 0.01, note: "how far the tip leans" },
+    { group: "grass", key: "swaySpeed", label: "sway speed", min: 0, max: 6, step: 0.05, note: "oscillations/sec" },
+    { group: "grass", key: "gustLength", label: "gust length", min: 1, max: 40, step: 0.5, note: "wavelength of the wave crossing the field" },
+  ],
+};
+
+const mono = "ui-monospace, SFMono-Regular, Menlo, monospace";
+
+function Slider({ row }: { row: Row }) {
+  const t = useTuning();
+  const value = (t[row.group] as unknown as Record<string, number>)[row.key];
+  const shipped = (TUNING_DEFAULTS[row.group] as unknown as Record<string, number>)[row.key];
+  const changed = Math.abs(value - shipped) > 1e-9;
+
+  return (
+    <div style={{ marginBottom: 14 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+        <span style={{ fontSize: 12, color: "#e8e4dc" }}>{row.label}</span>
+        <span
+          style={{
+            fontFamily: mono,
+            fontSize: 13,
+            color: changed ? "#ffd166" : "#8a939a",
+            fontWeight: changed ? 700 : 400,
+          }}
+        >
+          {value.toFixed(3)}
+          {changed && <span style={{ fontSize: 10, opacity: 0.6 }}> (was {shipped})</span>}
+        </span>
+      </div>
+      <input
+        type="range"
+        min={row.min}
+        max={row.max}
+        step={row.step}
+        value={value}
+        onChange={(e) => setTuning(row.group, row.key as never, Number(e.target.value))}
+        style={{ width: "100%" }}
+      />
+      <div style={{ fontSize: 9, color: "#6f787f", lineHeight: 1.3 }}>{row.note}</div>
+    </div>
+  );
+}
+
+export default function TuneBench() {
+  const [specimen, setSpecimen] = useState<Specimen>("gull");
+  const [copied, setCopied] = useState(false);
+
+  const tab = (id: Specimen, label: string) => (
+    <button
+      key={id}
+      onClick={() => setSpecimen(id)}
+      style={{
+        padding: "5px 12px",
+        fontSize: 12,
+        fontFamily: mono,
+        borderRadius: 4,
+        border: "1px solid #3a4148",
+        background: specimen === id ? "#ffd166" : "#1c2126",
+        color: specimen === id ? "#1c2126" : "#c8cfd4",
+        cursor: "pointer",
+      }}
+    >
+      {label}
+    </button>
+  );
+
+  return (
+    <div style={{ position: "fixed", top: 40, left: 0, right: 0, bottom: 0, background: "#11151a", display: "flex" }}>
+      <div style={{ flex: 1, position: "relative" }}>
+        <Canvas shadows camera={{ position: [7, 5, 9], fov: 40 }}>
+          <color attach="background" args={["#202931"]} />
+          <hemisphereLight args={["#cfe2ff", "#5a6b4a", 0.5]} />
+          <directionalLight position={[6, 10, 4]} intensity={1.4} color="#FFF7E4" castShadow />
+          <Suspense fallback={null}>
+            {specimen === "gull" ? <GullSpecimen /> : <GrassSpecimen />}
+          </Suspense>
+          <gridHelper args={[24, 24, "#2c353d", "#1d242a"]} position={[0, -0.01, 0]} />
+          <OrbitControls makeDefault target={[0, 1, 0]} />
+        </Canvas>
+        <div
+          style={{
+            position: "absolute",
+            top: 12,
+            left: 12,
+            fontFamily: mono,
+            fontSize: 11,
+            color: "#6f787f",
+          }}
+        >
+          drag to orbit · scroll to zoom · values are live in the world too
+        </div>
+      </div>
+
+      <div
+        style={{
+          width: 330,
+          padding: 16,
+          overflowY: "auto",
+          background: "#171c21",
+          borderLeft: "1px solid #2a3138",
+          fontFamily: mono,
+        }}
+      >
+        <div style={{ fontSize: 13, color: "#ffd166", letterSpacing: 1, marginBottom: 10 }}>
+          TUNING BENCH
+        </div>
+        <div style={{ display: "flex", gap: 6, marginBottom: 16 }}>
+          {tab("gull", "seagull")}
+          {tab("grass", "grass")}
+        </div>
+
+        {ROWS[specimen].map((r) => (
+          <Slider key={`${r.group}.${r.key}`} row={r} />
+        ))}
+
+        <div style={{ display: "flex", gap: 6, marginTop: 18 }}>
+          <button
+            onClick={() => {
+              navigator.clipboard.writeText(tuningSource());
+              setCopied(true);
+              setTimeout(() => setCopied(false), 1400);
+            }}
+            style={{
+              flex: 1,
+              padding: "7px 10px",
+              fontSize: 11,
+              fontFamily: mono,
+              borderRadius: 4,
+              border: "1px solid #3a4148",
+              background: copied ? "#5aa469" : "#1c2126",
+              color: "#e8e4dc",
+              cursor: "pointer",
+            }}
+          >
+            {copied ? "copied" : "Copy source"}
+          </button>
+          <button
+            onClick={() => resetTuning()}
+            style={{
+              padding: "7px 10px",
+              fontSize: 11,
+              fontFamily: mono,
+              borderRadius: 4,
+              border: "1px solid #3a4148",
+              background: "#1c2126",
+              color: "#c8cfd4",
+              cursor: "pointer",
+            }}
+          >
+            Reset
+          </button>
+        </div>
+        <div style={{ fontSize: 9, color: "#6f787f", marginTop: 10, lineHeight: 1.5 }}>
+          A screenshot of this panel is a complete record — every value is printed
+          next to its slider, and anything moved off the shipped default is
+          highlighted. &ldquo;Copy source&rdquo; gives the paste-ready
+          TUNING_DEFAULTS block for lib/game/tuning.ts.
+        </div>
+      </div>
+    </div>
+  );
+}
