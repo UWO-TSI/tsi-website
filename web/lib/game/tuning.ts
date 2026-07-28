@@ -45,6 +45,18 @@ export interface Tuning {
     /** How far the orbit centre wanders, world units. */
     drift: number;
   };
+  water: {
+    /** How fast the flow normal scrolls, UV/sec. */
+    flowSpeed: number;
+    /** World units one repeat of the flow normal covers. */
+    flowScale: number;
+    /** Strength of the flow normal — the ripple depth. */
+    ripple: number;
+    /** Surface opacity. */
+    opacity: number;
+    /** How glossy the surface reads. Lower is shinier. */
+    roughness: number;
+  };
   grass: {
     /** 0 = procedural crossed cards, 1 = the low-poly blade pack. */
     model: number;
@@ -84,6 +96,13 @@ export const TUNING_DEFAULTS: Tuning = {
     wobble: 0.26,
     drift: 3.5,
   },
+  water: {
+    flowSpeed: 0.06,
+    flowScale: 6,
+    ripple: 0.55,
+    opacity: 0.82,
+    roughness: 0.18,
+  },
   grass: {
     model: 1,
     normalStrength: 0.6,
@@ -97,7 +116,7 @@ export const TUNING_DEFAULTS: Tuning = {
 };
 
 function clone(t: Tuning): Tuning {
-  return { gull: { ...t.gull }, grass: { ...t.grass } };
+  return { gull: { ...t.gull }, water: { ...t.water }, grass: { ...t.grass } };
 }
 
 let current: Tuning = clone(TUNING_DEFAULTS);
@@ -148,6 +167,8 @@ export function tuningSource(): string {
   return (
     "export const TUNING_DEFAULTS: Tuning = {\n" +
     group("gull", current.gull as unknown as Record<string, number>) +
+    "\n" +
+    group("water", current.water as unknown as Record<string, number>) +
     "\n" +
     group("grass", current.grass as unknown as Record<string, number>) +
     "\n};"

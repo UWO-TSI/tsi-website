@@ -18,8 +18,9 @@ import { setTerrainHeightProvider } from "../terrain";
 import GridTerrain from "./GridTerrain";
 import GridCliffs from "./GridCliffs";
 import GrassTufts from "./GrassTufts";
-import { applyGrassNormalStrength } from "./terrainMaterials";
-import { useTuning } from "@/lib/game/tuning";
+import { applyGrassNormalStrength, advanceWater } from "./terrainMaterials";
+import { useTuning, tune as tuneNow } from "@/lib/game/tuning";
+import { useFrame } from "@react-three/fiber";
 
 let cached: { map: IslandMap; props: PlacedProp[] } | null = null;
 
@@ -76,6 +77,9 @@ export default function GridWorld() {
     setTerrainHeightProvider((x, z) => heightAtWorld(map, x, z));
     return () => setTerrainHeightProvider(null);
   }, [map]);
+
+  // The river flows. One texture-offset write per frame, no recompile.
+  useFrame((state) => advanceWater(state.clock.elapsedTime, tuneNow().water));
 
   return (
     <group>

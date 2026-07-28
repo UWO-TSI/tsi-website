@@ -36,9 +36,9 @@ import {
 } from "@/lib/game/tuning";
 import { patchWind, tuftGeometry } from "@/components/game/grid/GrassTufts";
 import { gullPose, type GullParams } from "@/lib/game/gullPath";
-import { terrainMaterial, applyGrassNormalStrength } from "@/components/game/grid/terrainMaterials";
+import { terrainMaterial, applyGrassNormalStrength, advanceWater } from "@/components/game/grid/terrainMaterials";
 
-type Specimen = "gull" | "grass";
+type Specimen = "gull" | "water" | "grass";
 
 // ── Specimens ────────────────────────────────────────────────────
 
@@ -213,6 +213,37 @@ function GrassSpecimen() {
   );
 }
 
+/**
+ * A pane of river over a sand bed, using the world's own water material so the
+ * flow, ripple and opacity are the real ones rather than a look-alike.
+ */
+function WaterSpecimen() {
+  const t = useTuning();
+  const mat = useMemo(() => terrainMaterial("mRiver"), []);
+  useFrame((state) => advanceWater(state.clock.elapsedTime, t.water));
+
+  const geo = useMemo(() => {
+    const g = new THREE.PlaneGeometry(12, 12);
+    g.rotateX(-Math.PI / 2);
+    const pos = g.attributes.position;
+    const uv = g.attributes.uv;
+    for (let i = 0; i < pos.count; i++) uv.setXY(i, pos.getX(i) / 2, pos.getZ(i) / 2);
+    uv.needsUpdate = true;
+    return g;
+  }, []);
+
+  return (
+    <group>
+      {/* The bed under it, so opacity has something to reveal. */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.35, 0]} receiveShadow>
+        <planeGeometry args={[12, 12]} />
+        <meshStandardMaterial color="#A47B4B" roughness={0.95} metalness={0} />
+      </mesh>
+      <mesh geometry={geo} material={mat ?? undefined} />
+    </group>
+  );
+}
+
 // ── Controls ─────────────────────────────────────────────────────
 
 interface Row {
@@ -227,6 +258,13 @@ interface Row {
 }
 
 const ROWS: Record<Specimen, Row[]> = {
+  water: [
+    { group: "water", key: "flowSpeed", label: "flow speed", min: 0, max: 0.4, step: 0.005, note: "how fast the current runs" },
+    { group: "water", key: "flowScale", label: "flow scale", min: 1, max: 20, step: 0.5, note: "world units per ripple repeat" },
+    { group: "water", key: "ripple", label: "ripple depth", min: 0, max: 2, step: 0.05, note: "mRiver_Nrm strength — 0 is a flat pane" },
+    { group: "water", key: "opacity", label: "opacity", min: 0.3, max: 1, step: 0.02, note: "how much bed shows through" },
+    { group: "water", key: "roughness", label: "roughness", min: 0, max: 1, step: 0.02, note: "lower is glossier" },
+  ],
   gull: [
     { group: "gull", key: "flap", label: "wing flap", min: 0.2, max: 6, step: 0.05, note: "animation speed multiplier" },
     { group: "gull", key: "flapSpread", label: "flap spread", min: 0, max: 2, step: 0.05, note: "per-bird variation, keeps the flock out of lockstep" },
@@ -321,7 +359,7 @@ export default function TuneBench() {
           <hemisphereLight args={["#cfe2ff", "#5a6b4a", 0.5]} />
           <directionalLight position={[6, 10, 4]} intensity={1.4} color="#FFF7E4" castShadow />
           <Suspense fallback={null}>
-            {specimen === "gull" ? <GullSpecimen /> : <GrassSpecimen />}
+            {specimen === "gull" ? <GullSpecimen /> : specimen === "water" ? <WaterSpecimen /> : <GrassSpecimen />}
           </Suspense>
           <gridHelper args={[32, 32, "#2c353d", "#1d242a"]} position={[0, -0.01, 0]} />
           <OrbitControls makeDefault target={[0, 2, 0]} />
@@ -355,6 +393,7 @@ export default function TuneBench() {
         </div>
         <div style={{ display: "flex", gap: 6, marginBottom: 16 }}>
           {tab("gull", "seagull")}
+          {tab("water", "water")}
           {tab("grass", "grass")}
         </div>
 

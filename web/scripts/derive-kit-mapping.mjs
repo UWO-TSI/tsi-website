@@ -38,7 +38,35 @@ const KIT = arg("--kit", "cliff");
 const KIT_DIR = path.join(WEB, "public/assets/acnh", KIT);
 
 // The material that IS the vertical face, per kit.
-const WALL_MATERIAL = { cliff: /mCliff/i, river: /mRiver(?!Bed)/i, fall: /mWaterfall/i }[KIT] ?? /mCliff/i;
+// For the river this is the BANK, not the water. Measured: `mRiver` is a
+// full-tile quad on almost every piece, so probing it reports "wet on all
+// sides" for two thirds of the kit. What actually encodes the neighbourhood is
+// where the piece puts GROUND — same as a cliff putting rock where the drop is.
+const WALL_MATERIAL = {
+  cliff: /mCliff/i,
+  river: /mGrass(?!River)/i,
+  fall: /mWaterfall/i,
+}[KIT] ?? /mCliff/i;
+
+/**
+ * Does finding the material at an edge mean the mask bit is SET or CLEAR?
+ *
+ * The two kits are opposites and it is not a detail:
+ *
+ *   CLIFF  `mCliff` is a WALL. A wall on the north edge means the north
+ *          neighbour is LOWER, i.e. not part of this tier — bit CLEAR.
+ *   RIVER  probed on `mGrass`, the BANK. Ground on the north edge means the
+ *          north neighbour is land, not river — bit CLEAR, same as a cliff.
+ *
+ * Run with the wrong polarity and the table is a mirror of itself: the 4-way
+ * junction `0-a-0` comes back as an isolated pond and the fully-enclosed
+ * `4-c-0` as a lone stub. Both are legal-looking configs, so nothing errors —
+ * the river just renders inside out.
+ */
+const EDGE_MEANS_SAME = { cliff: false, river: false, fall: true }[KIT] ?? false;
+
+/** Surface kits need their polygons sampled, not just their vertices. */
+const DENSIFY = KIT !== "cliff";
 
 function readGLB(file) {
   const b = fs.readFileSync(file);
@@ -47,10 +75,30 @@ function readGLB(file) {
   return { json, bin: b, binOffset: 20 + jsonLen + 8 };
 }
 
+/**
+ * Read an accessor of scalar indices.
+ */
+function readIndices(json, bin, binOffset, accIdx) {
+  const acc = json.accessors[accIdx];
+  const bv = json.bufferViews[acc.bufferView];
+  const base = binOffset + (bv.byteOffset || 0) + (acc.byteOffset || 0);
+  const out = new Array(acc.count);
+  for (let i = 0; i < acc.count; i++) {
+    out[i] =
+      acc.componentType === 5125
+        ? bin.readUInt32LE(base + i * 4)
+        : acc.componentType === 5123
+          ? bin.readUInt16LE(base + i * 2)
+          : bin.readUInt8(base + i);
+  }
+  return out;
+}
+
 /** Float positions of every primitive whose material matches `re`. */
 function wallPoints(file, re) {
   const { json, bin, binOffset } = readGLB(file);
   const pts = [];
+  const tris = [];
   for (const mesh of json.meshes ?? []) {
     for (const prim of mesh.primitives) {
       const matName = json.materials?.[prim.material]?.name ?? "";
@@ -59,13 +107,99 @@ function wallPoints(file, re) {
       const bv = json.bufferViews[acc.bufferView];
       const stride = bv.byteStride || 12;
       const base = binOffset + (bv.byteOffset || 0) + (acc.byteOffset || 0);
+      const verts = [];
       for (let i = 0; i < acc.count; i++) {
         const o = base + i * stride;
-        pts.push([bin.readFloatLE(o), bin.readFloatLE(o + 4), bin.readFloatLE(o + 8)]);
+        verts.push([bin.readFloatLE(o), bin.readFloatLE(o + 4), bin.readFloatLE(o + 8)]);
+      }
+      pts.push(...verts);
+
+      if (DENSIFY && prim.indices !== undefined) {
+        const idx = readIndices(json, bin, binOffset, prim.indices);
+        for (let t = 0; t < idx.length; t += 3) {
+          const a = verts[idx[t]];
+          const b = verts[idx[t + 1]];
+          const c = verts[idx[t + 2]];
+          if (a && b && c) tris.push([a, b, c]);
+        }
       }
     }
   }
-  return pts;
+  return { pts, tris };
+}
+
+/**
+ * Rasterise triangles into a fixed grid over the 10x10 tile.
+ *
+ * WHY NOT JUST SAMPLE THE TRIANGLES. Barycentric sampling puts a fixed number
+ * of points on every triangle regardless of its size, so a big water quad ends
+ * up sparser per unit area than a small bank sliver — and any count threshold
+ * is then measuring tessellation, not coverage. `0-a-0` is a four-way junction
+ * and it came back reporting water on two sides.
+ *
+ * An occupancy grid is density-independent: a cell is wet or it is not, and the
+ * answer is the same whether the polygon over it is one triangle or fifty.
+ */
+const RES = 48;
+const HALF = 5; // tile is 10x10 raw, centred
+
+function occupancy(tris) {
+  const g = new Uint8Array(RES * RES);
+  const toCell = (v) => Math.floor(((v + HALF) / (HALF * 2)) * RES);
+  for (const [a, b, c] of tris) {
+    const xs = [a[0], b[0], c[0]];
+    const zs = [a[2], b[2], c[2]];
+    const x0 = Math.max(0, toCell(Math.min(...xs)));
+    const x1 = Math.min(RES - 1, toCell(Math.max(...xs)));
+    const z0 = Math.max(0, toCell(Math.min(...zs)));
+    const z1 = Math.min(RES - 1, toCell(Math.max(...zs)));
+    // Edge functions, evaluated at each candidate cell centre.
+    const d = (px, pz, p, q) => (px - p[0]) * (q[2] - p[2]) - (pz - p[2]) * (q[0] - p[0]);
+    for (let zi = z0; zi <= z1; zi++) {
+      for (let xi = x0; xi <= x1; xi++) {
+        const px = ((xi + 0.5) / RES) * HALF * 2 - HALF;
+        const pz = ((zi + 0.5) / RES) * HALF * 2 - HALF;
+        const s1 = d(px, pz, a, b);
+        const s2 = d(px, pz, b, c);
+        const s3 = d(px, pz, c, a);
+        const neg = s1 < 0 || s2 < 0 || s3 < 0;
+        const pos = s1 > 0 || s2 > 0 || s3 > 0;
+        if (!(neg && pos)) g[zi * RES + xi] = 1;
+      }
+    }
+  }
+  return g;
+}
+
+/** Fraction of a rectangular band of the tile that is occupied. */
+function bandFill(g, xMin, xMax, zMin, zMax) {
+  const toCell = (v) => Math.max(0, Math.min(RES - 1, Math.floor(((v + HALF) / (HALF * 2)) * RES)));
+  let on = 0;
+  let total = 0;
+  for (let zi = toCell(zMin); zi <= toCell(zMax); zi++) {
+    for (let xi = toCell(xMin); xi <= toCell(xMax); xi++) {
+      total++;
+      if (g[zi * RES + xi]) on++;
+    }
+  }
+  return total ? on / total : 0;
+}
+
+/** Direction test on the occupancy grid: is this edge or corner wet? */
+function occupiedDirs(g) {
+  const MID = 2.0;
+  const OUT = 4.0;
+  const C = 3.4;
+  const f = [];
+  f[grid.Dir.N] = bandFill(g, -MID, MID, -HALF, -OUT);
+  f[grid.Dir.S] = bandFill(g, -MID, MID, OUT, HALF);
+  f[grid.Dir.E] = bandFill(g, OUT, HALF, -MID, MID);
+  f[grid.Dir.W] = bandFill(g, -HALF, -OUT, -MID, MID);
+  f[grid.Dir.NE] = bandFill(g, C, HALF, -HALF, -C);
+  f[grid.Dir.SE] = bandFill(g, C, HALF, C, HALF);
+  f[grid.Dir.SW] = bandFill(g, -HALF, -C, C, HALF);
+  f[grid.Dir.NW] = bandFill(g, -HALF, -C, -HALF, -C);
+  return f.map((v) => v >= 0.5);
 }
 
 /**
@@ -96,7 +230,8 @@ function walledDirs(pts) {
   }
   // A face carries far more vertices than a corner fillet, so the two need
   // different bars; a flat count either misses corners or invents faces.
-  return hits.map((h, d) => (d % 2 === 0 ? h >= 4 : h >= 3));
+  const bar = DENSIFY ? [40, 24] : [4, 3];
+  return hits.map((h, d) => (d % 2 === 0 ? h >= bar[0] : h >= bar[1]));
 }
 
 const files = fs
@@ -109,15 +244,14 @@ for (const f of files) {
   const stem = f.replace(/\.glb$/, "");
   const m = /^(\d+)-([a-c])-(\d+)$/.exec(stem);
   if (!m) continue;
-  const pts = wallPoints(path.join(KIT_DIR, f), WALL_MATERIAL);
+  const { pts, tris } = wallPoints(path.join(KIT_DIR, f), WALL_MATERIAL);
   if (pts.length === 0) {
     rows.push({ stem, klass: +m[1], variant: m[2], rot: +m[3], mask: null, note: "no wall geometry" });
     continue;
   }
-  const walled = walledDirs(pts);
-  // Wall present => that neighbour is LOWER => the mask bit is CLEAR.
+  const walled = DENSIFY ? occupiedDirs(occupancy(tris)) : walledDirs(pts);
   let mask = 0;
-  for (let d = 0; d < 8; d++) if (!walled[d]) mask |= 1 << d;
+  for (let d = 0; d < 8; d++) if (walled[d] === EDGE_MEANS_SAME) mask |= 1 << d;
   const choice = grid.autotile(mask);
   rows.push({
     stem,

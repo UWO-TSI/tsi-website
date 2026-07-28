@@ -152,6 +152,11 @@ export function terrainMaterial(name: string): THREE.Material | null {
     const hit = cache.get(procKey);
     if (hit) return hit;
     const isWater = procKey === "mRiver";
+    if (isWater) {
+      const mat = waterMaterial();
+      cache.set(procKey, mat);
+      return mat;
+    }
     const mat = new THREE.MeshStandardMaterial({
       map: isWater ? undefined : getGrassTexture(),
       // ACNH's grass has NO albedo texture — the colour comes from the ramp.
@@ -191,6 +196,69 @@ export function terrainMaterial(name: string): THREE.Material | null {
   mat.name = `terrain:${key}`;
   cache.set(key, mat);
   return mat;
+}
+
+let waterNrm: THREE.Texture | null = null;
+
+/**
+ * The river surface.
+ *
+ * NOT `mRiver_Alb`. That file is the sandy RIVERBED — mean RGB (164,107,63),
+ * orange — which is what lies UNDER the water, and using it as the surface made
+ * the river read as a dirt track. ACNH draws the surface with a shader, and the
+ * asset that carries it is `mRiver_Nrm`: a 512x128 normal map whose wide aspect
+ * IS the flow direction.
+ *
+ * So the water is a tinted, glossy, semi-transparent surface with that normal
+ * map SCROLLING along the flow. That is the whole trick, it needs no albedo
+ * fetch, and the animation is one texture-offset write per frame rather than
+ * anything per-vertex.
+ *
+ * (The map was two-channel like the grass one — blue flat zero, Z implied.
+ * `scripts/fix-normal-maps.mjs` reconstructed it, or this would render black
+ * the same way the lawn did.)
+ */
+function waterMaterial(): THREE.MeshStandardMaterial {
+  if (!waterNrm) {
+    const t = new THREE.TextureLoader().load(TEX_DIR + "mRiver_Nrm.png");
+    t.wrapS = THREE.RepeatWrapping;
+    t.wrapT = THREE.RepeatWrapping;
+    waterNrm = t;
+  }
+  const mat = new THREE.MeshStandardMaterial({
+    color: 0x4f87a8,
+    normalMap: waterNrm,
+    normalScale: new THREE.Vector2(0.55, 0.55),
+    roughness: 0.18,
+    metalness: 0.05,
+    transparent: true,
+    opacity: 0.82,
+    // The surface sits 0.078u below its banks and is viewed from above; writing
+    // depth would z-fight the riverbed once that is drawn under it.
+    depthWrite: false,
+  });
+  mat.name = "terrain:mRiver";
+  return mat;
+}
+
+/**
+ * Scroll the flow and apply the bench's water settings. Called once per frame
+ * from GridWorld — a texture-offset write, not a shader recompile.
+ */
+export function advanceWater(
+  elapsed: number,
+  cfg: { flowSpeed: number; flowScale: number; ripple: number; opacity: number; roughness: number }
+): void {
+  const mat = cache?.get("mRiver") as THREE.MeshStandardMaterial | undefined;
+  if (!mat || !mat.normalMap) return;
+  const r = Math.max(0.01, 2 / cfg.flowScale);
+  mat.normalMap.repeat.set(r, r);
+  // Flow runs along the map's long axis; the cross-axis drift at a different
+  // rate keeps it from reading as a conveyor belt.
+  mat.normalMap.offset.set(elapsed * cfg.flowSpeed, elapsed * cfg.flowSpeed * 0.31);
+  mat.normalScale.set(cfg.ripple, cfg.ripple);
+  mat.opacity = cfg.opacity;
+  mat.roughness = cfg.roughness;
 }
 
 /** Swap a loaded kit piece onto the shared materials, in place. */
