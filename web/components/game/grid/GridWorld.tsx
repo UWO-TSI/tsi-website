@@ -11,7 +11,8 @@
  * The default URL is unchanged until David approves the slice.
  */
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
+import * as THREE from "three";
 import islandMapDoc from "@/data/island-map.json";
 import { parseIslandMap, heightAtWorld, type IslandMap, type PlacedProp } from "@/lib/game/grid";
 import { setTerrainHeightProvider } from "../terrain";
@@ -78,8 +79,19 @@ export default function GridWorld() {
     return () => setTerrainHeightProvider(null);
   }, [map]);
 
-  // The river flows. One texture-offset write per frame, no recompile.
-  useFrame((state) => advanceWater(state.clock.elapsedTime, tuneNow().water));
+  // The river flows, swells and catches the sun. One uniform block per frame.
+  // The key light is found by traversal rather than duplicated from GameWorld's
+  // sun maths — one source of truth, and it stays correct if that arc changes.
+  const sunDir = useRef(new THREE.Vector3(0, 1, 0));
+  useFrame((state) => {
+    let key: THREE.DirectionalLight | null = null;
+    state.scene.traverse((o) => {
+      const l = o as THREE.DirectionalLight;
+      if (!key && l.isDirectionalLight && l.intensity > 0.5) key = l;
+    });
+    if (key) sunDir.current.copy((key as THREE.DirectionalLight).position);
+    advanceWater(state.clock.elapsedTime, tuneNow().water, sunDir.current, state.camera);
+  });
 
   return (
     <group>

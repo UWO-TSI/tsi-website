@@ -226,17 +226,13 @@ function waterMaterial(): THREE.MeshStandardMaterial {
     waterNrm = t;
   }
   const mat = new THREE.MeshStandardMaterial({
-    // Deep-water colour. MEASURED off David's ACNH reference, not picked: the
-    // channel centre samples #26415E and the bank rim #6F8496. The previous
-    // #4F87A8 was both far too light and far too cyan, which is most of why the
-    // river read as painted-on.
-    color: 0x26415e,
+    color: 0xffffff, // the ramp below supplies all colour
     normalMap: waterNrm,
     normalScale: new THREE.Vector2(0.18, 0.18),
     roughness: 0.12,
     metalness: 0.1,
     transparent: true,
-    opacity: 0.9,
+    opacity: 0.88,
     // The surface sits 0.078u below its banks and is viewed from above; writing
     // depth would z-fight the riverbed once that is drawn under it.
     depthWrite: false,
@@ -244,59 +240,107 @@ function waterMaterial(): THREE.MeshStandardMaterial {
   mat.name = "terrain:mRiver";
 
   /**
-   * Two things the reference has that a flat tinted plane cannot.
+   * Four things, all riding one attribute or one uniform.
    *
-   * 1. A DEPTH GRADIENT. ACNH water is dark navy mid-channel and lightens
-   *    sharply at the bank. `aShore` carries the exact distance in cells,
-   *    baked by `shoreDistance()` at build time, so this is a lookup rather
-   *    than an approximation.
+   * THE COLOUR RAMP. `aShore` is the exact distance to the nearest bank in
+   * cells, baked by `shoreDistance()` at build time. David's stylised reference
+   * samples #F8F8F7 foam at the edge, #C9EEF4 pale just inside it, and #62DAE6
+   * saturated cyan in open water — so it is a three-stop ramp on one number we
+   * already have, not three separate effects.
    *
-   * 2. A SKY SHEEN. The reference reads near-mirror — you can see the bank and
-   *    the standing villager reflected in it. Real reflections are a second
-   *    render pass we are not paying for; a Fresnel term that brightens toward
-   *    grazing angles gets most of that read for free, because the grazing
-   *    angles are exactly where a reflection would dominate.
+   * FOAM. Same attribute, a tighter band. This is why the reference has a white
+   * collar around every rock and lily pad: it is not decoration placed per
+   * object, it is what water does near anything it touches. Ours currently
+   * collars the banks and the beach. Props standing IN the water will not get
+   * one until props come from the map, because the map is what shore distance
+   * is computed from.
    *
-   * Both go through `onBeforeCompile` on a stock MeshStandardMaterial, so the
-   * water still takes the scene's lights, fog and shadows normally.
+   * SUN GLINT. The mirrored sun, as a specular lobe about the reflected view
+   * vector. The direction arrives already in VIEW space — converted once per
+   * frame on the CPU rather than reconstructing world space per fragment.
+   *
+   * SWELL. Vertical displacement from two sine waves at different angles and
+   * incommensurate frequencies, so the surface is never uniformly up or down —
+   * which is the "waves that aren't uniform" ask. It is a function of WORLD
+   * position, so adjacent cells agree at their shared edge and the sheet stays
+   * continuous even though each cell is its own four vertices. The normal is
+   * perturbed from the same function analytically, or the swell would move the
+   * surface without changing how it catches light.
    */
   mat.onBeforeCompile = (shader) => {
-    shader.uniforms.uShallow = waterUniforms.shallow;
-    shader.uniforms.uSky = waterUniforms.sky;
-    shader.uniforms.uDepthFalloff = waterUniforms.depthFalloff;
-    shader.uniforms.uFresnel = waterUniforms.fresnel;
+    for (const [k, v] of Object.entries(waterUniforms)) shader.uniforms["u" + k[0].toUpperCase() + k.slice(1)] = v;
+
+    const WAVE = `
+      float uWaveK1 = 6.2831853 / max(uWaveScale, 0.001);
+      vec2 uWaveD1 = normalize(vec2(1.0, 0.35));
+      vec2 uWaveD2 = normalize(vec2(-0.42, 1.0));
+      float wA1 = dot(position.xz, uWaveD1) * uWaveK1 + uTime * uWaveSpeed;
+      float wA2 = dot(position.xz, uWaveD2) * uWaveK1 * 1.63 + uTime * uWaveSpeed * 1.31;
+      float waveH = (sin(wA1) * 0.62 + sin(wA2) * 0.38) * uWaveHeight;
+      vec2 waveG = uWaveD1 * (cos(wA1) * 0.62 * uWaveK1 * uWaveHeight)
+                 + uWaveD2 * (cos(wA2) * 0.38 * uWaveK1 * 1.63 * uWaveHeight);`;
 
     shader.vertexShader = shader.vertexShader
       .replace(
         "#include <common>",
         `#include <common>
          attribute float aShore;
-         varying float vShore;`
+         varying float vShore;
+         uniform float uTime;
+         uniform float uWaveHeight;
+         uniform float uWaveScale;
+         uniform float uWaveSpeed;`
       )
-      .replace("#include <begin_vertex>", "#include <begin_vertex>\n vShore = aShore;");
+      .replace(
+        "#include <beginnormal_vertex>",
+        `#include <beginnormal_vertex>
+         ${WAVE}
+         objectNormal = normalize(vec3(-waveG.x, 1.0, -waveG.y));`
+      )
+      .replace(
+        "#include <begin_vertex>",
+        `#include <begin_vertex>
+         vShore = aShore;
+         transformed.y += waveH;`
+      );
 
     shader.fragmentShader = shader.fragmentShader
       .replace(
         "#include <common>",
         `#include <common>
-         uniform vec3 uShallow;
+         uniform vec3 uDeepColor;
+         uniform vec3 uShallowColor;
+         uniform vec3 uFoamColor;
          uniform vec3 uSky;
+         uniform vec3 uSunView;
          uniform float uDepthFalloff;
+         uniform float uFoamWidth;
+         uniform float uFoamStrength;
          uniform float uFresnel;
+         uniform float uSunGlint;
+         uniform float uSunSharp;
          varying float vShore;`
       )
       .replace(
         "#include <color_fragment>",
         `#include <color_fragment>
-         // 1 at the bank, 0 once we are uDepthFalloff cells out.
-         float shallow = 1.0 - clamp((vShore - 1.0) / max(uDepthFalloff, 0.001), 0.0, 1.0);
-         diffuseColor.rgb = mix(diffuseColor.rgb, uShallow, shallow * shallow);`
+         float edge = max(vShore - 1.0, 0.0);
+         float openness = clamp(edge / max(uDepthFalloff, 0.001), 0.0, 1.0);
+         vec3 waterCol = mix(uShallowColor, uDeepColor, openness);
+         float foam = 1.0 - smoothstep(0.0, max(uFoamWidth, 0.001), edge);
+         diffuseColor.rgb *= mix(waterCol, uFoamColor, foam * uFoamStrength);`
       )
       .replace(
         "#include <emissivemap_fragment>",
         `#include <emissivemap_fragment>
-         float rim = pow(1.0 - clamp(dot(normalize(normal), normalize(vViewPosition)), 0.0, 1.0), 3.0);
-         totalEmissiveRadiance += uSky * rim * uFresnel;`
+         vec3 wN = normalize(normal);
+         vec3 wV = normalize(vViewPosition);
+         float rim = pow(1.0 - clamp(dot(wN, wV), 0.0, 1.0), 3.0);
+         totalEmissiveRadiance += uSky * rim * uFresnel;
+         // The mirrored sun. Killed inside the foam, where the surface is
+         // broken up and a mirror highlight would look like a bug.
+         float glint = pow(max(dot(reflect(-wV, wN), uSunView), 0.0), max(uSunSharp, 1.0));
+         totalEmissiveRadiance += vec3(1.0, 0.98, 0.92) * glint * uSunGlint * (1.0 - foam);`
       );
   };
   return mat;
@@ -308,15 +352,32 @@ function waterMaterial(): THREE.MeshStandardMaterial {
  * uniform objects the compiled shader already holds.
  */
 const waterUniforms = {
-  shallow: { value: new THREE.Color(0x6f8496) },
+  time: { value: 0 },
+  deepColor: { value: new THREE.Color(0x62dae6) },
+  shallowColor: { value: new THREE.Color(0xc9eef4) },
+  foamColor: { value: new THREE.Color(0xf8f8f7) },
   sky: { value: new THREE.Color(0x9fc4e8) },
-  depthFalloff: { value: 2.5 },
-  fresnel: { value: 0.35 },
+  sunView: { value: new THREE.Vector3(0, 1, 0) },
+  depthFalloff: { value: 2.2 },
+  foamWidth: { value: 0.85 },
+  foamStrength: { value: 0.9 },
+  fresnel: { value: 0.25 },
+  sunGlint: { value: 0.85 },
+  sunSharp: { value: 48 },
+  waveHeight: { value: 0.035 },
+  waveScale: { value: 7 },
+  waveSpeed: { value: 0.7 },
 };
 
+const _sun = new THREE.Vector3();
+
 /**
- * Scroll the flow and apply the bench's water settings. Called once per frame
- * from GridWorld — a texture-offset write, not a shader recompile.
+ * Scroll the flow, drive the swell, and apply the bench's water settings.
+ * Called once per frame from GridWorld.
+ *
+ * `sunWorld` is the scene's key-light direction; it is converted to VIEW space
+ * here, once, so the fragment shader can do the glint with a single dot product
+ * instead of reconstructing world space per pixel.
  */
 export function advanceWater(
   elapsed: number,
@@ -328,10 +389,40 @@ export function advanceWater(
     roughness: number;
     depthFalloff: number;
     fresnel: number;
-  }
+    deepColor: number;
+    shallowColor: number;
+    foamColor: number;
+    foamWidth: number;
+    foamStrength: number;
+    sunGlint: number;
+    sunSharp: number;
+    waveHeight: number;
+    waveScale: number;
+    waveSpeed: number;
+  },
+  sunWorld?: THREE.Vector3,
+  camera?: THREE.Camera
 ): void {
-  waterUniforms.depthFalloff.value = cfg.depthFalloff;
-  waterUniforms.fresnel.value = cfg.fresnel;
+  const u = waterUniforms;
+  u.time.value = elapsed;
+  u.deepColor.value.setHex(cfg.deepColor);
+  u.shallowColor.value.setHex(cfg.shallowColor);
+  u.foamColor.value.setHex(cfg.foamColor);
+  u.depthFalloff.value = cfg.depthFalloff;
+  u.foamWidth.value = cfg.foamWidth;
+  u.foamStrength.value = cfg.foamStrength;
+  u.fresnel.value = cfg.fresnel;
+  u.sunGlint.value = cfg.sunGlint;
+  u.sunSharp.value = cfg.sunSharp;
+  u.waveHeight.value = cfg.waveHeight;
+  u.waveScale.value = cfg.waveScale;
+  u.waveSpeed.value = cfg.waveSpeed;
+
+  if (sunWorld && camera) {
+    _sun.copy(sunWorld).normalize().transformDirection(camera.matrixWorldInverse);
+    u.sunView.value.copy(_sun);
+  }
+
   const mat = cache?.get("mRiver") as THREE.MeshStandardMaterial | undefined;
   if (!mat || !mat.normalMap) return;
   const r = Math.max(0.01, 2 / cfg.flowScale);

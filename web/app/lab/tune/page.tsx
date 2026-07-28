@@ -264,20 +264,32 @@ interface Row {
   step: number;
   /** What the number means, shown under the label. */
   note: string;
+  /** Colour rows render a swatch picker and store the value as a hex number. */
+  kind?: "color";
 }
 
 const ROWS: Record<Specimen, Row[]> = {
   water: [
+    { group: "water", key: "deepColor", label: "open water", min: 0, max: 0, step: 0, kind: "color", note: "sampled #62DAE6 off the reference" },
+    { group: "water", key: "shallowColor", label: "shallow", min: 0, max: 0, step: 0, kind: "color", note: "sampled #C9EEF4 — paler at the bank, not darker" },
+    { group: "water", key: "foamColor", label: "foam", min: 0, max: 0, step: 0, kind: "color", note: "sampled #F8F8F7" },
+    { group: "water", key: "depthFalloff", label: "depth falloff", min: 0.2, max: 8, step: 0.1, note: "cells over which shallow blends to open water" },
+    { group: "water", key: "foamWidth", label: "foam width", min: 0, max: 3, step: 0.05, note: "width of the white collar, in cells" },
+    { group: "water", key: "foamStrength", label: "foam strength", min: 0, max: 1, step: 0.02, note: "how opaque the collar gets" },
+    { group: "water", key: "sunGlint", label: "sun glint", min: 0, max: 3, step: 0.05, note: "brightness of the mirrored sun" },
+    { group: "water", key: "sunSharp", label: "glint tightness", min: 4, max: 200, step: 2, note: "higher is a smaller, harder spot" },
+    { group: "water", key: "waveHeight", label: "wave height", min: 0, max: 0.3, step: 0.005, note: "vertical swell, world units — keep it small" },
+    { group: "water", key: "waveScale", label: "wave length", min: 1, max: 30, step: 0.5, note: "world units per swell" },
+    { group: "water", key: "waveSpeed", label: "wave speed", min: 0, max: 3, step: 0.05, note: "how fast the swell travels" },
+    { group: "water", key: "fresnel", label: "sky sheen", min: 0, max: 1.5, step: 0.02, note: "grazing-angle brightening" },
+    { group: "water", key: "ripple", label: "ripple depth", min: 0, max: 2, step: 0.02, note: "mRiver_Nrm surface detail" },
     { group: "water", key: "flowSpeed", label: "flow speed", min: 0, max: 0.4, step: 0.005, note: "how fast the current runs" },
     { group: "water", key: "flowScale", label: "flow scale", min: 1, max: 20, step: 0.5, note: "world units per ripple repeat" },
-    { group: "water", key: "ripple", label: "ripple depth", min: 0, max: 2, step: 0.05, note: "mRiver_Nrm strength — 0 is a flat pane" },
     { group: "water", key: "opacity", label: "opacity", min: 0.3, max: 1, step: 0.02, note: "how much bed shows through" },
     { group: "water", key: "roughness", label: "roughness", min: 0, max: 1, step: 0.02, note: "lower is glossier" },
-    { group: "water", key: "depthFalloff", label: "depth falloff", min: 0.2, max: 8, step: 0.1, note: "cells from the bank over which shallow #6F8496 fades to deep #26415E" },
-    { group: "water", key: "fresnel", label: "sky sheen", min: 0, max: 1.5, step: 0.02, note: "grazing-angle brightening — stands in for a reflection" },
   ],
   gull: [
-    { group: "gull", key: "flap", label: "wing flap", min: 0.2, max: 6, step: 0.05, note: "animation speed multiplier" },
+    { group: "gull", key: "flap", label: "wing flap", min: 0.2, max: 8, step: 0.05, note: "animation speed multiplier" },
     { group: "gull", key: "flapSpread", label: "flap spread", min: 0, max: 2, step: 0.05, note: "per-bird variation, keeps the flock out of lockstep" },
     { group: "gull", key: "orbitSpeed", label: "fly speed", min: 0.02, max: 1.5, step: 0.01, note: "radians/sec around its anchor" },
     { group: "gull", key: "orbitRadius", label: "orbit radius", min: 2, max: 20, step: 0.5, note: "world units" },
@@ -308,6 +320,39 @@ function Slider({ row }: { row: Row }) {
   const value = (t[row.group] as unknown as Record<string, number>)[row.key];
   const shipped = (TUNING_DEFAULTS[row.group] as unknown as Record<string, number>)[row.key];
   const changed = Math.abs(value - shipped) > 1e-9;
+
+  const asHex = (v: number) => "#" + Math.round(v).toString(16).padStart(6, "0");
+
+  if (row.kind === "color") {
+    return (
+      <div style={{ marginBottom: 14 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span style={{ fontSize: 12, color: "#e8e4dc" }}>{row.label}</span>
+          <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span
+              style={{
+                fontFamily: mono,
+                fontSize: 13,
+                color: changed ? "#ffd166" : "#8a939a",
+                fontWeight: changed ? 700 : 400,
+              }}
+            >
+              {asHex(value).toUpperCase()}
+            </span>
+            <input
+              type="color"
+              value={asHex(value)}
+              onChange={(e) =>
+                setTuning(row.group, row.key as never, parseInt(e.target.value.slice(1), 16))
+              }
+              style={{ width: 34, height: 22, padding: 0, border: "1px solid #3a4148", background: "none" }}
+            />
+          </span>
+        </div>
+        <div style={{ fontSize: 9, color: "#6f787f", lineHeight: 1.3 }}>{row.note}</div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ marginBottom: 14 }}>
@@ -372,7 +417,11 @@ export default function TuneBench() {
           <Suspense fallback={null}>
             {specimen === "gull" ? <GullSpecimen /> : specimen === "water" ? <WaterSpecimen /> : <GrassSpecimen />}
           </Suspense>
-          <gridHelper args={[32, 32, "#2c353d", "#1d242a"]} position={[0, -0.01, 0]} />
+          {/* Hidden under water: the surface does not write depth, so the
+              helper shows straight through it and reads as seams in the water. */}
+          {specimen !== "water" && (
+            <gridHelper args={[32, 32, "#2c353d", "#1d242a"]} position={[0, -0.01, 0]} />
+          )}
           <OrbitControls makeDefault target={[0, 2, 0]} />
         </Canvas>
         <div

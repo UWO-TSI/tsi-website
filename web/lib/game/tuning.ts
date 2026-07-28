@@ -46,6 +46,18 @@ export interface Tuning {
     drift: number;
   };
   water: {
+    /** Open-water colour, hex. Sampled #62DAE6 off David's stylised reference. */
+    deepColor: number;
+    /** Colour at the bank, hex. Sampled #C9EEF4 — paler, not darker. */
+    shallowColor: number;
+    /** Foam colour, hex. Sampled #F8F8F7. */
+    foamColor: number;
+    /** Cells from the bank over which shallow blends to open water. */
+    depthFalloff: number;
+    /** Width of the white foam collar, in cells. */
+    foamWidth: number;
+    /** How opaque the foam gets at its strongest. */
+    foamStrength: number;
     /** How fast the flow normal scrolls, UV/sec. */
     flowSpeed: number;
     /** World units one repeat of the flow normal covers. */
@@ -56,10 +68,18 @@ export interface Tuning {
     opacity: number;
     /** How glossy the surface reads. Lower is shinier. */
     roughness: number;
-    /** Cells from the bank over which shallow fades to deep. */
-    depthFalloff: number;
     /** Sky sheen at grazing angles — stands in for a real reflection. */
     fresnel: number;
+    /** Brightness of the mirrored sun. */
+    sunGlint: number;
+    /** Tightness of the sun's reflection. Higher is a smaller, harder spot. */
+    sunSharp: number;
+    /** Vertical wave amplitude, world units. Keep it small. */
+    waveHeight: number;
+    /** Wavelength of the swell, world units. */
+    waveScale: number;
+    /** Swell speed. */
+    waveSpeed: number;
   };
   grass: {
     /** 0 = procedural crossed cards, 1 = the low-poly blade pack. */
@@ -100,16 +120,28 @@ export const TUNING_DEFAULTS: Tuning = {
     wobble: 0.26,
     drift: 3.5,
   },
-  // Retuned 2026-07-28 against David's ACNH reference: the water there is
-  // near-mirror with broad soft undulation, not a busy rippled surface.
+  // Sampled off David's stylised reference 2026-07-28. Note the ramp runs PALE
+  // at the bank to SATURATED in open water — the opposite of the ACNH rain
+  // capture, which was dark mid-channel. Different look, and this is the one
+  // he picked.
   water: {
+    deepColor: 0x62dae6,
+    shallowColor: 0xc9eef4,
+    foamColor: 0xf8f8f7,
+    depthFalloff: 2.2,
+    foamWidth: 0.85,
+    foamStrength: 0.9,
     flowSpeed: 0.04,
     flowScale: 11,
     ripple: 0.18,
-    opacity: 0.9,
+    opacity: 0.88,
     roughness: 0.12,
-    depthFalloff: 2.5,
-    fresnel: 0.35,
+    fresnel: 0.25,
+    sunGlint: 0.85,
+    sunSharp: 48,
+    waveHeight: 0.035,
+    waveScale: 7,
+    waveSpeed: 0.7,
   },
   grass: {
     model: 1,
@@ -169,7 +201,12 @@ export function tuningSource(): string {
   const group = (name: string, obj: Record<string, number>) =>
     `  ${name}: {\n` +
     Object.entries(obj)
-      .map(([k, v]) => `    ${k}: ${Number(v.toFixed(4))},`)
+      // Colours read as hex or the pasted block is a wall of decimals.
+      .map(([k, v]) =>
+        /Color$/.test(k)
+          ? `    ${k}: 0x${Math.round(v).toString(16).padStart(6, "0")},`
+          : `    ${k}: ${Number(v.toFixed(4))},`
+      )
       .join("\n") +
     "\n  },";
   return (
