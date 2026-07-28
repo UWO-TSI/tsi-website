@@ -70,10 +70,18 @@ export interface Tuning {
     roughness: number;
     /** Sky sheen at grazing angles — stands in for a real reflection. */
     fresnel: number;
-    /** Brightness of the mirrored sun. */
+    /** Brightness of the broad blown-out glare sheet. */
+    glare: number;
+    /** Width of that sheet. LOWER is wider — it is a specular power. */
+    glareWidth: number;
+    /** Brightness of the tight sparkle points riding on top. */
     sunGlint: number;
-    /** Tightness of the sun's reflection. Higher is a smaller, harder spot. */
+    /** Tightness of the sparkle. Higher is a smaller, harder point. */
     sunSharp: number;
+    /** How much the sparkle breaks into intermittent points vs a steady sheen. */
+    sparkle: number;
+    /** How fast the sparkle field churns. */
+    sparkleSpeed: number;
     /** Vertical wave amplitude, world units. Keep it small. */
     waveHeight: number;
     /** Wavelength of the swell, world units. */
@@ -137,8 +145,12 @@ export const TUNING_DEFAULTS: Tuning = {
     opacity: 0.88,
     roughness: 0.12,
     fresnel: 0.25,
-    sunGlint: 0.85,
-    sunSharp: 48,
+    glare: 1.5,
+    glareWidth: 26,
+    sunGlint: 6.5,
+    sunSharp: 230,
+    sparkle: 0.7,
+    sparkleSpeed: 1.4,
     waveHeight: 0.035,
     waveScale: 7,
     waveSpeed: 0.7,

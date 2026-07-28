@@ -276,8 +276,12 @@ const ROWS: Record<Specimen, Row[]> = {
     { group: "water", key: "depthFalloff", label: "depth falloff", min: 0.2, max: 8, step: 0.1, note: "cells over which shallow blends to open water" },
     { group: "water", key: "foamWidth", label: "foam width", min: 0, max: 3, step: 0.05, note: "width of the white collar, in cells" },
     { group: "water", key: "foamStrength", label: "foam strength", min: 0, max: 1, step: 0.02, note: "how opaque the collar gets" },
-    { group: "water", key: "sunGlint", label: "sun glint", min: 0, max: 3, step: 0.05, note: "brightness of the mirrored sun" },
-    { group: "water", key: "sunSharp", label: "glint tightness", min: 4, max: 200, step: 2, note: "higher is a smaller, harder spot" },
+    { group: "water", key: "glare", label: "glare sheet", min: 0, max: 8, step: 0.1, note: "broad blown-out sheen — over 1 clips to white on purpose" },
+    { group: "water", key: "glareWidth", label: "glare spread", min: 1, max: 60, step: 0.5, note: "LOWER is wider; it is a specular power" },
+    { group: "water", key: "sunGlint", label: "flare brightness", min: 0, max: 20, step: 0.1, note: "the sharp points riding on the sheet" },
+    { group: "water", key: "sunSharp", label: "flare tightness", min: 20, max: 600, step: 5, note: "higher is smaller and harder" },
+    { group: "water", key: "sparkle", label: "flare intermittency", min: 0, max: 1, step: 0.02, note: "0 = steady sheen, 1 = flares come and go" },
+    { group: "water", key: "sparkleSpeed", label: "flare churn", min: 0, max: 5, step: 0.05, note: "how fast the sparkle field moves" },
     { group: "water", key: "waveHeight", label: "wave height", min: 0, max: 0.3, step: 0.005, note: "vertical swell, world units — keep it small" },
     { group: "water", key: "waveScale", label: "wave length", min: 1, max: 30, step: 0.5, note: "world units per swell" },
     { group: "water", key: "waveSpeed", label: "wave speed", min: 0, max: 3, step: 0.05, note: "how fast the swell travels" },
@@ -410,7 +414,17 @@ export default function TuneBench() {
   return (
     <div style={{ position: "fixed", top: 40, left: 0, right: 0, bottom: 0, background: "#11151a", display: "flex" }}>
       <div style={{ flex: 1, position: "relative" }}>
-        <Canvas shadows camera={{ position: [16, 11, 20], fov: 40 }}>
+        <Canvas
+          shadows
+          camera={{ position: [16, 11, 20], fov: 40 }}
+          // MATCH THE WORLD. GameWorld sets NeutralToneMapping; the Canvas
+          // default is not the same curve, so without this the bench renders
+          // brightness differently from the thing it exists to judge — and a
+          // glare tuned here would be wrong there.
+          onCreated={({ gl }) => {
+            gl.toneMapping = THREE.NeutralToneMapping;
+          }}
+        >
           <color attach="background" args={["#202931"]} />
           <hemisphereLight args={["#cfe2ff", "#5a6b4a", 0.5]} />
           <directionalLight position={[6, 10, 4]} intensity={1.4} color="#FFF7E4" castShadow />

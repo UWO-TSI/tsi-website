@@ -286,6 +286,7 @@ function waterMaterial(): THREE.MeshStandardMaterial {
         `#include <common>
          attribute float aShore;
          varying float vShore;
+         varying vec3 vWorldPos;
          uniform float uTime;
          uniform float uWaveHeight;
          uniform float uWaveScale;
@@ -301,7 +302,8 @@ function waterMaterial(): THREE.MeshStandardMaterial {
         "#include <begin_vertex>",
         `#include <begin_vertex>
          vShore = aShore;
-         transformed.y += waveH;`
+         transformed.y += waveH;
+         vWorldPos = (modelMatrix * vec4(transformed, 1.0)).xyz;`
       );
 
     shader.fragmentShader = shader.fragmentShader
@@ -319,7 +321,13 @@ function waterMaterial(): THREE.MeshStandardMaterial {
          uniform float uFresnel;
          uniform float uSunGlint;
          uniform float uSunSharp;
-         varying float vShore;`
+         uniform float uGlare;
+         uniform float uGlareWidth;
+         uniform float uSparkle;
+         uniform float uSparkleSpeed;
+         uniform float uTime;
+         varying float vShore;
+         varying vec3 vWorldPos;`
       )
       .replace(
         "#include <color_fragment>",
@@ -337,10 +345,35 @@ function waterMaterial(): THREE.MeshStandardMaterial {
          vec3 wV = normalize(vViewPosition);
          float rim = pow(1.0 - clamp(dot(wN, wV), 0.0, 1.0), 3.0);
          totalEmissiveRadiance += uSky * rim * uFresnel;
-         // The mirrored sun. Killed inside the foam, where the surface is
-         // broken up and a mirror highlight would look like a bug.
-         float glint = pow(max(dot(reflect(-wV, wN), uSunView), 0.0), max(uSunSharp, 1.0));
-         totalEmissiveRadiance += vec3(1.0, 0.98, 0.92) * glint * uSunGlint * (1.0 - foam);`
+         // THE SUN ON THE WATER, in two lobes plus a sparkle field.
+         //
+         // One tight specular lobe is what we had, and it reads as a dull dot
+         // because that is what it is. The reference has a BROAD blown-out
+         // sheet of glare with sharp points flickering inside it, so:
+         //
+         //   broad  low power, wide, over-bright. This is the sheet. Pushing it
+         //          past 1.0 is deliberate — it clips to white and reads as
+         //          overexposure, which is the "super shiny" part.
+         //   tight  high power, small. The individual flares.
+         //   spark  three sines beating against each other over WORLD position
+         //          and time. Their product is near zero most of the time and
+         //          occasionally spikes, which is what makes the flares come
+         //          and go instead of sitting there. This is the "occasionally"
+         //          and it is also where the dimension comes from — the field
+         //          moves independently of the surface, so the highlight
+         //          crawls across it.
+         //
+         // Both are killed inside the foam, where a mirror highlight is wrong.
+         float sd = max(dot(reflect(-wV, wN), uSunView), 0.0);
+         float broad = pow(sd, max(uGlareWidth, 0.5));
+         float tight = pow(sd, max(uSunSharp, 1.0));
+         float t = uTime * uSparkleSpeed;
+         float n = sin(vWorldPos.x * 2.7 + t * 1.7)
+                 * sin(vWorldPos.z * 2.3 - t * 1.3)
+                 * sin((vWorldPos.x + vWorldPos.z) * 1.7 + t * 2.3);
+         float spark = mix(1.0, smoothstep(0.15, 0.85, n * 0.5 + 0.5), uSparkle);
+         vec3 sunCol = vec3(1.0, 0.98, 0.92);
+         totalEmissiveRadiance += sunCol * (broad * uGlare + tight * uSunGlint * spark) * (1.0 - foam);`
       );
   };
   return mat;
@@ -362,8 +395,12 @@ const waterUniforms = {
   foamWidth: { value: 0.85 },
   foamStrength: { value: 0.9 },
   fresnel: { value: 0.25 },
-  sunGlint: { value: 0.85 },
-  sunSharp: { value: 48 },
+  glare: { value: 1.5 },
+  glareWidth: { value: 26 },
+  sunGlint: { value: 6.5 },
+  sunSharp: { value: 230 },
+  sparkle: { value: 0.7 },
+  sparkleSpeed: { value: 1.4 },
   waveHeight: { value: 0.035 },
   waveScale: { value: 7 },
   waveSpeed: { value: 0.7 },
@@ -396,6 +433,10 @@ export function advanceWater(
     foamStrength: number;
     sunGlint: number;
     sunSharp: number;
+    glare: number;
+    glareWidth: number;
+    sparkle: number;
+    sparkleSpeed: number;
     waveHeight: number;
     waveScale: number;
     waveSpeed: number;
@@ -414,6 +455,10 @@ export function advanceWater(
   u.fresnel.value = cfg.fresnel;
   u.sunGlint.value = cfg.sunGlint;
   u.sunSharp.value = cfg.sunSharp;
+  u.glare.value = cfg.glare;
+  u.glareWidth.value = cfg.glareWidth;
+  u.sparkle.value = cfg.sparkle;
+  u.sparkleSpeed.value = cfg.sparkleSpeed;
   u.waveHeight.value = cfg.waveHeight;
   u.waveScale.value = cfg.waveScale;
   u.waveSpeed.value = cfg.waveSpeed;
