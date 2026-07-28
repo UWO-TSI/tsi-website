@@ -823,3 +823,61 @@ export function easedCellOutline(inLayer: LayerTest, cx: number, cz: number): nu
   }
   return out;
 }
+
+// ── Water depth ──────────────────────────────────────────────────
+
+/**
+ * Distance from every river cell to the nearest bank, in cells.
+ *
+ * WHY THIS EXISTS. The ACNH reference David gave is not a flat blue sheet: the
+ * water is deep navy in the channel and lightens toward the bank, and that
+ * gradient is most of what makes it read as WATER rather than as a painted
+ * surface. Sampling the reference gives roughly #26415E in the middle and
+ * #6F8496 at the edge — a big swing, and it tracks distance from the bank.
+ *
+ * We can compute that exactly rather than faking it in a shader, because the
+ * map already knows where the banks are. One BFS at build time, baked into a
+ * vertex attribute, zero runtime cost. A screen-space depth fade would be an
+ * approximation of a fact we already have.
+ *
+ * Non-river cells read 0. Void counts as a bank: where a river meets the sea
+ * the mouth should shallow out, not run deep to the edge of the world.
+ */
+export function shoreDistance(map: IslandMap): Float32Array {
+  const d = new Float32Array(map.width * map.depth);
+  const queue: number[] = [];
+  for (let cz = 0; cz < map.depth; cz++) {
+    for (let cx = 0; cx < map.width; cx++) {
+      const i = cellIndex(map, cx, cz);
+      if (!isRiver(map.surfaces[i])) continue;
+      let bank = false;
+      for (const [dx, dz] of DIR_OFFSETS) {
+        const nx = cx + dx;
+        const nz = cz + dz;
+        if (!inBounds(map, nx, nz) || !isRiver(surfaceAt(map, nx, nz))) {
+          bank = true;
+          break;
+        }
+      }
+      if (bank) {
+        d[i] = 1;
+        queue.push(i);
+      }
+    }
+  }
+  for (let head = 0; head < queue.length; head++) {
+    const i = queue[head];
+    const cz = Math.floor(i / map.width);
+    const cx = i % map.width;
+    for (const [dx, dz] of DIR_OFFSETS) {
+      const nx = cx + dx;
+      const nz = cz + dz;
+      if (!inBounds(map, nx, nz)) continue;
+      const n = cellIndex(map, nx, nz);
+      if (!isRiver(map.surfaces[n]) || d[n] !== 0) continue;
+      d[n] = d[i] + 1;
+      queue.push(n);
+    }
+  }
+  return d;
+}

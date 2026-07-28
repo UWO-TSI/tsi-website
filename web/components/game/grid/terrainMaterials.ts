@@ -226,20 +226,93 @@ function waterMaterial(): THREE.MeshStandardMaterial {
     waterNrm = t;
   }
   const mat = new THREE.MeshStandardMaterial({
-    color: 0x4f87a8,
+    // Deep-water colour. MEASURED off David's ACNH reference, not picked: the
+    // channel centre samples #26415E and the bank rim #6F8496. The previous
+    // #4F87A8 was both far too light and far too cyan, which is most of why the
+    // river read as painted-on.
+    color: 0x26415e,
     normalMap: waterNrm,
-    normalScale: new THREE.Vector2(0.55, 0.55),
-    roughness: 0.18,
-    metalness: 0.05,
+    normalScale: new THREE.Vector2(0.18, 0.18),
+    roughness: 0.12,
+    metalness: 0.1,
     transparent: true,
-    opacity: 0.82,
+    opacity: 0.9,
     // The surface sits 0.078u below its banks and is viewed from above; writing
     // depth would z-fight the riverbed once that is drawn under it.
     depthWrite: false,
   });
   mat.name = "terrain:mRiver";
+
+  /**
+   * Two things the reference has that a flat tinted plane cannot.
+   *
+   * 1. A DEPTH GRADIENT. ACNH water is dark navy mid-channel and lightens
+   *    sharply at the bank. `aShore` carries the exact distance in cells,
+   *    baked by `shoreDistance()` at build time, so this is a lookup rather
+   *    than an approximation.
+   *
+   * 2. A SKY SHEEN. The reference reads near-mirror — you can see the bank and
+   *    the standing villager reflected in it. Real reflections are a second
+   *    render pass we are not paying for; a Fresnel term that brightens toward
+   *    grazing angles gets most of that read for free, because the grazing
+   *    angles are exactly where a reflection would dominate.
+   *
+   * Both go through `onBeforeCompile` on a stock MeshStandardMaterial, so the
+   * water still takes the scene's lights, fog and shadows normally.
+   */
+  mat.onBeforeCompile = (shader) => {
+    shader.uniforms.uShallow = waterUniforms.shallow;
+    shader.uniforms.uSky = waterUniforms.sky;
+    shader.uniforms.uDepthFalloff = waterUniforms.depthFalloff;
+    shader.uniforms.uFresnel = waterUniforms.fresnel;
+
+    shader.vertexShader = shader.vertexShader
+      .replace(
+        "#include <common>",
+        `#include <common>
+         attribute float aShore;
+         varying float vShore;`
+      )
+      .replace("#include <begin_vertex>", "#include <begin_vertex>\n vShore = aShore;");
+
+    shader.fragmentShader = shader.fragmentShader
+      .replace(
+        "#include <common>",
+        `#include <common>
+         uniform vec3 uShallow;
+         uniform vec3 uSky;
+         uniform float uDepthFalloff;
+         uniform float uFresnel;
+         varying float vShore;`
+      )
+      .replace(
+        "#include <color_fragment>",
+        `#include <color_fragment>
+         // 1 at the bank, 0 once we are uDepthFalloff cells out.
+         float shallow = 1.0 - clamp((vShore - 1.0) / max(uDepthFalloff, 0.001), 0.0, 1.0);
+         diffuseColor.rgb = mix(diffuseColor.rgb, uShallow, shallow * shallow);`
+      )
+      .replace(
+        "#include <emissivemap_fragment>",
+        `#include <emissivemap_fragment>
+         float rim = pow(1.0 - clamp(dot(normalize(normal), normalize(vViewPosition)), 0.0, 1.0), 3.0);
+         totalEmissiveRadiance += uSky * rim * uFresnel;`
+      );
+  };
   return mat;
 }
+
+/**
+ * Live handles on the water shader. Held here rather than rebuilt per frame:
+ * the material is shared and cached, so a bench move must write through to the
+ * uniform objects the compiled shader already holds.
+ */
+const waterUniforms = {
+  shallow: { value: new THREE.Color(0x6f8496) },
+  sky: { value: new THREE.Color(0x9fc4e8) },
+  depthFalloff: { value: 2.5 },
+  fresnel: { value: 0.35 },
+};
 
 /**
  * Scroll the flow and apply the bench's water settings. Called once per frame
@@ -247,8 +320,18 @@ function waterMaterial(): THREE.MeshStandardMaterial {
  */
 export function advanceWater(
   elapsed: number,
-  cfg: { flowSpeed: number; flowScale: number; ripple: number; opacity: number; roughness: number }
+  cfg: {
+    flowSpeed: number;
+    flowScale: number;
+    ripple: number;
+    opacity: number;
+    roughness: number;
+    depthFalloff: number;
+    fresnel: number;
+  }
 ): void {
+  waterUniforms.depthFalloff.value = cfg.depthFalloff;
+  waterUniforms.fresnel.value = cfg.fresnel;
   const mat = cache?.get("mRiver") as THREE.MeshStandardMaterial | undefined;
   if (!mat || !mat.normalMap) return;
   const r = Math.max(0.01, 2 / cfg.flowScale);

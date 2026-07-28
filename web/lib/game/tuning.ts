@@ -56,6 +56,10 @@ export interface Tuning {
     opacity: number;
     /** How glossy the surface reads. Lower is shinier. */
     roughness: number;
+    /** Cells from the bank over which shallow fades to deep. */
+    depthFalloff: number;
+    /** Sky sheen at grazing angles — stands in for a real reflection. */
+    fresnel: number;
   };
   grass: {
     /** 0 = procedural crossed cards, 1 = the low-poly blade pack. */
@@ -96,12 +100,16 @@ export const TUNING_DEFAULTS: Tuning = {
     wobble: 0.26,
     drift: 3.5,
   },
+  // Retuned 2026-07-28 against David's ACNH reference: the water there is
+  // near-mirror with broad soft undulation, not a busy rippled surface.
   water: {
-    flowSpeed: 0.06,
-    flowScale: 6,
-    ripple: 0.55,
-    opacity: 0.82,
-    roughness: 0.18,
+    flowSpeed: 0.04,
+    flowScale: 11,
+    ripple: 0.18,
+    opacity: 0.9,
+    roughness: 0.12,
+    depthFalloff: 2.5,
+    fresnel: 0.35,
   },
   grass: {
     model: 1,

@@ -223,12 +223,21 @@ function WaterSpecimen() {
   useFrame((state) => advanceWater(state.clock.elapsedTime, t.water));
 
   const geo = useMemo(() => {
-    const g = new THREE.PlaneGeometry(12, 12);
+    // Segmented, because the depth gradient is a per-vertex attribute and a
+    // single quad has nothing to interpolate across.
+    const g = new THREE.PlaneGeometry(12, 12, 24, 24);
     g.rotateX(-Math.PI / 2);
     const pos = g.attributes.position;
     const uv = g.attributes.uv;
-    for (let i = 0; i < pos.count; i++) uv.setXY(i, pos.getX(i) / 2, pos.getZ(i) / 2);
+    // Fake a channel: shore distance grows toward the middle in Z, so the pane
+    // shows the same bank-to-deep-to-bank ramp a real river cross-section does.
+    const shore = new Float32Array(pos.count);
+    for (let i = 0; i < pos.count; i++) {
+      uv.setXY(i, pos.getX(i) / 2, pos.getZ(i) / 2);
+      shore[i] = 1 + (1 - Math.abs(pos.getZ(i)) / 6) * 5;
+    }
     uv.needsUpdate = true;
+    g.setAttribute("aShore", new THREE.BufferAttribute(shore, 1));
     return g;
   }, []);
 
@@ -264,6 +273,8 @@ const ROWS: Record<Specimen, Row[]> = {
     { group: "water", key: "ripple", label: "ripple depth", min: 0, max: 2, step: 0.05, note: "mRiver_Nrm strength — 0 is a flat pane" },
     { group: "water", key: "opacity", label: "opacity", min: 0.3, max: 1, step: 0.02, note: "how much bed shows through" },
     { group: "water", key: "roughness", label: "roughness", min: 0, max: 1, step: 0.02, note: "lower is glossier" },
+    { group: "water", key: "depthFalloff", label: "depth falloff", min: 0.2, max: 8, step: 0.1, note: "cells from the bank over which shallow #6F8496 fades to deep #26415E" },
+    { group: "water", key: "fresnel", label: "sky sheen", min: 0, max: 1.5, step: 0.02, note: "grazing-angle brightening — stands in for a reflection" },
   ],
   gull: [
     { group: "gull", key: "flap", label: "wing flap", min: 0.2, max: 6, step: 0.05, note: "animation speed multiplier" },

@@ -40,6 +40,8 @@ import {
   cellToWorldZ,
   needsCliff,
   bankEdges,
+  shoreDistance,
+  cellIndex,
   easedCellOutline,
   type LayerTest,
 } from "@/lib/game/grid";
@@ -90,10 +92,12 @@ interface Mesh {
   uv: number[];
   /** Explicit, because banks are sloped and the flat +Y default would flatten them. */
   nrm: number[];
+  /** Cells from the nearest bank. River only; empty elsewhere. */
+  dep: number[];
   idx: number[];
 }
 
-const emptyMesh = (): Mesh => ({ pos: [], uv: [], nrm: [], idx: [] });
+const emptyMesh = (): Mesh => ({ pos: [], uv: [], nrm: [], dep: [], idx: [] });
 
 /**
  * Append one cell.
@@ -102,7 +106,16 @@ const emptyMesh = (): Mesh => ({ pos: [], uv: [], nrm: [], idx: [] });
  * extra geometry stays on boundaries where it does something instead of on all
  * ~11k land cells. Boundary cells emit a centre-fan over the eased outline.
  */
-function addCell(mesh: Mesh, inLayer: LayerTest, cx: number, cz: number, x: number, y: number, z: number) {
+function addCell(
+  mesh: Mesh,
+  inLayer: LayerTest,
+  cx: number,
+  cz: number,
+  x: number,
+  y: number,
+  z: number,
+  depth?: number
+) {
   const s = 1 / (UV_CELLS_PER_REPEAT * TILE);
   const base = mesh.pos.length / 3;
   const push = (px: number, pz: number) => {
@@ -111,6 +124,7 @@ function addCell(mesh: Mesh, inLayer: LayerTest, cx: number, cz: number, x: numb
     // instead of each restarting it.
     mesh.uv.push(px * s, pz * s);
     mesh.nrm.push(0, 1, 0);
+    if (depth !== undefined) mesh.dep.push(depth);
   };
 
   const outline = easedCellOutline(inLayer, cx, cz);
@@ -214,6 +228,10 @@ function build(mesh: Mesh): THREE.BufferGeometry | null {
   g.setAttribute("position", new THREE.Float32BufferAttribute(mesh.pos, 3));
   g.setAttribute("uv", new THREE.Float32BufferAttribute(mesh.uv, 2));
   g.setAttribute("normal", new THREE.Float32BufferAttribute(mesh.nrm, 3));
+  // Only the water carries this, and only when every vertex has one.
+  if (mesh.dep.length === mesh.pos.length / 3) {
+    g.setAttribute("aShore", new THREE.Float32BufferAttribute(mesh.dep, 1));
+  }
   g.setIndex(mesh.idx);
   g.computeBoundingSphere();
   return g;
@@ -228,6 +246,8 @@ export default function GridTerrain({ map }: { map: IslandMap }) {
     // land, not about which cells we happen to draw. `inGround` deliberately
     // still counts cliff cells: excluding them would cut the ground away at
     // the foot of every cliff and open a gap the cliff piece does not cover.
+    const shore = shoreDistance(map);
+
     const inGround: LayerTest = (cx, cz) =>
       inBounds(map, cx, cz) && !isVoid(surfaceAt(map, cx, cz)) && !isRiver(surfaceAt(map, cx, cz));
     const inSurface = (s: number): LayerTest => (cx, cz) =>
@@ -252,7 +272,7 @@ export default function GridTerrain({ map }: { map: IslandMap }) {
             // NOT eased, and drawn full-square on purpose. Nothing is beneath
             // the water, so cutting its corners would show sky; instead the
             // rounded grass bank overlaps it from above.
-            addCell(river, () => true, cx, cz, x, y - WATER_DROP, z);
+            addCell(river, () => true, cx, cz, x, y - WATER_DROP, z, shore[cellIndex(map, cx, cz)]);
             continue;
           }
 
