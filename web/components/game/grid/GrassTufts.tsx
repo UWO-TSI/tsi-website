@@ -21,6 +21,7 @@
  */
 
 import { useEffect, useMemo, useRef } from "react";
+import { useGLTF } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import {
@@ -36,6 +37,9 @@ import {
   cellToWorldZ,
 } from "@/lib/game/grid";
 import { useTuning } from "@/lib/game/tuning";
+
+const PACK_URL = "/assets/nature/grass-tufts.glb";
+useGLTF.preload(PACK_URL);
 
 /** Deterministic per-cell hash in [0, 1). Same cell, same tuft, every load. */
 function hash01(cx: number, cz: number, salt: number): number {
@@ -98,7 +102,7 @@ export function tuftGeometry(height: number): THREE.BufferGeometry {
 export function patchWind(
   mat: THREE.Material,
   uTime: { value: number },
-  uWind: { value: THREE.Vector3 }
+  uWind: { value: THREE.Vector4 }
 ) {
   mat.onBeforeCompile = (shader) => {
     shader.uniforms.uTime = uTime;
@@ -108,7 +112,7 @@ export function patchWind(
         "#include <common>",
         `#include <common>
          uniform float uTime;
-         uniform vec3 uWind; // x = amount, y = speed, z = gust wavelength`
+         uniform vec4 uWind; // amount, speed, gust wavelength, tuft height`
       )
       .replace(
         "#include <begin_vertex>",
@@ -118,7 +122,12 @@ export function patchWind(
          #else
            vec3 tuftOrigin = vec3(0.0);
          #endif
-         float bend = uv.y * uv.y;
+         // Bend from HEIGHT UP THE BLADE, not from uv.y — the imported pack
+         // carries no UVs, and height works for both sources. Tufts are
+         // authored with their base at y = 0, so this is 0 at the root and 1 at
+         // the tip; squaring it keeps the root planted.
+         float up = clamp(transformed.y / max(uWind.w, 0.001), 0.0, 1.0);
+         float bend = up * up;
          float gust = (tuftOrigin.x + tuftOrigin.z) / max(uWind.z, 0.001);
          float phase = uTime * uWind.y + gust;
          transformed.x += sin(phase) * bend * uWind.x;
@@ -137,11 +146,11 @@ export default function GrassTufts({ map }: { map: IslandMap }) {
   // uniforms: the react-compiler lint forbids mutating a useMemo result, and a
   // uniform object exists precisely to be mutated every frame.
   const uTime = useRef({ value: 0 });
-  const uWind = useRef({ value: new THREE.Vector3(0.09, 1.1, 9) });
+  const uWind = useRef({ value: new THREE.Vector4(0.09, 1.1, 9, 0.34) });
 
   // Placements depend only on density, so a sway tweak does not rebuild them.
   const placements = useMemo(() => {
-    const out: { x: number; y: number; z: number; rot: number; s: number }[] = [];
+    const out: { x: number; y: number; z: number; rot: number; s: number; v: number }[] = [];
     if (t.grass.tuftDensity <= 0) return out;
     const chance = t.grass.tuftDensity / 100;
     for (let cz = 0; cz < map.depth; cz++) {
@@ -154,28 +163,52 @@ export default function GrassTufts({ map }: { map: IslandMap }) {
           x: cellToWorldX(map, cx) + (hash01(cx, cz, 2) - 0.5) * TILE,
           y: levelAt(map, cx, cz) * LEVEL_STEP,
           z: cellToWorldZ(map, cz) + (hash01(cx, cz, 3) - 0.5) * TILE,
-          rot: hash01(cx, cz, 4) * Math.PI,
+          rot: hash01(cx, cz, 4) * Math.PI * 2,
           s: 0.75 + hash01(cx, cz, 5) * 0.5,
+          v: Math.floor(hash01(cx, cz, 6) * 64) % 64,
         });
       }
     }
     return out;
   }, [map, t.grass.tuftDensity]);
 
-  const geometry = useMemo(() => tuftGeometry(t.grass.tuftHeight), [t.grass.tuftHeight]);
+  const useModel = t.grass.model >= 0.5;
+
+  // The imported pack. Tufts are authored 1.0 unit tall with their base at the
+  // origin, so `tuftHeight` is a straight scale rather than a rebuild — which is
+  // why the height slider does not churn geometry on this path.
+  const { scene: packScene } = useGLTF(PACK_URL);
+  const variants = useMemo(() => {
+    if (!useModel) return [] as THREE.BufferGeometry[];
+    const out: THREE.BufferGeometry[] = [];
+    packScene.traverse((o) => {
+      const mesh = o as THREE.Mesh;
+      if (mesh.isMesh && mesh.geometry) out.push(mesh.geometry);
+    });
+    return out;
+  }, [packScene, useModel]);
+  const scaleFor = useModel ? t.grass.tuftHeight : 1;
+
+  const cardGeometry = useMemo(
+    () => (useModel ? new THREE.BufferGeometry() : tuftGeometry(t.grass.tuftHeight)),
+    [t.grass.tuftHeight, useModel]
+  );
 
   const material = useMemo(() => {
     const m = new THREE.MeshStandardMaterial({
-      color: 0x86b862,
+      // White base when the pack supplies colour through COLOR_0; the flat green
+      // is only for the procedural cards, which carry no vertex colour.
+      color: useModel ? 0xffffff : 0x86b862,
+      vertexColors: useModel,
       roughness: 0.95,
       metalness: 0,
       side: THREE.DoubleSide,
-      // Cards read as solid blades from the diorama camera; alpha would cost a
-      // sorted transparent pass for no visible gain at this size.
+      // Blades read as solid from the diorama camera; alpha would cost a sorted
+      // transparent pass for no visible gain at this size.
       transparent: false,
     });
     return m;
-  }, []);
+  }, [useModel]);
 
   // The wind patch is attached in an EFFECT, not in the memo that builds the
   // material: effects may read refs, render may not, and the material is not
@@ -186,35 +219,56 @@ export default function GrassTufts({ map }: { map: IslandMap }) {
 
   useFrame((state) => {
     uTime.current.value = state.clock.elapsedTime;
-    uWind.current.value.set(t.grass.swayAmount, t.grass.swaySpeed, t.grass.gustLength);
+    uWind.current.value.set(t.grass.swayAmount, t.grass.swaySpeed, t.grass.gustLength, t.grass.tuftHeight);
   });
 
-  const setMatrices = (inst: THREE.InstancedMesh | null) => {
+  const setMatricesFor = (variant: number, total: number) => (inst: THREE.InstancedMesh | null) => {
     if (!inst) return;
     const m = new THREE.Matrix4();
     const q = new THREE.Quaternion();
     const e = new THREE.Euler();
     const p = new THREE.Vector3();
     const sc = new THREE.Vector3();
-    placements.forEach((pl, i) => {
+    let k = 0;
+    for (const pl of placements) {
+      if (total > 1 && pl.v % total !== variant) continue;
       e.set(0, pl.rot, 0);
       q.setFromEuler(e);
       p.set(pl.x, pl.y, pl.z);
-      sc.setScalar(pl.s);
+      sc.setScalar(pl.s * scaleFor);
       m.compose(p, q, sc);
-      inst.setMatrixAt(i, m);
-    });
+      inst.setMatrixAt(k++, m);
+    }
+    inst.count = k;
     inst.instanceMatrix.needsUpdate = true;
   };
 
   if (placements.length === 0) return null;
 
+  // ONE InstancedMesh per tuft variant. The pack collapses to a single material
+  // (colour is baked into COLOR_0 by the extractor), so this is `variants` draw
+  // calls for the entire grass layer of the island, not one per tuft.
+  if (useModel && variants.length > 0) {
+    return (
+      <group>
+        {variants.map((geo, i) => (
+          <instancedMesh
+            key={i}
+            ref={setMatricesFor(i, variants.length)}
+            args={[geo, material, placements.length]}
+            frustumCulled={false}
+            castShadow={false}
+            receiveShadow
+          />
+        ))}
+      </group>
+    );
+  }
+
   return (
     <instancedMesh
-      ref={setMatrices}
-      args={[geometry, material, placements.length]}
-      // Instanced bounds do not track per-instance transforms well enough for a
-      // set spread over the whole island; culling would pop entire fields.
+      ref={setMatricesFor(0, 1)}
+      args={[cardGeometry, material, placements.length]}
       frustumCulled={false}
       castShadow={false}
       receiveShadow

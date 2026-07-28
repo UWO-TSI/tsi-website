@@ -118,20 +118,33 @@ function GrassSpecimen() {
   // uniforms: the react-compiler lint forbids mutating a useMemo result, and a
   // uniform object exists precisely to be mutated every frame.
   const uTime = useRef({ value: 0 });
-  const uWind = useRef({ value: new THREE.Vector3(0.09, 1.1, 9) });
+  const uWind = useRef({ value: new THREE.Vector4(0.09, 1.1, 9, 0.34) });
 
-  // Same crossed-card geometry the world uses.
-  const geometry = useMemo(() => tuftGeometry(t.grass.tuftHeight), [t.grass.tuftHeight]);
+  const useModel = t.grass.model >= 0.5;
+  const { scene: packScene } = useGLTF("/assets/nature/grass-tufts.glb");
+  const packGeo = useMemo(() => {
+    let g: THREE.BufferGeometry | null = null;
+    packScene.traverse((o) => {
+      const m = o as THREE.Mesh;
+      if (!g && m.isMesh && m.geometry) g = m.geometry;
+    });
+    return g;
+  }, [packScene]);
+  // Same geometry the world uses on whichever path is selected.
+  const cardGeo = useMemo(() => tuftGeometry(t.grass.tuftHeight), [t.grass.tuftHeight]);
+  const geometry = useModel && packGeo ? packGeo : cardGeo;
+  const bladeScale = useModel ? t.grass.tuftHeight : 1;
 
   const material = useMemo(
     () =>
       new THREE.MeshStandardMaterial({
-        color: 0x86b862,
+        color: useModel ? 0xffffff : 0x86b862,
+        vertexColors: useModel,
         roughness: 0.95,
         metalness: 0,
         side: THREE.DoubleSide,
       }),
-    []
+    [useModel]
   );
 
   // The SAME patch the world uses, not a copy of it — see GrassTufts.
@@ -164,14 +177,14 @@ function GrassSpecimen() {
 
   useFrame((state) => {
     uTime.current.value = state.clock.elapsedTime;
-    uWind.current.value.set(t.grass.swayAmount, t.grass.swaySpeed, t.grass.gustLength);
+    uWind.current.value.set(t.grass.swayAmount, t.grass.swaySpeed, t.grass.gustLength, t.grass.tuftHeight);
   });
 
   return (
     <group>
       <mesh geometry={floor} material={floorMat ?? undefined} receiveShadow />
       <instancedMesh
-        key={`${count}-${t.grass.tuftHeight}`}
+        key={`${count}-${t.grass.tuftHeight}-${useModel}`}
         args={[geometry, material, count]}
         frustumCulled={false}
         ref={(inst) => {
@@ -189,7 +202,7 @@ function GrassSpecimen() {
             e.set(0, a * 3, 0);
             q.setFromEuler(e);
             p.set(Math.cos(a) * r, 0, Math.sin(a) * r);
-            s.setScalar(0.75 + ((i * 37) % 10) / 20);
+            s.setScalar((0.75 + ((i * 37) % 10) / 20) * bladeScale);
             m.compose(p, q, s);
             inst.setMatrixAt(i, m);
           }
@@ -228,6 +241,7 @@ const ROWS: Record<Specimen, Row[]> = {
     { group: "gull", key: "drift", label: "path drift", min: 0, max: 15, step: 0.5, note: "how far the loop centre wanders, world units" },
   ],
   grass: [
+    { group: "grass", key: "model", label: "blade model", min: 0, max: 1, step: 1, note: "0 = procedural cards (4 tri), 1 = imported pack (42 tri)" },
     { group: "grass", key: "normalStrength", label: "ground detail", min: 0, max: 3, step: 0.05, note: "ACNH mGrass_Nrm strength — 0 is the flat green" },
     { group: "grass", key: "normalScale", label: "detail scale", min: 0.5, max: 12, step: 0.25, note: "world units per repeat" },
     { group: "grass", key: "tuftDensity", label: "tuft density", min: 0, max: 40, step: 1, note: "tufts per 100 grass cells — this is the perf knob" },

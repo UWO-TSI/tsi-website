@@ -46,6 +46,8 @@ export interface Tuning {
     drift: number;
   };
   grass: {
+    /** 0 = procedural crossed cards, 1 = the low-poly blade pack. */
+    model: number;
     /** Strength of the ACNH normal map on the ground. 0 = the flat green. */
     normalStrength: number;
     /** World units one repeat of the detail normal covers. */
@@ -83,6 +85,7 @@ export const TUNING_DEFAULTS: Tuning = {
     drift: 3.5,
   },
   grass: {
+    model: 1,
     normalStrength: 0.6,
     normalScale: 2,
     tuftDensity: 6,
