@@ -385,9 +385,12 @@ function Gull({ anchor, seed, idx, swoopRef }: { anchor: [number, number]; seed:
           pose.y + (sy - pose.y) * w,
           pose.z + (sz - pose.z) * w
         );
-        // Tight turn, so it leans harder — but still about the FORWARD axis.
+        // Tight turn, so it leans harder — but still about the FORWARD axis,
+        // and DEEPENING the existing lean rather than fighting it, which a
+        // fixed sign here would do half the time.
         ref.current.rotation.y = w > 0.5 ? sa + Math.PI : pose.yaw;
-        ref.current.rotation.z = pose.roll - w * g.bank * 0.5;
+        const deepen = Math.sign(pose.roll || 1) * w * g.bank * 0.5;
+        ref.current.rotation.z = Math.max(-g.bank, Math.min(g.bank, pose.roll + deepen));
         return;
       }
     }

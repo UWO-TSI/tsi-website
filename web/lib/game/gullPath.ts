@@ -59,7 +59,7 @@ export interface GullPose {
   z: number;
   /** Rotation about Y that points the model's +Z forward along its velocity. */
   yaw: number;
-  /** Roll about the forward axis, radians. Positive leans into a left turn. */
+  /** Roll about the forward axis, radians. Signed so the bird leans INTO its turn. */
   roll: number;
 }
 
@@ -104,8 +104,16 @@ export function gullPose(t: number, p: GullParams, bankGain: number, maxBank: nu
   while (d > Math.PI) d -= Math.PI * 2;
   while (d < -Math.PI) d += Math.PI * 2;
 
+  // NEGATED, and the sign is not arbitrary. The model's forward is +Z, and a
+  // right-handed frame with forward +Z and up +Y puts +X on the bird's LEFT
+  // (three's camera convention has forward at -Z, so ours is mirrored). A
+  // POSITIVE rotation about +Z carries +X toward +Y, i.e. it lifts the left
+  // wing — which is the outside wing in a left turn. Rolling with the raw turn
+  // rate therefore leans the bird OUT of its turns, like a motorbike taken
+  // wrong. David, 2026-07-28: "it should bank inwards when turning not
+  // outwards."
   const turnRate = d / LOOKAHEAD;
-  const roll = Math.max(-maxBank, Math.min(maxBank, turnRate * bankGain));
+  const roll = Math.max(-maxBank, Math.min(maxBank, -turnRate * bankGain));
 
   return { x: _here.x, y: _here.y, z: _here.z, yaw, roll };
 }

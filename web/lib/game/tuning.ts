@@ -68,15 +68,16 @@ export interface Tuning {
  * bench changes only that tab.
  */
 export const TUNING_DEFAULTS: Tuning = {
+  // Gull values are DAVID'S, off the bench 2026-07-28. Do not "tidy" them.
   gull: {
-    flap: 0.85,
-    flapSpread: 0.3,
-    orbitSpeed: 0.09,
+    flap: 5.15,
+    flapSpread: 0.75,
+    orbitSpeed: 0.6,
     orbitRadius: 6.5,
-    altitude: 6.5,
-    bob: 1.1,
+    altitude: 8,
+    bob: 1.4,
     scale: 0.075,
-    bank: 0.55,
+    bank: 0.54,
     bankGain: 0.9,
     wobble: 0.26,
     drift: 3.5,
