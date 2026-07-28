@@ -1,8 +1,73 @@
 # QA Report
 
 > Owner: QA agent. All agents check this for bugs in their area.
-> Last updated: 2026-07-27 (Wave 33 — corner easing + coastal apron, art-cohesion branch)
+> Last updated: 2026-07-28 (Wave 34 — terrain leveling, half-step levels, art-cohesion branch)
 > **Lint baseline updated 2026-07-13: 74 errors / 52 warnings** (was 74/59 — seven genuinely-unused eslint-disable directives removed; mentorship/page.tsx keeps its two, the "unused" report there is a react-compiler two-pass quirk shielding a real declaration-order error).
+
+---
+
+## Wave 34 — 2026-07-28 Terrain leveling: a level is now HALF a cliff
+
+David: "there should be logic for terrain leveling, and also the height for each
+terrain is too tall, i think it should be half as tall for each inciment, so 0.5
+is walkable but a 1 would be considered a cliff."
+
+**The constraint that shapes the whole change.** `LEVEL_STEP` could not simply be
+halved: the kit's wall is 1.5u and it does not stack (`Cliff0A_0` tops at y=0 and
+drops to exactly y=-15 raw). So 1.5u stays what a CLIFF is, and it now spans
+**two** levels instead of one. `CLIFF_LEVELS = 2` is the only knob; the invariant
+`LEVEL_STEP * CLIFF_LEVELS === CLIFF_HEIGHT` is a test.
+
+| drop | world | what it is |
+|---|---|---|
+| 1 level | 0.75u | **bank** — walkable, no kit piece, sloped skirt |
+| 2 levels | 1.5u | **cliff** — kit piece, not walkable |
+| 3+ | — | illegal; `enforceSteps` caps it, nothing can draw it |
+
+**Renderer.** `bankEdges()` reports which of a cell's four orthogonal edges fall
+a walkable step; `GridTerrain.addBank` emits a sloped skirt for each, with the
+true slope normal so it shades differently from the flat ground on either side —
+that shading difference is most of what makes the step readable. Banks
+deliberately overlap the lower cell rather than meeting it exactly, because an
+exact meeting leaves a hairline of sky at grazing angles.
+
+**Autotiler.** `sameLevelOrHigher` now means same TIER (`> level - CLIFF_LEVELS`).
+A one-level neighbour reads as the same ground, so no wall grows along a bank.
+Getting this wrong would have put a cliff face on every bank.
+
+**Ramps — the leveling rule that makes a plateau reachable.** A terrace at level
+2 sits behind a 1.5u wall on every side. ACNH solves this with an incline kit;
+**the dump has none** — searched all 57,822 entries, `FldUISlope` is a UI icon
+and there is no ramp, stair or slope model anywhere. So the ramp is built from
+terrain, which the half-step scale now allows: `ground 0 -> ramp 1 -> terrace 2`,
+each a walkable 0.75u bank. The cliff autotiler agrees for free and leaves a gap
+in the wall exactly where the ramp meets it. One per plateau, sited at whichever
+boundary cell is closest to a road. 8 carved.
+
+**Authoring.** The main uplands now rise through a walkable RIM (taper of 1 level
+rather than a full cliff), so most relief is soft:
+
+```
+relief: 898 walkable bank cells (75%) vs 303 cliff-face cells
+levels over land: 0 → 67.0% · 1 → 11.8% · 2 → 19.9% · 4 → 1.3%
+```
+
+**Ground height is now the grid.** `terrain.ts` gained a registered height
+provider that `GridWorld` installs on mount, so the player, NPCs, click-to-move
+and the prop scatter all read `heightAtWorld` instead of the FBM heightfield.
+Without it a bank you can see is not a bank you can walk up. A registered
+provider rather than an import because `terrain.ts` is pulled in by the
+extraction scripts under `--experimental-strip-types`, which cannot load the JSON
+map. It is also cheaper than the bilinear sample it replaces.
+
+**Bug found and fixed in the same pass.** The bank winding flip keyed on
+`dx + dz > 0`, the SIGN of the step direction; the correct discriminator is the
+AXIS. Two of the four directions came out backfacing, and a culled bank showed as
+a pale hole straight through the terrain to the sky. Replaced the hand-cased flip
+with a cross product compared against the normal we already know, which cannot
+get it wrong.
+
+Gates: tsc clean, tests 78/78 (6 new for the leveling rule), lint 74/52.
 
 ---
 

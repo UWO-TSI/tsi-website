@@ -11,9 +11,10 @@
  * The default URL is unchanged until David approves the slice.
  */
 
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import islandMapDoc from "@/data/island-map.json";
-import { parseIslandMap, type IslandMap, type PlacedProp } from "@/lib/game/grid";
+import { parseIslandMap, heightAtWorld, type IslandMap, type PlacedProp } from "@/lib/game/grid";
+import { setTerrainHeightProvider } from "../terrain";
 import GridTerrain from "./GridTerrain";
 import GridCliffs from "./GridCliffs";
 
@@ -50,6 +51,20 @@ export function isGridEnabled(): boolean {
 
 export default function GridWorld() {
   const { map } = useMemo(() => getIslandMap(), []);
+
+  /**
+   * Take over ground height for everything that asks terrain.ts for it — the
+   * player, the NPCs, click-to-move, the prop scatter. Without this the world
+   * LOOKS terraced and BEHAVES like the old smooth heightfield, so a bank you
+   * can see is not a bank you can walk up.
+   *
+   * `heightAtWorld` reads a Uint8Array and multiplies. It is cheaper than the
+   * baked-grid bilinear sample it replaces, so the per-frame paths get faster.
+   */
+  useEffect(() => {
+    setTerrainHeightProvider((x, z) => heightAtWorld(map, x, z));
+    return () => setTerrainHeightProvider(null);
+  }, [map]);
 
   return (
     <group>

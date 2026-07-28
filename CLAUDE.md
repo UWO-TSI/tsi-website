@@ -47,7 +47,8 @@ Canonical constants (raw dump units; world = raw x 0.1). These are measured, not
 | Constant | Raw | World |
 |---|---|---|
 | Tile pitch | 10.0 | **1.0u** |
-| Elevation step | 15.0 | **1.5u** |
+| Cliff height (one kit piece) | 15.0 | **1.5u** |
+| Elevation step (one LEVEL) | 7.5 | **0.75u** |
 | River water surface, below its ground level | 0.78 | **0.078u** |
 | Grass top lip | 0.39 | 0.039u |
 | Cliff grass drape down the face | 1.88 | 0.188u |
@@ -56,11 +57,19 @@ Canonical constants (raw dump units; world = raw x 0.1). These are measured, not
 Rules that follow, all enforced by ACNH and none of them optional if the art is to fit:
 
 1. **Integer cells, integer levels.** Position is `(cellX, cellZ, level)`. No float
-   placement. Max 4 levels.
+   placement.
+1b. **A level is HALF a cliff** (David, 2026-07-28). One level (0.75u) is a BANK:
+   walkable, no kit piece, drawn as a sloped skirt by `GridTerrain`. Two levels
+   (1.5u) is a CLIFF: not walkable, gets a kit piece. `CLIFF_LEVELS` in
+   `lib/game/grid.ts` is the single knob; `LEVEL_STEP * CLIFF_LEVELS` must stay
+   equal to the kit's measured 1.5u wall. Ramps are built from terrain, not a
+   kit — the dump has NO incline model (searched, 57,822 entries).
 2. **One autotile vocabulary.** `{Kit}{Class}{Variant}_{Rotation}`; class 0-8 from the
    8 neighbours, A/B/C for diagonals, 0-3 pre-baked rotations. The same function drives
    cliff (44 pieces), river (45), waterfall (47) and road (20 per material).
-3. **Each cliff level insets at least 1 tile** from the level below.
+3. **Each cliff level insets at least 1 tile** from the level below, and no two
+   neighbours may differ by more than `CLIFF_LEVELS` — a face taller than one
+   kit piece has nothing to draw it.
 4. **Waterfalls are derived, not placed.** A river cell bordering a lower level emits a
    Fall piece. Multi-step drops stack single-step pieces.
 5. **Buildings, bridges and inclines have integer footprints and a 1-tile gap.**

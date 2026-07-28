@@ -2,6 +2,12 @@ import { describe, it, expect } from "vitest";
 import {
   TILE,
   LEVEL_STEP,
+  CLIFF_LEVELS,
+  CLIFF_HEIGHT,
+  isWalkableDrop,
+  bankEdges,
+  needsCliff,
+  cliffPieceFor,
   WATER_DROP,
   CHUNK,
   MAX_LEVEL,
@@ -42,10 +48,14 @@ describe("constants", () => {
   // changes, the art stops fitting the world — see specs/acnh-system-reference.
   it("match the measured ACNH kit", () => {
     expect(TILE).toBe(1.0);
-    expect(LEVEL_STEP).toBe(1.5);
+    // A LEVEL is a half step since 2026-07-28; the CLIFF is what the kit
+    // measures, and it is the product that must stay at the measured 1.5u.
+    expect(LEVEL_STEP).toBe(0.75);
+    expect(CLIFF_LEVELS).toBe(2);
+    expect(CLIFF_HEIGHT).toBeCloseTo(1.5, 6);
     expect(WATER_DROP).toBeCloseTo(0.078, 5);
     expect(CHUNK).toBe(16);
-    expect(MAX_LEVEL).toBe(3);
+    expect(MAX_LEVEL).toBe(6);
   });
 });
 
@@ -75,7 +85,7 @@ describe("map access", () => {
   it("height is level times the step, with no interpolation", () => {
     const map = createMap(4, 4);
     setCell(map, 1, 1, 2, Surface.Grass);
-    expect(heightAt(map, 1, 1)).toBeCloseTo(3.0, 6);
+    expect(heightAt(map, 1, 1)).toBeCloseTo(1.5, 6);
     expect(heightAt(map, 0, 0)).toBe(0);
   });
 
@@ -366,19 +376,72 @@ describe("autotile", () => {
   });
 });
 
+describe("leveling: bank vs cliff", () => {
+  // David 2026-07-28: "0.5 is walkable but a 1 would be considered a cliff".
+  // One level is that 0.5; CLIFF_LEVELS of them is the 1.
+  it("calls a one-level step walkable and a cliff-sized one not", () => {
+    expect(isWalkableDrop(0)).toBe(false); // flat is not a step
+    expect(isWalkableDrop(1)).toBe(true);
+    expect(isWalkableDrop(CLIFF_LEVELS)).toBe(false);
+    expect(isWalkableDrop(CLIFF_LEVELS + 1)).toBe(false);
+  });
+
+  it("emits no cliff piece for a bank", () => {
+    const map = createMap(5, 5);
+    for (let i = 0; i < 25; i++) map.levels[i] = 1;
+    setCell(map, 2, 2, 2, Surface.Grass); // one level above its neighbours
+    expect(needsCliff(map, 2, 2)).toBe(false);
+    expect(cliffPieceFor(map, 2, 2)).toBeNull();
+  });
+
+  it("emits a cliff piece for a full step", () => {
+    const map = createMap(5, 5);
+    setCell(map, 2, 2, CLIFF_LEVELS, Surface.Grass);
+    expect(needsCliff(map, 2, 2)).toBe(true);
+    expect(cliffPieceFor(map, 2, 2)).not.toBeNull();
+  });
+
+  it("reports the bank edges a cell needs a skirt on", () => {
+    const map = createMap(5, 5);
+    for (let i = 0; i < 25; i++) map.levels[i] = 1;
+    setCell(map, 2, 2, 2, Surface.Grass);
+    // All four orthogonals are one level down, so all four are banks.
+    expect(bankEdges(map, 2, 2)).toHaveLength(4);
+    // A cliff-sized drop is not a bank — it belongs to the kit.
+    setCell(map, 2, 2, 1 + CLIFF_LEVELS, Surface.Grass);
+    expect(bankEdges(map, 2, 2)).toHaveLength(0);
+  });
+
+  it("does not bank against open sea — the beach already runs to the water", () => {
+    const map = createMap(5, 5);
+    for (let i = 0; i < 25; i++) map.levels[i] = 1;
+    setCell(map, 2, 2, 2, Surface.Grass);
+    setCell(map, 3, 2, 0, Surface.Void);
+    expect(bankEdges(map, 2, 2).some(([dx]) => dx === 1)).toBe(false);
+  });
+
+  it("keeps a cliff piece exactly one kit-height tall", () => {
+    // The kit is 1.5u of wall and does not stack, so CLIFF_LEVELS levels of
+    // LEVEL_STEP must equal it or every face is the wrong size.
+    expect(CLIFF_LEVELS * LEVEL_STEP).toBeCloseTo(CLIFF_HEIGHT, 6);
+  });
+});
+
 describe("neighbourMask", () => {
   it("sets the north bit for a cell above in -Z", () => {
     const map = createMap(5, 5);
-    setCell(map, 2, 1, 1, Surface.Grass); // north of (2,2)
-    const mask = neighbourMask(map, 2, 2, sameLevelOrHigher(1));
+    // A CLIFF-sized difference, because a single level is a bank and the mask
+    // deliberately reads a bank as the same tier.
+    setCell(map, 2, 1, CLIFF_LEVELS, Surface.Grass); // north of (2,2)
+    const mask = neighbourMask(map, 2, 2, sameLevelOrHigher(CLIFF_LEVELS));
     expect(mask & (1 << Dir.N)).toBeTruthy();
     expect(mask & (1 << Dir.S)).toBeFalsy();
   });
 
   it("treats out-of-bounds as level 0, so an edge cell above 0 reads as exposed", () => {
     const map = createMap(3, 3);
-    for (let i = 0; i < 9; i++) map.levels[i] = 1;
-    const mask = neighbourMask(map, 0, 0, sameLevelOrHigher(1));
+    for (let i = 0; i < 9; i++) map.levels[i] = CLIFF_LEVELS;
+    const mask = neighbourMask(map, 0, 0, sameLevelOrHigher(CLIFF_LEVELS));
     expect(mask & (1 << Dir.W)).toBeFalsy();
     expect(mask & (1 << Dir.N)).toBeFalsy();
     expect(mask & (1 << Dir.E)).toBeTruthy();

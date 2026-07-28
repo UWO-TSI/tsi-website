@@ -23,8 +23,34 @@
 /** One cell, world units. Raw 10.0. */
 export const TILE = 1.0;
 
-/** One elevation step, world units. Raw 15.0. */
-export const LEVEL_STEP = 1.5;
+/**
+ * One elevation step, world units.
+ *
+ * HALVED 2026-07-28 on David's call: "the height for each terrain is too tall,
+ * i think it should be half as tall for each inciment, so 0.5 is walkable but a
+ * 1 would be considered a cliff."
+ *
+ * The kit's own step is 1.5 and that is not negotiable — `Cliff0A_0` puts its
+ * top grass at y=0 and drops the wall to exactly y=-15 raw, so a cliff piece IS
+ * 1.5u of wall. What changes is that 1.5u is now TWO levels rather than one.
+ * A single level is a 0.75u bank you walk up; two is a cliff you cannot.
+ *
+ * That is the whole leveling rule, and it falls out of one number:
+ * `CLIFF_LEVELS`.
+ */
+export const LEVEL_STEP = 0.75;
+
+/**
+ * How many levels a cliff piece spans. `CLIFF_LEVELS * LEVEL_STEP` must equal
+ * the kit's measured 1.5u wall, so these two constants move together.
+ *
+ * A drop of fewer levels than this is a BANK: walkable, no kit piece, drawn as
+ * a sloped skirt by GridTerrain. A drop of this many or more is a CLIFF.
+ */
+export const CLIFF_LEVELS = 2;
+
+/** The vertical drop one cliff piece covers, world units. Matches the kit. */
+export const CLIFF_HEIGHT = CLIFF_LEVELS * LEVEL_STEP;
 
 /** River surface below its own ground level, world units. Raw 0.78. */
 export const WATER_DROP = 0.078;
@@ -32,8 +58,11 @@ export const WATER_DROP = 0.078;
 /** Cells per chunk edge. One ACNH acre, and the culling/merge unit. */
 export const CHUNK = 16;
 
-/** Ground plus three cliff tiers; ACNH's top tier is unusable. */
-export const MAX_LEVEL = 3;
+/**
+ * Ground plus three cliff tiers, in HALF steps — so the reachable ceiling is
+ * unchanged at 3 x 1.5u, it just takes twice as many levels to get there.
+ */
+export const MAX_LEVEL = 3 * CLIFF_LEVELS;
 
 // ── Surfaces ─────────────────────────────────────────────────────
 // Values are stable — they are persisted in the map file. Append only.
@@ -591,18 +620,57 @@ export function neighbourMask(
   return mask;
 }
 
-/** Same-or-higher level: the test that decides where a cliff face goes. */
+// ── Leveling: bank vs cliff ──────────────────────────────────────
+//
+// One rule, applied everywhere: how far a neighbour sits BELOW a cell decides
+// what goes between them.
+//
+//   drop of 0 levels                  nothing — flat ground
+//   drop of 1 level  (0.75u)          a BANK. Walkable. A sloped grass skirt,
+//                                     drawn by GridTerrain, no kit piece.
+//   drop of CLIFF_LEVELS+ (1.5u+)     a CLIFF. Not walkable. A kit piece.
+//
+// Everything downstream — which cells the autotiler sees as "same", where the
+// terrain mesh skips a quad, what the authoring script is allowed to build —
+// reads these two predicates rather than comparing levels itself.
+
+/** The four edge-sharing neighbours, in the order banks are emitted. */
+export const ORTHOGONAL: ReadonlyArray<readonly [number, number]> = [
+  [1, 0],
+  [-1, 0],
+  [0, 1],
+  [0, -1],
+];
+
+/** How far the neighbour at (nx, nz) sits below this cell, in levels. */
+export function dropTo(map: IslandMap, cx: number, cz: number, nx: number, nz: number): number {
+  return levelAt(map, cx, cz) - levelAt(map, nx, nz);
+}
+
+/** Is the step down to this neighbour walkable, i.e. a bank rather than a cliff? */
+export function isWalkableDrop(drop: number): boolean {
+  return drop > 0 && drop < CLIFF_LEVELS;
+}
+
+/**
+ * Same TIER: the test that decides where a cliff face goes.
+ *
+ * Not "same or higher level" any more. A neighbour one level down is a bank you
+ * step over, so as far as the cliff autotiler is concerned it is still the same
+ * ground — only a drop of CLIFF_LEVELS or more opens a face. Getting this wrong
+ * would put a cliff wall along every bank.
+ */
 export function sameLevelOrHigher(level: number) {
-  return (map: IslandMap, nx: number, nz: number) => levelAt(map, nx, nz) >= level;
+  return (map: IslandMap, nx: number, nz: number) =>
+    levelAt(map, nx, nz) > level - CLIFF_LEVELS;
 }
 
 /**
  * Does this cell need a cliff piece?
  *
- * True when any of the 8 neighbours sits lower — that exposed side is what a
- * cliff face IS. Void and off-map both read as level 0, so a raised cell at
- * the coastline is exposed and gets its face, which is exactly the "rocks at
- * the water" silhouette.
+ * True when any of the 8 neighbours sits CLIFF_LEVELS or more below — that
+ * exposed side is what a cliff face IS. Void and off-map both read as level 0,
+ * so a raised cell at the coastline is exposed and gets its face.
  *
  * GridTerrain skips these cells and GridCliffs draws them, because an ACNH
  * cliff piece carries its own grass top and a quad underneath would z-fight.
@@ -611,11 +679,32 @@ export function needsCliff(map: IslandMap, cx: number, cz: number): boolean {
   const s = surfaceAt(map, cx, cz);
   if (isVoid(s)) return false;
   const level = levelAt(map, cx, cz);
-  if (level === 0) return false; // nothing below sea level to expose
+  if (level < CLIFF_LEVELS) return false; // cannot be a full step above the sea
   for (const [dx, dz] of DIR_OFFSETS) {
-    if (levelAt(map, cx + dx, cz + dz) < level) return true;
+    if (dropTo(map, cx, cz, cx + dx, cz + dz) >= CLIFF_LEVELS) return true;
   }
   return false;
+}
+
+/**
+ * The orthogonal edges of this cell that fall a walkable step, as
+ * `[dx, dz, drop]`. GridTerrain turns each into a sloped bank.
+ *
+ * Diagonals are left out on purpose: a bank is a skirt along an EDGE, and a
+ * diagonal neighbour shares only a corner, which the two flanking edges already
+ * cover between them.
+ */
+export function bankEdges(map: IslandMap, cx: number, cz: number): [number, number, number][] {
+  if (isVoid(surfaceAt(map, cx, cz))) return [];
+  const out: [number, number, number][] = [];
+  for (const [dx, dz] of ORTHOGONAL) {
+    // A bank needs ground on both sides. Where the neighbour is open sea the
+    // beach already runs down to the waterline and a skirt would float.
+    if (isVoid(surfaceAt(map, cx + dx, cz + dz))) continue;
+    const drop = dropTo(map, cx, cz, cx + dx, cz + dz);
+    if (isWalkableDrop(drop)) out.push([dx, dz, drop]);
+  }
+  return out;
 }
 
 /** The cliff piece for a cell, plus how to place it. Null when none is needed. */

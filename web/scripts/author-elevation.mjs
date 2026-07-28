@@ -34,6 +34,14 @@ const WEB = path.resolve(HERE, "..");
 const grid = await import(path.join(WEB, "lib/game/grid.ts"));
 const coast = await import(path.join(WEB, "lib/game/coast.ts"));
 
+/**
+ * Levels per cliff. Since 2026-07-28 a level is a HALF step: one level (0.75u)
+ * is a bank you walk up, two (1.5u) is a cliff you cannot. Everything this
+ * script builds is phrased in multiples of it, so an upland terrace asks for
+ * `CLIFF` and gets a wall, and a ramp asks for 1 and gets a slope.
+ */
+const CLIFF = grid.CLIFF_LEVELS;
+
 const MAP_PATH = path.join(WEB, "data/island-map.json");
 const dry = process.argv.includes("--dry");
 
@@ -219,7 +227,7 @@ const canRaise = (cx, cz) =>
  * resolved to level 0, so every stated radius was silently 45% too small and
  * the uplands came out as coins.
  */
-function blob(name, x, z, radius, level, force = false) {
+function blob(name, x, z, radius, level, force = false, taper = CLIFF) {
   let applied = 0;
   const r2 = radius * radius;
   for (let cz = 0; cz < map.depth; cz++) {
@@ -230,7 +238,7 @@ function blob(name, x, z, radius, level, force = false) {
       const d2 = dx * dx + dz * dz;
       if (d2 > r2) continue;
       const t = Math.sqrt(d2) / radius;
-      const want = level === 1 ? 1 : t < 0.62 ? level : level - 1;
+      const want = level <= taper ? level : t < 0.62 ? level : level - taper;
       if (want <= 0) continue;
       const i = grid.cellIndex(map, cx, cz);
       if (force) forced[i] = 1;
@@ -363,12 +371,12 @@ const UPLAND = [
   ["upland saddle", -16, -30, 11],
   ["upland headland", -38, -36, 9],
 ];
-for (const [name, x, z, r] of UPLAND) report.push(blob(name, x, z, r, 1));
+for (const [name, x, z, r] of UPLAND) report.push(blob(name, x, z, r, CLIFF, false, 1));
 
 // A second level so the island has a summit and not just one flat shelf. It
 // insets off the level-1 mass it sits inside, which is the ACNH rule and also
 // what makes the terrace read as terrain from ground level.
-report.push(blob("upland summit", -12, -42, 11, 2));
+report.push(blob("upland summit", -12, -42, 11, 2 * CLIFF));
 
 // 2. Temple Rise. Its platform is level 2 sitting directly on level 0, which
 //    is an illegal 2-step face — there is no cliff piece for it. The shoulder
@@ -380,7 +388,7 @@ report.push(blob("upland summit", -12, -42, 11, 2));
 //    building apron must be FLAT, not level 0. Raising the whole apron one
 //    step keeps it flat. What is forbidden is a level change inside the apron,
 //    and a blob wider than the apron cannot make one.
-report.push(blob("temple shoulder", 0, 31.8, 13, 1, true));
+report.push(blob("temple shoulder", 0, 31.8, 13, CLIFF, true));
 
 // 3. The far side needs relief too, or half the island is a lawn. Same rule:
 //    the widest pockets clear of the road grid.
@@ -390,7 +398,7 @@ const FARSIDE = [
   ["farside west", -35, 26, 10],
   ["farside w-spur", -46, 17, 9],
 ];
-for (const [name, x, z, r] of FARSIDE) report.push(blob(name, x, z, r, 1));
+for (const [name, x, z, r] of FARSIDE) report.push(blob(name, x, z, r, CLIFF, false, 1));
 
 // 3. ROCKY SHELVES AT THE WATERLINE — the specific ask. These have to STRADDLE
 //    the coast to read as rocks at the water: sand starts at coastDist 48.5
@@ -433,7 +441,7 @@ const SHELVES = [
 for (const [name, deg, r] of SHELVES) {
   const a = (deg * Math.PI) / 180;
   const rad = radiusAtCoastDist(deg, SHELF_COAST_DIST);
-  report.push(blob(name, Math.cos(a) * rad, Math.sin(a) * rad, r, 1));
+  report.push(blob(name, Math.cos(a) * rad, Math.sin(a) * rad, r, CLIFF));
 }
 
 // ── Constraints ──────────────────────────────────────────────────
@@ -462,8 +470,11 @@ function enforceSteps() {
           const nl = isLand(nx, nz) ? map.levels[grid.cellIndex(map, nx, nz)] : 0;
           if (nl < lowest) lowest = nl;
         }
-        if (lvl - lowest > 1) {
-          map.levels[i] = lowest + 1;
+        // A face taller than one cliff piece has NOTHING to draw it — the kit
+        // is 1.5u and does not stack. So the legal maximum between neighbours
+        // is exactly CLIFF levels, which is also what makes each tier inset.
+        if (lvl - lowest > CLIFF) {
+          map.levels[i] = lowest + CLIFF;
           changed++;
         }
       }
@@ -524,6 +535,95 @@ function straighten(rounds) {
   return flipped;
 }
 
+/**
+ * RAMPS — the leveling rule that makes a plateau reachable.
+ *
+ * A terrace built at level CLIFF sits behind a 1.5u wall on every side, which
+ * is exactly what a cliff is and exactly why you cannot get onto it. ACNH
+ * solves this with an incline kit; the dump has none (searched — `FldUISlope`
+ * is a UI icon, and there is no ramp, stair or slope model anywhere in the
+ * 57,822 entries). So the ramp is built out of the terrain itself, which the
+ * half-step scale now makes possible:
+ *
+ *   ground 0  ->  ramp 1  ->  terrace 2
+ *
+ * Each of those is a single level, so each is a walkable 0.75u bank and none of
+ * them is a cliff. The cliff autotiler agrees for free: `sameLevelOrHigher`
+ * treats a one-level neighbour as the same tier, so the terrace grows no wall
+ * where the ramp meets it and the ramp appears as a gap in the cliff run.
+ *
+ * One ramp per plateau, placed at whichever of its boundary cells is closest to
+ * a road — because the point of the ramp is that a path can reach it.
+ */
+function carveRamps(radius) {
+  const W = map.width;
+  const D = map.depth;
+  const seen = new Uint8Array(W * D);
+  const ramps = [];
+
+  for (let cz = 0; cz < D; cz++) {
+    for (let cx = 0; cx < W; cx++) {
+      const start = grid.cellIndex(map, cx, cz);
+      if (seen[start] || map.levels[start] < CLIFF || !isLand(cx, cz)) continue;
+
+      // Flood the plateau, tracking the boundary cell nearest to a road.
+      const stack = [start];
+      seen[start] = 1;
+      let best = null;
+      let bestDist = Infinity;
+      let size = 0;
+      while (stack.length) {
+        const i = stack.pop();
+        const z = Math.floor(i / W);
+        const x = i % W;
+        size++;
+        let onEdge = false;
+        for (const [dx, dz] of grid.ORTHOGONAL) {
+          const nx = x + dx;
+          const nz = z + dz;
+          if (!isLand(nx, nz)) continue;
+          const n = grid.cellIndex(map, nx, nz);
+          if (map.levels[n] >= CLIFF) {
+            if (!seen[n]) {
+              seen[n] = 1;
+              stack.push(n);
+            }
+          } else {
+            onEdge = true;
+          }
+        }
+        if (!onEdge) continue;
+        const d = clearance[i];
+        if (d < bestDist) {
+          bestDist = d;
+          best = [x, z];
+        }
+      }
+
+      // A plateau too small to stand on does not need a way up.
+      if (!best || size < 12) continue;
+
+      // Set the ramp disc to level 1. `blob`-style: only ever raises, so the
+      // terrace keeps its own height and only the ground outside steps up.
+      let cells = 0;
+      for (let dz = -radius; dz <= radius; dz++) {
+        for (let dx = -radius; dx <= radius; dx++) {
+          if (dx * dx + dz * dz > radius * radius) continue;
+          const rx = best[0] + dx;
+          const rz = best[1] + dz;
+          if (!isLand(rx, rz) || isProtected(rx, rz)) continue;
+          const i = grid.cellIndex(map, rx, rz);
+          if (map.levels[i] >= 1) continue;
+          map.levels[i] = 1;
+          cells++;
+        }
+      }
+      ramps.push({ at: best, cells, plateau: size });
+    }
+  }
+  return ramps;
+}
+
 /** A single raised cell with no raised neighbour is noise, not a landform. */
 function removeSpecks() {
   let removed = 0;
@@ -550,6 +650,9 @@ function removeSpecks() {
 // to resolve real terraces, not artifacts.
 const opened = open(2);
 const flipped = straighten(2);
+// Ramps AFTER open/straighten: both work on "is this cell raised at all", and
+// a 2-cell ramp disc is exactly the kind of thin feature open(2) deletes.
+const ramps = carveRamps(3);
 const stepFix = enforceSteps();
 const specks = removeSpecks();
 enforceSteps();
@@ -582,7 +685,7 @@ for (let i = 0; i < map.levels.length; i++) {
 console.log("features applied:");
 for (const r of report) console.log(`  ${r.name.padEnd(26)} ${String(r.cells).padStart(5)} cells raised`);
 console.log(
-  `\nopen(2) dropped: ${opened} · straighten(2) flipped: ${flipped} · constraint passes: ${stepFix.passes} (settled: ${stepFix.settled}) · specks removed: ${specks}`
+  `\nopen(2) dropped: ${opened} · straighten(2) flipped: ${flipped} · ramps carved: ${ramps.length} · constraint passes: ${stepFix.passes} (settled: ${stepFix.settled}) · specks removed: ${specks}`
 );
 console.log(`protected cells modified: ${violations}${violations ? "  <<< BUG" : ""}`);
 console.log("\nlevels over land:");
@@ -615,6 +718,8 @@ let edgeCells = 0;
 let thinCells = 0;
 let cornerCells = 0;
 let coastCliff = 0;
+let bankCells = 0;
+let cliffFaceCells = 0;
 for (let cz = 0; cz < map.depth; cz++) {
   for (let cx = 0; cx < map.width; cx++) {
     if (!isLand(cx, cz)) continue;
@@ -630,6 +735,15 @@ for (let cz = 0; cz < map.depth; cz++) {
       [0, -1],
     ].filter(([dx, dz]) => below(dx, dz)).length;
     if (grid.DIR_OFFSETS.some(([dx, dz]) => below(dx, dz))) edgeCells++;
+    // The number that matters now: how much of the relief is a walkable bank
+    // and how much is a wall. David 2026-07-28 wants most of it walkable.
+    const worst = Math.max(
+      ...grid.DIR_OFFSETS.map(([dx, dz]) =>
+        lvl - (isLand(cx + dx, cz + dz) ? map.levels[grid.cellIndex(map, cx + dx, cz + dz)] : 0)
+      )
+    );
+    if (worst >= CLIFF) cliffFaceCells++;
+    else if (worst > 0) bankCells++;
     // Two or more lower orthogonals means the wall TURNS here. A long straight
     // run has one; a staircase has one at every single cell, which is what
     // reads as Minecraft. This is the number `straighten()` exists to drive
@@ -644,6 +758,14 @@ console.log(
     (100 * edgeCells) /
     Math.max(1, raisedCells)
   ).toFixed(0)}% · 1-cell-wide ridges: ${thinCells}`
+);
+console.log(
+  `relief: ${bankCells} walkable bank cells (${(
+    (100 * bankCells) /
+    Math.max(1, bankCells + cliffFaceCells)
+  ).toFixed(0)}%) vs ${cliffFaceCells} cliff-face cells — one level is ${
+    grid.LEVEL_STEP
+  }u, a cliff is ${grid.CLIFF_HEIGHT}u`
 );
 console.log(
   `corner (wall turns here) cells: ${cornerCells}/${edgeCells} = ${(

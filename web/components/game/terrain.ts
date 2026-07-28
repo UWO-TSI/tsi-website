@@ -242,7 +242,28 @@ function rawNoiseHeight(x: number, z: number): number {
  * Buildings get flat footprints — see BUILDING_FOOTPRINTS. Paths get
  * flattened to y=0 with a falloff so the dirt-path quads sit flush.
  */
+/**
+ * Grid height override (2026-07-28).
+ *
+ * When the tile world is mounted, ground height stops coming from the FBM
+ * heightfield and starts coming from the cell map — otherwise the player walks
+ * the old smooth terrain while looking at terraces, and a "walkable" 0.75u bank
+ * is walkable only in the sense that you can see it.
+ *
+ * A REGISTERED PROVIDER rather than an import, on purpose. `terrain.ts` is
+ * pulled in by the extraction scripts (`snap-world-to-grid.mjs` and friends)
+ * under `--experimental-strip-types`, and importing the map would drag a JSON
+ * module into a context that cannot load one. Dependency stays one-directional:
+ * the grid knows about terrain, terrain knows nothing about the grid.
+ */
+let heightProvider: ((x: number, z: number) => number) | null = null;
+
+export function setTerrainHeightProvider(fn: ((x: number, z: number) => number) | null): void {
+  heightProvider = fn;
+}
+
 export function getTerrainHeight(x: number, z: number): number {
+  if (heightProvider) return heightProvider(x, z);
   // 0. River valley — carves through everything (paths cross via the
   // bridge; building footprints don't reach the channel core).
   const ri = riverInfluence(x, z);
@@ -373,6 +394,7 @@ function bakeGrid(): Float32Array {
  * accurate near grid boundaries.
  */
 export function sampleTerrainHeightFast(x: number, z: number): number {
+  if (heightProvider) return heightProvider(x, z);
   // Out-of-bounds clamp to 0 matches getTerrainHeight's island-edge
   // behavior (perimeter falls off to y=0 at ISLAND_RADIUS).
   if (Math.abs(x) > ISLAND_RADIUS || Math.abs(z) > ISLAND_RADIUS) return 0;

@@ -39,6 +39,7 @@ import {
   cellToWorldX,
   cellToWorldZ,
   needsCliff,
+  bankEdges,
   easedCellOutline,
   type LayerTest,
 } from "@/lib/game/grid";
@@ -73,14 +74,26 @@ const OVERLAY_LIFT = 0.004;
 // meant to run continuously across the terrain, not a per-tile decal.
 const UV_CELLS_PER_REPEAT = 2;
 
+/**
+ * How far a walkable bank runs out into the lower cell, in tiles.
+ *
+ * A level is 0.75u and a bank falls exactly one of them, so at 0.55 tiles of
+ * run the slope is about 54 degrees — steep enough to read as a bank rather
+ * than a lawn, shallow enough to read as something you walk up rather than a
+ * wall. A cliff, for contrast, is vertical over 1.5u.
+ */
+const BANK_RUN = 0.55;
+
 /** A layer's triangles, accumulated flat rather than as 11k BufferGeometries. */
 interface Mesh {
   pos: number[];
   uv: number[];
+  /** Explicit, because banks are sloped and the flat +Y default would flatten them. */
+  nrm: number[];
   idx: number[];
 }
 
-const emptyMesh = (): Mesh => ({ pos: [], uv: [], idx: [] });
+const emptyMesh = (): Mesh => ({ pos: [], uv: [], nrm: [], idx: [] });
 
 /**
  * Append one cell.
@@ -97,6 +110,7 @@ function addCell(mesh: Mesh, inLayer: LayerTest, cx: number, cz: number, x: numb
     // UVs from WORLD position so neighbouring cells continue the pattern
     // instead of each restarting it.
     mesh.uv.push(px * s, pz * s);
+    mesh.nrm.push(0, 1, 0);
   };
 
   const outline = easedCellOutline(inLayer, cx, cz);
@@ -118,14 +132,88 @@ function addCell(mesh: Mesh, inLayer: LayerTest, cx: number, cz: number, x: numb
   }
 }
 
+/**
+ * Append the sloped skirt for one walkable step down.
+ *
+ * The top edge sits on the cell boundary at the cell's own height; the bottom
+ * edge runs BANK_RUN out into the lower neighbour and down to its height. It
+ * deliberately overlaps the neighbour's ground rather than meeting it exactly:
+ * an exact meeting leaves a hairline of sky at grazing angles, and the overlap
+ * costs nothing because the neighbour's quad is flat underneath.
+ *
+ * Normals are the true slope normal, so a bank catches the key light
+ * differently from the flat ground on either side. That shading difference is
+ * most of what makes the step readable at all.
+ */
+function addBank(
+  mesh: Mesh,
+  x: number,
+  z: number,
+  topY: number,
+  bottomY: number,
+  dx: number,
+  dz: number
+) {
+  const s = 1 / (UV_CELLS_PER_REPEAT * TILE);
+  const half = TILE / 2;
+  // Along-edge axis is the perpendicular of the step direction.
+  const ax = dz;
+  const az = dx;
+  const ex = x + dx * half;
+  const ez = z + dz * half;
+  const ox = ex + dx * BANK_RUN;
+  const oz = ez + dz * BANK_RUN;
+
+  const drop = topY - bottomY;
+  const len = Math.hypot(drop, BANK_RUN) || 1;
+  // Slope normal: horizontal component points down the slope, vertical up.
+  const nx = (dx * drop) / len;
+  const ny = BANK_RUN / len;
+  const nz = (dz * drop) / len;
+
+  const base = mesh.pos.length / 3;
+  const pts: [number, number, number][] = [
+    [ex - ax * half, topY, ez - az * half],
+    [ex + ax * half, topY, ez + az * half],
+    [ox + ax * half, bottomY, oz + az * half],
+    [ox - ax * half, bottomY, oz - az * half],
+  ];
+  for (const [px, py, pz] of pts) {
+    mesh.pos.push(px, py, pz);
+    mesh.uv.push(px * s, pz * s);
+    mesh.nrm.push(nx, ny, nz);
+  }
+
+  // Wind so the face points up-slope, DERIVED rather than hand-cased.
+  //
+  // The hand-cased version keyed the flip on `dx + dz > 0`, which is the sign
+  // of the step direction. The correct discriminator is the AXIS, not the sign,
+  // so two of the four directions came out backfacing — and a backfacing bank
+  // is culled, which showed as a pale hole straight through the terrain to the
+  // sky. Comparing the triangle's own cross product against the normal we
+  // already know cannot get that wrong, whatever the corner order happens to be.
+  const [a, b, c] = pts;
+  const ux = b[0] - a[0];
+  const uy = b[1] - a[1];
+  const uz = b[2] - a[2];
+  const vx = c[0] - a[0];
+  const vy = c[1] - a[1];
+  const vz = c[2] - a[2];
+  const facing =
+    (uy * vz - uz * vy) * nx + (uz * vx - ux * vz) * ny + (ux * vy - uy * vx) * nz;
+  if (facing > 0) {
+    mesh.idx.push(base, base + 1, base + 2, base, base + 2, base + 3);
+  } else {
+    mesh.idx.push(base, base + 3, base + 2, base, base + 2, base + 1);
+  }
+}
+
 function build(mesh: Mesh): THREE.BufferGeometry | null {
   if (mesh.idx.length === 0) return null;
   const g = new THREE.BufferGeometry();
   g.setAttribute("position", new THREE.Float32BufferAttribute(mesh.pos, 3));
   g.setAttribute("uv", new THREE.Float32BufferAttribute(mesh.uv, 2));
-  const normals = new Float32Array(mesh.pos.length);
-  for (let i = 1; i < normals.length; i += 3) normals[i] = 1;
-  g.setAttribute("normal", new THREE.BufferAttribute(normals, 3));
+  g.setAttribute("normal", new THREE.Float32BufferAttribute(mesh.nrm, 3));
   g.setIndex(mesh.idx);
   g.computeBoundingSphere();
   return g;
@@ -169,6 +257,13 @@ export default function GridTerrain({ map }: { map: IslandMap }) {
           }
 
           addCell(grass, inGround, cx, cz, x, y, z);
+
+          // Walkable step down to a neighbour: a sloped skirt, not a kit
+          // piece. This is the whole visible difference between a bank and a
+          // cliff, and it lives here because it is terrain, not an object.
+          for (const [dx, dz, drop] of bankEdges(map, cx, cz)) {
+            addBank(grass, x, z, y, y - drop * LEVEL_STEP, dx, dz);
+          }
 
           if (s !== Surface.Grass) {
             const m = overlays.get(s) ?? emptyMesh();
