@@ -7,6 +7,7 @@ import { clone as cloneSkeleton } from "three/examples/jsm/utils/SkeletonUtils.j
 import * as THREE from "three";
 import { sampleTerrainHeightFast } from "./terrain";
 import { tune } from "@/lib/game/tuning";
+import { gullPose, type GullParams } from "@/lib/game/gullPath";
 
 /**
  * Ambient life — sprint A6. Butterflies (day), fireflies (night),
@@ -324,9 +325,8 @@ const SWOOP_MS = 4200;
 
 function Gull({ anchor, seed, idx, swoopRef }: { anchor: [number, number]; seed: number; idx: number; swoopRef: React.MutableRefObject<GullSwoop | null> }) {
   const ref = useRef<THREE.Group>(null);
-  // Per-bird jitter only. The BASE of each of these is on the bench
-  // (`tuning.gull`) and read per frame, so a slider move is immediate and does
-  // not have to re-seed and re-place every gull.
+  // Per-bird jitter only. Every BASE below is on the bench (`tuning.gull`) and
+  // read per frame, so a slider move is immediate.
   const { phase, jSpeed, jRadius, jAlt } = useMemo(() => {
     const rng = seededRandom(seed * 409 + 7);
     return {
@@ -337,45 +337,72 @@ function Gull({ anchor, seed, idx, swoopRef }: { anchor: [number, number]; seed:
     };
   }, [seed]);
 
+  const params = useRef<GullParams>({
+    anchorX: anchor[0],
+    anchorZ: anchor[1],
+    speed: 0.09,
+    radius: 6.5,
+    altitude: 6.5,
+    bob: 1.1,
+    wobble: 0.26,
+    drift: 3.5,
+    phase,
+  });
+
   useFrame((state) => {
     if (!ref.current) return;
     const t = state.clock.elapsedTime;
     const g = tune().gull;
-    const speed = g.orbitSpeed + jSpeed;
-    const radius = g.orbitRadius + jRadius;
-    const alt = g.altitude + jAlt;
-    const a = t * speed + phase;
-    const ox = anchor[0] + Math.cos(a) * radius;
-    const oy = alt + Math.sin(t * 0.35 + phase) * g.bob;
-    const oz = anchor[1] + Math.sin(a) * radius;
+
+    const p = params.current;
+    p.anchorX = anchor[0];
+    p.anchorZ = anchor[1];
+    p.speed = g.orbitSpeed + jSpeed;
+    p.radius = g.orbitRadius + jRadius;
+    p.altitude = g.altitude + jAlt;
+    p.bob = g.bob;
+    p.wobble = g.wobble;
+    p.drift = g.drift;
+    p.phase = phase;
+
+    const pose = gullPose(t, p, g.bankGain, g.bank);
 
     const sw = swoopRef.current;
     if (sw && sw.idx === idx) {
-      const p = (performance.now() - sw.at) / SWOOP_MS;
-      if (p >= 1) {
+      const prog = (performance.now() - sw.at) / SWOOP_MS;
+      if (prog >= 1) {
         swoopRef.current = null;
       } else {
-        // fast low circle over the catch point; blend in and out of orbit
+        // A fast low circle over the catch point, blended in and out of the
+        // patrol so the bird does not teleport between the two paths.
         const sa = t * 1.6 + phase;
         const sx = sw.x + Math.cos(sa) * 1.9;
         const sy = 2.4 + Math.sin(t * 2.2) * 0.25;
         const sz = sw.z + Math.sin(sa) * 1.9;
-        const w = p < 0.25 ? p / 0.25 : p > 0.72 ? (1 - p) / 0.28 : 1;
-        ref.current.position.set(ox + (sx - ox) * w, oy + (sy - oy) * w, oz + (sz - oz) * w);
-        ref.current.rotation.y = w > 0.5 ? -sa + Math.PI / 2 : -a + Math.PI / 2;
-        // Bank into the turn. Was a fake 6.5Hz wing-flap oscillation; the
-        // model animates its own wings now, so this reads as a lean instead.
-        ref.current.rotation.z = -0.22 - w * 0.16 + Math.sin(t * 1.4) * 0.05;
+        const w = prog < 0.25 ? prog / 0.25 : prog > 0.72 ? (1 - prog) / 0.28 : 1;
+        ref.current.position.set(
+          pose.x + (sx - pose.x) * w,
+          pose.y + (sy - pose.y) * w,
+          pose.z + (sz - pose.z) * w
+        );
+        // Tight turn, so it leans harder — but still about the FORWARD axis.
+        ref.current.rotation.y = w > 0.5 ? sa + Math.PI : pose.yaw;
+        ref.current.rotation.z = pose.roll - w * g.bank * 0.5;
         return;
       }
     }
-    ref.current.position.set(ox, oy, oz);
-    ref.current.rotation.y = -a + Math.PI / 2;
-    ref.current.rotation.z = -g.bank + Math.sin(t * 0.9 + phase) * 0.07; // lazy bank
+
+    ref.current.position.set(pose.x, pose.y, pose.z);
+    ref.current.rotation.y = pose.yaw;
+    ref.current.rotation.z = pose.roll;
   });
 
   return (
-    <group ref={ref} position={[anchor[0] + tune().gull.orbitRadius + jRadius, 7, anchor[1]]}>
+    // YXZ so `rotation.z` is applied INNERMOST, i.e. about the body's own
+    // forward axis. With the default XYZ order it rolls about the parent's Z,
+    // which after the yaw is the bird's side axis — that is what made it pitch
+    // its nose up instead of banking.
+    <group ref={ref} rotation={[0, 0, 0, "YXZ"]} position={[anchor[0], 7, anchor[1]]}>
       <Suspense fallback={null}>
         <SeagullModel seed={seed} />
       </Suspense>
@@ -392,7 +419,11 @@ function Gull({ anchor, seed, idx, swoopRef }: { anchor: [number, number]; seed:
  *
  * Wing phase is offset per gull so the flock does not beat in lockstep.
  */
-const SEAGULL_YAW = -Math.PI / 2; // model faces +X, our orbit code faces -Z
+// NO yaw correction. Measured: the model's wingspan is 9.31 along X and its
+// body 5.55 along Z, so its forward is already +Z, which is what `gullPose`
+// assumes. The old `-Math.PI / 2` here was based on a comment claiming the model
+// faced +X; it turned forward into -X in the parent frame, and roll about the
+// parent's Z then pitched the nose up. David: "it banks upwards."
 
 function SeagullModel({ seed }: { seed: number }) {
   const { scene, animations } = useGLTF(SEAGULL_URL);
@@ -401,7 +432,6 @@ function SeagullModel({ seed }: { seed: number }) {
   const body = useMemo(() => {
     const c = cloneSkeleton(scene);
     c.scale.setScalar(tune().gull.scale);
-    c.rotation.y = SEAGULL_YAW;
     c.traverse((o) => {
       const mesh = o as THREE.Mesh;
       if (!mesh.isMesh) return;

@@ -35,6 +35,7 @@ import {
   type Tuning,
 } from "@/lib/game/tuning";
 import { patchWind, tuftGeometry } from "@/components/game/grid/GrassTufts";
+import { gullPose, type GullParams } from "@/lib/game/gullPath";
 import { terrainMaterial, applyGrassNormalStrength } from "@/components/game/grid/terrainMaterials";
 
 type Specimen = "gull" | "grass";
@@ -43,17 +44,26 @@ type Specimen = "gull" | "grass";
 
 const SEAGULL_URL = "/assets/fauna/seagull.glb";
 
-/** One gull, flying its real orbit, alone. */
+/** One gull, flying the REAL path function, alone. */
 function GullSpecimen() {
   const group = useRef<THREE.Group>(null);
   const { scene, animations } = useGLTF(SEAGULL_URL);
   const mixerRef = useRef<THREE.AnimationMixer | null>(null);
+  const params = useRef<GullParams>({
+    anchorX: 0,
+    anchorZ: 0,
+    speed: 0.09,
+    radius: 6.5,
+    altitude: 2,
+    bob: 1.1,
+    wobble: 0.26,
+    drift: 3.5,
+    phase: 0,
+  });
 
-  const body = useMemo(() => {
-    const c = cloneSkeleton(scene) as THREE.Group;
-    c.rotation.y = -Math.PI / 2;
-    return c;
-  }, [scene]);
+  // No yaw correction — the model's forward is +Z, which is what gullPose
+  // assumes. See the note in AmbientLife.
+  const body = useMemo(() => cloneSkeleton(scene) as THREE.Group, [scene]);
 
   useEffect(() => {
     if (!animations.length) return;
@@ -75,19 +85,23 @@ function GullSpecimen() {
       mixerRef.current.update(delta);
     }
     if (!group.current) return;
-    const t = state.clock.elapsedTime;
-    const a = t * g.orbitSpeed;
-    group.current.position.set(
-      Math.cos(a) * g.orbitRadius,
-      2 + Math.sin(t * 0.35) * g.bob,
-      Math.sin(a) * g.orbitRadius
-    );
-    group.current.rotation.y = -a + Math.PI / 2;
-    group.current.rotation.z = -g.bank;
+
+    const p = params.current;
+    p.speed = g.orbitSpeed;
+    p.radius = g.orbitRadius;
+    p.altitude = 2;
+    p.bob = g.bob;
+    p.wobble = g.wobble;
+    p.drift = g.drift;
+
+    const pose = gullPose(state.clock.elapsedTime, p, g.bankGain, g.bank);
+    group.current.position.set(pose.x, pose.y, pose.z);
+    group.current.rotation.y = pose.yaw;
+    group.current.rotation.z = pose.roll;
   });
 
   return (
-    <group ref={group}>
+    <group ref={group} rotation={[0, 0, 0, "YXZ"]}>
       <primitive object={body} />
     </group>
   );
@@ -208,7 +222,10 @@ const ROWS: Record<Specimen, Row[]> = {
     { group: "gull", key: "altitude", label: "altitude", min: 1, max: 20, step: 0.5, note: "world units above the water" },
     { group: "gull", key: "bob", label: "altitude bob", min: 0, max: 4, step: 0.1, note: "slow rise and fall on the breeze" },
     { group: "gull", key: "scale", label: "scale", min: 0.02, max: 0.25, step: 0.005, note: "model is ~9.3u wingspan raw" },
-    { group: "gull", key: "bank", label: "bank", min: 0, max: 0.8, step: 0.02, note: "lean into the turn, radians" },
+    { group: "gull", key: "bank", label: "max bank", min: 0, max: 1.4, step: 0.02, note: "ceiling on the roll, radians — roll is about the FORWARD axis" },
+    { group: "gull", key: "bankGain", label: "bank gain", min: 0, max: 4, step: 0.05, note: "turn rate to roll — how hard it leans into the same turn" },
+    { group: "gull", key: "wobble", label: "path wobble", min: 0, max: 0.8, step: 0.02, note: "radius variation — 0 is a dead circle" },
+    { group: "gull", key: "drift", label: "path drift", min: 0, max: 15, step: 0.5, note: "how far the loop centre wanders, world units" },
   ],
   grass: [
     { group: "grass", key: "normalStrength", label: "ground detail", min: 0, max: 3, step: 0.05, note: "ACNH mGrass_Nrm strength — 0 is the flat green" },
@@ -285,15 +302,15 @@ export default function TuneBench() {
   return (
     <div style={{ position: "fixed", top: 40, left: 0, right: 0, bottom: 0, background: "#11151a", display: "flex" }}>
       <div style={{ flex: 1, position: "relative" }}>
-        <Canvas shadows camera={{ position: [7, 5, 9], fov: 40 }}>
+        <Canvas shadows camera={{ position: [16, 11, 20], fov: 40 }}>
           <color attach="background" args={["#202931"]} />
           <hemisphereLight args={["#cfe2ff", "#5a6b4a", 0.5]} />
           <directionalLight position={[6, 10, 4]} intensity={1.4} color="#FFF7E4" castShadow />
           <Suspense fallback={null}>
             {specimen === "gull" ? <GullSpecimen /> : <GrassSpecimen />}
           </Suspense>
-          <gridHelper args={[24, 24, "#2c353d", "#1d242a"]} position={[0, -0.01, 0]} />
-          <OrbitControls makeDefault target={[0, 1, 0]} />
+          <gridHelper args={[32, 32, "#2c353d", "#1d242a"]} position={[0, -0.01, 0]} />
+          <OrbitControls makeDefault target={[0, 2, 0]} />
         </Canvas>
         <div
           style={{

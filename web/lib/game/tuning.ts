@@ -36,8 +36,14 @@ export interface Tuning {
     bob: number;
     /** Model scale. Source wingspan is ~9.3u; a gull wants ~0.7u. */
     scale: number;
-    /** Constant lean into the turn, radians. */
+    /** Ceiling on the roll, radians. A gull leans; it does not barrel-roll. */
     bank: number;
+    /** Turn rate (rad/sec) to roll. Higher = leans harder into the same turn. */
+    bankGain: number;
+    /** Radius variation as a fraction of radius. 0 is a dead circle. */
+    wobble: number;
+    /** How far the orbit centre wanders, world units. */
+    drift: number;
   };
   grass: {
     /** Strength of the ACNH normal map on the ground. 0 = the flat green. */
@@ -70,7 +76,10 @@ export const TUNING_DEFAULTS: Tuning = {
     altitude: 6.5,
     bob: 1.1,
     scale: 0.075,
-    bank: 0.16,
+    bank: 0.55,
+    bankGain: 0.9,
+    wobble: 0.26,
+    drift: 3.5,
   },
   grass: {
     normalStrength: 0.6,
