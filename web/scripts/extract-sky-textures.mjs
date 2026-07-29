@@ -1,37 +1,74 @@
 #!/usr/bin/env node
 /**
- * extract-sky-textures — pull the cloud, star and moon layers out of a COZY
- * `.unitypackage` and process them into something a browser can actually hold.
+ * extract-sky-textures — pull the cloud, star and border masks out of a COZY
+ * `.unitypackage` and pack them into two textures a browser barely notices.
  *
- *   node scripts/extract-sky-textures.mjs [--src <rar|unitypackage>]
+ *   node scripts/extract-sky-textures.mjs [--src <rar|unitypackage>] [--size 512]
  *
- * WHY PROCESSING IS NOT OPTIONAL. The source art is authored for a desktop
- * Unity build. Measured: the Luxury cloud sheets are 4096x4096 and the star
- * maps are 8192x8192. Download size is not the problem — VRAM is. An
- * uncompressed 4096x4096 RGBA texture is 67MB on the GPU, 89MB once mipmapped,
- * EACH. Five cloud layers at source resolution is roughly 450MB of video
- * memory, on an M1 that is already the binding constraint (defect D8: dpr
- * [1,2] costs 4x the fragments on Retina before any of this).
+ * ── WHY THIS IS NOT JUST A RESIZE ───────────────────────────────────────
+ * The download was never the problem. A texture costs 4 BYTES PER TEXEL on the
+ * GPU no matter how well it compresses, so a 350KB WebP and a 4MB PNG of the
+ * same dimensions cost exactly the same VRAM. The source art is authored for a
+ * desktop Unity build: the Luxury sheets are 4096x4096 and the star maps
+ * 8192x8192. One 4096 RGBA texture is 89MB once mipmapped. Eight of them is
+ * most of a laptop's video memory, on an M1 that is already the binding
+ * constraint (defect D8: dpr [1,2] costs 4x the fragments on Retina before any
+ * of this).
  *
- * At 1024 that is 4MB per layer and 20MB for the set. A stylised cel sky has
- * no use for the extra detail anyway; the cloud SHAPES are what matter and
- * they survive the downsample intact.
+ * Two things fix that properly, and only one of them is resolution:
  *
- * WHAT THE MEASUREMENTS SAID. Two facts drove the mapping below, and both came
- * from testing the pixels rather than from the filenames:
+ *   1. PACKING. Every one of these layers is a single-channel MASK — a
+ *      greyscale coverage map, nothing more. Storing six of them as six RGBA
+ *      textures wastes most of every byte. Three masks fit in the RGB of one
+ *      texture, so six become TWO. (Four would fit using alpha as well, and
+ *      the first version did exactly that — see the note at the encode for why
+ *      it had to be undone.)
  *
+ *   2. SIZE. These are soft cloud shapes stretched across a sky dome, and the
+ *      camera can never see more than 24 degrees above the horizon (measured
+ *      from CameraControls' maxPolarAngle and a 48 degree FOV, and it drops to
+ *      ~15 once D6 narrows the lens). There is no detail here worth 1024, let
+ *      alone 4096.
+ *
+ * Together: 6 source textures (255MB of VRAM) become 2 at 512 (2.7MB). 96x
+ * less video memory, and 307KB over the wire.
+ *
+ * SIZE WAS CHOSEN BY MEASUREMENT. Halving again to 256 costs 0.9-1.2% mean
+ * error overall, which sounds free, but per channel it is 3.84 on stars and
+ * 7.20 on altocumulus — stars are sparse bright points and are exactly what a
+ * downsample eats. It would save 2MB out of the 104MB of texture memory the
+ * game already spends. Not worth degrading the sky for 2%, so 512 it is;
+ * `--size 256` is there if that ever changes.
+ *
+ * ── LOSSLESS IS MANDATORY, NOT A PREFERENCE ─────────────────────────────
+ * Packed channels are independent data, not a picture. Lossy WebP does chroma
+ * subsampling — it throws away colour detail because human eyes do not notice
+ * it in photographs — which would smear the cumulus mask into the cirrus mask.
+ * They are only "colours" by accident of storage.
+ *
+ * The round-trip check at the bottom is not ceremony. Packing fails SILENTLY:
+ * a wrong channel order or a lossy encode still writes a perfectly valid
+ * image. It caught the premultiplied-alpha bug described at the encode, which
+ * nothing else would have surfaced until the sky looked wrong on screen.
+ *
+ * ── WHAT WAS MEASURED, NOT ASSUMED ──────────────────────────────────────
  *   · The textures are SQUARE (1:1), not equirectangular (2:1). COZY projects
- *     them onto its dome with a spherize warp — which is why none of the
- *     equirect problems (pole pinch, seam at the wrap, horizon pinned to the
- *     vertical centre) apply to them.
+ *     them onto its dome with a spherize warp, which is why none of the
+ *     equirect problems (pole pinch, wrap seam, horizon pinned to the centre)
+ *     apply.
  *
- *   · Only SOME of them tile. Comparing wrapping edges against an interior
- *     control seam: `Cirrus` is perfect (0.00 / 0.00) and `Cumulus Noise` is
- *     effectively perfect (0.24 / 0.28), while `Altocumulus` (16.4 / 17.9) and
- *     the Luxury sheets (107 / 41) are not. So there are two classes: tiling
- *     noise that scrolls forever, and one-shot coverage sheets mapped once.
- *     They need different wrap modes, and getting that wrong shows as a hard
- *     line across the sky.
+ *   · Seven of nine have FLAT ALPHA. `sips` reports hasAlpha=yes but the
+ *     channel is 255 everywhere; the shape is a greyscale mask in RGB, the same
+ *     convention our own water-caustic.png uses. Only the two "Luxury" sheets
+ *     are true RGBA. Reading that wrong is silent and total — a cumulus layer
+ *     sampled as alpha draws an opaque square. So the source channel is
+ *     DETECTED per texture rather than hardcoded.
+ *
+ *   · Only some tile. Wrapping edges vs an interior control seam: Cirrus
+ *     0.00/0.00 and Cumulus Noise 0.24/0.28, but Altocumulus 16.4/17.9 and the
+ *     Luxury sheets 107/41. That is why the packs are split by WRAP MODE and
+ *     not by what the layers are for: everything sharing a texture must share
+ *     a wrap mode, or the clamped layers show a hard line across the sky.
  */
 
 import fs from "fs";
@@ -51,26 +88,26 @@ const arg = (name, def) => {
   return i >= 0 ? process.argv[i + 1] : def;
 };
 
-const SRC = arg(
-  "src",
-  path.join(os.homedir(), "Downloads/COZY Stylized Weather 3 v3.2.2.rar")
-);
+const SRC = arg("src", path.join(os.homedir(), "Downloads/COZY Stylized Weather 3 v3.2.2.rar"));
+const SIZE = Number(arg("size", 512));
 
 /**
- * source name -> { out, size, tiles }
- *
- * `tiles` decides the wrap mode at runtime, so it is recorded in the manifest
- * rather than guessed later.
+ * The two packs, split by WRAP MODE because that is the constraint a shared
+ * texture cannot escape. Channel order is r, g, b, a.
  */
-const WANT = {
-  "Cumulus Noise.png": { out: "cumulus", size: 1024, tiles: true },
-  "Altocumulus.png": { out: "altocumulus", size: 1024, tiles: false },
-  "Cirrus.png": { out: "cirrus", size: 1024, tiles: true },
-  "Cirrostratus.png": { out: "cirrostratus", size: 1024, tiles: false },
-  "Medium Nimbus Luxury.png": { out: "nimbus", size: 1024, tiles: false },
-  "Luxury Border High.png": { out: "border", size: 512, tiles: false },
-  "Stars.png": { out: "stars", size: 1024, tiles: true },
-  "Galaxy Stars.png": { out: "galaxy", size: 1024, tiles: true },
+const PACKS = [
+  { out: "sky-tiling", wrap: "repeat", layers: ["cumulus", "cirrus", "stars"] },
+  { out: "sky-clamped", wrap: "clamp", layers: ["altocumulus", "cirrostratus", "nimbus"] },
+];
+
+/** Source file for each layer name. */
+const SOURCE = {
+  cumulus: "Cumulus Noise.png",
+  cirrus: "Cirrus.png",
+  stars: "Stars.png",
+  altocumulus: "Altocumulus.png",
+  cirrostratus: "Cirrostratus.png",
+  nimbus: "Medium Nimbus Luxury.png",
 };
 
 // ── Read the package ─────────────────────────────────────────────
@@ -78,7 +115,7 @@ const WANT = {
 function readPackage(src) {
   if (src.toLowerCase().endsWith(".rar")) {
     // bsdtar (shipped with macOS) reads RAR5. The archive holds exactly one
-    // file, so -O streams it straight out without a temp copy.
+    // file, so -O streams it out without a temp copy.
     console.log("reading RAR via bsdtar…");
     return execFileSync("tar", ["-xf", src, "-O"], { maxBuffer: 1 << 30 });
   }
@@ -86,10 +123,9 @@ function readPackage(src) {
 }
 
 /**
- * A .unitypackage is a gzipped tar of `<guid>/{asset,pathname,...}`. Rather
- * than pull in a tar dependency for one shape of archive, walk the 512-byte
- * headers directly — it is about thirty lines and has no failure modes we
- * cannot see.
+ * A .unitypackage is a gzipped tar of `<guid>/{asset,pathname,...}`. Walking
+ * the 512-byte headers is thirty lines and has no failure modes we cannot see,
+ * which beats a dependency for one shape of archive.
  */
 function* tarEntries(buf) {
   let off = 0;
@@ -99,9 +135,9 @@ function* tarEntries(buf) {
       off += 512;
       continue;
     }
-    const size = parseInt(buf.toString("ascii", off + 124, off + 136).replace(/\0.*$/, "").trim(), 8) || 0;
-    const body = buf.subarray(off + 512, off + 512 + size);
-    yield { name, body };
+    const size =
+      parseInt(buf.toString("ascii", off + 124, off + 136).replace(/\0.*$/, "").trim(), 8) || 0;
+    yield { name, body: buf.subarray(off + 512, off + 512 + size) };
     off += 512 + Math.ceil(size / 512) * 512;
   }
 }
@@ -113,13 +149,11 @@ if (!fs.existsSync(SRC)) {
   process.exit(1);
 }
 
-const tgz = readPackage(SRC);
-console.log(`package: ${(tgz.length / 1024 / 1024).toFixed(0)}MB`);
-const tar = zlib.gunzipSync(tgz);
+const tar = zlib.gunzipSync(readPackage(SRC));
 console.log(`inflated: ${(tar.length / 1024 / 1024).toFixed(0)}MB`);
 
-// First pass: guid -> real filename. `pathname` carries a trailing "00" line,
-// so only the FIRST line is the path.
+// guid -> real filename. `pathname` carries a trailing "00" line, so only the
+// FIRST line is the path.
 const nameOf = new Map();
 const assetOf = new Map();
 for (const { name, body } of tarEntries(tar)) {
@@ -130,76 +164,121 @@ for (const { name, body } of tarEntries(tar)) {
   if (leaf === "pathname") nameOf.set(guid, body.toString("utf8").split("\n")[0].trim());
   else if (leaf === "asset") assetOf.set(guid, body);
 }
-console.log(`entries: ${nameOf.size} assets\n`);
+
+/** basename -> raw bytes, for the files we actually want. */
+const wanted = new Map(Object.entries(SOURCE).map(([k, v]) => [v, k]));
+const bodies = new Map();
+let sourceBytes = 0;
+let sourceVram = 0;
+for (const [guid, full] of nameOf) {
+  const layer = wanted.get(path.basename(full));
+  if (!layer) continue;
+  const body = assetOf.get(guid);
+  if (body) bodies.set(layer, body);
+}
 
 fs.mkdirSync(OUT, { recursive: true });
 
-const manifest = {};
-let found = 0;
-for (const [guid, full] of nameOf) {
-  const base = path.basename(full);
-  const spec = WANT[base];
-  if (!spec) continue;
-  const body = assetOf.get(guid);
-  if (!body) {
-    console.warn(`  ${base}: no asset body`);
-    continue;
-  }
-  found++;
-
+/**
+ * One layer as a single-channel buffer at the target size.
+ *
+ * The source channel is measured, not assumed: if alpha actually varies the
+ * shape is in alpha, otherwise it is the greyscale mask in red.
+ */
+async function maskOf(layer) {
+  const body = bodies.get(layer);
+  if (!body) throw new Error(`missing source for ${layer}: ${SOURCE[layer]}`);
   const img = sharp(body, { limitInputPixels: false });
   const meta = await img.metadata();
-  const dst = path.join(OUT, `${spec.out}.webp`);
-
-  /**
-   * WHICH CHANNEL CARRIES THE SHAPE, measured rather than assumed.
-   *
-   * `sips` reports hasAlpha=yes on nearly all of these, but the channel is
-   * flat 255 on seven of the nine — the shape is a GREYSCALE MASK in RGB, the
-   * same convention our own `water-caustic.png` uses. Only the two "Luxury"
-   * sheets are true RGBA.
-   *
-   * Reading this wrong is silent and total: a cumulus layer sampled as alpha
-   * would draw an opaque square (alpha is 255 everywhere), and cirrus sampled
-   * as alpha would be an invisible black sheet. So the answer goes in the
-   * manifest and the shader reads the channel it is told to.
-   */
   const stats = await img.stats();
   const alpha = stats.channels[3];
-  const channel = alpha && alpha.stdev > 3 ? "a" : "r";
+  const channel = alpha && alpha.stdev > 3 ? 3 : 0;
 
-  await sharp(body, { limitInputPixels: false })
-    .resize(spec.size, spec.size, { fit: "fill", kernel: "lanczos3" })
-    .webp({ quality: 86, alphaQuality: 90, effort: 6 })
+  sourceBytes += body.length;
+  sourceVram += (meta.width * meta.height * 4 * 1.33) / 1024 / 1024;
+
+  const data = await sharp(body, { limitInputPixels: false })
+    .resize(SIZE, SIZE, { fit: "fill", kernel: "lanczos3" })
+    .ensureAlpha()
+    .extractChannel(channel)
+    .raw()
+    .toBuffer();
+
+  return { data, channel: channel === 3 ? "a" : "r", source: `${meta.width}²` };
+}
+
+const raw = { width: SIZE, height: SIZE, channels: 1 };
+const manifest = { size: SIZE, packs: {} };
+
+console.log(`\npacking ${PACKS.reduce((n,p)=>n+p.layers.length,0)} masks into ${PACKS.length} RGB textures at ${SIZE}²\n`);
+
+for (const pack of PACKS) {
+  const masks = [];
+  for (const layer of pack.layers) masks.push(await maskOf(layer));
+
+  const dst = path.join(OUT, `${pack.out}.webp`);
+  // THREE masks per texture, RGB, NO ALPHA -- and that is deliberate.
+  //
+  // Four fit, and the first version packed four. The round-trip check below
+  // then measured a mean error of 33 on the cumulus channel while alpha came
+  // back exact, which is the signature of PREMULTIPLIED ALPHA: WebP multiplies
+  // RGB by alpha on encode and divides it back on decode, so wherever alpha is
+  // near zero the RGB beside it is destroyed. `galaxy` was in that slot and is
+  // almost entirely black, so it wiped out its own neighbours.
+  //
+  // With no alpha channel there is nothing to premultiply by, and lossless
+  // means lossless. The cost is one extra texture per six masks, which is
+  // 1.3MB, and the alternative is silently corrupt cloud layers.
+  await sharp(masks[0].data, { raw })
+    .joinChannel(masks[1].data, { raw })
+    .joinChannel(masks[2].data, { raw })
+    .webp({ lossless: true, effort: 6 })
     .toFile(dst);
 
-  const before = body.length / 1024;
-  const after = fs.statSync(dst).size / 1024;
-  // GPU cost is what actually matters: 4 bytes per texel, x1.33 for mipmaps.
-  const vramBefore = (meta.width * meta.height * 4 * 1.33) / 1024 / 1024;
-  const vramAfter = (spec.size * spec.size * 4 * 1.33) / 1024 / 1024;
+  const kb = fs.statSync(dst).size / 1024;
+  const vram = (SIZE * SIZE * 4 * 1.33) / 1024 / 1024;
+  manifest.packs[pack.out] = {
+    file: `${pack.out}.webp`,
+    wrap: pack.wrap,
+    channels: Object.fromEntries(pack.layers.map((l, i) => [l, "rgba"[i]])),
+  };
 
-  manifest[spec.out] = { file: `${spec.out}.webp`, size: spec.size, tiles: spec.tiles, channel };
-
-  console.log(
-    `  ${spec.out.padEnd(13)} ${String(meta.width).padStart(4)}² -> ${spec.size}²  ` +
-      `${before.toFixed(0).padStart(6)}KB -> ${after.toFixed(0).padStart(4)}KB  ` +
-      `VRAM ${vramBefore.toFixed(0).padStart(3)}MB -> ${vramAfter.toFixed(1)}MB  ` +
-      `${spec.tiles ? "tiling" : "clamped"}  .${channel}`
-  );
+  console.log(`  ${pack.out.padEnd(12)} ${pack.wrap.padEnd(6)} ${kb.toFixed(0).padStart(4)}KB  VRAM ${vram.toFixed(1)}MB`);
+  for (let i = 0; i < pack.layers.length; i++) {
+    console.log(`      .${"rgba"[i]}  ${pack.layers[i].padEnd(13)} from ${masks[i].source} ${masks[i].channel}`);
+  }
 }
 
 fs.writeFileSync(path.join(OUT, "manifest.json"), JSON.stringify(manifest, null, 2) + "\n");
 
-const missing = Object.keys(WANT).filter((k) => !manifest[WANT[k].out]);
-if (missing.length) console.warn(`\nNOT FOUND: ${missing.join(", ")}`);
+// ── Verify the round trip ────────────────────────────────────────
+// Packing is exactly the kind of change that fails silently: a wrong channel
+// order or a lossy encode still produces a valid image. Decode what was
+// written and check each channel against the mask that went in.
+console.log("\nverifying round trip…");
+let worst = 0;
+for (const pack of PACKS) {
+  const decoded = await sharp(path.join(OUT, `${pack.out}.webp`)).raw().toBuffer();
+  // Read the stride off the decode rather than assuming 3 or 4: an encoder is
+  // free to hand back RGBA for an RGB source, and a wrong stride here would
+  // report garbage errors and hide a real one.
+  const stride = decoded.length / (SIZE * SIZE);
+  for (let i = 0; i < pack.layers.length; i++) {
+    const expect = (await maskOf(pack.layers[i])).data;
+    let diff = 0;
+    for (let p = 0; p < expect.length; p++) diff += Math.abs(decoded[p * stride + i] - expect[p]);
+    const mean = diff / expect.length;
+    worst = Math.max(worst, mean);
+    console.log(`  ${pack.out}.${"rgba"[i]} = ${pack.layers[i].padEnd(13)} mean error ${mean.toFixed(4)}`);
+  }
+}
 
-const totalKB = Object.values(manifest).reduce(
-  (s, m) => s + fs.statSync(path.join(OUT, m.file)).size / 1024,
-  0
-);
-const totalVram = Object.values(manifest).reduce((s, m) => s + (m.size * m.size * 4 * 1.33) / 1024 / 1024, 0);
+const outKB = PACKS.reduce((s, p) => s + fs.statSync(path.join(OUT, `${p.out}.webp`)).size / 1024, 0);
+const outVram = PACKS.length * ((SIZE * SIZE * 4 * 1.33) / 1024 / 1024);
 console.log(
-  `\n${found}/${Object.keys(WANT).length} layers -> ${path.relative(WEB, OUT)}` +
-    `\ndownload ${totalKB.toFixed(0)}KB · VRAM ${totalVram.toFixed(0)}MB`
+  `\nsource  ${(sourceBytes / 1024 / 1024 / 2).toFixed(1)}MB on disk · ${(sourceVram / 2).toFixed(0)}MB VRAM` +
+    `\npacked  ${outKB.toFixed(0)}KB on disk · ${outVram.toFixed(1)}MB VRAM` +
+    `\nratio   ${(sourceVram / 2 / outVram).toFixed(0)}x less video memory`
 );
+if (worst > 0.01) console.error(`\nROUND TRIP FAILED: mean error ${worst.toFixed(4)} — encode is not lossless`);
+else console.log(`round trip exact (worst channel error ${worst.toFixed(4)})`);
