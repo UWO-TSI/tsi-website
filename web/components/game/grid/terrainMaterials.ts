@@ -335,8 +335,20 @@ function waterMaterial(): THREE.MeshStandardMaterial {
          float edge = max(vShore - 1.0, 0.0);
          float openness = clamp(edge / max(uDepthFalloff, 0.001), 0.0, 1.0);
          vec3 waterCol = mix(uShallowColor, uDeepColor, openness);
-         float foam = 1.0 - smoothstep(0.0, max(uFoamWidth, 0.001), edge);
-         diffuseColor.rgb *= mix(waterCol, uFoamColor, foam * uFoamStrength);`
+         // SOLID collar, not a gradient (David, 2026-07-28). A hard step would
+         // alias into a staircase along every curve, so the only blend is
+         // exactly one pixel wide: fwidth() gives how fast edge changes
+         // across this fragment, which is the width in world units of one
+         // pixel here. The band therefore stays crisp when the camera is close
+         // and stays smooth when it is far, instead of shimmering.
+         float aa = max(fwidth(edge), 1e-5) * 0.8;
+         float foam = 1.0 - smoothstep(uFoamWidth - aa, uFoamWidth + aa, edge);
+         diffuseColor.rgb *= mix(waterCol, uFoamColor, foam * uFoamStrength);
+         // Lift the collar clear of the lighting so it reads as one flat white
+         // shape from every angle, which is what makes it a "radius" rather
+         // than a shaded rim. Scaled by strength so the slider still means
+         // something at the low end.
+         totalEmissiveRadiance += uFoamColor * foam * uFoamStrength * 0.35;`
       )
       .replace(
         "#include <emissivemap_fragment>",
