@@ -19,6 +19,7 @@
  */
 
 import { useEffect, useState } from "react";
+import type { WaterParams } from "./waterShader";
 
 export interface Tuning {
   gull: {
@@ -45,50 +46,8 @@ export interface Tuning {
     /** How far the orbit centre wanders, world units. */
     drift: number;
   };
-  water: {
-    /** Open-water colour, hex. Sampled #62DAE6 off David's stylised reference. */
-    deepColor: number;
-    /** Colour at the bank, hex. Sampled #C9EEF4 — paler, not darker. */
-    shallowColor: number;
-    /** Foam colour, hex. Sampled #F8F8F7. */
-    foamColor: number;
-    /** Cells from the bank over which shallow blends to open water. */
-    depthFalloff: number;
-    /** Width of the white foam collar, in cells. */
-    foamWidth: number;
-    /** How opaque the foam gets at its strongest. */
-    foamStrength: number;
-    /** How fast the flow normal scrolls, UV/sec. */
-    flowSpeed: number;
-    /** World units one repeat of the flow normal covers. */
-    flowScale: number;
-    /** Strength of the flow normal — the ripple depth. */
-    ripple: number;
-    /** Surface opacity. */
-    opacity: number;
-    /** How glossy the surface reads. Lower is shinier. */
-    roughness: number;
-    /** Sky sheen at grazing angles — stands in for a real reflection. */
-    fresnel: number;
-    /** Brightness of the broad blown-out glare sheet. */
-    glare: number;
-    /** Width of that sheet. LOWER is wider — it is a specular power. */
-    glareWidth: number;
-    /** Brightness of the tight sparkle points riding on top. */
-    sunGlint: number;
-    /** Tightness of the sparkle. Higher is a smaller, harder point. */
-    sunSharp: number;
-    /** How much the sparkle breaks into intermittent points vs a steady sheen. */
-    sparkle: number;
-    /** How fast the sparkle field churns. */
-    sparkleSpeed: number;
-    /** Vertical wave amplitude, world units. Keep it small. */
-    waveHeight: number;
-    /** Wavelength of the swell, world units. */
-    waveScale: number;
-    /** Swell speed. */
-    waveSpeed: number;
-  };
+  /** See `lib/game/waterShader.ts` — every field is documented on WaterParams. */
+  water: WaterParams;
   grass: {
     /** 0 = procedural crossed cards, 1 = the low-poly blade pack. */
     model: number;
@@ -128,23 +87,38 @@ export const TUNING_DEFAULTS: Tuning = {
     wobble: 0.26,
     drift: 3.5,
   },
-  // Sampled off David's stylised reference 2026-07-28. Note the ramp runs PALE
-  // at the bank to SATURATED in open water — the opposite of the ACNH rain
-  // capture, which was dark mid-channel. Different look, and this is the one
-  // he picked.
+  // Colours sampled off David's references 2026-07-29 (images 12 and 13):
+  //   #3098B3 deep · #5BC5CB mid · #CADCBC shallow · #EAE1C3 bed · #FAFCEB foam
+  // The ramp ENDS IN THE SAND. Shallow water there is the seabed under a thin
+  // blue film, not a paler blue, which is why the driver is depth.
+  //
+  // glare / glareWidth / sunGlint / sunSharp / sparkle / sparkleSpeed and the
+  // three wave values are DAVID'S, off the bench 2026-07-28. They are carried
+  // over unchanged, but the material underneath them changed from lit to unlit,
+  // so they need one confirming pass before they can be called his again.
   water: {
-    deepColor: 0x62dae6,
-    shallowColor: 0xc9eef4,
-    foamColor: 0xf8f8f7,
-    depthFalloff: 2.2,
+    deepColor: 0x3098b3,
+    midColor: 0x5bc5cb,
+    shallowColor: 0xcadcbc,
+    bedColor: 0xeae1c3,
+    foamColor: 0xfafceb,
+    ringColor: 0xd8f4ef,
+    depthFalloff: 0.9,
+    bedDepth: 1.6,
+    bedSlope: 3.5,
     foamWidth: 0.85,
     foamStrength: 0.9,
-    flowSpeed: 0.04,
-    flowScale: 11,
-    ripple: 0.18,
-    opacity: 0.88,
-    roughness: 0.12,
-    fresnel: 0.25,
+    foamSoft: 0.06,
+    foamWave: 0.12,
+    foamWaveSpeed: 1.4,
+    blobScale: 3.2,
+    blobDarken: 0.88,
+    blobSpeed: 0.35,
+    ringWidth: 0.06,
+    ringStrength: 0.35,
+    shoreAlpha: 0.35,
+    opacity: 0.94,
+    fresnel: 0.18,
     glare: 1.5,
     glareWidth: 26,
     sunGlint: 6.5,

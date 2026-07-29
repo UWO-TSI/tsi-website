@@ -36,7 +36,14 @@ import {
 } from "@/lib/game/tuning";
 import { patchWind, tuftGeometry } from "@/components/game/grid/GrassTufts";
 import { gullPose, type GullParams } from "@/lib/game/gullPath";
-import { easedCellOutline, sdfFromMask, SHORE_SDF_SCALE, type LayerTest } from "@/lib/game/grid";
+import {
+  easedCellOutline,
+  sdfFromMask,
+  sampleShore,
+  SHORE_SDF_SCALE,
+  type LayerTest,
+} from "@/lib/game/grid";
+import { bedDepth } from "@/lib/game/waterShader";
 import {
   terrainMaterial,
   applyGrassNormalStrength,
@@ -257,7 +264,11 @@ const benchLand: LayerTest = (cx, cz) => isLandAt(bx(cx), bx(cz));
 
 function WaterSpecimen() {
   const t = useTuning();
-  useFrame((state) => advanceWater(state.clock.elapsedTime, t.water));
+  // The stage's key light, so the glare lands where the shading says it should.
+  // The water is unlit now, so it does NOT pick this up on its own — the sun has
+  // to be handed to it the same way GridWorld hands it the scene's key.
+  const sun = useMemo(() => new THREE.Vector3(6, 10, 4).normalize(), []);
+  useFrame((state) => advanceWater(state.clock.elapsedTime, t.water, sun));
 
   const waterMat = useMemo(() => terrainMaterial("mRiver"), []);
   const landMat = useMemo(() => terrainMaterial("mGrass"), []);
@@ -276,7 +287,7 @@ function WaterSpecimen() {
    * world they will earn their collar the same way, by being stamped in before
    * the transform rather than special-cased in the shader.
    */
-  useEffect(() => {
+  const field = useMemo(() => {
     const scale = SHORE_SDF_SCALE;
     const n = BENCH_CELLS * scale;
     const mask = new Uint8Array(n * n);
@@ -289,15 +300,17 @@ function WaterSpecimen() {
         if (solid) mask[j * n + i] = 1;
       }
     }
-    setShoreField(
-      sdfFromMask(mask, n, n, scale, {
-        minX: -BENCH_CELLS / 2,
-        minZ: -BENCH_CELLS / 2,
-        sizeX: BENCH_CELLS,
-        sizeZ: BENCH_CELLS,
-      })
-    );
+    return sdfFromMask(mask, n, n, scale, {
+      minX: -BENCH_CELLS / 2,
+      minZ: -BENCH_CELLS / 2,
+      sizeX: BENCH_CELLS,
+      sizeZ: BENCH_CELLS,
+    });
   }, []);
+
+  useEffect(() => {
+    setShoreField(field);
+  }, [field]);
 
   // Still finely tessellated, but only for the SWELL now — the foam and the
   // colour ramp read the field per fragment and no longer care.
@@ -373,11 +386,34 @@ function WaterSpecimen() {
     return g;
   }, []);
 
+  /**
+   * The bed, SLOPING, through the same `bedDepth` the world's seabed uses.
+   *
+   * A flat bed would make the depth ramp a lie on the bench: the colour would
+   * imply water getting deeper over ground that never drops. Since the ramp is
+   * the thing being judged here, the bed has to be honest about it.
+   *
+   * Rebuilt when the two bathymetry sliders move, which the world does NOT do
+   * (128x128 cells of geometry per frame would stall the tab). On the bench it
+   * is one 64x64 plane, so it can afford to.
+   */
+  const bedGeo = useMemo(() => {
+    const g = new THREE.PlaneGeometry(BENCH_CELLS, BENCH_CELLS, 64, 64);
+    g.rotateX(-Math.PI / 2);
+    const pos = g.attributes.position;
+    for (let i = 0; i < pos.count; i++) {
+      const d = sampleShore(field, pos.getX(i), pos.getZ(i));
+      pos.setY(i, -bedDepth(d, t.water));
+    }
+    pos.needsUpdate = true;
+    g.computeVertexNormals();
+    return g;
+  }, [field, t.water]);
+
   return (
     <group>
-      {/* Bed, so opacity has something to reveal. */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.5, 0]} receiveShadow>
-        <planeGeometry args={[BENCH_CELLS, BENCH_CELLS]} />
+      {/* Bed, so the alpha and the depth ramp have something to reveal. */}
+      <mesh geometry={bedGeo} receiveShadow>
         <meshStandardMaterial color="#B79463" roughness={0.95} metalness={0} />
       </mesh>
       <mesh geometry={land} material={landMat ?? undefined} receiveShadow castShadow />
@@ -415,27 +451,37 @@ interface Row {
 
 const ROWS: Record<Specimen, Row[]> = {
   water: [
-    { group: "water", key: "deepColor", label: "open water", min: 0, max: 0, step: 0, kind: "color", note: "sampled #62DAE6 off the reference" },
-    { group: "water", key: "shallowColor", label: "shallow", min: 0, max: 0, step: 0, kind: "color", note: "sampled #C9EEF4 — paler at the bank, not darker" },
-    { group: "water", key: "foamColor", label: "foam", min: 0, max: 0, step: 0, kind: "color", note: "sampled #F8F8F7" },
-    { group: "water", key: "depthFalloff", label: "depth falloff", min: 0.2, max: 8, step: 0.1, note: "cells over which shallow blends to open water" },
-    { group: "water", key: "foamWidth", label: "foam radius", min: 0, max: 3, step: 0.05, note: "solid white out to this radius, in cells — hard edge, one pixel of AA" },
+    { group: "water", key: "deepColor", label: "open water", min: 0, max: 0, step: 0, kind: "color", note: "sampled #3098B3 off reference 13" },
+    { group: "water", key: "midColor", label: "mid water", min: 0, max: 0, step: 0, kind: "color", note: "sampled #5BC5CB — the turquoise band" },
+    { group: "water", key: "shallowColor", label: "shallows", min: 0, max: 0, step: 0, kind: "color", note: "sampled #CADCBC — sand starting to read through" },
+    { group: "water", key: "bedColor", label: "seabed", min: 0, max: 0, step: 0, kind: "color", note: "sampled #EAE1C3 — the ramp ENDS here, it is sand under a film" },
+    { group: "water", key: "foamColor", label: "foam", min: 0, max: 0, step: 0, kind: "color", note: "sampled #FAFCEB — cream, not white" },
+    { group: "water", key: "ringColor", label: "light ring", min: 0, max: 0, step: 0, kind: "color", note: "the two ADD layers from your tutorial image" },
+    { group: "water", key: "bedDepth", label: "max depth", min: 0.2, max: 6, step: 0.1, note: "how deep the bed ever gets, world units" },
+    { group: "water", key: "bedSlope", label: "bed slope", min: 0.5, max: 20, step: 0.5, note: "cells from shore to reach ~63% of max depth" },
+    { group: "water", key: "depthFalloff", label: "depth falloff", min: 0.1, max: 6, step: 0.05, note: "world units of DEPTH the colour ramp spans" },
+    { group: "water", key: "foamWidth", label: "foam radius", min: 0, max: 3, step: 0.05, note: "solid white out to this radius, in cells" },
     { group: "water", key: "foamStrength", label: "foam opacity", min: 0, max: 1, step: 0.02, note: "1 is flat white; lower lets the water through" },
+    { group: "water", key: "foamSoft", label: "foam softness", min: 0, max: 0.6, step: 0.01, note: "0 is a hard edge with one pixel of AA" },
+    { group: "water", key: "foamWave", label: "swash", min: 0, max: 2, step: 0.02, note: "how far the waterline runs up and back, in cells — 0 is a static edge" },
+    { group: "water", key: "foamWaveSpeed", label: "swash speed", min: 0, max: 5, step: 0.05, note: "how fast the swash travels ALONG the shore" },
+    { group: "water", key: "blobScale", label: "blob size", min: 0.5, max: 12, step: 0.1, note: "world units per patch in the MULTIPLY layer" },
+    { group: "water", key: "blobDarken", label: "blob depth", min: 0.5, max: 1, step: 0.01, note: "1 is off; lower darkens the patches" },
+    { group: "water", key: "blobSpeed", label: "blob drift", min: 0, max: 2, step: 0.02, note: "how fast the patches churn" },
+    { group: "water", key: "ringWidth", label: "ring width", min: 0.01, max: 0.4, step: 0.005, note: "thickness of the light outline around each patch" },
+    { group: "water", key: "ringStrength", label: "ring brightness", min: 0, max: 1.5, step: 0.02, note: "the two ADD layers" },
     { group: "water", key: "glare", label: "glare sheet", min: 0, max: 8, step: 0.1, note: "broad blown-out sheen — over 1 clips to white on purpose" },
     { group: "water", key: "glareWidth", label: "glare spread", min: 1, max: 60, step: 0.5, note: "LOWER is wider; it is a specular power" },
     { group: "water", key: "sunGlint", label: "flare brightness", min: 0, max: 20, step: 0.1, note: "the sharp points riding on the sheet" },
     { group: "water", key: "sunSharp", label: "flare tightness", min: 20, max: 600, step: 5, note: "higher is smaller and harder" },
     { group: "water", key: "sparkle", label: "flare intermittency", min: 0, max: 1, step: 0.02, note: "0 = steady sheen, 1 = flares come and go" },
     { group: "water", key: "sparkleSpeed", label: "flare churn", min: 0, max: 5, step: 0.05, note: "how fast the sparkle field moves" },
+    { group: "water", key: "fresnel", label: "sky sheen", min: 0, max: 1.5, step: 0.02, note: "grazing-angle brightening" },
     { group: "water", key: "waveHeight", label: "wave height", min: 0, max: 0.3, step: 0.005, note: "vertical swell, world units — keep it small" },
     { group: "water", key: "waveScale", label: "wave length", min: 1, max: 30, step: 0.5, note: "world units per swell" },
     { group: "water", key: "waveSpeed", label: "wave speed", min: 0, max: 3, step: 0.05, note: "how fast the swell travels" },
-    { group: "water", key: "fresnel", label: "sky sheen", min: 0, max: 1.5, step: 0.02, note: "grazing-angle brightening" },
-    { group: "water", key: "ripple", label: "ripple depth", min: 0, max: 2, step: 0.02, note: "mRiver_Nrm surface detail" },
-    { group: "water", key: "flowSpeed", label: "flow speed", min: 0, max: 0.4, step: 0.005, note: "how fast the current runs" },
-    { group: "water", key: "flowScale", label: "flow scale", min: 1, max: 20, step: 0.5, note: "world units per ripple repeat" },
-    { group: "water", key: "opacity", label: "opacity", min: 0.3, max: 1, step: 0.02, note: "how much bed shows through" },
-    { group: "water", key: "roughness", label: "roughness", min: 0, max: 1, step: 0.02, note: "lower is glossier" },
+    { group: "water", key: "shoreAlpha", label: "alpha at shore", min: 0, max: 1, step: 0.02, note: "how much bed shows through in the shallows" },
+    { group: "water", key: "opacity", label: "alpha in deep", min: 0.3, max: 1, step: 0.02, note: "how much bed shows through out in open water" },
   ],
   gull: [
     { group: "gull", key: "flap", label: "wing flap", min: 0.2, max: 8, step: 0.05, note: "animation speed multiplier" },

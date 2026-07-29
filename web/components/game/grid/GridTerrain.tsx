@@ -41,10 +41,13 @@ import {
   needsCliff,
   bankEdges,
   shoreSdf,
+  sampleShore,
   easedCellOutline,
   type LayerTest,
 } from "@/lib/game/grid";
 import { terrainMaterial, setShoreField } from "./terrainMaterials";
+import { TUNING_DEFAULTS } from "@/lib/game/tuning";
+import { bedDepth } from "@/lib/game/waterShader";
 
 // Flat colours for the surfaces whose road-kit textures are not wired yet.
 const SURFACE_COLOR: Record<number, string> = {
@@ -68,6 +71,13 @@ const OVERLAY_SURFACES = [
 
 /** Lift per overlay so it wins the depth test against the base without z-fighting. */
 const OVERLAY_LIFT = 0.004;
+
+/**
+ * Render layer for the riverbed. Not a map Surface: nothing authors a bed cell,
+ * it is derived from the water above it, the same way waterfalls are derived
+ * from a level drop.
+ */
+const RIVER_BED = 8;
 
 // How many cells one repeat of a ground texture covers. PlaneGeometry's own
 // 0..1 UVs put the WHOLE texture on every single cell, which turned the lawn
@@ -110,12 +120,14 @@ function addCell(
   cz: number,
   x: number,
   y: number,
-  z: number
+  z: number,
+  /** Per-vertex height offset. The seabed uses it; every flat layer omits it. */
+  dip?: (px: number, pz: number) => number
 ) {
   const s = 1 / (UV_CELLS_PER_REPEAT * TILE);
   const base = mesh.pos.length / 3;
   const push = (px: number, pz: number) => {
-    mesh.pos.push(px, y, pz);
+    mesh.pos.push(px, dip ? y - dip(px, pz) : y, pz);
     // UVs from WORLD position so neighbouring cells continue the pattern
     // instead of each restarting it.
     mesh.uv.push(px * s, pz * s);
@@ -229,6 +241,10 @@ function build(mesh: Mesh): THREE.BufferGeometry | null {
 }
 
 export default function GridTerrain({ map }: { map: IslandMap }) {
+  // ONE field, read twice: the seabed geometry samples it on the CPU, the water
+  // shader samples it on the GPU. Two bakes would be two shorelines.
+  const field = useMemo(() => shoreSdf(map), [map]);
+
   const chunks = useMemo(() => {
     const out: { key: string; surface: number; geometry: THREE.BufferGeometry }[] = [];
 
@@ -238,6 +254,14 @@ export default function GridTerrain({ map }: { map: IslandMap }) {
     // still counts cliff cells: excluding them would cut the ground away at
     // the foot of every cliff and open a gap the cliff piece does not cover.
 
+    // How far the bed drops below the surface at a given point. Reads the
+    // SHIPPED tuning, not the live bench value: this is geometry, and rebuilding
+    // 128x128 cells of it on every slider frame would stall the tab. Moving
+    // `bedDepth` or `bedSlope` on the bench changes the colour instantly and the
+    // bed shape on reload.
+    const water = TUNING_DEFAULTS.water;
+    const dipAt = (px: number, pz: number) => bedDepth(sampleShore(field, px, pz), water);
+
     const inGround: LayerTest = (cx, cz) =>
       inBounds(map, cx, cz) && !isVoid(surfaceAt(map, cx, cz)) && !isRiver(surfaceAt(map, cx, cz));
     const inSurface = (s: number): LayerTest => (cx, cz) =>
@@ -246,6 +270,7 @@ export default function GridTerrain({ map }: { map: IslandMap }) {
     for (const chunk of listChunks(map)) {
       const grass = emptyMesh();
       const river = emptyMesh();
+      const bed = emptyMesh();
       const overlays = new Map<number, Mesh>();
 
       for (let cz = chunk.minCellZ; cz <= chunk.maxCellZ; cz++) {
@@ -259,10 +284,17 @@ export default function GridTerrain({ map }: { map: IslandMap }) {
           const y = levelAt(map, cx, cz) * LEVEL_STEP;
 
           if (isRiver(s)) {
-            // NOT eased, and drawn full-square on purpose. Nothing is beneath
-            // the water, so cutting its corners would show sky; instead the
-            // rounded grass bank overlaps it from above.
+            // NOT eased, and drawn full-square on purpose: the rounded grass
+            // bank overlaps it from above, so cutting its corners would open a
+            // gap between the two.
             addCell(river, () => true, cx, cz, x, y - WATER_DROP, z);
+            // The bed under it, sloping away from the bank. David approved
+            // bathymetry 2026-07-29: the reference colour ramp ends in the
+            // SEABED colour, so there has to be a seabed and it has to get
+            // further away as the water deepens, or the ramp has nothing to
+            // ramp over. Depth comes from `bedDepth`, the same function the
+            // shader mirrors in GLSL.
+            addCell(bed, () => true, cx, cz, x, y - WATER_DROP, z, dipAt);
             continue;
           }
 
@@ -288,6 +320,7 @@ export default function GridTerrain({ map }: { map: IslandMap }) {
         if (g) out.push({ key: `${chunk.chunkX}:${chunk.chunkZ}:${surface}`, surface, geometry: g });
       };
       emit(Surface.Grass, grass);
+      emit(RIVER_BED, bed);
       emit(Surface.River, river);
       for (const s of OVERLAY_SURFACES) {
         const m = overlays.get(s);
@@ -295,13 +328,13 @@ export default function GridTerrain({ map }: { map: IslandMap }) {
       }
     }
     return out;
-  }, [map]);
+  }, [map, field]);
 
   // The water reads its distance to the shore from a baked field rather than
   // from anything on the mesh, so this is a one-shot upload, not geometry.
   useEffect(() => {
-    setShoreField(shoreSdf(map));
-  }, [map]);
+    setShoreField(field);
+  }, [field]);
 
   const materials = useMemo(() => {
     // Names, not files — terrainMaterial() decides whether a surface gets an
@@ -312,9 +345,13 @@ export default function GridTerrain({ map }: { map: IslandMap }) {
       [Surface.Grass]: "mGrass",
       [Surface.Sand]: "mSand",
       [Surface.River]: "mRiver",
+      // The one ACNH file that IS what its name says: mRiverBed_Alb is the
+      // sandy bed, mean RGB (164,107,63). It was extracted and then never
+      // drawn, because until now there was no bed to draw it on.
+      [RIVER_BED]: "mRiverBed",
     };
     const m = new Map<number, THREE.Material>();
-    for (const s of [Surface.Grass, Surface.River, ...OVERLAY_SURFACES]) {
+    for (const s of [Surface.Grass, RIVER_BED, Surface.River, ...OVERLAY_SURFACES]) {
       const sharedName = SHARED[s];
       const shared = sharedName ? terrainMaterial(sharedName) : null;
       if (shared) {

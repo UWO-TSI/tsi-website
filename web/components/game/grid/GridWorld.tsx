@@ -90,7 +90,7 @@ export default function GridWorld() {
       if (!key && l.isDirectionalLight && l.intensity > 0.5) key = l;
     });
     if (key) sunDir.current.copy((key as THREE.DirectionalLight).position);
-    advanceWater(state.clock.elapsedTime, tuneNow().water, sunDir.current, state.camera);
+    advanceWater(state.clock.elapsedTime, tuneNow().water, sunDir.current);
   });
 
   return (
