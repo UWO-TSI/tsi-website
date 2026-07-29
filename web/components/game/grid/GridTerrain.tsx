@@ -40,6 +40,8 @@ import {
   cellToWorldZ,
   needsCliff,
   bankEdges,
+  waterEdges,
+  FRINGE_DROP,
   shoreSdf,
   sampleShore,
   easedCellOutline,
@@ -78,6 +80,18 @@ const OVERLAY_LIFT = 0.004;
  * from a level drop.
  */
 const RIVER_BED = 8;
+
+/** Render layer for the grass fringe that drapes over a water edge. */
+const WATER_FRINGE = 9;
+
+/**
+ * How far the fringe card sits OUTBOARD of the land edge, in tiles.
+ *
+ * Slightly past the boundary so the blades overhang the water rather than
+ * standing on the line. Small, because the drape is only 0.188u tall and a
+ * bigger overhang reads as grass floating on the surface.
+ */
+const FRINGE_OVERHANG = 0.06;
 
 // How many cells one repeat of a ground texture covers. PlaneGeometry's own
 // 0..1 UVs put the WHOLE texture on every single cell, which turned the lawn
@@ -229,6 +243,63 @@ function addBank(
   }
 }
 
+/**
+ * Append the grass drape for one land-to-water edge.
+ *
+ * ACNH hangs a strip of alpha-cut grass over every water boundary, and it is
+ * what makes the edge read as an edge rather than as the place the cells ran
+ * out. The card is vertical, one tile wide, FRINGE_DROP tall, and hangs from
+ * the land's own height -- so it reaches past the water surface (only 0.078u
+ * below) and dips in.
+ *
+ * UVs run along WORLD position on the long axis, so the strip is continuous
+ * across adjacent cells instead of restarting its blades at every boundary.
+ * The source texture is 1024x32, a 32:1 strip, so one tile takes a 1/6 slice
+ * to keep the blades at roughly their authored proportion.
+ */
+function addFringe(
+  mesh: Mesh,
+  x: number,
+  z: number,
+  topY: number,
+  dx: number,
+  dz: number
+) {
+  const half = TILE / 2;
+  // Along-edge axis is the perpendicular of the outward direction.
+  const ax = dz;
+  const az = dx;
+  const ex = x + dx * (half + FRINGE_OVERHANG);
+  const ez = z + dz * (half + FRINGE_OVERHANG);
+  const bottomY = topY - FRINGE_DROP;
+
+  const base = mesh.pos.length / 3;
+  const pts: [number, number, number][] = [
+    [ex - ax * half, topY, ez - az * half],
+    [ex + ax * half, topY, ez + az * half],
+    [ex + ax * half, bottomY, ez + az * half],
+    [ex - ax * half, bottomY, ez - az * half],
+  ];
+  // World-space U so neighbouring cards continue the same blades.
+  const U = 1 / 6;
+  const uAt = (px: number, pz: number) => (ax !== 0 ? pz : px) * U;
+  const uvs: [number, number][] = [
+    [uAt(pts[0][0], pts[0][2]), 0],
+    [uAt(pts[1][0], pts[1][2]), 0],
+    [uAt(pts[2][0], pts[2][2]), 1],
+    [uAt(pts[3][0], pts[3][2]), 1],
+  ];
+  for (let i = 0; i < 4; i++) {
+    mesh.pos.push(pts[i][0], pts[i][1], pts[i][2]);
+    mesh.uv.push(uvs[i][0], uvs[i][1]);
+    // Face outward over the water. The card is double-sided anyway, but a
+    // correct normal means it catches the key light like the ground it hangs
+    // from rather than going flat.
+    mesh.nrm.push(dx, 0.35, dz);
+  }
+  mesh.idx.push(base, base + 1, base + 2, base, base + 2, base + 3);
+}
+
 function build(mesh: Mesh): THREE.BufferGeometry | null {
   if (mesh.idx.length === 0) return null;
   const g = new THREE.BufferGeometry();
@@ -271,6 +342,7 @@ export default function GridTerrain({ map }: { map: IslandMap }) {
       const grass = emptyMesh();
       const river = emptyMesh();
       const bed = emptyMesh();
+      const fringe = emptyMesh();
       const overlays = new Map<number, Mesh>();
 
       for (let cz = chunk.minCellZ; cz <= chunk.maxCellZ; cz++) {
@@ -307,6 +379,14 @@ export default function GridTerrain({ map }: { map: IslandMap }) {
             addBank(grass, x, z, y, y - drop * LEVEL_STEP, dx, dz);
           }
 
+          // Grass hanging over a water edge. Without this the river simply
+          // stops where its cells end -- the old world needed RiverBanks and
+          // RiverBankWalls to hide the same seam, and this is the kit's own
+          // answer to it.
+          for (const [dx, dz] of waterEdges(map, cx, cz)) {
+            addFringe(fringe, x, z, y, dx, dz);
+          }
+
           if (s !== Surface.Grass) {
             const m = overlays.get(s) ?? emptyMesh();
             addCell(m, inSurface(s), cx, cz, x, y + OVERLAY_LIFT, z);
@@ -322,6 +402,7 @@ export default function GridTerrain({ map }: { map: IslandMap }) {
       emit(Surface.Grass, grass);
       emit(RIVER_BED, bed);
       emit(Surface.River, river);
+      emit(WATER_FRINGE, fringe);
       for (const s of OVERLAY_SURFACES) {
         const m = overlays.get(s);
         if (m) emit(s, m);
@@ -356,9 +437,10 @@ export default function GridTerrain({ map }: { map: IslandMap }) {
       // sandy bed, mean RGB (164,107,63). It was extracted and then never
       // drawn, because until now there was no bed to draw it on.
       [RIVER_BED]: "mRiverBed",
+      [WATER_FRINGE]: "mGrassRiverXlu",
     };
     const m = new Map<number, THREE.Material>();
-    for (const s of [Surface.Grass, RIVER_BED, Surface.River, ...OVERLAY_SURFACES]) {
+    for (const s of [Surface.Grass, RIVER_BED, Surface.River, WATER_FRINGE, ...OVERLAY_SURFACES]) {
       const sharedName = SHARED[s];
       const shared = sharedName ? terrainMaterial(sharedName) : null;
       if (shared) {

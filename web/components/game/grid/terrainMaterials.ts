@@ -68,8 +68,13 @@ const TEXTURE_FOR: Record<string, string> = {
   mRoadStone: "mRoadStone_Alb.png",
   mRoadWood: "mRoadWood_Alb.png",
   mRoadBrick: "mRoadBrick_Alb.png",
-  mGrassCliffXlu: "mGrassCliffXlu_AlbGry.png",
-  mGrassRiverXlu: "mGrassRiverXlu_AlbGry.png",
+  // NOT the _AlbGry files. ACNH splits these into _AlbGry (greyscale colour,
+  // tinted at runtime) and _OP (the blade shapes). The _AlbGry alone has NO
+  // usable alpha -- measured 0% opaque -- so with alphaTest 0.4 every fragment
+  // was discarded and the card was invisible. scripts/extract-grass-fringe.mjs
+  // composites the pair into one RGBA file with these names.
+  mGrassCliffXlu: "mGrassCliffXlu.png",
+  mGrassRiverXlu: "mGrassRiverXlu.png",
   mRiverBed: "mRiverBed_Alb.png",
   mSand: "mSand_Alb.png",
 };

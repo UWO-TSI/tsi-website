@@ -55,6 +55,38 @@ export const CLIFF_HEIGHT = CLIFF_LEVELS * LEVEL_STEP;
 /** River surface below its own ground level, world units. Raw 0.78. */
 export const WATER_DROP = 0.078;
 
+/**
+ * How far the grass fringe hangs past a water edge, world units.
+ *
+ * Measured from the kit: ACNH drapes grass 1.88 raw units down a cliff face,
+ * which is 0.188u. The same strip does the river's edge, and because the water
+ * surface is only WATER_DROP (0.078u) below the ground the drape reaches BELOW
+ * it -- the blades dip into the water instead of stopping above it, which is
+ * what stops the boundary reading as a cut.
+ */
+export const FRINGE_DROP = 0.188;
+
+/**
+ * Water edges: which orthogonal neighbours of a LAND cell are river.
+ *
+ * The counterpart to `bankEdges`. A bank is a walkable step between two land
+ * levels; this is the boundary between land and water, and it wants a hanging
+ * grass card rather than a sloped skirt.
+ *
+ * Void is excluded deliberately. Where land meets open sea the beach already
+ * runs down under the waterline, so a fringe there would float over nothing --
+ * the same reason `bankEdges` skips it.
+ */
+export function waterEdges(map: IslandMap, cx: number, cz: number): [number, number][] {
+  const here = surfaceAt(map, cx, cz);
+  if (isVoid(here) || isRiver(here)) return [];
+  const out: [number, number][] = [];
+  for (const [dx, dz] of ORTHOGONAL) {
+    if (isRiver(surfaceAt(map, cx + dx, cz + dz))) out.push([dx, dz]);
+  }
+  return out;
+}
+
 /** Cells per chunk edge. One ACNH acre, and the culling/merge unit. */
 export const CHUNK = 16;
 
