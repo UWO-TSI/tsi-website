@@ -101,8 +101,9 @@ const SIZE = Number(arg("size", 512));
  * the reflection is invisible.
  */
 const PACKS = [
-  { out: "sky-a", wrap: "mirror", layers: ["puffy", "chunky", "overcast"] },
-  { out: "sky-b", wrap: "mirror", layers: ["storm", "noise", "stars"] },
+  { out: "sky-a", wrap: "mirror", layers: ["puffyCover", "puffyShade", "chunkyCover"] },
+  { out: "sky-b", wrap: "mirror", layers: ["chunkyShade", "overcast", "storm"] },
+  { out: "sky-c", wrap: "mirror", layers: ["noise", "stars", "spare"] },
 ];
 
 /** Source file for each layer name. */
@@ -121,9 +122,11 @@ const PACKS = [
  */
 const SOURCE = {
   /** Discrete puffy clouds with gaps between them. The fair-weather sky. */
-  puffy: "Partly Cloudy Luxury Texture.png",
+  puffyCover: "Partly Cloudy Luxury Texture.png",
+  puffyShade: "Partly Cloudy Luxury Texture.png",
   /** Bigger and denser, still broken up. */
-  chunky: "Mostly Cloudy Luxury Texture.png",
+  chunkyCover: "Mostly Cloudy Luxury Texture.png",
+  chunkyShade: "Mostly Cloudy Luxury Texture.png",
   /** Continuous soft ceiling. */
   overcast: "Overcast Luxury Texture.png",
   /** Heavy dark ceiling for rain and storms. */
@@ -131,6 +134,36 @@ const SOURCE = {
   /** Soft fractal noise, to break the ladder up so it never reads as a decal. */
   noise: "Cumulus Noise.png",
   stars: "Stars.png",
+  spare: "Cumulus Noise.png",
+};
+
+/**
+ * WHICH CHANNEL, per layer. Forced rather than detected, because detection got
+ * this wrong in a way that cost the whole look.
+ *
+ * The Luxury sheets are TWO-CHANNEL data: ALPHA is the silhouette (is there a
+ * cloud here) and RGB is the painted SHADING inside it (soft grey cores,
+ * layered tones, actual volume). Measured on Partly Cloudy: alpha sd 79.8,
+ * RGB sd 107.0. Both channels carry real information.
+ *
+ * The first pass picked ONE channel per texture with "use alpha if it varies",
+ * which took the silhouette for puffy and chunky and discarded the art. The
+ * result rendered as flat white blobs, and David called it: "why does it look
+ * so boring, are these really the same assets". They were not.
+ *
+ * Overcast and Dense Overcast have flat alpha, so for those RGB IS the density
+ * and one channel is all there is.
+ */
+const CHANNEL = {
+  puffyCover: 3,
+  puffyShade: 0,
+  chunkyCover: 3,
+  chunkyShade: 0,
+  overcast: 0,
+  storm: 0,
+  noise: 0,
+  stars: 0,
+  spare: 0,
 };
 
 // ── Read the package ─────────────────────────────────────────────
@@ -188,16 +221,20 @@ for (const { name, body } of tarEntries(tar)) {
   else if (leaf === "asset") assetOf.set(guid, body);
 }
 
-/** basename -> raw bytes, for the files we actually want. */
-const wanted = new Map(Object.entries(SOURCE).map(([k, v]) => [v, k]));
+/**
+ * basename -> raw bytes. Keyed by FILE, not by layer: puffyCover and puffyShade
+ * are two channels of the SAME image, so a layer-keyed map silently kept only
+ * the last one.
+ */
+const wanted = new Set(Object.values(SOURCE));
 const bodies = new Map();
 let sourceBytes = 0;
 let sourceVram = 0;
 for (const [guid, full] of nameOf) {
-  const layer = wanted.get(path.basename(full));
-  if (!layer) continue;
+  const base = path.basename(full);
+  if (!wanted.has(base)) continue;
   const body = assetOf.get(guid);
-  if (body) bodies.set(layer, body);
+  if (body) bodies.set(base, body);
 }
 
 fs.mkdirSync(OUT, { recursive: true });
@@ -209,13 +246,11 @@ fs.mkdirSync(OUT, { recursive: true });
  * shape is in alpha, otherwise it is the greyscale mask in red.
  */
 async function maskOf(layer) {
-  const body = bodies.get(layer);
+  const body = bodies.get(SOURCE[layer]);
   if (!body) throw new Error(`missing source for ${layer}: ${SOURCE[layer]}`);
   const img = sharp(body, { limitInputPixels: false });
   const meta = await img.metadata();
-  const stats = await img.stats();
-  const alpha = stats.channels[3];
-  const channel = alpha && alpha.stdev > 3 ? 3 : 0;
+  const channel = CHANNEL[layer];
 
   sourceBytes += body.length;
   sourceVram += (meta.width * meta.height * 4 * 1.33) / 1024 / 1024;

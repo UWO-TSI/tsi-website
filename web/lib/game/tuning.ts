@@ -163,16 +163,16 @@ export const TUNING_DEFAULTS: Tuning = {
   // whatever the WEATHER ENGINE pushes at runtime; these are only what the
   // bench opens on.
   sky: {
-    cloudScale: 0.85,
-    puffy: 0.9,
-    chunky: 0.35,
+    cloudScale: 0.5,
+    puffy: 0.6,
+    chunky: 0.25,
     overcast: 0,
     storm: 0,
     stormReach: 1,
-    bandHeight: 0.45,
+    bandHeight: 0.52,
     bandEffect: 1,
-    wind: 0.3,
-    cloudLit: 0xfff7e4,
+    wind: 0.84,
+    cloudLit: 0xffffff,
     cloudDark: 0xb9cbdc,
     zenith: 0x4fb6f5,
     horizon: 0xa9dcf2,

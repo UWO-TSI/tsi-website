@@ -84,7 +84,7 @@ const hex = (h) => [((h >> 16) & 255) / 255, ((h >> 8) & 255) / 255, (h & 255) /
 // other has to, and a preview that has quietly drifted from the shader is worse
 // than no preview at all.
 
-function shade(dir, U, A, B) {
+function shadePixel(dir, U, A, B, C) {
   const el = Math.max(dir[1], 0);
   // See skyShader.ts: el never exceeds ~0.42 through the real camera, so every
   // height-shaped term works in normalised space or it lands off screen.
@@ -103,35 +103,41 @@ function shade(dir, U, A, B) {
   const t = U.time * U.wind;
   const s = U.cloudScale;
 
-  let uv = sheetUv(s, t * 0.01, t * 0.004);
-  const puffy = sample(A, uv[0], uv[1], 0);
-  uv = sheetUv(s * 0.78, t * 0.013, t * 0.006);
-  const chunky = sample(A, uv[0], uv[1], 1);
-  uv = sheetUv(s * 0.62, t * 0.008, t * 0.003);
-  const overcast = sample(A, uv[0], uv[1], 2);
-  uv = sheetUv(s * 0.55, t * 0.016, t * 0.009);
-  const storm = sample(B, uv[0], uv[1], 0);
-  uv = sheetUv(s * 1.9, t * 0.006, t * 0.002);
-  const noise = sample(B, uv[0], uv[1], 1);
+  const uvP = sheetUv(s, t * 0.01, t * 0.004);
+  const uvC = sheetUv(s * 0.78, t * 0.013, t * 0.006);
+  const uvO = sheetUv(s * 0.62, t * 0.008, t * 0.003);
+  const uvS = sheetUv(s * 0.55, t * 0.016, t * 0.009);
+  const uvN = sheetUv(s * 1.9, t * 0.006, t * 0.002);
+
+  const puffyCover = sample(A, uvP[0], uvP[1], 0);
+  const puffyShade = sample(A, uvP[0], uvP[1], 1);
+  const chunkyCover = sample(A, uvC[0], uvC[1], 2);
+  const chunkyShade = sample(B, uvC[0], uvC[1], 0);
+  const overcast = sample(B, uvO[0], uvO[1], 1);
+  const storm = sample(B, uvS[0], uvS[1], 2);
+  const noise = sample(C, uvN[0], uvN[1], 0);
   const breakUp = mix(1, 0.35 + noise * 0.9, 0.55);
 
   const band = smoothstep(U.bandHeight - 0.75, U.bandHeight + 0.75, elN);
   const border = mix(1, band, clamp(U.bandEffect, 0, 1));
 
-  let density = 0;
-  density += puffy * U.puffy * border * breakUp;
-  density += chunky * U.chunky * border * breakUp;
-  density += overcast * U.overcast * breakUp;
-  density += storm * U.storm * breakUp * smoothstep(0, mix(0.9, 0.15, U.stormReach), elN);
-  density = clamp(density, 0, 1) * fade;
+  const wPuffy = puffyCover * U.puffy * border * breakUp;
+  const wChunky = chunkyCover * U.chunky * border * breakUp;
+  const wOver = overcast * U.overcast * breakUp;
+  const wStorm = storm * U.storm * breakUp * smoothstep(0, mix(0.9, 0.15, U.stormReach), elN);
 
-  const k = smoothstep(0.35, 1.0, density);
+  const density = clamp(wPuffy + wChunky + wOver + wStorm, 0, 1) * fade;
+  const wsum = wPuffy + wChunky + wOver + wStorm;
+  const shade = wsum > 0.0001
+    ? (puffyShade * wPuffy + chunkyShade * wChunky + overcast * wOver + storm * wStorm) / wsum
+    : 1;
+
   const cloud = [0, 0, 0];
-  for (let i = 0; i < 3; i++) cloud[i] = mix(U.cloudLit[i], U.cloudDark[i], k);
+  for (let i = 0; i < 3; i++) cloud[i] = mix(U.cloudDark[i], U.cloudLit[i], shade);
 
   if (U.night > 0.001) {
     const su = sheetUv(s * 0.9, 0, 0);
-    const stars = sample(B, su[0], su[1], 2);
+    const stars = sample(C, su[0], su[1], 1);
     const g = [0.85, 0.9, 1.0];
     for (let i = 0; i < 3; i++) sky[i] += g[i] * Math.pow(stars, 2.2) * U.night * fade * 2.2;
   }
@@ -143,7 +149,7 @@ function shade(dir, U, A, B) {
 
 // ── Render ───────────────────────────────────────────────────────
 
-function renderTile(U, A, B) {
+function renderTile(U, A, B, C) {
   const buf = Buffer.alloc(TILE_W * TILE_H * 3);
   const aspect = TILE_W / TILE_H;
   const th = Math.tan(FOV / 2);
@@ -157,7 +163,7 @@ function renderTile(U, A, B) {
       const dy = ndcY * th;
       const len = Math.hypot(dx, dy, 1);
       const dir = [dx / len, dy / len, -1 / len];
-      const c = shade(dir, U, A, B);
+      const c = shadePixel(dir, U, A, B, C);
       const i = (y * TILE_W + x) * 3;
       // Approximate sRGB encode, so the preview is not gamma-dark.
       for (let k = 0; k < 3; k++) buf[i + k] = Math.round(clamp(Math.pow(clamp(c[k], 0, 1), 1 / 2.2), 0, 1) * 255);
@@ -187,6 +193,7 @@ const STATES = {
 
 const A = await loadPack("sky-a.webp");
 const B = await loadPack("sky-b.webp");
+const C = await loadPack("sky-c.webp");
 console.log(`packs: ${A.w}² x${A.ch}ch / ${B.w}² x${B.ch}ch`);
 
 const rows = [];
@@ -204,12 +211,12 @@ for (const [tname, T] of Object.entries(TIMES)) {
       cloudDark: hex(T.dark),
       night: T.night,
       time: 40,
-      wind: 0.3,
-      cloudScale: 0.85,
+      wind: 0.84,
+      cloudScale: 0.5,
       value: T.value * S.value,
       ...S,
     };
-    rows.push(renderTile(U, A, B));
+    rows.push(renderTile(U, A, B, C));
     labels.push(`${tname}/${sname}`);
   }
 }

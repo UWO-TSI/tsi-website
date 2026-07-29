@@ -62,6 +62,7 @@ export interface SkyShape {
 export const skyUniforms = {
   uPackA: { value: null as THREE.Texture | null },
   uPackB: { value: null as THREE.Texture | null },
+  uPackC: { value: null as THREE.Texture | null },
   uTime: { value: 0 },
   /** Straight up. */
   uZenith: { value: new THREE.Color(0x4fb6f5) },
@@ -98,6 +99,7 @@ void main() {
 const FRAG = /* glsl */ `
 uniform sampler2D uPackA;
 uniform sampler2D uPackB;
+uniform sampler2D uPackC;
 uniform float uTime;
 uniform vec3 uZenith;
 uniform vec3 uHorizon;
@@ -149,45 +151,59 @@ void main() {
   float t = uTime * uWind;
   float s = uCloudScale;
 
-  // THE COVERAGE LADDER. Not cloud types -- increasing amounts of sky covered.
-  // Each is driven at its own scale and drift so they never move as one sheet.
-  float puffy = texture2D(uPackA, sheetUv(s, vec2(t * 0.010, t * 0.004))).r;
-  float chunky = texture2D(uPackA, sheetUv(s * 0.78, vec2(t * 0.013, t * 0.006))).g;
-  float overcast = texture2D(uPackA, sheetUv(s * 0.62, vec2(t * 0.008, t * 0.003))).b;
-  float storm = texture2D(uPackB, sheetUv(s * 0.55, vec2(t * 0.016, t * 0.009))).r;
-  // Soft fractal noise, sampled larger and slower. Multiplied in rather than
-  // added so it thins and thickens the ladder instead of adding cloud of its
-  // own -- without it, four fixed sheets read as decals sliding past.
-  float noise = texture2D(uPackB, sheetUv(s * 1.9, vec2(t * 0.006, t * 0.002))).g;
+  // THE COVERAGE LADDER, and each sheet is TWO channels.
+  //
+  // These are not silhouettes. ALPHA in the source says where a cloud is; RGB
+  // says how it is SHADED inside -- soft grey cores, layered tones, real
+  // volume. The first version kept only the silhouette and the sky rendered as
+  // flat white blobs. Coverage decides how much sky is cloud; SHADE decides
+  // what that cloud looks like, and it is the second one that stops it being
+  // boring.
+  vec4 a1 = texture2D(uPackA, sheetUv(s, vec2(t * 0.010, t * 0.004)));
+  vec4 a2 = texture2D(uPackA, sheetUv(s * 0.78, vec2(t * 0.013, t * 0.006)));
+  vec4 b1 = texture2D(uPackB, sheetUv(s * 0.78, vec2(t * 0.013, t * 0.006)));
+  vec4 b2 = texture2D(uPackB, sheetUv(s * 0.62, vec2(t * 0.008, t * 0.003)));
+  vec4 b3 = texture2D(uPackB, sheetUv(s * 0.55, vec2(t * 0.016, t * 0.009)));
+
+  float puffyCover = a1.r;
+  float puffyShade = a1.g;
+  float chunkyCover = a2.b;
+  float chunkyShade = b1.r;
+  float overcast = b2.g;
+  float storm = b3.b;
+
+  // Soft fractal noise, larger and slower, MULTIPLIED in so it thins and
+  // thickens the ladder rather than adding cloud of its own. Without it four
+  // fixed sheets read as decals sliding past each other.
+  float noise = texture2D(uPackC, sheetUv(s * 1.9, vec2(t * 0.006, t * 0.002))).r;
   float breakUp = mix(1.0, 0.35 + noise * 0.9, 0.55);
 
-  // BAND: clouds gather overhead and thin toward the skyline, or the reverse
-  // for a ceiling. borderEffect at 0 leaves coverage flat at every height.
-  // Wide and low. Clouds do sit higher than the skyline, but the visible band
-  // is only 24 degrees tall, so a band centred halfway up leaves the bottom
-  // two thirds of every frame as bare gradient.
+  // BAND: wide and low. Clouds do sit higher than the skyline, but the visible
+  // band is only 24 degrees tall, so a band centred halfway up leaves the
+  // bottom two thirds of every frame as bare gradient.
   float band = smoothstep(uCoverB.z - 0.75, uCoverB.z + 0.75, elN);
   float border = mix(1.0, band, clamp(uCoverB.w, 0.0, 1.0));
 
-  float density = 0.0;
-  density += puffy * uCoverA.x * border * breakUp;
-  density += chunky * uCoverA.y * border * breakUp;
-  // The ceiling layers get the noise too. Without it their masks saturate to
-  // 1 across the whole sky and overcast renders as flat grey paint -- correct
-  // in coverage, dead on screen.
-  density += overcast * uCoverA.z * breakUp;
-  // A storm ceiling reaches DOWN, which is what makes it feel like a lid
-  // rather than another layer.
-  density += storm * uCoverB.x * breakUp * smoothstep(0.0, mix(0.9, 0.15, uCoverB.y), elN);
+  float wPuffy = puffyCover * uCoverA.x * border * breakUp;
+  float wChunky = chunkyCover * uCoverA.y * border * breakUp;
+  float wOver = overcast * uCoverA.z * breakUp;
+  // A storm ceiling reaches DOWN, which makes it a lid rather than a layer.
+  float wStorm = storm * uCoverB.x * breakUp * smoothstep(0.0, mix(0.9, 0.15, uCoverB.y), elN);
 
-  density = clamp(density, 0.0, 1.0) * fade;
+  float density = clamp(wPuffy + wChunky + wOver + wStorm, 0.0, 1.0) * fade;
 
-  // Thick cloud reads dark, wisps read bright. Driving that off density itself
-  // costs nothing and needs no second fetch.
-  vec3 cloud = mix(uCloudLit, uCloudDark, smoothstep(0.35, 1.0, density));
+  // Weighted average of the shading maps: whichever layer is actually present
+  // here is the one that decides how this pixel is lit. The overcast and storm
+  // sheets have no separate silhouette, so their own value is their shading.
+  float wsum = wPuffy + wChunky + wOver + wStorm;
+  float shade = wsum > 0.0001
+    ? (puffyShade * wPuffy + chunkyShade * wChunky + overcast * wOver + storm * wStorm) / wsum
+    : 1.0;
+
+  vec3 cloud = mix(uCloudDark, uCloudLit, shade);
 
   if (uNight > 0.001) {
-    float stars = texture2D(uPackB, sheetUv(s * 0.9, vec2(0.0))).b;
+    float stars = texture2D(uPackC, sheetUv(s * 0.9, vec2(0.0))).g;
     sky += vec3(0.85, 0.9, 1.0) * pow(stars, 2.2) * uNight * fade * 2.2;
   }
 
@@ -217,6 +233,7 @@ export function skyMaterial(): THREE.ShaderMaterial {
   };
   skyUniforms.uPackA.value = load("sky-a.webp");
   skyUniforms.uPackB.value = load("sky-b.webp");
+  skyUniforms.uPackC.value = load("sky-c.webp");
 
   cached = new THREE.ShaderMaterial({
     side: THREE.BackSide,
