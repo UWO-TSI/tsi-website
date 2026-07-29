@@ -345,6 +345,13 @@ export default function GridTerrain({ map }: { map: IslandMap }) {
       [Surface.Grass]: "mGrass",
       [Surface.Sand]: "mSand",
       [Surface.River]: "mRiver",
+      // The four that were flat hex constants. Four of seven surfaces had no
+      // texture at all, which is most of why the grid world read as unfinished
+      // beside the old mesh terrain.
+      [Surface.Soil]: "mRoadSoil",
+      [Surface.Stone]: "mRoadStone",
+      [Surface.Wood]: "mRoadWood",
+      [Surface.Brick]: "mRoadBrick",
       // The one ACNH file that IS what its name says: mRiverBed_Alb is the
       // sandy bed, mean RGB (164,107,63). It was extracted and then never
       // drawn, because until now there was no bed to draw it on.

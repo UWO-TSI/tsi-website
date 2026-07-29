@@ -57,10 +57,29 @@ const TEX_DIR = "/assets/acnh/terrain/";
  */
 const TEXTURE_FOR: Record<string, string> = {
   mCliff: "mCliff_Alb.png",
+  // The four road surfaces GridTerrain used to paint as flat hex constants.
+  // NOTE the directory: these live in road/, not terrain/. And note the file
+  // names -- every road material also ships a `_Grd`, and every one of those is
+  // a 32x48 or 64x48 SWATCH RAMP, not an albedo. Tiling one paints the whole
+  // seasonal palette on as stripes, which is what mGrass_Grd did to the lawn.
+  // scripts/extract-road-textures.mjs rejects anything under 80px for exactly
+  // that reason.
+  mRoadSoil: "mRoadSoil_Alb.png",
+  mRoadStone: "mRoadStone_Alb.png",
+  mRoadWood: "mRoadWood_Alb.png",
+  mRoadBrick: "mRoadBrick_Alb.png",
   mGrassCliffXlu: "mGrassCliffXlu_AlbGry.png",
   mGrassRiverXlu: "mGrassRiverXlu_AlbGry.png",
   mRiverBed: "mRiverBed_Alb.png",
   mSand: "mSand_Alb.png",
+};
+
+/** Detail normals, where the kit ships one we can use. */
+const NORMAL_FOR: Record<string, string> = {
+  mRoadSoil: "mRoadSoil_Nrm.png",
+  mRoadStone: "mRoadStone_Nrm.png",
+  mRoadWood: "mRoadWood_Nrm.png",
+  mRoadBrick: "mRoadBrick_Nrm.png",
 };
 
 /** Names we handle without an ACNH file. */
@@ -116,8 +135,15 @@ export function applyGrassNormalStrength(strength: number, worldUnitsPerRepeat: 
   mat.normalMap.needsUpdate = true;
 }
 
-function loadTexture(loader: THREE.TextureLoader, file: string): THREE.Texture {
-  const t = loader.load(TEX_DIR + file);
+const ROAD_DIR = "/assets/acnh/road/";
+
+/** Road materials ship in road/, the rest in terrain/. */
+function dirFor(name: string): string {
+  return name.startsWith("mRoad") ? ROAD_DIR : TEX_DIR;
+}
+
+function loadTexture(loader: THREE.TextureLoader, file: string, dir = TEX_DIR): THREE.Texture {
+  const t = loader.load(dir + file);
   t.colorSpace = THREE.SRGBColorSpace;
   t.wrapS = THREE.RepeatWrapping;
   t.wrapT = THREE.RepeatWrapping;
@@ -190,8 +216,21 @@ export function terrainMaterial(name: string): THREE.Material | null {
 
   const loader = new THREE.TextureLoader();
   const isAlpha = ALPHA_MATERIALS.has(key);
+  const dir = dirFor(key);
+  /**
+   * Road surfaces get their detail normal too, and it is safe to bind because
+   * the extractor already reconstructed Z. The source files are TWO-CHANNEL
+   * (blue flat zero, Z implied), and three's standard material does not
+   * reconstruct -- binding a raw one flattens the lighting instead of adding to
+   * it, which is how mGrass_Nrm rendered the whole ground black.
+   */
+  const nrm = NORMAL_FOR[key]
+    ? loadTexture(loader, NORMAL_FOR[key], dir)
+    : undefined;
   const mat = new THREE.MeshStandardMaterial({
-    map: loadTexture(loader, TEXTURE_FOR[key]),
+    map: loadTexture(loader, TEXTURE_FOR[key], dir),
+    normalMap: nrm,
+    normalScale: nrm ? new THREE.Vector2(0.5, 0.5) : undefined,
     color: TINT_FOR[key] ?? 0xffffff,
     roughness: 0.92,
     metalness: 0,
