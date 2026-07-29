@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, ExternalLink } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import type { SeasonalPalette, PaletteColors } from "@/lib/game/contentTypes";
+import type { SeasonalPalette, PaletteColors } from "@/lib/content/types";
 
 // ─── PaletteEditor ──────────────────────────────────────────────────────────
 // Shared form component used by both /new and /[id]/edit. Mirrors NPCEditor /

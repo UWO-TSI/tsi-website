@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect } from "react";
-import { useEmoteTypes } from "@/lib/game/contentLoader";
-import type { EmoteType } from "@/lib/game/contentTypes";
+import { useEmoteTypes } from "@/lib/content/loader";
+import type { EmoteType } from "@/lib/content/types";
 
 /**
  * EmoteMenu (sprint E2) — DOM overlay rendered alongside AudioController /

@@ -15,7 +15,7 @@
  */
 
 import { useSyncExternalStore } from "react";
-import type { SeasonalPalette } from "./contentTypes";
+import type { SeasonalPalette } from "@/lib/content/types";
 import type { Grade } from "./grading";
 
 export type LabPaletteColors = SeasonalPalette["palette"];

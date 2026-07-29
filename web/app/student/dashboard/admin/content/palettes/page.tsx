@@ -6,7 +6,7 @@ import { Shield, ArrowLeft, Plus, Pencil, Check } from "lucide-react";
 import { useUser } from "@/components/portal/UserContext";
 import { createClient } from "@/lib/supabase/client";
 import { DEFAULT_PALETTES } from "@/data/content-defaults";
-import type { SeasonalPalette, PaletteColors } from "@/lib/game/contentTypes";
+import type { SeasonalPalette, PaletteColors } from "@/lib/content/types";
 
 function hasSupabaseEnv(): boolean {
   return Boolean(

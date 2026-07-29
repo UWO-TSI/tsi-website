@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { X, Flag, Loader2, Send } from "lucide-react";
 import { AudioManager } from "@/lib/game/audio";
-import type { NPCPersona } from "@/lib/game/contentTypes";
+import type { NPCPersona } from "@/lib/content/types";
 
 /**
  * NPCChatOverlay (sprint D4) — DOM overlay rendered alongside AudioController,

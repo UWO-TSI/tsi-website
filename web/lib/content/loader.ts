@@ -12,7 +12,7 @@
 import { useSyncExternalStore } from "react";
 import useSWR from "swr";
 import { createClient } from "@/lib/supabase/client";
-import { getLabPalette, labSubscribe } from "./devLab";
+import { getLabPalette, labSubscribe } from "@/lib/game/devLab";
 
 const getNullLabPalette = () => null;
 import {
@@ -28,7 +28,7 @@ import type {
   SeasonalPalette,
   ShopCategory,
   ShopItem,
-} from "@/lib/game/contentTypes";
+} from "@/lib/content/types";
 
 const FIVE_MINUTES = 5 * 60 * 1000;
 

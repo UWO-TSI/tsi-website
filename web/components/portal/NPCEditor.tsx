@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Plus, Trash2, ExternalLink } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import type { NPCPersona, SpawnZone } from "@/lib/game/contentTypes";
+import type { NPCPersona, SpawnZone } from "@/lib/content/types";
 import ImageUploadButton from "@/components/portal/ImageUploadButton";
 
 // ─── NPCEditor ──────────────────────────────────────────────────────────────

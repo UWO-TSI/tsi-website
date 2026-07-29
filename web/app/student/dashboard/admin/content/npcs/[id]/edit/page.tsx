@@ -5,7 +5,7 @@ import { Shield } from "lucide-react";
 import { useUser } from "@/components/portal/UserContext";
 import { createClient } from "@/lib/supabase/client";
 import NPCEditor from "@/components/portal/NPCEditor";
-import type { NPCPersona } from "@/lib/game/contentTypes";
+import type { NPCPersona } from "@/lib/content/types";
 
 export default function EditNPCPage({
   params,

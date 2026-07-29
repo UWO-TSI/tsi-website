@@ -13,7 +13,7 @@
 import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
-import { useActivePalette } from "@/lib/game/contentLoader";
+import { useActivePalette } from "@/lib/content/loader";
 import { sampleRiverPoint } from "./River";
 
 // Deterministic PRNG — react-compiler forbids Math.random() during render,

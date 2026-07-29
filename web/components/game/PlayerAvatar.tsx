@@ -13,7 +13,7 @@ import { pickCurvedGround } from "@/lib/game/groundPick";
 import { juiceFovOffset } from "@/lib/game/cameraJuice";
 import { getLabFov } from "@/lib/game/devLab";
 import MoveTargetIndicator from "./MoveTargetIndicator";
-import type { EmoteType } from "@/lib/game/contentTypes";
+import type { EmoteType } from "@/lib/content/types";
 
 // Sprint E3: animation_key → emoji glyph for the Html overlay. Real sprite
 // swaps land when avatar sprites do; this is the placeholder.

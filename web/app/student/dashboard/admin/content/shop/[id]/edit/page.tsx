@@ -5,7 +5,7 @@ import { Shield } from "lucide-react";
 import { useUser } from "@/components/portal/UserContext";
 import { createClient } from "@/lib/supabase/client";
 import ShopEditor from "@/components/portal/ShopEditor";
-import type { ShopItem } from "@/lib/game/contentTypes";
+import type { ShopItem } from "@/lib/content/types";
 
 export default function EditShopItemPage({
   params,

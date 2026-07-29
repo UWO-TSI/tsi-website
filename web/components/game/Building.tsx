@@ -4,7 +4,7 @@ import { Suspense, useMemo, useRef } from "react";
 import { Html, useGLTF } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
-import { useActivePalette } from "@/lib/game/contentLoader";
+import { useActivePalette } from "@/lib/content/loader";
 import { GLBProp } from "./NatureModels";
 
 // Matches GameWorld's central sweep INTERACT_RADIUS so the "Press E"

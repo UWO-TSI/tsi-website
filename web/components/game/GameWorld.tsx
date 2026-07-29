@@ -53,7 +53,7 @@ import GuestbookOverlay from "@/components/portal/GuestbookOverlay";
 import NPC from "./NPC";
 import GhostReplay from "./GhostReplay";
 import { useUser } from "@/components/portal/UserContext";
-import { useActivePalette, useEmoteTypes, useNPCPersonas } from "@/lib/game/contentLoader";
+import { useActivePalette, useEmoteTypes, useNPCPersonas } from "@/lib/content/loader";
 import { getGrassTexture } from "@/lib/game/grassTexture";
 import { usePositionHeartbeat } from "@/lib/game/usePositionHeartbeat";
 import { useGhostPositions } from "@/lib/game/useGhostPositions";
@@ -99,7 +99,7 @@ import "@/lib/game/glbPreload";
 import "@/lib/game/curvedWorld";
 // L8: aerial-perspective fog (distance desaturation) — same patch rule.
 import "@/lib/game/aerialFog";
-import type { EmoteType, NPCPersona, SpawnZone } from "@/lib/game/contentTypes";
+import type { EmoteType, NPCPersona, SpawnZone } from "@/lib/content/types";
 
 /**
  * Game World v2 — Animal Crossing: New Horizons visual style.

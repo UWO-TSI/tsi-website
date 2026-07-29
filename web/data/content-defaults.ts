@@ -8,7 +8,7 @@ import type {
   NPCPersona,
   SeasonalPalette,
   ShopItem,
-} from "@/lib/game/contentTypes";
+} from "@/lib/content/types";
 
 const NOW = "1970-01-01T00:00:00.000Z";
 

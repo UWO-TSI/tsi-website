@@ -7,7 +7,7 @@ import * as THREE from "three";
 import { getTerrainHeight } from "./terrain";
 import { getBlobTexture } from "./BlobShadows";
 import { AudioManager } from "@/lib/game/audio";
-import type { NPCPersona } from "@/lib/game/contentTypes";
+import type { NPCPersona } from "@/lib/content/types";
 
 
 /**

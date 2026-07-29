@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, ExternalLink } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import type { ShopItem, ShopCategory, Rarity } from "@/lib/game/contentTypes";
+import type { ShopItem, ShopCategory, Rarity } from "@/lib/content/types";
 import ImageUploadButton from "@/components/portal/ImageUploadButton";
 
 // ─── ShopEditor ─────────────────────────────────────────────────────────────

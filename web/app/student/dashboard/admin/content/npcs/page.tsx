@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Shield, ArrowLeft, Plus, Pencil } from "lucide-react";
 import { useUser } from "@/components/portal/UserContext";
-import { useNPCPersonas } from "@/lib/game/contentLoader";
+import { useNPCPersonas } from "@/lib/content/loader";
 
 export default function AdminContentNPCsPage() {
   const { profile, loading } = useUser();

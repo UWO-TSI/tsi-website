@@ -14,7 +14,7 @@
 import { Suspense, useMemo } from "react";
 import { useGLTF } from "@react-three/drei";
 import * as THREE from "three";
-import { useActivePalette } from "@/lib/game/contentLoader";
+import { useActivePalette } from "@/lib/content/loader";
 
 const SETS: { match: RegExp; url: string; tint: string }[] = [
   { match: /winter|frost|christmas|holiday|snow/i, url: "/assets/acnh/seasonal/christmas-garland.glb", tint: "#2E6B3E" },
