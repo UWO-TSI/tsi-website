@@ -1,8 +1,55 @@
 # QA Report
 
 > Owner: QA agent. All agents check this for bugs in their area.
-> Last updated: 2026-07-28 (Wave 34 — terrain leveling, half-step levels, art-cohesion branch)
+> Last updated: 2026-07-29 (Wave 35 — water distance field, art-cohesion branch)
 > **Lint baseline updated 2026-07-13: 74 errors / 52 warnings** (was 74/59 — seven genuinely-unused eslint-disable directives removed; mentorship/page.tsx keeps its two, the "unused" report there is a react-compiler two-pass quirk shielding a real declaration-order error).
+
+---
+
+## Wave 35 — 2026-07-29 Water: the foam regression, and its actual cause
+
+**Regression introduced by Wave 34's last commit (`35a89f6`, solid foam).** The
+river rendered as a chunky white stair-stepped tube. Found by inspecting the
+world screenshot; the tuning bench showed it clean.
+
+### Root cause
+Not the foam. `shoreDistance()` returned one integer per CELL. Every vertex of a
+cell got the same value, so the attribute was constant across each quad and
+anything keyed on it changed in whole-cell steps. The soft gradient it was
+originally written for hid that. The hard edge exposed it.
+
+### Why the bench did not catch it
+`WaterSpecimen` computed its own distance analytically (`shoreAt(z) - x`, min
+against rock radii). That function is smooth by construction, so the bench was
+*incapable* of reproducing a defect caused by quantisation. A tuning tool that
+does not share the shipped code path can only confirm the shipped code path by
+coincidence.
+
+### Fix
+`shoreSdf()` in `lib/game/grid.ts`. Exact signed Euclidean distance in cells,
+positive in water, two passes of Felzenszwalb, rasterised at 4 samples/cell
+against the **eased** outline (the visible shoreline), uploaded as an R16F
+texture and sampled per FRAGMENT. Per-vertex was considered and rejected: the
+water mesh is one quad per cell, so its finest carryable detail is one cell and
+curved banks facet along the triangle diagonals.
+
+The bench now bakes its own field through the same `sdfFromMask`.
+
+### Evidence
+- field spans -31.34 .. 36.07 cells over the shipped map; bake 27ms; 512KB R16F
+- sign changes on a test scanline land exactly on the banks (verified against
+  `surfaceAt` rows 59-68: river starts row 64, field reads -0.50 at row 63)
+- 27 distinct values across a river band where the old field had ~6
+- `THREE.DataUtils.toHalfFloat(-1.25)` = 0xbd00, correct binary16
+
+### Not verified
+**No on-screen check.** The gstack browse instance cannot create a WebGL context
+on this machine (`SwiftShader ... BindToCurrentSequence failed`), headless or
+headed. Everything above is numeric. David should eyeball `?grid=1` and
+`/lab/tune`.
+
+### Gates
+`npx tsc --noEmit` clean · `npm run lint` 74/52 (baseline) · `npm test` 78/78
 
 ---
 
