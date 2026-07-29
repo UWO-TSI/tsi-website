@@ -45,6 +45,7 @@ import {
 } from "@/lib/game/grid";
 import { bedDepth } from "@/lib/game/waterShader";
 import { skyMaterial, advanceSky } from "@/lib/game/skyShader";
+import { SKY_VARIANTS, type SkyVariantId } from "@/lib/game/skyVariants";
 import {
   terrainMaterial,
   applyGrassNormalStrength,
@@ -444,10 +445,19 @@ function BenchRock({ url, x, z, rot }: { url: string; x: number; z: number; rot:
  * will ever see -- which is exactly the mistake that made the first version of
  * this shader render as bare gradient.
  */
-function SkySpecimen() {
+function SkySpecimen({ variant }: { variant: SkyVariantId }) {
   const t = useTuning();
-  const mat = useMemo(() => skyMaterial(), []);
+  const mat = useMemo(() => skyMaterial(variant), [variant]);
   const { camera, controls } = useThree();
+  const col = useMemo(
+    () => ({
+      zenith: new THREE.Color(),
+      horizon: new THREE.Color(),
+      lit: new THREE.Color(),
+      dark: new THREE.Color(),
+    }),
+    []
+  );
 
   /**
    * Frame it the way the GAME does, once, on mount.
@@ -466,15 +476,6 @@ function SkySpecimen() {
       c.update?.();
     }
   }, [camera, controls]);
-  const col = useMemo(
-    () => ({
-      zenith: new THREE.Color(),
-      horizon: new THREE.Color(),
-      lit: new THREE.Color(),
-      dark: new THREE.Color(),
-    }),
-    []
-  );
 
   useFrame((state) => {
     const k = t.sky;
@@ -670,6 +671,7 @@ function Slider({ row }: { row: Row }) {
 
 export default function TuneBench() {
   const [specimen, setSpecimen] = useState<Specimen>("gull");
+  const [skyVar, setSkyVar] = useState<SkyVariantId>("luxury");
   const [copied, setCopied] = useState(false);
 
   const tab = (id: Specimen, label: string) => (
@@ -714,7 +716,7 @@ export default function TuneBench() {
             ) : specimen === "water" ? (
               <WaterSpecimen />
             ) : specimen === "sky" ? (
-              <SkySpecimen />
+              <SkySpecimen variant={skyVar} />
             ) : (
               <GrassSpecimen />
             )}
@@ -758,6 +760,32 @@ export default function TuneBench() {
           {tab("water", "water")}
           {tab("sky", "sky")}
           {tab("grass", "grass")}
+          {specimen === "sky" && (
+            <span style={{ display: "flex", gap: 4, marginLeft: 10, flexWrap: "wrap", alignItems: "center" }}>
+              {SKY_VARIANTS.map((v) => (
+                <button
+                  key={v.id}
+                  onClick={() => setSkyVar(v.id)}
+                  title={v.note}
+                  style={{
+                    padding: "4px 9px",
+                    fontSize: 11,
+                    fontFamily: mono,
+                    borderRadius: 4,
+                    border: "1px solid #3a4148",
+                    background: skyVar === v.id ? "#7fd1c0" : "#171b20",
+                    color: skyVar === v.id ? "#12161a" : "#9aa4ac",
+                    cursor: "pointer",
+                  }}
+                >
+                  {v.label}
+                </button>
+              ))}
+              <span style={{ fontSize: 11, fontFamily: mono, color: "#7d868e", marginLeft: 6 }}>
+                {SKY_VARIANTS.find((v) => v.id === skyVar)?.note}
+              </span>
+            </span>
+          )}
         </div>
 
         {ROWS[specimen].map((r) => (
