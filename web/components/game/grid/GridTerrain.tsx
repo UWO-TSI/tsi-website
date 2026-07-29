@@ -22,7 +22,7 @@
  * those.
  */
 
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import * as THREE from "three";
 import {
   type IslandMap,
@@ -40,12 +40,11 @@ import {
   cellToWorldZ,
   needsCliff,
   bankEdges,
-  shoreDistance,
-  cellIndex,
+  shoreSdf,
   easedCellOutline,
   type LayerTest,
 } from "@/lib/game/grid";
-import { terrainMaterial } from "./terrainMaterials";
+import { terrainMaterial, setShoreField } from "./terrainMaterials";
 
 // Flat colours for the surfaces whose road-kit textures are not wired yet.
 const SURFACE_COLOR: Record<number, string> = {
@@ -92,12 +91,10 @@ interface Mesh {
   uv: number[];
   /** Explicit, because banks are sloped and the flat +Y default would flatten them. */
   nrm: number[];
-  /** Cells from the nearest bank. River only; empty elsewhere. */
-  dep: number[];
   idx: number[];
 }
 
-const emptyMesh = (): Mesh => ({ pos: [], uv: [], nrm: [], dep: [], idx: [] });
+const emptyMesh = (): Mesh => ({ pos: [], uv: [], nrm: [], idx: [] });
 
 /**
  * Append one cell.
@@ -113,8 +110,7 @@ function addCell(
   cz: number,
   x: number,
   y: number,
-  z: number,
-  depth?: number
+  z: number
 ) {
   const s = 1 / (UV_CELLS_PER_REPEAT * TILE);
   const base = mesh.pos.length / 3;
@@ -124,7 +120,6 @@ function addCell(
     // instead of each restarting it.
     mesh.uv.push(px * s, pz * s);
     mesh.nrm.push(0, 1, 0);
-    if (depth !== undefined) mesh.dep.push(depth);
   };
 
   const outline = easedCellOutline(inLayer, cx, cz);
@@ -228,10 +223,6 @@ function build(mesh: Mesh): THREE.BufferGeometry | null {
   g.setAttribute("position", new THREE.Float32BufferAttribute(mesh.pos, 3));
   g.setAttribute("uv", new THREE.Float32BufferAttribute(mesh.uv, 2));
   g.setAttribute("normal", new THREE.Float32BufferAttribute(mesh.nrm, 3));
-  // Only the water carries this, and only when every vertex has one.
-  if (mesh.dep.length === mesh.pos.length / 3) {
-    g.setAttribute("aShore", new THREE.Float32BufferAttribute(mesh.dep, 1));
-  }
   g.setIndex(mesh.idx);
   g.computeBoundingSphere();
   return g;
@@ -246,7 +237,6 @@ export default function GridTerrain({ map }: { map: IslandMap }) {
     // land, not about which cells we happen to draw. `inGround` deliberately
     // still counts cliff cells: excluding them would cut the ground away at
     // the foot of every cliff and open a gap the cliff piece does not cover.
-    const shore = shoreDistance(map);
 
     const inGround: LayerTest = (cx, cz) =>
       inBounds(map, cx, cz) && !isVoid(surfaceAt(map, cx, cz)) && !isRiver(surfaceAt(map, cx, cz));
@@ -272,7 +262,7 @@ export default function GridTerrain({ map }: { map: IslandMap }) {
             // NOT eased, and drawn full-square on purpose. Nothing is beneath
             // the water, so cutting its corners would show sky; instead the
             // rounded grass bank overlaps it from above.
-            addCell(river, () => true, cx, cz, x, y - WATER_DROP, z, shore[cellIndex(map, cx, cz)]);
+            addCell(river, () => true, cx, cz, x, y - WATER_DROP, z);
             continue;
           }
 
@@ -305,6 +295,12 @@ export default function GridTerrain({ map }: { map: IslandMap }) {
       }
     }
     return out;
+  }, [map]);
+
+  // The water reads its distance to the shore from a baked field rather than
+  // from anything on the mesh, so this is a one-shot upload, not geometry.
+  useEffect(() => {
+    setShoreField(shoreSdf(map));
   }, [map]);
 
   const materials = useMemo(() => {

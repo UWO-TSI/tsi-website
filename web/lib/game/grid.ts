@@ -827,57 +827,214 @@ export function easedCellOutline(inLayer: LayerTest, cx: number, cz: number): nu
 // ── Water depth ──────────────────────────────────────────────────
 
 /**
- * Distance from every river cell to the nearest bank, in cells.
+ * Signed distance from the shoreline, in cells. Positive in water.
  *
  * WHY THIS EXISTS. The ACNH reference David gave is not a flat blue sheet: the
- * water is deep navy in the channel and lightens toward the bank, and that
- * gradient is most of what makes it read as WATER rather than as a painted
- * surface. Sampling the reference gives roughly #26415E in the middle and
- * #6F8496 at the edge — a big swing, and it tracks distance from the bank.
+ * water is deep in the channel and lightens toward the bank, and that gradient
+ * is most of what makes it read as WATER rather than as a painted surface. The
+ * same number drives the white collar the reference puts around every rock and
+ * every stretch of shore. We can compute it exactly rather than fake it in a
+ * shader, because the map already knows where the banks are.
  *
- * We can compute that exactly rather than faking it in a shader, because the
- * map already knows where the banks are. One BFS at build time, baked into a
- * vertex attribute, zero runtime cost. A screen-space depth fade would be an
- * approximation of a fact we already have.
+ * WHY IT IS A TEXTURE AND NOT THE PER-CELL BFS IT REPLACES. The BFS produced
+ * ONE INTEGER PER CELL, so every vertex of a cell carried the same value, the
+ * attribute was constant across each quad, and anything keyed on it changed in
+ * whole-cell steps. Under a soft gradient that was invisible; the moment the
+ * foam became a hard edge (David, 2026-07-28) it drew the cell grid on screen
+ * and the river came out as a stair-stepped white tube.
  *
- * Non-river cells read 0. Void counts as a bank: where a river meets the sea
- * the mouth should shallow out, not run deep to the edge of the world.
+ * Moving it to a vertex attribute sampled per corner fixes the staircase but
+ * not the cause: the water mesh is one quad per cell, so the finest detail it
+ * can carry is still one cell, and a curved bank facets along the triangle
+ * diagonals. A FIELD SHOULD NOT INHERIT THE RESOLUTION OF THE MESH THAT READS
+ * IT. So it goes in a texture, sampled per fragment, and the water mesh can
+ * stay four vertices.
+ *
+ * SIGNED, because the field is sampled on both sides of the waterline and the
+ * shader needs the crossing to land exactly on it: land carries the negative
+ * distance INTO land, water the positive distance into water, and 0 is the
+ * shore. A foam width of 0.85 then means 0.85 cells of real world.
+ *
+ * RASTERISED AT SUB-CELL RESOLUTION AGAINST THE EASED OUTLINE, not the cell
+ * grid, because the eased outline is the shoreline you can actually see.
+ *
+ * This is also where props will earn their collar: stamping a footprint into
+ * `land` before the transform gives it foam for free, with no per-object work
+ * in the shader. Nothing does that yet — props are still in hardcoded arrays
+ * rather than on the map.
+ *
+ * Void counts as water. Where a river meets the sea the mouth should shallow
+ * out, not run deep to the edge of the world.
  */
-export function shoreDistance(map: IslandMap): Float32Array {
-  const d = new Float32Array(map.width * map.depth);
-  const queue: number[] = [];
+export interface ShoreSdf {
+  /** Signed distance from the waterline in CELLS, positive in water. */
+  data: Float32Array;
+  width: number;
+  height: number;
+  /** Samples per cell. */
+  scale: number;
+  /** World position of the field's lower-left corner. */
+  minX: number;
+  minZ: number;
+  /** World extent covered. */
+  sizeX: number;
+  sizeZ: number;
+}
+
+/** Samples per cell. 4 puts the waterline within 12cm of where it is drawn. */
+export const SHORE_SDF_SCALE = 4;
+
+export function shoreSdf(map: IslandMap, scale = SHORE_SDF_SCALE): ShoreSdf {
+  const width = map.width * scale;
+  const height = map.depth * scale;
+
+  const inGround: LayerTest = (cx, cz) =>
+    inBounds(map, cx, cz) && !isVoid(surfaceAt(map, cx, cz)) && !isRiver(surfaceAt(map, cx, cz));
+
+  // Rasterise the LAND, cell by cell, through the same outline the mesh uses.
+  // Sampling the cell grid instead would put the field's shoreline on the
+  // square boundary while the eye sees it on the eased one, and the foam would
+  // sit a corner-radius away from the corner it belongs to.
+  const land = new Uint8Array(width * height);
+  const step = 1 / scale;
+  const first = -0.5 + step / 2; // first sample centre, relative to the cell centre
   for (let cz = 0; cz < map.depth; cz++) {
     for (let cx = 0; cx < map.width; cx++) {
-      const i = cellIndex(map, cx, cz);
-      if (!isRiver(map.surfaces[i])) continue;
-      let bank = false;
-      for (const [dx, dz] of DIR_OFFSETS) {
-        const nx = cx + dx;
-        const nz = cz + dz;
-        if (!inBounds(map, nx, nz) || !isRiver(surfaceAt(map, nx, nz))) {
-          bank = true;
-          break;
+      if (!inGround(cx, cz)) continue;
+      const outline = easedCellOutline(inGround, cx, cz);
+      for (let sz = 0; sz < scale; sz++) {
+        for (let sx = 0; sx < scale; sx++) {
+          if (outline && !pointInPolygon(first + sx * step, first + sz * step, outline)) continue;
+          land[(cz * scale + sz) * width + (cx * scale + sx)] = 1;
         }
       }
-      if (bank) {
-        d[i] = 1;
-        queue.push(i);
-      }
     }
   }
-  for (let head = 0; head < queue.length; head++) {
-    const i = queue[head];
-    const cz = Math.floor(i / map.width);
-    const cx = i % map.width;
-    for (const [dx, dz] of DIR_OFFSETS) {
-      const nx = cx + dx;
-      const nz = cz + dz;
-      if (!inBounds(map, nx, nz)) continue;
-      const n = cellIndex(map, nx, nz);
-      if (!isRiver(map.surfaces[n]) || d[n] !== 0) continue;
-      d[n] = d[i] + 1;
-      queue.push(n);
-    }
+
+  return sdfFromMask(land, width, height, scale, {
+    minX: map.originX - TILE / 2,
+    minZ: map.originZ - TILE / 2,
+    sizeX: map.width * TILE,
+    sizeZ: map.depth * TILE,
+  });
+}
+
+/**
+ * Signed distance in CELLS from the edge of `mask`, positive where the mask is
+ * 0 (water).
+ *
+ * Split out from `shoreSdf` so the tuning bench can bake its own bench-local
+ * shore through the identical transform. The bench previously used an analytic
+ * distance function, which is smooth by construction and therefore could not
+ * show the stair-stepping the real field had — the tool hid the bug it existed
+ * to catch.
+ */
+export function sdfFromMask(
+  mask: Uint8Array,
+  width: number,
+  height: number,
+  scale: number,
+  rect: { minX: number; minZ: number; sizeX: number; sizeZ: number }
+): ShoreSdf {
+  const outward = squaredDistanceTransform(width, height, (i) => mask[i] === 1);
+  const inward = squaredDistanceTransform(width, height, (i) => mask[i] === 0);
+
+  const data = new Float32Array(width * height);
+  for (let i = 0; i < data.length; i++) {
+    // Sample centres sit half a sample from the boundary they share, so the
+    // raw centre-to-centre distance overstates the reach to the waterline by
+    // exactly that half. Divide through to land back in cells.
+    const d = mask[i] ? -(Math.sqrt(inward[i]) - 0.5) : Math.sqrt(outward[i]) - 0.5;
+    data[i] = d / scale;
   }
-  return d;
+  return { data, width, height, scale, ...rect };
+}
+
+/** Even-odd crossing test. The outline is closed implicitly. */
+function pointInPolygon(x: number, z: number, poly: number[][]): boolean {
+  let inside = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const [xi, zi] = poly[i];
+    const [xj, zj] = poly[j];
+    if (zi > z !== zj > z && x < ((xj - xi) * (z - zi)) / (zj - zi) + xi) inside = !inside;
+  }
+  return inside;
+}
+
+/** Stand-in for infinity that survives the arithmetic in the 1-D pass. */
+const DT_FAR = 1e9;
+
+/**
+ * Squared Euclidean distance from every sample to the nearest sample where
+ * `isSeed` holds, as two 1-D passes (Felzenszwalb & Huttenlocher 2012).
+ *
+ * Exact, and O(n) — unlike a chamfer approximation it has no directional bias,
+ * so the foam collar is the same width on a diagonal bank as on a straight one.
+ */
+function squaredDistanceTransform(
+  width: number,
+  height: number,
+  isSeed: (i: number) => boolean
+): Float64Array {
+  const f = new Float64Array(width * height);
+  for (let i = 0; i < f.length; i++) f[i] = isSeed(i) ? 0 : DT_FAR;
+
+  const n = Math.max(width, height);
+  const row = new Float64Array(n);
+  const res = new Float64Array(n);
+  const v = new Int32Array(n);
+  const z = new Float64Array(n + 1);
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) row[x] = f[y * width + x];
+    dt1d(row, width, res, v, z);
+    for (let x = 0; x < width; x++) f[y * width + x] = res[x];
+  }
+  for (let x = 0; x < width; x++) {
+    for (let y = 0; y < height; y++) row[y] = f[y * width + x];
+    dt1d(row, height, res, v, z);
+    for (let y = 0; y < height; y++) f[y * width + x] = res[y];
+  }
+  return f;
+}
+
+/** Lower envelope of the parabolas rooted at each sample. Scratch is caller-owned. */
+function dt1d(f: Float64Array, n: number, out: Float64Array, v: Int32Array, z: Float64Array): void {
+  let k = 0;
+  v[0] = 0;
+  z[0] = -DT_FAR;
+  z[1] = DT_FAR;
+  for (let q = 1; q < n; q++) {
+    let s = (f[q] + q * q - (f[v[k]] + v[k] * v[k])) / (2 * q - 2 * v[k]);
+    while (s <= z[k]) {
+      k--;
+      s = (f[q] + q * q - (f[v[k]] + v[k] * v[k])) / (2 * q - 2 * v[k]);
+    }
+    k++;
+    v[k] = q;
+    z[k] = s;
+    z[k + 1] = DT_FAR;
+  }
+  k = 0;
+  for (let q = 0; q < n; q++) {
+    while (z[k + 1] < q) k++;
+    out[q] = (q - v[k]) * (q - v[k]) + f[v[k]];
+  }
+}
+
+/** Read the field at an arbitrary world position, bilinearly. For CPU callers. */
+export function sampleShore(f: ShoreSdf, x: number, z: number): number {
+  const fx = Math.min(f.width - 1, Math.max(0, ((x - f.minX) / f.sizeX) * f.width - 0.5));
+  const fz = Math.min(f.height - 1, Math.max(0, ((z - f.minZ) / f.sizeZ) * f.height - 0.5));
+  const x0 = Math.floor(fx);
+  const z0 = Math.floor(fz);
+  const x1 = Math.min(f.width - 1, x0 + 1);
+  const z1 = Math.min(f.height - 1, z0 + 1);
+  const tx = fx - x0;
+  const tz = fz - z0;
+  const a = f.data[z0 * f.width + x0];
+  const b = f.data[z0 * f.width + x1];
+  const c = f.data[z1 * f.width + x0];
+  const d = f.data[z1 * f.width + x1];
+  return (a * (1 - tx) + b * tx) * (1 - tz) + (c * (1 - tx) + d * tx) * tz;
 }

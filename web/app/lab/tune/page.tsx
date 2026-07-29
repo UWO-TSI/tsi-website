@@ -36,8 +36,13 @@ import {
 } from "@/lib/game/tuning";
 import { patchWind, tuftGeometry } from "@/components/game/grid/GrassTufts";
 import { gullPose, type GullParams } from "@/lib/game/gullPath";
-import { easedCellOutline, type LayerTest } from "@/lib/game/grid";
-import { terrainMaterial, applyGrassNormalStrength, advanceWater } from "@/components/game/grid/terrainMaterials";
+import { easedCellOutline, sdfFromMask, SHORE_SDF_SCALE, type LayerTest } from "@/lib/game/grid";
+import {
+  terrainMaterial,
+  applyGrassNormalStrength,
+  advanceWater,
+  setShoreField,
+} from "@/components/game/grid/terrainMaterials";
 
 type Specimen = "gull" | "water" | "grass";
 
@@ -223,14 +228,14 @@ function GrassSpecimen() {
  * This is built the same way the world is, not mocked up to look similar:
  *   · the shoreline runs through `easedCellOutline`, the identical helper that
  *     rounds the island's coast, so the corner treatment here IS the shipped one
- *   · `aShore` is the true distance to the nearest land or rock in CELLS, which
- *     is exactly what `shoreDistance()` bakes over the real map
+ *   · the distance field goes through `sdfFromMask`, the identical transform
+ *     that bakes it over the real map
  *   · the rocks are the shipped ACNH assets, measured at 1.0 x 0.5 x 1.0 — one
  *     cell, which is why a rock gets a one-cell collar here and would in the
  *     world too
  *
- * ONE HONEST GAP. In the world today, props do NOT get a collar. Shore distance
- * is computed from the MAP, and props still live in hardcoded arrays rather than
+ * ONE HONEST GAP. In the world today, props do NOT get a collar. The field is
+ * rasterised from the MAP, and props still live in hardcoded arrays rather than
  * on it. So the rock collar below is what the world will do once props move onto
  * the map, not what it does right now.
  */
@@ -260,31 +265,51 @@ function WaterSpecimen() {
     applyGrassNormalStrength(t.grass.normalStrength, t.grass.normalScale);
   }, [t.grass.normalStrength, t.grass.normalScale]);
 
-  /** Distance in cells to the nearest thing the water touches. */
-  const shoreDist = (x: number, z: number) => {
-    let d = shoreAt(z) - x; // positive out in the water
-    for (const r of ROCKS) d = Math.min(d, Math.hypot(x - r.x, z - r.z) - r.r);
-    return Math.max(0, d);
-  };
+  /**
+   * The bench's own distance field, baked exactly the way the world's is:
+   * rasterise what the water touches, then run the SAME transform. Sampling an
+   * analytic distance function instead — which is what this did before — makes
+   * the bench smooth by construction, so it could not reproduce the stepping
+   * the real field had.
+   *
+   * The rocks are in the mask, which is the whole point of the specimen: in the
+   * world they will earn their collar the same way, by being stamped in before
+   * the transform rather than special-cased in the shader.
+   */
+  useEffect(() => {
+    const scale = SHORE_SDF_SCALE;
+    const n = BENCH_CELLS * scale;
+    const mask = new Uint8Array(n * n);
+    const at = (i: number) => -BENCH_CELLS / 2 + (i + 0.5) / scale;
+    for (let j = 0; j < n; j++) {
+      for (let i = 0; i < n; i++) {
+        const x = at(i);
+        const z = at(j);
+        const solid = isLandAt(x, z) || ROCKS.some((r) => Math.hypot(x - r.x, z - r.z) < r.r);
+        if (solid) mask[j * n + i] = 1;
+      }
+    }
+    setShoreField(
+      sdfFromMask(mask, n, n, scale, {
+        minX: -BENCH_CELLS / 2,
+        minZ: -BENCH_CELLS / 2,
+        sizeX: BENCH_CELLS,
+        sizeZ: BENCH_CELLS,
+      })
+    );
+  }, []);
 
-  // Fine grid: the foam collar and the swell both need vertices to resolve on.
+  // Still finely tessellated, but only for the SWELL now — the foam and the
+  // colour ramp read the field per fragment and no longer care.
   const water = useMemo(() => {
     const N = 120;
     const S = BENCH_CELLS;
     const g = new THREE.PlaneGeometry(S, S, N, N);
     g.rotateX(-Math.PI / 2);
-    const pos = g.attributes.position;
     const uv = g.attributes.uv;
-    const shore = new Float32Array(pos.count);
-    for (let i = 0; i < pos.count; i++) {
-      const x = pos.getX(i);
-      const z = pos.getZ(i);
-      uv.setXY(i, x / 2, z / 2);
-      // +1 to match the world, where the first water cell against land reads 1.
-      shore[i] = 1 + shoreDist(x, z);
-    }
+    const pos = g.attributes.position;
+    for (let i = 0; i < pos.count; i++) uv.setXY(i, pos.getX(i) / 2, pos.getZ(i) / 2);
     uv.needsUpdate = true;
-    g.setAttribute("aShore", new THREE.BufferAttribute(shore, 1));
     return g;
   }, []);
 

@@ -242,8 +242,10 @@ function waterMaterial(): THREE.MeshStandardMaterial {
   /**
    * Four things, all riding one attribute or one uniform.
    *
-   * THE COLOUR RAMP. `aShore` is the exact distance to the nearest bank in
-   * cells, baked by `shoreDistance()` at build time. David's stylised reference
+   * THE COLOUR RAMP. `aShore` is the signed distance from the waterline in
+   * cells, baked by `shoreField()` at build time and sampled per VERTEX, so it
+   * is continuous across cell boundaries — a per-cell value drew the grid on
+   * screen the moment the foam became a hard edge. David's stylised reference
    * samples #F8F8F7 foam at the edge, #C9EEF4 pale just inside it, and #62DAE6
    * saturated cyan in open water — so it is a three-stop ramp on one number we
    * already have, not three separate effects.
@@ -284,8 +286,6 @@ function waterMaterial(): THREE.MeshStandardMaterial {
       .replace(
         "#include <common>",
         `#include <common>
-         attribute float aShore;
-         varying float vShore;
          varying vec3 vWorldPos;
          uniform float uTime;
          uniform float uWaveHeight;
@@ -301,7 +301,6 @@ function waterMaterial(): THREE.MeshStandardMaterial {
       .replace(
         "#include <begin_vertex>",
         `#include <begin_vertex>
-         vShore = aShore;
          transformed.y += waveH;
          vWorldPos = (modelMatrix * vec4(transformed, 1.0)).xyz;`
       );
@@ -326,13 +325,18 @@ function waterMaterial(): THREE.MeshStandardMaterial {
          uniform float uSparkle;
          uniform float uSparkleSpeed;
          uniform float uTime;
-         varying float vShore;
+         uniform sampler2D uShoreMap;
+         uniform vec4 uShoreRect;
          varying vec3 vWorldPos;`
       )
       .replace(
         "#include <color_fragment>",
         `#include <color_fragment>
-         float edge = max(vShore - 1.0, 0.0);
+         // Distance from the waterline in cells, read per FRAGMENT from the
+         // baked field. Per-vertex would cap the detail at one cell, which is
+         // the whole width of the water mesh's quads.
+         vec2 shoreUv = (vWorldPos.xz - uShoreRect.xy) / uShoreRect.zw;
+         float edge = max(texture2D(uShoreMap, shoreUv).r, 0.0);
          float openness = clamp(edge / max(uDepthFalloff, 0.001), 0.0, 1.0);
          vec3 waterCol = mix(uShallowColor, uDeepColor, openness);
          // SOLID collar, not a gradient (David, 2026-07-28). A hard step would
@@ -416,7 +420,41 @@ const waterUniforms = {
   waveHeight: { value: 0.035 },
   waveScale: { value: 7 },
   waveSpeed: { value: 0.7 },
+  shoreMap: { value: null as THREE.Texture | null },
+  /** World rect the field covers: (minX, minZ, sizeX, sizeZ). */
+  shoreRect: { value: new THREE.Vector4(0, 0, 1, 1) },
 };
+
+/**
+ * Hand the water shader its distance field.
+ *
+ * Half-float so the waterline stays exactly where `shoreSdf` put it — an 8-bit
+ * texture would quantise the crossing and contour the foam edge. R16F is core
+ * WebGL2 and linearly filterable without an extension.
+ */
+export function setShoreField(f: {
+  data: Float32Array;
+  width: number;
+  height: number;
+  minX: number;
+  minZ: number;
+  sizeX: number;
+  sizeZ: number;
+}): void {
+  const half = new Uint16Array(f.data.length);
+  for (let i = 0; i < f.data.length; i++) half[i] = THREE.DataUtils.toHalfFloat(f.data[i]);
+  const tex = new THREE.DataTexture(half, f.width, f.height, THREE.RedFormat, THREE.HalfFloatType);
+  tex.minFilter = THREE.LinearFilter;
+  tex.magFilter = THREE.LinearFilter;
+  // Clamp, not repeat: sampling past the map edge must read the last shoreline
+  // value, not wrap round to the far side of the island.
+  tex.wrapS = THREE.ClampToEdgeWrapping;
+  tex.wrapT = THREE.ClampToEdgeWrapping;
+  tex.needsUpdate = true;
+  waterUniforms.shoreMap.value?.dispose();
+  waterUniforms.shoreMap.value = tex;
+  waterUniforms.shoreRect.value.set(f.minX, f.minZ, f.sizeX, f.sizeZ);
+}
 
 const _sun = new THREE.Vector3();
 
