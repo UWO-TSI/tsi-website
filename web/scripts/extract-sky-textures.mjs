@@ -92,22 +92,45 @@ const SRC = arg("src", path.join(os.homedir(), "Downloads/COZY Stylized Weather 
 const SIZE = Number(arg("size", 512));
 
 /**
- * The two packs, split by WRAP MODE because that is the constraint a shared
- * texture cannot escape. Channel order is r, g, b, a.
+ * Two packs, three masks each in RGB.
+ *
+ * Both MIRRORED repeat. The Luxury sheets do not tile (measured 107 and 41 edge
+ * error against an 87 control) and the cloud projection is an infinite overhead
+ * sheet, so clamping would put cloud in one direction and empty sky everywhere
+ * else. Mirroring makes any organic texture tile, and on shapes this irregular
+ * the reflection is invisible.
  */
 const PACKS = [
-  { out: "sky-tiling", wrap: "repeat", layers: ["cumulus", "cirrus", "stars"] },
-  { out: "sky-clamped", wrap: "clamp", layers: ["altocumulus", "cirrostratus", "nimbus"] },
+  { out: "sky-a", wrap: "mirror", layers: ["puffy", "chunky", "overcast"] },
+  { out: "sky-b", wrap: "mirror", layers: ["storm", "noise", "stars"] },
 ];
 
 /** Source file for each layer name. */
+/**
+ * CHOSEN BY LOOKING AT THEM, which the first pass did not do.
+ *
+ * Picking by filename gave `Cirrus.png` (one spiral motif), `Cirrostratus`
+ * (three small clusters on black) and `Medium Nimbus Luxury` (a hard silhouette
+ * blob). None are tiling cloud fields, and the spiral was the radial streak
+ * artifact in the first preview. Rendering all 26 candidates as a contact sheet
+ * showed the ones that matter were the sheets that had been skipped.
+ *
+ * These are a COVERAGE LADDER, not meteorological cloud types: partly -> mostly
+ * -> overcast -> dense is increasing sky coverage, which is the axis weather
+ * actually moves along, and it maps straight onto weatherSystem.ts's profiles.
+ */
 const SOURCE = {
-  cumulus: "Cumulus Noise.png",
-  cirrus: "Cirrus.png",
+  /** Discrete puffy clouds with gaps between them. The fair-weather sky. */
+  puffy: "Partly Cloudy Luxury Texture.png",
+  /** Bigger and denser, still broken up. */
+  chunky: "Mostly Cloudy Luxury Texture.png",
+  /** Continuous soft ceiling. */
+  overcast: "Overcast Luxury Texture.png",
+  /** Heavy dark ceiling for rain and storms. */
+  storm: "Dense Overcast Luxury Texture.png",
+  /** Soft fractal noise, to break the ladder up so it never reads as a decal. */
+  noise: "Cumulus Noise.png",
   stars: "Stars.png",
-  altocumulus: "Altocumulus.png",
-  cirrostratus: "Cirrostratus.png",
-  nimbus: "Medium Nimbus Luxury.png",
 };
 
 // ── Read the package ─────────────────────────────────────────────
