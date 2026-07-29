@@ -36,6 +36,7 @@ import {
 } from "@/lib/game/tuning";
 import { patchWind, tuftGeometry } from "@/components/game/grid/GrassTufts";
 import { gullPose, type GullParams } from "@/lib/game/gullPath";
+import { easedCellOutline, type LayerTest } from "@/lib/game/grid";
 import { terrainMaterial, applyGrassNormalStrength, advanceWater } from "@/components/game/grid/terrainMaterials";
 
 type Specimen = "gull" | "water" | "grass";
@@ -214,43 +215,162 @@ function GrassSpecimen() {
 }
 
 /**
- * A pane of river over a sand bed, using the world's own water material so the
- * flow, ripple and opacity are the real ones rather than a look-alike.
+ * A pane of water with a real SHORE and real ROCKS in it.
+ *
+ * David asked to see the interaction, and the whole point of the foam is that
+ * it is a distance field — so a bench with nothing to be near cannot show it.
+ *
+ * This is built the same way the world is, not mocked up to look similar:
+ *   · the shoreline runs through `easedCellOutline`, the identical helper that
+ *     rounds the island's coast, so the corner treatment here IS the shipped one
+ *   · `aShore` is the true distance to the nearest land or rock in CELLS, which
+ *     is exactly what `shoreDistance()` bakes over the real map
+ *   · the rocks are the shipped ACNH assets, measured at 1.0 x 0.5 x 1.0 — one
+ *     cell, which is why a rock gets a one-cell collar here and would in the
+ *     world too
+ *
+ * ONE HONEST GAP. In the world today, props do NOT get a collar. Shore distance
+ * is computed from the MAP, and props still live in hardcoded arrays rather than
+ * on it. So the rock collar below is what the world will do once props move onto
+ * the map, not what it does right now.
  */
+const BENCH_CELLS = 16;
+const LAND_Y = 0.34;
+const ROCKS: { url: string; x: number; z: number; r: number; rot: number }[] = [
+  { url: "/assets/acnh/props/rock-a.glb", x: -2.6, z: 1.4, r: 0.52, rot: 0.7 },
+  { url: "/assets/acnh/props/rock-c.glb", x: 1.4, z: -3.4, r: 0.55, rot: 2.1 },
+  { url: "/assets/acnh/props/rock-e.glb", x: -4.2, z: -2.2, r: 0.55, rot: 4.0 },
+];
+
+/** Bench-local cell index -> world coordinate. 1 cell = 1 world unit. */
+const bx = (i: number) => i - BENCH_CELLS / 2 + 0.5;
+
+/** The shoreline: a wandering curve so the eased corners have something to do. */
+const shoreAt = (z: number) => 3.1 + 1.35 * Math.sin(z * 0.52) + 0.5 * Math.sin(z * 1.31);
+const isLandAt = (x: number, z: number) => x > shoreAt(z);
+const benchLand: LayerTest = (cx, cz) => isLandAt(bx(cx), bx(cz));
+
 function WaterSpecimen() {
   const t = useTuning();
-  const mat = useMemo(() => terrainMaterial("mRiver"), []);
   useFrame((state) => advanceWater(state.clock.elapsedTime, t.water));
 
-  const geo = useMemo(() => {
-    // Segmented, because the depth gradient is a per-vertex attribute and a
-    // single quad has nothing to interpolate across.
-    const g = new THREE.PlaneGeometry(12, 12, 24, 24);
+  const waterMat = useMemo(() => terrainMaterial("mRiver"), []);
+  const landMat = useMemo(() => terrainMaterial("mGrass"), []);
+  useEffect(() => {
+    applyGrassNormalStrength(t.grass.normalStrength, t.grass.normalScale);
+  }, [t.grass.normalStrength, t.grass.normalScale]);
+
+  /** Distance in cells to the nearest thing the water touches. */
+  const shoreDist = (x: number, z: number) => {
+    let d = shoreAt(z) - x; // positive out in the water
+    for (const r of ROCKS) d = Math.min(d, Math.hypot(x - r.x, z - r.z) - r.r);
+    return Math.max(0, d);
+  };
+
+  // Fine grid: the foam collar and the swell both need vertices to resolve on.
+  const water = useMemo(() => {
+    const N = 120;
+    const S = BENCH_CELLS;
+    const g = new THREE.PlaneGeometry(S, S, N, N);
     g.rotateX(-Math.PI / 2);
     const pos = g.attributes.position;
     const uv = g.attributes.uv;
-    // Fake a channel: shore distance grows toward the middle in Z, so the pane
-    // shows the same bank-to-deep-to-bank ramp a real river cross-section does.
     const shore = new Float32Array(pos.count);
     for (let i = 0; i < pos.count; i++) {
-      uv.setXY(i, pos.getX(i) / 2, pos.getZ(i) / 2);
-      shore[i] = 1 + (1 - Math.abs(pos.getZ(i)) / 6) * 5;
+      const x = pos.getX(i);
+      const z = pos.getZ(i);
+      uv.setXY(i, x / 2, z / 2);
+      // +1 to match the world, where the first water cell against land reads 1.
+      shore[i] = 1 + shoreDist(x, z);
     }
     uv.needsUpdate = true;
     g.setAttribute("aShore", new THREE.BufferAttribute(shore, 1));
     return g;
   }, []);
 
+  // The shore itself, through the world's own corner easing.
+  const land = useMemo(() => {
+    const pos: number[] = [];
+    const nrm: number[] = [];
+    const uvs: number[] = [];
+    const idx: number[] = [];
+    const push = (x: number, y: number, z: number, n: [number, number, number]) => {
+      pos.push(x, y, z);
+      nrm.push(...n);
+      uvs.push(x / 2, z / 2);
+    };
+    for (let cz = 0; cz < BENCH_CELLS; cz++) {
+      for (let cx = 0; cx < BENCH_CELLS; cx++) {
+        if (!benchLand(cx, cz)) continue;
+        const x = bx(cx);
+        const z = bx(cz);
+        const outline = easedCellOutline(benchLand, cx, cz) ?? [
+          [-0.5, -0.5],
+          [-0.5, 0.5],
+          [0.5, 0.5],
+          [0.5, -0.5],
+        ];
+        const base = pos.length / 3;
+        push(x, LAND_Y, z, [0, 1, 0]);
+        for (const [ox, oz] of outline) push(x + ox, LAND_Y, z + oz, [0, 1, 0]);
+        for (let i = 0; i < outline.length; i++) {
+          idx.push(base, base + 1 + i, base + 1 + ((i + 1) % outline.length));
+        }
+        // Bank face down into the water wherever this cell meets it.
+        for (const [dx, dz] of [
+          [1, 0],
+          [-1, 0],
+          [0, 1],
+          [0, -1],
+        ]) {
+          if (benchLand(cx + dx, cz + dz)) continue;
+          const ax = dz;
+          const az = dx;
+          const ex = x + dx * 0.5;
+          const ez = z + dz * 0.5;
+          const b = pos.length / 3;
+          const n: [number, number, number] = [dx, 0.35, dz];
+          push(ex - ax * 0.5, LAND_Y, ez - az * 0.5, n);
+          push(ex + ax * 0.5, LAND_Y, ez + az * 0.5, n);
+          push(ex + ax * 0.5, -0.5, ez + az * 0.5, n);
+          push(ex - ax * 0.5, -0.5, ez - az * 0.5, n);
+          if (dx !== 0) idx.push(b, b + 1, b + 2, b, b + 2, b + 3);
+          else idx.push(b, b + 3, b + 2, b, b + 2, b + 1);
+        }
+      }
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+    g.setAttribute("normal", new THREE.Float32BufferAttribute(nrm, 3));
+    g.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2));
+    g.setIndex(idx);
+    g.computeBoundingSphere();
+    return g;
+  }, []);
+
   return (
     <group>
-      {/* The bed under it, so opacity has something to reveal. */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.35, 0]} receiveShadow>
-        <planeGeometry args={[12, 12]} />
-        <meshStandardMaterial color="#A47B4B" roughness={0.95} metalness={0} />
+      {/* Bed, so opacity has something to reveal. */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.5, 0]} receiveShadow>
+        <planeGeometry args={[BENCH_CELLS, BENCH_CELLS]} />
+        <meshStandardMaterial color="#B79463" roughness={0.95} metalness={0} />
       </mesh>
-      <mesh geometry={geo} material={mat ?? undefined} />
+      <mesh geometry={land} material={landMat ?? undefined} receiveShadow castShadow />
+      {ROCKS.map((r) => (
+        <Suspense key={r.url} fallback={null}>
+          <BenchRock url={r.url} x={r.x} z={r.z} rot={r.rot} />
+        </Suspense>
+      ))}
+      <mesh geometry={water} material={waterMat ?? undefined} />
     </group>
   );
+}
+
+/** A shipped ACNH rock, sat on the bed so the water cuts across it. */
+function BenchRock({ url, x, z, rot }: { url: string; x: number; z: number; rot: number }) {
+  const { scene } = useGLTF(url);
+  const model = useMemo(() => scene.clone(true), [scene]);
+  return <primitive object={model} position={[x, -0.22, z]} rotation={[0, rot, 0]} />;
 }
 
 // ── Controls ─────────────────────────────────────────────────────
