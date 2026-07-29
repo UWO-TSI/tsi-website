@@ -184,21 +184,36 @@ void main() {
   float band = smoothstep(uCoverB.z - 0.75, uCoverB.z + 0.75, elN);
   float border = mix(1.0, band, clamp(uCoverB.w, 0.0, 1.0));
 
-  float wPuffy = puffyCover * uCoverA.x * border * breakUp;
-  float wChunky = chunkyCover * uCoverA.y * border * breakUp;
-  float wOver = overcast * uCoverA.z * breakUp;
+  float aPuffy = puffyCover * uCoverA.x * border * breakUp;
+  float aChunky = chunkyCover * uCoverA.y * border * breakUp;
+  float aOver = uCoverA.z * border * breakUp;
   // A storm ceiling reaches DOWN, which makes it a lid rather than a layer.
-  float wStorm = storm * uCoverB.x * breakUp * smoothstep(0.0, mix(0.9, 0.15, uCoverB.y), elN);
+  float aStorm = uCoverB.x * breakUp * smoothstep(0.0, mix(0.9, 0.15, uCoverB.y), elN);
 
-  float density = clamp(wPuffy + wChunky + wOver + wStorm, 0.0, 1.0) * fade;
+  /**
+   * COMPOSITE THE WAY COZY DOES, which is not the way I first wrote it.
+   *
+   * Read out of their "Stylized Clouds (Luxury)" shader. Shading is a chain of
+   * lerps starting at 1.0 (clear sky), each layer painting OVER the previous by
+   * its own coverage:
+   *
+   *     v = lerp(v, thisLayerShading, thisLayerCoverage)
+   *
+   * Density is separately the SUM of the coverages, saturated.
+   *
+   * My first version averaged the shading maps by weight instead. That dilutes
+   * the top layer into the ones beneath it, so a heavy storm ceiling came out
+   * washed toward whatever was under it rather than simply covering it. An
+   * ordered over-composite is what a painter does and what a cloud does.
+   */
+  float shade = 1.0;
+  shade = mix(shade, puffyShade, aPuffy);
+  shade = mix(shade, chunkyShade, aChunky);
+  shade = mix(shade, overcast, aOver);
+  shade = mix(shade, storm, aStorm);
+  shade = clamp(shade, 0.0, 1.0);
 
-  // Weighted average of the shading maps: whichever layer is actually present
-  // here is the one that decides how this pixel is lit. The overcast and storm
-  // sheets have no separate silhouette, so their own value is their shading.
-  float wsum = wPuffy + wChunky + wOver + wStorm;
-  float shade = wsum > 0.0001
-    ? (puffyShade * wPuffy + chunkyShade * wChunky + overcast * wOver + storm * wStorm) / wsum
-    : 1.0;
+  float density = clamp(aPuffy + aChunky + aOver + aStorm, 0.0, 1.0) * fade;
 
   vec3 cloud = mix(uCloudDark, uCloudLit, shade);
 

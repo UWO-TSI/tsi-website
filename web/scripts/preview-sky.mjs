@@ -121,16 +121,20 @@ function shadePixel(dir, U, A, B, C) {
   const band = smoothstep(U.bandHeight - 0.75, U.bandHeight + 0.75, elN);
   const border = mix(1, band, clamp(U.bandEffect, 0, 1));
 
-  const wPuffy = puffyCover * U.puffy * border * breakUp;
-  const wChunky = chunkyCover * U.chunky * border * breakUp;
-  const wOver = overcast * U.overcast * breakUp;
-  const wStorm = storm * U.storm * breakUp * smoothstep(0, mix(0.9, 0.15, U.stormReach), elN);
+  const aPuffy = puffyCover * U.puffy * border * breakUp;
+  const aChunky = chunkyCover * U.chunky * border * breakUp;
+  const aOver = U.overcast * border * breakUp;
+  const aStorm = U.storm * breakUp * smoothstep(0, mix(0.9, 0.15, U.stormReach), elN);
 
-  const density = clamp(wPuffy + wChunky + wOver + wStorm, 0, 1) * fade;
-  const wsum = wPuffy + wChunky + wOver + wStorm;
-  const shade = wsum > 0.0001
-    ? (puffyShade * wPuffy + chunkyShade * wChunky + overcast * wOver + storm * wStorm) / wsum
-    : 1;
+  // COZY's own composite: chained lerps from 1.0, density is the summed alpha.
+  let shade = 1;
+  shade = mix(shade, puffyShade, aPuffy);
+  shade = mix(shade, chunkyShade, aChunky);
+  shade = mix(shade, overcast, aOver);
+  shade = mix(shade, storm, aStorm);
+  shade = clamp(shade, 0, 1);
+
+  const density = clamp(aPuffy + aChunky + aOver + aStorm, 0, 1) * fade;
 
   const cloud = [0, 0, 0];
   for (let i = 0; i < 3; i++) cloud[i] = mix(U.cloudDark[i], U.cloudLit[i], shade);
