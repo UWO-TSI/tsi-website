@@ -21,7 +21,7 @@
  */
 
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
-import { Canvas, useFrame } from "@react-three/fiber";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls, useGLTF } from "@react-three/drei";
 import { clone as cloneSkeleton } from "three/examples/jsm/utils/SkeletonUtils.js";
 import * as THREE from "three";
@@ -44,6 +44,7 @@ import {
   type LayerTest,
 } from "@/lib/game/grid";
 import { bedDepth } from "@/lib/game/waterShader";
+import { skyMaterial, advanceSky } from "@/lib/game/skyShader";
 import {
   terrainMaterial,
   applyGrassNormalStrength,
@@ -51,7 +52,7 @@ import {
   setShoreField,
 } from "@/components/game/grid/terrainMaterials";
 
-type Specimen = "gull" | "water" | "grass";
+type Specimen = "gull" | "water" | "sky" | "grass";
 
 // ── Specimens ────────────────────────────────────────────────────
 
@@ -434,6 +435,78 @@ function BenchRock({ url, x, z, rot }: { url: string; x: number; z: number; rot:
   return <primitive object={model} position={[x, -0.22, z]} rotation={[0, rot, 0]} />;
 }
 
+/**
+ * The sky, on its own dome, with the REAL material.
+ *
+ * Deliberately shows the same 24-degree band the game does and no more. The
+ * camera in GameWorld cannot look above that (polar clamp plus a 48 degree
+ * FOV), so a bench that showed the whole dome would have you tuning sky nobody
+ * will ever see -- which is exactly the mistake that made the first version of
+ * this shader render as bare gradient.
+ */
+function SkySpecimen() {
+  const t = useTuning();
+  const mat = useMemo(() => skyMaterial(), []);
+  const { camera, controls } = useThree();
+
+  /**
+   * Frame it the way the GAME does, once, on mount.
+   *
+   * The bench's default camera looks DOWN at a prop on a plinth, which for a
+   * sky means staring at the part of the dome under the floor. The game's view
+   * is the opposite: near the ground, level, with the top of frame 24 degrees
+   * up. Tuning against any other framing is how the first version of this
+   * shader ended up calibrated for sky nobody can see.
+   */
+  useEffect(() => {
+    camera.position.set(0, 1.6, 12);
+    const c = controls as unknown as { target?: THREE.Vector3; update?: () => void } | null;
+    if (c?.target) {
+      c.target.set(0, 3.4, 0);
+      c.update?.();
+    }
+  }, [camera, controls]);
+  const col = useMemo(
+    () => ({
+      zenith: new THREE.Color(),
+      horizon: new THREE.Color(),
+      lit: new THREE.Color(),
+      dark: new THREE.Color(),
+    }),
+    []
+  );
+
+  useFrame((state) => {
+    const k = t.sky;
+    col.zenith.setHex(k.zenith);
+    col.horizon.setHex(k.horizon);
+    col.lit.setHex(k.cloudLit);
+    col.dark.setHex(k.cloudDark);
+    advanceSky(
+      state.clock.elapsedTime,
+      { cumulus: k.puffy, altocumulus: k.chunky, cirrostratus: k.overcast, nimbus: k.storm, cirrus: 0 },
+      {
+        nimbusHeight: k.stormReach,
+        nimbusVariation: 0,
+        borderHeight: k.bandHeight,
+        borderEffect: k.bandEffect,
+        borderVariation: 0,
+      },
+      col,
+      k.night,
+      1,
+      k.wind,
+      k.cloudScale
+    );
+  });
+
+  return (
+    <mesh material={mat} scale={[120, 120, 120]}>
+      <sphereGeometry args={[1, 48, 32]} />
+    </mesh>
+  );
+}
+
 // ── Controls ─────────────────────────────────────────────────────
 
 interface Row {
@@ -495,6 +568,22 @@ const ROWS: Record<Specimen, Row[]> = {
     { group: "gull", key: "bankGain", label: "bank gain", min: 0, max: 4, step: 0.05, note: "turn rate to roll — how hard it leans into the same turn" },
     { group: "gull", key: "wobble", label: "path wobble", min: 0, max: 0.8, step: 0.02, note: "radius variation — 0 is a dead circle" },
     { group: "gull", key: "drift", label: "path drift", min: 0, max: 15, step: 0.5, note: "how far the loop centre wanders, world units" },
+  ],
+  sky: [
+    { group: "sky", key: "cloudScale", label: "cloud size", min: 0.2, max: 3, step: 0.05, note: "repeats across the sky — LOWER is bigger clouds" },
+    { group: "sky", key: "puffy", label: "puffy clouds", min: 0, max: 2, step: 0.05, note: "discrete clouds with gaps. the fair-weather layer" },
+    { group: "sky", key: "chunky", label: "chunky clouds", min: 0, max: 2, step: 0.05, note: "bigger and denser, still broken up" },
+    { group: "sky", key: "overcast", label: "overcast ceiling", min: 0, max: 2, step: 0.05, note: "continuous soft ceiling" },
+    { group: "sky", key: "storm", label: "storm ceiling", min: 0, max: 2, step: 0.05, note: "heavy dark lid" },
+    { group: "sky", key: "stormReach", label: "storm reach", min: 0, max: 1, step: 0.02, note: "how far down the lid comes. 1 = to the skyline" },
+    { group: "sky", key: "bandHeight", label: "cloud height", min: 0, max: 1, step: 0.02, note: "where clouds gather, as a fraction of the sky you can SEE" },
+    { group: "sky", key: "bandEffect", label: "height falloff", min: 0, max: 1, step: 0.02, note: "0 = same coverage everywhere, 1 = clouds bunch at cloud height" },
+    { group: "sky", key: "wind", label: "drift", min: 0, max: 1, step: 0.02, note: "how fast the sheets move" },
+    { group: "sky", key: "night", label: "stars", min: 0, max: 1, step: 0.02, note: "night only. 0 by day" },
+    { group: "sky", key: "cloudLit", label: "cloud lit", min: 0, max: 0, step: 0, kind: "color", note: "the sunlit face" },
+    { group: "sky", key: "cloudDark", label: "cloud shadow", min: 0, max: 0, step: 0, kind: "color", note: "thick cloud reads toward this" },
+    { group: "sky", key: "zenith", label: "sky overhead", min: 0, max: 0, step: 0, kind: "color", note: "in the game this comes from the time-of-day table" },
+    { group: "sky", key: "horizon", label: "sky at skyline", min: 0, max: 0, step: 0, kind: "color", note: "in the game this is the time-of-day fog colour" },
   ],
   grass: [
     { group: "grass", key: "model", label: "blade model", min: 0, max: 1, step: 1, note: "0 = procedural cards (4 tri), 1 = imported pack (42 tri)" },
@@ -620,7 +709,15 @@ export default function TuneBench() {
           <hemisphereLight args={["#cfe2ff", "#5a6b4a", 0.5]} />
           <directionalLight position={[6, 10, 4]} intensity={1.4} color="#FFF7E4" castShadow />
           <Suspense fallback={null}>
-            {specimen === "gull" ? <GullSpecimen /> : specimen === "water" ? <WaterSpecimen /> : <GrassSpecimen />}
+            {specimen === "gull" ? (
+              <GullSpecimen />
+            ) : specimen === "water" ? (
+              <WaterSpecimen />
+            ) : specimen === "sky" ? (
+              <SkySpecimen />
+            ) : (
+              <GrassSpecimen />
+            )}
           </Suspense>
           {/* Hidden under water: the surface does not write depth, so the
               helper shows straight through it and reads as seams in the water. */}
@@ -659,6 +756,7 @@ export default function TuneBench() {
         <div style={{ display: "flex", gap: 6, marginBottom: 16 }}>
           {tab("gull", "seagull")}
           {tab("water", "water")}
+          {tab("sky", "sky")}
           {tab("grass", "grass")}
         </div>
 

@@ -237,7 +237,8 @@ export function advanceSky(
   colors: { zenith: THREE.Color; horizon: THREE.Color; lit: THREE.Color; dark: THREE.Color },
   night: number,
   value: number,
-  wind: number
+  wind: number,
+  cloudScale: number
 ): void {
   const u = skyUniforms;
   u.uTime.value = elapsed;
@@ -253,4 +254,5 @@ export function advanceSky(
   u.uNight.value = night;
   u.uValue.value = value;
   u.uWind.value = 0.06 + wind * 0.34;
+  u.uCloudScale.value = cloudScale;
 }
