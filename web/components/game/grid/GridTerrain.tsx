@@ -90,6 +90,17 @@ const RIVER_BED = 8;
 const WATER_FRINGE = 9;
 
 /**
+ * Render layer for ramps.
+ *
+ * Given its own layer so it can wear a BUILT material rather than grass. A ramp
+ * is the one piece of terrain that is an object you placed -- David, 2026-07-29:
+ * "half steps which are more like stairs and ramps than anything" -- and a grass
+ * slope reads as ground that happens to tilt, which is exactly the thing the
+ * cliff model was meant to remove. Stone reads as an incline someone built.
+ */
+const RAMP_LAYER = 10;
+
+/**
  * How far the fringe card sits OUTBOARD of the land edge, in tiles.
  *
  * Slightly past the boundary so the blades overhang the water rather than
@@ -439,6 +450,7 @@ export default function GridTerrain({ map }: { map: IslandMap }) {
       const river = emptyMesh();
       const bed = emptyMesh();
       const fringe = emptyMesh();
+      const ramp = emptyMesh();
       const overlays = new Map<number, Mesh>();
 
       for (let cz = chunk.minCellZ; cz <= chunk.maxCellZ; cz++) {
@@ -454,7 +466,7 @@ export default function GridTerrain({ map }: { map: IslandMap }) {
           // A ramp replaces its own ground quad: the sloped surface IS the cell.
           if (isRamp(s)) {
             const dir = rampDir(map, cx, cz);
-            if (dir) addRamp(grass, x, z, y, dir[0], dir[1]);
+            if (dir) addRamp(ramp, x, z, y, dir[0], dir[1]);
             else addCell(grass, inGround, cx, cz, x, y, z, undefined, groundAt);
             continue;
           }
@@ -524,6 +536,7 @@ export default function GridTerrain({ map }: { map: IslandMap }) {
       emit(RIVER_BED, bed);
       emit(Surface.River, river);
       emit(WATER_FRINGE, fringe);
+      emit(RAMP_LAYER, ramp);
       for (const s of OVERLAY_SURFACES) {
         const m = overlays.get(s);
         if (m) emit(s, m);
@@ -559,9 +572,17 @@ export default function GridTerrain({ map }: { map: IslandMap }) {
       // drawn, because until now there was no bed to draw it on.
       [RIVER_BED]: "mRiverBed",
       [WATER_FRINGE]: "mGrassRiverXlu",
+      [RAMP_LAYER]: "mRoadStone",
     };
     const m = new Map<number, THREE.Material>();
-    for (const s of [Surface.Grass, RIVER_BED, Surface.River, WATER_FRINGE, ...OVERLAY_SURFACES]) {
+    for (const s of [
+      Surface.Grass,
+      RIVER_BED,
+      Surface.River,
+      WATER_FRINGE,
+      RAMP_LAYER,
+      ...OVERLAY_SURFACES,
+    ]) {
       const sharedName = SHARED[s];
       const shared = sharedName ? terrainMaterial(sharedName) : null;
       if (shared) {
