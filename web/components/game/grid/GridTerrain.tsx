@@ -44,6 +44,7 @@ import {
   needsCliff,
   halfCliffEdges,
   cellHeightRange,
+  ORTHOGONAL,
   waterEdges,
   FRINGE_DROP,
   heightField,
@@ -59,7 +60,7 @@ import { bedDepth } from "@/lib/game/waterShader";
 
 // Flat colours for the surfaces whose road-kit textures are not wired yet.
 const SURFACE_COLOR: Record<number, string> = {
-  [Surface.Grass]: "#8FC96B",
+  [Surface.Grass]: "#8FA16C",
   [Surface.Soil]: "#BA9664",
   [Surface.Stone]: "#B0ACA6",
   [Surface.Sand]: "#E2CB93",
@@ -166,7 +167,9 @@ function addCell(
    * flat quad: four independent corner heights make the surface continuous with
    * its neighbours, which is the whole mechanism and costs no extra geometry.
    */
-  heightAt?: (px: number, pz: number) => number
+  heightAt?: (px: number, pz: number) => number,
+  /** Cuts the cell into subdiv x subdiv quads. 1 is the plain single quad. */
+  subdiv = 1
 ) {
   const s = 1 / (UV_CELLS_PER_REPEAT * TILE);
   const base = mesh.pos.length / 3;
@@ -182,6 +185,27 @@ function addCell(
   const outline = easedCellOutline(inLayer, cx, cz);
   if (!outline) {
     const h = TILE / 2;
+    if (subdiv > 1) {
+      /**
+       * A grid of quads, so a sloping cell curves rather than creasing. Only
+       * used inside a blend; a flat cell gets the single quad below, because
+       * subdividing 9200 flat cells would be 16x the triangles for nothing.
+       */
+      const step = TILE / subdiv;
+      for (let iz = 0; iz <= subdiv; iz++) {
+        for (let ix = 0; ix <= subdiv; ix++) {
+          push(x - h + ix * step, z - h + iz * step);
+        }
+      }
+      const row = subdiv + 1;
+      for (let iz = 0; iz < subdiv; iz++) {
+        for (let ix = 0; ix < subdiv; ix++) {
+          const a = base + iz * row + ix;
+          mesh.idx.push(a, a + row, a + row + 1, a, a + row + 1, a + 1);
+        }
+      }
+      return;
+    }
     push(x - h, z - h);
     push(x - h, z + h);
     push(x + h, z + h);
@@ -372,13 +396,37 @@ export default function GridTerrain({ map }: { map: IslandMap }) {
      */
     const groundFor = smooth
       ? (cx: number, cz: number) => {
-          const [lo, hi] = cellHeightRange(map, cx, cz);
+          const range = cellHeightRange(map, cx, cz);
+          if (!range) return (px: number, pz: number) => sampleHeightField(map, smooth, px, pz);
+          const [lo, hi] = range;
           return (px: number, pz: number) => {
             const h = sampleHeightField(map, smooth, px, pz);
             return h < lo ? lo : h > hi ? hi : h;
           };
         }
       : undefined;
+
+    /**
+     * How finely to cut a cell, so a blend curves instead of creasing.
+     *
+     * One quad per cell gives four height samples across a whole blend, and
+     * linear interpolation between them leaves visible facets -- measured second
+     * derivatives of 0.34 and -0.52 across a three-cell rise, which is a crease
+     * you can see. Subdividing only where the ground is actually sloping keeps
+     * the extra triangles off the ~9200 flat cells that do not need them.
+     */
+    const subdivFor = (cx: number, cz: number) => {
+      if (!smooth) return 1;
+      const here = levelAt(map, cx, cz);
+      for (const [dx, dz] of ORTHOGONAL) {
+        const nx = cx + dx;
+        const nz = cz + dz;
+        if (!inBounds(map, nx, nz) || isVoid(surfaceAt(map, nx, nz))) continue;
+        const d = Math.abs(levelAt(map, nx, nz) - here);
+        if (d > 0 && d < CLIFF_LEVELS) return 4; // inside a blend
+      }
+      return 1;
+    };
 
     const inGround: LayerTest = (cx, cz) =>
       inBounds(map, cx, cz) && !isVoid(surfaceAt(map, cx, cz)) && !isRiver(surfaceAt(map, cx, cz));
@@ -407,7 +455,7 @@ export default function GridTerrain({ map }: { map: IslandMap }) {
           if (isRamp(s)) {
             const dir = rampDir(map, cx, cz);
             if (dir) addRamp(ramp, x, z, y, dir[0], dir[1]);
-            else addCell(grass, inGround, cx, cz, x, y, z, undefined, groundFor?.(cx, cz));
+            else addCell(grass, inGround, cx, cz, x, y, z, undefined, groundFor?.(cx, cz), subdivFor(cx, cz));
             continue;
           }
 
@@ -426,7 +474,7 @@ export default function GridTerrain({ map }: { map: IslandMap }) {
             continue;
           }
 
-          addCell(grass, inGround, cx, cz, x, y, z, undefined, groundFor?.(cx, cz));
+          addCell(grass, inGround, cx, cz, x, y, z, undefined, groundFor?.(cx, cz), subdivFor(cx, cz));
 
           // Walkable step down to a neighbour: a sloped skirt, not a kit
           // piece. This is the whole visible difference between a bank and a

@@ -465,10 +465,15 @@ describe("leveling: flat, full cliffs, and rare blended half steps", () => {
     // Clamped to what the cell can reach: the raw field reads 0.75 here because
     // the shared corner is pinned to the cliff top, and cellHeightRange is what
     // stops the low ground riding halfway up the wall.
-    const [lo, hi] = cellHeightRange(full, 6, 6);
+    const range = cellHeightRange(full, 6, 6);
+    expect(range).not.toBeNull();
+    const [lo, hi] = range!;
     expect(hi).toBeCloseTo(0, 6);
     const raw = sampleHeightField(full, ff, cellToWorldX(full, 6), cellToWorldZ(full, 6));
     expect(Math.min(hi, Math.max(lo, raw))).toBeCloseTo(0, 6);
+    // A cell with NO cliff near it must not clamp at all, or two neighbours
+    // clamped to different ranges leave a crack in the surface.
+    expect(cellHeightRange(half, 3, 6)).toBeNull();
     // And the cliff top is exactly at its level for the piece to sit on.
     expect(sampleHeightField(full, ff, cellToWorldX(full, 10), cellToWorldZ(full, 6))).toBeCloseTo(
       CLIFF_LEVELS * LEVEL_STEP,

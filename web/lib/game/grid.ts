@@ -69,12 +69,26 @@ export const FRINGE_DROP = 0.188;
 /**
  * Grass colour, and the ONE place it is defined.
  *
- * Was 0x7CAE56 in four separate places -- the ground material, the two fringe
- * tints, and GridTerrain's fallback swatch -- so lightening it meant finding
- * all four. David, 2026-07-29: "the color is too dark for the grass". 0x7CAE56
- * is a mid olive; ACNH's is brighter and yellower.
+ * MEASURED off David's ACNH reference (2026-07-30), not guessed. Classifying the
+ * screenshot by hue and averaging the sunlit band -- the closest thing in a lit
+ * capture to an albedo -- gives #8FA16C: hue 81deg, saturation 0.33.
+ *
+ * Both previous values missed the same way, and it was not brightness:
+ *
+ *   0x7CAE56  hue 94deg  sat 0.51   the original, called "too dark"
+ *   0x8FC96B  hue 97deg  sat 0.47   my fix -- brighter, still 16deg too green
+ *                                   and 42% oversaturated
+ *   0x8FA16C  hue 81deg  sat 0.33   the reference
+ *
+ * So "too dark" was really "too green and too saturated". Raising the value did
+ * not touch the actual error, which is why the second attempt looked wrong too.
+ * ACNH's grass is a desaturated yellow-olive, not a saturated green.
+ *
+ * Defined ONCE. It was duplicated across the ground material, both fringe tints
+ * and GridTerrain's fallback swatch, so changing it meant finding all four and
+ * missing one left a mismatched patch.
  */
-export const GRASS_COLOR = 0x8fc96b;
+export const GRASS_COLOR = 0x8fa16c;
 
 // ── Smooth terrain ───────────────────────────────────────────────
 
@@ -231,8 +245,9 @@ export function rampHeightAt(map: IslandMap, x: number, z: number): number | nul
  * same barrier the blur itself uses. A full drop is excluded, so a cell beside a
  * cliff stays flat and the wall stays vertical.
  */
-export function cellHeightRange(map: IslandMap, cx: number, cz: number): [number, number] {
+export function cellHeightRange(map: IslandMap, cx: number, cz: number): [number, number] | null {
   const here = levelAt(map, cx, cz);
+  let cliffNear = false;
   let lo = here;
   let hi = here;
   for (const [dx, dz] of DIR_OFFSETS) {
@@ -240,10 +255,20 @@ export function cellHeightRange(map: IslandMap, cx: number, cz: number): [number
     const nz = cz + dz;
     if (!inBounds(map, nx, nz) || isVoid(surfaceAt(map, nx, nz))) continue;
     const l = levelAt(map, nx, nz);
-    if (Math.abs(l - here) >= CLIFF_LEVELS) continue; // a cliff, not a blend
+    if (Math.abs(l - here) >= CLIFF_LEVELS) {
+      cliffNear = true;
+      continue; // a cliff, not a blend
+    }
     if (l < lo) lo = l;
     if (l > hi) hi = l;
   }
+  // NULL means "use the field raw". Clamping a cell that has no cliff near it
+  // makes it disagree with its neighbours, and two adjacent cells clamped to
+  // different ranges leave a CRACK in the surface -- measured at 0.23u across a
+  // blend, which is a third of a level and plainly visible. The clamp exists
+  // only to stop a pinned cliff corner dragging the ground beside it up, so it
+  // should apply only where a cliff is actually adjacent.
+  if (!cliffNear) return null;
   return [lo * LEVEL_STEP, hi * LEVEL_STEP];
 }
 
