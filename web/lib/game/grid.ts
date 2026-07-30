@@ -547,6 +547,47 @@ export function serialiseIslandMap(map: IslandMap, props: PlacedProp[] = []): Is
   };
 }
 
+/**
+ * Copy a map into a square grid `size` cells a side, keeping it centred.
+ *
+ * THE INVARIANT: every surviving cell keeps the WORLD position it had. Cells
+ * shift by half the size difference and the origin moves by the same amount the
+ * other way, so growing the grid adds sea around the island rather than sliding
+ * the island through it. Props move with their cells; anything pushed outside a
+ * shrink is dropped.
+ *
+ * The `fill` is not a detail. `Surface.Grass` is 0, so the zeroed array behind a
+ * new map is a solid grass square, not open water. Measured when this was first
+ * written inline in `/lab/map`: growing 128 -> 160 turned 9216 cells of sea into
+ * walkable land, and the editor reported 20670 land cells for an island with
+ * 11454.
+ */
+export function resizeMap(
+  map: IslandMap,
+  props: PlacedProp[],
+  size: number
+): { map: IslandMap; props: PlacedProp[] } {
+  const dst = createCenteredMap(size, size);
+  dst.surfaces.fill(Surface.Void);
+  const ox = Math.floor((size - map.width) / 2);
+  const oz = Math.floor((size - map.depth) / 2);
+  for (let cz = 0; cz < map.depth; cz++) {
+    for (let cx = 0; cx < map.width; cx++) {
+      const tx = cx + ox;
+      const tz = cz + oz;
+      if (tx < 0 || tz < 0 || tx >= size || tz >= size) continue;
+      const si = cz * map.width + cx;
+      const di = tz * size + tx;
+      dst.levels[di] = map.levels[si];
+      dst.surfaces[di] = map.surfaces[si];
+    }
+  }
+  const moved = props
+    .map((p) => ({ ...p, cell: [p.cell[0] + ox, p.cell[1] + oz] as [number, number] }))
+    .filter((p) => p.cell[0] >= 0 && p.cell[1] >= 0 && p.cell[0] < size && p.cell[1] < size);
+  return { map: dst, props: moved };
+}
+
 // ── Cell <-> world ───────────────────────────────────────────────
 // Cell (0,0)'s CENTRE sits at (originX, originZ); a cell spans +/- TILE/2.
 

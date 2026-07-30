@@ -27,6 +27,7 @@ import {
   heightAtWorld,
   cellToWorldX,
   cellToWorldZ,
+  resizeMap,
   worldToCellX,
   worldToCellZ,
   listChunks,
@@ -171,6 +172,63 @@ describe("serialisation", () => {
     const props = [{ kind: "tree", cell: [1, 2] as [number, number], level: 0 }];
     const { props: back } = parseIslandMap(serialiseIslandMap(map, props));
     expect(back).toEqual(props);
+  });
+});
+
+describe("resizeMap", () => {
+  it("keeps every surviving cell at the same world position", () => {
+    // The invariant the whole feature rests on. If a resize moved cells in
+    // world space it would slide the island out from under the props and the
+    // hardcoded building coordinates.
+    const map = createCenteredMap(8, 8);
+    setCell(map, 2, 3, 2, Surface.Stone);
+    setCell(map, 6, 6, 1, Surface.Sand);
+    const beforeX = cellToWorldX(map, 2);
+    const beforeZ = cellToWorldZ(map, 3);
+
+    const { map: big } = resizeMap(map, [], 16);
+    const ox = (16 - 8) / 2;
+    expect(cellToWorldX(big, 2 + ox)).toBeCloseTo(beforeX, 9);
+    expect(cellToWorldZ(big, 3 + ox)).toBeCloseTo(beforeZ, 9);
+    expect(levelAt(big, 2 + ox, 3 + ox)).toBe(2);
+    expect(surfaceAt(big, 2 + ox, 3 + ox)).toBe(Surface.Stone);
+    expect(surfaceAt(big, 6 + ox, 6 + ox)).toBe(Surface.Sand);
+  });
+
+  it("fills the new margin with sea, not grass", () => {
+    // Surface.Grass is 0, so the zeroed array behind a new map is a solid grass
+    // square. Without an explicit fill, growing the grid silently turns open
+    // water into walkable land -- measured at 9216 phantom cells going 128->160.
+    const map = createCenteredMap(4, 4);
+    for (let i = 0; i < map.surfaces.length; i++) map.surfaces[i] = Surface.Grass;
+    const { map: big } = resizeMap(map, [], 12);
+    expect(surfaceAt(big, 0, 0)).toBe(Surface.Void);
+    expect(surfaceAt(big, 11, 11)).toBe(Surface.Void);
+    let grass = 0;
+    for (const s of big.surfaces) if (s === Surface.Grass) grass++;
+    expect(grass).toBe(16); // exactly the original 4x4, nothing more
+  });
+
+  it("moves props with their cells and drops what a shrink cuts off", () => {
+    const map = createCenteredMap(8, 8);
+    const props = [
+      { kind: "tree", cell: [4, 4] as [number, number], level: 0 },
+      { kind: "rock", cell: [0, 0] as [number, number], level: 0 },
+    ];
+    // 8 -> 4 offsets by -2, so the centre prop survives at (2,2) and the
+    // corner one lands at (-2,-2) and is cut.
+    const { props: out } = resizeMap(map, props, 4);
+    expect(out).toEqual([{ kind: "tree", cell: [2, 2], level: 0 }]);
+  });
+
+  it("survives a grow-then-shrink round trip", () => {
+    const map = createCenteredMap(8, 8);
+    setCell(map, 3, 5, 2, Surface.Brick);
+    const { map: big, props: bigProps } = resizeMap(map, [], 24);
+    const { map: back } = resizeMap(big, bigProps, 8);
+    expect(back.originX).toBe(map.originX);
+    expect(levelAt(back, 3, 5)).toBe(2);
+    expect(surfaceAt(back, 3, 5)).toBe(Surface.Brick);
   });
 });
 
