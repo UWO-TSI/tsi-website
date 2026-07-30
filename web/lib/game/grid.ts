@@ -38,7 +38,7 @@ export const TILE = 1.0;
  * That is the whole leveling rule, and it falls out of one number:
  * `CLIFF_LEVELS`.
  */
-export const LEVEL_STEP = 1.5;
+export const LEVEL_STEP = 0.75;
 
 /**
  * How many levels a cliff piece spans. `CLIFF_LEVELS * LEVEL_STEP` must equal
@@ -47,7 +47,7 @@ export const LEVEL_STEP = 1.5;
  * A drop of fewer levels than this is a BANK: walkable, no kit piece, drawn as
  * a sloped skirt by GridTerrain. A drop of this many or more is a CLIFF.
  */
-export const CLIFF_LEVELS = 1;
+export const CLIFF_LEVELS = 2;
 
 /** The vertical drop one cliff piece covers, world units. Matches the kit. */
 export const CLIFF_HEIGHT = CLIFF_LEVELS * LEVEL_STEP;
@@ -260,7 +260,7 @@ export const CHUNK = 16;
  * Ground plus three cliff tiers, in HALF steps — so the reachable ceiling is
  * unchanged at 3 x 1.5u, it just takes twice as many levels to get there.
  */
-export const MAX_LEVEL = 3;
+export const MAX_LEVEL = 6;
 
 // ── Surfaces ─────────────────────────────────────────────────────
 // Values are stable — they are persisted in the map file. Append only.
@@ -885,9 +885,32 @@ export function dropTo(map: IslandMap, cx: number, cz: number, nx: number, nz: n
 }
 
 /** Is the step down to this neighbour walkable, i.e. a bank rather than a cliff? */
-export function isWalkableDrop(drop: number): boolean {
-  return drop > 0 && drop < CLIFF_LEVELS;
+export function isWalkableDrop(): boolean {
+  // NOTHING is walkable. Both tiers are cliffs -- see HALF_CLIFF_HEIGHT. Kept as
+  // a named constant-false rather than deleted because callers reading
+  // "is this walkable" is clearer than them knowing there is no such thing.
+  return false;
 }
+
+/**
+ * The short cliff, world units. One level.
+ *
+ * David, 2026-07-30: "there should be a half step cliff and a full cliff, and
+ * this island overall should be flat with occasional half step, and only in
+ * certain high terrain have the full cliff."
+ *
+ * So there are two FACE HEIGHTS and neither is a slope:
+ *
+ *   1 level  0.75u  HALF CLIFF -- generated geometry, the common case
+ *   2 levels 1.50u  FULL CLIFF -- the measured kit piece, reserved for high ground
+ *
+ * The kit only ships the 1.5u wall, so the half cliff cannot be a kit piece and
+ * is built instead: a vertical face in mCliff, the grass lip on top, and the
+ * mGrassCliffXlu drape over the edge -- the same three parts the GLB carries,
+ * at half the height. Scaling a kit piece to 0.5 was the alternative and it
+ * squashes the rock texture by half, which reads as a different material.
+ */
+export const HALF_CLIFF_HEIGHT = LEVEL_STEP;
 
 /**
  * Same TIER: the test that decides where a cliff face goes.
@@ -933,17 +956,31 @@ export function needsCliff(map: IslandMap, cx: number, cz: number): boolean {
  * diagonal neighbour shares only a corner, which the two flanking edges already
  * cover between them.
  */
-export function bankEdges(map: IslandMap, cx: number, cz: number): [number, number, number][] {
+/**
+ * Orthogonal edges that fall exactly ONE level: the half-cliff faces.
+ *
+ * The counterpart to `needsCliff`, which handles the two-level drops the kit
+ * covers. A cell can have both -- a corner of a high plateau may drop two levels
+ * on one side and one on another -- so these are drawn independently and the
+ * autotile is never asked to represent a face it has no piece for.
+ *
+ * Void is skipped for the same reason it always was: where land meets open sea
+ * the beach already runs under the waterline, and a face there would hang over
+ * nothing.
+ */
+export function halfCliffEdges(map: IslandMap, cx: number, cz: number): [number, number][] {
   if (isVoid(surfaceAt(map, cx, cz))) return [];
-  const out: [number, number, number][] = [];
+  const out: [number, number][] = [];
   for (const [dx, dz] of ORTHOGONAL) {
-    // A bank needs ground on both sides. Where the neighbour is open sea the
-    // beach already runs down to the waterline and a skirt would float.
     if (isVoid(surfaceAt(map, cx + dx, cz + dz))) continue;
-    const drop = dropTo(map, cx, cz, cx + dx, cz + dz);
-    if (isWalkableDrop(drop)) out.push([dx, dz, drop]);
+    if (dropTo(map, cx, cz, cx + dx, cz + dz) === 1) out.push([dx, dz]);
   }
   return out;
+}
+
+/** @deprecated Nothing is walkable; use `halfCliffEdges`. Returns empty. */
+export function bankEdges(_map: IslandMap, _cx: number, _cz: number): [number, number, number][] {
+  return [];
 }
 
 /** The cliff piece for a cell, plus how to place it. Null when none is needed. */

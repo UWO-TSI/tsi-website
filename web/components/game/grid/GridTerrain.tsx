@@ -42,7 +42,8 @@ import {
   cellToWorldX,
   cellToWorldZ,
   needsCliff,
-  bankEdges,
+  halfCliffEdges,
+  HALF_CLIFF_HEIGHT,
   waterEdges,
   FRINGE_DROP,
   heightField,
@@ -99,6 +100,9 @@ const WATER_FRINGE = 9;
  * cliff model was meant to remove. Stone reads as an incline someone built.
  */
 const RAMP_LAYER = 10;
+
+/** The rock face of a half cliff. Wears mCliff, same as the kit pieces. */
+const HALF_CLIFF = 11;
 
 /**
  * How far the fringe card sits OUTBOARD of the land edge, in tiles.
@@ -197,79 +201,63 @@ function addCell(
 }
 
 /**
- * Append the sloped skirt for one walkable step down.
+ * Append one HALF-CLIFF face: a vertical wall exactly one level tall.
  *
- * The top edge sits on the cell boundary at the cell's own height; the bottom
- * edge runs BANK_RUN out into the lower neighbour and down to its height. It
- * deliberately overlaps the neighbour's ground rather than meeting it exactly:
- * an exact meeting leaves a hairline of sky at grazing angles, and the overlap
- * costs nothing because the neighbour's quad is flat underneath.
+ * David, 2026-07-30 wants two cliff heights and no slopes. The kit only ships
+ * the 1.5u wall, so the 0.75u one is built here from the same three parts the
+ * GLB carries: this face in mCliff, the grass lip that the ground quad above
+ * already provides, and the mGrassCliffXlu drape added separately.
  *
- * Normals are the true slope normal, so a bank catches the key light
- * differently from the flat ground on either side. That shading difference is
- * most of what makes the step readable at all.
+ * Vertical, flush with the cell boundary. The old sloped skirt ran 1.1 tiles
+ * out into the lower neighbour; a face does not, which is why the half cliff
+ * costs no flat ground where the skirt ate over a tile of it per edge.
  */
-function addBank(
+function addHalfCliff(
   mesh: Mesh,
   x: number,
   z: number,
   topY: number,
-  bottomY: number,
   dx: number,
   dz: number
 ) {
-  const s = 1 / (UV_CELLS_PER_REPEAT * TILE);
   const half = TILE / 2;
-  // Along-edge axis is the perpendicular of the step direction.
+  const bottomY = topY - HALF_CLIFF_HEIGHT;
+  // Along-edge axis is the perpendicular of the outward direction.
   const ax = dz;
   const az = dx;
   const ex = x + dx * half;
   const ez = z + dz * half;
-  const ox = ex + dx * BANK_RUN;
-  const oz = ez + dz * BANK_RUN;
-
-  const drop = topY - bottomY;
-  const len = Math.hypot(drop, BANK_RUN) || 1;
-  // Slope normal: horizontal component points down the slope, vertical up.
-  const nx = (dx * drop) / len;
-  const ny = BANK_RUN / len;
-  const nz = (dz * drop) / len;
 
   const base = mesh.pos.length / 3;
   const pts: [number, number, number][] = [
     [ex - ax * half, topY, ez - az * half],
     [ex + ax * half, topY, ez + az * half],
-    [ox + ax * half, bottomY, oz + az * half],
-    [ox - ax * half, bottomY, oz - az * half],
+    [ex + ax * half, bottomY, ez + az * half],
+    [ex - ax * half, bottomY, ez - az * half],
   ];
-  for (const [px, py, pz] of pts) {
-    mesh.pos.push(px, py, pz);
-    mesh.uv.push(px * s, pz * s);
-    mesh.nrm.push(nx, ny, nz);
+  // V runs top to bottom over exactly one face height so the rock is at the
+  // same scale as the kit's, which matters when a half and a full cliff meet.
+  const uAt = (px: number, pz: number) => (ax !== 0 ? pz : px);
+  const uvs: [number, number][] = [
+    [uAt(pts[0][0], pts[0][2]), 0],
+    [uAt(pts[1][0], pts[1][2]), 0],
+    [uAt(pts[2][0], pts[2][2]), HALF_CLIFF_HEIGHT],
+    [uAt(pts[3][0], pts[3][2]), HALF_CLIFF_HEIGHT],
+  ];
+  for (let i = 0; i < 4; i++) {
+    mesh.pos.push(pts[i][0], pts[i][1], pts[i][2]);
+    mesh.uv.push(uvs[i][0], uvs[i][1]);
+    mesh.nrm.push(dx, 0, dz);
   }
-
-  // Wind so the face points up-slope, DERIVED rather than hand-cased.
-  //
-  // The hand-cased version keyed the flip on `dx + dz > 0`, which is the sign
-  // of the step direction. The correct discriminator is the AXIS, not the sign,
-  // so two of the four directions came out backfacing — and a backfacing bank
-  // is culled, which showed as a pale hole straight through the terrain to the
-  // sky. Comparing the triangle's own cross product against the normal we
-  // already know cannot get that wrong, whatever the corner order happens to be.
-  const [a, b, c] = pts;
-  const ux = b[0] - a[0];
-  const uy = b[1] - a[1];
-  const uz = b[2] - a[2];
-  const vx = c[0] - a[0];
-  const vy = c[1] - a[1];
-  const vz = c[2] - a[2];
-  const facing =
-    (uy * vz - uz * vy) * nx + (uz * vx - ux * vz) * ny + (ux * vy - uy * vx) * nz;
-  if (facing > 0) {
-    mesh.idx.push(base, base + 1, base + 2, base, base + 2, base + 3);
-  } else {
-    mesh.idx.push(base, base + 3, base + 2, base, base + 2, base + 1);
-  }
+  // Wound from the cross product against the known normal, the same way the
+  // other faces are: keying on the sign of the direction instead leaves two of
+  // the four orientations backfacing, which culls them into a hole.
+  const [p0, p1, p2] = pts;
+  const ux = p1[0] - p0[0], uy = p1[1] - p0[1], uz = p1[2] - p0[2];
+  const vx = p2[0] - p0[0], vy = p2[1] - p0[1], vz = p2[2] - p0[2];
+  const facing = (uy * vz - uz * vy) * dx + (uz * vx - ux * vz) * 0 + (ux * vy - uy * vx) * dz;
+  if (facing > 0) mesh.idx.push(base, base + 1, base + 2, base, base + 2, base + 3);
+  else mesh.idx.push(base, base + 3, base + 2, base, base + 2, base + 1);
 }
 
 /**
@@ -451,6 +439,7 @@ export default function GridTerrain({ map }: { map: IslandMap }) {
       const bed = emptyMesh();
       const fringe = emptyMesh();
       const ramp = emptyMesh();
+      const halfCliff = emptyMesh();
       const overlays = new Map<number, Mesh>();
 
       for (let cz = chunk.minCellZ; cz <= chunk.maxCellZ; cz++) {
@@ -491,15 +480,13 @@ export default function GridTerrain({ map }: { map: IslandMap }) {
           // Walkable step down to a neighbour: a sloped skirt, not a kit
           // piece. This is the whole visible difference between a bank and a
           // cliff, and it lives here because it is terrain, not an object.
-          // Skirts are what the height field REPLACES. A skirt patched each
-          // boundary on its own, so three changes in a row came out as three
-          // ramps with treads between them. The field spreads and merges them
-          // instead, so in smooth mode there is nothing left for a skirt to do
-          // and drawing one would poke through the slope.
-          if (!smooth) {
-            for (const [dx, dz, drop] of bankEdges(map, cx, cz)) {
-              addBank(grass, x, z, y, y - drop * LEVEL_STEP, dx, dz);
-            }
+          // One-level drops are HALF CLIFFS: a vertical face, not a slope. Two
+          // levels is a full drop and the kit piece covers it, drawn by
+          // GridCliffs -- a cell can have both, on different sides.
+          for (const [dx, dz] of halfCliffEdges(map, cx, cz)) {
+            addHalfCliff(halfCliff, x, z, y, dx, dz);
+            // The same drape the kit hangs over a full cliff lip.
+            addFringe(fringe, x, z, y, dx, dz);
           }
 
           // Grass hanging over a water edge. Without this the river simply
@@ -537,6 +524,7 @@ export default function GridTerrain({ map }: { map: IslandMap }) {
       emit(Surface.River, river);
       emit(WATER_FRINGE, fringe);
       emit(RAMP_LAYER, ramp);
+      emit(HALF_CLIFF, halfCliff);
       for (const s of OVERLAY_SURFACES) {
         const m = overlays.get(s);
         if (m) emit(s, m);
@@ -573,6 +561,7 @@ export default function GridTerrain({ map }: { map: IslandMap }) {
       [RIVER_BED]: "mRiverBed",
       [WATER_FRINGE]: "mGrassRiverXlu",
       [RAMP_LAYER]: "mRoadStone",
+      [HALF_CLIFF]: "mCliff",
     };
     const m = new Map<number, THREE.Material>();
     for (const s of [
@@ -581,6 +570,7 @@ export default function GridTerrain({ map }: { map: IslandMap }) {
       Surface.River,
       WATER_FRINGE,
       RAMP_LAYER,
+      HALF_CLIFF,
       ...OVERLAY_SURFACES,
     ]) {
       const sharedName = SHARED[s];

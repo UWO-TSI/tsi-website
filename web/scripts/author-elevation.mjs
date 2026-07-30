@@ -406,7 +406,11 @@ for (const [name, x, z, r] of UPLAND) report.push(blob(name, x, z, r, 1, false, 
 // stacked in two pieces, which is the tallest thing on the island by a long way
 // and reads as a fortress. The upland is the high ground; it does not need a
 // peak on top of it.
-report.push(blob("upland summit", -10, -43, 7, 1));
+// THE HIGH GROUND. David, 2026-07-30: "only in certain high terrain have the
+// full cliff." Level 2 sitting against the level-0 plain is a 2-level drop,
+// which is the kit's 1.5u wall. Everything else on the island is level 1 and
+// therefore a 0.75u half cliff.
+report.push(blob("upland summit", -10, -43, 8, CLIFF));
 
 // 2. Temple Rise. Its platform is level 2 sitting directly on level 0, which
 //    is an illegal 2-step face — there is no cliff piece for it. The shoulder
@@ -418,7 +422,9 @@ report.push(blob("upland summit", -10, -43, 7, 1));
 //    building apron must be FLAT, not level 0. Raising the whole apron one
 //    step keeps it flat. What is forbidden is a level change inside the apron,
 //    and a blob wider than the apron cannot make one.
-report.push(blob("temple shoulder", 0, 31.8, 13, CLIFF, true));
+// The temple is the island's second piece of high ground, and the only other
+// place a full cliff is wanted.
+report.push(blob("temple shoulder", 0, 31.8, 11, CLIFF, true));
 
 // 3. The far side needs relief too, or half the island is a lawn. Same rule:
 //    the widest pockets clear of the road grid.
@@ -902,7 +908,7 @@ let edgeCells = 0;
 let thinCells = 0;
 let cornerCells = 0;
 let coastCliff = 0;
-let bankCells = 0;
+let halfCells = 0;
 let cliffFaceCells = 0;
 for (let cz = 0; cz < map.depth; cz++) {
   for (let cx = 0; cx < map.width; cx++) {
@@ -927,7 +933,7 @@ for (let cz = 0; cz < map.depth; cz++) {
       )
     );
     if (worst >= CLIFF) cliffFaceCells++;
-    else if (worst > 0) bankCells++;
+    else if (worst > 0) halfCells++;
     // Two or more lower orthogonals means the wall TURNS here. A long straight
     // run has one; a staircase has one at every single cell, which is what
     // reads as Minecraft. This is the number `straighten()` exists to drive
@@ -944,12 +950,12 @@ console.log(
   ).toFixed(0)}% · 1-cell-wide ridges: ${thinCells}`
 );
 console.log(
-  `relief: ${bankCells} walkable bank cells (${(
-    (100 * bankCells) /
-    Math.max(1, bankCells + cliffFaceCells)
-  ).toFixed(0)}%) vs ${cliffFaceCells} cliff-face cells — one level is ${
-    grid.LEVEL_STEP
-  }u, a cliff is ${grid.CLIFF_HEIGHT}u`
+  // NOT "walkable" -- nothing is, since 2026-07-30. Both tiers are faces; they
+  // differ only in height and in which one the kit can draw.
+  `relief: ${halfCells} half-cliff cells at ${grid.HALF_CLIFF_HEIGHT}u (${(
+    (100 * halfCells) /
+    Math.max(1, halfCells + cliffFaceCells)
+  ).toFixed(0)}%) vs ${cliffFaceCells} full-cliff cells at ${grid.CLIFF_HEIGHT}u`
 );
 console.log(
   `corner (wall turns here) cells: ${cornerCells}/${edgeCells} = ${(

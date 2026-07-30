@@ -5,6 +5,8 @@ import {
   CLIFF_LEVELS,
   CLIFF_HEIGHT,
   isWalkableDrop,
+  halfCliffEdges,
+  HALF_CLIFF_HEIGHT,
   heightField,
   sampleHeightField,
   bankEdges,
@@ -54,15 +56,19 @@ describe("constants", () => {
     // step is reverted: every level change is a hard cliff, and half steps are
     // stairs and ramps you place rather than ground you walk up. The product is
     // still the kit's measured 1.5u wall, which is the invariant that matters.
-    expect(LEVEL_STEP).toBe(1.5);
-    expect(CLIFF_LEVELS).toBe(1);
+    // TWO cliff heights, neither a slope (David, 2026-07-30). A one-level drop
+    // is a 0.75u half cliff built from geometry; two levels is the kit's
+    // measured 1.5u wall. The product is still the piece.
+    expect(LEVEL_STEP).toBe(0.75);
+    expect(CLIFF_LEVELS).toBe(2);
     expect(CLIFF_HEIGHT).toBeCloseTo(1.5, 6);
-    // Nothing is a walkable slope any more, at any drop.
-    expect(isWalkableDrop(1)).toBe(false);
-    expect(isWalkableDrop(2)).toBe(false);
+    expect(HALF_CLIFF_HEIGHT).toBeCloseTo(0.75, 6);
+    expect(HALF_CLIFF_HEIGHT * 2).toBeCloseTo(CLIFF_HEIGHT, 6);
+    // Nothing is walkable at any drop -- both tiers are faces.
+    expect(isWalkableDrop()).toBe(false);
     expect(WATER_DROP).toBeCloseTo(0.078, 5);
     expect(CHUNK).toBe(16);
-    expect(MAX_LEVEL).toBe(3);
+    expect(MAX_LEVEL).toBe(6);
   });
 });
 
@@ -388,27 +394,36 @@ describe("leveling: every change is a cliff", () => {
   // and have cliffs if there's level change so that there's no more slope that
   // will affect building." This replaces the 2026-07-28 half-step rule. Half
   // steps are now stairs and ramps you PLACE, not ground you walk up.
-  it("calls no drop walkable, at any size", () => {
-    expect(isWalkableDrop(0)).toBe(false); // flat is not a step
-    expect(isWalkableDrop(1)).toBe(false); // one level IS a cliff now
-    expect(isWalkableDrop(2)).toBe(false);
-    expect(isWalkableDrop(3)).toBe(false);
+  it("calls no drop walkable", () => {
+    expect(isWalkableDrop()).toBe(false);
   });
 
-  it("emits a cliff piece for a one-level step", () => {
-    const map = createMap(5, 5);
-    setCell(map, 2, 2, 1, Surface.Grass);
-    expect(needsCliff(map, 2, 2)).toBe(true);
-    expect(cliffPieceFor(map, 2, 2)).not.toBeNull();
-  });
-
-  it("reports no bank edges, because banks no longer exist", () => {
+  it("makes a one-level drop a HALF cliff, with no kit piece", () => {
     const map = createMap(5, 5);
     for (let i = 0; i < 25; i++) map.levels[i] = 1;
-    setCell(map, 2, 2, 2, Surface.Grass);
-    // Four orthogonal one-level drops. Under the old rule these were four
-    // walkable skirts; now every one of them is a cliff face.
-    expect(bankEdges(map, 2, 2)).toHaveLength(0);
+    setCell(map, 2, 2, 2, Surface.Grass); // one level above its neighbours
+    // Four orthogonal faces, all half height, and the kit is not involved --
+    // it only ships the 1.5u wall.
+    expect(halfCliffEdges(map, 2, 2)).toHaveLength(4);
+    expect(needsCliff(map, 2, 2)).toBe(false);
+    expect(cliffPieceFor(map, 2, 2)).toBeNull();
+  });
+
+  it("makes a two-level drop a FULL cliff, with a kit piece", () => {
+    const map = createMap(5, 5);
+    setCell(map, 2, 2, CLIFF_LEVELS, Surface.Grass);
+    expect(needsCliff(map, 2, 2)).toBe(true);
+    expect(cliffPieceFor(map, 2, 2)).not.toBeNull();
+    // A full drop is NOT also reported as a half face, or it would be drawn twice.
+    expect(halfCliffEdges(map, 2, 2)).toHaveLength(0);
+  });
+
+  it("lets one cell have both tiers on different sides", () => {
+    const map = createMap(5, 5);
+    for (let i = 0; i < 25; i++) map.levels[i] = 2;
+    setCell(map, 1, 2, 1, Surface.Grass); // west is one level down
+    setCell(map, 3, 2, 0, Surface.Grass); // east is two levels down
+    expect(halfCliffEdges(map, 2, 2)).toEqual([[-1, 0]]);
     expect(needsCliff(map, 2, 2)).toBe(true);
   });
 
@@ -417,19 +432,26 @@ describe("leveling: every change is a cliff", () => {
     // LEVEL_STEP must equal it or every face is the wrong size. With both back
     // to one-to-one, a level and a piece are the same thing again.
     expect(CLIFF_LEVELS * LEVEL_STEP).toBeCloseTo(CLIFF_HEIGHT, 6);
-    expect(LEVEL_STEP).toBeCloseTo(CLIFF_HEIGHT, 6);
+    // A level is HALF a piece again, so the two tiers stack exactly.
+    expect(LEVEL_STEP * 2).toBeCloseTo(CLIFF_HEIGHT, 6);
   });
 
   it("leaves the height field inert, since nothing is walkable", () => {
+    // Still inert: the blur skips samples a full cliff away, and a half cliff is
+    // a hard face too, so no corner is ever smoothed across either tier.
     // heightField's blur skips any sample a full cliff from the corner's home
     // level. At CLIFF_LEVELS 1 that is every differing sample, so each corner
     // keeps its own height and plateaus stay hard-edged with no special case.
     const map = createMap(9, 9);
     for (let i = 0; i < 81; i++) map.levels[i] = 0;
-    for (let z = 0; z < 9; z++) for (let x = 5; x < 9; x++) setCell(map, x, z, 1, Surface.Grass);
+    // A FULL cliff, so the blur's barrier definitely applies.
+    for (let z = 0; z < 9; z++) for (let x = 5; x < 9; x++) setCell(map, x, z, CLIFF_LEVELS, Surface.Grass);
     const f = heightField(map);
     expect(sampleHeightField(map, f, cellToWorldX(map, 2), cellToWorldZ(map, 4))).toBeCloseTo(0, 6);
-    expect(sampleHeightField(map, f, cellToWorldX(map, 7), cellToWorldZ(map, 4))).toBeCloseTo(LEVEL_STEP, 6);
+    expect(sampleHeightField(map, f, cellToWorldX(map, 7), cellToWorldZ(map, 4))).toBeCloseTo(
+      CLIFF_LEVELS * LEVEL_STEP,
+      6
+    );
   });
 });
 
