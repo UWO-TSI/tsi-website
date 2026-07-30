@@ -29,6 +29,7 @@ import {
   Surface,
   TILE,
   LEVEL_STEP,
+  CLIFF_LEVELS,
   WATER_DROP,
   listChunks,
   levelAt,
@@ -53,7 +54,6 @@ import {
 } from "@/lib/game/grid";
 import { terrainMaterial, setShoreField } from "./terrainMaterials";
 import { TUNING_DEFAULTS } from "@/lib/game/tuning";
-import { isSteppedTerrain } from "./GridWorld";
 import { bedDepth } from "@/lib/game/waterShader";
 
 // Flat colours for the surfaces whose road-kit textures are not wired yet.
@@ -399,7 +399,14 @@ export default function GridTerrain({ map }: { map: IslandMap }) {
    * that is drawn -- two separate calculations is how a character ends up
    * hovering over a hill.
    */
-  const smooth = useMemo(() => (isSteppedTerrain() ? null : heightField(map)), [map]);
+  const smooth = useMemo(
+    // Guarded on the constant, not on a URL flag. At CLIFF_LEVELS 1 every level
+    // change is a cliff, so the blur has nothing it is allowed to cross and
+    // every corner keeps its own height -- 20ms of work for an identical result.
+    // The branch stays so raising the constant revives smoothing for free.
+    () => (CLIFF_LEVELS > 1 ? heightField(map) : null),
+    [map]
+  );
 
   const chunks = useMemo(() => {
     const out: { key: string; surface: number; geometry: THREE.BufferGeometry }[] = [];

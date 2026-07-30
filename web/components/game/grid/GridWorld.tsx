@@ -17,6 +17,7 @@ import islandMapDoc from "@/data/island-map.json";
 import {
   parseIslandMap,
   heightAtWorld,
+  CLIFF_LEVELS,
   heightField,
   sampleHeightField,
   rampHeightAt,
@@ -62,26 +63,6 @@ export function isGridEnabled(): boolean {
   return gridFlag;
 }
 
-/**
- * Stepped terrain, for comparison.
- *
- * David, 2026-07-29, asked to see both: hard ACNH-style steps versus the smooth
- * height field. Smooth is the default because it is what he described wanting;
- * `?stepped=1` restores the old flat-quad-plus-skirt behaviour on the same map,
- * so the two can be judged against identical terrain.
- *
- * Read once from the URL for the same reason isGridEnabled is -- see its note.
- */
-let steppedFlag: boolean | null = null;
-export function isSteppedTerrain(): boolean {
-  if (steppedFlag === null) {
-    steppedFlag =
-      typeof window !== "undefined" &&
-      new URLSearchParams(window.location.search).get("stepped") === "1";
-  }
-  return steppedFlag;
-}
-
 export default function GridWorld() {
   const { map } = useMemo(() => getIslandMap(), []);
   const t = useTuning();
@@ -105,7 +86,9 @@ export default function GridWorld() {
   useEffect(() => {
     // The SAME field the mesh uses, or the player walks on a surface that is
     // not the one being drawn.
-    const field = isSteppedTerrain() ? null : heightField(map);
+    // Same guard as GridTerrain: inert at CLIFF_LEVELS 1, and the two MUST
+    // agree or the player walks on a different surface from the one drawn.
+    const field = CLIFF_LEVELS > 1 ? heightField(map) : null;
     /**
      * Ramps are checked FIRST, because they are the one place the ground is not
      * flat and the height field cannot help: its blur treats a full-cliff

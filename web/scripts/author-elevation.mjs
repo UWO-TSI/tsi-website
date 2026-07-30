@@ -476,6 +476,47 @@ for (const [name, deg, r] of SHELVES) {
   report.push(blob(name, Math.cos(a) * rad, Math.sin(a) * rad, r, 1));
 }
 
+/**
+ * Delete one-cell-wide walls.
+ *
+ * A raised cell with lower ground on BOTH sides of an axis is a wall you cannot
+ * stand on: one tile of plateau between two cliff faces. `open(2)` removes thin
+ * features by area, but a ridge one cell wide and twenty long has plenty of area
+ * and survives it -- the authoring report counted 13.
+ *
+ * Repeated to a fixed point, because dropping one cell can expose its
+ * neighbour as the new one-cell ridge.
+ */
+function widen(rounds = 6) {
+  let dropped = 0;
+  for (let pass = 0; pass < rounds; pass++) {
+    const kill = [];
+    for (let cz = 1; cz < map.depth - 1; cz++) {
+      for (let cx = 1; cx < map.width - 1; cx++) {
+        if (!isLand(cx, cz)) continue;
+        const l = grid.levelAt(map, cx, cz);
+        if (l === 0) continue;
+        const lower = (dx, dz) => isLand(cx + dx, cz + dz) && grid.levelAt(map, cx + dx, cz + dz) < l;
+        if ((lower(-1, 0) && lower(1, 0)) || (lower(0, -1) && lower(0, 1))) kill.push([cx, cz, l]);
+      }
+    }
+    if (!kill.length) break;
+    for (const [cx, cz, l] of kill) {
+      // Drop to the highest neighbour still below it, so a ridge between two
+      // different terraces lands on the upper one rather than the sea.
+      let to = 0;
+      for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        if (!isLand(cx + dx, cz + dz)) continue;
+        const nl = grid.levelAt(map, cx + dx, cz + dz);
+        if (nl < l && nl > to) to = nl;
+      }
+      grid.setCell(map, cx, cz, to, grid.surfaceAt(map, cx, cz));
+      dropped++;
+    }
+  }
+  return dropped;
+}
+
 // ── Ramps ────────────────────────────────────────────────────────
 
 /**
@@ -790,6 +831,7 @@ const flipped = straighten(2);
 // a 2-cell ramp disc is exactly the kind of thin feature open(2) deletes.
 const ramps = carveRamps(3);
 const stepFix = enforceSteps();
+const widened = widen();
 const specks = removeSpecks();
 enforceSteps();
 // LAST, and that ordering matters. A ramp is a single cell, which is exactly
@@ -827,7 +869,7 @@ for (let i = 0; i < map.levels.length; i++) {
 console.log("features applied:");
 for (const r of report) console.log(`  ${r.name.padEnd(26)} ${String(r.cells).padStart(5)} cells raised`);
 console.log(
-  `\nopen(2) dropped: ${opened} · straighten(2) flipped: ${flipped} · ramps carved: ${ramps.length} · constraint passes: ${stepFix.passes} (settled: ${stepFix.settled}) · specks removed: ${specks}`
+  `\nwiden dropped: ${widened} · open(2) dropped: ${opened} · straighten(2) flipped: ${flipped} · ramps carved: ${ramps.length} · constraint passes: ${stepFix.passes} (settled: ${stepFix.settled}) · specks removed: ${specks}`
 );
 console.log(`protected cells modified: ${violations}${violations ? "  <<< BUG" : ""}`);
 console.log("\nlevels over land:");
