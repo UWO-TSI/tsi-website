@@ -82,12 +82,17 @@ export const GRASS_COLOR = 0x8fc96b;
  * How far a one-level change spreads sideways, in cells. David's call,
  * 2026-07-29: about 5.
  *
- * A 0.75u rise over 5 cells is roughly 8 degrees, so it reads as rolling ground
- * rather than as a bank. It is a real trade: the median flat run between level
- * changes on the shipped map is 14 cells, so a 5-cell spread converts a third
- * of it into slope and that much less is genuinely flat and buildable.
+ * Was 5, which the blur turned into a transition about 8 cells wide at roughly
+ * 8 degrees. David, 2026-07-29: "the 8 block 8 degree change is a little over
+ * kill" -- and his ACNH reference has no slopes in it at all, only hard cliffs
+ * with a rounded grass lip.
+ *
+ * 2 gives a transition about 3 cells wide at roughly 21 degrees: still a slope
+ * you walk up rather than a step, but it reads as the edge of a terrace instead
+ * of as rolling countryside, and it leaves 11 of the median 14-cell flat run
+ * intact instead of 6.
  */
-export const SLOPE_SPREAD = 5;
+export const SLOPE_SPREAD = 2;
 
 /**
  * Continuous ground height at every cell CORNER, from the discrete level field.
