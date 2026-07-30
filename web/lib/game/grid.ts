@@ -488,6 +488,38 @@ export interface PlacedProp {
   id?: string;
   cell: [number, number];
   level: number;
+  /**
+   * Footprint in cells, [width, depth], for things that occupy an area rather
+   * than a point — a building plot, a plaza, a reserved block.
+   *
+   * `cell` stays the MINIMUM corner so a footprint is just cell + size, with no
+   * even/odd rounding to get wrong. Absent means a point marker.
+   *
+   * ACNH buildings occupy whole tiles and the shipped GLBs already measure in
+   * near-integer cells (`house-chalet.glb` is 5.00 x 4.21), so a footprint is
+   * real map data the renderer will want, not only a drafting aid.
+   */
+  size?: [number, number];
+}
+
+/**
+ * A named, hand-drawn region: fencing, a hedge line, "paved later", "keep clear".
+ *
+ * David, 2026-07-30: "custom things like fencing that I can label myself so that
+ * there's more flexibility on the instructions given to you." That is the point
+ * — an annotation is a message from the person drafting to whoever builds it,
+ * and inventing a fixed vocabulary of surfaces would be the thing that limits
+ * it. The name is free text and carries the meaning.
+ *
+ * Deliberately NOT a surface. Surfaces are a closed enum the renderer switches
+ * on; adding drafting notes there would put made-up values into game data.
+ * Annotations are sparse cell lists that the renderer ignores entirely.
+ */
+export interface MapAnnotation {
+  name: string;
+  /** CSS colour, so a draft reads the same in the editor as in a screenshot. */
+  color: string;
+  cells: [number, number][];
 }
 
 /**
@@ -503,10 +535,15 @@ export interface IslandMapDoc {
   originZ: number;
   levels: string[];
   surfaces: string[];
-  props?: { kind: string; id?: string; cell: number[]; level: number }[];
+  props?: { kind: string; id?: string; cell: number[]; level: number; size?: number[] }[];
+  annotations?: { name: string; color?: string; cells: number[][] }[];
 }
 
-export function parseIslandMap(doc: IslandMapDoc): { map: IslandMap; props: PlacedProp[] } {
+export function parseIslandMap(doc: IslandMapDoc): {
+  map: IslandMap;
+  props: PlacedProp[];
+  annotations: MapAnnotation[];
+} {
   const map = createMap(doc.width, doc.depth, doc.originX, doc.originZ);
   for (let cz = 0; cz < doc.depth; cz++) {
     const lvlRow = doc.levels[cz] ?? "";
@@ -522,11 +559,29 @@ export function parseIslandMap(doc: IslandMapDoc): { map: IslandMap; props: Plac
     ...(p.id ? { id: p.id } : {}),
     cell: [p.cell[0] ?? 0, p.cell[1] ?? 0],
     level: p.level ?? 0,
+    // Narrowed here rather than at call sites: this is the parser, and it is the
+    // only place that knows a JSON `number[]` is meant to be a pair. Anything
+    // this function drops is lost on the next save, so a new field has to be
+    // added here as well as to the type.
+    ...(Array.isArray(p.size) && p.size.length === 2
+      ? { size: [p.size[0], p.size[1]] as [number, number] }
+      : {}),
   }));
-  return { map, props };
+  const annotations: MapAnnotation[] = (doc.annotations ?? []).map((a) => ({
+    name: a.name,
+    color: a.color ?? "#ffffff",
+    cells: (a.cells ?? [])
+      .filter((c) => Array.isArray(c) && c.length === 2)
+      .map((c) => [c[0], c[1]] as [number, number]),
+  }));
+  return { map, props, annotations };
 }
 
-export function serialiseIslandMap(map: IslandMap, props: PlacedProp[] = []): IslandMapDoc {
+export function serialiseIslandMap(
+  map: IslandMap,
+  props: PlacedProp[] = [],
+  annotations: MapAnnotation[] = []
+): IslandMapDoc {
   const rows = (arr: Uint8Array) => {
     const out: string[] = [];
     for (let cz = 0; cz < map.depth; cz++) {
@@ -544,6 +599,9 @@ export function serialiseIslandMap(map: IslandMap, props: PlacedProp[] = []): Is
     levels: rows(map.levels),
     surfaces: rows(map.surfaces),
     props,
+    // Omitted when empty so the shipped map does not carry a dead key, and so a
+    // diff of a map with no annotations stays clean.
+    ...(annotations.length ? { annotations } : {}),
   };
 }
 
@@ -565,8 +623,9 @@ export function serialiseIslandMap(map: IslandMap, props: PlacedProp[] = []): Is
 export function resizeMap(
   map: IslandMap,
   props: PlacedProp[],
-  size: number
-): { map: IslandMap; props: PlacedProp[] } {
+  size: number,
+  annotations: MapAnnotation[] = []
+): { map: IslandMap; props: PlacedProp[]; annotations: MapAnnotation[] } {
   const dst = createCenteredMap(size, size);
   dst.surfaces.fill(Surface.Void);
   const ox = Math.floor((size - map.width) / 2);
@@ -585,7 +644,17 @@ export function resizeMap(
   const moved = props
     .map((p) => ({ ...p, cell: [p.cell[0] + ox, p.cell[1] + oz] as [number, number] }))
     .filter((p) => p.cell[0] >= 0 && p.cell[1] >= 0 && p.cell[0] < size && p.cell[1] < size);
-  return { map: dst, props: moved };
+  // Annotations shift with everything else. An annotation that loses every cell
+  // to a shrink is dropped rather than kept as an empty name.
+  const shifted = annotations
+    .map((a) => ({
+      ...a,
+      cells: a.cells
+        .map((c) => [c[0] + ox, c[1] + oz] as [number, number])
+        .filter((c) => c[0] >= 0 && c[1] >= 0 && c[0] < size && c[1] < size),
+    }))
+    .filter((a) => a.cells.length > 0);
+  return { map: dst, props: moved, annotations: shifted };
 }
 
 // ── Cell <-> world ───────────────────────────────────────────────

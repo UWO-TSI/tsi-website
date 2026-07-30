@@ -173,6 +173,57 @@ describe("serialisation", () => {
     const { props: back } = parseIslandMap(serialiseIslandMap(map, props));
     expect(back).toEqual(props);
   });
+
+  it("carries a plot footprint through", () => {
+    // The parser builds each prop field by field, so an added field is silently
+    // dropped on the next save unless it is handled there too. This is the test
+    // that fails when someone adds one and forgets.
+    const map = createCenteredMap(8, 8);
+    const props = [
+      { kind: "building", id: "hq", cell: [2, 3] as [number, number], level: 1, size: [5, 4] as [number, number] },
+      { kind: "tree", cell: [0, 0] as [number, number], level: 0 },
+    ];
+    const { props: back } = parseIslandMap(serialiseIslandMap(map, props));
+    expect(back).toEqual(props);
+    expect(back[1].size).toBeUndefined();
+  });
+
+  it("round-trips named annotations", () => {
+    const map = createCenteredMap(8, 8);
+    const annotations = [
+      { name: "fence", color: "#c9a227", cells: [[1, 1], [2, 1], [3, 1]] as [number, number][] },
+      { name: "paved later", color: "#8899aa", cells: [[5, 5]] as [number, number][] },
+    ];
+    const doc = serialiseIslandMap(map, [], annotations);
+    expect(parseIslandMap(doc).annotations).toEqual(annotations);
+  });
+
+  it("omits the annotations key entirely when there are none", () => {
+    // So the shipped map does not carry a dead key and a diff stays clean.
+    const doc = serialiseIslandMap(createCenteredMap(4, 4), []);
+    expect("annotations" in doc).toBe(false);
+    expect(parseIslandMap(doc).annotations).toEqual([]);
+  });
+
+  it("defaults a missing annotation colour and drops malformed cells", () => {
+    const doc = serialiseIslandMap(createCenteredMap(4, 4), []);
+    doc.annotations = [{ name: "fence", cells: [[1, 1], [2], [], [3, 3]] }];
+    const { annotations } = parseIslandMap(doc);
+    expect(annotations[0].color).toBe("#ffffff");
+    expect(annotations[0].cells).toEqual([[1, 1], [3, 3]]);
+  });
+
+  it("ignores a malformed footprint rather than half-reading it", () => {
+    const map = createCenteredMap(4, 4);
+    const doc = serialiseIslandMap(map, []);
+    doc.props = [
+      { kind: "building", cell: [1, 1], level: 0, size: [3] },
+      { kind: "building", cell: [2, 2], level: 0, size: [] },
+    ];
+    const { props: back } = parseIslandMap(doc);
+    expect(back[0].size).toBeUndefined();
+    expect(back[1].size).toBeUndefined();
+  });
 });
 
 describe("resizeMap", () => {
@@ -219,6 +270,20 @@ describe("resizeMap", () => {
     // corner one lands at (-2,-2) and is cut.
     const { props: out } = resizeMap(map, props, 4);
     expect(out).toEqual([{ kind: "tree", cell: [2, 2], level: 0 }]);
+  });
+
+  it("shifts annotations with the grid and drops ones a shrink empties", () => {
+    const map = createCenteredMap(8, 8);
+    const annotations = [
+      { name: "fence", color: "#c9a227", cells: [[4, 4], [5, 4]] as [number, number][] },
+      { name: "edge note", color: "#fff", cells: [[0, 0]] as [number, number][] },
+    ];
+    // 8 -> 4 offsets by -2: the fence lands at (2,2),(3,2) and the corner note
+    // falls off the map entirely.
+    const out = resizeMap(map, [], 4, annotations);
+    expect(out.annotations).toEqual([
+      { name: "fence", color: "#c9a227", cells: [[2, 2], [3, 2]] },
+    ]);
   });
 
   it("survives a grow-then-shrink round trip", () => {

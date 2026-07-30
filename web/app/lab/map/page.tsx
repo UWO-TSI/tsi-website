@@ -47,6 +47,7 @@ import {
   type IslandMap,
   type IslandMapDoc,
   type PlacedProp,
+  type MapAnnotation,
 } from "@/lib/game/grid";
 
 const mono = "ui-monospace, SFMono-Regular, Menlo, monospace";
@@ -77,7 +78,7 @@ const SURFACE_NAME: Record<number, string> = {
   [Surface.Ramp]: "ramp",
 };
 
-const TOOLS = ["land", "sea", "raise", "lower", "flat", "surface", "ramp", "prop"] as const;
+const TOOLS = ["land", "sea", "raise", "lower", "flat", "surface", "ramp", "prop", "label"] as const;
 type Tool = (typeof TOOLS)[number];
 
 const TOOL_HELP: Record<Tool, string> = {
@@ -88,7 +89,41 @@ const TOOL_HELP: Record<Tool, string> = {
   flat: "set an exact level. How you draw a plateau.",
   surface: "paint a surface, terrain untouched.",
   ramp: "mark a ramp cell. It climbs toward the higher neighbour.",
-  prop: "click to drop a marker, click it again to remove. One per click, brush ignored.",
+  prop: "drag a rectangle for a building plot, click for a point marker. Click either again to remove.",
+  label: "paint a named thing of your own: fencing, hedges, a note. Terrain untouched.",
+};
+
+/**
+ * Colours offered for a new label. Chosen to stay legible over grass, sand and
+ * water, since a label is useless if it disappears into the ground it marks.
+ */
+const LABEL_COLORS = [
+  "#ff4d6d",
+  "#ffa62b",
+  "#ffe066",
+  "#7bf1a8",
+  "#4cc9f0",
+  "#b892ff",
+  "#ffffff",
+  "#1b1b1b",
+];
+
+/**
+ * WHERE a tool applies, independent of WHAT it does.
+ *
+ * David, 2026-07-30: this is for blocking out space — island structures,
+ * building plots, pathways — not for pixel-perfect work. A round brush is the
+ * wrong instrument for a rectangular plot or a straight road, and dabbing one
+ * out cell by cell is how you get a wobbly blob that reads as an accident.
+ */
+const SHAPES = ["free", "rect", "line", "fill"] as const;
+type Shape = (typeof SHAPES)[number];
+
+const SHAPE_HELP: Record<Shape, string> = {
+  free: "brush, follows the cursor",
+  rect: "drag a rectangle, fills on release",
+  line: "drag a straight run, snapped to 8 directions",
+  fill: "click to flood the matching region",
 };
 
 /**
@@ -264,6 +299,7 @@ function writeLibrary(lib: Record<string, IslandMapDoc>) {
 interface World {
   map: IslandMap;
   props: PlacedProp[];
+  annotations: MapAnnotation[];
 }
 let WORLD: World | null = null;
 function world(): World {
@@ -287,13 +323,14 @@ interface Snapshot {
   levels: Uint8Array;
   surfaces: Uint8Array;
   props: PlacedProp[];
+  annotations: MapAnnotation[];
 }
 const HISTORY_LIMIT = 80;
 const UNDO: Snapshot[] = [];
 let REDO: Snapshot[] = [];
 
 function snapshot(): Snapshot {
-  const { map, props } = world();
+  const { map, props, annotations } = world();
   return {
     width: map.width,
     depth: map.depth,
@@ -302,6 +339,7 @@ function snapshot(): Snapshot {
     levels: map.levels.slice(),
     surfaces: map.surfaces.slice(),
     props: props.map((p) => ({ ...p, cell: [p.cell[0], p.cell[1]] })),
+    annotations: annotations.map((a) => ({ ...a, cells: a.cells.map((c) => [c[0], c[1]] as [number, number]) })),
   };
 }
 
@@ -316,6 +354,10 @@ function restore(s: Snapshot) {
       surfaces: s.surfaces.slice(),
     },
     props: s.props.map((p) => ({ ...p, cell: [p.cell[0], p.cell[1]] as [number, number] })),
+    annotations: s.annotations.map((a) => ({
+      ...a,
+      cells: a.cells.map((c) => [c[0], c[1]] as [number, number]),
+    })),
   };
 }
 
@@ -329,8 +371,10 @@ function commit() {
 export default function MapLab() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const offscreen = useRef<HTMLCanvasElement | null>(null);
-  const { map, props } = world();
+  const { map, props, annotations } = world();
   const [tool, setTool] = useState<Tool>("raise");
+  const [shape, setShape] = useState<Shape>("free");
+  const [dragFrom, setDragFrom] = useState<{ x: number; z: number } | null>(null);
   const [brush, setBrush] = useState(3);
   const [round, setRound] = useState(true);
   const [paintSurface, setPaintSurface] = useState<number>(Surface.Grass);
@@ -341,6 +385,10 @@ export default function MapLab() {
   const [edited, setEdited] = useState(false);
   const [propKind, setPropKind] = useState<string>("building");
   const [propId, setPropId] = useState("");
+  const [activeLabel, setActiveLabel] = useState("");
+  const [newLabel, setNewLabel] = useState("");
+  const [labelColor, setLabelColor] = useState(LABEL_COLORS[0]);
+  const [labelErase, setLabelErase] = useState(false);
   const [library, setLibrary] = useState<string[]>([]);
   const [saveName, setSaveName] = useState("");
   const [sheet, setSheet] = useState<"none" | "open" | "import">("none");
@@ -349,6 +397,17 @@ export default function MapLab() {
   const [version, setVersion] = useState(0);
   const painting = useRef(false);
   const lastCell = useRef<{ x: number; z: number } | null>(null);
+  /**
+   * The authoritative drag origin.
+   *
+   * `dragFrom` state exists only so the preview and the size readout re-render;
+   * it CANNOT be what mouseup reads. mousedown and mouseup can land in the same
+   * task — a fast click, or any synthetic event — and React batches the state
+   * update, so the mouseup handler would still see the previous render's value
+   * and silently drop the whole rectangle. Measured: a 12x11 rect applied zero
+   * cells before this ref existed.
+   */
+  const dragRef = useRef<{ x: number; z: number } | null>(null);
 
   /** Redraw, and mark the map as diverged from the shipped one. */
   const bump = useCallback(() => {
@@ -411,13 +470,13 @@ export default function MapLab() {
     if (!edited) return;
     const t = setTimeout(() => {
       try {
-        window.localStorage.setItem(DRAFT_KEY, JSON.stringify(serialiseIslandMap(map, props)));
+        window.localStorage.setItem(DRAFT_KEY, JSON.stringify(serialiseIslandMap(map, props, annotations)));
       } catch {
         /* quota or private mode: autosave is a convenience, not a guarantee */
       }
     }, 700);
     return () => clearTimeout(t);
-  }, [map, props, version, edited]);
+  }, [map, props, annotations, version, edited]);
 
   const undo = useCallback(() => {
     if (!UNDO.length) return;
@@ -443,17 +502,31 @@ export default function MapLab() {
     [bump]
   );
 
+  /** Create a label and select it. Names are the identity, so they must be unique. */
+  const addLabel = useCallback(() => {
+    const n = newLabel.trim();
+    if (!n) return;
+    const w = world();
+    if (!w.annotations.some((a) => a.name === n)) {
+      commit();
+      w.annotations = [...w.annotations, { name: n, color: labelColor, cells: [] }];
+      bump();
+    }
+    setActiveLabel(n);
+    setNewLabel("");
+  }, [newLabel, labelColor, bump]);
+
   const saveDraft = useCallback(
     (name: string) => {
       const n = name.trim();
       if (!n) return;
       const lib = readLibrary();
-      lib[n] = serialiseIslandMap(map, props);
+      lib[n] = serialiseIslandMap(map, props, annotations);
       writeLibrary(lib);
       setLibrary(Object.keys(lib).sort());
       setSaveName("");
     },
-    [map, props]
+    [map, props, annotations]
   );
 
   useEffect(() => {
@@ -571,28 +644,82 @@ export default function MapLab() {
     // Markers, coloured by kind so a layout reads at a glance without hovering
     // every dot. Buildings get their id written next to them, since "where does
     // HQ go" is the actual question a layout draft answers.
+    // Labels sit under the markers and over the terrain. Semi-transparent with
+    // a solid centre dot: a fence line has to read as a line at a glance, but
+    // you still need to see the ground it is drawn on.
+    for (const a of annotations) {
+      ctx.fillStyle = a.color;
+      for (const [x, z] of a.cells) {
+        ctx.globalAlpha = 0.45;
+        ctx.fillRect(x * zoom, z * zoom, zoom, zoom);
+        ctx.globalAlpha = 1;
+        ctx.fillRect(x * zoom + zoom * 0.35, z * zoom + zoom * 0.35, zoom * 0.3, zoom * 0.3);
+      }
+      // The name once, at the first cell, so a map with six labels is readable
+      // instead of being the same word stamped four hundred times.
+      const first = a.cells[0];
+      if (first && zoom >= 4) {
+        ctx.font = `${Math.max(9, zoom * 1.1)}px ${mono}`;
+        ctx.textBaseline = "bottom";
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = "rgba(0,0,0,0.85)";
+        ctx.strokeText(a.name, first[0] * zoom, first[1] * zoom - 2);
+        ctx.fillStyle = a.color;
+        ctx.fillText(a.name, first[0] * zoom, first[1] * zoom - 2);
+      }
+    }
+
     for (const p of props) {
-      const cx = (p.cell[0] + 0.5) * zoom;
-      const cz = (p.cell[1] + 0.5) * zoom;
-      const r = Math.max(2, zoom * 0.34);
-      ctx.beginPath();
-      ctx.arc(cx, cz, r, 0, Math.PI * 2);
-      ctx.fillStyle = PROP_COLOR[p.kind] ?? "#ffd166";
-      ctx.fill();
-      ctx.lineWidth = 1;
-      ctx.strokeStyle = "rgba(0,0,0,0.65)";
-      ctx.stroke();
+      const colour = PROP_COLOR[p.kind] ?? "#ffd166";
+      const [pw, pd] = p.size ?? [1, 1];
+      const plot = pw > 1 || pd > 1;
+      let lx: number;
+      let lz: number;
+
+      if (plot) {
+        // A plot is drawn as its actual footprint, hatched rather than solid so
+        // the terrain underneath still reads. Blocking out where a building goes
+        // is only useful if you can see what it is standing on.
+        const x = p.cell[0] * zoom;
+        const z = p.cell[1] * zoom;
+        const w = pw * zoom;
+        const d = pd * zoom;
+        ctx.fillStyle = colour;
+        ctx.globalAlpha = 0.3;
+        ctx.fillRect(x, z, w, d);
+        ctx.globalAlpha = 1;
+        ctx.strokeStyle = colour;
+        ctx.lineWidth = 2;
+        ctx.strokeRect(x + 1, z + 1, w - 2, d - 2);
+        lx = x + w / 2;
+        lz = z + d / 2;
+      } else {
+        lx = (p.cell[0] + 0.5) * zoom;
+        lz = (p.cell[1] + 0.5) * zoom;
+        const r = Math.max(2, zoom * 0.34);
+        ctx.beginPath();
+        ctx.arc(lx, lz, r, 0, Math.PI * 2);
+        ctx.fillStyle = colour;
+        ctx.fill();
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = "rgba(0,0,0,0.65)";
+        ctx.stroke();
+        lx += r + 3;
+      }
+
       if (p.id && zoom >= 5) {
         ctx.font = `${Math.max(9, zoom * 1.1)}px ${mono}`;
         ctx.textBaseline = "middle";
+        ctx.textAlign = plot ? "center" : "left";
         ctx.lineWidth = 3;
         ctx.strokeStyle = "rgba(0,0,0,0.8)";
-        ctx.strokeText(p.id, cx + r + 3, cz);
+        ctx.strokeText(p.id, lx, lz);
         ctx.fillStyle = "#fff";
-        ctx.fillText(p.id, cx + r + 3, cz);
+        ctx.fillText(p.id, lx, lz);
+        ctx.textAlign = "left";
       }
     }
-  }, [map, props, zoom]);
+  }, [map, props, annotations, zoom]);
 
   const blit = useCallback(() => {
     const cv = canvasRef.current;
@@ -605,9 +732,34 @@ export default function MapLab() {
     ctx.imageSmoothingEnabled = false;
     ctx.drawImage(off, 0, 0);
     if (!hover) return;
+
+    // A pending rect or line, drawn before it is committed. Without this you
+    // are dragging blind and only find out the plot was the wrong size after
+    // it lands.
+    const pending = dragFrom && (tool === "prop" || shape === "rect" || shape === "line");
+    if (pending && dragFrom) {
+      ctx.strokeStyle = "#ffd166";
+      ctx.lineWidth = 2;
+      if (shape === "line" && tool !== "prop") {
+        const end = snapLine(dragFrom, hover);
+        ctx.beginPath();
+        ctx.moveTo((dragFrom.x + 0.5) * zoom, (dragFrom.z + 0.5) * zoom);
+        ctx.lineTo((end.x + 0.5) * zoom, (end.z + 0.5) * zoom);
+        ctx.stroke();
+      } else {
+        const { x0, z0, x1, z1 } = rectOf(dragFrom, hover);
+        ctx.strokeRect(
+          x0 * zoom + 1,
+          z0 * zoom + 1,
+          (x1 - x0 + 1) * zoom - 2,
+          (z1 - z0 + 1) * zoom - 2
+        );
+      }
+    }
+
     ctx.strokeStyle = "#fff";
     ctx.lineWidth = 1;
-    const r = brush - 1;
+    const r = tool === "prop" || shape === "rect" || shape === "fill" ? 0 : brush - 1;
     if (round && r > 0) {
       ctx.beginPath();
       ctx.arc((hover.x + 0.5) * zoom, (hover.z + 0.5) * zoom, (r + 0.5) * zoom, 0, Math.PI * 2);
@@ -620,12 +772,76 @@ export default function MapLab() {
         (r * 2 + 1) * zoom - 1
       );
     }
-  }, [hover, brush, zoom, round]);
+  }, [hover, brush, zoom, round, dragFrom, shape, tool]);
 
   useEffect(() => {
     repaint();
     blit();
   }, [repaint, blit, version]);
+
+  /**
+   * Add or remove one cell from the active label.
+   *
+   * Kept as a sparse cell list rather than a parallel grid: a fence is a few
+   * hundred cells on a map of 65k, and a list survives a resize by shifting
+   * rather than being rebuilt.
+   */
+  const paintLabel = useCallback(
+    (x: number, z: number) => {
+      const w = world();
+      const a = w.annotations.find((n) => n.name === activeLabel);
+      if (!a) return;
+      const at = a.cells.findIndex((c) => c[0] === x && c[1] === z);
+      if (labelErase) {
+        if (at >= 0) a.cells.splice(at, 1);
+      } else if (at < 0) {
+        a.cells.push([x, z]);
+      }
+    },
+    [activeLabel, labelErase]
+  );
+
+  /** What the active tool does to ONE cell. Shape decides which cells. */
+  const paintCell = useCallback(
+    (x: number, z: number) => {
+      if (!inBounds(map, x, z)) return;
+      const s = surfaceAt(map, x, z);
+      switch (tool) {
+        case "label":
+          paintLabel(x, z);
+          break;
+        case "prop":
+          // Handled on mousedown, one per click. Dragging a brush of them
+          // would carpet the map.
+          break;
+        case "land":
+          // Only fills water. Painting over existing ground would silently
+          // erase whatever surface was there.
+          if (isVoid(s)) setCell(map, x, z, 0, Surface.Grass);
+          break;
+        case "sea":
+          setCell(map, x, z, 0, Surface.Void);
+          break;
+        case "surface":
+          setCell(map, x, z, levelAt(map, x, z), paintSurface);
+          break;
+        case "ramp":
+          if (!isVoid(s)) setCell(map, x, z, levelAt(map, x, z), Surface.Ramp);
+          break;
+        case "flat":
+          if (!isVoid(s)) setCell(map, x, z, paintLevel, s);
+          break;
+        case "raise":
+        case "lower": {
+          if (isVoid(s)) break;
+          const d = tool === "raise" ? 1 : -1;
+          setCell(map, x, z, Math.min(MAX_LEVEL, Math.max(0, levelAt(map, x, z) + d)), s);
+          break;
+        }
+      }
+    },
+    [map, tool, paintSurface, paintLevel, paintLabel]
+  );
 
   /** One brush dab. Does not touch history; the stroke owns that. */
   const dab = useCallback(
@@ -634,44 +850,68 @@ export default function MapLab() {
       for (let dz = -r; dz <= r; dz++) {
         for (let dx = -r; dx <= r; dx++) {
           if (round && dx * dx + dz * dz > r * r + r) continue;
-          const x = cx + dx;
-          const z = cz + dz;
-          if (!inBounds(map, x, z)) continue;
-          const s = surfaceAt(map, x, z);
-          switch (tool) {
-            case "prop":
-              // Handled on mousedown, one per click. Dragging a brush of them
-              // would carpet the map.
-              break;
-            case "land":
-              // Only fills water. Painting over existing ground would silently
-              // erase whatever surface was there.
-              if (isVoid(s)) setCell(map, x, z, 0, Surface.Grass);
-              break;
-            case "sea":
-              setCell(map, x, z, 0, Surface.Void);
-              break;
-            case "surface":
-              setCell(map, x, z, levelAt(map, x, z), paintSurface);
-              break;
-            case "ramp":
-              if (!isVoid(s)) setCell(map, x, z, levelAt(map, x, z), Surface.Ramp);
-              break;
-            case "flat":
-              if (!isVoid(s)) setCell(map, x, z, paintLevel, s);
-              break;
-            case "raise":
-            case "lower": {
-              if (isVoid(s)) break;
-              const d = tool === "raise" ? 1 : -1;
-              setCell(map, x, z, Math.min(MAX_LEVEL, Math.max(0, levelAt(map, x, z) + d)), s);
-              break;
-            }
-          }
+          paintCell(cx + dx, cz + dz);
         }
       }
     },
-    [map, brush, round, tool, paintSurface, paintLevel]
+    [brush, round, paintCell]
+  );
+
+  /** The rectangle two cells span, normalised so drag direction does not matter. */
+  const rectOf = (a: { x: number; z: number }, b: { x: number; z: number }) => ({
+    x0: Math.min(a.x, b.x),
+    z0: Math.min(a.z, b.z),
+    x1: Math.max(a.x, b.x),
+    z1: Math.max(a.z, b.z),
+  });
+
+  /**
+   * Snap a drag to one of 8 directions.
+   *
+   * A pathway drawn freehand reads as an accident. Snapping is what makes a road
+   * look placed. The 2:1 thresholds pick the axis you were closest to rather
+   * than splitting evenly at 45 degrees, which makes near-horizontal drags
+   * settle on horizontal instead of flickering to diagonal.
+   */
+  const snapLine = (a: { x: number; z: number }, b: { x: number; z: number }) => {
+    const dx = b.x - a.x;
+    const dz = b.z - a.z;
+    const adx = Math.abs(dx);
+    const adz = Math.abs(dz);
+    if (adx > adz * 2) return { x: b.x, z: a.z };
+    if (adz > adx * 2) return { x: a.x, z: b.z };
+    const n = Math.min(adx, adz);
+    return { x: a.x + Math.sign(dx) * n, z: a.z + Math.sign(dz) * n };
+  };
+
+  /**
+   * Cells reachable from a seed with the same surface and level.
+   *
+   * Collected BEFORE anything is painted, on purpose. Filling while walking
+   * would change the very thing the walk is matching on — `raise` would chase
+   * its own edge outward and never stop where you meant it to.
+   */
+  const fillRegion = useCallback(
+    (sx: number, sz: number): [number, number][] => {
+      if (!inBounds(map, sx, sz)) return [];
+      const wantS = surfaceAt(map, sx, sz);
+      const wantL = levelAt(map, sx, sz);
+      const seen = new Uint8Array(map.width * map.depth);
+      const out: [number, number][] = [];
+      const stack: [number, number][] = [[sx, sz]];
+      while (stack.length) {
+        const [x, z] = stack.pop()!;
+        if (!inBounds(map, x, z)) continue;
+        const i = z * map.width + x;
+        if (seen[i]) continue;
+        if (surfaceAt(map, x, z) !== wantS || levelAt(map, x, z) !== wantL) continue;
+        seen[i] = 1;
+        out.push([x, z]);
+        for (const [dx, dz] of ORTHOGONAL) stack.push([x + dx, z + dz]);
+      }
+      return out;
+    },
+    [map]
   );
 
   /**
@@ -714,29 +954,74 @@ export default function MapLab() {
     lastCell.current = null;
   };
 
-  /** Toggle a marker at a cell: click empty ground to place, click it to remove. */
-  const toggleProp = useCallback(
-    (cx: number, cz: number) => {
-      if (!inBounds(map, cx, cz)) return;
-      const w = world();
-      const at = w.props.findIndex((p) => p.cell[0] === cx && p.cell[1] === cz);
-      commit();
-      if (at >= 0) {
-        w.props = w.props.filter((_, i) => i !== at);
-      } else {
-        const id = propId.trim();
-        w.props = [
-          ...w.props,
-          {
-            kind: propKind,
-            ...(id ? { id } : {}),
-            cell: [cx, cz] as [number, number],
-            // A marker sits on the ground it is placed on; the renderer reads
-            // this rather than re-deriving it, so it has to match.
-            level: levelAt(map, cx, cz),
-          },
-        ];
+  /** Fill every cell of a rectangle. Used by the rect shape. */
+  const applyRect = useCallback(
+    (a: { x: number; z: number }, b: { x: number; z: number }) => {
+      const { x0, z0, x1, z1 } = rectOf(a, b);
+      for (let z = z0; z <= z1; z++) for (let x = x0; x <= x1; x++) paintCell(x, z);
+    },
+    [paintCell]
+  );
+
+  /** Walk a snapped line, dabbing the brush along it so runs have width. */
+  const applyLine = useCallback(
+    (a: { x: number; z: number }, b: { x: number; z: number }) => {
+      const end = snapLine(a, b);
+      const steps = Math.max(Math.abs(end.x - a.x), Math.abs(end.z - a.z));
+      if (steps === 0) {
+        dab(a.x, a.z);
+        return;
       }
+      for (let i = 0; i <= steps; i++) {
+        dab(
+          Math.round(a.x + ((end.x - a.x) * i) / steps),
+          Math.round(a.z + ((end.z - a.z) * i) / steps)
+        );
+      }
+    },
+    [dab]
+  );
+
+  /** Does this marker cover a cell? Point markers cover one; plots cover their footprint. */
+  const propCovers = (p: PlacedProp, x: number, z: number) => {
+    const [w, d] = p.size ?? [1, 1];
+    return x >= p.cell[0] && z >= p.cell[1] && x < p.cell[0] + w && z < p.cell[1] + d;
+  };
+
+  /**
+   * Place or remove a marker.
+   *
+   * Click a covered cell to remove whatever is there, so a mis-drawn plot is one
+   * click to undo rather than a hunt for its corner. Otherwise a drag defines a
+   * footprint and a click defines a point.
+   */
+  const placeProp = useCallback(
+    (a: { x: number; z: number }, b: { x: number; z: number }) => {
+      if (!inBounds(map, a.x, a.z)) return;
+      const w = world();
+      const hit = w.props.findIndex((p) => propCovers(p, a.x, a.z));
+      commit();
+      if (hit >= 0) {
+        w.props = w.props.filter((_, i) => i !== hit);
+        bump();
+        return;
+      }
+      const { x0, z0, x1, z1 } = rectOf(a, b);
+      const sw = x1 - x0 + 1;
+      const sd = z1 - z0 + 1;
+      const id = propId.trim();
+      w.props = [
+        ...w.props,
+        {
+          kind: propKind,
+          ...(id ? { id } : {}),
+          cell: [x0, z0] as [number, number],
+          // A marker sits on the ground it is placed on; the renderer reads
+          // this rather than re-deriving it, so it has to match.
+          level: levelAt(map, x0, z0),
+          ...(sw > 1 || sd > 1 ? { size: [sw, sd] as [number, number] } : {}),
+        },
+      ];
       bump();
     },
     [map, propKind, propId, bump]
@@ -774,24 +1059,53 @@ export default function MapLab() {
           style={{ cursor: "crosshair", imageRendering: "pixelated" }}
           onMouseDown={(e) => {
             const c = cellFrom(e);
-            if (tool === "prop") {
-              toggleProp(c.x, c.z);
-              return;
-            }
-            commit();
+            dragRef.current = c;
+            setDragFrom(c);
             painting.current = true;
             lastCell.current = null;
+            // The prop tool and the deferred shapes decide what to do on
+            // RELEASE, once the drag is known. Only free painting and fill act
+            // immediately.
+            if (tool === "prop" || shape === "rect" || shape === "line") return;
+            commit();
+            if (shape === "fill") {
+              for (const [x, z] of fillRegion(c.x, c.z)) paintCell(x, z);
+              bump();
+              return;
+            }
             stroke(c.x, c.z);
           }}
-          onMouseUp={endStroke}
+          onMouseUp={(e) => {
+            const c = cellFrom(e);
+            const from = dragRef.current;
+            dragRef.current = null;
+            if (from) {
+              if (tool === "prop") {
+                placeProp(from, c);
+              } else if (shape === "rect") {
+                commit();
+                applyRect(from, c);
+                bump();
+              } else if (shape === "line") {
+                commit();
+                applyLine(from, c);
+                bump();
+              }
+            }
+            setDragFrom(null);
+            endStroke();
+          }}
           onMouseLeave={() => {
+            // Abandon a pending rect/line rather than guessing where it ended.
+            dragRef.current = null;
+            setDragFrom(null);
             endStroke();
             setHover(null);
           }}
           onMouseMove={(e) => {
             const c = cellFrom(e);
             setHover(c);
-            if (painting.current) stroke(c.x, c.z);
+            if (painting.current && shape === "free" && tool !== "prop") stroke(c.x, c.z);
           }}
         />
       </div>
@@ -831,9 +1145,10 @@ export default function MapLab() {
                 const { map: m } = world();
                 m.levels.fill(0);
                 m.surfaces.fill(Surface.Void);
-                // Props go with the terrain. Leaving them behind floats every
-                // building over open water on a map that no longer has ground.
-                WORLD = { map: m, props: [] };
+                // Props and labels go with the terrain. Leaving them behind
+                // floats every building over open water on a map that no longer
+                // has ground.
+                WORLD = { map: m, props: [], annotations: [] };
                 bump();
               }}
               style={btn(false, { flex: 1 })}
@@ -967,7 +1282,48 @@ export default function MapLab() {
             </button>
           ))}
         </div>
-        <div style={{ color: "#5c6670", marginBottom: 10, lineHeight: 1.5 }}>{TOOL_HELP[tool]}</div>
+        <div style={{ color: "#5c6670", marginBottom: 8, lineHeight: 1.5 }}>{TOOL_HELP[tool]}</div>
+
+        {tool !== "prop" && (
+          <>
+            <div style={{ display: "flex", gap: 4, marginBottom: 6 }}>
+              {SHAPES.map((s) => (
+                <button key={s} onClick={() => setShape(s)} style={btn(shape === s, { flex: 1 })}>
+                  {s}
+                </button>
+              ))}
+            </div>
+            <div style={{ color: "#5c6670", marginBottom: 10, lineHeight: 1.5 }}>
+              {SHAPE_HELP[shape]}
+            </div>
+          </>
+        )}
+
+        {/* Live size while dragging. Blocking out a plot is a question about
+            dimensions, and counting cells off a screenshot is not an answer. */}
+        {dragFrom && hover && (
+          <div
+            style={{
+              border: "1px solid #ffd166",
+              borderRadius: 4,
+              padding: "6px 9px",
+              marginBottom: 10,
+              color: "#ffd166",
+            }}
+          >
+            {(() => {
+              const { x0, z0, x1, z1 } = rectOf(dragFrom, hover);
+              const w = x1 - x0 + 1;
+              const d = z1 - z0 + 1;
+              if (shape === "line" && tool !== "prop") {
+                const end = snapLine(dragFrom, hover);
+                const len = Math.max(Math.abs(end.x - dragFrom.x), Math.abs(end.z - dragFrom.z)) + 1;
+                return `${len} cells long, ${brush * 2 - 1} wide`;
+              }
+              return `${w} × ${d} cells  (${w * d})`;
+            })()}
+          </div>
+        )}
 
         {tool === "surface" && (
           <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 10 }}>
@@ -994,6 +1350,98 @@ export default function MapLab() {
                 L{l}
               </button>
             ))}
+          </div>
+        )}
+
+        {tool === "label" && (
+          <div style={{ marginBottom: 10 }}>
+            {annotations.map((a) => (
+              <div key={a.name} style={{ display: "flex", gap: 4, marginBottom: 4, alignItems: "center" }}>
+                <button
+                  onClick={() => setActiveLabel(a.name)}
+                  style={btn(false, {
+                    flex: 1,
+                    textAlign: "left",
+                    borderLeft: `6px solid ${a.color}`,
+                    outline: activeLabel === a.name ? "2px solid #ffd166" : "none",
+                  })}
+                >
+                  {a.name}{" "}
+                  <span style={{ color: "#7d868e" }}>{a.cells.length}</span>
+                </button>
+                <button
+                  onClick={() => {
+                    commit();
+                    const w = world();
+                    w.annotations = w.annotations.filter((n) => n.name !== a.name);
+                    if (activeLabel === a.name) setActiveLabel("");
+                    bump();
+                  }}
+                  style={btn(false, { color: "#ff5577" })}
+                  title={`delete ${a.name}`}
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+
+            <div style={{ display: "flex", gap: 3, flexWrap: "wrap", margin: "8px 0 6px" }}>
+              {LABEL_COLORS.map((c) => (
+                <button
+                  key={c}
+                  onClick={() => setLabelColor(c)}
+                  style={{
+                    width: 22,
+                    height: 22,
+                    background: c,
+                    borderRadius: 4,
+                    cursor: "pointer",
+                    border: labelColor === c ? "2px solid #ffd166" : "1px solid #3a4148",
+                  }}
+                  title={c}
+                />
+              ))}
+            </div>
+
+            <div style={{ display: "flex", gap: 4 }}>
+              <input
+                value={newLabel}
+                onChange={(e) => setNewLabel(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") addLabel();
+                }}
+                placeholder="new label, e.g. fencing"
+                style={{
+                  flex: 1,
+                  minWidth: 0,
+                  padding: "5px 8px",
+                  fontSize: 12,
+                  fontFamily: mono,
+                  borderRadius: 4,
+                  border: "1px solid #3a4148",
+                  background: "#12161a",
+                  color: "#c8cfd4",
+                }}
+              />
+              <button onClick={addLabel} style={btn(false)}>
+                add
+              </button>
+            </div>
+
+            <div style={{ display: "flex", gap: 4, marginTop: 6 }}>
+              <button onClick={() => setLabelErase(false)} style={btn(!labelErase, { flex: 1 })}>
+                paint
+              </button>
+              <button onClick={() => setLabelErase(true)} style={btn(labelErase, { flex: 1 })}>
+                erase
+              </button>
+            </div>
+
+            <div style={{ color: "#5c6670", marginTop: 6, lineHeight: 1.5 }}>
+              {activeLabel
+                ? `Painting “${activeLabel}”. Labels are free text and never touch the terrain — they ride along in the exported JSON as instructions.`
+                : "Add a label, then pick it to paint. Works with every shape: line for a fence run, rect for a zone, fill for a whole region."}
+            </div>
           </div>
         )}
 
@@ -1062,7 +1510,7 @@ export default function MapLab() {
                 onClick={() => {
                   if (n === map.width) return;
                   commit();
-                  WORLD = resizeMap(map, props, n);
+                  WORLD = resizeMap(map, props, n, annotations);
                   bump();
                 }}
                 style={btn(n === map.width)}
@@ -1163,7 +1611,7 @@ export default function MapLab() {
         <div style={{ borderTop: "1px solid #232a31", padding: 14, flexShrink: 0 }}>
         <button
           onClick={() => {
-            const out = { ...islandMapDoc, ...serialiseIslandMap(map, props) };
+            const out = { ...islandMapDoc, ...serialiseIslandMap(map, props, annotations) };
             void navigator.clipboard.writeText(JSON.stringify(out, null, 1));
             setCopied(true);
             setTimeout(() => setCopied(false), 1400);

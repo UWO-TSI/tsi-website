@@ -127,6 +127,19 @@ to the clipboard; paste it over `web/data/island-map.json`. Its health panel
 checks exactly what `web/lib/game/islandMap.test.ts` asserts, so if the panel
 says healthy the paste keeps the suite green.
 
+It is for **blocking out space**, not pixel-perfect work. Every tool answers
+*what* (land, sea, raise, lower, flat, surface, ramp) and every shape answers
+*where* (free brush, rect, snapped line, flood fill), so a plot is a dragged
+rectangle and a path is a snapped run rather than a hand-dabbed blob. Two things
+ride along in the exported JSON without touching terrain:
+
+- **Plots** — a dragged marker stores `size: [w, d]`, so "HQ goes here, 7×5" is
+  data rather than a note.
+- **Labels** — `annotations`, free-text named regions you draw yourself
+  (fencing, hedges, "paved later"). Deliberately not surfaces: surfaces are a
+  closed enum the renderer switches on, and drafting notes do not belong there.
+  The renderer ignores annotations entirely.
+
 Two things that bite:
 
 - `web/scripts/author-elevation.mjs` reads `island-map.json`, mutates it and
