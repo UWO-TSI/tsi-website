@@ -77,7 +77,7 @@ const SURFACE_NAME: Record<number, string> = {
   [Surface.Ramp]: "ramp",
 };
 
-const TOOLS = ["land", "sea", "raise", "lower", "flat", "surface", "ramp"] as const;
+const TOOLS = ["land", "sea", "raise", "lower", "flat", "surface", "ramp", "prop"] as const;
 type Tool = (typeof TOOLS)[number];
 
 const TOOL_HELP: Record<Tool, string> = {
@@ -88,6 +88,37 @@ const TOOL_HELP: Record<Tool, string> = {
   flat: "set an exact level. How you draw a plateau.",
   surface: "paint a surface, terrain untouched.",
   ramp: "mark a ramp cell. It climbs toward the higher neighbour.",
+  prop: "click to drop a marker, click it again to remove. One per click, brush ignored.",
+};
+
+/**
+ * Marker kinds. The first six are what `island-map.json` already carries; the
+ * rest are layout language for planning a map before any of it is built.
+ *
+ * A marker is just a `PlacedProp`, so a plan drawn here and a shippable map are
+ * the same file. `id` is free text and becomes the building id the renderer
+ * looks up ("hq", "shop", "oracle"), or a note to yourself on a draft.
+ */
+const PROP_KINDS = [
+  "building",
+  "npc",
+  "tree",
+  "bush",
+  "flower",
+  "lamp",
+  "spawn",
+  "note",
+] as const;
+
+const PROP_COLOR: Record<string, string> = {
+  building: "#ff8f4a",
+  npc: "#d98fff",
+  tree: "#3f8f4f",
+  bush: "#5aab5f",
+  flower: "#ff7fa8",
+  lamp: "#ffd166",
+  spawn: "#4ad8ff",
+  note: "#ffffff",
 };
 
 /** Grid sizes offered by the resize control. Multiples of CHUNK (16). */
@@ -194,6 +225,35 @@ function measure(map: IslandMap): Health {
 }
 
 /**
+ * Named drafts, so this can hold more than one island.
+ *
+ * David, 2026-07-30: this page is where the general layout for all future
+ * terrain and islands gets drafted. One autosave slot is crash protection, not
+ * a library — without named slots, starting a second island destroys the first.
+ * Kept in localStorage next to the working draft; a draft is just the same
+ * `island-map.json` document, so anything saved here can be exported and
+ * shipped unchanged.
+ */
+const LIBRARY_KEY = "lab-map-library-v1";
+
+function readLibrary(): Record<string, IslandMapDoc> {
+  try {
+    const raw = window.localStorage.getItem(LIBRARY_KEY);
+    return raw ? (JSON.parse(raw) as Record<string, IslandMapDoc>) : {};
+  } catch {
+    return {};
+  }
+}
+
+function writeLibrary(lib: Record<string, IslandMapDoc>) {
+  try {
+    window.localStorage.setItem(LIBRARY_KEY, JSON.stringify(lib));
+  } catch {
+    /* quota: the caller already has the map in memory, nothing is lost yet */
+  }
+}
+
+/**
  * The map lives at module scope, not in state.
  *
  * Editing mutates the typed arrays in place — copying 65k cells per brush dab
@@ -279,6 +339,13 @@ export default function MapLab() {
   const [hover, setHover] = useState<{ x: number; z: number } | null>(null);
   const [copied, setCopied] = useState(false);
   const [edited, setEdited] = useState(false);
+  const [propKind, setPropKind] = useState<string>("building");
+  const [propId, setPropId] = useState("");
+  const [library, setLibrary] = useState<string[]>([]);
+  const [saveName, setSaveName] = useState("");
+  const [sheet, setSheet] = useState<"none" | "open" | "import">("none");
+  const [importText, setImportText] = useState("");
+  const [importError, setImportError] = useState("");
   const [version, setVersion] = useState(0);
   const painting = useRef(false);
   const lastCell = useRef<{ x: number; z: number } | null>(null);
@@ -327,6 +394,12 @@ export default function MapLab() {
     setVersion((v) => v + 1);
   }, []);
 
+  // The saved-draft list, read once. Kept as names only; the documents are big
+  // and there is no reason to hold every island in memory to render a list.
+  useEffect(() => {
+    setLibrary(Object.keys(readLibrary()).sort());
+  }, []);
+
   // Autosave. Debounced, because serialising 256² to JSON on every brush dab
   // would be the slowest thing on the page.
   //
@@ -360,8 +433,35 @@ export default function MapLab() {
     bump();
   }, [bump]);
 
+  /** Replace the working map wholesale. Undoable, and marks the map dirty. */
+  const load = useCallback(
+    (doc: IslandMapDoc) => {
+      commit();
+      WORLD = parseIslandMap(doc);
+      bump();
+    },
+    [bump]
+  );
+
+  const saveDraft = useCallback(
+    (name: string) => {
+      const n = name.trim();
+      if (!n) return;
+      const lib = readLibrary();
+      lib[n] = serialiseIslandMap(map, props);
+      writeLibrary(lib);
+      setLibrary(Object.keys(lib).sort());
+      setSaveName("");
+    },
+    [map, props]
+  );
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      // Otherwise "[" typed into the draft-name or prop-id field resizes the
+      // brush, and Cmd+Z in a text field undoes the MAP instead of the text.
+      const el = e.target as HTMLElement | null;
+      if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA")) return;
       if (!(e.metaKey || e.ctrlKey)) {
         if (e.key === "[") setBrush((b) => Math.max(1, b - 1));
         if (e.key === "]") setBrush((b) => Math.min(16, b + 1));
@@ -468,14 +568,29 @@ export default function MapLab() {
       }
     }
 
+    // Markers, coloured by kind so a layout reads at a glance without hovering
+    // every dot. Buildings get their id written next to them, since "where does
+    // HQ go" is the actual question a layout draft answers.
     for (const p of props) {
-      ctx.fillStyle = "#ffd166";
-      ctx.fillRect(
-        p.cell[0] * zoom + zoom * 0.3,
-        p.cell[1] * zoom + zoom * 0.3,
-        zoom * 0.4,
-        zoom * 0.4
-      );
+      const cx = (p.cell[0] + 0.5) * zoom;
+      const cz = (p.cell[1] + 0.5) * zoom;
+      const r = Math.max(2, zoom * 0.34);
+      ctx.beginPath();
+      ctx.arc(cx, cz, r, 0, Math.PI * 2);
+      ctx.fillStyle = PROP_COLOR[p.kind] ?? "#ffd166";
+      ctx.fill();
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = "rgba(0,0,0,0.65)";
+      ctx.stroke();
+      if (p.id && zoom >= 5) {
+        ctx.font = `${Math.max(9, zoom * 1.1)}px ${mono}`;
+        ctx.textBaseline = "middle";
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = "rgba(0,0,0,0.8)";
+        ctx.strokeText(p.id, cx + r + 3, cz);
+        ctx.fillStyle = "#fff";
+        ctx.fillText(p.id, cx + r + 3, cz);
+      }
     }
   }, [map, props, zoom]);
 
@@ -524,6 +639,10 @@ export default function MapLab() {
           if (!inBounds(map, x, z)) continue;
           const s = surfaceAt(map, x, z);
           switch (tool) {
+            case "prop":
+              // Handled on mousedown, one per click. Dragging a brush of them
+              // would carpet the map.
+              break;
             case "land":
               // Only fills water. Painting over existing ground would silently
               // erase whatever surface was there.
@@ -595,6 +714,34 @@ export default function MapLab() {
     lastCell.current = null;
   };
 
+  /** Toggle a marker at a cell: click empty ground to place, click it to remove. */
+  const toggleProp = useCallback(
+    (cx: number, cz: number) => {
+      if (!inBounds(map, cx, cz)) return;
+      const w = world();
+      const at = w.props.findIndex((p) => p.cell[0] === cx && p.cell[1] === cz);
+      commit();
+      if (at >= 0) {
+        w.props = w.props.filter((_, i) => i !== at);
+      } else {
+        const id = propId.trim();
+        w.props = [
+          ...w.props,
+          {
+            kind: propKind,
+            ...(id ? { id } : {}),
+            cell: [cx, cz] as [number, number],
+            // A marker sits on the ground it is placed on; the renderer reads
+            // this rather than re-deriving it, so it has to match.
+            level: levelAt(map, cx, cz),
+          },
+        ];
+      }
+      bump();
+    },
+    [map, propKind, propId, bump]
+  );
+
   const btn = (active: boolean, extra?: React.CSSProperties) => ({
     padding: "5px 10px",
     fontSize: 12,
@@ -627,6 +774,10 @@ export default function MapLab() {
           style={{ cursor: "crosshair", imageRendering: "pixelated" }}
           onMouseDown={(e) => {
             const c = cellFrom(e);
+            if (tool === "prop") {
+              toggleProp(c.x, c.z);
+              return;
+            }
             commit();
             painting.current = true;
             lastCell.current = null;
@@ -656,22 +807,158 @@ export default function MapLab() {
           minHeight: 0,
         }}
       >
-        <div style={{ flex: 1, overflowY: "auto", padding: 14, minHeight: 0 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
-          <span style={{ fontSize: 13, color: "#ffd166" }}>/lab/map</span>
-          <span style={{ color: edited ? "#7fd1c0" : "#5c6670" }}>
-            {edited ? "draft autosaved" : "shipped map"}
-          </span>
+        {/* Pinned. Which island you are on, and how to get to another one, are
+            the two things that must never be scrolled off a drafting tool. */}
+        <div style={{ borderBottom: "1px solid #232a31", padding: "12px 14px", flexShrink: 0 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+            <span style={{ fontSize: 13, color: "#ffd166" }}>/lab/map</span>
+            <span style={{ color: edited ? "#7fd1c0" : "#5c6670" }}>
+              {edited ? "draft autosaved" : "shipped map"}
+            </span>
+          </div>
+          <div style={{ display: "flex", gap: 4, marginBottom: 6 }}>
+            <button onClick={undo} disabled={!UNDO.length} style={btn(false, { flex: 1, opacity: UNDO.length ? 1 : 0.35 })}>
+              ↶ undo
+            </button>
+            <button onClick={redo} disabled={!REDO.length} style={btn(false, { flex: 1, opacity: REDO.length ? 1 : 0.35 })}>
+              ↷ redo
+            </button>
+          </div>
+          <div style={{ display: "flex", gap: 4 }}>
+            <button
+              onClick={() => {
+                commit();
+                const { map: m } = world();
+                m.levels.fill(0);
+                m.surfaces.fill(Surface.Void);
+                // Props go with the terrain. Leaving them behind floats every
+                // building over open water on a map that no longer has ground.
+                WORLD = { map: m, props: [] };
+                bump();
+              }}
+              style={btn(false, { flex: 1 })}
+            >
+              new
+            </button>
+            <button onClick={() => setSheet(sheet === "open" ? "none" : "open")} style={btn(sheet === "open", { flex: 1 })}>
+              open {library.length ? `(${library.length})` : ""}
+            </button>
+            <button onClick={() => setSheet(sheet === "import" ? "none" : "import")} style={btn(sheet === "import", { flex: 1 })}>
+              import
+            </button>
+          </div>
         </div>
 
-        <div style={{ display: "flex", gap: 4, marginBottom: 10 }}>
-          <button onClick={undo} disabled={!UNDO.length} style={btn(false, { flex: 1, opacity: UNDO.length ? 1 : 0.35 })}>
-            ↶ undo
-          </button>
-          <button onClick={redo} disabled={!REDO.length} style={btn(false, { flex: 1, opacity: REDO.length ? 1 : 0.35 })}>
-            ↷ redo
-          </button>
-        </div>
+        <div style={{ flex: 1, overflowY: "auto", padding: 14, minHeight: 0 }}>
+        {sheet === "open" && (
+          <div style={{ border: "1px solid #3a4148", borderRadius: 4, padding: 10, marginBottom: 12 }}>
+            <div style={{ color: "#ffd166", marginBottom: 6 }}>saved islands</div>
+            {library.length === 0 && (
+              <div style={{ color: "#5c6670", marginBottom: 8 }}>none yet</div>
+            )}
+            {library.map((name) => (
+              <div key={name} style={{ display: "flex", gap: 4, marginBottom: 4, alignItems: "center" }}>
+                <button
+                  onClick={() => {
+                    const doc = readLibrary()[name];
+                    if (doc) load(doc);
+                    setSheet("none");
+                  }}
+                  style={btn(false, { flex: 1, textAlign: "left" })}
+                >
+                  {name}
+                </button>
+                <button
+                  onClick={() => {
+                    const lib = readLibrary();
+                    delete lib[name];
+                    writeLibrary(lib);
+                    setLibrary(Object.keys(lib).sort());
+                  }}
+                  style={btn(false, { color: "#ff5577" })}
+                  title={`delete ${name}`}
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+            <div style={{ display: "flex", gap: 4, marginTop: 8 }}>
+              <input
+                value={saveName}
+                onChange={(e) => setSaveName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") saveDraft(saveName);
+                }}
+                placeholder="name this island"
+                style={{
+                  flex: 1,
+                  minWidth: 0,
+                  padding: "5px 8px",
+                  fontSize: 12,
+                  fontFamily: mono,
+                  borderRadius: 4,
+                  border: "1px solid #3a4148",
+                  background: "#12161a",
+                  color: "#c8cfd4",
+                }}
+              />
+              <button onClick={() => saveDraft(saveName)} style={btn(false)}>
+                save
+              </button>
+            </div>
+            <div style={{ color: "#5c6670", marginTop: 6, lineHeight: 1.5 }}>
+              Saving under an existing name overwrites it. Stored in this
+              browser, so export anything you want to keep.
+            </div>
+          </div>
+        )}
+
+        {sheet === "import" && (
+          <div style={{ border: "1px solid #3a4148", borderRadius: 4, padding: 10, marginBottom: 12 }}>
+            <div style={{ color: "#ffd166", marginBottom: 6 }}>paste island-map.json</div>
+            <textarea
+              value={importText}
+              onChange={(e) => setImportText(e.target.value)}
+              rows={5}
+              placeholder='{"width":128,"depth":128,...}'
+              style={{
+                width: "100%",
+                boxSizing: "border-box",
+                padding: 8,
+                fontSize: 11,
+                fontFamily: mono,
+                borderRadius: 4,
+                border: "1px solid #3a4148",
+                background: "#12161a",
+                color: "#c8cfd4",
+                resize: "vertical",
+              }}
+            />
+            {importError && <div style={{ color: "#ff5577", marginTop: 6 }}>{importError}</div>}
+            <button
+              onClick={() => {
+                try {
+                  const doc = JSON.parse(importText) as IslandMapDoc;
+                  // Validate before replacing: a bad paste that half-loads
+                  // would look like a corrupted map rather than a typo.
+                  if (!doc.width || !doc.depth || !Array.isArray(doc.levels) || !Array.isArray(doc.surfaces)) {
+                    setImportError("not an island map: needs width, depth, levels, surfaces");
+                    return;
+                  }
+                  load(doc);
+                  setImportError("");
+                  setImportText("");
+                  setSheet("none");
+                } catch (err) {
+                  setImportError(`not valid JSON: ${String(err).slice(0, 80)}`);
+                }
+              }}
+              style={btn(false, { width: "100%", marginTop: 6 })}
+            >
+              load it
+            </button>
+          </div>
+        )}
 
         <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 6 }}>
           {TOOLS.map((t) => (
@@ -707,6 +994,47 @@ export default function MapLab() {
                 L{l}
               </button>
             ))}
+          </div>
+        )}
+
+        {tool === "prop" && (
+          <div style={{ marginBottom: 10 }}>
+            <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 6 }}>
+              {PROP_KINDS.map((k) => (
+                <button
+                  key={k}
+                  onClick={() => setPropKind(k)}
+                  style={btn(false, {
+                    background: PROP_COLOR[k],
+                    color: "#12161a",
+                    outline: propKind === k ? "2px solid #ffd166" : "none",
+                  })}
+                >
+                  {k}
+                </button>
+              ))}
+            </div>
+            <input
+              value={propId}
+              onChange={(e) => setPropId(e.target.value)}
+              placeholder="id / label, e.g. hq"
+              style={{
+                width: "100%",
+                boxSizing: "border-box",
+                padding: "5px 8px",
+                fontSize: 12,
+                fontFamily: mono,
+                borderRadius: 4,
+                border: "1px solid #3a4148",
+                background: "#12161a",
+                color: "#c8cfd4",
+              }}
+            />
+            <div style={{ color: "#5c6670", marginTop: 5, lineHeight: 1.5 }}>
+              For a building the id is what the renderer looks up: hq, shop,
+              oracle, house, wharf, bounty, jobs, leaderboard. On a draft it is
+              just a note to yourself.
+            </div>
           </div>
         )}
 
@@ -749,39 +1077,24 @@ export default function MapLab() {
           </div>
         </div>
 
-        <div style={{ display: "flex", gap: 4, marginBottom: 10 }}>
-          <button
-            onClick={() => {
-              commit();
-              const { map: m } = world();
-              m.levels.fill(0);
-              m.surfaces.fill(Surface.Void);
-              WORLD = { map: m, props: [] };
-              bump();
-            }}
-            style={btn(false, { flex: 1 })}
-          >
-            clear to sea
-          </button>
-          <button
-            onClick={() => {
-              commit();
-              WORLD = parseIslandMap(islandMapDoc as IslandMapDoc);
-              try {
-                window.localStorage.removeItem(DRAFT_KEY);
-              } catch {
-                /* nothing to clear */
-              }
-              bumpClean();
-            }}
-            style={btn(false, { flex: 1 })}
-          >
-            reload shipped
-          </button>
-        </div>
+        <button
+          onClick={() => {
+            commit();
+            WORLD = parseIslandMap(islandMapDoc as IslandMapDoc);
+            try {
+              window.localStorage.removeItem(DRAFT_KEY);
+            } catch {
+              /* nothing to clear */
+            }
+            bumpClean();
+          }}
+          style={btn(false, { width: "100%", marginBottom: 6 })}
+        >
+          reload shipped island
+        </button>
         <div style={{ color: "#5c6670", marginBottom: 10, lineHeight: 1.5 }}>
-          Both are undoable. Work autosaves to this browser; “reload shipped”
-          throws the draft away.
+          Undoable. Work autosaves to this browser; this throws the working
+          draft away. Named saves under “open” are untouched.
         </div>
 
         <div style={{ borderTop: "1px solid #232a31", paddingTop: 10, marginBottom: 10 }}>
@@ -815,7 +1128,23 @@ export default function MapLab() {
           <Legend c="#e8a13c" label="half step (walkable, blended)" />
           <Legend c="#2b7fff" label="ramp, arrow points uphill" />
           <Legend c="#ff0055" label="broken: no kit piece or no climb" />
-          <Legend c="#ffd166" label="prop" />
+          <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginTop: 4 }}>
+            {PROP_KINDS.map((k) => (
+              <span key={k} style={{ display: "flex", alignItems: "center", gap: 4, color: "#7d868e" }}>
+                <span
+                  style={{
+                    width: 9,
+                    height: 9,
+                    background: PROP_COLOR[k],
+                    borderRadius: "50%",
+                    border: "1px solid rgba(0,0,0,0.6)",
+                  }}
+                />
+                {k}
+              </span>
+            ))}
+          </div>
+          <Row k="markers placed" v={String(props.length)} />
         </div>
 
         {hover && inBounds(map, hover.x, hover.z) && (

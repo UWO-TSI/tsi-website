@@ -128,6 +128,7 @@ cover layer.
 | Current sprint goal | `AGENT_LOG.md` → "Current Sprint" |
 | Build/lint baseline + bug list | `specs/qa.md` |
 | 3D game world component | `web/components/game/GameWorld.tsx` |
+| **Terrain drafting tool** | `web/app/lab/map` — where the layout of every island gets planned. See below. |
 | Player avatar + sprite sheet | `web/components/game/PlayerAvatar.tsx` |
 | Dashboard pages (overlays) | `web/app/student/dashboard/*/page.tsx` |
 | Supabase clients | `web/lib/supabase/{client,server,admin}.ts` |
@@ -136,6 +137,32 @@ cover layer.
 | Design tokens | `web/styles/game-tokens.css` |
 | Historical 5-agent log | `archive/logs/AGENT_LOG-2026-03-27-to-04-06.md` |
 | Deprecated specs | `archive/specs/` |
+
+## Terrain is drawn, not coded (set 2026-07-30)
+
+**`/lab/map` is where the general layout for all future terrain and islands gets
+drafted.** David's call. Before it existed, every terrain change was him
+describing what he wanted ("less hills", "too vertical", "half steps should
+blend") and an agent guessing at constants in `web/scripts/author-elevation.mjs`
+— six of eight rounds went that way, each one a script edit, a regenerate and a
+screenshot.
+
+Consequences for anyone working on terrain:
+
+- **Do not tune terrain by editing `author-elevation.mjs` constants** unless
+  David asks for that specifically. Ask him to draw it, or draw a proposal
+  yourself in the editor and export it.
+- The editor edits the SHIPPED `web/data/island-map.json` and exports the whole
+  document to the clipboard. There is no write path to disk on purpose.
+- **`author-elevation.mjs` overwrites hand edits.** Its output is also its own
+  input, which is how 21 stale ramp cells accumulated in the shipped map. If you
+  run it, expect to lose hand-drawn work.
+- Named drafts live in the browser's localStorage, so they are per-machine.
+  Anything worth keeping has to be exported into the repo.
+- The health panel checks exactly what `web/lib/game/islandMap.test.ts` asserts:
+  reachability, cliff-piece coverage, orphan ramps, one-cell walls, faces taller
+  than the kit can draw. **If the panel says healthy, the paste keeps the suite
+  green.** Keep those two in sync when adding a check to either.
 
 ## Design principles (set 2026-05-25)
 
