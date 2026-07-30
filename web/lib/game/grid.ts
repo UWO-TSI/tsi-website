@@ -76,6 +76,135 @@ export const FRINGE_DROP = 0.188;
  */
 export const GRASS_COLOR = 0x8fc96b;
 
+// ── Smooth terrain ───────────────────────────────────────────────
+
+/**
+ * How far a one-level change spreads sideways, in cells. David's call,
+ * 2026-07-29: about 5.
+ *
+ * A 0.75u rise over 5 cells is roughly 8 degrees, so it reads as rolling ground
+ * rather than as a bank. It is a real trade: the median flat run between level
+ * changes on the shipped map is 14 cells, so a 5-cell spread converts a third
+ * of it into slope and that much less is genuinely flat and buildable.
+ */
+export const SLOPE_SPREAD = 5;
+
+/**
+ * Continuous ground height at every cell CORNER, from the discrete level field.
+ *
+ * WHY A FIELD AND NOT PER-EDGE SKIRTS. The old `addBank` patched each level
+ * boundary independently, so three changes in a row came out as three ramps
+ * with flat treads between them -- a staircase. David asked for a system that
+ * "calculates the steps from each other", looking ahead to see how many cells
+ * until the next change and producing one continuous hill across all of them.
+ *
+ * That is what a BLUR of the level field does, and it is why this is a blur
+ * rather than hand-written lookahead:
+ *
+ *   · a blurred step function is a smooth S-curve spanning the kernel, so a
+ *     single isolated change becomes a gentle slope
+ *   · a blur of a CONSTANT is that constant, so plateau interiors stay dead
+ *     flat with no special case
+ *   · overlapping transitions SUM, so a staircase merges into one long ramp
+ *     automatically -- the lookahead is emergent, not coded
+ *
+ * CLIFFS ARE BARRIERS. A sample is only accumulated if its level is within
+ * CLIFF_LEVELS of the corner's home level. So a cliff-top corner never averages
+ * in the ground below it: the plateau stays flat right up to the lip and the kit
+ * piece still sits correctly. Without this the blur would round every cliff into
+ * a slope and the 44-piece cliff kit would have nothing to draw.
+ *
+ * Corners, not centres, because a quad with four independent corner heights is
+ * already a continuous surface -- no subdivision needed, so this costs the same
+ * geometry the stepped version did.
+ */
+export function heightField(map: IslandMap, spread = SLOPE_SPREAD): Float32Array {
+  const W = map.width + 1;
+  const D = map.depth + 1;
+  const out = new Float32Array(W * D);
+
+  // Transition width of a blurred step is about 3 sigma, so solve for sigma.
+  const sigma = Math.max(0.5, spread / 3);
+  const radius = Math.ceil(sigma * 3);
+  const inv2s2 = 1 / (2 * sigma * sigma);
+
+  // Level of the cell nearest a corner, clamped into the map. Corners sit at
+  // cell boundaries, so the cell up-left of the corner is the natural home.
+  const homeLevel = (ix: number, iz: number) =>
+    levelAt(map, Math.min(map.width - 1, Math.max(0, ix - 1)), Math.min(map.depth - 1, Math.max(0, iz - 1)));
+
+  for (let iz = 0; iz < D; iz++) {
+    for (let ix = 0; ix < W; ix++) {
+      const home = homeLevel(ix, iz);
+      let sum = 0;
+      let wsum = 0;
+      for (let dz = -radius; dz <= radius; dz++) {
+        for (let dx = -radius; dx <= radius; dx++) {
+          const cx = ix - 1 + dx;
+          const cz = iz - 1 + dz;
+          if (!inBounds(map, cx, cz)) continue;
+          const l = levelAt(map, cx, cz);
+          // The cliff barrier. Anything a full cliff away is a different
+          // terrace and must not bleed across.
+          if (Math.abs(l - home) >= CLIFF_LEVELS) continue;
+          const w = Math.exp(-(dx * dx + dz * dz) * inv2s2);
+          sum += l * w;
+          wsum += w;
+        }
+      }
+      out[iz * W + ix] = (wsum > 0 ? sum / wsum : home) * LEVEL_STEP;
+    }
+  }
+
+  /**
+   * PIN CLIFF TOPS, and this pass is not optional.
+   *
+   * A kit piece sits on a cliff cell and expects its top to be flat at exactly
+   * level * LEVEL_STEP. Inferring that from the blur does not work: `home` above
+   * is taken from ONE adjacent cell, so a corner on a cliff boundary can anchor
+   * to the LOW side, which then excludes the cliff above it as out-of-range and
+   * reads as ground level. Measured before this pass, 75 of 133 cliff cells
+   * drifted, median 0.742u -- a whole level -- so every piece would have floated
+   * or sunk by its own height.
+   *
+   * Both passes are needed. The blur handles walkable ground; this makes the
+   * cliffs exact.
+   *
+   * MAX where two cliff cells of different levels share a corner: at a lip the
+   * higher terrace wins, or the upper piece would hang over a gap.
+   */
+  for (let cz = 0; cz < map.depth; cz++) {
+    for (let cx = 0; cx < map.width; cx++) {
+      if (!needsCliff(map, cx, cz)) continue;
+      const top = levelAt(map, cx, cz) * LEVEL_STEP;
+      for (const [ox, oz] of [[0, 0], [1, 0], [0, 1], [1, 1]] as const) {
+        const i = (cz + oz) * W + (cx + ox);
+        if (top > out[i]) out[i] = top;
+      }
+    }
+  }
+  return out;
+}
+
+/** Bilinear sample of a corner height field at a world position. */
+export function sampleHeightField(map: IslandMap, field: Float32Array, x: number, z: number): number {
+  const W = map.width + 1;
+  // Corner (0,0) sits half a tile up-left of cell (0,0)'s centre.
+  const fx = Math.min(map.width, Math.max(0, (x - map.originX) / TILE + 0.5));
+  const fz = Math.min(map.depth, Math.max(0, (z - map.originZ) / TILE + 0.5));
+  const x0 = Math.floor(fx);
+  const z0 = Math.floor(fz);
+  const x1 = Math.min(map.width, x0 + 1);
+  const z1 = Math.min(map.depth, z0 + 1);
+  const tx = fx - x0;
+  const tz = fz - z0;
+  const a = field[z0 * W + x0];
+  const b = field[z0 * W + x1];
+  const c = field[z1 * W + x0];
+  const d = field[z1 * W + x1];
+  return (a * (1 - tx) + b * tx) * (1 - tz) + (c * (1 - tx) + d * tx) * tz;
+}
+
 /**
  * Water edges: which orthogonal neighbours of a LAND cell are river.
  *

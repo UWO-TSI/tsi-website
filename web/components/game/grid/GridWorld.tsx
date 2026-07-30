@@ -14,7 +14,14 @@
 import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import islandMapDoc from "@/data/island-map.json";
-import { parseIslandMap, heightAtWorld, type IslandMap, type PlacedProp } from "@/lib/game/grid";
+import {
+  parseIslandMap,
+  heightAtWorld,
+  heightField,
+  sampleHeightField,
+  type IslandMap,
+  type PlacedProp,
+} from "@/lib/game/grid";
 import { setTerrainHeightProvider } from "../terrain";
 import GridTerrain from "./GridTerrain";
 import GridCliffs from "./GridCliffs";
@@ -54,6 +61,26 @@ export function isGridEnabled(): boolean {
   return gridFlag;
 }
 
+/**
+ * Stepped terrain, for comparison.
+ *
+ * David, 2026-07-29, asked to see both: hard ACNH-style steps versus the smooth
+ * height field. Smooth is the default because it is what he described wanting;
+ * `?stepped=1` restores the old flat-quad-plus-skirt behaviour on the same map,
+ * so the two can be judged against identical terrain.
+ *
+ * Read once from the URL for the same reason isGridEnabled is -- see its note.
+ */
+let steppedFlag: boolean | null = null;
+export function isSteppedTerrain(): boolean {
+  if (steppedFlag === null) {
+    steppedFlag =
+      typeof window !== "undefined" &&
+      new URLSearchParams(window.location.search).get("stepped") === "1";
+  }
+  return steppedFlag;
+}
+
 export default function GridWorld() {
   const { map } = useMemo(() => getIslandMap(), []);
   const t = useTuning();
@@ -75,7 +102,12 @@ export default function GridWorld() {
    * baked-grid bilinear sample it replaces, so the per-frame paths get faster.
    */
   useEffect(() => {
-    setTerrainHeightProvider((x, z) => heightAtWorld(map, x, z));
+    // The SAME field the mesh uses, or the player walks on a surface that is
+    // not the one being drawn.
+    const field = isSteppedTerrain() ? null : heightField(map);
+    setTerrainHeightProvider(
+      field ? (x, z) => sampleHeightField(map, field, x, z) : (x, z) => heightAtWorld(map, x, z)
+    );
     return () => setTerrainHeightProvider(null);
   }, [map]);
 

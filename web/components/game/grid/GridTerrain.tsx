@@ -42,6 +42,8 @@ import {
   bankEdges,
   waterEdges,
   FRINGE_DROP,
+  heightField,
+  sampleHeightField,
   shoreSdf,
   sampleShore,
   easedCellOutline,
@@ -49,6 +51,7 @@ import {
 } from "@/lib/game/grid";
 import { terrainMaterial, setShoreField } from "./terrainMaterials";
 import { TUNING_DEFAULTS } from "@/lib/game/tuning";
+import { isSteppedTerrain } from "./GridWorld";
 import { bedDepth } from "@/lib/game/waterShader";
 
 // Flat colours for the surfaces whose road-kit textures are not wired yet.
@@ -142,12 +145,19 @@ function addCell(
   y: number,
   z: number,
   /** Per-vertex height offset. The seabed uses it; every flat layer omits it. */
-  dip?: (px: number, pz: number) => number
+  dip?: (px: number, pz: number) => number,
+  /**
+   * Per-vertex ground height. Supplied in smooth mode so a cell is no longer a
+   * flat quad: four independent corner heights make the surface continuous with
+   * its neighbours, which is the whole mechanism and costs no extra geometry.
+   */
+  heightAt?: (px: number, pz: number) => number
 ) {
   const s = 1 / (UV_CELLS_PER_REPEAT * TILE);
   const base = mesh.pos.length / 3;
   const push = (px: number, pz: number) => {
-    mesh.pos.push(px, dip ? y - dip(px, pz) : y, pz);
+    const base = heightAt ? heightAt(px, pz) : y;
+    mesh.pos.push(px, dip ? base - dip(px, pz) : base, pz);
     // UVs from WORLD position so neighbouring cells continue the pattern
     // instead of each restarting it.
     mesh.uv.push(px * s, pz * s);
@@ -322,6 +332,14 @@ export default function GridTerrain({ map }: { map: IslandMap }) {
   // shader samples it on the GPU. Two bakes would be two shorelines.
   const field = useMemo(() => shoreSdf(map), [map]);
 
+  /**
+   * The continuous ground height. One field, read by the mesh here and by the
+   * height provider in GridWorld, so the player walks on exactly the surface
+   * that is drawn -- two separate calculations is how a character ends up
+   * hovering over a hill.
+   */
+  const smooth = useMemo(() => (isSteppedTerrain() ? null : heightField(map)), [map]);
+
   const chunks = useMemo(() => {
     const out: { key: string; surface: number; geometry: THREE.BufferGeometry }[] = [];
 
@@ -338,6 +356,10 @@ export default function GridTerrain({ map }: { map: IslandMap }) {
     // bed shape on reload.
     const water = TUNING_DEFAULTS.water;
     const dipAt = (px: number, pz: number) => bedDepth(sampleShore(field, px, pz), water);
+
+    const groundAt = smooth
+      ? (px: number, pz: number) => sampleHeightField(map, smooth, px, pz)
+      : undefined;
 
     const inGround: LayerTest = (cx, cz) =>
       inBounds(map, cx, cz) && !isVoid(surfaceAt(map, cx, cz)) && !isRiver(surfaceAt(map, cx, cz));
@@ -376,13 +398,20 @@ export default function GridTerrain({ map }: { map: IslandMap }) {
             continue;
           }
 
-          addCell(grass, inGround, cx, cz, x, y, z);
+          addCell(grass, inGround, cx, cz, x, y, z, undefined, groundAt);
 
           // Walkable step down to a neighbour: a sloped skirt, not a kit
           // piece. This is the whole visible difference between a bank and a
           // cliff, and it lives here because it is terrain, not an object.
-          for (const [dx, dz, drop] of bankEdges(map, cx, cz)) {
-            addBank(grass, x, z, y, y - drop * LEVEL_STEP, dx, dz);
+          // Skirts are what the height field REPLACES. A skirt patched each
+          // boundary on its own, so three changes in a row came out as three
+          // ramps with treads between them. The field spreads and merges them
+          // instead, so in smooth mode there is nothing left for a skirt to do
+          // and drawing one would poke through the slope.
+          if (!smooth) {
+            for (const [dx, dz, drop] of bankEdges(map, cx, cz)) {
+              addBank(grass, x, z, y, y - drop * LEVEL_STEP, dx, dz);
+            }
           }
 
           // Grass hanging over a water edge. Without this the river simply
@@ -390,12 +419,22 @@ export default function GridTerrain({ map }: { map: IslandMap }) {
           // RiverBankWalls to hide the same seam, and this is the kit's own
           // answer to it.
           for (const [dx, dz] of waterEdges(map, cx, cz)) {
-            addFringe(fringe, x, z, y, dx, dz);
+            addFringe(fringe, x, z, groundAt ? groundAt(x, z) : y, dx, dz);
           }
 
           if (s !== Surface.Grass) {
             const m = overlays.get(s) ?? emptyMesh();
-            addCell(m, inSurface(s), cx, cz, x, y + OVERLAY_LIFT, z);
+            addCell(
+              m,
+              inSurface(s),
+              cx,
+              cz,
+              x,
+              y + OVERLAY_LIFT,
+              z,
+              undefined,
+              groundAt ? (px, pz) => groundAt(px, pz) + OVERLAY_LIFT : undefined
+            );
             overlays.set(s, m);
           }
         }
@@ -415,7 +454,7 @@ export default function GridTerrain({ map }: { map: IslandMap }) {
       }
     }
     return out;
-  }, [map, field]);
+  }, [map, field, smooth]);
 
   // The water reads its distance to the shore from a baked field rather than
   // from anything on the mesh, so this is a one-shot upload, not geometry.
