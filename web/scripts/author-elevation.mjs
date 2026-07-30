@@ -393,7 +393,16 @@ const UPLAND = [
 // CLIFF made every upland a 2-level jump from the plain, which is a cliff by
 // definition -- that is how 20% of the land ended up at L2 with 303 cliff
 // cells. One level reads as a rise you walk up.
-for (const [name, x, z, r] of UPLAND) report.push(blob(name, x, z, r, 1, false, 1));
+// FULL CLIFF (David, 2026-07-30): "keep everything either flat or with 1 unit
+// high cliffs." A level change is normally the kit's 1.5u wall, so raised ground
+// goes to CLIFF and the L0 plain meets it as a full drop. Half steps are added
+// separately and sparingly below.
+// taper CLIFF, not 1. At taper 1 the expression above resolves the outer 38% of
+// every radius to level 1, putting an L1 APRON around each L2 plateau -- and an
+// apron's whole perimeter is a half step on both sides. That is where 74% of all
+// relief was coming from, not the swells. At taper CLIFF the plateau fills
+// uniformly and meets the L0 plain as one full cliff, which is the brief.
+for (const [name, x, z, r] of UPLAND) report.push(blob(name, x, z, r, CLIFF, false, CLIFF));
 
 // A second level so the island has a summit and not just one flat shelf. It
 // insets off the level-1 mass it sits inside, which is the ACNH rule and also
@@ -433,7 +442,7 @@ const FARSIDE = [
   ["farside east", 38, 30, 11],
   ["farside west", -36, 26, 10],
 ];
-for (const [name, x, z, r] of FARSIDE) report.push(blob(name, x, z, r, 1, false, 1));
+for (const [name, x, z, r] of FARSIDE) report.push(blob(name, x, z, r, CLIFF, false, CLIFF));
 
 // 3. ROCKY SHELVES AT THE WATERLINE — the specific ask. These have to STRADDLE
 //    the coast to read as rocks at the water: sand starts at coastDist 48.5
@@ -479,7 +488,7 @@ for (const [name, deg, r] of SHELVES) {
   // ONE level, not CLIFF. At CLIFF these seven shelves put a 2-level face
   // around the island's rim, which is what made the outline read as a flight of
   // stairs (David: "should be the same with corners of island").
-  report.push(blob(name, Math.cos(a) * rad, Math.sin(a) * rad, r, 1));
+  report.push(blob(name, Math.cos(a) * rad, Math.sin(a) * rad, r, CLIFF));
 }
 
 /**
@@ -521,6 +530,39 @@ function widen(rounds = 6) {
     }
   }
   return dropped;
+}
+
+/**
+ * A handful of level-1 rises, and only a handful.
+ *
+ * David, 2026-07-30: half steps "will be rarely used for island naturalness,
+ * otherwise keep everything either flat or with 1 unit high cliffs." Everything
+ * else on this island is either the L0 plain or a full-cliff terrace at CLIFF,
+ * so without these there would be no half steps at all -- and a plain that is
+ * perfectly flat right up to every wall reads as machined.
+ *
+ * These are the exception that makes the rule look deliberate: five soft swells
+ * of a single level, blended by `heightField` into rises you walk over without
+ * noticing, placed away from the terraces so they never stack into a staircase.
+ */
+// SMALL, and that is the point. At radius 7-10 the five swells put 636
+// half-step cells against 161 full-cliff ones -- 80% of all relief, when the
+// brief was "rarely used". A swell's whole PERIMETER is a half step, so the
+// count scales with radius, not area. Three at radius 4-5 is a few soft rises
+// on a flat plain rather than a second terrace system.
+const SWELLS = [
+  ["swell north", -30, -14, 5],
+  ["swell south", -6, 20, 5],
+  ["swell east", 26, 6, 4],
+];
+function placeSwells() {
+  let n = 0;
+  for (const [name, x, z, r] of SWELLS) {
+    const before = report.length;
+    report.push(blob(name, x, z, r, 1));
+    if (report[before]) n++;
+  }
+  return n;
 }
 
 // ── Ramps ────────────────────────────────────────────────────────
@@ -837,6 +879,7 @@ const flipped = straighten(2);
 // a 2-cell ramp disc is exactly the kind of thin feature open(2) deletes.
 const ramps = carveRamps(3);
 const stepFix = enforceSteps();
+const swells = placeSwells();
 const widened = widen();
 const specks = removeSpecks();
 enforceSteps();
@@ -875,7 +918,7 @@ for (let i = 0; i < map.levels.length; i++) {
 console.log("features applied:");
 for (const r of report) console.log(`  ${r.name.padEnd(26)} ${String(r.cells).padStart(5)} cells raised`);
 console.log(
-  `\nwiden dropped: ${widened} · open(2) dropped: ${opened} · straighten(2) flipped: ${flipped} · ramps carved: ${ramps.length} · constraint passes: ${stepFix.passes} (settled: ${stepFix.settled}) · specks removed: ${specks}`
+  `\nswells: ${swells} · widen dropped: ${widened} · open(2) dropped: ${opened} · straighten(2) flipped: ${flipped} · ramps carved: ${ramps.length} · constraint passes: ${stepFix.passes} (settled: ${stepFix.settled}) · specks removed: ${specks}`
 );
 console.log(`protected cells modified: ${violations}${violations ? "  <<< BUG" : ""}`);
 console.log("\nlevels over land:");
@@ -952,7 +995,7 @@ console.log(
 console.log(
   // NOT "walkable" -- nothing is, since 2026-07-30. Both tiers are faces; they
   // differ only in height and in which one the kit can draw.
-  `relief: ${halfCells} half-cliff cells at ${grid.HALF_CLIFF_HEIGHT}u (${(
+  `relief: ${halfCells} half-cliff cells at ${grid.HALF_STEP_RISE}u (${(
     (100 * halfCells) /
     Math.max(1, halfCells + cliffFaceCells)
   ).toFixed(0)}%) vs ${cliffFaceCells} full-cliff cells at ${grid.CLIFF_HEIGHT}u`

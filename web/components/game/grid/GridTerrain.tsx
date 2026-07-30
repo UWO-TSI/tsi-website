@@ -43,7 +43,7 @@ import {
   cellToWorldZ,
   needsCliff,
   halfCliffEdges,
-  HALF_CLIFF_HEIGHT,
+  cellHeightRange,
   waterEdges,
   FRINGE_DROP,
   heightField,
@@ -101,8 +101,6 @@ const WATER_FRINGE = 9;
  */
 const RAMP_LAYER = 10;
 
-/** The rock face of a half cliff. Wears mCliff, same as the kit pieces. */
-const HALF_CLIFF = 11;
 
 /**
  * How far the fringe card sits OUTBOARD of the land edge, in tiles.
@@ -198,66 +196,6 @@ function addCell(
   for (let i = 0; i < n; i++) {
     mesh.idx.push(base, base + 1 + i, base + 1 + ((i + 1) % n));
   }
-}
-
-/**
- * Append one HALF-CLIFF face: a vertical wall exactly one level tall.
- *
- * David, 2026-07-30 wants two cliff heights and no slopes. The kit only ships
- * the 1.5u wall, so the 0.75u one is built here from the same three parts the
- * GLB carries: this face in mCliff, the grass lip that the ground quad above
- * already provides, and the mGrassCliffXlu drape added separately.
- *
- * Vertical, flush with the cell boundary. The old sloped skirt ran 1.1 tiles
- * out into the lower neighbour; a face does not, which is why the half cliff
- * costs no flat ground where the skirt ate over a tile of it per edge.
- */
-function addHalfCliff(
-  mesh: Mesh,
-  x: number,
-  z: number,
-  topY: number,
-  dx: number,
-  dz: number
-) {
-  const half = TILE / 2;
-  const bottomY = topY - HALF_CLIFF_HEIGHT;
-  // Along-edge axis is the perpendicular of the outward direction.
-  const ax = dz;
-  const az = dx;
-  const ex = x + dx * half;
-  const ez = z + dz * half;
-
-  const base = mesh.pos.length / 3;
-  const pts: [number, number, number][] = [
-    [ex - ax * half, topY, ez - az * half],
-    [ex + ax * half, topY, ez + az * half],
-    [ex + ax * half, bottomY, ez + az * half],
-    [ex - ax * half, bottomY, ez - az * half],
-  ];
-  // V runs top to bottom over exactly one face height so the rock is at the
-  // same scale as the kit's, which matters when a half and a full cliff meet.
-  const uAt = (px: number, pz: number) => (ax !== 0 ? pz : px);
-  const uvs: [number, number][] = [
-    [uAt(pts[0][0], pts[0][2]), 0],
-    [uAt(pts[1][0], pts[1][2]), 0],
-    [uAt(pts[2][0], pts[2][2]), HALF_CLIFF_HEIGHT],
-    [uAt(pts[3][0], pts[3][2]), HALF_CLIFF_HEIGHT],
-  ];
-  for (let i = 0; i < 4; i++) {
-    mesh.pos.push(pts[i][0], pts[i][1], pts[i][2]);
-    mesh.uv.push(uvs[i][0], uvs[i][1]);
-    mesh.nrm.push(dx, 0, dz);
-  }
-  // Wound from the cross product against the known normal, the same way the
-  // other faces are: keying on the sign of the direction instead leaves two of
-  // the four orientations backfacing, which culls them into a hole.
-  const [p0, p1, p2] = pts;
-  const ux = p1[0] - p0[0], uy = p1[1] - p0[1], uz = p1[2] - p0[2];
-  const vx = p2[0] - p0[0], vy = p2[1] - p0[1], vz = p2[2] - p0[2];
-  const facing = (uy * vz - uz * vy) * dx + (uz * vx - ux * vz) * 0 + (ux * vy - uy * vx) * dz;
-  if (facing > 0) mesh.idx.push(base, base + 1, base + 2, base, base + 2, base + 3);
-  else mesh.idx.push(base, base + 3, base + 2, base, base + 2, base + 1);
 }
 
 /**
@@ -424,8 +362,22 @@ export default function GridTerrain({ map }: { map: IslandMap }) {
     const water = TUNING_DEFAULTS.water;
     const dipAt = (px: number, pz: number) => bedDepth(sampleShore(field, px, pz), water);
 
-    const groundAt = smooth
-      ? (px: number, pz: number) => sampleHeightField(map, smooth, px, pz)
+    /**
+     * Per-CELL sampler, clamped to what that cell can legitimately reach.
+     *
+     * Not a single shared function, because the clamp depends on the cell: a
+     * corner on a cliff boundary is pinned to the cliff top, and without the
+     * clamp the low cell beside it samples that corner and rides halfway up the
+     * wall. See `cellHeightRange`.
+     */
+    const groundFor = smooth
+      ? (cx: number, cz: number) => {
+          const [lo, hi] = cellHeightRange(map, cx, cz);
+          return (px: number, pz: number) => {
+            const h = sampleHeightField(map, smooth, px, pz);
+            return h < lo ? lo : h > hi ? hi : h;
+          };
+        }
       : undefined;
 
     const inGround: LayerTest = (cx, cz) =>
@@ -439,7 +391,6 @@ export default function GridTerrain({ map }: { map: IslandMap }) {
       const bed = emptyMesh();
       const fringe = emptyMesh();
       const ramp = emptyMesh();
-      const halfCliff = emptyMesh();
       const overlays = new Map<number, Mesh>();
 
       for (let cz = chunk.minCellZ; cz <= chunk.maxCellZ; cz++) {
@@ -456,7 +407,7 @@ export default function GridTerrain({ map }: { map: IslandMap }) {
           if (isRamp(s)) {
             const dir = rampDir(map, cx, cz);
             if (dir) addRamp(ramp, x, z, y, dir[0], dir[1]);
-            else addCell(grass, inGround, cx, cz, x, y, z, undefined, groundAt);
+            else addCell(grass, inGround, cx, cz, x, y, z, undefined, groundFor?.(cx, cz));
             continue;
           }
 
@@ -475,26 +426,29 @@ export default function GridTerrain({ map }: { map: IslandMap }) {
             continue;
           }
 
-          addCell(grass, inGround, cx, cz, x, y, z, undefined, groundAt);
+          addCell(grass, inGround, cx, cz, x, y, z, undefined, groundFor?.(cx, cz));
 
           // Walkable step down to a neighbour: a sloped skirt, not a kit
           // piece. This is the whole visible difference between a bank and a
           // cliff, and it lives here because it is terrain, not an object.
-          // One-level drops are HALF CLIFFS: a vertical face, not a slope. Two
-          // levels is a full drop and the kit piece covers it, drawn by
-          // GridCliffs -- a cell can have both, on different sides.
-          for (const [dx, dz] of halfCliffEdges(map, cx, cz)) {
-            addHalfCliff(halfCliff, x, z, y, dx, dz);
-            // The same drape the kit hangs over a full cliff lip.
-            addFringe(fringe, x, z, y, dx, dz);
-          }
+          // A one-level drop is BLENDED, not faced. David, 2026-07-30: "the half
+          // steps needs blending, and will be rarely used for island
+          // naturalness, otherwise keep everything either flat or with 1 unit
+          // high cliffs."
+          //
+          // The height field already does exactly that: its blur crosses
+          // anything under CLIFF_LEVELS and treats a full drop as a barrier, so
+          // a one-level change comes out as a soft rise and a two-level change
+          // stays razor sharp for the kit piece. Nothing to draw here -- and the
+          // previous commit drew a vertical face INTO that same slope, which is
+          // the bug this replaces.
 
           // Grass hanging over a water edge. Without this the river simply
           // stops where its cells end -- the old world needed RiverBanks and
           // RiverBankWalls to hide the same seam, and this is the kit's own
           // answer to it.
           for (const [dx, dz] of waterEdges(map, cx, cz)) {
-            addFringe(fringe, x, z, groundAt ? groundAt(x, z) : y, dx, dz);
+            addFringe(fringe, x, z, groundFor ? groundFor(cx, cz)(x, z) : y, dx, dz);
           }
 
           if (s !== Surface.Grass) {
@@ -508,7 +462,9 @@ export default function GridTerrain({ map }: { map: IslandMap }) {
               y + OVERLAY_LIFT,
               z,
               undefined,
-              groundAt ? (px, pz) => groundAt(px, pz) + OVERLAY_LIFT : undefined
+              groundFor
+                ? ((g) => (px: number, pz: number) => g(px, pz) + OVERLAY_LIFT)(groundFor(cx, cz))
+                : undefined
             );
             overlays.set(s, m);
           }
@@ -524,7 +480,6 @@ export default function GridTerrain({ map }: { map: IslandMap }) {
       emit(Surface.River, river);
       emit(WATER_FRINGE, fringe);
       emit(RAMP_LAYER, ramp);
-      emit(HALF_CLIFF, halfCliff);
       for (const s of OVERLAY_SURFACES) {
         const m = overlays.get(s);
         if (m) emit(s, m);
@@ -561,7 +516,6 @@ export default function GridTerrain({ map }: { map: IslandMap }) {
       [RIVER_BED]: "mRiverBed",
       [WATER_FRINGE]: "mGrassRiverXlu",
       [RAMP_LAYER]: "mRoadStone",
-      [HALF_CLIFF]: "mCliff",
     };
     const m = new Map<number, THREE.Material>();
     for (const s of [
@@ -570,7 +524,6 @@ export default function GridTerrain({ map }: { map: IslandMap }) {
       Surface.River,
       WATER_FRINGE,
       RAMP_LAYER,
-      HALF_CLIFF,
       ...OVERLAY_SURFACES,
     ]) {
       const sharedName = SHARED[s];

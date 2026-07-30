@@ -58,48 +58,46 @@ Rules that follow, all enforced by ACNH and none of them optional if the art is 
 
 1. **Integer cells, integer levels.** Position is `(cellX, cellZ, level)`. No float
    placement.
-1b. **TWO cliff heights, and neither is a slope** (David, 2026-07-30). The
-   island reads too vertical with one tall tier, so:
+1b. **Flat, full cliffs, and rare blended half steps** (David, 2026-07-30: "the
+   half steps needs blending, and will be rarely used for island naturalness,
+   otherwise keep everything either flat or with 1 unit high cliffs").
 
-   | drop | height | drawn as |
-   |---|---|---|
-   | 1 level | **0.75u** half cliff | generated geometry, the common case |
-   | 2 levels | **1.5u** full cliff | the measured kit piece, high ground only |
+   | state | height | drawn as | share |
+   |---|---|---|---|
+   | flat | — | ground quad | ~80% of land |
+   | full cliff, 2 levels | **1.5u** | the kit piece | 18.6% of land, 79% of relief |
+   | half step, 1 level | **0.75u** | BLENDED by `heightField` | 0.9% of land, 21% of relief |
 
-   `LEVEL_STEP = 0.75`, `CLIFF_LEVELS = 2`, and `isWalkableDrop()` is constant
-   FALSE — both tiers are faces. This is not the 2026-07-28 half step, which was
-   a walkable slope; that tier forced sloped skirts, skirts in a row read as a
-   staircase, and a smoothed height field existed only to fix that. A half
-   CLIFF has none of those consequences and costs no flat ground, because a
-   vertical face sits on the cell boundary where a 1.1-tile skirt ate into the
-   neighbour.
+   `LEVEL_STEP = 0.75`, `CLIFF_LEVELS = 2`. A half step is **not geometry** — the
+   blur in `heightField` crosses any drop under `CLIFF_LEVELS` and treats a full
+   drop as a barrier, so soft-where-soft and sharp-where-the-kit-draws falls out
+   of one function. An earlier pass built a vertical half-height face and drew it
+   *into* the slope the field was already smoothing; don't reintroduce it.
 
-   The kit only ships the 1.5u wall, so the half cliff is built from the same
-   three parts the GLB carries — a face in `mCliff`, the grass lip the ground
-   quad above already provides, and the `mGrassCliffXlu` drape. Scaling a kit
-   piece to 0.5 was the alternative and squashes the rock texture by half, which
-   reads as a different material where the two meet.
+   **`cellHeightRange` is load-bearing.** The field stores one height per cell
+   CORNER, but a corner on a cliff boundary belongs to two cells that must
+   disagree — the cliff top wants 1.5u, the ground below wants 0. The pinning
+   pass resolves it for the cliff, which then drags the low cell's edge halfway
+   up the wall (measured: 0.75 exactly). The mesh does not share vertices, so
+   each cell clamps the field to its own reachable range, using the same barrier
+   the blur does.
 
-   A cell can have BOTH tiers on different sides; `halfCliffEdges` and
-   `needsCliff` are independent, so the autotile is never asked for a face it
-   has no piece for.
+   **Authoring: `blob`'s taper is the trap.** `want = level <= taper ? level :
+   t < 0.62 ? level : level - taper`, so `taper = 1` on a CLIFF blob resolves the
+   outer 38% of the radius to level 1 — an L1 apron around every plateau, whose
+   whole perimeter is a half step on both sides. That single argument was 74% of
+   all relief. Pass `taper = CLIFF` so plateaus fill uniformly.
 
-   **Target distribution: mostly flat, occasional half step, full cliffs only on
-   high ground.** Currently 81% level 0, 15% level 1, 3.8% level 2 — 537 half
-   faces against 82 full-cliff cells.
+   Half steps come only from `SWELLS` in the authoring script: three rises of
+   radius 4-5. A swell's PERIMETER is the half step, so the count scales with
+   radius, not area.
 
-   **Half steps you CROSS are ramps.** `Surface.Ramp` (8) marks a cell stored at
-   the LOWER level, direction derived from the neighbour one level up. `dropTo`
-   reports a ramp as no drop and `sameLevelOrHigher` reports it as the same
-   tier, so the cliff outline routes around the opening instead of sealing it.
-
-   Ramps are load-bearing: with nothing walkable, a flood fill found the island
-   broken into disconnected regions stranding 22% of the land.
-   `scripts/author-elevation.mjs` auto-places them and the check is
-   reachability, currently 100% on 13 ramps.
-
-   `heightField` in grid.ts is inert while nothing is walkable and revives if a
-   walkable tier is ever reintroduced.
+   **Ramps cross full cliffs.** `Surface.Ramp` (8), stored at the LOWER level,
+   direction derived from the neighbour one level up. `dropTo` reports a ramp as
+   no drop and `sameLevelOrHigher` reports it as the same tier, so the cliff
+   outline routes around the opening rather than sealing it. Auto-placed, and the
+   check is reachability — currently 100% on 21 ramps. Without them, hard cliffs
+   strand 22% of the island.
 2. **One autotile vocabulary.** `{Kit}{Class}{Variant}_{Rotation}`; class 0-8 from the
    8 neighbours, A/B/C for diagonals, 0-3 pre-baked rotations. The same function drives
    cliff (44 pieces), river (45), waterfall (47) and road (20 per material).

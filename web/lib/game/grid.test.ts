@@ -6,7 +6,8 @@ import {
   CLIFF_HEIGHT,
   isWalkableDrop,
   halfCliffEdges,
-  HALF_CLIFF_HEIGHT,
+  cellHeightRange,
+  HALF_STEP_RISE,
   heightField,
   sampleHeightField,
   bankEdges,
@@ -62,10 +63,11 @@ describe("constants", () => {
     expect(LEVEL_STEP).toBe(0.75);
     expect(CLIFF_LEVELS).toBe(2);
     expect(CLIFF_HEIGHT).toBeCloseTo(1.5, 6);
-    expect(HALF_CLIFF_HEIGHT).toBeCloseTo(0.75, 6);
-    expect(HALF_CLIFF_HEIGHT * 2).toBeCloseTo(CLIFF_HEIGHT, 6);
-    // Nothing is walkable at any drop -- both tiers are faces.
-    expect(isWalkableDrop()).toBe(false);
+    expect(HALF_STEP_RISE).toBeCloseTo(0.75, 6);
+    expect(HALF_STEP_RISE * 2).toBeCloseTo(CLIFF_HEIGHT, 6);
+    // A half step is BLENDED, so it is walkable; a full drop is a kit cliff.
+    expect(isWalkableDrop(1)).toBe(true);
+    expect(isWalkableDrop(CLIFF_LEVELS)).toBe(false);
     expect(WATER_DROP).toBeCloseTo(0.078, 5);
     expect(CHUNK).toBe(16);
     expect(MAX_LEVEL).toBe(6);
@@ -389,16 +391,18 @@ describe("autotile", () => {
   });
 });
 
-describe("leveling: every change is a cliff", () => {
+describe("leveling: flat, full cliffs, and rare blended half steps", () => {
   // David 2026-07-29, after looking at real ACNH terrain: "keep game mostly flat
   // and have cliffs if there's level change so that there's no more slope that
   // will affect building." This replaces the 2026-07-28 half-step rule. Half
   // steps are now stairs and ramps you PLACE, not ground you walk up.
-  it("calls no drop walkable", () => {
-    expect(isWalkableDrop()).toBe(false);
+  it("calls a blended half step walkable and a full drop not", () => {
+    expect(isWalkableDrop(0)).toBe(false); // flat is not a step
+    expect(isWalkableDrop(1)).toBe(true); // blended by heightField
+    expect(isWalkableDrop(CLIFF_LEVELS)).toBe(false); // kit cliff
   });
 
-  it("makes a one-level drop a HALF cliff, with no kit piece", () => {
+  it("makes a one-level drop a blended step, with no kit piece", () => {
     const map = createMap(5, 5);
     for (let i = 0; i < 25; i++) map.levels[i] = 1;
     setCell(map, 2, 2, 2, Surface.Grass); // one level above its neighbours
@@ -436,19 +440,37 @@ describe("leveling: every change is a cliff", () => {
     expect(LEVEL_STEP * 2).toBeCloseTo(CLIFF_HEIGHT, 6);
   });
 
-  it("leaves the height field inert, since nothing is walkable", () => {
-    // Still inert: the blur skips samples a full cliff away, and a half cliff is
-    // a hard face too, so no corner is ever smoothed across either tier.
-    // heightField's blur skips any sample a full cliff from the corner's home
-    // level. At CLIFF_LEVELS 1 that is every differing sample, so each corner
-    // keeps its own height and plateaus stay hard-edged with no special case.
-    const map = createMap(9, 9);
-    for (let i = 0; i < 81; i++) map.levels[i] = 0;
-    // A FULL cliff, so the blur's barrier definitely applies.
-    for (let z = 0; z < 9; z++) for (let x = 5; x < 9; x++) setCell(map, x, z, CLIFF_LEVELS, Surface.Grass);
-    const f = heightField(map);
-    expect(sampleHeightField(map, f, cellToWorldX(map, 2), cellToWorldZ(map, 4))).toBeCloseTo(0, 6);
-    expect(sampleHeightField(map, f, cellToWorldX(map, 7), cellToWorldZ(map, 4))).toBeCloseTo(
+  it("blends a half step but never a full cliff", () => {
+    // The whole mechanism in one test: the blur crosses a one-level drop and
+    // treats a full drop as a barrier, so half steps come out soft and cliff
+    // tops stay flat right up to the lip where the kit piece sits.
+    const half = createMap(13, 13);
+    for (let z = 0; z < 13; z++) for (let x = 7; x < 13; x++) setCell(half, x, z, 1, Surface.Grass);
+    const hf = heightField(half);
+    // Three cells before the boundary the ground has already started to lift.
+    const before = sampleHeightField(half, hf, cellToWorldX(half, 5), cellToWorldZ(half, 6));
+    expect(before).toBeGreaterThan(0.01);
+    expect(before).toBeLessThan(LEVEL_STEP);
+    // Halfway across the boundary itself, which is what makes it a blend rather
+    // than a step placed on one side.
+    expect(sampleHeightField(half, hf, cellToWorldX(half, 7), cellToWorldZ(half, 6))).toBeCloseTo(
+      LEVEL_STEP / 2,
+      2
+    );
+
+    const full = createMap(13, 13);
+    for (let z = 0; z < 13; z++) for (let x = 7; x < 13; x++) setCell(full, x, z, CLIFF_LEVELS, Surface.Grass);
+    const ff = heightField(full);
+    // Same place, across a FULL drop: dead flat, because the blur cannot cross.
+    // Clamped to what the cell can reach: the raw field reads 0.75 here because
+    // the shared corner is pinned to the cliff top, and cellHeightRange is what
+    // stops the low ground riding halfway up the wall.
+    const [lo, hi] = cellHeightRange(full, 6, 6);
+    expect(hi).toBeCloseTo(0, 6);
+    const raw = sampleHeightField(full, ff, cellToWorldX(full, 6), cellToWorldZ(full, 6));
+    expect(Math.min(hi, Math.max(lo, raw))).toBeCloseTo(0, 6);
+    // And the cliff top is exactly at its level for the piece to sit on.
+    expect(sampleHeightField(full, ff, cellToWorldX(full, 10), cellToWorldZ(full, 6))).toBeCloseTo(
       CLIFF_LEVELS * LEVEL_STEP,
       6
     );

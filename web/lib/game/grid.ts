@@ -87,12 +87,13 @@ export const GRASS_COLOR = 0x8fc96b;
  * kill" -- and his ACNH reference has no slopes in it at all, only hard cliffs
  * with a rounded grass lip.
  *
- * 2 gives a transition about 3 cells wide at roughly 21 degrees: still a slope
- * you walk up rather than a step, but it reads as the edge of a terrace instead
- * of as rolling countryside, and it leaves 11 of the median 14-cell flat run
- * intact instead of 6.
+ * 3 now, not 2, because the job changed. When every level change was a half step
+ * the spread was a direct tax on flat buildable ground, so it had to be tight.
+ * Half steps are RARE now -- a level change is normally a full cliff -- and the
+ * only reason they exist is island naturalness, so a softer blend is what they
+ * are for and it costs almost no flat ground because there are so few.
  */
-export const SLOPE_SPREAD = 2;
+export const SLOPE_SPREAD = 3;
 
 /**
  * Continuous ground height at every cell CORNER, from the discrete level field.
@@ -211,6 +212,39 @@ export function rampHeightAt(map: IslandMap, x: number, z: number): number | nul
   const along = (dx !== 0 ? ox * dx : oz * dz) / TILE + 0.5;
   const t = Math.min(1, Math.max(0, along));
   return (levelAt(map, cx, cz) + t) * LEVEL_STEP;
+}
+
+/**
+ * The height range a cell's own surface is allowed to occupy.
+ *
+ * WHY THIS IS NEEDED, and it is not a detail. The field stores one height per
+ * cell CORNER, but a corner on a cliff boundary belongs to two cells that must
+ * disagree: the cliff top wants 1.5u and the ground below wants 0. A single
+ * value cannot be both, and the cliff-pinning pass resolves it in the cliff's
+ * favour -- which then drags the LOW cell's edge halfway up the wall when it
+ * samples that corner. Measured before this: a level-0 cell one cell from a full
+ * drop read 0.75, exactly half the cliff.
+ *
+ * The mesh does not actually share vertices -- every cell pushes its own four --
+ * so each cell may clamp the field to what IT can legitimately reach. That range
+ * is its own level plus any neighbour a blend is allowed to cross, which is the
+ * same barrier the blur itself uses. A full drop is excluded, so a cell beside a
+ * cliff stays flat and the wall stays vertical.
+ */
+export function cellHeightRange(map: IslandMap, cx: number, cz: number): [number, number] {
+  const here = levelAt(map, cx, cz);
+  let lo = here;
+  let hi = here;
+  for (const [dx, dz] of DIR_OFFSETS) {
+    const nx = cx + dx;
+    const nz = cz + dz;
+    if (!inBounds(map, nx, nz) || isVoid(surfaceAt(map, nx, nz))) continue;
+    const l = levelAt(map, nx, nz);
+    if (Math.abs(l - here) >= CLIFF_LEVELS) continue; // a cliff, not a blend
+    if (l < lo) lo = l;
+    if (l > hi) hi = l;
+  }
+  return [lo * LEVEL_STEP, hi * LEVEL_STEP];
 }
 
 /** Bilinear sample of a corner height field at a world position. */
@@ -885,32 +919,32 @@ export function dropTo(map: IslandMap, cx: number, cz: number, nx: number, nz: n
 }
 
 /** Is the step down to this neighbour walkable, i.e. a bank rather than a cliff? */
-export function isWalkableDrop(): boolean {
-  // NOTHING is walkable. Both tiers are cliffs -- see HALF_CLIFF_HEIGHT. Kept as
-  // a named constant-false rather than deleted because callers reading
-  // "is this walkable" is clearer than them knowing there is no such thing.
-  return false;
+export function isWalkableDrop(drop: number): boolean {
+  // A one-level drop is BLENDED by `heightField` into a soft rise, so it IS
+  // walkable. A full drop is a kit cliff and is not.
+  return drop > 0 && drop < CLIFF_LEVELS;
 }
 
 /**
- * The short cliff, world units. One level.
+ * The rise a blended half step covers, world units. One level.
  *
- * David, 2026-07-30: "there should be a half step cliff and a full cliff, and
- * this island overall should be flat with occasional half step, and only in
- * certain high terrain have the full cliff."
+ * David, 2026-07-30: "the half steps needs blending, and will be rarely used for
+ * island naturalness, otherwise keep everything either flat or with 1 unit high
+ * cliffs."
  *
- * So there are two FACE HEIGHTS and neither is a slope:
+ * So the island has exactly three states, and only one of them is a face:
  *
- *   1 level  0.75u  HALF CLIFF -- generated geometry, the common case
- *   2 levels 1.50u  FULL CLIFF -- the measured kit piece, reserved for high ground
+ *   flat                          the overwhelming majority
+ *   2 levels  1.50u  FULL CLIFF   the kit piece, wherever ground does change
+ *   1 level   0.75u  HALF STEP    BLENDED by heightField, rare, for naturalness
  *
- * The kit only ships the 1.5u wall, so the half cliff cannot be a kit piece and
- * is built instead: a vertical face in mCliff, the grass lip on top, and the
- * mGrassCliffXlu drape over the edge -- the same three parts the GLB carries,
- * at half the height. Scaling a kit piece to 0.5 was the alternative and it
- * squashes the rock texture by half, which reads as a different material.
+ * A half step is deliberately NOT geometry. `heightField`'s blur crosses any
+ * drop under CLIFF_LEVELS and treats a full drop as a barrier, so this falls out
+ * of the field for free: soft where it should be soft, sharp where the kit
+ * draws. An earlier pass built a vertical half-height face instead and drew it
+ * into the same slope the field was already smoothing.
  */
-export const HALF_CLIFF_HEIGHT = LEVEL_STEP;
+export const HALF_STEP_RISE = LEVEL_STEP;
 
 /**
  * Same TIER: the test that decides where a cliff face goes.
