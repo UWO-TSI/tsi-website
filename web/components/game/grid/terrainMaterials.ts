@@ -25,6 +25,7 @@
 
 import * as THREE from "three";
 import { getGrassTexture } from "@/lib/game/grassTexture";
+import { GRASS_COLOR } from "@/lib/game/grid";
 import {
   applyWaterShader,
   waterUniforms,
@@ -97,8 +98,8 @@ const PROCEDURAL = new Set(["mGrass", "mProcGrass", "mRiver"]);
  * renders as a grey smear.
  */
 const TINT_FOR: Record<string, number> = {
-  mGrassCliffXlu: 0x7cae56,
-  mGrassRiverXlu: 0x7cae56,
+  mGrassCliffXlu: GRASS_COLOR,
+  mGrassRiverXlu: GRASS_COLOR,
 };
 
 /** Materials that are alpha-cut foliage cards, not solid surfaces. */
@@ -204,7 +205,7 @@ export function terrainMaterial(name: string): THREE.Material | null {
       // flat green. Strength is on the bench (`tuning.grass.normalStrength`).
       normalMap: isWater ? undefined : grassNormal(),
       normalScale: isWater ? undefined : new THREE.Vector2(0, 0),
-      color: isWater ? 0x568cb2 : 0x7cae56,
+      color: isWater ? 0x568cb2 : GRASS_COLOR,
       roughness: isWater ? 0.4 : 0.92,
       metalness: 0,
       transparent: isWater,

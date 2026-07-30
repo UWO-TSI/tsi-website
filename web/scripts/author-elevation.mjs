@@ -147,6 +147,21 @@ const MARGIN = 3;
  */
 const COAST_APRON = 4;
 
+/**
+ * World-unit radius around the island centre that stays dead flat.
+ *
+ * David, 2026-07-29: "should have less hills and flatter ground near the center
+ * of the island." Measured before the change, the centre was already flat to
+ * about r15 in cells, but the 25-35 band was 32% raised, so the plain the
+ * village sits on was smaller than it looked. Nothing may raise inside this.
+ *
+ * 30 rather than 22: at 22 the level histogram improved (L2 19.9% -> 7.1%) but
+ * the AMOUNT of raised ground barely moved -- 32% at r25-35, 50% at r35-45 --
+ * because the uplands sit outside 22 anyway. Only pushing the protected disc
+ * past them reduces the hill count rather than just their height.
+ */
+const CENTRE_FLAT = 30;
+
 /** Chebyshev distance to the open sea, so the apron can be enforced. */
 const seaDist = (() => {
   const d = new Int32Array(map.width * map.depth).fill(1 << 29);
@@ -211,7 +226,8 @@ const clearance = (() => {
 const canRaise = (cx, cz) =>
   isLand(cx, cz) &&
   clearance[grid.cellIndex(map, cx, cz)] >= MARGIN &&
-  seaDist[grid.cellIndex(map, cx, cz)] >= COAST_APRON;
+  seaDist[grid.cellIndex(map, cx, cz)] >= COAST_APRON &&
+  Math.hypot(wx(cx), wz(cz)) >= CENTRE_FLAT;
 
 // ── Features ─────────────────────────────────────────────────────
 // World coordinates throughout, so these read against the same numbers the
@@ -371,12 +387,21 @@ const UPLAND = [
   ["upland saddle", -16, -30, 11],
   ["upland headland", -38, -36, 9],
 ];
-for (const [name, x, z, r] of UPLAND) report.push(blob(name, x, z, r, CLIFF, false, 1));
+// LEVEL 1, NOT CLIFF (David, 2026-07-29: "1 block height difference should be
+// eased and look like natural slight height changes"). Raising straight to
+// CLIFF made every upland a 2-level jump from the plain, which is a cliff by
+// definition -- that is how 20% of the land ended up at L2 with 303 cliff
+// cells. One level reads as a rise you walk up.
+for (const [name, x, z, r] of UPLAND) report.push(blob(name, x, z, r, 1, false, 1));
 
 // A second level so the island has a summit and not just one flat shelf. It
 // insets off the level-1 mass it sits inside, which is the ACNH rule and also
 // what makes the terrace read as terrain from ground level.
-report.push(blob("upland summit", -12, -42, 11, 2 * CLIFF));
+// The island's one genuine cliff feature. At 2*CLIFF it was 4 levels up, which
+// with the uplands now at 1 would be a 3-level face that no kit piece can draw
+// and enforceSteps would cascade back down anyway. CLIFF puts it exactly one
+// cliff above its own shoulder.
+report.push(blob("upland summit", -12, -42, 11, CLIFF));
 
 // 2. Temple Rise. Its platform is level 2 sitting directly on level 0, which
 //    is an illegal 2-step face — there is no cliff piece for it. The shoulder
@@ -398,7 +423,7 @@ const FARSIDE = [
   ["farside west", -35, 26, 10],
   ["farside w-spur", -46, 17, 9],
 ];
-for (const [name, x, z, r] of FARSIDE) report.push(blob(name, x, z, r, CLIFF, false, 1));
+for (const [name, x, z, r] of FARSIDE) report.push(blob(name, x, z, r, 1, false, 1));
 
 // 3. ROCKY SHELVES AT THE WATERLINE — the specific ask. These have to STRADDLE
 //    the coast to read as rocks at the water: sand starts at coastDist 48.5
@@ -441,7 +466,10 @@ const SHELVES = [
 for (const [name, deg, r] of SHELVES) {
   const a = (deg * Math.PI) / 180;
   const rad = radiusAtCoastDist(deg, SHELF_COAST_DIST);
-  report.push(blob(name, Math.cos(a) * rad, Math.sin(a) * rad, r, CLIFF));
+  // ONE level, not CLIFF. At CLIFF these seven shelves put a 2-level face
+  // around the island's rim, which is what made the outline read as a flight of
+  // stairs (David: "should be the same with corners of island").
+  report.push(blob(name, Math.cos(a) * rad, Math.sin(a) * rad, r, 1));
 }
 
 // ── Constraints ──────────────────────────────────────────────────

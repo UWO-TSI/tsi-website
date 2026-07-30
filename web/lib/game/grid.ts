@@ -67,6 +67,16 @@ export const WATER_DROP = 0.078;
 export const FRINGE_DROP = 0.188;
 
 /**
+ * Grass colour, and the ONE place it is defined.
+ *
+ * Was 0x7CAE56 in four separate places -- the ground material, the two fringe
+ * tints, and GridTerrain's fallback swatch -- so lightening it meant finding
+ * all four. David, 2026-07-29: "the color is too dark for the grass". 0x7CAE56
+ * is a mid olive; ACNH's is brighter and yellower.
+ */
+export const GRASS_COLOR = 0x8fc96b;
+
+/**
  * Water edges: which orthogonal neighbours of a LAND cell are river.
  *
  * The counterpart to `bankEdges`. A bank is a walkable step between two land
