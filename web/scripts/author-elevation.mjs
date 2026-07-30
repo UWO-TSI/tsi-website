@@ -568,16 +568,64 @@ function placeSwells() {
 // ── Ramps ────────────────────────────────────────────────────────
 
 /**
+ * Every ramp cell left over from a previous run, reset to its surroundings.
+ *
+ * WHY THIS HAS TO EXIST. This script reads `island-map.json`, mutates it and
+ * writes it back, so its own output is its next input. Levels are recomputed
+ * from scratch every run, but SURFACES are not -- and `placeRamps` writes a
+ * surface. A ramp placed against a step that a later run flattened stays in the
+ * file forever, and the next run adds more on top.
+ *
+ * Measured before this pass existed: 21 ramp cells in the shipped map, 12 of
+ * them orphaned (no neighbour to climb to). Seven sat on ground that was flat in
+ * every direction. The renderer falls back to a plain grass quad for those, so
+ * nothing looked broken -- which is exactly why it accumulated unnoticed.
+ *
+ * The cell's original surface is gone, so it takes the most common surface among
+ * its non-ramp orthogonal neighbours. That heals a hole in a road rather than
+ * stamping grass through it.
+ */
+function clearStaleRamps() {
+  const W = map.width, D = map.depth;
+  let cleared = 0;
+  for (let z = 0; z < D; z++) {
+    for (let x = 0; x < W; x++) {
+      if (!grid.isRamp(grid.surfaceAt(map, x, z))) continue;
+      const tally = new Map();
+      for (const [dx, dz] of grid.ORTHOGONAL) {
+        const nx = x + dx, nz = z + dz;
+        if (nx < 0 || nz < 0 || nx >= W || nz >= D) continue;
+        const s = grid.surfaceAt(map, nx, nz);
+        if (grid.isRamp(s) || grid.isVoid(s) || grid.isRiver(s)) continue;
+        tally.set(s, (tally.get(s) ?? 0) + 1);
+      }
+      let pick = grid.Surface.Grass;
+      let bestN = 0;
+      for (const [s, n] of tally) if (n > bestN) { bestN = n; pick = s; }
+      grid.setCell(map, x, z, grid.levelAt(map, x, z), pick);
+      cleared++;
+    }
+  }
+  return cleared;
+}
+
+/**
  * Place a ramp into every raised region that would otherwise be unreachable.
  *
- * MEASURED NEED. With every level change a hard cliff, a flood fill that can
- * only step between cells of equal level broke the island into 7 disconnected
- * regions, stranding 2394 of 10833 walkable cells -- 22%. Ramps are not
- * decoration here, they are the only way the terrain is traversable.
+ * THE MEASUREMENT THIS PASS WAS BUILT ON WAS WRONG. It flood-filled stepping
+ * only between cells of EQUAL level, found 7 regions and 2394 stranded cells,
+ * and cut ramps accordingly. But the game does not walk that way: `isWalkableDrop`
+ * lets the player cross anything under CLIFF levels, so a half step is not a
+ * barrier and never was. Under the real rule the island is one region and
+ * nothing is stranded -- every ramp that pass placed was decoration.
  *
- * The algorithm is deliberately dumb and deterministic: grow the reachable set
- * from the largest region, then repeatedly find the best cliff edge touching it
- * and cut a ramp there, until nothing is left stranded.
+ * So the fill below uses the game's own rule. A real barrier is a gap of CLIFF
+ * levels, and a one-cell ramp cannot span one: `rampHeightAt` and `addRamp` both
+ * climb exactly one LEVEL_STEP across one tile, so a ramp against a full cliff
+ * would leave the player half a level short of the top. Rather than write that
+ * and call it a ramp, this reports the stranded region and places nothing. If
+ * terrain ever needs a cliff route, the ramp has to become a multi-cell run
+ * first -- a shape decision, not a bug fix.
  *
  * "Best" prefers a site with flat ground on BOTH sides -- a ramp landing in a
  * one-cell notch is unusable however correct the geometry is -- and among those
@@ -590,8 +638,13 @@ function placeRamps() {
     !grid.isVoid(grid.surfaceAt(map, x, z)) && !grid.isRiver(grid.surfaceAt(map, x, z));
   const lvl = (x, z) => grid.levelAt(map, x, z);
   const ORTH = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+  /** The game's rule, not a stricter one. Anything under CLIFF is a step down. */
+  const canStep = (ax, az, bx, bz) =>
+    Math.abs(lvl(ax, az) - lvl(bx, bz)) < CLIFF ||
+    grid.isRamp(grid.surfaceAt(map, ax, az)) ||
+    grid.isRamp(grid.surfaceAt(map, bx, bz));
 
-  /** Cells reachable from `seeds` stepping only between equal levels or via a ramp. */
+  /** Cells the player can actually reach from `seeds`. */
   const reach = (seeds) => {
     const seen = new Uint8Array(W * D);
     const st = [...seeds];
@@ -602,15 +655,13 @@ function placeRamps() {
       seen[i] = 1;
       for (const [dx, dz] of ORTH) {
         const nx = x + dx, nz = z + dz;
-        if (!walk(nx, nz)) continue;
-        const isRamp = grid.isRamp(grid.surfaceAt(map, nx, nz)) || grid.isRamp(grid.surfaceAt(map, x, z));
-        if (lvl(nx, nz) === lvl(x, z) || isRamp) st.push([nx, nz]);
+        if (walk(nx, nz) && canStep(x, z, nx, nz)) st.push([nx, nz]);
       }
     }
     return seen;
   };
 
-  /** Every equal-level component, biggest first. */
+  /** Every mutually-reachable component, biggest first. */
   const components = () => {
     const seen = new Uint8Array(W * D), out = [];
     for (let z = 0; z < D; z++) for (let x = 0; x < W; x++) {
@@ -621,7 +672,7 @@ function placeRamps() {
         const [a, b] = st.pop(), j = b * W + a;
         if (seen[j] || !walk(a, b)) continue;
         seen[j] = 1; cells.push([a, b]);
-        for (const [dx, dz] of ORTH) if (walk(a + dx, b + dz) && lvl(a + dx, b + dz) === lvl(a, b)) st.push([a + dx, b + dz]);
+        for (const [dx, dz] of ORTH) if (walk(a + dx, b + dz) && canStep(a, b, a + dx, b + dz)) st.push([a + dx, b + dz]);
       }
       out.push(cells);
     }
@@ -629,44 +680,11 @@ function placeRamps() {
   };
 
   const comps = components();
-  if (!comps.length) return [];
-  const placed = [];
-  let seen = reach([comps[0][0]]);
-
-  // At most one ramp per stranded component per pass, and a hard cap so a
-  // pathological map cannot spin here.
-  for (let pass = 0; pass < 40; pass++) {
-    const stranded = comps.filter((c) => !seen[c[0][1] * W + c[0][0]] && c.length >= 6);
-    if (!stranded.length) break;
-
-    let best = null;
-    for (const comp of stranded) {
-      for (const [x, z] of comp) {
-        for (const [dx, dz] of ORTH) {
-          const lx = x + dx, lz = z + dz;
-          // The low cell must be reachable and exactly one level down.
-          if (!walk(lx, lz) || !seen[lz * W + lx]) continue;
-          if (lvl(x, z) - lvl(lx, lz) !== 1) continue;
-          // Score: flat neighbours on both sides, so the ramp lands on open
-          // ground rather than in a notch.
-          let openLow = 0, openHigh = 0;
-          for (const [ax, az] of ORTH) {
-            if (walk(lx + ax, lz + az) && lvl(lx + ax, lz + az) === lvl(lx, lz)) openLow++;
-            if (walk(x + ax, z + az) && lvl(x + ax, z + az) === lvl(x, z)) openHigh++;
-          }
-          const score = openLow + openHigh;
-          if (!best || score > best.score) best = { lx, lz, dx, dz, score, size: comp.length };
-        }
-      }
-    }
-    if (!best) break;
-
-    // The ramp occupies the LOW cell: stored at the lower level, climbing dx/dz.
-    grid.setCell(map, best.lx, best.lz, lvl(best.lx, best.lz), grid.Surface.Ramp);
-    placed.push(best);
-    seen = reach([comps[0][0]]);
-  }
-  return placed;
+  if (!comps.length) return { placed: [], stranded: [] };
+  const seen = reach([comps[0][0]]);
+  // A pocket too small to stand in is not worth a route up.
+  const stranded = comps.filter((c) => !seen[c[0][1] * W + c[0][0]] && c.length >= 6);
+  return { placed: [], stranded };
 }
 
 // ── Constraints ──────────────────────────────────────────────────
@@ -888,7 +906,10 @@ enforceSteps();
 // them after both means nothing downstream can undo the only routes onto the
 // high ground. (Not to be confused with carveRamps above, which cuts terraced
 // ramp SHAPES into the level field; this marks Surface.Ramp cells.)
-const rampsPlaced = placeRamps();
+// The clear has to come first: this script's output is its own next input, so
+// last run's ramps are sitting in the file against levels that have moved since.
+const rampsCleared = clearStaleRamps();
+const { placed: rampsPlaced, stranded: rampStranded } = placeRamps();
 
 // Protected cells must be untouched. Checking "still zero" would be wrong —
 // some protected ground (the temple platform) is legitimately raised. What
@@ -921,6 +942,12 @@ console.log(
   `\nswells: ${swells} · widen dropped: ${widened} · open(2) dropped: ${opened} · straighten(2) flipped: ${flipped} · ramps carved: ${ramps.length} · constraint passes: ${stepFix.passes} (settled: ${stepFix.settled}) · specks removed: ${specks}`
 );
 console.log(`protected cells modified: ${violations}${violations ? "  <<< BUG" : ""}`);
+console.log(
+  `stale ramps cleared: ${rampsCleared} · ramps placed: ${rampsPlaced.length} · regions the player cannot reach: ${rampStranded.length}` +
+    (rampStranded.length
+      ? `  <<< ${rampStranded.map((c) => `${c.length} cells at ${c[0][0]},${c[0][1]}`).join("; ")}`
+      : "")
+);
 console.log("\nlevels over land:");
 for (const [lvl, n] of [...hist].sort((a, b) => a[0] - b[0])) {
   console.log(`  ${lvl}  ${String(n).padStart(6)}  ${((n / land) * 100).toFixed(1)}%`);
