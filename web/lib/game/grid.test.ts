@@ -5,6 +5,8 @@ import {
   CLIFF_LEVELS,
   CLIFF_HEIGHT,
   isWalkableDrop,
+  heightField,
+  sampleHeightField,
   bankEdges,
   needsCliff,
   cliffPieceFor,
@@ -48,14 +50,19 @@ describe("constants", () => {
   // changes, the art stops fitting the world — see specs/acnh-system-reference.
   it("match the measured ACNH kit", () => {
     expect(TILE).toBe(1.0);
-    // A LEVEL is a half step since 2026-07-28; the CLIFF is what the kit
-    // measures, and it is the product that must stay at the measured 1.5u.
-    expect(LEVEL_STEP).toBe(0.75);
-    expect(CLIFF_LEVELS).toBe(2);
+    // ONE level is ONE cliff piece (David, 2026-07-29). The 2026-07-28 half
+    // step is reverted: every level change is a hard cliff, and half steps are
+    // stairs and ramps you place rather than ground you walk up. The product is
+    // still the kit's measured 1.5u wall, which is the invariant that matters.
+    expect(LEVEL_STEP).toBe(1.5);
+    expect(CLIFF_LEVELS).toBe(1);
     expect(CLIFF_HEIGHT).toBeCloseTo(1.5, 6);
+    // Nothing is a walkable slope any more, at any drop.
+    expect(isWalkableDrop(1)).toBe(false);
+    expect(isWalkableDrop(2)).toBe(false);
     expect(WATER_DROP).toBeCloseTo(0.078, 5);
     expect(CHUNK).toBe(16);
-    expect(MAX_LEVEL).toBe(6);
+    expect(MAX_LEVEL).toBe(3);
   });
 });
 
@@ -85,7 +92,7 @@ describe("map access", () => {
   it("height is level times the step, with no interpolation", () => {
     const map = createMap(4, 4);
     setCell(map, 1, 1, 2, Surface.Grass);
-    expect(heightAt(map, 1, 1)).toBeCloseTo(1.5, 6);
+    expect(heightAt(map, 1, 1)).toBeCloseTo(2 * LEVEL_STEP, 6);
     expect(heightAt(map, 0, 0)).toBe(0);
   });
 
@@ -376,54 +383,53 @@ describe("autotile", () => {
   });
 });
 
-describe("leveling: bank vs cliff", () => {
-  // David 2026-07-28: "0.5 is walkable but a 1 would be considered a cliff".
-  // One level is that 0.5; CLIFF_LEVELS of them is the 1.
-  it("calls a one-level step walkable and a cliff-sized one not", () => {
+describe("leveling: every change is a cliff", () => {
+  // David 2026-07-29, after looking at real ACNH terrain: "keep game mostly flat
+  // and have cliffs if there's level change so that there's no more slope that
+  // will affect building." This replaces the 2026-07-28 half-step rule. Half
+  // steps are now stairs and ramps you PLACE, not ground you walk up.
+  it("calls no drop walkable, at any size", () => {
     expect(isWalkableDrop(0)).toBe(false); // flat is not a step
-    expect(isWalkableDrop(1)).toBe(true);
-    expect(isWalkableDrop(CLIFF_LEVELS)).toBe(false);
-    expect(isWalkableDrop(CLIFF_LEVELS + 1)).toBe(false);
+    expect(isWalkableDrop(1)).toBe(false); // one level IS a cliff now
+    expect(isWalkableDrop(2)).toBe(false);
+    expect(isWalkableDrop(3)).toBe(false);
   });
 
-  it("emits no cliff piece for a bank", () => {
+  it("emits a cliff piece for a one-level step", () => {
     const map = createMap(5, 5);
-    for (let i = 0; i < 25; i++) map.levels[i] = 1;
-    setCell(map, 2, 2, 2, Surface.Grass); // one level above its neighbours
-    expect(needsCliff(map, 2, 2)).toBe(false);
-    expect(cliffPieceFor(map, 2, 2)).toBeNull();
-  });
-
-  it("emits a cliff piece for a full step", () => {
-    const map = createMap(5, 5);
-    setCell(map, 2, 2, CLIFF_LEVELS, Surface.Grass);
+    setCell(map, 2, 2, 1, Surface.Grass);
     expect(needsCliff(map, 2, 2)).toBe(true);
     expect(cliffPieceFor(map, 2, 2)).not.toBeNull();
   });
 
-  it("reports the bank edges a cell needs a skirt on", () => {
+  it("reports no bank edges, because banks no longer exist", () => {
     const map = createMap(5, 5);
     for (let i = 0; i < 25; i++) map.levels[i] = 1;
     setCell(map, 2, 2, 2, Surface.Grass);
-    // All four orthogonals are one level down, so all four are banks.
-    expect(bankEdges(map, 2, 2)).toHaveLength(4);
-    // A cliff-sized drop is not a bank — it belongs to the kit.
-    setCell(map, 2, 2, 1 + CLIFF_LEVELS, Surface.Grass);
+    // Four orthogonal one-level drops. Under the old rule these were four
+    // walkable skirts; now every one of them is a cliff face.
     expect(bankEdges(map, 2, 2)).toHaveLength(0);
-  });
-
-  it("does not bank against open sea — the beach already runs to the water", () => {
-    const map = createMap(5, 5);
-    for (let i = 0; i < 25; i++) map.levels[i] = 1;
-    setCell(map, 2, 2, 2, Surface.Grass);
-    setCell(map, 3, 2, 0, Surface.Void);
-    expect(bankEdges(map, 2, 2).some(([dx]) => dx === 1)).toBe(false);
+    expect(needsCliff(map, 2, 2)).toBe(true);
   });
 
   it("keeps a cliff piece exactly one kit-height tall", () => {
     // The kit is 1.5u of wall and does not stack, so CLIFF_LEVELS levels of
-    // LEVEL_STEP must equal it or every face is the wrong size.
+    // LEVEL_STEP must equal it or every face is the wrong size. With both back
+    // to one-to-one, a level and a piece are the same thing again.
     expect(CLIFF_LEVELS * LEVEL_STEP).toBeCloseTo(CLIFF_HEIGHT, 6);
+    expect(LEVEL_STEP).toBeCloseTo(CLIFF_HEIGHT, 6);
+  });
+
+  it("leaves the height field inert, since nothing is walkable", () => {
+    // heightField's blur skips any sample a full cliff from the corner's home
+    // level. At CLIFF_LEVELS 1 that is every differing sample, so each corner
+    // keeps its own height and plateaus stay hard-edged with no special case.
+    const map = createMap(9, 9);
+    for (let i = 0; i < 81; i++) map.levels[i] = 0;
+    for (let z = 0; z < 9; z++) for (let x = 5; x < 9; x++) setCell(map, x, z, 1, Surface.Grass);
+    const f = heightField(map);
+    expect(sampleHeightField(map, f, cellToWorldX(map, 2), cellToWorldZ(map, 4))).toBeCloseTo(0, 6);
+    expect(sampleHeightField(map, f, cellToWorldX(map, 7), cellToWorldZ(map, 4))).toBeCloseTo(LEVEL_STEP, 6);
   });
 });
 

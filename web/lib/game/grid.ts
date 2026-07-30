@@ -38,7 +38,7 @@ export const TILE = 1.0;
  * That is the whole leveling rule, and it falls out of one number:
  * `CLIFF_LEVELS`.
  */
-export const LEVEL_STEP = 0.75;
+export const LEVEL_STEP = 1.5;
 
 /**
  * How many levels a cliff piece spans. `CLIFF_LEVELS * LEVEL_STEP` must equal
@@ -47,7 +47,7 @@ export const LEVEL_STEP = 0.75;
  * A drop of fewer levels than this is a BANK: walkable, no kit piece, drawn as
  * a sloped skirt by GridTerrain. A drop of this many or more is a CLIFF.
  */
-export const CLIFF_LEVELS = 2;
+export const CLIFF_LEVELS = 1;
 
 /** The vertical drop one cliff piece covers, world units. Matches the kit. */
 export const CLIFF_HEIGHT = CLIFF_LEVELS * LEVEL_STEP;
@@ -191,6 +191,28 @@ export function heightField(map: IslandMap, spread = SLOPE_SPREAD): Float32Array
   return out;
 }
 
+/**
+ * Ground height on a ramp cell at a world position, interpolated across it.
+ *
+ * The cell is stored at the lower level; the surface climbs one full LEVEL_STEP
+ * across the tile in `rampDir`. Returns null when this is not a ramp so callers
+ * can fall through to the flat case.
+ */
+export function rampHeightAt(map: IslandMap, x: number, z: number): number | null {
+  const cx = worldToCellX(map, x);
+  const cz = worldToCellZ(map, z);
+  const dir = rampDir(map, cx, cz);
+  if (!dir) return null;
+  const [dx, dz] = dir;
+  // How far across the tile we are, measured along the climb: 0 at the low edge,
+  // 1 at the high edge.
+  const ox = x - cellToWorldX(map, cx);
+  const oz = z - cellToWorldZ(map, cz);
+  const along = (dx !== 0 ? ox * dx : oz * dz) / TILE + 0.5;
+  const t = Math.min(1, Math.max(0, along));
+  return (levelAt(map, cx, cz) + t) * LEVEL_STEP;
+}
+
 /** Bilinear sample of a corner height field at a world position. */
 export function sampleHeightField(map: IslandMap, field: Float32Array, x: number, z: number): number {
   const W = map.width + 1;
@@ -238,7 +260,7 @@ export const CHUNK = 16;
  * Ground plus three cliff tiers, in HALF steps — so the reachable ceiling is
  * unchanged at 3 x 1.5u, it just takes twice as many levels to get there.
  */
-export const MAX_LEVEL = 3 * CLIFF_LEVELS;
+export const MAX_LEVEL = 3;
 
 // ── Surfaces ─────────────────────────────────────────────────────
 // Values are stable — they are persisted in the map file. Append only.
@@ -258,6 +280,19 @@ export const Surface = {
    * render. Distinct from River, which is water WITH a bed inside the island.
    */
   Void: 7,
+  /**
+   * A RAMP: the only way to change level on foot now that every drop is a cliff.
+   *
+   * David, 2026-07-29: "half steps which are more like stairs and ramps than
+   * anything". A ramp cell is stored at the LOWER of the two levels it joins and
+   * its direction is derived -- the orthogonal neighbour exactly one level up.
+   * Nothing is authored twice.
+   *
+   * Measured need, not a nice-to-have: with hard cliffs everywhere the island
+   * broke into 7 disconnected regions and 2394 of 10833 walkable cells (22%)
+   * became unreachable. Ramps are what make the terrain traversable at all.
+   */
+  Ramp: 8,
 } as const;
 export type SurfaceId = (typeof Surface)[keyof typeof Surface];
 
@@ -271,10 +306,32 @@ export const SURFACE_ROAD_KIT: Record<SurfaceId, string | null> = {
   [Surface.Brick]: "brick-",
   [Surface.River]: null,
   [Surface.Void]: null,
+  // A ramp wears the surface it joins, not a road kit of its own.
+  [Surface.Ramp]: null,
 };
 
 export function isRiver(s: number): boolean {
   return s === Surface.River;
+}
+
+export function isRamp(s: number): boolean {
+  return s === Surface.Ramp;
+}
+
+/**
+ * Which way a ramp climbs: the orthogonal neighbour exactly one level above it,
+ * or null when it joins nothing (an authoring mistake worth seeing rather than
+ * silently rendering flat).
+ */
+export function rampDir(map: IslandMap, cx: number, cz: number): [number, number] | null {
+  if (!isRamp(surfaceAt(map, cx, cz))) return null;
+  const here = levelAt(map, cx, cz);
+  for (const [dx, dz] of ORTHOGONAL) {
+    const n = surfaceAt(map, cx + dx, cz + dz);
+    if (isVoid(n) || isRiver(n) || isRamp(n)) continue;
+    if (levelAt(map, cx + dx, cz + dz) === here + 1) return [dx, dz];
+  }
+  return null;
 }
 
 /** True where the map has no ground at all — nothing to draw, nothing to walk. */
@@ -820,6 +877,10 @@ export const ORTHOGONAL: ReadonlyArray<readonly [number, number]> = [
 
 /** How far the neighbour at (nx, nz) sits below this cell, in levels. */
 export function dropTo(map: IslandMap, cx: number, cz: number, nx: number, nz: number): number {
+  // A ramp is the way up, so from the high side it is not a drop at all. Without
+  // this the plateau still wants a cliff piece on the ramp's face and the wall
+  // is drawn straight across the thing you are supposed to walk up.
+  if (isRamp(surfaceAt(map, nx, nz))) return 0;
   return levelAt(map, cx, cz) - levelAt(map, nx, nz);
 }
 
@@ -838,7 +899,9 @@ export function isWalkableDrop(drop: number): boolean {
  */
 export function sameLevelOrHigher(level: number) {
   return (map: IslandMap, nx: number, nz: number) =>
-    levelAt(map, nx, nz) > level - CLIFF_LEVELS;
+    // A ramp counts as the same tier for the autotile, which is what makes the
+    // cliff outline turn a corner around the opening rather than sealing it.
+    isRamp(surfaceAt(map, nx, nz)) || levelAt(map, nx, nz) > level - CLIFF_LEVELS;
 }
 
 /**

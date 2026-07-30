@@ -19,6 +19,7 @@ import {
   heightAtWorld,
   heightField,
   sampleHeightField,
+  rampHeightAt,
   type IslandMap,
   type PlacedProp,
 } from "@/lib/game/grid";
@@ -105,9 +106,18 @@ export default function GridWorld() {
     // The SAME field the mesh uses, or the player walks on a surface that is
     // not the one being drawn.
     const field = isSteppedTerrain() ? null : heightField(map);
-    setTerrainHeightProvider(
-      field ? (x, z) => sampleHeightField(map, field, x, z) : (x, z) => heightAtWorld(map, x, z)
-    );
+    /**
+     * Ramps are checked FIRST, because they are the one place the ground is not
+     * flat and the height field cannot help: its blur treats a full-cliff
+     * difference as a barrier, which at CLIFF_LEVELS 1 is every level change, so
+     * a ramp cell reads as its own flat level. Walking one would be walking
+     * through the slope.
+     */
+    setTerrainHeightProvider((x, z) => {
+      const r = rampHeightAt(map, x, z);
+      if (r !== null) return r;
+      return field ? sampleHeightField(map, field, x, z) : heightAtWorld(map, x, z);
+    });
     return () => setTerrainHeightProvider(null);
   }, [map]);
 

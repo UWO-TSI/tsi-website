@@ -35,6 +35,8 @@ import {
   surfaceAt,
   isVoid,
   isRiver,
+  isRamp,
+  rampDir,
   inBounds,
   cellToWorldX,
   cellToWorldZ,
@@ -316,6 +318,65 @@ function addFringe(
   mesh.idx.push(base, base + 1, base + 2, base, base + 2, base + 3);
 }
 
+/**
+ * Append a ramp: one cell that climbs a full level in `dir`.
+ *
+ * The only way to change level on foot now that every drop is a cliff. Stored at
+ * the LOWER level, so the low edge sits flush with the ground it leaves and the
+ * high edge meets the plateau it joins.
+ *
+ * The cliff outline routes AROUND this cell rather than sealing it, because
+ * `sameLevelOrHigher` reports a ramp as the same tier and `dropTo` reports it as
+ * no drop. Both live in grid.ts so the geometry and the autotile cannot disagree.
+ */
+function addRamp(
+  mesh: Mesh,
+  x: number,
+  z: number,
+  lowY: number,
+  dx: number,
+  dz: number
+) {
+  const s = 1 / (UV_CELLS_PER_REPEAT * TILE);
+  const half = TILE / 2;
+  const highY = lowY + LEVEL_STEP;
+  // Across-slope axis is the perpendicular of the climb.
+  const ax = dz;
+  const az = dx;
+  // Low edge is on the far side from the climb direction.
+  const lx = x - dx * half;
+  const lz = z - dz * half;
+  const hx = x + dx * half;
+  const hz = z + dz * half;
+
+  const len = Math.hypot(LEVEL_STEP, TILE) || 1;
+  const nx = (-dx * LEVEL_STEP) / len;
+  const ny = TILE / len;
+  const nz = (-dz * LEVEL_STEP) / len;
+
+  const base = mesh.pos.length / 3;
+  const pts: [number, number, number][] = [
+    [lx - ax * half, lowY, lz - az * half],
+    [lx + ax * half, lowY, lz + az * half],
+    [hx + ax * half, highY, hz + az * half],
+    [hx - ax * half, highY, hz - az * half],
+  ];
+  for (const [px, py, pz] of pts) {
+    mesh.pos.push(px, py, pz);
+    mesh.uv.push(px * s, pz * s);
+    mesh.nrm.push(nx, ny, nz);
+  }
+  // Wind from the cross product against the known normal, the same way addBank
+  // does -- keying on the sign of the direction instead gets two of the four
+  // orientations backfacing, which culls them into a hole.
+  const [a, b, c] = pts;
+  const ux = b[0] - a[0], uy = b[1] - a[1], uz = b[2] - a[2];
+  const vx = c[0] - a[0], vy = c[1] - a[1], vz = c[2] - a[2];
+  const facing = (uy * vz - uz * vy) * nx + (uz * vx - ux * vz) * ny + (ux * vy - uy * vx) * nz;
+  if (facing > 0) mesh.idx.push(base, base + 1, base + 2, base, base + 2, base + 3);
+  else mesh.idx.push(base, base + 3, base + 2, base, base + 2, base + 1);
+}
+
 function build(mesh: Mesh): THREE.BufferGeometry | null {
   if (mesh.idx.length === 0) return null;
   const g = new THREE.BufferGeometry();
@@ -382,6 +443,14 @@ export default function GridTerrain({ map }: { map: IslandMap }) {
           const x = cellToWorldX(map, cx);
           const z = cellToWorldZ(map, cz);
           const y = levelAt(map, cx, cz) * LEVEL_STEP;
+
+          // A ramp replaces its own ground quad: the sloped surface IS the cell.
+          if (isRamp(s)) {
+            const dir = rampDir(map, cx, cz);
+            if (dir) addRamp(grass, x, z, y, dir[0], dir[1]);
+            else addCell(grass, inGround, cx, cz, x, y, z, undefined, groundAt);
+            continue;
+          }
 
           if (isRiver(s)) {
             // NOT eased, and drawn full-square on purpose: the rounded grass

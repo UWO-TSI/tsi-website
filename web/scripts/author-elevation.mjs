@@ -160,7 +160,7 @@ const COAST_APRON = 4;
  * because the uplands sit outside 22 anyway. Only pushing the protected disc
  * past them reduces the hill count rather than just their height.
  */
-const CENTRE_FLAT = 30;
+const CENTRE_FLAT = 34;
 
 /** Chebyshev distance to the open sea, so the apron can be enforced. */
 const seaDist = (() => {
@@ -379,13 +379,14 @@ const report = [];
 // on eyeballed coordinates: the centres below are the local maxima of distance
 // to the nearest road, bank or building, so each blob has room to be a mass
 // rather than a ribbon squeezed between two paths.
+// MOSTLY FLAT (David, 2026-07-29). One level is now a full 1.5u cliff, so every
+// raised region is a hard wall you cannot walk up -- six overlapping uplands
+// covering half the island read as a maze rather than as terrain. Reduced to
+// three, and the saddle and headland are gone entirely.
 const UPLAND = [
-  ["upland west", -24, -42, 14],
-  ["upland centre", -10, -44, 14],
-  ["upland c-east", 4, -41, 13],
-  ["upland east", 17, -32, 12],
-  ["upland saddle", -16, -30, 11],
-  ["upland headland", -38, -36, 9],
+  ["upland west", -22, -42, 12],
+  ["upland centre", -6, -44, 13],
+  ["upland east", 14, -34, 10],
 ];
 // LEVEL 1, NOT CLIFF (David, 2026-07-29: "1 block height difference should be
 // eased and look like natural slight height changes"). Raising straight to
@@ -401,7 +402,11 @@ for (const [name, x, z, r] of UPLAND) report.push(blob(name, x, z, r, 1, false, 
 // with the uplands now at 1 would be a 3-level face that no kit piece can draw
 // and enforceSteps would cascade back down anyway. CLIFF puts it exactly one
 // cliff above its own shoulder.
-report.push(blob("upland summit", -12, -42, 11, CLIFF));
+// ONE terrace, not two. At 1.5u per level a second terrace is 3u of wall
+// stacked in two pieces, which is the tallest thing on the island by a long way
+// and reads as a fortress. The upland is the high ground; it does not need a
+// peak on top of it.
+report.push(blob("upland summit", -10, -43, 7, 1));
 
 // 2. Temple Rise. Its platform is level 2 sitting directly on level 0, which
 //    is an illegal 2-step face — there is no cliff piece for it. The shoulder
@@ -417,11 +422,10 @@ report.push(blob("temple shoulder", 0, 31.8, 13, CLIFF, true));
 
 // 3. The far side needs relief too, or half the island is a lawn. Same rule:
 //    the widest pockets clear of the road grid.
+// Two, not four. The spurs were thin slivers that became one-cell-wide walls.
 const FARSIDE = [
-  ["farside east", 37, 32, 12],
-  ["farside e-spur", 48, 23, 9],
-  ["farside west", -35, 26, 10],
-  ["farside w-spur", -46, 17, 9],
+  ["farside east", 38, 30, 11],
+  ["farside west", -36, 26, 10],
 ];
 for (const [name, x, z, r] of FARSIDE) report.push(blob(name, x, z, r, 1, false, 1));
 
@@ -454,13 +458,13 @@ function radiusAtCoastDist(deg, target) {
   return (lo + hi) / 2;
 }
 
+// THREE, not seven. At one-level-equals-one-cliff, seven shelves put a ring of
+// hard walls around the rim and the island's outline became a fortification.
+// Three reads as a few rocky bluffs looking over the sand, which was the
+// original intent.
 const SHELVES = [
-  ["shelf 35deg", 35, 5.0],
   ["shelf 110deg", 110, 5.5],
-  ["shelf 140deg", 140, 4.5],
-  ["shelf 215deg", 215, 5.0],
   ["shelf 250deg", 250, 5.5],
-  ["shelf 285deg", 285, 4.5],
   ["shelf 320deg", 320, 5.0],
 ];
 for (const [name, deg, r] of SHELVES) {
@@ -470,6 +474,110 @@ for (const [name, deg, r] of SHELVES) {
   // around the island's rim, which is what made the outline read as a flight of
   // stairs (David: "should be the same with corners of island").
   report.push(blob(name, Math.cos(a) * rad, Math.sin(a) * rad, r, 1));
+}
+
+// ── Ramps ────────────────────────────────────────────────────────
+
+/**
+ * Place a ramp into every raised region that would otherwise be unreachable.
+ *
+ * MEASURED NEED. With every level change a hard cliff, a flood fill that can
+ * only step between cells of equal level broke the island into 7 disconnected
+ * regions, stranding 2394 of 10833 walkable cells -- 22%. Ramps are not
+ * decoration here, they are the only way the terrain is traversable.
+ *
+ * The algorithm is deliberately dumb and deterministic: grow the reachable set
+ * from the largest region, then repeatedly find the best cliff edge touching it
+ * and cut a ramp there, until nothing is left stranded.
+ *
+ * "Best" prefers a site with flat ground on BOTH sides -- a ramp landing in a
+ * one-cell notch is unusable however correct the geometry is -- and among those
+ * the widest, so ramps land on open ground rather than on a spur.
+ */
+function placeRamps() {
+  const W = map.width, D = map.depth;
+  const walk = (x, z) =>
+    x >= 0 && z >= 0 && x < W && z < D &&
+    !grid.isVoid(grid.surfaceAt(map, x, z)) && !grid.isRiver(grid.surfaceAt(map, x, z));
+  const lvl = (x, z) => grid.levelAt(map, x, z);
+  const ORTH = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+
+  /** Cells reachable from `seeds` stepping only between equal levels or via a ramp. */
+  const reach = (seeds) => {
+    const seen = new Uint8Array(W * D);
+    const st = [...seeds];
+    while (st.length) {
+      const [x, z] = st.pop();
+      const i = z * W + x;
+      if (seen[i] || !walk(x, z)) continue;
+      seen[i] = 1;
+      for (const [dx, dz] of ORTH) {
+        const nx = x + dx, nz = z + dz;
+        if (!walk(nx, nz)) continue;
+        const isRamp = grid.isRamp(grid.surfaceAt(map, nx, nz)) || grid.isRamp(grid.surfaceAt(map, x, z));
+        if (lvl(nx, nz) === lvl(x, z) || isRamp) st.push([nx, nz]);
+      }
+    }
+    return seen;
+  };
+
+  /** Every equal-level component, biggest first. */
+  const components = () => {
+    const seen = new Uint8Array(W * D), out = [];
+    for (let z = 0; z < D; z++) for (let x = 0; x < W; x++) {
+      const i = z * W + x;
+      if (seen[i] || !walk(x, z)) continue;
+      const cells = [], st = [[x, z]];
+      while (st.length) {
+        const [a, b] = st.pop(), j = b * W + a;
+        if (seen[j] || !walk(a, b)) continue;
+        seen[j] = 1; cells.push([a, b]);
+        for (const [dx, dz] of ORTH) if (walk(a + dx, b + dz) && lvl(a + dx, b + dz) === lvl(a, b)) st.push([a + dx, b + dz]);
+      }
+      out.push(cells);
+    }
+    return out.sort((a, b) => b.length - a.length);
+  };
+
+  const comps = components();
+  if (!comps.length) return [];
+  const placed = [];
+  let seen = reach([comps[0][0]]);
+
+  // At most one ramp per stranded component per pass, and a hard cap so a
+  // pathological map cannot spin here.
+  for (let pass = 0; pass < 40; pass++) {
+    const stranded = comps.filter((c) => !seen[c[0][1] * W + c[0][0]] && c.length >= 6);
+    if (!stranded.length) break;
+
+    let best = null;
+    for (const comp of stranded) {
+      for (const [x, z] of comp) {
+        for (const [dx, dz] of ORTH) {
+          const lx = x + dx, lz = z + dz;
+          // The low cell must be reachable and exactly one level down.
+          if (!walk(lx, lz) || !seen[lz * W + lx]) continue;
+          if (lvl(x, z) - lvl(lx, lz) !== 1) continue;
+          // Score: flat neighbours on both sides, so the ramp lands on open
+          // ground rather than in a notch.
+          let openLow = 0, openHigh = 0;
+          for (const [ax, az] of ORTH) {
+            if (walk(lx + ax, lz + az) && lvl(lx + ax, lz + az) === lvl(lx, lz)) openLow++;
+            if (walk(x + ax, z + az) && lvl(x + ax, z + az) === lvl(x, z)) openHigh++;
+          }
+          const score = openLow + openHigh;
+          if (!best || score > best.score) best = { lx, lz, dx, dz, score, size: comp.length };
+        }
+      }
+    }
+    if (!best) break;
+
+    // The ramp occupies the LOW cell: stored at the lower level, climbing dx/dz.
+    grid.setCell(map, best.lx, best.lz, lvl(best.lx, best.lz), grid.Surface.Ramp);
+    placed.push(best);
+    seen = reach([comps[0][0]]);
+  }
+  return placed;
 }
 
 // ── Constraints ──────────────────────────────────────────────────
@@ -684,6 +792,12 @@ const ramps = carveRamps(3);
 const stepFix = enforceSteps();
 const specks = removeSpecks();
 enforceSteps();
+// LAST, and that ordering matters. A ramp is a single cell, which is exactly
+// what removeSpecks deletes and what enforceSteps would flatten back. Placing
+// them after both means nothing downstream can undo the only routes onto the
+// high ground. (Not to be confused with carveRamps above, which cuts terraced
+// ramp SHAPES into the level field; this marks Surface.Ramp cells.)
+const rampsPlaced = placeRamps();
 
 // Protected cells must be untouched. Checking "still zero" would be wrong —
 // some protected ground (the temple platform) is legitimately raised. What
