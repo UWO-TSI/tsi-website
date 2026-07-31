@@ -28,6 +28,9 @@ import {
   cellToWorldX,
   cellToWorldZ,
   resizeMap,
+  legaliseTerraces,
+  ORTHOGONAL,
+  inBounds,
   worldToCellX,
   worldToCellZ,
   listChunks,
@@ -223,6 +226,71 @@ describe("serialisation", () => {
     const { props: back } = parseIslandMap(doc);
     expect(back[0].size).toBeUndefined();
     expect(back[1].size).toBeUndefined();
+  });
+});
+
+describe("legaliseTerraces", () => {
+  it("lowers a face the kit cannot draw, and keeps the peak a peak", () => {
+    // David's temple mountain, in miniature: level 6 sitting straight on level
+    // 3. The kit is CLIFF_LEVELS tall and does not stack, so 3 -> 6 renders as
+    // a hole.
+    //
+    // The plain is wide on purpose. Out of bounds reads as level 0, so a
+    // mountain touching the map edge is legitimately crushed by its own border
+    // and the test would be measuring that instead.
+    const N = 15;
+    const map = createCenteredMap(N, N);
+    for (let x = 0; x < N; x++) for (let z = 0; z < N; z++) setCell(map, x, z, 3, Surface.Grass);
+    for (let x = 6; x < 9; x++) for (let z = 6; z < 9; z++) setCell(map, x, z, 6, Surface.Grass);
+
+    const moved = legaliseTerraces(map);
+    expect(moved).toBeGreaterThan(0);
+    // Still high ground, just reachable-looking high ground.
+    expect(levelAt(map, 7, 7)).toBeGreaterThan(3);
+    let worst = 0;
+    for (let z = 0; z < N; z++) {
+      for (let x = 0; x < N; x++) {
+        for (const [dx, dz] of ORTHOGONAL) {
+          if (!inBounds(map, x + dx, z + dz)) continue;
+          worst = Math.max(worst, Math.abs(levelAt(map, x, z) - levelAt(map, x + dx, z + dz)));
+        }
+      }
+    }
+    expect(worst).toBeLessThanOrEqual(CLIFF_LEVELS);
+  });
+
+  it("is a no-op on a map that is already legal", () => {
+    const map = createCenteredMap(6, 6);
+    for (let x = 0; x < 6; x++) for (let z = 0; z < 6; z++) setCell(map, x, z, x < 3 ? 0 : 2, Surface.Grass);
+    expect(legaliseTerraces(map)).toBe(0);
+  });
+
+  it("leaves a coastal cliff alone", () => {
+    // Sea reads as level 0, so raised ground meeting water is legal and is the
+    // rocks-at-the-waterline silhouette, not a defect.
+    const map = createCenteredMap(4, 1);
+    setCell(map, 0, 0, 0, Surface.Void);
+    for (let x = 1; x < 4; x++) setCell(map, x, 0, 2, Surface.Grass);
+    expect(legaliseTerraces(map)).toBe(0);
+    expect(levelAt(map, 1, 0)).toBe(2);
+  });
+
+  it("terminates on a tall spike instead of spinning", () => {
+    const map = createCenteredMap(5, 5);
+    for (let x = 0; x < 5; x++) for (let z = 0; z < 5; z++) setCell(map, x, z, 0, Surface.Grass);
+    setCell(map, 2, 2, MAX_LEVEL, Surface.Grass);
+    legaliseTerraces(map);
+    expect(levelAt(map, 2, 2)).toBe(CLIFF_LEVELS);
+  });
+});
+
+describe("serialisation scale", () => {
+  it("stamps the engine's live scale into the document", () => {
+    // A draft carried levelStep 1.5 forward while the engine had moved to 0.75,
+    // so a mountain authored as 9u tall would have rendered at 4.5u silently.
+    const doc = serialiseIslandMap(createCenteredMap(4, 4), []);
+    expect(doc.levelStep).toBe(LEVEL_STEP);
+    expect(doc.tile).toBe(TILE);
   });
 });
 

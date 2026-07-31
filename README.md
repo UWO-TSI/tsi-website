@@ -135,6 +135,10 @@ ride along in the exported JSON without touching terrain:
 
 - **Plots** — a dragged marker stores `size: [w, d]`, so "HQ goes here, 7×5" is
   data rather than a note.
+Draw the silhouette you want and let the tool legalise it: a face taller than
+one cliff piece has nothing to render it, and **terrace them** steps the whole
+landform down until every face fits, leaving the peak where you drew it.
+
 - **Labels** — `annotations`, free-text named regions you draw yourself
   (fencing, hedges, "paved later"). Deliberately not surfaces: surfaces are a
   closed enum the renderer switches on, and drafting notes do not belong there.

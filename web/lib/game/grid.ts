@@ -537,6 +537,18 @@ export interface IslandMapDoc {
   surfaces: string[];
   props?: { kind: string; id?: string; cell: number[]; level: number; size?: number[] }[];
   annotations?: { name: string; color?: string; cells: number[][] }[];
+  /**
+   * WRITTEN, NEVER READ. The engine's scale constants, stamped into the file so
+   * anyone reading it knows what a level is worth.
+   *
+   * They are not per-map settings and the parser ignores them, but they cannot
+   * be left stale either: a hand-drawn draft carried `levelStep: 1.5` forward
+   * from an old export while the engine had moved to 0.75, so a mountain
+   * authored as 9u tall was going to render at 4.5u and nothing said so.
+   * Serialising the live constants keeps the file honest.
+   */
+  tile?: number;
+  levelStep?: number;
 }
 
 export function parseIslandMap(doc: IslandMapDoc): {
@@ -596,6 +608,8 @@ export function serialiseIslandMap(
     depth: map.depth,
     originX: map.originX,
     originZ: map.originZ,
+    tile: TILE,
+    levelStep: LEVEL_STEP,
     levels: rows(map.levels),
     surfaces: rows(map.surfaces),
     props,
@@ -603,6 +617,59 @@ export function serialiseIslandMap(
     // diff of a map with no annotations stays clean.
     ...(annotations.length ? { annotations } : {}),
   };
+}
+
+/**
+ * Lower whatever is too tall to draw, until every face fits the kit.
+ *
+ * A cliff piece is ONE level-pair tall and does not stack, so a face steeper
+ * than CLIFF_LEVELS has nothing to render it and comes out as a hole. Measured
+ * on David's first hand-drawn island: the temple mountain rose 3 -> 6 in one
+ * step, 20 undrawable faces in nine rows alone.
+ *
+ * This is the counterpart to drawing roughly. Blocking out a mountain by
+ * sketching its silhouette is the right way to work; making every face legal by
+ * hand is not, and it is exactly the kind of bookkeeping a tool should absorb.
+ *
+ * LOWERS rather than raises, matching `enforceSteps` in author-elevation.mjs:
+ * raising would inflate a summit the author placed deliberately, while lowering
+ * insets each tier and leaves the peak where it was drawn. Off-map and sea both
+ * read as level 0, so a cliff at the coast stays legal — that is the rocks-at-
+ * the-water silhouette, not a defect.
+ *
+ * Returns how many cells moved, so a caller can tell the difference between
+ * "nothing to do" and "quietly rewrote your mountain".
+ */
+export function legaliseTerraces(map: IslandMap, maxPasses = 64): number {
+  let moved = 0;
+  for (let pass = 0; pass < maxPasses; pass++) {
+    let changed = 0;
+    for (let cz = 0; cz < map.depth; cz++) {
+      for (let cx = 0; cx < map.width; cx++) {
+        if (isVoid(surfaceAt(map, cx, cz))) continue;
+        const i = cellIndex(map, cx, cz);
+        const lvl = map.levels[i];
+        if (lvl === 0) continue;
+        let lowest = lvl;
+        for (const [dx, dz] of DIR_OFFSETS) {
+          const nx = cx + dx;
+          const nz = cz + dz;
+          const nl =
+            inBounds(map, nx, nz) && !isVoid(surfaceAt(map, nx, nz))
+              ? map.levels[cellIndex(map, nx, nz)]
+              : 0;
+          if (nl < lowest) lowest = nl;
+        }
+        if (lvl - lowest > CLIFF_LEVELS) {
+          map.levels[i] = lowest + CLIFF_LEVELS;
+          changed++;
+        }
+      }
+    }
+    moved += changed;
+    if (!changed) break;
+  }
+  return moved;
 }
 
 /**

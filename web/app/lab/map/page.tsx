@@ -29,6 +29,7 @@ import {
   parseIslandMap,
   serialiseIslandMap,
   resizeMap,
+  legaliseTerraces,
   setCell,
   levelAt,
   surfaceAt,
@@ -394,6 +395,7 @@ export default function MapLab() {
   const [sheet, setSheet] = useState<"none" | "open" | "import">("none");
   const [importText, setImportText] = useState("");
   const [importError, setImportError] = useState("");
+  const [legalised, setLegalised] = useState(0);
   const [version, setVersion] = useState(0);
   const painting = useRef(false);
   const lastCell = useRef<{ x: number; z: number } | null>(null);
@@ -1556,6 +1558,25 @@ export default function MapLab() {
           <Row k="orphan ramps" v={String(health.orphanRamps)} warn={health.orphanRamps > 0} />
           <Row k="1-cell walls" v={String(health.thinWalls)} warn={health.thinWalls > 0} />
           <Row k="faces too tall" v={String(health.tooTall)} warn={health.tooTall > 0} />
+          {health.tooTall > 0 && (
+            <button
+              onClick={() => {
+                commit();
+                const moved = legaliseTerraces(map);
+                setLegalised(moved);
+                bump();
+              }}
+              style={btn(false, { width: "100%", marginTop: 6 })}
+            >
+              terrace them ({health.tooTall})
+            </button>
+          )}
+          {legalised > 0 && health.tooTall === 0 && (
+            <div style={{ color: "#7fd1c0", marginTop: 5, lineHeight: 1.5 }}>
+              Lowered {legalised} cells. The peak stays where you drew it; each
+              tier insets until every face fits one cliff piece.
+            </div>
+          )}
         </div>
 
         <div style={{ borderTop: "1px solid #232a31", paddingTop: 10, marginBottom: 10 }}>
