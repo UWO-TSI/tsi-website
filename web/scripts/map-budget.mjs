@@ -19,7 +19,7 @@ import { fileURLToPath } from "node:url";
 const WEB = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const grid = await import(path.join(WEB, "lib/game/grid.ts"));
 
-const { CHUNK, SHORE_SDF_SCALE, TILE, LEVEL_STEP } = grid;
+const { SHORE_SDF_SCALE, TILE, LEVEL_STEP } = grid;
 
 /** Every distinct surface a chunk contains gets its own merged geometry. */
 function budget(map, label) {
