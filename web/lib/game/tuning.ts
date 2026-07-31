@@ -135,7 +135,20 @@ export const TUNING_DEFAULTS: Tuning = {
     ringColor: 0xd8f4ef,
     depthFalloff: 0.9,
     bedDepth: 1.6,
-    bedSlope: 3.5,
+    /**
+     * How fast the bed falls away from the bank, in cells.
+     *
+     * 3.5 read as ice rather than water. The ramp reaches full deep colour at
+     * 2.9 cells from a bank, and the shipped river is 8 cells across, so only
+     * the middle two cells ever got there: three quarters of its surface sat in
+     * the cream-and-sage end of a ramp whose distances were tuned for open
+     * ocean, where `SEA_PARAMS` takes 13.7 cells to reach the same point.
+     *
+     * 1.45 puts full deep colour 1.2 cells in, so the pale band reads as the
+     * shallows AT the bank and the body of the river is water. A river has
+     * banks; the sea has a beach.
+     */
+    bedSlope: 1.45,
     foamWidth: 0.85,
     foamStrength: 0.9,
     foamSoft: 0.06,
