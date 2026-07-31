@@ -10,6 +10,7 @@ import {
   needsCliff,
   cliffPieceFor,
   rampDir,
+  rampRun,
   ORTHOGONAL,
   inBounds,
   CLIFF_LEVELS,
@@ -72,7 +73,10 @@ describe("island-map.json", () => {
         const nz = z + dz;
         if (!walkable(map, nx, nz) || seen[nz * map.width + nx]) continue;
         const drop = Math.abs(levelAt(map, nx, nz) - levelAt(map, x, z));
-        const viaRamp = isRamp(surfaceAt(map, nx, nz)) || isRamp(surfaceAt(map, x, z));
+        // Only a ramp whose RUN resolves is a route. Keying on the surface
+        // alone counts a broken ramp as a way up and reports the map more
+        // connected than it is.
+        const viaRamp = !!rampRun(map, nx, nz) || !!rampRun(map, x, z);
         if (drop < CLIFF_LEVELS || viaRamp) stack.push([nx, nz]);
       }
     }

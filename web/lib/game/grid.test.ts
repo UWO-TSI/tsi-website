@@ -29,6 +29,10 @@ import {
   cellToWorldZ,
   resizeMap,
   legaliseTerraces,
+  isRamp,
+  rampHeightAt,
+  rampDir,
+  rampRun,
   ORTHOGONAL,
   inBounds,
   worldToCellX,
@@ -226,6 +230,125 @@ describe("serialisation", () => {
     const { props: back } = parseIslandMap(doc);
     expect(back[0].size).toBeUndefined();
     expect(back[1].size).toBeUndefined();
+  });
+});
+
+describe("ramp runs", () => {
+  /** foot at level 0, `n` ramp cells along +X, then ground at `top`. */
+  function rampMap(n: number, top: number) {
+    const map = createCenteredMap(n + 4, 3);
+    for (let x = 0; x < n + 4; x++) {
+      for (let z = 0; z < 3; z++) setCell(map, x, z, x >= n + 2 ? top : 0, Surface.Grass);
+    }
+    for (let x = 2; x < n + 2; x++) setCell(map, x, 1, 0, Surface.Ramp);
+    return map;
+  }
+
+  it("climbs a full cliff over two tiles, which one tile could never do", () => {
+    // The whole point. A one-cell ramp rose exactly one level, so against a
+    // CLIFF_LEVELS cliff it left the player half a level short and every cliff
+    // stayed a wall.
+    const map = rampMap(2, CLIFF_LEVELS);
+    const a = rampRun(map, 2, 1);
+    const b = rampRun(map, 3, 1);
+    expect(a).toEqual({ dir: [1, 0], index: 0, length: 2, rise: CLIFF_LEVELS, base: 0 });
+    expect(b).toEqual({ dir: [1, 0], index: 1, length: 2, rise: CLIFF_LEVELS, base: 0 });
+  });
+
+  it("is one continuous slope, not two steps", () => {
+    // Each tile carries HALF the climb. If a tile derived its own top from
+    // LEVEL_STEP instead of its slice of the run, the walk surface would jump.
+    const map = rampMap(2, CLIFF_LEVELS);
+    const x0 = cellToWorldX(map, 2);
+    const x1 = cellToWorldX(map, 3);
+    const z = cellToWorldZ(map, 1);
+    const foot = rampHeightAt(map, x0 - TILE / 2 + 1e-6, z)!;
+    const mid = rampHeightAt(map, (x0 + x1) / 2, z)!;
+    const top = rampHeightAt(map, x1 + TILE / 2 - 1e-6, z)!;
+    expect(foot).toBeCloseTo(0, 5);
+    expect(mid).toBeCloseTo((CLIFF_LEVELS / 2) * LEVEL_STEP, 5);
+    expect(top).toBeCloseTo(CLIFF_LEVELS * LEVEL_STEP, 5);
+    // Monotonic all the way up: no step, no reversal. Swept strictly inside the
+    // two ramp cells; landing exactly on the far boundary reads as the flat
+    // ground beyond, where there is no ramp to sample.
+    const start = x0 - TILE / 2 + 1e-6;
+    const span = 2 * TILE - 2e-6;
+    let prev = -Infinity;
+    for (let i = 0; i <= 40; i++) {
+      const h = rampHeightAt(map, start + (i / 40) * span, z);
+      expect(h).not.toBeNull();
+      expect(h!).toBeGreaterThanOrEqual(prev - 1e-9);
+      prev = h!;
+    }
+  });
+
+  it("meets the ground exactly at both ends", () => {
+    // A ramp that does not land flush leaves a lip you trip on.
+    const map = rampMap(2, CLIFF_LEVELS);
+    const z = cellToWorldZ(map, 1);
+    expect(rampHeightAt(map, cellToWorldX(map, 2) - TILE / 2 + 1e-6, z)).toBeCloseTo(
+      levelAt(map, 1, 1) * LEVEL_STEP,
+      5
+    );
+    expect(rampHeightAt(map, cellToWorldX(map, 3) + TILE / 2 - 1e-6, z)).toBeCloseTo(
+      levelAt(map, 4, 1) * LEVEL_STEP,
+      5
+    );
+  });
+
+  it("still handles a one-tile half step", () => {
+    const map = rampMap(1, 1);
+    expect(rampRun(map, 2, 1)).toEqual({ dir: [1, 0], index: 0, length: 1, rise: 1, base: 0 });
+  });
+
+  it("refuses a climb the cliff kit cannot face", () => {
+    // Beyond CLIFF_LEVELS there is no wall art either, so a ramp there would be
+    // the only thing holding up a landform that cannot be drawn.
+    expect(rampRun(rampMap(2, CLIFF_LEVELS + 1), 2, 1)).toBeNull();
+  });
+
+  it("reports nothing for a run that joins nothing", () => {
+    const map = createCenteredMap(5, 3);
+    for (let x = 0; x < 5; x++) for (let z = 0; z < 3; z++) setCell(map, x, z, 0, Surface.Grass);
+    setCell(map, 2, 1, 0, Surface.Ramp);
+    expect(rampRun(map, 2, 1)).toBeNull();
+    expect(rampDir(map, 2, 1)).toBeNull();
+  });
+
+  it("makes a terraced summit reachable, which is the reason it exists", () => {
+    const N = 11;
+    const map = createCenteredMap(N, N);
+    for (let x = 0; x < N; x++) for (let z = 0; z < N; z++) setCell(map, x, z, 0, Surface.Grass);
+    for (let x = 4; x < 8; x++) for (let z = 4; z < 8; z++) setCell(map, x, z, CLIFF_LEVELS, Surface.Grass);
+
+    const reach = () => {
+      const seen = new Uint8Array(N * N);
+      const st: [number, number][] = [[0, 0]];
+      let n = 0;
+      while (st.length) {
+        const [x, z] = st.pop()!;
+        if (!inBounds(map, x, z) || seen[z * N + x]) continue;
+        seen[z * N + x] = 1;
+        n++;
+        for (const [dx, dz] of ORTHOGONAL) {
+          const nx = x + dx;
+          const nz = z + dz;
+          if (!inBounds(map, nx, nz)) continue;
+          const d = Math.abs(levelAt(map, nx, nz) - levelAt(map, x, z));
+          const viaRamp = isRamp(surfaceAt(map, nx, nz)) || isRamp(surfaceAt(map, x, z));
+          if (d < CLIFF_LEVELS || viaRamp) st.push([nx, nz]);
+        }
+      }
+      return n;
+    };
+
+    // The plateau is cut off: a full cliff on every side.
+    expect(reach()).toBe(N * N - 16);
+    // Two ramp cells leading up to it, and the whole map opens.
+    setCell(map, 2, 5, 0, Surface.Ramp);
+    setCell(map, 3, 5, 0, Surface.Ramp);
+    expect(rampRun(map, 3, 5)?.rise).toBe(CLIFF_LEVELS);
+    expect(reach()).toBe(N * N);
   });
 });
 

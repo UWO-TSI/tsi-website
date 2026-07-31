@@ -39,6 +39,7 @@ import {
   needsCliff,
   cliffPieceFor,
   rampDir,
+  rampRun,
   halfCliffEdges,
   Surface,
   MAX_LEVEL,
@@ -225,6 +226,18 @@ function measure(map: IslandMap): Health {
     }
   }
 
+  // A ramp is only a route if its RUN resolves. Keying on the surface alone
+  // said a broken ramp was walkable: painting a second ramp straight onto the
+  // first merged them into one run climbing further than the kit allows, all
+  // three cells reported as orphans, and stranded still dropped from 48 to 30
+  // as though a route had opened. Precomputed because rampRun walks the run.
+  const ramped = new Uint8Array(W * D);
+  for (let z = 0; z < D; z++) {
+    for (let x = 0; x < W; x++) {
+      if (isRamp(surfaceAt(map, x, z)) && rampRun(map, x, z)) ramped[z * W + x] = 1;
+    }
+  }
+
   let reachable = 0;
   if (seed) {
     const seen = new Uint8Array(W * D);
@@ -240,8 +253,8 @@ function measure(map: IslandMap): Health {
         const nz = z + dz;
         if (!walkAt(nx, nz)) continue;
         const d = Math.abs(levelAt(map, nx, nz) - levelAt(map, x, z));
-        const viaRamp = isRamp(surfaceAt(map, nx, nz)) || isRamp(surfaceAt(map, x, z));
-        // A blended half step is walkable; a full cliff needs a ramp.
+        const viaRamp = ramped[nz * W + nx] === 1 || ramped[i] === 1;
+        // A blended half step is walkable; a full cliff needs a working ramp.
         if (d < CLIFF_LEVELS || viaRamp) stack.push([nx, nz]);
       }
     }

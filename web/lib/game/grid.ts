@@ -216,16 +216,18 @@ export function heightField(map: IslandMap, spread = SLOPE_SPREAD): Float32Array
 export function rampHeightAt(map: IslandMap, x: number, z: number): number | null {
   const cx = worldToCellX(map, x);
   const cz = worldToCellZ(map, z);
-  const dir = rampDir(map, cx, cz);
-  if (!dir) return null;
-  const [dx, dz] = dir;
-  // How far across the tile we are, measured along the climb: 0 at the low edge,
-  // 1 at the high edge.
+  const run = rampRun(map, cx, cz);
+  if (!run) return null;
+  const [dx, dz] = run.dir;
+  // How far across THIS tile we are, measured along the climb: 0 at its low
+  // edge, 1 at its high edge.
   const ox = x - cellToWorldX(map, cx);
   const oz = z - cellToWorldZ(map, cz);
-  const along = (dx !== 0 ? ox * dx : oz * dz) / TILE + 0.5;
-  const t = Math.min(1, Math.max(0, along));
-  return (levelAt(map, cx, cz) + t) * LEVEL_STEP;
+  const along = Math.min(1, Math.max(0, (dx !== 0 ? ox * dx : oz * dz) / TILE + 0.5));
+  // Then where that lands along the WHOLE run, which is what makes a two-tile
+  // ramp a continuous slope instead of two steps.
+  const t = (run.index + along) / run.length;
+  return (run.base + t * run.rise) * LEVEL_STEP;
 }
 
 /**
@@ -377,20 +379,87 @@ export function isRamp(s: number): boolean {
   return s === Surface.Ramp;
 }
 
+/** A run of ramp cells, resolved from the ground at either end. */
+export interface RampRun {
+  /** Uphill, from foot to top. */
+  dir: [number, number];
+  /** This cell's place in the run, 0 at the foot. */
+  index: number;
+  /** How many ramp cells the run spans. */
+  length: number;
+  /** Levels climbed from the ground at the foot to the ground at the top. */
+  rise: number;
+  /** Level of the ground the run starts from. */
+  base: number;
+}
+
 /**
- * Which way a ramp climbs: the orthogonal neighbour exactly one level above it,
- * or null when it joins nothing (an authoring mistake worth seeing rather than
- * silently rendering flat).
+ * Resolve the whole run a ramp cell belongs to.
+ *
+ * WHY A RUN AND NOT A CELL. A ramp used to be one cell climbing exactly one
+ * level, which meant it could never get you up a cliff: a full cliff is
+ * CLIFF_LEVELS and a one-cell ramp left you half a level short of the top. So
+ * every cliff was a wall with no way over it. Terracing a test mountain made it
+ * drawable and stranded 70 cells on the summit, which is the same bug wearing a
+ * different hat.
+ *
+ * David, 2026-07-31: build the gentle one. A run climbs CLIFF_LEVELS over two
+ * tiles, so 1.5u of rise across 2.0u of ground, about 37 degrees. The steep
+ * one-tile version is 56 degrees and reads as a wall you happen to be able to
+ * walk up.
+ *
+ * NOTHING IS AUTHORED TWICE. The run is derived: walk uphill through touching
+ * ramp cells to the ground at the top, walk back down to the ground at the
+ * foot, and the rise and length fall out. Painting two ramp cells against a
+ * cliff is the whole authoring step. Returns null when the run joins nothing at
+ * one end, which is an authoring mistake worth surfacing rather than silently
+ * rendering flat.
  */
-export function rampDir(map: IslandMap, cx: number, cz: number): [number, number] | null {
+export function rampRun(map: IslandMap, cx: number, cz: number): RampRun | null {
   if (!isRamp(surfaceAt(map, cx, cz))) return null;
-  const here = levelAt(map, cx, cz);
   for (const [dx, dz] of ORTHOGONAL) {
-    const n = surfaceAt(map, cx + dx, cz + dz);
-    if (isVoid(n) || isRiver(n) || isRamp(n)) continue;
-    if (levelAt(map, cx + dx, cz + dz) === here + 1) return [dx, dz];
+    // Uphill to the first cell that is not ramp.
+    let ahead = 0;
+    let tx = cx + dx;
+    let tz = cz + dz;
+    while (inBounds(map, tx, tz) && isRamp(surfaceAt(map, tx, tz))) {
+      ahead++;
+      tx += dx;
+      tz += dz;
+    }
+    if (!inBounds(map, tx, tz)) continue;
+    const topS = surfaceAt(map, tx, tz);
+    if (isVoid(topS) || isRiver(topS)) continue;
+
+    // Downhill to the first cell that is not ramp.
+    let behind = 0;
+    let bx = cx - dx;
+    let bz = cz - dz;
+    while (inBounds(map, bx, bz) && isRamp(surfaceAt(map, bx, bz))) {
+      behind++;
+      bx -= dx;
+      bz -= dz;
+    }
+    if (!inBounds(map, bx, bz)) continue;
+    const footS = surfaceAt(map, bx, bz);
+    if (isVoid(footS) || isRiver(footS)) continue;
+
+    const base = levelAt(map, bx, bz);
+    const rise = levelAt(map, tx, tz) - base;
+    // Downhill in this direction, or a climb taller than the kit can face.
+    if (rise < 1 || rise > CLIFF_LEVELS) continue;
+    return { dir: [dx, dz], index: behind, length: behind + ahead + 1, rise, base };
   }
   return null;
+}
+
+/**
+ * Which way a ramp climbs, or null when it joins nothing.
+ *
+ * Kept as its own function because most callers only want the arrow.
+ */
+export function rampDir(map: IslandMap, cx: number, cz: number): [number, number] | null {
+  return rampRun(map, cx, cz)?.dir ?? null;
 }
 
 /** True where the map has no ground at all — nothing to draw, nothing to walk. */

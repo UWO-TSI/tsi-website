@@ -37,7 +37,7 @@ import {
   isVoid,
   isRiver,
   isRamp,
-  rampDir,
+  rampRun,
   inBounds,
   cellToWorldX,
   cellToWorldZ,
@@ -290,17 +290,24 @@ function addFringe(
  * `sameLevelOrHigher` reports a ramp as the same tier and `dropTo` reports it as
  * no drop. Both live in grid.ts so the geometry and the autotile cannot disagree.
  */
+/**
+ * One tile's slice of a ramp run.
+ *
+ * Takes both heights rather than deriving the top from LEVEL_STEP: a run now
+ * spans CLIFF_LEVELS across however many tiles it is long, so each tile carries
+ * a fraction of the rise and no tile knows the whole climb.
+ */
 function addRamp(
   mesh: Mesh,
   x: number,
   z: number,
   lowY: number,
+  highY: number,
   dx: number,
   dz: number
 ) {
   const s = 1 / (UV_CELLS_PER_REPEAT * TILE);
   const half = TILE / 2;
-  const highY = lowY + LEVEL_STEP;
   // Across-slope axis is the perpendicular of the climb.
   const ax = dz;
   const az = dx;
@@ -310,10 +317,12 @@ function addRamp(
   const hx = x + dx * half;
   const hz = z + dz * half;
 
-  const len = Math.hypot(LEVEL_STEP, TILE) || 1;
-  const nx = (-dx * LEVEL_STEP) / len;
+  // Normal tilts by THIS tile's rise, so a gentle run shades gently.
+  const rise = highY - lowY;
+  const len = Math.hypot(rise, TILE) || 1;
+  const nx = (-dx * rise) / len;
   const ny = TILE / len;
-  const nz = (-dz * LEVEL_STEP) / len;
+  const nz = (-dz * rise) / len;
 
   const base = mesh.pos.length / 3;
   const pts: [number, number, number][] = [
@@ -453,9 +462,16 @@ export default function GridTerrain({ map }: { map: IslandMap }) {
 
           // A ramp replaces its own ground quad: the sloped surface IS the cell.
           if (isRamp(s)) {
-            const dir = rampDir(map, cx, cz);
-            if (dir) addRamp(ramp, x, z, y, dir[0], dir[1]);
-            else addCell(grass, inGround, cx, cz, x, y, z, undefined, groundFor?.(cx, cz), subdivFor(cx, cz));
+            const run = rampRun(map, cx, cz);
+            if (run) {
+              // This tile's slice of the run, so a two-tile ramp is one
+              // continuous slope rather than two separate one-level ramps.
+              const lowY = (run.base + (run.index / run.length) * run.rise) * LEVEL_STEP;
+              const highY = (run.base + ((run.index + 1) / run.length) * run.rise) * LEVEL_STEP;
+              addRamp(ramp, x, z, lowY, highY, run.dir[0], run.dir[1]);
+            } else {
+              addCell(grass, inGround, cx, cz, x, y, z, undefined, groundFor?.(cx, cz), subdivFor(cx, cz));
+            }
             continue;
           }
 
