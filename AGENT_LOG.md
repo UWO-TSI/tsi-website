@@ -21,7 +21,19 @@
 
 All 13 deliverables shipped, QA Wave 14 PASS (commit `001eea8`), zero lint regressions. Sprint log preserved in the table below.
 
-## Current Sprint — Admin Tooling CRUD (started 2026-05-27)
+## Current — Sept 2026 launch: fall hiring round + gamified apply (set 2026-09-02)
+
+**Read `STATE.md` first.** David's ruling 2026-09-02: the Sept launch is the **fall exec hiring round** (VP Marketing + PM, public, Sept 5-11) with a **gamified "character sheet" application** prototype (class quiz → quest-framed form → character card). The member game world is **pushed back**; its tip is parked on `feat/acnh-tile-grid` (QA Wave 35 was the last entry). Single agent session covers build + qa + reviewer.
+
+| # | Deliverable | Status |
+|---|-------------|--------|
+| H1 | Repo hygiene: STATE.md, CLAUDE.md/AGENT_LOG refresh, untrack root node_modules, close PR #9, RLS on `bounty_deliverables` | in progress |
+| R1 | Migration `027_recruitment_fall_2026.sql`: retire May rows, fresh `vp-marketing` + `pm` rows, Sept 5-11 window | in progress |
+| R2 | Round copy: role content for `pm`, student landing positions + deadline, dev scripts repointed | in progress |
+| G1 | Character sheet prototype: class quiz step, quest rail + XP bar, character card success screen, class on dashboard + admin card + CSV | in progress |
+| QA | tsc / lint baseline / vitest / build / Playwright pass at 375 + 1280 / preview URL for David | pending |
+
+## Previous Sprint — Admin Tooling CRUD (started 2026-05-27)
 
 Spec: `specs/sprint-2026-06-admin-tooling.md`. Builds CRUD forms on top of the content pipeline (B3 API routes + B4 listing pages). 6 deliverables (C1-C6), ~4 week window.
 

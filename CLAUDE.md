@@ -1,14 +1,14 @@
 # CLAUDE.md — Agent Entry Point
 
-> First file every agent reads. 1-page index. Last updated 2026-05-21.
+> First file every agent reads. 1-page index. Last updated 2026-09-02.
 
 ## What this repo is
 
 UWO-TSI (Tethos) website + student portal. Two product surfaces:
 
 1. **Marketing site** (`web/app/(site)/`, `web/app/student/page.tsx`) — public landing pages. Stable.
-2. **Recruitment system** (`web/app/student/apply/`, `web/components/recruit/`, `web/components/admin/`) — 2026-27 exec hiring portal. Live in production. Do not touch unless explicitly tasked.
-3. **Student game portal** (`web/app/student/dashboard/`, `web/components/game/`, `web/components/portal/`) — **THIS is what agents are building.** A 2.5D MMO RPG game world for active TSI members. Single-player MVP, multiplayer (Colyseus) deferred to Phase 2.
+2. **Recruitment system** (`web/app/student/apply/`, `web/components/recruit/`, `web/components/admin/`) — 2026-27 exec hiring portal. Live in production. **Current focus** (fall round + gamified apply); otherwise do not touch unless tasked.
+3. **Student game portal** (`web/app/student/dashboard/`, `web/components/game/`, `web/components/portal/`) — a 2.5D MMO RPG game world for active TSI members. **Pushed back as of 2026-09-02**; tip parked on `feat/acnh-tile-grid`. Single-player MVP, multiplayer (Colyseus) deferred.
 
 ## Your role
 
@@ -16,6 +16,7 @@ The team has 3 agents: `build`, `qa`, `reviewer`. See `AGENT_LOG.md` Team sectio
 
 ## Read in this order
 
+0. **`STATE.md`** — which branch is live, what's in prod, what David decided most recently. One page. Read it before anything else below.
 1. **This file** — you're here
 2. **`AGENT_LOG.md`** — current sprint, your role, file ownership, commit prefixes
 3. **`web/app/student/STUDENT_SYSTEM_BIBLE.md`** — feature mechanics (Bounty, Calendar, Kanban, Marketplace, Job Board, Directory). Read the "CURRENT VISION DELTAS" banner at the top first — it lists what's drifted.
@@ -23,12 +24,16 @@ The team has 3 agents: `build`, `qa`, `reviewer`. See `AGENT_LOG.md` Team sectio
 5. **`specs/asset-stack.md`** — confirmed tech architecture: R3F + Drei + PS1 shader, Quaternius/Kenney assets, 2D sprite chars via Nano Banana, Colyseus deferred.
 6. **Role-specific specs** in `specs/` — `ux-game-world-v2.md`, `ux-oracle-v2.md`, `ux-classes.md`, `ux-dashboard.md`, `ux-directory.md`, etc. Use the index in `specs/ux-status.md` §1 to find the right one.
 
+## Current focus (David, 2026-09-02)
+
+**Sept 2026 launch = fall hiring round (VP Marketing + PM, Sept 5-11) with a gamified "character sheet" application.** The member game world is pushed back; its tip is parked on `feat/acnh-tile-grid` (see `STATE.md`). Recruitment code is **in scope** for this work; the marketing site stays off-limits.
+
 ## Project vision (TL;DR)
 
 - **Style:** 2D sprite characters in a 3D world (Dave the Diver, Octopath Traveler). PS1 shader + ACNH curved-world shader.
 - **Map:** 2-3 screens wide. Buildings (HQ, Shop, Oracle Temple) you enter; objects (Bounty Board, Job Board) open overlays.
 - **5-tier RBAC:** T1 David / T2 chapter presidents / T3 PMs+VPs / T4 directors+devs / T5 volunteers+general.
-- **MBTI class system:** 4 main classes (Analyst/Diplomat/Sentinel/Explorer) + 16 subclasses, assigned via Oracle Temple quiz during onboarding.
+- **MBTI class system:** 4 main classes (as implemented: Warrior/Mage/Healer/Rogue, colors in `specs/ux-classes.md`) + 16 subclasses, assigned via the Oracle Temple quiz. The gamified apply flow reuses the same mapping.
 - **Economy:** TSI Coins, never reveal conversion rate.
 - **Phase 1 (current):** single-player game world, directory, all feature pages as overlays. Close Tier-1 punch list to merge to main.
 - **Phase 2 (deferred):** multiplayer (Colyseus), Avatar creator (Nano Banana sprites), building interiors, Oracle v2 card-game, mobile.
@@ -44,7 +49,7 @@ The team has 3 agents: `build`, `qa`, `reviewer`. See `AGENT_LOG.md` Team sectio
 | Dashboard pages (overlays) | `web/app/student/dashboard/*/page.tsx` |
 | Supabase clients | `web/lib/supabase/{client,server,admin}.ts` |
 | DB types | `web/lib/supabase/types.ts` |
-| Migrations | `web/supabase/migrations/` (portal: 001_initial, 002-008; recruitment: 001_recruitment, 009-012 — separate trees) |
+| Migrations | `web/supabase/migrations/` (portal: 001_initial, 002-008, 014-023; recruitment: 001_recruitment, 009-013, 027; 024/025 are unapplied drafts on the game branch). Status table in `STATE.md` |
 | Design tokens | `web/styles/game-tokens.css` |
 | Historical 5-agent log | `archive/logs/AGENT_LOG-2026-03-27-to-04-06.md` |
 | Deprecated specs | `archive/specs/` |
@@ -70,7 +75,7 @@ These guide every scope and design decision. When trade-offs arise, choose the o
 - `npm run dev` may fall back to port 3001 if 3000 is taken.
 - Game world uses `next/dynamic` with `ssr: false` — `BAILOUT_TO_CLIENT_SIDE_RENDERING` in SSR output is expected, not an error.
 - Middleware gracefully handles missing Supabase env vars — dev works without `.env.local`.
-- **Never** edit applied migrations. Add new ones (next slot: `013_*`).
+- **Never** edit applied migrations. Add new ones (next free slot: `028_*`; see `STATE.md`).
 - **Never** reveal the TC ≈ CAD conversion rate in user-facing strings.
 - Build agents: when scope is unclear, ask reviewer (David) before guessing. Don't add features the spec doesn't list.
 
@@ -81,6 +86,6 @@ These guide every scope and design decision. When trade-offs arise, choose the o
 ## Out of scope (do not touch unless tasked)
 
 - `web/app/(site)/**` — marketing site
-- `web/app/student/apply/**`, `web/components/recruit/**`, `web/components/admin/**` — recruitment system (live in prod)
+- `web/app/student/apply/**`, `web/components/recruit/**`, `web/components/admin/**` — recruitment system (live in prod). **Exception:** in scope for the Sept 2026 round + gamified apply prototype (David, 2026-09-02)
 - `web/components/sections/**` — marketing homepage sections
 - Migrations `001_recruitment.sql`, `009_*`, `010_*`, `011_*`, `012_*` — recruitment schema
