@@ -60,8 +60,18 @@ const SAMPLE_CHARACTERS: Character[] = [
   rollCharacter([1, 0, 0, 0])!, // ISTJ Rogue
 ];
 
+const PROD_HOSTS = ["tethos.ca", "uwotsi.com"];
+
 export default function GuildPreviewPage() {
+  // Two gates in case Vercel's system env vars are not exposed: the build
+  // env, and the real domains at runtime.
   if (process.env.NEXT_PUBLIC_VERCEL_ENV === "production") notFound();
+  if (
+    typeof window !== "undefined" &&
+    PROD_HOSTS.some((h) => window.location.hostname.endsWith(h))
+  ) {
+    notFound();
+  }
   return (
     <Suspense fallback={null}>
       <GuildPreview />
