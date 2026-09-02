@@ -119,17 +119,16 @@ export default function DropdownNav() {
                 width: open ? 14 : 16,
                 height: 1.5,
                 rotate: open ? 45 : 0,
-                y: open ? 2.75 : 0,
+                y: open ? 5.5 : 0,
               }}
               transition={SPRING_SNAPPY}
             />
             <motion.span
               className="block bg-white/60 rounded-full"
               animate={{
-                width: 12,
+                width: open ? 0 : 12,
                 height: 1.5,
                 opacity: open ? 0 : 1,
-                scaleX: open ? 0 : 1,
               }}
               transition={SPRING_SNAPPY}
             />
@@ -139,7 +138,7 @@ export default function DropdownNav() {
                 width: open ? 14 : 10,
                 height: 1.5,
                 rotate: open ? -45 : 0,
-                y: open ? -2.75 : 0,
+                y: open ? -5.5 : 0,
               }}
               transition={SPRING_SNAPPY}
             />
