@@ -16,3 +16,5 @@
 .playwright-mcp/
 .next/
 __pycache__/
+.gstack/
+web/supabase/.temp/
