@@ -180,6 +180,10 @@ export const ROLE_CONTENT: Record<string, RoleContent> = {
   },
 };
 
+// Fall 2026 round (migration 027): the public PM role lives on the `pm`
+// slug; it shares the copy written for the May internal PM track.
+ROLE_CONTENT.pm = ROLE_CONTENT["pm-internal"];
+
 export function getRoleContent(slug: string): RoleContent | null {
   return ROLE_CONTENT[slug] ?? null;
 }

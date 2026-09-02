@@ -18,10 +18,10 @@ const admin = createClient(
   { auth: { persistSession: false } }
 );
 
-const OPENS_AT = "2026-05-06T04:00:00Z"; // May 6, 00:00 EDT
-const CLOSES_AT = "2026-05-13T04:10:00Z"; // May 13, 00:10 EDT (i.e. 12:10 AM after May 12 ends)
+const OPENS_AT = "2026-09-05T04:00:00Z"; // Sept 5, 00:00 EDT
+const CLOSES_AT = "2026-09-12T04:10:00Z"; // Sept 12, 00:10 EDT (i.e. 12:10 AM after Sept 11 ends)
 
-const SLUGS = ["vp-internal", "vp-external", "vp-marketing", "pm-internal", "advisor"];
+const SLUGS = ["vp-marketing", "pm"]; // fall 2026 round (migration 027)
 
 const { error } = await admin
   .from("positions")

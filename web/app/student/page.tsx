@@ -21,30 +21,22 @@ if (typeof window !== "undefined") {
    DATA
    ═══════════════════════════════════════════ */
 
-// Mirrors the three public positions live at /student/apply for the
-// 2026-27 cycle. Internal roles (PM, Advisor) are intentionally not
-// surfaced here since they're invite-only and gated by access code.
+// Mirrors the public positions live at /student/apply for the fall 2026
+// round (migration 027). Keep in sync when a round opens or closes.
 const POSITIONS = [
-  {
-    role: "VP Internal",
-    team: "Leadership",
-    status: "open",
-    description:
-      "The heartbeat of TSI. Keep the community alive, the calendar full, and make sure everyone feels like they belong here.",
-  },
-  {
-    role: "VP External",
-    team: "Leadership",
-    status: "open",
-    description:
-      "The face of TSI to the world. Build partnerships and lead GENESIS Project Showcase end-to-end.",
-  },
   {
     role: "VP Marketing",
     team: "Leadership",
     status: "open",
     description:
       "Own TSI's creative vision. Posts that stop the scroll, videos that tell our story, mastery of one craft.",
+  },
+  {
+    role: "Project Manager",
+    team: "Projects",
+    status: "open",
+    description:
+      "CEO of your own project. Lead a team of developers building real software for a nonprofit client, kickoff to GENESIS.",
   },
 ];
 
@@ -391,7 +383,7 @@ export default function StudentPage() {
             Open positions.
           </h2>
           <p className="text-sm mb-12" style={{ color: "rgba(255,255,255,0.3)", fontFamily: "var(--font-highlight)" }}>
-            2026-27 executive team · Applications close May 12
+            2026-27 executive team, fall round. Applications open Sept 5 and close Sept 11
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
