@@ -12,12 +12,14 @@ const META_COMMITMENTS_ID = "__profile_commitments_next_year";
 const META_PORTFOLIO_FILES_ID = "__portfolio_files";
 const META_PORTFOLIO_LINK_ID = "__portfolio_link";
 const META_CREATIVE_PIECE_FILES_ID = "__creative_piece_files";
+const META_GUILD_CLASS_ID = "__guild_class";
 const META_IDS = new Set([
   META_OTHER_LINKS_ID,
   META_COMMITMENTS_ID,
   META_PORTFOLIO_FILES_ID,
   META_PORTFOLIO_LINK_ID,
   META_CREATIVE_PIECE_FILES_ID,
+  META_GUILD_CLASS_ID,
 ]);
 
 interface FileEntry {
@@ -49,6 +51,19 @@ function fileList(json: string): string {
   try {
     const arr = JSON.parse(json) as FileEntry[];
     return arr.map((f) => f.filename).join(" | ");
+  } catch {
+    return "";
+  }
+}
+
+// "__guild_class" holds the applicant's rolled character (lib/guild.ts).
+// Cosmetic; exported so the sheet can see it, never used for review.
+function guildLabel(json: string): string {
+  if (!json) return "";
+  try {
+    const c = JSON.parse(json) as { class?: string; subclass?: string; mbti?: string };
+    if (!c?.class) return "";
+    return [c.class, c.subclass, c.mbti].filter(Boolean).join(" / ");
   } catch {
     return "";
   }
@@ -147,6 +162,7 @@ export async function GET() {
     "heard_about_us",
     "tags",
     "admin_notes",
+    "class",
     ...essayCols.map((id) => `essay:${id}`),
   ];
 
@@ -190,6 +206,7 @@ export async function GET() {
       parseAdminNotes(r.admin_notes)
         .map((n) => `[${n.author_name ?? n.author_email}] ${n.text}`)
         .join("\n\n"),
+      guildLabel(findMeta(answers, META_GUILD_CLASS_ID)),
       ...essayCols.map((id) => findMeta(answers, id)),
     ];
 

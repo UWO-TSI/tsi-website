@@ -3,10 +3,11 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import FormField from "./FormField";
-import FormProgress from "./FormProgress";
 import ResumeUpload from "./ResumeUpload";
 import PortfolioUpload, { type PortfolioFile } from "./PortfolioUpload";
 import SuccessScreen from "./SuccessScreen";
+import ClassQuiz from "./guild/ClassQuiz";
+import QuestRail from "./guild/QuestRail";
 import Button from "@/components/ui/Button";
 import {
   ArrowRight,
@@ -19,6 +20,12 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import type { Position, EssayAnswer } from "@/lib/recruitment";
 import { HEARD_ABOUT_OPTIONS, YEAR_OPTIONS } from "@/lib/recruitment";
+import {
+  QUESTS,
+  META_GUILD_CLASS_ID,
+  xpForStep,
+  type Character,
+} from "@/lib/guild";
 
 interface ApplicationFormProps {
   position: Position;
@@ -45,6 +52,8 @@ interface FormData {
   portfolio_link: string;
   /** Creative-piece files (essay step, VP Marketing + VP Internal). */
   creative_piece_files: PortfolioFile[];
+  /** Quest 1 result. Cosmetic; travels with the draft and into essay_answers. */
+  character: Character | null;
 }
 
 const EMPTY_FORM: FormData = {
@@ -64,6 +73,7 @@ const EMPTY_FORM: FormData = {
   portfolio_files: [],
   portfolio_link: "",
   creative_piece_files: [],
+  character: null,
 };
 
 const DRAFT_KEY = (positionId: string) => `tethos:draft:${positionId}`;
@@ -97,6 +107,7 @@ function isEmptyForm(f: FormData): boolean {
     f.portfolio_files.length === 0 &&
     !f.portfolio_link &&
     f.creative_piece_files.length === 0 &&
+    !f.character &&
     Object.values(f.essay_answers).every((v) => !v)
   );
 }
@@ -114,7 +125,9 @@ function relativeTime(iso: string): string {
   return `${day} day${day === 1 ? "" : "s"} ago`;
 }
 
-const STEP_LABELS = ["Personal Info", "Resume", "Questions", "Review"];
+// Steps are the guild quests (lib/guild.ts): roll, identity, proof of
+// work, trials, oath. Indices below refer to that order.
+const STEP_COUNT = QUESTS.length;
 
 const slideVariants = {
   enter: (direction: number) => ({
@@ -145,6 +158,10 @@ export default function ApplicationForm({
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [confirmChecked, setConfirmChecked] = useState(false);
+  const [xpToast, setXpToast] = useState<{ xp: number; name: string } | null>(
+    null
+  );
+  const xpToastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [formData, setFormData] = useState<FormData>(EMPTY_FORM);
 
@@ -228,6 +245,7 @@ export default function ApplicationForm({
           portfolio_files: chosen.form_data.portfolio_files ?? [],
           portfolio_link: chosen.form_data.portfolio_link ?? "",
           creative_piece_files: chosen.form_data.creative_piece_files ?? [],
+          character: chosen.form_data.character ?? null,
         });
         setDraftRestoredAt(chosen.updated_at);
       } else {
@@ -339,11 +357,24 @@ export default function ApplicationForm({
     setFormData((prev) => ({ ...prev, creative_piece_files: files }));
   }, []);
 
+  const updateCharacter = useCallback((character: Character | null) => {
+    setFormData((prev) => ({ ...prev, character }));
+    setErrors((prev) => {
+      const next = { ...prev };
+      delete next.character;
+      return next;
+    });
+  }, []);
+
   // Step validation
   const validateStep = (s: number): boolean => {
     const errs: Record<string, string> = {};
 
     if (s === 0) {
+      if (!formData.character) errs.character = "Answer the four questions first";
+    }
+
+    if (s === 1) {
       if (!formData.full_name.trim()) errs.full_name = "Required";
       if (!formData.email.trim()) errs.email = "Required";
       else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email))
@@ -353,11 +384,11 @@ export default function ApplicationForm({
       if (!formData.heard_about_us) errs.heard_about_us = "Required";
     }
 
-    if (s === 1) {
+    if (s === 2) {
       if (!formData.resume_storage_path) errs.resume = "Resume is required";
     }
 
-    if (s === 2) {
+    if (s === 3) {
       // Roles whose essay step accepts a file upload as a substitute
       // for written text. Both inputs are optional — applicant can
       // submit with neither, either, or both. Word cap still enforced
@@ -386,14 +417,30 @@ export default function ApplicationForm({
 
   const goNext = () => {
     if (!validateStep(step)) return;
+    const quest = QUESTS[step];
+    setXpToast({ xp: quest.xp, name: quest.name });
+    if (xpToastTimer.current) clearTimeout(xpToastTimer.current);
+    xpToastTimer.current = setTimeout(() => setXpToast(null), 2200);
     setDirection(1);
-    setStep((s) => Math.min(s + 1, STEP_LABELS.length - 1));
+    setStep((s) => Math.min(s + 1, STEP_COUNT - 1));
   };
 
   const goBack = () => {
     setDirection(-1);
     setStep((s) => Math.max(s - 1, 0));
   };
+
+  const jumpTo = (target: number) => {
+    if (target > step) return;
+    setDirection(-1);
+    setStep(target);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (xpToastTimer.current) clearTimeout(xpToastTimer.current);
+    };
+  }, []);
 
   const handleSubmit = async () => {
     // Block double-submit
@@ -405,13 +452,13 @@ export default function ApplicationForm({
       saveTimerRef.current = null;
     }
 
-    if (!validateStep(2)) {
-      setStep(2);
+    if (!validateStep(3)) {
+      setStep(3);
       return;
     }
 
     if (!formData.resume_storage_path) {
-      setStep(1);
+      setStep(2);
       setErrors({ resume: "Resume is required" });
       return;
     }
@@ -466,6 +513,14 @@ export default function ApplicationForm({
             {
               question_id: META_CREATIVE_PIECE_FILES_ID,
               answer: JSON.stringify(formData.creative_piece_files),
+            },
+          ]
+        : []),
+      ...(formData.character
+        ? [
+            {
+              question_id: META_GUILD_CLASS_ID,
+              answer: JSON.stringify(formData.character),
             },
           ]
         : []),
@@ -540,12 +595,26 @@ export default function ApplicationForm({
         applicantName={formData.full_name}
         position={position}
         positionSlug={position.slug}
+        character={formData.character}
       />
     );
   }
 
+  const quest = QUESTS[step];
+  const xp = xpForStep(step);
+
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="md:grid md:grid-cols-[260px_minmax(0,1fr)] md:gap-10 md:items-start">
+      <QuestRail
+        step={step}
+        xp={xp}
+        name={formData.full_name}
+        roleTitle={position.title}
+        character={formData.character}
+        onJump={jumpTo}
+      />
+
+    <div className="min-w-0 max-w-2xl">
       <AnimatePresence>
         {draftRestoredAt && !draftBannerDismissed && (
           <motion.div
@@ -584,59 +653,98 @@ export default function ApplicationForm({
         )}
       </AnimatePresence>
 
-      <FormProgress
-        currentStep={step}
-        totalSteps={STEP_LABELS.length}
-        labels={STEP_LABELS}
-      />
-
-      <div className="flex items-center justify-end mb-6 h-5">
+      <div className="flex items-end justify-between gap-4 mb-6">
+        <div className="min-w-0">
+          <p className="text-xs text-[#6B7280] mb-1">
+            Quest {step + 1} of {STEP_COUNT}
+          </p>
+          <h2 className="text-2xl md:text-3xl font-semibold text-[#F1FFFF] tracking-tight">
+            {quest.title}
+          </h2>
+        </div>
+        {/* Sync state is desktop-only; the XP toast shows everywhere. */}
+        <div className="h-5 flex items-center shrink-0">
         <AnimatePresence mode="wait">
-          {draftSyncState === "saving" && (
+          {xpToast && (
+            <motion.span
+              key="xp"
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              className="text-xs text-[#FFD166] whitespace-nowrap"
+              style={{ fontFamily: "var(--font-highlight)" }}
+              role="status"
+            >
+              +{xpToast.xp} XP
+            </motion.span>
+          )}
+          {!xpToast && draftSyncState === "saving" && (
             <motion.span
               key="saving"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="text-[10px] font-mono text-[#6B7280] flex items-center gap-1.5"
+              className="text-[10px] font-mono text-[#6B7280] hidden sm:flex items-center gap-1.5"
             >
               <span className="w-1 h-1 rounded-full bg-[#FFD166] animate-pulse" />
               Saving draft…
             </motion.span>
           )}
-          {draftSyncState === "saved" && (
+          {!xpToast && draftSyncState === "saved" && (
             <motion.span
               key="saved"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="text-[10px] font-mono text-[#6B7280] flex items-center gap-1.5"
+              className="text-[10px] font-mono text-[#6B7280] hidden sm:flex items-center gap-1.5"
             >
               <Cloud className="w-3 h-3 text-[#1D9BF0]" />
               Draft saved
             </motion.span>
           )}
-          {draftSyncState === "offline" && (
+          {!xpToast && draftSyncState === "offline" && (
             <motion.span
               key="offline"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="text-[10px] font-mono text-[#FFD166] flex items-center gap-1.5"
+              className="text-[10px] font-mono text-[#FFD166] hidden sm:flex items-center gap-1.5"
             >
               <CloudOff className="w-3 h-3" />
               Saved locally. Will sync when online
             </motion.span>
           )}
         </AnimatePresence>
+        </div>
       </div>
 
       <div className="relative overflow-hidden min-h-[400px]">
         <AnimatePresence mode="wait" custom={direction}>
-          {/* Step 0: Personal Info */}
+          {/* Step 0: Roll your character */}
           {step === 0 && (
             <motion.div
               key="step0"
+              custom={direction}
+              variants={slideVariants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              transition={{ type: "spring", stiffness: 300, damping: 30 }}
+            >
+              <ClassQuiz
+                character={formData.character}
+                onChange={updateCharacter}
+              />
+              {errors.character && (
+                <p className="text-xs text-[#EF4444] mt-4">{errors.character}</p>
+              )}
+            </motion.div>
+          )}
+
+          {/* Step 1: Identity */}
+          {step === 1 && (
+            <motion.div
+              key="step1"
               custom={direction}
               variants={slideVariants}
               initial="enter"
@@ -776,10 +884,10 @@ export default function ApplicationForm({
             </motion.div>
           )}
 
-          {/* Step 1: Resume */}
-          {step === 1 && (
+          {/* Step 2: Proof of work */}
+          {step === 2 && (
             <motion.div
-              key="step1"
+              key="step2"
               custom={direction}
               variants={slideVariants}
               initial="enter"
@@ -787,10 +895,7 @@ export default function ApplicationForm({
               exit="exit"
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
             >
-              <div className="py-8">
-                <h3 className="text-xl font-semibold text-[#F1FFFF] mb-2">
-                  Upload your resume
-                </h3>
+              <div className="py-2">
                 <p className="text-sm text-[#9CA3AF] mb-6">
                   Upload a PDF of your resume. Make sure it&apos;s up to date
                   and highlights relevant experience.
@@ -829,10 +934,10 @@ export default function ApplicationForm({
             </motion.div>
           )}
 
-          {/* Step 2: Essay Questions */}
-          {step === 2 && (
+          {/* Step 3: Trials */}
+          {step === 3 && (
             <motion.div
-              key="step2"
+              key="step3"
               custom={direction}
               variants={slideVariants}
               initial="enter"
@@ -923,10 +1028,10 @@ export default function ApplicationForm({
             </motion.div>
           )}
 
-          {/* Step 3: Review */}
-          {step === 3 && (
+          {/* Step 4: Oath */}
+          {step === 4 && (
             <motion.div
-              key="step3"
+              key="step4"
               custom={direction}
               variants={slideVariants}
               initial="enter"
@@ -935,16 +1040,34 @@ export default function ApplicationForm({
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
             >
               <div>
-                <h3 className="text-lg font-semibold text-[#F1FFFF] mb-8">
-                  Review your application
-                </h3>
+                <p className="text-sm text-[#9CA3AF] mb-8">
+                  Read it once more. This is what we&apos;ll see.
+                </p>
 
                 <div className="space-y-3 pb-6 border-b border-white/[0.06]">
                   <ReviewSectionHeader
-                    title="Personal"
+                    title="Character"
                     onEdit={() => {
                       setDirection(-1);
                       setStep(0);
+                    }}
+                  />
+                  <ReviewRow
+                    label="Class"
+                    value={
+                      formData.character
+                        ? `${formData.character.class}, ${formData.character.subclass}`
+                        : "Not rolled"
+                    }
+                  />
+                </div>
+
+                <div className="space-y-3 py-6 border-b border-white/[0.06]">
+                  <ReviewSectionHeader
+                    title="Identity"
+                    onEdit={() => {
+                      setDirection(-1);
+                      setStep(1);
                     }}
                   />
                   <ReviewRow label="Name" value={formData.full_name} />
@@ -985,10 +1108,10 @@ export default function ApplicationForm({
 
                 <div className="space-y-3 py-6 border-b border-white/[0.06]">
                   <ReviewSectionHeader
-                    title="Resume"
+                    title="Proof of work"
                     onEdit={() => {
                       setDirection(-1);
-                      setStep(1);
+                      setStep(2);
                     }}
                   />
                   <ReviewRow
@@ -1014,10 +1137,10 @@ export default function ApplicationForm({
                 {position.essay_questions.length > 0 && (
                   <div className="space-y-4 pt-6">
                     <ReviewSectionHeader
-                      title="Essays"
+                      title="Trials"
                       onEdit={() => {
                         setDirection(-1);
-                        setStep(2);
+                        setStep(3);
                       }}
                     />
                     {formData.creative_piece_files.length > 0 && (
@@ -1123,10 +1246,14 @@ export default function ApplicationForm({
           )}
         </div>
         <div>
-          {step < STEP_LABELS.length - 1 ? (
-            <Button variant="primary" onClick={goNext}>
+          {step < STEP_COUNT - 1 ? (
+            <Button
+              variant="primary"
+              onClick={goNext}
+              disabled={step === 0 && !formData.character}
+            >
               <span className="flex items-center gap-2">
-                Next
+                Next quest
                 <ArrowRight className="w-4 h-4" />
               </span>
             </Button>
@@ -1136,11 +1263,12 @@ export default function ApplicationForm({
               onClick={handleSubmit}
               disabled={!confirmChecked || submitting}
             >
-              {submitting ? "Submitting..." : "Submit Application"}
+              {submitting ? "Submitting..." : "Submit application"}
             </Button>
           )}
         </div>
       </div>
+    </div>
     </div>
   );
 }

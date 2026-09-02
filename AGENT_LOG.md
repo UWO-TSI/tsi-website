@@ -27,11 +27,11 @@ All 13 deliverables shipped, QA Wave 14 PASS (commit `001eea8`), zero lint regre
 
 | # | Deliverable | Status |
 |---|-------------|--------|
-| H1 | Repo hygiene: STATE.md, CLAUDE.md/AGENT_LOG refresh, untrack root node_modules, close PR #9, RLS on `bounty_deliverables` | in progress |
-| R1 | Migration `027_recruitment_fall_2026.sql`: retire May rows, fresh `vp-marketing` + `pm` rows, Sept 5-11 window | in progress |
-| R2 | Round copy: role content for `pm`, student landing positions + deadline, dev scripts repointed | in progress |
-| G1 | Character sheet prototype: class quiz step, quest rail + XP bar, character card success screen, class on dashboard + admin card + CSV | in progress |
-| QA | tsc / lint baseline / vitest / build / Playwright pass at 375 + 1280 / preview URL for David | pending |
+| H1 | Repo hygiene: STATE.md, CLAUDE.md/AGENT_LOG refresh, untrack root node_modules, close PR #9, RLS on `bounty_deliverables` | ✅ PR #15 merged; RLS migration 026 written, apply blocked on the DB restore |
+| R1 | Migration `027_recruitment_fall_2026.sql`: retire May rows, fresh `vp-marketing` + `pm` rows, Sept 5-11 window | ✅ written (PR #16); apply blocked on the DB restore + David's essays |
+| R2 | Round copy: role content for `pm`, student landing positions + deadline, dev scripts repointed | ✅ PR #16 |
+| G1 | Character sheet prototype: class quiz step, quest rail + XP bar, character card success screen, class on dashboard + admin card + CSV | ✅ PR #16, awaiting David's eyeball on the preview |
+| QA | tsc / lint baseline / vitest / build / headless pass at 375 + 1280 / preview URL for David | ✅ all green (mock position); real-DB E2E pending the restore |
 
 ## Previous Sprint — Admin Tooling CRUD (started 2026-05-27)
 
@@ -113,6 +113,18 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 ---
 
 ## build
+
+### 2026-09-02 — Fall 2026 round + the guild apply prototype (`feat/fall-2026-apply`, PR #16)
+
+David's rulings for the Sept launch (see `STATE.md`): fall hiring round for **VP Marketing + PM**, both public, **Sept 5-11**, with a gamified "character sheet" application. Game world pushed back.
+
+**Round (R1/R2):** migration `027_recruitment_fall_2026.sql` retires the May rows (`vp-marketing` → `vp-marketing-may26`, title suffixed; everything `is_active=false`), inserts a fresh `vp-marketing` row and takes over the 001-seeded `pm-general` row as `pm`. New rows because `applications` has `UNIQUE(user_id, position_id)` (reusing rows would block May applicants from reapplying) and the admin board has no round filter. Essays are May's as placeholders until David pastes the fall set. `ROLE_CONTENT.pm` aliases the PM copy; the student landing page's static positions + "close May 12" line now say VP Marketing / Project Manager, Sept 5-11; `_toggle-apps-open` and `_update-application-dates` point at the new slugs; `UpcomingCTA` gained the missing `America/Toronto` timezone (the "Opens Sept 5" screen every visitor sees this week was wrong outside Eastern).
+
+**Guild layer (G1):** `lib/guild.ts` (4 questions, one per MBTI axis, lifted from the Oracle bank; same MBTI→class map as the temple; 5 quests = 100 XP; `__guild_class` reserved essay-answer id so the schema is untouched). `components/recruit/guild/`: `ClassQuiz` (quest 1 with the reveal), `QuestRail` (sticky desktop sheet, one-line mobile strip), `CharacterCard` (class color is the only accent, mono fields, corner marks, low-opacity glyph field per the ASCII rule). `ApplicationForm` is now 5 quests (roll / identity / proof of work / trials / oath); the character rides in the draft and lands in `essay_answers` on submit. `SuccessScreen` shows the card ("Welcome to the guild"). Dashboard shows the class chip; admin `ApplicantCard` renders it as "Class (cosmetic)"; CSV export gains a `class` column. `app/dev/guild` is a mock-position preview (404s only on the production deployment) with `?seeded=1`, `?view=success`, `?view=cards`.
+
+**Gates:** tsc clean · lint 74 errors (= baseline) / 53 warnings · vitest 32/32 · `npm run build` 105 pages · headless pass at 1280 and 375 through quiz → reveal → all five quests → success, zero page errors, no horizontal overflow on mobile.
+
+**Blocked on David:** fall essay questions; Supabase project restore (still not resolving at push time, so nothing has been applied to prod and the real apply flow cannot be exercised); merge + apply 027 + `RECRUITMENT_EMAILS_ENABLED` in Vercel before Sept 5.
 
 ### 2026-07-14 (evening) — Organic island + continuous game-feel loop (`94b518b`…, ongoing)
 

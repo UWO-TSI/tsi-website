@@ -29,6 +29,7 @@ import {
   nextPipelineStatus,
 } from "@/lib/recruitment";
 import { parseAdminNotes } from "@/lib/admin-notes";
+import { parseCharacter, META_GUILD_CLASS_ID } from "@/lib/guild";
 
 // Reserved IDs the form stuffs into essay_answers because applications
 // has no dedicated columns for them.
@@ -43,6 +44,7 @@ const META_IDS = new Set([
   META_PORTFOLIO_FILES_ID,
   META_PORTFOLIO_LINK_ID,
   META_CREATIVE_PIECE_FILES_ID,
+  META_GUILD_CLASS_ID,
 ]);
 
 interface MetaFile {
@@ -327,8 +329,21 @@ export default function ApplicantCard({
                     const creativeFiles = parseFiles(
                       findMeta(answers, META_CREATIVE_PIECE_FILES_ID)
                     );
+                    const guild = parseCharacter(
+                      findMeta(answers, META_GUILD_CLASS_ID)
+                    );
                     return (
                       <>
+                        {guild && (
+                          <div className="text-xs">
+                            <p className="text-[10px] uppercase tracking-wider text-[#6B7280] mb-1 font-mono">
+                              Class (cosmetic)
+                            </p>
+                            <p className="text-[#E5E7EB]">
+                              {guild.class}, {guild.subclass} ({guild.mbti})
+                            </p>
+                          </div>
+                        )}
                         {otherLinks && (
                           <div className="text-xs">
                             <p className="text-[10px] uppercase tracking-wider text-[#6B7280] mb-1 font-mono">

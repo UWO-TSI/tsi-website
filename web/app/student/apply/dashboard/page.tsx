@@ -18,6 +18,8 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { studentVisibleStatus, type Application } from "@/lib/recruitment";
+import { parseCharacter, META_GUILD_CLASS_ID, CLASS_COLORS } from "@/lib/guild";
+import { CLASS_ICONS } from "@/components/recruit/guild/classIcons";
 import type { User } from "@supabase/supabase-js";
 
 const EASE_OUT: [number, number, number, number] = [0.16, 1, 0.3, 1];
@@ -226,6 +228,12 @@ export default function DashboardPage() {
           <div className="space-y-5">
             {applications.map((app, i) => {
               const visibleStatus = studentVisibleStatus(app);
+              const character = parseCharacter(
+                app.essay_answers?.find(
+                  (a) => a.question_id === META_GUILD_CLASS_ID
+                )?.answer
+              );
+              const ClassIcon = character ? CLASS_ICONS[character.class] : null;
               return (
               <motion.div
                 key={app.id}
@@ -249,7 +257,16 @@ export default function DashboardPage() {
                     <h3 className="text-lg font-semibold text-[#F1FFFF] mb-2">
                       {app.position?.title ?? "Position"}
                     </h3>
-                    <div className="flex items-center gap-4 text-xs text-[#6B7280]">
+                    <div className="flex flex-wrap items-center gap-4 text-xs text-[#6B7280]">
+                      {character && ClassIcon && (
+                        <span
+                          className="flex items-center gap-1.5"
+                          style={{ color: CLASS_COLORS[character.class] }}
+                        >
+                          <ClassIcon className="w-3.5 h-3.5" />
+                          {character.class}, {character.subclass}
+                        </span>
+                      )}
                       <span className="flex items-center gap-1.5">
                         <Calendar className="w-3.5 h-3.5" />
                         Submitted{" "}
