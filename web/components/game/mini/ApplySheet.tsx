@@ -16,6 +16,7 @@ import StatusBadge from "@/components/recruit/StatusBadge";
 import StatusPipeline from "@/components/recruit/StatusPipeline";
 import { getPositionStatus, type ApplicationStatus } from "@/lib/recruitment";
 import type { Desk } from "@/lib/game/miniIsland";
+import type { Profile } from "@/lib/supabase/types";
 
 const ApplicationForm = dynamic(() => import("@/components/recruit/ApplicationForm"), { ssr: false });
 
@@ -27,12 +28,16 @@ export interface AppliedInfo {
 export default function ApplySheet({
   desk,
   userId,
+  email,
+  profile,
   applied,
   onClose,
   onSubmitted,
 }: {
   desk: Desk | null;
   userId: string;
+  email: string;
+  profile: Profile | null;
   applied: AppliedInfo | null;
   onClose: () => void;
   onSubmitted: () => void;
@@ -139,6 +144,12 @@ export default function ApplySheet({
               <ApplicationForm
                 position={position}
                 userId={userId}
+                defaults={{
+                  full_name: profile?.display_name && !profile.display_name.includes("@") ? profile.display_name : undefined,
+                  email,
+                  program_major: profile?.program ?? undefined,
+                  year_of_study: profile?.year ?? undefined,
+                }}
                 onSubmitted={onSubmitted}
                 renderSuccess={() => <SubmittedPanel recruiterName={recruiter.name} onClose={onClose} />}
               />

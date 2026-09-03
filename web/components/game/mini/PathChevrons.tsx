@@ -62,8 +62,9 @@ export default function PathChevrons({
     const e = new THREE.Euler();
     const yaw = Math.atan2(dir[0], dir[1]);
     points.forEach(([x, z], i) => {
-      // Lay the shape flat (its +Y becomes world +Z), then yaw toward dir.
-      e.set(-Math.PI / 2, 0, -yaw, "YXZ");
+      // Lay the shape flat. Tilting -90° about X sends the shape's +Y to
+      // world -Z, so spin it half a turn in-plane first; then yaw toward dir.
+      e.set(-Math.PI / 2, 0, Math.PI - yaw, "YXZ");
       q.setFromEuler(e);
       m4.compose(new THREE.Vector3(x, heightAt(x, z) + 0.035, z), q, new THREE.Vector3(1.15, 1.15, 1));
       m.setMatrixAt(i, m4);

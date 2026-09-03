@@ -27,6 +27,8 @@ interface ApplicationFormProps {
   onSubmitted?: () => void;
   /** Replace the default full-page success screen (used inside the world sheet). */
   renderSuccess?: () => React.ReactNode;
+  /** Prefill for the identity step (the applicant world's character). Login metadata is the fallback. */
+  defaults?: { full_name?: string; email?: string; program_major?: string; year_of_study?: string };
 }
 
 interface FormData {
@@ -144,6 +146,7 @@ export default function ApplicationForm({
   userId,
   onSubmitted,
   renderSuccess,
+  defaults,
 }: ApplicationFormProps) {
   const [step, setStep] = useState(0);
   const [direction, setDirection] = useState(1);
@@ -169,14 +172,21 @@ export default function ApplicationForm({
     async function hydrate() {
       const supabase = createClient();
 
-      // Start with Google-derived defaults (name/email pre-fill)
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      // Start with the caller's defaults (the applicant world's character),
+      // then Google-derived metadata (name/email pre-fill). An auth hiccup
+      // must not stop the form from rendering.
+      let user: Awaited<ReturnType<typeof supabase.auth.getUser>>["data"]["user"] = null;
+      try {
+        ({ data: { user } } = await supabase.auth.getUser());
+      } catch {
+        user = null;
+      }
       const meta = user?.user_metadata ?? {};
       const sessionDefaults: Partial<FormData> = {
-        full_name: meta.full_name ?? meta.name ?? "",
-        email: user?.email ?? "",
+        full_name: defaults?.full_name || meta.full_name || meta.name || "",
+        email: defaults?.email || user?.email || "",
+        ...(defaults?.program_major ? { program_major: defaults.program_major } : {}),
+        ...(defaults?.year_of_study ? { year_of_study: defaults.year_of_study } : {}),
       };
 
       // Load drafts in parallel: localStorage (fast) + Supabase (authoritative)
@@ -246,6 +256,8 @@ export default function ApplicationForm({
     return () => {
       cancelled = true;
     };
+    // defaults are read once at mount on purpose (a re-created object must not re-hydrate).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [position.id]);
 
   // Debounced autosave to localStorage (always) + Supabase (when non-empty).

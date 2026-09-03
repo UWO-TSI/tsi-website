@@ -212,7 +212,7 @@ export default function MiniWorld({ session }: { session: MiniWorldSession }) {
     >
       <Canvas
         gl={{ antialias: false, powerPreference: "high-performance" }}
-        dpr={[1, 2]}
+        dpr={0.66} /* the member world's pixelated mode: render low, upscale nearest */
         camera={{ fov: 48, near: 0.1, far: 220, position: [0, 17, -26] }}
         shadows="soft"
         onCreated={({ gl }) => {
@@ -259,6 +259,8 @@ export default function MiniWorld({ session }: { session: MiniWorldSession }) {
       <ApplySheet
         desk={sheetDesk}
         userId={session.userId}
+        email={session.email}
+        profile={profile}
         applied={appliedFor(sheetDesk)}
         onClose={closeSheet}
         onSubmitted={handleSubmitted}
