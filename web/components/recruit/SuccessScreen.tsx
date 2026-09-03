@@ -8,15 +8,12 @@ import Button from "@/components/ui/Button";
 import { useRouter } from "next/navigation";
 import { Share2, Check } from "lucide-react";
 import type { Position } from "@/lib/recruitment";
-import { TOTAL_XP, type Character } from "@/lib/guild";
-import CharacterCard from "./guild/CharacterCard";
 
 interface SuccessScreenProps {
   positionTitle: string;
   applicantName?: string;
   position?: Position;
   positionSlug?: string;
-  character?: Character | null;
 }
 
 function formatDate(d: Date): string {
@@ -33,12 +30,10 @@ export default function SuccessScreen({
   applicantName,
   position,
   positionSlug,
-  character,
 }: SuccessScreenProps) {
   const router = useRouter();
   const confettiFired = useRef(false);
   const [shared, setShared] = useState(false);
-  const [issued] = useState(() => new Date());
 
   useEffect(() => {
     if (confettiFired.current) return;
@@ -108,9 +103,7 @@ export default function SuccessScreen({
         : typeof window !== "undefined"
           ? window.location.origin
           : "";
-    const shareText = character
-      ? `I rolled a ${character.class} and applied for ${positionTitle} at Tethos. They're hiring.`
-      : `I just applied for ${positionTitle} at Tethos. They're hiring.`;
+    const shareText = `I just applied for ${positionTitle} at Tethos — they're hiring.`;
 
     if (navigator.share) {
       try {
@@ -172,37 +165,10 @@ export default function SuccessScreen({
           custom={0}
           className="text-3xl md:text-4xl font-semibold text-[#F1FFFF] mb-3 text-center"
         >
-          {character
-            ? firstName
-              ? `Welcome to the guild, ${firstName}.`
-              : "Welcome to the guild."
-            : firstName
-              ? `Thanks, ${firstName}.`
-              : "Thanks for applying."}
+          {firstName
+            ? `Thanks, ${firstName}.`
+            : "Thanks for applying."}
         </motion.h2>
-
-        {character && (
-          <motion.div
-            variants={fadeUpVariants}
-            initial="hidden"
-            animate="visible"
-            custom={1}
-            className="mb-10"
-          >
-            <CharacterCard
-              name={applicantName ?? ""}
-              character={character}
-              roleTitle={positionTitle}
-              status="Screening"
-              issued={issued}
-              xp={TOTAL_XP}
-            />
-            <p className="text-xs text-[#6B7280] text-center mt-4">
-              Your card. Screenshot it, share it, or keep it. Every quest
-              complete.
-            </p>
-          </motion.div>
-        )}
 
         <motion.p
           variants={fadeUpVariants}
@@ -211,7 +177,7 @@ export default function SuccessScreen({
           custom={1}
           className="text-[#9CA3AF] mb-10 text-center leading-relaxed"
         >
-          Your application
+          Thanks for applying to join the TSI Executive Team. Your application
           for{" "}
           <span className="text-[#F1FFFF] font-medium">{positionTitle}</span>{" "}
           is in. We&apos;ll be reviewing all applications and contacting
