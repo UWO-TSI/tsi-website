@@ -499,10 +499,14 @@ interface BuildingProps {
   color: string;
   roofColor?: string;
   href?: string;
+  /** Room id when the building can be entered (prompt shows without an href). */
+  interior?: string;
+  /** Proximity name pill. Default on. */
+  showLabel?: boolean;
   playerPosition: THREE.Vector3;
 }
 
-export default function Building({ id, name, position, size, color, roofColor, href, playerPosition }: BuildingProps) {
+export default function Building({ id, name, position, size, color, roofColor, href, interior, showLabel = true, playerPosition }: BuildingProps) {
   const dist = useMemo(() => {
     return new THREE.Vector3(...position).distanceTo(playerPosition);
   }, [position, playerPosition]);
@@ -554,7 +558,7 @@ export default function Building({ id, name, position, size, color, roofColor, h
 
       {/* Label — white pill, dark text. Proximity-gated with a soft
           fade-in so approaching a building "reveals" its name. */}
-      {labelNear && (
+      {labelNear && showLabel && (
         <Html zIndexRange={[40, 0]} position={[0, size[1] + 0.7, 0]} center distanceFactor={12} style={{ pointerEvents: "none" }}>
           <div style={{ fontSize: "13px", color: "#2a2a2a", background: "rgba(255,255,255,0.88)", padding: "3px 10px", borderRadius: "6px", fontWeight: 600, fontFamily: "'IBM Plex Mono',monospace", boxShadow: "0 1px 4px rgba(0,0,0,0.12)", whiteSpace: "nowrap", animation: "tsi-label-in 0.25s ease-out" }}>
             {name}
@@ -563,7 +567,7 @@ export default function Building({ id, name, position, size, color, roofColor, h
         </Html>
       )}
 
-      {isNear && href && (
+      {isNear && (href || interior) && (
         <Html zIndexRange={[40, 0]} position={[0, size[1] + 0.8, 0]} center style={{ pointerEvents: "none" }}>
           <div className="animate-bounce" style={{ fontSize: "14px", color: "#fff", background: "#4a6fa5", padding: "5px 14px", borderRadius: "10px", fontWeight: 600, boxShadow: "0 2px 8px rgba(0,0,0,0.2)", whiteSpace: "nowrap" }}>
             Press <kbd style={{ color: "#FFD166", fontFamily: "'IBM Plex Mono',monospace", fontWeight: 700 }}>E</kbd> to {isBoard ? "view" : "enter"}

@@ -141,11 +141,14 @@ export default function Critters({
   playerPosRef,
   flowerAnchors,
   treeAnchors,
+  heightAt = sampleTerrainHeightFast,
 }: {
   todPhase: "day" | "night" | "dawn" | "dusk";
   playerPosRef: React.MutableRefObject<THREE.Vector3>;
   flowerAnchors: readonly [number, number][];
   treeAnchors: readonly [number, number][];
+  /** Ground sampler. Defaults to the member island's heightfield. */
+  heightAt?: (x: number, z: number) => number;
 }) {
   const phase: "day" | "night" = todPhase === "night" || todPhase === "dusk" ? "night" : "day";
   const groupRefs = useRef<(THREE.Group | null)[]>([]);
@@ -249,7 +252,7 @@ export default function Critters({
         }
       }
 
-      const ground = sampleTerrainHeightFast(x, z);
+      const ground = heightAt(x, z);
       let py = ground + y;
       let scl = s.sp.scale;
 

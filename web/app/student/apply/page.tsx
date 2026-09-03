@@ -12,6 +12,11 @@ import DecryptedText from "@/components/ui/DecryptedText";
 import GradientText from "@/components/ui/GradientText";
 import Countdown from "@/components/recruit/Countdown";
 
+// Applicant world switch (David, 2026-09-02): when set in Vercel, applying
+// happens inside /student/apply/portal and the role pages point there. Unset,
+// the plain web form stays the path (Sept 5 opens this way).
+const APPLY_WORLD = process.env.NEXT_PUBLIC_APPLY_WORLD === "1";
+
 const EASE_OUT: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
 export default function RecruitmentPage() {
@@ -258,6 +263,23 @@ function RecruitmentPageInner() {
             transition={{ duration: 0.6, delay: 0.5, ease: EASE_OUT }}
             className="flex flex-wrap items-center gap-5"
           >
+            {APPLY_WORLD ? (
+              <Link
+                href="/student/apply/portal"
+                className="group inline-flex items-center gap-2 px-6 py-3 rounded-full text-sm font-semibold transition-all duration-300"
+                style={{ background: "#1D9BF0", color: "#0F0F10" }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.boxShadow =
+                    "0 0 28px rgba(29,155,240,0.32)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.boxShadow = "none";
+                }}
+              >
+                Enter the portal
+                <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
+              </Link>
+            ) : (
             <a
               href="#positions"
               className="group inline-flex items-center gap-2 px-6 py-3 rounded-full text-sm font-semibold transition-all duration-300"
@@ -273,6 +295,7 @@ function RecruitmentPageInner() {
               View positions
               <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
             </a>
+            )}
             <Link
               href="/student/apply/dashboard"
               className="text-sm transition-colors duration-200"

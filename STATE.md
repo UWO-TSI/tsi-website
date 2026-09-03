@@ -12,7 +12,7 @@ The member game world is **pushed back**. Do not spend time on it unless David r
 |---|---|
 | Round | Fall 2026 exec hiring: **VP Marketing** + **PM** (both public) |
 | Dates | Opens **Sept 5 2026 00:00 EDT**, closes **Sept 11 2026 end of day EDT** (`closes_at` = Sept 12 04:10Z, May convention) |
-| Prototype | "Character sheet" apply flow: short class quiz (Oracle MBTI logic) → the 4 form steps become quests with an XP bar → success = shareable character card. Small prototype, not the 3D world. Live for Sept 5. |
+| Prototype | **Applicant world** (David, 2026-09-02): sign in → character creation (name, year, program, saved to the member `profiles` row) → a dedicated mini island built from the portal's own components → guided walk (WASD primer, chevrons, fences) to the HQ → Recruitment Office with one desk + recruiter per open role → E opens the existing 4-step application as a sheet over the world. Desktop only. **v1 is walkable on `feat/apply-world` (PR #17)** at `/student/apply/portal` (`?preview=1` mocks the roles without a DB). Entry points switch on with `NEXT_PUBLIC_APPLY_WORLD=1` in Vercel. David's Figma reskins the UI later; his new sprite sheet adds appearance. |
 | Essays | David pastes new questions. May's questions are the placeholder until then. |
 | Exec beta | Skipped. |
 | Migrations 024/025 (game coins, seasonal seed, drafted on the game branch) | Apply at the game world's launch window, not now. |

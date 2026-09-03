@@ -46,7 +46,16 @@ const RECTS = [
 ];
 
 type Variant = "interior" | "edge" | "corner" | "cap";
-type Zone = "soil" | "stone" | "sand" | "wood";
+export type RoadZone = "soil" | "stone" | "sand" | "wood";
+type Zone = RoadZone;
+export interface RoadRect { x0: number; x1: number; z0: number; z1: number }
+export interface RoadConfig {
+  rects: RoadRect[];
+  zoneAt: (x: number, z: number) => Zone;
+  /** Inclusive cell index ranges swept by the auto-tiler. */
+  grid: { gx: [number, number]; gz: [number, number] };
+  heightAt: (x: number, z: number) => number;
+}
 
 const ZONE_URLS: Record<Zone, Record<Variant, string>> = {
   soil: {
@@ -180,9 +189,13 @@ function zoneAt(x: number, z: number): Zone {
   return "soil";
 }
 
-function isRoad(x: number, z: number): boolean {
-  return RECTS.some((r) => inRect(r, x, z));
-}
+// The member island's network (default). Other scenes pass their own.
+const MAIN_ISLAND: RoadConfig = {
+  rects: RECTS,
+  zoneAt,
+  grid: { gx: [-32, 32], gz: [-30, 50] },
+  heightAt: getTerrainHeight,
+};
 
 function mergedGeometry(scene: THREE.Group): THREE.BufferGeometry {
   const geos: THREE.BufferGeometry[] = [];
@@ -202,15 +215,16 @@ function mergedGeometry(scene: THREE.Group): THREE.BufferGeometry {
 
 interface Placement { x: number; z: number; rot: number }
 
-function computePlacements(zone: Zone): Record<Variant, Placement[]> {
+function computePlacements(zone: Zone, cfg: RoadConfig): Record<Variant, Placement[]> {
+  const isRoad = (x: number, z: number) => cfg.rects.some((r) => inRect(r, x, z));
   const out: Record<string, Placement[]> = { interior: [], edge: [], corner: [], cap: [] };
-  for (let gx = -32; gx <= 32; gx++) {
-    for (let gz = -30; gz <= 50; gz++) {
+  for (let gx = cfg.grid.gx[0]; gx <= cfg.grid.gx[1]; gx++) {
+    for (let gz = cfg.grid.gz[0]; gz <= cfg.grid.gz[1]; gz++) {
       // half-cell offset: corridors span an even tile count symmetrically
       const cx = (gx + 0.5) * CELL;
       const cz = (gz + 0.5) * CELL;
       if (!isRoad(cx, cz)) continue;
-      if (zoneAt(cx, cz) !== zone) continue;
+      if (cfg.zoneAt(cx, cz) !== zone) continue;
       const n = isRoad(cx, cz + CELL);
       const s = isRoad(cx, cz - CELL);
       const e = isRoad(cx - CELL, cz);
@@ -237,7 +251,7 @@ function computePlacements(zone: Zone): Record<Variant, Placement[]> {
   return out as Record<Variant, Placement[]>;
 }
 
-export default function RoadTiles() {
+export default function RoadTiles({ config = MAIN_ISLAND }: { config?: RoadConfig } = {}) {
   const soilI = useGLTF(ZONE_URLS.soil.interior).scene;
   const soilE = useGLTF(ZONE_URLS.soil.edge).scene;
   const soilC = useGLTF(ZONE_URLS.soil.corner).scene;
@@ -269,7 +283,7 @@ export default function RoadTiles() {
     const up = new THREE.Vector3(0, 1, 0);
     const result: THREE.InstancedMesh[] = [];
     for (const zone of ZONES) {
-      const placements = computePlacements(zone);
+      const placements = computePlacements(zone, config);
       const mat = new THREE.MeshStandardMaterial({
         color: ZONE_COLORS[zone],
         map: getZoneTexture(zone),
@@ -282,7 +296,7 @@ export default function RoadTiles() {
         const im = new THREE.InstancedMesh(mergedGeometry(scenes[zone][kind]), mat, list.length);
         list.forEach((t, i) => {
           q.setFromAxisAngle(up, t.rot);
-          p.set(t.x, getTerrainHeight(t.x, t.z) + 0.02, t.z);
+          p.set(t.x, config.heightAt(t.x, t.z) + 0.02, t.z);
           m4.compose(p, q, sc);
           im.setMatrixAt(i, m4);
         });
@@ -292,7 +306,7 @@ export default function RoadTiles() {
       }
     }
     return result;
-  }, [soilI, soilE, soilC, soilK, stoneI, stoneE, stoneC, stoneK, sandI, sandE, sandC, sandK, woodI, woodE, woodC, woodK]);
+  }, [config, soilI, soilE, soilC, soilK, stoneI, stoneE, stoneC, stoneK, sandI, sandE, sandC, sandK, woodI, woodE, woodC, woodK]);
 
   return (
     <group>
