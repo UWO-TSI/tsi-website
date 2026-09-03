@@ -11,6 +11,9 @@ import type { RoadConfig, RoadRect } from "@/components/game/RoadTiles";
 import type { Position } from "@/lib/recruitment";
 import type { KeeperHat } from "@/components/game/interiorShared";
 
+/** The island's fixed hour: late afternoon, warm key, still bright. */
+export const PORTAL_HOUR = 16.3;
+
 /** Grass disc radius; sand begins just outside. */
 export const GRASS_RADIUS = 21;
 /** Radius where the sunken rim crosses the water plane (y = -0.55). */

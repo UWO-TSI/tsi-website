@@ -49,7 +49,7 @@ export const TOD_KEYS: [number, string, string, string, number, string, number][
   [17, "#FF9966", "#FFD4A8", "#FFA35C", 0.95, "#FFD4A8", 0.34], // golden peak (BSL 255,160,80)
   [18, "#E87A5A", "#F2B888", "#FF8E4A", 0.7,  "#E8B090", 0.3],  // saturate + darken
   [19, "#FF9966", "#2D2D6B", "#FF7A48", 0.35, "#6B5A8B", 0.26], // last ember
-  [21, "#1A1A40", "#2D2D6B", "#334466", 0.0,  "#334466", 0.22], // blue night floor
+  [21, "#1A1A40", "#26264A", "#334466", 0.0,  "#334466", 0.22], // blue night floor (fog darkened 2026-07-23)
 ];
 const _tc = new THREE.Color();
 const _sunPos = new THREE.Vector3();
@@ -341,17 +341,22 @@ export function TimeOfDayCycle({ weather, todPhase, shadowsOn, playerPosRef, hou
         sunRef.current.position.copy(_sunPos);
       }
     }
-    // Ambient
+    // Fill budget (D3 fix, game branch 2026-07-26): fill was measured at
+    // 1.30 against a 1.40 key, a 2.2:1 ratio that cannot carve form. The
+    // ambient now scales with how much sun there is to compete with, and
+    // the hemisphere is a cool-from-above tint rather than a second key.
+    const sunNorm = Math.min(1, (a[4] + (b[4] - a[4]) * t) / 1.4);
     if (ambRef.current) {
       ambRef.current.color.set(a[5]).lerp(_tc.set(b[5]), t);
-      ambRef.current.intensity = (a[6] + (b[6] - a[6]) * t) * (weather === "rain" ? 0.85 : 1);
+      const tableAmb = a[6] + (b[6] - a[6]) * t;
+      ambRef.current.intensity =
+        tableAmb * (0.32 + (1 - sunNorm) * 0.68) * (weather === "rain" ? 0.85 : 1);
     }
     // Hemisphere rides the sun curve (art pass 2026-07-07). Lighting v3:
     // retuned for the stronger sun — 0.2 floor at night → ~0.4 at noon
     // (was 0.3 + sunI×0.55 ≈ 0.82, a shadow-flooding fill).
     if (hemiRef.current) {
-      const sunI = (a[4] + (b[4] - a[4]) * t) * wDim;
-      hemiRef.current.intensity = 0.2 + sunI * 0.14;
+      hemiRef.current.intensity = 0.2 - sunNorm * 0.05;
     }
     // Fog still follows the TOD horizon palette (the placeholder skies are
     // baked from the same table, so they stay in sync). Rain pulls it
@@ -398,7 +403,8 @@ export function TimeOfDayCycle({ weather, todPhase, shadowsOn, playerPosRef, hou
         shadow-camera-top={22} shadow-camera-bottom={-22}
         shadow-bias={-0.0004} shadow-normalBias={0.03}
       />
-      <directionalLight color="#C0D0FF" intensity={0.15} position={[-12, 18, -8]} />
+      {/* D3: the second cool fill directional is gone. It lit exactly the
+          surfaces the key does not, which is what collapses contrast. */}
     </>
   );
 }

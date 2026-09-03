@@ -1,0 +1,297 @@
+/**
+ * Fishing data + rules (extracted from FishingOverlay 2026-07-22 so the
+ * /lab/fishing bench and the game share ONE source of truth).
+ *
+ * Refinement rulings (David, 2026-07-22 playtest; rerank 2026-07-24):
+ *  - 6 rarity tiers: common / uncommon / rare / epic / legendary / sea king.
+ *    SEA KING sits VACANT (rerank ruling): none of the current roster earns
+ *    it — David is supplying dedicated marquee models for the tier.
+ *    Legendary is deliberately tight (7): the three goldens + Stringfish +
+ *    Coelacanth / Hammerhead / Sturgeon.
+ *  - Difficulty scales with rarity: bar narrows, fish speed up — and every
+ *    species has its OWN movement fields so behavior is parameterized per
+ *    fish, not one memorizable pattern.
+ *  - Sizes make sense: per-species cm ranges, rolled skew-small on catch.
+ *  - Celebration scales with tier (shake px, confetti bursts, card time).
+ */
+
+import confetti from "canvas-confetti";
+import { getTodayWeather } from "./weather";
+// Hour override: the applicant island pins its sky to one hour (the game
+// branch scrubbed this through /lab). null = wall clock.
+let hourOverride: number | null = null;
+export function setFishingHour(h: number | null): void {
+  hourOverride = h;
+}
+import { EXTRA_FISH } from "./fishCatalog";
+import { weatherMods } from "./weatherPerks";
+
+export type Rarity = "common" | "uncommon" | "rare" | "epic" | "legendary" | "seaking";
+
+/**
+ * Sea King is HOLOGRAPHIC (David ruling 2026-07-23): chips render this
+ * animated iridescent gradient instead of the flat tier color. Pair with
+ * the `tsi-holo-shift` keyframes (defined wherever chips render).
+ */
+export const HOLO_GRADIENT =
+  "linear-gradient(115deg, #5EE7F7 0%, #6EA8FF 18%, #B57AFF 38%, #FF7AD9 58%, #7DFFC4 78%, #5EE7F7 100%)";
+
+/** Wharf Shack buy prices per rarity (economy v2 E3 — coins 🪙, count-based
+ *  v1; size factor lands with server-side sales). */
+export const SELL_PRICES: Record<Rarity, number> = {
+  common: 8,
+  uncommon: 20,
+  rare: 60,
+  epic: 180,
+  legendary: 600,
+  seaking: 2500,
+};
+
+export const RARITY_META: Record<
+  Rarity,
+  { label: string; color: string; weight: number; barW: number }
+> = {
+  common: { label: "Common", color: "#7C9A62", weight: 100, barW: 0.3 },
+  uncommon: { label: "Uncommon", color: "#4A90D9", weight: 48, barW: 0.27 },
+  rare: { label: "Rare", color: "#9B6DD6", weight: 18, barW: 0.24 },
+  epic: { label: "Epic", color: "#D6598F", weight: 7, barW: 0.21 },
+  legendary: { label: "Legendary", color: "#E8A93C", weight: 2.5, barW: 0.19 },
+  seaking: { label: "Sea King", color: "#1FB6CF", weight: 1, barW: 0.17 },
+};
+
+/** Per-species reel behavior — track space is 0..1, speeds in track/s. */
+export interface FishMove {
+  speed: number; // top cruising speed
+  accel: number; // how hard it pulls toward its target (track/s²)
+  jitter: number; // constant nervous wobble amplitude
+  dartChance: number; // chance a retarget is a dart
+  dartMul: number; // speed/accel multiplier while darting
+  retargetMs: number; // base time between new targets
+}
+
+export interface FishDef {
+  key: string;
+  label: string; // "a Dace" — result copy
+  name: string; // "Dace" — reel card
+  model: string;
+  rarity: Rarity;
+  sizeCm: [number, number];
+  move: FishMove;
+  /** Availability gate; absent = always biting. Hour is 0-24 local. */
+  when?: (hour: number, weather: string) => boolean;
+  /** Human copy for the availability window (lab bench + future almanac). */
+  whenLabel?: string;
+  /** Icon override; absent = the rendered per-key PNG via iconFor(). */
+  icon?: string;
+  /** Raw dump export: FishCatchFX applies GAME_CALIBRATION (0.1, +90°X). */
+  raw?: boolean;
+  /** Habitat: river (default) or sea — spots roll their own zone. */
+  zone?: "river" | "sea";
+  /** Sea-floor creature (not a fish): pulled up at sea spots, grouped
+   *  separately in the Collection Book. */
+  creature?: boolean;
+}
+
+/** Resolve a species' reel/book icon. */
+export function iconFor(f: FishDef): string {
+  return f.icon ?? `/assets/acnh/icons/${f.key}.png`;
+}
+
+// ACNH revamp 2026-07: species-true river catches (models shown in-world by
+// FishCatchFX). New species are one row here + one in CollectionBook once
+// their model/icon ships (the dump's Creatures/ set has more to extract;
+// the next marquee fish takes the Sea King crown).
+const CORE_FISH: FishDef[] = [
+  { key: "fish_dace", label: "a Dace", name: "Dace", model: "/assets/acnh/fish/dace.glb", rarity: "common", sizeCm: [10, 18], move: { speed: 0.2, accel: 0.9, jitter: 0.004, dartChance: 0.08, dartMul: 1.8, retargetMs: 1900 } },
+  { key: "fish_pale_chub", label: "a Pale Chub", name: "Pale Chub", model: "/assets/acnh/fish/pale-chub.glb", rarity: "common", sizeCm: [8, 14], move: { speed: 0.22, accel: 0.9, jitter: 0.006, dartChance: 0.1, dartMul: 1.9, retargetMs: 1800 }, when: (h) => h >= 6 && h < 18, whenLabel: "day (6-18h)" },
+  { key: "fish_pond_smelt", label: "a Pond Smelt", name: "Pond Smelt", model: "/assets/acnh/fish/pond-smelt.glb", rarity: "common", sizeCm: [6, 10], move: { speed: 0.18, accel: 0.7, jitter: 0.005, dartChance: 0.08, dartMul: 1.7, retargetMs: 2000 } },
+  { key: "fish_crucian_carp", label: "a Crucian Carp", name: "Crucian Carp", model: "/assets/acnh/fish/crucian-carp.glb", rarity: "uncommon", sizeCm: [15, 30], move: { speed: 0.26, accel: 1.0, jitter: 0.005, dartChance: 0.14, dartMul: 1.9, retargetMs: 1600 } },
+  { key: "fish_bluegill", label: "a Bluegill", name: "Bluegill", model: "/assets/acnh/fish/bluegill.glb", rarity: "uncommon", sizeCm: [12, 22], move: { speed: 0.3, accel: 1.4, jitter: 0.012, dartChance: 0.18, dartMul: 2.0, retargetMs: 1300 }, when: (h) => h >= 9 && h < 16, whenLabel: "midday (9-16h)" },
+  { key: "fish_goldfish", label: "a Goldfish", name: "Goldfish", model: "/assets/acnh/fish/goldfish.glb", rarity: "uncommon", sizeCm: [8, 15], move: { speed: 0.27, accel: 1.1, jitter: 0.008, dartChance: 0.12, dartMul: 1.8, retargetMs: 1500 } },
+  { key: "fish_carp", label: "a Carp", name: "Carp", model: "/assets/acnh/fish/carp.glb", rarity: "uncommon", sizeCm: [35, 70], move: { speed: 0.3, accel: 1.2, jitter: 0.004, dartChance: 0.16, dartMul: 1.8, retargetMs: 1500 } },
+  { key: "fish_black_bass", label: "a Black Bass", name: "Black Bass", model: "/assets/acnh/fish/black-bass.glb", rarity: "rare", sizeCm: [30, 55], move: { speed: 0.36, accel: 1.8, jitter: 0.01, dartChance: 0.26, dartMul: 2.3, retargetMs: 1150 } },
+  { key: "fish_catfish", label: "a Catfish", name: "Catfish", model: "/assets/acnh/fish/catfish.glb", rarity: "epic", sizeCm: [50, 110], move: { speed: 0.32, accel: 1.5, jitter: 0.006, dartChance: 0.3, dartMul: 2.6, retargetMs: 1300 }, when: (h, w) => h >= 20 || h < 4 || w === "rain", whenLabel: "night (20-4h) or rain" },
+  // ── Dump import batch 1 (2026-07-24, calibrated rip): 11 new species.
+  { key: "fish_killifish", label: "a Killifish", name: "Killifish", model: "/assets/acnh/fish/killifish.glb", rarity: "common", sizeCm: [3, 5], raw: true, move: { speed: 0.19, accel: 0.8, jitter: 0.007, dartChance: 0.09, dartMul: 1.7, retargetMs: 1900 }, when: (h) => h >= 6 && h < 20, whenLabel: "day (6-20h)" },
+  { key: "fish_loach", label: "a Loach", name: "Loach", model: "/assets/acnh/fish/loach.glb", rarity: "common", sizeCm: [12, 20], raw: true, move: { speed: 0.21, accel: 0.85, jitter: 0.005, dartChance: 0.1, dartMul: 1.8, retargetMs: 1850 } },
+  { key: "fish_sweetfish", label: "a Sweetfish", name: "Sweetfish", model: "/assets/acnh/fish/sweetfish.glb", rarity: "uncommon", sizeCm: [18, 30], raw: true, move: { speed: 0.28, accel: 1.2, jitter: 0.009, dartChance: 0.15, dartMul: 1.9, retargetMs: 1450 } },
+  { key: "fish_rainbow_trout", label: "a Rainbow Trout", name: "Rainbow Trout", model: "/assets/acnh/fish/rainbow-trout.glb", rarity: "uncommon", sizeCm: [30, 50], raw: true, move: { speed: 0.29, accel: 1.25, jitter: 0.007, dartChance: 0.16, dartMul: 2.0, retargetMs: 1400 }, when: (h) => h >= 5 && h < 19, whenLabel: "day (5-19h)" },
+  { key: "fish_salmon", label: "a Salmon", name: "Salmon", model: "/assets/acnh/fish/salmon.glb", rarity: "uncommon", sizeCm: [50, 80], raw: true, move: { speed: 0.33, accel: 1.4, jitter: 0.006, dartChance: 0.2, dartMul: 2.1, retargetMs: 1300 } },
+  { key: "fish_snakehead", label: "a Snakehead", name: "Snakehead", model: "/assets/acnh/fish/snakehead.glb", rarity: "rare", sizeCm: [40, 90], raw: true, move: { speed: 0.34, accel: 1.6, jitter: 0.008, dartChance: 0.24, dartMul: 2.2, retargetMs: 1250 }, when: (h) => h >= 9 && h < 16, whenLabel: "midday (9-16h)" },
+  { key: "fish_gar", label: "a Gar", name: "Gar", model: "/assets/acnh/fish/gar.glb", rarity: "epic", sizeCm: [90, 150], raw: true, move: { speed: 0.34, accel: 1.6, jitter: 0.005, dartChance: 0.28, dartMul: 2.5, retargetMs: 1250 }, when: (h, w) => h >= 16 || h < 9 || w === "rain", whenLabel: "evening/night or rain" },
+  { key: "fish_king_salmon", label: "a King Salmon", name: "King Salmon", model: "/assets/acnh/fish/king-salmon.glb", rarity: "epic", sizeCm: [70, 120], raw: true, move: { speed: 0.35, accel: 1.7, jitter: 0.006, dartChance: 0.3, dartMul: 2.4, retargetMs: 1200 } },
+  { key: "fish_stringfish", label: "a Stringfish", name: "Stringfish", model: "/assets/acnh/fish/stringfish.glb", rarity: "legendary", sizeCm: [80, 130], raw: true, move: { speed: 0.4, accel: 2.0, jitter: 0.01, dartChance: 0.32, dartMul: 2.4, retargetMs: 1050 }, when: (h, w) => h >= 21 || h < 4 || w === "rain", whenLabel: "late night or rain" },
+  { key: "fish_golden_trout", label: "a Golden Trout", name: "Golden Trout", model: "/assets/acnh/fish/golden-trout.glb", rarity: "legendary", sizeCm: [40, 60], raw: true, move: { speed: 0.41, accel: 2.1, jitter: 0.012, dartChance: 0.3, dartMul: 2.3, retargetMs: 1000 } },
+  // Golden Arowana (2026-07-24): the last unconverted species model in the
+  // dump (ArowanaGold recolor) — closes the fish roster at 81.
+  { key: "fish_golden_arowana", label: "a Golden Arowana", name: "Golden Arowana", model: "/assets/acnh/fish/golden-arowana.glb", rarity: "legendary", sizeCm: [70, 100], raw: true, move: { speed: 0.42, accel: 2.1, jitter: 0.01, dartChance: 0.32, dartMul: 2.4, retargetMs: 980 }, when: (h) => h >= 20 || h < 4, whenLabel: "night (20-4h)" },
+  // Rarity rerank (David ruling 2026-07-24): SEA KING IS VACANT — David is
+  // supplying new marquee models for the tier; the arapaima drops to epic
+  // (keeping its king-sized fight). Legendary is deliberately tight: the
+  // three goldens + Stringfish + Coelacanth/Hammerhead/Sturgeon.
+  { key: "fish_golden_koi", label: "a Golden Koi", name: "Golden Koi", model: "/assets/acnh/fish/koi.glb", rarity: "legendary", sizeCm: [60, 95], move: { speed: 0.44, accel: 2.2, jitter: 0.014, dartChance: 0.34, dartMul: 2.4, retargetMs: 950 } },
+  { key: "fish_arapaima", label: "an Arapaima", name: "Arapaima", model: "/assets/acnh/fish/arapaima.glb", rarity: "epic", sizeCm: [150, 300], raw: true, move: { speed: 0.46, accel: 2.3, jitter: 0.012, dartChance: 0.36, dartMul: 2.5, retargetMs: 900 }, when: (h, w) => h >= 16 || h < 9 || w === "rain", whenLabel: "evening/night or rain" },
+];
+
+
+// Sea-floor creatures (2026-07-24): the 10 dive models staged under
+// assets/acnh/sea/ (loop iter 25) are now IN the game — pulled up at the
+// two sea fishing spots (deck + cove) alongside the sea fish. Slow, heavy
+// reel personalities: bottom dwellers cling, they don't sprint. A future
+// pier/diving feature can move them to their own mechanic without touching
+// these defs.
+const SEA_CREATURES: FishDef[] = [
+  { key: "sea_scallop", label: "a Scallop", name: "Scallop", model: "/assets/acnh/sea/scallop.glb", rarity: "common", zone: "sea", creature: true, sizeCm: [8, 14], raw: true, move: { speed: 0.15, accel: 0.6, jitter: 0.004, dartChance: 0.06, dartMul: 1.6, retargetMs: 2200 } },
+  { key: "sea_sweet_shrimp", label: "a Sweet Shrimp", name: "Sweet Shrimp", model: "/assets/acnh/sea/sweet-shrimp.glb", rarity: "common", zone: "sea", creature: true, sizeCm: [5, 9], raw: true, move: { speed: 0.2, accel: 0.85, jitter: 0.008, dartChance: 0.14, dartMul: 2.0, retargetMs: 1700 }, when: (h) => h >= 16 || h < 9, whenLabel: "evening/night" },
+  { key: "sea_sea_star", label: "a Sea Star", name: "Sea Star", model: "/assets/acnh/sea/sea-star.glb", rarity: "common", zone: "sea", creature: true, sizeCm: [8, 15], raw: true, move: { speed: 0.12, accel: 0.5, jitter: 0.003, dartChance: 0.04, dartMul: 1.4, retargetMs: 2500 } },
+  { key: "sea_barnacle", label: "an Acorn Barnacle", name: "Acorn Barnacle", model: "/assets/acnh/sea/barnacle.glb", rarity: "common", zone: "sea", creature: true, sizeCm: [2, 4], raw: true, move: { speed: 0.1, accel: 0.45, jitter: 0.003, dartChance: 0.03, dartMul: 1.3, retargetMs: 2600 } },
+  { key: "sea_dungeness_crab", label: "a Dungeness Crab", name: "Dungeness Crab", model: "/assets/acnh/sea/dungeness-crab.glb", rarity: "uncommon", zone: "sea", creature: true, sizeCm: [15, 25], raw: true, move: { speed: 0.24, accel: 1.0, jitter: 0.007, dartChance: 0.16, dartMul: 1.9, retargetMs: 1500 } },
+  { key: "sea_garden_eel", label: "a Garden Eel", name: "Garden Eel", model: "/assets/acnh/sea/garden-eel.glb", rarity: "uncommon", zone: "sea", creature: true, sizeCm: [30, 40], raw: true, move: { speed: 0.26, accel: 1.1, jitter: 0.009, dartChance: 0.18, dartMul: 2.0, retargetMs: 1400 }, when: (h) => h >= 6 && h < 18, whenLabel: "day (6-18h)" },
+  { key: "sea_firefly_squid", label: "a Firefly Squid", name: "Firefly Squid", model: "/assets/acnh/sea/firefly-squid.glb", rarity: "uncommon", zone: "sea", creature: true, sizeCm: [5, 8], raw: true, move: { speed: 0.27, accel: 1.15, jitter: 0.01, dartChance: 0.2, dartMul: 2.1, retargetMs: 1350 }, when: (h) => h >= 21 || h < 4, whenLabel: "late night (21-4h)" },
+  { key: "sea_abalone", label: "an Abalone", name: "Abalone", model: "/assets/acnh/sea/abalone.glb", rarity: "rare", zone: "sea", creature: true, sizeCm: [12, 20], raw: true, move: { speed: 0.18, accel: 0.8, jitter: 0.004, dartChance: 0.1, dartMul: 1.7, retargetMs: 1900 }, when: (h) => h >= 16 || h < 9, whenLabel: "evening/night" },
+  { key: "sea_pearl_oyster", label: "a Pearl Oyster", name: "Pearl Oyster", model: "/assets/acnh/sea/pearl-oyster.glb", rarity: "rare", zone: "sea", creature: true, sizeCm: [7, 12], raw: true, move: { speed: 0.2, accel: 0.9, jitter: 0.005, dartChance: 0.12, dartMul: 1.8, retargetMs: 1800 } },
+  { key: "sea_giant_isopod", label: "a Giant Isopod", name: "Giant Isopod", model: "/assets/acnh/sea/giant-isopod.glb", rarity: "epic", zone: "sea", creature: true, sizeCm: [20, 40], raw: true, move: { speed: 0.3, accel: 1.4, jitter: 0.007, dartChance: 0.26, dartMul: 2.3, retargetMs: 1250 }, when: (h) => h >= 20 || h < 4, whenLabel: "night (20-4h)" },
+];
+
+export const FISH: FishDef[] = [...CORE_FISH, ...EXTRA_FISH, ...SEA_CREATURES];
+
+export function currentFishingContext(): { hour: number; weather: string } {
+  const hour = hourOverride ?? new Date().getHours() + new Date().getMinutes() / 60;
+  return { hour, weather: getTodayWeather() };
+}
+
+export function fishWeight(f: FishDef, weather: string): number {
+  let w = RARITY_META[f.rarity].weight;
+  if (f.key === "fish_golden_koi" && weather === "rain") w *= 2; // koi loves rain
+  if ((f.zone ?? "river") === "sea") w *= weatherMods(weather).seaWeightMul;
+  return w;
+}
+
+/** Cast-meter tuning (David 2026-07-23): hold E → vertical ping-pong bar,
+ *  release at the tip = MAX CAST. Power scales BOTH luck and bite timing. */
+export const CAST = {
+  cycleMs: 1400, // base ping-pong period — the meter speeds up 15%/cycle while held
+  maxZone: 0.92, // release at p >= this = MAX CAST
+  maxBonus: 0.3, // extra luck on a MAX release
+  waitScale: 0.5, // max power halves the 2-6s wait
+  biteBonusMs: 800, // max power widens the 1.4s hook window by this
+};
+
+/** Luck-aware weight: cast power inflates rare-and-up odds (max ≈ 2×). */
+function luckWeight(f: FishDef, weather: string, luck: number): number {
+  let w = fishWeight(f, weather);
+  if (luck > 0 && f.rarity !== "common" && f.rarity !== "uncommon") w *= 1 + luck;
+  return w;
+}
+
+/** Weighted roll over the species available right now. luck 0..~1.3 from
+ *  cast power — see CAST. */
+export function rollFish(luck = 0, zone: "river" | "sea" = "river"): FishDef {
+  const { hour, weather } = currentFishingContext();
+  // Weather perk: rain adds flat luck on top of cast power.
+  const totalLuck = luck + weatherMods(weather).rareLuckBonus;
+  const pool = FISH.filter((f) => (f.zone ?? "river") === zone && (!f.when || f.when(hour, weather)));
+  const total = pool.reduce((s, f) => s + luckWeight(f, weather, totalLuck), 0);
+  let r = Math.random() * total;
+  for (const f of pool) {
+    r -= luckWeight(f, weather, totalLuck);
+    if (r <= 0) return f;
+  }
+  return pool[pool.length - 1];
+}
+
+/** Skewed size roll — most catches modest, big ones are the brag. */
+export function rollSize([min, max]: [number, number]): number {
+  return Math.round(min + (max - min) * Math.pow(Math.random(), 1.7));
+}
+
+// ─── Reel tuning (track space is 0..1; bar width comes from rarity) ─────────
+export const HOLD_ACCEL = 3.6; // hold LMB → push right
+export const GRAVITY = 3.1; // release → fall left
+export const DAMPING = 1.4; // exponential velocity damping /s
+export const EDGE_BOUNCE = 0.35; // left-edge elasticity (Stardew's bottom bounce)
+export const FILL_RATE = 0.26; // progress /s while the fish is inside the bar
+export const START_PROGRESS = 0.35;
+
+/**
+ * Blind-box reveal staging (David ruling 2026-07-23): FIRST catches get a
+ * fullscreen gacha ceremony — black silhouette shakes center-screen while
+ * a tier-colored glow ramps (the telegraph), then a flash, then the fish
+ * lands in color with name/rarity/size. Cinematic pacing, click-to-skip.
+ * Repeats keep the quick bottom card. All times ms, shake in px.
+ */
+export const REVEAL: Record<
+  Rarity,
+  {
+    suspense: number;
+    flash: number;
+    hold: number;
+    shake: number;
+    rays: boolean;
+    /** Dead-stop beat before the crack (the gasp) — Sol's RNG pattern. 0 = none. */
+    freeze: number;
+    /** Expanding pulse rings at the crack (count = tier flex). */
+    rings: number;
+    /** Double-flash fake-out (legendary+) + monochrome flick (sea king). */
+    doubleFlash: boolean;
+  }
+> = {
+  common: { suspense: 800, flash: 130, hold: 1100, shake: 3, rays: false, freeze: 0, rings: 0, doubleFlash: false },
+  uncommon: { suspense: 1100, flash: 150, hold: 1250, shake: 4, rays: false, freeze: 0, rings: 0, doubleFlash: false },
+  rare: { suspense: 1700, flash: 170, hold: 1450, shake: 6, rays: true, freeze: 0, rings: 2, doubleFlash: false },
+  epic: { suspense: 2300, flash: 190, hold: 1650, shake: 8, rays: true, freeze: 350, rings: 3, doubleFlash: false },
+  legendary: { suspense: 3000, flash: 230, hold: 2200, shake: 10, rays: true, freeze: 450, rings: 4, doubleFlash: true },
+  seaking: { suspense: 3800, flash: 270, hold: 2600, shake: 13, rays: true, freeze: 600, rings: 5, doubleFlash: true },
+};
+
+/** "1 in N" odds for a species under the current hour/weather pool. */
+export function fishOdds(fish: FishDef): number {
+  const { hour, weather } = currentFishingContext();
+  // Odds are within the species' own zone pool (a sea catch competes with
+  // the sea roster, not the whole book).
+  const zone = fish.zone ?? "river";
+  const pool = FISH.filter((f) => (f.zone ?? "river") === zone && (!f.when || f.when(hour, weather)));
+  const total = pool.reduce((s, f) => s + fishWeight(f, weather), 0);
+  const w = fishWeight(fish, weather);
+  return Math.max(1, Math.round(total / w));
+}
+
+/** Tier-scaled catch celebration: shake px, confetti bursts, card ms. */
+export const CELEBRATE: Record<Rarity, { shake: number; bursts: number; cardMs: number; glow: boolean }> = {
+  common: { shake: 4, bursts: 0, cardMs: 2600, glow: false },
+  uncommon: { shake: 4, bursts: 0, cardMs: 2600, glow: false },
+  rare: { shake: 6, bursts: 1, cardMs: 3000, glow: false },
+  epic: { shake: 8, bursts: 2, cardMs: 3200, glow: false },
+  legendary: { shake: 10, bursts: 3, cardMs: 3800, glow: true },
+  seaking: { shake: 12, bursts: 4, cardMs: 4200, glow: true },
+};
+
+export function celebrate(rarity: Rarity, color: string) {
+  const c = CELEBRATE[rarity];
+  // Screen shake — amplitude by tier (no-op when no canvas is mounted,
+  // e.g. on the lab bench).
+  const a = c.shake;
+  document.querySelector("canvas")?.animate(
+    [
+      { transform: "translate(0,0)" },
+      { transform: `translate(${a}px,${-a / 2}px)` },
+      { transform: `translate(${-a}px,${a / 2}px)` },
+      { transform: `translate(${a / 2}px,${a / 3}px)` },
+      { transform: "translate(0,0)" },
+    ],
+    { duration: 90 + a * 25 }
+  );
+  // Confetti from rare up; tier-tinted for the crown tiers.
+  for (let i = 0; i < c.bursts; i++) {
+    window.setTimeout(() => {
+      confetti({
+        particleCount: 50 + i * 40,
+        spread: 65 + i * 12,
+        startVelocity: 38,
+        origin: { x: 0.5, y: 0.72 },
+        colors: [color, "#FFD166", "#FFFDF5"],
+        disableForReducedMotion: true,
+      });
+    }, i * 220);
+  }
+}

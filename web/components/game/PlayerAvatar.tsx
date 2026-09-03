@@ -10,6 +10,7 @@ import { useSFX } from "@/lib/game/useAudio";
 import { getCameraForwardXZ } from "@/lib/game/cameraBasis";
 import { pickCurvedGround } from "@/lib/game/groundPick";
 import MoveTargetIndicator from "./MoveTargetIndicator";
+import { juiceFovOffset } from "@/lib/game/cameraJuice";
 import type { EmoteType } from "@/lib/game/contentTypes";
 
 // Sprint E3: animation_key → emoji glyph for the Html overlay. Real sprite
@@ -88,7 +89,7 @@ function defaultClamp(x: number, z: number): [number, number] {
 function applySprintFov(camera: THREE.Camera, speed: number, delta: number) {
   const pcam = camera as THREE.PerspectiveCamera;
   if (!pcam.isPerspectiveCamera) return;
-  const targetFov = speed > 7.5 ? 51 : 48;
+  const targetFov = (speed > 7.5 ? 51 : 48) - juiceFovOffset(delta);
   const nextFov = THREE.MathUtils.damp(pcam.fov, targetFov, 4, delta);
   if (Math.abs(nextFov - pcam.fov) > 0.01) {
     pcam.fov = nextFov;

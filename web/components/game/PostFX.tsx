@@ -51,9 +51,9 @@ class PastelEffect extends Effect {
     super("PastelGrade", PASTEL_FRAG, {
       blendFunction: BlendFunction.NORMAL,
       uniforms: new Map<string, Uniform>([
-        ["uDesat", new Uniform(0.14)],
+        ["uDesat", new Uniform(0.08)],
         ["uWarmCast", new Uniform(new Vector3(1.03, 1.0, 0.94))],
-        ["uBlackLift", new Uniform(new Vector3(0.05, 0.042, 0.032))],
+        ["uBlackLift", new Uniform(new Vector3(0.025, 0.021, 0.016))],
       ]),
     });
   }

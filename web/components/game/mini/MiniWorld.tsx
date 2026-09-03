@@ -28,7 +28,8 @@ import CharacterCreate from "./CharacterCreate";
 import FishingOverlay from "../FishingOverlay";
 import CollectionBook from "../CollectionBook";
 import { pickFlower } from "@/lib/game/flowerPicks";
-import { layoutDesks, HQ_EXIT_SPAWN, MINI_SPAWN, type Desk } from "@/lib/game/miniIsland";
+import { setFishingHour } from "@/lib/game/fishing";
+import { layoutDesks, HQ_EXIT_SPAWN, MINI_SPAWN, PORTAL_HOUR, type Desk } from "@/lib/game/miniIsland";
 import { createClient } from "@/lib/supabase/client";
 import type { Position, ApplicationStatus } from "@/lib/recruitment";
 import type { Profile } from "@/lib/supabase/types";
@@ -79,6 +80,12 @@ export default function MiniWorld({ session }: { session: MiniWorldSession }) {
   const [positions, setPositions] = useState<Position[]>(session.preview?.positions ?? []);
   const [applications, setApplications] = useState<AppRow[]>([]);
   const playerPosRef = useRef<THREE.Vector3>(new THREE.Vector3(...MINI_SPAWN));
+
+  // Species availability follows the island's pinned hour, not the wall clock.
+  useEffect(() => {
+    setFishingHour(PORTAL_HOUR);
+    return () => setFishingHour(null);
+  }, []);
 
   const playerName = profile?.display_name && !profile.display_name.includes("@") ? profile.display_name : "Applicant";
 
@@ -152,7 +159,7 @@ export default function MiniWorld({ session }: { session: MiniWorldSession }) {
       }
       // The member world's collectibles, same events, same FX layers.
       if (n.kind === "fishing") {
-        window.dispatchEvent(new CustomEvent("tsi:fish-start", { detail: { x: n.spot[0], z: n.spot[1] } }));
+        window.dispatchEvent(new CustomEvent("tsi:fish-start", { detail: { x: n.spot[0], z: n.spot[1], zone: "sea" } }));
         return;
       }
       if (n.kind === "flower") {

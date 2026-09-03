@@ -10,24 +10,24 @@ import { createClient } from "@/lib/supabase/server";
  * POST → collect one item: upsert (user_id, item_key) with count+1.
  */
 
-const ITEM_KEYS = [
-  "apple",
-  "peach",
-  "acorn",
-  "flower_red",
-  "flower_purple",
-  "flower_yellow",
-  "fish_common",
-  "fish_river",
-  "fish_rare",
-] as const;
-
+// QA Wave 29 fix (2026-07-25): the original key ENUM went stale the moment
+// species-true keys shipped (fish_dace, sea_scallop, bug_*, shore_*…) — the
+// server was 400-ing every real catch while localStorage masked it. Shape
+// validation only: collections carry no TC/XP (principle #3), so a
+// whitelist buys nothing and rots every content drop. New species now need
+// zero API edits (the book already derives from the FISH table).
 const CollectSchema = z.object({
-  item_key: z.enum(ITEM_KEYS),
+  item_key: z.string().min(1).max(64).regex(/^[a-z0-9_]+$/),
 });
 
 export async function GET() {
-  const supabase = await createClient();
+  let supabase: Awaited<ReturnType<typeof createClient>>;
+  try {
+    supabase = await createClient();
+  } catch {
+    // Env-less dev/preview: behave like an empty book, not a 500.
+    return NextResponse.json({ collections: [] });
+  }
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -46,7 +46,12 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const supabase = await createClient();
+  let supabase: Awaited<ReturnType<typeof createClient>>;
+  try {
+    supabase = await createClient();
+  } catch {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   const {
     data: { user },
   } = await supabase.auth.getUser();

@@ -40,12 +40,11 @@ import {
   HQ_SIZE,
   ROAD_CONFIG,
   CHEVRONS,
+  PORTAL_HOUR,
   miniHeight,
   clampToIsland,
 } from "@/lib/game/miniIsland";
 
-/** Pinned late afternoon: warm key, still bright. */
-const PORTAL_HOUR = 16.3;
 const FOG_COLOR = "#F2DCB8";
 const INTERACT_RADIUS = 3.4;
 
