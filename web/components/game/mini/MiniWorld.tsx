@@ -25,6 +25,9 @@ import RecruitOffice from "./RecruitOffice";
 import ApplyWelcomeOverlay from "./ApplyWelcomeOverlay";
 import ApplySheet, { type AppliedInfo } from "./ApplySheet";
 import CharacterCreate from "./CharacterCreate";
+import FishingOverlay from "../FishingOverlay";
+import CollectionBook from "../CollectionBook";
+import { pickFlower } from "@/lib/game/flowerPicks";
 import { layoutDesks, HQ_EXIT_SPAWN, MINI_SPAWN, type Desk } from "@/lib/game/miniIsland";
 import { createClient } from "@/lib/supabase/client";
 import type { Position, ApplicationStatus } from "@/lib/recruitment";
@@ -72,6 +75,7 @@ export default function MiniWorld({ session }: { session: MiniWorldSession }) {
   const [sheetDesk, setSheetDesk] = useState<Desk | null>(null);
   const [welcomeVisible, setWelcomeVisible] = useState(false);
   const [welcomeBump, setWelcomeBump] = useState(0);
+  const [collectionOpen, setCollectionOpen] = useState(false);
   const [positions, setPositions] = useState<Position[]>(session.preview?.positions ?? []);
   const [applications, setApplications] = useState<AppRow[]>([]);
   const playerPosRef = useRef<THREE.Vector3>(new THREE.Vector3(...MINI_SPAWN));
@@ -121,7 +125,7 @@ export default function MiniWorld({ session }: { session: MiniWorldSession }) {
     [applications]
   );
 
-  const frozen = !!sheetDesk || creating || welcomeVisible || isTransitioning || !gateDone;
+  const frozen = !!sheetDesk || creating || welcomeVisible || collectionOpen || isTransitioning || !gateDone;
   const frozenRef = useRef(frozen);
   useEffect(() => { frozenRef.current = frozen; }, [frozen]);
   const desksRef = useRef(desks);
@@ -144,6 +148,25 @@ export default function MiniWorld({ session }: { session: MiniWorldSession }) {
           setNearest(null);
         });
         AudioManager.playSFX("exit");
+        return;
+      }
+      // The member world's collectibles, same events, same FX layers.
+      if (n.kind === "fishing") {
+        window.dispatchEvent(new CustomEvent("tsi:fish-start", { detail: { x: n.spot[0], z: n.spot[1] } }));
+        return;
+      }
+      if (n.kind === "flower") {
+        if (pickFlower(n.flowerIdx)) {
+          window.dispatchEvent(new CustomEvent("tsi:flower-pick", { detail: { x: n.flowerPos[0], z: n.flowerPos[1], idx: n.flowerIdx } }));
+        }
+        return;
+      }
+      if (n.kind === "tree") {
+        window.dispatchEvent(new CustomEvent("tsi:tree-shake", { detail: { x: n.treePos[0], z: n.treePos[1], species: n.species } }));
+        return;
+      }
+      if (n.kind === "critter") {
+        window.dispatchEvent(new CustomEvent("tsi:critter-catch", { detail: { slot: n.critterSlot } }));
         return;
       }
       if (n.kind === "station") {
@@ -213,7 +236,7 @@ export default function MiniWorld({ session }: { session: MiniWorldSession }) {
       <Canvas
         gl={{ antialias: false, powerPreference: "high-performance" }}
         dpr={0.66} /* the member world's pixelated mode: render low, upscale nearest */
-        camera={{ fov: 48, near: 0.1, far: 220, position: [0, 17, -26] }}
+        camera={{ fov: 48, near: 0.1, far: 320, position: [0, 17, -26] }}
         shadows="soft"
         onCreated={({ gl }) => {
           gl.toneMapping = THREE.NeutralToneMapping;
@@ -256,6 +279,9 @@ export default function MiniWorld({ session }: { session: MiniWorldSession }) {
 
       <Crosshair active={nearest !== null && !frozen} hint={nearest?.name ?? null} />
 
+      <FishingOverlay />
+      <CollectionBook open={collectionOpen} onClose={() => setCollectionOpen(false)} />
+
       <ApplySheet
         desk={sheetDesk}
         userId={session.userId}
@@ -283,10 +309,11 @@ export default function MiniWorld({ session }: { session: MiniWorldSession }) {
               Tethos application portal
             </div>
             <div style={{ fontSize: 12, color: "#F1FFFF", marginTop: 2 }}>
-              {interior ? "Recruitment Office" : "Walk to HQ"}
+              {interior ? "Recruitment Office" : "Explore, then head to HQ"}
             </div>
           </div>
           <div style={{ position: "absolute", bottom: 16, right: 18, zIndex: 60, display: "flex", gap: 8 }}>
+            <HudButton onClick={() => setCollectionOpen((o) => !o)}>Items</HudButton>
             <HudButton onClick={() => setCreating(true)}>Character</HudButton>
             <HudButton onClick={() => setWelcomeBump((n) => n + 1)}>Keys</HudButton>
             <HudButton href="/student/apply">Leave</HudButton>

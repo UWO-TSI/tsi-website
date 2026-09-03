@@ -15,7 +15,7 @@ export default function MiniSignpost({
 }: {
   position: [number, number, number];
   target: [number, number];
-  label: string;
+  label?: string;
 }) {
   const yaw = Math.atan2(target[0] - position[0], target[1] - position[2]);
   return (
@@ -34,6 +34,7 @@ export default function MiniSignpost({
           <meshStandardMaterial color="#C9A66B" roughness={0.9} />
         </mesh>
       </group>
+      {label && (
       <Html zIndexRange={[40, 0]} position={[0, 2.15, 0]} center distanceFactor={11} style={{ pointerEvents: "none" }}>
         <div
           style={{
@@ -51,6 +52,7 @@ export default function MiniSignpost({
           {label}
         </div>
       </Html>
+      )}
     </group>
   );
 }

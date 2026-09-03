@@ -501,10 +501,12 @@ interface BuildingProps {
   href?: string;
   /** Room id when the building can be entered (prompt shows without an href). */
   interior?: string;
+  /** Proximity name pill. Default on. */
+  showLabel?: boolean;
   playerPosition: THREE.Vector3;
 }
 
-export default function Building({ id, name, position, size, color, roofColor, href, interior, playerPosition }: BuildingProps) {
+export default function Building({ id, name, position, size, color, roofColor, href, interior, showLabel = true, playerPosition }: BuildingProps) {
   const dist = useMemo(() => {
     return new THREE.Vector3(...position).distanceTo(playerPosition);
   }, [position, playerPosition]);
@@ -556,7 +558,7 @@ export default function Building({ id, name, position, size, color, roofColor, h
 
       {/* Label — white pill, dark text. Proximity-gated with a soft
           fade-in so approaching a building "reveals" its name. */}
-      {labelNear && (
+      {labelNear && showLabel && (
         <Html zIndexRange={[40, 0]} position={[0, size[1] + 0.7, 0]} center distanceFactor={12} style={{ pointerEvents: "none" }}>
           <div style={{ fontSize: "13px", color: "#2a2a2a", background: "rgba(255,255,255,0.88)", padding: "3px 10px", borderRadius: "6px", fontWeight: 600, fontFamily: "'IBM Plex Mono',monospace", boxShadow: "0 1px 4px rgba(0,0,0,0.12)", whiteSpace: "nowrap", animation: "tsi-label-in 0.25s ease-out" }}>
             {name}
