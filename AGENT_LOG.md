@@ -114,6 +114,20 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-09-02 — Applicant world v1 shipped on `feat/apply-world` (PR #17, draft)
+
+The plan from the entry below, built and walked end to end the same day.
+
+**Route:** `/student/apply/portal`. Desktop gate (`max-width: 900px` or coarse pointer → "open this on a laptop" + copy link), then `supabase.auth.getUser()` → the recruitment `AuthModal` if signed out (redirects back here), then the world. `?preview=1` (refused on the production deployment) skips auth and mocks the two fall roles so the walk can be checked without a database. Entry points are behind **`NEXT_PUBLIC_APPLY_WORLD=1`**: with it set, the listing's primary CTA is "Enter the portal" and the role pages' Start button goes to the portal; unset, the plain form stays (Sept 5 opens that way).
+
+**Shared components changed (member world untouched in behaviour):** `TimeOfDayCycle` extracted from GameWorld.tsx into its own file (+ `hourOverride`, `groundColor`); `PlayerAvatar` gains `heightAt` / `clampAt` / `frozen` / `clickToMove` / `showNameplate` (all default to the old behaviour); `RoadTiles` takes a `config` (rects, zoneAt, grid, heightAt; default = the main island); `Building` gains `interior` so a room-only building shows "Press E to enter"; `interiorShared` gains `InteriorKeeper` (the branch's procedural desk staff); `ApplicationForm` gains `onSubmitted` + `renderSuccess`.
+
+**New (`web/lib/game/miniIsland.ts`, `web/components/game/mini/`):** flat round island (grass disc r21, sand ring, water at r22.8), one stone road with a door apron, `clampToRoad` keeps the applicant on it, `PathChevrons` pulse toward HQ, `MiniSignpost`, log fences, lamps, 17 trees, bushes, flowers, `MiniOcean` (Ocean's shader with a radial shore), sky pinned to 16:18. `RecruitOffice` = the HQ room kit with one desk per active position from `/api/positions`, a named `InteriorKeeper` per desk (Mara for VP Marketing, Theo for PM), a "Now hiring" board, the exit mat. `ApplySheet` = the OverlaySheet chrome with the recruiter's greeting and the existing four-step form (or the status pipeline if already applied, or an opens/closed notice). `CharacterCreate` = name / year / program → `PATCH /api/profile` (year sent as a string). `MiniWorld` owns the E key, the freeze rules (sheet, creation, primer, transition, load gate), and the HUD (Character / Keys / Leave).
+
+**Verified:** scripted Playwright walk with software WebGL (gstack's daemon cannot create a WebGL context here): creation → primer → road → "Press E to enter" at the door → office → desk prompt → sheet with the form → Esc back. Zero page errors; the only console errors are the DNS failures from the paused database. tsc clean · lint 74 errors (= baseline) / 53 warnings · vitest 32/32 · build green.
+
+**Not done / next:** David's Figma reskin of the sheet, creation and primer; the new sprite sheet (appearance options); real-DB pass (profile save, submit, applied state) once Supabase is back; desk "Applied" state was only exercised with mocks. Fences are `fence-log-a` (the country fence read as a string of dots from the camera height).
+
 ### 2026-07-14 (evening) — Organic island + continuous game-feel loop (`94b518b`…, ongoing)
 
 David's rulings: rain opacity down; "island should not be just a circle — organic shape, organic terrain"; then a standing loop: find visual inconsistencies + game-feel ideas, implement, screenshot-QA, repeat, do not stop.

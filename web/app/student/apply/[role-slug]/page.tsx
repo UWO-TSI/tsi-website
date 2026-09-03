@@ -23,6 +23,9 @@ import type { Position } from "@/lib/recruitment";
 import { getRoleContent } from "@/lib/recruitment-content";
 import type { User } from "@supabase/supabase-js";
 
+// Applicant world switch (see app/student/apply/page.tsx).
+const APPLY_WORLD = process.env.NEXT_PUBLIC_APPLY_WORLD === "1";
+
 const EASE_OUT: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
 const ACK_KEY = (slug: string) => `tethos:ack:${slug}`;
@@ -506,6 +509,11 @@ export default function RoleApplicationPage() {
                       canStart={canStart}
                       onToggleAck={() => setAcknowledged((v) => !v)}
                       onStart={() => {
+                        if (APPLY_WORLD) {
+                          // Applicant world: the application happens at a desk inside HQ.
+                          window.location.assign("/student/apply/portal");
+                          return;
+                        }
                         setPhase("apply");
                         // Scroll to form top
                         window.scrollTo({ top: 0, behavior: "smooth" });
@@ -922,7 +930,7 @@ function ReadyToApply({
             : "bg-white/5 text-[#6B7280] cursor-not-allowed"
         }`}
       >
-        Start application
+        {APPLY_WORLD ? "Enter the portal" : "Start application"}
         <ArrowRight className="w-4 h-4" />
       </motion.button>
 
