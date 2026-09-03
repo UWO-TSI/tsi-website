@@ -11,8 +11,8 @@ The member game world is **pushed back**. Do not spend time on it unless David r
 | Item | Decision |
 |---|---|
 | Round | Fall 2026 exec hiring: **VP Marketing** + **PM** (both public) |
-| Dates | Opens **Sept 5 2026 00:00 EDT**, closes **Sept 11 2026 end of day EDT** (`closes_at` = Sept 12 04:10Z, May convention) |
-| Prototype | "Character sheet" apply flow: short class quiz (Oracle MBTI logic) → the 4 form steps become quests with an XP bar → success = shareable character card. Small prototype, not the 3D world. Live for Sept 5. |
+| Dates | Opens **Sept 5 2026 00:00 EDT**, closes **Sept 11 2026 end of day EDT** (`closes_at` = Sept 12 04:10Z, May convention). Opens on the plain web form; the world replaces it mid-round once David signs off. |
+| Prototype | **Applicant world** (David, 2026-09-02, after rejecting a form-side "character sheet" prototype): click Apply → sign in → character creation (name, year, program, saved to the member `profiles` row) → a dedicated mini island built from the portal's own components → guided walk (WASD popup, chevrons, fences) to the HQ → inside, a Recruitment Office with one desk + recruiter NPC per open role → E opens the existing 4-step application as a sheet over the world. Desktop only; phones get "open on a laptop". David's Figma reskins the UI later. Branch `feat/apply-world`; plan in `AGENT_LOG.md` build section. |
 | Essays | David pastes new questions. May's questions are the placeholder until then. |
 | Exec beta | Skipped. |
 | Migrations 024/025 (game coins, seasonal seed, drafted on the game branch) | Apply at the game world's launch window, not now. |
