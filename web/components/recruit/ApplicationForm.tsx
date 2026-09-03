@@ -23,6 +23,10 @@ import { HEARD_ABOUT_OPTIONS, YEAR_OPTIONS } from "@/lib/recruitment";
 interface ApplicationFormProps {
   position: Position;
   userId: string;
+  /** Fires once the application is accepted by the API. */
+  onSubmitted?: () => void;
+  /** Replace the default full-page success screen (used inside the world sheet). */
+  renderSuccess?: () => React.ReactNode;
 }
 
 interface FormData {
@@ -138,6 +142,8 @@ function countWords(text: string): number {
 export default function ApplicationForm({
   position,
   userId,
+  onSubmitted,
+  renderSuccess,
 }: ApplicationFormProps) {
   const [step, setStep] = useState(0);
   const [direction, setDirection] = useState(1);
@@ -495,6 +501,7 @@ export default function ApplicationForm({
         await clearDraft();
         setSubmitted(true);
         setSubmitting(false);
+        onSubmitted?.();
         return;
       }
 
@@ -534,6 +541,7 @@ export default function ApplicationForm({
   };
 
   if (submitted) {
+    if (renderSuccess) return <>{renderSuccess()}</>;
     return (
       <SuccessScreen
         positionTitle={position.title}

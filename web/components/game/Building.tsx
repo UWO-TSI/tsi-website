@@ -499,10 +499,12 @@ interface BuildingProps {
   color: string;
   roofColor?: string;
   href?: string;
+  /** Room id when the building can be entered (prompt shows without an href). */
+  interior?: string;
   playerPosition: THREE.Vector3;
 }
 
-export default function Building({ id, name, position, size, color, roofColor, href, playerPosition }: BuildingProps) {
+export default function Building({ id, name, position, size, color, roofColor, href, interior, playerPosition }: BuildingProps) {
   const dist = useMemo(() => {
     return new THREE.Vector3(...position).distanceTo(playerPosition);
   }, [position, playerPosition]);
@@ -563,7 +565,7 @@ export default function Building({ id, name, position, size, color, roofColor, h
         </Html>
       )}
 
-      {isNear && href && (
+      {isNear && (href || interior) && (
         <Html zIndexRange={[40, 0]} position={[0, size[1] + 0.8, 0]} center style={{ pointerEvents: "none" }}>
           <div className="animate-bounce" style={{ fontSize: "14px", color: "#fff", background: "#4a6fa5", padding: "5px 14px", borderRadius: "10px", fontWeight: 600, boxShadow: "0 2px 8px rgba(0,0,0,0.2)", whiteSpace: "nowrap" }}>
             Press <kbd style={{ color: "#FFD166", fontFamily: "'IBM Plex Mono',monospace", fontWeight: 700 }}>E</kbd> to {isBoard ? "view" : "enter"}

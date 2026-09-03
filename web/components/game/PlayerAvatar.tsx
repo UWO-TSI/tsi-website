@@ -77,6 +77,10 @@ const WALK_RIGHT = { col: 3, frames: 4 };
 // Key state tracking
 const keys: Record<string, boolean> = {};
 
+function defaultClamp(x: number, z: number): [number, number] {
+  return clampToCoast(x, z, BOUNDARY);
+}
+
 // G1 camera feel: FOV widens a touch at sprint speed. Lives at module scope
 // because the react-compiler treats three objects reached through hooks as
 // frozen inside component code; a plain function call is the sanctioned
@@ -98,16 +102,28 @@ interface PlayerAvatarProps {
   playerName?: string;
   playerLevel?: number;
   activeEmote?: EmoteType | null;
+  /** Ground height sampler. Defaults to the member island's heightfield. */
+  heightAt?: (x: number, z: number) => number;
+  /** Walkable-area clamp. Defaults to the member island's coast clamp. */
+  clampAt?: (x: number, z: number) => [number, number];
+  /** Ignore all movement input (a sheet or dialog is up). */
+  frozen?: boolean;
+  /** Click-to-move on the ground. Default on. */
+  clickToMove?: boolean;
+  /** Floating name + level plate. Default on. */
+  showNameplate?: boolean;
 }
 
-export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Player", playerLevel = 1, activeEmote = null }: PlayerAvatarProps) {
+export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Player", playerLevel = 1, activeEmote = null, heightAt, clampAt, frozen = false, clickToMove = true, showNameplate = true }: PlayerAvatarProps) {
   const groupRef = useRef<THREE.Group>(null);
   const meshRef = useRef<THREE.Mesh>(null);
+  const sampleH = heightAt ?? sampleTerrainHeightFast;
+  const clampFn = clampAt ?? defaultClamp;
   // Initialize y on the terrain at spawn so the avatar doesn't visibly
   // drop in from y=0 if the spawn point sits on a slope.
   const positionRef = useRef(new THREE.Vector3(
     spawnPosition[0],
-    getTerrainHeight(spawnPosition[0], spawnPosition[2]) + AVATAR_FOOT_OFFSET,
+    (heightAt ?? getTerrainHeight)(spawnPosition[0], spawnPosition[2]) + AVATAR_FOOT_OFFSET,
     spawnPosition[2],
   ));
   const targetRef = useRef<THREE.Vector3 | null>(null);
@@ -213,6 +229,7 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
 
   const handleClick = useCallback(
     (e: MouseEvent) => {
+      if (!clickToMove) return;
       const rect = gl.domElement.getBoundingClientRect();
       mouse.current.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
       mouse.current.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
@@ -224,7 +241,7 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
       const intersection = pickCurvedGround(raycaster.current.ray, camera);
 
       if (intersection) {
-        const [cix, ciz] = clampToCoast(intersection.x, intersection.z, BOUNDARY);
+        const [cix, ciz] = clampFn(intersection.x, intersection.z);
         intersection.x = cix;
         intersection.z = ciz;
         intersection.y = 0;
@@ -239,7 +256,7 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
         ]);
       }
     },
-    [camera, gl, sfx]
+    [camera, gl, sfx, clickToMove, clampFn]
   );
 
   useEffect(() => {
@@ -270,6 +287,15 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
     let dx = 0;
     let dz = 0;
 
+    // Frozen (a sheet or dialog owns the keyboard): hold the pose, keep the
+    // avatar where it is, drop any queued click target.
+    if (frozen) {
+      targetRef.current = null;
+      velRef.current.set(0, 0);
+      if (isMoving) setIsMoving(false);
+      return;
+    }
+
     // G3: any movement input stands up. Checked before the sit branch so a
     // held key breaks the pose immediately.
     if (sitRef.current && (keys["w"] || keys["a"] || keys["s"] || keys["d"] || targetRef.current)) {
@@ -279,7 +305,7 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
     // G3: seated — snap to the bench seat, freeze, hold down-idle pose.
     if (sitRef.current) {
       const seat = sitRef.current;
-      const seatY = sampleTerrainHeightFast(seat.x, seat.z) + AVATAR_FOOT_OFFSET;
+      const seatY = sampleH(seat.x, seat.z) + AVATAR_FOOT_OFFSET;
       pos.set(seat.x, seatY, seat.z);
       groupRef.current.position.copy(pos);
       facingRef.current = Math.PI; // face the camera (down column, front cell)
@@ -346,7 +372,7 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
       if (Math.abs(vel.x) > 0.02 || Math.abs(vel.y) > 0.02) {
         pos.x += vel.x * delta;
         pos.z += vel.y * delta;
-        const [cpx, cpz] = clampToCoast(pos.x, pos.z, BOUNDARY);
+        const [cpx, cpz] = clampFn(pos.x, pos.z);
         pos.x = cpx;
         pos.z = cpz;
       }
@@ -369,7 +395,7 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
     // avatar settles if terrain ever changes) and damp toward it. Damping
     // keeps slope transitions smooth instead of snapping per step.
     // Per-frame: lookup-grid bilinear sample (~50x cheaper than FBM).
-    const targetY = sampleTerrainHeightFast(pos.x, pos.z) + AVATAR_FOOT_OFFSET;
+    const targetY = sampleH(pos.x, pos.z) + AVATAR_FOOT_OFFSET;
     pos.y = THREE.MathUtils.damp(pos.y, targetY, 1 / Y_DAMP_TIME, delta);
 
     // Determine direction for sprite sheet
@@ -626,6 +652,7 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
       )}
 
       {/* Nameplate */}
+      {showNameplate && (
       <Html zIndexRange={[40, 0]}
         position={[0, 2.0, 0]}
         center
@@ -648,6 +675,7 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
           </div>
         </div>
       </Html>
+      )}
       </group>
     </>
   );
