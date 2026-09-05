@@ -525,7 +525,7 @@ export default function RoleApplicationPage() {
             transition={{ duration: 0.5, ease: EASE_OUT }}
             className="pt-8 md:pt-12 px-6 md:px-16 pb-24"
           >
-            <div className="max-w-2xl mx-auto">
+            <div className="max-w-5xl mx-auto">
               <button
                 onClick={() => setPhase("read")}
                 className="group flex items-center gap-2 text-sm text-[#6B7280] hover:text-[#F1FFFF] transition-colors mb-8"
@@ -822,6 +822,7 @@ function UpcomingCTA({
     ? new Date(opensAt).toLocaleDateString("en-US", {
         month: "long",
         day: "numeric",
+        timeZone: "America/Toronto",
       })
     : "soon";
   return (

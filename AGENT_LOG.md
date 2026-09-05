@@ -27,11 +27,11 @@ All 13 deliverables shipped, QA Wave 14 PASS (commit `001eea8`), zero lint regre
 
 | # | Deliverable | Status |
 |---|-------------|--------|
-| H1 | Repo hygiene: STATE.md, CLAUDE.md/AGENT_LOG refresh, untrack root node_modules, close PR #9, RLS on `bounty_deliverables` | in progress |
-| R1 | Migration `027_recruitment_fall_2026.sql`: retire May rows, fresh `vp-marketing` + `pm` rows, Sept 5-11 window | in progress |
-| R2 | Round copy: role content for `pm`, student landing positions + deadline, dev scripts repointed | in progress |
-| G1 | Character sheet prototype: class quiz step, quest rail + XP bar, character card success screen, class on dashboard + admin card + CSV | in progress |
-| QA | tsc / lint baseline / vitest / build / Playwright pass at 375 + 1280 / preview URL for David | pending |
+| H1 | Repo hygiene: STATE.md, CLAUDE.md/AGENT_LOG refresh, untrack root node_modules, close PR #9, RLS on `bounty_deliverables` | ✅ PR #15 merged; RLS migration 026 written, apply blocked on the DB restore |
+| R1 | Migration `027_recruitment_fall_2026.sql`: retire May rows, fresh `vp-marketing` + `pm` rows, Sept 5-11 window | ✅ written (PR #16); apply blocked on the DB restore + David's essays |
+| R2 | Round copy: role content for `pm`, student landing positions + deadline, dev scripts repointed | ✅ PR #16 |
+| G1 | ~~Character sheet prototype in the web form~~ rejected 2026-09-02; replaced by the **applicant world** (plan in the build entry; branch `feat/apply-world`) | in progress |
+| QA | gates on PR #16 (round setup) green; world QA pending | in progress |
 
 ## Previous Sprint — Admin Tooling CRUD (started 2026-05-27)
 
@@ -113,6 +113,54 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 ---
 
 ## build
+
+### 2026-09-05 (later) — Round opened, migrations applied, copy from the Hiring Descriptions doc, admin menu link
+
+Supabase came back ~06:25 UTC. Sequence with David watching: 027's data half applied via `scripts/_apply-fall-2026-positions.mjs` (idempotent, guarded rename), fall rows to internal test mode (`_fall-2026-test-mode.mjs on`), then David ruled both roles public → `_apply-fall-2026-essays.mjs` (questions + active + public). David ran 028 + 026 in the SQL editor at 06:49 UTC (a Playwright-driven SQL editor window was tried first; computer-use is read-only for browsers and he closed the window).
+
+**Copy:** VP Marketing became the "Polished" Video & Content posting from David's "Hiring Descriptions" Google Doc, then trimmed on his review: title back to "VP Marketing", tagline "responsible for the video marketing side of TSI", note box removed, question "Submit a video that convinces us you're the candidate for this role" with the upload block relabelled "Your video". May's VP Marketing copy lives under the `vp-marketing-may26` key. PM "who fits" reworded (tech foundation / leadership / organized / consistent) on a `pm`-specific object so May's archived copy is untouched.
+
+**Admin access:** `/api/admin/me` (server-side whitelist check) + an "Admin dashboard" entry in `DropdownNav` for admins, re-checked on every route change.
+
+**Verified against the real DB** (`scripts/_e2e-fall-2026.mjs` on a side-effect-free `next start -p 3100` with sheet sync + email env blanked): two throwaway applicants submitted through `/api/resume-sign` + `/api/applications` for both roles, duplicate blocked by the unique constraint, admin GET/PATCH ok, anonymous 401, admin page + dashboard render, everything created deleted again and the admin session revoked. After 028: admin API 30 rows = 29 archived + 1 live (David's own test PM application), panel shows May 2026 → 5 roles. Note `applications.phone` is NOT NULL (the form sends ""), and there is no `resume_storage_path` column (the path lives inside the signed URL).
+
+**Left for David:** real PM questions (placeholders are live); delete his test application; merge PR #16 so tethos.ca serves the new copy; `RECRUITMENT_EMAILS_ENABLED=true` in Vercel before the first release batch.
+
+### 2026-09-05 — Pivot: fall round ships on the plain form; May round archived (`feat/fall-2026-apply`, PR #16)
+
+David (2026-09-05): no time for the applicant world this round. "Same process as before, just switch the roles, make sure it connects to the admin database, archive the old round with a collapsed field on the admin page." PR #17 stays a parked draft. Rulings: archived cards keep notes + tags only; hold the round until his questions land; archive collapsed under the live list.
+
+**Done on this branch:**
+- Guild leftovers from the rejected form-side prototype removed (`lib/guild.ts`, `recruit/guild/classIcons.tsx`, dashboard class chip, admin class row, CSV `class` column). Form, submit route, drafts, dashboard and admin board are May's code unchanged; 027 only swaps the position rows.
+- Migration `028_recruitment_archive.sql`: `positions.archived_at` + index, stamps `vp-internal`, `vp-external`, `vp-marketing-may26`, `pm-internal`, `advisor`; replaces the applicant positions SELECT policy with an EXISTS on the caller's own applications so the student dashboard's `position:positions(*)` join keeps resolving for May applicants after 027 deactivates their rows.
+- `lib/recruitment.ts`: `Position.archived_at`, `isArchivedApplication`, `roundLabel` (month + year of `closes_at`, Toronto time).
+- `components/admin/ArchivePanel.tsx`: collapsed "Archived rounds" section under the live list, grouped round → role, count pill per role, same `ApplicantCard` with the new `archived` prop (verdicts, release, delete hidden; notes and tags editable). Admin page splits `activeApps`/`archivedApps`; list, board, insights, filters, pending count and release-all only see active. Header shows `· N archived`. CSV export gains `archived`.
+- 027 now lands both fall rows **inactive**. New `scripts/_apply-fall-2026-essays.mjs` writes the questions and activates both slugs in one run.
+
+**Verified:** tsc clean · build green · Playwright against `next start` with a forged session cookie and a mocked `/api/applications` (11 apps over 7 positions): header "4 total · 1 pending · 7 archived" (archived draft not counted), archive expands May 2026 → roles → cards, no Release/Delete controls inside, board shows only live rows.
+
+**Blocked on David:** essay questions; Supabase still unreachable from the dev machine (nothing applied or tested against the real DB); apply 026 → 027 → 028, run the essays script, set `RECRUITMENT_EMAILS_ENABLED=true` in Vercel before the first release.
+
+### 2026-09-02 — Fall 2026 round setup (`feat/fall-2026-apply`, PR #16) + pivot to the applicant world
+
+David's rulings for the Sept launch (see `STATE.md`): fall hiring round for **VP Marketing + PM**, both public, **Sept 5-11**.
+
+**Round (R1/R2):** migration `027_recruitment_fall_2026.sql` retires the May rows (`vp-marketing` → `vp-marketing-may26`, title suffixed; everything `is_active=false`), inserts a fresh `vp-marketing` row and takes over the 001-seeded `pm-general` row as `pm`. New rows because `applications` has `UNIQUE(user_id, position_id)` (reusing rows would block May applicants from reapplying) and the admin board has no round filter. Essays are May's as placeholders until David pastes the fall set. `ROLE_CONTENT.pm` aliases the PM copy; the student landing page's static positions + "close May 12" line now say VP Marketing / Project Manager, Sept 5-11; `_toggle-apps-open` and `_update-application-dates` point at the new slugs; `UpcomingCTA` gained the missing `America/Toronto` timezone.
+
+**Pivot (same day):** a form-side "character sheet" prototype (class quiz step, quest rail, applicant card) was built, screenshotted and rejected by David: the application should happen **inside a game world**, reusing the portal's code. The form-side layer was removed from this PR before merge; `lib/guild.ts` (class logic), the dashboard class chip, the admin "Class (cosmetic)" row and the CSV `class` column stay for reuse. The world plan is in the next entry.
+
+**Gates at push:** tsc clean · lint 74 errors (= baseline) · vitest 32/32 · build green.
+
+**Blocked on David:** fall essay questions; Supabase project restore (paused since July, still not resolving); merge + apply 026/027 + `RECRUITMENT_EMAILS_ENABLED` in Vercel before Sept 5.
+
+### 2026-09-02 — Applicant world: plan (David-confirmed, build starts on `feat/apply-world`)
+
+1. `/student/apply` becomes a landing with one Enter button; role pages stay readable, their Apply says Enter; existing AuthModal pops if signed out. Desktop only: phones get "open this on a laptop" + copy link.
+2. First entry: character creation (name, year, program, email prefilled) saved to the member `profiles` row so a hired applicant carries the character into the member world. Sprite: current sheet until David supplies a new one; code accepts variants.
+3. Dedicated mini island from the world's own parts (terrain patch, road tiles, trees, sky/lighting fixed at late afternoon, the HQ GLB). WASD popup on spawn, chevrons along the one road, fences + invisible clamp, a marker over the HQ door. Nothing from the member island loads.
+4. HQ interior = Recruitment Office: one desk per active position (live from `/api/positions`), a named recruiter NPC per desk. E at a desk: greeting, role blurb, Apply.
+5. Apply = the existing 4-step `ApplicationForm` as a sheet over the world (OverlaySheet system, current game panel style; David's Figma reskins later). Resume upload unchanged. Desk shows "Applied, in screening" on re-entry; web dashboard keeps working.
+6. Calendar: Sept 5 opens on the plain form (this PR). The world ships when David signs off.
 
 ### 2026-07-14 (evening) — Organic island + continuous game-feel loop (`94b518b`…, ongoing)
 

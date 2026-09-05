@@ -107,8 +107,8 @@ export async function GET() {
     tags: string[] | null;
     admin_notes: string | null;
     position:
-      | { slug?: string; title?: string }
-      | { slug?: string; title?: string }[]
+      | { slug?: string; title?: string; archived_at?: string | null }
+      | { slug?: string; title?: string; archived_at?: string | null }[]
       | null;
   };
   const rows = (data as unknown as AppRow[]) ?? [];
@@ -128,6 +128,7 @@ export async function GET() {
   const header = [
     "submitted_at",
     "position",
+    "archived",
     "status",
     "full_name",
     "email",
@@ -155,8 +156,8 @@ export async function GET() {
   for (const r of rows) {
     const answers = r.essay_answers ?? [];
     const positionAny = r.position as
-      | { title?: string; slug?: string }
-      | { title?: string; slug?: string }[]
+      | { title?: string; slug?: string; archived_at?: string | null }
+      | { title?: string; slug?: string; archived_at?: string | null }[]
       | null
       | undefined;
     const positionRow = Array.isArray(positionAny)
@@ -169,6 +170,7 @@ export async function GET() {
     const cells: unknown[] = [
       r.submitted_at,
       positionLabel,
+      positionRow?.archived_at ? "yes" : "",
       r.status,
       r.full_name,
       r.email,

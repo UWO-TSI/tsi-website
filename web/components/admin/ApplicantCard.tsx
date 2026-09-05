@@ -101,6 +101,8 @@ interface ApplicantCardProps {
   onNoteTextChange: (id: string, text: string) => void;
   onRelease: (id: string) => void;
   onDelete: (id: string) => void;
+  /** Archived rounds: notes and tags stay editable, verdicts, release and delete are hidden. */
+  archived?: boolean;
 }
 
 export default function ApplicantCard({
@@ -113,6 +115,7 @@ export default function ApplicantCard({
   onNoteTextChange,
   onRelease,
   onDelete,
+  archived = false,
 }: ApplicantCardProps) {
   const [expanded, setExpanded] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
@@ -202,11 +205,13 @@ export default function ApplicantCard({
 
         {/* Verdict buttons — internal, become the next student-facing
             status once released. */}
-        <VerdictButtons
-          releasedStatus={application.status}
-          draftStatus={application.draft_status}
-          onChange={(s) => onStatusChange(application.id, s)}
-        />
+        {!archived && (
+          <VerdictButtons
+            releasedStatus={application.status}
+            draftStatus={application.draft_status}
+            onChange={(s) => onStatusChange(application.id, s)}
+          />
+        )}
 
         {/* Status badge — shows the effective verdict (draft if pending,
             else released). The "(draft)" tag makes it obvious the student
@@ -476,7 +481,7 @@ export default function ApplicantCard({
                   </div>
 
                   {/* Individual release */}
-                  {hasUnreleased && (
+                  {hasUnreleased && !archived && (
                     <button
                       onClick={() => onRelease(application.id)}
                       className="w-full rounded-lg bg-[#FFD166]/10 border border-[#FFD166]/30 px-3 py-2 text-xs text-[#FFD166] font-mono hover:bg-[#FFD166]/20 transition"
@@ -486,6 +491,7 @@ export default function ApplicantCard({
                   )}
 
                   {/* Delete with two-step confirm */}
+                  {!archived && (
                   <div className="pt-3 mt-3 border-t border-white/5">
                     {!confirmingDelete ? (
                       <button
@@ -523,6 +529,7 @@ export default function ApplicantCard({
                       </div>
                     )}
                   </div>
+                  )}
                 </div>
               </div>
 
