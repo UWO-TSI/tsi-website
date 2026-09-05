@@ -23,20 +23,16 @@ const admin = createClient(
   { auth: { persistSession: false } }
 );
 
-// Placeholders (May's prompts) until David's fall questions replace them.
+// PM questions are placeholders until David's fall questions replace them.
 const ESSAYS = {
+  // Video & Content posting ("Hiring Descriptions" → Polished). The answer
+  // is the creative-piece upload; the text box is for a link or a line.
   "vp-marketing": [
     {
       id: "vp-mkt-f26-1",
       question:
-        "Pick one craft (design, video, photo, content) and tell us what makes you elite at it. Specific examples beat adjectives.",
-      max_words: 400,
-    },
-    {
-      id: "vp-mkt-f26-2",
-      question:
-        "Show us, don't just tell us. Paste a link to one creative piece, in whatever medium is your strength, that makes the case for why you're the one for this role.",
-      max_words: 80,
+        "Show don't tell. Submit a video or reel that makes the case for why you're the one for this role.",
+      max_words: 60,
     },
   ],
   pm: [

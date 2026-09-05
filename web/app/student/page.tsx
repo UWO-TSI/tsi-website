@@ -25,11 +25,11 @@ if (typeof window !== "undefined") {
 // round (migration 027). Keep in sync when a round opens or closes.
 const POSITIONS = [
   {
-    role: "VP Marketing",
+    role: "VP Marketing (Video & Content)",
     team: "Leadership",
     status: "open",
     description:
-      "Own TSI's creative vision. Posts that stop the scroll, videos that tell our story, mastery of one craft.",
+      "Own how TSI moves and sounds. Reels, vlogs and mini-documentaries that make people stop scrolling and actually watch.",
   },
   {
     role: "Project Manager",

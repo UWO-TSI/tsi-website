@@ -152,7 +152,8 @@ export const ROLE_CONTENT: Record<string, RoleContent> = {
     },
   },
 
-  "vp-marketing": {
+  // May 2026 round, kept for the retired `vp-marketing-may26` row.
+  "vp-marketing-may26": {
     positionsCount: "2",
     tagline:
       "As VP Marketing, you own TSI's creative vision, from the posts that stop the scroll to the videos that tell our story. You'll take ideas from concept to execution and make sure TSI looks and feels like the world-class organization it is.",
@@ -177,6 +178,32 @@ export const ROLE_CONTENT: Record<string, RoleContent> = {
     ],
     applyInstructions:
       "Show us, don't just tell us. Submit a creative piece, in whatever medium is your strength, that makes the case for why you're the one for this role.",
+  },
+
+  // Fall 2026 round (migration 027). Copy from "Hiring Descriptions" →
+  // Polished → Co-VP Marketing - Video & Content.
+  "vp-marketing": {
+    positionsCount: "1",
+    tagline:
+      "As VP Marketing (Video & Content), you own how TSI moves and sounds. You'll tell TSI's story through reels, vlogs, and mini-documentaries that make people stop scrolling and actually watch.",
+    preApplyNote:
+      "We already have our VP Marketing (Design) locked in. Now we're looking for the other half, someone who lives and breathes video and content creation.",
+    whatYoullDo: [
+      "Produce short vlogs and mini-documentaries for each project team and the club overall",
+      "Make reels that get people talking",
+      "Capture TSI events, socials, and GENESIS on video",
+      "Collaborate closely with the design VP to make sure visuals and video feel cohesive",
+      "Bring creative ideas that build buzz around TSI",
+    ],
+    whoYouAre: [
+      "Someone who has taste",
+      "You enjoy making videos and creating content",
+      "Someone who has a natural eye for storytelling",
+      "Organized and can manage multiple projects at once",
+      "A good leader who can give clear direction to a team & has good comms skills",
+    ],
+    applyInstructions:
+      "Show don't tell. Submit a video or reel that makes the case for why you're the one for this role.",
   },
 };
 
