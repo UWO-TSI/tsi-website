@@ -71,6 +71,24 @@ export interface Position {
   is_active: boolean;
   created_at: string;
   calendly_url?: string | null;
+  /** Set once the round this position belonged to is over (migration 028). */
+  archived_at?: string | null;
+}
+
+/** An application is archived through its position, never on its own. */
+export function isArchivedApplication(app: { position?: Position | null }): boolean {
+  return !!app.position?.archived_at;
+}
+
+/** "May 2026": the month the round closed, in Toronto time. */
+export function roundLabel(position: Pick<Position, "closes_at" | "archived_at">): string {
+  const stamp = position.closes_at ?? position.archived_at;
+  if (!stamp) return "Earlier rounds";
+  return new Date(stamp).toLocaleDateString("en-US", {
+    month: "long",
+    year: "numeric",
+    timeZone: "America/Toronto",
+  });
 }
 
 // ============================================

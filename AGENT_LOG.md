@@ -114,6 +114,21 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-09-05 — Pivot: fall round ships on the plain form; May round archived (`feat/fall-2026-apply`, PR #16)
+
+David (2026-09-05): no time for the applicant world this round. "Same process as before, just switch the roles, make sure it connects to the admin database, archive the old round with a collapsed field on the admin page." PR #17 stays a parked draft. Rulings: archived cards keep notes + tags only; hold the round until his questions land; archive collapsed under the live list.
+
+**Done on this branch:**
+- Guild leftovers from the rejected form-side prototype removed (`lib/guild.ts`, `recruit/guild/classIcons.tsx`, dashboard class chip, admin class row, CSV `class` column). Form, submit route, drafts, dashboard and admin board are May's code unchanged; 027 only swaps the position rows.
+- Migration `028_recruitment_archive.sql`: `positions.archived_at` + index, stamps `vp-internal`, `vp-external`, `vp-marketing-may26`, `pm-internal`, `advisor`; replaces the applicant positions SELECT policy with an EXISTS on the caller's own applications so the student dashboard's `position:positions(*)` join keeps resolving for May applicants after 027 deactivates their rows.
+- `lib/recruitment.ts`: `Position.archived_at`, `isArchivedApplication`, `roundLabel` (month + year of `closes_at`, Toronto time).
+- `components/admin/ArchivePanel.tsx`: collapsed "Archived rounds" section under the live list, grouped round → role, count pill per role, same `ApplicantCard` with the new `archived` prop (verdicts, release, delete hidden; notes and tags editable). Admin page splits `activeApps`/`archivedApps`; list, board, insights, filters, pending count and release-all only see active. Header shows `· N archived`. CSV export gains `archived`.
+- 027 now lands both fall rows **inactive**. New `scripts/_apply-fall-2026-essays.mjs` writes the questions and activates both slugs in one run.
+
+**Verified:** tsc clean · build green · Playwright against `next start` with a forged session cookie and a mocked `/api/applications` (11 apps over 7 positions): header "4 total · 1 pending · 7 archived" (archived draft not counted), archive expands May 2026 → roles → cards, no Release/Delete controls inside, board shows only live rows.
+
+**Blocked on David:** essay questions; Supabase still unreachable from the dev machine (nothing applied or tested against the real DB); apply 026 → 027 → 028, run the essays script, set `RECRUITMENT_EMAILS_ENABLED=true` in Vercel before the first release.
+
 ### 2026-09-02 — Fall 2026 round setup (`feat/fall-2026-apply`, PR #16) + pivot to the applicant world
 
 David's rulings for the Sept launch (see `STATE.md`): fall hiring round for **VP Marketing + PM**, both public, **Sept 5-11**.

@@ -7,11 +7,17 @@ import ApplicantCard from "@/components/admin/ApplicantCard";
 import ReleaseControls from "@/components/admin/ReleaseControls";
 import RecruitInsights from "@/components/admin/RecruitInsights";
 import RecruitBoard from "@/components/admin/RecruitBoard";
+import ArchivePanel from "@/components/admin/ArchivePanel";
 import { motion } from "framer-motion";
 import { fadeUpVariants } from "@/lib/motion";
 import { RefreshCw, Download } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import type { Application, ApplicationStatus, Position } from "@/lib/recruitment";
+import {
+  isArchivedApplication,
+  type Application,
+  type ApplicationStatus,
+  type Position,
+} from "@/lib/recruitment";
 import type { User } from "@supabase/supabase-js";
 
 export default function AdminRecruitPage() {
@@ -72,8 +78,15 @@ export default function AdminRecruitPage() {
     fetchData();
   }, [fetchData]);
 
+  // Finished rounds (positions.archived_at, migration 028) live in the
+  // collapsed archive below the list and stay out of everything else.
+  const activeApps = applications.filter((a) => !isArchivedApplication(a));
+  const archivedApps = applications.filter(isArchivedApplication);
+  const activePositions = positions.filter((p) => !p.archived_at);
+  const archivedPositions = positions.filter((p) => !!p.archived_at);
+
   // Filtered applications
-  const filtered = applications.filter((app) => {
+  const filtered = activeApps.filter((app) => {
     if (
       filters.search &&
       !app.full_name.toLowerCase().includes(filters.search.toLowerCase()) &&
@@ -91,14 +104,14 @@ export default function AdminRecruitPage() {
   });
 
   // Pending count
-  const pendingCount = applications.filter(
+  const pendingCount = activeApps.filter(
     (a) => a.draft_status && a.draft_status !== a.status
   ).length;
 
-  const positionsWithPending = positions.map((p) => ({
+  const positionsWithPending = activePositions.map((p) => ({
     id: p.id,
     title: p.title,
-    pendingCount: applications.filter(
+    pendingCount: activeApps.filter(
       (a) =>
         a.position_id === p.id &&
         a.draft_status &&
@@ -280,12 +293,20 @@ export default function AdminRecruitPage() {
                 Applications
               </h1>
               <span className="text-[11px] font-mono text-[#6B7280] tabular-nums">
-                {applications.length} total
+                {activeApps.length} total
                 {pendingCount > 0 && (
                   <>
                     <span className="opacity-50 mx-2">·</span>
                     <span className="text-[#FFD166]">
                       {pendingCount} pending
+                    </span>
+                  </>
+                )}
+                {archivedApps.length > 0 && (
+                  <>
+                    <span className="opacity-50 mx-2">·</span>
+                    <span className="opacity-70">
+                      {archivedApps.length} archived
                     </span>
                   </>
                 )}
@@ -329,7 +350,7 @@ export default function AdminRecruitPage() {
         >
           <SegmentTab
             label="List"
-            count={applications.length}
+            count={activeApps.length}
             active={tab === "dashboard"}
             onClick={() => setTab("dashboard")}
           />
@@ -370,11 +391,11 @@ export default function AdminRecruitPage() {
             style={{ background: "rgba(255,255,255,0.015)" }}
           >
             <FilterBar
-              positions={positions.map((p) => ({ slug: p.slug, title: p.title }))}
+              positions={activePositions.map((p) => ({ slug: p.slug, title: p.title }))}
               onFilterChange={setFilters}
             />
             <span className="text-[10px] font-mono text-[#6B7280] tabular-nums whitespace-nowrap">
-              {filtered.length} / {applications.length} shown
+              {filtered.length} / {activeApps.length} shown
             </span>
           </div>
 
@@ -406,16 +427,31 @@ export default function AdminRecruitPage() {
         </section>
       )}
 
+      {tab === "dashboard" && (
+        <div className="mt-4">
+          <ArchivePanel
+            applications={archivedApps}
+            positions={archivedPositions}
+            currentUserEmail={user?.email ?? ""}
+            onStatusChange={handleStatusChange}
+            onTagsChange={handleTagsChange}
+            onNoteTextChange={handleNoteTextChange}
+            onRelease={handleRelease}
+            onDelete={handleDelete}
+          />
+        </div>
+      )}
+
       {tab === "board" && (
         <RecruitBoard
-          applications={applications}
-          positions={positions}
+          applications={activeApps}
+          positions={activePositions}
           onStatusChange={handleStatusChange}
         />
       )}
 
       {tab === "insights" && (
-        <RecruitInsights applications={applications} positions={positions} />
+        <RecruitInsights applications={activeApps} positions={activePositions} />
       )}
     </div>
   );
