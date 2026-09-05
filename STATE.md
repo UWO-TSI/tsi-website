@@ -16,7 +16,7 @@ The applicant world (`feat/apply-world`, draft PR #17) is **parked**: David has 
 | Essays | VP Marketing: one question, "Submit a video that convinces us you're the candidate for this role" (60 words + video upload). PM: two placeholder questions still live; David may replace them (paste into `_apply-fall-2026-essays.mjs`, run). |
 | Archive | The May round is archived through `positions.archived_at` (migration 028). The admin list folds those applications into a collapsed **Archived rounds** panel (round → role → cards). Archived cards keep notes and tags editable; verdicts, release and delete are hidden. Archived rows stay out of the live list, board, insights, filters and release; CSV export gains an `archived` column. |
 | Applicant world | Parked on `feat/apply-world` (draft PR #17). `NEXT_PUBLIC_APPLY_WORLD` stays unset. Resume from the plan in `AGENT_LOG.md` when re-opened. |
-| Admin access | Whitelisted admins get an "Admin dashboard" entry in the hamburger menu (`/api/admin/me` + `DropdownNav`). |
+| Log in / admin access | Hamburger "Log in" → `/student/go`: whitelisted admins land in the game portal (`/student/dashboard`, sidebar Admin → Recruitment = the applications board), everyone else in the applicant dashboard (`/student/apply/dashboard`, which shows the sign-in prompt when signed out). Signed-in menu: "My applications" for applicants, "Game portal" + "Admin dashboard" for admins. `/student/login` is the member terminal and is not linked. David's Google profile is tier 1 (set 2026-09-05); the sidebar and in-portal recruitment tab also accept the email whitelist. PR #18. |
 | Exec beta | Skipped. |
 | Migrations 024/025 (game coins, seasonal seed, drafted on the game branch) | Apply at the game world's launch window, not now. |
 
