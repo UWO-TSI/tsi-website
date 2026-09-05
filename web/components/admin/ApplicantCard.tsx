@@ -34,12 +34,14 @@ import { parseAdminNotes } from "@/lib/admin-notes";
 // has no dedicated columns for them.
 const META_OTHER_LINKS_ID = "__profile_other_links";
 const META_COMMITMENTS_ID = "__profile_commitments_next_year";
+const META_PAST_PROJECTS_ID = "__past_projects";
 const META_PORTFOLIO_FILES_ID = "__portfolio_files";
 const META_PORTFOLIO_LINK_ID = "__portfolio_link";
 const META_CREATIVE_PIECE_FILES_ID = "__creative_piece_files";
 const META_IDS = new Set([
   META_OTHER_LINKS_ID,
   META_COMMITMENTS_ID,
+  META_PAST_PROJECTS_ID,
   META_PORTFOLIO_FILES_ID,
   META_PORTFOLIO_LINK_ID,
   META_CREATIVE_PIECE_FILES_ID,
@@ -322,6 +324,7 @@ export default function ApplicantCard({
                     const answers = application.essay_answers ?? [];
                     const otherLinks = findMeta(answers, META_OTHER_LINKS_ID);
                     const commitments = findMeta(answers, META_COMMITMENTS_ID);
+                    const pastProjects = findMeta(answers, META_PAST_PROJECTS_ID);
                     const portfolioLink = findMeta(
                       answers,
                       META_PORTFOLIO_LINK_ID
@@ -351,6 +354,16 @@ export default function ApplicantCard({
                             </p>
                             <p className="text-[#E5E7EB] whitespace-pre-wrap leading-relaxed">
                               {commitments}
+                            </p>
+                          </div>
+                        )}
+                        {pastProjects && (
+                          <div className="text-xs">
+                            <p className="text-[10px] uppercase tracking-wider text-[#6B7280] mb-1 font-mono">
+                              Past projects
+                            </p>
+                            <p className="text-[#E5E7EB] whitespace-pre-wrap leading-relaxed">
+                              {pastProjects}
                             </p>
                           </div>
                         )}

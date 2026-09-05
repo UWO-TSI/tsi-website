@@ -9,12 +9,14 @@ import { parseAdminNotes } from "@/lib/admin-notes";
 
 const META_OTHER_LINKS_ID = "__profile_other_links";
 const META_COMMITMENTS_ID = "__profile_commitments_next_year";
+const META_PAST_PROJECTS_ID = "__past_projects";
 const META_PORTFOLIO_FILES_ID = "__portfolio_files";
 const META_PORTFOLIO_LINK_ID = "__portfolio_link";
 const META_CREATIVE_PIECE_FILES_ID = "__creative_piece_files";
 const META_IDS = new Set([
   META_OTHER_LINKS_ID,
   META_COMMITMENTS_ID,
+  META_PAST_PROJECTS_ID,
   META_PORTFOLIO_FILES_ID,
   META_PORTFOLIO_LINK_ID,
   META_CREATIVE_PIECE_FILES_ID,
@@ -138,6 +140,7 @@ export async function GET() {
     "linkedin",
     "other_links",
     "commitments_next_year",
+    "past_projects",
     "portfolio_link",
     "portfolio_files",
     "portfolio_paths",
@@ -180,6 +183,7 @@ export async function GET() {
       r.linkedin_url ?? "",
       findMeta(answers, META_OTHER_LINKS_ID),
       findMeta(answers, META_COMMITMENTS_ID),
+      findMeta(answers, META_PAST_PROJECTS_ID),
       findMeta(answers, META_PORTFOLIO_LINK_ID),
       fileList(findMeta(answers, META_PORTFOLIO_FILES_ID)),
       filePaths(findMeta(answers, META_PORTFOLIO_FILES_ID)),

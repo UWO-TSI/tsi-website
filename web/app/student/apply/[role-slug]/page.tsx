@@ -324,6 +324,10 @@ export default function RoleApplicationPage() {
                 we have a role-specific entry; falls back to a generic block. */}
             <div className="px-6 md:px-16">
               <div className="max-w-3xl mx-auto space-y-14 pb-10">
+                {roleContent?.howItWorks && (
+                  <HowItWorksBlock block={roleContent.howItWorks} delay={0.2} />
+                )}
+
                 {roleContent?.preApplyNote && (
                   <PreApplyNote text={roleContent.preApplyNote} delay={0.22} />
                 )}
@@ -583,11 +587,50 @@ function PreApplyNote({ text, delay }: { text: string; delay: number }) {
   );
 }
 
+function HowItWorksBlock({
+  block,
+  delay,
+}: {
+  block: { title: string; paragraphs: string[] };
+  delay: number;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: "-80px" }}
+      transition={{ duration: 0.6, delay, ease: EASE_OUT }}
+      className="rounded-2xl p-6"
+      style={{
+        background: "rgba(255,255,255,0.03)",
+        border: "1px solid rgba(255,255,255,0.08)",
+      }}
+    >
+      <p className="font-mono text-[10px] tracking-[0.2em] uppercase text-[#9CA3AF] mb-3">
+        {block.title}
+      </p>
+      <div className="space-y-2.5">
+        {block.paragraphs.map((line, i) => (
+          <p key={i} className="text-sm md:text-base text-[#E5E7EB] leading-relaxed">
+            {line}
+          </p>
+        ))}
+      </div>
+    </motion.div>
+  );
+}
+
 function AboutBlock({
   about,
   delay,
 }: {
-  about: { title: string; body: string; subtitle?: string; stats?: string[] };
+  about: {
+    title: string;
+    body: string;
+    subtitle?: string;
+    stats?: string[];
+    link?: { label: string; href: string };
+  };
   delay: number;
 }) {
   return (
@@ -636,6 +679,17 @@ function AboutBlock({
               ))}
             </ul>
           )
+        )}
+        {about.link && (
+          <a
+            href={about.link.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 mt-6 text-sm font-medium text-[#1D9BF0] hover:text-[#F1FFFF] transition-colors"
+          >
+            {about.link.label}
+            <ArrowRight className="w-3.5 h-3.5" />
+          </a>
         )}
       </div>
     </motion.section>
