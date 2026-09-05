@@ -16,7 +16,12 @@ const NAV_ITEMS = [
 ];
 
 const CONTACT = { label: "Contact", href: "mailto:team@tethos.ca" };
-const LOGIN = { label: "Log in", href: "/student/login" };
+// Applicant entry point: the apply dashboard shows the sign-in prompt when
+// signed out and the person's applications when signed in. /student/login is
+// the member-portal terminal, which bounces signed-in non-members into member
+// onboarding.
+const LOGIN = { label: "Log in", href: "/student/apply/dashboard" };
+const ACCOUNT = { label: "My applications", href: "/student/apply/dashboard" };
 const ADMIN = { label: "Admin dashboard", href: "/admin/recruit" };
 
 /* Spring configs */
@@ -28,6 +33,7 @@ export default function DropdownNav() {
   const [pressed, setPressed] = useState(false);
   const [visible, setVisible] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [signedIn, setSignedIn] = useState(false);
   const pathname = usePathname();
   const lastScrollY = useRef(0);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -60,7 +66,9 @@ export default function DropdownNav() {
     fetch("/api/admin/me")
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
-        if (!cancelled) setIsAdmin(!!d?.isAdmin);
+        if (cancelled) return;
+        setIsAdmin(!!d?.isAdmin);
+        setSignedIn(!!d?.signedIn);
       })
       .catch(() => {});
     return () => {
@@ -310,7 +318,7 @@ export default function DropdownNav() {
                   }}
                 >
                   <Link
-                    href={LOGIN.href}
+                    href={signedIn ? ACCOUNT.href : LOGIN.href}
                     onClick={() => setOpen(false)}
                     className="group relative flex items-center gap-3 px-5 py-2.5"
                   >
@@ -324,7 +332,7 @@ export default function DropdownNav() {
                       whileHover={{ color: "rgba(255,255,255,0.7)", x: 3 }}
                       transition={{ duration: 0.15 }}
                     >
-                      {LOGIN.label}
+                      {signedIn ? ACCOUNT.label : LOGIN.label}
                     </motion.span>
                   </Link>
                 </motion.div>
