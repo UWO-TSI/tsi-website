@@ -114,6 +114,15 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-09-05 (QA fix) — Login routing (`fix/hamburger-login`, PR #18, merged)
+
+QA: a signed-in applicant clicking the hamburger "Log in" landed on `/student/onboarding`. Cause: the link went to `/student/login` (member terminal); the middleware bounces signed-in users to `/student/dashboard`, which demands member onboarding. David's rule: admins → game portal with the recruitment board, applicants → application portal.
+
+- `/student/go` (route handler): admins (email whitelist) → `/student/dashboard`, everyone else → `/student/apply/dashboard`. The apply dashboard's AuthModal now redirects through `/student/go`.
+- `DropdownNav`: "Log in" → `/student/go`; signed in: "My applications" (applicants) or "Game portal" + "Admin dashboard" (`/student/dashboard/admin/recruitment`) for admins. `/api/admin/me` returns `signedIn` + `isAdmin`.
+- Portal `Sidebar` and the in-portal recruitment tab accept whitelisted admins as well as T1/T2. David's Google profile set to tier 1 (was 4).
+- Verified with Playwright (signed out / applicant / admin) locally and the signed-out path on prod after deploy.
+
 ### 2026-09-05 (later) — Round opened, migrations applied, copy from the Hiring Descriptions doc, admin menu link
 
 Supabase came back ~06:25 UTC. Sequence with David watching: 027's data half applied via `scripts/_apply-fall-2026-positions.mjs` (idempotent, guarded rename), fall rows to internal test mode (`_fall-2026-test-mode.mjs on`), then David ruled both roles public → `_apply-fall-2026-essays.mjs` (questions + active + public). David ran 028 + 026 in the SQL editor at 06:49 UTC (a Playwright-driven SQL editor window was tried first; computer-use is read-only for browsers and he closed the window).
