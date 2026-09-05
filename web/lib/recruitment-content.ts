@@ -14,6 +14,13 @@ export interface AboutCallout {
   body: string;
   subtitle?: string;
   stats?: string[];
+  /** Optional link under the list (e.g. last year's project package). */
+  link?: { label: string; href: string };
+}
+
+export interface HowItWorks {
+  title: string;
+  paragraphs: string[];
 }
 
 export interface RoleContent {
@@ -31,6 +38,8 @@ export interface RoleContent {
   preApplyNote?: string;
   /** Optional special apply instructions (e.g. VP Marketing's portfolio ask). */
   applyInstructions?: string;
+  /** Optional callout right under the tagline (e.g. PM's hire-first, pick-a-project-later). */
+  howItWorks?: HowItWorks;
 }
 
 export const ROLE_CONTENT: Record<string, RoleContent> = {
@@ -210,12 +219,27 @@ export const ROLE_CONTENT: Record<string, RoleContent> = {
 // list, reworded by David 2026-09-05.
 ROLE_CONTENT.pm = {
   ...ROLE_CONTENT["pm-internal"],
+  howItWorks: {
+    title: "How this works",
+    paragraphs: [
+      "You're applying to be a PM, not to a specific project.",
+      "We hire first. Then there's a project selection day where you meet the other PMs and pick the project you want to run.",
+      "So you don't need to know which project you want yet. Just convince us you can run one.",
+    ],
+  },
   whoYouAre: [
     "Have a strong tech foundation",
     "Leadership",
     "Organized",
     "Consistent",
   ],
+  about: {
+    ...ROLE_CONTENT["pm-internal"].about!,
+    link: {
+      label: "See projects from last year",
+      href: "/tsi-25-26-developer-package.pdf",
+    },
+  },
 };
 
 export function getRoleContent(slug: string): RoleContent | null {

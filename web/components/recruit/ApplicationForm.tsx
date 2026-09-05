@@ -34,6 +34,8 @@ interface FormData {
   linkedin_url: string;
   other_links: string;
   commitments_next_year: string;
+  /** PM only: past projects, solo or team (optional). */
+  past_projects: string;
   heard_about_us: string;
   essay_answers: Record<string, string>;
   resume_storage_path: string | null;
@@ -56,6 +58,7 @@ const EMPTY_FORM: FormData = {
   linkedin_url: "",
   other_links: "",
   commitments_next_year: "",
+  past_projects: "",
   heard_about_us: "",
   essay_answers: {},
   resume_storage_path: null,
@@ -73,6 +76,7 @@ const DRAFT_KEY = (positionId: string) => `tethos:draft:${positionId}`;
 // and the user's review screen pull these out separately from real essays.
 export const META_OTHER_LINKS_ID = "__profile_other_links";
 export const META_COMMITMENTS_ID = "__profile_commitments_next_year";
+export const META_PAST_PROJECTS_ID = "__past_projects";
 export const META_PORTFOLIO_FILES_ID = "__portfolio_files";
 export const META_PORTFOLIO_LINK_ID = "__portfolio_link";
 export const META_CREATIVE_PIECE_FILES_ID = "__creative_piece_files";
@@ -92,6 +96,7 @@ function isEmptyForm(f: FormData): boolean {
     !f.linkedin_url &&
     !f.other_links &&
     !f.commitments_next_year &&
+    !f.past_projects &&
     !f.heard_about_us &&
     !f.resume_storage_path &&
     f.portfolio_files.length === 0 &&
@@ -222,6 +227,7 @@ export default function ApplicationForm({
           essay_answers: chosen.form_data.essay_answers ?? {},
           other_links: chosen.form_data.other_links ?? "",
           commitments_next_year: chosen.form_data.commitments_next_year ?? "",
+          past_projects: chosen.form_data.past_projects ?? "",
           resume_storage_path: chosen.form_data.resume_storage_path ?? null,
           resume_filename: chosen.form_data.resume_filename ?? null,
           resume_size_bytes: chosen.form_data.resume_size_bytes ?? null,
@@ -442,6 +448,14 @@ export default function ApplicationForm({
             {
               question_id: META_COMMITMENTS_ID,
               answer: formData.commitments_next_year.trim(),
+            },
+          ]
+        : []),
+      ...(formData.past_projects.trim()
+        ? [
+            {
+              question_id: META_PAST_PROJECTS_ID,
+              answer: formData.past_projects.trim(),
             },
           ]
         : []),
@@ -841,6 +855,36 @@ export default function ApplicationForm({
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
               className="space-y-8"
             >
+              {position.slug === "pm" && (
+                <div
+                  className="rounded-2xl p-5"
+                  style={{
+                    background: "rgba(255,255,255,0.03)",
+                    border: "1px solid rgba(255,255,255,0.08)",
+                  }}
+                >
+                  <p className="text-sm text-[#F1FFFF] mb-1 font-medium">
+                    Past projects (optional)
+                  </p>
+                  <p className="text-xs text-[#9CA3AF] mb-3 leading-relaxed">
+                    Solo or team, school or personal. For each: what it was,
+                    what you did, and a link if there is one. A few lines is
+                    plenty.
+                  </p>
+                  <FormField
+                    label=""
+                    name="past_projects"
+                    type="textarea"
+                    value={formData.past_projects}
+                    onChange={(v) => updateField("past_projects", v)}
+                    placeholder="Project name, solo or team, what you built and your part in it, link if there is one"
+                    rows={5}
+                    wordCount={countWords(formData.past_projects)}
+                    maxWords={300}
+                  />
+                </div>
+              )}
+
               {position.essay_questions.map((q, i) => {
                 const answer = formData.essay_answers[q.id] ?? "";
                 // Roles where the essay accepts a file upload as the
@@ -975,6 +1019,12 @@ export default function ApplicationForm({
                     <ReviewRow
                       label="Commitments"
                       value={formData.commitments_next_year.trim()}
+                    />
+                  )}
+                  {formData.past_projects.trim() && (
+                    <ReviewRow
+                      label="Past projects"
+                      value={formData.past_projects.trim()}
                     />
                   )}
                   <ReviewRow

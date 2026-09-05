@@ -24,7 +24,7 @@ const admin = createClient(
   { auth: { persistSession: false } }
 );
 
-// PM questions are placeholders until David's fall questions replace them.
+// PM questions: David's, 2026-09-05.
 const ESSAYS = {
   // Video & Content posting ("Hiring Descriptions" → Polished). The answer
   // is the creative-piece upload; the text box is for a link or a line.
@@ -40,14 +40,20 @@ const ESSAYS = {
     {
       id: "pm-f26-1",
       question:
-        "Tell us about a time you led a team through a hard project. What did you own, what did you delegate, and what would you do differently?",
-      max_words: 400,
+        "Why are you interested in being a Project Manager at TSI, and what do you hope to gain from this experience?",
+      max_words: 200,
     },
     {
       id: "pm-f26-2",
       question:
-        "Walk us through your most impressive technical project. What did you build, what was your role, and what did you learn?",
-      max_words: 400,
+        "Describe a project where other people's work getting done was your responsibility. What was it, how many people, what did you actually do?",
+      max_words: 200,
+    },
+    {
+      id: "pm-f26-3",
+      question:
+        "It's week 6 of 12. Your developer has gone quiet for two weeks. The client demo is in 10 days. What would you do?",
+      max_words: 200,
     },
   ],
 };
