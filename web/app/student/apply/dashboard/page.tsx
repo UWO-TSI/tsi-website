@@ -148,7 +148,7 @@ export default function DashboardPage() {
         <AuthModal
           isOpen={showAuth}
           onClose={() => setShowAuth(false)}
-          redirectTo="/student/apply/dashboard"
+          redirectTo="/student/go"
         />
       </div>
     );

@@ -16,8 +16,14 @@ const NAV_ITEMS = [
 ];
 
 const CONTACT = { label: "Contact", href: "mailto:team@tethos.ca" };
-const LOGIN = { label: "Log in", href: "/student/login" };
-const ADMIN = { label: "Admin dashboard", href: "/admin/recruit" };
+// "Log in" (David, 2026-09-05): /student/go sends admins to the game portal
+// and everyone else to the applicant dashboard, which shows the sign-in
+// prompt when signed out. /student/login is the member-portal terminal, which
+// bounces signed-in non-members into member onboarding, so it is not linked.
+const LOGIN = { label: "Log in", href: "/student/go" };
+const ACCOUNT = { label: "My applications", href: "/student/apply/dashboard" };
+const PORTAL = { label: "Game portal", href: "/student/dashboard" };
+const ADMIN = { label: "Admin dashboard", href: "/student/dashboard/admin/recruitment" };
 
 /* Spring configs */
 const SPRING_SNAPPY = { type: "spring" as const, stiffness: 500, damping: 30, mass: 0.8 };
@@ -28,6 +34,7 @@ export default function DropdownNav() {
   const [pressed, setPressed] = useState(false);
   const [visible, setVisible] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [signedIn, setSignedIn] = useState(false);
   const pathname = usePathname();
   const lastScrollY = useRef(0);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -60,7 +67,9 @@ export default function DropdownNav() {
     fetch("/api/admin/me")
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
-        if (!cancelled) setIsAdmin(!!d?.isAdmin);
+        if (cancelled) return;
+        setIsAdmin(!!d?.isAdmin);
+        setSignedIn(!!d?.signedIn);
       })
       .catch(() => {});
     return () => {
@@ -279,8 +288,8 @@ export default function DropdownNav() {
                       <motion.div
                         className="w-1 h-1 rounded-full flex-shrink-0"
                         animate={{
-                          scale: pathname.startsWith("/admin") ? 1 : 0,
-                          background: pathname.startsWith("/admin") ? "#1d9bf0" : "transparent",
+                          scale: pathname.startsWith(ADMIN.href) ? 1 : 0,
+                          background: pathname.startsWith(ADMIN.href) ? "#1d9bf0" : "transparent",
                         }}
                         transition={SPRING_SNAPPY}
                       />
@@ -288,9 +297,9 @@ export default function DropdownNav() {
                         className="text-[13px] font-medium"
                         style={{
                           fontFamily: "var(--font-highlight)",
-                          color: pathname.startsWith("/admin") ? "#1d9bf0" : "rgba(255,255,255,0.5)",
+                          color: pathname.startsWith(ADMIN.href) ? "#1d9bf0" : "rgba(255,255,255,0.5)",
                         }}
-                        whileHover={{ color: pathname.startsWith("/admin") ? "#1d9bf0" : "rgba(255,255,255,0.8)", x: 3 }}
+                        whileHover={{ color: pathname.startsWith(ADMIN.href) ? "#1d9bf0" : "rgba(255,255,255,0.8)", x: 3 }}
                         transition={{ duration: 0.15 }}
                       >
                         {ADMIN.label}
@@ -310,7 +319,7 @@ export default function DropdownNav() {
                   }}
                 >
                   <Link
-                    href={LOGIN.href}
+                    href={signedIn ? (isAdmin ? PORTAL.href : ACCOUNT.href) : LOGIN.href}
                     onClick={() => setOpen(false)}
                     className="group relative flex items-center gap-3 px-5 py-2.5"
                   >
@@ -324,7 +333,7 @@ export default function DropdownNav() {
                       whileHover={{ color: "rgba(255,255,255,0.7)", x: 3 }}
                       transition={{ duration: 0.15 }}
                     >
-                      {LOGIN.label}
+                      {signedIn ? (isAdmin ? PORTAL.label : ACCOUNT.label) : LOGIN.label}
                     </motion.span>
                   </Link>
                 </motion.div>

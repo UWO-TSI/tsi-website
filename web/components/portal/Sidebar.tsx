@@ -15,7 +15,7 @@ import {
   ClipboardList,
   X,
 } from "lucide-react";
-import type { ComponentType } from "react";
+import { useEffect, useState, type ComponentType } from "react";
 import { useUser } from "./UserContext";
 import { ClassBadge } from "./classIdentity";
 
@@ -61,6 +61,21 @@ interface SidebarProps {
 export default function Sidebar({ onClose }: SidebarProps) {
   const pathname = usePathname();
   const { profile } = useUser();
+  // Recruitment admins are an email whitelist (lib/supabase/admin), not a
+  // tier. They get the Admin section too; the hub page keeps its tier gate.
+  const [isWhitelistedAdmin, setIsWhitelistedAdmin] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/admin/me")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (!cancelled) setIsWhitelistedAdmin(!!d?.isAdmin);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   const userName = profile?.display_name || "Player";
   const userLevel = profile?.level ?? 1;
 
@@ -140,8 +155,8 @@ export default function Sidebar({ onClose }: SidebarProps) {
           />
         ))}
 
-        {/* Admin section — T1/T2 only, matching the admin hub's own gate */}
-        {(profile?.tier ?? 99) <= 2 && (
+        {/* Admin section — T1/T2, or a whitelisted recruitment admin */}
+        {((profile?.tier ?? 99) <= 2 || isWhitelistedAdmin) && (
           <>
             <div
               className="font-mono uppercase tracking-wider"
