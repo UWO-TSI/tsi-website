@@ -12,10 +12,11 @@ The applicant world (`feat/apply-world`, draft PR #17) is **parked**: David has 
 |---|---|
 | Round | Fall 2026 exec hiring: **VP Marketing** + **PM** (both public). Same 4-step form, submit route, drafts, dashboard and admin board as May; migration 027 only swaps the position rows. |
 | Dates | Opens **Sept 5 2026 00:00 EDT**, closes **Sept 11 2026 end of day EDT** (`closes_at` = Sept 12 04:10Z, May convention). |
-| Hold | David (2026-09-05): **do not open with placeholder questions.** 027 lands both fall rows `is_active = false`. `web/scripts/_apply-fall-2026-essays.mjs` writes the real questions and flips both rows active in one run. Until then `/student/apply` lists no positions and the role pages 404. |
-| Essays | David pastes them (per role: question text + word limit). Paste into the script above, run it. Never edit 027 once applied. |
+| Live | **Round opened 2026-09-05 ~06:40 UTC** on David's call (both roles public). 027's data half was applied through `scripts/_apply-fall-2026-positions.mjs`; 028 and 026 were run by David in the SQL editor at 06:49 UTC. `_apply-fall-2026-essays.mjs` writes questions + public/active; `_fall-2026-test-mode.mjs on/off` flips both rows to internal-only for testing. |
+| Essays | VP Marketing: one question, "Submit a video that convinces us you're the candidate for this role" (60 words + video upload). PM: two placeholder questions still live; David may replace them (paste into `_apply-fall-2026-essays.mjs`, run). |
 | Archive | The May round is archived through `positions.archived_at` (migration 028). The admin list folds those applications into a collapsed **Archived rounds** panel (round → role → cards). Archived cards keep notes and tags editable; verdicts, release and delete are hidden. Archived rows stay out of the live list, board, insights, filters and release; CSV export gains an `archived` column. |
 | Applicant world | Parked on `feat/apply-world` (draft PR #17). `NEXT_PUBLIC_APPLY_WORLD` stays unset. Resume from the plan in `AGENT_LOG.md` when re-opened. |
+| Admin access | Whitelisted admins get an "Admin dashboard" entry in the hamburger menu (`/api/admin/me` + `DropdownNav`). |
 | Exec beta | Skipped. |
 | Migrations 024/025 (game coins, seasonal seed, drafted on the game branch) | Apply at the game world's launch window, not now. |
 
@@ -38,7 +39,7 @@ Rule going forward (David's standing preference): short-lived branch per task, P
 - **Vercel team** `davids-projects-e31987e3` (hobby). Project **`uwotsi.com`** (`prj_RHJizhUPiP9rWS4RkPdLJKNw5kqm`) serves `tethos.ca`, `www.tethos.ca`, `uwotsi.com`. A second project **`uwotsi`** (`prj_SldZLuGi2Td2ErPj3IqvSRT0sVNH`) is linked to the same repo and also builds every push; it serves nothing real. Safe to delete.
 - `tethos.ca` 307s to `www.tethos.ca`. Smoke: `curl -sI https://www.tethos.ca/student/apply` → 200, `https://www.tethos.ca/api/positions` → 200 JSON.
 - **Supabase** project "Tethos Central Database", ref `rtbkrngsdbptbjhfbcud`, org `wsacjowpbmnrpbnmctrc`. Free tier.
-  - **2026-09-05:** still `ENOTFOUND` from David's dev machine. Nothing DB-side has been applied or verified since July.
+  - **2026-09-05:** project restored ~06:25 UTC (first minutes returned Cloudflare 521 while the origin came up; a stale negative DNS entry on the dev Mac needed `dscacheutil -flushcache`). Fall round data applied and tested end to end the same hour.
   - **Incident 2026-09-02:** the project had been **paused** (free-tier inactivity). DNS for the ref stopped resolving, every prod API that touches the DB returned `TypeError: fetch failed`, Vercel runtime errors show the same `ENOTFOUND` from **2026-07-02 through 2026-08-31**. David restored it from the dashboard. Free projects pause after ~7 idle days and are deleted after ~90 paused days: **keep it warm** (a weekly cron hit, or upgrade) or this repeats.
 - Prod env vars live only in Vercel. `ANTHROPIC_API_KEY` presence there is unverified (only matters for NPC chat, which is parked).
 - Recruitment emails: `RECRUITMENT_EMAILS_ENABLED=true` must be set in Vercel before the first status release batch.
@@ -47,9 +48,7 @@ Rule going forward (David's standing preference): short-lived branch per task, P
 
 - Applied on prod: `001_initial_schema` … `023_member_collections` (verified 2026-07-03 with David watching; `bounty_submissions` restored then).
 - Drafted, **not applied**, on the game branch: `024_game_coins.sql`, `025_seasonal_seed.sql`.
-- On `main` since 2026-09-02, not applied: `026_bounty_deliverables_rls.sql` (closes the Supabase critical advisory).
-- On `feat/fall-2026-apply` (PR #16), not applied: `027_recruitment_fall_2026.sql` (fall rows, inactive; May `vp-marketing` → `vp-marketing-may26`, `pm-general` → `pm`), `028_recruitment_archive.sql` (`positions.archived_at`, stamps the five May rows, widens the applicant positions RLS so the student dashboard keeps showing May applications after 027 deactivates their rows).
-- Apply order in the SQL editor once the project resolves: 026 → 027 → 028. Then `cd web && node scripts/_apply-fall-2026-essays.mjs` opens the round.
+- **Applied 2026-09-05:** `026_bounty_deliverables_rls.sql` and `028_recruitment_archive.sql` (SQL editor, David, 06:49 UTC); `027_recruitment_fall_2026.sql`'s data half via `scripts/_apply-fall-2026-positions.mjs` (service-role API). The 027 file is guarded so re-running it is a no-op.
 - **Next free slot: `029_*`.** Never edit an applied migration.
 
 ## Repo hygiene done 2026-09-02

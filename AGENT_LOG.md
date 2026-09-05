@@ -114,6 +114,18 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-09-05 (later) — Round opened, migrations applied, copy from the Hiring Descriptions doc, admin menu link
+
+Supabase came back ~06:25 UTC. Sequence with David watching: 027's data half applied via `scripts/_apply-fall-2026-positions.mjs` (idempotent, guarded rename), fall rows to internal test mode (`_fall-2026-test-mode.mjs on`), then David ruled both roles public → `_apply-fall-2026-essays.mjs` (questions + active + public). David ran 028 + 026 in the SQL editor at 06:49 UTC (a Playwright-driven SQL editor window was tried first; computer-use is read-only for browsers and he closed the window).
+
+**Copy:** VP Marketing became the "Polished" Video & Content posting from David's "Hiring Descriptions" Google Doc, then trimmed on his review: title back to "VP Marketing", tagline "responsible for the video marketing side of TSI", note box removed, question "Submit a video that convinces us you're the candidate for this role" with the upload block relabelled "Your video". May's VP Marketing copy lives under the `vp-marketing-may26` key. PM "who fits" reworded (tech foundation / leadership / organized / consistent) on a `pm`-specific object so May's archived copy is untouched.
+
+**Admin access:** `/api/admin/me` (server-side whitelist check) + an "Admin dashboard" entry in `DropdownNav` for admins, re-checked on every route change.
+
+**Verified against the real DB** (`scripts/_e2e-fall-2026.mjs` on a side-effect-free `next start -p 3100` with sheet sync + email env blanked): two throwaway applicants submitted through `/api/resume-sign` + `/api/applications` for both roles, duplicate blocked by the unique constraint, admin GET/PATCH ok, anonymous 401, admin page + dashboard render, everything created deleted again and the admin session revoked. After 028: admin API 30 rows = 29 archived + 1 live (David's own test PM application), panel shows May 2026 → 5 roles. Note `applications.phone` is NOT NULL (the form sends ""), and there is no `resume_storage_path` column (the path lives inside the signed URL).
+
+**Left for David:** real PM questions (placeholders are live); delete his test application; merge PR #16 so tethos.ca serves the new copy; `RECRUITMENT_EMAILS_ENABLED=true` in Vercel before the first release batch.
+
 ### 2026-09-05 — Pivot: fall round ships on the plain form; May round archived (`feat/fall-2026-apply`, PR #16)
 
 David (2026-09-05): no time for the applicant world this round. "Same process as before, just switch the roles, make sure it connects to the admin database, archive the old round with a collapsed field on the admin page." PR #17 stays a parked draft. Rulings: archived cards keep notes + tags only; hold the round until his questions land; archive collapsed under the live list.

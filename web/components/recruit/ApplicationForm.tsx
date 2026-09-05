@@ -851,9 +851,9 @@ export default function ApplicationForm({
                   { label: string; description: string }
                 > = {
                   "vp-marketing": {
-                    label: "Creative piece",
+                    label: "Your video",
                     description:
-                      "Upload the piece you want us to see for this role. Image, video, PDF, or zip up to 50MB. If your file is bigger, paste a hosted link below instead.",
+                      "Upload a video that convinces us you're the candidate for this role. Up to 50MB here; if it's bigger, paste a hosted link (YouTube, Drive, Instagram) below instead.",
                   },
                   "vp-internal": {
                     label: "Planning doc / screenshots",
@@ -1024,7 +1024,7 @@ export default function ApplicationForm({
                       <div className="pt-2">
                         <p className="text-xs text-[#9CA3AF] mb-1.5 font-medium">
                           {position.slug === "vp-marketing"
-                            ? "Creative piece"
+                            ? "Video"
                             : "Attachment"}
                         </p>
                         <ul className="text-sm text-[#E5E7EB] space-y-1">

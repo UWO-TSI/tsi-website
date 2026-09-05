@@ -1,7 +1,8 @@
 // Fall 2026 round: write the essay questions for VP Marketing + PM and open
-// the round. Migration 027 lands both rows inactive on purpose (David,
-// 2026-09-05: hold until the real questions are in). Run once with David's
-// questions filled in below:
+// the round publicly. Migration 027 lands both rows inactive on purpose
+// (David, 2026-09-05: hold until the real questions are in); the test switch
+// is scripts/_fall-2026-test-mode.mjs. Run once with David's questions
+// filled in below:
 //   node scripts/_apply-fall-2026-essays.mjs
 // Re-runnable: same UPDATE every time. To close/reopen later use
 // scripts/_toggle-apps-open.mjs.
@@ -31,7 +32,7 @@ const ESSAYS = {
     {
       id: "vp-mkt-f26-1",
       question:
-        "Show don't tell. Submit a video or reel that makes the case for why you're the one for this role.",
+        "Submit a video that convinces us you're the candidate for this role.",
       max_words: 60,
     },
   ],
@@ -54,7 +55,7 @@ const ESSAYS = {
 for (const [slug, essays] of Object.entries(ESSAYS)) {
   const { data, error } = await admin
     .from("positions")
-    .update({ essay_questions: essays, is_active: true })
+    .update({ essay_questions: essays, is_active: true, visibility: "public" })
     .eq("slug", slug)
     .select("slug");
   if (error) {

@@ -185,9 +185,7 @@ export const ROLE_CONTENT: Record<string, RoleContent> = {
   "vp-marketing": {
     positionsCount: "1",
     tagline:
-      "As VP Marketing (Video & Content), you own how TSI moves and sounds. You'll tell TSI's story through reels, vlogs, and mini-documentaries that make people stop scrolling and actually watch.",
-    preApplyNote:
-      "We already have our VP Marketing (Design) locked in. Now we're looking for the other half, someone who lives and breathes video and content creation.",
+      "As VP Marketing, you're responsible for the video marketing side of TSI. You'll tell TSI's story through reels, vlogs, and mini-documentaries.",
     whatYoullDo: [
       "Produce short vlogs and mini-documentaries for each project team and the club overall",
       "Make reels that get people talking",
@@ -203,13 +201,22 @@ export const ROLE_CONTENT: Record<string, RoleContent> = {
       "A good leader who can give clear direction to a team & has good comms skills",
     ],
     applyInstructions:
-      "Show don't tell. Submit a video or reel that makes the case for why you're the one for this role.",
+      "Submit a video that convinces us you're the candidate for this role.",
   },
 };
 
 // Fall 2026 round (migration 027): the public PM role lives on the `pm`
-// slug; it shares the copy written for the May internal PM track.
-ROLE_CONTENT.pm = ROLE_CONTENT["pm-internal"];
+// slug. Same copy as the May internal PM track except the "who you are"
+// list, reworded by David 2026-09-05.
+ROLE_CONTENT.pm = {
+  ...ROLE_CONTENT["pm-internal"],
+  whoYouAre: [
+    "Have a strong tech foundation",
+    "Leadership",
+    "Organized",
+    "Consistent",
+  ],
+};
 
 export function getRoleContent(slug: string): RoleContent | null {
   return ROLE_CONTENT[slug] ?? null;
