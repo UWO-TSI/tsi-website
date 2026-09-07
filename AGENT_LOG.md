@@ -108,6 +108,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-09-07 · Desktop heartbeat snapshots and world bounds
+
+Snapshot/acknowledgement, bounded serial polling, exit cancellation and idle-expiry margin fixed. ±80 validation supports existing coast/islet; authenticated last-seen update now executes and optional failure stays nonfatal. 366 tests/36 files, types/lint/build pass. Supabase writes mocked; Dia transport fake. No migrations or reward changes. See checkpoint.
+
 ### 2026-09-07 · Compass/minimap agreement
 
 Removed reversed camera heading, normalized angle/seam handling and added accessible facing labels. 346 tests/34 files, types/lint and production build pass. Dia cardinal/seam/hide-show fixture QA clean. No map geometry or member-data changes. See checkpoint.
