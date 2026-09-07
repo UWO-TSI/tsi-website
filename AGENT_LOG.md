@@ -108,6 +108,8 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+- 2026-09-07 Codex: park bench restored upright with original UV/wood-metal texture; common bench repair script preserves scale. Seated sprite alignment/one-time position report/quick-key exit repaired. Dia inspector + local player/log/park checks clean, 405 tests/types/lint/build pass. No backend transport in fixture. Next inspect park clock. See checkpoint and park bench provenance.
+
 - 2026-09-07 Codex: nested shop details/world-sheet focus and Escape ownership repaired. Dia fake nested + actual anonymous sheet keyboard checks pass, 44px named item close; no purchases. 405 tests/types/build pass, lint only carried image warnings. Next original park bench asset repair. See checkpoint.
 
 - 2026-09-07 Codex: truthful shop/account GET errors, validated read transport, retry/abort feedback and unknown-balance checkout guard. Existing economy POST unchanged. 405 tests + types/webpack build pass; lint only 2 carried img warnings. Dia fake read QA clean, no purchases. Next nested shop/sheet keyboard behavior. See checkpoint.

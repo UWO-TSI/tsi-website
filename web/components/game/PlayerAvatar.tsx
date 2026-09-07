@@ -212,6 +212,7 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
     return bindGameKeys({ keys, accepted: ["w", "a", "s", "d", "shift", " "],
       onReset: () => { targetRef.current = null; velRef.current.set(0, 0); },
       onPress: (e) => {
+        if (["w", "a", "s", "d"].includes(e.key.toLowerCase())) sitRef.current = null;
         // F1.2: Space triggers cosmetic jump. Ignore key-repeat so holding
         // Space doesn't loop the arc — only re-fires after the previous
         // jump finishes.
@@ -290,6 +291,9 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
       const sittingDown = !(cur && cur.x === x && cur.z === z);
       sitRef.current = sittingDown ? { x, z } : null;
       if (sittingDown) {
+        targetRef.current = null;
+        jumpRef.current = { active: false, t: 0 };
+        squashRef.current = 0;
         // settle: soft dust puff at the seat + ♪ for a moment
         const id = puffIdRef.current++;
         setPuffs((prev) => [...prev, { id, position: [x, groundHeight(x, z) + 0.15, z], scale: 1.3 }]);
@@ -333,17 +337,21 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
     if (sitRef.current) {
       const seat = sitRef.current;
       const seatY = groundHeight(seat.x, seat.z) + AVATAR_FOOT_OFFSET;
+      const changed = pos.x !== seat.x || pos.y !== seatY || pos.z !== seat.z;
       pos.set(seat.x, seatY, seat.z);
       groupRef.current.position.copy(pos);
       facingRef.current = Math.PI; // face the camera (down column, front cell)
       currentFrame.current = 0;
       spriteTexture.offset.set(DIR_DOWN.col / SHEET_COLS, 1 - 1 / SHEET_ROWS);
       if (spriteRef.current) {
-        // Lower the sprite so it reads as seated on the bench slats.
-        spriteRef.current.position.y = SPRITE_BASE_Y - 0.42;
+        // Shorten the standing sprite and bring it just in front of the seat back.
+        spriteRef.current.position.set(0, SPRITE_BASE_Y, 0.2);
+        spriteRef.current.scale.set(1, 0.82, 1);
+        spriteRef.current.rotation.z = 0;
       }
       velRef.current.set(0, 0);
       if (isMoving) setIsMoving(false);
+      if (changed) onMove(pos.clone());
       return;
     }
 
@@ -554,7 +562,7 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
     }
 
     if (spriteRef.current) {
-      spriteRef.current.position.y = SPRITE_BASE_Y + bobY + jumpY;
+      spriteRef.current.position.set(0, SPRITE_BASE_Y + bobY + jumpY, 0);
       // G1 squash & stretch: stretch on the way up, squash for ~0.18s on
       // landing, lean tilt from lateral motion. Billboard makes rotation.z
       // a clean screen-space tilt.

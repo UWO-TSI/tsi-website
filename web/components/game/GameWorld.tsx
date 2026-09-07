@@ -1506,13 +1506,13 @@ const LAMP_XZ: [number, number][] = [[1.8, -9], [-1.8, -16], [-1.8, 6.5], [1.8, 
 function Props() {
   return (
     <group>
-      {/* Benches — warm wood benches by the HQ approach, white park benches
+      {/* Benches — warm wood benches by the HQ approach, upright park benches
           at the north plaza. Sit anchors stay at the same XZ (BENCHES list
           in the interact sweep mirrors these coords). */}
       {[[-3, -16], [3, -16], [-3.2, 13], [3.2, 13]].map(([x, z], i) => (
         <group key={`bench-${i}`} position={yAt(x, z)}>
           <Suspense fallback={null}>
-            <GLBProp url={z < 0 ? "/assets/acnh/props/bench-wood.glb" : "/assets/acnh/props/bench-park.glb"} />
+            <GLBProp url={z < 0 ? "/assets/acnh/props/bench-wood.glb" : "/assets/acnh/props/bench-park.glb"} rotation={[0, z >= 0 ? Math.PI : 0, 0]} />
           </Suspense>
         </group>
       ))}

@@ -5,7 +5,7 @@ Rebuilt September 7, 2026 from the existing local asset library. No new asset pu
 - Geometry: `~/Downloads/Assets/Model/FtrWoodBench.Nin_NX_NVN/FtrWoodBench.dae`
 - Original default wood variant: `~/Downloads/Assets/Model/FtrWoodBenchReBody0.Nin_NX_NVN/mReBody_Alb.png`
 - Output: `web/public/assets/acnh/props/bench-wood.glb`
-- Reproduce from `web/`: `node scripts/restore-wood-bench.mjs [source-model-directory]` (requires installed assimp).
+- Reproduce from `web/`: `node scripts/restore-bench-assets.mjs wood [source-model-directory]` (requires installed assimp).
 
 The old GLB had one mesh with position/normal attributes but no UVs or textures. The repair exports the source with its matching variant images in a temporary directory, retains UVs/albedo, removes unused skinning/extra material extensions, and applies the existing 0.1 scale. It centers X/Z and grounds Y, matching the old 1.9453 × 0.5106 × 0.5280 bounds within 0.001 units. The script verifies mesh count, UV/albedo presence and dimensions before writing.
 
