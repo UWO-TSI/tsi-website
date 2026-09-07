@@ -108,6 +108,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-09-07 — Exposure pipeline and reference lighting (Codex)
+
+Restored missing neutral tone mapping; exposure extremes now visibly work in Dia. Reference lighting retuned and bloom/lite/pixel combinations checked. 170 tests and production build pass, including prior model ownership changes. See `specs/game-default-island-checkpoint.md`.
+
 ### 2026-09-07 — Shared model material ownership (Codex)
 
 Building/seasonal/instanced nature materials now have explicit ownership and cleanup; HQ flag and foliage preparation agree across both worlds. Removed premature grass-normal upload after route QA exposed a warning. Material test, TypeScript and targeted ESLint pass; cold island console clean. See `specs/game-default-island-checkpoint.md`.

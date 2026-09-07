@@ -82,14 +82,14 @@ export default function GraphicsSettingsPanel({ open, onClose }: GraphicsSetting
         />
         <Toggle
           label="Bloom glow"
-          hint="Soft glow on lanterns / braziers / fireflies. Costs ~12 FPS."
+          hint="Soft glow around lights and bright effects. Turn off for smoother performance."
           value={settings.bloom}
           onChange={actions.setBloom}
           disabled={settings.liteMode}
         />
         <Toggle
           label="Shadows"
-          hint="Real sun shadows from buildings and trees (soft discs when off). Costs a few FPS."
+          hint="Sun shadows from buildings and trees. Uses soft ground shadows when off."
           value={settings.shadows}
           onChange={actions.setShadows}
           disabled={settings.liteMode}

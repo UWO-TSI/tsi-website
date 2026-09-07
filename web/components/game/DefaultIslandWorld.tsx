@@ -20,9 +20,9 @@ import { WORLD_BEND } from "@/lib/game/curvedWorld";
 import styles from "./DefaultIslandWorld.module.css";
 
 const LIGHTING = {
-  day: { name: "Daylight", sky: "#b7dce0", sun: "#fff3d6", strength: 2.1, fill: "#c4e5ef", position: [-12, 24, -14] as [number, number, number] },
-  evening: { name: "Golden hour", sky: "#d5b7a9", sun: "#ffd09a", strength: 1.8, fill: "#b3bfdb", position: [-22, 12, -8] as [number, number, number] },
-  overcast: { name: "Overcast", sky: "#b4c8ce", sun: "#e6eff5", strength: 0.9, fill: "#d2e0e0", position: [-12, 24, -14] as [number, number, number] },
+  day: { name: "Daylight", sky: "#b7dce0", sun: "#fff3d6", strength: 3.2, fill: "#c4e5ef", position: [-12, 24, -14] as [number, number, number] },
+  evening: { name: "Golden hour", sky: "#d5b7a9", sun: "#ffd09a", strength: 2.7, fill: "#b3bfdb", position: [-22, 12, -8] as [number, number, number] },
+  overcast: { name: "Overcast", sky: "#b4c8ce", sun: "#e6eff5", strength: 1.35, fill: "#d2e0e0", position: [-12, 24, -14] as [number, number, number] },
 };
 type LightPreset = keyof typeof LIGHTING;
 type Metrics = { fps: number; frameMs: number; calls: number; triangles: number; x: number; z: number };
@@ -74,8 +74,8 @@ function IslandScene({ preset, overview, shadows, reset, onMetrics }: {
     <>
       <color attach="background" args={[light.sky]} />
       <fog attach="fog" args={[light.sky, overview ? 50 : 36, overview ? 85 : 74]} />
-      <ambientLight intensity={0.3} color={light.fill} />
-      <hemisphereLight args={[light.fill, "#a0a980", 0.65]} />
+      <ambientLight intensity={0.4} color={light.fill} />
+      <hemisphereLight args={[light.fill, "#a0a980", 1]} />
       <directionalLight position={light.position} color={light.sun} intensity={light.strength}
         castShadow={shadows} shadow-mapSize={[1024, 1024]} shadow-camera-left={-26} shadow-camera-right={26}
         shadow-camera-top={24} shadow-camera-bottom={-24} shadow-camera-near={1} shadow-camera-far={75}

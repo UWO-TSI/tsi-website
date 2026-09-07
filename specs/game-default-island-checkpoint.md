@@ -115,3 +115,13 @@ This is a playable review checkpoint, not final visual or whole-game acceptance.
 - Dia full-world Noon check shows the HQ flag and continuous blossom crowns. Fresh full-world console has only the existing seasonal-palette fallback warning. Route change exposed a grass-normal texture marked for upload before its image loaded; UV repeat changes do not require an upload, so removed that redundant needsUpdate. Cold default-island load after the fix has no warnings/errors.
 - Targeted material ownership test, TypeScript and targeted ESLint pass. Previous complete suite: 170 tests; previous production build passed before this batch. Authenticated services and physical device inputs remain unverified.
 - Next: verify the postprocessing exposure path. Local dependency code disables renderer tone mapping while the current composer contains no ToneMapping effect; investigate before retuning lighting. Larger terrain/authored-map work stays deferred.
+
+## September 7 exposure pipeline and reference light calibration
+
+- Shared asset batch committed as `fca5e06`. Found that installed @react-three/postprocessing disables renderer tone mapping while PostFX had no replacement effect. Live Dia exposure 0.5 versus 1.6 produced no visible scene change before repair.
+- Added explicit NEUTRAL ToneMapping after HDR effects, matching the operator both Canvas roots already select. Repeated exposure extremes now visibly darken/brighten the HQ and terrain. Reviewed pixelated dusk with bloom, unfiltered view, lite-mode fallback and restoration; no new runtime errors.
+- Source: [postprocessing tone mapping documentation](https://pmndrs.github.io/postprocessing/public/docs/#tone-mapping), checked September 7; installed EffectComposer implementation corroborates renderer tone-mapping suppression. Exposure behavior is verified in the live app, not inferred solely from documentation.
+- Corrected reference light levels after the pipeline fix: daylight sun 3.2, golden hour 2.7, overcast 1.35; ambient 0.4 and hemisphere 1. All three presets reviewed in Dia; brighter daylight preserves building and foliage detail. Full-world lighting presets still need their later art pass.
+- Graphics hints no longer present an old host-specific bloom/shadow FPS cost as a universal estimate. Bloom restored off, lite mode off, pixel filter on; no saved lab grading draft overwritten.
+- 170 tests, TypeScript, targeted ESLint and production webpack build pass, including the preceding model-ownership batch. Existing build deprecation/browser-data warnings remain. Continuous local work, no push/deploy.
+- Next: NPC interaction targets must follow current wandering positions and refresh while the player stands still; preserve existing interaction radii/actions and progression.

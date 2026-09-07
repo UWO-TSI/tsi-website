@@ -22,11 +22,11 @@
 
 import { useEffect, useMemo, useSyncExternalStore } from "react";
 import { useThree } from "@react-three/fiber";
-import { EffectComposer, Bloom, Vignette } from "@react-three/postprocessing";
+import { EffectComposer, Bloom, ToneMapping, Vignette } from "@react-three/postprocessing";
 import { createGraphicsContextStore } from "@/lib/game/graphicsContext";
 import { useLabState } from "@/lib/game/devLab";
 import { DEFAULT_GRADE, type Grade } from "@/lib/game/grading";
-import { BlendFunction, Effect } from "postprocessing";
+import { BlendFunction, Effect, ToneMappingMode } from "postprocessing";
 import { Uniform, Vector3 } from "three";
 
 // Pastel master grade (AC-reference calibration, 2026-07-14 — David's
@@ -146,6 +146,9 @@ export default function PostFX({ enabled = true, vignetteDarkness = 0.4, bloom =
           luminanceSmoothing={0.025}
         />
       ) : <></>}
+      {/* The composer disables renderer tone mapping. Preserve the Canvas's
+          neutral operator here, after HDR effects, so exposure still works. */}
+      <ToneMapping mode={ToneMappingMode.NEUTRAL} />
     </EffectComposer>
   );
 }
