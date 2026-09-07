@@ -125,3 +125,11 @@ This is a playable review checkpoint, not final visual or whole-game acceptance.
 - Graphics hints no longer present an old host-specific bloom/shadow FPS cost as a universal estimate. Bloom restored off, lite mode off, pixel filter on; no saved lab grading draft overwritten.
 - 170 tests, TypeScript, targeted ESLint and production webpack build pass, including the preceding model-ownership batch. Existing build deprecation/browser-data warnings remain. Continuous local work, no push/deploy.
 - Next: NPC interaction targets must follow current wandering positions and refresh while the player stands still; preserve existing interaction radii/actions and progression.
+
+## September 7 live interaction tracking
+
+- Rendering/exposure batch committed as `aad0b7d`. Nearest-target sweeps now run every 50 ms while exterior input is active, independently of player movement. Existing target radii, priorities and actions are preserved; critters and picked flowers also refresh while stationary.
+- Permanent NPCs publish their current grounded position through refs. NPC selection and target glow follow the drawn character instead of its day/night/weather anchor.
+- Live Dia check used temporary bundled permanent NPCs because the unauthenticated world bench returned none. Player remained at (-5, -2). Mayor acquired at distance 3.4985827 (06:40:59.753 UTC) and cleared at 3.5045511 (06:41:19.248 UTC), without moving the player. Logged glow coordinates exactly matched the mayor's current grounded position. A passing critter also acquired/cleared while stationary.
+- Temporary NPC fixture and QA_LIVE_NPC logging removed. Default island fresh console clean. TypeScript, targeted ESLint and diff check pass. Prior 170-test suite and production build passed before this interaction batch; no authenticated NPC conversation or persistence claim.
+- Next: finish camera-follow settling at rest, then review the reference/traversal checkpoint against the agreed part-by-part scope. Authored terrain remains deferred.

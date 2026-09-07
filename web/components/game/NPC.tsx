@@ -33,6 +33,7 @@ interface NPCProps {
   position: [number, number, number];
   playerPosition?: THREE.Vector3;
   playerPositionRef?: RefObject<THREE.Vector3>;
+  worldPositionRef?: RefObject<THREE.Vector3>;
   groundHeight?: (x: number, z: number) => number;
   constrainMove?: (x: number, z: number, nx: number, nz: number) => [number, number];
   onClick: () => void;
@@ -96,7 +97,7 @@ function wanderOffset(t: number, phase: number): [number, number] {
   return [x, z];
 }
 
-export default function NPC({ persona, position, playerPosition, playerPositionRef, groundHeight = getTerrainHeight, constrainMove, onClick }: NPCProps) {
+export default function NPC({ persona, position, playerPosition, playerPositionRef, worldPositionRef, groundHeight = getTerrainHeight, constrainMove, onClick }: NPCProps) {
   const groupRef = useRef<THREE.Group>(null);
   const visualRef = useRef<THREE.Group>(null);
   const [hovered, setHovered] = useState(false);
@@ -263,6 +264,7 @@ export default function NPC({ persona, position, playerPosition, playerPositionR
       const bob = Math.sin(clockRef.current * Math.PI * 1.8) * amp;
       const gy = groundHeight(curX, curZ);
       groupRef.current.position.set(curX, gy, curZ);
+      worldPositionRef?.current.copy(groupRef.current.position);
       if (visualRef.current) visualRef.current.position.y = bob + hopY;
     }
 

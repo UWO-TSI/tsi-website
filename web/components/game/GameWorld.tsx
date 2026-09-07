@@ -1927,7 +1927,7 @@ function Scene({
       const idx = zoneCount[p.spawn_zone] ?? 0;
       zoneCount[p.spawn_zone] = idx + 1;
       const pos: [number, number, number] = [base[0] + idx * 1.5, base[1], base[2]];
-      return { persona: p, position: pos };
+      return { persona: p, position: pos, positionRef: { current: new THREE.Vector3(...pos) } };
     });
   }, [personas, todPhase, weather]);
 
@@ -1958,15 +1958,16 @@ function Scene({
     cameraRef.current?.moveTo(position.x + cf.leadX, position.y + 1.5, position.z + cf.leadZ, true);
     // (Sprint FOV widen lives in PlayerAvatar's useFrame — the compiler
     // allows camera mutation there but not in this DOM-side callback.)
+  }, [playerPosRef]);
 
-    // F1.2: compute nearest interactable for crosshair + E-interact. Cheap
-    // O(npc + building) sweep every move tick. INTERACT_RADIUS = 3.5 units.
+  const updateNearestInteractable = useCallback((position: THREE.Vector3) => {
+    // Use live positions: NPCs and critters keep moving while the player rests.
     const INTERACT_RADIUS = 3.5;
     let bestDist = INTERACT_RADIUS;
     let best: { kind: "npc" | "building" | "tree" | "bench" | "flower" | "fishing" | "critter" | "station"; id: string; name: string; href?: string; npc?: NPCPersona; treePos?: [number, number]; seat?: [number, number]; flowerIdx?: number; flowerPos?: [number, number]; spot?: [number, number]; critterSlot?: number; interiorId?: string; stationAction?: string } | null = null;
-    for (const { persona, position: p } of placedPersonas) {
-      const dx = p[0] - position.x;
-      const dz = p[2] - position.z;
+    for (const { persona, positionRef } of placedPersonas) {
+      const dx = positionRef.current.x - position.x;
+      const dz = positionRef.current.z - position.z;
       const d = Math.hypot(dx, dz);
       if (d < bestDist) {
         bestDist = d;
@@ -2064,13 +2065,22 @@ function Scene({
           if (b) gp = [b.position[0], getTerrainHeight(b.position[0], b.position[2]), b.position[2]];
         } else if (best.kind === "npc") {
           const pp = placedPersonas.find((q) => q.persona.id === best.id);
-          if (pp) gp = [pp.position[0], getTerrainHeight(pp.position[0], pp.position[2]), pp.position[2]];
+          if (pp) gp = [pp.positionRef.current.x, pp.positionRef.current.y, pp.positionRef.current.z];
         }
       }
       glowTargetRef.current = gp;
     }
     onNearestInteractable(best);
-  }, [playerPosRef, placedPersonas, onNearestInteractable]);
+  }, [placedPersonas, onNearestInteractable]);
+
+  const interactionElapsed = useRef(0);
+  useFrame((_, delta) => {
+    if (frozen) { interactionElapsed.current = 0; return; }
+    interactionElapsed.current += delta;
+    if (interactionElapsed.current < 0.05) return;
+    interactionElapsed.current = 0;
+    updateNearestInteractable(playerPosRef.current);
+  }, -1);
 
   // Sprint F1.1: rebind mouse buttons via the imperative API. drei's JSX
   // wrapper doesn't always thread the `mouseButtons` object cleanly, so set
@@ -2247,11 +2257,12 @@ function Scene({
       })}
 
       {/* Permanent NPCs from content pipeline. Click → chat overlay. */}
-      {placedPersonas.map(({ persona, position }) => (
+      {placedPersonas.map(({ persona, position, positionRef }) => (
         <NPC
           key={persona.id}
           persona={persona}
           position={position}
+          worldPositionRef={positionRef}
           playerPositionRef={playerPosRef}
           onClick={() => onNPCClick(persona)}
         />
