@@ -1,94 +1,36 @@
 "use client";
 
-/**
- * ToastHub (game-feel wave G3, item 11) — ONE toast system for the whole
- * game. Fruit, flowers, fish, filler chatter all funnel through here:
- * consistent pill, consistent position (bottom-center above the hotbar),
- * consistent soft slide+fade, queued to three.
- *
- * Fire from anywhere: `toast("You picked a white lily!")` — it's a window
- * event under the hood, so world-layer components (inside the Canvas) and
- * DOM components use the same call.
- */
-
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
+import { createToastQueue, type GameToast } from "@/lib/game/toastQueue";
+import styles from "./ToastHub.module.css";
 
 export function toast(text: string, icon?: string) {
   if (typeof window === "undefined") return;
   window.dispatchEvent(new CustomEvent("tsi:toast", { detail: { text, icon } }));
 }
 
-interface Entry {
-  id: number;
-  text: string;
-  icon?: string; // item icon url (2026-07-13: rendered ACNH icons)
+function ToastIcon({ src }: { src: string }) {
+  const [failed, setFailed] = useState(false);
+  if (failed) return null;
+  // eslint-disable-next-line @next/next/no-img-element
+  return <img className={styles.icon} src={src} alt="" width={22} height={22} onError={() => setFailed(true)} />;
 }
 
-let nextId = 0;
-const TOAST_MS = 2600;
-
 export default function ToastHub() {
-  const [entries, setEntries] = useState<Entry[]>([]);
-
+  const [entries, setEntries] = useState<readonly GameToast[]>([]);
   useEffect(() => {
-    const onToast = (e: Event) => {
-      const { text, icon } = (e as CustomEvent<{ text: string; icon?: string }>).detail;
-      if (!text) return;
-      const id = nextId++;
-      setEntries((prev) => [...prev.slice(-2), { id, text, icon }]);
-      window.setTimeout(() => {
-        setEntries((prev) => prev.filter((t) => t.id !== id));
-      }, TOAST_MS);
-    };
+    const queue = createToastQueue(setEntries);
+    const onToast = (event: Event) => queue.push((event as CustomEvent<unknown>).detail);
     window.addEventListener("tsi:toast", onToast);
-    return () => window.removeEventListener("tsi:toast", onToast);
+    return () => { window.removeEventListener("tsi:toast", onToast); queue.dispose(); };
   }, []);
 
   return (
-    <div
-      aria-live="polite"
-      style={{
-        position: "absolute",
-        bottom: 96, // clears the ToolDock (item 12) pill below
-        left: "50%",
-        transform: "translateX(-50%)",
-        zIndex: 65,
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        gap: 6,
-        pointerEvents: "none",
-      }}
-    >
-      {entries.map((t) => (
-        <div
-          key={t.id}
-          style={{
-            background: "rgba(255, 252, 240, 0.95)",
-            color: "#3D3A2E",
-            border: "1px solid rgba(0,0,0,0.08)",
-            borderRadius: 999,
-            padding: "7px 16px",
-            fontSize: 13,
-            fontWeight: 600,
-            fontFamily: "'IBM Plex Mono', monospace",
-            boxShadow: "0 2px 10px rgba(0,0,0,0.18)",
-            whiteSpace: "nowrap",
-            display: "flex",
-            alignItems: "center",
-            gap: 7,
-            animation: `tsi-toast-in 0.28s cubic-bezier(0.2, 0.9, 0.3, 1.2), tsi-toast-out 0.3s ease-in ${TOAST_MS - 320}ms forwards`,
-          }}
-        >
-          {t.icon && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={t.icon} alt="" width={22} height={22} style={{ margin: "-3px 0" }} />
-          )}
-          {t.text}
-          <style>{`
-            @keyframes tsi-toast-in { from { opacity: 0; transform: translateY(10px) scale(0.92); } to { opacity: 1; transform: none; } }
-            @keyframes tsi-toast-out { to { opacity: 0; transform: translateY(-6px); } }
-          `}</style>
+    <div className={styles.hub} aria-live="polite" aria-relevant="additions" aria-atomic="false">
+      {entries.map((entry) => (
+        <div key={entry.id} className={styles.toast} style={{ "--toast-ms": `${entry.duration}ms` } as CSSProperties}>
+          {entry.icon && <ToastIcon src={entry.icon} />}
+          <span className={styles.text}>{entry.text}</span>
         </div>
       ))}
     </div>

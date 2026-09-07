@@ -108,6 +108,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-09-07 · Notification readability and queue cleanup
+
+Validated toast payloads, wrapped/bounded long text, proportional reading time, optional-icon fallback, reduced-motion styling and owned queue timers. 324 tests/31 files, targeted lint and production build pass, including counters. Dia narrow local-notice QA clean. See checkpoint.
+
 ### 2026-09-07 · Interrupted counter feedback
 
 Display counter correction no longer jumps from an old target or leaves a gain highlight stuck. Cancellable RAF ownership and reduced-motion handling added. Seven animation tests, types/lint and Dia simulated-value hook QA pass. No actual balance or reward changes. Details in checkpoint.
