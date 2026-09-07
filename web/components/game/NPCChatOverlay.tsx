@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { X, Flag, Loader2, Send } from "lucide-react";
 import { AudioManager } from "@/lib/game/audio";
+import { ChatRequestError, npcChatTransport, type ChatTurn as Turn, type NPCChatTransport } from "@/lib/npc/chatClient";
 import type { NPCPersona } from "@/lib/content/types";
 
 /**
@@ -17,27 +18,34 @@ import type { NPCPersona } from "@/lib/content/types";
  */
 
 const TYPE_INTERVAL_MS = 30;
-const HISTORY_LIMIT = 10;
+const MAX_MESSAGE_LENGTH = 500;
 
 interface NPCChatOverlayProps {
   npc: NPCPersona | null;
   onClose: () => void;
+  transport?: NPCChatTransport;
 }
 
-type Turn = {
-  id: string;
-  user_message: string;
-  npc_response: string;
-  flagged: boolean;
-  created_at: string;
-  // Local-only: if true, render the NPC response with the typewriter effect.
-  isFresh?: boolean;
-};
+export default function NPCChatOverlay({ npc, onClose, transport = npcChatTransport }: NPCChatOverlayProps) {
+  return npc ? <Conversation key={npc.id} npc={npc} onClose={onClose} transport={transport} /> : null;
+}
 
-export default function NPCChatOverlay({ npc, onClose }: NPCChatOverlayProps) {
+function Conversation({ npc, onClose, transport }: { npc: NPCPersona; onClose: () => void; transport: NPCChatTransport }) {
   const [turns, setTurns] = useState<Turn[]>([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
+  const [historyLoading, setHistoryLoading] = useState(true);
+  const [historyError, setHistoryError] = useState<string | null>(null);
+  const [unavailable, setUnavailable] = useState(false);
+  const pendingRef = useRef(false);
+  const requestsRef = useRef(new Set<AbortController>());
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const closeRef = useRef(onClose);
+  useEffect(() => { closeRef.current = onClose; }, [onClose]);
+  useEffect(() => () => {
+    requestsRef.current.forEach((request) => request.abort());
+    requestsRef.current.clear();
+  }, []);
   // Loop iter 23 (2026-07-24): while the NPC is "thinking", soft voice
   // blips mutter at a lazy random rhythm — the same voice they answer
   // with, so the wait feels like composing, not buffering.
@@ -62,55 +70,39 @@ export default function NPCChatOverlay({ npc, onClose }: NPCChatOverlayProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  // ── Load history on open ────────────────────────────────────────
   useEffect(() => {
-    if (!npc) return;
-    let cancelled = false;
-    setTurns([]);
-    setErrorMsg(null);
-    setRetryPayload(null);
-    setInput("");
+    const controller = new AbortController();
+    transport.history(npc.id, controller.signal).then((history) => {
+      if (!controller.signal.aborted) setTurns(history);
+    }).catch((error: unknown) => {
+      if (controller.signal.aborted) return;
+      if (error instanceof ChatRequestError && [401, 404].includes(error.status)) {
+        setUnavailable(true);
+        setHistoryError(error.message);
+      } else setHistoryError("Earlier messages couldn't load. You can still start a new message.");
+    }).finally(() => { if (!controller.signal.aborted) setHistoryLoading(false); });
+    return () => controller.abort();
+  }, [npc.id, transport]);
 
-    (async () => {
-      try {
-        const res = await fetch(
-          `/api/npc/conversations?npc_id=${encodeURIComponent(npc.id)}&limit=${HISTORY_LIMIT}`,
-        );
-        if (cancelled) return;
-        if (res.status === 401) {
-          setErrorMsg("Please sign in to chat");
-          setTimeout(() => !cancelled && onClose(), 3000);
-          return;
-        }
-        if (!res.ok) {
-          // Endpoint may not exist or DB unreachable — start empty.
-          // TODO: wire history persistence if this ever ships before route.
-          return;
-        }
-        const data = (await res.json()) as { turns?: Turn[] };
-        if (Array.isArray(data.turns)) setTurns(data.turns);
-      } catch {
-        // Network error on history load is non-fatal — start empty.
-      }
-    })();
-
-    // Focus input shortly after mount.
-    const focusTimer = setTimeout(() => inputRef.current?.focus(), 220);
-    return () => {
-      cancelled = true;
-      clearTimeout(focusTimer);
-    };
-  }, [npc, onClose]);
-
-  // ── ESC closes ──────────────────────────────────────────────────
   useEffect(() => {
-    if (!npc) return;
+    const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    inputRef.current?.focus({ preventScroll: true });
     const handle = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") {
+        e.preventDefault(); e.stopPropagation(); closeRef.current();
+      } else if (e.key === "Tab") {
+        const controls = Array.from(dialogRef.current?.querySelectorAll<HTMLElement>("button:not(:disabled), textarea:not(:disabled), a[href]") ?? []);
+        const index = controls.findIndex((control) => control === document.activeElement);
+        const next = e.shiftKey ? (index <= 0 ? controls.length - 1 : index - 1) : (index + 1) % controls.length;
+        e.preventDefault(); e.stopPropagation(); controls[next]?.focus();
+      }
     };
-    window.addEventListener("keydown", handle);
-    return () => window.removeEventListener("keydown", handle);
-  }, [npc, onClose]);
+    window.addEventListener("keydown", handle, true);
+    return () => {
+      window.removeEventListener("keydown", handle, true);
+      if (previous?.isConnected) previous.focus({ preventScroll: true });
+    };
+  }, []);
 
   // ── Auto-scroll on new content ─────────────────────────────────
   useEffect(() => {
@@ -125,101 +117,61 @@ export default function NPCChatOverlay({ npc, onClose }: NPCChatOverlayProps) {
     return () => clearTimeout(t);
   }, [toast]);
 
-  const sendMessage = useCallback(
-    async (text: string) => {
-      if (!npc) return;
-      const message = text.trim();
-      if (!message || sending) return;
-
-      setSending(true);
-      setErrorMsg(null);
-      setRetryPayload(null);
-      setInput("");
-
-      try {
-        const res = await fetch("/api/npc/chat", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ npc_id: npc.id, message }),
-        });
-
-        if (res.status === 401) {
-          setErrorMsg("Please sign in to chat");
-          setTimeout(() => onClose(), 3000);
-          return;
-        }
-        if (res.status === 404) {
-          onClose();
-          return;
-        }
-        if (res.status === 429) {
-          setErrorMsg(
-            "You're sending messages too fast. Try again in a few minutes.",
-          );
-          return;
-        }
-        if (res.status === 400) {
-          const body = (await res.json().catch(() => ({}))) as {
-            error?: string;
-          };
-          setErrorMsg(body.error ?? "Please keep messages respectful.");
-          return;
-        }
-        if (!res.ok) {
-          setErrorMsg("Couldn't reach the server. Try again.");
-          setRetryPayload(message);
-          return;
-        }
-
-        const data = (await res.json()) as { reply?: string };
-        const reply = data.reply ?? "";
-        setTurns((prev) => [
-          ...prev,
-          {
-            id: `local-${Date.now()}`,
-            user_message: message,
-            npc_response: reply,
-            flagged: false,
-            created_at: new Date().toISOString(),
-            isFresh: true,
-          },
-        ]);
-      } catch {
-        setErrorMsg("Couldn't reach the server. Try again.");
-        setRetryPayload(message);
-      } finally {
-        setSending(false);
-      }
-    },
-    [npc, sending, onClose],
-  );
-
-  const handleFlag = useCallback(async (turnId: string) => {
-    // Local turns (just-sent, no DB id yet) can't be flagged this round.
-    if (turnId.startsWith("local-")) {
-      setToast("This message can be reported after refresh.");
+  const sendMessage = useCallback(async (text: string) => {
+    const message = text.trim();
+    if (!message || pendingRef.current || historyLoading || unavailable) return;
+    if (message.length > MAX_MESSAGE_LENGTH) {
+      setErrorMsg("Keep your message to 500 characters.");
       return;
     }
+    const controller = new AbortController();
+    requestsRef.current.add(controller);
+    pendingRef.current = true;
+    setSending(true);
+    setErrorMsg(null);
+    setRetryPayload(null);
+    inputRef.current?.focus({ preventScroll: true });
     try {
-      const res = await fetch(`/api/npc/conversations/${turnId}/flag`, {
-        method: "POST",
-      });
-      if (res.ok) {
-        setTurns((prev) =>
-          prev.map((t) => (t.id === turnId ? { ...t, flagged: true } : t)),
-        );
-        setToast("Reported");
-      } else {
-        setToast("Couldn't report message");
+      const reply = await transport.send(npc.id, message, controller.signal);
+      if (controller.signal.aborted) return;
+      setTurns((previous) => [...previous, {
+        id: `local-${Date.now()}`, user_message: message, npc_response: reply,
+        flagged: false, created_at: new Date().toISOString(), isFresh: true,
+      }]);
+      setInput("");
+    } catch (error) {
+      if (controller.signal.aborted) return;
+      setErrorMsg(error instanceof ChatRequestError ? error.message : "Couldn't reach the server. Try again.");
+      setInput(message);
+      if (!(error instanceof ChatRequestError) || error.retryable) setRetryPayload(message);
+      if (error instanceof ChatRequestError && [401, 404].includes(error.status)) setUnavailable(true);
+    } finally {
+      requestsRef.current.delete(controller);
+      if (!controller.signal.aborted) {
+        pendingRef.current = false;
+        setSending(false);
       }
-    } catch {
-      setToast("Couldn't report message");
     }
-  }, []);
+  }, [npc.id, transport, historyLoading, unavailable]);
 
-  if (!npc) return null;
+  const handleFlag = useCallback(async (turnId: string) => {
+    if (turnId.startsWith("local-")) {
+      setToast("This message can be reported after reopening the conversation.");
+      return;
+    }
+    const controller = new AbortController();
+    requestsRef.current.add(controller);
+    try {
+      await transport.flag(turnId, controller.signal);
+      if (controller.signal.aborted) return;
+      setTurns((previous) => previous.map((turn) => turn.id === turnId ? { ...turn, flagged: true } : turn));
+      setToast("Reported");
+    } catch {
+      if (!controller.signal.aborted) setToast("Couldn't report message");
+    } finally { requestsRef.current.delete(controller); }
+  }, [transport]);
 
-  const visible = npc !== null;
+  const sendDisabled = sending || historyLoading || unavailable || input.trim().length === 0;
 
   return (
     <>
@@ -232,14 +184,17 @@ export default function NPCChatOverlay({ npc, onClose }: NPCChatOverlayProps) {
           zIndex: 55,
           background: "rgba(0, 0, 0, 0.6)",
           backdropFilter: "blur(4px)",
-          opacity: visible ? 1 : 0,
+          opacity: 1,
           transition: "opacity 200ms ease-out",
         }}
       />
 
       {/* Panel */}
       <div
+        ref={dialogRef}
+        className="npc-chat-panel"
         role="dialog"
+        aria-modal="true"
         aria-label={`Chat with ${npc.display_name}`}
         style={{
           position: "fixed",
@@ -248,7 +203,8 @@ export default function NPCChatOverlay({ npc, onClose }: NPCChatOverlayProps) {
           transform: "translate(-50%, -50%)",
           zIndex: 60,
           width: "min(600px, 92vw)",
-          maxHeight: "82vh",
+          maxHeight: "82dvh",
+          overflowY: "auto",
           background: "#0d1b2a",
           border: "1px solid rgba(0, 47, 167, 0.3)",
           borderRadius: 16,
@@ -319,6 +275,9 @@ export default function NPCChatOverlay({ npc, onClose }: NPCChatOverlayProps) {
         {/* Conversation */}
         <div
           ref={scrollRef}
+          role="log"
+          aria-label="Conversation"
+          aria-busy={sending || historyLoading}
           style={{
             flex: 1,
             minHeight: 160,
@@ -343,7 +302,9 @@ export default function NPCChatOverlay({ npc, onClose }: NPCChatOverlayProps) {
           >
             ─── Conversation ───
           </div>
-          {turns.length === 0 && !sending && (
+          {historyLoading && <p role="status">Loading earlier messages…</p>}
+          {historyError && <p role="status" style={{ color: "#d0d5dd" }}>{historyError}</p>}
+          {turns.length === 0 && !sending && !historyLoading && !historyError && (
             <div
               style={{
                 color: "#6b7280",
@@ -378,6 +339,7 @@ export default function NPCChatOverlay({ npc, onClose }: NPCChatOverlayProps) {
         {/* Error / retry */}
         {errorMsg && (
           <div
+            role="alert"
             style={{
               padding: "8px 10px",
               background: "rgba(232, 80, 80, 0.12)",
@@ -394,7 +356,8 @@ export default function NPCChatOverlay({ npc, onClose }: NPCChatOverlayProps) {
             <span>{errorMsg}</span>
             {retryPayload && (
               <button
-                onClick={() => sendMessage(retryPayload)}
+                disabled={sending || unavailable}
+                onClick={() => sendMessage(input || retryPayload)}
                 style={{
                   background: "rgba(255,255,255,0.08)",
                   border: "1px solid rgba(255,255,255,0.15)",
@@ -418,12 +381,15 @@ export default function NPCChatOverlay({ npc, onClose }: NPCChatOverlayProps) {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
+              if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
                 e.preventDefault();
-                sendMessage(input);
+                if (!e.repeat) sendMessage(input);
               }
             }}
-            disabled={sending}
+            readOnly={sending || unavailable}
+            aria-label="Message"
+            aria-busy={sending}
+            maxLength={MAX_MESSAGE_LENGTH}
             placeholder="Type your message..."
             rows={2}
             style={{
@@ -436,23 +402,22 @@ export default function NPCChatOverlay({ npc, onClose }: NPCChatOverlayProps) {
               color: "#f1ffff",
               fontFamily: "inherit",
               fontSize: 13,
-              outline: "none",
               opacity: sending ? 0.6 : 1,
             }}
           />
           <button
             onClick={() => sendMessage(input)}
-            disabled={sending || input.trim().length === 0}
+            disabled={sendDisabled}
             aria-label="Send"
             style={{
               background:
-                sending || input.trim().length === 0 ? "#1f2a3a" : "#002FA7",
+                sendDisabled ? "#1f2a3a" : "#002FA7",
               border: "1px solid rgba(255,255,255,0.15)",
               borderRadius: 8,
               padding: "10px 14px",
               color: "#f1ffff",
               cursor:
-                sending || input.trim().length === 0 ? "not-allowed" : "pointer",
+                sendDisabled ? "not-allowed" : "pointer",
               display: "flex",
               alignItems: "center",
               gap: 6,
@@ -474,6 +439,7 @@ export default function NPCChatOverlay({ npc, onClose }: NPCChatOverlayProps) {
 
         {toast && (
           <div
+            role="status"
             style={{
               position: "absolute",
               bottom: -36,
@@ -494,6 +460,7 @@ export default function NPCChatOverlay({ npc, onClose }: NPCChatOverlayProps) {
       </div>
 
       <style jsx>{`
+        :global(.npc-chat-panel :focus-visible) { outline: 2px solid #e4bf6c; outline-offset: 3px; }
         @keyframes npcChatIn {
           from {
             opacity: 0;
@@ -713,8 +680,11 @@ function NPCReplyText({ text, animate }: { text: string; animate: boolean }) {
   const done = shown >= text.length;
   return (
     <span>
-      {text.slice(0, shown)}
-      {!done && <span className="npc-cursor">_</span>}
+      <span className="sr-only">{text}</span>
+      <span aria-hidden="true">
+        {text.slice(0, shown)}
+        {!done && <span className="npc-cursor">_</span>}
+      </span>
     </span>
   );
 }
