@@ -11,56 +11,11 @@
  * the shallows. Pure ambience (catching stays in FishingOverlay).
  */
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type RefObject } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { sampleRiverPoint } from "./River";
-
-// Splash-scatter (loop wake 26): when a cast plops down near a shadow, it
-// darts away from the splash and swims back — ACNH's "you scared it" beat.
-// One module-scope splash record; each fish decides membership ONCE per
-// splash (drifting into range later doesn't spook it).
-const SPLASH = { x: 0, z: 0, at: 0 };
-const FLEE_RADIUS = 6;
-const FLEE_DIST = 2.6;
-const FLEE_MS = 2800;
-
-interface FleeState {
-  seenAt: number;
-  active: boolean;
-  start: number;
-  dx: number;
-  dz: number;
-}
-export function makeFleeState(): FleeState {
-  return { seenAt: 0, active: false, start: 0, dx: 0, dz: 0 };
-}
-
-/** Offset for this frame + whether the fish is in its dart-out beat. */
-function computeFlee(fs: FleeState, fx: number, fz: number): { ox: number; oz: number; dart: boolean } {
-  if (fs.seenAt !== SPLASH.at) {
-    fs.seenAt = SPLASH.at;
-    const dx = fx - SPLASH.x;
-    const dz = fz - SPLASH.z;
-    const d = Math.hypot(dx, dz);
-    if (d < FLEE_RADIUS) {
-      fs.active = true;
-      fs.start = performance.now();
-      const inv = d > 0.01 ? 1 / d : 1;
-      fs.dx = dx * inv;
-      fs.dz = dz * inv;
-    }
-  }
-  if (!fs.active) return { ox: 0, oz: 0, dart: false };
-  const p = (performance.now() - fs.start) / FLEE_MS;
-  if (p >= 1) {
-    fs.active = false;
-    return { ox: 0, oz: 0, dart: false };
-  }
-  // dart out fast, then drift back to the patrol line
-  const out = p < 0.3 ? 1 - Math.pow(1 - p / 0.3, 3) : 1 - (p - 0.3) / 0.7;
-  return { ox: fs.dx * FLEE_DIST * out, oz: fs.dz * FLEE_DIST * out, dart: p < 0.3 };
-}
+import { computeFlee, makeFleeState, type FleeState, type FishSplash } from "@/lib/game/fishFlee";
 
 const RIVER_FISH: { t0: number; t1: number; speed: number; size: number; phase: number }[] = [
   { t0: 0.1, t1: 0.22, speed: 0.014, size: 0.38, phase: 0 },
@@ -115,7 +70,7 @@ function getRingGeometry(): THREE.RingGeometry {
 const JUMP_PERIOD = 22; // seconds between breaches per fish
 const JUMP_LEN = 0.85;
 
-function RiverFish({ cfg }: { cfg: (typeof RIVER_FISH)[number] }) {
+function RiverFish({ cfg, splash }: { cfg: (typeof RIVER_FISH)[number]; splash: RefObject<FishSplash> }) {
   const ref = useRef<THREE.Mesh>(null);
   const ringRef = useRef<THREE.Mesh>(null);
   const fleeRef = useRef<FleeState>(makeFleeState());
@@ -132,7 +87,7 @@ function RiverFish({ cfg }: { cfg: (typeof RIVER_FISH)[number] }) {
     const swayN = Math.sin(time * 0.7 + cfg.phase) * 0.6;
     const fx = position.x - tangent.z * swayN;
     const fz = position.z + tangent.x * swayN;
-    const flee = computeFlee(fleeRef.current, fx, fz);
+    const flee = computeFlee(fleeRef.current, splash.current, fx, fz, performance.now());
 
     // Koi breach: once per JUMP_PERIOD the shadow arcs above the surface
     // with a splash ring — the little "the water is alive" beat. Skipped
@@ -175,7 +130,7 @@ function RiverFish({ cfg }: { cfg: (typeof RIVER_FISH)[number] }) {
   );
 }
 
-function SeaFish({ cfg }: { cfg: (typeof SEA_FISH)[number] }) {
+function SeaFish({ cfg, splash }: { cfg: (typeof SEA_FISH)[number]; splash: RefObject<FishSplash> }) {
   const ref = useRef<THREE.Mesh>(null);
   const fleeRef = useRef<FleeState>(makeFleeState());
   useFrame(({ clock }) => {
@@ -185,7 +140,7 @@ function SeaFish({ cfg }: { cfg: (typeof SEA_FISH)[number] }) {
     const a = time * cfg.speed + cfg.phase;
     const fx = cfg.x + Math.cos(a) * cfg.r;
     const fz = cfg.z + Math.sin(a) * cfg.r;
-    const flee = computeFlee(fleeRef.current, fx, fz);
+    const flee = computeFlee(fleeRef.current, splash.current, fx, fz, performance.now());
     m.position.set(fx + flee.ox, SEA_FISH_Y, fz + flee.oz);
     // orbit tangent heading (+ wiggle): d/da of (cos,sin) is (-sin,cos)
     m.rotation.y = flee.dart
@@ -197,34 +152,24 @@ function SeaFish({ cfg }: { cfg: (typeof SEA_FISH)[number] }) {
 }
 
 export default function FishShadows() {
-  // The splash lands ~half a second after the cast fires (bobber flight) —
-  // scatter on the plop, not the throw.
+  const splash = useRef<FishSplash>({ id: 0, x: 0, z: 0 });
   useEffect(() => {
-    const timers: number[] = [];
-    const onCast = (e: Event) => {
-      const d = (e as CustomEvent).detail as { x?: number; z?: number } | undefined;
-      if (typeof d?.x !== "number" || typeof d?.z !== "number") return;
-      timers.push(
-        window.setTimeout(() => {
-          SPLASH.x = d.x!;
-          SPLASH.z = d.z!;
-          SPLASH.at = performance.now();
-        }, 480)
-      );
+    const onSplash = (event: Event) => {
+      const detail = (event as CustomEvent<{ x?: number; z?: number }>).detail;
+      if (typeof detail?.x !== "number" || !Number.isFinite(detail.x)
+        || typeof detail?.z !== "number" || !Number.isFinite(detail.z)) return;
+      splash.current = { id: splash.current.id + 1, x: detail.x, z: detail.z };
     };
-    window.addEventListener("tsi:fish-cast", onCast);
-    return () => {
-      window.removeEventListener("tsi:fish-cast", onCast);
-      timers.forEach((t) => window.clearTimeout(t));
-    };
+    window.addEventListener("tsi:fish-splash", onSplash);
+    return () => window.removeEventListener("tsi:fish-splash", onSplash);
   }, []);
   return (
     <group>
       {RIVER_FISH.map((cfg, i) => (
-        <RiverFish key={`r${i}`} cfg={cfg} />
+        <RiverFish key={`r${i}`} cfg={cfg} splash={splash} />
       ))}
       {SEA_FISH.map((cfg, i) => (
-        <SeaFish key={`s${i}`} cfg={cfg} />
+        <SeaFish key={`s${i}`} cfg={cfg} splash={splash} />
       ))}
     </group>
   );

@@ -1354,6 +1354,10 @@ Aligned input hints with pointer mode, enlarged controls and restored disclosure
 
 Isolated optional catch-model failure, owned bobber timers and aligned float/dip/ripples to shared water heights. 410 tests/types/lint/webpack build pass; Dia fault/lifecycle/water fixtures verified without backend writes. See checkpoint. No push/deploy.
 
+### 2026-09-07 actual landing splash
+
+Fish ambience reacts to bobber landing instead of guessed delayed cast marker. World-owned splash state, deterministic flee/direct-hit fix; 415 tests/types/lint/build pass. Dia cancel/unmount/remount event-count QA passes without backend. See checkpoint.
+
 ## qa
 
 *(append your entries below — log waves continue from Wave 11 in `specs/qa.md`)*

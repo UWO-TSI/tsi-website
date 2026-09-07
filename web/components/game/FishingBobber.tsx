@@ -138,6 +138,7 @@ export default function FishingBobber({ playerPosRef, waterHeight = legacyFishin
       g.position.y += Math.sin(k * Math.PI) * (1.1 + powerRef.current * 0.9);
       if (k >= 1) {
         phaseRef.current = "float";
+        window.dispatchEvent(new CustomEvent("tsi:fish-splash", { detail: { x: landRef.current.x, z: landRef.current.z } }));
         addRing(false);
         AudioManager.playSFX("blip2"); // plop
       }
