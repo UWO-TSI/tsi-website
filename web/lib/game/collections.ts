@@ -13,9 +13,21 @@
 
 const KEY = "tsi.collections.local.v1";
 
+function validItemKey(key: string): boolean {
+  return /^[a-z0-9_]{1,64}$/.test(key) && !["__proto__", "constructor", "prototype"].includes(key);
+}
+
+/** Zero stock still records discovery; malformed browser data is never inventory. */
+export function collectionCounts(value: unknown): Record<string, number> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  return Object.fromEntries(Object.entries(value).filter(([key, count]) =>
+    validItemKey(key) && typeof count === "number" && Number.isSafeInteger(count) && count >= 0
+  ));
+}
+
 export function localCollections(): Record<string, number> {
   try {
-    return JSON.parse(localStorage.getItem(KEY) ?? "{}") as Record<string, number>;
+    return collectionCounts(JSON.parse(localStorage.getItem(KEY) ?? "{}"));
   } catch {
     return {};
   }
@@ -23,9 +35,10 @@ export function localCollections(): Record<string, number> {
 
 /** Record an item locally AND post it to the server (fire-and-forget). */
 export function collect(itemKey: string): void {
+  if (!validItemKey(itemKey)) return;
   try {
     const all = localCollections();
-    all[itemKey] = (all[itemKey] ?? 0) + 1;
+    all[itemKey] = Math.min(Number.MAX_SAFE_INTEGER, (all[itemKey] ?? 0) + 1);
     localStorage.setItem(KEY, JSON.stringify(all));
   } catch {
     /* private browsing */
@@ -47,9 +60,10 @@ export function collect(itemKey: string): void {
 export function spendCollected(itemKey: string, n: number): number {
   try {
     const all = localCollections();
-    const left = Math.max(0, (all[itemKey] ?? 0) - n);
-    if (left === 0) delete all[itemKey];
-    else all[itemKey] = left;
+    const have = Object.hasOwn(all, itemKey) ? all[itemKey] : 0;
+    if (!validItemKey(itemKey) || !Number.isSafeInteger(n) || n < 1 || !Object.hasOwn(all, itemKey)) return have;
+    const left = Math.max(0, have - n);
+    all[itemKey] = left;
     localStorage.setItem(KEY, JSON.stringify(all));
     return left;
   } catch {
@@ -59,7 +73,7 @@ export function spendCollected(itemKey: string, n: number): number {
 
 /** Merge server rows with the local record (max count per key). */
 export function mergeWithLocal(server: Record<string, number>): Record<string, number> {
-  const out = { ...server };
+  const out = collectionCounts(server);
   for (const [k, n] of Object.entries(localCollections())) {
     out[k] = Math.max(out[k] ?? 0, n);
   }

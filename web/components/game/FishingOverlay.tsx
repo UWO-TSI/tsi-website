@@ -29,7 +29,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import FishReveal from "./FishReveal";
 import { AudioManager } from "@/lib/game/audio";
-import { collect } from "@/lib/game/collections";
+import { collect, localCollections, mergeWithLocal } from "@/lib/game/collections";
 import { punchZoom, setTensionZoom } from "@/lib/game/cameraJuice";
 import { coastDist } from "@/lib/game/coast";
 import {
@@ -70,8 +70,8 @@ export default function FishingOverlay({ onActiveChange }: { onActiveChange?: (a
   const [wasNew, setWasNew] = useState(false);
   const timersRef = useRef<number[]>([]);
   const biteDeadlineRef = useRef(0);
-  // Species the member already has — drives the ???-silhouette mystery.
-  // Fails closed to "everything is new" (mystery is the better default).
+  // Discovery survives depleted stock and unavailable account sync.
+  // Unknown species keep the ??? silhouette until their first catch.
   const ownedRef = useRef<Set<string>>(new Set());
   // Cast meter (David 2026-07-23): hold E → ping-pong power bar, release
   // at the tip = MAX CAST. Power scales luck AND bite timing.
@@ -81,13 +81,14 @@ export default function FishingOverlay({ onActiveChange }: { onActiveChange?: (a
   const spotRef = useRef<{ x: number; z: number } | null>(null);
 
   useEffect(() => {
+    for (const key of Object.keys(localCollections())) ownedRef.current.add(key);
     fetch("/api/collections")
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
         if (d?.collections) {
-          ownedRef.current = new Set(
-            (d.collections as { item_key: string }[]).map((c) => c.item_key)
-          );
+          const rows = d.collections as { item_key: string; count: number }[];
+          const counts = mergeWithLocal(Object.fromEntries(rows.map((row) => [row.item_key, row.count])));
+          for (const key of Object.keys(counts)) ownedRef.current.add(key);
         }
       })
       .catch(() => {});

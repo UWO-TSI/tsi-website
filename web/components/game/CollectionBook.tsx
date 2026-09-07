@@ -9,10 +9,10 @@
  * Undiscovered items render greyed with a "?" so there's a completion pull.
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { FISH, RARITY_META, iconFor, type FishDef } from "@/lib/game/fishing";
 import { AudioManager } from "@/lib/game/audio";
-import { mergeWithLocal } from "@/lib/game/collections";
+import { localCollections, mergeWithLocal } from "@/lib/game/collections";
 import { X } from "lucide-react";
 
 interface Row {
@@ -96,56 +96,73 @@ const CATALOG: { group: string; items: { key: string; icon: string; img?: string
 ];
 
 export default function CollectionBook({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const [counts, setCounts] = useState<Record<string, number>>({});
-  // Starts true; each open resets it in the fetch's finally. Avoids a
-  // synchronous setState-in-effect (react-hooks/set-state-in-effect).
-  const [loading, setLoading] = useState(true);
-  // Almanac pick (loop wake 29) — which discovered species' notes are open.
-  const [detailKey, setDetailKey] = useState<string | null>(null);
-  // Wake 71: the Fish group is ~78 species — habitat/caught filter chips.
-  const [fishFilter, setFishFilter] = useState<"all" | "river" | "sea" | "caught">("all");
+  return open ? <OpenCollectionBook onClose={onClose} /> : null;
+}
 
-  // Loop iter 24 (2026-07-24): page-open beat — paper pop + page-turn
-  // notes when the book opens.
+function OpenCollectionBook({ onClose }: { onClose: () => void }) {
+  const [counts, setCounts] = useState(localCollections);
+  const [sync, setSync] = useState<"loading" | "synced" | "local">("loading");
+  const [detailKey, setDetailKey] = useState<string | null>(null);
+  const [fishFilter, setFishFilter] = useState<"all" | "river" | "sea" | "caught">("all");
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const closeRef = useRef(onClose);
+  useEffect(() => { closeRef.current = onClose; }, [onClose]);
+
   useEffect(() => {
-    if (!open) return;
     AudioManager.playSFX("click");
-    window.setTimeout(() => AudioManager.playSFX("blip1"), 110);
+    const sound = window.setTimeout(() => AudioManager.playSFX("blip1"), 110);
+    const controller = new AbortController();
     let cancelled = false;
-    fetch("/api/collections")
-      .then((r) => (r.ok ? r.json() : { collections: [] }))
-      .catch(() => ({ collections: [] }))
-      .then((d: { collections?: Row[] }) => {
-        if (cancelled) return;
-        const map: Record<string, number> = {};
-        for (const row of d.collections ?? []) map[row.item_key] = row.count;
-        Object.assign(map, mergeWithLocal(map));
-        setCounts(map);
+    fetch("/api/collections", { signal: controller.signal })
+      .then(async (r) => {
+        if (!r.ok) throw new Error("Collection sync unavailable");
+        const d: { collections?: Row[] } = await r.json();
+        if (!Array.isArray(d.collections)) throw new Error("Invalid collection response");
+        const map = Object.fromEntries(d.collections.map((row) => [row.item_key, row.count]));
+        if (!cancelled) {
+          setCounts(mergeWithLocal(map));
+          setSync("synced");
+        }
       })
-      .catch(() => {})
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
+      .catch(() => { if (!cancelled) setSync("local"); });
     return () => {
       cancelled = true;
+      controller.abort();
+      window.clearTimeout(sound);
     };
-  }, [open]);
+  }, []);
 
   useEffect(() => {
-    if (!open) return;
+    const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const dialog = dialogRef.current;
+    dialog?.focus({ preventScroll: true });
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") {
+        e.preventDefault();
+        e.stopPropagation();
+        closeRef.current();
+      } else if (e.key === "Tab") {
+        const buttons = Array.from(dialog?.querySelectorAll<HTMLButtonElement>("button:not(:disabled)") ?? []);
+        const index = buttons.findIndex((button) => button === document.activeElement);
+        const next = e.shiftKey
+          ? (index <= 0 ? buttons.length - 1 : index - 1)
+          : (index + 1) % buttons.length;
+        e.preventDefault();
+        e.stopPropagation();
+        buttons[next]?.focus();
+      }
     };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
-
-  if (!open) return null;
+    window.addEventListener("keydown", onKey, true);
+    return () => {
+      window.removeEventListener("keydown", onKey, true);
+      if (previous?.isConnected) previous.focus({ preventScroll: true });
+    };
+  }, []);
 
   const detail = detailKey ? FISH_BY_KEY.get(detailKey) ?? null : null;
   const total = Object.values(counts).reduce((a, b) => a + b, 0);
   const discovered = CATALOG.reduce(
-    (n, g) => n + g.items.filter((it) => (counts[it.key] ?? 0) > 0).length,
+    (n, g) => n + g.items.filter((it) => Object.hasOwn(counts, it.key)).length,
     0
   );
   const totalKinds = CATALOG.reduce((n, g) => n + g.items.length, 0);
@@ -166,6 +183,7 @@ export default function CollectionBook({ open, onClose }: { open: boolean; onClo
       }}
     >
       <style>{`
+        .collection-book button:focus-visible { outline: 3px solid #79601F; outline-offset: 3px; }
         @keyframes cb-fade { from { opacity: 0; } to { opacity: 1; } }
         @keyframes cb-unfold {
           0% { opacity: 0; transform: scale(0.92) rotate(-1.2deg) translateY(10px); }
@@ -174,11 +192,19 @@ export default function CollectionBook({ open, onClose }: { open: boolean; onClo
         }
       `}</style>
       <div
+        ref={dialogRef}
+        className="collection-book"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="collection-book-title"
+        tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
         style={{
           width: "min(92vw, 440px)",
           maxHeight: "82vh",
           overflowY: "auto",
+          scrollPaddingTop: 140,
+          scrollPaddingBottom: 90,
           background: "#FFFDF5",
           border: "3px solid #E0D2B0",
           borderRadius: 20,
@@ -189,26 +215,30 @@ export default function CollectionBook({ open, onClose }: { open: boolean; onClo
           color: "#4A4034",
         }}
       >
-        <div className="flex items-center justify-between" style={{ marginBottom: 4 }}>
-          <h2 style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>🧺 Collection</h2>
-          <button
-            onClick={onClose}
-            aria-label="Close"
-            style={{ background: "none", border: "none", cursor: "pointer", color: "#8A7B5E" }}
-          >
-            <X size={18} />
-          </button>
-        </div>
-        <p style={{ fontSize: 12, color: "#8A7B5E", marginTop: 0, marginBottom: 16 }}>
-          {loading
-            ? "Opening the book…"
-            : `${discovered}/${totalKinds} kinds discovered · ${total} collected`}
-        </p>
+        <header style={{ position: "sticky", top: -20, zIndex: 2, background: "#FFFDF5", margin: "-20px -20px 16px", padding: "16px 20px 12px", borderBottom: "1px solid #E0D2B0" }}>
+          <div className="flex items-center justify-between" style={{ marginBottom: 4 }}>
+            <h2 id="collection-book-title" style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>🧺 Collection</h2>
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Close"
+              style={{ display: "grid", placeItems: "center", width: 36, height: 36, background: "none", border: "none", borderRadius: 8, cursor: "pointer", color: "#6F624A" }}
+            >
+              <X size={18} />
+            </button>
+          </div>
+          <p style={{ fontSize: 12, color: "#8A7B5E", marginTop: 0, marginBottom: 0 }}>
+            {discovered}/{totalKinds} kinds discovered · {total} in your bag
+            <span role="status" style={{ display: "block", marginTop: 4 }}>
+              {sync === "loading" ? "Checking saved collection…" : sync === "local" ? "Showing this browser’s collection. Account sync unavailable." : "Saved collection loaded"}
+            </span>
+          </p>
+        </header>
 
         {CATALOG.map((g) => {
           // Loop wake 27: per-group completion count — the Critterpedia
           // "how far along am I" read; gold ✓ once the group is complete.
-          const got = g.items.filter((it) => (counts[it.key] ?? 0) > 0).length;
+          const got = g.items.filter((it) => Object.hasOwn(counts, it.key)).length;
           const done = got === g.items.length;
           const isFish = g.group === "Fish";
           const shown = isFish
@@ -216,7 +246,7 @@ export default function CollectionBook({ open, onClose }: { open: boolean; onClo
                 const zone = (it as { zone?: string }).zone;
                 if (fishFilter === "river") return zone !== "sea";
                 if (fishFilter === "sea") return zone === "sea";
-                if (fishFilter === "caught") return (counts[it.key] ?? 0) > 0;
+                if (fishFilter === "caught") return Object.hasOwn(counts, it.key);
                 return true;
               })
             : g.items;
@@ -236,20 +266,21 @@ export default function CollectionBook({ open, onClose }: { open: boolean; onClo
               }}
             >
               <span>{g.group}</span>
-              {!loading && (
-                <span style={{ color: done ? "#C9962E" : "#B0A17C", fontVariantNumeric: "tabular-nums" }}>
-                  {done ? "✓ " : ""}{got}/{g.items.length}
-                </span>
-              )}
+              <span style={{ color: done ? "#C9962E" : "#B0A17C", fontVariantNumeric: "tabular-nums" }}>
+                {done ? "✓ " : ""}{got}/{g.items.length}
+              </span>
             </div>
             {isFish && (
-              <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
-                {([["all", "All"], ["river", "🏞 River"], ["sea", "🌊 Sea"], ["caught", "✓ Caught"]] as const).map(([k, label]) => (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
+                {([["all", "All"], ["river", "🏞 River"], ["sea", "🌊 Sea"], ["caught", "✓ Discovered"]] as const).map(([k, label]) => (
                   <button
                     key={k}
+                    type="button"
+                    aria-pressed={fishFilter === k}
                     onClick={() => setFishFilter(k)}
                     style={{
                       padding: "3px 10px",
+                      minHeight: 32,
                       borderRadius: 7,
                       fontSize: 11,
                       fontWeight: 700,
@@ -267,12 +298,14 @@ export default function CollectionBook({ open, onClose }: { open: boolean; onClo
             <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
               {shown.map((it) => {
                 const n = counts[it.key] ?? 0;
-                const have = n > 0;
+                const have = Object.hasOwn(counts, it.key);
                 const almanac = have && FISH_BY_KEY.has(it.key);
                 const picked = detailKey === it.key;
+                const Tile = almanac ? "button" : "div";
                 return (
-                  <div
+                  <Tile
                     key={it.key}
+                    {...(almanac ? { type: "button" as const, "aria-expanded": picked, "aria-controls": "collection-field-notes" } : {})}
                     onClick={
                       almanac
                         ? () => {
@@ -282,6 +315,8 @@ export default function CollectionBook({ open, onClose }: { open: boolean; onClo
                         : undefined
                     }
                     style={{
+                      color: "inherit",
+                      fontFamily: "inherit",
                       display: "flex",
                       flexDirection: "column",
                       alignItems: "center",
@@ -296,7 +331,7 @@ export default function CollectionBook({ open, onClose }: { open: boolean; onClo
                   >
                     {have && it.img ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={it.img} alt={it.name} width={34} height={34} style={{ imageRendering: "auto" }} />
+                      <img src={it.img} alt="" width={34} height={34} style={{ imageRendering: "auto" }} />
                     ) : (
                       <span style={{ fontSize: 26, filter: have ? "none" : "grayscale(1)" }}>
                         {have ? it.icon : "❔"}
@@ -317,7 +352,7 @@ export default function CollectionBook({ open, onClose }: { open: boolean; onClo
                         ×{n}
                       </span>
                     )}
-                  </div>
+                  </Tile>
                 );
               })}
             </div>
@@ -329,6 +364,9 @@ export default function CollectionBook({ open, onClose }: { open: boolean; onClo
             bottom of the book while scrolling. */}
         {detail && (
           <div
+            id="collection-field-notes"
+            role="region"
+            aria-label={`${detail.name} field notes`}
             style={{
               position: "sticky",
               bottom: -20,
@@ -366,7 +404,7 @@ export default function CollectionBook({ open, onClose }: { open: boolean; onClo
                 </span>
               </div>
               <div style={{ fontSize: 11, color: "#8A7B5E", marginTop: 2 }}>
-                bites: {detail.whenLabel ?? "any time"} · {detail.sizeCm[0]}-{detail.sizeCm[1]} cm · caught ×
+                bites: {detail.whenLabel ?? "any time"} · {detail.sizeCm[0]}-{detail.sizeCm[1]} cm · in bag ×
                 {counts[detail.key] ?? 0}
               </div>
             </div>
