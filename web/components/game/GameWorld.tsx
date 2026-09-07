@@ -13,7 +13,7 @@ import * as THREE from "three";
 import PlayerAvatar from "./PlayerAvatar";
 import GameSceneBoundary from "./GameSceneBoundary";
 import Building, { ACNHParts, CHALET_VARIANTS } from "./Building";
-import GridWorld, { isGridEnabled } from "./grid/GridWorld";
+import GridWorld, { getIslandMap, isGridEnabled } from "./grid/GridWorld";
 import River, { sampleRiverPoint, findRiverTForX } from "./River";
 import Ocean from "./Ocean";
 import TreeShakeFX from "./TreeShakeFX";
@@ -46,6 +46,8 @@ import EmoteMenu from "./EmoteMenu";
 import { useEmoteSharing } from "@/lib/game/useEmoteSharing";
 import FishingOverlay from "./FishingOverlay";
 import FishingBobber from "./FishingBobber";
+import { gridFishingWaterHeight } from "@/lib/game/fishingWater";
+
 import IdleFireflies from "./IdleFireflies";
 import CollectionBook from "./CollectionBook";
 import ControlsOverlay from "./ControlsOverlay";
@@ -109,6 +111,8 @@ import "@/lib/game/curvedWorld";
 // L8: aerial-perspective fog (distance desaturation) — same patch rule.
 import "@/lib/game/aerialFog";
 import type { EmoteType, NPCPersona, SpawnZone } from "@/lib/content/types";
+
+const islandFishingWaterHeight = (x: number, z: number) => gridFishingWaterHeight(getIslandMap().map, x, z);
 
 /**
  * Game World v2 — Animal Crossing: New Horizons visual style.
@@ -2248,7 +2252,7 @@ function Scene({
       ))}
 
       <PlayerAvatar frozen={frozen} spawnPosition={spawn ?? spawnOverride() ?? SPAWN_POSITION} onMove={handlePlayerMove} playerName={playerName} playerLevel={playerLevel} activeEmote={activeEmote} />
-      <FishingBobber playerPosRef={playerPosRef} />
+      <FishingBobber playerPosRef={playerPosRef} waterHeight={gridEnabled ? islandFishingWaterHeight : undefined} />
       <IdleFireflies playerPosRef={playerPosRef} />
 
     </>

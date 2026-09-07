@@ -16,11 +16,12 @@
  * are the only stateful bits, set from event handlers.
  */
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { Billboard, Html } from "@react-three/drei";
 import * as THREE from "three";
 import { AudioManager } from "@/lib/game/audio";
+import { legacyFishingWaterHeight } from "@/lib/game/fishingWater";
 import { getCameraForwardXZ } from "@/lib/game/cameraBasis";
 
 interface CastDetail {
@@ -29,31 +30,49 @@ interface CastDetail {
   power: number;
 }
 
-export default function FishingBobber({ playerPosRef }: { playerPosRef: React.MutableRefObject<THREE.Vector3> }) {
+export default function FishingBobber({ playerPosRef, waterHeight = legacyFishingWaterHeight }: { playerPosRef: React.MutableRefObject<THREE.Vector3>; waterHeight?: (x: number, z: number) => number }) {
   const { camera } = useThree();
   const [active, setActive] = useState(false);
+  const activeRef = useRef(false);
+  const ringTimers = useRef(new Set<number>());
   const [bite, setBite] = useState(false);
-  const [rings, setRings] = useState<{ id: number; x: number; z: number; big: boolean }[]>([]);
+  const [rings, setRings] = useState<{ id: number; x: number; y: number; z: number; big: boolean }[]>([]);
   const ringIdRef = useRef(0);
   const groupRef = useRef<THREE.Group>(null);
+  const biteGroupRef = useRef<THREE.Group>(null);
   const phaseRef = useRef<"arc" | "float" | "bite">("arc");
   const tRef = useRef(0);
   const nibbleAtRef = useRef(-1);
   const startRef = useRef(new THREE.Vector3());
   const landRef = useRef(new THREE.Vector3());
   const powerRef = useRef(0);
+  const waterYRef = useRef(0);
 
-  const addRing = (big: boolean) => {
+  const clearRingTimers = useCallback(() => {
+    ringTimers.current.forEach((timer) => window.clearTimeout(timer));
+    ringTimers.current.clear();
+  }, []);
+
+  const addRing = useCallback((big: boolean) => {
     const id = ringIdRef.current++;
-    const { x, z } = { x: landRef.current.x, z: landRef.current.z };
-    setRings((r) => [...r, { id, x, z, big }]);
-    window.setTimeout(() => setRings((r) => r.filter((q) => q.id !== id)), big ? 900 : 650);
-  };
+    const { x, z } = landRef.current;
+    const y = waterYRef.current + 0.015;
+    setRings((r) => [...r, { id, x, y, z, big }]);
+    const timer = window.setTimeout(() => {
+      ringTimers.current.delete(timer);
+      setRings((r) => r.filter((q) => q.id !== id));
+    }, big ? 900 : 650);
+    ringTimers.current.add(timer);
+  }, []);
 
   useEffect(() => {
     const onCast = (e: Event) => {
       const d = (e as CustomEvent<CastDetail>).detail;
       const p = playerPosRef.current;
+      clearRingTimers();
+      setRings([]);
+      nibbleAtRef.current = Number.NEGATIVE_INFINITY;
+      activeRef.current = true;
       // Cast along the CAMERA's forward (bug fix 2026-07-24: spot−player
       // flipped sign when the player stood past the marker — the hook flew
       // backwards onto land). The player faces away from the camera, so
@@ -64,8 +83,10 @@ export default function FishingBobber({ playerPosRef }: { playerPosRef: React.Mu
       else dir.normalize();
       // Power = visibly longer throw past the spot marker.
       const extend = 0.6 + d.power * 2.0;
-      landRef.current.set(d.x + dir.x * extend, -0.24, d.z + dir.z * extend);
-      startRef.current.set(p.x, 0.9, p.z);
+      landRef.current.set(d.x + dir.x * extend, 0, d.z + dir.z * extend);
+      waterYRef.current = waterHeight(landRef.current.x, landRef.current.z);
+      landRef.current.y = waterYRef.current + 0.08;
+      startRef.current.set(p.x, p.y + 0.9, p.z);
       powerRef.current = d.power;
       tRef.current = 0;
       phaseRef.current = "arc";
@@ -73,16 +94,20 @@ export default function FishingBobber({ playerPosRef }: { playerPosRef: React.Mu
       setActive(true);
     };
     const onNibble = () => {
+      if (!activeRef.current) return;
       nibbleAtRef.current = performance.now();
       addRing(false);
       AudioManager.playSFX("blip1");
     };
     const onBite = () => {
+      if (!activeRef.current) return;
       phaseRef.current = "bite";
       setBite(true);
       addRing(true);
     };
     const onEnd = () => {
+      activeRef.current = false;
+      clearRingTimers();
       setActive(false);
       setBite(false);
       setRings([]);
@@ -92,17 +117,19 @@ export default function FishingBobber({ playerPosRef }: { playerPosRef: React.Mu
     window.addEventListener("tsi:fish-bite", onBite);
     window.addEventListener("tsi:fish-end", onEnd);
     return () => {
+      clearRingTimers();
       window.removeEventListener("tsi:fish-cast", onCast);
       window.removeEventListener("tsi:fish-nibble", onNibble);
       window.removeEventListener("tsi:fish-bite", onBite);
       window.removeEventListener("tsi:fish-end", onEnd);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [camera, playerPosRef, waterHeight, addRing, clearRingTimers]);
 
   useFrame((_, dt) => {
     const g = groupRef.current;
-    if (!g || !active) return;
+    if (!g || !activeRef.current) return;
+    const player = playerPosRef.current;
+    biteGroupRef.current?.position.set(player.x, player.y + 2.4, player.z);
     tRef.current += dt;
     const t = tRef.current;
     if (phaseRef.current === "arc") {
@@ -118,14 +145,14 @@ export default function FishingBobber({ playerPosRef }: { playerPosRef: React.Mu
       const dip = performance.now() - nibbleAtRef.current < 420 ? -0.16 : 0;
       g.position.set(
         landRef.current.x,
-        -0.24 + Math.sin(t * 2.6) * 0.05 + dip,
+        waterYRef.current + 0.08 + Math.sin(t * 2.6) * 0.05 + dip,
         landRef.current.z
       );
     } else {
       // bite: slammed under, thrashing
       g.position.set(
         landRef.current.x + (Math.random() * 2 - 1) * 0.03,
-        -0.4 + Math.sin(t * 18) * 0.04,
+        waterYRef.current - 0.08 + Math.sin(t * 18) * 0.04,
         landRef.current.z + (Math.random() * 2 - 1) * 0.03
       );
     }
@@ -148,12 +175,12 @@ export default function FishingBobber({ playerPosRef }: { playerPosRef: React.Mu
       </group>
 
       {rings.map((r) => (
-        <RippleRing key={r.id} x={r.x} z={r.z} big={r.big} />
+        <RippleRing key={r.id} x={r.x} y={r.y} z={r.z} big={r.big} />
       ))}
 
       {/* ACNH bite "!" above the player */}
       {bite && (
-        <Billboard position={[playerPosRef.current.x, playerPosRef.current.y + 2.4, playerPosRef.current.z]}>
+        <Billboard ref={biteGroupRef}>
           <Html center zIndexRange={[30, 0]} style={{ pointerEvents: "none" }}>
             <div
               style={{
@@ -185,7 +212,7 @@ export default function FishingBobber({ playerPosRef }: { playerPosRef: React.Mu
 }
 
 /** Expanding water ring; parent removes it from the list after its life. */
-function RippleRing({ x, z, big }: { x: number; z: number; big: boolean }) {
+function RippleRing({ x, y, z, big }: { x: number; y: number; z: number; big: boolean }) {
   const meshRef = useRef<THREE.Mesh>(null);
   const tRef = useRef(0);
   useFrame((_, dt) => {
@@ -199,7 +226,7 @@ function RippleRing({ x, z, big }: { x: number; z: number; big: boolean }) {
     (m.material as THREE.MeshBasicMaterial).opacity = 0.55 * (1 - k);
   });
   return (
-    <mesh ref={meshRef} position={[x, -0.05, z]} rotation-x={-Math.PI / 2}>
+    <mesh ref={meshRef} position={[x, y, z]} rotation-x={-Math.PI / 2}>
       <ringGeometry args={[0.34, 0.42, 24]} />
       <meshBasicMaterial color="#EAF6FF" transparent opacity={0.55} depthWrite={false} />
     </mesh>

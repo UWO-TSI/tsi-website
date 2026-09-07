@@ -1350,6 +1350,10 @@ Restored round lamp finish/emission; corrected repaired glass faces/shadows; wir
 
 Aligned input hints with pointer mode, enlarged controls and restored disclosure focus on Escape. Dia 390px layout plus direct component keyboard QA, types/lint pass. Source fixtures removed; details in checkpoint. No push/deploy.
 
+### 2026-09-07 fishing visual recovery
+
+Isolated optional catch-model failure, owned bobber timers and aligned float/dip/ripples to shared water heights. 410 tests/types/lint/webpack build pass; Dia fault/lifecycle/water fixtures verified without backend writes. See checkpoint. No push/deploy.
+
 ## qa
 
 *(append your entries below — log waves continue from Wave 11 in `specs/qa.md`)*

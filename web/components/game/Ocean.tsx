@@ -14,6 +14,7 @@
  * sand ring under the waterline (see Terrain() in GameWorld.tsx).
  */
 
+import { OCEAN_WATER_Y as OCEAN_Y } from "@/lib/game/waterLevels";
 import { useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
@@ -27,7 +28,6 @@ import {
 } from "@/lib/game/waterShader";
 
 const OCEAN_SIZE = 400;
-const OCEAN_Y = -0.55;
 const SHORE_RADIUS = 51.4; // where the sunken beach ring crosses OCEAN_Y
 const FOAM_BAND = 2.6; // how far the shore foam reaches out from the island
 

@@ -59,6 +59,7 @@
  * GameWorld can sit on the spline at the right tangent / height.
  */
 
+import { RIVER_WATER_Y as WATER_Y } from "@/lib/game/waterLevels";
 import { useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
@@ -76,11 +77,6 @@ export const RIVER_CONTROL_POINTS: [number, number][] = [
 const RIVER_WIDTH = 3.8;
 const ROWS = 5; // 5 rows: 2 banks + 3 inner — denser cross-section than Path
 const SEGMENTS = 144; // river v3: denser sampling keeps the narrows/pool edges smooth
-
-/** Y offset of the water surface relative to the terrain baseline (y=0). */
-// River v2 (2026-07-14): water dropped so the new bank walls
-// (RiverBankWalls) get real ACNH presence above the surface.
-const WATER_Y = -0.32; // V1: water sits deeper in the carved channel
 
 const _curve = new THREE.CatmullRomCurve3(
   RIVER_CONTROL_POINTS.map(([x, z]) => new THREE.Vector3(x, 0, z)),
