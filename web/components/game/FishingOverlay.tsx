@@ -35,11 +35,6 @@ import { coastDist } from "@/lib/game/coast";
 import {
   CAST,
   CELEBRATE,
-  DAMPING,
-  EDGE_BOUNCE,
-  FILL_RATE,
-  GRAVITY,
-  HOLD_ACCEL,
   HOLO_GRADIENT,
   RARITY_META,
   START_PROGRESS,
@@ -51,6 +46,8 @@ import {
 } from "@/lib/game/fishing";
 import { weatherMods } from "@/lib/game/weatherPerks";
 import { getTodayWeather } from "@/lib/game/weather";
+import { advanceFishingReel, createFishingReel } from "@/lib/game/fishingReel";
+import { bindFishingInput } from "@/lib/game/fishingInput";
 
 type Phase = "idle" | "charging" | "casting" | "waiting" | "bite" | "reeling" | "revealing" | "caught" | "missed";
 
@@ -515,6 +512,9 @@ export function ReelMinigame({
   known: boolean;
   onDone: (success: boolean) => void;
 }) {
+  const reelRef = useRef<HTMLDivElement>(null);
+  const pausedLabelRef = useRef<HTMLDivElement>(null);
+  const pausedRef = useRef(false);
   const barRef = useRef<HTMLDivElement>(null);
   const fishRef = useRef<HTMLImageElement>(null);
   const progRef = useRef<HTMLDivElement>(null);
@@ -524,23 +524,16 @@ export function ReelMinigame({
   const lastThunkRef = useRef(0);
 
   const barW = RARITY_META[fish.rarity].barW;
-  const drainRate = 0.17 + 0.09 * (1 - barW / 0.3); // narrower bar ⇒ faster drain
 
   useEffect(() => {
     let raf = 0;
     let last = performance.now();
-    let pos = 0; // bar left edge 0..1-barW
-    let vel = 0;
-    // Fish spawns near the resting bar (Stardew's bottom spawn) so the
-    // opening moment is winnable, then wanders out.
-    let fishPos = 0.15;
-    let fishVel = 0;
-    let fishTarget = 0.4;
-    let mul = 1;
-    let retargetAt = last + 600;
-    let progress = START_PROGRESS;
-    let tension = 0; // micro-zoom creep while the fish sits in the bar
-    const m = fish.move;
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    const reel = reelRef.current;
+    reel?.focus({ preventScroll: true });
+    const simulation = createFishingReel(fish);
+    doneRef.current = false;
+    holdingRef.current = false;
 
     const finish = (success: boolean) => {
       if (doneRef.current) return;
@@ -550,71 +543,32 @@ export function ReelMinigame({
     };
 
     const step = (now: number) => {
-      const dt = Math.min((now - last) / 1000, 0.05);
+      const dt = (now - last) / 1000;
       last = now;
-
-      // Bar physics
-      vel += (holdingRef.current ? HOLD_ACCEL : -GRAVITY) * dt;
-      vel *= Math.exp(-DAMPING * dt);
-      pos += vel * dt;
-      if (pos < 0) {
-        pos = 0;
-        if (Math.abs(vel) < 0.12) {
-          vel = 0;
-        } else {
-          vel = -vel * EDGE_BOUNCE;
-          // Feedback kit: soft thunk when the bar slams the left wall.
-          if (now - lastThunkRef.current > 250) {
-            lastThunkRef.current = now;
-            AudioManager.playSFX("blip3");
-            if (barRef.current) {
-              barRef.current.animate(
-                [{ boxShadow: "0 0 0 0 rgba(61,143,82,0)" }, { boxShadow: "0 0 10px 2px rgba(61,143,82,0.8)" }, { boxShadow: "0 0 0 0 rgba(61,143,82,0)" }],
-                { duration: 200 }
-              );
-            }
-          }
-        }
-      } else if (pos > 1 - barW) {
-        pos = 1 - barW;
-        vel = 0;
+      if (pausedRef.current) {
+        raf = requestAnimationFrame(step);
+        return;
       }
+      const events = advanceFishingReel(simulation, dt, holdingRef.current, weatherMods(getTodayWeather()).dartChanceMul);
+      const { position: pos, fishPosition: fishPos, inside, progress, tension } = simulation;
+      if (simulation.result !== null) return finish(simulation.result);
 
-      // Fish AI — velocity-seek with per-species personality. Cloudy days
-      // calm the darts (weather perk).
-      if (now >= retargetAt) {
-        const dart = Math.random() < m.dartChance * weatherMods(getTodayWeather()).dartChanceMul;
-        fishTarget = Math.random();
-        mul = dart ? m.dartMul : 1;
-        retargetAt = now + m.retargetMs * (0.6 + 0.8 * Math.random());
-        // Feedback kit: darting fish sprays droplets on the track.
-        if (dart && trackRef.current) {
-          for (let i = 0; i < 3; i++) {
-            const drop = document.createElement("span");
-            drop.style.cssText = `position:absolute;left:${fishPos * 100}%;top:50%;width:5px;height:5px;border-radius:50%;background:#EAF6FF;pointer-events:none;--dx:${(Math.random() * 2 - 1) * 26}px;animation:reel-droplet 0.45s ease-out forwards;animation-delay:${i * 40}ms;`;
-            trackRef.current.appendChild(drop);
-            window.setTimeout(() => drop.remove(), 600);
-          }
+      if (events.bounced && now - lastThunkRef.current > 250) {
+        lastThunkRef.current = now;
+        AudioManager.playSFX("blip3");
+        barRef.current?.animate(
+          [{ boxShadow: "0 0 0 0 rgba(61,143,82,0)" }, { boxShadow: "0 0 10px 2px rgba(61,143,82,0.8)" }, { boxShadow: "0 0 0 0 rgba(61,143,82,0)" }],
+          { duration: 200 }
+        );
+      }
+      if (events.darted && trackRef.current) {
+        for (let i = 0; i < 3; i++) {
+          const drop = document.createElement("span");
+          drop.style.cssText = `position:absolute;left:${fishPos * 100}%;top:50%;width:5px;height:5px;border-radius:50%;background:#EAF6FF;pointer-events:none;--dx:${(Math.random() * 2 - 1) * 26}px;animation:reel-droplet 0.45s ease-out forwards;animation-delay:${i * 40}ms;`;
+          trackRef.current.appendChild(drop);
+          window.setTimeout(() => drop.remove(), 600);
         }
       }
-      const delta = fishTarget - fishPos;
-      const maxV = m.speed * mul;
-      fishVel += Math.sign(delta) * m.accel * mul * dt;
-      if (Math.abs(delta) < 0.04) fishVel *= Math.exp(-6 * dt); // arrive
-      fishVel = Math.max(-maxV, Math.min(maxV, fishVel));
-      fishPos += fishVel * dt + Math.sin(now / 90) * m.jitter;
-      if (fishPos < 0) { fishPos = 0; fishVel = 0; }
-      else if (fishPos > 1) { fishPos = 1; fishVel = 0; }
-
-      // Progress
-      const inside = fishPos >= pos - 0.015 && fishPos <= pos + barW + 0.015;
-      progress += (inside ? FILL_RATE : -drainRate) * dt;
-      if (progress >= 1) return finish(true);
-      if (progress <= 0) return finish(false);
-
-      // Mid-reel tension micro-zoom: creeps in while the fish is held,
-      // releases fast when it escapes the bar.
-      tension = inside ? Math.min(1, tension + dt / 1.2) : Math.max(0, tension - dt / 0.5);
       setTensionZoom(tension);
 
       // DOM writes
@@ -629,6 +583,7 @@ export function ReelMinigame({
       }
       if (progRef.current) {
         progRef.current.style.width = `${progress * 100}%`;
+        progRef.current.setAttribute("aria-valuenow", String(Math.round(progress * 100)));
         progRef.current.style.background = progress < 0.25 ? "#E5484D" : "#FFD166";
         // Feedback kit: heartbeat pulse as the catch gets close — faster
         // the closer you are.
@@ -640,51 +595,34 @@ export function ReelMinigame({
     };
     raf = requestAnimationFrame(step);
 
-    // Input: hold LMB anywhere (capture: the world's handlers must not
-    // fire), or hold E / Space. Touch works via Pointer Events (mobile-aware).
-    const down = (e: PointerEvent) => {
-      if (e.button !== 0) return;
-      e.preventDefault();
-      e.stopPropagation();
-      holdingRef.current = true;
-    };
-    const up = () => {
-      holdingRef.current = false;
-    };
-    const keyDown = (e: KeyboardEvent) => {
-      if (e.key === "e" || e.key === "E" || e.key === " ") {
-        e.preventDefault();
-        e.stopPropagation();
-        holdingRef.current = true;
-      } else if (e.key === "Escape") {
-        e.preventDefault();
-        e.stopPropagation();
-        finish(false); // concede — it swims off
-      }
-    };
-    const keyUp = (e: KeyboardEvent) => {
-      if (e.key === "e" || e.key === "E" || e.key === " ") holdingRef.current = false;
-    };
-    window.addEventListener("pointerdown", down, true);
-    window.addEventListener("pointerup", up, true);
-    window.addEventListener("pointercancel", up, true);
-    window.addEventListener("keydown", keyDown, true);
-    window.addEventListener("keyup", keyUp, true);
+    const releaseInput = bindFishingInput({
+      onHold: (holding) => { holdingRef.current = holding; },
+      onCancel: () => finish(false),
+      onPointerFocus: () => reel?.focus({ preventScroll: true }),
+      onPause: (paused) => {
+        pausedRef.current = paused;
+        last = performance.now();
+        if (pausedLabelRef.current) pausedLabelRef.current.hidden = !paused;
+        if (paused) setTensionZoom(0);
+      },
+    });
 
     return () => {
       cancelAnimationFrame(raf);
       setTensionZoom(0);
-      window.removeEventListener("pointerdown", down, true);
-      window.removeEventListener("pointerup", up, true);
-      window.removeEventListener("pointercancel", up, true);
-      window.removeEventListener("keydown", keyDown, true);
-      window.removeEventListener("keyup", keyUp, true);
+      releaseInput();
+      if (document.activeElement === reel && previouslyFocused?.isConnected) previouslyFocused.focus({ preventScroll: true });
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
     <div
+      ref={reelRef}
+      role="application"
+      aria-label="Fishing reel"
+      aria-describedby="fishing-reel-help"
+      tabIndex={0}
       style={{
         width: "min(560px, 86vw)",
         padding: "12px 14px 10px",
@@ -733,7 +671,7 @@ export function ReelMinigame({
           {(fish.zone ?? "river") === "sea" ? "🌊 sea" : "🏞 river"}
         </span>
         <span style={{ marginLeft: "auto", fontSize: 10, color: "#8a7f6a" }}>
-          hold left-click to push the bar →
+          keep the fish inside the green bar
         </span>
       </div>
 
@@ -792,6 +730,12 @@ export function ReelMinigame({
         />
       </div>
 
+      <div ref={pausedLabelRef} hidden style={{ marginTop: 8, fontSize: 12, color: "#4A4034" }}>
+        Paused · click the reel to resume
+      </div>
+      <div id="fishing-reel-help" style={{ marginTop: 8, fontSize: 11, color: "#635745" }}>
+        Hold E, Space or left-click → · Release ← · Esc to let go
+      </div>
       {/* Progress */}
       <div
         style={{
@@ -804,6 +748,11 @@ export function ReelMinigame({
       >
         <div
           ref={progRef}
+          role="progressbar"
+          aria-label="Catch progress"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={START_PROGRESS * 100}
           style={{
             height: "100%",
             width: `${START_PROGRESS * 100}%`,

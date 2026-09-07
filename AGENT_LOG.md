@@ -108,6 +108,8 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+- **2026-09-07 (Codex):** Fishing reel uses fixed 60 Hz simulation and independent held-input tracking; pauses on blur/hidden/control focus. Dia catch, Escape, retry and frozen-progress/resume checks pass. 190 tests, targeted lint and production build pass. Continuing cast/hook/reveal lifecycle.
+
 - **2026-09-07 (Codex):** Recovered shop sign surface with an adapted “Tethos Shop” atlas; source window glow replaces flat quads. Dia reference/full-world checks, types, targeted lint and material tests pass. Prompt/provenance in `specs/shop-sign-asset.md`; temporary reference fixture removed. Next: fishing loop inspection.
 
 - **2026-09-07 (Codex):** HQ now shares assembled body/door between reference and full world; removed opaque door cover and replaced HQ window quads with source glow textures. Dia day/evening/night checks, TypeScript, targeted ESLint and production build pass. Details: `specs/game-default-island-checkpoint.md`. Continuing shop asset inspection locally.
