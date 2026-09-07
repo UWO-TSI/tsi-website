@@ -132,3 +132,32 @@ describe("cast lifecycle", () => {
     expect(h.release).not.toHaveBeenCalled(); expect(h.cancel).toHaveBeenCalledTimes(3);
   });
 });
+
+describe("hook-to-reel input handoff", () => {
+  it.each(["key", "pointer"])("immediately inherits a held %s and releases it normally", (kind) => {
+    const win = new EventTarget();
+    const doc = Object.assign(new EventTarget(), { hidden: false, activeElement: null });
+    const input = { keys: new Set(kind === "key" ? ["e"] : []), pointers: new Set(kind === "pointer" ? [7] : []) };
+    const hold = vi.fn();
+    const dispose = bindFishingInput({ initialInput: input, onHold: hold, onCancel: vi.fn(), onPause: vi.fn(), windowTarget: win, documentTarget: doc });
+    expect(hold).toHaveBeenLastCalledWith(true);
+    win.dispatchEvent(Object.assign(new Event(kind === "key" ? "keyup" : "pointerup"), { key: "e", pointerId: 7 }));
+    expect(hold).toHaveBeenLastCalledWith(false);
+    dispose();
+  });
+
+  it("observes a release before the reel mounts and leaves the source lease intact during cleanup", () => {
+    const win = new EventTarget();
+    const doc = Object.assign(new EventTarget(), { hidden: false, activeElement: null });
+    const input = { keys: new Set(["e"]), pointers: new Set<number>() };
+    const releaseCast = bindFishingCastLifecycle({ getPhase: () => "reeling", heldInput: input, onStart: vi.fn(), onRelease: vi.fn(), onCancel: vi.fn(), windowTarget: win, documentTarget: doc });
+    const hold = vi.fn();
+    const mount = () => bindFishingInput({ initialInput: input, onHold: hold, onCancel: vi.fn(), onPause: vi.fn(), windowTarget: win, documentTarget: doc });
+    const first = mount(); expect(hold).toHaveBeenLastCalledWith(true);
+    first(); expect(input.keys.has("e")).toBe(true);
+    win.dispatchEvent(Object.assign(new Event("keyup"), { key: "E" }));
+    expect(input.keys.size).toBe(0);
+    const second = mount(); expect(hold).toHaveBeenLastCalledWith(false);
+    second(); releaseCast();
+  });
+});

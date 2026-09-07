@@ -108,6 +108,8 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+- **2026-09-07 (Codex):** Hook→reel now inherits held key/pointer state while honoring releases before mount; 3 handoff regressions added. 203 tests, types/lint and production build pass. Physical sustained-input handoff remains unverified. Starting collection integrity review locally; no backend changes yet.
+
 - **2026-09-07 (Codex):** Weather copy now matches implemented effects; removed ineffective cloudy sea-frequency claim without changing probabilities. Native HUD buttons pass Dia Space/Escape checks; rain/cloudy copy verified. Types/lint pass. Next: hook→reel held-input handoff.
 
 - **2026-09-07 (Codex):** Reveal now has explicit controls, immediate Escape, focus containment/restoration and synchronous transition guards. Dia keyboard path passes; head-up fish icons retained after checking recorded art choice. 200 tests, lint/types and production build pass. Next: weather/odds copy accuracy.

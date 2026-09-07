@@ -1,19 +1,25 @@
 import { isGameControlTarget } from "./keyboardInput";
 
+export interface FishingHeldInput {
+  keys: Set<string>;
+  pointers: Set<number>;
+}
+
 type InputDocument = EventTarget & Pick<Document, "activeElement" | "hidden">;
 
 /** Track each input independently so releasing Space cannot release a held pointer. */
-export function bindFishingInput({ onHold, onCancel, onPause, onPointerFocus, windowTarget = window, documentTarget = document }: {
+export function bindFishingInput({ onHold, onCancel, onPause, onPointerFocus, initialInput, windowTarget = window, documentTarget = document }: {
   onHold: (holding: boolean) => void;
   onCancel: () => void;
   onPause: (paused: boolean) => void;
   onPointerFocus?: () => void;
+  initialInput?: FishingHeldInput;
   windowTarget?: EventTarget;
   documentTarget?: InputDocument;
 }) {
   const capture = { capture: true };
-  const keys = new Set<string>();
-  const pointers = new Set<number>();
+  const keys = new Set(initialInput?.keys);
+  const pointers = new Set(initialInput?.pointers);
   let blurred = false;
   const publish = () => onHold(keys.size > 0 || pointers.size > 0);
   const reset = () => { keys.clear(); pointers.clear(); publish(); };
@@ -60,6 +66,7 @@ export function bindFishingInput({ onHold, onCancel, onPause, onPointerFocus, wi
   documentTarget.addEventListener("visibilitychange", updatePause);
   documentTarget.addEventListener("focusin", updatePause);
   updatePause();
+  publish();
   return () => {
     windowTarget.removeEventListener("keydown", keyDown, capture);
     windowTarget.removeEventListener("keyup", keyUp, capture);
@@ -75,11 +82,12 @@ export function bindFishingInput({ onHold, onCancel, onPause, onPointerFocus, wi
 }
 
 /** The world starts charging synchronously; release events must not wait for React to mount a meter. */
-export function bindFishingCastLifecycle({ getPhase, onStart, onRelease, onCancel, windowTarget = window, documentTarget = document }: {
+export function bindFishingCastLifecycle({ getPhase, onStart, onRelease, onCancel, heldInput, windowTarget = window, documentTarget = document }: {
   getPhase: () => string;
   onStart: (spot: { x: number; z: number }) => void;
   onRelease: () => void;
   onCancel: () => void;
+  heldInput?: FishingHeldInput;
   windowTarget?: EventTarget;
   documentTarget?: EventTarget & Pick<Document, "hidden">;
 }) {
@@ -89,9 +97,12 @@ export function bindFishingCastLifecycle({ getPhase, onStart, onRelease, onCance
     if (getPhase() !== "idle") return;
     const spot = (event as CustomEvent<{ x: number; z: number }>).detail;
     if (!spot || !Number.isFinite(spot.x) || !Number.isFinite(spot.z)) return;
+    heldInput?.keys.clear(); heldInput?.pointers.clear();
     onStart({ x: spot.x, z: spot.z });
   };
   const release = (event: Event) => {
+    if (event.type === "keyup") heldInput?.keys.delete((event as KeyboardEvent).key.toLowerCase());
+    else heldInput?.pointers.delete((event as PointerEvent).pointerId);
     if (getPhase() !== "charging") return;
     if (event.type === "keyup" && (event as KeyboardEvent).key.toLowerCase() !== "e") return;
     if (event.type === "pointerup" && (event as PointerEvent).button !== 0) return;
@@ -103,7 +114,10 @@ export function bindFishingCastLifecycle({ getPhase, onStart, onRelease, onCance
     if (!pending() && getPhase() !== "caught" && getPhase() !== "missed") return;
     e.preventDefault(); e.stopPropagation(); onCancel();
   };
-  const interrupt = () => { if (pending()) onCancel(); };
+  const interrupt = () => {
+    heldInput?.keys.clear(); heldInput?.pointers.clear();
+    if (pending()) onCancel();
+  };
   const visibility = () => { if (documentTarget.hidden) interrupt(); };
   windowTarget.addEventListener("tsi:fish-start", start);
   windowTarget.addEventListener("keyup", release, capture);

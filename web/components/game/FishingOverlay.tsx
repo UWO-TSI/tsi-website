@@ -47,7 +47,7 @@ import {
 import { weatherMods } from "@/lib/game/weatherPerks";
 import { getTodayWeather } from "@/lib/game/weather";
 import { advanceFishingReel, createFishingReel } from "@/lib/game/fishingReel";
-import { bindFishingCastLifecycle, bindFishingInput } from "@/lib/game/fishingInput";
+import { bindFishingCastLifecycle, bindFishingInput, type FishingHeldInput } from "@/lib/game/fishingInput";
 import { isGameControlTarget } from "@/lib/game/keyboardInput";
 
 type Phase = "idle" | "charging" | "casting" | "waiting" | "bite" | "reeling" | "revealing" | "caught" | "missed";
@@ -58,6 +58,7 @@ export default function FishingOverlay({ onActiveChange }: { onActiveChange?: (a
   const [phase, setPhase] = useState<Phase>("idle");
   const phaseRef = useRef<Phase>("idle");
   const releaseRequestedRef = useRef(false);
+  const reelInputRef = useRef<FishingHeldInput>({ keys: new Set(), pointers: new Set() });
   const changePhase = useCallback((next: Phase) => {
     phaseRef.current = next;
     setPhase(next);
@@ -100,6 +101,7 @@ export default function FishingOverlay({ onActiveChange }: { onActiveChange?: (a
   const cancel = useCallback(() => {
     clearTimers();
     releaseRequestedRef.current = false;
+    reelInputRef.current.keys.clear(); reelInputRef.current.pointers.clear();
     changePhase("idle");
     setFish(null);
     setCaughtSize(null);
@@ -189,7 +191,7 @@ export default function FishingOverlay({ onActiveChange }: { onActiveChange?: (a
   };
 
   /** Bite hooked (E or click) → roll the species, open the reel. */
-  const hook = () => {
+  const hook = (input: KeyboardEvent | PointerEvent) => {
     if (phaseRef.current !== "bite") return;
     if (performance.now() > biteDeadlineRef.current) return;
     clearTimers();
@@ -198,6 +200,9 @@ export default function FishingOverlay({ onActiveChange }: { onActiveChange?: (a
     const sp = spotRef.current;
     const zone: "river" | "sea" = sp && coastDist(sp.x, sp.z) > 47 ? "sea" : "river";
     setFish(rollFish(luck, zone));
+    reelInputRef.current.keys.clear(); reelInputRef.current.pointers.clear();
+    if ("key" in input) reelInputRef.current.keys.add(input.key.toLowerCase());
+    else reelInputRef.current.pointers.add(input.pointerId);
     changePhase("reeling");
     AudioManager.playSFX("click");
   };
@@ -251,6 +256,7 @@ export default function FishingOverlay({ onActiveChange }: { onActiveChange?: (a
     },
     onRelease: () => { releaseRequestedRef.current = true; },
     onCancel: cancel,
+    heldInput: reelInputRef.current,
   }), [cancel, changePhase]);
 
   // Keyboard: E hooks during bite, ESC cancels (the reel and the reveal
@@ -263,7 +269,7 @@ export default function FishingOverlay({ onActiveChange }: { onActiveChange?: (a
       if (e.key === "e" || e.key === "E" || e.key === " ") {
         e.preventDefault();
         e.stopPropagation();
-        hook();
+        hook(e);
       }
     };
     window.addEventListener("keydown", onKey, true);
@@ -279,7 +285,7 @@ export default function FishingOverlay({ onActiveChange }: { onActiveChange?: (a
       if (e.button !== 0 || isGameControlTarget(e.target as Element | null)) return;
       e.preventDefault();
       e.stopPropagation();
-      hook();
+      hook(e);
     };
     window.addEventListener("pointerdown", onDown, true);
     return () => window.removeEventListener("pointerdown", onDown, true);
@@ -331,7 +337,7 @@ export default function FishingOverlay({ onActiveChange }: { onActiveChange?: (a
       {phase === "charging" ? (
         <CastMeter onRelease={castNow} releaseRequestedRef={releaseRequestedRef} />
       ) : phase === "reeling" && fish ? (
-        <ReelMinigame fish={fish} known={ownedRef.current.has(fish.key)} onDone={onReelDone} />
+        <ReelMinigame fish={fish} known={ownedRef.current.has(fish.key)} onDone={onReelDone} initialInput={reelInputRef.current} />
       ) : (
         <div
           style={{
@@ -519,10 +525,12 @@ export function ReelMinigame({
   fish,
   known,
   onDone,
+  initialInput,
 }: {
   fish: FishDef;
   known: boolean;
   onDone: (success: boolean) => void;
+  initialInput?: FishingHeldInput;
 }) {
   const reelRef = useRef<HTMLDivElement>(null);
   const pausedLabelRef = useRef<HTMLDivElement>(null);
@@ -608,6 +616,7 @@ export function ReelMinigame({
     raf = requestAnimationFrame(step);
 
     const releaseInput = bindFishingInput({
+      initialInput,
       onHold: (holding) => { holdingRef.current = holding; },
       onCancel: () => finish(false),
       onPointerFocus: () => reel?.focus({ preventScroll: true }),
