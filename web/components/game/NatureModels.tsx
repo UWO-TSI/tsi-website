@@ -9,7 +9,7 @@ import { prepareModel, disposeModelMaterials, applyModelTextures } from "@/lib/g
  * Loads, clones, and renders assets with shadows. Exported as GLBProp for
  * one-off prop placement (AmbientProps, benches, bridge).
  */
-export function GLBProp({ url, scale = 1, position, rotation, castShadow = true }: {
+export function GLBProp({ url, scale = 1, position, rotation, castShadow = true, emissiveIntensity }: {
   url: string;
   scale?: number;
   position?: [number, number, number];
@@ -20,9 +20,10 @@ export function GLBProp({ url, scale = 1, position, rotation, castShadow = true 
    * small rocks) where the shadow is invisible at game camera distance.
    */
   castShadow?: boolean;
+  emissiveIntensity?: number;
 }) {
   const { scene } = useGLTF(url);
-  const clone = useMemo(() => prepareModel(scene, url, castShadow), [scene, url, castShadow]);
+  const clone = useMemo(() => prepareModel(scene, url, castShadow, emissiveIntensity), [scene, url, castShadow, emissiveIntensity]);
   useEffect(() => {
     applyModelTextures(clone, url);
     return () => disposeModelMaterials(clone);

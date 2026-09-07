@@ -1,4 +1,4 @@
-import { Color, DoubleSide, Material, Mesh, MeshStandardMaterial, Object3D, SRGBColorSpace, Texture, TextureLoader } from "three";
+import { Color, DoubleSide, FrontSide, Material, Mesh, MeshStandardMaterial, Object3D, SRGBColorSpace, Texture, TextureLoader } from "three";
 
 let flagTexture: Texture | null = null;
 let shopSignTexture: Texture | null = null;
@@ -20,7 +20,7 @@ function getFlagTexture() {
 }
 
 /** Clone materials as well as nodes so one instance cannot recolor cached GLTF assets. */
-export function prepareModel(source: Object3D, url: string, castShadow: boolean): Object3D {
+export function prepareModel(source: Object3D, url: string, castShadow: boolean, emissiveIntensity?: number): Object3D {
   const materials = new Map<Material, Material>();
   const clone = source.clone(true);
   clone.traverse((object) => {
@@ -31,6 +31,9 @@ export function prepareModel(source: Object3D, url: string, castShadow: boolean)
     mesh.frustumCulled = false;
     mesh.castShadow = castShadow;
     const originals = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+    const glassShell = /\/props\/(streetlamp|park-clock)\.glb$/.test(url)
+      && originals.every((material) => material.transparent && material.name.startsWith("mGlass"));
+    if (glassShell) mesh.castShadow = false;
     const layeredCanopy = /\/plants\/tree-(hardwood-|blossom)/.test(url)
       && originals.every((material) => /OakLeaf|SakuraBack|SakuraBloom/.test(material.name));
     // Layered foliage cards self-shadow into hard patches. Keep their light
@@ -40,7 +43,11 @@ export function prepareModel(source: Object3D, url: string, castShadow: boolean)
       const existing = materials.get(original);
       if (existing) return existing;
       const material = original.clone();
-      material.side = DoubleSide;
+      material.side = glassShell ? FrontSide : DoubleSide;
+      if (glassShell) material.depthWrite = false;
+      if (material instanceof MeshStandardMaterial && material.emissiveMap && emissiveIntensity !== undefined) {
+        material.emissiveIntensity = emissiveIntensity;
+      }
       if (url.includes("/plants/tree-hardwood-") && material instanceof MeshStandardMaterial) {
         // Grayscale foliage and trunk albedos need their seasonal colour tint.
         if (material.name.includes("OakLeaf")) {

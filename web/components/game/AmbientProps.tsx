@@ -128,11 +128,11 @@ const FENCE_SEGMENTS: { country: NaturePlacement[]; log: NaturePlacement[] } = (
 // ─── Lantern (ACNH round streetlamp) ────────────────────────────────────
 // Model is ~2.7u tall with the globe at the top; the warm point light sits
 // in the globe so night pools read like the W7 cozy lamps.
-function Lantern({ position }: { position: [number, number, number] }) {
+function Lantern({ position, lampsOn }: { position: [number, number, number]; lampsOn: boolean }) {
   return (
     <group position={position}>
-      <GLBProp url="/assets/acnh/props/streetlamp.glb" />
-      <pointLight color={C.lanternEmissive} intensity={0.4} distance={5} position={[0, 2.4, 0]} />
+      <GLBProp url="/assets/acnh/props/streetlamp.glb" emissiveIntensity={lampsOn ? 2.2 : 0} />
+      <pointLight color={C.lanternEmissive} intensity={lampsOn ? 0.4 : 0} distance={5} position={[0, 2.4, 0]} />
     </group>
   );
 }
@@ -169,7 +169,7 @@ function Campfire({ position }: { position: [number, number, number] }) {
 // The classic ACNH sky beat: a gift balloon drifts across every few
 // minutes. Pure ambience — no popping, no rewards (principle #3). The
 // cycle starts mid-flight so a fresh visitor's first minute includes one.
-export default function AmbientProps() {
+export default function AmbientProps({ lampsOn = false }: { lampsOn?: boolean }) {
   return (
     <group>
       <group name="signposts">
@@ -190,7 +190,7 @@ export default function AmbientProps() {
       <group name="lanterns">
         {LANTERNS.map(([x, z], i) => {
           const y = getTerrainHeight(x, z);
-          return <Lantern key={i} position={[x, y, z]} />;
+          return <Lantern key={i} position={[x, y, z]} lampsOn={lampsOn} />;
         })}
       </group>
 

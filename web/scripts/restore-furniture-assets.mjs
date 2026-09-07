@@ -10,6 +10,7 @@ import { ALL_EXTENSIONS } from "@gltf-transform/extensions";
 import { getBounds, prune, transformPrimitive } from "@gltf-transform/functions";
 
 const furniture = {
+  lamp: { model: "FtrStreetlampRound", output: "streetlamp", meshes: 3, size: [0.5341208, 2.6706136, 0.5341209] },
   wood: { model: "FtrWoodBench", output: "bench-wood", meshes: 1, size: [1.94533515, 0.51064712, 0.52800059] },
   park: { model: "FtrParkbenche", output: "bench-park", meshes: 1, size: [1.75375214, 1.00475866, 0.95076203] },
   clock: { model: "FtrParkclock", output: "park-clock", meshes: 2, size: [0.67092419, 2.67856293, 0.56309319] },
@@ -17,7 +18,7 @@ const furniture = {
 
 export async function restoreFurniture(selection = "all", source = path.join(homedir(), "Downloads/Assets/Model")) {
   const selected = Array.isArray(selection) ? selection : selection === "all" ? Object.keys(furniture) : [selection];
-  if (selected.some(key => !Object.hasOwn(furniture, key))) throw new Error("Choose wood, park, clock or all");
+  if (selected.some(key => !Object.hasOwn(furniture, key))) throw new Error("Choose wood, park, clock, lamp or all");
   for (const key of selected) {
     const item = furniture[key];
     const output = path.resolve(`public/assets/acnh/props/${item.output}.glb`);
@@ -31,7 +32,8 @@ export async function restoreFurniture(selection = "all", source = path.join(hom
     }
     let dae = await readFile(path.join(modelDir, `${item.model}.dae`), "utf8");
     // Variant textures are referenced by some effects but absent from library_images.
-    for (const suffix of ["Alb", "Nrm", "Mix"]) {
+    for (const suffix of ["Alb", "Nrm", "Mix", "Emi"]) {
+      if (suffix === "Emi" && !(await readdir(variantDir)).includes("mReBody_Emi.png")) continue;
       const id = `mReBody_${suffix}`;
       if (!dae.includes(`<image id="${id}"`)) {
         if (!dae.includes("</library_images>")) throw new Error("Missing source image library");
@@ -63,6 +65,12 @@ export async function restoreFurniture(selection = "all", source = path.join(hom
     for (const material of root.listMaterials()) {
       material.setBaseColorFactor([1, 1, 1, 1]).setMetallicFactor(0).setRoughnessFactor(1)
         .setNormalTexture(null).setOcclusionTexture(null).setMetallicRoughnessTexture(null);
+      if (material.getName() === "mGlassF") {
+        material.setAlphaMode("BLEND").setBaseColorFactor([1, 1, 1, 0.4]).setRoughnessFactor(0.3);
+      }
+      if (material.getName() === "mGlassR") {
+        material.setAlphaMode("BLEND").setRoughnessFactor(0.3);
+      }
       if (material.getName() === "mGlass") {
         // The source expects a custom glass shader; an opaque export hides the dial.
         material.setAlphaMode("BLEND").setBaseColorFactor([1, 1, 1, 0.08]).setRoughnessFactor(0.2);

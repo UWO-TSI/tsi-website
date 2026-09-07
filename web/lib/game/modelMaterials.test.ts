@@ -1,5 +1,5 @@
 import { expect, it, vi } from "vitest";
-import { BoxGeometry, Frustum, Group, Matrix4, Mesh, MeshStandardMaterial, PerspectiveCamera, Texture, Vector3 } from "three";
+import { BoxGeometry, FrontSide, Frustum, Group, Matrix4, Mesh, MeshStandardMaterial, PerspectiveCamera, Texture, Vector3 } from "three";
 import { disposeModelMaterials, prepareModel } from "./modelMaterials";
 import { bendViewPoint } from "./worldProjection";
 
@@ -46,4 +46,40 @@ it("keeps a curved-world model visible when its unbent bounds are above the view
   disposeModelMaterials(prepared);
   source.material.dispose();
   source.geometry.dispose();
+});
+
+it("changes mapped lamp glow per instance without lighting glass or mutating the cache", () => {
+  const body = new MeshStandardMaterial({ emissive: "white", emissiveMap: new Texture() });
+  const glass = new MeshStandardMaterial({ transparent: true, opacity: 0.4 });
+  const source = new Mesh(new BoxGeometry(), [body, glass]);
+  const day = prepareModel(source, "/assets/acnh/props/streetlamp.glb", true, 0) as Mesh<BoxGeometry, MeshStandardMaterial[]>;
+  const night = prepareModel(source, "/assets/acnh/props/streetlamp.glb", true, 2.2) as Mesh<BoxGeometry, MeshStandardMaterial[]>;
+  expect(day.material[0].emissiveIntensity).toBe(0);
+  expect(night.material[0].emissiveIntensity).toBe(2.2);
+  expect(body.emissiveIntensity).toBe(1);
+  expect(night.material[1].emissiveIntensity).toBe(1);
+  expect(night.material[1].opacity).toBe(0.4);
+  disposeModelMaterials(day);
+  expect(night.material[0].emissiveMap).toBe(body.emissiveMap);
+  disposeModelMaterials(night);
+  body.emissiveMap?.dispose();
+  body.dispose();
+  glass.dispose();
+  source.geometry.dispose();
+});
+
+
+it("keeps repaired glass transparent and out of the opaque shadow pass", () => {
+  for (const prop of ["streetlamp", "park-clock"]) {
+    const glass = new MeshStandardMaterial({ name: "mGlassF", transparent: true, opacity: 0.4 });
+    const source = new Mesh(new BoxGeometry(), glass);
+    const clone = prepareModel(source, `/assets/acnh/props/${prop}.glb`, true) as Mesh<BoxGeometry, MeshStandardMaterial>;
+    expect(clone.castShadow).toBe(false);
+    expect(clone.material.side).toBe(FrontSide);
+    expect(clone.material.depthWrite).toBe(false);
+    expect(glass.depthWrite).toBe(true);
+    disposeModelMaterials(clone);
+    source.geometry.dispose();
+    glass.dispose();
+  }
 });

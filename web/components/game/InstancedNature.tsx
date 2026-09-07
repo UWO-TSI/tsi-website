@@ -35,6 +35,7 @@ interface SubMesh {
   geometry: THREE.BufferGeometry;
   material: THREE.Material | THREE.Material[];
   receiveShadow: boolean;
+  castShadow: boolean;
 }
 
 function extractSubMeshes(scene: THREE.Object3D): SubMesh[] {
@@ -42,7 +43,7 @@ function extractSubMeshes(scene: THREE.Object3D): SubMesh[] {
   scene.traverse((child) => {
     const m = child as THREE.Mesh;
     if (m.isMesh && m.geometry) {
-      out.push({ geometry: m.geometry, material: m.material, receiveShadow: m.receiveShadow });
+      out.push({ geometry: m.geometry, material: m.material, receiveShadow: m.receiveShadow, castShadow: m.castShadow });
     }
   });
   return out;
@@ -55,6 +56,7 @@ interface InstancedGLBProps {
   receiveShadow?: boolean;
   /** Per-instance scale multiplier — multiplied with the placement's scale. */
   baseScale?: number;
+  emissiveIntensity?: number;
 }
 
 /**
@@ -68,9 +70,10 @@ export default function InstancedGLB({
   castShadow = true,
   receiveShadow = true,
   baseScale = 1,
+  emissiveIntensity,
 }: InstancedGLBProps) {
   const { scene } = useGLTF(url);
-  const model = useMemo(() => prepareModel(scene, url, castShadow), [scene, url, castShadow]);
+  const model = useMemo(() => prepareModel(scene, url, castShadow, emissiveIntensity), [scene, url, castShadow, emissiveIntensity]);
   const subMeshes = useMemo(() => extractSubMeshes(model), [model]);
   useEffect(() => () => disposeModelMaterials(model), [model]);
 
@@ -87,7 +90,7 @@ export default function InstancedGLB({
           geometry={sm.geometry}
           material={sm.material}
           dispose={null}
-          castShadow={castShadow}
+          castShadow={castShadow && sm.castShadow}
           receiveShadow={receiveShadow && sm.receiveShadow}
         >
           {placements.map((p, j) => (

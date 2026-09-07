@@ -1342,6 +1342,10 @@ Verification: `tsc --noEmit` clean, `npm run lint` 74 errors / 56 warnings (= Wa
 
 Restored original clock finish/glass, preserving size; added automatic inspector framing and rotation-aware bounds. TypeScript/lint/Dia checks pass. See `specs/game-default-island-checkpoint.md` and `specs/park-clock-asset.md`. No push/deploy.
 
+### 2026-09-07 streetlamp restoration
+
+Restored round lamp finish/emission; corrected repaired glass faces/shadows; wired ordinary/instanced lamp glow and pools to existing day/night phase. 407 tests/types/lint/webpack build pass; Dia source fixture matches both render paths. Details in checkpoint and `specs/streetlamp-asset.md`. No push/deploy.
+
 ## qa
 
 *(append your entries below — log waves continue from Wave 11 in `specs/qa.md`)*

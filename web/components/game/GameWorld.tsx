@@ -1503,7 +1503,7 @@ function yAt(x: number, z: number): [number, number, number] {
   return [x, getTerrainHeight(x, z), z];
 }
 const LAMP_XZ: [number, number][] = [[1.8, -9], [-1.8, -16], [-1.8, 6.5], [1.8, 17], [-1.8, 24], [-11, 12.2], [11, 12.2]];
-function Props() {
+function Props({ lampsOn }: { lampsOn: boolean }) {
   return (
     <group>
       {/* Benches — warm wood benches by the HQ approach, upright park benches
@@ -1517,16 +1517,17 @@ function Props() {
         </group>
       ))}
       {/* Lampposts — ACNH round streetlamps, instanced (one draw per
-          sub-mesh for all 5); point lights stay per-lamp. */}
+          sub-mesh for all placements); point lights stay per-lamp. */}
       <Suspense fallback={null}>
         <InstancedGLB
           url="/assets/acnh/props/streetlamp.glb"
+          emissiveIntensity={lampsOn ? 2.2 : 0}
           placements={LAMP_XZ.map(([x, z]) => ({ position: yAt(x, z) }))}
         />
       </Suspense>
       {LAMP_XZ.map(([x, z], i) => {
         const [, y] = yAt(x, z);
-        return <pointLight key={`lamp-light-${i}`} color={P.lampGlow} intensity={0.35} distance={6} position={[x, y + 2.4, z]} />;
+        return <pointLight key={`lamp-light-${i}`} color={P.lampGlow} intensity={lampsOn ? 0.35 : 0} distance={6} position={[x, y + 2.4, z]} />;
       })}
       {/* (HQ approach fence rows removed in the 2026-07-07 declutter —
           seen end-on from the south camera they read as beaded poles and
@@ -2206,8 +2207,8 @@ function Scene({
           static sky background instead. The AmbienceFX ground cloud-shadow
           layer stays — separate system, nearly free.) */}
       <Suspense fallback={null}>
-        <Props />
-        <AmbientProps />
+        <Props lampsOn={todPhase !== "day"} />
+        <AmbientProps lampsOn={todPhase !== "day"} />
         <LampPosts phase={todPhase} />
         <Signpost playerPosRef={playerPosRef} />
         {!liteMode && <DustMotes playerPosRef={playerPosRef} />}
