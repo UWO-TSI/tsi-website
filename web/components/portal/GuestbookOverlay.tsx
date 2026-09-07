@@ -1,8 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { X, Send, Loader2 } from "lucide-react";
+import { X, Send, Loader2, RefreshCw } from "lucide-react";
 import { AudioManager } from "@/lib/game/audio";
+import { useWorldDialog } from "@/lib/game/useWorldDialog";
+import { presenceRequest } from "@/lib/game/mobilePresence";
+import { guestbookTransport, GuestbookRequestError, guestbookSignError, type GuestbookEntry, type GuestbookTransport } from "@/lib/game/guestbookClient";
 
 /**
  * GuestbookOverlay (sprint E6) — DOM overlay rendered alongside the game
@@ -16,116 +19,91 @@ import { AudioManager } from "@/lib/game/audio";
 
 const MAX_LEN = 200;
 
-interface GuestbookEntry {
-  id: string;
-  message: string;
-  created_at: string;
-  display_name: string;
-  tier: number;
-}
-
 interface GuestbookOverlayProps {
   open: boolean;
   onClose: () => void;
+  transport?: GuestbookTransport;
 }
 
-export default function GuestbookOverlay({ open, onClose }: GuestbookOverlayProps) {
+export default function GuestbookOverlay({ open, onClose, transport = guestbookTransport }: GuestbookOverlayProps) {
+  return open ? <GuestbookSession onClose={onClose} transport={transport} /> : null;
+}
+
+function GuestbookSession({ onClose, transport }: { onClose: () => void; transport: GuestbookTransport }) {
   const [entries, setEntries] = useState<GuestbookEntry[] | null>(null);
-  const [justSigned, setJustSigned] = useState(false);
+  const [signedId, setSignedId] = useState<string | null>(null);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [signedOut, setSignedOut] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const loadRef = useRef<AbortController | null>(null);
+  const pendingRef = useRef<AbortController | null>(null);
+  const timersRef = useRef(new Set<ReturnType<typeof setTimeout>>());
+  const dialogRef = useWorldDialog(true, onClose);
 
   const loadEntries = useCallback(async () => {
+    loadRef.current?.abort();
+    const controller = new AbortController();
+    loadRef.current = controller;
+    setLoadError(null); setLoading(true);
     try {
-      const res = await fetch("/api/guestbook");
-      if (!res.ok) {
-        setEntries([]);
-        return;
-      }
-      const data = (await res.json()) as { entries?: GuestbookEntry[] };
-      setEntries(Array.isArray(data.entries) ? data.entries : []);
-    } catch {
-      setEntries([]);
-    }
-  }, []);
-
-  // ── Load on open ────────────────────────────────────────────────
-  useEffect(() => {
-    if (!open) return;
-    setEntries(null);
-    setErrorMsg(null);
-    setInput("");
-    loadEntries();
-    const focusTimer = setTimeout(() => textareaRef.current?.focus(), 220);
-    return () => clearTimeout(focusTimer);
-  }, [open, loadEntries]);
-
-  // ── ESC closes ──────────────────────────────────────────────────
-  useEffect(() => {
-    if (!open) return;
-    const handle = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", handle);
-    return () => window.removeEventListener("keydown", handle);
-  }, [open, onClose]);
-
-  // ── Auto-clear toast ────────────────────────────────────────────
-  useEffect(() => {
-    if (!toast) return;
-    const t = setTimeout(() => setToast(null), 1500);
-    return () => clearTimeout(t);
-  }, [toast]);
-
-  const submit = useCallback(async () => {
-    const message = input.trim();
-    if (!message || sending) return;
-    setSending(true);
-    setErrorMsg(null);
-    try {
-      const res = await fetch("/api/guestbook", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message }),
-      });
-      if (res.status === 401) {
-        setErrorMsg("Please sign in to leave a message.");
-        return;
-      }
-      if (res.status === 429) {
-        setErrorMsg("You've reached today's signing limit.");
-        return;
-      }
-      if (res.status === 400) {
-        const body = (await res.json().catch(() => ({}))) as { error?: string };
-        setErrorMsg(body.error ?? "Please keep messages respectful.");
-        return;
-      }
-      if (!res.ok) {
-        setErrorMsg("Couldn't save your message. Try again.");
-        return;
-      }
-      setInput("");
-      setToast("Thanks!");
-      // Loop iter 16 (2026-07-24): sign beat — pen-scratch two-blip into a
-      // stamp note, and the fresh entry pops into the wall below.
-      AudioManager.playSFX("blip1");
-      window.setTimeout(() => AudioManager.playSFX("blip3"), 120);
-      window.setTimeout(() => AudioManager.playSFX("confirm"), 280);
-      setJustSigned(true);
-      window.setTimeout(() => setJustSigned(false), 1200);
-      await loadEntries();
-    } catch {
-      setErrorMsg("Couldn't reach the server. Try again.");
+      const rows = await presenceRequest(transport.list, controller.signal);
+      if (!controller.signal.aborted) { setEntries(rows); setSignedOut(false); }
+    } catch (error) {
+      if (controller.signal.aborted) return;
+      const unauthorized = error instanceof GuestbookRequestError && error.status === 401;
+      setSignedOut(unauthorized);
+      setLoadError(unauthorized ? "Sign in to read and sign the wall." : "Couldn’t load the wall. Your draft is still here.");
     } finally {
-      setSending(false);
+      if (!controller.signal.aborted) setLoading(false);
     }
-  }, [input, sending, loadEntries]);
+  }, [transport]);
 
-  if (!open) return null;
+  useEffect(() => {
+    void loadEntries();
+    textareaRef.current?.focus();
+    const timers = timersRef.current;
+    return () => {
+      loadRef.current?.abort(); pendingRef.current?.abort();
+      for (const timer of timers) clearTimeout(timer);
+      timers.clear();
+    };
+  }, [loadEntries]);
+
+  const later = (callback: () => void, delay: number) => {
+    const timer = setTimeout(() => { timersRef.current.delete(timer); callback(); }, delay);
+    timersRef.current.add(timer);
+  };
+
+  async function submit() {
+    const message = input.trim();
+    if (!message || pendingRef.current || signedOut) return;
+    const controller = new AbortController();
+    pendingRef.current = controller;
+    setSending(true); setErrorMsg(null); setToast(null);
+    textareaRef.current?.focus();
+    try {
+      const saved = await presenceRequest((signal) => transport.sign(message, signal), controller.signal);
+      if (controller.signal.aborted) return;
+      setInput(""); setToast("Your message was saved."); setSignedId(saved.id);
+      AudioManager.playSFX("blip1");
+      later(() => AudioManager.playSFX("blip3"), 120);
+      later(() => AudioManager.playSFX("confirm"), 280);
+      later(() => setSignedId(null), 1200);
+      void loadEntries();
+    } catch (error) {
+      if (controller.signal.aborted) return;
+      if (error instanceof GuestbookRequestError && error.status === 401) setSignedOut(true);
+      setErrorMsg(guestbookSignError(error));
+    } finally {
+      if (pendingRef.current === controller) pendingRef.current = null;
+      if (!controller.signal.aborted) setSending(false);
+    }
+  }
 
   return (
     <>
@@ -144,8 +122,11 @@ export default function GuestbookOverlay({ open, onClose }: GuestbookOverlayProp
 
       {/* Panel */}
       <div
+        ref={dialogRef}
         role="dialog"
+        aria-modal="true"
         aria-label="TSI Guestbook"
+        tabIndex={-1}
         style={{
           position: "fixed",
           top: "50%",
@@ -153,8 +134,10 @@ export default function GuestbookOverlay({ open, onClose }: GuestbookOverlayProp
           transform: "translate(-50%, -50%)",
           zIndex: 60,
           width: "min(560px, 92vw)",
-          maxHeight: "82vh",
-          background: "var(--color-bg-navy)",
+          maxHeight: "min(82dvh, calc(100% - 24px))",
+          maxWidth: "calc(100% - 24px)",
+          overflowY: "auto",
+          background: "var(--color-bg-navy, #152125)",
           border: "1px solid rgba(0, 47, 167, 0.3)",
           borderRadius: 16,
           boxShadow: "0 18px 45px rgba(0, 0, 0, 0.6)",
@@ -187,6 +170,8 @@ export default function GuestbookOverlay({ open, onClose }: GuestbookOverlayProp
           >
             TSI Guestbook
           </span>
+          <div style={{ display: "flex", gap: 4 }}>
+          <button onClick={() => void loadEntries()} disabled={loading || sending} aria-label="Refresh wall" title="Refresh wall" style={{ minWidth: 44, minHeight: 44, display: "flex", alignItems: "center", justifyContent: "center", color: "#A9B8C4", opacity: loading || sending ? 0.5 : 1 }}><RefreshCw size={18} aria-hidden /></button>
           <button
             onClick={onClose}
             aria-label="Close guestbook"
@@ -194,20 +179,26 @@ export default function GuestbookOverlay({ open, onClose }: GuestbookOverlayProp
               background: "none",
               border: "none",
               cursor: "pointer",
-              color: "#9ca3af",
+              color: "#A9B8C4",
               padding: 4,
+              minWidth: 44,
+              minHeight: 44,
+              alignItems: "center",
+              justifyContent: "center",
               display: "flex",
             }}
           >
             <X size={20} />
           </button>
+          </div>
         </div>
 
+        {loading && entries !== null && <p role="status" style={{ fontSize: 12, color: "#A9B8C4" }}>Refreshing wall…</p>}
         {/* Entries list */}
         <div
           style={{
             flex: 1,
-            minHeight: 160,
+            minHeight: 100,
             maxHeight: "44vh",
             overflowY: "auto",
             padding: "4px 2px",
@@ -224,21 +215,24 @@ export default function GuestbookOverlay({ open, onClose }: GuestbookOverlayProp
               100% { transform: scale(1) translateY(0); opacity: 1; }
             }
           `}</style>
-          {entries === null ? (
+          {loadError ? <div role="status" style={{ fontSize: 12, color: "#DCC9AE", padding: "12px 0" }}>
+            <p>{loadError}</p>
+          </div> : entries === null ? (
             <div
+              role="status"
               style={{
-                color: "#6b7280",
+                color: "#A9B8C4",
                 fontStyle: "italic",
                 textAlign: "center",
                 padding: "12px 0",
               }}
             >
-              Loading entries...
+              Loading entries…
             </div>
           ) : entries.length === 0 ? (
             <div
               style={{
-                color: "#6b7280",
+                color: "#A9B8C4",
                 fontStyle: "italic",
                 textAlign: "center",
                 padding: "12px 0",
@@ -247,8 +241,8 @@ export default function GuestbookOverlay({ open, onClose }: GuestbookOverlayProp
               Be the first to sign the wall.
             </div>
           ) : (
-            entries.map((entry, i) => (
-              <div key={entry.id} style={i === 0 && justSigned ? { animation: "gb-pop 0.32s cubic-bezier(0.34, 1.56, 0.64, 1)" } : undefined}>
+            entries.map((entry) => (
+              <div key={entry.id} style={entry.id === signedId ? { animation: "gb-pop 0.32s cubic-bezier(0.34, 1.56, 0.64, 1)" } : undefined}>
                 <EntryBlock entry={entry} />
               </div>
             ))
@@ -258,6 +252,7 @@ export default function GuestbookOverlay({ open, onClose }: GuestbookOverlayProp
         {/* Error */}
         {errorMsg && (
           <div
+            role="alert"
             style={{
               padding: "8px 10px",
               background: "rgba(232, 80, 80, 0.12)",
@@ -275,15 +270,16 @@ export default function GuestbookOverlay({ open, onClose }: GuestbookOverlayProp
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           <textarea
             ref={textareaRef}
+            aria-label="Guestbook message"
             value={input}
             onChange={(e) => setInput(e.target.value.slice(0, MAX_LEN))}
             onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
+              if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing && !e.repeat) {
                 e.preventDefault();
                 submit();
               }
             }}
-            disabled={sending}
+            readOnly={sending}
             placeholder="Leave a note for the club..."
             rows={2}
             maxLength={MAX_LEN}
@@ -295,8 +291,7 @@ export default function GuestbookOverlay({ open, onClose }: GuestbookOverlayProp
               padding: "8px 10px",
               color: "#f1ffff",
               fontFamily: "inherit",
-              fontSize: 13,
-              outline: "none",
+              fontSize: 16,
               opacity: sending ? 0.6 : 1,
             }}
           />
@@ -311,7 +306,7 @@ export default function GuestbookOverlay({ open, onClose }: GuestbookOverlayProp
             <span
               style={{
                 fontSize: 10,
-                color: "#6b7280",
+                color: "#A9B8C4",
                 letterSpacing: 0.5,
               }}
             >
@@ -319,19 +314,20 @@ export default function GuestbookOverlay({ open, onClose }: GuestbookOverlayProp
             </span>
             <button
               onClick={submit}
-              disabled={sending || input.trim().length === 0}
+              disabled={sending || signedOut || input.trim().length === 0}
               aria-label="Sign guestbook"
               style={{
                 background:
-                  sending || input.trim().length === 0
+                  sending || signedOut || input.trim().length === 0
                     ? "#1f2a3a"
                     : "#002FA7",
                 border: "1px solid rgba(255,255,255,0.15)",
                 borderRadius: 8,
                 padding: "8px 14px",
+                minHeight: 44,
                 color: "#f1ffff",
                 cursor:
-                  sending || input.trim().length === 0
+                  sending || signedOut || input.trim().length === 0
                     ? "not-allowed"
                     : "pointer",
                 display: "flex",
@@ -356,11 +352,9 @@ export default function GuestbookOverlay({ open, onClose }: GuestbookOverlayProp
 
         {toast && (
           <div
+            role="status"
             style={{
-              position: "absolute",
-              bottom: -36,
-              left: "50%",
-              transform: "translateX(-50%)",
+              textAlign: "center",
               background: "rgba(15,15,16,0.92)",
               border: "1px solid rgba(255,255,255,0.15)",
               borderRadius: 8,
@@ -376,6 +370,7 @@ export default function GuestbookOverlay({ open, onClose }: GuestbookOverlayProp
       </div>
 
       <style jsx>{`
+        @media (prefers-reduced-motion: reduce) { div { animation: none !important; } :global(.gb-spin) { animation: none !important; } }
         @keyframes guestbookFadeIn {
           from {
             opacity: 0;
@@ -448,7 +443,7 @@ function EntryBlock({ entry }: { entry: GuestbookEntry }) {
             T{entry.tier}
           </span>
         </div>
-        <span style={{ color: "#6b7280" }}>
+        <span style={{ color: "#A9B8C4" }}>
           {formatRelative(entry.created_at)}
         </span>
       </div>
