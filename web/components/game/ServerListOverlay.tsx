@@ -1,5 +1,7 @@
 "use client";
 import { useServerOnline } from "@/lib/game/useServerOnline";
+import { presenceAge, upcomingTime, type OnlineData } from "@/lib/game/serverPresence";
+import { PresenceRequestError } from "@/lib/game/mobilePresence";
 
 /**
  * Sprint F1.3 — DOM overlay shown while the user holds Tab.
@@ -9,29 +11,13 @@ import { useServerOnline } from "@/lib/game/useServerOnline";
  * Rendered as a sibling of the R3F Canvas, NOT inside it.
  */
 
-function relativeTime(iso: string): string {
-  const diffMs = Date.now() - new Date(iso).getTime();
-  const mins = Math.floor(diffMs / 60_000);
-  if (mins < 1) return "now";
-  if (mins < 60) return `${mins}m ago`;
-  const h = Math.floor(mins / 60);
-  if (h < 24) return `${h}h ago`;
-  return "1d+ ago";
-}
-
-function eventTime(iso: string): string {
-  const diffMs = new Date(iso).getTime() - Date.now();
-  const mins = Math.floor(diffMs / 60_000);
-  if (mins < 5) return "starting";
-  return `in ${mins}m`;
-}
-
 export default function ServerListOverlay({ visible }: { visible: boolean }) {
-  const { data } = useServerOnline(visible);
+  const { data, error, isLoading } = useServerOnline(visible);
   if (!visible) return null;
+  return <ServerListView data={data} status={error ? "error" : isLoading ? "loading" : "ready"} signedOut={error instanceof PresenceRequestError && error.status === 401} />;
+}
 
-  const totalHere = data.online.length + data.npcs.length;
-
+export function ServerListView({ data, status, signedOut = false }: { data: OnlineData; status: "loading" | "ready" | "error"; signedOut?: boolean }) {
   return (
     <div
       style={{
@@ -48,8 +34,14 @@ export default function ServerListOverlay({ visible }: { visible: boolean }) {
       }}
     >
       <div
+        role="region"
+        aria-label="Member presence"
         style={{
-          width: "min(600px, 90vw)",
+          pointerEvents: "auto",
+          maxHeight: "min(78dvh, calc(100% - 24px))",
+          overflowY: "auto",
+          width: 600,
+          maxWidth: "calc(100% - 24px)",
           background: "rgba(15, 15, 16, 0.92)",
           border: "1px solid rgba(255,255,255,0.18)",
           borderRadius: "8px",
@@ -59,18 +51,22 @@ export default function ServerListOverlay({ visible }: { visible: boolean }) {
       >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "12px" }}>
           <div style={{ fontSize: "14px", fontWeight: 700, letterSpacing: "0.05em" }}>TSI WORLD</div>
-          <div style={{ fontSize: "11px", color: "#8a939a" }}>{totalHere} here · hold Tab</div>
+          <div style={{ fontSize: "11px", color: "#A9B8C4" }}>hold Tab</div>
         </div>
 
+        {status === "loading" && <p role="status" style={{ fontSize: 12, color: "#A9B8C4" }}>Checking member presence…</p>}
+        {status === "error" && <p role="status" style={{ fontSize: 12, color: "#DCC9AE" }}>{signedOut ? "Sign in to see member presence." : "Member presence is unavailable. Try again shortly."}</p>}
+        {status === "ready" && <>
+        {data.online.length === 0 && data.recent.length === 0 && <p style={{ fontSize: 12, color: "#A9B8C4", marginBottom: 12 }}>No member activity in the past 24 hours.</p>}
         {data.online.length > 0 && (
-          <Section title="Online now" dotColor="#7CB342">
+          <Section title="Active in the last 5 minutes" dotColor="#7CB342">
             {data.online.map((p) => (
               <Row
                 key={p.user_id}
                 dot="#7CB342"
                 name={p.display_name}
                 meta={`Lv${p.level}${p.class ? " · " + p.class : ""}`}
-                right="now"
+                right={presenceAge(p.recorded_at)}
               />
             ))}
           </Section>
@@ -84,17 +80,17 @@ export default function ServerListOverlay({ visible }: { visible: boolean }) {
                 dot="#FFD166"
                 name={p.display_name}
                 meta={`Lv${p.level}`}
-                right={relativeTime(p.recorded_at)}
+                right={presenceAge(p.recorded_at)}
               />
             ))}
           </Section>
         )}
 
-        <Section title="NPCs" dotColor="#8a939a">
+        {data.npcs.length > 0 && <Section title="Village NPCs" dotColor="#8a939a">
           {data.npcs.map((n) => (
             <Row key={n.id} dot="#8a939a" name={n.display_name} meta={n.spawn_zone} right="" />
           ))}
-        </Section>
+        </Section>}
 
         {data.events.length > 0 && (
           <Section title="Happening soon" dotColor="#FF7518">
@@ -104,11 +100,12 @@ export default function ServerListOverlay({ visible }: { visible: boolean }) {
                 dot="#FF7518"
                 name={e.title}
                 meta={e.location ?? ""}
-                right={eventTime(e.start_time)}
+                right={upcomingTime(e.start_time)}
               />
             ))}
           </Section>
         )}
+        </>}
       </div>
     </div>
   );
@@ -124,7 +121,7 @@ function Section({ title, dotColor, children }: { title: string; dotColor: strin
           gap: "6px",
           marginBottom: "4px",
           fontSize: "11px",
-          color: "#8a939a",
+          color: "#A9B8C4",
           textTransform: "uppercase",
           letterSpacing: "0.08em",
         }}
@@ -143,9 +140,9 @@ function Row({ dot, name, meta, right }: { dot: string; name: string; meta: stri
       <div style={{ display: "flex", alignItems: "center", gap: "8px", flex: 1, minWidth: 0 }}>
         <span style={{ width: 5, height: 5, borderRadius: "50%", background: dot, flexShrink: 0 }} />
         <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{name}</span>
-        {meta && <span style={{ color: "#8a939a", fontSize: "11px" }}>{meta}</span>}
+        {meta && <span style={{ color: "#A9B8C4", fontSize: "11px" }}>{meta}</span>}
       </div>
-      {right && <span style={{ color: "#8a939a", fontSize: "11px", flexShrink: 0, marginLeft: "8px" }}>{right}</span>}
+      {right && <span style={{ color: "#A9B8C4", fontSize: "11px", flexShrink: 0, marginLeft: "8px" }}>{right}</span>}
     </div>
   );
 }

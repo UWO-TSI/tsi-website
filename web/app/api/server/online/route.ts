@@ -36,6 +36,10 @@ export async function GET() {
       .limit(10),
   ]);
 
+  if (positions.error || npcs.error || events.error) {
+    return NextResponse.json({ error: "Member presence unavailable" }, { status: 503 });
+  }
+
   type RawPos = {
     user_id: string;
     recorded_at: string;

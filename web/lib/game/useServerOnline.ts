@@ -1,63 +1,21 @@
 "use client";
 import useSWR from "swr";
+import { EMPTY_PRESENCE, fetchServerPresence, type OnlineData } from "./serverPresence";
+export type { OnlinePlayer, OnlineNPC, UpcomingEvent } from "./serverPresence";
 
-/**
- * Sprint F1.3 — server-list data hook for the hold-Tab overlay.
- * Only polls while `active` is true (overlay visible). When closed the
- * SWR key is null, so no fetch is scheduled.
- */
-
-export interface OnlinePlayer {
-  user_id: string;
-  display_name: string;
-  level: number;
-  class: string | null;
-  tier: number;
-  recorded_at: string;
-}
-export interface OnlineNPC {
-  id: string;
-  display_name: string;
-  spawn_zone: string;
-  is_permanent: boolean;
-}
-export interface UpcomingEvent {
-  id: string;
-  title: string;
-  start_time: string;
-  location: string | null;
-}
-
-interface OnlineData {
-  online: OnlinePlayer[];
-  recent: OnlinePlayer[];
-  npcs: OnlineNPC[];
-  events: UpcomingEvent[];
-}
-
-const EMPTY: OnlineData = { online: [], recent: [], npcs: [], events: [] };
 const ONE_MIN = 60_000;
 
-async function fetcher(): Promise<OnlineData> {
-  try {
-    const res = await fetch("/api/server/online");
-    if (!res.ok) return EMPTY;
-    return (await res.json()) as OnlineData;
-  } catch {
-    return EMPTY;
-  }
-}
-
+/** The hold-Tab view polls recent heartbeats only while open. */
 export function useServerOnline(active: boolean) {
-  const { data, isLoading } = useSWR<OnlineData>(
+  const { data, error, isLoading } = useSWR<OnlineData>(
     active ? "server-online" : null,
-    fetcher,
+    () => fetchServerPresence(),
     {
       revalidateOnFocus: false,
-      revalidateOnReconnect: false,
+      revalidateOnReconnect: true,
       dedupingInterval: ONE_MIN,
       refreshInterval: active ? ONE_MIN : 0,
     },
   );
-  return { data: data ?? EMPTY, isLoading };
+  return { data: data ?? EMPTY_PRESENCE, error, isLoading };
 }

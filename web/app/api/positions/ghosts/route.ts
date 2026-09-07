@@ -14,7 +14,7 @@ export async function GET() {
     .gte("recorded_at", since)
     .order("recorded_at", { ascending: false })
     .limit(10);
-  if (error) return NextResponse.json({ ghosts: [] });
+  if (error) return NextResponse.json({ error: "Recent visitors unavailable" }, { status: 503 });
 
   const ghosts = (data ?? []).map((row: unknown) => {
     const r = row as { user_id: string; world_x: number; world_z: number; recorded_at: string; profiles?: { display_name?: string; level?: number } };

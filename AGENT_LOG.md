@@ -108,6 +108,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-09-07 truthful member presence
+
+Loading/errors/empty and recent-heartbeat semantics fixed in the list. Read-only presence endpoints return 503 on query failures; auth and successful schemas unchanged. 292 tests, types/lint/build pass, narrow source fixture QA complete. HMR panic recorded separately; fixture removed and preview restarting. See checkpoint.
+
 ### 2026-09-07 emote menu polish
 
 Wrapped narrow layout, visible close, keyboard ownership, empty state and missing-icon fallback verified in Dia with fake selection only. Fixture removed; types/lint pass. Latest full suite/build: audio batch, 273 tests. See checkpoint.
