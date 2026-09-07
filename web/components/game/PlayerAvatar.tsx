@@ -9,6 +9,7 @@ import { clampToCoast, coastDist } from "@/lib/game/coast";
 import { getTodayWeather } from "@/lib/game/weather";
 import { useSFX } from "@/lib/game/useAudio";
 import { getCameraForwardXZ } from "@/lib/game/cameraBasis";
+import { advanceMotion, easeFacing, relativeFacingAngle } from "@/lib/game/locomotion";
 import { Surface } from "@/lib/game/grid";
 import { calculateCurvedHtmlPosition } from "@/lib/game/worldProjection";
 import { pickCurvedGround } from "@/lib/game/groundPick";
@@ -28,19 +29,9 @@ const EMOTE_EMOJI: Record<string, string> = {
 };
 
 /**
- * PlayerAvatar — 2D sprite on Billboard in 3D world (Dave the Diver style)
- *
- * Uses a sprite sheet loaded from /assets/characters/prototype_character.png
- * UV offset/repeat used to crop one frame at a time.
- * Frame cycling in useFrame for walk animation.
- *
- * Sprite sheet layout (estimated from prototype):
- *   Rows 0-1: front idle (2 frames)
- *   Rows 2-3: front walk (3 frames)
- *   Rows 4-5: side (2-3 frames)
- *   Rows 6+: back/other directions
- *
- * Configurable via SHEET_COLS/SHEET_ROWS constants.
+ * Shared billboard avatar using the Ninja Adventure 16px walk sheet.
+ * Four direction columns and four animation rows; movement, sprite facing,
+ * ground queries and feedback stay synchronized in the frame loop.
  */
 
 const PLAYER_SPEED = 7.4; // refinement 2026-07-22 (David: walk felt slow) — was 6.3
@@ -113,7 +104,7 @@ interface PlayerAvatarProps {
 
 export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Player", playerLevel = 1, activeEmote = null, groundHeight = sampleTerrainHeightFast, groundSurface, constrainMove }: PlayerAvatarProps) {
   const groupRef = useRef<THREE.Group>(null);
-  const meshRef = useRef<THREE.Mesh>(null);
+  const spriteRef = useRef<THREE.Group>(null);
   // Initialize y on the terrain at spawn so the avatar doesn't visibly
   // drop in from y=0 if the spawn point sits on a slope.
   const positionRef = useRef(new THREE.Vector3(
@@ -368,9 +359,9 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
       facingRef.current = Math.PI; // face the camera (down column, front cell)
       currentFrame.current = 0;
       spriteTexture.offset.set(DIR_DOWN.col / SHEET_COLS, 1 - 1 / SHEET_ROWS);
-      if (meshRef.current) {
+      if (spriteRef.current) {
         // Lower the sprite so it reads as seated on the bench slats.
-        meshRef.current.position.y = SPRITE_BASE_Y - 0.42;
+        spriteRef.current.position.y = SPRITE_BASE_Y - 0.42;
       }
       velRef.current.set(0, 0);
       if (isMoving) setIsMoving(false);
@@ -407,13 +398,14 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
     if (!moving && targetRef.current) {
       const toTarget = targetRef.current.clone().sub(pos);
       toTarget.y = 0;
-      if (toTarget.length() > 0.3) {
+      if (toTarget.length() > 0.1) {
         toTarget.normalize();
         dx = toTarget.x;
         dz = toTarget.z;
         moving = true;
       } else {
         targetRef.current = null;
+        velRef.current.set(0, 0);
       }
     }
 
@@ -435,29 +427,22 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
           playSFX("footstep");
         }
       }
-      vel.x = THREE.MathUtils.damp(vel.x, moving ? dx * PLAYER_SPEED * speedMult : 0, lam, delta);
-      vel.y = THREE.MathUtils.damp(vel.y, moving ? dz * PLAYER_SPEED * speedMult : 0, lam, delta);
-      if (Math.abs(vel.x) > 0.02 || Math.abs(vel.y) > 0.02) {
-        const nextX = pos.x + vel.x * delta;
-        const nextZ = pos.z + vel.y * delta;
-        const [cpx, cpz] = constrainMove
-          ? constrainMove(pos.x, pos.z, nextX, nextZ)
-          : clampToCoast(nextX, nextZ, BOUNDARY);
-        if (Math.abs(cpx - nextX) > 0.0001) vel.x = (cpx - pos.x) / delta;
-        if (Math.abs(cpz - nextZ) > 0.0001) vel.y = (cpz - pos.z) / delta;
-        pos.x = cpx;
-        pos.z = cpz;
-      }
+      const motion = advanceMotion(
+        { x: pos.x, z: pos.z, vx: vel.x, vz: vel.y },
+        { x: moving ? dx : 0, z: moving ? dz : 0, speed: PLAYER_SPEED * speedMult, response: lam, goal: targetRef.current ?? undefined },
+        delta,
+        constrainMove ?? ((_x, _z, nextX, nextZ) => clampToCoast(nextX, nextZ, BOUNDARY)),
+      );
+      pos.x = motion.x;
+      pos.z = motion.z;
+      vel.set(motion.vx, motion.vz);
+      if (motion.arrived) targetRef.current = null;
       if (moving) {
         const targetAngle = Math.atan2(dx, dz);
-        facingRef.current = THREE.MathUtils.lerp(
-          facingRef.current,
-          targetAngle,
-          ROTATION_LERP * delta
-        );
+        facingRef.current = easeFacing(facingRef.current, targetAngle, ROTATION_LERP, delta);
       }
       // Feedback follows movement that survived collision, including glide-out.
-      moving = Math.hypot(pos.x - prevX, pos.z - prevZ) > 0.02 * delta;
+      moving = motion.moving;
       // Lean into screen-space lateral motion (~5° max), damped.
       const latVel = vel.x * rx + vel.y * rz;
       const targetLean = THREE.MathUtils.clamp(-latVel / PLAYER_SPEED, -1, 1) * 0.085;
@@ -495,12 +480,11 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
     pos.y = THREE.MathUtils.damp(pos.y, targetY, 1 / Y_DAMP_TIME, delta);
 
     // Determine direction for sprite sheet
-    const angle = facingRef.current;
+    const angle = relativeFacingAngle(facingRef.current, fx, fz);
     const normalizedAngle = ((angle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
 
-    // facing = atan2(dx, dz): 0 = +z (away from the default camera → back
-    // view), π = toward camera (front). Verified against the Ninja sheet
-    // 2026-07-04 — the old mapping had up/down swapped for this layout.
+    // Camera-relative heading: away uses the back of the sprite, toward
+    // uses its front. Rotating the view must rotate this mapping too.
     let anim = moving ? WALK_UP : DIR_UP;
     if (normalizedAngle > Math.PI * 0.25 && normalizedAngle <= Math.PI * 0.75) {
       anim = moving ? WALK_LEFT : DIR_LEFT;
@@ -590,8 +574,8 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
       }
     }
 
-    if (meshRef.current) {
-      meshRef.current.position.y = SPRITE_BASE_Y + bobY + jumpY;
+    if (spriteRef.current) {
+      spriteRef.current.position.y = SPRITE_BASE_Y + bobY + jumpY;
       // G1 squash & stretch: stretch on the way up, squash for ~0.18s on
       // landing, lean tilt from lateral motion. Billboard makes rotation.z
       // a clean screen-space tilt.
@@ -604,8 +588,8 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
         sx = 1 + 0.1 * q;
         sy = 1 - 0.12 * q;
       }
-      meshRef.current.scale.set(sx, sy, 1);
-      meshRef.current.rotation.z = leanRef.current;
+      spriteRef.current.scale.set(sx, sy, 1);
+      spriteRef.current.rotation.z = leanRef.current;
     }
 
     // Footstep SFX — fire ~every 0.4s walking, ~0.25s when sprinting (F1.6).
@@ -645,7 +629,7 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
     // the terrain (keeps camera in sync after stopping on a slope).
     const ySettling = Math.abs(pos.y - targetY) > 0.005;
     if (moving || ySettling) onMove(pos.clone());
-  });
+  }, -3);
 
   return (
     <>
@@ -689,16 +673,14 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
       <group ref={groupRef} position={spawnPosition}>
       {/* (Art pass 2026-07-07: the player keeps its ORIGINAL static_shadow
           decal below — adding a second blob here doubled the shadow.) */}
-      {/* Character sprite on billboard. P31: bumped 1.0×1.4 → 1.4×2.0
-          (~40% larger) so the player reads clearly at default camera
-          distance. Sprite-base-y also pushed up to keep the avatar
-          feet-on-ground. */}
+      {/* The sprite, outline and nameplate share the same animated pose. */}
       <Billboard follow lockX={false} lockY={false} lockZ={false}>
+        <group ref={spriteRef} position={[0, SPRITE_BASE_Y, 0]}>
         {/* P-light v2 character pop: dark silhouette halo behind the
             sprite (same animated texture, black-multiplied, 7% larger) —
             the classic outline trick that separates characters from the
             world. One extra draw. */}
-        <mesh position={[0, 1.1, -0.012]} scale={[1.07, 1.07, 1]}>
+        <mesh position={[0, 0, -0.012]} scale={[1.07, 1.07, 1]}>
           <planeGeometry args={[1.45, 1.45]} />
           <meshBasicMaterial
             map={spriteTexture}
@@ -710,7 +692,7 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
             depthWrite={false}
           />
         </mesh>
-        <mesh ref={meshRef} position={[0, 1.1, 0]}>
+        <mesh>
           <planeGeometry args={[1.45, 1.45]} />
           {/* Playtest fix 2026-07-13: depthWrite ON — alphaTest already
               cuts the sprite out, and without depth the ground path ribbon
@@ -724,6 +706,29 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
             depthWrite
           />
         </mesh>
+      {/* Nameplate */}
+      <Html calculatePosition={calculateCurvedHtmlPosition} zIndexRange={[40, 0]}
+        position={[0, 1.12, 0]}
+        center
+        style={{ pointerEvents: "none" }}
+      >
+        <div
+          className="whitespace-nowrap text-center"
+          style={{
+            background: "rgba(15, 15, 16, 0.6)",
+            padding: "2px 8px",
+            borderRadius: "4px",
+          }}
+        >
+          <div style={{ fontSize: "11px", fontWeight: 700, color: "#f1ffff", lineHeight: 1.2 }}>
+            {playerName}
+          </div>
+          <div style={{ fontSize: "9px", color: "#b8c3c3", fontFamily: "'IBM Plex Mono', monospace", lineHeight: 1.2 }}>
+            Lv. {playerLevel}
+          </div>
+        </div>
+      </Html>
+        </group>
       </Billboard>
 
       {/* Ground shadow — scaled to the pt2 smaller sprite. */}
@@ -816,28 +821,7 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
         </Html>
       )}
 
-      {/* Nameplate */}
-      <Html calculatePosition={calculateCurvedHtmlPosition} zIndexRange={[40, 0]}
-        position={[0, 2.0, 0]}
-        center
-        style={{ pointerEvents: "none" }}
-      >
-        <div
-          className="whitespace-nowrap text-center"
-          style={{
-            background: "rgba(15, 15, 16, 0.6)",
-            padding: "2px 8px",
-            borderRadius: "4px",
-          }}
-        >
-          <div style={{ fontSize: "11px", fontWeight: 700, color: "#f1ffff", lineHeight: 1.2 }}>
-            {playerName}
-          </div>
-          <div style={{ fontSize: "9px", color: "#b8c3c3", fontFamily: "'IBM Plex Mono', monospace", lineHeight: 1.2 }}>
-            Lv. {playerLevel}
-          </div>
-        </div>
-      </Html>
+
       </group>
     </>
   );

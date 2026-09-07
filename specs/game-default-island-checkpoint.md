@@ -56,3 +56,14 @@ This is a playable review checkpoint, not final visual or whole-game acceptance.
 - Full legacy world renders after a fresh reload and Noon control change. It still has a seasonal palette fetch fallback warning and existing visual debt; this is a smoke check, not whole-world acceptance. An earlier auth-lock recovery warning appeared during heavy hot reloads. Backend contracts were not changed.
 - Turbopack resolved Tailwind from the wrong repository root after switching between production build and dev. Set explicit web app roots and moved stale `.next/dev` output into a uniquely named `/tmp/uwotsi-island-dev-cache-*` directory. Both lab routes then compiled and returned 200. No dependency updates.
 - Latest suite: 136 tests across eight files. TypeScript and targeted ESLint pass. Production build predates this follow-up and will be rerun after the next coherent batch.
+
+## September 7 movement and avatar pose follow-up
+
+- Second checkpoint committed locally as `32e90dd`.
+- Replaced frame-end velocity integration with exact exponential displacement. The old calculation moved about 18 cm farther over one second at 15 FPS than at 120 FPS. Tests now compare walking, sprinting, reversing and stopping across 10–120 FPS.
+- Tap movement slows toward its target, stops within 10 cm and clears velocity; tests verify no overshoot and that collision still blocks water with no walking feedback against a bank.
+- Facing turns through the shortest angular arc and sprite direction is camera-relative, including cameras on all four sides.
+- Dia hop screenshot exposed a stationary outline and overlapping nameplate. Sprite, outline and label now share the animated billboard pose, updated before camera/HTML projection. Repeat hop screenshot shows the outline attached and label above the head.
+- Latest suite: 149 tests across nine files; TypeScript and targeted ESLint pass. Production webpack build passed after this batch and the recovery/root changes. Dev preview restored on 3107.
+- Full-world logs also revealed missing permanent NPC sprite URLs in content defaults; investigate with existing sprite library next. Auth-protected collection/ghost endpoints return 401 in the unauthenticated lab, so this smoke check does not verify persistence or live presence.
+- CUA reconnect note: reset detached the original tab (511417935); reconnect could not reclaim it. Current QA tab 511417936 opened through the same verified Dia extension browser. Do not reset the CUA session merely to reread documentation. Old preview remains open because its handle could not close it; do not close unrelated user tabs.

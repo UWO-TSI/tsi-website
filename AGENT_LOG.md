@@ -108,6 +108,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-09-07 — Consistent locomotion and avatar pose (Codex)
+
+Exact acceleration displacement removes measured frame-rate travel bias; tap movement brakes to its target, and collision still constrains its path. Camera-relative sprite facing and shortest-arc turns tested. Live Dia hop caught detached outline/nameplate; one animated billboard pose now keeps them together. 149 tests across nine files, TypeScript, targeted lint and production webpack build pass. Dev preview restored. Found missing permanent NPC sprites during full-world smoke check; existing-library audit next. No push or backend changes.
+
 ### 2026-09-07 — Scene recovery and ground-contact QA (Codex)
 
 Added shared scene failure recovery and tested a missing HQ asset followed by restoration/reload in Dia. PostFX now observes graphics-context loss after a real HMR failure; event lifecycle covered by a regression test. Grid surface drives footsteps, collision constrains feedback velocity, and rounded shore cutouts are no longer walkable squares. Corrected grass normal Z reconstruction and explicit Next web roots. 136 tests, TypeScript and targeted lint pass; latest fresh default-island console clean. Full-world smoke check renders with a seasonal-content fallback warning; broader acceptance remains open. First checkpoint is local commit `3dff288`. No push.
