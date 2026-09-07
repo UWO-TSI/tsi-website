@@ -21,7 +21,7 @@ import {
   RARITY_META,
   celebrate,
   currentFishingContext,
-  fishWeight,
+  fishingPool,
   rollFish,
   rollSize,
   type FishDef,
@@ -67,10 +67,13 @@ export default function FishingBench() {
   // Bumped by weather clicks so availability/sim recompute (weather lives in
   // the URL, which React can't see change).
   const [envTick, setEnvTick] = useState(0);
+  const [zone, setZone] = useState<"river" | "sea">("river");
 
   const ctx = useMemo(() => currentFishingContext(), [lab.hour, envTick]); // eslint-disable-line react-hooks/exhaustive-deps
-  const pool = FISH.filter((f) => !f.when || f.when(ctx.hour, ctx.weather));
-  const totalW = pool.reduce((s, f) => s + fishWeight(f, ctx.weather), 0);
+  const species = FISH.filter((f) => (f.zone ?? "river") === zone);
+  const pool = fishingPool(0, zone, ctx);
+  const totalW = pool.reduce((s, entry) => s + entry.weight, 0);
+  const weights = new Map(pool.map(({ fish, weight }) => [fish.key, weight]));
 
   const playReel = () => {
     setLastResult(null);
@@ -92,11 +95,11 @@ export default function FishingBench() {
   const simulate = () => {
     const counts = new Map<string, number>();
     for (let i = 0; i < 1000; i++) {
-      const f = rollFish();
+      const f = rollFish(0, zone, ctx);
       counts.set(f.key, (counts.get(f.key) ?? 0) + 1);
     }
     setSimRows(
-      FISH.map((f) => ({
+      species.map((f) => ({
         key: f.key,
         name: f.name,
         rarity: f.rarity,
@@ -128,35 +131,52 @@ export default function FishingBench() {
             min={0}
             max={23}
             value={lab.hour ?? new Date().getHours()}
-            onChange={(e) => setLabHour(Number(e.target.value))}
+            onChange={(e) => { setLabHour(Number(e.target.value)); setSimRows(null); }}
             style={{ width: 56, padding: "3px 6px", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 5, color: "#f1ffff", fontFamily: "inherit" }}
           />
           {lab.hour !== null && (
-            <button onClick={() => setLabHour(null)} style={btn()}>wall clock</button>
+            <button onClick={() => { setLabHour(null); setSimRows(null); }} style={btn()}>wall clock</button>
           )}
         </label>
         <span style={{ color: "#8a939a" }}>weather:</span>
         {WEATHERS.map((w) => (
           <button
             key={w}
-            onClick={() => { setWeatherParam(w); setEnvTick((t) => t + 1); }}
+            aria-pressed={ctx.weather === w}
+            onClick={() => { setWeatherParam(w); setEnvTick((t) => t + 1); setSimRows(null); }}
             style={btn(ctx.weather === w)}
           >
             {w}
           </button>
         ))}
+        <label style={{ display: "flex", gap: 6, alignItems: "center" }}>
+          habitat
+          <select value={zone} onChange={(e) => {
+            const next = e.target.value as "river" | "sea";
+            setZone(next);
+            setSelected(FISH.find((f) => (f.zone ?? "river") === next)!);
+            setReelOpen(false);
+            setLastResult(null);
+            setSimRows(null);
+          }} style={{ ...btn(), colorScheme: "dark" }}>
+            <option value="river">River</option>
+            <option value="sea">Sea</option>
+          </select>
+        </label>
         <span style={{ marginLeft: "auto", color: "#8a939a" }}>
-          {pool.length}/{FISH.length} species biting now
+          {pool.length}/{species.length} {zone} species biting now
         </span>
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "280px 1fr", gap: 18 }}>
         {/* Species list */}
         <div>
-          {FISH.map((f) => {
+          <p style={{ color: "#8a939a", marginBottom: 8 }}>Odds include weather luck; cast luck is zero.</p>
+          {species.map((f) => {
             const meta = RARITY_META[f.rarity];
-            const available = !f.when || f.when(ctx.hour, ctx.weather);
-            const pct = available ? ((fishWeight(f, ctx.weather) / totalW) * 100).toFixed(1) : null;
+            const weight = weights.get(f.key) ?? 0;
+            const available = weight > 0;
+            const pct = available ? ((weight / totalW) * 100).toFixed(1) : null;
             return (
               <button
                 key={f.key}
@@ -189,10 +209,10 @@ export default function FishingBench() {
             );
           })}
           <button onClick={simulate} style={{ ...btn(), width: "100%", marginTop: 8, padding: "7px" }}>
-            Simulate 1000 casts (current hour/weather)
+            Simulate 1000 {zone} casts
           </button>
           {simRows && (
-            <div style={{ marginTop: 8, padding: 10, background: "rgba(255,255,255,0.04)", borderRadius: 8, fontSize: 10 }}>
+            <div role="region" aria-label="Simulated catches" style={{ marginTop: 8, padding: 10, background: "rgba(255,255,255,0.04)", borderRadius: 8, fontSize: 10 }}>
               {simRows.map((r) => (
                 <div key={r.key} style={{ display: "flex", justifyContent: "space-between", padding: "2px 0" }}>
                   <span>{r.name}</span>

@@ -179,20 +179,26 @@ function luckWeight(f: FishDef, weather: string, luck: number): number {
   return w;
 }
 
+/** Available weighted catches, including weather luck, shared with the QA bench. */
+export function fishingPool(luck = 0, zone: "river" | "sea" = "river", context = currentFishingContext()) {
+  const { hour, weather } = context;
+  const totalLuck = luck + weatherMods(weather).rareLuckBonus;
+  return FISH
+    .filter((f) => (f.zone ?? "river") === zone && (!f.when || f.when(hour, weather)))
+    .map((fish) => ({ fish, weight: luckWeight(fish, weather, totalLuck) }));
+}
+
 /** Weighted roll over the species available right now. luck 0..~1.3 from
  *  cast power — see CAST. */
-export function rollFish(luck = 0, zone: "river" | "sea" = "river"): FishDef {
-  const { hour, weather } = currentFishingContext();
-  // Weather perk: rain adds flat luck on top of cast power.
-  const totalLuck = luck + weatherMods(weather).rareLuckBonus;
-  const pool = FISH.filter((f) => (f.zone ?? "river") === zone && (!f.when || f.when(hour, weather)));
-  const total = pool.reduce((s, f) => s + luckWeight(f, weather, totalLuck), 0);
+export function rollFish(luck = 0, zone: "river" | "sea" = "river", context = currentFishingContext()): FishDef {
+  const pool = fishingPool(luck, zone, context);
+  const total = pool.reduce((s, entry) => s + entry.weight, 0);
   let r = Math.random() * total;
-  for (const f of pool) {
-    r -= luckWeight(f, weather, totalLuck);
-    if (r <= 0) return f;
+  for (const { fish, weight } of pool) {
+    r -= weight;
+    if (r <= 0) return fish;
   }
-  return pool[pool.length - 1];
+  return pool[pool.length - 1].fish;
 }
 
 /** Skewed size roll — most catches modest, big ones are the brag. */

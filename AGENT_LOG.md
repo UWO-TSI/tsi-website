@@ -108,6 +108,8 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+- 2026-09-07: Correct fishing bench habitat/odds/simulation drift with shared weighted pool. 225 tests, types, lint and production build pass; Dia sea simulation and stale-result reset verified. No authored probability changes.
+
 - 2026-09-07: Preserve collection discovery at zero stock, validate local records, and polish book loading/keyboard/sticky header. 221 tests, types and targeted lint pass; Dia fixture verified and removed. Phone viewport and authenticated sale integrity remain open. See `specs/game-default-island-checkpoint.md`.
 
 - **2026-09-07 (Codex):** Hook→reel now inherits held key/pointer state while honoring releases before mount; 3 handoff regressions added. 203 tests, types/lint and production build pass. Physical sustained-input handoff remains unverified. Starting collection integrity review locally; no backend changes yet.
