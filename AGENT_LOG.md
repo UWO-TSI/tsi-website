@@ -108,6 +108,8 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+- 2026-09-07 Codex: nested shop details/world-sheet focus and Escape ownership repaired. Dia fake nested + actual anonymous sheet keyboard checks pass, 44px named item close; no purchases. 405 tests/types/build pass, lint only carried image warnings. Next original park bench asset repair. See checkpoint.
+
 - 2026-09-07 Codex: truthful shop/account GET errors, validated read transport, retry/abort feedback and unknown-balance checkout guard. Existing economy POST unchanged. 405 tests + types/webpack build pass; lint only 2 carried img warnings. Dia fake read QA clean, no purchases. Next nested shop/sheet keyboard behavior. See checkpoint.
 
 - 2026-09-07 Codex: reduced hardwood leaf atlas contrast; ordinary/instanced material paths match in Dia, remount/night/crisp checks clean. Material tests/types/targeted lint/webpack build pass. Full 387-test baseline on preceding composition commit. Main clean, local only. Next shop loading/error feedback, no purchase-rule edits. See checkpoint.

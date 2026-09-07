@@ -14,6 +14,9 @@ export function useWorldDialog(open: boolean, onClose: () => void, closeKey?: st
     const controls = () => Array.from(panel?.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), a[href], [tabindex="0"]') ?? []).filter((node) => node.getClientRects().length > 0);
     (controls()[0] ?? panel)?.focus();
     const onKey = (event: KeyboardEvent) => {
+      const activeDialog = document.activeElement?.closest('[role="dialog"], dialog');
+      // A nested dialog owns its shortcuts and tab loop until it closes.
+      if (activeDialog && activeDialog !== panel && panel?.contains(activeDialog)) return;
       const extraClose = closeKey && !event.metaKey && !event.ctrlKey && !event.altKey && event.key.toLowerCase() === closeKey.toLowerCase();
       if (event.key === "Escape" || extraClose) {
         event.preventDefault();

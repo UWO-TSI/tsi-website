@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import confetti from "canvas-confetti";
 import { AudioManager } from "@/lib/game/audio";
 import { ShoppingBag, Coins, SearchX, X } from "lucide-react";
 import { presenceRequest, PresenceRequestError } from "@/lib/game/mobilePresence";
+import { useWorldDialog } from "@/lib/game/useWorldDialog";
 import { shopReadTransport, type ShopProduct as Product, type ShopReadTransport } from "@/lib/game/shopRead";
 
 type Category = "all" | "apparel" | "accessories" | "digital" | "merch";
@@ -27,6 +28,8 @@ export default function ShopView({ transport = shopReadTransport }: { transport?
   const [attempt, setAttempt] = useState(0);
   const [selected, setSelected] = useState<Product | null>(null);
   const [purchasing, setPurchasing] = useState(false);
+  const detailTitleId = useId();
+  const detailRef = useWorldDialog(selected !== null, () => setSelected(null));
 
   useEffect(() => {
     const controller = new AbortController();
@@ -175,12 +178,17 @@ export default function ShopView({ transport = shopReadTransport }: { transport?
       {selected && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.6)" }} onClick={() => setSelected(null)}>
           <div
+            ref={detailRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={detailTitleId}
+            tabIndex={-1}
             className="w-full rounded-2xl overflow-y-auto"
             style={{ maxWidth: 720, maxHeight: "80vh", background: "var(--color-bg-navy)", border: "1px solid rgba(0, 47, 167, 0.3)", padding: 24 }}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex justify-end mb-2">
-              <button onClick={() => setSelected(null)} style={{ color: "var(--color-text-muted)" }}><X className="w-5 h-5" /></button>
+              <button aria-label="Close item details" onClick={() => setSelected(null)} style={{ color: "var(--color-text-muted)", width: 44, height: 44, display: "flex", alignItems: "center", justifyContent: "center" }}><X className="w-5 h-5" aria-hidden /></button>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <div className="rounded-xl overflow-hidden" style={{ aspectRatio: "1", background: "#111113" }}>
@@ -193,7 +201,7 @@ export default function ShopView({ transport = shopReadTransport }: { transport?
                 )}
               </div>
               <div>
-            <h2 className="text-2xl font-bold mb-2" style={{ color: "var(--color-text-main)" }}>{selected.name}</h2>
+            <h2 id={detailTitleId} className="text-2xl font-bold mb-2" style={{ color: "var(--color-text-main)" }}>{selected.name}</h2>
             <div className="flex items-center gap-3 mb-4">
               {selected.price_cad != null && <span className="text-2xl font-bold" style={{ color: "var(--color-text-main)" }}>${selected.price_cad.toFixed(2)}</span>}
               {selected.price_tc != null && <span className="font-mono text-base" style={{ color: "#ffd166" }}>{selected.price_tc} 💎</span>}

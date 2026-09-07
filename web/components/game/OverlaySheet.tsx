@@ -16,9 +16,10 @@
  * dashboard sidebar still work; this only changes in-world interaction.
  */
 
-import { Component as ReactComponent, useEffect, type ReactNode } from "react";
+import { Component as ReactComponent, type ReactNode } from "react";
 import dynamic from "next/dynamic";
 import { X } from "lucide-react";
+import { useWorldDialog } from "@/lib/game/useWorldDialog";
 
 const SheetShop = dynamic(() => import("@/app/student/dashboard/shop/page"), { ssr: false, loading: SheetLoading });
 const SheetBounty = dynamic(() => import("@/app/student/dashboard/bounty/page"), { ssr: false, loading: SheetLoading });
@@ -81,17 +82,7 @@ export function sheetKeyForHref(href: string | undefined): SheetKey | null {
 }
 
 export default function OverlaySheet({ sheet, onClose }: { sheet: SheetKey | null; onClose: () => void }) {
-  useEffect(() => {
-    if (!sheet) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.stopPropagation();
-        onClose();
-      }
-    };
-    window.addEventListener("keydown", onKey, true);
-    return () => window.removeEventListener("keydown", onKey, true);
-  }, [sheet, onClose]);
+  const dialogRef = useWorldDialog(sheet !== null, onClose);
 
   if (!sheet) return null;
   const { Component, title } = SHEETS[sheet];
@@ -108,7 +99,10 @@ export default function OverlaySheet({ sheet, onClose }: { sheet: SheetKey | nul
         }}
       />
       <div
+        ref={dialogRef}
         role="dialog"
+        aria-modal="true"
+        tabIndex={-1}
         aria-label={title}
         style={{
           position: "absolute",
