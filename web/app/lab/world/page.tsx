@@ -11,6 +11,7 @@
 import { useState } from "react";
 import dynamic from "next/dynamic";
 import LabPanel from "@/components/lab/LabPanel";
+import { TransitionProvider } from "@/components/game/TransitionOverlay";
 
 const GameWorld = dynamic(() => import("@/components/game/GameWorld"), {
   ssr: false,
@@ -34,7 +35,7 @@ export default function WorldBench() {
   const [worldKey, setWorldKey] = useState(0);
   return (
     <div style={{ position: "relative", width: "100%", height: "calc(100vh - 40px)", overflow: "hidden" }}>
-      <GameWorld key={worldKey} />
+      <TransitionProvider key={worldKey}><GameWorld /></TransitionProvider>
       <LabPanel onRemount={() => setWorldKey((k) => k + 1)} />
     </div>
   );

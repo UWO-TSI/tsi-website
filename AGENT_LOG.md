@@ -108,6 +108,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-09-07 · Transition recovery and fade lifetime
+
+Owned fade/hold timers, same-frame trigger guard, thrown/rejected callback recovery, reduced-motion timing and real fade-in. Lab world now has a keyed transition provider. 333 tests/32 files, types/lint and production build pass. Dia provider fixture passed; intentional failure logs only. Gaps and detailed evidence in checkpoint.
+
 ### 2026-09-07 · Notification readability and queue cleanup
 
 Validated toast payloads, wrapped/bounded long text, proportional reading time, optional-icon fallback, reduced-motion styling and owned queue timers. 324 tests/31 files, targeted lint and production build pass, including counters. Dia narrow local-notice QA clean. See checkpoint.
