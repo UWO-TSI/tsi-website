@@ -108,6 +108,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-09-07 — Scene recovery and ground-contact QA (Codex)
+
+Added shared scene failure recovery and tested a missing HQ asset followed by restoration/reload in Dia. PostFX now observes graphics-context loss after a real HMR failure; event lifecycle covered by a regression test. Grid surface drives footsteps, collision constrains feedback velocity, and rounded shore cutouts are no longer walkable squares. Corrected grass normal Z reconstruction and explicit Next web roots. 136 tests, TypeScript and targeted lint pass; latest fresh default-island console clean. Full-world smoke check renders with a seasonal-content fallback warning; broader acceptance remains open. First checkpoint is local commit `3dff288`. No push.
+
 ### 2026-09-07 — Default island rendering/input polish (Codex)
 
 Continuous local work authorized by David, no approval pause between parts. Repaired alpha fringe, model materials, real logo flag, curved labels/picking, slope contact, ocean coverage and keyboard focus. Static shadow caching reduced draw calls 170→138. Compact settings verified at 390×844. Avatar image loading moved after commit; fresh Dia console clean. 134 tests, TypeScript, targeted ESLint and production webpack build pass; production /lab/island returns 404. Reference scene remains in polish and performance acceptance is open. See `specs/game-default-island-checkpoint.md`. No pushes or authored-map/backend edits.

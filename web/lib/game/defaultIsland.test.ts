@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { createDefaultIsland, DEFAULT_SPAWN } from "./defaultIsland";
-import { createCenteredMap, setCell, Surface, heightField, sampleGroundHeight, sampleHeightField } from "./grid";
+import { createCenteredMap, setCell, Surface, heightField, sampleGroundHeight, sampleHeightField, isGroundAtWorld } from "./grid";
 
 describe("default island movement", () => {
   const island = createDefaultIsland();
@@ -35,4 +35,20 @@ it("keeps the walker on the low side of cliff-pinned height corners", () => {
   expect(sampleHeightField(map, field, 0, 0)).toBeGreaterThan(0.5);
   expect(sampleGroundHeight(map, field, 0, 0)).toBe(0);
   expect(sampleGroundHeight(map, field, 2, 0)).toBeCloseTo(1.5);
+});
+
+
+it("blocks the water exposed by rounded land corners while keeping straight crossings open", () => {
+  const map = createCenteredMap(7, 7);
+  for (let z = 0; z < 7; z++) for (let x = 0; x < 7; x++) setCell(map, x, z, 0, Surface.River);
+  // A broad square of land has one rounded outer corner at (0.5, 0.5).
+  for (let z = 1; z <= 3; z++) for (let x = 1; x <= 3; x++) setCell(map, x, z, 0, Surface.Grass);
+  expect(isGroundAtWorld(map, 0, 0)).toBe(true);
+  expect(isGroundAtWorld(map, 0.45, 0.45)).toBe(false);
+  expect(isGroundAtWorld(map, 0.4, -0.4)).toBe(true);
+  expect(isGroundAtWorld(map, 1, 1)).toBe(false);
+  expect(isGroundAtWorld(map, 20, 20)).toBe(false);
+  for (let z = 0; z < 7; z++) setCell(map, 5, z, 0, Surface.Wood);
+  expect(isGroundAtWorld(map, 2, 0)).toBe(true);
+  expect(isGroundAtWorld(map, 2.4, 0.4)).toBe(true);
 });

@@ -1,6 +1,6 @@
 import {
   createCenteredMap, setCell, Surface, heightField, sampleGroundHeight,
-  worldToCellX, worldToCellZ, inBounds, surfaceAt, levelAt, CLIFF_LEVELS,
+  worldToCellX, worldToCellZ, isGroundAtWorld, surfaceAt, levelAt, CLIFF_LEVELS,
 } from "./grid";
 
 export const DEFAULT_SPAWN: [number, number, number] = [0, 0, -10];
@@ -24,11 +24,9 @@ export function createDefaultIsland() {
   }
   const field = heightField(map);
   const ground = (x: number, z: number) => sampleGroundHeight(map, field, x, z);
+  const surface = (x: number, z: number) => surfaceAt(map, worldToCellX(map, x), worldToCellZ(map, z));
   const standable = (x: number, z: number) => {
-    const cx = worldToCellX(map, x), cz = worldToCellZ(map, z);
-    if (!inBounds(map, cx, cz)) return false;
-    const surface = surfaceAt(map, cx, cz);
-    if (surface === Surface.River || surface === Surface.Void) return false;
+    if (!isGroundAtWorld(map, x, z)) return false;
     if (x > -3.5 && x < 3.5 && z > 6.7 && z < 12) return false;
     return !ISLAND_TREES.some(([tx, tz]) => Math.hypot(tx - x, tz - z) < 0.65);
   };
@@ -51,5 +49,5 @@ export function createDefaultIsland() {
     }
     return [x, z];
   };
-  return { map, ground, standable, move };
+  return { map, ground, surface, standable, move };
 }

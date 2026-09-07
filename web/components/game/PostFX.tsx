@@ -20,9 +20,10 @@
  *    never garish" law.
  */
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useSyncExternalStore } from "react";
 import { useThree } from "@react-three/fiber";
 import { EffectComposer, Bloom, Vignette } from "@react-three/postprocessing";
+import { createGraphicsContextStore } from "@/lib/game/graphicsContext";
 import { useLabState } from "@/lib/game/devLab";
 import { DEFAULT_GRADE, type Grade } from "@/lib/game/grading";
 import { BlendFunction, Effect } from "postprocessing";
@@ -111,6 +112,8 @@ interface PostFXProps {
 export default function PostFX({ enabled = true, vignetteDarkness = 0.4, bloom = false, bloomIntensity = 0.55, grade }: PostFXProps) {
   const pastel = useMemo(() => new PastelEffect(), []);
   const gl = useThree((s) => s.gl);
+  const context = useMemo(() => createGraphicsContextStore(gl.getContext(), gl.domElement), [gl]);
+  const contextAvailable = useSyncExternalStore(context.subscribe, context.getSnapshot, () => false);
   // Grade resolution: lab sliders (dev-only, always null in prod) beat the
   // game's per-weather grade, which beats the shipped default. Every field
   // of DEFAULT_GRADE reproduces the 2026-07-14 look exactly.
@@ -125,7 +128,7 @@ export default function PostFX({ enabled = true, vignetteDarkness = 0.4, bloom =
     setExposure(gl, g.exposure);
   }, [g, pastel, gl]);
   if (typeof window !== "undefined" && window.location.search.includes("nofx")) return null;
-  if (!enabled) return null;
+  if (!enabled || !contextAvailable) return null;
   return (
     <EffectComposer multisampling={0}>
       <Vignette

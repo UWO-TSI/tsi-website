@@ -9,6 +9,7 @@ import { clampToCoast, coastDist } from "@/lib/game/coast";
 import { getTodayWeather } from "@/lib/game/weather";
 import { useSFX } from "@/lib/game/useAudio";
 import { getCameraForwardXZ } from "@/lib/game/cameraBasis";
+import { Surface } from "@/lib/game/grid";
 import { calculateCurvedHtmlPosition } from "@/lib/game/worldProjection";
 import { pickCurvedGround } from "@/lib/game/groundPick";
 import { juiceFovOffset } from "@/lib/game/cameraJuice";
@@ -106,10 +107,11 @@ interface PlayerAvatarProps {
   playerLevel?: number;
   activeEmote?: EmoteType | null;
   groundHeight?: (x: number, z: number) => number;
+  groundSurface?: (x: number, z: number) => number;
   constrainMove?: (fromX: number, fromZ: number, toX: number, toZ: number) => [number, number];
 }
 
-export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Player", playerLevel = 1, activeEmote = null, groundHeight = sampleTerrainHeightFast, constrainMove }: PlayerAvatarProps) {
+export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Player", playerLevel = 1, activeEmote = null, groundHeight = sampleTerrainHeightFast, groundSurface, constrainMove }: PlayerAvatarProps) {
   const groupRef = useRef<THREE.Group>(null);
   const meshRef = useRef<THREE.Mesh>(null);
   // Initialize y on the terrain at spawn so the avatar doesn't visibly
@@ -441,6 +443,8 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
         const [cpx, cpz] = constrainMove
           ? constrainMove(pos.x, pos.z, nextX, nextZ)
           : clampToCoast(nextX, nextZ, BOUNDARY);
+        if (Math.abs(cpx - nextX) > 0.0001) vel.x = (cpx - pos.x) / delta;
+        if (Math.abs(cpz - nextZ) > 0.0001) vel.y = (cpz - pos.z) / delta;
         pos.x = cpx;
         pos.z = cpz;
       }
@@ -452,6 +456,8 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
           ROTATION_LERP * delta
         );
       }
+      // Feedback follows movement that survived collision, including glide-out.
+      moving = Math.hypot(pos.x - prevX, pos.z - prevZ) > 0.02 * delta;
       // Lean into screen-space lateral motion (~5° max), damped.
       const latVel = vel.x * rx + vel.y * rz;
       const targetLean = THREE.MathUtils.clamp(-latVel / PLAYER_SPEED, -1, 1) * 0.085;
@@ -612,10 +618,11 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
         footstepTimer.current = 0;
         // Loop iter 26 (2026-07-24): the bridge knocks — steps on the main
         // river crossing play a wooden note instead of the grass scuff.
-        const onBridge = (Math.abs(pos.x) < 2.2 && pos.z > 0 && pos.z < 6.5) || (Math.abs(pos.x - 39.25) < 1.8 && pos.z > 0.9 && pos.z < 6.6) || (pos.x > 43.2 && pos.x < 45.2 && pos.z > 0.4 && pos.z < 5); // S2+S3: crossings + pier knock
+        const surface = groundSurface?.(pos.x, pos.z);
+        const onBridge = surface !== undefined ? surface === Surface.Wood : (Math.abs(pos.x) < 2.2 && pos.z > 0 && pos.z < 6.5) || (Math.abs(pos.x - 39.25) < 1.8 && pos.z > 0.9 && pos.z < 6.6) || (pos.x > 43.2 && pos.x < 45.2 && pos.z > 0.4 && pos.z < 5); // S2+S3: crossings + pier knock
         // Loop wake 31: the brick plaza taps — hard pavement note (matches
         // RoadTiles' PLAZA rect), and dry brick kicks no dirt.
-        const onBrick = pos.x > -5.4 && pos.x < 5.4 && pos.z > -16.6 && pos.z < -9.4;
+        const onBrick = surface !== undefined ? surface === Surface.Brick || surface === Surface.Stone : pos.x > -5.4 && pos.x < 5.4 && pos.z > -16.6 && pos.z < -9.4;
         playSFX(onBridge ? "blip4" : onBrick ? "blip3" : "footstep");
         // P28: spawn a dust puff at the player's feet. Trailing slightly
         // behind the movement direction so it reads as kicked-up dust.
@@ -626,7 +633,7 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
         // wet ring instead of kicking dust (coast-space distance past the
         // sand line ≈48.5). Iter 22: rain days make EVERY step a puddle
         // ripple — the weather reaches the ground (incl. puddles on brick).
-        const wet = coastDist(trailX, trailZ) > 48.5 || getTodayWeather() === "rain";
+        const wet = (!groundSurface && coastDist(trailX, trailZ) > 48.5) || getTodayWeather() === "rain";
         if (!onBridge && (!onBrick || wet)) setPuffs((prev) => [...prev, { id, position: [trailX, pos.y + 0.02, trailZ], scale: keys["shift"] ? 1.3 : 1, wet }]);
       }
     } else {

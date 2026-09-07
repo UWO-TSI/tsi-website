@@ -7,6 +7,7 @@ import * as THREE from "three";
 import GridWorld from "./grid/GridWorld";
 import GridOcean from "./grid/GridOcean";
 import PlayerAvatar from "./PlayerAvatar";
+import GameSceneBoundary from "./GameSceneBoundary";
 import PostFX from "./PostFX";
 import { GLBProp, NatureTree, NatureBush, NatureFlowerCluster } from "./NatureModels";
 import { createDefaultIsland, DEFAULT_SPAWN, ISLAND_TREES, ISLAND_BUSHES, ISLAND_FLOWERS } from "@/lib/game/defaultIsland";
@@ -85,7 +86,7 @@ function IslandScene({ preset, overview, shadows, reset, onMetrics }: {
       {ISLAND_BUSHES.map(([x, z], i) => <NatureBush key={`bush-${i}`} position={[x, island.ground(x, z), z]} seed={i} />)}
       {ISLAND_FLOWERS.map(([x, z], i) => <NatureFlowerCluster key={`flower-${i}`} position={[x, island.ground(x, z), z]} seed={i * 2} />)}
       <PlayerAvatar key={reset} spawnPosition={DEFAULT_SPAWN} playerName="You" onMove={move}
-        groundHeight={island.ground} constrainMove={island.move} />
+        groundHeight={island.ground} groundSurface={island.surface} constrainMove={island.move} />
     </>
   );
 }
@@ -95,12 +96,16 @@ const OVERVIEW_OFFSET = new THREE.Vector3(12, 21, -27);
 
 function LoadingStatus() {
   const { active, progress, errors } = useProgress();
-  if (errors.length) return <div className={styles.loading} role="alert">An island asset could not load. Reload to try again.</div>;
+  if (errors.length) return <div className={styles.loading} role="alert">An island asset could not load.<button className={styles.return} onClick={() => window.location.reload()}>Reload island</button></div>;
   if (!active) return null;
   return <div className={styles.loading} role="status">Preparing the island · {Math.round(progress)}%</div>;
 }
 
 export default function DefaultIslandWorld() {
+  return <GameSceneBoundary><DefaultIslandWorldContent /></GameSceneBoundary>;
+}
+
+function DefaultIslandWorldContent() {
   const [graphics, actions] = useGraphicsSettings();
   const [preset, setPreset] = useState<LightPreset>("day");
   const [optionsOpen, setOptionsOpen] = useState(false);

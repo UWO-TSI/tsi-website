@@ -45,3 +45,14 @@ This is a playable review checkpoint, not final visual or whole-game acceptance.
 - Remaining runtime checks: jump/sprint, blur/resume and loading failure; controlled device inputs and broader network audit. Golden hour, compact layout, fresh console and production build are now checked.
 - Revisit the existing full game with shared material/input changes before integration. No authentication/backend/economy changes were made, and existing functional portal/activity loops were not regression-tested here.
 - David's art/feel feedback remains useful while implementation and QA continue. No push/deploy; main and the saved custom map are untouched.
+
+## September 7 recovery and traversal follow-up
+
+- First checkpoint committed locally as `3dff288`.
+- Corrected two-channel grass normals by reconstructing Z in the material shader. Shader compiles and the reference scene renders normally.
+- Footstep surfaces come from the default island grid; collision-constrained movement now drives walking feedback and sprint velocity. Rounded shoreline cutouts are excluded from walkable ground using the same outline as the mesh. Added a footprint regression test.
+- During full-world QA, a hot reload lost the WebGL context and PostFX attempted to add passes to it. PostFX now observes context loss/restoration; a test verifies suspension, restore notification and listener cleanup. Real GPU restoration is not yet fault-injected.
+- Added a shared scene error boundary to the reference scene and full GameWorld. Deliberately substituted a missing HQ model: recovery screen appeared with Reload island and lab navigation remained usable. Restored the real URL, clicked Reload island and verified the scene plus a fresh clean console. No fault injection remains in source.
+- Full legacy world renders after a fresh reload and Noon control change. It still has a seasonal palette fetch fallback warning and existing visual debt; this is a smoke check, not whole-world acceptance. An earlier auth-lock recovery warning appeared during heavy hot reloads. Backend contracts were not changed.
+- Turbopack resolved Tailwind from the wrong repository root after switching between production build and dev. Set explicit web app roots and moved stale `.next/dev` output into a uniquely named `/tmp/uwotsi-island-dev-cache-*` directory. Both lab routes then compiled and returned 200. No dependency updates.
+- Latest suite: 136 tests across eight files. TypeScript and targeted ESLint pass. Production build predates this follow-up and will be rerun after the next coherent batch.

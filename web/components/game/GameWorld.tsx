@@ -7,6 +7,7 @@ import { CameraControls, Html, useGLTF } from "@react-three/drei";
 import { Smile, BookOpen, Map as MapIcon, Settings2, Keyboard } from "lucide-react";
 import * as THREE from "three";
 import PlayerAvatar from "./PlayerAvatar";
+import GameSceneBoundary from "./GameSceneBoundary";
 import Building, { ACNHParts, CHALET_VARIANTS } from "./Building";
 import GridWorld, { isGridEnabled } from "./grid/GridWorld";
 import River, { sampleRiverPoint, findRiverTForX } from "./River";
@@ -2303,6 +2304,10 @@ function Scene({
 
 // ─── Canvas (v2 spec Section 2) ─────────────────────────────────
 export default function GameWorld() {
+  return <GameSceneBoundary><GameWorldContent /></GameSceneBoundary>;
+}
+
+function GameWorldContent() {
   const { profile } = useUser();
   const { data: activePalette } = useActivePalette();
   const playerName = profile?.display_name || "Player";

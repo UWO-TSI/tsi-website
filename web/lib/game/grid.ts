@@ -1414,6 +1414,18 @@ export function easedCellOutline(inLayer: LayerTest, cx: number, cz: number): nu
   return out;
 }
 
+/** Whether a point lies on the same eased land footprint drawn by GridTerrain. */
+export function isGroundAtWorld(map: IslandMap, x: number, z: number): boolean {
+  const cx = worldToCellX(map, x), cz = worldToCellZ(map, z);
+  const inGround = (nx: number, nz: number) => {
+    const surface = surfaceAt(map, nx, nz);
+    return inBounds(map, nx, nz) && !isVoid(surface) && !isRiver(surface);
+  };
+  if (!inGround(cx, cz)) return false;
+  const outline = easedCellOutline(inGround, cx, cz);
+  return !outline || pointInPolygon(x - cellToWorldX(map, cx), z - cellToWorldZ(map, cz), outline);
+}
+
 // ── Water depth ──────────────────────────────────────────────────
 
 /**

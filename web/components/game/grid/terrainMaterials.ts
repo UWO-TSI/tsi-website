@@ -115,8 +115,8 @@ let grassNrm: THREE.Texture | null = null;
  * Its blue channel is zeroed (mean 128,128,0), which is a two-channel normal
  * map: Z is meant to be reconstructed. Three's standard material does not do
  * that, so the raw texture would flatten the lighting instead of adding to it.
- * `normalScale` therefore starts at 0 and `applyGrassNormalStrength` drives it,
- * which also makes it a single number the bench can move.
+ * The grass material reconstructs positive Z before applying normalScale.
+ * The bench controls the resulting detail strength.
  */
 function grassNormal(): THREE.Texture {
   if (grassNrm) return grassNrm;
@@ -212,6 +212,12 @@ export function terrainMaterial(name: string): THREE.Material | null {
       transparent: isWater,
       opacity: isWater ? 0.85 : 1,
     });
+    mat.onBeforeCompile = (shader) => {
+      shader.fragmentShader = shader.fragmentShader.replace("#include <normal_fragment_maps>",
+        THREE.ShaderChunk.normal_fragment_maps.replace("mapN.xy *= normalScale;",
+          "mapN.z = sqrt(max(0.0, 1.0 - dot(mapN.xy, mapN.xy)));\nmapN.xy *= normalScale;"));
+    };
+    mat.customProgramCacheKey = () => "terrain-grass-normal-rg-v1";
     mat.name = `terrain:${procKey}`;
     cache.set(procKey, mat);
     return mat;
