@@ -9,6 +9,7 @@
  */
 
 import { useEffect, useState } from "react";
+import { useWorldDialog } from "@/lib/game/useWorldDialog";
 import { useCoarsePointer } from "@/lib/game/useMediaQuery";
 
 const STORAGE_KEY = "tsi.welcome.v1.seen";
@@ -30,34 +31,23 @@ export default function WelcomeOverlay({ onVisibleChange }: { onVisibleChange?: 
   };
 
   useEffect(() => {
-    try {
-      const seen = localStorage.getItem(STORAGE_KEY);
-      if (seen !== "true") {
-        // eslint-disable-next-line react-hooks/set-state-in-effect -- one-shot SSR-safe init; localStorage isn't available server-side
-        setVisible(true);
-      }
-    } catch {
-      /* ignore — private browsing etc. */
-    }
+    let seen = false;
+    try { seen = localStorage.getItem(STORAGE_KEY) === "true"; }
+    catch { /* Show the primer when storage is unavailable; dismissal still works for this visit. */ }
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-shot client preference read
+    setVisible(!seen);
   }, []);
 
-  useEffect(() => {
-    if (!visible) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" || e.key === "Enter") {
-        e.preventDefault();
-        dismiss();
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [visible]);
+  return <WelcomeCard visible={visible} coarse={coarse} onDismiss={dismiss} />;
+}
 
+export function WelcomeCard({ visible, coarse, onDismiss }: { visible: boolean; coarse: boolean; onDismiss: () => void }) {
+  const dialogRef = useWorldDialog(visible, onDismiss, "Enter");
   if (!visible) return null;
 
   return (
     <div
-      onClick={dismiss}
+      onClick={onDismiss}
       style={{
         position: "absolute",
         inset: 0,
@@ -71,17 +61,26 @@ export default function WelcomeOverlay({ onVisibleChange }: { onVisibleChange?: 
       }}
     >
       <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Welcome to Tethos"
+        tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
         style={{
-          width: "min(520px, 92vw)",
-          background: "linear-gradient(160deg, rgba(20,22,30,0.97), rgba(15,15,16,0.97))",
+          width: 520,
+          maxWidth: "calc(100% - 24px)",
+          maxHeight: "85dvh",
+          overflowY: "auto",
+          background: "#152125",
           border: "1px solid rgba(255,212,128,0.35)",
           borderRadius: "14px",
-          padding: "28px 30px",
+          padding: "24px",
           color: "#f1ffff",
           boxShadow: "0 18px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.04)",
         }}
       >
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 12 }}>
         <div
           style={{
             fontSize: "11px",
@@ -93,6 +92,8 @@ export default function WelcomeOverlay({ onVisibleChange }: { onVisibleChange?: 
         >
           Welcome to Tethos
         </div>
+        <button onClick={onDismiss} aria-label="Skip introduction" style={{ minWidth: 44, minHeight: 44, color: "#D1DDE1", border: "1px solid #56666b", borderRadius: 8, fontSize: 11 }}>Skip</button>
+        </div>
         <div style={{ fontSize: "22px", fontWeight: 700, marginBottom: "20px", lineHeight: 1.25 }}>
           Look around, talk to people, find your village.
         </div>
@@ -102,7 +103,7 @@ export default function WelcomeOverlay({ onVisibleChange }: { onVisibleChange?: 
             <>
               <Row keys={["Tap ground"]} label="Walk there" />
               <Row keys={["Drag"]} label="Look around" />
-              <Row keys={["Tap NPC"]} label="Chat with anyone" />
+              <Row keys={["Tap NPC"]} label="Talk to a villager" />
               <Row keys={["Emote button"]} label="Wave, dance, laugh" />
             </>
           ) : (
@@ -110,17 +111,17 @@ export default function WelcomeOverlay({ onVisibleChange }: { onVisibleChange?: 
               <Row keys={["W", "A", "S", "D"]} label="Walk (camera-relative)" />
               <Row keys={["Right-click", "drag"]} label="Look around" />
               <Row keys={["E"]} label="Interact when you see a prompt" />
-              <Row keys={["Click NPC"]} label="Chat with anyone" />
+              <Row keys={["Click NPC"]} label="Talk to a villager" />
               <Row keys={["F1"]} label="Full controls list, anytime" />
             </>
           )}
         </div>
 
         <button
-          onClick={dismiss}
+          onClick={onDismiss}
           style={{
             width: "100%",
-            background: "linear-gradient(180deg, #FFD166, #E8A93C)",
+            background: "#FFD166",
             color: "#1A1410",
             border: "none",
             borderRadius: "8px",
@@ -137,13 +138,14 @@ export default function WelcomeOverlay({ onVisibleChange }: { onVisibleChange?: 
           Start exploring
         </button>
         {!coarse && (
-          <div style={{ marginTop: "10px", textAlign: "center", fontSize: "11px", color: "#8a939a" }}>
+          <div style={{ marginTop: "10px", textAlign: "center", fontSize: "11px", color: "#A9B8C4" }}>
             Press Enter or Esc to dismiss
           </div>
         )}
       </div>
 
       <style jsx>{`
+        @media (prefers-reduced-motion: reduce) { div { animation: none !important; } }
         @keyframes tsi-welcome-fade-in {
           from { opacity: 0; }
           to { opacity: 1; }
@@ -160,6 +162,8 @@ function Row({ keys, label }: { keys: string[]; label: string }) {
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
+        flexWrap: "wrap",
+        gap: 8,
         padding: "6px 12px",
         background: "rgba(255,255,255,0.04)",
         borderRadius: "6px",
@@ -168,7 +172,7 @@ function Row({ keys, label }: { keys: string[]; label: string }) {
     >
       <div style={{ display: "flex", gap: "4px" }}>
         {keys.map((k, i) => (
-          <span
+          <kbd
             key={i}
             style={{
               background: "rgba(255,255,255,0.08)",
@@ -182,10 +186,10 @@ function Row({ keys, label }: { keys: string[]; label: string }) {
             }}
           >
             {k}
-          </span>
+          </kbd>
         ))}
       </div>
-      <div style={{ color: "#c9d1d6", textAlign: "right", marginLeft: "16px" }}>{label}</div>
+      <div style={{ color: "#c9d1d6", textAlign: "right", flex: "1 1 150px", minWidth: 0 }}>{label}</div>
     </div>
   );
 }

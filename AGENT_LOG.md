@@ -108,6 +108,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-09-07 first-visit introduction
+
+Welcome focus/Skip/readability and narrow desktop/touch copy verified in source fixture; removed after navigation. Seen flag preserved, no quest/reward changes. Types/lint pass; preceding full suite/build 292 tests. Default island restored. See checkpoint.
+
 ### 2026-09-07 truthful member presence
 
 Loading/errors/empty and recent-heartbeat semantics fixed in the list. Read-only presence endpoints return 503 on query failures; auth and successful schemas unchanged. 292 tests, types/lint/build pass, narrow source fixture QA complete. HMR panic recorded separately; fixture removed and preview restarting. See checkpoint.
