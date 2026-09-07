@@ -108,6 +108,8 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+- 2026-09-07: Replace NPC portrait placeholder with matching sprite/fallback, improve text and close control. Dia fixture verified and removed. Production build, types and lint pass; full suite remains 246 tests. Next mobile presence feedback.
+
 - 2026-09-07: Isolate NPC conversations, cancel stale requests, preserve failed drafts, and improve history/focus feedback. 246 tests, types and lint pass; source-only Dia race/error fixture verified then removed. No model calls or backend changes.
 
 - 2026-09-07: Add shared moonlight and default-island night preset, hold midnight palette, and phase legacy river highlights. 232 tests, types, targeted lint and production build pass. Dia day/night/rain/pixel comparisons verified; legacy river art and phone viewport remain open. No map edits.

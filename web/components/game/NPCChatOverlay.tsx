@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { X, Flag, Loader2, Send } from "lucide-react";
+import { npcSpriteSources } from "@/lib/game/npcSprites";
 import { AudioManager } from "@/lib/game/audio";
 import { ChatRequestError, npcChatTransport, type ChatTurn as Turn, type NPCChatTransport } from "@/lib/npc/chatClient";
 import type { NPCPersona } from "@/lib/content/types";
@@ -236,7 +237,9 @@ function Conversation({ npc, onClose, transport }: { npc: NPCPersona; onClose: (
               border: "none",
               cursor: "pointer",
               color: "#9ca3af",
-              padding: 4,
+              width: 44,
+              height: 44,
+              padding: 12,
               display: "flex",
             }}
           >
@@ -294,7 +297,7 @@ function Conversation({ npc, onClose, transport }: { npc: NPCPersona; onClose: (
           <div
             style={{
               textAlign: "center",
-              color: "#6b7280",
+              color: "#A9B8C4",
               fontSize: 10,
               letterSpacing: 1,
               textTransform: "uppercase",
@@ -307,7 +310,7 @@ function Conversation({ npc, onClose, transport }: { npc: NPCPersona; onClose: (
           {turns.length === 0 && !sending && !historyLoading && !historyError && (
             <div
               style={{
-                color: "#6b7280",
+                color: "#A9B8C4",
                 fontStyle: "italic",
                 textAlign: "center",
                 padding: "12px 0",
@@ -460,6 +463,7 @@ function Conversation({ npc, onClose, transport }: { npc: NPCPersona; onClose: (
       </div>
 
       <style jsx>{`
+        @media (max-width: 700px) { :global(.npc-chat-panel textarea) { font-size: 16px !important; } }
         :global(.npc-chat-panel :focus-visible) { outline: 2px solid #e4bf6c; outline-offset: 3px; }
         @keyframes npcChatIn {
           from {
@@ -519,40 +523,24 @@ function Conversation({ npc, onClose, transport }: { npc: NPCPersona; onClose: (
   );
 }
 
-// ─── Portrait — colored quad placeholder, real sprite swap in D5 ─────────────
+// Portrait uses the same four-direction sheet and fallback policy as the world.
 function NPCPortrait({ npc }: { npc: NPCPersona }) {
-  // Derive a stable color from the slug so each NPC has a distinct portrait
-  // until real sprites land.
-  const hue = hashHue(npc.slug);
+  const sources = npcSpriteSources(npc.sprite_url, npc.slug);
+  const [failed, setFailed] = useState<string[]>([]);
+  const source = [sources.primary, sources.fallback].find((url) => !failed.includes(url));
+  const initials = npc.display_name.split(/\s+/).map((part) => part[0]).slice(0, 2).join("");
   return (
-    <div
-      style={{
-        height: 96,
-        borderRadius: 12,
-        background: `linear-gradient(135deg, hsl(${hue} 60% 45%), hsl(${(hue + 40) % 360} 50% 30%))`,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        color: "rgba(255,255,255,0.92)",
-        fontWeight: 700,
-        letterSpacing: 2,
-        fontSize: 18,
-        textTransform: "uppercase",
-        textShadow: "0 2px 8px rgba(0,0,0,0.45)",
-        border: "1px solid rgba(255,255,255,0.1)",
-      }}
-    >
-      {npc.display_name}
+    <div style={{ display: "flex", justifyContent: "center", padding: "8px 0", background: "#142b35", border: "1px solid #31515b", borderRadius: 12 }}>
+      <div role="img" aria-label={`Portrait of ${npc.display_name}`} style={{ width: 80, height: 80, overflow: "hidden", flexShrink: 0, display: "grid", placeItems: "center", color: "#fff0cf", fontSize: 24 }}>
+        {source ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={source} alt="" width={320} height={80}
+            onError={() => setFailed((previous) => previous.includes(source) ? previous : [...previous, source])}
+            style={{ width: 320, height: 80, maxWidth: "none", imageRendering: "pixelated", justifySelf: "start" }} />
+        ) : initials}
+      </div>
     </div>
   );
-}
-
-function hashHue(slug: string): number {
-  let h = 0;
-  for (let i = 0; i < slug.length; i++) {
-    h = (h * 31 + slug.charCodeAt(i)) >>> 0;
-  }
-  return h % 360;
 }
 
 // ─── Turn block: user message bubble + NPC reply bubble w/ typewriter ────────
@@ -635,7 +623,7 @@ function TurnBlock({
               background: "none",
               border: "none",
               cursor: turn.flagged ? "default" : "pointer",
-              color: turn.flagged ? "#E85050" : "#6b7280",
+              color: turn.flagged ? "#E85050" : "#A9B8C4",
               padding: 2,
               display: "flex",
             }}
