@@ -265,13 +265,10 @@ export function LeafGusts() {
 }
 
 // ─── Night window glow (item 25) ────────────────────────────────────────
-// Legacy quads for the remaining facades; HQ uses its model's glow textures.
+// Legacy quads for the remaining facades; HQ and shop use model glow textures.
 // Opacity follows dusk/night. All
 // share one material so the whole set is a single opacity write.
 const WINDOWS: { x: number; y: number; z: number; w: number; h: number }[] = [
-  // Shop (facade at z=12)
-  { x: -26.35, y: 1.35, z: 11.96, w: 0.95, h: 0.8 },
-  { x: -21.7, y: 1.35, z: 11.96, w: 0.95, h: 0.8 },
   // Oracle museum (facade at z=30; S6 Temple Rise lifted the building
   // onto the 2.3 plateau — the glow rides up with it)
   { x: -2.5, y: 4.15, z: 29.96, w: 0.6, h: 1.1 },

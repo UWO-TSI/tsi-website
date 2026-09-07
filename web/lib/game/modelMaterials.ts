@@ -1,6 +1,15 @@
 import { Color, DoubleSide, Material, Mesh, MeshStandardMaterial, Object3D, SRGBColorSpace, Texture, TextureLoader } from "three";
 
 let flagTexture: Texture | null = null;
+let shopSignTexture: Texture | null = null;
+function getShopSignTexture() {
+  if (!shopSignTexture) {
+    shopSignTexture = new TextureLoader().load("/assets/branding/shop-sign-v1.png");
+    shopSignTexture.colorSpace = SRGBColorSpace;
+    shopSignTexture.flipY = false;
+  }
+  return shopSignTexture;
+}
 function getFlagTexture() {
   if (!flagTexture) {
     flagTexture = new TextureLoader().load("/assets/branding/island-flag.svg");
@@ -37,7 +46,10 @@ export function prepareModel(source: Object3D, url: string, castShadow: boolean)
         if (material.name.includes("OakLeaf")) material.color.copy(new Color("#a9c977").multiplyScalar(2));
         if (material.name.includes("OakTrunk")) material.color.copy(new Color("#b88c58").multiplyScalar(1.7));
       }
-      if (url.endsWith("/buildings/hq-office.glb") && material instanceof MeshStandardMaterial && material.name === "mMyDesign") {
+      if (material instanceof MeshStandardMaterial && (
+        (url.endsWith("/buildings/hq-office.glb") && material.name === "mMyDesign")
+        || (url.endsWith("/buildings/shop-market.glb") && material.name === "mSign")
+      )) {
         material.color.set(0xffffff);
       }
       materials.set(original, material);
@@ -62,13 +74,16 @@ export function disposeModelMaterials(model: Object3D): void {
 }
 
 export function applyModelTextures(model: Object3D, url: string): void {
-  if (!url.endsWith("/buildings/hq-office.glb")) return;
-  const texture = getFlagTexture();
+  const isHQ = url.endsWith("/buildings/hq-office.glb");
+  const isShop = url.endsWith("/buildings/shop-market.glb");
+  if (!isHQ && !isShop) return;
+  const texture = isHQ ? getFlagTexture() : getShopSignTexture();
+  const materialName = isHQ ? "mMyDesign" : "mSign";
   model.traverse((object) => {
     const mesh = object as Mesh;
     if (!mesh.isMesh) return;
     for (const material of Array.isArray(mesh.material) ? mesh.material : [mesh.material]) {
-      if (material instanceof MeshStandardMaterial && material.name === "mMyDesign") {
+      if (material instanceof MeshStandardMaterial && material.name === materialName) {
         material.map = texture;
         material.needsUpdate = true;
       }

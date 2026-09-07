@@ -2250,7 +2250,7 @@ function Scene({
 
       {BUILDINGS.map((b) => {
         const y = getTerrainHeight(b.position[0], b.position[2]);
-        return <Building key={b.id} id={b.id} name={b.name} position={[b.position[0], y, b.position[2]]} size={b.size} color={b.color} roofColor={b.roofColor} href={b.href} playerPositionRef={playerPosRef} windowGlow={b.id === "hq" ? (todPhase === "night" ? 1.4 : todPhase === "dusk" ? 0.8 : 0) : undefined} />;
+        return <Building key={b.id} id={b.id} name={b.name} position={[b.position[0], y, b.position[2]]} size={b.size} color={b.color} roofColor={b.roofColor} href={b.href} playerPositionRef={playerPosRef} windowGlow={b.id === "hq" || b.id === "shop" ? (todPhase === "night" ? 1.4 : todPhase === "dusk" ? 0.8 : 0) : undefined} />;
       })}
 
       {/* Permanent NPCs from content pipeline. Click → chat overlay. */}
