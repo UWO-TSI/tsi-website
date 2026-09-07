@@ -2851,7 +2851,7 @@ function GameWorldContent() {
       </div>
       )}
       <ToastHub />
-      {mapOpen && !screenshotMode && !interior && <MiniMap playerPosRef={playerPosRef} />}
+      {mapOpen && !screenshotMode && !interior && <MiniMap playerPosRef={playerPosRef} onClose={() => setMapOpen(false)} />}
     </div>
   );
 }

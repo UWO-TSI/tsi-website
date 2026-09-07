@@ -108,6 +108,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-09-07 · Minimap and discovery lifetime
+
+Map contrast, visible Oracle marker, player position initialization, close/focus controls and narrow spacing polished. Discovery cache validation/session fallback and timer cleanup fixed. 311 tests/29 files, targeted lint and production build pass, including bridge/windows. Dia fake-location and near-spawn component QA clean. Details and generated-dev-type caveat in checkpoint.
+
 ### 2026-09-07 · HQ night windows
 
 Calibrated only the existing HQ window emissive maps after inspecting their source brightness. Dia fresh-load night/day/evening comparison clean; types, lint and material lifetime/culling tests pass. Source assets preserved. Details in checkpoint.

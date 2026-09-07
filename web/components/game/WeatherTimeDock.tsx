@@ -59,9 +59,9 @@ export default function WeatherTimeDock({
     <div
       style={{
         position: "absolute",
-        // Tuck under the minimap (top 60 + 170 tall + 10 gap) when it's
+        // Tuck under the minimap (top 60 + 260 tall + 10 gap) when it's
         // shown; take over its corner slot when it's hidden.
-        top: belowMap ? 240 : 60,
+        top: belowMap ? 330 : 60,
         right: 16,
         zIndex: 50,
         display: "flex",

@@ -7,7 +7,10 @@
  * pure wayfinding for the radius-52 island.
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { X } from "lucide-react";
+import { createLandmarkDiscovery } from "@/lib/game/landmarkDiscovery";
+import styles from "./MiniMap.module.css";
 import * as THREE from "three";
 import { AudioManager } from "@/lib/game/audio";
 import { coastWobble, beachWidthShift, COAST_SCALE } from "@/lib/game/coast";
@@ -41,70 +44,56 @@ const BUILDINGS: { x: number; z: number; w: number; h: number; c: string }[] = [
   { x: 44.5, z: -3.2, w: 3.6, h: 2.6, c: "#8A6A4A" }, // Wharf Shack (S4)
 ];
 
-// Loop iter 17 (2026-07-24): discovery pings — first visit to a landmark
-// pulses a ring on the minimap + a toast + a soft chime. Persisted in
-// localStorage so each discovery only fires once per device.
-const DISCOVER_ZONES: { key: string; label: string; x: number; z: number; r: number }[] = [
-  { key: "cove", label: "Beach Cove", x: 16, z: 53.9, r: 8 },
-  { key: "lighthouse", label: "The Lighthouse", x: 38.2, z: -37.1, r: 7 },
-  { key: "islet", label: "Isla Chica", x: -24, z: 72, r: 9 },
-  { key: "flats", label: "The Flats", x: 38.5, z: 46.5, r: 9 },
-  { key: "reedmarsh", label: "The Reedmarsh", x: -41.5, z: 9.5, r: 7 },
-  { key: "windmill", label: "The Windmill", x: -32, z: -26, r: 9 },
-  { key: "oracle", label: "Oracle Temple", x: 0, z: 30, r: 7 },
-];
-const DISCOVER_KEY = "tsi.discovered.v1";
+type MapPing = { id: number; x: number; z: number } | null;
 
-export default function MiniMap({ playerPosRef }: { playerPosRef: React.MutableRefObject<THREE.Vector3> }) {
-  const [dot, setDot] = useState<[number, number]>([0, -15]);
-  const [ping, setPing] = useState<{ id: number; x: number; z: number } | null>(null);
+export default function MiniMap({ playerPosRef, onClose }: {
+  playerPosRef: React.MutableRefObject<THREE.Vector3>; onClose: () => void;
+}) {
+  const [dot, setDot] = useState<[number, number]>(() => [playerPosRef.current.x, playerPosRef.current.z]);
+  const [ping, setPing] = useState<MapPing>(null);
+  const opener = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
-    const t = setInterval(() => {
-      const p = playerPosRef.current;
-      setDot((prev) => (Math.abs(prev[0] - p.x) > 0.2 || Math.abs(prev[1] - p.z) > 0.2 ? [p.x, p.z] : prev));
-      // Discovery check (cheap: 4 zones at 5Hz)
-      try {
-        const seen = new Set<string>(JSON.parse(localStorage.getItem(DISCOVER_KEY) ?? "[]") as string[]);
-        for (const zn of DISCOVER_ZONES) {
-          if (seen.has(zn.key)) continue;
-          if (Math.hypot(p.x - zn.x, p.z - zn.z) < zn.r) {
-            seen.add(zn.key);
-            localStorage.setItem(DISCOVER_KEY, JSON.stringify([...seen]));
-            setPing({ id: Date.now(), x: zn.x, z: zn.z });
-            window.setTimeout(() => setPing(null), 1800);
-            window.dispatchEvent(new CustomEvent("tsi:toast", { detail: { text: `Discovered: ${zn.label}!` } }));
-            AudioManager.playSFX("enter");
-            break;
-          }
-        }
-      } catch { /* private browsing */ }
+    opener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    let storage: Storage | undefined;
+    try { storage = window.localStorage; } catch { /* Discoveries still work for this visit. */ }
+    const discover = createLandmarkDiscovery(storage);
+    let pingTimer: ReturnType<typeof setTimeout> | undefined;
+    let pingId = 0;
+    const timer = setInterval(() => {
+      const { x, z } = playerPosRef.current;
+      if (!Number.isFinite(x) || !Number.isFinite(z)) return;
+      setDot((previous) => Math.abs(previous[0] - x) > 0.2 || Math.abs(previous[1] - z) > 0.2 ? [x, z] : previous);
+      const landmark = discover(x, z);
+      if (!landmark) return;
+      clearTimeout(pingTimer);
+      setPing({ id: ++pingId, x: landmark.x, z: landmark.z });
+      pingTimer = setTimeout(() => setPing(null), 1800);
+      window.dispatchEvent(new CustomEvent("tsi:toast", { detail: { text: `Discovered: ${landmark.label}!` } }));
+      AudioManager.playSFX("enter");
     }, 200);
-    return () => clearInterval(t);
+    return () => { clearInterval(timer); clearTimeout(pingTimer); };
   }, [playerPosRef]);
 
+  return <MiniMapView dot={dot} ping={ping} onClose={() => { onClose(); if (opener.current?.isConnected) opener.current.focus(); }} />;
+}
+
+export function MiniMapView({ dot, ping = null, onClose }: { dot: [number, number]; ping?: MapPing; onClose: () => void }) {
   // world → svg: x right, z up-screen (north = up)
   const sx = (x: number) => x;
   const sy = (z: number) => -z;
 
   return (
-    <div
-      style={{
-        position: "absolute",
-        top: 60,
-        right: 16,
-        zIndex: 50,
-        width: 170,
-        height: 170,
-        borderRadius: 14,
-        overflow: "hidden",
-        border: "1px solid rgba(255,255,255,0.2)",
-        boxShadow: "0 3px 14px rgba(0,0,0,0.3)",
-        animation: "tsi-map-in 0.22s ease-out",
-        pointerEvents: "none",
-      }}
-    >
-      <svg viewBox="-80 -80 160 160" style={{ width: "100%", height: "100%", display: "block", background: "#6FB55B" }}>
+    <section className={styles.map} aria-label="Island map">
+      <header className={styles.header}>
+        <span>Island map</span>
+        <button className={styles.close} aria-label="Close map" onClick={onClose} onKeyDown={(event) => {
+          if (event.key === "Escape" || (event.key.toLowerCase() === "m" && !event.metaKey && !event.ctrlKey && !event.altKey)) {
+            event.preventDefault(); event.stopPropagation(); if (!event.repeat) onClose();
+          }
+        }}><X size={17} aria-hidden /></button>
+      </header>
+      <svg viewBox="-80 -80 160 160" className={styles.plot} role="img" aria-label="Island overview. The yellow marker shows your position; north is up.">
         {/* island — organic coastline: sand ring under the grass line */}
         <polygon points={SAND_POINTS} fill="#E4CD96" stroke="#CBB27C" strokeWidth="1" strokeLinejoin="round" />
         <polygon points={GRASS_POINTS} fill="#7EC167" stroke="#5E9E4E" strokeWidth="1" strokeLinejoin="round" />
@@ -126,10 +115,6 @@ export default function MiniMap({ playerPosRef }: { playerPosRef: React.MutableR
         {/* river (world z≈1-5 band, drawn at -z); ellipse = the v3 bend pool */}
         <ellipse cx="22" cy="-2.9" rx="5.4" ry="3.2" fill="#69A8D0" />
         <path d="M -61 -2 C -35 -5, -12 -5, -3 -1 S 16 -2, 30 -4 S 50 -3, 61 -3" fill="none" stroke="#69A8D0" strokeWidth="3.4" strokeLinecap="round" />
-        {/* buildings */}
-        {BUILDINGS.map((b, i) => (
-          <rect key={i} x={sx(b.x) - b.w / 2} y={sy(b.z) - b.h / 2} width={b.w} height={b.h} rx="1" fill={b.c} stroke="rgba(0,0,0,0.25)" strokeWidth="0.4" />
-        ))}
         {/* S7: Reedmarsh ponds + Flats tide pools */}
         <circle cx={-43} cy={-9} r={1.9} fill="#7FB5C9" />
         <circle cx={-38.3} cy={-11.2} r={1.4} fill="#7FB5C9" />
@@ -138,6 +123,10 @@ export default function MiniMap({ playerPosRef }: { playerPosRef: React.MutableR
         {/* S6: Temple Rise plateau under the Oracle */}
         <ellipse cx={0} cy={-31.8} rx={8.2} ry={7.8} fill="#74B25E" stroke="#5E9E4E" strokeWidth="0.9" />
         <rect x={-1.3} y={-28.9} width={2.6} height={2.8} rx={0.4} fill="#C6BCA4" stroke="#A79E8E" strokeWidth="0.4" />
+        {/* buildings */}
+        {BUILDINGS.map((b, i) => (
+          <rect key={i} x={sx(b.x) - b.w / 2} y={sy(b.z) - b.h / 2} width={b.w} height={b.h} rx="1" fill={b.c} stroke="rgba(0,0,0,0.25)" strokeWidth="0.4" />
+        ))}
         {/* S5: Isla Chica (boat islet, SSW — map north is -y) */}
         <ellipse cx={-24} cy={-72} rx={6.5} ry={6} fill="#E4CD96" stroke="#CBB27C" strokeWidth="0.8" />
         <ellipse cx={-24.3} cy={-71.6} rx={4.1} ry={3.7} fill="#7EC167" stroke="#5E9E4E" strokeWidth="0.8" />
@@ -147,19 +136,14 @@ export default function MiniMap({ playerPosRef }: { playerPosRef: React.MutableR
         {/* discovery ping */}
         {ping && (
           <g key={ping.id}>
-            <circle cx={sx(ping.x)} cy={sy(ping.z)} r="3" fill="none" stroke="#FFD166" strokeWidth="1.2" style={{ animation: "tsi-ping 0.9s ease-out 2" }} />
+            <circle cx={sx(ping.x)} cy={sy(ping.z)} r="3" fill="none" stroke="#FFD166" strokeWidth="1.2" className={styles.ping} />
           </g>
         )}
+        <text x="68" y="-66" textAnchor="middle" fill="#244855" fontSize="9" fontWeight="700">N</text>
         {/* player */}
         <circle cx={sx(dot[0])} cy={sy(dot[1])} r="2.2" fill="#FFDD57" stroke="#7A5A00" strokeWidth="0.7" />
       </svg>
-      <style>{`
-        @keyframes tsi-map-in { from { opacity: 0; transform: scale(0.94); } to { opacity: 1; transform: none; } }
-        @keyframes tsi-ping {
-          0% { opacity: 1; transform: scale(0.5); transform-box: fill-box; transform-origin: center; }
-          100% { opacity: 0; transform: scale(2.6); transform-box: fill-box; transform-origin: center; }
-        }
-      `}</style>
-    </div>
+      <footer className={styles.legend}><span className={styles.you}>You</span><span>M to hide</span></footer>
+    </section>
   );
 }
