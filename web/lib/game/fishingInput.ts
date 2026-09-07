@@ -73,3 +73,52 @@ export function bindFishingInput({ onHold, onCancel, onPause, onPointerFocus, wi
     reset();
   };
 }
+
+/** The world starts charging synchronously; release events must not wait for React to mount a meter. */
+export function bindFishingCastLifecycle({ getPhase, onStart, onRelease, onCancel, windowTarget = window, documentTarget = document }: {
+  getPhase: () => string;
+  onStart: (spot: { x: number; z: number }) => void;
+  onRelease: () => void;
+  onCancel: () => void;
+  windowTarget?: EventTarget;
+  documentTarget?: EventTarget & Pick<Document, "hidden">;
+}) {
+  const capture = { capture: true };
+  const pending = () => ["charging", "casting", "waiting", "bite"].includes(getPhase());
+  const start = (event: Event) => {
+    if (getPhase() !== "idle") return;
+    const spot = (event as CustomEvent<{ x: number; z: number }>).detail;
+    if (!spot || !Number.isFinite(spot.x) || !Number.isFinite(spot.z)) return;
+    onStart({ x: spot.x, z: spot.z });
+  };
+  const release = (event: Event) => {
+    if (getPhase() !== "charging") return;
+    if (event.type === "keyup" && (event as KeyboardEvent).key.toLowerCase() !== "e") return;
+    if (event.type === "pointerup" && (event as PointerEvent).button !== 0) return;
+    onRelease();
+  };
+  const keyDown = (event: Event) => {
+    const e = event as KeyboardEvent;
+    if (e.key !== "Escape" || e.metaKey || e.ctrlKey || e.altKey) return;
+    if (!pending() && getPhase() !== "caught" && getPhase() !== "missed") return;
+    e.preventDefault(); e.stopPropagation(); onCancel();
+  };
+  const interrupt = () => { if (pending()) onCancel(); };
+  const visibility = () => { if (documentTarget.hidden) interrupt(); };
+  windowTarget.addEventListener("tsi:fish-start", start);
+  windowTarget.addEventListener("keyup", release, capture);
+  windowTarget.addEventListener("keydown", keyDown, capture);
+  windowTarget.addEventListener("pointerup", release, capture);
+  windowTarget.addEventListener("pointercancel", interrupt, capture);
+  windowTarget.addEventListener("blur", interrupt);
+  documentTarget.addEventListener("visibilitychange", visibility);
+  return () => {
+    windowTarget.removeEventListener("tsi:fish-start", start);
+    windowTarget.removeEventListener("keyup", release, capture);
+    windowTarget.removeEventListener("keydown", keyDown, capture);
+    windowTarget.removeEventListener("pointerup", release, capture);
+    windowTarget.removeEventListener("pointercancel", interrupt, capture);
+    windowTarget.removeEventListener("blur", interrupt);
+    documentTarget.removeEventListener("visibilitychange", visibility);
+  };
+}

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { bindFishingInput } from "./fishingInput";
+import { bindFishingCastLifecycle, bindFishingInput } from "./fishingInput";
 
 function harness() {
   const win = new EventTarget();
@@ -66,5 +66,69 @@ describe("fishing input ownership", () => {
     expect(h.cancel).toHaveBeenCalledOnce(); expect(h.hold).toHaveBeenLastCalledWith(false);
     h.dispose(); h.key("keydown", "e"); h.pointer("pointerdown"); h.key("keydown", "Escape");
     expect(h.hold).toHaveBeenLastCalledWith(false); expect(h.cancel).toHaveBeenCalledOnce();
+  });
+});
+
+describe("cast lifecycle", () => {
+  function casting() {
+    const win = new EventTarget();
+    const doc = Object.assign(new EventTarget(), { hidden: false });
+    let phase = "idle";
+    const start = vi.fn(() => { phase = "charging"; });
+    const release = vi.fn();
+    const cancel = vi.fn(() => { phase = "idle"; });
+    const dispose = bindFishingCastLifecycle({ getPhase: () => phase, onStart: start, onRelease: release, onCancel: cancel, windowTarget: win, documentTarget: doc });
+    const send = (type: string, props = {}) => {
+      const event = Object.assign(new Event(type, { cancelable: true }), props);
+      win.dispatchEvent(event); return event;
+    };
+    return { win, doc, start, release, cancel, dispose, send, setPhase: (next: string) => { phase = next; } };
+  }
+
+  it("retains a same-turn quick release and ignores competing starts", () => {
+    const h = casting();
+    h.send("tsi:fish-start", { detail: { x: 1, z: 2 } });
+    h.send("keyup", { key: "E" });
+    h.send("tsi:fish-start", { detail: { x: 50, z: 50 } });
+    expect(h.release).toHaveBeenCalledOnce(); expect(h.start).toHaveBeenCalledExactlyOnceWith({ x: 1, z: 2 });
+    h.dispose();
+  });
+
+  it("rejects invalid coordinates and unrelated releases", () => {
+    const h = casting();
+    for (const detail of [undefined, { x: 1 }, { x: NaN, z: 2 }, { x: 1, z: Infinity }]) h.send("tsi:fish-start", { detail });
+    expect(h.start).not.toHaveBeenCalled();
+    h.setPhase("charging"); h.send("keyup", { key: "w" }); h.send("pointerup", { button: 2 });
+    expect(h.release).not.toHaveBeenCalled();
+    h.send("pointerup", { button: 0 }); expect(h.release).toHaveBeenCalledOnce();
+    h.setPhase("waiting"); h.send("keyup", { key: "e" }); expect(h.release).toHaveBeenCalledOnce();
+    h.dispose();
+  });
+
+  it.each(["charging", "casting", "waiting", "bite", "caught", "missed"])("owns Escape during %s", (phase) => {
+    const h = casting(); h.setPhase(phase);
+    expect(h.send("keydown", { key: "Escape" }).defaultPrevented).toBe(true);
+    expect(h.cancel).toHaveBeenCalledOnce(); h.dispose();
+  });
+
+  it("yields idle, reel and reveal Escape to their respective owners", () => {
+    const h = casting();
+    for (const phase of ["idle", "reeling", "revealing"]) {
+      h.setPhase(phase); expect(h.send("keydown", { key: "Escape" }).defaultPrevented).toBe(false);
+    }
+    expect(h.cancel).not.toHaveBeenCalled(); h.dispose();
+  });
+
+  it("interrupts pending casts, preserves completed catches, and cleans up", () => {
+    const h = casting();
+    for (const type of ["blur", "pointercancel", "visibilitychange"]) {
+      h.setPhase("waiting");
+      if (type === "visibilitychange") { h.doc.hidden = true; h.doc.dispatchEvent(new Event(type)); }
+      else h.send(type);
+    }
+    expect(h.cancel).toHaveBeenCalledTimes(3);
+    h.setPhase("revealing"); h.send("blur"); expect(h.cancel).toHaveBeenCalledTimes(3);
+    h.dispose(); h.setPhase("charging"); h.send("keyup", { key: "e" }); h.send("blur");
+    expect(h.release).not.toHaveBeenCalled(); expect(h.cancel).toHaveBeenCalledTimes(3);
   });
 });

@@ -108,6 +108,8 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+- **2026-09-07 (Codex):** Cast lifecycle retains quick release, rejects competing/invalid starts, captures Escape and cancels pending casts on interruption. Visible Cancel/Close and readable meter text. 25 fishing tests, types/lint and Dia full cast→hook→reel→cancel pass. Temporary fixture removed. Next: reveal skip/input.
+
 - **2026-09-07 (Codex):** Fishing reel uses fixed 60 Hz simulation and independent held-input tracking; pauses on blur/hidden/control focus. Dia catch, Escape, retry and frozen-progress/resume checks pass. 190 tests, targeted lint and production build pass. Continuing cast/hook/reveal lifecycle.
 
 - **2026-09-07 (Codex):** Recovered shop sign surface with an adapted “Tethos Shop” atlas; source window glow replaces flat quads. Dia reference/full-world checks, types, targeted lint and material tests pass. Prompt/provenance in `specs/shop-sign-asset.md`; temporary reference fixture removed. Next: fishing loop inspection.

@@ -47,7 +47,8 @@ import {
 import { weatherMods } from "@/lib/game/weatherPerks";
 import { getTodayWeather } from "@/lib/game/weather";
 import { advanceFishingReel, createFishingReel } from "@/lib/game/fishingReel";
-import { bindFishingInput } from "@/lib/game/fishingInput";
+import { bindFishingCastLifecycle, bindFishingInput } from "@/lib/game/fishingInput";
+import { isGameControlTarget } from "@/lib/game/keyboardInput";
 
 type Phase = "idle" | "charging" | "casting" | "waiting" | "bite" | "reeling" | "revealing" | "caught" | "missed";
 
@@ -55,6 +56,12 @@ const BITE_WINDOW_MS = 1400;
 
 export default function FishingOverlay({ onActiveChange }: { onActiveChange?: (active: boolean) => void }) {
   const [phase, setPhase] = useState<Phase>("idle");
+  const phaseRef = useRef<Phase>("idle");
+  const releaseRequestedRef = useRef(false);
+  const changePhase = useCallback((next: Phase) => {
+    phaseRef.current = next;
+    setPhase(next);
+  }, []);
   const active = phase !== "idle";
   useEffect(() => { onActiveChange?.(active); }, [active, onActiveChange]);
   const [fish, setFish] = useState<FishDef | null>(null);
@@ -90,9 +97,10 @@ export default function FishingOverlay({ onActiveChange }: { onActiveChange?: (a
     timersRef.current = [];
   };
 
-  const cancel = () => {
+  const cancel = useCallback(() => {
     clearTimers();
-    setPhase("idle");
+    releaseRequestedRef.current = false;
+    changePhase("idle");
     setFish(null);
     setCaughtSize(null);
     setWasNew(false);
@@ -100,10 +108,11 @@ export default function FishingOverlay({ onActiveChange }: { onActiveChange?: (a
     powerRef.current = 0;
     setTensionZoom(0);
     window.dispatchEvent(new CustomEvent("tsi:fish-end"));
-  };
+  }, [changePhase]);
 
   const beginWait = () => {
-    setPhase("waiting");
+    if (phaseRef.current !== "casting") return;
+    changePhase("waiting");
     // Cast power shortens the wait (max cast halves it); rain days shorten
     // it further (weather perk).
     const wait = (2000 + Math.random() * 4000) * (1 - CAST.waitScale * powerRef.current) * weatherMods(getTodayWeather()).biteWaitMul;
@@ -126,7 +135,7 @@ export default function FishingOverlay({ onActiveChange }: { onActiveChange?: (a
     }
     timersRef.current.push(
       window.setTimeout(() => {
-        setPhase("bite");
+        changePhase("bite");
         punchZoom(3); // micro-zoom: the strike
         window.dispatchEvent(new CustomEvent("tsi:fish-bite")); // bobber slam + "!"
         // G1 hit-confirmation: a 130ms screen nudge sells the bite. The
@@ -148,7 +157,7 @@ export default function FishingOverlay({ onActiveChange }: { onActiveChange?: (a
         // Auto-miss if the window lapses.
         timersRef.current.push(
           window.setTimeout(() => {
-            setPhase("missed");
+            changePhase("missed");
             AudioManager.playSFX("exit");
             timersRef.current.push(window.setTimeout(cancel, 1800));
           }, windowMs)
@@ -159,6 +168,7 @@ export default function FishingOverlay({ onActiveChange }: { onActiveChange?: (a
 
   /** Meter released → actually cast, with power locked in. */
   const castNow = (power: number) => {
+    if (phaseRef.current !== "charging") return;
     clearTimers();
     setFish(null);
     setCaughtSize(null);
@@ -172,7 +182,7 @@ export default function FishingOverlay({ onActiveChange }: { onActiveChange?: (a
     } else {
       AudioManager.playSFX("click");
     }
-    setPhase("casting");
+    changePhase("casting");
     const spot = spotRef.current ?? { x: 0, z: 0 };
     window.dispatchEvent(new CustomEvent("tsi:fish-cast", { detail: { x: spot.x, z: spot.z, power } }));
     timersRef.current.push(window.setTimeout(beginWait, 650));
@@ -180,7 +190,7 @@ export default function FishingOverlay({ onActiveChange }: { onActiveChange?: (a
 
   /** Bite hooked (E or click) → roll the species, open the reel. */
   const hook = () => {
-    if (phase !== "bite") return;
+    if (phaseRef.current !== "bite") return;
     if (performance.now() > biteDeadlineRef.current) return;
     clearTimers();
     const luck = powerRef.current + (powerRef.current >= CAST.maxZone ? CAST.maxBonus : 0);
@@ -188,7 +198,7 @@ export default function FishingOverlay({ onActiveChange }: { onActiveChange?: (a
     const sp = spotRef.current;
     const zone: "river" | "sea" = sp && coastDist(sp.x, sp.z) > 47 ? "sea" : "river";
     setFish(rollFish(luck, zone));
-    setPhase("reeling");
+    changePhase("reeling");
     AudioManager.playSFX("click");
   };
 
@@ -213,17 +223,17 @@ export default function FishingOverlay({ onActiveChange }: { onActiveChange?: (a
           // Blind-box ceremony (David 2026-07-23): first catches get the
           // fullscreen staged reveal — it owns the celebration (confetti
           // fires at its flash) and dismisses back to idle.
-          setPhase("revealing");
+          changePhase("revealing");
           AudioManager.playSFX("click");
         } else {
           // Repeats keep the quick card + tier confetti.
-          setPhase("caught");
+          changePhase("caught");
           AudioManager.playSFX("confirm");
           celebrate(fish.rarity, RARITY_META[fish.rarity].color);
           timersRef.current.push(window.setTimeout(cancel, CELEBRATE[fish.rarity].cardMs));
         }
       } else {
-        setPhase("missed");
+        changePhase("missed");
         AudioManager.playSFX("exit");
         timersRef.current.push(window.setTimeout(cancel, 1800));
       }
@@ -232,18 +242,16 @@ export default function FishingOverlay({ onActiveChange }: { onActiveChange?: (a
     [fish]
   );
 
-  // Start on the world event.
-  useEffect(() => {
-    const onStart = (e: Event) => {
-      const d = (e as CustomEvent<{ x: number; z: number }>).detail;
-      if (d && typeof d.x === "number") spotRef.current = { x: d.x, z: d.z };
-      // Ignore restart while a cast is live; a fresh start only from idle.
-      // Charging first: the world E keydown opens the meter, keyup casts.
-      setPhase((p) => (p === "idle" ? "charging" : p));
-    };
-    window.addEventListener("tsi:fish-start", onStart);
-    return () => window.removeEventListener("tsi:fish-start", onStart);
-  }, []);
+  useEffect(() => bindFishingCastLifecycle({
+    getPhase: () => phaseRef.current,
+    onStart: (spot) => {
+      spotRef.current = spot;
+      releaseRequestedRef.current = false;
+      changePhase("charging");
+    },
+    onRelease: () => { releaseRequestedRef.current = true; },
+    onCancel: cancel,
+  }), [cancel, changePhase]);
 
   // Keyboard: E hooks during bite, ESC cancels (the reel and the reveal
   // each handle their own input). Capture so the world's E handler doesn't
@@ -251,12 +259,11 @@ export default function FishingOverlay({ onActiveChange }: { onActiveChange?: (a
   useEffect(() => {
     if (phase === "idle" || phase === "reeling" || phase === "revealing") return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "e" || e.key === "E") {
+      if (e.repeat || e.metaKey || e.ctrlKey || e.altKey || isGameControlTarget(document.activeElement)) return;
+      if (e.key === "e" || e.key === "E" || e.key === " ") {
         e.preventDefault();
         e.stopPropagation();
         hook();
-      } else if (e.key === "Escape") {
-        cancel();
       }
     };
     window.addEventListener("keydown", onKey, true);
@@ -269,7 +276,7 @@ export default function FishingOverlay({ onActiveChange }: { onActiveChange?: (a
   useEffect(() => {
     if (phase !== "bite") return;
     const onDown = (e: PointerEvent) => {
-      if (e.button !== 0) return;
+      if (e.button !== 0 || isGameControlTarget(e.target as Element | null)) return;
       e.preventDefault();
       e.stopPropagation();
       hook();
@@ -322,7 +329,7 @@ export default function FishingOverlay({ onActiveChange }: { onActiveChange?: (a
       }}
     >
       {phase === "charging" ? (
-        <CastMeter onRelease={castNow} />
+        <CastMeter onRelease={castNow} releaseRequestedRef={releaseRequestedRef} />
       ) : phase === "reeling" && fish ? (
         <ReelMinigame fish={fish} known={ownedRef.current.has(fish.key)} onDone={onReelDone} />
       ) : (
@@ -448,8 +455,13 @@ export default function FishingOverlay({ onActiveChange }: { onActiveChange?: (a
             textShadow: "0 1px 3px rgba(0,0,0,0.5)",
           }}
         >
-          ESC to reel in
+          {phase === "bite" ? "E, Space or click to hook" : "Watch for the bite"}
         </div>
+      )}
+      {phase !== "reeling" && (
+        <button type="button" onClick={cancel} style={{ pointerEvents: "auto", padding: "7px 12px", borderRadius: 8, border: "1px solid #D8CFB8", background: "#FFFDF5", color: "#4A4034", fontSize: 12 }}>
+          {phase === "caught" || phase === "missed" ? "Close" : "Cancel cast (Esc)"}
+        </button>
       )}
       <style>{`
         @keyframes fish-pulse {
@@ -774,7 +786,7 @@ export function ReelMinigame({
 // wider hook window — see CAST in lib/game/fishing.ts). rAF + refs, zero
 // re-renders per frame; ESC cancels via the parent's key handler.
 
-function CastMeter({ onRelease }: { onRelease: (power: number) => void }) {
+function CastMeter({ onRelease, releaseRequestedRef }: { onRelease: (power: number) => void; releaseRequestedRef: React.RefObject<boolean> }) {
   const fillRef = useRef<HTMLDivElement>(null);
   const readoutRef = useRef<HTMLDivElement>(null);
   const pRef = useRef(0);
@@ -791,8 +803,16 @@ function CastMeter({ onRelease }: { onRelease: (power: number) => void }) {
     let lastCycle = 0;
     // Weather perk: sunny days slow the meter (easier MAX CAST).
     const cycleMs = CAST.cycleMs * weatherMods(getTodayWeather()).castCycleMul;
+    releasedRef.current = false;
     const step = (now: number) => {
-      const dt = now - last;
+      if (releaseRequestedRef.current) {
+        if (!releasedRef.current) {
+          releasedRef.current = true;
+          onRelease(pRef.current);
+        }
+        return;
+      }
+      const dt = Math.min(now - last, 100);
       last = now;
       vt += dt * speedMul;
       const cycleIdx = Math.floor(vt / cycleMs);
@@ -814,29 +834,13 @@ function CastMeter({ onRelease }: { onRelease: (power: number) => void }) {
       }
       if (readoutRef.current) {
         readoutRef.current.textContent = inTip ? "MAX!" : `${Math.round(p * 100)}%`;
-        readoutRef.current.style.color = inTip ? "#FFD166" : "#FFFDF5";
+        readoutRef.current.style.color = inTip ? "#9B6500" : "#4A4034";
       }
       raf = requestAnimationFrame(step);
     };
     raf = requestAnimationFrame(step);
 
-    const release = () => {
-      if (releasedRef.current) return;
-      releasedRef.current = true;
-      cancelAnimationFrame(raf);
-      onRelease(pRef.current);
-    };
-    const onKeyUp = (e: KeyboardEvent) => {
-      if (e.key === "e" || e.key === "E") release();
-    };
-    const onPointerUp = () => release();
-    window.addEventListener("keyup", onKeyUp, true);
-    window.addEventListener("pointerup", onPointerUp, true);
-    return () => {
-      cancelAnimationFrame(raf);
-      window.removeEventListener("keyup", onKeyUp, true);
-      window.removeEventListener("pointerup", onPointerUp, true);
-    };
+    return () => cancelAnimationFrame(raf);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -899,8 +903,7 @@ function CastMeter({ onRelease }: { onRelease: (power: number) => void }) {
             fontFamily: "'IBM Plex Mono', monospace",
             fontSize: 15,
             fontWeight: 800,
-            color: "#FFFDF5",
-            textShadow: "0 1px 3px rgba(60,45,20,0.5)",
+            color: "#4A4034",
             minWidth: 52,
           }}
         >
