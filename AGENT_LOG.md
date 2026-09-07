@@ -108,6 +108,8 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+- **2026-09-07 (Codex):** Weather copy now matches implemented effects; removed ineffective cloudy sea-frequency claim without changing probabilities. Native HUD buttons pass Dia Space/Escape checks; rain/cloudy copy verified. Types/lint pass. Next: hook→reel held-input handoff.
+
 - **2026-09-07 (Codex):** Reveal now has explicit controls, immediate Escape, focus containment/restoration and synchronous transition guards. Dia keyboard path passes; head-up fish icons retained after checking recorded art choice. 200 tests, lint/types and production build pass. Next: weather/odds copy accuracy.
 
 - **2026-09-07 (Codex):** Cast lifecycle retains quick release, rejects competing/invalid starts, captures Escape and cancels pending casts on interruption. Visible Cancel/Close and readable meter text. 25 fishing tests, types/lint and Dia full cast→hook→reel→cancel pass. Temporary fixture removed. Next: reveal skip/input.

@@ -391,7 +391,7 @@ export default function FishReveal({
                 padding: "4px 10px",
               }}
             >
-              1 in {odds}
+              Base odds · 1 in {odds}
             </span>
           </div>
         </div>

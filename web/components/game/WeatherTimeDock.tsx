@@ -70,35 +70,41 @@ export default function WeatherTimeDock({
         transition: "top 0.25s ease",
       }}
     >
-      <div
-        role="button"
-        tabIndex={0}
+      <button
+        type="button"
         aria-label={`Time of day: ${pm.label}`}
+        aria-expanded={open === "time"}
+        aria-describedby={open === "time" ? "world-weather-details" : undefined}
         style={{ ...CIRCLE, background: pm.bg, color: pm.fg }}
         onMouseEnter={() => setOpen("time")}
-        onMouseLeave={() => setOpen((o) => (o === "time" ? null : o))}
+        onMouseLeave={(event) => { if (document.activeElement !== event.currentTarget) setOpen((o) => (o === "time" ? null : o)); }}
         onFocus={() => setOpen("time")}
         onBlur={() => setOpen((o) => (o === "time" ? null : o))}
-        onClick={() => setOpen((o) => (o === "time" ? null : "time"))}
+        onClick={() => setOpen("time")}
+        onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); setOpen(null); } }}
       >
         <pm.Icon size={19} strokeWidth={2.4} />
-      </div>
-      <div
-        role="button"
-        tabIndex={0}
+      </button>
+      <button
+        type="button"
         aria-label={`Weather: ${perks.title}`}
+        aria-expanded={open === "weather"}
+        aria-describedby={open === "weather" ? "world-weather-details" : undefined}
         style={{ ...CIRCLE, background: wm.bg, color: wm.fg }}
         onMouseEnter={() => setOpen("weather")}
-        onMouseLeave={() => setOpen((o) => (o === "weather" ? null : o))}
+        onMouseLeave={(event) => { if (document.activeElement !== event.currentTarget) setOpen((o) => (o === "weather" ? null : o)); }}
         onFocus={() => setOpen("weather")}
         onBlur={() => setOpen((o) => (o === "weather" ? null : o))}
-        onClick={() => setOpen((o) => (o === "weather" ? null : "weather"))}
+        onClick={() => setOpen("weather")}
+        onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); setOpen(null); } }}
       >
         <wm.Icon size={19} strokeWidth={2.4} />
-      </div>
+      </button>
 
       {open && (
         <div
+          id="world-weather-details"
+          role="tooltip"
           style={{
             position: "absolute",
             top: 44,

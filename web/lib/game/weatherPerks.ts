@@ -35,7 +35,7 @@ export const WEATHER_PERKS: Record<
   sunny: {
     title: "Sunny",
     perks: [
-      "Calm casting: the cast meter swings 12% slower, so MAX CAST is easier to hit",
+      "Calm casting: 12% more time to line up your cast",
       "Butterflies are out in force today",
     ],
     mods: { ...NEUTRAL, castCycleMul: 1.12 },
@@ -43,8 +43,7 @@ export const WEATHER_PERKS: Record<
   cloudy: {
     title: "Cloudy",
     perks: [
-      "Fish fight 20% calmer in the reel (fewer panic darts)",
-      "Sea fish bite 15% more often at the deck and cove",
+      "Fish make 20% fewer panic darts while reeling",
     ],
     mods: { ...NEUTRAL, dartChanceMul: 0.8, seaWeightMul: 1.15 },
   },
@@ -52,9 +51,9 @@ export const WEATHER_PERKS: Record<
     title: "Rainy",
     perks: [
       "Bites come 25% sooner",
-      "+10% luck for rare-and-up fish",
-      "Rain-only fish are biting (Stringfish, Gar, Catfish…)",
-      "The Golden Koi appears twice as often",
+      "A luck bonus for rare catches",
+      "Stringfish, Gar and Catfish can bite outside their usual hours",
+      "Better chances of finding a Golden Koi",
       "Butterflies are hiding from the rain",
     ],
     mods: { ...NEUTRAL, rareLuckBonus: 0.1, biteWaitMul: 0.75 },
