@@ -7,7 +7,7 @@ export async function GET(request: NextRequest) {
   try {
     supabase = await createClient();
   } catch {
-    return NextResponse.json({ products: [] });
+    return NextResponse.json({ error: "Shop catalogue unavailable" }, { status: 503 });
   }
 
   const {
@@ -41,6 +41,10 @@ export async function GET(request: NextRequest) {
       .eq("active", true)
       .order("released_at", { ascending: false }),
   ]);
+
+  if (marketplaceResult.error || avatarResult.error || shopItemsResult.error) {
+    return NextResponse.json({ error: "Shop catalogue unavailable" }, { status: 503 });
+  }
 
   // Normalize marketplace items to Product shape
   const marketplaceProducts = (marketplaceResult.data ?? []).map((item) => ({

@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const limit = Math.min(parseInt(searchParams.get("limit") ?? "50", 10), 100);
 
-  const [{ data: profile }, { data: transactions }] = await Promise.all([
+  const [profileResult, transactionsResult] = await Promise.all([
     supabase
       .from("profiles")
       .select("tethos_coins, xp, level")
@@ -30,11 +30,16 @@ export async function GET(request: NextRequest) {
       .limit(limit),
   ]);
 
+  const profile = profileResult.data;
+  if (profileResult.error || transactionsResult.error || !profile || typeof profile.tethos_coins !== "number" || !Number.isFinite(profile.tethos_coins) || profile.tethos_coins < 0) {
+    return NextResponse.json({ error: "Account balance unavailable" }, { status: 503 });
+  }
+
   return NextResponse.json({
-    balance: profile?.tethos_coins ?? 0,
+    balance: profile.tethos_coins,
     xp: profile?.xp ?? 0,
     level: profile?.level ?? 1,
-    transactions: transactions ?? [],
+    transactions: transactionsResult.data ?? [],
   });
 }
 
