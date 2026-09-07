@@ -108,6 +108,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-09-07 feature-sheet recovery
+
+Per-sheet render-error boundary, loading feedback and separate 44px close header implemented. Intentional failure fixture and real Shop open/close verified; no purchases. Types/lint/webpack build pass; preceding full unit suite 292 tests. Preview uses Webpack dev after Turbopack HMR reloads. See checkpoint.
+
 ### 2026-09-07 first-visit introduction
 
 Welcome focus/Skip/readability and narrow desktop/touch copy verified in source fixture; removed after navigation. Seen flag preserved, no quest/reward changes. Types/lint pass; preceding full suite/build 292 tests. Default island restored. See checkpoint.

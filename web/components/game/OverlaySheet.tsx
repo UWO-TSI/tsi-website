@@ -16,19 +16,39 @@
  * dashboard sidebar still work; this only changes in-world interaction.
  */
 
-import { useEffect } from "react";
+import { Component as ReactComponent, useEffect, type ReactNode } from "react";
 import dynamic from "next/dynamic";
 import { X } from "lucide-react";
 
-const SheetShop = dynamic(() => import("@/app/student/dashboard/shop/page"), { ssr: false });
-const SheetBounty = dynamic(() => import("@/app/student/dashboard/bounty/page"), { ssr: false });
-const SheetJobs = dynamic(() => import("@/app/student/dashboard/jobs/page"), { ssr: false });
-const SheetLeaderboard = dynamic(() => import("@/app/student/dashboard/leaderboard/page"), { ssr: false });
-const SheetOracle = dynamic(() => import("@/app/student/dashboard/oracle/page"), { ssr: false });
-const SheetDirectory = dynamic(() => import("@/app/student/dashboard/directory/page"), { ssr: false });
-const SheetProfile = dynamic(() => import("@/app/student/dashboard/profile/page"), { ssr: false });
-const SheetQuests = dynamic(() => import("@/app/student/dashboard/quests/page"), { ssr: false });
-const SheetWharfSell = dynamic(() => import("./WharfSellSheet"), { ssr: false });
+const SheetShop = dynamic(() => import("@/app/student/dashboard/shop/page"), { ssr: false, loading: SheetLoading });
+const SheetBounty = dynamic(() => import("@/app/student/dashboard/bounty/page"), { ssr: false, loading: SheetLoading });
+const SheetJobs = dynamic(() => import("@/app/student/dashboard/jobs/page"), { ssr: false, loading: SheetLoading });
+const SheetLeaderboard = dynamic(() => import("@/app/student/dashboard/leaderboard/page"), { ssr: false, loading: SheetLoading });
+const SheetOracle = dynamic(() => import("@/app/student/dashboard/oracle/page"), { ssr: false, loading: SheetLoading });
+const SheetDirectory = dynamic(() => import("@/app/student/dashboard/directory/page"), { ssr: false, loading: SheetLoading });
+const SheetProfile = dynamic(() => import("@/app/student/dashboard/profile/page"), { ssr: false, loading: SheetLoading });
+const SheetQuests = dynamic(() => import("@/app/student/dashboard/quests/page"), { ssr: false, loading: SheetLoading });
+const SheetWharfSell = dynamic(() => import("./WharfSellSheet"), { ssr: false, loading: SheetLoading });
+
+function SheetLoading() {
+  return <p role="status" style={{ padding: 32, color: "var(--color-text-muted, #A9B8C4)", fontSize: 14 }}>Opening panel…</p>;
+}
+
+export class SheetContentBoundary extends ReactComponent<{ title: string; onClose: () => void; children: ReactNode }, { failed: boolean }> {
+  state = { failed: false };
+  static getDerivedStateFromError() { return { failed: true }; }
+  render() {
+    if (!this.state.failed) return this.props.children;
+    return <section role="alert" style={{ padding: 32, color: "var(--color-text-main, #f1ffff)" }}>
+      <h2 style={{ fontSize: 18, marginBottom: 8 }}>{this.props.title} couldn’t open</h2>
+      <p style={{ color: "var(--color-text-muted, #A9B8C4)", fontSize: 14 }}>You can keep exploring, or reload the page to try again.</p>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginTop: 20 }}>
+        <button onClick={this.props.onClose} style={{ minHeight: 44, padding: "8px 14px", borderRadius: 8, background: "#FFD166", color: "#25291e" }}>Back to village</button>
+        <button onClick={() => window.location.reload()} style={{ minHeight: 44, padding: "8px 14px", borderRadius: 8, border: "1px solid var(--glass-border-soft, #53616a)" }}>Reload page</button>
+      </div>
+    </section>;
+  }
+}
 
 const SHEETS = {
   shop: { Component: SheetShop, title: "Shop" },
@@ -77,7 +97,7 @@ export default function OverlaySheet({ sheet, onClose }: { sheet: SheetKey | nul
   const { Component, title } = SHEETS[sheet];
 
   return (
-    <div style={{ position: "absolute", inset: 0, zIndex: 70 }}>
+    <div data-world-sheet style={{ position: "absolute", inset: 0, zIndex: 70 }}>
       <div
         onClick={onClose}
         style={{
@@ -108,34 +128,25 @@ export default function OverlaySheet({ sheet, onClose }: { sheet: SheetKey | nul
           animation: "tsi-sheet-up 0.28s cubic-bezier(0.32, 0.9, 0.35, 1)",
         }}
       >
-        <button
-          onClick={onClose}
-          aria-label="Close sheet"
-          title="Close (Esc)"
-          style={{
-            position: "absolute",
-            top: 12,
-            right: 14,
-            zIndex: 5,
-            width: 34,
-            height: 34,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            background: "rgba(255, 255, 255, 0.08)",
-            border: "1px solid rgba(255, 255, 255, 0.16)",
-            borderRadius: 10,
-            color: "#f1ffff",
-            cursor: "pointer",
-          }}
-        >
-          <X size={16} />
-        </button>
-        <div style={{ flex: 1, overflowY: "auto" }}>
-          <Component />
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "10px 16px", borderBottom: "1px solid var(--glass-border-soft, rgba(255,255,255,0.14))", flexShrink: 0 }}>
+          <span style={{ color: "var(--color-text-main, #f1ffff)", fontSize: 13, fontWeight: 600 }}>{title}</span>
+          <button
+            onClick={onClose}
+            aria-label="Close sheet"
+            title="Close (Esc)"
+            style={{ width: 44, height: 44, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "var(--surface-chip, rgba(255,255,255,0.08))", border: "1px solid var(--glass-border-soft, rgba(255,255,255,0.16))", borderRadius: 10, color: "var(--color-text-main, #f1ffff)", cursor: "pointer" }}
+          >
+            <X size={18} aria-hidden />
+          </button>
+        </div>
+        <div style={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
+          <SheetContentBoundary key={sheet} title={title} onClose={onClose}>
+            <Component />
+          </SheetContentBoundary>
         </div>
       </div>
       <style>{`
+        @media (prefers-reduced-motion: reduce) { [data-world-sheet] * { animation: none !important; } }
         @keyframes tsi-sheet-up { from { transform: translate(-50%, 6%); opacity: 0.6; } to { transform: translate(-50%, 0); opacity: 1; } }
         @keyframes tsi-sheet-dim { from { opacity: 0; } to { opacity: 1; } }
       `}</style>
