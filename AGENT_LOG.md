@@ -108,6 +108,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-09-07 — Camera settling and curved model visibility (Codex)
+
+Camera look-ahead settles at rest and yields to intro; opening framing repaired. Curved-model culling fixed after museum vanished at intro endpoint. Live checks plus 175 tests/build pass; temporary overrides removed. Full-world performance remains open. See `specs/game-default-island-checkpoint.md`.
+
 ### 2026-09-07 — Live interaction tracking (Codex)
 
 NPC targets/glow follow live grounded refs; nearest sweeps refresh while the player rests. Live stationary fixture acquired at 3.499 units and cleared at 3.505, then fixture/logs removed. TypeScript/lint pass; reference console clean. See `specs/game-default-island-checkpoint.md`.

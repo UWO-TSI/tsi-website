@@ -17,6 +17,9 @@ export function prepareModel(source: Object3D, url: string, castShadow: boolean)
   clone.traverse((object) => {
     const mesh = object as Mesh;
     if (!mesh.isMesh) return;
+    // The vertex shader bends distant models back into view. Their original
+    // bounds cannot determine visibility in the curved world.
+    mesh.frustumCulled = false;
     mesh.castShadow = castShadow;
     const originals = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
     const layeredCanopy = /\/plants\/tree-(hardwood-|blossom)/.test(url)

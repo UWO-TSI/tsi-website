@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { calculateCurvedHtmlPosition } from "@/lib/game/worldProjection";
 import { sameInteractionTarget } from "@/lib/game/interactionTarget";
+import { createCameraFollow, updateCameraFollow } from "@/lib/game/cameraFollow";
 import { bindGameKeys, isGameControlTarget } from "@/lib/game/keyboardInput";
 import { CameraControls, Html, useGLTF } from "@react-three/drei";
 import { Smile, BookOpen, Map as MapIcon, Settings2, Keyboard } from "lucide-react";
@@ -1856,6 +1857,7 @@ function Scene({
   // (the follow moveTo no-ops on the null ref).
   const aerial = useMemo(() => getAerialParams(), []);
   const blobPlacements = useMemo(() => buildBlobPlacements(), []);
+  const introActiveRef = useRef(false);
 
   // G5 (item 16): first-visit flythrough — a 6s sweep from over the sea
   // down to the spawn plaza. Any key/click skips. `?nointro` for tests.
@@ -1873,13 +1875,15 @@ function Scene({
       return;
     }
     const prevSmooth = cc.smoothTime;
+    introActiveRef.current = true;
     let done = false;
-    cc.setLookAt(-38, 34, -100, 0, 2, 8, false);
+    cc.setLookAt(-14, 23, -43, 0, -2, -10, false);
     cc.smoothTime = 2.6;
     void cc.setLookAt(0, 19.5, -35, 0, 1.5, -15, true);
     const finish = () => {
       if (done) return;
       done = true;
+      introActiveRef.current = false;
       cc.smoothTime = prevSmooth;
       window.removeEventListener("keydown", skip, true);
       window.removeEventListener("pointerdown", skip, true);
@@ -1941,24 +1945,17 @@ function Scene({
   // M5: read once per mount. Plain function, not a hook — see isGridEnabled.
   const gridEnabled = isGridEnabled();
 
-  const camFeelRef = useRef({ lastX: 0, lastZ: 0, lastT: 0, leadX: 0, leadZ: 0, fov: 48 });
+  const camFeelRef = useRef(createCameraFollow());
   const handlePlayerMove = useCallback((position: THREE.Vector3) => {
     playerPosRef.current.copy(position);
-    const cf = camFeelRef.current;
-    const now = performance.now();
-    const dt = Math.min((now - cf.lastT) / 1000, 0.1) || 0.016;
-    const vx = cf.lastT ? (position.x - cf.lastX) / dt : 0;
-    const vz = cf.lastT ? (position.z - cf.lastZ) / dt : 0;
-    cf.lastX = position.x; cf.lastZ = position.z; cf.lastT = now;
-    const speed = Math.hypot(vx, vz);
-    const lead = speed > 1 ? 1.2 : 0;
-    const inv = speed > 0.001 ? 1 / speed : 0;
-    cf.leadX = THREE.MathUtils.damp(cf.leadX, vx * inv * lead, 3, dt);
-    cf.leadZ = THREE.MathUtils.damp(cf.leadZ, vz * inv * lead, 3, dt);
-    cameraRef.current?.moveTo(position.x + cf.leadX, position.y + 1.5, position.z + cf.leadZ, true);
-    // (Sprint FOV widen lives in PlayerAvatar's useFrame — the compiler
-    // allows camera mutation there but not in this DOM-side callback.)
   }, [playerPosRef]);
+  useFrame((_, delta) => {
+    if (frozen || introActiveRef.current || !cameraRef.current) return;
+    const follow = camFeelRef.current;
+    if (updateCameraFollow(follow, playerPosRef.current, delta)) {
+      cameraRef.current?.moveTo(follow.x, follow.y, follow.z, true);
+    }
+  }, -2);
 
   const updateNearestInteractable = useCallback((position: THREE.Vector3) => {
     // Use live positions: NPCs and critters keep moving while the player rests.
