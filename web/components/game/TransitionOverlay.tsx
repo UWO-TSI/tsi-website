@@ -8,13 +8,13 @@ import styles from "./TransitionOverlay.module.css";
 interface TransitionContextValue {
   state: TransitionState;
   isTransitioning: boolean;
-  triggerTransition: (onBlack: SceneChange) => void;
+  triggerTransition: (onBlack: SceneChange) => boolean;
 }
 
 const TransitionContext = createContext<TransitionContextValue>({
   state: "idle",
   isTransitioning: false,
-  triggerTransition: () => {},
+  triggerTransition: () => false,
 });
 
 export function useTransition() {
@@ -34,7 +34,7 @@ export function TransitionProvider({ children }: { children: React.ReactNode }) 
   }, []);
 
   const triggerTransition = useCallback((onBlack: SceneChange) => {
-    runner.current?.trigger(onBlack, window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+    return runner.current?.trigger(onBlack, window.matchMedia("(prefers-reduced-motion: reduce)").matches) ?? false;
   }, []);
   const isTransitioning = state !== "idle";
 

@@ -18,6 +18,7 @@ import River, { sampleRiverPoint, findRiverTForX } from "./River";
 import Ocean from "./Ocean";
 import TreeShakeFX from "./TreeShakeFX";
 import { useTransition } from "./TransitionOverlay";
+import { startIntroSweep } from "@/lib/game/introSweep";
 import FlowerPickFX from "./FlowerPickFX";
 import FishCatchFX from "./FishCatchFX";
 import { pickFlower, subscribeFlowerPicks, getPickedSnapshot, getPickedServerSnapshot } from "@/lib/game/flowerPicks";
@@ -1859,39 +1860,11 @@ function Scene({
     // Task 26: don't burn the flythrough behind the loading gate — this
     // effect re-runs when the gate finishes and only then starts the sweep.
     if (!introReady) return;
-    if (window.location.search.includes("nointro")) return;
-    try {
-      if (localStorage.getItem("tsi.intro.v1")) return;
-      localStorage.setItem("tsi.intro.v1", "1");
-    } catch {
-      return;
-    }
-    const prevSmooth = cc.smoothTime;
-    introActiveRef.current = true;
-    let done = false;
-    cc.setLookAt(-14, 23, -43, 0, -2, -10, false);
-    cc.smoothTime = 2.6;
-    void cc.setLookAt(0, 19.5, -35, 0, 1.5, -15, true);
-    const finish = () => {
-      if (done) return;
-      done = true;
-      introActiveRef.current = false;
-      cc.smoothTime = prevSmooth;
-      window.removeEventListener("keydown", skip, true);
-      window.removeEventListener("pointerdown", skip, true);
-    };
-    const skip = () => {
-      cc.smoothTime = 0.4;
-      void cc.setLookAt(0, 19.5, -35, 0, 1.5, -15, true);
-      window.setTimeout(finish, 450);
-    };
-    const t = window.setTimeout(finish, 6500);
-    window.addEventListener("keydown", skip, true);
-    window.addEventListener("pointerdown", skip, true);
-    return () => {
-      window.clearTimeout(t);
-      finish();
-    };
+    if (window.location.search.includes("nointro") || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    try { if (localStorage.getItem("tsi.intro.v1")) return; } catch { return; }
+    return startIntroSweep(cc, (active) => { introActiveRef.current = active; }, () => {
+      try { localStorage.setItem("tsi.intro.v1", "1"); } catch { /* The sweep remains skippable for this visit. */ }
+    });
   }, [introReady]);
   // G2: world-space anchor for the E-target ground glow.
   const glowTargetRef = useRef<[number, number, number] | null>(null);
@@ -2398,6 +2371,7 @@ function GameWorldContent() {
   }, []);
   const [activeEmote, setActiveEmote] = useState<EmoteType | null>(null);
   const emoteClearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const doorSoundTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const playerPosRef = useRef<THREE.Vector3>(new THREE.Vector3(...SPAWN_POSITION));
   // P16: shared ref pumped by CompassFeed inside Canvas; consumed by the
   // DOM Compass HUD on the outside. radians, 0 = north, growing clockwise.
@@ -2494,7 +2468,7 @@ function GameWorldContent() {
             AudioManager.playSFX("confirm");
             setSheet(action.slice(6) as SheetKey);
           } else if (action === "exit") {
-            triggerTransition(() => {
+            const accepted = triggerTransition(() => {
               // just outside each building's door (spec §7.2)
               const spawns: Record<string, [number, number, number]> = {
                 hq: [0, 0, -7], shop: [-24, 0, 9], oracle: [0, 0, 29.4], wharf: [44.5, 0, -6.4],
@@ -2503,18 +2477,21 @@ function GameWorldContent() {
               setInterior(null);
               setNearest(null);
             });
-            setDoorGlow((k) => k + 1);
-            AudioManager.playSFX("exit");
+            if (accepted) {
+              setDoorGlow((k) => k + 1);
+              AudioManager.playSFX("exit");
+            }
           } else if (action.startsWith("boat:")) {
             // S5: rowboat fade-travel. Scene is keyed on worldSpawn, so the
             // new spawn remounts it behind the standard transition.
             if (isTransitioning) return;
             const [bx, bz] = action.slice(5).split(",").map(Number);
             const toIslet = bz > 60;
-            triggerTransition(() => {
+            const accepted = triggerTransition(() => {
               setWorldSpawn([bx, 0, bz]);
               setNearest(null);
             });
+            if (!accepted) return;
             AudioManager.playSFX("exit");
             window.dispatchEvent(new CustomEvent("tsi:toast", { detail: { text: toIslet ? "🚣 Rowed out to Isla Chica" : "🚣 Rowed back to the village" } }));
           } else if (action === "admin") {
@@ -2523,15 +2500,20 @@ function GameWorldContent() {
         } else if (n.kind === "building" && n.interiorId) {
           // Interiors-lite: enter the room behind the standard fade.
           if (isTransitioning) return;
-          triggerTransition(() => {
+          const accepted = triggerTransition(() => {
             setInterior(n.interiorId as "hq" | "shop" | "oracle" | "wharf");
             setNearest(null);
           });
+          if (!accepted) return;
           // Door beat: warm light spills from the doorway + the ENTER
           // chime (was playing the exit sound on the way in).
           setDoorGlow((k) => k + 1);
           AudioManager.playSFX("enter");
-          window.setTimeout(() => AudioManager.playSFX("blip2"), 160);
+          if (doorSoundTimerRef.current) clearTimeout(doorSoundTimerRef.current);
+          doorSoundTimerRef.current = setTimeout(() => {
+            doorSoundTimerRef.current = null;
+            AudioManager.playSFX("blip2");
+          }, 160);
         } else if (n.kind === "building" && n.href) {
           // Item 14: mapped targets open as sheets over the world — the
           // Canvas keeps running and close is instant. Unmapped hrefs keep
@@ -2595,6 +2577,7 @@ function GameWorldContent() {
   useEffect(() => {
     return () => {
       if (emoteClearTimerRef.current) clearTimeout(emoteClearTimerRef.current);
+      if (doorSoundTimerRef.current) clearTimeout(doorSoundTimerRef.current);
     };
   }, []);
 

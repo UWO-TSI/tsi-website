@@ -108,6 +108,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-09-07 · Intro skip and doorway feedback ownership
+
+Owned intro timers/listeners, single skip, viewed-on-completion/dismissal and reduced-motion skip. Accepted transitions gate doorway/boat feedback; delayed door sound cancels on world unmount. 339 tests/33 files, types/lint and production build pass. Physical intro/door audio remains unverified. See checkpoint.
+
 ### 2026-09-07 · Transition recovery and fade lifetime
 
 Owned fade/hold timers, same-frame trigger guard, thrown/rejected callback recovery, reduced-motion timing and real fade-in. Lab world now has a keyed transition provider. 333 tests/32 files, types/lint and production build pass. Dia provider fixture passed; intentional failure logs only. Gaps and detailed evidence in checkpoint.
