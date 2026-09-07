@@ -108,6 +108,8 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+- **2026-09-07 (Codex):** HQ now shares assembled body/door between reference and full world; removed opaque door cover and replaced HQ window quads with source glow textures. Dia day/evening/night checks, TypeScript, targeted ESLint and production build pass. Details: `specs/game-default-island-checkpoint.md`. Continuing shop asset inspection locally.
+
 ### 2026-09-07 — Camera settling and curved model visibility (Codex)
 
 Camera look-ahead settles at rest and yields to intro; opening framing repaired. Curved-model culling fixed after museum vanished at intro endpoint. Live checks plus 175 tests/build pass; temporary overrides removed. Full-world performance remains open. See `specs/game-default-island-checkpoint.md`.

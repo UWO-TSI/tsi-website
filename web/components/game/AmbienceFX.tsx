@@ -265,12 +265,10 @@ export function LeafGusts() {
 }
 
 // ─── Night window glow (item 25) ────────────────────────────────────────
-// Warm quads on the four main facades; opacity follows dusk/night. All
+// Legacy quads for the remaining facades; HQ uses its model's glow textures.
+// Opacity follows dusk/night. All
 // share one material so the whole set is a single opacity write.
 const WINDOWS: { x: number; y: number; z: number; w: number; h: number }[] = [
-  // HQ (facade at z=-4, faces south/-z)
-  { x: -2.1, y: 1.55, z: -4.04, w: 0.7, h: 0.85 },
-  { x: 2.1, y: 1.55, z: -4.04, w: 0.7, h: 0.85 },
   // Shop (facade at z=12)
   { x: -26.35, y: 1.35, z: 11.96, w: 0.95, h: 0.8 },
   { x: -21.7, y: 1.35, z: 11.96, w: 0.95, h: 0.8 },

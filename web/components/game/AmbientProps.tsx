@@ -236,14 +236,8 @@ export default function AmbientProps() {
         ))}
       </group>
 
-      {/* HQ entry glow — the RS doorway recess reads as a black hole at
-          distance; a warm pane + soft light make it read as an open,
-          lit lobby (day and night). Door plane is at z=-4 facing south. */}
+      {/* Light the recessed HQ door without covering its textured panels. */}
       <group name="hq-entry">
-        <mesh position={[0, 1.5, -3.2]} rotation={[0, Math.PI, 0]}>
-          <planeGeometry args={[1.7, 2.4]} />
-          <meshStandardMaterial color="#FFE9C0" emissive="#FFC878" emissiveIntensity={0.55} roughness={0.6} metalness={0} />
-        </mesh>
         <pointLight color="#FFD9A0" intensity={0.5} distance={4.5} position={[0, 1.6, -4.6]} />
       </group>
     </group>

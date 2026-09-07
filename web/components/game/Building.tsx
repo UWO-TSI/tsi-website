@@ -6,8 +6,11 @@ import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { useActivePalette } from "@/lib/content/loader";
 import { calculateCurvedHtmlPosition } from "@/lib/game/worldProjection";
-import { applyModelTextures, disposeModelMaterials, prepareModel } from "@/lib/game/modelMaterials";
+import { disposeModelMaterials, prepareModel } from "@/lib/game/modelMaterials";
 import { GLBProp } from "./NatureModels";
+import { ACNHBuilding, ACNH_GLB, ACNH_SCALE, CHALET_VARIANTS } from "./ACNHBuilding";
+
+export { ACNHParts, CHALET_VARIANTS } from "./ACNHBuilding";
 
 // Matches GameWorld's central sweep INTERACT_RADIUS so the "Press E"
 // prompt never shows outside the range where E actually fires.
@@ -223,117 +226,6 @@ const GLB_PATHS: Record<string, string> = {
   oracle: "/assets/buildings/oracle_temple.glb",
   house: "/assets/buildings/house_1.glb",
 };
-
-// ─── ACNH textured building models (2026-07 revamp) ─────────────
-// Source pack is authored at ~10 units per meter; ACNH_SCALE brings them
-// into world units. Models keep their own textures/materials (unlike
-// GLBBuilding, which flat-color-overrides). Grounding: ACNH buildings put
-// their walk-in floor at y=0 in model space and extend foundation BELOW
-// (for slope placement), so we scale about the origin and do NOT re-ground
-// by bbox min — that would hoist the foundation into view.
-const ACNH_SCALE = 0.1;
-
-// M1 (2026-07-26): buildings are composed from PARTS, not one merged file.
-//
-// ACNH authors a building as separate wall / roof / door assets in a SHARED
-// coordinate space — the roof already sits at its correct height in its own
-// file, so the parts need no transform, only mounting in one group. The
-// previous single-file exports were merged by the lost ad-hoc pipeline, which
-// dropped meshes doing it: the chalet shipped with 7 of its 15 meshes, missing
-// mWindowGlass, mSideWindow, mCurtain and mLamp. The houses had no windows.
-//
-// Composing at load time instead of merging offline keeps the extractor honest
-// (one .dae in, one .glb out, mesh-count gated) and costs a few extra draw
-// calls, which the grid renderer's batching pass addresses globally.
-const B = "/assets/acnh/buildings";
-
-/** Chalet variants are a wall + roof pairing over the shared standard door. */
-function chaletParts(wall: string, roof: string): string[] {
-  return [`${B}/chalet-wall-${wall}.glb`, `${B}/chalet-roof-${roof}.glb`, `${B}/chalet-door.glb`];
-}
-
-/** Ambient chalet colourways (scenery only — see GameWorld's south green). */
-export const CHALET_VARIANTS = {
-  brown: chaletParts("a", "b"),
-  red: chaletParts("c", "g"),
-  yellow: chaletParts("e", "e"),
-} as const;
-
-const ACNH_GLB: Record<string, { parts: string[]; scale?: number; yOffset?: number; rotationY?: number }> = {
-  hq: { parts: [`${B}/hq-office.glb`, `${B}/hq-office-door.glb`], rotationY: Math.PI },
-  shop: { parts: [`${B}/shop-market.glb`, `${B}/shop-market-door.glb`], rotationY: Math.PI },
-  oracle: { parts: [`${B}/oracle-museum.glb`], rotationY: Math.PI },
-  house: { parts: CHALET_VARIANTS.brown, rotationY: Math.PI },
-};
-
-/** Shared material pass: ACNH albedo carries the look, so kill PBR shine. */
-function matteACNH(root: THREE.Object3D, castShadow: boolean) {
-  root.traverse((child) => {
-    if (!(child as THREE.Mesh).isMesh) return;
-    const mesh = child as THREE.Mesh;
-    mesh.castShadow = castShadow;
-    mesh.receiveShadow = true;
-    const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
-    for (const m of mats) {
-      const std = m as THREE.MeshStandardMaterial;
-      if (std.isMeshStandardMaterial) {
-        std.metalness = 0;
-        std.roughness = Math.max(std.roughness, 0.85);
-      }
-    }
-  });
-}
-
-/**
- * Mounts a part list as one group. Parts share the source coordinate space.
- *
- * The extractor strips skinning, so node clones are sufficient; materials
- * are cloned separately before applying the instance's finish and textures.
- */
-export function ACNHParts({
-  parts,
-  scale = 1,
-  yOffset = 0,
-  rotationY = 0,
-  castShadow = true,
-}: {
-  parts: readonly string[];
-  scale?: number;
-  yOffset?: number;
-  rotationY?: number;
-  castShadow?: boolean;
-}) {
-  const gltfs = useGLTF(parts as string[]);
-  const group = useMemo(() => {
-    const g = new THREE.Group();
-    gltfs.forEach(({ scene }, index) => g.add(prepareModel(scene, parts[index], castShadow)));
-    g.scale.setScalar(scale * ACNH_SCALE);
-    g.position.y = yOffset;
-    g.rotation.y = rotationY;
-    matteACNH(g, castShadow);
-    return g;
-  }, [gltfs, parts, scale, yOffset, rotationY, castShadow]);
-
-  useEffect(() => {
-    group.children.forEach((part, index) => applyModelTextures(part, parts[index]));
-    return () => disposeModelMaterials(group);
-  }, [group, parts]);
-
-  return <primitive object={group} />;
-}
-
-/** ACNH building: fixed scale, origin-grounded, original materials kept. */
-function ACNHBuilding({ id }: { id: string }) {
-  const cfg = ACNH_GLB[id];
-  return (
-    <ACNHParts
-      parts={cfg.parts}
-      scale={cfg.scale ?? 1}
-      yOffset={cfg.yOffset ?? 0}
-      rotationY={cfg.rotationY ?? 0}
-    />
-  );
-}
 
 for (const cfg of Object.values(ACNH_GLB)) for (const url of cfg.parts) useGLTF.preload(url);
 for (const parts of Object.values(CHALET_VARIANTS)) for (const url of parts) useGLTF.preload(url);
@@ -564,9 +456,10 @@ interface BuildingProps {
   href?: string;
   playerPosition?: THREE.Vector3;
   playerPositionRef?: RefObject<THREE.Vector3>;
+  windowGlow?: number;
 }
 
-export default function Building({ id, name, position, size, color, roofColor, href, playerPosition, playerPositionRef }: BuildingProps) {
+export default function Building({ id, name, position, size, color, roofColor, href, playerPosition, playerPositionRef, windowGlow }: BuildingProps) {
   const [range, setRange] = useState(0);
   useFrame(() => {
     const player = playerPositionRef?.current ?? playerPosition;
@@ -605,7 +498,7 @@ export default function Building({ id, name, position, size, color, roofColor, h
       ) : hasACNH ? (
         <>
           <Suspense fallback={<ACBuilding size={size} color={color} roofColor={roofColor} />}>
-            <ACNHBuilding id={id} />
+            <ACNHBuilding id={id} windowGlow={windowGlow} />
           </Suspense>
           {decoUrl && (
             <Suspense fallback={null}>
