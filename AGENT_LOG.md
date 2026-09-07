@@ -108,6 +108,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-09-07 — NPC art recovery and curved hit targets (Codex)
+
+Repaired legacy NPC sprite URLs with bundled assets and isolated custom-image fallback. Fixed invisible sprite material reuse; unified animated labels/pose and removed duplicate glow/shadows. Curved hit targets now match drawn NPCs; live Dia click triggers greeting. Compact scene and panel layering verified. 154 tests, TypeScript and targeted lint pass; production build predates this batch. No push or backend changes.
+
 ### 2026-09-07 — Consistent locomotion and avatar pose (Codex)
 
 Exact acceleration displacement removes measured frame-rate travel bias; tap movement brakes to its target, and collision still constrains its path. Camera-relative sprite facing and shortest-arc turns tested. Live Dia hop caught detached outline/nameplate; one animated billboard pose now keeps them together. 149 tests across nine files, TypeScript, targeted lint and production webpack build pass. Dev preview restored. Found missing permanent NPC sprites during full-world smoke check; existing-library audit next. No push or backend changes.

@@ -67,3 +67,12 @@ This is a playable review checkpoint, not final visual or whole-game acceptance.
 - Latest suite: 149 tests across nine files; TypeScript and targeted ESLint pass. Production webpack build passed after this batch and the recovery/root changes. Dev preview restored on 3107.
 - Full-world logs also revealed missing permanent NPC sprite URLs in content defaults; investigate with existing sprite library next. Auth-protected collection/ghost endpoints return 401 in the unauthenticated lab, so this smoke check does not verify persistence or live presence.
 - CUA reconnect note: reset detached the original tab (511417935); reconnect could not reclaim it. Current QA tab 511417936 opened through the same verified Dia extension browser. Do not reset the CUA session merely to reread documentation. Old preview remains open because its handle could not close it; do not close unrelated user tabs.
+
+## September 7 NPC rendering and interaction follow-up
+
+- Movement/pose batch committed locally as `ff1cb5a`.
+- Missing legacy mayor/shopkeeper sprite URLs now resolve to existing bundled art. Custom art is preserved and retries a stable bundled fallback on failure, isolated from critical scene loading. Deliberately tested a missing custom NPC image, observed the fallback, and restored the real source.
+- Fixed a placeholder-to-sprite material reuse bug that made the loaded NPC invisible. Sprite, notice/bubble and nameplate share the animated pose; removed duplicate shadows and oversized ghost-like glow. Scheduled voice blips clean up on unmount.
+- Added curved billboard hit testing with three camera-angle/clip tests. Live Dia click on the drawn NPC triggered its greeting hop. NPC clicks prevent the ground movement handler from also consuming the event.
+- Reference island includes Mayor Eliza with terrain-aware wandering. At 390×844, NPC and compact controls render; fixed world labels drawing above the settings panel by containing the canvas stacking context. Fresh console after the final reload has no warnings/errors.
+- 154 tests across 11 files, TypeScript, targeted ESLint and diff check pass. Latest production build predates this NPC batch. No touch-hardware, live chat/persistence or controlled-performance acceptance claimed.

@@ -262,6 +262,7 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
 
   const handleClick = useCallback(
     (e: MouseEvent) => {
+      if (e.defaultPrevented) return;
       // Refinement 2026-07-22 (David): click-to-move is touch-only now.
       // On fine-pointer devices misclicks kept sending the player walking;
       // WASD is the desktop verb. Coarse pointers (phones/tablets in full

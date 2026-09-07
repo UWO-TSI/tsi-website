@@ -7,6 +7,8 @@ import * as THREE from "three";
 import GridWorld from "./grid/GridWorld";
 import GridOcean from "./grid/GridOcean";
 import PlayerAvatar from "./PlayerAvatar";
+import NPC from "./NPC";
+import { DEFAULT_NPC_PERSONAS } from "@/data/content-defaults";
 import GameSceneBoundary from "./GameSceneBoundary";
 import PostFX from "./PostFX";
 import { GLBProp, NatureTree, NatureBush, NatureFlowerCluster } from "./NatureModels";
@@ -85,6 +87,9 @@ function IslandScene({ preset, overview, shadows, reset, onMetrics }: {
       {ISLAND_TREES.map(([x, z], i) => <NatureTree key={`tree-${i}`} position={[x, island.ground(x, z), z]} seed={TREE_SEEDS[i]} />)}
       {ISLAND_BUSHES.map(([x, z], i) => <NatureBush key={`bush-${i}`} position={[x, island.ground(x, z), z]} seed={i} />)}
       {ISLAND_FLOWERS.map(([x, z], i) => <NatureFlowerCluster key={`flower-${i}`} position={[x, island.ground(x, z), z]} seed={i * 2} />)}
+      <NPC key={`npc-${reset}`} persona={DEFAULT_NPC_PERSONAS[0]} position={[-2, 0, -7]} playerPositionRef={player}
+        groundHeight={island.ground} constrainMove={island.move}
+        onClick={() => window.dispatchEvent(new CustomEvent("tsi:npc-greet", { detail: { id: DEFAULT_NPC_PERSONAS[0].id } }))} />
       <PlayerAvatar key={reset} spawnPosition={DEFAULT_SPAWN} playerName="You" onMove={move}
         groundHeight={island.ground} groundSurface={island.surface} constrainMove={island.move} />
     </>
@@ -115,7 +120,7 @@ function DefaultIslandWorldContent() {
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   return (
     <main className={styles.world}>
-      <Canvas tabIndex={0} role="application" aria-label="Island walking area" style={{ imageRendering: graphics.pixelated ? "pixelated" : "auto" }} gl={{ antialias: false, powerPreference: "high-performance" }} dpr={graphics.pixelated ? 0.5 : [1, 2]}
+      <Canvas tabIndex={0} role="application" aria-label="Island walking area" style={{ zIndex: 0, imageRendering: graphics.pixelated ? "pixelated" : "auto" }} gl={{ antialias: false, powerPreference: "high-performance" }} dpr={graphics.pixelated ? 0.5 : [1, 2]}
         camera={{ position: [0, 13, -28], fov: 48, near: 0.1, far: 120 }} shadows="soft"
         onCreated={({ gl }) => { gl.info.autoReset = false; gl.toneMapping = THREE.NeutralToneMapping; gl.outputColorSpace = THREE.SRGBColorSpace; }}>
         <Suspense fallback={null}>
