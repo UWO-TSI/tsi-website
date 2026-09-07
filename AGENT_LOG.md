@@ -108,6 +108,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-09-07 · Default island bridge asset
+
+Existing wooden bridge fitted to the default crossing after measuring deck/span. No authored map or movement changes. Dia camera/lighting review clean; types, lint and six island movement tests pass. See checkpoint.
+
 ### 2026-09-07 · Guestbook request and draft safety
 
 Abort/late-response protection, duplicate pending-submit guard, acknowledged success, retained failed drafts, refresh and keyboard/narrow-panel polish. Full suite 302/28, targeted lint and production build pass. Dia fake-wall QA covered validation/network errors, close/reopen races, refresh, focus and auth/load states; no real posts. Details: `specs/game-default-island-checkpoint.md`.

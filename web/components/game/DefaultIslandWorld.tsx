@@ -11,7 +11,7 @@ import NPC from "./NPC";
 import { DEFAULT_NPC_PERSONAS } from "@/data/content-defaults";
 import GameSceneBoundary from "./GameSceneBoundary";
 import PostFX from "./PostFX";
-import { NatureTree, NatureBush, NatureFlowerCluster } from "./NatureModels";
+import { GLBProp, NatureTree, NatureBush, NatureFlowerCluster } from "./NatureModels";
 import { ACNHBuilding } from "./ACNHBuilding";
 import { createDefaultIsland, DEFAULT_SPAWN, ISLAND_TREES, ISLAND_BUSHES, ISLAND_FLOWERS } from "@/lib/game/defaultIsland";
 import { useGraphicsSettings } from "@/lib/game/useGraphicsSettings";
@@ -87,6 +87,7 @@ function IslandScene({ preset, overview, shadows, reset, onMetrics }: {
       <StaticShadows preset={preset} enabled={shadows} />
       <GridWorld map={island.map} water={preset === "night" ? NIGHT_WATER : WATER} />
       <GridOcean map={island.map} />
+      <GLBProp url="/assets/acnh/props/bridge-wooden.glb" position={[0, -0.065, 0.5]} rotation={[0, Math.PI / 2, 0]} />
       <group position={[0, 0, 7]}><ACNHBuilding id="hq" windowGlow={preset === "night" ? 1.4 : preset === "evening" ? 0.8 : 0} /></group>
       {ISLAND_TREES.map(([x, z], i) => <NatureTree key={`tree-${i}`} position={[x, island.ground(x, z), z]} seed={TREE_SEEDS[i]} />)}
       {ISLAND_BUSHES.map(([x, z], i) => <NatureBush key={`bush-${i}`} position={[x, island.ground(x, z), z]} seed={i} />)}
