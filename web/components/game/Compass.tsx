@@ -11,6 +11,7 @@
  */
 
 import { useEffect, useState } from "react";
+import { cardinalOffset, compassDegrees } from "@/lib/game/compassHeading";
 
 interface CompassProps {
   azimuthRef: React.MutableRefObject<number>;
@@ -25,7 +26,7 @@ const CARDINALS = [
 ];
 
 export default function Compass({ azimuthRef, visible = true }: CompassProps) {
-  const [deg, setDeg] = useState(0);
+  const [deg, setDeg] = useState<number | null>(null);
 
   useEffect(() => {
     if (!visible) return;
@@ -35,18 +36,21 @@ export default function Compass({ azimuthRef, visible = true }: CompassProps) {
       raf = requestAnimationFrame(tick);
       if (t - last < 80) return;
       last = t;
-      const radians = azimuthRef.current;
-      const next = ((radians * 180) / Math.PI) % 360;
-      setDeg(next);
+      const next = compassDegrees(azimuthRef.current);
+      if (next !== null) setDeg(Math.round(next * 10) / 10 % 360);
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
   }, [azimuthRef, visible]);
 
-  if (!visible) return null;
+  if (!visible || deg === null) return null;
+  const direction = ["north", "northeast", "east", "southeast", "south", "southwest", "west", "northwest"][Math.round(deg / 45) % 8];
+  const rounded = Math.round(deg) % 360;
 
   return (
     <div
+      role="img"
+      aria-label={`Facing ${direction}, ${rounded} ${rounded === 1 ? "degree" : "degrees"}`}
       style={{
         position: "absolute",
         top: 12,
@@ -85,9 +89,7 @@ export default function Compass({ azimuthRef, visible = true }: CompassProps) {
         {CARDINALS.map((c) => {
           // Wrap delta into [-180, 180] so labels can slide off either side
           // without jumping when they cross the seam.
-          let delta = c.angle - deg;
-          if (delta > 180) delta -= 360;
-          if (delta < -180) delta += 360;
+          const delta = cardinalOffset(c.angle, deg);
           // 1 deg = ~0.55px on a 116px strip → ~1/3 visible at any time.
           const x = 58 + delta * 0.55;
           if (x < -8 || x > 124) return null;

@@ -19,6 +19,7 @@ import Ocean from "./Ocean";
 import TreeShakeFX from "./TreeShakeFX";
 import { useTransition } from "./TransitionOverlay";
 import { startIntroSweep } from "@/lib/game/introSweep";
+import { forwardAzimuth } from "@/lib/game/compassHeading";
 import FlowerPickFX from "./FlowerPickFX";
 import FishCatchFX from "./FishCatchFX";
 import { pickFlower, subscribeFlowerPicks, getPickedSnapshot, getPickedServerSnapshot } from "@/lib/game/flowerPicks";
@@ -1802,10 +1803,8 @@ function CompassFeed({ azimuthRef }: { azimuthRef: React.MutableRefObject<number
   const fwd = useRef(new THREE.Vector3());
   useFrame(() => {
     camera.getWorldDirection(fwd.current);
-    // atan2(x, z) puts 0 at +Z (south in our world) and grows CCW. We
-    // want 0 at -Z (north) growing CW so it matches a real compass. So
-    // flip sign and add π.
-    azimuthRef.current = Math.atan2(fwd.current.x, fwd.current.z) + Math.PI;
+    const heading = forwardAzimuth(fwd.current.x, fwd.current.z);
+    if (heading !== null) azimuthRef.current = heading;
   });
   return null;
 }

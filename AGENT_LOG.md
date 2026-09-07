@@ -108,6 +108,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-09-07 · Compass/minimap agreement
+
+Removed reversed camera heading, normalized angle/seam handling and added accessible facing labels. 346 tests/34 files, types/lint and production build pass. Dia cardinal/seam/hide-show fixture QA clean. No map geometry or member-data changes. See checkpoint.
+
 ### 2026-09-07 · Intro skip and doorway feedback ownership
 
 Owned intro timers/listeners, single skip, viewed-on-completion/dismissal and reduced-motion skip. Accepted transitions gate doorway/boat feedback; delayed door sound cancels on world unmount. 339 tests/33 files, types/lint and production build pass. Physical intro/door audio remains unverified. See checkpoint.
