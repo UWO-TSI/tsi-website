@@ -108,6 +108,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-09-07 audio lifecycle and mixer
+
+Fixed stale crossfade volume and world-exit audio lifetime; autoplay retry and malformed preferences handled. 273 tests, TypeScript, targeted ESLint and production build pass. Dia mixer controls and re-entry fixture verified and removed. Listening/device QA still open. See checkpoint.
+
 ### 2026-09-07 shared graphics state and keyboard panels
 
 Fixed independent graphics-hook states, retained settings compatibility, and wired effective lite shadow gating. Graphics/Controls focus and larger targets verified in Dia. 264 tests, TypeScript, targeted lint and webpack build pass. See checkpoint for exact evidence and remaining device/authentication gaps.

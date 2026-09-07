@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Volume2, VolumeX, Settings2 } from "lucide-react";
 import { AudioManager, type AmbientPhase } from "@/lib/game/audio";
 import { useAmbientAudio, useAudioState } from "@/lib/game/useAudio";
@@ -23,8 +23,14 @@ export default function AudioController({ phase }: { phase: AmbientPhase }) {
   useAmbientAudio(phase);
   const state = useAudioState();
   const [panelOpen, setPanelOpen] = useState(false);
+  const panelId = useId();
+  const panelRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => { if (panelOpen) panelRef.current?.querySelector("input")?.focus(); }, [panelOpen]);
+  const closePanel = () => { setPanelOpen(false); buttonRef.current?.focus(); };
 
   const handleEnable = () => {
+    setPanelOpen(false);
     AudioManager.enable();
   };
 
@@ -43,8 +49,8 @@ export default function AudioController({ phase }: { phase: AmbientPhase }) {
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            width: 40,
-            height: 40,
+            width: 44,
+            height: 44,
             background: "rgba(15, 15, 16, 0.78)",
             border: "1px solid rgba(255, 255, 255, 0.2)",
             borderRadius: 999,
@@ -63,6 +69,11 @@ export default function AudioController({ phase }: { phase: AmbientPhase }) {
       {/* Mixer widget — bottom-right corner. */}
       {state.enabled && (
         <div
+          onKeyDown={(event) => {
+            if (panelOpen && event.key === "Escape") {
+              event.preventDefault(); event.stopPropagation(); closePanel();
+            }
+          }}
           style={{
             position: "absolute",
             bottom: 16,
@@ -74,6 +85,10 @@ export default function AudioController({ phase }: { phase: AmbientPhase }) {
         >
           {panelOpen && (
             <div
+              ref={panelRef}
+              id={panelId}
+              role="region"
+              aria-label="Audio settings"
               style={{
                 marginBottom: 8,
                 padding: 12,
@@ -105,13 +120,17 @@ export default function AudioController({ phase }: { phase: AmbientPhase }) {
             </div>
           )}
           <button
-            onClick={() => setPanelOpen((o) => !o)}
+            ref={buttonRef}
+            aria-expanded={panelOpen}
+            aria-controls={panelId}
+            onClick={() => panelOpen ? closePanel() : setPanelOpen(true)}
             aria-label={panelOpen ? "Close audio settings" : "Open audio settings"}
             style={{
               display: "flex",
               alignItems: "center",
               gap: 6,
               padding: "8px 10px",
+              minHeight: 44,
               background: "rgba(15, 15, 16, 0.78)",
               border: "1px solid rgba(255, 255, 255, 0.15)",
               borderRadius: 8,
@@ -147,12 +166,14 @@ function VolumeSlider({
         <span>{Math.round(value * 100)}</span>
       </span>
       <input
+        aria-label={`${label} volume`}
+        aria-valuetext={`${Math.round(value * 100)}%`}
         type="range"
         min={0}
         max={100}
         value={Math.round(value * 100)}
         onChange={(e) => onChange(Number(e.target.value) / 100)}
-        style={{ width: "100%", accentColor: "#7EC850" }}
+        style={{ width: "100%", minHeight: 32, accentColor: "#7EC850" }}
       />
     </label>
   );

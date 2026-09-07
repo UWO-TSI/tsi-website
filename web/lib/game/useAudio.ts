@@ -16,6 +16,7 @@ export function useAmbientAudio(phase: AmbientPhase): void {
   useEffect(() => {
     AudioManager.setPhase(phase);
   }, [phase]);
+  useEffect(() => () => AudioManager.stop(), []);
 }
 
 export function useSFX(): { play: (name: SFXName) => void } {
