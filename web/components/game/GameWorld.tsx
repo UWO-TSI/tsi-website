@@ -21,7 +21,7 @@ import FlowerPickFX from "./FlowerPickFX";
 import FishCatchFX from "./FishCatchFX";
 import { pickFlower, subscribeFlowerPicks, getPickedSnapshot, getPickedServerSnapshot } from "@/lib/game/flowerPicks";
 import { getTerrainHeight, valueNoise, BUILDING_FOOTPRINTS } from "./terrain";
-import { GLBProp, NatureMushroom, NatureStump } from "./NatureModels";
+import { GLBProp, NatureMushroom, NatureStump, treeYaw } from "./NatureModels";
 import InstancedGLB, { type NaturePlacement } from "./InstancedNature";
 import AmbientProps from "./AmbientProps";
 import BlobShadows from "./BlobShadows";
@@ -959,7 +959,7 @@ function buildTreePlacements(): { near: NaturePlacement[][]; far: NaturePlacemen
     const y = getTerrainHeight(x, z);
     const placement: NaturePlacement = {
       position: [x, y, z],
-      rotation: (i * 137.5 * Math.PI) / 180,
+      rotation: treeYaw(i),
       // ACNH models are true-scale (~2.7-4.1u); keep variance subtle.
       scale: 0.85 + (i % 5) * 0.08,
     };
@@ -983,7 +983,7 @@ function InstancedTrees() {
           <InstancedGLB key={`near-${url}`} url={url} placements={near[i]} />
         ))}
         {TREE_MODELS.map((url, i) => (
-          <InstancedGLB key={`far-${url}`} url={url} placements={far[i]} />
+          <InstancedGLB key={`far-${url}`} url={url} placements={far[i]} castShadow={false} />
         ))}
       </group>
     </Suspense>

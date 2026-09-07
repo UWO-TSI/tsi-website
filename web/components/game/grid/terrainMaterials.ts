@@ -139,7 +139,6 @@ export function applyGrassNormalStrength(strength: number, worldUnitsPerRepeat: 
   // this repeat is relative to that, not to the tile.
   const r = Math.max(0.01, 2 / worldUnitsPerRepeat);
   mat.normalMap.repeat.set(r, r);
-  mat.normalMap.needsUpdate = true;
 }
 
 const ROAD_DIR = "/assets/acnh/road/";

@@ -1,11 +1,12 @@
 "use client";
 
-import { Suspense, useMemo, useRef, useState, type RefObject } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { Html, useGLTF } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { useActivePalette } from "@/lib/content/loader";
 import { calculateCurvedHtmlPosition } from "@/lib/game/worldProjection";
+import { applyModelTextures, disposeModelMaterials, prepareModel } from "@/lib/game/modelMaterials";
 import { GLBProp } from "./NatureModels";
 
 // Matches GameWorld's central sweep INTERACT_RADIUS so the "Press E"
@@ -286,9 +287,8 @@ function matteACNH(root: THREE.Object3D, castShadow: boolean) {
 /**
  * Mounts a part list as one group. Parts share the source coordinate space.
  *
- * Plain `.clone(true)` is safe here ONLY because the extractor strips skinning
- * (see stripSkinning in scripts/extract-acnh-kit.mjs). Skinned clones do not
- * rebind their skeleton and explode into shards.
+ * The extractor strips skinning, so node clones are sufficient; materials
+ * are cloned separately before applying the instance's finish and textures.
  */
 export function ACNHParts({
   parts,
@@ -306,13 +306,18 @@ export function ACNHParts({
   const gltfs = useGLTF(parts as string[]);
   const group = useMemo(() => {
     const g = new THREE.Group();
-    for (const { scene } of gltfs) g.add(scene.clone(true));
+    gltfs.forEach(({ scene }, index) => g.add(prepareModel(scene, parts[index], castShadow)));
     g.scale.setScalar(scale * ACNH_SCALE);
     g.position.y = yOffset;
     g.rotation.y = rotationY;
     matteACNH(g, castShadow);
     return g;
-  }, [gltfs, scale, yOffset, rotationY, castShadow]);
+  }, [gltfs, parts, scale, yOffset, rotationY, castShadow]);
+
+  useEffect(() => {
+    group.children.forEach((part, index) => applyModelTextures(part, parts[index]));
+    return () => disposeModelMaterials(group);
+  }, [group, parts]);
 
   return <primitive object={group} />;
 }
@@ -353,18 +358,13 @@ function ACNHDeco({ id, url }: { id: string; url: string }) {
   const cfg = ACNH_GLB[id];
   const { scene } = useGLTF(url);
   const cloned = useMemo(() => {
-    const clone = scene.clone(true);
+    const clone = prepareModel(scene, url, true);
     clone.scale.setScalar((cfg.scale ?? 1) * ACNH_SCALE);
     clone.position.y = cfg.yOffset ?? 0;
     if (cfg.rotationY) clone.rotation.y = cfg.rotationY;
-    clone.traverse((child) => {
-      if ((child as THREE.Mesh).isMesh) {
-        (child as THREE.Mesh).castShadow = true;
-        (child as THREE.Mesh).receiveShadow = true;
-      }
-    });
     return clone;
-  }, [scene, cfg]);
+  }, [scene, cfg, url]);
+  useEffect(() => () => disposeModelMaterials(cloned), [cloned]);
   return <primitive object={cloned} />;
 }
 
@@ -406,6 +406,8 @@ function GLBBuilding({ id, size, color }: { id: string; size: [number, number, n
 
     return clone;
   }, [scene, color, size]);
+
+  useEffect(() => () => disposeModelMaterials(cloned), [cloned]);
 
   return <primitive object={cloned} />;
 }

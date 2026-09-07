@@ -106,3 +106,12 @@ This is a playable review checkpoint, not final visual or whole-game acceptance.
 - Avatar reports its grounded position on mount, so initial camera framing and interaction tracking no longer wait for a first step. Initial camera lead ignores the uninitialized velocity sample. Fresh Dia load shows the avatar in frame before movement.
 - Signpost and building labels use the shared curved projection. Signpost text remains readable nearby and hides at distance; building name/prompt no longer overlap. Fresh full-world console has only the existing seasonal-palette fallback warning; protected requests remain unauthenticated in the lab.
 - 170 tests across 14 files, TypeScript, targeted ESLint and production webpack build pass. This build includes the previous surface/canopy changes. Dev preview restored on port 3107.
+
+## September 7 shared building and foliage material ownership
+
+- Previous batch committed as `ea53087`. ACNH building parts and seasonal decorations now own cloned materials; finishing and HQ flag assignment no longer mutate cached GLTF materials. Owned materials clean up on replacement/unmount, including the legacy flat-colour building fallback.
+- Instanced nature now uses the same material preparation as the reference island, retaining material arrays and canopy receive-shadow rules. Cached geometry/textures remain shared and are excluded from automatic instance disposal. Extended the ownership test to cover material arrays and shared texture survival.
+- Both tree placement paths use the same broadleaf yaw. Restored the documented distant-tree shadow exclusion, whose far bucket had accidentally retained the default castShadow=true.
+- Dia full-world Noon check shows the HQ flag and continuous blossom crowns. Fresh full-world console has only the existing seasonal-palette fallback warning. Route change exposed a grass-normal texture marked for upload before its image loaded; UV repeat changes do not require an upload, so removed that redundant needsUpdate. Cold default-island load after the fix has no warnings/errors.
+- Targeted material ownership test, TypeScript and targeted ESLint pass. Previous complete suite: 170 tests; previous production build passed before this batch. Authenticated services and physical device inputs remain unverified.
+- Next: verify the postprocessing exposure path. Local dependency code disables renderer tone mapping while the current composer contains no ToneMapping effect; investigate before retuning lighting. Larger terrain/authored-map work stays deferred.

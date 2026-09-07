@@ -41,15 +41,19 @@ const TREE_MODELS = [
 export function NatureTree({ position, seed }: { position: [number, number, number]; seed: number }) {
   const url = TREE_MODELS[seed % TREE_MODELS.length];
   const s = 0.85 + (seed % 5) * 0.08;
-  // Broadleaf canopies are authored wider than they are deep; a side-on
-  // quarter turn makes the leaf cards look like a thin sheet.
-  const yaw = seed % TREE_MODELS.length === 3 ? seed * 137.5 : 180 + ((seed % 5) - 2) * 8;
-  const r: [number, number, number] = [0, (yaw * Math.PI) / 180, 0];
+  const r: [number, number, number] = [0, treeYaw(seed), 0];
   return (
     <Suspense fallback={null}>
       <GLBProp url={url} scale={s} position={position} rotation={r} />
     </Suspense>
   );
+}
+
+export function treeYaw(seed: number): number {
+  // Broadleaf canopies are authored wider than they are deep; a side-on
+  // quarter turn makes the leaf cards look like a thin sheet.
+  const yaw = seed % TREE_MODELS.length === 3 ? seed * 137.5 : 180 + ((seed % 5) - 2) * 8;
+  return (yaw * Math.PI) / 180;
 }
 
 // ─── Bushes ─────────────────────────────────────────────────────

@@ -108,6 +108,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-09-07 — Shared model material ownership (Codex)
+
+Building/seasonal/instanced nature materials now have explicit ownership and cleanup; HQ flag and foliage preparation agree across both worlds. Removed premature grass-normal upload after route QA exposed a warning. Material test, TypeScript and targeted ESLint pass; cold island console clean. See `specs/game-default-island-checkpoint.md`.
+
 ### 2026-09-07 — Movement render cost and initial camera (Codex)
 
 Removed frame-by-frame React position updates from Scene; shared refs feed actors and equivalent interaction targets no longer republish. Matched live pointer walk reduced Scene render invocations 252 to 4 (dev/Strict Mode, not an FPS claim). Temporary measurement code removed and fine-pointer WASD policy restored. Initial grounded position now reaches camera/interaction tracking before walking. Curved sign/building labels fixed. 170 tests, types, targeted lint and production build pass. No push.

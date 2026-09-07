@@ -20,9 +20,10 @@
  *    mount require re-rendering this component. Fine for static scenery.
  */
 
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { Instances, Instance, useGLTF } from "@react-three/drei";
 import * as THREE from "three";
+import { disposeModelMaterials, prepareModel } from "@/lib/game/modelMaterials";
 
 export interface NaturePlacement {
   position: [number, number, number];
@@ -32,7 +33,8 @@ export interface NaturePlacement {
 
 interface SubMesh {
   geometry: THREE.BufferGeometry;
-  material: THREE.Material;
+  material: THREE.Material | THREE.Material[];
+  receiveShadow: boolean;
 }
 
 function extractSubMeshes(scene: THREE.Object3D): SubMesh[] {
@@ -40,15 +42,7 @@ function extractSubMeshes(scene: THREE.Object3D): SubMesh[] {
   scene.traverse((child) => {
     const m = child as THREE.Mesh;
     if (m.isMesh && m.geometry) {
-      // For most Kenney/Quaternius kits the material is a single object,
-      // not an array. Handle both defensively.
-      const mat = Array.isArray(m.material) ? m.material[0] : m.material;
-      // Foliage backface fix (David report 2026-07-24) — see NatureModels.
-      if (mat && mat.side !== THREE.DoubleSide) {
-        mat.side = THREE.DoubleSide;
-        mat.needsUpdate = true;
-      }
-      out.push({ geometry: m.geometry, material: mat });
+      out.push({ geometry: m.geometry, material: m.material, receiveShadow: m.receiveShadow });
     }
   });
   return out;
@@ -76,7 +70,9 @@ export default function InstancedGLB({
   baseScale = 1,
 }: InstancedGLBProps) {
   const { scene } = useGLTF(url);
-  const subMeshes = useMemo(() => extractSubMeshes(scene), [scene]);
+  const model = useMemo(() => prepareModel(scene, url, castShadow), [scene, url, castShadow]);
+  const subMeshes = useMemo(() => extractSubMeshes(model), [model]);
+  useEffect(() => () => disposeModelMaterials(model), [model]);
 
   if (subMeshes.length === 0) return null;
 
@@ -90,8 +86,9 @@ export default function InstancedGLB({
           limit={Math.max(placements.length, 16)}
           geometry={sm.geometry}
           material={sm.material}
+          dispose={null}
           castShadow={castShadow}
-          receiveShadow={receiveShadow}
+          receiveShadow={receiveShadow && sm.receiveShadow}
         >
           {placements.map((p, j) => (
             <Instance
