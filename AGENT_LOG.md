@@ -1346,6 +1346,10 @@ Restored original clock finish/glass, preserving size; added automatic inspector
 
 Restored round lamp finish/emission; corrected repaired glass faces/shadows; wired ordinary/instanced lamp glow and pools to existing day/night phase. 407 tests/types/lint/webpack build pass; Dia source fixture matches both render paths. Details in checkpoint and `specs/streetlamp-asset.md`. No push/deploy.
 
+### 2026-09-07 compact island controls
+
+Aligned input hints with pointer mode, enlarged controls and restored disclosure focus on Escape. Dia 390px layout plus direct component keyboard QA, types/lint pass. Source fixtures removed; details in checkpoint. No push/deploy.
+
 ## qa
 
 *(append your entries below — log waves continue from Wave 11 in `specs/qa.md`)*

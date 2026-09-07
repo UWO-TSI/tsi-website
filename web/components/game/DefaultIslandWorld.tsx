@@ -121,6 +121,7 @@ function DefaultIslandWorldContent() {
   const [graphics, actions] = useGraphicsSettings();
   const [preset, setPreset] = useState<LightPreset>("day");
   const [optionsOpen, setOptionsOpen] = useState(false);
+  const optionsToggleRef = useRef<HTMLButtonElement>(null);
   const [effects, setEffects] = useState(true);
   const [overview, setOverview] = useState(false);
   const [reset, setReset] = useState(0);
@@ -139,8 +140,15 @@ function DefaultIslandWorldContent() {
         <h1>Tethos Island</h1>
         <p>A little space to make our own.</p>
       </header>
-      <button className={styles.panelToggle} aria-expanded={optionsOpen} aria-controls="island-options" onClick={() => setOptionsOpen((open) => !open)}>View options</button>
-      <section id="island-options" className={styles.panel} data-open={optionsOpen} aria-label="Island view and graphics">
+      <button ref={optionsToggleRef} className={styles.panelToggle} aria-expanded={optionsOpen} aria-controls="island-options" onClick={() => setOptionsOpen((open) => !open)}>View options</button>
+      <section id="island-options" className={styles.panel} data-open={optionsOpen} aria-label="Island view and graphics" onKeyDown={(event) => {
+        if (optionsOpen && event.key === "Escape" && optionsToggleRef.current?.getClientRects().length) {
+          event.preventDefault();
+          event.stopPropagation();
+          setOptionsOpen(false);
+          optionsToggleRef.current?.focus();
+        }
+      }}>
         <div className={styles.views} aria-label="Camera view">
           <button aria-pressed={!overview} onClick={() => setOverview(false)}>Walk</button>
           <button aria-pressed={overview} onClick={() => setOverview(true)}>Overview</button>
