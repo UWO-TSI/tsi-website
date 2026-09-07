@@ -11,7 +11,7 @@
 
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { Canvas } from "@react-three/fiber";
-import { OrbitControls, useGLTF } from "@react-three/drei";
+import { Bounds, OrbitControls, useGLTF } from "@react-three/drei";
 import { clone as cloneSkeleton } from "three/examples/jsm/utils/SkeletonUtils.js";
 import * as THREE from "three";
 
@@ -36,6 +36,7 @@ function Model({
   const cloned = useMemo(() => cloneSkeleton(scene), [scene]);
 
   useEffect(() => {
+    cloned.updateWorldMatrix(true, true);
     const box = new THREE.Box3().setFromObject(cloned);
     const s = new THREE.Vector3();
     box.getSize(s);
@@ -50,7 +51,7 @@ function Model({
       }
     });
     onMeasure({ size: [s.x, s.y, s.z], meshes, materials: mats.size });
-  }, [cloned, onMeasure]);
+  }, [cloned, fixRot, onMeasure]);
 
   return (
     <group rotation-x={fixRot ? Math.PI / 2 : 0}>
@@ -146,18 +147,18 @@ export default function ItemBench() {
           <hemisphereLight args={["#cfe8ff", "#4a3f33", 0.5]} />
           <directionalLight position={[4, 6, 3]} intensity={1.4} />
           <gridHelper args={[10, 20, "#3a4250", "#232a36"]} />
-          {showRef && (
-            /* player-height reference: 1.4u tall, 0.5u wide */
-            <mesh position={[-1.2, 0.7, 0]}>
-              <boxGeometry args={[0.5, 1.4, 0.24]} />
-              <meshStandardMaterial color="#FFD166" transparent opacity={0.28} />
-            </mesh>
-          )}
-          {selected && (
-            <Suspense fallback={null}>
-              <Model url={selected} fixRot={fixRot} onMeasure={setMeasure} />
-            </Suspense>
-          )}
+          <Suspense fallback={null}>
+            <Bounds key={`${selected}:${fixRot}:${showRef}`} fit clip observe margin={1.3}>
+              {showRef && (
+                /* player-height reference: 1.4u tall, 0.5u wide */
+                <mesh position={[-1.2, 0.7, 0]}>
+                  <boxGeometry args={[0.5, 1.4, 0.24]} />
+                  <meshStandardMaterial color="#FFD166" transparent opacity={0.28} />
+                </mesh>
+              )}
+              {selected && <Model url={selected} fixRot={fixRot} onMeasure={setMeasure} />}
+            </Bounds>
+          </Suspense>
           <OrbitControls makeDefault enableDamping dampingFactor={0.1} />
         </Canvas>
 

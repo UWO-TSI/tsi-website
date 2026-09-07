@@ -1338,6 +1338,10 @@ Verification: `tsc --noEmit` clean, `npm run lint` 74 errors / 56 warnings (= Wa
 
 ---
 
+### 2026-09-07 clock and inspector
+
+Restored original clock finish/glass, preserving size; added automatic inspector framing and rotation-aware bounds. TypeScript/lint/Dia checks pass. See `specs/game-default-island-checkpoint.md` and `specs/park-clock-asset.md`. No push/deploy.
+
 ## qa
 
 *(append your entries below — log waves continue from Wave 11 in `specs/qa.md`)*
