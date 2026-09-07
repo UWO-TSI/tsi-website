@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { isPresenceCoordinate } from "@/lib/game/presencePosition";
 
 // POST /api/emotes/log
 // Body: { emote_type_id: string; world_x: number; world_z: number }
@@ -7,8 +8,6 @@ import { createClient } from "@/lib/supabase/server";
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const COORD_MIN = -50;
-const COORD_MAX = 50;
 
 export async function POST(request: Request) {
   let body: { emote_type_id?: unknown; world_x?: unknown; world_z?: unknown };
@@ -19,6 +18,10 @@ export async function POST(request: Request) {
       { ok: false, error: "Invalid JSON body" },
       { status: 400 },
     );
+  }
+
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    return NextResponse.json({ ok: false, error: "Invalid JSON body" }, { status: 400 });
   }
 
   const emoteId =
@@ -32,14 +35,7 @@ export async function POST(request: Request) {
       { status: 400 },
     );
   }
-  if (
-    !Number.isFinite(worldX) ||
-    !Number.isFinite(worldZ) ||
-    worldX < COORD_MIN ||
-    worldX > COORD_MAX ||
-    worldZ < COORD_MIN ||
-    worldZ > COORD_MAX
-  ) {
+  if (!isPresenceCoordinate(worldX) || !isPresenceCoordinate(worldZ)) {
     return NextResponse.json(
       { ok: false, error: "Invalid world coordinates" },
       { status: 400 },
@@ -66,8 +62,8 @@ export async function POST(request: Request) {
 
   if (error) {
     return NextResponse.json(
-      { ok: false, error: error.message },
-      { status: 500 },
+      { ok: false, error: "Emote sharing unavailable" },
+      { status: 503 },
     );
   }
 

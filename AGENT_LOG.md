@@ -108,6 +108,8 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+- 2026-09-07 Codex: emote sharing keeps local animation immediate, reports only latest failure, aborts on exit; desktop/mobile require actual acknowledgement. API supports existing islet and rejects malformed bodies; no real posts. 385 tests, types, targeted lint and webpack build pass; Dia fake-transport QA clean. See `specs/game-default-island-checkpoint.md`. Continuing default-island art composition.
+
 ### 2026-09-07 · Desktop heartbeat snapshots and world bounds
 
 Snapshot/acknowledgement, bounded serial polling, exit cancellation and idle-expiry margin fixed. ±80 validation supports existing coast/islet; authenticated last-seen update now executes and optional failure stays nonfatal. 366 tests/36 files, types/lint/build pass. Supabase writes mocked; Dia transport fake. No migrations or reward changes. See checkpoint.

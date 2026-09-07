@@ -43,6 +43,7 @@ import AmbientLife from "./AmbientLife";
 import AudioController from "./AudioController";
 import NPCChatOverlay from "./NPCChatOverlay";
 import EmoteMenu from "./EmoteMenu";
+import { useEmoteSharing } from "@/lib/game/useEmoteSharing";
 import FishingOverlay from "./FishingOverlay";
 import FishingBobber from "./FishingBobber";
 import IdleFireflies from "./IdleFireflies";
@@ -2625,6 +2626,7 @@ function GameWorldContent() {
     };
   }, [inputBlocked]);
 
+  const sendEmote = useEmoteSharing();
   const handleEmotePick = useCallback((emote: EmoteType) => {
     setActiveEmote(emote);
     if (emoteClearTimerRef.current) clearTimeout(emoteClearTimerRef.current);
@@ -2634,18 +2636,8 @@ function GameWorldContent() {
     }, 3500);
 
     const pos = playerPosRef.current;
-    void fetch("/api/emotes/log", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        emote_type_id: emote.id,
-        world_x: pos.x,
-        world_z: pos.z,
-      }),
-    }).catch(() => {
-      // Silent — emote played client-side even if log fails.
-    });
-  }, []);
+    sendEmote({ id: emote.id, x: pos.x, z: pos.z });
+  }, [sendEmote]);
   // Keep the ref pointed at the latest handler for the keydown effect.
   // Writing the ref in a layout effect (instead of during render) avoids
   // the React "no side-effects during render" lint rule. The keydown

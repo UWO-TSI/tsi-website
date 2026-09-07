@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { shareEmote } from "@/lib/game/emoteSharing";
 import { Expand } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { pollPresence, presenceRequest, PresenceRequestError, recentVisitors, type RecentVisitor } from "@/lib/game/mobilePresence";
@@ -70,7 +71,7 @@ const mobileTransport: MobilePresenceTransport = {
     return Object.fromEntries((data ?? []).map((row) => [row.slug, row.id]));
   },
   async emote(id, signal) {
-    await presenceFetch("/api/emotes/log", signal, { emote_type_id: id, world_x: PLAZA.x, world_z: PLAZA.z });
+    await shareEmote({ id, ...PLAZA }, signal);
   },
 };
 
@@ -146,7 +147,7 @@ export default function MobileWorld({ onTry3D, transport = mobileTransport }: {
         setEmoteFeedback(`${label} shown here. Sharing is unavailable.`);
       }
     } catch {
-      if (!controller.signal.aborted) setEmoteFeedback(`${label} shown here. Couldn’t share it. Try again.`);
+      if (!controller.signal.aborted) setEmoteFeedback(`${label} shown here. Sharing could not be confirmed.`);
     } finally {
       if (pendingRef.current === controller) pendingRef.current = null;
       if (!controller.signal.aborted) setSending(false);
