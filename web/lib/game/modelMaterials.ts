@@ -43,7 +43,19 @@ export function prepareModel(source: Object3D, url: string, castShadow: boolean)
       material.side = DoubleSide;
       if (url.includes("/plants/tree-hardwood-") && material instanceof MeshStandardMaterial) {
         // Grayscale foliage and trunk albedos need their seasonal colour tint.
-        if (material.name.includes("OakLeaf")) material.color.copy(new Color("#a9c977").multiplyScalar(2));
+        if (material.name.includes("OakLeaf")) {
+          material.color.copy(new Color("#9bc87e").multiplyScalar(1.6));
+          // Compress the grayscale atlas contrast so dark leaf cards retain colour.
+          // This affects albedo only; alpha cutouts and scene lighting remain intact.
+          material.onBeforeCompile = (shader) => {
+            shader.fragmentShader = shader.fragmentShader.replace("#include <map_fragment>", `
+              #include <map_fragment>
+              #ifdef USE_MAP
+                diffuseColor.rgb = diffuse * (0.065 + 0.9 * sampledDiffuseColor.rgb);
+              #endif
+            `);
+          };
+        }
         if (material.name.includes("OakTrunk")) material.color.copy(new Color("#b88c58").multiplyScalar(1.7));
       }
       if (material instanceof MeshStandardMaterial && (
