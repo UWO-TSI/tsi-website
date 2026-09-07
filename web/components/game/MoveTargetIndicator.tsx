@@ -22,9 +22,10 @@ const OUTER_RADIUS = 0.6;
 interface MoveTargetIndicatorProps {
   position: [number, number, number];
   onComplete: () => void;
+  groundHeight?: (x: number, z: number) => number;
 }
 
-export default function MoveTargetIndicator({ position, onComplete }: MoveTargetIndicatorProps) {
+export default function MoveTargetIndicator({ position, onComplete, groundHeight = getTerrainHeight }: MoveTargetIndicatorProps) {
   const meshRef = useRef<THREE.Mesh>(null);
   const matRef = useRef<THREE.MeshBasicMaterial>(null);
   // Juice round 2: a second, slightly delayed ring + a center dot that
@@ -37,7 +38,7 @@ export default function MoveTargetIndicator({ position, onComplete }: MoveTarget
   const doneRef = useRef(false);
 
   const [x, , z] = position;
-  const groundY = getTerrainHeight(x, z) + 0.05;
+  const groundY = groundHeight(x, z) + 0.05;
 
   useFrame((_, delta) => {
     if (doneRef.current) return;

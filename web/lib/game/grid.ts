@@ -293,6 +293,15 @@ export function sampleHeightField(map: IslandMap, field: Float32Array, x: number
   return (a * (1 - tx) + b * tx) * (1 - tz) + (c * (1 - tx) + d * tx) * tz;
 }
 
+/** Shared ground query for walking and placement beside cliff-pinned corners. */
+export function sampleGroundHeight(map: IslandMap, field: Float32Array, x: number, z: number): number {
+  const ramp = rampHeightAt(map, x, z);
+  if (ramp !== null) return ramp;
+  const range = cellHeightRange(map, worldToCellX(map, x), worldToCellZ(map, z));
+  const h = sampleHeightField(map, field, x, z);
+  return range ? Math.max(range[0], Math.min(range[1], h)) : h;
+}
+
 /**
  * Water edges: which orthogonal neighbours of a LAND cell are river.
  *

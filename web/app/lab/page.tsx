@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 const CARDS = [
+  { href: "/lab/island", title: "Default island", desc: "The first revamp slice: a small walkable island, existing assets, lighting presets and a persistent pixel filter." },
   {
     href: "/lab/world",
     title: "World bench",

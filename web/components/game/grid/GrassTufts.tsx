@@ -28,8 +28,8 @@ import {
   type IslandMap,
   Surface,
   TILE,
-  LEVEL_STEP,
-  levelAt,
+  heightField,
+  sampleGroundHeight,
   surfaceAt,
   isVoid,
   needsCliff,
@@ -149,6 +149,7 @@ export default function GrassTufts({ map }: { map: IslandMap }) {
   const uWind = useRef({ value: new THREE.Vector4(0.09, 1.1, 9, 0.34) });
 
   // Placements depend only on density, so a sway tweak does not rebuild them.
+  const groundField = useMemo(() => heightField(map), [map]);
   const placements = useMemo(() => {
     const out: { x: number; y: number; z: number; rot: number; s: number; v: number }[] = [];
     if (t.grass.tuftDensity <= 0) return out;
@@ -159,10 +160,10 @@ export default function GrassTufts({ map }: { map: IslandMap }) {
         if (isVoid(s) || s !== Surface.Grass) continue;
         if (needsCliff(map, cx, cz)) continue;
         if (hash01(cx, cz, 1) > chance) continue;
+        const x = cellToWorldX(map, cx) + (hash01(cx, cz, 2) - 0.5) * TILE;
+        const z = cellToWorldZ(map, cz) + (hash01(cx, cz, 3) - 0.5) * TILE;
         out.push({
-          x: cellToWorldX(map, cx) + (hash01(cx, cz, 2) - 0.5) * TILE,
-          y: levelAt(map, cx, cz) * LEVEL_STEP,
-          z: cellToWorldZ(map, cz) + (hash01(cx, cz, 3) - 0.5) * TILE,
+          x, y: sampleGroundHeight(map, groundField, x, z), z,
           rot: hash01(cx, cz, 4) * Math.PI * 2,
           s: 0.75 + hash01(cx, cz, 5) * 0.5,
           v: Math.floor(hash01(cx, cz, 6) * 64) % 64,
@@ -170,7 +171,7 @@ export default function GrassTufts({ map }: { map: IslandMap }) {
       }
     }
     return out;
-  }, [map, t.grass.tuftDensity]);
+  }, [map, groundField, t.grass.tuftDensity]);
 
   const useModel = t.grass.model >= 0.5;
 
@@ -215,7 +216,9 @@ export default function GrassTufts({ map }: { map: IslandMap }) {
   // compiled by the renderer until the first frame, which is after effects run.
   useEffect(() => {
     patchWind(material, uTime.current, uWind.current);
+    return () => material.dispose();
   }, [material]);
+  useEffect(() => () => cardGeometry.dispose(), [cardGeometry]);
 
   useFrame((state) => {
     uTime.current.value = state.clock.elapsedTime;

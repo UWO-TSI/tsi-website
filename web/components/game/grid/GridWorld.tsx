@@ -19,7 +19,7 @@ import {
   heightAtWorld,
   CLIFF_LEVELS,
   heightField,
-  sampleHeightField,
+  sampleGroundHeight,
   rampHeightAt,
   type IslandMap,
   type PlacedProp,
@@ -31,6 +31,7 @@ import GrassTufts from "./GrassTufts";
 import { applyGrassNormalStrength, advanceWater } from "./terrainMaterials";
 import { useTuning, tune as tuneNow } from "@/lib/game/tuning";
 import { useFrame } from "@react-three/fiber";
+import type { WaterParams } from "@/lib/game/waterShader";
 
 let cached: { map: IslandMap; props: PlacedProp[] } | null = null;
 
@@ -63,8 +64,8 @@ export function isGridEnabled(): boolean {
   return gridFlag;
 }
 
-export default function GridWorld() {
-  const { map } = useMemo(() => getIslandMap(), []);
+export default function GridWorld({ map: suppliedMap, water }: { map?: IslandMap; water?: WaterParams }) {
+  const map = useMemo(() => suppliedMap ?? getIslandMap().map, [suppliedMap]);
   const t = useTuning();
 
   // The ground material is shared and cached, so the normal-map settings are
@@ -89,18 +90,9 @@ export default function GridWorld() {
     // Same guard as GridTerrain: inert at CLIFF_LEVELS 1, and the two MUST
     // agree or the player walks on a different surface from the one drawn.
     const field = CLIFF_LEVELS > 1 ? heightField(map) : null;
-    /**
-     * Ramps are checked FIRST, because they are the one place the ground is not
-     * flat and the height field cannot help: its blur treats a full-cliff
-     * difference as a barrier, which at CLIFF_LEVELS 1 is every level change, so
-     * a ramp cell reads as its own flat level. Walking one would be walking
-     * through the slope.
-     */
-    setTerrainHeightProvider((x, z) => {
-      const r = rampHeightAt(map, x, z);
-      if (r !== null) return r;
-      return field ? sampleHeightField(map, field, x, z) : heightAtWorld(map, x, z);
-    });
+    setTerrainHeightProvider((x, z) =>
+      field ? sampleGroundHeight(map, field, x, z) : rampHeightAt(map, x, z) ?? heightAtWorld(map, x, z)
+    );
     return () => setTerrainHeightProvider(null);
   }, [map]);
 
@@ -108,14 +100,20 @@ export default function GridWorld() {
   // The key light is found by traversal rather than duplicated from GameWorld's
   // sun maths — one source of truth, and it stays correct if that arc changes.
   const sunDir = useRef(new THREE.Vector3(0, 1, 0));
+  const lightTarget = useRef(new THREE.Vector3());
   useFrame((state) => {
     let key: THREE.DirectionalLight | null = null;
     state.scene.traverse((o) => {
       const l = o as THREE.DirectionalLight;
       if (!key && l.isDirectionalLight && l.intensity > 0.5) key = l;
     });
-    if (key) sunDir.current.copy((key as THREE.DirectionalLight).position);
-    advanceWater(state.clock.elapsedTime, tuneNow().water, sunDir.current);
+    if (key) {
+      const light = key as THREE.DirectionalLight;
+      light.getWorldPosition(sunDir.current);
+      light.target.getWorldPosition(lightTarget.current);
+      sunDir.current.sub(lightTarget.current);
+    }
+    advanceWater(state.clock.elapsedTime, water ?? tuneNow().water, sunDir.current);
   });
 
   return (

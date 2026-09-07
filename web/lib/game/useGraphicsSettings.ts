@@ -7,8 +7,7 @@
  * navigator.deviceMemory:
  *   - ≤4 GB: lite mode auto-on (no PostFX, no clouds, no ambient life,
  *            no ghosts)
- *   - ≥8 GB: bloom auto-on (the polish that ate ~12 FPS on 4GB devices
- *            is fine on bigger ones)
+ *   - Bloom stays opt-in regardless of reported memory.
  *
  * Members can override either way via the in-game settings panel.
  */
@@ -62,7 +61,7 @@ export interface GraphicsSettings {
   /** Art pass 2026-07-07: gates the blob-shadow layer (shadow maps are gone). */
   shadows: boolean;
   ghostsEnabled: boolean;
-  /** Render at 0.66 dpr with nearest upscale — the Frog Island chunky-pixel look. */
+  /** Render at 0.5 dpr with nearest upscale — the Frog Island chunky-pixel look. */
   pixelated: boolean;
 }
 
@@ -151,7 +150,7 @@ export function useGraphicsSettings(): [GraphicsSettings, GraphicsSettingsAction
       const gb = detectDeviceMemoryGB();
       setState({
         liteMode: gb <= 4,
-        bloom: gb >= 8,
+        bloom: false,
         shadows: !(gb <= 4),
         ghostsEnabled: true,
         pixelated: true,

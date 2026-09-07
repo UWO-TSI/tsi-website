@@ -1,8 +1,8 @@
 "use client";
 
-import { Suspense, useMemo } from "react";
+import { Suspense, useEffect, useMemo } from "react";
 import { useGLTF } from "@react-three/drei";
-import * as THREE from "three";
+import { prepareModel, disposeModelMaterials, applyModelTextures } from "@/lib/game/modelMaterials";
 
 /**
  * GLB model loader (Kenney kits + ACNH pack).
@@ -22,29 +22,11 @@ export function GLBProp({ url, scale = 1, position, rotation, castShadow = true 
   castShadow?: boolean;
 }) {
   const { scene } = useGLTF(url);
-  const clone = useMemo(() => {
-    const c = scene.clone(true);
-    c.traverse((child) => {
-      if ((child as THREE.Mesh).isMesh) {
-        const mesh = child as THREE.Mesh;
-        mesh.castShadow = castShadow;
-        mesh.receiveShadow = true;
-        // David bug report 2026-07-24: blossom/leaf canopies vanished from
-        // half the view angles — the extractor wrote foliage CARDS as
-        // FrontSide, so their backfaces culled. Render nature materials
-        // double-sided (standard for stylized foliage; closed trunk meshes
-        // cost next to nothing).
-        const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
-        for (const mat of mats) {
-          if (mat && mat.side !== THREE.DoubleSide) {
-            mat.side = THREE.DoubleSide;
-            mat.needsUpdate = true;
-          }
-        }
-      }
-    });
-    return c;
-  }, [scene, castShadow]);
+  const clone = useMemo(() => prepareModel(scene, url, castShadow), [scene, url, castShadow]);
+  useEffect(() => {
+    applyModelTextures(clone, url);
+    return () => disposeModelMaterials(clone);
+  }, [clone, url]);
   return <primitive object={clone} scale={scale} position={position} rotation={rotation} />;
 }
 

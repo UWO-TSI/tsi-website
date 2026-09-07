@@ -108,6 +108,14 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-09-07 — Default island rendering/input polish (Codex)
+
+Continuous local work authorized by David, no approval pause between parts. Repaired alpha fringe, model materials, real logo flag, curved labels/picking, slope contact, ocean coverage and keyboard focus. Static shadow caching reduced draw calls 170→138. Compact settings verified at 390×844. Avatar image loading moved after commit; fresh Dia console clean. 134 tests, TypeScript, targeted ESLint and production webpack build pass; production /lab/island returns 404. Reference scene remains in polish and performance acceptance is open. See `specs/game-default-island-checkpoint.md`. No pushes or authored-map/backend edits.
+
+### 2026-09-06 — Default island revamp first checkpoint (Codex)
+
+David confirmed pixelation by default with an off toggle, existing-library-first assets, AC-inspired scenery and 2D characters. Created `feat/game-default-island` from `2a388d5`; local `/lab/island` uses shared rendering and player components. 128 tests and TypeScript pass; changed-file lint has zero errors and five existing warnings. Native Dia confirmed rendering, filter persistence, walking/crossing and HQ collision. Local 27–30 FPS is not performance acceptance. Part 1 remains open for visual polish, controlled performance and broader runtime QA. See `specs/game-default-island-checkpoint.md`. No pushes, migrations or authored-map edits.
+
 ### 2026-07-25 — Loop wake 71: collection-book fish filters
 
 The Fish group grew to ~78 species (wake 22's full-dump import) — one flat grid was a wall. Added filter chips on the Fish group only: **All / 🏞 River / 🌊 Sea / ✓ Caught** (fish items now carry their zone through the catalog map; other groups untouched). Verified headless with seeded catches: Sea shows Horse Mackerel + hides Stringfish, Caught shows exactly the three seeded species. Gates: tsc clean, 74/52, 32/32. Hourly holding pattern continues.

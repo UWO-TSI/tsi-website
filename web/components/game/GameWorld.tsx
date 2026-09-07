@@ -2690,7 +2690,7 @@ export default function GameWorld() {
   // (and doubles as the ambient-density proxy it already was).
   //
   // Pixelated render target (Time on Frog Island reference): render at
-  // 0.66 CSS-pixel ratio and let the browser upscale with nearest — the
+  // 0.5 CSS-pixel ratio and let the browser upscale with nearest — the
   // chunky-pixel look IS the optimization (~40-60% fewer fragments than
   // dpr 1-2). DOM UI stays crisp on top. Toggle in Graphics settings.
   return (
@@ -2707,9 +2707,9 @@ export default function GameWorld() {
           : 'url("data:image/svg+xml;utf8,<svg xmlns=%27http://www.w3.org/2000/svg%27 width=%2720%27 height=%2720%27><circle cx=%2710%27 cy=%2710%27 r=%275%27 fill=%27%23FFFFFF%27 fill-opacity=%270.9%27 stroke=%27%233D3A2E%27 stroke-width=%272%27/></svg>") 10 10, auto',
       }}
     >
-      <Canvas
+      <Canvas style={{ imageRendering: graphicsSettings.pixelated ? "pixelated" : "auto" }}
         gl={{ antialias: false, powerPreference: "high-performance" }}
-        dpr={graphicsSettings.pixelated ? 0.66 : [1, 2]}
+        dpr={graphicsSettings.pixelated ? 0.5 : [1, 2]}
         camera={{ fov: 48, near: 0.1, far: 300, position: [0, 16.5, -21] }} // refinement: closer default framing (was 19/-24)
         shadows="soft" /* P-light v2 2026-07-13: PCFSoft maps; the sun only casts when the shadows setting is on */
         onCreated={({ gl }) => {
@@ -2719,7 +2719,6 @@ export default function GameWorld() {
           // instead of clipping. Unlocks toneMapped=false glow materials.
           gl.toneMapping = THREE.NeutralToneMapping;
           gl.outputColorSpace = THREE.SRGBColorSpace;
-          gl.domElement.style.imageRendering = "pixelated";
         }}
       >
         <WarmupProbe onReady={() => setWorldReady(true)} />

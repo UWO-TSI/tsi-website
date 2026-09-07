@@ -98,6 +98,7 @@ const PROCEDURAL = new Set(["mGrass", "mProcGrass", "mRiver"]);
  * renders as a grey smear.
  */
 const TINT_FOR: Record<string, number> = {
+  mRoadSoil: 0xba9664,
   mGrassCliffXlu: GRASS_COLOR,
   mGrassRiverXlu: GRASS_COLOR,
 };
@@ -148,9 +149,9 @@ function dirFor(name: string): string {
   return name.startsWith("mRoad") ? ROAD_DIR : TEX_DIR;
 }
 
-function loadTexture(loader: THREE.TextureLoader, file: string, dir = TEX_DIR): THREE.Texture {
+function loadTexture(loader: THREE.TextureLoader, file: string, dir = TEX_DIR, colorSpace: THREE.ColorSpace = THREE.SRGBColorSpace): THREE.Texture {
   const t = loader.load(dir + file);
-  t.colorSpace = THREE.SRGBColorSpace;
+  t.colorSpace = colorSpace;
   t.wrapS = THREE.RepeatWrapping;
   t.wrapT = THREE.RepeatWrapping;
   // ACNH source textures are tiny (32x48 up to 512x512). Nearest keeps them
@@ -231,12 +232,11 @@ export function terrainMaterial(name: string): THREE.Material | null {
    * it, which is how mGrass_Nrm rendered the whole ground black.
    */
   const nrm = NORMAL_FOR[key]
-    ? loadTexture(loader, NORMAL_FOR[key], dir)
+    ? loadTexture(loader, NORMAL_FOR[key], dir, THREE.NoColorSpace)
     : undefined;
   const mat = new THREE.MeshStandardMaterial({
     map: loadTexture(loader, TEXTURE_FOR[key], dir),
-    normalMap: nrm,
-    normalScale: nrm ? new THREE.Vector2(0.5, 0.5) : undefined,
+    ...(nrm ? { normalMap: nrm, normalScale: new THREE.Vector2(0.5, 0.5) } : {}),
     color: TINT_FOR[key] ?? 0xffffff,
     roughness: 0.92,
     metalness: 0,
@@ -244,8 +244,18 @@ export function terrainMaterial(name: string): THREE.Material | null {
     // solid geometry, or they punch holes in what is behind them.
     side: isAlpha ? THREE.DoubleSide : THREE.FrontSide,
     transparent: isAlpha,
+    depthWrite: !isAlpha,
     alphaTest: isAlpha ? 0.4 : 0,
   });
+  if (isAlpha) {
+    // The exported fringe contains a valid blade mask but zero RGB. Use its
+    // alpha with the terrain tint instead of multiplying the grass by black.
+    mat.onBeforeCompile = (shader) => {
+      shader.fragmentShader = shader.fragmentShader.replace("#include <map_fragment>",
+        THREE.ShaderChunk.map_fragment.replace("diffuseColor *= sampledDiffuseColor;", "diffuseColor.a *= sampledDiffuseColor.a;"));
+    };
+    mat.customProgramCacheKey = () => "terrain-fringe-alpha-v1";
+  }
   mat.name = `terrain:${key}`;
   cache.set(key, mat);
   return mat;

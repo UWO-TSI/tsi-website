@@ -62,6 +62,9 @@ import * as THREE from "three";
 // lateral it sinks 0.44u, just enough to bow the skyline.
 export const WORLD_BEND = 0.0032;
 export const WORLD_BEND_SIDE = 0.0011;
+const aerialSurvey = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("aerial") === "1";
+export const ACTIVE_WORLD_BEND = aerialSurvey ? 0 : WORLD_BEND;
+export const ACTIVE_WORLD_BEND_SIDE = aerialSurvey ? 0 : WORLD_BEND_SIDE;
 
 const MARKER = "// tsi-curved-world";
 
@@ -85,9 +88,8 @@ if (typeof window !== "undefined") {
   // the curvature is constant-baked into every program, and from 140u up
   // it warps the map into a fisheye. Product loads are untouched: the
   // param is read once at module init, before any material compiles.
-  const aerialSurvey = new URLSearchParams(window.location.search).get("aerial") === "1";
-  const bend = aerialSurvey ? 0 : WORLD_BEND;
-  const bendSide = aerialSurvey ? 0 : WORLD_BEND_SIDE;
+  const bend = ACTIVE_WORLD_BEND;
+  const bendSide = ACTIVE_WORLD_BEND_SIDE;
 
   // Mark the depth pass. Must happen before the first material compiles;
   // three caches programs, so a later patch would only affect new materials.

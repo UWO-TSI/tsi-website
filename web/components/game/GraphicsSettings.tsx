@@ -95,8 +95,8 @@ export default function GraphicsSettingsPanel({ open, onClose }: GraphicsSetting
           disabled={settings.liteMode}
         />
         <Toggle
-          label="Pixel look"
-          hint="Chunky retro render (also the fastest mode). Off = crisp."
+          label="Pixel filter"
+          hint="Pixelates the scenery and characters. Turn off for a sharper view."
           value={settings.pixelated}
           onChange={actions.setPixelated}
         />

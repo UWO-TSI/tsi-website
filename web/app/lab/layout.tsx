@@ -14,7 +14,7 @@ export default function LabLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div style={{ minHeight: "100vh", background: "#0b0e14", color: "#f1ffff" }}>
-      <nav
+      <nav className="whitespace-nowrap overflow-x-auto [&>a]:shrink-0 [&>span]:shrink-0"
         style={{
           position: "fixed",
           top: 0,
@@ -34,6 +34,7 @@ export default function LabLayout({ children }: { children: React.ReactNode }) {
       >
         <span style={{ color: "#FFD166", letterSpacing: "0.12em" }}>TSI LAB</span>
         <Link href="/lab" style={{ color: "#c9d1d6" }}>Index</Link>
+        <Link href="/lab/island" style={{ color: "#FFD166" }}>Default island</Link>
         <Link href="/lab/world" style={{ color: "#c9d1d6" }}>World bench</Link>
         <Link href="/lab/fishing" style={{ color: "#c9d1d6" }}>Fishing bench</Link>
         <Link href="/lab/item" style={{ color: "#c9d1d6" }}>Item bench</Link>

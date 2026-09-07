@@ -261,7 +261,7 @@ function addFringe(
   ];
   // World-space U so neighbouring cards continue the same blades.
   const U = 1 / 6;
-  const uAt = (px: number, pz: number) => (ax !== 0 ? pz : px) * U;
+  const uAt = (px: number, pz: number) => (ax !== 0 ? px : pz) * U;
   const uvs: [number, number][] = [
     [uAt(pts[0][0], pts[0][2]), 0],
     [uAt(pts[1][0], pts[1][2]), 0],
@@ -393,7 +393,7 @@ export default function GridTerrain({ map }: { map: IslandMap }) {
     // `bedDepth` or `bedSlope` on the bench changes the colour instantly and the
     // bed shape on reload.
     const water = TUNING_DEFAULTS.water;
-    const dipAt = (px: number, pz: number) => bedDepth(sampleShore(field, px, pz), water);
+    const dipAt = (px: number, pz: number) => Math.max(0.12, bedDepth(sampleShore(field, px, pz), water));
 
     /**
      * Per-CELL sampler, clamped to what that cell can legitimately reach.
@@ -492,6 +492,16 @@ export default function GridTerrain({ map }: { map: IslandMap }) {
 
           addCell(grass, inGround, cx, cz, x, y, z, undefined, groundFor?.(cx, cz), subdivFor(cx, cz));
 
+          // Rounded land corners expose part of this cell. Continue the water
+          // underneath so those cutouts reveal water instead of a dark gap.
+          const shoreEdges = waterEdges(map, cx, cz);
+          if (shoreEdges.length) {
+            const waterY = Math.min(...shoreEdges.map(([dx, dz]) =>
+              levelAt(map, cx + dx, cz + dz) * LEVEL_STEP)) - WATER_DROP;
+            addCell(river, () => true, cx, cz, x, waterY, z);
+            addCell(bed, () => true, cx, cz, x, waterY, z, dipAt);
+          }
+
           // Walkable step down to a neighbour: a sloped skirt, not a kit
           // piece. This is the whole visible difference between a bank and a
           // cliff, and it lives here because it is terrain, not an object.
@@ -511,7 +521,7 @@ export default function GridTerrain({ map }: { map: IslandMap }) {
           // stops where its cells end -- the old world needed RiverBanks and
           // RiverBankWalls to hide the same seam, and this is the kit's own
           // answer to it.
-          for (const [dx, dz] of waterEdges(map, cx, cz)) {
+          for (const [dx, dz] of s === Surface.Grass ? shoreEdges : []) {
             addFringe(fringe, x, z, groundFor ? groundFor(cx, cz)(x, z) : y, dx, dz);
           }
 

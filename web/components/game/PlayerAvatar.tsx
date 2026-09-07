@@ -4,11 +4,12 @@ import { useRef, useState, useEffect, useCallback, useMemo } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { Billboard, Html } from "@react-three/drei";
 import * as THREE from "three";
-import { getTerrainHeight, sampleTerrainHeightFast } from "./terrain";
+import { sampleTerrainHeightFast } from "./terrain";
 import { clampToCoast, coastDist } from "@/lib/game/coast";
 import { getTodayWeather } from "@/lib/game/weather";
 import { useSFX } from "@/lib/game/useAudio";
 import { getCameraForwardXZ } from "@/lib/game/cameraBasis";
+import { calculateCurvedHtmlPosition } from "@/lib/game/worldProjection";
 import { pickCurvedGround } from "@/lib/game/groundPick";
 import { juiceFovOffset } from "@/lib/game/cameraJuice";
 import { getLabFov } from "@/lib/game/devLab";
@@ -104,16 +105,18 @@ interface PlayerAvatarProps {
   playerName?: string;
   playerLevel?: number;
   activeEmote?: EmoteType | null;
+  groundHeight?: (x: number, z: number) => number;
+  constrainMove?: (fromX: number, fromZ: number, toX: number, toZ: number) => [number, number];
 }
 
-export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Player", playerLevel = 1, activeEmote = null }: PlayerAvatarProps) {
+export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Player", playerLevel = 1, activeEmote = null, groundHeight = sampleTerrainHeightFast, constrainMove }: PlayerAvatarProps) {
   const groupRef = useRef<THREE.Group>(null);
   const meshRef = useRef<THREE.Mesh>(null);
   // Initialize y on the terrain at spawn so the avatar doesn't visibly
   // drop in from y=0 if the spawn point sits on a slope.
   const positionRef = useRef(new THREE.Vector3(
     spawnPosition[0],
-    getTerrainHeight(spawnPosition[0], spawnPosition[2]) + AVATAR_FOOT_OFFSET,
+    groundHeight(spawnPosition[0], spawnPosition[2]) + AVATAR_FOOT_OFFSET,
     spawnPosition[2],
   ));
   const targetRef = useRef<THREE.Vector3 | null>(null);
@@ -126,7 +129,7 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
   const sitRef = useRef<{ x: number; z: number } | null>(null);
   const [isMoving, setIsMoving] = useState(false);
   const { camera, gl } = useThree();
-  const sfx = useSFX();
+  const { play: playSFX } = useSFX();
   const footstepTimer = useRef(0);
   // Sprint A8: breath blend (0 = walking bob, 1 = idle bob), elapsed clock for
   // sine drivers, and active click-to-move ring indicators.
@@ -164,9 +167,9 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
   // left, right, then back to front — so idling reads alive (ACNH beat).
   const idleTimeRef = useRef(0);
 
-  // Load and configure textures for pixel art during construction
+  // Configure each avatar’s own UV state; begin image loading after commit.
   const spriteTexture = useMemo(() => {
-    const tex = new THREE.TextureLoader().load("/assets/characters/player_walk.png");
+    const tex = new THREE.Texture();
     // L12 colorspace audit: sprite sheets are albedo — untagged they were
     // sampled as linear and rendered washed-bright vs everything else.
     tex.colorSpace = THREE.SRGBColorSpace;
@@ -179,12 +182,31 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
   }, []);
 
   const shadowTexture = useMemo(() => {
-    const tex = new THREE.TextureLoader().load("/assets/characters/static_shadow.png");
+    const tex = new THREE.Texture();
     tex.minFilter = THREE.NearestFilter;
     tex.magFilter = THREE.NearestFilter;
     tex.generateMipmaps = false;
     return tex;
   }, []);
+
+  useEffect(() => {
+    let mounted = true;
+    const loader = new THREE.ImageLoader();
+    const load = (url: string, texture: THREE.Texture) => {
+      loader.load(url, (image) => {
+        if (!mounted) return;
+        texture.image = image;
+        texture.needsUpdate = true;
+      });
+    };
+    load("/assets/characters/player_walk.png", spriteTexture);
+    load("/assets/characters/static_shadow.png", shadowTexture);
+    return () => {
+      mounted = false;
+      spriteTexture.dispose();
+      shadowTexture.dispose();
+    };
+  }, [spriteTexture, shadowTexture]);
 
   // Keyboard input. Sprint F1.1: track Shift for sprint multiplier and guard
   // against typing in inputs/textareas/contentEditable so WASD doesn't fire
@@ -193,8 +215,7 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
     const isTyping = () => {
       const el = document.activeElement as HTMLElement | null;
       if (!el) return false;
-      const tag = el.tagName;
-      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return true;
+      if (el.closest("input, textarea, select, button, summary, a[href]")) return true;
       if (el.isContentEditable) return true;
       return false;
     };
@@ -215,7 +236,7 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
           const jp = positionRef.current;
           const id = puffIdRef.current++;
           setPuffs((prev) => [...prev, { id, position: [jp.x, jp.y + 0.02, jp.z], scale: 0.85 }]);
-          sfx.play("blip2");
+          playSFX("blip2");
         }
         e.preventDefault();
       }
@@ -224,13 +245,23 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
       keys[e.key.toLowerCase()] = false;
       if (e.key === "Shift") keys["shift"] = false;
     };
+    const clearKeys = () => { Object.keys(keys).forEach((key) => { keys[key] = false; }); };
+    const onVisibility = () => { if (document.hidden) clearKeys(); };
+    const onFocus = () => { if (isTyping()) clearKeys(); };
+    window.addEventListener("blur", clearKeys);
+    document.addEventListener("visibilitychange", onVisibility);
+    document.addEventListener("focusin", onFocus);
     window.addEventListener("keydown", onKeyDown);
     window.addEventListener("keyup", onKeyUp);
     return () => {
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("keyup", onKeyUp);
+      window.removeEventListener("blur", clearKeys);
+      document.removeEventListener("visibilitychange", onVisibility);
+      document.removeEventListener("focusin", onFocus);
+      clearKeys();
     };
-  }, [sfx]);
+  }, [playSFX]);
 
   // Click-to-move
   const raycaster = useRef(new THREE.Raycaster());
@@ -251,25 +282,28 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
       // 2026-07-08 sync fix: pick against the VISUALLY CURVED heightfield
       // (terrain height + world-bend), not a flat y=0 plane — clicks were
       // landing short of the point under the cursor.
-      const intersection = pickCurvedGround(raycaster.current.ray, camera);
+      const intersection = pickCurvedGround(raycaster.current.ray, camera, groundHeight);
 
       if (intersection) {
-        const [cix, ciz] = clampToCoast(intersection.x, intersection.z, BOUNDARY);
+        const pos = positionRef.current;
+        const [cix, ciz] = constrainMove
+          ? constrainMove(pos.x, pos.z, intersection.x, intersection.z)
+          : clampToCoast(intersection.x, intersection.z, BOUNDARY);
         intersection.x = cix;
         intersection.z = ciz;
         intersection.y = 0;
         targetRef.current = intersection;
-        sfx.play("click");
+        playSFX("click");
         // Sprint A8: spawn expanding ring at click point. Re-clicks spawn new
         // rings (key by counter so React mounts a fresh component).
         const id = indicatorIdRef.current++;
         setIndicators((prev) => [
           ...prev,
-          { id, position: [intersection.x, 0, intersection.z] },
+          { id, position: [intersection.x, groundHeight(intersection.x, intersection.z), intersection.z] },
         ]);
       }
     },
-    [camera, gl, sfx]
+    [camera, gl, playSFX, constrainMove, groundHeight]
   );
 
   useEffect(() => {
@@ -287,7 +321,7 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
       if (sittingDown) {
         // settle: soft dust puff at the seat + ♪ for a moment
         const id = puffIdRef.current++;
-        setPuffs((prev) => [...prev, { id, position: [x, getTerrainHeight(x, z) + 0.15, z], scale: 1.3 }]);
+        setPuffs((prev) => [...prev, { id, position: [x, groundHeight(x, z) + 0.15, z], scale: 1.3 }]);
         setSitNote(true);
         if (sitNoteTimerRef.current) window.clearTimeout(sitNoteTimerRef.current);
         sitNoteTimerRef.current = window.setTimeout(() => setSitNote(false), 1700);
@@ -298,12 +332,16 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
       }
     };
     window.addEventListener("tsi:sit", onSit);
-    return () => window.removeEventListener("tsi:sit", onSit);
-  }, []);
+    return () => {
+      window.removeEventListener("tsi:sit", onSit);
+      if (sitNoteTimerRef.current) window.clearTimeout(sitNoteTimerRef.current);
+    };
+  }, [groundHeight]);
 
   // Movement + sprite animation loop
-  useFrame((_, delta) => {
+  useFrame((_, elapsed) => {
     if (!groupRef.current) return;
+    const delta = Math.min(elapsed, 0.1);
 
     clockRef.current += delta;
     const pos = positionRef.current;
@@ -322,7 +360,7 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
     // G3: seated — snap to the bench seat, freeze, hold down-idle pose.
     if (sitRef.current) {
       const seat = sitRef.current;
-      const seatY = sampleTerrainHeightFast(seat.x, seat.z) + AVATAR_FOOT_OFFSET;
+      const seatY = groundHeight(seat.x, seat.z) + AVATAR_FOOT_OFFSET;
       pos.set(seat.x, seatY, seat.z);
       groupRef.current.position.copy(pos);
       facingRef.current = Math.PI; // face the camera (down column, front cell)
@@ -392,15 +430,17 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
           skidCooldownRef.current = 0.6;
           const id = puffIdRef.current++;
           setPuffs((prev) => [...prev, { id, position: [pos.x, pos.y + 0.12, pos.z], scale: 1.15 }]);
-          sfx.play("footstep");
+          playSFX("footstep");
         }
       }
       vel.x = THREE.MathUtils.damp(vel.x, moving ? dx * PLAYER_SPEED * speedMult : 0, lam, delta);
       vel.y = THREE.MathUtils.damp(vel.y, moving ? dz * PLAYER_SPEED * speedMult : 0, lam, delta);
       if (Math.abs(vel.x) > 0.02 || Math.abs(vel.y) > 0.02) {
-        pos.x += vel.x * delta;
-        pos.z += vel.y * delta;
-        const [cpx, cpz] = clampToCoast(pos.x, pos.z, BOUNDARY);
+        const nextX = pos.x + vel.x * delta;
+        const nextZ = pos.z + vel.y * delta;
+        const [cpx, cpz] = constrainMove
+          ? constrainMove(pos.x, pos.z, nextX, nextZ)
+          : clampToCoast(nextX, nextZ, BOUNDARY);
         pos.x = cpx;
         pos.z = cpz;
       }
@@ -445,7 +485,7 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
     // avatar settles if terrain ever changes) and damp toward it. Damping
     // keeps slope transitions smooth instead of snapping per step.
     // Per-frame: lookup-grid bilinear sample (~50x cheaper than FBM).
-    const targetY = sampleTerrainHeightFast(pos.x, pos.z) + AVATAR_FOOT_OFFSET;
+    const targetY = groundHeight(pos.x, pos.z) + AVATAR_FOOT_OFFSET;
     pos.y = THREE.MathUtils.damp(pos.y, targetY, 1 / Y_DAMP_TIME, delta);
 
     // Determine direction for sprite sheet
@@ -531,7 +571,7 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
         jumpRef.current.active = false;
         jumpRef.current.t = 0;
         squashRef.current = 0.18; // G1: landing squash window
-        sfx.play("footstep"); // land thud
+        playSFX("footstep"); // land thud
         // P29: landing puff — bigger ring at the player's current spot.
         const id = puffIdRef.current++;
         setPuffs((prev) => [
@@ -576,7 +616,7 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
         // Loop wake 31: the brick plaza taps — hard pavement note (matches
         // RoadTiles' PLAZA rect), and dry brick kicks no dirt.
         const onBrick = pos.x > -5.4 && pos.x < 5.4 && pos.z > -16.6 && pos.z < -9.4;
-        sfx.play(onBridge ? "blip4" : onBrick ? "blip3" : "footstep");
+        playSFX(onBridge ? "blip4" : onBrick ? "blip3" : "footstep");
         // P28: spawn a dust puff at the player's feet. Trailing slightly
         // behind the movement direction so it reads as kicked-up dust.
         const trailX = pos.x - (dx || 0) * 0.2;
@@ -607,6 +647,7 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
         <MoveTargetIndicator
           key={ind.id}
           position={ind.position}
+          groundHeight={groundHeight}
           onComplete={() =>
             setIndicators((prev) => prev.filter((i) => i.id !== ind.id))
           }
@@ -692,7 +733,7 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
       {/* Sprint E3: active emote bubble above the avatar's head. Parent clears
           activeEmote after 3.5s so this just unmounts automatically. */}
       {sitNote && (
-        <Html position={[0, 2.1, 0]} center zIndexRange={[30, 0]} style={{ pointerEvents: "none" }}>
+        <Html calculatePosition={calculateCurvedHtmlPosition} position={[0, 2.1, 0]} center zIndexRange={[30, 0]} style={{ pointerEvents: "none" }}>
           <div style={{ fontSize: 20, animation: "tsi-sit-note 1.7s ease-out forwards" }}>♪</div>
           <style>{`
             @keyframes tsi-sit-note {
@@ -704,12 +745,11 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
         </Html>
       )}
       {activeEmote && (
-        <Html zIndexRange={[40, 0]}
+        <Html calculatePosition={calculateCurvedHtmlPosition} zIndexRange={[40, 0]}
           position={[0, 2.6, 0]}
           center
           style={{ pointerEvents: "none" }}
-          distanceFactor={10}
-        >
+          >
           {/* Loop iter 19 (2026-07-24): burst — six sparks fly radially on
               emote start so a wave reads across the plaza. One-shot per
               emote instance (keyed by id + start). */}
@@ -770,11 +810,10 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
       )}
 
       {/* Nameplate */}
-      <Html zIndexRange={[40, 0]}
+      <Html calculatePosition={calculateCurvedHtmlPosition} zIndexRange={[40, 0]}
         position={[0, 2.0, 0]}
         center
         style={{ pointerEvents: "none" }}
-        distanceFactor={10}
       >
         <div
           className="whitespace-nowrap text-center"
@@ -784,10 +823,10 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
             borderRadius: "4px",
           }}
         >
-          <div style={{ fontSize: "14px", fontWeight: 700, color: "#f1ffff", lineHeight: 1.2 }}>
+          <div style={{ fontSize: "11px", fontWeight: 700, color: "#f1ffff", lineHeight: 1.2 }}>
             {playerName}
           </div>
-          <div style={{ fontSize: "12px", color: "#9ca3af", fontFamily: "'IBM Plex Mono', monospace", lineHeight: 1.2 }}>
+          <div style={{ fontSize: "9px", color: "#b8c3c3", fontFamily: "'IBM Plex Mono', monospace", lineHeight: 1.2 }}>
             Lv. {playerLevel}
           </div>
         </div>
