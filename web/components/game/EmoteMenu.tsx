@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect } from "react";
+import { useState } from "react";
+import { useWorldDialog } from "@/lib/game/useWorldDialog";
 import { useEmoteTypes } from "@/lib/content/loader";
 import type { EmoteType } from "@/lib/content/types";
 
 /**
  * EmoteMenu (sprint E2) — DOM overlay rendered alongside AudioController /
- * NPCChatOverlay, outside the R3F Canvas. Opens on E key or sidebar icon
+ * NPCChatOverlay, outside the R3F Canvas. Opens on G key or sidebar icon
  * (wired in GameWorld). Click an emote → onPick(emote) → onClose().
  *
  * Cosmetic-only: emotes don't grant XP/TC (CLAUDE.md principle #3 + #4).
@@ -26,18 +27,13 @@ interface EmoteMenuProps {
   onPick: (emote: EmoteType) => void;
 }
 
-export default function EmoteMenu({ open, onClose, onPick }: EmoteMenuProps) {
+export default function EmoteMenu(props: EmoteMenuProps) {
   const { data: emotes } = useEmoteTypes();
+  return <EmoteMenuView {...props} emotes={emotes} />;
+}
 
-  // ESC closes
-  useEffect(() => {
-    if (!open) return;
-    const handle = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", handle);
-    return () => window.removeEventListener("keydown", handle);
-  }, [open, onClose]);
+export function EmoteMenuView({ open, onClose, onPick, emotes }: EmoteMenuProps & { emotes: EmoteType[] }) {
+  const dialogRef = useWorldDialog(open, onClose, "g");
 
   if (!open) return null;
 
@@ -58,18 +54,23 @@ export default function EmoteMenu({ open, onClose, onPick }: EmoteMenuProps) {
         }}
       />
 
-      {/* Menu — bottom-center row */}
+      {/* Menu stays within the world container, including phones opting into 3D. */}
       <div
+        ref={dialogRef}
         role="dialog"
+        aria-modal="true"
         aria-label="Emote menu"
+        tabIndex={-1}
         style={{
           position: "absolute",
           bottom: 80,
           left: "50%",
           transform: "translateX(-50%)",
           zIndex: 60,
-          display: "flex",
-          gap: 10,
+          width: Math.min(620, Math.max(260, visible.length * 74 + 28)),
+          maxWidth: "calc(100% - 24px)",
+          maxHeight: "calc(100% - 110px)",
+          overflowY: "auto",
           padding: "12px 14px",
           background: "rgba(15, 15, 16, 0.85)",
           border: "1px solid rgba(255, 255, 255, 0.15)",
@@ -79,6 +80,12 @@ export default function EmoteMenu({ open, onClose, onPick }: EmoteMenuProps) {
           animation: "emoteMenuPopIn 200ms ease-out",
         }}
       >
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 8 }}>
+          <span style={{ color: "#f1ffff", fontFamily: "monospace", fontSize: 13 }}>Emotes</span>
+          <button aria-label="Close emotes" onClick={onClose} style={{ minWidth: 44, minHeight: 44, border: "1px solid #53616a", borderRadius: 8, color: "#d6e0e5", fontFamily: "monospace", fontSize: 11 }}>ESC</button>
+        </div>
+        {visible.length === 0 && <p role="status" style={{ color: "#A9B8C4", fontSize: 13, padding: "8px 0" }}>No emotes are available right now.</p>}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(64px, 1fr))", gap: 10 }}>
         {visible.map((emote) => (
           <button
             key={emote.id}
@@ -89,8 +96,9 @@ export default function EmoteMenu({ open, onClose, onPick }: EmoteMenuProps) {
             aria-label={emote.display_name}
             title={emote.display_name}
             style={{
-              width: 64,
-              height: 64,
+              width: "100%",
+              minHeight: 72,
+              padding: "8px 4px",
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
@@ -118,7 +126,8 @@ export default function EmoteMenu({ open, onClose, onPick }: EmoteMenuProps) {
               style={{
                 fontSize: 9,
                 letterSpacing: 0.5,
-                color: "#9ca3af",
+                color: "#B7C4CD",
+                overflowWrap: "anywhere",
                 textTransform: "uppercase",
               }}
             >
@@ -126,9 +135,14 @@ export default function EmoteMenu({ open, onClose, onPick }: EmoteMenuProps) {
             </span>
           </button>
         ))}
+        </div>
       </div>
 
       <style jsx>{`
+        @media (prefers-reduced-motion: reduce) {
+          div { animation: none !important; }
+          button { transition: none !important; }
+        }
         @keyframes emoteMenuFadeIn {
           from {
             opacity: 0;
@@ -153,12 +167,14 @@ export default function EmoteMenu({ open, onClose, onPick }: EmoteMenuProps) {
 }
 
 function EmoteIcon({ emote }: { emote: EmoteType }) {
-  if (emote.icon_url) {
+  const [failedSource, setFailedSource] = useState<string | null>(null);
+  if (emote.icon_url && failedSource !== emote.icon_url) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
       <img
         src={emote.icon_url}
-        alt={emote.display_name}
+        alt=""
+        onError={() => setFailedSource(emote.icon_url)}
         width={28}
         height={28}
         style={{ imageRendering: "pixelated" }}
@@ -167,10 +183,11 @@ function EmoteIcon({ emote }: { emote: EmoteType }) {
   }
   const emoji = EMOJI_BY_KEY[emote.animation_key];
   if (emoji) {
-    return <span style={{ fontSize: 26, lineHeight: 1 }}>{emoji}</span>;
+    return <span aria-hidden style={{ fontSize: 26, lineHeight: 1 }}>{emoji}</span>;
   }
   return (
     <span
+      aria-hidden
       style={{
         width: 26,
         height: 26,

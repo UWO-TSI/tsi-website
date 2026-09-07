@@ -14,7 +14,8 @@ export function useWorldDialog(open: boolean, onClose: () => void, closeKey?: st
     const controls = () => Array.from(panel?.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), a[href], [tabindex="0"]') ?? []).filter((node) => node.getClientRects().length > 0);
     (controls()[0] ?? panel)?.focus();
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape" || event.key === closeKey) {
+      const extraClose = closeKey && !event.metaKey && !event.ctrlKey && !event.altKey && event.key.toLowerCase() === closeKey.toLowerCase();
+      if (event.key === "Escape" || extraClose) {
         event.preventDefault();
         event.stopImmediatePropagation();
         if (!event.repeat) closeRef.current();

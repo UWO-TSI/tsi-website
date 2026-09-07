@@ -267,3 +267,10 @@ This is a playable review checkpoint, not final visual or whole-game acceptance.
 - Nine media-mock tests cover mute/fade behavior, rapid phase changes, stopping/re-entry, autoplay retry, late rejection, stored values and finished one-shots. Full suite 273 tests across 25 files; TypeScript, targeted ESLint and production webpack build pass. Media behavior checked against https://developer.mozilla.org/en-US/docs/Web/API/HTMLMediaElement/play and /volume.
 - Dia isolated real mixer fixture: Enable sound, Master initial focus, Home to zero, Escape to Audio launcher, phase change, unmount/remount, retained settings and restoring 70/60/80 levels all passed. No fresh browser warnings/errors. Fixture removed. This verifies controls and tested media behavior, not listening quality or physical-device playback.
 - Next bounded work: emote menu keyboard/phone-width polish and custom-icon fallback. Authenticated sharing, actual phone/touch and controlled laptop performance remain open; no push/deploy.
+
+## September 7 emote menu polish
+
+- Audio batch committed as `814edcf`. Emote menu now wraps within its world container, has a visible close target, modal focus containment/restoration, G/Escape close, reduced-motion handling and a readable empty state. Failed custom icons fall back to the existing emoji/initial. Existing emotes and sharing/reward behavior preserved.
+- Dia 390px source fixture with eight emotes: panel width 366px, no horizontal overflow, 44px close target and 72px+ emote targets; long labels wrap. Tab/Shift-Tab wrap, Enter selects and closes, G/Escape restore launcher focus, missing custom icon falls back, and empty state stays closable. No fresh runtime warnings/errors. Fake selection callback only; no remote sharing. Fixture removed.
+- TypeScript, targeted ESLint and diff check pass. Latest full suite/build is the preceding audio batch: 273 tests across 25 files. No extra implementation-mirroring UI unit tests. Actual phone viewport and physical touch remain unverified.
+- Next: make the member-presence list distinguish loading/failure from empty and describe the server's recent-heartbeat semantics accurately.

@@ -108,6 +108,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-09-07 emote menu polish
+
+Wrapped narrow layout, visible close, keyboard ownership, empty state and missing-icon fallback verified in Dia with fake selection only. Fixture removed; types/lint pass. Latest full suite/build: audio batch, 273 tests. See checkpoint.
+
 ### 2026-09-07 audio lifecycle and mixer
 
 Fixed stale crossfade volume and world-exit audio lifetime; autoplay retry and malformed preferences handled. 273 tests, TypeScript, targeted ESLint and production build pass. Dia mixer controls and re-entry fixture verified and removed. Listening/device QA still open. See checkpoint.
