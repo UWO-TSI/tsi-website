@@ -108,6 +108,8 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+- 2026-09-07: Add shared moonlight and default-island night preset, hold midnight palette, and phase legacy river highlights. 232 tests, types, targeted lint and production build pass. Dia day/night/rain/pixel comparisons verified; legacy river art and phone viewport remain open. No map edits.
+
 - 2026-09-07: Scope environment maps to scene/renderer and release bake scratch resources. Five lifecycle tests, types and lint pass; Dia time/weather remounts render without new errors. Lighting values unchanged in this batch.
 
 - 2026-09-07: Correct fishing bench habitat/odds/simulation drift with shared weighted pool. 225 tests, types, lint and production build pass; Dia sea simulation and stale-result reset verified. No authored probability changes.

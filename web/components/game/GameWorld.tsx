@@ -94,6 +94,7 @@ import { clone as cloneSkeleton } from "three/examples/jsm/utils/SkeletonUtils.j
 import SeasonalProps from "./SeasonalProps";
 import Landmarks from "./Landmarks";
 import { getActiveCritters } from "@/lib/game/critterStore";
+import { MOONLIGHT, moonlightWeight } from "@/lib/game/moonlight";
 import { applyEnvironment, disposeEnvironment } from "@/lib/game/envLight";
 import { useGhostReplaySetting } from "@/lib/game/useGhostReplaySetting";
 // P15: side-effect import kicks off useGLTF.preload for buildings + nature
@@ -199,6 +200,8 @@ function setFogRange(fog: THREE.Fog, near: number, far: number) {
 }
 
 const TOD_KEYS: [number, string, string, string, number, string, number][] = [
+  [0,  "#1A1A40", "#26264A", "#334466", 0.0, "#334466", 0.22],
+  [4,  "#1A1A40", "#26264A", "#334466", 0.0, "#334466", 0.22],
   [5,  "#FFB878", "#FFDDB8", "#FFD9B0", 0.6,  "#C8BCFF", 0.34], // dawn peach
   [6,  "#8FC4EE", "#F2E2C8", "#FFE7C4", 0.95, "#D8D4F2", 0.36], // sunrise cream
   [7,  "#63C2F7", "#BEE4EE", "#FFF9E8", 1.25, "#CFE7FF", 0.38],
@@ -216,6 +219,8 @@ const TOD_KEYS: [number, string, string, string, number, string, number][] = [
 const _tc = new THREE.Color();
 
 const _sunPos = new THREE.Vector3();
+const _moonLightPos = new THREE.Vector3(...MOONLIGHT.position);
+const _moonLightColor = new THREE.Color(MOONLIGHT.color);
 
 /**
  * Sun + moon direction from wall-clock hour.
@@ -391,7 +396,7 @@ function TimeOfDayCycle({ weather, todPhase, shadowsOn, playerPosRef }: { weathe
     if (ai < bi) {
       t = (h - a[0]) / (b[0] - a[0]);
     } else {
-      // Night→Dawn wrap (21→5)
+      // Midnight wrap (21→0); dawn begins at the 4→5 keys.
       const span = (24 - a[0]) + b[0];
       t = (h >= a[0] ? h - a[0] : h + 24 - a[0]) / span;
     }
@@ -459,10 +464,14 @@ function TimeOfDayCycle({ weather, todPhase, shadowsOn, playerPosRef }: { weathe
       cloudMat.uniforms.params.value.set(prev.x + drift, cOpacity, (0.32 + sunI * 0.68) * (weather === "rain" ? 0.75 : 1), 0);
     }
 
-    // Sun
+    // One shadow-casting key transitions from sunlight to soft moonlight.
     if (sunRef.current) {
-      sunRef.current.color.set(a[3]).lerp(_tc.set(b[3]), t);
-      sunRef.current.intensity = (a[4] + (b[4] - a[4]) * t) * wDim;
+      const sunStrength = (a[4] + (b[4] - a[4]) * t) * wDim;
+      const moonStrength = MOONLIGHT.strength * moonlightWeight(h) * wDim;
+      const totalStrength = sunStrength + moonStrength;
+      const moonMix = totalStrength > 0 ? moonStrength / totalStrength : 0;
+      sunRef.current.color.set(a[3]).lerp(_tc.set(b[3]), t).lerp(_moonLightColor, moonMix);
+      sunRef.current.intensity = totalStrength;
       // Cozy push 2026-07-03: the LIGHT rides a classic high arc (15-60°)
       // even though the visible DISC stays low (W18-1 keeps it in the
       // camera-reachable band). Sharing the low arc made midday light skim
@@ -475,33 +484,16 @@ function TimeOfDayCycle({ weather, todPhase, shadowsOn, playerPosRef }: { weathe
         Math.sin(lightAz) * Math.cos(lightEl),
         Math.sin(lightEl),
         Math.cos(lightAz) * Math.cos(lightEl)
-      ).multiplyScalar(30);
+      ).multiplyScalar(30).lerp(_moonLightPos, moonMix);
       if (shadowsOn) {
         updateShadowRig(gl, sunRef.current, playerPosRef.current, _sunPos);
       } else {
         sunRef.current.position.copy(_sunPos);
       }
     }
-    // ── Fill budget (D3 fix, 2026-07-26) ────────────────────────────
-    // Measured before: key 1.40 vs total fill 1.30 (ambient 0.35 + hemi 0.40 +
-    // 2nd directional 0.15 + env IBL 0.40). Key:fill 1.08:1 gives a 2.2:1
-    // contrast ratio, about 1.1 stops — form cannot read at that ratio, which
-    // is the flatness David reported.
-    //
-    // The fix is not a flat cut: at night there IS no key, so fill is the only
-    // light and cutting it 3x would make the dark hours unplayable. Fill now
-    // scales INVERSELY with the sun — small when the key is strong, full when
-    // the key is gone. Night chemistry is deliberately left as shipped.
-    //
-    //            noon (sunNorm 1)      night (sunNorm 0)
-    //   ambient  0.35 x 0.32 = 0.11    0.22 x 1.00 = 0.22   (table value preserved)
-    //   hemi                    0.15                  0.20
-    //   env IBL                 0.20                  0.22   (see envLight.ts)
-    //   total fill              0.46                  0.64
-    //   key                     1.40                  0.00
-    //   contrast           ~4.0 : 1              unchanged
-    //
-    // sunNorm matches the fog block below: sun intensity over the 1.4 noon peak.
+    // Daytime fill recedes under the sun to preserve form. At night the
+    // existing ambient/hemi floor supports the moon key and warm windows.
+    // Keep sunNorm based on sunlight so the new moon does not suppress fill.
     const sunNorm = Math.min(1, (a[4] + (b[4] - a[4]) * t) / 1.4);
     // Ambient — TOD table still owns the colour AND the per-hour ratios the art
     // pass tuned; we only scale the whole curve down as the sun comes up.

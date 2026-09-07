@@ -143,6 +143,7 @@ const DEFAULT_SHALLOW = "#A8D8E8"; // light blue foam highlight
 // palette so the water bodies read as one at dusk/night instead of the river
 // staying day-blue.
 type RiverPhase = "dawn" | "day" | "dusk" | "night";
+const RIVER_HIGHLIGHT_LIGHT: Record<RiverPhase, number> = { dawn: 0.5, day: 1, dusk: 0.3, night: 0 };
 const RIVER_PALETTE: Record<RiverPhase, [string, string]> = {
   dawn: ["#5378B0", "#C4D8E8"],
   day: ["#3A6EA5", "#A8D8E8"],
@@ -311,6 +312,7 @@ export default function River({
       deep: { value: new THREE.Color(deepColor) },
       shallow: { value: new THREE.Color(shallowColor) },
       surfaceAlpha: { value: opacity },
+      highlightLight: { value: 1 },
     };
 
     mat.onBeforeCompile = (shader) => {
@@ -318,6 +320,7 @@ export default function River({
       shader.uniforms.deep = uniforms.deep;
       shader.uniforms.shallow = uniforms.shallow;
       shader.uniforms.surfaceAlpha = uniforms.surfaceAlpha;
+      shader.uniforms.highlightLight = uniforms.highlightLight;
       shader.uniforms.uCaustic = { value: getCausticTexture() };
 
       shader.vertexShader = shader.vertexShader
@@ -335,6 +338,7 @@ export default function River({
             "uniform vec3 deep;",
             "uniform vec3 shallow;",
             "uniform float surfaceAlpha;",
+            "uniform float highlightLight;",
             "varying vec2 vRiverUv;",
             "void main() {",
           ].join("\n"),
@@ -368,8 +372,9 @@ export default function River({
             "float chevron = smoothstep(0.38, 0.32, chevSaw) * (1.0 - chevX) * 0.55;",
             // Color mix: deep base + wave-modulated shallow tone + crest highlight + arrow.
             "vec3 water = mix(deep, shallow, wave1 * 0.35);",
-            "water = mix(water, vec3(0.92, 0.98, 1.0), cells);",
-            "water += highlight * 0.35;",
+            "vec3 cellLight = mix(shallow, vec3(0.92, 0.98, 1.0), highlightLight);",
+            "water = mix(water, cellLight, cells);",
+            "water += highlight * mix(0.06, 0.35, highlightLight);",
             "water = mix(water, shallow, chevron);",
             "diffuseColor.rgb = water;",
             "diffuseColor.a = surfaceAlpha * edge;",
@@ -385,21 +390,19 @@ export default function River({
   }, [deepColor, shallowColor, opacity]);
 
   const materialRef = useRef(material);
+  useEffect(() => { materialRef.current = material; }, [material]);
 
-  // P4 memory: dispose River's BufferGeometries + Material on unmount.
-  useEffect(() => {
-    return () => {
-      geometry.dispose();
-      riverbedGeometry.dispose();
-      material.dispose();
-    };
-  }, [geometry, riverbedGeometry, material]);
+  useEffect(() => () => {
+    geometry.dispose();
+    riverbedGeometry.dispose();
+  }, [geometry, riverbedGeometry]);
+  useEffect(() => () => material.dispose(), [material]);
 
   useFrame((_, delta) => {
     const mat = materialRef.current as THREE.MeshBasicMaterial & {
       userData: { uniforms: { time: { value: number } } };
     };
-    const u = (mat.userData as { uniforms?: { time: { value: number }; deep: { value: THREE.Color }; shallow: { value: THREE.Color } } }).uniforms;
+    const u = (mat.userData as { uniforms?: { time: { value: number }; deep: { value: THREE.Color }; shallow: { value: THREE.Color }; highlightLight: { value: number } } }).uniforms;
     if (u?.time) {
       u.time.value += delta;
       // V6: ease water color toward the current phase (~0.5s constant).
@@ -407,6 +410,7 @@ export default function River({
       const k = 1 - Math.exp(-delta / 0.5);
       u.deep.value.lerp(_riverTgt.set(pal[0]), k);
       u.shallow.value.lerp(_riverTgt.set(pal[1]), k);
+      u.highlightLight.value += (RIVER_HIGHLIGHT_LIGHT[phaseRef.current] - u.highlightLight.value) * k;
     }
   });
 

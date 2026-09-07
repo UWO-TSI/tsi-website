@@ -34,3 +34,5 @@
   .controls { display: none; }
   .touchControls { display: block; position: absolute; bottom: 18px; left: 50%; transform: translateX(-50%); margin: 0; padding: 10px 14px; border-radius: 6px; background: #f8f7e9e8; white-space: nowrap; font-size: 11px; }
 }
+
+.world[data-light="night"] .heading { color: #fff4da; text-shadow: 0 2px 12px #11152a; }
