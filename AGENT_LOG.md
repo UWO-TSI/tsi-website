@@ -108,6 +108,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-09-07 — Movement render cost and initial camera (Codex)
+
+Removed frame-by-frame React position updates from Scene; shared refs feed actors and equivalent interaction targets no longer republish. Matched live pointer walk reduced Scene render invocations 252 to 4 (dev/Strict Mode, not an FPS claim). Temporary measurement code removed and fine-pointer WASD policy restored. Initial grounded position now reaches camera/interaction tracking before walking. Curved sign/building labels fixed. 170 tests, types, targeted lint and production build pass. No push.
+
 ### 2026-09-07 — Natural surface blending and foliage lighting (Codex)
 
 Feathered soil/sand into grass using actual eased boundaries; protected water/constructed edges. Added four boundary/immutability tests and owned-resource cleanup. Compared existing low-poly alternatives, retained textured broadleaf assets, corrected front-facing placement and removed canopy self-shadow patches while retaining ground shadows. Dia unfiltered overview and pixelated golden hour checked, fresh console clean. 167 tests and types pass; targeted lint zero errors/two existing warnings. Coastline shape, full-orbit profile and controlled laptop QA remain open.

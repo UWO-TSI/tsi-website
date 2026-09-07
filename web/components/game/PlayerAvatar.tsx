@@ -114,6 +114,7 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
     groundHeight(spawnPosition[0], spawnPosition[2]) + AVATAR_FOOT_OFFSET,
     spawnPosition[2],
   ));
+  useEffect(() => { onMove(positionRef.current.clone()); }, [onMove]);
   const targetRef = useRef<THREE.Vector3 | null>(null);
   const facingRef = useRef(0);
   const frameTimer = useRef(0);

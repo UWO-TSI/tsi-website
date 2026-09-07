@@ -96,3 +96,13 @@ This is a playable review checkpoint, not final visual or whole-game acceptance.
 - Dia: unfiltered overview and pixelated golden-hour walk view render with no fresh warnings/errors. Example local overview sample: 145 draws, 54,637 triangles, 144 FPS on the current host. This is a development sample, not controlled laptop acceptance or a comparison against the earlier busy-host result.
 - 167 tests across 13 files and TypeScript pass. Targeted ESLint has zero errors and two pre-existing GridTerrain unused-symbol warnings. Latest production build predates this visual batch.
 - Still open: grid-shaped outer coastline (larger terrain/map work deferred), broadleaf profile under a full side orbit, controlled device performance and full-game integration. The material blend is not a new custom-map implementation.
+
+## September 7 movement render cost and spawn framing
+
+- Natural materials/canopy batch committed locally as `f6b6a9a`.
+- Buildings and NPCs now consume the shared position ref rather than forcing Scene to render for every walking frame. Building proximity state changes only at range boundaries. Nearest-interaction state skips equivalent records while preserving target, action, coordinate and content changes. Three regression tests added.
+- Live Dia measurement on `/lab/world?nointro`: same starting framing and pointer target at (1770, 1010), with Noon selected. Baseline produced 252 Scene render invocations between 06:06:37.693 and 06:06:42.660 UTC; optimized run produced 4 between 06:09:07.009 and 06:09:11.996 UTC. Both walks visibly reached the same area. These are development render invocations (including Strict Mode behavior), not committed frames or an FPS claim.
+- Measurement temporarily enabled pointer walking on the fine-pointer host and logged render calls. Both temporary edits were removed; desktop remains WASD-only, touch retains tap movement. No QA flag/log remains in source.
+- Avatar reports its grounded position on mount, so initial camera framing and interaction tracking no longer wait for a first step. Initial camera lead ignores the uninitialized velocity sample. Fresh Dia load shows the avatar in frame before movement.
+- Signpost and building labels use the shared curved projection. Signpost text remains readable nearby and hides at distance; building name/prompt no longer overlap. Fresh full-world console has only the existing seasonal-palette fallback warning; protected requests remain unauthenticated in the lab.
+- 170 tests across 14 files, TypeScript, targeted ESLint and production webpack build pass. This build includes the previous surface/canopy changes. Dev preview restored on port 3107.

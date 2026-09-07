@@ -3,6 +3,8 @@
 import { Suspense, useRef, useState, useCallback, useEffect, useMemo, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { calculateCurvedHtmlPosition } from "@/lib/game/worldProjection";
+import { sameInteractionTarget } from "@/lib/game/interactionTarget";
 import { bindGameKeys, isGameControlTarget } from "@/lib/game/keyboardInput";
 import { CameraControls, Html, useGLTF } from "@react-three/drei";
 import { Smile, BookOpen, Map as MapIcon, Settings2, Keyboard } from "lucide-react";
@@ -1281,8 +1283,14 @@ const SIGN_TARGETS: { label: string; x: number; z: number }[] = [
 ];
 
 const SIGNPOST_POS = { x: 0, z: -12 };
-function Signpost() {
+function Signpost({ playerPosRef }: { playerPosRef: React.RefObject<THREE.Vector3> }) {
   const { x, z } = SIGNPOST_POS;
+  const [near, setNear] = useState(false);
+  useFrame(() => {
+    const player = playerPosRef.current;
+    const next = Math.hypot(player.x - x, player.z - z) < 9;
+    if (next !== near) setNear(next);
+  });
   const y = useMemo(() => getTerrainHeight(x, z), [x, z]);
   return (
     <group position={[x, y, z]}>
@@ -1309,16 +1317,15 @@ function Signpost() {
               <coneGeometry args={[0.22, 0.32, 4]} />
               <meshStandardMaterial color="#C4A265" roughness={0.85} metalness={0} />
             </mesh>
-            <Html zIndexRange={[40, 0]}
+            {near && <Html calculatePosition={calculateCurvedHtmlPosition} zIndexRange={[40, 0]}
               position={[0, 0, 0.45]}
               center
-              distanceFactor={9}
               style={{ pointerEvents: "none" }}
             >
               <div
                 style={{
                   fontFamily: "'IBM Plex Mono', monospace",
-                  fontSize: 13,
+                  fontSize: 10,
                   fontWeight: 700,
                   color: "#3D2817",
                   whiteSpace: "nowrap",
@@ -1327,7 +1334,7 @@ function Signpost() {
               >
                 {t.label}
               </div>
-            </Html>
+            </Html>}
           </group>
         );
       })}
@@ -1892,7 +1899,6 @@ function Scene({
   }, [introReady]);
   // G2: world-space anchor for the E-target ground glow.
   const glowTargetRef = useRef<[number, number, number] | null>(null);
-  const [playerPos, setPlayerPos] = useState<THREE.Vector3>(new THREE.Vector3(...SPAWN_POSITION));
   const { data: personas } = useNPCPersonas({ permanentOnly: true });
 
   // E4: heartbeat current position to player_positions every 30s.
@@ -1937,13 +1943,12 @@ function Scene({
 
   const camFeelRef = useRef({ lastX: 0, lastZ: 0, lastT: 0, leadX: 0, leadZ: 0, fov: 48 });
   const handlePlayerMove = useCallback((position: THREE.Vector3) => {
-    setPlayerPos(position);
     playerPosRef.current.copy(position);
     const cf = camFeelRef.current;
     const now = performance.now();
     const dt = Math.min((now - cf.lastT) / 1000, 0.1) || 0.016;
-    const vx = (position.x - cf.lastX) / dt;
-    const vz = (position.z - cf.lastZ) / dt;
+    const vx = cf.lastT ? (position.x - cf.lastX) / dt : 0;
+    const vz = cf.lastT ? (position.z - cf.lastZ) / dt : 0;
     cf.lastX = position.x; cf.lastZ = position.z; cf.lastT = now;
     const speed = Math.hypot(vx, vz);
     const lead = speed > 1 ? 1.2 : 0;
@@ -2232,13 +2237,13 @@ function Scene({
         <Props />
         <AmbientProps />
         <LampPosts phase={todPhase} />
-        <Signpost />
+        <Signpost playerPosRef={playerPosRef} />
         {!liteMode && <DustMotes playerPosRef={playerPosRef} />}
       </Suspense>
 
       {BUILDINGS.map((b) => {
         const y = getTerrainHeight(b.position[0], b.position[2]);
-        return <Building key={b.id} id={b.id} name={b.name} position={[b.position[0], y, b.position[2]]} size={b.size} color={b.color} roofColor={b.roofColor} href={b.href} playerPosition={playerPos} />;
+        return <Building key={b.id} id={b.id} name={b.name} position={[b.position[0], y, b.position[2]]} size={b.size} color={b.color} roofColor={b.roofColor} href={b.href} playerPositionRef={playerPosRef} />;
       })}
 
       {/* Permanent NPCs from content pipeline. Click → chat overlay. */}
@@ -2247,7 +2252,7 @@ function Scene({
           key={persona.id}
           persona={persona}
           position={position}
-          playerPosition={playerPos}
+          playerPositionRef={playerPosRef}
           onClick={() => onNPCClick(persona)}
         />
       ))}
@@ -2411,6 +2416,9 @@ function GameWorldContent() {
   // on each player move via onNearestInteractable. Kept here so Crosshair
   // (DOM, outside Canvas) can read it.
   const [nearest, setNearest] = useState<{ kind: "npc" | "building" | "tree" | "bench" | "flower" | "fishing" | "critter" | "station"; id: string; name: string; href?: string; npc?: NPCPersona; treePos?: [number, number]; seat?: [number, number]; flowerIdx?: number; flowerPos?: [number, number]; spot?: [number, number]; critterSlot?: number; interiorId?: string; stationAction?: string } | null>(null);
+  const handleNearest = useCallback((target: typeof nearest) => {
+    setNearest((current) => sameInteractionTarget(current, target) ? current : target);
+  }, []);
   const nearestRef = useRef<typeof nearest>(null);
   useEffect(() => { nearestRef.current = nearest; }, [nearest]);
 
@@ -2711,7 +2719,7 @@ function GameWorldContent() {
               frozen={inputBlocked}
               playerPosRef={playerPosRef}
               onNearestStation={(st: InteriorStation | null) =>
-                setNearest(st ? { kind: "station", id: `station-${st.id}`, name: st.name, stationAction: st.action } : null)
+                handleNearest(st ? { kind: "station", id: `station-${st.id}`, name: st.name, stationAction: st.action } : null)
               }
             />
           );
@@ -2731,7 +2739,7 @@ function GameWorldContent() {
             fogColor={fogColor}
             todPhase={todPhase}
             onNPCClick={setActiveNPC}
-            onNearestInteractable={setNearest}
+            onNearestInteractable={handleNearest}
             debugSnapshotRef={debugSnapshotRef}
             activeEmote={activeEmote}
             playerPosRef={playerPosRef}

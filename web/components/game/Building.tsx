@@ -1,10 +1,11 @@
 "use client";
 
-import { Suspense, useMemo, useRef } from "react";
+import { Suspense, useMemo, useRef, useState, type RefObject } from "react";
 import { Html, useGLTF } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { useActivePalette } from "@/lib/content/loader";
+import { calculateCurvedHtmlPosition } from "@/lib/game/worldProjection";
 import { GLBProp } from "./NatureModels";
 
 // Matches GameWorld's central sweep INTERACT_RADIUS so the "Press E"
@@ -559,15 +560,21 @@ interface BuildingProps {
   color: string;
   roofColor?: string;
   href?: string;
-  playerPosition: THREE.Vector3;
+  playerPosition?: THREE.Vector3;
+  playerPositionRef?: RefObject<THREE.Vector3>;
 }
 
-export default function Building({ id, name, position, size, color, roofColor, href, playerPosition }: BuildingProps) {
-  const dist = useMemo(() => {
-    return new THREE.Vector3(...position).distanceTo(playerPosition);
-  }, [position, playerPosition]);
-  const isNear = dist < INTERACT_RANGE;
-  const labelNear = dist < LABEL_RANGE;
+export default function Building({ id, name, position, size, color, roofColor, href, playerPosition, playerPositionRef }: BuildingProps) {
+  const [range, setRange] = useState(0);
+  useFrame(() => {
+    const player = playerPositionRef?.current ?? playerPosition;
+    if (!player) return;
+    const distance = Math.hypot(position[0] - player.x, position[1] - player.y, position[2] - player.z);
+    const next = distance < INTERACT_RANGE ? 2 : distance < LABEL_RANGE ? 1 : 0;
+    if (next !== range) setRange(next);
+  });
+  const isNear = range === 2;
+  const labelNear = range > 0;
 
   const { data: activePalette } = useActivePalette();
   const decoUrl = id === "shop"
@@ -614,8 +621,8 @@ export default function Building({ id, name, position, size, color, roofColor, h
 
       {/* Label — white pill, dark text. Proximity-gated with a soft
           fade-in so approaching a building "reveals" its name. */}
-      {labelNear && (
-        <Html zIndexRange={[40, 0]} position={[0, size[1] + 0.7, 0]} center distanceFactor={12} style={{ pointerEvents: "none" }}>
+      {labelNear && !(isNear && href) && (
+        <Html calculatePosition={calculateCurvedHtmlPosition} zIndexRange={[40, 0]} position={[0, size[1] + 0.7, 0]} center style={{ pointerEvents: "none" }}>
           <div style={{ fontSize: "13px", color: "#2a2a2a", background: "rgba(255,255,255,0.88)", padding: "3px 10px", borderRadius: "6px", fontWeight: 600, fontFamily: "'IBM Plex Mono',monospace", boxShadow: "0 1px 4px rgba(0,0,0,0.12)", whiteSpace: "nowrap", animation: "tsi-label-in 0.25s ease-out" }}>
             {name}
             <style>{`@keyframes tsi-label-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }`}</style>
@@ -624,7 +631,7 @@ export default function Building({ id, name, position, size, color, roofColor, h
       )}
 
       {isNear && href && (
-        <Html zIndexRange={[40, 0]} position={[0, size[1] + 0.8, 0]} center style={{ pointerEvents: "none" }}>
+        <Html calculatePosition={calculateCurvedHtmlPosition} zIndexRange={[40, 0]} position={[0, size[1] + 0.8, 0]} center style={{ pointerEvents: "none" }}>
           <div className="animate-bounce" style={{ fontSize: "14px", color: "#fff", background: "#4a6fa5", padding: "5px 14px", borderRadius: "10px", fontWeight: 600, boxShadow: "0 2px 8px rgba(0,0,0,0.2)", whiteSpace: "nowrap" }}>
             Press <kbd style={{ color: "#FFD166", fontFamily: "'IBM Plex Mono',monospace", fontWeight: 700 }}>E</kbd> to {isBoard ? "view" : "enter"}
           </div>
