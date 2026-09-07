@@ -41,9 +41,11 @@ export const ENV_PHASES: Record<"dawn" | "day" | "dusk" | "night", EnvPhaseSpec>
   night: { skyTop: "#0E0E28", skyBottom: "#2D2D6B", sun: "#AAB4E8", ground: "#2E4A38", intensity: 0.22, sunElev: 0.4 },
 };
 
-let _pmrem: THREE.PMREMGenerator | null = null;
-let _currentRT: THREE.WebGLRenderTarget | null = null;
-let _appliedPhase: string | null = null;
+const environments = new WeakMap<THREE.Scene, {
+  renderer: THREE.WebGLRenderer;
+  phase: keyof typeof ENV_PHASES;
+  target: THREE.WebGLRenderTarget;
+}>();
 
 function paintEquirect(spec: EnvPhaseSpec): HTMLCanvasElement {
   const w = 64;
@@ -85,27 +87,36 @@ export function applyEnvironment(
   scene: THREE.Scene,
   phase: "dawn" | "day" | "dusk" | "night",
 ): void {
-  if (_appliedPhase === phase && scene.environment) return;
-  if (!_pmrem) _pmrem = new THREE.PMREMGenerator(gl);
+  const current = environments.get(scene);
+  if (current?.renderer === gl && current.phase === phase && scene.environment === current.target.texture) return;
   const spec = ENV_PHASES[phase];
-  const tex = new THREE.CanvasTexture(paintEquirect(spec));
-  tex.mapping = THREE.EquirectangularReflectionMapping;
-  tex.colorSpace = THREE.SRGBColorSpace;
-  const rt = _pmrem.fromEquirectangular(tex);
-  tex.dispose();
-  const old = _currentRT;
-  scene.environment = rt.texture;
+  // PMREM generators retain their renderer. Keep one only for this synchronous
+  // bake so a remounted Canvas cannot reuse the previous renderer's resources.
+  const generator = new THREE.PMREMGenerator(gl);
+  let tex: THREE.CanvasTexture | null = null;
+  let target: THREE.WebGLRenderTarget;
+  try {
+    tex = new THREE.CanvasTexture(paintEquirect(spec));
+    tex.mapping = THREE.EquirectangularReflectionMapping;
+    tex.colorSpace = THREE.SRGBColorSpace;
+    target = generator.fromEquirectangular(tex);
+  } finally {
+    tex?.dispose();
+    generator.dispose();
+  }
+  scene.environment = target.texture;
   scene.environmentIntensity = spec.intensity;
-  _currentRT = rt;
-  _appliedPhase = phase;
-  if (old) old.dispose();
+  environments.set(scene, { renderer: gl, phase, target });
+  current?.target.dispose();
 }
 
 export function disposeEnvironment(scene: THREE.Scene): void {
-  scene.environment = null;
-  if (_currentRT) {
-    _currentRT.dispose();
-    _currentRT = null;
+  const current = environments.get(scene);
+  if (!current) return;
+  if (scene.environment === current.target.texture) {
+    scene.environment = null;
+    scene.environmentIntensity = 1;
   }
-  _appliedPhase = null;
+  current.target.dispose();
+  environments.delete(scene);
 }

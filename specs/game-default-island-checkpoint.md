@@ -213,3 +213,10 @@ This is a playable review checkpoint, not final visual or whole-game acceptance.
 - Shared pool extraction preserves the prior roll distribution. Four tests compare prior arithmetic across weather, habitats, hours, luck and random boundaries, and verify nonempty finite normalized pools over the day. Full suite: 225 tests across 19 files; TypeScript, targeted ESLint and production webpack build pass, including the collection batch.
 - Dia: river 30/47 and sea 33/44 active species at the tested early-morning cloudy setting; sea simulation returned only sea catches, rain cleared prior results. No fresh runtime warnings/errors. Dev restored on 3107; main remains clean. No live data, currency, catch probability or progression changes.
 - Next: full-world lighting/resource-lifecycle visual pass. Phone viewport remains blocked by detached duplicate tab in the browser capability.
+
+## September 7 environment-light resource lifetime
+
+- Fishing bench batch committed as `dc125f9`. Environment-light bake cache is now scoped to each scene and renderer. A synchronous bake creates and disposes its PMREM generator, avoiding reuse of the previous Canvas renderer after remount. Replaced render targets and temporary input textures are released; failed bakes keep the previous scene environment.
+- Five focused tests pass for phase caching, independent scenes, replacement renderers, failed bake cleanup and safe repeated cleanup with another owner's environment. Initial test disposal listeners were corrected to observe the render target (Three emits disposal there), then all five passed. TypeScript and targeted ESLint pass. Previous full suite/build: 225 tests at fishing bench batch.
+- Dia day/night and cloudy/rain/sunny remounts remained rendered with only the existing seasonal-palette fallback warning. Night view still has low building depth and overbright river; this resource fix deliberately leaves all light values unchanged. Next: bounded nighttime readability pass.
+- Three.js PMREM lifetime checked against installed source and https://threejs.org/docs/pages/PMREMGenerator.html. No backend, currency or authored-map edits.

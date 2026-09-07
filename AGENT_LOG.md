@@ -108,6 +108,8 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+- 2026-09-07: Scope environment maps to scene/renderer and release bake scratch resources. Five lifecycle tests, types and lint pass; Dia time/weather remounts render without new errors. Lighting values unchanged in this batch.
+
 - 2026-09-07: Correct fishing bench habitat/odds/simulation drift with shared weighted pool. 225 tests, types, lint and production build pass; Dia sea simulation and stale-result reset verified. No authored probability changes.
 
 - 2026-09-07: Preserve collection discovery at zero stock, validate local records, and polish book loading/keyboard/sticky header. 221 tests, types and targeted lint pass; Dia fixture verified and removed. Phone viewport and authenticated sale integrity remain open. See `specs/game-default-island-checkpoint.md`.
