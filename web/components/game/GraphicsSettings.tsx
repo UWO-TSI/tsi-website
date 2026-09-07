@@ -7,7 +7,7 @@
  * Driven by useGraphicsSettings().
  */
 
-import { useEffect } from "react";
+import { useWorldDialog } from "@/lib/game/useWorldDialog";
 import { Settings } from "lucide-react";
 import { useGraphicsSettings } from "@/lib/game/useGraphicsSettings";
 
@@ -19,14 +19,7 @@ interface GraphicsSettingsProps {
 export default function GraphicsSettingsPanel({ open, onClose }: GraphicsSettingsProps) {
   const [settings, actions] = useGraphicsSettings();
 
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
+  const dialogRef = useWorldDialog(open, onClose);
 
   if (!open) return null;
 
@@ -45,9 +38,16 @@ export default function GraphicsSettingsPanel({ open, onClose }: GraphicsSetting
       onClick={onClose}
     >
       <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Graphics"
+        tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
         style={{
-          width: "min(420px, 92vw)",
+          width: "min(440px, 92vw)",
+          maxHeight: "85dvh",
+          overflowY: "auto",
           background: "rgba(15, 15, 16, 0.96)",
           border: "1px solid rgba(255,255,255,0.18)",
           borderRadius: "8px",
@@ -55,16 +55,19 @@ export default function GraphicsSettingsPanel({ open, onClose }: GraphicsSetting
           color: "#f1ffff",
         }}
       >
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "16px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", position: "sticky", top: -20, zIndex: 1, background: "#111719", paddingBlock: 8 }}>
           <div style={{ fontSize: "14px", fontWeight: 700, letterSpacing: "0.05em" }}>GRAPHICS</div>
           <button
             onClick={onClose}
+            aria-label="Close graphics"
             style={{
               background: "transparent",
               border: "1px solid rgba(255,255,255,0.2)",
-              color: "#8a939a",
+              color: "#A9B8C4",
               borderRadius: "4px",
               padding: "2px 10px",
+              minHeight: 44,
+              minWidth: 44,
               fontSize: "11px",
               cursor: "pointer",
               fontFamily: "inherit",
@@ -76,7 +79,7 @@ export default function GraphicsSettingsPanel({ open, onClose }: GraphicsSetting
 
         <Toggle
           label="Lite mode"
-          hint="Disables particles, clouds, ghosts. Best for low-end devices."
+          hint="Reduces effects and disables cast shadows and recent visitor sprites."
           value={settings.liteMode}
           onChange={actions.setLiteMode}
         />
@@ -89,7 +92,7 @@ export default function GraphicsSettingsPanel({ open, onClose }: GraphicsSetting
         />
         <Toggle
           label="Shadows"
-          hint="Sun shadows from buildings and trees. Uses soft ground shadows when off."
+          hint="Directional shadows from buildings and trees. Soft ground shadows remain when off."
           value={settings.shadows}
           onChange={actions.setShadows}
           disabled={settings.liteMode}
@@ -109,15 +112,16 @@ export default function GraphicsSettingsPanel({ open, onClose }: GraphicsSetting
         />
 
         <div style={{ marginTop: "16px", paddingTop: "12px", borderTop: "1px solid rgba(255,255,255,0.08)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <span style={{ fontSize: "10px", color: "#8a939a" }}>Settings persist on this device.</span>
+          <span style={{ fontSize: "10px", color: "#A9B8C4" }}>Preferences apply immediately on this device.</span>
           <button
             onClick={actions.resetToAuto}
             style={{
               background: "transparent",
               border: "1px solid rgba(255,255,255,0.2)",
-              color: "#8a939a",
+              color: "#A9B8C4",
               borderRadius: "4px",
               padding: "3px 10px",
+              minHeight: 44,
               fontSize: "10px",
               cursor: "pointer",
               fontFamily: "inherit",
@@ -140,34 +144,38 @@ function Toggle({
   onChange: (v: boolean) => void;
   disabled?: boolean;
 }) {
+  const active = value && !disabled;
   return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid rgba(255,255,255,0.05)", opacity: disabled ? 0.5 : 1 }}>
       <div style={{ flex: 1, paddingRight: "12px" }}>
         <div style={{ fontSize: "12px", fontWeight: 600 }}>{label}</div>
-        <div style={{ fontSize: "10px", color: "#8a939a", marginTop: "2px" }}>{hint}</div>
+        <div style={{ fontSize: "10px", color: "#A9B8C4", marginTop: "2px" }}>{disabled ? "Off in lite mode. Your preference is kept." : hint}</div>
       </div>
       <button
         onClick={() => !disabled && onChange(!value)}
         disabled={disabled}
         aria-label={label}
-        aria-pressed={value}
+        aria-pressed={active}
         style={{
-          background: value ? "#1D9BF0" : "rgba(255,255,255,0.1)",
-          border: "1px solid rgba(255,255,255,0.18)",
+          background: "transparent",
           borderRadius: "12px",
+          border: "none",
+          flexShrink: 0,
           width: "44px",
-          height: "22px",
+          height: "44px",
           padding: 0,
           position: "relative",
           cursor: disabled ? "not-allowed" : "pointer",
           transition: "background 0.15s",
         }}
       >
+        <span aria-hidden style={{ position: "absolute", left: 0, top: 11, width: 44, height: 22, borderRadius: 12, background: active ? "#1D9BF0" : "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.18)" }} />
         <span
+          aria-hidden
           style={{
             position: "absolute",
-            top: "2px",
-            left: value ? "24px" : "2px",
+            top: "14px",
+            left: active ? "24px" : "2px",
             width: "16px",
             height: "16px",
             borderRadius: "50%",

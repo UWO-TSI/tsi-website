@@ -108,6 +108,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-09-07 shared graphics state and keyboard panels
+
+Fixed independent graphics-hook states, retained settings compatibility, and wired effective lite shadow gating. Graphics/Controls focus and larger targets verified in Dia. 264 tests, TypeScript, targeted lint and webpack build pass. See checkpoint for exact evidence and remaining device/authentication gaps.
+
 ### 2026-09-07 mobile presence revamp
 
 Frontend viewport entry and truthful presence/emote feedback completed. Serial bounded polling/cancellation tested; 254 tests, TypeScript, targeted lint and production build pass. Dia narrow source fixture checked sharing/errors/close; removed. Actual phone/authenticated QA remains open. See `specs/game-default-island-checkpoint.md`.

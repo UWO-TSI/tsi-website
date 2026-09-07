@@ -8,7 +8,7 @@
  * single source of truth for what's currently bound in-game.
  */
 
-import { useEffect } from "react";
+import { useWorldDialog } from "@/lib/game/useWorldDialog";
 
 interface ControlsOverlayProps {
   visible: boolean;
@@ -52,7 +52,8 @@ const SECTIONS: Section[] = [
     bindings: [
       { keys: ["E"], label: "Interact with nearest NPC / enter building" },
       { keys: ["G"], label: "Open emote menu" },
-      { keys: ["Tab", "hold"], label: "Show who's online" },
+      { keys: ["Tab", "hold"], label: "Show member presence" },
+      { keys: ["M"], label: "Open village map" },
       { keys: ["Click NPC"], label: "Chat with NPC (alternative)" },
     ],
   },
@@ -69,17 +70,7 @@ const SECTIONS: Section[] = [
 ];
 
 export default function ControlsOverlay({ visible, onClose }: ControlsOverlayProps) {
-  useEffect(() => {
-    if (!visible) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" || e.key === "F1") {
-        e.preventDefault();
-        onClose();
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [visible, onClose]);
+  const dialogRef = useWorldDialog(visible, onClose, "F1");
 
   if (!visible) return null;
 
@@ -98,10 +89,15 @@ export default function ControlsOverlay({ visible, onClose }: ControlsOverlayPro
       onClick={onClose}
     >
       <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Controls"
+        tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
         style={{
           width: "min(640px, 92vw)",
-          maxHeight: "85vh",
+          maxHeight: "85dvh",
           overflowY: "auto",
           background: "rgba(15, 15, 16, 0.96)",
           border: "1px solid rgba(255,255,255,0.18)",
@@ -110,7 +106,7 @@ export default function ControlsOverlay({ visible, onClose }: ControlsOverlayPro
           color: "#f1ffff",
         }}
       >
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "16px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", position: "sticky", top: -20, zIndex: 1, background: "#111719", paddingBlock: 8 }}>
           <div style={{ fontSize: "16px", fontWeight: 700, letterSpacing: "0.05em" }}>CONTROLS</div>
           <button
             aria-label="Close"
@@ -118,9 +114,11 @@ export default function ControlsOverlay({ visible, onClose }: ControlsOverlayPro
             style={{
               background: "transparent",
               border: "1px solid rgba(255,255,255,0.2)",
-              color: "#8a939a",
+              color: "#A9B8C4",
               borderRadius: "4px",
               padding: "2px 10px",
+              minHeight: 44,
+              minWidth: 44,
               fontSize: "11px",
               cursor: "pointer",
               fontFamily: "inherit",
@@ -135,7 +133,7 @@ export default function ControlsOverlay({ visible, onClose }: ControlsOverlayPro
             <div
               style={{
                 fontSize: "11px",
-                color: "#8a939a",
+                color: "#A9B8C4",
                 textTransform: "uppercase",
                 letterSpacing: "0.08em",
                 marginBottom: "8px",
@@ -173,10 +171,10 @@ export default function ControlsOverlay({ visible, onClose }: ControlsOverlayPro
             paddingTop: "12px",
             borderTop: "1px solid rgba(255,255,255,0.08)",
             fontSize: "11px",
-            color: "#8a939a",
+            color: "#A9B8C4",
           }}
         >
-          Press <Kbd text="F1" /> or <Kbd text="Esc" /> to close. New bindings coming in upcoming sprints.
+          Press <Kbd text="F1" /> or <Kbd text="Esc" /> to close.
         </div>
       </div>
     </div>
@@ -185,7 +183,7 @@ export default function ControlsOverlay({ visible, onClose }: ControlsOverlayPro
 
 function Kbd({ text }: { text: string }) {
   return (
-    <span
+    <kbd
       style={{
         background: "rgba(255,255,255,0.08)",
         border: "1px solid rgba(255,255,255,0.16)",
@@ -200,6 +198,6 @@ function Kbd({ text }: { text: string }) {
       }}
     >
       {text}
-    </span>
+    </kbd>
   );
 }

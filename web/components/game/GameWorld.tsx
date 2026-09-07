@@ -2673,11 +2673,7 @@ function GameWorldContent() {
     emotePickRef.current = handleEmotePick;
   }, [handleEmotePick]);
 
-  // Art pass 2026-07-07: shadow maps are gone for good — the New Leaf
-  // look grounds everything on blob discs (BlobShadows), which the 3DS
-  // games used precisely because it's nearly free. The old PCF-soft pass
-  // cost ~7 FPS on M1. graphicsSettings.shadows now gates the blob layer
-  // (and doubles as the ambient-density proxy it already was).
+  // Lite mode disables directional shadows while retaining the ground-disc fallback.
   //
   // Pixelated render target (Time on Frog Island reference): render at
   // 0.5 CSS-pixel ratio and let the browser upscale with nearest — the
@@ -2743,8 +2739,8 @@ function GameWorldContent() {
             debugSnapshotRef={debugSnapshotRef}
             activeEmote={activeEmote}
             playerPosRef={playerPosRef}
-            ambientDensity={graphicsSettings.shadows ? 1 : 0.7}
-            blobShadows={graphicsSettings.shadows}
+            ambientDensity={graphicsSettings.shadows && !liteMode ? 1 : 0.7}
+            blobShadows={graphicsSettings.shadows && !liteMode}
             azimuthRef={azimuthRef}
           />
           {/* G4 — bloom + vignette. Inside Suspense so it doesn't block
