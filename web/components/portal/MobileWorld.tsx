@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Expand } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { pollPresence, presenceRequest, PresenceRequestError, recentVisitors, type RecentVisitor } from "@/lib/game/mobilePresence";
 
 // ─── MobileWorld (Tier-2 #11, stripped mode v1) ─────────────────────────────
 // David's 2026-07-03 rulings: phones get a 2D SVG minimap with member dots
@@ -37,12 +38,41 @@ const EMOTES = [
   { slug: "sit", glyph: "🪑" },
 ];
 
-interface Ghost {
-  user_id: string;
-  world_x: number;
-  world_z: number;
-  display_name?: string;
+export interface MobilePresenceTransport {
+  visitors: (signal: AbortSignal) => Promise<RecentVisitor[]>;
+  heartbeat: (signal: AbortSignal) => Promise<void>;
+  emoteTypes: (signal: AbortSignal) => Promise<Record<string, string>>;
+  emote: (id: string, signal: AbortSignal) => Promise<void>;
 }
+
+async function presenceFetch(url: string, signal: AbortSignal, body?: object) {
+  const response = await fetch(url, {
+    signal,
+    ...(body ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : {}),
+  });
+  if (!response.ok) throw new PresenceRequestError(response.status);
+  return response;
+}
+
+const mobileTransport: MobilePresenceTransport = {
+  async visitors(signal) {
+    const response = await presenceFetch("/api/positions/ghosts", signal);
+    const data = await response.json();
+    if (!Array.isArray(data?.ghosts)) throw new Error("Invalid visitor response");
+    return recentVisitors(data.ghosts);
+  },
+  async heartbeat(signal) {
+    await presenceFetch("/api/positions/heartbeat", signal, { world_x: PLAZA.x, world_z: PLAZA.z });
+  },
+  async emoteTypes(signal) {
+    const { data, error } = await createClient().from("emote_types").select("id, slug").eq("active", true).abortSignal(signal);
+    if (error) throw error;
+    return Object.fromEntries((data ?? []).map((row) => [row.slug, row.id]));
+  },
+  async emote(id, signal) {
+    await presenceFetch("/api/emotes/log", signal, { emote_type_id: id, world_x: PLAZA.x, world_z: PLAZA.z });
+  },
+};
 
 interface EmoteBubble {
   id: string;
@@ -51,111 +81,75 @@ interface EmoteBubble {
   glyph: string;
 }
 
-export default function MobileWorld({ onTry3D }: { onTry3D: () => void }) {
-  const [ghosts, setGhosts] = useState<Ghost[]>([]);
+export default function MobileWorld({ onTry3D, transport = mobileTransport }: {
+  onTry3D: () => void;
+  transport?: MobilePresenceTransport;
+}) {
+  const [ghosts, setGhosts] = useState<RecentVisitor[]>([]);
+  const [visitorsState, setVisitorsState] = useState<"loading" | "ready" | "error">("loading");
+  const [presence, setPresence] = useState<"connecting" | "shared" | "offline" | "signed-out">("connecting");
   const [bubbles, setBubbles] = useState<EmoteBubble[]>([]);
   const [sending, setSending] = useState(false);
+  const [emoteFeedback, setEmoteFeedback] = useState("");
   const emoteIdsRef = useRef<Record<string, string>>({});
+  const pendingRef = useRef<AbortController | null>(null);
+  const bubbleTimers = useRef(new Set<ReturnType<typeof setTimeout>>());
 
-  // Presence in: recent member positions (same feed the desktop ghost replay
-  // uses). Poll at 60s — this is ambience, not realtime.
+  useEffect(() => pollPresence(transport.visitors, 60_000, (visitors) => {
+    setGhosts(recentVisitors(visitors));
+    setVisitorsState("ready");
+  }, () => setVisitorsState("error")), [transport]);
+
+  useEffect(() => pollPresence(transport.heartbeat, HEARTBEAT_MS,
+    () => setPresence("shared"),
+    (error) => setPresence(error instanceof PresenceRequestError && error.status === 401 ? "signed-out" : "offline"),
+  ), [transport]);
+
   useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      try {
-        const res = await fetch("/api/positions/ghosts");
-        if (!res.ok) return;
-        const data = await res.json();
-        if (!cancelled) setGhosts((data.ghosts ?? data ?? []).slice(0, 20));
-      } catch {
-        /* offline / logged out — map just shows no dots */
-      }
-    }
-    load();
-    const t = setInterval(load, 60_000);
+    const controller = new AbortController();
+    emoteIdsRef.current = {};
+    void presenceRequest(transport.emoteTypes, controller.signal).then((ids) => {
+      if (!controller.signal.aborted) emoteIdsRef.current = ids;
+    }).catch(() => { /* Local bubbles remain available while emote types are unavailable. */ });
+    return () => controller.abort();
+  }, [transport]);
+
+  useEffect(() => {
+    const timers = bubbleTimers.current;
     return () => {
-      cancelled = true;
-      clearInterval(t);
-    };
-  }, []);
-
-  // Presence out: heartbeat at the HQ plaza so this member appears online
-  // in-world for desktop players (principle #5).
-  useEffect(() => {
-    async function beat() {
-      try {
-        await fetch("/api/positions/heartbeat", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ world_x: PLAZA.x, world_z: PLAZA.z }),
-        });
-      } catch {
-        /* ignore */
-      }
-    }
-    beat();
-    const t = setInterval(beat, HEARTBEAT_MS);
-    return () => clearInterval(t);
-  }, []);
-
-  // Emote type ids come from the emote_types table (seeded in 019). Fetched
-  // once, keyed by slug; if the table is unreachable the buttons still show
-  // a local bubble so the interaction never feels dead.
-  useEffect(() => {
-    let cancelled = false;
-    async function loadTypes() {
-      try {
-        const supabase = createClient();
-        const { data } = await supabase
-          .from("emote_types")
-          .select("id, slug")
-          .eq("active", true);
-        if (!cancelled && data) {
-          const map: Record<string, string> = {};
-          for (const row of data as { id: string; slug: string }[]) map[row.slug] = row.id;
-          emoteIdsRef.current = map;
-        }
-      } catch {
-        /* fallback: local-only bubbles */
-      }
-    }
-    loadTypes();
-    return () => {
-      cancelled = true;
+      pendingRef.current?.abort();
+      for (const timer of timers) clearTimeout(timer);
+      timers.clear();
     };
   }, []);
 
   async function sendEmote(slug: string, glyph: string) {
-    if (sending) return;
+    if (pendingRef.current) return;
+    const controller = new AbortController();
+    pendingRef.current = controller;
     setSending(true);
-    const bubble: EmoteBubble = {
-      id: `${slug}-${Date.now()}`,
-      x: PLAZA.x,
-      z: PLAZA.z,
-      glyph,
-    };
+    const bubble: EmoteBubble = { id: `${slug}-${Date.now()}`, x: PLAZA.x, z: PLAZA.z, glyph };
     setBubbles((b) => [...b.slice(-4), bubble]);
-    setTimeout(
-      () => setBubbles((b) => b.filter((x) => x.id !== bubble.id)),
-      EMOTE_BUBBLE_MS
-    );
+    const timer = setTimeout(() => {
+      bubbleTimers.current.delete(timer);
+      setBubbles((b) => b.filter((x) => x.id !== bubble.id));
+    }, EMOTE_BUBBLE_MS);
+    bubbleTimers.current.add(timer);
+    const label = slug[0].toUpperCase() + slug.slice(1);
+    const emoteId = emoteIdsRef.current[slug];
     try {
-      const emoteId = emoteIdsRef.current[slug];
       if (emoteId) {
-        await fetch("/api/emotes/log", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            emote_type_id: emoteId,
-            world_x: PLAZA.x,
-            world_z: PLAZA.z,
-          }),
-        });
+        setEmoteFeedback(`Sharing ${slug}…`);
+        await presenceRequest((signal) => transport.emote(emoteId, signal), controller.signal);
+        if (!controller.signal.aborted) setEmoteFeedback(`${label} shared`);
+      } else {
+        setEmoteFeedback(`${label} shown here. Sharing is unavailable.`);
       }
     } catch {
-      /* the local bubble already showed; log failure is non-fatal */
+      if (!controller.signal.aborted) setEmoteFeedback(`${label} shown here. Couldn’t share it. Try again.`);
     } finally {
-      setSending(false);
+      if (pendingRef.current === controller) pendingRef.current = null;
+      if (!controller.signal.aborted) setSending(false);
     }
   }
 
@@ -175,9 +169,9 @@ export default function MobileWorld({ onTry3D }: { onTry3D: () => void }) {
             TSI World · lite
           </p>
           <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
-            {ghosts.length > 0
-              ? `${ghosts.length} member${ghosts.length === 1 ? "" : "s"} around recently`
-              : "The village is quiet right now"}
+            {visitorsState === "loading" ? "Loading recent visitors…" : visitorsState === "error"
+              ? "Recent visitors unavailable"
+              : ghosts.length > 0 ? `${ghosts.length} recent visitor${ghosts.length === 1 ? "" : "s"}` : "No recent visitors"}
           </p>
         </div>
         <button
@@ -185,6 +179,8 @@ export default function MobileWorld({ onTry3D }: { onTry3D: () => void }) {
           className="flex items-center gap-1.5 font-mono rounded-lg"
           style={{
             fontSize: 11,
+            minHeight: 44,
+            flexShrink: 0,
             padding: "6px 10px",
             border: "1px solid var(--glass-border-soft)",
             color: "var(--color-text-muted)",
@@ -196,6 +192,10 @@ export default function MobileWorld({ onTry3D }: { onTry3D: () => void }) {
         </button>
       </div>
 
+      <p role="status" className="px-4 pb-2 text-xs" style={{ color: "var(--color-text-muted)" }}>
+        {presence === "connecting" ? "Connecting your presence…" : presence === "shared" ? "Your presence is shared at the plaza" : presence === "signed-out" ? "Sign in to share your presence" : "Presence unavailable. Reconnecting…"}
+      </p>
+
       {/* Minimap */}
       <div className="flex-1 px-3 pb-2 min-h-0">
         <svg
@@ -203,7 +203,7 @@ export default function MobileWorld({ onTry3D }: { onTry3D: () => void }) {
           className="w-full h-full rounded-2xl"
           style={{ background: "#7EB86A", border: "1px solid var(--glass-border-soft)" }}
           role="img"
-          aria-label="Map of the TSI village showing who is around"
+          aria-label="Map of the TSI village with recent visitor positions"
         >
           {/* Paths — the main cross through spawn, matching the world layout */}
           <path d="M -28 4 L 28 4" stroke="#D9B380" strokeWidth="3" strokeLinecap="round" opacity="0.9" />
@@ -238,7 +238,7 @@ export default function MobileWorld({ onTry3D }: { onTry3D: () => void }) {
           ))}
 
           {/* Recent member dots */}
-          {ghosts.map((g) => (
+          {(visitorsState === "error" ? [] : ghosts).map((g) => (
             <g key={g.user_id}>
               <circle cx={sx(g.world_x)} cy={sy(g.world_z)} r="1.4" fill="#F1FFFF" opacity="0.9">
                 <animate attributeName="opacity" values="0.9;0.5;0.9" dur="2.4s" repeatCount="indefinite" />
@@ -276,6 +276,7 @@ export default function MobileWorld({ onTry3D }: { onTry3D: () => void }) {
         </svg>
       </div>
 
+      <p role="status" className="px-4 pb-2 text-center text-xs min-h-8" style={{ color: "var(--color-text-muted)" }}>{emoteFeedback}</p>
       {/* Emote bar */}
       <div className="flex items-center justify-center gap-2 px-4" style={{ paddingBottom: 18 }}>
         {EMOTES.map((e) => (

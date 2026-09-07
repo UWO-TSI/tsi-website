@@ -23,8 +23,8 @@ function getViewportSnapshot(): boolean {
   return window.matchMedia("(max-width: 767px)").matches;
 }
 
-function getViewportServerSnapshot(): boolean {
-  return false; // SSR renders the desktop shell; GameWorld is ssr:false anyway
+function getViewportServerSnapshot(): boolean | null {
+  return null; // Resolve the viewport before mounting either client world.
 }
 
 /**
@@ -59,7 +59,7 @@ function GameLoadingScreen() {
           className="font-mono text-sm mb-4 select-none"
           style={{ color: "var(--color-text-muted)" }}
         >
-          Connecting to TSI World
+          Opening TSI World
           <span className="a9-cursor">_</span>
         </div>
         <div
@@ -97,12 +97,14 @@ const GameWorld = dynamic(() => import("@/components/game/GameWorld"), {
 });
 
 export default function DashboardHome() {
-  const isMobile = useSyncExternalStore(
+  const isMobile = useSyncExternalStore<boolean | null>(
     subscribeViewport,
     getViewportSnapshot,
     getViewportServerSnapshot
   );
   const [force3D, setForce3D] = useState(false);
+
+  if (isMobile === null) return <GameLoadingScreen />;
 
   if (isMobile && !force3D) {
     return (
@@ -113,7 +115,8 @@ export default function DashboardHome() {
   }
 
   return (
-    <div className="w-full h-full">
+    <div className="w-full h-full relative">
+      {isMobile && <button onClick={() => setForce3D(false)} className="absolute left-4 top-16 z-[70] rounded-lg bg-[#fff9e9] px-3 py-2 text-sm text-[#344d45] shadow">Back to lite view</button>}
       <Suspense fallback={<GameLoadingScreen />}>
         <GameWorld />
       </Suspense>
