@@ -108,6 +108,8 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+- **2026-09-07 (Codex):** Reveal now has explicit controls, immediate Escape, focus containment/restoration and synchronous transition guards. Dia keyboard path passes; head-up fish icons retained after checking recorded art choice. 200 tests, lint/types and production build pass. Next: weather/odds copy accuracy.
+
 - **2026-09-07 (Codex):** Cast lifecycle retains quick release, rejects competing/invalid starts, captures Escape and cancels pending casts on interruption. Visible Cancel/Close and readable meter text. 25 fishing tests, types/lint and Dia full cast→hook→reel→cancel pass. Temporary fixture removed. Next: reveal skip/input.
 
 - **2026-09-07 (Codex):** Fishing reel uses fixed 60 Hz simulation and independent held-input tracking; pauses on blur/hidden/control focus. Dia catch, Escape, retry and frozen-progress/resume checks pass. 190 tests, targeted lint and production build pass. Continuing cast/hook/reveal lifecycle.

@@ -54,9 +54,11 @@ export default function FishReveal({
 
   const [stage, setStage] = useState<Stage>("suspense");
   const stageRef = useRef<Stage>("suspense");
-  useEffect(() => {
-    stageRef.current = stage;
-  }, [stage]);
+  const changeStage = useCallback((next: Stage) => {
+    stageRef.current = next;
+    setStage(next);
+  }, []);
+  const dialogRef = useRef<HTMLDivElement>(null);
 
   const fishImgRef = useRef<HTMLImageElement>(null);
   const glowRef = useRef<HTMLDivElement>(null);
@@ -72,16 +74,16 @@ export default function FishReveal({
   }, []);
 
   const crack = useCallback(() => {
-    if (stageRef.current === "flash" || stageRef.current === "landed") return;
+    if (doneRef.current || stageRef.current === "flash" || stageRef.current === "landed") return;
     timersRef.current.forEach((t) => window.clearTimeout(t));
     timersRef.current = [];
-    setStage("flash");
+    changeStage("flash");
     AudioManager.playSFX("confirm");
     punchZoom(4); // micro-zoom: the crack
     celebrate(fish.rarity, meta.color);
     timersRef.current.push(
       window.setTimeout(() => {
-        setStage("landed");
+        changeStage("landed");
         timersRef.current.push(window.setTimeout(finish, cfg.hold));
       }, cfg.flash)
     );
@@ -91,11 +93,11 @@ export default function FishReveal({
   // End of suspense: epic+ gets the dead-stop gasp (shake halts, faint
   // fake-out flare for legendary+), then the real crack.
   const toFlash = useCallback(() => {
-    if (stageRef.current !== "suspense") return;
+    if (doneRef.current || stageRef.current !== "suspense") return;
     if (cfg.freeze > 0) {
       timersRef.current.forEach((t) => window.clearTimeout(t));
       timersRef.current = [];
-      setStage("freeze");
+      changeStage("freeze");
       AudioManager.playSFX("click");
       timersRef.current.push(window.setTimeout(crack, cfg.freeze));
     } else {
@@ -115,24 +117,42 @@ export default function FishReveal({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Skip input: click / E / Space / Enter. ESC also skips (never traps).
+  const skip = useCallback(() => {
+    if (doneRef.current) return;
+    if (stageRef.current === "suspense") toFlash();
+    else if (stageRef.current === "freeze") crack();
+    else if (stageRef.current === "landed") finish();
+  }, [toFlash, crack, finish]);
+
   useEffect(() => {
-    const skip = () => {
-      if (stageRef.current === "suspense") toFlash();
-      else if (stageRef.current === "freeze") crack();
-      else if (stageRef.current === "landed") finish();
-    };
+    const previous = document.activeElement as HTMLElement | null;
+    const dialog = dialogRef.current;
+    dialog?.focus({ preventScroll: true });
     const onPointer = (e: PointerEvent) => {
-      if (e.button !== 0) return;
-      e.preventDefault();
-      e.stopPropagation();
-      skip();
+      if (e.button !== 0 || (e.target as Element | null)?.closest("button")) return;
+      e.preventDefault(); e.stopPropagation(); skip();
     };
     const onKey = (e: KeyboardEvent) => {
-      if (["e", "E", " ", "Enter", "Escape"].includes(e.key)) {
-        e.preventDefault();
-        e.stopPropagation();
-        skip();
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.key === "Escape") {
+        e.preventDefault(); e.stopPropagation(); finish();
+        return;
+      }
+      if (e.key === "Tab") {
+        const buttons = Array.from(dialog?.querySelectorAll<HTMLButtonElement>("button:not(:disabled)") ?? []);
+        const index = buttons.indexOf(document.activeElement as HTMLButtonElement);
+        const next = index < 0 ? (e.shiftKey ? buttons.length - 1 : 0) : (index + (e.shiftKey ? -1 : 1) + buttons.length) % buttons.length;
+        e.preventDefault(); e.stopPropagation(); buttons[next]?.focus();
+        return;
+      }
+      if (["e", "E", " ", "Enter"].includes(e.key)) {
+        // Native buttons own Space/Enter. Held reel keys must not skip the reveal.
+        if ((e.key === " " || e.key === "Enter") && (document.activeElement as Element | null)?.closest("button")) {
+          if (e.repeat) e.preventDefault();
+          return;
+        }
+        e.preventDefault(); e.stopPropagation();
+        if (!e.repeat) skip();
       }
     };
     window.addEventListener("pointerdown", onPointer, true);
@@ -140,9 +160,9 @@ export default function FishReveal({
     return () => {
       window.removeEventListener("pointerdown", onPointer, true);
       window.removeEventListener("keydown", onKey, true);
+      if (previous?.isConnected) previous.focus({ preventScroll: true });
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [skip, finish]);
 
   // Suspense rAF: shake amplitude ramps quadratically, glow builds behind.
   useEffect(() => {
@@ -171,6 +191,11 @@ export default function FishReveal({
 
   return (
     <div
+      ref={dialogRef}
+      role="dialog"
+      aria-modal="true"
+      aria-label="New catch"
+      tabIndex={-1}
       style={{
         position: "fixed",
         inset: 0,
@@ -401,22 +426,12 @@ export default function FishReveal({
         </div>
       )}
 
-      {/* Skip hint */}
-      {!landed && (
-        <div
-          style={{
-            position: "absolute",
-            bottom: 36,
-            left: "50%",
-            transform: "translateX(-50%)",
-            fontSize: 11,
-            color: "rgba(255,255,255,0.45)",
-            fontFamily: "'IBM Plex Mono', monospace",
-          }}
-        >
-          click to skip
-        </div>
-      )}
+      <button type="button" onClick={finish} aria-label="Close reveal" style={{ position: "absolute", top: 24, right: 24, background: "#FFFDF5", color: "#4A4034", border: "1px solid #E8DFC8", borderRadius: 8, padding: "8px 12px", fontSize: 12 }}>
+        Close · Esc
+      </button>
+      <button type="button" onClick={skip} disabled={stage === "flash"} style={{ position: "absolute", bottom: 36, left: "50%", transform: "translateX(-50%)", padding: "10px 18px", borderRadius: 10, border: "1px solid #E8DFC8", background: "#FFFDF5", color: "#4A4034", fontSize: 13, fontWeight: 600 }}>
+        {landed ? "Continue" : "Reveal catch"}
+      </button>
 
       <style>{`
         @keyframes tsi-reveal-in {
