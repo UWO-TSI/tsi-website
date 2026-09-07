@@ -10,6 +10,7 @@ import { getTodayWeather } from "@/lib/game/weather";
 import { useSFX } from "@/lib/game/useAudio";
 import { getCameraForwardXZ } from "@/lib/game/cameraBasis";
 import { advanceMotion, easeFacing, relativeFacingAngle } from "@/lib/game/locomotion";
+import { bindGameKeys } from "@/lib/game/keyboardInput";
 import { Surface } from "@/lib/game/grid";
 import { calculateCurvedHtmlPosition } from "@/lib/game/worldProjection";
 import { pickCurvedGround } from "@/lib/game/groundPick";
@@ -97,12 +98,13 @@ interface PlayerAvatarProps {
   playerName?: string;
   playerLevel?: number;
   activeEmote?: EmoteType | null;
+  frozen?: boolean;
   groundHeight?: (x: number, z: number) => number;
   groundSurface?: (x: number, z: number) => number;
   constrainMove?: (fromX: number, fromZ: number, toX: number, toZ: number) => [number, number];
 }
 
-export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Player", playerLevel = 1, activeEmote = null, groundHeight = sampleTerrainHeightFast, groundSurface, constrainMove }: PlayerAvatarProps) {
+export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Player", playerLevel = 1, activeEmote = null, frozen = false, groundHeight = sampleTerrainHeightFast, groundSurface, constrainMove }: PlayerAvatarProps) {
   const groupRef = useRef<THREE.Group>(null);
   const spriteRef = useRef<THREE.Group>(null);
   // Initialize y on the terrain at spawn so the avatar doesn't visibly
@@ -205,56 +207,30 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
   // against typing in inputs/textareas/contentEditable so WASD doesn't fire
   // while the user is filling out a form overlay.
   useEffect(() => {
-    const isTyping = () => {
-      const el = document.activeElement as HTMLElement | null;
-      if (!el) return false;
-      if (el.closest("input, textarea, select, button, summary, a[href]")) return true;
-      if (el.isContentEditable) return true;
-      return false;
-    };
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (isTyping()) return;
-      keys[e.key.toLowerCase()] = true;
-      if (e.key === "Shift") keys["shift"] = true;
-      // F1.2: Space triggers cosmetic jump. Ignore key-repeat so holding
-      // Space doesn't loop the arc — only re-fires after the previous
-      // jump finishes.
-      if (e.key === " " || e.code === "Space") {
-        if (!e.repeat && !jumpRef.current.active) {
-          jumpRef.current.active = true;
-          jumpRef.current.t = 0;
-          // Loop iter 14 (2026-07-24): takeoff beat — landing had squash +
-          // puff + thud, liftoff had nothing. Small kick-off puff + a light
-          // hop note completes the arc.
-          const jp = positionRef.current;
-          const id = puffIdRef.current++;
-          setPuffs((prev) => [...prev, { id, position: [jp.x, jp.y + 0.02, jp.z], scale: 0.85 }]);
-          playSFX("blip2");
+    if (frozen) return;
+    return bindGameKeys({ keys, accepted: ["w", "a", "s", "d", "shift", " "],
+      onReset: () => { targetRef.current = null; velRef.current.set(0, 0); },
+      onPress: (e) => {
+        // F1.2: Space triggers cosmetic jump. Ignore key-repeat so holding
+        // Space doesn't loop the arc — only re-fires after the previous
+        // jump finishes.
+        if (e.key === " " || e.code === "Space") {
+          if (!e.repeat && !jumpRef.current.active) {
+            jumpRef.current.active = true;
+            jumpRef.current.t = 0;
+            // Loop iter 14 (2026-07-24): takeoff beat — landing had squash +
+            // puff + thud, liftoff had nothing. Small kick-off puff + a light
+            // hop note completes the arc.
+            const jp = positionRef.current;
+            const id = puffIdRef.current++;
+            setPuffs((prev) => [...prev, { id, position: [jp.x, jp.y + 0.02, jp.z], scale: 0.85 }]);
+            playSFX("blip2");
+          }
+          e.preventDefault();
         }
-        e.preventDefault();
-      }
-    };
-    const onKeyUp = (e: KeyboardEvent) => {
-      keys[e.key.toLowerCase()] = false;
-      if (e.key === "Shift") keys["shift"] = false;
-    };
-    const clearKeys = () => { Object.keys(keys).forEach((key) => { keys[key] = false; }); };
-    const onVisibility = () => { if (document.hidden) clearKeys(); };
-    const onFocus = () => { if (isTyping()) clearKeys(); };
-    window.addEventListener("blur", clearKeys);
-    document.addEventListener("visibilitychange", onVisibility);
-    document.addEventListener("focusin", onFocus);
-    window.addEventListener("keydown", onKeyDown);
-    window.addEventListener("keyup", onKeyUp);
-    return () => {
-      window.removeEventListener("keydown", onKeyDown);
-      window.removeEventListener("keyup", onKeyUp);
-      window.removeEventListener("blur", clearKeys);
-      document.removeEventListener("visibilitychange", onVisibility);
-      document.removeEventListener("focusin", onFocus);
-      clearKeys();
-    };
-  }, [playSFX]);
+      },
+    });
+  }, [playSFX, frozen]);
 
   // Click-to-move
   const raycaster = useRef(new THREE.Raycaster());
@@ -262,7 +238,7 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
 
   const handleClick = useCallback(
     (e: MouseEvent) => {
-      if (e.defaultPrevented) return;
+      if (frozen || e.defaultPrevented) return;
       // Refinement 2026-07-22 (David): click-to-move is touch-only now.
       // On fine-pointer devices misclicks kept sending the player walking;
       // WASD is the desktop verb. Coarse pointers (phones/tablets in full
@@ -297,7 +273,7 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
         ]);
       }
     },
-    [camera, gl, playSFX, constrainMove, groundHeight]
+    [camera, gl, playSFX, constrainMove, groundHeight, frozen]
   );
 
   useEffect(() => {
@@ -336,6 +312,7 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
   useFrame((_, elapsed) => {
     if (!groupRef.current) return;
     const delta = Math.min(elapsed, 0.1);
+    if (frozen) { targetRef.current = null; velRef.current.set(0, 0); }
 
     clockRef.current += delta;
     const pos = positionRef.current;
@@ -347,7 +324,7 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
 
     // G3: any movement input stands up. Checked before the sit branch so a
     // held key breaks the pose immediately.
-    if (sitRef.current && (keys["w"] || keys["a"] || keys["s"] || keys["d"] || targetRef.current)) {
+    if (!frozen && sitRef.current && (keys["w"] || keys["a"] || keys["s"] || keys["d"] || targetRef.current)) {
       sitRef.current = null;
     }
 
@@ -375,11 +352,11 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
     const { fx, fz } = getCameraForwardXZ(camera);
     const rx = -fz;
     const rz = fx;
-    const wDown = !!keys["w"];
-    const sDown = !!keys["s"];
-    const aDown = !!keys["a"];
-    const dDown = !!keys["d"];
-    const sprint = !!keys["shift"];
+    const wDown = !frozen && !!keys["w"];
+    const sDown = !frozen && !!keys["s"];
+    const aDown = !frozen && !!keys["a"];
+    const dDown = !frozen && !!keys["d"];
+    const sprint = !frozen && !!keys["shift"];
     if (wDown) { dx += fx; dz += fz; }
     if (sDown) { dx -= fx; dz -= fz; }
     if (dDown) { dx += rx; dz += rz; }

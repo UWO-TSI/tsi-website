@@ -108,6 +108,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-09-07 — Menu and window input ownership (Codex)
+
+Shared key lifecycle clears movement/targets on blur, hidden document and control focus; ignores browser shortcuts. World camera/player and room input pause for active overlays/fishing. Camera arrows now use delta time. Accessible graphics labels and touch-only movement help repaired. Dia controls/graphics Escape and pixel keyboard toggle checked; collection opens. 163 tests, TypeScript, targeted lint and production webpack build pass. Held-key/touch hardware QA still open. No push.
+
 ### 2026-09-07 — NPC art recovery and curved hit targets (Codex)
 
 Repaired legacy NPC sprite URLs with bundled assets and isolated custom-image fallback. Fixed invisible sprite material reuse; unified animated labels/pose and removed duplicate glow/shadows. Curved hit targets now match drawn NPCs; live Dia click triggers greeting. Compact scene and panel layering verified. 154 tests, TypeScript and targeted lint pass; production build predates this batch. No push or backend changes.

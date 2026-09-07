@@ -10,6 +10,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { useGLTF } from "@react-three/drei";
+import { bindGameKeys } from "@/lib/game/keyboardInput";
 import { PIECE_TINTS, type Tint } from "@/lib/game/furniturePalettes";
 import * as THREE from "three";
 
@@ -85,35 +86,34 @@ export function InteriorPlayer({
   const targetRef = useRef<{ x: number; z: number } | null>(null);
   const dirRef = useRef(1);
   const animRef = useRef(0);
-  const frozenRef = useRef(frozen);
-  useEffect(() => { frozenRef.current = frozen; }, [frozen]);
   const tex = useMemo(() => getWalkTexture(), []);
   const { camera } = useThree();
 
   useEffect(() => {
-    const down = (e: KeyboardEvent) => { keys[e.key.toLowerCase()] = true; };
-    const up = (e: KeyboardEvent) => { keys[e.key.toLowerCase()] = false; };
-    window.addEventListener("keydown", down);
-    window.addEventListener("keyup", up);
-    return () => {
-      window.removeEventListener("keydown", down);
-      window.removeEventListener("keyup", up);
-    };
-  }, []);
+    if (frozen) return;
+    return bindGameKeys({ keys,
+      accepted: ["w", "a", "s", "d", "arrowup", "arrowdown", "arrowleft", "arrowright"],
+      onReset: () => { targetRef.current = null; },
+      onPress: (event) => event.preventDefault(),
+    });
+  }, [frozen]);
 
   useEffect(() => {
     const onTarget = (e: Event) => {
+      if (frozen) return;
       const { x, z } = (e as CustomEvent<{ x: number; z: number }>).detail;
       targetRef.current = { x, z };
     };
     window.addEventListener("tsi:interior-move", onTarget);
     return () => window.removeEventListener("tsi:interior-move", onTarget);
-  }, []);
+  }, [frozen]);
 
-  useFrame((_, delta) => {
+  useFrame((_, elapsed) => {
+    const delta = Math.min(elapsed, 0.1);
+    if (frozen) targetRef.current = null;
     const p = posRef.current;
     let vx = 0, vz = 0;
-    if (!frozenRef.current) {
+    if (!frozen) {
       if (keys["w"] || keys["arrowup"]) vz += 1;
       if (keys["s"] || keys["arrowdown"]) vz -= 1;
       if (keys["a"] || keys["arrowleft"]) vx += 1;

@@ -149,6 +149,7 @@ function Toggle({
       <button
         onClick={() => !disabled && onChange(!value)}
         disabled={disabled}
+        aria-label={label}
         aria-pressed={value}
         style={{
           background: value ? "#1D9BF0" : "rgba(255,255,255,0.1)",

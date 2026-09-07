@@ -13,8 +13,9 @@ import { useCoarsePointer } from "@/lib/game/useMediaQuery";
 
 const STORAGE_KEY = "tsi.welcome.v1.seen";
 
-export default function WelcomeOverlay() {
+export default function WelcomeOverlay({ onVisibleChange }: { onVisibleChange?: (visible: boolean) => void }) {
   const [visible, setVisible] = useState(false);
+  useEffect(() => { onVisibleChange?.(visible); }, [visible, onVisibleChange]);
   // Touch devices that entered full 3D via MobileWorld's "Try full 3D"
   // get touch instructions, not WASD + right-click.
   const coarse = useCoarsePointer();

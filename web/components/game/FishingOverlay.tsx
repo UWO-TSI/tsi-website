@@ -56,8 +56,10 @@ type Phase = "idle" | "charging" | "casting" | "waiting" | "bite" | "reeling" | 
 
 const BITE_WINDOW_MS = 1400;
 
-export default function FishingOverlay() {
+export default function FishingOverlay({ onActiveChange }: { onActiveChange?: (active: boolean) => void }) {
   const [phase, setPhase] = useState<Phase>("idle");
+  const active = phase !== "idle";
+  useEffect(() => { onActiveChange?.(active); }, [active, onActiveChange]);
   const [fish, setFish] = useState<FishDef | null>(null);
   const [caughtSize, setCaughtSize] = useState<number | null>(null);
   const [wasNew, setWasNew] = useState(false);

@@ -76,3 +76,12 @@ This is a playable review checkpoint, not final visual or whole-game acceptance.
 - Added curved billboard hit testing with three camera-angle/clip tests. Live Dia click on the drawn NPC triggered its greeting hop. NPC clicks prevent the ground movement handler from also consuming the event.
 - Reference island includes Mayor Eliza with terrain-aware wandering. At 390×844, NPC and compact controls render; fixed world labels drawing above the settings panel by containing the canvas stacking context. Fresh console after the final reload has no warnings/errors.
 - 154 tests across 11 files, TypeScript, targeted ESLint and diff check pass. Latest production build predates this NPC batch. No touch-hardware, live chat/persistence or controlled-performance acceptance claimed.
+
+## September 7 input ownership follow-up
+
+- NPC batch committed locally as `3b135c2`.
+- Shared keyboard handling clears held keys and pending travel on window blur, hidden document, control focus and cleanup. Browser modifier shortcuts and already-consumed events do not move the avatar. Nine lifecycle/ownership tests added.
+- Exterior player and camera now pause for loading, transitions, sheets, chat, collection, controls, graphics, welcome, emotes and fishing. Interiors use the same pause state and key cleanup. Camera arrows scale rotation by elapsed seconds rather than frame count.
+- Game hotkeys respect focused controls and avoid repeated toggles. Hold-Tab presence list yields to menu navigation and clears on blur/visibility loss. Graphics toggles now expose accessible labels; controls correctly describe tap movement as touch-only.
+- Live Dia: controls and graphics opened and closed with Escape; keyboard Space toggled Pixel filter off and on. Collection opened. During controls, brief W/arrow presses did not change displayed player coordinates. Sustained held-key pause/resume and touch-device checks remain unverified; unit tests cover the event lifecycle. Existing unauthenticated collection/presence requests return 401 and seasonal palette uses its fallback.
+- 163 tests across 12 files, TypeScript, targeted ESLint and production webpack build pass. Existing baseline-browser-data and middleware warnings remain. Dev preview restored on 3107; main remains clean.

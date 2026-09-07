@@ -35,7 +35,7 @@ const SECTIONS: Section[] = [
       { keys: ["D"], label: "Strafe right" },
       { keys: ["Shift"], label: "Sprint (hold)" },
       { keys: ["Space"], label: "Jump (cosmetic)" },
-      { keys: ["Click"], label: "Walk to point (alternative)" },
+      { keys: ["Tap ground"], label: "Walk to point (touch devices)" },
     ],
   },
   {

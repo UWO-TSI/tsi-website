@@ -3,6 +3,7 @@
 import { Suspense, useRef, useState, useCallback, useEffect, useMemo, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { bindGameKeys, isGameControlTarget } from "@/lib/game/keyboardInput";
 import { CameraControls, Html, useGLTF } from "@react-three/drei";
 import { Smile, BookOpen, Map as MapIcon, Settings2, Keyboard } from "lucide-react";
 import * as THREE from "three";
@@ -1809,6 +1810,7 @@ function CompassFeed({ azimuthRef }: { azimuthRef: React.MutableRefObject<number
 }
 
 function Scene({
+  frozen,
   playerName,
   introReady,
   weather,
@@ -1827,6 +1829,7 @@ function Scene({
 }: {
   playerName: string;
   introReady: boolean;
+  frozen: boolean;
   weather: Weather;
   spawn?: [number, number, number];
   playerLevel: number;
@@ -2081,53 +2084,23 @@ function Scene({
     cc.mouseButtons.wheel = 16;
   }, []);
 
-  // Sprint F1.1: arrow-key camera rotation as no-mouse fallback. Tracks
-  // held state via a ref so the rotation rate is consistent per frame.
-  // Guarded against typing in inputs.
-  const arrowKeysRef = useRef({ left: false, right: false, up: false, down: false });
+  const arrowKeysRef = useRef<Record<string, boolean>>({});
   useEffect(() => {
-    const isTyping = () => {
-      const el = document.activeElement as HTMLElement | null;
-      if (!el) return false;
-      const tag = el.tagName;
-      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return true;
-      if (el.isContentEditable) return true;
-      return false;
-    };
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (isTyping()) return;
-      if (e.key === "ArrowLeft") arrowKeysRef.current.left = true;
-      else if (e.key === "ArrowRight") arrowKeysRef.current.right = true;
-      else if (e.key === "ArrowUp") arrowKeysRef.current.up = true;
-      else if (e.key === "ArrowDown") arrowKeysRef.current.down = true;
-    };
-    const onKeyUp = (e: KeyboardEvent) => {
-      if (e.key === "ArrowLeft") arrowKeysRef.current.left = false;
-      else if (e.key === "ArrowRight") arrowKeysRef.current.right = false;
-      else if (e.key === "ArrowUp") arrowKeysRef.current.up = false;
-      else if (e.key === "ArrowDown") arrowKeysRef.current.down = false;
-    };
-    window.addEventListener("keydown", onKeyDown);
-    window.addEventListener("keyup", onKeyUp);
-    return () => {
-      window.removeEventListener("keydown", onKeyDown);
-      window.removeEventListener("keyup", onKeyUp);
-    };
-  }, []);
+    if (frozen) return;
+    return bindGameKeys({ keys: arrowKeysRef.current,
+      accepted: ["arrowleft", "arrowright", "arrowup", "arrowdown"],
+      onPress: (event) => event.preventDefault(),
+    });
+  }, [frozen]);
 
-  useFrame(() => {
+  useFrame((_, delta) => {
     const cc = cameraRef.current;
-    if (!cc) return;
+    if (!cc || frozen) return;
     const k = arrowKeysRef.current;
-    let dAz = 0;
-    let dPol = 0;
-    if (k.left) dAz -= 0.02;
-    if (k.right) dAz += 0.02;
-    if (k.up) dPol -= 0.015;
-    if (k.down) dPol += 0.015;
-    if (dAz !== 0 || dPol !== 0) {
-      cc.rotate(dAz, dPol, true);
-    }
+    const seconds = Math.min(delta, 0.1);
+    const dAz = ((k.arrowright ? 1 : 0) - (k.arrowleft ? 1 : 0)) * 1.2 * seconds;
+    const dPol = ((k.arrowdown ? 1 : 0) - (k.arrowup ? 1 : 0)) * 0.9 * seconds;
+    if (dAz || dPol) cc.rotate(dAz, dPol, true);
   });
 
   return (
@@ -2144,6 +2117,7 @@ function Scene({
         <AerialCamera cfg={aerial} />
       ) : (
       <CameraControls
+        enabled={!frozen}
         ref={cameraRef}
         minPolarAngle={Math.PI / 2 - (42 * Math.PI) / 180}
         maxPolarAngle={Math.PI / 2}
@@ -2294,7 +2268,7 @@ function Scene({
         <GhostReplay key={g.user_id} ghost={g} />
       ))}
 
-      <PlayerAvatar spawnPosition={spawn ?? spawnOverride() ?? SPAWN_POSITION} onMove={handlePlayerMove} playerName={playerName} playerLevel={playerLevel} activeEmote={activeEmote} />
+      <PlayerAvatar frozen={frozen} spawnPosition={spawn ?? spawnOverride() ?? SPAWN_POSITION} onMove={handlePlayerMove} playerName={playerName} playerLevel={playerLevel} activeEmote={activeEmote} />
       <FishingBobber playerPosRef={playerPosRef} />
       <IdleFireflies playerPosRef={playerPosRef} />
 
@@ -2330,6 +2304,8 @@ function GameWorldContent() {
   const [graphicsOpen, setGraphicsOpen] = useState(false);
 
   // Active NPC chat target. D5 wires sprite clicks → setActiveNPC inside Scene.
+  const [fishingActive, setFishingActive] = useState(false);
+  const [welcomeVisible, setWelcomeVisible] = useState(false);
   const [activeNPC, setActiveNPC] = useState<NPCPersona | null>(null);
   // Loop iter 8: greeting hop — tell the world which NPC just got engaged.
   useEffect(() => {
@@ -2428,6 +2404,9 @@ function GameWorldContent() {
   const router = useRouter();
   const { triggerTransition, isTransitioning } = useTransition();
 
+  const inputBlocked = !gateDone || isTransitioning || sheet !== null || activeNPC !== null
+    || guestbookOpen || collectionOpen || emoteMenuOpen || controlsOpen || graphicsOpen || fishingActive || welcomeVisible;
+
   // F1.2: nearest interactable for crosshair + E-interact. Updated by Scene
   // on each player move via onNearestInteractable. Kept here so Crosshair
   // (DOM, outside Canvas) can read it.
@@ -2442,9 +2421,9 @@ function GameWorldContent() {
   // hijack chat or form fields.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      const el = document.activeElement as HTMLElement | null;
-      const tag = el?.tagName;
-      if (tag === "INPUT" || tag === "TEXTAREA" || el?.isContentEditable) return;
+      if (e.defaultPrevented || e.repeat || e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.key !== "Escape" && isGameControlTarget(document.activeElement)) return;
+      if (inputBlocked && e.key !== "Escape" && !(emoteMenuOpen && e.key.toLowerCase() === "g")) return;
       // Item 14: while a sheet is up, game hotkeys stand down (the sheet's
       // own capture-phase listener handles Escape).
       if (sheetRef.current) return;
@@ -2603,7 +2582,7 @@ function GameWorldContent() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [activeNPC, emoteTypes, guestbookOpen, emoteMenuOpen, controlsOpen, debugOpen, screenshotMode, router, triggerTransition, isTransitioning]);
+  }, [activeNPC, emoteTypes, guestbookOpen, emoteMenuOpen, controlsOpen, debugOpen, screenshotMode, router, triggerTransition, isTransitioning, inputBlocked]);
 
   useEffect(() => {
     return () => {
@@ -2633,16 +2612,8 @@ function GameWorldContent() {
   // Sprint F1.3: hold Tab → show server list overlay; release → hide.
   // Guarded against typing in inputs so Tab still navigates forms.
   useEffect(() => {
-    const isTyping = () => {
-      const el = document.activeElement as HTMLElement | null;
-      if (!el) return false;
-      const tag = el.tagName;
-      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return true;
-      if (el.isContentEditable) return true;
-      return false;
-    };
     const down = (e: KeyboardEvent) => {
-      if (e.key === "Tab" && !isTyping()) {
+      if (e.key === "Tab" && !inputBlocked && !e.defaultPrevented && !isGameControlTarget(document.activeElement)) {
         e.preventDefault();
         setTabHeld(true);
       }
@@ -2650,13 +2621,19 @@ function GameWorldContent() {
     const up = (e: KeyboardEvent) => {
       if (e.key === "Tab") setTabHeld(false);
     };
+    const clear = () => setTabHeld(false);
+    const visibility = () => { if (document.hidden) clear(); };
+    window.addEventListener("blur", clear);
+    document.addEventListener("visibilitychange", visibility);
     window.addEventListener("keydown", down);
     window.addEventListener("keyup", up);
     return () => {
       window.removeEventListener("keydown", down);
       window.removeEventListener("keyup", up);
+      window.removeEventListener("blur", clear);
+      document.removeEventListener("visibilitychange", visibility);
     };
-  }, []);
+  }, [inputBlocked]);
 
   const handleEmotePick = useCallback((emote: EmoteType) => {
     setActiveEmote(emote);
@@ -2712,7 +2689,7 @@ function GameWorldContent() {
           : 'url("data:image/svg+xml;utf8,<svg xmlns=%27http://www.w3.org/2000/svg%27 width=%2720%27 height=%2720%27><circle cx=%2710%27 cy=%2710%27 r=%275%27 fill=%27%23FFFFFF%27 fill-opacity=%270.9%27 stroke=%27%233D3A2E%27 stroke-width=%272%27/></svg>") 10 10, auto',
       }}
     >
-      <Canvas style={{ imageRendering: graphicsSettings.pixelated ? "pixelated" : "auto" }}
+      <Canvas tabIndex={0} role="application" aria-label="World walking area" style={{ zIndex: 0, imageRendering: graphicsSettings.pixelated ? "pixelated" : "auto" }}
         gl={{ antialias: false, powerPreference: "high-performance" }}
         dpr={graphicsSettings.pixelated ? 0.5 : [1, 2]}
         camera={{ fov: 48, near: 0.1, far: 300, position: [0, 16.5, -21] }} // refinement: closer default framing (was 19/-24)
@@ -2731,7 +2708,7 @@ function GameWorldContent() {
           const Room = interior === "hq" ? HQInterior : interior === "shop" ? ShopInterior : interior === "wharf" ? WharfShackInterior : OracleInterior;
           return (
             <Room
-              frozen={sheet !== null || isTransitioning}
+              frozen={inputBlocked}
               playerPosRef={playerPosRef}
               onNearestStation={(st: InteriorStation | null) =>
                 setNearest(st ? { kind: "station", id: `station-${st.id}`, name: st.name, stationAction: st.action } : null)
@@ -2744,6 +2721,7 @@ function GameWorldContent() {
           {/* S5: keyed on spawn so boat travel (exterior→exterior) remounts
               the Scene behind the fade — same path as interior exits. */}
           <Scene
+            frozen={inputBlocked}
             key={worldSpawn ? worldSpawn.join(",") : "init"}
             playerName={playerName}
             introReady={gateDone}
@@ -2784,16 +2762,16 @@ function GameWorldContent() {
           onClose={() => setEmoteMenuOpen(false)}
           onPick={handleEmotePick}
         />
-        <FishingOverlay />
+        <FishingOverlay onActiveChange={setFishingActive} />
         <CollectionBook open={collectionOpen} onClose={() => setCollectionOpen(false)} />
 
         <GuestbookOverlay
           open={guestbookOpen}
           onClose={() => setGuestbookOpen(false)}
         />
-        <ServerListOverlay visible={tabHeld} />
+        <ServerListOverlay visible={tabHeld && !inputBlocked} />
         <ControlsOverlay visible={controlsOpen} onClose={() => setControlsOpen(false)} />
-        <WelcomeOverlay />
+        <WelcomeOverlay onVisibleChange={setWelcomeVisible} />
         <GraphicsSettingsPanel open={graphicsOpen} onClose={() => setGraphicsOpen(false)} />
         <OverlaySheet sheet={sheet} onClose={() => setSheet(null)} />
         <Crosshair active={nearest !== null} hint={nearest?.name ?? null} />
