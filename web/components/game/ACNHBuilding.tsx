@@ -98,7 +98,7 @@ export function ACNHParts({
     return g;
   }, [gltfs, parts, scale, yOffset, rotationY, castShadow]);
 
-  const emitters = useRef<THREE.MeshStandardMaterial[]>([]);
+  const emitters = useRef<{ material: THREE.MeshStandardMaterial; gain: number }[]>([]);
   useEffect(() => {
     const materials = new Set<THREE.MeshStandardMaterial>();
     group.traverse((object) => {
@@ -108,15 +108,20 @@ export function ACNHParts({
         if (material instanceof THREE.MeshStandardMaterial && material.emissiveMap) materials.add(material);
       }
     });
-    emitters.current = [...materials];
+    const isHQ = parts.some((part) => part.endsWith("/hq-office.glb"));
+    emitters.current = [...materials].map((material) => ({
+      material,
+      // The HQ window lightmaps are much dimmer than its clock/lamp map.
+      gain: isHQ && /^mWindow[LR]$/.test(material.name) ? 4 : 1,
+    }));
     return () => { emitters.current = []; };
-  }, [group]);
+  }, [group, parts]);
   useFrame((_, delta) => {
     if (windowGlow === undefined) return;
-    for (const material of emitters.current) {
+    for (const { material, gain } of emitters.current) {
       // These are instance-owned Three materials, animated outside React rendering.
       // eslint-disable-next-line react-hooks/immutability
-      material.emissiveIntensity = THREE.MathUtils.damp(material.emissiveIntensity, windowGlow, 1.5, Math.min(delta, 0.1));
+      material.emissiveIntensity = THREE.MathUtils.damp(material.emissiveIntensity, windowGlow * gain, 1.5, Math.min(delta, 0.1));
     }
   });
 

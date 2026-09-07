@@ -313,3 +313,9 @@ This is a playable review checkpoint, not final visual or whole-game acceptance.
 - Default island now uses the existing 97 KB `bridge-wooden.glb` at the wooden crossing. Measured asset span is 3.79 units, width 2.90, and central deck about 0.07 high. Rotated the span along the path, centered at z=0.5 and lowered 0.065 so the deck matches existing walking height and overlaps both banks. No grid/map/collision data changes.
 - Dia screenshots checked Walk/Overview and day/evening/overcast/night; rails and plank deck are readable with no new runtime warnings/errors. TypeScript, targeted ESLint and six existing island movement tests pass. Latest full suite/build remains guestbook 302/28. Physical crossing input not newly verified.
 - Next: HQ night-window readability. Existing emissive textures inspected directly from the GLB; their window panes are very dim. Preserve source assets and tune the instance material only if visual QA supports it.
+
+## September 7 HQ night-window readability
+
+- Bridge batch committed as `4b718c4`. HQ's existing mWindowL/R emissive maps were inspected from the GLB and found substantially dimmer than its clock/lamp map. Applied a 4x gain only to those instance-owned HQ window materials, retaining the existing day/evening/night fade and original textures. Other building materials retain their intensity.
+- Dia fresh-load comparisons: warmer, legible night windows; unchanged daylight finish; golden-hour view also checked. No fresh runtime warnings/errors after reload. Editing the effect dependency array triggered a development HMR warning before reload, not reproduced from a fresh mount. TypeScript, targeted ESLint and both existing material lifetime/culling tests pass. Latest full suite/build remains guestbook 302/28; bridge/windows not yet production rebuilt.
+- Next: minimap readability and discovery feedback lifetime, preserving existing landmark purposes and zero online rewards.

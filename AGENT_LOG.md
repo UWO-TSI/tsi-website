@@ -108,6 +108,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-09-07 · HQ night windows
+
+Calibrated only the existing HQ window emissive maps after inspecting their source brightness. Dia fresh-load night/day/evening comparison clean; types, lint and material lifetime/culling tests pass. Source assets preserved. Details in checkpoint.
+
 ### 2026-09-07 · Default island bridge asset
 
 Existing wooden bridge fitted to the default crossing after measuring deck/span. No authored map or movement changes. Dia camera/lighting review clean; types, lint and six island movement tests pass. See checkpoint.
