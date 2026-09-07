@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { createDefaultIsland, DEFAULT_SPAWN } from "./defaultIsland";
+import { createDefaultIsland, DEFAULT_SPAWN, ISLAND_PROPS } from "./defaultIsland";
 import { createCenteredMap, setCell, Surface, heightField, sampleGroundHeight, sampleHeightField, isGroundAtWorld } from "./grid";
 
 describe("default island movement", () => {
@@ -20,6 +20,24 @@ describe("default island movement", () => {
     expect(island.move(0, 4, 0, 15)[1]).toBeLessThan(6.7);
     expect(island.move(0, -10, 0, -40)[1]).toBeGreaterThan(-17);
     expect(island.move(-8, -9, -8, -6)[1]).toBeLessThan(-6.6);
+  });
+  it("keeps solid prop footprints on land and blocks entry from each side", () => {
+    for (const prop of ISLAND_PROPS) {
+      expect(island.surface(prop.x, prop.z)).not.toBe(Surface.River);
+      expect(island.standable(prop.x, prop.z)).toBe(false);
+      for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const fromX = prop.x + dx * 2, fromZ = prop.z + dz * 2;
+        if (!island.standable(fromX, fromZ)) continue;
+        const [x, z] = island.move(fromX, fromZ, prop.x, prop.z);
+        expect(island.standable(x, z)).toBe(true);
+        expect(Math.hypot(x - prop.x, z - prop.z)).toBeGreaterThan(0.35);
+      }
+    }
+  });
+  it("keeps the clearing-to-HQ approach clear after furnishing", () => {
+    expect(island.move(0, -10, 0, 6)).toEqual([0, expect.closeTo(6, 5)]);
+    expect(island.standable(5.6, 4.5)).toBe(true);
+    expect(island.standable(5, 5.3)).toBe(false);
   });
   it("allows a diagonal to slide along the building", () => {
     const [x, z] = island.move(0, 6, 5, 9);

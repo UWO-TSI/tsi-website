@@ -13,7 +13,7 @@ import GameSceneBoundary from "./GameSceneBoundary";
 import PostFX from "./PostFX";
 import { GLBProp, NatureTree, NatureBush, NatureFlowerCluster } from "./NatureModels";
 import { ACNHBuilding } from "./ACNHBuilding";
-import { createDefaultIsland, DEFAULT_SPAWN, ISLAND_TREES, ISLAND_BUSHES, ISLAND_FLOWERS } from "@/lib/game/defaultIsland";
+import { createDefaultIsland, DEFAULT_SPAWN, ISLAND_TREES, ISLAND_BUSHES, ISLAND_FLOWERS, ISLAND_PROPS } from "@/lib/game/defaultIsland";
 import { useGraphicsSettings } from "@/lib/game/useGraphicsSettings";
 import { DEFAULT_GRADE } from "@/lib/game/grading";
 import { TUNING_DEFAULTS } from "@/lib/game/tuning";
@@ -32,7 +32,7 @@ type Metrics = { fps: number; frameMs: number; calls: number; triangles: number;
 const GRADE = { ...DEFAULT_GRADE, desat: 0.08, lift: 0.5, warmth: 0.7, vignette: 0.2 };
 const WATER = { ...TUNING_DEFAULTS.water, foamWidth: 0.22, foamStrength: 0.65, foamSoft: 0.12, ringStrength: 0.12, glare: 0.4, sunGlint: 1.5 };
 const NIGHT_WATER = { ...WATER, deepColor: 0x152943, midColor: 0x284c67, shallowColor: 0x516e81, bedColor: 0x394b59, foamColor: 0x8babc2, ringColor: 0x7493aa, glare: 0.08, sunGlint: 0.25 };
-const TREE_SEEDS = [0, 3, 2, 5, 7, 8];
+const TREE_SEEDS = [0, 3, 2, 5, 7, 8, 1, 3];
 
 function refreshStaticShadows(gl: THREE.WebGLRenderer) {
   gl.shadowMap.autoUpdate = false;
@@ -89,6 +89,8 @@ function IslandScene({ preset, overview, shadows, reset, onMetrics }: {
       <GridOcean map={island.map} />
       <GLBProp url="/assets/acnh/props/bridge-wooden.glb" position={[0, -0.065, 0.5]} rotation={[0, Math.PI / 2, 0]} />
       <group position={[0, 0, 7]}><ACNHBuilding id="hq" windowGlow={preset === "night" ? 1.4 : preset === "evening" ? 0.8 : 0} /></group>
+      {ISLAND_PROPS.map((prop, i) => <GLBProp key={`prop-${i}`} url={`/assets/acnh/props/${prop.model}.glb`}
+        position={[prop.x, island.ground(prop.x, prop.z), prop.z]} scale={prop.scale} rotation={[0, prop.yaw, 0]} />)}
       {ISLAND_TREES.map(([x, z], i) => <NatureTree key={`tree-${i}`} position={[x, island.ground(x, z), z]} seed={TREE_SEEDS[i]} />)}
       {ISLAND_BUSHES.map(([x, z], i) => <NatureBush key={`bush-${i}`} position={[x, island.ground(x, z), z]} seed={i} />)}
       {ISLAND_FLOWERS.map(([x, z], i) => <NatureFlowerCluster key={`flower-${i}`} position={[x, island.ground(x, z), z]} seed={i * 2} />)}

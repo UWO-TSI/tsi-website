@@ -108,6 +108,8 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+- 2026-09-07 Codex: default-island planting groups/bench areas/rocks with shared collision footprints; restored missing wooden bench UVs and original wood texture with repeatable source script. Dia day/evening/night/crisp checks clean, 387 tests + types/lint/webpack build pass. No authored map edits. Next foliage contrast comparison. See checkpoint and `specs/wood-bench-asset.md`.
+
 - 2026-09-07 Codex: emote sharing keeps local animation immediate, reports only latest failure, aborts on exit; desktop/mobile require actual acknowledgement. API supports existing islet and rejects malformed bodies; no real posts. 385 tests, types, targeted lint and webpack build pass; Dia fake-transport QA clean. See `specs/game-default-island-checkpoint.md`. Continuing default-island art composition.
 
 ### 2026-09-07 · Desktop heartbeat snapshots and world bounds
