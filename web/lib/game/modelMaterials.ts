@@ -18,14 +18,19 @@ export function prepareModel(source: Object3D, url: string, castShadow: boolean)
     const mesh = object as Mesh;
     if (!mesh.isMesh) return;
     mesh.castShadow = castShadow;
-    mesh.receiveShadow = true;
+    const originals = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+    const layeredCanopy = /\/plants\/tree-(hardwood-|blossom)/.test(url)
+      && originals.every((material) => /OakLeaf|SakuraBack|SakuraBloom/.test(material.name));
+    // Layered foliage cards self-shadow into hard patches. Keep their light
+    // response and ground shadow without shadowing one card onto the next.
+    mesh.receiveShadow = !layeredCanopy;
     const adapt = (original: Material) => {
       const existing = materials.get(original);
       if (existing) return existing;
       const material = original.clone();
       material.side = DoubleSide;
       if (url.includes("/plants/tree-hardwood-") && material instanceof MeshStandardMaterial) {
-        // These textures are grayscale seasonal ramps; GLTF carries no tint.
+        // Grayscale foliage and trunk albedos need their seasonal colour tint.
         if (material.name.includes("OakLeaf")) material.color.copy(new Color("#a9c977").multiplyScalar(2));
         if (material.name.includes("OakTrunk")) material.color.copy(new Color("#b88c58").multiplyScalar(1.7));
       }

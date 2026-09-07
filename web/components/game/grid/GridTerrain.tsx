@@ -54,6 +54,7 @@ import {
   easedCellOutline,
   type LayerTest,
 } from "@/lib/game/grid";
+import { createSurfaceBlend } from "@/lib/game/surfaceBlend";
 import { terrainMaterial, setShoreField } from "./terrainMaterials";
 import { TUNING_DEFAULTS } from "@/lib/game/tuning";
 import { bedDepth } from "@/lib/game/waterShader";
@@ -141,9 +142,10 @@ interface Mesh {
   /** Explicit, because banks are sloped and the flat +Y default would flatten them. */
   nrm: number[];
   idx: number[];
+  color: number[];
 }
 
-const emptyMesh = (): Mesh => ({ pos: [], uv: [], nrm: [], idx: [] });
+const emptyMesh = (): Mesh => ({ pos: [], uv: [], nrm: [], idx: [], color: [] });
 
 /**
  * Append one cell.
@@ -169,7 +171,8 @@ function addCell(
    */
   heightAt?: (px: number, pz: number) => number,
   /** Cuts the cell into subdiv x subdiv quads. 1 is the plain single quad. */
-  subdiv = 1
+  subdiv = 1,
+  blendAt?: (x: number, z: number) => number
 ) {
   const s = 1 / (UV_CELLS_PER_REPEAT * TILE);
   const base = mesh.pos.length / 3;
@@ -180,6 +183,7 @@ function addCell(
     // instead of each restarting it.
     mesh.uv.push(px * s, pz * s);
     mesh.nrm.push(0, 1, 0);
+    if (blendAt) mesh.color.push(1, 1, 1, blendAt(px, pz));
   };
 
   const outline = easedCellOutline(inLayer, cx, cz);
@@ -214,11 +218,17 @@ function addCell(
     return;
   }
 
-  push(x, z); // fan centre
-  for (const [ox, oz] of outline) push(x + ox, z + oz);
+  push(x, z);
   const n = outline.length;
-  for (let i = 0; i < n; i++) {
-    mesh.idx.push(base, base + 1 + i, base + 1 + ((i + 1) % n));
+  const rings = blendAt ? [0.45, 0.7, 1] : [1];
+  for (const radius of rings) for (const [ox, oz] of outline) push(x + ox * radius, z + oz * radius);
+  for (let i = 0; i < n; i++) mesh.idx.push(base, base + 1 + i, base + 1 + ((i + 1) % n));
+  for (let ring = 1; ring < rings.length; ring++) {
+    const inner = base + 1 + (ring - 1) * n, outer = inner + n;
+    for (let i = 0; i < n; i++) {
+      const j = (i + 1) % n;
+      mesh.idx.push(inner + i, outer + i, outer + j, inner + i, outer + j, inner + j);
+    }
   }
 }
 
@@ -353,6 +363,7 @@ function build(mesh: Mesh): THREE.BufferGeometry | null {
   g.setAttribute("position", new THREE.Float32BufferAttribute(mesh.pos, 3));
   g.setAttribute("uv", new THREE.Float32BufferAttribute(mesh.uv, 2));
   g.setAttribute("normal", new THREE.Float32BufferAttribute(mesh.nrm, 3));
+  if (mesh.color.length) g.setAttribute("color", new THREE.Float32BufferAttribute(mesh.color, 4));
   g.setIndex(mesh.idx);
   g.computeBoundingSphere();
   return g;
@@ -442,6 +453,8 @@ export default function GridTerrain({ map }: { map: IslandMap }) {
     const inSurface = (s: number): LayerTest => (cx, cz) =>
       inBounds(map, cx, cz) && surfaceAt(map, cx, cz) === s;
 
+    const blends = new Map<number, ReturnType<typeof createSurfaceBlend>>([Surface.Sand, Surface.Soil].map((surface) => [surface, createSurfaceBlend(map, surface)]));
+
     for (const chunk of listChunks(map)) {
       const grass = emptyMesh();
       const river = emptyMesh();
@@ -527,6 +540,7 @@ export default function GridTerrain({ map }: { map: IslandMap }) {
 
           if (s !== Surface.Grass) {
             const m = overlays.get(s) ?? emptyMesh();
+            const blend = blends.get(s);
             addCell(
               m,
               inSurface(s),
@@ -538,7 +552,9 @@ export default function GridTerrain({ map }: { map: IslandMap }) {
               undefined,
               groundFor
                 ? ((g) => (px: number, pz: number) => g(px, pz) + OVERLAY_LIFT)(groundFor(cx, cz))
-                : undefined
+                : undefined,
+              Math.max(subdivFor(cx, cz), blend?.nearEdge(cx, cz) ? 4 : 1),
+              blend?.sample
             );
             overlays.set(s, m);
           }
@@ -603,7 +619,13 @@ export default function GridTerrain({ map }: { map: IslandMap }) {
       const sharedName = SHARED[s];
       const shared = sharedName ? terrainMaterial(sharedName) : null;
       if (shared) {
-        m.set(s, shared);
+        if (s === Surface.Sand || s === Surface.Soil) {
+          const overlay = shared.clone() as THREE.MeshStandardMaterial;
+          overlay.vertexColors = true;
+          overlay.transparent = true;
+          overlay.depthWrite = false;
+          m.set(s, overlay);
+        } else m.set(s, shared);
         continue;
       }
       m.set(
@@ -622,6 +644,12 @@ export default function GridTerrain({ map }: { map: IslandMap }) {
     }
     return m;
   }, []);
+
+  useEffect(() => () => { chunks.forEach(({ geometry }) => geometry.dispose()); }, [chunks]);
+  useEffect(() => () => {
+    materials.get(Surface.Sand)?.dispose();
+    materials.get(Surface.Soil)?.dispose();
+  }, [materials]);
 
   return (
     <group>

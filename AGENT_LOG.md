@@ -108,6 +108,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-09-07 — Natural surface blending and foliage lighting (Codex)
+
+Feathered soil/sand into grass using actual eased boundaries; protected water/constructed edges. Added four boundary/immutability tests and owned-resource cleanup. Compared existing low-poly alternatives, retained textured broadleaf assets, corrected front-facing placement and removed canopy self-shadow patches while retaining ground shadows. Dia unfiltered overview and pixelated golden hour checked, fresh console clean. 167 tests and types pass; targeted lint zero errors/two existing warnings. Coastline shape, full-orbit profile and controlled laptop QA remain open.
+
 ### 2026-09-07 — Menu and window input ownership (Codex)
 
 Shared key lifecycle clears movement/targets on blur, hidden document and control focus; ignores browser shortcuts. World camera/player and room input pause for active overlays/fishing. Camera arrows now use delta time. Accessible graphics labels and touch-only movement help repaired. Dia controls/graphics Escape and pixel keyboard toggle checked; collection opens. 163 tests, TypeScript, targeted lint and production webpack build pass. Held-key/touch hardware QA still open. No push.

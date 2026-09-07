@@ -85,3 +85,14 @@ This is a playable review checkpoint, not final visual or whole-game acceptance.
 - Game hotkeys respect focused controls and avoid repeated toggles. Hold-Tab presence list yields to menu navigation and clears on blur/visibility loss. Graphics toggles now expose accessible labels; controls correctly describe tap movement as touch-only.
 - Live Dia: controls and graphics opened and closed with Escape; keyboard Space toggled Pixel filter off and on. Collection opened. During controls, brief W/arrow presses did not change displayed player coordinates. Sustained held-key pause/resume and touch-device checks remain unverified; unit tests cover the event lifecycle. Existing unauthenticated collection/presence requests return 401 and seasonal palette uses its fallback.
 - 163 tests across 12 files, TypeScript, targeted ESLint and production webpack build pass. Existing baseline-browser-data and middleware warnings remain. Dev preview restored on 3107; main remains clean.
+
+## September 7 natural materials and canopy follow-up
+
+- Input batch committed locally as `27bc949`.
+- Sand and soil now feather into grass across a narrow 0.3-tile boundary derived from the same eased cell outlines. Path centres remain opaque; water/wood/stone borders do not acquire a green rim. Four tests cover edge falloff, one-tile paths, rounded corners, cell joins and map immutability. Grid editing/collision data is unchanged.
+- Natural overlays use owned material clones and vertex alpha; chunk geometry and the owned materials dispose on replacement/unmount.
+- Reviewed the existing `nature/tree_detailed.glb` and `nature/tree_oak.glb` in the model inspector. Their blocky/faceted crowns are a weaker match for the confirmed textured scenery. Kept the existing tree library.
+- Broadleaf placement now presents the authored canopy front toward the primary camera, with small yaw variation instead of arbitrary full turns. Layered broadleaf meshes no longer receive card-to-card shadows; trunks still receive shadows and trees still cast them. Dia before/after shows the blossom's dark canopy patches replaced by a continuous pink crown. No source asset binaries changed.
+- Dia: unfiltered overview and pixelated golden-hour walk view render with no fresh warnings/errors. Example local overview sample: 145 draws, 54,637 triangles, 144 FPS on the current host. This is a development sample, not controlled laptop acceptance or a comparison against the earlier busy-host result.
+- 167 tests across 13 files and TypeScript pass. Targeted ESLint has zero errors and two pre-existing GridTerrain unused-symbol warnings. Latest production build predates this visual batch.
+- Still open: grid-shaped outer coastline (larger terrain/map work deferred), broadleaf profile under a full side orbit, controlled device performance and full-game integration. The material blend is not a new custom-map implementation.
