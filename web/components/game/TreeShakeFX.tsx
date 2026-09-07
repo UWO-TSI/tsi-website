@@ -5,7 +5,7 @@
  *
  * Listens for `tsi:tree-shake` window events (fired by GameWorld's E
  * handler when the nearest interactable is a tree) and runs a burst at the
- * tree's canopy: ~12 leaf quads flutter down, and ~35% of shakes drop a
+ * tree's canopy: ~12 leaf pieces flutter down, and ~35% of shakes drop a
  * fruit (apple/peach/acorn) that falls, bounces, then floats up and fades
  * with a "You got..." toast. Collection persists via POST /api/collections
  * — cosmetic only, no TC, no XP (principle #3). Unauthenticated (env-off
@@ -15,8 +15,9 @@
  * cooldown (2.5s) stops E-mashing from stacking bursts.
  */
 
-import { useEffect, useRef, useState } from "react";
+import { Component, Suspense, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useFrame } from "@react-three/fiber";
+import { Billboard, useTexture } from "@react-three/drei";
 import * as THREE from "three";
 import { getTerrainHeight } from "./terrain";
 import { AudioManager } from "@/lib/game/audio";
@@ -24,6 +25,10 @@ import { collect } from "@/lib/game/collections";
 
 const CANOPY_Y = 3.1;
 const LEAVES_PER_SHAKE = 12;
+const LEAF_SHAPE = new THREE.Shape();
+LEAF_SHAPE.moveTo(0, -0.1);
+LEAF_SHAPE.quadraticCurveTo(-0.1, 0, 0, 0.1);
+LEAF_SHAPE.quadraticCurveTo(0.1, 0, 0, -0.1);
 const FRUIT_CHANCE = 0.35;
 const SHAKE_COOLDOWN_MS = 2500;
 
@@ -64,9 +69,13 @@ interface Burst {
 
 let burstId = 0;
 
-export default function TreeShakeFX({ playerPosRef }: { playerPosRef?: React.MutableRefObject<THREE.Vector3> }) {
+export default function TreeShakeFX({ playerPosRef, collectItem = collect, random = Math.random, groundHeight = getTerrainHeight }: { playerPosRef?: React.MutableRefObject<THREE.Vector3>; collectItem?: (key: string) => void; random?: () => number; groundHeight?: (x: number, z: number) => number }) {
   const [bursts, setBursts] = useState<Burst[]>([]);
   const lastShakeRef = useRef<Record<string, number>>({});
+
+  useEffect(() => {
+    FRUITS.forEach((fruit) => useTexture.preload(`/assets/acnh/icons/${fruit.key}.png`));
+  }, []);
 
   useEffect(() => {
     const onShake = (e: Event) => {
@@ -83,8 +92,8 @@ export default function TreeShakeFX({ playerPosRef }: { playerPosRef?: React.Mut
         z,
         color: sp.leaves[i % sp.leaves.length],
       }));
-      const fruit = Math.random() < FRUIT_CHANCE
-        ? FRUITS[sp.drops[Math.floor(Math.random() * sp.drops.length)]]
+      const fruit = random() < FRUIT_CHANCE
+        ? FRUITS[sp.drops[Math.floor(random() * sp.drops.length)]]
         : null;
 
       AudioManager.playSFX("exit"); // soft door-thud reads as a trunk knock
@@ -94,7 +103,7 @@ export default function TreeShakeFX({ playerPosRef }: { playerPosRef?: React.Mut
           id: burstId++,
           x,
           z,
-          groundY: getTerrainHeight(x, z),
+          groundY: groundHeight(x, z),
           start: now,
           leaves,
           fruit,
@@ -104,7 +113,7 @@ export default function TreeShakeFX({ playerPosRef }: { playerPosRef?: React.Mut
     };
     window.addEventListener("tsi:tree-shake", onShake);
     return () => window.removeEventListener("tsi:tree-shake", onShake);
-  }, []);
+  }, [random, groundHeight]);
 
   const expire = (id: number) =>
     setBursts((b) => b.filter((x) => x.id !== id));
@@ -112,15 +121,15 @@ export default function TreeShakeFX({ playerPosRef }: { playerPosRef?: React.Mut
   return (
     <>
       {bursts.map((b) => (
-        <ShakeBurst key={b.id} burst={b} playerPosRef={playerPosRef} onDone={() => expire(b.id)} />
+        <ShakeBurst key={b.id} burst={b} playerPosRef={playerPosRef} collectItem={collectItem} onDone={() => expire(b.id)} />
       ))}
     </>
   );
 }
 
-function ShakeBurst({ burst, playerPosRef, onDone }: { burst: Burst; playerPosRef?: React.MutableRefObject<THREE.Vector3>; onDone: () => void }) {
+function ShakeBurst({ burst, playerPosRef, collectItem, onDone }: { burst: Burst; playerPosRef?: React.MutableRefObject<THREE.Vector3>; collectItem: (key: string) => void; onDone: () => void }) {
   const groupRef = useRef<THREE.Group>(null);
-  const fruitRef = useRef<THREE.Mesh>(null);
+  const fruitRef = useRef<THREE.Group>(null);
   const doneRef = useRef(false);
   const collectedRef = useRef(false);
 
@@ -139,10 +148,12 @@ function ShakeBurst({ burst, playerPosRef, onDone }: { burst: Burst; playerPosRe
       const angle = (leaf.seed % 360) * (Math.PI / 180);
       child.position.set(
         Math.cos(angle) * spread + sway * 0.4,
-        CANOPY_Y - fall * (CANOPY_Y - 0.15) - 0,
+        CANOPY_Y - fall * (CANOPY_Y - 0.15),
         Math.sin(angle) * spread + sway * 0.2
       );
       child.rotation.z = t * 3 + leaf.seed;
+      child.rotation.x = Math.sin(t * 4 + leaf.seed) * 0.6;
+      child.rotation.y = Math.sin(t * 2 + leaf.seed) * 0.8;
       const m = (child as THREE.Mesh).material as THREE.MeshBasicMaterial;
       m.opacity = 1 - Math.max(0, fall - 0.75) * 4;
     });
@@ -166,20 +177,24 @@ function ShakeBurst({ burst, playerPosRef, onDone }: { burst: Burst; playerPosRe
         const pp = playerPosRef?.current;
         if (pp) {
           const ease = k * k * (3 - 2 * k);
-          f.position.x = THREE.MathUtils.lerp(f.position.x, pp.x - burst.x, ease);
-          f.position.z = THREE.MathUtils.lerp(f.position.z, pp.z - burst.z, ease);
-          f.position.y = 0.35 + Math.sin(ease * Math.PI) * 1.1 + (pp.y - burst.groundY + 0.8) * ease;
+          f.position.x = THREE.MathUtils.lerp(0.4, pp.x - burst.x, ease);
+          f.position.z = THREE.MathUtils.lerp(0.3, pp.z - burst.z, ease);
+          f.position.y = THREE.MathUtils.lerp(0.35, pp.y - burst.groundY + 0.8, ease) + Math.sin(ease * Math.PI) * 1.1;
           f.scale.setScalar(1 - ease * 0.55);
         } else {
           f.position.y = 0.35 + k * 1.2;
         }
-        const m = f.material as THREE.MeshStandardMaterial;
-        m.opacity = 1 - Math.max(0, k - 0.75) * 4;
+        const opacity = 1 - Math.max(0, k - 0.75) * 4;
+        f.traverse((object) => {
+          const mesh = object as THREE.Mesh;
+          if (!mesh.isMesh) return;
+          for (const material of Array.isArray(mesh.material) ? mesh.material : [mesh.material]) material.opacity = opacity;
+        });
         if (!collectedRef.current && k >= 1) {
           collectedRef.current = true;
           window.dispatchEvent(new CustomEvent("tsi:toast", { detail: { text: `You got ${burst.fruit.label}!`, icon: `/assets/acnh/icons/${burst.fruit.key}.png` } }));
           AudioManager.playSFX("confirm");
-          collect(burst.fruit.key);
+          collectItem(burst.fruit.key);
         }
       }
     }
@@ -195,7 +210,7 @@ function ShakeBurst({ burst, playerPosRef, onDone }: { burst: Burst; playerPosRe
     <group ref={groupRef} position={[burst.x, burst.groundY, burst.z]}>
       {burst.leaves.map((leaf, i) => (
         <mesh key={i} name="leaf" position={[0, CANOPY_Y, 0]}>
-          <planeGeometry args={[0.16, 0.16]} />
+          <shapeGeometry args={[LEAF_SHAPE, 4]} />
           <meshBasicMaterial
             color={leaf.color}
             transparent
@@ -205,15 +220,37 @@ function ShakeBurst({ burst, playerPosRef, onDone }: { burst: Burst; playerPosRe
         </mesh>
       ))}
       {burst.fruit && (
-        <mesh ref={fruitRef} position={[0.4, CANOPY_Y, 0.3]} castShadow>
-          <sphereGeometry args={[0.22, 12, 12]} />
-          <meshStandardMaterial
-            color={burst.fruit.color}
-            roughness={0.5}
-            transparent
-          />
-        </mesh>
+        <group ref={fruitRef} position={[0.4, CANOPY_Y, 0.3]}>
+          <DropArtBoundary fallback={<FruitFallback color={burst.fruit.color} />}>
+            <Suspense fallback={<FruitFallback color={burst.fruit.color} />}>
+              <FruitArt itemKey={burst.fruit.key} />
+            </Suspense>
+          </DropArtBoundary>
+        </group>
       )}
     </group>
   );
+}
+
+
+function FruitFallback({ color }: { color: string }) {
+  return <mesh castShadow><sphereGeometry args={[0.22, 12, 12]} /><meshStandardMaterial color={color} roughness={0.5} transparent /></mesh>;
+}
+
+class DropArtBoundary extends Component<{ children: ReactNode; fallback: ReactNode }, { failed: boolean }> {
+  state = { failed: false };
+  static getDerivedStateFromError() { return { failed: true }; }
+  render() { return this.state.failed ? this.props.fallback : this.props.children; }
+}
+
+function FruitArt({ itemKey }: { itemKey: string }) {
+  const source = useTexture(`/assets/acnh/icons/${itemKey}.png`);
+  const texture = useMemo(() => {
+    const clone = source.clone();
+    clone.colorSpace = THREE.SRGBColorSpace;
+    clone.needsUpdate = true;
+    return clone;
+  }, [source]);
+  useEffect(() => () => texture.dispose(), [texture]);
+  return <Billboard><mesh><planeGeometry args={[0.55, 0.55]} /><meshBasicMaterial map={texture} transparent depthWrite={false} /></mesh></Billboard>;
 }

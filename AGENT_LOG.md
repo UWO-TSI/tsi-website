@@ -1358,6 +1358,10 @@ Isolated optional catch-model failure, owned bobber timers and aligned float/dip
 
 Fish ambience reacts to bobber landing instead of guessed delayed cast marker. World-owned splash state, deterministic flee/direct-hit fix; 415 tests/types/lint/build pass. Dia cancel/unmount/remount event-count QA passes without backend. See checkpoint.
 
+### 2026-09-07 tree-shake presentation
+
+Existing item artwork, leaf-shaped particles and deterministic pocket motion; isolated image fallback. Dia four-species/local-callback/exit/remount/fault QA and 415 tests/types/lint/build pass. No reward-rule or persistence changes; see checkpoint.
+
 ## qa
 
 *(append your entries below — log waves continue from Wave 11 in `specs/qa.md`)*
