@@ -108,6 +108,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-09-07 · Interrupted counter feedback
+
+Display counter correction no longer jumps from an old target or leaves a gain highlight stuck. Cancellable RAF ownership and reduced-motion handling added. Seven animation tests, types/lint and Dia simulated-value hook QA pass. No actual balance or reward changes. Details in checkpoint.
+
 ### 2026-09-07 · Minimap and discovery lifetime
 
 Map contrast, visible Oracle marker, player position initialization, close/focus controls and narrow spacing polished. Discovery cache validation/session fallback and timer cleanup fixed. 311 tests/29 files, targeted lint and production build pass, including bridge/windows. Dia fake-location and near-spawn component QA clean. Details and generated-dev-type caveat in checkpoint.

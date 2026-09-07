@@ -14,45 +14,33 @@
 import { useEffect, useRef, useState } from "react";
 import { useUser } from "@/components/portal/UserContext";
 import { xpForLevel } from "@/lib/supabase/types";
+import { animateCounter, type CounterFrame } from "@/lib/game/counterAnimation";
 
 /**
  * Loop iter 18 (2026-07-24): the TC number counts toward its new value
  * (ease-out over ~0.7s) with a gold flash on gains, instead of snapping.
  */
 export function useTickUp(target: number): { value: number; flashing: boolean } {
-  const [value, setValue] = useState(target);
-  const [flashing, setFlashing] = useState(false);
-  const fromRef = useRef(target);
+  const [frame, setFrame] = useState<CounterFrame>({ value: target, flashing: false });
+  const visible = useRef(target);
+  const previousTarget = useRef(target);
   useEffect(() => {
-    const from = fromRef.current;
-    if (from === target) return;
-    fromRef.current = target;
-    const gained = target > from;
-    const t0 = performance.now();
-    const dur = 700;
-    let raf = 0;
-    let flashed = false;
-    let flashOff = 0;
-    const step = (now: number) => {
-      // Flash kicks in on the first frame (not synchronously in the
-      // effect body — react-compiler cascading-render rule).
-      if (gained && !flashed) {
-        flashed = true;
-        setFlashing(true);
-        flashOff = window.setTimeout(() => setFlashing(false), 900);
-      }
-      const k = Math.min(1, (now - t0) / dur);
-      const eased = 1 - Math.pow(1 - k, 3);
-      setValue(Math.round(from + (target - from) * eased));
-      if (k < 1) raf = requestAnimationFrame(step);
+    const gained = target > previousTarget.current;
+    previousTarget.current = target;
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+    let stop = () => {};
+    const start = () => {
+      stop();
+      stop = animateCounter(visible.current, target, gained, media.matches, (next) => {
+        visible.current = next.value;
+        setFrame((current) => current.value === next.value && current.flashing === next.flashing ? current : next);
+      });
     };
-    raf = requestAnimationFrame(step);
-    return () => {
-      cancelAnimationFrame(raf);
-      if (flashOff) window.clearTimeout(flashOff);
-    };
+    start();
+    media.addEventListener("change", start);
+    return () => { stop(); media.removeEventListener("change", start); };
   }, [target]);
-  return { value, flashing };
+  return frame;
 }
 
 export default function StatsHUD() {
