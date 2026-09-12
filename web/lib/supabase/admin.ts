@@ -18,6 +18,7 @@ const BASELINE_ADMINS = [
   "davidliu8473@gmail.com",
   "dliu468@uwo.ca",
   "anguyen.hba2027@ivey.ca",
+  "jhogan53@uwo.ca", // Jack Hogan, added by David 2026-09-12
 ];
 
 /** Check if an email is in the admin whitelist */
