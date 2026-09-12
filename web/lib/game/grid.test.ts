@@ -10,7 +10,6 @@ import {
   HALF_STEP_RISE,
   heightField,
   sampleHeightField,
-  bankEdges,
   needsCliff,
   cliffPieceFor,
   WATER_DROP,

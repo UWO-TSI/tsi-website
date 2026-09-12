@@ -305,13 +305,8 @@ export function sampleGroundHeight(map: IslandMap, field: Float32Array, x: numbe
 /**
  * Water edges: which orthogonal neighbours of a LAND cell are river.
  *
- * The counterpart to `bankEdges`. A bank is a walkable step between two land
- * levels; this is the boundary between land and water, and it wants a hanging
- * grass card rather than a sloped skirt.
- *
- * Void is excluded deliberately. Where land meets open sea the beach already
- * runs down under the waterline, so a fringe there would float over nothing --
- * the same reason `bankEdges` skips it.
+ * Draws hanging grass cards at riverbanks. Open sea is excluded because the
+ * beach already runs below the waterline.
  */
 export function waterEdges(map: IslandMap, cx: number, cz: number): [number, number][] {
   const here = surfaceAt(map, cx, cz);
@@ -1263,14 +1258,6 @@ export function needsCliff(map: IslandMap, cx: number, cz: number): boolean {
 }
 
 /**
- * The orthogonal edges of this cell that fall a walkable step, as
- * `[dx, dz, drop]`. GridTerrain turns each into a sloped bank.
- *
- * Diagonals are left out on purpose: a bank is a skirt along an EDGE, and a
- * diagonal neighbour shares only a corner, which the two flanking edges already
- * cover between them.
- */
-/**
  * Orthogonal edges that fall exactly ONE level: the half-cliff faces.
  *
  * The counterpart to `needsCliff`, which handles the two-level drops the kit
@@ -1290,11 +1277,6 @@ export function halfCliffEdges(map: IslandMap, cx: number, cz: number): [number,
     if (dropTo(map, cx, cz, cx + dx, cz + dz) === 1) out.push([dx, dz]);
   }
   return out;
-}
-
-/** @deprecated Nothing is walkable; use `halfCliffEdges`. Returns empty. */
-export function bankEdges(_map: IslandMap, _cx: number, _cz: number): [number, number, number][] {
-  return [];
 }
 
 /** The cliff piece for a cell, plus how to place it. Null when none is needed. */

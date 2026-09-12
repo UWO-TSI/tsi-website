@@ -1362,6 +1362,10 @@ Fish ambience reacts to bobber landing instead of guessed delayed cast marker. W
 
 Existing item artwork, leaf-shaped particles and deterministic pocket motion; isolated image fallback. Dia four-species/local-callback/exit/remount/fault QA and 415 tests/types/lint/build pass. No reward-rule or persistence changes; see checkpoint.
 
+### 2026-09-12 — Ponytail bounded cleanup
+
+Removed unused terrain bank stub/constants/imports and the obsolete lite-mode wrapper; GameWorld now uses one graphics-settings subscription per component. Six source files, net 55 lines removed. Verified: 415 tests pass, scoped ESLint zero errors (warnings 12 → 5), source TypeScript passes with generated `.next` excluded in a temporary config; normal tsc stalled reading `.next/dev/types/cache-life.d 2.ts`. No browser/build rerun, push or gameplay redesign. This closes David's quick cleanup request; the broader revamp loop stays paused.
+
 ## qa
 
 *(append your entries below — log waves continue from Wave 11 in `specs/qa.md`)*

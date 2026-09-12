@@ -42,7 +42,6 @@ import {
   cellToWorldX,
   cellToWorldZ,
   needsCliff,
-  halfCliffEdges,
   cellHeightRange,
   ORTHOGONAL,
   waterEdges,
@@ -118,22 +117,6 @@ const FRINGE_OVERHANG = 0.06;
 // into hard green/yellow stripes — an ACNH ground texture is a tiling pattern
 // meant to run continuously across the terrain, not a per-tile decal.
 const UV_CELLS_PER_REPEAT = 2;
-
-/**
- * How far a walkable bank runs out into the lower cell, in tiles.
- *
- * A level is 0.75u, so the run sets the angle: 0.55 tiles is 54 degrees, 1.1 is
- * 34. It was 0.55, and at 54 degrees a one-level change read as a STEP rather
- * than a slope — David, 2026-07-29: "1 block height difference should be eased
- * and look like natural slight height changes".
- *
- * 1.1 is a deliberate compromise, not the gentlest option. The skirt is drawn
- * OVER the lower neighbour's ground, so a longer run reaches further into it,
- * and once it passes about 1.5 tiles two adjacent banks stepping the same way
- * start to overlap each other and z-fight. 34 degrees reads as a rise you walk
- * up without risking that. A cliff, for contrast, is vertical over 1.5u.
- */
-const BANK_RUN = 1.1;
 
 /** A layer's triangles, accumulated flat rather than as 11k BufferGeometries. */
 interface Mesh {

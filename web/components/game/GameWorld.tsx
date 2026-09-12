@@ -67,7 +67,6 @@ import { useActivePalette, useEmoteTypes, useNPCPersonas } from "@/lib/content/l
 import { getGrassTexture } from "@/lib/game/grassTexture";
 import { usePositionHeartbeat } from "@/lib/game/usePositionHeartbeat";
 import { useGhostPositions } from "@/lib/game/useGhostPositions";
-import { useLiteMode } from "@/lib/game/useLiteMode";
 import { useGraphicsSettings } from "@/lib/game/useGraphicsSettings";
 import GraphicsSettingsPanel from "./GraphicsSettings";
 import ToolDock from "./ToolDock";
@@ -101,7 +100,6 @@ import Landmarks from "./Landmarks";
 import { getActiveCritters } from "@/lib/game/critterStore";
 import { MOONLIGHT, moonlightWeight } from "@/lib/game/moonlight";
 import { applyEnvironment, disposeEnvironment } from "@/lib/game/envLight";
-import { useGhostReplaySetting } from "@/lib/game/useGhostReplaySetting";
 // P15: side-effect import kicks off useGLTF.preload for buildings + nature
 // at module parse time, so first-render Suspense doesn't flash fallback
 // procedural geometry over real GLBs.
@@ -1880,11 +1878,7 @@ function Scene({
   usePositionHeartbeat(playerPosRef as unknown as React.RefObject<{ x: number; z: number } | null>);
   // E5: ghost-replay of other recent members (last 24h, max 10).
   const { ghosts } = useGhostPositions();
-  // E9: settings toggle — members can disable ghost ambience.
-  const [ghostsEnabled] = useGhostReplaySetting();
-  // G4 follow-up: lite mode disables PostFX + ambient particles + ghosts +
-  // clouds. Auto-detects ≤4GB devices on first visit. Settings override.
-  const [liteMode] = useLiteMode();
+  const [{ ghostsEnabled, liteMode }] = useGraphicsSettings();
 
   // Position each permanent NPC by spawn_zone, offsetting duplicates so they
   // don't overlap. Stable: ordering follows the personas array.
@@ -2277,13 +2271,8 @@ function GameWorldContent() {
   const skyBase = activePalette.palette.sky || P.skyBottom;
   const fogColor = activePalette.palette.fog || P.fog;
   const todPhase = useTodPhase();
-  // G4 follow-up: lite mode (auto-detected on first visit if device has
-  // ≤4GB RAM). Disables PostFX + ambient particles + ghosts + clouds.
-  const [liteMode] = useLiteMode();
-  // G4/G5: full per-device graphics settings (subset of which is liteMode
-  // — left in place for backwards-compat with anything reading the older
-  // hook). New components read via useGraphicsSettings.
   const [graphicsSettings] = useGraphicsSettings();
+  const { liteMode } = graphicsSettings;
   const [graphicsOpen, setGraphicsOpen] = useState(false);
 
   // Active NPC chat target. D5 wires sprite clicks → setActiveNPC inside Scene.
