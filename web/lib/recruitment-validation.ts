@@ -16,7 +16,7 @@ export const applicationInput = z.object({
   essay_answers: z.array(z.object({ question_id: text(100).min(1), answer: z.string().max(12000) })).max(26),
 });
 export type ApplicationInput = z.infer<typeof applicationInput>;
-const META_IDS = new Set(["__profile_other_links", "__profile_commitments_next_year", "__past_projects", "__portfolio_link", "__portfolio_files", "__creative_piece_files"]);
+const META_IDS = new Set(["__profile_other_links", "__profile_commitments_next_year", "__past_projects", "__portfolio_link", "__portfolio_files", "__creative_piece_files", "__project_choice_1", "__project_choice_2", "__project_choice_3", "__project_choice_reason"]);
 
 export function validatePositionAnswers(input: ApplicationInput, position: Position, userId: string): string | null {
   if (!input.resume_storage_path.startsWith(`${userId}/`) || input.resume_storage_path.includes("..")) return "Invalid resume path";
