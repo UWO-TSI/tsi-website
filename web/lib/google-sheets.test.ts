@@ -49,6 +49,21 @@ describe("durable Google delivery", () => {
     expect(mock.writes[0]).toMatchObject({ requestBody: { valueInputOption: "RAW", data: [{ range: "'Recruitment records'!A1:BN1" }, { range: "'Recruitment records'!A8:BN8", values: [Array(66).fill("")] }] } });
     expect(mock.acknowledgments).toEqual([{ p_rows: [{ application_id: "deleted-record", version: 2 }] }]);
   });
+  it("adds one page per pipeline stage plus archived rounds, as live formulas over the master tab", async () => {
+    await syncRecruitmentSheet();
+    const titles = ["Screening", "Interview Invite", "Final Review", "Accepted", "Waitlist", "Rejected", "Archived rounds"];
+    expect(mock.tabRequests[0]).toMatchObject({ spreadsheetId: "existing-sheet", requestBody: { requests: titles.map(title => ({ addSheet: { properties: { title } } })) } });
+    const view = mock.writes[1] as { requestBody: { valueInputOption: string; data: { range: string; values: string[][] }[] } };
+    expect(view.requestBody.valueInputOption).toBe("USER_ENTERED");
+    expect(view.requestBody.data.map(d => d.range)).toEqual(titles.flatMap(t => [`'${t}'!A1:BN1`, `'${t}'!A2`]));
+    const screening = view.requestBody.data.find(d => d.range === "'Screening'!A2")?.values[0][0] ?? "";
+    expect(screening).toContain("'Recruitment records'!O2:O=\"screening\"");
+    expect(screening).toContain("'Recruitment records'!E2:E=\"No\"");
+    expect(screening).toMatch(/^=IFERROR\(SORT\(FILTER\('Recruitment records'!A2:BN, /);
+    const archived = view.requestBody.data.find(d => d.range === "'Archived rounds'!A2")?.values[0][0] ?? "";
+    expect(archived).toContain("'Recruitment records'!E2:E=\"Yes\"");
+    expect(mock.acknowledgments).toHaveLength(1);
+  });
   it("keeps a failed write pending, releases the lease and retries the identical row", async () => {
     mock.googleFails = true;
     await expect(syncRecruitmentSheet()).rejects.toThrow("simulated timeout");
