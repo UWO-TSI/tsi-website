@@ -41,14 +41,14 @@ export default function VillageUIPreview() {
 
   return <main className={styles.preview} data-evening={evening}>
     <header className={styles.header}>
-      <Link href="/student/apply/portal?preview=1" className={styles.brand}>Tethos <span>Village interface</span></Link>
+      <Link href="/student/apply/portal?preview=1" className={styles.brand}>Tech for Social Impact <span>Village interface</span></Link>
       <VillageButton variant="secondary" aria-pressed={evening} onClick={() => setEvening(!evening)}>
         {evening ? "Evening backdrop" : "Daylight backdrop"}
       </VillageButton>
     </header>
 
     <div className={styles.intro}>
-      <div><h1>A little place to begin.</h1><p>Tethos colors and type, with a little village warmth.</p></div>
+      <div><h1>A little place to begin.</h1><p>Tech for Social Impact colors and type, with a little village warmth.</p></div>
       <span className={styles.previewLabel}>Component preview · no applications are sent</span>
     </div>
 
@@ -98,11 +98,11 @@ export default function VillageUIPreview() {
         </VillagePanel>
       </div>
       <div className={styles.palette} aria-label="Interface colors">
-        {[['Tethos blue','#1d9bf0'],['Golden yellow','#ffd166'],['Brand light','#f1ffff'],['Warm paper','#fffbe7'],['Navy','#0d1b2a']].map(([name,color]) => <span key={name}><i style={{ backgroundColor: color }} />{name}<small>{color}</small></span>)}
+        {[['Brand blue','#1d9bf0'],['Golden yellow','#ffd166'],['Brand light','#f1ffff'],['Warm paper','#fffbe7'],['Navy','#0d1b2a']].map(([name,color]) => <span key={name}><i style={{ backgroundColor: color }} />{name}<small>{color}</small></span>)}
       </div>
     </section>
 
-    <footer className={styles.pageFooter}>Tethos recruitment · Responsive components, real role copy, example states.</footer>
+    <footer className={styles.pageFooter}>Tech for Social Impact recruitment · Responsive components, real role copy, example states.</footer>
 
     <dialog ref={dialog} className={styles.modal} onCancel={event => { event.preventDefault(); closeRole(); }} aria-label={role ? `${role.title} application preview` : "Application preview"}>
       {role && <ApplicationSheet title={role.title} subtitle="Application layout preview · submissions disabled" onClose={closeRole} closeLabel="Close preview" footer={<>

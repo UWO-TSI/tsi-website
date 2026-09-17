@@ -24,11 +24,11 @@ export default function RecruitmentLanding() {
     return () => controller.abort();
   }, [preview]);
   return <main className={styles.landing}>
-    <nav className={styles.nav} aria-label="Recruitment"><Link href="/">Tethos</Link><Link href="/student/apply/dashboard">My applications <ArrowUpRight size={15} /></Link></nav>
+    <nav className={styles.nav} aria-label="Recruitment"><Link href="/">Tech for Social Impact</Link><Link href="/student/apply/dashboard">My applications <ArrowUpRight size={15} /></Link></nav>
     {preview && <p className={styles.notice}>Local preview · Four roles, with draft questions. Applications are not open.</p>}
     {params.get("error") === "auth" && <p role="alert" className={styles.notice}>Sign-in didn&apos;t finish. You can try again when you choose a role.</p>}
     <header className={styles.hero}>
-      <p className={styles.term}>Tethos · 2026–27 recruitment</p>
+      <p className={styles.term}>Tech for Social Impact · 2026–27 recruitment</p>
       <h1>Find your place on the team.</h1>
       <p className={styles.intro}>Choose a role, sign in, and apply. Your draft saves as you go.</p>
     </header>
@@ -47,7 +47,7 @@ export default function RecruitmentLanding() {
     </section>
     <aside className={styles.explore}>
       <p>You&apos;ll need a PDF résumé (up to 2 MB) and answers to your role&apos;s questions. You can read the questions before signing in.</p>
-      {!formOnly && <Link href={`/student/apply/portal${preview ? "?preview=1" : ""}`} prefetch={false}><Compass size={18} /> Explore Tethos <span>Optional village visit ↗</span></Link>}
+      {!formOnly && <Link href={`/student/apply/portal${preview ? "?preview=1" : ""}`} prefetch={false}><Compass size={18} /> Explore Tech for Social Impact <span>Optional village visit ↗</span></Link>}
     </aside>
     <footer className={styles.footer}><Link href="/student">Meet Tethos</Link><Link href="/student/apply/internal">Have an internal access code?</Link><a href="mailto:team@tethos.ca">Questions? Contact us</a></footer>
   </main>;

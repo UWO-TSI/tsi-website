@@ -204,18 +204,18 @@ export default function ApplicantIsland() {
     {play && <ApplicantAppearanceContext.Provider value={appearance}><IslandBoundary onFailure={onFailure}><Scene guideToHQ={!visitedHQ} guideToBoard={!readBoard} onFishingTarget={onFishingTarget} countdownPositions={positions} nearClock={near === "clock"} loading={!ready} collectionScope={collectionScope} arrival={arriving} onArrived={finishArrival} pickedFlowers={pickedFlowers} onFlowerNear={setNearFlower} onPickFlower={pickFlower} fishing={fishing} phase={renderedPhase} postings={positions.map(p => ({ title: p.title, complete: applied.has(p.id) || preview && rehearsed.has(p.id) }))} onSelectRole={openRole} inside={inside} returned={returned} paused={hidden || !avatarLoaded || customizing || bagOpen || panel !== null || transitioning || showAuth} hidden={hidden}
       onAction={act} onNear={setNear} onReady={onReady} onFailure={onFailure} onMetrics={setMetrics} /></IslandBoundary></ApplicantAppearanceContext.Provider>}
     {play && ready && avatarLoaded && !customizing && <ToastHub />}
-    <div className={styles.location}><span>Tethos</span><strong>{inside ? "TSI Headquarters" : "Applicant village"}</strong></div>
+    <div className={styles.location}><span>Tech for Social Impact</span><strong>{inside ? "TSI Headquarters" : "Applicant village"}</strong></div>
     <nav className={styles.tools} aria-label="Game options">
       <Link href={direct}>Back to applications ↗</Link>
       {play && ready && avatarLoaded && !customizing && !arriving && !fishing && !bagOpen && <button onClick={() => setPanel("menu")} aria-label="Open game menu">☰</button>}
     </nav>
     {play && !ready && <ApplicantLoading />}
     {!play && <div className={styles.gate}>
-      <span className={styles.eyebrow}>Tethos · Recruitment</span><h1>Your next chapter<br />starts here.</h1>
+      <span className={styles.eyebrow}>Tech for Social Impact · Recruitment</span><h1>Your next chapter<br />starts here.</h1>
       <p>{failed ? "The village couldn’t load on this device. You can still read every role and apply directly." : "Meet your guide, explore the village, and find your place on the team inside TSI HQ."}</p>
       {loadState === "error" ? <><p role="alert">We couldn’t load the positions.</p><button className={styles.apply} onClick={() => location.reload()}>Try again</button></>
         : !authLoaded || loadState === "loading" ? <p role="status">Getting ready…</p>
-        : !user && !preview && !failed ? <button className={styles.apply} onClick={() => setShowAuth(true)}>Sign in to explore Tethos</button> : null}
+        : !user && !preview && !failed ? <button className={styles.apply} onClick={() => setShowAuth(true)}>Sign in to explore Tech for Social Impact</button> : null}
       <Link className={styles.plainLink} href={direct}>Browse roles and use the direct form</Link>
     </div>}
     {play && ready && preview && <p className={styles.testNotice}>Local rehearsal · No applications sent</p>}
@@ -237,7 +237,7 @@ export default function ApplicantIsland() {
     {play && ready && !inside && !customizing && !arriving && !panel && !bagOpen && <FishingOverlay onActiveChange={setFishing} collectionScope={collectionScope} zoneOverride="sea" />}
     <CollectionBook open={bagOpen} onClose={() => { setBagOpen(false); focusGame(); }} collectionScope={collectionScope} />
     {play && ready && avatarLoaded && customizing && <CharacterSetup appearance={appearance} onChange={setAppearance} onDone={finishAppearance} />}
-    {play && ready && arriving && <div className={styles.arrivalClouds} aria-label="Arriving through the clouds"><i /><i /><i /><span>Welcome to Tethos.<small>A little place to begin.</small></span></div>}
+    {play && ready && arriving && <div className={styles.arrivalClouds} aria-label="Arriving through the clouds"><i /><i /><i /><span>Welcome to Tech for Social Impact.<small>A little place to begin.</small></span></div>}
     <div className={styles.fade} data-active={transitioning} aria-hidden="true" />
     <dialog ref={dialog} className={`${styles.dialog} ${panel === "board" ? styles.boardDialog : panel === "role" ? styles.applicationDialog : panel === "guide" ? styles.guideDialog : ""}`} onCancel={e => { e.preventDefault(); void close(); }} aria-label={panel === "role" ? `${position?.title ?? "Role"} application` : undefined} aria-labelledby={panel === "role" || panel === "guide" ? undefined : "island-panel-title"}>
       {panel === "welcome" && <div className={styles.welcome}>
@@ -268,7 +268,7 @@ export default function ApplicantIsland() {
         {!positions.length && <p>The next round is being prepared. Come back soon, or check My applications in the menu.</p>}
         <small>{preview ? "Local rehearsal only. Recruitment dates are still unconfirmed." : "Your application stays private. Explore any posting before deciding."}</small>
       </section>}
-      {panel === "role" && position&&<MotionConfig reducedMotion="user"><ApplicationSheet title={position.title} subtitle={preview ? "Layout preview · Submissions disabled" : "Your space to tell us what you’ll bring to Tethos."} onClose={() => { void close(); }} closeDisabled={closing} closeLabel={closing ? "Saving draft…" : applying ? "Save and return to board" : "Return to board"} className={styles.roleSheet} footer={<div className={styles.applicationFooter}>
+      {panel === "role" && position&&<MotionConfig reducedMotion="user"><ApplicationSheet title={position.title} subtitle={preview ? "Layout preview · Submissions disabled" : "Your space to tell us what you’ll bring to Tech for Social Impact."} onClose={() => { void close(); }} closeDisabled={closing} closeLabel={closing ? "Saving draft…" : applying ? "Save and return to board" : "Return to board"} className={styles.roleSheet} footer={<div className={styles.applicationFooter}>
         <span role="status">{saveNotice || (closing ? "Saving your latest changes…" : applying ? "Save and close with ×. Review your answers before submitting." : "Read any posting. Apply when you’re ready.")}</span>
         <a href="mailto:team@tethos.ca?subject=Recruitment%20application%20help">Need help? Contact Tethos ↗</a>
       </div>}>

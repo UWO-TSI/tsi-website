@@ -67,7 +67,7 @@ function RoleApplication() {
     {state === "ready" && position && <>
       {preview && <p className={styles.notice}>Local draft preview · Application dates are being prepared. Submissions are disabled.</p>}
       <header className={styles.hero}>
-        <p className={styles.term}>Tethos · Recruitment{!preview && position.closes_at ? ` · Closes ${formatClosesAt(position.closes_at)}` : ""}</p>
+        <p className={styles.term}>Tech for Social Impact · Recruitment{!preview && position.closes_at ? ` · Closes ${formatClosesAt(position.closes_at)}` : ""}</p>
         <h1>{position.title}</h1>{content?.positionsCount && <p className={styles.hiring}>Hiring {content.positionsCount} {position.slug.startsWith("director-") ? "Directors" : "positions"}</p>}<p className={styles.intro}>{content?.tagline ?? position.description}</p>
       </header>
       <section className={styles.applyStart} aria-label="Start your application">
