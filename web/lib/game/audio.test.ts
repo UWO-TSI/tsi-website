@@ -33,14 +33,29 @@ beforeEach(() => {
 afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
 describe("world audio lifecycle", () => {
+  it("keeps applicant movement quieter than feedback, including after volume changes", () => {
+    const manager = new AudioManagerImpl();
+    manager.setPhase("applicant-island"); manager.enable();
+    manager.playSFX("footstep"); manager.playSFX("jump"); manager.playSFX("confirm");
+    const [step, jump, confirm] = FakeAudio.all.slice(-3);
+    expect(step.volume).toBeCloseTo(0.7 * 0.8 * 0.25 * 0.35);
+    expect(jump.volume).toBeCloseTo(step.volume);
+    expect(confirm.volume).toBeCloseTo(0.7 * 0.8 * 0.25);
+    manager.setVolumes({ master: 0 });
+    expect([step.volume, jump.volume, confirm.volume]).toEqual([0, 0, 0]);
+    manager.setVolumes({ master: 1 });
+    expect(step.volume / confirm.volume).toBeCloseTo(0.35);
+    expect(jump.volume).toBeCloseTo(step.volume);
+    manager.dispose();
+  });
   it("uses the requested quiet applicant tracks without changing saved member volumes", () => {
     const manager = new AudioManagerImpl();
     manager.setPhase("applicant-island"); manager.enable();
     expect(FakeAudio.all[0].src).toBe("/audio/ambient/applicant-ocean-railway.ogg");
-    expect(FakeAudio.all[0].volume).toBeCloseTo(0.7 * 0.6 * 0.28);
+    expect(FakeAudio.all[0].volume).toBeCloseTo(0.7 * 0.6 * 0.18);
     manager.setPhase("applicant-hq"); frame(800);
     expect(FakeAudio.all.at(-1)?.src).toBe("/audio/ambient/applicant-willow-tree.ogg");
-    expect(FakeAudio.all.at(-1)?.volume).toBeCloseTo(0.7 * 0.6 * 0.28);
+    expect(FakeAudio.all.at(-1)?.volume).toBeCloseTo(0.7 * 0.6 * 0.18);
     expect(manager.getState().volumes).toEqual({ master: 0.7, ambient: 0.6, sfx: 0.8 });
     manager.setPhase("day"); frame(1600);
     expect(FakeAudio.all.at(-1)?.volume).toBeCloseTo(0.42);

@@ -42,7 +42,7 @@ export function TutorialChecklist({ title = "A little to-do", items, className }
 }
 
 export type PostingStatus = "open" | "draft" | "preparing" | "submitted" | "upcoming" | "closed" | "rehearsed";
-const postingLabels: Record<PostingStatus, string> = { rehearsed: "Rehearsal complete · Not submitted", open: "Read & apply", draft: "Resume draft", preparing: "Questions being prepared", submitted: "Application sent", upcoming: "Dates to be confirmed", closed: "Applications closed" };
+const postingLabels: Record<PostingStatus, string> = { rehearsed: "Rehearsal complete · Not submitted", open: "Read & apply", draft: "Resume draft", preparing: "Questions being prepared", submitted: "Application sent", upcoming: "Opening soon", closed: "Applications closed" };
 
 export function WantedPosting({ title, summary, status, onClick, className }: { title: string; summary?: string; status: PostingStatus; onClick?: () => void; className?: string }) {
   return <button type="button" className={cx(styles.theme, styles.posting, className)} data-status={status === "rehearsed" ? "submitted" : status} onClick={onClick}>

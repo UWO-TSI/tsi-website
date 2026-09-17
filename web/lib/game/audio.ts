@@ -25,6 +25,7 @@
 export type AmbientPhase = "dawn" | "day" | "dusk" | "night" | "applicant-island" | "applicant-hq";
 export type SFXName =
   | "footstep"
+  | "jump"
   | "enter"
   | "exit"
   | "click"
@@ -51,6 +52,7 @@ const MANIFEST: AudioManifest = {
   },
   sfx: {
     footstep: "/audio/sfx/footstep.ogg",
+    jump: "/audio/sfx/blip2.ogg",
     enter: "/audio/sfx/enter.ogg",
     exit: "/audio/sfx/exit.ogg",
     click: "/audio/sfx/click.ogg",
@@ -117,7 +119,7 @@ export class AudioManagerImpl {
   private crossfadeRaf: number | null = null;
   private crossfadeStart = 0;
   private fadeProgress = 0;
-  private oneShots = new Set<HTMLAudioElement>();
+  private oneShots = new Map<HTMLAudioElement, SFXName>();
 
   private missingFiles = new Set<string>();
   private warnedMissing = false;
@@ -182,7 +184,7 @@ export class AudioManagerImpl {
     const target = this.ambientTargetVolume();
     if (this.currentTrack) this.currentTrack.volume = target * (this.nextTrack ? 1 - this.fadeProgress : 1);
     if (this.nextTrack) this.nextTrack.volume = target * this.fadeProgress;
-    for (const sound of this.oneShots) sound.volume = this.sfxTargetVolume();
+    for (const [sound, name] of this.oneShots) sound.volume = this.sfxTargetVolume(name);
   }
 
   private playElement(el: HTMLAudioElement, src: string): void {
@@ -200,12 +202,15 @@ export class AudioManagerImpl {
   }
 
   private ambientTargetVolume(): number {
-    const sceneGain = this.phase === "applicant-island" || this.phase === "applicant-hq" ? 0.28 : 1;
+    const sceneGain = this.phase === "applicant-island" || this.phase === "applicant-hq" ? 0.18 : 1;
     return this.volumes.master * this.volumes.ambient * sceneGain;
   }
 
-  private sfxTargetVolume(): number {
-    return this.volumes.master * this.volumes.sfx;
+  private sfxTargetVolume(name: SFXName): number {
+    const applicant = this.phase === "applicant-island" || this.phase === "applicant-hq";
+    const sceneGain = applicant ? 0.25 : 1;
+    const movementGain = applicant && (name === "footstep" || name === "jump") ? 0.35 : 1;
+    return this.volumes.master * this.volumes.sfx * sceneGain * movementGain;
   }
 
   setPhase(phase: AmbientPhase): void {
@@ -292,8 +297,8 @@ export class AudioManagerImpl {
     if (this.missingFiles.has(src)) return; // already known missing
     const el = this.createAudioElement(src, false);
     if (!el) return;
-    el.volume = this.sfxTargetVolume();
-    this.oneShots.add(el);
+    el.volume = this.sfxTargetVolume(name);
+    this.oneShots.set(el, name);
     el.onended = () => this.oneShots.delete(el);
     el.addEventListener("error", () => this.oneShots.delete(el), { once: true });
     this.playElement(el, src);
@@ -318,7 +323,7 @@ export class AudioManagerImpl {
       this.nextTrack.pause();
       this.nextTrack = null;
     }
-    for (const sound of this.oneShots) sound.pause();
+    for (const sound of this.oneShots.keys()) sound.pause();
     this.oneShots.clear();
     this.fadeProgress = 0;
   }
