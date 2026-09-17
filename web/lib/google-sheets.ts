@@ -3,7 +3,7 @@ import { google } from "googleapis";
 import { getOAuthClient } from "./google-oauth";
 import { createAdminClient } from "./supabase/admin";
 import type { Application } from "./recruitment";
-import { SHEET_TAB, SHEET_HEADERS, sheetRow, columnName } from "./recruitment-sheet-data";
+import { SHEET_TAB, SHEET_HEADERS, SHEET_VIEWS, sheetRow, columnName } from "./recruitment-sheet-data";
 
 const GOOGLE_OPTIONS = { timeout: 15000, retry: false };
 const BATCH_SIZE = 100;
@@ -128,6 +128,23 @@ export async function syncRecruitmentSheet() {
         ...rows.map(r => ({ range: `'${SHEET_TAB}'!A${r.sheet_row}:${end}${r.sheet_row}`,
           values: [byId.has(r.application_id) ? sheetRow(byId.get(r.application_id)!, recruitmentOrigin()) : SHEET_HEADERS.map(() => "")] })),
       ],
+    } }, GOOGLE_OPTIONS);
+    // Stage pages: created when missing, formulas rewritten on every delivery
+    // so a renamed or damaged tab heals itself. Written after the master rows
+    // so a failure here retries the same delivery, never a partial one.
+    const present = new Set((meta.data.sheets ?? []).map(s => s.properties?.title));
+    const missingViews = SHEET_VIEWS.filter(v => !present.has(v.title));
+    if (missingViews.length) {
+      await sheets.spreadsheets.batchUpdate({ spreadsheetId, requestBody: { requests: missingViews.map(v => ({ addSheet: { properties: {
+        title: v.title, gridProperties: { rowCount: 1000, columnCount: SHEET_HEADERS.length, frozenRowCount: 1 },
+      } } })) } }, GOOGLE_OPTIONS);
+    }
+    await sheets.spreadsheets.values.batchUpdate({ spreadsheetId, requestBody: {
+      valueInputOption: "USER_ENTERED",
+      data: SHEET_VIEWS.flatMap(v => [
+        { range: `'${v.title}'!A1:${end}1`, values: [SHEET_HEADERS] },
+        { range: `'${v.title}'!A2`, values: [[v.formula]] },
+      ]),
     } }, GOOGLE_OPTIONS);
     const now = new Date().toISOString();
     // A concurrent edit increments version; it must remain queued for the next write.
