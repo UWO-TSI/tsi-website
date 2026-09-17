@@ -1,4 +1,6 @@
 .projects { margin:24px 0 32px; color:inherit; }
+.embedded { margin:0; }
+.embedded details:first-of-type { margin-top:0; }
 .projects h2 { font-size:24px; font-weight:700; margin:0 0 10px; }
 .projects>p { font-size:14px; line-height:1.6; margin:0 0 18px; opacity:.85; }
 .projects details { border:1px solid #8ba29a55; border-radius:16px; margin:10px 0; overflow:hidden; }

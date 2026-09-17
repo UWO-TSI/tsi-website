@@ -38,6 +38,12 @@ const META_PAST_PROJECTS_ID = "__past_projects";
 const META_PORTFOLIO_FILES_ID = "__portfolio_files";
 const META_PORTFOLIO_LINK_ID = "__portfolio_link";
 const META_CREATIVE_PIECE_FILES_ID = "__creative_piece_files";
+const META_PROJECT_CHOICE_IDS = [
+  "__project_choice_1",
+  "__project_choice_2",
+  "__project_choice_3",
+];
+const META_PROJECT_REASON_ID = "__project_choice_reason";
 const META_IDS = new Set([
   META_OTHER_LINKS_ID,
   META_COMMITMENTS_ID,
@@ -45,6 +51,8 @@ const META_IDS = new Set([
   META_PORTFOLIO_FILES_ID,
   META_PORTFOLIO_LINK_ID,
   META_CREATIVE_PIECE_FILES_ID,
+  ...META_PROJECT_CHOICE_IDS,
+  META_PROJECT_REASON_ID,
 ]);
 
 interface MetaFile {
@@ -335,6 +343,10 @@ export default function ApplicantCard({
                     const creativeFiles = parseFiles(
                       findMeta(answers, META_CREATIVE_PIECE_FILES_ID)
                     );
+                    const projectChoices = META_PROJECT_CHOICE_IDS.map((id) =>
+                      findMeta(answers, id)
+                    ).filter((v): v is string => !!v);
+                    const projectReason = findMeta(answers, META_PROJECT_REASON_ID);
                     return (
                       <>
                         {otherLinks && (
@@ -365,6 +377,23 @@ export default function ApplicantCard({
                             <p className="text-[#E5E7EB] whitespace-pre-wrap leading-relaxed">
                               {pastProjects}
                             </p>
+                          </div>
+                        )}
+                        {projectChoices.length > 0 && (
+                          <div className="text-xs">
+                            <p className="text-[10px] uppercase tracking-wider text-[#6B7280] mb-1 font-mono">
+                              Project choices
+                            </p>
+                            <ol className="text-[#E5E7EB] leading-relaxed list-decimal list-inside">
+                              {projectChoices.map((choice) => (
+                                <li key={choice}>{choice}</li>
+                              ))}
+                            </ol>
+                            {projectReason && (
+                              <p className="text-[#9CA3AF] whitespace-pre-wrap leading-relaxed mt-1">
+                                {projectReason}
+                              </p>
+                            )}
                           </div>
                         )}
                         {portfolioLink && (
