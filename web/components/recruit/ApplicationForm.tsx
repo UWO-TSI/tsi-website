@@ -21,6 +21,8 @@ import type { Position, EssayAnswer } from "@/lib/recruitment";
 import { HEARD_ABOUT_OPTIONS, YEAR_OPTIONS, isApplicationLink } from "@/lib/recruitment";
 
 import { applicationDraftKey, createApplicationDraft, confirmedApplication, readApplicationDraft, type DraftPayload, type DraftSaveResult, type DraftStatus } from "./application-draft";
+import ProjectChoices from "./ProjectChoices";
+import { META_PROJECT_CHOICE_IDS, META_PROJECT_REASON_ID, PROJECT_REASON_MAX_WORDS, RANK_LABELS, projectChoiceAnswer, sanitizeProjectChoices } from "./project-choices";
 import { SaveStatus } from "./ui";
 
 export interface ApplicationFormHandle {
@@ -61,6 +63,10 @@ interface FormData {
   portfolio_link: string;
   /** Creative-piece files (essay step, VP Marketing + VP Internal). */
   creative_piece_files: PortfolioFile[];
+  /** Developer only: ranked project picks (partner names, index 0 = 1st choice). Optional. */
+  project_choices: string[];
+  /** Developer only: optional short reason for the picks. */
+  project_choice_reason: string;
 }
 
 const EMPTY_FORM: FormData = {
@@ -81,6 +87,8 @@ const EMPTY_FORM: FormData = {
   portfolio_files: [],
   portfolio_link: "",
   creative_piece_files: [],
+  project_choices: [],
+  project_choice_reason: "",
 };
 
 
@@ -228,6 +236,7 @@ function ApplicationFormInner({
           essay_answers: restored.essay_answers && typeof restored.essay_answers === "object" ? restored.essay_answers : {},
           portfolio_files: Array.isArray(restored.portfolio_files) ? restored.portfolio_files : [],
           creative_piece_files: Array.isArray(restored.creative_piece_files) ? restored.creative_piece_files : [],
+          project_choices: sanitizeProjectChoices(restored.project_choices),
         };
         for (const [key, initial] of Object.entries(EMPTY_FORM)) {
           if (typeof initial === "string" && typeof data[key as keyof FormData] !== "string") Object.assign(data, { [key]: initial });
@@ -297,6 +306,9 @@ function ApplicationFormInner({
   const updateCreativePieceFiles = useCallback((files: PortfolioFile[]) => {
     updateForm(prev => ({ ...prev, creative_piece_files: files }));
   }, [updateForm]);
+  const updateProjectChoices = useCallback((choices: string[]) => {
+    updateForm(prev => ({ ...prev, project_choices: choices }));
+  }, [updateForm]);
 
   // Step validation
   const validateStep = (s: number): boolean => {
@@ -338,6 +350,10 @@ function ApplicationFormInner({
         } else if (q.response_type !== "url" && countWords(answer) > q.max_words) {
           errs[`essay_${q.id}`] = `Exceeds ${q.max_words} word limit`;
         }
+      }
+      // Project preferences are fully optional; only the word cap is enforced.
+      if (position.slug === "developer" && countWords(formData.project_choice_reason) > PROJECT_REASON_MAX_WORDS) {
+        errs.project_choice_reason = `Exceeds ${PROJECT_REASON_MAX_WORDS} word limit`;
       }
     }
 
@@ -433,6 +449,19 @@ function ApplicationFormInner({
             {
               question_id: META_CREATIVE_PIECE_FILES_ID,
               answer: JSON.stringify(formData.creative_piece_files),
+            },
+          ]
+        : []),
+      // Developer project preferences — optional ranked picks + reason.
+      ...formData.project_choices.map((partner, i) => ({
+        question_id: META_PROJECT_CHOICE_IDS[i],
+        answer: projectChoiceAnswer(partner),
+      })),
+      ...(formData.project_choice_reason.trim()
+        ? [
+            {
+              question_id: META_PROJECT_REASON_ID,
+              answer: formData.project_choice_reason.trim(),
             },
           ]
         : []),
@@ -803,6 +832,17 @@ function ApplicationFormInner({
                 </div>
               )}
 
+              {position.slug === "developer" && (
+                <ProjectChoices
+                  choices={formData.project_choices}
+                  reason={formData.project_choice_reason}
+                  onChoicesChange={updateProjectChoices}
+                  onReasonChange={(v) => updateField("project_choice_reason", v)}
+                  reasonError={errors.project_choice_reason}
+                  reasonWordCount={countWords(formData.project_choice_reason)}
+                />
+              )}
+
               {position.essay_questions.map((q, i) => {
                 const answer = formData.essay_answers[q.id] ?? "";
                 // Roles where the essay accepts a file upload as the
@@ -985,6 +1025,33 @@ function ApplicationFormInner({
                     />
                   )}
                 </div>
+
+                {position.slug === "developer" &&
+                  (formData.project_choices.length > 0 ||
+                    formData.project_choice_reason.trim()) && (
+                    <div className="space-y-3 py-6 border-b border-white/[0.06]">
+                      <ReviewSectionHeader
+                        title="Project choices"
+                        onEdit={() => {
+                          setDirection(-1);
+                          setStep(2);
+                        }}
+                      />
+                      {formData.project_choices.map((partner, i) => (
+                        <ReviewRow
+                          key={partner}
+                          label={RANK_LABELS[i]}
+                          value={projectChoiceAnswer(partner)}
+                        />
+                      ))}
+                      {formData.project_choice_reason.trim() && (
+                        <ReviewRow
+                          label="Reason"
+                          value={formData.project_choice_reason.trim()}
+                        />
+                      )}
+                    </div>
+                  )}
 
                 {position.essay_questions.length > 0 && (
                   <div className="space-y-4 pt-6">

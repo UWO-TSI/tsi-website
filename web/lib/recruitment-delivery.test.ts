@@ -21,7 +21,7 @@ describe("recruitment submission and delivery", () => {
       expect(row[SHEET_HEADERS.indexOf("Past projects")]).toBe("A project\nwith two lines");
       expect(row.join(" ")).not.toContain("https://example.invalid/expires");
     }
-    expect(columnName(SHEET_HEADERS.length)).toBe("BN");
+    expect(columnName(SHEET_HEADERS.length)).toBe("BR");
   });
   it("rejects missing resume, malformed fields and forged attachments", () => {
     expect(applicationInput.safeParse(input).success).toBe(true);

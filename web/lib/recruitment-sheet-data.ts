@@ -10,6 +10,10 @@ const META = [
   ["Portfolio link", "__portfolio_link"],
   ["Portfolio files", "__portfolio_files"],
   ["Creative files", "__creative_piece_files"],
+  ["1st choice project", "__project_choice_1"],
+  ["2nd choice project", "__project_choice_2"],
+  ["3rd choice project", "__project_choice_3"],
+  ["Project choice reason", "__project_choice_reason"],
 ] as const;
 export const SHEET_HEADERS = [
   "Application ID", "Submitted at", "Role", "Role ID", "Archived", "Full name",
