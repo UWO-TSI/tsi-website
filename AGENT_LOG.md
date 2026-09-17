@@ -114,6 +114,14 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-09-17 (later) — Sheet stage pages, copy, duplicate-file cleanup
+
+David: "make the formatting of the google sheet separated by page for each application phase" → ruled one tab per pipeline stage for live rounds plus Archived rounds. Implemented as `SHEET_VIEWS` (`web/lib/recruitment-sheet-data.ts`): each page holds `=IFERROR(SORT(FILTER('Recruitment records'!A2:BN, Status=stage, Archived="No"), 2, TRUE), ...)`; the delivery worker (`syncRecruitmentSheet`) adds missing pages with a frozen header and rewrites header + formula after the master write, so a failure retries the same delivery. Test added; vitest 344/344. After deploy, all 71 rows were re-queued and one admin-triggered sync created the pages on the live workbook. PR #26.
+
+Copy (PR #27): "Welcome to Tech for Social Impact" (WelcomeOverlay, ApplicantIsland, VillageUIPreview); questions-step note → "Do not use AI for the written questions. The president is chronically on Claude and he can tell if you Claude your answers. We'd rather see a broken English response with thought behind your answers than slop."
+
+Housekeeping: the Mac mini keeps producing Finder-style " 2" copies of recently written files (about 330 this week, including a copy of the delivery migration and of test files). Identical copies were deleted. Copies that differ from their tracked original were left untracked for David: `specs/director-developer-round 2.md`, `specs/recruitment-deployment-readiness-2026-09-17 2.md`, `web/components/game/Seagulls 2.tsx`, `web/components/recruit/RecruitmentEntry 2.tsx`, `web/components/recruit/ui/index 2.tsx`, `web/lib/game/audio.test 2.ts`, `web/lib/google-sheets.test 2.ts`, plus two deployment logs.
+
 ### 2026-09-17 — Live release, Sheets delivery and immediate new round
 
 Deployed PR #23 (`4ab7f63`) and whitespace-only Google destination fix PR #24 (`f0616f5`) to www.tethos.ca. Production build and 339 tests passed. Applied only recruitment delivery migration (remote ledger 20260917160347) and its minute scheduler (20260917161307); parked game migrations remain unapplied. Google workbook auto-creation recovered correctly after trimming the existing newline-only ID.

@@ -3,6 +3,12 @@
 > Read this before `AGENT_LOG.md`. It answers "which branch, what's live, what's next"
 > in one page. Update it whenever direction changes. Last updated **2026-09-17**.
 
+## Google Sheet pages and copy (2026-09-17, later)
+
+- The recruitment workbook now has one page per pipeline stage (Screening, Interview Invite, Final Review, Accepted, Waitlist, Rejected) for live rounds and an **Archived rounds** page. They are live `FILTER` formulas over the master **Recruitment records** tab (`SHEET_VIEWS` in `web/lib/recruitment-sheet-data.ts`); the delivery worker creates missing pages and rewrites their header + formula after every master write. PR #26. Verified live: Screening shows the two developer applicants, Archived rounds 68. The empty default `Sheet1` tab is untouched.
+- Copy: "Welcome to Tech for Social Impact" in the member world and applicant island; the questions-step note is the blunt no-AI version. PR #27.
+- Housekeeping: ~330 Finder-style " 2" duplicate files (identical copies) were removed from the working tree; a few differing copies are listed in the AGENT_LOG entry for David to judge.
+
 ## Production release and immediate opening (2026-09-17)
 
 Deployed PR #23 (`4ab7f63`) and whitespace-only Google destination fix PR #24 (`f0616f5`) to www.tethos.ca. Production build and 339 tests passed. Applied only recruitment delivery migration (remote ledger 20260917160347) and its minute scheduler (20260917161307); parked game migrations remain unapplied. Google workbook auto-creation recovered correctly after trimming the existing newline-only ID.
