@@ -8,6 +8,8 @@ import { SHEET_TAB, SHEET_HEADERS, sheetRow, columnName } from "./recruitment-sh
 const GOOGLE_OPTIONS = { timeout: 15000, retry: false };
 const BATCH_SIZE = 100;
 const SHEET_TITLE = "Tethos Recruitment 2026-27";
+const configuredSheetId = () => process.env.GOOGLE_SHEETS_SPREADSHEET_ID?.trim() || null;
+const configuredFolderId = () => process.env.GOOGLE_DRIVE_FOLDER_ID?.trim() || null;
 export const recruitmentOrigin = () => process.env.NEXT_PUBLIC_SITE_URL || "https://www.tethos.ca";
 
 export function sheetsConfigured(): boolean {
@@ -16,11 +18,12 @@ export function sheetsConfigured(): boolean {
 
 /** Read-only health check. Credential presence is not proof of Google access. */
 export async function sheetConnection(spreadsheetId: string | null) {
+  spreadsheetId = spreadsheetId?.trim() || null;
   if (!sheetsConfigured()) return { connection: "missing" as const, connection_message: "Connect the recruitment Google account before syncing." };
   try {
     const auth = getOAuthClient();
     const drive = google.drive({ version: "v3", auth });
-    const destination = spreadsheetId || process.env.GOOGLE_DRIVE_FOLDER_ID;
+    const destination = spreadsheetId || configuredFolderId();
     if (destination) {
       const file = await drive.files.get({ fileId: destination, supportsAllDrives: true,
         fields: "id,mimeType,capabilities(canEdit,canAddChildren)" }, GOOGLE_OPTIONS);
@@ -48,7 +51,7 @@ export async function sheetSyncStatus() {
   const errors = [state.error, pending.error].filter(Boolean);
   if (errors.some(error => error?.code !== "PGRST205" && error?.code !== "PGRST116")) throw new Error("Could not check spreadsheet delivery");
   const setup_ready = errors.length === 0;
-  const spreadsheetId = state.data?.spreadsheet_id || process.env.GOOGLE_SHEETS_SPREADSHEET_ID || null;
+  const spreadsheetId = state.data?.spreadsheet_id?.trim() || configuredSheetId();
   return { setup_ready, pending: setup_ready ? pending.count ?? 0 : null, configured: sheetsConfigured(),
     last_synced_at: state.data?.last_synced_at ?? null, last_error: state.data?.last_error ?? null,
     next_attempt_at: state.data?.next_attempt_at ?? null,
@@ -75,10 +78,10 @@ export async function syncRecruitmentSheet() {
     const drive = google.drive({ version: "v3", auth });
     const state = await admin.from("recruitment_sheet_state").select("spreadsheet_id").eq("id", true).single();
     if (state.error) throw state.error;
-    let spreadsheetId = state.data.spreadsheet_id as string | null;
+    let spreadsheetId = (state.data.spreadsheet_id as string | null)?.trim() || null;
     if (!rows.length && spreadsheetId) return { synced: 0, configured: true };
     if (!spreadsheetId) {
-      spreadsheetId = process.env.GOOGLE_SHEETS_SPREADSHEET_ID ?? null;
+      spreadsheetId = configuredSheetId();
       if (!spreadsheetId) {
         // Recover a create that succeeded at Google before the server stopped.
         const found = await drive.files.list({
@@ -90,7 +93,7 @@ export async function syncRecruitmentSheet() {
           const file = await drive.files.create({ requestBody: {
             name: SHEET_TITLE, mimeType: "application/vnd.google-apps.spreadsheet",
             appProperties: { tethosRecruitment: "records-v1" },
-            ...(process.env.GOOGLE_DRIVE_FOLDER_ID ? { parents: [process.env.GOOGLE_DRIVE_FOLDER_ID] } : {}),
+            ...(configuredFolderId() ? { parents: [configuredFolderId()!] } : {}),
           }, fields: "id", supportsAllDrives: true }, GOOGLE_OPTIONS);
           spreadsheetId = file.data.id ?? null;
         }

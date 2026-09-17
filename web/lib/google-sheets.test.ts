@@ -72,6 +72,15 @@ describe("durable Google delivery", () => {
     expect(mock.updates).toContainEqual({ table: "recruitment_sheet_state", values: { spreadsheet_id: "new-sheet" } });
     expect(mock.tabRequests[0]).toMatchObject({ spreadsheetId: "new-sheet", requestBody: { requests: [{ addSheet: { properties: { title: "Recruitment records" } } }] } });
   });
+  it("treats a whitespace-only configured workbook as absent and trims the folder", async () => {
+    mock.spreadsheetId = null;
+    vi.stubEnv("GOOGLE_SHEETS_SPREADSHEET_ID", " \n");
+    vi.stubEnv("GOOGLE_DRIVE_FOLDER_ID", " recruitment-folder\n");
+    expect(await sheetSyncStatus()).toMatchObject({ url: null, connection: "connected" });
+    await syncRecruitmentSheet();
+    expect(mock.creates[0]).toMatchObject({ requestBody: { parents: ["recruitment-folder"] } });
+    expect(mock.writes[0]).toMatchObject({ spreadsheetId: "new-sheet" });
+  });
   it("recovers a previously created workbook after a server interruption", async () => {
     mock.spreadsheetId = null; mock.foundId = "recovered-sheet";
     await syncRecruitmentSheet();
