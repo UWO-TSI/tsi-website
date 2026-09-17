@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import { trySheetSync } from "@/lib/google-sheets";
+import { after, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient, isAdminEmail } from "@/lib/supabase/admin";
 import { getResend, EMAIL_FROM } from "@/lib/resend";
@@ -55,7 +56,7 @@ export async function POST(request: Request) {
   );
 
   let released = 0;
-  const resend = getResend();
+  const resend = process.env.RECRUITMENT_EMAILS_ENABLED === "true" ? getResend() : null;
   const origin = new URL(request.url).origin;
 
   for (const app of toRelease) {
@@ -87,7 +88,7 @@ export async function POST(request: Request) {
     if (process.env.RECRUITMENT_EMAILS_ENABLED === "true") {
       try {
         const positionTitle = app.position?.title ?? "Position";
-        await resend.emails.send({
+        await resend!.emails.send({
           from: EMAIL_FROM,
           to: app.email,
           subject: `Application Update: ${positionTitle}`,
@@ -107,5 +108,6 @@ export async function POST(request: Request) {
     released++;
   }
 
+  after(trySheetSync);
   return NextResponse.json({ released });
 }

@@ -20,9 +20,13 @@
  *    never garish" law.
  */
 
-import { useMemo } from "react";
-import { EffectComposer, Bloom, Vignette } from "@react-three/postprocessing";
-import { BlendFunction, Effect } from "postprocessing";
+import { useEffect, useMemo, useSyncExternalStore } from "react";
+import { useThree } from "@react-three/fiber";
+import { EffectComposer, Bloom, FXAA, ToneMapping, Vignette } from "@react-three/postprocessing";
+import { createGraphicsContextStore } from "@/lib/game/graphicsContext";
+import { useLabState } from "@/lib/game/devLab";
+import { DEFAULT_GRADE, type Grade } from "@/lib/game/grading";
+import { BlendFunction, Effect, ToneMappingMode } from "postprocessing";
 import { Uniform, Vector3 } from "three";
 
 // Pastel master grade (AC-reference calibration, 2026-07-14 — David's
@@ -36,30 +40,65 @@ const PASTEL_FRAG = /* glsl */ `
 uniform float uDesat;
 uniform vec3 uWarmCast;
 uniform vec3 uBlackLift;
+uniform float uContrast;
+uniform float uVibrance;
 void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor) {
   vec3 c = inputColor.rgb;
+  // Vibrance (BSL-style): saturation boost weighted toward the LEAST
+  // saturated pixels, so skin/pastel tones don't blow out. 0 = identity.
+  float lumV = dot(c, vec3(0.299, 0.587, 0.114));
+  float satV = max(c.r, max(c.g, c.b)) - min(c.r, min(c.g, c.b));
+  c = mix(vec3(lumV), c, 1.0 + uVibrance * (1.0 - satV));
   vec3 lum = vec3(dot(c, vec3(0.299, 0.587, 0.114)));
   c = mix(c, lum, uDesat);
   c *= uWarmCast;
   c = c + uBlackLift * (1.0 - c);
+  // Contrast around mid-grey. 1 = identity.
+  c = (c - 0.5) * uContrast + 0.5;
   outputColor = vec4(c, inputColor.a);
 }
 `;
+
+// Module-scope escape hatch (react-compiler immutability rule): the
+// renderer reached through useThree is frozen inside component code.
+function setExposure(gl: { toneMappingExposure: number }, v: number) {
+  gl.toneMappingExposure = v;
+}
 
 class PastelEffect extends Effect {
   constructor() {
     super("PastelGrade", PASTEL_FRAG, {
       blendFunction: BlendFunction.NORMAL,
+      // D4 retune (2026-07-26). These were calibrated on 2026-07-14 against a
+      // render whose key:fill was 1.08:1 — a washed, highlight-clipped image.
+      // Both uDesat and uBlackLift were pushing the SAME direction as that
+      // defect, so with the D3 fill cut (contrast now ~4:1) they would flatten
+      // the contrast we just bought back.
+      //   uDesat     0.14  -> 0.08   the wash it was taming is largely gone;
+      //                              lit surfaces now sit below the tone-map
+      //                              knee instead of clipping into it
+      //   uBlackLift 0.05  -> 0.025  halved. ACNH shadows genuinely never
+      //                              crush, so the lift stays — it just no
+      //                              longer has to hide flat shadows
+      // uWarmCast is UNCHANGED: it came from measuring David's ACNH reference
+      // snapshots, not from compensating for the lighting, so it still holds.
+      //
+      // If this reads dark on the M1, exposure is the knob (already a slider in
+      // /lab/world), not these two.
       uniforms: new Map<string, Uniform>([
-        ["uDesat", new Uniform(0.14)],
+        ["uDesat", new Uniform(0.08)],
         ["uWarmCast", new Uniform(new Vector3(1.03, 1.0, 0.94))],
-        ["uBlackLift", new Uniform(new Vector3(0.05, 0.042, 0.032))],
+        ["uBlackLift", new Uniform(new Vector3(0.025, 0.021, 0.016))],
+        ["uContrast", new Uniform(1)],
+        ["uVibrance", new Uniform(0)],
       ]),
     });
   }
 }
 
 interface PostFXProps {
+  /** Smooth mode only; keep the intentionally pixelated target unfiltered. */
+  antialias?: boolean;
   /** Toggle the whole pipeline (lite mode disables it). */
   enabled?: boolean;
   /** Vignette darkening intensity 0-1. Higher during transitions. */
@@ -68,17 +107,38 @@ interface PostFXProps {
   bloom?: boolean;
   /** G2: bloom strength by time of day — dusk glows, midday stays flat. */
   bloomIntensity?: number;
+  /** Per-weather color grade (WEATHER_GRADES). Lab override wins. */
+  grade?: Grade;
 }
 
-export default function PostFX({ enabled = true, vignetteDarkness = 0.4, bloom = false, bloomIntensity = 0.55 }: PostFXProps) {
+export default function PostFX({ enabled = true, antialias = false, vignetteDarkness = 0.4, bloom = false, bloomIntensity = 0.55, grade }: PostFXProps) {
   const pastel = useMemo(() => new PastelEffect(), []);
+  const gl = useThree((s) => s.gl);
+  const context = useMemo(() => createGraphicsContextStore(gl.getContext(), gl.domElement), [gl]);
+  const contextAvailable = useSyncExternalStore(context.subscribe, context.getSnapshot, () => false);
+  // Grade resolution: lab sliders (dev-only, always null in prod) beat the
+  // game's per-weather grade, which beats the shipped default. Every field
+  // of DEFAULT_GRADE reproduces the 2026-07-14 look exactly.
+  const lab = useLabState();
+  const g: Grade = lab.grade ?? grade ?? DEFAULT_GRADE;
+  useEffect(() => {
+    (pastel.uniforms.get("uDesat")!).value = g.desat;
+    (pastel.uniforms.get("uWarmCast")!.value as Vector3).set(1 + 0.03 * g.warmth, 1.0, 1 - 0.06 * g.warmth);
+    (pastel.uniforms.get("uBlackLift")!.value as Vector3).set(0.05 * g.lift, 0.042 * g.lift, 0.032 * g.lift);
+    (pastel.uniforms.get("uContrast")!).value = g.contrast;
+    (pastel.uniforms.get("uVibrance")!).value = g.vibrance;
+    setExposure(gl, g.exposure);
+  }, [g, pastel, gl]);
   if (typeof window !== "undefined" && window.location.search.includes("nofx")) return null;
-  if (!enabled) return null;
+  if (!enabled || !contextAvailable) return null;
   return (
     <EffectComposer multisampling={0}>
+      {/* FXAA samples neighboring input pixels. Run it before the merged grade
+          so its center and neighbor samples use the same color space. */}
+      {antialias ? <FXAA /> : <></>}
       <Vignette
         offset={0.32}
-        darkness={vignetteDarkness}
+        darkness={g.vignette ?? vignetteDarkness}
         eskil={false}
         blendFunction={BlendFunction.NORMAL}
       />
@@ -91,6 +151,9 @@ export default function PostFX({ enabled = true, vignetteDarkness = 0.4, bloom =
           luminanceSmoothing={0.025}
         />
       ) : <></>}
+      {/* The composer disables renderer tone mapping. Preserve the Canvas's
+          neutral operator here, after HDR effects, so exposure still works. */}
+      <ToneMapping mode={ToneMappingMode.NEUTRAL} />
     </EffectComposer>
   );
 }

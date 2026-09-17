@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import { trySheetSync } from "@/lib/google-sheets";
+import { after, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient, isAdminEmail } from "@/lib/supabase/admin";
 import { getResend, EMAIL_FROM } from "@/lib/resend";
@@ -87,5 +88,6 @@ export async function POST(
     }
   }
 
+  after(trySheetSync);
   return NextResponse.json({ released: true, oldStatus, newStatus });
 }

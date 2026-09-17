@@ -25,7 +25,9 @@ export function getOAuthClient(): OAuth2Client {
     );
   }
 
-  const client = new google.auth.OAuth2(clientId, clientSecret);
+  const client = new google.auth.OAuth2({ clientId, clientSecret,
+    transporterOptions: { timeout: 15000, retry: false },
+  });
   client.setCredentials({ refresh_token: refreshToken });
   cached = client;
   return client;

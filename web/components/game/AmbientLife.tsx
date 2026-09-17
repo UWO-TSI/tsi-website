@@ -1,12 +1,15 @@
 "use client";
 
-import { useRef, useMemo, useEffect } from "react";
+import { Suspense, useRef, useMemo, useEffect } from "react";
 import { useFrame } from "@react-three/fiber";
+import { useTexture } from "@react-three/drei";
 import * as THREE from "three";
 import { sampleTerrainHeightFast } from "./terrain";
+import { GLBProp } from "./NatureModels";
+import { fireflyOffset } from "@/lib/game/fireflyPath";
 
 /**
- * Ambient life — sprint A6. Procedural-only (no textures, no asset loads).
+ * Ambient life — sprint A6. Fireflies use the existing ACNH insect asset.
  * Butterflies (day), fireflies (night), leaves/pollen drift (always),
  * background birds (day). Phase prop comes from the parent.
  */
@@ -106,48 +109,51 @@ function Butterflies({ count = 4 }: { count?: number }) {
 }
 
 // ─── Fireflies (night only, 8-12) ───────────────────────────────
-function Firefly({ seed }: { seed: number }) {
+function Firefly({ seed, anchor, groundHeight = sampleTerrainHeightFast }: { seed: number; anchor?: readonly [number, number]; groundHeight?: (x: number, z: number) => number }) {
   const ref = useRef<THREE.Group>(null);
-  const matRef = useRef<THREE.MeshStandardMaterial>(null);
+  const matRef = useRef<THREE.SpriteMaterial>(null);
+  const glow = useTexture("/assets/sky/sun.png");
 
   const { home, phase, drift } = useMemo(() => {
     const rng = seededRandom(seed * 1013 + 17);
     return {
-      home: new THREE.Vector3((rng() - 0.5) * 50, 0, (rng() - 0.5) * 50),
+      home: anchor ? new THREE.Vector3(anchor[0], 0, anchor[1]) : new THREE.Vector3((rng() - 0.5) * 50, 0, (rng() - 0.5) * 50),
       phase: rng() * Math.PI * 2,
-      drift: 1.8 + rng() * 1.6,
+      drift: anchor ? 0.65 + rng() * 0.4 : 1.8 + rng() * 1.6,
     };
-  }, [seed]);
+  }, [seed, anchor]);
 
   useFrame((state) => {
     if (!ref.current) return;
     const t = state.clock.elapsedTime;
-    const x = THREE.MathUtils.clamp(home.x + Math.sin(t * 0.3 + phase) * drift + Math.cos(t * 0.17 + phase * 1.4) * (drift * 0.5), -30, 30);
-    const z = THREE.MathUtils.clamp(home.z + Math.cos(t * 0.27 + phase * 0.9) * drift + Math.sin(t * 0.19 + phase * 1.7) * (drift * 0.5), -30, 30);
-    const yBase = sampleTerrainHeightFast(x, z);
-    const y = yBase + 0.6 + (Math.sin(t * 0.6 + phase) * 0.5 + 0.5) * 1.6;
+    const offset = fireflyOffset(seed, t);
+    const x = home.x + offset[0] * drift;
+    const z = home.z + offset[2] * drift;
+    const y = groundHeight(x, z) + offset[1];
+    const dx = x - ref.current.position.x, dz = z - ref.current.position.z;
+    if (Math.abs(dx) + Math.abs(dz) > 0.0001) ref.current.rotation.y = Math.atan2(dx, dz);
     ref.current.position.set(x, y, z);
     // Pulse glow.
     if (matRef.current) {
-      matRef.current.emissiveIntensity = 1.4 + Math.sin(t * 2.4 + phase) * 0.7;
+      matRef.current.opacity = 0.34 + Math.sin(t * (1.1 + drift * 0.3) + phase) * 0.24;
     }
   });
 
   return (
     <group ref={ref} position={[home.x, 1.0, home.z]}>
-      <mesh>
-        <sphereGeometry args={[0.06, 8, 8]} />
-        <meshStandardMaterial ref={matRef} color="#FFEE88" emissive="#FFEE88" emissiveIntensity={2.0} roughness={0.4} metalness={0} />
-      </mesh>
+      <GLBProp url="/assets/acnh/critters/firefly.glb" scale={0.012} rotation={[-Math.PI / 2, 0, 0]} castShadow={false} />
+      <sprite scale={[0.13, 0.13, 1]}>
+        <spriteMaterial ref={matRef} map={glow} color="#ffec8b" transparent opacity={0.5} depthWrite={false} toneMapped={false} blending={THREE.AdditiveBlending} />
+      </sprite>
     </group>
   );
 }
 
-function Fireflies({ count = 10 }: { count?: number }) {
+export function Fireflies({ count = 10, anchors, groundHeight }: { count?: number; anchors?: readonly (readonly [number, number])[]; groundHeight?: (x: number, z: number) => number }) {
   return (
     <group>
       {Array.from({ length: count }, (_, i) => (
-        <Firefly key={i} seed={i + 1} />
+        <Suspense key={i} fallback={null}><Firefly seed={i + 1} anchor={anchors?.length ? anchors[i % anchors.length] : undefined} groundHeight={groundHeight} /></Suspense>
       ))}
     </group>
   );

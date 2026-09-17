@@ -11,6 +11,7 @@
 # Un-ignore globe data files
 !web/data/globe-nodes.json
 !web/data/globe-countries.json
+!web/lib/recruitment-round-drafts.json
 .vercel
 *.jpeg
 .playwright-mcp/

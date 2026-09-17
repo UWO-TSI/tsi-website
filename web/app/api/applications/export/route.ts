@@ -1,214 +1,38 @@
-// Admin-only: download all applications as CSV. Includes the JSONB
-// meta fields (other links, commitments, portfolio link, file paths)
-// flattened into their own columns so the spreadsheet is readable.
-
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient, isAdminEmail } from "@/lib/supabase/admin";
-import { parseAdminNotes } from "@/lib/admin-notes";
+import { SHEET_HEADERS, sheetRow } from "@/lib/recruitment-sheet-data";
+import { recruitmentOrigin } from "@/lib/google-sheets";
+import type { Application } from "@/lib/recruitment";
 
-const META_OTHER_LINKS_ID = "__profile_other_links";
-const META_COMMITMENTS_ID = "__profile_commitments_next_year";
-const META_PAST_PROJECTS_ID = "__past_projects";
-const META_PORTFOLIO_FILES_ID = "__portfolio_files";
-const META_PORTFOLIO_LINK_ID = "__portfolio_link";
-const META_CREATIVE_PIECE_FILES_ID = "__creative_piece_files";
-const META_IDS = new Set([
-  META_OTHER_LINKS_ID,
-  META_COMMITMENTS_ID,
-  META_PAST_PROJECTS_ID,
-  META_PORTFOLIO_FILES_ID,
-  META_PORTFOLIO_LINK_ID,
-  META_CREATIVE_PIECE_FILES_ID,
-]);
-
-interface FileEntry {
-  path: string;
-  filename: string;
-}
-
-function csvCell(value: unknown): string {
-  if (value === null || value === undefined) return "";
-  const s = String(value);
-  // Quote anything with comma, quote, or newline; double internal quotes.
-  if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
-  return s;
-}
-
-function csvRow(cells: unknown[]): string {
-  return cells.map(csvCell).join(",");
-}
-
-function findMeta(
-  answers: { question_id: string; answer: string }[],
-  id: string
-): string {
-  return answers.find((a) => a.question_id === id)?.answer ?? "";
-}
-
-function fileList(json: string): string {
-  if (!json) return "";
-  try {
-    const arr = JSON.parse(json) as FileEntry[];
-    return arr.map((f) => f.filename).join(" | ");
-  } catch {
-    return "";
-  }
-}
-
-function filePaths(json: string): string {
-  if (!json) return "";
-  try {
-    const arr = JSON.parse(json) as FileEntry[];
-    return arr.map((f) => f.path).join(" | ");
-  } catch {
-    return "";
-  }
+function csvCell(value: string | number): string {
+  // CSV has no RAW input option, so prevent applicant text becoming a formula.
+  const text = String(value);
+  const safe = /^\s*[=+@-]/u.test(text) ? `'${text}` : text;
+  return `"${safe.replace(/"/g, '\"\"')}"`;
 }
 
 export async function GET() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data: { user } } = await supabase.auth.getUser();
   if (!user || !isAdminEmail(user.email ?? "")) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
-
   const admin = createAdminClient();
-  const { data, error } = await admin
-    .from("applications")
-    .select(
-      "id, submitted_at, status, full_name, email, phone, " +
-        "program_major, year_of_study, linkedin_url, heard_about_us, " +
-        "resume_filename, resume_drive_url, essay_answers, tags, admin_notes, " +
-        "position:positions(slug, title)"
-    )
-    .order("submitted_at", { ascending: false });
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-
-  // Supabase types the joined-position result loosely; cast to a row
-  // shape we can iterate without TS complaints.
-  type AppRow = {
-    id: string;
-    submitted_at: string;
-    status: string;
-    full_name: string;
-    email: string;
-    phone: string | null;
-    program_major: string;
-    year_of_study: number;
-    linkedin_url: string | null;
-    heard_about_us: string;
-    resume_filename: string | null;
-    resume_drive_url: string | null;
-    essay_answers: { question_id: string; answer: string }[] | null;
-    tags: string[] | null;
-    admin_notes: string | null;
-    position:
-      | { slug?: string; title?: string; archived_at?: string | null }
-      | { slug?: string; title?: string; archived_at?: string | null }[]
-      | null;
-  };
-  const rows = (data as unknown as AppRow[]) ?? [];
-
-  // Collect all unique non-meta question_ids across applications so each
-  // gets its own CSV column.
-  const realQuestionIds = new Set<string>();
-  for (const r of rows) {
-    for (const a of r.essay_answers ?? []) {
-      if (!META_IDS.has(a.question_id) && a.answer?.trim()) {
-        realQuestionIds.add(a.question_id);
-      }
+  const lines = [SHEET_HEADERS.map(csvCell).join(",")];
+  for (let offset = 0; ; offset += 500) {
+    const { data, error } = await admin.from("applications").select("*, position:positions(*)")
+      .order("submitted_at", { ascending: true }).order("id", { ascending: true }).range(offset, offset + 499);
+    if (error) return NextResponse.json({ error: "Could not export applications. Please try again." }, { status: 500 });
+    for (const app of (data ?? []) as Application[]) {
+      lines.push(sheetRow(app, recruitmentOrigin()).map(csvCell).join(","));
     }
+    if (!data || data.length < 500) break;
   }
-  const essayCols = [...realQuestionIds].sort();
-
-  const header = [
-    "submitted_at",
-    "position",
-    "archived",
-    "status",
-    "full_name",
-    "email",
-    "phone",
-    "program",
-    "year",
-    "linkedin",
-    "other_links",
-    "commitments_next_year",
-    "past_projects",
-    "portfolio_link",
-    "portfolio_files",
-    "portfolio_paths",
-    "creative_files",
-    "creative_paths",
-    "resume_filename",
-    "resume_url",
-    "heard_about_us",
-    "tags",
-    "admin_notes",
-    ...essayCols.map((id) => `essay:${id}`),
-  ];
-
-  const lines = [csvRow(header)];
-
-  for (const r of rows) {
-    const answers = r.essay_answers ?? [];
-    const positionAny = r.position as
-      | { title?: string; slug?: string; archived_at?: string | null }
-      | { title?: string; slug?: string; archived_at?: string | null }[]
-      | null
-      | undefined;
-    const positionRow = Array.isArray(positionAny)
-      ? positionAny[0]
-      : positionAny;
-    const positionLabel = positionRow
-      ? `${positionRow.title ?? ""} (${positionRow.slug ?? ""})`
-      : "";
-
-    const cells: unknown[] = [
-      r.submitted_at,
-      positionLabel,
-      positionRow?.archived_at ? "yes" : "",
-      r.status,
-      r.full_name,
-      r.email,
-      r.phone,
-      r.program_major,
-      r.year_of_study,
-      r.linkedin_url ?? "",
-      findMeta(answers, META_OTHER_LINKS_ID),
-      findMeta(answers, META_COMMITMENTS_ID),
-      findMeta(answers, META_PAST_PROJECTS_ID),
-      findMeta(answers, META_PORTFOLIO_LINK_ID),
-      fileList(findMeta(answers, META_PORTFOLIO_FILES_ID)),
-      filePaths(findMeta(answers, META_PORTFOLIO_FILES_ID)),
-      fileList(findMeta(answers, META_CREATIVE_PIECE_FILES_ID)),
-      filePaths(findMeta(answers, META_CREATIVE_PIECE_FILES_ID)),
-      r.resume_filename ?? "",
-      r.resume_drive_url ?? "",
-      r.heard_about_us,
-      (r.tags ?? []).join(" | "),
-      parseAdminNotes(r.admin_notes)
-        .map((n) => `[${n.author_name ?? n.author_email}] ${n.text}`)
-        .join("\n\n"),
-      ...essayCols.map((id) => findMeta(answers, id)),
-    ];
-
-    lines.push(csvRow(cells));
-  }
-
-  const body = lines.join("\r\n");
-  const stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
-  return new NextResponse(body, {
-    status: 200,
-    headers: {
-      "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": `attachment; filename="tsi-applications-${stamp}.csv"`,
-    },
-  });
+  const stamp = new Date().toISOString().slice(0, 10);
+  return new NextResponse(lines.join("\r\n"), { headers: {
+    "Content-Type": "text/csv; charset=utf-8",
+    "Content-Disposition": `attachment; filename="tethos-applications-${stamp}.csv"`,
+    "Cache-Control": "no-store",
+  } });
 }

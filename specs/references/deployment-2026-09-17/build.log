@@ -1,0 +1,175 @@
+
+> web@0.1.0 build
+> NODE_OPTIONS='--max-old-space-size=8192' next build
+
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+▲ Next.js 16.1.6 (Turbopack)
+- Environments: .env.local
+
+⚠ The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+  Creating an optimized production build ...
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+✓ Compiled successfully in 15.7s
+  Running TypeScript ...
+  Collecting page data using 9 workers ...
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+  Generating static pages using 9 workers (0/108) ...
+  Generating static pages using 9 workers (27/108)
+  Generating static pages using 9 workers (54/108)
+  Generating static pages using 9 workers (81/108)
+✓ Generating static pages using 9 workers (108/108) in 747.4ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ƒ /admin/preview/[id]
+├ ○ /admin/recruit
+├ ƒ /api/achievements
+├ ƒ /api/achievements/[id]/award
+├ ƒ /api/admin/me
+├ ƒ /api/an-token
+├ ƒ /api/applications
+├ ƒ /api/applications/[id]
+├ ƒ /api/applications/[id]/release
+├ ƒ /api/applications/export
+├ ƒ /api/applications/release-batch
+├ ƒ /api/auth/callback
+├ ƒ /api/bounties
+├ ƒ /api/bounties/[id]
+├ ƒ /api/bounties/[id]/claim
+├ ƒ /api/bounties/[id]/review
+├ ƒ /api/bounties/[id]/submissions/upload
+├ ƒ /api/bounties/[id]/submit
+├ ƒ /api/collections
+├ ƒ /api/content/drafts
+├ ƒ /api/content/drafts/[id]
+├ ƒ /api/content/drafts/[id]/discard
+├ ƒ /api/content/drafts/[id]/publish
+├ ƒ /api/content/palettes/[id]/activate
+├ ƒ /api/content/upload
+├ ƒ /api/directory
+├ ƒ /api/drafts
+├ ƒ /api/economy
+├ ƒ /api/emotes/log
+├ ƒ /api/events
+├ ƒ /api/events/[id]/rsvp
+├ ƒ /api/guestbook
+├ ƒ /api/guestbook/[id]/moderate
+├ ƒ /api/inventory
+├ ƒ /api/jobs
+├ ƒ /api/leaderboard
+├ ƒ /api/npc/chat
+├ ƒ /api/npc/conversations
+├ ƒ /api/npc/conversations/[id]/flag
+├ ƒ /api/npc/conversations/[id]/resolve
+├ ƒ /api/npc/memories/wipe
+├ ƒ /api/npc/spend
+├ ƒ /api/onboarding
+├ ƒ /api/oracle/quiz
+├ ƒ /api/oracle/result
+├ ƒ /api/positions
+├ ƒ /api/positions/ghosts
+├ ƒ /api/positions/heartbeat
+├ ƒ /api/profile
+├ ƒ /api/profile/[id]
+├ ƒ /api/quests
+├ ƒ /api/quests/[id]/accept
+├ ƒ /api/quests/[id]/complete
+├ ƒ /api/resume-sign
+├ ƒ /api/server/online
+├ ƒ /api/sheets-sync
+├ ƒ /api/shop
+├ ƒ /api/upload
+├ ○ /company
+├ ○ /dev/playground
+├ ○ /genesis
+├ ○ /globetest
+├ ○ /icon.svg
+├ ○ /npo
+├ ○ /npo/apply
+├ ○ /npo/impact
+├ ○ /npo/people
+├ ○ /npo/program
+├ ○ /npo/voices
+├ ○ /sponsor
+├ ○ /student
+├ ○ /student/apply
+├ ƒ /student/apply/[role-slug]
+├ ○ /student/apply/dashboard
+├ ○ /student/apply/internal
+├ ○ /student/apply/portal
+├ ○ /student/apply/ui-preview
+├ ƒ /student/auth/callback
+├ ○ /student/dashboard
+├ ○ /student/dashboard/admin
+├ ○ /student/dashboard/admin/analytics
+├ ○ /student/dashboard/admin/announcements
+├ ○ /student/dashboard/admin/bounties
+├ ○ /student/dashboard/admin/content/emotes
+├ ƒ /student/dashboard/admin/content/emotes/[id]/edit
+├ ○ /student/dashboard/admin/content/emotes/new
+├ ○ /student/dashboard/admin/content/events
+├ ƒ /student/dashboard/admin/content/events/[id]/edit
+├ ƒ /student/dashboard/admin/content/events/[id]/print
+├ ○ /student/dashboard/admin/content/events/new
+├ ○ /student/dashboard/admin/content/log
+├ ○ /student/dashboard/admin/content/npcs
+├ ƒ /student/dashboard/admin/content/npcs/[id]/edit
+├ ƒ /student/dashboard/admin/content/npcs/[id]/history
+├ ○ /student/dashboard/admin/content/npcs/new
+├ ○ /student/dashboard/admin/content/palettes
+├ ƒ /student/dashboard/admin/content/palettes/[id]/edit
+├ ƒ /student/dashboard/admin/content/palettes/[id]/history
+├ ○ /student/dashboard/admin/content/palettes/new
+├ ○ /student/dashboard/admin/content/shop
+├ ƒ /student/dashboard/admin/content/shop/[id]/edit
+├ ƒ /student/dashboard/admin/content/shop/[id]/history
+├ ○ /student/dashboard/admin/content/shop/new
+├ ○ /student/dashboard/admin/election
+├ ○ /student/dashboard/admin/guestbook
+├ ○ /student/dashboard/admin/marketplace
+├ ○ /student/dashboard/admin/members
+├ ○ /student/dashboard/admin/npc-conversations
+├ ○ /student/dashboard/admin/quests
+├ ○ /student/dashboard/admin/recruitment
+├ ○ /student/dashboard/bounty
+├ ○ /student/dashboard/calendar
+├ ○ /student/dashboard/directory
+├ ƒ /student/dashboard/directory/[id]
+├ ○ /student/dashboard/jobs
+├ ○ /student/dashboard/kanban
+├ ○ /student/dashboard/leaderboard
+├ ○ /student/dashboard/marketplace
+├ ○ /student/dashboard/mentorship
+├ ○ /student/dashboard/oracle
+├ ○ /student/dashboard/portfolio
+├ ○ /student/dashboard/profile
+├ ○ /student/dashboard/quests
+├ ○ /student/dashboard/settings
+├ ○ /student/dashboard/settings/npc-memories
+├ ○ /student/dashboard/shop
+├ ○ /student/dashboard/tools
+├ ○ /student/dashboard/tools/ascii
+├ ○ /student/dashboard/tools/rag
+├ ○ /student/election
+├ ƒ /student/go
+├ ○ /student/login
+├ ○ /student/onboarding
+├ ○ /student/reset-password
+├ ○ /student/signup
+└ ○ /under-construction
+
+
+ƒ Proxy (Middleware)
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand

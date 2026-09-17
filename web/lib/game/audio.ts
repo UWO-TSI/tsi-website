@@ -3,11 +3,12 @@
 /**
  * Audio manager (sprint A7 infra; content landed 2026-07-03 cozy push).
  *
- * All shipped files are CC0 — no attribution required (see
+ * Original member-world files are CC0 (see
  * `web/public/audio/CREDITS.md`): ambient loops from Pixel-boy's Ninja
  * Adventure pack (Peaceful/Calm Village/Chill/Dream mapped to
  * dawn/day/dusk/night), SFX from Kenney RPG Audio + Interface Sounds,
  * dialogue voice blips from Ninja Adventure (animalese-lite for NPC chat).
+ * Applicant music by Stream Cafe has separate source/use terms in CREDITS.md.
  * The missing-file fallback stays: a deleted file just runs silent.
  *
  * Public API:
@@ -21,7 +22,7 @@
  *   AudioManager.getState()
  */
 
-export type AmbientPhase = "dawn" | "day" | "dusk" | "night";
+export type AmbientPhase = "dawn" | "day" | "dusk" | "night" | "applicant-island" | "applicant-hq";
 export type SFXName =
   | "footstep"
   | "enter"
@@ -45,6 +46,8 @@ const MANIFEST: AudioManifest = {
     day: "/audio/ambient/day.ogg",
     dusk: "/audio/ambient/dusk.ogg",
     night: "/audio/ambient/night.ogg",
+    "applicant-island": "/audio/ambient/applicant-ocean-railway.ogg",
+    "applicant-hq": "/audio/ambient/applicant-willow-tree.ogg",
   },
   sfx: {
     footstep: "/audio/sfx/footstep.ogg",
@@ -88,9 +91,9 @@ function readStoredVolumes(): AudioVolumes {
     if (raw) {
       const parsed = JSON.parse(raw);
       return {
-        master: clamp01(parsed.master ?? 0.7),
-        ambient: clamp01(parsed.ambient ?? 0.6),
-        sfx: clamp01(parsed.sfx ?? 0.8),
+        master: clamp01(parsed.master, 0.7),
+        ambient: clamp01(parsed.ambient, 0.6),
+        sfx: clamp01(parsed.sfx, 0.8),
       };
     }
   } catch {
@@ -99,12 +102,12 @@ function readStoredVolumes(): AudioVolumes {
   return { master: 0.7, ambient: 0.6, sfx: 0.8 };
 }
 
-function clamp01(n: number): number {
-  if (Number.isNaN(n)) return 0;
+function clamp01(n: unknown, fallback = 0): number {
+  if (typeof n !== "number" || !Number.isFinite(n)) return fallback;
   return Math.max(0, Math.min(1, n));
 }
 
-class AudioManagerImpl {
+export class AudioManagerImpl {
   private enabled = false;
   private volumes: AudioVolumes = { master: 0.7, ambient: 0.6, sfx: 0.8 };
   private phase: AmbientPhase | null = null;
@@ -113,6 +116,8 @@ class AudioManagerImpl {
   private nextTrack: HTMLAudioElement | null = null;
   private crossfadeRaf: number | null = null;
   private crossfadeStart = 0;
+  private fadeProgress = 0;
+  private oneShots = new Set<HTMLAudioElement>();
 
   private missingFiles = new Set<string>();
   private warnedMissing = false;
@@ -158,9 +163,9 @@ class AudioManagerImpl {
 
   setVolumes(partial: Partial<AudioVolumes>): void {
     this.volumes = {
-      master: clamp01(partial.master ?? this.volumes.master),
-      ambient: clamp01(partial.ambient ?? this.volumes.ambient),
-      sfx: clamp01(partial.sfx ?? this.volumes.sfx),
+      master: clamp01(partial.master, this.volumes.master),
+      ambient: clamp01(partial.ambient, this.volumes.ambient),
+      sfx: clamp01(partial.sfx, this.volumes.sfx),
     };
     if (typeof window !== "undefined") {
       try {
@@ -169,15 +174,34 @@ class AudioManagerImpl {
         /* ignore quota errors */
       }
     }
-    // Re-apply ambient volume to live track.
-    if (this.currentTrack) {
-      this.currentTrack.volume = this.ambientTargetVolume();
-    }
+    this.applyVolumes();
     this.notify();
   }
 
+  private applyVolumes(): void {
+    const target = this.ambientTargetVolume();
+    if (this.currentTrack) this.currentTrack.volume = target * (this.nextTrack ? 1 - this.fadeProgress : 1);
+    if (this.nextTrack) this.nextTrack.volume = target * this.fadeProgress;
+    for (const sound of this.oneShots) sound.volume = this.sfxTargetVolume();
+  }
+
+  private playElement(el: HTMLAudioElement, src: string): void {
+    void el.play().catch((error: unknown) => {
+      if (el !== this.currentTrack && el !== this.nextTrack && !this.oneShots.has(el)) return;
+      if (error instanceof DOMException && error.name === "NotAllowedError") {
+        this.enabled = false;
+        this.stop();
+        this.notify();
+      } else if (error instanceof DOMException && error.name === "NotSupportedError") {
+        this.markMissing(src);
+      }
+      this.oneShots.delete(el);
+    });
+  }
+
   private ambientTargetVolume(): number {
-    return this.volumes.master * this.volumes.ambient;
+    const sceneGain = this.phase === "applicant-island" || this.phase === "applicant-hq" ? 0.28 : 1;
+    return this.volumes.master * this.volumes.ambient * sceneGain;
   }
 
   private sfxTargetVolume(): number {
@@ -185,7 +209,10 @@ class AudioManagerImpl {
   }
 
   setPhase(phase: AmbientPhase): void {
-    if (this.phase === phase) return;
+    if (this.phase === phase) {
+      if (this.enabled && !this.currentTrack && !this.nextTrack) this.startAmbient(phase);
+      return;
+    }
     const previousPhase = this.phase;
     this.phase = phase;
     if (this.enabled) {
@@ -204,11 +231,8 @@ class AudioManagerImpl {
     const el = this.createAudioElement(src, true);
     if (!el) return;
     el.volume = this.ambientTargetVolume();
-    el.play().catch(() => {
-      // Autoplay may still be blocked even after a click in some browsers.
-      this.markMissing(src);
-    });
     this.currentTrack = el;
+    this.playElement(el, src);
   }
 
   private crossfadeTo(phase: AmbientPhase): void {
@@ -236,18 +260,18 @@ class AudioManagerImpl {
       return;
     }
     next.volume = 0;
-    next.play().catch(() => this.markMissing(src));
     this.nextTrack = next;
+    this.fadeProgress = 0;
+    this.playElement(next, src);
 
     this.crossfadeStart = performance.now();
-    const target = this.ambientTargetVolume();
     const fromTrack = this.currentTrack;
 
     const tick = () => {
       const elapsed = performance.now() - this.crossfadeStart;
       const t = Math.min(1, elapsed / CROSSFADE_MS);
-      if (fromTrack) fromTrack.volume = target * (1 - t);
-      if (this.nextTrack) this.nextTrack.volume = target * t;
+      this.fadeProgress = t;
+      this.applyVolumes();
       if (t < 1) {
         this.crossfadeRaf = requestAnimationFrame(tick);
       } else {
@@ -269,7 +293,10 @@ class AudioManagerImpl {
     const el = this.createAudioElement(src, false);
     if (!el) return;
     el.volume = this.sfxTargetVolume();
-    el.play().catch(() => this.markMissing(src));
+    this.oneShots.add(el);
+    el.onended = () => this.oneShots.delete(el);
+    el.addEventListener("error", () => this.oneShots.delete(el), { once: true });
+    this.playElement(el, src);
   }
 
   /** Random short voice blip for NPC dialogue reveal (animalese-lite). */
@@ -277,7 +304,8 @@ class AudioManagerImpl {
     this.playSFX(BLIPS[Math.floor(Math.random() * BLIPS.length)]);
   }
 
-  dispose(): void {
+  /** Stop world audio on route exit; keep the user’s sound preference for re-entry. */
+  stop(): void {
     if (this.crossfadeRaf !== null) {
       cancelAnimationFrame(this.crossfadeRaf);
       this.crossfadeRaf = null;
@@ -290,6 +318,16 @@ class AudioManagerImpl {
       this.nextTrack.pause();
       this.nextTrack = null;
     }
+    for (const sound of this.oneShots) sound.pause();
+    this.oneShots.clear();
+    this.fadeProgress = 0;
+  }
+
+  dispose(): void {
+    this.stop();
+    this.enabled = false;
+    this.phase = null;
+    this.notify();
     this.listeners.clear();
   }
 
@@ -299,7 +337,7 @@ class AudioManagerImpl {
       const el = new Audio(src);
       el.loop = loop;
       el.preload = "auto";
-      el.onerror = () => this.markMissing(src);
+      el.onerror = () => { if (el.error?.code === 4) this.markMissing(src); };
       return el;
     } catch {
       this.markMissing(src);
@@ -312,7 +350,7 @@ class AudioManagerImpl {
     if (!this.warnedMissing) {
       this.warnedMissing = true;
       console.warn(
-        "[audio] Audio assets not yet shipped — running silently. Drop files into web/public/audio/ to enable.",
+        `[audio] Could not decode or load audio asset: ${src}`,
       );
     }
   }

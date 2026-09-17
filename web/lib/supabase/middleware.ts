@@ -1,3 +1,4 @@
+import { APPLICANT_PORTAL } from "@/lib/recruitment-access";
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
@@ -50,7 +51,7 @@ export async function updateSession(request: NextRequest) {
   if (pathname === "/student/election" || pathname.startsWith("/student/dashboard/admin/election")) {
     if (process.env.ENABLE_ELECTION !== "true") {
       const url = request.nextUrl.clone();
-      url.pathname = "/student/dashboard";
+      url.pathname = APPLICANT_PORTAL;
       return NextResponse.redirect(url);
     }
 
@@ -154,7 +155,7 @@ export async function updateSession(request: NextRequest) {
     user
   ) {
     const url = request.nextUrl.clone();
-    url.pathname = "/student/dashboard";
+    url.pathname = APPLICANT_PORTAL;
     return NextResponse.redirect(url);
   }
 

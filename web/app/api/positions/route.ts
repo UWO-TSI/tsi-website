@@ -1,9 +1,13 @@
+import { previewRecruitmentPositions } from "@/lib/recruitment-round";
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
+  if (process.env.NODE_ENV === "development" && searchParams.get("preview") === "1") {
+    return NextResponse.json(previewRecruitmentPositions(), { headers: { "Cache-Control": "no-store" } });
+  }
   const code = searchParams.get("code");
 
   // Without a code: anon RLS policy already hides internal rows, so the

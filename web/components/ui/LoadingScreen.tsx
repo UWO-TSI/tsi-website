@@ -1,13 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 
 export default function LoadingScreen() {
+  const recruitment = usePathname().startsWith("/student/apply");
   const [phase, setPhase] = useState<"enter" | "visible" | "logo-out" | "bg-out" | "gone">(
     "enter"
   );
 
   useEffect(() => {
+    if (recruitment) return;
     const enterTimer = setTimeout(() => setPhase("visible"), 80);
 
     const startExit = () => {
@@ -32,9 +35,9 @@ export default function LoadingScreen() {
       clearTimeout(minTimer);
       window.removeEventListener("load", startExit);
     };
-  }, []);
+  }, [recruitment]);
 
-  if (phase === "gone") return null;
+  if (recruitment || phase === "gone") return null;
 
   const entering = phase === "enter";
   const logoOut = phase === "logo-out";

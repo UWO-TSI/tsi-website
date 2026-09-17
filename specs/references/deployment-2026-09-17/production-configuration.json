@@ -1,0 +1,22 @@
+{
+  "checkedAt": "2026-09-17T15:53:02.652073+00:00",
+  "vercelProject": "uwotsi.com",
+  "domainConfirmed": "www.tethos.ca",
+  "environment": "Production",
+  "secretVariablesSaved": [
+    "GOOGLE_OAUTH_CLIENT_ID",
+    "GOOGLE_OAUTH_CLIENT_SECRET",
+    "GOOGLE_OAUTH_REFRESH_TOKEN",
+    "CRON_SECRET"
+  ],
+  "supabaseVaultEntriesVerified": [
+    "recruitment_sheet_origin",
+    "recruitment_sheet_cron_secret"
+  ],
+  "vaultValuesMatchIntended": true,
+  "requiresNewDeployment": true,
+  "codeDeployed": false,
+  "deliveryMigrationApplied": false,
+  "schedulerEnabled": false,
+  "productionRolesActivated": false
+}

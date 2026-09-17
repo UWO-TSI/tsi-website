@@ -1,11 +1,16 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient, isAdminEmail } from "@/lib/supabase/admin";
 import { getResend, EMAIL_FROM } from "@/lib/resend";
-import { syncApplicationToSheet } from "@/lib/google-sheets";
+import { trySheetSync } from "@/lib/google-sheets";
+import { applicationInput, validatePositionAnswers } from "@/lib/recruitment-validation";
+import { isPositionOpen, MAX_RESUME_SIZE_BYTES } from "@/lib/recruitment";
 import ApplicationConfirmation from "@/emails/ApplicationConfirmation";
 
+export const maxDuration = 60;
+
 const SIGNED_URL_TTL_SECONDS = 60 * 60 * 24 * 7; // 7 days
+const RECEIPT_FIELDS = "id,position_id,submitted_at";
 
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -17,41 +22,43 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // Rate limit: max 3 submissions per user per minute.
+  const parsed = applicationInput.safeParse(await request.json().catch(() => null));
+  if (!parsed.success) return NextResponse.json({ error: "Please check the required fields, resume and answer lengths." }, { status: 400 });
+  const body = parsed.data;
+  const findReceipt = () => supabase.from("applications").select(RECEIPT_FIELDS)
+    .eq("user_id", user.id).eq("position_id", body.position_id).maybeSingle();
+  // A lost response must not turn a saved application into an apparent failure,
+  // even if the role closes or its questions change before the applicant retries.
+  const existing = await findReceipt();
+  if (existing.error) return NextResponse.json({ error: "Could not check whether your application was saved. Please retry or check My applications before starting again." }, { status: 503 });
+  if (existing.data) return NextResponse.json({ ...existing.data, already_submitted: true });
+
+  // Rate limit: max 5 submissions per user per minute.
   // Prevents runaway submit-button spam; DB unique constraint
   // already blocks duplicate (user, position) pairs.
   const oneMinuteAgo = new Date(Date.now() - 60_000).toISOString();
-  const { count: recentCount } = await supabase
+  const { count: recentCount, error: countError } = await supabase
     .from("applications")
     .select("id", { count: "exact", head: true })
     .eq("user_id", user.id)
     .gte("submitted_at", oneMinuteAgo);
-  if ((recentCount ?? 0) >= 3) {
+  if (countError) return NextResponse.json({ error: "Could not verify your application history. Please try again." }, { status: 503 });
+  if ((recentCount ?? 0) >= 5) {
     return NextResponse.json(
       { error: "Too many submissions. Please wait a moment and try again." },
       { status: 429 }
     );
   }
 
-  const body = await request.json();
-
-  // Validate required fields
-  const required = [
-    "position_id",
-    "full_name",
-    "email",
-    "program_major",
-    "year_of_study",
-    "heard_about_us",
-  ];
-  for (const field of required) {
-    if (!body[field]) {
-      return NextResponse.json(
-        { error: `Missing required field: ${field}` },
-        { status: 400 }
-      );
-    }
+  const { data: position, error: positionError } = await supabase.from("positions").select("*").eq("id", body.position_id).single();
+  if (positionError && positionError.code !== "PGRST116") {
+    return NextResponse.json({ error: "Could not check this position. Please try again." }, { status: 503 });
   }
+  if (!position || !isPositionOpen(position)) {
+    return NextResponse.json({ code: "POSITION_CLOSED", error: "This position is not accepting applications. Your draft has not been submitted." }, { status: 409 });
+  }
+  const answerError = validatePositionAnswers(body, position, user.id);
+  if (answerError) return NextResponse.json({ error: answerError }, { status: 400 });
 
   // Resume path validation. Must be in the user's own folder so a
   // crafted body can't reference someone else's upload.
@@ -70,6 +77,20 @@ export async function POST(request: Request) {
     // Generate a 7-day signed URL via service role so it works regardless
     // of the user's session at view time (admins use it too).
     const admin = createAdminClient();
+    const { data: file, error: fileError } = await admin.storage.from("resumes").info(path);
+    if (fileError || !file) {
+      return NextResponse.json({ error: "Resume not found. Please re-upload and try again." }, { status: 400 });
+    }
+    if (!file.size || file.size > MAX_RESUME_SIZE_BYTES || file.contentType !== "application/pdf") {
+      return NextResponse.json({ error: "Please upload a PDF resume no larger than 2 MB." }, { status: 400 });
+    }
+    const { data: pdf, error: downloadError } = await admin.storage.from("resumes").download(path);
+    if (downloadError || !pdf) {
+      return NextResponse.json({ error: "Could not verify your resume. Please try again." }, { status: 503 });
+    }
+    if (!pdf.size || pdf.size > MAX_RESUME_SIZE_BYTES || await pdf.slice(0, 5).text() !== "%PDF-") {
+      return NextResponse.json({ error: "Please upload a valid PDF resume no larger than 2 MB." }, { status: 400 });
+    }
     const { data: signed, error: signErr } = await admin.storage
       .from("resumes")
       .createSignedUrl(path, SIGNED_URL_TTL_SECONDS);
@@ -81,9 +102,6 @@ export async function POST(request: Request) {
       );
     }
     resumeSignedUrl = signed.signedUrl;
-  } else if (body.resume_drive_url) {
-    // Legacy path — the old form used to POST a Drive URL directly.
-    resumeSignedUrl = body.resume_drive_url;
   }
 
   // Path is encoded inside the signed URL (we don't have a separate column),
@@ -91,7 +109,7 @@ export async function POST(request: Request) {
   void resumeStoragePath;
 
   // Insert application
-  const { data, error } = await supabase
+  const { data, error } = await createAdminClient()
     .from("applications")
     .insert({
       user_id: user.id,
@@ -107,52 +125,36 @@ export async function POST(request: Request) {
       resume_filename: body.resume_filename,
       essay_answers: body.essay_answers ?? [],
     })
-    .select()
+    .select(RECEIPT_FIELDS)
     .single();
 
-  if (error) {
-    if (error.code === "23505") {
-      return NextResponse.json(
-        { error: "You have already applied for this position" },
-        { status: 409 }
-      );
-    }
-    console.error("Application insert error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error || !data?.id) {
+    // Covers a racing duplicate and an ambiguous database response after commit.
+    const recovered = await findReceipt();
+    if (!recovered.error && recovered.data) return NextResponse.json({ ...recovered.data, already_submitted: true });
+    console.error("Application insert was not confirmed:", error?.code);
+    const closed = error?.code === "23514";
+    return NextResponse.json({ code: closed ? "POSITION_CLOSED" : "SAVE_UNCONFIRMED", error: closed ? "This position is no longer accepting applications. Your draft has not been submitted." : "We could not confirm your application was saved. Please retry or check My applications before starting again." }, { status: closed ? 409 : 503 });
   }
 
-  // Get position for email + sheet sync
-  const { data: position } = await supabase
-    .from("positions")
-    .select("*")
-    .eq("id", body.position_id)
-    .single();
-
-  // Clean up draft (non-blocking)
-  try {
-    await supabase
+  // Cleanup cannot delay acknowledgement of a committed application.
+  after(async () => { try {
+    const { error: draftError } = await supabase
       .from("application_drafts")
       .delete()
       .eq("user_id", user.id)
       .eq("position_id", body.position_id);
+    if (draftError) console.error("Draft cleanup failed:", draftError.code);
   } catch (draftErr) {
     console.error("Draft cleanup error:", draftErr);
-  }
+  } });
 
-  // Sync to Google Sheet (non-blocking)
-  try {
-    if (position) {
-      await syncApplicationToSheet(
-        { ...data, tags: data.tags ?? [] },
-        position
-      );
-    }
-  } catch (sheetErr) {
-    console.error("Sheet sync error:", sheetErr);
-  }
+  // Once the delivery migration is applied, its trigger queues each save in
+  // the same transaction. Deploy this route first; migration backfills the gap.
+  after(trySheetSync);
 
-  // Send confirmation email (non-blocking)
-  try {
+  // Send confirmation after returning the saved application to the applicant.
+  after(async () => { try {
     const resend = getResend();
     await resend.emails.send({
       from: EMAIL_FROM,
@@ -167,7 +169,7 @@ export async function POST(request: Request) {
   } catch (emailErr) {
     console.error("Email send error:", emailErr);
     // Don't fail the submission if email fails
-  }
+  } });
 
   return NextResponse.json(data, { status: 201 });
 }
@@ -195,8 +197,8 @@ export async function GET(request: Request) {
   const admin = createAdminClient();
   let query = admin
     .from("applications")
-    .select("*, position:positions(*)")
-    .order("submitted_at", { ascending: false });
+    .select("*, position:positions!inner(*)")
+    .order("submitted_at", { ascending: false }).order("id", { ascending: false });
 
   if (role) {
     // Filter by position slug via join
@@ -209,11 +211,16 @@ export async function GET(request: Request) {
     query = query.contains("tags", [tag]);
   }
 
-  const { data, error } = await query;
+  const offset = Number(searchParams.get("offset") ?? 0);
+  const limit = Number(searchParams.get("limit") ?? 500);
+  if (!Number.isSafeInteger(offset) || offset < 0 || !Number.isSafeInteger(limit) || limit < 1 || limit > 500) {
+    return NextResponse.json({ error: "Invalid page range" }, { status: 400 });
+  }
+  const { data, error } = await query.range(offset, offset + limit - 1);
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json(data ?? []);
+  return NextResponse.json(data ?? [], { headers: { "Cache-Control": "no-store" } });
 }

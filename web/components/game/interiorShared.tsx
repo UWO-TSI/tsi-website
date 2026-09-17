@@ -10,7 +10,11 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { useGLTF } from "@react-three/drei";
+import { bindGameKeys } from "@/lib/game/keyboardInput";
+import { PIECE_TINTS, type Tint } from "@/lib/game/furniturePalettes";
 import * as THREE from "three";
+import ApplicantCharacter, { type ApplicantMotion } from "@/components/recruit/ApplicantCharacter";
+import { easeFacing } from "@/lib/game/locomotion";
 
 export interface InteriorStation {
   id: string;
@@ -36,7 +40,7 @@ const keys: Record<string, boolean> = {};
 let _walkTex: THREE.Texture | null = null;
 function getWalkTexture(): THREE.Texture {
   if (!_walkTex) {
-    const tex = new THREE.TextureLoader().load("/assets/characters/player_walk.png");
+    const tex = new THREE.Texture();
     tex.magFilter = THREE.NearestFilter;
     tex.minFilter = THREE.NearestFilter;
     tex.generateMipmaps = false;
@@ -48,15 +52,28 @@ function getWalkTexture(): THREE.Texture {
   return _walkTex;
 }
 
+let walkLoading = false;
+function loadWalkTexture() {
+  if (walkLoading) return;
+  walkLoading = true;
+  const image = new Image();
+  image.onload = () => { const tex = getWalkTexture(); tex.image = image; tex.needsUpdate = true; };
+  image.onerror = () => { walkLoading = false; };
+  image.src = "/assets/characters/player_walk.png";
+}
+
 // Module escape hatches for imperative three mutations (react-compiler).
 export function applyInteriorBackdrop(scene: THREE.Scene, color = "#14100C"): () => void {
   const prevBg = scene.background;
   const prevFog = scene.fog;
-  scene.background = new THREE.Color(color);
+  const backdrop = new THREE.Color(color);
+  scene.background = backdrop;
   scene.fog = null;
   return () => {
-    scene.background = prevBg;
-    scene.fog = prevFog;
+    // R3F may already have attached the next scene's backdrop before effect
+    // cleanup. Restore only values this interior still owns.
+    if (scene.background === backdrop) scene.background = prevBg;
+    if (scene.fog === null) scene.fog = prevFog;
   };
 }
 
@@ -68,51 +85,57 @@ function followInteriorCamera(camera: THREE.Camera, px: number, pz: number, delt
 }
 
 export function InteriorPlayer({
+  avatarMode = "sprite",
   frozen,
   bounds,
   playerPosRef,
   onMove,
+  constrainMove,
 }: {
+  avatarMode?: "sprite" | "applicant";
   frozen: boolean;
   bounds: RoomBounds;
   playerPosRef: React.MutableRefObject<THREE.Vector3>;
   onMove: (x: number, z: number) => void;
+  constrainMove?: (x: number, z: number, nx: number, nz: number) => [number, number];
 }) {
   const meshRef = useRef<THREE.Mesh>(null);
+  const applicantMotion = useRef<ApplicantMotion>({ speed: 0, yaw: 0, lift: 0.018 });
   const groupRef = useRef<THREE.Group>(null);
   const posRef = useRef({ x: bounds.spawn[0], z: bounds.spawn[1] });
   const targetRef = useRef<{ x: number; z: number } | null>(null);
   const dirRef = useRef(1);
   const animRef = useRef(0);
-  const frozenRef = useRef(frozen);
-  useEffect(() => { frozenRef.current = frozen; }, [frozen]);
   const tex = useMemo(() => getWalkTexture(), []);
+  useEffect(loadWalkTexture, []);
   const { camera } = useThree();
 
   useEffect(() => {
-    const down = (e: KeyboardEvent) => { keys[e.key.toLowerCase()] = true; };
-    const up = (e: KeyboardEvent) => { keys[e.key.toLowerCase()] = false; };
-    window.addEventListener("keydown", down);
-    window.addEventListener("keyup", up);
-    return () => {
-      window.removeEventListener("keydown", down);
-      window.removeEventListener("keyup", up);
-    };
-  }, []);
+    if (frozen) return;
+    return bindGameKeys({ keys,
+      accepted: ["w", "a", "s", "d", "arrowup", "arrowdown", "arrowleft", "arrowright"],
+      onReset: () => { targetRef.current = null; },
+      onPress: (event) => event.preventDefault(),
+    });
+  }, [frozen]);
 
   useEffect(() => {
     const onTarget = (e: Event) => {
+      if (frozen) return;
       const { x, z } = (e as CustomEvent<{ x: number; z: number }>).detail;
       targetRef.current = { x, z };
     };
     window.addEventListener("tsi:interior-move", onTarget);
     return () => window.removeEventListener("tsi:interior-move", onTarget);
-  }, []);
+  }, [frozen]);
 
-  useFrame((_, delta) => {
+  useFrame((_, elapsed) => {
+    const delta = Math.min(elapsed, 0.1);
+    if (frozen) targetRef.current = null;
     const p = posRef.current;
+    const previousX = p.x, previousZ = p.z;
     let vx = 0, vz = 0;
-    if (!frozenRef.current) {
+    if (!frozen) {
       if (keys["w"] || keys["arrowup"]) vz += 1;
       if (keys["s"] || keys["arrowdown"]) vz -= 1;
       if (keys["a"] || keys["arrowleft"]) vx += 1;
@@ -132,8 +155,9 @@ export function InteriorPlayer({
 
     const moving = vx !== 0 || vz !== 0;
     if (moving) {
-      p.x = THREE.MathUtils.clamp(p.x + vx * PLAYER_SPEED * delta, -bounds.halfW + WALK_MARGIN, bounds.halfW - WALK_MARGIN);
-      p.z = THREE.MathUtils.clamp(p.z + vz * PLAYER_SPEED * delta, -bounds.halfD + WALK_MARGIN, bounds.halfD - WALK_MARGIN);
+      const nx = THREE.MathUtils.clamp(p.x + vx * PLAYER_SPEED * delta, -bounds.halfW + WALK_MARGIN, bounds.halfW - WALK_MARGIN);
+      const nz = THREE.MathUtils.clamp(p.z + vz * PLAYER_SPEED * delta, -bounds.halfD + WALK_MARGIN, bounds.halfD - WALK_MARGIN);
+      [p.x, p.z] = constrainMove ? constrainMove(p.x, p.z, nx, nz) : [nx, nz];
       dirRef.current = Math.abs(vx) > Math.abs(vz) ? (vx > 0 ? 2 : 3) : vz > 0 ? 1 : 0;
       animRef.current += delta * FRAME_RATE;
       onMove(p.x, p.z);
@@ -147,6 +171,8 @@ export function InteriorPlayer({
     tex.offset.set(col / SHEET_COLS, 1 - (row + 1) / SHEET_ROWS);
 
     if (groupRef.current) groupRef.current.position.set(p.x, 0, p.z);
+    applicantMotion.current.speed = delta > 0 ? Math.hypot(p.x - previousX, p.z - previousZ) / delta : 0;
+    if (moving) applicantMotion.current.yaw = easeFacing(applicantMotion.current.yaw, Math.atan2(vx, vz), 10, delta);
     if (meshRef.current) {
       const bob = moving ? Math.sin(animRef.current * Math.PI) * 0.04 : Math.sin(performance.now() / 600) * 0.015;
       meshRef.current.position.y = 0.82 + bob;
@@ -156,14 +182,14 @@ export function InteriorPlayer({
 
   return (
     <group ref={groupRef} position={[bounds.spawn[0], 0, bounds.spawn[1]]}>
-      <mesh position={[0, 0.82, -0.012]} scale={[1.07, 1.07, 1]}>
+      {avatarMode === "applicant" ? <ApplicantCharacter motion={applicantMotion} frozen={frozen} walkSpeed={PLAYER_SPEED} /> : <><mesh position={[0, 0.82, -0.012]} scale={[1.07, 1.07, 1]}>
         <planeGeometry args={[1.45, 1.45]} />
         <meshBasicMaterial map={tex} color="#2A2118" transparent opacity={0.55} alphaTest={0.1} side={THREE.DoubleSide} depthWrite={false} />
       </mesh>
       <mesh ref={meshRef} position={[0, 0.82, 0]}>
         <planeGeometry args={[1.45, 1.45]} />
         <meshBasicMaterial map={tex} transparent alphaTest={0.1} side={THREE.DoubleSide} />
-      </mesh>
+      </mesh></>}
       <mesh position={[0, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <circleGeometry args={[0.42, 20]} />
         <meshBasicMaterial color="#000000" transparent opacity={0.18} depthWrite={false} />
@@ -173,15 +199,179 @@ export function InteriorPlayer({
 }
 
 const FURNITURE_BASE = "/assets/acnh/furniture";
+const RESTORED_PIECES = new Set(["study-desk", "study-chair", "bookshelf", "wooden-chest", "bulletinboard", "antique-clock", "plant-monstera", "plant-yucca", "reading-table"]);
+const pieceUrl = (name: string) => `${FURNITURE_BASE}/${name}.glb${name === "clubhouse-pendant" ? "?v=white-20260917" : RESTORED_PIECES.has(name) ? "?v=hq-textures-20260917" : ""}`;
 
-export function Piece({ name, position, rotY = 0, scale = 0.1 }: { name: string; position: [number, number, number]; rotY?: number; scale?: number }) {
-  const { scene } = useGLTF(`${FURNITURE_BASE}/${name}.glb`);
-  const clone = useMemo(() => scene.clone(true), [scene]);
+/**
+ * Recolor pipeline (2026-07-25): tint the clone's materials by name.
+ * Materials are CLONED before coloring — scene.clone(true) shares
+ * materials with the GLTF cache, so mutating in place would repaint
+ * every instance of the piece everywhere.
+ */
+export function applyTint(root: THREE.Object3D, tint: Tint): void {
+  root.traverse((o) => {
+    const mesh = o as THREE.Mesh;
+    if (!mesh.isMesh) return;
+    const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+    const tinted = mats.map((m) => {
+      const name = (m.name || "").toLowerCase();
+      const slot = Object.keys(tint).find((k) => k !== "*" && name.includes(k.toLowerCase()));
+      const hex = slot ? tint[slot] : tint["*"];
+      if (!hex) return m;
+      const c = m.clone() as THREE.MeshStandardMaterial;
+      if (c.color) c.color.set(hex);
+      return c;
+    });
+    mesh.material = Array.isArray(mesh.material) ? tinted : tinted[0];
+  });
+}
+
+export function Piece({ name, position, rotY = 0, rotX = 0, scale = 0.1, tint, glassMaterial, shadows = false }: { name: string; position: [number, number, number]; rotY?: number; rotX?: number; scale?: number; tint?: Tint | null; glassMaterial?: string; shadows?: boolean }) {
+  const { scene } = useGLTF(pieceUrl(name));
+  const clone = useMemo(() => {
+    const c = scene.clone(true);
+    c.traverse(object => {
+      if (!(object instanceof THREE.Mesh)) return;
+      object.castShadow = shadows;
+      object.receiveShadow = shadows;
+    });
+    // undefined = auto-apply the piece's ruled tint; null = force base.
+    const t = tint === null ? undefined : tint ?? PIECE_TINTS[name];
+    if (t) applyTint(c, t);
+    if (glassMaterial) c.traverse(object => {
+      if (!(object instanceof THREE.Mesh)) return;
+      const materials = Array.isArray(object.material) ? object.material : [object.material];
+      const adjusted = materials.map(material => {
+        if (material.name !== glassMaterial) return material;
+        const glass = material.clone();
+        glass.transparent = true;
+        glass.opacity = 0.12;
+        glass.depthWrite = false;
+        return glass;
+      });
+      object.material = Array.isArray(object.material) ? adjusted : adjusted[0];
+    });
+    if (rotX) {
+      c.rotation.x = rotX;
+      c.updateMatrixWorld(true);
+      const bounds = new THREE.Box3().setFromObject(c);
+      const center = bounds.getCenter(new THREE.Vector3());
+      c.position.set(-center.x, -bounds.min.y, -center.z);
+      const grounded = new THREE.Group();
+      grounded.add(c);
+      return grounded;
+    }
+    return c;
+  }, [scene, name, tint, rotX, glassMaterial, shadows]);
   return <primitive object={clone} position={position} rotation={[0, rotY, 0]} scale={[scale, scale, scale]} />;
 }
 
 export function preloadPieces(names: string[]): void {
-  names.forEach((n) => useGLTF.preload(`${FURNITURE_BASE}/${n}.glb`));
+  names.forEach((n) => useGLTF.preload(pieceUrl(n)));
+}
+
+/**
+ * InteriorKeeper (wake 69, generalized from wake 68's WharfKeeper) — the
+ * procedural staff figure: idle bob + a damped friendly lean when the
+ * player steps into `watch` range. Hat variants give each room its person.
+ * Presence only (principle #2); actions stay on the stations.
+ */
+export function InteriorKeeper({ position, rotY = Math.PI, watch, colors, hat, playerPosRef }: {
+  position: [number, number, number];
+  rotY?: number;
+  watch: [number, number];
+  colors: { apron: string; shirt: string };
+  hat: "straw" | "cap" | "bun" | "hood" | "none";
+  playerPosRef: React.MutableRefObject<THREE.Vector3>;
+}) {
+  return (
+    <group position={position} rotation={[0, rotY, 0]}>
+      <KeeperBody watch={watch} colors={colors} hat={hat} playerPosRef={playerPosRef} />
+    </group>
+  );
+}
+
+function KeeperBody({ watch, colors, hat, playerPosRef }: {
+  watch: [number, number];
+  colors: { apron: string; shirt: string };
+  hat: "straw" | "cap" | "bun" | "hood" | "none";
+  playerPosRef: React.MutableRefObject<THREE.Vector3>;
+}) {
+  const ref = useRef<THREE.Group>(null);
+  useFrame(({ clock }) => {
+    const g = ref.current;
+    if (!g) return;
+    const t = clock.elapsedTime;
+    g.position.y = Math.sin(t * 1.6) * 0.03;
+    const p = playerPosRef.current;
+    const near = Math.hypot(p.x - watch[0], p.z - watch[1]) < 2.6;
+    g.rotation.x = THREE.MathUtils.damp(g.rotation.x, near ? 0.12 : 0, 3, 0.016);
+    g.rotation.z = Math.sin(t * 0.9) * 0.02;
+  });
+  return (
+    <group ref={ref}>
+      <mesh position={[0, 0.52, 0]}>
+        <capsuleGeometry args={[0.26, 0.5, 4, 10]} />
+        <meshStandardMaterial color={colors.apron} roughness={0.9} />
+      </mesh>
+      <mesh position={[0, 0.62, -0.02]}>
+        <capsuleGeometry args={[0.235, 0.3, 4, 10]} />
+        <meshStandardMaterial color={colors.shirt} roughness={0.9} />
+      </mesh>
+      <mesh position={[0, 1.12, 0]}>
+        <sphereGeometry args={[0.21, 12, 10]} />
+        <meshStandardMaterial color="#F0C8A0" roughness={0.85} />
+      </mesh>
+      <mesh position={[0, 1.09, 0.2]}>
+        <sphereGeometry args={[0.045, 8, 6]} />
+        <meshStandardMaterial color="#E5B48C" roughness={0.85} />
+      </mesh>
+      {hat === "straw" && (
+        <group>
+          <mesh position={[0, 1.3, 0]}>
+            <cylinderGeometry args={[0.34, 0.36, 0.035, 12]} />
+            <meshStandardMaterial color="#C9AE6A" roughness={0.95} flatShading />
+          </mesh>
+          <mesh position={[0, 1.38, 0]}>
+            <cylinderGeometry args={[0.15, 0.19, 0.14, 10]} />
+            <meshStandardMaterial color="#BFA35E" roughness={0.95} flatShading />
+          </mesh>
+        </group>
+      )}
+      {hat === "cap" && (
+        <group>
+          <mesh position={[0, 1.29, 0]}>
+            <sphereGeometry args={[0.2, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2]} />
+            <meshStandardMaterial color="#4E7A52" roughness={0.9} flatShading />
+          </mesh>
+          <mesh position={[0, 1.24, 0.2]} rotation={[0.25, 0, 0]}>
+            <cylinderGeometry args={[0.13, 0.15, 0.02, 10]} />
+            <meshStandardMaterial color="#436A47" roughness={0.9} flatShading />
+          </mesh>
+        </group>
+      )}
+      {hat === "bun" && (
+        <mesh position={[0, 1.31, -0.08]}>
+          <sphereGeometry args={[0.11, 8, 6]} />
+          <meshStandardMaterial color="#5A4632" roughness={0.9} />
+        </mesh>
+      )}
+      {hat === "hood" && (
+        <mesh position={[0, 1.22, -0.03]} rotation={[0.2, 0, 0]}>
+          <sphereGeometry args={[0.26, 10, 8, 0, Math.PI * 2, 0, Math.PI / 1.6]} />
+          <meshStandardMaterial color="#5A4A7E" roughness={0.92} flatShading />
+        </mesh>
+      )}
+      <mesh position={[-0.3, 0.62, 0.1]} rotation={[0.5, 0, 0.35]}>
+        <capsuleGeometry args={[0.07, 0.3, 3, 8]} />
+        <meshStandardMaterial color={colors.shirt} roughness={0.9} />
+      </mesh>
+      <mesh position={[0.3, 0.62, 0.1]} rotation={[0.5, 0, -0.35]}>
+        <capsuleGeometry args={[0.07, 0.3, 3, 8]} />
+        <meshStandardMaterial color={colors.shirt} roughness={0.9} />
+      </mesh>
+    </group>
+  );
 }
 
 /** Nearest-station helper shared by all rooms. */

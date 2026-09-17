@@ -1,13 +1,17 @@
 "use client";
 
-import { useRef, useState, useMemo, useEffect } from "react";
+import { useRef, useState, useMemo, useEffect, type RefObject } from "react";
 import { useFrame, ThreeEvent } from "@react-three/fiber";
 import { Billboard, Html } from "@react-three/drei";
 import * as THREE from "three";
 import { getTerrainHeight } from "./terrain";
 import { getBlobTexture } from "./BlobShadows";
+import { curvedSpriteRaycast } from "@/lib/game/spritePicking";
+import { npcSpriteSources } from "@/lib/game/npcSprites";
+import { calculateCurvedHtmlPosition } from "@/lib/game/worldProjection";
 import { AudioManager } from "@/lib/game/audio";
-import type { NPCPersona } from "@/lib/game/contentTypes";
+import type { NPCPersona } from "@/lib/content/types";
+
 
 /**
  * NPC (sprint D5; sprites landed 2026-07-03 cozy push) — billboard for a
@@ -15,10 +19,9 @@ import type { NPCPersona } from "@/lib/game/contentTypes";
  *
  * With `persona.sprite_url` set, renders the front-facing cell of a 64x16
  * Ninja Adventure CC0 idle sheet (columns are DIRECTIONS, not frames) with
- * NearestFilter. Falls back to the original hue-hashed quad while
- * the texture loads, on load error, or when sprite_url is null — the world
- * never shows an empty NPC (principle #2). Non-Suspense TextureLoader,
- * matching PlayerAvatar's pattern.
+ * NearestFilter. Old seed URLs resolve to bundled art; unavailable custom
+ * art retries a stable bundled sprite. A hue-hashed quad remains visible
+ * during loading or if both assets fail (principle #2).
  *
  * Click fires onClick (GameWorld wires this to setActiveNPC → D4 overlay).
  */
@@ -29,12 +32,16 @@ interface NPCProps {
   persona: NPCPersona;
   position: [number, number, number];
   playerPosition?: THREE.Vector3;
+  playerPositionRef?: RefObject<THREE.Vector3>;
+  worldPositionRef?: RefObject<THREE.Vector3>;
+  groundHeight?: (x: number, z: number) => number;
+  constrainMove?: (x: number, z: number, nx: number, nz: number) => [number, number];
   onClick: () => void;
 }
 
 const QUAD_WIDTH = 1.2;
 const QUAD_HEIGHT = 1.6;
-const NAMEPLATE_OFFSET = QUAD_HEIGHT / 2 + 0.5;
+const NAMEPLATE_OFFSET = QUAD_HEIGHT + 0.45;
 // P10: how close before the NPC visually "notices" the player (bob + "!"
 // indicator above head). Matches the keyboard-interact range felt in
 // playtest so the cue arrives just before the prompt would.
@@ -90,28 +97,46 @@ function wanderOffset(t: number, phase: number): [number, number] {
   return [x, z];
 }
 
-export default function NPC({ persona, position, playerPosition, onClick }: NPCProps) {
+export default function NPC({ persona, position, playerPosition, playerPositionRef, worldPositionRef, groundHeight = getTerrainHeight, constrainMove, onClick }: NPCProps) {
   const groupRef = useRef<THREE.Group>(null);
-  const meshRef = useRef<THREE.Mesh>(null);
+  const visualRef = useRef<THREE.Group>(null);
   const [hovered, setHovered] = useState(false);
   const [noticed, setNoticed] = useState(false);
   // G2 speech bubble state + timers (refs so useFrame can read/write freely).
   const [bubble, setBubble] = useState<string | null>(null);
   const bubbleUntilRef = useRef(0);
   const bubbleCooldownRef = useRef(0);
+  const voiceTimers = useRef<number[]>([]);
+  useEffect(() => () => { voiceTimers.current.forEach(window.clearTimeout); }, []);
   // P10: per-frame bob clock + smoothed proximity factor (0 = far, 1 = next
   // to the NPC). Drives idle bob amplitude so the NPC subtly leans in as
   // the player approaches.
   const clockRef = useRef(0);
   const proxRef = useRef(0);
+  // Loop iter 8 (2026-07-24): greeting hop — when a chat opens with this
+  // NPC (tsi:npc-greet {id}), fire the same hop as the startle. Cheap
+  // delight: they bounce hello as the overlay slides in.
+  useEffect(() => {
+    const onGreet = (e: Event) => {
+      const d = (e as CustomEvent<{ id: string }>).detail;
+      if (d?.id === persona.id) greetAtRef.current = performance.now();
+    };
+    window.addEventListener("tsi:npc-greet", onGreet);
+    return () => window.removeEventListener("tsi:npc-greet", onGreet);
+  }, [persona.id]);
+
   // G4 (item 8): startle hop when the player barges in close — a little
   // 0.35s bounce with a 3s cooldown.
   const hopRef = useRef({ t: -1, cooldownUntil: 0 });
+  // Greet hop trigger: listener stamps the time; the frame loop only READS
+  // it (react-compiler forbids frame-writes to effect-shared refs) — the
+  // 150ms window + the hop.t latch make it one-shot.
+  const greetAtRef = useRef(0);
 
   // Spawn base (XZ). W1: the NPC wanders around this within WANDER_RADIUS.
   const grounded: [number, number, number] = useMemo(() => {
-    return [position[0], getTerrainHeight(position[0], position[2]), position[2]];
-  }, [position]);
+    return [position[0], groundHeight(position[0], position[2]), position[2]];
+  }, [position, groundHeight]);
   // Deterministic per-NPC wander phase from the slug hash.
   const wanderPhase = useMemo(() => slugToHue(persona.slug) * 0.017, [persona.slug]);
 
@@ -125,39 +150,37 @@ export default function NPC({ persona, position, playerPosition, onClick }: NPCP
   // animation mutates through the ref (state values can't be mutated) —
   // each React Compiler rule sees only its legal access path.
   const spriteTexRef = useRef<THREE.Texture | null>(null);
-  const [spriteTex, setSpriteTex] = useState<THREE.Texture | null>(null);
+  const sources = useMemo(() => npcSpriteSources(persona.sprite_url, persona.slug), [persona.sprite_url, persona.slug]);
+  const [loadedSprite, setLoadedSprite] = useState<{ source: string; texture: THREE.Texture } | null>(null);
+  const spriteTex = loadedSprite?.source === sources.primary ? loadedSprite.texture : null;
   useEffect(() => {
-    if (!persona.sprite_url) return;
     let cancelled = false;
-    const loader = new THREE.TextureLoader();
-    loader.load(
-      persona.sprite_url,
-      (tex) => {
-        if (cancelled) {
-          tex.dispose();
-          return;
-        }
-        // L12 colorspace audit: sprite sheets are albedo → sRGB
+    const loader = new THREE.TextureLoader(new THREE.LoadingManager());
+    const textures = new Set<THREE.Texture>();
+    const load = (url: string) => {
+      const texture = loader.load(url, (tex) => {
+        if (cancelled) { tex.dispose(); return; }
         tex.colorSpace = THREE.SRGBColorSpace;
         tex.magFilter = THREE.NearestFilter;
         tex.minFilter = THREE.NearestFilter;
         tex.generateMipmaps = false;
-        tex.colorSpace = THREE.SRGBColorSpace;
         tex.repeat.set(1 / SPRITE_FRAMES, 1);
         spriteTexRef.current = tex;
-        setSpriteTex(tex);
-      },
-      undefined,
-      () => {
-        /* load error → keep the hue-quad fallback */
-      }
-    );
+        setLoadedSprite({ source: sources.primary, texture: tex });
+      }, undefined, () => {
+        texture.dispose();
+        textures.delete(texture);
+        if (!cancelled && url !== sources.fallback) load(sources.fallback);
+      });
+      textures.add(texture);
+    };
+    load(sources.primary);
     return () => {
       cancelled = true;
-      spriteTexRef.current?.dispose();
+      textures.forEach((texture) => texture.dispose());
       spriteTexRef.current = null;
     };
-  }, [persona.sprite_url]);
+  }, [sources]);
 
   // Daily village life v1: the anchor eases toward the (phase-dependent)
   // spawn base so a time-of-day move reads as a slow stroll, not a snap.
@@ -174,14 +197,16 @@ export default function NPC({ persona, position, playerPosition, onClick }: NPCP
 
     // W1: current wandered XZ around the (eased) spawn base.
     const [wx, wz] = wanderOffset(clockRef.current, wanderPhase);
-    const curX = eb[0] + wx;
-    const curZ = eb[1] + wz;
+    const [curX, curZ] = constrainMove
+      ? constrainMove(grounded[0], grounded[2], eb[0] + wx, eb[1] + wz)
+      : [eb[0] + wx, eb[1] + wz];
 
     // Distance to player uses the wandered position (XZ only).
     let dist = Infinity;
-    if (playerPosition) {
-      const dx = playerPosition.x - curX;
-      const dz = playerPosition.z - curZ;
+    const player = playerPositionRef?.current ?? playerPosition;
+    if (player) {
+      const dx = player.x - curX;
+      const dz = player.z - curZ;
       dist = Math.hypot(dx, dz);
     }
     const targetProx = THREE.MathUtils.clamp(1 - dist / NOTICE_RANGE, 0, 1);
@@ -191,6 +216,11 @@ export default function NPC({ persona, position, playerPosition, onClick }: NPCP
 
     // G4 startle hop trigger.
     const hop = hopRef.current;
+    const greeted = performance.now() - greetAtRef.current < 150;
+    if (greeted && hop.t < 0) {
+      hop.t = 0;
+      hop.cooldownUntil = clockRef.current + 2;
+    }
     if (dist < 1.05 && hop.t < 0 && clockRef.current > hop.cooldownUntil) {
       hop.t = 0;
       hop.cooldownUntil = clockRef.current + 3;
@@ -215,16 +245,16 @@ export default function NPC({ persona, position, playerPosition, onClick }: NPCP
       setBubble(line);
       // A couple of staggered voice blips sell the "they said something".
       AudioManager.playBlip();
-      window.setTimeout(() => AudioManager.playBlip(), 140);
-      window.setTimeout(() => AudioManager.playBlip(), 300);
+      voiceTimers.current.forEach(window.clearTimeout);
+      voiceTimers.current = [140, 300].map((delay) => window.setTimeout(() => AudioManager.playBlip(), delay));
     }
     if (bubble && now > bubbleUntilRef.current) setBubble(null);
 
-    if (meshRef.current) {
+    if (visualRef.current) {
       // Hover takes precedence over notice scale; both feel like attention.
       const scaleTarget = hovered ? 1.05 : 1 + proxRef.current * 0.04;
-      const next = THREE.MathUtils.damp(meshRef.current.scale.x, scaleTarget, 12, delta);
-      meshRef.current.scale.set(next, next, next);
+      const next = THREE.MathUtils.damp(visualRef.current.scale.x, scaleTarget, 12, delta);
+      visualRef.current.scale.set(next, next, next);
     }
 
     // Idle bob + W1 wander drift. XZ eases to the wandered spot; y resamples
@@ -232,8 +262,10 @@ export default function NPC({ persona, position, playerPosition, onClick }: NPCP
     if (groupRef.current) {
       const amp = 0.04 + proxRef.current * 0.08;
       const bob = Math.sin(clockRef.current * Math.PI * 1.8) * amp;
-      const gy = getTerrainHeight(curX, curZ);
-      groupRef.current.position.set(curX, gy + bob + hopY, curZ);
+      const gy = groundHeight(curX, curZ);
+      groupRef.current.position.set(curX, gy, curZ);
+      worldPositionRef?.current.copy(groupRef.current.position);
+      if (visualRef.current) visualRef.current.position.y = bob + hopY;
     }
 
     // Idle sheets put DIRECTIONS in columns (down/up/left/right), not
@@ -241,7 +273,7 @@ export default function NPC({ persona, position, playerPosition, onClick }: NPCP
     // layout audit). Pin the front-facing column; the bob is the idle life.
     const tex = spriteTexRef.current;
     if (tex && tex.offset.x !== 0) tex.offset.x = 0;
-  });
+  }, -3);
 
   const handlePointerOver = (e: ThreeEvent<PointerEvent>) => {
     e.stopPropagation();
@@ -255,6 +287,7 @@ export default function NPC({ persona, position, playerPosition, onClick }: NPCP
   };
   const handleClick = (e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation();
+    e.nativeEvent.preventDefault();
     onClick();
   };
 
@@ -265,22 +298,8 @@ export default function NPC({ persona, position, playerPosition, onClick }: NPCP
         <planeGeometry args={[0.8, 0.55]} />
         <meshBasicMaterial map={getBlobTexture()} transparent opacity={0.3} depthWrite={false} polygonOffset polygonOffsetFactor={-2} polygonOffsetUnits={-2} />
       </mesh>
+      <group ref={visualRef}>
       <Billboard follow lockX={false} lockY={false} lockZ={false}>
-        {/* P25: soft warm glow that fades in when player is near. Sits
-            behind the rim + fill, larger and faded so it reads as a halo
-            rather than a hard outline. Opacity tied to noticed state. */}
-        {noticed && (
-          <mesh position={[0, QUAD_HEIGHT / 2, -0.005]}>
-            <planeGeometry args={[QUAD_WIDTH + 0.9, QUAD_HEIGHT + 0.9]} />
-            <meshBasicMaterial
-              color="#FFE9B5"
-              transparent
-              opacity={0.28}
-              side={THREE.DoubleSide}
-              depthWrite={false}
-            />
-          </mesh>
-        )}
         {spriteTex ? (
           /* Pixel-art idle sprite. Square quad (frames are 16x16); sits with
              feet at ground. P-light v2: dark silhouette halo behind the
@@ -299,7 +318,8 @@ export default function NPC({ persona, position, playerPosition, onClick }: NPCP
             />
           </mesh>
           <mesh
-            ref={meshRef}
+            key="npc-sprite"
+            raycast={curvedSpriteRaycast}
             position={[0, QUAD_HEIGHT / 2, 0]}
             onClick={handleClick}
             onPointerOver={handlePointerOver}
@@ -308,10 +328,11 @@ export default function NPC({ persona, position, playerPosition, onClick }: NPCP
             <planeGeometry args={[QUAD_HEIGHT, QUAD_HEIGHT]} />
             <meshBasicMaterial
               map={spriteTex}
-              transparent
+              color="#ffffff"
+              opacity={1}
               alphaTest={0.05}
               side={THREE.DoubleSide}
-              depthWrite={false}
+              depthWrite
             />
           </mesh>
           </>
@@ -330,7 +351,8 @@ export default function NPC({ persona, position, playerPosition, onClick }: NPCP
             </mesh>
             {/* Fill quad — clickable */}
             <mesh
-              ref={meshRef}
+              key="npc-placeholder"
+              raycast={curvedSpriteRaycast}
               position={[0, QUAD_HEIGHT / 2, 0]}
               onClick={handleClick}
               onPointerOver={handlePointerOver}
@@ -349,22 +371,15 @@ export default function NPC({ persona, position, playerPosition, onClick }: NPCP
         )}
       </Billboard>
 
-      {/* Ground shadow disc — keeps NPCs grounded visually */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
-        <circleGeometry args={[QUAD_WIDTH * 0.45, 16]} />
-        <meshBasicMaterial color="#000000" transparent opacity={0.25} depthWrite={false} />
-      </mesh>
-
       {/* G2: proximity speech bubble — ACNH-style rounded white bubble with
           a tail, floating above the nameplate. Pointer-events off so it
           never blocks the click-to-chat hitbox. */}
       {bubble && (
-        <Html
+        <Html calculatePosition={calculateCurvedHtmlPosition}
           zIndexRange={[40, 0]}
-          position={[0, NAMEPLATE_OFFSET + QUAD_HEIGHT + 0.6, 0]}
+          position={[0, NAMEPLATE_OFFSET + 0.95, 0]}
           center
           style={{ pointerEvents: "none" }}
-          distanceFactor={10}
         >
           <div
             style={{
@@ -412,12 +427,11 @@ export default function NPC({ persona, position, playerPosition, onClick }: NPCP
       {/* P10: notice indicator — appears when player enters NOTICE_RANGE.
           A subtle "!" bubble that signals "I see you, click to talk".
           Mounted/unmounted by `noticed` state so animations restart cleanly. */}
-      {noticed && (
-        <Html zIndexRange={[40, 0]}
-          position={[0, NAMEPLATE_OFFSET + QUAD_HEIGHT + 0.7, 0]}
+      {noticed && !bubble && (
+        <Html calculatePosition={calculateCurvedHtmlPosition} zIndexRange={[40, 0]}
+          position={[0, NAMEPLATE_OFFSET + 0.65, 0]}
           center
           style={{ pointerEvents: "none" }}
-          distanceFactor={10}
         >
           <div
             style={{
@@ -451,11 +465,10 @@ export default function NPC({ persona, position, playerPosition, onClick }: NPCP
       {/* Nameplate — proximity-gated (art pass pt2): always-on plates over
           every NPC read as map clutter; they reveal alongside the greeting. */}
       {(noticed || hovered) && (
-      <Html zIndexRange={[40, 0]}
-        position={[0, NAMEPLATE_OFFSET + QUAD_HEIGHT, 0]}
+      <Html calculatePosition={calculateCurvedHtmlPosition} zIndexRange={[40, 0]}
+        position={[0, NAMEPLATE_OFFSET, 0]}
         center
         style={{ pointerEvents: "none" }}
-        distanceFactor={10}
       >
         <div
           className="whitespace-nowrap text-center"
@@ -468,7 +481,7 @@ export default function NPC({ persona, position, playerPosition, onClick }: NPCP
         >
           <div
             style={{
-              fontSize: "13px",
+              fontSize: "11px",
               fontWeight: 700,
               color: "#f1ffff",
               fontFamily: "'IBM Plex Mono', monospace",
@@ -480,6 +493,7 @@ export default function NPC({ persona, position, playerPosition, onClick }: NPCP
         </div>
       </Html>
       )}
+      </group>
     </group>
   );
 }

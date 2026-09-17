@@ -9,13 +9,21 @@
  * Undiscovered items render greyed with a "?" so there's a completion pull.
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { FISH, RARITY_META, iconFor, type FishDef } from "@/lib/game/fishing";
+import { AudioManager } from "@/lib/game/audio";
+import { localCollections, mergeWithLocal } from "@/lib/game/collections";
 import { X } from "lucide-react";
 
 interface Row {
   item_key: string;
   count: number;
 }
+
+// Almanac lookup (loop wake 29): clicking a DISCOVERED fish/sea-floor tile
+// shows its field notes — window, size, zone, rarity. Only these two groups
+// carry FishDef data; other groups' tiles stay non-interactive.
+const FISH_BY_KEY = new Map<string, FishDef>(FISH.map((f) => [f.key, f]));
 
 // img: rendered ACNH icon (assets/acnh/icons, 2026-07-13); emoji stays the fallback.
 const CATALOG: { group: string; items: { key: string; icon: string; img?: string; name: string }[] }[] = [
@@ -48,16 +56,14 @@ const CATALOG: { group: string; items: { key: string; icon: string; img?: string
     // Legacy generic keys retired pre-launch (no real member data).
     group: "Fish",
     items: [
-      { key: "fish_dace", img: "/assets/acnh/icons/fish_dace.png", icon: "🐟", name: "Dace" },
-      { key: "fish_crucian_carp", img: "/assets/acnh/icons/fish_crucian_carp.png", icon: "🐟", name: "Crucian Carp" },
-      { key: "fish_bluegill", img: "/assets/acnh/icons/fish_bluegill.png", icon: "🐠", name: "Bluegill" },
-      { key: "fish_black_bass", img: "/assets/acnh/icons/fish_black_bass.png", icon: "🐡", name: "Black Bass" },
-      { key: "fish_carp", img: "/assets/acnh/icons/fish_carp.png", icon: "🐟", name: "Carp" },
-      { key: "fish_goldfish", img: "/assets/acnh/icons/fish_goldfish.png", icon: "🐠", name: "Goldfish" },
-      { key: "fish_pale_chub", img: "/assets/acnh/icons/fish_pale_chub.png", icon: "🐟", name: "Pale Chub" },
-      { key: "fish_pond_smelt", img: "/assets/acnh/icons/fish_pond_smelt.png", icon: "🐟", name: "Pond Smelt" },
-      { key: "fish_catfish", img: "/assets/acnh/icons/fish_catfish.png", icon: "🐟", name: "Catfish" },
-      { key: "fish_golden_koi", img: "/assets/acnh/icons/fish_golden_koi.png", icon: "✨", name: "Golden Koi" },
+      ...FISH.filter((f) => !f.creature).map((f) => ({ key: f.key, img: iconFor(f), icon: f.rarity === "seaking" ? "👑" : f.rarity === "legendary" ? "✨" : "🐟", name: f.name, zone: f.zone ?? "river" })),
+    ],
+  },
+  {
+    // Sea-floor creatures (2026-07-24): pulled up at the deck + cove spots.
+    group: "Sea Floor",
+    items: [
+      ...FISH.filter((f) => f.creature).map((f) => ({ key: f.key, img: iconFor(f), icon: "🦪", name: f.name })),
     ],
   },
   {
@@ -89,46 +95,75 @@ const CATALOG: { group: string; items: { key: string; icon: string; img?: string
   },
 ];
 
-export default function CollectionBook({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const [counts, setCounts] = useState<Record<string, number>>({});
-  // Starts true; each open resets it in the fetch's finally. Avoids a
-  // synchronous setState-in-effect (react-hooks/set-state-in-effect).
-  const [loading, setLoading] = useState(true);
+export default function CollectionBook({ open, onClose, collectionScope }: { open: boolean; onClose: () => void; collectionScope?: string }) {
+  return open ? <OpenCollectionBook onClose={onClose} collectionScope={collectionScope} /> : null;
+}
+
+function OpenCollectionBook({ onClose, collectionScope }: { onClose: () => void; collectionScope?: string }) {
+  const [counts, setCounts] = useState(() => localCollections(collectionScope));
+  const [sync, setSync] = useState<"loading" | "synced" | "local">(collectionScope ? "local" : "loading");
+  const [detailKey, setDetailKey] = useState<string | null>(null);
+  const [fishFilter, setFishFilter] = useState<"all" | "river" | "sea" | "caught">("all");
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const closeRef = useRef(onClose);
+  useEffect(() => { closeRef.current = onClose; }, [onClose]);
 
   useEffect(() => {
-    if (!open) return;
+    AudioManager.playSFX("click");
+    const sound = window.setTimeout(() => AudioManager.playSFX("blip1"), 110);
+    const controller = new AbortController();
     let cancelled = false;
-    fetch("/api/collections")
-      .then((r) => (r.ok ? r.json() : { collections: [] }))
-      .then((d: { collections?: Row[] }) => {
-        if (cancelled) return;
-        const map: Record<string, number> = {};
-        for (const row of d.collections ?? []) map[row.item_key] = row.count;
-        setCounts(map);
+    if (collectionScope) return () => { window.clearTimeout(sound); controller.abort(); };
+    fetch("/api/collections", { signal: controller.signal })
+      .then(async (r) => {
+        if (!r.ok) throw new Error("Collection sync unavailable");
+        const d: { collections?: Row[] } = await r.json();
+        if (!Array.isArray(d.collections)) throw new Error("Invalid collection response");
+        const map = Object.fromEntries(d.collections.map((row) => [row.item_key, row.count]));
+        if (!cancelled) {
+          setCounts(mergeWithLocal(map, collectionScope));
+          setSync("synced");
+        }
       })
-      .catch(() => {})
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
+      .catch(() => { if (!cancelled) setSync("local"); });
     return () => {
       cancelled = true;
+      controller.abort();
+      window.clearTimeout(sound);
     };
-  }, [open]);
+  }, [collectionScope]);
 
   useEffect(() => {
-    if (!open) return;
+    const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const dialog = dialogRef.current;
+    dialog?.focus({ preventScroll: true });
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") {
+        e.preventDefault();
+        e.stopPropagation();
+        closeRef.current();
+      } else if (e.key === "Tab") {
+        const buttons = Array.from(dialog?.querySelectorAll<HTMLButtonElement>("button:not(:disabled)") ?? []);
+        const index = buttons.findIndex((button) => button === document.activeElement);
+        const next = e.shiftKey
+          ? (index <= 0 ? buttons.length - 1 : index - 1)
+          : (index + 1) % buttons.length;
+        e.preventDefault();
+        e.stopPropagation();
+        buttons[next]?.focus();
+      }
     };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
+    window.addEventListener("keydown", onKey, true);
+    return () => {
+      window.removeEventListener("keydown", onKey, true);
+      if (previous?.isConnected) previous.focus({ preventScroll: true });
+    };
+  }, []);
 
-  if (!open) return null;
-
+  const detail = detailKey ? FISH_BY_KEY.get(detailKey) ?? null : null;
   const total = Object.values(counts).reduce((a, b) => a + b, 0);
   const discovered = CATALOG.reduce(
-    (n, g) => n + g.items.filter((it) => (counts[it.key] ?? 0) > 0).length,
+    (n, g) => n + g.items.filter((it) => Object.hasOwn(counts, it.key)).length,
     0
   );
   const totalKinds = CATALOG.reduce((n, g) => n + g.items.length, 0);
@@ -145,75 +180,159 @@ export default function CollectionBook({ open, onClose }: { open: boolean; onClo
         alignItems: "center",
         justifyContent: "center",
         backdropFilter: "blur(3px)",
+        animation: "cb-fade 0.18s ease-out",
       }}
     >
+      <style>{`
+        .collection-book button:focus-visible { outline: 3px solid var(--app-link, #79601F); outline-offset: 3px; }
+        @keyframes cb-fade { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes cb-unfold {
+          0% { opacity: 0; transform: scale(0.92) rotate(-1.2deg) translateY(10px); }
+          70% { opacity: 1; transform: scale(1.015) rotate(0.3deg) translateY(-2px); }
+          100% { opacity: 1; transform: scale(1) rotate(0) translateY(0); }
+        }
+      `}</style>
       <div
+        ref={dialogRef}
+        className="collection-book"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="collection-book-title"
+        tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
         style={{
           width: "min(92vw, 440px)",
           maxHeight: "82vh",
           overflowY: "auto",
-          background: "#FFFDF5",
-          border: "3px solid #E0D2B0",
+          scrollPaddingTop: 140,
+          scrollPaddingBottom: 90,
+          background: "var(--app-surface, #FFFDF5)",
+          border: "3px solid var(--app-line, #E0D2B0)",
           borderRadius: 20,
           padding: 20,
           boxShadow: "0 20px 60px rgba(60, 45, 20, 0.35)",
           fontFamily: "var(--font-highlight, sans-serif)",
-          color: "#4A4034",
+          animation: "cb-unfold 0.32s cubic-bezier(0.34, 1.56, 0.64, 1)",
+          color: "var(--app-ink, #4A4034)",
         }}
       >
-        <div className="flex items-center justify-between" style={{ marginBottom: 4 }}>
-          <h2 style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>🧺 Collection</h2>
-          <button
-            onClick={onClose}
-            aria-label="Close"
-            style={{ background: "none", border: "none", cursor: "pointer", color: "#8A7B5E" }}
-          >
-            <X size={18} />
-          </button>
-        </div>
-        <p style={{ fontSize: 12, color: "#8A7B5E", marginTop: 0, marginBottom: 16 }}>
-          {loading
-            ? "Opening the book…"
-            : `${discovered}/${totalKinds} kinds discovered · ${total} collected`}
-        </p>
+        <header style={{ position: "sticky", top: -20, zIndex: 2, background: "var(--app-surface, #FFFDF5)", margin: "-20px -20px 16px", padding: "16px 20px 12px", borderBottom: "1px solid var(--app-line, #E0D2B0)" }}>
+          <div className="flex items-center justify-between" style={{ marginBottom: 4 }}>
+            <h2 id="collection-book-title" style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>🧺 Collection</h2>
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Close"
+              style={{ display: "grid", placeItems: "center", width: 36, height: 36, background: "none", border: "none", borderRadius: 8, cursor: "pointer", color: "var(--app-muted, #6F624A)" }}
+            >
+              <X size={18} />
+            </button>
+          </div>
+          <p style={{ fontSize: 12, color: "var(--app-muted, #8A7B5E)", marginTop: 0, marginBottom: 0 }}>
+            {discovered}/{totalKinds} kinds discovered · {total} in your bag
+            <span role="status" style={{ display: "block", marginTop: 4 }}>
+              {collectionScope ? "Saved on this device · Just for fun" : sync === "loading" ? "Checking saved collection…" : sync === "local" ? "Showing this browser’s collection. Account sync unavailable." : "Saved collection loaded"}
+            </span>
+          </p>
+        </header>
 
-        {CATALOG.map((g) => (
+        {CATALOG.map((g) => {
+          // Loop wake 27: per-group completion count — the Critterpedia
+          // "how far along am I" read; gold ✓ once the group is complete.
+          const got = g.items.filter((it) => Object.hasOwn(counts, it.key)).length;
+          const done = got === g.items.length;
+          const isFish = g.group === "Fish";
+          const shown = isFish
+            ? g.items.filter((it) => {
+                const zone = (it as { zone?: string }).zone;
+                if (fishFilter === "river") return zone !== "sea";
+                if (fishFilter === "sea") return zone === "sea";
+                if (fishFilter === "caught") return Object.hasOwn(counts, it.key);
+                return true;
+              })
+            : g.items;
+          return (
           <div key={g.group} style={{ marginBottom: 16 }}>
             <div
               style={{
+                display: "flex",
+                alignItems: "baseline",
+                justifyContent: "space-between",
                 fontSize: 11,
                 fontWeight: 700,
                 textTransform: "uppercase",
                 letterSpacing: "0.06em",
-                color: "#B0A17C",
+                color: "var(--app-muted, #B0A17C)",
                 marginBottom: 8,
               }}
             >
-              {g.group}
+              <span>{g.group}</span>
+              <span style={{ color: done ? "var(--app-link, #C9962E)" : "var(--app-muted, #B0A17C)", fontVariantNumeric: "tabular-nums" }}>
+                {done ? "✓ " : ""}{got}/{g.items.length}
+              </span>
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
-              {g.items.map((it) => {
-                const n = counts[it.key] ?? 0;
-                const have = n > 0;
-                return (
-                  <div
-                    key={it.key}
+            {isFish && (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
+                {([["all", "All"], ["river", "🏞 River"], ["sea", "🌊 Sea"], ["caught", "✓ Discovered"]] as const).map(([k, label]) => (
+                  <button
+                    key={k}
+                    type="button"
+                    aria-pressed={fishFilter === k}
+                    onClick={() => setFishFilter(k)}
                     style={{
+                      padding: "3px 10px",
+                      minHeight: 32,
+                      borderRadius: 7,
+                      fontSize: 11,
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      border: `1.5px solid ${fishFilter === k ? "var(--app-link, #C9962E)" : "var(--app-line, #E0D2B0)"}`,
+                      background: fishFilter === k ? "var(--app-soft, #F8EFC9)" : "var(--app-surface, #FFFDF5)",
+                      color: fishFilter === k ? "var(--app-link, #7A5A10)" : "var(--app-muted, #8A7B5E)",
+                    }}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            )}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
+              {shown.map((it) => {
+                const n = counts[it.key] ?? 0;
+                const have = Object.hasOwn(counts, it.key);
+                const almanac = have && FISH_BY_KEY.has(it.key);
+                const picked = detailKey === it.key;
+                const Tile = almanac ? "button" : "div";
+                return (
+                  <Tile
+                    key={it.key}
+                    {...(almanac ? { type: "button" as const, "aria-expanded": picked, "aria-controls": "collection-field-notes" } : {})}
+                    onClick={
+                      almanac
+                        ? () => {
+                            setDetailKey((k) => (k === it.key ? null : it.key));
+                            AudioManager.playSFX("blip1");
+                          }
+                        : undefined
+                    }
+                    style={{
+                      color: "inherit",
+                      fontFamily: "inherit",
                       display: "flex",
                       flexDirection: "column",
                       alignItems: "center",
                       gap: 4,
                       padding: "12px 6px",
                       borderRadius: 12,
-                      background: have ? "#F3ECD8" : "#F0EEE6",
-                      border: `1px solid ${have ? "#E0D2B0" : "#E8E6DE"}`,
+                      background: picked ? "var(--app-soft, #F8EFC9)" : have ? "var(--app-soft, #F3ECD8)" : "var(--app-soft, #F0EEE6)",
+                      border: `1px solid ${picked ? "var(--app-link, #C9962E)" : have ? "var(--app-line, #E0D2B0)" : "var(--app-soft, #E8E6DE)"}`,
                       opacity: have ? 1 : 0.5,
+                      cursor: almanac ? "pointer" : "default",
                     }}
                   >
                     {have && it.img ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={it.img} alt={it.name} width={34} height={34} style={{ imageRendering: "auto" }} />
+                      <img src={it.img} alt="" width={34} height={34} style={{ imageRendering: "auto" }} />
                     ) : (
                       <span style={{ fontSize: 26, filter: have ? "none" : "grayscale(1)" }}>
                         {have ? it.icon : "❔"}
@@ -227,19 +346,71 @@ export default function CollectionBook({ open, onClose }: { open: boolean; onClo
                         style={{
                           fontSize: 11,
                           fontWeight: 700,
-                          color: "#8A7B5E",
+                          color: "var(--app-muted, #8A7B5E)",
                           fontFamily: "monospace",
                         }}
                       >
                         ×{n}
                       </span>
                     )}
-                  </div>
+                  </Tile>
                 );
               })}
             </div>
           </div>
-        ))}
+          );
+        })}
+
+        {/* Almanac strip — field notes for the picked species, pinned to the
+            bottom of the book while scrolling. */}
+        {detail && (
+          <div
+            id="collection-field-notes"
+            role="region"
+            aria-label={`${detail.name} field notes`}
+            style={{
+              position: "sticky",
+              bottom: -20,
+              margin: "8px -8px -8px",
+              padding: "10px 12px",
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              background: "var(--app-soft, #FBF6E4)",
+              border: "2px solid var(--app-line, #E0D2B0)",
+              borderRadius: 12,
+              boxShadow: "0 -4px 12px rgba(60, 45, 20, 0.12)",
+            }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={iconFor(detail)} alt="" width={40} height={40} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 700 }}>
+                {detail.name}
+                <span
+                  style={{
+                    fontSize: 9,
+                    fontWeight: 700,
+                    textTransform: "uppercase",
+                    padding: "1px 7px",
+                    borderRadius: 999,
+                    color: "var(--app-surface, #FFFDF5)",
+                    background: RARITY_META[detail.rarity].color,
+                  }}
+                >
+                  {RARITY_META[detail.rarity].label}
+                </span>
+                <span style={{ fontSize: 10, fontWeight: 400, color: "var(--app-muted, #8A7B5E)" }}>
+                  {(detail.zone ?? "river") === "sea" ? "🌊 sea" : "🏞 river"}
+                </span>
+              </div>
+              <div style={{ fontSize: 11, color: "var(--app-muted, #8A7B5E)", marginTop: 2 }}>
+                bites: {detail.whenLabel ?? "any time"} · {detail.sizeCm[0]}-{detail.sizeCm[1]} cm · in bag ×
+                {counts[detail.key] ?? 0}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -1,11 +1,12 @@
 import type { ReactNode } from "react";
+import RecruitmentAppearance from "@/components/recruit/RecruitmentAppearance";
 
 export const metadata = {
   title: "Join Tethos | 2026-27 Recruitment",
   description:
-    "Apply for executive and leadership positions at Tethos. Build real software for nonprofits and launch your career.",
+    "Explore director and developer roles at Tethos. Meet the team, build software for nonprofits and follow your application.",
 };
 
 export default function ApplyLayout({ children }: { children: ReactNode }) {
-  return <>{children}</>;
+  return <RecruitmentAppearance>{children}</RecruitmentAppearance>;
 }
