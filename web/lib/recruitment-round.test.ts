@@ -49,6 +49,20 @@ describe("final director and developer question contracts", () => {
     }
   });
 
+  it("accepts the developer's optional project ranking meta answers", () => {
+    const position = role("developer");
+    const input = inputFor(position);
+    input.essay_answers.push(
+      { question_id: "__project_choice_1", answer: "Boys and Girls Club London (MAP Program App)" },
+      { question_id: "__project_choice_2", answer: "Growing Chefs! (Dietary Restriction System)" },
+      { question_id: "__project_choice_3", answer: "ArkAid (Kitchen Dashboard)" },
+      { question_id: "__project_choice_reason", answer: "I care about food security." },
+    );
+    expect(validatePositionAnswers(input, position, userId)).toBeNull();
+    input.essay_answers.push({ question_id: "__project_choice_4", answer: "no such rank" });
+    expect(validatePositionAnswers(input, position, userId)).toBe("Unknown application question");
+  });
+
   it("requires Internal's new persuasion answer and reel link independently", () => {
     const position = role("director-internal");
     const input = inputFor(position);
