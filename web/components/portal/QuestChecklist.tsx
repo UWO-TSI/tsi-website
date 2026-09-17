@@ -56,7 +56,7 @@ const QUESTS: readonly Quest[] = [
   {
     id: "attend_irl_event",
     title: "Attend an IRL event",
-    hint: "Scan the QR code at a Tech for Social Impact event to bank real XP.",
+    hint: "Scan the QR code at a Tethos event to bank real XP.",
   },
   {
     id: "shake_a_tree",
