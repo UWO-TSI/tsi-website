@@ -1,5 +1,7 @@
 # Schedule confirmed September 17, 2026
 
+> September 17 production correction: David requested opening immediately. All four new roles opened at 12:17:10 Toronto (16:17:10Z), with the September 23 11:59 PM Toronto deadline unchanged. PM/VP Marketing are archived. Laptop entry defaults to the applicant world; mobile/reduced-motion and `?view=form` retain direct forms. This supersedes the earlier opening schedule and optional desktop-world entry.
+
 All four roles: September 17 at 3:00 PM through September 23 at 11:59 PM, Toronto time (EDT). UTC opens 2026-09-17T19:00:00.000Z, closes 2026-09-24T03:59:00.000Z. Supersedes historical unset-date notes below. Local drafts updated; production activation remains pending the release checks.
 
 # Director and developer recruitment

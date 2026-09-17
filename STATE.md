@@ -3,6 +3,16 @@
 > Read this before `AGENT_LOG.md`. It answers "which branch, what's live, what's next"
 > in one page. Update it whenever direction changes. Last updated **2026-09-17**.
 
+## Production release and immediate opening (2026-09-17)
+
+Deployed PR #23 (`4ab7f63`) and whitespace-only Google destination fix PR #24 (`f0616f5`) to www.tethos.ca. Production build and 339 tests passed. Applied only recruitment delivery migration (remote ledger 20260917160347) and its minute scheduler (20260917161307); parked game migrations remain unapplied. Google workbook auto-creation recovered correctly after trimming the existing newline-only ID.
+
+Live verification: all 68 existing applications delivered; a synthetic internal application's multiline answer and later update were read back from its fixed row. Deleted only that synthetic application/position. The minute job cleared its row, returned HTTP 200 without timeout, and left zero pending; all 68 real applications remain. Authenticated Dia admin shows zero waiting and the workbook link. Production island, HQ, board and protected-route checks pass. No applicant email was sent. Actual applicant form submission/resume upload/email delivery were not exercised live; timeout/race recovery is covered by local SQL/unit tests rather than a forced production outage.
+
+David then explicitly requested opening immediately, archiving PM/VP Marketing and pushing quieter world-first laptop entry. Production roles opened at **2026-09-17 12:17:10 Toronto (16:17:10Z)**; September 23, 11:59 PM Toronto deadline is unchanged. PM and VP Marketing are archived, preserving all applications; current unarchived round has zero applications at verification. This supersedes the earlier 3 PM opening. Follow-up code sends laptops directly into the existing applicant island, retaining mobile/reduced-motion forms and the explicit `?view=form` escape. Applicant music gain is 0.18; SFX gain 0.25, with a further 0.35 gain for running/landing/jumping. Saved volume settings and member-world levels are preserved.
+
+Operational follow-up: Google consent identified a Testing app. Verify OAuth publishing status or renew before the documented seven-day token expiry; queued applications remain in Supabase if Google access expires. Full repository lint retains known debt (68 errors/52 warnings against previous main 74/53); focused changes pass. New externally-created ` 2` duplicate files appeared untracked during release and are preserved, excluded from staging. Exact follow-up code verified in an isolated checkout: production build and all 343 tests pass; focused ESLint passes.
+
 ## Production credentials prepared (2026-09-17)
 
 David authorized completing the production settings. Dia verified `uwotsi.com` serves www.tethos.ca. This project was missing all three OAuth variables; added verified local GOOGLE_OAUTH_CLIENT_ID, GOOGLE_OAUTH_CLIENT_SECRET, GOOGLE_OAUTH_REFRESH_TOKEN plus a generated CRON_SECRET as non-revealable Secret variables for Production only. Preserved existing folder/workbook and unrelated variables. Vercel confirmed save success and requires a new deployment to apply them.
