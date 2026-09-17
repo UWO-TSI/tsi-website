@@ -232,7 +232,7 @@ export default function PlayerAvatar({ avatarMode = "sprite", spawnPosition, onM
             const jp = positionRef.current;
             const id = puffIdRef.current++;
             setPuffs((prev) => [...prev, { id, position: [jp.x, jp.y + 0.02, jp.z], scale: 0.85 }]);
-            playSFX("blip2");
+            playSFX("jump");
           }
           e.preventDefault();
         }

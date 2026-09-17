@@ -1,0 +1,61 @@
+{
+  "date": "2026-09-17",
+  "production": "https://www.tethos.ca",
+  "initial_pull_requests": [
+    23,
+    24
+  ],
+  "initial_main": "f0616f528c1dd3041cc3c9fd1ef3e2625113a511",
+  "database": {
+    "delivery_migration": "20260917160347",
+    "scheduler_migration": "20260917161307",
+    "scheduler": "* * * * *",
+    "observed_scheduled_request": {
+      "at": "2026-09-17T16:16:00Z",
+      "http_status": 200,
+      "timed_out": false
+    },
+    "application_count_preserved": 68,
+    "old_roles_archived": [
+      "pm",
+      "vp-marketing"
+    ],
+    "new_roles": [
+      "developer",
+      "director-marketing",
+      "director-internal",
+      "director-external"
+    ],
+    "new_round_application_count_at_check": 0,
+    "opens_at": "2026-09-17T16:17:10.883399Z",
+    "closes_at": "2026-09-24T03:59:00Z"
+  },
+  "sheets": {
+    "connected": true,
+    "pending": 0,
+    "synthetic_fixed_row_initial_readback": true,
+    "synthetic_update_readback": true,
+    "synthetic_deleted": true,
+    "synthetic_position_deleted": true,
+    "scheduled_tombstone_readback_empty": true,
+    "real_applicant_content_logged": false
+  },
+  "browser": {
+    "admin_authenticated": true,
+    "archive_group_count": 68,
+    "island_hq_and_board": true
+  },
+  "limits": [
+    "No live applicant submission, resume upload or email dispatch performed",
+    "Google OAuth Testing-app publishing status requires follow-up for durable refresh credentials",
+    "Full lint retains existing baseline debt",
+    "External untracked duplicate files preserved and excluded from release"
+  ],
+  "followup_verification": {
+    "unit_tests": 343,
+    "test_files": 35,
+    "focused_lint": "pass",
+    "exact_code_commit": "7f742e0",
+    "production_build": "pass; isolated exact-code checkout, environment passed in process"
+  }
+}
