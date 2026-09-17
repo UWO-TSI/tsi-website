@@ -86,7 +86,7 @@ export default function WelcomeOverlay() {
             textTransform: "uppercase",
           }}
         >
-          Welcome to Tethos
+          Welcome to Tech for Social Impact
         </div>
         <div style={{ fontSize: "22px", fontWeight: 700, marginBottom: "20px", lineHeight: 1.25 }}>
           Look around, talk to people, find your village.

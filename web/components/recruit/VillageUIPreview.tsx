@@ -79,7 +79,7 @@ export default function VillageUIPreview() {
 
     <section className={styles.dialogueSection} aria-label="Guide dialogue example">
       <NPCDialogue speaker="Eliza" onContinue={() => setGuideRead(!guideRead)} continueLabel={guideRead ? "Read welcome again" : "Got it"}>
-        {guideRead ? <>Take your time. You can return to a draft before submitting.</> : <>Welcome to Tethos! The <strong>hiring board</strong> is just inside HQ. Have a look. You might find your people.</>}
+        {guideRead ? <>Take your time. You can return to a draft before submitting.</> : <>Welcome to Tech for Social Impact! The <strong>hiring board</strong> is just inside HQ. Have a look. You might find your people.</>}
       </NPCDialogue>
     </section>
 

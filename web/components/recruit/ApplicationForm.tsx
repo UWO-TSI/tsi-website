@@ -877,10 +877,13 @@ function ApplicationFormInner({
                 <Sparkles className="w-4 h-4 text-[#FFD166] flex-shrink-0 mt-0.5" />
                 <div>
                   <p className="text-sm text-[#F1FFFF] font-medium">
-                    Write in your own voice
+                    Do not use AI for the written questions
                   </p>
                   <p className="text-xs text-[#9CA3AF] mt-1 leading-relaxed">
-                    Use your own examples and experiences. We want to get to know you.
+                    The president is chronically on Claude and he can tell if
+                    you Claude your answers. We&apos;d rather see a broken
+                    English response with thought behind your answers than
+                    slop.
                   </p>
                 </div>
               </div>
