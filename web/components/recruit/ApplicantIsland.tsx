@@ -241,7 +241,7 @@ export default function ApplicantIsland() {
     <div className={styles.fade} data-active={transitioning} aria-hidden="true" />
     <dialog ref={dialog} className={`${styles.dialog} ${panel === "board" ? styles.boardDialog : panel === "role" ? styles.applicationDialog : panel === "guide" ? styles.guideDialog : ""}`} onCancel={e => { e.preventDefault(); void close(); }} aria-label={panel === "role" ? `${position?.title ?? "Role"} application` : undefined} aria-labelledby={panel === "role" || panel === "guide" ? undefined : "island-panel-title"}>
       {panel === "welcome" && <div className={styles.welcome}>
-        <span className={styles.eyebrow}>A warm welcome to Tethos</span><h1 id="island-panel-title">Come on in.</h1><p>This is your little corner of the island. Meet Jayden, take a walk, then head into TSI HQ to find the recruitment board.</p>
+        <span className={styles.eyebrow}>A warm welcome to Tech for Social Impact</span><h1 id="island-panel-title">Come on in.</h1><p>This is your little corner of the island. Meet Jayden, take a walk, then head into TSI HQ to find the recruitment board.</p>
         <div className={styles.keyGuide}><span><kbd>WASD</kbd> Walk</span><span><kbd>E</kbd> Interact</span><span><kbd>Esc</kbd> Menu</span></div><p className={styles.small}>You can also click the ground to walk. Scroll gently to adjust the view.</p>
         <button className={styles.apply} onClick={() => { AudioManager.enable(); close(); }}>Let’s explore →</button><Link className={styles.plainLink} href={direct}>Go straight to the application</Link>
       </div>}
