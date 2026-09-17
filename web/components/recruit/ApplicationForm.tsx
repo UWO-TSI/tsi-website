@@ -1,6 +1,5 @@
 "use client";
 
-import DeveloperProjects from "./DeveloperProjects";
 import Link from "next/link";
 import { useState, useCallback, useEffect, useRef, useMemo, useImperativeHandle, type Ref } from "react";
 import { motion, AnimatePresence, MotionConfig } from "framer-motion";
@@ -577,7 +576,6 @@ function ApplicationFormInner({
       </div>
 
       <fieldset disabled={submitting} className="relative min-w-0 border-0 p-0 m-0" aria-busy={submitting}>
-        {position.slug === "developer" && step !== 3 && <DeveloperProjects />}
         <AnimatePresence mode={layout === "sheet" ? "sync" : "wait"} custom={direction}>
           {/* Step 0: Personal Info */}
           {(step === 0 || layout === "sheet" && step !== 3) && (

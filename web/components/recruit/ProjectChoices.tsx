@@ -1,6 +1,7 @@
 "use client";
 
 import { DEVELOPER_PROJECTS } from "@/lib/recruitment-projects";
+import DeveloperProjects from "./DeveloperProjects";
 import FormField from "./FormField";
 import {
   MAX_PROJECT_CHOICES,
@@ -35,51 +36,54 @@ export default function ProjectChoices({
       }}
     >
       <p className="text-sm text-[#F1FFFF] mb-1 font-medium">
-        Project preferences (optional)
+        This year&apos;s projects · rank your top 3 (optional)
       </p>
       <p className="text-xs text-[#9CA3AF] mb-4 leading-relaxed">
-        Rank up to {MAX_PROJECT_CHOICES} projects you&apos;d most want to build
-        (details in the project list above). Tap to rank, tap again to remove.
-        Skipping this won&apos;t hurt your application; it helps us place you.
+        Five nonprofit partners; open each one to read what the team will
+        build. Tap a project to rank it, tap again to remove. Skipping this
+        won&apos;t hurt your application; it helps us place you.
       </p>
-      <div className="space-y-2" role="group" aria-label="Rank your top 3 projects">
-        {DEVELOPER_PROJECTS.map((project) => {
-          const rank = choices.indexOf(project.partner);
-          const ranked = rank !== -1;
-          const full = !ranked && choices.length >= MAX_PROJECT_CHOICES;
-          return (
-            <button
-              key={project.partner}
-              type="button"
-              aria-pressed={ranked}
-              disabled={full}
-              onClick={() => onChoicesChange(toggleProjectChoice(choices, project.partner))}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all border ${
-                ranked
-                  ? "bg-[#1D9BF0]/10 border-[#1D9BF0]/50"
-                  : full
-                    ? "bg-white/[0.02] border-white/5 opacity-50 cursor-not-allowed"
-                    : "bg-white/[0.03] border-white/10 hover:border-white/20"
-              }`}
-            >
-              <span
-                className={`flex-shrink-0 w-9 h-6 rounded-full flex items-center justify-center font-mono text-[10px] ${
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+        <div className="space-y-2" role="group" aria-label="Rank your top 3 projects">
+          {DEVELOPER_PROJECTS.map((project) => {
+            const rank = choices.indexOf(project.partner);
+            const ranked = rank !== -1;
+            const full = !ranked && choices.length >= MAX_PROJECT_CHOICES;
+            return (
+              <button
+                key={project.partner}
+                type="button"
+                aria-pressed={ranked}
+                disabled={full}
+                onClick={() => onChoicesChange(toggleProjectChoice(choices, project.partner))}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all border ${
                   ranked
-                    ? "bg-[#1D9BF0] text-[#F1FFFF]"
-                    : "border border-white/15 text-[#6B7280]"
+                    ? "bg-[#1D9BF0]/10 border-[#1D9BF0]/50"
+                    : full
+                      ? "bg-white/[0.02] border-white/5 opacity-50 cursor-not-allowed"
+                      : "bg-white/[0.03] border-white/10 hover:border-white/20"
                 }`}
               >
-                {ranked ? RANK_LABELS[rank] : "—"}
-              </span>
-              <span className="min-w-0">
-                <span className="block text-sm text-[#F1FFFF]">
-                  {project.partner}
+                <span
+                  className={`flex-shrink-0 w-9 h-6 rounded-full flex items-center justify-center font-mono text-[10px] ${
+                    ranked
+                      ? "bg-[#1D9BF0] text-[#F1FFFF]"
+                      : "border border-white/15 text-[#6B7280]"
+                  }`}
+                >
+                  {ranked ? RANK_LABELS[rank] : "—"}
                 </span>
-                <span className="block text-xs text-[#9CA3AF]">{project.title}</span>
-              </span>
-            </button>
-          );
-        })}
+                <span className="min-w-0">
+                  <span className="block text-sm text-[#F1FFFF]">
+                    {project.partner}
+                  </span>
+                  <span className="block text-xs text-[#9CA3AF]">{project.title}</span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
+        <DeveloperProjects embedded />
       </div>
       <div className="mt-4">
         <FormField
