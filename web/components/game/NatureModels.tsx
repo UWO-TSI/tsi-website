@@ -1,15 +1,15 @@
 "use client";
 
-import { Suspense, useMemo } from "react";
+import { Suspense, useEffect, useMemo } from "react";
 import { useGLTF } from "@react-three/drei";
-import * as THREE from "three";
+import { prepareModel, disposeModelMaterials, applyModelTextures } from "@/lib/game/modelMaterials";
 
 /**
  * GLB model loader (Kenney kits + ACNH pack).
  * Loads, clones, and renders assets with shadows. Exported as GLBProp for
  * one-off prop placement (AmbientProps, benches, bridge).
  */
-export function GLBProp({ url, scale = 1, position, rotation, castShadow = true }: {
+export function GLBProp({ url, scale = 1, position, rotation, castShadow = true, emissiveIntensity }: {
   url: string;
   scale?: number;
   position?: [number, number, number];
@@ -20,18 +20,14 @@ export function GLBProp({ url, scale = 1, position, rotation, castShadow = true 
    * small rocks) where the shadow is invisible at game camera distance.
    */
   castShadow?: boolean;
+  emissiveIntensity?: number;
 }) {
   const { scene } = useGLTF(url);
-  const clone = useMemo(() => {
-    const c = scene.clone(true);
-    c.traverse((child) => {
-      if ((child as THREE.Mesh).isMesh) {
-        (child as THREE.Mesh).castShadow = castShadow;
-        (child as THREE.Mesh).receiveShadow = true;
-      }
-    });
-    return c;
-  }, [scene, castShadow]);
+  const clone = useMemo(() => prepareModel(scene, url, castShadow, emissiveIntensity), [scene, url, castShadow, emissiveIntensity]);
+  useEffect(() => {
+    applyModelTextures(clone, url);
+    return () => disposeModelMaterials(clone);
+  }, [clone, url]);
   return <primitive object={clone} scale={scale} position={position} rotation={rotation} />;
 }
 
@@ -46,12 +42,19 @@ const TREE_MODELS = [
 export function NatureTree({ position, seed }: { position: [number, number, number]; seed: number }) {
   const url = TREE_MODELS[seed % TREE_MODELS.length];
   const s = 0.85 + (seed % 5) * 0.08;
-  const r: [number, number, number] = [0, (seed * 137.5 * Math.PI) / 180, 0];
+  const r: [number, number, number] = [0, treeYaw(seed), 0];
   return (
     <Suspense fallback={null}>
       <GLBProp url={url} scale={s} position={position} rotation={r} />
     </Suspense>
   );
+}
+
+export function treeYaw(seed: number): number {
+  // Broadleaf canopies are authored wider than they are deep; a side-on
+  // quarter turn makes the leaf cards look like a thin sheet.
+  const yaw = seed % TREE_MODELS.length === 3 ? seed * 137.5 : 180 + ((seed % 5) - 2) * 8;
+  return (yaw * Math.PI) / 180;
 }
 
 // ─── Bushes ─────────────────────────────────────────────────────
@@ -151,8 +154,8 @@ const PRELOAD = [
   "/assets/acnh/props/bridge-wooden.glb",
   "/assets/acnh/props/fence-country-a.glb",
   "/assets/acnh/props/fence-log-a.glb",
-  "/assets/acnh/buildings/house-chalet-red.glb",
-  "/assets/acnh/buildings/house-chalet-yellow.glb",
+  // (ambient chalets moved to Building.tsx CHALET_VARIANTS — they are
+  // composed from wall + roof + door parts now, and preloaded there)
 ];
 for (const url of PRELOAD) useGLTF.preload(url);
 

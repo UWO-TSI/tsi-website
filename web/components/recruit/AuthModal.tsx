@@ -14,7 +14,7 @@ interface AuthModalProps {
 export default function AuthModal({
   isOpen,
   onClose,
-  redirectTo = "/student/apply/dashboard",
+  redirectTo = "/student/apply/portal",
 }: AuthModalProps) {
   const [mode, setMode] = useState<"signin" | "signup" | "forgot">("signin");
   const [email, setEmail] = useState("");
@@ -121,8 +121,8 @@ export default function AuthModal({
             <div
               className="w-full max-w-md p-8 md:p-10 relative rounded-2xl"
               style={{
-                background: "linear-gradient(135deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.03) 100%)",
-                border: "1px solid rgba(255,255,255,0.10)",
+                background: "var(--app-surface, #172a35)",
+                border: "1px solid var(--app-line, rgba(255,255,255,0.10))",
                 backdropFilter: "blur(24px)",
               }}
               onClick={(e) => e.stopPropagation()}

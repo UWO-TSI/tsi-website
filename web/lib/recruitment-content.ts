@@ -24,6 +24,8 @@ export interface HowItWorks {
 }
 
 export interface RoleContent {
+  overview?: string;
+  draftOverview?: boolean;
   /** Display string like "2" or "1–2" (en-dash) — appears next to "Positions". */
   positionsCount: string;
   /** Single-paragraph tagline shown under the role title. */
@@ -240,6 +242,70 @@ ROLE_CONTENT.pm = {
       href: "/tsi-25-26-developer-package.pdf",
     },
   },
+};
+
+ROLE_CONTENT["director-external"] = {
+  positionsCount: "3–4",
+  tagline: "Organize GENESIS and build relationships with our partners, sponsors and project teams.",
+  overview: "The External Portfolio organizes TSI’s annual project showcase GENESIS. With over 250+ attendees last year, GENESIS has easily become our largest event, allowing project teams to demo and display the tech projects that they’ve created over the past 8 months.",
+  whatYoullDo: [
+    "Handle logistics and planning (e.g. venue coordination, prize delivery, communications, deliverables).",
+    "Manage partnerships and communication with external stakeholders, including sponsors, startups, and nonprofits partners, as well as internal communication with project teams.",
+    "Lead outreach efforts by drafting emails, sending follow-ups, and tracking responses to ensure timely, professional communication.",
+    "Maintain strong, ongoing relationships with partner organizations through check-ins, updates, and thoughtful engagement post-collaboration.",
+  ],
+  whoYouAre: ["Proactive", "Organized (Super organized) and on top of things", "Willing to learn", "Good communicator", "Adaptable", "Committed", "Carry TSI spirit"],
+};
+
+ROLE_CONTENT["director-internal"] = {
+  positionsCount: "2–3",
+  tagline: "Help the team feel connected through member experience, events and internal operations.",
+  overview: "The Internal Portfolio is focused on building TSI’s community from within. Internal Directors help create an engaging and welcoming environment through socials, team bonding, and initiatives.",
+  whatYoullDo: [
+    "Help foster a welcoming, inclusive, and fun TSI community throughout the year.",
+    "Plan and execute internal socials and team bonding activities.",
+    "Communicate with members and project teams to gather feedback, share updates, and ensure everyone feels involved.",
+    "Work closely with other Internal Directors and the executive team to develop new initiatives and improve the member experience.",
+    "Stay organized and on top of timelines, sign-ups, logistics, and follow-ups.",
+  ],
+  whoYouAre: ["Creativity", "Collaborative", "Approachable", "Problem-Solver", "Member-Focused", "Organized"],
+};
+
+ROLE_CONTENT["director-marketing"] = {
+  positionsCount: "3–4",
+  tagline: "As a Director of Marketing, you're the creative engine behind TSI's content. You'll work directly under the VP Marketing team, get real creative freedom, and build skills in whatever medium you're strongest in, either it’s design or video editing.",
+  whatYoullDo: [
+    "Create content for TSI's social media: designing posts, making reels, shooting mini-documentaries, photographing events, and more",
+    "Support the VP Marketing team on ongoing projects and campaigns",
+    "Bring your own creative ideas to the table and execute on them",
+    "Contribute to GENESIS content and materials such as merchandise, banners, etc. GENESIS is TSI's annual project showcase, our biggest event of the year with 250+ attendees",
+  ],
+  whoYouAre: [
+    "Creative and genuinely interested in design, video, or content creation",
+    "Have taste",
+    "Self-directed and can run with a brief without hand-holding",
+    "A team player who communicates well and meets deadlines",
+  ],
+};
+
+ROLE_CONTENT.developer = {
+  positionsCount: "",
+  tagline: "This role is about growth. No experience required. What matters is your willingness to learn, show up, and care about what you're building. You'll work alongside other students, be mentored by experienced PMs, and contribute to a real project with real clients from start to finish. You'll leave with something tangible, and the skills to back it up.",
+  whatYoullDo: [
+    "Build real tools used by nonprofits",
+    "Ask questions, seek feedback, and own your learning curve",
+    "Show up to weekly team meetings and keep your team in the loop",
+    "Adapt when problems come up, iterate fast, and keep moving",
+    "Ship work that ends up in the hands of real organizations solving real problems",
+    "Show up to team socials, club-wide events, and GENESIS. Being part of TSI means being part of the community",
+  ],
+  whoYouAre: [
+    "Hungry to learn and eager to grow",
+    "Consistent: you show up, follow through, and communicate",
+    "A team player who gives feedback and supports the people around you",
+    "Someone who wants to build things that actually matter",
+  ],
+  preApplyNote: "No experience required. We welcome students from all backgrounds: CS, engineering, science, business, or anyone who just loves building things. If you're curious, committed, and excited about tech for social good, we want you on the team.",
 };
 
 export function getRoleContent(slug: string): RoleContent | null {

@@ -1,0 +1,38 @@
+.landing { --ink:var(--app-ink,#f1ffff); --muted:var(--app-muted,#a7afb5); --line:var(--app-line,#ffffff24); --blue:var(--app-link,#73c3fa); max-width:1080px; margin:auto; padding:24px 48px 40px; color:var(--ink); }
+.nav { display:flex; justify-content:space-between; align-items:center; gap:24px; padding:8px 0 26px; }
+.nav a { display:inline-flex; align-items:center; gap:8px; min-height:44px; }
+.nav>a:first-child { font-weight:650; font-size:26px; letter-spacing:-1px; }
+.nav>a:last-child { color:var(--muted); font-size:14px; }
+.hero { padding:24px 0 36px; }
+.term { font-size:13px; margin:0 0 14px; color:var(--muted); }
+.hero h1 { font-size:clamp(32px,4vw,46px); line-height:1.1; letter-spacing:-1.6px; font-weight:550; margin:0 0 16px; }
+.intro { font-size:16px; line-height:1.6; color:var(--muted); margin:0; }
+.secondary { min-height:44px; display:inline-flex; align-items:center; justify-content:center; gap:10px; padding:10px 16px; border-radius:7px; font-size:14px; border:1px solid var(--line); color:inherit; background:transparent; cursor:pointer; }
+.roles { scroll-margin-top:24px; }
+.sectionHead { display:flex; align-items:baseline; justify-content:space-between; gap:20px; padding-bottom:16px; border-bottom:1px solid var(--line); }
+.sectionHead h2 { font-size:18px; font-weight:550; }.sectionHead span { font-size:12px; color:var(--muted); }
+.role { padding:22px 0; border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content:space-between; gap:32px; }
+.role h3 { margin:0 0 6px; font-size:21px; font-weight:500; }.role p { color:var(--muted); font-size:14px; line-height:1.55; max-width:620px; margin:0; }.role:hover h3 { color:var(--blue); }
+.roleStatus { flex-shrink:0; display:flex; align-items:center; gap:12px; font-size:12px; color:var(--muted); }
+.explore { display:flex; align-items:center; justify-content:space-between; gap:36px; padding:26px 0; }
+.explore p { max-width:560px; color:var(--muted); font-size:13px; line-height:1.65; }
+.explore a { display:grid; grid-template-columns:18px 1fr; align-items:center; column-gap:9px; flex-shrink:0; font-size:14px; padding:10px 0; }
+.explore a span { grid-column:2; font-size:12px; color:var(--muted); margin-top:3px; }
+.footer { display:flex; flex-wrap:wrap; gap:24px; border-top:1px solid var(--line); padding-top:12px; color:var(--muted); font-size:12px; }.footer a { min-height:44px; display:flex; align-items:center; }
+.notice { padding:10px 14px; border:1px solid #b79049; color:var(--app-link,#e3c48a); font-size:12px; line-height:1.5; }
+.landing a:focus-visible,.landing button:focus-visible { outline:3px solid #8ed2ff; outline-offset:5px; }
+@media(max-width:760px) { .landing { padding:16px 22px 28px; }.hero { padding:16px 0 28px; }.hero h1 { letter-spacing:-1px; }.role { align-items:flex-start; flex-direction:column; gap:12px; padding:20px 0; }.sectionHead { gap:8px; }.sectionHead span { font-size:11px; }.explore { flex-direction:column; align-items:flex-start; gap:6px; }.footer { gap:12px 20px; } }
+.rolePage { max-width:880px; }
+.rolePage .nav>a:first-child { font-size:14px; letter-spacing:0; font-weight:400; }
+.rolePage .footer { margin-top:36px; }
+.applyStart { margin:0 0 28px; }.applyStart p { font-size:14px; line-height:1.6; color:var(--muted); margin-top:12px; }
+.applyStart h2 { font-size:22px; }
+.startButton { display:inline-flex; align-items:center; min-height:48px; padding:12px 22px; background:#1d9bf0; color:#071824; font-weight:650; border-radius:8px; cursor:pointer; }
+.startButton:hover { background:#73c3fa; }
+.roleDetails { border-top:1px solid var(--line); padding:20px 0; font-size:15px; color:var(--muted); line-height:1.7; }
+.roleDetails summary { cursor:pointer; color:var(--ink); font-size:17px; font-weight:500; min-height:28px; }
+.roleDetails summary:focus-visible { outline:3px solid #8ed2ff; outline-offset:5px; }
+.roleDetails h2 { color:var(--ink); font-size:17px; margin:22px 0 10px; font-weight:500; }
+.roleDetails p { margin:16px 0; }.roleDetails ul,.roleDetails ol { padding-left:24px; margin:16px 0; }.roleDetails ul { list-style:disc; }.roleDetails ol { list-style:decimal; }.roleDetails li { padding-left:4px; margin-bottom:12px; }.roleDetails small { display:block; font-size:12px; margin-top:4px; }.roleDetails a { color:var(--blue); text-decoration:underline; }
+
+.hiring { color:var(--blue); font-size:14px; margin:0 0 16px; }

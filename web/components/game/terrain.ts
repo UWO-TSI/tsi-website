@@ -1,4 +1,45 @@
 /**
+ * ⚠️ WORLD MODEL NOTICE (David ruling 2026-07-26) — this file implements the
+ * WRONG model and is scheduled for replacement. Read
+ * `specs/acnh-system-reference.md` + CLAUDE.md § "World model" before editing.
+ *
+ * ACNH is a grid of cells at integer levels. Its whole ground plane is
+ * `FldUnit/Base_0.dae`: one 4-vertex quad, 10x10 raw, material mGrass. Height
+ * is `level * 1.5u`, an array read. Cliffs, rivers and roads are autotile
+ * pieces chosen from the 8 neighbours.
+ *
+ * This file is instead a continuous FBM heightfield, and the mismatch is the
+ * root cause of most of the world's visual debt:
+ *
+ *  - NOISE_AMPLITUDE 0.6 + the 0.8 outskirt swell puts the ENTIRE island
+ *    inside a range of ~1.4u. One ACNH elevation step is 1.5u. Nothing can
+ *    read as a level because nothing is a level.
+ *  - `Math.max(h, 0)` in rawNoiseHeight means the terrain has no dips at all.
+ *    Everything is bumps above a plane; the only concavity is the river carve.
+ *  - The consuming mesh is PlaneGeometry(150,150,216,216) = 0.694u per vertex.
+ *    The river channel is 2.9-4.4u wide with 1.3u bank blends, so it is
+ *    sampled by ~4 vertices and the deepest sample rarely lands on the
+ *    centreline. The channel is a faceted asymmetric trench by construction.
+ *  - BUILDING_FOOTPRINTS flattens to `rawNoiseHeight(b.x, b.z)`, which ignores
+ *    PATH_CORRIDORS entirely, so a building next to a path sits at a different
+ *    height than the path meeting it. The slab discs in GameWorld's Terrain()
+ *    exist only to hide that seam.
+ *  - TEMPLE_RISE.h = 2.3 is not a multiple of 1.5, so the ACNH cliff kit
+ *    cannot sit on it even in principle. TempleRise.tsx's rock band is a cover
+ *    for a smooth radial cone.
+ *  - getTerrainHeight and sampleTerrainHeightFast disagree: only the fast path
+ *    applies the bridge arch, so one-shot prop placement sinks into bridges.
+ *
+ * Target replacement: `level: Uint8Array` + `surface: Uint8Array` on a 1.0u
+ * grid, height = level * 1.5, chunked 16x16 (one ACNH acre) so it culls.
+ * That deletes BUILDING_FOOTPRINTS, PATH_CORRIDORS, RIVER_DEPTH, the 257 grid
+ * bake, and the slab discs.
+ *
+ * Until then: do not add new flatten zones, blend radii or cover layers here.
+ * Every one of those is a symptom of the model, not a fix.
+ *
+ * ── Original header ──────────────────────────────────────────────
+ *
  * Terrain height generation for the AC-style game world.
  * Uses value noise with FBM for subtle rolling hills.
  *
@@ -46,7 +87,7 @@ function fbm(x: number, y: number, octaves: number = 4): number {
 
 // ─── Constants ───────────────────────────────────────────────────
 
-export const ISLAND_RADIUS = 52;
+export const ISLAND_RADIUS = 61; // GEO S1: +18% island
 
 // Noise tuning — sprint A1 target: max ~0.6 displacement
 // fbm returns ~[0, 1]. NOISE_AMPLITUDE caps the height accordingly.
@@ -65,13 +106,17 @@ const NOISE_AMPLITUDE = 0.6;
 export const BUILDING_FOOTPRINTS: Array<{ x: number; z: number; radius: number }> = [
   { x: 0, z: -2.3, radius: 4.2 },   // HQ office
   { x: -24, z: 13.8, radius: 4.2 }, // Shop market
-  { x: 0, z: 31.8, radius: 4.5 },   // Oracle museum
+  // Oracle museum footprint removed — Temple Rise (S6) owns that ground.
   { x: 24, z: 15.1, radius: 3.2 },  // House chalet
   { x: 14, z: 9, radius: 1.4 },     // Bounty board
   { x: -15, z: -13, radius: 1.4 },  // Job board
   { x: 15, z: -13, radius: 1.4 },   // Leaderboard
   { x: -31.5, z: -18, radius: 3 },  // ambient house (red chalet)
   { x: 31.5, z: -19, radius: 3 },   // ambient house (yellow chalet)
+  // S7 Reedmarsh ponds — flatten slabs so the water discs sit clean
+  // (S7Pockets.tsx PONDS mirrors these centers).
+  { x: -43, z: 9, radius: 2.5 },
+  { x: -38.3, z: 11.2, radius: 1.9 },
 ];
 
 // ─── River valley (ACNH revamp 2026-07) ─────────────────────────
@@ -100,9 +145,22 @@ const RIVER_POLYLINE: [number, number][] = (() => {
   }
   return pts;
 })();
-const RIVER_DEPTH = -0.55; // river v2: deeper valley under the -0.2 water
-const RIVER_HALF = 2.2;    // full-depth half-width (water is 1.9 half-wide)
-const RIVER_BLEND = 1.3;   // bank blend distance beyond RIVER_HALF
+const RIVER_DEPTH = -0.95; // V1 visual depth (David 2026-07-25): a CARVED channel under the -0.32 water
+const RIVER_HALF = 2.2;    // base full-depth half-width (water is 1.9 half-wide)
+const RIVER_BLEND = 1.3;   // bank blend distance beyond the local half-width
+
+// River v3 (David 2026-07-25): the run varies in width — tight narrows under
+// both bridge crossings, one wide bend pool on the gentle x≈22 bend (the
+// island's marquee fishing hole; the tight S-bend at x≈0-10 stays base
+// width — wide offsets there fold the bank ribbons across the channel).
+// Single profile: the carve here AND the water/bank ribbons (River.tsx,
+// RiverBankWalls.tsx, RiverBanks.tsx) all multiply their cross-offsets by
+// this, so every layer stays in register.
+export function riverWidthScale(x: number): number {
+  const pool = 0.8 * Math.exp(-(((x - 22) / 4.5) ** 2));
+  const narrows = 0.34 * (Math.exp(-((x / 3) ** 2)) + Math.exp(-(((x - 39.25) / 3) ** 2)));
+  return 1 + pool - narrows;
+}
 
 function distToRiver(x: number, z: number): number {
   let best = Infinity;
@@ -121,9 +179,10 @@ function distToRiver(x: number, z: number): number {
 /** 1 inside the channel, smoothstep → 0 across the banks. */
 function riverInfluence(x: number, z: number): number {
   const d = distToRiver(x, z);
-  if (d >= RIVER_HALF + RIVER_BLEND) return 0;
-  if (d <= RIVER_HALF) return 1;
-  const t = 1 - (d - RIVER_HALF) / RIVER_BLEND;
+  const half = RIVER_HALF * riverWidthScale(x);
+  if (d >= half + RIVER_BLEND) return 0;
+  if (d <= half) return 1;
+  const t = 1 - (d - half) / RIVER_BLEND;
   return t * t * (3 - 2 * t);
 }
 
@@ -131,14 +190,23 @@ function riverInfluence(x: number, z: number): number {
 // [axis, axisPos, halfWidth, otherMin, otherMax, falloff]
 // axis "z" = path runs along Z, so x is the cross-axis at axisPos.
 type PathCorridor = { axis: "x" | "z"; pos: number; halfWidth: number; from: number; to: number; falloff: number };
+// S2: the two arched river crossings (walker crest centers).
+export const BRIDGE_CROSSINGS = [
+  { x: 0, zc: 3.25 },
+  { x: 39.25, zc: 3.7 },
+];
+
 const PATH_CORRIDORS: PathCorridor[] = [
   { axis: "x", pos: 0, halfWidth: 1.75, from: -24, to: 27, falloff: 1.5 },   // N-S spine
-  { axis: "z", pos: 10, halfWidth: 1.75, from: -26, to: 26, falloff: 1.5 },  // E-W at z=10
-  { axis: "z", pos: -13, halfWidth: 1.75, from: -17, to: 17, falloff: 1.5 }, // E-W at z=-13
+  { axis: "z", pos: 10, halfWidth: 1.75, from: -34, to: 41, falloff: 1.5 },  // S2 north avenue
+  { axis: "z", pos: -13, halfWidth: 1.75, from: -34, to: 41, falloff: 1.5 }, // S2 south avenue
+  { axis: "x", pos: 39.25, halfWidth: 1.75, from: -11.25, to: 8.25, falloff: 1.5 }, // S2 east leg (carve wins at the crossing)
+  { axis: "x", pos: -31.75, halfWidth: 1.75, from: -26.5, to: -14.75, falloff: 1.5 }, // S2 windmill spur
+  { axis: "x", pos: 44, halfWidth: 3, from: -5, to: 0.4, falloff: 1.5 }, // S3 wharf apron
   // Beach Cove spur (2026-07-14): sand path SE off the spine + wood deck.
   { axis: "z", pos: 23.75, halfWidth: 1.75, from: 1, to: 20, falloff: 1.5 },
-  { axis: "x", pos: 18.25, halfWidth: 1.75, from: 25.5, to: 40, falloff: 1.5 },
-  { axis: "x", pos: 18.25, halfWidth: 2.65, from: 39.9, to: 44.2, falloff: 1.5 },
+  { axis: "x", pos: 18.25, halfWidth: 1.75, from: 25.5, to: 46.9, falloff: 1.5 }, // S1
+  { axis: "x", pos: 18.25, halfWidth: 2.65, from: 46.8, to: 51.8, falloff: 1.5 }, // S1
 ];
 
 // ─── Internal: raw noise terrain (no flattening) ─────────────────
@@ -174,7 +242,28 @@ function rawNoiseHeight(x: number, z: number): number {
  * Buildings get flat footprints — see BUILDING_FOOTPRINTS. Paths get
  * flattened to y=0 with a falloff so the dirt-path quads sit flush.
  */
+/**
+ * Grid height override (2026-07-28).
+ *
+ * When the tile world is mounted, ground height stops coming from the FBM
+ * heightfield and starts coming from the cell map — otherwise the player walks
+ * the old smooth terrain while looking at terraces, and a "walkable" 0.75u bank
+ * is walkable only in the sense that you can see it.
+ *
+ * A REGISTERED PROVIDER rather than an import, on purpose. `terrain.ts` is
+ * pulled in by the extraction scripts (`snap-world-to-grid.mjs` and friends)
+ * under `--experimental-strip-types`, and importing the map would drag a JSON
+ * module into a context that cannot load one. Dependency stays one-directional:
+ * the grid knows about terrain, terrain knows nothing about the grid.
+ */
+let heightProvider: ((x: number, z: number) => number) | null = null;
+
+export function setTerrainHeightProvider(fn: ((x: number, z: number) => number) | null): void {
+  heightProvider = fn;
+}
+
 export function getTerrainHeight(x: number, z: number): number {
+  if (heightProvider) return heightProvider(x, z);
   // 0. River valley — carves through everything (paths cross via the
   // bridge; building footprints don't reach the channel core).
   const ri = riverInfluence(x, z);
@@ -183,7 +272,37 @@ export function getTerrainHeight(x: number, z: number): number {
   return ri > 0 ? base * (1 - ri) + RIVER_DEPTH * ri : base;
 }
 
+// ─── Temple Rise (GEO S6, 2026-07-25) ────────────────────────────
+// David-ruled: the Oracle Temple sits ON a hill with cliff faces. A flat
+// plateau under the temple, a steep blend the cliff-rock band hides
+// (TempleRise.tsx), and a stair ramp notched into the south face joining
+// the plaza spine. Beats footprints/paths — the oracle footprint entry
+// was removed in favor of this.
+export const TEMPLE_RISE = { x: 0, z: 31.8, topR: 6.6, blend: 1.7, h: 2.3 };
+export const TEMPLE_STAIRS = { halfW: 1.7, z0: 26.3, z1: 28.9 };
+
+export function templeRiseHeight(x: number, z: number): number | null {
+  const R = TEMPLE_RISE;
+  // Stair ramp cuts through the plateau front: smooth 0 → h.
+  if (Math.abs(x - R.x) < TEMPLE_STAIRS.halfW && z > TEMPLE_STAIRS.z0 - 0.3 && z < R.z) {
+    const t = Math.min(Math.max((z - TEMPLE_STAIRS.z0) / (TEMPLE_STAIRS.z1 - TEMPLE_STAIRS.z0), 0), 1);
+    return R.h * t * t * (3 - 2 * t);
+  }
+  const d = Math.hypot(x - R.x, z - R.z);
+  if (d < R.topR) return R.h;
+  if (d < R.topR + R.blend) {
+    const t = 1 - (d - R.topR) / R.blend;
+    return R.h * t * t * (3 - 2 * t);
+  }
+  return null;
+}
+
 function baseTerrainHeight(x: number, z: number): number {
+  // 0. Temple Rise — strongest claim of all (covers the old oracle
+  // footprint region entirely).
+  const rise = templeRiseHeight(x, z);
+  if (rise !== null) return rise;
+
   // 1. Building footprint flattening — strongest claim
   for (const b of BUILDING_FOOTPRINTS) {
     const dx = x - b.x;
@@ -275,6 +394,7 @@ function bakeGrid(): Float32Array {
  * accurate near grid boundaries.
  */
 export function sampleTerrainHeightFast(x: number, z: number): number {
+  if (heightProvider) return heightProvider(x, z);
   // Out-of-bounds clamp to 0 matches getTerrainHeight's island-edge
   // behavior (perimeter falls off to y=0 at ISLAND_RADIUS).
   if (Math.abs(x) > ISLAND_RADIUS || Math.abs(z) > ISLAND_RADIUS) return 0;
@@ -304,10 +424,20 @@ export function sampleTerrainHeightFast(x: number, z: number): number {
   const b = h10 + (h11 - h10) * fx;
   const h = a + (b - a) * fz;
 
-  // Bridge deck override for walkers: the N-S path crosses the carved
-  // river valley on the wooden bridge (deck top ≈ 0.1). Without this,
-  // ground-follow dips the player under the deck mid-crossing. Cheap
-  // |x| guard keeps riverInfluence out of the common case.
-  if (x > -1.5 && x < 1.5 && riverInfluence(x, z) > 0 && h < 0.12) return 0.12;
+  // V2 bridge arch (David 2026-07-25) — S2: parameterized for BOTH river
+  // crossings (main bridge + the wharf east bridge). Walkers ride a
+  // parabolic ≈0.55 crest with smooth ramps at the ends.
+  // S3 wharf pier: fixed plank height over the carved channel.
+  if (x > 43.2 && x < 45.2 && z > 0.4 && z < 5 && h < 0.12) return 0.12;
+  for (let bi = 0; bi < BRIDGE_CROSSINGS.length; bi++) {
+    const bc = BRIDGE_CROSSINGS[bi];
+    if (x > bc.x - 1.6 && x < bc.x + 1.6) {
+      const dz = (z - bc.zc) / 3.3;
+      if (dz > -1 && dz < 1) {
+        const arch = 0.55 * (1 - dz * dz) + 0.02;
+        if (arch > h) return arch;
+      }
+    }
+  }
   return h;
 }

@@ -1,7 +1,9 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import DeveloperProjects from "./DeveloperProjects";
+import Link from "next/link";
+import { useState, useCallback, useEffect, useRef, useMemo, useImperativeHandle, type Ref } from "react";
+import { motion, AnimatePresence, MotionConfig } from "framer-motion";
 import FormField from "./FormField";
 import FormProgress from "./FormProgress";
 import ResumeUpload from "./ResumeUpload";
@@ -13,16 +15,28 @@ import {
   ArrowLeft,
   Check,
   Sparkles,
-  CloudOff,
-  Cloud,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { Position, EssayAnswer } from "@/lib/recruitment";
-import { HEARD_ABOUT_OPTIONS, YEAR_OPTIONS } from "@/lib/recruitment";
+import { HEARD_ABOUT_OPTIONS, YEAR_OPTIONS, isApplicationLink } from "@/lib/recruitment";
+
+import { applicationDraftKey, createApplicationDraft, confirmedApplication, readApplicationDraft, type DraftPayload, type DraftSaveResult, type DraftStatus } from "./application-draft";
+import { SaveStatus } from "./ui";
+
+export interface ApplicationFormHandle {
+  flushDraft: () => Promise<DraftSaveResult>;
+  isSubmitting: () => boolean;
+}
 
 interface ApplicationFormProps {
   position: Position;
   userId: string;
+  onSubmitted?: () => void;
+  onReturnToBoard?: () => void;
+  onPreviewComplete?: () => void;
+  layout?: "steps" | "sheet";
+  preview?: boolean;
+  ref?: Ref<ApplicationFormHandle>;
 }
 
 interface FormData {
@@ -69,7 +83,6 @@ const EMPTY_FORM: FormData = {
   creative_piece_files: [],
 };
 
-const DRAFT_KEY = (positionId: string) => `tethos:draft:${positionId}`;
 
 // Reserved IDs for profile fields stashed inside essay_answers since the
 // applications table doesn't have dedicated columns for them. Admin views
@@ -80,31 +93,6 @@ export const META_PAST_PROJECTS_ID = "__past_projects";
 export const META_PORTFOLIO_FILES_ID = "__portfolio_files";
 export const META_PORTFOLIO_LINK_ID = "__portfolio_link";
 export const META_CREATIVE_PIECE_FILES_ID = "__creative_piece_files";
-
-interface DraftPayload {
-  form_data: FormData;
-  updated_at: string;
-}
-
-function isEmptyForm(f: FormData): boolean {
-  return (
-    !f.full_name &&
-    !f.email &&
-    !f.phone &&
-    !f.program_major &&
-    !f.year_of_study &&
-    !f.linkedin_url &&
-    !f.other_links &&
-    !f.commitments_next_year &&
-    !f.past_projects &&
-    !f.heard_about_us &&
-    !f.resume_storage_path &&
-    f.portfolio_files.length === 0 &&
-    !f.portfolio_link &&
-    f.creative_piece_files.length === 0 &&
-    Object.values(f.essay_answers).every((v) => !v)
-  );
-}
 
 function relativeTime(iso: string): string {
   const then = new Date(iso).getTime();
@@ -140,9 +128,19 @@ function countWords(text: string): number {
     .filter((w) => w.length > 0).length;
 }
 
-export default function ApplicationForm({
+export default function ApplicationForm(props: ApplicationFormProps) {
+  return <ApplicationFormInner key={`${props.userId}:${props.position.id}:${!!props.preview}`} {...props} />;
+}
+
+function ApplicationFormInner({
   position,
   userId,
+  onSubmitted,
+  onReturnToBoard,
+  onPreviewComplete,
+  layout = "steps",
+  preview = false,
+  ref: formRef,
 }: ApplicationFormProps) {
   const [step, setStep] = useState(0);
   const [direction, setDirection] = useState(1);
@@ -152,198 +150,153 @@ export default function ApplicationForm({
   const [confirmChecked, setConfirmChecked] = useState(false);
 
   const [formData, setFormData] = useState<FormData>(EMPTY_FORM);
-
+  const latestForm = useRef<FormData>(EMPTY_FORM);
+  const formElement = useRef<HTMLDivElement>(null);
+  const submittingRef = useRef(false);
+  const submittedCallback = useRef(onSubmitted);
+  useEffect(() => { submittedCallback.current = onSubmitted; }, [onSubmitted]);
+  const [alreadySubmitted, setAlreadySubmitted] = useState(false);
+  const [hydrated, setHydrated] = useState(preview);
+  const [hydrationError, setHydrationError] = useState<"session" | "draft" | null>(null);
   const [draftRestoredAt, setDraftRestoredAt] = useState<string | null>(null);
   const [draftBannerDismissed, setDraftBannerDismissed] = useState(false);
-  const [draftSyncState, setDraftSyncState] = useState<
-    "idle" | "saving" | "saved" | "offline"
-  >("idle");
-  const hydratedRef = useRef(false);
-  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [draftSyncState, setDraftSyncState] = useState<DraftStatus>("idle");
+  const hydratedRef = useRef(preview);
+  const draft = useMemo(() => createApplicationDraft<FormData>({
+    writeLocal: payload => localStorage.setItem(applicationDraftKey(userId, position.id), JSON.stringify(payload)),
+    removeLocal: () => localStorage.removeItem(applicationDraftKey(userId, position.id)),
+    saveRemote: async data => {
+      const response = await fetch("/api/drafts", {
+        method: "PUT", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ position_id: position.id, form_data: data }),
+        signal: AbortSignal.timeout(15_000),
+      });
+      if (response.status === 409) {
+        const result = await response.json().catch(() => null);
+        if (result?.code === "ALREADY_SUBMITTED" && confirmedApplication(result.submitted_application, position.id)) return "submitted";
+      }
+      return response.ok;
+    },
+    onStatus: setDraftSyncState,
+    onSubmitted: () => { setAlreadySubmitted(true); setSubmitted(true); submittedCallback.current?.(); },
+  }), [position.id, userId]);
 
-  // Hydrate from draft + Google session on mount.
+  useImperativeHandle(formRef, () => ({
+    flushDraft: async () => {
+      if (submittingRef.current) return "error";
+      if (!hydratedRef.current) return "saved";
+      return preview ? "saved" : draft.flush();
+    },
+    isSubmitting: () => submittingRef.current,
+  }), [draft, preview]);
+
   useEffect(() => {
+    draft.activate();
+    if (preview) return () => draft.dispose();
     let cancelled = false;
-
+    hydratedRef.current = false;
+    const controller = new AbortController();
     async function hydrate() {
-      const supabase = createClient();
-
-      // Start with Google-derived defaults (name/email pre-fill)
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      const meta = user?.user_metadata ?? {};
-      const sessionDefaults: Partial<FormData> = {
-        full_name: meta.full_name ?? meta.name ?? "",
-        email: user?.email ?? "",
-      };
-
-      // Load drafts in parallel: localStorage (fast) + Supabase (authoritative)
-      let localDraft: DraftPayload | null = null;
+      let stage: "session" | "draft" = "session";
       try {
-        const raw = localStorage.getItem(DRAFT_KEY(position.id));
-        if (raw) localDraft = JSON.parse(raw);
-      } catch {
-        localDraft = null;
-      }
-
-      let remoteDraft: DraftPayload | null = null;
-      try {
-        const res = await fetch(
-          `/api/drafts?position_id=${encodeURIComponent(position.id)}`
-        );
-        if (res.ok) {
-          const row = await res.json();
-          if (row && row.form_data) {
-            remoteDraft = {
-              form_data: row.form_data,
-              updated_at: row.updated_at,
-            };
-          }
+        const { data: { user }, error } = await createClient().auth.getUser();
+        if (error || user?.id !== userId) throw new Error("Session changed");
+        stage = "draft";
+        const defaults = { full_name: user.user_metadata?.full_name ?? user.user_metadata?.name ?? "", email: user.email ?? "" };
+        let local: DraftPayload<Partial<FormData>> | null = null;
+        try { local = JSON.parse(localStorage.getItem(applicationDraftKey(userId, position.id)) ?? "null"); } catch { /* Browser storage is optional. */ }
+        const res = await fetch(`/api/drafts?position_id=${encodeURIComponent(position.id)}`, { signal: AbortSignal.any([controller.signal, AbortSignal.timeout(15_000)]) });
+        const stored = await readApplicationDraft<Partial<FormData>>(res, position.id);
+        if (cancelled) return;
+        if (stored.submitted) {
+          draft.submitted();
+          hydratedRef.current = true;
+          setHydrated(true);
+          setAlreadySubmitted(true);
+          setSubmitted(true);
+          submittedCallback.current?.();
+          return;
         }
-      } catch {
-        // Network failed, rely on localStorage
-      }
-
-      if (cancelled) return;
-
-      // Prefer the most recently updated draft
-      let chosen: DraftPayload | null = null;
-      if (localDraft && remoteDraft) {
-        chosen =
-          new Date(localDraft.updated_at).getTime() >
-          new Date(remoteDraft.updated_at).getTime()
-            ? localDraft
-            : remoteDraft;
-      } else {
-        chosen = localDraft ?? remoteDraft;
-      }
-
-      if (chosen && !isEmptyForm(chosen.form_data)) {
-        setFormData({
-          ...EMPTY_FORM,
-          ...sessionDefaults,
-          ...chosen.form_data,
-          essay_answers: chosen.form_data.essay_answers ?? {},
-          other_links: chosen.form_data.other_links ?? "",
-          commitments_next_year: chosen.form_data.commitments_next_year ?? "",
-          past_projects: chosen.form_data.past_projects ?? "",
-          resume_storage_path: chosen.form_data.resume_storage_path ?? null,
-          resume_filename: chosen.form_data.resume_filename ?? null,
-          resume_size_bytes: chosen.form_data.resume_size_bytes ?? null,
-          portfolio_files: chosen.form_data.portfolio_files ?? [],
-          portfolio_link: chosen.form_data.portfolio_link ?? "",
-          creative_piece_files: chosen.form_data.creative_piece_files ?? [],
-        });
-        setDraftRestoredAt(chosen.updated_at);
-      } else {
-        setFormData((prev) => ({ ...prev, ...sessionDefaults }));
-      }
-      hydratedRef.current = true;
+        const remote = stored.draft;
+        const candidates = [local, remote].filter((candidate): candidate is DraftPayload<Partial<FormData>> =>
+          !!candidate?.form_data && typeof candidate.form_data === "object" && !Array.isArray(candidate.form_data) && Number.isFinite(Date.parse(candidate.updated_at)));
+        candidates.sort((a, b) => Date.parse(b.updated_at) - Date.parse(a.updated_at));
+        const chosen = candidates[0];
+        const restored = { ...EMPTY_FORM, ...defaults, ...chosen?.form_data };
+        const data: FormData = {
+          ...restored,
+          essay_answers: restored.essay_answers && typeof restored.essay_answers === "object" ? restored.essay_answers : {},
+          portfolio_files: Array.isArray(restored.portfolio_files) ? restored.portfolio_files : [],
+          creative_piece_files: Array.isArray(restored.creative_piece_files) ? restored.creative_piece_files : [],
+        };
+        for (const [key, initial] of Object.entries(EMPTY_FORM)) {
+          if (typeof initial === "string" && typeof data[key as keyof FormData] !== "string") Object.assign(data, { [key]: initial });
+        }
+        data.essay_answers = Object.fromEntries(Object.entries(data.essay_answers).filter(([, value]) => typeof value === "string"));
+        latestForm.current = data;
+        hydratedRef.current = true;
+        setFormData(data);
+        setHydrated(true);
+        if (chosen) { setDraftRestoredAt(chosen.updated_at); draft.update(data); }
+      } catch { if (!cancelled) setHydrationError(stage); }
     }
+    void hydrate();
+    const retry = () => { if (hydratedRef.current && !submittingRef.current) void draft.flush(); };
+    window.addEventListener("online", retry);
+    return () => { cancelled = true; hydratedRef.current = false; controller.abort(); window.removeEventListener("online", retry); draft.dispose(); };
+  }, [draft, position.id, userId, preview]);
 
-    hydrate();
-    return () => {
-      cancelled = true;
-    };
-  }, [position.id]);
-
-  // Debounced autosave to localStorage (always) + Supabase (when non-empty).
   useEffect(() => {
-    if (!hydratedRef.current) return;
-    if (isEmptyForm(formData)) return;
+    if (preview || !(submitting || draftSyncState === "saving" || draftSyncState === "error")) return;
+    const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ""; };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [draftSyncState, submitting, preview]);
 
-    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-    setDraftSyncState("saving");
-
-    saveTimerRef.current = setTimeout(async () => {
-      const payload: DraftPayload = {
-        form_data: formData,
-        updated_at: new Date().toISOString(),
-      };
-
-      try {
-        localStorage.setItem(DRAFT_KEY(position.id), JSON.stringify(payload));
-      } catch {
-        // Storage may be full or disabled; proceed with remote save.
+  useEffect(() => {
+    if (layout !== "sheet") return;
+    const frame = requestAnimationFrame(() => {
+      const heading = formElement.current?.querySelector<HTMLElement>("[data-form-section] h3");
+      if (!heading) return;
+      heading.focus({ preventScroll: true });
+      let scroll = formElement.current?.parentElement;
+      while (scroll && scroll !== document.body) {
+        if (/(auto|scroll)/.test(getComputedStyle(scroll).overflowY)) {
+          scroll.scrollTo({ top: 0, behavior: "instant" });
+          break;
+        }
+        scroll = scroll.parentElement;
       }
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [layout, step]);
 
-      try {
-        const res = await fetch("/api/drafts", {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            position_id: position.id,
-            form_data: formData,
-          }),
-        });
-        setDraftSyncState(res.ok ? "saved" : "offline");
-      } catch {
-        setDraftSyncState("offline");
-      }
-    }, 800);
-
-    return () => {
-      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-    };
-  }, [formData, position.id]);
-
-  const clearDraft = useCallback(async () => {
-    try {
-      localStorage.removeItem(DRAFT_KEY(position.id));
-    } catch {
-      // ignore
-    }
-    try {
-      await fetch(
-        `/api/drafts?position_id=${encodeURIComponent(position.id)}`,
-        { method: "DELETE" }
-      );
-    } catch {
-      // Server-side cleanup also happens on successful submit.
-    }
-  }, [position.id]);
+  const updateForm = useCallback((change: (current: FormData) => FormData) => {
+    if (!hydratedRef.current || submittingRef.current) return;
+    const next = change(latestForm.current);
+    latestForm.current = next;
+    setFormData(next);
+    if (!preview) draft.update(next);
+  }, [draft, preview]);
 
   const updateField = useCallback((field: keyof FormData, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-    setErrors((prev) => {
-      const next = { ...prev };
-      delete next[field];
-      return next;
-    });
-  }, []);
-
+    updateForm(prev => ({ ...prev, [field]: value }));
+    setErrors(prev => { const next = { ...prev }; delete next[field]; return next; });
+  }, [updateForm]);
   const updateEssay = useCallback((questionId: string, value: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      essay_answers: { ...prev.essay_answers, [questionId]: value },
-    }));
-  }, []);
-
-  const updateResume = useCallback(
-    (data: { path: string; filename: string; size: number } | null) => {
-      setFormData((prev) => ({
-        ...prev,
-        resume_storage_path: data?.path ?? null,
-        resume_filename: data?.filename ?? null,
-        resume_size_bytes: data?.size ?? null,
-      }));
-      setErrors((prev) => {
-        const next = { ...prev };
-        delete next.resume;
-        return next;
-      });
-    },
-    []
-  );
-
+    updateForm(prev => ({ ...prev, essay_answers: { ...prev.essay_answers, [questionId]: value } }));
+    setErrors(prev => { const next = { ...prev }; delete next[`essay_${questionId}`]; return next; });
+  }, [updateForm]);
+  const updateResume = useCallback((data: { path: string; filename: string; size: number } | null) => {
+    updateForm(prev => ({ ...prev, resume_storage_path: data?.path ?? null, resume_filename: data?.filename ?? null, resume_size_bytes: data?.size ?? null }));
+    setErrors(prev => { const next = { ...prev }; delete next.resume; return next; });
+  }, [updateForm]);
   const updatePortfolioFiles = useCallback((files: PortfolioFile[]) => {
-    setFormData((prev) => ({ ...prev, portfolio_files: files }));
-  }, []);
-
+    updateForm(prev => ({ ...prev, portfolio_files: files }));
+  }, [updateForm]);
   const updateCreativePieceFiles = useCallback((files: PortfolioFile[]) => {
-    setFormData((prev) => ({ ...prev, creative_piece_files: files }));
-  }, []);
+    updateForm(prev => ({ ...prev, creative_piece_files: files }));
+  }, [updateForm]);
 
   // Step validation
   const validateStep = (s: number): boolean => {
@@ -360,7 +313,7 @@ export default function ApplicationForm({
     }
 
     if (s === 1) {
-      if (!formData.resume_storage_path) errs.resume = "Resume is required";
+      if (!preview && !formData.resume_storage_path) errs.resume = "Resume is required";
     }
 
     if (s === 2) {
@@ -378,15 +331,32 @@ export default function ApplicationForm({
           }
           continue;
         }
-        if (!answer.trim()) {
+        if (!answer.trim() && q.required !== false) {
           errs[`essay_${q.id}`] = "Required";
-        } else if (countWords(answer) > q.max_words) {
+        } else if (q.response_type === "url" && answer.trim() && !isApplicationLink(answer)) {
+          errs[`essay_${q.id}`] = "Enter a valid http or https link";
+        } else if (q.response_type !== "url" && countWords(answer) > q.max_words) {
           errs[`essay_${q.id}`] = `Exceeds ${q.max_words} word limit`;
         }
       }
     }
 
     setErrors(errs);
+    if (Object.keys(errs).length) requestAnimationFrame(() => {
+      const section = formElement.current?.querySelector<HTMLElement>(`[data-form-section="${["profile", "resume", "your-answers"][s]}"]`);
+      const target = section?.querySelector<HTMLElement>("[aria-invalid=true]") ?? section?.querySelector<HTMLElement>("h3, input, textarea, button");
+      if (!target) return;
+      if (target.tagName === "H3") target.tabIndex = -1;
+      target.focus({ preventScroll: true });
+      let scroll = formElement.current?.parentElement;
+      while (scroll && scroll !== document.body) {
+        if (/(auto|scroll)/.test(getComputedStyle(scroll).overflowY)) {
+          scroll.scrollTo({ top: scroll.scrollTop + target.getBoundingClientRect().top - scroll.getBoundingClientRect().top - 24, behavior: "instant" });
+          break;
+        }
+        scroll = scroll.parentElement;
+      }
+    });
     return Object.keys(errs).length === 0;
   };
 
@@ -402,32 +372,15 @@ export default function ApplicationForm({
   };
 
   const handleSubmit = async () => {
-    // Block double-submit
-    if (submitting) return;
-
-    // Cancel any pending autosave so it can't race the clearDraft call
-    if (saveTimerRef.current) {
-      clearTimeout(saveTimerRef.current);
-      saveTimerRef.current = null;
+    if (preview || submittingRef.current || !hydratedRef.current || !confirmChecked) return;
+    for (const section of [0, 1, 2]) {
+      if (!validateStep(section)) { setStep(section); return; }
     }
-
-    if (!validateStep(2)) {
-      setStep(2);
-      return;
-    }
-
-    if (!formData.resume_storage_path) {
-      setStep(1);
-      setErrors({ resume: "Resume is required" });
-      return;
-    }
-
+    submittingRef.current = true;
     setSubmitting(true);
-    setErrors((prev) => {
-      const next = { ...prev };
-      delete next.submit;
-      return next;
-    });
+    setErrors(prev => { const next = { ...prev }; delete next.submit; return next; });
+    // Drain older writes before submission so a delayed autosave cannot recreate its draft.
+    await draft.pauseForSubmission();
 
     const essayAnswers: EssayAnswer[] = [
       ...position.essay_questions.map((q) => ({
@@ -488,6 +441,7 @@ export default function ApplicationForm({
     try {
       const res = await fetch("/api/applications", {
         method: "POST",
+        signal: AbortSignal.timeout(30_000),
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           user_id: userId,
@@ -505,47 +459,34 @@ export default function ApplicationForm({
         }),
       });
 
-      if (res.ok) {
-        await clearDraft();
+      const result = await res.json().catch(() => null);
+      if (res.ok && confirmedApplication(result, position.id)) {
+        draft.submitted();
+        setAlreadySubmitted(result.already_submitted === true);
         setSubmitted(true);
-        setSubmitting(false);
+        onSubmitted?.();
         return;
       }
-
-      // Map status codes to actionable messages
-      let message: string;
-      try {
-        const errData = await res.json();
-        if (res.status === 409) {
-          message =
-            "You've already applied for this position. Track its status in your dashboard.";
-        } else if (res.status === 429) {
-          message = "Too many submissions. Wait a moment, then try again.";
-        } else if (res.status === 401) {
-          message = "Your session expired. Please refresh and sign in again.";
-        } else {
-          message =
-            errData?.error ||
-            "Submission failed. Your draft is saved. Try again.";
-        }
-      } catch {
-        message = "Submission failed. Your draft is saved. Try again.";
-      }
-      setErrors({ submit: message });
-      if (res.status === 409) {
-        // Already applied — clear the local draft so they can't keep
-        // mashing Submit on stale data.
-        await clearDraft().catch(() => {});
-      }
+      const serverMessage = typeof result?.error === "string" ? result.error : "We couldn’t confirm that your application was received.";
+      const guidance = res.status === 401
+        ? "Your session expired. Save and close, then sign in again to this role."
+        : res.status === 429 ? "Please wait a minute, then retry."
+        : res.status === 409 ? "Your answers are still here. Check this role’s availability or My applications before retrying."
+        : "Your answers are still here. Check your connection and retry; we’ll check for an existing submission to avoid duplicates.";
+      setErrors({ submit: `${serverMessage} ${guidance}` });
+      draft.resume();
     } catch {
-      setErrors({
-        submit:
-          "Network error. Your draft is saved. Check your connection and try again.",
-      });
+      setErrors({ submit: "We couldn’t confirm your submission. Your answers are still here. Check My applications, then retry if needed; retrying won’t create a second application." });
+      draft.resume();
+    } finally {
+      submittingRef.current = false;
+      setSubmitting(false);
     }
-
-    setSubmitting(false);
   };
+
+  if (!hydrated) return <div role={hydrationError ? "alert" : "status"} className="py-8">
+    {hydrationError ? <><p>{hydrationError === "session" ? "We couldn’t verify your session." : "We couldn’t restore your saved progress."} Your saved answers haven’t changed.</p><p>{hydrationError === "session" ? "Sign in again, then return to this role." : "Check your connection and retry before editing."}</p><button type="button" onClick={() => location.reload()}>Try again</button></> : "Restoring your application…"}
+  </div>;
 
   if (submitted) {
     return (
@@ -554,12 +495,14 @@ export default function ApplicationForm({
         applicantName={formData.full_name}
         position={position}
         positionSlug={position.slug}
+        alreadySubmitted={alreadySubmitted}
+        onReturnToBoard={onReturnToBoard}
       />
     );
   }
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <MotionConfig reducedMotion="user"><div ref={formElement} className="max-w-2xl mx-auto" data-layout={layout}>
       <AnimatePresence>
         {draftRestoredAt && !draftBannerDismissed && (
           <motion.div
@@ -598,67 +541,29 @@ export default function ApplicationForm({
         )}
       </AnimatePresence>
 
-      <FormProgress
-        currentStep={step}
-        totalSteps={STEP_LABELS.length}
-        labels={STEP_LABELS}
-      />
+      {layout === "steps" ? <FormProgress currentStep={step} totalSteps={STEP_LABELS.length} labels={STEP_LABELS} /> : <p className="mb-6 text-sm">{step === 3 ? "Review · Check your details before sending" : "Your application · Review before sending"}</p>}
 
-      <div className="flex items-center justify-end mb-6 h-5">
-        <AnimatePresence mode="wait">
-          {draftSyncState === "saving" && (
-            <motion.span
-              key="saving"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="text-[10px] font-mono text-[#6B7280] flex items-center gap-1.5"
-            >
-              <span className="w-1 h-1 rounded-full bg-[#FFD166] animate-pulse" />
-              Saving draft…
-            </motion.span>
-          )}
-          {draftSyncState === "saved" && (
-            <motion.span
-              key="saved"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="text-[10px] font-mono text-[#6B7280] flex items-center gap-1.5"
-            >
-              <Cloud className="w-3 h-3 text-[#1D9BF0]" />
-              Draft saved
-            </motion.span>
-          )}
-          {draftSyncState === "offline" && (
-            <motion.span
-              key="offline"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="text-[10px] font-mono text-[#FFD166] flex items-center gap-1.5"
-            >
-              <CloudOff className="w-3 h-3" />
-              Saved locally. Will sync when online
-            </motion.span>
-          )}
-        </AnimatePresence>
+      <div className="flex items-center justify-between gap-4 mb-6">
+        {preview ? <p>Preview only · Nothing is saved or submitted.</p> : <><SaveStatus state={draftSyncState} />{(draftSyncState === "error" || draftSyncState === "local") && <button type="button" onClick={() => void draft.flush()}>Retry saving</button>}</>}
       </div>
 
-      <div className="relative overflow-hidden min-h-[400px]">
-        <AnimatePresence mode="wait" custom={direction}>
+      <fieldset disabled={submitting} className="relative min-w-0 border-0 p-0 m-0" aria-busy={submitting}>
+        {position.slug === "developer" && step !== 3 && <DeveloperProjects />}
+        <AnimatePresence mode={layout === "sheet" ? "sync" : "wait"} custom={direction}>
           {/* Step 0: Personal Info */}
-          {step === 0 && (
+          {(step === 0 || layout === "sheet" && step !== 3) && (
             <motion.div
               key="step0"
+              data-form-section="profile"
               custom={direction}
               variants={slideVariants}
-              initial="enter"
+              initial={layout === "sheet" ? false : "enter"}
               animate="center"
               exit="exit"
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
               className="space-y-6"
             >
+              {layout === "sheet" && <h3 tabIndex={-1}>Profile</h3>}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField
                   label="Full Name"
@@ -706,6 +611,7 @@ export default function ApplicationForm({
                     return (
                       <button
                         key={y.value}
+                        aria-pressed={selected}
                         type="button"
                         onClick={() =>
                           updateField("year_of_study", String(y.value))
@@ -768,6 +674,7 @@ export default function ApplicationForm({
                     return (
                       <button
                         key={o}
+                        aria-pressed={selected}
                         type="button"
                         onClick={() => updateField("heard_about_us", o)}
                         className={`px-4 py-2 rounded-full text-sm transition-all ${
@@ -791,16 +698,18 @@ export default function ApplicationForm({
           )}
 
           {/* Step 1: Resume */}
-          {step === 1 && (
+          {(step === 1 || layout === "sheet" && step !== 3) && (
             <motion.div
               key="step1"
+              data-form-section="resume"
               custom={direction}
               variants={slideVariants}
-              initial="enter"
+              initial={layout === "sheet" ? false : "enter"}
               animate="center"
               exit="exit"
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
             >
+              {layout === "sheet" && <h3 tabIndex={-1}>Resume</h3>}
               <div className="py-8">
                 <h3 className="text-xl font-semibold text-[#F1FFFF] mb-2">
                   Upload your resume
@@ -809,24 +718,31 @@ export default function ApplicationForm({
                   Upload a PDF of your resume. Make sure it&apos;s up to date
                   and highlights relevant experience.
                 </p>
-                <ResumeUpload
+                {preview ? <div className="rounded-xl border border-dashed p-6"><p>PDF résumé · Up to 2 MB</p><button type="button" disabled>Upload disabled in preview</button></div> : <ResumeUpload
                   positionSlug={position.slug}
                   currentPath={formData.resume_storage_path}
                   currentFilename={formData.resume_filename}
                   currentSize={formData.resume_size_bytes}
                   onChange={updateResume}
                   error={errors.resume}
-                />
+                />}
 
+                {["director-marketing", "developer"].includes(position.slug) && (
+                  <div className="mt-8">
+                    <FormField label="Portfolio or project link (optional)" name="portfolio_link" type="url"
+                      value={formData.portfolio_link} onChange={(v) => updateField("portfolio_link", v)}
+                      placeholder="Your website, GitHub, or portfolio" />
+                  </div>
+                )}
                 {position.slug === "vp-marketing" && (
                   <div className="mt-8 pt-8 border-t border-white/[0.06]">
-                    <PortfolioUpload
+                    {!preview && <PortfolioUpload
                       positionSlug={`${position.slug}-portfolio`}
                       files={formData.portfolio_files}
                       onChange={updatePortfolioFiles}
                       label="Portfolio (optional)"
                       description="Drop your broader body of work: designs, reels, photos, anything that shows what you've made before. Multiple files OK. Or paste a hosted link below."
-                    />
+                    />}
                     <div className="mt-4">
                       <FormField
                         label="Portfolio link (optional)"
@@ -844,17 +760,19 @@ export default function ApplicationForm({
           )}
 
           {/* Step 2: Essay Questions */}
-          {step === 2 && (
+          {(step === 2 || layout === "sheet" && step !== 3) && (
             <motion.div
               key="step2"
+              data-form-section="your-answers"
               custom={direction}
               variants={slideVariants}
-              initial="enter"
+              initial={layout === "sheet" ? false : "enter"}
               animate="center"
               exit="exit"
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
               className="space-y-8"
             >
+              {layout === "sheet" && <h3 tabIndex={-1}>Your answers</h3>}
               {position.slug === "pm" && (
                 <div
                   className="rounded-2xl p-5"
@@ -909,11 +827,14 @@ export default function ApplicationForm({
                 const acceptsAttachment = !!attachmentMeta;
                 return (
                   <div key={q.id}>
-                    <p className="text-sm text-[#F1FFFF] mb-3 font-medium whitespace-pre-line">
+                    <label htmlFor={`essay_${q.id}`} className="block text-sm text-[#F1FFFF] mb-3 font-medium whitespace-pre-line">
                       {i + 1}. {q.question}
-                    </p>
+                    </label>
+                    {q.response_type === "url" && (
+                      <p className="text-sm text-[#9CA3AF] mb-3">Paste the link. Check that the team can open it.</p>
+                    )}
 
-                    {acceptsAttachment && (
+                    {acceptsAttachment && !preview && (
                       <div className="mb-4">
                         <PortfolioUpload
                           positionSlug={`${position.slug}-creative`}
@@ -928,19 +849,19 @@ export default function ApplicationForm({
                     <FormField
                       label=""
                       name={`essay_${q.id}`}
-                      type="textarea"
+                      type={q.response_type === "url" ? "url" : "textarea"}
                       value={answer}
                       onChange={(v) => updateEssay(q.id, v)}
-                      required={!acceptsAttachment}
+                      required={!acceptsAttachment && q.required !== false}
                       placeholder={
-                        acceptsAttachment
+                        q.response_type === "url" ? "https://…" : acceptsAttachment
                           ? "Or paste a link if your file is hosted elsewhere"
                           : undefined
                       }
                       rows={q.max_words <= 80 ? 2 : 6}
                       error={errors[`essay_${q.id}`]}
-                      wordCount={countWords(answer)}
-                      maxWords={q.max_words}
+                      wordCount={q.response_type === "url" ? undefined : countWords(answer)}
+                      maxWords={q.response_type === "url" ? undefined : q.max_words}
                     />
                   </div>
                 );
@@ -959,8 +880,7 @@ export default function ApplicationForm({
                     Write in your own voice
                   </p>
                   <p className="text-xs text-[#9CA3AF] mt-1 leading-relaxed">
-                    The president spends his whole day on Claude. He&apos;ll
-                    know if it&apos;s AI-generated.
+                    Use your own examples and experiences. We want to get to know you.
                   </p>
                 </div>
               </div>
@@ -971,13 +891,15 @@ export default function ApplicationForm({
           {step === 3 && (
             <motion.div
               key="step3"
+              data-form-section="review"
               custom={direction}
               variants={slideVariants}
-              initial="enter"
+              initial={layout === "sheet" ? false : "enter"}
               animate="center"
               exit="exit"
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
             >
+              {layout === "sheet" && <h3 tabIndex={-1}>Review</h3>}
               <div>
                 <h3 className="text-lg font-semibold text-[#F1FFFF] mb-8">
                   Review your application
@@ -1093,8 +1015,7 @@ export default function ApplicationForm({
                           {formData.essay_answers[q.id] || "—"}
                         </p>
                         <p className="text-[10px] text-[#6B7280] font-mono mt-1">
-                          {countWords(formData.essay_answers[q.id] ?? "")} /{" "}
-                          {q.max_words} words
+                          {q.response_type === "url" ? "Link" : `${countWords(formData.essay_answers[q.id] ?? "")} / ${q.max_words} words`}
                         </p>
                       </div>
                     ))}
@@ -1103,6 +1024,8 @@ export default function ApplicationForm({
               </div>
 
               <button
+                role="checkbox"
+                aria-checked={confirmChecked}
                 onClick={() => setConfirmChecked((v) => !v)}
                 className="w-full flex items-start gap-3 p-4 rounded-xl mt-6 text-left transition-colors"
                 style={{
@@ -1135,6 +1058,7 @@ export default function ApplicationForm({
 
               {errors.submit && (
                 <div
+                  role="alert"
                   className="flex items-start gap-3 p-4 rounded-xl mt-6"
                   style={{
                     background: "rgba(239,68,68,0.08)",
@@ -1151,20 +1075,22 @@ export default function ApplicationForm({
                     <p className="text-xs text-[#9CA3AF] mt-1 leading-relaxed">
                       {errors.submit}
                     </p>
+                    <p className="text-xs mt-3"><Link href="/student/apply/dashboard">Check My applications</Link> · <a href={`mailto:team@tethos.ca?subject=${encodeURIComponent(`Application help: ${position.title}`)}`}>Contact the recruitment team</a></p>
                   </div>
                 </div>
               )}
             </motion.div>
           )}
         </AnimatePresence>
-      </div>
+      </fieldset>
 
       {/* Navigation */}
       <div className="flex justify-between mt-8">
         <div>
           {step > 0 && (
             <button
-              onClick={goBack}
+              onClick={() => layout === "sheet" ? setStep(0) : goBack()}
+              disabled={submitting}
               className="flex items-center gap-2 text-sm text-[#9CA3AF] hover:text-[#F1FFFF] transition"
             >
               <ArrowLeft className="w-4 h-4" />
@@ -1174,24 +1100,28 @@ export default function ApplicationForm({
         </div>
         <div>
           {step < STEP_LABELS.length - 1 ? (
-            <Button variant="primary" onClick={goNext}>
+            <Button variant="primary" onClick={() => {
+              if (layout !== "sheet") { goNext(); return; }
+              for (const section of [0, 1, 2]) { if (!validateStep(section)) { setStep(section); return; } }
+              setStep(3);
+            }}>
               <span className="flex items-center gap-2">
-                Next
+                {layout === "sheet" ? "Review application" : "Next"}
                 <ArrowRight className="w-4 h-4" />
               </span>
             </Button>
           ) : (
             <Button
               variant="primary"
-              onClick={handleSubmit}
-              disabled={!confirmChecked || submitting}
+              onClick={preview ? onPreviewComplete : handleSubmit}
+              disabled={(preview && !onPreviewComplete) || !confirmChecked || submitting}
             >
-              {submitting ? "Submitting..." : "Submit Application"}
+              {preview ? onPreviewComplete ? "Rehearse completion · No submission" : "Preview · Submission disabled" : submitting ? "Submitting..." : "Submit Application"}
             </Button>
           )}
         </div>
       </div>
-    </div>
+    </div></MotionConfig>
   );
 }
 

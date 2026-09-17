@@ -127,11 +127,11 @@ const FENCE_SEGMENTS: { country: NaturePlacement[]; log: NaturePlacement[] } = (
 // ─── Lantern (ACNH round streetlamp) ────────────────────────────────────
 // Model is ~2.7u tall with the globe at the top; the warm point light sits
 // in the globe so night pools read like the W7 cozy lamps.
-function Lantern({ position }: { position: [number, number, number] }) {
+export function Lantern({ position, intensity = 0.4, glow }: { position: [number, number, number]; intensity?: number; glow?: number }) {
   return (
     <group position={position}>
-      <GLBProp url="/assets/acnh/props/streetlamp.glb" />
-      <pointLight color={C.lanternEmissive} intensity={0.4} distance={5} position={[0, 2.4, 0]} />
+      <GLBProp url="/assets/acnh/props/streetlamp.glb" emissiveIntensity={glow} />
+      <pointLight color={C.lanternEmissive} intensity={intensity} distance={5} position={[0, 2.4, 0]} />
     </group>
   );
 }

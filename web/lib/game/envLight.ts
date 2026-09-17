@@ -3,7 +3,7 @@ import * as THREE from "three";
 /**
  * envLight (P3 polish 2026-07-13) — the ACNH "cozy reflections" pass.
  *
- * ACNH's warmth comes from image-based lighting: every prop sits in a
+ * Our approximation of soft outdoor reflection: every prop sits in a
  * bright sky-colored light field with a hot sun spot, so surfaces pick up
  * soft colored reflections instead of flat diffuse. Three.js equivalent:
  * scene.environment from a PMREM. We bake a tiny equirect (64x32 canvas —
@@ -33,9 +33,7 @@ export const ENV_PHASES: Record<"dawn" | "day" | "dusk" | "night", EnvPhaseSpec>
   night: { skyTop: "#0E0E28", skyBottom: "#2D2D6B", sun: "#AAB4E8", ground: "#2E4A38", intensity: 0.22, sunElev: 0.4 },
 };
 
-let _pmrem: THREE.PMREMGenerator | null = null;
-let _currentRT: THREE.WebGLRenderTarget | null = null;
-let _appliedPhase: string | null = null;
+const environments = new WeakMap<THREE.Scene, { gl: THREE.WebGLRenderer; pmrem: THREE.PMREMGenerator; target: THREE.WebGLRenderTarget; spec: EnvPhaseSpec }>();
 
 function paintEquirect(spec: EnvPhaseSpec): HTMLCanvasElement {
   const w = 64;
@@ -76,28 +74,30 @@ export function applyEnvironment(
   gl: THREE.WebGLRenderer,
   scene: THREE.Scene,
   phase: "dawn" | "day" | "dusk" | "night",
+  override?: EnvPhaseSpec,
 ): void {
-  if (_appliedPhase === phase && scene.environment) return;
-  if (!_pmrem) _pmrem = new THREE.PMREMGenerator(gl);
-  const spec = ENV_PHASES[phase];
+  const spec = override ?? ENV_PHASES[phase];
+  const existing = environments.get(scene);
+  if (existing?.gl === gl && existing.spec === spec && scene.environment === existing.target.texture) return;
+  if (existing && existing.gl !== gl) disposeEnvironment(scene);
+  const previous = environments.get(scene);
+  const pmrem = previous?.pmrem ?? new THREE.PMREMGenerator(gl);
   const tex = new THREE.CanvasTexture(paintEquirect(spec));
   tex.mapping = THREE.EquirectangularReflectionMapping;
   tex.colorSpace = THREE.SRGBColorSpace;
-  const rt = _pmrem.fromEquirectangular(tex);
+  const rt = pmrem.fromEquirectangular(tex);
   tex.dispose();
-  const old = _currentRT;
   scene.environment = rt.texture;
   scene.environmentIntensity = spec.intensity;
-  _currentRT = rt;
-  _appliedPhase = phase;
-  if (old) old.dispose();
+  environments.set(scene, { gl, pmrem, target: rt, spec });
+  previous?.target.dispose();
 }
 
 export function disposeEnvironment(scene: THREE.Scene): void {
   scene.environment = null;
-  if (_currentRT) {
-    _currentRT.dispose();
-    _currentRT = null;
-  }
-  _appliedPhase = null;
+  scene.environmentIntensity = 1;
+  const existing = environments.get(scene);
+  existing?.target.dispose();
+  existing?.pmrem.dispose();
+  environments.delete(scene);
 }

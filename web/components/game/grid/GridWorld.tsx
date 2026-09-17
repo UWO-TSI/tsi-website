@@ -1,0 +1,91 @@
+"use client";
+
+/**
+ * GridWorld (M4/M5, 2026-07-26) — the tile world, mounted behind `?grid=1`.
+ *
+ * Replaces Terrain / River / RoadTiles / RiverBanks / RiverBankWalls with the
+ * cell grid. Everything else in the scene (props, NPCs, sky, weather, the
+ * player) is untouched and still mounts around it, so this is a substrate
+ * swap rather than a second game.
+ *
+ * The default URL is unchanged until David approves the slice.
+ */
+
+import { useEffect, useRef } from "react";
+import * as THREE from "three";
+import {
+  heightAtWorld,
+  CLIFF_LEVELS,
+  heightField,
+  sampleGroundHeight,
+  rampHeightAt,
+  type IslandMap,
+} from "@/lib/game/grid";
+import { setTerrainHeightProvider } from "../terrain";
+import GridTerrain, { type TerrainPalette } from "./GridTerrain";
+import GridCliffs from "./GridCliffs";
+import GrassTufts from "./GrassTufts";
+import { applyGrassNormalStrength, advanceWater } from "./terrainMaterials";
+import { useTuning, tune as tuneNow } from "@/lib/game/tuning";
+import { useFrame } from "@react-three/fiber";
+import type { WaterParams } from "@/lib/game/waterShader";
+
+export default function GridWorld({ map, water, palette }: { map: IslandMap; water?: WaterParams; palette?: TerrainPalette }) {
+  const t = useTuning();
+
+  // The ground material is shared and cached, so the normal-map settings are
+  // pushed onto it rather than recreated — a slider move must not rebuild every
+  // chunk's material.
+  useEffect(() => {
+    applyGrassNormalStrength(t.grass.normalStrength, t.grass.normalScale);
+  }, [t.grass.normalStrength, t.grass.normalScale]);
+
+  /**
+   * Take over ground height for everything that asks terrain.ts for it — the
+   * player, the NPCs, click-to-move, the prop scatter. Without this the world
+   * LOOKS terraced and BEHAVES like the old smooth heightfield, so a bank you
+   * can see is not a bank you can walk up.
+   *
+   * `heightAtWorld` reads a Uint8Array and multiplies. It is cheaper than the
+   * baked-grid bilinear sample it replaces, so the per-frame paths get faster.
+   */
+  useEffect(() => {
+    // The SAME field the mesh uses, or the player walks on a surface that is
+    // not the one being drawn.
+    // Same guard as GridTerrain: inert at CLIFF_LEVELS 1, and the two MUST
+    // agree or the player walks on a different surface from the one drawn.
+    const field = CLIFF_LEVELS > 1 ? heightField(map) : null;
+    setTerrainHeightProvider((x, z) =>
+      field ? sampleGroundHeight(map, field, x, z) : rampHeightAt(map, x, z) ?? heightAtWorld(map, x, z)
+    );
+    return () => setTerrainHeightProvider(null);
+  }, [map]);
+
+  // The river flows, swells and catches the sun. One uniform block per frame.
+  // The key light is found by traversal rather than duplicated from GameWorld's
+  // sun maths — one source of truth, and it stays correct if that arc changes.
+  const sunDir = useRef(new THREE.Vector3(0, 1, 0));
+  const lightTarget = useRef(new THREE.Vector3());
+  useFrame((state) => {
+    let key: THREE.DirectionalLight | null = null;
+    state.scene.traverse((o) => {
+      const l = o as THREE.DirectionalLight;
+      if (!key && l.isDirectionalLight && l.intensity > 0.5) key = l;
+    });
+    if (key) {
+      const light = key as THREE.DirectionalLight;
+      light.getWorldPosition(sunDir.current);
+      light.target.getWorldPosition(lightTarget.current);
+      sunDir.current.sub(lightTarget.current);
+    }
+    advanceWater(state.clock.elapsedTime, water ?? tuneNow().water, sunDir.current);
+  });
+
+  return (
+    <group>
+      <GridTerrain map={map} palette={palette} />
+      <GridCliffs map={map} />
+      <GrassTufts map={map} />
+    </group>
+  );
+}

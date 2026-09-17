@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { recruitmentRouteRedirect } from "@/lib/recruitment-access";
 import { updateSession } from "@/lib/supabase/middleware";
 
 // Fail-open deadline for the session refresh. During the 2026-07-02 Supabase
@@ -11,6 +12,13 @@ import { updateSession } from "@/lib/supabase/middleware";
 const SESSION_TIMEOUT_MS = 4000;
 
 export async function middleware(request: NextRequest) {
+  const destination = recruitmentRouteRedirect(request.nextUrl.pathname);
+  if (destination) {
+    const url = request.nextUrl.clone();
+    url.pathname = destination;
+    url.search = "";
+    return NextResponse.redirect(url);
+  }
   let timer: ReturnType<typeof setTimeout> | undefined;
   const failOpen = new Promise<NextResponse>((resolve) => {
     timer = setTimeout(

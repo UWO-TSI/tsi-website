@@ -114,6 +114,73 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-09-17 — Authorized production credentials and Vault setup
+
+Verified www.tethos.ca domain on uwotsi.com in Dia. Saved three missing Google OAuth variables and CRON_SECRET as Production-only Secrets. Created matching Vault origin/cron entries; verified presence/equality without returning values. Vercel confirms new deployment required. No code deploy, migration, scheduler or role activation. Sanitized evidence in deployment readiness report.
+
+### 2026-09-17 — Authorized local Google token update
+
+Replaced only GOOGLE_OAUTH_REFRESH_TOKEN in web/.env.local on explicit permission; other bytes preserved. Fresh OAuth/folder access checks pass; local dev env reloaded. Production unchanged. Updated sanitized readiness evidence, removed temporary token copy.
+
+### 2026-09-17 — Renewed Google credential verified live
+
+Consent completed. Actual Google authorization/folder permissions, synthetic write/readback, repeated RAW row update and clearing pass. Test workbook trashed, no applicants touched. New token remains in protected temp file, local env permission requested. Production schema/scheduler/configuration still pending; testing-app token lifetime documented in readiness report.
+
+### 2026-09-17 — Confirmed round dates and Google reconnect
+
+Updated local four-role date source and inactive preparation payload: Sep 17 15:00 to Sep 23 23:59 Toronto/EDT. Opened existing Google consent in Dia; user consent pending. Existing OAuth script now offers protected token-file output without env changes, state validation and safe errors. Role tests/dry run and invalid-state rejection pass; no production writes.
+
+### 2026-09-17 — Main deployment preparation and truthful Sheets health
+
+Strengthened existing admin delivery health with real OAuth/destination checks, safe failure messages, bounded OAuth transport and read-only deployment diagnostic. Build/338 tests/focused lint pass; local SQL suite passes 300-record queue/race/permission checks. Main baseline lint 74 errors vs checkout 68. Production delivery schema/scheduler/new roles absent; checkout Google invalid_grant; Vercel access unavailable. Await reconnect and dates; no production mutations or deployment. Full rollout order/evidence: `specs/recruitment-deployment-readiness-2026-09-17.md`.
+
+### 2026-09-17 — Researched clubhouse layout and restrained feedback
+
+Approved sage/cream/wood direction; researched primary interior/lighting guidance and visually inspected Pinterest references. Centered board, shared furniture/collision placement, clear circulation, grouped original lounge/rug, bookshelf against wall, appropriately sized task lamps and original white pendants. Reused advanced ToastHub/queue (source worktree unchanged) for existing pickup events; smaller objective-aware arrows and subtle board hover feedback. TypeScript/lint/90 tests, asset audit, Dia board and night/evening checks pass. Local only; see `specs/clubhouse-refinement-2026-09-17.md` for sources, screenshots and limits.
+
+### 2026-09-17 — Lightweight terrain surfaces and original HQ lounge
+
+Applicant grass/path/beach materials now have corrected texture scale, subtle grain and coordinated sage/earth/cream colors; existing water shader uses the original 128px sea-normal texture for fine ripples and quieter rings. Removed applicant acorn rug/art; original cream sofa, wood table, tea set, books and lamp form a lounge with collision-safe board access. Four models total 534 KiB. TypeScript, focused lint, 84 tests, source-asset audit and Dia pixel/smooth visual checks pass. Local only. Details: `specs/applicant-surfaces-and-lounge-2026-09-17.md`.
+
+### 2026-09-17 — Cozy lighting, adaptive appearance and shoreline interactions
+
+Applicant HQ has phase-based warm lamp pools and an original-source reading area; clock is against the wall with a compact scene-anchored proximity countdown. Existing fireflies are smaller and wander independently around 22 bush anchors; shoreline-derived targets reuse the full fishing system. Recruitment UI/loading follow system light/dark appearance, with Toronto-time accents. TypeScript, focused lint, 34 tests and asset/primary-contrast checks pass. Dia verified the night exterior and furnished HQ; final proximity/theme-switch/fishing walkthroughs remain unverified after computer control was blocked on the current browser URL. No deployment. Research, original-asset import commands and verification limits: `specs/cozy-lighting-and-adaptive-ui-2026-09-17.md`.
+
+### 2026-09-17 — Original HQ furniture texture restoration
+
+Recovered missing variant albedos and UVs from existing source DAE/PNG assets for eight furniture GLBs. Original positions/normals retained; reproducible recovery script checks triangle correspondence. Applicant-only cream/sage/parquet and neutral/warm lighting pass, static furniture shadows, bookshelf/mat orientation polish. TypeScript/lint/7 focused tests and asset audit pass. Dia verifies texture detail, board, clock and entry/exit. See `specs/hq-interior-polish-2026-09-17.md`. Local only.
+
+### 2026-09-16 — Golden HQ windows and existing fireflies
+
+Applicant glass is solid golden/emissive with warm window/porch spill. Reused real `acnh/critters/firefly.glb`, existing AmbientLife drift/pulse and existing sun texture for halo; night/evening populations near HQ, reduced in lite. No newly generated model. Material isolation regression plus 20 focused tests, TypeScript and lint pass. Visual check pending due Dia connector timeouts and concurrent user input during native fallback. Report records exact settings and limitation; no push/deploy.
+
+### 2026-09-16 — Applicant graphics continuation
+
+Reused existing blob shadows for applicant/Jayden and low-opacity plant contact shading; recalibrated haze, cached 2048 shadow map, applicant-only sand albedo correction and smooth-only FXAA in the existing composer. Visual QA caught and fixed merged-effect ordering artifacts. 43 tests, TypeScript, focused lint and Dia phase/quality checks pass. Large-window smooth performance remains below a proven 60 FPS; development samples and screenshots documented in `specs/applicant-lighting-2026-09-16.md`. Local only.
+
+### 2026-09-16 — Applicant island lighting research and implementation
+
+Reused PostFX, aerialFog, PMREM environment, terrain materials/normals/blends, CloudShadows and Lantern after inspecting the advanced worktree. Coordinated phase palettes; corrected grass/dirt and compressed source soil marks; softer cached shadows with invalidation; per-scene environment ownership and regression tests. Primary Nintendo/Monolith art evidence is distinguished from rendering inference. Report: `specs/applicant-lighting-2026-09-16.md`, comparison images alongside. TypeScript/focused lint/41 tests and Dia phase/quality/HQ walkthrough pass. Local only; member worktree unchanged; no full production build or low-end hardware benchmark claimed.
+
+### 2026-09-16 — Applicant characters, furniture and landscape
+
+Latest appearance correction: keep the same Quaternius pack/style, but use Casual2_Male for the player with distinct blond hairstyle, warm light skin, green shirt, navy trousers and dark facial details. Jayden stays unchanged. Source geometry/animations preserved; independent model asset player.gltf. Dia visual verification and TypeScript, focused lint, two animation tests pass.
+
+Latest follow-up: David explicitly requested the same character as Jayden for the player. Both now use Quaternius Casual_Male (`jayden.gltf`) with independent cloned skeletons and animation mixers. The procedural default human is removed. Verified matching models in Dia.
+
+Latest user correction: original default human player, supplied CC0 Jayden guide and casual dialogue. Fixed recruitment furniture tilt and clock glass, added proximity countdown, removed middle river/bridge, expanded foliage and added direction arrow. Dia visual and dialogue/countdown checks pass; 37 focused tests, TypeScript and lint pass. Dates unset; no push/deploy. See latest STATE.md and vault session.
+
+### 2026-09-16 — Interrupted chat recovery and resumed QA
+
+Recovered the latest source transcript and preserved all local work. Dia preview journey reaches rehearsal completion and returns to board. Fixed destination cue wrapping, stale essay error clearing and botanical texture batch preloading. Fresh 88 targeted tests, TypeScript and focused lint pass. No production writes/push/deploy; live auth/persistence/Sheets and release checks remain. See latest STATE.md and vault recovery checkpoint.
+
+### 2026-09-16 — Recruitment UI kit and application safety (local)
+
+- Adapted supplied UI references to Tethos palette/type; dev-only showroom and nearly fullscreen real application sheet. R4 direct mobile, R5 single scroll+review confirmed.
+- Hardened draft saves, close/recovery, duplicate receipts, failed-load protection and submitted-draft suppression; preserved backend delivery work.
+- Final:44targeted mocked tests, TypeScript and focusedlint pass; Dia desktop/form/mobile-width interaction checks. No real submission/Google integration, full build or load test claimed. Details: `specs/director-developer-round.md`, `specs/recruitment-ui-kit.md`.
+- No commit/push/deploy, production migration/activation or real emails. Main-world gate and complete revised island remain pending.
+
 ### 2026-09-05 (QA fix) — Login routing (`fix/hamburger-login`, PR #18, merged)
 
 QA: a signed-in applicant clicking the hamburger "Log in" landed on `/student/onboarding`. Cause: the link went to `/student/login` (member terminal); the middleware bounces signed-in users to `/student/dashboard`, which demands member onboarding. David's rule: admins → game portal with the recruitment board, applicants → application portal.

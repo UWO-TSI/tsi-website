@@ -1,10 +1,11 @@
+import { recruitmentReturnPath } from "@/lib/recruitment-access";
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
-  const next = searchParams.get("next") ?? "/student/dashboard";
+  const next = recruitmentReturnPath(searchParams.get("next"));
 
   if (code) {
     const supabase = await createClient();
@@ -22,5 +23,5 @@ export async function GET(request: Request) {
     }
   }
 
-  return NextResponse.redirect(`${origin}/student/login?error=auth_callback_failed`);
+  return NextResponse.redirect(`${origin}/student/apply?error=auth`);
 }

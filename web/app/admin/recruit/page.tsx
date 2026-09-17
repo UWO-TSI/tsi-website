@@ -6,6 +6,7 @@ import ApplicantCard from "@/components/admin/ApplicantCard";
 import ReleaseControls from "@/components/admin/ReleaseControls";
 import RecruitInsights from "@/components/admin/RecruitInsights";
 import RecruitBoard from "@/components/admin/RecruitBoard";
+import SheetsSync from "@/components/admin/SheetsSync";
 import ArchivePanel from "@/components/admin/ArchivePanel";
 import AuthModal from "@/components/recruit/AuthModal";
 import { motion } from "framer-motion";
@@ -35,7 +36,8 @@ export default function AdminRecruitPage() {
     status: "",
     tag: "",
   });
-  const [syncing, setSyncing] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(50);
+  const [loadError, setLoadError] = useState("");
   const [tab, setTab] = useState<"dashboard" | "board" | "insights">("dashboard");
 
   const supabase = useMemo(() => createClient(), []);
@@ -54,7 +56,8 @@ export default function AdminRecruitPage() {
     // Fetch applications (admin API)
     const res = await fetch("/api/applications", {
       headers: { "Content-Type": "application/json" },
-    });
+    }).catch(() => null);
+    if (!res) { setLoadError("Could not load applications. Please refresh."); setLoading(false); return; }
 
     // 401: the server has no session for this browser (stale cookie).
     // 403: signed in, but not an admin. Say so instead of bouncing home.
@@ -70,7 +73,17 @@ export default function AdminRecruitPage() {
     }
 
     if (res.ok) {
-      const data = await res.json();
+      const data: Application[] = await res.json();
+      try {
+        while (data.length && data.length % 500 === 0) {
+          const next = await fetch(`/api/applications?offset=${data.length}&limit=500`);
+          if (!next.ok) throw new Error("Could not load the remaining applications. Please refresh.");
+          const page: Application[] = await next.json();
+          data.push(...page);
+          if (page.length < 500) break;
+        }
+        setLoadError("");
+      } catch (error) { setLoadError(error instanceof Error ? error.message : "Application loading failed"); }
       setApplications(data);
 
       // Extract unique positions
@@ -81,6 +94,7 @@ export default function AdminRecruitPage() {
       setPositions(Array.from(posMap.values()));
     }
 
+    if (!res.ok) setLoadError("Could not load applications. Please refresh.");
     setLoading(false);
   }, [supabase]);
 
@@ -250,12 +264,6 @@ export default function AdminRecruitPage() {
     );
   };
 
-  const handleSheetsSync = async () => {
-    setSyncing(true);
-    await fetch("/api/sheets-sync", { method: "POST" });
-    setSyncing(false);
-  };
-
   const handleCsvExport = () => {
     window.open("/api/applications/export", "_blank", "noopener");
   };
@@ -384,22 +392,15 @@ export default function AdminRecruitPage() {
             label="Export"
           />
           <ToolbarButton
-            onClick={handleSheetsSync}
-            disabled={syncing}
-            icon={
-              <Download
-                className={`w-3.5 h-3.5 ${syncing ? "animate-spin" : ""}`}
-              />
-            }
-            label="Sheets"
-          />
-          <ToolbarButton
             onClick={() => fetchData()}
             icon={<RefreshCw className="w-3.5 h-3.5" />}
             label="Refresh"
           />
         </div>
       </motion.header>
+
+      <SheetsSync />
+      {loadError && <p role="alert" className="text-red-400 mb-4">{loadError}</p>}
 
       {/* Tabs — segmented control */}
       <div className="mb-5">
@@ -454,7 +455,7 @@ export default function AdminRecruitPage() {
           >
             <FilterBar
               positions={activePositions.map((p) => ({ slug: p.slug, title: p.title }))}
-              onFilterChange={setFilters}
+              onFilterChange={(next) => { setFilters(next); setVisibleCount(50); }}
             />
             <span className="text-[10px] font-mono text-[#6B7280] tabular-nums whitespace-nowrap">
               {filtered.length} / {activeApps.length} shown
@@ -470,7 +471,7 @@ export default function AdminRecruitPage() {
                 </p>
               </div>
             ) : (
-              filtered.map((app) => (
+              filtered.slice(0, visibleCount).map((app) => (
                 <ApplicantCard
                   key={app.id}
                   application={app}
@@ -486,6 +487,7 @@ export default function AdminRecruitPage() {
               ))
             )}
           </div>
+          {filtered.length > visibleCount && <button className="m-4 min-h-11 px-4 border border-white/20 rounded-md" onClick={() => setVisibleCount(count => count + 50)}>Show next {Math.min(50, filtered.length - visibleCount)} applications</button>}
         </section>
       )}
 

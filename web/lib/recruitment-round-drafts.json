@@ -1,0 +1,121 @@
+[
+  {
+    "slug": "director-marketing",
+    "title": "Marketing Director",
+    "description": "Make Tethos's work visible through content, campaigns and creative projects.",
+    "essay_questions": [
+      {
+        "id": "marketing-role-success",
+        "question": "How might you be successful in this role?",
+        "max_words": 150
+      },
+      {
+        "id": "marketing-portfolio",
+        "question": "(optional, recommended) Please share a link to your design portfolio with us. Make sure the link shared is viewable!",
+        "max_words": 1,
+        "response_type": "url",
+        "required": false
+      },
+      {
+        "id": "marketing-proud-work",
+        "question": "Tell us about a project or piece of work you’re really proud of.",
+        "max_words": 200
+      },
+      {
+        "id": "marketing-fonts",
+        "question": "What two fonts best represent you and why?",
+        "max_words": 150
+      }
+    ],
+    "opens_at": "2026-09-17T19:00:00.000Z",
+    "closes_at": "2026-09-24T03:59:00.000Z"
+  },
+  {
+    "slug": "director-internal",
+    "title": "Internal Director",
+    "description": "Help the team feel connected through member experience, events and internal operations.",
+    "essay_questions": [
+      {
+        "id": "internal-social-event",
+        "question": "Propose a social event for our club! Tell us what you’d plan and how you’d make it happen.",
+        "max_words": 250
+      },
+      {
+        "id": "internal-participation",
+        "question": "Participation is one of our biggest challenges, as students are often too busy to attend events. How would you encourage students to get involved despite their busy schedules?",
+        "max_words": 250
+      },
+      {
+        "id": "internal-pedicure-persuasion",
+        "question": "Jack (our PMO) has officially announced that he will NOT be attending the TSI pedicure social. Your mission: change his mind. What are you saying to convince him to come?",
+        "max_words": 250
+      },
+      {
+        "id": "internal-reel",
+        "question": "Send me a reel.",
+        "max_words": 1,
+        "response_type": "url"
+      }
+    ],
+    "opens_at": "2026-09-17T19:00:00.000Z",
+    "closes_at": "2026-09-24T03:59:00.000Z"
+  },
+  {
+    "slug": "director-external",
+    "title": "External Director",
+    "description": "Build relationships with partners, sponsors and the communities our projects serve.",
+    "essay_questions": [
+      {
+        "id": "external-motivation",
+        "question": "Why do you want to apply to External?",
+        "max_words": 250
+      },
+      {
+        "id": "external-passion",
+        "question": "Tell us about something you’re passionate about! Convince us to try it.",
+        "max_words": 250
+      },
+      {
+        "id": "external-genesis-reach",
+        "question": "Despite it being our 1st time running GENESIS, we achieved 250+ attendees in students, professors, and corporate sponsors. How would you expand GENESIS to reach even more people?",
+        "max_words": 250
+      },
+      {
+        "id": "external-food-sponsor",
+        "question": "Situation Question: You are 2 weeks away from GENESIS and notice there’s only 1 food sponsor secured willing to serve up to 50 attendees. Knowing there are 300+ signups, what would you do?",
+        "max_words": 250
+      }
+    ],
+    "opens_at": "2026-09-17T19:00:00.000Z",
+    "closes_at": "2026-09-24T03:59:00.000Z"
+  },
+  {
+    "slug": "developer",
+    "title": "Developer",
+    "description": "Build useful software with a project team for a nonprofit client.",
+    "essay_questions": [
+      {
+        "id": "developer-motivation",
+        "question": "Why do you want to be a developer at TSI?",
+        "max_words": 150
+      },
+      {
+        "id": "developer-proud-exploration",
+        "question": "Tell us about something you've built or explored that you're proud of; it doesn't have to be a school project or anything technical.",
+        "max_words": 150
+      },
+      {
+        "id": "developer-time-commitment",
+        "question": "TSI is a real-time commitment. How do you plan to balance it with everything else on your plate?",
+        "max_words": 150
+      },
+      {
+        "id": "developer-passion",
+        "question": "Tell us something you're genuinely passionate about. Anything.",
+        "max_words": 150
+      }
+    ],
+    "opens_at": "2026-09-17T19:00:00.000Z",
+    "closes_at": "2026-09-24T03:59:00.000Z"
+  }
+]

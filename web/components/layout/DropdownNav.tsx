@@ -12,18 +12,15 @@ const NAV_ITEMS = [
   { label: "Companies", href: "/company" },
   { label: "Sponsors", href: "/sponsor" },
   { label: "Students", href: "/student" },
+  { label: "Apply", href: "/student/apply" },
   { label: "Genesis", href: "/genesis" },
 ];
 
 const CONTACT = { label: "Contact", href: "mailto:team@tethos.ca" };
-// "Log in" (David, 2026-09-05): /student/go sends admins to the game portal
-// and everyone else to the applicant dashboard, which shows the sign-in
-// prompt when signed out. /student/login is the member-portal terminal, which
-// bounces signed-in non-members into member onboarding, so it is not linked.
+// General account entry is the applicant village; recruitment administration stays separate.
 const LOGIN = { label: "Log in", href: "/student/go" };
-const ACCOUNT = { label: "My applications", href: "/student/apply/dashboard" };
-const PORTAL = { label: "Game portal", href: "/student/dashboard" };
-const ADMIN = { label: "Admin dashboard", href: "/student/dashboard/admin/recruitment" };
+const ACCOUNT = { label: "Applicant portal", href: "/student/apply/portal" };
+const ADMIN = { label: "Admin dashboard", href: "/admin/recruit" };
 
 /* Spring configs */
 const SPRING_SNAPPY = { type: "spring" as const, stiffness: 500, damping: 30, mass: 0.8 };
@@ -319,7 +316,7 @@ export default function DropdownNav() {
                   }}
                 >
                   <Link
-                    href={signedIn ? (isAdmin ? PORTAL.href : ACCOUNT.href) : LOGIN.href}
+                    href={signedIn ? ACCOUNT.href : LOGIN.href}
                     onClick={() => setOpen(false)}
                     className="group relative flex items-center gap-3 px-5 py-2.5"
                   >
@@ -333,7 +330,7 @@ export default function DropdownNav() {
                       whileHover={{ color: "rgba(255,255,255,0.7)", x: 3 }}
                       transition={{ duration: 0.15 }}
                     >
-                      {signedIn ? (isAdmin ? PORTAL.label : ACCOUNT.label) : LOGIN.label}
+                      {signedIn ? ACCOUNT.label : LOGIN.label}
                     </motion.span>
                   </Link>
                 </motion.div>

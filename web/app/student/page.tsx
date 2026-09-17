@@ -11,6 +11,7 @@ import DecryptedText from "@/components/ui/DecryptedText";
 import DotNav from "@/components/ui/DotNav";
 import type { DotNavSection } from "@/components/ui/DotNav";
 import LogoLoop from "@/components/ui/LogoLoop";
+import { getPositionStatus, type Position } from "@/lib/recruitment";
 import { ALUMNI_LOGOS } from "@/components/ui/PartnerLogos";
 
 if (typeof window !== "undefined") {
@@ -21,24 +22,7 @@ if (typeof window !== "undefined") {
    DATA
    ═══════════════════════════════════════════ */
 
-// Mirrors the public positions live at /student/apply for the fall 2026
-// round (migration 027). Keep in sync when a round opens or closes.
-const POSITIONS = [
-  {
-    role: "VP Marketing",
-    team: "Leadership",
-    status: "open",
-    description:
-      "Responsible for the video marketing side of TSI: reels, vlogs, and mini-documentaries.",
-  },
-  {
-    role: "Project Manager",
-    team: "Projects",
-    status: "open",
-    description:
-      "CEO of your own project. Lead a team of developers building real software for a nonprofit client, kickoff to GENESIS.",
-  },
-];
+type StudentRole = { role: string; team: string; status: string; description: string; slug: string };
 
 const STATS = [
   { value: "150+", label: "Alumni shipped", desc: "Students who've built real products" },
@@ -178,7 +162,7 @@ function TerminalBoot() {
    POSITION CARD
    ═══════════════════════════════════════════ */
 
-function PositionCard({ position, index }: { position: typeof POSITIONS[0]; index: number }) {
+function PositionCard({ position, index }: { position: StudentRole; index: number }) {
   const isOpen = position.status === "open";
 
   return (
@@ -188,7 +172,7 @@ function PositionCard({ position, index }: { position: typeof POSITIONS[0]; inde
       style={{
         background: "rgba(255,255,255,0.02)",
         border: `1px solid ${isOpen ? "rgba(29,155,240,0.15)" : "rgba(255,255,255,0.06)"}`,
-        opacity: 0,
+        opacity: 1,
       }}
     >
       {/* Terminal-style header */}
@@ -206,7 +190,7 @@ function PositionCard({ position, index }: { position: typeof POSITIONS[0]; inde
             }}
           />
           <span className="text-[10px] uppercase tracking-widest" style={{ color: isOpen ? "#1D9BF0" : "rgba(255,255,255,0.25)", fontFamily: "var(--font-highlight)" }}>
-            {isOpen ? "Open" : "Coming"}
+            {isOpen ? "Open" : position.status === "closed" ? "Closed" : "Coming soon"}
           </span>
         </span>
       </div>
@@ -281,6 +265,14 @@ function ChapterTerminal() {
    ═══════════════════════════════════════════ */
 
 export default function StudentPage() {
+  const [positions,setPositions] = useState<StudentRole[]>([]);
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch("/api/positions", { signal: controller.signal }).then(r => r.ok ? r.json() : []).then((rows: Position[]) => {
+      if (Array.isArray(rows)) setPositions(rows.filter(p => !p.archived_at).map(p => ({ role:p.title, team:p.slug === "developer" ? "Projects" : "Team", status:getPositionStatus(p), description:p.description ?? "", slug:p.slug })));
+    }).catch(() => {});
+    return () => controller.abort();
+  }, []);
   const positionsRef = useRef<HTMLDivElement>(null);
   const whyRef = useRef<HTMLDivElement>(null);
   const chapterRef = useRef<HTMLDivElement>(null);
@@ -383,12 +375,12 @@ export default function StudentPage() {
             Open positions.
           </h2>
           <p className="text-sm mb-12" style={{ color: "rgba(255,255,255,0.3)", fontFamily: "var(--font-highlight)" }}>
-            2026-27 executive team, fall round. Applications open Sept 5 and close Sept 11
+            Find your role on the 2026–27 team. Current openings and deadlines are on the applications page.
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {POSITIONS.map((pos, i) => (
-              <Link key={pos.role} href="/student/apply">
+            {positions.map((pos, i) => (
+              <Link key={pos.role} href={`/student/apply/${pos.slug}`}>
                 <PositionCard position={pos} index={i} />
               </Link>
             ))}

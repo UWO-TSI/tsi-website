@@ -71,6 +71,8 @@ These guide every scope and design decision. When trade-offs arise, choose the o
 
 ## Working rules
 
+- **Before implementing or creating anything, search for an existing implementation first:** inspect current code, relevant branches/worktrees, existing assets and saved context. Read the best prior version and reuse or adapt it. Do not build a simplified duplicate because it is absent from the current branch. In particular, the advanced game systems are in `.claude/worktrees/restart-art-cohesion` (`feat/game-default-island`): seagull model/pathing, full fishing, CollectionBook/backpack and flower picking. Identify a concrete incompatibility before proposing a replacement. (David, 2026-09-16)
+
 - `cd web && npm install` requires `--legacy-peer-deps` (`.npmrc` is configured).
 - `npm run dev` may fall back to port 3001 if 3000 is taken.
 - Game world uses `next/dynamic` with `ssr: false` — `BAILOUT_TO_CLIENT_SIDE_RENDERING` in SSR output is expected, not an error.

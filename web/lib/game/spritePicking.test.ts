@@ -1,0 +1,30 @@
+import { expect, it } from "vitest";
+import { Mesh, MeshBasicMaterial, PerspectiveCamera, PlaneGeometry, Raycaster, Vector2, Vector3 } from "three";
+import { bendViewPoint } from "./worldProjection";
+import { curvedSpriteRaycast } from "./spritePicking";
+
+it.each([[0, 13, -20], [12, 21, -27], [-15, 16, 9]])("hits the drawn sprite from camera %j and rejects nearby ground", (x, y, z) => {
+  const camera = new PerspectiveCamera(48, 1.6, 0.1, 150);
+  camera.position.set(x, y, z);
+  camera.lookAt(0, 0, 0);
+  camera.updateMatrixWorld();
+  const sprite = new Mesh(new PlaneGeometry(1.6, 1.6), new MeshBasicMaterial());
+  sprite.position.set(3, 1, 4);
+  sprite.quaternion.copy(camera.quaternion);
+  sprite.updateMatrixWorld();
+  const ndc = bendViewPoint(sprite.position.clone().applyMatrix4(camera.matrixWorldInverse)).applyMatrix4(camera.projectionMatrix);
+  const ray = new Raycaster();
+  ray.setFromCamera(new Vector2(ndc.x, ndc.y), camera);
+  sprite.raycast = curvedSpriteRaycast;
+  const hits = ray.intersectObject(sprite);
+  expect(hits).toHaveLength(1);
+  expect(hits[0].object).toBe(sprite);
+  expect(hits[0].point.distanceTo(new Vector3(3, 1, 4))).toBe(0);
+  ray.setFromCamera(new Vector2(ndc.x + 0.2, ndc.y), camera);
+  expect(ray.intersectObject(sprite)).toHaveLength(0);
+  ray.setFromCamera(new Vector2(ndc.x, ndc.y), camera);
+  ray.far = 1;
+  expect(ray.intersectObject(sprite)).toHaveLength(0);
+  sprite.geometry.dispose();
+  sprite.material.dispose();
+});

@@ -14,10 +14,8 @@ interface SuccessScreenProps {
   applicantName?: string;
   position?: Position;
   positionSlug?: string;
-}
-
-function formatDate(d: Date): string {
-  return d.toLocaleDateString("en-US", { month: "long", day: "numeric" });
+  alreadySubmitted?: boolean;
+  onReturnToBoard?: () => void;
 }
 
 function prefersReducedMotion(): boolean {
@@ -28,72 +26,34 @@ function prefersReducedMotion(): boolean {
 export default function SuccessScreen({
   positionTitle,
   applicantName,
-  position,
   positionSlug,
+  alreadySubmitted = false,
+  onReturnToBoard,
 }: SuccessScreenProps) {
   const router = useRouter();
   const confettiFired = useRef(false);
+  const confettiCanvas = useRef<HTMLCanvasElement>(null);
   const [shared, setShared] = useState(false);
 
   useEffect(() => {
-    if (confettiFired.current) return;
+    if (confettiFired.current || alreadySubmitted || prefersReducedMotion() || !confettiCanvas.current) return;
     confettiFired.current = true;
-    if (prefersReducedMotion()) return;
-
-    const end = Date.now() + 1500;
-    const colors = ["#1D9BF0", "#FFD166", "#F1FFFF"];
-
-    (function frame() {
-      confetti({
-        particleCount: 3,
-        angle: 60,
-        spread: 55,
-        origin: { x: 0, y: 0.7 },
-        colors,
-        shapes: ["square"],
-      });
-      confetti({
-        particleCount: 3,
-        angle: 120,
-        spread: 55,
-        origin: { x: 1, y: 0.7 },
-        colors,
-        shapes: ["square"],
-      });
-
-      if (Date.now() < end) {
-        requestAnimationFrame(frame);
-      }
-    })();
-  }, []);
+    const celebrate = confetti.create(confettiCanvas.current, { resize: true, useWorker: false });
+    const end = Date.now() + 1200;
+    let frameId = 0;
+    const frame = () => {
+      for (const x of [0, 1]) celebrate({ particleCount: 3, angle: x === 0 ? 60 : 120, spread: 55, origin: { x, y: .7 }, colors: ["#1D9BF0", "#FFD166", "#F1FFFF"], shapes: ["square"] });
+      if (Date.now() < end) frameId = requestAnimationFrame(frame);
+    };
+    frame();
+    return () => { cancelAnimationFrame(frameId); celebrate.reset(); };
+  }, [alreadySubmitted]);
 
   const firstName = applicantName?.split(" ")[0] ?? null;
 
-  // Build timeline expectations. If position has closes_at, use offsets from it.
-  const closesAt = position?.closes_at ? new Date(position.closes_at) : null;
-  const now = new Date();
-  const reviewStart = closesAt && closesAt > now ? closesAt : now;
-  const reviewEnd = new Date(reviewStart.getTime() + 7 * 24 * 60 * 60 * 1000);
-  const finalDecision = new Date(
-    reviewEnd.getTime() + 7 * 24 * 60 * 60 * 1000
-  );
-
   const timeline = [
-    {
-      label: "Submitted",
-      date: formatDate(now),
-      status: "current" as const,
-    },
-    {
-      label: "Review",
-      date: `${formatDate(reviewStart)} – ${formatDate(reviewEnd)}`,
-      status: "upcoming" as const,
-    },
-    {
-      label: "Decisions",
-      date: `by ${formatDate(finalDecision)}`,
-      status: "upcoming" as const,
-    },
+    { label: "Application received", date: "Saved to your account", status: "current" as const },
+    { label: "Team review", date: "Watch My applications for updates", status: "upcoming" as const },
   ];
 
   const handleShare = async () => {
@@ -124,7 +84,8 @@ export default function SuccessScreen({
   };
 
   return (
-    <div className="min-h-[60vh] flex items-center justify-center px-6 py-16">
+    <div className="relative min-h-[60vh] flex items-center justify-center px-6 py-16">
+      <canvas ref={confettiCanvas} aria-hidden="true" className="absolute inset-0 w-full h-full pointer-events-none z-10" />
       <div className="max-w-lg w-full">
         {/* Animated checkmark */}
         <motion.div
@@ -165,9 +126,7 @@ export default function SuccessScreen({
           custom={0}
           className="text-3xl md:text-4xl font-semibold text-[#F1FFFF] mb-3 text-center"
         >
-          {firstName
-            ? `Thanks, ${firstName}.`
-            : "Thanks for applying."}
+          {alreadySubmitted ? "Your application is already received." : firstName ? `Thanks, ${firstName}.` : "Thanks for applying."}
         </motion.h2>
 
         <motion.p
@@ -180,14 +139,13 @@ export default function SuccessScreen({
           Thanks for applying to join the TSI Executive Team. Your application
           for{" "}
           <span className="text-[#F1FFFF] font-medium">{positionTitle}</span>{" "}
-          is in. We&apos;ll be reviewing all applications and contacting
-          shortlisted candidates soon. If you have any questions, feel free to
+          is safely saved. You can check its status in My applications. If you have any questions, feel free to
           reach out through our Instagram or email{" "}
           <a
-            href="mailto:davidliu8473@gmail.com"
+            href="mailto:team@tethos.ca"
             className="text-[#F1FFFF] underline underline-offset-2 hover:text-[#1D9BF0] transition-colors"
           >
-            davidliu8473@gmail.com
+            team@tethos.ca
           </a>
           .
         </motion.p>
@@ -302,9 +260,9 @@ export default function SuccessScreen({
           </Button>
           <Button
             variant="secondary"
-            onClick={() => router.push("/student/apply")}
+            onClick={onReturnToBoard ?? (() => router.push("/student/apply"))}
           >
-            More roles
+            {onReturnToBoard ? "Back to the board" : "More roles"}
           </Button>
           {positionSlug && (
             <button

@@ -1,37 +1,36 @@
 import { NextResponse } from "next/server";
+import { timingSafeEqual } from "node:crypto";
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient, isAdminEmail } from "@/lib/supabase/admin";
-import { syncApplicationToSheet } from "@/lib/google-sheets";
+import { isAdminEmail } from "@/lib/supabase/admin";
+import { sheetSyncStatus, syncRecruitmentSheet } from "@/lib/google-sheets";
+
+export const maxDuration = 60;
+
+async function allowed(request: Request) {
+  const token = process.env.CRON_SECRET;
+  const provided = request.headers.get("authorization") ?? "";
+  if (token) {
+    const expected = Buffer.from(`Bearer ${token}`);
+    const actual = Buffer.from(provided);
+    if (actual.length === expected.length && timingSafeEqual(actual, expected)) return true;
+  }
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  return !!user && isAdminEmail(user.email ?? "");
+}
+
+export async function GET(request: Request) {
+  if (!(await allowed(request))) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  try { return NextResponse.json(await sheetSyncStatus(), { headers: { "Cache-Control": "no-store" } }); }
+  catch { return NextResponse.json({ error: "Could not check spreadsheet delivery. Check the database connection and retry." }, { status: 503 }); }
+}
 
 export async function POST(request: Request) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user || !isAdminEmail(user.email ?? "")) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!(await allowed(request))) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  try {
+    const result = await syncRecruitmentSheet();
+    return NextResponse.json({ ...result, ...(await sheetSyncStatus()) });
+  } catch {
+    return NextResponse.json({ error: "Could not sync Google Sheets. Applications are saved; delivery will retry. Check Google access and the delivery setup." }, { status: 503 });
   }
-
-  const admin = createAdminClient();
-  const { data: applications, error } = await admin
-    .from("applications")
-    .select("*, position:positions(*)")
-    .order("submitted_at", { ascending: true });
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-
-  let synced = 0;
-  for (const app of applications ?? []) {
-    try {
-      await syncApplicationToSheet(app, app.position);
-      synced++;
-    } catch (err) {
-      console.error(`Sync failed for ${app.id}:`, err);
-    }
-  }
-
-  return NextResponse.json({ synced, total: applications?.length ?? 0 });
 }

@@ -64,7 +64,7 @@ function getCloudTexture(): THREE.CanvasTexture {
   return _cloudTex;
 }
 
-export function CloudShadows({ phase }: { phase: Phase }) {
+export function CloudShadows({ phase, size = [240, 240], bounded = false }: { phase: Phase; size?: [number, number]; bounded?: boolean }) {
   const matRef = useRef<THREE.MeshBasicMaterial>(null);
   useFrame((_, delta) => {
     // Module-cached texture — mutated through the getter so the compiler's
@@ -79,8 +79,14 @@ export function CloudShadows({ phase }: { phase: Phase }) {
   });
   return (
     <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.06, 0]} renderOrder={2}>
-      <planeGeometry args={[240, 240]} />
-      <meshBasicMaterial ref={matRef} map={getCloudTexture()} transparent opacity={0} depthWrite={false} />
+      <planeGeometry args={size} />
+      <meshBasicMaterial ref={matRef} map={getCloudTexture()} transparent opacity={0} depthWrite={false}
+        onBeforeCompile={shader => {
+          if (bounded) {
+            shader.vertexShader = "varying vec2 vCloudUv;\n" + shader.vertexShader.replace("#include <begin_vertex>", "#include <begin_vertex>\nvCloudUv = uv;");
+            shader.fragmentShader = "varying vec2 vCloudUv;\n" + shader.fragmentShader.replace("#include <map_fragment>", "#include <map_fragment>\ndiffuseColor.a *= 1.0 - smoothstep(0.65, 1.0, length(vCloudUv * 2.0 - 1.0));");
+          }
+        }} customProgramCacheKey={() => `cloud-shade-${bounded}`} />
     </mesh>
   );
 }

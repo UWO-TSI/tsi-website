@@ -1,0 +1,71 @@
+{
+  "checkedAt": "2026-09-17T15:43:46.990Z",
+  "scope": "checkout configuration; external services are read-only",
+  "configuration": {
+    "GOOGLE_OAUTH_CLIENT_ID": true,
+    "GOOGLE_OAUTH_CLIENT_SECRET": true,
+    "GOOGLE_OAUTH_REFRESH_TOKEN": true,
+    "GOOGLE_DRIVE_FOLDER_ID": true,
+    "GOOGLE_SHEETS_SPREADSHEET_ID": false,
+    "CRON_SECRET": false,
+    "NEXT_PUBLIC_SUPABASE_URL": true,
+    "SUPABASE_SERVICE_ROLE_KEY": true
+  },
+  "google": {
+    "ready": true,
+    "authorization": "valid",
+    "destinationWritable": true
+  },
+  "database": {
+    "host": "rtbkrngsdbptbjhfbcud.supabase.co",
+    "recruitment_sheet_state": {
+      "available": false,
+      "code": "PGRST205"
+    },
+    "recruitment_sheet_rows": {
+      "available": false,
+      "code": "PGRST205"
+    },
+    "rolesReadable": true
+  },
+  "roles": [
+    {
+      "slug": "director-marketing",
+      "exists": false,
+      "active": false,
+      "opens_at": null,
+      "closes_at": null,
+      "ready": false
+    },
+    {
+      "slug": "director-internal",
+      "exists": false,
+      "active": false,
+      "opens_at": null,
+      "closes_at": null,
+      "ready": false
+    },
+    {
+      "slug": "director-external",
+      "exists": false,
+      "active": false,
+      "opens_at": null,
+      "closes_at": null,
+      "ready": false
+    },
+    {
+      "slug": "developer",
+      "exists": false,
+      "active": false,
+      "opens_at": null,
+      "closes_at": null,
+      "ready": false
+    }
+  ],
+  "configurationReady": false,
+  "remainingVerification": [
+    "Google write/readback",
+    "scheduled retries",
+    "Vercel production configuration"
+  ]
+}

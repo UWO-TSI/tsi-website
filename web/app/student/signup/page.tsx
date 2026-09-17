@@ -86,7 +86,7 @@ export default function SignupPage() {
             display_name: displayName,
             invite_code: inviteCode || null,
           },
-          emailRedirectTo: `${window.location.origin}/student/auth/callback?next=/student/apply`,
+          emailRedirectTo: `${window.location.origin}/student/auth/callback?next=/student/apply/portal`,
         },
       });
 
@@ -121,7 +121,7 @@ export default function SignupPage() {
         return;
       }
 
-      router.push("/student/apply");
+      router.push("/student/apply/portal");
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
