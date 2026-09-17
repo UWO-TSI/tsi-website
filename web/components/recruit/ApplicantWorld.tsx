@@ -335,7 +335,7 @@ export default function ApplicantWorld(props: Props) {
     window.addEventListener("pointerup", focus);
     return () => window.removeEventListener("pointerup", focus);
   }, []);
-  return <Canvas tabIndex={0} role="application" aria-label="Tethos applicant village. WASD or click the ground to walk. E to interact."
+  return <Canvas tabIndex={0} role="application" aria-label="Tech for Social Impact applicant village. WASD or click the ground to walk. E to interact."
     frameloop={props.hidden ? "never" : props.paused && !props.loading ? "demand" : "always"} dpr={graphics.pixelated ? 0.5 : [1, 1.5]} shadows={graphics.shadows && !graphics.liteMode ? "percentage" : false}
     style={{ imageRendering: graphics.pixelated ? "pixelated" : "auto" }}
     gl={{ antialias: false, powerPreference: "high-performance" }} camera={{ position: [0, 10.2, -21], fov: 48, near: 0.1, far: 100 }}

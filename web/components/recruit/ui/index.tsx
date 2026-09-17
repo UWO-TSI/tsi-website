@@ -47,7 +47,7 @@ const postingLabels: Record<PostingStatus, string> = { rehearsed: "Rehearsal com
 export function WantedPosting({ title, summary, status, onClick, className }: { title: string; summary?: string; status: PostingStatus; onClick?: () => void; className?: string }) {
   return <button type="button" className={cx(styles.theme, styles.posting, className)} data-status={status === "rehearsed" ? "submitted" : status} onClick={onClick}>
     <span className={styles.pin} aria-hidden="true" />
-    <span className={styles.postingEyebrow}>Tethos · Join the team</span>
+    <span className={styles.postingEyebrow}>Tech for Social Impact · Join the team</span>
     <span className={styles.postingTitle}>{title}</span>
     {summary && <span className={styles.postingSummary}>{summary}</span>}
     <span className={styles.postingStatus}><span aria-hidden="true">{status === "submitted" || status === "rehearsed" ? "✓" : status === "open" ? "↗" : "◌"}</span>{postingLabels[status]}</span>
@@ -92,7 +92,7 @@ export function ApplicationSheet({ title, subtitle, children, footer, onClose, c
   const titleId = useId();
   return <section className={cx(styles.theme, styles.applicationSheet, className)} aria-labelledby={titleId}>
     <header className={styles.sheetHeader}>
-      <div><p className={styles.sheetEyebrow}>Tethos · Recruitment office</p><h2 id={titleId}>{title}</h2>{subtitle && <p className={styles.sheetSubtitle}>{subtitle}</p>}</div>
+      <div><p className={styles.sheetEyebrow}>Tech for Social Impact · Recruitment office</p><h2 id={titleId}>{title}</h2>{subtitle && <p className={styles.sheetSubtitle}>{subtitle}</p>}</div>
       <button type="button" className={styles.closeButton} onClick={onClose} disabled={closeDisabled} aria-label={closeLabel} title={closeLabel}><span aria-hidden="true">×</span></button>
     </header>
     <div className={styles.sheetBody}>{children}</div>

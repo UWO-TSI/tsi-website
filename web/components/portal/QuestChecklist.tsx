@@ -56,7 +56,7 @@ const QUESTS: readonly Quest[] = [
   {
     id: "attend_irl_event",
     title: "Attend an IRL event",
-    hint: "Scan the QR code at a Tethos event to bank real XP.",
+    hint: "Scan the QR code at a Tech for Social Impact event to bank real XP.",
   },
   {
     id: "shake_a_tree",
@@ -708,7 +708,7 @@ function QuestPanelContent({
             flexShrink: 0,
           }}
         >
-          All quests checked off. Welcome to Tethos.
+          All quests checked off. Welcome to Tech for Social Impact.
         </p>
       )}
     </>

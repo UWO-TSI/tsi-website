@@ -30,7 +30,7 @@ export default function InterviewScheduler({
               You&apos;re through to the interview round
             </p>
             <p className="text-xs text-[#9CA3AF] mt-1 leading-relaxed">
-              A member of the Tethos team will reach out to you directly with
+              A member of the Tech for Social Impact team will reach out to you directly with
               interview details. If you have questions, email{" "}
               <a
                 href="mailto:recruitment@tethos.ca"

@@ -135,7 +135,7 @@ export default function QuestsPage() {
             Quest Board
           </h1>
           <p className="text-sm font-mono text-[var(--color-text-muted)] mt-1">
-            Complete quests to earn XP and Tethos Coins
+            Complete quests to earn XP and TSI Coins
           </p>
         </div>
         <div className="flex items-center gap-4">

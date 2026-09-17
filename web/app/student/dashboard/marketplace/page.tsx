@@ -95,7 +95,7 @@ export default function MarketplacePage() {
     }
 
     if (balance < buyItem.price) {
-      setBuyResult({ success: false, message: "Insufficient Tethos Coins." });
+      setBuyResult({ success: false, message: "Insufficient TSI Coins." });
       setBuying(false);
       return;
     }
@@ -146,7 +146,7 @@ export default function MarketplacePage() {
             Marketplace
           </h1>
           <p className="text-sm font-mono text-[var(--color-text-muted)] mt-1">
-            Spend your hard-earned Tethos Coins
+            Spend your hard-earned TSI Coins
           </p>
         </div>
         <div className="flex items-center gap-2 bg-[var(--color-bg-alt)] border border-[var(--color-brand-yellow)]/30 rounded-lg px-4 py-2">

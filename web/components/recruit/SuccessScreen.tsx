@@ -63,12 +63,12 @@ export default function SuccessScreen({
         : typeof window !== "undefined"
           ? window.location.origin
           : "";
-    const shareText = `I just applied for ${positionTitle} at Tethos — they're hiring.`;
+    const shareText = `I just applied for ${positionTitle} at Tech for Social Impact, they're hiring.`;
 
     if (navigator.share) {
       try {
         await navigator.share({
-          title: "Tethos recruitment",
+          title: "Tech for Social Impact recruitment",
           text: shareText,
           url: shareUrl,
         });

@@ -147,7 +147,7 @@ export default function AuthModal({
                 {mode === "signin"
                   ? "Sign in to submit your application."
                   : mode === "signup"
-                    ? "Create an account to apply to Tethos."
+                    ? "Create an account to apply to Tech for Social Impact."
                     : "Enter your email and we'll send a recovery link."}
               </p>
 
