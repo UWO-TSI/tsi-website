@@ -3,6 +3,14 @@
 > Read this before `AGENT_LOG.md`. It answers "which branch, what's live, what's next"
 > in one page. Update it whenever direction changes. Last updated **2026-09-17**.
 
+## Outage 2026-09-18: database instance starved, restarted via management API
+
+- **Symptom (David, ~15:40Z):** every page stuck loading, applicant world on "Getting ready…", admin board spinning. Vercel runtime errors from 08:58Z (300 s timeouts on `/api/positions`, `/api/resume-sign`, `/api/sheets-sync`), 504s and Cloudflare HTML pages from Supabase from 12:28Z. Traffic was normal; PRs #31/#32 (deployed 13:00Z) were not the cause.
+- **Cause:** the free-tier (nano) Postgres instance was IO-starved. Logs: statement timeouts from 13:03Z, a 5-page checkpoint taking 193 s, autovacuum and pg_cron unable to start. `pg_stat_statements`: the three heaviest statements in the database's life are pg_cron's own run-history writes (mean 2.7 s, max 217 s per single-row insert) next to ~9,000 draft-autosave upserts. Supabase health: db/rest/auth/storage all "Failed to connect to database" while the project showed ACTIVE_HEALTHY; the SQL editor and CLI could not connect either.
+- **Fix (15:51Z):** `POST /v1/projects/{ref}/restart` with the CLI's token from the keychain (see memory `reference_supabase_emergency_access`). Healthy at 15:54Z; positions API 0.5 s; world and admin verified with a real session.
+- **Load reductions applied on prod:** sheet cron `*/5 * * * *` (was every minute; the app still syncs after each write) and a daily `prune-cron-history` job. Code (PR #33): 20 s ceiling on every server-side Supabase call, `/api/positions` keeps a last-good copy and serves it when the database errors, draft autosave debounce 0.8 s → 3 s. `supabase/schedule-recruitment-sheet.sql` matches prod.
+- **Open for David:** the round runs on a free-tier nano instance with a 5-day deadline; upgrading to Pro + Micro compute for the round is the one change that removes the risk. Supabase also had an "API Gateway degraded" incident the same day.
+
 ## Google Sheet pages and copy (2026-09-17, later)
 
 - The recruitment workbook now has one page per pipeline stage (Screening, Interview Invite, Final Review, Accepted, Waitlist, Rejected) for live rounds and an **Archived rounds** page. They are live `FILTER` formulas over the master **Recruitment records** tab (`SHEET_VIEWS` in `web/lib/recruitment-sheet-data.ts`); the delivery worker creates missing pages and rewrites their header + formula after every master write. PR #26. Verified live: Screening shows the two developer applicants, Archived rounds 68. The empty default `Sheet1` tab is untouched.

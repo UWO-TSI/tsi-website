@@ -114,6 +114,12 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-09-18 — Outage: Postgres instance starved; restart + load reductions + fail-fast (PR #33)
+
+Timeline and cause in `STATE.md` ("Outage 2026-09-18"). Diagnosis path that worked while the SQL editor and CLI could not connect: Vercel `get_runtime_errors` → Supabase management API `health` (all UNHEALTHY) → `POST /restart` → `postgres_logs` via `analytics/endpoints/logs.all` → `pg_stat_statements` via `database/query`. Token = Supabase CLI keychain entry (`go-keyring-base64:` + base64 of `sbp_…`).
+
+Changes: `lib/supabase/fetch-timeout.ts` (20 s `AbortSignal.timeout` on the server and admin clients; a 5 MB resume download fits), `/api/positions` last-good cache (30 s fresh, stale copy on error with `x-positions: cached|stale`, 503 instead of 500 when nothing is cached), `application-draft.ts` debounce 3 s, cron schedule file updated (`*/5`, prune job). Prod cron altered directly via `cron.alter_job` / `cron.schedule`. tsc clean, vitest 351/351, build green.
+
 ### 2026-09-17 (night) — HOTFIX: server whitelist rejected ranking submissions
 
 Live e2e of the ranking feature (synthetic applicant through the real prod form) caught a submit failure: `recruitment-validation.ts` keeps its own META_IDS whitelist, separate from ApplicationForm's, and the four `__project_choice_*` IDs weren't in it — "Unknown application question" on submit for anyone who ranked. Applicants who skipped ranking were unaffected; drafts of affected applicants persist. Fix: whitelist the four IDs + regression test (vitest 351/351). Lesson recorded: essay_answers meta IDs live in THREE places — ApplicationForm.tsx, ApplicantCard.tsx, recruitment-sheet-data.ts — plus the validation whitelist in recruitment-validation.ts; grep for one existing ID (e.g. `__past_projects`) before adding a new one.

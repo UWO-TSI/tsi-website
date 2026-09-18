@@ -64,7 +64,7 @@ export function createApplicationDraft<T>({ writeLocal, removeLocal, saveRemote,
       persistLocal();
       cancelTimer();
       notify("saving");
-      timer = setTimeout(() => { void flush(); }, 800);
+      timer = setTimeout(() => { void flush(); }, 3000);
     },
     flush,
     async pauseForSubmission() {

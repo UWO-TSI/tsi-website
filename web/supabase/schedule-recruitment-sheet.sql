@@ -13,7 +13,10 @@ do $$ begin
   end if;
 end $$;
 
-select cron.schedule('recruitment-sheet-delivery', '* * * * *', $job$
+-- Every 5 minutes (was every minute until 2026-09-18: pg_cron's own run-history
+-- writes were the heaviest statements on the free-tier instance). The app also
+-- syncs right after each write, so this is only the safety net.
+select cron.schedule('recruitment-sheet-delivery', '*/5 * * * *', $job$
   select net.http_post(
     url := (select decrypted_secret from vault.decrypted_secrets where name='recruitment_sheet_origin') || '/api/sheets-sync',
     headers := jsonb_build_object('Content-Type','application/json','Authorization','Bearer ' ||
@@ -23,4 +26,9 @@ select cron.schedule('recruitment-sheet-delivery', '* * * * *', $job$
   ) where exists(select 1 from public.recruitment_sheet_rows where synced_at is null)
     and exists(select 1 from public.recruitment_sheet_state where next_attempt_at <= now()
       and (lease_until is null or lease_until < now()));
+$job$);
+
+-- pg_cron keeps every run in cron.job_run_details; prune it daily (applied 2026-09-18).
+select cron.schedule('prune-cron-history', '17 4 * * *', $job$
+  delete from cron.job_run_details where start_time < now() - interval '2 days'
 $job$);
