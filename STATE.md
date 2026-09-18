@@ -3,6 +3,13 @@
 > Read this before `AGENT_LOG.md`. It answers "which branch, what's live, what's next"
 > in one page. Update it whenever direction changes. Last updated **2026-09-17**.
 
+## Reviewer tabs in the recruitment workbook (2026-09-18, PR #36)
+
+- David's 10 PMs and 5 VPs read applications in Google Sheets and discuss them with cell comments, not on the portal. The workbook now has **All applicants**, **Developers**, **Internal**, **External**, **Marketing** (one per live role, the role's questions verbatim as headers). No IDs, statuses, tags or admin notes; profile, submitted time, resume link (signed, 45 days, refreshed on every delivery), LinkedIn, other links, portfolio/creative file links, commitments, and for developers the project picks and reason.
+- Every application has a fixed row per tab for life (`recruitment_sheet_rows.tab_row` / `all_row`, migration `20260918200000_recruitment_sheet_tabs`), assigned in submission order at queue time, so comments never drift. Deleted or archived applications are blanked in place. **Share the workbook with reviewers as Commenter, never Editor**: an editor sorting the sheet would move rows out from under the delivery worker. Each tab also carries a warning-only protection saying so.
+- The master "Recruitment records" tab is hidden (still the durable record, incl. archived rounds, and the CSV/admin source). Yesterday's stage tabs and the default Sheet1 are deleted by the worker.
+- Formatting is applied once when a tab is created (frozen dark header, wrap, widths, banding, filter). Reviewers should use temporary filter views for sorting.
+
 ## Developer project cards (2026-09-18, PR #34)
 
 - The developer application's project ranking is one column of partner cards (`components/recruit/ProjectCards.tsx`): single-colour partner logo (`public/logos/partners/*.svg`, CSS mask in `currentColor`), name and project, chevron opens the brief inline, a Rank pill (1st/2nd/3rd, tap again to remove). Same cards read-only on the role page and in the village overlay. Logos were traced or recoloured from each partner's site; ArkAid, Brain Tumour and Growing Chefs are cropped to their marks.

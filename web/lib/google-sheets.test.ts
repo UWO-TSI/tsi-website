@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mock = vi.hoisted(() => ({
-  claim: true, googleFails: false, queue: [{ application_id: "deleted-record", sheet_row: 8, version: 2 }],
+  claim: true, googleFails: false, queue: [{ application_id: "deleted-record", sheet_row: 8, version: 2, tab_row: null, all_row: 5, position_id: null }],
   writes: [] as unknown[], acknowledgments: [] as unknown[], updates: [] as { table: string; values: Record<string, unknown> }[],
   spreadsheetId: "existing-sheet" as string | null, foundId: null as string | null,
   creates: [] as unknown[], tabRequests: [] as unknown[], hasTab: true,
@@ -49,19 +49,20 @@ describe("durable Google delivery", () => {
     expect(mock.writes[0]).toMatchObject({ requestBody: { valueInputOption: "RAW", data: [{ range: "'Recruitment records'!A1:BR1" }, { range: "'Recruitment records'!A8:BR8", values: [Array(70).fill("")] }] } });
     expect(mock.acknowledgments).toEqual([{ p_rows: [{ application_id: "deleted-record", version: 2 }] }]);
   });
-  it("adds one page per pipeline stage plus archived rounds, as live formulas over the master tab", async () => {
+  it("creates the reviewer tabs, hides the master, removes legacy tabs and writes fixed rows", async () => {
     await syncRecruitmentSheet();
-    const titles = ["Screening", "Interview Invite", "Final Review", "Accepted", "Waitlist", "Rejected", "Archived rounds"];
-    expect(mock.tabRequests[0]).toMatchObject({ spreadsheetId: "existing-sheet", requestBody: { requests: titles.map(title => ({ addSheet: { properties: { title } } })) } });
+    // One structural request: hide the master tab (no legacy tabs in the mock), add All applicants.
+    expect(mock.tabRequests[0]).toMatchObject({ spreadsheetId: "existing-sheet", requestBody: { requests: [
+      { updateSheetProperties: { properties: { sheetId: 1, hidden: true } } },
+      { addSheet: { properties: { title: "All applicants", gridProperties: { frozenRowCount: 1 } } } },
+    ] } });
     const view = mock.writes[1] as { requestBody: { valueInputOption: string; data: { range: string; values: string[][] }[] } };
     expect(view.requestBody.valueInputOption).toBe("USER_ENTERED");
-    expect(view.requestBody.data.map(d => d.range)).toEqual(titles.flatMap(t => [`'${t}'!A1:BR1`, `'${t}'!A2`]));
-    const screening = view.requestBody.data.find(d => d.range === "'Screening'!A2")?.values[0][0] ?? "";
-    expect(screening).toContain("'Recruitment records'!O2:O=\"screening\"");
-    expect(screening).toContain("'Recruitment records'!E2:E=\"No\"");
-    expect(screening).toMatch(/^=IFERROR\(SORT\(FILTER\('Recruitment records'!A2:BR, /);
-    const archived = view.requestBody.data.find(d => d.range === "'Archived rounds'!A2")?.values[0][0] ?? "";
-    expect(archived).toContain("'Recruitment records'!E2:E=\"Yes\"");
+    // The deleted application is blanked on its fixed reviewer row; no ID columns anywhere.
+    expect(view.requestBody.data).toEqual([
+      { range: "'All applicants'!A1:H1", values: [["Name", "Email", "Role", "Program", "Year", "Submitted", "Resume", "LinkedIn"]] },
+      { range: "'All applicants'!A5:H5", values: [Array(8).fill("")] },
+    ]);
     expect(mock.acknowledgments).toHaveLength(1);
   });
   it("keeps a failed write pending, releases the lease and retries the identical row", async () => {
