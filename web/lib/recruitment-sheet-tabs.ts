@@ -13,6 +13,15 @@ export const ROLE_TABS: Record<string, string> = {
   "director-external": "External",
   "director-marketing": "Marketing",
 };
+/** One tab per developer project, listing applicants who ranked it (David, 2026-09-18). Keyed by partner name. */
+export const PROJECT_TABS: Record<string, string> = {
+  "Boys and Girls Club London": "BGC London",
+  ArkAid: "ArkAid",
+  "Grand Theatre": "Grand Theatre",
+  "Brain Tumour Foundation of Canada": "Brain Tumour",
+  "Growing Chefs!": "Growing Chefs",
+};
+const RANK_LABELS = ["1st", "2nd", "3rd"];
 /** Tabs from earlier layouts, removed once the reviewer tabs exist. */
 export const LEGACY_TABS = ["Sheet1", "Screening", "Interview Invite", "Final Review", "Accepted", "Waitlist", "Rejected", "Archived rounds"];
 
@@ -125,4 +134,25 @@ export function formatRequests(sheetId: number, headers: string[], answerColumns
     { addProtectedRange: { protectedRange: { range: { sheetId }, warningOnly: true,
       description: "Rows are placed by the application portal. Comment on cells; do not sort, insert or delete rows." } } },
   ];
+}
+
+/** The applicant's picks as (partner, rank) from the stored "Partner (Title)" answers. */
+export function projectPicks(app: Application): { partner: string; rank: number }[] {
+  const m = answerMap(app);
+  return META.picks.map((id, i) => ({ partner: (m.get(id) ?? "").split(" (")[0], rank: i + 1 })).filter(p => p.partner);
+}
+
+const REASON_HEADER = "Why these picks";
+/** Project tab: name, email, their rank and reason first, then the rest of the developer columns. */
+export function projectHeaders(position: Pick<Position, "slug" | "essay_questions">): string[] {
+  const base = roleHeaders(position).filter(h => h !== REASON_HEADER);
+  return [base[0], base[1], "Their rank for this project", REASON_HEADER, ...base.slice(2)];
+}
+export function projectRow(app: Application, position: Pick<Position, "slug" | "essay_questions">, links: RowLinks, rank: number): string[] {
+  const headers = roleHeaders(position);
+  const cells = roleRow(app, position, links);
+  const reasonAt = headers.indexOf(REASON_HEADER);
+  const reason = reasonAt === -1 ? "" : cells[reasonAt];
+  const rest = cells.filter((_, i) => i !== reasonAt);
+  return [rest[0], rest[1], RANK_LABELS[rank - 1] ?? String(rank), reason, ...rest.slice(2)];
 }

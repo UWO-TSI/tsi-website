@@ -114,6 +114,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-09-18 (night) — Project tabs for PMs (PR #39)
+
+David: a tab per project so each PM sees who ranked their project in the top 3. Rulings: full application plus rank and reason, fixed rows for comments, unranked developers stay in the Developers tab only. `recruitment_sheet_project_rows (application_id, project, project_row)` is filled by the same `private.assign_recruitment_tab_rows` function (picks parsed from `__project_choice_1..3`, partner = text before " ("), backfilled and re-queued by migration `20260918230000`. Worker: `PROJECT_TABS` (partner → short tab name), `projectHeaders`/`projectRow` (name, email, their rank, reason, then the developer columns minus the duplicate reason), tabs created whenever the developer role is live, ordered after Marketing. Migration applied via the management API; workbook brought to shape by a direct worker run.
+
 ### 2026-09-18 — Reviewer tabs for the 15 PMs/VPs (PR #36)
 
 David: reviewers read applications in Google Sheets; five tabs (All applicants + one per live role), readable, no ID-type columns; discussion via Sheets comments. Design consequence: comments anchor to cells, so rows must be fixed per application in every tab and reviewers must be Commenters. Migration adds `position_id`, `tab_row`, `all_row` to `recruitment_sheet_rows` with an AFTER INSERT trigger (`private.assign_recruitment_tab_rows`, advisory-locked, unique indexes as backstop), backfills live rounds in submission order, and re-queues every row. `lib/recruitment-sheet-tabs.ts` builds headers/rows (HYPERLINK formulas for resume/LinkedIn/portfolio, leading-apostrophe guard for answers that look like formulas, Toronto submitted time) and the one-time formatting requests. `syncRecruitmentSheet` writes the tabs after the master rows (same retry semantics), creates missing tabs with formatting, hides the master, deletes legacy tabs, signs resume/portfolio links for 45 days per delivery. Deploy order: code first, then the migration (it re-queues all rows for the new worker). Tests: 17 sheet tests, vitest total green.

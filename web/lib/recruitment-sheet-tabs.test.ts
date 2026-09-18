@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { allRow, cell, formatRequests, resumePath, roleHeaders, roleRow } from "./recruitment-sheet-tabs";
+import { allRow, cell, formatRequests, projectHeaders, projectPicks, projectRow, resumePath, roleHeaders, roleRow } from "./recruitment-sheet-tabs";
 import type { Application, Position } from "./recruitment";
 
 const position = { slug: "developer", title: "Developer", essay_questions: [
@@ -45,5 +45,15 @@ describe("reviewer tab rows", () => {
   it("formats a new tab with a frozen bold header, wrapping, banding, a filter and a warning-only protection", () => {
     const kinds = formatRequests(7, roleHeaders(position), 12).map(r => Object.keys(r)[0]);
     expect(kinds).toEqual(expect.arrayContaining(["repeatCell", "updateDimensionProperties", "addBanding", "setBasicFilter", "addProtectedRange"]));
+  });
+  it("reads the picks back by partner and builds project rows with rank and reason first", () => {
+    expect(projectPicks(app)).toEqual([{ partner: "ArkAid", rank: 1 }]);
+    const headers = projectHeaders(position);
+    expect(headers.slice(0, 4)).toEqual(["Name", "Email", "Their rank for this project", "Why these picks"]);
+    expect(headers.filter(h => h === "Why these picks")).toHaveLength(1);
+    const row = projectRow(app, position, links, 1);
+    expect(row.slice(0, 4)).toEqual(["Ada Lovelace", "ada@uwo.ca", "1st", "Kitchens"]);
+    expect(row).toHaveLength(headers.length);
+    expect(row[row.length - 1]).toBe("Built a thing");
   });
 });
