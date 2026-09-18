@@ -3,6 +3,11 @@
 > Read this before `AGENT_LOG.md`. It answers "which branch, what's live, what's next"
 > in one page. Update it whenever direction changes. Last updated **2026-09-17**.
 
+## Developer project cards (2026-09-18, PR #34)
+
+- The developer application's project ranking is one column of partner cards (`components/recruit/ProjectCards.tsx`): single-colour partner logo (`public/logos/partners/*.svg`, CSS mask in `currentColor`), name and project, chevron opens the brief inline, a Rank pill (1st/2nd/3rd, tap again to remove). Same cards read-only on the role page and in the village overlay. Logos were traced or recoloured from each partner's site; ArkAid, Brain Tumour and Growing Chefs are cropped to their marks.
+- Vercel skipped the production deploy for the PR #34 merge (branch preview built, no `main` deployment); the next merge re-triggered it.
+
 ## Outage 2026-09-18: database instance starved, restarted via management API
 
 - **Symptom (David, ~15:40Z):** every page stuck loading, applicant world on "Getting ready…", admin board spinning. Vercel runtime errors from 08:58Z (300 s timeouts on `/api/positions`, `/api/resume-sign`, `/api/sheets-sync`), 504s and Cloudflare HTML pages from Supabase from 12:28Z. Traffic was normal; PRs #31/#32 (deployed 13:00Z) were not the cause.
