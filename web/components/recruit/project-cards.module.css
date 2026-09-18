@@ -1,0 +1,30 @@
+/* Partner project cards: one column, logo + name + expandable brief, and an
+   optional rank pill. Colours come from the app tokens so the same cards work
+   in the cream village sheet and the dark direct form. */
+.list { display: grid; gap: 10px; }
+.card { border: 1.5px solid var(--app-line, #ffffff24); border-radius: 16px; background: var(--app-raised, transparent); transition: border-color 120ms ease, box-shadow 120ms ease; }
+.card[data-ranked="true"] { border-color: var(--app-link, #1d9bf0); box-shadow: inset 4px 0 0 var(--app-link, #1d9bf0); }
+.row { display: flex; align-items: center; gap: 14px; padding: 12px 14px 12px 16px; }
+.logo { flex: 0 0 auto; width: 92px; height: 44px; color: var(--app-ink, currentColor); background: currentColor; opacity: .92;
+  -webkit-mask-image: var(--logo); -webkit-mask-size: contain; -webkit-mask-position: center; -webkit-mask-repeat: no-repeat;
+  mask-image: var(--logo); mask-size: contain; mask-position: center; mask-repeat: no-repeat; }
+.main { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; gap: 10px; margin: 0; padding: 6px 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.main:focus-visible, .rank:focus-visible { outline: 3px solid var(--app-focus, #1d9bf0); outline-offset: 2px; border-radius: 10px; }
+.text { min-width: 0; }
+.text strong { display: block; font-size: 15px; font-weight: 700; line-height: 1.3; }
+.text span { display: block; font-size: 13px; line-height: 1.4; opacity: .75; }
+.chev { flex: 0 0 auto; margin-left: auto; opacity: .6; transition: transform 120ms ease; }
+.card[data-open="true"] .chev { transform: rotate(90deg); }
+.rank { flex: 0 0 auto; min-width: 66px; height: 34px; padding: 0 14px; border: 1.5px solid var(--app-line, #ffffff33); border-radius: 999px; background: transparent; color: inherit; font: 600 12px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .04em; cursor: pointer; transition: background 120ms ease, border-color 120ms ease; }
+.rank:hover:not(:disabled) { border-color: var(--app-link, #1d9bf0); }
+.rank[aria-pressed="true"] { background: var(--app-link, #1d9bf0); border-color: var(--app-link, #1d9bf0); color: #fff; }
+.rank:disabled { opacity: .35; cursor: not-allowed; }
+.brief { padding: 0 16px 16px calc(16px + 92px + 14px); }
+.brief p { margin: 10px 0 0; font-size: 14px; line-height: 1.75; opacity: .9; }
+.hint { margin: 10px 0 0; font-size: 12px; line-height: 1.5; opacity: .7; }
+@media (max-width: 640px) {
+  .row { gap: 10px; padding: 10px 12px; }
+  .logo { width: 60px; height: 30px; }
+  .brief { padding-left: 12px; }
+  .rank { min-width: 56px; padding: 0 10px; }
+}

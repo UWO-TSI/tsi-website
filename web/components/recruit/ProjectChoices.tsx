@@ -1,14 +1,9 @@
 "use client";
 
-import { DEVELOPER_PROJECTS } from "@/lib/recruitment-projects";
-import DeveloperProjects from "./DeveloperProjects";
 import FormField from "./FormField";
-import {
-  MAX_PROJECT_CHOICES,
-  PROJECT_REASON_MAX_WORDS,
-  RANK_LABELS,
-  toggleProjectChoice,
-} from "./project-choices";
+import ProjectCards from "./ProjectCards";
+import cardStyles from "./project-cards.module.css";
+import { MAX_PROJECT_CHOICES, PROJECT_REASON_MAX_WORDS } from "./project-choices";
 
 interface ProjectChoicesProps {
   choices: string[];
@@ -39,52 +34,16 @@ export default function ProjectChoices({
         This year&apos;s projects · rank your top 3 (optional)
       </p>
       <p className="text-xs text-[#9CA3AF] mb-4 leading-relaxed">
-        Five nonprofit partners; open each one to read what the team will
-        build. Tap a project to rank it, tap again to remove. Skipping this
-        won&apos;t hurt your application; it helps us place you.
+        Open a card to read the brief. Use the pill to rank it; tap again to
+        remove. Skipping this won&apos;t hurt your application; it helps us
+        place you.
       </p>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-        <div className="space-y-2" role="group" aria-label="Rank your top 3 projects">
-          {DEVELOPER_PROJECTS.map((project) => {
-            const rank = choices.indexOf(project.partner);
-            const ranked = rank !== -1;
-            const full = !ranked && choices.length >= MAX_PROJECT_CHOICES;
-            return (
-              <button
-                key={project.partner}
-                type="button"
-                aria-pressed={ranked}
-                disabled={full}
-                onClick={() => onChoicesChange(toggleProjectChoice(choices, project.partner))}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all border ${
-                  ranked
-                    ? "bg-[#1D9BF0]/10 border-[#1D9BF0]/50"
-                    : full
-                      ? "bg-white/[0.02] border-white/5 opacity-50 cursor-not-allowed"
-                      : "bg-white/[0.03] border-white/10 hover:border-white/20"
-                }`}
-              >
-                <span
-                  className={`flex-shrink-0 w-9 h-6 rounded-full flex items-center justify-center font-mono text-[10px] ${
-                    ranked
-                      ? "bg-[#1D9BF0] text-[#F1FFFF]"
-                      : "border border-white/15 text-[#6B7280]"
-                  }`}
-                >
-                  {ranked ? RANK_LABELS[rank] : "—"}
-                </span>
-                <span className="min-w-0">
-                  <span className="block text-sm text-[#F1FFFF]">
-                    {project.partner}
-                  </span>
-                  <span className="block text-xs text-[#9CA3AF]">{project.title}</span>
-                </span>
-              </button>
-            );
-          })}
-        </div>
-        <DeveloperProjects embedded />
-      </div>
+      <ProjectCards choices={choices} onChoicesChange={onChoicesChange} />
+      <p className={cardStyles.hint} aria-live="polite">
+        {choices.length === 0
+          ? "Nothing picked yet."
+          : `${choices.length} of ${MAX_PROJECT_CHOICES} picked${choices.length >= MAX_PROJECT_CHOICES ? ". Remove one to change your picks." : "."}`}
+      </p>
       <div className="mt-4">
         <FormField
           label="Why these choices? (optional)"
