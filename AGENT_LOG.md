@@ -114,6 +114,12 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-09-18 — Developer project cards: partner logos, one column, rank pill (PR #34)
+
+David: "this ui sucks for the project desc and ranking. find logo, monochrome it, make it svg." The two-column layout (rank list left, accordion right) is replaced by one shared `ProjectCards` component: logo, partner + project, chevron opens the brief inline, a "Rank" pill on the application step (1st/2nd/3rd, tap again to remove; disabled when three are picked). `DeveloperProjects` (role page, village overlay) renders the same cards read-only. Styling on the `--app-*` tokens so the cream sheet and dark form both work.
+
+Logos (`public/logos/partners/*.svg`, single colour, drawn as a CSS mask in `currentColor`): BGC London traced from the site's WebP; ArkAid traced from the site PNG, cropped to the ark mark; Grand Theatre traced from the white wordmark PNG's alpha; Brain Tumour Foundation's flag SVG recoloured and cropped to the flag; Growing Chefs' inline SVG with the brown wordmark paths removed. Tools: potrace, ImageMagick, rsvg-convert. tsc clean, vitest 351/351, build green, Playwright screenshots of both views.
+
 ### 2026-09-18 — Outage: Postgres instance starved; restart + load reductions + fail-fast (PR #33)
 
 Timeline and cause in `STATE.md` ("Outage 2026-09-18"). Diagnosis path that worked while the SQL editor and CLI could not connect: Vercel `get_runtime_errors` → Supabase management API `health` (all UNHEALTHY) → `POST /restart` → `postgres_logs` via `analytics/endpoints/logs.all` → `pg_stat_statements` via `database/query`. Token = Supabase CLI keychain entry (`go-keyring-base64:` + base64 of `sbp_…`).

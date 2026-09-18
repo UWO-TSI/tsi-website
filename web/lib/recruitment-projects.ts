@@ -1,7 +1,9 @@
-// Project descriptions supplied by David on 2026-09-16.
+// Project descriptions supplied by David on 2026-09-16. Logos: single-colour
+// SVGs in public/logos/partners (traced or recoloured from each partner's
+// site, 2026-09-18); rendered as a CSS mask so they take the text colour.
 export const DEVELOPER_PROJECTS = [
   {
-    partner: "Boys and Girls Club London", title: "MAP Program App",
+    partner: "Boys and Girls Club London", logo: "/logos/partners/bgc.svg", title: "MAP Program App",
     paragraphs: [
       "BGC London has been running since 1956. It employs more than 35 full-time and 40 part-time staff, and its Supper Club nutrition program serves over 16,000 meals each school year, plus another 18,000 snacks over the summer. In one evening the Strupat Foundation donated $1 million to MAP alone.",
       "MAP is My Action Plan to Education. It supports students from Grade 4 through post-secondary, and the roughly 200 currently enrolled are split across three pathways: tutoring only, tutoring plus workshops toward a completion certificate, or the full track that accumulates points toward scholarship eligibility.",
@@ -11,7 +13,7 @@ export const DEVELOPER_PROJECTS = [
     ],
   },
   {
-    partner: "ArkAid", title: "Kitchen Dashboard",
+    partner: "ArkAid", logo: "/logos/partners/arkaid.svg", title: "Kitchen Dashboard",
     paragraphs: [
       "Ark Aid Mission operates out of 696 Dundas Street. Dinner service runs seven days a week, laundry and showers five days, and the Out of the Cold program runs 24 hours a day from December 1 to March 31. Meal volumes doubled after the pandemic, from around 100 to between 100 and 230.",
       "Then this happened: on April 1, 2026, the City of London withdrew core funding for daytime services at 696 Dundas, roughly one-third of operations, over $1 million a year. Council approved bridge funding on April 28. Grant reporting is not an administrative nicety for them right now.",
@@ -20,7 +22,7 @@ export const DEVELOPER_PROJECTS = [
     ],
   },
   {
-    partner: "Grand Theatre", title: "Carbon and Energy Dashboard",
+    partner: "Grand Theatre", logo: "/logos/partners/grand-theatre.svg", title: "Carbon and Energy Dashboard",
     paragraphs: [
       "The Grand opened on September 9, 1901. It's a not-for-profit professional theatre with two stages, the 839-seat Spriet and the 144-seat Auburn, running a September to May season, and it produces its own work rather than just hosting tours.",
       "Emissions tracking happens in one Excel workbook. Each department types its numbers in, line by line. Staff who aren't fluent in spreadsheets are effectively locked out of it.",
@@ -28,7 +30,7 @@ export const DEVELOPER_PROJECTS = [
     ],
   },
   {
-    partner: "Brain Tumour Foundation of Canada", title: "Walk Support Hub",
+    partner: "Brain Tumour Foundation of Canada", logo: "/logos/partners/brain-tumour.svg", title: "Walk Support Hub",
     paragraphs: [
       "National charity, founded in 1982, with its head office at 205 Horton Street East in London. 25 employees. Funded entirely by donations, memorial gifts, planned giving, and events. 27 Canadians are diagnosed with a brain tumour every day, across 120 tumour types.",
       "The Brain Tumour Walk is their largest volunteer-led, peer-to-peer fundraiser. Roughly 25 walks, most of them in June, generating most of the year's revenue. Six of them are in-person flagship events in London, Toronto, Calgary, Edmonton, Ottawa, and Winnipeg, with the rest community-hosted.",
@@ -36,7 +38,7 @@ export const DEVELOPER_PROJECTS = [
     ],
   },
   {
-    partner: "Growing Chefs!", title: "Dietary Restriction System",
+    partner: "Growing Chefs!", logo: "/logos/partners/growing-chefs.svg", title: "Dietary Restriction System",
     paragraphs: [
       "Incorporated in 2008, a registered charity in London that connects chefs, growers, and educators through children's food education. Over 110,000 children and youth have come through their programs. Last year they delivered 125,000 scratch-made lunches to local schools, generating $1.2 million in revenue, with more than 40% of ingredients sourced from Ontario producers.",
       "Up to 800 meals a day, across daycares, public schools, and private schools. Every new site fills out JotForm intakes for each student. Those feed a spreadsheet that gets updated daily, and chefs spend 30 to 60 minutes every morning reading it before they cook. All meat is halal and nuts are already out of the kitchen, which covers the common cases. It does not cover anaphylaxis. They have sent a child to hospital.",
