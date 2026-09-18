@@ -193,9 +193,16 @@ async function signLinks(admin: AdminApi, app: Application): Promise<RowLinks> {
 async function writeReviewerTabs(admin: AdminApi, sheets: SheetsApi, spreadsheetId: string, existing: SheetProps[], rows: QueuedRow[], apps: Application[]) {
   const byId = new Map(apps.map(a => [a.id, a]));
   const positionIds = [...new Set(rows.map(r => r.position_id ?? byId.get(r.application_id)?.position_id).filter((x): x is string => !!x))];
-  const positions = positionIds.length ? await admin.from("positions").select("*").in("id", positionIds) : { data: [], error: null };
+  // Every live role gets its tab on the first delivery, applicants or not,
+  // so reviewers see the whole structure; batch positions are added for
+  // rows whose role is archived or has no tab.
+  const live = await admin.from("positions").select("*").in("slug", Object.keys(ROLE_TABS)).is("archived_at", null);
+  if (live.error) throw live.error;
+  const liveIds = new Set(((live.data ?? []) as Position[]).map(p => p.id));
+  const rest = positionIds.filter(id => !liveIds.has(id));
+  const positions = rest.length ? await admin.from("positions").select("*").in("id", rest) : { data: [], error: null };
   if (positions.error) throw positions.error;
-  const positionById = new Map(((positions.data ?? []) as Position[]).map(p => [p.id, p]));
+  const positionById = new Map([...((live.data ?? []) as Position[]), ...((positions.data ?? []) as Position[])].map(p => [p.id, p]));
   const tabs = new Map(existing.map(s => [s.properties?.title ?? "", s.properties ?? {}]));
 
   // Tabs needed by this batch; All applicants always.
@@ -204,7 +211,11 @@ async function writeReviewerTabs(admin: AdminApi, sheets: SheetsApi, spreadsheet
     const title = ROLE_TABS[p.slug];
     if (title && !needed.some(n => n.title === title)) needed.push({ title, headers: roleHeaders(p), answersFrom: roleHeaders(p).length - p.essay_questions.length });
   }
+  // Order matters: Google refuses a batch that leaves no visible sheet, so
+  // new tabs are added before the master is hidden and legacy tabs removed.
   const requests: object[] = [];
+  const missing = needed.filter(n => !tabs.has(n.title));
+  for (const n of missing) requests.push({ addSheet: { properties: { title: n.title, gridProperties: { rowCount: 1000, columnCount: n.headers.length + 2, frozenRowCount: 1 } } } });
   const master = tabs.get(SHEET_TAB);
   if (master?.sheetId !== undefined && master?.sheetId !== null && !master.hidden) {
     requests.push({ updateSheetProperties: { properties: { sheetId: master.sheetId, hidden: true }, fields: "hidden" } });
@@ -213,14 +224,23 @@ async function writeReviewerTabs(admin: AdminApi, sheets: SheetsApi, spreadsheet
     const t = tabs.get(legacy);
     if (t?.sheetId !== undefined && t?.sheetId !== null) requests.push({ deleteSheet: { sheetId: t.sheetId } });
   }
-  const missing = needed.filter(n => !tabs.has(n.title));
-  for (const n of missing) requests.push({ addSheet: { properties: { title: n.title, gridProperties: { rowCount: 1000, columnCount: n.headers.length + 2, frozenRowCount: 1 } } } });
+  const idByTitle = new Map<string, number>();
+  for (const [title, props] of tabs) if (typeof props.sheetId === "number") idByTitle.set(title, props.sheetId);
   if (requests.length) {
     const res = await sheets.spreadsheets.batchUpdate({ spreadsheetId, requestBody: { requests } }, GOOGLE_OPTIONS);
     const replies = (res as { data?: { replies?: { addSheet?: { properties?: { sheetId?: number | null } } }[] } } | undefined)?.data?.replies ?? [];
     const created = replies.map(r => r.addSheet?.properties?.sheetId).filter((x): x is number => typeof x === "number");
+    missing.forEach((n, i) => { if (created[i] !== undefined) idByTitle.set(n.title, created[i]); });
     const format = missing.flatMap((n, i) => created[i] === undefined ? [] : formatRequests(created[i], n.headers, n.answersFrom));
     if (format.length) await sheets.spreadsheets.batchUpdate({ spreadsheetId, requestBody: { requests: format } }, GOOGLE_OPTIONS);
+  }
+  // Tab order as David listed it, every delivery (cheap, idempotent); the
+  // hidden master falls to the end.
+  const wanted = [ALL_TAB, ...Object.values(ROLE_TABS)].filter(t => idByTitle.has(t));
+  const current = existing.filter(s => s.properties?.title && !s.properties.hidden).map(s => s.properties!.title!);
+  if (wanted.some((t, i) => current[i] !== t)) {
+    await sheets.spreadsheets.batchUpdate({ spreadsheetId, requestBody: { requests: wanted.map((t, i) => ({
+      updateSheetProperties: { properties: { sheetId: idByTitle.get(t), index: i }, fields: "index" } })) } }, GOOGLE_OPTIONS);
   }
 
   const data: { range: string; values: string[][] }[] = [];

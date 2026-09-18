@@ -51,10 +51,10 @@ describe("durable Google delivery", () => {
   });
   it("creates the reviewer tabs, hides the master, removes legacy tabs and writes fixed rows", async () => {
     await syncRecruitmentSheet();
-    // One structural request: hide the master tab (no legacy tabs in the mock), add All applicants.
+    // One structural request: add All applicants first (Google needs a visible sheet), then hide the master.
     expect(mock.tabRequests[0]).toMatchObject({ spreadsheetId: "existing-sheet", requestBody: { requests: [
-      { updateSheetProperties: { properties: { sheetId: 1, hidden: true } } },
       { addSheet: { properties: { title: "All applicants", gridProperties: { frozenRowCount: 1 } } } },
+      { updateSheetProperties: { properties: { sheetId: 1, hidden: true } } },
     ] } });
     const view = mock.writes[1] as { requestBody: { valueInputOption: string; data: { range: string; values: string[][] }[] } };
     expect(view.requestBody.valueInputOption).toBe("USER_ENTERED");
