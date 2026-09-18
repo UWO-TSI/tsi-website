@@ -46,34 +46,6 @@ export function sheetRow(app: Application, origin: string): (string | number)[] 
   return row;
 }
 
-/**
- * Stage pages (David, 2026-09-17): one tab per pipeline stage for the live
- * rounds plus one for archived rounds. Each is a live FILTER over the master
- * tab, so a released status or an archived round moves rows on its own and
- * the fixed-row delivery above stays the only writer of applicant data.
- */
-export const SHEET_VIEWS: { title: string; formula: string }[] = (() => {
-  const end = columnName(SHEET_HEADERS.length);
-  const col = (header: string) => columnName(SHEET_HEADERS.indexOf(header) + 1);
-  const status = col("Status"), archived = col("Archived");
-  const submittedAt = SHEET_HEADERS.indexOf("Submitted at") + 1;
-  const master = `'${SHEET_TAB}'`;
-  const view = (title: string, where: string, empty: string) => ({
-    title,
-    formula: `=IFERROR(SORT(FILTER(${master}!A2:${end}, ${where}), ${submittedAt}, TRUE), "${empty}")`,
-  });
-  const stage = (title: string, value: string) =>
-    view(title, `${master}!${status}2:${status}="${value}", ${master}!${archived}2:${archived}="No"`, "No applications at this stage");
-  return [
-    stage("Screening", "screening"),
-    stage("Interview Invite", "interview_invite"),
-    stage("Final Review", "final_review"),
-    stage("Accepted", "accepted"),
-    stage("Waitlist", "waitlist"),
-    stage("Rejected", "rejected"),
-    view("Archived rounds", `${master}!${archived}2:${archived}="Yes"`, "No archived applications"),
-  ];
-})();
 export function columnName(column: number): string {
   let name = "";
   while (column > 0) { column--; name = String.fromCharCode(65 + column % 26) + name; column = Math.floor(column / 26); }

@@ -3,7 +3,9 @@ import { google } from "googleapis";
 import { getOAuthClient } from "./google-oauth";
 import { createAdminClient } from "./supabase/admin";
 import type { Application } from "./recruitment";
-import { SHEET_TAB, SHEET_HEADERS, SHEET_VIEWS, sheetRow, columnName } from "./recruitment-sheet-data";
+import { SHEET_TAB, SHEET_HEADERS, sheetRow, columnName } from "./recruitment-sheet-data";
+import { ALL_HEADERS, ALL_TAB, LEGACY_TABS, RESUME_LINK_TTL_SECONDS, ROLE_TABS, allRow, fileEntries, formatRequests, resumePath, roleHeaders, roleRow, type RowLinks } from "./recruitment-sheet-tabs";
+import type { Position } from "./recruitment";
 
 const GOOGLE_OPTIONS = { timeout: 15000, retry: false };
 const BATCH_SIZE = 100;
@@ -69,7 +71,7 @@ export async function syncRecruitmentSheet() {
   if (!claim.data) return { synced: 0, busy: true };
   let failed = false;
   try {
-    const queued = await admin.from("recruitment_sheet_rows").select("application_id,sheet_row,version")
+    const queued = await admin.from("recruitment_sheet_rows").select("application_id,sheet_row,version,tab_row,all_row,position_id")
       .is("synced_at", null).order("sheet_row").limit(BATCH_SIZE);
     if (queued.error) throw queued.error;
     const rows = queued.data ?? [];
@@ -129,23 +131,10 @@ export async function syncRecruitmentSheet() {
           values: [byId.has(r.application_id) ? sheetRow(byId.get(r.application_id)!, recruitmentOrigin()) : SHEET_HEADERS.map(() => "")] })),
       ],
     } }, GOOGLE_OPTIONS);
-    // Stage pages: created when missing, formulas rewritten on every delivery
-    // so a renamed or damaged tab heals itself. Written after the master rows
-    // so a failure here retries the same delivery, never a partial one.
-    const present = new Set((meta.data.sheets ?? []).map(s => s.properties?.title));
-    const missingViews = SHEET_VIEWS.filter(v => !present.has(v.title));
-    if (missingViews.length) {
-      await sheets.spreadsheets.batchUpdate({ spreadsheetId, requestBody: { requests: missingViews.map(v => ({ addSheet: { properties: {
-        title: v.title, gridProperties: { rowCount: 1000, columnCount: SHEET_HEADERS.length, frozenRowCount: 1 },
-      } } })) } }, GOOGLE_OPTIONS);
-    }
-    await sheets.spreadsheets.values.batchUpdate({ spreadsheetId, requestBody: {
-      valueInputOption: "USER_ENTERED",
-      data: SHEET_VIEWS.flatMap(v => [
-        { range: `'${v.title}'!A1:${end}1`, values: [SHEET_HEADERS] },
-        { range: `'${v.title}'!A2`, values: [[v.formula]] },
-      ]),
-    } }, GOOGLE_OPTIONS);
+    // Reviewer tabs (one per live role + All applicants), written after the
+    // master rows so a failure retries the same delivery. Rows are fixed per
+    // application (tab_row / all_row) because reviewers comment on cells.
+    await writeReviewerTabs(admin, sheets, spreadsheetId, meta.data.sheets ?? [], rows as QueuedRow[], apps.data as Application[]);
     const now = new Date().toISOString();
     // A concurrent edit increments version; it must remain queued for the next write.
     const ack = await admin.rpc("ack_recruitment_sheet", { p_rows: rows.map(({ application_id, version }) => ({ application_id, version })) });
@@ -171,4 +160,97 @@ export async function syncRecruitmentSheet() {
 
 export async function trySheetSync() {
   try { await syncRecruitmentSheet(); } catch { console.error("Recruitment spreadsheet sync pending retry"); }
+}
+
+type QueuedRow = { application_id: string; sheet_row: number; version: number; tab_row: number | null; all_row: number | null; position_id: string | null };
+type SheetProps = { properties?: { title?: string | null; sheetId?: number | null; hidden?: boolean | null; gridProperties?: { rowCount?: number | null; columnCount?: number | null } | null } | null };
+type SheetsApi = ReturnType<typeof google.sheets>;
+type AdminApi = ReturnType<typeof createAdminClient>;
+
+async function signLinks(admin: AdminApi, app: Application): Promise<RowLinks> {
+  const links: RowLinks = { resume: null, portfolioFiles: [], creativeFiles: [] };
+  const files = fileEntries(app);
+  try {
+    const path = resumePath(app.resume_drive_url);
+    if (path) {
+      const signed = await admin.storage.from("resumes").createSignedUrl(path, RESUME_LINK_TTL_SECONDS);
+      links.resume = signed.data?.signedUrl ?? null;
+    }
+    for (const [key, list] of [["portfolioFiles", files.portfolio], ["creativeFiles", files.creative]] as const) {
+      if (!list.length) { continue; }
+      const signed = await admin.storage.from("portfolios").createSignedUrls(list.map(f => f.path), RESUME_LINK_TTL_SECONDS);
+      const byPath = new Map((signed.data ?? []).map(x => [x.path, x.signedUrl]));
+      links[key] = list.map(f => ({ filename: f.filename, url: byPath.get(f.path) ?? null }));
+    }
+  } catch {
+    // A file that cannot be signed shows as its name; the row still delivers.
+    links.portfolioFiles = files.portfolio.map(f => ({ filename: f.filename, url: null }));
+    links.creativeFiles = files.creative.map(f => ({ filename: f.filename, url: null }));
+  }
+  return links;
+}
+
+async function writeReviewerTabs(admin: AdminApi, sheets: SheetsApi, spreadsheetId: string, existing: SheetProps[], rows: QueuedRow[], apps: Application[]) {
+  const byId = new Map(apps.map(a => [a.id, a]));
+  const positionIds = [...new Set(rows.map(r => r.position_id ?? byId.get(r.application_id)?.position_id).filter((x): x is string => !!x))];
+  const positions = positionIds.length ? await admin.from("positions").select("*").in("id", positionIds) : { data: [], error: null };
+  if (positions.error) throw positions.error;
+  const positionById = new Map(((positions.data ?? []) as Position[]).map(p => [p.id, p]));
+  const tabs = new Map(existing.map(s => [s.properties?.title ?? "", s.properties ?? {}]));
+
+  // Tabs needed by this batch; All applicants always.
+  const needed: { title: string; headers: string[]; answersFrom: number }[] = [{ title: ALL_TAB, headers: ALL_HEADERS, answersFrom: ALL_HEADERS.length }];
+  for (const p of positionById.values()) {
+    const title = ROLE_TABS[p.slug];
+    if (title && !needed.some(n => n.title === title)) needed.push({ title, headers: roleHeaders(p), answersFrom: roleHeaders(p).length - p.essay_questions.length });
+  }
+  const requests: object[] = [];
+  const master = tabs.get(SHEET_TAB);
+  if (master?.sheetId !== undefined && master?.sheetId !== null && !master.hidden) {
+    requests.push({ updateSheetProperties: { properties: { sheetId: master.sheetId, hidden: true }, fields: "hidden" } });
+  }
+  for (const legacy of LEGACY_TABS) {
+    const t = tabs.get(legacy);
+    if (t?.sheetId !== undefined && t?.sheetId !== null) requests.push({ deleteSheet: { sheetId: t.sheetId } });
+  }
+  const missing = needed.filter(n => !tabs.has(n.title));
+  for (const n of missing) requests.push({ addSheet: { properties: { title: n.title, gridProperties: { rowCount: 1000, columnCount: n.headers.length + 2, frozenRowCount: 1 } } } });
+  if (requests.length) {
+    const res = await sheets.spreadsheets.batchUpdate({ spreadsheetId, requestBody: { requests } }, GOOGLE_OPTIONS);
+    const replies = (res as { data?: { replies?: { addSheet?: { properties?: { sheetId?: number | null } } }[] } } | undefined)?.data?.replies ?? [];
+    const created = replies.map(r => r.addSheet?.properties?.sheetId).filter((x): x is number => typeof x === "number");
+    const format = missing.flatMap((n, i) => created[i] === undefined ? [] : formatRequests(created[i], n.headers, n.answersFrom));
+    if (format.length) await sheets.spreadsheets.batchUpdate({ spreadsheetId, requestBody: { requests: format } }, GOOGLE_OPTIONS);
+  }
+
+  const data: { range: string; values: string[][] }[] = [];
+  const blank = (n: number) => Array.from({ length: n }, () => "");
+  const links = new Map<string, RowLinks>();
+  for (const r of rows) {
+    const app = byId.get(r.application_id);
+    if (app && positionById.get(app.position_id) && !positionById.get(app.position_id)!.archived_at) links.set(app.id, await signLinks(admin, app));
+  }
+  const allEnd = columnName(ALL_HEADERS.length);
+  data.push({ range: `'${ALL_TAB}'!A1:${allEnd}1`, values: [ALL_HEADERS] });
+  for (const r of rows) {
+    if (!r.all_row) continue;
+    const app = byId.get(r.application_id);
+    const position = app ? positionById.get(app.position_id) : undefined;
+    const live = app && position && !position.archived_at;
+    data.push({ range: `'${ALL_TAB}'!A${r.all_row}:${allEnd}${r.all_row}`, values: [live ? allRow(app, position, links.get(app.id)!) : blank(ALL_HEADERS.length)] });
+  }
+  for (const n of needed) {
+    if (n.title === ALL_TAB) continue;
+    const end = columnName(n.headers.length);
+    data.push({ range: `'${n.title}'!A1:${end}1`, values: [n.headers] });
+    for (const r of rows) {
+      if (!r.tab_row) continue;
+      const position = r.position_id ? positionById.get(r.position_id) : undefined;
+      if (!position || ROLE_TABS[position.slug] !== n.title) continue;
+      const app = byId.get(r.application_id);
+      const live = app && !position.archived_at;
+      data.push({ range: `'${n.title}'!A${r.tab_row}:${end}${r.tab_row}`, values: [live ? roleRow(app, position, links.get(app.id)!) : blank(n.headers.length)] });
+    }
+  }
+  await sheets.spreadsheets.values.batchUpdate({ spreadsheetId, requestBody: { valueInputOption: "USER_ENTERED", data } }, GOOGLE_OPTIONS);
 }

@@ -114,6 +114,10 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 
 ## build
 
+### 2026-09-18 — Reviewer tabs for the 15 PMs/VPs (PR #36)
+
+David: reviewers read applications in Google Sheets; five tabs (All applicants + one per live role), readable, no ID-type columns; discussion via Sheets comments. Design consequence: comments anchor to cells, so rows must be fixed per application in every tab and reviewers must be Commenters. Migration adds `position_id`, `tab_row`, `all_row` to `recruitment_sheet_rows` with an AFTER INSERT trigger (`private.assign_recruitment_tab_rows`, advisory-locked, unique indexes as backstop), backfills live rounds in submission order, and re-queues every row. `lib/recruitment-sheet-tabs.ts` builds headers/rows (HYPERLINK formulas for resume/LinkedIn/portfolio, leading-apostrophe guard for answers that look like formulas, Toronto submitted time) and the one-time formatting requests. `syncRecruitmentSheet` writes the tabs after the master rows (same retry semantics), creates missing tabs with formatting, hides the master, deletes legacy tabs, signs resume/portfolio links for 45 days per delivery. Deploy order: code first, then the migration (it re-queues all rows for the new worker). Tests: 17 sheet tests, vitest total green.
+
 ### 2026-09-18 — Developer project cards: partner logos, one column, rank pill (PR #34)
 
 David: "this ui sucks for the project desc and ranking. find logo, monochrome it, make it svg." The two-column layout (rank list left, accordion right) is replaced by one shared `ProjectCards` component: logo, partner + project, chevron opens the brief inline, a "Rank" pill on the application step (1st/2nd/3rd, tap again to remove; disabled when three are picked). `DeveloperProjects` (role page, village overlay) renders the same cards read-only. Styling on the `--app-*` tokens so the cream sheet and dark form both work.
