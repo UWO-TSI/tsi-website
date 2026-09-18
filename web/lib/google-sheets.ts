@@ -4,7 +4,7 @@ import { getOAuthClient } from "./google-oauth";
 import { createAdminClient } from "./supabase/admin";
 import type { Application } from "./recruitment";
 import { SHEET_TAB, SHEET_HEADERS, sheetRow, columnName } from "./recruitment-sheet-data";
-import { ALL_HEADERS, ALL_TAB, LEGACY_TABS, RESUME_LINK_TTL_SECONDS, ROLE_TABS, allRow, fileEntries, formatRequests, resumePath, roleHeaders, roleRow, type RowLinks } from "./recruitment-sheet-tabs";
+import { ALL_HEADERS, ALL_TAB, LEGACY_TABS, PROJECT_TABS, RESUME_LINK_TTL_SECONDS, ROLE_TABS, allRow, fileEntries, formatRequests, projectHeaders, projectPicks, projectRow, resumePath, roleHeaders, roleRow, type RowLinks } from "./recruitment-sheet-tabs";
 import type { Position } from "./recruitment";
 
 const GOOGLE_OPTIONS = { timeout: 15000, retry: false };
@@ -211,6 +211,14 @@ async function writeReviewerTabs(admin: AdminApi, sheets: SheetsApi, spreadsheet
     const title = ROLE_TABS[p.slug];
     if (title && !needed.some(n => n.title === title)) needed.push({ title, headers: roleHeaders(p), answersFrom: roleHeaders(p).length - p.essay_questions.length });
   }
+  // Project tabs exist whenever the developer role is live, applicants or not.
+  const developer = [...positionById.values()].find(p => p.slug === "developer" && !p.archived_at);
+  if (developer) for (const title of Object.values(PROJECT_TABS)) {
+    if (!needed.some(n => n.title === title)) needed.push({ title, headers: projectHeaders(developer), answersFrom: projectHeaders(developer).length - developer.essay_questions.length });
+  }
+  const projectRowsRes = rows.length ? await admin.from("recruitment_sheet_project_rows").select("application_id,project,project_row").in("application_id", rows.map(r => r.application_id)) : { data: [], error: null };
+  if (projectRowsRes.error) throw projectRowsRes.error;
+  const projectRows = (projectRowsRes.data ?? []) as { application_id: string; project: string; project_row: number }[];
   // Order matters: Google refuses a batch that leaves no visible sheet, so
   // new tabs are added before the master is hidden and legacy tabs removed.
   const requests: object[] = [];
@@ -236,7 +244,7 @@ async function writeReviewerTabs(admin: AdminApi, sheets: SheetsApi, spreadsheet
   }
   // Tab order as David listed it, every delivery (cheap, idempotent); the
   // hidden master falls to the end.
-  const wanted = [ALL_TAB, ...Object.values(ROLE_TABS)].filter(t => idByTitle.has(t));
+  const wanted = [ALL_TAB, ...Object.values(ROLE_TABS), ...Object.values(PROJECT_TABS)].filter(t => idByTitle.has(t));
   const current = existing.filter(s => s.properties?.title && !s.properties.hidden).map(s => s.properties!.title!);
   if (wanted.some((t, i) => current[i] !== t)) {
     await sheets.spreadsheets.batchUpdate({ spreadsheetId, requestBody: { requests: wanted.map((t, i) => ({
@@ -259,10 +267,22 @@ async function writeReviewerTabs(admin: AdminApi, sheets: SheetsApi, spreadsheet
     const live = app && position && !position.archived_at;
     data.push({ range: `'${ALL_TAB}'!A${r.all_row}:${allEnd}${r.all_row}`, values: [live ? allRow(app, position, links.get(app.id)!) : blank(ALL_HEADERS.length)] });
   }
+  const projectTitles = new Set(Object.values(PROJECT_TABS));
   for (const n of needed) {
     if (n.title === ALL_TAB) continue;
     const end = columnName(n.headers.length);
     data.push({ range: `'${n.title}'!A1:${end}1`, values: [n.headers] });
+    if (projectTitles.has(n.title)) {
+      const partner = Object.keys(PROJECT_TABS).find(k => PROJECT_TABS[k] === n.title)!;
+      for (const pr of projectRows.filter(x => x.project === partner)) {
+        const app = byId.get(pr.application_id);
+        const position = app ? positionById.get(app.position_id) : undefined;
+        const live = app && position && !position.archived_at;
+        const rank = app ? projectPicks(app).find(p => p.partner === partner)?.rank ?? 0 : 0;
+        data.push({ range: `'${n.title}'!A${pr.project_row}:${end}${pr.project_row}`, values: [live ? projectRow(app, position, links.get(app.id)!, rank) : blank(n.headers.length)] });
+      }
+      continue;
+    }
     for (const r of rows) {
       if (!r.tab_row) continue;
       const position = r.position_id ? positionById.get(r.position_id) : undefined;
