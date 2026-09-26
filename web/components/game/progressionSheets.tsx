@@ -1,9 +1,6 @@
 "use client";
 
-/**
- * Progression sheets used by world props (mailbox, notice board, journal).
- * Re-exported from the systems agent's `@/components/progression`; all take
- * `{ open, onClose }`.
- */
-export { LettersSheet, NoticeSheet, JournalSheet } from "@/components/progression";
-export type { ProgressionSheetProps } from "@/components/progression";
+/** Progression sheets used by world props (mailbox, notice board, journal). All take `{ open, onClose }`. */
+export { default as LettersSheet } from "@/components/progression/LettersSheet";
+export { default as NoticeSheet } from "@/components/progression/NoticeSheet";
+export { default as JournalSheet } from "@/components/progression/JournalSheet";
