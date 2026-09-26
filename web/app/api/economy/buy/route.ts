@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { supabaseEconomyStore } from "@/lib/wallet/supabaseStore";
-import { jsonResult, withStore } from "@/lib/server/memberContext";
+import { IdemKey, jsonResult, withStore } from "@/lib/server/memberContext";
 import { buy } from "@/lib/wallet/service";
 
-const Body = z.object({ item_id: z.string().uuid(), qty: z.number().int().min(1).max(20).default(1), idempotency_key: z.string().regex(/^[A-Za-z0-9_:-]{8,100}$/) });
+const Body = z.object({ item_id: z.string().uuid(), qty: z.number().int().min(1).max(20).default(1), idempotency_key: IdemKey });
 
 // POST /api/economy/buy: the server prices it (specials included); retry with the same key.
 export async function POST(request: Request) {

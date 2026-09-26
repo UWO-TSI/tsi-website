@@ -4,6 +4,7 @@
  */
 import { NextResponse } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -42,6 +43,8 @@ export async function withStore<S>(make: (db: SupabaseClient) => S): Promise<(Me
 }
 
 export const isAdminTier = (tier: number) => tier === 1 || tier === 2;
+/** Client-generated idempotency key: resend the same one on retry. */
+export const IdemKey = z.string().regex(/^[A-Za-z0-9_:-]{8,100}$/);
 export const badRequest = (error = "Invalid request") => NextResponse.json({ ok: false, error }, { status: 400 });
 export const forbidden = () => NextResponse.json({ ok: false, error: "Forbidden: T1/T2 only" }, { status: 403 });
 

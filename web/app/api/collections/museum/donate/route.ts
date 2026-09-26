@@ -2,11 +2,11 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { supabaseCollectionsStore } from "@/lib/collections/supabaseStore";
 import { donate } from "@/lib/collections/service";
-import { jsonResult, withStore } from "@/lib/server/memberContext";
+import { IdemKey, jsonResult, withStore } from "@/lib/server/memberContext";
 
 const Body = z.object({
   species_key: z.string().regex(/^[a-z0-9_]{1,64}$/),
-  idempotency_key: z.string().regex(/^[A-Za-z0-9_:-]{8,100}$/),
+  idempotency_key: IdemKey,
 });
 
 // POST /api/collections/museum/donate: first of a species goes on display with your name; duplicates refused.

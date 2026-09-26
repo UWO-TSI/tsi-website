@@ -2,11 +2,11 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { supabaseHomesStore } from "@/lib/homes-sync/supabaseStore";
 import { buyRoom } from "@/lib/homes-sync/service";
-import { jsonResult, withStore } from "@/lib/server/memberContext";
+import { IdemKey, jsonResult, withStore } from "@/lib/server/memberContext";
 
 const Body = z.object({
   expected_price: z.number().int().min(0),
-  idempotency_key: z.string().regex(/^[A-Za-z0-9_:-]{8,100}$/),
+  idempotency_key: IdemKey,
 });
 
 // POST /api/homes/rooms: buy the next room (server price, cap 4, coins from profiles.coins).

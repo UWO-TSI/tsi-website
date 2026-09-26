@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { supabaseEconomyStore } from "@/lib/wallet/supabaseStore";
-import { jsonResult, withStore } from "@/lib/server/memberContext";
+import { IdemKey, jsonResult, withStore } from "@/lib/server/memberContext";
 import { sell, sellList } from "@/lib/wallet/service";
 
-const Body = z.object({ item_key: z.string().regex(/^[a-z0-9_]{1,64}$/), qty: z.number().int().min(1).max(200), idempotency_key: z.string().regex(/^[A-Za-z0-9_:-]{8,100}$/) });
+const Body = z.object({ item_key: z.string().regex(/^[a-z0-9_]{1,64}$/), qty: z.number().int().min(1).max(200), idempotency_key: IdemKey });
 
 // GET /api/economy/sell: what you can sell and the price each (by category and rarity).
 export async function GET() {

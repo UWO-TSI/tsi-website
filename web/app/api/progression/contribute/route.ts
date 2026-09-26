@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { supabaseProgressionStore } from "@/lib/progression/supabaseStore";
-import { badRequest, jsonResult, withStore } from "@/lib/server/memberContext";
+import { badRequest, IdemKey, jsonResult, withStore } from "@/lib/server/memberContext";
 import { MAX_DELIVERY_UNITS } from "@/lib/progression/goals";
 import { contribute } from "@/lib/progression/service";
 import { DELIVERY_KINDS } from "@/lib/progression/types";
@@ -12,7 +12,7 @@ const Body = z.object({
   amount: z.number().int().min(1).max(MAX_DELIVERY_UNITS),
   item_key: z.string().regex(/^[a-z0-9_:-]{1,64}$/).nullable().optional(),
   // Client-generated per delivery attempt; resend the same key on retry.
-  idempotency_key: z.string().regex(/^[A-Za-z0-9_:-]{8,100}$/),
+  idempotency_key: IdemKey,
 });
 
 // POST /api/progression/contribute: in-game delivery at the monument/HQ.
