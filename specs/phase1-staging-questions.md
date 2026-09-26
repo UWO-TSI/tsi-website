@@ -12,7 +12,7 @@ Each has the assumption I worked on. None blocks the branch.
 
 5. **Production's migration ledger is incomplete.** `supabase_migrations.schema_migrations` lists 10 versions; `001`–`028` and the two 2026-09-26 security files were run in the SQL editor. *Assumption:* launch applies files by hand in name order (as `applied.md`); nobody runs `supabase db push` against production without `migration repair` first.
 
-6. **`avatar_config` drift overlaps with `game/study-character`.** `20260926155000_schema_drift_reconcile` adds `avatar_config`/`skills`/`social_links` with `add column if not exists` and grants `authenticated` SELECT on them (the privilege guard only granted columns that existed). If study-character ships its own add-column, it's harmless (idempotent) but it also needs that grant, or it can be dropped in favour of this one.
+6. **`avatar_config` is added twice.** `20260926155000_schema_drift_reconcile` (all three 004 columns + grants) and study-character's `20260926170000_profiles_avatar_config` (merged later) both add it idempotently with the grant; on staging the second is a no-op. *Assumption:* keep both (harmless); drop `170000` if you want one source.
 
 7. **Un-RSVP does nothing in production.** `/api/events/[id]/rsvp` deletes the user's row with the user's key; the delete policy (`008`) never ran in production and the reconciliation drops it from fresh replays (with it, a member could delete and re-insert attendance). The route answers success while the row stays. *Assumption:* legacy portal, left as is.
 
