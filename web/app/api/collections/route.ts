@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { recordCatch } from "@/lib/collections/service";
+import { collectionsContext } from "@/lib/collections/deps";
 
 /**
  * Member collections (cozy marathon G1/G4/G5) — stackable cosmetic
@@ -18,6 +20,8 @@ import { createClient } from "@/lib/supabase/server";
 // zero API edits (the book already derives from the FISH table).
 const CollectSchema = z.object({
   item_key: z.string().min(1).max(64).regex(/^[a-z0-9_]+$/),
+  // 031: catch size for the catch card / personal record (clamped server-side).
+  size_cm: z.number().positive().max(10000).optional(),
 });
 
 export async function GET() {
@@ -69,7 +73,16 @@ export async function POST(request: Request) {
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid item_key" }, { status: 400 });
   }
-  const { item_key } = parsed.data;
+  const { item_key, size_cm } = parsed.data;
+
+  // 031 path: atomic count + lifetime total + personal best + weekly best.
+  // Falls through to the 023 path when the functions aren't deployed.
+  const ctx = await collectionsContext();
+  if (!(ctx instanceof NextResponse)) {
+    const r = await recordCatch(ctx.store, ctx.userId, item_key, size_cm);
+    if (r.ok) return NextResponse.json(r.data);
+    if (r.code !== "unavailable") return NextResponse.json({ error: r.error }, { status: r.status });
+  }
 
   // Read-modify-write under the UNIQUE(user_id, item_key) constraint. Two
   // racing collects can lose one increment in the worst case — acceptable
