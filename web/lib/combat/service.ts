@@ -7,10 +7,10 @@ import { ENEMIES, MISSIONS } from "./content";
 import { SUBCLASSES, subclassesFor } from "./kits";
 import { applyEvents, canStart, type MissionEvent, type MissionState } from "./missions";
 import { allocate, derived, FAMILY_PRESETS, levelProgress, pointsEarned, pointsSpent, presetAllocation, STAT_RESET_FEE, SUBCLASS_LEVEL, SUBCLASS_RESPEC_FEE, ZERO_STATS } from "./progression";
+import { toFailure, type Result } from "@/lib/result";
 import { CombatError, type CombatStore } from "./store";
 import { repairCost, WEAPONS } from "./weapons";
 
-type Result<T> = { ok: true; data: T } | { ok: false; status: number; error: string; code: string };
 const ERR: Record<string, [number, string]> = {
   unavailable: [503, "The ruins are closed for now."],
   insufficient: [409, "Not enough coins."],
@@ -33,9 +33,7 @@ async function run<T>(f: () => Promise<T>): Promise<Result<T>> {
   try {
     return { ok: true, data: await f() };
   } catch (err) {
-    const code = err instanceof CombatError ? err.code : "failed";
-    const [status, error] = ERR[code] ?? ERR.failed;
-    return { ok: false, status, error, code };
+    return toFailure(ERR, err);
   }
 }
 

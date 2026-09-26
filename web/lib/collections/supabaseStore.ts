@@ -1,16 +1,11 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Donation, MemberItem, WeeklyBest } from "./logic";
 import { ROSTER, type Species } from "./roster";
-import { CollectionsError, type CollectionsStore } from "./store";
+import { raisePg } from "@/lib/result";
+import type { CollectionsStore } from "./store";
 
 type Row = Record<string, unknown>;
-const MISSING = ["42P01", "PGRST205", "PGRST202", "42703", "42883"];
-function raise(error: { code?: string; message?: string } | null): never {
-  const msg = error?.message ?? "";
-  if (MISSING.includes(error?.code ?? "") || /does not exist|schema cache/i.test(msg)) throw new CollectionsError("unavailable", msg);
-  for (const c of ["already_donated", "not_owned", "not_donatable", "rate_limited"] as const) if (msg.includes(c)) throw new CollectionsError(c);
-  throw new CollectionsError("failed", msg);
-}
+const raise = (error: { code?: string; message?: string } | null): never => raisePg(error, ["already_donated", "not_owned", "not_donatable", "rate_limited"]);
 const num = (v: unknown) => (v === null || v === undefined ? null : Number(v));
 
 function toSpecies(r: Row): Species {

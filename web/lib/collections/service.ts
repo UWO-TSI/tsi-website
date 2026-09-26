@@ -3,9 +3,8 @@ import {
   type Exhibit, type JournalPage, type MuseumWing, type Trophy, type WorldMoment,
 } from "./logic";
 import { CATEGORIES, type Category } from "./roster";
-import { CollectionsError, type CatchResult, type CollectionsStore } from "./store";
-
-export type Result<T> = { ok: true; data: T } | { ok: false; status: number; error: string; code: string };
+import { toFailure, type Result } from "@/lib/result";
+import type { CatchResult, CollectionsStore } from "./store";
 
 const ERRORS: Record<string, [number, string]> = {
   unavailable: [503, "Collections aren't available yet."],
@@ -15,11 +14,7 @@ const ERRORS: Record<string, [number, string]> = {
   rate_limited: [429, "That's plenty of those for this hour. Try again later."],
   failed: [500, "Something went wrong. Try again."],
 };
-function fail<T>(err: unknown): Result<T> {
-  const code = err instanceof CollectionsError ? err.code : "failed";
-  const [status, error] = ERRORS[code] ?? ERRORS.failed;
-  return { ok: false, status, error, code };
-}
+const fail = <T>(err: unknown): Result<T> => toFailure(ERRORS, err);
 
 export async function recordCatch(store: CollectionsStore, memberId: string, itemKey: string, sizeCm: number | null | undefined): Promise<Result<CatchResult & { item_key: string }>> {
   try {

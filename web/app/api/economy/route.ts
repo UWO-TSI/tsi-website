@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { supabaseEconomyStore } from "@/lib/wallet/supabaseStore";
-import { EconomyError } from "@/lib/wallet/store";
+import { DomainError } from "@/lib/result";
 import { z } from "zod";
 
 /** Gems move only through wallet_apply (locked, recorded, one row per key). */
@@ -10,7 +10,7 @@ async function applyGems(userId: string, amount: number, type: string, descripti
   try {
     return { balance: (await supabaseEconomyStore(createAdminClient()).credit(userId, "gems", amount, type, description, key)).balance };
   } catch (err) {
-    return { error: err instanceof EconomyError && err.code === "insufficient" ? "insufficient" : "failed" };
+    return { error: err instanceof DomainError && err.code === "insufficient" ? "insufficient" : "failed" };
   }
 }
 

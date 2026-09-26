@@ -7,9 +7,8 @@ import { ROSTER } from "@/lib/collections/roster";
 import { FISH } from "@/lib/game/fishing";
 import { fnv1a } from "@/lib/game/weatherSystem";
 import { dailySpecials, effectivePrice, isOnSale, sellPrice, speciesClass, TAB_OF, torontoDay, type ShopItem, type Special } from "./rules";
+import { toFailure, type Result } from "@/lib/result";
 import { EconomyError, type EconomyStore, type InventoryRow, type LedgerEntry, type Reservation } from "./store";
-
-type Result<T> = { ok: true; data: T } | { ok: false; status: number; error: string; code: string };
 
 const ERR: Record<string, [number, string]> = {
   unavailable: [503, "The shop is closed for now."],
@@ -29,11 +28,7 @@ const ERR: Record<string, [number, string]> = {
   no_slot: [422, "That isn't something you wear or hold."],
   failed: [500, "Something went wrong. Try again."],
 };
-function fail<T>(err: unknown): Result<T> {
-  const code = err instanceof EconomyError ? err.code : "failed";
-  const [status, error] = ERR[code] ?? ERR.failed;
-  return { ok: false, status, error, code };
-}
+const fail = <T>(err: unknown): Result<T> => toFailure(ERR, err);
 const run = async <T>(f: () => Promise<T>): Promise<Result<T>> => {
   try {
     return { ok: true, data: await f() };

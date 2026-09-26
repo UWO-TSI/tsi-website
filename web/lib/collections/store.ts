@@ -1,12 +1,9 @@
 import type { Donation, MemberItem, WeeklyBest } from "./logic";
 import type { Species } from "./roster";
+import { DomainError } from "@/lib/result";
 
 export type CollectionsErrorCode = "unavailable" | "already_donated" | "not_owned" | "not_donatable" | "rate_limited" | "failed";
-export class CollectionsError extends Error {
-  constructor(public code: CollectionsErrorCode, message?: string) {
-    super(message ?? code);
-  }
-}
+export class CollectionsError extends DomainError<CollectionsErrorCode> {}
 
 export interface CatchResult {
   count: number;

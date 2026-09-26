@@ -1,15 +1,11 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ShopItem } from "./rules";
+import { raisePg } from "@/lib/result";
 import { EconomyError, type EconomyErrorCode, type EconomyStore, type LedgerEntry, type Reservation } from "./store";
 
 type Row = Record<string, unknown>;
 const CODES: EconomyErrorCode[] = ["insufficient", "not_found", "not_for_sale", "already_owned", "bad_qty", "bad_price", "sold_out", "not_sellable", "insufficient_items", "too_many_open", "already_resolved", "forbidden"];
-function raise(error: { code?: string; message?: string } | null): never {
-  const msg = error?.message ?? "";
-  if (["42P01", "PGRST205", "PGRST202", "42703", "42883"].includes(error?.code ?? "") || /does not exist|schema cache/i.test(msg)) throw new EconomyError("unavailable", msg);
-  const code = [...CODES].sort((a, b) => b.length - a.length).find((c) => msg.includes(c));
-  throw new EconomyError(code ?? "failed", msg);
-}
+const raise = (error: { code?: string; message?: string } | null): never => raisePg(error, CODES);
 const first = (data: unknown) => ((Array.isArray(data) ? data[0] : data) ?? {}) as Row;
 const ITEM_COLS = "id, slug, display_name, category, description, price_coins, tc_price, tier, slot, special_pool, stackable, stock, catalogue_ref, sprite_url, position, active, available_from, available_until, retired_at";
 const toItem = (r: Row): ShopItem => ({
