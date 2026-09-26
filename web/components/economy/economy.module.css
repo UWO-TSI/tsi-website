@@ -5,6 +5,7 @@
 .tile { display: grid; gap: 4px; align-content: start; padding: 10px; border-radius: 14px; background: #ffffffc0; border: 1px solid #5c746c2e; position: relative; }
 .tile h4 { margin: 0; font-size: 14px; line-height: 1.25; }
 .art { height: 64px; border-radius: 10px; background: linear-gradient(135deg, #e7eedf, #f4ecd9); display: grid; place-items: center; font-size: 28px; }
+.dye { width: 36px; height: 36px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 2px 0 #0000002a; }
 .chip { justify-self: start; font-size: 10.5px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; padding: 2px 7px; border-radius: 999px; background: #e4e8dc; color: #42544e; }
 .sale { position: absolute; top: 8px; right: 8px; font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 999px; background: #e8704a; color: #fff; }
 .price { font-weight: 800; font-size: 15px; font-variant-numeric: tabular-nums; }

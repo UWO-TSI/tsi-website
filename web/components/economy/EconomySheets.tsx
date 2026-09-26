@@ -8,6 +8,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { fmtCoins, fmtGems } from "@/lib/economy";
 import { ownedCounts } from "@/lib/wallet/rules";
+import { PALETTE } from "@/lib/game/character/look";
 import type { InventoryView, SellEntry, ShopEntry, ShopView, WalletView } from "@/lib/wallet/service";
 import { ApiError, newKey } from "@/lib/apiClient";
 import { httpEconomyTransport, type EconomyTransport, type MerchView } from "@/lib/wallet/transport";
@@ -110,7 +111,7 @@ export function ShopBody({ transport = httpEconomyTransport, initialTab = "tools
         {list.map((e) => (
           <article key={e.id} className={s.tile} aria-label={e.name}>
             {e.special ? <span className={s.sale}>−20%</span> : null}
-            <div className={s.art} aria-hidden>{ART[e.category] ?? "✨"}</div>
+            <div className={s.art} aria-hidden>{e.catalogue_ref?.startsWith("hair:") ? <span className={s.dye} style={{ background: PALETTE.hair[Number(e.catalogue_ref.slice(5))] }} /> : ART[e.category] ?? "✨"}</div>
             <h4>{e.name}</h4>
             {e.tier ? <span className={s.chip}>{e.tier}</span> : <span className={s.chip}>{e.category}</span>}
             <span className={s.price}>

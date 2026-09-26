@@ -1,4 +1,13 @@
-# SQL smoke: `20260926180000_ownership` (2026-09-26, polish-ownership)
+# Evidence: polish-ownership (2026-09-26)
+
+Screenshots (headed Chromium, `shots.mjs`, `/lab/island?crafting=demo` signed out: the in-memory inventory, shop and buy services behind the real sheets):
+- `O2-01` fitting room, Tops: starter tops owned; the rest locked (dashed, 🔒), tapping one shows "sold in the shop" with **Visit the shop**.
+- `O2-02` the shop sheet it opens (Outfits tab): the six hair dyes with their colour.
+- `O2-03` after buying the cardigan and the pink dye (1,500 → 1,210 coins; cardigan "Owned").
+- `O2-04a` back in the fitting room: the cardigan is owned and worn. `O2-04b` hair colours: six free, the bought dye worn, the other five locked.
+- `O2-05` decorate inside the house: only owned pieces with how many are left (the starter room's four placed → 0 left), free finishes only, a link to the shop.
+
+# SQL smoke: `20260926180000_ownership`
 
 Throwaway local Postgres 16 (Homebrew `initdb`, port 55441, trust auth, deleted after). Never Supabase. Runner: `sql-smoke.sh` next to this file.
 

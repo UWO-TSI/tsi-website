@@ -66,6 +66,8 @@ export interface ShopEntry {
   owned: number;
   can_buy: boolean;
   sprite_url: string | null;
+  /** What it unlocks: character part id, `hair:<i>`, homes piece or finish. */
+  catalogue_ref: string | null;
 }
 export interface ShopView {
   day: string;
@@ -81,7 +83,7 @@ function entry(it: ShopItem, specials: Special[], owned: Map<string, number>, w:
   return {
     id: it.id, slug: it.slug, name: it.display_name, category: String(it.category), description: it.description ?? "", tier: it.tier,
     currency: p.currency, price: p.price, base_price: (it.price_coins ?? it.price_gems)!, special: p.special, stock: it.stock, owned: have,
-    can_buy: !soldOut && (it.stackable || have === 0) && (p.currency === "coins" ? w.coins : w.gems) >= p.price, sprite_url: it.sprite_url,
+    can_buy: !soldOut && (it.stackable || have === 0) && (p.currency === "coins" ? w.coins : w.gems) >= p.price, sprite_url: it.sprite_url, catalogue_ref: it.catalogue_ref,
   };
 }
 
