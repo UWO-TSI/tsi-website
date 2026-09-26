@@ -1,11 +1,12 @@
 import type { Family } from "@/lib/oracle/engine";
+import type { BossReward } from "./content";
 import type { MissionProgress, MissionState } from "./missions";
 import type { StatBlock } from "./progression";
 import { DomainError } from "@/lib/result";
 
 export type CombatErrorCode =
   | "unavailable" | "insufficient" | "not_found" | "not_owned" | "needs_reset" | "not_enough_points" | "level_too_low" | "wrong_family"
-  | "no_family" | "cooldown" | "not_ready" | "kill_xp_cap" | "unknown_enemy" | "unknown_mission" | "bad_hits" | "failed";
+  | "no_family" | "cooldown" | "not_ready" | "kill_xp_cap" | "unknown_enemy" | "unknown_mission" | "bad_hits" | "boss_cooldown" | "gate_closed" | "failed";
 export class CombatError extends DomainError<CombatErrorCode> {}
 
 export interface ProgressionRow {
@@ -44,5 +45,7 @@ export interface CombatStore {
   missionRows(memberId: string): Promise<ProgressRow[]>;
   startMission(memberId: string, missionKey: string, startKey: string): Promise<{ progress_id: string; resumed: boolean }>;
   saveMission(memberId: string, id: string, state: MissionState, progress: MissionProgress): Promise<boolean>;
-  completeMission(memberId: string, id: string): Promise<{ xp_awarded: number; coins_awarded: number; replayed: boolean }>;
+  completeMission(memberId: string, id: string): Promise<{ xp_awarded: number; coins_awarded: number; materials_awarded: Record<string, number>; replayed: boolean }>;
+  /** Pay a rolled boss reward once per recorded boss kill, at most once per cooldown; a replay returns the first reward. */
+  bossReward(memberId: string, eventKey: string, reward: BossReward): Promise<{ reward: BossReward; replayed: boolean }>;
 }

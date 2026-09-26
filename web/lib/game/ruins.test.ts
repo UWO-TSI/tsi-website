@@ -1,12 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { BOSS_CENTER, COURTYARD, ESCORT_PATH, GATE_PLAZA, LANTERN_SPOT, RUNE_CIRCLE, RUINS_SPAWN, TEMPLE_STEPS, createRuins, zoneAt } from "./ruins";
-import { WAVES } from "./combat/spawns";
+import { BOSS_CENTER, COURTYARD, ESCORT_PATHS, FETCH_SPOTS, GATE_PLAZA, RUINS_SPAWN, SURVIVE_CIRCLES, TEMPLE_STEPS, createRuins, zoneAt } from "./ruins";
+import { capacity, respawnAfter, SPAWN_TABLE, SPAWNS, WAVES } from "./combat/spawns";
 import { inRect } from "./combat/sim";
-import { SPAWNS } from "./combat/spawns";
+import { ENEMIES } from "./combat/data";
+import { ENEMIES as ROSTER, ZONE_LEVEL } from "@/lib/combat/content";
+
+const MAP_ZONE = { outer: "outer", inner: "temple", boss: "boss" } as const;
 
 describe("ruins zone", () => {
   const ruins = createRuins();
-  it("connects gate → outer → temple → boss chamber on foot", () => {
+  it("connects gate → outer → temple → boss chamber on foot, with every mission place reachable", () => {
     // Flood fill from the spawn over walkable points.
     const seen = new Set<string>(); const queue = [[RUINS_SPAWN[0], RUINS_SPAWN[2]]];
     while (queue.length) {
@@ -18,18 +21,47 @@ describe("ruins zone", () => {
     const reach = (p: { x: number; z: number }) => [...seen].some(k => { const [x, z] = k.split(",").map(Number); return Math.hypot(x - p.x, z - p.z) < 0.8; });
     expect(reach({ x: 0, z: -14 })).toBe(true);
     expect(reach(TEMPLE_STEPS)).toBe(true);
-    expect(reach(LANTERN_SPOT)).toBe(true);
-    expect(reach(RUNE_CIRCLE)).toBe(true);
-    for (const p of ESCORT_PATH) expect(reach(p)).toBe(true);
+    for (const p of Object.values(FETCH_SPOTS)) expect(reach(p)).toBe(true);
+    for (const c of Object.values(SURVIVE_CIRCLES)) expect(reach(c)).toBe(true);
+    for (const p of Object.values(ESCORT_PATHS).flat()) expect(reach(p)).toBe(true);
     expect(reach({ x: BOSS_CENTER.x, z: BOSS_CENTER.z - 4 })).toBe(true);
   });
   it("keeps the spawn in the safe plaza and every enemy outside it, on open floor", () => {
     expect(inRect({ x: RUINS_SPAWN[0], z: RUINS_SPAWN[2] }, GATE_PLAZA)).toBe(true);
-    for (const s of [...SPAWNS, ...WAVES.flat()]) {
+    for (const s of [...SPAWNS, ...Object.values(WAVES).flat(2)]) {
       expect(inRect(s, GATE_PLAZA)).toBe(false);
-      expect(ruins.free(s.x, s.z, 0.2)).toBe(true);
+      expect(ruins.free(s.x, s.z, ENEMIES[s.type].radius * 0.6)).toBe(true);
     }
     expect(zoneAt(COURTYARD.x0 + 1, COURTYARD.z0 + 1)).toBe("temple");
     expect(ruins.free(0, -40)).toBe(false);
+  });
+});
+
+describe("spawn table (combat-content A1)", () => {
+  it("places the whole roster, each type in its roster zone at the zone's fixed level (row 230)", () => {
+    expect(new Set(SPAWN_TABLE.map(r => r.type))).toEqual(new Set(ROSTER.map(e => e.key)));
+    for (const row of SPAWN_TABLE) {
+      const e = ROSTER.find(x => x.key === row.type)!;
+      expect(row.zone).toBe(e.zone);
+      expect(e.level).toBe(ZONE_LEVEL[e.zone] + (e.kind === "elite" ? 2 : 0));
+      for (const [x, z] of row.at) expect(zoneAt(x, z)).toBe(MAP_ZONE[row.zone]);
+    }
+    const zoneOf = (t: string) => SPAWN_TABLE.find(r => r.type === t)!.zone;
+    for (const t of ["shadow-fox", "thorn-crab", "mushroom-beast", "rune-wisp", "elder-thorn-crab"]) expect(zoneOf(t)).toBe("outer");
+    for (const t of ["animated-book", "stone-golem"]) expect(zoneOf(t)).toBe("inner");
+    expect(zoneOf("guardian-statue")).toBe("boss");
+  });
+  it("puts the elder thorn crab in the outer area's far corner and the guardian alone in its chamber", () => {
+    const [[x, z]] = SPAWN_TABLE.find(r => r.type === "elder-thorn-crab")!.at;
+    expect((x / 15) ** 2 + ((z + 14) / 11.5) ** 2).toBeGreaterThan(0.8); // near the edge of the outer ellipse
+    expect(SPAWNS.filter(s => zoneAt(s.x, s.z) === "boss").map(s => s.type)).toEqual(["guardian-statue"]);
+  });
+  it("gives each spawn a stable id, respawns the wild but not the boss, and sizes instancing for waves and summons", () => {
+    expect(new Set(SPAWNS.map(s => s.id)).size).toBe(SPAWNS.length);
+    expect(respawnAfter("shadow-fox-1")).toBeGreaterThan(0);
+    expect(respawnAfter("guardian-statue-1")).toBe(0);
+    expect(respawnAfter("wv1-0")).toBe(0);
+    expect(capacity("rune-wisp")).toBe(SPAWNS.filter(s => s.type === "rune-wisp").length + 1 + 2); // one in a wave, two summons
+    expect(capacity("animated-book")).toBe(3 + 3);
   });
 });

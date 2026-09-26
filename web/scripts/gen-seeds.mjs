@@ -13,8 +13,8 @@ const combat = await jiti.import("../lib/combat/seed.ts");
 for (const [path, { SEED_BEGIN, SEED_END }, seed] of [
   ["supabase/migrations/20260926150400_collections.sql", collections, collections.seedSql(ROSTER)],
   ["supabase/migrations/20260926150600_economy.sql", economy, economy.economySeedSql()],
-  ["supabase/migrations/20260926150800_combat.sql", combat, combat.combatSeedSql()],
   ["supabase/migrations/20260926180000_ownership.sql", { SEED_BEGIN: economy.OWNERSHIP_BEGIN, SEED_END: economy.OWNERSHIP_END }, economy.ownershipSeedSql()],
+  ["supabase/migrations/20260926190000_combat_content.sql", combat, combat.combatSeedSql()],
 ]) {
   const sql = readFileSync(path, "utf8");
   const start = sql.indexOf(SEED_BEGIN);

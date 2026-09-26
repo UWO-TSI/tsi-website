@@ -16,7 +16,7 @@ import { BASE_URL, FACE_ATLAS_URL, PALETTE, TSI_DECAL_URL, CLIP_BY_NAME, bodyKey
 import { CLIP_EXPRESSION, composeFace, type Ctx2D, type Expression } from "@/lib/game/character/face";
 import { DERIVED_CLIPS, WEAPON_HAND, isLoop, isUpperBodyTrack, resolveClip, tempo, type CharacterMotion, type ClipName } from "@/lib/game/character/clips";
 import { adoptPrimitive, materialName, mergeLook, refCache, skinnedPrimitives } from "@/lib/game/character/rig";
-import type { WeaponKind } from "@/lib/game/combat/contract";
+import type { WeaponGrip, WeaponKind } from "@/lib/game/combat/contract";
 
 export type { CharacterMotion, ClipName } from "@/lib/game/character/clips";
 /** v6 is 1.045 m tall; at 1.3 a character stands ~1.36 world units, a little over one tile (ACNH). */
@@ -147,6 +147,8 @@ class Puppet {
   }
   private releaseFaces() { for (const { key } of this.held.values()) faces.release(key); this.held.clear(); }
 
+  get attacking() { return !!this.clip?.startsWith("Attack"); }
+
   private play(name: ClipName) {
     const clip = this.clips.get(name) ?? this.clips.get("Idle")!;
     const next = this.mixer.clipAction(clip);
@@ -190,27 +192,40 @@ class Puppet {
   }
 }
 
-export interface WeaponView { kind: WeaponKind; model: string; modelScale: number; inHand: boolean }
-/** Weapon placement per kind in socket space (row 140): in hand in the ruins, across the back elsewhere. */
-const GRIP: Record<WeaponKind, { hand: [number, number, number]; back: [number, number, number] }> = {
+export interface WeaponView { kind: WeaponKind; model: string; modelScale: number; inHand: boolean; grip?: WeaponGrip }
+/**
+ * Weapon placement per kind in socket space (row 140): in hand in the ruins, across the back elsewhere.
+ * Weapons are authored grip-at-origin, tip up +Y. `rest` is the in-hand pose outside attack clips: the
+ * staff and bow stand upright (+Y world up, +Z forward, solved from the v6 Idle socket frames) instead
+ * of pointing like a lance or lying flat; attack clips use `hand`.
+ */
+const GRIP: Record<WeaponKind, WeaponGrip> = {
   melee: { hand: [Math.PI / 2, 0, 0], back: [0, 0, 0.5] },
-  bow: { hand: [0, Math.PI / 2, 0], back: [0, Math.PI / 2, 0.3] },
-  staff: { hand: [Math.PI / 2, 0, 0], back: [0, 0, 2.6] },
-  summon: { hand: [Math.PI / 2, 0, 0], back: [0, 0, 2.6] },
+  bow: { hand: [0, Math.PI / 2, 0], back: [0, Math.PI / 2, 0.3], rest: [0.03, 0.24, 1.15] },
+  staff: { hand: [Math.PI / 2, 0, 0], back: [0, 0, -0.5], rest: [0.03, -0.24, -1.15] },
+  summon: { hand: [Math.PI / 2, 0, 0], back: [0, 0, -0.5] },
 };
+const gripQ = new THREE.Quaternion(), gripE = new THREE.Euler();
 
-function HeldWeapon({ puppet, weapon: { kind, model: url, modelScale, inHand } }: { puppet: Puppet; weapon: WeaponView }) {
+function HeldWeapon({ puppet, weapon: { kind, model: url, modelScale, inHand, grip } }: { puppet: Puppet; weapon: WeaponView }) {
   const { scene } = useGLTF(url);
+  const model = useMemo(() => scene.clone(true), [scene]);
   useEffect(() => {
-    const model = scene.clone(true);
-    placeWeapon(model, { kind, model: url, modelScale, inHand }, inHand ? puppet.sockets[WEAPON_HAND[kind]] : puppet.sockets.Back);
+    placeWeapon(model, { kind, model: url, modelScale, inHand, grip }, inHand ? puppet.sockets[WEAPON_HAND[kind]] : puppet.sockets.Back);
     return () => { model.removeFromParent(); };
-  }, [scene, puppet, kind, url, modelScale, inHand]);
+  }, [model, puppet, kind, url, modelScale, inHand, grip]);
+  // Upright at rest, the attack grip while an attack clip plays (eased so the swap doesn't pop).
+  useFrame((_, delta) => {
+    const g = grip ?? GRIP[kind];
+    if (!inHand || !g.rest) return;
+    model.quaternion.slerp(gripQ.setFromEuler(gripE.set(...(puppet.attacking ? g.hand : g.rest))), 1 - Math.exp(-delta * 24));
+  });
   return null;
 }
 function placeWeapon(model: THREE.Object3D, weapon: WeaponView, socket: THREE.Object3D) {
+  const g = weapon.grip ?? GRIP[weapon.kind];
   model.scale.setScalar(weapon.modelScale / CHARACTER_SCALE);
-  model.rotation.set(...(weapon.inHand ? GRIP[weapon.kind].hand : GRIP[weapon.kind].back));
+  model.rotation.set(...(weapon.inHand ? g.hand : g.back));
   model.traverse(o => { o.castShadow = false; });
   socket.add(model);
 }

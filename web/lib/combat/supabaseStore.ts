@@ -1,12 +1,13 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Family } from "@/lib/oracle/engine";
+import type { BossReward } from "./content";
 import type { MissionProgress } from "./missions";
 import { ZERO_STATS, type StatBlock } from "./progression";
 import { raisePg } from "@/lib/result";
 import { CombatError, type CombatErrorCode, type CombatStore, type ProgressRow } from "./store";
 
 type Row = Record<string, unknown>;
-const CODES: CombatErrorCode[] = ["insufficient", "not_found", "not_owned", "needs_reset", "not_enough_points", "level_too_low", "wrong_family", "no_family", "cooldown", "not_ready", "kill_xp_cap", "unknown_enemy", "unknown_mission", "bad_hits"];
+const CODES: CombatErrorCode[] = ["insufficient", "not_found", "not_owned", "needs_reset", "not_enough_points", "level_too_low", "wrong_family", "no_family", "cooldown", "not_ready", "kill_xp_cap", "unknown_enemy", "unknown_mission", "bad_hits", "boss_cooldown"];
 const raise = (error: { code?: string; message?: string } | null): never => raisePg(error, CODES);
 const first = (d: unknown) => ((Array.isArray(d) ? d[0] : d) ?? {}) as Row;
 const xpRes = (r: Row) => ({ xp: Number(r.xp), level: Number(r.level), levelled_up: r.levelled_up === true, replayed: r.replayed === true });
@@ -82,7 +83,11 @@ export function supabaseCombatStore(db: SupabaseClient): CombatStore {
     },
     async completeMission(m, id) {
       const r = first(await rpc("combat_mission_complete", { p_progress_id: id, p_member_id: m }));
-      return { xp_awarded: Number(r.xp_awarded), coins_awarded: Number(r.coins_awarded), replayed: r.replayed === true };
+      return { xp_awarded: Number(r.xp_awarded), coins_awarded: Number(r.coins_awarded), materials_awarded: (r.materials_awarded as Record<string, number>) ?? {}, replayed: r.replayed === true };
+    },
+    async bossReward(m, ev, reward) {
+      const r = first(await rpc("combat_boss_reward", { p_member_id: m, p_event_key: ev, p_reward: reward }));
+      return { reward: r.reward as BossReward, replayed: r.replayed === true };
     },
   };
 }

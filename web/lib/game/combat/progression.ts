@@ -7,6 +7,7 @@ import type { CombatProgression } from "./contract";
 import type { Ability } from "@/lib/combat/kits";
 import type { StatBlock } from "@/lib/combat/progression";
 import type { MissionEvent } from "@/lib/combat/missions";
+import type { BossReward } from "@/lib/combat/content";
 import { installCombatDemo } from "./demo";
 
 export interface IslandProgression extends CombatProgression { stats: StatBlock | null; maxHp: number | null; signature: Ability | null; weapons: { weapon_key: string; durability: number }[] }
@@ -33,4 +34,8 @@ export const postKill = (enemy: string, eventKey: string) => call<{ xp: number; 
 export const postWear = (weapon: string, hits: number, defeated: boolean) => call<{ durability: number }>("/api/combat/wear", "weapon", { weapon, hits: Math.min(500, hits), defeated, idempotency_key: key("wear") });
 export const startMissionRemote = (mission: string) => call<{ progress_id: string; resumed: boolean }>("/api/combat/missions/start", "mission", { mission, start_key: key("start") });
 export const postMissionEvents = (progressId: string, events: MissionEvent[]) => call<{ state: string; counter: number }>("/api/combat/missions/progress", "mission", { progress_id: progressId, events });
-export const completeMissionRemote = (progressId: string) => call<{ xp_awarded: number; coins_awarded: number }>("/api/combat/missions/complete", "rewards", { progress_id: progressId });
+export const completeMissionRemote = (progressId: string) => call<{ xp_awarded: number; coins_awarded: number; materials_awarded: Record<string, number> }>("/api/combat/missions/complete", "rewards", { progress_id: progressId });
+/** The board's server view: per mission, whether it can start and when its 20 h cooldown ends. */
+export const missionBoard = () => call<{ key: string; can_start: boolean; cooldown_until: string | null }[]>("/api/combat/missions", "missions");
+/** After the boss kill posts: the server rolls the guardian's drop table once per kill. */
+export const claimBossReward = (eventKey: string) => call<{ reward: BossReward; replayed: boolean }>("/api/combat/boss-reward", "boss", { event_key: eventKey });

@@ -4,11 +4,11 @@
  * (web/lib/combat/weapons.ts `damage`); the island owns shapes and timing.
  */
 import { damage as ruleDamage, WEAPONS as SYSTEM_WEAPONS } from "@/lib/combat/weapons";
-import { ENEMIES, WEAPONS, WEAPON_ORDER } from "./data";
+import { ENEMIES, WEAPONS } from "./data";
 import type { IncantationScore } from "./contract";
 import { advanceMission, type MissionEvent } from "./missions";
-import { DODGE, damageEnemy, inArc, invulnerable, spawnEnemy, type Enemy, type Vec } from "./sim";
-import { ENERGY, type AbilityId, type CombatRuntime, type WeaponId } from "./runtime";
+import { BOSS, DODGE, damageEnemy, inArc, invulnerable, spawnEnemy, staggered, type Enemy, type Vec } from "./sim";
+import { ENERGY, type AbilityId, type CombatRuntime } from "./runtime";
 import { runeById } from "./runes";
 import type { SpawnPoint } from "./spawns";
 
@@ -34,11 +34,12 @@ export function regenEnergy(rt: CombatRuntime, dt: number) {
   if (!rt.casting && p.sinceSpend >= ENERGY.delay) p.energy = Math.min(ENERGY.max, p.energy + ENERGY.regen * dt);
 }
 
-/** One hit from the equipped weapon (systems damage formula), crits 10%. */
+/** One hit from the equipped weapon (systems damage formula), crits 10%; a staggered boss takes half again. */
 export function weaponDamage(rt: CombatRuntime, e: Enemy, random: () => number, potency = 1): { amount: number; crit: boolean } {
   const p = rt.player, def = SYSTEM_WEAPONS.find(w => w.key === p.weapon)!;
   const crit = random() < 0.1;
-  return { amount: ruleDamage({ weapon: def, durability: p.durability[p.weapon], stats: p.stats, level: p.level, enemyDefense: e.type.defense, crit, potency }), crit };
+  const scaled = potency * (staggered(e) ? BOSS.staggerBonus : 1);
+  return { amount: ruleDamage({ weapon: def, durability: p.durability[p.weapon], stats: p.stats, level: p.level, enemyDefense: e.type.defense, enemyArmor: e.type.armor, crit, potency: scaled }), crit };
 }
 
 function hitEnemy(rt: CombatRuntime, idx: number, from: Vec, knock: number, random: () => number, potency = 1) {
@@ -52,7 +53,7 @@ function hitEnemy(rt: CombatRuntime, idx: number, from: Vec, knock: number, rand
   }
   return killed;
 }
-const wearHit = (rt: CombatRuntime) => { rt.player.hits[rt.player.weapon] += 1; rt.player.durability[rt.player.weapon] = Math.max(0, rt.player.durability[rt.player.weapon] - 1); };
+const wearHit = (rt: CombatRuntime) => { const p = rt.player; p.hits[p.weapon] = (p.hits[p.weapon] ?? 0) + 1; p.durability[p.weapon] = Math.max(0, p.durability[p.weapon] - 1); };
 
 /** Primary attack with the equipped weapon toward the aim. Returns true if it fired. */
 export function attack(rt: CombatRuntime, player: Vec, random = Math.random): boolean {
@@ -117,7 +118,7 @@ export function hurtPlayer(rt: CombatRuntime, amount: number, from: Vec, player:
 export function triggerAbility(rt: CombatRuntime, id: AbilityId, player: Vec = { x: 0, z: 0 }): boolean {
   const p = rt.player;
   if (!p.alive || rt.cooldowns[id] > 0 || rt.casting) return false;
-  if (id === "swap") { p.weapon = WEAPON_ORDER[(WEAPON_ORDER.indexOf(p.weapon) + 1) % WEAPON_ORDER.length] as WeaponId; p.attackCd = 0.2; rt.cooldowns.swap = 0.4; return true; }
+  if (id === "swap") { p.weapon = p.owned[(p.owned.indexOf(p.weapon) + 1) % p.owned.length]; p.attackCd = 0.2; rt.cooldowns.swap = 0.4; return true; }
   if (id === "spark" || id === "binding") {
     if (!spend(rt, runeById(id).energy)) { floater(rt, player, 1.9, "Not enough energy", "info"); return false; }
     rt.casting = { id: rt.seq++, rune: id, aim: { ...p.aim }, potencyScale: 1 };
@@ -163,4 +164,15 @@ export function resolveCast(rt: CombatRuntime, player: Vec, score: IncantationSc
 
 export function spawnWave(rt: CombatRuntime, wave: SpawnPoint[]) {
   for (const s of wave) rt.enemies.push({ ...spawnEnemy(s.id, ENEMIES[s.type], s.x, s.z), state: "chase" });
+}
+
+/** The boss calls rune wisps at its sides, topping up to BOSS.summons alive. */
+export function summonWisps(rt: CombatRuntime, boss: Enemy) {
+  const alive = rt.enemies.filter(e => e.summoned && e.state !== "dead").length;
+  rt.enemies = rt.enemies.filter(e => !(e.summoned && e.state === "dead"));
+  for (let i = alive; i < BOSS.summons; i++) {
+    const side = i % 2 ? -1 : 1, x = boss.x + Math.cos(boss.facing) * 2.6 * side, z = boss.z - Math.sin(boss.facing) * 2.6 * side;
+    rt.enemies.push({ ...spawnEnemy(`summon-${rt.seq++}`, ENEMIES["rune-wisp"], x, z), state: "chase", summoned: true });
+  }
+  rt.blasts.push({ id: rt.seq++, x: boss.x, z: boss.z, radius: 2.6, color: "#b48cff", age: 0, life: 0.6 });
 }
