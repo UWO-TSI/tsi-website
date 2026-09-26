@@ -1,11 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { defaultLayout, withRooms, type HomeLayoutDoc } from "@/lib/homes/layout";
+import { CATALOGUE } from "@/lib/homes/catalogue";
+import { defaultLayout, FLOORINGS, WALLPAPERS, withRooms, type HomeLayoutDoc } from "@/lib/homes/layout";
 import { memoryHomesStore } from "./memoryStore";
 import { createRemoteHomeStore } from "./remoteStore";
 import { ROOM_CAP, ROOM_PRICE_COINS, validateLayout } from "./rules";
 import { buyRoom, loadHome, saveHome } from "./service";
 
 const M = "00000000-0000-4000-8000-0000000000aa";
+/** Owns plenty of every piece and finish (ownership itself: lib/wallet/ownership.test.ts). */
+const PLENTY = new Map<string, number>([...CATALOGUE.map((p): [string, number] => [p.id, 9]), ...[...WALLPAPERS, ...FLOORINGS].map((f): [string, number] => [f, 1])]);
 
 /** fetch() that routes /api/homes* to the service over a memory store. */
 function fakeServer(mem = memoryHomesStore(), member = M) {
@@ -16,7 +19,7 @@ function fakeServer(mem = memoryHomesStore(), member = M) {
     if (down) throw new TypeError("network down");
     const body = init?.body ? JSON.parse(String(init.body)) : {};
     const r = url === "/api/homes" ? await loadHome(mem.store, member)
-      : url === "/api/homes/layout" ? await saveHome(mem.store, member, body)
+      : url === "/api/homes/layout" ? await saveHome(mem.store, member, body, PLENTY)
       : await buyRoom(mem.store, member, body);
     const key = url === "/api/homes" ? "home" : url === "/api/homes/layout" ? "saved" : "purchase";
     const json = r.ok ? { ok: true, [key]: r.data } : { ok: false, error: r.error, code: r.code, home: r.home };
@@ -39,7 +42,7 @@ describe("home save/load", () => {
   it("round-trips a layout through save and load", async () => {
     const { store } = memoryHomesStore();
     const doc = withItem({ ...defaultLayout(), outdoor: [{ uid: "o1", piece: "bench-wood", cell: [3, -4], rot: 1 }] }, "lamp-2", [5, 2]);
-    expect(await saveHome(store, M, { layout: doc, base_revision: 0, save_key: "save-0001" })).toMatchObject({ ok: true, data: { revision: 1 } });
+    expect(await saveHome(store, M, { layout: doc, base_revision: 0, save_key: "save-0001" }, PLENTY)).toMatchObject({ ok: true, data: { revision: 1 } });
     const loaded = await loadHome(store, M);
     expect(loaded.ok && loaded.data.layout).toEqual(doc);
     expect(loaded.ok && loaded.data).toMatchObject({ revision: 1, room_price: ROOM_PRICE_COINS, room_cap: 4 });
@@ -47,20 +50,20 @@ describe("home save/load", () => {
   it("replays the same save key without a new revision, and rejects stale revisions with the current doc", async () => {
     const { store } = memoryHomesStore();
     const doc = withItem(defaultLayout(), "a", [5, 2]);
-    await saveHome(store, M, { layout: doc, base_revision: 0, save_key: "save-0002" });
-    expect(await saveHome(store, M, { layout: doc, base_revision: 0, save_key: "save-0002" })).toMatchObject({ ok: true, data: { revision: 1, replayed: true } });
-    const stale = await saveHome(store, M, { layout: defaultLayout(), base_revision: 0, save_key: "save-0003" });
+    await saveHome(store, M, { layout: doc, base_revision: 0, save_key: "save-0002" }, PLENTY);
+    expect(await saveHome(store, M, { layout: doc, base_revision: 0, save_key: "save-0002" }, PLENTY)).toMatchObject({ ok: true, data: { revision: 1, replayed: true } });
+    const stale = await saveHome(store, M, { layout: defaultLayout(), base_revision: 0, save_key: "save-0003" }, PLENTY);
     expect(stale).toMatchObject({ ok: false, status: 409, code: "revision_conflict", home: { revision: 1 } });
   });
   it("refuses overlapping, unknown or misplaced pieces and extra rooms", async () => {
     const { store } = memoryHomesStore();
     const overlap = withItem(defaultLayout(), "x", [0, 4]); // on the bed
-    expect(await saveHome(store, M, { layout: overlap, base_revision: 0, save_key: "save-0004" })).toMatchObject({ ok: false, status: 422 });
+    expect(await saveHome(store, M, { layout: overlap, base_revision: 0, save_key: "save-0004" }, PLENTY)).toMatchObject({ ok: false, status: 422 });
     const unknown = { ...defaultLayout(), rooms: [{ ...defaultLayout().rooms[0], items: [{ uid: "u", piece: "golden-throne", cell: [1, 1], rot: 0 }] }] };
-    expect(validateLayout(unknown, 1)).toMatchObject({ ok: false });
+    expect(validateLayout(unknown, 1, PLENTY)).toMatchObject({ ok: false });
     const outside = { ...defaultLayout(), outdoor: [{ uid: "l", piece: "floor-lamp", cell: [0, 0], rot: 0 }] };
-    expect(validateLayout(outside, 1)).toMatchObject({ ok: false, error: "Indoor pieces can't go outside." });
-    expect(validateLayout(withRooms(defaultLayout(), 2), 1)).toMatchObject({ ok: false });
+    expect(validateLayout(outside, 1, PLENTY)).toMatchObject({ ok: false, error: "Indoor pieces can't go outside." });
+    expect(validateLayout(withRooms(defaultLayout(), 2), 1, PLENTY)).toMatchObject({ ok: false });
   });
 });
 

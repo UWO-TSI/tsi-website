@@ -6,7 +6,7 @@
 import { ROSTER } from "@/lib/collections/roster";
 import { FISH } from "@/lib/game/fishing";
 import { fnv1a } from "@/lib/game/weatherSystem";
-import { dailySpecials, effectivePrice, isOnSale, sellPrice, speciesClass, TAB_OF, torontoDay, type ShopItem, type Special } from "./rules";
+import { dailySpecials, effectivePrice, isOnSale, ownedCounts, sellPrice, speciesClass, TAB_OF, torontoDay, type ShopItem, type Special } from "./rules";
 import { toFailure, type Result } from "@/lib/result";
 import { EconomyError, type EconomyStore, type InventoryRow, type LedgerEntry, type Reservation } from "./store";
 
@@ -143,11 +143,20 @@ export const sell = (store: EconomyStore, m: string, input: { item_key: string; 
 export interface InventoryView {
   groups: Record<string, InventoryRow[]>;
 }
+/** First look at the bag grants the free starters (idempotent, once per account). */
 export const getInventory = (store: EconomyStore, m: string) =>
   run<InventoryView>(async () => {
+    await store.grantStarters(m);
     const groups: Record<string, InventoryRow[]> = {};
     for (const r of await store.inventory(m)) (groups[TAB_OF[String(r.item.category)] ?? "outfits"] ??= []).push(r);
     return { groups };
+  });
+
+/** Catalogue refs the member owns (starters granted first): what a look save or a home save is checked against. */
+export const ownedRefs = (store: EconomyStore, m: string) =>
+  run<Map<string, number>>(async () => {
+    await store.grantStarters(m);
+    return ownedCounts(await store.inventory(m));
   });
 
 export const equip = (store: EconomyStore, m: string, input: { item_id: string; equipped: boolean }) =>

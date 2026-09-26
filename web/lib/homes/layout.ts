@@ -38,6 +38,8 @@ export const MAX_ROOMS = 4;
 export const ROOM_PRICE = { coins: 500, materials: "10 wood, 5 stone" };
 export const WALLPAPERS = ["plaster00", "stripe02", "log00", "brick00"] as const;
 export const FLOORINGS = ["simpleparquet00", "tatami00", "simplecarpet01", "simple00"] as const;
+/** The starter room's finishes are free; the others are bought in the shop. */
+export const FREE_FINISHES: readonly string[] = [WALLPAPERS[0], FLOORINGS[0]];
 /** Entrance cells kept clear so the player can always get in. */
 export const DOOR_CELLS: [number, number][] = [[2, 0], [3, 0]];
 
@@ -54,6 +56,14 @@ export function starterRoom(id = "room-1"): RoomDoc {
 }
 export function defaultLayout(): HomeLayoutDoc {
   return { version: 1, rooms: [starterRoom()], outdoor: [] };
+}
+/** A room bought later: empty, starter finishes. */
+export const emptyRoom = (id: string): RoomDoc => ({ ...starterRoom(id), items: [] });
+/** Pieces placed across every room and the island, by piece id (a save may place only what the member owns). */
+export function placedCounts(doc: HomeLayoutDoc): Map<string, number> {
+  const out = new Map<string, number>();
+  for (const it of [...doc.rooms.flatMap(r => r.items), ...doc.outdoor]) out.set(it.piece, (out.get(it.piece) ?? 0) + 1);
+  return out;
 }
 
 /** World/pointer position → nearest cell index (floor). */
@@ -171,6 +181,6 @@ export function withRooms(doc: HomeLayoutDoc, count: number): HomeLayoutDoc {
   const target = Math.min(MAX_ROOMS, Math.max(1, Math.floor(count)));
   if (doc.rooms.length >= target) return doc;
   const rooms = [...doc.rooms];
-  while (rooms.length < target) rooms.push({ ...starterRoom(`room-${rooms.length + 1}`), items: [], wallpaper: "stripe02", flooring: "tatami00" });
+  while (rooms.length < target) rooms.push(emptyRoom(`room-${rooms.length + 1}`));
   return { ...doc, rooms };
 }
