@@ -1,15 +1,15 @@
 "use client";
 
-import { useRef, useState, useEffect, useCallback, useMemo } from "react";
+import { useRef, useState, useEffect, useCallback } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
-import { Billboard, Html } from "@react-three/drei";
+import { Html } from "@react-three/drei";
 import * as THREE from "three";
 import { sampleTerrainHeightFast } from "./terrain";
 import { clampToCoast, coastDist } from "@/lib/game/coast";
 import { getTodayWeather } from "@/lib/game/weather";
 import { useSFX } from "@/lib/game/useAudio";
 import { getCameraForwardXZ } from "@/lib/game/cameraBasis";
-import { advanceMotion, easeFacing, relativeFacingAngle } from "@/lib/game/locomotion";
+import { advanceMotion, easeFacing } from "@/lib/game/locomotion";
 import { bindGameKeys } from "@/lib/game/keyboardInput";
 import { Surface } from "@/lib/game/grid";
 import { calculateCurvedHtmlPosition } from "@/lib/game/worldProjection";
@@ -19,22 +19,21 @@ import { getLabFov } from "@/lib/game/devLab";
 import MoveTargetIndicator from "./MoveTargetIndicator";
 import { getBlobTexture } from "./BlobShadows";
 import type { EmoteType } from "@/lib/content/types";
-import ApplicantCharacter, { type ApplicantMotion } from "@/components/recruit/ApplicantCharacter";
-
-// Sprint E3: animation_key → emoji glyph for the Html overlay. Real sprite
-// swaps land when avatar sprites do; this is the placeholder.
-const EMOTE_EMOJI: Record<string, string> = {
-  wave: "👋",
-  dance: "🕺",
-  laugh: "😂",
-  point: "👉",
-  sit: "🪑",
-};
+import Character, { CHARACTER_HEIGHT, CHARACTER_SCALE, type CharacterMotion, type ClipName } from "./character/Character";
+import type { CharacterLook } from "@/lib/game/character/look";
+import { useMyLook } from "@/lib/game/character/lookStore";
+import { EMOTE_CLIPS, combatClip, seatLift, type CombatView } from "@/lib/game/character/clips";
+import { useWorldClips } from "./character/useWorldClips";
+import { combat, useCombatVersion } from "@/lib/game/combat/runtime";
+import { WEAPONS } from "@/lib/game/combat/data";
 
 /**
- * Shared billboard avatar using the Ninja Adventure 16px walk sheet.
- * Four direction columns and four animation rows; movement, sprite facing,
- * ground queries and feedback stay synchronized in the frame loop.
+ * The player: movement, collision, ground follow and feedback, drawn as the
+ * shared 3D character (row 105; sprites retired). World interactions become
+ * clip requests: sit/study/sleep seats (tsi:sit), fishing (tsi:fish-cast /
+ * tsi:fish-end), forage and net (tsi:peaceful-act, tsi:flower-pick,
+ * tsi:critter-catch), emotes (activeEmote or tsi:emote {clip}), and the
+ * encounter state when `combat` is set.
  */
 
 const PLAYER_SPEED = 7.4; // refinement 2026-07-22 (David: walk felt slow) — was 6.3
@@ -48,31 +47,6 @@ const ROTATION_LERP = 10;
 // transitions so there's no per-frame popping.
 const Y_DAMP_TIME = 0.05;
 const AVATAR_FOOT_OFFSET = 0;
-
-// Sprint A8: visual bob constants. Applied to the sprite mesh inside the
-// Billboard, NOT the group (group.y is ground-follow from A1).
-const SPRITE_BASE_Y = 0.82; // square 1.45 plane: feet land at ~0.10 (art pass pt2: smaller avatar)
-const WALK_BOB_AMP = 0.05;
-const IDLE_BOB_AMP = 0.02;
-const BREATH_BLEND_LERP = 1 / 0.3; // ~0.3s blend between walk and idle bob
-
-// Sprite sheet grid — Ninja Adventure (CC0) Walk.png: 4 direction COLUMNS
-// (down, up, left, right) x 4 walk-frame ROWS of 16x16. Idle = frame row 0
-// of the facing column, so one texture covers everything.
-const SHEET_COLS = 4;
-const SHEET_ROWS = 4;
-const FRAME_RATE = 8; // frames per second for walk animation
-
-// col = direction column; frames = walk cycle length (rows)
-const DIR_DOWN = { col: 0, frames: 1 };
-const DIR_UP = { col: 1, frames: 1 };
-const DIR_LEFT = { col: 2, frames: 1 };
-const DIR_RIGHT = { col: 3, frames: 1 };
-const WALK_DOWN = { col: 0, frames: 4 };
-const WALK_UP = { col: 1, frames: 4 };
-const WALK_LEFT = { col: 2, frames: 4 };
-const WALK_RIGHT = { col: 3, frames: 4 };
-
 // Key state tracking
 const keys: Record<string, boolean> = {};
 
@@ -95,7 +69,6 @@ function applySprintFov(camera: THREE.Camera, speed: number, delta: number) {
 }
 
 interface PlayerAvatarProps {
-  avatarMode?: "sprite" | "applicant";
   spawnPosition: [number, number, number];
   onMove: (position: THREE.Vector3) => void;
   playerName?: string;
@@ -107,6 +80,8 @@ interface PlayerAvatarProps {
   impulse?: React.MutableRefObject<{ x: number; z: number }>;
   /** Combat: Space belongs to dodge, so no cosmetic hop. */
   noHop?: boolean;
+  /** Encounter: clips and facing follow the combat runtime; the weapon is in hand. */
+  combat?: boolean;
   activeEmote?: EmoteType | null;
   frozen?: boolean;
   desktopClickToMove?: boolean;
@@ -115,10 +90,10 @@ interface PlayerAvatarProps {
   constrainMove?: (fromX: number, fromZ: number, toX: number, toZ: number) => [number, number];
 }
 
-export default function PlayerAvatar({ avatarMode = "sprite", spawnPosition, onMove, playerName = "Player", showNameplate = true, playerLevel = 1, member = false, impulse, noHop = false, activeEmote = null, frozen = false, desktopClickToMove = false, groundHeight = sampleTerrainHeightFast, groundSurface, constrainMove }: PlayerAvatarProps) {
+export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Player", showNameplate = true, playerLevel = 1, member = false, impulse, noHop = false, combat: inCombat = false, activeEmote = null, frozen = false, desktopClickToMove = false, groundHeight = sampleTerrainHeightFast, groundSurface, constrainMove }: PlayerAvatarProps) {
   const groupRef = useRef<THREE.Group>(null);
-  const applicantMotion = useRef<ApplicantMotion>({ speed: 0, yaw: 0, lift: 0 });
-  const spriteRef = useRef<THREE.Group>(null);
+  const motion = useRef<CharacterMotion>({ speed: 0, yaw: 0, lift: 0, pose: null, play: null });
+  const { look } = useMyLook();
   // Initialize y on the terrain at spawn so the avatar doesn't visibly
   // drop in from y=0 if the spawn point sits on a slope.
   const positionRef = useRef(new THREE.Vector3(
@@ -129,19 +104,14 @@ export default function PlayerAvatar({ avatarMode = "sprite", spawnPosition, onM
   useEffect(() => { onMove(positionRef.current.clone()); }, [onMove]);
   const targetRef = useRef<THREE.Vector3 | null>(null);
   const facingRef = useRef(0);
-  const frameTimer = useRef(0);
-  const currentFrame = useRef(0);
   // G3: bench sitting. When set, movement freezes and the avatar snaps to the
   // seat with a down-facing idle pose. Toggled by tsi:sit window events from
   // GameWorld's E handler; any WASD/click input also stands.
-  const sitRef = useRef<{ x: number; z: number } | null>(null);
-  const [isMoving, setIsMoving] = useState(false);
+  const sitRef = useRef<{ x: number; z: number; clip: ClipName; lift: number; yaw: number } | null>(null);
   const { camera, gl } = useThree();
   const { play: playSFX } = useSFX();
   const footstepTimer = useRef(0);
-  // Sprint A8: breath blend (0 = walking bob, 1 = idle bob), elapsed clock for
-  // sine drivers, and active click-to-move ring indicators.
-  const breathBlendRef = useRef(0);
+  // Elapsed clock for sine drivers, and active click-to-move ring indicators.
   const clockRef = useRef(0);
   const indicatorIdRef = useRef(0);
   const [indicators, setIndicators] = useState<Array<{ id: number; position: [number, number, number] }>>([]);
@@ -157,11 +127,8 @@ export default function PlayerAvatar({ avatarMode = "sprite", spawnPosition, onM
   // (NOT the group — group y stays terrain-bound). Doesn't affect collision
   // or click-to-move pathing; pure visual delight.
   const jumpRef = useRef<{ active: boolean; t: number }>({ active: false, t: 0 });
-  // Game-feel wave G1 (2026-07-07): velocity with accel/decel easing, screen-
-  // space lean into motion, and a landing squash timer. Linear start/stop was
-  // the last "slides like a cursor" tell in the handling.
+  // Game-feel wave G1 (2026-07-07): velocity with accel/decel easing.
   const velRef = useRef(new THREE.Vector2(0, 0));
-  const leanRef = useRef(0);
   // Loop iter 6 (2026-07-24): turn-skid dust — a sharp direction reversal
   // at speed kicks a puff behind the feet. Cooldown stops puff spam.
   const skidCooldownRef = useRef(0);
@@ -170,51 +137,7 @@ export default function PlayerAvatar({ avatarMode = "sprite", spawnPosition, onM
   // slowdown. All refs; no per-frame React.
   const windGroupRef = useRef<THREE.Group>(null);
   const windMatsRef = useRef<THREE.MeshBasicMaterial[]>([]);
-  const squashRef = useRef(0);
-  // G4 (item 7): after ~12s of standing still the sprite looks around —
-  // left, right, then back to front — so idling reads alive (ACNH beat).
-  const idleTimeRef = useRef(0);
-
-  // Configure each avatar’s own UV state; begin image loading after commit.
-  const spriteTexture = useMemo(() => {
-    const tex = new THREE.Texture();
-    // L12 colorspace audit: sprite sheets are albedo — untagged they were
-    // sampled as linear and rendered washed-bright vs everything else.
-    tex.colorSpace = THREE.SRGBColorSpace;
-    tex.minFilter = THREE.NearestFilter;
-    tex.magFilter = THREE.NearestFilter;
-    tex.generateMipmaps = false;
-    tex.repeat.set(1 / SHEET_COLS, 1 / SHEET_ROWS);
-    tex.offset.set(0, 1 - 1 / SHEET_ROWS);
-    return tex;
-  }, []);
-
-  const shadowTexture = useMemo(() => {
-    const tex = new THREE.Texture();
-    tex.minFilter = THREE.NearestFilter;
-    tex.magFilter = THREE.NearestFilter;
-    tex.generateMipmaps = false;
-    return tex;
-  }, []);
-
-  useEffect(() => {
-    let mounted = true;
-    const loader = new THREE.ImageLoader();
-    const load = (url: string, texture: THREE.Texture) => {
-      loader.load(url, (image) => {
-        if (!mounted) return;
-        texture.image = image;
-        texture.needsUpdate = true;
-      });
-    };
-    load("/assets/characters/player_walk.png", spriteTexture);
-    load("/assets/characters/static_shadow.png", shadowTexture);
-    return () => {
-      mounted = false;
-      spriteTexture.dispose();
-      shadowTexture.dispose();
-    };
-  }, [spriteTexture, shadowTexture]);
+  const combatPrev = useRef<CombatView | null>(null);
 
   // Keyboard input. Sprint F1.1: track Shift for sprint multiplier and guard
   // against typing in inputs/textareas/contentEditable so WASD doesn't fire
@@ -296,16 +219,19 @@ export default function PlayerAvatar({ avatarMode = "sprite", spawnPosition, onM
   }, [gl, handleClick]);
 
   // G3: sit toggle. Same seat → stand; different/first → sit at that seat.
+  // detail.clip picks Sit/Study/Sleep; detail.seatY is the furniture's seat
+  // (or bed) top in world y, and the clip's authored seat height is taken off
+  // it (ruling 18); detail.yaw faces the seat's front (default: the camera).
   useEffect(() => {
     const onSit = (e: Event) => {
-      const { x, z } = (e as CustomEvent<{ x: number; z: number }>).detail;
+      const { x, z, clip = "Sit", seatY, yaw = Math.PI } = (e as CustomEvent<{ x: number; z: number; clip?: ClipName; seatY?: number; yaw?: number }>).detail;
       const cur = sitRef.current;
       const sittingDown = !(cur && cur.x === x && cur.z === z);
-      sitRef.current = sittingDown ? { x, z } : null;
+      sitRef.current = sittingDown ? { x, z, clip, yaw, lift: seatY === undefined ? 0 : seatLift(clip, seatY - groundHeight(x, z), CHARACTER_SCALE) } : null;
+      motion.current.pose = sittingDown ? clip : null;
       if (sittingDown) {
         targetRef.current = null;
         jumpRef.current = { active: false, t: 0 };
-        squashRef.current = 0;
         // settle: soft dust puff at the seat + ♪ for a moment
         const id = puffIdRef.current++;
         setPuffs((prev) => [...prev, { id, position: [x, groundHeight(x, z) + 0.15, z], scale: 1.3 }]);
@@ -325,7 +251,15 @@ export default function PlayerAvatar({ avatarMode = "sprite", spawnPosition, onM
     };
   }, [groundHeight]);
 
-  // Movement + sprite animation loop
+  // World interactions → clips (fish, forage, net, emotes).
+  const faceToward = useCallback((x: number, z: number) => { const p = positionRef.current; facingRef.current = Math.atan2(x - p.x, z - p.z); }, []);
+  useWorldClips(motion, faceToward);
+  useEffect(() => {
+    const clip = activeEmote ? EMOTE_CLIPS[activeEmote.animation_key] : null;
+    if (clip) motion.current.play = clip;
+  }, [activeEmote]);
+
+  // Movement + animation loop
   useFrame((_, elapsed) => {
     if (!groupRef.current) return;
     const delta = Math.min(elapsed, 0.1);
@@ -345,27 +279,20 @@ export default function PlayerAvatar({ avatarMode = "sprite", spawnPosition, onM
       sitRef.current = null;
     }
 
-    // G3: seated — snap to the bench seat, freeze, hold down-idle pose.
+    // G3: seated — snap to the seat, freeze, hold the seat clip.
     if (sitRef.current) {
       const seat = sitRef.current;
       const seatY = groundHeight(seat.x, seat.z) + AVATAR_FOOT_OFFSET;
       const changed = pos.x !== seat.x || pos.y !== seatY || pos.z !== seat.z;
       pos.set(seat.x, seatY, seat.z);
       groupRef.current.position.copy(pos);
-      facingRef.current = Math.PI; // face the camera (down column, front cell)
-      currentFrame.current = 0;
-      spriteTexture.offset.set(DIR_DOWN.col / SHEET_COLS, 1 - 1 / SHEET_ROWS);
-      if (spriteRef.current) {
-        // Shorten the standing sprite and bring it just in front of the seat back.
-        spriteRef.current.position.set(0, SPRITE_BASE_Y, 0.2);
-        spriteRef.current.scale.set(1, 0.82, 1);
-        spriteRef.current.rotation.z = 0;
-      }
+      facingRef.current = seat.yaw;
+      Object.assign(motion.current, { speed: 0, yaw: seat.yaw, lift: seat.lift, pose: seat.clip });
       velRef.current.set(0, 0);
-      if (isMoving) setIsMoving(false);
       if (changed) onMove(pos.clone());
       return;
     }
+    if (motion.current.pose && SEAT_CLIPS.has(motion.current.pose)) motion.current.pose = null;
 
     // Sprint F1.1: camera-relative WASD. Forward = camera direction projected
     // onto XZ plane; right = forward rotated 90° clockwise. Arrow keys are
@@ -451,10 +378,6 @@ export default function PlayerAvatar({ avatarMode = "sprite", spawnPosition, onM
       }
       // Feedback follows movement that survived collision, including glide-out.
       moving = motion.moving;
-      // Lean into screen-space lateral motion (~5° max), damped.
-      const latVel = vel.x * rx + vel.y * rz;
-      const targetLean = THREE.MathUtils.clamp(-latVel / PLAYER_SPEED, -1, 1) * 0.085;
-      leanRef.current = THREE.MathUtils.damp(leanRef.current, targetLean, 10, delta);
       applySprintFov(camera, Math.hypot(vel.x, vel.y), delta);
 
       // Sprint wind lines: visible only near sprint speed, sliding
@@ -487,78 +410,7 @@ export default function PlayerAvatar({ avatarMode = "sprite", spawnPosition, onM
     const targetY = groundHeight(pos.x, pos.z) + AVATAR_FOOT_OFFSET;
     pos.y = THREE.MathUtils.damp(pos.y, targetY, 1 / Y_DAMP_TIME, delta);
 
-    // Determine direction for sprite sheet
-    const angle = relativeFacingAngle(facingRef.current, fx, fz);
-    const normalizedAngle = ((angle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
-
-    // Camera-relative heading: away uses the back of the sprite, toward
-    // uses its front. Rotating the view must rotate this mapping too.
-    let anim = moving ? WALK_UP : DIR_UP;
-    if (normalizedAngle > Math.PI * 0.25 && normalizedAngle <= Math.PI * 0.75) {
-      anim = moving ? WALK_LEFT : DIR_LEFT;
-    } else if (normalizedAngle > Math.PI * 0.75 && normalizedAngle <= Math.PI * 1.25) {
-      anim = moving ? WALK_DOWN : DIR_DOWN;
-    } else if (normalizedAngle > Math.PI * 1.25 && normalizedAngle <= Math.PI * 1.75) {
-      anim = moving ? WALK_RIGHT : DIR_RIGHT;
-    }
-
-    // G4 idle look-around: 12s still → glance left (1s), right (1s), front
-    // (1s), then rest for another cycle.
-    if (moving) {
-      idleTimeRef.current = 0;
-    } else {
-      idleTimeRef.current += delta;
-      const it = idleTimeRef.current;
-      if (it > 12) {
-        const seq = (it - 12) % 9;
-        if (seq < 1) anim = DIR_LEFT;
-        else if (seq < 2) anim = DIR_RIGHT;
-        else if (seq < 3) anim = DIR_DOWN;
-      }
-    }
-
-    // Frame cycling — Sprint A8: scale rate by actual XZ movement speed so
-    // boundary-clamped or slow approach drags the cycle down proportionally.
-    if (moving) {
-      const dx = pos.x - prevX;
-      const dz = pos.z - prevZ;
-      const actualSpeed = delta > 0 ? Math.hypot(dx, dz) / delta : 0;
-      const speedRatio = THREE.MathUtils.clamp(actualSpeed / PLAYER_SPEED, 0, 1);
-      const effectiveRate = FRAME_RATE * speedRatio;
-      frameTimer.current += delta;
-      if (effectiveRate > 0 && frameTimer.current > 1 / effectiveRate) {
-        frameTimer.current = 0;
-        currentFrame.current = (currentFrame.current + 1) % anim.frames;
-      }
-    } else {
-      currentFrame.current = 0;
-      frameTimer.current = 0;
-    }
-
-    // Update UV offset — direction picks the column, frame picks the row.
-    const col = anim.col;
-    const row = currentFrame.current % anim.frames;
-    spriteTexture.offset.set(
-      col / SHEET_COLS,
-      1 - (row + 1) / SHEET_ROWS
-    );
-
-    // Update position
     groupRef.current.position.copy(pos);
-
-    // Sprint A8: walk bob (4Hz, 0.05) vs idle breathing (0.5Hz, 0.02), blended
-    // smoothly via breathBlendRef over ~0.3s. Applied to sprite mesh y only so
-    // the group's ground-follow y from A1 is untouched.
-    const t = clockRef.current;
-    const walkBob = Math.sin(t * Math.PI * 8) * WALK_BOB_AMP;
-    const idleBob = Math.sin(t * Math.PI) * IDLE_BOB_AMP;
-    const blendTarget = moving ? 0 : 1;
-    breathBlendRef.current = THREE.MathUtils.lerp(
-      breathBlendRef.current,
-      blendTarget,
-      THREE.MathUtils.clamp(BREATH_BLEND_LERP * delta, 0, 1)
-    );
-    const bobY = THREE.MathUtils.lerp(walkBob, idleBob, breathBlendRef.current);
 
     // F1.2 jump arc — simple parabola over 0.5s, peak ~0.6 units.
     let jumpY = 0;
@@ -568,7 +420,6 @@ export default function PlayerAvatar({ avatarMode = "sprite", spawnPosition, onM
       if (j >= 1) {
         jumpRef.current.active = false;
         jumpRef.current.t = 0;
-        squashRef.current = 0.18; // G1: landing squash window
         playSFX("footstep"); // land thud
         // P29: landing puff — bigger ring at the player's current spot.
         const id = puffIdRef.current++;
@@ -582,26 +433,19 @@ export default function PlayerAvatar({ avatarMode = "sprite", spawnPosition, onM
       }
     }
 
-    if (spriteRef.current) {
-      spriteRef.current.position.set(0, SPRITE_BASE_Y + bobY + jumpY, 0);
-      // G1 squash & stretch: stretch on the way up, squash for ~0.18s on
-      // landing, lean tilt from lateral motion. Billboard makes rotation.z
-      // a clean screen-space tilt.
-      let sx = 1, sy = 1;
-      if (jumpRef.current.active) {
-        sx = 0.96; sy = 1.06;
-      } else if (squashRef.current > 0) {
-        squashRef.current = Math.max(0, squashRef.current - delta);
-        const q = squashRef.current / 0.18;
-        sx = 1 + 0.1 * q;
-        sy = 1 - 0.12 * q;
-      }
-      spriteRef.current.scale.set(sx, sy, 1);
-      spriteRef.current.rotation.z = leanRef.current;
+    const m = motion.current;
+    m.speed = delta > 0 ? Math.hypot(pos.x - prevX, pos.z - prevZ) / delta : 0;
+    m.yaw = facingRef.current;
+    m.lift = jumpY;
+    if (inCombat) {
+      // Encounter: face the aim; attacks, dodges, hits, casting and defeat drive the clips.
+      const p = combat.rt.player, view: CombatView = { alive: p.alive, dodgeAge: p.dodgeAge, hurt: p.hurt, attackCd: p.attackCd };
+      const next = combatClip(view, combatPrev.current ?? view, !!combat.rt.casting, WEAPONS[p.weapon].kind);
+      combatPrev.current = view;
+      m.yaw = facingRef.current = p.facing;
+      m.pose = next.pose;
+      if (next.play) m.play = next.play;
     }
-    applicantMotion.current.speed = delta > 0 ? Math.hypot(pos.x - prevX, pos.z - prevZ) / delta : 0;
-    applicantMotion.current.yaw = facingRef.current;
-    applicantMotion.current.lift = jumpY + 0.018;
 
     // Footstep SFX — fire ~every 0.4s walking, ~0.25s when sprinting (F1.6).
     // No-op if audio is muted or assets aren't shipped (manager silently
@@ -635,7 +479,6 @@ export default function PlayerAvatar({ avatarMode = "sprite", spawnPosition, onM
       footstepTimer.current = 0;
     }
 
-    if (moving !== isMoving) setIsMoving(moving);
     // Notify camera/parent when moving, or when y is still settling toward
     // the terrain (keeps camera in sync after stopping on a slope).
     const ySettling = Math.abs(pos.y - targetY) > 0.005;
@@ -682,43 +525,9 @@ export default function PlayerAvatar({ avatarMode = "sprite", spawnPosition, onM
         />
       ))}
       <group ref={groupRef} position={spawnPosition}>
-      {/* Each avatar uses one ground decal below, sized for its visual. */}
-      {/* The sprite, outline and nameplate share the same animated pose. */}
-      {avatarMode === "applicant" ? <ApplicantCharacter motion={applicantMotion} frozen={frozen} /> : <Billboard follow lockX={false} lockY={false} lockZ={false}>
-        <group ref={spriteRef} position={[0, SPRITE_BASE_Y, 0]}>
-        {/* P-light v2 character pop: dark silhouette halo behind the
-            sprite (same animated texture, black-multiplied, 7% larger) —
-            the classic outline trick that separates characters from the
-            world. One extra draw. */}
-        <mesh position={[0, 0, -0.012]} scale={[1.07, 1.07, 1]}>
-          <planeGeometry args={[1.45, 1.45]} />
-          <meshBasicMaterial
-            map={spriteTexture}
-            color="#2A2118"
-            transparent
-            opacity={0.55}
-            alphaTest={0.1}
-            side={THREE.DoubleSide}
-            depthWrite={false}
-          />
-        </mesh>
-        <mesh>
-          <planeGeometry args={[1.45, 1.45]} />
-          {/* Playtest fix 2026-07-13: depthWrite ON — alphaTest already
-              cuts the sprite out, and without depth the ground path ribbon
-              (transparent, sorted by mesh center) composited over the
-              player's body. Cutout + depth is the standard sprite recipe. */}
-          <meshBasicMaterial
-            map={spriteTexture}
-            transparent
-            alphaTest={0.1}
-            side={THREE.DoubleSide}
-            depthWrite
-          />
-        </mesh>
-      {/* Nameplate */}
+      <PlayerCharacter look={look} motion={motion} inCombat={inCombat} />
       {showNameplate && <Html calculatePosition={calculateCurvedHtmlPosition} zIndexRange={[40, 0]}
-        position={[0, 1.12, 0]}
+        position={[0, CHARACTER_HEIGHT + 0.28, 0]}
         center
         style={{ pointerEvents: "none" }}
       >
@@ -741,22 +550,12 @@ export default function PlayerAvatar({ avatarMode = "sprite", spawnPosition, onM
           </div>
         </div>
       </Html>}
-        </group>
-      </Billboard>}
-
-      {/* The sprite's tiny atlas shadow does not cover the 3D model's feet. */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]} renderOrder={avatarMode === "applicant" ? 1 : 0}>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]} renderOrder={1}>
         <planeGeometry args={[1.1, 1.1]} />
-        <meshBasicMaterial
-          map={avatarMode === "applicant" ? getBlobTexture() : shadowTexture}
-          transparent
-          opacity={0.5}
-          depthWrite={false}
-        />
+        <meshBasicMaterial map={getBlobTexture()} transparent opacity={0.5} depthWrite={false} />
       </mesh>
 
-      {/* Sprint E3: active emote bubble above the avatar's head. Parent clears
-          activeEmote after 3.5s so this just unmounts automatically. */}
+      {/* Cozy sit beat: a brief contented note over the head. */}
       {sitNote && (
         <Html calculatePosition={calculateCurvedHtmlPosition} position={[0, 2.1, 0]} center zIndexRange={[30, 0]} style={{ pointerEvents: "none" }}>
           <div style={{ fontSize: 20, animation: "tsi-sit-note 1.7s ease-out forwards" }}>♪</div>
@@ -769,72 +568,6 @@ export default function PlayerAvatar({ avatarMode = "sprite", spawnPosition, onM
           `}</style>
         </Html>
       )}
-      {activeEmote && (
-        <Html calculatePosition={calculateCurvedHtmlPosition} zIndexRange={[40, 0]}
-          position={[0, 2.6, 0]}
-          center
-          style={{ pointerEvents: "none" }}
-          >
-          {/* Loop iter 19 (2026-07-24): burst — six sparks fly radially on
-              emote start so a wave reads across the plaza. One-shot per
-              emote instance (keyed by id + start). */}
-          <div style={{ position: "relative" }}>
-            {Array.from({ length: 6 }).map((_, bi) => (
-              <span
-                key={`${activeEmote.id}-${bi}`}
-                aria-hidden
-                style={{
-                  position: "absolute",
-                  left: "50%",
-                  top: "50%",
-                  width: 6,
-                  height: 6,
-                  borderRadius: "50%",
-                  background: bi % 2 ? "#FFD166" : "#FFFDF5",
-                  ["--ex" as string]: `${Math.cos((bi / 6) * Math.PI * 2) * 34}px`,
-                  ["--ey" as string]: `${Math.sin((bi / 6) * Math.PI * 2) * 26}px`,
-                  animation: "playerEmoteSpark 0.55s ease-out forwards",
-                  pointerEvents: "none",
-                }}
-              />
-            ))}
-            <div
-              className="player-emote-bubble"
-              style={{
-                fontSize: 40,
-                lineHeight: 1,
-                filter: "drop-shadow(0 2px 6px rgba(0,0,0,0.4))",
-                userSelect: "none",
-              }}
-            >
-              {EMOTE_EMOJI[activeEmote.animation_key] ??
-                activeEmote.display_name.charAt(0).toUpperCase()}
-            </div>
-          </div>
-          <style jsx>{`
-            .player-emote-bubble {
-              animation: playerEmoteBounce 600ms ease-in-out infinite;
-            }
-            @keyframes playerEmoteSpark {
-              0% { opacity: 0.95; transform: translate(-50%, -50%); }
-              100% { opacity: 0; transform: translate(calc(-50% + var(--ex)), calc(-50% + var(--ey))) scale(0.5); }
-            }
-            @keyframes playerEmoteBounce {
-              0% {
-                transform: translateY(0) scale(1);
-              }
-              50% {
-                transform: translateY(-6px) scale(1.08);
-              }
-              100% {
-                transform: translateY(0) scale(1);
-              }
-            }
-          `}</style>
-        </Html>
-      )}
-
-
       </group>
     </>
   );
@@ -875,4 +608,15 @@ function FootstepPuff({ position, onDone, baseScale = 1, wet = false }: { positi
       />
     </mesh>
   );
+}
+
+/** Clips that hold while seated; the seat branch owns them. */
+const SEAT_CLIPS = new Set<ClipName>(["Sit", "Study", "Sleep"]);
+
+/** The player's character, with the equipped weapon: in hand in an encounter, across the back once the ruins gate is open (row 140). */
+function PlayerCharacter({ look, motion, inCombat }: { look: CharacterLook; motion: React.RefObject<CharacterMotion>; inCombat: boolean }) {
+  useCombatVersion();
+  const p = combat.rt.player, w = WEAPONS[p.weapon];
+  const weapon = w && (inCombat ? p.alive : p.armed) ? { kind: w.kind, model: w.model, modelScale: w.modelScale, inHand: inCombat } : null;
+  return <Character look={look} motion={motion} walkSpeed={PLAYER_SPEED} weapon={weapon} />;
 }

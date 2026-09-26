@@ -2,13 +2,14 @@
 
 import { Suspense, useCallback, useEffect, useMemo, useRef } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { Html, useGLTF, useProgress, useTexture } from "@react-three/drei";
+import { Html, useProgress, useTexture } from "@react-three/drei";
 import * as THREE from "three";
 import { useReducedMotion } from "framer-motion";
 import GridWorld from "@/components/game/grid/GridWorld";
 import GridOcean from "@/components/game/grid/GridOcean";
 import PlayerAvatar from "@/components/game/PlayerAvatar";
-import ApplicantCharacter from "./ApplicantCharacter";
+import Character from "@/components/game/character/Character";
+import { DEFAULT_LOOK, type CharacterLook } from "@/lib/game/character/look";
 import Seagulls from "@/components/game/Seagulls";
 import FishingBobber from "@/components/game/FishingBobber";
 import FishCatchFX from "@/components/game/FishCatchFX";
@@ -47,9 +48,8 @@ const ROOM_TEXTURES = ["/assets/acnh/road/mRoadWood_Alb.png", "/assets/acnh/icon
 ROOM_TEXTURES.forEach(url => useTexture.preload(url));
 const BOTANICAL_TEXTURES = ROOM_TEXTURES.slice(1);
 useTexture.preload(BOTANICAL_TEXTURES);
-useGLTF.preload("/assets/characters/applicant/jayden.gltf");
-useGLTF.preload("/assets/characters/applicant/player.gltf");
-useGLTF.preload("/assets/characters/applicant/player-female.gltf");
+/** Jayden, the applicant guide, on the shared rig. */
+const JAYDEN: CharacterLook = { ...DEFAULT_LOOK, skin: 6, hair: 0, eyes: "E5.4", mouth: "M4.2", bangs: "bangs_swept_r", back: "back_short_spiky", top: "top_tsi_crew", bottom: "bottom_trousers", shoes: "shoes_sneakers" };
 const GULL_ANCHORS: [number, number][] = [[-16, 0], [12, 10], [0, 16]];
 const fishingWaterHeight = () => -WATER_DROP;
 const RETURN_SPAWN: [number, number, number] = [0, 0, 5.4];
@@ -229,10 +229,10 @@ function Village({ guideToHQ, returned, paused, onAction, onNear, phase, fishing
     <Lantern position={[3.8, 0, 4.6]} intensity={phase === "day" ? 0 : lighting.lamp * 1.5} glow={phase === "day" ? 0 : 1.2} />
     <pointLight position={[0, 1.6, 5.6]} color="#ffd68b" intensity={lighting.lamp * 1.5} distance={5.5} />
     <group position={[-2.6, 0.018, -6]} onClick={e => { e.stopPropagation(); if (!paused && player.current.distanceTo(guide.current) < 3.2) onAction("guide"); }}>
-      <ApplicantCharacter guide motion={guideMotion} frozen={paused} />
-      <Html position={[0, 2.2, 0]} center distanceFactor={13} zIndexRange={[3, 0]}><span className="village-sign">Jayden · Your guide</span></Html>
+      <Character look={JAYDEN} motion={guideMotion} />
+      <Html position={[0, 1.8, 0]} center distanceFactor={13} zIndexRange={[3, 0]}><span className="village-sign">Jayden · Your guide</span></Html>
     </group>
-    <PlayerAvatar avatarMode="applicant" spawnPosition={spawn} playerName="You" showNameplate={false} onMove={move} frozen={paused || fishing || arrival} desktopClickToMove
+    <PlayerAvatar spawnPosition={spawn} playerName="You" showNameplate={false} onMove={move} frozen={paused || fishing || arrival} desktopClickToMove
       groundHeight={island.ground} groundSurface={island.surface} constrainMove={island.move} />
     <DirectionArrow player={player} target={[0, 6.3]} paused={paused || fishing || arrival || !guideToHQ} />
   </>;
@@ -304,7 +304,7 @@ function Interior({ guideToBoard, paused, onNear, onSelectRole, postings, phase,
   useEffect(() => { camera.position.set(0, 8.4, -11.4); onNear("exit"); }, [camera, onNear]);
   const station = useCallback((s: InteriorStation | null) => onNear(s?.id === "board" ? "board" : s?.id === "clock" ? "clock" : s?.id === "exit" ? "exit" : null), [onNear]);
   return <>
-    <HQInterior avatarMode="applicant" clubhouse phase={phase} floorTexture={floor} frozen={paused} playerPosRef={player} onNearestStation={station} stations={STATIONS} constrainMove={constrainClubhouse} />
+    <HQInterior clubhouse phase={phase} floorTexture={floor} frozen={paused} playerPosRef={player} onNearestStation={station} stations={STATIONS} constrainMove={constrainClubhouse} />
     <DirectionArrow player={player} target={HQ_BOARD_APPROACH} paused={paused || !guideToBoard} />
     <BotanicalFrames />
     {nearClock && !paused && <Html position={[HQ_CLOCK[0], 3.6, HQ_CLOCK[2] - 0.3]} center zIndexRange={[8, 0]} style={{ pointerEvents: "none" }}><ApplicationCountdown positions={countdownPositions} /></Html>}

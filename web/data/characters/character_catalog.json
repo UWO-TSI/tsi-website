@@ -1,0 +1,1523 @@
+{
+ "outfits": [
+  {
+   "id": "top_tee",
+   "slot": "top",
+   "name": "Base tee",
+   "glb": "outfits/top/top_tee.glb",
+   "tris": 152,
+   "materials": [
+    {
+     "name": "M_Main",
+     "tint": "outfit",
+     "default": 0
+    },
+    {
+     "name": "M_Decal",
+     "decal": true,
+     "default": null
+    }
+   ],
+   "decalSlot": {
+    "material": "M_Decal",
+    "uv": [
+     0,
+     0,
+     1,
+     1
+    ],
+    "alphaMode": "MASK"
+   },
+   "hidesBackHair": false,
+   "hides": []
+  },
+  {
+   "id": "top_hoodie",
+   "slot": "top",
+   "name": "Hoodie",
+   "glb": "outfits/top/top_hoodie.glb",
+   "tris": 279,
+   "materials": [
+    {
+     "name": "M_Main",
+     "tint": "outfit",
+     "default": 11
+    },
+    {
+     "name": "M_Accent",
+     "tint": "outfit",
+     "default": 1
+    },
+    {
+     "name": "M_Decal",
+     "decal": true,
+     "default": null
+    }
+   ],
+   "decalSlot": {
+    "material": "M_Decal",
+    "uv": [
+     0,
+     0,
+     1,
+     1
+    ],
+    "alphaMode": "MASK"
+   },
+   "hidesBackHair": false,
+   "hides": []
+  },
+  {
+   "id": "top_cardigan",
+   "slot": "top",
+   "name": "Cardigan",
+   "glb": "outfits/top/top_cardigan.glb",
+   "tris": 262,
+   "materials": [
+    {
+     "name": "M_Main",
+     "tint": "outfit",
+     "default": 7
+    },
+    {
+     "name": "M_Accent",
+     "tint": "outfit",
+     "default": 0
+    },
+    {
+     "name": "M_Trim",
+     "tint": "outfit",
+     "default": 0
+    },
+    {
+     "name": "M_Decal",
+     "decal": true,
+     "default": null
+    }
+   ],
+   "decalSlot": {
+    "material": "M_Decal",
+    "uv": [
+     0,
+     0,
+     1,
+     1
+    ],
+    "alphaMode": "MASK"
+   },
+   "hidesBackHair": false,
+   "hides": []
+  },
+  {
+   "id": "top_stripe_ls",
+   "slot": "top",
+   "name": "Striped long-sleeve",
+   "glb": "outfits/top/top_stripe_ls.glb",
+   "tris": 256,
+   "materials": [
+    {
+     "name": "M_Main",
+     "tint": "outfit",
+     "default": 1
+    },
+    {
+     "name": "M_Stripe",
+     "tint": "outfit",
+     "default": 12
+    },
+    {
+     "name": "M_Decal",
+     "decal": true,
+     "default": null
+    }
+   ],
+   "decalSlot": {
+    "material": "M_Decal",
+    "uv": [
+     0,
+     0,
+     1,
+     1
+    ],
+    "alphaMode": "MASK"
+   },
+   "hidesBackHair": false,
+   "hides": []
+  },
+  {
+   "id": "top_collar_shirt",
+   "slot": "top",
+   "name": "Collared shirt",
+   "glb": "outfits/top/top_collar_shirt.glb",
+   "tris": 176,
+   "materials": [
+    {
+     "name": "M_Main",
+     "tint": "outfit",
+     "default": 10
+    },
+    {
+     "name": "M_Accent",
+     "tint": "outfit",
+     "default": 1
+    },
+    {
+     "name": "M_Decal",
+     "decal": true,
+     "default": null
+    }
+   ],
+   "decalSlot": {
+    "material": "M_Decal",
+    "uv": [
+     0,
+     0,
+     1,
+     1
+    ],
+    "alphaMode": "MASK"
+   },
+   "hidesBackHair": false,
+   "hides": []
+  },
+  {
+   "id": "top_sweater_vest",
+   "slot": "top",
+   "name": "Sweater vest over tee",
+   "glb": "outfits/top/top_sweater_vest.glb",
+   "tris": 188,
+   "materials": [
+    {
+     "name": "M_Main",
+     "tint": "outfit",
+     "default": 3
+    },
+    {
+     "name": "M_Accent",
+     "tint": "outfit",
+     "default": 1
+    },
+    {
+     "name": "M_Decal",
+     "decal": true,
+     "default": null
+    }
+   ],
+   "decalSlot": {
+    "material": "M_Decal",
+    "uv": [
+     0,
+     0,
+     1,
+     1
+    ],
+    "alphaMode": "MASK"
+   },
+   "hidesBackHair": false,
+   "hides": []
+  },
+  {
+   "id": "top_tsi_crew",
+   "slot": "top",
+   "name": "TSI crewneck",
+   "glb": "outfits/top/top_tsi_crew.glb",
+   "tris": 256,
+   "materials": [
+    {
+     "name": "M_Main",
+     "tint": "outfit",
+     "default": 2
+    },
+    {
+     "name": "M_Accent",
+     "tint": "outfit",
+     "default": 3
+    },
+    {
+     "name": "M_Decal",
+     "decal": true,
+     "default": "outfits/decal_tsi_mark.png"
+    }
+   ],
+   "decalSlot": {
+    "material": "M_Decal",
+    "uv": [
+     0,
+     0,
+     1,
+     1
+    ],
+    "alphaMode": "MASK"
+   },
+   "hidesBackHair": false,
+   "hides": []
+  },
+  {
+   "id": "top_raincoat",
+   "slot": "top",
+   "name": "Raincoat",
+   "glb": "outfits/top/top_raincoat.glb",
+   "tris": 218,
+   "materials": [
+    {
+     "name": "M_Main",
+     "tint": "outfit",
+     "default": 6
+    },
+    {
+     "name": "M_Trim",
+     "tint": "outfit",
+     "default": 14
+    },
+    {
+     "name": "M_Decal",
+     "decal": true,
+     "default": null
+    }
+   ],
+   "decalSlot": {
+    "material": "M_Decal",
+    "uv": [
+     0,
+     0,
+     1,
+     1
+    ],
+    "alphaMode": "MASK"
+   },
+   "hidesBackHair": false,
+   "hides": []
+  },
+  {
+   "id": "bottom_shorts",
+   "slot": "bottom",
+   "name": "Base shorts",
+   "glb": "outfits/bottom/bottom_shorts.glb",
+   "tris": 114,
+   "materials": [
+    {
+     "name": "M_Main",
+     "tint": "outfit",
+     "default": 4
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": []
+  },
+  {
+   "id": "bottom_trousers",
+   "slot": "bottom",
+   "name": "Long trousers",
+   "glb": "outfits/bottom/bottom_trousers.glb",
+   "tris": 178,
+   "materials": [
+    {
+     "name": "M_Main",
+     "tint": "outfit",
+     "default": 12
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": []
+  },
+  {
+   "id": "bottom_pleated_skirt",
+   "slot": "bottom",
+   "name": "Pleated skirt",
+   "glb": "outfits/bottom/bottom_pleated_skirt.glb",
+   "tris": 120,
+   "materials": [
+    {
+     "name": "M_Main",
+     "tint": "outfit",
+     "default": 11
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": []
+  },
+  {
+   "id": "bottom_overall_shorts",
+   "slot": "bottom",
+   "name": "Overall shorts",
+   "glb": "outfits/bottom/bottom_overall_shorts.glb",
+   "tris": 162,
+   "materials": [
+    {
+     "name": "M_Main",
+     "tint": "outfit",
+     "default": 11
+    },
+    {
+     "name": "M_Accent",
+     "tint": "outfit",
+     "default": 6
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": []
+  },
+  {
+   "id": "bottom_joggers",
+   "slot": "bottom",
+   "name": "Jogger pants",
+   "glb": "outfits/bottom/bottom_joggers.glb",
+   "tris": 234,
+   "materials": [
+    {
+     "name": "M_Main",
+     "tint": "outfit",
+     "default": 14
+    },
+    {
+     "name": "M_Accent",
+     "tint": "outfit",
+     "default": 14
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": []
+  },
+  {
+   "id": "bottom_long_skirt",
+   "slot": "bottom",
+   "name": "Long skirt",
+   "glb": "outfits/bottom/bottom_long_skirt.glb",
+   "tris": 160,
+   "materials": [
+    {
+     "name": "M_Main",
+     "tint": "outfit",
+     "default": 15
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": []
+  },
+  {
+   "id": "onepiece_raincape",
+   "slot": "onepiece",
+   "name": "Hooded rain-cape dress (#18)",
+   "glb": "outfits/onepiece/onepiece_raincape.glb",
+   "tris": 211,
+   "materials": [
+    {
+     "name": "M_Main",
+     "tint": "outfit",
+     "default": 10
+    },
+    {
+     "name": "M_Accent",
+     "tint": "outfit",
+     "default": 8
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [
+    "top",
+    "bottom"
+   ]
+  },
+  {
+   "id": "onepiece_raincape_hood",
+   "slot": "onepiece",
+   "name": "Hooded rain-cape dress, hood up (#18)",
+   "glb": "outfits/onepiece/onepiece_raincape_hood.glb",
+   "tris": 282,
+   "materials": [
+    {
+     "name": "M_Main",
+     "tint": "outfit",
+     "default": 10
+    },
+    {
+     "name": "M_Accent",
+     "tint": "outfit",
+     "default": 8
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": true,
+   "hides": [
+    "top",
+    "bottom"
+   ],
+   "variantOf": "onepiece_raincape"
+  },
+  {
+   "id": "onepiece_sundress",
+   "slot": "onepiece",
+   "name": "Sundress",
+   "glb": "outfits/onepiece/onepiece_sundress.glb",
+   "tris": 208,
+   "materials": [
+    {
+     "name": "M_Main",
+     "tint": "outfit",
+     "default": 9
+    },
+    {
+     "name": "M_Accent",
+     "tint": "outfit",
+     "default": 1
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [
+    "top",
+    "bottom"
+   ]
+  },
+  {
+   "id": "onepiece_robe",
+   "slot": "onepiece",
+   "name": "Robe",
+   "glb": "outfits/onepiece/onepiece_robe.glb",
+   "tris": 260,
+   "materials": [
+    {
+     "name": "M_Main",
+     "tint": "outfit",
+     "default": 12
+    },
+    {
+     "name": "M_Accent",
+     "tint": "outfit",
+     "default": 0
+    },
+    {
+     "name": "M_Trim",
+     "tint": "outfit",
+     "default": 6
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [
+    "top",
+    "bottom"
+   ]
+  },
+  {
+   "id": "onepiece_jumpsuit",
+   "slot": "onepiece",
+   "name": "Jumpsuit",
+   "glb": "outfits/onepiece/onepiece_jumpsuit.glb",
+   "tris": 274,
+   "materials": [
+    {
+     "name": "M_Main",
+     "tint": "outfit",
+     "default": 3
+    },
+    {
+     "name": "M_Accent",
+     "tint": "outfit",
+     "default": 5
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [
+    "top",
+    "bottom"
+   ]
+  },
+  {
+   "id": "shoes_slipon",
+   "slot": "shoes",
+   "name": "Yellow slip-ons (#18)",
+   "glb": "outfits/shoes/shoes_slipon.glb",
+   "tris": 216,
+   "materials": [
+    {
+     "name": "M_Main",
+     "tint": "outfit",
+     "default": 6
+    },
+    {
+     "name": "M_Sole",
+     "tint": null,
+     "color": "#C9A63A"
+    },
+    {
+     "name": "M_Sock",
+     "tint": "outfit",
+     "default": 1
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": []
+  },
+  {
+   "id": "shoes_sneakers",
+   "slot": "shoes",
+   "name": "Sneakers",
+   "glb": "outfits/shoes/shoes_sneakers.glb",
+   "tris": 156,
+   "materials": [
+    {
+     "name": "M_Main",
+     "tint": "outfit",
+     "default": 11
+    },
+    {
+     "name": "M_Sole",
+     "tint": "outfit",
+     "default": 1
+    },
+    {
+     "name": "M_Accent",
+     "tint": "outfit",
+     "default": 1
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": []
+  },
+  {
+   "id": "shoes_boots",
+   "slot": "shoes",
+   "name": "Boots",
+   "glb": "outfits/shoes/shoes_boots.glb",
+   "tris": 248,
+   "materials": [
+    {
+     "name": "M_Main",
+     "tint": "outfit",
+     "default": 5
+    },
+    {
+     "name": "M_Sole",
+     "tint": "outfit",
+     "default": 14
+    },
+    {
+     "name": "M_Accent",
+     "tint": "outfit",
+     "default": 4
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": []
+  },
+  {
+   "id": "shoes_sandals",
+   "slot": "shoes",
+   "name": "Sandals",
+   "glb": "outfits/shoes/shoes_sandals.glb",
+   "tris": 152,
+   "materials": [
+    {
+     "name": "M_Main",
+     "tint": "outfit",
+     "default": 4
+    },
+    {
+     "name": "M_Sole",
+     "tint": "outfit",
+     "default": 5
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": []
+  },
+  {
+   "id": "shoes_loafers",
+   "slot": "shoes",
+   "name": "Loafers",
+   "glb": "outfits/shoes/shoes_loafers.glb",
+   "tris": 172,
+   "materials": [
+    {
+     "name": "M_Main",
+     "tint": "outfit",
+     "default": 5
+    },
+    {
+     "name": "M_Sole",
+     "tint": "outfit",
+     "default": 14
+    },
+    {
+     "name": "M_Accent",
+     "tint": "outfit",
+     "default": 4
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": []
+  },
+  {
+   "id": "shoes_rainboots",
+   "slot": "shoes",
+   "name": "Rain boots",
+   "glb": "outfits/shoes/shoes_rainboots.glb",
+   "tris": 248,
+   "materials": [
+    {
+     "name": "M_Main",
+     "tint": "outfit",
+     "default": 7
+    },
+    {
+     "name": "M_Sole",
+     "tint": "outfit",
+     "default": 14
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": []
+  }
+ ],
+ "accessories": [
+  {
+   "id": "acc_glasses_round",
+   "slot": "accessory",
+   "name": "Round glasses",
+   "glb": "accessories/accessory/acc_glasses_round.glb",
+   "tris": 208,
+   "materials": [
+    {
+     "name": "M_Main",
+     "tint": "outfit",
+     "default": 14
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "group": "face"
+  },
+  {
+   "id": "acc_glasses_square",
+   "slot": "accessory",
+   "name": "Square glasses",
+   "glb": "accessories/accessory/acc_glasses_square.glb",
+   "tris": 176,
+   "materials": [
+    {
+     "name": "M_Main",
+     "tint": "outfit",
+     "default": 5
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "group": "face"
+  },
+  {
+   "id": "acc_beanie",
+   "slot": "accessory",
+   "name": "Beanie",
+   "glb": "accessories/accessory/acc_beanie.glb",
+   "tris": 196,
+   "materials": [
+    {
+     "name": "M_Main",
+     "tint": "outfit",
+     "default": 7
+    },
+    {
+     "name": "M_Accent",
+     "tint": "outfit",
+     "default": 0
+    },
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": true,
+   "hides": [],
+   "group": "head"
+  },
+  {
+   "id": "acc_sunhat",
+   "slot": "accessory",
+   "name": "Sun hat",
+   "glb": "accessories/accessory/acc_sunhat.glb",
+   "tris": 208,
+   "materials": [
+    {
+     "name": "M_Main",
+     "tint": "outfit",
+     "default": 0
+    },
+    {
+     "name": "M_Accent",
+     "tint": "outfit",
+     "default": 8
+    },
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": true,
+   "hides": [],
+   "group": "head"
+  },
+  {
+   "id": "acc_cap",
+   "slot": "accessory",
+   "name": "Cap",
+   "glb": "accessories/accessory/acc_cap.glb",
+   "tris": 172,
+   "materials": [
+    {
+     "name": "M_Main",
+     "tint": "outfit",
+     "default": 11
+    },
+    {
+     "name": "M_Accent",
+     "tint": "outfit",
+     "default": 1
+    },
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": true,
+   "hides": [],
+   "group": "head"
+  },
+  {
+   "id": "acc_backpack",
+   "slot": "accessory",
+   "name": "Backpack",
+   "glb": "accessories/accessory/acc_backpack.glb",
+   "tris": 148,
+   "materials": [
+    {
+     "name": "M_Main",
+     "tint": "outfit",
+     "default": 15
+    },
+    {
+     "name": "M_Accent",
+     "tint": "outfit",
+     "default": 5
+    },
+    {
+     "name": "M_Trim",
+     "tint": "outfit",
+     "default": 5
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "group": "bag"
+  },
+  {
+   "id": "acc_shoulder_bag",
+   "slot": "accessory",
+   "name": "Shoulder bag",
+   "glb": "accessories/accessory/acc_shoulder_bag.glb",
+   "tris": 86,
+   "materials": [
+    {
+     "name": "M_Main",
+     "tint": "outfit",
+     "default": 4
+    },
+    {
+     "name": "M_Accent",
+     "tint": "outfit",
+     "default": 5
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "group": "bag"
+  },
+  {
+   "id": "acc_scarf",
+   "slot": "accessory",
+   "name": "Scarf",
+   "glb": "accessories/accessory/acc_scarf.glb",
+   "tris": 180,
+   "materials": [
+    {
+     "name": "M_Main",
+     "tint": "outfit",
+     "default": 9
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "group": "neck"
+  }
+ ],
+ "base": {
+  "glb": "base/v6.glb",
+  "clips_glb": "base/v6_clips.glb",
+  "fps": 30,
+  "note": "v6_clips.glb = the v6 base body (tee + shorts + default hair) with every clip. Sit/Study sit on a seat at seatHeight; Sleep/Defeat lie on the back with the head toward the character's back (+Y Blender, -Z glTF). hand = the socket that holds the weapon."
+ },
+ "clips": [
+  {
+   "name": "Idle",
+   "length": 2.0,
+   "loop": true,
+   "frames": 60,
+   "source": "v6"
+  },
+  {
+   "name": "Walk",
+   "length": 1.0,
+   "loop": true,
+   "frames": 30,
+   "source": "v6"
+  },
+  {
+   "name": "Run",
+   "length": 0.6,
+   "loop": true,
+   "frames": 18
+  },
+  {
+   "name": "Sit",
+   "length": 2.0,
+   "loop": true,
+   "frames": 60,
+   "seatHeight": 0.12
+  },
+  {
+   "name": "Study",
+   "length": 2.0,
+   "loop": true,
+   "frames": 60,
+   "seatHeight": 0.12,
+   "deskHeight": 0.28
+  },
+  {
+   "name": "Sleep",
+   "length": 3.0,
+   "loop": true,
+   "frames": 90
+  },
+  {
+   "name": "Fish",
+   "length": 1.4,
+   "loop": false,
+   "frames": 42,
+   "endsNeutral": false,
+   "endsOn": "FishHold"
+  },
+  {
+   "name": "FishHold",
+   "length": 2.0,
+   "loop": true,
+   "frames": 60
+  },
+  {
+   "name": "Forage",
+   "length": 1.3,
+   "loop": false,
+   "frames": 39,
+   "endsNeutral": true
+  },
+  {
+   "name": "Dig",
+   "length": 1.3,
+   "loop": false,
+   "frames": 39,
+   "endsNeutral": true
+  },
+  {
+   "name": "Net",
+   "length": 1.1,
+   "loop": false,
+   "frames": 33,
+   "endsNeutral": true
+  },
+  {
+   "name": "Wave",
+   "length": 1.6,
+   "loop": false,
+   "frames": 48,
+   "endsNeutral": true
+  },
+  {
+   "name": "Cheer",
+   "length": 1.3,
+   "loop": false,
+   "frames": 39,
+   "endsNeutral": true
+  },
+  {
+   "name": "Laugh",
+   "length": 1.6,
+   "loop": false,
+   "frames": 48,
+   "endsNeutral": true
+  },
+  {
+   "name": "Sad",
+   "length": 2.0,
+   "loop": false,
+   "frames": 60,
+   "endsNeutral": true
+  },
+  {
+   "name": "Dance",
+   "length": 2.0,
+   "loop": true,
+   "frames": 60
+  },
+  {
+   "name": "AttackMelee",
+   "length": 0.7,
+   "loop": false,
+   "frames": 21,
+   "endsNeutral": true,
+   "hand": "R"
+  },
+  {
+   "name": "AttackBow",
+   "length": 1.0,
+   "loop": false,
+   "frames": 30,
+   "endsNeutral": true,
+   "hand": "L"
+  },
+  {
+   "name": "AttackCast",
+   "length": 0.9,
+   "loop": false,
+   "frames": 27,
+   "endsNeutral": true,
+   "hand": "R"
+  },
+  {
+   "name": "DodgeRoll",
+   "length": 0.7,
+   "loop": false,
+   "frames": 21,
+   "endsNeutral": true
+  },
+  {
+   "name": "Hit",
+   "length": 0.5,
+   "loop": false,
+   "frames": 15,
+   "endsNeutral": true
+  },
+  {
+   "name": "Defeat",
+   "length": 1.6,
+   "loop": false,
+   "frames": 48,
+   "endsNeutral": false
+  },
+  {
+   "name": "Trace",
+   "length": 2.0,
+   "loop": true,
+   "frames": 60,
+   "hand": "L"
+  }
+ ],
+ "hair": [
+  {
+   "id": "bangs_straight",
+   "slot": "bangs",
+   "name": "Straight cut",
+   "glb": "hair/bangs/bangs_straight.glb",
+   "tris": 45,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "sheetCell": "N4.2"
+  },
+  {
+   "id": "bangs_straight_long",
+   "slot": "bangs",
+   "name": "Straight cut, long",
+   "glb": "hair/bangs/bangs_straight_long.glb",
+   "tris": 45,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "sheetCell": "N3.3"
+  },
+  {
+   "id": "bangs_bowl",
+   "slot": "bangs",
+   "name": "Rounded bowl",
+   "glb": "hair/bangs/bangs_bowl.glb",
+   "tris": 36,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "sheetCell": "N4.1"
+  },
+  {
+   "id": "bangs_wispy",
+   "slot": "bangs",
+   "name": "See-through wispy",
+   "glb": "hair/bangs/bangs_wispy.glb",
+   "tris": 25,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "sheetCell": "N6.1"
+  },
+  {
+   "id": "bangs_swept_l",
+   "slot": "bangs",
+   "name": "Side-swept left",
+   "glb": "hair/bangs/bangs_swept_l.glb",
+   "tris": 45,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "sheetCell": "N2.2"
+  },
+  {
+   "id": "bangs_swept_r",
+   "slot": "bangs",
+   "name": "Side-swept right",
+   "glb": "hair/bangs/bangs_swept_r.glb",
+   "tris": 45,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "sheetCell": "N6.4"
+  },
+  {
+   "id": "bangs_curtain",
+   "slot": "bangs",
+   "name": "Curtain",
+   "glb": "hair/bangs/bangs_curtain.glb",
+   "tris": 43,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "sheetCell": "N3.2"
+  },
+  {
+   "id": "bangs_curtain_long",
+   "slot": "bangs",
+   "name": "Curtain, long",
+   "glb": "hair/bangs/bangs_curtain_long.glb",
+   "tris": 43,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "sheetCell": "N6.2"
+  },
+  {
+   "id": "bangs_centre_split",
+   "slot": "bangs",
+   "name": "Centre split",
+   "glb": "hair/bangs/bangs_centre_split.glb",
+   "tris": 40,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "sheetCell": "N1.4"
+  },
+  {
+   "id": "bangs_spiky",
+   "slot": "bangs",
+   "name": "Spiky tufts",
+   "glb": "hair/bangs/bangs_spiky.glb",
+   "tris": 45,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "sheetCell": "N4.3"
+  },
+  {
+   "id": "bangs_hime",
+   "slot": "bangs",
+   "name": "Hime side-locks",
+   "glb": "hair/bangs/bangs_hime.glb",
+   "tris": 45,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "sheetCell": "N6.3"
+  },
+  {
+   "id": "bangs_choppy",
+   "slot": "bangs",
+   "name": "Short choppy",
+   "glb": "hair/bangs/bangs_choppy.glb",
+   "tris": 55,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "sheetCell": "N1.5"
+  },
+  {
+   "id": "bangs_swept_back",
+   "slot": "bangs",
+   "name": "Swept back",
+   "glb": "hair/bangs/bangs_swept_back.glb",
+   "tris": 28,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "sheetCell": "N5.4"
+  },
+  {
+   "id": "bangs_single_strand",
+   "slot": "bangs",
+   "name": "Short with one long strand",
+   "glb": "hair/bangs/bangs_single_strand.glb",
+   "tris": 40,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "sheetCell": "N5.3"
+  },
+  {
+   "id": "bangs_wavy",
+   "slot": "bangs",
+   "name": "Wavy swept",
+   "glb": "hair/bangs/bangs_wavy.glb",
+   "tris": 45,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "sheetCell": "N3.1"
+  },
+  {
+   "id": "bangs_asym_block",
+   "slot": "bangs",
+   "name": "Asymmetric block",
+   "glb": "hair/bangs/bangs_asym_block.glb",
+   "tris": 45,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "sheetCell": "N6.5"
+  },
+  {
+   "id": "back_bob",
+   "slot": "back",
+   "name": "Bob",
+   "glb": "hair/back/back_bob.glb",
+   "tris": 96,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "sheetCell": "B2.1"
+  },
+  {
+   "id": "back_wolf",
+   "slot": "back",
+   "name": "Wolf cut",
+   "glb": "hair/back/back_wolf.glb",
+   "tris": 116,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "sheetCell": "B4.4"
+  },
+  {
+   "id": "back_long",
+   "slot": "back",
+   "name": "Long straight",
+   "glb": "hair/back/back_long.glb",
+   "tris": 128,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "sheetCell": "B3.1"
+  },
+  {
+   "id": "back_wavy_long",
+   "slot": "back",
+   "name": "Wavy long",
+   "glb": "hair/back/back_wavy_long.glb",
+   "tris": 128,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "sheetCell": "B4.5"
+  },
+  {
+   "id": "back_high_pony",
+   "slot": "back",
+   "name": "High ponytail",
+   "glb": "hair/back/back_high_pony.glb",
+   "tris": 156,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "sheetCell": "B6.5"
+  },
+  {
+   "id": "back_pigtails",
+   "slot": "back",
+   "name": "Low pigtails",
+   "glb": "hair/back/back_pigtails.glb",
+   "tris": 188,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "sheetCell": "B3.2"
+  },
+  {
+   "id": "back_twin_buns",
+   "slot": "back",
+   "name": "Twin buns",
+   "glb": "hair/back/back_twin_buns.glb",
+   "tris": 220,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "sheetCell": "B2.5"
+  },
+  {
+   "id": "back_bun",
+   "slot": "back",
+   "name": "Single top bun",
+   "glb": "hair/back/back_bun.glb",
+   "tris": 156,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "sheetCell": "B1.1"
+  },
+  {
+   "id": "back_braid_crown",
+   "slot": "back",
+   "name": "Braided crown",
+   "glb": "hair/back/back_braid_crown.glb",
+   "tris": 236,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "sheetCell": "B7.2"
+  },
+  {
+   "id": "back_short_spiky",
+   "slot": "back",
+   "name": "Short spiky",
+   "glb": "hair/back/back_short_spiky.glb",
+   "tris": 116,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "sheetCell": "B3.4"
+  },
+  {
+   "id": "back_undercut",
+   "slot": "back",
+   "name": "Undercut",
+   "glb": "hair/back/back_undercut.glb",
+   "tris": 92,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "sheetCell": "B3.5"
+  },
+  {
+   "id": "back_bowl",
+   "slot": "back",
+   "name": "Bowl",
+   "glb": "hair/back/back_bowl.glb",
+   "tris": 92,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "sheetCell": "B1.5"
+  }
+ ]
+}
