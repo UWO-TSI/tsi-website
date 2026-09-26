@@ -622,6 +622,6 @@ const SEAT_CLIPS = new Set<ClipName>(["Sit", "Study", "Stretch", "Sleep"]);
 function PlayerCharacter({ look, motion, inCombat }: { look: CharacterLook; motion: React.RefObject<CharacterMotion>; inCombat: boolean }) {
   useCombatVersion();
   const p = combat.rt.player, w = WEAPONS[p.weapon];
-  const weapon = w && (inCombat ? p.alive : p.armed) ? { kind: w.kind, model: w.model, modelScale: w.modelScale, inHand: inCombat } : null;
+  const weapon = w && (inCombat ? p.alive : p.armed) ? { kind: w.kind, model: w.model, modelScale: w.modelScale, inHand: inCombat, grip: w.grip } : null;
   return <Character look={look} motion={motion} walkSpeed={PLAYER_SPEED} weapon={weapon} />;
 }

@@ -109,6 +109,8 @@ describe("telegraph helper (one for every enemy)", () => {
     expect(partPose("cap", at("mushroom-beast", "windup", 0.9), 0)!.sy).toBeGreaterThan(1.2);
     expect(partPose("body", at("shadow-fox", "recover", 0.01), 0)!.dz).toBeGreaterThan(0.08); // the lunge
     expect(partPose("glow_eyes", crab, 0)).toBeNull(); // glow parts ride their parent and only change brightness
+    const running = at("shadow-fox", "chase", 0);
+    expect(partPose("leg_fl", running, 0.1)!.rx).toBeCloseTo(-partPose("leg_fr", running, 0.1)!.rx); // a trot: pairs opposite
   });
   it("draws a marker for every attack shape while it winds up, and the beam line while it sweeps", () => {
     for (const id of Object.keys(ENEMIES)) for (const move of ENEMIES[id].attacks) {

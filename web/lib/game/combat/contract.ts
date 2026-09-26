@@ -19,7 +19,10 @@ export interface Weapon {
   speed?: number;
   durability: number; maxDurability: number;
   model: string; modelScale: number;
+  /** Socket-space Euler overrides for a model that doesn't follow its kind's grip (the revolver's barrel is +Z). */
+  grip?: WeaponGrip;
 }
+export interface WeaponGrip { hand: [number, number, number]; back: [number, number, number]; rest?: [number, number, number] }
 
 export type EnemyKind = "wildlife" | "construct" | "boss";
 /** smash: a slam on a ring marker where you stood; beam: a sweep over `arc` during `active`; summon: calls rune wisps. */

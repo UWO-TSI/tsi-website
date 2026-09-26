@@ -34,11 +34,11 @@ const impact = (e: Pick<Enemy, "state">, r: number) => (e.state === "recover" ? 
  */
 export function partPose(role: string, e: Pick<Enemy, "state" | "t" | "move">, time: number, seed = 0): PartPose | null {
   const shape: AttackShape = e.move.shape, { k, r } = progress(e), hit = impact(e, r);
-  const side = /_l$/.test(role) ? 1 : /_r$/.test(role) ? -1 : 0;
+  const side = /_[fb]?l$/.test(role) ? 1 : /_[fb]?r$/.test(role) ? -1 : 0; // arm_l, leg_fl, leg_br…
   const moving = e.state === "chase" || e.state === "return";
   const p: PartPose = { rx: 0, ry: 0, rz: 0, dy: 0, dz: 0, sy: 1 };
   const w = ease(k);
-  switch (role.replace(/_[lr]$/, "")) {
+  switch (role.replace(/_[fb]?[lr]$/, "")) {
     case "body":
       if (moving) p.dy = Math.abs(Math.sin(time * 12 + seed)) * 0.02;
       else if (e.state === "idle") p.dy = Math.sin(time * 2 + seed) * 0.006;

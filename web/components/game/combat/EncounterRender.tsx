@@ -100,6 +100,9 @@ export function EnemyInstances({ typeId, capacity, ground }: { typeId: string; c
   return <>{parts.map((p, i) => <instancedMesh key={i} ref={el => { refs.current[i] = el; }} args={[p.geometry, p.material, capacity]} />)}</>;
 }
 
+/** Outline and fill colours: red for danger, violet for the guardian's summon. */
+const TONES = { danger: [new THREE.Color("#ff4040"), new THREE.Color("#ff2a2a")], summon: [new THREE.Color("#b48cff"), new THREE.Color("#9a6bff")] };
+
 /** Ground markers from marker(): sectors, circles, the smash's ring and the beam line, filling as the windup completes. */
 export function Telegraphs({ ground, max = 24 }: { ground: Ground; max?: number }) {
   const refs = useRef<(THREE.Mesh | null)[]>([]);
@@ -124,7 +127,7 @@ export function Telegraphs({ ground, max = 24 }: { ground: Ground; max?: number 
         m.position.set(mk.x, ground(mk.x, mk.z) + 0.05, mk.z);
         m.rotation.y = mk.rot + Math.PI;
         m.visible = true;
-        (m.material as THREE.MeshBasicMaterial).color.set(mk.tone === "summon" ? (m === fill ? "#9a6bff" : "#b48cff") : m === fill ? "#ff2a2a" : "#ff4040");
+        (m.material as THREE.MeshBasicMaterial).color.copy(TONES[mk.tone][m === fill ? 1 : 0]);
       }
       outline.scale.setScalar(mk.r);
       fill.scale.setScalar(mk.r * mk.fill);

@@ -12,7 +12,7 @@ const W = "/assets/game/weapons/", E = "/assets/game/enemies/";
 
 /** Ruling 2026-09-26: when the gate opens everyone gets one starter of each archetype. */
 export const WEAPON_ORDER = ["sword-driftwood", "bow-willow", "staff-oak", "tome-spirits"] as const;
-type Look = Pick<Weapon, "cooldown" | "range" | "arc" | "speed" | "model" | "modelScale">;
+type Look = Pick<Weapon, "cooldown" | "range" | "arc" | "speed" | "model" | "modelScale" | "grip">;
 const WEAPON_LOOK: Record<string, Look> = {
   "sword-driftwood": { cooldown: 0.42, range: 1.7, arc: 1.9, model: `${W}sword-driftwood.glb`, modelScale: 1.3 },
   "bow-willow": { cooldown: 0.6, range: 11, arc: 0, speed: 18, model: `${W}bow-willow.glb`, modelScale: 1.3 },
@@ -21,7 +21,10 @@ const WEAPON_LOOK: Record<string, Look> = {
   // Crafted (lib/crafting/recipes.ts): damage comes from the tier in the weapons table; these are the feel.
   "sword-iron": { cooldown: 0.45, range: 1.9, arc: 2.0, model: `${W}sword-iron.glb`, modelScale: 1.3 },
   "bow-yew": { cooldown: 0.7, range: 14, arc: 0, speed: 22, model: `${W}bow-yew.glb`, modelScale: 1.3 },
-  "revolver-brass": { cooldown: 0.34, range: 10, arc: 0, speed: 30, model: `${W}revolver-brass.glb`, modelScale: 1.3 },
+  // Barrel along +Z, so its own grips (left-hand socket, solved from the v6 AttackBow and Idle frames):
+  // level and forward when firing, pointed at the ground ahead at rest, barrel down on the back.
+  "revolver-brass": { cooldown: 0.34, range: 10, arc: 0, speed: 30, model: `${W}revolver-brass.glb`, modelScale: 1.3,
+    grip: { hand: [0.81, 1.41, -0.92], rest: [0.53, 0.92, 0.85], back: [Math.PI / 2, 0, 0] } },
   "staff-rune": { cooldown: 0.7, range: 9, arc: 0, speed: 13, model: `${W}staff-rune.glb`, modelScale: 1.3 },
   // Guardian statue drops (row 21). ponytail: they reuse the crafted models, larger, until the Epic/Legendary set is modelled.
   "sword-guardian": { cooldown: 0.45, range: 2.1, arc: 2.1, model: `${W}sword-iron.glb`, modelScale: 1.5 },
