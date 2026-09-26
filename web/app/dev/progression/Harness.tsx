@@ -16,8 +16,8 @@ import { DEFAULT_CHAPTERS, DEFAULT_GOALS } from "@/lib/progression/defaults";
 import { memoryStore } from "@/lib/progression/memoryStore";
 import { advanceChapter, contribute, loadState, sendNote, syncRealActivity } from "@/lib/progression/service";
 import { setProgressionState } from "@/lib/progression/useProgression";
-
-const ME = "00000000-0000-4000-8000-000000000001";
+import { routeDemoFetch } from "@/lib/game/demoFetch";
+import { DEMO_MEMBER as ME, progressionRoutes } from "@/lib/game/progressionDemo";
 const FRIENDS = ["Maya Chen", "Jordan Park", "Priya Shah", "Leo Martin"].map((name, i) => ({ id: `00000000-0000-4000-8000-00000000010${i}`, display_name: name }));
 
 async function demo(): Promise<LettersTransport> {
@@ -36,18 +36,7 @@ async function demo(): Promise<LettersTransport> {
   const state = await loadState(m.store, ME, now);
   if (state.ok) setProgressionState(state.data);
   // Route the sheets' own /api/progression calls to the same in-memory service.
-  const realFetch = window.fetch.bind(window);
-  const json = (r: { ok: boolean; status?: number; error?: string; data?: unknown }, key: string) =>
-    new Response(JSON.stringify(r.ok ? { ok: true, [key]: r.data } : { ok: false, error: r.error }), { status: r.ok ? 200 : (r.status ?? 500) });
-  window.fetch = async (input, init) => {
-    const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
-    const path = new URL(url, window.location.origin).pathname;
-    const body = init?.body ? JSON.parse(String(init.body)) : {};
-    if (path === "/api/progression/state") return json(await loadState(m.store, ME, new Date()), "state");
-    if (path === "/api/progression/contribute") return json(await contribute(m.store, ME, { ...body, item_key: body.item_key ?? null, idempotency_key: `delivery:${body.idempotency_key}` }, new Date()), "contribution");
-    if (path === "/api/progression/chapters/advance") return json(await advanceChapter(m.store, ME, body, new Date()), "state");
-    return realFetch(input, init);
-  };
+  routeDemoFetch("/api/progression", progressionRoutes(m, ME));
   try {
     localStorage.setItem("tsi.coins.local.v1", "2050");
     localStorage.setItem("tsi.collections.local.v1", JSON.stringify({ fish_dace: 3, fish_pale_chub: 1, flower_tulip: 6, apple: 4 }));
