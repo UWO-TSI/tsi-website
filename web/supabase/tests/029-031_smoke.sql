@@ -66,7 +66,7 @@ END $$;
 DO $$
 DECLARE r record; A uuid := '00000000-0000-4000-8000-0000000000aa'; B uuid := '00000000-0000-4000-8000-0000000000bb';
 BEGIN
-  ASSERT (SELECT count(*) FROM collection_species) = 100, '031 roster seeded';
+  ASSERT (SELECT count(*) FROM collection_species) >= 100, '031 roster seeded'; -- + crafting materials (20260926160000)
   ASSERT (SELECT count(*) FROM collection_species WHERE category = 'fish') = 40, '031 40 fish';
   SELECT * INTO r FROM collections_record_catch(A, 'fish_dace', 12.5, true);
   ASSERT r.count = 1 AND r.new_record AND r.best_size_cm = 12.5, '031 first catch';
