@@ -69,6 +69,16 @@ export const ISLAND_PROPS = [
   { model: "rock-a", x: -12.5, z: 3.5, scale: 0.7, yaw: 1, halfWidth: 0.48, halfDepth: 0.45 },
 ] as const;
 
+/** Bench-wood seat top: its slats measure 0.48–0.51 above the ground. */
+export const BENCH_SEAT_TOP = 0.5;
+/** The village bench within reach, as a `tsi:sit` spot: its middle, facing the side you stand on. */
+export function benchSeat(x: number, z: number, range = 1.3): { x: number; z: number; yaw: number } | null {
+  const b = ISLAND_PROPS.find(p => p.model === "bench-wood" && Math.hypot(p.x - x, p.z - z) < range);
+  if (!b) return null;
+  const front = (x - b.x) * Math.sin(b.yaw) + (z - b.z) * Math.cos(b.yaw) >= 0;
+  return { x: b.x, z: b.z, yaw: b.yaw + (front ? 0 : Math.PI) };
+}
+
 const inRect = (x: number, z: number, x0: number, x1: number, z0: number, z1: number) => x >= x0 && x <= x1 && z >= z0 && z <= z1;
 
 export function createDefaultIsland() {
@@ -112,10 +122,13 @@ export function createDefaultIsland() {
     if (studySolid("village", x, z)) return false;
     return !ISLAND_TREES.some(([tx, tz]) => Math.hypot(tx - x, tz - z) < 0.65);
   };
-  const fits = (x: number, z: number) =>
-    [[0, 0], [-0.2, 0], [0.2, 0], [0, -0.2], [0, 0.2]].every(([dx, dz]) => standable(x + dx, z + dz));
+  /** How much of the body (5 probe points) stands on free ground; 5 = fits. */
+  const clearance = (x: number, z: number) =>
+    [[0, 0], [-0.2, 0], [0.2, 0], [0, -0.2], [0, 0.2]].filter(([dx, dz]) => standable(x + dx, z + dz)).length;
   const canStep = (x: number, z: number, nx: number, nz: number) => {
-    if (!fits(nx, nz)) return false;
+    // Never lose clearance: out in the open every step must fit; sitting on a bench leaves you inside
+    // its footprint, and from there any step that frees as much or more of you walks you off it.
+    if (clearance(nx, nz) < clearance(x, z)) return false;
     return Math.abs(levelAt(map, worldToCellX(map, nx), worldToCellZ(map, nz)) -
       levelAt(map, worldToCellX(map, x), worldToCellZ(map, z))) < CLIFF_LEVELS;
   };

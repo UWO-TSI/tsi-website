@@ -25,9 +25,23 @@ const WALL_H = 3.2;
 const I = "/assets/acnh/interior/";
 [...WALLPAPERS.map(w => `${I}wall-${w}.png`), ...FLOORINGS.map(f => `${I}floor-${f}.png`)].forEach(url => useTexture.preload(url));
 
-export type HouseNear = "exit" | "buy" | "closet" | null;
+export type HouseNear = "exit" | "buy" | "closet" | "bed" | null;
 /** World x of room i's screen-left edge (rooms centred on x = 0). */
 export const roomLeft = (i: number, n: number) => (RW * n) / 2 - RW * i;
+/** World x/z of a placed floor item's centre in room i of n. */
+function itemCentre(i: number, n: number, item: PlacedItem): [number, number] {
+  const cells = cellsOf(item), cx = cells.reduce((a, c) => a + c[0], 0) / cells.length, cz = cells.reduce((a, c) => a + c[1], 0) / cells.length;
+  return [roomLeft(i, n) - cx - 0.5, -RD / 2 + cz + 0.5];
+}
+/** home-bed's comforter top at scale 0.1, measured from the GLB. */
+const BED_TOP = 0.58;
+/** `tsi:sit` Sleep spots: each bed's middle, head toward its pillow end (model −x, turned with the bed). */
+const beds = (layout: HomeLayoutDoc) => layout.rooms.flatMap((room, i) => room.items.filter(item => item.piece === "home-bed").map(item => {
+  const [x, z] = itemCentre(i, layout.rooms.length, item);
+  return { x, z, clip: "Sleep" as const, seatY: BED_TOP, yaw: Math.PI + item.rot * Math.PI / 2 };
+}));
+export const nearestBed = (layout: HomeLayoutDoc, x: number, z: number) =>
+  beds(layout).sort((a, b) => Math.hypot(a.x - x, a.z - z) - Math.hypot(b.x - x, b.z - z))[0] ?? null;
 /** Which room a world x falls in. */
 export function roomAt(x: number, n: number): number {
   return Math.min(n - 1, Math.max(0, Math.floor((roomLeft(0, n) - x) / RW)));
@@ -87,7 +101,8 @@ export default function HomeInterior({ layout, phase, frozen, player, onNear, de
     const free = (x: number, z: number) => !blocked.some(b => Math.abs(b.x - x) < 0.75 && Math.abs(b.z - z) < 0.75)
       && !dividers.some(d => Math.abs(x - d) < 0.4 && Math.abs(z) > 0.75);
     return (x: number, z: number, nx: number, nz: number): [number, number] => {
-      if (free(nx, nz)) return [nx, nz];
+      // Getting out of bed: from inside furniture any step is allowed.
+      if (free(nx, nz) || !free(x, z)) return [nx, nz];
       if (free(nx, z)) return [nx, z];
       if (free(x, nz)) return [x, nz];
       return [x, z];
@@ -96,10 +111,9 @@ export default function HomeInterior({ layout, phase, frozen, player, onNear, de
   const stations: InteriorStation[] = useMemo(() => [
     { id: "exit", name: "Outside", pos: [spawnX, -2.2], action: "exit", range: 1.3 },
     // Every closet is a wardrobe (decision 210): stand at it and press E.
-    ...layout.rooms.flatMap((room, i) => room.items.filter(item => item.piece === "closet").map(item => {
-      const cells = cellsOf(item), cx = cells.reduce((a, c) => a + c[0], 0) / cells.length, cz = cells.reduce((a, c) => a + c[1], 0) / cells.length;
-      return { id: "closet", name: "Closet", pos: [roomLeft(i, n) - cx - 0.5, -RD / 2 + cz + 0.5] as [number, number], action: "closet", range: 1.6 };
-    })),
+    ...layout.rooms.flatMap((room, i) => room.items.filter(item => item.piece === "closet")
+      .map(item => ({ id: "closet", name: "Closet", pos: itemCentre(i, n, item), action: "closet", range: 1.6 }))),
+    ...beds(layout).map(b => ({ id: "bed", name: "Bed", pos: [b.x, b.z] as [number, number], action: "bed", range: 1.6 })),
     ...(n < MAX_ROOMS ? [{ id: "buy", name: "Add a room", pos: [roomLeft(n - 1, n) - RW + 1.2, 0] as [number, number], action: "buy", range: 1.4 }] : []),
   ], [layout, n, spawnX]);
   const nearRef = useRef<HouseNear>(null);
