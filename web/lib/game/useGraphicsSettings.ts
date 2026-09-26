@@ -17,6 +17,9 @@ export interface GraphicsSettingsActions {
   setGhostsEnabled: (v: boolean) => void;
   setPixelated: (v: boolean) => void;
   resetToAuto: () => void;
+  detect: (values: Partial<GraphicsSettings>) => void;
+  isExplicit: (key: keyof GraphicsSettings) => boolean;
+  unset: (key: keyof GraphicsSettings) => void;
 }
 
 const actions: GraphicsSettingsActions = {
@@ -26,6 +29,9 @@ const actions: GraphicsSettingsActions = {
   setGhostsEnabled: (v) => store.set("ghostsEnabled", v),
   setPixelated: (v) => store.set("pixelated", v),
   resetToAuto: store.reset,
+  detect: store.detect,
+  isExplicit: store.isExplicit,
+  unset: store.unset,
 };
 
 export function useGraphicsSettings(): [GraphicsSettings, GraphicsSettingsActions] {

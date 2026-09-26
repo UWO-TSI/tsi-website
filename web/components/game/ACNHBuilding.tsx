@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef } from "react";
 import { useGLTF } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
-import { applyModelTextures, disposeModelMaterials, prepareModel } from "@/lib/game/modelMaterials";
+import { applyModelTextures, disposeModelMaterials, lightHQWindows, prepareModel } from "@/lib/game/modelMaterials";
 
 // ─── ACNH textured building models (2026-07 revamp) ─────────────
 // Source pack is authored at ~10 units per meter; ACNH_SCALE brings them
@@ -79,6 +79,7 @@ export function ACNHParts({
   rotationY = 0,
   castShadow = true,
   windowGlow,
+  windowColor,
 }: {
   parts: readonly string[];
   scale?: number;
@@ -86,6 +87,7 @@ export function ACNHParts({
   rotationY?: number;
   castShadow?: boolean;
   windowGlow?: number;
+  windowColor?: string;
 }) {
   const gltfs = useGLTF(parts as string[]);
   const group = useMemo(() => {
@@ -95,8 +97,9 @@ export function ACNHParts({
     g.position.y = yOffset;
     g.rotation.y = rotationY;
     matteACNH(g, castShadow);
+    if (windowColor) lightHQWindows(g, windowColor);
     return g;
-  }, [gltfs, parts, scale, yOffset, rotationY, castShadow]);
+  }, [gltfs, parts, scale, yOffset, rotationY, castShadow, windowColor]);
 
   const emitters = useRef<{ material: THREE.MeshStandardMaterial; gain: number }[]>([]);
   useEffect(() => {
@@ -105,17 +108,17 @@ export function ACNHParts({
       const mesh = object as THREE.Mesh;
       if (!mesh.isMesh) return;
       for (const material of Array.isArray(mesh.material) ? mesh.material : [mesh.material]) {
-        if (material instanceof THREE.MeshStandardMaterial && material.emissiveMap) materials.add(material);
+        if (material instanceof THREE.MeshStandardMaterial && (material.emissiveMap || windowColor && /^m(?:Window[LR]|SideWindow)$/.test(material.name))) materials.add(material);
       }
     });
     const isHQ = parts.some((part) => part.endsWith("/hq-office.glb"));
     emitters.current = [...materials].map((material) => ({
       material,
       // The HQ window lightmaps are much dimmer than its clock/lamp map.
-      gain: isHQ && /^mWindow[LR]$/.test(material.name) ? 4 : 1,
+      gain: isHQ && !windowColor && /^mWindow[LR]$/.test(material.name) ? 4 : 1,
     }));
     return () => { emitters.current = []; };
-  }, [group, parts]);
+  }, [group, parts, windowColor]);
   useFrame((_, delta) => {
     if (windowGlow === undefined) return;
     for (const { material, gain } of emitters.current) {
@@ -134,7 +137,7 @@ export function ACNHParts({
 }
 
 /** ACNH building: fixed scale, origin-grounded, original materials kept. */
-export function ACNHBuilding({ id, windowGlow }: { id: string; windowGlow?: number }) {
+export function ACNHBuilding({ id, windowGlow, windowColor }: { id: string; windowGlow?: number; windowColor?: string }) {
   const cfg = ACNH_GLB[id];
   return (
     <ACNHParts
@@ -143,6 +146,7 @@ export function ACNHBuilding({ id, windowGlow }: { id: string; windowGlow?: numb
       yOffset={cfg.yOffset ?? 0}
       rotationY={cfg.rotationY ?? 0}
       windowGlow={windowGlow}
+      windowColor={windowColor}
     />
   );
 }

@@ -9,7 +9,7 @@ import { prepareModel, disposeModelMaterials, applyModelTextures } from "@/lib/g
  * Loads, clones, and renders assets with shadows. Exported as GLBProp for
  * one-off prop placement (AmbientProps, benches, bridge).
  */
-export function GLBProp({ url, scale = 1, position, rotation, castShadow = true, emissiveIntensity }: {
+export function GLBProp({ url, scale = 1, position, rotation, castShadow = true, emissiveIntensity, hideMaterial }: {
   url: string;
   scale?: number;
   position?: [number, number, number];
@@ -21,9 +21,19 @@ export function GLBProp({ url, scale = 1, position, rotation, castShadow = true,
    */
   castShadow?: boolean;
   emissiveIntensity?: number;
+  /** Hide sub-meshes using this material name (e.g. a scaffold's tarp). */
+  hideMaterial?: string;
 }) {
   const { scene } = useGLTF(url);
   const clone = useMemo(() => prepareModel(scene, url, castShadow, emissiveIntensity), [scene, url, castShadow, emissiveIntensity]);
+  useEffect(() => {
+    clone.traverse((object) => {
+      const mesh = object as import("three").Mesh;
+      if (!mesh.isMesh) return;
+      const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+      mesh.visible = !hideMaterial || !materials.some((m) => m.name === hideMaterial);
+    });
+  }, [clone, hideMaterial]);
   useEffect(() => {
     applyModelTextures(clone, url);
     return () => disposeModelMaterials(clone);
@@ -39,8 +49,9 @@ const TREE_MODELS = [
   "/assets/acnh/plants/tree-cedar.glb",
 ];
 
-export function NatureTree({ position, seed }: { position: [number, number, number]; seed: number }) {
-  const url = TREE_MODELS[seed % TREE_MODELS.length];
+/** `models` swaps the four tree slots (oak a, oak b, blossom, cedar), e.g. for seasonal dressing. */
+export function NatureTree({ position, seed, models = TREE_MODELS }: { position: [number, number, number]; seed: number; models?: readonly string[] }) {
+  const url = models[seed % models.length];
   const s = 0.85 + (seed % 5) * 0.08;
   const r: [number, number, number] = [0, treeYaw(seed), 0];
   return (
@@ -64,8 +75,8 @@ const BUSH_MODELS = [
   "/assets/acnh/plants/bush-holly.glb",
 ];
 
-export function NatureBush({ position, seed }: { position: [number, number, number]; seed: number }) {
-  const url = BUSH_MODELS[seed % BUSH_MODELS.length];
+export function NatureBush({ position, seed, models = BUSH_MODELS }: { position: [number, number, number]; seed: number; models?: readonly string[] }) {
+  const url = models[seed % models.length];
   return (
     <Suspense fallback={null}>
       <GLBProp url={url} scale={0.9 + (seed % 3) * 0.15} position={position} rotation={[0, seed * 1.3, 0]} />
@@ -85,14 +96,14 @@ const FLOWER_MODELS = [
   "/assets/acnh/plants/flower-windflower.glb",
 ];
 
-export function NatureFlowerCluster({ position, seed }: { position: [number, number, number]; seed: number }) {
+export function NatureFlowerCluster({ position, seed, models = FLOWER_MODELS }: { position: [number, number, number]; seed: number; models?: readonly string[] }) {
   return (
     <group position={position}>
       <Suspense fallback={null}>
         {[0, 1, 2].map((j) => (
           <GLBProp
             key={j}
-            url={FLOWER_MODELS[(seed + j) % FLOWER_MODELS.length]}
+            url={models[(seed + j) % models.length]}
             scale={0.8}
             position={[(j - 1) * 0.4, 0, ((j * 7 + seed) % 3 - 1) * 0.3]}
             rotation={[0, j * 2.1, 0]}

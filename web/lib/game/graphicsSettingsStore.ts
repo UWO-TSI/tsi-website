@@ -29,6 +29,8 @@ export function createGraphicsSettingsStore({ storage, memory, events }: {
 }) {
   let snapshot: GraphicsSettings | undefined;
   const sessionOverrides: Partial<GraphicsSettings> = {};
+  // Measured on this device this session (quality probe); below stored choices.
+  let detected: Partial<GraphicsSettings> = {};
   const listeners = new Set<() => void>();
   const publish = (next: GraphicsSettings) => {
     if (snapshot && fields.every((key) => snapshot![key] === next[key])) return;
@@ -36,7 +38,7 @@ export function createGraphicsSettingsStore({ storage, memory, events }: {
     for (const listener of listeners) listener();
   };
   const refresh = () => {
-    const next = automaticGraphics(memory());
+    const next = { ...automaticGraphics(memory()), ...detected };
     for (const key of fields) {
       try {
         const value = storage().getItem(GRAPHICS_KEYS[key]);
@@ -71,6 +73,22 @@ export function createGraphicsSettingsStore({ storage, memory, events }: {
       try { storage().setItem(GRAPHICS_KEYS[key], String(value)); delete sessionOverrides[key]; }
       catch { sessionOverrides[key] = value; }
       publish(next);
+    },
+    /** Apply a measured default. Never overrides a value the player chose. */
+    detect(values: Partial<GraphicsSettings>) {
+      detected = { ...detected, ...values };
+      refresh();
+    },
+    /** Whether the player has chosen this setting (vs. automatic/detected). */
+    isExplicit(key: keyof GraphicsSettings): boolean {
+      if (key in sessionOverrides) return true;
+      try { return storage().getItem(GRAPHICS_KEYS[key]) !== null; } catch { return false; }
+    },
+    /** Forget the player's choice for one setting, returning it to automatic. */
+    unset(key: keyof GraphicsSettings) {
+      try { storage().removeItem(GRAPHICS_KEYS[key]); } catch { /* Blocked storage has nothing saved. */ }
+      delete sessionOverrides[key];
+      refresh();
     },
     reset() {
       const next = automaticGraphics(memory());

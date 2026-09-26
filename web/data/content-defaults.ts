@@ -52,6 +52,12 @@ export const DEFAULT_PALETTES: SeasonalPalette[] = [
   // Seasonal set (wake 64, specs/seasonal-palettes.md): the monthly-cadence
   // palettes per principle #8. An admin flips the season by activating the
   // matching seasonal_palettes row — these are the fallback/seed values.
+  // The member island (DefaultIslandWorld) blends all four season rows by
+  // date (lib/game/season.ts) and reads `island_grass` / `leaf`. Those were
+  // derived from ACNH's own seasonal ramps (FldUnit mGrass_Grd, PltTreeOak
+  // mPltTreeOakLeafColor_Grd): hue and saturation from the ramp's spring /
+  // late-October rows, lightness from our calibrated summer tint. Winter
+  // ground is the snow cover, not a tint. Admins retune these rows.
   {
     id: "autumn-palette-fallback",
     slug: "autumn",
@@ -64,6 +70,8 @@ export const DEFAULT_PALETTES: SeasonalPalette[] = [
       water: "#4E7FA8",
       building_primary: "#C08A52",
       building_accent: "#7A5230",
+      island_grass: "#C6B46D",
+      leaf: "#FF9A3C",
     },
     active: false,
     scheduled_start: "2026-09-15T00:00:00Z",
@@ -82,6 +90,8 @@ export const DEFAULT_PALETTES: SeasonalPalette[] = [
       water: "#3A5F80",
       building_primary: "#B9C4CE",
       building_accent: "#6E7E8A",
+      island_grass: "#C9D6CB",
+      leaf: "#E6ECEF",
     },
     active: false,
     scheduled_start: "2026-12-01T00:00:00Z",
@@ -100,10 +110,33 @@ export const DEFAULT_PALETTES: SeasonalPalette[] = [
       water: "#5A9FD4",
       building_primary: "#D9B08C",
       building_accent: "#8B6F5E",
+      island_grass: "#A9C271",
+      leaf: "#BCC97D",
     },
     active: false,
     scheduled_start: "2027-03-15T00:00:00Z",
     scheduled_end: "2027-05-15T23:59:59Z",
+    created_at: NOW,
+  },
+  {
+    // Summer is the calibrated baseline shipped with the applicant island look.
+    id: "summer-palette-fallback",
+    slug: "summer",
+    display_name: "Summer Green",
+    palette: {
+      sky: "#BFE9FA",
+      grass: "#84CB47",
+      accent: "#FFD166",
+      fog: "#CDEBF7",
+      water: "#398D9F",
+      building_primary: "#D4A574",
+      building_accent: "#8B6F4E",
+      island_grass: "#91B47F",
+      leaf: "#9BC87E",
+    },
+    active: false,
+    scheduled_start: "2027-06-21T00:00:00Z",
+    scheduled_end: "2027-09-21T23:59:59Z",
     created_at: NOW,
   },
 ];

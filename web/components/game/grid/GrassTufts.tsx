@@ -137,7 +137,8 @@ export function patchWind(
   mat.needsUpdate = true;
 }
 
-export default function GrassTufts({ map }: { map: IslandMap }) {
+/** `windScale` multiplies sway: 0 for the Light tier, >1 on windy days. */
+export default function GrassTufts({ map, windScale = 1 }: { map: IslandMap; windScale?: number }) {
   const t = useTuning();
   // Plain memo, not a ref: these objects are handed to the shader once and then
   // mutated per frame, and reading a ref during render to build the material is
@@ -222,7 +223,7 @@ export default function GrassTufts({ map }: { map: IslandMap }) {
 
   useFrame((state) => {
     uTime.current.value = state.clock.elapsedTime;
-    uWind.current.value.set(t.grass.swayAmount, t.grass.swaySpeed, t.grass.gustLength, t.grass.tuftHeight);
+    uWind.current.value.set(t.grass.swayAmount * windScale, t.grass.swaySpeed, t.grass.gustLength, t.grass.tuftHeight);
   });
 
   const setMatricesFor = (variant: number, total: number) => (inst: THREE.InstancedMesh | null) => {

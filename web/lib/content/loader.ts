@@ -314,6 +314,40 @@ export function useActivePalette(options?: { previewDraftId?: string | null }) {
   };
 }
 
+// ─── Season rows for the member island (2026-09-24) ─────────────────────────
+// The island blends all four season rows by date, so it reads them together
+// regardless of which row is `active`. Missing/malformed rows fall back to
+// DEFAULT_PALETTES by slug.
+
+export const SEASON_SLUGS = ["spring", "summer", "autumn", "winter"] as const;
+
+function defaultSeasonRows(): SeasonalPalette[] {
+  return DEFAULT_PALETTES.filter((p) => (SEASON_SLUGS as readonly string[]).includes(p.slug));
+}
+
+async function fetchSeasonPalettes(): Promise<SeasonalPalette[]> {
+  if (!hasSupabaseEnv()) return defaultSeasonRows();
+  try {
+    const { data, error } = await createClient()
+      .from("seasonal_palettes")
+      .select("id, slug, display_name, palette, active, scheduled_start, scheduled_end, created_at")
+      .in("slug", [...SEASON_SLUGS]);
+    if (error || !data) return defaultSeasonRows();
+    const rows = (data as unknown as SeasonalPalette[]).filter((row) => row.palette && typeof row.palette === "object" && "sky" in row.palette);
+    return defaultSeasonRows().map((fallback) => {
+      const row = rows.find((r) => r.slug === fallback.slug);
+      return row ? { ...row, palette: { ...fallback.palette, ...row.palette } } : fallback;
+    });
+  } catch {
+    return defaultSeasonRows();
+  }
+}
+
+export function useSeasonPalettes(): SeasonalPalette[] {
+  const { data } = useSWR<SeasonalPalette[]>("seasonal_palettes:seasons", fetchSeasonPalettes, SWR_OPTS);
+  return data ?? defaultSeasonRows();
+}
+
 // ─── Emote types (sprint E2) ────────────────────────────────────────────────
 
 async function fetchEmoteTypes(): Promise<EmoteType[]> {

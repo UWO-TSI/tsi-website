@@ -34,6 +34,24 @@ export function getBlobTexture(): THREE.CanvasTexture {
   return _tex;
 }
 
+let _tintTex: THREE.CanvasTexture | null = null;
+/** White variant of the blob gradient so a material colour can tint it. */
+function getTintBlobTexture(): THREE.CanvasTexture {
+  if (_tintTex) return _tintTex;
+  const c = document.createElement("canvas");
+  c.width = c.height = 64;
+  const ctx = c.getContext("2d")!;
+  const g = ctx.createRadialGradient(32, 32, 4, 32, 32, 32);
+  g.addColorStop(0, "rgba(255,255,255,0.9)");
+  g.addColorStop(0.7, "rgba(255,255,255,0.6)");
+  g.addColorStop(1, "rgba(255,255,255,0)");
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, 64, 64);
+  _tintTex = new THREE.CanvasTexture(c);
+  _tintTex.colorSpace = THREE.SRGBColorSpace;
+  return _tintTex;
+}
+
 export interface BlobPlacement {
   x: number;
   y: number; // ground height at (x, z)
@@ -47,13 +65,15 @@ const _q = new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 
 const _p = new THREE.Vector3();
 const _s = new THREE.Vector3();
 
-export default function BlobShadows({ placements, opacity = 0.3 }: { placements: BlobPlacement[]; opacity?: number }) {
+/** `color` tints the (black) blob, e.g. for rain puddles. */
+export default function BlobShadows({ placements, opacity = 0.3, color }: { placements: BlobPlacement[]; opacity?: number; color?: string }) {
   const meshRef = useRef<THREE.InstancedMesh>(null);
 
   const material = useMemo(
     () =>
       new THREE.MeshBasicMaterial({
-        map: getBlobTexture(),
+        map: color ? getTintBlobTexture() : getBlobTexture(),
+        color: color ?? 0xffffff,
         transparent: true,
         opacity,
         depthWrite: false,
@@ -63,7 +83,7 @@ export default function BlobShadows({ placements, opacity = 0.3 }: { placements:
         polygonOffsetFactor: -2,
         polygonOffsetUnits: -2,
       }),
-    [opacity]
+    [opacity, color]
   );
 
   useEffect(() => {

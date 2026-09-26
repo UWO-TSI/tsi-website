@@ -12,7 +12,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, ChevronDown, ChevronRight, RotateCcw } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
-type TableName = "npc_personas" | "shop_items" | "seasonal_palettes";
+type TableName = "npc_personas" | "shop_items" | "seasonal_palettes" | "quest_chapters" | "club_goals";
 
 interface VersionRow {
   id: string;
@@ -37,6 +37,8 @@ const EDITOR_ROUTE: Record<TableName, string> = {
   npc_personas: "/student/dashboard/admin/content/npcs",
   shop_items: "/student/dashboard/admin/content/shop",
   seasonal_palettes: "/student/dashboard/admin/content/palettes",
+  quest_chapters: "/student/dashboard/admin/content/chapters",
+  club_goals: "/student/dashboard/admin/content/goals",
 };
 
 export default function VersionHistory({

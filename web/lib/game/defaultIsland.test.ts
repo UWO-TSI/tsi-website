@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { createDefaultIsland, DEFAULT_SPAWN, ISLAND_PROPS } from "./defaultIsland";
+import { createDefaultIsland, DEFAULT_SPAWN, ISLAND_PROPS, ISLAND_TREES, LANDMARKS, WHARF_DECK, landmark, nearestLandmark } from "./defaultIsland";
 import { createCenteredMap, setCell, Surface, heightField, sampleGroundHeight, sampleHeightField, isGroundAtWorld } from "./grid";
 
 describe("default island movement", () => {
@@ -18,8 +18,15 @@ describe("default island movement", () => {
   });
   it("stops before the building, shore and tree trunks", () => {
     expect(island.move(0, 4, 0, 15)[1]).toBeLessThan(6.7);
-    expect(island.move(0, -10, 0, -40)[1]).toBeGreaterThan(-17);
-    expect(island.move(-8, -9, -8, -6)[1]).toBeLessThan(-6.6);
+    const shore = island.move(3, -10, 3, -40)[1];
+    expect(shore).toBeGreaterThan(-20.5);
+    expect(shore).toBeLessThan(-17);
+    for (const [tx, tz] of ISLAND_TREES) {
+      const from = [[1.5, 0], [-1.5, 0], [0, 1.5], [0, -1.5]].map(([dx, dz]) => [tx + dx, tz + dz]).find(([x, z]) => island.standable(x, z));
+      if (!from) continue;
+      const [x, z] = island.move(from[0], from[1], tx, tz);
+      expect(Math.hypot(x - tx, z - tz)).toBeGreaterThan(0.6);
+    }
   });
   it("keeps solid prop footprints on land and blocks entry from each side", () => {
     for (const prop of ISLAND_PROPS) {
@@ -43,6 +50,42 @@ describe("default island movement", () => {
     const [x, z] = island.move(0, 6, 5, 9);
     expect(x).toBeCloseTo(5);
     expect(island.standable(x, z)).toBe(true);
+  });
+});
+
+describe("village core layout", () => {
+  const island = createDefaultIsland();
+  it("places every landmark from ledger row 155", () => {
+    expect(LANDMARKS.map(l => l.id).sort()).toEqual(["beach", "cafe", "catch", "hq", "mailbox", "monument", "museum", "notice", "oracle", "plaza", "pond", "ruins", "shop", "wharf"]);
+    expect(LANDMARKS.filter(l => !l.open).map(l => l.id).sort()).toEqual(["cafe", "museum", "ruins"]);
+  });
+  it("keeps buildings solid, on dry land, with a standable approach in front", () => {
+    for (const l of LANDMARKS.filter(l => l.half)) {
+      expect(island.standable(l.x, l.z), l.id).toBe(false);
+      expect(island.surface(l.x, l.z), l.id).not.toBe(Surface.River);
+      const frontZ = l.z - l.half![1] - 0.6;
+      expect(island.standable(l.x, frontZ) || island.standable(l.x + 0.8, frontZ), `${l.id} approach`).toBe(true);
+    }
+  });
+  it("lets the walker reach the shop, café door and plaza boards from spawn", () => {
+    let [x, z] = island.move(0, -10, 0, -9.5);
+    [x, z] = island.move(x, z, 10, -9.5);
+    expect(Math.hypot(x - 10, z + 9.5)).toBeLessThan(0.1);
+    [x, z] = island.move(0, -9.5, -10, -9.5);
+    expect(Math.hypot(x + 10, z + 9.5)).toBeLessThan(0.1);
+    [x, z] = island.move(0, -10, 0, 4.5);
+    expect(nearestLandmark(x, z, 3.2, ["notice", "catch"])).not.toBeNull();
+  });
+  it("has water in the pond and a walkable wharf stub over the sea", () => {
+    expect(island.surface(landmark("pond").x, landmark("pond").z)).toBe(Surface.River);
+    expect(island.standable((WHARF_DECK.x0 + WHARF_DECK.x1) / 2, WHARF_DECK.z0 + 0.5)).toBe(true);
+    expect(isGroundAtWorld(island.map, 8, -22.5)).toBe(false);
+  });
+  it("raises the Oracle temple on a half-step rise that stays walkable", () => {
+    const oracle = landmark("oracle");
+    expect(island.ground(oracle.x, oracle.z - 3)).toBeGreaterThan(0.3);
+    const [, z] = island.move(oracle.x - 2.5, 2.5, oracle.x - 2.5, oracle.z - oracle.half![1] - 0.5);
+    expect(z).toBeGreaterThan(6.2);
   });
 });
 

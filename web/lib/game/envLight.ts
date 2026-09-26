@@ -43,7 +43,7 @@ export const ENV_PHASES: Record<"dawn" | "day" | "dusk" | "night", EnvPhaseSpec>
 
 const environments = new WeakMap<THREE.Scene, {
   renderer: THREE.WebGLRenderer;
-  phase: keyof typeof ENV_PHASES;
+  spec: EnvPhaseSpec;
   target: THREE.WebGLRenderTarget;
 }>();
 
@@ -86,10 +86,11 @@ export function applyEnvironment(
   gl: THREE.WebGLRenderer,
   scene: THREE.Scene,
   phase: "dawn" | "day" | "dusk" | "night",
+  override?: EnvPhaseSpec,
 ): void {
+  const spec = override ?? ENV_PHASES[phase];
   const current = environments.get(scene);
-  if (current?.renderer === gl && current.phase === phase && scene.environment === current.target.texture) return;
-  const spec = ENV_PHASES[phase];
+  if (current?.renderer === gl && current.spec === spec && scene.environment === current.target.texture) return;
   // PMREM generators retain their renderer. Keep one only for this synchronous
   // bake so a remounted Canvas cannot reuse the previous renderer's resources.
   const generator = new THREE.PMREMGenerator(gl);
@@ -106,7 +107,7 @@ export function applyEnvironment(
   }
   scene.environment = target.texture;
   scene.environmentIntensity = spec.intensity;
-  environments.set(scene, { renderer: gl, phase, target });
+  environments.set(scene, { renderer: gl, spec, target });
   current?.target.dispose();
 }
 

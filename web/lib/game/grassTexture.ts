@@ -85,6 +85,8 @@ export function getGrassTexture(): THREE.DataTexture {
   }
 
   const tex = new THREE.DataTexture(data, SIZE, SIZE, THREE.RGBAFormat);
+  // These are linear light multipliers, not an sRGB photograph. Preserve their values.
+  tex.colorSpace = THREE.LinearSRGBColorSpace;
   tex.wrapS = THREE.RepeatWrapping;
   tex.wrapT = THREE.RepeatWrapping;
   // Tile ~10x across the 82-unit terrain — enough density to feel like

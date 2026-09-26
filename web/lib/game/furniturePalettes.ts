@@ -1,11 +1,10 @@
 /**
  * Furniture recolor pipeline (collab track, 2026-07-25).
  *
- * The dump furniture GLBs read clay-gray (David: "they currently lack
- * texture"). Rather than baking recolored GLB variants (no gltf-transform
- * on this machine, and binaries fight the monthly content cadence), tints
- * are DATA: a Tint maps material-name substrings → hex, applied at clone
- * time in interiorShared's Piece. Same GLB, any palette, zero new assets.
+ * A Tint maps material-name substrings → hex, applied at clone time in
+ * interiorShared's Piece. Tints multiply existing albedo textures.
+ * HQ furniture's missing remake atlases and UVs were restored from the
+ * original assets on 2026-09-17; use those instead of flat-color substitutes.
  *
  * Workflow with David (documented in specs/collab-design-track.md):
  *  1. Open /lab/furniture?piece=<name> — the material inspector lists the
@@ -35,7 +34,7 @@ export const PRESETS: Record<string, Tint> = {
 export const PIECE_TINTS: Record<string, Tint> = {
   // Wharf barrels: oiled-oak demo ruling (pending David's pass). Note the
   // counter-register carries NO tint — it ships textured, and tints
-  // MULTIPLY over textures (mid-tone hexes go muddy). Flat clay pieces
-  // (study-chair, wooden-chest…) recolor directly and take any hex.
+  // MULTIPLY over textures (mid-tone hexes go muddy). The restored HQ
+  // furniture likewise keeps its original textured colors without a tint.
   barrel: { "*": "#B08A5E" },
 };

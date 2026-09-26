@@ -352,7 +352,38 @@ function build(mesh: Mesh): THREE.BufferGeometry | null {
   return g;
 }
 
-export default function GridTerrain({ map }: { map: IslandMap }) {
+export type TerrainPalette = { grass: string; soil: string; sand: string };
+
+/**
+ * Winter snow cover on palette terrain (0..1), shared uniform so a daily
+ * season blend does not rebuild materials. Grain (luminance only) is the
+ * dump's own `mSandSnow_Alb` snow variant (FldUnit), on grass, paths and beach.
+ */
+export const TERRAIN_SNOW = { value: 0 };
+let snowGrain: THREE.Texture | null = null;
+function getSnowGrain(): THREE.Texture {
+  if (!snowGrain) {
+    snowGrain = new THREE.TextureLoader().load("/assets/acnh/terrain/mSandSnow_Alb.png");
+    snowGrain.wrapS = snowGrain.wrapT = THREE.RepeatWrapping;
+    snowGrain.colorSpace = THREE.SRGBColorSpace;
+  }
+  return snowGrain;
+}
+/** Paths keep a little of their colour through the snow; grass is covered. */
+function addSnow(shader: THREE.WebGLProgramParametersWithUniforms, cover: number) {
+  shader.uniforms.uSnow = TERRAIN_SNOW;
+  shader.uniforms.uSnowGrain = { value: getSnowGrain() };
+  shader.fragmentShader = "uniform float uSnow;\nuniform sampler2D uSnowGrain;\n" + shader.fragmentShader.replace("#include <normal_fragment_begin>", `
+    #ifdef USE_MAP
+      // The dump's snow albedo is warm-tinted; keep only its grain and use ACNH's cool snow ground.
+      float snowGrain = dot(texture2D(uSnowGrain, vMapUv * 1.3).rgb, vec3(0.2126, 0.7152, 0.0722));
+      vec3 snow = vec3(0.9, 0.93, 0.97) * (0.86 + (snowGrain - 0.55) * 0.35);
+      diffuseColor.rgb = mix(diffuseColor.rgb, snow, uSnow * ${cover.toFixed(2)});
+    #endif
+    #include <normal_fragment_begin>`);
+}
+
+export default function GridTerrain({ map, palette }: { map: IslandMap; palette?: TerrainPalette }) {
   // ONE field, read twice: the seabed geometry samples it on the CPU, the water
   // shader samples it on the GPU. Two bakes would be two shorelines.
   const field = useMemo(() => shoreSdf(map), [map]);
@@ -601,12 +632,93 @@ export default function GridTerrain({ map }: { map: IslandMap }) {
     ]) {
       const sharedName = SHARED[s];
       const shared = sharedName ? terrainMaterial(sharedName) : null;
+      if (shared && palette && s === Surface.Stone) {
+        // Island stone (plaza) keeps its shared look and gains winter snow cover.
+        const stone = shared.clone() as THREE.MeshStandardMaterial;
+        stone.onBeforeCompile = (shader, renderer) => { shared.onBeforeCompile(shader, renderer); addSnow(shader, 0.8); };
+        stone.customProgramCacheKey = () => "island-stone-snow-v1";
+        m.set(s, stone);
+        continue;
+      }
       if (shared) {
-        if (s === Surface.Sand || s === Surface.Soil) {
+        if (s === Surface.Sand || s === Surface.Soil || palette && s === Surface.Grass) {
           const overlay = shared.clone() as THREE.MeshStandardMaterial;
-          overlay.vertexColors = true;
-          overlay.transparent = true;
-          overlay.depthWrite = false;
+          // Clone does not preserve material shader hooks (grass reconstructs normal Z).
+          overlay.onBeforeCompile = shared.onBeforeCompile;
+          overlay.customProgramCacheKey = shared.customProgramCacheKey;
+          if (palette) {
+            // World UVs already repeat every two units. Do not inherit the
+            // legacy 10x grass repeat, which reduced blades to subpixel noise.
+            if (overlay.map) {
+              overlay.map = overlay.map.clone();
+              overlay.map.repeat.setScalar(s === Surface.Grass ? 0.85 : s === Surface.Soil ? 0.4 : 0.65);
+              overlay.map.magFilter = THREE.LinearFilter;
+              overlay.map.anisotropy = 4;
+              overlay.map.needsUpdate = true;
+            }
+            if (overlay.normalMap) {
+              overlay.normalMap = overlay.normalMap.clone();
+              overlay.normalMap.repeat.setScalar(s === Surface.Grass ? 0.8 : 1.4);
+              overlay.normalMap.magFilter = THREE.LinearFilter;
+              overlay.normalMap.needsUpdate = true;
+            }
+            if (s === Surface.Grass) overlay.normalScale.set(0.38, 0.38);
+          }
+          if (s !== Surface.Grass) {
+            overlay.vertexColors = true;
+            overlay.transparent = true;
+            overlay.depthWrite = false;
+          }
+          if (palette) overlay.color.set(s === Surface.Grass ? palette.grass : s === Surface.Soil ? palette.soil : palette.sand);
+          if (palette && s === Surface.Grass) {
+            overlay.onBeforeCompile = (shader, renderer) => {
+              shared.onBeforeCompile(shader, renderer);
+              shader.fragmentShader = shader.fragmentShader.replace("#include <map_fragment>", `
+                #include <map_fragment>
+                #ifdef USE_MAP
+                  diffuseColor.rgb = diffuse * mix(vec3(0.9, 0.96, 0.88), sampledDiffuseColor.rgb, 0.38);
+                #endif
+              `);
+              addSnow(shader, 0.96);
+            };
+            overlay.customProgramCacheKey = () => "island-grass-detail-v3";
+          }
+          if (palette && s === Surface.Soil) {
+            // The supplied soil albedo contains broad bright marks. Keep its
+            // authored detail without repeating high-contrast spots down the path.
+            overlay.normalScale.set(0.18, 0.18);
+            overlay.onBeforeCompile = (shader, renderer) => {
+              shared.onBeforeCompile(shader, renderer);
+              shader.uniforms.uSoilGrain = { value: (terrainMaterial("mSand") as THREE.MeshStandardMaterial).map };
+              shader.fragmentShader = "uniform sampler2D uSoilGrain;\n" + shader.fragmentShader;
+              shader.fragmentShader = shader.fragmentShader.replace("#include <map_fragment>", `
+                #include <map_fragment>
+                #ifdef USE_MAP
+                  vec3 crossedSoil = texture2D(map, vec2(-vMapUv.y, vMapUv.x) * 1.73 + 0.37).rgb;
+                  vec3 soilDetail = mix(sampledDiffuseColor.rgb, crossedSoil, 0.45);
+                  float grain = dot(texture2D(uSoilGrain, vMapUv * 3.5).rgb, vec3(0.2126, 0.7152, 0.0722));
+                  diffuseColor.rgb = diffuse * mix(vec3(0.82), soilDetail, 0.18) * (0.8 + grain * 0.5);
+                #endif
+              `);
+              addSnow(shader, 0.7);
+            };
+            overlay.customProgramCacheKey = () => "island-soil-detail-v3";
+          }
+          if (palette && s === Surface.Sand) {
+            // Retain the supplied sand grain while reducing its baked orange cast.
+            overlay.onBeforeCompile = (shader, renderer) => {
+              shared.onBeforeCompile(shader, renderer);
+              shader.fragmentShader = shader.fragmentShader.replace("#include <map_fragment>", `
+                #include <map_fragment>
+                #ifdef USE_MAP
+                  float sandLuma = dot(sampledDiffuseColor.rgb, vec3(0.2126, 0.7152, 0.0722));
+                  diffuseColor.rgb = diffuse * (0.84 + (sandLuma - 0.4) * 0.32);
+                #endif
+              `);
+              addSnow(shader, 0.85);
+            };
+            overlay.customProgramCacheKey = () => "island-sand-detail-v3";
+          }
           m.set(s, overlay);
         } else m.set(s, shared);
         continue;
@@ -626,13 +738,20 @@ export default function GridTerrain({ map }: { map: IslandMap }) {
       );
     }
     return m;
-  }, []);
+  }, [palette]);
 
   useEffect(() => () => { chunks.forEach(({ geometry }) => geometry.dispose()); }, [chunks]);
   useEffect(() => () => {
+    if (palette) for (const surface of [Surface.Grass, Surface.Soil, Surface.Sand]) {
+      const material = materials.get(surface) as THREE.MeshStandardMaterial;
+      material.map?.dispose();
+      material.normalMap?.dispose();
+    }
     materials.get(Surface.Sand)?.dispose();
     materials.get(Surface.Soil)?.dispose();
-  }, [materials]);
+    if (palette) materials.get(Surface.Grass)?.dispose();
+    if (palette) materials.get(Surface.Stone)?.dispose();
+  }, [materials, palette]);
 
   return (
     <group>

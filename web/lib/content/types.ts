@@ -49,6 +49,10 @@ export interface PaletteColors {
   water: string;
   building_primary: string;
   building_accent: string;
+  /** Member island ground tint over the calibrated grass texture (seasonal rows). */
+  island_grass?: string;
+  /** Oak foliage tint over the greyscale leaf albedo (seasonal rows). */
+  leaf?: string;
 }
 
 export interface SeasonalPalette {

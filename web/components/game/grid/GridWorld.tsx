@@ -25,7 +25,7 @@ import {
   type PlacedProp,
 } from "@/lib/game/grid";
 import { setTerrainHeightProvider } from "../terrain";
-import GridTerrain from "./GridTerrain";
+import GridTerrain, { type TerrainPalette } from "./GridTerrain";
 import GridCliffs from "./GridCliffs";
 import GrassTufts from "./GrassTufts";
 import { applyGrassNormalStrength, advanceWater } from "./terrainMaterials";
@@ -64,7 +64,7 @@ export function isGridEnabled(): boolean {
   return gridFlag;
 }
 
-export default function GridWorld({ map: suppliedMap, water }: { map?: IslandMap; water?: WaterParams }) {
+export default function GridWorld({ map: suppliedMap, water, palette, windScale }: { map?: IslandMap; water?: WaterParams; palette?: TerrainPalette; windScale?: number }) {
   const map = useMemo(() => suppliedMap ?? getIslandMap().map, [suppliedMap]);
   const t = useTuning();
 
@@ -118,9 +118,9 @@ export default function GridWorld({ map: suppliedMap, water }: { map?: IslandMap
 
   return (
     <group>
-      <GridTerrain map={map} />
+      <GridTerrain map={map} palette={palette} />
       <GridCliffs map={map} />
-      <GrassTufts map={map} />
+      <GrassTufts map={map} windScale={windScale} />
     </group>
   );
 }

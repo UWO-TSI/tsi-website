@@ -279,7 +279,19 @@ export function terrainMaterial(name: string): THREE.Material | null {
 function waterMaterial(): THREE.MeshBasicMaterial {
   const mat = new THREE.MeshBasicMaterial({ color: 0xffffff });
   mat.name = "terrain:mRiver";
-  applyWaterShader(mat, () => waterUniformBlock, { shore: SHORE_FROM_FIELD });
+  applyWaterShader(mat, () => waterUniformBlock, {
+    shore: SHORE_FROM_FIELD,
+    normal: `
+      uniform sampler2D uRippleTexture;
+      uniform float uRippleStrength;
+      vec2 waterDetailNormal(vec2 xz) {
+        if (uRippleStrength <= 0.0) return vec2(0.0);
+        vec2 a = texture2D(uRippleTexture, xz * 0.22 + uTime * vec2(0.014, 0.009)).rg * 2.0 - 1.0;
+        vec2 b = texture2D(uRippleTexture, xz.yx * 0.31 - uTime * vec2(0.008, 0.011)).rg * 2.0 - 1.0;
+        return (a + b * 0.5) * uRippleStrength;
+      }
+    `,
+  });
   return mat;
 }
 
@@ -290,6 +302,8 @@ function waterMaterial(): THREE.MeshBasicMaterial {
  */
 const waterUniformBlock = {
   ...waterUniforms(TUNING_DEFAULTS.water),
+  uRippleTexture: { value: null as THREE.Texture | null },
+  uRippleStrength: { value: 0 },
   uShoreMap: { value: null as THREE.Texture | null },
   /** World rect the field covers: (minX, minZ, sizeX, sizeZ). */
   uShoreRect: { value: new THREE.Vector4(0, 0, 1, 1) },
@@ -336,6 +350,11 @@ export function setShoreField(f: {
  * shader can build the view vector itself and the conversion bought nothing.
  */
 export function advanceWater(elapsed: number, cfg: WaterParams, sunWorld?: THREE.Vector3): void {
+  waterUniformBlock.uRippleStrength.value = cfg.rippleStrength ?? 0;
+  if (cfg.rippleStrength && !waterUniformBlock.uRippleTexture.value) {
+    waterUniformBlock.uRippleTexture.value = loadTexture(new THREE.TextureLoader(), "mSeaWater_Nrm.png", TEX_DIR, THREE.NoColorSpace);
+    waterUniformBlock.uRippleTexture.value.magFilter = THREE.LinearFilter;
+  }
   waterUniformBlock.uTime.value = elapsed;
   writeWaterUniforms(waterUniformBlock, cfg);
   if (sunWorld) waterUniformBlock.uSunDir.value.copy(sunWorld).normalize();

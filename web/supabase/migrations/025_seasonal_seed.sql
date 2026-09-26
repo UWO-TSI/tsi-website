@@ -23,14 +23,18 @@ VALUES
    '{"sky":"#2B1B3D","grass":"#3E2A47","accent":"#FF7518","fog":"#4A3A5C","water":"#1A1226","building_primary":"#5A2E8E","building_accent":"#0F0A1A"}'::jsonb,
    FALSE, '2026-10-01T00:00:00Z', '2026-11-07T23:59:59Z'),
   ('autumn', 'Autumn Harvest',
-   '{"sky":"#D8E4EE","grass":"#9FA23F","accent":"#E07B39","fog":"#E4D9BF","water":"#4E7FA8","building_primary":"#C08A52","building_accent":"#7A5230"}'::jsonb,
+   '{"sky":"#D8E4EE","grass":"#9FA23F","accent":"#E07B39","fog":"#E4D9BF","water":"#4E7FA8","building_primary":"#C08A52","building_accent":"#7A5230","island_grass":"#C6B46D","leaf":"#FF9A3C"}'::jsonb,
    FALSE, '2026-09-15T00:00:00Z', '2026-11-30T23:59:59Z'),
   ('winter', 'Winter Frost',
-   '{"sky":"#C7D8E8","grass":"#E8EEF2","accent":"#E86A6A","fog":"#DCE8F2","water":"#3A5F80","building_primary":"#B9C4CE","building_accent":"#6E7E8A"}'::jsonb,
+   '{"sky":"#C7D8E8","grass":"#E8EEF2","accent":"#E86A6A","fog":"#DCE8F2","water":"#3A5F80","building_primary":"#B9C4CE","building_accent":"#6E7E8A","island_grass":"#C9D6CB","leaf":"#E6ECEF"}'::jsonb,
    FALSE, '2026-12-01T00:00:00Z', '2027-02-28T23:59:59Z'),
   ('spring', 'Spring Sakura',
-   '{"sky":"#CFE8F7","grass":"#8FD16A","accent":"#F5A9C4","fog":"#EBD9E4","water":"#5A9FD4","building_primary":"#D9B08C","building_accent":"#8B6F5E"}'::jsonb,
-   FALSE, '2027-03-15T00:00:00Z', '2027-05-15T23:59:59Z')
+   '{"sky":"#CFE8F7","grass":"#8FD16A","accent":"#F5A9C4","fog":"#EBD9E4","water":"#5A9FD4","building_primary":"#D9B08C","building_accent":"#8B6F5E","island_grass":"#A9C271","leaf":"#BCC97D"}'::jsonb,
+   FALSE, '2027-03-15T00:00:00Z', '2027-05-15T23:59:59Z'),
+  -- Member island seasonal baseline (2026-09-24): summer row for the blended island look.
+  ('summer', 'Summer Green',
+   '{"sky":"#BFE9FA","grass":"#84CB47","accent":"#FFD166","fog":"#CDEBF7","water":"#398D9F","building_primary":"#D4A574","building_accent":"#8B6F4E","island_grass":"#91B47F","leaf":"#9BC87E"}'::jsonb,
+   FALSE, '2027-06-21T00:00:00Z', '2027-09-21T23:59:59Z')
 ON CONFLICT (slug) DO UPDATE SET
   display_name = EXCLUDED.display_name,
   palette = EXCLUDED.palette,

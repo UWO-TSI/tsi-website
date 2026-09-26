@@ -22,7 +22,7 @@
 
 import { useEffect, useMemo, useSyncExternalStore } from "react";
 import { useThree } from "@react-three/fiber";
-import { EffectComposer, Bloom, ToneMapping, Vignette } from "@react-three/postprocessing";
+import { EffectComposer, Bloom, FXAA, ToneMapping, Vignette } from "@react-three/postprocessing";
 import { createGraphicsContextStore } from "@/lib/game/graphicsContext";
 import { useLabState } from "@/lib/game/devLab";
 import { DEFAULT_GRADE, type Grade } from "@/lib/game/grading";
@@ -97,6 +97,8 @@ class PastelEffect extends Effect {
 }
 
 interface PostFXProps {
+  /** Smooth mode only; keep the intentionally pixelated target unfiltered. */
+  antialias?: boolean;
   /** Toggle the whole pipeline (lite mode disables it). */
   enabled?: boolean;
   /** Vignette darkening intensity 0-1. Higher during transitions. */
@@ -109,7 +111,7 @@ interface PostFXProps {
   grade?: Grade;
 }
 
-export default function PostFX({ enabled = true, vignetteDarkness = 0.4, bloom = false, bloomIntensity = 0.55, grade }: PostFXProps) {
+export default function PostFX({ enabled = true, antialias = false, vignetteDarkness = 0.4, bloom = false, bloomIntensity = 0.55, grade }: PostFXProps) {
   const pastel = useMemo(() => new PastelEffect(), []);
   const gl = useThree((s) => s.gl);
   const context = useMemo(() => createGraphicsContextStore(gl.getContext(), gl.domElement), [gl]);
@@ -131,6 +133,9 @@ export default function PostFX({ enabled = true, vignetteDarkness = 0.4, bloom =
   if (!enabled || !contextAvailable) return null;
   return (
     <EffectComposer multisampling={0}>
+      {/* FXAA samples neighboring input pixels. Run it before the merged grade
+          so its center and neighbor samples use the same color space. */}
+      {antialias ? <FXAA /> : <></>}
       <Vignette
         offset={0.32}
         darkness={g.vignette ?? vignetteDarkness}

@@ -84,6 +84,8 @@ export interface WaterParams {
   waveHeight: number;
   waveScale: number;
   waveSpeed: number;
+  /** Optional authored sea-normal detail, used by applicant ocean. */
+  rippleStrength?: number;
 }
 
 /**
@@ -308,7 +310,8 @@ const FRAGMENT_BODY = /* glsl */ `
 
   // Surface normal from the swell gradient, then the sun off it in world
   // space. cameraPosition is a built-in, so no view-space bookkeeping.
-  vec3 N = normalize(vec3(-vWaterGrad.x, 1.0, -vWaterGrad.y));
+  vec2 detailNormal = waterDetailNormal(vWaterWorld.xz);
+  vec3 N = normalize(vec3(-vWaterGrad.x + detailNormal.x, 1.0, -vWaterGrad.y + detailNormal.y));
   vec3 V = normalize(cameraPosition - vWaterWorld);
   vec3 S = normalize(uSunDir);
 
@@ -364,6 +367,8 @@ export interface WaterShaderOptions {
   shore: string;
   /** Optionally replaces `waterExtra`, which runs between the cel layers and the foam. */
   extra?: string;
+  /** Optional small-wave normal from existing assets. */
+  normal?: string;
   /**
    * Transparent water needs something under it. The river has a bed; the open
    * sea does not, so it stays opaque and keeps writing depth rather than
@@ -405,10 +410,12 @@ export function applyWaterShader(
           UNIFORM_DECLS +
           opts.shore +
           (opts.extra ?? WATER_EXTRA_NONE) +
+          (opts.normal ?? "vec2 waterDetailNormal(vec2 xz) { return vec2(0.0); }\n") +
           WATER_FUNCTIONS
       )
       .replace("#include <color_fragment>", "#include <color_fragment>\n" + FRAGMENT_BODY);
   };
+  mat.customProgramCacheKey = () => `water:${opts.shore}:${opts.extra ?? ""}:${opts.normal ?? ""}`;
   mat.needsUpdate = true;
 }
 

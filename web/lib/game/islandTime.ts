@@ -1,0 +1,35 @@
+import { phaseForSun, sunFor, type SunDay } from "./sunTimes";
+
+/**
+ * Island clock: real campus time in Toronto (ledger rows 84, 88) with phases
+ * set by real sunrise/sunset for London, Ontario (decision 173, sunTimes.ts).
+ */
+export type IslandPhase = "dawn" | "day" | "evening" | "night";
+export const ISLAND_PHASES: readonly IslandPhase[] = ["dawn", "day", "evening", "night"];
+
+/** Fractional hour (0-24) in America/Toronto for a given instant. */
+export function torontoHour(date = new Date()): number {
+  const parts = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Toronto", hour: "numeric", minute: "numeric", hourCycle: "h23" }).formatToParts(date);
+  const get = (type: string) => Number(parts.find(part => part.type === type)?.value ?? 0);
+  return get("hour") + get("minute") / 60;
+}
+
+/** Phase for a Toronto hour on a date (defaults to today's fallback sun times). */
+export function phaseForHour(hour: number, date = new Date(), days?: readonly SunDay[] | null): IslandPhase {
+  return phaseForSun(hour, sunFor(date, days));
+}
+
+export function islandPhase(date = new Date(), days?: readonly SunDay[] | null): IslandPhase {
+  return phaseForHour(torontoHour(date), date, days);
+}
+
+/**
+ * Dev/QA override from the URL: `?time=dawn|day|evening|night` or an hour
+ * (`?time=18.5`). Returns null when absent or invalid.
+ */
+export function parseTimeOverride(value: string | null, date = new Date()): IslandPhase | null {
+  if (!value) return null;
+  if ((ISLAND_PHASES as readonly string[]).includes(value)) return value as IslandPhase;
+  const hour = Number(value);
+  return Number.isFinite(hour) && hour >= 0 && hour <= 24 ? phaseForHour(hour, date) : null;
+}

@@ -50,6 +50,22 @@ function getRainMaterial(): THREE.MeshBasicMaterial {
   }
   return _rainMat;
 }
+let _snowMat: THREE.MeshBasicMaterial | null = null;
+function getSnowMaterial(): THREE.MeshBasicMaterial {
+  if (!_snowMat) {
+    // Round flakes from the existing soft sun-glow sprite texture.
+    const flake = new THREE.TextureLoader().load("/assets/sky/sun.png");
+    flake.colorSpace = THREE.SRGBColorSpace;
+    _snowMat = new THREE.MeshBasicMaterial({ color: "#F4F8FC", map: flake, transparent: true, opacity: 0.95, depthWrite: false, side: THREE.DoubleSide });
+  }
+  return _snowMat;
+}
+
+/** Same streak system, re-tuned: slow, swaying flakes for snowfall (2026-09-24). */
+const KINDS = {
+  rain: { fall: FALL_SPEED, slant: SLANT, sway: 0, size: [0.03, 0.7] as [number, number] },
+  snow: { fall: 2.1, slant: 0.5, sway: 0.6, size: [0.16, 0.16] as [number, number] },
+};
 
 const _m = new THREE.Matrix4();
 const _q = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0, 0.12));
@@ -68,14 +84,15 @@ function buildDrops(): Float32Array {
   return arr;
 }
 
-export default function RainFX({ playerPosRef }: { playerPosRef: React.MutableRefObject<THREE.Vector3> }) {
+export default function RainFX({ playerPosRef, groundHeight = sampleTerrainHeightFast, kind = "rain" }: { playerPosRef: React.RefObject<THREE.Vector3>; groundHeight?: (x: number, z: number) => number; kind?: keyof typeof KINDS }) {
+  const look = KINDS[kind];
   const meshRef = useRef<THREE.InstancedMesh>(null);
   // Drop state lives in a ref, seeded lazily on the first frame — the
   // react-compiler freezes useMemo results, and ref writes during render
   // are equally off-limits, so the init happens inside useFrame.
   const dropsRef = useRef<Float32Array | null>(null);
 
-  useFrame((_, delta) => {
+  useFrame(({ clock }, delta) => {
     const mesh = meshRef.current;
     if (!mesh) return;
     let drops = dropsRef.current;
@@ -84,18 +101,19 @@ export default function RainFX({ playerPosRef }: { playerPosRef: React.MutableRe
     const d = Math.min(delta, 0.05);
     for (let i = 0; i < COUNT; i++) {
       const j = i * 4;
-      drops[j + 1] -= FALL_SPEED * drops[j + 3] * d;
-      drops[j] += SLANT * d;
+      drops[j + 1] -= look.fall * drops[j + 3] * d;
+      drops[j] += look.slant * d;
       // wrap in XZ so the box stays centered on the player
       let lx = drops[j];
       const lz = drops[j + 2];
       if (lx > BOX / 2) { drops[j] = lx -= BOX; }
       const wx = pp.x + lx;
       const wz = pp.z + lz;
-      if (drops[j + 1] < sampleTerrainHeightFast(wx, wz) - pp.y) {
+      if (drops[j + 1] < groundHeight(wx, wz) - pp.y) {
         drops[j + 1] = TOP * (0.7 + 0.3 * drops[j + 3]);
       }
-      _p.set(wx, pp.y + drops[j + 1], wz);
+      const sway = look.sway ? Math.sin(clock.elapsedTime * 1.3 + drops[j + 3] * 40) * look.sway : 0;
+      _p.set(wx + sway, pp.y + drops[j + 1], wz);
       _m.compose(_p, _q, _s);
       mesh.setMatrixAt(i, _m);
     }
@@ -103,8 +121,8 @@ export default function RainFX({ playerPosRef }: { playerPosRef: React.MutableRe
   });
 
   return (
-    <instancedMesh ref={meshRef} args={[undefined, undefined, COUNT]} frustumCulled={false} material={getRainMaterial()} renderOrder={5}>
-      <planeGeometry args={[0.03, 0.7]} />
+    <instancedMesh ref={meshRef} args={[undefined, undefined, COUNT]} frustumCulled={false} material={kind === "snow" ? getSnowMaterial() : getRainMaterial()} renderOrder={5}>
+      <planeGeometry args={look.size} />
     </instancedMesh>
   );
 }

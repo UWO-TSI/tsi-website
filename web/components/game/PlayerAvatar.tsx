@@ -97,6 +97,12 @@ interface PlayerAvatarProps {
   onMove: (position: THREE.Vector3) => void;
   playerName?: string;
   playerLevel?: number;
+  /** TSI member (row 223): subtle blue dot + glow on the nameplate. */
+  member?: boolean;
+  /** Combat: extra velocity (dodge dash, knockback) applied through constrainMove each frame. */
+  impulse?: React.MutableRefObject<{ x: number; z: number }>;
+  /** Combat: Space belongs to dodge, so no cosmetic hop. */
+  noHop?: boolean;
   activeEmote?: EmoteType | null;
   frozen?: boolean;
   groundHeight?: (x: number, z: number) => number;
@@ -104,7 +110,7 @@ interface PlayerAvatarProps {
   constrainMove?: (fromX: number, fromZ: number, toX: number, toZ: number) => [number, number];
 }
 
-export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Player", playerLevel = 1, activeEmote = null, frozen = false, groundHeight = sampleTerrainHeightFast, groundSurface, constrainMove }: PlayerAvatarProps) {
+export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Player", playerLevel = 1, member = false, impulse, noHop = false, activeEmote = null, frozen = false, groundHeight = sampleTerrainHeightFast, groundSurface, constrainMove }: PlayerAvatarProps) {
   const groupRef = useRef<THREE.Group>(null);
   const spriteRef = useRef<THREE.Group>(null);
   // Initialize y on the terrain at spawn so the avatar doesn't visibly
@@ -209,14 +215,14 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
   // while the user is filling out a form overlay.
   useEffect(() => {
     if (frozen) return;
-    return bindGameKeys({ keys, accepted: ["w", "a", "s", "d", "shift", " "],
+    return bindGameKeys({ keys, accepted: ["w", "a", "s", "d", "shift", " ", "c"],
       onReset: () => { targetRef.current = null; velRef.current.set(0, 0); },
       onPress: (e) => {
         if (["w", "a", "s", "d"].includes(e.key.toLowerCase())) sitRef.current = null;
         // F1.2: Space triggers cosmetic jump. Ignore key-repeat so holding
         // Space doesn't loop the arc — only re-fires after the previous
         // jump finishes.
-        if (e.key === " " || e.code === "Space") {
+        if ((e.key === " " || e.code === "Space") && !noHop) {
           if (!e.repeat && !jumpRef.current.active) {
             jumpRef.current.active = true;
             jumpRef.current.t = 0;
@@ -232,7 +238,7 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
         }
       },
     });
-  }, [playSFX, frozen]);
+  }, [playSFX, frozen, noHop]);
 
   // Click-to-move
   const raycaster = useRef(new THREE.Raycaster());
@@ -400,7 +406,9 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
     // direction — ~80ms up to speed, ~130ms glide-out. Frame cycling below
     // already scales by ACTUAL speed, so the walk anim eases in for free.
     {
-      const speedMult = sprint && keyMoving ? 1.85 : 1; // refinement: stronger sprint (was 1.6)
+      // Hold C to sneak (peaceful loop: approach bugs without startling them, rods/bugs spec).
+      const sneak = !sprint && !!keys["c"];
+      const speedMult = sprint && keyMoving ? 1.85 : sneak ? 0.3 : 1; // refinement: stronger sprint (was 1.6)
       const vel = velRef.current;
       const lam = moving ? 12 : 7.5;
       // Turn-skid: desired dir opposes current velocity while moving fast.
@@ -423,6 +431,13 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
       pos.x = motion.x;
       pos.z = motion.z;
       vel.set(motion.vx, motion.vz);
+      // Combat dash / knockback rides the same collision as walking.
+      const push = impulse?.current;
+      if (push && (push.x || push.z)) {
+        const constrain = constrainMove ?? ((_x: number, _z: number, nextX: number, nextZ: number) => clampToCoast(nextX, nextZ, BOUNDARY));
+        const [px, pz] = constrain(pos.x, pos.z, pos.x + push.x * delta, pos.z + push.z * delta);
+        pos.x = px; pos.z = pz; moving = true;
+      }
       if (motion.arrived) targetRef.current = null;
       if (moving) {
         const targetAngle = Math.atan2(dx, dz);
@@ -705,9 +720,12 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
             background: "rgba(15, 15, 16, 0.6)",
             padding: "2px 8px",
             borderRadius: "4px",
+            boxShadow: member ? "0 0 0 1px rgba(96, 165, 250, 0.55), 0 0 10px rgba(96, 165, 250, 0.45)" : undefined,
           }}
+          data-member={member || undefined}
         >
-          <div style={{ fontSize: "11px", fontWeight: 700, color: "#f1ffff", lineHeight: 1.2 }}>
+          <div style={{ fontSize: "11px", fontWeight: 700, color: "#f1ffff", lineHeight: 1.2, display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
+            {member && <span aria-label="TSI member" title="TSI member" style={{ width: 6, height: 6, borderRadius: "50%", background: "#60A5FA", boxShadow: "0 0 4px #60A5FA", flex: "none" }} />}
             {playerName}
           </div>
           <div style={{ fontSize: "9px", color: "#b8c3c3", fontFamily: "'IBM Plex Mono', monospace", lineHeight: 1.2 }}>

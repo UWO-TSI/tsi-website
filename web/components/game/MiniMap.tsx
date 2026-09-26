@@ -7,7 +7,7 @@
  * pure wayfinding for the radius-52 island.
  */
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { X } from "lucide-react";
 import { createLandmarkDiscovery } from "@/lib/game/landmarkDiscovery";
 import styles from "./MiniMap.module.css";
@@ -46,8 +46,19 @@ const BUILDINGS: { x: number; z: number; w: number; h: number; c: string }[] = [
 
 type MapPing = { id: number; x: number; z: number } | null;
 
-export default function MiniMap({ playerPosRef, onClose }: {
-  playerPosRef: React.MutableRefObject<THREE.Vector3>; onClose: () => void;
+/**
+ * Custom island geometry for another map (e.g. the default island). Drawn in
+ * world units with z negated (north up); replaces the legacy island drawing
+ * and skips legacy landmark discovery.
+ */
+export interface MiniMapPlot {
+  viewBox: string; content: ReactNode; north: [number, number]; label?: string;
+  /** Draw world +x to the left, matching a camera that looks north with +x on screen left. */
+  mirrorX?: boolean;
+}
+
+export default function MiniMap({ playerPosRef, onClose, plot }: {
+  playerPosRef: React.RefObject<THREE.Vector3>; onClose: () => void; plot?: MiniMapPlot;
 }) {
   const [dot, setDot] = useState<[number, number]>(() => [playerPosRef.current.x, playerPosRef.current.z]);
   const [ping, setPing] = useState<MapPing>(null);
@@ -64,6 +75,7 @@ export default function MiniMap({ playerPosRef, onClose }: {
       const { x, z } = playerPosRef.current;
       if (!Number.isFinite(x) || !Number.isFinite(z)) return;
       setDot((previous) => Math.abs(previous[0] - x) > 0.2 || Math.abs(previous[1] - z) > 0.2 ? [x, z] : previous);
+      if (plot) return;
       const landmark = discover(x, z);
       if (!landmark) return;
       clearTimeout(pingTimer);
@@ -73,14 +85,14 @@ export default function MiniMap({ playerPosRef, onClose }: {
       AudioManager.playSFX("enter");
     }, 200);
     return () => { clearInterval(timer); clearTimeout(pingTimer); };
-  }, [playerPosRef]);
+  }, [playerPosRef, plot]);
 
-  return <MiniMapView dot={dot} ping={ping} onClose={() => { onClose(); if (opener.current?.isConnected) opener.current.focus(); }} />;
+  return <MiniMapView plot={plot} dot={dot} ping={ping} onClose={() => { onClose(); if (opener.current?.isConnected) opener.current.focus(); }} />;
 }
 
-export function MiniMapView({ dot, ping = null, onClose }: { dot: [number, number]; ping?: MapPing; onClose: () => void }) {
+export function MiniMapView({ dot, ping = null, onClose, plot }: { dot: [number, number]; ping?: MapPing; onClose: () => void; plot?: MiniMapPlot }) {
   // world → svg: x right, z up-screen (north = up)
-  const sx = (x: number) => x;
+  const sx = (x: number) => plot?.mirrorX ? -x : x;
   const sy = (z: number) => -z;
 
   return (
@@ -93,7 +105,8 @@ export function MiniMapView({ dot, ping = null, onClose }: { dot: [number, numbe
           }
         }}><X size={17} aria-hidden /></button>
       </header>
-      <svg viewBox="-80 -80 160 160" className={styles.plot} role="img" aria-label="Island overview. The yellow marker shows your position; north is up.">
+      <svg viewBox={plot?.viewBox ?? "-80 -80 160 160"} className={styles.plot} role="img" aria-label={plot?.label ?? "Island overview. The yellow marker shows your position; north is up."}>
+        {plot ? plot.content : <>
         {/* island — organic coastline: sand ring under the grass line */}
         <polygon points={SAND_POINTS} fill="#E4CD96" stroke="#CBB27C" strokeWidth="1" strokeLinejoin="round" />
         <polygon points={GRASS_POINTS} fill="#7EC167" stroke="#5E9E4E" strokeWidth="1" strokeLinejoin="round" />
@@ -139,9 +152,10 @@ export function MiniMapView({ dot, ping = null, onClose }: { dot: [number, numbe
             <circle cx={sx(ping.x)} cy={sy(ping.z)} r="3" fill="none" stroke="#FFD166" strokeWidth="1.2" className={styles.ping} />
           </g>
         )}
-        <text x="68" y="-66" textAnchor="middle" fill="#244855" fontSize="9" fontWeight="700">N</text>
+        </>}
+        <text x={plot?.north[0] ?? 68} y={plot?.north[1] ?? -66} textAnchor="middle" fill="#244855" fontSize={plot ? 4 : 9} fontWeight="700">N</text>
         {/* player */}
-        <circle cx={sx(dot[0])} cy={sy(dot[1])} r="2.2" fill="#FFDD57" stroke="#7A5A00" strokeWidth="0.7" />
+        <circle cx={sx(dot[0])} cy={sy(dot[1])} r={plot ? 1.1 : 2.2} fill="#FFDD57" stroke="#7A5A00" strokeWidth="0.7" />
       </svg>
       <footer className={styles.legend}><span className={styles.you}>You</span><span>M to hide</span></footer>
     </section>

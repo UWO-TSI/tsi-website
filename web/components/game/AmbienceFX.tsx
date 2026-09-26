@@ -13,6 +13,7 @@
 import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
+import { useTexture } from "@react-three/drei";
 import { useActivePalette } from "@/lib/content/loader";
 import { sampleRiverPoint } from "./River";
 
@@ -65,7 +66,7 @@ function getCloudTexture(): THREE.CanvasTexture {
   return _cloudTex;
 }
 
-export function CloudShadows({ phase }: { phase: Phase }) {
+export function CloudShadows({ phase, size = [240, 240], bounded = false }: { phase: Phase; size?: [number, number]; bounded?: boolean }) {
   const matRef = useRef<THREE.MeshBasicMaterial>(null);
   useFrame((_, delta) => {
     // Module-cached texture — mutated through the getter so the compiler's
@@ -80,8 +81,14 @@ export function CloudShadows({ phase }: { phase: Phase }) {
   });
   return (
     <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.06, 0]} renderOrder={2}>
-      <planeGeometry args={[240, 240]} />
-      <meshBasicMaterial ref={matRef} map={getCloudTexture()} transparent opacity={0} depthWrite={false} />
+      <planeGeometry args={size} />
+      <meshBasicMaterial ref={matRef} map={getCloudTexture()} transparent opacity={0} depthWrite={false}
+        onBeforeCompile={shader => {
+          if (bounded) {
+            shader.vertexShader = "varying vec2 vCloudUv;\n" + shader.vertexShader.replace("#include <begin_vertex>", "#include <begin_vertex>\nvCloudUv = uv;");
+            shader.fragmentShader = "varying vec2 vCloudUv;\n" + shader.fragmentShader.replace("#include <map_fragment>", "#include <map_fragment>\ndiffuseColor.a *= 1.0 - smoothstep(0.65, 1.0, length(vCloudUv * 2.0 - 1.0));");
+          }
+        }} customProgramCacheKey={() => `cloud-shade-${bounded}`} />
     </mesh>
   );
 }
@@ -361,7 +368,7 @@ const _fq = new THREE.Quaternion();
 const _fs = new THREE.Vector3(1, 1, 1);
 const _fm = new THREE.Matrix4();
 
-type ParticleMode = "snow" | "leaves" | "petals" | null;
+export type ParticleMode = "snow" | "leaves" | "petals" | null;
 
 const PARTICLE_LOOKS: Record<Exclude<ParticleMode, null>, { color: string; size: number; fall: number; sway: number; spin: number; opacity: number }> = {
   snow: { color: "#F4F8FC", size: 0.09, fall: 1.15, sway: 0.55, spin: 2, opacity: 0.9 },
@@ -380,9 +387,10 @@ function resolveParticleMode(slug: string, palette: { grass: string; accent: str
   return null;
 }
 
-export function SeasonalParticles({ playerPosRef }: { playerPosRef: React.MutableRefObject<THREE.Vector3> }) {
+/** `mode` overrides the active-palette lookup (member island passes its own season). */
+export function SeasonalParticles({ playerPosRef, mode: forcedMode }: { playerPosRef: React.RefObject<THREE.Vector3>; mode?: ParticleMode }) {
   const { data: activePalette } = useActivePalette();
-  const mode = resolveParticleMode(activePalette.slug, activePalette.palette);
+  const mode = forcedMode !== undefined ? forcedMode : resolveParticleMode(activePalette.slug, activePalette.palette);
   const meshRef = useRef<THREE.InstancedMesh>(null);
 
   useFrame(({ clock }) => {
@@ -421,4 +429,29 @@ export function SeasonalParticles({ playerPosRef }: { playerPosRef: React.Mutabl
       <meshBasicMaterial transparent opacity={0} depthWrite={false} side={THREE.DoubleSide} />
     </instancedMesh>
   );
+}
+
+// ─── Mist banks (2026-09-24) ────────────────────────────────────────────
+// Fog-day haze that hugs the ground: a handful of large soft sprites (the
+// existing sun-glow radial) tinted with the fog colour, drifting slowly
+// around the player. Normal blending, no depth write; one draw each.
+const MIST_COUNT = 9;
+export function MistBanks({ playerPosRef, color, opacity = 0.32 }: { playerPosRef: React.RefObject<THREE.Vector3>; color: string; opacity?: number }) {
+  const glow = useTexture("/assets/sky/sun.png");
+  const group = useRef<THREE.Group>(null);
+  useFrame(({ clock }) => {
+    const g = group.current;
+    if (!g) return;
+    const p = playerPosRef.current, t = clock.elapsedTime;
+    g.children.forEach((child, i) => {
+      const a = (i / MIST_COUNT) * Math.PI * 2 + t * 0.015;
+      const r = 5 + (i % 3) * 4;
+      child.position.set(p.x + Math.cos(a) * r, 0.9 + (i % 2) * 0.5, p.z + Math.sin(a) * r + 3);
+    });
+  });
+  return <group ref={group}>{Array.from({ length: MIST_COUNT }, (_, i) => (
+    <sprite key={i} scale={[9 + (i % 3) * 2, 3.2, 1]} renderOrder={4}>
+      <spriteMaterial map={glow} color={color} transparent opacity={opacity} depthWrite={false} fog={false} />
+    </sprite>
+  ))}</group>;
 }
