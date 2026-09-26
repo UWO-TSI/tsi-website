@@ -31,7 +31,7 @@ import { getTodayWeather } from "@/lib/game/weather";
 
 type Motion = "flutter" | "dart" | "perch" | "drift" | "crawl";
 
-interface Species {
+export interface Species {
   key: string;
   label: string;
   model: string;
@@ -44,7 +44,7 @@ interface Species {
   zone?: "beach";
 }
 
-const SPECIES: Species[] = [
+export const SPECIES: Species[] = [
   { key: "bug_common_butterfly", label: "a Common Butterfly", model: "/assets/acnh/critters/common-butterfly.glb", motion: "flutter", scale: 0.09, baseY: 0.75, phases: ["day"], weight: 3 },
   { key: "bug_agrias_butterfly", label: "an Agrias Butterfly", model: "/assets/acnh/critters/agrias-butterfly.glb", motion: "flutter", scale: 0.09, baseY: 0.8, phases: ["day"], weight: 2 },
   { key: "bug_emperor_butterfly", label: "an Emperor Butterfly", model: "/assets/acnh/critters/emperor-butterfly.glb", motion: "flutter", scale: 0.09, baseY: 0.85, phases: ["night"], weight: 1 },

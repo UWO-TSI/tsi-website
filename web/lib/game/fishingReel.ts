@@ -25,12 +25,13 @@ export function createFishingReel(fish: FishDef) {
 export type FishingReel = ReturnType<typeof createFishingReel>;
 
 /** Preserve the authored 60 Hz fight on every display; bound suspended-frame catch-up. */
-export function advanceFishingReel(state: FishingReel, delta: number, holding: boolean, dartChanceMultiplier: number, random = Math.random) {
+/** `tensionMul` (rod tier, rods.ts) scales how fast progress drains while the fish is outside the bar. */
+export function advanceFishingReel(state: FishingReel, delta: number, holding: boolean, dartChanceMultiplier: number, random = Math.random, tensionMul = 1) {
   const events = { bounced: false, darted: false };
   if (state.result !== null) return events;
   state.remainder += Math.max(0, Math.min(delta, 0.1));
   const move = state.fish.move;
-  const drainRate = 0.17 + 0.09 * (1 - state.barWidth / 0.3);
+  const drainRate = (0.17 + 0.09 * (1 - state.barWidth / 0.3)) * tensionMul;
   while (state.remainder + 1e-9 >= STEP && state.result === null) {
     state.remainder = Math.max(0, state.remainder - STEP);
     state.elapsed += STEP;

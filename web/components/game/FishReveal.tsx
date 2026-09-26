@@ -1,5 +1,7 @@
 "use client";
 
+import { oneLinerFor } from "@/lib/game/peaceful";
+
 /**
  * FishReveal (David ruling 2026-07-23) — the blind-box first-catch ceremony.
  *
@@ -394,6 +396,7 @@ export default function FishReveal({
               Base odds · 1 in {odds}
             </span>
           </div>
+          {oneLinerFor(fish.key) && <p style={{ margin: "10px 0 0", fontSize: 13, fontStyle: "italic", color: "rgba(255, 253, 245, 0.85)", textAlign: "center" }}>“{oneLinerFor(fish.key)}”</p>}
         </div>
       </div>
 
