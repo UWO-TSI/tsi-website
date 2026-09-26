@@ -22,9 +22,11 @@ The coordinator (Claude) runs this without check-ins (David, 2026-09-26): verifi
 | Study × character integration (rigged seat-mates, sittable benches, bed Sleep, Dig, `avatar_config` drift migration, HUD on short screens) | **Done, merged** (`86923dc6`): rigged seat-mates, benches, bed, Dig, `avatar_config` migration, short-screen HUD; 877 tests | Seat-mates and the player use the rig at every seat | ~30 recipes learnable and craftable; rods 4–5 unlock |
 | Staging Supabase + signed-in E2E (Phase 1) | Running (branch `game/phase1-staging`) on `tethos-staging` (ref `jjiyeroyralfbluowbjq`); starts with a prod-vs-files schema drift diff | Every Phase 1 flow passes signed in |
 | Polish: ownership (wardrobe/decorate read owned items, free starters granted once), cleanup follow-ups in DefaultIslandWorld/study | Running (branch `game/polish-ownership`) | Nothing the shop sells is free outside the starter set |
-| Props and enemies art (original weapons, 8 enemies, workbench, bottle) | Running (branch `game/props-enemies`) | No dump stand-ins left in the ruins or crafting |
+| Props and enemies art (original weapons, 8 enemies, workbench, bottle) | **Done, merged** (`97192958`) | No dump stand-ins left in the ruins or crafting |
 | Server-authoritative catch rolls (catches are client-reported with hourly caps today) | Backlog, before launch | Server rolls species/size; client only requests |
-| Phone companion, seasonal events, combat content, chapters 3–4, admin pass | Later waves | Per spec in `specs/` |
+| Combat content A: roster, telegraphs, guardian statue boss, 10 missions, crafted weapon stats | Running (branch `game/combat-content-a`), spec `specs/combat-content.md` | Every enemy and the boss fight in the ruins; each mission template playable |
+| Combat content B: 16 kits, level-10 subclass choice, stat allocation | After A | Every subclass clears a normal mission solo |
+| Phone companion, seasonal events, chapters 3–4, admin pass | Later waves | Per spec in `specs/` |
 | Launch (Phase 4) | After all of the above | Member playtest, David's local review, migrations in one window |
 
 Waves run at most three code-writing agents at once (Mac memory). Each area: spec in `specs/<area>.md`, one fresh agent, questions in `specs/<area>-questions.md`, coordinator review, merge.
