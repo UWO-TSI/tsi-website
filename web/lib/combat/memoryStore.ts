@@ -4,7 +4,7 @@ import { BOSS_DROPS, ENEMIES, MISSIONS, type BossReward } from "./content";
 import { initialProgress, type MissionProgress, type MissionState } from "./missions";
 import { levelForXp, pointsEarned, pointsSpent, STATS, ZERO_STATS, STAT_RESET_FEE, SUBCLASS_RESPEC_FEE, type StatBlock } from "./progression";
 import { CombatError, type CombatStore, type OwnedWeapon, type ProgressRow } from "./store";
-import { STARTER_WEAPONS, wear as wearRule, WEAPONS } from "./weapons";
+import { FIRST_WEAPONS, STARTER_WEAPONS, wear as wearRule, WEAPONS } from "./weapons";
 
 export function memoryCombatStore(clock: () => Date = () => new Date()) {
   const prog = new Map<string, { xp: number; stats: StatBlock; subclass: string | null }>();
@@ -32,7 +32,7 @@ export function memoryCombatStore(clock: () => Date = () => new Date()) {
   const ensure = (m: string) => {
     if (!prog.has(m)) {
       prog.set(m, { xp: 0, stats: { ...ZERO_STATS }, subclass: null });
-      weapons.set(m, STARTER_WEAPONS.map((k) => ({ weapon_key: k, durability: WEAPONS.find((w) => w.key === k)!.max_durability, equipped: k === "sword-driftwood" })));
+      weapons.set(m, FIRST_WEAPONS.map((k) => ({ weapon_key: k, durability: WEAPONS.find((w) => w.key === k)!.max_durability, equipped: k === "sword-driftwood" })));
     }
     return prog.get(m)!;
   };
@@ -88,6 +88,8 @@ export function memoryCombatStore(clock: () => Date = () => new Date()) {
       const fee = p.subclass ? SUBCLASS_RESPEC_FEE : 0;
       if (fee) pay(m, -fee, `subclass:${key}`);
       p.subclass = subclass;
+      const list = weapons.get(m)!; // the gate opens: one starter per archetype
+      for (const k of STARTER_WEAPONS) if (!list.some((w) => w.weapon_key === k)) list.push({ weapon_key: k, durability: WEAPONS.find((w) => w.key === k)!.max_durability, equipped: false });
       return { subclass, fee, replayed: false };
     },
     async weapons(m) {
@@ -167,5 +169,5 @@ export function memoryCombatStore(clock: () => Date = () => new Date()) {
       return { reward, replayed: false };
     },
   };
-  return { store, setFamily: (m: string, f: Family) => families.set(m, f), fund: (m: string, n: number) => coins.set(m, n), coinsOf: (m: string) => coins.get(m) ?? 0, materialOf: (m: string, item: string) => materials.get(`${m}:${item}`) ?? 0 };
+  return { store, setFamily: (m: string, f: Family | null) => (f ? families.set(m, f) : families.delete(m)), fund: (m: string, n: number) => coins.set(m, n), coinsOf: (m: string) => coins.get(m) ?? 0, materialOf: (m: string, item: string) => materials.get(`${m}:${item}`) ?? 0 };
 }

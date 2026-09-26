@@ -13,12 +13,46 @@ import { allocateStats, chooseSubclass, claimBossReward, completeMission, getPro
 const M = "00000000-0000-4000-8000-0000000000aa";
 const now = new Date("2026-09-26T12:00:00Z");
 
+/** Rows 179/207: the ruins gate opens with the Oracle family, level 10 and the subclass choice. */
+async function openGate(c: ReturnType<typeof memoryCombatStore>, m = M) {
+  c.setFamily(m, "Warden");
+  await c.store.grantXp(m, xpForLevel(10), "admin", "x", "gate-xp");
+  await chooseSubclass(c.store, m, "druid", "gate-sub");
+}
+
+describe("the ruins gate is enforced on the server (Phase 1 finding)", () => {
+  it("refuses mission start, progress, kills and the boss reward until family + level 10 + subclass", async () => {
+    const c = memoryCombatStore(() => now);
+    const closed = { ok: false, code: "gate_closed" };
+    expect(await startMission(c.store, M, "hunt-golem", "start-g001", now)).toMatchObject(closed);
+    expect(await recordKill(c.store, M, "stone-golem", "kill-g001")).toMatchObject(closed);
+    expect(await claimBossReward(c.store, M, "kill-g001", () => 0.9)).toMatchObject(closed);
+    c.setFamily(M, "Warden");
+    await c.store.grantXp(M, xpForLevel(10), "admin", "x", "gate-xp");
+    expect(await startMission(c.store, M, "hunt-golem", "start-g002", now)).toMatchObject(closed); // no subclass yet
+    await chooseSubclass(c.store, M, "druid", "gate-sub");
+    const s = await startMission(c.store, M, "hunt-golem", "start-g003", now);
+    expect(s).toMatchObject({ ok: true });
+    expect(await recordKill(c.store, M, "stone-golem", "kill-g002")).toMatchObject({ ok: true });
+    // A progress row started before a gate check existed is refused too once the gate is closed again (family cleared).
+    c.setFamily(M, null);
+    expect(await missionProgress(c.store, M, s.ok ? s.data.progress_id : "", [{ id: "k1", type: "kill", enemy: "stone-golem" }])).toMatchObject(closed);
+  });
+  it("grants the four starter weapons when the gate opens, not before", async () => {
+    const c = memoryCombatStore(() => now);
+    const owned = async () => { const p = await getProgression(c.store, M); return p.ok ? p.data.weapons.map((w) => w.weapon_key) : []; };
+    expect(await owned()).toEqual(["sword-driftwood", "wraps-cloth"]);
+    await openGate(c);
+    expect(new Set(await owned())).toEqual(new Set(STARTER_WEAPONS));
+  });
+});
+
 describe("progression via the service", () => {
   it("starts at level 1 with starter weapons and no subclass choices", async () => {
     const c = memoryCombatStore(() => now);
     const p = await getProgression(c.store, M);
     expect(p).toMatchObject({ ok: true, data: { level: 1, points_available: 0, subclass_choices: [] } });
-    expect(p.ok && p.data.weapons.map((w) => w.weapon_key)).toEqual(["sword-driftwood", "bow-willow", "staff-oak", "tome-spirits", "wraps-cloth"]);
+    expect(p.ok && p.data.weapons.map((w) => w.weapon_key)).toEqual(["sword-driftwood", "wraps-cloth"]);
   });
   it("allocates within points, needs a paid reset to take points back, keeps XP on reset", async () => {
     const c = memoryCombatStore(() => now);
@@ -48,8 +82,10 @@ describe("progression via the service", () => {
   });
   it("counts each kill event once", async () => {
     const c = memoryCombatStore(() => now);
-    expect(await recordKill(c.store, M, "shadow-fox", "kill-0001")).toMatchObject({ ok: true, data: { xp: 30 } });
-    expect(await recordKill(c.store, M, "shadow-fox", "kill-0001")).toMatchObject({ ok: true, data: { xp: 30, replayed: true } });
+    await openGate(c);
+    const base = xpForLevel(10);
+    expect(await recordKill(c.store, M, "shadow-fox", "kill-0001")).toMatchObject({ ok: true, data: { xp: base + 30 } });
+    expect(await recordKill(c.store, M, "shadow-fox", "kill-0001")).toMatchObject({ ok: true, data: { xp: base + 30, replayed: true } });
     expect(await recordKill(c.store, M, "dragon", "kill-0002")).toMatchObject({ ok: false, code: "unknown_enemy" });
   });
 });
@@ -57,6 +93,7 @@ describe("progression via the service", () => {
 describe("missions via the service", () => {
   it("runs a hunt end to end; retried events and turn-ins pay once", async () => {
     const c = memoryCombatStore(() => now);
+    await openGate(c);
     const s = await startMission(c.store, M, "hunt-foxes", "start-0001", now);
     const id = s.ok ? s.data.progress_id : "";
     expect(await startMission(c.store, M, "hunt-foxes", "start-0002", now)).toMatchObject({ ok: true, data: { progress_id: id, resumed: true } });
@@ -70,7 +107,7 @@ describe("missions via the service", () => {
     expect(c.coinsOf(M)).toBe(60);
     expect(c.materialOf(M, "wood_branch")).toBe(3); // materials paid once too
     const p = await getProgression(c.store, M);
-    expect(p.ok && p.data.xp).toBe(300);
+    expect(p.ok && p.data.xp).toBe(xpForLevel(10) + 300);
     expect(await startMission(c.store, M, "hunt-foxes", "start-0003", now)).toMatchObject({ ok: false, code: "cooldown" });
     const board = await listMissions(c.store, M, now);
     expect(board.ok && board.data.find((m) => m.key === "hunt-foxes")).toMatchObject({ can_start: false });
@@ -78,6 +115,7 @@ describe("missions via the service", () => {
   });
   it("refuses kill events for unknown enemies", async () => {
     const c = memoryCombatStore(() => now);
+    await openGate(c);
     const s = await startMission(c.store, M, "hunt-crabs", "start-0010", now);
     expect(await missionProgress(c.store, M, s.ok ? s.data.progress_id : "", [{ id: "x", type: "kill", enemy: "dragon" }])).toMatchObject({ ok: false, code: "unknown_enemy" });
   });
@@ -119,6 +157,7 @@ describe("guardian statue reward (row 21)", () => {
   it("pays once per recorded boss kill, then waits out the 20 h cooldown", async () => {
     let t = now.getTime();
     const c = memoryCombatStore(() => new Date(t));
+    await openGate(c);
     expect(await claimBossReward(c.store, M, "boss-0001", () => 0.9)).toMatchObject({ ok: false, code: "not_found" }); // no kill yet
     await recordKill(c.store, M, "shadow-fox", "fox-0001");
     expect(await claimBossReward(c.store, M, "fox-0001", () => 0.9)).toMatchObject({ ok: false, code: "not_found" }); // not a boss
@@ -142,6 +181,7 @@ describe("guardian statue reward (row 21)", () => {
     expect(rollBossReward(epics.slice(0, 3), () => 0.1)).toMatchObject({ weapon: epics[3] });
     for (const g of BOSS_DROPS.gear) for (const w of g.weapons) expect(WEAPONS.find((x) => x.key === w)!.tier).toBe(g.rarity === "legendary" ? 5 : 4);
     const c = memoryCombatStore(() => now);
+    await openGate(c);
     await recordKill(c.store, M, "guardian-statue", "boss-0100");
     const r = await claimBossReward(c.store, M, "boss-0100", () => 0.1);
     const w = r.ok ? r.data.reward.weapon : null;

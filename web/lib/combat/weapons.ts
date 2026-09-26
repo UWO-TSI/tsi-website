@@ -41,7 +41,8 @@ export const WEAPONS: WeaponDef[] = [
   W("staff-heartstone", "Heartstone staff", "staff", 5, ["arcana", "spirit"]),
 ];
 
-/** Ruling 2026-09-26: one starter of each archetype (plus the wraps), granted with the progression row. */
+/** Everyone starts with a sword and wraps; ruling 2026-09-26: the rest of one-per-archetype arrives when the ruins gate opens (subclass choice). */
+export const FIRST_WEAPONS = ["sword-driftwood", "wraps-cloth"];
 export const STARTER_WEAPONS = ["sword-driftwood", "bow-willow", "staff-oak", "tome-spirits", "wraps-cloth"];
 
 /** Durability ≤ 0: the weapon still works at half damage until repaired (defeat never deletes gear). */

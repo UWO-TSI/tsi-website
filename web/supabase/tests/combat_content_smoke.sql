@@ -10,10 +10,14 @@ BEGIN
   ASSERT (SELECT zone FROM enemy_types WHERE key = 'rune-wisp') = 'outer' AND (SELECT armor FROM enemy_types WHERE key = 'guardian-statue') > 0, 'content roster';
   ASSERT (SELECT count(*) FROM missions WHERE active AND difficulty BETWEEN 1 AND 5 AND rewards ? 'materials') = 10, 'content missions';
   ASSERT (SELECT count(*) FROM weapons WHERE tier >= 4) = 5, 'content boss gear';
-  -- starters: one per archetype plus the wraps, the sword equipped
+  -- starters: a sword and wraps at first; one per archetype when the gate opens (the subclass choice)
   PERFORM combat_ensure(G);
-  ASSERT (SELECT count(*) FROM member_weapons WHERE member_id = G) = 5 AND (SELECT weapon_key FROM member_weapons WHERE member_id = G AND equipped) = 'sword-driftwood', 'content starters';
-  ASSERT NOT EXISTS (SELECT 1 FROM member_progression p WHERE NOT EXISTS (SELECT 1 FROM member_weapons w WHERE w.member_id = p.member_id AND w.weapon_key = 'staff-oak')), 'content starters backfilled';
+  ASSERT (SELECT count(*) FROM member_weapons WHERE member_id = G) = 2 AND (SELECT weapon_key FROM member_weapons WHERE member_id = G AND equipped) = 'sword-driftwood', 'content first weapons';
+  INSERT INTO member_identity (member_id, family) VALUES (G, 'Ranger') ON CONFLICT (member_id) DO UPDATE SET family = 'Ranger';
+  PERFORM combat_grant_xp(G, 11625, 'admin', 'x', 'cc-xp-0001');
+  PERFORM combat_choose_subclass(G, 'hunter', 'Ranger', 'cc-sub-0001');
+  ASSERT (SELECT count(*) FROM member_weapons WHERE member_id = G) = 5 AND (SELECT weapon_key FROM member_weapons WHERE member_id = G AND equipped) = 'sword-driftwood', 'content starters at the gate';
+  ASSERT NOT EXISTS (SELECT 1 FROM member_progression p WHERE p.subclass IS NOT NULL AND NOT EXISTS (SELECT 1 FROM member_weapons w WHERE w.member_id = p.member_id AND w.weapon_key = 'staff-oak')), 'content starters backfilled';
   -- mission rewards: XP, coins and materials exactly once
   wood := COALESCE((SELECT count FROM member_collections WHERE user_id = G AND item_key = 'wood_branch'), 0);
   SELECT * INTO r FROM combat_mission_start(G, 'escort-botanist', 'cc-mis-0001');

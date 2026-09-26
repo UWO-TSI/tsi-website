@@ -23,7 +23,10 @@ Each item has the assumption the build uses today. None blocks.
    - Levels are one per zone (row 230): outer 5, inner 10, boss 15, with elites 2 above.
 4. **Respawn.** Wild enemies from the spawn table come back 40 to 120 seconds after dying, once you are 12 units away. The boss only comes back on your next visit. This lets the hunts (6 foxes, 5 crabs) finish with a small resident population. *Assumption:* OK.
 5. **The guardian stays in its chamber.** Aggro is 9 and leash is 11. At the old aggro 14 and leash 42 it followed players into the temple. Leaving the chamber resets it to full health and phase 1.
-6. **Starter grant (answers island Q12).** `combat_ensure` now grants the four starters plus the wraps when the progression row is created, not when the gate opens, and existing members are backfilled. Weapons only show on the character once the gate is open, so owning them early is invisible. *Assumption:* OK.
+6. **Starter grant (answers island Q12) and the gate on the server (Phase 1 finding).**
+   - The server now checks the gate on every call that implies being in the ruins: mission start and progress, kills and the boss reward. The gate needs the Oracle family, level 10 and a subclass (rows 179, 207), and a closed gate returns `gate_closed` (403) from `web/lib/combat/service.ts`. Wear and repair stay open, since they only cost the member.
+   - The subclass choice, which is what opens the gate, grants the bow, staff and tome. Everyone keeps the sword and wraps from the start. Members who already chose a subclass are backfilled.
+   - The check lives in the service rather than SQL, because the routes are the only callers of the service-role functions.
 7. **Mission rewards.**
    - Materials go into `member_collections`, the stock crafting spends, through `combat_give_materials`.
    - Boss coins use the wallet source `mission`, which avoids another rewrite of the ledger's CHECK constraint.

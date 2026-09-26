@@ -56,22 +56,39 @@ INSERT INTO missions (key, title, template, zone, difficulty, params, rewards, c
 ON CONFLICT (key) DO UPDATE SET title = EXCLUDED.title, template = EXCLUDED.template, zone = EXCLUDED.zone, difficulty = EXCLUDED.difficulty, params = EXCLUDED.params, rewards = EXCLUDED.rewards, cooldown_hours = EXCLUDED.cooldown_hours;
 -- END GENERATED COMBAT SEED
 
--- ─── Starter weapons: one per archetype (ruling), new members and existing ones ─
-CREATE OR REPLACE FUNCTION public.combat_ensure(p_member_id UUID) RETURNS VOID
-LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+-- ─── Starter weapons (ruling): one per archetype when the ruins gate opens ───
+-- The gate opens with the level-10 subclass choice inside the Oracle family
+-- (rows 179, 207), so the choice grants the set; members who already chose are
+-- backfilled. The gate itself is checked in web/lib/combat/service.ts.
+CREATE OR REPLACE FUNCTION public.combat_choose_subclass(p_member_id UUID, p_subclass TEXT, p_subclass_family TEXT, p_key TEXT)
+RETURNS TABLE (subclass TEXT, fee INTEGER, replayed BOOLEAN) LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+#variable_conflict use_column
+DECLARE p member_progression%ROWTYPE; v_family TEXT; v_fee INTEGER := 0;
 BEGIN
-  INSERT INTO member_progression (member_id) VALUES (p_member_id) ON CONFLICT DO NOTHING;
-  IF FOUND THEN
-    INSERT INTO member_weapons (member_id, weapon_key, durability, equipped)
-    SELECT p_member_id, w.key, w.max_durability, w.key = 'sword-driftwood' FROM weapons w
-     WHERE w.key IN ('sword-driftwood', 'bow-willow', 'staff-oak', 'tome-spirits', 'wraps-cloth')
-    ON CONFLICT DO NOTHING;
+  PERFORM public.combat_ensure(p_member_id);
+  SELECT * INTO p FROM member_progression WHERE member_id = p_member_id FOR UPDATE;
+  IF p.subclass IS NOT DISTINCT FROM p_subclass THEN RETURN QUERY SELECT p.subclass, 0, TRUE; RETURN; END IF;
+  IF p.level < 10 THEN RAISE EXCEPTION 'level_too_low'; END IF;
+  SELECT i.family INTO v_family FROM member_identity i WHERE i.member_id = p_member_id;
+  IF v_family IS NULL THEN RAISE EXCEPTION 'no_family'; END IF;
+  IF v_family <> p_subclass_family THEN RAISE EXCEPTION 'wrong_family'; END IF;
+  IF p.subclass IS NOT NULL THEN
+    v_fee := COALESCE((SELECT value FROM economy_settings WHERE key = 'subclass_respec_fee'), 250);
+    PERFORM public.wallet_apply(p_member_id, 'coins', -v_fee, 'respec', 'subclass change', 'subclass:' || p_key);
   END IF;
+  INSERT INTO combat_respec_log (member_id, kind, from_value, to_value, fee, idempotency_key)
+  VALUES (p_member_id, 'subclass', to_jsonb(p.subclass), to_jsonb(p_subclass), v_fee, 'subclass:' || p_key);
+  UPDATE member_progression SET subclass = p_subclass, subclass_chosen_at = NOW(), updated_at = NOW() WHERE member_id = p_member_id;
+  INSERT INTO member_weapons (member_id, weapon_key, durability)
+  SELECT p_member_id, w.key, w.max_durability FROM weapons w
+   WHERE w.key IN ('sword-driftwood', 'bow-willow', 'staff-oak', 'tome-spirits', 'wraps-cloth')
+  ON CONFLICT DO NOTHING;
+  RETURN QUERY SELECT p_subclass, v_fee, FALSE;
 END;
 $$;
 INSERT INTO member_weapons (member_id, weapon_key, durability)
 SELECT p.member_id, w.key, w.max_durability FROM member_progression p CROSS JOIN weapons w
- WHERE w.key IN ('bow-willow', 'staff-oak', 'tome-spirits')
+ WHERE p.subclass IS NOT NULL AND w.key IN ('sword-driftwood', 'bow-willow', 'staff-oak', 'tome-spirits', 'wraps-cloth')
 ON CONFLICT DO NOTHING;
 
 -- ─── Materials into member_collections (the stock crafting spends) ──────────
@@ -158,7 +175,7 @@ END;
 $$;
 
 DO $$ DECLARE f TEXT; BEGIN
-  FOREACH f IN ARRAY ARRAY['combat_ensure(uuid)', 'combat_give_materials(uuid, jsonb)', 'combat_mission_complete(uuid, uuid)', 'combat_boss_reward(uuid, text, jsonb)'] LOOP
+  FOREACH f IN ARRAY ARRAY['combat_choose_subclass(uuid, text, text, text)', 'combat_give_materials(uuid, jsonb)', 'combat_mission_complete(uuid, uuid)', 'combat_boss_reward(uuid, text, jsonb)'] LOOP
     EXECUTE format('REVOKE ALL ON FUNCTION public.%s FROM PUBLIC, anon, authenticated', f);
     EXECUTE format('GRANT EXECUTE ON FUNCTION public.%s TO service_role', f);
   END LOOP;

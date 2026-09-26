@@ -6,7 +6,7 @@ import { DomainError } from "@/lib/result";
 
 export type CombatErrorCode =
   | "unavailable" | "insufficient" | "not_found" | "not_owned" | "needs_reset" | "not_enough_points" | "level_too_low" | "wrong_family"
-  | "no_family" | "cooldown" | "not_ready" | "kill_xp_cap" | "unknown_enemy" | "unknown_mission" | "bad_hits" | "boss_cooldown" | "failed";
+  | "no_family" | "cooldown" | "not_ready" | "kill_xp_cap" | "unknown_enemy" | "unknown_mission" | "bad_hits" | "boss_cooldown" | "gate_closed" | "failed";
 export class CombatError extends DomainError<CombatErrorCode> {}
 
 export interface ProgressionRow {
