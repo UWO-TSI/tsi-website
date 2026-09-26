@@ -24,8 +24,8 @@ The coordinator (Claude) runs this without check-ins (David, 2026-09-26): verifi
 | Polish: ownership (wardrobe/decorate read owned items, free starters granted once), cleanup follow-ups in DefaultIslandWorld/study | **Done, merged** (`9cb1f58b`): 885 tests; `avatar_config` now server-only | Nothing the shop sells is free outside the starter set |
 | Props and enemies art (original weapons, 8 enemies, workbench, bottle) | **Done, merged** (`97192958`) | No dump stand-ins left in the ruins or crafting |
 | Server-authoritative catch rolls (catches are client-reported with hourly caps today) | Backlog, before launch | Server rolls species/size; client only requests |
-| Combat content A: roster, telegraphs, guardian statue boss, 10 missions, crafted weapon stats | Running (branch `game/combat-content-a`), spec `specs/combat-content.md` | Every enemy and the boss fight in the ruins; each mission template playable |
-| Combat content B: 16 kits, level-10 subclass choice, stat allocation | After A | Every subclass clears a normal mission solo |
+| Combat content A: roster, telegraphs, guardian statue boss, 10 missions, crafted weapon stats | **Done, merged** (`df3d884d`): full roster, shared telegraphs, guardian boss (3 patterns, stagger, enrage), 10 missions, crafted weapon stats, server-side gate; 902 tests | Every enemy and the boss fight in the ruins; each mission template playable |
+| Combat content B: 16 kits, level-10 subclass choice, stat allocation | Running (branch `game/combat-content-b`) | Every subclass clears a normal mission solo |
 | Character art pass 2 (crafted wearables, real Stretch clip, beanie/cap/backpack/skirt fixes) | Running (branch `game/character-art-2`) | Every craftable wearable is wearable |
 | Launch-readiness fixes (membership default/backfill, public tier 5, un-RSVP, atomic chapter rewards, launch runbook) | Running (branch `game/launch-fixes`) | Fail-first tests; staging reruns pass |
 | Audio pass (sound on, settings, 12-block hourly music player, ambience, SFX map) | Next slot, spec `specs/audio-pass.md` | Chime and music play by default; blocks follow real time |

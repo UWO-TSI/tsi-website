@@ -35,3 +35,6 @@ Each item has the assumption the build uses today. None blocks.
 9. **The board shows all ten missions (answers island Q16).** They are grouped by zone and show difficulty stars, rewards and the cooldown. The inner missions aren't hidden, since the gate already requires level 10 and the zone levels speak for themselves.
 10. **Revolver grip.** The brass revolver's barrel is modelled along +Z, while the other weapons point along +Y. It gets its own grips, solved from the v6 socket frames: level when firing (left hand, AttackBow), pointed at the ground ahead at rest, and barrel down on the back.
 11. **Ground markers were drawn behind enemies.** The sector marker's yaw was off by π, so lunges and sweeps drew behind the attacker. Fixed in `Telegraphs`, and the screenshots show the markers in front.
+
+## Coordinator rulings (2026-09-26)
+All eleven Part A assumptions accepted as built; boss numbers are the starting balance, retune after the member playtest.
