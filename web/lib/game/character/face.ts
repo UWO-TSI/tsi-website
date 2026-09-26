@@ -10,7 +10,7 @@ export type Expression = "neutral" | "happy" | "surprised" | "sad" | "angry" | "
 
 /** Ruling 23: clip → expression; everything else is neutral with blinks. */
 export const CLIP_EXPRESSION: Record<string, Expression> = {
-  Laugh: "happy", Cheer: "happy", Dance: "happy", Sad: "sad", Defeat: "sad", Hit: "surprised", Sleep: "sleepy",
+  Laugh: "happy", Cheer: "happy", Stretch: "happy", Dance: "happy", Sad: "sad", Defeat: "sad", Hit: "surprised", Sleep: "sleepy",
   AttackMelee: "angry", AttackBow: "angry", AttackCast: "angry",
 };
 /** Which atlas cells stand in for each expression (closed "n" arcs, "> <", the half lid, open mouths). */

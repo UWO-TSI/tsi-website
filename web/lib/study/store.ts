@@ -53,6 +53,8 @@ export interface StudyStore {
   /** Service-role, idempotent: pays minutes + bonus once per session. */
   settle(sessionId: string, memberId: string): Promise<{ coins: number; replayed: boolean }>;
   names(ids: string[]): Promise<Map<string, string>>;
+  /** Stored character looks (`profiles.avatar_config.look`); missing ones fall back to a default on the client. */
+  looks?(ids: string[]): Promise<Map<string, unknown>>;
   weekStats(weekStart: string): Promise<WeekStat[]>;
   boardOptIns(): Promise<Set<string>>;
   setBoardOptIn(memberId: string, optIn: boolean): Promise<void>;

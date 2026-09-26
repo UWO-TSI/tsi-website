@@ -2,27 +2,32 @@
 
 /**
  * Study tables in one area of the world (specs/study-world.md): furniture
- * from lib/study/seats.ts, seat-mates at their seats with overhead timers,
- * your own overhead timer, the "Sit" proximity check and walk-away (row 80).
- * Sitting reuses PlayerAvatar's `tsi:sit` snap; the HUD owns the session.
+ * from lib/study/seats.ts, seat-mates on the shared rig at their seats with
+ * overhead timers, your own overhead timer, the "Sit" proximity check and
+ * walk-away (row 80). Sitting is PlayerAvatar's `tsi:sit` with the seat's
+ * measured top; the clip follows `studyPose()`. The HUD owns the session.
  */
 import { Suspense, useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
-import { Billboard, Html, useTexture } from "@react-three/drei";
-import * as THREE from "three";
+import { Html } from "@react-three/drei";
+import type * as THREE from "three";
 import { GLBProp } from "../NatureModels";
+import Character, { CHARACTER_SCALE, type CharacterMotion } from "../character/Character";
 import { calculateCurvedHtmlPosition } from "@/lib/game/worldProjection";
-import { npcSpriteSources } from "@/lib/game/npcSprites";
+import { hashSeed, parseLook, randomLook, seeded } from "@/lib/game/character/look";
+import { seatLift } from "@/lib/game/character/clips";
 import { FURNITURE, STUDY_LAYOUT, nearestSeat, seatAt, walkedAway, type SeatArea, type TableLayout, type WorldSeat } from "@/lib/study/seats";
-import { getWorldStudy, seatAvatar, setWorldStudy, useWorldStudy } from "@/lib/study/worldStore";
+import { STUDY_CLIP, getWorldStudy, poseOf, seatAvatar, setWorldStudy, sitDetail, useWorldStudy } from "@/lib/study/worldStore";
 import type { Mate } from "@/lib/study/service";
 import { formatClock } from "@/lib/study/useStudySession";
 import s from "./study.module.css";
 
 const F = "/assets/acnh/furniture/", P = "/assets/acnh/props/";
 const flat = () => 0;
-/** PlayerAvatar's tsi:sit toggles: sits if standing, stands if already in that seat. */
-const toggleSit = (seat: WorldSeat) => window.dispatchEvent(new CustomEvent("tsi:sit", { detail: { x: seat.x, z: seat.z } }));
+/** Without a clip, PlayerAvatar's tsi:sit at the seat you're in stands you up. */
+const standUp = (seat: WorldSeat) => window.dispatchEvent(new CustomEvent("tsi:sit", { detail: { x: seat.x, z: seat.z } }));
+/** With a clip it sits you (or re-poses you if already there): never a toggle. */
+const sitIn = (seat: WorldSeat, phase: Mate["phase"] | undefined) => window.dispatchEvent(new CustomEvent("tsi:sit", { detail: sitDetail(seat, phase) }));
 const atSeat = (seat: WorldSeat, p: THREE.Vector3) => Math.abs(p.x - seat.x) < 0.01 && Math.abs(p.z - seat.z) < 0.01;
 
 /** Placeholder furniture per kind, from the HQ clubhouse family (tables, chairs, sofa) and village props (benches, parasol). */
@@ -51,28 +56,17 @@ function Overhead({ name, phase, remaining }: { name?: string; phase: Mate["phas
   </div>;
 }
 
-/** Seat-mate stand-in (no multiplayer yet): a resident sprite at the seat, bobbing through breaks. */
-function MateFigure({ mate, seat, y, remaining }: { mate: Mate; seat: WorldSeat; y: number; remaining: number | null }) {
-  const url = npcSpriteSources(null, mate.member_id).fallback;
-  const sheet = useTexture(url);
-  const tex = useMemo(() => {
-    const t = sheet.clone();
-    t.colorSpace = THREE.SRGBColorSpace; t.magFilter = t.minFilter = THREE.NearestFilter; t.generateMipmaps = false;
-    t.repeat.set(1 / 4, 1); t.needsUpdate = true;
-    return t;
-  }, [sheet]);
-  useEffect(() => () => tex.dispose(), [tex]);
-  const body = useRef<THREE.Mesh>(null);
-  useFrame(({ clock }) => {
-    // ponytail: placeholder stretch bob until the rigged Sit/Study clips land.
-    if (body.current) body.current.position.y = 0.72 + (mate.phase === "break" ? Math.abs(Math.sin(clock.elapsedTime * 2.2)) * 0.12 : 0);
-  });
-  return <group position={[seat.x, y, seat.z]}>
-    <Billboard><mesh ref={body} scale={[1, 0.82, 1]} position={[0, 0.72, 0.2]}>
-      <planeGeometry args={[1.45, 1.45]} />
-      <meshBasicMaterial map={tex} transparent alphaTest={0.1} side={THREE.DoubleSide} />
-    </mesh></Billboard>
-    <Html calculatePosition={calculateCurvedHtmlPosition} position={[0, 1.75, 0]} center zIndexRange={[35, 0]} style={{ pointerEvents: "none" }}>
+/** Seat-mate (no multiplayer yet): the shared rig in their stored look, or a steady default per member, studying/stretching/sitting by phase. */
+function MateFigure({ mate, seat, floor, remaining }: { mate: Mate; seat: WorldSeat; floor: number; remaining: number | null }) {
+  const stored = JSON.stringify(mate.look ?? null);
+  const look = useMemo(() => (stored !== "null" ? parseLook(JSON.parse(stored)) : randomLook(seeded(hashSeed(mate.member_id)))), [stored, mate.member_id]);
+  const clip = STUDY_CLIP[poseOf(mate.phase)];
+  const lift = seatLift(clip, seat.y - floor, CHARACTER_SCALE);
+  const motion = useRef<CharacterMotion>({ speed: 0, yaw: seat.facing, lift, pose: clip, play: null });
+  useEffect(() => { Object.assign(motion.current, { yaw: seat.facing, lift, pose: clip }); }, [seat.facing, lift, clip]);
+  return <group position={[seat.x, floor, seat.z]}>
+    <Character look={look} motion={motion} />
+    <Html calculatePosition={calculateCurvedHtmlPosition} position={[0, seat.y - floor + 1.25, 0]} center zIndexRange={[35, 0]} style={{ pointerEvents: "none" }}>
       <Overhead name={mate.name.split(" ")[0]} phase={mate.phase} remaining={remaining} />
     </Html>
   </group>;
@@ -104,11 +98,13 @@ export default function StudySeats({ area, player, ground = flat, board }: {
   const arrived = useRef(false);
   // PlayerAvatar may not be listening yet on the first frames after a scene change: retry the snap briefly.
   const retry = useRef({ until: 0, last: 0 });
+  // The clip last sent while seated; a phase change (focus → break) re-poses in place.
+  const shown = useRef<string | null>(null);
   // Session over (finished, Leave seat, another device): stand up if still sitting.
   useEffect(() => {
     const seated = getWorldStudy().seated;
     if (session || !seated || !anchors.has(seated.anchor)) return;
-    if (atSeat(seated, player.current)) toggleSit(seated);
+    if (atSeat(seated, player.current)) standUp(seated);
     setWorldStudy({ seated: null });
   }, [session, anchors, player]);
   // A scene change after sitting down counts as walking away.
@@ -128,7 +124,7 @@ export default function StudySeats({ area, player, ground = flat, board }: {
     // From the frame loop, so PlayerAvatar's tsi:sit listener is already up.
     const table = w.study?.table;
     if (mine && table && anchors.has(table.anchor) && placed.current !== mine.id && !w.seated) {
-      const seat = seatAt(table.anchor, mine.seat);
+      const seat = seatAt(table.anchor, mine.seat, ground);
       placed.current = mine.id;
       arrived.current = false;
       retry.current = { until: performance.now() + 3000, last: performance.now() };
@@ -139,7 +135,12 @@ export default function StudySeats({ area, player, ground = flat, board }: {
     const now = performance.now();
     if (seated && !arrived.current && now < retry.current.until && now - retry.current.last > 400) {
       retry.current.last = now;
-      toggleSit(seated);
+      sitIn(seated, mine?.phase);
+    }
+    const clip = STUDY_CLIP[poseOf(mine?.phase)];
+    if (seated && arrived.current && atSeat(seated, p) && shown.current !== clip) {
+      shown.current = clip;
+      sitIn(seated, mine?.phase);
     }
     if (seated && arrived.current && walkedAway(seated, p.x, p.z)) {
       arrived.current = false;
@@ -153,7 +154,7 @@ export default function StudySeats({ area, player, ground = flat, board }: {
       if (!view) return !w.study!.signedOut;
       if (mine) return !(w.study!.table?.anchor === anchor && mine.seat === seat) || (!!w.seated && atSeat(w.seated, p));
       return !view.can_join || view.taken.includes(seat);
-    });
+    }, ground);
     const prev = w.near;
     const same = prev === near || (typeof prev === "object" && typeof near === "object" && prev?.anchor === near?.anchor && prev?.seat === near?.seat);
     if (!same) setWorldStudy({ near });
@@ -165,9 +166,9 @@ export default function StudySeats({ area, player, ground = flat, board }: {
       const layout = layouts.find(l => l.anchor === v.anchor)!;
       return <group key={v.id}>
         {v.mates.filter(m => !m.me).map(m => {
-          const seat = seatAt(v.anchor, m.seat);
+          const seat = seatAt(v.anchor, m.seat, ground);
           return seat && <Suspense key={m.member_id} fallback={null}>
-            <MateFigure mate={m} seat={seat} y={ground(seat.x, seat.z)} remaining={m.remaining_s} />
+            <MateFigure mate={m} seat={seat} floor={ground(seat.x, seat.z)} remaining={m.remaining_s} />
           </Suspense>;
         })}
         {v.is_private && !v.can_join && <Html position={[layout.at[0], ground(...layout.at) + 1.6, layout.at[1]]} center zIndexRange={[30, 0]} style={{ pointerEvents: "none" }}>

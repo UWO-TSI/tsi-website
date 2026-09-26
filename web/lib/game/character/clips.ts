@@ -8,7 +8,16 @@ import { CLIP_BY_NAME } from "./look";
 import type { WeaponKind } from "@/lib/game/combat/contract";
 
 export type ClipName = "Idle" | "Walk" | "Run" | "Sit" | "Study" | "Sleep" | "Fish" | "FishHold" | "Forage" | "Dig" | "Net"
-  | "Wave" | "Cheer" | "Laugh" | "Sad" | "Dance" | "AttackMelee" | "AttackBow" | "AttackCast" | "DodgeRoll" | "Hit" | "Defeat" | "Trace";
+  | "Wave" | "Cheer" | "Laugh" | "Sad" | "Dance" | "AttackMelee" | "AttackBow" | "AttackCast" | "DodgeRoll" | "Hit" | "Defeat" | "Trace" | "Stretch";
+
+/**
+ * Clips assembled at load until Blender ones exist: `from`'s hips and legs
+ * with `upper`'s arms, neck and head. Stretch is the study break at the seat
+ * (study row 166): seated legs with Cheer's arms-up.
+ */
+export const DERIVED_CLIPS: Partial<Record<ClipName, { from: ClipName; upper: ClipName }>> = { Stretch: { from: "Sit", upper: "Cheer" } };
+/** Tracks are named `<bone>.<property>` after the rig's mixamo bones (the loader strips the ":"). */
+export const isUpperBodyTrack = (track: string) => /Shoulder|Arm|Hand|Neck|Head/.test(track.split(".")[0]);
 
 /**
  * What the world asks of a character each frame. `speed` is ground speed in
@@ -61,5 +70,5 @@ export function combatClip(p: CombatView, prev: CombatView, casting: boolean, ki
 
 /** Ruling 18: seat clips are authored on a generic seat; lift the character so it lands on this furniture's seat (heights in world units). */
 export function seatLift(clip: ClipName, seatHeight: number, scale: number): number {
-  return seatHeight - (CLIP_BY_NAME.get(clip)?.seatHeight ?? 0) * scale;
+  return seatHeight - (CLIP_BY_NAME.get(DERIVED_CLIPS[clip]?.from ?? clip)?.seatHeight ?? 0) * scale;
 }
