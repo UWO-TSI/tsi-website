@@ -22,7 +22,7 @@ SOFT = 70                      # organic parts read smooth; thorns, boxes and ro
 
 def eye(pc, p, n, rx, ry, tilt=0.0, depth=0.012):
     """A painted-looking dome eye sitting on a surface point p with normal n (rx across, ry up)."""
-    lathe(pc, p - n * depth * 0.5, [(0, -depth), (1, 0), (0.72, depth * 0.55), (0, depth)], n=8, axis=n, sx=rx, sy=ry, tilt=tilt)
+    lathe(pc, p - n * depth * 0.5, [(0, -depth), (1, 0), (0.72, depth * 0.55), (0, depth)], n=10, axis=n, sx=rx, sy=ry, tilt=tilt)
 
 
 def eyes_on(pc, c, r, x, z, rx, ry, tilt):
@@ -61,7 +61,7 @@ def shadow_fox():
 
     def glow(pc):
         pc.mat = TEL
-        eyes_on(pc, HC_, HR, 0.058, 0.37, 0.04, 0.03, math.radians(18))
+        eyes_on(pc, HC_, HR, 0.06, 0.368, 0.038, 0.025, math.radians(24))
 
     def tail(pc):
         pc.mat = "M_Fur"
@@ -410,7 +410,7 @@ def guardian_statue():
             pc.mat = "M_Stone"
             pc.tube([(s * 0.62, 0, 1.45), (s * 0.66, -0.03, 1.2)], [0.13, 0.12], sides=7, tip=False)
             rbox(pc, (s * 0.68, -0.07, 1.0), (0.3, 0.3, 0.36), ch=0.4)                                  # gauntlet
-            pc.blob((s * 0.7, -0.1, 0.74), (0.2, 0.2, 0.18), segs=8, rings=5)                          # fist
+            pc.blob((s * 0.72, -0.12, 0.72), (0.26, 0.25, 0.23), segs=8, rings=5)                      # fist
         return b
 
     def glow_arm(s):

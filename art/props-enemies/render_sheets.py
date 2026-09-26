@@ -54,11 +54,16 @@ for mid, entry in CAT.items():
             pe.use_action(rig, clip, t)
             root.rotation_euler = (0, 0, math.radians(yaw))
             st.shot(f(mid, tag), char + held, elev=15, res=(300, 380))
+        bpy.data.objects.remove(holder, do_unlink=True)
+        holder = pe.attach(held, socks["Back"], kind, False)             # carried on the back outside the ruins
+        pe.use_action(rig, "Idle", 0.0)
+        root.rotation_euler = (0, 0, math.radians(150))
+        st.shot(f(mid, "e"), char + held, elev=15, res=(300, 380))
         alone = pe.import_glb(glb(mid))
         tt = turntable(alone, (6, 0, 0))
         tt.rotation_euler = (0, 0, math.radians(35))
         st.shot(f(mid, "d"), alone, elev=12, res=(300, 380), pad=1.2, ground=False)
-        cells.append((f"{label}  ({kind}, {pe.HAND[kind]} hand)", [f(mid, x) for x in "abcd"]))
+        cells.append((f"{label}  ({kind}, {pe.HAND[kind]} hand)", [f(mid, x) for x in "abced"]))
         for o in held + alone + [holder, tt]:
             bpy.data.objects.remove(o, do_unlink=True)
     else:
