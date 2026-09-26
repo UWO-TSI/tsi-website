@@ -23,6 +23,8 @@ export interface PartMaterial { name: string; tint?: "outfit" | "hair" | null; d
 export interface CatalogPart {
   id: string; slot: PartSlot; name: string; glb: string; tris: number; materials: PartMaterial[];
   hidesBackHair: boolean; hides: string[]; variantOf?: string; group?: AccGroup;
+  /** The economy item (crafted) that unlocks this part; its catalogue_ref is this part's id. Such parts are never sold. */
+  item?: string;
 }
 export interface ClipInfo { name: string; length: number; loop: boolean; endsNeutral?: boolean; endsOn?: string; seatHeight?: number; deskHeight?: number; hand?: "L" | "R" }
 

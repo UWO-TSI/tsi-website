@@ -14,7 +14,7 @@ import * as THREE from "three";
 import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js";
 import { BASE_URL, FACE_ATLAS_URL, PALETTE, TSI_DECAL_URL, CLIP_BY_NAME, bodyKey, faceKey, resolveParts, type CharacterLook, type ResolvedPart } from "@/lib/game/character/look";
 import { CLIP_EXPRESSION, composeFace, type Ctx2D, type Expression } from "@/lib/game/character/face";
-import { DERIVED_CLIPS, WEAPON_HAND, isLoop, isUpperBodyTrack, resolveClip, tempo, type CharacterMotion, type ClipName } from "@/lib/game/character/clips";
+import { WEAPON_HAND, isLoop, resolveClip, tempo, type CharacterMotion, type ClipName } from "@/lib/game/character/clips";
 import { adoptPrimitive, materialName, mergeLook, refCache, skinnedPrimitives } from "@/lib/game/character/rig";
 import type { WeaponGrip, WeaponKind } from "@/lib/game/combat/contract";
 
@@ -39,22 +39,6 @@ function faceMaterial(atlas: HTMLImageElement, look: CharacterLook, expression: 
   map.colorSpace = THREE.SRGBColorSpace;
   const material = new THREE.MeshStandardMaterial({ name: "CharacterFace", map, roughness: 0.85, metalness: 0 });
   return { material, dispose() { map.dispose(); material.dispose(); } };
-}
-
-/** Catalogue clips plus DERIVED_CLIPS (Stretch), built once per loaded base and shared by every puppet. */
-const clipSets = new WeakMap<THREE.AnimationClip[], Map<string, THREE.AnimationClip>>();
-function withDerived(animations: THREE.AnimationClip[]) {
-  let set = clipSets.get(animations);
-  if (set) return set;
-  set = new Map(animations.map(c => [c.name, c]));
-  for (const [name, { from, upper }] of Object.entries(DERIVED_CLIPS)) {
-    const a = set.get(from), b = set.get(upper);
-    // The upper body is slowed to the base clip's length, so the arms rise and settle once per loop.
-    if (a && b) set.set(name, new THREE.AnimationClip(name, a.duration,
-      [...a.tracks.filter(t => !isUpperBodyTrack(t.name)), ...b.tracks.filter(t => isUpperBodyTrack(t.name)).map(t => t.clone().scale(a.duration / b.duration))]));
-  }
-  clipSets.set(animations, set);
-  return set;
 }
 
 /** One character instance: its own bones and mixer, shared geometry/materials. */
@@ -102,7 +86,7 @@ class Puppet {
     this.body.visible = this.face.visible = this.decal.visible = false; // until dress()
     this.sockets = { R: this.root.getObjectByName("Socket_R_Hand")!, L: this.root.getObjectByName("Socket_L_Hand")!, Back: this.root.getObjectByName("Socket_Back")! };
     this.mixer = new THREE.AnimationMixer(this.root);
-    this.clips = withDerived(base.animations);
+    this.clips = new Map(base.animations.map(c => [c.name, c]));
   }
 
   dress(look: CharacterLook, parts: ResolvedPart[], scenes: THREE.Object3D[], atlas: HTMLImageElement, decalMap: THREE.Texture, faceSize: number) {
