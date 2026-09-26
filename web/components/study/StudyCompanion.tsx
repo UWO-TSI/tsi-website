@@ -81,7 +81,7 @@ function Tables({ study }: { study: StudyHook }) {
   );
 }
 
-function Setup({ study }: { study: StudyHook }) {
+export function Setup({ study }: { study: StudyHook }) {
   const [settings, setSettings] = useState<Settings>({ focus_len: 25, break_len: 5, cycles: 4 });
   const step = (k: keyof Settings, d: number) => {
     const lim = k === "focus_len" ? LIMITS.focus : k === "break_len" ? LIMITS.break : LIMITS.cycles;
@@ -201,7 +201,7 @@ function Stats({ study }: { study: StudyHook; transport?: StudyTransport }) {
   );
 }
 
-function Chat({ study }: { study: StudyHook }) {
+export function Chat({ study }: { study: StudyHook }) {
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const send = async () => {

@@ -2,6 +2,7 @@ import {
   createCenteredMap, setCell, Surface, heightField, sampleGroundHeight,
   worldToCellX, worldToCellZ, isGroundAtWorld, surfaceAt, levelAt, CLIFF_LEVELS,
 } from "./grid";
+import { studySolid } from "@/lib/study/seats";
 
 /**
  * Default island: the village core (ledger rows 155, 156). World +x is screen
@@ -108,6 +109,7 @@ export function createDefaultIsland() {
       const localZ = dx * Math.sin(prop.yaw) + dz * Math.cos(prop.yaw);
       return Math.abs(localX) < prop.halfWidth * prop.scale && Math.abs(localZ) < prop.halfDepth * prop.scale;
     })) return false;
+    if (studySolid("village", x, z)) return false;
     return !ISLAND_TREES.some(([tx, tz]) => Math.hypot(tx - x, tz - z) < 0.65);
   };
   const fits = (x: number, z: number) =>

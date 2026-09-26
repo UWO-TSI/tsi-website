@@ -136,13 +136,16 @@ export function useStudySession(opts: { transport?: StudyTransport; heartbeatMs?
     };
   }, [active?.id, heartbeatMs, run, transport]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // 1 Hz local tick for your countdown and seat-mates' overhead timers.
-  const ticking = !!active?.phase_ends_at || (state?.table?.mates ?? []).some((m) => m.remaining_s !== null);
+  // 1 Hz local tick for your countdown and every visible studier's overhead timer.
+  const ticking = !!active?.phase_ends_at || (state?.tables ?? []).some((t) => t.mates.some((m) => m.remaining_s !== null));
   useEffect(() => {
     if (!ticking) return;
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
   }, [ticking]);
+
+  const age = Math.floor((now - fetchedAt) / 1000);
+  const tick = (m: Mate): Mate => (m.remaining_s === null ? m : { ...m, remaining_s: Math.max(0, m.remaining_s - age) });
 
   const remaining = active?.phase_ends_at ? Math.max(0, Math.ceil((Date.parse(active.phase_ends_at) - now) / 1000)) : null;
 
@@ -189,8 +192,8 @@ export function useStudySession(opts: { transport?: StudyTransport; heartbeatMs?
     busy,
     session: active,
     table: state?.table ?? null,
-    tables: state?.tables ?? [],
-    mates: (state?.table?.mates ?? []).map((m) => (m.remaining_s === null ? m : { ...m, remaining_s: Math.max(0, m.remaining_s - Math.floor((now - fetchedAt) / 1000)) })),
+    tables: (state?.tables ?? []).map((t) => ({ ...t, mates: t.mates.map(tick) })),
+    mates: (state?.table?.mates ?? []).map(tick),
     remaining,
     chatMuted,
     chat: chatActive ? chat : [],
