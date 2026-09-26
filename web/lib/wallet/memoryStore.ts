@@ -1,5 +1,5 @@
 /** In-memory EconomyStore mirroring 20260926150600_economy.sql (tests, dev harness). */
-import { dailyGiftAmount, SELL_PRICES, SETTINGS } from "./catalogue";
+import { dailyGiftAmount, SELL_PRICES, SETTINGS, STARTER_REFS } from "./catalogue";
 import { seedItems, sellPrice, speciesClass, torontoDay, type ShopItem } from "./rules";
 import { EconomyError, type EconomyStore, type InventoryRow, type LedgerEntry, type Reservation } from "./store";
 
@@ -11,6 +11,7 @@ export function memoryEconomyStore(clock: () => Date = () => new Date()) {
   const inventory = new Map<string, InventoryRow>(); // `${member}:${itemId}`
   const collections = new Map<string, number>(); // `${member}:${key}`
   const claims = new Set<string>();
+  const granted = new Set<string>(); // starter_grants
   const reservations: Reservation[] = [];
   const tiers = new Map<string, number>();
   const names = new Map<string, string>();
@@ -37,6 +38,18 @@ export function memoryEconomyStore(clock: () => Date = () => new Date()) {
     },
     async inventory(m) {
       return [...inventory.entries()].filter(([k]) => k.startsWith(`${m}:`)).map(([, v]) => ({ ...v, item: { ...v.item } }));
+    },
+    async grantStarters(m) {
+      if (granted.has(m)) return { granted: false };
+      granted.add(m);
+      for (const it of items) {
+        const qty = it.catalogue_ref ? STARTER_REFS.get(it.catalogue_ref) : undefined;
+        if (!qty) continue;
+        const row = inventory.get(`${m}:${it.id}`) ?? { item: it, qty: 0, equipped: false, acquired_at: clock().toISOString() };
+        row.qty += qty;
+        inventory.set(`${m}:${it.id}`, row);
+      }
+      return { granted: true };
     },
     async buy(m, itemId, qty, priceEach, key) {
       const it = items.find((i) => i.id === itemId);

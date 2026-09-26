@@ -1,4 +1,4 @@
--- Local smoke test for draft 20260926180000_combat_content (after every game draft
+-- Local smoke test for draft 20260926190000_combat_content (after every game draft
 -- and the 029-035, security and crafting smokes, same throwaway cluster). Never Supabase.
 \set ON_ERROR_STOP 1
 INSERT INTO auth.users (id, email) VALUES ('00000000-0000-4000-8000-0000000000c5', 'fighter@x') ON CONFLICT DO NOTHING;

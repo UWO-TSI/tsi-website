@@ -20,12 +20,15 @@ The coordinator (Claude) runs this without check-ins (David, 2026-09-26): verifi
 | Study in the world | **Done, merged** (`c977ef7`): cafe interior placeholder, 2 outdoor tables, sit/start/stand, overhead timers, walk-away settlement, grey fitting room fixed | Sit → study → coins → walk away ends session, in the cafe and outdoor tables |
 | Crafting | **Done, merged** (`0e98713a`): 31 recipes, HQ workbench, beach bottles, branches, crafted rods 4–5 |
 | Study × character integration (rigged seat-mates, sittable benches, bed Sleep, Dig, `avatar_config` drift migration, HUD on short screens) | **Done, merged** (`86923dc6`): rigged seat-mates, benches, bed, Dig, `avatar_config` migration, short-screen HUD; 877 tests | Seat-mates and the player use the rig at every seat | ~30 recipes learnable and craftable; rods 4–5 unlock |
-| Staging Supabase + signed-in E2E (Phase 1) | Running (branch `game/phase1-staging`) on `tethos-staging` (ref `jjiyeroyralfbluowbjq`); starts with a prod-vs-files schema drift diff | Every Phase 1 flow passes signed in |
-| Polish: ownership (wardrobe/decorate read owned items, free starters granted once), cleanup follow-ups in DefaultIslandWorld/study | Running (branch `game/polish-ownership`) | Nothing the shop sells is free outside the starter set |
+| Staging Supabase + signed-in E2E (Phase 1) | **Done, merged** (`1ada8162`): drift reconcile (004 never ran in prod, 005/007/008 missing, 011/020 partial), 4 fixes with fail-first tests, all flows pass on staging, 46 security checks | Every Phase 1 flow passes signed in |
+| Polish: ownership (wardrobe/decorate read owned items, free starters granted once), cleanup follow-ups in DefaultIslandWorld/study | **Done, merged** (`9cb1f58b`): 885 tests; `avatar_config` now server-only | Nothing the shop sells is free outside the starter set |
 | Props and enemies art (original weapons, 8 enemies, workbench, bottle) | **Done, merged** (`97192958`) | No dump stand-ins left in the ruins or crafting |
 | Server-authoritative catch rolls (catches are client-reported with hourly caps today) | Backlog, before launch | Server rolls species/size; client only requests |
 | Combat content A: roster, telegraphs, guardian statue boss, 10 missions, crafted weapon stats | Running (branch `game/combat-content-a`), spec `specs/combat-content.md` | Every enemy and the boss fight in the ruins; each mission template playable |
 | Combat content B: 16 kits, level-10 subclass choice, stat allocation | After A | Every subclass clears a normal mission solo |
+| Character art pass 2 (crafted wearables, real Stretch clip, beanie/cap/backpack/skirt fixes) | Running (branch `game/character-art-2`) | Every craftable wearable is wearable |
+| Launch-readiness fixes (membership default/backfill, public tier 5, un-RSVP, atomic chapter rewards, launch runbook) | Running (branch `game/launch-fixes`) | Fail-first tests; staging reruns pass |
+| Audio pass (sound on, settings, 12-block hourly music player, ambience, SFX map) | Next slot, spec `specs/audio-pass.md` | Chime and music play by default; blocks follow real time |
 | Phone companion, seasonal events, chapters 3–4, admin pass | Later waves | Per spec in `specs/` |
 | Launch (Phase 4) | After all of the above | Member playtest, David's local review, migrations in one window |
 

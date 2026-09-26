@@ -191,8 +191,8 @@ describe("guardian statue reward (row 21)", () => {
   });
 });
 
-describe("20260926180000_combat_content.sql stays in step with the TS rules", () => {
-  const sql = readFileSync(join(__dirname, "../../supabase/migrations/20260926180000_combat_content.sql"), "utf8");
+describe("20260926190000_combat_content.sql stays in step with the TS rules", () => {
+  const sql = readFileSync(join(__dirname, "../../supabase/migrations/20260926190000_combat_content.sql"), "utf8");
   it("carries the generated seed verbatim", () => {
     expect(sql).toContain(combatSeedSql());
   });

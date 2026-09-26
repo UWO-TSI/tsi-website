@@ -20,8 +20,10 @@ import { NatureFence } from "./NatureModels";
 import WharfPier from "./WharfPier";
 import MiniMap from "./MiniMap";
 import { useDefaultIslandPlot } from "./DefaultIslandMap";
-import { LettersSheet, NoticeSheet, JournalSheet } from "./progressionSheets";
-import { useProgressionWorld, useCeremony, useChapterActions, monumentStage, type WorldGoalId } from "@/lib/game/progressionBridge";
+import LettersSheet from "@/components/progression/LettersSheet";
+import NoticeSheet from "@/components/progression/NoticeSheet";
+import JournalSheet from "@/components/progression/JournalSheet";
+import { useProgressionWorld, useCeremony, useChapterActions, type WorldGoalId } from "@/lib/game/progressionBridge";
 import confetti from "canvas-confetti";
 import type { InteriorStation } from "./interiorShared";
 import { POND, ISLAND_RADII, createDefaultIsland, DEFAULT_SPAWN, ISLAND_TREES, ISLAND_BUSHES, ISLAND_FLOWERS, ISLAND_PROPS, LANDMARKS, landmark, benchSeat, BENCH_SEAT_TOP, type Landmark } from "@/lib/game/defaultIsland";
@@ -34,6 +36,9 @@ import { useIslandConditions } from "@/lib/game/useIslandConditions";
 import { IslandAtmosphere, useFollowCamera } from "./IslandAtmosphere";
 import PeacefulLayer, { peacefulNear } from "./peaceful/PeacefulLayer";
 import WardrobeSheet from "./peaceful/WardrobeSheet";
+import { ShopBody } from "@/components/economy/EconomySheets";
+import ProgressionPanel from "@/components/progression/ProgressionPanel";
+import { apiCall } from "@/lib/apiClient";
 import PlayerCharacterUI from "./character/PlayerCharacterUI";
 import CharacterCrowd from "./character/CharacterCrowd";
 import OracleTemple from "./oracle/OracleTemple";
@@ -46,6 +51,7 @@ import { combatProgression, postWear, startMissionRemote } from "@/lib/game/comb
 import { MISSIONS, WEAPONS } from "@/lib/game/combat/data";
 import { startMission } from "@/lib/game/combat/missions";
 import OracleQuizSheet from "./oracle/OracleQuizSheet";
+import { FamilyReveal } from "./oracle/OracleSheetEmbed";
 import SettingsSheet from "./oracle/SettingsSheet";
 import FamilyAura from "./oracle/FamilyAura";
 import { FAMILIES } from "@/lib/game/oracle/family";
@@ -85,7 +91,7 @@ import styles from "./DefaultIslandWorld.module.css";
 
 type Metrics = { fps: number; frameMs: number; calls: number; triangles: number; x: number; z: number };
 type Near = "enter" | "exit" | "board" | "display" | "desk" | "shelf" | "clock" | "notice" | "catch" | "cafe" | "museum" | "ruins" | "mailbox" | "monument" | "home" | "house" | "village" | "buy" | "claim" | "donate" | "report" | "fish" | "forage" | "net" | "museum_enter" | "cafe_enter" | "curator" | "closet" | "fitting" | "oracle_enter" | "altar" | "missions" | "ruins_exit" | "lantern" | "bench" | "bed" | null;
-type Sheet = "notice" | "catch" | "letters" | "journal" | "trophies" | "showcase" | "closet" | "fitting" | "oracle" | "settings" | "missions" | null;
+type Sheet = "notice" | "letters" | "journal" | "trophies" | "showcase" | "closet" | "fitting" | "oracle" | "settings" | "missions" | null;
 const PHASE_NAMES: Record<IslandPhase, string> = { dawn: "Dawn", day: "Daylight", evening: "Evening", night: "Night" };
 const TREE_SEEDS = [0, 3, 2, 5, 7, 8, 1, 3];
 const HQ_DOOR: [number, number] = [0, 6.3];
@@ -430,10 +436,11 @@ function DefaultIslandWorldContent() {
   const [donateOpen, setDonateOpen] = useState(false);
   const [museumWings, setMuseumWings] = useState<MuseumWing[] | null>(null);
   const loadMuseumRef = useRef(false);
-  const loadMuseum = useCallback(() => { void fetch("/api/collections/museum").then(r => r.json()).then(b => { if (b?.ok) setMuseumWings(b.wings); }).catch(() => {}); }, []);
+  const loadMuseum = useCallback(() => { apiCall<MuseumWing[]>("/api/collections/museum", "wings").then(setMuseumWings, () => {}); }, []);
   const [fading, setFading] = useState(false);
   const [near, setNear] = useState<Near>(null);
   const [sheet, setSheet] = useState<Sheet>(null);
+  const [shopTab, setShopTab] = useState<"outfits" | "furniture" | null>(null);
   const [mapOpen, setMapOpen] = useState(true);
   const plot = useDefaultIslandPlot();
   const progression = useProgressionWorld();
@@ -469,7 +476,7 @@ function DefaultIslandWorldContent() {
   }, []);
   const fishSpot = useRef<FishingSpot | null>(null);
   useCheer(ceremony, RESIDENTS.map(r => r.persona.id));
-  const stage = progression.activeGoal ? monumentStage(progression.activeGoal.progress) : 0;
+  const stage = progression.activeGoal?.stage ?? 0;
   const progressionWorld = useMemo(() => ({ stage, opened: progression.completedGoals }), [stage, progression.completedGoals]);
   const target = progression.objective.target;
   // Objective marker drawn in the minimap's mirrored world coordinates (+x on the left).
@@ -502,7 +509,9 @@ function DefaultIslandWorldContent() {
   const grade = inside ? CLUBHOUSE_LIGHTING[phase].grade : light.grade;
   const atHome = site === "home";
   const act = useCallback((action: Near) => {
-    if (action === "notice" || action === "catch") { setSheet(action); return; }
+    if (action === "notice") { setSheet("notice"); return; }
+    // The catch board's clues are the collection journal's.
+    if (action === "catch") { setBagOpen(true); return; }
     if (action === "mailbox") { setSheet("letters"); return; }
     if (action === "curator") { setDonateOpen(true); return; }
     if (action === "display") { setSheet("trophies"); return; }
@@ -678,33 +687,24 @@ function DefaultIslandWorldContent() {
       <CeremonyConfetti active={ceremony && !inside && !atHome} />
       {actionNote && <p className={styles.actionNote} role="status">{actionNote}</p>}
       {atHome && !decor.decorating && <button className={styles.decorateToggle} onClick={decor.toggle}><kbd>F</kbd> Decorate</button>}
-      {atHome && decor.decorating && <DecorateSheet indoor={inside === "house"} selected={decor.selected}
+      {atHome && decor.decorating && !shopTab && <DecorateSheet indoor={inside === "house"} selected={decor.selected} layout={layout}
         room={inside === "house" ? layout.rooms[roomAt(player.current.x, layout.rooms.length)] ?? null : null}
         onChoose={decor.choose} onRotate={decor.rotateSelected} onPutAway={decor.putAway} onDone={decor.toggle}
-        onFinish={(key, value) => decor.setRoomFinish(roomAt(player.current.x, layout.rooms.length), key, value)} />}
+        onFinish={(key, value) => decor.setRoomFinish(roomAt(player.current.x, layout.rooms.length), key, value)} onShop={() => setShopTab("furniture")} />}
+      {/* Locked wardrobe items and the decorate panel link here; closing remounts them with the new inventory. */}
+      <ProgressionPanel open={!!shopTab} onClose={() => setShopTab(null)} title="Shop" wide>{shopTab && <ShopBody initialTab={shopTab} />}</ProgressionPanel>
       <NoticeSheet open={sheet === "notice"} onClose={() => setSheet(null)} />
       <LettersSheet open={sheet === "letters"} onClose={() => setSheet(null)} />
-      {(sheet === "closet" || sheet === "fitting") && <WardrobeSheet open place={sheet === "closet" ? "closet" : "fitting"} onClose={() => setSheet(null)} />}
+      {(sheet === "closet" || sheet === "fitting") && <WardrobeSheet open place={sheet === "closet" ? "closet" : "fitting"} onClose={() => setSheet(null)} onShop={() => { setSheet(null); setShopTab("outfits"); }} />}
       <PlayerCharacterUI />
       <JournalSheet open={sheet === "journal"} onClose={() => setSheet(null)} />
       <OracleQuizSheet open={sheet === "oracle"} onClose={() => setSheet(null)} onResult={onOracleResult} />
       <SettingsSheet open={sheet === "settings"} onClose={() => setSheet(null)} />
-      {reveal && inside === "oracle" && <section className={styles.reveal} role="status" style={{ ["--family" as string]: FAMILIES[reveal.family].color }} data-testid="oracle-reveal">
-        <p className={styles.revealFamily}>{reveal.family}</p>
-        <p>{FAMILIES[reveal.family].keeperLine}</p>
-        <small>Aura unlocked · {reveal.type}</small>
-        <button onClick={() => setReveal(null)}>Continue</button>
-      </section>}
+      {reveal && inside === "oracle" && <FamilyReveal family={reveal.family} type={reveal.type} onContinue={() => setReveal(null)} />}
       <TrophySheet open={sheet === "trophies"} onClose={() => setSheet(null)} />
       <ShowcaseSheet open={sheet === "showcase"} onClose={() => setSheet(null)} />
       <MissionBoardSheet open={sheet === "missions"} onClose={() => setSheet(null)} gateNote={gate.open ? null : gate.reason} />
       {site === "ruins" && <CombatHud player={player} />}
-      {sheet === "catch" && <section className={styles.sheet} role="dialog" aria-modal="false" aria-labelledby="island-sheet-title">
-        <header><h2 id="island-sheet-title">Catch board</h2><button onClick={() => setSheet(null)} aria-label="Close">×</button></header>
-        <p>Today&apos;s possible catches will appear here, with habitat, time and weather clues for the ones you haven&apos;t found yet.</p>
-        <ul className={styles.silhouettes} aria-label="Undiscovered catches">{[0, 1, 2, 3].map(i => <li key={i} aria-label="Undiscovered">?</li>)}</ul>
-        <small>Placeholder · village core milestone</small>
-      </section>}
       {site === "ruins" ? <div className={styles.controls} data-combat><span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> Move</span><span>Mouse Aim</span><span>Click Attack</span><span><kbd>Space</kbd> Dodge</span><span><kbd>1</kbd>–<kbd>4</kbd> Abilities</span><span><kbd>E</kbd> Interact</span></div>
       : <div className={styles.controls}><span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> Walk</span><span><kbd>Shift</kbd> Run</span><span><kbd>Space</kbd> Hop</span><span><kbd>E</kbd> Interact</span><span><kbd>Z</kbd> Zoom</span><span><kbd>{keyLabel(identity.settings.key_bindings.openMap)}</kbd> Map</span><span><kbd>J</kbd> Quests</span><span><kbd>{keyLabel(identity.settings.key_bindings.openJournal)}</kbd> Collection</span><span><kbd>C</kbd> Sneak</span></div>}
       <p className={styles.touchControls}>Tap the ground to move</p>

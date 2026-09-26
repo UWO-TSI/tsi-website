@@ -5,7 +5,10 @@
  * 20260926150600_economy.sql by scripts/gen-seeds.mjs. Prices are play coins
  * (or Gems for merch). No real-money value appears anywhere.
  */
-export type ShopCategory = "tool" | "outfit" | "hair" | "accessory" | "furniture" | "wallpaper" | "flooring" | "merch";
+import { dyeRef, FREE_HAIR_COLOURS, PARTS, STARTER_PARTS } from "@/lib/game/character/look";
+import { CATALOGUE as PIECES } from "@/lib/homes/catalogue";
+
+export type ShopCategory ="tool" | "outfit" | "hair" | "accessory" | "furniture" | "wallpaper" | "flooring" | "merch";
 export type Tier = "basic" | "mid" | "premium";
 export type Slot = "rod" | "net" | "shovel" | "outfit" | "hair" | "accessory";
 
@@ -21,7 +24,7 @@ export interface CatalogueEntry {
   special_pool: boolean;
   stackable: boolean;
   stock: number | null;
-  catalogue_ref: string | null; // homes piece id / wallpaper key / legacy gear key
+  catalogue_ref: string | null; // homes piece id / wallpaper key / character part id / hair:<i> / legacy gear key
   sprite_url: string | null;
   position: number;
 }
@@ -78,6 +81,35 @@ export const CATALOGUE: CatalogueEntry[] = [
   e("merch-sticker-pack", "TSI sticker pack", "merch", 0, { price_coins: null, price_gems: 150, stock: 100, description: "Five die-cut stickers. Pick up at HQ on campus." }),
   e("merch-tote", "TSI tote bag", "merch", 0, { price_coins: null, price_gems: 600, stock: 30, description: "Canvas tote. Pick up at HQ on campus." }),
 ];
+
+// ── Ownership (coordinator ruling on audit item 22; 20260926180000_ownership.sql) ──
+// Clothes are character parts (catalogue_ref = part id), dyes are `hair:<palette
+// index>`, furniture is every homes piece. Mirrored by scripts/gen-seeds.mjs.
+
+/** Starter home pieces (the starter room: bed, lamp, shelf, closet) plus the 10-piece pack, piece id → qty. */
+export const STARTER_FURNITURE: Record<string, number> = {
+  "home-bed": 1, "floor-lamp": 1, bookshelf: 1, closet: 1,
+  "lounge-table": 1, "reading-table": 1, "study-chair": 1, "wooden-chest": 1, "plant-yucca": 1, candle: 1, "yellow-message-mat": 1, "wall-frame": 1, "bench-wood": 1, "flower-tulip": 1,
+};
+/** Everything granted once per account (economy_grant_starters), catalogue_ref → qty. */
+export const STARTER_REFS: ReadonlyMap<string, number> = new Map([...STARTER_PARTS.map((id): [string, number] => [id, 1]), ...Object.entries(STARTER_FURNITURE)]);
+/** Shop dyes for hair colours FREE_HAIR_COLOURS.. (palette order). */
+const DYES = ["Wheat blonde", "Copper", "Rust red", "Silver", "Blossom pink", "Sea blue"];
+const WEAR_PRICE: Record<string, number> = { top: 150, bottom: 140, onepiece: 180, shoes: 110, accessory: 80 };
+const HAS_FURNITURE = new Set(CATALOGUE.map((c) => c.catalogue_ref));
+pos = 199;
+
+/** Rows the ownership migration adds: every wearable part, the dyes, the homes pieces the shop lacked. Starter clothes are never sold. */
+export const OWNERSHIP_ITEMS: CatalogueEntry[] = [
+  ...PARTS.filter((p) => p.slot !== "bangs" && p.slot !== "back" && !p.variantOf).map((p) =>
+    e(`wear-${p.id.replace(/_/g, "-")}`, p.name.replace(/ \(#\d+\)$/, ""), p.slot === "accessory" ? "accessory" : "outfit", WEAR_PRICE[p.slot], { catalogue_ref: p.id, special_pool: !STARTER_REFS.has(p.id) })),
+  ...DYES.map((name, i) => e(`dye-${name.toLowerCase().replace(/ /g, "-")}`, `${name} hair dye`, "hair", 140, { catalogue_ref: dyeRef(FREE_HAIR_COLOURS + i), special_pool: true })),
+  ...PIECES.filter((p) => !HAS_FURNITURE.has(p.id)).map((p) => furniture(p.id, p.label, 60 + (p.mount === "rug" ? 15 : 40) * p.size[0] * p.size[1])),
+];
+/** Pre-ownership outfit rows with no character part: off sale. */
+export const RETIRED = ["outfit-sage-overalls", "outfit-cream-knit", "outfit-wharf-raincoat", "outfit-club-tee", "hair-chestnut", "hair-sea-glass", "hair-sunset", "acc-straw-hat", "acc-round-glasses", "acc-bandana"];
+/** Sold, as opposed to only granted: starter clothes stay off sale. */
+export const onSale = (c: CatalogueEntry) => !RETIRED.includes(c.slug) && !(c.category !== "furniture" && c.catalogue_ref !== null && STARTER_REFS.has(c.catalogue_ref));
 
 /** Sell prices by category and rarity (row 91), in play coins per item. */
 export const SELL_PRICES: Record<string, Record<string, number>> = {

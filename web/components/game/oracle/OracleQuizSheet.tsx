@@ -12,6 +12,7 @@ import { FAMILIES, SCALE, keeperReaction } from "@/lib/game/oracle/family";
 import { OracleError, answerBatch, finishReading, oracleStatus, startReading } from "@/lib/game/oracle/client";
 import type { AttemptView, OracleStatus, ResultView } from "@/lib/oracle/service";
 import type { TieBreaker } from "@/lib/oracle/items";
+import IslandSheet from "../IslandSheet";
 import styles from "../DefaultIslandWorld.module.css";
 
 const BATCH = 10;
@@ -98,8 +99,7 @@ export default function OracleQuizSheet({ open, onClose, onResult, embedded = fa
   const item = reading?.items.find(i => !(i.id in answered));
   const lastUnsent = reading ? Object.keys(answered).filter(id => !sent.has(id)).pop() : undefined;
   const next = status?.next_reading;
-  return <section className={`${styles.sheet} ${styles.oracleSheet} ${embedded ? styles.oracleEmbedded : ""}`} role={embedded ? undefined : "dialog"} aria-modal={embedded ? undefined : false} aria-labelledby="oracle-title" data-testid="oracle-quiz">
-    <header><h2 id="oracle-title">The Oracle</h2>{!embedded && <button onClick={onClose} aria-label="Close">×</button>}</header>
+  return <IslandSheet title="The Oracle" onClose={onClose} embedded={embedded} className={`${styles.oracleSheet} ${embedded ? styles.oracleEmbedded : ""}`} testId="oracle-quiz">
     <div className={styles.keeperLine}><span className={styles.keeperFace} aria-hidden="true" /><p role="status">{note ?? (!reading && status?.family ? `You're ${status.family}. The light remembers.` : keeper)}</p></div>
     {ties && reading ? <>
       {ties.map(t => <fieldset key={t.id} className={styles.tieBreaker}><legend>{t.prompt}</legend>
@@ -124,5 +124,5 @@ export default function OracleQuizSheet({ open, onClose, onResult, embedded = fa
       <p>{status?.open_attempt ? `You're ${status.open_attempt.answered} of ${status.open_attempt.total} in.` : "64 short statements. There are no right answers, and you can take a break any time."}</p>
       <button className={styles.oracleBegin} onClick={() => void begin()} disabled={busy}>{status?.open_attempt ? "Continue" : "Begin"}</button>
     </>}
-  </section>;
+  </IslandSheet>;
 }

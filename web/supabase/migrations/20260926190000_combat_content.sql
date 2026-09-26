@@ -2,7 +2,7 @@
 --
 -- DRAFT 2026-09-26. NOT APPLIED. Spec: specs/combat-content.md Part A (rows
 -- 21, 213, 228-231; ruling 2026-09-26: one starter weapon per archetype).
--- Apply after 20260926160000_crafting. Depends on 20260926150800_combat
+-- Apply after 20260926180000_ownership (the latest draft). Depends on 20260926150800_combat
 -- (weapons, enemy_types, missions, combat_* functions), 20260926150400
 -- (member_collections.total_collected, collection_species), 033 wallet_apply.
 -- Content lives in web/lib/combat/ (content.ts, weapons.ts); the seed below is

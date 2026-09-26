@@ -32,16 +32,24 @@
 .swatches button { width: 30px; height: 30px; border-radius: 50%; border: 3px solid #fff; cursor: pointer; box-shadow: 0 2px 0 #0000001f; }
 .swatches button[aria-pressed="true"] { outline: 3px solid var(--c-ink); outline-offset: 2px; }
 .swatches button:disabled { opacity: 0.35; cursor: not-allowed; }
+/* Owned vs locked (shop) items: the 3D thumb draws above the DOM, so the lock lives on the frame and label. */
+.grid button[data-locked] { border: 3px dashed #c9bd98; background: #f3ecd8; box-shadow: none; }
+.grid button[data-locked] .label { color: var(--c-muted); }
+.swatches button[data-locked] { opacity: 0.45; border-style: dashed; }
+.lockNote { margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 18px; background: var(--c-cream); font-size: 13px; font-weight: 700; }
+.lockNote button { padding: 6px 14px; border: 0; border-radius: 16px; background: var(--c-wood); color: #fffbed; font-weight: 800; cursor: pointer; box-shadow: 0 2px 0 #6e4e35; }
 .actions { margin-top: auto; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; }
 @media (max-width: 760px) {
   .creator { grid-template-columns: 1fr; }
   .stage { min-height: 260px; }
   .grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
   .label { display: none; }
+  .grid button[data-locked] .label { display: block; }
 }
 @media (prefers-color-scheme: dark) {
   .creator { --c-cream: #2c3a36; --c-paper: #1f2a28; --c-tri: #26332f; --c-ink: #f5efdf; --c-muted: #bacbc8; }
   .stage { background: radial-gradient(ellipse at 50% 75%, #3b4a44, #25312d 70%); }
   .thumb { background: radial-gradient(circle at 50% 60%, #3b4a44, #2a3632 80%); }
   .grid button[aria-pressed="true"] { background: #33443c; }
+  .grid button[data-locked] { background: #27322f; border-color: #4d5c55; }
 }

@@ -10,6 +10,7 @@ import { CATEGORIES, type Category } from "@/lib/collections/roster";
 import type { JournalEntryKnown } from "@/lib/collections/logic";
 import { fetchJournalPage } from "../JournalPages";
 import { curatorLine } from "@/lib/game/peaceful";
+import IslandSheet from "../IslandSheet";
 import styles from "../DefaultIslandWorld.module.css";
 
 const DONATABLE: Category[] = CATEGORIES.filter(c => c === "fish" || c === "sea" || c === "bug" || c === "nature");
@@ -39,8 +40,7 @@ export default function DonateSheet({ open, onClose, onDonated }: { open: boolea
     return () => { alive = false; };
   }, [open]);
   if (!open) return null;
-  return <section className={styles.sheet} role="dialog" aria-modal="false" aria-labelledby="donate-title" data-testid="donate-sheet">
-    <header><h2 id="donate-title">Museum curator</h2><button onClick={onClose} aria-label="Close">×</button></header>
+  return <IslandSheet title="Museum curator" onClose={onClose} testId="donate-sheet">
     <p className={styles.curatorLine} role="status">{line}</p>
     {items === null ? <p>Looking through your pockets…</p> : items.length === 0 ? <p>You haven&apos;t found anything the museum collects yet.</p> :
       <ul className={styles.donateList}>{items.map(item => <li key={item.key}>
@@ -52,5 +52,5 @@ export default function DonateSheet({ open, onClose, onDonated }: { open: boolea
           <span>{item.name}<small>{item.museum.donated ? `On display · ${item.museum.by_me ? "you" : item.museum.donor_name}` : `In bag ×${item.count}`}</small></span>
         </button>
       </li>)}</ul>}
-  </section>;
+  </IslandSheet>;
 }

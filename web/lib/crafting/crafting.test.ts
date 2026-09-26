@@ -79,7 +79,7 @@ describe("crafting", () => {
     expect(again).toMatchObject({ ok: true, data: { replayed: true, qty: 1 } });
     expect(await m.stock("wood_branch")).toBe(8);
     const furniture = (await data(getInventory(m.eco.store, A))).groups.furniture;
-    expect(furniture.find(r => r.item.slug === "furn-study-chair")!.qty).toBe(1);
+    expect(furniture.find(r => r.item.slug === "furn-study-chair")!.qty).toBe(2); // the starter chair + this one
     expect(await craft(m.store, A, { recipe_id: "acc-straw-hat", idempotency_key: "craft-0003" })).toMatchObject({ ok: false, code: "key_reused" });
     // A new key crafts a second chair (stackable); a second straw hat is refused (one per member).
     expect(await craft(m.store, A, { recipe_id: chair.id, idempotency_key: "craft-0004" })).toMatchObject({ ok: true, data: { replayed: false } });

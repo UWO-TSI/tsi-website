@@ -11,6 +11,7 @@ import { useEffect, useState } from "react";
 import { ACTION_LABEL, MENU_ACTIONS, TEXT_SIZES, normalizeKey, type MenuAction, type TextSize } from "@/lib/identity/settings";
 import { keyLabel, saveSettings, setAuraVisible, useWorldIdentity } from "@/lib/game/identity";
 import { ABILITIES, readAbilityKeys, remapAbility, type AbilityId } from "@/lib/game/combat/runtime";
+import IslandSheet from "../IslandSheet";
 import styles from "../DefaultIslandWorld.module.css";
 
 const SIZE_NAMES: Record<TextSize, string> = { small: "Small", default: "Standard", large: "Large", xl: "Largest" };
@@ -58,8 +59,7 @@ export default function SettingsSheet({ open, onClose }: { open: boolean; onClos
     return () => window.removeEventListener("keydown", onKey, true);
   }, [listening, settings.key_bindings]);
   if (!open) return null;
-  return <section className={`${styles.sheet} ${styles.settingsSheet}`} role="dialog" aria-modal="false" aria-labelledby="settings-title" data-testid="settings-sheet">
-    <header><h2 id="settings-title">Settings</h2><button onClick={onClose} aria-label="Close">×</button></header>
+  return <IslandSheet title="Settings" onClose={onClose} className={styles.settingsSheet} testId="settings-sheet">
     <fieldset>
       <legend>Text size</legend>
       <div className={styles.segmented}>{TEXT_SIZES.map(s => <button key={s} aria-pressed={settings.text_size === s} onClick={() => void save({ text_size: s })}>{SIZE_NAMES[s]}</button>)}</div>
@@ -87,5 +87,5 @@ export default function SettingsSheet({ open, onClose }: { open: boolean; onClos
       {abilityNote && <p className={styles.hint} role="status">{abilityNote}</p>}
     </fieldset>
     <small className={styles.hint}>{signedIn ? "Saved to your account." : "Saved on this device. Sign in to keep them everywhere."}</small>
-  </section>;
+  </IslandSheet>;
 }

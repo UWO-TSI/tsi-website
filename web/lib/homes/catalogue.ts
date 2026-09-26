@@ -1,6 +1,7 @@
 /**
- * Home furniture catalogue stub (ledger row 116): pieces from the ACNH dump
- * already in the repo. Footprints are whole cells measured from the GLB bounds
+ * Home furniture pieces (ledger row 116): pieces from the ACNH dump already
+ * in the repo. This is geometry only; what a member may place is what they
+ * own (shop `furn-<id>` rows, lib/wallet/catalogue.ts). Footprints are whole cells measured from the GLB bounds
  * (furniture is authored in raw dump units, shown at 0.1 = 1 cell per 10 raw).
  * `mount`: floor items block cells; rugs lie under floor items; wall items hang
  * on the back or side walls. `where` limits a piece to the house or the island.

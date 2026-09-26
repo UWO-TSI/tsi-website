@@ -1,6 +1,6 @@
 /**
  * Ruins roster, missions and the boss drop table (rows 21, 208, 213, 228, 230,
- * 231). Content, mirrored as seed rows in 20260926180000_combat_content.sql
+ * 231). Content, mirrored as seed rows in 20260926190000_combat_content.sql
  * (enemy_types, missions, weapons); placeholder numbers. Levels are fixed per
  * zone, never scaled to the player (row 230): the outer wild is outgrown, the
  * inner temple is level 10 and the boss is a wall until geared.

@@ -1,4 +1,5 @@
 import type { StudySession } from "./rules";
+import { DomainError } from "@/lib/result";
 
 export type TableKind = "window" | "two" | "four" | "couch" | "outdoor";
 export interface StudyTable {
@@ -16,11 +17,7 @@ export interface StudyTable {
 }
 
 export type StudyErrorCode = "unavailable" | "seat_taken" | "already_seated" | "insufficient" | "failed";
-export class StudyError extends Error {
-  constructor(public code: StudyErrorCode, message?: string) {
-    super(message ?? code);
-  }
-}
+export class StudyError extends DomainError<StudyErrorCode> {}
 
 export interface WeekStat {
   member_id: string;
