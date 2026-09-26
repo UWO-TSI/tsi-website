@@ -1,0 +1,23 @@
+/* Study in the world: overhead timers, the timer card column, the start sheet. Cream / sage / wood like the island sheets. */
+.overhead { display: grid; justify-items: center; gap: 1px; padding: 3px 9px; border-radius: 999px; background: #f8f7e9ee; color: #293e3b; border: 1px solid #5c746c40; box-shadow: 0 2px 8px #29464125; font: 700 10px "IBM Plex Mono", monospace; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.overhead b { font-size: 8px; font-weight: 600; color: #607069; }
+.overhead[data-phase="focus"] { background: #f6ddb9f0; color: #7a4c16; }
+.overhead[data-phase="break"] { background: #cfe3c7f0; color: #2f5a36; animation: stretch 1.4s ease-in-out infinite; }
+.overhead[data-phase="private"] { background: #e4e4dcee; color: #6f7a74; }
+@keyframes stretch { 50% { transform: translateY(-4px); } }
+
+.panel { position: absolute; left: 16px; top: 200px; width: 290px; max-height: calc(100% - 300px); overflow-y: auto; display: grid; gap: 10px; z-index: 12; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+.panel > section { box-shadow: 0 6px 0 #47625218, 0 12px 30px #29464120; background: #f8f7e9f5; }
+.phase { margin: 0; font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #bb813f; }
+.phase[data-phase="break"] { color: #6c9a6f; }
+.clock { margin: 2px 0 4px; font-size: 40px; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1.1; }
+
+/* Beside the seated avatar (screen centre), not over it. */
+.startSheet { position: absolute; left: calc(50% + 70px); top: 50%; transform: translateY(-50%); width: min(360px, calc(100% - 32px)); z-index: 20; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+.startSheet > section { box-shadow: 0 6px 0 #47625218, 0 16px 40px #29464130; background: #f8f7e9; }
+
+.board { margin: 10px 0 4px; padding: 0; list-style: none; display: grid; gap: 4px; }
+.board li { display: flex; justify-content: space-between; padding: 6px 10px; border-radius: 10px; background: #fffdf3; border: 1px solid #e3d8ba; }
+
+@media (max-width: 700px) { .startSheet { left: 16px; top: auto; bottom: 70px; transform: none; } .panel { top: auto; bottom: 70px; left: 12px; width: calc(100% - 24px); max-height: 45%; } }
+@media (prefers-reduced-motion: reduce) { .overhead[data-phase="break"] { animation: none; } }

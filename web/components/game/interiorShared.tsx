@@ -77,7 +77,7 @@ export function applyInteriorBackdrop(scene: THREE.Scene, color = "#14100C"): ()
   };
 }
 
-function followInteriorCamera(camera: THREE.Camera, px: number, pz: number, delta: number) {
+export function followInteriorCamera(camera: THREE.Camera, px: number, pz: number, delta: number) {
   camera.position.x = THREE.MathUtils.damp(camera.position.x, px, 6, delta);
   camera.position.y = THREE.MathUtils.damp(camera.position.y, 8.4, 6, delta);
   camera.position.z = THREE.MathUtils.damp(camera.position.z, pz - 7.2, 6, delta);
