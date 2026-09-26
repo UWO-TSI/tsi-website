@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { createDefaultIsland, DEFAULT_SPAWN, ISLAND_PROPS, ISLAND_TREES, LANDMARKS, WHARF_DECK, landmark, nearestLandmark } from "./defaultIsland";
+import { benchSeat, createDefaultIsland, DEFAULT_SPAWN, ISLAND_PROPS, ISLAND_TREES, LANDMARKS, WHARF_DECK, landmark, nearestLandmark } from "./defaultIsland";
 import { createCenteredMap, setCell, Surface, heightField, sampleGroundHeight, sampleHeightField, isGroundAtWorld } from "./grid";
 
 describe("default island movement", () => {
@@ -50,6 +50,17 @@ describe("default island movement", () => {
     const [x, z] = island.move(0, 6, 5, 9);
     expect(x).toBeCloseTo(5);
     expect(island.standable(x, z)).toBe(true);
+  });
+  it("sits you mid-bench facing the side you came from, and lets you step off", () => {
+    // Plaza bench (5, 4.5) runs north-south: from the plaza side you face west, from the east you face east.
+    expect(benchSeat(4, 4.5)).toMatchObject({ x: 5, z: 4.5 });
+    expect(benchSeat(4, 4.5)?.yaw).toBeCloseTo(Math.PI * 1.5);
+    expect(benchSeat(6, 4.5)?.yaw).toBeCloseTo(Math.PI / 2);
+    expect(benchSeat(-6, -9)).toEqual({ x: -6, z: -8, yaw: Math.PI });
+    expect(benchSeat(0, 0)).toBeNull();
+    const [x, z] = island.move(5, 4.5, 3.8, 4.5);
+    expect(x).toBeCloseTo(3.8);
+    expect(z).toBeCloseTo(4.5);
   });
 });
 

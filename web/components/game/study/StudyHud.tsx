@@ -97,11 +97,11 @@ function Hud({ transport }: { transport?: StudyTransport }) {
 function Timer({ study }: { study: StudyHook }) {
   const x = study.session!;
   const isHost = study.mates.some(m => m.me && m.is_host);
-  return <section className={card.card} aria-label="Study timer">
-    <p className={s.phase} data-phase={x.phase}>{x.phase === "focus" ? "Focus" : "Break · stretch"} · cycle {x.cycle} of {x.settings?.cycles}</p>
+  return <section className={`${card.card} ${s.timer}`} aria-label="Study timer">
+    <p className={s.phase} data-phase={x.phase}>{x.phase === "focus" ? "Focus" : "Break"}<span>{x.phase === "break" && " · stretch"} · cycle {x.cycle} of {x.settings?.cycles}</span></p>
     <p className={s.clock} role="timer">{formatClock(study.remaining)}</p>
     <p className={card.muted}>{study.table?.label} · {x.minutes_completed} min banked · {x.coins_pending} {COINS.symbol} so far</p>
-    <div className={card.row} style={{ marginTop: 10 }}>
+    <div className={`${card.row} ${s.actions}`}>
       {x.phase === "focus"
         ? <button className={card.ghost} onClick={study.takeBreak} disabled={study.busy}>Break now</button>
         : <button className={card.ghost} onClick={study.resume} disabled={study.busy}>Skip break</button>}

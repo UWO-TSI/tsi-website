@@ -18,7 +18,7 @@ import { SPECIES as CRITTERS } from "../Critters";
 import { AudioManager } from "@/lib/game/audio";
 import { collectWithSize, localCollections } from "@/lib/game/collections";
 import { bugReaction, hasClue, hourKey, nodeAvailable, rollNode } from "@/lib/game/peaceful";
-import { setPeacefulTarget } from "@/lib/game/peacefulNear";
+import { setPeacefulTarget, type PeacefulTarget } from "@/lib/game/peacefulNear";
 import type { Biome, Species } from "@/lib/collections/roster";
 import type { WorldMoment } from "@/lib/collections/logic";
 
@@ -41,6 +41,8 @@ function Sparkle({ position, strong }: { position: [number, number, number]; str
   </sprite>;
 }
 
+const buried = (sp: Species) => sp.tool === "shovel" && sp.category !== "mineral";
+
 function NodeVisual({ sp, x, y, z, canopy }: { sp: Species; x: number; y: number; z: number; canopy?: boolean }) {
   if (sp.category === "fruit") {
     const color = FRUIT_COLOR[sp.key] ?? "#d8433b";
@@ -49,6 +51,8 @@ function NodeVisual({ sp, x, y, z, canopy }: { sp: Species; x: number; y: number
   }
   if (sp.sub === "wood") return null; // still up in the tree until it's shaken
   if (sp.sub === "mushroom") return <NatureMushroom position={[x, y, z]} seed={sp.position} />;
+  // Buried (a shovel find that isn't a rock): only a dark dig spot shows in the sand.
+  if (buried(sp)) return <mesh position={[x, y + 0.012, z]} rotation={[-Math.PI / 2, 0, 0]}><circleGeometry args={[0.17, 10]} /><meshStandardMaterial color="#6e5a3e" roughness={1} /></mesh>;
   if (sp.model) return <GLBProp url={sp.model} position={[x, y + 0.02, z]} scale={1} castShadow={false} />;
   if (sp.category === "mineral") return <mesh position={[x, y + 0.12, z]}><dodecahedronGeometry args={[0.16, 0]} /><meshStandardMaterial color={sp.key.includes("gold") ? "#e2b640" : sp.key.includes("crystal") ? "#b9e3f2" : "#8d8a84"} roughness={0.5} metalness={sp.key.includes("gold") ? 0.6 : 0} /></mesh>;
   // Flowers and anything without a model: a small bright tuft.
@@ -109,11 +113,11 @@ export default function VillageLife({ nodes, bugNodes, moment, member, player, g
     const step = Math.hypot(p.x - last.current.x, p.z - last.current.z);
     const speed = delta > 0 && step < 1 ? step / Math.min(delta, 0.1) : 0;
     last.current.copy(p);
-    let best: { id: string; kind: "forage" | "bug"; label: string; distance: number } | null = null;
+    let best: PeacefulTarget | null = null;
     for (const { n, sp } of forage) {
       const d = Math.hypot(n.x - p.x, n.z - p.z);
       if (hasClue(sp) && d < 5 && !chimed.current.has(n.id)) { chimed.current.add(n.id); AudioManager.playSFX("blip3"); }
-      if (d < REACH && (!best || d < best.distance)) best = { id: n.id, kind: "forage", label: n.canopy ? "Shake the tree" : sp!.category === "mineral" ? "Strike the rock" : sp!.sub === "shell" ? "Pick up the shell" : "Pick it", distance: d };
+      if (d < REACH && (!best || d < best.distance)) best = { id: n.id, kind: sp!.tool === "shovel" ? "dig" : "forage", label: n.canopy ? "Shake the tree" : sp!.category === "mineral" ? "Strike the rock" : buried(sp!) ? "Dig it up" : sp!.sub === "shell" ? "Pick up the shell" : "Pick it", distance: d, at: [n.x, n.z] };
     }
     const t = clock.elapsedTime;
     for (const bug of bugState.current.values()) {

@@ -76,6 +76,17 @@ export function supabaseStudyStore(db: SupabaseClient): StudyStore {
       for (const p of (data ?? []) as Row[]) out.set(String(p.id), String(p.display_name ?? "Member"));
       return out;
     },
+    async looks(ids) {
+      const out = new Map<string, unknown>();
+      if (!ids.length) return out;
+      // No error check on purpose: before 20260926170000 production has no avatar_config, and mates then get default looks.
+      const { data } = await db.from("profiles").select("id, avatar_config").in("id", ids);
+      for (const p of (data ?? []) as Row[]) {
+        const look = (p.avatar_config as { look?: unknown } | null)?.look;
+        if (look) out.set(String(p.id), look);
+      }
+      return out;
+    },
     async weekStats(week) {
       const { data, error } = await db.from("study_weekly_stats").select("member_id, minutes, longest_block, sessions").eq("week_start", week);
       if (error) raise(error);

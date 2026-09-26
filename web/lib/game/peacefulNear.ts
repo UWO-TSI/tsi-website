@@ -4,7 +4,8 @@
  * nearest every frame, the scene reads the closest when nothing else is closer.
  * Module state, no React subscription (critterStore pattern).
  */
-export interface PeacefulTarget { id: string; kind: "forage" | "bug"; label: string; distance: number }
+/** `dig`: a shovel find (buried clam, rock), gathered like forage but played with the Dig clip. `at`: where to turn to. */
+export interface PeacefulTarget { id: string; kind: "forage" | "bug" | "dig"; label: string; distance: number; at?: [number, number] }
 const nearest = new Map<string, PeacefulTarget | null>();
 export function setPeacefulTarget(target: PeacefulTarget | null, source = "life"): void { nearest.set(source, target); }
 export function getPeacefulTarget(): PeacefulTarget | null {

@@ -26,3 +26,18 @@ Each item says what I assumed so the work kept moving. Evidence: `specs/evidence
 8. Seat prompt outranks fishing: accepted.
 9. Private table behaviour: accepted.
 10. Short screens: the timer card and chat must not cover the minimap; collapse the timer card to a single line under 760 px height (small follow-up, next agent touching the HUD).
+
+## 2026-09-26 (study × character integration, branch `game/study-character`)
+
+Evidence: `specs/evidence/study-character/S-*.webp` and `sql-smoke.md`. Each item gives the assumption I built on.
+
+1. **Stretch is a stand-in clip.** No Blender stretch exists yet. Stretch uses Sit's hips and legs with Cheer's arms, neck and head, slowed to Sit's 2 s loop. It plays as arms up behind the head and back down, once per loop (`S-four-seat-break`, Jordan). *Assumed* good enough until a real clip lands: add "Stretch" to the catalogue and delete the `DERIVED_CLIPS` entry in `lib/game/character/clips.ts`.
+2. **Seat heights are measured from the GLBs.** Study chair 0.52, sofa cushion 0.78, bench-wood slats 0.5, bed comforter 0.58. Seats pass the height through `tsi:sit`, and the engine subtracts the clip's own seat height. The `seatY` per furniture lives in `lib/study/seats.ts`, so David's interior only needs a new number if the furniture changes.
+3. **`tsi:sit` with a clip at your own seat now re-poses instead of standing you up.** That's how Study, Stretch and Sit swap as the phase changes. Without a clip it still toggles, so E on the same bench stands you up. The interior walker (the bed) still toggles: E in bed wakes you.
+4. **Seat-mates' looks.** The study service reads `profiles.avatar_config.look` for anyone seated and sends it with the table view. Members without a saved look (and the signed-out demo) get a fixed random look seeded from their member id. A look is visible in the world anyway, so sending it to table-mates exposes nothing new.
+5. **Four-seat crowding (ruling 6): not rotated.** With rigged characters the back row is no longer hidden behind the front row. What still covered the back-row faces was your own timer at 2.4 units, so it now sits just above your nameplate (2.05). Labels no longer overlap. The front row is seen from behind, which a 90° turn would only trade for profile views. Say if you still want the tables turned.
+6. **Benches.** Both village bench-wood props are sittable. You sit in the middle, facing the side you came from; one person per bench. To stand up you walk off the bench footprint, because movement only refuses steps that lose clearance.
+7. **Dig.** Nothing in the codebase dug before. Dig now follows the roster's `tool: "shovel"`: rocks ("Strike the rock") and the asari clam play Dig and face the spot. The clam shows as a dark dig spot on the sand ("Dig it up") and goes through the existing collect path. No new node type. *Assumed* that a shovel strike on rocks should play Dig too.
+8. **Bed.** Every home bed is an E station ("Sleep in your bed") that works from either end of the bed. The prompt text stays the same while you're asleep.
+9. **Migration.** I used 004's definition (`jsonb not null default '{}'`) rather than a nullable column, so production matches the files. The grant is re-run in the same migration.
+10. **Short screens (ruling 10).** Under 760 px tall the timer card is one line: phase, clock, Break/Skip and Stand up. Hidden on short screens: banked minutes and coins, the walk-away note, the chat toggle and the host's private-table toggle. With the minimap open, the column stops above it (chat scrolls in what's left). In the café there's no minimap, so chat gets the full column. *Assumed* hiding the two toggles on short screens is OK; an expand chevron would bring them back.
