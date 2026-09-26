@@ -17,8 +17,8 @@ The coordinator (Claude) runs this without check-ins (David, 2026-09-26): verifi
 | Character outfits + clips on the locked v6 base | **Done.** 33 parts, 23 clips, catalogue | Catalogue + evidence sheets, every clip verified |
 | Ponytail cleanup + game-side security (member_collections self-edit → sell exploit, economy_sell retry race, legacy Gem writers, class badges after 034, game code vs the #40 guard) | Running (wave B, branch `game/cleanup-security`) | Audit items applied as small commits; exploit tests fail before, pass after |
 | Character in engine (rigged model replaces sprite; creator + wardrobe use the catalogue) | Running (wave B, branch `game/character-engine`) | Player, residents, applicants on one rig in `/lab/island` and the applicant island |
-| Study in the world | Running (wave B, branch `game/study-world`) | Sit → study → coins → walk away ends session, in the cafe and outdoor tables |
-| Crafting | Next free slot | ~30 recipes learnable and craftable; rods 4–5 unlock |
+| Study in the world | **Done, merged** (`c977ef7`): cafe interior placeholder, 2 outdoor tables, sit/start/stand, overhead timers, walk-away settlement, grey fitting room fixed | Sit → study → coins → walk away ends session, in the cafe and outdoor tables |
+| Crafting | Running (branch `game/crafting`) | ~30 recipes learnable and craftable; rods 4–5 unlock |
 | Staging Supabase + signed-in E2E (Phase 1) | Staging project `tethos-staging` (ref `jjiyeroyralfbluowbjq`, free, us-west-2) created 2026-09-26; runs in the next free slot, spec `specs/phase1-staging.md` | Every Phase 1 flow passes signed in |
 | Phone companion, seasonal events, combat content, chapters 3–4, admin pass | Later waves | Per spec in `specs/` |
 | Launch (Phase 4) | After all of the above | Member playtest, David's local review, migrations in one window |
