@@ -16,9 +16,10 @@ The coordinator (Claude) runs this without check-ins (David, 2026-09-26): verifi
 | Phase 0: commit, merge `main`, timestamp migrations, push, draft PR | **Done.** 18 commits, contains `main` through #41, 834 tests, draft PR #42 (stays draft until launch) | Branch pushed, contains `main` (incl. #40/#41), tsc/tests green, applicant + member island screenshots match |
 | Character outfits + clips on the locked v6 base | **Done.** 33 parts, 23 clips, catalogue | Catalogue + evidence sheets, every clip verified |
 | Ponytail cleanup + game-side security (member_collections self-edit → sell exploit, economy_sell retry race, legacy Gem writers, class badges after 034, game code vs the #40 guard) | Running (wave B, branch `game/cleanup-security`) | Audit items applied as small commits; exploit tests fail before, pass after |
-| Character in engine (rigged model replaces sprite; creator + wardrobe use the catalogue) | Running (wave B, branch `game/character-engine`) | Player, residents, applicants on one rig in `/lab/island` and the applicant island |
+| Character in engine (rigged model replaces sprite; creator + wardrobe use the catalogue) | **Done, merged** (`c011a35`): one rig for player/residents/applicants, creator, wardrobe, emotes, combat clips; 854 tests | Player, residents, applicants on one rig in `/lab/island` and the applicant island |
 | Study in the world | **Done, merged** (`c977ef7`): cafe interior placeholder, 2 outdoor tables, sit/start/stand, overhead timers, walk-away settlement, grey fitting room fixed | Sit → study → coins → walk away ends session, in the cafe and outdoor tables |
-| Crafting | Running (branch `game/crafting`) | ~30 recipes learnable and craftable; rods 4–5 unlock |
+| Crafting | Running (branch `game/crafting`) |
+| Study × character integration (rigged seat-mates, sittable benches, bed Sleep, Dig, `avatar_config` drift migration, HUD on short screens) | Running (branch `game/study-character`) | Seat-mates and the player use the rig at every seat | ~30 recipes learnable and craftable; rods 4–5 unlock |
 | Staging Supabase + signed-in E2E (Phase 1) | Staging project `tethos-staging` (ref `jjiyeroyralfbluowbjq`, free, us-west-2) created 2026-09-26; runs in the next free slot, spec `specs/phase1-staging.md` | Every Phase 1 flow passes signed in |
 | Phone companion, seasonal events, combat content, chapters 3–4, admin pass | Later waves | Per spec in `specs/` |
 | Launch (Phase 4) | After all of the above | Member playtest, David's local review, migrations in one window |

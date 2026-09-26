@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { z } from "zod";
 import type { Profile } from "@/lib/supabase/types";
+import { parseLook } from "@/lib/game/character/look";
 
 const ProfileUpdateSchema = z.object({
   display_name: z.string().min(1).max(50).optional(),
@@ -28,6 +29,8 @@ const ProfileUpdateSchema = z.object({
       hair_color: z.string().optional(),
       skin_color: z.string().optional(),
       outfit_color: z.string().optional(),
+      // Character creator look (row 142), normalised against the catalogue.
+      look: z.unknown().optional().transform(v => (v === undefined ? undefined : parseLook(v))),
     })
     .optional(),
   year: z.string().max(20).nullable().optional(),

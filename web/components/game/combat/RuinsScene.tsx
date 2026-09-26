@@ -18,7 +18,7 @@ import { GLBProp } from "../NatureModels";
 import { InteriorKeeper } from "../interiorShared";
 import { IslandAtmosphere, useFollowCamera } from "../IslandAtmosphere";
 import BlobShadows from "../BlobShadows";
-import { AimReticle, Blasts, EnemyInstances, FloaterProjector, HeldWeapon, Projectiles, Telegraphs, Wisps } from "./EncounterRender";
+import { AimReticle, Blasts, EnemyInstances, FloaterProjector, Projectiles, Telegraphs, Wisps } from "./EncounterRender";
 import { BOSS_CENTER, ESCORT_PATH, EXIT_SPOT, GATE_PLAZA, LANTERN_SPOT, RUINS_BROKEN_ARCHES, RUINS_MOAI, RUINS_PILLARS, RUINS_ROCKS, RUINS_SPAWN, RUINS_TORCHES, RUNE_CIRCLE, createRuins } from "@/lib/game/ruins";
 import { combat, publishCombat, readAbilityKeys, takeMissionQueue, type AbilityId } from "@/lib/game/combat/runtime";
 import { attack, floater, hurtPlayer, missionEvent, regenEnergy, resolvePlayerShot, spawnWave, startDodge, triggerAbility } from "@/lib/game/combat/actions";
@@ -234,7 +234,6 @@ export default function RuinsScene({ phase, light, look, weather, liteMode, zoom
       <RuneCircle ground={ruins.ground} />
       <Idol ground={ruins.ground} player={player} />
       <Escort ground={ruins.ground} player={player} />
-      <HeldWeapon player={player} />
       <Wisps ground={ruins.ground} />
     </Suspense>
     <Telegraphs ground={ruins.ground} />
@@ -244,7 +243,7 @@ export default function RuinsScene({ phase, light, look, weather, liteMode, zoom
     <FloaterProjector />
     <Html position={[EXIT_SPOT.x, 2.2, EXIT_SPOT.z]} center distanceFactor={10} zIndexRange={[3, 0]}><div className={styles.cue}>Gate · safe zone</div></Html>
     <PlayerAvatar spawnPosition={spawn} playerName="You" onMove={onMove} frozen={!!combat.rt.casting || !combat.rt.player.alive}
-      groundHeight={ruins.ground} constrainMove={ruins.move} impulse={impulse} noHop />
+      groundHeight={ruins.ground} constrainMove={ruins.move} impulse={impulse} noHop combat />
   </>;
 }
 

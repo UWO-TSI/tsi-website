@@ -16,6 +16,7 @@
 # The tile map IS the world. The blanket *.json above was silently keeping it
 # out of every commit, so the grid island existed only on one machine.
 !web/data/island-map.json
+!web/data/characters/*.json
 
 # Catalogue data that ships with the art and the sky textures
 !art/characters/base/face_variants.json
