@@ -109,6 +109,15 @@ def outward(p):
     return d.normalized()
 
 
+def brim(pc, rings, closed=True):
+    """A brim or visor as a thin slab: the top sheet, and 3 mm under it the underside facing down, because the
+    engine's character material culls back faces (a single sheet vanishes from below)."""
+    n = len(rings) - 1
+    pc.region = "head"
+    pc.band(rings, closed=closed, refs=[HC - Vector((0, 0, 0.3))] * n)
+    pc.band([[p - Vector((0, 0, 0.003)) for p in r] for r in rings], closed=closed, refs=[HC + Vector((0, 0, 0.6))] * n)
+
+
 @part("acc_beanie", "accessory", "Beanie", {"M_Main": ("outfit", 7), "M_Accent": ("outfit", 0), "M_Hair": ("hair", None)},
       sharp=45, hidesBackHair=True, group="head")
 def beanie(pc):
@@ -130,8 +139,8 @@ def sunhat(pc):
     dome(pc, edge, lambda lon: [edge(lon), edge(lon) + 14, 60, 78], (0.082, 0.09, 0.09, 0.086), 0.086)
     rim = [hair_point(edge(l), l, 0.082) for l in WRAP[:-1]]
     pc.region = "head"
-    pc.band([rim, [p + outward(p) * 0.06 - Vector((0, 0, 0.006)) for p in rim],
-             [p + outward(p) * 0.12 - Vector((0, 0, 0.022)) for p in rim]], refs=[HC - Vector((0, 0, 0.3))] * 2)
+    brim(pc, [rim, [p + outward(p) * 0.06 - Vector((0, 0, 0.006)) for p in rim],
+              [p + outward(p) * 0.12 - Vector((0, 0, 0.022)) for p in rim]])
     pc.mat = "M_Accent"
     pc.patch(WRAP, lambda lon: [edge(lon) + 1, edge(lon) + 9], lambda lat, lon, ri: 0.095)
     pc.mat = "M_Main"
@@ -147,9 +156,8 @@ def cap(pc):
     base = [hair_point(edge(l), l, 0.078) for l in lons]
     reach = [0.135 * math.cos(math.radians(l)) ** 0.6 for l in lons]
     pc.region = "head"
-    pc.band([base, [p + outward(p) * r * 0.5 - Vector((0, 0, 0.004)) for p, r in zip(base, reach)],
-             [p + outward(p) * r - Vector((0, 0, 0.022)) for p, r in zip(base, reach)]], closed=False,
-            refs=[HC - Vector((0, 0, 0.3))] * 2)
+    brim(pc, [base, [p + outward(p) * r * 0.5 - Vector((0, 0, 0.004)) for p, r in zip(base, reach)],
+              [p + outward(p) * r - Vector((0, 0, 0.022)) for p, r in zip(base, reach)]], closed=False)
     pc.mat = "M_Accent"
     pc.blob(hair_point(90, 0, 0.08) + Vector((0, 0, 0.004)), (0.014, 0.014, 0.008), segs=5, rings=3)
     pc.mat = "M_Main"
@@ -164,8 +172,7 @@ def straw_hat(pc):
     dome(pc, edge, lambda lon: [edge(lon), edge(lon) + 12, 62, 80], (0.084, 0.09, 0.096, 0.092), 0.09)
     rim = [hair_point(edge(l), l, 0.084) for l in WRAP[:-1]]
     pc.region = "head"
-    pc.band([rim, [p + outward(p) * 0.075 for p in rim], [p + outward(p) * 0.145 + Vector((0, 0, 0.014)) for p in rim]],
-            refs=[HC - Vector((0, 0, 0.3))] * 2)
+    brim(pc, [rim, [p + outward(p) * 0.075 for p in rim], [p + outward(p) * 0.145 + Vector((0, 0, 0.014)) for p in rim]])
     pc.mat = "M_Accent"
     pc.patch(WRAP, lambda lon: [edge(lon) + 1, edge(lon) + 9], lambda lat, lon, ri: 0.093)
     pc.mat = "M_Main"

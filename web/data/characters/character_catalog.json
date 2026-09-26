@@ -857,7 +857,7 @@
    "slot": "accessory",
    "name": "Sun hat",
    "glb": "accessories/accessory/acc_sunhat.glb",
-   "tris": 224,
+   "tris": 272,
    "materials": [
     {
      "name": "M_Main",
@@ -884,7 +884,7 @@
    "slot": "accessory",
    "name": "Cap",
    "glb": "accessories/accessory/acc_cap.glb",
-   "tris": 188,
+   "tris": 204,
    "materials": [
     {
      "name": "M_Main",
@@ -911,7 +911,7 @@
    "slot": "accessory",
    "name": "Straw hat",
    "glb": "accessories/accessory/acc_straw_hat.glb",
-   "tris": 224,
+   "tris": 272,
    "materials": [
     {
      "name": "M_Main",

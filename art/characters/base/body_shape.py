@@ -116,7 +116,7 @@ def _ss(a, b, x):
 
 def weights(region, co):
     """Bone -> weight for a vertex at co. region: a body part name as in build_v6 (torso, neck, head, arm_L,
-    hand_R, leg_L, foot_R), 'skirt' (hips blended into both thighs toward the hem), 'hood' (head, easing into
+    hand_R, leg_L, foot_R), 'skirt' (hips blended into both thighs toward the hem; the front also into the shins), 'hood' (head, easing into
     the neck), or a dict of fixed weights."""
     if isinstance(region, dict):
         return region
