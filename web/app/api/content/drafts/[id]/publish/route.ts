@@ -7,6 +7,8 @@ const ALLOWED_TABLES = new Set([
   "shop_items",
   "seasonal_palettes",
   "emote_types",
+  "quest_chapters",
+  "club_goals",
 ]);
 
 export async function POST(

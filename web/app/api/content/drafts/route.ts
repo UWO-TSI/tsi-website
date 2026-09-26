@@ -1,11 +1,21 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { validateChapterDraft } from "@/lib/progression/chapters";
+import { validateGoalDraft } from "@/lib/progression/goals";
+
+// Progression content is validated before it can become a draft (029_progression.sql).
+const DRAFT_VALIDATORS: Record<string, (d: Record<string, unknown>) => string[]> = {
+  quest_chapters: validateChapterDraft,
+  club_goals: validateGoalDraft,
+};
 
 const ALLOWED_TABLES = new Set([
   "npc_personas",
   "shop_items",
   "seasonal_palettes",
   "emote_types",
+  "quest_chapters",
+  "club_goals",
 ]);
 
 // POST — create a new draft
@@ -43,6 +53,12 @@ export async function POST(request: Request) {
       { ok: false, error: "Missing draft_data" },
       { status: 400 },
     );
+  }
+
+  const validator = DRAFT_VALIDATORS[table_name];
+  const problems = validator ? validator(draft_data as Record<string, unknown>) : [];
+  if (problems.length > 0) {
+    return NextResponse.json({ ok: false, error: `Invalid draft: ${problems.join("; ")}` }, { status: 400 });
   }
 
   const { data, error } = await supabase
