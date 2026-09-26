@@ -82,3 +82,17 @@ BEGIN
   ASSERT (SELECT count(*) FROM wallet_ledger WHERE member_id = F AND idempotency_key = 'sell:race-0001') = 1, 'security sell retry race: ledger rows';
   RAISE NOTICE 'security 2 sell retry race ok';
 END $$;
+
+-- ─── 3. Legacy Gem writers go through wallet_apply with their own types ─────
+DO $$
+DECLARE F uuid := '00000000-0000-4000-8000-0000000000f2'; r record;
+BEGIN
+  SELECT * INTO r FROM wallet_apply(F, 'gems', 40, 'earn_bounty', 'Bounty completed', 'bounty:smoke-1');
+  SELECT * INTO r FROM wallet_apply(F, 'gems', 40, 'earn_bounty', 'Bounty completed', 'bounty:smoke-1');
+  ASSERT r.replayed AND r.balance = 40, 'security gems: a retried bounty pays once';
+  PERFORM wallet_apply(F, 'gems', -15, 'spend_marketplace', 'Purchased 1x Sticker', 'marketplace:smoke-1');
+  ASSERT (SELECT array_agg(type ORDER BY created_at, amount DESC) FROM tc_transactions WHERE user_id = F) = ARRAY['earn_bounty', 'spend_marketplace'],
+    'security gems: legacy types kept: ' || (SELECT array_agg(type)::text FROM tc_transactions WHERE user_id = F);
+  ASSERT (SELECT tethos_coins FROM profiles WHERE id = F) = 25, 'security gems balance';
+  RAISE NOTICE 'security 3 gem types ok';
+END $$;

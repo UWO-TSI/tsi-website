@@ -107,6 +107,7 @@ export async function POST(
     xpType: "achievement",
     referenceId: id,
     description: `Achievement unlocked: ${achievement.display_name}`,
+    key: `achievement:${id}`,
   });
 
   return NextResponse.json({

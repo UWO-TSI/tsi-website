@@ -1,7 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { supabaseEconomyStore } from "@/lib/wallet/supabaseStore";
+import { EconomyError } from "@/lib/wallet/store";
 import { z } from "zod";
+
+/** Gems move only through wallet_apply (locked, recorded, one row per key). */
+async function applyGems(userId: string, amount: number, type: string, description: string, key: string) {
+  try {
+    return { balance: (await supabaseEconomyStore(createAdminClient()).credit(userId, "gems", amount, type, description, key)).balance };
+  } catch (err) {
+    return { error: err instanceof EconomyError && err.code === "insufficient" ? "insufficient" : "failed" };
+  }
+}
 
 // GET /api/economy — get own balance + recent transactions
 export async function GET(request: NextRequest) {
@@ -127,35 +138,19 @@ async function handlePurchase(
   }
 
   const totalCost = item.price_tc * data.quantity;
+  const key = `marketplace:${data.item_id}:${crypto.randomUUID()}`;
 
-  // Get current balance
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("tethos_coins")
-    .eq("id", userId)
-    .single();
-
-  if (!profile || profile.tethos_coins < totalCost) {
-    return NextResponse.json({ error: "Insufficient coins" }, { status: 409 });
+  // Best-effort ordering: charge, create order, decrement stock
+  // (Supabase doesn't support multi-table transactions via REST).
+  const charged = await applyGems(userId, -totalCost, "spend_marketplace", `Purchased ${data.quantity}x ${item.name}`, key);
+  if ("error" in charged) {
+    return charged.error === "insufficient"
+      ? NextResponse.json({ error: "Insufficient coins" }, { status: 409 })
+      : NextResponse.json({ error: "Failed to deduct coins" }, { status: 500 });
   }
 
-  const newBalance = profile.tethos_coins - totalCost;
-
-  // Atomic-ish: deduct coins, create order, decrement stock, record transaction
-  // (Supabase doesn't support multi-table transactions via REST, so we do best-effort ordering)
-  // Coins are server-only columns (migration 20260926120000): service role.
+  // Orders and stock are server-only (migration 20260926130000).
   const admin = createAdminClient();
-  const { error: updateError } = await admin
-    .from("profiles")
-    .update({ tethos_coins: newBalance })
-    .eq("id", userId)
-    .gte("tethos_coins", totalCost); // Prevent race condition
-
-  if (updateError) {
-    return NextResponse.json({ error: "Failed to deduct coins" }, { status: 500 });
-  }
-
-  // Orders, stock and the ledger are server-only (migration 20260926130000).
   const { error: orderError } = await admin
     .from("marketplace_orders")
     .insert({
@@ -167,11 +162,7 @@ async function handlePurchase(
     });
 
   if (orderError) {
-    // Refund on failure
-    await admin
-      .from("profiles")
-      .update({ tethos_coins: profile.tethos_coins })
-      .eq("id", userId);
+    await applyGems(userId, totalCost, "refund", `Refund: ${item.name}`, `refund:${key}`);
     return NextResponse.json({ error: "Failed to create order" }, { status: 500 });
   }
 
@@ -181,19 +172,9 @@ async function handlePurchase(
     .update({ stock: item.stock - data.quantity })
     .eq("id", data.item_id);
 
-  // Record transaction
-  await admin.from("tc_transactions").insert({
-    user_id: userId,
-    amount: -totalCost,
-    balance_after: newBalance,
-    type: "spend_marketplace",
-    reference_id: data.item_id,
-    description: `Purchased ${data.quantity}x ${item.name}`,
-  });
-
   return NextResponse.json({
     success: true,
-    balance: newBalance,
+    balance: charged.balance,
     item_name: item.name,
     total_cost: totalCost,
   });
@@ -229,30 +210,13 @@ async function handleAvatarPurchase(
   }
 
   const cost = item.coin_price;
+  const key = `avatar:${data.item_id}:${crypto.randomUUID()}`;
 
-  // Check balance
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("tethos_coins")
-    .eq("id", userId)
-    .single();
-
-  if (!profile || profile.tethos_coins < cost) {
-    return NextResponse.json({ error: "Insufficient coins" }, { status: 409 });
-  }
-
-  const newBalance = profile.tethos_coins - cost;
-
-  // Deduct coins (with race-condition guard). Server-only column: service role.
-  const admin = createAdminClient();
-  const { error: updateError } = await admin
-    .from("profiles")
-    .update({ tethos_coins: newBalance })
-    .eq("id", userId)
-    .gte("tethos_coins", cost);
-
-  if (updateError) {
-    return NextResponse.json({ error: "Failed to deduct coins" }, { status: 500 });
+  const charged = await applyGems(userId, -cost, "spend_marketplace", `Purchased avatar item: ${item.name}`, key);
+  if ("error" in charged) {
+    return charged.error === "insufficient"
+      ? NextResponse.json({ error: "Insufficient coins" }, { status: 409 })
+      : NextResponse.json({ error: "Failed to deduct coins" }, { status: 500 });
   }
 
   // Add to inventory
@@ -265,27 +229,13 @@ async function handleAvatarPurchase(
     });
 
   if (inventoryError) {
-    // Refund on failure
-    await admin
-      .from("profiles")
-      .update({ tethos_coins: profile.tethos_coins })
-      .eq("id", userId);
+    await applyGems(userId, cost, "refund", `Refund: ${item.name}`, `refund:${key}`);
     return NextResponse.json({ error: "Failed to add to inventory" }, { status: 500 });
   }
 
-  // Record transaction
-  await admin.from("tc_transactions").insert({
-    user_id: userId,
-    amount: -cost,
-    balance_after: newBalance,
-    type: "spend_marketplace",
-    reference_id: data.item_id,
-    description: `Purchased avatar item: ${item.name}`,
-  });
-
   return NextResponse.json({
     success: true,
-    balance: newBalance,
+    balance: charged.balance,
     item_name: item.name,
     item_id: data.item_id,
     total_cost: cost,
@@ -308,10 +258,9 @@ async function handleAward(
     return NextResponse.json({ error: "Forbidden — T1-T2 only" }, { status: 403 });
   }
 
-  // Get target's current balance
   const { data: targetProfile } = await supabase
     .from("profiles")
-    .select("tethos_coins, display_name")
+    .select("id")
     .eq("id", data.user_id)
     .single();
 
@@ -319,27 +268,16 @@ async function handleAward(
     return NextResponse.json({ error: "Target user not found" }, { status: 404 });
   }
 
-  const newBalance = targetProfile.tethos_coins + data.amount;
-
-  // Another member's coins and the ledger: service role, after the tier check.
-  const admin = createAdminClient();
-  await admin
-    .from("profiles")
-    .update({ tethos_coins: newBalance })
-    .eq("id", data.user_id);
-
-  await admin.from("tc_transactions").insert({
-    user_id: data.user_id,
-    amount: data.amount,
-    balance_after: newBalance,
-    type: "earn_admin",
-    description: data.description ?? `Admin award by ${callerId}`,
-  });
+  // Another member's Gems: service role, after the tier check.
+  const credited = await applyGems(data.user_id, data.amount, "earn_admin", data.description ?? `Admin award by ${callerId}`, `award:${crypto.randomUUID()}`);
+  if ("error" in credited) {
+    return NextResponse.json({ error: "Failed to award" }, { status: 500 });
+  }
 
   return NextResponse.json({
     success: true,
     user: data.user_id,
     awarded: data.amount,
-    new_balance: newBalance,
+    new_balance: credited.balance,
   });
 }

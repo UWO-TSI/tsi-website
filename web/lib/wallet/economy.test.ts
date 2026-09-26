@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { CATALOGUE } from "./catalogue";
@@ -176,5 +176,18 @@ describe("catalogue", () => {
   it("never shows a conversion between coins, Gems and money", () => {
     const text = JSON.stringify(CATALOGUE);
     expect(text).not.toMatch(/\$|CAD|dollar|USD|≈/i);
+  });
+});
+
+describe("Gems have one write path", () => {
+  it("no app or lib code writes profiles.tethos_coins or tc_transactions outside wallet_apply", () => {
+    const web = join(__dirname, "../..");
+    const files = ["app", "lib", "components"].flatMap((d) =>
+      (readdirSync(join(web, d), { recursive: true }) as string[]).filter((f) => /\.tsx?$/.test(f) && !/\.test\./.test(f)).map((f) => join(d, f)));
+    const writers = files.filter((f) => {
+      const src = readFileSync(join(web, f), "utf8");
+      return /\.(update|insert|upsert)\(\s*\{[^}]*\btethos_coins\b/.test(src) || /from\("tc_transactions"\)\s*\.(insert|update|upsert|delete)/.test(src);
+    });
+    expect(writers).toEqual([]);
   });
 });
