@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DEFAULT_LOOK, FREE_HAIR_COLOURS, PALETTE, PARTS, STARTER_PARTS, randomLook, seeded, wear } from "@/lib/game/character/look";
 import { CATALOGUE as PIECES } from "@/lib/homes/catalogue";
+import { CRAFTED_ITEMS, RECIPES } from "@/lib/crafting/recipes";
 import { defaultLayout, type HomeLayoutDoc } from "@/lib/homes/layout";
 import { memoryHomesStore } from "@/lib/homes-sync/memoryStore";
 import { CATALOGUE, OWNERSHIP_ITEMS, STARTER_REFS } from "./catalogue";
@@ -58,9 +59,17 @@ describe("ownership catalogue", () => {
     const items = seedItems();
     const byRef = (ref: string) => items.filter((i) => i.catalogue_ref === ref);
     for (const p of PARTS.filter((x) => x.slot !== "bangs" && x.slot !== "back" && !x.variantOf)) {
+      if (p.item) { // crafted wearables: owning the crafted item unlocks the part; never sold as a wear- row
+        expect([...CATALOGUE, ...CRAFTED_ITEMS].filter((c) => c.catalogue_ref === p.id).map((c) => c.slug), p.id).toEqual([p.item]);
+        expect(byRef(p.id).filter((i) => i.active), p.id).toHaveLength(0);
+        continue;
+      }
       expect(byRef(p.id), p.id).toHaveLength(1);
       expect(byRef(p.id)[0].active, p.id).toBe(!STARTER_PARTS.includes(p.id));
     }
+    // every crafted outfit or accessory has a wearable part
+    const crafted = [...CATALOGUE, ...CRAFTED_ITEMS].filter((c) => (c.category === "outfit" || c.category === "accessory") && RECIPES.some((r) => r.output.key === c.slug));
+    expect(crafted.map((c) => c.slug).sort()).toEqual(PARTS.flatMap((p) => p.item ?? []).sort());
     for (let h = FREE_HAIR_COLOURS; h < PALETTE.hair.length; h++) expect(byRef(`hair:${h}`)[0]?.active, `dye ${h}`).toBe(true);
     expect(items.filter((i) => i.category === "hair" && i.active)).toHaveLength(6);
     for (const p of PIECES) expect(byRef(p.id).filter((i) => i.category === "furniture" && i.active), p.id).toHaveLength(1);

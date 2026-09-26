@@ -1,4 +1,5 @@
-"""Outfit library (deliverable 3): 8 tops, 6 bottoms, 4 one-pieces (+ the hood-up variant) and 6 shoes.
+"""Outfit library (deliverable 3): 8 tops, 6 bottoms, 4 one-pieces (+ the hood-up variant) and 6 shoes; pass 2: the
+crafted silk sweater (top), monarch cape and koi kimono (one-pieces), `item` = their economy slug.
 
   /Applications/Blender.app/Contents/MacOS/Blender -b -P art/characters/outfits/build_outfits.py
 
@@ -265,6 +266,19 @@ def raincoat(pc):
     badge_decal(pc, CL + 0.014)
 
 
+@part("outfit_silk_sweater", "top", "Silk sweater", with_decal({"M_Main": ("outfit", 13), "M_Accent": ("outfit", 0)}), decal=True,
+      item="outfit-silk-sweater")
+def silk_sweater(pc):
+    """Loose V-neck sweater: ribbed hem, full sleeves gathered into ribbed cuffs."""
+    zs = [B.WAIST - 0.03, B.WAIST - 0.016, B.WAIST + 0.02, 0.42, Z_SH, Z_NECK]
+    offs = dict(zip(zs, [CL + 0.005, CL + 0.012, CL + 0.014, CL + 0.014, CL + 0.012, CL + 0.009]))
+    open_front(pc, lambda l, z: T(l, z, offs[z]), zs, lambda z: 0.0 if z <= 0.42 else 30 * (z - 0.42) / (Z_NECK - 0.42),
+               mat=lambda i, k: "M_Accent" if i == 0 else None)
+    sleeves(pc, [X0 * 0.8, X0 + 0.03, X0 + B.ARM_LEN * 0.55, 0.24, 0.262], [0.013, CL + 0.006, CL + 0.014, CL + 0.012, CL + 0.002],
+            mat=lambda i, k: "M_Accent" if i == 3 else None)
+    chest_decal(pc, CL + 0.014, half=16, z0=0.345, z1=0.395)
+
+
 # ================================================================ bottoms
 SHORT_LEGS = ([B.HEM - 0.004, 0.25, B.CROTCH + 0.02], [CL + 0.004, CL, CL])
 
@@ -424,6 +438,80 @@ def jumpsuit(pc):
     lons = [14, 60, 100, 140, 180, 220, 260, 300, 346]
     pc.band([[T(l, Z_NECK + 0.004, CL + 0.004) for l in lons], [T(l, Z_NECK - 0.024, CL + 0.026) for l in lons]],
             closed=False, refs=[B.torso_at(Z_NECK, 0)[0]])
+
+
+P12 = [15 + 30 * k for k in range(12)]
+
+
+def spot(pc, c, n, size, mat):
+    """Small diamond patch at c facing n (upright), just over the cloth."""
+    keep, pc.mat = pc.mat, mat
+    u = Vector((0, 0, 1)).cross(n).normalized()
+    vs = [pc.v(c + n * 0.003 + d) for d in (u * size, Vector((0, 0, size)), -u * size, Vector((0, 0, -size)))]
+    pc.f(vs, c - n)
+    pc.mat = keep
+
+
+@part("outfit_monarch_cape", "onepiece", "Monarch cape", {"M_Main": ("outfit", 7), "M_Accent": ("outfit", 14), "M_Trim": ("outfit", 1)},
+      sharp=34, grad=(0.72, 1.0), hides=("top", "bottom"), item="outfit-monarch-cape")
+def monarch_cape(pc):
+    """Orange cape to the hips over a short black skirt: a wing-lobed black border with white spots, black collar."""
+    pc.mat, pc.region = "M_Accent", "skirt"
+    pc.band([[oval(l, z, rx, ry) for l in P8] for z, rx, ry in ((0.33, 0.148, 0.128), (0.19, 0.184, 0.172))])
+    pc.mat = "M_Main"                                             # wide cape sleeves with black cuffs, as the rain-cape's
+    sleeves(pc, [X0 * 0.85, X0 + 0.05, 0.215, 0.256], [0.018, 0.022, 0.02, 0.014], mat=lambda i, k: "M_Accent" if i == 2 else None)
+    pc.region = "skirt"
+    prof =[(Z_NECK + 0.006, 0.105, 0.082), (Z_SH - 0.004, 0.152, 0.118), (0.4, 0.166, 0.144), (0.31, 0.192, 0.18)]
+    pc.band([[oval(l, z, rx, ry) for l in P12] for z, rx, ry in prof])
+    pc.mat = "M_Accent"
+    edge = [oval(l, 0.31, 0.192, 0.18) for l in P12]
+    lobes = [oval(l, 0.262 - 0.03 * (k % 2), 0.2, 0.19) for k, l in enumerate(P12)]
+    pc.band([edge, lobes])
+    for k in range(12):
+        c = oval(30 * k, 0.286 - 0.012 * (k % 2), 0.197, 0.186)
+        spot(pc, c, Vector((c.x, c.y, 0)).normalized(), 0.008, "M_Trim")
+    trunk(pc, [Z_NECK - 0.004, Z_NECK + 0.014], [CL + 0.03, CL + 0.012])
+
+
+@part("outfit_koi_kimono", "onepiece", "Koi kimono",
+      {"M_Main": ("outfit", 11), "M_Accent": ("outfit", 0), "M_Trim": ("outfit", 7), "M_Gold": ("outfit", 6)},
+      hides=("top", "bottom"), item="outfit-koi-kimono")
+def koi_kimono(pc):
+    """Straight wrap kimono to the ankles, blue like a pond: a V collar over a cream under-collar, deep boxy sleeves, a
+    cream obi tied in a bow at the back, two golden koi and an orange one swimming round the skirt."""
+    low = {0.06: (0.184, 0.16), 0.17: (0.176, 0.152), 0.28: (0.154, 0.132)}      # nearly straight; room for seated knees
+    offs = {B.WAIST: CL + 0.012, Z_CHEST: CL + 0.012, Z_SH: CL + 0.011, Z_NECK: CL + 0.009}
+    pt = lambda l, z: oval(l, z, *low[z]) if z in low else T(l, z, offs[z])
+    e = lambda z: 0.0 if z <= 0.38 else 24 * ((z - 0.38) / (Z_NECK - 0.38)) ** 0.8
+    pc.mat, pc.region = "M_Accent", "torso"
+    pc.band([[T(l, z, CL) for l in (-26, -13, 0, 13, 26)] for z in (0.37, 0.42, Z_SH, Z_NECK)], closed=False)
+    pc.mat = "M_Main"
+    open_front(pc, pt, [0.06, 0.17, 0.28, B.WAIST, Z_CHEST, Z_SH, Z_NECK], e, n=8, region="skirt")
+    pc.mat = "M_Accent"
+    for s in (1, -1):
+        strip(pc, [T(s * (e(z) + 3), z, CL + 0.014) for z in (Z_NECK - 0.002, 0.45, 0.39)], 0.016)
+    trunk(pc, [0.3, 0.362], CL + 0.018)
+    pc.blob(T(180, 0.335, CL + 0.036), (0.056, 0.022, 0.03), segs=6, rings=3)
+    pc.mat = "M_Main"
+    for sx, s in SIDES:                                           # deep front-to-back, so they hang square at the sides
+        pc.region = f"arm_{s}"
+        pc.band([[B.arm_pt(sx, x, l, o + d * abs(math.sin(math.radians(l)))) for l in R8]
+                 for x, o, d in ((X0 * 0.8, 0.02, 0.0), (X0 + 0.03, 0.024, 0.012), (0.2, 0.03, 0.04), (0.245, 0.032, 0.046))])
+    pc.region = "skirt"
+    for lon, z, mat, head in ((32, 0.15, "M_Gold", 1), (-44, 0.225, "M_Trim", -1), (196, 0.13, "M_Gold", -1)):
+        rx, ry = (0.179, 0.155) if z < 0.17 else (0.165, 0.142)
+        c = oval(lon, z, rx, ry)
+        n = Vector((c.x / rx ** 2, c.y / ry ** 2, 0)).normalized()
+        t = Vector((0, 0, 1)).cross(n).normalized() * head
+        up = Vector((0, 0, 1))
+        c = c + n * 0.004
+        nose, top, joint, bot = c + t * 0.05, c + up * 0.02 - t * 0.004, c - t * 0.03, c - up * 0.018 - t * 0.004
+        tail_a, tail_b = c - t * 0.058 + up * 0.022, c - t * 0.058 - up * 0.018
+        pc.mat = mat
+        vs = [pc.v(p) for p in (nose, top, joint, bot, tail_a, tail_b)]
+        pc.f(vs[:4], c - n)
+        pc.f([vs[2], vs[4], vs[5]], c - n)
+    pc.mat = "M_Main"
 
 
 # ================================================================ shoes (own slot; both feet in one piece)

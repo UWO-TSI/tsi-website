@@ -41,7 +41,7 @@ export function useWorldStudy<T>(pick: (s: WorldStudy) => T): T {
 export type StudyPoseName = "sit" | "study" | "stretch";
 /** Focus studies, a break stretches at the seat (row 166), anything else just sits. Seat-mates use it too. */
 export const poseOf = (phase: Phase | null | undefined): StudyPoseName => phase === "focus" ? "study" : phase === "break" ? "stretch" : "sit";
-/** The rig clip for each pose (Stretch is derived from Sit + Cheer until a Blender clip exists). */
+/** The rig clip for each pose. */
 export const STUDY_CLIP: Record<StudyPoseName, ClipName> = { sit: "Sit", study: "Study", stretch: "Stretch" };
 /** `tsi:sit` detail for a study seat: the measured seat top, the seat's facing and this phase's clip. */
 export const sitDetail = (seat: WorldSeat, phase: Phase | null | undefined) =>

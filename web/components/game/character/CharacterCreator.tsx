@@ -95,6 +95,7 @@ export default function CharacterCreator({ initial, mode = "create", title, askN
   // Identity (face, hair styles, the free colours) is always free; clothes and dyes are owned (ruling on audit item 22).
   const has = (id: string | null) => { const ref = id && partRef(id); return !ref || owned.has(ref); };
   const hasHair = (i: number) => i < FREE_HAIR_COLOURS || owned.has(dyeRef(i));
+  const crafted = (id: string | null) => !!id && !!PART_BY_ID.get(id)?.item; // unlocked by a crafted item, never sold
   const [lockNote, setLockNote] = useState<string | null>(null);
   const items = mode === "create" ? tab.items.filter(has) : tab.items;
   const pages = Math.max(1, Math.ceil(items.length / PAGE));
@@ -114,7 +115,7 @@ export default function CharacterCreator({ initial, mode = "create", title, askN
   }, [name, askName]);
 
   const choose = (id: string | null) => {
-    setLockNote(has(id) ? null : `${tab.name(id)} is sold in the shop.`);
+    setLockNote(has(id) ? null : `${tab.name(id)} is ${crafted(id) ? "made at the workbench" : "sold in the shop"}.`);
     if (!has(id)) return;
     setLook(l => tab.apply(l, id));
     if (tab.id === "accessory" && id) setLastAccessory(id);
@@ -156,7 +157,7 @@ export default function CharacterCreator({ initial, mode = "create", title, askN
       {items.length > 0 && <ul className={styles.grid} aria-label={tab.label}>
         {cells.map(id => <li key={id ?? "none"}>
           <button aria-pressed={tab.on(look, id)} onClick={() => choose(id)} data-locked={!has(id) || undefined}
-            aria-label={has(id) ? tab.name(id) : `${tab.name(id)} (in the shop)`} title={tab.name(id)}>
+            aria-label={has(id) ? tab.name(id) : `${tab.name(id)} (${crafted(id) ? "crafted" : "in the shop"})`} title={tab.name(id)}>
             <View as="span" className={styles.thumb}><Stage look={tab.apply(look, id)} framing={tab.framing} /></View>
             <span className={styles.label}>{has(id) ? "" : "🔒 "}{tab.name(id)}</span>
           </button>

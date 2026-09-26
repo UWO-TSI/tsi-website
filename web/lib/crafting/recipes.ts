@@ -51,12 +51,13 @@ export const CRAFTED_ITEMS: CatalogueEntry[] = [
   tool("shovel-sturdy", "Sturdy shovel", "shovel", 3),
   tool("shovel-crystal", "Crystal shovel", "shovel", 4),
   tool("shovel-gold", "Golden shovel", "shovel", 5),
-  item("acc-flower-crown", "Flower crown", "accessory", 200, { slot: "accessory" }),
-  item("acc-shell-necklace", "Shell necklace", "accessory", 250, { slot: "accessory" }),
-  item("acc-crystal-circlet", "Crystal circlet", "accessory", 2000, { slot: "accessory", description: "Rare. Catches the lamplight." }),
-  item("outfit-silk-sweater", "Silk sweater", "outfit", 300, { slot: "outfit" }),
-  item("outfit-monarch-cape", "Monarch cape", "outfit", 1500, { slot: "outfit", description: "Rare. Orange and black, like October." }),
-  item("outfit-koi-kimono", "Koi kimono", "outfit", 4000, { slot: "outfit", description: "Rare. Woven around a golden koi scale." }),
+  // Wearables: catalogue_ref is the character part the item unlocks (its `item` in the character catalogue).
+  item("acc-flower-crown", "Flower crown", "accessory", 200, { slot: "accessory", catalogue_ref: "acc_flower_crown" }),
+  item("acc-shell-necklace", "Shell necklace", "accessory", 250, { slot: "accessory", catalogue_ref: "acc_shell_necklace" }),
+  item("acc-crystal-circlet", "Crystal circlet", "accessory", 2000, { slot: "accessory", catalogue_ref: "acc_crystal_circlet", description: "Rare. Catches the lamplight." }),
+  item("outfit-silk-sweater", "Silk sweater", "outfit", 300, { slot: "outfit", catalogue_ref: "outfit_silk_sweater" }),
+  item("outfit-monarch-cape", "Monarch cape", "outfit", 1500, { slot: "outfit", catalogue_ref: "outfit_monarch_cape", description: "Rare. Orange and black, like October." }),
+  item("outfit-koi-kimono", "Koi kimono", "outfit", 4000, { slot: "outfit", catalogue_ref: "outfit_koi_kimono", description: "Rare. Woven around a golden koi scale." }),
 ];
 
 const r = (id: string, ingredients: Record<string, number>, sources: RecipeSource[], kind: "item" | "weapon" = "item", qty = 1): Recipe =>

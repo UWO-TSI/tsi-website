@@ -225,6 +225,18 @@ def study(p):
     return P
 
 
+@clip("Stretch", 2.0, True, seatHeight=SEAT)
+def stretch(p):
+    """Study break at the seat (row 166): arms up and back past the head, leaning back, swaying side to side."""
+    s, c = math.sin(TAU * p), math.cos(TAU * p)
+    P = seated(lean=-5 + 2 * math.cos(2 * TAU * p), nod=-12 + 3 * math.cos(2 * TAU * p), swing=6 * s)
+    P.rot("Spine1", ry(6 * s)).rot("Head", ry(-5 * s))
+    for sd, sx in SIDES:
+        reach = 0.06 * sx * s                                     # the arm on the leaning side reaches a little higher
+        arm(P, sd, V(sx * (0.8 - reach), 0.36, 0.5 + reach), V(sx * (0.55 - reach), 0.5, 0.68 + reach))
+    return P
+
+
 @clip("Sleep", 3.0, True, ground="frame")
 def sleep(p):
     b = math.sin(TAU * p)

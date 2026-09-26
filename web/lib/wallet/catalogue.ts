@@ -54,7 +54,7 @@ export const CATALOGUE: CatalogueEntry[] = [
   e("hair-chestnut", "Chestnut hair dye", "hair", 120, { slot: "hair", special_pool: true }),
   e("hair-sea-glass", "Sea-glass hair dye", "hair", 140, { slot: "hair", special_pool: true }),
   e("hair-sunset", "Sunset hair dye", "hair", 140, { slot: "hair", special_pool: true }),
-  e("acc-straw-hat", "Straw hat", "accessory", 80, { slot: "accessory", special_pool: true }),
+  e("acc-straw-hat", "Straw hat", "accessory", 80, { slot: "accessory", special_pool: true, catalogue_ref: "acc_straw_hat" }), // off sale; crafted (starter recipe)
   e("acc-round-glasses", "Round glasses", "accessory", 80, { slot: "accessory", special_pool: true }),
   e("acc-bandana", "Bandana", "accessory", 60, { slot: "accessory", special_pool: true }),
   // Furniture (homes catalogue pieces; stackable: you can own several)
@@ -99,9 +99,12 @@ const WEAR_PRICE: Record<string, number> = { top: 150, bottom: 140, onepiece: 18
 const HAS_FURNITURE = new Set(CATALOGUE.map((c) => c.catalogue_ref));
 pos = 199;
 
-/** Rows the ownership migration adds: every wearable part, the dyes, the homes pieces the shop lacked. Starter clothes are never sold. */
+/**
+ * Rows the ownership migration adds: every wearable part, the dyes, the homes pieces the shop lacked. Starter clothes are never sold.
+ * Parts with an `item` are unlocked by that existing (crafted) item instead, so they get no shop row.
+ */
 export const OWNERSHIP_ITEMS: CatalogueEntry[] = [
-  ...PARTS.filter((p) => p.slot !== "bangs" && p.slot !== "back" && !p.variantOf).map((p) =>
+  ...PARTS.filter((p) => p.slot !== "bangs" && p.slot !== "back" && !p.variantOf && !p.item).map((p) =>
     e(`wear-${p.id.replace(/_/g, "-")}`, p.name.replace(/ \(#\d+\)$/, ""), p.slot === "accessory" ? "accessory" : "outfit", WEAR_PRICE[p.slot], { catalogue_ref: p.id, special_pool: !STARTER_REFS.has(p.id) })),
   ...DYES.map((name, i) => e(`dye-${name.toLowerCase().replace(/ /g, "-")}`, `${name} hair dye`, "hair", 140, { catalogue_ref: dyeRef(FREE_HAIR_COLOURS + i), special_pool: true })),
   ...PIECES.filter((p) => !HAS_FURNITURE.has(p.id)).map((p) => furniture(p.id, p.label, 60 + (p.mount === "rug" ? 15 : 40) * p.size[0] * p.size[1])),
