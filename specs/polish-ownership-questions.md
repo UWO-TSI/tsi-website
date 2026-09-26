@@ -11,3 +11,8 @@ Each item has the assumption taken so the work kept moving.
 7. **avatar_config is server-only now.** Before this, a member could PATCH any part or dye into `profiles.avatar_config` straight through PostgREST. The guard (20260926180000) drops it from the member-editable list, and PATCH /api/profile writes the look as the service role after the ownership check. The legacy onboarding `avatar_config` field had no caller and is removed. Deploy order is unchanged: the migration goes out with this code.
 8. **When the grant happens.** "First login" is the first inventory read, look save or home save (all call `economy_grant_starters`, which is a no-op after the first time). Applicants who save a look in the applicant island get the starter clothes too, which carries into the member game if they're hired.
 9. **Study chime is silent until the island has sound.** The block-end chime now goes through `AudioManager.playSFX("confirm")`, so it respects volume and mute. Neither the member island nor the study companion calls `AudioManager.enable()` yet (no sound control on those pages), so the chime doesn't play there until the audio pass wires the controller in. Assumption: acceptable until Phase 2 audio.
+
+## Coordinator rulings (2026-09-26)
+1–8. Accepted as built.
+4. Crafted wearables get character parts in character-art pass 2 (`specs/character-art-pass-2.md`).
+9. Audio pass (`specs/audio-pass.md`): `AudioManager.enable()` on the first user gesture on the member island and the study companion, a sound toggle in settings, then the chime plays by default (row 169).
