@@ -4,8 +4,9 @@
  * Phone study companion (row 81): same tables, timers and coins as the 3D
  * cafe, through the shared useStudySession hook. Mobile-first, no canvas.
  */
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { COINS } from "@/lib/economy";
+import { AudioManager } from "@/lib/game/audio";
 import { LIMITS, PRESETS, type Settings } from "@/lib/study/rules";
 import type { TableView } from "@/lib/study/service";
 import type { StudyTransport } from "@/lib/study/transport";
@@ -17,6 +18,19 @@ const LOCATION: Record<string, string> = { cafe: "Cafe", "outdoor-plaza": "Plaza
 export default function StudyCompanion({ transport }: { transport?: StudyTransport }) {
   const study = useStudySession({ transport });
   const { session } = study;
+  // Audio pass (row 169 / polish-ownership item 9): the block-end chime
+  // goes through AudioManager.playSFX("confirm"), which stays silent until
+  // something calls enable(). The companion has no canvas to click into, so
+  // the first tap or key anywhere on the page unlocks it.
+  useEffect(() => {
+    const unlock = () => AudioManager.enable();
+    window.addEventListener("pointerdown", unlock, { once: true });
+    window.addEventListener("keydown", unlock, { once: true });
+    return () => {
+      window.removeEventListener("pointerdown", unlock);
+      window.removeEventListener("keydown", unlock);
+    };
+  }, []);
   return (
     <div className={s.shell}>
       <div className={s.wrap}>
