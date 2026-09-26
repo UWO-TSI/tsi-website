@@ -5,16 +5,13 @@
  * atomically; clients name a recipe and a key, never a quantity or a price.
  */
 import { ROSTER } from "@/lib/collections/roster";
+import { DomainError, toFailure, type Result } from "@/lib/result";
 import { CATALOGUE } from "@/lib/wallet/catalogue";
 import { torontoDay } from "@/lib/wallet/rules";
 import { CRAFTED_ITEMS, MATERIALS, RECIPES, outputName, type Recipe } from "./recipes";
 
 export type CraftingErrorCode = "unavailable" | "not_found" | "not_learned" | "insufficient_items" | "already_owned" | "key_reused" | "nothing_left" | "failed";
-export class CraftingError extends Error {
-  constructor(public code: CraftingErrorCode, message?: string) {
-    super(message ?? code);
-  }
-}
+export class CraftingError extends DomainError<CraftingErrorCode> {}
 
 export interface CraftingStore {
   learned(memberId: string): Promise<{ recipe_id: string; source: string }[]>;
@@ -29,7 +26,6 @@ export interface CraftingStore {
   openBottle(memberId: string): Promise<{ recipe_id: string; replayed: boolean }>;
 }
 
-type Result<T> = { ok: true; data: T } | { ok: false; status: number; error: string; code: string };
 const ERR: Record<CraftingErrorCode, [number, string]> = {
   unavailable: [503, "The workbench isn't set up yet."],
   not_found: [404, "There's no recipe like that."],
@@ -44,9 +40,7 @@ async function run<T>(f: () => Promise<T>): Promise<Result<T>> {
   try {
     return { ok: true, data: await f() };
   } catch (err) {
-    const code = err instanceof CraftingError ? err.code : "failed";
-    const [status, error] = ERR[code];
-    return { ok: false, status, error, code };
+    return toFailure(ERR, err);
   }
 }
 

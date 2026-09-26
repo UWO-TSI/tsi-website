@@ -1,13 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { CraftingError, type CraftingErrorCode, type CraftingStore } from "./service";
+import { raisePg } from "@/lib/result";
+import type { CraftingErrorCode, CraftingStore } from "./service";
 
 type Row = Record<string, unknown>;
 const CODES: CraftingErrorCode[] = ["not_found", "not_learned", "insufficient_items", "already_owned", "key_reused", "nothing_left"];
-function raise(error: { code?: string; message?: string } | null): never {
-  const msg = error?.message ?? "";
-  if (["42P01", "PGRST205", "PGRST202", "42703", "42883"].includes(error?.code ?? "") || /does not exist|schema cache/i.test(msg)) throw new CraftingError("unavailable", msg);
-  throw new CraftingError(CODES.find(c => msg.includes(c)) ?? "failed", msg);
-}
+const raise = (error: { code?: string; message?: string } | null): never => raisePg(error, CODES);
 const first = (data: unknown) => ((Array.isArray(data) ? data[0] : data) ?? {}) as Row;
 
 export function supabaseCraftingStore(db: SupabaseClient): CraftingStore {

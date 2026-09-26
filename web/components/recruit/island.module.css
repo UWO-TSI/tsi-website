@@ -134,20 +134,6 @@
 .countdown>p { margin:0; font-size:11px; }
 @media(max-width:900px) { .tutorial { right:20px; width:240px; } }
 
-.characterSetup { position:absolute; inset:0; z-index:25; display:grid; place-items:center; padding:24px; background:color-mix(in srgb,var(--app-bg) 92%,transparent); backdrop-filter:blur(12px); }
-.characterCard { display:grid; grid-template-columns:240px 360px; max-width:100%; border:1px solid #fff9; border-radius:32px; background:var(--app-surface); color:var(--app-ink); box-shadow:0 18px 60px var(--app-shadow); overflow:hidden; }
-.characterPreview { height:480px; background:radial-gradient(ellipse at 50% 70%,var(--app-soft),var(--app-sky) 70%); }
-.characterOptions { padding:32px; }
-.characterOptions h1 { font:700 28px/1.2 var(--font-heading); margin:10px 0; }
-.characterOptions>p { font-size:13px; margin-bottom:22px; }
-.characterOptions fieldset { border:0; padding:0; margin:16px 0; }
-.characterOptions legend { font-size:12px; font-weight:700; margin-bottom:8px; }
-.avatarChoices,.swatches { display:flex; gap:10px; }
-.avatarChoices button { padding:8px 22px; border-radius:18px; background:var(--app-soft); cursor:pointer; font-size:13px; }
-.avatarChoices button[aria-pressed=true] { color:#fff; background:#245c7e; }
-.swatches button { width:32px; height:32px; border:3px solid #fff9; border-radius:50%; cursor:pointer; }
-.swatches button[aria-pressed=true] { outline:2px solid var(--app-ink); outline-offset:2px; }
-.characterOptions .apply { width:100%; margin-top:24px; font-size:13px; }
 .backpackButton { position:absolute; right:28px; bottom:82px; display:flex; align-items:center; gap:8px; border-radius:22px; padding:12px 17px; background:var(--app-surface); box-shadow:0 3px 0 var(--app-edge); color:var(--app-ink); font-size:12px; cursor:pointer; }
 .backpackButton:disabled { opacity:.5; cursor:default; }
 .arrivalClouds { position:absolute; inset:0; z-index:24; pointer-events:none; overflow:hidden; animation:arrivalFade 6.5s both; }
@@ -160,7 +146,6 @@
 @keyframes cloudPassReverse { 0% { transform:rotate(180deg) scale(1.3); opacity:1; } 100% { transform:rotate(180deg) translate(-50%,40%) scale(2.8); opacity:0; } }
 @keyframes arrivalFade { 0%,20% { background:var(--app-sky); } 80%,100% { background:transparent; } }
 @keyframes arrivalTitle { 0%,12% { opacity:0; } 25%,45% { opacity:1; } 70%,100% { opacity:0; } }
-@media(max-height:650px) { .characterPreview { height:420px; } .characterOptions { padding:20px 28px; } .characterOptions fieldset { margin:10px 0; } }
 
 /* One adaptive palette for HUD, dialogs, loading and character setup. */
 .location { color:var(--app-ink); background:color-mix(in srgb,var(--app-surface) 88%,transparent); padding:10px 16px; border-radius:18px; text-shadow:none; }

@@ -19,7 +19,7 @@ import { setPeacefulTarget } from "@/lib/game/peacefulNear";
 import { installCraftingDemo } from "@/lib/crafting/demo";
 import type { RecipeBook, RecipeView } from "@/lib/crafting/service";
 import { torontoDay } from "@/lib/wallet/rules";
-import { newKey } from "@/lib/wallet/transport";
+import { ApiError, apiCall, newKey } from "@/lib/apiClient";
 import world from "../DefaultIslandWorld.module.css";
 import styles from "./Workshop.module.css";
 
@@ -64,16 +64,14 @@ export function BeachBottle({ player, ground }: { player: React.RefObject<THREE.
   const rock = useRef<THREE.Group>(null);
   useEffect(() => {
     let alive = true;
-    fetch("/api/crafting/recipes").then(r => r.json()).then(b => { if (alive) setAvailable(b?.ok === true && b.book.bottle.available); }).catch(() => {});
+    apiCall<RecipeBook>("/api/crafting/recipes", "book").then(b => { if (alive) setAvailable(b.bottle.available); }, () => {});
     const onAct = (e: Event) => {
       if ((e as CustomEvent<{ id: string }>).detail.id !== "bottle") return;
       setAvailable(false);
       setPeacefulTarget(null, "bottle");
-      void fetch("/api/crafting/learn", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ source: "bottle" }) })
-        .then(r => r.json()).catch(() => null).then(b => {
-          if (b?.ok) { AudioManager.playSFX("confirm"); window.dispatchEvent(new CustomEvent("tsi:recipe-learned", { detail: { name: b.learned.name } })); }
-          else window.dispatchEvent(new CustomEvent("tsi:toast", { detail: { text: b?.error ?? "The cork won't budge. Try again later." } }));
-        });
+      apiCall<{ name: string }>("/api/crafting/learn", "learned", { source: "bottle" }).then(
+        learned => { AudioManager.playSFX("confirm"); window.dispatchEvent(new CustomEvent("tsi:recipe-learned", { detail: { name: learned.name } })); },
+        (e: unknown) => window.dispatchEvent(new CustomEvent("tsi:toast", { detail: { text: e instanceof ApiError ? e.message : "The cork won't budge. Try again later." } })));
     };
     window.addEventListener("tsi:peaceful-act", onAct);
     return () => { alive = false; window.removeEventListener("tsi:peaceful-act", onAct); setPeacefulTarget(null, "bottle"); };
@@ -110,12 +108,9 @@ export default function CraftingSheet() {
   const [card, setCard] = useState<Card | null>(null);
   const pending = useRef<{ id: string; key: string } | null>(null); // a failed request retries with its key
 
-  const load = useCallback(async () => {
-    const res = await fetch("/api/crafting/recipes").catch(() => null);
-    const body = await res?.json().catch(() => null);
-    if (body?.ok) { setBook(body.book); setError(null); }
-    else setError(res?.status === 401 ? "Sign in to use the workbench." : body?.error ?? "The workbench isn't set up yet.");
-  }, []);
+  const load = useCallback(() => apiCall<RecipeBook>("/api/crafting/recipes", "book").then(
+    b => { setBook(b); setError(null); },
+    (e: unknown) => setError(e instanceof ApiError ? (e.status === 401 ? "Sign in to use the workbench." : e.message) : "The workbench isn't set up yet.")), []);
   const show = useCallback(() => { setOpen(true); setCard(null); void load(); }, [load]);
 
   useEffect(() => {
@@ -139,15 +134,19 @@ export default function CraftingSheet() {
     if (busy) return;
     setBusy(true);
     if (pending.current?.id !== r.id) pending.current = { id: r.id, key: `craft:${newKey()}` };
-    const res = await fetch("/api/crafting/craft", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ recipe_id: r.id, idempotency_key: pending.current.key }) }).catch(() => null);
-    const body = await res?.json().catch(() => null);
-    if (res) pending.current = null; // answered: the next press is a new craft
-    setBusy(false);
-    if (!body?.ok) { setError(body?.error ?? "The workbench wobbled. Try again."); return; }
-    AudioManager.playSFX("confirm");
-    window.dispatchEvent(new CustomEvent("tsi:crafted", { detail: { id: r.id } }));
-    setCard({ title: "Crafted", name: body.craft.name, note: r.kind === "weapon" ? "It's in your gear rack for the ruins." : "It's in your pockets." });
-    void load();
+    try {
+      const done = await apiCall<{ name: string }>("/api/crafting/craft", "craft", { recipe_id: r.id, idempotency_key: pending.current.key });
+      pending.current = null;
+      AudioManager.playSFX("confirm");
+      window.dispatchEvent(new CustomEvent("tsi:crafted", { detail: { id: r.id } }));
+      setCard({ title: "Crafted", name: done.name, note: r.kind === "weapon" ? "It's in your gear rack for the ruins." : "It's in your pockets." });
+      void load();
+    } catch (e) {
+      if (e instanceof ApiError) pending.current = null; // answered: the next press is a new craft
+      setError(e instanceof ApiError ? e.message : "The workbench wobbled. Try again.");
+    } finally {
+      setBusy(false);
+    }
   };
 
   const selected = book?.recipes.find(r => r.id === pick) ?? book?.recipes[0] ?? null;

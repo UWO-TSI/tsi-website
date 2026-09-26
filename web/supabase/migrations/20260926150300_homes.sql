@@ -1,4 +1,4 @@
--- ─── 030 Homes: personal home layout, rooms, mailbox ────────────────────────
+-- ─── 030 Homes: personal home layout and rooms ────────────────────────
 --
 -- DRAFT 2026-09-24. NOT APPLIED. Spec: specs/homes.md (rows 68-71, 82, 115-117,
 -- 127, 187, 95). Depends on 001 (profiles); coins go through
@@ -15,9 +15,6 @@ CREATE TABLE IF NOT EXISTS member_homes (
   member_id UUID PRIMARY KEY REFERENCES profiles(id) ON DELETE CASCADE,
   rooms_count INTEGER NOT NULL DEFAULT 1 CHECK (rooms_count BETWEEN 1 AND 4),
   outdoor JSONB NOT NULL DEFAULT '[]'::jsonb CHECK (jsonb_typeof(outdoor) = 'array'),
-  -- Mailbox binding (row 95/187): letters to member_id are read here.
-  mailbox_x REAL NOT NULL DEFAULT 2.3,
-  mailbox_z REAL NOT NULL DEFAULT 1.3,
   -- Optimistic concurrency + idempotent saves.
   revision INTEGER NOT NULL DEFAULT 0,
   last_save_key TEXT CHECK (last_save_key IS NULL OR char_length(last_save_key) <= 100),

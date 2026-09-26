@@ -1,16 +1,9 @@
 "use client";
 
 /**
- * Contract for the island agent (lib/game/progressionBridge.ts). Maps
- * ProgressionState into the world's ProgressionWorldState shape without
- * importing world code: anchors → XZ come from the caller.
- *
- *   // lib/game/progressionBridge.ts
- *   import { useProgressionWorldSource } from "@/lib/progression/worldBridge";
- *   function useProgressionSource() { return useProgressionWorldSource(ANCHOR_XZ); }
- *
- * Structural types below match ProgressionWorldState / WorldGoal /
- * WorldObjective in progressionBridge.ts.
+ * Maps ProgressionState into what the island renders (WorldProgression)
+ * without importing world code: anchors → XZ come from the caller
+ * (lib/game/progressionBridge.ts passes resolveAnchor).
  */
 import { useProgression } from "./useProgression";
 import { activeGoal } from "./devOverride";
@@ -70,7 +63,6 @@ export function toWorldProgression(state: ProgressionState, resolve: AnchorResol
   };
 }
 
-/** Drop-in for progressionBridge.useProgressionSource(). */
 export function useProgressionWorldSource(resolve: AnchorResolver): WorldProgression {
   const { state } = useProgression();
   return toWorldProgression(state, resolve);

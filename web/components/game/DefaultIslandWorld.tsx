@@ -34,6 +34,8 @@ import { useIslandConditions } from "@/lib/game/useIslandConditions";
 import { IslandAtmosphere, useFollowCamera } from "./IslandAtmosphere";
 import PeacefulLayer, { peacefulNear } from "./peaceful/PeacefulLayer";
 import WardrobeSheet from "./peaceful/WardrobeSheet";
+import PlayerCharacterUI from "./character/PlayerCharacterUI";
+import CharacterCrowd from "./character/CharacterCrowd";
 import OracleTemple from "./oracle/OracleTemple";
 import RuinsScene from "./combat/RuinsScene";
 import CombatHud from "./combat/CombatHud";
@@ -253,6 +255,7 @@ function IslandScene({ identity, devAt, exitFrom, peaceful, fishSpot, fishing, c
         onClick={() => window.dispatchEvent(new CustomEvent("tsi:npc-greet", { detail: { id: persona.id } }))} />)}
       <PlayerAvatar key={`${reset}-${returned}-${fromBoat}-${exitFrom}`} spawnPosition={spawn} playerName={identity.display_name} member={identity.member} onMove={onMove} frozen={fishing}
         groundHeight={island.ground} groundSurface={island.surface} constrainMove={island.move} />
+      <CharacterCrowd player={player} ground={island.ground} />
     </>
   );
 }
@@ -446,11 +449,13 @@ function DefaultIslandWorldContent() {
     setGate({ open: g.gateOpen, reason: g.gateOpen ? null : /^Sealed/.test(g.reason ?? "") ? g.reason : `Sealed. ${g.reason ?? ""}`.trim() });
     // Progression feeds the encounter: stats, max HP, subclass signature, weapon durability.
     const p = combat.rt.player;
+    p.armed = g.gateOpen;
     if (g.stats) p.stats = g.stats;
     p.level = g.level;
     if (g.maxHp) { p.maxHp = g.maxHp; p.hp = Math.min(p.hp, g.maxHp); }
     combat.rt.signature = g.signature;
     for (const w of g.weapons) if (w.weapon_key in p.durability) p.durability[w.weapon_key as keyof typeof p.durability] = w.durability;
+    publishCombat();
   }); return () => { alive = false; }; }, [identity.family]);
   const onOracleResult = useCallback((result: ResultView) => {
     setFamily(result.family); setSheet(null);
@@ -667,6 +672,7 @@ function DefaultIslandWorldContent() {
       <NoticeSheet open={sheet === "notice"} onClose={() => setSheet(null)} />
       <LettersSheet open={sheet === "letters"} onClose={() => setSheet(null)} />
       {(sheet === "closet" || sheet === "fitting") && <WardrobeSheet open place={sheet === "closet" ? "closet" : "fitting"} onClose={() => setSheet(null)} />}
+      <PlayerCharacterUI />
       <JournalSheet open={sheet === "journal"} onClose={() => setSheet(null)} />
       <OracleQuizSheet open={sheet === "oracle"} onClose={() => setSheet(null)} onResult={onOracleResult} />
       <SettingsSheet open={sheet === "settings"} onClose={() => setSheet(null)} />

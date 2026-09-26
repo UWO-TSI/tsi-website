@@ -6,24 +6,11 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { normalizeChapter } from "./chapters";
 import { normalizeGoal } from "./goals";
+import { raisePg } from "@/lib/result";
 import { StoreError, type CommitInput, type ProgressionStore, type RealActivity } from "./store";
 import type { LetterView, MemberChapterProgress } from "./types";
 
-interface PgError {
-  code?: string;
-  message?: string;
-}
-
-const MISSING = new Set(["42P01", "PGRST205", "PGRST202", "42703", "42883"]);
-
-function raise(error: PgError | null | undefined): never {
-  const code = error?.code ?? "";
-  const message = error?.message ?? "";
-  if (MISSING.has(code) || /does not exist|schema cache/i.test(message)) throw new StoreError("unavailable", message);
-  if (/cap_exceeded/.test(message)) throw new StoreError("cap_exceeded");
-  if (/insufficient/.test(message)) throw new StoreError("insufficient");
-  throw new StoreError("failed", message);
-}
+const raise = (error: { code?: string; message?: string } | null | undefined): never => raisePg(error, ["cap_exceeded", "insufficient"]);
 
 type Row = Record<string, unknown>;
 

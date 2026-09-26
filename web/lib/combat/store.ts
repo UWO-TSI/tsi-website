@@ -1,15 +1,12 @@
 import type { Family } from "@/lib/oracle/engine";
 import type { MissionProgress, MissionState } from "./missions";
 import type { StatBlock } from "./progression";
+import { DomainError } from "@/lib/result";
 
 export type CombatErrorCode =
   | "unavailable" | "insufficient" | "not_found" | "not_owned" | "needs_reset" | "not_enough_points" | "level_too_low" | "wrong_family"
   | "no_family" | "cooldown" | "not_ready" | "kill_xp_cap" | "unknown_enemy" | "unknown_mission" | "bad_hits" | "failed";
-export class CombatError extends Error {
-  constructor(public code: CombatErrorCode, message?: string) {
-    super(message ?? code);
-  }
-}
+export class CombatError extends DomainError<CombatErrorCode> {}
 
 export interface ProgressionRow {
   xp: number;

@@ -1,5 +1,5 @@
 /** In-memory HomesStore mirroring home_save_layout / home_buy_room (tests, dev harness). */
-import { assembleLayout, DEFAULT_MAILBOX } from "./rules";
+import { assembleLayout } from "./rules";
 import { HomeStoreError, type HomesStore } from "./store";
 
 interface Row { room_index: number; room_id: string; wallpaper: string; flooring: string; items: unknown }
@@ -16,7 +16,7 @@ export function memoryHomesStore() {
   const store: HomesStore = {
     async getHome(m) {
       const h = home(m);
-      return { rooms_count: h.rooms_count, layout: assembleLayout(h.rooms_count, structuredClone(h.rows), structuredClone(h.outdoor)), revision: h.revision, mailbox: DEFAULT_MAILBOX };
+      return { rooms_count: h.rooms_count, layout: assembleLayout(h.rooms_count, structuredClone(h.rows), structuredClone(h.outdoor)), revision: h.revision };
     },
     async saveLayout(m, base, key, doc) {
       const h = home(m);

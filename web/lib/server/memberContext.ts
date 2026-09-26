@@ -1,9 +1,10 @@
 /**
- * Signed-in member + service-role client for game-data routes (homes,
- * collections). Mocked in route tests.
+ * Signed-in member + service-role client for the game-data routes.
+ * Mocked in route tests.
  */
 import { NextResponse } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -34,6 +35,18 @@ export async function memberContext(): Promise<MemberContext | NextResponse> {
   }
   return { userId, tier, db: createAdminClient(), now: new Date() };
 }
+
+/** memberContext plus a domain store built on its service-role client. */
+export async function withStore<S>(make: (db: SupabaseClient) => S): Promise<(MemberContext & { store: S }) | NextResponse> {
+  const ctx = await memberContext();
+  return ctx instanceof NextResponse ? ctx : { ...ctx, store: make(ctx.db) };
+}
+
+export const isAdminTier = (tier: number) => tier === 1 || tier === 2;
+/** Client-generated idempotency key: resend the same one on retry. */
+export const IdemKey = z.string().regex(/^[A-Za-z0-9_:-]{8,100}$/);
+export const badRequest = (error = "Invalid request") => NextResponse.json({ ok: false, error }, { status: 400 });
+export const forbidden = () => NextResponse.json({ ok: false, error: "Forbidden: T1/T2 only" }, { status: 403 });
 
 export function jsonResult<T>(r: { ok: true; data: T } | { ok: false; status: number; error: string; code?: string; [k: string]: unknown }, key: string): NextResponse {
   if (!r.ok) {

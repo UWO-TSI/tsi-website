@@ -17,7 +17,8 @@ const DONATABLE: Category[] = CATEGORIES.filter(c => c === "fish" || c === "sea"
 export async function postDonation(key: string, name: string): Promise<string> {
   try {
     const res = await fetch("/api/collections/museum/donate", { method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ species_key: key, idempotency_key: `donate:${key}:${Date.now().toString(36)}` }) });
+      // One donation per species ever, so the species is the key: a retry replays.
+      body: JSON.stringify({ species_key: key, idempotency_key: `donate:${key}` }) });
     const body = await res.json().catch(() => null);
     return curatorLine(res.ok && body?.ok ? { ok: true, name } : { ok: false, code: body?.code, error: body?.error });
   } catch {

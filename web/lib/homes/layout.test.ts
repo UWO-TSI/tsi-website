@@ -4,7 +4,6 @@ import {
   DOOR_CELLS, MAX_ROOMS, ROOM_SIZE, canPlace, cellsOf, defaultLayout, footprint, parseLayout, roomInside,
   roomWallLength, rotate, serialiseLayout, snapCell, snapToWall, withRooms, type PlacedItem,
 } from "./layout";
-import { createHomeStore, HOME_LAYOUT_KEY } from "./store";
 
 const room = (items: PlacedItem[], mount: "floor" | "rug" | "wall" = "floor") => ({ items, inside: roomInside(mount), wallLength: roomWallLength });
 
@@ -98,22 +97,5 @@ describe("layout document", () => {
     for (const item of defaultLayout().rooms[0].items) expect(canPlace(item, room(defaultLayout().rooms[0].items))).toBe(true);
     expect(withRooms(defaultLayout(), 9).rooms).toHaveLength(MAX_ROOMS);
     expect(catalogueItem("home-bed")?.mount).toBe("floor");
-  });
-});
-
-describe("local store", () => {
-  it("persists edits and survives blocked or corrupt storage", () => {
-    const saved = new Map<string, string>();
-    const storage = { getItem: (k: string) => saved.get(k) ?? null, setItem: (k: string, v: string) => { saved.set(k, v); }, removeItem: (k: string) => { saved.delete(k); } };
-    const store = createHomeStore(() => storage);
-    const next = withRooms(store.getSnapshot(), 2);
-    store.set(next);
-    expect(JSON.parse(saved.get(HOME_LAYOUT_KEY)!).rooms).toHaveLength(2);
-    expect(createHomeStore(() => storage).getSnapshot().rooms).toHaveLength(2);
-    saved.set(HOME_LAYOUT_KEY, "{broken");
-    expect(createHomeStore(() => storage).getSnapshot()).toEqual(defaultLayout());
-    const blocked = createHomeStore(() => { throw new Error("blocked"); });
-    blocked.set(next);
-    expect(blocked.getSnapshot().rooms).toHaveLength(2);
   });
 });

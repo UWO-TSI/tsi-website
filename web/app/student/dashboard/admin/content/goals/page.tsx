@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, History, Pencil, Plus, RefreshCw } from "lucide-react";
 import { AdminGate, Field, inputCls, primaryBtnCls, thCls } from "@/components/portal/ProgressionAdminShared";
-import { newIdempotencyKey } from "@/lib/progression/client";
+import { newKey } from "@/lib/apiClient";
 import type { GoalProgressView } from "@/lib/progression/types";
 import { createClient } from "@/lib/supabase/client";
 
@@ -46,7 +46,7 @@ export default function AdminGoalsPage() {
 
   const logCredit = async () => {
     // One key per intended credit; kept on failure so a retry can't double-count.
-    const key = creditKey ?? newIdempotencyKey();
+    const key = creditKey ?? newKey();
     setCreditKey(key);
     const res = await fetch(`/api/progression/goals/${credit.goal}/credit`, {
       method: "POST",

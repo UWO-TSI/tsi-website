@@ -4,6 +4,7 @@
  * answers; the server scores.
  */
 import { IdentityError, type IdentityStore } from "@/lib/identity/store";
+import { toFailure } from "@/lib/result";
 import { FAMILY_COLOR, itemOrder, keeperBeat, missing, score, tieBreakersFor, tiedDichotomies, validAnswer, type Family, type OracleResult } from "./engine";
 import { STATEMENTS, TIE_BREAKERS, type Pole } from "./items";
 import { RESPEC_COOLDOWN_DAYS, RESPEC_FEE_COINS, startDecision } from "./retake";
@@ -17,11 +18,7 @@ const ERR: Record<string, [number, string]> = {
   incomplete: [409, "Answer every question first."],
   failed: [500, "Something went wrong. Try again."],
 };
-const fail = <T>(err: unknown): Result<T> => {
-  const code = err instanceof IdentityError ? err.code : "failed";
-  const [status, error] = ERR[code] ?? ERR.failed;
-  return { ok: false, status, error, code };
-};
+const fail = <T>(err: unknown): Result<T> => toFailure(ERR, err);
 
 const TEXT = new Map(STATEMENTS.map((s) => [s.id, s.text]));
 

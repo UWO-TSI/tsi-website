@@ -23,8 +23,8 @@ import { useApplicantDayPhase } from "./RecruitmentAppearance";
 import ApplicantLoading from "./ApplicantLoading";
 import appearanceStyles from "./appearance.module.css";
 import PreviewCompletion from "./PreviewCompletion";
-import CharacterSetup from "./CharacterSetup";
-import { ApplicantAppearanceContext, DEFAULT_APPEARANCE, parseAppearance } from "@/lib/game/applicantAppearance";
+import CharacterCreator from "@/components/game/character/CharacterCreator";
+import { saveMyLook, useMyLook } from "@/lib/game/character/lookStore";
 import FishingOverlay from "@/components/game/FishingOverlay";
 import ToastHub from "@/components/game/ToastHub";
 import CollectionBook from "@/components/game/CollectionBook";
@@ -51,8 +51,11 @@ export default function ApplicantIsland() {
   const [positions, setPositions] = useState<Position[]>([]), [loadState, setLoadState] = useState<"loading" | "ready" | "error">("loading");
   const [near, setNear] = useState<VillageAction>(null), [selected, setSelected] = useState<number | null>(null);
   const [inside, setInside] = useState(false), [returned, setReturned] = useState(false), [transitioning, setTransitioning] = useState(false);
-  const [appearance, setAppearance] = useState(DEFAULT_APPEARANCE);
-  const [avatarLoaded, setAvatarLoaded] = useState(false), [customizing, setCustomizing] = useState(false), [arrival, setArrival] = useState(false);
+  // Applicants make their character before applying; it is saved to their profile and carries over on hire (row 142).
+  const mine = useMyLook();
+  const avatarLoaded = mine.saved || mine.loaded;
+  const [customizing, setCustomizing] = useState(false), [arrival, setArrival] = useState(false);
+  const greeted = useRef(false);
   const pickedFlowers = useSyncExternalStore(subscribeFlowerPicks, getPickedSnapshot, getPickedServerSnapshot);
   const [nearFlower, setNearFlower] = useState<number | null>(null);
   const [bagOpen, setBagOpen] = useState(false);
@@ -85,17 +88,15 @@ export default function ApplicantIsland() {
   const userId = user?.id;
   const collectionScope = `applicant:${preview ? "preview" : userId ?? "guest"}`;
   const onReady = useCallback(() => setReady(true), []), onFailure = useCallback(() => setFailed(true), []);
-  const avatarKey = `tethos-applicant-avatar-v1:${preview ? "preview" : userId ?? "guest"}`;
   useEffect(() => {
-    if (!play) return;
-    let saved = null;
-    try { saved = parseAppearance(localStorage.getItem(avatarKey)); } catch { /* Storage may be unavailable. */ }
-    setAppearance(saved ?? DEFAULT_APPEARANCE); setAvatarLoaded(true); setCustomizing(!saved); setArrival(!!saved);
-  }, [play, avatarKey]);
-  const finishAppearance = useCallback(() => {
-    try { localStorage.setItem(avatarKey, JSON.stringify(appearance)); } catch { /* Keep the current-session appearance. */ }
+    if (!play || !avatarLoaded || greeted.current) return;
+    greeted.current = true;
+    setCustomizing(!mine.saved); setArrival(mine.saved);
+  }, [play, avatarLoaded, mine.saved]);
+  const finishAppearance = useCallback(async (look: Parameters<typeof saveMyLook>[0]) => {
+    await saveMyLook(look);
     setCustomizing(false); setArrival(!inside);
-  }, [appearance, avatarKey, inside]);
+  }, [inside]);
   const finishArrival = useCallback(() => setArrival(false), []);
   const arriving = arrival && !inside && !reducedMotion;
   const pickFlower = useCallback((index: number) => {
@@ -201,8 +202,8 @@ export default function ApplicantIsland() {
   if (compact) return <RecruitmentLanding />;
   const previewAppearance = preview && ["light", "dark"].includes(params.get("appearance") ?? "") ? params.get("appearance") : undefined;
   return <main className={`${appearanceStyles.theme} ${styles.island}`} data-time={renderedPhase} data-appearance={previewAppearance}>
-    {play && <ApplicantAppearanceContext.Provider value={appearance}><IslandBoundary onFailure={onFailure}><Scene guideToHQ={!visitedHQ} guideToBoard={!readBoard} onFishingTarget={onFishingTarget} countdownPositions={positions} nearClock={near === "clock"} loading={!ready} collectionScope={collectionScope} arrival={arriving} onArrived={finishArrival} pickedFlowers={pickedFlowers} onFlowerNear={setNearFlower} onPickFlower={pickFlower} fishing={fishing} phase={renderedPhase} postings={positions.map(p => ({ title: p.title, complete: applied.has(p.id) || preview && rehearsed.has(p.id) }))} onSelectRole={openRole} inside={inside} returned={returned} paused={hidden || !avatarLoaded || customizing || bagOpen || panel !== null || transitioning || showAuth} hidden={hidden}
-      onAction={act} onNear={setNear} onReady={onReady} onFailure={onFailure} onMetrics={setMetrics} /></IslandBoundary></ApplicantAppearanceContext.Provider>}
+    {play && <IslandBoundary onFailure={onFailure}><Scene guideToHQ={!visitedHQ} guideToBoard={!readBoard} onFishingTarget={onFishingTarget} countdownPositions={positions} nearClock={near === "clock"} loading={!ready} collectionScope={collectionScope} arrival={arriving} onArrived={finishArrival} pickedFlowers={pickedFlowers} onFlowerNear={setNearFlower} onPickFlower={pickFlower} fishing={fishing} phase={renderedPhase} postings={positions.map(p => ({ title: p.title, complete: applied.has(p.id) || preview && rehearsed.has(p.id) }))} onSelectRole={openRole} inside={inside} returned={returned} paused={hidden || !avatarLoaded || customizing || bagOpen || panel !== null || transitioning || showAuth} hidden={hidden}
+      onAction={act} onNear={setNear} onReady={onReady} onFailure={onFailure} onMetrics={setMetrics} /></IslandBoundary>}
     {play && ready && avatarLoaded && !customizing && <ToastHub />}
     <div className={styles.location}><span>Tech for Social Impact</span><strong>{inside ? "TSI Headquarters" : "Applicant village"}</strong></div>
     <nav className={styles.tools} aria-label="Game options">
@@ -236,7 +237,7 @@ export default function ApplicantIsland() {
     </>}
     {play && ready && !inside && !customizing && !arriving && !panel && !bagOpen && <FishingOverlay onActiveChange={setFishing} collectionScope={collectionScope} zoneOverride="sea" />}
     <CollectionBook open={bagOpen} onClose={() => { setBagOpen(false); focusGame(); }} collectionScope={collectionScope} />
-    {play && ready && avatarLoaded && customizing && <CharacterSetup appearance={appearance} onChange={setAppearance} onDone={finishAppearance} />}
+    {play && ready && avatarLoaded && customizing && <CharacterCreator initial={mine.look} title="Make yourself at home" onDone={finishAppearance} />}
     {play && ready && arriving && <div className={styles.arrivalClouds} aria-label="Arriving through the clouds"><i /><i /><i /><span>Welcome to Tech for Social Impact.<small>A little place to begin.</small></span></div>}
     <div className={styles.fade} data-active={transitioning} aria-hidden="true" />
     <dialog ref={dialog} className={`${styles.dialog} ${panel === "board" ? styles.boardDialog : panel === "role" ? styles.applicationDialog : panel === "guide" ? styles.guideDialog : ""}`} onCancel={e => { e.preventDefault(); void close(); }} aria-label={panel === "role" ? `${position?.title ?? "Role"} application` : undefined} aria-labelledby={panel === "role" || panel === "guide" ? undefined : "island-panel-title"}>

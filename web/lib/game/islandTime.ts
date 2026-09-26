@@ -1,4 +1,5 @@
 import { phaseForSun, sunFor, type SunDay } from "./sunTimes";
+import { torontoParts } from "@/lib/time";
 
 /**
  * Island clock: real campus time in Toronto (ledger rows 84, 88) with phases
@@ -9,9 +10,8 @@ export const ISLAND_PHASES: readonly IslandPhase[] = ["dawn", "day", "evening", 
 
 /** Fractional hour (0-24) in America/Toronto for a given instant. */
 export function torontoHour(date = new Date()): number {
-  const parts = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Toronto", hour: "numeric", minute: "numeric", hourCycle: "h23" }).formatToParts(date);
-  const get = (type: string) => Number(parts.find(part => part.type === type)?.value ?? 0);
-  return get("hour") + get("minute") / 60;
+  const t = torontoParts(date);
+  return t.hour + t.minute / 60;
 }
 
 /** Phase for a Toronto hour on a date (defaults to today's fallback sun times). */

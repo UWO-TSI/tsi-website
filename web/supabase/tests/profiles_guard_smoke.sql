@@ -60,7 +60,7 @@ BEGIN
     github_username = 'maya', instagram = 'maya', linkedin = 'maya', discord_tag = 'maya',
     favourite_music = 'x', dream_retirement = 'x', spirit_animal = 'x', fun_fact = 'x',
     avatar_url = 'x', avatar_config = '{"hair":"a"}', skills = '{go}', social_links = '{"github":"maya"}',
-    active_theme = 'light', preferences = '{"sfx":0.2}', class = 'Mage', subclass = 'INTJ',
+    active_theme = 'light', preferences = '{"sfx":0.2}',
     onboarding_step = 4, onboarding_completed = true, last_seen_at = now(), updated_at = now()
   WHERE id = auth.uid();
   GET DIAGNOSTICS n = ROW_COUNT;
@@ -69,7 +69,7 @@ BEGIN
   UPDATE profiles SET tier = tier, tethos_coins = tethos_coins, display_name = 'Maya L' WHERE id = auth.uid();
   GET DIAGNOSTICS n = ROW_COUNT;
   ASSERT n = 1, 'FAIL: no-op write of privileged column refused';
-  RAISE NOTICE 'ok: all 28 editable columns update on own row';
+  RAISE NOTICE 'ok: all 26 editable columns update on own row (class/subclass server-only since 20260926151200)';
 
   -- No self-insert (the INSERT policy is gone; handle_new_user creates rows).
   BEGIN

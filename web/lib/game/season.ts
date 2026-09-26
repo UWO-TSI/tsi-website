@@ -4,6 +4,8 @@
  * Boundaries use fixed dates (Mar 20, Jun 21, Sep 22, Dec 21); the true
  * equinox/solstice moves by at most a day, which the 14-day blend absorbs.
  */
+import { torontoParts } from "@/lib/time";
+
 export type Season = "spring" | "summer" | "autumn" | "winter";
 export const SEASONS: readonly Season[] = ["spring", "summer", "autumn", "winter"];
 export const SEASON_BLEND_DAYS = 14;
@@ -18,9 +20,8 @@ const DAY = 86_400_000;
 
 /** Calendar date in Toronto, as a UTC-midnight timestamp (DST-proof day arithmetic). */
 function torontoDay(date: Date): number {
-  const parts = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Toronto", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(date);
-  const get = (type: string) => Number(parts.find(part => part.type === type)?.value);
-  return Date.UTC(get("year"), get("month") - 1, get("day"));
+  const t = torontoParts(date);
+  return Date.UTC(t.year, t.month - 1, t.day);
 }
 
 export interface SeasonBlend {

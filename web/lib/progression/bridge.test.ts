@@ -19,7 +19,7 @@ describe("?goal= dev override", () => {
 });
 
 describe("world bridge contract", () => {
-  it("maps state into the island's ProgressionWorldState shape", () => {
+  it("maps state into the island's WorldProgression shape", () => {
     const w = toWorldProgression(previewState(), resolve);
     expect(w.activeGoal).toEqual({ id: "cafe", label: "Reopen the cafe", progress: 0, completed: false });
     expect(w.objective).toEqual({ text: "Claim your plot at HQ", target: [0, 6.3], anchor: "hq" });

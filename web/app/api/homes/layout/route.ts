@@ -1,19 +1,19 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { homesContext } from "@/lib/homes-sync/deps";
+import { supabaseHomesStore } from "@/lib/homes-sync/supabaseStore";
 import { saveHome } from "@/lib/homes-sync/service";
-import { jsonResult } from "@/lib/server/memberContext";
+import { IdemKey, jsonResult, withStore } from "@/lib/server/memberContext";
 
 const Body = z.object({
   layout: z.unknown(),
   base_revision: z.number().int().min(0),
   // One key per edit; resend the same key when retrying the same save.
-  save_key: z.string().regex(/^[A-Za-z0-9_:-]{8,100}$/),
+  save_key: IdemKey,
 });
 
 // PUT /api/homes/layout: save the whole document (validated, optimistic, idempotent).
 export async function PUT(request: Request) {
-  const ctx = await homesContext();
+  const ctx = await withStore(supabaseHomesStore);
   if (ctx instanceof NextResponse) return ctx;
   const body = await request.json().catch(() => null);
   const parsed = Body.safeParse(body);

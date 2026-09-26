@@ -398,7 +398,7 @@ DO $$ DECLARE f TEXT; BEGIN
 END $$;
 
 -- ─── Seed (web/lib/combat/) ─────────────────────────────────────────────────
--- BEGIN GENERATED COMBAT SEED (web/scripts/gen-combat-seed.mjs)
+-- BEGIN GENERATED COMBAT SEED (web/scripts/gen-seeds.mjs)
 INSERT INTO weapons (key, name, weapon_type, tier, scaling, max_durability, repair_per_point) VALUES
   ('sword-driftwood', 'Driftwood sword', 'sword', 1, ARRAY['might']::text[], 90, 1),
   ('sword-iron', 'Iron sword', 'sword', 2, ARRAY['might']::text[], 120, 2),

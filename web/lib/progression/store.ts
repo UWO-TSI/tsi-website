@@ -6,15 +6,11 @@
  */
 import type { ClubGoal, ContributionSource, DeliveryKind, LetterView, MemberChapterProgress, QuestChapter } from "./types";
 import type { MemberTotals } from "./goals";
+import { DomainError } from "@/lib/result";
 
 export type StoreErrorCode = "unavailable" | "cap_exceeded" | "insufficient" | "not_found" | "failed";
 
-export class StoreError extends Error {
-  constructor(public code: StoreErrorCode, message?: string) {
-    super(message ?? code);
-    this.name = "StoreError";
-  }
-}
+export class StoreError extends DomainError<StoreErrorCode> {}
 
 export interface MemberFacts {
   tier: number;

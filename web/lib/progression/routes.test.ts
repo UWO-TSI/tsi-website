@@ -3,9 +3,9 @@ import { NextResponse } from "next/server";
 import { memoryStore } from "./memoryStore";
 
 const mock = vi.hoisted(() => ({ ctx: null as unknown }));
-vi.mock("@/lib/progression/deps", () => ({
-  progressionContext: async () => mock.ctx,
-  isAdminTier: (t: number) => t === 1 || t === 2,
+vi.mock("@/lib/server/memberContext", async (original) => ({
+  ...(await original<typeof import("@/lib/server/memberContext")>()),
+  withStore: async () => mock.ctx,
 }));
 
 import { POST as contributeRoute } from "../../app/api/progression/contribute/route";

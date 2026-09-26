@@ -1,17 +1,17 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { homesContext } from "@/lib/homes-sync/deps";
+import { supabaseHomesStore } from "@/lib/homes-sync/supabaseStore";
 import { buyRoom } from "@/lib/homes-sync/service";
-import { jsonResult } from "@/lib/server/memberContext";
+import { IdemKey, jsonResult, withStore } from "@/lib/server/memberContext";
 
 const Body = z.object({
   expected_price: z.number().int().min(0),
-  idempotency_key: z.string().regex(/^[A-Za-z0-9_:-]{8,100}$/),
+  idempotency_key: IdemKey,
 });
 
 // POST /api/homes/rooms: buy the next room (server price, cap 4, coins from profiles.coins).
 export async function POST(request: Request) {
-  const ctx = await homesContext();
+  const ctx = await withStore(supabaseHomesStore);
   if (ctx instanceof NextResponse) return ctx;
   const body = await request.json().catch(() => null);
   const parsed = Body.safeParse(body);

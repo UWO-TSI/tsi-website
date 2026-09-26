@@ -6,6 +6,7 @@ import Link from "next/link";
 import { ArrowLeft, ExternalLink } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { ShopItem, ShopCategory, Rarity } from "@/lib/content/types";
+import type { ShopCategory as CatalogueCategory } from "@/lib/wallet/catalogue";
 import ImageUploadButton from "@/components/portal/ImageUploadButton";
 
 // ─── ShopEditor ─────────────────────────────────────────────────────────────
@@ -20,7 +21,7 @@ import ImageUploadButton from "@/components/portal/ImageUploadButton";
 const SLUG_REGEX = /^[a-z0-9-]+$/;
 // 20260926150600_economy.sql widened the categories; merch is always priced in Gems,
 // everything else in play coins or Gems. No real-money price exists.
-type EditorCategory = ShopCategory | "tool" | "outfit" | "hair" | "accessory" | "furniture" | "wallpaper" | "flooring";
+type EditorCategory = ShopCategory | CatalogueCategory;
 const CATEGORIES: EditorCategory[] = [
   "tool",
   "outfit",

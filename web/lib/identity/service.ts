@@ -1,9 +1,9 @@
 /** Identity service: world names, member badge, settings, reports and T1/T2 moderation. */
 import { canChangeName, checkName, NAME_CHANGE_COOLDOWN_DAYS } from "./names";
 import { mergeSettings, type AccountSettings } from "./settings";
+import { toFailure, type Result } from "@/lib/result";
 import { IdentityError, type IdentityStore } from "./store";
 
-type Result<T> = { ok: true; data: T } | { ok: false; status: number; error: string; code: string };
 const ERR: Record<string, [number, string]> = {
   unavailable: [503, "Names can't be saved right now."],
   name_taken: [409, "Someone already has that name."],
@@ -11,11 +11,7 @@ const ERR: Record<string, [number, string]> = {
   forbidden: [403, "T1/T2 only."],
   failed: [500, "Something went wrong. Try again."],
 };
-const fail = <T>(err: unknown): Result<T> => {
-  const code = err instanceof IdentityError ? err.code : "failed";
-  const [status, error] = ERR[code] ?? ERR.failed;
-  return { ok: false, status, error, code };
-};
+const fail = <T>(err: unknown): Result<T> => toFailure(ERR, err);
 
 export async function checkWorldName(store: IdentityStore, m: string, raw: unknown): Promise<Result<{ name: string; available: boolean }>> {
   const c = checkName(raw);

@@ -1,10 +1,11 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
-import { COINS } from "@/lib/economy";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { COINS, fmtCoins } from "@/lib/economy";
 import { localCollections, spendCollected } from "@/lib/game/collections";
-import { localCoins, spendCoins } from "@/lib/game/coins";
-import { deliver, newIdempotencyKey, ProgressionRequestError } from "@/lib/progression/client";
+import { httpEconomyTransport } from "@/lib/wallet/transport";
+import { deliver } from "@/lib/progression/client";
+import { ApiError, newKey } from "@/lib/apiClient";
 import { planContribution } from "@/lib/progression/goals";
 import { itemDeliveryKind, itemLabel } from "@/lib/progression/items";
 import { refreshProgression, useProgression } from "@/lib/progression/useProgression";
@@ -25,7 +26,9 @@ export function ContributeBody({ goalSlug }: { goalSlug?: string }) {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
   const keyRef = useRef<string | null>(null);
-  const [wallet, setWallet] = useState(() => (typeof window === "undefined" ? 0 : localCoins()));
+  const [wallet, setWallet] = useState(0);
+  const loadWallet = () => httpEconomyTransport.wallet().then((w) => setWallet(w.coins), () => {});
+  useEffect(() => { void loadWallet(); }, []);
   const [items, setItems] = useState(() => (typeof window === "undefined" ? {} : localCollections()));
 
   const effectiveKind: DeliveryKind = goal && goal.accepts.includes(kind) ? kind : (goal?.accepts[0] ?? "coins");
@@ -46,15 +49,13 @@ export function ContributeBody({ goalSlug }: { goalSlug?: string }) {
     setBusy(true);
     setMessage(null);
     // One key per delivery attempt; kept across retries until it lands.
-    keyRef.current = keyRef.current ?? newIdempotencyKey();
+    keyRef.current = keyRef.current ?? newKey();
     try {
       const receipt = await deliver({ goal_slug: goal.slug, kind: effectiveKind, amount, item_key: selectedItem }, keyRef.current);
       keyRef.current = null;
-      if (receipt.amount_used > 0) {
-        if (effectiveKind === "coins") spendCoins(receipt.amount_used, "goal_delivery");
-        else if (selectedItem) spendCollected(selectedItem, receipt.amount_used);
-      }
-      setWallet(localCoins());
+      // The server charged the coins; the item mirror is local.
+      if (receipt.amount_used > 0 && effectiveKind !== "coins" && selectedItem) spendCollected(selectedItem, receipt.amount_used);
+      await loadWallet();
       setItems(localCollections());
       const text = receipt.completed_now
         ? `${goal.title}: complete! Thank you.`
@@ -63,8 +64,8 @@ export function ContributeBody({ goalSlug }: { goalSlug?: string }) {
       window.dispatchEvent(new CustomEvent("tsi:toast", { detail: { text } }));
       await refreshProgression();
     } catch (err) {
-      if (err instanceof ProgressionRequestError && err.status < 500) keyRef.current = null;
-      setMessage({ kind: "err", text: err instanceof ProgressionRequestError ? err.message : "Couldn't reach the monument. Try again." });
+      if (err instanceof ApiError && err.status < 500) keyRef.current = null;
+      setMessage({ kind: "err", text: err instanceof ApiError ? err.message : "Couldn't reach the monument. Try again." });
     } finally {
       setBusy(false);
     }
@@ -123,7 +124,7 @@ export function ContributeBody({ goalSlug }: { goalSlug?: string }) {
           onChange={(e) => { setAmount(Math.floor(Number(e.target.value) || 0)); keyRef.current = null; }}
         />
         <span className={s.muted}>
-          You have {effectiveKind === "coins" ? `${have.toLocaleString()} ${COINS.symbol}` : have.toLocaleString()} · you can add {deliveryRoom.toLocaleString()} more pts by delivery
+          You have {effectiveKind === "coins" ? fmtCoins(have) : have.toLocaleString()} · you can add {deliveryRoom.toLocaleString()} more pts by delivery
         </span>
       </div>
 

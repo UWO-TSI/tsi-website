@@ -5,10 +5,10 @@
  */
 import { ROSTER } from "@/lib/collections/roster";
 import { FISH } from "@/lib/game/fishing";
+import { fnv1a } from "@/lib/game/weatherSystem";
 import { dailySpecials, effectivePrice, isOnSale, sellPrice, speciesClass, TAB_OF, torontoDay, type ShopItem, type Special } from "./rules";
+import { toFailure, type Result } from "@/lib/result";
 import { EconomyError, type EconomyStore, type InventoryRow, type LedgerEntry, type Reservation } from "./store";
-
-type Result<T> = { ok: true; data: T } | { ok: false; status: number; error: string; code: string };
 
 const ERR: Record<string, [number, string]> = {
   unavailable: [503, "The shop is closed for now."],
@@ -28,11 +28,7 @@ const ERR: Record<string, [number, string]> = {
   no_slot: [422, "That isn't something you wear or hold."],
   failed: [500, "Something went wrong. Try again."],
 };
-function fail<T>(err: unknown): Result<T> {
-  const code = err instanceof EconomyError ? err.code : "failed";
-  const [status, error] = ERR[code] ?? ERR.failed;
-  return { ok: false, status, error, code };
-}
+const fail = <T>(err: unknown): Result<T> => toFailure(ERR, err);
 const run = async <T>(f: () => Promise<T>): Promise<Result<T>> => {
   try {
     return { ok: true, data: await f() };
@@ -166,8 +162,7 @@ export const claimDailyGift = (store: EconomyStore, m: string) => run(() => stor
 
 /** Short pickup code derived from the reservation key, so a retry shows the same code. */
 export function pickupCode(memberId: string, key: string): string {
-  let h = 2166136261;
-  for (const ch of `${memberId}:${key}`) h = Math.imul(h ^ ch.charCodeAt(0), 16777619) >>> 0;
+  let h = fnv1a(`${memberId}:${key}`);
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no 0/O, 1/I
   let out = "";
   for (let i = 0; i < 5; i++) {

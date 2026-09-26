@@ -4,6 +4,7 @@
  * catch records (rows 196, 204).
  */
 import { RARITY_RANK, WING_OF, type Biome, type Category, type Rarity, type Species, type Wing } from "./roster";
+import { torontoParts } from "@/lib/time";
 
 export interface WorldMoment {
   hour: number; // 0-24 local island time
@@ -200,14 +201,20 @@ export function clampSize(sp: Species | undefined, size: number | null | undefin
   return Math.round(Math.min(sp.size[1], Math.max(sp.size[0], size)) * 10) / 10;
 }
 
+/** Island clock for availability: Toronto hour/month unless the client passes its own. */
+export function momentFrom(url: URL, now: Date) {
+  const t = torontoParts(now);
+  const hourParam = Number(url.searchParams.get("hour"));
+  const hour = url.searchParams.has("hour") && hourParam >= 0 && hourParam < 24 ? hourParam : t.hour;
+  const w = url.searchParams.get("weather");
+  const weather = w === "rain" || w === "snow" || w === "cloudy" ? w : "clear";
+  return { hour, month: t.month, weather } as const;
+}
+
 /** Monday 00:00 in America/Toronto, as YYYY-MM-DD (matches 031's SQL). */
 export function weekStart(now: Date): string {
-  const parts = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Toronto", year: "numeric", month: "2-digit", day: "2-digit", weekday: "short" }).formatToParts(now);
-  const get = (t: string) => parts.find((p) => p.type === t)!.value;
-  const local = new Date(Date.UTC(Number(get("year")), Number(get("month")) - 1, Number(get("day"))));
-  const dow = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].indexOf(get("weekday"));
-  local.setUTCDate(local.getUTCDate() - dow);
-  return local.toISOString().slice(0, 10);
+  const t = torontoParts(now);
+  return new Date(Date.UTC(t.year, t.month - 1, t.day - t.weekday)).toISOString().slice(0, 10);
 }
 
 export interface WeeklyBest {

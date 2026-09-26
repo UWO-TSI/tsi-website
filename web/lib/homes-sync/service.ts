@@ -1,4 +1,5 @@
 import { boughtRoom, ROOM_CAP, ROOM_PRICE_COINS, validateLayout } from "./rules";
+import { toFailure } from "@/lib/result";
 import { HomeStoreError, type HomeRecord, type HomesStore } from "./store";
 
 export type HomeResult<T> = { ok: true; data: T } | { ok: false; status: number; error: string; code: string; home?: HomeRecord };
@@ -13,8 +14,7 @@ const MESSAGES: Record<string, [number, string]> = {
 };
 
 async function failure<T>(store: HomesStore, memberId: string, err: unknown): Promise<HomeResult<T>> {
-  const code = err instanceof HomeStoreError ? err.code : "failed";
-  const [status, error] = MESSAGES[code] ?? MESSAGES.failed;
+  const { status, error, code } = toFailure(MESSAGES, err) as { status: number; error: string; code: string };
   // Conflicts hand back the current document so the client can adopt it.
   const home = code === "revision_conflict" || code === "room_count_mismatch" ? await store.getHome(memberId).catch(() => undefined) : undefined;
   return { ok: false, status, error, code, home };
