@@ -1,5 +1,7 @@
 -- Exploit tests for the game-side security migrations (20260926150900 onward).
 -- Runs last, after the 029-035 smokes on the same throwaway cluster. Never Supabase.
+-- Section 2 opens two dblink sessions back to this database over TCP localhost
+-- (user postgres, trust auth), so the server must listen on localhost.
 \set ON_ERROR_STOP 1
 INSERT INTO auth.users (id, email) VALUES ('00000000-0000-4000-8000-0000000000f2', 'f2@x');
 
