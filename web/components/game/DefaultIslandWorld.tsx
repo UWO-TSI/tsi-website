@@ -24,7 +24,7 @@ import { LettersSheet, NoticeSheet, JournalSheet } from "./progressionSheets";
 import { useProgressionWorld, useCeremony, useChapterActions, monumentStage, type WorldGoalId } from "@/lib/game/progressionBridge";
 import confetti from "canvas-confetti";
 import type { InteriorStation } from "./interiorShared";
-import { POND, ISLAND_RADII, createDefaultIsland, DEFAULT_SPAWN, ISLAND_TREES, ISLAND_BUSHES, ISLAND_FLOWERS, ISLAND_PROPS, LANDMARKS, landmark, type Landmark } from "@/lib/game/defaultIsland";
+import { POND, ISLAND_RADII, createDefaultIsland, DEFAULT_SPAWN, ISLAND_TREES, ISLAND_BUSHES, ISLAND_FLOWERS, ISLAND_PROPS, LANDMARKS, landmark, benchSeat, BENCH_SEAT_TOP, type Landmark } from "@/lib/game/defaultIsland";
 import { useGraphicsSettings } from "@/lib/game/useGraphicsSettings";
 import { ISLAND_LIGHTING, CLUBHOUSE_LIGHTING, ISLAND_TERRAIN, withWeather, withSeason, type IslandLight } from "@/lib/game/islandLighting";
 import { paletteBySeason, seasonLook, SEASON_TREES, SEASON_BUSHES, SEASON_FLOWERS, type SeasonLook } from "@/lib/game/seasonalLook";
@@ -66,7 +66,7 @@ import { villageWaterType, type FishingSpot } from "@/lib/game/fishingSpots";
 import { getPeacefulTarget } from "@/lib/game/peacefulNear";
 import type { WorldMoment } from "@/lib/collections/logic";
 import HomeIslandScene, { type HomeNear } from "./home/HomeIslandScene";
-import HomeInterior, { roomAt, type HouseNear } from "./home/HomeInterior";
+import HomeInterior, { nearestBed, roomAt, type HouseNear } from "./home/HomeInterior";
 import DecorateSheet from "./home/DecorateSheet";
 import { useDecorate } from "./home/useDecorate";
 import { useHomeLayout } from "@/lib/homes/useHomeLayout";
@@ -74,7 +74,8 @@ import { catalogueItem } from "@/lib/homes/catalogue";
 import { ROOM_PRICE } from "@/lib/homes/layout";
 import { PROBE_FRAMES, PROBE_WARMUP, medianFrameMs, tierForFrameMs, type QualityTier } from "@/lib/game/qualityTier";
 import { ISLAND_PHASES, type IslandPhase } from "@/lib/game/islandTime";
-import { HQ_CLOCK, HQ_LAYOUT, HQ_BOARD_APPROACH, constrainClubhouse } from "@/lib/game/clubhouse";
+import { HQ_CLOCK, HQ_LAYOUT, HQ_BOARD_APPROACH } from "@/lib/game/clubhouse";
+import CraftingSheet, { BeachBottle, Workbench, constrainWorkshop } from "./crafting/Workshop";
 import StudySeats from "./study/StudySeats";
 import StudyHud from "./study/StudyHud";
 import CafeInterior from "./study/CafeInterior";
@@ -83,7 +84,7 @@ import "@/lib/game/aerialFog";
 import styles from "./DefaultIslandWorld.module.css";
 
 type Metrics = { fps: number; frameMs: number; calls: number; triangles: number; x: number; z: number };
-type Near = "enter" | "exit" | "board" | "display" | "desk" | "shelf" | "clock" | "notice" | "catch" | "cafe" | "museum" | "ruins" | "mailbox" | "monument" | "home" | "house" | "village" | "buy" | "claim" | "donate" | "report" | "fish" | "forage" | "net" | "museum_enter" | "cafe_enter" | "curator" | "closet" | "fitting" | "oracle_enter" | "altar" | "missions" | "ruins_exit" | "lantern" | null;
+type Near = "enter" | "exit" | "board" | "display" | "desk" | "shelf" | "clock" | "notice" | "catch" | "cafe" | "museum" | "ruins" | "mailbox" | "monument" | "home" | "house" | "village" | "buy" | "claim" | "donate" | "report" | "fish" | "forage" | "net" | "museum_enter" | "cafe_enter" | "curator" | "closet" | "fitting" | "oracle_enter" | "altar" | "missions" | "ruins_exit" | "lantern" | "bench" | "bed" | null;
 type Sheet = "notice" | "catch" | "letters" | "journal" | "trophies" | "showcase" | "closet" | "fitting" | "oracle" | "settings" | "missions" | null;
 const PHASE_NAMES: Record<IslandPhase, string> = { dawn: "Dawn", day: "Daylight", evening: "Evening", night: "Night" };
 const TREE_SEEDS = [0, 3, 2, 5, 7, 8, 1, 3];
@@ -108,8 +109,11 @@ const NEAR_LABELS: Record<Exclude<Near, null>, string> = {
   home: "Take the boat home", fish: "Cast your line", forage: "Gather", net: "Swing the net", claim: "Claim your plot", donate: "Donate your first catch to the museum", report: "Report to HQ", house: "Enter your house", village: "Take the boat to the village",
   buy: `Add a room · ${ROOM_PRICE.coins} coins + ${ROOM_PRICE.materials}`,
   cafe: "Café · Opening soon", museum: "Museum · Closed for now", ruins: "Enter the ruins", missions: "Read the mission board", ruins_exit: "Back to the village", lantern: "Pick up the old lantern",
+  bench: "Sit on the bench", bed: "Sleep in your bed",
 };
 const CLOSED: Near[] = ["cafe", "museum", "monument"];
+/** The village bench in reach as a `tsi:sit` detail: IslandScene writes it each frame, E sits (or stands) there. */
+const benchSpot: { current: { x: number; z: number; yaw: number; seatY: number } | null } = { current: null };
 /** Wharf stub end: the boat home (specs/homes.md §1). */
 const WHARF_BOAT: [number, number] = [8, -22];
 const WHARF_SPAWN: [number, number, number] = [8, 0, -18.4];
@@ -212,6 +216,9 @@ function IslandScene({ identity, devAt, exitFrom, peaceful, fishSpot, fishing, c
       : Math.hypot(player.current.x - FITTING_ROOM[0], player.current.z - FITTING_ROOM[1]) < 1.5 ? "fitting"
       : Math.hypot(player.current.x - ORACLE_DOOR[0], player.current.z - ORACLE_DOOR[1]) < 1.6 ? "oracle_enter"
       : Math.hypot(player.current.x - MISSION_BOARD[0], player.current.z - MISSION_BOARD[1]) < 1.5 ? "missions" : null;
+    const b = benchSeat(player.current.x, player.current.z);
+    benchSpot.current = b && { ...b, seatY: island.ground(b.x, b.z) + BENCH_SEAT_TOP };
+    if (!next && benchSpot.current) next = "bench";
     if (!next) {
       let best = 1.4;
       for (const l of PROMPT_LANDMARKS) {
@@ -233,6 +240,7 @@ function IslandScene({ identity, devAt, exitFrom, peaceful, fishSpot, fishing, c
       <GridWorld map={island.map} water={light.water} palette={terrain} windScale={liteMode ? 0 : weather === "wind" ? 2.2 : 1} />
       <GridOcean map={island.map} />
       <PeacefulLayer map={island.map} nodes={VILLAGE_NODES} moment={peaceful.moment} member={peaceful.member} player={player} ground={island.ground} highTier={!liteMode} active={!fishing} />
+      <BeachBottle player={player} ground={island.ground} />
       <BlobShadows placements={plantShadows} opacity={0.16} />
       {!castShadows && <BlobShadows placements={solidShadows} opacity={0.45} />}
       <StudySeats area="village" player={player} ground={island.ground} />
@@ -368,8 +376,9 @@ function Clubhouse({ phase, player, frozen, onNear }: { phase: IslandPhase; play
   useEffect(() => { player.current.set(0, 0, -4.2); camera.position.set(0, 8.4, -11.4); onNear("exit"); }, [camera, onNear, player]);
   const station = useCallback((s: InteriorStation | null) => onNear((s?.id as Near) ?? null), [onNear]);
   return <>
-    <HQInterior clubhouse phase={phase} floorTexture={floor} frozen={frozen} playerPosRef={player} onNearestStation={station} stations={CLUBHOUSE_STATIONS} constrainMove={constrainClubhouse} />
+    <HQInterior clubhouse phase={phase} floorTexture={floor} frozen={frozen} playerPosRef={player} onNearestStation={station} stations={CLUBHOUSE_STATIONS} constrainMove={constrainWorkshop} />
     <BotanicalFrames />
+    <Workbench player={player} />
   </>;
 }
 
@@ -520,6 +529,13 @@ function DefaultIslandWorldContent() {
       if (target) window.dispatchEvent(new CustomEvent("tsi:peaceful-act", { detail: { id: target.id } }));
       return;
     }
+    // E again at the same bench or bed stands you up (tsi:sit toggles there).
+    if (action === "bench") { if (benchSpot.current) window.dispatchEvent(new CustomEvent("tsi:sit", { detail: benchSpot.current })); return; }
+    if (action === "bed") {
+      const bed = nearestBed(layout, player.current.x, player.current.z);
+      if (bed) window.dispatchEvent(new CustomEvent("tsi:sit", { detail: bed }));
+      return;
+    }
     if (action === "claim" || action === "donate" || action === "report") {
       const step = action === "claim" ? "claim_plot" : action === "donate" ? "donate_catch" : "report_hq";
       void chapterActions.run(step).then(error => {
@@ -548,7 +564,7 @@ function DefaultIslandWorldContent() {
       if (action === "exit" || action === "enter") setFromBoat(false);
     }, 320);
     window.setTimeout(() => setFading(false), 900);
-  }, [fading, chapterActions, homeActions, inside, gate]);
+  }, [fading, chapterActions, homeActions, inside, gate, layout]);
   useEffect(() => {
     const key = (event: KeyboardEvent) => {
       if (event.repeat || (event.target instanceof HTMLElement && event.target.closest("input, select, textarea, button"))) return;
@@ -652,9 +668,10 @@ function DefaultIslandWorldContent() {
       <DonateSheet open={donateOpen} onClose={() => setDonateOpen(false)} onDonated={loadMuseum} />
       <ToastHub />
       <StudyHud />
+      <CraftingSheet />
       <CollectionBook open={bagOpen} onClose={() => setBagOpen(false)} />
       {!bagOpen && <button className={styles.bagButton} onClick={() => setBagOpen(true)} aria-label="Open your collection journal"><kbd>{keyLabel(identity.settings.key_bindings.openJournal)}</kbd> Journal</button>}
-      {mapOpen && !inside && !atHome && site !== "ruins" && <div className={styles.minimap}>
+      {mapOpen && !inside && !atHome && site !== "ruins" && <div className={styles.minimap} data-minimap>
         <MiniMap playerPosRef={player} plot={objectivePlot} onClose={() => setMapOpen(false)} />
         {progression.objective.text && <p className={styles.objective} data-testid="objective"><span aria-hidden="true">◆</span> {progression.objective.text}</p>}
       </div>}

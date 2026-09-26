@@ -9,21 +9,26 @@
  *
  * `facing` is the direction a seated character looks: radians of atan2(dx, dz),
  * so 0 looks north (+z, away from the camera) and π looks at the camera.
+ * `seatY` is the furniture's measured seat top above the floor (world units,
+ * at the scale StudySeats places it); `tsi:sit` lifts the character onto it.
  */
 export type SeatArea = "cafe" | "village";
 export type Furniture = "window" | "two" | "four" | "couch" | "picnic" | "pier";
 export interface TableLayout { anchor: string; area: SeatArea; at: [number, number]; yaw: number; furniture: Furniture }
-export interface WorldSeat { anchor: string; seat: number; x: number; z: number; facing: number }
+/** `y` is the seat top in world y (floor height at the seat + the furniture's seatY). */
+export interface WorldSeat { anchor: string; seat: number; x: number; z: number; facing: number; y: number }
 
 const PI = Math.PI;
-/** Seats and solid rects ([cx, cz, halfW, halfD]) relative to the table, before `yaw`. */
-export const FURNITURE: Record<Furniture, { seats: [number, number, number][]; solid: [number, number, number, number][] }> = {
-  window: { seats: [[0.45, -0.8, 0], [-0.45, -0.8, 0]], solid: [[0, 0, 0.5, 0.42]] },
-  two: { seats: [[0.85, 0, -PI / 2], [-0.85, 0, PI / 2]], solid: [[0, 0, 0.5, 0.42]] },
-  four: { seats: [[0.55, -0.9, 0], [-0.55, -0.9, 0], [0.55, 0.9, PI], [-0.55, 0.9, PI]], solid: [[0, 0, 1, 0.42]] },
-  couch: { seats: [[0.9, -0.15, PI], [0, -0.15, PI], [-0.9, -0.15, PI]], solid: [[0, 0.45, 1.45, 0.25], [0, -1.35, 0.9, 0.46]] },
-  picnic: { seats: [[0.5, -0.8, 0], [-0.5, -0.8, 0], [0.5, 0.8, PI], [-0.5, 0.8, PI]], solid: [[0, 0, 1, 0.42]] },
-  pier: { seats: [[0.45, 0.8, PI], [-0.45, 0.8, PI]], solid: [[0, 0, 0.5, 0.42]] },
+/** Seat tops measured from the GLBs: study-chair at 0.1, lounge-sofa cushions at 0.16, bench-wood slats at 1. */
+const CHAIR = 0.52, SOFA = 0.78, BENCH = 0.5;
+/** Seats, seat top and solid rects ([cx, cz, halfW, halfD]) relative to the table, before `yaw`. */
+export const FURNITURE: Record<Furniture, { seats: [number, number, number][]; seatY: number; solid: [number, number, number, number][] }> = {
+  window: { seats: [[0.45, -0.8, 0], [-0.45, -0.8, 0]], seatY: CHAIR, solid: [[0, 0, 0.5, 0.42]] },
+  two: { seats: [[0.85, 0, -PI / 2], [-0.85, 0, PI / 2]], seatY: CHAIR, solid: [[0, 0, 0.5, 0.42]] },
+  four: { seats: [[0.55, -0.9, 0], [-0.55, -0.9, 0], [0.55, 0.9, PI], [-0.55, 0.9, PI]], seatY: CHAIR, solid: [[0, 0, 1, 0.42]] },
+  couch: { seats: [[0.9, -0.15, PI], [0, -0.15, PI], [-0.9, -0.15, PI]], seatY: SOFA, solid: [[0, 0.45, 1.45, 0.25], [0, -1.35, 0.9, 0.46]] },
+  picnic: { seats: [[0.5, -0.8, 0], [-0.5, -0.8, 0], [0.5, 0.8, PI], [-0.5, 0.8, PI]], seatY: BENCH, solid: [[0, 0, 1, 0.42]] },
+  pier: { seats: [[0.45, 0.8, PI], [-0.45, 0.8, PI]], seatY: BENCH, solid: [[0, 0, 0.5, 0.42]] },
 };
 
 export const STUDY_LAYOUT: TableLayout[] = [
@@ -47,26 +52,31 @@ const turn = (x: number, z: number, yaw: number): [number, number] => [x * Math.
 
 export const tableLayout = (anchor: string) => STUDY_LAYOUT.find(t => t.anchor === anchor) ?? null;
 
+type Ground = (x: number, z: number) => number;
+const flat: Ground = () => 0;
+
 /** Seats of a table in world (or room) coordinates, numbered 1..n like the backend. */
-export function seatsOf(anchor: string): WorldSeat[] {
+export function seatsOf(anchor: string, ground: Ground = flat): WorldSeat[] {
   const t = tableLayout(anchor);
   if (!t) return [];
-  return FURNITURE[t.furniture].seats.map(([x, z, facing], i) => {
+  const { seats, seatY } = FURNITURE[t.furniture];
+  return seats.map(([x, z, facing], i) => {
     const [dx, dz] = turn(x, z, t.yaw);
-    return { anchor, seat: i + 1, x: t.at[0] + dx, z: t.at[1] + dz, facing: facing + t.yaw };
+    const wx = t.at[0] + dx, wz = t.at[1] + dz;
+    return { anchor, seat: i + 1, x: wx, z: wz, facing: facing + t.yaw, y: ground(wx, wz) + seatY };
   });
 }
 
-export function seatAt(anchor: string, seat: number): WorldSeat | null {
-  return seatsOf(anchor)[seat - 1] ?? null;
+export function seatAt(anchor: string, seat: number, ground: Ground = flat): WorldSeat | null {
+  return seatsOf(anchor, ground)[seat - 1] ?? null;
 }
 
 /** Nearest seat in an area within SIT_RANGE; `skip(anchor, seat)` filters taken seats. */
-export function nearestSeat(area: SeatArea, x: number, z: number, skip: (anchor: string, seat: number) => boolean = () => false): WorldSeat | null {
+export function nearestSeat(area: SeatArea, x: number, z: number, skip: (anchor: string, seat: number) => boolean = () => false, ground: Ground = flat): WorldSeat | null {
   let best: WorldSeat | null = null, d = SIT_RANGE;
   for (const t of STUDY_LAYOUT) {
     if (t.area !== area) continue;
-    for (const s of seatsOf(t.anchor)) {
+    for (const s of seatsOf(t.anchor, ground)) {
       const ds = Math.hypot(s.x - x, s.z - z);
       if (ds < d && !skip(s.anchor, s.seat)) { best = s; d = ds; }
     }

@@ -218,17 +218,22 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
     return () => gl.domElement.removeEventListener("click", handleClick);
   }, [gl, handleClick]);
 
-  // G3: sit toggle. Same seat → stand; different/first → sit at that seat.
-  // detail.clip picks Sit/Study/Sleep; detail.seatY is the furniture's seat
-  // (or bed) top in world y, and the clip's authored seat height is taken off
-  // it (ruling 18); detail.yaw faces the seat's front (default: the camera).
+  // G3: sit toggle. Same seat without a clip → stand; different/first → sit
+  // at that seat. The same seat WITH a clip re-poses and stays seated (study:
+  // Study in focus, Stretch on breaks). detail.clip picks Sit/Study/Stretch/
+  // Sleep; detail.seatY is the furniture's seat (or bed) top in world y, and
+  // the clip's authored seat height is taken off it (ruling 18); detail.yaw
+  // faces the seat's front (default: the camera).
   useEffect(() => {
     const onSit = (e: Event) => {
-      const { x, z, clip = "Sit", seatY, yaw = Math.PI } = (e as CustomEvent<{ x: number; z: number; clip?: ClipName; seatY?: number; yaw?: number }>).detail;
+      const { x, z, clip, seatY, yaw = Math.PI } = (e as CustomEvent<{ x: number; z: number; clip?: ClipName; seatY?: number; yaw?: number }>).detail;
       const cur = sitRef.current;
-      const sittingDown = !(cur && cur.x === x && cur.z === z);
-      sitRef.current = sittingDown ? { x, z, clip, yaw, lift: seatY === undefined ? 0 : seatLift(clip, seatY - groundHeight(x, z), CHARACTER_SCALE) } : null;
-      motion.current.pose = sittingDown ? clip : null;
+      const sameSeat = !!cur && cur.x === x && cur.z === z;
+      const seat = (c: ClipName) => ({ x, z, clip: c, yaw, lift: seatY === undefined ? 0 : seatLift(c, seatY - groundHeight(x, z), CHARACTER_SCALE) });
+      if (sameSeat && clip) { sitRef.current = seat(clip); return; }
+      const sittingDown = !sameSeat;
+      sitRef.current = sittingDown ? seat(clip ?? "Sit") : null;
+      motion.current.pose = sitRef.current?.clip ?? null;
       if (sittingDown) {
         targetRef.current = null;
         jumpRef.current = { active: false, t: 0 };
@@ -611,7 +616,7 @@ function FootstepPuff({ position, onDone, baseScale = 1, wet = false }: { positi
 }
 
 /** Clips that hold while seated; the seat branch owns them. */
-const SEAT_CLIPS = new Set<ClipName>(["Sit", "Study", "Sleep"]);
+const SEAT_CLIPS = new Set<ClipName>(["Sit", "Study", "Stretch", "Sleep"]);
 
 /** The player's character, with the equipped weapon: in hand in an encounter, across the back once the ruins gate is open (row 140). */
 function PlayerCharacter({ look, motion, inCombat }: { look: CharacterLook; motion: React.RefObject<CharacterMotion>; inCombat: boolean }) {

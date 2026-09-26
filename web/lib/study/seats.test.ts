@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_TABLES } from "./tables";
 import { STUDY_LAYOUT, WALK_AWAY_RADIUS, nearestSeat, seatAt, seatsOf, studySolid, walkedAway } from "./seats";
+import { STUDY_CLIP, poseOf, sitDetail, studyPose } from "./worldStore";
+import type { StudyHook } from "./useStudySession";
 
 describe("seat anchors (study-world §1)", () => {
   it("maps every backend table anchor to exactly its seat count, and nothing else", () => {
@@ -47,5 +49,24 @@ describe("walk-away detection (row 80)", () => {
     expect(walkedAway(seat, seat.x, seat.z)).toBe(false);
     expect(walkedAway(seat, seat.x + WALK_AWAY_RADIUS - 0.05, seat.z)).toBe(false);
     expect(walkedAway(seat, seat.x, seat.z - WALK_AWAY_RADIUS - 0.05)).toBe(true);
+  });
+});
+
+describe("seat heights and study clips (study × character)", () => {
+  it("puts each seat top at the floor plus its furniture's measured seat", () => {
+    expect(seatAt("study:cafe-four-1", 1)!.y).toBeCloseTo(0.52);
+    expect(seatAt("study:cafe-couch", 2)!.y).toBeCloseTo(0.78);
+    const slope = (x: number, z: number) => 0.1 * x + 0.05 * z;
+    const s = seatAt("study:plaza-picnic", 3, slope)!;
+    expect(s.y).toBeCloseTo(slope(s.x, s.z) + 0.5);
+    expect(nearestSeat("village", s.x, s.z, undefined, slope)?.y).toBeCloseTo(s.y);
+  });
+  it("studies in focus, stretches on a break and sits otherwise, at the seat's top and facing", () => {
+    expect((["focus", "break", "seated", "ended", null] as const).map(p => STUDY_CLIP[poseOf(p)])).toEqual(["Study", "Stretch", "Sit", "Sit", "Sit"]);
+    const seat = seatAt("study:cafe-two-1", 1)!;
+    expect(sitDetail(seat, "focus")).toEqual({ x: seat.x, z: seat.z, clip: "Study", seatY: 0.52, yaw: -Math.PI / 2 });
+    const onBreak = { session: { phase: "break" } } as unknown as StudyHook;
+    expect(studyPose({ study: onBreak, near: null, seated: seat })).toEqual({ pose: "stretch", seat });
+    expect(studyPose({ study: onBreak, near: null, seated: null })).toBeNull();
   });
 });

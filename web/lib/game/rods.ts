@@ -32,9 +32,9 @@ export const LEGENDARY_ROD_TIER = 4;
 export function rodByTier(tier: number): RodTier {
   return RODS[Math.min(RODS.length, Math.max(1, Math.round(tier))) - 1];
 }
-/** Best rod among owned gear keys (starter rod always owned). Crafted tiers 4–5 stay dev-only (`?rod=`) until crafting exists. */
+/** Best rod among owned gear keys (inventory `catalogue_ref`s; starter rod always owned). Tiers 4–5 are owned only by crafting them. */
 export function bestOwnedRod(owned: readonly string[]): RodTier {
-  return [...RODS].reverse().find(rod => rod.source === "starter" || (rod.source === "shop" && owned.includes(rod.key))) ?? RODS[0];
+  return [...RODS].reverse().find(rod => rod.source === "starter" || owned.includes(rod.key)) ?? RODS[0];
 }
 export function biteWindowMs(baseMs: number, rod: RodTier): number {
   return baseMs + rod.biteWindowMs;

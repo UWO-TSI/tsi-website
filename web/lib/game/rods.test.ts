@@ -24,7 +24,8 @@ describe("rod tiers", () => {
     expect(rodByTier(9).tier).toBe(5);
     expect(bestOwnedRod([]).tier).toBe(1);
     expect(bestOwnedRod(["rod_glass", "rod_cedar"]).tier).toBe(3);
-    expect(bestOwnedRod(["rod_lighthouse", "rod_tidewarden"]).tier).toBe(1);
+    expect(bestOwnedRod(["rod_lighthouse"]).tier).toBe(4); // crafted (lib/crafting); the shop never sells them
+    expect(bestOwnedRod(["rod_glass", "rod_tidewarden"]).tier).toBe(5);
   });
   it("slows the reel's drain for better rods (same fight, same fish)", () => {
     const fish = FISH.find(f => f.rarity === "rare")!;

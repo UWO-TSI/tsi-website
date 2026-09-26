@@ -326,7 +326,7 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
         ? "MAX CAST!!"
         : "Casting…"
       : phase === "waiting"
-        ? "Waiting for a bite…"
+        ? rod.tier > 1 ? `Waiting for a bite… · ${rod.name}` : "Waiting for a bite…"
         : phase === "bite"
           ? "!!  Hook it!"
           : phase === "caught"

@@ -74,6 +74,8 @@ export interface Mate {
   remaining_s: number | null;
   is_host: boolean;
   me: boolean;
+  /** Stored character look (parse with parseLook); null draws a default look for this member. */
+  look: unknown;
 }
 export interface TableView {
   id: string;
@@ -93,12 +95,16 @@ export interface TableView {
 
 async function tableViews(store: StudyStore, me: string, now: Date): Promise<TableView[]> {
   const [tables, sessions] = await Promise.all([store.listTables(), store.activeSessions()]);
-  const names = await store.names([...new Set([...sessions.map((s) => s.member_id), ...tables.flatMap((t) => (t.host_id ? [t.host_id] : []))])]);
+  const seated = [...new Set(sessions.map((s) => s.member_id))];
+  const [names, looks] = await Promise.all([
+    store.names([...new Set([...seated, ...tables.flatMap((t) => (t.host_id ? [t.host_id] : []))])]),
+    store.looks?.(seated) ?? new Map<string, unknown>(),
+  ]);
   return tables.map((t) => {
     const here = sessions.filter((s) => s.table_id === t.id).map((s) => R.advance(s, now)).filter((s) => s.phase !== "ended");
     const allowed = !t.is_private || t.host_id === me || t.allowed.includes(me) || here.some((s) => s.member_id === me);
     const mates = allowed
-      ? here.map((s) => ({ member_id: s.member_id, name: names.get(s.member_id) ?? "Member", seat: s.seat, phase: s.phase, remaining_s: R.viewOf(s, now).remaining_s, is_host: s.member_id === t.host_id, me: s.member_id === me }))
+      ? here.map((s) => ({ member_id: s.member_id, name: names.get(s.member_id) ?? "Member", seat: s.seat, phase: s.phase, remaining_s: R.viewOf(s, now).remaining_s, is_host: s.member_id === t.host_id, me: s.member_id === me, look: looks.get(s.member_id) ?? null }))
       : [];
     return {
       id: t.id, slug: t.slug, label: t.label, location: t.location, anchor: t.anchor, kind: t.kind, seats: t.seats,

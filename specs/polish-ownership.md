@@ -1,0 +1,7 @@
+# Polish: ownership and cleanup follow-ups
+
+Owner: one agent in its own worktree after `game/study-character` merges (both touch DefaultIslandWorld and study). Load `ponytail`.
+
+1. **Ownership (ruling in `cleanup-and-game-security-questions.md`, audit item 22):** grant the free starters once per account through the wallet/inventory service (idempotent, first login): base tee, base shorts, 2 more tops, 2 more bottoms, the hooded rain-cape, 2 shoes, 6 hair colours, the starter home pieces and a 10-piece furniture starter pack. WardrobeSheet and DecorateSheet read owned items from `/api/economy/inventory`; the creator keeps all identity choices free. Shop sells the rest plus 6 hair dyes. Delete `WARDROBE_STUB` and the free catalogue stub. Tests: a non-owned item cannot be equipped or placed (server-side check, not just UI).
+2. **Cleanup follow-ups** listed at the top of `cleanup-and-game-security-questions.md` for DefaultIslandWorld.tsx and study (sheets imported directly and `progressionSheets.tsx` deleted, catch board opens the journal, one FamilyReveal, study onto `lib/result.ts`/`withStore`/`apiCall`/`newKey`, chime through AudioManager, delete the unused `/api/study/tables` if still uncalled, study seed-sync test).
+Gates: tsc, full vitest, focused lint, SQL smoke, evidence O2- under `specs/evidence/polish/` (wardrobe showing owned vs locked items with a shop link, decorate sheet owned-only).

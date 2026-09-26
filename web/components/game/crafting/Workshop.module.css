@@ -1,0 +1,32 @@
+/* Workbench sheet: the island sheet's paper look (DefaultIslandWorld .sheet), wider, list + detail. */
+.sheet { width: min(600px, calc(100% - 32px)); }
+.count { margin: 2px 0 10px; color: #607069; font-size: 11px; }
+.error { margin: 6px 0; padding: 6px 10px; border-radius: 10px; background: #f6dfd2; color: #7a3b22; font-size: 12px; }
+.body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 14px; }
+@media (max-width: 560px) { .body { grid-template-columns: 1fr; } }
+
+.list { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; max-height: 320px; overflow-y: auto; }
+.list button { width: 100%; min-height: 40px; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 10px; border: 1px solid #d8cbaa; border-radius: 10px; background: #fffdf3; color: #293e3b; font: inherit; font-size: 12px; text-align: left; cursor: pointer; }
+.list button[aria-pressed="true"] { border-color: #426b5b; background: #e7eedf; }
+.list button:focus-visible, .craft:focus-visible, .card button:focus-visible { outline: 3px solid #bb813f; outline-offset: 2px; }
+.list i { flex: none; width: 9px; height: 9px; border-radius: 50%; background: #d8cbaa; }
+.list i[data-ready="true"] { background: #5f9a55; }
+.list i[data-owned="true"] { background: #9aa6a0; }
+
+.detail h3 { margin: 0; font-size: 15px; }
+.detail small { margin-top: 2px; }
+.ingredients { list-style: none; margin: 10px 0; padding: 0; display: grid; gap: 4px; }
+.ingredients li { display: grid; grid-template-columns: 22px 1fr auto; align-items: center; gap: 8px; min-height: 30px; padding: 2px 8px; border-radius: 8px; background: #efe6cf; font-size: 12px; }
+.ingredients b { width: 14px; height: 14px; margin: 0 4px; border-radius: 4px; background: #b59a6c; }
+.ingredients output { font-variant-numeric: tabular-nums; font-weight: 600; color: #426b5b; }
+.ingredients li[data-short="true"] output { color: #b0472b; }
+.craft { width: 100%; min-height: 44px; border: 0; border-radius: 999px; background: #426b5b; color: #fffdf0; font: inherit; font-weight: 600; cursor: pointer; }
+.craft:disabled { background: #c8c2ae; color: #5d5a4e; cursor: default; }
+
+.card { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 25; width: min(300px, calc(100% - 32px)); padding: 18px 20px; border-radius: 18px; background: #fffdf3; color: #293e3b; border: 2px solid #e2c36b; box-shadow: 0 0 0 6px #e2c36b33, 0 16px 40px #29464140; text-align: center; font-size: 12px; animation: card-in 0.35s ease-out both; }
+.card p { margin: 4px 0; }
+.cardTitle { font-size: 11px !important; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: #9a7a2c; }
+.cardName { font-size: 20px; font-weight: 700; }
+.card button { margin-top: 10px; min-height: 40px; padding: 6px 24px; border: 1px solid #426b5b; border-radius: 999px; background: transparent; color: inherit; font: inherit; font-weight: 600; cursor: pointer; }
+@keyframes card-in { from { opacity: 0; transform: translate(-50%, -44%) scale(0.94); } }
+@media (prefers-reduced-motion: reduce) { .card { animation: none; } }

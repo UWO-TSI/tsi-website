@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { combatClip, locomotion, resolveClip, seatLift, tempo, type CombatView } from "./clips";
+import { DERIVED_CLIPS, combatClip, isUpperBodyTrack, locomotion, resolveClip, seatLift, tempo, type CombatView } from "./clips";
 
 describe("character state machine", () => {
   it("picks locomotion from speed", () => {
@@ -27,5 +27,13 @@ describe("character state machine", () => {
   it("lifts seat clips onto the furniture's measured seat height", () => {
     expect(seatLift("Sit", 0.45, 1.3)).toBeCloseTo(0.45 - 0.12 * 1.3);
     expect(seatLift("Sleep", 0.3, 1.3)).toBeCloseTo(0.3);
+    // Study is authored on the same seat; the derived Stretch sits like Sit (study chair 0.52, bench 0.5).
+    expect(seatLift("Study", 0.52, 1.3)).toBeCloseTo(0.52 - 0.12 * 1.3);
+    expect(seatLift("Stretch", 0.5, 1.3)).toBeCloseTo(seatLift("Sit", 0.5, 1.3));
+  });
+  it("builds Stretch from Sit's legs and Cheer's arms and head", () => {
+    expect(DERIVED_CLIPS.Stretch).toEqual({ from: "Sit", upper: "Cheer" });
+    expect(["mixamorigLeftArm.quaternion", "mixamorigRightForeArm.quaternion", "mixamorigLeftHand.quaternion", "mixamorigNeck.quaternion", "mixamorigHead.quaternion", "mixamorigRightShoulder.quaternion"].every(isUpperBodyTrack)).toBe(true);
+    expect(["mixamorigHips.position", "mixamorigHips.quaternion", "mixamorigSpine1.quaternion", "mixamorigLeftUpLeg.quaternion", "mixamorigRightFoot.quaternion"].some(isUpperBodyTrack)).toBe(false);
   });
 });
