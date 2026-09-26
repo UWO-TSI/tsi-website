@@ -4,6 +4,7 @@
  * per-month table below is used. Hours are Toronto local time.
  */
 import type { IslandPhase } from "./islandTime";
+import { torontoParts } from "@/lib/time";
 
 export interface SunDay { date: string; sunrise: number; sunset: number }
 
@@ -48,9 +49,8 @@ export function parseSunDaily(body: unknown): SunDay[] {
 
 /** Toronto calendar date "YYYY-MM-DD" and month index for an instant. */
 export function torontoDate(date: Date): { key: string; month: number } {
-  const parts = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Toronto", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(date);
-  const get = (type: string) => parts.find(part => part.type === type)?.value ?? "01";
-  return { key: `${get("year")}-${get("month")}-${get("day")}`, month: Number(get("month")) - 1 };
+  const t = torontoParts(date);
+  return { key: t.date, month: t.month - 1 };
 }
 
 /** Today's sun times: the forecast day if present, else the monthly fallback. */

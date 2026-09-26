@@ -6,6 +6,7 @@
 import { ROSTER } from "@/lib/collections/roster";
 import { FISH } from "@/lib/game/fishing";
 import { fnv1a, seededRandom } from "@/lib/game/weatherSystem";
+import { torontoParts } from "@/lib/time";
 import { CATALOGUE, SELL_PRICES, SETTINGS, type ShopCategory, type Slot, type Tier } from "./catalogue";
 
 export interface ShopItem {
@@ -31,7 +32,7 @@ export interface ShopItem {
 
 /** YYYY-MM-DD in America/Toronto. */
 export function torontoDay(now: Date): string {
-  return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Toronto", year: "numeric", month: "2-digit", day: "2-digit" }).format(now);
+  return torontoParts(now).date;
 }
 
 export function isOnSale(item: ShopItem, now: Date): boolean {

@@ -8,6 +8,7 @@
  * progressionDemo.ts. Never active in production builds.
  */
 import { memoryCollectionsStore } from "@/lib/collections/memoryStore";
+import { torontoParts } from "@/lib/time";
 import { donate, getShowcase, journal, museum, recordCatch, setShowcase, trophies } from "@/lib/collections/service";
 
 const ME = "00000000-0000-4000-8000-000000000001";
@@ -52,7 +53,7 @@ export function installCollectionsDemo(): void {
         }
         return new Response(JSON.stringify({ collections: (await m.store.memberItems(ME)).map(i => ({ item_key: i.item_key, count: i.count })) }));
       case "/api/collections/journal": {
-        const hour = Number(new Intl.DateTimeFormat("en-CA", { timeZone: "America/Toronto", hour: "numeric", hourCycle: "h23" }).format(now));
+        const hour = torontoParts(now).hour;
         return json(await journal(m.store, ME, url.searchParams.get("category") ?? "fish", { hour, month: now.getMonth() + 1, weather: "clear" }), "page");
       }
       case "/api/collections/museum": return json(await museum(m.store), "wings");

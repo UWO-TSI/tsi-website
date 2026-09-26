@@ -7,6 +7,7 @@
 import { weatherForDate } from "./weather";
 import type { Season } from "./season";
 import type { SunDay } from "./sunTimes";
+import { torontoParts } from "@/lib/time";
 
 export type IslandWeather = "clear" | "rain" | "snow" | "fog" | "wind";
 export const ISLAND_WEATHERS: readonly IslandWeather[] = ["clear", "rain", "snow", "fog", "wind"];
@@ -51,9 +52,7 @@ export function parseOpenMeteo(body: unknown): WeatherHour[] {
 
 /** Toronto-local "YYYY-MM-DDTHH:00", the format Open-Meteo returns with timezone=America/Toronto. */
 export function torontoHourKey(date = new Date()): string {
-  const parts = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Toronto", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", hourCycle: "h23" }).formatToParts(date);
-  const get = (type: string) => parts.find(part => part.type === type)?.value ?? "00";
-  return `${get("year")}-${get("month")}-${get("day")}T${get("hour")}:00`;
+  return `${torontoParts(date).hourKey}:00`;
 }
 
 export function weatherAt(report: WeatherReport, date = new Date()): IslandWeather | null {

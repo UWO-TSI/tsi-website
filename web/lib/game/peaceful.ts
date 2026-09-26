@@ -7,6 +7,7 @@ import { FISH, fishingPool, type FishDef } from "./fishing";
 import { canHook, castLuck, type RodTier } from "./rods";
 import type { WaterType } from "./fishingSpots";
 import { fnv1a } from "./weatherSystem";
+import { torontoParts } from "@/lib/time";
 import { ROSTER, RARITY_RANK, type Biome, type Rarity, type Species } from "@/lib/collections/roster";
 import { availableAt, type WorldMoment } from "@/lib/collections/logic";
 
@@ -72,9 +73,7 @@ export function bugReaction(distance: number, playerSpeed: number, rarity: Rarit
 
 /** Toronto wall-clock hour key, e.g. "2026-09-24T14". */
 export function hourKey(date: Date): string {
-  const parts = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Toronto", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", hourCycle: "h23" }).formatToParts(date);
-  const get = (t: string) => parts.find(p => p.type === t)?.value ?? "00";
-  return `${get("year")}-${get("month")}-${get("day")}T${get("hour")}`;
+  return torontoParts(date).hourKey;
 }
 /** A harvested node or caught bug slot returns at the next real hour, for that player only. */
 export function nodeAvailable(harvestedHour: string | null | undefined, now: Date): boolean {
