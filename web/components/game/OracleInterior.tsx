@@ -81,7 +81,7 @@ function CandleEmbers() {
   );
 }
 
-function FloatingCrystal() {
+function FloatingCrystal({ glow = "#D4B0FF" }: { glow?: string }) {
   const ref = useRef<THREE.Mesh>(null);
   useFrame(() => {
     const m = ref.current;
@@ -93,7 +93,7 @@ function FloatingCrystal() {
   return (
     <mesh ref={ref} position={[0, 2.35, 2.6]}>
       <icosahedronGeometry args={[0.42, 0]} />
-      <meshStandardMaterial color="#7B5EA7" emissive="#D4B0FF" emissiveIntensity={0.55} roughness={0.25} metalness={0.1} />
+      <meshStandardMaterial color="#7B5EA7" emissive={glow} emissiveIntensity={0.55} roughness={0.25} metalness={0.1} />
     </mesh>
   );
 }
@@ -102,7 +102,10 @@ export default function OracleInterior({
   frozen,
   playerPosRef,
   onNearestStation,
+  tint = "#D4B0FF",
 }: {
+  /** Temple light colour; the reveal ceremony washes it in the family colour (row 206). */
+  tint?: string;
   frozen: boolean;
   playerPosRef: React.MutableRefObject<THREE.Vector3>;
   onNearestStation: (s: InteriorStation | null) => void;
@@ -121,8 +124,8 @@ export default function OracleInterior({
           its violet identity but drops the flat fill — candle pools +
           crystal glow carry the room. */}
       <ambientLight color="#D8C4EE" intensity={0.4} />
-      <pointLight color="#D4B0FF" intensity={26} distance={19} position={[0, 4.2, 0]} />
-      <pointLight color="#D4B0FF" intensity={10} distance={7} position={[0, 3, 2.6]} />
+      <pointLight color={tint} intensity={26} distance={19} position={[0, 4.2, 0]} />
+      <pointLight color={tint} intensity={10} distance={7} position={[0, 3, 2.6]} />
       <pointLight color="#FFCF8A" intensity={10} distance={5.5} position={[-2.2, 1, 2.2]} />
       <pointLight color="#FFCF8A" intensity={10} distance={5.5} position={[2.2, 1, 2.2]} />
 
@@ -159,7 +162,7 @@ export default function OracleInterior({
         {/* runic circle + altar + crystal (→ Oracle quiz sheet) */}
         <Piece name="magic-circle-rug" position={[0, 0.012, 2.6]} scale={0.14} />
         <Piece name="altar" position={[0, 0, 2.6]} scale={0.11} />
-        <FloatingCrystal />
+        <FloatingCrystal glow={tint} />
         {/* ruins pillars flanking the altar */}
         <Piece name="remains-pillar" position={[-3.6, 0, 3.6]} scale={0.12} />
         <Piece name="remains-pillar" position={[3.6, 0, 3.6]} rotY={0.6} scale={0.12} />
