@@ -47,7 +47,10 @@ import CombatHud from "./combat/CombatHud";
 import MissionBoardSheet from "./combat/MissionBoardSheet";
 import { attachProgressId, combat, publishCombat, setMission, setOwnedWeapons } from "@/lib/game/combat/runtime";
 import { missionEvent } from "@/lib/game/combat/actions";
-import { combatProgression, postWear, startMissionRemote } from "@/lib/game/combat/progression";
+import { combatProgression, postWear, startMissionRemote, type ProgressionView } from "@/lib/game/combat/progression";
+import { equipKit } from "@/lib/game/combat/abilities";
+import { subclassByKey } from "@/lib/combat/kits";
+import PathSheet from "./oracle/PathSheet";
 import { MISSIONS, WEAPONS } from "@/lib/game/combat/data";
 import { startMission } from "@/lib/game/combat/missions";
 import OracleQuizSheet from "./oracle/OracleQuizSheet";
@@ -91,7 +94,7 @@ import styles from "./DefaultIslandWorld.module.css";
 
 type Metrics = { fps: number; frameMs: number; calls: number; triangles: number; x: number; z: number };
 type Near = "enter" | "exit" | "board" | "display" | "desk" | "shelf" | "clock" | "notice" | "catch" | "cafe" | "museum" | "ruins" | "mailbox" | "monument" | "home" | "house" | "village" | "buy" | "claim" | "donate" | "report" | "fish" | "forage" | "net" | "museum_enter" | "cafe_enter" | "curator" | "closet" | "fitting" | "oracle_enter" | "altar" | "missions" | "ruins_exit" | "lantern" | "bench" | "bed" | null;
-type Sheet = "notice" | "letters" | "journal" | "trophies" | "showcase" | "closet" | "fitting" | "oracle" | "settings" | "missions" | null;
+type Sheet = "notice" | "letters" | "journal" | "trophies" | "showcase" | "closet" | "fitting" | "oracle" | "path" | "settings" | "missions" | null;
 const PHASE_NAMES: Record<IslandPhase, string> = { dawn: "Dawn", day: "Daylight", evening: "Evening", night: "Night" };
 const TREE_SEEDS = [0, 3, 2, 5, 7, 8, 1, 3];
 const HQ_DOOR: [number, number] = [0, 6.3];
@@ -457,19 +460,23 @@ function DefaultIslandWorldContent() {
   const [bagOpen, setBagOpen] = useState(false);
   const identity = useWorldIdentity();
   const [reveal, setReveal] = useState<{ family: Family; type: string; startedAt: number } | null>(null);
+  // Bumped by the Oracle's path sheet after a subclass, loadout or stat change so the encounter re-reads them.
+  const [pathTick, setPathTick] = useState(0);
+  const [pathView, setPathView] = useState<ProgressionView | null>(null);
   useEffect(() => { let alive = true; void combatProgression().then(g => {
     if (!alive) return;
     setGate({ open: g.gateOpen, reason: g.gateOpen ? null : /^Sealed/.test(g.reason ?? "") ? g.reason : `Sealed. ${g.reason ?? ""}`.trim() });
-    // Progression feeds the encounter: stats, max HP, subclass signature, weapon durability.
+    setPathView(g.view);
+    // Progression feeds the encounter: stats, max HP, the subclass kit and loadout, weapon durability.
     const p = combat.rt.player;
     p.armed = g.gateOpen;
     if (g.stats) p.stats = g.stats;
     p.level = g.level;
     if (g.maxHp) { p.maxHp = g.maxHp; p.hp = Math.min(p.hp, g.maxHp); }
-    combat.rt.signature = g.signature;
+    equipKit(combat.rt, subclassByKey(g.subclass), g.view?.loadout ?? [], g.view?.traits ?? {});
     setOwnedWeapons(combat.rt, g.weapons);
     publishCombat();
-  }); return () => { alive = false; }; }, [identity.family]);
+  }); return () => { alive = false; }; }, [identity.family, pathTick]);
   const onOracleResult = useCallback((result: ResultView) => {
     setFamily(result.family); setSheet(null);
     setReveal({ family: result.family, type: result.type, startedAt: performance.now() });
@@ -698,7 +705,8 @@ function DefaultIslandWorldContent() {
       {(sheet === "closet" || sheet === "fitting") && <WardrobeSheet open place={sheet === "closet" ? "closet" : "fitting"} onClose={() => setSheet(null)} onShop={() => { setSheet(null); setShopTab("outfits"); }} />}
       <PlayerCharacterUI />
       <JournalSheet open={sheet === "journal"} onClose={() => setSheet(null)} />
-      <OracleQuizSheet open={sheet === "oracle"} onClose={() => setSheet(null)} onResult={onOracleResult} />
+      <OracleQuizSheet open={sheet === "oracle"} onClose={() => setSheet(null)} onResult={onOracleResult} onPath={pathView?.family ? () => { setPathTick(n => n + 1); setSheet("path"); } : undefined} />
+      {sheet === "path" && pathView && <PathSheet view={pathView} onClose={() => setSheet(null)} onChanged={() => setPathTick(n => n + 1)} />}
       <SettingsSheet open={sheet === "settings"} onClose={() => setSheet(null)} />
       {reveal && inside === "oracle" && <FamilyReveal family={reveal.family} type={reveal.type} onContinue={() => setReveal(null)} />}
       <TrophySheet open={sheet === "trophies"} onClose={() => setSheet(null)} />

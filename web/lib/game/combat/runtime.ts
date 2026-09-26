@@ -7,19 +7,33 @@ import { useSyncExternalStore } from "react";
 import type { MissionState } from "./missions";
 import type { Enemy, Vec } from "./sim";
 import { PLAYER_BASE, WEAPONS, WEAPON_ORDER } from "./data";
-import { ZERO_STATS, type StatBlock } from "@/lib/combat/progression";
-import type { Ability } from "@/lib/combat/kits";
+import { ZERO_STATS, type Stat, type StatBlock } from "@/lib/combat/progression";
+import type { Ability, BuffStat, Element, Status, Subclass, UnitDef } from "@/lib/combat/kits";
 
-export interface Projectile { id: number; x: number; z: number; vx: number; vz: number; life: number; from: "player" | "enemy"; damage: number; kind: "arrow" | "bolt" | "spit"; radius: number }
-export interface Minion { id: number; x: number; z: number; life: number; cooldown: number }
+/** A shot. Weapon shots carry nothing; ability and unit shots carry what they do on impact. */
+export interface ShotHit { power: number; stat?: Stat; tier?: number; pierce?: boolean; splash?: number; status?: Status; unit?: boolean; hitIds?: string[] }
+export interface Projectile { id: number; x: number; z: number; vx: number; vz: number; life: number; from: "player" | "enemy"; damage: number; kind: "arrow" | "bolt" | "spit"; radius: number; hit?: ShotHit }
+/** Summons, totems, traps and decoys (kits.ts UNITS): `source` is the ability that made it ("weapon" for the summoning charm's wisps). */
+export interface Unit {
+  id: number; def: UnitDef; source: string; x: number; z: number; hp: number; maxHp: number;
+  /** Seconds left, or null = persists (row 50). */
+  life: number | null;
+  cd: number; power: number; stat: Stat;
+  /** Minions that borrow an enemy model: its pose (state/t/move) for the renderer; shades borrow their corpse's. */
+  body: Enemy | null;
+}
+export interface Buff { stat: BuffStat; value: number; t: number; onBlock?: Ability; answered?: boolean }
 export interface Floater { id: number; x: number; y: number; z: number; text: string; kind: "hit" | "crit" | "hurt" | "info"; age: number }
-export interface Blast { id: number; x: number; z: number; radius: number; color: string; age: number; life: number }
-export type AbilityId = "spark" | "binding" | "swap" | "signature";
+export interface Blast { id: number; x: number; z: number; radius: number; color: string; age: number; life: number; arc?: number; rot?: number; length?: number }
+/** Four equipped ability slots (row 50) plus the weapon swap. */
+export type AbilityId = "slot1" | "slot2" | "slot3" | "slot4" | "swap";
+export const SLOT_IDS = ["slot1", "slot2", "slot3", "slot4"] as const;
 export const ABILITIES: { id: AbilityId; name: string }[] = [
-  { id: "spark", name: "Spark (rune)" },
-  { id: "binding", name: "Binding (rune)" },
+  { id: "slot1", name: "Ability 1" },
+  { id: "slot2", name: "Ability 2" },
+  { id: "slot3", name: "Ability 3" },
+  { id: "slot4", name: "Ability 4" },
   { id: "swap", name: "Swap weapon" },
-  { id: "signature", name: "Signature" },
 ];
 /** Energy ruling (2026-09-26): 100 max, regenerates 12/s after 1 s without spending, never while tracing. */
 export const ENERGY = { max: 100, regen: 12, delay: 1 } as const;
@@ -34,13 +48,26 @@ export interface CombatRuntime {
     aim: Vec; facing: number; hurt: number; downFor: number;
     /** Weapons granted (the ruins gate is open): the equipped one shows on the character's back in the village (row 140). */
     armed: boolean;
+    /** Absorbs damage first, for `shieldFor` seconds. */
+    shield: number; shieldFor: number;
+    /** An ability dash in progress (toward the aim or away); i-frames like a dodge when `iframes`. */
+    dash: { x: number; z: number; speed: number; left: number; iframes: boolean; then: ((at: Vec) => void) | null } | null;
+    /** What moves the character this frame besides walking: dodge, dash, knockback (PlayerAvatar `impulse`). */
+    impulse: Vec;
+    /** Move speed multiplier (stats, kit, buffs, momentum) and seconds standing still (Steady Stance). */
+    speed: number; still: number; last: Vec | null;
   };
   cooldowns: Record<AbilityId, number>;
   enemies: Enemy[];
-  projectiles: Projectile[]; minions: Minion[]; floaters: Floater[]; blasts: Blast[];
-  casting: { id: number; rune: "spark" | "binding"; aim: Vec; potencyScale: number } | null;
-  /** Subclass signature from /api/combat/progression (kits data). */
-  signature: Ability | null;
+  projectiles: Projectile[]; units: Unit[]; buffs: Buff[]; floaters: Floater[]; blasts: Blast[];
+  casting: { id: number; rune: "spark" | "binding"; aim: Vec; slot: number; ability: Ability } | null;
+  /** The subclass kit from /api/combat/progression: equipped abilities, capacity for summons, owned monster traits. */
+  kit: { subclass: Subclass; capacity: number; traits: Record<string, number> } | null;
+  slots: (Ability | null)[];
+  /** Passive bookkeeping: last element, same-target stacks, momentum, Hot Streak procs this cooldown. */
+  passive: { element: Element | null; target: string | null; stacks: number; momentum: number; momentumT: number; procs: number };
+  /** A body-part transformation being shown (Transmuter). */
+  transform: { name: string; t: number } | null;
   /** Kills not yet posted to /api/combat/kill. */
   killQueue: { enemy: string; key: string }[];
   mission: MissionState | null;
@@ -60,10 +87,13 @@ export function createRuntime(): CombatRuntime {
       durability: Object.fromEntries(Object.values(WEAPONS).map(w => [w.id, w.maxDurability])),
       hits: {},
       attackCd: 0, swing: 0, dodgeAge: null, dodgeCd: 0, dodgeDir: { x: 0, z: 1 },
-      aim: { x: 0, z: 0 }, facing: 0, hurt: 0, downFor: 0, armed: false },
-    cooldowns: { spark: 0, binding: 0, swap: 0, signature: 0 },
-    enemies: [], projectiles: [], minions: [], floaters: [], blasts: [],
-    casting: null, signature: null, killQueue: [], mission: null, idol: "temple", escort: null, wave: null, bossEngaged: false, banner: null, seq: 1,
+      aim: { x: 0, z: 0 }, facing: 0, hurt: 0, downFor: 0, armed: false,
+      shield: 0, shieldFor: 0, dash: null, impulse: { x: 0, z: 0 }, speed: 1, still: 0, last: null },
+    cooldowns: { slot1: 0, slot2: 0, slot3: 0, slot4: 0, swap: 0 },
+    enemies: [], projectiles: [], units: [], buffs: [], floaters: [], blasts: [],
+    casting: null, kit: null, slots: [null, null, null, null],
+    passive: { element: null, target: null, stacks: 0, momentum: 0, momentumT: 0, procs: 0 }, transform: null,
+    killQueue: [], mission: null, idol: "temple", escort: null, wave: null, bossEngaged: false, banner: null, seq: 1,
   };
 }
 
@@ -86,9 +116,9 @@ export function useCombatVersion(): number {
   return useSyncExternalStore(l => { listeners.add(l); return () => { listeners.delete(l); }; }, () => version, () => 0);
 }
 
-// ── Ability keys (1–4, remappable) ──────────────────────────────
-const KEYS_KEY = "tsi.combatKeys.v1";
-export const DEFAULT_ABILITY_KEYS: Record<AbilityId, string> = { spark: "1", binding: "2", swap: "3", signature: "4" };
+// ── Ability keys (slots 1–4 and the weapon swap Q, remappable) ──────
+const KEYS_KEY = "tsi.combatKeys.v2"; // v1 bound the prototype runes, not slots
+export const DEFAULT_ABILITY_KEYS: Record<AbilityId, string> = { slot1: "1", slot2: "2", slot3: "3", slot4: "4", swap: "q" };
 const RESERVED = new Set(["w", "a", "s", "d", " ", "e", "escape", "shift", "tab", "c", "z", "m", "j", "b", "i"]);
 export function readAbilityKeys(): Record<AbilityId, string> {
   try {
@@ -96,7 +126,7 @@ export function readAbilityKeys(): Record<AbilityId, string> {
     if (raw && typeof raw === "object") {
       const out = { ...DEFAULT_ABILITY_KEYS };
       for (const a of Object.keys(out) as AbilityId[]) if (typeof raw[a] === "string" && raw[a].length === 1 && !RESERVED.has(raw[a])) out[a] = raw[a];
-      if (new Set(Object.values(out)).size === 4) return out;
+      if (new Set(Object.values(out)).size === ABILITIES.length) return out;
     }
   } catch { /* defaults */ }
   return { ...DEFAULT_ABILITY_KEYS };

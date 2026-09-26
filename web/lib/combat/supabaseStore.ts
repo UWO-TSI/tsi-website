@@ -7,7 +7,7 @@ import { raisePg } from "@/lib/result";
 import { CombatError, type CombatErrorCode, type CombatStore, type ProgressRow } from "./store";
 
 type Row = Record<string, unknown>;
-const CODES: CombatErrorCode[] = ["insufficient", "not_found", "not_owned", "needs_reset", "not_enough_points", "level_too_low", "wrong_family", "no_family", "cooldown", "not_ready", "kill_xp_cap", "unknown_enemy", "unknown_mission", "bad_hits", "boss_cooldown"];
+const CODES: CombatErrorCode[] = ["bad_loadout", "no_subclass", "insufficient", "not_found", "not_owned", "needs_reset", "not_enough_points", "level_too_low", "wrong_family", "no_family", "cooldown", "not_ready", "kill_xp_cap", "unknown_enemy", "unknown_mission", "bad_hits", "boss_cooldown"];
 const raise = (error: { code?: string; message?: string } | null): never => raisePg(error, CODES);
 const first = (d: unknown) => ((Array.isArray(d) ? d[0] : d) ?? {}) as Row;
 const xpRes = (r: Row) => ({ xp: Number(r.xp), level: Number(r.level), levelled_up: r.levelled_up === true, replayed: r.replayed === true });
@@ -21,10 +21,11 @@ export function supabaseCombatStore(db: SupabaseClient): CombatStore {
   return {
     async progression(m) {
       await rpc("combat_ensure", { p_member_id: m });
-      const { data, error } = await db.from("member_progression").select("xp, level, stats, subclass").eq("member_id", m).single();
+      const { data, error } = await db.from("member_progression").select("xp, level, stats, subclass, loadout, traits").eq("member_id", m).single();
       if (error) raise(error);
       const r = data as Row;
-      return { xp: Number(r.xp), level: Number(r.level), stats: { ...ZERO_STATS, ...(r.stats as StatBlock) }, subclass: (r.subclass as string) ?? null };
+      return { xp: Number(r.xp), level: Number(r.level), stats: { ...ZERO_STATS, ...(r.stats as StatBlock) }, subclass: (r.subclass as string) ?? null,
+        loadout: (r.loadout as string[]) ?? [], traits: (r.traits as Record<string, number>) ?? {} };
     },
     async family(m) {
       const { data } = await db.from("member_identity").select("family").eq("member_id", m).maybeSingle();
@@ -41,6 +42,7 @@ export function supabaseCombatStore(db: SupabaseClient): CombatStore {
       const r = first(await rpc("combat_choose_subclass", { p_member_id: m, p_subclass: subclass, p_subclass_family: family, p_key: key }));
       return { subclass: String(r.subclass), fee: Number(r.fee), replayed: r.replayed === true };
     },
+    setLoadout: async (m, loadout) => ((await rpc("combat_set_loadout", { p_member_id: m, p_loadout: loadout })) as string[]) ?? [],
     async weapons(m) {
       const { data, error } = await db.from("member_weapons").select("weapon_key, durability, equipped").eq("member_id", m);
       if (error) raise(error);

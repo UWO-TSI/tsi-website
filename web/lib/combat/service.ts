@@ -5,9 +5,9 @@
  */
 import { ENEMIES, MISSIONS, rollBossReward } from "./content";
 import { islandProgression } from "./islandAdapter";
-import { SUBCLASSES, subclassesFor } from "./kits";
+import { checkLoadout, kitOptions, resolveLoadout, subclassByKey, subclassesFor, traitFor } from "./kits";
 import { applyEvents, canStart, type MissionEvent, type MissionState } from "./missions";
-import { allocate, derived, FAMILY_PRESETS, levelProgress, pointsEarned, pointsSpent, presetAllocation, STAT_RESET_FEE, SUBCLASS_LEVEL, SUBCLASS_RESPEC_FEE, ZERO_STATS } from "./progression";
+import { allocate, derived, FAMILY_PRESETS, levelProgress, pointsEarned, pointsSpent, presetAllocation, STAT_RESET_FEE, STATS, SUBCLASS_LEVEL, SUBCLASS_RESPEC_FEE, ZERO_STATS } from "./progression";
 import { toFailure, type Result } from "@/lib/result";
 import { CombatError, type CombatStore } from "./store";
 import { repairCost, WEAPONS } from "./weapons";
@@ -30,6 +30,8 @@ const ERR: Record<string, [number, string]> = {
   bad_hits: [400, "Invalid hit count."],
   gate_closed: [403, "The ruins gate is sealed: it opens after the Oracle, level 10 and your subclass choice."],
   boss_cooldown: [409, "The guardian's hoard is spent for now. It refills 20 hours after your last win."],
+  bad_loadout: [400, "That loadout isn't in your kit."],
+  no_subclass: [409, "Choose your subclass at the Oracle first."],
   failed: [500, "Something went wrong. Try again."],
 };
 async function run<T>(f: () => Promise<T>): Promise<Result<T>> {
@@ -43,13 +45,18 @@ async function run<T>(f: () => Promise<T>): Promise<Result<T>> {
 export const getProgression = (store: CombatStore, m: string) =>
   run(async () => {
     const [p, family, owned] = await Promise.all([store.progression(m), store.family(m), store.weapons(m)]);
+    const subclass = subclassByKey(p.subclass);
     return {
       ...levelProgress(p.xp),
       stats: p.stats,
       points_available: pointsEarned(p.level) - pointsSpent(p.stats),
-      derived: derived(p.stats, p.level),
+      derived: derived(p.stats, p.level, subclass?.mods),
       family,
-      subclass: p.subclass ? (SUBCLASSES.find((s) => s.key === p.subclass) ?? null) : null,
+      subclass,
+      /** Four equipped ability keys (row 50), the whole kit to choose from, and the Transmuter's traits with their defeats. */
+      loadout: subclass ? resolveLoadout(subclass, p.loadout, p.traits).map((a) => a.key) : [],
+      kit: subclass ? kitOptions(subclass, p.traits).map((a) => a.key) : [],
+      traits: p.traits,
       subclass_choices: family && p.level >= SUBCLASS_LEVEL ? subclassesFor(family) : [],
       preset: family ? { weights: FAMILY_PRESETS[family], at_level: presetAllocation(family, p.level) } : null,
       fees: { stat_reset: STAT_RESET_FEE, subclass_change: SUBCLASS_RESPEC_FEE },
@@ -60,10 +67,19 @@ export const getProgression = (store: CombatStore, m: string) =>
     };
   });
 
-export const allocateStats = (store: CombatStore, m: string, add: Record<string, unknown>) =>
+/**
+ * Set the allocation to `target` (stats left out keep their value). Sending the
+ * total rather than the points to add makes a retried request a no-op. Lowering
+ * a stat needs the paid reset.
+ */
+export const allocateStats = (store: CombatStore, m: string, target: Record<string, unknown>) =>
   run(async () => {
     const p = await store.progression(m);
-    const r = allocate(p.stats ?? ZERO_STATS, add, p.level);
+    const current = p.stats ?? ZERO_STATS;
+    const add: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(target)) add[k] = typeof v === "number" && STATS.includes(k as never) ? v - current[k as keyof typeof current] : v;
+    if (Object.values(add).some((v) => typeof v === "number" && v < 0)) throw new CombatError("needs_reset");
+    const r = allocate(current, add, p.level);
     if (!r.ok) throw Object.assign(new CombatError("not_enough_points", r.error));
     return store.allocate(m, r.stats);
   });
@@ -72,9 +88,20 @@ export const resetStats = (store: CombatStore, m: string, key: string) => run(()
 
 export const chooseSubclass = (store: CombatStore, m: string, subclassKey: string, key: string) =>
   run(async () => {
-    const s = SUBCLASSES.find((x) => x.key === subclassKey);
+    const s = subclassByKey(subclassKey);
     if (!s) throw new CombatError("not_found");
     return store.chooseSubclass(m, s.key, s.family, key);
+  });
+
+/** Row 50: four abilities from the kit, chosen outside combat. Setting the same list again changes nothing. */
+export const setLoadout = (store: CombatStore, m: string, loadout: unknown) =>
+  run(async () => {
+    const p = await store.progression(m);
+    const s = subclassByKey(p.subclass);
+    if (!s) throw new CombatError("no_subclass");
+    const c = checkLoadout(s, loadout, p.traits);
+    if (!c.ok) throw new CombatError("bad_loadout", c.error);
+    return store.setLoadout(m, c.loadout);
   });
 
 /**
@@ -87,10 +114,15 @@ async function requireGate(store: CombatStore, m: string) {
   if (!islandProgression({ level: p.level, family, subclass: p.subclass ? { key: p.subclass } : null }).gateOpen) throw new CombatError("gate_closed");
 }
 
+/** A kill; for a Transmuter the first defeat of a species also names the trait it just learned (row 40, counted in the same transaction). */
 export const recordKill = (store: CombatStore, m: string, enemyKey: string, eventKey: string) =>
   run(async () => {
     await requireGate(store, m);
-    return store.recordKill(m, enemyKey, eventKey);
+    const t = traitFor(enemyKey);
+    const before = t ? (await store.progression(m)).traits[t.key] ?? 0 : 0;
+    const r = await store.recordKill(m, enemyKey, eventKey);
+    const after = t && !r.replayed ? (await store.progression(m)).traits[t.key] ?? 0 : 0;
+    return { ...r, trait_unlocked: t && before === 0 && after > 0 ? t.key : null };
   });
 
 export const listMissions = (store: CombatStore, m: string, now: Date) =>

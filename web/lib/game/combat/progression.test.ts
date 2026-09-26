@@ -5,9 +5,9 @@ afterEach(() => { vi.unstubAllGlobals(); });
 
 describe("ruins gate", () => {
   it("reads the systems gate from /api/combat/progression", async () => {
-    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ ok: true, progression: { level: 12, stats: {}, family: "Warden", subclass: { key: "grovekeeper", signature: { name: "Grove", energy: 30, cooldown_s: 10, power: 1, description: "" } }, weapons: [] }, gate: { level: 12, family: "Warden", subclass: "grovekeeper", gateOpen: true, reason: null } }))));
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ ok: true, progression: { level: 12, stats: {}, family: "Warden", subclass: { key: "druid" }, loadout: ["druid.rootbind"], weapons: [] }, gate: { level: 12, family: "Warden", subclass: "druid", gateOpen: true, reason: null } }))));
     const g = await combatProgression();
-    expect(g).toMatchObject({ gateOpen: true, subclass: "grovekeeper", signature: { name: "Grove" } });
+    expect(g).toMatchObject({ gateOpen: true, subclass: "druid", view: { loadout: ["druid.rootbind"] } });
   });
   it("stays sealed when signed out or the route fails", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ ok: false, error: "Unauthorized" }), { status: 401 })));

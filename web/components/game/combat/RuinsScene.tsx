@@ -19,16 +19,18 @@ import { GLBProp } from "../NatureModels";
 import { InteriorKeeper } from "../interiorShared";
 import { IslandAtmosphere, useFollowCamera } from "../IslandAtmosphere";
 import BlobShadows from "../BlobShadows";
-import { AimReticle, Blasts, EnemyInstances, FloaterProjector, Projectiles, Telegraphs, Wisps } from "./EncounterRender";
+import { AimReticle, Blasts, EnemyInstances, FloaterProjector, PlayerAuras, Projectiles, Telegraphs, Totems, Wisps } from "./EncounterRender";
 import { BOSS_CENTER, ESCORT_PATHS, EXIT_SPOT, FETCH_SPOTS, GATE_PLAZA, RUINS_BROKEN_ARCHES, RUINS_MOAI, RUINS_PILLARS, RUINS_ROCKS, RUINS_SPAWN, RUINS_TORCHES, SURVIVE_CIRCLES, createRuins } from "@/lib/game/ruins";
 import { combat, publishCombat, readAbilityKeys, takeMissionQueue, type AbilityId } from "@/lib/game/combat/runtime";
-import { attack, floater, hurtPlayer, missionEvent, regenEnergy, resolvePlayerShot, spawnWave, startDodge, summonWisps, triggerAbility } from "@/lib/game/combat/actions";
+import { attack, missionEvent, spawnWave, startDodge, triggerAbility } from "@/lib/game/combat/actions";
+import { stepCombat } from "@/lib/game/combat/encounter";
 import { claimBossReward, postKill, postMissionEvents } from "@/lib/game/combat/progression";
 import { materialsLabel } from "@/lib/game/combat/missions";
 import { ENEMIES, WEAPONS } from "@/lib/game/combat/data";
-import { beamLands, DODGE, inRect, spawnEnemy, stepEnemy, strikeLands, sweptHit } from "@/lib/game/combat/sim";
+import { inRect, spawnEnemy } from "@/lib/game/combat/sim";
 import { capacity, respawnAfter, SPAWN_TABLE, SPAWNS, WAVES } from "@/lib/game/combat/spawns";
 import { BOSS_DROPS } from "@/lib/combat/content";
+import { TRAITS } from "@/lib/combat/kits";
 import { ISLAND_TERRAIN, type IslandLight } from "@/lib/game/islandLighting";
 import type { SeasonLook } from "@/lib/game/seasonalLook";
 import type { IslandWeather } from "@/lib/game/islandWeather";
@@ -38,6 +40,8 @@ import styles from "../DefaultIslandWorld.module.css";
 export type RuinsNear = "exit" | "lantern" | null;
 const F = "/assets/acnh/furniture/";
 const TYPES = SPAWN_TABLE.map(r => r.type);
+/** Models your summons and shades can borrow (every non-boss enemy). */
+const ALLY_TYPES = TYPES.filter(t => t !== "guardian-statue");
 const ESCORTEE: Record<string, { colors: { apron: string; shirt: string }; hat: "straw" | "hood" }> = {
   botanist: { colors: { apron: "#7a5c3e", shirt: "#e8dcc4" }, hat: "straw" },
   scholar: { colors: { apron: "#4b3f6b", shirt: "#d9d2ec" }, hat: "hood" },
@@ -46,12 +50,22 @@ const ESCORTEE: Record<string, { colors: { apron: string; shirt: string }; hat: 
 export function resetEncounter() {
   const rt = combat.rt;
   rt.enemies = SPAWNS.map(s => spawnEnemy(s.id, ENEMIES[s.type], s.x, s.z));
-  rt.projectiles = []; rt.minions = []; rt.blasts = []; rt.floaters = []; rt.casting = null; rt.wave = null; rt.bossEngaged = false; rt.banner = null;
-  rt.player = { ...rt.player, hp: rt.player.maxHp, alive: true, safe: true, dodgeAge: null, dodgeCd: 0, attackCd: 0, hurt: 0, downFor: 0 };
+  rt.projectiles = []; rt.units = []; rt.buffs = []; rt.blasts = []; rt.floaters = []; rt.casting = null; rt.wave = null; rt.bossEngaged = false; rt.banner = null;
+  rt.player = { ...rt.player, hp: rt.player.maxHp, alive: true, safe: true, dodgeAge: null, dodgeCd: 0, attackCd: 0, hurt: 0, downFor: 0, shield: 0, shieldFor: 0, dash: null, impulse: { x: 0, z: 0 } };
+  rt.transform = null;
   rt.idol = rt.idol === "carried" ? "temple" : rt.idol;
   const path = rt.mission?.def.template === "escort" && rt.mission.status === "active" ? ESCORT_PATHS[rt.mission.def.id] : null;
   rt.escort = path ? { x: path[0].x, z: path[0].z, hp: 60, waypoint: 1 } : null;
   rt.player.energy = Math.max(rt.player.energy, 0);
+}
+
+/** A Transmuter's first defeat of a species (row 40): the server taught a trait; it joins the kit, equipped at the Oracle. */
+function traitLearned(key: string, now: number) {
+  const rt = combat.rt, t = TRAITS.find(x => x.key === key);
+  if (!t || !rt.kit) return;
+  rt.kit.traits = { ...rt.kit.traits, [key]: Math.max(1, rt.kit.traits[key] ?? 0) };
+  rt.banner = { text: `New trait: ${t.ability.name} (${t.part}). Equip it at the Oracle.`, until: now + 6 };
+  publishCombat();
 }
 
 /** Boss down: a card now, the server's roll when it answers (the kill must post first). */
@@ -134,13 +148,10 @@ export default function RuinsScene({ phase, light, look, weather, liteMode, zoom
       if (ray.ray.intersectPlane(plane.current, hit)) p.aim = { x: hit.x, z: hit.z };
     } else p.aim = { x: pl.x, z: pl.z + 3 };
     p.facing = Math.atan2(p.aim.x - pl.x, p.aim.z - pl.z);
-    // Timers.
-    p.attackCd = Math.max(0, p.attackCd - dt); p.swing = Math.max(0, p.swing - dt); p.dodgeCd = Math.max(0, p.dodgeCd - dt); p.hurt = Math.max(0, p.hurt - dt);
-    for (const k of Object.keys(rt.cooldowns) as AbilityId[]) rt.cooldowns[k] = Math.max(0, rt.cooldowns[k] - dt);
     p.safe = inRect(me, GATE_PLAZA);
     // Defeat: wake at the gate (row 229).
     if (!p.alive) {
-      p.downFor += dt; impulse.current = { x: 0, z: 0 };
+      p.downFor += dt;
       if (p.downFor > 1.8) { missionEvent(rt, { kind: "defeated" }); onDefeat(); }
     }
     // Inputs.
@@ -154,66 +165,16 @@ export default function RuinsScene({ phase, light, look, weather, liteMode, zoom
       startDodge(rt, dx || dz ? { x: dx, z: dz } : { x: Math.sin(p.facing), z: Math.cos(p.facing) });
     }
     while (inp.abilities.length) triggerAbility(rt, inp.abilities.shift()!, me);
-    regenEnergy(rt, dt);
     if (inp.attack) attack(rt, me);
-    // Dodge dash / knockback impulse for PlayerAvatar.
-    if (p.dodgeAge !== null) {
-      p.dodgeAge += dt;
-      const on = p.dodgeAge < DODGE.duration;
-      impulse.current = on ? { x: p.dodgeDir.x * DODGE.speed * (1 - p.dodgeAge / DODGE.duration * 0.6), z: p.dodgeDir.z * DODGE.speed * (1 - p.dodgeAge / DODGE.duration * 0.6) } : { x: 0, z: 0 };
-      if (!on) p.dodgeAge = null;
-    } else impulse.current = p.hurt > 0.2 ? { x: p.dodgeDir.x * 5, z: p.dodgeDir.z * 5 } : { x: 0, z: 0 };
-    // Enemies.
-    const target = { x: pl.x, z: pl.z, safe: p.safe, alive: p.alive };
-    for (const e of [...rt.enemies]) {
-      const ev = stepEnemy(e, target, dt, (x, z) => ruins.free(x, z, e.type.radius * 0.6));
-      if (!ev) continue;
-      const dmg = e.move.damage;
-      if (ev.kind === "strike") {
-        if (strikeLands(e, me)) hurtPlayer(rt, dmg, e.move.shape === "smash" ? e.aim : e, me);
-        if (rt.escort && strikeLands(e, rt.escort, 0.4)) { rt.escort.hp -= dmg; floater(rt, rt.escort, 1.8, `-${dmg}`, "hurt"); }
-        if (rt.escort && Math.hypot(rt.escort.x - e.x, rt.escort.z - e.z) < Math.hypot(pl.x - e.x, pl.z - e.z)) e.aim = { x: rt.escort.x, z: rt.escort.z };
-        if (e.move.shape === "smash") rt.blasts.push({ id: rt.seq++, x: e.aim.x, z: e.aim.z, radius: e.move.range, color: "#ffd9a0", age: 0, life: 0.45 });
-      } else if (ev.kind === "spit") {
-        const d = Math.hypot(ev.to.x - e.x, ev.to.z - e.z) || 1, sp = 9;
-        rt.projectiles.push({ id: rt.seq++, x: e.x, z: e.z, vx: ((ev.to.x - e.x) / d) * sp, vz: ((ev.to.z - e.z) / d) * sp, life: (e.move.range + 2) / sp, from: "enemy", damage: dmg, kind: "spit", radius: 0.3 });
-      } else if (ev.kind === "beam") {
-        if (beamLands(e, me)) hurtPlayer(rt, dmg, e, me);
-      } else if (ev.kind === "summon") summonWisps(rt, e);
-      else if (ev.kind === "phase") floater(rt, e, 3.4, e.phase === 3 ? "Enraged" : "The guardian calls for help", "info");
-      else if (ev.kind === "reset" && e.type.kind === "boss") rt.enemies = rt.enemies.filter(x => !x.summoned);
-    }
+    // Timers, energy, enemies, projectiles, summons and totems (lib/game/combat/encounter.ts); the dodge/dash/knockback impulse feeds PlayerAvatar.
+    stepCombat(rt, me, dt, ruins.free);
+    impulse.current = p.alive ? p.impulse : { x: 0, z: 0 };
     // Respawn (spawn-table enemies only) once dead long enough and you're away from the spot.
     for (const [i, e] of rt.enemies.entries()) {
       const after = e.state === "dead" && !e.summoned ? respawnAfter(e.id) : 0;
       if (after && e.deadFor > after && Math.hypot(pl.x - e.spawnX, pl.z - e.spawnZ) > 12) rt.enemies[i] = spawnEnemy(e.id, e.type, e.spawnX, e.spawnZ);
     }
     rt.bossEngaged = rt.enemies.some(e => e.type.kind === "boss" && ["chase", "windup", "active", "recover"].includes(e.state));
-    // Projectiles.
-    for (let i = rt.projectiles.length - 1; i >= 0; i--) {
-      const s = rt.projectiles[i], from = { x: s.x, z: s.z };
-      s.x += s.vx * dt; s.z += s.vz * dt; s.life -= dt;
-      const to = { x: s.x, z: s.z };
-      let gone = s.life <= 0 || !ruins.free(s.x, s.z, 0.05);
-      if (!gone && s.from === "player") gone = resolvePlayerShot(rt, i, from, to, sweptHit);
-      else if (!gone && s.from === "enemy" && sweptHit(from, to, me, 0.35 + s.radius)) { hurtPlayer(rt, s.damage, from, me); gone = true; }
-      if (gone) rt.projectiles.splice(i, 1);
-    }
-    // Wisps (summons): drift to the nearest enemy and nip it.
-    for (let i = rt.minions.length - 1; i >= 0; i--) {
-      const m = rt.minions[i]; m.life -= dt; m.cooldown -= dt;
-      if (m.life <= 0) { rt.minions.splice(i, 1); continue; }
-      const foe = rt.enemies.filter(e => e.state !== "dead" && e.state !== "return" && Math.hypot(e.x - m.x, e.z - m.z) < 8).sort((a, b) => Math.hypot(a.x - m.x, a.z - m.z) - Math.hypot(b.x - m.x, b.z - m.z))[0];
-      const goal = foe ?? { x: pl.x - 0.8, z: pl.z - 0.4 };
-      const d = Math.hypot(goal.x - m.x, goal.z - m.z);
-      if (d > 0.9) { m.x += ((goal.x - m.x) / d) * 5 * dt; m.z += ((goal.z - m.z) / d) * 5 * dt; }
-      else if (foe && m.cooldown <= 0) {
-        m.cooldown = 0.9;
-        rt.projectiles.push({ id: rt.seq++, x: m.x, z: m.z, vx: ((foe.x - m.x) / (d || 1)) * 14, vz: ((foe.z - m.z) / (d || 1)) * 14, life: 0.3, from: "player", damage: -1, kind: "bolt", radius: 0.2 });
-      }
-    }
-    for (let i = rt.blasts.length - 1; i >= 0; i--) { rt.blasts[i].age += dt; if (rt.blasts[i].age > rt.blasts[i].life) rt.blasts.splice(i, 1); }
-    for (let i = rt.floaters.length - 1; i >= 0; i--) { rt.floaters[i].age += dt; if (rt.floaters[i].age > 1.1) rt.floaters.splice(i, 1); }
     if (rt.banner && clock.elapsedTime > rt.banner.until) rt.banner = null;
     // Places → mission events.
     const mission = rt.mission?.status === "active" ? rt.mission : null;
@@ -254,7 +215,7 @@ export default function RuinsScene({ phase, light, look, weather, liteMode, zoom
       syncAt.current = clock.elapsedTime;
       for (const k of rt.killQueue.splice(0)) {
         if (k.enemy === BOSS_DROPS.enemy) bossVictory(k.key, clock.elapsedTime);
-        else void postKill(k.enemy, k.key);
+        else void postKill(k.enemy, k.key).then(r => { if (r.ok && r.data.trait_unlocked) traitLearned(r.data.trait_unlocked, clock.elapsedTime); });
       }
       const pid = rt.mission?.progressId;
       if (pid && rt.mission?.queue.length) void postMissionEvents(pid, takeMissionQueue());
@@ -285,10 +246,13 @@ export default function RuinsScene({ phase, light, look, weather, liteMode, zoom
       {Object.entries(FETCH_SPOTS).map(([item, s]) => <FetchItem key={item} item={item} spot={s} ground={ruins.ground} player={player} />)}
       <Escort ground={ruins.ground} player={player} />
       <Wisps ground={ruins.ground} />
+      {ALLY_TYPES.map(t => <EnemyInstances key={`ally-${t}`} typeId={t} capacity={6} ground={ruins.ground} allies />)}
     </Suspense>
     <Telegraphs ground={ruins.ground} />
     <Projectiles ground={ruins.ground} />
     <Blasts ground={ruins.ground} />
+    <Totems ground={ruins.ground} />
+    <PlayerAuras player={player} ground={ruins.ground} />
     <AimReticle player={player} ground={ruins.ground} />
     <FloaterProjector />
     <Html position={[EXIT_SPOT.x, 2.2, EXIT_SPOT.z]} center distanceFactor={10} zIndexRange={[3, 0]}><div className={styles.cue}>Gate · safe zone</div></Html>

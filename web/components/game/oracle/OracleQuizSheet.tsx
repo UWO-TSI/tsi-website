@@ -18,8 +18,10 @@ import styles from "../DefaultIslandWorld.module.css";
 const BATCH = 10;
 const INTRO = "Answer as you are on an ordinary day. The crystal does the rest.";
 
-export default function OracleQuizSheet({ open, onClose, onResult, embedded = false }: {
+export default function OracleQuizSheet({ open, onClose, onResult, onPath, embedded = false }: {
   open: boolean; onClose: () => void; onResult: (result: ResultView) => void;
+  /** Opens the path sheet (level-10 subclass, loadout, stats) once the family is known. */
+  onPath?: () => void;
   /** Inside another sheet's chrome (GameWorld's OverlaySheet): no own frame or close button. */
   embedded?: boolean;
 }) {
@@ -120,6 +122,7 @@ export default function OracleQuizSheet({ open, onClose, onResult, embedded = fa
         ? <small className={styles.hint}>The crystal needs rest. You can ask again {next.available_at ? new Date(next.available_at).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : "soon"}.</small>
         : <><button className={styles.oracleBegin} onClick={() => void begin()} disabled={busy}>{next?.kind === "resume" ? "Continue your reading" : `Ask again · ${next?.fee ?? 0} coins`}</button>
           <small className={styles.hint}>A new reading replaces your family. Auras you&apos;ve unlocked stay.</small></>}
+      {onPath && <button className={styles.oracleBegin} data-testid="oracle-path" onClick={onPath}>Your path · subclass, abilities, stats</button>}
     </> : <>
       <p>{status?.open_attempt ? `You're ${status.open_attempt.answered} of ${status.open_attempt.total} in.` : "64 short statements. There are no right answers, and you can take a break any time."}</p>
       <button className={styles.oracleBegin} onClick={() => void begin()} disabled={busy}>{status?.open_attempt ? "Continue" : "Begin"}</button>

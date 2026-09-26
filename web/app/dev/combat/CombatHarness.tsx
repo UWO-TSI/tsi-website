@@ -248,11 +248,13 @@ function Kits() {
                 <b style={{ fontSize: 14 }}>{s.name}</b>
                 <span style={{ color: MUTED }}>{s.weapon_affinity.join(" / ")}</span>
               </div>
-              <div style={{ marginTop: 4 }}>
-                <b>{s.signature.name}</b> · {s.signature.cooldown_s}s · {s.signature.energy} energy · ×{s.signature.power}
-                {s.signature.incantation ? <span style={{ marginLeft: 6, padding: "1px 6px", borderRadius: 8, background: "#ece4f7", color: "#5b4a86" }}>rune: {s.signature.incantation}</span> : null}
-              </div>
-              <div style={{ color: MUTED }}>{s.signature.description}</div>
+              {[s.signature, ...s.abilities].map((a, i) => (
+                <div key={a.key} style={{ marginTop: 4 }}>
+                  <b>{a.name}</b>{i === 0 ? " (signature)" : ""} · {a.cooldown_s}s · {a.energy} energy · {a.effects.map((e) => e.kind).join(" + ")}
+                  {a.incantation ? <span style={{ marginLeft: 6, padding: "1px 6px", borderRadius: 8, background: "#ece4f7", color: "#5b4a86" }}>rune: {a.incantation}</span> : null}
+                  <div style={{ color: MUTED }}>{a.description}</div>
+                </div>
+              ))}
               <div style={{ marginTop: 4 }}><b>{s.passive.name}</b> ({s.passive.value}) <span style={{ color: MUTED }}>{s.passive.description}</span></div>
               {s.starter_note ? <div style={{ marginTop: 4, color: "#8a5a1e" }}>{s.starter_note}</div> : null}
             </div>
