@@ -1,7 +1,6 @@
 /**
- * Drop-in replacement for lib/homes/store.ts createHomeStore(): same
- * { getSnapshot, subscribe, set, reset } surface, backed by /api/homes with
- * localStorage as an offline cache.
+ * Home layout store: { getSnapshot, subscribe, set, reset }, backed by
+ * /api/homes with localStorage as an offline cache.
  *
  *   // lib/homes/useHomeLayout.ts (island agent)
  *   const store = createRemoteHomeStore({ cache: () => window.localStorage });
@@ -11,9 +10,9 @@
  * gets one save key, reused on retry, so a flaky network never double-saves.
  * A conflict (edited on another device) adopts the server's document.
  */
-import { HOME_LAYOUT_KEY } from "@/lib/homes/store";
 import { defaultLayout, parseLayout, serialiseLayout, withRooms, type HomeLayoutDoc } from "@/lib/homes/layout";
 
+export const HOME_LAYOUT_KEY = "tsi.home.layout.v1";
 export const HOME_META_KEY = "tsi.home.meta.v1";
 type Cache = Pick<Storage, "getItem" | "setItem" | "removeItem">;
 export type SyncStatus = "local" | "saving" | "saved" | "offline" | "conflict" | "error";

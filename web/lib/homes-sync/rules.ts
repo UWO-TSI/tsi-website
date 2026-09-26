@@ -17,7 +17,6 @@ export const MAX_OUTDOOR_ITEMS = 200;
 /** Home island map is 32×32 cells centred on the origin (lib/game/homeIsland.ts). */
 export const OUTDOOR_HALF = 16;
 export const MAX_LAYOUT_BYTES = 64 * 1024;
-export const DEFAULT_MAILBOX: [number, number] = [2.3, 1.3];
 
 /** A room bought later starts empty (same look as withRooms() in lib/homes). */
 export function boughtRoom(index: number): RoomDoc {

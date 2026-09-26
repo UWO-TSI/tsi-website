@@ -11,7 +11,6 @@ export interface HomeRecord {
   rooms_count: number;
   layout: HomeLayoutDoc;
   revision: number;
-  mailbox: [number, number];
 }
 
 export interface HomesStore {

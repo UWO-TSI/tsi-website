@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { assembleLayout, DEFAULT_MAILBOX } from "./rules";
+import { assembleLayout } from "./rules";
 import { HomeStoreError, type HomesStore } from "./store";
 
 function raise(error: { code?: string; message?: string } | null): never {
@@ -16,7 +16,7 @@ export function supabaseHomesStore(db: SupabaseClient): HomesStore {
   return {
     async getHome(memberId) {
       const [home, rooms] = await Promise.all([
-        db.from("member_homes").select("rooms_count, outdoor, revision, mailbox_x, mailbox_z").eq("member_id", memberId).maybeSingle(),
+        db.from("member_homes").select("rooms_count, outdoor, revision").eq("member_id", memberId).maybeSingle(),
         db.from("member_home_rooms").select("room_index, room_id, wallpaper, flooring, items").eq("member_id", memberId),
       ]);
       if (home.error) raise(home.error);
@@ -27,7 +27,6 @@ export function supabaseHomesStore(db: SupabaseClient): HomesStore {
         rooms_count: count,
         layout: assembleLayout(count, (rooms.data ?? []) as never, h.outdoor ?? []),
         revision: typeof h.revision === "number" ? h.revision : 0,
-        mailbox: typeof h.mailbox_x === "number" ? [h.mailbox_x, h.mailbox_z as number] : DEFAULT_MAILBOX,
       };
     },
     async saveLayout(memberId, base, key, doc) {
