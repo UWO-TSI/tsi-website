@@ -3,6 +3,14 @@
 > Read this before `AGENT_LOG.md`. It answers "which branch, what's live, what's next"
 > in one page. Update it whenever direction changes. Last updated **2026-09-17**.
 
+## Game branch (2026-09-26)
+
+- **Where:** `feat/game-default-island` (worktree `.claude/worktrees/restart-art-cohesion`), draft PR into `main`, not merged, not deployed. Contains `main` through PR #41. Rollback point: `wip/game-snapshot-2026-09-26` (d890a24). Decisions: `specs/game-world-development-plan.md`; order of work: `specs/development-roadmap.md`.
+- **Built (local only, in-memory or throwaway Postgres):** island core (Toronto time with real sunrise/sunset, seasons, weather, quality tiers), progression (chapters, club goals, letters, notice board, admin editors), homes (islet, rooms, decorating), peaceful loop (rod tiers, bugs, foraging, museum, wardrobe), study (Pomodoro tables, companion page), economy (wallet ledger, shop, selling, merch), Oracle and identity (64-item reading, families, display names, settings), combat foundation (XP curve, kits, ruins, missions). Base body v6 and the hair library are in `art/characters/`, awaiting review.
+- **Shared code:** the applicant island on `main` and the member island use one implementation of the game components (`PlayerAvatar`/`HQInterior` `avatarMode`, `collectionScope`, `islandLighting`, `clubhouse`). Change them for both.
+- **Migration drafts, unapplied, apply in this order after every `main` migration:** `20260926150000_game_coins`, `150100_seasonal_seed`, `150200_progression`, `150300_homes`, `150400_collections`, `150500_study`, `150600_economy`, `150700_identity`, `150800_combat` (all `20260926…`). Smoke chain and results: `specs/evidence/phase0/sql-smoke.md`. Open: `main`'s profiles guard lets members edit `class`/`subclass`, which the identity draft treats as server-only.
+- **Run the demos:** `cd web && npm run dev`, then `/lab/island` (member island, dev only; 404 in production). URL overrides: `?time=dawn|day|evening|night|18.5`, `?weather=rain|snow|fog|wind`, `?season=winter` or `?season=autumn-winter:0.5`, `?hq=inside`, `?museum=inside`, `?temple=inside`, `?home=1` or `?home=inside`, `?decorate=1&place=<piece>`, `?ruins=1`, `?mission=<id>`, `?at=x,z`. System harnesses: `/dev/systems`, `/dev/progression`, `/dev/economy`, `/dev/oracle`, `/dev/combat`. Applicant island: `/student/apply/portal?preview=1`.
+
 ## Reviewer tabs in the recruitment workbook (2026-09-18, PR #36)
 
 - David's 10 PMs and 5 VPs read applications in Google Sheets and discuss them with cell comments, not on the portal. The workbook now has **All applicants**, **Developers**, **Internal**, **External**, **Marketing** (one per live role, the role's questions verbatim as headers). No IDs, statuses, tags or admin notes; profile, submitted time, resume link (signed, 45 days, refreshed on every delivery), LinkedIn, other links, portfolio/creative file links, commitments, and for developers the project picks and reason.
@@ -164,7 +172,7 @@ Rule going forward (David's standing preference): short-lived branch per task, P
 ## Migrations
 
 - Applied on prod: `001_initial_schema` … `023_member_collections` (verified 2026-07-03 with David watching; `bounty_submissions` restored then).
-- Drafted, **not applied**, on the game branch: `024_game_coins.sql`, `025_seasonal_seed.sql`.
+- Drafted, **not applied**, on the game branch: nine `20260926150000`–`20260926150800` drafts (see "Game branch" above; formerly 024, 025, 029–035).
 - **Applied 2026-09-05:** `026_bounty_deliverables_rls.sql` and `028_recruitment_archive.sql` (SQL editor, David, 06:49 UTC); `027_recruitment_fall_2026.sql`'s data half via `scripts/_apply-fall-2026-positions.mjs` (service-role API). The 027 file is guarded so re-running it is a no-op.
 - **Next free slot: `029_*`.** Never edit an applied migration.
 

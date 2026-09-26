@@ -9,6 +9,7 @@ UWO-TSI (Tethos) website + student portal. Two product surfaces:
 1. **Marketing site** (`web/app/(site)/`, `web/app/student/page.tsx`) — public landing pages. Stable.
 2. **Recruitment system** (`web/app/student/apply/`, `web/components/recruit/`, `web/components/admin/`) — 2026-27 exec hiring portal. Live in production. **Current focus** (fall round + gamified apply); otherwise do not touch unless tasked.
 3. **Student game portal** (`web/app/student/dashboard/`, `web/components/game/`, `web/components/portal/`) — a 2.5D MMO RPG game world for active TSI members. **Pushed back as of 2026-09-02**; tip parked on `feat/acnh-tile-grid`. Single-player MVP, multiplayer (Colyseus) deferred.
+   **Superseded 2026-09-26:** the member game is active again on `feat/game-default-island` (draft PR, not merged). Its decisions live in `specs/game-world-development-plan.md` (ledger rows 1–231) and its sequence in `specs/development-roadmap.md`; both override this file where they differ. The applicant island is live on `main` and shares its rendering code with the member island. See `STATE.md` → "Game branch".
 
 ## Your role
 
@@ -33,7 +34,7 @@ Background on why the world model changed: `specs/investigation-2026-07-26-found
 
 ## Project vision (TL;DR)
 
-- **Style:** 2D sprite characters in a 3D world (Dave the Diver, Octopath Traveler). PS1 shader + ACNH curved-world shader.
+- **Style:** ~~2D sprite characters in a 3D world~~ retired by ledger row 105: characters are low-poly 3D models on one shared rig. PS1 shader + ACNH curved-world shader.
 - **Map:** 2-3 screens wide. Buildings (HQ, Shop, Oracle Temple) you enter; objects (Bounty Board, Job Board) open overlays.
 - **5-tier RBAC:** T1 David / T2 chapter presidents / T3 PMs+VPs / T4 directors+devs / T5 volunteers+general.
 - **MBTI class system:** 4 main classes (as implemented: Warrior/Mage/Healer/Rogue, colors in `specs/ux-classes.md`) + 16 subclasses, assigned via the Oracle Temple quiz. The gamified apply flow reuses the same mapping.
@@ -138,7 +139,7 @@ cover layer.
 | Dashboard pages (overlays) | `web/app/student/dashboard/*/page.tsx` |
 | Supabase clients | `web/lib/supabase/{client,server,admin}.ts` |
 | DB types | `web/lib/supabase/types.ts` |
-| Migrations | `web/supabase/migrations/` (portal: 001_initial, 002-008, 014-023; recruitment: 001_recruitment, 009-013, 027; 024/025 are unapplied drafts on the game branch). Status table in `STATE.md` |
+| Migrations | `web/supabase/migrations/` (portal: 001_initial, 002-008, 014-023; recruitment: 001_recruitment, 009-013, 027; timestamped since 2026-09-16). The game drafts `20260926150000_*`–`20260926150800_*` are unapplied. Status in `STATE.md` |
 | Design tokens | `web/styles/game-tokens.css` |
 | Historical 5-agent log | `archive/logs/AGENT_LOG-2026-03-27-to-04-06.md` |
 | Deprecated specs | `archive/specs/` |
@@ -173,9 +174,11 @@ Consequences for anyone working on terrain:
 
 These guide every scope and design decision. When trade-offs arise, choose the option that satisfies these. Confirmed by David.
 
+> **Partly superseded (2026-09-26).** Principle 3 is overridden by ledger rows 11, 23, 76, 200 and 225 (XP from play and missions as well as IRL, play coins from in-game activity, a daily login gift). Rows 74–75 open study tables and the wider game to public accounts. Where this list and `specs/game-world-development-plan.md` disagree, the ledger wins; `specs/development-roadmap.md` has the build order.
+
 1. **Community over productivity.** The portal is a 3D hangout, not a productivity tool. Bounties, jobs, leaderboards are features inside the hangout, not the engagement engine. When you have to pick: more social presence, less task throughput.
 2. **The world must never feel empty.** AI NPCs always populate the world, scaling inversely with real-player count. Ghost-replay of recent member positions if multiplayer isn't on. No empty-world states ever ship.
-3. **XP rewards IRL, TC rewards money-equivalent value.** XP comes only from in-person event attendance (QR check-in) and special admin grants. TC comes only from delivering monetary-value work (bounties, paid projects). **Never reward online activity** — no login streaks, no "visited a building" XP, no Habitica grinding.
+3. **(Superseded, see above.) XP rewards IRL, TC rewards money-equivalent value.** XP comes only from in-person event attendance (QR check-in) and special admin grants. TC comes only from delivering monetary-value work (bounties, paid projects). **Never reward online activity** — no login streaks, no "visited a building" XP, no Habitica grinding.
 4. **Cosmetic > functional class system.** MBTI classes and avatar customization are flair, not mechanics. Don't gate features behind class. Rich cosmetic + class identity is a late-game build (Phase 3+).
 5. **Mobile-aware, always.** No feature ships that's fundamentally desktop-only. Mobile members may get a stripped "view + emote + chat" mode, but they must be able to *appear online* on their phone.
 6. **Leaderboard: top half public, bottom half private.** Bottom-half members see only their own rank and anonymized neighbors. Privacy default.
@@ -192,7 +195,7 @@ These guide every scope and design decision. When trade-offs arise, choose the o
 - `npm run dev` may fall back to port 3001 if 3000 is taken.
 - Game world uses `next/dynamic` with `ssr: false` — `BAILOUT_TO_CLIENT_SIDE_RENDERING` in SSR output is expected, not an error.
 - Middleware gracefully handles missing Supabase env vars — dev works without `.env.local`.
-- **Never** edit applied migrations. Add new ones (next free slot: `028_*`; see `STATE.md`).
+- **Never** edit applied migrations. New migrations use a `YYYYMMDDHHMMSS_` timestamp after the latest one on `main` (see `STATE.md`).
 - **Never** reveal the TC ≈ CAD conversion rate in user-facing strings.
 - Build agents: when scope is unclear, ask reviewer (David) before guessing. Don't add features the spec doesn't list.
 
