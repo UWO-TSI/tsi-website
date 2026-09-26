@@ -35,10 +35,13 @@ function itemCentre(i: number, n: number, item: PlacedItem): [number, number] {
 }
 /** home-bed's comforter top at scale 0.1, measured from the GLB. */
 const BED_TOP = 0.58;
-/** `tsi:sit` Sleep spots: each bed's middle, head toward its pillow end (model −x, turned with the bed). */
+/**
+ * `tsi:sit` Sleep spots: each bed's middle, head toward its pillow end (model −x, turned with the bed).
+ * Sleep lies with the head toward −z at yaw 0, so a quarter turn lines it up with an unturned bed.
+ */
 const beds = (layout: HomeLayoutDoc) => layout.rooms.flatMap((room, i) => room.items.filter(item => item.piece === "home-bed").map(item => {
   const [x, z] = itemCentre(i, layout.rooms.length, item);
-  return { x, z, clip: "Sleep" as const, seatY: BED_TOP, yaw: Math.PI + item.rot * Math.PI / 2 };
+  return { x, z, clip: "Sleep" as const, seatY: BED_TOP, yaw: Math.PI / 2 + item.rot * Math.PI / 2 };
 }));
 export const nearestBed = (layout: HomeLayoutDoc, x: number, z: number) =>
   beds(layout).sort((a, b) => Math.hypot(a.x - x, a.z - z) - Math.hypot(b.x - x, b.z - z))[0] ?? null;
@@ -113,7 +116,8 @@ export default function HomeInterior({ layout, phase, frozen, player, onNear, de
     // Every closet is a wardrobe (decision 210): stand at it and press E.
     ...layout.rooms.flatMap((room, i) => room.items.filter(item => item.piece === "closet")
       .map(item => ({ id: "closet", name: "Closet", pos: itemCentre(i, n, item), action: "closet", range: 1.6 }))),
-    ...beds(layout).map(b => ({ id: "bed", name: "Bed", pos: [b.x, b.z] as [number, number], action: "bed", range: 1.6 })),
+    // From the bed's middle: a 2-cell bed needs the longer reach to be usable from its pillow or foot end.
+    ...beds(layout).map(b => ({ id: "bed", name: "Bed", pos: [b.x, b.z] as [number, number], action: "bed", range: 2 })),
     ...(n < MAX_ROOMS ? [{ id: "buy", name: "Add a room", pos: [roomLeft(n - 1, n) - RW + 1.2, 0] as [number, number], action: "buy", range: 1.4 }] : []),
   ], [layout, n, spawnX]);
   const nearRef = useRef<HouseNear>(null);

@@ -12,7 +12,7 @@ export type ClipName = "Idle" | "Walk" | "Run" | "Sit" | "Study" | "Sleep" | "Fi
 
 /**
  * Clips assembled at load until Blender ones exist: `from`'s hips and legs
- * with `upper`'s arms, neck and head. Stretch is the study break at the seat
+ * with `upper`'s arms, neck and head, slowed to `from`'s length. Stretch is the study break at the seat
  * (study row 166): seated legs with Cheer's arms-up.
  */
 export const DERIVED_CLIPS: Partial<Record<ClipName, { from: ClipName; upper: ClipName }>> = { Stretch: { from: "Sit", upper: "Cheer" } };

@@ -17,11 +17,11 @@
 @media (max-height: 759px) and (min-width: 701px) {
   .panel { width: 360px; }
   main:has([data-minimap]) .panel { max-height: max(64px, calc(100% - 600px)); }
-  .timer { display: flex; align-items: center; gap: 10px; padding: 8px 10px 8px 14px; }
+  .panel .timer { display: flex; align-items: center; gap: 10px; padding: 8px 10px 8px 14px; }
   .timer > :not(.phase, .clock, .actions), .timer .phase span { display: none; }
   .timer .clock { margin: 0; font-size: 24px; }
   .timer .actions { margin: 0 0 0 auto; flex-wrap: nowrap; }
-  .timer .actions button { min-height: 38px; padding: 0 12px; font-size: 13px; }
+  .timer .actions button { min-height: 38px; padding: 0 12px; font-size: 13px; white-space: nowrap; }
 }
 
 /* Beside the seated avatar (screen centre), not over it. */

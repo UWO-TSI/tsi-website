@@ -20,7 +20,11 @@ export function useWorldClips(motion: RefObject<CharacterMotion>, face: (x: numb
     const on: Record<string, (e: Event) => void> = {
       "tsi:fish-cast": e => { const d = (e as CustomEvent<{ x: number; z: number }>).detail; if (d) face(d.x, d.z); set({ play: "Fish", pose: "FishHold" }); },
       "tsi:fish-end": () => { if (motion.current.pose === "FishHold") set({ pose: null }); },
-      "tsi:peaceful-act": () => set({ play: ACT_CLIP[getPeacefulTarget()?.kind ?? "forage"] }),
+      "tsi:peaceful-act": () => {
+        const t = getPeacefulTarget();
+        if (t?.at) face(t.at[0], t.at[1]);
+        set({ play: ACT_CLIP[t?.kind ?? "forage"] });
+      },
       "tsi:flower-pick": () => set({ play: "Forage" }),
       "tsi:critter-catch": () => set({ play: "Net" }),
       "tsi:emote": e => { const clip = (e as CustomEvent<{ clip: ClipName }>).detail?.clip; if (clip && CLIP_BY_NAME.has(clip)) set({ play: clip }); },

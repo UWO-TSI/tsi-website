@@ -49,8 +49,9 @@ function withDerived(animations: THREE.AnimationClip[]) {
   set = new Map(animations.map(c => [c.name, c]));
   for (const [name, { from, upper }] of Object.entries(DERIVED_CLIPS)) {
     const a = set.get(from), b = set.get(upper);
-    if (a && b) set.set(name, new THREE.AnimationClip(name, Math.max(a.duration, b.duration),
-      [...a.tracks.filter(t => !isUpperBodyTrack(t.name)), ...b.tracks.filter(t => isUpperBodyTrack(t.name))]));
+    // The upper body is slowed to the base clip's length, so the arms rise and settle once per loop.
+    if (a && b) set.set(name, new THREE.AnimationClip(name, a.duration,
+      [...a.tracks.filter(t => !isUpperBodyTrack(t.name)), ...b.tracks.filter(t => isUpperBodyTrack(t.name)).map(t => t.clone().scale(a.duration / b.duration))]));
   }
   clipSets.set(animations, set);
   return set;

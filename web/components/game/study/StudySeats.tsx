@@ -72,7 +72,7 @@ function MateFigure({ mate, seat, floor, remaining }: { mate: Mate; seat: WorldS
   </group>;
 }
 
-/** Your own countdown, riding above the avatar (row 78). */
+/** Your own countdown, just above your nameplate (row 78); any higher it covers the seat-mate across a four-seat table (ruling 6). */
 function MyOverhead({ player }: { player: React.RefObject<THREE.Vector3> }) {
   const group = useRef<THREE.Group>(null);
   const session = useWorldStudy(w => w.study?.session ?? null);
@@ -80,7 +80,7 @@ function MyOverhead({ player }: { player: React.RefObject<THREE.Vector3> }) {
   useFrame(() => { if (group.current) group.current.position.copy(player.current); });
   if (!session || session.phase === "seated") return null;
   return <group ref={group}>
-    <Html calculatePosition={calculateCurvedHtmlPosition} position={[0, 2.4, 0]} center zIndexRange={[45, 0]} style={{ pointerEvents: "none" }}>
+    <Html calculatePosition={calculateCurvedHtmlPosition} position={[0, 2.05, 0]} center zIndexRange={[45, 0]} style={{ pointerEvents: "none" }}>
       <Overhead phase={session.phase} remaining={remaining} />
     </Html>
   </group>;

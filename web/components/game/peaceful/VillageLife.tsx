@@ -117,7 +117,7 @@ export default function VillageLife({ nodes, bugNodes, moment, member, player, g
     for (const { n, sp } of forage) {
       const d = Math.hypot(n.x - p.x, n.z - p.z);
       if (hasClue(sp) && d < 5 && !chimed.current.has(n.id)) { chimed.current.add(n.id); AudioManager.playSFX("blip3"); }
-      if (d < REACH && (!best || d < best.distance)) best = { id: n.id, kind: sp!.tool === "shovel" ? "dig" : "forage", label: n.canopy ? "Shake the tree" : sp!.category === "mineral" ? "Strike the rock" : buried(sp!) ? "Dig it up" : sp!.sub === "shell" ? "Pick up the shell" : "Pick it", distance: d };
+      if (d < REACH && (!best || d < best.distance)) best = { id: n.id, kind: sp!.tool === "shovel" ? "dig" : "forage", label: n.canopy ? "Shake the tree" : sp!.category === "mineral" ? "Strike the rock" : buried(sp!) ? "Dig it up" : sp!.sub === "shell" ? "Pick up the shell" : "Pick it", distance: d, at: [n.x, n.z] };
     }
     const t = clock.elapsedTime;
     for (const bug of bugState.current.values()) {
