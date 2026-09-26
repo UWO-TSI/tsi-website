@@ -80,6 +80,8 @@ export const combat = { rt: createRuntime(), freeze: false };
 let version = 0;
 const listeners = new Set<() => void>();
 export function publishCombat() { version++; for (const l of listeners) l(); }
+// Dev (screenshots): the runtime and a publish, in the village as well as the ruins.
+if (process.env.NODE_ENV !== "production" && typeof window !== "undefined") Object.assign(window, { __combat: combat, __publishCombat: publishCombat });
 export function useCombatVersion(): number {
   return useSyncExternalStore(l => { listeners.add(l); return () => { listeners.delete(l); }; }, () => version, () => 0);
 }
