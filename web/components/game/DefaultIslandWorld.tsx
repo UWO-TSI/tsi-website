@@ -72,7 +72,8 @@ import { catalogueItem } from "@/lib/homes/catalogue";
 import { ROOM_PRICE } from "@/lib/homes/layout";
 import { PROBE_FRAMES, PROBE_WARMUP, medianFrameMs, tierForFrameMs, type QualityTier } from "@/lib/game/qualityTier";
 import { ISLAND_PHASES, type IslandPhase } from "@/lib/game/islandTime";
-import { HQ_CLOCK, HQ_LAYOUT, HQ_BOARD_APPROACH, constrainClubhouse } from "@/lib/game/clubhouse";
+import { HQ_CLOCK, HQ_LAYOUT, HQ_BOARD_APPROACH } from "@/lib/game/clubhouse";
+import CraftingSheet, { BeachBottle, Workbench, constrainWorkshop } from "./crafting/Workshop";
 import StudySeats from "./study/StudySeats";
 import StudyHud from "./study/StudyHud";
 import CafeInterior from "./study/CafeInterior";
@@ -231,6 +232,7 @@ function IslandScene({ identity, devAt, exitFrom, peaceful, fishSpot, fishing, c
       <GridWorld map={island.map} water={light.water} palette={terrain} windScale={liteMode ? 0 : weather === "wind" ? 2.2 : 1} />
       <GridOcean map={island.map} />
       <PeacefulLayer map={island.map} nodes={VILLAGE_NODES} moment={peaceful.moment} member={peaceful.member} player={player} ground={island.ground} highTier={!liteMode} active={!fishing} />
+      <BeachBottle player={player} ground={island.ground} />
       <BlobShadows placements={plantShadows} opacity={0.16} />
       {!castShadows && <BlobShadows placements={solidShadows} opacity={0.45} />}
       <StudySeats area="village" player={player} ground={island.ground} />
@@ -365,8 +367,9 @@ function Clubhouse({ phase, player, frozen, onNear }: { phase: IslandPhase; play
   useEffect(() => { player.current.set(0, 0, -4.2); camera.position.set(0, 8.4, -11.4); onNear("exit"); }, [camera, onNear, player]);
   const station = useCallback((s: InteriorStation | null) => onNear((s?.id as Near) ?? null), [onNear]);
   return <>
-    <HQInterior clubhouse phase={phase} floorTexture={floor} frozen={frozen} playerPosRef={player} onNearestStation={station} stations={CLUBHOUSE_STATIONS} constrainMove={constrainClubhouse} />
+    <HQInterior clubhouse phase={phase} floorTexture={floor} frozen={frozen} playerPosRef={player} onNearestStation={station} stations={CLUBHOUSE_STATIONS} constrainMove={constrainWorkshop} />
     <BotanicalFrames />
+    <Workbench player={player} />
   </>;
 }
 
@@ -647,6 +650,7 @@ function DefaultIslandWorldContent() {
       <DonateSheet open={donateOpen} onClose={() => setDonateOpen(false)} onDonated={loadMuseum} />
       <ToastHub />
       <StudyHud />
+      <CraftingSheet />
       <CollectionBook open={bagOpen} onClose={() => setBagOpen(false)} />
       {!bagOpen && <button className={styles.bagButton} onClick={() => setBagOpen(true)} aria-label="Open your collection journal"><kbd>{keyLabel(identity.settings.key_bindings.openJournal)}</kbd> Journal</button>}
       {mapOpen && !inside && !atHome && site !== "ruins" && <div className={styles.minimap}>

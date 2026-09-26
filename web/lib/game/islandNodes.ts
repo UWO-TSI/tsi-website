@@ -7,9 +7,14 @@ import type { NodeSpec } from "@/components/game/peaceful/VillageLife";
 import { ISLAND_FLOWERS, ISLAND_PROPS, ISLAND_RADII, ISLAND_TREES, createDefaultIsland } from "./defaultIsland";
 import { HOME_FLOWERS, HOME_RADII, HOME_TREES, createHomeIsland } from "./homeIsland";
 import { isGroundAtWorld } from "./grid";
+import { MATERIALS } from "@/lib/crafting/recipes";
 
 /** Village tree seeds (DefaultIslandWorld TREE_SEEDS): seed % 4 === 3 is a cedar, which bears no fruit. */
 const VILLAGE_TREE_SEEDS = [0, 3, 2, 5, 7, 8, 1, 3];
+/** Any tree can be shaken for a branch (crafting); a fruit tree gives its fruit first. */
+const BRANCH = MATERIALS.find(m => m.key === "wood_branch")!;
+const branchNodes = (trees: readonly (readonly [number, number])[], prefix: string) =>
+  trees.map(([x, z], i): NodeSpec => ({ id: `${prefix}branch-${i}`, x, z: z - 0.9, biomes: ["trees"], categories: ["mineral"], canopy: true, drop: BRANCH }));
 const beachRing = (radii: { x: number; z: number }, count: number, r = 0.92, phase = 0.4): [number, number][] =>
   Array.from({ length: count }, (_, i) => { const a = phase + (i / count) * Math.PI * 2; return [Math.cos(a) * radii.x * r, Math.sin(a) * radii.z * r]; });
 
@@ -28,7 +33,14 @@ export function villageNodes(): { forage: NodeSpec[]; bugs: NodeSpec[] } {
     ...[[-3, -13], [4, -12], [10, -13]].map(([x, z], i): NodeSpec => ({ id: `bug-ground-${i}`, x, z, biomes: ["ground"], categories: ["bug"] })),
   ];
   const onLand = (n: NodeSpec) => isGroundAtWorld(land, n.x, n.z);
-  return { forage: [...fruit, ...shells, ...rocks, ...woods, ...flowers].filter(onLand), bugs: bugs.filter(onLand) };
+  return { forage: [...fruit, ...shells, ...rocks, ...woods, ...flowers, ...branchNodes(ISLAND_TREES, "")].filter(onLand), bugs: bugs.filter(onLand) };
+}
+
+/** Where today's message bottle washes up (crafting): one of the beach spots between the shells, by Toronto day. */
+export function villageBottleSpot(day: string): [number, number] {
+  const land = createDefaultIsland().map;
+  const spots = beachRing(ISLAND_RADII, 8, 0.92, 0.4 + Math.PI / 8).filter(([x, z]) => z < 12 && isGroundAtWorld(land, x, z));
+  return spots[[...day].reduce((h, c) => h * 31 + c.charCodeAt(0), 7) % spots.length];
 }
 
 export function homeNodes(): { forage: NodeSpec[]; bugs: NodeSpec[] } {
@@ -37,5 +49,5 @@ export function homeNodes(): { forage: NodeSpec[]; bugs: NodeSpec[] } {
   const shells = beachRing(HOME_RADII, 5, 0.9, 1.2).filter(([x, z]) => z < 6 && isGroundAtWorld(land, x, z)).map(([x, z], i): NodeSpec => ({ id: `home-shell-${i}`, x, z, biomes: ["beach"], categories: ["nature"] }));
   const bugs = HOME_FLOWERS.map(([x, z], i): NodeSpec => ({ id: `home-bug-${i}`, x, z, biomes: ["flowers"], categories: ["bug"] }));
   const onLand = (n: NodeSpec) => isGroundAtWorld(land, n.x, n.z);
-  return { forage: [...fruit, ...shells].filter(onLand), bugs: bugs.filter(onLand) };
+  return { forage: [...fruit, ...shells, ...branchNodes(HOME_TREES, "home-")].filter(onLand), bugs: bugs.filter(onLand) };
 }

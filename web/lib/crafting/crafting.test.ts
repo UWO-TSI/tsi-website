@@ -14,6 +14,7 @@ import { craft, learnFromQuest, openBottle, recipeBook } from "./service";
 const A = "00000000-0000-4000-8000-0000000000aa";
 const noon = new Date("2026-09-24T16:00:00Z");
 const ROD4 = RECIPES.find(r => r.id === "rod-lighthouse")!;
+const data = async <T,>(p: Promise<{ ok: true; data: T } | { ok: false; error: string }>) => { const r = await p; if (!r.ok) throw new Error(r.error); return r.data; };
 const setup = (clock = () => noon) => {
   const m = memoryCraftingStore(undefined, clock);
   const stock = (key: string) => m.eco.store.collections(A).then(rows => rows.find(r => r.item_key === key)?.count ?? 0);
@@ -49,7 +50,7 @@ describe("crafting", () => {
     m.fill(ROD4);
     expect(await craft(m.store, A, { recipe_id: ROD4.id, idempotency_key: "craft-0001" })).toMatchObject({ ok: false, code: "not_learned" });
     expect(await m.stock("wood_branch")).toBe(6);
-    expect((await recipeBook(m.store, A, noon)).data?.recipes.map(r => r.id)).not.toContain(ROD4.id);
+    expect((await data(recipeBook(m.store, A, noon))).recipes.map(r => r.id)).not.toContain(ROD4.id);
     await learnFromQuest(m.store, A, ROD4.id);
     expect(await craft(m.store, A, { recipe_id: ROD4.id, idempotency_key: "craft-0001" })).toMatchObject({ ok: true, data: { name: "Lighthouse rod", replayed: false } });
   });
@@ -59,7 +60,7 @@ describe("crafting", () => {
     await learnFromQuest(m.store, A, ROD4.id);
     m.fill(ROD4);
     m.eco.give(A, "sea_pearl_oyster", -1);
-    const book = (await recipeBook(m.store, A, noon)).data!;
+    const book = (await data(recipeBook(m.store, A, noon)));
     expect(book.recipes.find(r => r.id === ROD4.id)).toMatchObject({ can_craft: false });
     expect(book.recipes.find(r => r.id === ROD4.id)!.ingredients.find(i => i.key === "sea_pearl_oyster")).toMatchObject({ need: 1, have: 0 });
     expect(await craft(m.store, A, { recipe_id: ROD4.id, idempotency_key: "craft-0002" })).toMatchObject({ ok: false, code: "insufficient_items" });
@@ -77,7 +78,7 @@ describe("crafting", () => {
     expect(first).toMatchObject({ ok: true, data: { replayed: false, qty: 1 } });
     expect(again).toMatchObject({ ok: true, data: { replayed: true, qty: 1 } });
     expect(await m.stock("wood_branch")).toBe(8);
-    const furniture = (await getInventory(m.eco.store, A)).data!.groups.furniture;
+    const furniture = (await data(getInventory(m.eco.store, A))).groups.furniture;
     expect(furniture.find(r => r.item.slug === "furn-study-chair")!.qty).toBe(1);
     expect(await craft(m.store, A, { recipe_id: "acc-straw-hat", idempotency_key: "craft-0003" })).toMatchObject({ ok: false, code: "key_reused" });
     // A new key crafts a second chair (stackable); a second straw hat is refused (one per member).
@@ -90,7 +91,7 @@ describe("crafting", () => {
 
   it("unlocks the legendary fishing gate only by crafting rods 4-5", async () => {
     const m = setup();
-    const rodOf = async () => bestOwnedRod((await getInventory(m.eco.store, A)).data!.groups.tools?.flatMap(r => r.item.catalogue_ref ?? []) ?? []);
+    const rodOf = async () => bestOwnedRod((await data(getInventory(m.eco.store, A))).groups.tools?.flatMap(r => r.item.catalogue_ref ?? []) ?? []);
     expect((await rodOf()).tier).toBe(1);
     expect(canHook("legendary", await rodOf())).toBe(false);
     // Not for sale, whatever the price.
@@ -124,15 +125,15 @@ describe("learning", () => {
   it("opens one message bottle a Toronto day with a recipe you lack", async () => {
     let now = noon;
     const m = setup(() => now);
-    expect((await recipeBook(m.store, A, now)).data!.bottle.available).toBe(true);
-    const first = (await openBottle(m.store, A)).data!;
+    expect((await data(recipeBook(m.store, A, now))).bottle.available).toBe(true);
+    const first = (await data(openBottle(m.store, A)));
     expect(RECIPES.find(r => r.id === first.id)!.sources).toContain("bottle");
-    expect((await openBottle(m.store, A)).data).toEqual({ ...first, replayed: true });
-    const book = (await recipeBook(m.store, A, now)).data!;
+    expect(await data(openBottle(m.store, A))).toEqual({ ...first, replayed: true });
+    const book = (await data(recipeBook(m.store, A, now)));
     expect(book.bottle.available).toBe(false);
     expect(book.recipes.find(r => r.id === first.id)).toMatchObject({ source: "bottle" });
     now = new Date("2026-09-25T16:00:00Z");
-    const next = (await openBottle(m.store, A)).data!;
+    const next = (await data(openBottle(m.store, A)));
     expect(next.id).not.toBe(first.id);
     expect(next.replayed).toBe(false);
   });
@@ -143,13 +144,13 @@ describe("learning", () => {
     const id = m.eco.items.find(i => i.slug === card.slug)!.id;
     m.eco.fund(A, 1000);
     expect(await buy(m.eco.store, A, { item_id: id, qty: 1, idempotency_key: "buy-card-1" }, noon)).toMatchObject({ ok: true });
-    const book = (await recipeBook(m.store, A, noon)).data!;
+    const book = (await data(recipeBook(m.store, A, noon)));
     expect(book.recipes.find(r => `recipe:${r.id}` === card.catalogue_ref)).toMatchObject({ source: "shop" });
   });
 
   it("knows the starter recipes from day one", async () => {
     const m = setup();
-    const book = (await recipeBook(m.store, A, noon)).data!;
+    const book = (await data(recipeBook(m.store, A, noon)));
     expect(book.recipes.map(r => r.source)).toEqual(RECIPES.filter(r => r.sources.includes("starter")).map(() => "starter"));
     expect(book.total).toBe(RECIPES.length);
   });
