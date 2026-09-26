@@ -18,18 +18,37 @@ import ImageUploadButton from "@/components/portal/ImageUploadButton";
 //                   uniqueness skips the current slug.
 
 const SLUG_REGEX = /^[a-z0-9-]+$/;
-const CATEGORIES: ShopCategory[] = [
+// 033_economy.sql widened the categories; merch is always priced in Gems,
+// everything else in play coins or Gems. No real-money price exists.
+type EditorCategory = ShopCategory | "tool" | "outfit" | "hair" | "accessory" | "furniture" | "wallpaper" | "flooring";
+const CATEGORIES: EditorCategory[] = [
+  "tool",
+  "outfit",
+  "hair",
+  "accessory",
+  "furniture",
+  "wallpaper",
+  "flooring",
+  "merch",
   "avatar-outfit",
   "avatar-effect",
-  "merch",
   "profile-customization",
 ];
+const TIERS = ["", "basic", "mid", "premium"] as const;
+const SLOTS = ["", "rod", "net", "shovel", "outfit", "hair", "accessory"] as const;
+type EconomyFields = { price_coins?: number | null; tier?: string | null; slot?: string | null; special_pool?: boolean; stackable?: boolean; catalogue_ref?: string | null };
 const RARITIES: Rarity[] = ["common", "rare", "epic", "legendary"];
 
 interface FormState {
   slug: string;
   display_name: string;
-  category: ShopCategory;
+  category: EditorCategory;
+  currency: "coins" | "gems";
+  tier: string;
+  slot: string;
+  special_pool: boolean;
+  stackable: boolean;
+  catalogue_ref: string;
   sprite_url: string;
   description: string;
   tc_price: string;
@@ -44,7 +63,7 @@ interface FormState {
 interface ShopEditorProps {
   mode: "new" | "edit";
   rowId?: string;
-  initial?: Partial<ShopItem> | null;
+  initial?: (Partial<ShopItem> & EconomyFields) | null;
 }
 
 function toLocalDatetime(iso: string | null | undefined): string {
@@ -72,6 +91,12 @@ function makeEmptyForm(): FormState {
     slug: "",
     display_name: "",
     category: "merch",
+    currency: "gems",
+    tier: "",
+    slot: "",
+    special_pool: false,
+    stackable: false,
+    catalogue_ref: "",
     sprite_url: "",
     description: "",
     tc_price: "0",
@@ -84,16 +109,24 @@ function makeEmptyForm(): FormState {
   };
 }
 
-function toFormState(row: Partial<ShopItem> | null | undefined): FormState {
+function toFormState(row: (Partial<ShopItem> & EconomyFields) | null | undefined): FormState {
   if (!row) return makeEmptyForm();
+  const coinPriced = row.price_coins !== null && row.price_coins !== undefined;
   return {
     slug: row.slug ?? "",
     display_name: row.display_name ?? "",
-    category: (row.category as ShopCategory) ?? "merch",
+    category: (row.category as EditorCategory) ?? "merch",
+    currency: coinPriced ? "coins" : "gems",
+    tier: row.tier ?? "",
+    slot: row.slot ?? "",
+    special_pool: row.special_pool ?? false,
+    stackable: row.stackable ?? false,
+    catalogue_ref: row.catalogue_ref ?? "",
     sprite_url: row.sprite_url ?? "",
     description: row.description ?? "",
-    tc_price:
-      row.tc_price === undefined || row.tc_price === null
+    tc_price: coinPriced
+      ? String(row.price_coins)
+      : row.tc_price === undefined || row.tc_price === null
         ? "0"
         : String(row.tc_price),
     rarity: (row.rarity as Rarity) ?? "common",
@@ -181,7 +214,14 @@ export default function ShopEditor({ mode, rowId, initial }: ShopEditorProps) {
           category: form.category,
           sprite_url: form.sprite_url.trim() || null,
           description: form.description.trim() || null,
-          tc_price: Number.parseInt(form.tc_price, 10),
+          // One price per item (033 shop_items_one_price): Gems in tc_price, coins in price_coins.
+          tc_price: form.currency === "gems" ? Number.parseInt(form.tc_price, 10) : null,
+          price_coins: form.currency === "coins" ? Number.parseInt(form.tc_price, 10) : null,
+          tier: form.tier || null,
+          slot: form.slot || null,
+          special_pool: form.special_pool,
+          stackable: form.stackable,
+          catalogue_ref: form.catalogue_ref.trim() || null,
           rarity: form.rarity,
           stock: stockValue,
           active: form.active,
@@ -341,7 +381,7 @@ export default function ShopEditor({ mode, rowId, initial }: ShopEditorProps) {
           <select
             value={form.category}
             onChange={(e) =>
-              update("category", e.target.value as ShopCategory)
+              update("category", e.target.value as EditorCategory)
             }
             className={inputCls}
           >
@@ -403,7 +443,34 @@ export default function ShopEditor({ mode, rowId, initial }: ShopEditorProps) {
           </p>
         </Field>
 
-        <Field label="Gem Price" error={errors.tc_price}>
+        <Field label="Priced in" hint="Merch is always Gems (campus pickup). Everything else can be play coins or Gems." error={errors.currency}>
+          <select value={form.currency} onChange={(e) => update("currency", e.target.value as FormState["currency"])} className={inputCls}>
+            <option value="coins">Play coins</option>
+            <option value="gems">Gems</option>
+          </select>
+        </Field>
+
+        <div className="grid gap-5 md:grid-cols-2">
+          <Field label="Tier" hint="Tools: basic / mid / premium">
+            <select value={form.tier} onChange={(e) => update("tier", e.target.value)} className={inputCls}>
+              {TIERS.map((t) => <option key={t} value={t}>{t || "none"}</option>)}
+            </select>
+          </Field>
+          <Field label="Equip slot" hint="One equipped item per slot">
+            <select value={form.slot} onChange={(e) => update("slot", e.target.value)} className={inputCls}>
+              {SLOTS.map((t) => <option key={t} value={t}>{t || "none"}</option>)}
+            </select>
+          </Field>
+        </div>
+
+        <Field label="Catalogue ref" hint="Homes piece id (e.g. lounge-sofa), wallpaper/flooring key, or legacy gear key (rod_cedar).">
+          <input type="text" value={form.catalogue_ref} onChange={(e) => update("catalogue_ref", e.target.value)} className={inputCls} spellCheck={false} />
+        </Field>
+
+        <Toggle label="Daily specials pool" hint="Eligible for the three daily specials (20% off, same for everyone each Toronto day). Coin-priced items only." checked={form.special_pool} onChange={(v) => update("special_pool", v)} />
+        <Toggle label="Stackable" hint="Members can own more than one (furniture). Off: one per member." checked={form.stackable} onChange={(v) => update("stackable", v)} />
+
+        <Field label={form.currency === "coins" ? "Coin Price" : "Gem Price"} error={errors.tc_price}>
           <input
             type="number"
             min={0}
@@ -558,6 +625,13 @@ function validate(
     errors.display_name = "Keep under 80 characters";
   }
 
+  if (form.category === "merch" && form.currency !== "gems") {
+    errors.currency = "Merch is priced in Gems";
+  }
+  if (form.special_pool && form.currency !== "coins") {
+    errors.currency = "Daily specials are coin-priced items only";
+  }
+
   if (form.description.length > 500) {
     errors.description = "Description must be ≤ 500 characters";
   }
@@ -567,8 +641,8 @@ function validate(
     errors.tc_price = "Price is required";
   } else if (!Number.isInteger(price)) {
     errors.tc_price = "Price must be a whole number";
-  } else if (price < 0) {
-    errors.tc_price = "Price must be ≥ 0";
+  } else if (price < 0 || (form.currency === "coins" && price < 1)) {
+    errors.tc_price = form.currency === "coins" ? "Coin price must be at least 1" : "Price must be ≥ 0";
   }
 
   if (!form.unlimited_stock) {

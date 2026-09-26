@@ -1,0 +1,20 @@
+/* Economy sheets: same cream/sage/wood family as the progression sheets. */
+.balances { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+.balance { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; background: #fff; border: 1px solid #5c746c33; font-weight: 800; font-size: 14px; font-variant-numeric: tabular-nums; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.tile { display: grid; gap: 4px; align-content: start; padding: 10px; border-radius: 14px; background: #ffffffc0; border: 1px solid #5c746c2e; position: relative; }
+.tile h4 { margin: 0; font-size: 14px; line-height: 1.25; }
+.art { height: 64px; border-radius: 10px; background: linear-gradient(135deg, #e7eedf, #f4ecd9); display: grid; place-items: center; font-size: 28px; }
+.chip { justify-self: start; font-size: 10.5px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; padding: 2px 7px; border-radius: 999px; background: #e4e8dc; color: #42544e; }
+.sale { position: absolute; top: 8px; right: 8px; font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 999px; background: #e8704a; color: #fff; }
+.price { font-weight: 800; font-size: 15px; font-variant-numeric: tabular-nums; }
+.was { color: #8a9891; text-decoration: line-through; font-weight: 500; font-size: 12px; margin-left: 4px; }
+.small { min-height: 36px; padding: 0 12px; font-size: 12.5px; }
+.list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.row { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; align-items: center; padding: 8px 10px; border-radius: 12px; background: #ffffffc0; border: 1px solid #5c746c26; font-size: 13.5px; }
+.big { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+.bigCard { padding: 14px; border-radius: 16px; background: #fff; border: 1px solid #5c746c2e; }
+.bigCard b { display: block; font-size: 28px; font-variant-numeric: tabular-nums; }
+.plus { color: #2f5a36; font-weight: 700; }
+.minus { color: #8a3417; font-weight: 700; }
+.code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-weight: 800; letter-spacing: 0.12em; background: #fff8ec; border: 1px dashed #bb813f; border-radius: 8px; padding: 2px 8px; }

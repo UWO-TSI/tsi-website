@@ -1,73 +1,44 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { createClient } from "@/lib/supabase/server";
+import { economyContext } from "@/lib/wallet/deps";
+import { buy } from "@/lib/wallet/service";
 
 /**
- * Wharf Shack gear shelf (Economy v2 E4).
+ * Wharf Shack gear shelf, now on the shop catalogue + member_inventory.
+ * Legacy gear keys (rod_cedar, rod_glass, bobber_lucky) are the items'
+ * `catalogue_ref`, so the island's gear code keeps working.
  *
- * GET  → { gear: string[] | null } — null when no server profile reachable
- *        (env-less / unauthed / pre-migration); clients use the local mirror.
- * POST { item } → buy_gear() RPC: debits coins + appends the item
- *        atomically, price from the server-side gear_prices table.
- *
- * Gear is cosmetic flair only (design principle #4) — never a mechanic gate.
+ * GET  → { gear: string[] | null } (owned legacy keys; null = no server wallet)
+ * POST { item, idempotency_key? } → buys the item at the server price.
+ * Gear is cosmetic flair only (design principle #4).
  */
 
 const BuySchema = z.object({
   item: z.string().min(1).max(64).regex(/^[a-z0-9_]+$/),
+  idempotency_key: z.string().regex(/^[A-Za-z0-9_:-]{8,100}$/).optional(),
 });
 
 export async function GET() {
-  let supabase: Awaited<ReturnType<typeof createClient>>;
+  const ctx = await economyContext();
+  if (ctx instanceof NextResponse) return NextResponse.json({ gear: null });
   try {
-    supabase = await createClient();
+    const inv = await ctx.store.inventory(ctx.userId);
+    return NextResponse.json({ gear: inv.filter((r) => r.item.category === "tool").map((r) => r.item.catalogue_ref ?? r.item.slug) });
   } catch {
     return NextResponse.json({ gear: null });
   }
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ gear: null });
-  }
-  const { data, error } = await supabase.from("profiles").select("gear").eq("id", user.id).maybeSingle();
-  if (error) {
-    return NextResponse.json({ gear: null });
-  }
-  return NextResponse.json({ gear: (data as { gear?: string[] } | null)?.gear ?? [] });
 }
 
 export async function POST(request: Request) {
-  let supabase: Awaited<ReturnType<typeof createClient>>;
-  try {
-    supabase = await createClient();
-  } catch {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
-  }
-  const parsed = BuySchema.safeParse(body);
-  if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid gear payload" }, { status: 400 });
-  }
-
-  const { data, error } = await supabase.rpc("buy_gear", {
-    p_item: parsed.data.item,
-  } as never);
-  if (error) {
-    return NextResponse.json({ error: "Shop unavailable" }, { status: 503 });
-  }
-  const row = (Array.isArray(data) ? data[0] : data) as { coins: number; gear: string[] } | undefined;
-  return NextResponse.json({ coins: row?.coins ?? null, gear: row?.gear ?? null });
+  const ctx = await economyContext();
+  if (ctx instanceof NextResponse) return NextResponse.json({ error: "Unauthorized" }, { status: ctx.status === 401 ? 401 : 503 });
+  const parsed = BuySchema.safeParse(await request.json().catch(() => null));
+  if (!parsed.success) return NextResponse.json({ error: "Invalid item" }, { status: 400 });
+  const items = await ctx.store.catalogue().catch(() => null);
+  const item = items?.find((i) => i.catalogue_ref === parsed.data.item || i.slug === parsed.data.item);
+  if (!item) return NextResponse.json({ error: "Unknown item" }, { status: 404 });
+  const r = await buy(ctx.store, ctx.userId, { item_id: item.id, qty: 1, idempotency_key: parsed.data.idempotency_key ?? `gear-${crypto.randomUUID()}` }, ctx.now);
+  if (!r.ok) return NextResponse.json({ error: r.error, code: r.code }, { status: r.status });
+  const inv = await ctx.store.inventory(ctx.userId);
+  return NextResponse.json({ coins: r.data.balance, gear: inv.filter((x) => x.item.category === "tool").map((x) => x.item.catalogue_ref ?? x.item.slug) });
 }
