@@ -172,10 +172,8 @@ CREATE TABLE IF NOT EXISTS sell_prices (
   PRIMARY KEY (category, rarity)
 );
 ALTER TABLE sell_prices ENABLE ROW LEVEL SECURITY;
+-- Read-only: the shop shows lib/wallet/catalogue.ts SELL_PRICES, which the seed below mirrors.
 CREATE POLICY "Sell prices readable" ON sell_prices FOR SELECT USING ((select auth.role()) = 'authenticated');
-CREATE POLICY "Sell prices writable by T1/T2" ON sell_prices
-  FOR ALL USING ((SELECT tier FROM profiles WHERE id = (select auth.uid())) IN (1, 2))
-  WITH CHECK ((SELECT tier FROM profiles WHERE id = (select auth.uid())) IN (1, 2));
 
 -- ─── Merch reservations (row 47): reserve stock + Gems, campus pickup ───────
 CREATE TABLE IF NOT EXISTS merch_reservations (
@@ -482,8 +480,6 @@ ON CONFLICT (category, rarity) DO NOTHING;
 INSERT INTO economy_settings (key, value) VALUES
   ('daily_gift_coins', 10),
   ('event_attendance_coins', 50),
-  ('special_count', 3),
-  ('special_discount_pct', 20),
   ('max_open_merch', 3)
 ON CONFLICT (key) DO NOTHING;
 -- END GENERATED ECONOMY SEED
