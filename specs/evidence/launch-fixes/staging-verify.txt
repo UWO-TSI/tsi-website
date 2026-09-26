@@ -1,0 +1,43 @@
+{
+  "functions": {
+    "wallet_apply": true,
+    "admin_set_membership": true,
+    "invite_code_valid": true,
+    "signup_public_t5": true
+  },
+  "membership": [
+    {
+      "membership": "member",
+      "tier": 2,
+      "count": 1
+    },
+    {
+      "membership": "member",
+      "tier": 4,
+      "count": 2
+    },
+    {
+      "membership": "public",
+      "tier": 5,
+      "count": 4
+    }
+  ],
+  "attendance_policies": [
+    "Event attendance insertable",
+    "Event attendance readable",
+    "Users can cancel own RSVP"
+  ],
+  "invite_codes": {
+    "active": 1,
+    "w26_active": false
+  },
+  "tables_without_rls": 0,
+  "definer_fns_callable_by_users": [
+    "can_edit_kanban_board",
+    "current_tier",
+    "get_election_results",
+    "increment_invite_uses",
+    "invite_code_valid"
+  ],
+  "cron_jobs": null
+}
