@@ -14,7 +14,7 @@ import { WEAPONS as SYSTEM_WEAPONS } from "@/lib/combat/weapons";
 import { derived, presetAllocation } from "@/lib/combat/progression";
 import { potencyFor } from "@/lib/combat/incantation";
 import { SURVIVE_CIRCLES } from "@/lib/game/ruins";
-import { equipKit, useSlot, resolveCast } from "./abilities";
+import { equipKit, fireSlot, resolveCast } from "./abilities";
 import { attack, spawnWave, startDodge } from "./actions";
 import { PLAYER_BASE, WEAPONS } from "./data";
 import { stepCombat } from "./encounter";
@@ -104,7 +104,7 @@ export function runSurvive(subclassKey: string, missionId: "survive-circle" | "s
         if (!a || rt.cooldowns[`slot${i + 1}` as "slot1"] > 0 || p.energy < a.energy || !useful(rt, a, me, target, !!threat)) continue;
         const totem = a.effects.some(e => e.kind === "summon" && (UNITS[e.unit]?.kind === "totem"));
         if (totem && target) p.aim = { x: me.x + (target.x - me.x) * 0.3, z: me.z + (target.z - me.z) * 0.3 };
-        if (useSlot(rt, i, me, random)) { if (rt.casting) castLeft = RUNE_TIME[rt.casting.rune]; break; }
+        if (fireSlot(rt, i, me, random)) { const c = rt.casting as CombatRuntime["casting"]; if (c) castLeft = RUNE_TIME[c.rune]; break; }
       }
       if (target && !rt.casting && d2(target, me) <= WEAPONS[p.weapon].range + target.type.radius) attack(rt, me, random);
     }

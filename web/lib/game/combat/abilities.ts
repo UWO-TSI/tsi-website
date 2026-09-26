@@ -198,7 +198,7 @@ function context(rt: CombatRuntime, ability: Ability, me: Vec, potency: number, 
 }
 
 /** Ability keys 1–4. Drawn abilities open the rune overlay (25% energy now, the rest on release); others fire at once. */
-export function useSlot(rt: CombatRuntime, slot: number, me: Vec, random: () => number = Math.random): boolean {
+export function fireSlot(rt: CombatRuntime, slot: number, me: Vec, random: () => number = Math.random): boolean {
   const p = rt.player, ab = rt.slots[slot], id = SLOT_IDS[slot];
   if (!ab) { floater(rt, me, 1.9, rt.kit ? "Empty slot · set it at the Oracle" : "Choose a subclass at the Oracle", "info"); return false; }
   if (!p.alive || rt.cooldowns[id] > 0 || rt.casting || p.dash) return false;

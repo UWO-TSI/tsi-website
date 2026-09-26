@@ -3,7 +3,7 @@ import { CAPS, FAMILY_ABILITIES, SUBCLASSES, subclassByKey, TRAITS, type Ability
 import { presetAllocation } from "@/lib/combat/progression";
 import { ENEMIES } from "./data";
 import { hurtPlayer, resolveCast, startDodge, triggerAbility } from "./actions";
-import { CAST, equipKit, heal, hitAmount, strike, summon, useSlot } from "./abilities";
+import { CAST, equipKit, heal, hitAmount, strike, summon, fireSlot } from "./abilities";
 import { stepCombat } from "./encounter";
 import { createRuntime, SLOT_IDS, type CombatRuntime } from "./runtime";
 import { spawnEnemy, type Enemy } from "./sim";
@@ -22,8 +22,8 @@ function setup(sub: string, loadout: string[] = [], hp = 5000): { rt: CombatRunt
   rt.enemies = [dummy];
   return { rt, dummy };
 }
-const use = (rt: CombatRuntime, slot: number, power = 1) => {
-  const ok = useSlot(rt, slot, ME, noCrit);
+const press = (rt: CombatRuntime, slot: number, power = 1) => {
+  const ok = fireSlot(rt, slot, ME, noCrit);
   if (ok && rt.casting) resolveCast(rt, ME, cast(power), noCrit);
   return ok;
 };
@@ -48,7 +48,7 @@ describe("the sixteen kits run from data through one system (Part B 1)", () => {
         const ab = rt.slots[slot]!;
         const before = { hp: dummy.hp, units: rt.units.length, shield: rt.player.shield, buffs: rt.buffs.length, energy: rt.player.energy };
         rt.player.hp = 150; // room to heal
-        expect(use(rt, slot)).toBe(true);
+        expect(press(rt, slot)).toBe(true);
         const dashed = !!rt.player.dash;
         run(rt, 0.6); // dashes land, shots arrive, totems pulse
         const did = dummy.hp < before.hp || rt.units.length > before.units || rt.player.shield > before.shield || rt.buffs.length > before.buffs || rt.player.hp > 150 || rt.transform
@@ -56,7 +56,7 @@ describe("the sixteen kits run from data through one system (Part B 1)", () => {
         expect(did, `${ab.name} did nothing`).toBeTruthy();
         expect(rt.player.energy).toBeLessThan(before.energy + 0.6 * 12 + 1e-6);
         expect(rt.cooldowns[SLOT_IDS[slot]]).toBeGreaterThan(ab.cooldown_s - 0.7);
-        expect(use(rt, slot)).toBe(false); // still cooling down
+        expect(press(rt, slot)).toBe(false); // still cooling down
       }
     });
   }
@@ -67,7 +67,7 @@ describe("incantations on the rune prototype (rows 52, 53, C2, C3)", () => {
     const { rt, dummy } = setup("elementalist");
     dummy.state = "idle";
     const fox = spawnEnemy("fox", ENEMIES["shadow-fox"], 0, 6); rt.enemies.push(fox);
-    expect(useSlot(rt, 0, ME)).toBe(true);
+    expect(fireSlot(rt, 0, ME)).toBe(true);
     expect(rt.casting?.rune).toBe("spark");
     expect(rt.player.energy).toBe(100 - Math.ceil(35 * CAST.start));
     run(rt, 1); // tracing: the fox still comes (no pause, row 53)
@@ -77,17 +77,17 @@ describe("incantations on the rune prototype (rows 52, 53, C2, C3)", () => {
     expect(rt.cooldowns.slot1).toBe(CAST.recovery);
   });
   it("potency scales damage fully but caps shields and heals at 1.2 and control at 1", () => {
-    const dmg = (power: number) => { const { rt, dummy } = setup("elementalist"); use(rt, 0, power); return 5000 - dummy.hp; };
+    const dmg = (power: number) => { const { rt, dummy } = setup("elementalist"); press(rt, 0, power); return 5000 - dummy.hp; };
     expect(dmg(1.5)).toBeGreaterThan(dmg(1) * 1.4);
-    const ward = (power: number) => { const { rt } = setup("druid", ["warden.covenant"]); use(rt, 0, power); return { shield: rt.player.shield, hold: rt.enemies[0].status.hold }; };
+    const ward = (power: number) => { const { rt } = setup("druid", ["warden.covenant"]); press(rt, 0, power); return { shield: rt.player.shield, hold: rt.enemies[0].status.hold }; };
     expect(ward(1.5).shield).toBeCloseTo(ward(1).shield * 1.2, 1);
     expect(ward(1.5).hold).toBeCloseTo(ward(1).hold, 5);
   });
   it("a dodge cancels the drawing (row C3)", () => {
     const { rt } = setup("summoner");
-    use(rt, 0); // call is drawn: resolve it, then start another drawn one
+    press(rt, 0); // call is drawn: resolve it, then start another drawn one
     rt.cooldowns.slot4 = 0;
-    expect(useSlot(rt, 3, ME)).toBe(true); // Verdant Covenant
+    expect(fireSlot(rt, 3, ME)).toBe(true); // Verdant Covenant
     expect(startDodge(rt, { x: 1, z: 0 })).toBe(true);
     expect(rt.casting).toBeNull();
   });
@@ -98,7 +98,7 @@ describe("summons, totems, traps and decoys persist within caps (row 50)", () =>
     const { rt } = setup("summoner");
     const cap = rt.kit!.capacity;
     expect(cap).toBe(2 + Math.floor(rt.player.stats.spirit / 5) + subclassByKey("summoner")!.mods!.capacity!);
-    for (let i = 0; i < 4; i++) { rt.cooldowns.slot1 = rt.cooldowns.slot2 = rt.cooldowns.slot3 = 0; rt.player.energy = 100; use(rt, i % 3); }
+    for (let i = 0; i < 4; i++) { rt.cooldowns.slot1 = rt.cooldowns.slot2 = rt.cooldowns.slot3 = 0; rt.player.energy = 100; press(rt, i % 3); }
     const cost = rt.units.reduce((n, u) => n + (u.def.kind === "minion" ? u.def.cost ?? 1 : 0), 0);
     expect(cost).toBeLessThanOrEqual(cap);
     expect(rt.units.every(u => u.life === null)).toBe(true); // persistent
@@ -107,7 +107,7 @@ describe("summons, totems, traps and decoys persist within caps (row 50)", () =>
   });
   it("different companion types coexist, and dropping an ability from the loadout dismisses its units", () => {
     const { rt } = setup("summoner");
-    use(rt, 1); rt.player.energy = 100; use(rt, 2);
+    press(rt, 1); rt.player.energy = 100; press(rt, 2);
     expect(new Set(rt.units.map(u => u.def.key))).toEqual(new Set(["fox", "crab"]));
     equipKit(rt, subclassByKey("summoner"), ["summoner.call", "summoner.fox-pack", "warden.renew", "warden.covenant"]);
     expect(rt.units.map(u => u.def.key)).toEqual(["fox", "fox"]);
@@ -115,19 +115,19 @@ describe("summons, totems, traps and decoys persist within caps (row 50)", () =>
   it("the summoning weapon selects the Summoner's companions (row 43)", () => {
     const { rt } = setup("summoner");
     rt.player.weapon = "tome-warden";
-    use(rt, 0);
+    press(rt, 0);
     expect(rt.units.map(u => u.def.key)).toEqual(["fox", "fox"]);
   });
   it("Shaman: one totem per role, three at most; overlapping circles work harder (Resonance)", () => {
     const { rt } = setup("shaman");
-    for (let i = 0; i < 2; i++) { rt.cooldowns.slot1 = 0; rt.player.energy = 100; use(rt, 0); }
+    for (let i = 0; i < 2; i++) { rt.cooldowns.slot1 = 0; rt.player.energy = 100; press(rt, 0); }
     expect(rt.units.filter(u => u.def.key === "totem-ember")).toHaveLength(1);
-    rt.player.energy = 100; use(rt, 1); rt.player.energy = 100; use(rt, 2);
+    rt.player.energy = 100; press(rt, 1); rt.player.energy = 100; press(rt, 2);
     expect(rt.units.filter(u => u.def.kind === "totem")).toHaveLength(CAPS.totems);
     // Mending totem alone vs overlapping another: the same pulse heals more inside the overlap.
     const healed = (overlap: boolean) => {
       const { rt: r } = setup("shaman"); r.enemies = []; r.player.hp = 100; r.player.aim = { x: 0, z: 0 };
-      use(r, 1); if (overlap) { r.player.energy = 100; use(r, 0); }
+      press(r, 1); if (overlap) { r.player.energy = 100; press(r, 0); }
       const hp = r.player.hp; run(r, 1.05); return r.player.hp - hp;
     };
     expect(healed(true)).toBeGreaterThan(healed(false) * 1.2);
@@ -135,7 +135,7 @@ describe("summons, totems, traps and decoys persist within caps (row 50)", () =>
   it("Sniper traps: two at most; one springs on the first enemy through it, holding and hurting it", () => {
     const { rt, dummy } = setup("sniper");
     rt.player.aim = { x: 0, z: 8 };
-    for (let i = 0; i < 3; i++) { rt.cooldowns.slot1 = 0; rt.player.energy = 100; use(rt, 0); }
+    for (let i = 0; i < 3; i++) { rt.cooldowns.slot1 = 0; rt.player.energy = 100; press(rt, 0); }
     expect(rt.units.filter(u => u.def.kind === "trap")).toHaveLength(CAPS.traps);
     rt.units[0].x = dummy.x; rt.units[0].z = dummy.z;
     run(rt, 0.1);
@@ -146,7 +146,7 @@ describe("summons, totems, traps and decoys persist within caps (row 50)", () =>
   it("the Illusionist's phantom draws enemies to it and they count as distracted (Misdirection)", () => {
     const { rt, dummy } = setup("illusionist");
     const plain = hitAmount(rt, dummy, { power: 1, from: ME }, noCrit).amount;
-    use(rt, 0);
+    press(rt, 0);
     expect(rt.units.filter(u => u.def.kind === "decoy")).toHaveLength(1);
     expect(hitAmount(rt, dummy, { power: 1, from: ME }, noCrit).amount).toBeGreaterThan(plain);
   });
@@ -155,12 +155,12 @@ describe("summons, totems, traps and decoys persist within caps (row 50)", () =>
 describe("starters and missing gear (plan edge cases)", () => {
   it("Necromancer raises a bone wisp with no body near, a shade of the fallen enemy with one", () => {
     const { rt } = setup("necromancer");
-    use(rt, 0);
+    press(rt, 0);
     expect(rt.units.map(u => u.def.key)).toEqual(["bone-wisp"]);
     const { rt: r2 } = setup("necromancer");
     const golem = { ...spawnEnemy("g", ENEMIES["stone-golem"], 2, 2), state: "dead" as const };
     r2.enemies.push(golem);
-    use(r2, 0);
+    press(r2, 0);
     expect(r2.units[0]).toMatchObject({ def: { key: "shade" }, body: { type: { id: "stone-golem" } } });
     expect(golem.raised).toBe(true);
   });
@@ -168,22 +168,22 @@ describe("starters and missing gear (plan edge cases)", () => {
     const { rt, dummy } = setup("transmuter");
     expect(rt.slots.map(a => a?.key)).toContain("trait.fox-stride");
     const slot = rt.slots.findIndex(a => a?.key === "trait.fox-stride");
-    use(rt, slot); run(rt, 0.5);
+    press(rt, slot); run(rt, 0.5);
     expect(dummy.hp).toBeLessThan(5000);
     expect(rt.transform).not.toBeNull();
     expect(rt.player.shield).toBeGreaterThan(0); // Shed Skin
     const golemHit = (kills: number) => { const r = createRuntime(); r.player.stats = presetAllocation("Arcane", 10); equipKit(r, subclassByKey("transmuter"), ["trait.golem-fist"], { "golem-fist": kills });
-      const d = { ...spawnEnemy("d", { ...ENEMIES["thorn-crab"], hp: 5000, defense: 0 }, 0, 3), state: "chase" as const }; r.enemies = [d]; r.player.aim = { x: 0, z: 3 }; use(r, 0); return 5000 - d.hp; };
+      const d = { ...spawnEnemy("d", { ...ENEMIES["thorn-crab"], hp: 5000, defense: 0 }, 0, 3), state: "chase" as const }; r.enemies = [d]; r.player.aim = { x: 0, z: 3 }; press(r, 0); return 5000 - d.hp; };
     expect(golemHit(30)).toBeGreaterThan(golemHit(1));
     expect(TRAITS.find(t => t.key === "golem-fist")!.from).toEqual(["stone-golem"]);
   });
   it("Gunslinger without a revolver at 70%; Monk with wraps full, with a sword 85%; Guardian without a shield blocks half", () => {
-    const fan = (weapon: string) => { const { rt, dummy } = setup("gunslinger"); rt.player.weapon = weapon; rt.player.aim = { x: 0, z: 1.2 }; dummy.z = 1.2; use(rt, 0); run(rt, 0.3); return 5000 - dummy.hp; };
+    const fan = (weapon: string) => { const { rt, dummy } = setup("gunslinger"); rt.player.weapon = weapon; rt.player.aim = { x: 0, z: 1.2 }; dummy.z = 1.2; press(rt, 0); run(rt, 0.3); return 5000 - dummy.hp; };
     expect(fan("bow-willow") / fan("revolver-brass")).toBeLessThan(0.8);
-    const flow = (weapon: string) => { const { rt, dummy } = setup("monk"); rt.player.weapon = weapon; use(rt, 0); run(rt, 0.4); return 5000 - dummy.hp; };
+    const flow = (weapon: string) => { const { rt, dummy } = setup("monk"); rt.player.weapon = weapon; press(rt, 0); run(rt, 0.4); return 5000 - dummy.hp; };
     expect(flow("sword-driftwood")).toBeLessThan(flow("wraps-cloth"));
     const { rt } = setup("guardian");
-    use(rt, 0);
+    press(rt, 0);
     expect(rt.buffs.find(b => b.stat === "block")!.value).toBeCloseTo(0.4); // no buckler: 0.8 × 0.5
   });
 });
@@ -193,7 +193,7 @@ describe("passives (one modifier each on the shared hooks)", () => {
   it("Guardian: a frontal hit is blocked, answered with a bash and builds a barrier; one from behind isn't", () => {
     const { rt, dummy } = setup("guardian");
     rt.player.weapon = "shield-buckler";
-    use(rt, 0);
+    press(rt, 0);
     const took = hurtPlayer(rt, 40, { x: 0, z: 2 }, ME);
     expect(took).toBeLessThanOrEqual(Math.round(40 * 0.2));
     expect(rt.player.shield).toBeGreaterThan(0);
@@ -214,9 +214,9 @@ describe("passives (one modifier each on the shared hooks)", () => {
   it("Elementalist: a different element than the last hits harder", () => {
     const { rt, dummy } = setup("elementalist", ["elementalist.frost-nova", "elementalist.firebolt"]);
     dummy.x = 0; dummy.z = 2;
-    use(rt, 0); const first = 5000 - dummy.hp; // frost, no previous element
+    press(rt, 0); const first = 5000 - dummy.hp; // frost, no previous element
     dummy.hp = 5000; dummy.status.hold = 0; rt.cooldowns.slot1 = 0; rt.player.energy = 100;
-    rt.passive.element = "fire"; use(rt, 0); const switched = 5000 - dummy.hp;
+    rt.passive.element = "fire"; press(rt, 0); const switched = 5000 - dummy.hp;
     expect(switched).toBeGreaterThan(first);
   });
   it("Marksman standing still, Hunter on the same target, Sniper from far away all hit harder", () => {
@@ -230,7 +230,7 @@ describe("passives (one modifier each on the shared hooks)", () => {
   });
   it("Gunslinger: crits take a second off Fan the Hammer, three times per use", () => {
     const { rt, dummy } = setup("gunslinger");
-    use(rt, 0);
+    press(rt, 0);
     const cd = rt.cooldowns.slot1;
     for (let i = 0; i < 5; i++) strike(rt, dummy, { power: 0.01, from: ME }, () => 0); // every hit a crit
     expect(rt.cooldowns.slot1).toBeCloseTo(cd - 3);
@@ -269,14 +269,14 @@ describe("dashes", () => {
     const { rt } = setup("juggernaut", ["vanguard.leap"]);
     rt.enemies = [{ ...spawnEnemy("far", { ...ENEMIES["thorn-crab"], hp: 5000, defense: 0, speed: 0 }, 0, 5), state: "chase" }];
     rt.player.aim = { x: 0, z: 5 };
-    use(rt, 0);
+    press(rt, 0);
     expect(rt.enemies[0].hp).toBe(5000); // not yet: the strike lands on arrival
     let at = { ...ME };
     for (let t = 0; t < 0.5; t += 1 / 30) { at = { x: at.x + rt.player.impulse.x / 30, z: at.z + rt.player.impulse.z / 30 }; stepCombat(rt, at, 1 / 30, () => true, noCrit); }
     expect(at.z).toBeGreaterThan(3.5);
     expect(rt.enemies[0].hp).toBeLessThan(5000);
     const { rt: a } = setup("assassin");
-    use(a, 0);
+    press(a, 0);
     expect(hurtPlayer(a, 30, { x: 0, z: 1 }, ME)).toBe(0);
   });
 });

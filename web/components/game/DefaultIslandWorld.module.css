@@ -170,7 +170,7 @@ p.interact[data-closed="true"] { margin: 0; cursor: default; color: #6a4b2f; }
 .settingsSheet legend { font-weight: 700; margin-bottom: 6px; }
 .segmented { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
 .segmented button { min-height: 40px; border: 1px solid #a1af9b; border-radius: 6px; background: #fffdf3; font: inherit; font-size: 12px; color: #293e3b; cursor: pointer; }
-.segmented button[aria-pressed="true"] { background: #426b5b; color: #fffdf0; }
+.segmented button[aria-pressed="true"], .segmented button[aria-selected="true"] { background: #426b5b; color: #fffdf0; }
 .keyList { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
 .keyList li { display: flex; align-items: center; justify-content: space-between; min-height: 40px; }
 .keyList button { min-width: 110px; min-height: 36px; border: 1px solid #a1af9b; border-radius: 6px; background: #fffdf3; font: inherit; font-size: 12px; color: #293e3b; cursor: pointer; }

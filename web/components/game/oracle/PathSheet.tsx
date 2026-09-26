@@ -68,7 +68,7 @@ export default function PathSheet({ view, onClose, onChanged }: { view: Progress
       <small>{current ? current.passive.name + ": " + current.passive.description : unlocked ? "Level 10: choose your subclass. The first choice is free." : `Subclasses open at level ${SUBCLASS_LEVEL}. Here's what waits for you.`}</small>
     </p>
     <div className={styles.segmented} role="tablist" style={{ gridTemplateColumns: "repeat(3, 1fr)", margin: "12px 0" }}>
-      {(["subclass", "abilities", "stats"] as Tab[]).map(t => <button key={t} role="tab" aria-pressed={tab === t} disabled={t === "abilities" && !current} onClick={() => { setTab(t); setNote(null); setConfirm(null); }}>
+      {(["subclass", "abilities", "stats"] as Tab[]).map(t => <button key={t} role="tab" aria-selected={tab === t} disabled={t === "abilities" && !current} onClick={() => { setTab(t); setNote(null); setConfirm(null); }}>
         {t === "subclass" ? "Subclass" : t === "abilities" ? "Abilities" : `Stats${view.points_available ? ` · ${view.points_available}` : ""}`}</button>)}
     </div>
 
@@ -103,7 +103,7 @@ export default function PathSheet({ view, onClose, onChanged }: { view: Progress
     </div>}
 
     {tab === "stats" && <div data-testid="stats">
-      <p className={styles.hint}>{view.points_available} point{view.points_available === 1 ? "" : "s"} to spend · 3 per level. Any build works with any weapon; the weapon's stat decides how hard it hits.</p>
+      <p className={styles.hint}>{view.points_available} point{view.points_available === 1 ? "" : "s"} to spend · 3 per level. Any build works with any weapon; the weapon&apos;s stat decides how hard it hits.</p>
       <ul className={styles.pathStats}>{STATS.map(k => <li key={k}>
         <span>{STAT_LABEL[k]}</span><b>{view.stats[k] + add[k]}</b>
         <button aria-label={`Less ${STAT_LABEL[k]}`} disabled={add[k] === 0} onClick={() => setAdd(a => ({ ...a, [k]: a[k] - 1 }))}>−</button>

@@ -9,7 +9,7 @@ import { ENEMIES, WEAPONS } from "./data";
 import type { Vec } from "./sim";
 import { BOSS, DODGE, inArc, invulnerable, spawnEnemy, type Enemy } from "./sim";
 import { ENERGY, SLOT_IDS, type AbilityId, type CombatRuntime } from "./runtime";
-import { cancelCast, floater, hitAmount, mitigate, strike, summon, useSlot } from "./abilities";
+import { cancelCast, floater, hitAmount, mitigate, strike, summon, fireSlot } from "./abilities";
 import type { SpawnPoint } from "./spawns";
 import { FAMILY_STAT } from "@/lib/combat/kits";
 import { WEAPONS as SYSTEM_WEAPONS } from "@/lib/combat/weapons";
@@ -110,7 +110,7 @@ export function triggerAbility(rt: CombatRuntime, id: AbilityId, player: Vec = {
     p.weapon = p.owned[(p.owned.indexOf(p.weapon) + 1) % p.owned.length]; p.attackCd = 0.2; rt.cooldowns.swap = 0.4;
     return true;
   }
-  return useSlot(rt, SLOT_IDS.indexOf(id), player, random);
+  return fireSlot(rt, SLOT_IDS.indexOf(id), player, random);
 }
 
 export function spawnWave(rt: CombatRuntime, wave: SpawnPoint[]) {
