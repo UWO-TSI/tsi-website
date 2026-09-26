@@ -1,0 +1,839 @@
+2026-09-26T16:48:29.241Z member GET /api/study/tables  -> 200 {"ok":true,"tables":[{"id":"00000000-0000-4000-8000-000000005101","slug":"cafe-window-1","label":"Window seat 1","location":"cafe","anchor":"study:cafe-window-1","kind":"window","seats":2,"taken":[],"is_private":false,"can_join":true,"host_name":null,"mates":[]},{"id":"00000000-0000-4000-8000-000000005102","slug":"cafe-window-2","label":"Window seat 2","location":"cafe","anchor":"study:cafe-window-2","kind":"window","seats":2,"taken":[],"is_private":false,"can_join":true,"host_name":null,"mates":[]},{"id":"00000000-0000-4000-8000-000000005103","slug":"cafe-two-1","label":"Table for two","location":"cafe","anchor":"study:cafe-two-1","kind":"two","seats":2,"taken":[],"is_private":false,"can_jo
+PASS: study tables listed
+2026-09-26T16:48:30.552Z member POST /api/study/sit {"table_id":"00000000-0000-4000-8000-000000005109","seat":1} -> 200 {"ok":true,"study":{"session":{"id":"af399274-ddda-474e-ac7b-912a47ad869e","table_id":"00000000-0000-4000-8000-000000005109","seat":1,"phase":"seated","settings":null,"cycle":1,"phase_ends_at":null,"remaining_s":null,"minutes_completed":0,"blocks_completed":0,"coins_pending":0,"ended_at":null,"end_reason":null,"coins_paid":null},"table":{"id":"00000000-0000-4000-8000-000000005109","slug":"pier-bench","label":"Pier table","location":"outdoor-pier","anchor":"study:pier-bench","kind":"outdoor","seats":2,"taken":[1],"is_private":false,"can_join":true,"host_name":"Phase1 Member","mates":[{"member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","name":"Phase1 Member","seat":1,"phase":"seated","remainin
+PASS: sat at the pier table
+2026-09-26T16:48:31.333Z member POST /api/study/start {"focus_len":5,"break_len":1,"cycles":1} -> 200 {"ok":true,"study":{"session":{"id":"af399274-ddda-474e-ac7b-912a47ad869e","table_id":"00000000-0000-4000-8000-000000005109","seat":1,"phase":"focus","settings":{"focus_len":5,"break_len":1,"cycles":1},"cycle":1,"phase_ends_at":"2026-09-26T16:53:30.834Z","remaining_s":300,"minutes_completed":0,"blocks_completed":0,"coins_pending":0,"ended_at":null,"end_reason":null,"coins_paid":null},"table":{"id":"00000000-0000-4000-8000-000000005109","slug":"pier-bench","label":"Pier table","location":"outdoor-pier","anchor":"study:pier-bench","kind":"outdoor","seats":2,"taken":[1],"is_private":false,"can_join":true,"host_name":"Phase1 Member","mates":[{"member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","n
+PASS: started 5/1 x1 (server clock)
+SQL> select id, table_id, seat, phase, focus_len, break_len, cycles, phase_started_at, started_at from study_sessions where member_id = 'c2982825-3dd1-4572-a9d0-4b7fadd306d6' order by started_at desc limit 1
+id | table_id | seat | phase | focus_len | break_len | cycles | phase_started_at | started_at
+af399274-ddda-474e-ac7b-912a47ad869e | 00000000-0000-4000-8000-000000005109 | 1 | focus | 5 | 1 | 1 | 2026-09-26 16:48:30.834+00 | 2026-09-26 16:48:29.529+00
+2026-09-26T16:48:38.788Z member POST /api/progression/chapters/advance {"chapter_slug":"settle-in","action":"claim_plot"} -> 200 {"ok":true,"state":{"chapters":[{"slug":"settle-in","position":1,"title":"Settle in","summary":"Claim your plot, make your first catch and donate it, then report to HQ.","requirement":"settle_in","goal_slug":null,"status":"active","steps":[{"key":"claim_plot","label":"Claim your plot at HQ","done":true,"anchor":"hq"},{"key":"first_catch","label":"Make your first catch","hint":"Any fish counts. Try the pier.","done":false,"anchor":"fishing_spot"},{"key":"donate_catch","label":"Donate your catch to the museum shell","done":false,"anchor":"museum"},{"key":"report_hq","label":"Report back to HQ","done":false,"anchor":"hq"}],"unlocks_regions":["village_core"],"can_skip":true,"completed_at":null},
+PASS: claim_plot accepted
+2026-09-26T16:48:39.446Z member POST /api/progression/chapters/advance {"chapter_slug":"settle-in","action":"report_hq"} -> 409 {"ok":false,"error":"Claim your plot and donate a catch first.","code":"rejected"}
+PASS: report_hq refused before a catch is donated
+2026-09-26T16:48:39.916Z member POST /api/collections {"item_key":"fish_dace","size_cm":14.2} -> 200 {"item_key":"fish_dace","count":1,"total_collected":1,"best_size_cm":14.2,"new_record":true}
+PASS: first catch recorded
+2026-09-26T16:48:40.811Z member POST /api/collections/museum/donate {"species_key":"fish_dace","idempotency_key":"donate-d0c3d6ae-298f-4010-a5fb-27840826f2e7"} -> 200 {"ok":true,"donation":{"replayed":false,"exhibit":{"slot":1,"category":"fish","donated":true,"key":"fish_dace","name":"Dace","icon":"/assets/acnh/icons/fish_dace.png","donor_name":"Phase1 Member","donated_at":"2026-09-26T16:48:40.627502+00:00"}}}
+PASS: first catch donated to the museum
+2026-09-26T16:48:42.134Z member POST /api/progression/chapters/advance {"chapter_slug":"settle-in","action":"donate_catch"} -> 200 {"ok":true,"state":{"chapters":[{"slug":"settle-in","position":1,"title":"Settle in","summary":"Claim your plot, make your first catch and donate it, then report to HQ.","requirement":"settle_in","goal_slug":null,"status":"ready","steps":[{"key":"claim_plot","label":"Claim your plot at HQ","done":true,"anchor":"hq"},{"key":"first_catch","label":"Make your first catch","hint":"Any fish counts. Try the pier.","done":true,"anchor":"fishing_spot"},{"key":"donate_catch","label":"Donate your catch to the museum shell","done":true,"anchor":"museum"},{"key":"report_hq","label":"Report back to HQ","done":false,"anchor":"hq"}],"unlocks_regions":["village_core"],"can_skip":true,"completed_at":null},{"s
+PASS: donate_catch step accepted
+2026-09-26T16:48:43.884Z member POST /api/progression/chapters/advance {"chapter_slug":"settle-in","action":"report_hq"} -> 200 {"ok":true,"state":{"chapters":[{"slug":"settle-in","position":1,"title":"Settle in","summary":"Claim your plot, make your first catch and donate it, then report to HQ.","requirement":"settle_in","goal_slug":null,"status":"completed","steps":[{"key":"claim_plot","label":"Claim your plot at HQ","done":true,"anchor":"hq"},{"key":"first_catch","label":"Make your first catch","hint":"Any fish counts. Try the pier.","done":true,"anchor":"fishing_spot"},{"key":"donate_catch","label":"Donate your catch to the museum shell","done":true,"anchor":"museum"},{"key":"report_hq","label":"Report back to HQ","done":true,"anchor":"hq"}],"unlocks_regions":["village_core"],"can_skip":false,"completed_at":"2026
+PASS: report_hq completes chapter 1
+2026-09-26T16:48:44.249Z member GET /api/economy/wallet  -> 200 {"ok":true,"wallet":{"coins":100,"gems":0,"daily_claimed":false,"day":"2026-09-26","recent":[{"currency":"coins","amount":100,"balance_after":100,"source":"chapter","ref":"settle-in","created_at":"2026-09-26T16:48:43.15207+00:00"}]}}
+PASS: chapter 1 pays 100 coins (wallet 100)
+2026-09-26T16:48:44.743Z member GET /api/progression/letters  -> 200 {"ok":true,"letters":[{"id":"6074b89d-dc7c-4a09-bdfb-21bf41ec891b","kind":"system","sender_id":null,"sender_name":"Village Hall","recipient_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","recipient_name":"Phase1 Member","subject":"Settle in","body":"Welcome to the island. The village is yours to explore.","created_at":"2026-09-26T16:48:43.048163+00:00","read_at":null,"reported":false,"outgoing":false}]}
+PASS: chapter 1 letter in the mailbox
+SQL> select q.slug, p.status, p.steps_done, p.donated_item_key from member_quest_progress p join quest_chapters q on q.id = p.chapter_id where p.member_id = 'c2982825-3dd1-4572-a9d0-4b7fadd306d6'
+slug | status | steps_done | donated_item_key
+settle-in | completed | {"report_hq": "2026-09-26T16:48:42.375Z", "claim_plot": "2026-09-26T16:48:37.657Z", "first_catch": "2026-09-26T16:48:41.029Z", "donate_catch": "2026-09-26T16:48:41.029Z"} | fish_dace
+SQL> select kind, subject, broadcast_key from letters where recipient_id = 'c2982825-3dd1-4572-a9d0-4b7fadd306d6'
+kind | subject | broadcast_key
+system | Settle in | chapter:settle-in
+2026-09-26T16:48:47.569Z member GET /api/progression/goals  -> 200 {"ok":true,"goals":[{"slug":"reopen-cafe","title":"Reopen the cafe","summary":"The old cafe by the plaza has been boarded up for years. Bring coins and building materials to the monument, and come to club events: every check-in counts extra.","goal_type":"story","cycle":0,"open":true,"locked_by":null,"target_points":15000,"points":0,"percent":0,"stage":0,"completed":false,"completed_at":null,"contributors":0,"accepts":["coins","material"],"weights":{"coins":1,"material":20,"specimen":100,"event":500,"bounty":750,"admin":1},"caps":{"member_total":3000,"delivery":1500},"unlocks":["cafe","study_tables"],"monument_key":"plaza","my_points":0,"my_delivery_points":0},{"slug":"fund-museum","title":"
+2026-09-26T16:48:48.697Z member POST /api/progression/contribute {"goal_slug":"reopen-cafe","kind":"coins","amount":50,"idempotency_key":"contrib-50686f70-c6ee-4cec-9707-796b3a6e5d49"} -> 200 {"ok":true,"contribution":{"replayed":false,"credited_points":50,"amount_used":50,"capped":false,"goal":{"slug":"reopen-cafe","title":"Reopen the cafe","summary":"The old cafe by the plaza has been boarded up for years. Bring coins and building materials to the monument, and come to club events: every check-in counts extra.","goal_type":"story","cycle":0,"open":true,"locked_by":null,"target_points":15000,"points":50,"percent":0,"stage":0,"completed":false,"completed_at":null,"contributors":1,"accepts":["coins","material"],"weights":{"coins":1,"material":20,"specimen":100,"event":500,"bounty":750,"admin":1},"caps":{"member_total":3000,"delivery":1500},"unlocks":["cafe","study_tables"],"monume
+PASS: club-goal coin contribution accepted
+2026-09-26T16:48:49.675Z member POST /api/progression/contribute {"goal_slug":"reopen-cafe","kind":"coins","amount":10,"idempotency_key":"contrib-7f9d53c1-47b9-41a8-a573-1e3c5fb2770b"} -> 200 {"ok":true,"contribution":{"replayed":false,"credited_points":10,"amount_used":10,"capped":false,"goal":{"slug":"reopen-cafe","title":"Reopen the cafe","summary":"The old cafe by the plaza has been boarded up for years. Bring coins and building materials to the monument, and come to club events: every check-in counts extra.","goal_type":"story","cycle":0,"open":true,"locked_by":null,"target_points":15000,"points":60,"percent":0,"stage":0,"completed":false,"completed_at":null,"contributors":1,"accepts":["coins","material"],"weights":{"coins":1,"material":20,"specimen":100,"event":500,"bounty":750,"admin":1},"caps":{"member_total":3000,"delivery":1500},"unlocks":["cafe","study_tables"],"monume
+2026-09-26T16:48:50.357Z member POST /api/progression/contribute {"goal_slug":"reopen-cafe","kind":"coins","amount":10,"idempotency_key":"contrib-7f9d53c1-47b9-41a8-a573-1e3c5fb2770b"} -> 200 {"ok":true,"contribution":{"replayed":true,"credited_points":10,"amount_used":0,"capped":false,"goal":{"slug":"reopen-cafe","title":"Reopen the cafe","summary":"The old cafe by the plaza has been boarded up for years. Bring coins and building materials to the monument, and come to club events: every check-in counts extra.","goal_type":"story","cycle":0,"open":true,"locked_by":null,"target_points":15000,"points":60,"percent":0,"stage":0,"completed":false,"completed_at":null,"contributors":1,"accepts":["coins","material"],"weights":{"coins":1,"material":20,"specimen":100,"event":500,"bounty":750,"admin":1},"caps":{"member_total":3000,"delivery":1500},"unlocks":["cafe","study_tables"],"monument
+PASS: same idempotency key replays
+2026-09-26T16:48:50.996Z member GET /api/progression/goals  -> 200 {"ok":true,"goals":[{"slug":"reopen-cafe","title":"Reopen the cafe","summary":"The old cafe by the plaza has been boarded up for years. Bring coins and building materials to the monument, and come to club events: every check-in counts extra.","goal_type":"story","cycle":0,"open":true,"locked_by":null,"target_points":15000,"points":60,"percent":0,"stage":0,"completed":false,"completed_at":null,"contributors":1,"accepts":["coins","material"],"weights":{"coins":1,"material":20,"specimen":100,"event":500,"bounty":750,"admin":1},"caps":{"member_total":3000,"delivery":1500},"unlocks":["cafe","study_tables"],"monument_key":"plaza","my_points":60,"my_delivery_points":60},{"slug":"fund-museum","title
+PASS: monument progress 0 -> 60 (0%, stage 0), my_points 60
+2026-09-26T16:48:51.334Z member GET /api/economy/wallet  -> 200 {"ok":true,"wallet":{"coins":40,"gems":0,"daily_claimed":false,"day":"2026-09-26","recent":[{"currency":"coins","amount":-10,"balance_after":40,"source":"goal","ref":"7a269043-f034-4c85-afe3-5405360f2dbb","created_at":"2026-09-26T16:48:49.499933+00:00"},{"currency":"coins","amount":-50,"balance_after":50,"source":"goal","ref":"7a269043-f034-4c85-afe3-5405360f2dbb","created_at":"2026-09-26T16:48:48.509044+00:00"},{"currency":"coins","amount":100,"balance_after":100,"source":"chapter","ref":"settle-in","created_at":"2026-09-26T16:48:43.15207+00:00"}]}}
+PASS: wallet debited exactly 60 coins (100 - 60)
+SQL> select g.slug, c.kind, c.amount, c.amount_used, c.credited_points from club_goal_contributions c join club_goals g on g.id = c.goal_id where c.member_id = 'c2982825-3dd1-4572-a9d0-4b7fadd306d6' order by c.created_at
+slug | kind | amount | amount_used | credited_points
+reopen-cafe | coins | 50 | 50 | 50
+reopen-cafe | coins | 10 | 10 | 10
+SQL> select amount, balance_after, source, ref from wallet_ledger where member_id = 'c2982825-3dd1-4572-a9d0-4b7fadd306d6' order by created_at
+amount | balance_after | source | ref
+100 | 100 | chapter | settle-in
+-50 | 50 | goal | 7a269043-f034-4c85-afe3-5405360f2dbb
+-10 | 40 | goal | 7a269043-f034-4c85-afe3-5405360f2dbb
+2026-09-26T16:48:57.070Z member POST /api/collections {"item_key":"fish_anchovy","size_cm":11} -> 200 {"item_key":"fish_anchovy","count":1,"total_collected":1,"best_size_cm":11,"new_record":true}
+PASS: first anchovy sets a size record
+2026-09-26T16:48:57.521Z member POST /api/collections {"item_key":"fish_anchovy","size_cm":14.5} -> 200 {"item_key":"fish_anchovy","count":2,"total_collected":2,"best_size_cm":14.5,"new_record":true}
+PASS: bigger anchovy beats the record
+2026-09-26T16:48:57.948Z member POST /api/collections {"item_key":"fish_anchovy","size_cm":12} -> 200 {"item_key":"fish_anchovy","count":3,"total_collected":3,"best_size_cm":14.5,"new_record":false}
+PASS: smaller anchovy keeps the record
+2026-09-26T16:48:58.378Z member POST /api/collections {"item_key":"fish_anchovy","size_cm":999} -> 200 {"item_key":"fish_anchovy","count":4,"total_collected":4,"best_size_cm":15,"new_record":true}
+PASS: absurd size clamped to the species range (best 15)
+2026-09-26T16:48:58.735Z member GET /api/economy/wallet  -> 200 {"ok":true,"wallet":{"coins":40,"gems":0,"daily_claimed":false,"day":"2026-09-26","recent":[{"currency":"coins","amount":-10,"balance_after":40,"source":"goal","ref":"7a269043-f034-4c85-afe3-5405360f2dbb","created_at":"2026-09-26T16:48:49.499933+00:00"},{"currency":"coins","amount":-50,"balance_after":50,"source":"goal","ref":"7a269043-f034-4c85-afe3-5405360f2dbb","created_at":"2026-09-26T16:48:48.509044+00:00"},{"currency":"coins","amount":100,"balance_after":100,"source":"chapter","ref":"settle-in","created_at":"2026-09-26T16:48:43.15207+00:00"}]}}
+2026-09-26T16:48:59.140Z member GET /api/economy/sell  -> 200 {"ok":true,"sellable":[{"item_key":"fish_anchovy","name":"Anchovy","category":"fish","rarity":"common","count":4,"price_each":8}]}
+PASS: sell list
+2026-09-26T16:48:59.444Z member POST /api/economy/sell {"item_key":"fish_anchovy","qty":2,"idempotency_key":"sell-48833640-37e1-44fb-b9ce-a5fb4a86b2cb"} -> 200 {"ok":true,"sale":{"balance":56,"remaining":2,"paid":16,"replayed":false}}
+PASS: sold 2 anchovies
+2026-09-26T16:48:59.753Z member POST /api/economy/sell {"item_key":"fish_anchovy","qty":2,"idempotency_key":"sell-48833640-37e1-44fb-b9ce-a5fb4a86b2cb"} -> 200 {"ok":true,"sale":{"balance":56,"remaining":2,"paid":16,"replayed":true}}
+2026-09-26T16:49:00.192Z member GET /api/economy/wallet  -> 200 {"ok":true,"wallet":{"coins":56,"gems":0,"daily_claimed":false,"day":"2026-09-26","recent":[{"currency":"coins","amount":16,"balance_after":56,"source":"sell","ref":"fish_anchovy","created_at":"2026-09-26T16:48:59.477602+00:00"},{"currency":"coins","amount":-10,"balance_after":40,"source":"goal","ref":"7a269043-f034-4c85-afe3-5405360f2dbb","created_at":"2026-09-26T16:48:49.499933+00:00"},{"currency":"coins","amount":-50,"balance_after":50,"source":"goal","ref":"7a269043-f034-4c85-afe3-5405360f2dbb","created_at":"2026-09-26T16:48:48.509044+00:00"},{"currency":"coins","amount":100,"balance_after":100,"source":"chapter","ref":"settle-in","created_at":"2026-09-26T16:48:43.15207+00:00"}]}}
+PASS: sale credited once: 40 -> 56
+2026-09-26T16:49:01.245Z member POST /api/collections/museum/donate {"species_key":"fish_anchovy","idempotency_key":"donate-e879afec-a14a-4fcd-ab33-f8654f64a406"} -> 200 {"ok":true,"donation":{"replayed":false,"exhibit":{"slot":28,"category":"fish","donated":true,"key":"fish_anchovy","name":"Anchovy","icon":"/assets/acnh/icons/fish_anchovy.png","donor_name":"Phase1 Member","donated_at":"2026-09-26T16:49:01.084197+00:00"}}}
+PASS: anchovy donated (first of its species)
+2026-09-26T16:49:01.860Z public POST /api/collections {"item_key":"fish_anchovy","size_cm":12} -> 200 {"item_key":"fish_anchovy","count":1,"total_collected":1,"best_size_cm":12,"new_record":true}
+2026-09-26T16:49:02.559Z public POST /api/collections/museum/donate {"species_key":"fish_anchovy","idempotency_key":"donate-bd7a6df5-9aab-466d-8940-9cf742d66ede"} -> 409 {"ok":false,"code":"already_donated","error":"Already on display, donated by Phase1 Member. You could sell yours instead."}
+PASS: second donation of the same species refused (public account)
+2026-09-26T16:49:03.212Z member POST /api/collections/museum/donate {"species_key":"fish_anchovy","idempotency_key":"donate-b3ba300e-34b2-4b22-b4c6-e1162cfc1f12"} -> 409 {"ok":false,"code":"already_donated","error":"Already on display, donated by you. You could sell yours instead."}
+PASS: member's own duplicate donation refused
+SQL> select user_id = 'c2982825-3dd1-4572-a9d0-4b7fadd306d6' as member, item_key, count, total_collected, best_size_cm from member_collections where item_key = 'fish_anchovy' order by 1 desc
+member | item_key | count | total_collected | best_size_cm
+t | fish_anchovy | 1 | 4 | 15.0
+f | fish_anchovy | 1 | 1 | 12.0
+SQL> select species_key, donor_id = 'c2982825-3dd1-4572-a9d0-4b7fadd306d6' as by_member, size_cm from museum_donations order by donated_at
+species_key | by_member | size_cm
+fish_dace | t | 14.2
+fish_anchovy | t | 15.0
+SQL> select amount, balance_after, source, ref from wallet_ledger where member_id = 'c2982825-3dd1-4572-a9d0-4b7fadd306d6' and source = 'sell'
+amount | balance_after | source | ref
+16 | 56 | sell | fish_anchovy
+2026-09-26T16:49:10.998Z member GET /api/homes  -> 200 {"ok":true,"home":{"rooms_count":1,"layout":{"version":1,"rooms":[{"id":"room-1","wallpaper":"plaster00","flooring":"simpleparquet00","items":[{"uid":"starter-bed","piece":"home-bed","cell":[0,4],"rot":0},{"uid":"starter-lamp","piece":"floor-lamp","cell":[2,5],"rot":0},{"uid":"starter-shelf","piece":"bookshelf","cell":[4,5],"rot":0},{"uid":"starter-closet","piece":"closet","cell":[0,2],"rot":0}]}],"outdoor":[]},"revision":0,"room_price":500,"room_cap":4}}
+2026-09-26T16:49:27.245Z member GET /api/homes  -> 200 {"ok":true,"home":{"rooms_count":1,"layout":{"version":1,"rooms":[{"id":"room-1","wallpaper":"plaster00","flooring":"simpleparquet00","items":[{"uid":"starter-bed","piece":"home-bed","cell":[0,4],"rot":0},{"uid":"starter-lamp","piece":"floor-lamp","cell":[2,5],"rot":0},{"uid":"starter-shelf","piece":"bookshelf","cell":[4,5],"rot":0},{"uid":"starter-closet","piece":"closet","cell":[0,2],"rot":0}]}],"outdoor":[]},"revision":0,"room_price":500,"room_cap":4}}
+PASS: home: {"ok":true,"home":{"rooms_count":1,"layout":{"version":1,"rooms":[{"id":"room-1","wallpaper":"plaster00","flooring":"simpleparquet00","items":[{"uid":"starter-bed","piece":"home-bed","cell":[0,4],"rot":0},{"uid":"starter-lamp","piece":"floor-lamp","cell":[2,5],"rot":0},{"uid":"starter-shelf","piece"
+2026-09-26T16:49:27.836Z member POST /api/homes/rooms {"expected_price":500,"idempotency_key":"room-28835f9a-47eb-4c2f-8656-130cab65f88b"} -> 200 {"ok":true,"purchase":{"rooms_count":2,"coins":1056,"replayed":false,"home":{"rooms_count":2,"layout":{"version":1,"rooms":[{"id":"room-1","wallpaper":"plaster00","flooring":"simpleparquet00","items":[{"uid":"starter-bed","piece":"home-bed","cell":[0,4],"rot":0},{"uid":"starter-lamp","piece":"floor-lamp","cell":[2,5],"rot":0},{"uid":"starter-shelf","piece":"bookshelf","cell":[4,5],"rot":0},{"uid":"starter-closet","piece":"closet","cell":[0,2],"rot":0}]},{"id":"room-2","wallpaper":"stripe02","flooring":"tatami00","items":[]}],"outdoor":[]},"revision":1}}}
+PASS: room purchase at 500: {"ok":true,"purchase":{"rooms_count":2,"coins":1056,"replayed":false,"home":{"rooms_count":2,"layout":{"version":1,"rooms":[{"id":"room-1","wallpaper":"plaster00","flooring":"simpleparquet00","items":
+2026-09-26T16:49:28.138Z member GET /api/homes  -> 200 {"ok":true,"home":{"rooms_count":2,"layout":{"version":1,"rooms":[{"id":"room-1","wallpaper":"plaster00","flooring":"simpleparquet00","items":[{"uid":"starter-bed","piece":"home-bed","cell":[0,4],"rot":0},{"uid":"starter-lamp","piece":"floor-lamp","cell":[2,5],"rot":0},{"uid":"starter-shelf","piece":"bookshelf","cell":[4,5],"rot":0},{"uid":"starter-closet","piece":"closet","cell":[0,2],"rot":0}]},{"id":"room-2","wallpaper":"stripe02","flooring":"tatami00","items":[]}],"outdoor":[]},"revision":1,"room_price":500,"room_cap":4}}
+SQL> select member_id = 'c2982825-3dd1-4572-a9d0-4b7fadd306d6' as member, room_number, price_coins from home_room_purchases
+member | room_number | price_coins
+t | 2 | 500
+SQL> select rooms_count, revision from member_homes where member_id = 'c2982825-3dd1-4572-a9d0-4b7fadd306d6'
+rooms_count | revision
+2 | 1
+SQL> select room_index, room_id, wallpaper, flooring, jsonb_array_length(items) as items from member_home_rooms where member_id = 'c2982825-3dd1-4572-a9d0-4b7fadd306d6' order by room_index
+room_index | room_id | wallpaper | flooring | items
+1 | room-2 | stripe02 | tatami00 | 0
+2026-09-26T16:49:58.346Z member POST /api/economy/buy {"item_id":"505f16a4-0571-4091-8991-ea5ebeff17d1","qty":1,"idempotency_key":"buy-caec9c18-731b-496d-9e88-d3522715ce27"} -> 200 {"ok":true,"purchase":{"balance":916,"owned":1,"replayed":false,"price_each":140,"currency":"coins"}}
+PASS: bought the lounge rug: {"ok":true,"purchase":{"balance":916,"owned":1,"replayed":false,"price_each":140,"currency":"coins"}}
+2026-09-26T16:49:58.756Z member GET /api/homes  -> 200 {"ok":true,"home":{"rooms_count":2,"layout":{"version":1,"rooms":[{"id":"room-1","wallpaper":"plaster00","flooring":"simpleparquet00","items":[{"uid":"starter-bed","piece":"home-bed","cell":[0,4],"rot":0},{"uid":"starter-lamp","piece":"floor-lamp","cell":[2,5],"rot":0},{"uid":"starter-shelf","piece":"bookshelf","cell":[4,5],"rot":0},{"uid":"starter-closet","piece":"closet","cell":[0,2],"rot":0}]},{"id":"room-2","wallpaper":"stripe02","flooring":"tatami00","items":[]}],"outdoor":[]},"revision":1,"room_price":500,"room_cap":4}}
+2026-09-26T16:49:59.055Z member PUT /api/homes/layout {"layout":{"version":1,"rooms":[{"id":"room-1","wallpaper":"plaster00","flooring":"simpleparquet00","items":[{"uid":"starter-bed","piece":"home-bed","cell":[0,4],"rot":0},{"uid":"starter-lamp","piece":"floor-lamp","cell":[5,1],"rot":2},{"uid":"starter-shelf","piece":"bookshelf","cell":[4,5],"rot":0},{"uid":"starter-closet","piece":"closet","cell":[0,2],"rot":0}]},{"id":"room-2","wallpaper":"brick00","flooring":"tatami00","items":[{"uid":"p1-rug","piece":"lounge-rug","cell":[2,2],"rot":1}]}],"outdoor":[]},"base_revision":1} -> 400 {"ok":false,"error":"Invalid request"}
+FAIL: layout saved: {"ok":false,"error":"Invalid request"}
+2026-09-26T16:49:59.272Z member PUT /api/homes/layout {"layout":{"version":1,"rooms":[{"id":"room-1","wallpaper":"plaster00","flooring":"simpleparquet00","items":[{"uid":"starter-bed","piece":"home-bed","cell":[0,4],"rot":0},{"uid":"starter-lamp","piece":"floor-lamp","cell":[5,1],"rot":2},{"uid":"starter-shelf","piece":"bookshelf","cell":[4,5],"rot":0},{"uid":"starter-closet","piece":"closet","cell":[0,2],"rot":0}]},{"id":"room-2","wallpaper":"brick00","flooring":"tatami00","items":[{"uid":"p1-rug","piece":"lounge-rug","cell":[2,2],"rot":1}]}],"outdoor":[]},"base_revision":1} -> 400 {"ok":false,"error":"Invalid request"}
+FAIL: stale revision refused (400)
+2026-09-26T16:49:59.601Z member GET /api/homes  -> 200 {"ok":true,"home":{"rooms_count":2,"layout":{"version":1,"rooms":[{"id":"room-1","wallpaper":"plaster00","flooring":"simpleparquet00","items":[{"uid":"starter-bed","piece":"home-bed","cell":[0,4],"rot":0},{"uid":"starter-lamp","piece":"floor-lamp","cell":[2,5],"rot":0},{"uid":"starter-shelf","piece":"bookshelf","cell":[4,5],"rot":0},{"uid":"starter-closet","piece":"closet","cell":[0,2],"rot":0}]},{"id":"room-2","wallpaper":"stripe02","flooring":"tatami00","items":[]}],"outdoor":[]},"revision":1,"room_price":500,"room_cap":4}}
+FAIL: reload returns the edit (revision 1)
+SQL> select room_index, room_id, wallpaper, flooring, items from member_home_rooms where member_id = 'c2982825-3dd1-4572-a9d0-4b7fadd306d6' order by room_index
+room_index | room_id | wallpaper | flooring | items
+1 | room-2 | stripe02 | tatami00 | []
+SQL> select rooms_count, revision from member_homes where member_id = 'c2982825-3dd1-4572-a9d0-4b7fadd306d6'
+rooms_count | revision
+2 | 1
+2026-09-26T16:50:11.321Z member POST /api/economy/buy {"item_id":"505f16a4-0571-4091-8991-ea5ebeff17d1","qty":1,"idempotency_key":"buy-d1dd737e-8acf-4367-a910-9cccaa7ceb63"} -> 200 {"ok":true,"purchase":{"balance":776,"owned":2,"replayed":false,"price_each":140,"currency":"coins"}}
+PASS: bought the lounge rug: {"ok":true,"purchase":{"balance":776,"owned":2,"replayed":false,"price_each":140,"currency":"coins"}}
+2026-09-26T16:50:11.734Z member GET /api/homes  -> 200 {"ok":true,"home":{"rooms_count":2,"layout":{"version":1,"rooms":[{"id":"room-1","wallpaper":"plaster00","flooring":"simpleparquet00","items":[{"uid":"starter-bed","piece":"home-bed","cell":[0,4],"rot":0},{"uid":"starter-lamp","piece":"floor-lamp","cell":[2,5],"rot":0},{"uid":"starter-shelf","piece":"bookshelf","cell":[4,5],"rot":0},{"uid":"starter-closet","piece":"closet","cell":[0,2],"rot":0}]},{"id":"room-2","wallpaper":"stripe02","flooring":"tatami00","items":[]}],"outdoor":[]},"revision":1,"room_price":500,"room_cap":4}}
+2026-09-26T16:50:12.158Z member PUT /api/homes/layout {"layout":{"version":1,"rooms":[{"id":"room-1","wallpaper":"plaster00","flooring":"simpleparquet00","items":[{"uid":"starter-bed","piece":"home-bed","cell":[0,4],"rot":0},{"uid":"starter-lamp","piece":"floor-lamp","cell":[5,1],"rot":2},{"uid":"starter-shelf","piece":"bookshelf","cell":[4,5],"rot":0},{"uid":"starter-closet","piece":"closet","cell":[0,2],"rot":0}]},{"id":"room-2","wallpaper":"brick00","flooring":"tatami00","items":[{"uid":"p1-rug","piece":"lounge-rug","cell":[2,2],"rot":1}]}],"outdoor":[]},"base_revision":1,"save_key":"save-8308b673-7d3b-42cc-9df5-86b593967f9e"} -> 200 {"ok":true,"saved":{"revision":2,"replayed":false}}
+PASS: layout saved: {"ok":true,"saved":{"revision":2,"replayed":false}}
+2026-09-26T16:50:12.701Z member PUT /api/homes/layout {"layout":{"version":1,"rooms":[{"id":"room-1","wallpaper":"plaster00","flooring":"simpleparquet00","items":[{"uid":"starter-bed","piece":"home-bed","cell":[0,4],"rot":0},{"uid":"starter-lamp","piece":"floor-lamp","cell":[5,1],"rot":2},{"uid":"starter-shelf","piece":"bookshelf","cell":[4,5],"rot":0},{"uid":"starter-closet","piece":"closet","cell":[0,2],"rot":0}]},{"id":"room-2","wallpaper":"brick00","flooring":"tatami00","items":[{"uid":"p1-rug","piece":"lounge-rug","cell":[2,2],"rot":1}]}],"outdoor":[]},"base_revision":1,"save_key":"save-d1c7ab69-5485-4c0c-8077-96f759df94ed"} -> 409 {"ok":false,"error":"Your home changed somewhere else. Reloaded the latest version.","code":"revision_conflict","home":{"rooms_count":2,"layout":{"version":1,"rooms":[{"id":"room-1","wallpaper":"plaster00","flooring":"simpleparquet00","items":[{"uid":"starter-bed","piece":"home-bed","cell":[0,4],"rot":0},{"uid":"starter-lamp","piece":"floor-lamp","cell":[5,1],"rot":2},{"uid":"starter-shelf","piece":"bookshelf","cell":[4,5],"rot":0},{"uid":"starter-closet","piece":"closet","cell":[0,2],"rot":0}]},{"id":"room-2","wallpaper":"brick00","flooring":"tatami00","items":[{"uid":"p1-rug","piece":"lounge-rug","cell":[2,2],"rot":1}]}],"outdoor":[]},"revision":2}}
+PASS: stale revision refused (409)
+2026-09-26T16:50:13.012Z member GET /api/homes  -> 200 {"ok":true,"home":{"rooms_count":2,"layout":{"version":1,"rooms":[{"id":"room-1","wallpaper":"plaster00","flooring":"simpleparquet00","items":[{"uid":"starter-bed","piece":"home-bed","cell":[0,4],"rot":0},{"uid":"starter-lamp","piece":"floor-lamp","cell":[5,1],"rot":2},{"uid":"starter-shelf","piece":"bookshelf","cell":[4,5],"rot":0},{"uid":"starter-closet","piece":"closet","cell":[0,2],"rot":0}]},{"id":"room-2","wallpaper":"brick00","flooring":"tatami00","items":[{"uid":"p1-rug","piece":"lounge-rug","cell":[2,2],"rot":1}]}],"outdoor":[]},"revision":2,"room_price":500,"room_cap":4}}
+PASS: reload returns the edit (revision 2)
+SQL> select room_index, room_id, wallpaper, flooring, items from member_home_rooms where member_id = 'c2982825-3dd1-4572-a9d0-4b7fadd306d6' order by room_index
+room_index | room_id | wallpaper | flooring | items
+0 | room-1 | plaster00 | simpleparquet00 | [{"rot": 0, "uid": "starter-bed", "cell": [0, 4], "piece": "home-bed"}, {"rot": 2, "uid": "starter-lamp", "cell": [5, 1], "piece": "floor-lamp"}, {"rot": 0, "uid": "starter-shelf", "cell": [4, 5], "piece": "bookshelf"}, {"rot": 0, "uid": "starter-closet", "cell": [0, 2], "piece": "closet"}]
+1 | room-2 | brick00 | tatami00 | [{"rot": 1, "uid": "p1-rug", "cell": [2, 2], "piece": "lounge-rug"}]
+SQL> select rooms_count, revision from member_homes where member_id = 'c2982825-3dd1-4572-a9d0-4b7fadd306d6'
+rooms_count | revision
+2 | 2
+2026-09-26T16:50:20.913Z member POST /api/study/heartbeat  -> 200 {"ok":true,"study":{"session":{"id":"af399274-ddda-474e-ac7b-912a47ad869e","table_id":"00000000-0000-4000-8000-000000005109","seat":1,"phase":"focus","settings":{"focus_len":5,"break_len":1,"cycles":1},"cycle":1,"phase_ends_at":"2026-09-26T16:53:30.834Z","remaining_s":191,"minutes_completed":0,"blocks_completed":0,"coins_pending":0,"ended_at":null,"end_reason":null,"coins_paid":null},"table":{"id":"00000000-0000-4000-8000-000000005109","slug":"pier-bench","label":"Pier table","location":"outdoor-pier","anchor":"study:pier-bench","kind":"outdoor","seats":2,"taken":[1],"is_private":false,"can_join":true,"host_name":"Phase1 Member","mates":[{"member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","n
+2026-09-26T16:50:21.568Z member GET /api/oracle/me  -> 200 {"ok":true,"oracle":{"type":null,"family":null,"color":null,"auras":[],"taken_at":null,"open_attempt":null,"next_reading":{"kind":"free","fee":0,"available_at":null}}}
+PASS: oracle state
+2026-09-26T16:50:22.249Z member POST /api/oracle/start {"start_key":"oracle-0e1ec74d-1ce8-41e0-b0d5-e7e80bac68e6"} -> 200 {"ok":true,"reading":{"attempt_id":"c015826c-8ae7-4069-89be-4a49993b5aae","items":[{"id":"ei05","text":"Walking up to a table of strangers at an event feels easy for me."},{"id":"sn06","text":"I like asking what a project could become in five years, not just what it is now."},{"id":"tf06","text":"I can usually tell when someone is upset before they say anything."},{"id":"jp11","text":"I would rather decide quickly and adjust than keep debating."},{"id":"tf02","text":"Before deciding, I think about how each person in the group will feel about it."},{"id":"ei03","text":"I would rather talk a problem out loud than puzzle over it alone."},{"id":"jp07","text":"I pack for a trip days ahead, with a
+PASS: reading started: {"ok":true,"reading":{"attempt_id":"c015826c-8ae7-4069-89be-4a49993b5aae","items":[{"id":"ei05","text":"Walking up to a table of strangers at an event feels easy for me."},{"id":"sn06","text":"I like 
+2026-09-26T16:50:22.804Z member POST /api/oracle/answer {"attempt_id":"c015826c-8ae7-4069-89be-4a49993b5aae","answers":[{"item_id":"ei05","value":2},{"item_id":"sn06","value":-1},{"item_id":"tf06","value":1},{"item_id":"jp11","value":-2},{"item_id":"tf02","value":0},{"item_id":"ei03","value":2},{"item_id":"jp07","value":-1},{"item_id":"sn12","value":1},{"item_id":"ei15","value":-2},{"item_id":"tf15","value":0},{"item_id":"sn02","value":2},{"item_id":"jp01","value":-1},{"item_id":"tf01","value":1},{"item_id":"sn11","value":-2},{"item_id":"jp16","value":0},{"item_id":"ei16","value":2},{"item_id":"tf11","value":-1},{"item_id":"sn08","value":1},{"item_id":"jp05","value":-2},{"item_id":"ei10","value":0},{"item_id":"jp15","value":2},{"item_id":"tf05","value":-1},{"item_id":"sn13","value":1},{"item_id":"ei11","value":-2},{"item_id":"ei07","value":0},{"item_id":"tf16","value":2},{"item_id":"sn16","value":-1},{"item_id":"jp09","value":1},{"item_id":"jp03","value":-2},{"item_id":"ei02","value":0},{"item_id":"sn04","value":2},{"item_id":"tf08","value":-1},{"item_id":"sn09","value":1},{"item_id":"jp10","value":-2},{"item_id":"tf14","value":0},{"item_id":"ei12","value":2},{"item_id":"ei14","value":-1},{"item_id":"jp14","value":1},{"item_id":"sn07","value":-2},{"item_id":"tf03","value":0},{"item_id":"jp02","value":2},{"item_id":"sn15","value":-1},{"item_id":"tf10","value":1},{"item_id":"ei09","value":-2},{"item_id":"sn10","value":0},{"item_id":"tf13","value":2},{"item_id":"ei06","value":-1},{"item_id":"jp04","value":1},{"item_id":"jp13","value":-2},{"item_id":"tf04","value":0},{"item_id":"ei01","value":2},{"item_id":"sn14","value":-1},{"item_id":"jp06","value":1},{"item_id":"tf07","value":-2},{"item_id":"sn03","value":0},{"item_id":"ei13","value":2},{"item_id":"tf09","value":-1},{"item_id":"ei08","value":1},{"item_id":"jp12","value":-2},{"item_id":"sn05","value":0},{"item_id":"jp08","value":2},{"item_id":"ei04","value":-1},{"item_id":"sn01","value":1},{"item_id":"tf12","value":-2}]} -> 200 {"ok":true,"progress":{"answered":64,"total":64,"keeper_beat":null}}
+PASS: answered 64 items
+2026-09-26T16:50:23.321Z member POST /api/oracle/finish {"attempt_id":"c015826c-8ae7-4069-89be-4a49993b5aae"} -> 200 {"ok":true,"result":{"status":"needs_tie_breakers","tie_breakers":[{"id":"ei-t1","dichotomy":"EI","prompt":"A free Saturday on the island. You spend it…","options":[{"label":"at the plaza, seeing who turns up","pole":"E"},{"label":"on your own island, decorating","pole":"I"}]},{"id":"ei-t2","dichotomy":"EI","prompt":"You just caught a rare fish. First thing you do?","options":[{"label":"Show whoever is nearby","pole":"E"},{"label":"Quietly add it to your journal","pole":"I"}]},{"id":"ei-t3","dichotomy":"EI","prompt":"The club needs someone for…","options":[{"label":"greeting new members at the door","pole":"E"},{"label":"writing the welcome guide","pole":"I"}]},{"id":"ei-t4","dichotomy":"EI"
+PASS: reading finished: {"ok":true,"result":{"status":"needs_tie_breakers","tie_breakers":[{"id":"ei-t1","dichotomy":"EI","prompt":"A free Saturday on the island. You spend it…","options":[{"label":"at the plaza, seeing who turns up","pole":"E"},{"label":"on your own island, decorating","pole":"I"}]},{"id":"ei-t2","dichoto
+SQL> select status, mbti_type, family, fee_paid from oracle_attempts where member_id = 'c2982825-3dd1-4572-a9d0-4b7fadd306d6' order by started_at
+status | mbti_type | family | fee_paid
+open |  |  | 0
+SQL> select class from profiles where id = 'c2982825-3dd1-4572-a9d0-4b7fadd306d6'
+class
+2026-09-26T16:50:51.675Z member GET /api/oracle/me  -> 200 {"ok":true,"oracle":{"type":null,"family":null,"color":null,"auras":[],"taken_at":null,"open_attempt":null,"next_reading":{"kind":"free","fee":0,"available_at":null}}}
+PASS: oracle state: {"ok":true,"oracle":{"type":null,"family":null,"color":null,"auras":[],"taken_at":null,"open_attempt":null,"next_reading":{"kind":"free","fee":0,"available_at":null}}}
+2026-09-26T16:50:52.074Z member GET /api/economy/wallet  -> 200 {"ok":true,"wallet":{"coins":776,"gems":0,"daily_claimed":false,"day":"2026-09-26","recent":[{"currency":"coins","amount":-140,"balance_after":776,"source":"shop","ref":"furn-lounge-rug","created_at":"2026-09-26T16:50:11.352141+00:00"},{"currency":"coins","amount":-140,"balance_after":916,"source":"shop","ref":"furn-lounge-rug","created_at":"2026-09-26T16:49:58.36636+00:00"},{"currency":"coins","amount":-500,"balance_after":1056,"source":"room","ref":"room-2","created_at":"2026-09-26T16:49:27.77505+00:00"},{"currency":"coins","amount":1500,"balance_after":1556,"source":"admin","ref":"phase1 test fixture: no admin coin route exists","created_at":"2026-09-26T16:49:26.646673+00:00"},{"currency"
+2026-09-26T16:50:52.678Z member POST /api/oracle/start {"start_key":"oracle-a9d4b706-6282-4ab5-afcc-cb790b80a030"} -> 200 {"ok":true,"reading":{"attempt_id":"a457e617-e7b6-4b08-a35b-8c5e8182033b","items":[{"id":"tf01","text":"When two friends disagree, I first ask which argument is actually correct."},{"id":"ei14","text":"I would rather read the island guide than ask someone how things work."},{"id":"sn10","text":"My mind wanders to what-ifs while other people are still on the facts."},{"id":"jp06","text":"A surprise change of plans usually sounds fun to me."},{"id":"jp07","text":"I pack for a trip days ahead, with a checklist."},{"id":"tf14","text":"I choose gifts by thinking about what the person would love, not what is useful."},{"id":"sn08","text":"Metaphors help me understand things faster than step-by-ste
+2026-09-26T16:50:53.176Z member POST /api/oracle/answer {"attempt_id":"a457e617-e7b6-4b08-a35b-8c5e8182033b","answers":[{"item_id":"tf01","value":2},{"item_id":"ei14","value":2},{"item_id":"sn10","value":2},{"item_id":"jp06","value":2},{"item_id":"jp07","value":2},{"item_id":"tf14","value":2},{"item_id":"sn08","value":2},{"item_id":"ei09","value":2},{"item_id":"ei16","value":2},{"item_id":"jp11","value":2},{"item_id":"sn16","value":2},{"item_id":"tf06","value":2},{"item_id":"sn03","value":2},{"item_id":"tf08","value":2},{"item_id":"jp03","value":2},{"item_id":"ei04","value":2},{"item_id":"sn13","value":2},{"item_id":"jp12","value":2},{"item_id":"ei11","value":2},{"item_id":"tf03","value":2},{"item_id":"tf12","value":2},{"item_id":"sn04","value":2},{"item_id":"ei10","value":2},{"item_id":"jp04","value":2},{"item_id":"jp15","value":2},{"item_id":"ei12","value":2},{"item_id":"tf04","value":2},{"item_id":"sn11","value":2},{"item_id":"ei06","value":2},{"item_id":"tf11","value":2},{"item_id":"sn05","value":2},{"item_id":"jp10","value":2},{"item_id":"tf15","value":2},{"item_id":"ei13","value":2},{"item_id":"sn12","value":2},{"item_id":"jp09","value":2},{"item_id":"tf10","value":2},{"item_id":"jp08","value":2},{"item_id":"ei08","value":2},{"item_id":"sn07","value":2},{"item_id":"tf13","value":2},{"item_id":"jp14","value":2},{"item_id":"ei03","value":2},{"item_id":"sn02","value":2},{"item_id":"tf09","value":2},{"item_id":"jp01","value":2},{"item_id":"sn15","value":2},{"item_id":"ei02","value":2},{"item_id":"ei05","value":2},{"item_id":"jp16","value":2},{"item_id":"tf02","value":2},{"item_id":"sn06","value":2},{"item_id":"tf05","value":2},{"item_id":"jp05","value":2},{"item_id":"ei07","value":2},{"item_id":"sn14","value":2},{"item_id":"tf07","value":2},{"item_id":"jp02","value":2},{"item_id":"ei15","value":2},{"item_id":"sn09","value":2},{"item_id":"ei01","value":2},{"item_id":"tf16","value":2},{"item_id":"jp13","value":2},{"item_id":"sn01","value":2}]} -> 200 {"ok":true,"progress":{"answered":64,"total":64,"keeper_beat":null}}
+PASS: first reading: answered 64 items
+2026-09-26T16:50:53.584Z member POST /api/oracle/finish {"attempt_id":"a457e617-e7b6-4b08-a35b-8c5e8182033b"} -> 200 {"ok":true,"result":{"status":"needs_tie_breakers","tie_breakers":[{"id":"ei-t1","dichotomy":"EI","prompt":"A free Saturday on the island. You spend it…","options":[{"label":"at the plaza, seeing who turns up","pole":"E"},{"label":"on your own island, decorating","pole":"I"}]},{"id":"ei-t2","dichotomy":"EI","prompt":"You just caught a rare fish. First thing you do?","options":[{"label":"Show whoever is nearby","pole":"E"},{"label":"Quietly add it to your journal","pole":"I"}]},{"id":"ei-t3","dichotomy":"EI","prompt":"The club needs someone for…","options":[{"label":"greeting new members at the door","pole":"E"},{"label":"writing the welcome guide","pole":"I"}]},{"id":"ei-t4","dichotomy":"EI"
+2026-09-26T16:50:54.096Z member POST /api/oracle/finish {"attempt_id":"a457e617-e7b6-4b08-a35b-8c5e8182033b","tie_answers":{"ei-t1":"E","ei-t2":"E","ei-t3":"E","ei-t4":"E","sn-t1":"S","sn-t2":"S","sn-t3":"S","sn-t4":"S","tf-t1":"T","tf-t2":"T","tf-t3":"T","tf-t4":"T","jp-t1":"J","jp-t2":"J","jp-t3":"J","jp-t4":"J"}} -> 200 {"ok":true,"result":{"status":"done","type":"ESTJ","family":"Ranger","dichotomies":[{"dichotomy":"EI","score":0,"max":32,"letter":"E","clarity":0,"decided_by":"tie_breaker"},{"dichotomy":"SN","score":0,"max":32,"letter":"S","clarity":0,"decided_by":"tie_breaker"},{"dichotomy":"TF","score":0,"max":32,"letter":"T","clarity":0,"decided_by":"tie_breaker"},{"dichotomy":"JP","score":0,"max":32,"letter":"J","clarity":0,"decided_by":"tie_breaker"}],"low_clarity":false,"color":"blue","previous_family":null,"aura_new":true}}
+PASS: first reading: undefined Ranger
+2026-09-26T16:50:54.435Z member GET /api/economy/wallet  -> 200 {"ok":true,"wallet":{"coins":776,"gems":0,"daily_claimed":false,"day":"2026-09-26","recent":[{"currency":"coins","amount":-140,"balance_after":776,"source":"shop","ref":"furn-lounge-rug","created_at":"2026-09-26T16:50:11.352141+00:00"},{"currency":"coins","amount":-140,"balance_after":916,"source":"shop","ref":"furn-lounge-rug","created_at":"2026-09-26T16:49:58.36636+00:00"},{"currency":"coins","amount":-500,"balance_after":1056,"source":"room","ref":"room-2","created_at":"2026-09-26T16:49:27.77505+00:00"},{"currency":"coins","amount":1500,"balance_after":1556,"source":"admin","ref":"phase1 test fixture: no admin coin route exists","created_at":"2026-09-26T16:49:26.646673+00:00"},{"currency"
+PASS: first reading is free
+2026-09-26T16:50:54.757Z member POST /api/oracle/start {"start_key":"oracle-e3d0a654-b89c-4769-aae4-c4c9fe00a905"} -> 409 {"ok":false,"code":"cooldown","error":"The Oracle needs time before another reading.","until":"2026-10-03T16:50:54.124Z"}
+FAIL: respec: Ranger -> undefined
+2026-09-26T16:50:55.098Z member GET /api/economy/wallet  -> 200 {"ok":true,"wallet":{"coins":776,"gems":0,"daily_claimed":false,"day":"2026-09-26","recent":[{"currency":"coins","amount":-140,"balance_after":776,"source":"shop","ref":"furn-lounge-rug","created_at":"2026-09-26T16:50:11.352141+00:00"},{"currency":"coins","amount":-140,"balance_after":916,"source":"shop","ref":"furn-lounge-rug","created_at":"2026-09-26T16:49:58.36636+00:00"},{"currency":"coins","amount":-500,"balance_after":1056,"source":"room","ref":"room-2","created_at":"2026-09-26T16:49:27.77505+00:00"},{"currency":"coins","amount":1500,"balance_after":1556,"source":"admin","ref":"phase1 test fixture: no admin coin route exists","created_at":"2026-09-26T16:49:26.646673+00:00"},{"currency"
+FAIL: respec charged 0 coins
+SQL> select status, mbti_type, family, fee_paid from oracle_attempts where member_id = 'c2982825-3dd1-4572-a9d0-4b7fadd306d6' order by started_at
+status | mbti_type | family | fee_paid
+completed | ESTJ | Ranger | 0
+SQL> select from_family, to_family, fee, ledger_key from respec_log where member_id = 'c2982825-3dd1-4572-a9d0-4b7fadd306d6'
+from_family | to_family | fee | ledger_key
+SQL> select amount, balance_after, source, ref from wallet_ledger where member_id = 'c2982825-3dd1-4572-a9d0-4b7fadd306d6' and source = 'respec'
+amount | balance_after | source | ref
+SQL> select p.class, i.mbti_type, i.family from profiles p join member_identity i on i.member_id = p.id where p.id = 'c2982825-3dd1-4572-a9d0-4b7fadd306d6'
+class | mbti_type | family
+Ranger | ESTJ | Ranger
+SQL> select family from family_auras where member_id = 'c2982825-3dd1-4572-a9d0-4b7fadd306d6' order by 1
+family
+Ranger
+2026-09-26T16:51:25.522Z member GET /api/oracle/me  -> 200 {"ok":true,"oracle":{"type":null,"family":null,"color":null,"auras":[],"taken_at":null,"open_attempt":null,"next_reading":{"kind":"free","fee":0,"available_at":null}}}
+PASS: oracle state: {"ok":true,"oracle":{"type":null,"family":null,"color":null,"auras":[],"taken_at":null,"open_attempt":null,"next_reading":{"kind":"free","fee":0,"available_at":null}}}
+2026-09-26T16:51:26.064Z member GET /api/economy/wallet  -> 200 {"ok":true,"wallet":{"coins":776,"gems":0,"daily_claimed":false,"day":"2026-09-26","recent":[{"currency":"coins","amount":-140,"balance_after":776,"source":"shop","ref":"furn-lounge-rug","created_at":"2026-09-26T16:50:11.352141+00:00"},{"currency":"coins","amount":-140,"balance_after":916,"source":"shop","ref":"furn-lounge-rug","created_at":"2026-09-26T16:49:58.36636+00:00"},{"currency":"coins","amount":-500,"balance_after":1056,"source":"room","ref":"room-2","created_at":"2026-09-26T16:49:27.77505+00:00"},{"currency":"coins","amount":1500,"balance_after":1556,"source":"admin","ref":"phase1 test fixture: no admin coin route exists","created_at":"2026-09-26T16:49:26.646673+00:00"},{"currency"
+2026-09-26T16:51:26.774Z member POST /api/oracle/start {"start_key":"oracle-b1797535-15af-481d-9750-f7ad95209f3d"} -> 200 {"ok":true,"reading":{"attempt_id":"93347555-d254-424e-bf9a-beeac13c2f4c","items":[{"id":"ei13","text":"I like being the person who introduces friends to each other."},{"id":"jp14","text":"Rules feel more like suggestions to me when the situation is new."},{"id":"sn08","text":"Metaphors help me understand things faster than step-by-step lists."},{"id":"tf07","text":"A spreadsheet of pros and cons settles most choices for me."},{"id":"jp13","text":"Late arrivals to a meeting I planned throw off my whole afternoon."},{"id":"ei10","text":"People sometimes learn I had an opinion only after the meeting ended."},{"id":"sn14","text":"I often connect ideas from two unrelated classes in one assignmen
+2026-09-26T16:51:27.377Z member POST /api/oracle/answer {"attempt_id":"93347555-d254-424e-bf9a-beeac13c2f4c","answers":[{"item_id":"ei13","value":2},{"item_id":"jp14","value":2},{"item_id":"sn08","value":2},{"item_id":"tf07","value":2},{"item_id":"jp13","value":2},{"item_id":"ei10","value":2},{"item_id":"sn14","value":2},{"item_id":"tf06","value":2},{"item_id":"ei14","value":2},{"item_id":"tf02","value":2},{"item_id":"sn05","value":2},{"item_id":"jp03","value":2},{"item_id":"sn01","value":2},{"item_id":"tf13","value":2},{"item_id":"jp01","value":2},{"item_id":"ei16","value":2},{"item_id":"jp08","value":2},{"item_id":"ei05","value":2},{"item_id":"tf08","value":2},{"item_id":"sn04","value":2},{"item_id":"jp07","value":2},{"item_id":"tf01","value":2},{"item_id":"sn13","value":2},{"item_id":"ei12","value":2},{"item_id":"sn11","value":2},{"item_id":"ei02","value":2},{"item_id":"jp04","value":2},{"item_id":"tf10","value":2},{"item_id":"jp09","value":2},{"item_id":"sn09","value":2},{"item_id":"tf16","value":2},{"item_id":"ei06","value":2},{"item_id":"tf11","value":2},{"item_id":"jp15","value":2},{"item_id":"ei04","value":2},{"item_id":"sn10","value":2},{"item_id":"sn03","value":2},{"item_id":"jp05","value":2},{"item_id":"ei08","value":2},{"item_id":"tf14","value":2},{"item_id":"ei01","value":2},{"item_id":"sn07","value":2},{"item_id":"jp12","value":2},{"item_id":"tf03","value":2},{"item_id":"tf04","value":2},{"item_id":"sn15","value":2},{"item_id":"jp10","value":2},{"item_id":"ei07","value":2},{"item_id":"jp16","value":2},{"item_id":"tf09","value":2},{"item_id":"ei03","value":2},{"item_id":"sn02","value":2},{"item_id":"tf05","value":2},{"item_id":"ei11","value":2},{"item_id":"sn16","value":2},{"item_id":"jp02","value":2},{"item_id":"tf15","value":2},{"item_id":"jp06","value":2},{"item_id":"ei15","value":2},{"item_id":"sn06","value":2},{"item_id":"jp11","value":2},{"item_id":"ei09","value":2},{"item_id":"sn12","value":2},{"item_id":"tf12","value":2}]} -> 200 {"ok":true,"progress":{"answered":64,"total":64,"keeper_beat":null}}
+PASS: first reading: answered 64 items
+2026-09-26T16:51:27.852Z member POST /api/oracle/finish {"attempt_id":"93347555-d254-424e-bf9a-beeac13c2f4c"} -> 200 {"ok":true,"result":{"status":"needs_tie_breakers","tie_breakers":[{"id":"ei-t1","dichotomy":"EI","prompt":"A free Saturday on the island. You spend it…","options":[{"label":"at the plaza, seeing who turns up","pole":"E"},{"label":"on your own island, decorating","pole":"I"}]},{"id":"ei-t2","dichotomy":"EI","prompt":"You just caught a rare fish. First thing you do?","options":[{"label":"Show whoever is nearby","pole":"E"},{"label":"Quietly add it to your journal","pole":"I"}]},{"id":"ei-t3","dichotomy":"EI","prompt":"The club needs someone for…","options":[{"label":"greeting new members at the door","pole":"E"},{"label":"writing the welcome guide","pole":"I"}]},{"id":"ei-t4","dichotomy":"EI"
+2026-09-26T16:51:28.486Z member POST /api/oracle/finish {"attempt_id":"93347555-d254-424e-bf9a-beeac13c2f4c","tie_answers":{"ei-t1":"E","ei-t2":"E","ei-t3":"E","ei-t4":"E","sn-t1":"S","sn-t2":"S","sn-t3":"S","sn-t4":"S","tf-t1":"T","tf-t2":"T","tf-t3":"T","tf-t4":"T","jp-t1":"J","jp-t2":"J","jp-t3":"J","jp-t4":"J"}} -> 200 {"ok":true,"result":{"status":"done","type":"ESTJ","family":"Ranger","dichotomies":[{"dichotomy":"EI","score":0,"max":32,"letter":"E","clarity":0,"decided_by":"tie_breaker"},{"dichotomy":"SN","score":0,"max":32,"letter":"S","clarity":0,"decided_by":"tie_breaker"},{"dichotomy":"TF","score":0,"max":32,"letter":"T","clarity":0,"decided_by":"tie_breaker"},{"dichotomy":"JP","score":0,"max":32,"letter":"J","clarity":0,"decided_by":"tie_breaker"}],"low_clarity":false,"color":"blue","previous_family":null,"aura_new":true}}
+PASS: first reading: undefined Ranger
+2026-09-26T16:51:28.873Z member GET /api/economy/wallet  -> 200 {"ok":true,"wallet":{"coins":776,"gems":0,"daily_claimed":false,"day":"2026-09-26","recent":[{"currency":"coins","amount":-140,"balance_after":776,"source":"shop","ref":"furn-lounge-rug","created_at":"2026-09-26T16:50:11.352141+00:00"},{"currency":"coins","amount":-140,"balance_after":916,"source":"shop","ref":"furn-lounge-rug","created_at":"2026-09-26T16:49:58.36636+00:00"},{"currency":"coins","amount":-500,"balance_after":1056,"source":"room","ref":"room-2","created_at":"2026-09-26T16:49:27.77505+00:00"},{"currency":"coins","amount":1500,"balance_after":1556,"source":"admin","ref":"phase1 test fixture: no admin coin route exists","created_at":"2026-09-26T16:49:26.646673+00:00"},{"currency"
+PASS: first reading is free
+2026-09-26T16:51:29.231Z member POST /api/oracle/start {"start_key":"oracle-e975d33b-1f74-4d48-9e46-248f938d3aaf"} -> 409 {"ok":false,"code":"cooldown","error":"The Oracle needs time before another reading.","until":"2026-10-03T16:51:28.458Z"}
+PASS: a second reading right away waits for the cooldown (until 2026-10-03T16:51:28.458Z)
+SQL> update oracle_attempts set started_at = started_at - interval '8 days', completed_at = completed_at - interval '8 days' where member_id = 'c2982825-3dd1-4572-a9d0-4b7fadd306d6' and status = 'completed'
+
+SQL> update member_identity set quiz_taken_at = quiz_taken_at - interval '8 days' where member_id = 'c2982825-3dd1-4572-a9d0-4b7fadd306d6'
+
+2026-09-26T16:51:30.892Z member GET /api/oracle/me  -> 200 {"ok":true,"oracle":{"type":"ESTJ","family":"Ranger","color":"blue","auras":["Ranger"],"taken_at":"2026-09-18T16:51:28.458417+00:00","open_attempt":null,"next_reading":{"kind":"respec","fee":250,"available_at":null}}}
+PASS: next reading is a paid respec: {"kind":"respec","fee":250,"available_at":null}
+2026-09-26T16:51:31.654Z member POST /api/oracle/start {"start_key":"oracle-a28755ef-1ad6-42a9-a88d-7163cd095fd6"} -> 200 {"ok":true,"reading":{"attempt_id":"dea67bdc-e278-486f-b718-9a5f8bedba67","items":[{"id":"sn04","text":"I get restless doing a task the same way for the fifth time."},{"id":"tf04","text":"I will change a good plan if it would leave someone on the team behind."},{"id":"ei16","text":"My favourite part of a trip is the quiet morning before everyone wakes up."},{"id":"jp12","text":"I start several projects at once and switch between them as the mood takes me."},{"id":"ei13","text":"I like being the person who introduces friends to each other."},{"id":"jp15","text":"I like knowing exactly when an event starts and ends."},{"id":"sn08","text":"Metaphors help me understand things faster than step-by
+2026-09-26T16:51:32.211Z member POST /api/oracle/answer {"attempt_id":"dea67bdc-e278-486f-b718-9a5f8bedba67","answers":[{"item_id":"sn04","value":-2},{"item_id":"tf04","value":-2},{"item_id":"ei16","value":-2},{"item_id":"jp12","value":-2},{"item_id":"ei13","value":-2},{"item_id":"jp15","value":-2},{"item_id":"sn08","value":-2},{"item_id":"tf03","value":-2},{"item_id":"ei08","value":-2},{"item_id":"tf12","value":-2},{"item_id":"sn01","value":-2},{"item_id":"jp05","value":-2},{"item_id":"sn10","value":-2},{"item_id":"tf05","value":-2},{"item_id":"ei11","value":-2},{"item_id":"jp10","value":-2},{"item_id":"ei12","value":-2},{"item_id":"tf09","value":-2},{"item_id":"sn06","value":-2},{"item_id":"jp06","value":-2},{"item_id":"tf10","value":-2},{"item_id":"sn05","value":-2},{"item_id":"jp16","value":-2},{"item_id":"ei01","value":-2},{"item_id":"sn15","value":-2},{"item_id":"tf08","value":-2},{"item_id":"ei10","value":-2},{"item_id":"jp11","value":-2},{"item_id":"ei02","value":-2},{"item_id":"tf01","value":-2},{"item_id":"jp01","value":-2},{"item_id":"sn16","value":-2},{"item_id":"tf07","value":-2},{"item_id":"ei04","value":-2},{"item_id":"sn12","value":-2},{"item_id":"jp14","value":-2},{"item_id":"tf16","value":-2},{"item_id":"ei05","value":-2},{"item_id":"sn03","value":-2},{"item_id":"jp07","value":-2},{"item_id":"ei15","value":-2},{"item_id":"tf11","value":-2},{"item_id":"sn02","value":-2},{"item_id":"jp03","value":-2},{"item_id":"tf06","value":-2},{"item_id":"sn07","value":-2},{"item_id":"ei06","value":-2},{"item_id":"jp08","value":-2},{"item_id":"tf13","value":-2},{"item_id":"sn11","value":-2},{"item_id":"ei14","value":-2},{"item_id":"jp09","value":-2},{"item_id":"jp02","value":-2},{"item_id":"ei07","value":-2},{"item_id":"sn14","value":-2},{"item_id":"tf14","value":-2},{"item_id":"sn09","value":-2},{"item_id":"ei03","value":-2},{"item_id":"tf02","value":-2},{"item_id":"jp13","value":-2},{"item_id":"sn13","value":-2},{"item_id":"tf15","value":-2},{"item_id":"ei09","value":-2},{"item_id":"jp04","value":-2}]} -> 200 {"ok":true,"progress":{"answered":64,"total":64,"keeper_beat":null}}
+PASS: respec reading: answered 64 items
+2026-09-26T16:51:32.651Z member POST /api/oracle/finish {"attempt_id":"dea67bdc-e278-486f-b718-9a5f8bedba67"} -> 200 {"ok":true,"result":{"status":"needs_tie_breakers","tie_breakers":[{"id":"ei-t1","dichotomy":"EI","prompt":"A free Saturday on the island. You spend it…","options":[{"label":"at the plaza, seeing who turns up","pole":"E"},{"label":"on your own island, decorating","pole":"I"}]},{"id":"ei-t2","dichotomy":"EI","prompt":"You just caught a rare fish. First thing you do?","options":[{"label":"Show whoever is nearby","pole":"E"},{"label":"Quietly add it to your journal","pole":"I"}]},{"id":"ei-t3","dichotomy":"EI","prompt":"The club needs someone for…","options":[{"label":"greeting new members at the door","pole":"E"},{"label":"writing the welcome guide","pole":"I"}]},{"id":"ei-t4","dichotomy":"EI"
+2026-09-26T16:51:33.313Z member POST /api/oracle/finish {"attempt_id":"dea67bdc-e278-486f-b718-9a5f8bedba67","tie_answers":{"ei-t1":"I","ei-t2":"I","ei-t3":"I","ei-t4":"I","sn-t1":"N","sn-t2":"N","sn-t3":"N","sn-t4":"N","tf-t1":"F","tf-t2":"F","tf-t3":"F","tf-t4":"F","jp-t1":"P","jp-t2":"P","jp-t3":"P","jp-t4":"P"}} -> 200 {"ok":true,"result":{"status":"done","type":"INFP","family":"Warden","dichotomies":[{"dichotomy":"EI","score":0,"max":32,"letter":"I","clarity":0,"decided_by":"tie_breaker"},{"dichotomy":"SN","score":0,"max":32,"letter":"N","clarity":0,"decided_by":"tie_breaker"},{"dichotomy":"TF","score":0,"max":32,"letter":"F","clarity":0,"decided_by":"tie_breaker"},{"dichotomy":"JP","score":0,"max":32,"letter":"P","clarity":0,"decided_by":"tie_breaker"}],"low_clarity":false,"color":"green","previous_family":"Ranger","aura_new":true}}
+PASS: respec: Ranger -> Warden
+2026-09-26T16:51:33.712Z member GET /api/economy/wallet  -> 200 {"ok":true,"wallet":{"coins":526,"gems":0,"daily_claimed":false,"day":"2026-09-26","recent":[{"currency":"coins","amount":-250,"balance_after":526,"source":"respec","ref":"oracle respec","created_at":"2026-09-26T16:51:31.408692+00:00"},{"currency":"coins","amount":-140,"balance_after":776,"source":"shop","ref":"furn-lounge-rug","created_at":"2026-09-26T16:50:11.352141+00:00"},{"currency":"coins","amount":-140,"balance_after":916,"source":"shop","ref":"furn-lounge-rug","created_at":"2026-09-26T16:49:58.36636+00:00"},{"currency":"coins","amount":-500,"balance_after":1056,"source":"room","ref":"room-2","created_at":"2026-09-26T16:49:27.77505+00:00"},{"currency":"coins","amount":1500,"balance_af
+PASS: respec charged 250 coins
+SQL> select status, mbti_type, family, fee_paid from oracle_attempts where member_id = 'c2982825-3dd1-4572-a9d0-4b7fadd306d6' order by started_at
+status | mbti_type | family | fee_paid
+completed | ESTJ | Ranger | 0
+completed | INFP | Warden | 250
+SQL> select from_family, to_family, fee, ledger_key from respec_log where member_id = 'c2982825-3dd1-4572-a9d0-4b7fadd306d6'
+from_family | to_family | fee | ledger_key
+Ranger | Warden | 250 | respec:oracle-a28755ef-1ad6-42a9-a88d-7163cd095fd6
+SQL> select amount, balance_after, source, ref from wallet_ledger where member_id = 'c2982825-3dd1-4572-a9d0-4b7fadd306d6' and source = 'respec'
+amount | balance_after | source | ref
+-250 | 526 | respec | oracle respec
+SQL> select p.class, i.mbti_type, i.family from profiles p join member_identity i on i.member_id = p.id where p.id = 'c2982825-3dd1-4572-a9d0-4b7fadd306d6'
+class | mbti_type | family
+Warden | INFP | Warden
+SQL> select family from family_auras where member_id = 'c2982825-3dd1-4572-a9d0-4b7fadd306d6' order by 1
+family
+Ranger
+Warden
+2026-09-26T16:51:43.783Z member POST /api/progression/letters {"to":"4e294cb3-7032-433c-971e-90f855021d10","subject":"Hi from the pier","body":"Want to fish at dawn tomorrow?"} -> 200 {"ok":true,"letter":{"id":"4f8669f5-c6c0-43e8-82a0-b764e3711799","created_at":"2026-09-26T16:51:43.789915+00:00"}}
+PASS: member sends a note to the public account
+2026-09-26T16:51:44.305Z public GET /api/progression/letters  -> 200 {"ok":true,"letters":[{"id":"4f8669f5-c6c0-43e8-82a0-b764e3711799","kind":"note","sender_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","sender_name":"Phase1 Member","recipient_id":"4e294cb3-7032-433c-971e-90f855021d10","recipient_name":"Phase1 Public","subject":"Hi from the pier","body":"Want to fish at dawn tomorrow?","created_at":"2026-09-26T16:51:43.789915+00:00","read_at":null,"reported":false,"outgoing":false}]}
+PASS: public account sees the note
+2026-09-26T16:51:45.270Z public PATCH /api/progression/letters/4f8669f5-c6c0-43e8-82a0-b764e3711799 {"action":"read"} -> 200 {"ok":true}
+PASS: public marks it read
+2026-09-26T16:51:45.989Z public POST /api/progression/letters {"to":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","subject":"Re: pier","body":"Sure, see you there."} -> 200 {"ok":true,"letter":{"id":"8a721b06-ee1c-49dc-95f8-397f2b447ee3","created_at":"2026-09-26T16:51:46.02084+00:00"}}
+PASS: public replies
+2026-09-26T16:51:46.473Z member GET /api/progression/letters  -> 200 {"ok":true,"letters":[{"id":"8a721b06-ee1c-49dc-95f8-397f2b447ee3","kind":"note","sender_id":"4e294cb3-7032-433c-971e-90f855021d10","sender_name":"Phase1 Public","recipient_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","recipient_name":"Phase1 Member","subject":"Re: pier","body":"Sure, see you there.","created_at":"2026-09-26T16:51:46.02084+00:00","read_at":null,"reported":false,"outgoing":false},{"id":"4f8669f5-c6c0-43e8-82a0-b764e3711799","kind":"note","sender_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","sender_name":"Phase1 Member","recipient_id":"4e294cb3-7032-433c-971e-90f855021d10","recipient_name":"Phase1 Public","subject":"Hi from the pier","body":"Want to fish at dawn tomorrow?","create
+PASS: member sees the reply
+2026-09-26T16:51:46.776Z member POST /api/progression/letters {"to":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","body":"note to self"} -> 400 {"ok":false,"error":"You can't send a note to yourself.","code":"invalid"}
+PASS: note to yourself refused
+2026-09-26T16:51:47.099Z public PATCH /api/progression/letters/4f8669f5-c6c0-43e8-82a0-b764e3711799 {"action":"report","reason":"test report"} -> 200 {"ok":true}
+PASS: public reports the note
+2026-09-26T16:51:47.405Z member PATCH /api/progression/letters/4f8669f5-c6c0-43e8-82a0-b764e3711799 {"action":"report"} -> 404 {"ok":false,"error":"Letter not found."}
+PASS: sender can't report a letter they sent (404)
+2026-09-26T16:51:47.804Z member POST /api/identity/report {"member_id":"4e294cb3-7032-433c-971e-90f855021d10","reason":"name test"} -> 200 {"ok":true,"report":{"reported":true}}
+SQL> select kind, sender_id = 'c2982825-3dd1-4572-a9d0-4b7fadd306d6' as from_member, recipient_id = '4e294cb3-7032-433c-971e-90f855021d10' as to_public, subject, read_at is not null as read, reported, reported_reason from letters where kind = 'note' order by created_at
+kind | from_member | to_public | subject | read | reported | reported_reason
+note | t | t | Hi from the pier | t | t | test report
+note | f | f | Re: pier | f | f |
+SQL> select reporter_id = 'c2982825-3dd1-4572-a9d0-4b7fadd306d6' as by_member, target_id = '4e294cb3-7032-433c-971e-90f855021d10' as target_public, reason from identity_reports
+by_member | target_public | reason
+t | t | name test
+2026-09-26T16:51:57.036Z staff GET /api/progression/goals  -> 200 {"ok":true,"goals":[{"slug":"reopen-cafe","title":"Reopen the cafe","summary":"The old cafe by the plaza has been boarded up for years. Bring coins and building materials to the monument, and come to club events: every check-in counts extra.","goal_type":"story","cycle":0,"open":true,"locked_by":null,"target_points":15000,"points":60,"percent":0,"stage":0,"completed":false,"completed_at":null,"contributors":1,"accepts":["coins","material"],"weights":{"coins":1,"material":20,"specimen":100,"event":500,"bounty":750,"admin":1},"caps":{"member_total":3000,"delivery":1500},"unlocks":["cafe","study_tables"],"monument_key":"plaza","my_points":0,"my_delivery_points":0},{"slug":"fund-museum","title":
+2026-09-26T16:51:58.382Z staff POST /api/progression/goals/reopen-cafe/credit {"member_id":"6d14b24f-7005-4194-adf2-4fc02d186c45","points":5000,"note":"phase1 test","idempotency_key":"credit-1fd9ed0a-e4ba-444d-83ca-0b54b13789bc"} -> 200 {"ok":true,"credit":{"replayed":false,"credited_points":5000,"goal":{"slug":"reopen-cafe","title":"Reopen the cafe","summary":"The old cafe by the plaza has been boarded up for years. Bring coins and building materials to the monument, and come to club events: every check-in counts extra.","goal_type":"story","cycle":0,"open":true,"locked_by":null,"target_points":15000,"points":5060,"percent":33,"stage":1,"completed":false,"completed_at":null,"contributors":2,"accepts":["coins","material"],"weights":{"coins":1,"material":20,"specimen":100,"event":500,"bounty":750,"admin":1},"caps":{"member_total":3000,"delivery":1500},"unlocks":["cafe","study_tables"],"monument_key":"plaza","my_points":0,"my
+2026-09-26T16:51:59.219Z staff POST /api/progression/goals/reopen-cafe/credit {"member_id":"6d14b24f-7005-4194-adf2-4fc02d186c45","points":5000,"note":"phase1 test","idempotency_key":"credit-f4da6798-180c-435f-846f-1a064370fe3f"} -> 200 {"ok":true,"credit":{"replayed":false,"credited_points":5000,"goal":{"slug":"reopen-cafe","title":"Reopen the cafe","summary":"The old cafe by the plaza has been boarded up for years. Bring coins and building materials to the monument, and come to club events: every check-in counts extra.","goal_type":"story","cycle":0,"open":true,"locked_by":null,"target_points":15000,"points":10060,"percent":67,"stage":2,"completed":false,"completed_at":null,"contributors":2,"accepts":["coins","material"],"weights":{"coins":1,"material":20,"specimen":100,"event":500,"bounty":750,"admin":1},"caps":{"member_total":3000,"delivery":1500},"unlocks":["cafe","study_tables"],"monument_key":"plaza","my_points":0,"m
+2026-09-26T16:52:00.435Z staff POST /api/progression/goals/reopen-cafe/credit {"member_id":"6d14b24f-7005-4194-adf2-4fc02d186c45","points":4940,"note":"phase1 test","idempotency_key":"credit-c90aa2aa-2f2e-4118-801c-fcc179c94373"} -> 200 {"ok":true,"credit":{"replayed":false,"credited_points":4940,"goal":{"slug":"reopen-cafe","title":"Reopen the cafe","summary":"The old cafe by the plaza has been boarded up for years. Bring coins and building materials to the monument, and come to club events: every check-in counts extra.","goal_type":"story","cycle":0,"open":false,"locked_by":null,"target_points":15000,"points":15000,"percent":100,"stage":4,"completed":true,"completed_at":"2026-09-26T16:52:00.075245+00:00","contributors":2,"accepts":["coins","material"],"weights":{"coins":1,"material":20,"specimen":100,"event":500,"bounty":750,"admin":1},"caps":{"member_total":3000,"delivery":1500},"unlocks":["cafe","study_tables"],"monumen
+2026-09-26T16:52:01.266Z member GET /api/progression/goals  -> 200 {"ok":true,"goals":[{"slug":"reopen-cafe","title":"Reopen the cafe","summary":"The old cafe by the plaza has been boarded up for years. Bring coins and building materials to the monument, and come to club events: every check-in counts extra.","goal_type":"story","cycle":0,"open":false,"locked_by":null,"target_points":15000,"points":15000,"percent":100,"stage":4,"completed":true,"completed_at":"2026-09-26T16:52:00.075245+00:00","contributors":2,"accepts":["coins","material"],"weights":{"coins":1,"material":20,"specimen":100,"event":500,"bounty":750,"admin":1},"caps":{"member_total":3000,"delivery":1500},"unlocks":["cafe","study_tables"],"monument_key":"plaza","my_points":60,"my_delivery_point
+PASS: reopen-cafe completed (15000/15000, stage 4)
+2026-09-26T16:52:01.697Z member GET /api/progression/letters  -> 200 {"ok":true,"letters":[{"id":"e6155ed2-6ab8-4c31-903d-74f25a1d6d13","kind":"system","sender_id":null,"sender_name":"Village Hall","recipient_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","recipient_name":"Phase1 Member","subject":"The cafe is open","body":"We did it together. The boards are off the cafe and the study tables are yours. Thank you for every coin, plank and event you showed up to.","created_at":"2026-09-26T16:52:00.29466+00:00","read_at":null,"reported":false,"outgoing":false},{"id":"8a721b06-ee1c-49dc-95f8-397f2b447ee3","kind":"note","sender_id":"4e294cb3-7032-433c-971e-90f855021d10","sender_name":"Phase1 Public","recipient_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","recipient_name
+PASS: goal broadcast on the member's notice board
+2026-09-26T16:52:02.145Z public GET /api/progression/letters  -> 200 {"ok":true,"letters":[{"id":"1a8e9fe5-4dbc-4b0b-bb70-3eb826bbe284","kind":"system","sender_id":null,"sender_name":"Village Hall","recipient_id":"4e294cb3-7032-433c-971e-90f855021d10","recipient_name":"Phase1 Public","subject":"The cafe is open","body":"We did it together. The boards are off the cafe and the study tables are yours. Thank you for every coin, plank and event you showed up to.","created_at":"2026-09-26T16:52:00.29466+00:00","read_at":null,"reported":false,"outgoing":false},{"id":"8a721b06-ee1c-49dc-95f8-397f2b447ee3","kind":"note","sender_id":"4e294cb3-7032-433c-971e-90f855021d10","sender_name":"Phase1 Public","recipient_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","recipient_name
+PASS: goal broadcast reached the public account
+2026-09-26T16:52:03.620Z member POST /api/progression/chapters/advance {"chapter_slug":"reopen-cafe","action":"complete"} -> 200 {"ok":true,"state":{"chapters":[{"slug":"settle-in","position":1,"title":"Settle in","summary":"Claim your plot, make your first catch and donate it, then report to HQ.","requirement":"settle_in","goal_slug":null,"status":"completed","steps":[{"key":"claim_plot","label":"Claim your plot at HQ","done":true,"anchor":"hq"},{"key":"first_catch","label":"Make your first catch","hint":"Any fish counts. Try the pier.","done":true,"anchor":"fishing_spot"},{"key":"donate_catch","label":"Donate your catch to the museum shell","done":true,"anchor":"museum"},{"key":"report_hq","label":"Report back to HQ","done":true,"anchor":"hq"}],"unlocks_regions":["village_core"],"can_skip":false,"completed_at":"2026
+PASS: chapter 2 completes once the club goal is done
+2026-09-26T16:52:03.843Z member POST /api/progression/goals/reopen-cafe/credit {"member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","points":10,"idempotency_key":"credit-8d32015a-09c7-44a3-ae8d-d48e50074aa8"} -> 403 {"ok":false,"error":"Forbidden: T1/T2 only"}
+PASS: member can't use the admin credit route
+SQL> select g.slug, c.cycle, c.total_points from club_goal_completions c join club_goals g on g.id = c.goal_id
+slug | cycle | total_points
+reopen-cafe | 0 | 15000
+SQL> select recipient_id in ('c2982825-3dd1-4572-a9d0-4b7fadd306d6', '4e294cb3-7032-433c-971e-90f855021d10', '6d14b24f-7005-4194-adf2-4fc02d186c45') as test_user, subject, broadcast_key from letters where broadcast_key like 'goal:%' order by 1
+test_user | subject | broadcast_key
+t | The cafe is open | goal:reopen-cafe:0
+t | The cafe is open | goal:reopen-cafe:0
+t | The cafe is open | goal:reopen-cafe:0
+2026-09-26T16:52:10.803Z staff POST /api/economy {"action":"award","user_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","amount":1000,"description":"phase1 test Gems"} -> 200 {"success":true,"user":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","awarded":1000,"new_balance":1000}
+PASS: staff awards 1000 Gems
+2026-09-26T16:52:11.020Z member POST /api/economy {"action":"award","user_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","amount":1000} -> 403 {"error":"Forbidden — T1-T2 only"}
+PASS: member can't award Gems
+2026-09-26T16:52:11.514Z member GET /api/economy/merch  -> 200 {"ok":true,"merch":{"gems":1000,"items":[{"id":"d142560c-549a-4525-9dba-e0bb32f3268f","slug":"tsi-hoodie","name":"TSI Hoodie","category":"merch","description":"Heavyweight cotton hoodie with the TSI crest. Pickup at HQ.","tier":null,"currency":"gems","price":1500,"base_price":1500,"special":false,"stock":50,"owned":0,"can_buy":false,"sprite_url":null},{"id":"cb7aaac4-2a97-4ec1-a1e0-bf5bebed1ae4","slug":"merch-sticker-pack","name":"TSI sticker pack","category":"merch","description":"Five die-cut stickers. Pick up at HQ on campus.","tier":null,"currency":"gems","price":150,"base_price":150,"special":false,"stock":100,"owned":0,"can_buy":true,"sprite_url":null},{"id":"8a4a710d-175a-44a7-b962-30
+PASS: merch list: {"ok":true,"merch":{"gems":1000,"items":[{"id":"d142560c-549a-4525-9dba-e0bb32f3268f","slug":"tsi-hoodie","name":"TSI Hoodie","category":"merch","description":"
+SQL> select slug, stock from shop_items where slug in ('merch-sticker-pack', 'merch-tote') order by slug
+slug | stock
+merch-sticker-pack | 100
+merch-tote | 30
+2026-09-26T16:52:12.839Z member POST /api/economy/merch/reserve {"item_id":"cb7aaac4-2a97-4ec1-a1e0-bf5bebed1ae4","idempotency_key":"merch-3e234930-f092-421d-a1a0-503fbca98fb2"} -> 200 {"ok":true,"reservation":{"reservation_id":"b821c560-4291-451b-9436-8a9429329b37","gems_balance":850,"replayed":false,"reservation":{"id":"b821c560-4291-451b-9436-8a9429329b37","member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","member_name":"Phase1 Member","item_id":"cb7aaac4-2a97-4ec1-a1e0-bf5bebed1ae4","item_name":"TSI sticker pack","gems":150,"status":"reserved","pickup_code":"L2SPQ","note":null,"created_at":"2026-09-26T16:52:12.652721+00:00","resolved_at":null}}}
+PASS: member reserves the sticker pack: {"ok":true,"reservation":{"reservation_id":"b821c560-4291-451b-9436-8a9429329b37","gems_balance":850,"replayed":false,"reservation":{"id":"b821c560-4291-451b-9436-8a9429329b37","member_id":"c2982825-3
+2026-09-26T16:52:13.371Z member POST /api/economy/merch/reserve {"item_id":"8a4a710d-175a-44a7-b962-30b1a51e549c","idempotency_key":"merch-6005c3cc-f1ea-4119-8935-66de91befda6"} -> 200 {"ok":true,"reservation":{"reservation_id":"b25541d7-70b7-4abc-a16d-76ab4f6a0943","gems_balance":250,"replayed":false,"reservation":{"id":"b25541d7-70b7-4abc-a16d-76ab4f6a0943","member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","member_name":"Phase1 Member","item_id":"8a4a710d-175a-44a7-b962-30b1a51e549c","item_name":"TSI tote bag","gems":600,"status":"reserved","pickup_code":"U7MV2","note":null,"created_at":"2026-09-26T16:52:13.19136+00:00","resolved_at":null}}}
+PASS: member reserves the tote
+2026-09-26T16:52:13.625Z member GET /api/economy/admin/merch  -> 403 {"ok":false,"error":"Forbidden: T1/T2 only"}
+PASS: member can't open the merch admin list
+2026-09-26T16:52:14.036Z staff GET /api/economy/admin/merch  -> 200 {"ok":true,"reservations":[{"id":"b25541d7-70b7-4abc-a16d-76ab4f6a0943","member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","member_name":"Phase1 Member","item_id":"8a4a710d-175a-44a7-b962-30b1a51e549c","item_name":"TSI tote bag","gems":600,"status":"reserved","pickup_code":"U7MV2","note":null,"created_at":"2026-09-26T16:52:13.19136+00:00","resolved_at":null},{"id":"b821c560-4291-451b-9436-8a9429329b37","member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","member_name":"Phase1 Member","item_id":"cb7aaac4-2a97-4ec1-a1e0-bf5bebed1ae4","item_name":"TSI sticker pack","gems":150,"status":"reserved","pickup_code":"L2SPQ","note":null,"created_at":"2026-09-26T16:52:12.652721+00:00","resolved_at":null}]
+PASS: staff sees reservations: {"ok":true,"reservations":[{"id":"b25541d7-70b7-4abc-a16d-76ab4f6a0943","member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","member_name":"Phase1 Member","item_id":"8a4a710d-175a-44a7-b962-30b1a51e549c
+2026-09-26T16:52:14.757Z member POST /api/economy/admin/merch/b821c560-4291-451b-9436-8a9429329b37 {"action":"fulfil"} -> 403 {"ok":false,"error":"Forbidden: T1/T2 only"}
+PASS: member can't fulfil
+2026-09-26T16:52:15.068Z staff POST /api/economy/admin/merch/b821c560-4291-451b-9436-8a9429329b37 {"action":"fulfil","note":"picked up at GENESIS"} -> 200 {"ok":true,"resolution":{"status":"fulfilled","replayed":false}}
+PASS: staff fulfils the sticker pack
+2026-09-26T16:52:15.390Z staff POST /api/economy/admin/merch/b25541d7-70b7-4abc-a16d-76ab4f6a0943 {"action":"cancel","note":"out of totes"} -> 200 {"ok":true,"resolution":{"status":"cancelled","replayed":false}}
+PASS: staff cancels the tote (refund)
+2026-09-26T16:52:15.811Z member GET /api/economy/wallet  -> 200 {"ok":true,"wallet":{"coins":526,"gems":850,"daily_claimed":false,"day":"2026-09-26","recent":[{"currency":"gems","amount":600,"balance_after":850,"source":"refund_merch","ref":"merch refund","created_at":"2026-09-26T16:52:15.418258+00:00"},{"currency":"gems","amount":-600,"balance_after":250,"source":"spend_merch","ref":"merch-tote","created_at":"2026-09-26T16:52:13.19136+00:00"},{"currency":"gems","amount":-150,"balance_after":850,"source":"spend_merch","ref":"merch-sticker-pack","created_at":"2026-09-26T16:52:12.652721+00:00"},{"currency":"gems","amount":1000,"balance_after":1000,"source":"earn_admin","ref":"phase1 test Gems","created_at":"2026-09-26T16:52:10.827082+00:00"},{"currency":"c
+PASS: Gems 1000 - 150 - 600 + 600 refund = 850
+SQL> select s.slug, r.gems, r.status, r.note, r.resolved_by = '6d14b24f-7005-4194-adf2-4fc02d186c45' as by_staff from merch_reservations r join shop_items s on s.id = r.item_id order by r.created_at
+slug | gems | status | note | by_staff
+merch-sticker-pack | 150 | fulfilled | picked up at GENESIS | t
+merch-tote | 600 | cancelled | out of totes | t
+SQL> select amount, balance_after, type, description from tc_transactions where user_id = 'c2982825-3dd1-4572-a9d0-4b7fadd306d6' order by created_at
+amount | balance_after | type | description
+1000 | 1000 | earn_admin | phase1 test Gems
+-150 | 850 | spend_merch | merch-sticker-pack
+-600 | 250 | spend_merch | merch-tote
+600 | 850 | refund_merch | merch refund
+SQL> select slug, stock from shop_items where slug in ('merch-sticker-pack', 'merch-tote') order by slug
+slug | stock
+merch-sticker-pack | 99
+merch-tote | 30
+2026-09-26T16:52:22.343Z member GET /api/combat/progression  -> 200 {"ok":true,"progression":{"level":1,"xp":0,"into":0,"needed":125,"next_level_at":125,"stats":{"might":0,"finesse":0,"arcana":0,"spirit":0,"vitality":0},"points_available":0,"derived":{"max_hp":112,"energy":100,"crit_chance":0.05,"summon_capacity":2,"move_speed":1},"family":"Warden","subclass":null,"subclass_choices":[],"preset":{"weights":{"might":0,"finesse":1,"arcana":2,"spirit":5,"vitality":2},"at_level":{"might":0,"finesse":0,"arcana":0,"spirit":0,"vitality":0}},"fees":{"stat_reset":200,"subclass_change":250},"weapons":[]},"gate":{"level":1,"family":"Warden","subclass":null,"gateOpen":false,"reason":"Reach level 10."}}
+PASS: progression + gate: {"level":1,"family":"Warden","subclass":null,"gateOpen":false,"reason":"Reach level 10."}
+2026-09-26T16:52:22.757Z member GET /api/combat/missions  -> 200 {"ok":true,"missions":[{"key":"hunt-foxes","title":"Fox trouble","template":"hunt","zone":"outer","params":{"enemy":"shadow-fox","count":6},"rewards":{"xp":300,"coins":60},"cooldown_hours":20,"open":null,"can_start":true,"cooldown_until":null},{"key":"hunt-crabs","title":"Crab season","template":"hunt","zone":"outer","params":{"enemy":"thorn-crab","count":5},"rewards":{"xp":320,"coins":60},"cooldown_hours":20,"open":null,"can_start":true,"cooldown_until":null},{"key":"hunt-wisps","title":"Put out the wisps","template":"hunt","zone":"inner","params":{"enemy":"rune-wisp","count":6},"rewards":{"xp":600,"coins":110},"cooldown_hours":20,"open":null,"can_start":true,"cooldown_until":null},{"key":"
+PASS: mission board
+2026-09-26T16:52:23.293Z member POST /api/combat/missions/start {"mission":"hunt-wisps","start_key":"mission-a998c2d6-c366-45ae-97d3-cba74d5e0b5f"} -> 200 {"ok":true,"mission":{"progress_id":"60f34464-bd74-4cd7-a43b-99415b57f4e4","resumed":false}}
+2026-09-26T16:52:23.767Z member POST /api/combat/missions/progress {"progress_id":"60f34464-bd74-4cd7-a43b-99415b57f4e4","events":[{"id":"ab-1","type":"abandon"}]} -> 200 {"ok":true,"mission":{"id":"60f34464-bd74-4cd7-a43b-99415b57f4e4","mission_key":"hunt-wisps","state":"abandoned","counter":0,"carrying":false}}
+2026-09-26T16:52:24.195Z member POST /api/combat/missions/start {"mission":"hunt-foxes","start_key":"mission-05aa2740-e90d-4fd2-939c-886001f6da2f"} -> 200 {"ok":true,"mission":{"progress_id":"cbbaafa5-b189-454d-a7ad-5cea54e4e73b","resumed":false}}
+PASS: outer mission started: {"ok":true,"mission":{"progress_id":"cbbaafa5-b189-454d-a7ad-5cea54e4e73b","resumed":false}}
+2026-09-26T16:52:24.588Z member POST /api/combat/kill {"enemy":"shadow-fox","event_key":"kill-dbfad56e-93c9-40ca-8a4c-585d7a883932"} -> 200 {"ok":true,"xp":{"xp":30,"level":1,"levelled_up":false,"replayed":false}}
+2026-09-26T16:52:24.935Z member POST /api/combat/kill {"enemy":"shadow-fox","event_key":"kill-2ac3a548-3748-47ab-829b-ce49f201f15c"} -> 200 {"ok":true,"xp":{"xp":60,"level":1,"levelled_up":false,"replayed":false}}
+2026-09-26T16:52:25.255Z member POST /api/combat/kill {"enemy":"shadow-fox","event_key":"kill-76f9fbd4-838e-450f-a534-c9775ba96723"} -> 200 {"ok":true,"xp":{"xp":90,"level":1,"levelled_up":false,"replayed":false}}
+2026-09-26T16:52:25.582Z member POST /api/combat/kill {"enemy":"shadow-fox","event_key":"kill-7f96b7d5-1c59-4835-a547-051e25c8b882"} -> 200 {"ok":true,"xp":{"xp":120,"level":1,"levelled_up":false,"replayed":false}}
+2026-09-26T16:52:25.899Z member POST /api/combat/kill {"enemy":"shadow-fox","event_key":"kill-0dd92002-dd6b-439a-ba0d-ad502d0bea80"} -> 200 {"ok":true,"xp":{"xp":150,"level":2,"levelled_up":true,"replayed":false}}
+2026-09-26T16:52:26.225Z member POST /api/combat/kill {"enemy":"shadow-fox","event_key":"kill-941add45-d342-4032-91b8-17055362b086"} -> 200 {"ok":true,"xp":{"xp":180,"level":2,"levelled_up":false,"replayed":false}}
+2026-09-26T16:52:26.681Z member POST /api/combat/missions/progress {"progress_id":"cbbaafa5-b189-454d-a7ad-5cea54e4e73b","events":[{"id":"kill-0","type":"kill","enemy":"shadow-fox"},{"id":"kill-1","type":"kill","enemy":"shadow-fox"},{"id":"kill-2","type":"kill","enemy":"shadow-fox"},{"id":"kill-3","type":"kill","enemy":"shadow-fox"},{"id":"kill-4","type":"kill","enemy":"shadow-fox"},{"id":"kill-5","type":"kill","enemy":"shadow-fox"}]} -> 200 {"ok":true,"mission":{"id":"cbbaafa5-b189-454d-a7ad-5cea54e4e73b","mission_key":"hunt-foxes","state":"ready","counter":6,"carrying":false}}
+PASS: six fox kills make the mission ready
+2026-09-26T16:52:27.111Z member POST /api/combat/missions/complete {"progress_id":"cbbaafa5-b189-454d-a7ad-5cea54e4e73b"} -> 200 {"ok":true,"rewards":{"xp_awarded":300,"coins_awarded":60,"replayed":false}}
+PASS: mission turned in: {"ok":true,"rewards":{"xp_awarded":300,"coins_awarded":60,"replayed":false}}
+2026-09-26T16:52:27.442Z member POST /api/combat/missions/complete {"progress_id":"cbbaafa5-b189-454d-a7ad-5cea54e4e73b"} -> 200 {"ok":true,"rewards":{"xp_awarded":300,"coins_awarded":60,"replayed":true}}
+PASS: second turn-in replays, no double reward
+2026-09-26T16:52:27.846Z member POST /api/combat/wear {"weapon":"sword-driftwood","hits":40,"defeated":false,"idempotency_key":"wear-6d7e729c-634d-453a-8b08-0e6e2e33deec"} -> 200 {"ok":true,"weapon":{"durability":50,"replayed":false}}
+PASS: sword wear reported: {"ok":true,"weapon":{"durability":50,"replayed":false}}
+2026-09-26T16:52:28.334Z member GET /api/combat/progression  -> 200 {"ok":true,"progression":{"level":3,"xp":480,"into":55,"needed":525,"next_level_at":950,"stats":{"might":0,"finesse":0,"arcana":0,"spirit":0,"vitality":0},"points_available":6,"derived":{"max_hp":136,"energy":100,"crit_chance":0.05,"summon_capacity":2,"move_speed":1},"family":"Warden","subclass":null,"subclass_choices":[],"preset":{"weights":{"might":0,"finesse":1,"arcana":2,"spirit":5,"vitality":2},"at_level":{"might":0,"finesse":0,"arcana":1,"spirit":4,"vitality":1}},"fees":{"stat_reset":200,"subclass_change":250},"weapons":[{"weapon_key":"sword-driftwood","durability":50,"equipped":true,"name":"Driftwood sword","type":"sword","tier":1,"max_durability":90,"repair_cost":40,"broken":false},{
+PASS: durability 50/90, repair 40
+2026-09-26T16:52:28.941Z member POST /api/combat/repair {"weapon":"sword-driftwood","idempotency_key":"repair-1a768ee0-979c-4690-a779-e4a8d54d86d2"} -> 200 {"ok":true,"repair":{"durability":90,"cost":40,"replayed":false}}
+PASS: repair: {"ok":true,"repair":{"durability":90,"cost":40,"replayed":false}}
+SQL> select xp, level, stats, subclass from member_progression where member_id = 'c2982825-3dd1-4572-a9d0-4b7fadd306d6'
+xp | level | stats | subclass
+480 | 3 | {"might": 0, "arcana": 0, "spirit": 0, "finesse": 0, "vitality": 0} |
+SQL> select amount, source, ref from combat_xp_ledger where member_id = 'c2982825-3dd1-4572-a9d0-4b7fadd306d6' order by created_at
+amount | source | ref
+30 | kill | shadow-fox
+30 | kill | shadow-fox
+30 | kill | shadow-fox
+30 | kill | shadow-fox
+30 | kill | shadow-fox
+30 | kill | shadow-fox
+300 | mission | hunt-foxes
+SQL> select weapon_key, durability, equipped from member_weapons where member_id = 'c2982825-3dd1-4572-a9d0-4b7fadd306d6' order by weapon_key
+weapon_key | durability | equipped
+sword-driftwood | 90 | t
+wraps-cloth | 90 | f
+FAIL: combat threw: Command failed: /private/tmp/claude-501/-Users-DavidLiu/f43cc88e-f162-4021-b1f0-63ceff7a3d0d/scratchpad/p1/spsql.sh -X -q -A -F  |  -P footer=off -c select mission_key, state, completed_at is not null as done from mission_progress where member_id = 'c2982825-3dd1-4572-a9d0-4b7fadd306d6' order by created_at
+ERROR:  column "created_at" does not exist
+LINE 1: ...= 'c2982825-3dd1-4572-a9d0-4b7fadd306d6' order by created_at
+                                                             ^
+HINT:  Perhaps you meant to reference the column "mission_progress.updated_at".
+
+mission_key|state|done|start_key
+hunt-wisps|abandoned|f|mission-a998c2d6-c366-45ae-97d3-cba74d5e0b5f
+hunt-foxes|completed|t|mission-05aa2740-e90d-4fd2-939c-886001f6da2f
+(2 rows)
+amount|balance_after|source|ref
+60|586|mission|hunt-foxes
+-40|546|repair|sword-driftwood
+(2 rows)
+2026-09-26T16:52:43.740Z member GET /api/crafting/recipes  -> 200 {"ok":true,"book":{"recipes":[{"id":"acc-straw-hat","name":"Straw hat","kind":"item","qty":1,"source":"starter","ingredients":[{"key":"wood_branch","name":"Tree branch","icon":null,"need":3,"have":0}],"owned":false,"can_craft":false},{"id":"furn-campfire","name":"Campfire","kind":"item","qty":1,"source":"starter","ingredients":[{"key":"wood_branch","name":"Tree branch","icon":null,"need":5,"have":0},{"key":"rock_stone","name":"Stone","icon":null,"need":3,"have":0}],"owned":false,"can_craft":false},{"id":"furn-study-chair","name":"Study chair","kind":"item","qty":1,"source":"starter","ingredients":[{"key":"wood_branch","name":"Tree branch","icon":null,"need":4,"have":0}],"owned":false,"can_cr
+PASS: recipes: {"ok":true,"book":{"recipes":[{"id":"acc-straw-hat","name":"Straw hat","kind":"item","qty":1,"source":"starter","ingredients":[{"key":"wood_branch","name":"Tree branch","icon":null,"need":3,"have":0}],"owned":false,"can_craft":false},{"id":"furn-campfire","name":"Campfire","kind":"item","qty":1,"sou
+2026-09-26T16:52:44.162Z member POST /api/crafting/learn {"source":"bottle"} -> 200 {"ok":true,"learned":{"id":"revolver-brass","name":"Brass revolver","replayed":false}}
+PASS: bottle learn -> 200: {"ok":true,"learned":{"id":"revolver-brass","name":"Brass revolver","replayed":false}}
+SQL> select * from member_recipes where member_id = 'c2982825-3dd1-4572-a9d0-4b7fadd306d6'
+member_id | recipe_id | source | bottle_day | learned_at
+c2982825-3dd1-4572-a9d0-4b7fadd306d6 | revolver-brass | bottle | 2026-09-26 | 2026-09-26 16:52:44.179051+00
+2026-09-26T16:52:53.182Z member POST /api/collections {"item_key":"wood_branch"} -> 200 {"item_key":"wood_branch","count":1,"total_collected":1,"best_size_cm":null,"new_record":false}
+2026-09-26T16:52:53.809Z member POST /api/collections {"item_key":"wood_branch"} -> 200 {"item_key":"wood_branch","count":2,"total_collected":2,"best_size_cm":null,"new_record":false}
+2026-09-26T16:52:54.395Z member POST /api/collections {"item_key":"wood_branch"} -> 200 {"item_key":"wood_branch","count":3,"total_collected":3,"best_size_cm":null,"new_record":false}
+2026-09-26T16:52:54.925Z member POST /api/crafting/craft {"recipe_id":"acc-straw-hat","idempotency_key":"craft-phase1-0001"} -> 200 {"ok":true,"craft":{"id":"acc-straw-hat","name":"Straw hat","kind":"item","qty":1,"replayed":false}}
+2026-09-26T16:52:55.407Z member POST /api/crafting/craft {"recipe_id":"acc-straw-hat","idempotency_key":"craft-phase1-0001"} -> 200 {"ok":true,"craft":{"id":"acc-straw-hat","name":"Straw hat","kind":"item","qty":1,"replayed":true}}
+item_key|count
+wood_branch|0
+(1 row)
+slug|qty
+acc-straw-hat|1
+furn-lounge-rug|2
+(2 rows)
+recipe_id|idempotency_key
+acc-straw-hat|craft-phase1-0001
+(1 row)
+amount|balance_after|source|ref|created_at
+7|553|study|af399274-ddda-474e-ac7b-912a47ad869e|2026-09-26 16:53:33.491235+00
+(1 row)
+2026-09-26T16:54:46.450Z member GET /api/study/tables  -> 200 {"ok":true,"tables":[{"id":"00000000-0000-4000-8000-000000005101","slug":"cafe-window-1","label":"Window seat 1","location":"cafe","anchor":"study:cafe-window-1","kind":"window","seats":2,"taken":[],"is_private":false,"can_join":true,"host_name":null,"mates":[]},{"id":"00000000-0000-4000-8000-000000005102","slug":"cafe-window-2","label":"Window seat 2","location":"cafe","anchor":"study:cafe-window-2","kind":"window","seats":2,"taken":[],"is_private":false,"can_join":true,"host_name":null,"mates":[]},{"id":"00000000-0000-4000-8000-000000005103","slug":"cafe-two-1","label":"Table for two","location":"cafe","anchor":"study:cafe-two-1","kind":"two","seats":2,"taken":[],"is_private":false,"can_jo
+PASS: study tables listed
+2026-09-26T16:54:47.770Z member POST /api/study/sit {"table_id":"00000000-0000-4000-8000-000000005109","seat":1} -> 200 {"ok":true,"study":{"session":{"id":"89e2ab17-9f03-4728-ad2c-a1aacc688820","table_id":"00000000-0000-4000-8000-000000005109","seat":1,"phase":"seated","settings":null,"cycle":1,"phase_ends_at":null,"remaining_s":null,"minutes_completed":0,"blocks_completed":0,"coins_pending":0,"ended_at":null,"end_reason":null,"coins_paid":null},"table":{"id":"00000000-0000-4000-8000-000000005109","slug":"pier-bench","label":"Pier table","location":"outdoor-pier","anchor":"study:pier-bench","kind":"outdoor","seats":2,"taken":[1],"is_private":false,"can_join":true,"host_name":"Phase1 Member","mates":[{"member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","name":"Phase1 Member","seat":1,"phase":"seated","remainin
+PASS: sat at the pier table
+2026-09-26T16:54:48.510Z member POST /api/study/start {"focus_len":5,"break_len":1,"cycles":1} -> 200 {"ok":true,"study":{"session":{"id":"89e2ab17-9f03-4728-ad2c-a1aacc688820","table_id":"00000000-0000-4000-8000-000000005109","seat":1,"phase":"focus","settings":{"focus_len":5,"break_len":1,"cycles":1},"cycle":1,"phase_ends_at":"2026-09-26T16:59:47.997Z","remaining_s":300,"minutes_completed":0,"blocks_completed":0,"coins_pending":0,"ended_at":null,"end_reason":null,"coins_paid":null},"table":{"id":"00000000-0000-4000-8000-000000005109","slug":"pier-bench","label":"Pier table","location":"outdoor-pier","anchor":"study:pier-bench","kind":"outdoor","seats":2,"taken":[1],"is_private":false,"can_join":true,"host_name":"Phase1 Member","mates":[{"member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","n
+PASS: started 5/1 x1 (server clock)
+SQL> select id, table_id, seat, phase, focus_len, break_len, cycles, phase_started_at, started_at from study_sessions where member_id = 'c2982825-3dd1-4572-a9d0-4b7fadd306d6' order by started_at desc limit 1
+id | table_id | seat | phase | focus_len | break_len | cycles | phase_started_at | started_at
+89e2ab17-9f03-4728-ad2c-a1aacc688820 | 00000000-0000-4000-8000-000000005109 | 1 | focus | 5 | 1 | 1 | 2026-09-26 16:54:47.997+00 | 2026-09-26 16:54:46.672+00
+2026-09-26T16:58:03.764Z member GET /api/study/state  -> 200 {"ok":true,"study":{"session":{"id":"89e2ab17-9f03-4728-ad2c-a1aacc688820","table_id":"00000000-0000-4000-8000-000000005109","seat":1,"phase":"focus","settings":{"focus_len":5,"break_len":1,"cycles":1},"cycle":1,"phase_ends_at":"2026-09-26T16:59:47.997Z","remaining_s":105,"minutes_completed":0,"blocks_completed":0,"coins_pending":0,"ended_at":null,"end_reason":null,"coins_paid":null},"table":{"id":"00000000-0000-4000-8000-000000005109","slug":"pier-bench","label":"Pier table","location":"outdoor-pier","anchor":"study:pier-bench","kind":"outdoor","seats":2,"taken":[1],"is_private":false,"can_join":true,"host_name":"Phase1 Member","mates":[{"member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","n
+2026-09-26T16:58:54.916Z member GET /api/study/tables  -> 200 {"ok":true,"tables":[{"id":"00000000-0000-4000-8000-000000005101","slug":"cafe-window-1","label":"Window seat 1","location":"cafe","anchor":"study:cafe-window-1","kind":"window","seats":2,"taken":[],"is_private":false,"can_join":true,"host_name":null,"mates":[]},{"id":"00000000-0000-4000-8000-000000005102","slug":"cafe-window-2","label":"Window seat 2","location":"cafe","anchor":"study:cafe-window-2","kind":"window","seats":2,"taken":[],"is_private":false,"can_join":true,"host_name":null,"mates":[]},{"id":"00000000-0000-4000-8000-000000005103","slug":"cafe-two-1","label":"Table for two","location":"cafe","anchor":"study:cafe-two-1","kind":"two","seats":2,"taken":[],"is_private":false,"can_jo
+PASS: study tables listed
+2026-09-26T16:58:55.843Z member POST /api/study/sit {"table_id":"00000000-0000-4000-8000-000000005109","seat":1} -> 200 {"ok":true,"study":{"session":{"id":"89e2ab17-9f03-4728-ad2c-a1aacc688820","table_id":"00000000-0000-4000-8000-000000005109","seat":1,"phase":"focus","settings":{"focus_len":5,"break_len":1,"cycles":1},"cycle":1,"phase_ends_at":"2026-09-26T16:59:47.997Z","remaining_s":53,"minutes_completed":0,"blocks_completed":0,"coins_pending":0,"ended_at":null,"end_reason":null,"coins_paid":null},"table":{"id":"00000000-0000-4000-8000-000000005109","slug":"pier-bench","label":"Pier table","location":"outdoor-pier","anchor":"study:pier-bench","kind":"outdoor","seats":2,"taken":[1],"is_private":false,"can_join":true,"host_name":"Phase1 Member","mates":[{"member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","na
+PASS: sat at the pier table
+2026-09-26T16:58:56.203Z member POST /api/study/start {"focus_len":5,"break_len":1,"cycles":1} -> 409 {"ok":false,"code":"started","error":"Your timer is already running."}
+FAIL: started 5/1 x1 (server clock)
+SQL> select id, table_id, seat, phase, focus_len, break_len, cycles, phase_started_at, started_at from study_sessions where member_id = 'c2982825-3dd1-4572-a9d0-4b7fadd306d6' order by started_at desc limit 1
+id | table_id | seat | phase | focus_len | break_len | cycles | phase_started_at | started_at
+89e2ab17-9f03-4728-ad2c-a1aacc688820 | 00000000-0000-4000-8000-000000005109 | 1 | focus | 5 | 1 | 1 | 2026-09-26 16:54:47.997+00 | 2026-09-26 16:54:46.672+00
+2026-09-26T17:00:50.052Z member GET /api/study/tables  -> 200 {"ok":true,"tables":[{"id":"00000000-0000-4000-8000-000000005101","slug":"cafe-window-1","label":"Window seat 1","location":"cafe","anchor":"study:cafe-window-1","kind":"window","seats":2,"taken":[],"is_private":false,"can_join":true,"host_name":null,"mates":[]},{"id":"00000000-0000-4000-8000-000000005102","slug":"cafe-window-2","label":"Window seat 2","location":"cafe","anchor":"study:cafe-window-2","kind":"window","seats":2,"taken":[],"is_private":false,"can_join":true,"host_name":null,"mates":[]},{"id":"00000000-0000-4000-8000-000000005103","slug":"cafe-two-1","label":"Table for two","location":"cafe","anchor":"study:cafe-two-1","kind":"two","seats":2,"taken":[],"is_private":false,"can_jo
+PASS: study tables listed
+2026-09-26T17:00:51.379Z member POST /api/study/sit {"table_id":"00000000-0000-4000-8000-000000005109","seat":1} -> 200 {"ok":true,"study":{"session":{"id":"89ede106-d89d-4fac-ab72-b44ec2fd71f2","table_id":"00000000-0000-4000-8000-000000005109","seat":1,"phase":"seated","settings":null,"cycle":1,"phase_ends_at":null,"remaining_s":null,"minutes_completed":0,"blocks_completed":0,"coins_pending":0,"ended_at":null,"end_reason":null,"coins_paid":null},"table":{"id":"00000000-0000-4000-8000-000000005109","slug":"pier-bench","label":"Pier table","location":"outdoor-pier","anchor":"study:pier-bench","kind":"outdoor","seats":2,"taken":[1],"is_private":false,"can_join":true,"host_name":"Phase1 Member","mates":[{"member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","name":"Phase1 Member","seat":1,"phase":"seated","remainin
+PASS: sat at the pier table
+2026-09-26T17:00:52.147Z member POST /api/study/start {"focus_len":5,"break_len":1,"cycles":1} -> 200 {"ok":true,"study":{"session":{"id":"89ede106-d89d-4fac-ab72-b44ec2fd71f2","table_id":"00000000-0000-4000-8000-000000005109","seat":1,"phase":"focus","settings":{"focus_len":5,"break_len":1,"cycles":1},"cycle":1,"phase_ends_at":"2026-09-26T17:05:51.641Z","remaining_s":300,"minutes_completed":0,"blocks_completed":0,"coins_pending":0,"ended_at":null,"end_reason":null,"coins_paid":null},"table":{"id":"00000000-0000-4000-8000-000000005109","slug":"pier-bench","label":"Pier table","location":"outdoor-pier","anchor":"study:pier-bench","kind":"outdoor","seats":2,"taken":[1],"is_private":false,"can_join":true,"host_name":"Phase1 Member","mates":[{"member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","n
+PASS: started 5/1 x1 (server clock)
+SQL> select id, table_id, seat, phase, focus_len, break_len, cycles, phase_started_at, started_at from study_sessions where member_id = 'c2982825-3dd1-4572-a9d0-4b7fadd306d6' order by started_at desc limit 1
+id | table_id | seat | phase | focus_len | break_len | cycles | phase_started_at | started_at
+89ede106-d89d-4fac-ab72-b44ec2fd71f2 | 00000000-0000-4000-8000-000000005109 | 1 | focus | 5 | 1 | 1 | 2026-09-26 17:00:51.641+00 | 2026-09-26 17:00:50.335+00
+SQL> select tier, class, tethos_coins, xp, membership from profiles where id = 'c2982825-3dd1-4572-a9d0-4b7fadd306d6'
+tier | class | tethos_coins | xp | membership
+4 | Warden | 850 | 0 | member
+member: PATCH /rest/v1/profiles?id=eq.c2982825-3dd1-4572-a9d0-4b7fadd306d6 {"tier":1} -> 403 {"code":"42501","details":null,"hint":null,"message":"profiles: tier can only be changed by the server"}
+PASS: member can't set own tier (guard)
+member: PATCH /rest/v1/profiles?id=eq.c2982825-3dd1-4572-a9d0-4b7fadd306d6 {"class":"Arcane"} -> 403 {"code":"42501","details":null,"hint":null,"message":"profiles: class can only be changed by the server"}
+PASS: member can't set own class (guard)
+member: PATCH /rest/v1/profiles?id=eq.c2982825-3dd1-4572-a9d0-4b7fadd306d6 {"subclass":"Sage"} -> 403 {"code":"42501","details":null,"hint":null,"message":"profiles: subclass can only be changed by the server"}
+PASS: member can't set own subclass (guard)
+member: PATCH /rest/v1/profiles?id=eq.c2982825-3dd1-4572-a9d0-4b7fadd306d6 {"tethos_coins":99999} -> 403 {"code":"42501","details":null,"hint":null,"message":"profiles: tethos_coins can only be changed by the server"}
+PASS: member can't set own tethos_coins (guard)
+member: PATCH /rest/v1/profiles?id=eq.c2982825-3dd1-4572-a9d0-4b7fadd306d6 {"xp":99999} -> 403 {"code":"42501","details":null,"hint":null,"message":"profiles: xp can only be changed by the server"}
+PASS: member can't set own xp (guard)
+member: PATCH /rest/v1/profiles?id=eq.c2982825-3dd1-4572-a9d0-4b7fadd306d6 {"level":50} -> 403 {"code":"42501","details":null,"hint":null,"message":"profiles: level can only be changed by the server"}
+PASS: member can't set own level (guard)
+member: PATCH /rest/v1/profiles?id=eq.c2982825-3dd1-4572-a9d0-4b7fadd306d6 {"membership":"public"} -> 403 {"code":"42501","details":null,"hint":null,"message":"profiles: membership can only be changed by the server"}
+PASS: member can't set own membership (guard)
+member: PATCH /rest/v1/profiles?id=eq.c2982825-3dd1-4572-a9d0-4b7fadd306d6 {"is_active":false} -> 403 {"code":"42501","details":null,"hint":null,"message":"profiles: is_active can only be changed by the server"}
+PASS: member can't set own is_active (guard)
+public: PATCH /rest/v1/profiles?id=eq.4e294cb3-7032-433c-971e-90f855021d10 {"membership":"member"} -> 403 {"code":"42501","details":null,"hint":null,"message":"profiles: membership can only be changed by the server"}
+PASS: public account can't make itself a member
+member: PATCH /rest/v1/profiles?id=eq.c2982825-3dd1-4572-a9d0-4b7fadd306d6 {"bio":"allowed edit"} -> 204 
+PASS: member can still edit their own bio
+SQL> select tier, class, subclass, tethos_coins, xp, level, membership, is_active from profiles where id = 'c2982825-3dd1-4572-a9d0-4b7fadd306d6'
+tier | class | subclass | tethos_coins | xp | level | membership | is_active
+4 | Warden |  | 850 | 0 | 1 | member | t
+member: POST /rest/v1/wallet_ledger {"member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","amount":5000,"balance_after":5000,"source":"admin","idempotency_key":"exploit-ledger-1"} -> 403 {"code":"42501","details":null,"hint":null,"message":"new row violates row-level security policy for table \"wallet_ledger\""}
+PASS: member can't insert into wallet_ledger
+member: POST /rest/v1/wallets {"member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","coins":5000} -> 403 {"code":"42501","details":null,"hint":null,"message":"new row violates row-level security policy for table \"wallets\""}
+PASS: member can't insert into wallets
+member: POST /rest/v1/tc_transactions {"user_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","amount":5000,"balance_after":5000,"type":"earn_admin","description":"exploit"} -> 403 {"code":"42501","details":null,"hint":null,"message":"new row violates row-level security policy for table \"tc_transactions\""}
+PASS: member can't insert into tc_transactions
+member: POST /rest/v1/member_collections {"user_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","item_key":"fish_golden_koi","count":99} -> 403 {"code":"42501","details":null,"hint":"Grant the required privileges to the current role with: GRANT INSERT ON public.member_collections TO authenticated;","message":"permission denied for table member_collections"}
+PASS: member can't insert into member_collections
+member: POST /rest/v1/museum_donations {"species_key":"fish_koi","donor_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","idempotency_key":"exploit-donate-1"} -> 403 {"code":"42501","details":null,"hint":null,"message":"new row violates row-level security policy for table \"museum_donations\""}
+PASS: member can't insert into museum_donations
+member: POST /rest/v1/club_goal_contributions {"goal_id":"00000000-0000-4000-8000-000000000001","member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","source":"admin","amount":1,"amount_used":1,"weight":1,"credited_points":15000,"idempotency_key":"exploit-goal-1"} -> 403 {"code":"42501","details":null,"hint":null,"message":"new row violates row-level security policy for table \"club_goal_contributions\""}
+PASS: member can't insert into club_goal_contributions
+member: POST /rest/v1/combat_xp_ledger {"member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","amount":99999,"source":"admin","idempotency_key":"exploit-xp-1"} -> 403 {"code":"42501","details":null,"hint":null,"message":"new row violates row-level security policy for table \"combat_xp_ledger\""}
+PASS: member can't insert into combat_xp_ledger
+member: POST /rest/v1/member_progression {"member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","xp":999999,"level":50} -> 403 {"code":"42501","details":null,"hint":null,"message":"new row violates row-level security policy for table \"member_progression\""}
+PASS: member can't insert into member_progression
+member: POST /rest/v1/member_weapons {"member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","weapon_key":"staff-elder","durability":999} -> 403 {"code":"42501","details":null,"hint":null,"message":"new row violates row-level security policy for table \"member_weapons\""}
+PASS: member can't insert into member_weapons
+member: POST /rest/v1/member_inventory {"member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","item_id":"1afd7d2e-b300-43a8-84d8-9d8f633aaad3","qty":1} -> 403 {"code":"42501","details":null,"hint":null,"message":"new row violates row-level security policy for table \"member_inventory\""}
+PASS: member can't insert into member_inventory
+member: POST /rest/v1/merch_reservations {"member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","item_id":"d142560c-549a-4525-9dba-e0bb32f3268f","gems":0,"pickup_code":"EXPLOIT","idempotency_key":"exploit-merch-1"} -> 403 {"code":"42501","details":null,"hint":null,"message":"new row violates row-level security policy for table \"merch_reservations\""}
+PASS: member can't insert into merch_reservations
+member: POST /rest/v1/letters {"kind":"system","recipient_id":"4e294cb3-7032-433c-971e-90f855021d10","subject":"Official","body":"fake system letter"} -> 403 {"code":"42501","details":null,"hint":null,"message":"new row violates row-level security policy for table \"letters\""}
+PASS: member can't insert into letters
+member: POST /rest/v1/study_sessions {"member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","table_id":"00000000-0000-4000-8000-000000005109","seat":2,"coins_paid":999} -> 403 {"code":"42501","details":null,"hint":null,"message":"new row violates row-level security policy for table \"study_sessions\""}
+PASS: member can't insert into study_sessions
+member: POST /rest/v1/member_identity {"member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","family":"Arcane","mbti_type":"INTJ"} -> 403 {"code":"42501","details":null,"hint":null,"message":"new row violates row-level security policy for table \"member_identity\""}
+PASS: member can't insert into member_identity
+member: POST /rest/v1/home_room_purchases {"member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","room_number":4,"price_coins":0,"idempotency_key":"exploit-room-1"} -> 403 {"code":"42501","details":null,"hint":null,"message":"new row violates row-level security policy for table \"home_room_purchases\""}
+PASS: member can't insert into home_room_purchases
+member: PATCH /rest/v1/wallets?member_id=eq.c2982825-3dd1-4572-a9d0-4b7fadd306d6 {"coins":99999} -> 200 []
+PASS: member can't update wallets
+member: PATCH /rest/v1/member_progression?member_id=eq.c2982825-3dd1-4572-a9d0-4b7fadd306d6 {"xp":999999} -> 200 []
+PASS: member can't update member_progression
+member: PATCH /rest/v1/member_weapons?member_id=eq.c2982825-3dd1-4572-a9d0-4b7fadd306d6 {"durability":9999} -> 200 []
+PASS: member can't update member_weapons
+member: PATCH /rest/v1/member_collections?user_id=eq.c2982825-3dd1-4572-a9d0-4b7fadd306d6 {"count":99} -> 403 {"code":"42501","details":null,"hint":"Grant the required privileges to the current role with: GRANT UPDATE ON public.member_collections TO authenticated;","message":"permission denied for table member_collections"}
+PASS: member can't update member_collections
+member: PATCH /rest/v1/study_sessions?member_id=eq.c2982825-3dd1-4572-a9d0-4b7fadd306d6 {"coins_paid":999} -> 200 []
+PASS: member can't update study_sessions
+member: PATCH /rest/v1/member_identity?member_id=eq.c2982825-3dd1-4572-a9d0-4b7fadd306d6 {"family":"Warden"} -> 200 []
+PASS: member can't update member_identity
+member: POST /rest/v1/rpc/wallet_apply {"p_member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","p_currency":"coins","p_amount":5000,"p_source":"admin","p_ref":"x","p_idempotency_key":"exploit-rpc-1"} -> 403 {"code":"42501","details":null,"hint":null,"message":"permission denied for function wallet_apply"}
+PASS: member can't call wallet_apply
+member: POST /rest/v1/rpc/wallet_apply {"p_member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","p_currency":"gems","p_amount":5000,"p_source":"admin","p_ref":"x","p_idempotency_key":"exploit-rpc-2"} -> 403 {"code":"42501","details":null,"hint":null,"message":"permission denied for function wallet_apply"}
+PASS: member can't call wallet_apply
+member: POST /rest/v1/rpc/combat_grant_xp {"p_member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","p_amount":5000,"p_source":"admin","p_ref":"x","p_key":"exploit-rpc-3"} -> 403 {"code":"42501","details":null,"hint":null,"message":"permission denied for function combat_grant_xp"}
+PASS: member can't call combat_grant_xp
+member: POST /rest/v1/rpc/study_settle {"p_session_id":"00000000-0000-4000-8000-000000000000"} -> 404 {"code":"PGRST202","details":"Searched for the function public.study_settle with parameter p_session_id or with a single unnamed json/jsonb parameter, but no matches were found in the schema cache.","hint":"Perhaps you m
+PASS: member can't call study_settle
+member: POST /rest/v1/rpc/daily_gift_claim {"p_member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6"} -> 403 {"code":"42501","details":null,"hint":null,"message":"permission denied for function daily_gift_claim"}
+PASS: member can't call daily_gift_claim
+member: GET /rest/v1/profiles?select=id,email,phone&id=eq.4e294cb3-7032-433c-971e-90f855021d10  -> 403 {"code":"42501","details":null,"hint":"Grant the required privileges to the current role with: GRANT SELECT ON public.profiles TO authenticated;","message":"permission denied for table profiles"}
+PASS: member can't read another member's email/phone
+member: GET /rest/v1/wallet_ledger?member_id=eq.4e294cb3-7032-433c-971e-90f855021d10  -> 200 []
+PASS: member can't read another member's ledger
+member: GET /rest/v1/letters?recipient_id=eq.4e294cb3-7032-433c-971e-90f855021d10  -> 200 [{"id":"4f8669f5-c6c0-43e8-82a0-b764e3711799","kind":"note","sender_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","recipient_id":"4e294cb3-7032-433c-971e-90f855021d10","subject":"Hi from the pier","body":"Want to fish at da
+FAIL: member can't read another member's mail
+SQL> insert into events (title, event_type, is_irl, start_time, created_by) values ('Phase1 IRL test event', 'club', true, now(), '6d14b24f-7005-4194-adf2-4fc02d186c45') returning id
+id
+9eeeaf8d-78a3-4821-8af1-df81f2950bde
+member: POST /rest/v1/event_attendance {"event_id":"9eeeaf8d-78a3-4821-8af1-df81f2950bde","user_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","status":"attended"} -> 403 {"code":"42501","details":null,"hint":null,"message":"new row violates row-level security policy for table \"event_attendance\""}
+PASS: member can't mark themselves attended at an IRL event
+SQL> insert into events (title, event_type, is_irl, start_time, created_by) values ('Phase1 RSVP test event', 'club', true, now(), '6d14b24f-7005-4194-adf2-4fc02d186c45') returning id
+id
+143297cb-80ef-4fe4-9161-f053b2c6ef15
+member: POST /rest/v1/event_attendance {"event_id":"143297cb-80ef-4fe4-9161-f053b2c6ef15","user_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","status":"registered"} -> 201 [{"id":"c822132a-0fec-48ed-ab4b-948d007b8c5d","event_id":"143297cb-80ef-4fe4-9161-f053b2c6ef15","user_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","status":"registered"}]
+PASS: member can still RSVP (registered)
+SQL> select status from event_attendance where user_id = 'c2982825-3dd1-4572-a9d0-4b7fadd306d6' and event_id = '9eeeaf8d-78a3-4821-8af1-df81f2950bde'
+status
+SQL> select count(*) as event_xp_rows from combat_xp_ledger where member_id = 'c2982825-3dd1-4572-a9d0-4b7fadd306d6' and source = 'event'
+event_xp_rows
+0
+SQL> select count(*) as event_coin_rows from wallet_ledger where member_id = 'c2982825-3dd1-4572-a9d0-4b7fadd306d6' and source = 'event'
+event_coin_rows
+0
+anon: GET /rest/v1/invite_codes?select=code,is_active  -> 200 []
+PASS: anon can't list invite codes
+public: GET /rest/v1/invite_codes?select=code,is_active  -> 200 []
+PASS: a signed-in public account can't list invite codes
+SQL> select tier, class, tethos_coins, xp, membership from profiles where id = 'c2982825-3dd1-4572-a9d0-4b7fadd306d6'
+tier | class | tethos_coins | xp | membership
+4 | Warden | 850 | 0 | member
+member: PATCH /rest/v1/profiles?id=eq.c2982825-3dd1-4572-a9d0-4b7fadd306d6 {"tier":1} -> 403 {"code":"42501","details":null,"hint":null,"message":"profiles: tier can only be changed by the server"}
+PASS: member can't set own tier (guard)
+member: PATCH /rest/v1/profiles?id=eq.c2982825-3dd1-4572-a9d0-4b7fadd306d6 {"class":"Arcane"} -> 403 {"code":"42501","details":null,"hint":null,"message":"profiles: class can only be changed by the server"}
+PASS: member can't set own class (guard)
+member: PATCH /rest/v1/profiles?id=eq.c2982825-3dd1-4572-a9d0-4b7fadd306d6 {"subclass":"Sage"} -> 403 {"code":"42501","details":null,"hint":null,"message":"profiles: subclass can only be changed by the server"}
+PASS: member can't set own subclass (guard)
+member: PATCH /rest/v1/profiles?id=eq.c2982825-3dd1-4572-a9d0-4b7fadd306d6 {"tethos_coins":99999} -> 403 {"code":"42501","details":null,"hint":null,"message":"profiles: tethos_coins can only be changed by the server"}
+PASS: member can't set own tethos_coins (guard)
+member: PATCH /rest/v1/profiles?id=eq.c2982825-3dd1-4572-a9d0-4b7fadd306d6 {"xp":99999} -> 403 {"code":"42501","details":null,"hint":null,"message":"profiles: xp can only be changed by the server"}
+PASS: member can't set own xp (guard)
+member: PATCH /rest/v1/profiles?id=eq.c2982825-3dd1-4572-a9d0-4b7fadd306d6 {"level":50} -> 403 {"code":"42501","details":null,"hint":null,"message":"profiles: level can only be changed by the server"}
+PASS: member can't set own level (guard)
+member: PATCH /rest/v1/profiles?id=eq.c2982825-3dd1-4572-a9d0-4b7fadd306d6 {"membership":"public"} -> 403 {"code":"42501","details":null,"hint":null,"message":"profiles: membership can only be changed by the server"}
+PASS: member can't set own membership (guard)
+member: PATCH /rest/v1/profiles?id=eq.c2982825-3dd1-4572-a9d0-4b7fadd306d6 {"is_active":false} -> 403 {"code":"42501","details":null,"hint":null,"message":"profiles: is_active can only be changed by the server"}
+PASS: member can't set own is_active (guard)
+public: PATCH /rest/v1/profiles?id=eq.4e294cb3-7032-433c-971e-90f855021d10 {"membership":"member"} -> 403 {"code":"42501","details":null,"hint":null,"message":"profiles: membership can only be changed by the server"}
+PASS: public account can't make itself a member
+member: PATCH /rest/v1/profiles?id=eq.c2982825-3dd1-4572-a9d0-4b7fadd306d6 {"bio":"allowed edit"} -> 204 
+PASS: member can still edit their own bio
+SQL> select tier, class, subclass, tethos_coins, xp, level, membership, is_active from profiles where id = 'c2982825-3dd1-4572-a9d0-4b7fadd306d6'
+tier | class | subclass | tethos_coins | xp | level | membership | is_active
+4 | Warden |  | 850 | 0 | 1 | member | t
+member: POST /rest/v1/wallet_ledger {"member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","amount":5000,"balance_after":5000,"source":"admin","idempotency_key":"exploit-ledger-1"} -> 403 {"code":"42501","details":null,"hint":null,"message":"new row violates row-level security policy for table \"wallet_ledger\""}
+PASS: member can't insert into wallet_ledger
+member: POST /rest/v1/wallets {"member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","coins":5000} -> 403 {"code":"42501","details":null,"hint":null,"message":"new row violates row-level security policy for table \"wallets\""}
+PASS: member can't insert into wallets
+member: POST /rest/v1/tc_transactions {"user_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","amount":5000,"balance_after":5000,"type":"earn_admin","description":"exploit"} -> 403 {"code":"42501","details":null,"hint":null,"message":"new row violates row-level security policy for table \"tc_transactions\""}
+PASS: member can't insert into tc_transactions
+member: POST /rest/v1/member_collections {"user_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","item_key":"fish_golden_koi","count":99} -> 403 {"code":"42501","details":null,"hint":"Grant the required privileges to the current role with: GRANT INSERT ON public.member_collections TO authenticated;","message":"permission denied for table member_collections"}
+PASS: member can't insert into member_collections
+member: POST /rest/v1/museum_donations {"species_key":"fish_koi","donor_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","idempotency_key":"exploit-donate-1"} -> 403 {"code":"42501","details":null,"hint":null,"message":"new row violates row-level security policy for table \"museum_donations\""}
+PASS: member can't insert into museum_donations
+member: POST /rest/v1/club_goal_contributions {"goal_id":"00000000-0000-4000-8000-000000000001","member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","source":"admin","amount":1,"amount_used":1,"weight":1,"credited_points":15000,"idempotency_key":"exploit-goal-1"} -> 403 {"code":"42501","details":null,"hint":null,"message":"new row violates row-level security policy for table \"club_goal_contributions\""}
+PASS: member can't insert into club_goal_contributions
+member: POST /rest/v1/combat_xp_ledger {"member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","amount":99999,"source":"admin","idempotency_key":"exploit-xp-1"} -> 403 {"code":"42501","details":null,"hint":null,"message":"new row violates row-level security policy for table \"combat_xp_ledger\""}
+PASS: member can't insert into combat_xp_ledger
+member: POST /rest/v1/member_progression {"member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","xp":999999,"level":50} -> 403 {"code":"42501","details":null,"hint":null,"message":"new row violates row-level security policy for table \"member_progression\""}
+PASS: member can't insert into member_progression
+member: POST /rest/v1/member_weapons {"member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","weapon_key":"staff-elder","durability":999} -> 403 {"code":"42501","details":null,"hint":null,"message":"new row violates row-level security policy for table \"member_weapons\""}
+PASS: member can't insert into member_weapons
+member: POST /rest/v1/member_inventory {"member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","item_id":"1afd7d2e-b300-43a8-84d8-9d8f633aaad3","qty":1} -> 403 {"code":"42501","details":null,"hint":null,"message":"new row violates row-level security policy for table \"member_inventory\""}
+PASS: member can't insert into member_inventory
+member: POST /rest/v1/merch_reservations {"member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","item_id":"d142560c-549a-4525-9dba-e0bb32f3268f","gems":0,"pickup_code":"EXPLOIT","idempotency_key":"exploit-merch-1"} -> 403 {"code":"42501","details":null,"hint":null,"message":"new row violates row-level security policy for table \"merch_reservations\""}
+PASS: member can't insert into merch_reservations
+member: POST /rest/v1/letters {"kind":"system","recipient_id":"4e294cb3-7032-433c-971e-90f855021d10","subject":"Official","body":"fake system letter"} -> 403 {"code":"42501","details":null,"hint":null,"message":"new row violates row-level security policy for table \"letters\""}
+PASS: member can't insert into letters
+member: POST /rest/v1/study_sessions {"member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","table_id":"00000000-0000-4000-8000-000000005109","seat":2,"coins_paid":999} -> 403 {"code":"42501","details":null,"hint":null,"message":"new row violates row-level security policy for table \"study_sessions\""}
+PASS: member can't insert into study_sessions
+member: POST /rest/v1/member_identity {"member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","family":"Arcane","mbti_type":"INTJ"} -> 403 {"code":"42501","details":null,"hint":null,"message":"new row violates row-level security policy for table \"member_identity\""}
+PASS: member can't insert into member_identity
+member: POST /rest/v1/home_room_purchases {"member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","room_number":4,"price_coins":0,"idempotency_key":"exploit-room-1"} -> 403 {"code":"42501","details":null,"hint":null,"message":"new row violates row-level security policy for table \"home_room_purchases\""}
+PASS: member can't insert into home_room_purchases
+member: PATCH /rest/v1/wallets?member_id=eq.c2982825-3dd1-4572-a9d0-4b7fadd306d6 {"coins":99999} -> 200 []
+PASS: member can't update wallets
+member: PATCH /rest/v1/member_progression?member_id=eq.c2982825-3dd1-4572-a9d0-4b7fadd306d6 {"xp":999999} -> 200 []
+PASS: member can't update member_progression
+member: PATCH /rest/v1/member_weapons?member_id=eq.c2982825-3dd1-4572-a9d0-4b7fadd306d6 {"durability":9999} -> 200 []
+PASS: member can't update member_weapons
+member: PATCH /rest/v1/member_collections?user_id=eq.c2982825-3dd1-4572-a9d0-4b7fadd306d6 {"count":99} -> 403 {"code":"42501","details":null,"hint":"Grant the required privileges to the current role with: GRANT UPDATE ON public.member_collections TO authenticated;","message":"permission denied for table member_collections"}
+PASS: member can't update member_collections
+member: PATCH /rest/v1/study_sessions?member_id=eq.c2982825-3dd1-4572-a9d0-4b7fadd306d6 {"coins_paid":999} -> 200 []
+PASS: member can't update study_sessions
+member: PATCH /rest/v1/member_identity?member_id=eq.c2982825-3dd1-4572-a9d0-4b7fadd306d6 {"family":"Warden"} -> 200 []
+PASS: member can't update member_identity
+member: POST /rest/v1/rpc/wallet_apply {"p_member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","p_currency":"coins","p_amount":5000,"p_source":"admin","p_ref":"x","p_idempotency_key":"exploit-rpc-1"} -> 403 {"code":"42501","details":null,"hint":null,"message":"permission denied for function wallet_apply"}
+PASS: member can't call wallet_apply
+member: POST /rest/v1/rpc/wallet_apply {"p_member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","p_currency":"gems","p_amount":5000,"p_source":"admin","p_ref":"x","p_idempotency_key":"exploit-rpc-2"} -> 403 {"code":"42501","details":null,"hint":null,"message":"permission denied for function wallet_apply"}
+PASS: member can't call wallet_apply
+member: POST /rest/v1/rpc/combat_grant_xp {"p_member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","p_amount":5000,"p_source":"admin","p_ref":"x","p_key":"exploit-rpc-3"} -> 403 {"code":"42501","details":null,"hint":null,"message":"permission denied for function combat_grant_xp"}
+PASS: member can't call combat_grant_xp
+member: POST /rest/v1/rpc/study_settle {"p_session_id":"00000000-0000-4000-8000-000000000000"} -> 404 {"code":"PGRST202","details":"Searched for the function public.study_settle with parameter p_session_id or with a single unnamed json/jsonb parameter, but no matches were found in the schema cache.","hint":"Perhaps you m
+PASS: member can't call study_settle
+member: POST /rest/v1/rpc/daily_gift_claim {"p_member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6"} -> 403 {"code":"42501","details":null,"hint":null,"message":"permission denied for function daily_gift_claim"}
+PASS: member can't call daily_gift_claim
+member: GET /rest/v1/profiles?select=id,email,phone&id=eq.4e294cb3-7032-433c-971e-90f855021d10  -> 403 {"code":"42501","details":null,"hint":"Grant the required privileges to the current role with: GRANT SELECT ON public.profiles TO authenticated;","message":"permission denied for table profiles"}
+PASS: member can't read another member's email/phone
+member: GET /rest/v1/wallet_ledger?member_id=eq.4e294cb3-7032-433c-971e-90f855021d10  -> 200 []
+PASS: member can't read another member's ledger
+member: GET /rest/v1/letters?recipient_id=eq.4e294cb3-7032-433c-971e-90f855021d10&sender_id=is.distinct.from.c2982825-3dd1-4572-a9d0-4b7fadd306d6  -> 400 {"code":"PGRST100","details":"unexpected \"d\" expecting isVal: (null, not_null, true, false, unknown)","hint":null,"message":"\"failed to parse filter (is.distinct.from.c2982825-3dd1-4572-a9d0-4b7fadd306d6)\" (line 1, c
+PASS: member can't read another member's mail
+SQL> insert into events (title, event_type, is_irl, start_time, created_by) values ('Phase1 IRL test event', 'club', true, now(), '6d14b24f-7005-4194-adf2-4fc02d186c45') returning id
+id
+8df3fe32-36f8-4a8d-95a7-8022a42dd3ca
+member: POST /rest/v1/event_attendance {"event_id":"8df3fe32-36f8-4a8d-95a7-8022a42dd3ca","user_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","status":"attended"} -> 403 {"code":"42501","details":null,"hint":null,"message":"new row violates row-level security policy for table \"event_attendance\""}
+PASS: member can't mark themselves attended at an IRL event
+SQL> insert into events (title, event_type, is_irl, start_time, created_by) values ('Phase1 RSVP test event', 'club', true, now(), '6d14b24f-7005-4194-adf2-4fc02d186c45') returning id
+id
+2d8575ac-3963-42e4-8f2f-084c572b0790
+member: POST /rest/v1/event_attendance {"event_id":"2d8575ac-3963-42e4-8f2f-084c572b0790","user_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","status":"registered"} -> 201 [{"id":"5862e447-e3b3-4eb9-8089-7eb119edb1a9","event_id":"2d8575ac-3963-42e4-8f2f-084c572b0790","user_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","status":"registered"}]
+PASS: member can still RSVP (registered)
+SQL> select status from event_attendance where user_id = 'c2982825-3dd1-4572-a9d0-4b7fadd306d6' and event_id = '8df3fe32-36f8-4a8d-95a7-8022a42dd3ca'
+status
+SQL> select count(*) as event_xp_rows from combat_xp_ledger where member_id = 'c2982825-3dd1-4572-a9d0-4b7fadd306d6' and source = 'event'
+event_xp_rows
+0
+SQL> select count(*) as event_coin_rows from wallet_ledger where member_id = 'c2982825-3dd1-4572-a9d0-4b7fadd306d6' and source = 'event'
+event_coin_rows
+0
+anon: GET /rest/v1/invite_codes?select=code,is_active  -> 200 []
+PASS: anon can't list invite codes
+public: GET /rest/v1/invite_codes?select=code,is_active  -> 200 []
+PASS: a signed-in public account can't list invite codes
+SQL> select tier, class, tethos_coins, xp, membership from profiles where id = 'c2982825-3dd1-4572-a9d0-4b7fadd306d6'
+tier | class | tethos_coins | xp | membership
+4 | Warden | 850 | 0 | member
+member: PATCH /rest/v1/profiles?id=eq.c2982825-3dd1-4572-a9d0-4b7fadd306d6 {"tier":1} -> 403 {"code":"42501","details":null,"hint":null,"message":"profiles: tier can only be changed by the server"}
+PASS: member can't set own tier (guard)
+member: PATCH /rest/v1/profiles?id=eq.c2982825-3dd1-4572-a9d0-4b7fadd306d6 {"class":"Arcane"} -> 403 {"code":"42501","details":null,"hint":null,"message":"profiles: class can only be changed by the server"}
+PASS: member can't set own class (guard)
+member: PATCH /rest/v1/profiles?id=eq.c2982825-3dd1-4572-a9d0-4b7fadd306d6 {"subclass":"Sage"} -> 403 {"code":"42501","details":null,"hint":null,"message":"profiles: subclass can only be changed by the server"}
+PASS: member can't set own subclass (guard)
+member: PATCH /rest/v1/profiles?id=eq.c2982825-3dd1-4572-a9d0-4b7fadd306d6 {"tethos_coins":99999} -> 403 {"code":"42501","details":null,"hint":null,"message":"profiles: tethos_coins can only be changed by the server"}
+PASS: member can't set own tethos_coins (guard)
+member: PATCH /rest/v1/profiles?id=eq.c2982825-3dd1-4572-a9d0-4b7fadd306d6 {"xp":99999} -> 403 {"code":"42501","details":null,"hint":null,"message":"profiles: xp can only be changed by the server"}
+PASS: member can't set own xp (guard)
+member: PATCH /rest/v1/profiles?id=eq.c2982825-3dd1-4572-a9d0-4b7fadd306d6 {"level":50} -> 403 {"code":"42501","details":null,"hint":null,"message":"profiles: level can only be changed by the server"}
+PASS: member can't set own level (guard)
+member: PATCH /rest/v1/profiles?id=eq.c2982825-3dd1-4572-a9d0-4b7fadd306d6 {"membership":"public"} -> 403 {"code":"42501","details":null,"hint":null,"message":"profiles: membership can only be changed by the server"}
+PASS: member can't set own membership (guard)
+member: PATCH /rest/v1/profiles?id=eq.c2982825-3dd1-4572-a9d0-4b7fadd306d6 {"is_active":false} -> 403 {"code":"42501","details":null,"hint":null,"message":"profiles: is_active can only be changed by the server"}
+PASS: member can't set own is_active (guard)
+public: PATCH /rest/v1/profiles?id=eq.4e294cb3-7032-433c-971e-90f855021d10 {"membership":"member"} -> 403 {"code":"42501","details":null,"hint":null,"message":"profiles: membership can only be changed by the server"}
+PASS: public account can't make itself a member
+member: PATCH /rest/v1/profiles?id=eq.c2982825-3dd1-4572-a9d0-4b7fadd306d6 {"bio":"allowed edit"} -> 204 
+PASS: member can still edit their own bio
+SQL> select tier, class, subclass, tethos_coins, xp, level, membership, is_active from profiles where id = 'c2982825-3dd1-4572-a9d0-4b7fadd306d6'
+tier | class | subclass | tethos_coins | xp | level | membership | is_active
+4 | Warden |  | 850 | 0 | 1 | member | t
+member: POST /rest/v1/wallet_ledger {"member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","amount":5000,"balance_after":5000,"source":"admin","idempotency_key":"exploit-ledger-1"} -> 403 {"code":"42501","details":null,"hint":null,"message":"new row violates row-level security policy for table \"wallet_ledger\""}
+PASS: member can't insert into wallet_ledger
+member: POST /rest/v1/wallets {"member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","coins":5000} -> 403 {"code":"42501","details":null,"hint":null,"message":"new row violates row-level security policy for table \"wallets\""}
+PASS: member can't insert into wallets
+member: POST /rest/v1/tc_transactions {"user_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","amount":5000,"balance_after":5000,"type":"earn_admin","description":"exploit"} -> 403 {"code":"42501","details":null,"hint":null,"message":"new row violates row-level security policy for table \"tc_transactions\""}
+PASS: member can't insert into tc_transactions
+member: POST /rest/v1/member_collections {"user_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","item_key":"fish_golden_koi","count":99} -> 403 {"code":"42501","details":null,"hint":"Grant the required privileges to the current role with: GRANT INSERT ON public.member_collections TO authenticated;","message":"permission denied for table member_collections"}
+PASS: member can't insert into member_collections
+member: POST /rest/v1/museum_donations {"species_key":"fish_koi","donor_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","idempotency_key":"exploit-donate-1"} -> 403 {"code":"42501","details":null,"hint":null,"message":"new row violates row-level security policy for table \"museum_donations\""}
+PASS: member can't insert into museum_donations
+member: POST /rest/v1/club_goal_contributions {"goal_id":"00000000-0000-4000-8000-000000000001","member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","source":"admin","amount":1,"amount_used":1,"weight":1,"credited_points":15000,"idempotency_key":"exploit-goal-1"} -> 403 {"code":"42501","details":null,"hint":null,"message":"new row violates row-level security policy for table \"club_goal_contributions\""}
+PASS: member can't insert into club_goal_contributions
+member: POST /rest/v1/combat_xp_ledger {"member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","amount":99999,"source":"admin","idempotency_key":"exploit-xp-1"} -> 403 {"code":"42501","details":null,"hint":null,"message":"new row violates row-level security policy for table \"combat_xp_ledger\""}
+PASS: member can't insert into combat_xp_ledger
+member: POST /rest/v1/member_progression {"member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","xp":999999,"level":50} -> 403 {"code":"42501","details":null,"hint":null,"message":"new row violates row-level security policy for table \"member_progression\""}
+PASS: member can't insert into member_progression
+member: POST /rest/v1/member_weapons {"member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","weapon_key":"staff-elder","durability":999} -> 403 {"code":"42501","details":null,"hint":null,"message":"new row violates row-level security policy for table \"member_weapons\""}
+PASS: member can't insert into member_weapons
+member: POST /rest/v1/member_inventory {"member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","item_id":"1afd7d2e-b300-43a8-84d8-9d8f633aaad3","qty":1} -> 403 {"code":"42501","details":null,"hint":null,"message":"new row violates row-level security policy for table \"member_inventory\""}
+PASS: member can't insert into member_inventory
+member: POST /rest/v1/merch_reservations {"member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","item_id":"d142560c-549a-4525-9dba-e0bb32f3268f","gems":0,"pickup_code":"EXPLOIT","idempotency_key":"exploit-merch-1"} -> 403 {"code":"42501","details":null,"hint":null,"message":"new row violates row-level security policy for table \"merch_reservations\""}
+PASS: member can't insert into merch_reservations
+member: POST /rest/v1/letters {"kind":"system","recipient_id":"4e294cb3-7032-433c-971e-90f855021d10","subject":"Official","body":"fake system letter"} -> 403 {"code":"42501","details":null,"hint":null,"message":"new row violates row-level security policy for table \"letters\""}
+PASS: member can't insert into letters
+member: POST /rest/v1/study_sessions {"member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","table_id":"00000000-0000-4000-8000-000000005109","seat":2,"coins_paid":999} -> 403 {"code":"42501","details":null,"hint":null,"message":"new row violates row-level security policy for table \"study_sessions\""}
+PASS: member can't insert into study_sessions
+member: POST /rest/v1/member_identity {"member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","family":"Arcane","mbti_type":"INTJ"} -> 403 {"code":"42501","details":null,"hint":null,"message":"new row violates row-level security policy for table \"member_identity\""}
+PASS: member can't insert into member_identity
+member: POST /rest/v1/home_room_purchases {"member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","room_number":4,"price_coins":0,"idempotency_key":"exploit-room-1"} -> 403 {"code":"42501","details":null,"hint":null,"message":"new row violates row-level security policy for table \"home_room_purchases\""}
+PASS: member can't insert into home_room_purchases
+member: PATCH /rest/v1/wallets?member_id=eq.c2982825-3dd1-4572-a9d0-4b7fadd306d6 {"coins":99999} -> 200 []
+PASS: member can't update wallets
+member: PATCH /rest/v1/member_progression?member_id=eq.c2982825-3dd1-4572-a9d0-4b7fadd306d6 {"xp":999999} -> 200 []
+PASS: member can't update member_progression
+member: PATCH /rest/v1/member_weapons?member_id=eq.c2982825-3dd1-4572-a9d0-4b7fadd306d6 {"durability":9999} -> 200 []
+PASS: member can't update member_weapons
+member: PATCH /rest/v1/member_collections?user_id=eq.c2982825-3dd1-4572-a9d0-4b7fadd306d6 {"count":99} -> 403 {"code":"42501","details":null,"hint":"Grant the required privileges to the current role with: GRANT UPDATE ON public.member_collections TO authenticated;","message":"permission denied for table member_collections"}
+PASS: member can't update member_collections
+member: PATCH /rest/v1/study_sessions?member_id=eq.c2982825-3dd1-4572-a9d0-4b7fadd306d6 {"coins_paid":999} -> 200 []
+PASS: member can't update study_sessions
+member: PATCH /rest/v1/member_identity?member_id=eq.c2982825-3dd1-4572-a9d0-4b7fadd306d6 {"family":"Warden"} -> 200 []
+PASS: member can't update member_identity
+member: POST /rest/v1/rpc/wallet_apply {"p_member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","p_currency":"coins","p_amount":5000,"p_source":"admin","p_ref":"x","p_idempotency_key":"exploit-rpc-1"} -> 403 {"code":"42501","details":null,"hint":null,"message":"permission denied for function wallet_apply"}
+PASS: member can't call wallet_apply
+member: POST /rest/v1/rpc/wallet_apply {"p_member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","p_currency":"gems","p_amount":5000,"p_source":"admin","p_ref":"x","p_idempotency_key":"exploit-rpc-2"} -> 403 {"code":"42501","details":null,"hint":null,"message":"permission denied for function wallet_apply"}
+PASS: member can't call wallet_apply
+member: POST /rest/v1/rpc/combat_grant_xp {"p_member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","p_amount":5000,"p_source":"admin","p_ref":"x","p_key":"exploit-rpc-3"} -> 403 {"code":"42501","details":null,"hint":null,"message":"permission denied for function combat_grant_xp"}
+PASS: member can't call combat_grant_xp
+member: POST /rest/v1/rpc/study_settle {"p_session_id":"00000000-0000-4000-8000-000000000000"} -> 404 {"code":"PGRST202","details":"Searched for the function public.study_settle with parameter p_session_id or with a single unnamed json/jsonb parameter, but no matches were found in the schema cache.","hint":"Perhaps you m
+PASS: member can't call study_settle
+member: POST /rest/v1/rpc/daily_gift_claim {"p_member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6"} -> 403 {"code":"42501","details":null,"hint":null,"message":"permission denied for function daily_gift_claim"}
+PASS: member can't call daily_gift_claim
+member: GET /rest/v1/profiles?select=id,email,phone&id=eq.4e294cb3-7032-433c-971e-90f855021d10  -> 403 {"code":"42501","details":null,"hint":"Grant the required privileges to the current role with: GRANT SELECT ON public.profiles TO authenticated;","message":"permission denied for table profiles"}
+PASS: member can't read another member's email/phone
+member: GET /rest/v1/wallet_ledger?member_id=eq.4e294cb3-7032-433c-971e-90f855021d10  -> 200 []
+PASS: member can't read another member's ledger
+member: GET /rest/v1/letters?recipient_id=eq.4e294cb3-7032-433c-971e-90f855021d10&or=(sender_id.is.null,sender_id.neq.c2982825-3dd1-4572-a9d0-4b7fadd306d6)  -> 200 []
+PASS: member can't read another member's mail
+SQL> insert into events (title, event_type, is_irl, start_time, created_by) values ('Phase1 IRL test event', 'club', true, now(), '6d14b24f-7005-4194-adf2-4fc02d186c45') returning id
+id
+1e8e6cd0-8d81-4701-8c33-76504c333541
+member: POST /rest/v1/event_attendance {"event_id":"1e8e6cd0-8d81-4701-8c33-76504c333541","user_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","status":"attended"} -> 403 {"code":"42501","details":null,"hint":null,"message":"new row violates row-level security policy for table \"event_attendance\""}
+PASS: member can't mark themselves attended at an IRL event
+SQL> insert into events (title, event_type, is_irl, start_time, created_by) values ('Phase1 RSVP test event', 'club', true, now(), '6d14b24f-7005-4194-adf2-4fc02d186c45') returning id
+id
+76e8288c-b1e8-40ea-9554-fc9ddc4b65e5
+member: POST /rest/v1/event_attendance {"event_id":"76e8288c-b1e8-40ea-9554-fc9ddc4b65e5","user_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","status":"registered"} -> 201 [{"id":"ec79578d-b31f-41ac-859d-68cb13e0e355","event_id":"76e8288c-b1e8-40ea-9554-fc9ddc4b65e5","user_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","status":"registered"}]
+PASS: member can still RSVP (registered)
+SQL> select status from event_attendance where user_id = 'c2982825-3dd1-4572-a9d0-4b7fadd306d6' and event_id = '1e8e6cd0-8d81-4701-8c33-76504c333541'
+status
+SQL> select count(*) as event_xp_rows from combat_xp_ledger where member_id = 'c2982825-3dd1-4572-a9d0-4b7fadd306d6' and source = 'event'
+event_xp_rows
+0
+SQL> select count(*) as event_coin_rows from wallet_ledger where member_id = 'c2982825-3dd1-4572-a9d0-4b7fadd306d6' and source = 'event'
+event_coin_rows
+0
+anon: GET /rest/v1/invite_codes?select=code,is_active  -> 200 []
+PASS: anon can't list invite codes
+public: GET /rest/v1/invite_codes?select=code,is_active  -> 200 []
+PASS: a signed-in public account can't list invite codes
+SQL> select tier, class, tethos_coins, xp, membership from profiles where id = 'c2982825-3dd1-4572-a9d0-4b7fadd306d6'
+tier | class | tethos_coins | xp | membership
+4 | Warden | 850 | 0 | member
+member: PATCH /rest/v1/profiles?id=eq.c2982825-3dd1-4572-a9d0-4b7fadd306d6 {"tier":1} -> 403 {"code":"42501","details":null,"hint":null,"message":"profiles: tier can only be changed by the server"}
+PASS: member can't set own tier (guard)
+member: PATCH /rest/v1/profiles?id=eq.c2982825-3dd1-4572-a9d0-4b7fadd306d6 {"class":"Arcane"} -> 403 {"code":"42501","details":null,"hint":null,"message":"profiles: class can only be changed by the server"}
+PASS: member can't set own class (guard)
+member: PATCH /rest/v1/profiles?id=eq.c2982825-3dd1-4572-a9d0-4b7fadd306d6 {"subclass":"Sage"} -> 403 {"code":"42501","details":null,"hint":null,"message":"profiles: subclass can only be changed by the server"}
+PASS: member can't set own subclass (guard)
+member: PATCH /rest/v1/profiles?id=eq.c2982825-3dd1-4572-a9d0-4b7fadd306d6 {"tethos_coins":99999} -> 403 {"code":"42501","details":null,"hint":null,"message":"profiles: tethos_coins can only be changed by the server"}
+PASS: member can't set own tethos_coins (guard)
+member: PATCH /rest/v1/profiles?id=eq.c2982825-3dd1-4572-a9d0-4b7fadd306d6 {"xp":99999} -> 403 {"code":"42501","details":null,"hint":null,"message":"profiles: xp can only be changed by the server"}
+PASS: member can't set own xp (guard)
+member: PATCH /rest/v1/profiles?id=eq.c2982825-3dd1-4572-a9d0-4b7fadd306d6 {"level":50} -> 403 {"code":"42501","details":null,"hint":null,"message":"profiles: level can only be changed by the server"}
+PASS: member can't set own level (guard)
+member: PATCH /rest/v1/profiles?id=eq.c2982825-3dd1-4572-a9d0-4b7fadd306d6 {"membership":"public"} -> 403 {"code":"42501","details":null,"hint":null,"message":"profiles: membership can only be changed by the server"}
+PASS: member can't set own membership (guard)
+member: PATCH /rest/v1/profiles?id=eq.c2982825-3dd1-4572-a9d0-4b7fadd306d6 {"is_active":false} -> 403 {"code":"42501","details":null,"hint":null,"message":"profiles: is_active can only be changed by the server"}
+PASS: member can't set own is_active (guard)
+public: PATCH /rest/v1/profiles?id=eq.4e294cb3-7032-433c-971e-90f855021d10 {"membership":"member"} -> 403 {"code":"42501","details":null,"hint":null,"message":"profiles: membership can only be changed by the server"}
+PASS: public account can't make itself a member
+member: PATCH /rest/v1/profiles?id=eq.c2982825-3dd1-4572-a9d0-4b7fadd306d6 {"bio":"allowed edit"} -> 204 
+PASS: member can still edit their own bio
+SQL> select tier, class, subclass, tethos_coins, xp, level, membership, is_active from profiles where id = 'c2982825-3dd1-4572-a9d0-4b7fadd306d6'
+tier | class | subclass | tethos_coins | xp | level | membership | is_active
+4 | Warden |  | 850 | 0 | 1 | member | t
+member: POST /rest/v1/wallet_ledger {"member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","amount":5000,"balance_after":5000,"source":"admin","idempotency_key":"exploit-ledger-1"} -> 403 {"code":"42501","details":null,"hint":null,"message":"new row violates row-level security policy for table \"wallet_ledger\""}
+PASS: member can't insert into wallet_ledger
+member: POST /rest/v1/wallets {"member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","coins":5000} -> 403 {"code":"42501","details":null,"hint":null,"message":"new row violates row-level security policy for table \"wallets\""}
+PASS: member can't insert into wallets
+member: POST /rest/v1/tc_transactions {"user_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","amount":5000,"balance_after":5000,"type":"earn_admin","description":"exploit"} -> 403 {"code":"42501","details":null,"hint":null,"message":"new row violates row-level security policy for table \"tc_transactions\""}
+PASS: member can't insert into tc_transactions
+member: POST /rest/v1/member_collections {"user_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","item_key":"fish_golden_koi","count":99} -> 403 {"code":"42501","details":null,"hint":"Grant the required privileges to the current role with: GRANT INSERT ON public.member_collections TO authenticated;","message":"permission denied for table member_collections"}
+PASS: member can't insert into member_collections
+member: POST /rest/v1/museum_donations {"species_key":"fish_koi","donor_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","idempotency_key":"exploit-donate-1"} -> 403 {"code":"42501","details":null,"hint":null,"message":"new row violates row-level security policy for table \"museum_donations\""}
+PASS: member can't insert into museum_donations
+member: POST /rest/v1/club_goal_contributions {"goal_id":"00000000-0000-4000-8000-000000000001","member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","source":"admin","amount":1,"amount_used":1,"weight":1,"credited_points":15000,"idempotency_key":"exploit-goal-1"} -> 403 {"code":"42501","details":null,"hint":null,"message":"new row violates row-level security policy for table \"club_goal_contributions\""}
+PASS: member can't insert into club_goal_contributions
+member: POST /rest/v1/combat_xp_ledger {"member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","amount":99999,"source":"admin","idempotency_key":"exploit-xp-1"} -> 403 {"code":"42501","details":null,"hint":null,"message":"new row violates row-level security policy for table \"combat_xp_ledger\""}
+PASS: member can't insert into combat_xp_ledger
+member: POST /rest/v1/member_progression {"member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","xp":999999,"level":50} -> 403 {"code":"42501","details":null,"hint":null,"message":"new row violates row-level security policy for table \"member_progression\""}
+PASS: member can't insert into member_progression
+member: POST /rest/v1/member_weapons {"member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","weapon_key":"staff-elder","durability":999} -> 403 {"code":"42501","details":null,"hint":null,"message":"new row violates row-level security policy for table \"member_weapons\""}
+PASS: member can't insert into member_weapons
+member: POST /rest/v1/member_inventory {"member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","item_id":"1afd7d2e-b300-43a8-84d8-9d8f633aaad3","qty":1} -> 403 {"code":"42501","details":null,"hint":null,"message":"new row violates row-level security policy for table \"member_inventory\""}
+PASS: member can't insert into member_inventory
+member: POST /rest/v1/merch_reservations {"member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","item_id":"d142560c-549a-4525-9dba-e0bb32f3268f","gems":0,"pickup_code":"EXPLOIT","idempotency_key":"exploit-merch-1"} -> 403 {"code":"42501","details":null,"hint":null,"message":"new row violates row-level security policy for table \"merch_reservations\""}
+PASS: member can't insert into merch_reservations
+member: POST /rest/v1/letters {"kind":"system","recipient_id":"4e294cb3-7032-433c-971e-90f855021d10","subject":"Official","body":"fake system letter"} -> 403 {"code":"42501","details":null,"hint":null,"message":"new row violates row-level security policy for table \"letters\""}
+PASS: member can't insert into letters
+member: POST /rest/v1/study_sessions {"member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","table_id":"00000000-0000-4000-8000-000000005109","seat":2,"coins_paid":999} -> 403 {"code":"42501","details":null,"hint":null,"message":"new row violates row-level security policy for table \"study_sessions\""}
+PASS: member can't insert into study_sessions
+member: POST /rest/v1/member_identity {"member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","family":"Arcane","mbti_type":"INTJ"} -> 403 {"code":"42501","details":null,"hint":null,"message":"new row violates row-level security policy for table \"member_identity\""}
+PASS: member can't insert into member_identity
+member: POST /rest/v1/home_room_purchases {"member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","room_number":4,"price_coins":0,"idempotency_key":"exploit-room-1"} -> 403 {"code":"42501","details":null,"hint":null,"message":"new row violates row-level security policy for table \"home_room_purchases\""}
+PASS: member can't insert into home_room_purchases
+member: PATCH /rest/v1/wallets?member_id=eq.c2982825-3dd1-4572-a9d0-4b7fadd306d6 {"coins":99999} -> 200 []
+PASS: member can't update wallets
+member: PATCH /rest/v1/member_progression?member_id=eq.c2982825-3dd1-4572-a9d0-4b7fadd306d6 {"xp":999999} -> 200 []
+PASS: member can't update member_progression
+member: PATCH /rest/v1/member_weapons?member_id=eq.c2982825-3dd1-4572-a9d0-4b7fadd306d6 {"durability":9999} -> 200 []
+PASS: member can't update member_weapons
+member: PATCH /rest/v1/member_collections?user_id=eq.c2982825-3dd1-4572-a9d0-4b7fadd306d6 {"count":99} -> 403 {"code":"42501","details":null,"hint":"Grant the required privileges to the current role with: GRANT UPDATE ON public.member_collections TO authenticated;","message":"permission denied for table member_collections"}
+PASS: member can't update member_collections
+member: PATCH /rest/v1/study_sessions?member_id=eq.c2982825-3dd1-4572-a9d0-4b7fadd306d6 {"coins_paid":999} -> 200 []
+PASS: member can't update study_sessions
+member: PATCH /rest/v1/member_identity?member_id=eq.c2982825-3dd1-4572-a9d0-4b7fadd306d6 {"family":"Warden"} -> 200 []
+PASS: member can't update member_identity
+member: POST /rest/v1/rpc/wallet_apply {"p_member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","p_currency":"coins","p_amount":5000,"p_source":"admin","p_ref":"x","p_idempotency_key":"exploit-rpc-1"} -> 403 {"code":"42501","details":null,"hint":null,"message":"permission denied for function wallet_apply"}
+PASS: member can't call wallet_apply
+member: POST /rest/v1/rpc/wallet_apply {"p_member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","p_currency":"gems","p_amount":5000,"p_source":"admin","p_ref":"x","p_idempotency_key":"exploit-rpc-2"} -> 403 {"code":"42501","details":null,"hint":null,"message":"permission denied for function wallet_apply"}
+PASS: member can't call wallet_apply
+member: POST /rest/v1/rpc/combat_grant_xp {"p_member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","p_amount":5000,"p_source":"admin","p_ref":"x","p_key":"exploit-rpc-3"} -> 403 {"code":"42501","details":null,"hint":null,"message":"permission denied for function combat_grant_xp"}
+PASS: member can't call combat_grant_xp
+member: POST /rest/v1/rpc/study_settle {"p_session_id":"00000000-0000-4000-8000-000000000000"} -> 404 {"code":"PGRST202","details":"Searched for the function public.study_settle with parameter p_session_id or with a single unnamed json/jsonb parameter, but no matches were found in the schema cache.","hint":"Perhaps you m
+PASS: member can't call study_settle
+member: POST /rest/v1/rpc/daily_gift_claim {"p_member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6"} -> 403 {"code":"42501","details":null,"hint":null,"message":"permission denied for function daily_gift_claim"}
+PASS: member can't call daily_gift_claim
+member: GET /rest/v1/profiles?select=id,email,phone&id=eq.4e294cb3-7032-433c-971e-90f855021d10  -> 403 {"code":"42501","details":null,"hint":"Grant the required privileges to the current role with: GRANT SELECT ON public.profiles TO authenticated;","message":"permission denied for table profiles"}
+PASS: member can't read another member's email/phone
+member: GET /rest/v1/wallet_ledger?member_id=eq.4e294cb3-7032-433c-971e-90f855021d10  -> 200 []
+PASS: member can't read another member's ledger
+member: GET /rest/v1/letters?recipient_id=eq.4e294cb3-7032-433c-971e-90f855021d10&or=(sender_id.is.null,sender_id.neq.c2982825-3dd1-4572-a9d0-4b7fadd306d6)  -> 200 []
+PASS: member can't read another member's mail
+SQL> insert into events (title, event_type, is_irl, start_time, created_by) values ('Phase1 IRL test event', 'club', true, now(), '6d14b24f-7005-4194-adf2-4fc02d186c45') returning id
+id
+296b7b72-ce9b-4007-a0d6-10ea0d8162ff
+member: POST /rest/v1/event_attendance {"event_id":"296b7b72-ce9b-4007-a0d6-10ea0d8162ff","user_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","status":"attended"} -> 403 {"code":"42501","details":null,"hint":null,"message":"new row violates row-level security policy for table \"event_attendance\""}
+PASS: member can't mark themselves attended at an IRL event
+SQL> insert into events (title, event_type, is_irl, start_time, created_by) values ('Phase1 RSVP test event', 'club', true, now(), '6d14b24f-7005-4194-adf2-4fc02d186c45') returning id
+id
+64d71302-f9e2-48d7-b769-abe4cc903d69
+member: POST /rest/v1/event_attendance {"event_id":"64d71302-f9e2-48d7-b769-abe4cc903d69","user_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","status":"registered"} -> 201 [{"id":"e1995b25-3652-40e7-9373-3a93ae552f34","event_id":"64d71302-f9e2-48d7-b769-abe4cc903d69","user_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","status":"registered"}]
+PASS: member can still RSVP (registered)
+SQL> select status from event_attendance where user_id = 'c2982825-3dd1-4572-a9d0-4b7fadd306d6' and event_id = '296b7b72-ce9b-4007-a0d6-10ea0d8162ff'
+status
+SQL> select count(*) as event_xp_rows from combat_xp_ledger where member_id = 'c2982825-3dd1-4572-a9d0-4b7fadd306d6' and source = 'event'
+event_xp_rows
+0
+SQL> select count(*) as event_coin_rows from wallet_ledger where member_id = 'c2982825-3dd1-4572-a9d0-4b7fadd306d6' and source = 'event'
+event_coin_rows
+0
+anon: GET /rest/v1/invite_codes?select=code,is_active  -> 200 []
+PASS: anon can't list invite codes
+public: GET /rest/v1/invite_codes?select=code,is_active  -> 200 []
+PASS: a signed-in public account can't list invite codes
+anon: GET /rest/v1/member_badges?select=member_id,badge,family  -> 401 {"code":"42501","details":null,"hint":null,"message":"permission denied for view member_badges"}
+PASS: anon can't list member badges
+member: GET /rest/v1/member_badges?select=member_id,badge&member_id=eq.c2982825-3dd1-4572-a9d0-4b7fadd306d6  -> 200 [{"member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","badge":"member"}]
+PASS: signed-in users still read badges

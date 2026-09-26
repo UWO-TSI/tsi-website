@@ -24,7 +24,7 @@ Production at dump time: 57 tables, 486 columns, 188 constraints, 119 indexes, 1
 | Object | Notes |
 |---|---|
 | `handle_new_user()` body | Hand-hardened: `COALESCE(email, meta email, '')`, display name falls back through `display_name → full_name → name → email prefix → 'Agent'` (Google puts the name in `full_name`/`name`), and the profile insert is wrapped so a failure never blocks sign-up. `003` has none of this, and `20260926150700_identity` would **replace it at launch** with a body that has none of it either. |
-| Policy "Invite codes readable by anon for validation" | `SELECT` to `anon` where `is_active`. Used by `/student/signup` to validate a code before `signUp`. See the security note below. |
+| Policy "Invite codes readable by anon for validation" | `SELECT` to `anon` where `is_active`. Used by `/student/signup` to validate a code before `signUp`. It lets anyone list the active codes, and an active code makes a sign-up a member once identity ships: dropped by `20260926155300` (see `flows.md` §9). |
 | Bucket `portfolios` (private, 50 MB) | Created by `web/scripts/_create-portfolios-bucket.mjs`; `lib/google-sheets.ts` signs links from it. |
 | Extensions `pg_cron`, `pg_net`; jobs `recruitment-sheet-delivery` (`*/5`), `prune-cron-history` | From `web/supabase/schedule-recruitment-sheet.sql` (outside the migrations folder). **Not** scheduled on staging: the job posts to the production origin. Extensions only were created on staging. |
 
@@ -59,4 +59,4 @@ Idempotent (applied twice on staging, second run all no-ops), placed after the l
 
 Not reconciled, on purpose: the trigram and other `idx_profiles_*` indexes (performance only, 315 rows), `avatar_items` / `player_achievements` (only the legacy `/api/shop`, `/api/inventory` and avatar purchase read them; see flows), the `011` resume column and storage policies (unused), the cron jobs.
 
-After the reconciliation, staging = production + the launch chain. Final staging dump vs production: only the launch chain's own objects, the reconciliation's intended changes, and the cron jobs.
+After the reconciliation and the Phase 1 fixes, a final staging dump vs production differs only by the launch chain's own objects (1,788 added), the intended changes to existing objects (`profiles_tier_check`, `shop_items.tc_price` nullable and category check, `tc_transactions_type_check`, `handle_new_user`, `profiles_guard_privileged`, the RSVP-only attendance policy, the two invite-code policies and `member_collections` write access removed), and the two cron jobs.

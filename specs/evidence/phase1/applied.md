@@ -45,6 +45,7 @@ Diff against the read-only production dump, then patched staging until the only 
 | `20260926155100_letters_broadcast_unique.sql` (Phase 1 fix) | ok 16:15:33 |
 | `20260926155200_event_attendance_rsvp_only.sql` (Phase 1 fix) | ok |
 | `20260926155300_invite_codes_private.sql` (Phase 1 fix) | ok |
+| `20260926155400_member_badges_signed_in_only.sql` (Phase 1 fix) | ok 17:08 |
 | `20260926160000_crafting.sql` (merged from `game/crafting`) | ok 16:39 |
 | `20260926170000_profiles_avatar_config.sql` (merged from `game/study-character`) | ok (no-op after `155000`) |
 
