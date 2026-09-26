@@ -1,0 +1,61 @@
+chain ok (game)
+── 029-031_smoke.sql
+NOTICE:  029 ok
+NOTICE:  030 ok
+NOTICE:  031 ok
+── 032_smoke.sql
+NOTICE:  032 ok
+── 033_smoke.sql
+NOTICE:  033 ok
+── 034_smoke.sql
+NOTICE:  034 ok
+NOTICE:  034 membership not self-editable ok
+── 034_legacy_smoke.sql
+NOTICE:  034 legacy ok
+── 035_smoke.sql
+NOTICE:  035 ok
+── game_security_smoke.sql
+NOTICE:  security 1 collections ok
+NOTICE:  security 2 sell retry race ok
+NOTICE:  security 3 gem types ok
+NOTICE:  security 4 class server-only ok
+── crafting_smoke.sql
+NOTICE:  crafting ok
+NOTICE:  crafting recipes not self-writable ok
+── ownership_smoke.sql
+NOTICE:  ownership catalogue ok
+NOTICE:  extension "dblink" already exists, skipping
+NOTICE:  ownership starters once ok
+NOTICE:  ownership buy after grant ok
+NOTICE:  ok: member cannot write avatar_config (profiles: avatar_config can only be changed by the server)
+NOTICE:  ownership avatar_config server-only ok
+ownership smoke ok
+── combat_content_smoke.sql
+NOTICE:  combat content ok
+NOTICE:  combat content: boss reward not callable by members ok
+NOTICE:  combat content: materials not callable by members ok
+── phase1_regressions.sql
+NOTICE:  phase1 1 letters ok
+NOTICE:  phase1 2 attendance ok
+NOTICE:  phase1 3 invite codes ok
+NOTICE:  phase1 4 member badges ok
+── launch_fixes_smoke.sql
+NOTICE:  launch 1 membership backfill ok
+NOTICE:  relation "data_backfills" already exists, skipping
+NOTICE:  membership backfill already applied, skipped
+NOTICE:  launch 1b backfill rerun is a no-op ok
+NOTICE:  launch 2 sign-up tiers ok
+NOTICE:  launch 3 admin membership ok
+NOTICE:  launch 4 un-RSVP ok
+chain ok (guard)
+NOTICE:  ok: anon cannot read profiles
+NOTICE:  ok: service_role changes tier/tethos_coins and reads email
+NOTICE:  ok: final state (A still T4 / 0 Gems; B untouched by A)
+chain ok (rls)
+portal_rls_smoke exit 0
+chain ok (look)
+NOTICE:  column "avatar_config" of relation "profiles" already exists, skipping
+NOTICE:  ok: column re-added as jsonb, default {}, SELECT for authenticated only
+NOTICE:  ok: server saves the look
+NOTICE:  ok: another member reads the look
+avatar_config smoke ok

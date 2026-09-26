@@ -15,6 +15,8 @@ INSERT INTO auth.users (id, email) VALUES
   ('00000000-0000-4000-8000-00000000000c', 'c@example.test');
 -- handle_new_user created the profiles; the SQL editor (postgres) can still promote.
 UPDATE profiles SET tier = 1 WHERE id = '00000000-0000-4000-8000-00000000000c';
+-- From 20260926200000 a plain sign-up is a public T5 account; A and B are members.
+UPDATE profiles SET tier = 4 WHERE id IN ('00000000-0000-4000-8000-00000000000a', '00000000-0000-4000-8000-00000000000b');
 INSERT INTO npc_personas (slug, display_name, spawn_zone, active) VALUES ('hidden', 'Hidden', 'shop', false);
 DO $$ BEGIN
   ASSERT (SELECT tier FROM profiles WHERE id = '00000000-0000-4000-8000-00000000000c') = 1;

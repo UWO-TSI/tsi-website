@@ -1,0 +1,32 @@
+2026-09-26T23:30:24.816Z member PATCH /api/admin/members/8b41199c-f94f-4557-bfa8-8e75e4c11d3f {"tier":3} -> 403 {"ok":false,"error":"Forbidden: T1/T2 only"}
+PASS: T4 member refused
+2026-09-26T23:30:25.056Z public PATCH /api/admin/members/8b41199c-f94f-4557-bfa8-8e75e4c11d3f {"tier":3} -> 403 {"ok":false,"error":"Forbidden: T1/T2 only"}
+PASS: T5 public account refused
+2026-09-26T23:30:25.383Z staff PATCH /api/admin/members/8b41199c-f94f-4557-bfa8-8e75e4c11d3f {"tier":3,"xp":9999} -> 400 {"ok":false,"error":"Invalid request"}
+PASS: unknown field refused
+2026-09-26T23:30:25.592Z staff PATCH /api/admin/members/6d14b24f-7005-4194-adf2-4fc02d186c45 {"tier":3} -> 409 {"ok":false,"error":"You can't change your own tier."}
+PASS: staff can't change own tier
+2026-09-26T23:30:26.107Z staff PATCH /api/admin/members/8b41199c-f94f-4557-bfa8-8e75e4c11d3f {"tier":1} -> 403 {"ok":false,"error":"Only T1 can grant or change T1."}
+PASS: T2 can't grant T1
+2026-09-26T23:30:26.505Z staff PATCH /api/admin/members/8b41199c-f94f-4557-bfa8-8e75e4c11d3f {"tier":3} -> 200 {"ok":true,"member":{"id":"8b41199c-f94f-4557-bfa8-8e75e4c11d3f","tier":3}}
+PASS: T2 sets launch-l1 to T3
+SQL> select tier, is_active, is_alumni from profiles where id = '8b41199c-f94f-4557-bfa8-8e75e4c11d3f'
+tier=3 | is_active=true | is_alumni=false
+PASS: readback: tier 3 persisted
+2026-09-26T23:30:27.785Z staff PATCH /api/admin/members/8b41199c-f94f-4557-bfa8-8e75e4c11d3f {"is_active":false,"is_alumni":true} -> 200 {"ok":true,"member":{"id":"8b41199c-f94f-4557-bfa8-8e75e4c11d3f","is_active":false,"is_alumni":true}}
+PASS: T2 deactivates and marks alumni
+SQL> select tier, is_active, is_alumni from profiles where id = '8b41199c-f94f-4557-bfa8-8e75e4c11d3f'
+tier=3 | is_active=false | is_alumni=true
+PASS: readback: inactive, alumni
+SQL> select badge from member_badges where member_id = '8b41199c-f94f-4557-bfa8-8e75e4c11d3f'
+badge=null
+PASS: inactive member loses the badge
+2026-09-26T23:30:29.966Z staff PATCH /api/admin/members/8b41199c-f94f-4557-bfa8-8e75e4c11d3f {"tier":4,"is_active":true,"is_alumni":false} -> 200 {"ok":true,"member":{"id":"8b41199c-f94f-4557-bfa8-8e75e4c11d3f","tier":4,"is_active":true,"is_alumni":false}}
+PASS: restore T4, active, not alumni
+SQL> select tier, is_active, is_alumni from profiles where id = '8b41199c-f94f-4557-bfa8-8e75e4c11d3f'
+tier=4 | is_active=true | is_alumni=false
+PASS: readback: restored
+
+ALL PASS
+staff GET /student/dashboard/admin/members -> 200 page rendered
+staff GET /api/admin/members -> 200 members=9
