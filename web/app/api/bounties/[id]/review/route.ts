@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { awardRewards } from "@/lib/supabase/helpers";
 import { z } from "zod";
 
@@ -93,7 +94,7 @@ export async function PATCH(
     // Award coins only. XP is IRL-event-only per design principle #3 —
     // bounty xp_reward is intentionally NOT granted (David ruling 2026-07-01).
     if (bounty) {
-      await awardRewards(supabase, submission.user_id, {
+      await awardRewards(createAdminClient(), submission.user_id, {
         coins: bounty.pay_tc ?? 0,
         xp: 0,
         coinType: "earn_bounty",

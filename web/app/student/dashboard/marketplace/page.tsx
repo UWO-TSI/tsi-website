@@ -100,23 +100,19 @@ export default function MarketplacePage() {
       return;
     }
 
-    const { error: orderError } = await supabase.from("marketplace_orders").insert({
-      user_id: user.id,
-      item_id: buyItem.id,
-      quantity: 1,
-      total_price: buyItem.price,
+    // Orders, stock and coins are server-only (migrations 20260926120000/130000).
+    const res = await fetch("/api/economy", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "purchase", item_id: buyItem.id }),
     });
 
-    if (orderError) {
-      setBuyResult({ success: false, message: "Order failed. Try again." });
+    if (!res.ok) {
+      const body = await res.json().catch(() => null);
+      setBuyResult({ success: false, message: body?.error ?? "Order failed. Try again." });
       setBuying(false);
       return;
     }
-
-    await supabase
-      .from("profiles")
-      .update({ tethos_coins: balance - buyItem.price })
-      .eq("id", user.id);
 
     setBalance((prev) => prev - buyItem.price);
     setBuyResult({ success: true, message: `Acquired ${buyItem.name}!` });
