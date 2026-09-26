@@ -29,15 +29,10 @@ export default function AdminMembersPage() {
   const [updating, setUpdating] = useState<string | null>(null);
 
   async function fetchMembers() {
-    const supabase = createClient();
-    const { data } = await supabase
-      .from("profiles")
-      .select(
-        "id, display_name, email, tier, position, class, level, xp, tethos_coins, is_active, is_alumni, onboarding_completed, created_at, last_login_at"
-      )
-      .order("tier", { ascending: true })
-      .order("display_name");
-    setMembers((data as AdminMember[]) ?? []);
+    // Emails are server-only; /api/admin/members reads them after a tier check.
+    const res = await fetch("/api/admin/members");
+    const body = res.ok ? await res.json() : null;
+    setMembers((body?.members as AdminMember[]) ?? []);
     setLoading(false);
   }
 

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { z } from "zod";
 
 // GET /api/economy — get own balance + recent transactions
@@ -137,7 +138,9 @@ async function handlePurchase(
 
   // Atomic-ish: deduct coins, create order, decrement stock, record transaction
   // (Supabase doesn't support multi-table transactions via REST, so we do best-effort ordering)
-  const { error: updateError } = await supabase
+  // Coins are server-only columns (migration 20260926120000): service role.
+  const admin = createAdminClient();
+  const { error: updateError } = await admin
     .from("profiles")
     .update({ tethos_coins: newBalance })
     .eq("id", userId)
@@ -159,7 +162,7 @@ async function handlePurchase(
 
   if (orderError) {
     // Refund on failure
-    await supabase
+    await admin
       .from("profiles")
       .update({ tethos_coins: profile.tethos_coins })
       .eq("id", userId);
@@ -234,8 +237,9 @@ async function handleAvatarPurchase(
 
   const newBalance = profile.tethos_coins - cost;
 
-  // Deduct coins (with race-condition guard)
-  const { error: updateError } = await supabase
+  // Deduct coins (with race-condition guard). Server-only column: service role.
+  const admin = createAdminClient();
+  const { error: updateError } = await admin
     .from("profiles")
     .update({ tethos_coins: newBalance })
     .eq("id", userId)
@@ -256,7 +260,7 @@ async function handleAvatarPurchase(
 
   if (inventoryError) {
     // Refund on failure
-    await supabase
+    await admin
       .from("profiles")
       .update({ tethos_coins: profile.tethos_coins })
       .eq("id", userId);

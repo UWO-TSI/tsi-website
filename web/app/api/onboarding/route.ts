@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { awardRewards } from "@/lib/supabase/helpers";
 import { z } from "zod";
 
@@ -148,8 +149,9 @@ export async function POST(request: Request) {
   // TC-only: the one-time onboarding coin bonus is explicitly sanctioned
   // (ux-status 2026-05-25 note). XP is IRL-event-only per design principle #3
   // (David ruling 2026-07-01, same enforcement as the bounty path).
+  // Coins are server-only columns (migration 20260926120000): service role.
   if (parsed.data.step === FINAL_STEP) {
-    await awardRewards(supabase, user.id, {
+    await awardRewards(createAdminClient(), user.id, {
       coins: 100,
       xp: 0,
       coinType: "earn_achievement",

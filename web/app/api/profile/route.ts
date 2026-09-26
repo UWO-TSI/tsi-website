@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { z } from "zod";
 import type { Profile } from "@/lib/supabase/types";
 
@@ -63,7 +64,9 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { data, error } = await supabase
+  // Private columns (email, phone, ...) aren't readable with the user's key
+  // (migration 20260926120000), so the caller's own row is read server-side.
+  const { data, error } = await createAdminClient()
     .from("profiles")
     .select("*")
     .eq("id", user.id)
@@ -115,11 +118,19 @@ export async function PATCH(request: Request) {
     updated_at: new Date().toISOString(),
   };
 
-  const { data, error } = await supabase
+  const { error: updateError } = await supabase
     .from("profiles")
     .update(updates)
-    .eq("id", user.id)
+    .eq("id", user.id);
+
+  if (updateError) {
+    return NextResponse.json({ error: updateError.message }, { status: 500 });
+  }
+
+  const { data, error } = await createAdminClient()
+    .from("profiles")
     .select("*")
+    .eq("id", user.id)
     .single();
 
   if (error) {
