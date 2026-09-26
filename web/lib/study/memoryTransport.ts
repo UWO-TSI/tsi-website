@@ -5,12 +5,13 @@
 import { memoryStudyStore } from "./memoryStore";
 import * as C from "./chat";
 import * as S from "./service";
-import { StudyRequestError, type StudyTransport } from "./transport";
+import { ApiError } from "@/lib/apiClient";
+import type { StudyTransport } from "./transport";
 
 export function memoryStudyTransport(me: string, clock: () => Date = () => new Date(), m = memoryStudyStore()) {
   const unwrap = async <T>(p: Promise<{ ok: true; data: T } | { ok: false; status: number; error: string; code: string }>): Promise<T> => {
     const r = await p;
-    if (!r.ok) throw new StudyRequestError(r.error, r.status, r.code);
+    if (!r.ok) throw new ApiError(r.error, r.status, r.code);
     return r.data;
   };
   const transport: StudyTransport = {

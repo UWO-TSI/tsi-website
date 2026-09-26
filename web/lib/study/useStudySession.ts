@@ -16,11 +16,12 @@
  *   study.sit(tableId, seat); study.start({ focus_len: 25, break_len: 5, cycles: 4 });
  */
 import { useCallback, useEffect, useRef, useState } from "react";
-import { playChime } from "./chime";
+import { ApiError } from "@/lib/apiClient";
+import { AudioManager } from "@/lib/game/audio";
 import type { ChatView } from "./chat";
 import type { Settings, SessionView } from "./rules";
 import type { MyStats, StudyState, Mate, TableView } from "./service";
-import { httpStudyTransport, StudyRequestError, type StudyTransport } from "./transport";
+import { httpStudyTransport, type StudyTransport } from "./transport";
 
 export const HEARTBEAT_MS = 30_000;
 
@@ -96,12 +97,12 @@ export function useStudySession(opts: { transport?: StudyTransport; heartbeatMs?
         apply(await f());
         setSignedOut(false);
       } catch (err) {
-        if (err instanceof StudyRequestError && err.status === 401) {
+        if (err instanceof ApiError && err.status === 401) {
           setSignedOut(true);
           setError(null);
           return;
         }
-        setError(err instanceof StudyRequestError ? err.message : "Couldn't reach the cafe. Retrying.");
+        setError(err instanceof ApiError ? err.message : "Couldn't reach the cafe. Retrying.");
       } finally {
         if (!quiet) setBusy(false);
       }
@@ -168,7 +169,7 @@ export function useStudySession(opts: { transport?: StudyTransport; heartbeatMs?
   useEffect(() => {
     if (!active?.phase_ends_at || remaining !== 0 || chimedFor.current === active.phase_ends_at) return;
     chimedFor.current = active.phase_ends_at;
-    if (opts.chime !== false) playChime();
+    if (opts.chime !== false) AudioManager.playSFX("confirm"); // respects the player's volume and mute
     const t = setTimeout(() => void run(() => transport.heartbeat(), true), 1200);
     return () => clearTimeout(t);
   }, [remaining, active?.phase_ends_at, run, transport, opts.chime]);
@@ -202,7 +203,7 @@ export function useStudySession(opts: { transport?: StudyTransport; heartbeatMs?
         setChat(await transport.sendChat(body));
         return true;
       } catch (err) {
-        setError(err instanceof StudyRequestError ? err.message : "Couldn't send that.");
+        setError(err instanceof ApiError ? err.message : "Couldn't send that.");
         return false;
       }
     },
@@ -236,7 +237,7 @@ export function useStudySession(opts: { transport?: StudyTransport; heartbeatMs?
       try {
         setStats(await transport.setBoardOptIn(on));
       } catch (err) {
-        setError(err instanceof StudyRequestError ? err.message : "Couldn't save that.");
+        setError(err instanceof ApiError ? err.message : "Couldn't save that.");
       }
     },
     refresh,

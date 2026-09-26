@@ -4,9 +4,9 @@
  */
 import { weekStart } from "@/lib/collections/logic";
 import * as R from "./rules";
-import { StudyError, type StudyStore, type StudyTable, type WeekStat } from "./store";
+import { toFailure, type Result } from "@/lib/result";
+import type { StudyStore, StudyTable, WeekStat } from "./store";
 
-type Result<T> = { ok: true; data: T } | { ok: false; status: number; error: string; code: string };
 const fail = <T>(status: number, code: string, error: string): Result<T> => ({ ok: false, status, code, error });
 const ERR: Record<string, [number, string]> = {
   unavailable: [503, "Study tables aren't available yet."],
@@ -14,11 +14,7 @@ const ERR: Record<string, [number, string]> = {
   already_seated: [409, "You're already sitting somewhere. Leave that seat first."],
   failed: [500, "Something went wrong. Try again."],
 };
-function caught<T>(err: unknown): Result<T> {
-  const code = err instanceof StudyError ? err.code : "failed";
-  const [status, error] = ERR[code] ?? ERR.failed;
-  return fail(status, code, error);
-}
+const caught = <T>(err: unknown): Result<T> => toFailure(ERR, err);
 
 let seq = 0;
 const newId = () => (globalThis.crypto?.randomUUID ? globalThis.crypto.randomUUID() : `00000000-0000-4000-8000-${String(++seq).padStart(12, "0")}`);
