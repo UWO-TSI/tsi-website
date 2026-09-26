@@ -4,6 +4,8 @@ Dev server on `:3500` from this worktree, env from `web/.env.staging.local` only
 
 Accounts: **member** (tier 4, `membership = member`), **public** (tier 4, `public`), **staff** (tier 2). Ids in `applied.md`.
 
+**Final run (17:15–17:30Z)** after also merging `game/polish-ownership` (`20260926180000_ownership`, applied to staging): every flow rerun on reset data, all pass; log `flows-final-run.txt` (the first run with its failures is `flows-run.txt`). Changes the merge brought: decorating now refuses an unowned wallpaper (`422 not_owned`, then passes after buying `wall-brick`); the starter kit is granted once (24 items in `member_inventory`); the creator's look is saved through `PATCH /api/profile` (server-checked); `/api/study/tables` is gone (tables come with `/api/study/state`). Security run: 46 checks (adds "member can't set own `avatar_config`").
+
 ## Results
 
 | # | Flow | Result |
@@ -16,7 +18,7 @@ Accounts: **member** (tier 4, `membership = member`), **public** (tier 4, `publi
 | 6 | Letters between the accounts, notice board, reports | Pass |
 | 7 | Merch reserve (member), fulfil and cancel (staff) | Pass (API only: no staff UI calls `/api/economy/admin/merch`) |
 | 8 | Combat: gate check, mission start → complete, XP and durability | Pass; gate is not enforced server-side (question 4) |
-| 9 | Security guarantees | **Pass after 3 fixes** (45/45 checks; see below) |
+| 9 | Security guarantees | **Pass after 3 fixes** (46/46 checks in the final run; see below) |
 | + | Character creator (first login), crafting (merged mid-run) | Pass |
 
 ## 1. Chapter 1 and the club goal (member)
@@ -54,6 +56,7 @@ wallet_ledger:      16 | 56 | sell | fish_anchovy
 ## 3. Study (member)
 
 - Block to completion: `POST /api/study/sit` (pier table, seat 1) → `POST /api/study/start` 5/1 × 1. Focus ran on the server clock (16:48:30 → 16:53:30Z); the heartbeat after it settled the session: `ended | 5 min | bonus 2 | coins_paid 7 | end_reason finished`, ledger `7 | study`.
+- Final run, API only with a heartbeat every 60 s (what the HUD sends): block `finished`, 5 min + 2 bonus = 7 coins; then a second session ended by walking away after 2 min: `left`, 2 coins. Without any heartbeat a session times out at the last heartbeat and pays nothing (`end_reason timeout`), as the 5-minute grace rule says.
 - Walk-away: second session, island reloaded while seated. **Before the fix** (`P1-04a`) the HUD showed "Focus 04:21 · Pier table" while the avatar stood in the plaza; walking to the shore did not end it (the avatar was never seated, so walk-away never armed). Cause: React Strict Mode (dev) re-runs StudySeats' scene-change cleanup after the first frame has seated the avatar; it cleared the seat but kept the once-per-session guard. With Strict Mode off (as in a production build) the same reload seated the avatar, so production is not affected. **After the fix** (`P1-04b`) the avatar resumes at the pier; walking off ended the session: `ended | 1 min | bonus 0 | coins_paid 1 | end_reason left`, ledger `1 | study`.
 
 ## 4. Home (member)
@@ -117,7 +120,7 @@ wallet_ledger:      60 mission ; -40 repair
 
 ## 9. Security guarantees (member and public JWTs, public anon key, straight at PostgREST)
 
-45 checks, all pass after the fixes (`security-run.txt`; every request and readback of the whole run is in `flows-run.txt`). Profile updates sent with `Prefer: return=minimal` so the UPDATE really runs and the #40 guard answers:
+46 checks in the final run (45 before the ownership merge), all pass after the fixes (`security-run.txt`; every request and readback of the whole run is in `flows-run.txt`). Profile updates sent with `Prefer: return=minimal` so the UPDATE really runs and the #40 guard answers:
 
 - Own `tier`, `class`, `subclass`, `tethos_coins`, `xp`, `level`, `membership`, `is_active` → 403 "profiles: … can only be changed by the server"; public → `membership = member` refused; own `bio` still 204. Readback unchanged (tier 4, coins 0, xp 0, member).
 - INSERT refused (42501) on `wallet_ledger`, `wallets`, `tc_transactions`, `member_collections`, `museum_donations`, `club_goal_contributions`, `combat_xp_ledger`, `member_progression`, `member_weapons`, `member_inventory`, `merch_reservations`, `letters` (system), `study_sessions`, `member_identity`, `home_room_purchases`; UPDATE affects nothing on `wallets`, `member_progression`, `member_weapons`, `member_collections`, `study_sessions`, `member_identity`.

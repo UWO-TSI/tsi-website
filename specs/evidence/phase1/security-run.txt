@@ -19,6 +19,8 @@ member: PATCH /rest/v1/profiles?id=eq.c2982825-3dd1-4572-a9d0-4b7fadd306d6 {"mem
 PASS: member can't set own membership (guard)
 member: PATCH /rest/v1/profiles?id=eq.c2982825-3dd1-4572-a9d0-4b7fadd306d6 {"is_active":false} -> 403 {"code":"42501","details":null,"hint":null,"message":"profiles: is_active can only be changed by the server"}
 PASS: member can't set own is_active (guard)
+member: PATCH /rest/v1/profiles?id=eq.c2982825-3dd1-4572-a9d0-4b7fadd306d6 {"avatar_config":{"look":{"hair":99,"top":"top_founder_cape"}}} -> 403 {"code":"42501","details":null,"hint":null,"message":"profiles: avatar_config can only be changed by the server"}
+PASS: member can't set own avatar_config (guard)
 public: PATCH /rest/v1/profiles?id=eq.4e294cb3-7032-433c-971e-90f855021d10 {"membership":"member"} -> 403 {"code":"42501","details":null,"hint":null,"message":"profiles: membership can only be changed by the server"}
 PASS: public account can't make itself a member
 member: PATCH /rest/v1/profiles?id=eq.c2982825-3dd1-4572-a9d0-4b7fadd306d6 {"bio":"allowed edit"} -> 204 
@@ -86,15 +88,15 @@ member: GET /rest/v1/letters?recipient_id=eq.4e294cb3-7032-433c-971e-90f855021d1
 PASS: member can't read another member's mail
 SQL> insert into events (title, event_type, is_irl, start_time, created_by) values ('Phase1 IRL test event', 'club', true, now(), '6d14b24f-7005-4194-adf2-4fc02d186c45') returning id
 id
-296b7b72-ce9b-4007-a0d6-10ea0d8162ff
-member: POST /rest/v1/event_attendance {"event_id":"296b7b72-ce9b-4007-a0d6-10ea0d8162ff","user_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","status":"attended"} -> 403 {"code":"42501","details":null,"hint":null,"message":"new row violates row-level security policy for table \"event_attendance\""}
+b96b913a-c18e-4417-a874-0f41f8bc2d23
+member: POST /rest/v1/event_attendance {"event_id":"b96b913a-c18e-4417-a874-0f41f8bc2d23","user_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","status":"attended"} -> 403 {"code":"42501","details":null,"hint":null,"message":"new row violates row-level security policy for table \"event_attendance\""}
 PASS: member can't mark themselves attended at an IRL event
 SQL> insert into events (title, event_type, is_irl, start_time, created_by) values ('Phase1 RSVP test event', 'club', true, now(), '6d14b24f-7005-4194-adf2-4fc02d186c45') returning id
 id
-64d71302-f9e2-48d7-b769-abe4cc903d69
-member: POST /rest/v1/event_attendance {"event_id":"64d71302-f9e2-48d7-b769-abe4cc903d69","user_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","status":"registered"} -> 201 [{"id":"e1995b25-3652-40e7-9373-3a93ae552f34","event_id":"64d71302-f9e2-48d7-b769-abe4cc903d69","user_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","status":"registered"}]
+2b43ebdf-a750-4183-b5b7-1f13130a99af
+member: POST /rest/v1/event_attendance {"event_id":"2b43ebdf-a750-4183-b5b7-1f13130a99af","user_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","status":"registered"} -> 201 [{"id":"09b5272f-34cd-4126-976d-2d2abd6cc989","event_id":"2b43ebdf-a750-4183-b5b7-1f13130a99af","user_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","status":"registered"}]
 PASS: member can still RSVP (registered)
-SQL> select status from event_attendance where user_id = 'c2982825-3dd1-4572-a9d0-4b7fadd306d6' and event_id = '296b7b72-ce9b-4007-a0d6-10ea0d8162ff'
+SQL> select status from event_attendance where user_id = 'c2982825-3dd1-4572-a9d0-4b7fadd306d6' and event_id = 'b96b913a-c18e-4417-a874-0f41f8bc2d23'
 status
 SQL> select count(*) as event_xp_rows from combat_xp_ledger where member_id = 'c2982825-3dd1-4572-a9d0-4b7fadd306d6' and source = 'event'
 event_xp_rows

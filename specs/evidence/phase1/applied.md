@@ -48,8 +48,9 @@ Diff against the read-only production dump, then patched staging until the only 
 | `20260926155400_member_badges_signed_in_only.sql` (Phase 1 fix) | ok 17:08 |
 | `20260926160000_crafting.sql` (merged from `game/crafting`) | ok 16:39 |
 | `20260926170000_profiles_avatar_config.sql` (merged from `game/study-character`) | ok (no-op after `155000`) |
+| `20260926180000_ownership.sql` (merged from `game/polish-ownership`) | ok 17:13 |
 
-Local throwaway Postgres 16 with every migration above (`supabase_stub.sql` first): `phase1_regressions`, `crafting_smoke`, `avatar_config_smoke`, `game_security_smoke`, `profiles_guard_smoke`, `portal_rls_smoke` all pass, each on a fresh database.
+Local throwaway Postgres 16 with every migration above (`supabase_stub.sql` first): `phase1_regressions`, `crafting_smoke`, `avatar_config_smoke`, `ownership_smoke`, `game_security_smoke`, `profiles_guard_smoke`, `portal_rls_smoke` all pass, each on a fresh database. `tsc --noEmit` clean; vitest 107 files / 877 tests pass.
 
 Not applied: `web/supabase/schedule-recruitment-sheet.sql` (would schedule a job that posts to production), `APPLY_THEN_RESET.sql` (a one-off reset script).
 
