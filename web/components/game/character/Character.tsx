@@ -75,11 +75,13 @@ class Puppet {
       const mesh = new THREE.SkinnedMesh(geometry, material);
       parent.add(mesh);
       mesh.bind(skeleton, first.bindMatrix);
+      mesh.receiveShadow = true;
+      // Lying and rolling clips leave the rest pose; one generous sphere keeps culling cheap and never clips a pose.
+      mesh.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0.5, 0), 1.2);
       return mesh;
     };
     this.body = make(new THREE.BufferGeometry(), BODY_MATERIAL);
     this.face = make(facePrim.geometry, BODY_MATERIAL);
-    this.face.geometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0.75, 0), 0.6);
     this.decal = make(new THREE.BufferGeometry(), BODY_MATERIAL);
     this.body.visible = this.face.visible = this.decal.visible = false; // until dress()
     this.sockets = { R: this.root.getObjectByName("Socket_R_Hand")!, L: this.root.getObjectByName("Socket_L_Hand")!, Back: this.root.getObjectByName("Socket_Back")! };
@@ -161,11 +163,14 @@ class Puppet {
     this.mixer.update(delta);
   }
 
+  /** Also a reset: Strict Mode re-runs effects after this, so the next dress()/update() starts clean. */
   dispose() {
     this.mixer.stopAllAction();
     this.mixer.uncacheRoot(this.root);
+    this.action = null; this.clip = null; this.oneShot = null;
     if (this.bodyKey) bodies.release(this.bodyKey);
     this.releaseFaces();
+    this.bodyKey = ""; this.faceKey = "";
   }
 }
 

@@ -69,11 +69,9 @@ export function mergeLook(pieces: PieceSource[], bones: readonly THREE.Bone[]): 
     const own = (Array.isArray(mesh.material) ? mesh.material[0] : mesh.material) as THREE.MeshStandardMaterial;
     parts.push(adoptPrimitive(mesh, boneIndex, hex ? new THREE.Color(hex) : own.color ?? null));
   }
+  // The intermediate pieces share attributes with the loaded GLBs and were never uploaded: no dispose, the GC takes them.
   const merged = mergeGeometries(parts, false);
-  parts.forEach(p => p.dispose());
   if (!merged) throw new Error("Character pieces could not be merged");
-  // Poses (lying, rolling) leave the rest-pose bounds; one generous sphere keeps culling cheap and safe.
-  merged.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0.5, 0), 1.2);
   return merged;
 }
 
