@@ -283,7 +283,6 @@ export function WalletBody({ transport = httpEconomyTransport }: { transport?: E
 }
 
 type SheetProps = ProgressionSheetProps & { transport?: EconomyTransport };
-export const ShopSheet = ({ open, onClose, transport }: SheetProps) => <ProgressionPanel open={open} onClose={onClose} title="Shop" wide><ShopBody transport={transport} /></ProgressionPanel>;
 export const SellSheet = ({ open, onClose, transport }: SheetProps) => <ProgressionPanel open={open} onClose={onClose} title="Sell"><SellBody transport={transport} /></ProgressionPanel>;
 export const InventorySheet = ({ open, onClose, transport }: SheetProps) => <ProgressionPanel open={open} onClose={onClose} title="Bag"><InventoryBody transport={transport} /></ProgressionPanel>;
 export const WalletSheet = ({ open, onClose, transport }: SheetProps) => <ProgressionPanel open={open} onClose={onClose} title="Wallet"><WalletBody transport={transport} /></ProgressionPanel>;

@@ -14,7 +14,6 @@ import { STATEMENTS, TIE_BREAKERS, type Dichotomy, type Pole } from "./items";
 export const DICHOTOMIES: Dichotomy[] = ["EI", "SN", "TF", "JP"];
 export const FIRST: Record<Dichotomy, Pole> = { EI: "E", SN: "S", TF: "T", JP: "J" };
 export const SECOND: Record<Dichotomy, Pole> = { EI: "I", SN: "N", TF: "F", JP: "P" };
-export const MIN_ANSWERED = STATEMENTS.length; // every statement, no skips
 
 export type Family = "Arcane" | "Ranger" | "Vanguard" | "Warden";
 export const FAMILY_COLOR: Record<Family, string> = { Arcane: "purple", Ranger: "blue", Vanguard: "yellow", Warden: "green" };
