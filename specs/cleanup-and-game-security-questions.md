@@ -15,3 +15,11 @@ Each item has the assumption the agent took so the work kept moving.
 - `DefaultIslandWorld.tsx`: import the three progression sheets directly and delete `components/game/progressionSheets.tsx` (item 14); open the collections journal from the catch board instead of the placeholder sheet (item 11); one `FamilyReveal` shared with `OracleSheetEmbed` (item 1); use `apiCall` for its collections fetch (item 5); read the monument stage from `activeGoal` so progressionBridge's `monumentStage` can go (item 7); use an `IslandSheet` for its sheet chrome, together with Showcase/Donate/Wardrobe/Settings/OracleQuiz sheets (item 16).
 - Study: delete `/api/study/tables` (no caller; item 11); `lib/study` onto `lib/result.ts` and `withStore` (item 2), `apiCall`/`newKey` (item 5); chime through `AudioManager` (item 13); a seed-sync test for `study/tables.ts` vs 032 (item 18).
 - Not done, low value: one `memoryWallet()` for the five memory stores (item 12). Each store raises its own domain error on insufficient funds, so sharing saves little and the SQL smokes stay the authority.
+
+## Coordinator ruling on 8 / audit item 22 (2026-09-26, follows ledger rows 186–187, 110, 210)
+Ownership is required for things the shop sells, with free starters:
+- **Creator identity is always free:** skin, eyes, mouth, brows/extras, every bangs and back-hair style, and 6 hair colours. The other 6 hair colours are shop dyes (row 186 "hair recolours"), bought once and then free to use.
+- **Clothing:** a free starter set per account (base tee, base shorts, 2 more tops, 2 more bottoms, the hooded rain-cape, 2 shoes). Everything else is bought, crafted or merch.
+- **Furniture:** the starter home pieces (bed, lamp, shelf) plus a 10-piece starter pack are free; the rest is bought or crafted.
+- WardrobeSheet and DecorateSheet read owned items from `/api/economy/inventory`; the free starters are granted once through the wallet/inventory service (idempotent, first login). Delete `WARDROBE_STUB` and the free catalogue stub.
+Queued as the next polish task together with the DefaultIslandWorld/study follow-ups above.
