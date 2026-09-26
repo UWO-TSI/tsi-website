@@ -23,7 +23,7 @@ Owner: systems agent (sessions, accrual, presence, stats) now; island agent late
 
 ## Deliverables (systems agent)
 
-1. Migration draft `032_study.sql`: study_tables (location, seats, kind, host, is_private), study_sessions (member, table, seat, focus_len, break_len, cycles, started_at, phase, phase_started_at, last_heartbeat, ended_at, minutes_completed, bonus_paid, coins_paid), study_weekly_stats view, member opt-in flag for the board. Coins credited through a service-role function, idempotent per session.
+1. Migration draft `20260926150500_study.sql`: study_tables (location, seats, kind, host, is_private), study_sessions (member, table, seat, focus_len, break_len, cycles, started_at, phase, phase_started_at, last_heartbeat, ended_at, minutes_completed, bonus_paid, coins_paid), study_weekly_stats view, member opt-in flag for the board. Coins credited through a service-role function, idempotent per session.
 2. Routes `/api/study/*`: tables (list with occupancy and privacy), sit (seat claim, host lock), start (settings), heartbeat (drives phase changes server-side, 5-min grace), break/resume, end (settles minutes and bonus once), stats, board (opt-in top studiers this week). Presence: seat-mates with name, phase and remaining time.
 3. Shared client hook `web/lib/study/useStudySession.ts` used by both the game and the phone companion: settings, phase, remaining, seat-mates, chat mute state; tab-title countdown and chime.
 4. Phone companion page `/student/companion/study` (mobile-first, no 3D yet): join a table, timer, seat-mates list, coins earned.

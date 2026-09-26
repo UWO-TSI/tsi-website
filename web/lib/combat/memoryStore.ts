@@ -1,4 +1,4 @@
-/** In-memory CombatStore mirroring 035_combat.sql (tests, dev harness). */
+/** In-memory CombatStore mirroring 20260926150800_combat.sql (tests, dev harness). */
 import type { Family } from "@/lib/oracle/engine";
 import { ENEMIES, MISSIONS } from "./content";
 import { initialProgress, type MissionProgress, type MissionState } from "./missions";

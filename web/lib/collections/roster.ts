@@ -7,7 +7,7 @@
  * flowers from FlowerPickFX, fruit from CollectionBook, shells from
  * public/assets/acnh/props/shell-*.glb. Species without a model yet are
  * `asset_ready: false` (listed so the journal and museum have their slots).
- * Mirrored into supabase/migrations/031_collections.sql by
+ * Mirrored into supabase/migrations/20260926150400_collections.sql by
  * scripts/gen-collections-seed.mjs; collections.test.ts keeps them in sync.
  *
  * Hours are local island time, [start, end) wrapping past midnight; null = all

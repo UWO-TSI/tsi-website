@@ -1,4 +1,4 @@
--- Local smoke test for draft 032_study (run after 029-031_smoke.sql on the
+-- Local smoke test for draft 20260926150500_study (run after 029-031_smoke.sql on the
 -- same throwaway cluster, so profiles A/B exist). Never run against Supabase.
 \set ON_ERROR_STOP 1
 DO $$

@@ -8,7 +8,8 @@ INSERT INTO auth.users (id, email) VALUES
   ('00000000-0000-4000-8000-0000000000aa', 'a@x'), ('00000000-0000-4000-8000-0000000000bb', 'b@x');
 INSERT INTO profiles (id, email, display_name) VALUES
   ('00000000-0000-4000-8000-0000000000aa', 'a@x', 'Maya'),
-  ('00000000-0000-4000-8000-0000000000bb', 'b@x', 'Jordan');
+  ('00000000-0000-4000-8000-0000000000bb', 'b@x', 'Jordan')
+ON CONFLICT (id) DO UPDATE SET display_name = EXCLUDED.display_name;  -- a profile trigger may have created the row
 SELECT * FROM wallet_apply('00000000-0000-4000-8000-0000000000aa', 'coins', 2000, 'admin', 'smoke seed', 'seed:a');
 SELECT * FROM wallet_apply('00000000-0000-4000-8000-0000000000bb', 'coins', 100, 'admin', 'smoke seed', 'seed:b');
 

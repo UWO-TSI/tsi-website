@@ -1,6 +1,6 @@
 /**
  * XP, levels and stat points (rows 11, 23, 38, 207, 230). Placeholder numbers;
- * the same curve is implemented in 035_combat.sql (combat_level_for_xp) and a
+ * the same curve is implemented in 20260926150800_combat.sql (combat_level_for_xp) and a
  * test keeps them identical.
  *
  * XP to go from level L to L+1 = 100·L + 25·L². Level 10 (subclass choice,

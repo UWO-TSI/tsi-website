@@ -1,7 +1,7 @@
 /**
  * Supabase implementation of ProgressionStore. Uses the service-role client:
  * members have read-only RLS on these tables and every write is validated
- * by service.ts first (029_progression.sql).
+ * by service.ts first (20260926150200_progression.sql).
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { normalizeChapter } from "./chapters";

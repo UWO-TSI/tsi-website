@@ -2,7 +2,7 @@
 --
 -- DRAFT 2026-09-24. NOT APPLIED. Spec: specs/study.md (rows S1, 72-81, 126,
 -- 164-171, 214). Depends on 001 (profiles); coins are paid through
--- public.wallet_apply() from 033_economy.sql (apply 029-033 as one batch).
+-- public.wallet_apply() from 20260926150600_economy.sql (apply 029-033 as one batch).
 --
 -- Phases are derived server-side from timestamps (web/lib/study/rules.ts):
 -- every /api/study call replays wall-clock time, so a session moves from
@@ -139,7 +139,7 @@ BEGIN
   v_coins := s.minutes_completed + s.bonus_earned;
   UPDATE study_sessions SET coins_paid = v_coins, settled_at = NOW() WHERE id = p_session_id;
   IF v_coins > 0 THEN
-    -- Single wallet path (033_economy.sql), idempotent per session.
+    -- Single wallet path (20260926150600_economy.sql), idempotent per session.
     PERFORM public.wallet_apply(p_member_id, 'coins', v_coins, 'study', p_session_id::TEXT, 'study:' || p_session_id);
   END IF;
   RETURN QUERY SELECT v_coins, FALSE;

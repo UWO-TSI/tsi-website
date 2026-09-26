@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { economyContext } from "@/lib/wallet/deps";
 
 /**
- * Play-coin balance (single wallet, 033_economy.sql).
+ * Play-coin balance (single wallet, 20260926150600_economy.sql).
  *
  * GET  → { coins: number | null } (null = no server wallet reachable; the
  *        client keeps its local mirror).

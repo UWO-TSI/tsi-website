@@ -1,7 +1,7 @@
 -- ─── Seasonal palette seed (specs/seasonal-palettes.md) ────────────────
 --
 -- DRAFT 2026-07-25 — NOT YET APPLIED. Apply with the launch-window batch
--- (see specs/launch-batch.md; pairs with 024_game_coins.sql).
+-- (see specs/launch-batch.md; pairs with 20260926150000_game_coins.sql).
 --
 -- Seeds the five season rows so the no-code admin flow works day one:
 -- flip `active` on a row → clients repaint (sky/fog/grass tint/particles)

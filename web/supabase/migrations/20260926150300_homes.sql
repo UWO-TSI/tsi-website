@@ -2,7 +2,7 @@
 --
 -- DRAFT 2026-09-24. NOT APPLIED. Spec: specs/homes.md (rows 68-71, 82, 115-117,
 -- 127, 187, 95). Depends on 001 (profiles); coins go through
--- public.wallet_apply() from 033_economy.sql (apply 029-033 as one batch).
+-- public.wallet_apply() from 20260926150600_economy.sql (apply 029-033 as one batch).
 --
 -- The layout document is web/lib/homes/layout.ts (HomeLayoutDoc v1): one row
 -- per room plus the outdoor list. Members read their own rows; every write
@@ -113,7 +113,7 @@ BEGIN
     RETURN QUERY SELECT v_home.rooms_count, v_coins, TRUE; RETURN;
   END IF;
   IF v_home.rooms_count >= LEAST(p_max_rooms, 4) THEN RAISE EXCEPTION 'room_cap'; END IF;
-  -- Single wallet path (033_economy.sql): raises 'insufficient'.
+  -- Single wallet path (20260926150600_economy.sql): raises 'insufficient'.
   SELECT a.balance INTO v_coins FROM public.wallet_apply(p_member_id, 'coins', -p_price, 'room', 'room-' || (v_home.rooms_count + 1), 'room:' || p_idempotency_key) a;
   INSERT INTO home_room_purchases (member_id, room_number, price_coins, idempotency_key)
   VALUES (p_member_id, v_home.rooms_count + 1, p_price, p_idempotency_key);

@@ -1,4 +1,4 @@
-/** SQL seed for the economy catalogue, sell prices and settings (kept verbatim in 033_economy.sql). */
+/** SQL seed for the economy catalogue, sell prices and settings (kept verbatim in 20260926150600_economy.sql). */
 import { CATALOGUE, SELL_PRICES, SETTINGS } from "./catalogue";
 
 const q = (v: string | null) => (v === null ? "NULL" : `'${v.replace(/'/g, "''")}'`);

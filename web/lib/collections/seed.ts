@@ -1,4 +1,4 @@
-/** SQL seed for collection_species, generated from ROSTER (kept verbatim in 031_collections.sql). */
+/** SQL seed for collection_species, generated from ROSTER (kept verbatim in 20260926150400_collections.sql). */
 import type { Species } from "./roster";
 
 const q = (v: string | null) => (v === null ? "NULL" : `'${v.replace(/'/g, "''")}'`);

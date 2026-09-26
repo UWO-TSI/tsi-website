@@ -166,12 +166,12 @@ describe("inventory", () => {
 });
 
 describe("catalogue", () => {
-  it("anchors prices to row 127 and is mirrored in 033_economy.sql", () => {
+  it("anchors prices to row 127 and is mirrored in 20260926150600_economy.sql", () => {
     const price = (s: string) => CATALOGUE.find((c) => c.slug === s)!.price_coins;
     expect([price("rod-basic"), price("rod-cedar")]).toEqual([100, 400]);
     expect(CATALOGUE.filter((c) => c.category === "outfit").every((c) => c.price_coins! >= 120 && c.price_coins! <= 180)).toBe(true);
     expect(CATALOGUE.filter((c) => c.category === "merch").every((c) => c.price_coins === null && c.price_gems! > 0)).toBe(true);
-    expect(readFileSync(join(__dirname, "../../supabase/migrations/033_economy.sql"), "utf8")).toContain(economySeedSql());
+    expect(readFileSync(join(__dirname, "../../supabase/migrations/20260926150600_economy.sql"), "utf8")).toContain(economySeedSql());
   });
   it("never shows a conversion between coins, Gems and money", () => {
     const text = JSON.stringify(CATALOGUE);

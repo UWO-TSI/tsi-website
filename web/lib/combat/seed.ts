@@ -1,4 +1,4 @@
-/** SQL seed for weapons, enemy types and missions (kept verbatim in 035_combat.sql). */
+/** SQL seed for weapons, enemy types and missions (kept verbatim in 20260926150800_combat.sql). */
 import { ENEMIES, MISSIONS } from "./content";
 import { WEAPONS } from "./weapons";
 

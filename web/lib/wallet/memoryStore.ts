@@ -1,4 +1,4 @@
-/** In-memory EconomyStore mirroring 033_economy.sql (tests, dev harness). */
+/** In-memory EconomyStore mirroring 20260926150600_economy.sql (tests, dev harness). */
 import { dailyGiftAmount, SELL_PRICES, SETTINGS } from "./catalogue";
 import { seedItems, sellPrice, speciesClass, torontoDay, type ShopItem } from "./rules";
 import { EconomyError, type EconomyStore, type InventoryRow, type LedgerEntry, type Reservation } from "./store";

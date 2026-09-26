@@ -1,6 +1,6 @@
 /**
  * In-memory ProgressionStore for tests. commitContribution mirrors
- * progression_commit_contribution() in 029_progression.sql: idempotent on
+ * progression_commit_contribution() in 20260926150200_progression.sql: idempotent on
  * (member, key) and (goal, cycle, source, ref), re-checks caps, debits coins
  * or collection items, never below zero.
  */

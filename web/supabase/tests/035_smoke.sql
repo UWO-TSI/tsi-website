@@ -1,4 +1,4 @@
--- Local smoke test for draft 035_combat (after 029-034 smokes; same throwaway cluster).
+-- Local smoke test for draft 20260926150800_combat (after 029-034 smokes; same throwaway cluster).
 \set ON_ERROR_STOP 1
 DO $$
 DECLARE r record; A uuid := '00000000-0000-4000-8000-0000000000aa'; B uuid := '00000000-0000-4000-8000-0000000000f1'; -- fresh member (earlier smokes gave bb event XP)

@@ -18,7 +18,7 @@ import ImageUploadButton from "@/components/portal/ImageUploadButton";
 //                   uniqueness skips the current slug.
 
 const SLUG_REGEX = /^[a-z0-9-]+$/;
-// 033_economy.sql widened the categories; merch is always priced in Gems,
+// 20260926150600_economy.sql widened the categories; merch is always priced in Gems,
 // everything else in play coins or Gems. No real-money price exists.
 type EditorCategory = ShopCategory | "tool" | "outfit" | "hair" | "accessory" | "furniture" | "wallpaper" | "flooring";
 const CATEGORIES: EditorCategory[] = [

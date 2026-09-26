@@ -41,7 +41,7 @@
 ## Open follow-ups
 
 - ~~Launch-batch migration seeding the five rows~~ → **drafted**:
-  `web/supabase/migrations/025_seasonal_seed.sql` (see specs/launch-batch.md
+  `web/supabase/migrations/20260926150100_seasonal_seed.sql` (see specs/launch-batch.md
   for the apply checklist).
 - Scheduler: auto-activate by `scheduled_start/end` (currently manual
   `active` flag; a tiny cron or a `WHERE now() BETWEEN` in

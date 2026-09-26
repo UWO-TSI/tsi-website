@@ -8,8 +8,8 @@
 
 | # | File | What it does |
 |---|------|--------------|
-| 024 | `024_game_coins.sql` | coins wallet (column-revoked, `earn_coins` RPC), `fish_prices` (91-key seed), atomic `sell_catches`, `profiles.gear` + `gear_prices` + `buy_gear` |
-| 025 | `025_seasonal_seed.sql` | seeds the 5 `seasonal_palettes` rows (admin-respecting upsert; activates `default` only on fresh DBs) |
+| 024 | `20260926150000_game_coins.sql` | coins wallet (column-revoked, `earn_coins` RPC), `fish_prices` (91-key seed), atomic `sell_catches`, `profiles.gear` + `gear_prices` + `buy_gear` |
+| 025 | `20260926150100_seasonal_seed.sql` | seeds the 5 `seasonal_palettes` rows (admin-respecting upsert; activates `default` only on fresh DBs) |
 
 Both are idempotent. 024 includes column-level REVOKEs — verify with a
 non-admin key that direct `UPDATE profiles SET coins/gear` is rejected.

@@ -1,5 +1,5 @@
 /**
- * Server rules for home persistence (030_homes.sql). The layout document and
+ * Server rules for home persistence (20260926150300_homes.sql). The layout document and
  * placement rules are the island agent's (lib/homes/layout.ts); this module
  * only decides what the server accepts.
  */

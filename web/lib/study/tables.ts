@@ -1,7 +1,7 @@
 /**
  * Starter study tables (row 164: window, 2-seat, 4-seat, couch; plus outdoor).
  * Data-driven so David's interior layout can move them without code: the
- * island agent maps `anchor` to seat props. Mirrored in 032_study.sql's seed.
+ * island agent maps `anchor` to seat props. Mirrored in 20260926150500_study.sql's seed.
  */
 import type { StudyTable } from "./store";
 

@@ -1,6 +1,6 @@
 /**
  * Ruins roster and missions (rows 208, 213, 228, 230, 231). Content, mirrored
- * as seed rows in 035_combat.sql (enemy_types, missions); placeholder numbers.
+ * as seed rows in 20260926150800_combat.sql (enemy_types, missions); placeholder numbers.
  * Fixed levels per zone, no scaling (row 230).
  */
 export type EnemyKind = "normal" | "elite" | "boss";

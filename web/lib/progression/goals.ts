@@ -1,7 +1,7 @@
 /**
  * Club goal math: cycles (story vs yearly seasonal), weights, per-member
  * caps and monument stages. Pure; the route and the SQL function both
- * enforce the result (029_progression.sql re-checks caps under a row lock).
+ * enforce the result (20260926150200_progression.sql re-checks caps under a row lock).
  */
 import { DEFAULT_CAPS, DEFAULT_WEIGHTS } from "./defaults";
 import {

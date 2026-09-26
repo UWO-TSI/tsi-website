@@ -5,7 +5,7 @@
  * Uniqueness is by `nameKey`: Unicode NFKC, lower-case, separators and
  * apostrophes dropped, common digit look-alikes folded. So "Maya Chen",
  * "maya_chen" and "MAYA-CH3N" are the same name. The database enforces it
- * with a unique index on the key (034_identity.sql).
+ * with a unique index on the key (20260926150700_identity.sql).
  */
 import { containsProfanity } from "@/lib/moderation/profanity";
 

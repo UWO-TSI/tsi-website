@@ -2,7 +2,7 @@
  * Shop catalogue seed (rows 94, 127, 186): tools in basic/mid tiers, outfits,
  * hair recolours, accessories, furniture and finishes from the homes
  * catalogue, and the TSI merch corner in Gems. Mirrored into
- * 033_economy.sql by scripts/gen-economy-seed.mjs. Prices are play coins
+ * 20260926150600_economy.sql by scripts/gen-economy-seed.mjs. Prices are play coins
  * (or Gems for merch). No real-money value appears anywhere.
  */
 export type ShopCategory = "tool" | "outfit" | "hair" | "accessory" | "furniture" | "wallpaper" | "flooring" | "merch";

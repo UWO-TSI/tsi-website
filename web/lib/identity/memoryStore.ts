@@ -1,4 +1,4 @@
-/** In-memory IdentityStore mirroring 034_identity.sql (tests, dev harness). */
+/** In-memory IdentityStore mirroring 20260926150700_identity.sql (tests, dev harness). */
 import type { Family } from "@/lib/oracle/engine";
 import { DEFAULT_SETTINGS, type AccountSettings } from "./settings";
 import { IdentityError, type Attempt, type IdentityRow, type IdentityStore, type ProfileFacts } from "./store";

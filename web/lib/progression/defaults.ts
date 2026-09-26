@@ -1,6 +1,6 @@
 /**
  * Seed content for progression. Mirrors the INSERTs at the bottom of
- * supabase/migrations/029_progression.sql. Used as the fallback shape when
+ * supabase/migrations/20260926150200_progression.sql. Used as the fallback shape when
  * the migration is not applied (dev, previews) and by tests.
  */
 import type { ClubGoal, GoalCaps, GoalWeights, QuestChapter } from "./types";

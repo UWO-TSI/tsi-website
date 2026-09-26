@@ -111,8 +111,8 @@ describe("island adapter", () => {
   });
 });
 
-describe("035_combat.sql stays in step with the TS rules", () => {
-  const sql = readFileSync(join(__dirname, "../../supabase/migrations/035_combat.sql"), "utf8");
+describe("20260926150800_combat.sql stays in step with the TS rules", () => {
+  const sql = readFileSync(join(__dirname, "../../supabase/migrations/20260926150800_combat.sql"), "utf8");
   it("carries the generated seed verbatim", () => {
     expect(sql).toContain(combatSeedSql());
   });

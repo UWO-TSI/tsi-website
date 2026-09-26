@@ -1,4 +1,4 @@
--- Local smoke test for draft 034_identity (after the 029-033 smokes; same throwaway
+-- Local smoke test for draft 20260926150700_identity (after the 029-033 smokes; same throwaway
 -- cluster). Never run against Supabase.
 \set ON_ERROR_STOP 1
 DO $$
@@ -75,6 +75,17 @@ BEGIN
   ASSERT (SELECT membership FROM profiles WHERE id = '00000000-0000-4000-8000-0000000000d2') = 'member', '034 invite member';
   ASSERT (SELECT membership FROM profiles WHERE id = '00000000-0000-4000-8000-0000000000d3') = 'public', '034 public account';
   ASSERT (SELECT badge FROM member_badges WHERE member_id = '00000000-0000-4000-8000-0000000000d3') IS NULL, '034 public no badge';
-  ASSERT NOT has_column_privilege('authenticated', 'profiles', 'membership', 'UPDATE'), '034 membership not self-editable';
   RAISE NOTICE '034 ok';
 END $$;
+
+-- membership is server-only. A column REVOKE does nothing while Supabase grants
+-- table-level UPDATE; 20260926120000_profiles_privilege_guard's trigger refuses it.
+BEGIN;
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claims = '{"sub":"00000000-0000-4000-8000-0000000000d3","role":"authenticated"}';
+DO $$ BEGIN
+  UPDATE profiles SET membership = 'member' WHERE id = '00000000-0000-4000-8000-0000000000d3';
+  RAISE EXCEPTION '034 membership self-update was allowed';
+EXCEPTION WHEN insufficient_privilege THEN RAISE NOTICE '034 membership not self-editable ok';
+END $$;
+ROLLBACK;

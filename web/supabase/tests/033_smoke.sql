@@ -1,4 +1,4 @@
--- Local smoke test for draft 033_economy (after 029-032 smokes, same throwaway
+-- Local smoke test for draft 20260926150600_economy (after 029-032 smokes, same throwaway
 -- cluster; pre033_seed.sql ran before 033 was applied). Never run against Supabase.
 \set ON_ERROR_STOP 1
 DO $$

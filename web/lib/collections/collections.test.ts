@@ -43,8 +43,8 @@ describe("roster", () => {
     for (const s of ROSTER) if (s.icon) expect(existsSync(join(WEB, "public", s.icon)), s.icon).toBe(true);
     for (const s of ROSTER) if (s.model) expect(existsSync(join(WEB, "public", s.model)), s.model).toBe(true);
   });
-  it("is mirrored verbatim in 031_collections.sql", () => {
-    expect(readFileSync(join(WEB, "supabase/migrations/031_collections.sql"), "utf8")).toContain(seedSql(ROSTER));
+  it("is mirrored verbatim in 20260926150400_collections.sql", () => {
+    expect(readFileSync(join(WEB, "supabase/migrations/20260926150400_collections.sql"), "utf8")).toContain(seedSql(ROSTER));
   });
 });
 

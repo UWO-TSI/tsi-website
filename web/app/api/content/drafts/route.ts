@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { validateChapterDraft } from "@/lib/progression/chapters";
 import { validateGoalDraft } from "@/lib/progression/goals";
 
-// Progression content is validated before it can become a draft (029_progression.sql).
+// Progression content is validated before it can become a draft (20260926150200_progression.sql).
 const DRAFT_VALIDATORS: Record<string, (d: Record<string, unknown>) => string[]> = {
   quest_chapters: validateChapterDraft,
   club_goals: validateGoalDraft,

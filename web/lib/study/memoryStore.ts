@@ -1,4 +1,4 @@
-/** In-memory StudyStore mirroring 032_study.sql (unique seats/members, optimistic versions, idempotent study_settle). */
+/** In-memory StudyStore mirroring 20260926150500_study.sql (unique seats/members, optimistic versions, idempotent study_settle). */
 import { weekStart } from "@/lib/collections/logic";
 import { coinsFor, type StudySession } from "./rules";
 import { StudyError, type ChatMessage, type StudyStore, type StudyTable, type WeekStat } from "./store";

@@ -1,11 +1,11 @@
-// Regenerate the economy seed in supabase/migrations/035_combat.sql from
+// Regenerate the economy seed in supabase/migrations/20260926150800_combat.sql from
 // lib/combat/content.ts + weapons.ts. Run from web/: node scripts/gen-economy-seed.mjs
 import { readFileSync, writeFileSync } from "node:fs";
 import { createJiti } from "jiti";
 
 const jiti = createJiti(import.meta.url, { alias: { "@": process.cwd() } });
 const { combatSeedSql, SEED_BEGIN, SEED_END } = await jiti.import("../lib/combat/seed.ts");
-const path = "supabase/migrations/035_combat.sql";
+const path = "supabase/migrations/20260926150800_combat.sql";
 const sql = readFileSync(path, "utf8");
 const start = sql.indexOf(SEED_BEGIN);
 const end = sql.indexOf(SEED_END) + SEED_END.length;

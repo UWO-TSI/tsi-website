@@ -1,6 +1,6 @@
 /**
  * Progression shared types (specs/progression-systems.md).
- * Mirrors web/supabase/migrations/029_progression.sql (unapplied draft).
+ * Mirrors web/supabase/migrations/20260926150200_progression.sql (unapplied draft).
  */
 
 export const DELIVERY_KINDS = ["coins", "material", "specimen"] as const;
@@ -61,7 +61,7 @@ export interface QuestChapter {
   unlocks_regions: string[];
   completion_letter: string;
   skippable_max_tier: number;
-  /** Play coins paid once when the chapter is completed (not skipped). 033_economy.sql. */
+  /** Play coins paid once when the chapter is completed (not skipped). 20260926150600_economy.sql. */
   reward_coins: number;
   active: boolean;
 }

@@ -7,7 +7,7 @@
 -- Depends on: 001 (profiles, events, event_attendance, bounty_claims),
 -- 014/015 (content_drafts/content_versions for admin versioning),
 -- 023 (member_collections). Coin debits call public.wallet_apply() from
--- 033_economy.sql (resolved at run time; apply 029-033 as one batch).
+-- 20260926150600_economy.sql (resolved at run time; apply 029-033 as one batch).
 --
 -- Write model: members never write these tables directly. Every write goes
 -- through /api/progression/* with the service role after the server has
@@ -334,7 +334,7 @@ BEGIN
 
   IF p_source = 'delivery' AND p_amount_used > 0 THEN
     IF p_kind = 'coins' THEN
-      -- Single wallet path (033_economy.sql): raises 'insufficient', idempotent per key.
+      -- Single wallet path (20260926150600_economy.sql): raises 'insufficient', idempotent per key.
       PERFORM public.wallet_apply(p_member_id, 'coins', -p_amount_used, 'goal', p_goal_id::TEXT, 'goal:' || p_idempotency_key);
     ELSE
       UPDATE member_collections SET count = count - p_amount_used, updated_at = NOW()

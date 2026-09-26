@@ -1,7 +1,7 @@
 /**
  * Weapons, damage and durability (rows 12, 31, 140, 229). Any family can use
  * any weapon; the weapon's scaling stat decides how well (row 31).
- * Mirrored as seed rows in 035_combat.sql (weapons).
+ * Mirrored as seed rows in 20260926150800_combat.sql (weapons).
  */
 import type { Stat, StatBlock } from "./progression";
 
