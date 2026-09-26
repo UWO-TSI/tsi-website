@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { combatClip, locomotion, resolveClip, tempo, type CombatView } from "./clips";
+import { combatClip, locomotion, resolveClip, seatLift, tempo, type CombatView } from "./clips";
 
 describe("character state machine", () => {
   it("picks locomotion from speed", () => {
@@ -23,5 +23,9 @@ describe("character state machine", () => {
     expect(combatClip({ ...idle, hurt: 0.35 }, idle, false, "melee").play).toBe("Hit");
     expect(combatClip(idle, idle, true, "melee")).toEqual({ pose: "Trace", play: null });
     expect(combatClip({ ...idle, alive: false }, idle, false, "melee")).toEqual({ pose: "Defeat", play: null });
+  });
+  it("lifts seat clips onto the furniture's measured seat height", () => {
+    expect(seatLift("Sit", 0.45, 1.3)).toBeCloseTo(0.45 - 0.12 * 1.3);
+    expect(seatLift("Sleep", 0.3, 1.3)).toBeCloseTo(0.3);
   });
 });

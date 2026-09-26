@@ -32,6 +32,8 @@ export interface CombatRuntime {
     weapon: WeaponId; durability: Record<WeaponId, number>; hits: Record<WeaponId, number>;
     attackCd: number; swing: number; dodgeAge: number | null; dodgeCd: number; dodgeDir: Vec;
     aim: Vec; facing: number; hurt: number; downFor: number;
+    /** Weapons granted (the ruins gate is open): the equipped one shows on the character's back in the village (row 140). */
+    armed: boolean;
   };
   cooldowns: Record<AbilityId, number>;
   enemies: Enemy[];
@@ -56,7 +58,7 @@ export function createRuntime(): CombatRuntime {
       durability: Object.fromEntries(WEAPON_ORDER.map(id => [id, WEAPONS[id].maxDurability])) as Record<WeaponId, number>,
       hits: Object.fromEntries(WEAPON_ORDER.map(id => [id, 0])) as Record<WeaponId, number>,
       attackCd: 0, swing: 0, dodgeAge: null, dodgeCd: 0, dodgeDir: { x: 0, z: 1 },
-      aim: { x: 0, z: 0 }, facing: 0, hurt: 0, downFor: 0 },
+      aim: { x: 0, z: 0 }, facing: 0, hurt: 0, downFor: 0, armed: false },
     cooldowns: { spark: 0, binding: 0, swap: 0, signature: 0 },
     enemies: [], projectiles: [], minions: [], floaters: [], blasts: [],
     casting: null, signature: null, killQueue: [], mission: null, idol: "temple", escort: null, wave: null, bossEngaged: false, seq: 1,

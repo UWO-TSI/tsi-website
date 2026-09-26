@@ -1,0 +1,47 @@
+/* ACNH creator layout (row 141) in the Tethos palette: cream triangle pattern, sage and wood accents. */
+.creator {
+  --c-cream: #fffbef; --c-paper: #f6efd9; --c-tri: #ece0bd; --c-sage: #9caf88; --c-sage-deep: #5f7a55;
+  --c-wood: #a07850; --c-ink: #243e50; --c-muted: #5b6b66;
+  position: fixed; inset: 0; z-index: 70; display: grid; grid-template-columns: minmax(280px, 0.9fr) minmax(360px, 1.1fr); gap: clamp(12px, 2vw, 28px);
+  padding: clamp(14px, 3vw, 40px); color: var(--c-ink); font-family: var(--font-heading, "Test Sohne", sans-serif);
+  background-color: var(--c-paper);
+  background-image: linear-gradient(135deg, var(--c-tri) 22%, transparent 22%), linear-gradient(225deg, var(--c-tri) 22%, transparent 22%);
+  background-size: 44px 44px; background-position: 0 0, 22px 0;
+  overflow: auto;
+}
+.canvas { position: fixed !important; inset: 0; pointer-events: none; z-index: 2; }
+.preview, .picker { position: relative; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.preview { align-items: stretch; }
+.preview h1 { margin: 0; font-size: clamp(22px, 2.6vw, 32px); font-weight: 800; }
+.stage { flex: 1; min-height: 340px; border-radius: 42px 36px 40px 34px; background: radial-gradient(ellipse at 50% 75%, #fff8e6, #e7eddf 70%); box-shadow: inset 0 0 0 3px #fff9, 0 8px 22px #3c483218; }
+.turn { position: absolute; left: 18px; bottom: 18px; display: flex; gap: 8px; z-index: 3; }
+.creator[data-mode] .preview:has(.name) .turn { bottom: 140px; }
+.turn button, .pager button { width: 42px; height: 42px; border-radius: 50%; border: 0; background: var(--c-cream); color: var(--c-ink); font-size: 20px; cursor: pointer; box-shadow: 0 3px 0 #d8d0b7; }
+.name { background: var(--c-cream); border-radius: 26px; padding: 14px 18px; }
+.nameOk { margin: -6px 0 0 18px; font-size: 13px; color: var(--c-sage-deep); font-weight: 700; }
+.tabs { display: flex; flex-wrap: wrap; gap: 6px; }
+.tabs button { padding: 8px 14px; border: 0; border-radius: 18px; background: var(--c-cream); color: var(--c-ink); font-size: 13px; font-weight: 700; cursor: pointer; box-shadow: 0 2px 0 #d8d0b7; }
+.tabs button[aria-selected="true"] { background: var(--c-sage-deep); color: #fffbed; box-shadow: 0 2px 0 #3f5439; }
+.grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.grid button { width: 100%; display: flex; flex-direction: column; align-items: stretch; gap: 4px; padding: 6px; border: 3px solid transparent; border-radius: 24px; background: var(--c-cream); color: var(--c-ink); cursor: pointer; box-shadow: 0 3px 0 #d8d0b7; }
+.grid button[aria-pressed="true"] { border-color: var(--c-sage-deep); background: #f1f5e9; }
+.grid span { font-size: 11px; font-weight: 700; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.thumb { aspect-ratio: 1; width: 100%; border-radius: 18px; background: radial-gradient(circle at 50% 60%, #fffdf5, #efe7d0 80%); }
+.pager { display: flex; align-items: center; justify-content: center; gap: 14px; font-weight: 700; font-size: 13px; }
+.swatches { display: flex; flex-wrap: wrap; gap: 8px; padding: 10px 12px; border-radius: 22px; background: var(--c-cream); }
+.swatches button { width: 30px; height: 30px; border-radius: 50%; border: 3px solid #fff; cursor: pointer; box-shadow: 0 2px 0 #0000001f; }
+.swatches button[aria-pressed="true"] { outline: 3px solid var(--c-ink); outline-offset: 2px; }
+.swatches button:disabled { opacity: 0.35; cursor: not-allowed; }
+.actions { margin-top: auto; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; }
+@media (max-width: 760px) {
+  .creator { grid-template-columns: 1fr; }
+  .stage { min-height: 260px; }
+  .grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+  .grid span { display: none; }
+}
+@media (prefers-color-scheme: dark) {
+  .creator { --c-cream: #2c3a36; --c-paper: #1f2a28; --c-tri: #26332f; --c-ink: #f5efdf; --c-muted: #bacbc8; }
+  .stage { background: radial-gradient(ellipse at 50% 75%, #3b4a44, #25312d 70%); }
+  .thumb { background: radial-gradient(circle at 50% 60%, #3b4a44, #2a3632 80%); }
+  .grid button[aria-pressed="true"] { background: #33443c; }
+}

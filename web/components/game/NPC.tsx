@@ -1,32 +1,26 @@
 "use client";
 
-import { useRef, useState, useMemo, useEffect, type RefObject } from "react";
+import { Suspense, useRef, useState, useMemo, useEffect, type RefObject } from "react";
 import { useFrame, ThreeEvent } from "@react-three/fiber";
-import { Billboard, Html } from "@react-three/drei";
+import { Html } from "@react-three/drei";
 import * as THREE from "three";
 import { getTerrainHeight } from "./terrain";
 import { getBlobTexture } from "./BlobShadows";
-import { curvedSpriteRaycast } from "@/lib/game/spritePicking";
-import { npcSpriteSources } from "@/lib/game/npcSprites";
+import Character, { CHARACTER_HEIGHT, type CharacterMotion } from "./character/Character";
+import { hashSeed, randomLook, seeded } from "@/lib/game/character/look";
 import { calculateCurvedHtmlPosition } from "@/lib/game/worldProjection";
 import { AudioManager } from "@/lib/game/audio";
 import type { NPCPersona } from "@/lib/content/types";
 
 
 /**
- * NPC (sprint D5; sprites landed 2026-07-03 cozy push) — billboard for a
- * non-player character.
- *
- * With `persona.sprite_url` set, renders the front-facing cell of a 64x16
- * Ninja Adventure CC0 idle sheet (columns are DIRECTIONS, not frames) with
- * NearestFilter. Old seed URLs resolve to bundled art; unavailable custom
- * art retries a stable bundled sprite. A hue-hashed quad remains visible
- * during loading or if both assets fail (principle #2).
+ * NPC (sprint D5) — a resident on the shared character rig (row 105). Until
+ * the resident roster exists each persona wears a random look seeded by its
+ * slug, so the same resident always looks the same. Wandering drives the
+ * walk clip; a greeting (tsi:npc-greet) plays Wave.
  *
  * Click fires onClick (GameWorld wires this to setActiveNPC → D4 overlay).
  */
-
-const SPRITE_FRAMES = 4; // sheet columns (directions); front face = column 0
 
 interface NPCProps {
   persona: NPCPersona;
@@ -39,9 +33,7 @@ interface NPCProps {
   onClick: () => void;
 }
 
-const QUAD_WIDTH = 1.2;
-const QUAD_HEIGHT = 1.6;
-const NAMEPLATE_OFFSET = QUAD_HEIGHT + 0.45;
+const NAMEPLATE_OFFSET = CHARACTER_HEIGHT + 0.3;
 // P10: how close before the NPC visually "notices" the player (bob + "!"
 // indicator above head). Matches the keyboard-interact range felt in
 // playtest so the cue arrives just before the prompt would.
@@ -140,47 +132,8 @@ export default function NPC({ persona, position, playerPosition, playerPositionR
   // Deterministic per-NPC wander phase from the slug hash.
   const wanderPhase = useMemo(() => slugToHue(persona.slug) * 0.017, [persona.slug]);
 
-  const hue = useMemo(() => slugToHue(persona.slug), [persona.slug]);
-  const fillColor = useMemo(() => `hsl(${hue}, 50%, 60%)`, [hue]);
-  const rimColor = useMemo(() => `hsl(${hue}, 55%, 35%)`, [hue]);
-
-  // Sprite sheet: loaded imperatively (non-Suspense) so a missing file can
-  // never blank the NPC. The same texture object lives in BOTH state and a
-  // ref: JSX reads the state (refs can't be read in render), the useFrame
-  // animation mutates through the ref (state values can't be mutated) —
-  // each React Compiler rule sees only its legal access path.
-  const spriteTexRef = useRef<THREE.Texture | null>(null);
-  const sources = useMemo(() => npcSpriteSources(persona.sprite_url, persona.slug), [persona.sprite_url, persona.slug]);
-  const [loadedSprite, setLoadedSprite] = useState<{ source: string; texture: THREE.Texture } | null>(null);
-  const spriteTex = loadedSprite?.source === sources.primary ? loadedSprite.texture : null;
-  useEffect(() => {
-    let cancelled = false;
-    const loader = new THREE.TextureLoader(new THREE.LoadingManager());
-    const textures = new Set<THREE.Texture>();
-    const load = (url: string) => {
-      const texture = loader.load(url, (tex) => {
-        if (cancelled) { tex.dispose(); return; }
-        tex.colorSpace = THREE.SRGBColorSpace;
-        tex.magFilter = THREE.NearestFilter;
-        tex.minFilter = THREE.NearestFilter;
-        tex.generateMipmaps = false;
-        tex.repeat.set(1 / SPRITE_FRAMES, 1);
-        spriteTexRef.current = tex;
-        setLoadedSprite({ source: sources.primary, texture: tex });
-      }, undefined, () => {
-        texture.dispose();
-        textures.delete(texture);
-        if (!cancelled && url !== sources.fallback) load(sources.fallback);
-      });
-      textures.add(texture);
-    };
-    load(sources.primary);
-    return () => {
-      cancelled = true;
-      textures.forEach((texture) => texture.dispose());
-      spriteTexRef.current = null;
-    };
-  }, [sources]);
+  const look = useMemo(() => randomLook(seeded(hashSeed(persona.slug))), [persona.slug]);
+  const motion = useRef<CharacterMotion>({ speed: 0, yaw: 0, lift: 0, pose: null, play: null });
 
   // Daily village life v1: the anchor eases toward the (phase-dependent)
   // spawn base so a time-of-day move reads as a slow stroll, not a snap.
@@ -220,6 +173,7 @@ export default function NPC({ persona, position, playerPosition, playerPositionR
     if (greeted && hop.t < 0) {
       hop.t = 0;
       hop.cooldownUntil = clockRef.current + 2;
+      motion.current.play = "Wave";
     }
     if (dist < 1.05 && hop.t < 0 && clockRef.current > hop.cooldownUntil) {
       hop.t = 0;
@@ -260,19 +214,16 @@ export default function NPC({ persona, position, playerPosition, playerPositionR
     // Idle bob + W1 wander drift. XZ eases to the wandered spot; y resamples
     // terrain there (+ bob) so the NPC stays grounded on slopes.
     if (groupRef.current) {
-      const amp = 0.04 + proxRef.current * 0.08;
-      const bob = Math.sin(clockRef.current * Math.PI * 1.8) * amp;
-      const gy = groundHeight(curX, curZ);
-      groupRef.current.position.set(curX, gy, curZ);
-      worldPositionRef?.current.copy(groupRef.current.position);
-      if (visualRef.current) visualRef.current.position.y = bob + hopY;
+      const g = groupRef.current, m = motion.current;
+      const step = Math.hypot(curX - g.position.x, curZ - g.position.z);
+      m.speed = delta > 0 ? step / delta : 0;
+      // Face the way they stroll; turn to the player once noticed and still.
+      const heading = isNoticed && player ? Math.atan2(player.x - curX, player.z - curZ) : step > 1e-4 ? Math.atan2(curX - g.position.x, curZ - g.position.z) : m.yaw;
+      m.yaw += Math.atan2(Math.sin(heading - m.yaw), Math.cos(heading - m.yaw)) * Math.min(1, delta * 6);
+      m.lift = hopY;
+      g.position.set(curX, groundHeight(curX, curZ), curZ);
+      worldPositionRef?.current.copy(g.position);
     }
-
-    // Idle sheets put DIRECTIONS in columns (down/up/left/right), not
-    // animation frames — cycling them made NPCs spin in place (2026-07-04
-    // layout audit). Pin the front-facing column; the bob is the idle life.
-    const tex = spriteTexRef.current;
-    if (tex && tex.offset.x !== 0) tex.offset.x = 0;
   }, -3);
 
   const handlePointerOver = (e: ThreeEvent<PointerEvent>) => {
@@ -299,77 +250,9 @@ export default function NPC({ persona, position, playerPosition, playerPositionR
         <meshBasicMaterial map={getBlobTexture()} transparent opacity={0.3} depthWrite={false} polygonOffset polygonOffsetFactor={-2} polygonOffsetUnits={-2} />
       </mesh>
       <group ref={visualRef}>
-      <Billboard follow lockX={false} lockY={false} lockZ={false}>
-        {spriteTex ? (
-          /* Pixel-art idle sprite. Square quad (frames are 16x16); sits with
-             feet at ground. P-light v2: dark silhouette halo behind the
-             sprite (same trick as the player) pops NPCs from the world. */
-          <>
-          <mesh position={[0, QUAD_HEIGHT / 2, -0.012]} scale={[1.07, 1.07, 1]}>
-            <planeGeometry args={[QUAD_HEIGHT, QUAD_HEIGHT]} />
-            <meshBasicMaterial
-              map={spriteTex}
-              color="#2A2118"
-              transparent
-              opacity={0.5}
-              alphaTest={0.05}
-              side={THREE.DoubleSide}
-              depthWrite={false}
-            />
-          </mesh>
-          <mesh
-            key="npc-sprite"
-            raycast={curvedSpriteRaycast}
-            position={[0, QUAD_HEIGHT / 2, 0]}
-            onClick={handleClick}
-            onPointerOver={handlePointerOver}
-            onPointerOut={handlePointerOut}
-          >
-            <planeGeometry args={[QUAD_HEIGHT, QUAD_HEIGHT]} />
-            <meshBasicMaterial
-              map={spriteTex}
-              color="#ffffff"
-              opacity={1}
-              alphaTest={0.05}
-              side={THREE.DoubleSide}
-              depthWrite
-            />
-          </mesh>
-          </>
-        ) : (
-          <>
-            {/* Rim (slightly larger, darker — sits behind fill) */}
-            <mesh position={[0, QUAD_HEIGHT / 2, -0.001]}>
-              <planeGeometry args={[QUAD_WIDTH + 0.08, QUAD_HEIGHT + 0.08]} />
-              <meshBasicMaterial
-                color={rimColor}
-                transparent
-                opacity={0.9}
-                side={THREE.DoubleSide}
-                depthWrite={false}
-              />
-            </mesh>
-            {/* Fill quad — clickable */}
-            <mesh
-              key="npc-placeholder"
-              raycast={curvedSpriteRaycast}
-              position={[0, QUAD_HEIGHT / 2, 0]}
-              onClick={handleClick}
-              onPointerOver={handlePointerOver}
-              onPointerOut={handlePointerOut}
-            >
-              <planeGeometry args={[QUAD_WIDTH, QUAD_HEIGHT]} />
-              <meshBasicMaterial
-                color={fillColor}
-                transparent
-                opacity={hovered ? 1 : 0.95}
-                side={THREE.DoubleSide}
-                depthWrite={false}
-              />
-            </mesh>
-          </>
-        )}
-      </Billboard>
+      <group onClick={handleClick} onPointerOver={handlePointerOver} onPointerOut={handlePointerOut}>
+        <Suspense fallback={null}><Character look={look} motion={motion} walkSpeed={2} /></Suspense>
+      </group>
 
       {/* G2: proximity speech bubble — ACNH-style rounded white bubble with
           a tail, floating above the nameplate. Pointer-events off so it

@@ -37,8 +37,8 @@ export function resolveClip(s: { speed: number; walkSpeed: number; pose: ClipNam
   return locomotion(s.speed, s.walkSpeed);
 }
 
-/** Emote menu keys (content EmoteType.animation_key) → clips. */
-export const EMOTE_CLIPS: Record<string, ClipName> = { wave: "Wave", dance: "Dance", laugh: "Laugh", cheer: "Cheer", sad: "Sad", point: "Wave", sit: "Sit" };
+/** Emote menu keys (content EmoteType.animation_key) → clips. "sit" has no clip: Sit needs a seat (tsi:sit). */
+export const EMOTE_CLIPS: Record<string, ClipName> = { wave: "Wave", dance: "Dance", laugh: "Laugh", cheer: "Cheer", sad: "Sad", point: "Wave" };
 
 export const ATTACK_CLIP: Record<WeaponKind, ClipName> = { melee: "AttackMelee", bow: "AttackBow", staff: "AttackCast", summon: "AttackCast" };
 /** Which hand holds each weapon kind (clip catalogue `hand`); the bow sits in the left. */
@@ -57,4 +57,9 @@ export function combatClip(p: CombatView, prev: CombatView, casting: boolean, ki
   if (p.attackCd > prev.attackCd + 1e-6) return { pose, play: ATTACK_CLIP[kind] };
   if (p.hurt > prev.hurt + 1e-6) return { pose, play: "Hit" };
   return { pose, play: null };
+}
+
+/** Ruling 18: seat clips are authored on a generic seat; lift the character so it lands on this furniture's seat (heights in world units). */
+export function seatLift(clip: ClipName, seatHeight: number, scale: number): number {
+  return seatHeight - (CLIP_BY_NAME.get(clip)?.seatHeight ?? 0) * scale;
 }

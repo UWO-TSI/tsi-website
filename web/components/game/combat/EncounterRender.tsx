@@ -3,8 +3,9 @@
 /**
  * Encounter visuals, all driven from the combat runtime inside useFrame (no
  * React state per frame): instanced enemies (one InstancedMesh per GLB part
- * per enemy type), telegraphs, projectiles, wisps, blasts, aim reticle, the
- * held weapon, and the damage-number projector that moves DOM floaters.
+ * per enemy type), telegraphs, projectiles, wisps, blasts, aim reticle, and
+ * the damage-number projector that moves DOM floaters. The held weapon rides
+ * the character's hand socket (PlayerAvatar `combat`).
  */
 import { useEffect, useMemo, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
@@ -182,30 +183,6 @@ export function AimReticle({ player, ground }: { player: React.RefObject<THREE.V
     <mesh ref={ring} rotation={[-Math.PI / 2, 0, 0]} renderOrder={5}><ringGeometry args={[0.28, 0.36, 32]} /><meshBasicMaterial color="#fff4c8" transparent opacity={0.85} depthWrite={false} toneMapped={false} /></mesh>
     <mesh ref={line} renderOrder={5}><planeGeometry args={[1, 1]} /><meshBasicMaterial color="#fff4c8" transparent opacity={0.35} depthWrite={false} toneMapped={false} /></mesh>
   </>;
-}
-
-/** The equipped weapon in the player's hand (row 140), swinging for melee. */
-export function HeldWeapon({ player }: { player: React.RefObject<THREE.Vector3> }) {
-  const W = { sword: WEAPONS["sword-driftwood"], bow: WEAPONS["bow-willow"], staff: WEAPONS["staff-oak"], summon: WEAPONS["tome-spirits"] };
-  const sword = useGLTF(W.sword.model).scene, bow = useGLTF(W.bow.model).scene, staff = useGLTF(W.staff.model).scene;
-  const models = useMemo(() => ({ melee: sword.clone(), bow: bow.clone(), staff: staff.clone(), summon: staff.clone() }), [sword, bow, staff]);
-  const group = useRef<THREE.Group>(null);
-  useFrame(() => {
-    const g = group.current; if (!g) return;
-    const p = combat.rt.player, pl = player.current;
-    const side = p.facing + Math.PI / 2;
-    g.position.set(pl.x + Math.sin(side) * -0.32 + Math.sin(p.facing) * 0.15, pl.y + 0.55, pl.z + Math.cos(side) * -0.32 + Math.cos(p.facing) * 0.15);
-    const swing = p.swing > 0 ? (1 - p.swing / 0.22) * 2.4 - 1.2 : 0;
-    g.rotation.set(0, p.facing + swing, 0);
-    g.visible = p.alive;
-    (Object.keys(models) as (keyof typeof models)[]).forEach(k => { models[k].visible = k === WEAPONS[p.weapon].kind; });
-  });
-  return <group ref={group}>
-    <primitive object={models.melee} scale={W.sword.modelScale} rotation={[0, Math.PI / 2, -0.3]} position={[0, 0, 0.3]} />
-    <primitive object={models.bow} scale={W.bow.modelScale} position={[0, -0.2, 0.1]} />
-    <primitive object={models.staff} scale={W.staff.modelScale} position={[0, -0.3, 0.1]} />
-    <primitive object={models.summon} scale={W.summon.modelScale} position={[0, -0.2, 0.1]} />
-  </group>;
 }
 
 /** Projects runtime floaters (damage numbers) onto pooled DOM nodes registered by the HUD. */

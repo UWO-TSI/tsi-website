@@ -144,7 +144,10 @@ class Puppet {
   update(delta: number, motion: CharacterMotion, walkSpeed: number) {
     this.clock += delta;
     let restart = false;
+    // A looping clip asked for as a one-shot (Dance) holds as a pose; moving ends any pose.
+    if (motion.play && isLoop(motion.play)) { motion.pose = motion.play; motion.play = null; }
     if (motion.play) { this.oneShot = motion.play; motion.play = null; restart = true; }
+    if (motion.speed >= 0.08) motion.pose = null;
     if (this.oneShot && this.clip === this.oneShot && !restart && this.action && this.action.time >= this.action.getClip().duration - 1e-3) this.oneShot = null;
     const want = resolveClip({ speed: motion.speed, walkSpeed, pose: motion.pose ?? null, oneShot: this.oneShot });
     if (want !== this.clip || restart) this.play(want);
@@ -175,14 +178,13 @@ const GRIP: Record<WeaponKind, { hand: [number, number, number]; back: [number, 
   summon: { hand: [Math.PI / 2, 0, 0], back: [0, 0, 2.6] },
 };
 
-function HeldWeapon({ puppet, weapon }: { puppet: Puppet; weapon: WeaponView }) {
-  const { scene } = useGLTF(weapon.model);
+function HeldWeapon({ puppet, weapon: { kind, model: url, modelScale, inHand } }: { puppet: Puppet; weapon: WeaponView }) {
+  const { scene } = useGLTF(url);
   useEffect(() => {
     const model = scene.clone(true);
-    const socket = weapon.inHand ? puppet.sockets[WEAPON_HAND[weapon.kind]] : puppet.sockets.Back;
-    placeWeapon(model, weapon, socket);
+    placeWeapon(model, { kind, model: url, modelScale, inHand }, inHand ? puppet.sockets[WEAPON_HAND[kind]] : puppet.sockets.Back);
     return () => { model.removeFromParent(); };
-  }, [scene, puppet, weapon.kind, weapon.inHand, weapon.modelScale]);
+  }, [scene, puppet, kind, url, modelScale, inHand]);
   return null;
 }
 function placeWeapon(model: THREE.Object3D, weapon: WeaponView, socket: THREE.Object3D) {

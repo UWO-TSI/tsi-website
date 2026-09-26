@@ -1,0 +1,167 @@
+"use client";
+
+/**
+ * Character creator (rows 141, 142, 191, 210): ACNH layout in the Tethos
+ * palette. Character in three-quarter view on the left, category tabs top
+ * right, a 2x4 grid of rendered previews (each cell is the character wearing
+ * that option, drawn live through one shared canvas with drei <View>), a
+ * swatch row from the shared palette, confirm bottom right. `mode="wardrobe"`
+ * is the same sheet limited to hair and clothes (closet and fitting room).
+ */
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { Canvas } from "@react-three/fiber";
+import { PerspectiveCamera, View } from "@react-three/drei";
+import Character, { type CharacterMotion } from "./Character";
+import { VillageButton, VillageField } from "@/components/recruit/ui";
+import { FACE, PALETTE, PART_BY_ID, partColor, partsIn, randomLook, wear, type CharacterLook, type PartSlot } from "@/lib/game/character/look";
+import styles from "./CharacterCreator.module.css";
+
+type Swatch = "skin" | "hair" | "outfit" | null;
+interface Tab { id: string; label: string; items: (string | null)[]; framing: "head" | "body"; swatch: Swatch; apply: (look: CharacterLook, id: string | null) => CharacterLook; on: (look: CharacterLook, id: string | null) => boolean; name: (id: string | null) => string }
+const partName = (id: string | null) => (id ? PART_BY_ID.get(id)?.name ?? id : "None");
+const slotTab = (id: string, label: string, slots: PartSlot[], framing: Tab["framing"], swatch: Swatch, extra: (string | null)[] = []): Tab => ({
+  id, label, framing, swatch, name: partName,
+  items: [...extra, ...slots.flatMap(s => partsIn(s).map(p => p.id))],
+  apply: (look, part) => (part ? wear(look, PART_BY_ID.get(part)!.slot, part) : wear(look, slots[0], null)),
+  on: (look, part) => (part ? [look.bangs, look.back, look.top, look.bottom, look.onepiece, look.shoes, ...Object.values(look.acc)].includes(part) : !look[slots[0] as "shoes"]),
+});
+const TABS: Tab[] = [
+  { id: "skin", label: "Skin", items: [], framing: "head", swatch: "skin", apply: l => l, on: () => false, name: () => "" },
+  { id: "eyes", label: "Eyes", items: Object.keys(FACE.layers.eyes.items), framing: "head", swatch: null, apply: (l, id) => ({ ...l, eyes: id! }), on: (l, id) => l.eyes === id, name: id => `Eyes ${id}` },
+  { id: "mouth", label: "Mouth", items: Object.keys(FACE.layers.mouth.items), framing: "head", swatch: null, apply: (l, id) => ({ ...l, mouth: id! }), on: (l, id) => l.mouth === id, name: id => `Mouth ${id}` },
+  {
+    id: "features", label: "Brows & extras", items: [...Object.keys(FACE.layers.brows.items), ...Object.keys(FACE.layers.extras.items)], framing: "head", swatch: "hair",
+    apply: (l, id) => id! in FACE.layers.brows.items ? { ...l, brows: id! } : { ...l, extras: l.extras.includes(id!) ? l.extras.filter(e => e !== id) : [...l.extras, id!] },
+    on: (l, id) => l.brows === id || l.extras.includes(id!), name: id => ({ brow_soft: "Soft brows", brow_flat: "Flat brows", blush: "Blush", mole: "Mole", freckles: "Freckles" } as Record<string, string>)[id!] ?? id!,
+  },
+  slotTab("bangs", "Bangs", ["bangs"], "head", "hair"),
+  slotTab("back", "Back hair", ["back"], "head", "hair"),
+  slotTab("top", "Tops", ["top"], "body", "outfit"),
+  slotTab("bottom", "Bottoms & one-pieces", ["bottom", "onepiece"], "body", "outfit"),
+  slotTab("shoes", "Shoes", ["shoes"], "body", "outfit", [null]),
+  slotTab("accessory", "Accessories", ["accessory"], "head", "outfit"),
+];
+const WARDROBE_TABS = ["bangs", "back", "top", "bottom", "shoes", "accessory"];
+const PAGE = 8;
+
+/** The part a colour swatch recolours on the current tab. */
+function colourTarget(tab: string, look: CharacterLook, lastAccessory: string | null): string | null {
+  if (tab === "top") return look.onepiece ?? look.top;
+  if (tab === "bottom") return look.onepiece ?? look.bottom;
+  if (tab === "shoes") return look.shoes;
+  if (tab === "accessory") return lastAccessory && Object.values(look.acc).includes(lastAccessory) ? lastAccessory : Object.values(look.acc)[0] ?? null;
+  return null;
+}
+
+const STILL: CharacterMotion = { speed: 0, yaw: -0.55, lift: 0, pose: null, play: null };
+function Stage({ look, framing, yaw = -0.55, faceSize = 256 }: { look: CharacterLook; framing: "head" | "body"; yaw?: number; faceSize?: number }) {
+  const motion = useRef<CharacterMotion>({ ...STILL, yaw });
+  useEffect(() => { motion.current.yaw = yaw; }, [yaw]);
+  const head = framing === "head";
+  return <>
+    <PerspectiveCamera makeDefault fov={head ? 26 : 30} position={head ? [0.1, 0.84, 1.15] : [0.2, 0.62, 2.55]} onUpdate={c => c.lookAt(0, head ? 0.78 : 0.5, 0)} />
+    <ambientLight intensity={1.1} color="#fff6e6" />
+    <hemisphereLight args={["#fff8ec", "#b7c7a8", 0.9]} />
+    <directionalLight position={[1.6, 2.6, 2.2]} intensity={1.7} color="#fff1d8" />
+    <Suspense fallback={null}><Character look={look} motion={motion} scale={1} faceSize={faceSize} /></Suspense>
+  </>;
+}
+
+export interface CreatorProps {
+  initial: CharacterLook;
+  mode?: "create" | "wardrobe";
+  title?: string;
+  /** Member game: pick a world name (row 222) checked through /api/identity/name. */
+  askName?: { current: string };
+  onDone: (look: CharacterLook, name: string | null) => void | Promise<void>;
+  onClose?: () => void;
+}
+
+export default function CharacterCreator({ initial, mode = "create", title, askName, onDone, onClose }: CreatorProps) {
+  const root = useRef<HTMLElement>(null);
+  const [look, setLook] = useState(initial);
+  const tabs = useMemo(() => (mode === "wardrobe" ? TABS.filter(t => WARDROBE_TABS.includes(t.id)) : TABS), [mode]);
+  const [tabId, setTabId] = useState(tabs[0].id);
+  const [page, setPage] = useState(0);
+  const [yaw, setYaw] = useState(-0.55);
+  const [lastAccessory, setLastAccessory] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const tab = tabs.find(t => t.id === tabId)!;
+  const pages = Math.max(1, Math.ceil(tab.items.length / PAGE));
+  const cells = tab.items.slice(page * PAGE, page * PAGE + PAGE);
+  const target = colourTarget(tab.id, look, lastAccessory);
+  const [name, setName] = useState(askName?.current === "You" ? "" : askName?.current ?? "");
+  const [nameNote, setNameNote] = useState<{ ok: boolean; text: string } | null>(null);
+  useEffect(() => { root.current?.querySelector<HTMLButtonElement>("[role=tab]")?.focus(); }, []);
+  useEffect(() => {
+    if (!askName || !name.trim() || name.trim() === askName.current) return;
+    const timer = window.setTimeout(() => {
+      void fetch(`/api/identity/name?check=${encodeURIComponent(name.trim())}`).then(r => r.json()).then(b => {
+        setNameNote(b?.ok ? { ok: b.data.available, text: b.data.available ? "That name is free." : "Someone already has that name." } : { ok: false, text: b?.error ?? "Sign in to pick a name." });
+      }).catch(() => setNameNote({ ok: false, text: "Couldn't check the name right now." }));
+    }, 400);
+    return () => window.clearTimeout(timer);
+  }, [name, askName]);
+
+  const choose = (id: string | null) => {
+    setLook(l => tab.apply(l, id));
+    if (tab.id === "accessory" && id) setLastAccessory(id);
+  };
+  const paint = (i: number) => setLook(l => {
+    if (tab.swatch === "skin") return { ...l, skin: i };
+    if (tab.swatch === "hair") return { ...l, hair: i };
+    return target ? { ...l, colors: { ...l.colors, [target]: i } } : l;
+  });
+  const swatches = tab.swatch ? PALETTE[tab.swatch] : [];
+  const swatchOn = (i: number) => tab.swatch === "skin" ? look.skin === i : tab.swatch === "hair" ? look.hair === i : target !== null && partColor(look, target) === i;
+  const confirm = async (final: CharacterLook) => {
+    setSaving(true);
+    const wanted = askName && name.trim() && name.trim() !== askName.current && nameNote?.ok ? name.trim() : null;
+    await onDone(final, wanted);
+    setSaving(false);
+  };
+
+  return <section ref={root} className={styles.creator} role="dialog" aria-modal="true" aria-labelledby="creator-title" data-mode={mode}>
+    <div className={styles.preview}>
+      <h1 id="creator-title">{title ?? (mode === "wardrobe" ? "Your closet" : "Make your character")}</h1>
+      <View className={styles.stage}><Stage look={look} framing="body" yaw={yaw} faceSize={512} /></View>
+      <div className={styles.turn} aria-label="Turn the character">
+        <button onClick={() => setYaw(y => y - Math.PI / 4)} aria-label="Turn left">⟲</button>
+        <button onClick={() => setYaw(y => y + Math.PI / 4)} aria-label="Turn right">⟳</button>
+      </div>
+      {askName && <VillageField label="Your name on the island" hint="Letters and numbers; everyone in the world sees it." value={name} maxLength={24}
+        onChange={e => { setName(e.target.value); setNameNote(null); }} error={nameNote && !nameNote.ok ? nameNote.text : undefined} className={styles.name} />}
+      {askName && nameNote?.ok && <p className={styles.nameOk} role="status">{nameNote.text}</p>}
+    </div>
+    <div className={styles.picker}>
+      <div role="tablist" aria-label="Categories" className={styles.tabs}>
+        {tabs.map(t => <button key={t.id} role="tab" aria-selected={t.id === tabId} onClick={() => { setTabId(t.id); setPage(0); }}>{t.label}</button>)}
+      </div>
+      {tab.items.length > 0 && <ul className={styles.grid} aria-label={tab.label}>
+        {cells.map(id => <li key={id ?? "none"}>
+          <button aria-pressed={tab.on(look, id)} onClick={() => choose(id)} aria-label={tab.name(id)} title={tab.name(id)}>
+            <View className={styles.thumb}><Stage look={tab.apply(look, id)} framing={tab.framing} /></View>
+            <span>{tab.name(id)}</span>
+          </button>
+        </li>)}
+      </ul>}
+      {pages > 1 && <div className={styles.pager}>
+        <button onClick={() => setPage(p => (p + pages - 1) % pages)} aria-label="Previous page">‹</button>
+        <span>{page + 1} / {pages}</span>
+        <button onClick={() => setPage(p => (p + 1) % pages)} aria-label="Next page">›</button>
+      </div>}
+      {swatches.length > 0 && <div className={styles.swatches} role="group" aria-label={`${tab.swatch} colours`}>
+        {swatches.map((hex, i) => <button key={hex} style={{ background: hex }} aria-pressed={swatchOn(i)} aria-label={`${tab.swatch} colour ${i + 1}`} disabled={tab.swatch === "outfit" && !target} onClick={() => paint(i)} />)}
+      </div>}
+      <div className={styles.actions}>
+        {mode === "create" && <VillageButton variant="quiet" onClick={() => setLook(randomLook())}>Surprise me</VillageButton>}
+        {mode === "create" && <VillageButton variant="quiet" disabled={saving} onClick={() => void confirm(randomLook())}>Skip</VillageButton>}
+        {onClose && <VillageButton variant="quiet" onClick={onClose}>Close</VillageButton>}
+        <VillageButton disabled={saving} onClick={() => void confirm(look)}>{mode === "wardrobe" ? "Wear this" : "That's me"}</VillageButton>
+      </div>
+    </div>
+    <Canvas className={styles.canvas} eventSource={root as React.RefObject<HTMLElement>} gl={{ antialias: true, alpha: true }} dpr={[1, 2]}>
+      <View.Port />
+    </Canvas>
+  </section>;
+}
