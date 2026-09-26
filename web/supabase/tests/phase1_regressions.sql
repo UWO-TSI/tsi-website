@@ -59,3 +59,19 @@ DO $$ BEGIN
   RAISE NOTICE 'phase1 3 invite codes ok';
 END $$;
 ROLLBACK;
+
+-- ─── 4. Badges are for signed-in readers (20260926155400) ────────────────────
+BEGIN;
+SET LOCAL ROLE anon;
+DO $$ BEGIN
+  PERFORM 1 FROM member_badges;
+  RAISE EXCEPTION 'anon can list member_badges';
+EXCEPTION WHEN insufficient_privilege THEN NULL;
+END $$;
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claims = '{"sub":"00000000-0000-4000-8000-0000000001a1","role":"authenticated"}';
+DO $$ BEGIN
+  ASSERT EXISTS (SELECT 1 FROM member_badges WHERE member_id = '00000000-0000-4000-8000-0000000001a1'), 'signed-in users lost the badges';
+  RAISE NOTICE 'phase1 4 member badges ok';
+END $$;
+ROLLBACK;
