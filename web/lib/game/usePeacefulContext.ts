@@ -1,11 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { WorldMoment } from "@/lib/collections/logic";
 import type { IslandWeather } from "./islandWeather";
 import { torontoHour } from "./islandTime";
-import { bestOwnedRod, rodByTier, type RodTier } from "./rods";
-import { localGear } from "./gear";
+import { bestOwnedRod, type RodTier } from "./rods";
+import { httpEconomyTransport } from "@/lib/wallet/transport";
 import { installCollectionsDemo } from "./collectionsDemo";
 
 installCollectionsDemo();
@@ -17,8 +17,8 @@ export function rosterWeather(weather: IslandWeather): WorldMoment["weather"] {
 
 /**
  * Member seed for personal node rolls (hourly respawn is per member). A local
- * per-device id until the account id is threaded through; `?rod=<1-5>` picks a
- * rod tier outside production.
+ * per-device id until the account id is threaded through. The rod is the best
+ * one in the server inventory: shop tiers 2-3, crafted tiers 4-5 (lib/crafting).
  */
 export function usePeacefulContext(weather: IslandWeather, now: number): { moment: WorldMoment; member: string; rod: RodTier } {
   const [member] = useState(() => {
@@ -30,10 +30,15 @@ export function usePeacefulContext(weather: IslandWeather, now: number): { momen
       return id;
     } catch { return "local-guest"; }
   });
-  const [rod] = useState(() => {
-    const dev = process.env.NODE_ENV !== "production" && typeof window !== "undefined" ? Number(new URLSearchParams(window.location.search).get("rod")) : 0;
-    return dev ? rodByTier(dev) : bestOwnedRod(typeof window === "undefined" ? [] : localGear());
-  });
+  const [owned, setOwned] = useState<string[]>([]);
+  useEffect(() => {
+    // Signed out keeps the starter rod; a fresh craft (tsi:crafted) re-reads the inventory.
+    const load = () => { httpEconomyTransport.inventory().then(inv => setOwned((inv.groups.tools ?? []).flatMap(r => r.item.catalogue_ref ?? [])), () => {}); };
+    load();
+    window.addEventListener("tsi:crafted", load);
+    return () => window.removeEventListener("tsi:crafted", load);
+  }, []);
+  const rod = bestOwnedRod(owned);
   const date = new Date(now);
   const hour = Math.floor(torontoHour(date));
   const month = date.getMonth() + 1;
