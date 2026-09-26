@@ -32,7 +32,10 @@ const SheetProfile = dynamic(() => import("@/app/student/dashboard/profile/page"
 const SheetQuests = dynamic(() => import("@/app/student/dashboard/quests/page"), { ssr: false, loading: SheetLoading });
 const SheetJournal = dynamic(() => import("@/app/student/dashboard/journal/page"), { ssr: false, loading: SheetLoading });
 const SheetLetters = dynamic(() => import("@/app/student/dashboard/letters/page"), { ssr: false, loading: SheetLoading });
-const SheetWharfSell = dynamic(() => import("./WharfSellSheet"), { ssr: false, loading: SheetLoading });
+// The Wharf Shack counter: sell catches and buy tools through the server wallet.
+const SheetWharfSell = dynamic(() => import("@/components/economy/EconomySheets").then(({ SellBody, ShopBody }) => function WharfCounter() {
+  return <><SellBody /><ShopBody initialTab="tools" /></>;
+}), { ssr: false, loading: SheetLoading });
 
 function SheetLoading() {
   return <p role="status" style={{ padding: 32, color: "var(--color-text-muted, #A9B8C4)", fontSize: 14 }}>Opening panel…</p>;

@@ -18,6 +18,7 @@ import { advanceChapter, contribute, loadState, sendNote, syncRealActivity } fro
 import { setProgressionState } from "@/lib/progression/useProgression";
 import { routeDemoFetch } from "@/lib/game/demoFetch";
 import { DEMO_MEMBER as ME, progressionRoutes } from "@/lib/game/progressionDemo";
+
 const FRIENDS = ["Maya Chen", "Jordan Park", "Priya Shah", "Leo Martin"].map((name, i) => ({ id: `00000000-0000-4000-8000-00000000010${i}`, display_name: name }));
 
 async function demo(): Promise<LettersTransport> {
@@ -35,10 +36,9 @@ async function demo(): Promise<LettersTransport> {
   await sendNote(m.store, FRIENDS[1].id, { to: ME, body: "Thanks for helping set up the event yesterday. The cafe fund jumped!" }, now);
   const state = await loadState(m.store, ME, now);
   if (state.ok) setProgressionState(state.data);
-  // Route the sheets' own /api/progression calls to the same in-memory service.
-  routeDemoFetch("/api/progression", progressionRoutes(m, ME));
+  // Route the sheets' own /api/progression and wallet calls to the same in-memory service.
+  routeDemoFetch("/api/", progressionRoutes(m, ME));
   try {
-    localStorage.setItem("tsi.coins.local.v1", "2050");
     localStorage.setItem("tsi.collections.local.v1", JSON.stringify({ fish_dace: 3, fish_pale_chub: 1, flower_tulip: 6, apple: 4 }));
   } catch {
     /* preview only */

@@ -12,9 +12,10 @@ import { installDemoFetch, reply, type DemoHandler } from "./demoFetch";
 
 export const DEMO_MEMBER = "00000000-0000-4000-8000-000000000001";
 
-/** /api/progression/{state,chapters/advance,contribute} on an in-memory store. */
+/** /api/progression/{state,chapters/advance,contribute} and the coin wallet they spend, on an in-memory store. */
 export function progressionRoutes(m: ReturnType<typeof memoryStore>, me = DEMO_MEMBER): DemoHandler {
   return async (path, body) => {
+    if (path === "/api/economy/wallet") return reply({ ok: true, data: { coins: m.coinsOf(me), gems: 0, daily_claimed: true, day: "", recent: [] } }, "wallet");
     if (path === "/api/progression/state") return reply(await loadState(m.store, me, new Date()), "state");
     if (path === "/api/progression/chapters/advance") return reply(await advanceChapter(m.store, me, body, new Date()), "state");
     if (path === "/api/progression/contribute") return reply(await contribute(m.store, me, { ...body, item_key: body.item_key ?? null, idempotency_key: `delivery:${body.idempotency_key}` }, new Date()), "contribution");
@@ -23,7 +24,7 @@ export function progressionRoutes(m: ReturnType<typeof memoryStore>, me = DEMO_M
 }
 
 export function installIslandProgressionDemo(): void {
-  installDemoFetch("progression", "/api/progression", () => {
+  installDemoFetch("progression", "/api/", () => {
     const m = memoryStore();
     // A new member who already has a catch in the bag (so "donate" can succeed).
     m.addMember(DEMO_MEMBER, { tier: 4, firstCatchKey: "fish_dace" }, 2400);
