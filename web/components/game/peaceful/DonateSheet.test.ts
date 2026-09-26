@@ -13,7 +13,7 @@ function routeTo(m: ReturnType<typeof memoryCollectionsStore>, member: string) {
 }
 
 describe("donation sheet", () => {
-  afterEach(() => { vi.unstubAllGlobals(); });
+  afterEach(() => { vi.unstubAllGlobals(); vi.useRealTimers(); });
   it("thanks the first donor and refuses a duplicate with the curator's line", async () => {
     const m = memoryCollectionsStore();
     m.name("a", "Maya Chen");
@@ -26,6 +26,19 @@ describe("donation sheet", () => {
     routeTo(m, "b");
     expect(await postDonation("fish_dace", "Dace")).toMatch(/already have one/i);
     expect(m.countOf("b", "fish_dace")).toBe(1);
+  });
+  it("treats the donor's retry as the same donation, not a duplicate", async () => {
+    const m = memoryCollectionsStore();
+    await recordCatch(m.store, "a", "fish_dace", 12);
+    await recordCatch(m.store, "a", "fish_dace", 13);
+    routeTo(m, "a");
+    vi.useFakeTimers({ toFake: ["Date"] });
+    await postDonation("fish_dace", "Dace");
+    vi.setSystemTime(Date.now() + 30_000);  // the member retries after a timeout
+    const retry = await postDonation("fish_dace", "Dace");
+    expect(retry).toContain("Dace");
+    expect(retry).not.toMatch(/already/i);
+    expect(m.countOf("a", "fish_dace")).toBe(1);
   });
   it("falls back to a gentle line when the museum is unreachable", async () => {
     vi.stubGlobal("fetch", async () => { throw new Error("offline"); });

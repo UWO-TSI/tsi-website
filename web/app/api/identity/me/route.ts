@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
-import { identityContext } from "@/lib/identity/deps";
+import { supabaseIdentityStore } from "@/lib/identity/supabaseStore";
 import { me } from "@/lib/identity/service";
-import { jsonResult } from "@/lib/server/memberContext";
+import { jsonResult, withStore } from "@/lib/server/memberContext";
 
 // GET /api/identity/me: world name, member badge, family, auras, settings.
 export async function GET() {
-  const ctx = await identityContext();
+  const ctx = await withStore(supabaseIdentityStore);
   if (ctx instanceof NextResponse) return ctx;
   return jsonResult(await me(ctx.store, ctx.userId), "identity");
 }

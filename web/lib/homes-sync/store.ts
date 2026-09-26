@@ -1,17 +1,13 @@
 import type { HomeLayoutDoc } from "@/lib/homes/layout";
+import { DomainError } from "@/lib/result";
 
 export type HomeStoreErrorCode = "unavailable" | "revision_conflict" | "room_cap" | "insufficient" | "room_count_mismatch" | "failed";
-export class HomeStoreError extends Error {
-  constructor(public code: HomeStoreErrorCode, message?: string) {
-    super(message ?? code);
-  }
-}
+export class HomeStoreError extends DomainError<HomeStoreErrorCode> {}
 
 export interface HomeRecord {
   rooms_count: number;
   layout: HomeLayoutDoc;
   revision: number;
-  mailbox: [number, number];
 }
 
 export interface HomesStore {

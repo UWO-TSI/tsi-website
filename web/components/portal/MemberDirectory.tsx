@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { Search, SlidersHorizontal, SearchX, Loader2 } from "lucide-react";
 import MemberCard from "./MemberCard";
+import { CLASS_META } from "./classIdentity";
 import { TIER_COLORS } from "./types";
 import type { DirectoryMember, Tier } from "@/lib/supabase/types";
 
@@ -129,10 +130,7 @@ export default function MemberDirectory() {
               style={{ height: "28px", padding: "0 8px", fontSize: "12px", borderRadius: "8px", background: "var(--color-surface)", border: classFilter !== "all" ? "1px solid var(--color-brand-blue)" : "1px solid var(--gray-700)", color: classFilter !== "all" ? "var(--color-text-main)" : "var(--color-text-muted)" }}
             >
               <option value="all">All classes</option>
-              <option value="Warrior">Warrior</option>
-              <option value="Mage">Mage</option>
-              <option value="Healer">Healer</option>
-              <option value="Rogue">Rogue</option>
+              {Object.keys(CLASS_META).map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
           <div className="mb-3">

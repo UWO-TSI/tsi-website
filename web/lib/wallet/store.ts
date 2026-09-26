@@ -1,13 +1,10 @@
 import type { ShopItem } from "./rules";
+import { DomainError } from "@/lib/result";
 
 export type EconomyErrorCode =
   | "unavailable" | "insufficient" | "not_found" | "not_for_sale" | "already_owned" | "bad_qty" | "bad_price" | "sold_out"
   | "not_sellable" | "insufficient_items" | "too_many_open" | "already_resolved" | "forbidden" | "not_owned" | "no_slot" | "failed";
-export class EconomyError extends Error {
-  constructor(public code: EconomyErrorCode, message?: string) {
-    super(message ?? code);
-  }
-}
+export class EconomyError extends DomainError<EconomyErrorCode> {}
 
 export interface LedgerEntry {
   currency: "coins" | "gems";

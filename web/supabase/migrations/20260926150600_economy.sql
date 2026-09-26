@@ -172,10 +172,8 @@ CREATE TABLE IF NOT EXISTS sell_prices (
   PRIMARY KEY (category, rarity)
 );
 ALTER TABLE sell_prices ENABLE ROW LEVEL SECURITY;
+-- Read-only: the shop shows lib/wallet/catalogue.ts SELL_PRICES, which the seed below mirrors.
 CREATE POLICY "Sell prices readable" ON sell_prices FOR SELECT USING ((select auth.role()) = 'authenticated');
-CREATE POLICY "Sell prices writable by T1/T2" ON sell_prices
-  FOR ALL USING ((SELECT tier FROM profiles WHERE id = (select auth.uid())) IN (1, 2))
-  WITH CHECK ((SELECT tier FROM profiles WHERE id = (select auth.uid())) IN (1, 2));
 
 -- ─── Merch reservations (row 47): reserve stock + Gems, campus pickup ───────
 CREATE TABLE IF NOT EXISTS merch_reservations (
@@ -406,7 +404,7 @@ DO $$ BEGIN
 END $$;
 
 -- ─── Seed (web/lib/wallet/catalogue.ts) ─────────────────────────────────────
--- BEGIN GENERATED ECONOMY SEED (web/scripts/gen-economy-seed.mjs)
+-- BEGIN GENERATED ECONOMY SEED (web/scripts/gen-seeds.mjs)
 INSERT INTO shop_items (slug, display_name, category, description, price_coins, tc_price, tier, slot, special_pool, stackable, stock, catalogue_ref, position) VALUES
   ('rod-basic', 'Basic rod', 'tool', 'A sturdy starter rod.', 100, NULL, 'basic', 'rod', FALSE, FALSE, NULL, NULL, 1),
   ('rod-cedar', 'Cedar rod', 'tool', 'Lighter, and a little lucky.', 400, NULL, 'mid', 'rod', FALSE, FALSE, NULL, 'rod_cedar', 2),
@@ -482,8 +480,6 @@ ON CONFLICT (category, rarity) DO NOTHING;
 INSERT INTO economy_settings (key, value) VALUES
   ('daily_gift_coins', 10),
   ('event_attendance_coins', 50),
-  ('special_count', 3),
-  ('special_discount_pct', 20),
   ('max_open_merch', 3)
 ON CONFLICT (key) DO NOTHING;
 -- END GENERATED ECONOMY SEED

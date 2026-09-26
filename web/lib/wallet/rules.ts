@@ -5,6 +5,8 @@
  */
 import { ROSTER } from "@/lib/collections/roster";
 import { FISH } from "@/lib/game/fishing";
+import { fnv1a, seededRandom } from "@/lib/game/weatherSystem";
+import { torontoParts } from "@/lib/time";
 import { CATALOGUE, SELL_PRICES, SETTINGS, type ShopCategory, type Slot, type Tier } from "./catalogue";
 
 export interface ShopItem {
@@ -30,26 +32,7 @@ export interface ShopItem {
 
 /** YYYY-MM-DD in America/Toronto. */
 export function torontoDay(now: Date): string {
-  return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Toronto", year: "numeric", month: "2-digit", day: "2-digit" }).format(now);
-}
-
-function hash(str: string): number {
-  let h = 2166136261;
-  for (let i = 0; i < str.length; i++) {
-    h ^= str.charCodeAt(i);
-    h = Math.imul(h, 16777619);
-  }
-  return h >>> 0;
-}
-function rng(seed: number) {
-  let a = seed;
-  return () => {
-    a = (a + 0x6d2b79f5) >>> 0;
-    let t = a;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
+  return torontoParts(now).date;
 }
 
 export function isOnSale(item: ShopItem, now: Date): boolean {
@@ -71,7 +54,7 @@ export interface Special {
  */
 export function dailySpecials(items: ShopItem[], day: string, count: number = SETTINGS.special_count, pct: number = SETTINGS.special_discount_pct): Special[] {
   const pool = items.filter((i) => i.special_pool && i.active && i.price_coins !== null).sort((a, b) => a.slug.localeCompare(b.slug));
-  const r = rng(hash(`specials:${day}`));
+  const r = seededRandom(fnv1a(`specials:${day}`));
   const picked = [...pool];
   for (let i = picked.length - 1; i > 0; i--) {
     const j = Math.floor(r() * (i + 1));

@@ -23,7 +23,3 @@ export async function syncGoalsThrottled(store: ProgressionStore, now: Date, for
   }
   return { credited, skipped };
 }
-
-export function resetSyncThrottle(): void {
-  lastSync.clear();
-}

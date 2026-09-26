@@ -304,6 +304,13 @@ export function seededRandom(seed: number): () => number {
   };
 }
 
+/** 32-bit FNV-1a of a string (unsigned); the seed for `seededRandom` and the game's stable picks. */
+export function fnv1a(str: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < str.length; i++) h = Math.imul(h ^ str.charCodeAt(i), 16777619);
+  return h >>> 0;
+}
+
 /** Stable seed for a calendar day, matching `weatherForDate`'s key. */
 export function daySeed(d: Date): number {
   return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();

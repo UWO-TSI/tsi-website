@@ -2,15 +2,12 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Family } from "@/lib/oracle/engine";
 import type { MissionProgress } from "./missions";
 import { ZERO_STATS, type StatBlock } from "./progression";
+import { raisePg } from "@/lib/result";
 import { CombatError, type CombatErrorCode, type CombatStore, type ProgressRow } from "./store";
 
 type Row = Record<string, unknown>;
 const CODES: CombatErrorCode[] = ["insufficient", "not_found", "not_owned", "needs_reset", "not_enough_points", "level_too_low", "wrong_family", "no_family", "cooldown", "not_ready", "kill_xp_cap", "unknown_enemy", "unknown_mission", "bad_hits"];
-function raise(error: { code?: string; message?: string } | null): never {
-  const msg = error?.message ?? "";
-  if (["42P01", "PGRST205", "PGRST202", "42703", "42883"].includes(error?.code ?? "") || /does not exist|schema cache/i.test(msg)) throw new CombatError("unavailable", msg);
-  throw new CombatError([...CODES].sort((a, b) => b.length - a.length).find((c) => msg.includes(c)) ?? "failed", msg);
-}
+const raise = (error: { code?: string; message?: string } | null): never => raisePg(error, CODES);
 const first = (d: unknown) => ((Array.isArray(d) ? d[0] : d) ?? {}) as Row;
 const xpRes = (r: Row) => ({ xp: Number(r.xp), level: Number(r.level), levelled_up: r.levelled_up === true, replayed: r.replayed === true });
 

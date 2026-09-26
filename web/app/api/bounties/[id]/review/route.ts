@@ -101,6 +101,7 @@ export async function PATCH(
         xpType: "bounty",
         referenceId: id,
         description: `Bounty completed: ${id}`,
+        key: `bounty:${id}`,
       });
     }
   }

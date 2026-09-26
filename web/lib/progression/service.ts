@@ -14,7 +14,8 @@ import {
 import { goalCycle, goalPercent, monumentStage, planContribution, type PlanRejection } from "./goals";
 import { noteRateLimit, RATE_WINDOW_MS, validateNote } from "./letters";
 import { itemDeliveryKind } from "./items";
-import { StoreError, type MemberFacts, type ProgressionStore } from "./store";
+import { DomainError } from "@/lib/result";
+import type { MemberFacts, ProgressionStore } from "./store";
 import type { ClubGoal, DeliveryKind, GoalProgressView, ProgressionState } from "./types";
 
 export type ServiceResult<T> = { ok: true; data: T } | { ok: false; status: number; error: string; code?: string };
@@ -22,7 +23,7 @@ export type ServiceResult<T> = { ok: true; data: T } | { ok: false; status: numb
 const fail = (status: number, error: string, code?: string) => ({ ok: false as const, status, error, code });
 
 export function storeFailure(err: unknown): { ok: false; status: number; error: string; code?: string } {
-  if (err instanceof StoreError) {
+  if (err instanceof DomainError) {
     if (err.code === "unavailable") return fail(503, "Progression isn't available yet.", "unavailable");
     if (err.code === "cap_exceeded") return fail(409, "You've given the most this goal accepts from one member. Thank you!", "cap_reached");
     if (err.code === "insufficient") return fail(409, "You don't have enough to deliver that.", "insufficient");
@@ -244,7 +245,7 @@ export async function syncRealActivity(store: ProgressionStore, goal: ClubGoal, 
         totals.credited_points += res.credited_points;
       }
     } catch (err) {
-      if (err instanceof StoreError && err.code === "cap_exceeded") {
+      if (err instanceof DomainError && err.code === "cap_exceeded") {
         skipped++;
         continue;
       }

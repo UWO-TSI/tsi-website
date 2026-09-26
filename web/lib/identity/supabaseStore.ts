@@ -1,15 +1,12 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Family } from "@/lib/oracle/engine";
 import { readSettings } from "./settings";
-import { IdentityError, type Attempt, type IdentityErrorCode, type IdentityStore } from "./store";
+import { raisePg } from "@/lib/result";
+import type { Attempt, IdentityErrorCode, IdentityStore } from "./store";
 
 type Row = Record<string, unknown>;
 const CODES: IdentityErrorCode[] = ["name_taken", "too_soon", "forbidden", "cooldown", "insufficient", "not_found", "incomplete"];
-function raise(error: { code?: string; message?: string } | null): never {
-  const msg = error?.message ?? "";
-  if (["42P01", "PGRST205", "PGRST202", "42703", "42883"].includes(error?.code ?? "") || /does not exist|schema cache/i.test(msg)) throw new IdentityError("unavailable", msg);
-  throw new IdentityError(CODES.find((c) => msg.includes(c)) ?? "failed", msg);
-}
+const raise = (error: { code?: string; message?: string } | null): never => raisePg(error, CODES);
 const first = (d: unknown) => ((Array.isArray(d) ? d[0] : d) ?? {}) as Row;
 const toAttempt = (r: Row): Attempt => ({
   id: String(r.id), member_id: String(r.member_id), item_order: (r.item_order as string[]) ?? [], status: r.status as Attempt["status"], fee_paid: Number(r.fee_paid ?? 0),

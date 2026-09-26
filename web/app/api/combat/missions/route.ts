@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
-import { combatContext } from "@/lib/combat/deps";
+import { supabaseCombatStore } from "@/lib/combat/supabaseStore";
 import { listMissions } from "@/lib/combat/service";
-import { jsonResult } from "@/lib/server/memberContext";
+import { jsonResult, withStore } from "@/lib/server/memberContext";
 
 // GET /api/combat/missions: the board, with your open progress and cooldowns.
 export async function GET() {
-  const ctx = await combatContext();
+  const ctx = await withStore(supabaseCombatStore);
   if (ctx instanceof NextResponse) return ctx;
   return jsonResult(await listMissions(ctx.store, ctx.userId, ctx.now), "missions");
 }

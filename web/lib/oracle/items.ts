@@ -117,5 +117,3 @@ export const TIE_BREAKERS: TieBreaker[] = [
   t("jp-t3", "JP", "A to-do list is…", ["a promise", "J"], ["a suggestion", "P"]),
   t("jp-t4", "JP", "You prefer things…", ["settled", "J"], ["open", "P"]),
 ];
-
-export const ITEM_COUNT = STATEMENTS.length;

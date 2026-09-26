@@ -6,6 +6,8 @@
 import { FISH, fishingPool, type FishDef } from "./fishing";
 import { canHook, castLuck, type RodTier } from "./rods";
 import type { WaterType } from "./fishingSpots";
+import { fnv1a } from "./weatherSystem";
+import { torontoParts } from "@/lib/time";
 import { ROSTER, RARITY_RANK, type Biome, type Rarity, type Species } from "@/lib/collections/roster";
 import { availableAt, type WorldMoment } from "@/lib/collections/logic";
 
@@ -71,20 +73,13 @@ export function bugReaction(distance: number, playerSpeed: number, rarity: Rarit
 
 /** Toronto wall-clock hour key, e.g. "2026-09-24T14". */
 export function hourKey(date: Date): string {
-  const parts = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Toronto", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", hourCycle: "h23" }).formatToParts(date);
-  const get = (t: string) => parts.find(p => p.type === t)?.value ?? "00";
-  return `${get("year")}-${get("month")}-${get("day")}T${get("hour")}`;
+  return torontoParts(date).hourKey;
 }
 /** A harvested node or caught bug slot returns at the next real hour, for that player only. */
 export function nodeAvailable(harvestedHour: string | null | undefined, now: Date): boolean {
   return !harvestedHour || harvestedHour !== hourKey(now);
 }
 
-function hash(text: string): number {
-  let h = 2166136261;
-  for (let i = 0; i < text.length; i++) { h ^= text.charCodeAt(i); h = Math.imul(h, 16777619); }
-  return (h >>> 0) / 4294967296;
-}
 const RARITY_WEIGHT: Record<Rarity, number> = { common: 60, uncommon: 25, rare: 10, epic: 4, legendary: 1 };
 
 /**
@@ -96,7 +91,7 @@ export function rollNode(member: string, nodeId: string, hour: string, biomes: r
   const pool = ROSTER.filter(s => biomes.includes(s.biome) && s.tool !== "rod" && (!categories || categories.includes(s.category)) && availableAt(s, moment));
   if (!pool.length) return null;
   const total = pool.reduce((s, sp) => s + RARITY_WEIGHT[sp.rarity], 0);
-  let r = hash(`${member}:${nodeId}:${hour}`) * total;
+  let r = (fnv1a(`${member}:${nodeId}:${hour}`) / 4294967296) * total;
   for (const sp of pool) { r -= RARITY_WEIGHT[sp.rarity]; if (r <= 0) return sp; }
   return pool[pool.length - 1];
 }

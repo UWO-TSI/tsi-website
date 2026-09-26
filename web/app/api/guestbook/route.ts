@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { containsProfanity } from "@/lib/moderation/profanity";
 
 // ─── Guestbook API (sprint E6) ──────────────────────────────────────────────
 // GET  /api/guestbook       — last 20 non-hidden entries, joined with profile.
@@ -11,30 +12,6 @@ const LIST_LIMIT = 20;
 const MAX_MESSAGE_LEN = 200;
 const RATE_LIMIT_COUNT = 5;
 const RATE_LIMIT_WINDOW_MS = 24 * 60 * 60 * 1000;
-
-// Same blocklist pattern as /api/npc/chat. Caught at the door before INSERT.
-const PROFANITY_BLOCKLIST = [
-  "fuck",
-  "shit",
-  "bitch",
-  "asshole",
-  "bastard",
-  "cunt",
-  "dick",
-  "pussy",
-  "slut",
-  "whore",
-  "fag",
-  "faggot",
-  "nigger",
-  "nigga",
-  "retard",
-  "tranny",
-  "kike",
-  "spic",
-  "chink",
-  "gook",
-];
 
 // In-memory rate limit: resets per server-instance / cold start. Acceptable
 // for a low-volume admin-tier signing surface; upgrade to a durable store if
@@ -54,14 +31,6 @@ function checkRateLimit(userId: string): boolean {
   if (entry.count >= RATE_LIMIT_COUNT) return false;
   entry.count += 1;
   return true;
-}
-
-function containsProfanity(message: string): boolean {
-  const lowered = message.toLowerCase();
-  return PROFANITY_BLOCKLIST.some((bad) => {
-    const re = new RegExp(`\\b${bad}\\b`, "i");
-    return re.test(lowered);
-  });
 }
 
 interface EntryRow {

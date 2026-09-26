@@ -157,6 +157,7 @@ export async function POST(request: Request) {
       coinType: "earn_achievement",
       xpType: "achievement",
       description: "Onboarding completed — welcome bonus!",
+      key: "onboarding",
     });
   }
 

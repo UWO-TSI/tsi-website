@@ -4,7 +4,7 @@ import type { Species } from "./roster";
 const q = (v: string | null) => (v === null ? "NULL" : `'${v.replace(/'/g, "''")}'`);
 const arr = (v: (string | number)[], type: "text" | "int") => (v.length ? `ARRAY[${v.map((x) => (type === "text" ? q(String(x)) : String(x))).join(",")}]::${type}[]` : `'{}'::${type}[]`);
 
-export const SEED_BEGIN = "-- BEGIN GENERATED ROSTER (web/scripts/gen-collections-seed.mjs)";
+export const SEED_BEGIN = "-- BEGIN GENERATED ROSTER (web/scripts/gen-seeds.mjs)";
 export const SEED_END = "-- END GENERATED ROSTER";
 
 export function seedSql(roster: Species[]): string {

@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { listLetters, markRead, reportLetter, sendLetter, ProgressionRequestError } from "@/lib/progression/client";
+import { listLetters, markRead, reportLetter, sendLetter } from "@/lib/progression/client";
+import { ApiError } from "@/lib/apiClient";
 import { NOTE_MAX_LEN, SUBJECT_MAX_LEN } from "@/lib/progression/letters";
 import { refreshProgression } from "@/lib/progression/useProgression";
 import type { LetterView } from "@/lib/progression/types";
@@ -50,7 +51,7 @@ export function LettersBody({ transport = lettersTransport, systemOnly = false }
       setLetters(rows);
     } catch (err) {
       setLetters([]);
-      setError(err instanceof ProgressionRequestError && err.status === 401 ? "Sign in to read your mail." : "The mailbox is empty for now.");
+      setError(err instanceof ApiError && err.status === 401 ? "Sign in to read your mail." : "The mailbox is empty for now.");
     }
   }, [transport]);
 
@@ -180,7 +181,7 @@ function LetterComposer({ transport, to: initialTo, onDone }: { transport: Lette
       setMessage({ kind: "ok", text: `Sent to ${to.display_name}.` });
       setTimeout(onDone, 700);
     } catch (err) {
-      setMessage({ kind: "err", text: err instanceof ProgressionRequestError ? err.message : "Couldn't send. Your note is still here." });
+      setMessage({ kind: "err", text: err instanceof ApiError ? err.message : "Couldn't send. Your note is still here." });
     } finally {
       setBusy(false);
     }

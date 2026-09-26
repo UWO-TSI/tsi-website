@@ -1,12 +1,9 @@
 import type { Family } from "@/lib/oracle/engine";
 import type { AccountSettings } from "./settings";
+import { DomainError } from "@/lib/result";
 
 export type IdentityErrorCode = "unavailable" | "name_taken" | "too_soon" | "forbidden" | "cooldown" | "insufficient" | "not_found" | "incomplete" | "failed";
-export class IdentityError extends Error {
-  constructor(public code: IdentityErrorCode, message?: string) {
-    super(message ?? code);
-  }
-}
+export class IdentityError extends DomainError<IdentityErrorCode> {}
 
 export interface IdentityRow {
   world_name: string | null;

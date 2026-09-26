@@ -9,22 +9,7 @@ import { evaluateChapters, currentObjective, unlockedRegions, type AdvanceAction
 import { DEFAULT_CHAPTERS, DEFAULT_GOALS } from "./defaults";
 import { goalCycle } from "./goals";
 import type { DeliveryKind, GoalProgressView, LetterView, ProgressionState } from "./types";
-
-export class ProgressionRequestError extends Error {
-  constructor(message: string, public status: number, public code?: string) {
-    super(message);
-  }
-}
-
-async function call<T>(url: string, init: RequestInit | undefined, key: string): Promise<T> {
-  const res = await fetch(url, { ...init, headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) } });
-  const body = (await res.json().catch(() => null)) as Record<string, unknown> | null;
-  if (!res.ok || !body || body.ok !== true) {
-    const message = body && typeof body.error === "string" ? body.error : "Request failed";
-    throw new ProgressionRequestError(message, res.status, body && typeof body.code === "string" ? body.code : undefined);
-  }
-  return body[key] as T;
-}
+import { ApiError, apiCall } from "@/lib/apiClient";
 
 export function previewState(now = new Date()): ProgressionState {
   const goals: GoalProgressView[] = DEFAULT_GOALS.map((g, i) => ({
@@ -42,17 +27,16 @@ export function previewState(now = new Date()): ProgressionState {
 
 export async function fetchState(): Promise<ProgressionState> {
   try {
-    return await call<ProgressionState>("/api/progression/state", undefined, "state");
+    return await apiCall<ProgressionState>("/api/progression/state", "state");
   } catch {
     return previewState();
   }
 }
 
 export const advance = (chapter_slug: string, action: AdvanceAction) =>
-  call<ProgressionState>("/api/progression/chapters/advance", { method: "POST", body: JSON.stringify({ chapter_slug, action }) }, "state");
+  apiCall<ProgressionState>("/api/progression/chapters/advance", "state", { chapter_slug, action });
 
-export const setHudMuted = (hud_muted: boolean) =>
-  call<boolean>("/api/progression/prefs", { method: "POST", body: JSON.stringify({ hud_muted }) }, "hud_muted");
+export const setHudMuted = (hud_muted: boolean) => apiCall<boolean>("/api/progression/prefs", "hud_muted", { hud_muted });
 
 export interface ContributionReceipt {
   replayed: boolean;
@@ -64,11 +48,6 @@ export interface ContributionReceipt {
   goal: GoalProgressView;
 }
 
-export function newIdempotencyKey(): string {
-  const c = globalThis.crypto;
-  return c?.randomUUID ? c.randomUUID() : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
-}
-
 /**
  * Deliver to a goal. Pass the same key when retrying the same delivery;
  * the server credits and charges it once.
@@ -77,19 +56,17 @@ export async function deliver(input: { goal_slug: string; kind: DeliveryKind; am
   let lastError: unknown;
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
-      return await call<ContributionReceipt>("/api/progression/contribute", { method: "POST", body: JSON.stringify({ ...input, idempotency_key: key }) }, "contribution");
+      return await apiCall<ContributionReceipt>("/api/progression/contribute", "contribution", { ...input, idempotency_key: key });
     } catch (err) {
       lastError = err;
       // Only network failures and 5xx are worth a same-key retry.
-      if (err instanceof ProgressionRequestError && err.status < 500) throw err;
+      if (err instanceof ApiError && err.status < 500) throw err;
     }
   }
   throw lastError;
 }
 
-export const listLetters = () => call<LetterView[]>("/api/progression/letters", undefined, "letters");
-export const sendLetter = (to: string, subject: string, body: string) =>
-  call<{ id: string }>("/api/progression/letters", { method: "POST", body: JSON.stringify({ to, subject, body }) }, "letter");
-export const markRead = (id: string) => call<unknown>(`/api/progression/letters/${id}`, { method: "PATCH", body: JSON.stringify({ action: "read" }) }, "ok");
-export const reportLetter = (id: string, reason: string) =>
-  call<unknown>(`/api/progression/letters/${id}`, { method: "PATCH", body: JSON.stringify({ action: "report", reason }) }, "ok");
+export const listLetters = () => apiCall<LetterView[]>("/api/progression/letters", "letters");
+export const sendLetter = (to: string, subject: string, body: string) => apiCall<{ id: string }>("/api/progression/letters", "letter", { to, subject, body });
+export const markRead = (id: string) => apiCall<unknown>(`/api/progression/letters/${id}`, "ok", { action: "read" }, "PATCH");
+export const reportLetter = (id: string, reason: string) => apiCall<unknown>(`/api/progression/letters/${id}`, "ok", { action: "report", reason }, "PATCH");

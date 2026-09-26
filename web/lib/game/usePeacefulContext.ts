@@ -1,11 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { WorldMoment } from "@/lib/collections/logic";
 import type { IslandWeather } from "./islandWeather";
-import { torontoHour } from "./islandTime";
+import { torontoParts } from "@/lib/time";
 import { bestOwnedRod, rodByTier, type RodTier } from "./rods";
-import { localGear } from "./gear";
+import { httpEconomyTransport } from "@/lib/wallet/transport";
 import { installCollectionsDemo } from "./collectionsDemo";
 
 installCollectionsDemo();
@@ -30,13 +30,15 @@ export function usePeacefulContext(weather: IslandWeather, now: number): { momen
       return id;
     } catch { return "local-guest"; }
   });
-  const [rod] = useState(() => {
-    const dev = process.env.NODE_ENV !== "production" && typeof window !== "undefined" ? Number(new URLSearchParams(window.location.search).get("rod")) : 0;
-    return dev ? rodByTier(dev) : bestOwnedRod(typeof window === "undefined" ? [] : localGear());
-  });
-  const date = new Date(now);
-  const hour = Math.floor(torontoHour(date));
-  const month = date.getMonth() + 1;
+  const [devRod] = useState(() => (process.env.NODE_ENV !== "production" && typeof window !== "undefined" ? Number(new URLSearchParams(window.location.search).get("rod")) : 0));
+  const [owned, setOwned] = useState<string[]>([]);
+  useEffect(() => {
+    if (devRod) return;
+    // Rods are shop items in the server inventory (tools); signed out keeps the starter rod.
+    httpEconomyTransport.inventory().then(inv => setOwned((inv.groups.tools ?? []).flatMap(r => r.item.catalogue_ref ?? [])), () => {});
+  }, [devRod]);
+  const rod = devRod ? rodByTier(devRod) : bestOwnedRod(owned);
+  const { hour, month } = torontoParts(new Date(now));
   const moment = useMemo(() => ({ hour: hour + 0.5, month, weather: rosterWeather(weather) }), [hour, month, weather]);
   return { moment, member, rod };
 }

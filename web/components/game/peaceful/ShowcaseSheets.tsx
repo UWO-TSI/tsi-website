@@ -8,6 +8,7 @@
 import { useEffect, useState } from "react";
 import type { Trophy, JournalEntryKnown } from "@/lib/collections/logic";
 import { CATEGORIES } from "@/lib/collections/roster";
+import { ApiError, apiCall } from "@/lib/apiClient";
 import { fetchJournalPage } from "../JournalPages";
 import styles from "../DefaultIslandWorld.module.css";
 
@@ -16,7 +17,7 @@ export function TrophySheet({ open, onClose }: { open: boolean; onClose: () => v
   useEffect(() => {
     if (!open) return;
     let alive = true;
-    fetch("/api/collections/trophies").then(r => r.json()).then(b => { if (alive) setData(b?.ok ? b.case : "error"); }).catch(() => alive && setData("error"));
+    apiCall<{ week_start: string; trophies: Trophy[] }>("/api/collections/trophies", "case").then(c => alive && setData(c), () => alive && setData("error"));
     return () => { alive = false; };
   }, [open]);
   if (!open) return null;
@@ -45,9 +46,7 @@ export function ShowcaseSheet({ open, onClose }: { open: boolean; onClose: () =>
   useEffect(() => {
     if (!open) return;
     let alive = true;
-    fetch("/api/collections/showcase").then(r => r.json()).then(b => {
-      if (alive && b?.ok) setSlots((b.showcase as ({ key: string } | null)[]).map(s => s?.key ?? null));
-    }).catch(() => {});
+    apiCall<({ key: string } | null)[]>("/api/collections/showcase", "showcase").then(s => alive && setSlots(s.map(x => x?.key ?? null)), () => {});
     void Promise.all(CATEGORIES.map(fetchJournalPage)).then(pages => {
       if (alive) setFinds(pages.flatMap(p => (p?.entries ?? []).filter((e): e is JournalEntryKnown => e.discovered)));
     });
@@ -57,9 +56,9 @@ export function ShowcaseSheet({ open, onClose }: { open: boolean; onClose: () =>
   const byKey = new Map(finds.map(f => [f.key, f]));
   const save = async (next: (string | null)[]) => {
     setSlots(next);
-    const res = await fetch("/api/collections/showcase", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ items: next }) }).catch(() => null);
-    const body = await res?.json().catch(() => null);
-    setNote(res?.ok && body?.ok ? "Showcase saved to your profile." : body?.error ?? "Couldn't save the showcase.");
+    setNote(await apiCall("/api/collections/showcase", "showcase", { items: next }, "PUT").then(
+      () => "Showcase saved to your profile.",
+      (err) => (err instanceof ApiError && err.body?.error ? err.message : "Couldn't save the showcase.")));
   };
   return <section className={styles.sheet} role="dialog" aria-modal="false" aria-labelledby="showcase-title" data-testid="showcase-sheet">
     <header><h2 id="showcase-title">Your profile showcase</h2><button onClick={onClose} aria-label="Close">×</button></header>

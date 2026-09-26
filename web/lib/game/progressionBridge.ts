@@ -4,16 +4,15 @@
  * ─── World ⇄ progression data (island agent) ─────────────────────────────
  *
  * The island renders progression (plaza monument, ceremony, mailbox, notice
- * board, minimap objective, chapter-1 prompts) from ONE contract:
- * `ProgressionWorldState`. Live data comes from the systems agent's
- * `@/lib/progression/worldBridge` (anchors resolved to village XZ here).
+ * board, minimap objective, chapter-1 prompts) from `WorldProgression`
+ * (`@/lib/progression/worldBridge`), with anchors resolved to village XZ here.
  *
  * Dev overrides (not in production): `?goal=` is applied by the systems
  * agent's store (lib/progression/devOverride.ts); `?ceremony=1` here forces
  * the completion ceremony for the latest goal.
  */
 import { useCallback, useEffect, useState } from "react";
-import { useProgressionWorldSource } from "@/lib/progression/worldBridge";
+import { useProgressionWorldSource, type WorldGoalId, type WorldProgression } from "@/lib/progression/worldBridge";
 import { useProgression, setProgressionState } from "@/lib/progression/useProgression";
 import { advance } from "@/lib/progression/client";
 import type { ObjectiveAnchor } from "@/lib/progression/types";
@@ -22,36 +21,9 @@ import { installIslandProgressionDemo } from "./progressionDemo";
 
 installIslandProgressionDemo();
 
-export type WorldGoalId = "cafe" | "museum";
-export interface WorldGoal {
-  id: WorldGoalId;
-  label: string;
-  /** 0..1 of the goal target. */
-  progress: number;
-  completed: boolean;
-}
-export interface WorldObjective {
-  /** One line under the minimap. */
-  text: string;
-  /** World XZ of the minimap marker, or null for no marker. */
-  target: [number, number] | null;
-}
-export interface ProgressionWorldState {
-  /** The club goal the plaza monument is building toward (null: none active). */
-  activeGoal: WorldGoal | null;
-  /** Goals already completed; their landmarks open (boards off). */
-  completedGoals: readonly WorldGoalId[];
-  objective: WorldObjective;
-  unreadLetters: number;
-}
-
-/** Offline fixture (tests / previews); the world reads live state via useProgressionWorld. */
-export const STUB_STATE: ProgressionWorldState = {
-  activeGoal: { id: "cafe", label: "Reopen the café", progress: 0.3, completed: false },
-  completedGoals: [],
-  objective: { text: "Settle in: claim your plot at the clubhouse", target: [0, 6.3] },
-  unreadLetters: 1,
-};
+export type { WorldGoalId };
+/** A club goal on the monument; progress is 0..1 of its target. */
+type WorldGoal = NonNullable<WorldProgression["activeGoal"]>;
 
 /** Monument build stage 0–4 for the 0/25/50/75/100% milestones (row 182). */
 export function monumentStage(progress: number): 0 | 1 | 2 | 3 | 4 {
@@ -88,20 +60,16 @@ export function resolveAnchor(anchor: ObjectiveAnchor): [number, number] | null 
   }
 }
 
-function useProgressionSource() {
-  return useProgressionWorldSource(resolveAnchor);
-}
-
-export interface WorldProgressionView extends ProgressionWorldState {
+export interface WorldProgressionView extends Pick<WorldProgression, "activeGoal" | "completedGoals" | "unreadLetters" | "hudMuted" | "source"> {
+  /** One line under the minimap, and the world XZ of its marker (both empty when the HUD is muted). */
+  objective: { text: string; target: [number, number] | null };
   /** Goal whose ceremony is due (latest completion, or forced). */
   ceremonyGoal: WorldGoal | null;
   forceCeremony: boolean;
-  hudMuted: boolean;
-  source: "live" | "defaults";
 }
 
 export function useProgressionWorld(): WorldProgressionView {
-  const live = useProgressionSource();
+  const live = useProgressionWorldSource(resolveAnchor);
   const [force] = useState(() => process.env.NODE_ENV !== "production" && typeof window !== "undefined" && new URLSearchParams(window.location.search).get("ceremony") === "1");
   const forcedGoal = force ? (live.recentlyCompleted ?? (live.activeGoal ? { ...live.activeGoal, progress: 1, completed: true } : null)) : null;
   return {

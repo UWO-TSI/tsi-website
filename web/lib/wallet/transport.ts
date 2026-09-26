@@ -1,12 +1,8 @@
 /** Economy transport: /api/economy/* by default; in-memory for the dev harness. */
+import { apiCall } from "@/lib/apiClient";
 import type { InventoryView, ShopView, SellEntry, WalletView } from "./service";
 import type { Reservation } from "./store";
 
-export class EconomyRequestError extends Error {
-  constructor(message: string, public status: number, public code?: string) {
-    super(message);
-  }
-}
 export interface MerchView {
   gems: number;
   items: ShopView["tabs"]["merch"];
@@ -27,12 +23,7 @@ export interface EconomyTransport {
   resolve(id: string, action: "fulfil" | "cancel", note?: string): Promise<{ status: string; replayed: boolean }>;
 }
 
-async function call<T>(path: string, key: string, body?: unknown): Promise<T> {
-  const res = await fetch(`/api/economy/${path}`, body === undefined ? undefined : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-  const json = (await res.json().catch(() => null)) as Record<string, unknown> | null;
-  if (!res.ok || !json?.ok) throw new EconomyRequestError(typeof json?.error === "string" ? json.error : "Request failed", res.status, typeof json?.code === "string" ? json.code : undefined);
-  return json[key] as T;
-}
+const call = <T>(path: string, key: string, body?: unknown) => apiCall<T>(`/api/economy/${path}`, key, body);
 
 export const httpEconomyTransport: EconomyTransport = {
   wallet: () => call("wallet", "wallet"),
@@ -48,7 +39,3 @@ export const httpEconomyTransport: EconomyTransport = {
   adminReservations: (status) => call(`admin/merch${status ? `?status=${status}` : ""}`, "reservations"),
   resolve: (id, action, note) => call(`admin/merch/${id}`, "resolution", { action, note }),
 };
-
-export function newKey(): string {
-  return globalThis.crypto?.randomUUID ? globalThis.crypto.randomUUID() : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
-}

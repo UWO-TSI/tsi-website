@@ -3,7 +3,7 @@
  * existing cast/bite/reel loop. Each tier widens the bite window, slows how
  * fast the catch meter drains when the fish slips out ("line tension"), and
  * adds a small rare-catch bonus. Legendary fish need tier 4+. Tiers 2–3 are
- * the existing shop rods (gear.ts); 4–5 are crafted (crafting UI later).
+ * shop rods (lib/wallet/catalogue.ts); 4–5 are crafted (crafting UI later).
  */
 import type { Rarity } from "./fishing";
 
