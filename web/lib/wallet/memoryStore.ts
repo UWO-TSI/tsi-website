@@ -132,7 +132,7 @@ export function memoryEconomyStore(clock: () => Date = () => new Date()) {
     },
   };
   return {
-    store, items, ledger,
+    store, items, ledger, inventory,
     fund: (m: string, c: number, g = 0) => { coins.set(m, c); gems.set(m, g); },
     give: (m: string, key: string, n: number) => collections.set(`${m}:${key}`, (collections.get(`${m}:${key}`) ?? 0) + n),
     setTier: (m: string, t: number) => tiers.set(m, t),
