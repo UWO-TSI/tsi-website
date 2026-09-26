@@ -12,6 +12,7 @@ const ERRORS: Record<string, [number, string]> = {
   already_donated: [409, "Someone donated that first. You could sell yours instead."],
   not_owned: [409, "You need one in your pockets to donate it."],
   not_donatable: [422, "The museum doesn't collect that."],
+  rate_limited: [429, "That's plenty of those for this hour. Try again later."],
   failed: [500, "Something went wrong. Try again."],
 };
 function fail<T>(err: unknown): Result<T> {

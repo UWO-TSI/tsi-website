@@ -8,7 +8,7 @@ const MISSING = ["42P01", "PGRST205", "PGRST202", "42703", "42883"];
 function raise(error: { code?: string; message?: string } | null): never {
   const msg = error?.message ?? "";
   if (MISSING.includes(error?.code ?? "") || /does not exist|schema cache/i.test(msg)) throw new CollectionsError("unavailable", msg);
-  for (const c of ["already_donated", "not_owned", "not_donatable"] as const) if (msg.includes(c)) throw new CollectionsError(c);
+  for (const c of ["already_donated", "not_owned", "not_donatable", "rate_limited"] as const) if (msg.includes(c)) throw new CollectionsError(c);
   throw new CollectionsError("failed", msg);
 }
 const num = (v: unknown) => (v === null || v === undefined ? null : Number(v));

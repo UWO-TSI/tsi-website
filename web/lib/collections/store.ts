@@ -1,7 +1,7 @@
 import type { Donation, MemberItem, WeeklyBest } from "./logic";
 import type { Species } from "./roster";
 
-export type CollectionsErrorCode = "unavailable" | "already_donated" | "not_owned" | "not_donatable" | "failed";
+export type CollectionsErrorCode = "unavailable" | "already_donated" | "not_owned" | "not_donatable" | "rate_limited" | "failed";
 export class CollectionsError extends Error {
   constructor(public code: CollectionsErrorCode, message?: string) {
     super(message ?? code);
