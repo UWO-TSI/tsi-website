@@ -29,7 +29,8 @@ The coordinator (Claude) runs this without check-ins (David, 2026-09-26): verifi
 | Character art pass 2 (crafted wearables, real Stretch clip, beanie/cap/backpack/skirt fixes) | **Done, merged** (`f838efb8`) | Every craftable wearable is wearable |
 | Launch-readiness fixes (membership default/backfill, public tier 5, un-RSVP, atomic chapter rewards, launch runbook) | **Done, merged**: membership backfill (43 members / 272 public, rerun-safe), public = T5, un-RSVP, retry-safe chapter rewards, admin members editor via a T1/T2 server route, `specs/launch-runbook.md`; 915 tests | Fail-first tests; staging reruns pass |
 | Audio pass (sound on, settings, 12-block hourly music player, ambience, SFX map) | Running (branch `game/audio`, Sonnet to spread rate-limit load) | Chime and music play by default; blocks follow real time |
-| Phone companion, seasonal events, chapters 3–4, admin pass | Later waves | Per spec in `specs/` |
+| Phone companion (Study/Club/Me shell, 3D table view) | Running (branch `game/companion`, Sonnet) | Phone member can study, see club tools, profile, bag, journal, mail |
+| Seasonal events, chapters 3–4 check, admin pass (mark-member UI, merch staff screen, moderation queue, residents/recipes/events editors) | Later waves | Per spec in `specs/` |
 | Launch (Phase 4) | After all of the above | Member playtest, David's local review, migrations in one window |
 
 Waves run at most three code-writing agents at once (Mac memory). The account's session limit has stopped all agents twice; lighter, well-specified tasks run on Sonnet to spread the load, and agents commit early so an interruption loses little. Each area: spec in `specs/<area>.md`, one fresh agent, questions in `specs/<area>-questions.md`, coordinator review, merge.
