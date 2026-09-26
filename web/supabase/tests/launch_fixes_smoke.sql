@@ -10,8 +10,21 @@ DO $$ BEGIN
   ASSERT (SELECT membership || '/' || tier FROM profiles WHERE id = '00000000-0000-4000-8000-0000000001f3') = 'public/5', 'unreleased verdict is not hired';
   ASSERT (SELECT membership || '/' || tier FROM profiles WHERE id = '00000000-0000-4000-8000-0000000001f4') = 'member/4', 'whitelisted stays a member';
   ASSERT (SELECT membership || '/' || tier FROM profiles WHERE id = '00000000-0000-4000-8000-0000000001f5') = 'public/5', 'plain account becomes public T5';
+  ASSERT (SELECT membership || '/' || tier FROM profiles WHERE id = '00000000-0000-4000-8000-0000000001f6') = 'member/4', 'TETHOS-W26 sign-up stays a member (ruling 2026-09-26)';
   RAISE NOTICE 'launch 1 membership backfill ok';
 END $$;
+
+-- ─── 1b. A second run of 200000 changes nothing (marker), not even members marked since ─
+BEGIN;
+UPDATE profiles SET tier = 2 WHERE id = '00000000-0000-4000-8000-0000000001f4';
+SELECT membership FROM admin_set_membership('00000000-0000-4000-8000-0000000001f4', '00000000-0000-4000-8000-0000000001f5', 'member');
+\ir ../migrations/20260926200000_membership_launch.sql
+DO $$ BEGIN
+  ASSERT (SELECT membership || '/' || tier FROM profiles WHERE id = '00000000-0000-4000-8000-0000000001f5') = 'member/4', 'rerun demoted a member marked since';
+  ASSERT (SELECT count(*) FROM data_backfills WHERE key = 'membership_launch') = 1, 'backfill marker';
+  RAISE NOTICE 'launch 1b backfill rerun is a no-op ok';
+END $$;
+ROLLBACK;
 
 -- ─── 2. Sign-ups: public T5 unless whitelisted or an active invite code (200000) ─
 BEGIN;

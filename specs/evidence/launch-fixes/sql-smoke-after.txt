@@ -41,6 +41,9 @@ NOTICE:  phase1 3 invite codes ok
 NOTICE:  phase1 4 member badges ok
 ── launch_fixes_smoke.sql
 NOTICE:  launch 1 membership backfill ok
+NOTICE:  relation "data_backfills" already exists, skipping
+NOTICE:  membership backfill already applied, skipped
+NOTICE:  launch 1b backfill rerun is a no-op ok
 NOTICE:  launch 2 sign-up tiers ok
 NOTICE:  launch 3 admin membership ok
 NOTICE:  launch 4 un-RSVP ok

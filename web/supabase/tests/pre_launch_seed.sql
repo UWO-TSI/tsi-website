@@ -5,6 +5,8 @@ INSERT INTO auth.users (id, email) VALUES
   ('00000000-0000-4000-8000-0000000001f1', 'lf-staff@x'), ('00000000-0000-4000-8000-0000000001f2', 'lf-hired@x'),
   ('00000000-0000-4000-8000-0000000001f3', 'lf-drafted@x'), ('00000000-0000-4000-8000-0000000001f4', 'lf-listed@x'),
   ('00000000-0000-4000-8000-0000000001f5', 'lf-plain@x');
+INSERT INTO auth.users (id, email, raw_user_meta_data) VALUES
+  ('00000000-0000-4000-8000-0000000001f6', 'lf-w26@x', '{"invite_code":"tethos-w26"}');
 UPDATE profiles SET membership = 'member', tier = 4 WHERE email LIKE 'lf-%@x';
 UPDATE profiles SET tier = 3 WHERE id = '00000000-0000-4000-8000-0000000001f1';
 INSERT INTO member_email_whitelist (email) VALUES ('lf-listed@x');

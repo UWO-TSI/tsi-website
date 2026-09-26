@@ -3,23 +3,40 @@
 -- Follow-up to 20260926150700_identity (applied on staging, so not rewritten):
 -- identity grandfathered every existing profile as a member. Ruling 1: existing
 -- profiles are public unless staff (tier <= 3), hired through recruitment (a
--- released 'accepted' application) or whitelisted; T1/T2 mark anyone else
--- through POST /api/admin/members/:id/membership. Ruling 3: public accounts
--- are tier 5; members keep their tier.
--- Production at 2026-09-26 (read-only): 315 profiles -> 17 members (T1, T2,
--- 15 hired), 298 public.
--- Section 1 is a one-shot data backfill: apply this file once, at launch.
--- Re-running it demotes members T1/T2 have marked since.
+-- released 'accepted' application), whitelisted, or signed up with TETHOS-W26
+-- (the winter-2026 onboarding code for accepted members; ruling of 2026-09-26,
+-- later sign-ups with it are public because rotation deactivates it). T1/T2
+-- mark anyone else through POST /api/admin/members/:id/membership. Ruling 3:
+-- public accounts are tier 5; members keep their tier.
+-- Production at 2026-09-26 (read-only): 315 profiles -> 43 members, 272 public.
+-- Section 1 runs once: the data_backfills marker is written in the same
+-- transaction, so applying this file again never touches membership (it would
+-- otherwise demote members T1/T2 marked since).
 -- Test: web/supabase/tests/launch_fixes_smoke.sql (sections 1-3).
 
--- 1 ── Existing profiles ─────────────────────────────────────────────────────
-update public.profiles p
-   set membership = case
-         when p.tier <= 3
-           or exists (select 1 from public.applications a where a.user_id = p.id and a.status = 'accepted')
-           or exists (select 1 from public.member_email_whitelist w where w.email = lower(p.email))
-         then 'member' else 'public' end;
-update public.profiles set tier = 5 where membership = 'public' and tier = 4;
+-- 1 ── Existing profiles, once ───────────────────────────────────────────────
+create table if not exists public.data_backfills (
+  key text primary key,
+  applied_at timestamptz not null default now()
+);
+alter table public.data_backfills enable row level security;
+
+do $$
+begin
+  insert into public.data_backfills (key) values ('membership_launch') on conflict (key) do nothing;
+  if not found then
+    raise notice 'membership backfill already applied, skipped';
+    return;
+  end if;
+  update public.profiles p
+     set membership = case
+           when p.tier <= 3
+             or exists (select 1 from public.applications a where a.user_id = p.id and a.status = 'accepted')
+             or exists (select 1 from public.member_email_whitelist w where w.email = lower(p.email))
+             or exists (select 1 from auth.users u where u.id = p.id and upper(trim(u.raw_user_meta_data->>'invite_code')) = 'TETHOS-W26')
+           then 'member' else 'public' end;
+  update public.profiles set tier = 5 where membership = 'public' and tier = 4;
+end $$;
 
 -- 2 ── Sign-ups: 155000's body, plus tier 5 for public accounts ──────────────
 create or replace function public.handle_new_user()
