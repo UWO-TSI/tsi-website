@@ -30,6 +30,10 @@ NOTICE:  ownership buy after grant ok
 NOTICE:  ok: member cannot write avatar_config (profiles: avatar_config can only be changed by the server)
 NOTICE:  ownership avatar_config server-only ok
 ownership smoke ok
+── combat_content_smoke.sql
+NOTICE:  combat content ok
+NOTICE:  combat content: boss reward not callable by members ok
+NOTICE:  combat content: materials not callable by members ok
 ── phase1_regressions.sql
 NOTICE:  phase1 1 letters ok
 NOTICE:  phase1 2 attendance ok
