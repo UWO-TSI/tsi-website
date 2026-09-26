@@ -1,5 +1,5 @@
 // Regenerate the generated seeds in the game migration drafts from their TS
-// sources: collections roster, economy catalogue, combat content.
+// sources: collections roster, economy catalogue (and its ownership rows), combat content.
 // Run from web/: node scripts/gen-seeds.mjs
 import { readFileSync, writeFileSync } from "node:fs";
 import { createJiti } from "jiti";
@@ -14,6 +14,7 @@ for (const [path, { SEED_BEGIN, SEED_END }, seed] of [
   ["supabase/migrations/20260926150400_collections.sql", collections, collections.seedSql(ROSTER)],
   ["supabase/migrations/20260926150600_economy.sql", economy, economy.economySeedSql()],
   ["supabase/migrations/20260926150800_combat.sql", combat, combat.combatSeedSql()],
+  ["supabase/migrations/20260926180000_ownership.sql", { SEED_BEGIN: economy.OWNERSHIP_BEGIN, SEED_END: economy.OWNERSHIP_END }, economy.ownershipSeedSql()],
 ]) {
   const sql = readFileSync(path, "utf8");
   const start = sql.indexOf(SEED_BEGIN);

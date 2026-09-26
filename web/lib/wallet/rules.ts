@@ -7,7 +7,8 @@ import { ROSTER } from "@/lib/collections/roster";
 import { FISH } from "@/lib/game/fishing";
 import { fnv1a, seededRandom } from "@/lib/game/weatherSystem";
 import { torontoParts } from "@/lib/time";
-import { CATALOGUE, SELL_PRICES, SETTINGS, type ShopCategory, type Slot, type Tier } from "./catalogue";
+import { CATALOGUE, OWNERSHIP_ITEMS, onSale, SELL_PRICES, SETTINGS, type ShopCategory, type Slot, type Tier } from "./catalogue";
+import type { InventoryRow } from "./store";
 
 export interface ShopItem {
   id: string;
@@ -86,15 +87,22 @@ export function sellPrice(category: string, rarity: string, table: Record<string
   return table[category]?.[rarity] ?? null;
 }
 
-/** Catalogue rows as the memory store / previews see them. */
+/** Catalogue rows as the memory store / previews see them (033's seed, then the ownership migration's). */
 export function seedItems(): ShopItem[] {
-  return CATALOGUE.map((c, i) => ({
+  return [...CATALOGUE, ...OWNERSHIP_ITEMS].map((c, i) => ({
     ...c,
     id: `00000000-0000-4000-8000-0000000e${String(i + 1).padStart(4, "0")}`,
-    active: true,
+    active: onSale(c),
     available_from: null,
     available_until: null,
   }));
+}
+
+/** What inventory rows unlock, by catalogue_ref (character part, `hair:<i>`, homes piece, finish) → quantity. */
+export function ownedCounts(rows: InventoryRow[]): Map<string, number> {
+  const out = new Map<string, number>();
+  for (const r of rows) if (r.item.catalogue_ref) out.set(r.item.catalogue_ref, (out.get(r.item.catalogue_ref) ?? 0) + r.qty);
+  return out;
 }
 
 export const TAB_OF: Record<string, "tools" | "outfits" | "furniture" | "merch"> = {

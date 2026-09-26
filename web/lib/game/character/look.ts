@@ -171,18 +171,39 @@ export function seeded(seed: number): () => number {
 }
 export const hashSeed = (s: string) => Array.from(s).reduce((h, c) => (Math.imul(h, 31) + c.charCodeAt(0)) >>> 0, 7);
 
-/** Creator "surprise me" and the skip default (row 142): a complete random look. */
-export function randomLook(rand: () => number = Math.random): CharacterLook {
+// ── Ownership (coordinator ruling on audit item 22) ─────────────────────────
+/** Identity is free: skin, face, every hair style and the first six hair colours. The other six are shop dyes. */
+export const FREE_HAIR_COLOURS = 6;
+/** Clothes every account starts with, granted once through the inventory (20260926180000_ownership.sql). */
+export const STARTER_PARTS: readonly string[] = ["top_tee", "top_hoodie", "top_stripe_ls", "bottom_shorts", "bottom_trousers", "bottom_joggers", "onepiece_raincape", "shoes_slipon", "shoes_sneakers"];
+/** Inventory `catalogue_ref` of a hair dye. */
+export const dyeRef = (hair: number) => `hair:${hair}`;
+/** Inventory ref that unlocks a part (a variant counts as its base part); null for free hair styles and face items. */
+export function partRef(id: string): string | null {
+  const p = PART_BY_ID.get(id);
+  return !p || p.slot === "bangs" || p.slot === "back" ? null : p.variantOf ?? p.id;
+}
+/** Every inventory ref a look needs: worn clothes and a dyed hair colour. */
+export function lookRefs(look: CharacterLook): string[] {
+  const refs = [look.top, look.bottom, look.onepiece, look.shoes, ...Object.values(look.acc)].flatMap(id => (id && partRef(id)) || []);
+  return look.hair >= FREE_HAIR_COLOURS ? [...refs, dyeRef(look.hair)] : refs;
+}
+
+/**
+ * Creator "surprise me" and the skip default (row 142): a complete random look.
+ * With `owned`, only owned clothes and free hair colours (a new account's creator).
+ */
+export function randomLook(rand: () => number = Math.random, owned?: ReadonlySet<string>): CharacterLook {
   const pick = <T,>(xs: readonly T[]) => xs[Math.floor(rand() * xs.length)];
-  const ids = (slot: PartSlot) => partsIn(slot).filter(p => !p.variantOf).map(p => p.id);
+  const ids = (slot: PartSlot) => partsIn(slot).filter(p => !p.variantOf && (!owned || !partRef(p.id) || owned.has(p.id))).map(p => p.id);
   let look: CharacterLook = {
     ...DEFAULT_LOOK,
-    skin: Math.floor(rand() * PALETTE.skin.length), hair: Math.floor(rand() * PALETTE.hair.length),
+    skin: Math.floor(rand() * PALETTE.skin.length), hair: Math.floor(rand() * (owned ? FREE_HAIR_COLOURS : PALETTE.hair.length)),
     eyes: pick(Object.keys(FACE.layers.eyes.items)), mouth: pick(Object.keys(FACE.layers.mouth.items).filter(m => m.startsWith("M"))),
     extras: rand() < 0.3 ? ["blush"] : [], bangs: pick(ids("bangs")), back: pick(ids("back")), shoes: pick(ids("shoes")), acc: {}, colors: {},
   };
   look = rand() < 0.2 ? wear(look, "onepiece", pick(ids("onepiece"))) : wear(wear(look, "top", pick(ids("top"))), "bottom", pick(ids("bottom")));
   for (const id of [look.top, look.bottom, look.onepiece]) if (id && rand() < 0.6) look.colors[id] = Math.floor(rand() * PALETTE.outfit.length);
-  if (rand() < 0.45) look = wear(look, "accessory", pick(ids("accessory")));
+  if (rand() < 0.45 && ids("accessory").length) look = wear(look, "accessory", pick(ids("accessory")));
   return look;
 }

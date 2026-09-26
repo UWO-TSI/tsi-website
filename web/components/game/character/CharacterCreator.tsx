@@ -13,7 +13,7 @@ import { Canvas } from "@react-three/fiber";
 import { PerspectiveCamera, View } from "@react-three/drei";
 import Character, { type CharacterMotion } from "./Character";
 import { VillageButton, VillageField } from "@/components/recruit/ui";
-import { FACE, PALETTE, PART_BY_ID, partColor, partsIn, randomLook, wear, type CharacterLook, type PartSlot } from "@/lib/game/character/look";
+import { dyeRef, FACE, FREE_HAIR_COLOURS, PALETTE, PART_BY_ID, partColor, partRef, partsIn, randomLook, STARTER_PARTS, wear, type CharacterLook, type PartSlot } from "@/lib/game/character/look";
 import styles from "./CharacterCreator.module.css";
 
 type Swatch = "skin" | "hair" | "outfit" | null;
@@ -43,6 +43,7 @@ const TABS: Tab[] = [
 ];
 const WARDROBE_TABS = ["bangs", "back", "top", "bottom", "shoes", "accessory"];
 const PAGE = 8;
+const STARTERS: ReadonlySet<string> = new Set(STARTER_PARTS);
 
 /** The part a colour swatch recolours on the current tab. */
 function colourTarget(tab: string, look: CharacterLook, lastAccessory: string | null): string | null {
@@ -73,11 +74,15 @@ export interface CreatorProps {
   title?: string;
   /** Member game: pick a world name (row 222) checked through /api/identity/name. */
   askName?: { current: string };
+  /** Clothes and dyes owned (inventory catalogue refs). The creator offers only these; the wardrobe shows the rest locked. */
+  owned?: ReadonlySet<string>;
+  /** Wardrobe: a locked item links here (the shop). */
+  onShop?: () => void;
   onDone: (look: CharacterLook, name: string | null) => void | Promise<void>;
   onClose?: () => void;
 }
 
-export default function CharacterCreator({ initial, mode = "create", title, askName, onDone, onClose }: CreatorProps) {
+export default function CharacterCreator({ initial, mode = "create", title, askName, owned = STARTERS, onShop, onDone, onClose }: CreatorProps) {
   const root = useRef<HTMLElement>(null);
   const [look, setLook] = useState(initial);
   const tabs = useMemo(() => (mode === "wardrobe" ? TABS.filter(t => WARDROBE_TABS.includes(t.id)) : TABS), [mode]);
@@ -87,8 +92,13 @@ export default function CharacterCreator({ initial, mode = "create", title, askN
   const [lastAccessory, setLastAccessory] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const tab = tabs.find(t => t.id === tabId)!;
-  const pages = Math.max(1, Math.ceil(tab.items.length / PAGE));
-  const cells = tab.items.slice(page * PAGE, page * PAGE + PAGE);
+  // Identity (face, hair styles, the free colours) is always free; clothes and dyes are owned (ruling on audit item 22).
+  const has = (id: string | null) => { const ref = id && partRef(id); return !ref || owned.has(ref); };
+  const hasHair = (i: number) => i < FREE_HAIR_COLOURS || owned.has(dyeRef(i));
+  const [lockNote, setLockNote] = useState<string | null>(null);
+  const items = mode === "create" ? tab.items.filter(has) : tab.items;
+  const pages = Math.max(1, Math.ceil(items.length / PAGE));
+  const cells = items.slice(page * PAGE, page * PAGE + PAGE);
   const target = colourTarget(tab.id, look, lastAccessory);
   const [name, setName] = useState(askName?.current === "You" ? "" : askName?.current ?? "");
   const [nameNote, setNameNote] = useState<{ ok: boolean; text: string } | null>(null);
@@ -104,15 +114,21 @@ export default function CharacterCreator({ initial, mode = "create", title, askN
   }, [name, askName]);
 
   const choose = (id: string | null) => {
+    setLockNote(has(id) ? null : `${tab.name(id)} is sold in the shop.`);
+    if (!has(id)) return;
     setLook(l => tab.apply(l, id));
     if (tab.id === "accessory" && id) setLastAccessory(id);
   };
-  const paint = (i: number) => setLook(l => {
-    if (tab.swatch === "skin") return { ...l, skin: i };
-    if (tab.swatch === "hair") return { ...l, hair: i };
-    return target ? { ...l, colors: { ...l.colors, [target]: i } } : l;
-  });
-  const swatches = tab.swatch ? PALETTE[tab.swatch] : [];
+  const paint = (i: number) => {
+    const locked = tab.swatch === "hair" && !hasHair(i);
+    setLockNote(locked ? "That colour is a hair dye from the shop." : null);
+    if (!locked) setLook(l => {
+      if (tab.swatch === "skin") return { ...l, skin: i };
+      if (tab.swatch === "hair") return { ...l, hair: i };
+      return target ? { ...l, colors: { ...l.colors, [target]: i } } : l;
+    });
+  };
+  const swatches = !tab.swatch ? [] : tab.swatch === "hair" && mode === "create" ? PALETTE.hair.slice(0, FREE_HAIR_COLOURS) : PALETTE[tab.swatch];
   const swatchOn = (i: number) => tab.swatch === "skin" ? look.skin === i : tab.swatch === "hair" ? look.hair === i : target !== null && partColor(look, target) === i;
   const confirm = async (final: CharacterLook) => {
     setSaving(true);
@@ -135,27 +151,33 @@ export default function CharacterCreator({ initial, mode = "create", title, askN
     </div>
     <div className={styles.picker}>
       <div role="tablist" aria-label="Categories" className={styles.tabs}>
-        {tabs.map(t => <button key={t.id} role="tab" aria-selected={t.id === tabId} onClick={() => { setTabId(t.id); setPage(0); }}>{t.label}</button>)}
+        {tabs.map(t => <button key={t.id} role="tab" aria-selected={t.id === tabId} onClick={() => { setTabId(t.id); setPage(0); setLockNote(null); }}>{t.label}</button>)}
       </div>
-      {tab.items.length > 0 && <ul className={styles.grid} aria-label={tab.label}>
+      {items.length > 0 && <ul className={styles.grid} aria-label={tab.label}>
         {cells.map(id => <li key={id ?? "none"}>
-          <button aria-pressed={tab.on(look, id)} onClick={() => choose(id)} aria-label={tab.name(id)} title={tab.name(id)}>
+          <button aria-pressed={tab.on(look, id)} onClick={() => choose(id)} data-locked={!has(id) || undefined}
+            aria-label={has(id) ? tab.name(id) : `${tab.name(id)} (in the shop)`} title={tab.name(id)}>
             <View as="span" className={styles.thumb}><Stage look={tab.apply(look, id)} framing={tab.framing} /></View>
-            <span className={styles.label}>{tab.name(id)}</span>
+            <span className={styles.label}>{has(id) ? "" : "🔒 "}{tab.name(id)}</span>
           </button>
         </li>)}
       </ul>}
+      {lockNote && <p className={styles.lockNote} role="status">{lockNote}{onShop && <button onClick={onShop}>Visit the shop</button>}</p>}
       {pages > 1 && <div className={styles.pager}>
         <button onClick={() => setPage(p => (p + pages - 1) % pages)} aria-label="Previous page">‹</button>
         <span>{page + 1} / {pages}</span>
         <button onClick={() => setPage(p => (p + 1) % pages)} aria-label="Next page">›</button>
       </div>}
       {swatches.length > 0 && <div className={styles.swatches} role="group" aria-label={`${tab.swatch} colours`}>
-        {swatches.map((hex, i) => <button key={hex} style={{ background: hex }} aria-pressed={swatchOn(i)} aria-label={`${tab.swatch} colour ${i + 1}`} disabled={tab.swatch === "outfit" && !target} onClick={() => paint(i)} />)}
+        {swatches.map((hex, i) => {
+          const locked = tab.swatch === "hair" && !hasHair(i);
+          return <button key={hex} style={{ background: hex }} aria-pressed={swatchOn(i)} aria-label={`${tab.swatch} colour ${i + 1}${locked ? " (hair dye in the shop)" : ""}`}
+            data-locked={locked || undefined} disabled={tab.swatch === "outfit" && !target} onClick={() => paint(i)} />;
+        })}
       </div>}
       <div className={styles.actions}>
-        {mode === "create" && <VillageButton variant="quiet" onClick={() => setLook(randomLook())}>Surprise me</VillageButton>}
-        {mode === "create" && <VillageButton variant="quiet" disabled={saving} onClick={() => void confirm(randomLook())}>Skip</VillageButton>}
+        {mode === "create" && <VillageButton variant="quiet" onClick={() => setLook(randomLook(Math.random, owned))}>Surprise me</VillageButton>}
+        {mode === "create" && <VillageButton variant="quiet" disabled={saving} onClick={() => void confirm(randomLook(Math.random, owned))}>Skip</VillageButton>}
         {onClose && <VillageButton variant="quiet" onClick={onClose}>Close</VillageButton>}
         <VillageButton disabled={saving} onClick={() => void confirm(look)}>{mode === "wardrobe" ? "Wear this" : "That's me"}</VillageButton>
       </div>

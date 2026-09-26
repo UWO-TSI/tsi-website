@@ -51,6 +51,11 @@ export function supabaseEconomyStore(db: SupabaseClient): EconomyStore {
       if (error) raise(error);
       return ((data ?? []) as Row[]).map((r) => ({ item: toItem(r.shop_items as Row), qty: Number(r.qty), equipped: r.equipped === true, acquired_at: String(r.acquired_at) }));
     },
+    async grantStarters(m) {
+      const { data, error } = await db.rpc("economy_grant_starters", { p_member_id: m });
+      if (error) raise(error);
+      return { granted: first(data).granted === true };
+    },
     async buy(m, itemId, qty, price, key) {
       const { data, error } = await db.rpc("economy_buy", { p_member_id: m, p_item_id: itemId, p_qty: qty, p_price_each: price, p_idempotency_key: key });
       if (error) raise(error);

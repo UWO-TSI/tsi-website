@@ -4,6 +4,7 @@
  * client default (useStudySession); the server doesn't block posting.
  */
 import { containsProfanity } from "@/lib/moderation/profanity";
+import type { Result } from "@/lib/result";
 import type { StudyStore } from "./store";
 
 export const CHAT_MAX_LEN = 200;
@@ -12,7 +13,6 @@ export const CHAT_PER_HOUR = 60;
 export const CHAT_WINDOW_MS = 2 * 60 * 60_000; // show the last two hours
 export const CHAT_LIMIT = 50;
 
-type Result<T> = { ok: true; data: T } | { ok: false; status: number; error: string; code: string };
 
 export interface ChatView {
   id: string;

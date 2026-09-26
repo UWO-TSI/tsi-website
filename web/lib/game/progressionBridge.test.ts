@@ -1,10 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { ceremonyDue, chapterOneActions, markCeremonySeen, monumentStage, readSeenCeremonies, resolveAnchor } from "./progressionBridge";
+import { ceremonyDue, chapterOneActions, markCeremonySeen, readSeenCeremonies, resolveAnchor } from "./progressionBridge";
 
+// The monument's build stage is the server's (goals.monumentStage, tested in lib/progression/goals.test.ts).
 describe("progression world bridge", () => {
-  it("maps goal progress to the five monument stages", () => {
-    expect([0, 0.1, 0.25, 0.49, 0.5, 0.74, 0.75, 0.99, 1, 1.4, NaN].map(monumentStage)).toEqual([0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 0]);
-  });
   it("resolves every objective anchor to village ground", () => {
     for (const anchor of ["hq", "monument", "fishing_spot", "museum", "oracle", "ruins_gate"] as const) {
       const xz = resolveAnchor(anchor);
