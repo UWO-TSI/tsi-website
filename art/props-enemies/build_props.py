@@ -34,20 +34,21 @@ def workbench():
         pc.mat = "M_Top"
         for x, r in ((-0.25, 0.055), (-0.12, 0.05), (0.2, 0.06)):                             # a couple of logs on the shelf
             lathe(pc, (x, -0.05, 0.157 + r), [(0, -0.12), (r, -0.12), (r, 0.12), (0, 0.12)], n=7, axis=(0.15, 1, 0))
-        pc.mat = "M_Iron"                                    # vise on the front-left corner
-        rbox(pc, (L / 2 - 0.12, -D / 2 - 0.02, TOP + 0.04), (0.16, 0.1, 0.09), ch=0.25)
-        rbox(pc, (L / 2 - 0.12, -D / 2 - 0.085, TOP + 0.03), (0.16, 0.035, 0.1), ch=0.3)
+        V = -(L / 2 - 0.12)                                  # vise on the front-left end (away from the clubhouse crates)
+        pc.mat = "M_Iron"
+        rbox(pc, (V, -D / 2 - 0.02, TOP + 0.04), (0.16, 0.1, 0.09), ch=0.25)
+        rbox(pc, (V, -D / 2 - 0.085, TOP + 0.03), (0.16, 0.035, 0.1), ch=0.3)
         pc.mat = "M_Handle"
-        pc.tube([(L / 2 - 0.12, -D / 2 - 0.1, TOP + 0.02), (L / 2 - 0.12, -D / 2 - 0.2, TOP + 0.02)], [0.012, 0.012], sides=5, tip=False)
-        lathe(pc, (L / 2 - 0.2, -D / 2 - 0.2, TOP + 0.02), [(0, 0), (0.02, 0.01), (0.02, 0.15), (0, 0.16)], n=5, axis=(1, 0, 0))
+        pc.tube([(V, -D / 2 - 0.1, TOP + 0.02), (V, -D / 2 - 0.2, TOP + 0.02)], [0.012, 0.012], sides=5, tip=False)
+        lathe(pc, (V - 0.08, -D / 2 - 0.2, TOP + 0.02), [(0, 0), (0.02, 0.01), (0.02, 0.15), (0, 0.16)], n=5, axis=(1, 0, 0))
         # hammer and saw on the top
         pc.tube([(-0.1, -0.12, TOP + 0.018), (0.12, -0.02, TOP + 0.018)], [0.016, 0.016], sides=5, tip=False)
         pc.mat = "M_Iron"
         rbox(pc, (-0.12, -0.13, TOP + 0.03), (0.05, 0.12, 0.05), ch=0.25, rot=Matrix.Rotation(math.radians(24), 3, "Z"))
         pc.mat = "M_Steel"
-        rbox(pc, (-0.38, 0.1, TOP + 0.008), (0.3, 0.1, 0.012), ch=0, rot=Matrix.Rotation(math.radians(-12), 3, "Z"))
+        rbox(pc, (0.4, 0.1, TOP + 0.008), (0.3, 0.1, 0.012), ch=0, rot=Matrix.Rotation(math.radians(12), 3, "Z"))
         pc.mat = "M_Handle"
-        rbox(pc, (-0.2, 0.06, TOP + 0.02), (0.09, 0.07, 0.035), ch=0.3, rot=Matrix.Rotation(math.radians(-12), 3, "Z"))
+        rbox(pc, (0.22, 0.06, TOP + 0.02), (0.09, 0.07, 0.035), ch=0.3, rot=Matrix.Rotation(math.radians(12), 3, "Z"))
 
     ob = pe.part("workbench", M, b, sharp=40)
     pe.regrade([ob], (0.75, 1.0))
