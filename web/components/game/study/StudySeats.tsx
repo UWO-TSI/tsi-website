@@ -113,6 +113,7 @@ export default function StudySeats({ area, player, ground = flat, board }: {
     if (w.seated && anchors.has(w.seated.anchor)) {
       setWorldStudy({ seated: null, near: null });
       if (arrived.current) void w.study?.end();
+      else placed.current = null; // not seated yet (Strict Mode re-runs this cleanup on mount): seat again next frame
     } else if (w.near) setWorldStudy({ near: null });
   }, [anchors]);
 
