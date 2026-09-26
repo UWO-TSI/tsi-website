@@ -381,8 +381,9 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
         const targetAngle = Math.atan2(dx, dz);
         facingRef.current = easeFacing(facingRef.current, targetAngle, ROTATION_LERP, delta);
       }
-      // Feedback follows movement that survived collision, including glide-out.
-      moving = motion.moving;
+      // Feedback follows movement that survived collision, including glide-out; a dodge or
+      // knockback while standing still still moves the player, so the camera and combat must hear it.
+      moving = motion.moving || !!(push && (push.x || push.z));
       applySprintFov(camera, Math.hypot(vel.x, vel.y), delta);
 
       // Sprint wind lines: visible only near sprint speed, sliding

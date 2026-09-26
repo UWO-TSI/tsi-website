@@ -17,7 +17,7 @@ export const LANTERN_SPOT: Vec = { x: 11.5, z: -20 };
 /** Fetch items by mission `item`: the lantern at the fox den, the sealed tome in the temple library corner. */
 export const FETCH_SPOTS: Record<string, Vec & { model: string; scale: number; hint: string }> = {
   "old-lantern": { ...LANTERN_SPOT, model: "/assets/acnh/props/stone-lantern.glb", scale: 0.45, hint: "Find it near the fox den" },
-  "sealed-tome": { x: -9, z: 13.2, model: "/assets/game/weapons/tome-spirits.glb", scale: 2.4, hint: "It's in the temple library, far corner" },
+  "sealed-tome": { x: -6, z: 13.4, model: "/assets/game/weapons/tome-spirits.glb", scale: 3.4, hint: "It's in the temple library, far corner" },
 };
 /** Survive: the rune circle in the outer wild, and the sanctum circle in the temple court. */
 export const RUNE_CIRCLE = { x: 6.5, z: -14, r: 2.6 };

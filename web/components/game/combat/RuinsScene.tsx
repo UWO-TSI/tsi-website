@@ -94,7 +94,7 @@ export default function RuinsScene({ phase, light, look, weather, liteMode, zoom
   useEffect(() => {
     player.current.set(...spawn); resetEncounter(); publishCombat();
     // Dev (screenshots): hold a telegraph with __combat.freeze, stage mission steps with __combatDev.
-    if (process.env.NODE_ENV !== "production") Object.assign(window, { __combatDev: { missionEvent: (ev: Parameters<typeof missionEvent>[1]) => missionEvent(combat.rt, ev), spawnWave: (id: string, i: number) => spawnWave(combat.rt, WAVES[id][i]) } });
+    if (process.env.NODE_ENV !== "production") Object.assign(window, { __combatDev: { player: player.current, missionEvent: (ev: Parameters<typeof missionEvent>[1]) => missionEvent(combat.rt, ev), spawnWave: (id: string, i: number) => spawnWave(combat.rt, WAVES[id][i]) } });
   }, [player, spawn]);
   useFollowCamera(player, zoom, null);
 
