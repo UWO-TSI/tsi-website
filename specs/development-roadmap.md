@@ -6,7 +6,7 @@ Written 2026-09-26 after the vision interview (decisions 1–231 in `game-world-
 
 Ship a cozy seaside club village that members and the public want to open daily: real campus time and seasons, fishing, bugs and foraging worth doing on their own, a study cafe that pays for studying, a home to decorate, a TSI-building quest line with club-wide goals, and an optional arcane ruins area. Low-poly 3D characters on one rig. Everything persists across devices on one Supabase backend with one wallet. After launch: NPC personalities with memory, then multiplayer.
 
-The coordinator (Claude) runs this without check-ins (David, 2026-09-26): verified PRs are merged and deployed, matching production migrations applied and checked, and David hears outcomes. The only things that wait on David are art verdicts he owns, spending money (the Supabase Pro upgrade), and anything destructive.
+The coordinator (Claude) runs this without check-ins (David, 2026-09-26): verified PRs are merged and deployed, matching production migrations applied and checked, and David hears outcomes. The only things that wait on David are art verdicts he owns, spending money, and anything destructive. Supabase Pro is not needed for development (the second free project is paused, so staging fits the free plan); upgrade production to Pro in the week before launch for no-pause, bigger compute and restorable backups.
 
 ## Status board (updated 2026-09-26)
 
@@ -19,7 +19,7 @@ The coordinator (Claude) runs this without check-ins (David, 2026-09-26): verifi
 | Character in engine (rigged model replaces sprite; creator + wardrobe use the catalogue) | Running (wave B, branch `game/character-engine`) | Player, residents, applicants on one rig in `/lab/island` and the applicant island |
 | Study in the world | Running (wave B, branch `game/study-world`) | Sit → study → coins → walk away ends session, in the cafe and outdoor tables |
 | Crafting | Next free slot | ~30 recipes learnable and craftable; rods 4–5 unlock |
-| Staging Supabase + signed-in E2E (Phase 1) | Blocked on David's Pro upgrade (org still `free` 2026-09-26) | Every Phase 1 flow passes signed in |
+| Staging Supabase + signed-in E2E (Phase 1) | Staging project `tethos-staging` (ref `jjiyeroyralfbluowbjq`, free, us-west-2) created 2026-09-26; runs in the next free slot, spec `specs/phase1-staging.md` | Every Phase 1 flow passes signed in |
 | Phone companion, seasonal events, combat content, chapters 3–4, admin pass | Later waves | Per spec in `specs/` |
 | Launch (Phase 4) | After all of the above | Member playtest, David's local review, migrations in one window |
 
