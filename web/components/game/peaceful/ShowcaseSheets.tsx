@@ -10,6 +10,7 @@ import type { Trophy, JournalEntryKnown } from "@/lib/collections/logic";
 import { CATEGORIES } from "@/lib/collections/roster";
 import { ApiError, apiCall } from "@/lib/apiClient";
 import { fetchJournalPage } from "../JournalPages";
+import IslandSheet from "../IslandSheet";
 import styles from "../DefaultIslandWorld.module.css";
 
 export function TrophySheet({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -21,8 +22,7 @@ export function TrophySheet({ open, onClose }: { open: boolean; onClose: () => v
     return () => { alive = false; };
   }, [open]);
   if (!open) return null;
-  return <section className={styles.sheet} role="dialog" aria-modal="false" aria-labelledby="trophy-title" data-testid="trophy-sheet">
-    <header><h2 id="trophy-title">Trophy case</h2><button onClick={onClose} aria-label="Close">×</button></header>
+  return <IslandSheet title="Trophy case" onClose={onClose} testId="trophy-sheet">
     {data === null ? <p>Polishing the glass…</p> : data === "error" ? <p>Sign in to see this week&apos;s trophies.</p> : <>
       <p className={styles.hint}>Biggest catches since Monday {data.week_start}. Two per member, so the wall shows the club.</p>
       {data.trophies.length === 0 ? <p>No trophies yet this week. The first big catch goes up here.</p> :
@@ -35,7 +35,7 @@ export function TrophySheet({ open, onClose }: { open: boolean; onClose: () => v
           <span><b>{t.name}</b> · {t.size_cm} cm<small>{t.member_name} · {t.rarity}</small></span>
         </li>)}</ol>}
     </>}
-  </section>;
+  </IslandSheet>;
 }
 
 export function ShowcaseSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -60,8 +60,7 @@ export function ShowcaseSheet({ open, onClose }: { open: boolean; onClose: () =>
       () => "Showcase saved to your profile.",
       (err) => (err instanceof ApiError && err.body?.error ? err.message : "Couldn't save the showcase.")));
   };
-  return <section className={styles.sheet} role="dialog" aria-modal="false" aria-labelledby="showcase-title" data-testid="showcase-sheet">
-    <header><h2 id="showcase-title">Your profile showcase</h2><button onClick={onClose} aria-label="Close">×</button></header>
+  return <IslandSheet title="Your profile showcase" onClose={onClose} testId="showcase-sheet">
     <div className={styles.showcaseSlots}>{slots.map((key, i) => {
       const f = key ? byKey.get(key) : null;
       return <button key={i} aria-pressed={active === i} onClick={() => setActive(i)}>
@@ -81,5 +80,5 @@ export function ShowcaseSheet({ open, onClose }: { open: boolean; onClose: () =>
       <span>{f.name}<small>{f.best_size_cm ? `record ${f.best_size_cm} cm` : `×${f.total_collected}`}</small></span>
     </button></li>)}</ul>
     {note && <p role="status" className={styles.hint}>{note}</p>}
-  </section>;
+  </IslandSheet>;
 }

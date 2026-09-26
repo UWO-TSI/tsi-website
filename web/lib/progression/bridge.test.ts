@@ -21,14 +21,14 @@ describe("?goal= dev override", () => {
 describe("world bridge contract", () => {
   it("maps state into the island's WorldProgression shape", () => {
     const w = toWorldProgression(previewState(), resolve);
-    expect(w.activeGoal).toEqual({ id: "cafe", label: "Reopen the cafe", progress: 0, completed: false });
+    expect(w.activeGoal).toEqual({ id: "cafe", label: "Reopen the cafe", progress: 0, stage: 0, completed: false });
     expect(w.objective).toEqual({ text: "Claim your plot at HQ", target: [0, 6.3], anchor: "hq" });
     expect(w.completedGoals).toEqual([]);
   });
   it("keeps a just-completed goal on the monument so the ceremony can play", () => {
     const done = applyGoalOverride(previewState(), { slug: "reopen-cafe", fraction: 1 });
     const w = toWorldProgression({ ...done, goals: done.goals.map((g) => (g.slug === "fund-museum" ? { ...g, open: false } : g)) }, resolve);
-    expect(w.activeGoal).toMatchObject({ id: "cafe", progress: 1, completed: true });
+    expect(w.activeGoal).toMatchObject({ id: "cafe", progress: 1, stage: 4, completed: true });
     expect(w.completedGoals).toEqual(["cafe"]);
     expect(w.recentlyCompleted).toMatchObject({ id: "cafe", completed: true });
   });

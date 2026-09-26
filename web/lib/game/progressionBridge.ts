@@ -25,12 +25,6 @@ export type { WorldGoalId };
 /** A club goal on the monument; progress is 0..1 of its target. */
 type WorldGoal = NonNullable<WorldProgression["activeGoal"]>;
 
-/** Monument build stage 0–4 for the 0/25/50/75/100% milestones (row 182). */
-export function monumentStage(progress: number): 0 | 1 | 2 | 3 | 4 {
-  const p = Number.isFinite(progress) ? Math.min(1, Math.max(0, progress)) : 0;
-  return p >= 1 ? 4 : p >= 0.75 ? 3 : p >= 0.5 ? 2 : p >= 0.25 ? 1 : 0;
-}
-
 const SEEN_KEY = "tsi.ceremony.seen.v1";
 export function readSeenCeremonies(storage?: Pick<Storage, "getItem"> | null): WorldGoalId[] {
   try {
@@ -42,7 +36,7 @@ export function markCeremonySeen(id: WorldGoalId, storage?: Pick<Storage, "getIt
   try { storage?.setItem(SEEN_KEY, JSON.stringify([...new Set([...readSeenCeremonies(storage), id])])); } catch { /* Best effort. */ }
 }
 /** A goal's ceremony plays once: when it is complete and not yet seen (or forced). */
-export function ceremonyDue(goal: WorldGoal | null, seen: readonly WorldGoalId[], force = false): boolean {
+export function ceremonyDue(goal: Pick<WorldGoal, "id" | "completed"> | null, seen: readonly WorldGoalId[], force = false): boolean {
   return !!goal && goal.completed && (force || !seen.includes(goal.id));
 }
 
@@ -109,7 +103,7 @@ export function useCeremony(goal: WorldGoal | null, force: boolean): boolean {
     if (!id || !completed) return;
     let storage: Storage | null = null;
     try { storage = window.localStorage; } catch { /* Private mode: plays each visit. */ }
-    if (!ceremonyDue({ id, label: "", progress: 1, completed }, readSeenCeremonies(storage), force)) return;
+    if (!ceremonyDue({ id, completed }, readSeenCeremonies(storage), force)) return;
     const start = window.setTimeout(() => setActive(true), 1200);
     const stop = window.setTimeout(() => { setActive(false); markCeremonySeen(id, storage); }, 7200);
     return () => { window.clearTimeout(start); window.clearTimeout(stop); };
