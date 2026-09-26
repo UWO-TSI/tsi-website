@@ -1,12 +1,13 @@
 /** In-memory EconomyTransport over the real service (dev harness, tests). */
 import { memoryEconomyStore } from "./memoryStore";
 import * as S from "./service";
-import { EconomyRequestError, type EconomyTransport } from "./transport";
+import { ApiError } from "@/lib/apiClient";
+import type { EconomyTransport } from "./transport";
 
 export function memoryEconomyTransport(me: string, m = memoryEconomyStore(), clock: () => Date = () => new Date()): EconomyTransport {
   const u = async <T>(p: Promise<{ ok: true; data: T } | { ok: false; status: number; error: string; code: string }>): Promise<T> => {
     const r = await p;
-    if (!r.ok) throw new EconomyRequestError(r.error, r.status, r.code);
+    if (!r.ok) throw new ApiError(r.error, r.status, r.code);
     return r.data;
   };
   return {

@@ -10,6 +10,7 @@
  * gets one save key, reused on retry, so a flaky network never double-saves.
  * A conflict (edited on another device) adopts the server's document.
  */
+import { newKey } from "@/lib/apiClient";
 import { defaultLayout, parseLayout, serialiseLayout, withRooms, type HomeLayoutDoc } from "@/lib/homes/layout";
 
 export const HOME_LAYOUT_KEY = "tsi.home.layout.v1";
@@ -32,12 +33,10 @@ export interface RemoteHomeStoreOptions {
   newKey?: () => string;
 }
 
-const randomKey = () => (globalThis.crypto?.randomUUID ? globalThis.crypto.randomUUID() : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`);
-
 export function createRemoteHomeStore(opts: RemoteHomeStoreOptions) {
   const doFetch = (...args: Parameters<typeof fetch>) => (opts.fetchImpl ?? fetch)(...args);
   const debounceMs = opts.debounceMs ?? 800;
-  const newKey = opts.newKey ?? randomKey;
+  const makeKey = opts.newKey ?? newKey;
   const listeners = new Set<() => void>();
   let snapshot: HomeLayoutDoc | null = null;
   let revision = 0;
@@ -143,7 +142,7 @@ export function createRemoteHomeStore(opts: RemoteHomeStoreOptions) {
     },
     set(next: HomeLayoutDoc) {
       snapshot = next;
-      pending = { doc: next, key: newKey() };
+      pending = { doc: next, key: makeKey() };
       writeCache();
       setStatus("local");
       schedule(debounceMs);
@@ -180,7 +179,7 @@ export function createRemoteHomeStore(opts: RemoteHomeStoreOptions) {
     /** Buy the next room at the price the UI showed; the server re-checks price, cap and coins. */
     async buyRoom(expectedPrice: number): Promise<{ ok: true; coins: number } | { ok: false; error: string; code?: string }> {
       if (pending) await flush();
-      const key = newKey();
+      const key = makeKey();
       for (let attempt = 0; attempt < 3; attempt++) {
         let res: Response;
         try {

@@ -4,7 +4,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { GEMS } from "@/lib/economy";
 import type { Reservation } from "@/lib/wallet/store";
-import { EconomyRequestError, httpEconomyTransport, type EconomyTransport } from "@/lib/wallet/transport";
+import { ApiError } from "@/lib/apiClient";
+import { httpEconomyTransport, type EconomyTransport } from "@/lib/wallet/transport";
 
 export default function MerchFulfilment({ transport = httpEconomyTransport }: { transport?: EconomyTransport }) {
   const [status, setStatus] = useState<"reserved" | "fulfilled" | "cancelled">("reserved");
@@ -16,7 +17,7 @@ export default function MerchFulfilment({ transport = httpEconomyTransport }: { 
       setRows(await transport.adminReservations(status));
     } catch (err) {
       setRows([]);
-      setMessage({ kind: "err", text: err instanceof EconomyRequestError ? err.message : "Couldn't load reservations." });
+      setMessage({ kind: "err", text: err instanceof ApiError ? err.message : "Couldn't load reservations." });
     }
   }, [transport, status]);
   useEffect(() => {
@@ -30,7 +31,7 @@ export default function MerchFulfilment({ transport = httpEconomyTransport }: { 
       setMessage({ kind: "ok", text: action === "fulfil" ? `Handed over: ${r.item_name} to ${r.member_name}.` : `Cancelled and refunded ${r.gems} ${GEMS.symbol}.` });
       await load();
     } catch (err) {
-      setMessage({ kind: "err", text: err instanceof EconomyRequestError ? err.message : "Couldn't update that reservation." });
+      setMessage({ kind: "err", text: err instanceof ApiError ? err.message : "Couldn't update that reservation." });
     }
   };
   return (

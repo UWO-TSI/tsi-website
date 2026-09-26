@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { advance, setHudMuted, ProgressionRequestError } from "@/lib/progression/client";
+import { advance, setHudMuted } from "@/lib/progression/client";
+import { ApiError } from "@/lib/apiClient";
 import type { AdvanceAction } from "@/lib/progression/chapters";
 import { refreshProgression, setProgressionState, useProgression } from "@/lib/progression/useProgression";
 import type { ChapterView } from "@/lib/progression/types";
@@ -45,7 +46,7 @@ export function JournalBody({ initialTab = "quests" }: { initialTab?: Tab }) {
       setProgressionState(await advance(slug, action));
       setMessage({ kind: "ok", text: action === "skip" ? "Chapter skipped." : "Journal updated." });
     } catch (err) {
-      setMessage({ kind: "err", text: err instanceof ProgressionRequestError ? err.message : "Couldn't reach the village hall. Try again." });
+      setMessage({ kind: "err", text: err instanceof ApiError ? err.message : "Couldn't reach the village hall. Try again." });
     } finally {
       setBusy(null);
     }

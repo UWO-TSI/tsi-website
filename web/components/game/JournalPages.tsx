@@ -10,17 +10,14 @@ import { useEffect, useState } from "react";
 import type { Category } from "@/lib/collections/roster";
 import type { JournalEntryKnown, JournalEntryUnknown, JournalPage } from "@/lib/collections/logic";
 import { useMenuTab } from "@/lib/game/useMenuTab";
+import { apiCall } from "@/lib/apiClient";
 
 const LABEL: Record<Category, string> = { fish: "Fish", sea: "Sea floor", bug: "Bugs", fruit: "Fruit", nature: "Nature", mineral: "Rocks & ore" };
 const RARITY_COLOR: Record<string, string> = { common: "#8A9A7B", uncommon: "#3D8F52", rare: "#2F6FB5", epic: "#8A4FC2", legendary: "#D08A1E" };
 type Page = JournalPage & { categories: { category: Category; total: number; discovered: number }[] };
 
-export async function fetchJournalPage(category: Category): Promise<Page | null> {
-  try {
-    const res = await fetch(`/api/collections/journal?category=${category}`);
-    const body = await res.json().catch(() => null);
-    return res.ok && body?.ok && body.page ? body.page as Page : null;
-  } catch { return null; }
+export function fetchJournalPage(category: Category): Promise<Page | null> {
+  return apiCall<Page>(`/api/collections/journal?category=${category}`, "page").then(p => p ?? null, () => null);
 }
 
 export default function JournalPages({ initial }: { initial: Page }) {

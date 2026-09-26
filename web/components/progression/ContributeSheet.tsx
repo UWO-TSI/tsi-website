@@ -4,7 +4,8 @@ import { useMemo, useRef, useState } from "react";
 import { COINS } from "@/lib/economy";
 import { localCollections, spendCollected } from "@/lib/game/collections";
 import { localCoins, spendCoins } from "@/lib/game/coins";
-import { deliver, newIdempotencyKey, ProgressionRequestError } from "@/lib/progression/client";
+import { deliver } from "@/lib/progression/client";
+import { ApiError, newKey } from "@/lib/apiClient";
 import { planContribution } from "@/lib/progression/goals";
 import { itemDeliveryKind, itemLabel } from "@/lib/progression/items";
 import { refreshProgression, useProgression } from "@/lib/progression/useProgression";
@@ -46,7 +47,7 @@ export function ContributeBody({ goalSlug }: { goalSlug?: string }) {
     setBusy(true);
     setMessage(null);
     // One key per delivery attempt; kept across retries until it lands.
-    keyRef.current = keyRef.current ?? newIdempotencyKey();
+    keyRef.current = keyRef.current ?? newKey();
     try {
       const receipt = await deliver({ goal_slug: goal.slug, kind: effectiveKind, amount, item_key: selectedItem }, keyRef.current);
       keyRef.current = null;
@@ -63,8 +64,8 @@ export function ContributeBody({ goalSlug }: { goalSlug?: string }) {
       window.dispatchEvent(new CustomEvent("tsi:toast", { detail: { text } }));
       await refreshProgression();
     } catch (err) {
-      if (err instanceof ProgressionRequestError && err.status < 500) keyRef.current = null;
-      setMessage({ kind: "err", text: err instanceof ProgressionRequestError ? err.message : "Couldn't reach the monument. Try again." });
+      if (err instanceof ApiError && err.status < 500) keyRef.current = null;
+      setMessage({ kind: "err", text: err instanceof ApiError ? err.message : "Couldn't reach the monument. Try again." });
     } finally {
       setBusy(false);
     }

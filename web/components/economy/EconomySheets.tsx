@@ -8,7 +8,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { COINS, GEMS } from "@/lib/economy";
 import type { InventoryView, SellEntry, ShopEntry, ShopView, WalletView } from "@/lib/wallet/service";
-import { EconomyRequestError, httpEconomyTransport, newKey, type EconomyTransport, type MerchView } from "@/lib/wallet/transport";
+import { ApiError, newKey } from "@/lib/apiClient";
+import { httpEconomyTransport, type EconomyTransport, type MerchView } from "@/lib/wallet/transport";
 import ProgressionPanel, { type ProgressionSheetProps } from "@/components/progression/ProgressionPanel";
 import p from "@/components/progression/progression.module.css";
 import s from "./economy.module.css";
@@ -16,7 +17,7 @@ import s from "./economy.module.css";
 const sym = (c: string) => (c === "gems" ? GEMS.symbol : COINS.symbol);
 const fmt = (n: number, c: string) => `${n.toLocaleString()} ${sym(c)}`;
 const ART: Record<string, string> = { tool: "🎣", outfit: "👕", hair: "💇", accessory: "🎩", furniture: "🛋️", wallpaper: "🖼️", flooring: "🟫", merch: "🛍️" };
-const errText = (err: unknown) => (err instanceof EconomyRequestError ? err.message : "Couldn't reach the shop. Try again.");
+const errText = (err: unknown) => (err instanceof ApiError ? err.message : "Couldn't reach the shop. Try again.");
 
 function useLoad<T>(load: () => Promise<T>) {
   const [data, setData] = useState<T | null>(null);
@@ -74,7 +75,7 @@ export function ShopBody({ transport = httpEconomyTransport, initialTab = "tools
       keys.current.delete(e.id);
       await reload();
     } catch (err) {
-      if (err instanceof EconomyRequestError && err.status < 500) keys.current.delete(e.id);
+      if (err instanceof ApiError && err.status < 500) keys.current.delete(e.id);
       setError(errText(err));
     } finally {
       setBusy(null);
