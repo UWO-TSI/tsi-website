@@ -27,7 +27,7 @@ The coordinator (Claude) runs this without check-ins (David, 2026-09-26): verifi
 | Combat content A: roster, telegraphs, guardian statue boss, 10 missions, crafted weapon stats | **Done, merged** (`df3d884d`): full roster, shared telegraphs, guardian boss (3 patterns, stagger, enrage), 10 missions, crafted weapon stats, server-side gate; 902 tests | Every enemy and the boss fight in the ruins; each mission template playable |
 | Combat content B: 16 kits, level-10 subclass choice, stat allocation | Running (branch `game/combat-content-b`) | Every subclass clears a normal mission solo |
 | Character art pass 2 (crafted wearables, real Stretch clip, beanie/cap/backpack/skirt fixes) | **Done, merged** (`f838efb8`) | Every craftable wearable is wearable |
-| Launch-readiness fixes (membership default/backfill, public tier 5, un-RSVP, atomic chapter rewards, launch runbook) | Running (branch `game/launch-fixes`) | Fail-first tests; staging reruns pass |
+| Launch-readiness fixes (membership default/backfill, public tier 5, un-RSVP, atomic chapter rewards, launch runbook) | **Done, merged**: membership backfill (43 members / 272 public, rerun-safe), public = T5, un-RSVP, retry-safe chapter rewards, admin members editor via a T1/T2 server route, `specs/launch-runbook.md`; 915 tests | Fail-first tests; staging reruns pass |
 | Audio pass (sound on, settings, 12-block hourly music player, ambience, SFX map) | Running (branch `game/audio`, Sonnet to spread rate-limit load) | Chime and music play by default; blocks follow real time |
 | Phone companion, seasonal events, chapters 3–4, admin pass | Later waves | Per spec in `specs/` |
 | Launch (Phase 4) | After all of the above | Member playtest, David's local review, migrations in one window |

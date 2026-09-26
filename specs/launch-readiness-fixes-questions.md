@@ -11,3 +11,6 @@ Each has the assumption I worked on. None blocks the branch.
 7. **No tier-4 gate, but some club tools ignore membership.** Grep of every tier check (routes, middleware, RLS): gates are `<= 3` or T1/T2 only, so T4 vs T5 changes nothing. Open to any signed-in account regardless of tier or membership: submitting a pending bounty (`tier > 3`), posting a job listing, requesting a mentor, RSVPing to events, the directory. *Assumption:* unchanged for launch; say which of these are member-only and they get a `membership = 'member'` check.
 8. **Un-RSVP on a check-in answers "unregistered".** `/api/events/[id]/rsvp` deletes whatever row the caller has; the new policy only lets a `registered` row go, so on an `attended` row the route reports success while the check-in stays (correct data, wrong message). *Assumption:* legacy portal, left; a 409 there is two lines if wanted.
 9. **Staging order.** Staging got `20260926200000`/`200100` (then named `190000`/`190100`, identical content) at 17:47Z, before combat content's `20260926190000` at 17:53Z. The two don't touch the same objects. Production gets them in filename order.
+
+## Coordinator rulings (2026-09-26)
+T2 cannot grant T1 or edit a T1 account: accepted.
