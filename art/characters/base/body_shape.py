@@ -17,6 +17,8 @@ CL = 0.007                                   # clothing clearance over the skin 
 ARM_LEN, HAND_L = 0.165, M["hand_length"]
 ARM_X0 = SH_HALF * 0.72
 LEG_X = 0.058
+SKIRT_FRONT = [(0.068, 0.4, 0.05, 0.55), (0.14, 0.25, 0.4, 0.35), (0.19, 0.28, 0.5, 0.22), (0.27, 0.4, 0.6, 0.0),
+               (0.3, 0.6, 0.4, 0.0), (WAIST, 1.0, 0.0, 0.0)]   # skirt front weights by height: (z, hips, thighs, shins)
 
 TORSO = [
     (Vector((0, 0.0, CROTCH - 0.012)), 0.07, 0.06),
@@ -114,7 +116,7 @@ def _ss(a, b, x):
 
 def weights(region, co):
     """Bone -> weight for a vertex at co. region: a body part name as in build_v6 (torso, neck, head, arm_L,
-    hand_R, leg_L, foot_R), 'skirt' (hips blended into both thighs toward the hem), 'hood' (head, easing into
+    hand_R, leg_L, foot_R), 'skirt' (hips blended into both thighs toward the hem; the front also into the shins), 'hood' (head, easing into
     the neck), or a dict of fixed weights."""
     if isinstance(region, dict):
         return region
@@ -129,11 +131,17 @@ def weights(region, co):
         j = [b[1][2] for b in BONES[:5]]
         return _chain(co.z, [0.0] + j[1:5], ["Hips", "Spine", "Spine1", "Spine2", "Neck"], 0.03)
     if region == "skirt":
-        w = {b: x * 1.0 for b, x in weights("torso", Vector((co.x, co.y, max(co.z, CROTCH)))).items()}
+        # sides and back: hips blended into the thighs toward the hem; the front follows SKIRT_FRONT, so a seated
+        # skirt lies on the lap and hangs over the knees instead of letting them through
         k = 0.55 * _ss(WAIST, CROTCH - 0.07, co.z)
+        f = _ss(-0.02, -0.11, co.y)
+        fh, fu, fl = _interp(SKIRT_FRONT, co.z)
+        hip, up, leg = (1 - k) * (1 - f) + fh * f, k * (1 - f) + fu * f, fl * f
         sl = max(0.0, min(1.0, 0.5 + co.x / 0.12))
-        w = {b: x * (1 - k) for b, x in w.items()}
-        w["LeftUpLeg"], w["RightUpLeg"] = k * sl, k * (1 - sl)
+        w = {b: x * hip for b, x in weights("torso", Vector((co.x, co.y, max(co.z, CROTCH)))).items()}
+        w["LeftUpLeg"], w["RightUpLeg"] = up * sl, up * (1 - sl)
+        if leg > 0:
+            w["LeftLeg"], w["RightLeg"] = leg * sl, leg * (1 - sl)
         return w
     S = "Left" if region.endswith("L") else "Right"
     if region.startswith("hand"):

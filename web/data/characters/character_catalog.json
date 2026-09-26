@@ -289,6 +289,43 @@
    "hides": []
   },
   {
+   "id": "outfit_silk_sweater",
+   "slot": "top",
+   "name": "Silk sweater",
+   "glb": "outfits/top/outfit_silk_sweater.glb",
+   "tris": 236,
+   "materials": [
+    {
+     "name": "M_Main",
+     "tint": "outfit",
+     "default": 13
+    },
+    {
+     "name": "M_Accent",
+     "tint": "outfit",
+     "default": 0
+    },
+    {
+     "name": "M_Decal",
+     "decal": true,
+     "default": null
+    }
+   ],
+   "decalSlot": {
+    "material": "M_Decal",
+    "uv": [
+     0,
+     0,
+     1,
+     1
+    ],
+    "alphaMode": "MASK"
+   },
+   "hidesBackHair": false,
+   "hides": [],
+   "item": "outfit-silk-sweater"
+  },
+  {
    "id": "bottom_shorts",
    "slot": "bottom",
    "name": "Base shorts",
@@ -532,6 +569,73 @@
    ]
   },
   {
+   "id": "outfit_monarch_cape",
+   "slot": "onepiece",
+   "name": "Monarch cape",
+   "glb": "outfits/onepiece/outfit_monarch_cape.glb",
+   "tris": 252,
+   "materials": [
+    {
+     "name": "M_Main",
+     "tint": "outfit",
+     "default": 7
+    },
+    {
+     "name": "M_Accent",
+     "tint": "outfit",
+     "default": 14
+    },
+    {
+     "name": "M_Trim",
+     "tint": "outfit",
+     "default": 1
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [
+    "top",
+    "bottom"
+   ],
+   "item": "outfit-monarch-cape"
+  },
+  {
+   "id": "outfit_koi_kimono",
+   "slot": "onepiece",
+   "name": "Koi kimono",
+   "glb": "outfits/onepiece/outfit_koi_kimono.glb",
+   "tris": 277,
+   "materials": [
+    {
+     "name": "M_Main",
+     "tint": "outfit",
+     "default": 11
+    },
+    {
+     "name": "M_Accent",
+     "tint": "outfit",
+     "default": 0
+    },
+    {
+     "name": "M_Trim",
+     "tint": "outfit",
+     "default": 7
+    },
+    {
+     "name": "M_Gold",
+     "tint": "outfit",
+     "default": 6
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [
+    "top",
+    "bottom"
+   ],
+   "item": "outfit-koi-kimono"
+  },
+  {
    "id": "shoes_slipon",
    "slot": "shoes",
    "name": "Yellow slip-ons (#18)",
@@ -726,7 +830,7 @@
    "slot": "accessory",
    "name": "Beanie",
    "glb": "accessories/accessory/acc_beanie.glb",
-   "tris": 196,
+   "tris": 260,
    "materials": [
     {
      "name": "M_Main",
@@ -753,7 +857,7 @@
    "slot": "accessory",
    "name": "Sun hat",
    "glb": "accessories/accessory/acc_sunhat.glb",
-   "tris": 208,
+   "tris": 272,
    "materials": [
     {
      "name": "M_Main",
@@ -780,7 +884,7 @@
    "slot": "accessory",
    "name": "Cap",
    "glb": "accessories/accessory/acc_cap.glb",
-   "tris": 172,
+   "tris": 204,
    "materials": [
     {
      "name": "M_Main",
@@ -801,6 +905,92 @@
    "hidesBackHair": true,
    "hides": [],
    "group": "head"
+  },
+  {
+   "id": "acc_straw_hat",
+   "slot": "accessory",
+   "name": "Straw hat",
+   "glb": "accessories/accessory/acc_straw_hat.glb",
+   "tris": 272,
+   "materials": [
+    {
+     "name": "M_Main",
+     "tint": "outfit",
+     "default": 6
+    },
+    {
+     "name": "M_Accent",
+     "tint": "outfit",
+     "default": 7
+    },
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": true,
+   "hides": [],
+   "group": "head",
+   "item": "acc-straw-hat"
+  },
+  {
+   "id": "acc_flower_crown",
+   "slot": "accessory",
+   "name": "Flower crown",
+   "glb": "accessories/accessory/acc_flower_crown.glb",
+   "tris": 216,
+   "materials": [
+    {
+     "name": "M_Main",
+     "tint": "outfit",
+     "default": 9
+    },
+    {
+     "name": "M_Accent",
+     "tint": "outfit",
+     "default": 1
+    },
+    {
+     "name": "M_Trim",
+     "tint": "outfit",
+     "default": 2
+    },
+    {
+     "name": "M_Centre",
+     "tint": "outfit",
+     "default": 6
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "group": "head",
+   "item": "acc-flower-crown"
+  },
+  {
+   "id": "acc_crystal_circlet",
+   "slot": "accessory",
+   "name": "Crystal circlet",
+   "glb": "accessories/accessory/acc_crystal_circlet.glb",
+   "tris": 120,
+   "materials": [
+    {
+     "name": "M_Main",
+     "tint": "outfit",
+     "default": 6
+    },
+    {
+     "name": "M_Accent",
+     "tint": "outfit",
+     "default": 10
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "group": "head",
+   "item": "acc-crystal-circlet"
   },
   {
    "id": "acc_backpack",
@@ -870,6 +1060,35 @@
    "hidesBackHair": false,
    "hides": [],
    "group": "neck"
+  },
+  {
+   "id": "acc_shell_necklace",
+   "slot": "accessory",
+   "name": "Shell necklace",
+   "glb": "accessories/accessory/acc_shell_necklace.glb",
+   "tris": 154,
+   "materials": [
+    {
+     "name": "M_Main",
+     "tint": "outfit",
+     "default": 9
+    },
+    {
+     "name": "M_Accent",
+     "tint": "outfit",
+     "default": 5
+    },
+    {
+     "name": "M_Trim",
+     "tint": "outfit",
+     "default": 15
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "group": "neck",
+   "item": "acc-shell-necklace"
   }
  ],
  "base": {
@@ -913,6 +1132,13 @@
    "frames": 60,
    "seatHeight": 0.12,
    "deskHeight": 0.28
+  },
+  {
+   "name": "Stretch",
+   "length": 2.0,
+   "loop": true,
+   "frames": 60,
+   "seatHeight": 0.12
   },
   {
    "name": "Sleep",

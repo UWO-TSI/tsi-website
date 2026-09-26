@@ -341,7 +341,8 @@ def export(ob, rig, path):
 def registry():
     """(parts, part): part(id, slot, name, mats, sharp=, grad=, **meta) decorates a builder fn(pc).
     mats: material name -> ("outfit", palette index) | ("fixed", hex) | ("hair", None) | ("decal", image key).
-    meta: decal=True, hides=[slots], hidesBackHair=True, variantOf=id, group=str (copied to the catalogue)."""
+    meta: decal=True, hides=[slots], hidesBackHair=True, variantOf=id, group=str, item=economy slug (copied to the
+    catalogue; `item` = the crafted/economy item that unlocks the part, whose catalogue_ref is this part's id)."""
     parts = []
 
     def part(pid, slot, name, mats, sharp=50, grad=(0.8, 1.0), **meta):
@@ -382,7 +383,7 @@ def build_parts(parts, rig, section, subdir, images=None, max_tris=300):
                           for n, (k, v) in spec["mats"].items() if n in used],
             "decalSlot": {"material": "M_Decal", "uv": [0, 0, 1, 1], "alphaMode": "MASK"} if m.get("decal") else None,
             "hidesBackHair": m.get("hidesBackHair", False), "hides": list(m.get("hides", [])),
-            **{key: m[key] for key in ("group", "variantOf") if key in m},
+            **{key: m[key] for key in ("group", "variantOf", "item") if key in m},
         })
         unused = set(spec["mats"]) - set(used)
         print(f"PART {spec['id']} tris={tris}" + ("  OVER BUDGET" if tris > max_tris else "") + (f"  UNUSED {unused}" if unused else ""))
