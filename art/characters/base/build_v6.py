@@ -989,6 +989,7 @@ def split_object(name):
         if a in me.attributes:
             me.attributes.remove(me.attributes[a])
     me.color_attributes.active_color = me.color_attributes["Color"]
+    me.color_attributes.render_color_index = me.color_attributes.active_color_index   # glTF "ACTIVE" = render colour (ruling 22)
     for m in mats:
         me.materials.append(MATS[m])
     ob = bpy.data.objects.new(name, me)
