@@ -17,3 +17,14 @@ Each has the assumption I worked on. None blocks the branch.
 7. **Un-RSVP does nothing in production.** `/api/events/[id]/rsvp` deletes the user's row with the user's key; the delete policy (`008`) never ran in production and the reconciliation drops it from fresh replays (with it, a member could delete and re-insert attendance). The route answers success while the row stays. *Assumption:* legacy portal, left as is.
 
 8. **Chapter completion is not atomic.** `advanceChapter` saves the chapter as completed, then sends the letter, then pays the reward. Any failure after the save loses the reward for good (a retry answers "Chapter already finished"); that's how the 500 on staging cost the member chapter 1's 100 coins. The root cause (the letters index) is fixed. *Assumption:* not reordered; crediting first (the credit is idempotent) would make any later failure retry-safe.
+
+## Coordinator rulings (2026-09-26)
+1. **Membership at launch:** existing profiles default to `public`; backfill `member` for tier ≤ 3, for applicants hired through recruitment (application status hired/accepted in the recruitment tables), and for anyone a T1/T2 admin marks (admin pass adds a "mark member" tool). New sign-ups are public unless they use the active invite code.
+2. **Invite code:** rotate at launch; the new code lives only in the database (never in a migration or seed); `TETHOS-W26` is deactivated.
+3. **Public accounts are tier 5** (general), members keep 4 or their assigned tier; the drift reconcile already widens the tier check to 1–5.
+4. **Ruins gate server-side:** being fixed in combat content A.
+5. **Launch applies migrations through the management API in filename order; never `supabase db push`** (production's migration ledger is incomplete). Recorded in the roadmap's launch steps.
+6. Double `avatar_config` add: both idempotent; keep both (the later one carries a smoke test).
+7. **Un-RSVP:** restore an owner-only delete policy on event RSVPs in the reconcile migration so members can cancel their own RSVP.
+8. **Chapter completion atomic:** completion, letter and reward in one service transaction, or retries pay an unpaid reward; fail-first test.
+Items 1, 3, 7, 8 are implemented by the launch-readiness fixes task (`specs/launch-readiness-fixes.md`).
