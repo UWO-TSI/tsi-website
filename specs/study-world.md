@@ -21,3 +21,6 @@ Owner: one world agent in its own worktree. Backend exists: `web/lib/study/*`, `
 5. Cafe wall board from `/api/study/board`.
 6. Evidence prefix Y- under `evidence/study-world/`; tsc, focused lint, vitest (anchor mapping, walk-away detection radius).
 Out of scope: final cafe interior art, phone 3D view.
+
+## Also
+- An untextured grey box stands next to the shop on the member island (branch-only content, noted in Phase 0). Identify what it is (likely a placeholder prop from an earlier area) and either texture it from the dump or remove it.

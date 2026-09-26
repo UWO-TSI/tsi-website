@@ -2,31 +2,28 @@
 
 Written 2026-09-26 after the vision interview (decisions 1–231 in `game-world-development-plan.md`). The interview is paused. This file sequences the build from here to a launchable first version, then the two named follow-ups: NPC personalities and multiplayer.
 
-## Where things stand
+## Direction
 
-All game work lives on `feat/game-default-island` in the `.claude/worktrees/restart-art-cohesion` worktree. It is uncommitted and the branch is behind production.
+Ship a cozy seaside club village that members and the public want to open daily: real campus time and seasons, fishing, bugs and foraging worth doing on their own, a study cafe that pays for studying, a home to decorate, a TSI-building quest line with club-wide goals, and an optional arcane ruins area. Low-poly 3D characters on one rig. Everything persists across devices on one Supabase backend with one wallet. After launch: NPC personalities with memory, then multiplayer.
 
-| Fact | Value |
-|---|---|
-| Branch base | `30db173` (mid-September) |
-| Commits on `main` not in the branch | 58 (recruitment round, Sheets delivery, applicant island) |
-| Uncommitted files | ~220 (60 modified, ~160 new) |
-| Tests | ~650 passing locally |
-| Migration drafts | 024, 025, 029–034 written; 035 in progress. None applied. 029–034 pass a throwaway local Postgres smoke run |
-| Where it runs | `/lab/island` in dev only (404 in production) |
+The coordinator (Claude) runs this without check-ins (David, 2026-09-26): verified PRs are merged and deployed, matching production migrations applied and checked, and David hears outcomes. The only things that wait on David are art verdicts he owns, spending money (the Supabase Pro upgrade), and anything destructive.
 
-Built locally, each with screenshots in `specs/evidence/`:
+## Status board (updated 2026-09-26)
 
-- **Island core:** applicant-island look, real Toronto time with real sunrise/sunset, golden hour, ACNH-style seasons with a two-week crossfade, Open-Meteo weather, quality tiers, village core, minimap.
-- **Progression:** personal chapter line, club-wide goals with the plaza monument and ceremony, journal, letters, notice board, admin editors.
-- **Homes:** personal islet by boat, starter room, grid decorating, 40-piece catalogue, room purchase, server persistence.
-- **Peaceful loop:** five rod tiers, cast anywhere, catch cards with size records, sneak-and-swing bugs, foraging clues, three-wing museum, HQ trophy case, profile showcase, wardrobe sheet.
-- **Study:** server-driven Pomodoro sessions, 5-minute grace, coins per minute, open and private tables, table chat, phone companion page.
-- **Economy:** one wallet ledger for coins, Gems in their existing tables, shop with specials and a merch corner, selling, inventory, daily gift, merch pickup flow.
-- **Oracle and identity:** 64-item original MBTI reading, family reveal ceremony, display names, member dot, text size, contrast and key remap.
-- **Character:** base body v6 (measured from reference #18) awaiting David's review.
+| Track | State | Exit check |
+|---|---|---|
+| Production security | **Done.** #40 (profile self-promotion, Gems, email reads) and #41 (portal table writes; marketplace buys via server) merged, deployed and verified in prod | Rolled-back role tests pass in prod |
+| Phase 0: commit, merge `main`, timestamp migrations, push, draft PR | Running | Branch pushed, contains `main` (incl. #40/#41), tsc/tests green, applicant + member island screenshots match |
+| Character outfits + 20 clips on the locked v6 base | Running | Catalogue + evidence sheets, every clip verified |
+| Ponytail cleanup + game-side security (member_collections self-edit → sell exploit, economy_sell retry race, legacy Gem writers, class badges after 034, game code vs the #40 guard) | Next, after Phase 0 | Audit items applied as small commits; exploit tests fail before, pass after |
+| Character in engine (rigged model replaces sprite; creator + wardrobe use the catalogue) | Next, after outfits | Player, residents, applicants on one rig in `/lab/island` and the applicant island |
+| Study in the world | Next | Sit → study → coins → walk away ends session, in the cafe and outdoor tables |
+| Crafting | Next | ~30 recipes learnable and craftable; rods 4–5 unlock |
+| Staging Supabase + signed-in E2E (Phase 1) | Blocked on David's Pro upgrade (org still `free` 2026-09-26) | Every Phase 1 flow passes signed in |
+| Phone companion, seasonal events, combat content, chapters 3–4, admin pass | Later waves | Per spec in `specs/` |
+| Launch (Phase 4) | After all of the above | Member playtest, David's local review, migrations in one window |
 
-In progress now: combat foundation (rules and data, ruins zone and encounter) and the parametric hair library.
+Waves run at most three code-writing agents at once (Mac memory). Each area: spec in `specs/<area>.md`, one fresh agent, questions in `specs/<area>-questions.md`, coordinator review, merge.
 
 ## How the work is run (David, 2026-09-26)
 

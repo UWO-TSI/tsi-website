@@ -36,3 +36,37 @@ Append questions here (date, question, what you assumed meanwhile). The reviewer
 
 16. **Sheet cells.** Each bangs/back style in `hair_catalog.json` names the nearest N/B cell by my reading. Please highlight the exact cells you want as launch styles, and I'll retune the matching generators.
 17. **Hats-with-hair.** Row 135 lists hats-with-hair and braids. Should hats-with-hair be separate pieces in this library, or wait for the accessory pass?
+
+## 2026-09-26 (deliverable 3: outfits, accessories, clips)
+
+18. **Seat and bed heights.** Assumed Sit and Study sit on a bench with a 0.12 m seat, feet dangling, and Study writes at a 0.28 m desk. Assumed Sleep and Defeat lie on the back, with the head toward the character's back (-Z in glTF). The catalogue records seatHeight and deskHeight. Give the real furniture heights and I'll re-key.
+19. **Fish is two clips.** `Fish` is a one-shot cast that ends on the hold pose. `FishHold` loops from that pose. `Defeat` ends lying down (`endsNeutral: false`). Every other one-shot starts and ends on Idle frame 0. OK, or should Fish be one clip that the engine subclips?
+20. **Hats with hair (answers Q17 for now).** Beanie, sun hat and cap set `hidesBackHair`. Each carries a short bob-length `M_Hair` tuck at the sides and nape, tinted with the hair colour, so the head never reads bald. The chosen bangs stay visible. Is one tuck for every back style fine, or do long styles need a long tuck?
+21. **Layering order.** Assumed:
+    - Top hems sit over every bottom's waistband.
+    - The overall bib and straps sit over tops.
+    - Bags sit over everything.
+    - The backpack clips long back-hair styles.
+    - Accessory groups stack one each: face, head, bag, neck.
+    Say if any combination should be blocked in the creator instead.
+22. **COLOR_0 was never exported.** Blender 5's "ACTIVE" vertex-colour export uses the render colour attribute, and `bmesh.to_mesh` leaves that unset. So v6.glb and the hair GLBs had no gradient in three.js.
+    - Fixed in the shared `kit.py`, so hair and all new parts now carry COLOR_0.
+    - `v6_clips.glb` carries it too.
+    - `v6.glb` itself is untouched because build_v6.py is locked.
+    Use v6_clips.glb as the base body, or allow the one-line fix in build_v6.py?
+23. **Expressions per clip.** Clips don't switch face frames. I assumed the engine pairs them: Laugh/Cheer/Dance with happy, Sad with sad, Sleep with sleepy, Hit with surprised, Defeat with sleepy. Want this in the catalogue?
+24. **Decal slot.**
+    - Every top has an `M_Decal` patch: UV 0..1, alpha MASK, a transparent 8×8 PNG by default. The engine swaps the map.
+    - The TSI crewneck ships a script-drawn TSI roundel placeholder (`outfits/decal_tsi_mark.png`). Please supply the real mark.
+    - The patch sits 4 mm over the cloth, so it may need polygonOffset at distance.
+25. **Hood up.** The hood-up rain-cape is its own GLB (`variantOf: onepiece_raincape`), not a toggle inside one mesh. OK?
+
+## Coordinator rulings on 18–25 (2026-09-26; David delegated routine calls)
+18. Seat/desk/bed heights: the engine offsets the character per furniture anchor using each furniture GLB's measured seat/bed height; clips stay generic.
+19. Fish as cast (one-shot) + FishHold (loop): keep.
+20. One hat tuck shared by all hair styles: keep.
+21. Layering: a one-piece replaces top and bottom; accessories have sub-slots (eyes, head, back, neck), one item per sub-slot; a head hat and a hood cannot be worn together (the later choice replaces the earlier).
+22. Regenerate `v6.glb` with the vertex-colour gradient: yes. Adding the gradient does not change the locked shape.
+23. Expressions per clip: Laugh/Cheer/Dance → happy, Sad/Defeat → sad, Hit → surprised, Sleep → sleepy, AttackMelee/AttackBow/AttackCast → angry, everything else → neutral with blinks.
+24. Real TSI mark: use the official TSI logo already shipped in `web/public/` (the site's own logo files; a supplied asset, not a self-sourced reference) as the crewneck decal.
+25. Hood-up rain-cape as its own catalogue item: keep.
