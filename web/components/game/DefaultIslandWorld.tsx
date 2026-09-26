@@ -35,6 +35,7 @@ import { IslandAtmosphere, useFollowCamera } from "./IslandAtmosphere";
 import PeacefulLayer, { peacefulNear } from "./peaceful/PeacefulLayer";
 import WardrobeSheet from "./peaceful/WardrobeSheet";
 import PlayerCharacterUI from "./character/PlayerCharacterUI";
+import CharacterCrowd from "./character/CharacterCrowd";
 import OracleTemple from "./oracle/OracleTemple";
 import RuinsScene from "./combat/RuinsScene";
 import CombatHud from "./combat/CombatHud";
@@ -246,6 +247,7 @@ function IslandScene({ identity, devAt, exitFrom, peaceful, fishSpot, fishing, c
         onClick={() => window.dispatchEvent(new CustomEvent("tsi:npc-greet", { detail: { id: persona.id } }))} />)}
       <PlayerAvatar key={`${reset}-${returned}-${fromBoat}-${exitFrom}`} spawnPosition={spawn} playerName={identity.display_name} member={identity.member} onMove={onMove} frozen={fishing}
         groundHeight={island.ground} groundSurface={island.surface} constrainMove={island.move} />
+      <CharacterCrowd player={player} ground={island.ground} />
     </>
   );
 }
