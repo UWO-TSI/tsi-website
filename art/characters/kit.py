@@ -244,7 +244,7 @@ class Piece:
         return sum(len(f.verts) - 2 for f in self.bm.faces)
 
     def finish(self, name, rig, mats=None, sharp=40.0, grad=(0.62, 1.0)):
-        """Mesh object skinned to rig. mats: material name -> bpy material (defaults to bpy.data.materials)."""
+        """Mesh object skinned to rig (rig=None: unskinned static mesh). mats: material name -> bpy material (defaults to bpy.data.materials)."""
         bm = self.bm
         bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-5)
         bm.normal_update()
@@ -286,6 +286,8 @@ class Piece:
             me.materials.append((mats or bpy.data.materials)[m])
         ob = bpy.data.objects.new(name, me)
         bpy.context.scene.collection.objects.link(ob)
+        if rig is None:                          # static prop (art/props-enemies): no skin
+            return ob
         ob.parent = rig
         ob.modifiers.new("Armature", "ARMATURE").object = rig
         groups = {}
