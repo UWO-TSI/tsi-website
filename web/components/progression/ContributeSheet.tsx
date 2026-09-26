@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
-import { COINS } from "@/lib/economy";
+import { COINS, fmtCoins } from "@/lib/economy";
 import { localCollections, spendCollected } from "@/lib/game/collections";
 import { localCoins, spendCoins } from "@/lib/game/coins";
 import { deliver } from "@/lib/progression/client";
@@ -124,7 +124,7 @@ export function ContributeBody({ goalSlug }: { goalSlug?: string }) {
           onChange={(e) => { setAmount(Math.floor(Number(e.target.value) || 0)); keyRef.current = null; }}
         />
         <span className={s.muted}>
-          You have {effectiveKind === "coins" ? `${have.toLocaleString()} ${COINS.symbol}` : have.toLocaleString()} · you can add {deliveryRoom.toLocaleString()} more pts by delivery
+          You have {effectiveKind === "coins" ? fmtCoins(have) : have.toLocaleString()} · you can add {deliveryRoom.toLocaleString()} more pts by delivery
         </span>
       </div>
 

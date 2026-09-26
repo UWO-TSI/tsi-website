@@ -6,7 +6,7 @@
  * as play coins 🪙 or Gems 💎 only; nothing is ever expressed as money.
  */
 import { useCallback, useEffect, useRef, useState } from "react";
-import { COINS, GEMS } from "@/lib/economy";
+import { fmtCoins, fmtGems } from "@/lib/economy";
 import type { InventoryView, SellEntry, ShopEntry, ShopView, WalletView } from "@/lib/wallet/service";
 import { ApiError, newKey } from "@/lib/apiClient";
 import { httpEconomyTransport, type EconomyTransport, type MerchView } from "@/lib/wallet/transport";
@@ -14,8 +14,7 @@ import ProgressionPanel, { type ProgressionSheetProps } from "@/components/progr
 import p from "@/components/progression/progression.module.css";
 import s from "./economy.module.css";
 
-const sym = (c: string) => (c === "gems" ? GEMS.symbol : COINS.symbol);
-const fmt = (n: number, c: string) => `${n.toLocaleString()} ${sym(c)}`;
+const fmt = (n: number, c: string) => (c === "gems" ? fmtGems(n) : fmtCoins(n));
 const ART: Record<string, string> = { tool: "🎣", outfit: "👕", hair: "💇", accessory: "🎩", furniture: "🛋️", wallpaper: "🖼️", flooring: "🟫", merch: "🛍️" };
 const errText = (err: unknown) => (err instanceof ApiError ? err.message : "Couldn't reach the shop. Try again.");
 
