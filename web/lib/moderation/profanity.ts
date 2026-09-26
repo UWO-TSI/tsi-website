@@ -1,6 +1,6 @@
 /**
- * Shared word blocklist for member-written text (same list as the guestbook
- * and NPC chat routes). Whole-word, case-insensitive.
+ * The word blocklist for member-written text (guestbook, NPC chat, letters,
+ * names, table chat). Whole-word, case-insensitive.
  */
 const BLOCKLIST = [
   "fuck", "shit", "bitch", "asshole", "bastard", "cunt", "dick", "pussy", "slut", "whore",
