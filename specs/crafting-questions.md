@@ -14,3 +14,11 @@ Each has the assumption the build uses today. None blocks.
 10. **Resident quests.** No resident personal quests exist yet. `learnFromQuest()` (lib/crafting/service.ts) is the hook they call server-side; the client-facing `/api/crafting/learn` only opens the bottle. Top-tier recipes (rods 4-5, emperor net, golden shovel, koi kimono, crystal circlet, brass revolver, rune staff) are tagged `quest` and `bottle`, so they're reachable by bottle until quests exist. *Ask:* should they become quest-only once residents have quests?
 11. **Rare-catch drops (row 199).** Not built: a rare catch doesn't drop a recipe yet. The catch route is client-reported (hourly-capped), so a drop there would be farmable. *Assumption:* wait for server-rolled catches.
 12. **Rod gate.** Rods come from the server inventory (`catalogue_ref` of owned tools); the dev-only `?rod=` override is gone. Signed out, you fish with the starter rod. The fishing card shows the rod's name while you wait for a bite (tier 2+).
+
+## Coordinator rulings (2026-09-26)
+1. HQ bench only for v1: accepted.
+2. Workbench and bottle models: built in-house by the props/enemies Blender agent (`specs/props-and-enemies-art.md`); no ask to David.
+3–9. Accepted as built.
+10. Resident quests call `learnFromQuest()` when the resident roster lands (waits on David's founders' names and traits, row 217).
+11. Rare-catch recipe drops wait for server-rolled catches. Backlog item "server-authoritative catch rolls" added to the roadmap: catches are client-reported with hourly caps today, which bounds but does not remove farming.
+12. Accepted.

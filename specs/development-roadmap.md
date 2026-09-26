@@ -18,10 +18,12 @@ The coordinator (Claude) runs this without check-ins (David, 2026-09-26): verifi
 | Ponytail cleanup + game-side security (member_collections self-edit → sell exploit, economy_sell retry race, legacy Gem writers, class badges after 034, game code vs the #40 guard) | **Done, merged** (`becb580`): 4 exploits closed with fail-first tests, −2.4k lines, 862 tests | Audit items applied as small commits; exploit tests fail before, pass after |
 | Character in engine (rigged model replaces sprite; creator + wardrobe use the catalogue) | **Done, merged** (`c011a35`): one rig for player/residents/applicants, creator, wardrobe, emotes, combat clips; 854 tests | Player, residents, applicants on one rig in `/lab/island` and the applicant island |
 | Study in the world | **Done, merged** (`c977ef7`): cafe interior placeholder, 2 outdoor tables, sit/start/stand, overhead timers, walk-away settlement, grey fitting room fixed | Sit → study → coins → walk away ends session, in the cafe and outdoor tables |
-| Crafting | Running (branch `game/crafting`) |
+| Crafting | **Done, merged** (`0e98713a`): 31 recipes, HQ workbench, beach bottles, branches, crafted rods 4–5 |
 | Study × character integration (rigged seat-mates, sittable benches, bed Sleep, Dig, `avatar_config` drift migration, HUD on short screens) | Running (branch `game/study-character`) | Seat-mates and the player use the rig at every seat | ~30 recipes learnable and craftable; rods 4–5 unlock |
 | Staging Supabase + signed-in E2E (Phase 1) | Running (branch `game/phase1-staging`) on `tethos-staging` (ref `jjiyeroyralfbluowbjq`); starts with a prod-vs-files schema drift diff | Every Phase 1 flow passes signed in |
 | Polish: ownership (wardrobe/decorate read owned items, free starters granted once), cleanup follow-ups in DefaultIslandWorld/study | Next slot, spec `specs/polish-ownership.md` | Nothing the shop sells is free outside the starter set |
+| Props and enemies art (original weapons, 8 enemies, workbench, bottle) | Running (branch `game/props-enemies`) | No dump stand-ins left in the ruins or crafting |
+| Server-authoritative catch rolls (catches are client-reported with hourly caps today) | Backlog, before launch | Server rolls species/size; client only requests |
 | Phone companion, seasonal events, combat content, chapters 3–4, admin pass | Later waves | Per spec in `specs/` |
 | Launch (Phase 4) | After all of the above | Member playtest, David's local review, migrations in one window |
 
