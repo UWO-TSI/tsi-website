@@ -26,13 +26,13 @@ The coordinator (Claude) runs this without check-ins (David, 2026-09-26): verifi
 | Server-authoritative catch rolls (catches are client-reported with hourly caps today) | Backlog, before launch | Server rolls species/size; client only requests |
 | Combat content A: roster, telegraphs, guardian statue boss, 10 missions, crafted weapon stats | **Done, merged** (`df3d884d`): full roster, shared telegraphs, guardian boss (3 patterns, stagger, enrage), 10 missions, crafted weapon stats, server-side gate; 902 tests | Every enemy and the boss fight in the ruins; each mission template playable |
 | Combat content B: 16 kits, level-10 subclass choice, stat allocation | Running (branch `game/combat-content-b`) | Every subclass clears a normal mission solo |
-| Character art pass 2 (crafted wearables, real Stretch clip, beanie/cap/backpack/skirt fixes) | Running (branch `game/character-art-2`) | Every craftable wearable is wearable |
+| Character art pass 2 (crafted wearables, real Stretch clip, beanie/cap/backpack/skirt fixes) | **Done, merged** (`f838efb8`) | Every craftable wearable is wearable |
 | Launch-readiness fixes (membership default/backfill, public tier 5, un-RSVP, atomic chapter rewards, launch runbook) | Running (branch `game/launch-fixes`) | Fail-first tests; staging reruns pass |
-| Audio pass (sound on, settings, 12-block hourly music player, ambience, SFX map) | Next slot, spec `specs/audio-pass.md` | Chime and music play by default; blocks follow real time |
+| Audio pass (sound on, settings, 12-block hourly music player, ambience, SFX map) | Running (branch `game/audio`, Sonnet to spread rate-limit load) | Chime and music play by default; blocks follow real time |
 | Phone companion, seasonal events, chapters 3–4, admin pass | Later waves | Per spec in `specs/` |
 | Launch (Phase 4) | After all of the above | Member playtest, David's local review, migrations in one window |
 
-Waves run at most three code-writing agents at once (Mac memory). Each area: spec in `specs/<area>.md`, one fresh agent, questions in `specs/<area>-questions.md`, coordinator review, merge.
+Waves run at most three code-writing agents at once (Mac memory). The account's session limit has stopped all agents twice; lighter, well-specified tasks run on Sonnet to spread the load, and agents commit early so an interruption loses little. Each area: spec in `specs/<area>.md`, one fresh agent, questions in `specs/<area>-questions.md`, coordinator review, merge.
 
 ## How the work is run (David, 2026-09-26)
 
