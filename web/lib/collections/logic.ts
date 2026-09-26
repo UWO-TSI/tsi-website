@@ -201,6 +201,16 @@ export function clampSize(sp: Species | undefined, size: number | null | undefin
   return Math.round(Math.min(sp.size[1], Math.max(sp.size[0], size)) * 10) / 10;
 }
 
+/** Island clock for availability: Toronto hour/month unless the client passes its own. */
+export function momentFrom(url: URL, now: Date) {
+  const t = torontoParts(now);
+  const hourParam = Number(url.searchParams.get("hour"));
+  const hour = url.searchParams.has("hour") && hourParam >= 0 && hourParam < 24 ? hourParam : t.hour;
+  const w = url.searchParams.get("weather");
+  const weather = w === "rain" || w === "snow" || w === "cloudy" ? w : "clear";
+  return { hour, month: t.month, weather } as const;
+}
+
 /** Monday 00:00 in America/Toronto, as YYYY-MM-DD (matches 031's SQL). */
 export function weekStart(now: Date): string {
   const t = torontoParts(now);

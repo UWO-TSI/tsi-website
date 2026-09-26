@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { economyContext } from "@/lib/wallet/deps";
+import { supabaseEconomyStore } from "@/lib/wallet/supabaseStore";
+import { withStore } from "@/lib/server/memberContext";
 import { buy } from "@/lib/wallet/service";
 
 /**
@@ -19,7 +20,7 @@ const BuySchema = z.object({
 });
 
 export async function GET() {
-  const ctx = await economyContext();
+  const ctx = await withStore(supabaseEconomyStore);
   if (ctx instanceof NextResponse) return NextResponse.json({ gear: null });
   try {
     const inv = await ctx.store.inventory(ctx.userId);
@@ -30,7 +31,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const ctx = await economyContext();
+  const ctx = await withStore(supabaseEconomyStore);
   if (ctx instanceof NextResponse) return NextResponse.json({ error: "Unauthorized" }, { status: ctx.status === 401 ? 401 : 503 });
   const parsed = BuySchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Invalid item" }, { status: 400 });

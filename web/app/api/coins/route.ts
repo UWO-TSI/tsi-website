@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { economyContext } from "@/lib/wallet/deps";
+import { supabaseEconomyStore } from "@/lib/wallet/supabaseStore";
+import { withStore } from "@/lib/server/memberContext";
 
 /**
  * Play-coin balance (single wallet, 20260926150600_economy.sql).
@@ -11,7 +12,7 @@ import { economyContext } from "@/lib/wallet/deps";
  *        gift, in-person events), each through wallet_apply().
  */
 export async function GET() {
-  const ctx = await economyContext();
+  const ctx = await withStore(supabaseEconomyStore);
   if (ctx instanceof NextResponse) return NextResponse.json({ coins: null });
   try {
     return NextResponse.json({ coins: (await ctx.store.wallet(ctx.userId)).coins });

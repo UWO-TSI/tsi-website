@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { homesContext } from "@/lib/homes-sync/deps";
+import { supabaseHomesStore } from "@/lib/homes-sync/supabaseStore";
 import { saveHome } from "@/lib/homes-sync/service";
-import { jsonResult } from "@/lib/server/memberContext";
+import { jsonResult, withStore } from "@/lib/server/memberContext";
 
 const Body = z.object({
   layout: z.unknown(),
@@ -13,7 +13,7 @@ const Body = z.object({
 
 // PUT /api/homes/layout: save the whole document (validated, optimistic, idempotent).
 export async function PUT(request: Request) {
-  const ctx = await homesContext();
+  const ctx = await withStore(supabaseHomesStore);
   if (ctx instanceof NextResponse) return ctx;
   const body = await request.json().catch(() => null);
   const parsed = Body.safeParse(body);

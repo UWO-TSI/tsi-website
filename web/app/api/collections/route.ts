@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { recordCatch } from "@/lib/collections/service";
-import { collectionsContext } from "@/lib/collections/deps";
+import { supabaseCollectionsStore } from "@/lib/collections/supabaseStore";
+import { withStore } from "@/lib/server/memberContext";
 
 /**
  * Member collections: stackable collectibles (fruit, flowers, fish). The
@@ -47,7 +48,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const ctx = await collectionsContext();
+  const ctx = await withStore(supabaseCollectionsStore);
   if (ctx instanceof NextResponse) return ctx;
 
   let body: unknown;

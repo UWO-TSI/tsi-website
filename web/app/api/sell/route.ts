@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { economyContext } from "@/lib/wallet/deps";
+import { supabaseEconomyStore } from "@/lib/wallet/supabaseStore";
+import { withStore } from "@/lib/server/memberContext";
 import { sell } from "@/lib/wallet/service";
 
 /**
@@ -18,7 +19,7 @@ const SellSchema = z.object({
 });
 
 export async function POST(request: Request) {
-  const ctx = await economyContext();
+  const ctx = await withStore(supabaseEconomyStore);
   if (ctx instanceof NextResponse) return NextResponse.json({ error: "Unauthorized" }, { status: ctx.status === 401 ? 401 : 503 });
   const parsed = SellSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Invalid sale payload" }, { status: 400 });

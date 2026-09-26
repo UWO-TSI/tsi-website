@@ -1,6 +1,6 @@
 /**
- * Signed-in member + service-role client for game-data routes (homes,
- * collections). Mocked in route tests.
+ * Signed-in member + service-role client for the game-data routes.
+ * Mocked in route tests.
  */
 import { NextResponse } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -34,6 +34,14 @@ export async function memberContext(): Promise<MemberContext | NextResponse> {
   }
   return { userId, tier, db: createAdminClient(), now: new Date() };
 }
+
+/** memberContext plus a domain store built on its service-role client. */
+export async function withStore<S>(make: (db: SupabaseClient) => S): Promise<(MemberContext & { store: S }) | NextResponse> {
+  const ctx = await memberContext();
+  return ctx instanceof NextResponse ? ctx : { ...ctx, store: make(ctx.db) };
+}
+
+export const isAdminTier = (tier: number) => tier === 1 || tier === 2;
 
 export function jsonResult<T>(r: { ok: true; data: T } | { ok: false; status: number; error: string; code?: string; [k: string]: unknown }, key: string): NextResponse {
   if (!r.ok) {
