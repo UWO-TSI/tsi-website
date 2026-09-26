@@ -3,7 +3,7 @@
  * kills, missions and gear. Rules from this folder decide; the store (035
  * functions) applies atomically and idempotently.
  */
-import { ENEMIES, MISSIONS } from "./content";
+import { ENEMIES, MISSIONS, rollBossReward } from "./content";
 import { SUBCLASSES, subclassesFor } from "./kits";
 import { applyEvents, canStart, type MissionEvent, type MissionState } from "./missions";
 import { allocate, derived, FAMILY_PRESETS, levelProgress, pointsEarned, pointsSpent, presetAllocation, STAT_RESET_FEE, SUBCLASS_LEVEL, SUBCLASS_RESPEC_FEE, ZERO_STATS } from "./progression";
@@ -27,6 +27,7 @@ const ERR: Record<string, [number, string]> = {
   unknown_enemy: [400, "Unknown enemy."],
   unknown_mission: [404, "Unknown mission."],
   bad_hits: [400, "Invalid hit count."],
+  boss_cooldown: [409, "The guardian's hoard is spent for now. It refills 20 hours after your last win."],
   failed: [500, "Something went wrong. Try again."],
 };
 async function run<T>(f: () => Promise<T>): Promise<Result<T>> {
@@ -116,6 +117,9 @@ export const missionProgress = (store: CombatStore, m: string, progressId: strin
   });
 
 export const completeMission = (store: CombatStore, m: string, progressId: string) => run(() => store.completeMission(m, progressId));
+/** Guardian statue victory: rolled here on the server against the gear the member owns, paid by the store once. */
+export const claimBossReward = (store: CombatStore, m: string, eventKey: string, random: () => number = Math.random) =>
+  run(async () => store.bossReward(m, eventKey, rollBossReward((await store.weapons(m)).map((w) => w.weapon_key), random)));
 export const reportWear = (store: CombatStore, m: string, weaponKey: string, hits: number, defeated: boolean, key: string) => run(() => store.wear(m, weaponKey, hits, defeated, key));
 export const repairWeapon = (store: CombatStore, m: string, weaponKey: string, key: string) => run(() => store.repair(m, weaponKey, key));
 export const equipWeapon = (store: CombatStore, m: string, weaponKey: string) =>

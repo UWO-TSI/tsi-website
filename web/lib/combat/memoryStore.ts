@@ -1,15 +1,16 @@
 /** In-memory CombatStore mirroring 20260926150800_combat.sql (tests, dev harness). */
 import type { Family } from "@/lib/oracle/engine";
-import { ENEMIES, MISSIONS } from "./content";
+import { BOSS_DROPS, ENEMIES, MISSIONS, type BossReward } from "./content";
 import { initialProgress, type MissionProgress, type MissionState } from "./missions";
 import { levelForXp, pointsEarned, pointsSpent, STATS, ZERO_STATS, STAT_RESET_FEE, SUBCLASS_RESPEC_FEE, type StatBlock } from "./progression";
 import { CombatError, type CombatStore, type OwnedWeapon, type ProgressRow } from "./store";
-import { wear as wearRule, WEAPONS } from "./weapons";
+import { STARTER_WEAPONS, wear as wearRule, WEAPONS } from "./weapons";
 
 export function memoryCombatStore(clock: () => Date = () => new Date()) {
   const prog = new Map<string, { xp: number; stats: StatBlock; subclass: string | null }>();
   const xpKeys = new Set<string>();
   const kills = new Map<string, number>(); // `${m}:${event}` → xp
+  const killEnemy = new Map<string, string>(); // `${m}:${event}` → enemy key
   const killLog: { m: string; at: number; xp: number }[] = [];
   const weapons = new Map<string, OwnedWeapon[]>();
   const coins = new Map<string, number>();
@@ -18,6 +19,9 @@ export function memoryCombatStore(clock: () => Date = () => new Date()) {
   const missions = new Map<string, ProgressRow & { m: string; key: string }>();
   const wearKeys = new Set<string>();
   const respecKeys = new Map<string, number>();
+  const materials = new Map<string, number>(); // `${m}:${item}` → count (member_collections)
+  const bossRewards = new Map<string, { reward: BossReward; at: number }>(); // `${m}:${event}`
+  const give = (m: string, items: Record<string, number>) => { for (const [k, n] of Object.entries(items)) materials.set(`${m}:${k}`, (materials.get(`${m}:${k}`) ?? 0) + n); };
   let seq = 0;
   const pay = (m: string, amount: number, key: string) => {
     if (ledger.has(`${m}:${key}`)) return;
@@ -28,7 +32,7 @@ export function memoryCombatStore(clock: () => Date = () => new Date()) {
   const ensure = (m: string) => {
     if (!prog.has(m)) {
       prog.set(m, { xp: 0, stats: { ...ZERO_STATS }, subclass: null });
-      weapons.set(m, ["sword-driftwood", "wraps-cloth"].map((k) => ({ weapon_key: k, durability: WEAPONS.find((w) => w.key === k)!.max_durability, equipped: k === "sword-driftwood" })));
+      weapons.set(m, STARTER_WEAPONS.map((k) => ({ weapon_key: k, durability: WEAPONS.find((w) => w.key === k)!.max_durability, equipped: k === "sword-driftwood" })));
     }
     return prog.get(m)!;
   };
@@ -55,6 +59,7 @@ export function memoryCombatStore(clock: () => Date = () => new Date()) {
       const hour = killLog.filter((k) => k.m === m && k.at > clock().getTime() - 3_600_000).reduce((n, k) => n + k.xp, 0);
       if (hour + e.xp > 6000) throw new CombatError("kill_xp_cap");
       kills.set(`${m}:${ev}`, e.xp);
+      killEnemy.set(`${m}:${ev}`, enemy);
       killLog.push({ m, at: clock().getTime(), xp: e.xp });
       return store.grantXp(m, e.xp, "kill", enemy, `kill:${ev}`);
     },
@@ -139,14 +144,28 @@ export function memoryCombatStore(clock: () => Date = () => new Date()) {
       const r = missions.get(id);
       if (!r || r.m !== m) throw new CombatError("not_found");
       const def = MISSIONS.find((x) => x.key === r.mission_key)!;
-      if (r.state === "completed") return { xp_awarded: def.rewards.xp, coins_awarded: def.rewards.coins, replayed: true };
+      if (r.state === "completed") return { xp_awarded: def.rewards.xp, coins_awarded: def.rewards.coins, materials_awarded: def.rewards.materials, replayed: true };
       if (r.state !== "ready") throw new CombatError("not_ready");
       r.state = "completed";
       r.completed_at = clock().toISOString();
       await store.grantXp(m, def.rewards.xp, "mission", def.key, `mission:${id}`);
       pay(m, def.rewards.coins, `mission:${id}`);
-      return { xp_awarded: def.rewards.xp, coins_awarded: def.rewards.coins, replayed: false };
+      give(m, def.rewards.materials);
+      return { xp_awarded: def.rewards.xp, coins_awarded: def.rewards.coins, materials_awarded: def.rewards.materials, replayed: false };
+    },
+    async bossReward(m, ev, reward) {
+      const done = bossRewards.get(`${m}:${ev}`);
+      if (done) return { reward: done.reward, replayed: true };
+      if (!kills.has(`${m}:${ev}`) || killEnemy.get(`${m}:${ev}`) !== BOSS_DROPS.enemy) throw new CombatError("not_found");
+      const last = Math.max(0, ...[...bossRewards.entries()].filter(([k]) => k.startsWith(`${m}:`)).map(([, v]) => v.at));
+      if (last && clock().getTime() - last < BOSS_DROPS.cooldown_hours * 3_600_000) throw new CombatError("boss_cooldown");
+      bossRewards.set(`${m}:${ev}`, { reward, at: clock().getTime() });
+      pay(m, reward.coins, `boss:${ev}`);
+      give(m, reward.materials);
+      const list = weapons.get(m)!;
+      if (reward.weapon && !list.some((w) => w.weapon_key === reward.weapon)) list.push({ weapon_key: reward.weapon, durability: WEAPONS.find((w) => w.key === reward.weapon)!.max_durability, equipped: false });
+      return { reward, replayed: false };
     },
   };
-  return { store, setFamily: (m: string, f: Family) => families.set(m, f), fund: (m: string, n: number) => coins.set(m, n), coinsOf: (m: string) => coins.get(m) ?? 0 };
+  return { store, setFamily: (m: string, f: Family) => families.set(m, f), fund: (m: string, n: number) => coins.set(m, n), coinsOf: (m: string) => coins.get(m) ?? 0, materialOf: (m: string, item: string) => materials.get(`${m}:${item}`) ?? 0 };
 }

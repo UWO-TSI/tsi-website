@@ -22,23 +22,33 @@ export interface Weapon {
 }
 
 export type EnemyKind = "wildlife" | "construct" | "boss";
-export type AttackShape = "lunge" | "slam" | "spit" | "sweep";
-export interface EnemyAttack { shape: AttackShape; windup: number; recover: number; damage: number; range: number; arc: number; knockback: number }
+/** smash: a slam on a ring marker where you stood; beam: a sweep over `arc` during `active`; summon: calls rune wisps. */
+export type AttackShape = "lunge" | "slam" | "spit" | "sweep" | "smash" | "beam" | "summon";
+export interface EnemyAttack {
+  shape: AttackShape; windup: number; recover: number; damage: number; range: number; arc: number; knockback: number;
+  /** Distance at which the windup starts (default 0.8 × range). */
+  reach?: number;
+  /** Seconds the attack stays live after the windup (the beam's sweep). */
+  active?: number;
+  /** The recover is a stagger window: hits land for more. */
+  stagger?: boolean;
+}
 export interface EnemyType {
   id: string; name: string; kind: EnemyKind; level: number;
   hp: number; speed: number; radius: number;
-  /** Damage reduction 0..0.8 and kill XP (systems data). */
-  defense: number; xp: number; elite: boolean;
+  /** Damage reduction 0..0.8, flat armor after it, and kill XP (systems data). */
+  defense: number; armor: number; xp: number; elite: boolean;
   aggroRadius: number; leashRadius: number;
-  attack: EnemyAttack;
+  /** One for ordinary enemies; the boss rotates through several (sim.ts BOSS_PLAN). */
+  attacks: EnemyAttack[];
   model: string; modelScale: number; modelYaw: number; hover: number;
 }
 
 export type MissionTemplate = "hunt" | "fetch" | "survive" | "escort";
 export interface MissionDef {
-  id: string; template: MissionTemplate; title: string; blurb: string;
+  id: string; template: MissionTemplate; title: string; blurb: string; zone: "outer" | "inner" | "boss"; difficulty: number;
   params: { enemy?: string; count?: number; item?: string; waves?: number; escortee?: string };
-  reward: { coins: number; xp: number };
+  reward: { coins: number; xp: number; materials: Record<string, number> };
 }
 
 export type IncantationOutcome = "fail" | "normal" | "enhanced";

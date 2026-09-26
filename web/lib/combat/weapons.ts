@@ -33,7 +33,16 @@ export const WEAPONS: WeaponDef[] = [
   W("tome-spirits", "Tome of small spirits", "tome", 1, ["spirit"]),
   W("totem-cedar", "Cedar totem", "totem", 1, ["spirit"]),
   W("wraps-cloth", "Cloth hand wraps", "fists", 1, ["might", "finesse"]),
+  // Guardian statue drops (row 21, BOSS_DROPS in content.ts): tier 4 = Epic, tier 5 = Legendary.
+  W("sword-guardian", "Guardian's edge", "sword", 4, ["might"]),
+  W("bow-sentinel", "Sentinel bow", "bow", 4, ["finesse"]),
+  W("staff-sigil", "Sigil staff", "staff", 4, ["arcana"]),
+  W("tome-warden", "Warden's grimoire", "tome", 4, ["spirit"]),
+  W("staff-heartstone", "Heartstone staff", "staff", 5, ["arcana", "spirit"]),
 ];
+
+/** Ruling 2026-09-26: one starter of each archetype (plus the wraps), granted with the progression row. */
+export const STARTER_WEAPONS = ["sword-driftwood", "bow-willow", "staff-oak", "tome-spirits", "wraps-cloth"];
 
 /** Durability ≤ 0: the weapon still works at half damage until repaired (defeat never deletes gear). */
 export const BROKEN_DAMAGE_MULT = 0.5;
@@ -47,6 +56,7 @@ export interface HitInput {
   stats: StatBlock;
   level: number;
   enemyDefense: number; // 0..0.8 damage reduction
+  enemyArmor?: number; // flat, after defense (the boss's stone skin)
   crit?: boolean;
   critMult?: number;
   potency?: number; // abilities / incantations: 0.5..1.5
@@ -54,13 +64,14 @@ export interface HitInput {
 
 /**
  * damage = tier base × (1 + 2.5%·primary + 1%·secondary) × (1 + 1%·level)
- *          × potency × crit × (1 − defense) × (broken ? 0.5 : 1), at least 1.
+ *          × potency × crit × (1 − defense) − armor, × (broken ? 0.5 : 1), at least 1.
+ * Flat armor is what makes tier matter against the boss: low-tier hits mostly glance.
  */
 export function damage(h: HitInput): number {
   const [p, s] = h.weapon.scaling;
   const statMult = 1 + 0.025 * h.stats[p] + (s ? 0.01 * h.stats[s] : 0);
   const raw = TIER_BASE[h.weapon.tier] * statMult * (1 + 0.01 * h.level) * (h.potency ?? 1) * (h.crit ? (h.critMult ?? 1.75) : 1);
-  const afterDef = raw * (1 - Math.min(0.8, Math.max(0, h.enemyDefense)));
+  const afterDef = raw * (1 - Math.min(0.8, Math.max(0, h.enemyDefense))) - (h.enemyArmor ?? 0);
   return Math.max(1, Math.round(afterDef * (h.durability <= 0 ? BROKEN_DAMAGE_MULT : 1)));
 }
 

@@ -14,10 +14,22 @@ export const COURTYARD: Rect = { x0: -6.5, x1: 6.5, z0: 4, z1: 12.5 };
 export const TEMPLE_STEPS: Vec = { x: 0, z: 1.2 };
 /** Fetch: the old lantern by the fox den (outer wild, north-west corner). */
 export const LANTERN_SPOT: Vec = { x: 11.5, z: -20 };
-/** Survive: the rune circle in the outer wild. */
+/** Fetch items by mission `item`: the lantern at the fox den, the sealed tome in the temple library corner. */
+export const FETCH_SPOTS: Record<string, Vec & { model: string; scale: number; hint: string }> = {
+  "old-lantern": { ...LANTERN_SPOT, model: "/assets/acnh/props/stone-lantern.glb", scale: 0.45, hint: "Find it near the fox den" },
+  "sealed-tome": { x: -9, z: 13.2, model: "/assets/game/weapons/tome-spirits.glb", scale: 2.4, hint: "It's in the temple library, far corner" },
+};
+/** Survive: the rune circle in the outer wild, and the sanctum circle in the temple court. */
 export const RUNE_CIRCLE = { x: 6.5, z: -14, r: 2.6 };
+export const SANCTUM_CIRCLE = { x: 0, z: 8.2, r: 2.6 };
+export const SURVIVE_CIRCLES: Record<string, { x: number; z: number; r: number }> = { "survive-circle": RUNE_CIRCLE, "survive-sanctum": SANCTUM_CIRCLE };
 /** Escort: the botanist's checkpoints from the gate to the temple steps. */
 export const ESCORT_PATH: Vec[] = [{ x: 0, z: -26 }, { x: 0, z: -18 }, { x: -3, z: -11 }, { x: 0, z: -4 }, { x: 0, z: 1.2 }];
+/** Escort paths by mission: the first point is where the resident waits, the last is the arrival. */
+export const ESCORT_PATHS: Record<string, Vec[]> = {
+  "escort-botanist": ESCORT_PATH,
+  "escort-scholar": [{ x: 0, z: -2.5 }, { x: 0, z: 4 }, { x: -5, z: 8.5 }, { x: 4.5, z: 11.5 }, { x: 0, z: 13.2 }, { x: 0, z: 14.8 }],
+};
 export const BOSS_CENTER: Vec = { x: 0, z: 23.5 };
 export const EXIT_SPOT: Vec = { x: 0, z: -30.6 };
 

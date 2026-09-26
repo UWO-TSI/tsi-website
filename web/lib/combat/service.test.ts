@@ -2,11 +2,13 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { islandMissions, islandProgression, islandScore, islandWeapons } from "./islandAdapter";
+import { BOSS_DROPS, rollBossReward } from "./content";
 import { RUNES, resample } from "./incantation";
 import { memoryCombatStore } from "./memoryStore";
 import { EVENT_XP, STAT_RESET_FEE, SUBCLASS_RESPEC_FEE, levelForXp, xpForLevel } from "./progression";
 import { combatSeedSql } from "./seed";
-import { allocateStats, chooseSubclass, completeMission, getProgression, listMissions, missionProgress, recordKill, repairWeapon, reportWear, resetStats, startMission } from "./service";
+import { STARTER_WEAPONS, WEAPONS } from "./weapons";
+import { allocateStats, chooseSubclass, claimBossReward, completeMission, getProgression, listMissions, missionProgress, recordKill, repairWeapon, reportWear, resetStats, startMission } from "./service";
 
 const M = "00000000-0000-4000-8000-0000000000aa";
 const now = new Date("2026-09-26T12:00:00Z");
@@ -16,7 +18,7 @@ describe("progression via the service", () => {
     const c = memoryCombatStore(() => now);
     const p = await getProgression(c.store, M);
     expect(p).toMatchObject({ ok: true, data: { level: 1, points_available: 0, subclass_choices: [] } });
-    expect(p.ok && p.data.weapons.map((w) => w.weapon_key)).toEqual(["sword-driftwood", "wraps-cloth"]);
+    expect(p.ok && p.data.weapons.map((w) => w.weapon_key)).toEqual(["sword-driftwood", "bow-willow", "staff-oak", "tome-spirits", "wraps-cloth"]);
   });
   it("allocates within points, needs a paid reset to take points back, keeps XP on reset", async () => {
     const c = memoryCombatStore(() => now);
@@ -63,9 +65,10 @@ describe("missions via the service", () => {
     await missionProgress(c.store, M, id, kills.slice(0, 3)); // retry
     expect(await completeMission(c.store, M, id)).toMatchObject({ ok: false, code: "not_ready" });
     expect(await missionProgress(c.store, M, id, kills)).toMatchObject({ ok: true, data: { state: "ready", counter: 6 } });
-    expect(await completeMission(c.store, M, id)).toMatchObject({ ok: true, data: { xp_awarded: 300, coins_awarded: 60, replayed: false } });
+    expect(await completeMission(c.store, M, id)).toMatchObject({ ok: true, data: { xp_awarded: 300, coins_awarded: 60, materials_awarded: { wood_branch: 3 }, replayed: false } });
     expect(await completeMission(c.store, M, id)).toMatchObject({ ok: true, data: { replayed: true } });
     expect(c.coinsOf(M)).toBe(60);
+    expect(c.materialOf(M, "wood_branch")).toBe(3); // materials paid once too
     const p = await getProgression(c.store, M);
     expect(p.ok && p.data.xp).toBe(300);
     expect(await startMission(c.store, M, "hunt-foxes", "start-0003", now)).toMatchObject({ ok: false, code: "cooldown" });
@@ -111,11 +114,56 @@ describe("island adapter", () => {
   });
 });
 
-describe("20260926150800_combat.sql stays in step with the TS rules", () => {
-  const sql = readFileSync(join(__dirname, "../../supabase/migrations/20260926150800_combat.sql"), "utf8");
+describe("guardian statue reward (row 21)", () => {
+  const winAt = async (c: ReturnType<typeof memoryCombatStore>, key: string) => recordKill(c.store, M, "guardian-statue", key);
+  it("pays once per recorded boss kill, then waits out the 20 h cooldown", async () => {
+    let t = now.getTime();
+    const c = memoryCombatStore(() => new Date(t));
+    expect(await claimBossReward(c.store, M, "boss-0001", () => 0.9)).toMatchObject({ ok: false, code: "not_found" }); // no kill yet
+    await recordKill(c.store, M, "shadow-fox", "fox-0001");
+    expect(await claimBossReward(c.store, M, "fox-0001", () => 0.9)).toMatchObject({ ok: false, code: "not_found" }); // not a boss
+    await winAt(c, "boss-0002");
+    const first = await claimBossReward(c.store, M, "boss-0002", () => 0.9);
+    expect(first).toMatchObject({ ok: true, data: { replayed: false, reward: { coins: BOSS_DROPS.coins, weapon: null, rarity: null } } });
+    expect(await claimBossReward(c.store, M, "boss-0002", () => 0.01)).toMatchObject({ ok: true, data: { replayed: true, reward: { weapon: null } } });
+    expect(c.coinsOf(M)).toBe(BOSS_DROPS.coins);
+    expect(c.materialOf(M, "rock_crystal")).toBe(2);
+    await winAt(c, "boss-0003");
+    expect(await claimBossReward(c.store, M, "boss-0003", () => 0.9)).toMatchObject({ ok: false, code: "boss_cooldown" });
+    t += 20 * 3_600_000;
+    expect(await claimBossReward(c.store, M, "boss-0003", () => 0.9)).toMatchObject({ ok: true, data: { replayed: false } });
+  });
+  it("rolls Epic/Legendary gear the member doesn't own and puts it in their weapons", async () => {
+    expect(rollBossReward([], () => 0.01)).toMatchObject({ weapon: "staff-heartstone", rarity: "legendary" });
+    expect(rollBossReward(["staff-heartstone"], () => 0.01)).toMatchObject({ weapon: null, rarity: null });
+    expect(rollBossReward([], () => 0.1)).toMatchObject({ rarity: "epic" });
+    expect(rollBossReward([], () => 0.5)).toMatchObject({ weapon: null });
+    const epics = BOSS_DROPS.gear[1].weapons;
+    expect(rollBossReward(epics.slice(0, 3), () => 0.1)).toMatchObject({ weapon: epics[3] });
+    for (const g of BOSS_DROPS.gear) for (const w of g.weapons) expect(WEAPONS.find((x) => x.key === w)!.tier).toBe(g.rarity === "legendary" ? 5 : 4);
+    const c = memoryCombatStore(() => now);
+    await recordKill(c.store, M, "guardian-statue", "boss-0100");
+    const r = await claimBossReward(c.store, M, "boss-0100", () => 0.1);
+    const w = r.ok ? r.data.reward.weapon : null;
+    expect(w && epics.includes(w)).toBe(true);
+    const p = await getProgression(c.store, M);
+    expect(p.ok && p.data.weapons.some((x) => x.weapon_key === w && x.tier === 4)).toBe(true);
+  });
+});
+
+describe("20260926180000_combat_content.sql stays in step with the TS rules", () => {
+  const sql = readFileSync(join(__dirname, "../../supabase/migrations/20260926180000_combat_content.sql"), "utf8");
   it("carries the generated seed verbatim", () => {
     expect(sql).toContain(combatSeedSql());
   });
+  it("pays the boss reward at the same cooldown and grants the same starters", () => {
+    expect(sql).toContain(`make_interval(hours => ${BOSS_DROPS.cooldown_hours})`);
+    expect(sql).toContain(STARTER_WEAPONS.map((k) => `'${k}'`).join(", "));
+  });
+});
+
+describe("20260926150800_combat.sql stays in step with the TS rules", () => {
+  const sql = readFileSync(join(__dirname, "../../supabase/migrations/20260926150800_combat.sql"), "utf8");
   it("uses the same curve and fees", () => {
     expect(sql).toContain("need := need + 100 * l + 25 * l * l;");
     expect(sql).toContain(`('event_xp', ${EVENT_XP})`);

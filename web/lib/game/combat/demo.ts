@@ -5,7 +5,7 @@
  * missions can be played signed out. `?family=` picks the family.
  */
 import { memoryCombatStore } from "@/lib/combat/memoryStore";
-import { completeMission, getProgression, listMissions, missionProgress, recordKill, reportWear, startMission, chooseSubclass } from "@/lib/combat/service";
+import { claimBossReward, completeMission, getProgression, listMissions, missionProgress, recordKill, reportWear, startMission, chooseSubclass } from "@/lib/combat/service";
 import { islandProgression } from "@/lib/combat/islandAdapter";
 import { subclassesFor } from "@/lib/combat/kits";
 import { xpForLevel } from "@/lib/combat/progression";
@@ -48,6 +48,7 @@ export function installCombatDemo(): void {
       case "/api/combat/missions/start": return json(await startMission(m.store, ME, body.mission, body.start_key, now), "mission");
       case "/api/combat/missions/progress": return json(await missionProgress(m.store, ME, body.progress_id, body.events), "mission");
       case "/api/combat/missions/complete": return json(await completeMission(m.store, ME, body.progress_id), "rewards");
+      case "/api/combat/boss-reward": return json(await claimBossReward(m.store, ME, body.event_key), "boss");
       default: return new Response(JSON.stringify({ ok: false, error: "Not in the demo" }), { status: 404 });
     }
   };

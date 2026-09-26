@@ -10,7 +10,6 @@ import { PLAYER_BASE, WEAPONS, WEAPON_ORDER } from "./data";
 import { ZERO_STATS, type StatBlock } from "@/lib/combat/progression";
 import type { Ability } from "@/lib/combat/kits";
 
-export type WeaponId = (typeof WEAPON_ORDER)[number];
 export interface Projectile { id: number; x: number; z: number; vx: number; vz: number; life: number; from: "player" | "enemy"; damage: number; kind: "arrow" | "bolt" | "spit"; radius: number }
 export interface Minion { id: number; x: number; z: number; life: number; cooldown: number }
 export interface Floater { id: number; x: number; y: number; z: number; text: string; kind: "hit" | "crit" | "hurt" | "info"; age: number }
@@ -29,7 +28,8 @@ export interface CombatRuntime {
   player: {
     hp: number; maxHp: number; alive: boolean; safe: boolean; level: number; stats: StatBlock;
     energy: number; sinceSpend: number;
-    weapon: WeaponId; durability: Record<WeaponId, number>; hits: Record<WeaponId, number>;
+    /** Equipped weapon id and the owned ones the swap key cycles (starters until progression loads). */
+    weapon: string; owned: string[]; durability: Record<string, number>; hits: Record<string, number>;
     attackCd: number; swing: number; dodgeAge: number | null; dodgeCd: number; dodgeDir: Vec;
     aim: Vec; facing: number; hurt: number; downFor: number;
     /** Weapons granted (the ruins gate is open): the equipped one shows on the character's back in the village (row 140). */
@@ -48,25 +48,35 @@ export interface CombatRuntime {
   escort: { x: number; z: number; hp: number; waypoint: number } | null;
   wave: { index: number; active: boolean } | null;
   bossEngaged: boolean;
+  /** A card in the middle of the screen (boss victory reward), until `until` seconds of encounter time. */
+  banner: { text: string; until: number } | null;
   seq: number;
 }
 
 export function createRuntime(): CombatRuntime {
   return {
     player: { hp: PLAYER_BASE.maxHp, maxHp: PLAYER_BASE.maxHp, alive: true, safe: true, level: 10, stats: { ...ZERO_STATS },
-      energy: ENERGY.max, sinceSpend: 99, weapon: "sword-driftwood",
-      durability: Object.fromEntries(WEAPON_ORDER.map(id => [id, WEAPONS[id].maxDurability])) as Record<WeaponId, number>,
-      hits: Object.fromEntries(WEAPON_ORDER.map(id => [id, 0])) as Record<WeaponId, number>,
+      energy: ENERGY.max, sinceSpend: 99, weapon: "sword-driftwood", owned: [...WEAPON_ORDER],
+      durability: Object.fromEntries(Object.values(WEAPONS).map(w => [w.id, w.maxDurability])),
+      hits: {},
       attackCd: 0, swing: 0, dodgeAge: null, dodgeCd: 0, dodgeDir: { x: 0, z: 1 },
       aim: { x: 0, z: 0 }, facing: 0, hurt: 0, downFor: 0, armed: false },
     cooldowns: { spark: 0, binding: 0, swap: 0, signature: 0 },
     enemies: [], projectiles: [], minions: [], floaters: [], blasts: [],
-    casting: null, signature: null, killQueue: [], mission: null, idol: "temple", escort: null, wave: null, bossEngaged: false, seq: 1,
+    casting: null, signature: null, killQueue: [], mission: null, idol: "temple", escort: null, wave: null, bossEngaged: false, banner: null, seq: 1,
   };
 }
 
+/** The member's weapons from /api/combat/progression: every owned one with a look joins the swap cycle, with its durability. */
+export function setOwnedWeapons(rt: CombatRuntime, owned: { weapon_key: string; durability: number }[]) {
+  const usable = owned.filter(w => WEAPONS[w.weapon_key]);
+  for (const w of usable) rt.player.durability[w.weapon_key] = w.durability;
+  rt.player.owned = [...new Set([...WEAPON_ORDER, ...usable.map(w => w.weapon_key)])];
+}
+
 // ── HUD subscription ────────────────────────────────────────────
-export const combat = { rt: createRuntime() };
+/** `freeze` (dev, via window.__combat): the encounter clock stops so a telegraph can be held for a screenshot. */
+export const combat = { rt: createRuntime(), freeze: false };
 let version = 0;
 const listeners = new Set<() => void>();
 export function publishCombat() { version++; for (const l of listeners) l(); }

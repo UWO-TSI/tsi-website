@@ -7,6 +7,13 @@
 import { MISSIONS as SYSTEM_MISSIONS } from "@/lib/combat/content";
 import { applyEvent, initialProgress, type MissionEvent as SystemEvent, type MissionProgress } from "@/lib/combat/missions";
 import type { MissionDef } from "./contract";
+import { FETCH_SPOTS } from "@/lib/game/ruins";
+import { ROSTER } from "@/lib/collections/roster";
+import { MATERIALS } from "@/lib/crafting/recipes";
+
+const NAMES = new Map([...ROSTER, ...MATERIALS].map(s => [s.key, s.name]));
+/** "Crystal ×2, Gold Nugget ×1" for mission and boss rewards. */
+export const materialsLabel = (items: Record<string, number>) => Object.entries(items).map(([k, n]) => `${NAMES.get(k) ?? k} ×${n}`).join(", ");
 
 export type MissionEvent =
   | { kind: "kill"; enemy: string }
@@ -55,7 +62,7 @@ function withNote(s: MissionState): MissionState {
   const note = status === "complete" ? "Done. Claim it at the board."
     : status === "failed" ? (t === "escort" ? "The escort turned back." : t === "survive" ? "The waves pushed you out." : "Mission failed.")
     : t === "hunt" ? `${p.counter} / ${s.goal} ${plural(s.def.params.enemy?.replace(/-/g, " ") ?? "")}`
-    : t === "fetch" ? (p.carrying ? "Bring it back to the gate" : "Find it near the fox den")
+    : t === "fetch" ? (p.carrying ? "Bring it back to the gate" : FETCH_SPOTS[s.def.params.item ?? ""]?.hint ?? "Find it in the ruins")
     : t === "survive" ? (p.counter ? `Wave ${Math.min(p.counter + 1, s.goal)} of ${s.goal}` : "Step into the rune circle")
     : `Checkpoint ${p.counter} of ${s.goal}. Stay close`;
   return { ...s, status, note };

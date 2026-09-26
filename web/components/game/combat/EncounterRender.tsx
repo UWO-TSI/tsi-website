@@ -3,7 +3,8 @@
 /**
  * Encounter visuals, all driven from the combat runtime inside useFrame (no
  * React state per frame): instanced enemies (one InstancedMesh per GLB part
- * per enemy type), telegraphs, projectiles, wisps, blasts, aim reticle, and
+ * per enemy type, posed by lib/game/combat/telegraph.ts), telegraphs,
+ * projectiles, wisps, blasts, aim reticle, and
  * the damage-number projector that moves DOM floaters. The held weapon rides
  * the character's hand socket (PlayerAvatar `combat`).
  */
@@ -13,62 +14,100 @@ import { useGLTF, useTexture } from "@react-three/drei";
 import * as THREE from "three";
 import { combat } from "@/lib/game/combat/runtime";
 import { ENEMIES, WEAPONS } from "@/lib/game/combat/data";
+import { glow, marker, partPose } from "@/lib/game/combat/telegraph";
 
 type Ground = (x: number, z: number) => number;
 const tmpM = new THREE.Matrix4(), tmpQ = new THREE.Quaternion(), tmpS = new THREE.Vector3(), tmpP = new THREE.Vector3(), tmpC = new THREE.Color(), UP = new THREE.Vector3(0, 1, 0);
 
-function useParts(url: string) {
+/**
+ * The GLB as a flat node list (parent index, rest transform, part name) plus
+ * one draw per mesh primitive. Part names come from the glTF nodes
+ * (`userData.name`), so the per-primitive child meshes of a multi-material
+ * node follow their named parent instead of being posed twice.
+ */
+function useRig(url: string) {
   const { scene } = useGLTF(url);
   return useMemo(() => {
-    scene.updateMatrixWorld(true);
-    const parts: { geometry: THREE.BufferGeometry; material: THREE.Material; matrix: THREE.Matrix4 }[] = [];
-    scene.traverse(o => { if (o instanceof THREE.Mesh) parts.push({ geometry: o.geometry, material: (Array.isArray(o.material) ? o.material[0] : o.material).clone(), matrix: o.matrixWorld.clone() }); });
-    return parts;
+    const nodes: { parent: number; rest: THREE.Matrix4; role: string | null }[] = [];
+    const parts: { node: number; geometry: THREE.BufferGeometry; material: THREE.Material; telegraph: boolean }[] = [];
+    const walk = (o: THREE.Object3D, parent: number) => {
+      o.updateMatrix();
+      const node = nodes.push({ parent, rest: o.matrix.clone(), role: typeof o.userData.name === "string" ? o.userData.name : null }) - 1;
+      if (o instanceof THREE.Mesh) {
+        const src = (Array.isArray(o.material) ? o.material[0] : o.material) as THREE.MeshStandardMaterial;
+        const telegraph = src.name === "telegraph";
+        // The telegraph slot becomes unlit so the per-instance colour is its brightness (glow() in telegraph.ts).
+        const material = telegraph ? new THREE.MeshBasicMaterial({ color: src.emissive, side: THREE.DoubleSide, toneMapped: false }) : src.clone();
+        parts.push({ node, geometry: o.geometry, material, telegraph });
+      }
+      o.children.forEach(c => walk(c, node));
+    };
+    walk(scene, -1);
+    return { nodes, parts };
   }, [scene]);
 }
 
-/** Every enemy of one type in one draw call per model part. */
+const poseM = new THREE.Matrix4(), poseQ = new THREE.Quaternion(), poseE = new THREE.Euler(), poseP = new THREE.Vector3(), poseS = new THREE.Vector3();
+
+/**
+ * Every enemy of one type in one draw call per model part. Each part is posed
+ * from the shared telegraph helper (partPose/glow) every frame; the whole
+ * mesh is culled when none of its instances is on screen.
+ */
 export function EnemyInstances({ typeId, capacity, ground }: { typeId: string; capacity: number; ground: Ground }) {
   const type = ENEMIES[typeId];
-  const parts = useParts(type.model);
+  const { nodes, parts } = useRig(type.model);
+  const world = useMemo(() => nodes.map(() => new THREE.Matrix4()), [nodes]);
   const refs = useRef<(THREE.InstancedMesh | null)[]>([]);
   useFrame(({ clock }) => {
     const t = clock.elapsedTime;
-    const list = combat.rt.enemies.filter(e => e.type.id === typeId && !(e.state === "dead" && e.deadFor > 0.6));
-    parts.forEach((part, pi) => {
-      const mesh = refs.current[pi];
-      if (!mesh) return;
-      list.slice(0, capacity).forEach((e, i) => {
-        const dying = e.state === "dead" ? 1 - e.deadFor / 0.6 : 1;
-        const bob = type.hover ? Math.sin(t * 6 + i) * 0.12 : e.state === "chase" ? Math.abs(Math.sin(t * 12 + i)) * 0.06 : 0;
-        const lean = e.state === "windup" ? Math.min(1, e.t / type.attack.windup) * 0.25 : 0;
-        tmpQ.setFromAxisAngle(UP, e.facing + type.modelYaw);
-        tmpS.setScalar(type.modelScale * dying * (1 + lean * 0.3));
-        tmpP.set(e.x, ground(e.x, e.z) + type.hover + bob, e.z);
-        tmpM.compose(tmpP, tmpQ, tmpS).multiply(part.matrix);
-        mesh.setMatrixAt(i, tmpM);
-        // Hit flash (bright), windup tint (warm), home-walk (faded).
-        tmpC.setScalar(1);
-        if (e.flash > 0) tmpC.setScalar(1 + e.flash * 10);
-        else if (e.state === "windup") tmpC.setRGB(1.35, 0.85, 0.8);
+    const list = combat.rt.enemies.filter(e => e.type.id === typeId && !(e.state === "dead" && e.deadFor > 0.6)).slice(0, capacity);
+    list.forEach((e, i) => {
+      const dying = e.state === "dead" ? 1 - e.deadFor / 0.6 : 1;
+      const bob = type.hover ? Math.sin(t * 6 + i) * 0.12 : 0;
+      tmpQ.setFromAxisAngle(UP, (e.state === "active" ? e.beam : e.facing) + type.modelYaw);
+      tmpS.setScalar(type.modelScale * dying);
+      tmpP.set(e.x, ground(e.x, e.z) + type.hover + bob, e.z);
+      tmpM.compose(tmpP, tmpQ, tmpS);
+      nodes.forEach((n, ni) => {
+        const m = world[ni].copy(n.rest);
+        const pose = n.role && partPose(n.role, e, t, i * 1.7);
+        if (pose) m.multiply(poseM.compose(poseP.set(0, pose.dy, pose.dz), poseQ.setFromEuler(poseE.set(pose.rx, pose.ry, pose.rz)), poseS.set(1, pose.sy, 1)));
+        m.premultiply(n.parent < 0 ? tmpM : world[n.parent]);
+      });
+      const lit = glow(e, t);
+      parts.forEach((part, pi) => {
+        const mesh = refs.current[pi];
+        if (!mesh) return;
+        mesh.setMatrixAt(i, world[part.node]);
+        // Telegraph parts: their glow. Others: hit flash (bright), windup tint (warm), home-walk (faded).
+        if (part.telegraph) tmpC.setScalar(lit + e.flash * 4);
+        else if (e.flash > 0) tmpC.setScalar(1 + e.flash * 10);
+        else if (e.state === "windup") tmpC.setRGB(1.15, 0.95, 0.9);
         else if (e.state === "return") tmpC.setRGB(0.7, 0.75, 0.9);
+        else tmpC.setScalar(1);
         mesh.setColorAt(i, tmpC);
       });
-      mesh.count = Math.min(list.length, capacity);
+    });
+    for (const mesh of refs.current) {
+      if (!mesh) continue;
+      mesh.count = list.length;
       mesh.instanceMatrix.needsUpdate = true;
       if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
-    });
+      mesh.computeBoundingSphere();
+    }
   });
-  return <>{parts.map((p, i) => <instancedMesh key={i} ref={el => { refs.current[i] = el; }} args={[p.geometry, p.material, capacity]} frustumCulled={false} />)}</>;
+  return <>{parts.map((p, i) => <instancedMesh key={i} ref={el => { refs.current[i] = el; }} args={[p.geometry, p.material, capacity]} />)}</>;
 }
 
-/** Ground telegraphs: a red sector/circle that fills as the windup completes (spit: a target mark). */
+/** Ground markers from marker(): sectors, circles, the smash's ring and the beam line, filling as the windup completes. */
 export function Telegraphs({ ground, max = 24 }: { ground: Ground; max?: number }) {
   const refs = useRef<(THREE.Mesh | null)[]>([]);
   const fills = useRef<(THREE.Mesh | null)[]>([]);
   const geos = useRef(new Map<number, THREE.CircleGeometry>());
   const geo = (arc: number) => {
     const key = Math.round(arc * 100);
+    // Face up; the sector opens toward -Z, so yaw + π points it along the enemy's facing (sin, cos).
     if (!geos.current.has(key)) geos.current.set(key, new THREE.CircleGeometry(1, 40, Math.PI / 2 - arc / 2, arc).rotateX(-Math.PI / 2));
     return geos.current.get(key)!;
   };
@@ -76,23 +115,20 @@ export function Telegraphs({ ground, max = 24 }: { ground: Ground; max?: number 
   useFrame(() => {
     let n = 0;
     for (const e of combat.rt.enemies) {
-      if (e.state !== "windup" || n >= max) continue;
-      const a = e.type.attack, k = Math.min(1, e.t / a.windup);
+      const mk = n < max ? marker(e) : null;
+      if (!mk) continue;
       const outline = refs.current[n], fill = fills.current[n];
       if (!outline || !fill) continue;
-      const spit = a.shape === "spit";
-      const arc = spit ? Math.PI * 2 : a.shape === "slam" ? Math.PI * 2 : a.arc;
-      const r = spit ? 0.9 : a.range;
-      const cx = spit ? e.aim.x : e.x, cz = spit ? e.aim.z : e.z;
       for (const m of [outline, fill]) {
-        m.geometry = geo(arc);
-        m.position.set(cx, ground(cx, cz) + 0.05, cz);
-        m.rotation.y = spit ? 0 : e.facing - Math.PI / 2 + Math.PI / 2;
+        m.geometry = geo(mk.arc);
+        m.position.set(mk.x, ground(mk.x, mk.z) + 0.05, mk.z);
+        m.rotation.y = mk.rot + Math.PI;
         m.visible = true;
+        (m.material as THREE.MeshBasicMaterial).color.set(mk.tone === "summon" ? (m === fill ? "#9a6bff" : "#b48cff") : m === fill ? "#ff2a2a" : "#ff4040");
       }
-      outline.scale.setScalar(r);
-      fill.scale.setScalar(r * k);
-      (outline.material as THREE.MeshBasicMaterial).opacity = 0.18 + 0.1 * k;
+      outline.scale.setScalar(mk.r);
+      fill.scale.setScalar(mk.r * mk.fill);
+      (outline.material as THREE.MeshBasicMaterial).opacity = 0.18 + 0.1 * mk.fill;
       n++;
     }
     for (let i = n; i < max; i++) { if (refs.current[i]) refs.current[i]!.visible = false; if (fills.current[i]) fills.current[i]!.visible = false; }
