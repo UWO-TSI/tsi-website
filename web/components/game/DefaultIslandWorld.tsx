@@ -73,11 +73,15 @@ import { ROOM_PRICE } from "@/lib/homes/layout";
 import { PROBE_FRAMES, PROBE_WARMUP, medianFrameMs, tierForFrameMs, type QualityTier } from "@/lib/game/qualityTier";
 import { ISLAND_PHASES, type IslandPhase } from "@/lib/game/islandTime";
 import { HQ_CLOCK, HQ_LAYOUT, HQ_BOARD_APPROACH, constrainClubhouse } from "@/lib/game/clubhouse";
+import StudySeats from "./study/StudySeats";
+import StudyHud from "./study/StudyHud";
+import CafeInterior from "./study/CafeInterior";
+import { getWorldStudy } from "@/lib/study/worldStore";
 import "@/lib/game/aerialFog";
 import styles from "./DefaultIslandWorld.module.css";
 
 type Metrics = { fps: number; frameMs: number; calls: number; triangles: number; x: number; z: number };
-type Near = "enter" | "exit" | "board" | "display" | "desk" | "shelf" | "clock" | "notice" | "catch" | "cafe" | "museum" | "ruins" | "mailbox" | "monument" | "home" | "house" | "village" | "buy" | "claim" | "donate" | "report" | "fish" | "forage" | "net" | "museum_enter" | "curator" | "closet" | "fitting" | "oracle_enter" | "altar" | "missions" | "ruins_exit" | "lantern" | null;
+type Near = "enter" | "exit" | "board" | "display" | "desk" | "shelf" | "clock" | "notice" | "catch" | "cafe" | "museum" | "ruins" | "mailbox" | "monument" | "home" | "house" | "village" | "buy" | "claim" | "donate" | "report" | "fish" | "forage" | "net" | "museum_enter" | "cafe_enter" | "curator" | "closet" | "fitting" | "oracle_enter" | "altar" | "missions" | "ruins_exit" | "lantern" | null;
 type Sheet = "notice" | "catch" | "letters" | "journal" | "trophies" | "showcase" | "closet" | "fitting" | "oracle" | "settings" | "missions" | null;
 const PHASE_NAMES: Record<IslandPhase, string> = { dawn: "Dawn", day: "Daylight", evening: "Evening", night: "Night" };
 const TREE_SEEDS = [0, 3, 2, 5, 7, 8, 1, 3];
@@ -98,7 +102,7 @@ const NEAR_LABELS: Record<Exclude<Near, null>, string> = {
   enter: "Enter the clubhouse", exit: "Return to the island", board: "Read the notice board",
   display: "Look at the trophy case", desk: "Front desk · profile showcase", shelf: "Browse the bookshelf", clock: "Check the clock",
   notice: "Read the notice board", catch: "Check the catch board", mailbox: "Check the mailbox", monument: "Club monument",
-  museum_enter: "Enter the museum", curator: "Talk to the curator", closet: "Open the closet", fitting: "Try on outfits", oracle_enter: "Enter the Oracle temple", altar: "Consult the crystal",
+  museum_enter: "Enter the museum", cafe_enter: "Enter the café", curator: "Talk to the curator", closet: "Open the closet", fitting: "Try on outfits", oracle_enter: "Enter the Oracle temple", altar: "Consult the crystal",
   home: "Take the boat home", fish: "Cast your line", forage: "Gather", net: "Swing the net", claim: "Claim your plot", donate: "Donate your first catch to the museum", report: "Report to HQ", house: "Enter your house", village: "Take the boat to the village",
   buy: `Add a room · ${ROOM_PRICE.coins} coins + ${ROOM_PRICE.materials}`,
   cafe: "Café · Opening soon", museum: "Museum · Closed for now", ruins: "Enter the ruins", missions: "Read the mission board", ruins_exit: "Back to the village", lantern: "Pick up the old lantern",
@@ -108,6 +112,7 @@ const CLOSED: Near[] = ["cafe", "museum", "monument"];
 const WHARF_BOAT: [number, number] = [8, -22];
 const WHARF_SPAWN: [number, number, number] = [8, 0, -18.4];
 const MUSEUM_SPAWN: [number, number, number] = [11, 0, 6.6];
+const CAFE_SPAWN: [number, number, number] = [-10, 0, -8.9];
 /** Fitting room beside the shop (screen-right of its door). */
 const FITTING_ROOM: [number, number] = [5.6, -5.4];
 /** Ruins mission board beside the cliff gate, and where you come back out (combat-foundation.md §6). */
@@ -177,12 +182,12 @@ function Performance({ player, onMetrics }: { player: React.RefObject<THREE.Vect
 function IslandScene({ identity, devAt, exitFrom, peaceful, fishSpot, fishing, chapter, phase, light, look, weather, overview, zoom, reset, returned, fromBoat, liteMode, castShadows, player, onMove, onNear, progression, ceremony }: {
   progression: { stage: number; opened: readonly WorldGoalId[] }; ceremony: boolean; fromBoat: boolean;
   chapter: { claim: boolean; donate: boolean; report: boolean };
-  peaceful: { moment: WorldMoment; member: string }; fishSpot: { current: FishingSpot | null }; fishing: boolean; exitFrom: "museum" | "oracle" | "ruins" | null; devAt: [number, number, number] | null; identity: WorldIdentity;
+  peaceful: { moment: WorldMoment; member: string }; fishSpot: { current: FishingSpot | null }; fishing: boolean; exitFrom: "museum" | "oracle" | "ruins" | "cafe" | null; devAt: [number, number, number] | null; identity: WorldIdentity;
   phase: IslandPhase; light: IslandLight; look: SeasonLook; weather: IslandWeather; overview: boolean; zoom: number; reset: number; returned: boolean; liteMode: boolean; castShadows: boolean;
   player: React.RefObject<THREE.Vector3>; onMove: (position: THREE.Vector3) => void; onNear: (near: Near) => void;
 }) {
   const island = useMemo(() => createDefaultIsland(), []);
-  const spawn = devAt && !returned && !fromBoat && !exitFrom ? devAt : fromBoat ? WHARF_SPAWN : exitFrom === "museum" ? MUSEUM_SPAWN : exitFrom === "oracle" ? ORACLE_SPAWN : exitFrom === "ruins" ? RUINS_EXIT_SPAWN : returned ? RETURN_SPAWN : DEFAULT_SPAWN;
+  const spawn = devAt && !returned && !fromBoat && !exitFrom ? devAt : fromBoat ? WHARF_SPAWN : exitFrom === "museum" ? MUSEUM_SPAWN : exitFrom === "cafe" ? CAFE_SPAWN : exitFrom === "oracle" ? ORACLE_SPAWN : exitFrom === "ruins" ? RUINS_EXIT_SPAWN : returned ? RETURN_SPAWN : DEFAULT_SPAWN;
   const winterBare = SEASON_FLOWERS[look.season].length === 0;
   const plantShadows = useMemo(() => [
     ...ISLAND_BUSHES.map(([x, z]) => ({ x, z, y: island.ground(x, z), rx: 0.5, rz: 0.4 })),
@@ -210,13 +215,13 @@ function IslandScene({ identity, devAt, exitFrom, peaceful, fishSpot, fishing, c
       for (const l of PROMPT_LANDMARKS) {
         // An opened goal building (boards off) no longer shows its closed prompt.
         const opened = progression.opened.includes(l.id as WorldGoalId);
-        if (opened && l.id !== "museum") continue;
+        if (opened && l.id !== "museum" && l.id !== "cafe") continue;
         const d = footprintDistance(l, player.current.x, player.current.z);
-        if (opened && d < best) { best = d; next = "museum_enter"; continue; }
+        if (opened && d < best) { best = d; next = l.id === "cafe" ? "cafe_enter" : "museum_enter"; continue; }
         if (d < best) { best = d; next = l.id === "museum" && chapter.donate ? "donate" : l.id as Near; }
       }
     }
-    if (!next && !fishing) next = peacefulNear(island.map, VILLAGE_WATER, player.current.x, player.current.z, fishSpot);
+    if (!next && !fishing && !getWorldStudy().near) next = peacefulNear(island.map, VILLAGE_WATER, player.current.x, player.current.z, fishSpot);
     if (near.current !== next) { near.current = next; onNear(next); }
   }, -2);
   return (
@@ -228,6 +233,7 @@ function IslandScene({ identity, devAt, exitFrom, peaceful, fishSpot, fishing, c
       <PeacefulLayer map={island.map} nodes={VILLAGE_NODES} moment={peaceful.moment} member={peaceful.member} player={player} ground={island.ground} highTier={!liteMode} active={!fishing} />
       <BlobShadows placements={plantShadows} opacity={0.16} />
       {!castShadows && <BlobShadows placements={solidShadows} opacity={0.45} />}
+      <StudySeats area="village" player={player} ground={island.ground} />
       <VillageLandmarks ground={island.ground} opened={progression.opened} stage={progression.stage} ceremony={ceremony} />
       <GLBProp url="/assets/acnh/props/bridge-wooden.glb" position={[0, -0.065, 0.5]} rotation={[0, Math.PI / 2, 0]} />
       <group position={[0, 0, 7]}><ACNHBuilding id="hq" windowColor="#ffc95a" windowGlow={light.windowGlow} /></group>
@@ -387,12 +393,12 @@ function DefaultIslandWorldContent() {
   // Dev: ?home=1 starts on the home island, ?home=inside in the house; ?decorate=1&place=<piece> opens decorating.
   const [devHome] = useState(() => (process.env.NODE_ENV !== "production" && typeof window !== "undefined" ? new URLSearchParams(window.location.search) : new URLSearchParams()));
   const [site, setSite] = useState<"village" | "home" | "ruins">(devHome.get("home") ? "home" : devHome.get("ruins") ? "ruins" : "village");
-  const [inside, setInside] = useState<"hq" | "house" | "museum" | "oracle" | null>(devHome.get("home") === "inside" ? "house" : devHome.get("museum") === "inside" ? "museum" : devHome.get("hq") === "inside" ? "hq" : devHome.get("temple") === "inside" ? "oracle" : null);
+  const [inside, setInside] = useState<"hq" | "house" | "museum" | "oracle" | "cafe" | null>(devHome.get("home") === "inside" ? "house" : devHome.get("cafe") === "inside" ? "cafe" : devHome.get("museum") === "inside" ? "museum" : devHome.get("hq") === "inside" ? "hq" : devHome.get("temple") === "inside" ? "oracle" : null);
   const [layout, setLayout, , homeActions] = useHomeLayout();
   const decor = useDecorate(layout, setLayout, { on: devHome.get("decorate") === "1", piece: devHome.get("place") && catalogueItem(devHome.get("place")!) ? devHome.get("place") : null });
   const [returned, setReturned] = useState(false);
   const [fromBoat, setFromBoat] = useState(false);
-  const [exitFrom, setExitFrom] = useState<"museum" | "oracle" | "ruins" | null>(null);
+  const [exitFrom, setExitFrom] = useState<"museum" | "oracle" | "ruins" | "cafe" | null>(null);
   const [ruinsRun, setRuinsRun] = useState(0);
   // Dev: ?mission=<id> accepts a board mission up front (screenshots).
   const [devMission] = useState(() => { const id = devHome.get("mission"); const def = MISSIONS.find(m => m.id === id); if (def) { setMission(startMission(def)); void startMissionRemote(def.id).then(r => { if (r.ok) attachProgressId(def.id, r.data.progress_id); }); } return !!def; });
@@ -517,13 +523,14 @@ function DefaultIslandWorldContent() {
       });
       return;
     }
-    if (fading || !action || !["enter", "exit", "house", "home", "village", "museum_enter", "oracle_enter", "ruins", "ruins_exit"].includes(action)) return;
+    if (fading || !action || !["enter", "exit", "house", "home", "village", "museum_enter", "cafe_enter", "oracle_enter", "ruins", "ruins_exit"].includes(action)) return;
     setFading(true); setNear(null);
     window.setTimeout(() => {
       if (action === "enter") setInside("hq");
       if (action === "house") setInside("house");
       if (action === "museum_enter") setInside("museum");
-      if (action === "exit") setExitFrom(inside === "museum" || inside === "oracle" ? inside : null);
+      if (action === "cafe_enter") setInside("cafe");
+      if (action === "exit") setExitFrom(inside === "museum" || inside === "oracle" || inside === "cafe" ? inside : null);
       if (action === "oracle_enter") setInside("oracle");
       if (action === "ruins") { setSite("ruins"); setInside(null); setRuinsRun(n => n + 1); }
       if (action === "ruins_exit") {
@@ -567,6 +574,7 @@ function DefaultIslandWorldContent() {
           {site === "ruins" ? <RuinsScene key={`ruins-${ruinsRun}`} phase={phase} light={light} look={look} weather={weather} liteMode={liteMode} zoom={zoomed ? 1.4 : 1} player={player} onMove={move}
               onNear={n => setNear(n === "exit" ? "ruins_exit" : n)} onDefeat={onRuinsDefeat} start={ruinsRun <= 1 ? devAt : null} />
             : inside === "oracle" ? <OracleTemple frozen={fading || sheet === "oracle"} player={player} onNear={n => setNear(n)} ceremony={reveal} />
+            : inside === "cafe" ? <CafeInterior phase={phase} player={player} frozen={fading || !!sheet} identity={identity} onMove={move} onNear={setNear} />
             : inside === "museum" ? <MuseumInterior wings={museumWings} frozen={fading || donateOpen} player={player} onNear={n => setNear(n === "donate" ? "curator" : n)} />
             : inside === "hq" ? <Clubhouse phase={phase} player={player} frozen={fading} onNear={setNear} />
             : inside === "house" ? <HomeInterior layout={layout} phase={phase} frozen={fading} player={player} onNear={(n: HouseNear) => setNear(n)}
@@ -586,7 +594,7 @@ function DefaultIslandWorldContent() {
         </Suspense>
       </Canvas>
       <header className={styles.heading}>
-        <h1>{site === "ruins" ? "The ruins" : inside === "oracle" ? "Oracle temple" : inside === "museum" ? "Museum" : inside === "hq" ? "Clubhouse" : inside === "house" ? "Your house" : atHome ? "Your island" : "Tethos Island"}</h1>
+        <h1>{site === "ruins" ? "The ruins" : inside === "oracle" ? "Oracle temple" : inside === "museum" ? "Museum" : inside === "cafe" ? "Café" : inside === "hq" ? "Clubhouse" : inside === "house" ? "Your house" : atHome ? "Your island" : "Tethos Island"}</h1>
         <p>A little space to make our own.</p>
       </header>
       <button ref={optionsToggleRef} className={styles.panelToggle} aria-expanded={optionsOpen} aria-controls="island-options" onClick={() => setOptionsOpen((open) => !open)}>View options</button>
@@ -638,6 +646,7 @@ function DefaultIslandWorldContent() {
       <FishingOverlay rod={peaceful.rod} onActiveChange={setFishing} />
       <DonateSheet open={donateOpen} onClose={() => setDonateOpen(false)} onDonated={loadMuseum} />
       <ToastHub />
+      <StudyHud />
       <CollectionBook open={bagOpen} onClose={() => setBagOpen(false)} />
       {!bagOpen && <button className={styles.bagButton} onClick={() => setBagOpen(true)} aria-label="Open your collection journal"><kbd>{keyLabel(identity.settings.key_bindings.openJournal)}</kbd> Journal</button>}
       {mapOpen && !inside && !atHome && site !== "ruins" && <div className={styles.minimap}>
