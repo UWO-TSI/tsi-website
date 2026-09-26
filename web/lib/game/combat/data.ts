@@ -1,21 +1,23 @@
 /**
  * Combat data for the island: the systems agent's weapons, enemies, missions
  * and runes (web/lib/combat via islandAdapter) plus island presentation keyed
- * by id: dump placeholder models, attack shapes, timings, speeds, and blurbs.
+ * by id: models, attack shapes, timings, speeds, and blurbs. Models are the
+ * Blender GLBs from art/props-enemies, authored at the character rig's scale,
+ * so modelScale 1.3 = CHARACTER_SCALE keeps them in proportion to the player.
  */
 import { islandEnemies, islandMissions, islandWeapons } from "@/lib/combat/islandAdapter";
 import { ENEMIES as ROSTER } from "@/lib/combat/content";
 import type { AttackShape, EnemyType, MissionDef, Weapon } from "./contract";
 
-const F = "/assets/acnh/furniture/";
+const W = "/assets/game/weapons/", E = "/assets/game/enemies/";
 
 /** Ruling 2026-09-26: when the gate opens everyone gets one starter of each archetype. */
 export const WEAPON_ORDER = ["sword-driftwood", "bow-willow", "staff-oak", "tome-spirits"] as const;
 const WEAPON_LOOK: Record<string, Pick<Weapon, "cooldown" | "range" | "arc" | "speed" | "model" | "modelScale">> = {
-  "sword-driftwood": { cooldown: 0.42, range: 1.7, arc: 1.9, model: `${F}weapon-sword.glb`, modelScale: 0.06 },
-  "bow-willow": { cooldown: 0.6, range: 11, arc: 0, speed: 18, model: `${F}weapon-bow.glb`, modelScale: 0.035 },
-  "staff-oak": { cooldown: 0.75, range: 8, arc: 0, speed: 11, model: `${F}weapon-staff.glb`, modelScale: 0.12 },
-  "tome-spirits": { cooldown: 6, range: 7, arc: 0, model: `${F}weapon-staff.glb`, modelScale: 0.08 },
+  "sword-driftwood": { cooldown: 0.42, range: 1.7, arc: 1.9, model: `${W}sword-driftwood.glb`, modelScale: 1.3 },
+  "bow-willow": { cooldown: 0.6, range: 11, arc: 0, speed: 18, model: `${W}bow-willow.glb`, modelScale: 1.3 },
+  "staff-oak": { cooldown: 0.75, range: 8, arc: 0, speed: 11, model: `${W}staff-oak.glb`, modelScale: 1.3 },
+  "tome-spirits": { cooldown: 6, range: 7, arc: 0, model: `${W}tome-spirits.glb`, modelScale: 1.3 },
 };
 export const WEAPONS: Record<string, Weapon> = Object.fromEntries(islandWeapons()
   .filter(w => WEAPON_LOOK[w.id])
@@ -23,14 +25,14 @@ export const WEAPONS: Record<string, Weapon> = Object.fromEntries(islandWeapons(
 
 interface EnemyLook { speed: number; radius: number; shape: AttackShape; windup: number; recover: number; range?: number; arc: number; knockback: number; model: string; modelScale: number; modelYaw: number; hover: number }
 const ENEMY_LOOK: Record<string, EnemyLook> = {
-  "shadow-fox": { speed: 3.2, radius: 0.5, shape: "lunge", windup: 0.55, recover: 0.6, arc: 1.2, knockback: 3, model: `${F}enemy-scorpion.glb`, modelScale: 0.2, modelYaw: 0, hover: 0 },
-  "thorn-crab": { speed: 1.8, radius: 0.6, shape: "sweep", windup: 0.8, recover: 0.8, arc: 2, knockback: 4, model: "/assets/acnh/props/crab-gazami.glb", modelScale: 2.4, modelYaw: 0, hover: 0 },
-  "mushroom-beast": { speed: 1.4, radius: 0.55, shape: "spit", windup: 0.9, recover: 1.1, arc: 0, knockback: 1.5, model: `${F}enemy-tarantula.glb`, modelScale: 0.3, modelYaw: 0, hover: 0 },
-  "rune-wisp": { speed: 3.4, radius: 0.4, shape: "spit", windup: 0.7, recover: 0.9, arc: 0, knockback: 1.5, model: `${F}enemy-wasp.glb`, modelScale: 0.16, modelYaw: 0, hover: 1.1 },
-  "animated-book": { speed: 2.6, radius: 0.5, shape: "lunge", windup: 0.6, recover: 0.7, arc: 1.3, knockback: 3, model: `${F}enemy-construct.glb`, modelScale: 0.16, modelYaw: Math.PI, hover: 0 },
-  "stone-golem": { speed: 1.6, radius: 0.75, shape: "slam", windup: 1.0, recover: 1.1, range: 2.4, arc: Math.PI * 2, knockback: 5, model: `${F}enemy-construct.glb`, modelScale: 0.24, modelYaw: Math.PI, hover: 0 },
-  "elder-thorn-crab": { speed: 1.6, radius: 0.8, shape: "sweep", windup: 0.9, recover: 0.9, arc: 2.4, knockback: 5, model: "/assets/acnh/props/crab-gazami.glb", modelScale: 3.4, modelYaw: 0, hover: 0 },
-  "guardian-statue": { speed: 1.1, radius: 1.6, shape: "slam", windup: 1.4, recover: 1.2, range: 4, arc: Math.PI * 2, knockback: 7, model: `${F}boss-statue.glb`, modelScale: 0.26, modelYaw: Math.PI, hover: 0 },
+  "shadow-fox": { speed: 3.2, radius: 0.5, shape: "lunge", windup: 0.55, recover: 0.6, arc: 1.2, knockback: 3, model: `${E}shadow-fox.glb`, modelScale: 1.3, modelYaw: 0, hover: 0 },
+  "thorn-crab": { speed: 1.8, radius: 0.6, shape: "sweep", windup: 0.8, recover: 0.8, arc: 2, knockback: 4, model: `${E}thorn-crab.glb`, modelScale: 1.3, modelYaw: 0, hover: 0 },
+  "mushroom-beast": { speed: 1.4, radius: 0.55, shape: "spit", windup: 0.9, recover: 1.1, arc: 0, knockback: 1.5, model: `${E}mushroom-beast.glb`, modelScale: 1.3, modelYaw: 0, hover: 0 },
+  "rune-wisp": { speed: 3.4, radius: 0.4, shape: "spit", windup: 0.7, recover: 0.9, arc: 0, knockback: 1.5, model: `${E}rune-wisp.glb`, modelScale: 1.3, modelYaw: 0, hover: 1.1 },
+  "animated-book": { speed: 2.6, radius: 0.5, shape: "lunge", windup: 0.6, recover: 0.7, arc: 1.3, knockback: 3, model: `${E}animated-book.glb`, modelScale: 1.3, modelYaw: 0, hover: 0 },
+  "stone-golem": { speed: 1.6, radius: 0.75, shape: "slam", windup: 1.0, recover: 1.1, range: 2.4, arc: Math.PI * 2, knockback: 5, model: `${E}stone-golem.glb`, modelScale: 1.3, modelYaw: 0, hover: 0 },
+  "elder-thorn-crab": { speed: 1.6, radius: 0.8, shape: "sweep", windup: 0.9, recover: 0.9, arc: 2.4, knockback: 5, model: `${E}elder-thorn-crab.glb`, modelScale: 1.3, modelYaw: 0, hover: 0 },
+  "guardian-statue": { speed: 1.1, radius: 1.6, shape: "slam", windup: 1.4, recover: 1.2, range: 4, arc: Math.PI * 2, knockback: 7, model: `${E}guardian-statue.glb`, modelScale: 1.3, modelYaw: 0, hover: 0 },
 };
 /** Attack reach straight from the systems roster (the adapter doesn't carry it). */
 const RANGE: Record<string, number> = Object.fromEntries(ROSTER.map(e => [e.key, e.attack_range]));
