@@ -41,3 +41,6 @@ Evidence: `specs/evidence/study-character/S-*.webp` and `sql-smoke.md`. Each ite
 8. **Bed.** Every home bed is an E station ("Sleep in your bed") that works from either end of the bed. The prompt text stays the same while you're asleep.
 9. **Migration.** I used 004's definition (`jsonb not null default '{}'`) rather than a nullable column, so production matches the files. The grant is re-run in the same migration.
 10. **Short screens (ruling 10).** Under 760 px tall the timer card is one line: phase, clock, Break/Skip and Stand up. Hidden on short screens: banked minutes and coins, the walk-away note, the chat toggle and the host's private-table toggle. With the minimap open, the column stops above it (chat scrolls in what's left). In the café there's no minimap, so chat gets the full column. *Assumed* hiding the two toggles on short screens is OK; an expand chevron would bring them back.
+
+## Coordinator rulings on the integration assumptions (2026-09-26)
+All ten accepted. A real Blender `Stretch` clip joins the art backlog (next character-art pass).
