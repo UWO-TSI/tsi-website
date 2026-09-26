@@ -14,3 +14,15 @@ Each item says what I assumed so the work kept moving. Evidence: `specs/evidence
 8. **Prompt priority.** The plaza table is within fishing reach of the river, so near a seat (or while seated) the Sit prompt replaces "Cast your line". *Assumed:* the seat wins because fishing/foraging is already the lowest-priority prompt.
 9. **Private table.** Only the seated host sees the toggle, on the timer card. Outsiders see "Private table" above the table and get no Sit prompt, per row 168 (private shows occupied).
 10. **HUD placement.** The start sheet opens beside the seated avatar. The timer card and table chat sit in the left column under the Journal button. On short laptop screens (under about 760 px tall) the column overlaps the minimap. OK for now?
+
+## Coordinator rulings (2026-09-26, David delegated routine calls)
+1. Walk-away at 1.6 units with "Sit back down": accepted.
+2. Cross-device sessions as described: accepted.
+3. Seat-mate stand-ins and `studyPose()` for the rig: accepted; the character agent wires the Sit/Study clips.
+4. Two outdoor tables are enough for v1; add a pond table only if members ask.
+5. Placeholder cafe accepted until David's interior design arrives.
+6. Four-seat crowding: revisit after the rigged characters land; rotate tables only if still crowded.
+7. Fitting room textures: accepted.
+8. Seat prompt outranks fishing: accepted.
+9. Private table behaviour: accepted.
+10. Short screens: the timer card and chat must not cover the minimap; collapse the timer card to a single line under 760 px height (small follow-up, next agent touching the HUD).
