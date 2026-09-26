@@ -153,15 +153,15 @@ describe("inventory", () => {
   it("equips one item per slot", async () => {
     const m = memoryEconomyStore(() => noon);
     m.fund(A, 1000);
-    const hat = slug(m, "acc-straw-hat");
-    const glasses = slug(m, "acc-round-glasses");
-    await buy(m.store, A, { item_id: hat, qty: 1, idempotency_key: "buy-0010" }, noon);
-    await buy(m.store, A, { item_id: glasses, qty: 1, idempotency_key: "buy-0011" }, noon);
-    await equip(m.store, A, { item_id: hat, equipped: true });
-    const r = await equip(m.store, A, { item_id: glasses, equipped: true });
-    const acc = r.ok ? r.data.groups.outfits : [];
-    expect(acc.filter((x) => x.equipped).map((x) => x.item.slug)).toEqual(["acc-round-glasses"]);
-    expect(await equip(m.store, A, { item_id: slug(m, "rod-basic"), equipped: true })).toMatchObject({ ok: false, code: "not_owned" });
+    const basic = slug(m, "rod-basic");
+    const cedar = slug(m, "rod-cedar");
+    await buy(m.store, A, { item_id: basic, qty: 1, idempotency_key: "buy-0010" }, noon);
+    await buy(m.store, A, { item_id: cedar, qty: 1, idempotency_key: "buy-0011" }, noon);
+    await equip(m.store, A, { item_id: basic, equipped: true });
+    const r = await equip(m.store, A, { item_id: cedar, equipped: true });
+    const tools = r.ok ? r.data.groups.tools : [];
+    expect(tools.filter((x) => x.equipped).map((x) => x.item.slug)).toEqual(["rod-cedar"]);
+    expect(await equip(m.store, A, { item_id: slug(m, "net-basic"), equipped: true })).toMatchObject({ ok: false, code: "not_owned" });
   });
 });
 

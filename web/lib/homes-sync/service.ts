@@ -32,14 +32,16 @@ export async function saveHome(
   store: HomesStore,
   memberId: string,
   input: { layout: unknown; base_revision: number; save_key: string },
+  /** What the member owns (lib/wallet ownedRefs): catalogue ref → qty. */
+  owned: ReadonlyMap<string, number>,
 ): Promise<HomeResult<{ revision: number; replayed: boolean }>> {
   try {
     const current = await store.getHome(memberId);
-    const check = validateLayout(input.layout, current.rooms_count);
+    const check = validateLayout(input.layout, current.rooms_count, owned);
     if (!check.ok) {
       // A replayed save of an older room count is still a replay, not an error.
       if (input.base_revision !== current.revision) return failure(store, memberId, new HomeStoreError("revision_conflict"));
-      return { ok: false, status: 422, error: check.error, code: "invalid_layout" };
+      return { ok: false, status: 422, error: check.error, code: check.code ?? "invalid_layout" };
     }
     return { ok: true, data: await store.saveLayout(memberId, input.base_revision, input.save_key, check.doc) };
   } catch (err) {

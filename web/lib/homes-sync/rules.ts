@@ -5,7 +5,7 @@
  */
 import { catalogueItem } from "@/lib/homes/catalogue";
 import {
-  canPlace, FLOORINGS, MAX_ROOMS, parseLayout, ROOM_PRICE, roomInside, roomWallLength, starterRoom, WALLPAPERS,
+  canPlace, emptyRoom, FLOORINGS, FREE_FINISHES, MAX_ROOMS, parseLayout, placedCounts, ROOM_PRICE, roomInside, roomWallLength, starterRoom, WALLPAPERS,
   type HomeLayoutDoc, type PlacedItem, type RoomDoc,
 } from "@/lib/homes/layout";
 
@@ -18,10 +18,8 @@ export const MAX_OUTDOOR_ITEMS = 200;
 export const OUTDOOR_HALF = 16;
 export const MAX_LAYOUT_BYTES = 64 * 1024;
 
-/** A room bought later starts empty (same look as withRooms() in lib/homes). */
-export function boughtRoom(index: number): RoomDoc {
-  return { ...starterRoom(`room-${index + 1}`), items: [], wallpaper: "stripe02", flooring: "tatami00" };
-}
+/** A room bought later starts empty (same as withRooms() in lib/homes). */
+export const boughtRoom = (index: number): RoomDoc => emptyRoom(`room-${index + 1}`);
 
 /** Rebuild a document from stored rows; missing rows fall back to starter/blank rooms. */
 export function assembleLayout(roomsCount: number, rows: { room_index: number; room_id: string; wallpaper: string; flooring: string; items: unknown }[], outdoor: unknown): HomeLayoutDoc {
@@ -33,7 +31,7 @@ export function assembleLayout(roomsCount: number, rows: { room_index: number; r
   return parseLayout({ version: 1, rooms, outdoor });
 }
 
-export type LayoutCheck = { ok: true; doc: HomeLayoutDoc } | { ok: false; error: string };
+export type LayoutCheck = { ok: true; doc: HomeLayoutDoc } | { ok: false; error: string; code?: "not_owned" };
 
 function noOverlaps(items: PlacedItem[], inside: (mount: "floor" | "rug" | "wall") => (x: number, z: number) => boolean, walls: boolean): string | null {
   const seen = new Set<string>();
@@ -52,9 +50,11 @@ function noOverlaps(items: PlacedItem[], inside: (mount: "floor" | "rug" | "wall
 /**
  * Strict validation: the document must survive parseLayout unchanged (no
  * unknown pieces, bad rotations or finishes), match the rooms the member
- * owns, and every placement must be legal under the island agent's rules.
+ * owns, every placement must be legal under the island agent's rules, and
+ * every piece and finish must be owned (`owned`: catalogue ref → qty, from the
+ * member's inventory): no more copies of a piece placed than they hold.
  */
-export function validateLayout(raw: unknown, roomsCount: number): LayoutCheck {
+export function validateLayout(raw: unknown, roomsCount: number, owned: ReadonlyMap<string, number>): LayoutCheck {
   let size = 0;
   try {
     size = JSON.stringify(raw).length;
@@ -85,5 +85,12 @@ export function validateLayout(raw: unknown, roomsCount: number): LayoutCheck {
   const outside = () => (x: number, z: number) => x >= -OUTDOOR_HALF && z >= -OUTDOOR_HALF && x < OUTDOOR_HALF && z < OUTDOOR_HALF;
   const problem = noOverlaps(doc.outdoor, outside, false);
   if (problem) return { ok: false, error: problem };
+  for (const [piece, n] of placedCounts(doc)) {
+    const have = owned.get(piece) ?? 0;
+    if (n > have) return { ok: false, code: "not_owned", error: `You have ${have} ${catalogueItem(piece)!.label}; the layout places ${n}.` };
+  }
+  if (doc.rooms.some((room) => [room.wallpaper, room.flooring].some((f) => !FREE_FINISHES.includes(f) && !owned.has(f)))) {
+    return { ok: false, code: "not_owned", error: "That wallpaper or flooring isn't yours yet." };
+  }
   return { ok: true, doc };
 }

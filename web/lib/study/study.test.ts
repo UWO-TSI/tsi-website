@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { memoryStudyStore } from "./memoryStore";
 import { advance, blockBonus, coinsFor, heartbeat, leave, start, takeBreak, resume, type StudySession } from "./rules";
@@ -219,5 +221,13 @@ describe("table chat (row 77)", () => {
     expect(m.chat[0]).toMatchObject({ reported: true, reported_by: A });
     const forB = await readChat(m.store, B, at(0));
     expect(forB.ok && forB.data.some((x) => x.id === jordans)).toBe(true);
+  });
+});
+
+describe("seed", () => {
+  it("DEFAULT_TABLES mirror 20260926150500_study.sql's study_tables seed", () => {
+    const sql = readFileSync(join(__dirname, "../../supabase/migrations/20260926150500_study.sql"), "utf8");
+    const rows = DEFAULT_TABLES.map((t) => `  ('${t.id}', '${t.slug}', '${t.label}', '${t.location}', '${t.anchor}', '${t.kind}', ${t.seats}, ${t.position})`);
+    expect(sql).toContain(["INSERT INTO study_tables (id, slug, label, location, anchor, kind, seats, position) VALUES", rows.join(",\n"), "ON CONFLICT (slug) DO NOTHING;"].join("\n"));
   });
 });

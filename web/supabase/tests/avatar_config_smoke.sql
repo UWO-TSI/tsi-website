@@ -2,7 +2,7 @@
 -- profiles.avatar_config: schema drift). Throwaway local Postgres 16 only, after
 -- the full chain (specs/evidence/study-character/sql-smoke.md). Simulates
 -- production by dropping the column, applies the migration twice (idempotent),
--- then checks the grant, a member's own write and a cross-member read.
+-- then checks the grant, a server write and a cross-member read.
 \set ON_ERROR_STOP 1
 SET client_min_messages = notice;
 
@@ -22,17 +22,14 @@ DO $$ BEGIN
   RAISE NOTICE 'ok: column re-added as jsonb, default {}, SELECT for authenticated only';
 END $$;
 
--- Member A saves a look through the #40 guard (avatar_config is member-editable).
-BEGIN;
-SET LOCAL ROLE authenticated;
-SET LOCAL request.jwt.claims = '{"sub":"00000000-0000-4000-8000-0000000000a1","role":"authenticated"}';
+-- The server saves A's look (PATCH /api/profile; since 20260926180000_ownership
+-- avatar_config is server-only, ownership_smoke.sql checks the member side).
 DO $$ DECLARE n int; BEGIN
-  UPDATE profiles SET avatar_config = '{"look":{"skin":2,"bangs":"bangs_straight"}}' WHERE id = auth.uid();
+  UPDATE profiles SET avatar_config = '{"look":{"skin":2,"bangs":"bangs_straight"}}' WHERE id = '00000000-0000-4000-8000-0000000000a1';
   GET DIAGNOSTICS n = ROW_COUNT;
-  ASSERT n = 1, 'FAIL: member could not save own avatar_config';
-  RAISE NOTICE 'ok: member saves own look';
+  ASSERT n = 1, 'FAIL: server could not save avatar_config';
+  RAISE NOTICE 'ok: server saves the look';
 END $$;
-COMMIT;
 
 -- Member B (a seat-mate) reads A's look.
 BEGIN;

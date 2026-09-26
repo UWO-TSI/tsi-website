@@ -1,15 +1,15 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { StudySession } from "./rules";
+import { raisePg } from "@/lib/result";
 import { StudyError, type ChatMessage, type StudyStore, type StudyTable } from "./store";
 
 type Row = Record<string, unknown>;
+/** The two seat indexes name the race that was lost; the rest is the shared mapping. */
 function raise(error: { code?: string; message?: string; details?: string } | null): never {
-  const code = error?.code ?? "";
   const msg = `${error?.message ?? ""} ${error?.details ?? ""}`;
-  if (["42P01", "PGRST205", "PGRST202", "42703", "42883"].includes(code) || /does not exist|schema cache/i.test(msg)) throw new StudyError("unavailable", msg);
-  if (code === "23505" && msg.includes("idx_study_seat_taken")) throw new StudyError("seat_taken");
-  if (code === "23505" && msg.includes("idx_study_member_active")) throw new StudyError("already_seated");
-  throw new StudyError("failed", msg);
+  if (error?.code === "23505" && msg.includes("idx_study_seat_taken")) throw new StudyError("seat_taken");
+  if (error?.code === "23505" && msg.includes("idx_study_member_active")) throw new StudyError("already_seated");
+  raisePg({ code: error?.code, message: msg }, []);
 }
 const SESSION_COLS =
   "id, member_id, table_id, seat, focus_len, break_len, cycles, phase, cycle_index, started_at, phase_started_at, last_heartbeat, ended_at, end_reason, minutes_completed, blocks_completed, bonus_earned, longest_block, coins_paid, settled_at, version";

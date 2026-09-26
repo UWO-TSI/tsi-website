@@ -196,8 +196,8 @@ describe("seeded hashes stay identical across callers", () => {
   it("specials, Oracle item order, pickup codes and node rolls", () => {
     expect(dailySpecials(seedItems(), "2026-09-26").map((i) => i.slug)).toMatchInlineSnapshot(`
       [
-        "furn-bench-park",
-        "outfit-cream-knit",
+        "furn-candle",
+        "furn-yellow-message-mat",
         "furn-streetlamp",
       ]
     `);
