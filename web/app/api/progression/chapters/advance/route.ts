@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { ADVANCE_ACTIONS } from "@/lib/progression/chapters";
-import { progressionContext } from "@/lib/progression/deps";
-import { badRequest, readJson, respond } from "@/lib/progression/http";
+import { supabaseProgressionStore } from "@/lib/progression/supabaseStore";
+import { badRequest, jsonResult, withStore } from "@/lib/server/memberContext";
 import { advanceChapter } from "@/lib/progression/service";
 
 const Body = z.object({
@@ -12,11 +12,9 @@ const Body = z.object({
 
 // POST /api/progression/chapters/advance: request one step; the server checks it.
 export async function POST(request: Request) {
-  const ctx = await progressionContext();
+  const ctx = await withStore(supabaseProgressionStore);
   if (ctx instanceof NextResponse) return ctx;
-  const json = await readJson(request);
-  if (!json.ok) return json.response;
-  const parsed = Body.safeParse(json.body);
+  const parsed = Body.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return badRequest();
-  return respond(await advanceChapter(ctx.store, ctx.userId, parsed.data, ctx.now), "state");
+  return jsonResult(await advanceChapter(ctx.store, ctx.userId, parsed.data, ctx.now), "state");
 }

@@ -42,6 +42,8 @@ export async function withStore<S>(make: (db: SupabaseClient) => S): Promise<(Me
 }
 
 export const isAdminTier = (tier: number) => tier === 1 || tier === 2;
+export const badRequest = (error = "Invalid request") => NextResponse.json({ ok: false, error }, { status: 400 });
+export const forbidden = () => NextResponse.json({ ok: false, error: "Forbidden: T1/T2 only" }, { status: 403 });
 
 export function jsonResult<T>(r: { ok: true; data: T } | { ok: false; status: number; error: string; code?: string; [k: string]: unknown }, key: string): NextResponse {
   if (!r.ok) {

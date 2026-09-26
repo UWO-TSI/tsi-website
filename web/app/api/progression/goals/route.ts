@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
-import { progressionContext } from "@/lib/progression/deps";
+import { supabaseProgressionStore } from "@/lib/progression/supabaseStore";
+import { jsonResult, withStore } from "@/lib/server/memberContext";
 import { goalViews, storeFailure } from "@/lib/progression/service";
 import { syncGoalsThrottled } from "@/lib/progression/sync";
 
 // GET /api/progression/goals: active club goals with club-wide progress and the caller's own share.
 export async function GET() {
-  const ctx = await progressionContext();
+  const ctx = await withStore(supabaseProgressionStore);
   if (ctx instanceof NextResponse) return ctx;
   try {
     await syncGoalsThrottled(ctx.store, ctx.now).catch(() => undefined);
@@ -13,7 +14,6 @@ export async function GET() {
     const views = await goalViews(ctx.store, goals, ctx.userId, ctx.now);
     return NextResponse.json({ ok: true, goals: views });
   } catch (err) {
-    const f = storeFailure(err);
-    return NextResponse.json({ ok: false, error: f.error, code: f.code }, { status: f.status });
+    return jsonResult(storeFailure(err), "");
   }
 }

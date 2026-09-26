@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { progressionContext } from "@/lib/progression/deps";
-import { badRequest, readJson } from "@/lib/progression/http";
+import { supabaseProgressionStore } from "@/lib/progression/supabaseStore";
+import { badRequest, jsonResult, withStore } from "@/lib/server/memberContext";
 import { storeFailure } from "@/lib/progression/service";
 
 const Body = z.discriminatedUnion("action", [
@@ -11,13 +11,11 @@ const Body = z.discriminatedUnion("action", [
 
 // PATCH /api/progression/letters/:id: mark read, or report a note (recipient only).
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const ctx = await progressionContext();
+  const ctx = await withStore(supabaseProgressionStore);
   if (ctx instanceof NextResponse) return ctx;
   const { id } = await params;
   if (!z.string().uuid().safeParse(id).success) return badRequest();
-  const json = await readJson(request);
-  if (!json.ok) return json.response;
-  const parsed = Body.safeParse(json.body);
+  const parsed = Body.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return badRequest();
   try {
     const at = ctx.now.toISOString();
@@ -28,7 +26,6 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     if (!ok) return NextResponse.json({ ok: false, error: "Letter not found." }, { status: 404 });
     return NextResponse.json({ ok: true });
   } catch (err) {
-    const f = storeFailure(err);
-    return NextResponse.json({ ok: false, error: f.error, code: f.code }, { status: f.status });
+    return jsonResult(storeFailure(err), "");
   }
 }

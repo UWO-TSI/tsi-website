@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { progressionContext } from "@/lib/progression/deps";
+import { supabaseProgressionStore } from "@/lib/progression/supabaseStore";
+import { badRequest, jsonResult, withStore } from "@/lib/server/memberContext";
 import { MAX_DELIVERY_UNITS } from "@/lib/progression/goals";
-import { badRequest, readJson, respond } from "@/lib/progression/http";
 import { contribute } from "@/lib/progression/service";
 import { DELIVERY_KINDS } from "@/lib/progression/types";
 
@@ -17,14 +17,12 @@ const Body = z.object({
 
 // POST /api/progression/contribute: in-game delivery at the monument/HQ.
 export async function POST(request: Request) {
-  const ctx = await progressionContext();
+  const ctx = await withStore(supabaseProgressionStore);
   if (ctx instanceof NextResponse) return ctx;
-  const json = await readJson(request);
-  if (!json.ok) return json.response;
-  const parsed = Body.safeParse(json.body);
+  const parsed = Body.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return badRequest();
   const d = parsed.data;
-  return respond(
+  return jsonResult(
     await contribute(ctx.store, ctx.userId, { goal_slug: d.goal_slug, kind: d.kind, amount: d.amount, item_key: d.item_key ?? null, idempotency_key: `delivery:${d.idempotency_key}` }, ctx.now),
     "contribution",
   );
