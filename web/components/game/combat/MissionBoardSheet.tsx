@@ -16,15 +16,16 @@ import styles from "../DefaultIslandWorld.module.css";
 
 const TEMPLATE: Record<string, string> = { hunt: "Hunt", fetch: "Fetch", survive: "Survive waves", escort: "Escort" };
 const ZONE: Record<string, string> = { outer: "Outer wild", inner: "Inner temple", boss: "Guardian's chamber" };
-const hoursLeft = (iso: string) => Math.max(1, Math.ceil((Date.parse(iso) - Date.now()) / 3_600_000));
+const hoursLeft = (iso: string) => Math.ceil((Date.parse(iso) - Date.now()) / 3_600_000);
 
 export default function MissionBoardSheet({ open, onClose, gateNote }: { open: boolean; onClose: () => void; gateNote: string | null }) {
   useCombatVersion();
   const [note, setNote] = useState<string | null>(null);
-  const [cooldowns, setCooldowns] = useState<Record<string, string>>({});
+  /** Hours left on each mission's cooldown, as of opening the board. */
+  const [cooldowns, setCooldowns] = useState<Record<string, number>>({});
   useEffect(() => {
     if (!open) return;
-    void missionBoard().then(r => { if (r.ok) setCooldowns(Object.fromEntries(r.data.filter(m => m.cooldown_until).map(m => [m.key, m.cooldown_until!]))); });
+    void missionBoard().then(r => { if (r.ok) setCooldowns(Object.fromEntries(r.data.filter(m => m.cooldown_until).map(m => [m.key, hoursLeft(m.cooldown_until!)]))); });
   }, [open]);
   if (!open) return null;
   const active = combat.rt.mission;
@@ -42,7 +43,7 @@ export default function MissionBoardSheet({ open, onClose, gateNote }: { open: b
     if (queued.length) await postMissionEvents(m.progressId, queued);
     const r = await completeMissionRemote(m.progressId);
     setNote(r.ok ? `+${r.data.xp_awarded} XP · +${r.data.coins_awarded} coins · ${materialsLabel(r.data.materials_awarded)}` : r.error);
-    if (r.ok) { setMission(null); setCooldowns(c => ({ ...c, [m.def.id]: new Date(Date.now() + 20 * 3_600_000).toISOString() })); }
+    if (r.ok) { setMission(null); setCooldowns(c => ({ ...c, [m.def.id]: 20 })); }
   };
   return <section className={`${styles.sheet} ${styles.missionSheet}`} role="dialog" aria-modal="false" aria-labelledby="missions-title" data-testid="mission-board">
     <header><h2 id="missions-title">Ruins mission board</h2><button onClick={onClose} aria-label="Close">×</button></header>
@@ -60,7 +61,7 @@ export default function MissionBoardSheet({ open, onClose, gateNote }: { open: b
           <span>{active.note}</span>
           {active.status === "complete" ? <button onClick={() => void claim()}>Claim</button>
             : <button onClick={() => setMission(null)}>{active.status === "active" ? "Abandon" : "Clear"}</button>}
-        </div> : cool && Date.parse(cool) > Date.now() ? <small>Back in {hoursLeft(cool)} h</small>
+        </div> : cool ? <small>On cooldown · back in {cool} h</small>
           : <button disabled={active?.status === "active"} onClick={() => void accept(m.id)}>Accept</button>}
       </li>;
     })}</ul>

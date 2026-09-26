@@ -147,6 +147,8 @@ class Puppet {
   }
   private releaseFaces() { for (const { key } of this.held.values()) faces.release(key); this.held.clear(); }
 
+  get attacking() { return !!this.clip?.startsWith("Attack"); }
+
   private play(name: ClipName) {
     const clip = this.clips.get(name) ?? this.clips.get("Idle")!;
     const next = this.mixer.clipAction(clip);
@@ -191,21 +193,34 @@ class Puppet {
 }
 
 export interface WeaponView { kind: WeaponKind; model: string; modelScale: number; inHand: boolean }
-/** Weapon placement per kind in socket space (row 140): in hand in the ruins, across the back elsewhere. */
-const GRIP: Record<WeaponKind, { hand: [number, number, number]; back: [number, number, number] }> = {
+type Euler3 = [number, number, number];
+/**
+ * Weapon placement per kind in socket space (row 140): in hand in the ruins, across the back elsewhere.
+ * Weapons are authored grip-at-origin, tip up +Y. `rest` is the in-hand pose outside attack clips: the
+ * staff and bow stand upright (+Y world up, +Z forward, solved from the v6 Idle socket frames) instead
+ * of pointing like a lance or lying flat; attack clips use `hand`.
+ */
+const GRIP: Record<WeaponKind, { hand: Euler3; back: Euler3; rest?: Euler3 }> = {
   melee: { hand: [Math.PI / 2, 0, 0], back: [0, 0, 0.5] },
-  bow: { hand: [0, Math.PI / 2, 0], back: [0, Math.PI / 2, 0.3] },
-  staff: { hand: [Math.PI / 2, 0, 0], back: [0, 0, 2.6] },
-  summon: { hand: [Math.PI / 2, 0, 0], back: [0, 0, 2.6] },
+  bow: { hand: [0, Math.PI / 2, 0], back: [0, Math.PI / 2, 0.3], rest: [0.03, 0.24, 1.15] },
+  staff: { hand: [Math.PI / 2, 0, 0], back: [0, 0, -0.5], rest: [0.03, -0.24, -1.15] },
+  summon: { hand: [Math.PI / 2, 0, 0], back: [0, 0, -0.5] },
 };
+const gripQ = new THREE.Quaternion(), gripE = new THREE.Euler();
 
 function HeldWeapon({ puppet, weapon: { kind, model: url, modelScale, inHand } }: { puppet: Puppet; weapon: WeaponView }) {
   const { scene } = useGLTF(url);
+  const model = useMemo(() => scene.clone(true), [scene]);
   useEffect(() => {
-    const model = scene.clone(true);
     placeWeapon(model, { kind, model: url, modelScale, inHand }, inHand ? puppet.sockets[WEAPON_HAND[kind]] : puppet.sockets.Back);
     return () => { model.removeFromParent(); };
-  }, [scene, puppet, kind, url, modelScale, inHand]);
+  }, [model, puppet, kind, url, modelScale, inHand]);
+  // Upright at rest, the attack grip while an attack clip plays (eased so the swap doesn't pop).
+  useFrame((_, delta) => {
+    const rest = GRIP[kind].rest;
+    if (!inHand || !rest) return;
+    model.quaternion.slerp(gripQ.setFromEuler(gripE.set(...(puppet.attacking ? GRIP[kind].hand : rest))), 1 - Math.exp(-delta * 24));
+  });
   return null;
 }
 function placeWeapon(model: THREE.Object3D, weapon: WeaponView, socket: THREE.Object3D) {
