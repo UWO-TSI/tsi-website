@@ -95,6 +95,7 @@ export default function AdminMembersPage() {
     2: "T2 · Exec",
     3: "T3 · Member",
     4: "T4 · General",
+    5: "T5 · Public",
   };
 
   const tierColors: Record<number, string> = {
@@ -102,6 +103,7 @@ export default function AdminMembersPage() {
     2: "text-[var(--color-brand-yellow)]",
     3: "text-[var(--color-brand-blue)]",
     4: "text-[var(--color-text-muted)]",
+    5: "text-[var(--color-text-muted)]",
   };
 
   return (
