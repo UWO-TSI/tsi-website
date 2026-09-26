@@ -26,16 +26,16 @@ export function islandWeapons(owned: { weapon_key: string; durability: number }[
   }));
 }
 
-export function islandEnemies(): (Pick<EnemyType, "id" | "name" | "kind" | "level" | "hp" | "aggroRadius" | "leashRadius"> & { damage: number; defense: number; xp: number; elite: boolean })[] {
+export function islandEnemies(): (Pick<EnemyType, "id" | "name" | "kind" | "level" | "hp" | "aggroRadius" | "leashRadius" | "defense" | "armor" | "xp" | "elite"> & { damage: number; range: number })[] {
   return ENEMIES.map((e) => ({
     id: e.key, name: e.name, kind: e.kind === "boss" ? "boss" : e.zone === "outer" ? "wildlife" : "construct", level: e.level, hp: e.hp,
-    aggroRadius: e.aggro_radius, leashRadius: e.leash_radius, damage: e.damage, defense: e.defense, xp: e.xp, elite: e.kind === "elite",
+    aggroRadius: e.aggro_radius, leashRadius: e.leash_radius, damage: e.damage, range: e.attack_range, defense: e.defense, armor: e.armor, xp: e.xp, elite: e.kind === "elite",
   }));
 }
 
 export function islandMissions(): MissionDef[] {
   return MISSIONS.map((m) => ({
-    id: m.key, template: m.template, title: m.title, blurb: "",
+    id: m.key, template: m.template, title: m.title, blurb: "", zone: m.zone, difficulty: m.difficulty,
     params: {
       enemy: typeof m.params.enemy === "string" ? m.params.enemy : undefined,
       count: typeof m.params.count === "number" ? m.params.count : typeof m.params.checkpoints === "number" ? m.params.checkpoints : undefined,
@@ -43,7 +43,7 @@ export function islandMissions(): MissionDef[] {
       waves: typeof m.params.waves === "number" ? m.params.waves : undefined,
       escortee: typeof m.params.resident === "string" ? m.params.resident : undefined,
     },
-    reward: { coins: m.rewards.coins, xp: m.rewards.xp },
+    reward: { coins: m.rewards.coins, xp: m.rewards.xp, materials: m.rewards.materials },
   }));
 }
 

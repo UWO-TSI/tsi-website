@@ -45,7 +45,7 @@ import OracleTemple from "./oracle/OracleTemple";
 import RuinsScene from "./combat/RuinsScene";
 import CombatHud from "./combat/CombatHud";
 import MissionBoardSheet from "./combat/MissionBoardSheet";
-import { attachProgressId, combat, publishCombat, setMission } from "@/lib/game/combat/runtime";
+import { attachProgressId, combat, publishCombat, setMission, setOwnedWeapons } from "@/lib/game/combat/runtime";
 import { missionEvent } from "@/lib/game/combat/actions";
 import { combatProgression, postWear, startMissionRemote } from "@/lib/game/combat/progression";
 import { MISSIONS, WEAPONS } from "@/lib/game/combat/data";
@@ -114,7 +114,7 @@ const NEAR_LABELS: Record<Exclude<Near, null>, string> = {
   museum_enter: "Enter the museum", cafe_enter: "Enter the café", curator: "Talk to the curator", closet: "Open the closet", fitting: "Try on outfits", oracle_enter: "Enter the Oracle temple", altar: "Consult the crystal",
   home: "Take the boat home", fish: "Cast your line", forage: "Gather", net: "Swing the net", claim: "Claim your plot", donate: "Donate your first catch to the museum", report: "Report to HQ", house: "Enter your house", village: "Take the boat to the village",
   buy: `Add a room · ${ROOM_PRICE.coins} coins + ${ROOM_PRICE.materials}`,
-  cafe: "Café · Opening soon", museum: "Museum · Closed for now", ruins: "Enter the ruins", missions: "Read the mission board", ruins_exit: "Back to the village", lantern: "Pick up the old lantern",
+  cafe: "Café · Opening soon", museum: "Museum · Closed for now", ruins: "Enter the ruins", missions: "Read the mission board", ruins_exit: "Back to the village", lantern: "Pick it up",
   bench: "Sit on the bench", bed: "Sleep in your bed",
 };
 const CLOSED: Near[] = ["cafe", "museum", "monument"];
@@ -467,7 +467,7 @@ function DefaultIslandWorldContent() {
     p.level = g.level;
     if (g.maxHp) { p.maxHp = g.maxHp; p.hp = Math.min(p.hp, g.maxHp); }
     combat.rt.signature = g.signature;
-    for (const w of g.weapons) if (w.weapon_key in p.durability) p.durability[w.weapon_key as keyof typeof p.durability] = w.durability;
+    setOwnedWeapons(combat.rt, g.weapons);
     publishCombat();
   }); return () => { alive = false; }; }, [identity.family]);
   const onOracleResult = useCallback((result: ResultView) => {
@@ -519,7 +519,7 @@ function DefaultIslandWorldContent() {
     if (action === "closet" || action === "fitting") { setSheet(action); return; }
     if (action === "altar") { setReveal(null); setSheet("oracle"); return; }
     if (action === "missions") { setSheet("missions"); return; }
-    if (action === "lantern") { combat.rt.idol = "carried"; missionEvent(combat.rt, { kind: "pickup", item: "old-lantern" }); publishCombat(); return; }
+    if (action === "lantern") { combat.rt.idol = "carried"; missionEvent(combat.rt, { kind: "pickup", item: combat.rt.mission?.def.params.item ?? "old-lantern" }); publishCombat(); return; }
     if (action === "ruins" && !gate.open) { setActionNote(gate.reason); window.setTimeout(() => setActionNote(null), 3500); return; }
     if (action === "buy") {
       void homeActions.buyRoom(homeActions.roomPrice() ?? ROOM_PRICE.coins).then(result => {

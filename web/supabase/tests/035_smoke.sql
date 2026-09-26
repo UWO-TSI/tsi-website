@@ -14,7 +14,8 @@ BEGIN
   ASSERT r.xp = 200 AND r.level = 2 AND r.levelled_up AND NOT r.replayed, '035 grant';
   SELECT * INTO r FROM combat_grant_xp(B, 200, 'admin', 'x', 'xp-0001');
   ASSERT r.replayed AND r.xp = 200, '035 grant replay';
-  ASSERT (SELECT count(*) FROM member_weapons WHERE member_id = B) = 2 AND (SELECT weapon_key FROM member_weapons WHERE member_id = B AND equipped) = 'sword-driftwood', '035 starter weapons';
+  -- (20260926190000_combat_content adds the bow, staff and tome: combat_content_smoke checks all five)
+  ASSERT (SELECT count(*) FROM member_weapons WHERE member_id = B AND weapon_key IN ('sword-driftwood', 'wraps-cloth')) = 2 AND (SELECT weapon_key FROM member_weapons WHERE member_id = B AND equipped) = 'sword-driftwood', '035 starter weapons';
   -- kills: once per event, XP from the table, hourly cap
   SELECT * INTO r FROM combat_record_kill(B, 'shadow-fox', 'ev-0001');
   ASSERT r.xp = 230, '035 kill xp';

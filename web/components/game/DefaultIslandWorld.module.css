@@ -216,6 +216,7 @@ p.interact[data-closed="true"] { margin: 0; cursor: default; color: #6a4b2f; }
 .missionList button:disabled { opacity: 0.45; cursor: default; }
 .missionTemplate { justify-self: start; padding: 1px 8px; border-radius: 999px; background: #efe3cf; font: 600 10px "IBM Plex Mono", monospace; color: #6a4b2f; }
 .missionState { display: flex; gap: 8px; align-items: center; justify-content: space-between; }
+.missionList h3 { margin: 0 0 4px; font: 600 11px "IBM Plex Mono", monospace; letter-spacing: 0.06em; text-transform: uppercase; color: #607069; }
 .world .combatHud, .world .missionTracker, .world .incantation, .world .bossBar, .world .safeBadge { zoom: var(--tsi-text-scale, 1); }
 .energyBar { height: 10px; }
 .energyBar span { background: linear-gradient(90deg, #6fb7ff, #b48cff); }

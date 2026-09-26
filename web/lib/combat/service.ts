@@ -3,7 +3,8 @@
  * kills, missions and gear. Rules from this folder decide; the store (035
  * functions) applies atomically and idempotently.
  */
-import { ENEMIES, MISSIONS } from "./content";
+import { ENEMIES, MISSIONS, rollBossReward } from "./content";
+import { islandProgression } from "./islandAdapter";
 import { SUBCLASSES, subclassesFor } from "./kits";
 import { applyEvents, canStart, type MissionEvent, type MissionState } from "./missions";
 import { allocate, derived, FAMILY_PRESETS, levelProgress, pointsEarned, pointsSpent, presetAllocation, STAT_RESET_FEE, SUBCLASS_LEVEL, SUBCLASS_RESPEC_FEE, ZERO_STATS } from "./progression";
@@ -27,6 +28,8 @@ const ERR: Record<string, [number, string]> = {
   unknown_enemy: [400, "Unknown enemy."],
   unknown_mission: [404, "Unknown mission."],
   bad_hits: [400, "Invalid hit count."],
+  gate_closed: [403, "The ruins gate is sealed: it opens after the Oracle, level 10 and your subclass choice."],
+  boss_cooldown: [409, "The guardian's hoard is spent for now. It refills 20 hours after your last win."],
   failed: [500, "Something went wrong. Try again."],
 };
 async function run<T>(f: () => Promise<T>): Promise<Result<T>> {
@@ -74,7 +77,21 @@ export const chooseSubclass = (store: CombatStore, m: string, subclassKey: strin
     return store.chooseSubclass(m, s.key, s.family, key);
   });
 
-export const recordKill = (store: CombatStore, m: string, enemyKey: string, eventKey: string) => run(() => store.recordKill(m, enemyKey, eventKey));
+/**
+ * Rows 179/207: the ruins open with the Oracle family, level 10 and the subclass
+ * choice. Every call that implies being inside (mission start and progress,
+ * kills, the boss reward) checks it here, since the client can't be trusted to.
+ */
+async function requireGate(store: CombatStore, m: string) {
+  const [p, family] = await Promise.all([store.progression(m), store.family(m)]);
+  if (!islandProgression({ level: p.level, family, subclass: p.subclass ? { key: p.subclass } : null }).gateOpen) throw new CombatError("gate_closed");
+}
+
+export const recordKill = (store: CombatStore, m: string, enemyKey: string, eventKey: string) =>
+  run(async () => {
+    await requireGate(store, m);
+    return store.recordKill(m, enemyKey, eventKey);
+  });
 
 export const listMissions = (store: CombatStore, m: string, now: Date) =>
   run(async () => {
@@ -91,6 +108,7 @@ export const startMission = (store: CombatStore, m: string, missionKey: string, 
   run(async () => {
     const def = MISSIONS.find((x) => x.key === missionKey);
     if (!def) throw new CombatError("unknown_mission");
+    await requireGate(store, m);
     const rows = await store.missionRows(m);
     const open = rows.find((r) => r.mission_key === missionKey && (r.state === "active" || r.state === "ready"));
     if (!open) {
@@ -106,6 +124,7 @@ export const missionProgress = (store: CombatStore, m: string, progressId: strin
   run(async () => {
     const row = (await store.missionRows(m)).find((r) => r.id === progressId);
     if (!row) throw new CombatError("not_found");
+    await requireGate(store, m);
     const def = MISSIONS.find((x) => x.key === row.mission_key)!;
     for (const ev of events) {
       if (ev.type === "kill" && !ENEMIES.some((e) => e.key === ev.enemy)) throw new CombatError("unknown_enemy");
@@ -116,6 +135,12 @@ export const missionProgress = (store: CombatStore, m: string, progressId: strin
   });
 
 export const completeMission = (store: CombatStore, m: string, progressId: string) => run(() => store.completeMission(m, progressId));
+/** Guardian statue victory: rolled here on the server against the gear the member owns, paid by the store once. */
+export const claimBossReward = (store: CombatStore, m: string, eventKey: string, random: () => number = Math.random) =>
+  run(async () => {
+    await requireGate(store, m);
+    return store.bossReward(m, eventKey, rollBossReward((await store.weapons(m)).map((w) => w.weapon_key), random));
+  });
 export const reportWear = (store: CombatStore, m: string, weaponKey: string, hits: number, defeated: boolean, key: string) => run(() => store.wear(m, weaponKey, hits, defeated, key));
 export const repairWeapon = (store: CombatStore, m: string, weaponKey: string, key: string) => run(() => store.repair(m, weaponKey, key));
 export const equipWeapon = (store: CombatStore, m: string, weaponKey: string) =>

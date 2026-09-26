@@ -9,6 +9,7 @@ import { ABILITIES, ENERGY, combat, publishCombat, readAbilityKeys, useCombatVer
 import { runeById } from "@/lib/game/combat/runes";
 import { WEAPONS } from "@/lib/game/combat/data";
 import { resolveCast } from "@/lib/game/combat/actions";
+import { staggered } from "@/lib/game/combat/sim";
 import type { IncantationScore } from "@/lib/game/combat/contract";
 import { floaterNodes } from "./EncounterRender";
 import IncantationOverlay from "./IncantationOverlay";
@@ -50,9 +51,10 @@ export default function CombatHud({ player }: { player: React.RefObject<{ x: num
     </aside>}
     {boss && rt.bossEngaged && <div className={styles.bossBar} role="meter" aria-label={boss.type.name} aria-valuenow={boss.hp} aria-valuemax={boss.type.hp}>
       <b>{boss.type.name} · Lv {boss.type.level}</b><span><i style={{ width: `${(boss.hp / boss.type.hp) * 100}%` }} /></span>
-      <small>A wall until you&apos;re geared (row 230).</small>
+      <small>{staggered(boss) ? "Staggered: strike now" : boss.phase === 3 ? "Enraged" : boss.phase === 2 ? "Calling rune wisps" : "Watch the ring and the beam"}</small>
     </div>}
     {!p.alive && <p className={styles.defeat} role="alert">You&apos;re down. Waking at the gate…</p>}
+    {p.alive && rt.banner && <p className={styles.defeat} role="status">{rt.banner.text}</p>}
     {rt.casting && <IncantationOverlay key={rt.casting.id} runeId={rt.casting.rune} onDone={onDone} onCancel={onCancel} />}
   </>;
 }
