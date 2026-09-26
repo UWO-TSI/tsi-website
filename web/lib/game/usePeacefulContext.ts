@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import type { WorldMoment } from "@/lib/collections/logic";
 import type { IslandWeather } from "./islandWeather";
-import { torontoHour } from "./islandTime";
+import { torontoParts } from "@/lib/time";
 import { bestOwnedRod, rodByTier, type RodTier } from "./rods";
 import { localGear } from "./gear";
 import { installCollectionsDemo } from "./collectionsDemo";
@@ -34,9 +34,7 @@ export function usePeacefulContext(weather: IslandWeather, now: number): { momen
     const dev = process.env.NODE_ENV !== "production" && typeof window !== "undefined" ? Number(new URLSearchParams(window.location.search).get("rod")) : 0;
     return dev ? rodByTier(dev) : bestOwnedRod(typeof window === "undefined" ? [] : localGear());
   });
-  const date = new Date(now);
-  const hour = Math.floor(torontoHour(date));
-  const month = date.getMonth() + 1;
+  const { hour, month } = torontoParts(new Date(now));
   const moment = useMemo(() => ({ hour: hour + 0.5, month, weather: rosterWeather(weather) }), [hour, month, weather]);
   return { moment, member, rod };
 }

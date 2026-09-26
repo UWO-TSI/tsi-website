@@ -53,8 +53,8 @@ export function installCollectionsDemo(): void {
         }
         return new Response(JSON.stringify({ collections: (await m.store.memberItems(ME)).map(i => ({ item_key: i.item_key, count: i.count })) }));
       case "/api/collections/journal": {
-        const hour = torontoParts(now).hour;
-        return json(await journal(m.store, ME, url.searchParams.get("category") ?? "fish", { hour, month: now.getMonth() + 1, weather: "clear" }), "page");
+        const { hour, month } = torontoParts(now);
+        return json(await journal(m.store, ME, url.searchParams.get("category") ?? "fish", { hour, month, weather: "clear" }), "page");
       }
       case "/api/collections/museum": return json(await museum(m.store), "wings");
       case "/api/collections/museum/donate": return json(await donate(m.store, ME, body.species_key, body.idempotency_key), "donation");
