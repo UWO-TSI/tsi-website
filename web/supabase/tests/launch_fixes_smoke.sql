@@ -1,9 +1,9 @@
 -- Launch-readiness fixes (specs/launch-readiness-fixes.md). Throwaway local
 -- Postgres after every migration, with pre_launch_seed.sql applied before
--- 20260926190000. Never Supabase. Each section failed before its migration.
+-- 20260926200000. Never Supabase. Each section failed before its migration.
 \set ON_ERROR_STOP 1
 
--- ─── 1. Existing profiles: public unless staff, hired or whitelisted; public is T5 (190000) ─
+-- ─── 1. Existing profiles: public unless staff, hired or whitelisted; public is T5 (200000) ─
 DO $$ BEGIN
   ASSERT (SELECT membership || '/' || tier FROM profiles WHERE id = '00000000-0000-4000-8000-0000000001f1') = 'member/3', 'staff stays a member at T3';
   ASSERT (SELECT membership || '/' || tier FROM profiles WHERE id = '00000000-0000-4000-8000-0000000001f2') = 'member/4', 'hired applicant stays a member at T4';
@@ -13,7 +13,7 @@ DO $$ BEGIN
   RAISE NOTICE 'launch 1 membership backfill ok';
 END $$;
 
--- ─── 2. Sign-ups: public T5 unless whitelisted or an active invite code (190000) ─
+-- ─── 2. Sign-ups: public T5 unless whitelisted or an active invite code (200000) ─
 BEGIN;
 INSERT INTO invite_codes (code, term, is_active) VALUES ('LAUNCH-01', 'Fall 2026', TRUE), ('OLD-00', 'W26', FALSE);
 INSERT INTO member_email_whitelist (email) VALUES ('lf-new-listed@x');
@@ -31,7 +31,7 @@ DO $$ BEGIN
 END $$;
 ROLLBACK;
 
--- ─── 3. T1/T2 mark members (190000, POST /api/admin/members/:id/membership) ──
+-- ─── 3. T1/T2 mark members (200000, POST /api/admin/members/:id/membership) ──
 BEGIN;
 UPDATE profiles SET tier = 2 WHERE id = '00000000-0000-4000-8000-0000000001f4';
 DO $$
@@ -74,7 +74,7 @@ EXCEPTION WHEN insufficient_privilege THEN RAISE NOTICE 'launch 3 admin membersh
 END $$;
 ROLLBACK;
 
--- ─── 4. Members cancel their own RSVP, not a check-in or someone else's (190100) ─
+-- ─── 4. Members cancel their own RSVP, not a check-in or someone else's (200100) ─
 INSERT INTO events (id, title, event_type, start_time, is_irl)
 VALUES ('00000000-0000-4000-8000-0000000002e1', 'Launch RSVP event', 'club', NOW(), TRUE);
 INSERT INTO event_attendance (event_id, user_id, status) VALUES

@@ -1,5 +1,5 @@
 // T1/T2 mark an account as a TSI member or a public account (ruling 1).
-// admin_set_membership (20260926190000) moves the tier with it: public is T5,
+// admin_set_membership (20260926200000) moves the tier with it: public is T5,
 // a public account marked member gets T4; staff can't be made public.
 import { NextResponse } from "next/server";
 import { z } from "zod";

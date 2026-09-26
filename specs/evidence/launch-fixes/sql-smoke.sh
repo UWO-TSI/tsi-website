@@ -1,7 +1,7 @@
 #!/bin/zsh
 # Throwaway Postgres 16 smoke chain, every migration through the launch fixes (never Supabase).
 # Run: zsh specs/evidence/launch-fixes/sql-smoke.sh [cutoff]   (Homebrew postgresql@16)
-# cutoff (e.g. 20260926190000) skips migrations from that version on: the fail-first run.
+# cutoff (e.g. 20260926200000) skips migrations from that version on: the fail-first run.
 set -u
 CUT=${1:-99999999999999}
 PG=/opt/homebrew/opt/postgresql@16/bin
@@ -16,7 +16,7 @@ PS=($PG/psql -h localhost -p $PORT -U postgres -v ON_ERROR_STOP=1 -q)
 MAIN=$(ls $W/migrations | awk '$0 <= "20260926130000_zzz"')
 GAME=(20260926150000_game_coins 20260926150100_seasonal_seed 20260926150200_progression 20260926150300_homes 20260926150400_collections 20260926150500_study pre033 20260926150600_economy pre034 20260926150700_identity 20260926150800_combat 20260926150900_collections_server_only 20260926151000_economy_sell_lock 20260926151100_wallet_gem_types 20260926151200_profiles_class_server_only
   20260926155000_schema_drift_reconcile 20260926155100_letters_broadcast_unique 20260926155200_event_attendance_rsvp_only 20260926155300_invite_codes_private 20260926155400_member_badges_signed_in_only
-  20260926160000_crafting 20260926170000_profiles_avatar_config 20260926180000_ownership pre_launch 20260926190000_membership_launch 20260926190100_event_rsvp_cancel)
+  20260926160000_crafting 20260926170000_profiles_avatar_config 20260926180000_ownership pre_launch 20260926200000_membership_launch 20260926200100_event_rsvp_cancel)
 
 chain() { # db, with_seeds
   $PG/createdb -h localhost -p $PORT -U postgres $1

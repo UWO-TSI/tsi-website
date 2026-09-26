@@ -1,4 +1,4 @@
--- Run after 20260926180000 and BEFORE 20260926190000: production's shape at
+-- Run after 20260926180000 and BEFORE 20260926200000: production's shape at
 -- launch, where 150700_identity grandfathered every existing profile as a member.
 \set ON_ERROR_STOP 1
 INSERT INTO auth.users (id, email) VALUES
