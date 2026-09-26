@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_GOALS } from "./defaults";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { DEFAULT_CHAPTERS, DEFAULT_GOALS } from "./defaults";
 import { goalCycle, monumentStage, normalizeGoal, planContribution, validateGoalDraft } from "./goals";
 
 const cafe = DEFAULT_GOALS[0];
@@ -66,5 +68,13 @@ describe("goal cycles and monument", () => {
     expect(g.accepts).toEqual(["coins"]);
     expect(validateGoalDraft({ ...cafe })).toEqual([]);
     expect(validateGoalDraft({ ...cafe, goal_type: "seasonal" })).toContain("seasonal goals need a window");
+  });
+});
+
+describe("seed content", () => {
+  it("defaults.ts mirrors the goals and chapters seeded by 20260926150200_progression.sql", () => {
+    const sql = readFileSync(join(__dirname, "../../supabase/migrations/20260926150200_progression.sql"), "utf8");
+    const texts = [...DEFAULT_GOALS.flatMap((g) => [g.slug, g.title, g.summary, g.completion_letter_subject, g.completion_letter_body]), ...DEFAULT_CHAPTERS.flatMap((c) => [c.slug, c.title, c.summary])];
+    for (const t of texts) if (t) expect(sql).toContain(t.replace(/'/g, "''"));
   });
 });

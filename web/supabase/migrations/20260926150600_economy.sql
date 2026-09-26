@@ -406,7 +406,7 @@ DO $$ BEGIN
 END $$;
 
 -- ─── Seed (web/lib/wallet/catalogue.ts) ─────────────────────────────────────
--- BEGIN GENERATED ECONOMY SEED (web/scripts/gen-economy-seed.mjs)
+-- BEGIN GENERATED ECONOMY SEED (web/scripts/gen-seeds.mjs)
 INSERT INTO shop_items (slug, display_name, category, description, price_coins, tc_price, tier, slot, special_pool, stackable, stock, catalogue_ref, position) VALUES
   ('rod-basic', 'Basic rod', 'tool', 'A sturdy starter rod.', 100, NULL, 'basic', 'rod', FALSE, FALSE, NULL, NULL, 1),
   ('rod-cedar', 'Cedar rod', 'tool', 'Lighter, and a little lucky.', 400, NULL, 'mid', 'rod', FALSE, FALSE, NULL, 'rod_cedar', 2),

@@ -3,7 +3,7 @@ import { CATALOGUE, SELL_PRICES, SETTINGS } from "./catalogue";
 
 const q = (v: string | null) => (v === null ? "NULL" : `'${v.replace(/'/g, "''")}'`);
 const n = (v: number | null) => (v === null ? "NULL" : String(v));
-export const SEED_BEGIN = "-- BEGIN GENERATED ECONOMY SEED (web/scripts/gen-economy-seed.mjs)";
+export const SEED_BEGIN = "-- BEGIN GENERATED ECONOMY SEED (web/scripts/gen-seeds.mjs)";
 export const SEED_END = "-- END GENERATED ECONOMY SEED";
 
 export function economySeedSql(): string {

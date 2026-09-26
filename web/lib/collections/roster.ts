@@ -8,7 +8,7 @@
  * public/assets/acnh/props/shell-*.glb. Species without a model yet are
  * `asset_ready: false` (listed so the journal and museum have their slots).
  * Mirrored into supabase/migrations/20260926150400_collections.sql by
- * scripts/gen-collections-seed.mjs; collections.test.ts keeps them in sync.
+ * scripts/gen-seeds.mjs; collections.test.ts keeps them in sync.
  *
  * Hours are local island time, [start, end) wrapping past midnight; null = all
  * day. Months 1-12 (northern hemisphere, Ontario); [] = all year. `weather` []

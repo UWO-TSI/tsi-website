@@ -159,7 +159,7 @@ REVOKE ALL ON FUNCTION public.museum_donate(UUID, TEXT, TEXT, NUMERIC) FROM PUBL
 GRANT EXECUTE ON FUNCTION public.museum_donate(UUID, TEXT, TEXT, NUMERIC) TO service_role;
 
 -- ─── Seed: launch roster (web/lib/collections/roster.ts) ────────────────────
--- BEGIN GENERATED ROSTER (web/scripts/gen-collections-seed.mjs)
+-- BEGIN GENERATED ROSTER (web/scripts/gen-seeds.mjs)
 INSERT INTO collection_species (key, category, sub, name, biome, tool, rarity, size_min_cm, size_max_cm, start_hour, end_hour,
   rain_any_hour, weather, months, one_liner, icon, model, asset_ready, donatable, wing, position) VALUES
   ('fish_dace', 'fish', NULL, 'Dace', 'river', 'rod', 'common', 10, 18, NULL, NULL, FALSE, '{}'::text[], '{}'::int[], 'A dependable little river fish.', '/assets/acnh/icons/fish_dace.png', NULL, TRUE, TRUE, 'aquarium', 1),
