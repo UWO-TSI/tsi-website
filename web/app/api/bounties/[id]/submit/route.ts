@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { z } from "zod";
 
 const SubmissionSchema = z.object({
@@ -100,8 +101,8 @@ export async function POST(
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  // Update bounty status to review
-  await supabase
+  // Update bounty status to review (service role: the claimant is not staff)
+  await createAdminClient()
     .from("bounties")
     .update({ status: "review", updated_at: new Date().toISOString() })
     .eq("id", id);
