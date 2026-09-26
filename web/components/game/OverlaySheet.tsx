@@ -25,10 +25,13 @@ const SheetShop = dynamic(() => import("@/app/student/dashboard/shop/page"), { s
 const SheetBounty = dynamic(() => import("@/app/student/dashboard/bounty/page"), { ssr: false, loading: SheetLoading });
 const SheetJobs = dynamic(() => import("@/app/student/dashboard/jobs/page"), { ssr: false, loading: SheetLoading });
 const SheetLeaderboard = dynamic(() => import("@/app/student/dashboard/leaderboard/page"), { ssr: false, loading: SheetLoading });
-const SheetOracle = dynamic(() => import("@/app/student/dashboard/oracle/page"), { ssr: false, loading: SheetLoading });
+// The legacy 12-question quiz is retired here; the Oracle opens the new reading (oracle-identity.md).
+const SheetOracle = dynamic(() => import("./oracle/OracleSheetEmbed"), { ssr: false, loading: SheetLoading });
 const SheetDirectory = dynamic(() => import("@/app/student/dashboard/directory/page"), { ssr: false, loading: SheetLoading });
 const SheetProfile = dynamic(() => import("@/app/student/dashboard/profile/page"), { ssr: false, loading: SheetLoading });
 const SheetQuests = dynamic(() => import("@/app/student/dashboard/quests/page"), { ssr: false, loading: SheetLoading });
+const SheetJournal = dynamic(() => import("@/app/student/dashboard/journal/page"), { ssr: false, loading: SheetLoading });
+const SheetLetters = dynamic(() => import("@/app/student/dashboard/letters/page"), { ssr: false, loading: SheetLoading });
 const SheetWharfSell = dynamic(() => import("./WharfSellSheet"), { ssr: false, loading: SheetLoading });
 
 function SheetLoading() {
@@ -60,6 +63,8 @@ const SHEETS = {
   directory: { Component: SheetDirectory, title: "Directory" },
   profile: { Component: SheetProfile, title: "Profile" },
   quests: { Component: SheetQuests, title: "Quests" },
+  journal: { Component: SheetJournal, title: "Journal" },
+  letters: { Component: SheetLetters, title: "Letters" },
   wharfsell: { Component: SheetWharfSell, title: "Wharf Shack — Sell Catches" },
 } as const;
 
@@ -74,6 +79,8 @@ const HREF_TO_SHEET: Record<string, SheetKey> = {
   "/student/dashboard/directory": "directory",
   "/student/dashboard/profile": "profile",
   "/student/dashboard/quests": "quests",
+  "/student/dashboard/journal": "journal",
+  "/student/dashboard/letters": "letters",
 };
 
 export function sheetKeyForHref(href: string | undefined): SheetKey | null {

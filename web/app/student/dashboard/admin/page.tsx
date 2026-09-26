@@ -17,6 +17,9 @@ import {
   MessageSquareWarning,
   BookOpen,
   Smile,
+  Flag,
+  Landmark,
+  PackageCheck,
 } from "lucide-react";
 import NPCSpendWidget from "@/components/portal/NPCSpendWidget";
 
@@ -113,6 +116,27 @@ const adminSections = [
     icon: <Smile size={20} />,
     href: "/student/dashboard/admin/content/emotes",
     color: "#22d3ee",
+  },
+  {
+    title: "Main Quest",
+    description: "Chapter copy, order, regions and skip rules",
+    icon: <Flag size={20} />,
+    href: "/student/dashboard/admin/content/chapters",
+    color: "#bb813f",
+  },
+  {
+    title: "Club Goals",
+    description: "Targets, weights, caps, windows; log contributions",
+    icon: <Landmark size={20} />,
+    href: "/student/dashboard/admin/content/goals",
+    color: "#6c9a6f",
+  },
+  {
+    title: "Merch Pickups",
+    description: "Hand over reserved merch or cancel with a Gems refund",
+    icon: <PackageCheck size={20} />,
+    href: "/student/dashboard/admin/merch",
+    color: "#e8704a",
   },
 ];
 
