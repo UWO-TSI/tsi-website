@@ -96,3 +96,22 @@ BEGIN
   ASSERT (SELECT tethos_coins FROM profiles WHERE id = F) = 25, 'security gems balance';
   RAISE NOTICE 'security 3 gem types ok';
 END $$;
+
+-- ─── 4. The family (profiles.class / subclass) is server-assigned ────────────
+BEGIN;
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claims = '{"sub":"00000000-0000-4000-8000-0000000000f2","role":"authenticated"}';
+DO $$ BEGIN
+  BEGIN
+    UPDATE profiles SET class = 'Arcane' WHERE id = auth.uid();
+    RAISE EXCEPTION 'member set their own class';
+  EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+  BEGIN
+    UPDATE profiles SET subclass = 'INTJ' WHERE id = auth.uid();
+    RAISE EXCEPTION 'member set their own subclass';
+  EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+  UPDATE profiles SET display_name = 'Still editable' WHERE id = auth.uid();
+  ASSERT FOUND, 'security: display_name still editable';
+  RAISE NOTICE 'security 4 class server-only ok';
+END $$;
+ROLLBACK;
