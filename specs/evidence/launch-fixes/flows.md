@@ -82,3 +82,13 @@ The runbook's step 5 query, run on staging after everything (`staging-verify.txt
 ## Left on staging
 
 `launch-l1`/`launch-l2` (keychain passwords) and the four `launch-probe-*` sign-ups stay as test data; the Phase 1 member keeps an RSVP on the RSVP test event. The rotated invite code is in the keychain only.
+
+## 7. Coordinator rulings (2026-09-26, later): W26 members, rerun-safe backfill, admin editor
+
+**Fail-first.** `sql-smoke-before-rulings.txt`: the chain with the previous `200000`, smoke run without stopping: `TETHOS-W26 sign-up stays a member` and `rerun demoted a member marked since` both fail (sections 2–4 still pass). The route test `app/api/admin/members/[id]/route.test.ts` failed on the missing route. After: `sql-smoke-after.txt` (`launch 1 … ok`, `membership backfill already applied, skipped`, `launch 1b backfill rerun is a no-op ok`, every other smoke ok), vitest 915 pass, tsc clean.
+
+**Backfill run twice on staging.** Staging had run the pre-guard backfill at 17:47:25Z, so the marker was recorded with that time (`data_backfills`, same DDL as the file), then the new `20260926200000` was applied **twice** through the management API (23:29:48Z, both `[]`). `profiles` (email, tier, membership) before and after: identical, including `launch-l1` (a member only because staff marked it, not whitelisted), the new-code sign-up (member T4) and the post-rotation `tethos-w26` sign-up (public T5). The W26 retention itself is exercised on a fresh chain in `launch_fixes_smoke.sql` §1 (`lf-w26@x` stays member T4). Production (read-only, 2026-09-26): 43 members, 272 public.
+
+**Admin editor (`PATCH /api/admin/members/:id`).** Before, what the members page sent (staff key, `update … eq id`, `Prefer: return=minimal`) for `tier`, `is_active`, `is_alumni` on `launch-l1`: `HTTP 204` three times, readback unchanged (`tier 4, is_active true, is_alumni false`): RLS lets a user update only their own row, and #40 made those columns server-only. After (dev server on staging, `flows-tier-run.txt`, 12 checks **ALL PASS**): T4 member and T5 public → 403; an unknown field → 400; staff on its own tier → 409; T2 granting T1 → 403; T2 sets `launch-l1` to T3 → readback T3; inactive + alumni → readback, and the member badge drops while inactive; restored to T4/active. Staff `GET /student/dashboard/admin/members` 200 and `/api/admin/members` 200 (9 accounts).
+
+**Verification query** (`staging-verify.txt`, now with `backfills`): `["membership_launch"]`, 0 tables without RLS (`data_backfills` has RLS on, no policies), the same five user-callable definer functions.

@@ -6,7 +6,7 @@ Production Supabase `rtbkrngsdbptbjhfbcud` (Postgres 17.6), Vercel project for w
 
 - **Never `supabase db push`** (nor `migration up`, `db reset`, or linking the CLI to production and "syncing"). Production's ledger (`supabase_migrations.schema_migrations`) lists 10 versions; `001`–`028` and the 2026-09-26 security files were applied in the SQL editor. `db push` would try to replay all of them. Migrations go through the management API, one file at a time (ruling 5).
 - No key, database password or invite code in a tracked file, commit message, PR or evidence file.
-- Don't apply any file twice. `20260926200000_membership_launch` in particular is a one-shot backfill: a second run demotes every member marked since.
+- Apply each file once, in order. `20260926200000_membership_launch`'s backfill is guarded anyway: it writes `data_backfills.membership_launch` in the same transaction and skips when the row exists, so a rerun never flips members marked since (it only re-creates its two functions). Never delete that row.
 
 ## 0. The day before
 
@@ -22,9 +22,12 @@ Production Supabase `rtbkrngsdbptbjhfbcud` (Postgres 17.6), Vercel project for w
 3. Expected membership after launch (read-only, save the numbers):
    ```sql
    select count(*) filter (where m) as members, count(*) filter (where not m) as public, count(*) as total
-     from (select p.tier <= 3 or exists (select 1 from applications a where a.user_id = p.id and a.status = 'accepted') as m from profiles p) x;
+     from (select p.tier <= 3
+                  or exists (select 1 from applications a where a.user_id = p.id and a.status = 'accepted')
+                  or exists (select 1 from auth.users u where u.id = p.id and upper(trim(u.raw_user_meta_data->>'invite_code')) = 'TETHOS-W26') as m
+             from profiles p) x;
    ```
-   2026-09-26: 17 members (T1, T2 and 15 hired, all T4), 298 public, 315 total.
+   2026-09-26: 43 members (T1, T2, 41 at T4: the 15 hires and the W26 sign-ups), 272 public, 315 total. W26 sign-ups count as members (ruling 2026-09-26: the winter-2026 onboarding code for accepted members); sign-ups with it after step 3 are public.
 
 ## 2. Migrations (management API, filename order, one transaction per file)
 
@@ -46,6 +49,12 @@ curl -sS -X POST https://api.supabase.com/v1/projects/rtbkrngsdbptbjhfbcud/datab
 ```
 
 `[]` means applied. An error means that file rolled back on its own (earlier files stay applied): stop, fix forward on staging, resume at that file. Keep a local log of file → time → response.
+
+What lands where:
+
+- `20260926200000_membership_launch`: the membership backfill (staff, hires, whitelist and W26 sign-ups stay members; everyone else public at T5) runs **once**, guarded by `data_backfills`; public sign-ups get T5 from here on; `admin_set_membership` for the mark-member route.
+- `20260926200100_event_rsvp_cancel`: members can cancel their own RSVP.
+- The two admin routes (`POST /api/admin/members/:id/membership`, and `PATCH /api/admin/members/:id` for tier/active/alumni, which the members page now uses) are code: they arrive with the deploy in step 4. Until then the live members page's tier/active/alumni buttons keep doing nothing, as they have since #40.
 
 Right **before `20260926200000_membership_launch`**, save the rollback snapshot locally (read-only, ids only):
 
@@ -86,7 +95,8 @@ select json_build_object(
  'definer_fns_callable_by_users', (select json_agg(p.proname order by p.proname) from pg_proc p join pg_namespace n on n.oid = p.pronamespace
      where n.nspname = 'public' and p.prosecdef and p.prorettype <> 'trigger'::regtype
        and (has_function_privilege('anon', p.oid, 'execute') or has_function_privilege('authenticated', p.oid, 'execute'))),
- 'cron_jobs', (select json_agg(jobname order by jobname) from cron.job)
+ 'cron_jobs', (select json_agg(jobname order by jobname) from cron.job),
+ 'backfills', (select json_agg(key) from data_backfills)
 ) r;
 ```
 
@@ -99,6 +109,7 @@ select json_build_object(
 | `tables_without_rls` | 0 |
 | `definer_fns_callable_by_users` | exactly `can_edit_kanban_board`, `current_tier`, `get_election_results`, `increment_invite_uses`, `invite_code_valid` |
 | `cron_jobs` | `prune-cron-history`, `recruitment-sheet-delivery` (unchanged) |
+| `backfills` | `["membership_launch"]` |
 
 Staging's run of this query is in `specs/evidence/launch-fixes/flows.md`.
 
@@ -112,7 +123,8 @@ Signed in, on www.tethos.ca, with two throwaway accounts made for the smoke and 
 4. **Chapter 1.** Claim plot, catch, donate, report to HQ: 100 coins once (`wallet_ledger` one `chapter:settle-in` row), the chapter letter in the mailbox.
 5. **RSVP.** On an approved event: RSVP, then cancel: the `event_attendance` row is gone.
 6. **Security spot checks** with the member probe's JWT against PostgREST (the Phase 1 list, `specs/evidence/phase1/flows.md` §9): own `tier`/`membership`/`tethos_coins` PATCH → 403; `rpc/wallet_apply` → permission denied; `invite_codes` → `[]`; `member_badges` with the anon key → permission denied.
-7. **Recruitment untouched.** `/student/apply` loads; `select status, start_time from cron.job_run_details order by start_time desc limit 3` shows `succeeded`.
+7. **Members page.** As T1 on `/student/dashboard/admin/members`: change the member probe's tier, then active and alumni; reload: the changes stayed. Your own tier: refused ("You can't change your own tier").
+8. **Recruitment untouched.** `/student/apply` loads; `select status, start_time from cron.job_run_details order by start_time desc limit 3` shows `succeeded`.
 
 ## Rollback
 
@@ -123,4 +135,5 @@ Signed in, on www.tethos.ca, with two throwaway accounts made for the smoke and 
   update profiles p set membership = s.membership, tier = s.tier
     from json_to_recordset('<snapshot json>') as s(id uuid, membership text, tier int) where p.id = s.id;
   ```
+  Leave the `data_backfills` row in place: it keeps a reapplied `200000` from running the backfill again.
 - **Invite code:** never re-activate `TETHOS-W26` (it's in git); issue another new code.

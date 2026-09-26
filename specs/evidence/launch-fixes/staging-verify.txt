@@ -14,12 +14,12 @@
     {
       "membership": "member",
       "tier": 4,
-      "count": 2
+      "count": 3
     },
     {
       "membership": "public",
       "tier": 5,
-      "count": 4
+      "count": 5
     }
   ],
   "attendance_policies": [
@@ -39,5 +39,8 @@
     "increment_invite_uses",
     "invite_code_valid"
   ],
-  "cron_jobs": null
+  "cron_jobs": null,
+  "backfills": [
+    "membership_launch"
+  ]
 }
