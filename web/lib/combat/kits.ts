@@ -102,8 +102,8 @@ export const FAMILY_ABILITIES: Record<Family, Ability[]> = {
     a("ranger.rain", "Rain of Arrows", "Arrows rain on the aimed spot and slow what's under them.", 12, 30, [hit(1.5, 3, "aim", { status: { slow: [0.3, 2] } })]),
   ],
   Vanguard: [
-    a("vanguard.second-wind", "Second Wind", "Catch your breath mid-fight.", 18, 25, [{ kind: "heal", amount: 0.22 }]),
     a("vanguard.leap", "Leap Strike", "Leap toward your aim and strike where you land.", 10, 25, [dash(5), hit(1.2, 2)]),
+    a("vanguard.second-wind", "Second Wind", "Catch your breath mid-fight.", 16, 25, [{ kind: "heal", amount: 0.25 }]),
   ],
   Warden: [
     a("warden.renew", "Renew", "Mend yourself and keep a thin ward.", 12, 25, [{ kind: "heal", amount: 0.2 }, { kind: "shield", amount: 0.06, duration: 6 }]),
@@ -242,8 +242,8 @@ export const SUBCLASSES: Subclass[] = [
       a("summoner.fox-pack", "Fox Pack", "Two spirit foxes that harry your enemies.", 12, 30, [{ kind: "summon", unit: "fox", count: 2 }]),
       a("summoner.crab-guard", "Crab Bulwark", "A sturdy crab that draws enemies onto its shell.", 16, 35, [{ kind: "summon", unit: "crab" }]),
     ],
-    passive: { name: "Pack Bond", description: "Each companion makes the others a little stronger.", kind: "pack_bond", value: 0.06 },
-    mods: { capacity: 2 },
+    passive: { name: "Pack Bond", description: "Each companion makes the others a little stronger.", kind: "pack_bond", value: 0.05 },
+    mods: { capacity: 1 },
   }),
   k({
     key: "shaman", name: "Shaman", family: "Warden", weapon_affinity: ["totem"],
@@ -256,7 +256,7 @@ export const SUBCLASSES: Subclass[] = [
   }),
   k({
     key: "druid", name: "Druid", family: "Warden", weapon_affinity: ["staff", "totem"],
-    signature: a("druid.rootbind", "Rootbind", "Roots burst from the ground at your aim, holding and hurting.", 8, 30, [hit(1.4, 2.5, "aim", { status: { hold: 2.5 } })]),
+    signature: a("druid.rootbind", "Rootbind", "Roots burst from the ground at your aim, holding and hurting.", 7, 30, [hit(1.9, 2.5, "aim", { status: { hold: 2.5 } })]),
     abilities: [
       a("druid.thorn-lash", "Thorn Lash", "A thorny vine lashes the enemies in front of you.", 3, 15, [hit(1.1, 3, "self", { arc: 1.4, status: { slow: [0.3, 2] } })]),
       a("druid.wild-growth", "Wild Growth", "Green growth closes your wounds under a leaf ward.", 12, 25, [{ kind: "heal", amount: 0.15 }, { kind: "shield", amount: 0.08, duration: 6 }]),
@@ -265,7 +265,7 @@ export const SUBCLASSES: Subclass[] = [
   }),
   k({
     key: "priest", name: "Priest", family: "Warden", weapon_affinity: ["staff", "tome"],
-    signature: a("priest.holy-beam", "Holy Beam", "A beam of light through everything in a line toward your aim.", 5, 20, [hit(1.8, 0.8, "self", { length: 9 })]),
+    signature: a("priest.holy-beam", "Holy Beam", "A beam of light through everything in a line toward your aim.", 4, 20, [hit(2.2, 0.8, "self", { length: 9 })]),
     abilities: [
       a("priest.radiant-shield", "Radiant Shield", "A strong shield of light.", 14, 30, [{ kind: "shield", amount: 0.35, duration: 8 }]),
       a("priest.mend", "Mend", "A strong heal.", 10, 25, [{ kind: "heal", amount: 0.3 }]),
@@ -301,7 +301,7 @@ export const UNITS: Record<string, UnitDef> = {
   shade: { key: "shade", name: "Shade", kind: "minion", hp: 60, cost: 1, life: 20, speed: 5, range: 1.5, power: 0.8, rate: 0.9 },
   "bone-wisp": { key: "bone-wisp", name: "Bone wisp", kind: "minion", hp: 35, cost: 1, life: 20, speed: 5, range: 6, power: 0.55, rate: 0.9, ranged: true },
   "weapon-wisp": { key: "weapon-wisp", name: "Wisp", kind: "minion", hp: 30, life: 12, speed: 5, range: 6, power: 0.6, rate: 0.9, ranged: true },
-  "totem-ember": { key: "totem-ember", name: "Ember totem", kind: "totem", hp: 90, radius: 3.4, pulse: { damage: 0.4 } },
+  "totem-ember": { key: "totem-ember", name: "Ember totem", kind: "totem", hp: 90, radius: 3.4, pulse: { damage: 0.55 } },
   "totem-mending": { key: "totem-mending", name: "Mending totem", kind: "totem", hp: 90, radius: 3.4, pulse: { heal: 0.025 } },
   "totem-warding": { key: "totem-warding", name: "Warding totem", kind: "totem", hp: 90, radius: 3.4, pulse: { slow: 0.35, shield: 0.015 } },
   tripwire: { key: "tripwire", name: "Tripwire", kind: "trap", hp: 1, life: 25, radius: 1.2, power: 0.8 },

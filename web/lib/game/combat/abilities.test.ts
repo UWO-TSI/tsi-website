@@ -97,7 +97,7 @@ describe("summons, totems, traps and decoys persist within caps (row 50)", () =>
   it("Summoner companions persist, cost capacity, and the oldest leaves when a new one would pass it", () => {
     const { rt } = setup("summoner");
     const cap = rt.kit!.capacity;
-    expect(cap).toBe(2 + Math.floor(rt.player.stats.spirit / 5) + 2);
+    expect(cap).toBe(2 + Math.floor(rt.player.stats.spirit / 5) + subclassByKey("summoner")!.mods!.capacity!);
     for (let i = 0; i < 4; i++) { rt.cooldowns.slot1 = rt.cooldowns.slot2 = rt.cooldowns.slot3 = 0; rt.player.energy = 100; use(rt, i % 3); }
     const cost = rt.units.reduce((n, u) => n + (u.def.kind === "minion" ? u.def.cost ?? 1 : 0), 0);
     expect(cost).toBeLessThanOrEqual(cap);
