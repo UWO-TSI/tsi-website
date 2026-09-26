@@ -84,6 +84,7 @@ p.interact[data-closed="true"] { margin: 0; cursor: default; color: #6a4b2f; }
 .catalogue small { color: #607069; font-size: 9px; }
 .catalogue button[aria-pressed="true"] small { color: #dfe9d9; }
 .finishes { margin-top: 10px; display: grid; gap: 6px; }
+.decorate .shopLink { width: 100%; margin-top: 8px; background: #a07850; border-color: #6e4e35; color: #fffbed; font-weight: 700; }
 @media (max-width: 700px) { .decorate { width: calc(100% - 32px); max-height: 45%; } }
 .decorateToggle { position: absolute; right: 16px; bottom: 84px; min-height: 44px; padding: 8px 14px; border: 1px solid #a1af9b; border-radius: 999px; background: #f8f7e9f2; color: #293e3b; font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 15px #29464120; z-index: 11; }
 .decorateToggle kbd { font: inherit; background: #426b5b; color: #fffdf0; border-radius: 4px; padding: 1px 6px; margin-right: 4px; }

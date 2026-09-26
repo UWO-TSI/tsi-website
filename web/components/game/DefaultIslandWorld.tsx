@@ -34,6 +34,8 @@ import { useIslandConditions } from "@/lib/game/useIslandConditions";
 import { IslandAtmosphere, useFollowCamera } from "./IslandAtmosphere";
 import PeacefulLayer, { peacefulNear } from "./peaceful/PeacefulLayer";
 import WardrobeSheet from "./peaceful/WardrobeSheet";
+import { ShopBody } from "@/components/economy/EconomySheets";
+import ProgressionPanel from "@/components/progression/ProgressionPanel";
 import PlayerCharacterUI from "./character/PlayerCharacterUI";
 import CharacterCrowd from "./character/CharacterCrowd";
 import OracleTemple from "./oracle/OracleTemple";
@@ -434,6 +436,7 @@ function DefaultIslandWorldContent() {
   const [fading, setFading] = useState(false);
   const [near, setNear] = useState<Near>(null);
   const [sheet, setSheet] = useState<Sheet>(null);
+  const [shopTab, setShopTab] = useState<"outfits" | "furniture" | null>(null);
   const [mapOpen, setMapOpen] = useState(true);
   const plot = useDefaultIslandPlot();
   const progression = useProgressionWorld();
@@ -678,13 +681,15 @@ function DefaultIslandWorldContent() {
       <CeremonyConfetti active={ceremony && !inside && !atHome} />
       {actionNote && <p className={styles.actionNote} role="status">{actionNote}</p>}
       {atHome && !decor.decorating && <button className={styles.decorateToggle} onClick={decor.toggle}><kbd>F</kbd> Decorate</button>}
-      {atHome && decor.decorating && <DecorateSheet indoor={inside === "house"} selected={decor.selected}
+      {atHome && decor.decorating && !shopTab && <DecorateSheet indoor={inside === "house"} selected={decor.selected} layout={layout}
         room={inside === "house" ? layout.rooms[roomAt(player.current.x, layout.rooms.length)] ?? null : null}
         onChoose={decor.choose} onRotate={decor.rotateSelected} onPutAway={decor.putAway} onDone={decor.toggle}
-        onFinish={(key, value) => decor.setRoomFinish(roomAt(player.current.x, layout.rooms.length), key, value)} />}
+        onFinish={(key, value) => decor.setRoomFinish(roomAt(player.current.x, layout.rooms.length), key, value)} onShop={() => setShopTab("furniture")} />}
+      {/* Locked wardrobe items and the decorate panel link here; closing remounts them with the new inventory. */}
+      <ProgressionPanel open={!!shopTab} onClose={() => setShopTab(null)} title="Shop" wide>{shopTab && <ShopBody initialTab={shopTab} />}</ProgressionPanel>
       <NoticeSheet open={sheet === "notice"} onClose={() => setSheet(null)} />
       <LettersSheet open={sheet === "letters"} onClose={() => setSheet(null)} />
-      {(sheet === "closet" || sheet === "fitting") && <WardrobeSheet open place={sheet === "closet" ? "closet" : "fitting"} onClose={() => setSheet(null)} />}
+      {(sheet === "closet" || sheet === "fitting") && <WardrobeSheet open place={sheet === "closet" ? "closet" : "fitting"} onClose={() => setSheet(null)} onShop={() => { setSheet(null); setShopTab("outfits"); }} />}
       <PlayerCharacterUI />
       <JournalSheet open={sheet === "journal"} onClose={() => setSheet(null)} />
       <OracleQuizSheet open={sheet === "oracle"} onClose={() => setSheet(null)} onResult={onOracleResult} />

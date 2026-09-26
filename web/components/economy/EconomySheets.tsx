@@ -5,8 +5,9 @@
  * in the same overlay pattern as the progression sheets. Amounts are shown
  * as play coins 🪙 or Gems 💎 only; nothing is ever expressed as money.
  */
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { fmtCoins, fmtGems } from "@/lib/economy";
+import { ownedCounts } from "@/lib/wallet/rules";
 import type { InventoryView, SellEntry, ShopEntry, ShopView, WalletView } from "@/lib/wallet/service";
 import { ApiError, newKey } from "@/lib/apiClient";
 import { httpEconomyTransport, type EconomyTransport, type MerchView } from "@/lib/wallet/transport";
@@ -35,6 +36,13 @@ function useLoad<T>(load: () => Promise<T>) {
     void reload();
   }, [reload]);
   return { data, error, reload, setError };
+}
+
+/** What the player owns by catalogue ref (clothes, dyes, furniture, finishes) → qty; null until loaded or when signed out. */
+export function useOwned(transport = httpEconomyTransport): Map<string, number> | null {
+  const load = useCallback(() => transport.inventory(), [transport]);
+  const { data } = useLoad<InventoryView>(load);
+  return useMemo(() => (data ? ownedCounts(Object.values(data.groups).flat()) : null), [data]);
 }
 
 function Balances({ coins, gems }: { coins: number; gems: number }) {
@@ -188,6 +196,7 @@ export function SellBody({ transport = httpEconomyTransport }: { transport?: Eco
 // ── Inventory ────────────────────────────────────────────────────────────────
 
 const GROUP_LABEL: Record<string, string> = { tools: "Tools", outfits: "Outfits & accessories", furniture: "Furniture & finishes" };
+const USE_HINT: Record<string, string> = { outfits: "Wear it from your closet", furniture: "Place at home" };
 
 export function InventoryBody({ transport = httpEconomyTransport }: { transport?: EconomyTransport }) {
   const load = useCallback(() => transport.inventory(), [transport]);
@@ -221,7 +230,7 @@ export function InventoryBody({ transport = httpEconomyTransport }: { transport?
                 {r.item.slot ? (
                   <button className={`${r.equipped ? p.ghost : p.btn} ${s.small}`} onClick={() => toggle(r.item.id, !r.equipped)}>{r.equipped ? "Unequip" : "Equip"}</button>
                 ) : (
-                  <span className={p.muted}>Place at home</span>
+                  <span className={p.muted}>{USE_HINT[g] ?? ""}</span>
                 )}
               </li>
             ))}
