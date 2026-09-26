@@ -21,8 +21,8 @@ import s from "./study.module.css";
 
 const F = "/assets/acnh/furniture/", P = "/assets/acnh/props/";
 const flat = () => 0;
-/** PlayerAvatar's tsi:sit toggles: the same seat again stands up. */
-const standUp = (seat: WorldSeat) => window.dispatchEvent(new CustomEvent("tsi:sit", { detail: { x: seat.x, z: seat.z } }));
+/** PlayerAvatar's tsi:sit toggles: sits if standing, stands if already in that seat. */
+const toggleSit = (seat: WorldSeat) => window.dispatchEvent(new CustomEvent("tsi:sit", { detail: { x: seat.x, z: seat.z } }));
 const atSeat = (seat: WorldSeat, p: THREE.Vector3) => Math.abs(p.x - seat.x) < 0.01 && Math.abs(p.z - seat.z) < 0.01;
 
 /** Placeholder furniture per kind, from the HQ clubhouse family (tables, chairs, sofa) and village props (benches, parasol). */
@@ -39,7 +39,7 @@ function TableFurniture({ t, ground }: { t: TableLayout; ground: (x: number, z: 
     </> : t.furniture === "picnic" || t.furniture === "pier"
       ? [...new Set(seats.map(([, z]) => z))].map(z => <GLBProp key={z} url={`${P}bench-wood.glb`} position={[0, 0, z]} />)
       : seats.map(([x, z, facing], i) => <GLBProp key={i} url={`${F}study-chair.glb`} position={[x, 0, z]} scale={0.1} rotation={[0, facing, 0]} />)}
-    {t.furniture === "pier" && <GLBProp url={`${P}beach-parasol.glb`} position={[-1.3, 0, 0.2]} />}
+    {t.furniture === "pier" && <GLBProp url={`${P}beach-parasol.glb`} position={[-2.4, 0, 0.3]} />}
     {t.furniture !== "couch" && <GLBProp url={`${F}lounge-book.glb`} position={[0.15, 0.84, 0]} scale={0.065} rotation={[0, 0.3, 0]} castShadow={false} />}
   </group>;
 }
@@ -47,7 +47,7 @@ function TableFurniture({ t, ground }: { t: TableLayout; ground: (x: number, z: 
 function Overhead({ name, phase, remaining }: { name?: string; phase: Mate["phase"]; remaining: number | null }) {
   return <div className={s.overhead} data-phase={phase}>
     {name && <b>{name}</b>}
-    <span>{phase === "focus" ? `Focus ${formatClock(remaining)}` : phase === "break" ? `Stretch ${formatClock(remaining)}` : "Settling in"}</span>
+    {phase !== "seated" && <span>{phase === "focus" ? `Focus ${formatClock(remaining)}` : `Stretch ${formatClock(remaining)}`}</span>}
   </div>;
 }
 
@@ -73,7 +73,7 @@ function MateFigure({ mate, seat, y, remaining }: { mate: Mate; seat: WorldSeat;
       <meshBasicMaterial map={tex} transparent alphaTest={0.1} side={THREE.DoubleSide} />
     </mesh></Billboard>
     <Html calculatePosition={calculateCurvedHtmlPosition} position={[0, 1.75, 0]} center zIndexRange={[35, 0]} style={{ pointerEvents: "none" }}>
-      <Overhead name={mate.name} phase={mate.phase} remaining={remaining} />
+      <Overhead name={mate.name.split(" ")[0]} phase={mate.phase} remaining={remaining} />
     </Html>
   </group>;
 }
@@ -86,7 +86,7 @@ function MyOverhead({ player }: { player: React.RefObject<THREE.Vector3> }) {
   useFrame(() => { if (group.current) group.current.position.copy(player.current); });
   if (!session || session.phase === "seated") return null;
   return <group ref={group}>
-    <Html calculatePosition={calculateCurvedHtmlPosition} position={[0, 1.95, 0]} center zIndexRange={[45, 0]} style={{ pointerEvents: "none" }}>
+    <Html calculatePosition={calculateCurvedHtmlPosition} position={[0, 2.4, 0]} center zIndexRange={[45, 0]} style={{ pointerEvents: "none" }}>
       <Overhead phase={session.phase} remaining={remaining} />
     </Html>
   </group>;
@@ -96,40 +96,57 @@ export default function StudySeats({ area, player, ground = flat, board }: {
   area: SeatArea; player: React.RefObject<THREE.Vector3>; ground?: (x: number, z: number) => number; board?: [number, number];
 }) {
   const layouts = useMemo(() => STUDY_LAYOUT.filter(t => t.area === area), [area]);
+  const anchors = useMemo(() => new Set(layouts.map(l => l.anchor)), [layouts]);
   const tables = useWorldStudy(w => w.study?.tables);
   const session = useWorldStudy(w => w.study?.session ?? null);
-  const myTable = useWorldStudy(w => w.study?.table ?? null);
-  // Put the avatar in its seat once per session: after "Sit", on load, or on coming back into this area.
   const placed = useRef<string | null>(null);
-  const mySeat = session && myTable && layouts.some(l => l.anchor === myTable.anchor) ? seatAt(myTable.anchor, session.seat) : null;
-  useEffect(() => {
-    if (!session || !mySeat || placed.current === session.id || getWorldStudy().seated) return;
-    placed.current = session.id;
-    seatAvatar(mySeat);
-  }, [session, mySeat]);
+  // Walk-away only counts once the avatar has actually been in the seat.
+  const arrived = useRef(false);
+  // PlayerAvatar may not be listening yet on the first frames after a scene change: retry the snap briefly.
+  const retry = useRef({ until: 0, last: 0 });
   // Session over (finished, Leave seat, another device): stand up if still sitting.
   useEffect(() => {
     const seated = getWorldStudy().seated;
-    if (session || !seated || !layouts.some(l => l.anchor === seated.anchor)) return;
-    if (atSeat(seated, player.current)) standUp(seated);
+    if (session || !seated || !anchors.has(seated.anchor)) return;
+    if (atSeat(seated, player.current)) toggleSit(seated);
     setWorldStudy({ seated: null });
-  }, [session, layouts, player]);
-  // Leaving the area while seated (scene change) counts as walking away.
+  }, [session, anchors, player]);
+  // A scene change after sitting down counts as walking away.
   useEffect(() => () => {
     const w = getWorldStudy();
-    if (w.seated && layouts.some(l => l.anchor === w.seated!.anchor)) { setWorldStudy({ seated: null, near: null }); void w.study?.end(); }
-    else if (w.near) setWorldStudy({ near: null });
-  }, [layouts]);
+    if (w.seated && anchors.has(w.seated.anchor)) {
+      setWorldStudy({ seated: null, near: null });
+      if (arrived.current) void w.study?.end();
+    } else if (w.near) setWorldStudy({ near: null });
+  }, [anchors]);
 
   useFrame(() => {
     const w = getWorldStudy();
     const p = player.current;
-    if (w.seated && layouts.some(l => l.anchor === w.seated!.anchor) && walkedAway(w.seated, p.x, p.z)) {
+    const mine = w.study?.session;
+    // Once per session, seat the avatar (after "Sit", on load, on coming back into this area).
+    // From the frame loop, so PlayerAvatar's tsi:sit listener is already up.
+    const table = w.study?.table;
+    if (mine && table && anchors.has(table.anchor) && placed.current !== mine.id && !w.seated) {
+      const seat = seatAt(table.anchor, mine.seat);
+      placed.current = mine.id;
+      arrived.current = false;
+      retry.current = { until: performance.now() + 3000, last: performance.now() };
+      if (seat) seatAvatar(seat);
+    }
+    const seated = w.seated && anchors.has(w.seated.anchor) ? w.seated : null;
+    if (seated && atSeat(seated, p)) arrived.current = true;
+    const now = performance.now();
+    if (seated && !arrived.current && now < retry.current.until && now - retry.current.last > 400) {
+      retry.current.last = now;
+      toggleSit(seated);
+    }
+    if (seated && arrived.current && walkedAway(seated, p.x, p.z)) {
+      arrived.current = false;
       setWorldStudy({ seated: null });
-      if (w.study?.session) void w.study.end();
+      if (mine) void w.study?.end();
     }
     const views = w.study?.tables ?? [];
-    const mine = w.study?.session;
     let near: WorldSeat | "board" | null = board && Math.hypot(p.x - board[0], p.z - board[1]) < 1.3 ? "board" : null;
     if (!near && w.study) near = nearestSeat(area, p.x, p.z, (anchor, seat) => {
       const view = views.find(v => v.anchor === anchor);

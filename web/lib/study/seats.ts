@@ -20,7 +20,7 @@ const PI = Math.PI;
 export const FURNITURE: Record<Furniture, { seats: [number, number, number][]; solid: [number, number, number, number][] }> = {
   window: { seats: [[0.45, -0.8, 0], [-0.45, -0.8, 0]], solid: [[0, 0, 0.5, 0.42]] },
   two: { seats: [[0.85, 0, -PI / 2], [-0.85, 0, PI / 2]], solid: [[0, 0, 0.5, 0.42]] },
-  four: { seats: [[0.5, -0.8, 0], [-0.5, -0.8, 0], [0.5, 0.8, PI], [-0.5, 0.8, PI]], solid: [[0, 0, 1, 0.42]] },
+  four: { seats: [[0.55, -0.9, 0], [-0.55, -0.9, 0], [0.55, 0.9, PI], [-0.55, 0.9, PI]], solid: [[0, 0, 1, 0.42]] },
   couch: { seats: [[0.9, -0.15, PI], [0, -0.15, PI], [-0.9, -0.15, PI]], solid: [[0, 0.45, 1.45, 0.25], [0, -1.35, 0.9, 0.46]] },
   picnic: { seats: [[0.5, -0.8, 0], [-0.5, -0.8, 0], [0.5, 0.8, PI], [-0.5, 0.8, PI]], solid: [[0, 0, 1, 0.42]] },
   pier: { seats: [[0.45, 0.8, PI], [-0.45, 0.8, PI]], solid: [[0, 0, 0.5, 0.42]] },

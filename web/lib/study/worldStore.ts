@@ -29,6 +29,8 @@ export function setWorldStudy(patch: Partial<WorldStudy>) {
   state = { ...state, ...patch };
   subs.forEach(f => f());
 }
+/** Seats outrank the island's lowest-priority prompt (fish/forage) while near one or seated. */
+export const studyHoldsPrompt = () => !!(state.near || state.seated);
 /** Select a stable slice (the whole snapshot changes every HUD render). */
 export function useWorldStudy<T>(pick: (s: WorldStudy) => T): T {
   return useSyncExternalStore(subscribe, () => pick(state), () => pick(state));

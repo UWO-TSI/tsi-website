@@ -76,7 +76,7 @@ import { HQ_CLOCK, HQ_LAYOUT, HQ_BOARD_APPROACH, constrainClubhouse } from "@/li
 import StudySeats from "./study/StudySeats";
 import StudyHud from "./study/StudyHud";
 import CafeInterior from "./study/CafeInterior";
-import { getWorldStudy } from "@/lib/study/worldStore";
+import { studyHoldsPrompt } from "@/lib/study/worldStore";
 import "@/lib/game/aerialFog";
 import styles from "./DefaultIslandWorld.module.css";
 
@@ -221,7 +221,7 @@ function IslandScene({ identity, devAt, exitFrom, peaceful, fishSpot, fishing, c
         if (d < best) { best = d; next = l.id === "museum" && chapter.donate ? "donate" : l.id as Near; }
       }
     }
-    if (!next && !fishing && !getWorldStudy().near) next = peacefulNear(island.map, VILLAGE_WATER, player.current.x, player.current.z, fishSpot);
+    if (!next && !fishing && !studyHoldsPrompt()) next = peacefulNear(island.map, VILLAGE_WATER, player.current.x, player.current.z, fishSpot);
     if (near.current !== next) { near.current = next; onNear(next); }
   }, -2);
   return (
@@ -323,7 +323,7 @@ function VillageLandmarks({ ground, opened, stage, ceremony }: { ground: (x: num
   const cafe = landmark("cafe"), museum = landmark("museum"), ruins = landmark("ruins");
   return <>
     <group position={at("shop")}><ACNHBuilding id="shop" /></group>
-    <GLBProp url="/assets/acnh/furniture/fitting-room.glb" position={[FITTING_ROOM[0], ground(FITTING_ROOM[0], FITTING_ROOM[1]), FITTING_ROOM[1] + 0.45]} scale={0.1} />
+    <GLBProp url="/assets/acnh/furniture/fitting-room.glb" position={[FITTING_ROOM[0], ground(FITTING_ROOM[0], FITTING_ROOM[1]), FITTING_ROOM[1] + 0.45]} scale={0.1} rotation={[0, Math.PI, 0]} />
     <group position={at("oracle")}><ACNHBuilding id="oracle" /></group>
     <group position={at("cafe")}><ACNHParts parts={CHALET_VARIANTS.yellow} rotationY={Math.PI} /></group>
     <group position={at("museum")}><ACNHParts parts={CHALET_VARIANTS.red} rotationY={Math.PI} /></group>

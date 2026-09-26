@@ -12,8 +12,7 @@ import { useThree, useFrame } from "@react-three/fiber";
 import { Html, useTexture } from "@react-three/drei";
 import * as THREE from "three";
 import PlayerAvatar from "../PlayerAvatar";
-import { InteriorKeeper, Piece, applyInteriorBackdrop } from "../interiorShared";
-import { useFollowCamera } from "../IslandAtmosphere";
+import { InteriorKeeper, Piece, applyInteriorBackdrop, followInteriorCamera } from "../interiorShared";
 import StudySeats from "./StudySeats";
 import { CLUBHOUSE_LIGHTING } from "@/lib/game/islandLighting";
 import type { IslandPhase } from "@/lib/game/islandTime";
@@ -79,10 +78,10 @@ export default function CafeInterior({ phase, player, frozen, identity, onMove, 
   const { scene, camera } = useThree();
   const light = CLUBHOUSE_LIGHTING[phase];
   useEffect(() => applyInteriorBackdrop(scene, "#20170f"), [scene]);
-  useEffect(() => { camera.position.set(SPAWN[0], 6.5, SPAWN[2] - 8.5); }, [camera]);
-  useFollowCamera(player, 0.82, null);
+  useEffect(() => { camera.position.set(SPAWN[0], 8.4, SPAWN[2] - 7.2); }, [camera]);
   const near = useRef<"exit" | null>(null);
-  useFrame(() => {
+  useFrame((_, delta) => {
+    followInteriorCamera(camera, player.current.x, player.current.z, Math.min(delta, 0.1));
     const next = Math.hypot(player.current.x - DOOR[0], player.current.z - DOOR[1]) < 1.4 ? "exit" : null;
     if (next !== near.current) { near.current = next; onNear(next); }
   });
@@ -92,10 +91,6 @@ export default function CafeInterior({ phase, player, frozen, identity, onMove, 
     <directionalLight color="#fff4df" intensity={light.key} position={[3, 8, -4]} />
     <Suspense fallback={null}><Room phase={phase} /></Suspense>
     <Suspense fallback={null}>
-      {[[3.8, 0.9], [-4.6, 0.9], [4.4, -3]].map(([x, z]) => <group key={x} position={[x, 4, z]}>
-        <Piece name="clubhouse-pendant" position={[0, 0, 0]} scale={0.06} />
-        <pointLight color="#ffdcaa" intensity={light.ceiling * 0.4} distance={6} position={[0, -1, 0]} />
-      </group>)}
       <Piece name="bookshelf" position={[-8.5, 0, 0.2]} rotY={-Math.PI / 2} />
       <Piece name="bookshelf" position={[-8.5, 0, 2.4]} rotY={-Math.PI / 2} />
       <Piece name="plant-monstera" position={[8.1, 0, 5.2]} />
@@ -104,12 +99,14 @@ export default function CafeInterior({ phase, player, frozen, identity, onMove, 
       <Piece name="lounge-rug" position={[-5, 0.012, 4.2]} scale={0.11} />
       <Piece name="counter-register" position={[7.9, 0, -1.4]} rotY={Math.PI / 2} scale={0.12} />
       <Piece name="counter-register" position={[7.9, 0, -0.45]} rotY={Math.PI / 2} scale={0.12} />
-      <Piece name="wall-frame" position={[0.9, 2.3, 5.95]} rotY={Math.PI} />
+      <Piece name="lounge-tea" position={[7.9, 0.96, -1.2]} rotY={Math.PI / 2} scale={0.075} />
       <Piece name="wall-clock" position={[8.95, 2.6, 2.4]} rotY={-Math.PI / 2} />
       <Piece name="bulletinboard" position={BOARD} scale={0.2} rotY={Math.PI} />
       <Piece name="yellow-message-mat" rotX={Math.PI} rotY={Math.PI} position={[0, 0.015, -5.2]} scale={0.14} />
     </Suspense>
     <pointLight color="#ffdfae" intensity={light.lamp * 0.5} distance={4.8} position={[-7.4, 1.5, 5.3]} />
+    {/* Warm pools over the tables (no pendant meshes: the steep camera puts them in front of the seats). */}
+    {[[3.8, 0.9], [-4.6, 0.9], [4.4, -3], [-6.2, -3.2]].map(([x, z]) => <pointLight key={x} color="#ffdcaa" intensity={light.ceiling * 0.4} distance={6} position={[x, 3, z]} />)}
     <Html position={[BOARD[0], 2.55, BOARD[2] - 0.2]} center distanceFactor={10} zIndexRange={[3, 0]}><div className={world.cue}>Study board</div></Html>
     <InteriorKeeper position={[8.55, 0, -0.95]} rotY={-Math.PI / 2} watch={[7, -0.95]} colors={{ apron: "#7a4f2e", shirt: "#f3e6cf" }} hat="cap" playerPosRef={player as React.MutableRefObject<THREE.Vector3>} />
     <StudySeats area="cafe" player={player} board={BOARD_SPOT} />

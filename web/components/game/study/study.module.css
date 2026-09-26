@@ -1,6 +1,6 @@
 /* Study in the world: overhead timers, the timer card column, the start sheet. Cream / sage / wood like the island sheets. */
-.overhead { display: grid; justify-items: center; gap: 1px; padding: 3px 9px; border-radius: 999px; background: #f8f7e9ee; color: #293e3b; border: 1px solid #5c746c40; box-shadow: 0 2px 8px #29464125; font: 700 11px "IBM Plex Mono", monospace; white-space: nowrap; font-variant-numeric: tabular-nums; }
-.overhead b { font-size: 9px; font-weight: 600; color: #607069; }
+.overhead { display: grid; justify-items: center; gap: 1px; padding: 3px 9px; border-radius: 999px; background: #f8f7e9ee; color: #293e3b; border: 1px solid #5c746c40; box-shadow: 0 2px 8px #29464125; font: 700 10px "IBM Plex Mono", monospace; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.overhead b { font-size: 8px; font-weight: 600; color: #607069; }
 .overhead[data-phase="focus"] { background: #f6ddb9f0; color: #7a4c16; }
 .overhead[data-phase="break"] { background: #cfe3c7f0; color: #2f5a36; animation: stretch 1.4s ease-in-out infinite; }
 .overhead[data-phase="private"] { background: #e4e4dcee; color: #6f7a74; }
@@ -12,11 +12,12 @@
 .phase[data-phase="break"] { color: #6c9a6f; }
 .clock { margin: 2px 0 4px; font-size: 40px; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1.1; }
 
-.startSheet { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(380px, calc(100% - 32px)); z-index: 20; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+/* Beside the seated avatar (screen centre), not over it. */
+.startSheet { position: absolute; left: calc(50% + 70px); top: 50%; transform: translateY(-50%); width: min(360px, calc(100% - 32px)); z-index: 20; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
 .startSheet > section { box-shadow: 0 6px 0 #47625218, 0 16px 40px #29464130; background: #f8f7e9; }
 
 .board { margin: 10px 0 4px; padding: 0; list-style: none; display: grid; gap: 4px; }
 .board li { display: flex; justify-content: space-between; padding: 6px 10px; border-radius: 10px; background: #fffdf3; border: 1px solid #e3d8ba; }
 
-@media (max-width: 700px) { .panel { top: auto; bottom: 70px; left: 12px; width: calc(100% - 24px); max-height: 45%; } }
+@media (max-width: 700px) { .startSheet { left: 16px; top: auto; bottom: 70px; transform: none; } .panel { top: auto; bottom: 70px; left: 12px; width: calc(100% - 24px); max-height: 45%; } }
 @media (prefers-reduced-motion: reduce) { .overhead[data-phase="break"] { animation: none; } }
