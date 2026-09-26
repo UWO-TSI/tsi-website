@@ -45,10 +45,11 @@ export function Workbench({ player }: { player: React.RefObject<THREE.Vector3> }
   });
   useEffect(() => () => { window.dispatchEvent(new CustomEvent("tsi:workbench-near", { detail: false })); }, []);
   return <Suspense fallback={null}>
-    <Piece shadows name="reading-table" position={[BENCH.x, 0, BENCH.z]} rotY={Math.PI / 2} />
-    <GLBProp url="/assets/acnh/props/tool-rod.glb" position={[BENCH.x - 0.1, 0.78, BENCH.z - 0.35]} rotation={[0, 0.5, Math.PI / 2]} />
-    <GLBProp url="/assets/acnh/props/tool-net.glb" position={[BENCH.x - 0.35, 0, BENCH.z + 1.05]} rotation={[0, Math.PI / 2, 0]} />
-    <Piece shadows name="cardboard-pile" position={[BENCH.x, 0, BENCH.z - 1.35]} rotY={Math.PI / 2} />
+    <Piece shadows name="counter-register" position={[BENCH.x, 0, BENCH.z]} rotY={Math.PI / 2} scale={0.13} />
+    <GLBProp url="/assets/acnh/props/tool-rod.glb" scale={0.06} position={[BENCH.x + 0.1, 1.05, BENCH.z]} rotation={[Math.PI / 2, 0, 0.3]} />
+    <GLBProp url="/assets/acnh/props/tool-net.glb" scale={0.06} position={[BENCH.x - 0.2, 0, BENCH.z + 1.15]} />
+    <Piece shadows name="barrel" position={[BENCH.x + 0.1, 0, BENCH.z + 1.3]} scale={0.09} />
+    <Piece shadows name="cardboard-pile" position={[BENCH.x, 0, BENCH.z - 1.4]} rotY={Math.PI / 2} />
   </Suspense>;
 }
 
