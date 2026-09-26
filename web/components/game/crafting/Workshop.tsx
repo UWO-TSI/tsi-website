@@ -25,6 +25,9 @@ import styles from "./Workshop.module.css";
 
 installCraftingDemo();
 
+// Blender props (art/props-enemies), authored at the character rig's scale: scale 1.3 = CHARACTER_SCALE.
+const P = "/assets/game/props/";
+
 // ── Workbench (clubhouse, against the west wall between the desk and the plants) ──
 
 const BENCH = { x: -7.25, z: 1, halfX: 0.5, halfZ: 0.9 };
@@ -45,17 +48,13 @@ export function Workbench({ player }: { player: React.RefObject<THREE.Vector3> }
   });
   useEffect(() => () => { window.dispatchEvent(new CustomEvent("tsi:workbench-near", { detail: false })); }, []);
   return <Suspense fallback={null}>
-    <Piece shadows name="counter-register" position={[BENCH.x, 0, BENCH.z]} rotY={Math.PI / 2} scale={0.13} />
-    <GLBProp url="/assets/acnh/props/tool-rod.glb" scale={0.085} position={[BENCH.x + 0.15, 1.02, BENCH.z + 0.2]} rotation={[Math.PI / 2, 0, -0.5]} />
-    <GLBProp url="/assets/acnh/props/tool-net.glb" scale={0.085} position={[BENCH.x + 0.6, 0, BENCH.z - 0.75]} rotation={[0.25, Math.PI / 2, 0]} />
+    <GLBProp url={`${P}workbench.glb`} scale={1.3} position={[BENCH.x, 0, BENCH.z]} rotation={[0, Math.PI / 2, 0]} />
+    <GLBProp url={`${P}branch.glb`} scale={1.3} position={[BENCH.x - 0.1, 0.585, BENCH.z + 0.45]} rotation={[0, 0.4, 0]} castShadow={false} />
     <Piece shadows name="cardboard-pile" position={[BENCH.x, 0, BENCH.z - 1.4]} rotY={Math.PI / 2} />
   </Suspense>;
 }
 
 // ── Message bottle (village beach, one a Toronto day) ──
-
-// Lathe profile of a small corked bottle: [radius, height] in world units.
-const BOTTLE = [[0, 0], [0.075, 0], [0.09, 0.025], [0.09, 0.17], [0.055, 0.22], [0.03, 0.25], [0.03, 0.3], [0, 0.3]].map(([x, y]) => new THREE.Vector2(x, y));
 
 export function BeachBottle({ player, ground }: { player: React.RefObject<THREE.Vector3>; ground: (x: number, z: number) => number }) {
   const [available, setAvailable] = useState(false);
@@ -83,14 +82,8 @@ export function BeachBottle({ player, ground }: { player: React.RefObject<THREE.
     if (rock.current) rock.current.rotation.x = Math.sin(clock.elapsedTime * 1.3) * 0.08;
   });
   if (!available) return null;
-  return <group position={[spot[0], ground(spot[0], spot[1]) + 0.14, spot[1]]} rotation={[0, 0.8, 0]} scale={1.6}>
-    <group ref={rock}>
-      <group rotation={[0, 0, Math.PI / 2]} position={[0.15, 0, 0]}>
-        <mesh castShadow><latheGeometry args={[BOTTLE, 18]} /><meshStandardMaterial color="#8fd3bd" transparent opacity={0.62} roughness={0.08} metalness={0.1} /></mesh>
-        <mesh position={[0, 0.315, 0]}><cylinderGeometry args={[0.032, 0.028, 0.05, 10]} /><meshStandardMaterial color="#a57a4c" roughness={0.9} /></mesh>
-        <mesh position={[0, 0.1, 0]}><cylinderGeometry args={[0.04, 0.04, 0.15, 10]} /><meshStandardMaterial color="#f4e8cd" roughness={1} /></mesh>
-      </group>
-    </group>
+  return <group position={[spot[0], ground(spot[0], spot[1]) + 0.14, spot[1]]} rotation={[0, 0.8, 0]} scale={1.3}>
+    <group ref={rock}><Suspense fallback={null}><GLBProp url={`${P}message-bottle.glb`} /></Suspense></group>
   </group>;
 }
 
