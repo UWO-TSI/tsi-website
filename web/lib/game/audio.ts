@@ -1,7 +1,9 @@
 "use client";
 
 /**
- * Audio manager (sprint A7 infra; content landed 2026-07-03 cozy push).
+ * Audio manager (sprint A7 infra; content landed 2026-07-03 cozy push;
+ * hourly music + mute + weather/season ambience added in the audio pass,
+ * ledger rows 84, 99, 106, 112-114, 125, 169).
  *
  * Original member-world files are CC0 (see
  * `web/public/audio/CREDITS.md`): ambient loops from Pixel-boy's Ninja
@@ -11,16 +13,32 @@
  * Applicant music by Stream Cafe has separate source/use terms in CREDITS.md.
  * The missing-file fallback stays: a deleted file just runs silent.
  *
+ * Two independent crossfading beds share one cascading-candidate engine:
+ *   - ambient: the existing time-of-day loop, now also able to try a
+ *     weather- or season-specific variant before the guaranteed base file.
+ *   - music: the new 12-block hourly player (`musicSchedule.ts` picks the
+ *     block), with a seasonal-variant slot and interior/cafe overrides,
+ *     always ending on a fallback that already exists on disk.
+ * A candidate list of one item (the common case today — no weather/season
+ * variant authored yet) behaves exactly like the old single-src load.
+ *
  * Public API:
  *   AudioManager.enable()                        — user gesture unlock
- *   AudioManager.setVolumes({ master, ambient, sfx })
- *   AudioManager.setPhase(phase)                 — crossfade ambient track
+ *   AudioManager.setVolumes({ master, ambient, music, sfx })
+ *   AudioManager.setMuted(bool)                   — silences all channels, keeps sliders
+ *   AudioManager.setPhase(phase)                  — crossfade ambient track (time only)
+ *   AudioManager.setAmbience({ phase, weather, season }) — crossfade ambient, richer key
+ *   AudioManager.setMusic({ block, season, override }) — crossfade the hourly music bed
  *   AudioManager.playSFX(name)                   — one-shot, overlapping safe
  *   AudioManager.playBlip()                      — random dialogue voice blip
  *   AudioManager.dispose()
  *   AudioManager.subscribe(listener)             — for React UI sync
  *   AudioManager.getState()
  */
+
+import { buildMusicSrcList, type MusicBlock, type MusicOverride } from "./musicSchedule";
+import type { IslandWeather } from "./islandWeather";
+import type { Season } from "./season";
 
 export type AmbientPhase = "dawn" | "day" | "dusk" | "night" | "applicant-island" | "applicant-hq";
 export type SFXName =
@@ -69,39 +87,54 @@ const BLIPS: SFXName[] = ["blip1", "blip2", "blip3", "blip4", "blip5"];
 
 export interface AudioVolumes {
   master: number;  // 0-1
-  ambient: number; // 0-1
+  ambient: number; // 0-1 (labelled "Ambience" in the settings UI)
+  music: number;   // 0-1
   sfx: number;     // 0-1
 }
 
 export interface AudioState {
   enabled: boolean;
+  muted: boolean;
   volumes: AudioVolumes;
   phase: AmbientPhase | null;
+  music: { block: MusicBlock | null; override: MusicOverride };
 }
 
 const STORAGE_KEY = "tsi.audio.v1";
 const CROSSFADE_MS = 800;
 
 type Listener = (state: AudioState) => void;
+type ChannelName = "ambient" | "music";
 
-function readStoredVolumes(): AudioVolumes {
+interface StoredPrefs {
+  volumes: AudioVolumes;
+  muted: boolean;
+}
+
+const DEFAULT_VOLUMES: AudioVolumes = { master: 0.7, ambient: 0.6, music: 0.55, sfx: 0.8 };
+
+function readStoredPrefs(): StoredPrefs {
   if (typeof window === "undefined") {
-    return { master: 0.7, ambient: 0.6, sfx: 0.8 };
+    return { volumes: { ...DEFAULT_VOLUMES }, muted: false };
   }
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
       return {
-        master: clamp01(parsed.master, 0.7),
-        ambient: clamp01(parsed.ambient, 0.6),
-        sfx: clamp01(parsed.sfx, 0.8),
+        volumes: {
+          master: clamp01(parsed.master, DEFAULT_VOLUMES.master),
+          ambient: clamp01(parsed.ambient, DEFAULT_VOLUMES.ambient),
+          music: clamp01(parsed.music, DEFAULT_VOLUMES.music),
+          sfx: clamp01(parsed.sfx, DEFAULT_VOLUMES.sfx),
+        },
+        muted: typeof parsed.muted === "boolean" ? parsed.muted : false,
       };
     }
   } catch {
     /* ignore */
   }
-  return { master: 0.7, ambient: 0.6, sfx: 0.8 };
+  return { volumes: { ...DEFAULT_VOLUMES }, muted: false };
 }
 
 function clamp01(n: unknown, fallback = 0): number {
@@ -109,16 +142,33 @@ function clamp01(n: unknown, fallback = 0): number {
   return Math.max(0, Math.min(1, n));
 }
 
+interface TrackChannel {
+  current: HTMLAudioElement | null;
+  next: HTMLAudioElement | null;
+  raf: number | null;
+  fadeStart: number;
+  fadeProgress: number;
+}
+
+function emptyChannel(): TrackChannel {
+  return { current: null, next: null, raf: null, fadeStart: 0, fadeProgress: 0 };
+}
+
 export class AudioManagerImpl {
   private enabled = false;
-  private volumes: AudioVolumes = { master: 0.7, ambient: 0.6, sfx: 0.8 };
+  private muted = false;
+  private volumes: AudioVolumes = { ...DEFAULT_VOLUMES };
   private phase: AmbientPhase | null = null;
+  private musicBlock: MusicBlock | null = null;
+  private musicOverride: MusicOverride = null;
 
-  private currentTrack: HTMLAudioElement | null = null;
-  private nextTrack: HTMLAudioElement | null = null;
-  private crossfadeRaf: number | null = null;
-  private crossfadeStart = 0;
-  private fadeProgress = 0;
+  private ambientKey: string | null = null;
+  private ambientCandidates: string[] = [];
+  private musicKey: string | null = null;
+  private musicCandidates: string[] = [];
+
+  private ambientCh: TrackChannel = emptyChannel();
+  private musicCh: TrackChannel = emptyChannel();
   private oneShots = new Map<HTMLAudioElement, SFXName>();
 
   private missingFiles = new Set<string>();
@@ -128,13 +178,21 @@ export class AudioManagerImpl {
 
   constructor() {
     if (typeof window !== "undefined") {
-      this.volumes = readStoredVolumes();
+      const prefs = readStoredPrefs();
+      this.volumes = prefs.volumes;
+      this.muted = prefs.muted;
     }
     this.cachedSnapshot = this.computeSnapshot();
   }
 
   private computeSnapshot(): AudioState {
-    return { enabled: this.enabled, volumes: { ...this.volumes }, phase: this.phase };
+    return {
+      enabled: this.enabled,
+      muted: this.muted,
+      volumes: { ...this.volumes },
+      phase: this.phase,
+      music: { block: this.musicBlock, override: this.musicOverride },
+    };
   }
 
   getState(): AudioState {
@@ -153,13 +211,21 @@ export class AudioManagerImpl {
     this.listeners.forEach((l) => l(this.cachedSnapshot));
   }
 
+  private persist(): void {
+    if (typeof window === "undefined") return;
+    try {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...this.volumes, muted: this.muted }));
+    } catch {
+      /* ignore quota errors */
+    }
+  }
+
   enable(): void {
     if (this.enabled || typeof window === "undefined") return;
     this.enabled = true;
-    // If a phase was set before enable, start the track now.
-    if (this.phase) {
-      this.startAmbient(this.phase);
-    }
+    // Anything set before enable (phase / music block) starts now.
+    if (this.ambientKey) this.startChannel("ambient", this.ambientCandidates);
+    if (this.musicKey) this.startChannel("music", this.musicCandidates);
     this.notify();
   }
 
@@ -167,29 +233,36 @@ export class AudioManagerImpl {
     this.volumes = {
       master: clamp01(partial.master, this.volumes.master),
       ambient: clamp01(partial.ambient, this.volumes.ambient),
+      music: clamp01(partial.music, this.volumes.music),
       sfx: clamp01(partial.sfx, this.volumes.sfx),
     };
-    if (typeof window !== "undefined") {
-      try {
-        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(this.volumes));
-      } catch {
-        /* ignore quota errors */
-      }
-    }
-    this.applyVolumes();
+    this.persist();
+    this.applyChannelVolumes();
     this.notify();
   }
 
-  private applyVolumes(): void {
-    const target = this.ambientTargetVolume();
-    if (this.currentTrack) this.currentTrack.volume = target * (this.nextTrack ? 1 - this.fadeProgress : 1);
-    if (this.nextTrack) this.nextTrack.volume = target * this.fadeProgress;
+  /** Mute silences every channel without losing the slider positions. */
+  setMuted(muted: boolean): void {
+    if (this.muted === muted) return;
+    this.muted = muted;
+    this.persist();
+    this.applyChannelVolumes();
+    this.notify();
+  }
+
+  private applyChannelVolumes(): void {
+    for (const name of ["ambient", "music"] as const) {
+      const ch = this.channel(name);
+      const target = this.targetVolume(name);
+      if (ch.current) ch.current.volume = target * (ch.next ? 1 - ch.fadeProgress : 1);
+      if (ch.next) ch.next.volume = target * ch.fadeProgress;
+    }
     for (const [sound, name] of this.oneShots) sound.volume = this.sfxTargetVolume(name);
   }
 
   private playElement(el: HTMLAudioElement, src: string): void {
     void el.play().catch((error: unknown) => {
-      if (el !== this.currentTrack && el !== this.nextTrack && !this.oneShots.has(el)) return;
+      if (!this.isTracked(el)) return;
       if (error instanceof DOMException && error.name === "NotAllowedError") {
         this.enabled = false;
         this.stop();
@@ -201,94 +274,169 @@ export class AudioManagerImpl {
     });
   }
 
-  private ambientTargetVolume(): number {
-    const sceneGain = this.phase === "applicant-island" || this.phase === "applicant-hq" ? 0.18 : 1;
-    return this.volumes.master * this.volumes.ambient * sceneGain;
+  private mutedGain(): number {
+    return this.muted ? 0 : 1;
+  }
+
+  private ambientSceneGain(): number {
+    return this.phase === "applicant-island" || this.phase === "applicant-hq" ? 0.18 : 1;
+  }
+
+  private targetVolume(channel: ChannelName): number {
+    if (channel === "ambient") return this.volumes.master * this.volumes.ambient * this.ambientSceneGain() * this.mutedGain();
+    return this.volumes.master * this.volumes.music * this.mutedGain();
   }
 
   private sfxTargetVolume(name: SFXName): number {
     const applicant = this.phase === "applicant-island" || this.phase === "applicant-hq";
     const sceneGain = applicant ? 0.25 : 1;
     const movementGain = applicant && (name === "footstep" || name === "jump") ? 0.35 : 1;
-    return this.volumes.master * this.volumes.sfx * sceneGain * movementGain;
+    return this.volumes.master * this.volumes.sfx * sceneGain * movementGain * this.mutedGain();
   }
 
+  /** Time-of-day only — kept for existing callers (GameWorld, ApplicantIsland). */
   setPhase(phase: AmbientPhase): void {
-    if (this.phase === phase) {
-      if (this.enabled && !this.currentTrack && !this.nextTrack) this.startAmbient(phase);
+    this.setAmbience({ phase });
+  }
+
+  /** Richer ambient key: time of day, plus an optional weather/season variant tried first. */
+  setAmbience(input: { phase: AmbientPhase; weather?: IslandWeather; season?: Season }): void {
+    const candidates = ambientCandidates(input);
+    const key = candidates.join("|");
+    if (this.ambientKey === key) {
+      if (this.enabled && !this.ambientCh.current && !this.ambientCh.next) this.startChannel("ambient", candidates);
       return;
     }
-    const previousPhase = this.phase;
-    this.phase = phase;
+    const previousKey = this.ambientKey;
+    this.ambientKey = key;
+    this.ambientCandidates = candidates;
+    this.phase = input.phase;
     if (this.enabled) {
-      if (previousPhase === null) {
-        this.startAmbient(phase);
-      } else {
-        this.crossfadeTo(phase);
-      }
+      if (previousKey === null) this.startChannel("ambient", candidates);
+      else this.crossfadeChannel("ambient", candidates);
     }
     this.notify();
   }
 
-  private startAmbient(phase: AmbientPhase): void {
-    if (typeof window === "undefined") return;
-    const src = MANIFEST.ambient[phase];
-    const el = this.createAudioElement(src, true);
-    if (!el) return;
-    el.volume = this.ambientTargetVolume();
-    this.currentTrack = el;
-    this.playElement(el, src);
+  /** The 12-block hourly music player (rows 106, 112-114), with interior/cafe overrides. */
+  setMusic(input: { block: MusicBlock; season?: Season | null; override?: MusicOverride }): void {
+    const candidates = buildMusicSrcList(input.block, { season: input.season, override: input.override ?? null });
+    const key = candidates.join("|");
+    if (this.musicKey === key) {
+      if (this.enabled && !this.musicCh.current && !this.musicCh.next) this.startChannel("music", candidates);
+      return;
+    }
+    const previousKey = this.musicKey;
+    this.musicKey = key;
+    this.musicCandidates = candidates;
+    this.musicBlock = input.block;
+    this.musicOverride = input.override ?? null;
+    if (this.enabled) {
+      if (previousKey === null) this.startChannel("music", candidates);
+      else this.crossfadeChannel("music", candidates);
+    }
+    this.notify();
   }
 
-  private crossfadeTo(phase: AmbientPhase): void {
+  private channel(name: ChannelName): TrackChannel {
+    return name === "ambient" ? this.ambientCh : this.musicCh;
+  }
+
+  private isTracked(el: HTMLAudioElement): boolean {
+    return (
+      el === this.ambientCh.current || el === this.ambientCh.next ||
+      el === this.musicCh.current || el === this.musicCh.next ||
+      this.oneShots.has(el)
+    );
+  }
+
+  private newTrackElement(loop: boolean): HTMLAudioElement | null {
+    if (typeof window === "undefined") return null;
+    try {
+      const el = new Audio();
+      el.loop = loop;
+      el.preload = "auto";
+      return el;
+    } catch {
+      return null;
+    }
+  }
+
+  /** Plays the first candidate not already known-missing, retrying the next on decode failure. */
+  private playCascading(el: HTMLAudioElement, candidates: string[], index: number): void {
+    let i = index;
+    while (i < candidates.length && this.missingFiles.has(candidates[i])) i++;
+    if (i >= candidates.length) return; // nothing left to try — stays silent
+    const src = candidates[i];
+    el.src = src;
+    void el.play().catch((error: unknown) => {
+      if (!this.isTracked(el)) return;
+      if (error instanceof DOMException && error.name === "NotAllowedError") {
+        this.enabled = false;
+        this.stop();
+        this.notify();
+        return;
+      }
+      if (error instanceof DOMException && error.name === "NotSupportedError") {
+        this.markMissing(src);
+        this.playCascading(el, candidates, i + 1);
+      }
+    });
+  }
+
+  private startChannel(name: ChannelName, candidates: string[]): void {
     if (typeof window === "undefined") return;
-    const src = MANIFEST.ambient[phase];
+    const el = this.newTrackElement(true);
+    if (!el) return;
+    el.volume = this.targetVolume(name);
+    this.channel(name).current = el;
+    this.playCascading(el, candidates, 0);
+  }
 
-    // Cancel any in-flight crossfade.
-    if (this.crossfadeRaf !== null) {
-      cancelAnimationFrame(this.crossfadeRaf);
-      this.crossfadeRaf = null;
+  private crossfadeChannel(name: ChannelName, candidates: string[]): void {
+    if (typeof window === "undefined") return;
+    const ch = this.channel(name);
+
+    if (ch.raf !== null) {
+      cancelAnimationFrame(ch.raf);
+      ch.raf = null;
     }
-    // If nextTrack from an earlier fade is still around, dispose it.
-    if (this.nextTrack) {
-      this.nextTrack.pause();
-      this.nextTrack = null;
+    if (ch.next) {
+      ch.next.pause();
+      ch.next = null;
     }
 
-    const next = this.createAudioElement(src, true);
+    const next = this.newTrackElement(true);
     if (!next) {
-      // Failed to create — just stop current.
-      if (this.currentTrack) {
-        this.currentTrack.pause();
-        this.currentTrack = null;
+      if (ch.current) {
+        ch.current.pause();
+        ch.current = null;
       }
       return;
     }
     next.volume = 0;
-    this.nextTrack = next;
-    this.fadeProgress = 0;
-    this.playElement(next, src);
+    ch.next = next;
+    ch.fadeProgress = 0;
+    this.playCascading(next, candidates, 0);
 
-    this.crossfadeStart = performance.now();
-    const fromTrack = this.currentTrack;
+    ch.fadeStart = performance.now();
+    const fromTrack = ch.current;
 
     const tick = () => {
-      const elapsed = performance.now() - this.crossfadeStart;
+      const elapsed = performance.now() - ch.fadeStart;
       const t = Math.min(1, elapsed / CROSSFADE_MS);
-      this.fadeProgress = t;
-      this.applyVolumes();
+      ch.fadeProgress = t;
+      this.applyChannelVolumes();
       if (t < 1) {
-        this.crossfadeRaf = requestAnimationFrame(tick);
+        ch.raf = requestAnimationFrame(tick);
       } else {
-        this.crossfadeRaf = null;
-        if (fromTrack) {
-          fromTrack.pause();
-        }
-        this.currentTrack = this.nextTrack;
-        this.nextTrack = null;
+        ch.raf = null;
+        if (fromTrack) fromTrack.pause();
+        ch.current = ch.next;
+        ch.next = null;
       }
     };
-    this.crossfadeRaf = requestAnimationFrame(tick);
+    ch.raf = requestAnimationFrame(tick);
   }
 
   playSFX(name: SFXName): void {
@@ -311,27 +459,35 @@ export class AudioManagerImpl {
 
   /** Stop world audio on route exit; keep the user’s sound preference for re-entry. */
   stop(): void {
-    if (this.crossfadeRaf !== null) {
-      cancelAnimationFrame(this.crossfadeRaf);
-      this.crossfadeRaf = null;
-    }
-    if (this.currentTrack) {
-      this.currentTrack.pause();
-      this.currentTrack = null;
-    }
-    if (this.nextTrack) {
-      this.nextTrack.pause();
-      this.nextTrack = null;
+    for (const ch of [this.ambientCh, this.musicCh]) {
+      if (ch.raf !== null) {
+        cancelAnimationFrame(ch.raf);
+        ch.raf = null;
+      }
+      if (ch.current) {
+        ch.current.pause();
+        ch.current = null;
+      }
+      if (ch.next) {
+        ch.next.pause();
+        ch.next = null;
+      }
+      ch.fadeProgress = 0;
     }
     for (const sound of this.oneShots.keys()) sound.pause();
     this.oneShots.clear();
-    this.fadeProgress = 0;
   }
 
   dispose(): void {
     this.stop();
     this.enabled = false;
     this.phase = null;
+    this.ambientKey = null;
+    this.ambientCandidates = [];
+    this.musicKey = null;
+    this.musicCandidates = [];
+    this.musicBlock = null;
+    this.musicOverride = null;
     this.notify();
     this.listeners.clear();
   }
@@ -359,6 +515,17 @@ export class AudioManagerImpl {
       );
     }
   }
+}
+
+/** Ambient candidate list: an optional weather variant, then season variant, then the base file (guaranteed to exist). */
+function ambientCandidates(input: { phase: AmbientPhase; weather?: IslandWeather; season?: Season }): string[] {
+  const { phase, weather, season } = input;
+  const base = MANIFEST.ambient[phase];
+  const list: string[] = [];
+  if (weather && weather !== "clear") list.push(`/audio/ambient/${phase}-${weather}.ogg`);
+  if (season) list.push(`/audio/ambient/${phase}-${season}.ogg`);
+  list.push(base);
+  return list;
 }
 
 // Singleton — module-scope so all consumers share one manager.
