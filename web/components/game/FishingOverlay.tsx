@@ -29,7 +29,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import FishReveal from "./FishReveal";
 import { AudioManager } from "@/lib/game/audio";
-import { collectWithSize, localCollections, mergeWithLocal } from "@/lib/game/collections";
+import { collect, collectWithSize, localCollections, mergeWithLocal } from "@/lib/game/collections";
 import { rodByTier, type RodTier } from "@/lib/game/rods";
 import { oneLinerFor, rollFishFor } from "@/lib/game/peaceful";
 import type { WaterType } from "@/lib/game/fishingSpots";
@@ -59,7 +59,7 @@ type Phase = "idle" | "charging" | "casting" | "waiting" | "bite" | "reeling" | 
 const BITE_WINDOW_MS = 1400;
 
 /** `rod` (rods.ts) widens the hook window, slows the drain and adds rare luck; `tsi:fish-start` may carry `water` (fishingSpots.ts). */
-export default function FishingOverlay({ onActiveChange, rod = rodByTier(1) }: { onActiveChange?: (active: boolean) => void; rod?: RodTier }) {
+export default function FishingOverlay({ onActiveChange, collectionScope, zoneOverride, rod = rodByTier(1) }: { onActiveChange?: (active: boolean) => void; collectionScope?: string; zoneOverride?: "river" | "sea"; rod?: RodTier }) {
   const [phase, setPhase] = useState<Phase>("idle");
   const phaseRef = useRef<Phase>("idle");
   const releaseRequestedRef = useRef(false);
@@ -93,7 +93,8 @@ export default function FishingOverlay({ onActiveChange, rod = rodByTier(1) }: {
   const spotRef = useRef<{ x: number; z: number } | null>(null);
 
   useEffect(() => {
-    for (const key of Object.keys(localCollections())) ownedRef.current.add(key);
+    for (const key of Object.keys(localCollections(collectionScope))) ownedRef.current.add(key);
+    if (collectionScope) return;
     fetch("/api/collections")
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
@@ -104,7 +105,7 @@ export default function FishingOverlay({ onActiveChange, rod = rodByTier(1) }: {
         }
       })
       .catch(() => {});
-  }, []);
+  }, [collectionScope]);
 
   const clearTimers = () => {
     timersRef.current.forEach((t) => window.clearTimeout(t));
@@ -212,7 +213,7 @@ export default function FishingOverlay({ onActiveChange, rod = rodByTier(1) }: {
     const luck = powerRef.current + (powerRef.current >= CAST.maxZone ? CAST.maxBonus : 0);
     // Sea spots (deck + cove, out past the sand line) roll the SEA pool.
     const sp = spotRef.current;
-    const zone: "river" | "sea" = sp && coastDist(sp.x, sp.z) > 47 ? "sea" : "river";
+    const zone: "river" | "sea" = zoneOverride ?? (sp && coastDist(sp.x, sp.z) > 47 ? "sea" : "river");
     // Spots that report their water type (pond/river/sea) use the rod-aware pool.
     setFish(waterRef.current ? rollFishFor(waterRef.current, luck, rod, currentFishingContext()) : rollFish(luck + rod.rarityBonus, zone));
     reelInputRef.current.keys.clear(); reelInputRef.current.pointers.clear();
@@ -240,7 +241,8 @@ export default function FishingOverlay({ onActiveChange, rod = rodByTier(1) }: {
             detail: { key: fish.key, model: fish.model, raw: fish.raw, zone: fish.zone ?? "river", x: spotRef.current?.x, z: spotRef.current?.z },
           })
         );
-        void collectWithSize(fish.key, size).then(r => setNewRecord(!isNew && r.newRecord));
+        if (collectionScope) void collect(fish.key, { scope: collectionScope });
+        else void collectWithSize(fish.key, size).then(r => setNewRecord(!isNew && r.newRecord));
         if (isNew) {
           // Blind-box ceremony (David 2026-07-23): first catches get the
           // fullscreen staged reveal — it owns the celebration (confetti
@@ -261,7 +263,7 @@ export default function FishingOverlay({ onActiveChange, rod = rodByTier(1) }: {
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [fish]
+    [fish, collectionScope]
   );
 
   useEffect(() => bindFishingCastLifecycle({
@@ -334,7 +336,7 @@ export default function FishingOverlay({ onActiveChange, rod = rodByTier(1) }: {
   const rarity = fish ? RARITY_META[fish.rarity] : null;
   const glow = phase === "caught" && fish ? CELEBRATE[fish.rarity].glow : false;
 
-  const accent = phase === "bite" ? "#E5484D" : phase === "caught" ? "#3D8F52" : "#4A4034";
+  const accent = phase === "bite" ? "#E5484D" : phase === "caught" ? "#3D8F52" : "var(--app-ink, #4A4034)";
 
   return (
     <div
@@ -359,11 +361,11 @@ export default function FishingOverlay({ onActiveChange, rod = rodByTier(1) }: {
         <div
           style={{
             padding: "10px 20px",
-            background: "#FFFDF5",
+            background: "var(--app-surface, #FFFDF5)",
             color: accent,
             border: glow
               ? `2px solid ${rarity!.color}`
-              : `2px solid ${phase === "bite" ? "#E5484D" : phase === "casting" && maxCast ? "#FFD166" : "#E8DFC8"}`,
+              : `2px solid ${phase === "bite" ? "#E5484D" : phase === "casting" && maxCast ? "#FFD166" : "var(--app-line, #E8DFC8)"}`,
             borderRadius: 14,
             fontFamily: "var(--font-highlight, sans-serif)",
             fontSize: 15,
@@ -394,7 +396,7 @@ export default function FishingOverlay({ onActiveChange, rod = rodByTier(1) }: {
           )}
           {label}
           {phase === "caught" && caughtSize !== null && (
-            <span style={{ fontSize: 12, color: "#8a7f6a", fontWeight: 600 }}>{caughtSize} cm</span>
+            <span style={{ fontSize: 12, color: "var(--app-muted, #8a7f6a)", fontWeight: 600 }}>{caughtSize} cm</span>
           )}
           {phase === "caught" && rarity && (
             <span
@@ -492,7 +494,7 @@ export default function FishingOverlay({ onActiveChange, rod = rodByTier(1) }: {
         </div>
       )}
       {phase !== "reeling" && (
-        <button type="button" onClick={cancel} style={{ pointerEvents: "auto", padding: "7px 12px", borderRadius: 8, border: "1px solid #D8CFB8", background: "#FFFDF5", color: "#4A4034", fontSize: 12 }}>
+        <button type="button" onClick={cancel} style={{ pointerEvents: "auto", padding: "7px 12px", borderRadius: 8, border: "1px solid var(--app-line, #D8CFB8)", background: "var(--app-surface, #FFFDF5)", color: "var(--app-ink, #4A4034)", fontSize: 12 }}>
           {phase === "caught" || phase === "missed" ? "Close" : "Cancel cast (Esc)"}
         </button>
       )}
@@ -676,8 +678,8 @@ export function ReelMinigame({
       style={{
         width: "min(560px, 86vw)",
         padding: "12px 14px 10px",
-        background: "#FFFDF5",
-        border: "2px solid #E8DFC8",
+        background: "var(--app-surface, #FFFDF5)",
+        border: "2px solid var(--app-line, #E8DFC8)",
         borderRadius: 14,
         boxShadow: "0 4px 14px rgba(60, 45, 20, 0.2)",
         fontFamily: "var(--font-highlight, sans-serif)",
@@ -705,7 +707,7 @@ export function ReelMinigame({
       {/* Header: species (or ??? for unknowns — rarity is never shown here).
           Zone chip is always safe to show — you know where you cast. */}
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-        <span style={{ fontSize: 13, fontWeight: 700, color: "#4A4034" }}>
+        <span style={{ fontSize: 13, fontWeight: 700, color: "var(--app-ink, #4A4034)" }}>
           {known ? fish.name : "???"}
         </span>
         <span
@@ -720,7 +722,7 @@ export function ReelMinigame({
         >
           {(fish.zone ?? "river") === "sea" ? "🌊 sea" : "🏞 river"}
         </span>
-        <span style={{ marginLeft: "auto", fontSize: 10, color: "#8a7f6a" }}>
+        <span style={{ marginLeft: "auto", fontSize: 10, color: "var(--app-muted, #8a7f6a)" }}>
           keep the fish inside the green bar
         </span>
       </div>
@@ -780,10 +782,10 @@ export function ReelMinigame({
         />
       </div>
 
-      <div ref={pausedLabelRef} hidden style={{ marginTop: 8, fontSize: 12, color: "#4A4034" }}>
+      <div ref={pausedLabelRef} hidden style={{ marginTop: 8, fontSize: 12, color: "var(--app-ink, #4A4034)" }}>
         Paused · click the reel to resume
       </div>
-      <div id="fishing-reel-help" style={{ marginTop: 8, fontSize: 11, color: "#635745" }}>
+      <div id="fishing-reel-help" style={{ marginTop: 8, fontSize: 11, color: "var(--app-muted, #635745)" }}>
         Hold E, Space or left-click → · Release ← · Esc to let go
       </div>
       {/* Progress */}
@@ -872,7 +874,7 @@ function CastMeter({ onRelease, releaseRequestedRef }: { onRelease: (power: numb
       }
       if (readoutRef.current) {
         readoutRef.current.textContent = inTip ? "MAX!" : `${Math.round(p * 100)}%`;
-        readoutRef.current.style.color = inTip ? "#9B6500" : "#4A4034";
+        readoutRef.current.style.color = inTip ? "#9B6500" : "var(--app-ink, #4A4034)";
       }
       raf = requestAnimationFrame(step);
     };
@@ -889,8 +891,8 @@ function CastMeter({ onRelease, releaseRequestedRef }: { onRelease: (power: numb
         alignItems: "flex-end",
         gap: 10,
         padding: "12px 14px",
-        background: "#FFFDF5",
-        border: "2px solid #E8DFC8",
+        background: "var(--app-surface, #FFFDF5)",
+        border: "2px solid var(--app-line, #E8DFC8)",
         borderRadius: 14,
         boxShadow: "0 4px 14px rgba(60, 45, 20, 0.2)",
         pointerEvents: "auto",
@@ -904,7 +906,7 @@ function CastMeter({ onRelease, releaseRequestedRef }: { onRelease: (power: numb
           width: 20,
           height: 170,
           borderRadius: 10,
-          background: "linear-gradient(180deg, #E8DFC8 0%, #D8CFB8 100%)",
+          background: "linear-gradient(180deg, var(--app-line, #E8DFC8) 0%, var(--app-line, #D8CFB8) 100%)",
           boxShadow: "inset 0 2px 5px rgba(60, 45, 20, 0.25)",
           overflow: "hidden",
         }}
@@ -941,13 +943,13 @@ function CastMeter({ onRelease, releaseRequestedRef }: { onRelease: (power: numb
             fontFamily: "'IBM Plex Mono', monospace",
             fontSize: 15,
             fontWeight: 800,
-            color: "#4A4034",
+            color: "var(--app-ink, #4A4034)",
             minWidth: 52,
           }}
         >
           0%
         </div>
-        <div style={{ fontFamily: "var(--font-highlight, sans-serif)", fontSize: 11, color: "#8a7f6a", maxWidth: 120 }}>
+        <div style={{ fontFamily: "var(--font-highlight, sans-serif)", fontSize: 11, color: "var(--app-muted, #8a7f6a)", maxWidth: 120 }}>
           hold E — release at the gold tip
         </div>
       </div>

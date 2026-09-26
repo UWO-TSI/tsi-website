@@ -22,7 +22,6 @@ export default function TextRevealSection() {
   const textRef = useRef<HTMLDivElement>(null);
   const imagesRef = useRef<HTMLDivElement>(null);
   const lineRef = useRef<HTMLDivElement>(null);
-  const glowRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!sectionRef.current) return;
@@ -37,24 +36,6 @@ export default function TextRevealSection() {
         const imgs = imagesRef.current?.children;
         if (imgs) gsap.set(Array.from(imgs), { opacity: 1, clipPath: "inset(0 0 0 0)" });
         return;
-      }
-
-      // Scroll-driven glow breathing
-      if (glowRef.current) {
-        gsap.fromTo(
-          glowRef.current,
-          { opacity: 0.06 },
-          {
-            opacity: 0.15,
-            ease: "none",
-            scrollTrigger: {
-              trigger: sectionRef.current,
-              start: "top bottom",
-              end: "center center",
-              scrub: true,
-            },
-          }
-        );
       }
 
       // Accent line draws in
@@ -137,18 +118,6 @@ export default function TextRevealSection() {
         }}
       />
 
-      {/* Scroll-driven radial glow */}
-      <div
-        ref={glowRef}
-        className="absolute top-1/2 left-1/4 -translate-y-1/2 pointer-events-none"
-        style={{
-          width: "800px",
-          height: "800px",
-          background: "radial-gradient(circle, rgba(29,155,240,0.12) 0%, transparent 70%)",
-          filter: "blur(40px)",
-          opacity: 0.06,
-        }}
-      />
 
       <div className="relative max-w-[1400px] mx-auto flex flex-col lg:flex-row items-start gap-16 lg:gap-24">
         {/* Left: mission text */}

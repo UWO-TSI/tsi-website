@@ -100,7 +100,7 @@ function InternalPositionsContent() {
                 Welcome back
               </h1>
               <p className="text-[#9CA3AF] max-w-lg mx-auto">
-                These positions are exclusive to past Tethos members. Select a
+                These positions are exclusive to past Tech for Social Impact members. Select a
                 role to apply.
               </p>
             </motion.div>

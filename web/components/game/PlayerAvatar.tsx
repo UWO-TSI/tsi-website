@@ -17,7 +17,9 @@ import { pickCurvedGround } from "@/lib/game/groundPick";
 import { juiceFovOffset } from "@/lib/game/cameraJuice";
 import { getLabFov } from "@/lib/game/devLab";
 import MoveTargetIndicator from "./MoveTargetIndicator";
+import { getBlobTexture } from "./BlobShadows";
 import type { EmoteType } from "@/lib/content/types";
+import ApplicantCharacter, { type ApplicantMotion } from "@/components/recruit/ApplicantCharacter";
 
 // Sprint E3: animation_key → emoji glyph for the Html overlay. Real sprite
 // swaps land when avatar sprites do; this is the placeholder.
@@ -93,9 +95,11 @@ function applySprintFov(camera: THREE.Camera, speed: number, delta: number) {
 }
 
 interface PlayerAvatarProps {
+  avatarMode?: "sprite" | "applicant";
   spawnPosition: [number, number, number];
   onMove: (position: THREE.Vector3) => void;
   playerName?: string;
+  showNameplate?: boolean;
   playerLevel?: number;
   /** TSI member (row 223): subtle blue dot + glow on the nameplate. */
   member?: boolean;
@@ -105,13 +109,15 @@ interface PlayerAvatarProps {
   noHop?: boolean;
   activeEmote?: EmoteType | null;
   frozen?: boolean;
+  desktopClickToMove?: boolean;
   groundHeight?: (x: number, z: number) => number;
   groundSurface?: (x: number, z: number) => number;
   constrainMove?: (fromX: number, fromZ: number, toX: number, toZ: number) => [number, number];
 }
 
-export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Player", playerLevel = 1, member = false, impulse, noHop = false, activeEmote = null, frozen = false, groundHeight = sampleTerrainHeightFast, groundSurface, constrainMove }: PlayerAvatarProps) {
+export default function PlayerAvatar({ avatarMode = "sprite", spawnPosition, onMove, playerName = "Player", showNameplate = true, playerLevel = 1, member = false, impulse, noHop = false, activeEmote = null, frozen = false, desktopClickToMove = false, groundHeight = sampleTerrainHeightFast, groundSurface, constrainMove }: PlayerAvatarProps) {
   const groupRef = useRef<THREE.Group>(null);
+  const applicantMotion = useRef<ApplicantMotion>({ speed: 0, yaw: 0, lift: 0 });
   const spriteRef = useRef<THREE.Group>(null);
   // Initialize y on the terrain at spawn so the avatar doesn't visibly
   // drop in from y=0 if the spawn point sits on a slope.
@@ -232,7 +238,7 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
             const jp = positionRef.current;
             const id = puffIdRef.current++;
             setPuffs((prev) => [...prev, { id, position: [jp.x, jp.y + 0.02, jp.z], scale: 0.85 }]);
-            playSFX("blip2");
+            playSFX("jump");
           }
           e.preventDefault();
         }
@@ -251,7 +257,7 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
       // On fine-pointer devices misclicks kept sending the player walking;
       // WASD is the desktop verb. Coarse pointers (phones/tablets in full
       // 3D) keep tap-to-walk.
-      if (window.matchMedia("(pointer: fine)").matches) return;
+      if (!desktopClickToMove && window.matchMedia("(pointer: fine)").matches) return;
       const rect = gl.domElement.getBoundingClientRect();
       mouse.current.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
       mouse.current.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
@@ -281,7 +287,7 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
         ]);
       }
     },
-    [camera, gl, playSFX, constrainMove, groundHeight, frozen]
+    [camera, gl, playSFX, constrainMove, groundHeight, frozen, desktopClickToMove]
   );
 
   useEffect(() => {
@@ -593,6 +599,9 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
       spriteRef.current.scale.set(sx, sy, 1);
       spriteRef.current.rotation.z = leanRef.current;
     }
+    applicantMotion.current.speed = delta > 0 ? Math.hypot(pos.x - prevX, pos.z - prevZ) / delta : 0;
+    applicantMotion.current.yaw = facingRef.current;
+    applicantMotion.current.lift = jumpY + 0.018;
 
     // Footstep SFX — fire ~every 0.4s walking, ~0.25s when sprinting (F1.6).
     // No-op if audio is muted or assets aren't shipped (manager silently
@@ -673,10 +682,9 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
         />
       ))}
       <group ref={groupRef} position={spawnPosition}>
-      {/* (Art pass 2026-07-07: the player keeps its ORIGINAL static_shadow
-          decal below — adding a second blob here doubled the shadow.) */}
+      {/* Each avatar uses one ground decal below, sized for its visual. */}
       {/* The sprite, outline and nameplate share the same animated pose. */}
-      <Billboard follow lockX={false} lockY={false} lockZ={false}>
+      {avatarMode === "applicant" ? <ApplicantCharacter motion={applicantMotion} frozen={frozen} /> : <Billboard follow lockX={false} lockY={false} lockZ={false}>
         <group ref={spriteRef} position={[0, SPRITE_BASE_Y, 0]}>
         {/* P-light v2 character pop: dark silhouette halo behind the
             sprite (same animated texture, black-multiplied, 7% larger) —
@@ -709,7 +717,7 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
           />
         </mesh>
       {/* Nameplate */}
-      <Html calculatePosition={calculateCurvedHtmlPosition} zIndexRange={[40, 0]}
+      {showNameplate && <Html calculatePosition={calculateCurvedHtmlPosition} zIndexRange={[40, 0]}
         position={[0, 1.12, 0]}
         center
         style={{ pointerEvents: "none" }}
@@ -732,15 +740,15 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
             Lv. {playerLevel}
           </div>
         </div>
-      </Html>
+      </Html>}
         </group>
-      </Billboard>
+      </Billboard>}
 
-      {/* Ground shadow — scaled to the pt2 smaller sprite. */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
+      {/* The sprite's tiny atlas shadow does not cover the 3D model's feet. */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]} renderOrder={avatarMode === "applicant" ? 1 : 0}>
         <planeGeometry args={[1.1, 1.1]} />
         <meshBasicMaterial
-          map={shadowTexture}
+          map={avatarMode === "applicant" ? getBlobTexture() : shadowTexture}
           transparent
           opacity={0.5}
           depthWrite={false}

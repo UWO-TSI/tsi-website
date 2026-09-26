@@ -99,4 +99,14 @@ describe("environment GPU resource ownership", () => {
     expect(disposed).toHaveBeenCalledOnce();
     replacement.dispose();
   });
+
+  it("accepts an island palette without mutating the member-world default", () => {
+    const scene = new THREE.Scene();
+    const original = { ...ENV_PHASES.day };
+    const palette = { ...original, intensity: 0.27, ground: "#b6c593" };
+    applyEnvironment({} as THREE.WebGLRenderer, scene, "day", palette);
+    expect(scene.environmentIntensity).toBe(0.27);
+    expect(ENV_PHASES.day).toEqual(original);
+    disposeEnvironment(scene);
+  });
 });

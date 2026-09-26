@@ -25,9 +25,9 @@ export function collectionCounts(value: unknown): Record<string, number> {
   ));
 }
 
-export function localCollections(): Record<string, number> {
+export function localCollections(scope?: string): Record<string, number> {
   try {
-    return collectionCounts(JSON.parse(localStorage.getItem(KEY) ?? "{}"));
+    return collectionCounts(JSON.parse(localStorage.getItem(scope ? `${KEY}:${scope}` : KEY) ?? "{}"));
   } catch {
     return {};
   }
@@ -52,7 +52,7 @@ export async function collectWithSize(itemKey: string, sizeCm: number | null): P
   if (sizeCm !== null && (prior === undefined || sizeCm > prior)) {
     try { localStorage.setItem(RECORDS_KEY, JSON.stringify({ ...records, [itemKey]: sizeCm })); } catch { /* private browsing */ }
   }
-  const server = collect(itemKey, sizeCm);
+  const server = collect(itemKey, { sizeCm });
   try {
     const res = await server;
     if (res && typeof res.new_record === "boolean") return { newRecord: res.new_record && res.total_collected !== 1, best: res.best_size_cm ?? sizeCm };
@@ -60,16 +60,20 @@ export async function collectWithSize(itemKey: string, sizeCm: number | null): P
   return { newRecord: localNew, best: Math.max(prior ?? 0, sizeCm ?? 0) || null };
 }
 
-/** Record an item locally AND post it to the server. */
-export function collect(itemKey: string, sizeCm: number | null = null): Promise<{ new_record?: boolean; best_size_cm?: number | null; total_collected?: number } | null> {
+/**
+ * Record an item locally AND post it to the server. A `scope` (the applicant
+ * island) keeps a separate local record and never posts.
+ */
+export function collect(itemKey: string, { scope, sizeCm = null }: { scope?: string; sizeCm?: number | null } = {}): Promise<{ new_record?: boolean; best_size_cm?: number | null; total_collected?: number } | null> {
   if (!validItemKey(itemKey)) return Promise.resolve(null);
   try {
-    const all = localCollections();
+    const all = localCollections(scope);
     all[itemKey] = Math.min(Number.MAX_SAFE_INTEGER, (all[itemKey] ?? 0) + 1);
-    localStorage.setItem(KEY, JSON.stringify(all));
+    localStorage.setItem(scope ? `${KEY}:${scope}` : KEY, JSON.stringify(all));
   } catch {
     /* private browsing */
   }
+  if (scope) return Promise.resolve(null);
   return fetch("/api/collections", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -99,9 +103,9 @@ export function spendCollected(itemKey: string, n: number): number {
 }
 
 /** Merge server rows with the local record (max count per key). */
-export function mergeWithLocal(server: Record<string, number>): Record<string, number> {
+export function mergeWithLocal(server: Record<string, number>, scope?: string): Record<string, number> {
   const out = collectionCounts(server);
-  for (const [k, n] of Object.entries(localCollections())) {
+  for (const [k, n] of Object.entries(localCollections(scope))) {
     out[k] = Math.max(out[k] ?? 0, n);
   }
   return out;

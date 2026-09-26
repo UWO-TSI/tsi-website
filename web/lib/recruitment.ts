@@ -55,6 +55,8 @@ export interface EssayQuestion {
   id: string;
   question: string;
   max_words: number;
+  response_type?: "url";
+  required?: false;
 }
 
 export interface Position {
@@ -71,6 +73,24 @@ export interface Position {
   is_active: boolean;
   created_at: string;
   calendly_url?: string | null;
+  /** Set once the round this position belonged to is over (migration 028). */
+  archived_at?: string | null;
+}
+
+/** An application is archived through its position, never on its own. */
+export function isArchivedApplication(app: { position?: Position | null }): boolean {
+  return !!app.position?.archived_at;
+}
+
+/** "May 2026": the month the round closed, in Toronto time. */
+export function roundLabel(position: Pick<Position, "closes_at" | "archived_at">): string {
+  const stamp = position.closes_at ?? position.archived_at;
+  if (!stamp) return "Earlier rounds";
+  return new Date(stamp).toLocaleDateString("en-US", {
+    month: "long",
+    year: "numeric",
+    timeZone: "America/Toronto",
+  });
 }
 
 // ============================================
@@ -140,7 +160,7 @@ export const YEAR_OPTIONS = [
   { value: 5, label: "5th Year+" },
 ] as const;
 
-export const MAX_RESUME_SIZE_MB = 5;
+export const MAX_RESUME_SIZE_MB = 2;
 export const MAX_RESUME_SIZE_BYTES = MAX_RESUME_SIZE_MB * 1024 * 1024;
 
 // ============================================
@@ -343,10 +363,10 @@ export const POSITION_SEED_DATA: Omit<Position, "id" | "created_at">[] = [
 
 /** Check if a position is currently accepting applications */
 export function isPositionOpen(position: Position): boolean {
-  if (!position.is_active) return false;
+  if (!position.is_active || position.archived_at) return false;
   const now = new Date();
   if (position.opens_at && new Date(position.opens_at) > now) return false;
-  if (position.closes_at && new Date(position.closes_at) < now) return false;
+  if (position.closes_at && new Date(position.closes_at) <= now) return false;
   return true;
 }
 
@@ -357,7 +377,7 @@ export function getPositionStatus(position: Position): PositionStatus {
   const now = new Date();
   if (!position.is_active) return "upcoming";
   if (position.opens_at && new Date(position.opens_at) > now) return "upcoming";
-  if (position.closes_at && new Date(position.closes_at) < now) return "closed";
+  if (position.closes_at && new Date(position.closes_at) <= now) return "closed";
   return "open";
 }
 
@@ -433,4 +453,11 @@ export function nextPipelineStatus(
   const idx = PIPELINE_ORDER.indexOf(status);
   if (idx === -1) return null;
   return PIPELINE_ORDER[idx + 1] ?? null;
+}
+
+export function isApplicationLink(value: string): boolean {
+  try {
+    const url = new URL(value.trim());
+    return (url.protocol === "https:" || url.protocol === "http:") && !!url.hostname;
+  } catch { return false; }
 }

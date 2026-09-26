@@ -46,6 +46,7 @@ preloadPieces([
 ]);
 
 export default function HQInterior({
+  avatarMode = "sprite",
   frozen,
   playerPosRef,
   onNearestStation,
@@ -55,6 +56,7 @@ export default function HQInterior({
   floorTexture,
   phase = "day",
 }: {
+  avatarMode?: "sprite" | "applicant";
   clubhouse?: boolean;
   floorTexture?: THREE.Texture;
   phase?: IslandPhase;
@@ -216,7 +218,7 @@ export default function HQInterior({
 
       {/* wake 69: front-desk receptionist (navy blazer, hair bun) */}
       <InteriorKeeper position={[-6.3, 0, -2.4]} rotY={Math.PI / 2} watch={[-5.2, -2.4]} colors={{ apron: "#2E3E5C", shirt: "#F0E6D2" }} hat="bun" playerPosRef={playerPosRef} />
-      <InteriorPlayer frozen={frozen} bounds={BOUNDS} playerPosRef={playerPosRef} onMove={handleMove} constrainMove={constrainMove} />
+      <InteriorPlayer avatarMode={avatarMode} frozen={frozen} bounds={BOUNDS} playerPosRef={playerPosRef} onMove={handleMove} constrainMove={constrainMove} />
     </group>
   );
 }

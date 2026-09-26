@@ -1,3 +1,4 @@
+import { createApplicantVillage } from "./applicantVillage";
 import { createDefaultIsland } from "./defaultIsland";
 import { describe, expect, it } from "vitest";
 import { advanceVelocity, advanceMotion, easeFacing, relativeFacingAngle } from "./locomotion";
@@ -67,6 +68,21 @@ describe("tap movement", () => {
       moving = result.moving;
     }
     expect(state.z).toBeLessThan(-0.5);
+    expect(island.standable(state.x, state.z)).toBe(true);
+    expect(moving).toBe(false);
+    expect(state.vz).toBe(0);
+  });
+  it("cannot walk into the ocean or keep walking feedback active against the shore", () => {
+    const island = createApplicantVillage();
+    let state = { x: 6, z: -3, vx: 0, vz: 0 };
+    let moving = true;
+    for (let frame = 0; frame < 90; frame++) {
+      const result = advanceMotion(state, { x: 0, z: 1, speed: 13.69, response: 12 }, 1 / 15, island.move);
+      state = result;
+      moving = result.moving;
+    }
+    expect(state.z).toBeGreaterThan(5);
+    expect(state.z).toBeLessThan(16);
     expect(island.standable(state.x, state.z)).toBe(true);
     expect(moving).toBe(false);
     expect(state.vz).toBe(0);

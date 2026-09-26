@@ -48,7 +48,7 @@ interface Pick {
 
 let pickId = 0;
 
-export default function FlowerPickFX() {
+export default function FlowerPickFX({ collectionScope }: { collectionScope?: string }) {
   const [picks, setPicks] = useState<Pick[]>([]);
 
   useEffect(() => {
@@ -65,11 +65,11 @@ export default function FlowerPickFX() {
         flower,
       };
       setPicks((p) => [...p.slice(-3), pk]);
-      collect(flower.key);
+      collect(flower.key, { scope: collectionScope });
     };
     window.addEventListener("tsi:flower-pick", onPick);
     return () => window.removeEventListener("tsi:flower-pick", onPick);
-  }, []);
+  }, [collectionScope]);
 
   const expire = (id: number) => setPicks((p) => p.filter((x) => x.id !== id));
 

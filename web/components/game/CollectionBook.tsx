@@ -96,18 +96,23 @@ const CATALOG: { group: string; items: { key: string; icon: string; img?: string
   },
 ];
 
-export default function CollectionBook({ open, onClose }: { open: boolean; onClose: () => void }) {
-  return open ? <OpenCollectionBook onClose={onClose} /> : null;
+export default function CollectionBook({ open, onClose, collectionScope }: { open: boolean; onClose: () => void; collectionScope?: string }) {
+  return open ? <OpenCollectionBook onClose={onClose} collectionScope={collectionScope} /> : null;
 }
 
-function OpenCollectionBook({ onClose }: { onClose: () => void }) {
-  const [counts, setCounts] = useState(localCollections);
-  const [sync, setSync] = useState<"loading" | "synced" | "local">("loading");
+function OpenCollectionBook({ onClose, collectionScope }: { onClose: () => void; collectionScope?: string }) {
+  const [counts, setCounts] = useState(() => localCollections(collectionScope));
+  const [sync, setSync] = useState<"loading" | "synced" | "local">(collectionScope ? "local" : "loading");
   const [detailKey, setDetailKey] = useState<string | null>(null);
   const [fishFilter, setFishFilter] = useState<"all" | "river" | "sea" | "caught">("all");
   // Journal pages from /api/collections/journal when the server has them; the local catalog otherwise.
   const [journal, setJournal] = useState<Awaited<ReturnType<typeof fetchJournalPage>>>(null);
-  useEffect(() => { let alive = true; void fetchJournalPage("fish").then(p => { if (alive) setJournal(p); }); return () => { alive = false; }; }, []);
+  useEffect(() => {
+    if (collectionScope) return;
+    let alive = true;
+    void fetchJournalPage("fish").then(p => { if (alive) setJournal(p); });
+    return () => { alive = false; };
+  }, [collectionScope]);
   const dialogRef = useRef<HTMLDivElement>(null);
   const closeRef = useRef(onClose);
   useEffect(() => { closeRef.current = onClose; }, [onClose]);
@@ -117,6 +122,7 @@ function OpenCollectionBook({ onClose }: { onClose: () => void }) {
     const sound = window.setTimeout(() => AudioManager.playSFX("blip1"), 110);
     const controller = new AbortController();
     let cancelled = false;
+    if (collectionScope) return () => { window.clearTimeout(sound); controller.abort(); };
     fetch("/api/collections", { signal: controller.signal })
       .then(async (r) => {
         if (!r.ok) throw new Error("Collection sync unavailable");
@@ -124,7 +130,7 @@ function OpenCollectionBook({ onClose }: { onClose: () => void }) {
         if (!Array.isArray(d.collections)) throw new Error("Invalid collection response");
         const map = Object.fromEntries(d.collections.map((row) => [row.item_key, row.count]));
         if (!cancelled) {
-          setCounts(mergeWithLocal(map));
+          setCounts(mergeWithLocal(map, collectionScope));
           setSync("synced");
         }
       })
@@ -134,7 +140,7 @@ function OpenCollectionBook({ onClose }: { onClose: () => void }) {
       controller.abort();
       window.clearTimeout(sound);
     };
-  }, []);
+  }, [collectionScope]);
 
   useEffect(() => {
     const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
@@ -187,7 +193,7 @@ function OpenCollectionBook({ onClose }: { onClose: () => void }) {
       }}
     >
       <style>{`
-        .collection-book button:focus-visible { outline: 3px solid #79601F; outline-offset: 3px; }
+        .collection-book button:focus-visible { outline: 3px solid var(--app-link, #79601F); outline-offset: 3px; }
         @keyframes cb-fade { from { opacity: 0; } to { opacity: 1; } }
         @keyframes cb-unfold {
           0% { opacity: 0; transform: scale(0.92) rotate(-1.2deg) translateY(10px); }
@@ -209,32 +215,32 @@ function OpenCollectionBook({ onClose }: { onClose: () => void }) {
           overflowY: "auto",
           scrollPaddingTop: 140,
           scrollPaddingBottom: 90,
-          background: "#FFFDF5",
-          border: "3px solid #E0D2B0",
+          background: "var(--app-surface, #FFFDF5)",
+          border: "3px solid var(--app-line, #E0D2B0)",
           borderRadius: 20,
           padding: 20,
           boxShadow: "0 20px 60px rgba(60, 45, 20, 0.35)",
           fontFamily: "var(--font-highlight, sans-serif)",
           animation: "cb-unfold 0.32s cubic-bezier(0.34, 1.56, 0.64, 1)",
-          color: "#4A4034",
+          color: "var(--app-ink, #4A4034)",
         }}
       >
-        <header style={{ position: "sticky", top: -20, zIndex: 2, background: "#FFFDF5", margin: "-20px -20px 16px", padding: "16px 20px 12px", borderBottom: "1px solid #E0D2B0" }}>
+        <header style={{ position: "sticky", top: -20, zIndex: 2, background: "var(--app-surface, #FFFDF5)", margin: "-20px -20px 16px", padding: "16px 20px 12px", borderBottom: "1px solid var(--app-line, #E0D2B0)" }}>
           <div className="flex items-center justify-between" style={{ marginBottom: 4 }}>
             <h2 id="collection-book-title" style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>🧺 Collection</h2>
             <button
               type="button"
               onClick={onClose}
               aria-label="Close"
-              style={{ display: "grid", placeItems: "center", width: 36, height: 36, background: "none", border: "none", borderRadius: 8, cursor: "pointer", color: "#6F624A" }}
+              style={{ display: "grid", placeItems: "center", width: 36, height: 36, background: "none", border: "none", borderRadius: 8, cursor: "pointer", color: "var(--app-muted, #6F624A)" }}
             >
               <X size={18} />
             </button>
           </div>
-          <p style={{ fontSize: 12, color: "#8A7B5E", marginTop: 0, marginBottom: 0 }}>
+          <p style={{ fontSize: 12, color: "var(--app-muted, #8A7B5E)", marginTop: 0, marginBottom: 0 }}>
             {discovered}/{totalKinds} kinds discovered · {total} in your bag
             <span role="status" style={{ display: "block", marginTop: 4 }}>
-              {sync === "loading" ? "Checking saved collection…" : sync === "local" ? "Showing this browser’s collection. Account sync unavailable." : "Saved collection loaded"}
+              {collectionScope ? "Saved on this device · Just for fun" : sync === "loading" ? "Checking saved collection…" : sync === "local" ? "Showing this browser’s collection. Account sync unavailable." : "Saved collection loaded"}
             </span>
           </p>
         </header>
@@ -265,12 +271,12 @@ function OpenCollectionBook({ onClose }: { onClose: () => void }) {
                 fontWeight: 700,
                 textTransform: "uppercase",
                 letterSpacing: "0.06em",
-                color: "#B0A17C",
+                color: "var(--app-muted, #B0A17C)",
                 marginBottom: 8,
               }}
             >
               <span>{g.group}</span>
-              <span style={{ color: done ? "#C9962E" : "#B0A17C", fontVariantNumeric: "tabular-nums" }}>
+              <span style={{ color: done ? "var(--app-link, #C9962E)" : "var(--app-muted, #B0A17C)", fontVariantNumeric: "tabular-nums" }}>
                 {done ? "✓ " : ""}{got}/{g.items.length}
               </span>
             </div>
@@ -289,9 +295,9 @@ function OpenCollectionBook({ onClose }: { onClose: () => void }) {
                       fontSize: 11,
                       fontWeight: 700,
                       cursor: "pointer",
-                      border: `1.5px solid ${fishFilter === k ? "#C9962E" : "#E0D2B0"}`,
-                      background: fishFilter === k ? "#F8EFC9" : "#FFFDF5",
-                      color: fishFilter === k ? "#7A5A10" : "#8A7B5E",
+                      border: `1.5px solid ${fishFilter === k ? "var(--app-link, #C9962E)" : "var(--app-line, #E0D2B0)"}`,
+                      background: fishFilter === k ? "var(--app-soft, #F8EFC9)" : "var(--app-surface, #FFFDF5)",
+                      color: fishFilter === k ? "var(--app-link, #7A5A10)" : "var(--app-muted, #8A7B5E)",
                     }}
                   >
                     {label}
@@ -327,8 +333,8 @@ function OpenCollectionBook({ onClose }: { onClose: () => void }) {
                       gap: 4,
                       padding: "12px 6px",
                       borderRadius: 12,
-                      background: picked ? "#F8EFC9" : have ? "#F3ECD8" : "#F0EEE6",
-                      border: `1px solid ${picked ? "#C9962E" : have ? "#E0D2B0" : "#E8E6DE"}`,
+                      background: picked ? "var(--app-soft, #F8EFC9)" : have ? "var(--app-soft, #F3ECD8)" : "var(--app-soft, #F0EEE6)",
+                      border: `1px solid ${picked ? "var(--app-link, #C9962E)" : have ? "var(--app-line, #E0D2B0)" : "var(--app-soft, #E8E6DE)"}`,
                       opacity: have ? 1 : 0.5,
                       cursor: almanac ? "pointer" : "default",
                     }}
@@ -349,7 +355,7 @@ function OpenCollectionBook({ onClose }: { onClose: () => void }) {
                         style={{
                           fontSize: 11,
                           fontWeight: 700,
-                          color: "#8A7B5E",
+                          color: "var(--app-muted, #8A7B5E)",
                           fontFamily: "monospace",
                         }}
                       >
@@ -379,8 +385,8 @@ function OpenCollectionBook({ onClose }: { onClose: () => void }) {
               display: "flex",
               alignItems: "center",
               gap: 10,
-              background: "#FBF6E4",
-              border: "2px solid #E0D2B0",
+              background: "var(--app-soft, #FBF6E4)",
+              border: "2px solid var(--app-line, #E0D2B0)",
               borderRadius: 12,
               boxShadow: "0 -4px 12px rgba(60, 45, 20, 0.12)",
             }}
@@ -397,17 +403,17 @@ function OpenCollectionBook({ onClose }: { onClose: () => void }) {
                     textTransform: "uppercase",
                     padding: "1px 7px",
                     borderRadius: 999,
-                    color: "#FFFDF5",
+                    color: "var(--app-surface, #FFFDF5)",
                     background: RARITY_META[detail.rarity].color,
                   }}
                 >
                   {RARITY_META[detail.rarity].label}
                 </span>
-                <span style={{ fontSize: 10, fontWeight: 400, color: "#8A7B5E" }}>
+                <span style={{ fontSize: 10, fontWeight: 400, color: "var(--app-muted, #8A7B5E)" }}>
                   {(detail.zone ?? "river") === "sea" ? "🌊 sea" : "🏞 river"}
                 </span>
               </div>
-              <div style={{ fontSize: 11, color: "#8A7B5E", marginTop: 2 }}>
+              <div style={{ fontSize: 11, color: "var(--app-muted, #8A7B5E)", marginTop: 2 }}>
                 bites: {detail.whenLabel ?? "any time"} · {detail.sizeCm[0]}-{detail.sizeCm[1]} cm · in bag ×
                 {counts[detail.key] ?? 0}
               </div>

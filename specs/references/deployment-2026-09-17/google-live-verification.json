@@ -1,0 +1,9 @@
+{
+  "checkedAt": "2026-09-17T15:37:00.740Z",
+  "authorization": true,
+  "destinationWritable": true,
+  "writeReadback": true,
+  "repeatWriteSameRows": true,
+  "clearingReadback": true,
+  "testWorkbookTrashed": true
+}

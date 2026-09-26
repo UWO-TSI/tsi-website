@@ -1,7 +1,7 @@
 // Quick toggle for live testing.
 //   node scripts/_toggle-apps-open.mjs open    -> opens_at moved to the past
-//   node scripts/_toggle-apps-open.mjs scheduled -> restores May 6 launch
-// closes_at is left at May 13 04:10 UTC (May 13 00:10 EDT) either way.
+//   node scripts/_toggle-apps-open.mjs scheduled -> restores the Sept 5 launch
+// closes_at is left at Sept 12 04:10 UTC (Sept 12 00:10 EDT) either way.
 
 import { createClient } from "@supabase/supabase-js";
 import { readFileSync } from "fs";
@@ -20,9 +20,9 @@ const admin = createClient(
   { auth: { persistSession: false } }
 );
 
-const SLUGS = ["vp-internal", "vp-external", "vp-marketing", "pm-internal", "advisor"];
-const SCHEDULED_OPEN = "2026-05-06T04:00:00Z";
-const TEST_OPEN = "2026-05-01T00:00:00Z"; // few days in the past
+const SLUGS = ["vp-marketing", "pm"]; // fall 2026 round (migration 027)
+const SCHEDULED_OPEN = "2026-09-05T04:00:00Z";
+const TEST_OPEN = "2026-09-01T00:00:00Z"; // few days in the past
 
 const mode = process.argv[2];
 if (mode !== "open" && mode !== "scheduled") {

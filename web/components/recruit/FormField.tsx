@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { gsap } from "gsap";
 import { Check, AlertCircle } from "lucide-react";
 
@@ -37,6 +37,7 @@ export default function FormField({
   maxWords,
 }: FormFieldProps) {
   const [isFocused, setIsFocused] = useState(false);
+  const reducedMotion = useReducedMotion();
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const hasValue = value.length > 0;
@@ -45,14 +46,20 @@ export default function FormField({
 
   // Shake animation on error
   useEffect(() => {
-    if (error && containerRef.current) {
-      gsap.fromTo(
+    if (error && containerRef.current && !reducedMotion) {
+      const animation = gsap.fromTo(
         containerRef.current,
-        { x: -5 },
-        { x: 0, duration: 0.4, ease: "elastic.out(1, 0.3)" }
+        { x: -3 },
+        { x: 0, duration: 0.18, ease: "power2.out" }
       );
+      return () => { animation.kill(); };
     }
-  }, [error]);
+  }, [error, reducedMotion]);
+
+  const accessibility = {
+    "aria-invalid": error ? true as const : undefined,
+    "aria-describedby": [error ? `${name}-error` : "", type === "textarea" && maxWords !== undefined ? `${name}-count` : ""].filter(Boolean).join(" ") || undefined,
+  };
 
   const baseInputClass = `
     w-full rounded-xl bg-white/5 border px-4 py-3 text-sm text-[#F1FFFF]
@@ -82,6 +89,7 @@ export default function FormField({
       <div className="relative">
         {type === "select" ? (
           <select
+            {...accessibility}
             ref={inputRef as React.RefObject<HTMLSelectElement>}
             id={name}
             name={name}
@@ -103,6 +111,7 @@ export default function FormField({
           </select>
         ) : type === "textarea" ? (
           <textarea
+            {...accessibility}
             ref={inputRef as React.RefObject<HTMLTextAreaElement>}
             id={name}
             name={name}
@@ -118,6 +127,7 @@ export default function FormField({
           />
         ) : (
           <input
+            {...accessibility}
             ref={inputRef as React.RefObject<HTMLInputElement>}
             id={name}
             type={type}
@@ -134,7 +144,7 @@ export default function FormField({
         )}
 
         {/* Validation indicators */}
-        <div className="absolute right-3 top-3">
+        <div className="absolute right-3 top-3 pointer-events-none" aria-hidden="true">
           <AnimatePresence mode="wait">
             {error && (
               <motion.div
@@ -164,6 +174,8 @@ export default function FormField({
       <AnimatePresence>
         {error && (
           <motion.p
+            id={`${name}-error`}
+            role="alert"
             initial={{ opacity: 0, y: -4 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -4 }}
@@ -178,6 +190,7 @@ export default function FormField({
       {type === "textarea" && maxWords !== undefined && (
         <div className="flex justify-end mt-1">
           <span
+            id={`${name}-count`}
             className={`font-mono text-[10px] ${
               (wordCount ?? 0) > maxWords ? "text-[#EF4444]" : "text-[#6B7280]"
             }`}

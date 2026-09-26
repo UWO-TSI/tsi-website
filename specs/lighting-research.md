@@ -1,5 +1,7 @@
 # Cozy Game Lighting — Deep Research (2026-07-14)
 
+> **Evidence correction and applied follow-up, 2026-09-16:** Read [Applicant island lighting research and implementation](applicant-lighting-2026-09-16.md) for the current source audit, complete effect inventory, exact settings and verification. This historical document mixes useful artistic advice, other games' techniques and unverified claims about Nintendo's private renderer. Its assertions about ACNH's exact PBR/AO/bloom/scattering pipeline and hourly grading are not established by the primary sources checked on September 16. The numbered “laws” are historical taste guidelines, not universal rendering rules. Current work reuses these existing systems rather than creating another renderer.
+
 > Four-agent research sweep: ACNH rendering internals, Minecraft shader
 > pack source (BSL / Complementary / SEUS), cozy art theory (Valve,
 > Firewatch, Genshin, Project Horseshoe), and the Three.js toolbox.

@@ -160,7 +160,6 @@ export default function CaseStudies() {
   const sectionRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
   const showcaseRef = useRef<HTMLDivElement>(null);
-  const glowRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!sectionRef.current) return;
@@ -172,24 +171,6 @@ export default function CaseStudies() {
         gsap.set(headerRef.current, { opacity: 1 });
         gsap.set(showcaseRef.current, { opacity: 1 });
         return;
-      }
-
-      // Scroll-driven glow
-      if (glowRef.current) {
-        gsap.fromTo(
-          glowRef.current,
-          { opacity: 0.05 },
-          {
-            opacity: 0.14,
-            ease: "none",
-            scrollTrigger: {
-              trigger: sectionRef.current,
-              start: "top bottom",
-              end: "center center",
-              scrub: true,
-            },
-          }
-        );
       }
 
       // Header slides in
@@ -238,19 +219,6 @@ export default function CaseStudies() {
         style={{ height: "200px", background: "linear-gradient(to bottom, #0a0a0b, #0F0F10)" }}
       />
 
-      {/* Scroll-driven ambient glow */}
-      <div
-        ref={glowRef}
-        className="absolute top-1/3 right-0 pointer-events-none"
-        style={{
-          width: "600px",
-          height: "600px",
-          background: "radial-gradient(circle, rgba(29,155,240,0.12) 0%, transparent 70%)",
-          filter: "blur(40px)",
-          transform: "translateX(30%)",
-          opacity: 0.05,
-        }}
-      />
 
       <div className="relative max-w-[1400px] mx-auto">
         <div ref={headerRef} style={{ opacity: 0 }}>

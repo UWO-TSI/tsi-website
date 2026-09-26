@@ -1,175 +1,296 @@
+import { randomUUID } from "node:crypto";
 import { google } from "googleapis";
 import { getOAuthClient } from "./google-oauth";
-import type { Application, Position } from "./recruitment";
+import { createAdminClient } from "./supabase/admin";
+import type { Application } from "./recruitment";
+import { SHEET_TAB, SHEET_HEADERS, sheetRow, columnName } from "./recruitment-sheet-data";
+import { ALL_HEADERS, ALL_TAB, LEGACY_TABS, PROJECT_TABS, RESUME_LINK_TTL_SECONDS, ROLE_TABS, allRow, fileEntries, formatRequests, projectHeaders, projectPicks, projectRow, resumePath, roleHeaders, roleRow, type RowLinks } from "./recruitment-sheet-tabs";
+import type { Position } from "./recruitment";
 
-function getAuth() {
-  return getOAuthClient();
+const GOOGLE_OPTIONS = { timeout: 15000, retry: false };
+const BATCH_SIZE = 100;
+const SHEET_TITLE = "Tethos Recruitment 2026-27";
+const configuredSheetId = () => process.env.GOOGLE_SHEETS_SPREADSHEET_ID?.trim() || null;
+const configuredFolderId = () => process.env.GOOGLE_DRIVE_FOLDER_ID?.trim() || null;
+export const recruitmentOrigin = () => process.env.NEXT_PUBLIC_SITE_URL || "https://www.tethos.ca";
+
+export function sheetsConfigured(): boolean {
+  return !!(process.env.GOOGLE_OAUTH_CLIENT_ID && process.env.GOOGLE_OAUTH_CLIENT_SECRET && process.env.GOOGLE_OAUTH_REFRESH_TOKEN);
 }
 
-// In-memory cache for auto-created spreadsheet ID
-let cachedSpreadsheetId: string | null = null;
-
-/**
- * Get or create the recruitment spreadsheet.
- * If GOOGLE_SHEETS_SPREADSHEET_ID is set, uses that.
- * Otherwise creates a new spreadsheet in the Drive folder.
- */
-async function getSpreadsheetId(): Promise<string> {
-  if (process.env.GOOGLE_SHEETS_SPREADSHEET_ID) {
-    return process.env.GOOGLE_SHEETS_SPREADSHEET_ID;
+/** Read-only health check. Credential presence is not proof of Google access. */
+export async function sheetConnection(spreadsheetId: string | null) {
+  spreadsheetId = spreadsheetId?.trim() || null;
+  if (!sheetsConfigured()) return { connection: "missing" as const, connection_message: "Connect the recruitment Google account before syncing." };
+  try {
+    const auth = getOAuthClient();
+    const drive = google.drive({ version: "v3", auth });
+    const destination = spreadsheetId || configuredFolderId();
+    if (destination) {
+      const file = await drive.files.get({ fileId: destination, supportsAllDrives: true,
+        fields: "id,mimeType,capabilities(canEdit,canAddChildren)" }, GOOGLE_OPTIONS);
+      const writable = spreadsheetId ? file.data.capabilities?.canEdit : file.data.capabilities?.canAddChildren;
+      if (!writable) return { connection: "unavailable" as const, connection_message: "The recruitment Google account cannot write to the configured destination. Check its access." };
+    } else {
+      await drive.about.get({ fields: "kind" }, GOOGLE_OPTIONS);
+    }
+    if (spreadsheetId) await google.sheets({ version: "v4", auth }).spreadsheets.get({ spreadsheetId, fields: "spreadsheetId" }, GOOGLE_OPTIONS);
+    return { connection: "connected" as const, connection_message: null };
+  } catch (error) {
+    const response = (error as { response?: { data?: { error?: unknown } } })?.response;
+    if (response?.data?.error === "invalid_grant") return { connection: "reconnect" as const,
+      connection_message: "Google authorization expired or was revoked. Reconnect the recruitment Google account; applications remain saved." };
+    return { connection: "unavailable" as const, connection_message: "Google access could not be verified. Check the connection and destination, then retry. Applications remain saved." };
   }
-
-  if (cachedSpreadsheetId) {
-    return cachedSpreadsheetId;
-  }
-
-  const auth = getAuth();
-  const drive = google.drive({ version: "v3", auth });
-  const folderId = process.env.GOOGLE_DRIVE_FOLDER_ID!;
-
-  // Check if a spreadsheet already exists in the folder
-  const existing = await drive.files.list({
-    q: `name='Tethos Recruitment 2026-27' and '${folderId}' in parents and mimeType='application/vnd.google-apps.spreadsheet' and trashed=false`,
-    fields: "files(id)",
-    supportsAllDrives: true,
-    includeItemsFromAllDrives: true,
-  });
-
-  if (existing.data.files && existing.data.files.length > 0) {
-    cachedSpreadsheetId = existing.data.files[0].id!;
-    return cachedSpreadsheetId;
-  }
-
-  // Create new spreadsheet in the folder
-  const sheets = google.sheets({ version: "v4", auth });
-  const spreadsheet = await sheets.spreadsheets.create({
-    requestBody: {
-      properties: { title: "Tethos Recruitment 2026-27" },
-      sheets: [{ properties: { title: "Applications" } }],
-    },
-  });
-
-  const newId = spreadsheet.data.spreadsheetId!;
-
-  // Move to the Drive folder
-  await drive.files.update({
-    fileId: newId,
-    addParents: folderId,
-    removeParents: "root",
-    fields: "id, parents",
-    supportsAllDrives: true,
-  });
-
-  cachedSpreadsheetId = newId;
-  console.log(`Created recruitment spreadsheet: ${newId}`);
-  return newId;
 }
 
-/**
- * Append an application row to the Google Sheet.
- * Creates the spreadsheet and headers if they don't exist.
- */
-export async function syncApplicationToSheet(
-  application: Application,
-  position: Position
-): Promise<void> {
-  const auth = getAuth();
-  const sheets = google.sheets({ version: "v4", auth });
-  const spreadsheetId = await getSpreadsheetId();
-  const sheetName = "Applications";
+export async function sheetSyncStatus() {
+  const admin = createAdminClient();
+  const [state, pending] = await Promise.all([
+    admin.from("recruitment_sheet_state").select("spreadsheet_id,last_synced_at,last_error,next_attempt_at").eq("id", true).single(),
+    admin.from("recruitment_sheet_rows").select("application_id", { count: "exact" }).is("synced_at", null).limit(1),
+  ]);
+  const errors = [state.error, pending.error].filter(Boolean);
+  if (errors.some(error => error?.code !== "PGRST205" && error?.code !== "PGRST116")) throw new Error("Could not check spreadsheet delivery");
+  const setup_ready = errors.length === 0;
+  const spreadsheetId = state.data?.spreadsheet_id?.trim() || configuredSheetId();
+  return { setup_ready, pending: setup_ready ? pending.count ?? 0 : null, configured: sheetsConfigured(),
+    last_synced_at: state.data?.last_synced_at ?? null, last_error: state.data?.last_error ?? null,
+    next_attempt_at: state.data?.next_attempt_at ?? null,
+    ...(await sheetConnection(spreadsheetId)),
+    url: spreadsheetId ? `https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit` : null };
+}
 
-  // Check if headers exist
-  const existing = await sheets.spreadsheets.values.get({
-    spreadsheetId,
-    range: `${sheetName}!A1:A1`,
-  });
-
-  if (!existing.data.values || existing.data.values.length === 0) {
-    // Write headers
-    await sheets.spreadsheets.values.update({
-      spreadsheetId,
-      range: `${sheetName}!A1`,
+/** Fixed database-assigned rows, one leased worker, and version-aware acknowledgments. */
+export async function syncRecruitmentSheet() {
+  const admin = createAdminClient();
+  if (!sheetsConfigured()) return { synced: 0, configured: false };
+  const token = randomUUID();
+  const claim = await admin.rpc("claim_recruitment_sheet", { p_token: token });
+  if (claim.error) throw new Error("Spreadsheet delivery migration is not available");
+  if (!claim.data) return { synced: 0, busy: true };
+  let failed = false;
+  try {
+    const queued = await admin.from("recruitment_sheet_rows").select("application_id,sheet_row,version,tab_row,all_row,position_id")
+      .is("synced_at", null).order("sheet_row").limit(BATCH_SIZE);
+    if (queued.error) throw queued.error;
+    const rows = queued.data ?? [];
+    const auth = getOAuthClient();
+    const sheets = google.sheets({ version: "v4", auth });
+    const drive = google.drive({ version: "v3", auth });
+    const state = await admin.from("recruitment_sheet_state").select("spreadsheet_id").eq("id", true).single();
+    if (state.error) throw state.error;
+    let spreadsheetId = (state.data.spreadsheet_id as string | null)?.trim() || null;
+    if (!rows.length && spreadsheetId) return { synced: 0, configured: true };
+    if (!spreadsheetId) {
+      spreadsheetId = configuredSheetId();
+      if (!spreadsheetId) {
+        // Recover a create that succeeded at Google before the server stopped.
+        const found = await drive.files.list({
+          q: "appProperties has { key='tethosRecruitment' and value='records-v1' } and trashed=false",
+          fields: "files(id)", pageSize: 10,
+        }, GOOGLE_OPTIONS);
+        spreadsheetId = found.data.files?.[0]?.id ?? null;
+        if (!spreadsheetId) {
+          const file = await drive.files.create({ requestBody: {
+            name: SHEET_TITLE, mimeType: "application/vnd.google-apps.spreadsheet",
+            appProperties: { tethosRecruitment: "records-v1" },
+            ...(configuredFolderId() ? { parents: [configuredFolderId()!] } : {}),
+          }, fields: "id", supportsAllDrives: true }, GOOGLE_OPTIONS);
+          spreadsheetId = file.data.id ?? null;
+        }
+      }
+      if (!spreadsheetId) throw new Error("Google did not return a spreadsheet ID");
+      const saved = await admin.from("recruitment_sheet_state").update({ spreadsheet_id: spreadsheetId }).eq("id", true).eq("lease_token", token);
+      if (saved.error) throw saved.error;
+    }
+    const meta = await sheets.spreadsheets.get({ spreadsheetId, fields: "sheets.properties" }, GOOGLE_OPTIONS);
+    const tab = meta.data.sheets?.find(s => s.properties?.title === SHEET_TAB)?.properties;
+    const rowCount = Math.max(1000, ...rows.map(r => Number(r.sheet_row) + 100));
+    if (!tab) {
+      await sheets.spreadsheets.batchUpdate({ spreadsheetId, requestBody: { requests: [{ addSheet: { properties: {
+        title: SHEET_TAB, gridProperties: { rowCount, columnCount: SHEET_HEADERS.length, frozenRowCount: 1 },
+      } } }] } }, GOOGLE_OPTIONS);
+    } else if ((tab.gridProperties?.rowCount ?? 0) < rowCount || (tab.gridProperties?.columnCount ?? 0) < SHEET_HEADERS.length) {
+      await sheets.spreadsheets.batchUpdate({ spreadsheetId, requestBody: { requests: [{ updateSheetProperties: {
+        properties: { sheetId: tab.sheetId, gridProperties: {
+          rowCount: Math.max(rowCount, tab.gridProperties?.rowCount ?? 0),
+          columnCount: Math.max(SHEET_HEADERS.length, tab.gridProperties?.columnCount ?? 0),
+        } }, fields: "gridProperties.rowCount,gridProperties.columnCount",
+      } }] } }, GOOGLE_OPTIONS);
+    }
+    const apps = rows.length ? await admin.from("applications").select("*, position:positions(*)").in("id", rows.map(r => r.application_id)) : { data: [], error: null };
+    if (apps.error) throw apps.error;
+    const byId = new Map((apps.data as Application[]).map(a => [a.id, a]));
+    const end = columnName(SHEET_HEADERS.length);
+    await sheets.spreadsheets.values.batchUpdate({ spreadsheetId, requestBody: {
       valueInputOption: "RAW",
-      requestBody: {
-        values: [
-          [
-            "Application ID",
-            "Position",
-            "Phase",
-            "Full Name",
-            "Email",
-            "Phone",
-            "Program/Major",
-            "Year",
-            "LinkedIn",
-            "Heard About Us",
-            "Resume URL",
-            "Status",
-            "Tags",
-            "Submitted At",
-          ],
-        ],
-      },
-    });
-  }
-
-  // Append the row
-  await sheets.spreadsheets.values.append({
-    spreadsheetId,
-    range: `${sheetName}!A:N`,
-    valueInputOption: "RAW",
-    requestBody: {
-      values: [
-        [
-          application.id,
-          position.title,
-          `Phase ${position.phase}`,
-          application.full_name,
-          application.email,
-          application.phone,
-          application.program_major,
-          application.year_of_study,
-          application.linkedin_url ?? "",
-          application.heard_about_us,
-          application.resume_drive_url ?? "",
-          application.status,
-          application.tags.join(", "),
-          application.submitted_at,
-        ],
+      data: [
+        { range: `'${SHEET_TAB}'!A1:${end}1`, values: [SHEET_HEADERS] },
+        ...rows.map(r => ({ range: `'${SHEET_TAB}'!A${r.sheet_row}:${end}${r.sheet_row}`,
+          values: [byId.has(r.application_id) ? sheetRow(byId.get(r.application_id)!, recruitmentOrigin()) : SHEET_HEADERS.map(() => "")] })),
       ],
-    },
-  });
+    } }, GOOGLE_OPTIONS);
+    // Reviewer tabs (one per live role + All applicants), written after the
+    // master rows so a failure retries the same delivery. Rows are fixed per
+    // application (tab_row / all_row) because reviewers comment on cells.
+    await writeReviewerTabs(admin, sheets, spreadsheetId, meta.data.sheets ?? [], rows as QueuedRow[], apps.data as Application[]);
+    const now = new Date().toISOString();
+    // A concurrent edit increments version; it must remain queued for the next write.
+    const ack = await admin.rpc("ack_recruitment_sheet", { p_rows: rows.map(({ application_id, version }) => ({ application_id, version })) });
+    if (ack.error) throw ack.error;
+    const done = await admin.from("recruitment_sheet_state").update({ last_synced_at: now, last_error: null })
+      .eq("id", true).eq("lease_token", token);
+    if (done.error) throw done.error;
+    return { synced: rows.length, configured: true };
+  } catch (error) {
+    failed = true;
+    // Do not persist Google error bodies: they can contain credentials or applicant data.
+    await admin.from("recruitment_sheet_state").update({
+      last_error: "Google Sheets sync failed. Applications are saved. Check Google access and retry.",
+      next_attempt_at: new Date(Date.now() + 60_000).toISOString(),
+    }).eq("id", true).eq("lease_token", token);
+    throw error;
+  } finally {
+    await admin.from("recruitment_sheet_state").update({ lease_token: null, lease_until: null,
+      ...(!failed ? { next_attempt_at: new Date(Date.now() + 10_000).toISOString() } : {}),
+    }).eq("id", true).eq("lease_token", token);
+  }
 }
 
-/**
- * Update an existing row's status in the sheet (by application ID).
- */
-export async function updateSheetStatus(
-  applicationId: string,
-  newStatus: string
-): Promise<void> {
-  const auth = getAuth();
-  const sheets = google.sheets({ version: "v4", auth });
-  const spreadsheetId = await getSpreadsheetId();
-  const sheetName = "Applications";
+export async function trySheetSync() {
+  try { await syncRecruitmentSheet(); } catch { console.error("Recruitment spreadsheet sync pending retry"); }
+}
 
-  // Find the row
-  const data = await sheets.spreadsheets.values.get({
-    spreadsheetId,
-    range: `${sheetName}!A:A`,
-  });
+type QueuedRow = { application_id: string; sheet_row: number; version: number; tab_row: number | null; all_row: number | null; position_id: string | null };
+type SheetProps = { properties?: { title?: string | null; sheetId?: number | null; hidden?: boolean | null; gridProperties?: { rowCount?: number | null; columnCount?: number | null } | null } | null };
+type SheetsApi = ReturnType<typeof google.sheets>;
+type AdminApi = ReturnType<typeof createAdminClient>;
 
-  const rows = data.data.values ?? [];
-  const rowIndex = rows.findIndex((row) => row[0] === applicationId);
-  if (rowIndex === -1) return;
+async function signLinks(admin: AdminApi, app: Application): Promise<RowLinks> {
+  const links: RowLinks = { resume: null, portfolioFiles: [], creativeFiles: [] };
+  const files = fileEntries(app);
+  try {
+    const path = resumePath(app.resume_drive_url);
+    if (path) {
+      const signed = await admin.storage.from("resumes").createSignedUrl(path, RESUME_LINK_TTL_SECONDS);
+      links.resume = signed.data?.signedUrl ?? null;
+    }
+    for (const [key, list] of [["portfolioFiles", files.portfolio], ["creativeFiles", files.creative]] as const) {
+      if (!list.length) { continue; }
+      const signed = await admin.storage.from("portfolios").createSignedUrls(list.map(f => f.path), RESUME_LINK_TTL_SECONDS);
+      const byPath = new Map((signed.data ?? []).map(x => [x.path, x.signedUrl]));
+      links[key] = list.map(f => ({ filename: f.filename, url: byPath.get(f.path) ?? null }));
+    }
+  } catch {
+    // A file that cannot be signed shows as its name; the row still delivers.
+    links.portfolioFiles = files.portfolio.map(f => ({ filename: f.filename, url: null }));
+    links.creativeFiles = files.creative.map(f => ({ filename: f.filename, url: null }));
+  }
+  return links;
+}
 
-  // Update status column (L = column 12)
-  await sheets.spreadsheets.values.update({
-    spreadsheetId,
-    range: `${sheetName}!L${rowIndex + 1}`,
-    valueInputOption: "RAW",
-    requestBody: {
-      values: [[newStatus]],
-    },
-  });
+async function writeReviewerTabs(admin: AdminApi, sheets: SheetsApi, spreadsheetId: string, existing: SheetProps[], rows: QueuedRow[], apps: Application[]) {
+  const byId = new Map(apps.map(a => [a.id, a]));
+  const positionIds = [...new Set(rows.map(r => r.position_id ?? byId.get(r.application_id)?.position_id).filter((x): x is string => !!x))];
+  // Every live role gets its tab on the first delivery, applicants or not,
+  // so reviewers see the whole structure; batch positions are added for
+  // rows whose role is archived or has no tab.
+  const live = await admin.from("positions").select("*").in("slug", Object.keys(ROLE_TABS)).is("archived_at", null);
+  if (live.error) throw live.error;
+  const liveIds = new Set(((live.data ?? []) as Position[]).map(p => p.id));
+  const rest = positionIds.filter(id => !liveIds.has(id));
+  const positions = rest.length ? await admin.from("positions").select("*").in("id", rest) : { data: [], error: null };
+  if (positions.error) throw positions.error;
+  const positionById = new Map([...((live.data ?? []) as Position[]), ...((positions.data ?? []) as Position[])].map(p => [p.id, p]));
+  const tabs = new Map(existing.map(s => [s.properties?.title ?? "", s.properties ?? {}]));
+
+  // Tabs needed by this batch; All applicants always.
+  const needed: { title: string; headers: string[]; answersFrom: number }[] = [{ title: ALL_TAB, headers: ALL_HEADERS, answersFrom: ALL_HEADERS.length }];
+  for (const p of positionById.values()) {
+    const title = ROLE_TABS[p.slug];
+    if (title && !needed.some(n => n.title === title)) needed.push({ title, headers: roleHeaders(p), answersFrom: roleHeaders(p).length - p.essay_questions.length });
+  }
+  // Project tabs exist whenever the developer role is live, applicants or not.
+  const developer = [...positionById.values()].find(p => p.slug === "developer" && !p.archived_at);
+  if (developer) for (const title of Object.values(PROJECT_TABS)) {
+    if (!needed.some(n => n.title === title)) needed.push({ title, headers: projectHeaders(developer), answersFrom: projectHeaders(developer).length - developer.essay_questions.length });
+  }
+  const projectRowsRes = rows.length ? await admin.from("recruitment_sheet_project_rows").select("application_id,project,project_row").in("application_id", rows.map(r => r.application_id)) : { data: [], error: null };
+  if (projectRowsRes.error) throw projectRowsRes.error;
+  const projectRows = (projectRowsRes.data ?? []) as { application_id: string; project: string; project_row: number }[];
+  // Order matters: Google refuses a batch that leaves no visible sheet, so
+  // new tabs are added before the master is hidden and legacy tabs removed.
+  const requests: object[] = [];
+  const missing = needed.filter(n => !tabs.has(n.title));
+  for (const n of missing) requests.push({ addSheet: { properties: { title: n.title, gridProperties: { rowCount: 1000, columnCount: n.headers.length + 2, frozenRowCount: 1 } } } });
+  const master = tabs.get(SHEET_TAB);
+  if (master?.sheetId !== undefined && master?.sheetId !== null && !master.hidden) {
+    requests.push({ updateSheetProperties: { properties: { sheetId: master.sheetId, hidden: true }, fields: "hidden" } });
+  }
+  for (const legacy of LEGACY_TABS) {
+    const t = tabs.get(legacy);
+    if (t?.sheetId !== undefined && t?.sheetId !== null) requests.push({ deleteSheet: { sheetId: t.sheetId } });
+  }
+  const idByTitle = new Map<string, number>();
+  for (const [title, props] of tabs) if (typeof props.sheetId === "number") idByTitle.set(title, props.sheetId);
+  if (requests.length) {
+    const res = await sheets.spreadsheets.batchUpdate({ spreadsheetId, requestBody: { requests } }, GOOGLE_OPTIONS);
+    const replies = (res as { data?: { replies?: { addSheet?: { properties?: { sheetId?: number | null } } }[] } } | undefined)?.data?.replies ?? [];
+    const created = replies.map(r => r.addSheet?.properties?.sheetId).filter((x): x is number => typeof x === "number");
+    missing.forEach((n, i) => { if (created[i] !== undefined) idByTitle.set(n.title, created[i]); });
+    const format = missing.flatMap((n, i) => created[i] === undefined ? [] : formatRequests(created[i], n.headers, n.answersFrom));
+    if (format.length) await sheets.spreadsheets.batchUpdate({ spreadsheetId, requestBody: { requests: format } }, GOOGLE_OPTIONS);
+  }
+  // Tab order as David listed it, every delivery (cheap, idempotent); the
+  // hidden master falls to the end.
+  const wanted = [ALL_TAB, ...Object.values(ROLE_TABS), ...Object.values(PROJECT_TABS)].filter(t => idByTitle.has(t));
+  const current = existing.filter(s => s.properties?.title && !s.properties.hidden).map(s => s.properties!.title!);
+  if (wanted.some((t, i) => current[i] !== t)) {
+    await sheets.spreadsheets.batchUpdate({ spreadsheetId, requestBody: { requests: wanted.map((t, i) => ({
+      updateSheetProperties: { properties: { sheetId: idByTitle.get(t), index: i }, fields: "index" } })) } }, GOOGLE_OPTIONS);
+  }
+
+  const data: { range: string; values: string[][] }[] = [];
+  const blank = (n: number) => Array.from({ length: n }, () => "");
+  const links = new Map<string, RowLinks>();
+  for (const r of rows) {
+    const app = byId.get(r.application_id);
+    if (app && positionById.get(app.position_id) && !positionById.get(app.position_id)!.archived_at) links.set(app.id, await signLinks(admin, app));
+  }
+  const allEnd = columnName(ALL_HEADERS.length);
+  data.push({ range: `'${ALL_TAB}'!A1:${allEnd}1`, values: [ALL_HEADERS] });
+  for (const r of rows) {
+    if (!r.all_row) continue;
+    const app = byId.get(r.application_id);
+    const position = app ? positionById.get(app.position_id) : undefined;
+    const live = app && position && !position.archived_at;
+    data.push({ range: `'${ALL_TAB}'!A${r.all_row}:${allEnd}${r.all_row}`, values: [live ? allRow(app, position, links.get(app.id)!) : blank(ALL_HEADERS.length)] });
+  }
+  const projectTitles = new Set(Object.values(PROJECT_TABS));
+  for (const n of needed) {
+    if (n.title === ALL_TAB) continue;
+    const end = columnName(n.headers.length);
+    data.push({ range: `'${n.title}'!A1:${end}1`, values: [n.headers] });
+    if (projectTitles.has(n.title)) {
+      const partner = Object.keys(PROJECT_TABS).find(k => PROJECT_TABS[k] === n.title)!;
+      for (const pr of projectRows.filter(x => x.project === partner)) {
+        const app = byId.get(pr.application_id);
+        const position = app ? positionById.get(app.position_id) : undefined;
+        const live = app && position && !position.archived_at;
+        const rank = app ? projectPicks(app).find(p => p.partner === partner)?.rank ?? 0 : 0;
+        data.push({ range: `'${n.title}'!A${pr.project_row}:${end}${pr.project_row}`, values: [live ? projectRow(app, position, links.get(app.id)!, rank) : blank(n.headers.length)] });
+      }
+      continue;
+    }
+    for (const r of rows) {
+      if (!r.tab_row) continue;
+      const position = r.position_id ? positionById.get(r.position_id) : undefined;
+      if (!position || ROLE_TABS[position.slug] !== n.title) continue;
+      const app = byId.get(r.application_id);
+      const live = app && !position.archived_at;
+      data.push({ range: `'${n.title}'!A${r.tab_row}:${end}${r.tab_row}`, values: [live ? roleRow(app, position, links.get(app.id)!) : blank(n.headers.length)] });
+    }
+  }
+  await sheets.spreadsheets.values.batchUpdate({ spreadsheetId, requestBody: { valueInputOption: "USER_ENTERED", data } }, GOOGLE_OPTIONS);
 }

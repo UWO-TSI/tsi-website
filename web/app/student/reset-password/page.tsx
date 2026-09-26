@@ -48,7 +48,7 @@ export default function ResetPasswordPage() {
 
     setDone(true);
     setLoading(false);
-    setTimeout(() => router.push("/student/apply"), 1500);
+    setTimeout(() => router.push("/student/apply/portal"), 1500);
   }
 
   if (authed === false) {

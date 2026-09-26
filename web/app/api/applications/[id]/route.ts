@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import { trySheetSync } from "@/lib/google-sheets";
+import { after, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient, isAdminEmail } from "@/lib/supabase/admin";
 import { APPLICATION_STATUSES } from "@/lib/recruitment";
@@ -129,6 +130,7 @@ export async function PATCH(
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  after(trySheetSync);
   return NextResponse.json(data);
 }
 
@@ -171,5 +173,6 @@ export async function DELETE(
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  after(trySheetSync);
   return NextResponse.json({ ok: true });
 }

@@ -1,0 +1,58 @@
+/* System appearance controls brightness. Campus time only changes atmosphere. */
+.theme {
+  color-scheme: light;
+  --app-bg:#f4f3e9; --app-surface:#fffbef; --app-raised:#fffef8;
+  --app-soft:#e8eee4; --app-ink:#243e50; --app-muted:#52656b;
+  --app-line:#bac9bc; --app-link:#185d89; --app-focus:#185d89;
+  --app-accent:#ffd166; --app-accent-ink:#483719; --app-button:#526e49;
+  --app-button-ink:#fffbed; --app-shadow:#26352526; --app-edge:#a6ad96;
+  --app-success:#366643; --app-error:#a03d2b; --app-error-bg:#fff0e8;
+  --app-sky:#d8e9e2; --app-horizon:#f6edd2; --app-cloud-filter:brightness(1);
+  --app-cloud-opacity:.9; --app-glow:#eac78338; --app-board:#806d50;
+  min-height:100dvh; background:var(--app-bg); color:var(--app-ink);
+}
+.theme[data-time="evening"],.theme[data-time="night"] {
+  --app-bg:#f3ede1; --app-surface:#fff6e5; --app-soft:#eee6d7;
+  --app-sky:#e0e1df; --app-horizon:#f1dbb8; --app-glow:#d5a65733;
+}
+@media (prefers-color-scheme:dark) {
+  .theme:not([data-appearance="light"]) {
+    color-scheme:dark;
+    --app-bg:#17272e; --app-surface:#26383d; --app-raised:#30434a;
+    --app-soft:#34484b; --app-ink:#f5efdF; --app-muted:#bacbc8;
+    --app-line:#627572; --app-link:#9ad6f3; --app-focus:#ffd166;
+    --app-accent:#e9c681; --app-accent-ink:#362e20; --app-button:#a7c79b;
+    --app-button-ink:#1c3025; --app-shadow:#030e1859; --app-edge:#12262a;
+    --app-success:#b8dca8; --app-error:#ffb8a7; --app-error-bg:#492e2a;
+    --app-sky:#233e51; --app-horizon:#485250; --app-cloud-filter:brightness(.3) sepia(.2) saturate(.7);
+    --app-cloud-opacity:.45; --app-glow:#e6b46520; --app-board:#3b4039;
+  }
+  .theme:not([data-appearance="light"]):is([data-time="evening"],[data-time="night"]) {
+    --app-bg:#19262d; --app-surface:#2c3637; --app-raised:#384243;
+    --app-soft:#3c4440; --app-sky:#1b3044; --app-horizon:#414844;
+  }
+}
+/* Development-only preview attribute, supplied by the existing preview route. */
+.theme[data-appearance="dark"] {
+  color-scheme:dark;
+  --app-bg:#17272e; --app-surface:#26383d; --app-raised:#30434a;
+  --app-soft:#34484b; --app-ink:#f5efdf; --app-muted:#bacbc8;
+  --app-line:#627572; --app-link:#9ad6f3; --app-focus:#ffd166;
+  --app-accent:#e9c681; --app-accent-ink:#362e20; --app-button:#a7c79b;
+  --app-button-ink:#1c3025; --app-shadow:#030e1859; --app-edge:#12262a;
+  --app-success:#b8dca8; --app-error:#ffb8a7; --app-error-bg:#492e2a;
+  --app-sky:#233e51; --app-horizon:#485250; --app-cloud-filter:brightness(.3) sepia(.2) saturate(.7);
+  --app-cloud-opacity:.45; --app-glow:#e6b46520; --app-board:#3b4039;
+}
+.theme[data-appearance="dark"]:is([data-time="evening"],[data-time="night"]) {
+  --app-bg:#19262d; --app-surface:#2c3637; --app-raised:#384243;
+  --app-soft:#3c4440; --app-sky:#1b3044; --app-horizon:#414844;
+}
+/* Existing direct forms/auth surfaces use the same palette as game sheets. */
+.theme :global([class~="bg-[#0D1B2A]"]),.theme :global([class~="bg-[#101a20]"]) { background:var(--app-bg); }
+.theme :global([class~="bg-[#0F2132]"]),.theme :global([class~="bg-[#162B3D]"]) { background:var(--app-surface); }
+.theme :global([class~="text-[#F1FFFF]"]),.theme :global([class~="text-white"]) { color:var(--app-ink); }
+.theme :global([class~="text-[#9CA3AF]"]),.theme :global([class~="text-[#6B7280]"]) { color:var(--app-muted); }
+.theme :global([class~="border-white/10"]),.theme :global([class~="border-white/20"]) { border-color:var(--app-line); }
+.theme :global(input:not([type="checkbox"]):not([type="radio"]):not([type="file"])),.theme :global(textarea),.theme :global(select) { color:var(--app-ink); background:var(--app-raised); border-color:var(--app-line); }
+.theme :global(input::placeholder),.theme :global(textarea::placeholder) { color:var(--app-muted); }

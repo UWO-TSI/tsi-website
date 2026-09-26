@@ -708,7 +708,7 @@ function QuestPanelContent({
             flexShrink: 0,
           }}
         >
-          All quests checked off. Welcome to Tethos.
+          All quests checked off. Welcome to Tech for Social Impact.
         </p>
       )}
     </>

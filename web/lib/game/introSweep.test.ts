@@ -6,6 +6,17 @@ describe("first-visit camera sweep", () => {
   afterEach(() => vi.useRealTimers());
   const setup = () => ({ camera: { smoothTime: 0.25, setLookAt: vi.fn() }, active: vi.fn(), viewed: vi.fn(), events: new EventTarget() });
 
+  it("uses caller-supplied applicant poses for descent and skip", () => {
+    const { camera, active, viewed, events } = setup();
+    const poses = { start: [-4, 36, -9, 0, 0, -5] as [number, number, number, number, number, number], end: [0, 8.1, -16.3, 0, 0.7, -5.5] as [number, number, number, number, number, number] };
+    startIntroSweep(camera, active, viewed, events, poses);
+    expect(camera.setLookAt).toHaveBeenNthCalledWith(1, ...poses.start, false);
+    events.dispatchEvent(new Event("pointerdown"));
+    expect(camera.setLookAt).toHaveBeenLastCalledWith(...poses.end, true);
+    vi.advanceTimersByTime(450);
+    expect(active).toHaveBeenLastCalledWith(false);
+  });
+
   it("records a completed visit and restores the original camera smoothing", () => {
     const { camera, active, viewed, events } = setup();
     startIntroSweep(camera, active, viewed, events);

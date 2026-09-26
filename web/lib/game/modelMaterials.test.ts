@@ -1,7 +1,25 @@
 import { expect, it, vi } from "vitest";
 import { BoxGeometry, FrontSide, Frustum, Group, Matrix4, Mesh, MeshStandardMaterial, PerspectiveCamera, Texture, Vector3 } from "three";
-import { disposeModelMaterials, prepareModel } from "./modelMaterials";
+import { disposeModelMaterials, lightHQWindows, prepareModel } from "./modelMaterials";
 import { bendViewPoint } from "./worldProjection";
+
+it("lights only instance-owned HQ glass while preserving frames and cached textures", () => {
+  const texture = new Texture();
+  const glass = new MeshStandardMaterial({ name: "mWindowL", map: texture, emissiveMap: texture });
+  const wall = new MeshStandardMaterial({ name: "mWall", map: texture, emissiveMap: texture });
+  const source = new Mesh(new BoxGeometry(), [glass, wall]);
+  const clone = prepareModel(source, "/assets/acnh/buildings/hq-office.glb", true) as Mesh<BoxGeometry, MeshStandardMaterial[]>;
+  lightHQWindows(clone, "#ffc95a");
+  expect(clone.material[0].map).toBeNull();
+  expect(clone.material[0].emissiveMap).toBeNull();
+  expect(clone.material[0].emissive.getHexString()).toBe("ffc95a");
+  expect(clone.material[1].map).toBe(texture);
+  expect(clone.material[1].emissiveMap).toBe(texture);
+  expect(glass.map).toBe(texture);
+  expect(glass.emissive.getHex()).toBe(0);
+  disposeModelMaterials(clone);
+  source.geometry.dispose(); glass.dispose(); wall.dispose(); texture.dispose();
+});
 
 it("keeps source materials intact and disposes only the instance's shared clones", () => {
   const texture = new Texture();

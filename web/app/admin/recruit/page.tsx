@@ -1,22 +1,31 @@
 "use client";
 
 import { useEffect, useState, useCallback, useMemo } from "react";
-import { useRouter } from "next/navigation";
 import FilterBar, { type FilterState } from "@/components/admin/FilterBar";
 import ApplicantCard from "@/components/admin/ApplicantCard";
 import ReleaseControls from "@/components/admin/ReleaseControls";
 import RecruitInsights from "@/components/admin/RecruitInsights";
 import RecruitBoard from "@/components/admin/RecruitBoard";
+import SheetsSync from "@/components/admin/SheetsSync";
+import ArchivePanel from "@/components/admin/ArchivePanel";
+import AuthModal from "@/components/recruit/AuthModal";
 import { motion } from "framer-motion";
 import { fadeUpVariants } from "@/lib/motion";
 import { RefreshCw, Download } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import type { Application, ApplicationStatus, Position } from "@/lib/recruitment";
+import {
+  isArchivedApplication,
+  type Application,
+  type ApplicationStatus,
+  type Position,
+} from "@/lib/recruitment";
 import type { User } from "@supabase/supabase-js";
 
 export default function AdminRecruitPage() {
-  const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
+  // Signed in, but the email is not on the admin whitelist.
+  const [denied, setDenied] = useState(false);
+  const [showAuth, setShowAuth] = useState(false);
   const [applications, setApplications] = useState<Application[]>([]);
   const [positions, setPositions] = useState<Position[]>([]);
   const [loading, setLoading] = useState(true);
@@ -27,7 +36,8 @@ export default function AdminRecruitPage() {
     status: "",
     tag: "",
   });
-  const [syncing, setSyncing] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(50);
+  const [loadError, setLoadError] = useState("");
   const [tab, setTab] = useState<"dashboard" | "board" | "insights">("dashboard");
 
   const supabase = useMemo(() => createClient(), []);
@@ -46,15 +56,34 @@ export default function AdminRecruitPage() {
     // Fetch applications (admin API)
     const res = await fetch("/api/applications", {
       headers: { "Content-Type": "application/json" },
-    });
+    }).catch(() => null);
+    if (!res) { setLoadError("Could not load applications. Please refresh."); setLoading(false); return; }
 
+    // 401: the server has no session for this browser (stale cookie).
+    // 403: signed in, but not an admin. Say so instead of bouncing home.
+    if (res.status === 401) {
+      setUser(null);
+      setLoading(false);
+      return;
+    }
     if (res.status === 403) {
-      router.push("/");
+      setDenied(true);
+      setLoading(false);
       return;
     }
 
     if (res.ok) {
-      const data = await res.json();
+      const data: Application[] = await res.json();
+      try {
+        while (data.length && data.length % 500 === 0) {
+          const next = await fetch(`/api/applications?offset=${data.length}&limit=500`);
+          if (!next.ok) throw new Error("Could not load the remaining applications. Please refresh.");
+          const page: Application[] = await next.json();
+          data.push(...page);
+          if (page.length < 500) break;
+        }
+        setLoadError("");
+      } catch (error) { setLoadError(error instanceof Error ? error.message : "Application loading failed"); }
       setApplications(data);
 
       // Extract unique positions
@@ -65,15 +94,23 @@ export default function AdminRecruitPage() {
       setPositions(Array.from(posMap.values()));
     }
 
+    if (!res.ok) setLoadError("Could not load applications. Please refresh.");
     setLoading(false);
-  }, [supabase, router]);
+  }, [supabase]);
 
   useEffect(() => {
     fetchData();
   }, [fetchData]);
 
+  // Finished rounds (positions.archived_at, migration 028) live in the
+  // collapsed archive below the list and stay out of everything else.
+  const activeApps = applications.filter((a) => !isArchivedApplication(a));
+  const archivedApps = applications.filter(isArchivedApplication);
+  const activePositions = positions.filter((p) => !p.archived_at);
+  const archivedPositions = positions.filter((p) => !!p.archived_at);
+
   // Filtered applications
-  const filtered = applications.filter((app) => {
+  const filtered = activeApps.filter((app) => {
     if (
       filters.search &&
       !app.full_name.toLowerCase().includes(filters.search.toLowerCase()) &&
@@ -91,14 +128,14 @@ export default function AdminRecruitPage() {
   });
 
   // Pending count
-  const pendingCount = applications.filter(
+  const pendingCount = activeApps.filter(
     (a) => a.draft_status && a.draft_status !== a.status
   ).length;
 
-  const positionsWithPending = positions.map((p) => ({
+  const positionsWithPending = activePositions.map((p) => ({
     id: p.id,
     title: p.title,
-    pendingCount: applications.filter(
+    pendingCount: activeApps.filter(
       (a) =>
         a.position_id === p.id &&
         a.draft_status &&
@@ -227,12 +264,6 @@ export default function AdminRecruitPage() {
     );
   };
 
-  const handleSheetsSync = async () => {
-    setSyncing(true);
-    await fetch("/api/sheets-sync", { method: "POST" });
-    setSyncing(false);
-  };
-
   const handleCsvExport = () => {
     window.open("/api/applications/export", "_blank", "noopener");
   };
@@ -247,8 +278,60 @@ export default function AdminRecruitPage() {
 
   if (!user) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-[#9CA3AF]">Please sign in to access admin.</p>
+      <div className="min-h-screen flex items-center justify-center px-6">
+        <div className="text-center max-w-sm">
+          <p className="font-mono text-[10px] tracking-[0.2em] uppercase text-[#1D9BF0] mb-3">
+            Admin
+          </p>
+          <p className="text-[#F1FFFF] text-lg font-semibold mb-2">
+            Sign in to open the applications board
+          </p>
+          <p className="text-sm text-[#9CA3AF] mb-6">
+            Use the email that is on the admin list.
+          </p>
+          <button
+            type="button"
+            onClick={() => setShowAuth(true)}
+            className="rounded-full bg-[#1D9BF0] hover:bg-[#1a8cd8] text-white px-6 py-2.5 text-sm font-medium transition"
+          >
+            Sign in
+          </button>
+        </div>
+        <AuthModal
+          isOpen={showAuth}
+          onClose={() => setShowAuth(false)}
+          redirectTo="/admin/recruit"
+        />
+      </div>
+    );
+  }
+  if (denied) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-6">
+        <div className="text-center max-w-md">
+          <p className="font-mono text-[10px] tracking-[0.2em] uppercase text-[#EF4444] mb-3">
+            Not an admin
+          </p>
+          <p className="text-[#F1FFFF] text-lg font-semibold mb-2">
+            Signed in as {user.email}
+          </p>
+          <p className="text-sm text-[#9CA3AF] mb-6">
+            This account is not on the admin list. Sign out and sign back in
+            with the email that is.
+          </p>
+          <button
+            type="button"
+            onClick={async () => {
+              await supabase.auth.signOut();
+              setUser(null);
+              setDenied(false);
+              setShowAuth(true);
+            }}
+            className="rounded-full bg-white/5 border border-white/10 text-[#F1FFFF] hover:bg-white/10 px-6 py-2.5 text-sm font-medium transition"
+          >
+            Sign out
+          </button>
+        </div>
       </div>
     );
   }
@@ -280,12 +363,20 @@ export default function AdminRecruitPage() {
                 Applications
               </h1>
               <span className="text-[11px] font-mono text-[#6B7280] tabular-nums">
-                {applications.length} total
+                {activeApps.length} total
                 {pendingCount > 0 && (
                   <>
                     <span className="opacity-50 mx-2">·</span>
                     <span className="text-[#FFD166]">
                       {pendingCount} pending
+                    </span>
+                  </>
+                )}
+                {archivedApps.length > 0 && (
+                  <>
+                    <span className="opacity-50 mx-2">·</span>
+                    <span className="opacity-70">
+                      {archivedApps.length} archived
                     </span>
                   </>
                 )}
@@ -301,22 +392,15 @@ export default function AdminRecruitPage() {
             label="Export"
           />
           <ToolbarButton
-            onClick={handleSheetsSync}
-            disabled={syncing}
-            icon={
-              <Download
-                className={`w-3.5 h-3.5 ${syncing ? "animate-spin" : ""}`}
-              />
-            }
-            label="Sheets"
-          />
-          <ToolbarButton
             onClick={() => fetchData()}
             icon={<RefreshCw className="w-3.5 h-3.5" />}
             label="Refresh"
           />
         </div>
       </motion.header>
+
+      <SheetsSync />
+      {loadError && <p role="alert" className="text-red-400 mb-4">{loadError}</p>}
 
       {/* Tabs — segmented control */}
       <div className="mb-5">
@@ -329,7 +413,7 @@ export default function AdminRecruitPage() {
         >
           <SegmentTab
             label="List"
-            count={applications.length}
+            count={activeApps.length}
             active={tab === "dashboard"}
             onClick={() => setTab("dashboard")}
           />
@@ -370,11 +454,11 @@ export default function AdminRecruitPage() {
             style={{ background: "rgba(255,255,255,0.015)" }}
           >
             <FilterBar
-              positions={positions.map((p) => ({ slug: p.slug, title: p.title }))}
-              onFilterChange={setFilters}
+              positions={activePositions.map((p) => ({ slug: p.slug, title: p.title }))}
+              onFilterChange={(next) => { setFilters(next); setVisibleCount(50); }}
             />
             <span className="text-[10px] font-mono text-[#6B7280] tabular-nums whitespace-nowrap">
-              {filtered.length} / {applications.length} shown
+              {filtered.length} / {activeApps.length} shown
             </span>
           </div>
 
@@ -387,7 +471,7 @@ export default function AdminRecruitPage() {
                 </p>
               </div>
             ) : (
-              filtered.map((app) => (
+              filtered.slice(0, visibleCount).map((app) => (
                 <ApplicantCard
                   key={app.id}
                   application={app}
@@ -403,19 +487,35 @@ export default function AdminRecruitPage() {
               ))
             )}
           </div>
+          {filtered.length > visibleCount && <button className="m-4 min-h-11 px-4 border border-white/20 rounded-md" onClick={() => setVisibleCount(count => count + 50)}>Show next {Math.min(50, filtered.length - visibleCount)} applications</button>}
         </section>
+      )}
+
+      {tab === "dashboard" && (
+        <div className="mt-4">
+          <ArchivePanel
+            applications={archivedApps}
+            positions={archivedPositions}
+            currentUserEmail={user?.email ?? ""}
+            onStatusChange={handleStatusChange}
+            onTagsChange={handleTagsChange}
+            onNoteTextChange={handleNoteTextChange}
+            onRelease={handleRelease}
+            onDelete={handleDelete}
+          />
+        </div>
       )}
 
       {tab === "board" && (
         <RecruitBoard
-          applications={applications}
-          positions={positions}
+          applications={activeApps}
+          positions={activePositions}
           onStatusChange={handleStatusChange}
         />
       )}
 
       {tab === "insights" && (
-        <RecruitInsights applications={applications} positions={positions} />
+        <RecruitInsights applications={activeApps} positions={activePositions} />
       )}
     </div>
   );

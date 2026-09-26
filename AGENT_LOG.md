@@ -21,13 +21,19 @@
 
 All 13 deliverables shipped, QA Wave 14 PASS (commit `001eea8`), zero lint regressions. Sprint log preserved in the table below.
 
-## Current — Two Tracks (updated 2026-07-22)
+## Current — Sept 2026 launch: fall hiring round + gamified apply (set 2026-09-02)
 
-**World track (David's standing loop, active since 2026-07-14):** find visual inconsistencies + game-feel ideas, implement, screenshot-QA, repeat. Queue lives in the build entries below + `specs/asset-flags.md`. Next up: cliff system (river-kit archive `7143205` is the prep), lighting-chemistry final verdict, brick plaza, plaza stalls, seasonal variants.
+**Read `STATE.md` first.** David's ruling 2026-09-02: the Sept launch is the **fall exec hiring round** (VP Marketing + PM, public, Sept 5-11) with a **gamified "character sheet" application** prototype (class quiz → quest-framed form → character card). The member game world is **pushed back**; its tip is parked on `feat/acnh-tile-grid` (QA Wave 35 was the last entry). Single agent session covers build + qa + reviewer.
 
-**Launch track (new, spec: `specs/sprint-2026-08-launch-track.md`):** get real members in for the August exec beta → Sept fall-onboarding launch (David's anchor, 2026-07-22). L1 migrations apply + verify, L2 deploy safety ruling, L3 content seeding as CMS dry-run, L4 beta cohort onboarding, L5 feature-loop prod verification, L6 mobile LITE presence. Blockers are David rulings: migration hold, deploy gate, cohort + date.
+| # | Deliverable | Status |
+|---|-------------|--------|
+| H1 | Repo hygiene: STATE.md, CLAUDE.md/AGENT_LOG refresh, untrack root node_modules, close PR #9, RLS on `bounty_deliverables` | ✅ PR #15 merged; RLS migration 026 written, apply blocked on the DB restore |
+| R1 | Migration `027_recruitment_fall_2026.sql`: retire May rows, fresh `vp-marketing` + `pm` rows, Sept 5-11 window | ✅ written (PR #16); apply blocked on the DB restore + David's essays |
+| R2 | Round copy: role content for `pm`, student landing positions + deadline, dev scripts repointed | ✅ PR #16 |
+| G1 | ~~Character sheet prototype in the web form~~ rejected 2026-09-02; replaced by the **applicant world** (plan in the build entry; branch `feat/apply-world`) | in progress |
+| QA | gates on PR #16 (round setup) green; world QA pending | in progress |
 
-## Previous Sprint — Admin Tooling CRUD ✅ CLOSED (Wave 15)
+## Previous Sprint — Admin Tooling CRUD (started 2026-05-27)
 
 Spec: `specs/sprint-2026-06-admin-tooling.md`. Builds CRUD forms on top of the content pipeline (B3 API routes + B4 listing pages). 6 deliverables (C1-C6), ~4 week window.
 
@@ -107,6 +113,178 @@ Example: `[build] settings: split into 4 tabs (Profile/Social/Appearance/Account
 ---
 
 ## build
+
+### 2026-09-18 (night) — Project tabs for PMs (PR #39)
+
+David: a tab per project so each PM sees who ranked their project in the top 3. Rulings: full application plus rank and reason, fixed rows for comments, unranked developers stay in the Developers tab only. `recruitment_sheet_project_rows (application_id, project, project_row)` is filled by the same `private.assign_recruitment_tab_rows` function (picks parsed from `__project_choice_1..3`, partner = text before " ("), backfilled and re-queued by migration `20260918230000`. Worker: `PROJECT_TABS` (partner → short tab name), `projectHeaders`/`projectRow` (name, email, their rank, reason, then the developer columns minus the duplicate reason), tabs created whenever the developer role is live, ordered after Marketing. Migration applied via the management API; workbook brought to shape by a direct worker run.
+
+### 2026-09-18 — Reviewer tabs for the 15 PMs/VPs (PR #36)
+
+David: reviewers read applications in Google Sheets; five tabs (All applicants + one per live role), readable, no ID-type columns; discussion via Sheets comments. Design consequence: comments anchor to cells, so rows must be fixed per application in every tab and reviewers must be Commenters. Migration adds `position_id`, `tab_row`, `all_row` to `recruitment_sheet_rows` with an AFTER INSERT trigger (`private.assign_recruitment_tab_rows`, advisory-locked, unique indexes as backstop), backfills live rounds in submission order, and re-queues every row. `lib/recruitment-sheet-tabs.ts` builds headers/rows (HYPERLINK formulas for resume/LinkedIn/portfolio, leading-apostrophe guard for answers that look like formulas, Toronto submitted time) and the one-time formatting requests. `syncRecruitmentSheet` writes the tabs after the master rows (same retry semantics), creates missing tabs with formatting, hides the master, deletes legacy tabs, signs resume/portfolio links for 45 days per delivery. Deploy order: code first, then the migration (it re-queues all rows for the new worker). Tests: 17 sheet tests, vitest total green.
+
+Follow-up the same evening (PR #38): the first live delivery failed because the structural batch hid the master and deleted the stage tabs before adding the new ones (Google: "You can't remove all the visible sheets"); now adds first. Every live role's tab is created on each delivery even with zero applicants (Marketing), and tabs are kept in David's order (All applicants, Developers, Internal, External, Marketing). Because Vercel never promoted the #36 deployment to the domain, the workbook was brought to its final shape by running the worker directly from this machine (esbuild bundle of `lib/google-sheets.ts`, same credentials and lease); prod deliveries take over once the fix is live.
+
+### 2026-09-18 — Developer project cards: partner logos, one column, rank pill (PR #34)
+
+David: "this ui sucks for the project desc and ranking. find logo, monochrome it, make it svg." The two-column layout (rank list left, accordion right) is replaced by one shared `ProjectCards` component: logo, partner + project, chevron opens the brief inline, a "Rank" pill on the application step (1st/2nd/3rd, tap again to remove; disabled when three are picked). `DeveloperProjects` (role page, village overlay) renders the same cards read-only. Styling on the `--app-*` tokens so the cream sheet and dark form both work.
+
+Logos (`public/logos/partners/*.svg`, single colour, drawn as a CSS mask in `currentColor`): BGC London traced from the site's WebP; ArkAid traced from the site PNG, cropped to the ark mark; Grand Theatre traced from the white wordmark PNG's alpha; Brain Tumour Foundation's flag SVG recoloured and cropped to the flag; Growing Chefs' inline SVG with the brown wordmark paths removed. Tools: potrace, ImageMagick, rsvg-convert. tsc clean, vitest 351/351, build green, Playwright screenshots of both views.
+
+### 2026-09-18 — Outage: Postgres instance starved; restart + load reductions + fail-fast (PR #33)
+
+Timeline and cause in `STATE.md` ("Outage 2026-09-18"). Diagnosis path that worked while the SQL editor and CLI could not connect: Vercel `get_runtime_errors` → Supabase management API `health` (all UNHEALTHY) → `POST /restart` → `postgres_logs` via `analytics/endpoints/logs.all` → `pg_stat_statements` via `database/query`. Token = Supabase CLI keychain entry (`go-keyring-base64:` + base64 of `sbp_…`).
+
+Changes: `lib/supabase/fetch-timeout.ts` (20 s `AbortSignal.timeout` on the server and admin clients; a 5 MB resume download fits), `/api/positions` last-good cache (30 s fresh, stale copy on error with `x-positions: cached|stale`, 503 instead of 500 when nothing is cached), `application-draft.ts` debounce 3 s, cron schedule file updated (`*/5`, prune job). Prod cron altered directly via `cron.alter_job` / `cron.schedule`. tsc clean, vitest 351/351, build green.
+
+### 2026-09-17 (night) — HOTFIX: server whitelist rejected ranking submissions
+
+Live e2e of the ranking feature (synthetic applicant through the real prod form) caught a submit failure: `recruitment-validation.ts` keeps its own META_IDS whitelist, separate from ApplicationForm's, and the four `__project_choice_*` IDs weren't in it — "Unknown application question" on submit for anyone who ranked. Applicants who skipped ranking were unaffected; drafts of affected applicants persist. Fix: whitelist the four IDs + regression test (vitest 351/351). Lesson recorded: essay_answers meta IDs live in THREE places — ApplicationForm.tsx, ApplicantCard.tsx, recruitment-sheet-data.ts — plus the validation whitelist in recruitment-validation.ts; grep for one existing ID (e.g. `__past_projects`) before adding a new one.
+
+### 2026-09-17 (evening) — Developer project ranking: optional top-3 picks + reason
+
+David ruled: developer applicants can rank their top 3 of the 5 projects, fully optional (0-3 picks all submit), one overall reason box capped at 50 words, and the 7 already-submitted developer applications stay as they are. Implemented as a tap-to-rank card (`ProjectChoices.tsx`) on the Questions step, developer slug only; David then asked for ranking and project info in one section, so the card is two columns — ranking left, description dropdowns right (`DeveloperProjects embedded` variant), stacking on mobile — and the standalone accordion above the form was removed (the role page / island read-only view keep theirs). Picks stored in `essay_answers` under `__project_choice_1..3` + `__project_choice_reason` (same reserved-ID convention as portfolio/past-projects), no migration. Review step gets a "Project choices" section; ApplicantCard renders the picks; the Google Sheet gains 4 columns (`recruitment-sheet-data.ts` META), widening the master tab from BN to BR — **after deploy, requeue all rows (`update recruitment_sheet_rows set synced_at = null`) so existing rows realign under the new headers**. Draft-hydration sanitizes picks against the known partner list. New unit tests for toggle/sanitize; vitest 350/350; build passes; ranking, cap-at-3, unrank compaction, 50-word validation and review section verified in the village sheet preview via Playwright.
+
+David: "make the formatting of the google sheet separated by page for each application phase" → ruled one tab per pipeline stage for live rounds plus Archived rounds. Implemented as `SHEET_VIEWS` (`web/lib/recruitment-sheet-data.ts`): each page holds `=IFERROR(SORT(FILTER('Recruitment records'!A2:BN, Status=stage, Archived="No"), 2, TRUE), ...)`; the delivery worker (`syncRecruitmentSheet`) adds missing pages with a frozen header and rewrites header + formula after the master write, so a failure retries the same delivery. Test added; vitest 344/344. After deploy, all 71 rows were re-queued and one admin-triggered sync created the pages on the live workbook. PR #26.
+
+Copy (PR #27): "Welcome to Tech for Social Impact" (WelcomeOverlay, ApplicantIsland, VillageUIPreview); questions-step note → "Do not use AI for the written questions. The president is chronically on Claude and he can tell if you Claude your answers. We'd rather see a broken English response with thought behind your answers than slop."
+
+Housekeeping: the Mac mini keeps producing Finder-style " 2" copies of recently written files (about 330 this week, including a copy of the delivery migration and of test files). Identical copies were deleted. Copies that differ from their tracked original were left untracked for David: `specs/director-developer-round 2.md`, `specs/recruitment-deployment-readiness-2026-09-17 2.md`, `web/components/game/Seagulls 2.tsx`, `web/components/recruit/RecruitmentEntry 2.tsx`, `web/components/recruit/ui/index 2.tsx`, `web/lib/game/audio.test 2.ts`, `web/lib/google-sheets.test 2.ts`, plus two deployment logs.
+
+### 2026-09-17 — Live release, Sheets delivery and immediate new round
+
+Deployed PR #23 (`4ab7f63`) and whitespace-only Google destination fix PR #24 (`f0616f5`) to www.tethos.ca. Production build and 339 tests passed. Applied only recruitment delivery migration (remote ledger 20260917160347) and its minute scheduler (20260917161307); parked game migrations remain unapplied. Google workbook auto-creation recovered correctly after trimming the existing newline-only ID.
+
+Live verification: all 68 existing applications delivered; a synthetic internal application's multiline answer and later update were read back from its fixed row. Deleted only that synthetic application/position. The minute job cleared its row, returned HTTP 200 without timeout, and left zero pending; all 68 real applications remain. Authenticated Dia admin shows zero waiting and the workbook link. Production island, HQ, board and protected-route checks pass. No applicant email was sent. Actual applicant form submission/resume upload/email delivery were not exercised live; timeout/race recovery is covered by local SQL/unit tests rather than a forced production outage.
+
+David then explicitly requested opening immediately, archiving PM/VP Marketing and pushing quieter world-first laptop entry. Production roles opened at **2026-09-17 12:17:10 Toronto (16:17:10Z)**; September 23, 11:59 PM Toronto deadline is unchanged. PM and VP Marketing are archived, preserving all applications; current unarchived round has zero applications at verification. This supersedes the earlier 3 PM opening. Follow-up code sends laptops directly into the existing applicant island, retaining mobile/reduced-motion forms and the explicit `?view=form` escape. Applicant music gain is 0.18; SFX gain 0.25, with a further 0.35 gain for running/landing/jumping. Saved volume settings and member-world levels are preserved.
+
+Operational follow-up: Google consent identified a Testing app. Verify OAuth publishing status or renew before the documented seven-day token expiry; queued applications remain in Supabase if Google access expires. Full repository lint retains known debt (68 errors/52 warnings against previous main 74/53); focused changes pass. New externally-created ` 2` duplicate files appeared untracked during release and are preserved, excluded from staging. Exact follow-up code verified in an isolated checkout: production build and all 343 tests pass; focused ESLint passes.
+
+
+
+### 2026-09-17 — Authorized production credentials and Vault setup
+
+Verified www.tethos.ca domain on uwotsi.com in Dia. Saved three missing Google OAuth variables and CRON_SECRET as Production-only Secrets. Created matching Vault origin/cron entries; verified presence/equality without returning values. Vercel confirms new deployment required. No code deploy, migration, scheduler or role activation. Sanitized evidence in deployment readiness report.
+
+### 2026-09-17 — Authorized local Google token update
+
+Replaced only GOOGLE_OAUTH_REFRESH_TOKEN in web/.env.local on explicit permission; other bytes preserved. Fresh OAuth/folder access checks pass; local dev env reloaded. Production unchanged. Updated sanitized readiness evidence, removed temporary token copy.
+
+### 2026-09-17 — Renewed Google credential verified live
+
+Consent completed. Actual Google authorization/folder permissions, synthetic write/readback, repeated RAW row update and clearing pass. Test workbook trashed, no applicants touched. New token remains in protected temp file, local env permission requested. Production schema/scheduler/configuration still pending; testing-app token lifetime documented in readiness report.
+
+### 2026-09-17 — Confirmed round dates and Google reconnect
+
+Updated local four-role date source and inactive preparation payload: Sep 17 15:00 to Sep 23 23:59 Toronto/EDT. Opened existing Google consent in Dia; user consent pending. Existing OAuth script now offers protected token-file output without env changes, state validation and safe errors. Role tests/dry run and invalid-state rejection pass; no production writes.
+
+### 2026-09-17 — Main deployment preparation and truthful Sheets health
+
+Strengthened existing admin delivery health with real OAuth/destination checks, safe failure messages, bounded OAuth transport and read-only deployment diagnostic. Build/338 tests/focused lint pass; local SQL suite passes 300-record queue/race/permission checks. Main baseline lint 74 errors vs checkout 68. Production delivery schema/scheduler/new roles absent; checkout Google invalid_grant; Vercel access unavailable. Await reconnect and dates; no production mutations or deployment. Full rollout order/evidence: `specs/recruitment-deployment-readiness-2026-09-17.md`.
+
+### 2026-09-17 — Researched clubhouse layout and restrained feedback
+
+Approved sage/cream/wood direction; researched primary interior/lighting guidance and visually inspected Pinterest references. Centered board, shared furniture/collision placement, clear circulation, grouped original lounge/rug, bookshelf against wall, appropriately sized task lamps and original white pendants. Reused advanced ToastHub/queue (source worktree unchanged) for existing pickup events; smaller objective-aware arrows and subtle board hover feedback. TypeScript/lint/90 tests, asset audit, Dia board and night/evening checks pass. Local only; see `specs/clubhouse-refinement-2026-09-17.md` for sources, screenshots and limits.
+
+### 2026-09-17 — Lightweight terrain surfaces and original HQ lounge
+
+Applicant grass/path/beach materials now have corrected texture scale, subtle grain and coordinated sage/earth/cream colors; existing water shader uses the original 128px sea-normal texture for fine ripples and quieter rings. Removed applicant acorn rug/art; original cream sofa, wood table, tea set, books and lamp form a lounge with collision-safe board access. Four models total 534 KiB. TypeScript, focused lint, 84 tests, source-asset audit and Dia pixel/smooth visual checks pass. Local only. Details: `specs/applicant-surfaces-and-lounge-2026-09-17.md`.
+
+### 2026-09-17 — Cozy lighting, adaptive appearance and shoreline interactions
+
+Applicant HQ has phase-based warm lamp pools and an original-source reading area; clock is against the wall with a compact scene-anchored proximity countdown. Existing fireflies are smaller and wander independently around 22 bush anchors; shoreline-derived targets reuse the full fishing system. Recruitment UI/loading follow system light/dark appearance, with Toronto-time accents. TypeScript, focused lint, 34 tests and asset/primary-contrast checks pass. Dia verified the night exterior and furnished HQ; final proximity/theme-switch/fishing walkthroughs remain unverified after computer control was blocked on the current browser URL. No deployment. Research, original-asset import commands and verification limits: `specs/cozy-lighting-and-adaptive-ui-2026-09-17.md`.
+
+### 2026-09-17 — Original HQ furniture texture restoration
+
+Recovered missing variant albedos and UVs from existing source DAE/PNG assets for eight furniture GLBs. Original positions/normals retained; reproducible recovery script checks triangle correspondence. Applicant-only cream/sage/parquet and neutral/warm lighting pass, static furniture shadows, bookshelf/mat orientation polish. TypeScript/lint/7 focused tests and asset audit pass. Dia verifies texture detail, board, clock and entry/exit. See `specs/hq-interior-polish-2026-09-17.md`. Local only.
+
+### 2026-09-16 — Golden HQ windows and existing fireflies
+
+Applicant glass is solid golden/emissive with warm window/porch spill. Reused real `acnh/critters/firefly.glb`, existing AmbientLife drift/pulse and existing sun texture for halo; night/evening populations near HQ, reduced in lite. No newly generated model. Material isolation regression plus 20 focused tests, TypeScript and lint pass. Visual check pending due Dia connector timeouts and concurrent user input during native fallback. Report records exact settings and limitation; no push/deploy.
+
+### 2026-09-16 — Applicant graphics continuation
+
+Reused existing blob shadows for applicant/Jayden and low-opacity plant contact shading; recalibrated haze, cached 2048 shadow map, applicant-only sand albedo correction and smooth-only FXAA in the existing composer. Visual QA caught and fixed merged-effect ordering artifacts. 43 tests, TypeScript, focused lint and Dia phase/quality checks pass. Large-window smooth performance remains below a proven 60 FPS; development samples and screenshots documented in `specs/applicant-lighting-2026-09-16.md`. Local only.
+
+### 2026-09-16 — Applicant island lighting research and implementation
+
+Reused PostFX, aerialFog, PMREM environment, terrain materials/normals/blends, CloudShadows and Lantern after inspecting the advanced worktree. Coordinated phase palettes; corrected grass/dirt and compressed source soil marks; softer cached shadows with invalidation; per-scene environment ownership and regression tests. Primary Nintendo/Monolith art evidence is distinguished from rendering inference. Report: `specs/applicant-lighting-2026-09-16.md`, comparison images alongside. TypeScript/focused lint/41 tests and Dia phase/quality/HQ walkthrough pass. Local only; member worktree unchanged; no full production build or low-end hardware benchmark claimed.
+
+### 2026-09-16 — Applicant characters, furniture and landscape
+
+Latest appearance correction: keep the same Quaternius pack/style, but use Casual2_Male for the player with distinct blond hairstyle, warm light skin, green shirt, navy trousers and dark facial details. Jayden stays unchanged. Source geometry/animations preserved; independent model asset player.gltf. Dia visual verification and TypeScript, focused lint, two animation tests pass.
+
+Latest follow-up: David explicitly requested the same character as Jayden for the player. Both now use Quaternius Casual_Male (`jayden.gltf`) with independent cloned skeletons and animation mixers. The procedural default human is removed. Verified matching models in Dia.
+
+Latest user correction: original default human player, supplied CC0 Jayden guide and casual dialogue. Fixed recruitment furniture tilt and clock glass, added proximity countdown, removed middle river/bridge, expanded foliage and added direction arrow. Dia visual and dialogue/countdown checks pass; 37 focused tests, TypeScript and lint pass. Dates unset; no push/deploy. See latest STATE.md and vault session.
+
+### 2026-09-16 — Interrupted chat recovery and resumed QA
+
+Recovered the latest source transcript and preserved all local work. Dia preview journey reaches rehearsal completion and returns to board. Fixed destination cue wrapping, stale essay error clearing and botanical texture batch preloading. Fresh 88 targeted tests, TypeScript and focused lint pass. No production writes/push/deploy; live auth/persistence/Sheets and release checks remain. See latest STATE.md and vault recovery checkpoint.
+
+### 2026-09-16 — Recruitment UI kit and application safety (local)
+
+- Adapted supplied UI references to Tethos palette/type; dev-only showroom and nearly fullscreen real application sheet. R4 direct mobile, R5 single scroll+review confirmed.
+- Hardened draft saves, close/recovery, duplicate receipts, failed-load protection and submitted-draft suppression; preserved backend delivery work.
+- Final:44targeted mocked tests, TypeScript and focusedlint pass; Dia desktop/form/mobile-width interaction checks. No real submission/Google integration, full build or load test claimed. Details: `specs/director-developer-round.md`, `specs/recruitment-ui-kit.md`.
+- No commit/push/deploy, production migration/activation or real emails. Main-world gate and complete revised island remain pending.
+
+### 2026-09-05 (QA fix) — Login routing (`fix/hamburger-login`, PR #18, merged)
+
+QA: a signed-in applicant clicking the hamburger "Log in" landed on `/student/onboarding`. Cause: the link went to `/student/login` (member terminal); the middleware bounces signed-in users to `/student/dashboard`, which demands member onboarding. David's rule: admins → game portal with the recruitment board, applicants → application portal.
+
+- `/student/go` (route handler): admins (email whitelist) → `/student/dashboard`, everyone else → `/student/apply/dashboard`. The apply dashboard's AuthModal now redirects through `/student/go`.
+- `DropdownNav`: "Log in" → `/student/go`; signed in: "My applications" (applicants) or "Game portal" + "Admin dashboard" (`/student/dashboard/admin/recruitment`) for admins. `/api/admin/me` returns `signedIn` + `isAdmin`.
+- Portal `Sidebar` and the in-portal recruitment tab accept whitelisted admins as well as T1/T2. David's Google profile set to tier 1 (was 4).
+- Verified with Playwright (signed out / applicant / admin) locally and the signed-out path on prod after deploy.
+
+### 2026-09-05 (later) — Round opened, migrations applied, copy from the Hiring Descriptions doc, admin menu link
+
+Supabase came back ~06:25 UTC. Sequence with David watching: 027's data half applied via `scripts/_apply-fall-2026-positions.mjs` (idempotent, guarded rename), fall rows to internal test mode (`_fall-2026-test-mode.mjs on`), then David ruled both roles public → `_apply-fall-2026-essays.mjs` (questions + active + public). David ran 028 + 026 in the SQL editor at 06:49 UTC (a Playwright-driven SQL editor window was tried first; computer-use is read-only for browsers and he closed the window).
+
+**Copy:** VP Marketing became the "Polished" Video & Content posting from David's "Hiring Descriptions" Google Doc, then trimmed on his review: title back to "VP Marketing", tagline "responsible for the video marketing side of TSI", note box removed, question "Submit a video that convinces us you're the candidate for this role" with the upload block relabelled "Your video". May's VP Marketing copy lives under the `vp-marketing-may26` key. PM "who fits" reworded (tech foundation / leadership / organized / consistent) on a `pm`-specific object so May's archived copy is untouched.
+
+**Admin access:** `/api/admin/me` (server-side whitelist check) + an "Admin dashboard" entry in `DropdownNav` for admins, re-checked on every route change.
+
+**Verified against the real DB** (`scripts/_e2e-fall-2026.mjs` on a side-effect-free `next start -p 3100` with sheet sync + email env blanked): two throwaway applicants submitted through `/api/resume-sign` + `/api/applications` for both roles, duplicate blocked by the unique constraint, admin GET/PATCH ok, anonymous 401, admin page + dashboard render, everything created deleted again and the admin session revoked. After 028: admin API 30 rows = 29 archived + 1 live (David's own test PM application), panel shows May 2026 → 5 roles. Note `applications.phone` is NOT NULL (the form sends ""), and there is no `resume_storage_path` column (the path lives inside the signed URL).
+
+**Left for David:** real PM questions (placeholders are live); delete his test application; merge PR #16 so tethos.ca serves the new copy; `RECRUITMENT_EMAILS_ENABLED=true` in Vercel before the first release batch.
+
+### 2026-09-05 — Pivot: fall round ships on the plain form; May round archived (`feat/fall-2026-apply`, PR #16)
+
+David (2026-09-05): no time for the applicant world this round. "Same process as before, just switch the roles, make sure it connects to the admin database, archive the old round with a collapsed field on the admin page." PR #17 stays a parked draft. Rulings: archived cards keep notes + tags only; hold the round until his questions land; archive collapsed under the live list.
+
+**Done on this branch:**
+- Guild leftovers from the rejected form-side prototype removed (`lib/guild.ts`, `recruit/guild/classIcons.tsx`, dashboard class chip, admin class row, CSV `class` column). Form, submit route, drafts, dashboard and admin board are May's code unchanged; 027 only swaps the position rows.
+- Migration `028_recruitment_archive.sql`: `positions.archived_at` + index, stamps `vp-internal`, `vp-external`, `vp-marketing-may26`, `pm-internal`, `advisor`; replaces the applicant positions SELECT policy with an EXISTS on the caller's own applications so the student dashboard's `position:positions(*)` join keeps resolving for May applicants after 027 deactivates their rows.
+- `lib/recruitment.ts`: `Position.archived_at`, `isArchivedApplication`, `roundLabel` (month + year of `closes_at`, Toronto time).
+- `components/admin/ArchivePanel.tsx`: collapsed "Archived rounds" section under the live list, grouped round → role, count pill per role, same `ApplicantCard` with the new `archived` prop (verdicts, release, delete hidden; notes and tags editable). Admin page splits `activeApps`/`archivedApps`; list, board, insights, filters, pending count and release-all only see active. Header shows `· N archived`. CSV export gains `archived`.
+- 027 now lands both fall rows **inactive**. New `scripts/_apply-fall-2026-essays.mjs` writes the questions and activates both slugs in one run.
+
+**Verified:** tsc clean · build green · Playwright against `next start` with a forged session cookie and a mocked `/api/applications` (11 apps over 7 positions): header "4 total · 1 pending · 7 archived" (archived draft not counted), archive expands May 2026 → roles → cards, no Release/Delete controls inside, board shows only live rows.
+
+**Blocked on David:** essay questions; Supabase still unreachable from the dev machine (nothing applied or tested against the real DB); apply 026 → 027 → 028, run the essays script, set `RECRUITMENT_EMAILS_ENABLED=true` in Vercel before the first release.
+
+### 2026-09-02 — Fall 2026 round setup (`feat/fall-2026-apply`, PR #16) + pivot to the applicant world
+
+David's rulings for the Sept launch (see `STATE.md`): fall hiring round for **VP Marketing + PM**, both public, **Sept 5-11**.
+
+**Round (R1/R2):** migration `027_recruitment_fall_2026.sql` retires the May rows (`vp-marketing` → `vp-marketing-may26`, title suffixed; everything `is_active=false`), inserts a fresh `vp-marketing` row and takes over the 001-seeded `pm-general` row as `pm`. New rows because `applications` has `UNIQUE(user_id, position_id)` (reusing rows would block May applicants from reapplying) and the admin board has no round filter. Essays are May's as placeholders until David pastes the fall set. `ROLE_CONTENT.pm` aliases the PM copy; the student landing page's static positions + "close May 12" line now say VP Marketing / Project Manager, Sept 5-11; `_toggle-apps-open` and `_update-application-dates` point at the new slugs; `UpcomingCTA` gained the missing `America/Toronto` timezone.
+
+**Pivot (same day):** a form-side "character sheet" prototype (class quiz step, quest rail, applicant card) was built, screenshotted and rejected by David: the application should happen **inside a game world**, reusing the portal's code. The form-side layer was removed from this PR before merge; `lib/guild.ts` (class logic), the dashboard class chip, the admin "Class (cosmetic)" row and the CSV `class` column stay for reuse. The world plan is in the next entry.
+
+**Gates at push:** tsc clean · lint 74 errors (= baseline) · vitest 32/32 · build green.
+
+**Blocked on David:** fall essay questions; Supabase project restore (paused since July, still not resolving); merge + apply 026/027 + `RECRUITMENT_EMAILS_ENABLED` in Vercel before Sept 5.
+
+### 2026-09-02 — Applicant world: plan (David-confirmed, build starts on `feat/apply-world`)
+
+1. `/student/apply` becomes a landing with one Enter button; role pages stay readable, their Apply says Enter; existing AuthModal pops if signed out. Desktop only: phones get "open this on a laptop" + copy link.
+2. First entry: character creation (name, year, program, email prefilled) saved to the member `profiles` row so a hired applicant carries the character into the member world. Sprite: current sheet until David supplies a new one; code accepts variants.
+3. Dedicated mini island from the world's own parts (terrain patch, road tiles, trees, sky/lighting fixed at late afternoon, the HQ GLB). WASD popup on spawn, chevrons along the one road, fences + invisible clamp, a marker over the HQ door. Nothing from the member island loads.
+4. HQ interior = Recruitment Office: one desk per active position (live from `/api/positions`), a named recruiter NPC per desk. E at a desk: greeting, role blurb, Apply.
+5. Apply = the existing 4-step `ApplicationForm` as a sheet over the world (OverlaySheet system, current game panel style; David's Figma reskins later). Resume upload unchanged. Desk shows "Applied, in screening" on re-entry; web dashboard keeps working.
+6. Calendar: Sept 5 opens on the plain form (this PR). The world ships when David signs off.
 
 - 2026-09-07 Codex: park bench restored upright with original UV/wood-metal texture; common bench repair script preserves scale. Seated sprite alignment/one-time position report/quick-key exit repaired. Dia inspector + local player/log/park checks clean, 405 tests/types/lint/build pass. No backend transport in fixture. Next inspect park clock. See checkpoint and park bench provenance.
 

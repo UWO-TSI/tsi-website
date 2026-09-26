@@ -34,15 +34,25 @@ import { parseAdminNotes } from "@/lib/admin-notes";
 // has no dedicated columns for them.
 const META_OTHER_LINKS_ID = "__profile_other_links";
 const META_COMMITMENTS_ID = "__profile_commitments_next_year";
+const META_PAST_PROJECTS_ID = "__past_projects";
 const META_PORTFOLIO_FILES_ID = "__portfolio_files";
 const META_PORTFOLIO_LINK_ID = "__portfolio_link";
 const META_CREATIVE_PIECE_FILES_ID = "__creative_piece_files";
+const META_PROJECT_CHOICE_IDS = [
+  "__project_choice_1",
+  "__project_choice_2",
+  "__project_choice_3",
+];
+const META_PROJECT_REASON_ID = "__project_choice_reason";
 const META_IDS = new Set([
   META_OTHER_LINKS_ID,
   META_COMMITMENTS_ID,
+  META_PAST_PROJECTS_ID,
   META_PORTFOLIO_FILES_ID,
   META_PORTFOLIO_LINK_ID,
   META_CREATIVE_PIECE_FILES_ID,
+  ...META_PROJECT_CHOICE_IDS,
+  META_PROJECT_REASON_ID,
 ]);
 
 interface MetaFile {
@@ -101,6 +111,8 @@ interface ApplicantCardProps {
   onNoteTextChange: (id: string, text: string) => void;
   onRelease: (id: string) => void;
   onDelete: (id: string) => void;
+  /** Archived rounds: notes and tags stay editable, verdicts, release and delete are hidden. */
+  archived?: boolean;
 }
 
 export default function ApplicantCard({
@@ -113,6 +125,7 @@ export default function ApplicantCard({
   onNoteTextChange,
   onRelease,
   onDelete,
+  archived = false,
 }: ApplicantCardProps) {
   const [expanded, setExpanded] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
@@ -202,11 +215,13 @@ export default function ApplicantCard({
 
         {/* Verdict buttons — internal, become the next student-facing
             status once released. */}
-        <VerdictButtons
-          releasedStatus={application.status}
-          draftStatus={application.draft_status}
-          onChange={(s) => onStatusChange(application.id, s)}
-        />
+        {!archived && (
+          <VerdictButtons
+            releasedStatus={application.status}
+            draftStatus={application.draft_status}
+            onChange={(s) => onStatusChange(application.id, s)}
+          />
+        )}
 
         {/* Status badge — shows the effective verdict (draft if pending,
             else released). The "(draft)" tag makes it obvious the student
@@ -317,6 +332,7 @@ export default function ApplicantCard({
                     const answers = application.essay_answers ?? [];
                     const otherLinks = findMeta(answers, META_OTHER_LINKS_ID);
                     const commitments = findMeta(answers, META_COMMITMENTS_ID);
+                    const pastProjects = findMeta(answers, META_PAST_PROJECTS_ID);
                     const portfolioLink = findMeta(
                       answers,
                       META_PORTFOLIO_LINK_ID
@@ -327,6 +343,10 @@ export default function ApplicantCard({
                     const creativeFiles = parseFiles(
                       findMeta(answers, META_CREATIVE_PIECE_FILES_ID)
                     );
+                    const projectChoices = META_PROJECT_CHOICE_IDS.map((id) =>
+                      findMeta(answers, id)
+                    ).filter((v): v is string => !!v);
+                    const projectReason = findMeta(answers, META_PROJECT_REASON_ID);
                     return (
                       <>
                         {otherLinks && (
@@ -347,6 +367,33 @@ export default function ApplicantCard({
                             <p className="text-[#E5E7EB] whitespace-pre-wrap leading-relaxed">
                               {commitments}
                             </p>
+                          </div>
+                        )}
+                        {pastProjects && (
+                          <div className="text-xs">
+                            <p className="text-[10px] uppercase tracking-wider text-[#6B7280] mb-1 font-mono">
+                              Past projects
+                            </p>
+                            <p className="text-[#E5E7EB] whitespace-pre-wrap leading-relaxed">
+                              {pastProjects}
+                            </p>
+                          </div>
+                        )}
+                        {projectChoices.length > 0 && (
+                          <div className="text-xs">
+                            <p className="text-[10px] uppercase tracking-wider text-[#6B7280] mb-1 font-mono">
+                              Project choices
+                            </p>
+                            <ol className="text-[#E5E7EB] leading-relaxed list-decimal list-inside">
+                              {projectChoices.map((choice) => (
+                                <li key={choice}>{choice}</li>
+                              ))}
+                            </ol>
+                            {projectReason && (
+                              <p className="text-[#9CA3AF] whitespace-pre-wrap leading-relaxed mt-1">
+                                {projectReason}
+                              </p>
+                            )}
                           </div>
                         )}
                         {portfolioLink && (
@@ -476,7 +523,7 @@ export default function ApplicantCard({
                   </div>
 
                   {/* Individual release */}
-                  {hasUnreleased && (
+                  {hasUnreleased && !archived && (
                     <button
                       onClick={() => onRelease(application.id)}
                       className="w-full rounded-lg bg-[#FFD166]/10 border border-[#FFD166]/30 px-3 py-2 text-xs text-[#FFD166] font-mono hover:bg-[#FFD166]/20 transition"
@@ -486,6 +533,7 @@ export default function ApplicantCard({
                   )}
 
                   {/* Delete with two-step confirm */}
+                  {!archived && (
                   <div className="pt-3 mt-3 border-t border-white/5">
                     {!confirmingDelete ? (
                       <button
@@ -523,6 +571,7 @@ export default function ApplicantCard({
                       </div>
                     )}
                   </div>
+                  )}
                 </div>
               </div>
 

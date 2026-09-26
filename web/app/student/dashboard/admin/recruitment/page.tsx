@@ -36,7 +36,12 @@ export default function RecruitmentAdminTab() {
         .select("tier")
         .eq("id", user.id)
         .single();
-      setUserTier(profile?.tier ?? 99);
+      // Whitelisted recruitment admins pass regardless of portal tier; the
+      // /api/applications routes enforce the same whitelist server-side.
+      const me = await fetch("/api/admin/me")
+        .then((r) => (r.ok ? r.json() : null))
+        .catch(() => null);
+      setUserTier(me?.isAdmin ? 1 : (profile?.tier ?? 99));
     }
     fetchTier();
   }, []);

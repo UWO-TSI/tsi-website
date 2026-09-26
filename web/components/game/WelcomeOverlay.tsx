@@ -90,7 +90,7 @@ export function WelcomeCard({ visible, coarse, onDismiss }: { visible: boolean; 
             textTransform: "uppercase",
           }}
         >
-          Welcome to Tethos
+          Welcome to Tech for Social Impact
         </div>
         <button onClick={onDismiss} aria-label="Skip introduction" style={{ minWidth: 44, minHeight: 44, color: "#D1DDE1", border: "1px solid #56666b", borderRadius: 8, fontSize: 11 }}>Skip</button>
         </div>

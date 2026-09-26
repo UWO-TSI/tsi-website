@@ -12,11 +12,15 @@ const NAV_ITEMS = [
   { label: "Companies", href: "/company" },
   { label: "Sponsors", href: "/sponsor" },
   { label: "Students", href: "/student" },
+  { label: "Apply", href: "/student/apply" },
   { label: "Genesis", href: "/genesis" },
 ];
 
 const CONTACT = { label: "Contact", href: "mailto:team@tethos.ca" };
-const LOGIN = { label: "Log in", href: "/student/login" };
+// General account entry is the applicant village; recruitment administration stays separate.
+const LOGIN = { label: "Log in", href: "/student/go" };
+const ACCOUNT = { label: "Applicant portal", href: "/student/apply/portal" };
+const ADMIN = { label: "Admin dashboard", href: "/admin/recruit" };
 
 /* Spring configs */
 const SPRING_SNAPPY = { type: "spring" as const, stiffness: 500, damping: 30, mass: 0.8 };
@@ -26,6 +30,8 @@ export default function DropdownNav() {
   const [open, setOpen] = useState(false);
   const [pressed, setPressed] = useState(false);
   const [visible, setVisible] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [signedIn, setSignedIn] = useState(false);
   const pathname = usePathname();
   const lastScrollY = useRef(0);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -49,6 +55,23 @@ export default function DropdownNav() {
   // Close on route change
   useEffect(() => {
     setOpen(false);
+  }, [pathname]);
+
+  // Admin link: re-check on every route change so it appears right after
+  // login without a reload. The whitelist stays server-side.
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/admin/me")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (cancelled) return;
+        setIsAdmin(!!d?.isAdmin);
+        setSignedIn(!!d?.signedIn);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
   }, [pathname]);
 
   const handleMouseEnter = () => {
@@ -119,17 +142,16 @@ export default function DropdownNav() {
                 width: open ? 14 : 16,
                 height: 1.5,
                 rotate: open ? 45 : 0,
-                y: open ? 2.75 : 0,
+                y: open ? 5.5 : 0,
               }}
               transition={SPRING_SNAPPY}
             />
             <motion.span
               className="block bg-white/60 rounded-full"
               animate={{
-                width: 12,
+                width: open ? 0 : 12,
                 height: 1.5,
                 opacity: open ? 0 : 1,
-                scaleX: open ? 0 : 1,
               }}
               transition={SPRING_SNAPPY}
             />
@@ -139,7 +161,7 @@ export default function DropdownNav() {
                 width: open ? 14 : 10,
                 height: 1.5,
                 rotate: open ? -45 : 0,
-                y: open ? -2.75 : 0,
+                y: open ? -5.5 : 0,
               }}
               transition={SPRING_SNAPPY}
             />
@@ -244,6 +266,45 @@ export default function DropdownNav() {
                   }}
                 />
 
+                {/* Admin dashboard — only for whitelisted admins */}
+                {isAdmin && (
+                  <motion.div
+                    initial={{ opacity: 0, x: -8 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{
+                      delay: NAV_ITEMS.length * 0.04 + 0.08,
+                      duration: 0.25,
+                      ease: [0.25, 0.1, 0.25, 1],
+                    }}
+                  >
+                    <Link
+                      href={ADMIN.href}
+                      onClick={() => setOpen(false)}
+                      className="group relative flex items-center gap-3 px-5 py-2.5"
+                    >
+                      <motion.div
+                        className="w-1 h-1 rounded-full flex-shrink-0"
+                        animate={{
+                          scale: pathname.startsWith(ADMIN.href) ? 1 : 0,
+                          background: pathname.startsWith(ADMIN.href) ? "#1d9bf0" : "transparent",
+                        }}
+                        transition={SPRING_SNAPPY}
+                      />
+                      <motion.span
+                        className="text-[13px] font-medium"
+                        style={{
+                          fontFamily: "var(--font-highlight)",
+                          color: pathname.startsWith(ADMIN.href) ? "#1d9bf0" : "rgba(255,255,255,0.5)",
+                        }}
+                        whileHover={{ color: pathname.startsWith(ADMIN.href) ? "#1d9bf0" : "rgba(255,255,255,0.8)", x: 3 }}
+                        transition={{ duration: 0.15 }}
+                      >
+                        {ADMIN.label}
+                      </motion.span>
+                    </Link>
+                  </motion.div>
+                )}
+
                 {/* Log in — quiet utility link, same muted treatment as Contact */}
                 <motion.div
                   initial={{ opacity: 0, x: -8 }}
@@ -255,7 +316,7 @@ export default function DropdownNav() {
                   }}
                 >
                   <Link
-                    href={LOGIN.href}
+                    href={signedIn ? ACCOUNT.href : LOGIN.href}
                     onClick={() => setOpen(false)}
                     className="group relative flex items-center gap-3 px-5 py-2.5"
                   >
@@ -269,7 +330,7 @@ export default function DropdownNav() {
                       whileHover={{ color: "rgba(255,255,255,0.7)", x: 3 }}
                       transition={{ duration: 0.15 }}
                     >
-                      {LOGIN.label}
+                      {signedIn ? ACCOUNT.label : LOGIN.label}
                     </motion.span>
                   </Link>
                 </motion.div>

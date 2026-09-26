@@ -13,6 +13,8 @@ import { useGLTF } from "@react-three/drei";
 import { bindGameKeys } from "@/lib/game/keyboardInput";
 import { PIECE_TINTS, type Tint } from "@/lib/game/furniturePalettes";
 import * as THREE from "three";
+import ApplicantCharacter, { type ApplicantMotion } from "@/components/recruit/ApplicantCharacter";
+import { easeFacing } from "@/lib/game/locomotion";
 
 export interface InteriorStation {
   id: string;
@@ -83,12 +85,14 @@ function followInteriorCamera(camera: THREE.Camera, px: number, pz: number, delt
 }
 
 export function InteriorPlayer({
+  avatarMode = "sprite",
   frozen,
   bounds,
   playerPosRef,
   onMove,
   constrainMove,
 }: {
+  avatarMode?: "sprite" | "applicant";
   frozen: boolean;
   bounds: RoomBounds;
   playerPosRef: React.MutableRefObject<THREE.Vector3>;
@@ -96,6 +100,7 @@ export function InteriorPlayer({
   constrainMove?: (x: number, z: number, nx: number, nz: number) => [number, number];
 }) {
   const meshRef = useRef<THREE.Mesh>(null);
+  const applicantMotion = useRef<ApplicantMotion>({ speed: 0, yaw: 0, lift: 0.018 });
   const groupRef = useRef<THREE.Group>(null);
   const posRef = useRef({ x: bounds.spawn[0], z: bounds.spawn[1] });
   const targetRef = useRef<{ x: number; z: number } | null>(null);
@@ -128,6 +133,7 @@ export function InteriorPlayer({
     const delta = Math.min(elapsed, 0.1);
     if (frozen) targetRef.current = null;
     const p = posRef.current;
+    const previousX = p.x, previousZ = p.z;
     let vx = 0, vz = 0;
     if (!frozen) {
       if (keys["w"] || keys["arrowup"]) vz += 1;
@@ -165,6 +171,8 @@ export function InteriorPlayer({
     tex.offset.set(col / SHEET_COLS, 1 - (row + 1) / SHEET_ROWS);
 
     if (groupRef.current) groupRef.current.position.set(p.x, 0, p.z);
+    applicantMotion.current.speed = delta > 0 ? Math.hypot(p.x - previousX, p.z - previousZ) / delta : 0;
+    if (moving) applicantMotion.current.yaw = easeFacing(applicantMotion.current.yaw, Math.atan2(vx, vz), 10, delta);
     if (meshRef.current) {
       const bob = moving ? Math.sin(animRef.current * Math.PI) * 0.04 : Math.sin(performance.now() / 600) * 0.015;
       meshRef.current.position.y = 0.82 + bob;
@@ -174,14 +182,14 @@ export function InteriorPlayer({
 
   return (
     <group ref={groupRef} position={[bounds.spawn[0], 0, bounds.spawn[1]]}>
-      <mesh position={[0, 0.82, -0.012]} scale={[1.07, 1.07, 1]}>
+      {avatarMode === "applicant" ? <ApplicantCharacter motion={applicantMotion} frozen={frozen} walkSpeed={PLAYER_SPEED} /> : <><mesh position={[0, 0.82, -0.012]} scale={[1.07, 1.07, 1]}>
         <planeGeometry args={[1.45, 1.45]} />
         <meshBasicMaterial map={tex} color="#2A2118" transparent opacity={0.55} alphaTest={0.1} side={THREE.DoubleSide} depthWrite={false} />
       </mesh>
       <mesh ref={meshRef} position={[0, 0.82, 0]}>
         <planeGeometry args={[1.45, 1.45]} />
         <meshBasicMaterial map={tex} transparent alphaTest={0.1} side={THREE.DoubleSide} />
-      </mesh>
+      </mesh></>}
       <mesh position={[0, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <circleGeometry args={[0.42, 20]} />
         <meshBasicMaterial color="#000000" transparent opacity={0.18} depthWrite={false} />
