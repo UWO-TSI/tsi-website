@@ -11,13 +11,22 @@ import { useEffect, useState } from "react";
 import { ACTION_LABEL, MENU_ACTIONS, TEXT_SIZES, normalizeKey, type MenuAction, type TextSize } from "@/lib/identity/settings";
 import { keyLabel, saveSettings, setAuraVisible, useWorldIdentity } from "@/lib/game/identity";
 import { ABILITIES, readAbilityKeys, remapAbility, type AbilityId } from "@/lib/game/combat/runtime";
+import { AudioManager, type AudioVolumes } from "@/lib/game/audio";
+import { useAudioState } from "@/lib/game/useAudio";
 import IslandSheet from "../IslandSheet";
 import styles from "../DefaultIslandWorld.module.css";
 
 const SIZE_NAMES: Record<TextSize, string> = { small: "Small", default: "Standard", large: "Large", xl: "Largest" };
+const SOUND_SLIDERS: { key: keyof AudioVolumes; label: string }[] = [
+  { key: "master", label: "Master" },
+  { key: "music", label: "Music" },
+  { key: "ambient", label: "Ambience" },
+  { key: "sfx", label: "Sound effects" },
+];
 
 export default function SettingsSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { settings, signedIn, aura } = useWorldIdentity();
+  const audio = useAudioState();
   const [listening, setListening] = useState<MenuAction | null>(null);
   const [note, setNote] = useState<string | null>(null);
   const [abilityKeys, setAbilityKeys] = useState(readAbilityKeys);
@@ -66,6 +75,20 @@ export default function SettingsSheet({ open, onClose }: { open: boolean; onClos
     </fieldset>
     <label className={styles.toggle}><span>Show my family aura</span><input type="checkbox" checked={aura} onChange={e => setAuraVisible(e.target.checked)} /></label>
     <label className={styles.toggle}><span>High contrast</span><input type="checkbox" checked={settings.high_contrast} onChange={e => void save({ high_contrast: e.target.checked })} /></label>
+    <fieldset>
+      <legend>Sound</legend>
+      {!audio.enabled && <button onClick={() => AudioManager.enable()}>Turn on sound</button>}
+      <label className={styles.toggle}><span>Mute</span><input type="checkbox" checked={audio.muted} onChange={e => AudioManager.setMuted(e.target.checked)} /></label>
+      {SOUND_SLIDERS.map(({ key, label }) => (
+        <div key={key} className={styles.sliderRow}>
+          <label htmlFor={`sound-${key}`}>{label}</label>
+          <input id={`sound-${key}`} type="range" min={0} max={100} value={Math.round(audio.volumes[key] * 100)}
+            aria-valuetext={`${Math.round(audio.volumes[key] * 100)}%`}
+            onChange={e => AudioManager.setVolumes({ [key]: Number(e.target.value) / 100 })} />
+          <span>{Math.round(audio.volumes[key] * 100)}</span>
+        </div>
+      ))}
+    </fieldset>
     <fieldset>
       <legend>Menu keys</legend>
       <ul className={styles.keyList}>{MENU_ACTIONS.map(a => <li key={a}>
