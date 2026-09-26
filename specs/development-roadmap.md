@@ -13,12 +13,12 @@ The coordinator (Claude) runs this without check-ins (David, 2026-09-26): verifi
 | Track | State | Exit check |
 |---|---|---|
 | Production security | **Done.** #40 (profile self-promotion, Gems, email reads) and #41 (portal table writes; marketplace buys via server) merged, deployed and verified in prod | Rolled-back role tests pass in prod |
-| Phase 0: commit, merge `main`, timestamp migrations, push, draft PR | Running | Branch pushed, contains `main` (incl. #40/#41), tsc/tests green, applicant + member island screenshots match |
-| Character outfits + 20 clips on the locked v6 base | Running | Catalogue + evidence sheets, every clip verified |
-| Ponytail cleanup + game-side security (member_collections self-edit → sell exploit, economy_sell retry race, legacy Gem writers, class badges after 034, game code vs the #40 guard) | Next, after Phase 0 | Audit items applied as small commits; exploit tests fail before, pass after |
-| Character in engine (rigged model replaces sprite; creator + wardrobe use the catalogue) | Next, after outfits | Player, residents, applicants on one rig in `/lab/island` and the applicant island |
-| Study in the world | Next | Sit → study → coins → walk away ends session, in the cafe and outdoor tables |
-| Crafting | Next | ~30 recipes learnable and craftable; rods 4–5 unlock |
+| Phase 0: commit, merge `main`, timestamp migrations, push, draft PR | **Done.** 18 commits, contains `main` through #41, 834 tests, draft PR #42 (stays draft until launch) | Branch pushed, contains `main` (incl. #40/#41), tsc/tests green, applicant + member island screenshots match |
+| Character outfits + clips on the locked v6 base | **Done.** 33 parts, 23 clips, catalogue | Catalogue + evidence sheets, every clip verified |
+| Ponytail cleanup + game-side security (member_collections self-edit → sell exploit, economy_sell retry race, legacy Gem writers, class badges after 034, game code vs the #40 guard) | Running (wave B, branch `game/cleanup-security`) | Audit items applied as small commits; exploit tests fail before, pass after |
+| Character in engine (rigged model replaces sprite; creator + wardrobe use the catalogue) | Running (wave B, branch `game/character-engine`) | Player, residents, applicants on one rig in `/lab/island` and the applicant island |
+| Study in the world | Running (wave B, branch `game/study-world`) | Sit → study → coins → walk away ends session, in the cafe and outdoor tables |
+| Crafting | Next free slot | ~30 recipes learnable and craftable; rods 4–5 unlock |
 | Staging Supabase + signed-in E2E (Phase 1) | Blocked on David's Pro upgrade (org still `free` 2026-09-26) | Every Phase 1 flow passes signed in |
 | Phone companion, seasonal events, combat content, chapters 3–4, admin pass | Later waves | Per spec in `specs/` |
 | Launch (Phase 4) | After all of the above | Member playtest, David's local review, migrations in one window |
