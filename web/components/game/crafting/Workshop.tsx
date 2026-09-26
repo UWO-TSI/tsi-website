@@ -46,9 +46,8 @@ export function Workbench({ player }: { player: React.RefObject<THREE.Vector3> }
   useEffect(() => () => { window.dispatchEvent(new CustomEvent("tsi:workbench-near", { detail: false })); }, []);
   return <Suspense fallback={null}>
     <Piece shadows name="counter-register" position={[BENCH.x, 0, BENCH.z]} rotY={Math.PI / 2} scale={0.13} />
-    <GLBProp url="/assets/acnh/props/tool-rod.glb" scale={0.06} position={[BENCH.x + 0.1, 1.05, BENCH.z]} rotation={[Math.PI / 2, 0, 0.3]} />
-    <GLBProp url="/assets/acnh/props/tool-net.glb" scale={0.06} position={[BENCH.x - 0.2, 0, BENCH.z + 1.15]} />
-    <Piece shadows name="barrel" position={[BENCH.x + 0.1, 0, BENCH.z + 1.3]} scale={0.09} />
+    <GLBProp url="/assets/acnh/props/tool-rod.glb" scale={0.085} position={[BENCH.x + 0.15, 1.02, BENCH.z + 0.2]} rotation={[Math.PI / 2, 0, -0.5]} />
+    <GLBProp url="/assets/acnh/props/tool-net.glb" scale={0.085} position={[BENCH.x + 0.6, 0, BENCH.z - 0.75]} rotation={[0.25, Math.PI / 2, 0]} />
     <Piece shadows name="cardboard-pile" position={[BENCH.x, 0, BENCH.z - 1.4]} rotY={Math.PI / 2} />
   </Suspense>;
 }
@@ -62,13 +61,15 @@ export function BeachBottle({ player, ground }: { player: React.RefObject<THREE.
   const [available, setAvailable] = useState(false);
   const spot = useMemo(() => villageBottleSpot(torontoDay(new Date())), []);
   const rock = useRef<THREE.Group>(null);
+  const out = useRef(false); // read by the frame loop, so a pickup can't re-arm the prompt before React re-renders
+  useEffect(() => { out.current = available; }, [available]);
   useEffect(() => {
     let alive = true;
     apiCall<RecipeBook>("/api/crafting/recipes", "book").then(b => { if (alive) setAvailable(b.bottle.available); }, () => {});
     const onAct = (e: Event) => {
       if ((e as CustomEvent<{ id: string }>).detail.id !== "bottle") return;
+      out.current = false;
       setAvailable(false);
-      setPeacefulTarget(null, "bottle");
       apiCall<{ name: string }>("/api/crafting/learn", "learned", { source: "bottle" }).then(
         learned => { AudioManager.playSFX("confirm"); window.dispatchEvent(new CustomEvent("tsi:recipe-learned", { detail: { name: learned.name } })); },
         (e: unknown) => window.dispatchEvent(new CustomEvent("tsi:toast", { detail: { text: e instanceof ApiError ? e.message : "The cork won't budge. Try again later." } })));
@@ -77,13 +78,12 @@ export function BeachBottle({ player, ground }: { player: React.RefObject<THREE.
     return () => { alive = false; window.removeEventListener("tsi:peaceful-act", onAct); setPeacefulTarget(null, "bottle"); };
   }, []);
   useFrame(({ clock }) => {
-    if (!available) return;
     const d = Math.hypot(player.current.x - spot[0], player.current.z - spot[1]);
-    setPeacefulTarget(d < 1.7 ? { id: "bottle", kind: "forage", label: "Open the message bottle", distance: d } : null, "bottle");
+    setPeacefulTarget(out.current && d < 1.7 ? { id: "bottle", kind: "forage", label: "Open the message bottle", distance: d } : null, "bottle");
     if (rock.current) rock.current.rotation.x = Math.sin(clock.elapsedTime * 1.3) * 0.08;
   });
   if (!available) return null;
-  return <group position={[spot[0], ground(spot[0], spot[1]) + 0.09, spot[1]]} rotation={[0, 0.8, 0]}>
+  return <group position={[spot[0], ground(spot[0], spot[1]) + 0.14, spot[1]]} rotation={[0, 0.8, 0]} scale={1.6}>
     <group ref={rock}>
       <group rotation={[0, 0, Math.PI / 2]} position={[0.15, 0, 0]}>
         <mesh castShadow><latheGeometry args={[BOTTLE, 18]} /><meshStandardMaterial color="#8fd3bd" transparent opacity={0.62} roughness={0.08} metalness={0.1} /></mesh>
