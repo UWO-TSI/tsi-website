@@ -15,12 +15,13 @@ The coordinator (Claude) runs this without check-ins (David, 2026-09-26): verifi
 | Production security | **Done.** #40 (profile self-promotion, Gems, email reads) and #41 (portal table writes; marketplace buys via server) merged, deployed and verified in prod | Rolled-back role tests pass in prod |
 | Phase 0: commit, merge `main`, timestamp migrations, push, draft PR | **Done.** 18 commits, contains `main` through #41, 834 tests, draft PR #42 (stays draft until launch) | Branch pushed, contains `main` (incl. #40/#41), tsc/tests green, applicant + member island screenshots match |
 | Character outfits + clips on the locked v6 base | **Done.** 33 parts, 23 clips, catalogue | Catalogue + evidence sheets, every clip verified |
-| Ponytail cleanup + game-side security (member_collections self-edit → sell exploit, economy_sell retry race, legacy Gem writers, class badges after 034, game code vs the #40 guard) | Running (wave B, branch `game/cleanup-security`) | Audit items applied as small commits; exploit tests fail before, pass after |
+| Ponytail cleanup + game-side security (member_collections self-edit → sell exploit, economy_sell retry race, legacy Gem writers, class badges after 034, game code vs the #40 guard) | **Done, merged** (`becb580`): 4 exploits closed with fail-first tests, −2.4k lines, 862 tests | Audit items applied as small commits; exploit tests fail before, pass after |
 | Character in engine (rigged model replaces sprite; creator + wardrobe use the catalogue) | **Done, merged** (`c011a35`): one rig for player/residents/applicants, creator, wardrobe, emotes, combat clips; 854 tests | Player, residents, applicants on one rig in `/lab/island` and the applicant island |
 | Study in the world | **Done, merged** (`c977ef7`): cafe interior placeholder, 2 outdoor tables, sit/start/stand, overhead timers, walk-away settlement, grey fitting room fixed | Sit → study → coins → walk away ends session, in the cafe and outdoor tables |
 | Crafting | Running (branch `game/crafting`) |
 | Study × character integration (rigged seat-mates, sittable benches, bed Sleep, Dig, `avatar_config` drift migration, HUD on short screens) | Running (branch `game/study-character`) | Seat-mates and the player use the rig at every seat | ~30 recipes learnable and craftable; rods 4–5 unlock |
-| Staging Supabase + signed-in E2E (Phase 1) | Staging project `tethos-staging` (ref `jjiyeroyralfbluowbjq`, free, us-west-2) created 2026-09-26; runs in the next free slot, spec `specs/phase1-staging.md` | Every Phase 1 flow passes signed in |
+| Staging Supabase + signed-in E2E (Phase 1) | Running (branch `game/phase1-staging`) on `tethos-staging` (ref `jjiyeroyralfbluowbjq`); starts with a prod-vs-files schema drift diff | Every Phase 1 flow passes signed in |
+| Polish: ownership (wardrobe/decorate read owned items, free starters granted once), cleanup follow-ups in DefaultIslandWorld/study | Next slot, spec `specs/polish-ownership.md` | Nothing the shop sells is free outside the starter set |
 | Phone companion, seasonal events, combat content, chapters 3–4, admin pass | Later waves | Per spec in `specs/` |
 | Launch (Phase 4) | After all of the above | Member playtest, David's local review, migrations in one window |
 
@@ -104,7 +105,7 @@ In rough order. Each area follows the working rule: spec, then one agent, questi
 2. A member playtest with real TSI members.
 3. David reviews a complete local build before anything is pushed toward production.
 4. Launch data reset (decision 48): reset prototype gameplay, preserve real club records and real-value balances. Audit the tables first.
-5. Apply the migrations to production in one window, then deploy. Before that window, move production Supabase off the free tier or add a keep-warm job; it already paused once and hung once under load.
+5. Apply the migrations to production in one window, **then** deploy (the game code needs them: `/api/economy` and `awardRewards` depend on the economy and Gem-ledger migrations; this is the reverse of #40's order). Run the schema-drift reconciliation migration first. Before that window, move production Supabase off the free tier or add a keep-warm job; it already paused once and hung once under load.
 
 ## Later: NPC personalities (next update, after launch)
 
