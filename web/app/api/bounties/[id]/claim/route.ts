@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function POST(
   _request: Request,
@@ -60,8 +61,9 @@ export async function POST(
     return NextResponse.json({ error: claimError.message }, { status: 500 });
   }
 
-  // Update bounty status to claimed
-  await supabase
+  // Update bounty status to claimed (bounties are staff-writable under RLS;
+  // this route already checked the bounty is open and recorded the claim)
+  await createAdminClient()
     .from("bounties")
     .update({ status: "claimed", updated_at: new Date().toISOString() })
     .eq("id", id);

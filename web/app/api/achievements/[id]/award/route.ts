@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { awardRewards } from "@/lib/supabase/helpers";
 import { z } from "zod";
 
@@ -99,7 +100,7 @@ export async function POST(
   }
 
   // Award associated rewards (coins + XP with auto level-up)
-  const rewards = await awardRewards(supabase, parsed.data.user_id, {
+  const rewards = await awardRewards(createAdminClient(), parsed.data.user_id, {
     coins: achievement.tc_reward ?? 0,
     xp: achievement.xp_reward ?? 0,
     coinType: "earn_achievement",

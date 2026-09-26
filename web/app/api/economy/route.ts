@@ -150,7 +150,8 @@ async function handlePurchase(
     return NextResponse.json({ error: "Failed to deduct coins" }, { status: 500 });
   }
 
-  const { error: orderError } = await supabase
+  // Orders, stock and the ledger are server-only (migration 20260926130000).
+  const { error: orderError } = await admin
     .from("marketplace_orders")
     .insert({
       user_id: userId,
@@ -170,13 +171,13 @@ async function handlePurchase(
   }
 
   // Decrement stock
-  await supabase
+  await admin
     .from("marketplace_items")
     .update({ stock: item.stock - data.quantity })
     .eq("id", data.item_id);
 
   // Record transaction
-  await supabase.from("tc_transactions").insert({
+  await admin.from("tc_transactions").insert({
     user_id: userId,
     amount: -totalCost,
     balance_after: newBalance,
@@ -268,7 +269,7 @@ async function handleAvatarPurchase(
   }
 
   // Record transaction
-  await supabase.from("tc_transactions").insert({
+  await admin.from("tc_transactions").insert({
     user_id: userId,
     amount: -cost,
     balance_after: newBalance,
@@ -315,12 +316,14 @@ async function handleAward(
 
   const newBalance = targetProfile.tethos_coins + data.amount;
 
-  await supabase
+  // Another member's coins and the ledger: service role, after the tier check.
+  const admin = createAdminClient();
+  await admin
     .from("profiles")
     .update({ tethos_coins: newBalance })
     .eq("id", data.user_id);
 
-  await supabase.from("tc_transactions").insert({
+  await admin.from("tc_transactions").insert({
     user_id: data.user_id,
     amount: data.amount,
     balance_after: newBalance,
