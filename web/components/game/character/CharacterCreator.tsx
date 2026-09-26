@@ -53,13 +53,13 @@ function colourTarget(tab: string, look: CharacterLook, lastAccessory: string | 
   return null;
 }
 
-const STILL: CharacterMotion = { speed: 0, yaw: -0.55, lift: 0, pose: null, play: null };
-function Stage({ look, framing, yaw = -0.55, faceSize = 256 }: { look: CharacterLook; framing: "head" | "body"; yaw?: number; faceSize?: number }) {
+const STILL: CharacterMotion = { speed: 0, yaw: -0.4, lift: 0, pose: null, play: null };
+function Stage({ look, framing, yaw = -0.4, faceSize = 256 }: { look: CharacterLook; framing: "head" | "body"; yaw?: number; faceSize?: number }) {
   const motion = useRef<CharacterMotion>({ ...STILL, yaw });
   useEffect(() => { motion.current.yaw = yaw; }, [yaw]);
   const head = framing === "head";
   return <>
-    <PerspectiveCamera makeDefault fov={head ? 26 : 30} position={head ? [0.1, 0.84, 1.15] : [0.2, 0.62, 2.55]} onUpdate={c => c.lookAt(0, head ? 0.78 : 0.5, 0)} />
+    <PerspectiveCamera makeDefault fov={head ? 30 : 30} position={head ? [0.1, 0.86, 1.3] : [0.15, 0.6, 2.05]} onUpdate={c => c.lookAt(0, head ? 0.8 : 0.5, 0)} />
     <ambientLight intensity={1.1} color="#fff6e6" />
     <hemisphereLight args={["#fff8ec", "#b7c7a8", 0.9]} />
     <directionalLight position={[1.6, 2.6, 2.2]} intensity={1.7} color="#fff1d8" />
@@ -83,7 +83,7 @@ export default function CharacterCreator({ initial, mode = "create", title, askN
   const tabs = useMemo(() => (mode === "wardrobe" ? TABS.filter(t => WARDROBE_TABS.includes(t.id)) : TABS), [mode]);
   const [tabId, setTabId] = useState(tabs[0].id);
   const [page, setPage] = useState(0);
-  const [yaw, setYaw] = useState(-0.55);
+  const [yaw, setYaw] = useState(-0.4);
   const [lastAccessory, setLastAccessory] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const tab = tabs.find(t => t.id === tabId)!;
@@ -140,8 +140,8 @@ export default function CharacterCreator({ initial, mode = "create", title, askN
       {tab.items.length > 0 && <ul className={styles.grid} aria-label={tab.label}>
         {cells.map(id => <li key={id ?? "none"}>
           <button aria-pressed={tab.on(look, id)} onClick={() => choose(id)} aria-label={tab.name(id)} title={tab.name(id)}>
-            <View className={styles.thumb}><Stage look={tab.apply(look, id)} framing={tab.framing} /></View>
-            <span>{tab.name(id)}</span>
+            <View as="span" className={styles.thumb}><Stage look={tab.apply(look, id)} framing={tab.framing} /></View>
+            <span className={styles.label}>{tab.name(id)}</span>
           </button>
         </li>)}
       </ul>}

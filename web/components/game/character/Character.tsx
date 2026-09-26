@@ -177,8 +177,8 @@ class Puppet {
 export interface WeaponView { kind: WeaponKind; model: string; modelScale: number; inHand: boolean }
 /** Weapon placement per kind in socket space (row 140): in hand in the ruins, across the back elsewhere. */
 const GRIP: Record<WeaponKind, { hand: [number, number, number]; back: [number, number, number] }> = {
-  melee: { hand: [Math.PI / 2, 0, 0], back: [0, 0, 2.5] },
-  bow: { hand: [0, 0, 0], back: [0, 0, 0.3] },
+  melee: { hand: [Math.PI / 2, 0, 0], back: [0, 0, 0.5] },
+  bow: { hand: [0, Math.PI / 2, 0], back: [0, Math.PI / 2, 0.3] },
   staff: { hand: [Math.PI / 2, 0, 0], back: [0, 0, 2.6] },
   summon: { hand: [Math.PI / 2, 0, 0], back: [0, 0, 2.6] },
 };

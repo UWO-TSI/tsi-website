@@ -230,7 +230,7 @@ function Village({ guideToHQ, returned, paused, onAction, onNear, phase, fishing
     <pointLight position={[0, 1.6, 5.6]} color="#ffd68b" intensity={lighting.lamp * 1.5} distance={5.5} />
     <group position={[-2.6, 0.018, -6]} onClick={e => { e.stopPropagation(); if (!paused && player.current.distanceTo(guide.current) < 3.2) onAction("guide"); }}>
       <Character look={JAYDEN} motion={guideMotion} />
-      <Html position={[0, 2.2, 0]} center distanceFactor={13} zIndexRange={[3, 0]}><span className="village-sign">Jayden · Your guide</span></Html>
+      <Html position={[0, 1.8, 0]} center distanceFactor={13} zIndexRange={[3, 0]}><span className="village-sign">Jayden · Your guide</span></Html>
     </group>
     <PlayerAvatar spawnPosition={spawn} playerName="You" showNameplate={false} onMove={move} frozen={paused || fishing || arrival} desktopClickToMove
       groundHeight={island.ground} groundSurface={island.surface} constrainMove={island.move} />
