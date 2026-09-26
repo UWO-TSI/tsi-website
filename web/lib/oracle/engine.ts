@@ -9,6 +9,7 @@
  * dichotomy's most confident answers decides, and failing that the second
  * letter (I, N, F, P) is used and the result is marked low-clarity.
  */
+import { fnv1a } from "@/lib/game/weatherSystem";
 import { STATEMENTS, TIE_BREAKERS, type Dichotomy, type Pole } from "./items";
 
 export const DICHOTOMIES: Dichotomy[] = ["EI", "SN", "TF", "JP"];
@@ -109,8 +110,7 @@ export function score(answers: Answers, ties: TieAnswers = {}): OracleResult {
 
 /** Deterministic, interleaved item order per attempt (dichotomies alternate so the keeper's beats land evenly). */
 export function itemOrder(seed: string): string[] {
-  let h = 2166136261;
-  for (const ch of seed) h = Math.imul(h ^ ch.charCodeAt(0), 16777619) >>> 0;
+  let h = fnv1a(seed);
   const rnd = () => {
     h = Math.imul(h ^ (h >>> 15), 2246822519) >>> 0;
     h = Math.imul(h ^ (h >>> 13), 3266489917) >>> 0;

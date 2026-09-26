@@ -5,6 +5,7 @@
  */
 import { ROSTER } from "@/lib/collections/roster";
 import { FISH } from "@/lib/game/fishing";
+import { fnv1a } from "@/lib/game/weatherSystem";
 import { dailySpecials, effectivePrice, isOnSale, sellPrice, speciesClass, TAB_OF, torontoDay, type ShopItem, type Special } from "./rules";
 import { EconomyError, type EconomyStore, type InventoryRow, type LedgerEntry, type Reservation } from "./store";
 
@@ -166,8 +167,7 @@ export const claimDailyGift = (store: EconomyStore, m: string) => run(() => stor
 
 /** Short pickup code derived from the reservation key, so a retry shows the same code. */
 export function pickupCode(memberId: string, key: string): string {
-  let h = 2166136261;
-  for (const ch of `${memberId}:${key}`) h = Math.imul(h ^ ch.charCodeAt(0), 16777619) >>> 0;
+  let h = fnv1a(`${memberId}:${key}`);
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no 0/O, 1/I
   let out = "";
   for (let i = 0; i < 5; i++) {

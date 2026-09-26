@@ -9,6 +9,10 @@ import {
   lerpHex,
   ease,
 } from "./weatherSystem";
+import { dailySpecials, seedItems } from "@/lib/wallet/rules";
+import { pickupCode } from "@/lib/wallet/service";
+import { itemOrder } from "@/lib/oracle/engine";
+import { rollNode } from "./peaceful";
 
 /**
  * These exist because there is no GPU in this environment, so the blend maths
@@ -185,5 +189,31 @@ describe("weatherSystem", () => {
     for (const kind of ["sunny", "cloudy", "rain"] as const) {
       expect(WEATHER_PROFILES.some((p) => p.kinds.includes(kind))).toBe(true);
     }
+  });
+});
+
+describe("seeded hashes stay identical across callers", () => {
+  it("specials, Oracle item order, pickup codes and node rolls", () => {
+    expect(dailySpecials(seedItems(), "2026-09-26").map((i) => i.slug)).toMatchInlineSnapshot(`
+      [
+        "furn-bench-park",
+        "outfit-cream-knit",
+        "furn-streetlamp",
+      ]
+    `);
+    expect(itemOrder("x").slice(0, 8)).toMatchInlineSnapshot(`
+      [
+        "sn07",
+        "tf12",
+        "ei09",
+        "jp16",
+        "sn04",
+        "tf03",
+        "ei11",
+        "jp10",
+      ]
+    `);
+    expect(pickupCode("m", "k")).toMatchInlineSnapshot(`"FDX68"`);
+    expect(rollNode("m", "node-1", "2026-09-26T10", ["flowers"], { hour: 10, month: 9, weather: "clear" })?.key).toMatchInlineSnapshot(`"bug_common_butterfly"`);
   });
 });
