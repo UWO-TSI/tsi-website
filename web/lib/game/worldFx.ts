@@ -56,9 +56,9 @@ function fadeOut(v: number, a: number, b: number): number {
   return 1 - u * u * (3 - 2 * u);
 }
 
-/** 1 inside the window, easing to 0 over its outer 40% so wrapped copies never pop in view. */
+/** 1 inside the window, easing to 0 over its outer 30% so wrapped copies never pop in view. */
 export function windowFade(dx: number, dz: number, tile: number): number {
-  return fadeOut(Math.abs(dx), tile * 0.3, tile * 0.5) * fadeOut(Math.abs(dz), tile * 0.3, tile * 0.5);
+  return fadeOut(Math.abs(dx), tile * 0.35, tile * 0.5) * fadeOut(Math.abs(dz), tile * 0.35, tile * 0.5);
 }
 
 // ─── Rain and snow ───────────────────────────────────────────────────────
@@ -84,8 +84,10 @@ export function rainStreak(i: number, t: number, wind: WorldWind, look: FallLook
 }
 
 // ─── Mist banks ──────────────────────────────────────────────────────────
+/** A jittered 4×4 grid of banks per tile: evenly spread, so the view is never without one (density as the old ring's). */
+const MIST_GRID = 4;
 export const MIST_TILE = 32;
-export const MIST_BANKS = 10;
+export const MIST_BANKS = MIST_GRID * MIST_GRID;
 
 /**
  * Fog bank `k`: a world position drifting with the wind, and its strength,
@@ -93,8 +95,9 @@ export const MIST_BANKS = 10;
  * rises. The window fade (windowFade) is the caller's.
  */
 export function mistBank(k: number, t: number, wind: WorldWind, cx: number, cz: number, ground: Ground, out: Point3 & { strength: number }): Point3 & { strength: number } {
-  out.x = wrapInto(hash01(k, 21) * MIST_TILE + wind.x * t, cx, MIST_TILE);
-  out.z = wrapInto(hash01(k, 22) * MIST_TILE + wind.z * t, cz, MIST_TILE);
+  const cell = MIST_TILE / MIST_GRID;
+  out.x = wrapInto(((k % MIST_GRID) + 0.15 + 0.7 * hash01(k, 21)) * cell + wind.x * t, cx, MIST_TILE);
+  out.z = wrapInto((Math.floor(k / MIST_GRID) + 0.15 + 0.7 * hash01(k, 22)) * cell + wind.z * t, cz, MIST_TILE);
   const g = ground(out.x, out.z);
   out.strength = fadeOut(g, 0.3, 0.9);
   out.y = Math.max(g, 0) + 0.9 + (k % 2) * 0.5;
