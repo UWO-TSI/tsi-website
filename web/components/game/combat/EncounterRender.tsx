@@ -47,6 +47,7 @@ function useRig(url: string) {
   }, [scene]);
 }
 
+const ALLY_TINT = new THREE.Color(0.9, 2.2, 1.1), SHADE_TINT = new THREE.Color(1.5, 1.2, 2.6);
 const poseM = new THREE.Matrix4(), poseQ = new THREE.Quaternion(), poseE = new THREE.Euler(), poseP = new THREE.Vector3(), poseS = new THREE.Vector3();
 
 /**
@@ -54,19 +55,22 @@ const poseM = new THREE.Matrix4(), poseQ = new THREE.Quaternion(), poseE = new T
  * from the shared telegraph helper (partPose/glow) every frame; the whole
  * mesh is culled when none of its instances is on screen.
  */
-export function EnemyInstances({ typeId, capacity, ground }: { typeId: string; capacity: number; ground: Ground }) {
+export function EnemyInstances({ typeId, capacity, ground, allies = false }: { typeId: string; capacity: number; ground: Ground;
+  /** Your summons that borrow this model (kits.ts UNITS `model`, a Necromancer's shades): tinted spirit-green or shade-violet, a little smaller. */
+  allies?: boolean }) {
   const type = ENEMIES[typeId];
   const { nodes, parts } = useRig(type.model);
   const world = useMemo(() => nodes.map(() => new THREE.Matrix4()), [nodes]);
   const refs = useRef<(THREE.InstancedMesh | null)[]>([]);
   useFrame(({ clock }) => {
     const t = clock.elapsedTime;
-    const list = combat.rt.enemies.filter(e => e.type.id === typeId && !(e.state === "dead" && e.deadFor > 0.6)).slice(0, capacity);
+    const list = (allies ? combat.rt.units.flatMap(u => u.body?.type.id === typeId ? [u.body] : [])
+      : combat.rt.enemies.filter(e => e.type.id === typeId && !(e.state === "dead" && e.deadFor > 0.6))).slice(0, capacity);
     list.forEach((e, i) => {
       const dying = e.state === "dead" ? 1 - e.deadFor / 0.6 : 1;
       const bob = type.hover ? Math.sin(t * 6 + i) * 0.12 : 0;
       tmpQ.setFromAxisAngle(UP, (e.state === "active" ? e.beam : e.facing) + type.modelYaw);
-      tmpS.setScalar(type.modelScale * dying);
+      tmpS.setScalar(type.modelScale * dying * (allies ? 0.85 : 1));
       tmpP.set(e.x, ground(e.x, e.z) + type.hover + bob, e.z);
       tmpM.compose(tmpP, tmpQ, tmpS);
       nodes.forEach((n, ni) => {
@@ -86,6 +90,7 @@ export function EnemyInstances({ typeId, capacity, ground }: { typeId: string; c
         else if (e.state === "windup") tmpC.setRGB(1.15, 0.95, 0.9);
         else if (e.state === "return") tmpC.setRGB(0.7, 0.75, 0.9);
         else tmpC.setScalar(1);
+        if (allies) tmpC.multiply(e.id.startsWith("shade") ? SHADE_TINT : ALLY_TINT);
         mesh.setColorAt(i, tmpC);
       });
     });
@@ -164,16 +169,23 @@ export function Projectiles({ ground, max = 48 }: { ground: Ground; max?: number
   </instancedMesh>;
 }
 
-/** Summoned wisps and blasts share the firefly glow sprite. */
-export function Wisps({ ground, max = 4 }: { ground: Ground; max?: number }) {
+/** Glow-sprite units: wisps (the charm's and the kits'), bone wisps, the Illusionist's phantom. */
+const SPRITE_TINT: Record<string, string> = { wisp: "#9fe8ff", "weapon-wisp": "#9fe8ff", "bone-wisp": "#f2ecdc", decoy: "#d9b8ff" };
+export function Wisps({ ground, max = 10 }: { ground: Ground; max?: number }) {
   const glow = useTexture("/assets/sky/sun.png");
   const refs = useRef<(THREE.Sprite | null)[]>([]);
   useFrame(({ clock }) => {
+    const list = combat.rt.units.filter(u => !u.body && SPRITE_TINT[u.def.key]);
     for (let i = 0; i < max; i++) {
       const s = refs.current[i]; if (!s) continue;
-      const m = combat.rt.minions[i];
+      const m = list[i];
       s.visible = !!m;
-      if (m) { s.position.set(m.x, ground(m.x, m.z) + 1.1 + Math.sin(clock.elapsedTime * 4 + i) * 0.15, m.z); s.material.opacity = Math.min(1, m.life) * 0.9; }
+      if (!m) continue;
+      const decoy = m.def.kind === "decoy";
+      s.position.set(m.x, ground(m.x, m.z) + (decoy ? 0.9 : 1.1 + Math.sin(clock.elapsedTime * 4 + i) * 0.15), m.z);
+      s.scale.set(decoy ? 1.1 : 0.7, decoy ? 1.9 : 0.7, 1);
+      s.material.color.set(SPRITE_TINT[m.def.key]);
+      s.material.opacity = Math.min(1, m.life ?? 1) * (decoy ? 0.55 + Math.sin(clock.elapsedTime * 9) * 0.1 : 0.9);
     }
   });
   return <>{Array.from({ length: max }, (_, i) => <sprite key={i} ref={el => { refs.current[i] = el; }} scale={[0.7, 0.7, 1]} visible={false}>
@@ -181,25 +193,103 @@ export function Wisps({ ground, max = 4 }: { ground: Ground; max?: number }) {
   </sprite>)}</>;
 }
 
-export function Blasts({ ground, max = 8 }: { ground: Ground; max?: number }) {
+/** Totems (a carved post and the circle it covers, so overlaps read), tripwires (a small disc), and a ring under each of your summons: green, violet for a shade. */
+const TOTEM_COLOR: Record<string, string> = { "totem-ember": "#ff8a3d", "totem-mending": "#7dff9e", "totem-warding": "#8fd0ff", tripwire: "#ffe08a", shade: "#c9a7ff", decoy: "#d9b8ff" };
+export function Totems({ ground, max = 16 }: { ground: Ground; max?: number }) {
+  const posts = useRef<(THREE.Mesh | null)[]>([]), rings = useRef<(THREE.Mesh | null)[]>([]);
+  const ring = useMemo(() => new THREE.RingGeometry(0.94, 1, 64).rotateX(-Math.PI / 2), []);
+  const disc = useMemo(() => new THREE.CircleGeometry(1, 48).rotateX(-Math.PI / 2), []);
+  useEffect(() => () => { ring.dispose(); disc.dispose(); }, [ring, disc]);
+  useFrame(({ clock }) => {
+    const list = combat.rt.units.filter(u => u.source !== "weapon");
+    for (let i = 0; i < max; i++) {
+      const post = posts.current[i], r = rings.current[i], u = list[i];
+      if (!post || !r) continue;
+      post.visible = r.visible = !!u;
+      if (!u) continue;
+      const g = ground(u.x, u.z), c = TOTEM_COLOR[u.def.key] ?? "#7dff9e", totem = u.def.kind === "totem", area = totem || u.def.kind === "trap";
+      post.visible = totem;
+      r.geometry = area ? disc : ring;
+      post.position.set(u.x, g + 0.6, u.z);
+      (post.material as THREE.MeshStandardMaterial).color.set(c);
+      (post.material as THREE.MeshStandardMaterial).emissive.set(c);
+      r.position.set(u.x, g + 0.05, u.z);
+      r.scale.setScalar(area ? u.def.radius! : 0.75);
+      const m = r.material as THREE.MeshBasicMaterial;
+      m.color.set(c); m.opacity = totem ? 0.16 + Math.sin(clock.elapsedTime * 3 + i) * 0.04 : area ? 0.55 : 0.85;
+    }
+  });
+  return <>{Array.from({ length: max }, (_, i) => <group key={i}>
+    <mesh ref={el => { posts.current[i] = el; }} visible={false}><cylinderGeometry args={[0.16, 0.24, 1.2, 8]} />
+      <meshStandardMaterial color="#ff8a3d" emissive="#ff8a3d" emissiveIntensity={0.6} roughness={0.8} /></mesh>
+    <mesh ref={el => { rings.current[i] = el; }} geometry={disc} visible={false} renderOrder={2}>
+      <meshBasicMaterial transparent depthWrite={false} toneMapped={false} />
+    </mesh>
+  </group>)}</>;
+}
+
+/** On the player: a shield bubble, the raised guard's arc, and a ring while transformed (Transmuter). */
+export function PlayerAuras({ player, ground }: { player: React.RefObject<THREE.Vector3>; ground: Ground }) {
+  const bubble = useRef<THREE.Mesh>(null), guard = useRef<THREE.Mesh>(null), body = useRef<THREE.Mesh>(null);
+  const arc = useMemo(() => new THREE.CircleGeometry(1.1, 32, Math.PI / 2 - 0.9, 1.8).rotateX(-Math.PI / 2), []);
+  useEffect(() => () => arc.dispose(), [arc]);
+  useFrame(({ clock }) => {
+    const rt = combat.rt, p = rt.player, pl = player.current, g = ground(pl.x, pl.z);
+    if (bubble.current) {
+      bubble.current.visible = p.shield > 0.5 && p.alive;
+      bubble.current.position.set(pl.x, g + 0.95, pl.z);
+      (bubble.current.material as THREE.MeshBasicMaterial).opacity = 0.12 + Math.min(0.18, p.shield / p.maxHp);
+    }
+    if (guard.current) {
+      guard.current.visible = rt.buffs.some(b => b.stat === "block") && p.alive;
+      guard.current.position.set(pl.x, g + 0.06, pl.z);
+      guard.current.rotation.y = p.facing + Math.PI;
+    }
+    if (body.current) {
+      body.current.visible = !!rt.transform && p.alive;
+      body.current.position.set(pl.x, g + 0.05, pl.z);
+      body.current.rotation.y = clock.elapsedTime * 1.5;
+    }
+  });
+  return <>
+    <mesh ref={bubble} visible={false} renderOrder={6}><sphereGeometry args={[0.95, 24, 16]} />
+      <meshBasicMaterial color="#bfe3ff" transparent opacity={0.2} depthWrite={false} toneMapped={false} blending={THREE.AdditiveBlending} /></mesh>
+    <mesh ref={guard} geometry={arc} visible={false} renderOrder={5}>
+      <meshBasicMaterial color="#ffd27a" transparent opacity={0.45} depthWrite={false} toneMapped={false} /></mesh>
+    <mesh ref={body} rotation={[-Math.PI / 2, 0, 0]} visible={false} renderOrder={5}><ringGeometry args={[0.7, 0.85, 6]} />
+      <meshBasicMaterial color="#c9a7ff" transparent opacity={0.7} depthWrite={false} toneMapped={false} side={THREE.DoubleSide} /></mesh>
+  </>;
+}
+
+/** Ability and hit effects: rings for circles, filled sectors for cones, a lit strip for beams. */
+export function Blasts({ ground, max = 12 }: { ground: Ground; max?: number }) {
   const refs = useRef<(THREE.Mesh | null)[]>([]);
   const ring = useMemo(() => new THREE.RingGeometry(0.82, 1, 48).rotateX(-Math.PI / 2), []);
-  useEffect(() => () => ring.dispose(), [ring]);
+  const strip = useMemo(() => new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2).translate(0, 0, 0.5), []);
+  const sectors = useRef(new Map<number, THREE.BufferGeometry>());
+  const sector = (a: number) => {
+    const k = Math.round(a * 100);
+    if (!sectors.current.has(k)) sectors.current.set(k, new THREE.CircleGeometry(1, 32, Math.PI / 2 - a / 2, a).rotateX(-Math.PI / 2));
+    return sectors.current.get(k)!;
+  };
+  useEffect(() => { const cache = sectors.current; return () => { ring.dispose(); strip.dispose(); cache.forEach(g => g.dispose()); }; }, [ring, strip]);
   useFrame(() => {
     for (let i = 0; i < max; i++) {
       const m = refs.current[i]; if (!m) continue;
-      const b = combat.rt.blasts[i];
+      const b = combat.rt.blasts[combat.rt.blasts.length - 1 - i];
       m.visible = !!b;
       if (!b) continue;
-      const k = b.age / b.life;
+      const k = b.age / b.life, grow = 0.3 + 0.7 * Math.min(1, k * 1.6);
       m.position.set(b.x, ground(b.x, b.z) + 0.08, b.z);
-      m.scale.setScalar(b.radius * (0.3 + 0.7 * Math.min(1, k * 1.6)));
+      if (b.length) { m.geometry = strip; m.rotation.set(0, b.rot ?? 0, 0); m.scale.set(b.radius * 2, 1, b.length); }
+      else if (b.arc) { m.geometry = sector(b.arc); m.rotation.set(0, (b.rot ?? 0) + Math.PI, 0); m.scale.setScalar(b.radius * grow); }
+      else { m.geometry = ring; m.rotation.set(0, 0, 0); m.scale.setScalar(b.radius * grow); }
       const mat = m.material as THREE.MeshBasicMaterial;
-      mat.color.set(b.color); mat.opacity = 0.85 * (1 - k);
+      mat.color.set(b.color); mat.opacity = (b.length || b.arc ? 0.6 : 0.85) * (1 - k);
     }
   });
   return <>{Array.from({ length: max }, (_, i) => <mesh key={i} ref={el => { refs.current[i] = el; }} geometry={ring} visible={false} renderOrder={4}>
-    <meshBasicMaterial transparent depthWrite={false} toneMapped={false} blending={THREE.AdditiveBlending} />
+    <meshBasicMaterial transparent depthWrite={false} toneMapped={false} blending={THREE.AdditiveBlending} side={THREE.DoubleSide} />
   </mesh>)}</>;
 }
 

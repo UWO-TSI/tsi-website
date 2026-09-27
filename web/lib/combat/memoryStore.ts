@@ -5,9 +5,10 @@ import { initialProgress, type MissionProgress, type MissionState } from "./miss
 import { levelForXp, pointsEarned, pointsSpent, STATS, ZERO_STATS, STAT_RESET_FEE, SUBCLASS_RESPEC_FEE, type StatBlock } from "./progression";
 import { CombatError, type CombatStore, type OwnedWeapon, type ProgressRow } from "./store";
 import { FIRST_WEAPONS, STARTER_WEAPONS, wear as wearRule, WEAPONS } from "./weapons";
+import { traitFor } from "./kits";
 
 export function memoryCombatStore(clock: () => Date = () => new Date()) {
-  const prog = new Map<string, { xp: number; stats: StatBlock; subclass: string | null }>();
+  const prog = new Map<string, { xp: number; stats: StatBlock; subclass: string | null; loadout: string[]; traits: Record<string, number> }>();
   const xpKeys = new Set<string>();
   const kills = new Map<string, number>(); // `${m}:${event}` → xp
   const killEnemy = new Map<string, string>(); // `${m}:${event}` → enemy key
@@ -31,7 +32,7 @@ export function memoryCombatStore(clock: () => Date = () => new Date()) {
   };
   const ensure = (m: string) => {
     if (!prog.has(m)) {
-      prog.set(m, { xp: 0, stats: { ...ZERO_STATS }, subclass: null });
+      prog.set(m, { xp: 0, stats: { ...ZERO_STATS }, subclass: null, loadout: [], traits: {} });
       weapons.set(m, FIRST_WEAPONS.map((k) => ({ weapon_key: k, durability: WEAPONS.find((w) => w.key === k)!.max_durability, equipped: k === "sword-driftwood" })));
     }
     return prog.get(m)!;
@@ -39,7 +40,7 @@ export function memoryCombatStore(clock: () => Date = () => new Date()) {
   const store: CombatStore = {
     async progression(m) {
       const p = ensure(m);
-      return { xp: p.xp, level: levelForXp(p.xp), stats: { ...p.stats }, subclass: p.subclass };
+      return { xp: p.xp, level: levelForXp(p.xp), stats: { ...p.stats }, subclass: p.subclass, loadout: [...p.loadout], traits: { ...p.traits } };
     },
     async family(m) {
       return families.get(m) ?? null;
@@ -60,6 +61,8 @@ export function memoryCombatStore(clock: () => Date = () => new Date()) {
       if (hour + e.xp > 6000) throw new CombatError("kill_xp_cap");
       kills.set(`${m}:${ev}`, e.xp);
       killEnemy.set(`${m}:${ev}`, enemy);
+      const p = ensure(m), t = traitFor(enemy); // row 40: a Transmuter's defeats teach and train traits
+      if (t && p.subclass === "transmuter") p.traits[t.key] = (p.traits[t.key] ?? 0) + 1;
       killLog.push({ m, at: clock().getTime(), xp: e.xp });
       return store.grantXp(m, e.xp, "kill", enemy, `kill:${ev}`);
     },
@@ -80,6 +83,7 @@ export function memoryCombatStore(clock: () => Date = () => new Date()) {
     },
     async chooseSubclass(m, subclass, family, key) {
       const p = ensure(m);
+      if (respecKeys.has(`${m}:sub:${key}`)) return { subclass: p.subclass!, fee: respecKeys.get(`${m}:sub:${key}`)!, replayed: true };
       if (p.subclass === subclass) return { subclass, fee: 0, replayed: true };
       if (levelForXp(p.xp) < 10) throw new CombatError("level_too_low");
       const own = families.get(m);
@@ -87,10 +91,16 @@ export function memoryCombatStore(clock: () => Date = () => new Date()) {
       if (own !== family) throw new CombatError("wrong_family");
       const fee = p.subclass ? SUBCLASS_RESPEC_FEE : 0;
       if (fee) pay(m, -fee, `subclass:${key}`);
+      respecKeys.set(`${m}:sub:${key}`, fee);
       p.subclass = subclass;
       const list = weapons.get(m)!; // the gate opens: one starter per archetype
       for (const k of STARTER_WEAPONS) if (!list.some((w) => w.weapon_key === k)) list.push({ weapon_key: k, durability: WEAPONS.find((w) => w.key === k)!.max_durability, equipped: false });
       return { subclass, fee, replayed: false };
+    },
+    async setLoadout(m, loadout) {
+      const p = ensure(m);
+      p.loadout = [...loadout];
+      return [...p.loadout];
     },
     async weapons(m) {
       ensure(m);

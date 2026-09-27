@@ -8,7 +8,8 @@ import { memoryCombatStore } from "./memoryStore";
 import { EVENT_XP, STAT_RESET_FEE, SUBCLASS_RESPEC_FEE, levelForXp, xpForLevel } from "./progression";
 import { combatSeedSql } from "./seed";
 import { STARTER_WEAPONS, WEAPONS } from "./weapons";
-import { allocateStats, chooseSubclass, claimBossReward, completeMission, getProgression, listMissions, missionProgress, recordKill, repairWeapon, reportWear, resetStats, startMission } from "./service";
+import { allocateStats, chooseSubclass, claimBossReward, completeMission, getProgression, listMissions, missionProgress, recordKill, repairWeapon, reportWear, resetStats, setLoadout, startMission } from "./service";
+import { TRAITS } from "./kits";
 
 const M = "00000000-0000-4000-8000-0000000000aa";
 const now = new Date("2026-09-26T12:00:00Z");
@@ -211,5 +212,75 @@ describe("20260926150800_combat.sql stays in step with the TS rules", () => {
     expect(sql).toContain(`('subclass_respec_fee', ${SUBCLASS_RESPEC_FEE})`);
     // the smoke asserts combat_level_for_xp(11625) = 10 and (11624) = 9
     expect([levelForXp(11624), levelForXp(11625)]).toEqual([9, 10]);
+  });
+});
+
+describe("combat B: subclass choice, loadout, stat allocation and traits (rows 20, 38, 40, 50, 207)", () => {
+  it("allocation takes the new totals, so a retried request changes nothing", async () => {
+    const c = memoryCombatStore(() => now);
+    await c.store.grantXp(M, xpForLevel(10), "admin", "x", "b-xp-1");
+    expect(await allocateStats(c.store, M, { might: 10, vitality: 5 })).toMatchObject({ ok: true, data: { might: 10, vitality: 5 } });
+    expect(await allocateStats(c.store, M, { might: 10, vitality: 5 })).toMatchObject({ ok: true, data: { might: 10, vitality: 5 } }); // retry
+    expect(await allocateStats(c.store, M, { might: 12 })).toMatchObject({ ok: true, data: { might: 12, vitality: 5 } });
+    expect(await allocateStats(c.store, M, { might: 11 })).toMatchObject({ ok: false, code: "needs_reset" });
+    const p = await getProgression(c.store, M);
+    expect(p.ok && p.data.points_available).toBe(27 - 17);
+  });
+  it("a subclass change is charged once per key, and a retried key answers with its first result", async () => {
+    const c = memoryCombatStore(() => now);
+    c.setFamily(M, "Warden"); c.fund(M, 250);
+    await c.store.grantXp(M, xpForLevel(10), "admin", "x", "b-xp-2");
+    await chooseSubclass(c.store, M, "druid", "b-sub-0001");
+    expect(await chooseSubclass(c.store, M, "priest", "b-sub-0002")).toMatchObject({ ok: true, data: { fee: 250, replayed: false } });
+    expect(await chooseSubclass(c.store, M, "druid", "b-sub-0003")).toMatchObject({ ok: false, code: "insufficient" });
+    expect(await chooseSubclass(c.store, M, "priest", "b-sub-0002")).toMatchObject({ ok: true, data: { subclass: "priest", fee: 250, replayed: true } });
+    expect(c.coinsOf(M)).toBe(0);
+  });
+  it("the loadout holds four abilities from the kit, defaults to signature + own + family ritual, and survives a subclass change", async () => {
+    const c = memoryCombatStore(() => now);
+    expect(await setLoadout(c.store, M, ["priest.mend"])).toMatchObject({ ok: false, code: "no_subclass" });
+    await openGate(c); // druid
+    const p = await getProgression(c.store, M);
+    expect(p.ok && p.data.loadout).toEqual(["druid.rootbind", "druid.thorn-lash", "druid.wild-growth", "warden.covenant"]);
+    expect(p.ok && p.data.kit).toHaveLength(5);
+    const mine = ["druid.rootbind", "warden.renew", "druid.thorn-lash", "warden.covenant"];
+    expect(await setLoadout(c.store, M, mine)).toMatchObject({ ok: true });
+    expect(await setLoadout(c.store, M, mine)).toMatchObject({ ok: true }); // the same set again
+    expect(await setLoadout(c.store, M, ["priest.mend"])).toMatchObject({ ok: false, code: "bad_loadout" });
+    expect(await setLoadout(c.store, M, ["druid.rootbind", "druid.rootbind"])).toMatchObject({ ok: false, code: "bad_loadout" });
+    expect(await setLoadout(c.store, M, ["a", "b", "c", "d", "e"])).toMatchObject({ ok: false, code: "bad_loadout" });
+    const q = await getProgression(c.store, M);
+    expect(q.ok && q.data.loadout).toEqual(mine);
+    c.fund(M, 250);
+    await chooseSubclass(c.store, M, "priest", "b-sub-0010");
+    const r = await getProgression(c.store, M);
+    expect(r.ok && r.data.loadout).toEqual(["warden.renew", "warden.covenant"]); // the family's carry over, the druid's drop out
+  });
+  it("a Transmuter learns a basic trait on the first defeat of a species and trains it after (row 40); others don't", async () => {
+    const c = memoryCombatStore(() => now);
+    c.setFamily(M, "Arcane");
+    await c.store.grantXp(M, xpForLevel(10), "admin", "x", "b-xp-3");
+    await chooseSubclass(c.store, M, "transmuter", "b-sub-0020");
+    const start = await getProgression(c.store, M);
+    expect(start.ok && start.data.kit).toContain("trait.fox-stride"); // the starter, before any kill
+    expect(await recordKill(c.store, M, "thorn-crab", "b-kill-1")).toMatchObject({ ok: true, data: { trait_unlocked: "crab-shell" } });
+    expect(await recordKill(c.store, M, "thorn-crab", "b-kill-1")).toMatchObject({ ok: true, data: { replayed: true, trait_unlocked: null } });
+    expect(await recordKill(c.store, M, "elder-thorn-crab", "b-kill-2")).toMatchObject({ ok: true, data: { trait_unlocked: null } }); // same trait, trained
+    expect(await recordKill(c.store, M, "guardian-statue", "b-kill-3")).toMatchObject({ ok: true, data: { trait_unlocked: null } }); // the boss teaches nothing
+    const p = await getProgression(c.store, M);
+    expect(p.ok && p.data.traits).toEqual({ "crab-shell": 2 });
+    expect(p.ok && p.data.kit).toContain("trait.crab-shell");
+    expect(await setLoadout(c.store, M, ["transmuter.aspect", "trait.crab-shell", "trait.fox-stride", "arcane.blink"])).toMatchObject({ ok: true });
+    const other = "00000000-0000-4000-8000-0000000000ab";
+    await openGate(c, other);
+    await recordKill(c.store, other, "thorn-crab", "b-kill-9");
+    const o = await getProgression(c.store, other);
+    expect(o.ok && o.data.traits).toEqual({});
+  });
+  it("20260926210000_combat_kits.sql maps the same species to the same traits", () => {
+    const sql = readFileSync(join(__dirname, "../../supabase/migrations/20260926210000_combat_kits.sql"), "utf8");
+    const pairs = TRAITS.flatMap((t) => t.from.map((e) => `('${e}', '${t.key}')`));
+    for (const pair of pairs) expect(sql).toContain(pair);
+    expect(sql.match(/\('[a-z-]+', '[a-z-]+'\)/g)).toHaveLength(pairs.length);
   });
 });

@@ -362,7 +362,7 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
       }
       const motion = advanceMotion(
         { x: pos.x, z: pos.z, vx: vel.x, vz: vel.y },
-        { x: moving ? dx : 0, z: moving ? dz : 0, speed: PLAYER_SPEED * speedMult, response: lam, goal: targetRef.current ?? undefined },
+        { x: moving ? dx : 0, z: moving ? dz : 0, speed: PLAYER_SPEED * speedMult * (inCombat ? combat.rt.player.speed : 1), response: lam, goal: targetRef.current ?? undefined },
         delta,
         constrainMove ?? ((_x, _z, nextX, nextZ) => clampToCoast(nextX, nextZ, BOUNDARY)),
       );
@@ -623,6 +623,6 @@ const SEAT_CLIPS = new Set<ClipName>(["Sit", "Study", "Stretch", "Sleep"]);
 function PlayerCharacter({ look, motion, inCombat }: { look: CharacterLook; motion: React.RefObject<CharacterMotion>; inCombat: boolean }) {
   useCombatVersion();
   const p = combat.rt.player, w = WEAPONS[p.weapon];
-  const weapon = w && (inCombat ? p.alive : p.armed) ? { kind: w.kind, model: w.model, modelScale: w.modelScale, inHand: inCombat, grip: w.grip } : null;
+  const weapon = w?.model && (inCombat ? p.alive : p.armed) ? { kind: w.kind, model: w.model, modelScale: w.modelScale, inHand: inCombat, grip: w.grip } : null;
   return <Character look={look} motion={motion} walkSpeed={PLAYER_SPEED} weapon={weapon} />;
 }

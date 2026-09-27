@@ -73,10 +73,15 @@ export interface Enemy {
   beam: number; landed: boolean;
   /** Called by the boss: cleared when it resets. */
   summoned: boolean;
+  /** Kit statuses (lib/combat/kits.ts Status): held in place, slowed, marked for more damage, distracted (wanders home). */
+  status: { hold: number; slow: number; slowFor: number; mark: number; markFor: number; distract: number };
+  /** A Necromancer already raised this body. */
+  raised: boolean;
 }
 export function spawnEnemy(id: string, type: EnemyType, x: number, z: number): Enemy {
   return { id, type, x, z, spawnX: x, spawnZ: z, hp: type.hp, state: "idle", t: 0, facing: Math.PI, aim: { x, z }, flash: 0, kx: 0, kz: 0, deadFor: 0,
-    move: type.attacks[0], phase: 1, cycle: 0, beam: Math.PI, landed: false, summoned: false };
+    move: type.attacks[0], phase: 1, cycle: 0, beam: Math.PI, landed: false, summoned: false,
+    status: { hold: 0, slow: 0, slowFor: 0, mark: 0, markFor: 0, distract: 0 }, raised: false };
 }
 
 /** The next attack: ordinary enemies have one; the boss follows its plan, enraged in phase 3. */
@@ -117,6 +122,12 @@ export function stepEnemy(e: Enemy, player: Vec & { safe: boolean; alive: boolea
     const phase = bossPhase(e.hp / e.type.hp);
     if (phase > e.phase) { e.phase = phase; e.cycle = 0; if (e.state === "chase") e.move = nextMove(e); return { kind: "phase", enemy: e }; }
   }
+  // Statuses wear off; a held enemy does nothing (its windup waits too).
+  const st = e.status;
+  st.slowFor = Math.max(0, st.slowFor - dt); if (!st.slowFor) st.slow = 0;
+  st.markFor = Math.max(0, st.markFor - dt); if (!st.markFor) st.mark = 0;
+  st.distract = Math.max(0, st.distract - dt);
+  if (st.hold > 0 && e.state !== "return") { st.hold = Math.max(0, st.hold - dt); return null; }
   const a = e.move;
   const home = Math.hypot(e.x - e.spawnX, e.z - e.spawnZ);
   const dist = Math.hypot(player.x - e.x, player.z - e.z);
@@ -141,7 +152,7 @@ export function stepEnemy(e: Enemy, player: Vec & { safe: boolean; alive: boolea
       }
       return null;
     case "chase": {
-      if (dist > (a.reach ?? a.range * 0.8)) { move(player.x, player.z, e.type.speed); return null; }
+      if (dist > (a.reach ?? a.range * 0.8)) { move(player.x, player.z, e.type.speed * (1 - st.slow)); return null; }
       e.state = "windup"; e.t = 0; e.facing = facingTo(e, player); e.aim = { x: player.x, z: player.z }; e.landed = false;
       return null;
     }

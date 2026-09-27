@@ -11,13 +11,15 @@ import type { EnemyAttack, EnemyType, MissionDef, Weapon } from "./contract";
 const W = "/assets/game/weapons/", E = "/assets/game/enemies/";
 
 /** Ruling 2026-09-26: when the gate opens everyone gets one starter of each archetype. */
-export const WEAPON_ORDER = ["sword-driftwood", "bow-willow", "staff-oak", "tome-spirits"] as const;
+export const WEAPON_ORDER = ["sword-driftwood", "bow-willow", "staff-oak", "tome-spirits", "wraps-cloth"] as const;
 type Look = Pick<Weapon, "cooldown" | "range" | "arc" | "speed" | "model" | "modelScale" | "grip">;
 const WEAPON_LOOK: Record<string, Look> = {
   "sword-driftwood": { cooldown: 0.42, range: 1.7, arc: 1.9, model: `${W}sword-driftwood.glb`, modelScale: 1.3 },
   "bow-willow": { cooldown: 0.6, range: 11, arc: 0, speed: 18, model: `${W}bow-willow.glb`, modelScale: 1.3 },
   "staff-oak": { cooldown: 0.75, range: 8, arc: 0, speed: 11, model: `${W}staff-oak.glb`, modelScale: 1.3 },
   "tome-spirits": { cooldown: 6, range: 7, arc: 0, model: `${W}tome-spirits.glb`, modelScale: 1.3 },
+  // Bare hands with wraps (the Monk's full combo): quick, short, nothing held.
+  "wraps-cloth": { cooldown: 0.32, range: 1.35, arc: 1.7, model: "", modelScale: 1 },
   // Crafted (lib/crafting/recipes.ts): damage comes from the tier in the weapons table; these are the feel.
   "sword-iron": { cooldown: 0.45, range: 1.9, arc: 2.0, model: `${W}sword-iron.glb`, modelScale: 1.3 },
   "bow-yew": { cooldown: 0.7, range: 14, arc: 0, speed: 22, model: `${W}bow-yew.glb`, modelScale: 1.3 },

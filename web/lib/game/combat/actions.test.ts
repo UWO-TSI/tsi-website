@@ -4,6 +4,11 @@ import { attack, hurtPlayer, regenEnergy, resolveCast, startDodge, triggerAbilit
 import { startMission } from "./missions";
 import { createRuntime, ENERGY } from "./runtime";
 import { DODGE, spawnEnemy } from "./sim";
+import { equipKit } from "./abilities";
+import { subclassByKey } from "@/lib/combat/kits";
+
+/** An Elementalist: slot 1 is Elemental Burst, drawn with the easy spark rune. */
+const caster = () => { const rt = createRuntime(); equipKit(rt, subclassByKey("elementalist")); return rt; };
 
 const fixed = () => 0.5; // no crits
 
@@ -35,15 +40,16 @@ describe("player actions", () => {
     expect(rt.projectiles[0]).toMatchObject({ kind: "arrow", from: "player" });
     rt.player.weapon = "tome-spirits";
     for (let i = 0; i < 3; i++) { rt.player.attackCd = 0; attack(rt, { x: 0, z: 0 }); }
-    expect(rt.minions).toHaveLength(2);
+    expect(rt.units.filter(u => u.source === "weapon")).toHaveLength(2);
   });
   it("dodging grants i-frames, cancels casting and has a cooldown", () => {
-    const rt = createRuntime();
+    const rt = caster();
     rt.player.safe = false;
-    triggerAbility(rt, "spark");
+    triggerAbility(rt, "slot1");
     expect(rt.casting).not.toBeNull();
     expect(startDodge(rt, { x: 1, z: 0 })).toBe(true);
     expect(rt.casting).toBeNull();
+    expect(rt.cooldowns.slot1).toBe(1.5); // a cancel costs the short recovery, not the cooldown (row C3)
     rt.player.dodgeAge = 0.1;
     expect(hurtPlayer(rt, 20, { x: 1, z: 0 }, { x: 0, z: 0 })).toBe(0);
     rt.player.dodgeAge = DODGE.iframeEnd + 0.05;
@@ -59,10 +65,10 @@ describe("player actions", () => {
     expect(rt.player.alive).toBe(false);
   });
   it("runes cost energy; energy regenerates after a second, never while tracing", () => {
-    const rt = createRuntime();
-    expect(triggerAbility(rt, "binding")).toBe(true);
+    const rt = caster();
+    expect(triggerAbility(rt, "slot1")).toBe(true);
     const after = rt.player.energy;
-    expect(after).toBeLessThan(ENERGY.max);
+    expect(after).toBe(ENERGY.max - Math.ceil(35 * 0.25)); // a quarter of Elemental Burst's 35 to start
     regenEnergy(rt, 2);
     expect(rt.player.energy).toBe(after); // still tracing
     rt.casting = null; rt.player.sinceSpend = 0;
@@ -71,14 +77,15 @@ describe("player actions", () => {
     regenEnergy(rt, 1);
     expect(rt.player.energy).toBeGreaterThan(after);
     rt.player.energy = 5;
-    expect(triggerAbility(rt, "spark")).toBe(false);
+    rt.cooldowns.slot1 = 0;
+    expect(triggerAbility(rt, "slot1")).toBe(false);
   });
   it("incantation potency scales the effect; a fizzle does nothing", () => {
     const run = (outcome: "fail" | "normal" | "enhanced", power: number) => {
-      const rt = createRuntime();
+      const rt = caster();
       rt.enemies = [spawnEnemy("t", ENEMIES["stone-golem"], 3, 0)];
       rt.player.aim = { x: 3, z: 0 };
-      triggerAbility(rt, "spark");
+      triggerAbility(rt, "slot1");
       resolveCast(rt, { x: 0, z: 0 }, { accuracy: 90, coverage: 1, deviation: 0, order: 1, scribble: false, outcome, power }, fixed);
       return ENEMIES["stone-golem"].hp - rt.enemies[0].hp;
     };

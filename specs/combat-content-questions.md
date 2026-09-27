@@ -38,3 +38,33 @@ Each item has the assumption the build uses today. None blocks.
 
 ## Coordinator rulings (2026-09-26)
 All eleven Part A assumptions accepted as built; boss numbers are the starting balance, retune after the member playtest.
+
+## 2026-09-26 (combat content agent, Part B)
+
+Each item has the assumption the build uses today. None blocks. Kits: `web/lib/combat/kits.ts`; the one ability system: `web/lib/game/combat/abilities.ts`; table: `specs/evidence/combat-b/balance.md`.
+
+1. **What a kit holds (rows 17, 50).** Each subclass offers five abilities: its signature, two of its own, and its family's two shared ones (Arcane: Blink, Starfall; Ranger: Tumble, Rain of Arrows; Vanguard: Leap Strike, Second Wind; Warden: Renew, Verdant Covenant). Four are equipped at the Oracle, saved on the account (`member_progression.loadout`, migration `20260926210000`). The default is signature, own two, and the family's second.
+   *Assumption:* five to choose from is enough for launch; more per subclass later is data only.
+2. **Which spells are drawn (rows 52, C2).** Four: Elemental Burst and Call Companions (easy spark rune), Starfall and Verdant Covenant (hard binding rune). Ranger and Vanguard draw nothing.
+   - Drawing starts for 25% of the energy and pays the rest on release. A fizzle or a dodge pays only the start and waits 1.5 s instead of the cooldown (plan §defaults, C3).
+   - The score scales damage 0.5 to 1.5. Shields and heals cap at 1.2 and holds at 1.
+3. **Summon and totem caps (rows 43, 44, 50).**
+   - Minions share one capacity: 2 + Spirit/5, plus 1 for Summoner and Necromancer. Wisps and foxes cost 1, the bulwark crab 2. When a new one passes the cap, the oldest leaves.
+   - Totems: one per role (ember, mending, warding), three at most. Traps: two. The Illusionist's phantom: one.
+   - Companions and totems persist until destroyed, until you leave the ruins, or until their ability leaves the loadout. Shades and bone wisps last 20 s.
+   - Enemies go for a phantom or a bulwark crab near them, and a distracted enemy wanders home.
+4. **Transmuter (rows 34, 37, 40–42).** Each learned trait is an ability to equip, so the four slots are the equipped-trait limit.
+   - The first defeat of a species teaches its basic trait. The server does this in `combat_record_kill`, only for Transmuters, never on a replayed kill. The kill route answers `trait_unlocked`, and the ruins show a banner.
+   - Defeats also train mastery: tiers 2 to 4 at 1, 10 and 30 defeats. Trait damage uses that tier instead of the weapon's (row 37).
+   - Fox Stride is the starter. The elder crab trains Crab Shell, and the guardian teaches nothing.
+   - *Not built:* rarer drops per species (row 40) and wing flight (row 42).
+5. **The Guardian's shield.** The Buckler has no model and no way to be acquired, so every Guardian blocks at half, as the kit's missing-gear rule says. The Guardian is still 100% on both runs.
+   *Proposal:* grant the Buckler with the Guardian choice once it's modelled.
+   - Cloth wraps now work as a weapon (bare hands), so the Monk gets the full combo. Gunslingers without a revolver shoot at 70% until they craft one.
+6. **Stats (row 38).** Allocation now sends the new totals, so a retry changes nothing and lowering a stat needs the paid reset. The Oracle's "Family preset" only raises stats.
+7. **Subclass change (row 20).** A change costs 250 coins after a confirm. A retried key answers with its first result, even after a later change. Family abilities you had equipped stay equipped.
+8. **Balance (G2).** A scripted average player (60% dodges, runes at ~80%, no kiting) clears "Hold the rune circle" 100% of the time with every subclass.
+   - On "Sanctum watch", Warden is the most reliable family: lowest health averages 84%, against 63–71% for the rest, and it isn't the fastest.
+   - Summoner is the quickest Warden. Elementalist and Gunslinger are the frailest on the hard run (lowest health 40–45%) but still clear it.
+   *Assumption:* starting numbers; retune from the member playtest.
+9. **Keys.** The four slots are 1–4 and the weapon swap moved to Q. The key store is now `tsi.combatKeys.v2`, so anyone who remapped the prototype runes starts from the defaults once.

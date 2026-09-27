@@ -6,14 +6,15 @@ beforeEach(() => { saved.clear(); vi.stubGlobal("localStorage", { getItem: (k: s
 afterEach(() => { vi.unstubAllGlobals(); });
 
 describe("ability keys", () => {
-  it("default to 1–4, remap with swaps, refuse movement/dodge/menu keys, and persist", () => {
+  it("default to 1–4 for the slots and Q for the swap, remap with swaps, refuse movement/dodge/menu keys, and persist", () => {
     expect(readAbilityKeys()).toEqual(DEFAULT_ABILITY_KEYS);
-    const swapped = remapAbility(DEFAULT_ABILITY_KEYS, "spark", "2");
-    expect(swapped).toMatchObject({ ok: true, keys: { spark: "2", binding: "1" } });
-    expect(readAbilityKeys()).toMatchObject({ spark: "2", binding: "1" });
-    expect(remapAbility(DEFAULT_ABILITY_KEYS, "spark", " ")).toMatchObject({ ok: false });
-    expect(remapAbility(DEFAULT_ABILITY_KEYS, "spark", "w")).toMatchObject({ ok: false });
-    expect(remapAbility(DEFAULT_ABILITY_KEYS, "spark", "b")).toMatchObject({ ok: false });
-    expect(remapAbility(DEFAULT_ABILITY_KEYS, "signature", "q")).toMatchObject({ ok: true, keys: { signature: "q" } });
+    expect(DEFAULT_ABILITY_KEYS).toEqual({ slot1: "1", slot2: "2", slot3: "3", slot4: "4", swap: "q" });
+    const swapped = remapAbility(DEFAULT_ABILITY_KEYS, "slot1", "2");
+    expect(swapped).toMatchObject({ ok: true, keys: { slot1: "2", slot2: "1" } });
+    expect(readAbilityKeys()).toMatchObject({ slot1: "2", slot2: "1" });
+    expect(remapAbility(DEFAULT_ABILITY_KEYS, "slot1", " ")).toMatchObject({ ok: false });
+    expect(remapAbility(DEFAULT_ABILITY_KEYS, "slot1", "w")).toMatchObject({ ok: false });
+    expect(remapAbility(DEFAULT_ABILITY_KEYS, "slot1", "b")).toMatchObject({ ok: false });
+    expect(remapAbility(DEFAULT_ABILITY_KEYS, "slot4", "r")).toMatchObject({ ok: true, keys: { slot4: "r" } });
   });
 });

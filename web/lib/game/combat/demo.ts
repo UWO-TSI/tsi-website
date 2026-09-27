@@ -2,13 +2,16 @@
  * Dev-only: `?combat=demo` runs the island's /api/combat/* calls against the
  * systems agent's real service on an in-memory store (memoryCombatStore), as
  * a level-10 member with a family and subclass, so the gate, kills, wear and
- * missions can be played signed out. `?family=` picks the family.
+ * missions can be played signed out. `?family=` picks the family;
+ * `?subclass=<key>` picks the subclass (and its family), `?subclass=none`
+ * leaves the level-10 choice open; `?loadout=a,b,c` sets the four slots;
+ * the family preset is spent unless `?stats=none`.
  */
 import { memoryCombatStore } from "@/lib/combat/memoryStore";
-import { claimBossReward, completeMission, getProgression, listMissions, missionProgress, recordKill, reportWear, startMission, chooseSubclass } from "@/lib/combat/service";
+import { allocateStats, claimBossReward, completeMission, getProgression, listMissions, missionProgress, recordKill, reportWear, resetStats, setLoadout, startMission, chooseSubclass } from "@/lib/combat/service";
 import { islandProgression } from "@/lib/combat/islandAdapter";
-import { subclassesFor } from "@/lib/combat/kits";
-import { xpForLevel } from "@/lib/combat/progression";
+import { subclassByKey, subclassesFor } from "@/lib/combat/kits";
+import { presetAllocation, xpForLevel } from "@/lib/combat/progression";
 import type { Family } from "@/lib/oracle/engine";
 
 const ME = "00000000-0000-4000-8000-0000000c0de5";
@@ -20,11 +23,14 @@ export function installCombatDemo(): void {
   if (q.get("combat") !== "demo") return;
   installed = true;
   const m = memoryCombatStore();
-  const family = (["Arcane", "Ranger", "Vanguard", "Warden"].find(f => f.toLowerCase() === (q.get("family") ?? "").toLowerCase()) ?? "Arcane") as Family;
+  const picked = subclassByKey(q.get("subclass"));
+  const family = picked?.family ?? (["Arcane", "Ranger", "Vanguard", "Warden"].find(f => f.toLowerCase() === (q.get("family") ?? "").toLowerCase()) ?? "Arcane") as Family;
   const ready = (async () => {
     m.setFamily(ME, family); m.fund(ME, 2000);
     await m.store.grantXp(ME, xpForLevel(10), "admin", "demo", "demo-level-10");
-    await chooseSubclass(m.store, ME, subclassesFor(family)[0].key, "demo-subclass-1");
+    if (q.get("stats") !== "none") await allocateStats(m.store, ME, presetAllocation(family, 10));
+    if (q.get("subclass") !== "none") await chooseSubclass(m.store, ME, (picked ?? subclassesFor(family)[0]).key, "demo-subclass-1");
+    if (q.get("loadout")) await setLoadout(m.store, ME, q.get("loadout")!.split(","));
   })();
   const json = (r: { ok: boolean; status?: number; error?: string; data?: unknown; [k: string]: unknown }, key: string) => {
     const { ok, status, data, ...rest } = r;
@@ -49,6 +55,10 @@ export function installCombatDemo(): void {
       case "/api/combat/missions/progress": return json(await missionProgress(m.store, ME, body.progress_id, body.events), "mission");
       case "/api/combat/missions/complete": return json(await completeMission(m.store, ME, body.progress_id), "rewards");
       case "/api/combat/boss-reward": return json(await claimBossReward(m.store, ME, body.event_key), "boss");
+      case "/api/combat/subclass": return json(await chooseSubclass(m.store, ME, body.subclass, body.idempotency_key), "subclass");
+      case "/api/combat/loadout": return json(await setLoadout(m.store, ME, body.loadout), "loadout");
+      case "/api/combat/allocate": return json(await allocateStats(m.store, ME, body), "stats");
+      case "/api/combat/reset-stats": return json(await resetStats(m.store, ME, body.idempotency_key), "reset");
       default: return new Response(JSON.stringify({ ok: false, error: "Not in the demo" }), { status: 404 });
     }
   };

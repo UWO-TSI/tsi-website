@@ -6,7 +6,7 @@ import { DomainError } from "@/lib/result";
 
 export type CombatErrorCode =
   | "unavailable" | "insufficient" | "not_found" | "not_owned" | "needs_reset" | "not_enough_points" | "level_too_low" | "wrong_family"
-  | "no_family" | "cooldown" | "not_ready" | "kill_xp_cap" | "unknown_enemy" | "unknown_mission" | "bad_hits" | "boss_cooldown" | "gate_closed" | "failed";
+  | "no_family" | "cooldown" | "not_ready" | "kill_xp_cap" | "unknown_enemy" | "unknown_mission" | "bad_hits" | "boss_cooldown" | "gate_closed" | "bad_loadout" | "no_subclass" | "failed";
 export class CombatError extends DomainError<CombatErrorCode> {}
 
 export interface ProgressionRow {
@@ -14,6 +14,10 @@ export interface ProgressionRow {
   level: number;
   stats: StatBlock;
   subclass: string | null;
+  /** Equipped ability keys (kits.ts resolveLoadout fills and filters them). */
+  loadout: string[];
+  /** Transmuter monster traits: trait key → qualifying defeats (rows 40, 41). */
+  traits: Record<string, number>;
 }
 export interface OwnedWeapon {
   weapon_key: string;
@@ -38,6 +42,7 @@ export interface CombatStore {
   allocate(memberId: string, stats: StatBlock): Promise<StatBlock>;
   resetStats(memberId: string, key: string): Promise<{ fee: number; replayed: boolean }>;
   chooseSubclass(memberId: string, subclass: string, family: Family, key: string): Promise<{ subclass: string; fee: number; replayed: boolean }>;
+  setLoadout(memberId: string, loadout: string[]): Promise<string[]>;
   weapons(memberId: string): Promise<OwnedWeapon[]>;
   equip(memberId: string, weaponKey: string): Promise<void>;
   wear(memberId: string, weaponKey: string, hits: number, defeated: boolean, key: string): Promise<{ durability: number; replayed: boolean }>;
