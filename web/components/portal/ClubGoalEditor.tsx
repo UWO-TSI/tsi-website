@@ -11,9 +11,11 @@ import { DraftBar, Field, inputCls, listToText, textToList, Toggle, useDraftFlow
 // ─── ClubGoalEditor ─────────────────────────────────────────────────────────
 // Server-wide goal: type (story one-time / seasonal yearly), target, weights
 // per source, per-member caps, accepted deliveries, window, unlocks and the
-// completion letter sent to every member.
+// completion letter sent to every member. `seasonal` is the Seasonal Events
+// editor: the same goal, type fixed to seasonal (row 212; specs/seasonal-events.md).
 
-const BACK = "/student/dashboard/admin/content/goals";
+const GOALS = "/student/dashboard/admin/content/goals";
+export const SEASONAL = "/student/dashboard/admin/content/seasonal";
 const WEIGHT_LABELS: Record<WeightKey, string> = {
   coins: "Coin (per 1)",
   material: "Material (per item)",
@@ -26,12 +28,14 @@ const WEIGHT_LABELS: Record<WeightKey, string> = {
 const toLocalInput = (iso: string | null | undefined) => (iso ? new Date(iso).toISOString().slice(0, 16) : "");
 const fromLocalInput = (v: string) => (v ? new Date(`${v}:00Z`).toISOString() : null);
 
-export default function ClubGoalEditor({ mode, initial }: { mode: "new" | "edit"; initial?: Partial<ClubGoal> | null }) {
+export default function ClubGoalEditor({ mode, initial, seasonal = false }: { mode: "new" | "edit"; initial?: Partial<ClubGoal> | null; seasonal?: boolean }) {
+  const BACK = seasonal ? SEASONAL : GOALS;
+  const noun = seasonal ? "Seasonal Event" : "Club Goal";
   const [form, setForm] = useState(() => ({
     slug: initial?.slug ?? "",
     title: initial?.title ?? "",
     summary: initial?.summary ?? "",
-    goal_type: (initial?.goal_type ?? "story") as GoalType,
+    goal_type: (seasonal ? "seasonal" : (initial?.goal_type ?? "story")) as GoalType,
     target_points: initial?.target_points ?? DEFAULT_TARGET,
     weights: { ...DEFAULT_WEIGHTS, ...(initial?.weights ?? {}) },
     caps: { ...DEFAULT_CAPS, ...(initial?.caps ?? {}) },
@@ -76,16 +80,16 @@ export default function ClubGoalEditor({ mode, initial }: { mode: "new" | "edit"
   return (
     <div>
       <Link href={BACK} className="inline-flex items-center gap-1 text-xs font-mono text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] mb-2">
-        <ArrowLeft size={12} /> Back to Club Goals
+        <ArrowLeft size={12} /> Back to {seasonal ? "Seasonal Events" : "Club Goals"}
       </Link>
-      <h1 className="text-2xl font-heading font-bold text-[var(--color-text-primary)]">{mode === "new" ? "New Club Goal" : `Edit: ${initial?.title ?? "Goal"}`}</h1>
+      <h1 className="text-2xl font-heading font-bold text-[var(--color-text-primary)]">{mode === "new" ? `New ${noun}` : `Edit: ${initial?.title ?? noun}`}</h1>
       <p className="text-sm font-mono text-[var(--color-text-muted)] mt-1 mb-6">Default size: about two weeks for 20–30 active members (~30 check-ins or ~15,000 coins).</p>
 
       <div className="bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-lg p-6 space-y-5">
         <div className="grid gap-5 md:grid-cols-[1fr_1fr_120px]">
           <Field label="Slug"><input className={inputCls} value={form.slug} onChange={(e) => set("slug", e.target.value)} spellCheck={false} /></Field>
           <Field label="Type" hint="Story: one-time. Seasonal: repeats yearly.">
-            <select className={inputCls} value={form.goal_type} onChange={(e) => set("goal_type", e.target.value as GoalType)}>
+            <select className={inputCls} value={form.goal_type} disabled={seasonal} onChange={(e) => set("goal_type", e.target.value as GoalType)}>
               <option value="story">Story (one-time)</option>
               <option value="seasonal">Seasonal (yearly)</option>
             </select>

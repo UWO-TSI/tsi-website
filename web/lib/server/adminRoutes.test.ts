@@ -11,6 +11,7 @@ const mock = vi.hoisted(() => ({ ctx: null as unknown }));
 vi.mock("@/lib/server/memberContext", async (original) => ({
   ...(await original<typeof import("@/lib/server/memberContext")>()),
   memberContext: async () => mock.ctx,
+  withStore: async (make: (db: unknown) => unknown) => (mock.ctx instanceof NextResponse ? mock.ctx : { ...(mock.ctx as object), store: make((mock.ctx as { db: unknown }).db) }),
 }));
 
 const WEB = join(__dirname, "../..");

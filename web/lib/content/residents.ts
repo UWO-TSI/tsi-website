@@ -36,7 +36,7 @@ const isAnchor = (v: unknown): v is ResidentAnchor => typeof v === "string" && O
 export function validateResidentDraft(d: Record<string, unknown>): string[] {
   const errors: string[] = [];
   if (typeof d.slug !== "string" || !/^[a-z0-9-]{1,64}$/.test(d.slug)) errors.push("slug: lowercase letters, numbers, dashes");
-  if (typeof d.display_name !== "string" || !d.display_name.trim() || d.display_name.length > 40) errors.push("display_name: 1-40 characters");
+  if (typeof d.display_name !== "string" || !d.display_name.trim() || d.display_name.length > 80) errors.push("display_name: 1-80 characters");
   if (d.post != null && !(RESIDENT_POSTS as readonly unknown[]).includes(d.post)) errors.push("post: one of the service posts or villager");
   if (d.bio !== undefined && (typeof d.bio !== "string" || d.bio.length > 1000)) errors.push("bio: up to 1000 characters");
   if (d.tone != null && (typeof d.tone !== "string" || d.tone.length > 40)) errors.push("tone: up to 40 characters");
