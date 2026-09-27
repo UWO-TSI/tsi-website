@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { islandPhase, parseTimeOverride, phaseForHour, torontoHour } from "./islandTime";
+import { islandPhase, parseClockOverride, parseTimeOverride, phaseForHour, torontoHour, torontoInstant } from "./islandTime";
 
 const SEPT = new Date("2026-09-24T16:00:00Z");
 const DAYS = [{ date: "2026-09-24", sunrise: 7.23, sunset: 19.3 }];
@@ -32,5 +32,18 @@ describe("island clock", () => {
     expect(parseTimeOverride("noon")).toBeNull();
     expect(parseTimeOverride("25")).toBeNull();
     expect(parseTimeOverride(null)).toBeNull();
+  });
+  it("turns a Toronto wall clock into the instant, in daylight and standard time", () => {
+    expect(torontoInstant("2026-09-27", 11.75).toISOString()).toBe("2026-09-27T15:45:00.000Z");
+    expect(torontoInstant("2026-12-21", 17).toISOString()).toBe("2026-12-21T22:00:00.000Z");
+  });
+  it("reads ?at=HH:MM with an optional date, beside the ?at=x,z spawn point", () => {
+    const q = (s: string) => parseClockOverride(new URLSearchParams(s), SEPT)?.toISOString() ?? null;
+    expect(q("at=17:00")).toBe("2026-09-24T21:00:00.000Z");
+    expect(q("at=0,-1&at=17:00&date=2026-06-21")).toBe("2026-06-21T21:00:00.000Z");
+    expect(q("at=17:00&date=2026-12-21")).toBe("2026-12-21T22:00:00.000Z");
+    expect(q("at=0,-1")).toBeNull();
+    expect(q("at=25:00")).toBeNull();
+    expect(q("")).toBeNull();
   });
 });
