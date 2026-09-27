@@ -122,10 +122,11 @@ export const TUNING_DEFAULTS: Tuning = {
   // The ramp ENDS IN THE SAND. Shallow water there is the seabed under a thin
   // blue film, not a paler blue, which is why the driver is depth.
   //
-  // glare / glareWidth / sunGlint / sunSharp / sparkle / sparkleSpeed and the
-  // three wave values are DAVID'S, off the bench 2026-07-28. They are carried
-  // over unchanged, but the material underneath them changed from lit to unlit,
-  // so they need one confirming pass before they can be called his again.
+  // glare / sunGlint and the three wave values are DAVID'S, off the bench
+  // 2026-07-28. They are carried over unchanged, but the material underneath
+  // them changed from lit to unlit, so they need one confirming pass before
+  // they can be called his again. roughness is his glare spread (a specular
+  // power of 26) as the RMS slope with the same width (row 238).
   water: {
     deepColor: 0x3098b3,
     midColor: 0x5bc5cb,
@@ -163,11 +164,9 @@ export const TUNING_DEFAULTS: Tuning = {
     opacity: 0.94,
     fresnel: 0.18,
     glare: 1.5,
-    glareWidth: 26,
+    roughness: 0.14,
     sunGlint: 6.5,
-    sunSharp: 230,
-    sparkle: 0.7,
-    sparkleSpeed: 1.4,
+    sunSize: 5,
     waveHeight: 0.035,
     waveScale: 7,
     waveSpeed: 0.7,

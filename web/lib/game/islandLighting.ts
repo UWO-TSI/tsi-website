@@ -20,9 +20,10 @@ const water = {
   deepColor: 0x398d9f, midColor: 0x78bdbe, shallowColor: 0xc4ddd0, bedColor: 0xf0e2c6,
   foamWidth: 0.2, foamStrength: 0.42, foamSoft: 0.17, foamWave: 0.07, foamWaveSpeed: 0.85,
   blobScale: 1.35, blobDarken: 0.96, blobSpeed: 0.16, ringWidth: 0.12, ringStrength: 0.035,
-  // Glint path (row 237): a broad sheet toward the folded sun, sharp flickering flares inside it;
-  // sunGlint also drives the crest sparkle sprites (GridOcean).
-  glare: 0.2, glareWidth: 40, sunGlint: 2, sunSharp: 900, sparkle: 0.8, rippleStrength: 0.12,
+  // The real sun on the water (row 238, look spec §7.4): a glare sheet from the ripples too small to
+  // draw (roughness = their RMS slope on a calm day, Cox-Munk) and the sparkle sprites (GridOcean), each
+  // a facet that flashes while the sun's disc (sunSize = its radius, degrees) sits in its mirror direction.
+  glare: 0.2, roughness: 0.11, sunGlint: 2, sunSize: 5, rippleStrength: 0.12,
 };
 export type IslandWater = typeof water;
 

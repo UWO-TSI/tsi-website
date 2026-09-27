@@ -95,7 +95,7 @@ export default function GridWorld({ map: suppliedMap, water, palette, windScale 
       sunDir.current.sub(lightTarget.current);
       sunColor.current.copy(light.color);
     }
-    advanceWater(state.clock.elapsedTime, water ?? tuneNow().water, sunDir.current, state.camera, sunColor.current);
+    advanceWater(state.clock.elapsedTime, water ?? tuneNow().water, sunDir.current, sunColor.current);
   });
 
   return (
