@@ -266,14 +266,17 @@ export function terrainMaterial(name: string): THREE.Material | null {
   return mat;
 }
 
-/** The ripple normal (xz slope) at a world point and time. Shared with the sparkle sprites, which need the same waves. */
+/**
+ * The ripple normal (xz slope) at a world point and time. Shared with the sparkle sprites, which need the same
+ * waves. The scroll is `fract`ed: uTime is world seconds (up to a day), and the texture repeats, so the wrap is seamless.
+ */
 export const WATER_RIPPLE = /* glsl */ `
 uniform sampler2D uRippleTexture;
 uniform float uRippleStrength;
 vec2 waterDetailNormal(vec2 xz) {
   if (uRippleStrength <= 0.0) return vec2(0.0);
-  vec2 a = texture2D(uRippleTexture, xz * 0.22 + uTime * vec2(0.014, 0.009)).rg * 2.0 - 1.0;
-  vec2 b = texture2D(uRippleTexture, xz.yx * 0.31 - uTime * vec2(0.008, 0.011)).rg * 2.0 - 1.0;
+  vec2 a = texture2D(uRippleTexture, xz * 0.22 + fract(uTime * vec2(0.014, 0.009))).rg * 2.0 - 1.0;
+  vec2 b = texture2D(uRippleTexture, xz.yx * 0.31 - fract(uTime * vec2(0.008, 0.011))).rg * 2.0 - 1.0;
   return (a + b * 0.5) * uRippleStrength;
 }
 `;

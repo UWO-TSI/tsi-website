@@ -245,6 +245,16 @@ float facetGlint(vec3 sun, vec3 eye, vec3 p, vec3 n, float sunSize) {
 }
 `;
 
+/**
+ * A time phase wrapped to one turn before it meets sin(). uTime is world
+ * seconds (up to 86 400, lib/game/worldClock.ts), so t * speed reaches 10^5
+ * rad, where GPU fast-math sin loses its accuracy; the wrap keeps it in range
+ * and is seamless, because sin repeats.
+ */
+const WATER_PHASE = /* glsl */ `
+float waterPhase(float x) { return mod(x, 6.2831853); }
+`;
+
 const UNIFORM_DECLS = /* glsl */ `
 uniform float uTime;
 uniform vec3 uDeepColor;
@@ -285,7 +295,7 @@ uniform float uRoughness;
  * go.
  */
 const WATER_FUNCTIONS = /* glsl */ `
-// Mirrors bedDepth() in waterShader.ts. Change both together.
+${WATER_PHASE}// Mirrors bedDepth() in waterShader.ts. Change both together.
 float bedDepthAt(float d) {
   return uBedDepth * (1.0 - exp(-max(d, 0.0) / max(uBedSlope, 0.01)));
 }
@@ -304,8 +314,8 @@ vec3 waterRamp(float t) {
 // the plaid that two crossed waves give.
 float blobField(vec2 p, float t) {
   vec2 q = p / max(uBlobScale, 0.01);
-  float a = sin(q.x * 1.00 + t * 0.31) * sin(q.y * 0.87 - t * 0.23);
-  float b = sin((q.x + q.y) * 0.61 - t * 0.19) * sin((q.x - q.y) * 0.53 + t * 0.27);
+  float a = sin(q.x * 1.00 + waterPhase(t * 0.31)) * sin(q.y * 0.87 - waterPhase(t * 0.23));
+  float b = sin((q.x + q.y) * 0.61 - waterPhase(t * 0.19)) * sin((q.x - q.y) * 0.53 + waterPhase(t * 0.27));
   return a * 0.6 + b * 0.4;
 }
 ${WATER_OPTICS}`;
@@ -326,12 +336,13 @@ uniform float uTime;
 uniform float uWaveHeight;
 uniform float uWaveScale;
 uniform float uWaveSpeed;
+${WATER_PHASE}
 float waterSwell(vec2 xz, out vec2 grad) {
   float k = 6.2831853 / max(uWaveScale, 0.001);
   vec2 d1 = normalize(vec2(1.0, 0.35));
   vec2 d2 = normalize(vec2(-0.42, 1.0));
-  float a1 = dot(xz, d1) * k + uTime * uWaveSpeed;
-  float a2 = dot(xz, d2) * k * 1.63 + uTime * uWaveSpeed * 1.31;
+  float a1 = dot(xz, d1) * k + waterPhase(uTime * uWaveSpeed);
+  float a2 = dot(xz, d2) * k * 1.63 + waterPhase(uTime * uWaveSpeed * 1.31);
   grad = d1 * (cos(a1) * 0.62 * k * uWaveHeight)
        + d2 * (cos(a2) * 0.38 * k * 1.63 * uWaveHeight);
   return (sin(a1) * 0.62 + sin(a2) * 0.38) * uWaveHeight;
@@ -362,7 +373,7 @@ const FRAGMENT_BODY = /* glsl */ `
   // cells apart are at different points in the same swash. This is the sea's
   // original lapping foam, restored as a parameter and now shared with the
   // river, where it wants to be near zero.
-  float lap = sin(vWaterWorld.x * 0.9 + vWaterWorld.z * 0.7 + uTime * uFoamWaveSpeed) * uFoamWave;
+  float lap = sin(vWaterWorld.x * 0.9 + vWaterWorld.z * 0.7 + waterPhase(uTime * uFoamWaveSpeed)) * uFoamWave;
 
   float edge = max(shore - lap, 0.0);
   float depth = bedDepthAt(edge);
