@@ -36,6 +36,18 @@ describe("island lighting profiles", () => {
     }
     expect(luma(withWeather(ISLAND_LIGHTING.night, "snow").sky)).toBeLessThan(luma(ISLAND_LIGHTING.day.sky) * 0.6);
   });
+  it("hides the sun's reflection behind rain, snow and fog cloud, and spreads it wider and dimmer in wind (look spec §7.4)", () => {
+    for (const phase of ISLAND_PHASES) {
+      for (const weather of ["rain", "snow", "fog"] as const) {
+        const { water } = withWeather(ISLAND_LIGHTING[phase], weather);
+        expect([water.glare, water.sunGlint], `${phase} ${weather}`).toEqual([0, 0]);
+      }
+      const calm = ISLAND_LIGHTING[phase].water, windy = withWeather(ISLAND_LIGHTING[phase], "wind").water;
+      expect(windy.roughness).toBeCloseTo(calm.roughness * 1.6);
+      expect(windy.glare * windy.roughness ** 2).toBeCloseTo(calm.glare * calm.roughness ** 2);
+      expect(windy.sunGlint).toBe(calm.sunGlint);
+    }
+  });
   it("thickens haze for fog more than for rain", () => {
     expect(withWeather(ISLAND_LIGHTING.day, "fog").fogNear).toBeLessThan(withWeather(ISLAND_LIGHTING.day, "rain").fogNear);
   });
