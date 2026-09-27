@@ -24,9 +24,9 @@ export function weatherForDate(d: Date): Weather {
   return "sunny";
 }
 
-/** Client-only convenience: today's weather with URL overrides. */
+/** Client-only convenience: today's weather with URL overrides (development only). */
 export function getTodayWeather(): Weather {
-  if (typeof window !== "undefined") {
+  if (process.env.NODE_ENV !== "production" && typeof window !== "undefined") {
     const q = window.location.search;
     if (q.includes("rain")) return "rain";
     if (q.includes("cloudy")) return "cloudy";
