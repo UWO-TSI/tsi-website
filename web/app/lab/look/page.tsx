@@ -14,7 +14,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
-import LookRig, { type LookMetrics } from "@/components/lab/LookRig";
+import LookRig, { materialSummary, type LookMetrics } from "@/components/lab/LookRig";
 import { useGraphicsSettings } from "@/lib/game/useGraphicsSettings";
 import {
   CURRENT, LOOK_PRESETS, MATERIAL_CLASSES, keyFill, kelvinHex, parseLook, sunAngles, sunFromAngles, type LookPreset,
@@ -111,13 +111,15 @@ export default function LookLab() {
     const w = window as unknown as Tree;
     w.__look = (v: unknown) => setEdited(parseLook(v));
     w.__ab = (v: "A" | "B") => setAb(v);
-    w.__metrics = () => metricsRef;
+    w.__metrics = () => latest;
+    w.__materials = materialSummary;
+    w.__presets = Object.fromEntries(LOOK_PRESETS.map(p => [p.id, p]));
   }, []);
   const active = ab === "B" ? edited : undefined;
   const ratios = useMemo(() => keyFill(active ?? CURRENT), [active]);
   const sun = sunAngles(edited.light.sunPosition);
   const set = (path: string, value: unknown) => setEdited(p => withValue(p, path, value));
-  const onMetrics = (m: LookMetrics) => { metricsRef[slot] = m; setMetrics({ ...metricsRef }); };
+  const onMetrics = (m: LookMetrics) => { latest = m; metricsRef[slot] = m; setMetrics({ ...metricsRef }); };
 
   return (
     <div style={{ position: "relative", width: "100%", height: "calc(100vh - 40px)", overflow: "hidden" }}>
@@ -170,8 +172,9 @@ export default function LookLab() {
   );
 }
 
-/** Last metrics per slot, readable by capture scripts without a render. */
+/** Last metrics per slot for the readout; `latest` for capture scripts. */
 const metricsRef: Record<string, LookMetrics> = {};
+let latest: LookMetrics | null = null;
 
 function Slider({ label, min, max, step, value, onChange }: { label: string; min: number; max: number; step: number; value: number; onChange: (v: number) => void }) {
   return <label style={{ display: "block", margin: "4px 0" }}>

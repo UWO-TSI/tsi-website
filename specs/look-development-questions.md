@@ -1,2 +1,13 @@
 # look-development: open questions for David
 
+Each question carries the assumption the work went ahead on. Answer any of them and the lab or the captures follow.
+
+1. **Captures use smooth mode, not the pixel filter.** The shipped default is `pixelated: true` (`web/lib/game/graphicsSettingsStore.ts:16`, DPR 0.5, no FXAA). Every baseline and preset capture has the pixel filter off so material and shadow detail is readable and FXAA (High) is in the path. Tone, contrast and saturation numbers barely move with the filter. Should the final look be judged with the filter on?
+2. **"Overcast" is the rain weather.** The game has no overcast state: WMO cloud codes 1-3 map to `clear` (`web/lib/game/islandWeather.ts:23-29`). The overcast baseline frames are `?weather=rain` (sun ×0.45, 60% desaturated sky, rain particles). Should overcast become its own weather state when the look is applied?
+3. **Season forced to summer** in every capture (`?season=summer`), so presets compare on the same palette. Today's real date gives an autumn blend.
+4. **A preset is the day look.** In the lab it replaces the profile at whatever time is forced; dawn, golden hour, night and weather are derived later (§3-4). Season and weather still layer on top of it (`lookToLight` feeds `withSeason`/`withWeather`).
+5. **Sun direction moved to the side in all three directions.** The shipped sun sits behind the camera (34° off the view axis), which hides most cast shadows. The directions light from screen-left and slightly behind the subject so shadows fall toward the camera. This is a composition choice as much as a lighting one; your references will settle it.
+6. **No outline effect.** Row 145 says characters do not need outlines, and nothing in the brief asks for them on props. The lab has no outline control. Say so if you want one tried.
+7. **Shadow tint and per-class material controls live in the lab rig only** (`web/components/lab/LookRig.tsx` patches the scene's own materials). Promoting them into the game's material code is part of §4 (apply), once a preset is picked.
+8. **The sky gradient is screen-space.** The follow camera pitches down 34° with a 48° vertical FOV, so its top ray is 10° below the horizon; the sky that shows is only there because the curved world bends the terrain down. A world-space sky dome would paint ground colours into that band. The gradient runs from the sky-top colour at the top of the frame to the horizon colour at 55% height.
+9. **FPS numbers are relative.** Dev build on this M4 Mac mini, uncapped frame rate, other agents' servers and tools running. They rank the presets' cost; they are not a device benchmark. The Light tier target (30 FPS on integrated graphics) is checked on this machine's integrated GPU only.

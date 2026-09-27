@@ -84,6 +84,18 @@ function sweepScene(scene: THREE.Scene): boolean {
   return added;
 }
 
+/** Authored roughness/metalness per class, for the render-value inventory (capture scripts). */
+export function materialSummary() {
+  const out: Record<string, { count: number; roughness: number[]; metalness: number[]; textured: number }> = {};
+  for (const m of LIVE) {
+    const { cls, roughness } = PATCHED.get(m)!, row = out[cls] ??= { count: 0, roughness: [], metalness: [], textured: 0 };
+    row.count++; row.roughness.push(roughness); row.metalness.push(m.metalness); if (m.map) row.textured++;
+  }
+  const q = (v: number[], f: number) => [...v].sort((a, b) => a - b)[Math.floor(f * (v.length - 1))];
+  return Object.fromEntries(Object.entries(out).map(([cls, r]) => [cls, { count: r.count, textured: r.textured,
+    roughness: [q(r.roughness, 0), q(r.roughness, 0.5), q(r.roughness, 1)], metalness: [q(r.metalness, 0), q(r.metalness, 0.5), q(r.metalness, 1)] }]));
+}
+
 export default function LookRig({ preset, onMetrics }: { preset: LookPreset | null; onMetrics: (m: LookMetrics) => void }) {
   const scene = useThree(s => s.scene);
   const clock = useRef({ seconds: 1, frames: 0 });
