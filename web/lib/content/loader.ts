@@ -85,14 +85,13 @@ async function fetchNPCPersonas(permanentOnly: boolean): Promise<NPCPersona[]> {
     const supabase = createClient();
     let query = supabase
       .from("npc_personas")
-      .select(
-        "id, slug, display_name, sprite_url, spawn_zone, is_permanent, persona_prompt, canned_dialogue, active, created_at, updated_at",
-      )
+      .select("*")
       .eq("active", true);
     if (permanentOnly) query = query.eq("is_permanent", true);
     const { data, error } = await query;
-    if (error || !data) {
-      console.warn("[contentLoader] npc_personas fetch failed, using defaults", error);
+    // No rows (signed out, or every resident switched off) also falls back: the world never empties (principle 2).
+    if (error || !data?.length) {
+      if (error) console.warn("[contentLoader] npc_personas fetch failed, using defaults", error);
       return filterPermanent(DEFAULT_NPC_PERSONAS, permanentOnly);
     }
     return data as unknown as NPCPersona[];
@@ -106,6 +105,8 @@ function filterPermanent(rows: NPCPersona[], permanentOnly: boolean): NPCPersona
   const active = rows.filter((r) => r.active);
   return permanentOnly ? active.filter((r) => r.is_permanent) : active;
 }
+// Stable fallbacks so memoised consumers don't recompute before the fetch lands.
+const DEFAULT_PERSONAS = { all: filterPermanent(DEFAULT_NPC_PERSONAS, false), permanent: filterPermanent(DEFAULT_NPC_PERSONAS, true) };
 
 function applyNPCDraft(rows: NPCPersona[], draft: Record<string, unknown>): NPCPersona[] {
   if (!draft || typeof draft !== "object" || !("slug" in draft)) return rows;
@@ -151,7 +152,7 @@ export function useNPCPersonas(options?: {
     SWR_OPTS,
   );
   return {
-    data: data ?? filterPermanent(DEFAULT_NPC_PERSONAS, permanentOnly),
+    data: data ?? DEFAULT_PERSONAS[permanentOnly ? "permanent" : "all"],
     isLoading,
     error,
   };

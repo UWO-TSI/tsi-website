@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { adminContext } from "@/lib/server/adminContext";
 
 // Atomic "Set Active" for seasonal_palettes.
 //
@@ -19,30 +18,11 @@ export async function POST(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
-  }
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("tier")
-    .eq("id", user.id)
-    .single();
-
-  if (!profile || (profile.tier !== 1 && profile.tier !== 2)) {
-    return NextResponse.json(
-      { ok: false, error: "Forbidden — T1/T2 only" },
-      { status: 403 },
-    );
-  }
+  const ctx = await adminContext();
+  if (ctx instanceof NextResponse) return ctx;
 
   const { id: targetId } = await params;
-  const admin = createAdminClient();
+  const admin = ctx.db;
 
   // 1. Confirm target palette exists.
   const { data: target, error: targetError } = await admin

@@ -19,6 +19,7 @@ const TABLE_OPTIONS = [
   { value: "seasonal_palettes", label: "seasonal_palettes" },
   { value: "quest_chapters", label: "quest_chapters" },
   { value: "club_goals", label: "club_goals" },
+  { value: "crafting_recipes", label: "crafting_recipes" },
 ] as const;
 
 type TableFilter = (typeof TABLE_OPTIONS)[number]["value"];
@@ -29,6 +30,7 @@ const HISTORY_ROUTE: Record<string, string> = {
   seasonal_palettes: "/student/dashboard/admin/content/palettes",
   quest_chapters: "/student/dashboard/admin/content/chapters",
   club_goals: "/student/dashboard/admin/content/goals",
+  crafting_recipes: "/student/dashboard/admin/content/recipes",
 };
 
 interface VersionEntry {
@@ -479,5 +481,6 @@ function rowDisplay(v: {
       ? (v.snapshot_data.display_name as string)
       : null;
   if (name) return name;
-  return v.row_id.slice(0, 8);
+  // uuid rows shorten; text-keyed rows (recipes) are their own name.
+  return /^[0-9a-f]{8}-/.test(v.row_id) ? v.row_id.slice(0, 8) : v.row_id;
 }

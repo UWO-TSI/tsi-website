@@ -15,7 +15,7 @@ interface ReportRow {
   created_at: string;
 }
 
-export default function NameReportsPanel() {
+export default function NameReportsPanel({ showEmpty = false }: { showEmpty?: boolean }) {
   const [rows, setRows] = useState<(ReportRow & { target: string; world: string | null; reporter: string })[] | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const load = useCallback(async () => {
@@ -45,7 +45,7 @@ export default function NameReportsPanel() {
     setMsg(res.ok && body.ok ? `Done: ${action.replace("_", " ")}.` : (body.error ?? "Action failed."));
     await load();
   };
-  if (!rows || rows.length === 0) return null;
+  if (!rows || (rows.length === 0 && !showEmpty)) return null;
   return (
     <div className="bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-lg p-4 mb-4">
       <h2 className="font-heading font-bold text-[var(--color-text-primary)] mb-2">Name reports ({rows.length} open)</h2>

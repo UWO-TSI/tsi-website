@@ -8,7 +8,7 @@ import GridWorld from "./grid/GridWorld";
 import GridOcean from "./grid/GridOcean";
 import PlayerAvatar from "./PlayerAvatar";
 import NPC from "./NPC";
-import { DEFAULT_NPC_PERSONAS } from "@/data/content-defaults";
+import { residentSpots } from "@/lib/content/residents";
 import GameSceneBoundary from "./GameSceneBoundary";
 import PostFX from "./PostFX";
 import HQInterior from "./HQInterior";
@@ -30,7 +30,7 @@ import { POND, ISLAND_RADII, WHARF_DECK, createDefaultIsland, DEFAULT_SPAWN, ISL
 import { useGraphicsSettings } from "@/lib/game/useGraphicsSettings";
 import { CLUBHOUSE_LIGHTING, ISLAND_TERRAIN, islandLight, withWeather, withSeason, type IslandLight } from "@/lib/game/islandLighting";
 import { paletteBySeason, seasonLook, SEASON_TREES, SEASON_BUSHES, SEASON_FLOWERS, type SeasonLook } from "@/lib/game/seasonalLook";
-import { useSeasonPalettes } from "@/lib/content/loader";
+import { useNPCPersonas, useSeasonPalettes } from "@/lib/content/loader";
 import type { IslandWeather } from "@/lib/game/islandWeather";
 import { useIslandConditions } from "@/lib/game/useIslandConditions";
 import { IslandAtmosphere, useFollowCamera } from "./IslandAtmosphere";
@@ -209,6 +209,8 @@ function IslandScene({ identity, devAt, exitFrom, peaceful, fishSpot, fishing, c
   player: React.RefObject<THREE.Vector3>; onMove: (position: THREE.Vector3) => void; onNear: (near: Near) => void;
 }) {
   const island = useMemo(() => createDefaultIsland(), []);
+  const { data: personas } = useNPCPersonas({ permanentOnly: true });
+  const residents = useMemo(() => residentSpots(personas, phase), [personas, phase]);
   const spawn = devAt && !returned && !fromBoat && !exitFrom ? devAt : fromBoat ? WHARF_SPAWN : exitFrom === "museum" ? MUSEUM_SPAWN : exitFrom === "cafe" ? CAFE_SPAWN : exitFrom === "oracle" ? ORACLE_SPAWN : exitFrom === "ruins" ? RUINS_EXIT_SPAWN : returned ? RETURN_SPAWN : DEFAULT_SPAWN;
   const winterBare = SEASON_FLOWERS[look.season].length === 0;
   const plantShadows = useMemo(() => [
@@ -271,8 +273,8 @@ function IslandScene({ identity, devAt, exitFrom, peaceful, fishSpot, fishing, c
       {ISLAND_TREES.map(([x, z], i) => <NatureTree key={`tree-${i}`} position={[x, island.ground(x, z), z]} seed={TREE_SEEDS[i % TREE_SEEDS.length]} models={SEASON_TREES[look.season]} />)}
       {ISLAND_BUSHES.map(([x, z], i) => <NatureBush key={`bush-${i}`} position={[x, island.ground(x, z), z]} seed={i} models={SEASON_BUSHES[look.season]} />)}
       {SEASON_FLOWERS[look.season].length > 0 && ISLAND_FLOWERS.map(([x, z], i) => <NatureFlowerCluster key={`flower-${i}`} position={[x, island.ground(x, z), z]} seed={i * 2} models={SEASON_FLOWERS[look.season]} />)}
-      {/* Residents (placeholders): during a ceremony they stroll to the monument and cheer. */}
-      {RESIDENTS.map(({ persona, home, plaza }) => <NPC key={`npc-${persona.id}-${reset}`} persona={persona} position={ceremony ? plaza : home} playerPositionRef={player}
+      {/* Residents stand where their schedule puts them this phase; during a ceremony they stroll to the monument and cheer. */}
+      {residents.map(({ persona, home, plaza }) => <NPC key={`npc-${persona.id}-${home.join()}-${reset}`} persona={persona} position={ceremony ? plaza : home} playerPositionRef={player}
         groundHeight={island.ground} constrainMove={island.move}
         onClick={() => window.dispatchEvent(new CustomEvent("tsi:npc-greet", { detail: { id: persona.id } }))} />)}
       <PlayerAvatar key={`${reset}-${returned}-${fromBoat}-${exitFrom}`} spawnPosition={spawn} playerName={identity.display_name} member={identity.member} onMove={onMove} frozen={fishing}
@@ -281,11 +283,6 @@ function IslandScene({ identity, devAt, exitFrom, peaceful, fishSpot, fishing, c
     </>
   );
 }
-
-const RESIDENTS = [
-  { persona: DEFAULT_NPC_PERSONAS[0], home: [-2, 0, -7] as [number, number, number], plaza: [-3.3, 0, 2.3] as [number, number, number] },
-  { persona: DEFAULT_NPC_PERSONAS[1], home: [9, 0, -9.6] as [number, number, number], plaza: [-6.6, 0, 1.9] as [number, number, number] },
-].filter(r => r.persona);
 
 const F = "/assets/acnh/furniture/";
 /**
@@ -499,7 +496,8 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
     setReveal({ family: result.family, type: result.type, startedAt: performance.now() });
   }, []);
   const fishSpot = useRef<FishingSpot | null>(null);
-  useCheer(ceremony, RESIDENTS.map(r => r.persona.id));
+  const { data: residentRows } = useNPCPersonas({ permanentOnly: true });
+  useCheer(ceremony, residentRows.map(r => r.id));
   const stage = progression.activeGoal?.stage ?? 0;
   const progressionWorld = useMemo(() => ({ stage, opened: progression.completedGoals }), [stage, progression.completedGoals]);
   const target = progression.objective.target;

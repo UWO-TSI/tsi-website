@@ -8,7 +8,7 @@ import { ROSTER } from "@/lib/collections/roster";
 import { DomainError, toFailure, type Result } from "@/lib/result";
 import { CATALOGUE } from "@/lib/wallet/catalogue";
 import { torontoDay } from "@/lib/wallet/rules";
-import { CRAFTED_ITEMS, MATERIALS, RECIPES, outputName, type Recipe } from "./recipes";
+import { CRAFTED_ITEMS, MATERIALS, outputName, type Recipe } from "./recipes";
 
 export type CraftingErrorCode = "unavailable" | "not_found" | "not_learned" | "insufficient_items" | "already_owned" | "key_reused" | "nothing_left" | "failed";
 export class CraftingError extends DomainError<CraftingErrorCode> {}
@@ -24,6 +24,8 @@ export interface CraftingStore {
   craft(memberId: string, recipeId: string, key: string): Promise<{ qty: number; replayed: boolean }>;
   learn(memberId: string, recipeId: string, source: "quest" | "admin"): Promise<{ learned: boolean }>;
   openBottle(memberId: string): Promise<{ recipe_id: string; replayed: boolean }>;
+  /** Active recipes: the crafting_recipes rows T1/T2 edit (RECIPES in memory). */
+  recipes(): Promise<Recipe[]>;
 }
 
 const ERR: Record<CraftingErrorCode, [number, string]> = {
@@ -47,8 +49,8 @@ async function run<T>(f: () => Promise<T>): Promise<Result<T>> {
 const STACKABLE = new Set([...CATALOGUE, ...CRAFTED_ITEMS].filter(c => c.stackable).map(c => c.slug));
 const INGREDIENT_NAME = new Map([...ROSTER, ...MATERIALS].map(s => [s.key, s.name]));
 const INGREDIENT_ICON = new Map([...ROSTER, ...MATERIALS].map(s => [s.key, s.icon]));
-const known = (rows: { recipe_id: string; source: string }[]) =>
-  new Map([...RECIPES.filter(r => r.sources.includes("starter")).map(r => [r.id, "starter"] as const), ...rows.map(r => [r.recipe_id, r.source] as const)]);
+const known = (all: Recipe[], rows: { recipe_id: string; source: string }[]) =>
+  new Map([...all.filter(r => r.sources.includes("starter")).map(r => [r.id, "starter"] as const), ...rows.map(r => [r.recipe_id, r.source] as const)]);
 
 export interface RecipeView {
   id: string;
@@ -68,20 +70,20 @@ export interface RecipeBook {
 
 export const recipeBook = (store: CraftingStore, m: string, now: Date) =>
   run<RecipeBook>(async () => {
-    const [rows, stock, owned, bottle] = await Promise.all([store.learned(m), store.materials(m), store.owned(m), store.bottleOn(m, torontoDay(now))]);
-    const learned = known(rows);
-    const recipes = RECIPES.filter(r => learned.has(r.id)).map((r): RecipeView => {
+    const [all, rows, stock, owned, bottle] = await Promise.all([store.recipes(), store.learned(m), store.materials(m), store.owned(m), store.bottleOn(m, torontoDay(now))]);
+    const learned = known(all, rows);
+    const recipes = all.filter(r => learned.has(r.id)).map((r): RecipeView => {
       const ingredients = Object.entries(r.ingredients).map(([key, need]) => ({ key, name: INGREDIENT_NAME.get(key) ?? key, icon: INGREDIENT_ICON.get(key) ?? null, need, have: stock[key] ?? 0 }));
       const blocked = owned.has(r.output.key) && (r.output.kind === "weapon" || !STACKABLE.has(r.output.key));
       return { id: r.id, name: outputName(r), kind: r.output.kind, qty: r.output.qty, source: learned.get(r.id)!, ingredients, owned: blocked, can_craft: !blocked && ingredients.every(i => i.have >= i.need) };
     });
-    const unlearnedBottle = RECIPES.some(r => r.sources.includes("bottle") && !learned.has(r.id));
-    return { recipes, total: RECIPES.length, bottle: { available: !bottle && unlearnedBottle } };
+    const unlearnedBottle = all.some(r => r.sources.includes("bottle") && !learned.has(r.id));
+    return { recipes, total: all.length, bottle: { available: !bottle && unlearnedBottle } };
   });
 
 export const craft = (store: CraftingStore, m: string, input: { recipe_id: string; idempotency_key: string }) =>
   run(async () => {
-    const recipe = RECIPES.find(r => r.id === input.recipe_id);
+    const recipe = (await store.recipes()).find(r => r.id === input.recipe_id);
     if (!recipe) throw new CraftingError("not_found");
     const r = await store.craft(m, recipe.id, input.idempotency_key);
     return { id: recipe.id, name: outputName(recipe), kind: recipe.output.kind, ...r };
@@ -90,7 +92,7 @@ export const craft = (store: CraftingStore, m: string, input: { recipe_id: strin
 export const openBottle = (store: CraftingStore, m: string) =>
   run(async () => {
     const r = await store.openBottle(m);
-    const recipe = RECIPES.find(x => x.id === r.recipe_id);
+    const recipe = (await store.recipes()).find(x => x.id === r.recipe_id);
     return { id: r.recipe_id, name: recipe ? outputName(recipe) : r.recipe_id, replayed: r.replayed };
   });
 

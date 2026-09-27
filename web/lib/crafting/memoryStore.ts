@@ -81,6 +81,9 @@ export function memoryCraftingStore(eco = memoryEconomyStore(), clock: () => Dat
       taught.set(`${m}:${pick.id}`, { source: "bottle", day });
       return { recipe_id: pick.id, replayed: false };
     },
+    async recipes() {
+      return RECIPES;
+    },
   };
   return { store, eco };
 }

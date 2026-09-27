@@ -12,16 +12,11 @@ import {
   BarChart3,
   Shield,
   Vote,
-  Sparkles,
-  History,
   MessageSquareWarning,
   BookOpen,
-  Smile,
-  Flag,
-  Landmark,
-  PackageCheck,
 } from "lucide-react";
 import NPCSpendWidget from "@/components/portal/NPCSpendWidget";
+import GameContentIndex from "@/components/portal/GameContentIndex";
 
 interface Stats {
   totalMembers: number;
@@ -83,20 +78,6 @@ const adminSections = [
     color: "var(--color-accent-cyan)",
   },
   {
-    title: "Content",
-    description: "NPCs, shop items, palettes, events (read-only)",
-    icon: <Sparkles size={20} />,
-    href: "/student/dashboard/admin/content/npcs",
-    color: "#f59e0b",
-  },
-  {
-    title: "Content Activity Log",
-    description: "Recent publishes across NPCs, shop, palettes",
-    icon: <History size={20} />,
-    href: "/student/dashboard/admin/content/log",
-    color: "#94a3b8",
-  },
-  {
     title: "NPC Conversations",
     description: "Moderation queue for flagged NPC chats",
     icon: <MessageSquareWarning size={20} />,
@@ -109,34 +90,6 @@ const adminSections = [
     icon: <BookOpen size={20} />,
     href: "/student/dashboard/admin/guestbook",
     color: "#fbbf24",
-  },
-  {
-    title: "Emotes",
-    description: "Add or edit emote types (slug, animation, unlock)",
-    icon: <Smile size={20} />,
-    href: "/student/dashboard/admin/content/emotes",
-    color: "#22d3ee",
-  },
-  {
-    title: "Main Quest",
-    description: "Chapter copy, order, regions and skip rules",
-    icon: <Flag size={20} />,
-    href: "/student/dashboard/admin/content/chapters",
-    color: "#bb813f",
-  },
-  {
-    title: "Club Goals",
-    description: "Targets, weights, caps, windows; log contributions",
-    icon: <Landmark size={20} />,
-    href: "/student/dashboard/admin/content/goals",
-    color: "#6c9a6f",
-  },
-  {
-    title: "Merch Pickups",
-    description: "Hand over reserved merch or cancel with a Gems refund",
-    icon: <PackageCheck size={20} />,
-    href: "/student/dashboard/admin/merch",
-    color: "#e8704a",
   },
 ];
 
@@ -264,6 +217,9 @@ export default function AdminPage() {
         </div>
       )}
 
+      <GameContentIndex />
+
+      <h2 className="text-sm font-heading font-bold text-[var(--color-text-primary)] mb-3">Club portal</h2>
       {/* Admin Sections Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
         {adminSections.map((section) => (

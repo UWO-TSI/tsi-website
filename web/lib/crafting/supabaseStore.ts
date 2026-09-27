@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { raisePg } from "@/lib/result";
+import { recipeFromRow } from "./recipes";
 import type { CraftingErrorCode, CraftingStore } from "./service";
 
 type Row = Record<string, unknown>;
@@ -52,6 +53,11 @@ export function supabaseCraftingStore(db: SupabaseClient): CraftingStore {
       if (error) raise(error);
       const r = first(data);
       return { recipe_id: String(r.recipe_id), replayed: r.replayed === true };
+    },
+    async recipes() {
+      const { data, error } = await db.from("crafting_recipes").select("id, output_item, output_weapon, output_qty, ingredients, sources").eq("active", true).order("position");
+      if (error) raise(error);
+      return ((data ?? []) as Row[]).map(recipeFromRow);
     },
   };
 }

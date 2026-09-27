@@ -4,7 +4,8 @@
 // T1 grants T1 or edits a T1 account.
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { badRequest, forbidden, isAdminTier, memberContext } from "@/lib/server/memberContext";
+import { badRequest } from "@/lib/server/memberContext";
+import { adminContext } from "@/lib/server/adminContext";
 
 const Body = z
   .object({ tier: z.number().int().min(1).max(5), is_active: z.boolean(), is_alumni: z.boolean() })
@@ -14,9 +15,8 @@ const Body = z
 const fail = (status: number, error: string) => NextResponse.json({ ok: false, error }, { status });
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const ctx = await memberContext();
+  const ctx = await adminContext();
   if (ctx instanceof NextResponse) return ctx;
-  if (!isAdminTier(ctx.tier)) return forbidden();
   const { id } = await params;
   const parsed = Body.safeParse(await req.json().catch(() => null));
   if (!parsed.success || !z.string().uuid().safeParse(id).success) return badRequest();
