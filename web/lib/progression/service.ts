@@ -316,15 +316,16 @@ export async function advanceChapter(
     const progress = ctx.progress.find((p) => p.chapter_id === chapter.id);
     const result = validateAdvance(input.action, chapter, view, progress, ctx.chapterFacts, now);
     if (!result.ok) return fail(result.status, result.error, "rejected");
-    const completedAt = result.completedChapter ? now.toISOString() : null;
-    await store.saveMemberProgress(memberId, chapter.id, result.next, completedAt);
-    if (result.next.status === "completed" && chapter.completion_letter) {
-      await store.sendSystemLetter(memberId, `chapter:${chapter.slug}`, chapter.title, chapter.completion_letter);
-    }
-    // Chapter reward (row 200): once per member and chapter, not for a skip.
+    // Reward and letter are keyed per member and chapter, so they run before
+    // the save: a failure anywhere leaves the chapter open and the retry pays
+    // (ruling 8). Reward: row 200, not for a skip.
     if (result.next.status === "completed" && chapter.reward_coins > 0) {
       await store.creditCoins(memberId, chapter.reward_coins, "chapter", chapter.slug, `chapter:${chapter.slug}`);
     }
+    if (result.next.status === "completed" && chapter.completion_letter) {
+      await store.sendSystemLetter(memberId, `chapter:${chapter.slug}`, chapter.title, chapter.completion_letter);
+    }
+    await store.saveMemberProgress(memberId, chapter.id, result.next, result.completedChapter ? now.toISOString() : null);
     return loadState(store, memberId, now);
   } catch (err) {
     return storeFailure(err);

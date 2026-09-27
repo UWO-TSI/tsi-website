@@ -160,6 +160,22 @@ describe("chapter rewards (row 200, single wallet)", () => {
     await advanceChapter(m.store, B, { chapter_slug: "settle-in", action: "skip" }, now);
     expect(m.coinsOf(B)).toBe(skipBefore);
   });
+  it("a failure while finishing a chapter leaves it retryable and the retry pays once (ruling 8)", async () => {
+    for (const failing of ["sendSystemLetter", "creditCoins"] as const) {
+      const m = setup();
+      m.setFacts(A, { firstCatchKey: "fish_dace" });
+      const before = m.coinsOf(A);
+      for (const action of ["claim_plot", "donate_catch"] as const) await advanceChapter(m.store, A, { chapter_slug: "settle-in", action }, now);
+      const real = m.store[failing] as (...a: unknown[]) => Promise<unknown>;
+      let calls = 0;
+      (m.store as unknown as Record<string, unknown>)[failing] = (...a: unknown[]) => (calls++ === 0 ? Promise.reject(new Error("boom")) : real(...a));
+      expect(await advanceChapter(m.store, A, { chapter_slug: "settle-in", action: "report_hq" }, now)).toMatchObject({ ok: false, status: 500 });
+      const retry = await advanceChapter(m.store, A, { chapter_slug: "settle-in", action: "report_hq" }, now);
+      expect(retry.ok && retry.data.chapters[0].status).toBe("completed");
+      expect(retry.ok && retry.data.unread_letters).toBe(1);
+      expect(m.coinsOf(A)).toBe(before + 100);
+    }
+  });
 });
 
 describe("letters", () => {

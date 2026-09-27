@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { createClient } from "@/lib/supabase/client";
 import { Search, ChevronUp, ChevronDown } from "lucide-react";
 import type { Tier } from "@/lib/supabase/types";
 
@@ -41,48 +40,26 @@ export default function AdminMembersPage() {
     fetchMembers();
   }, []);
 
-  async function updateTier(memberId: string, newTier: Tier) {
+  // tier / is_active / is_alumni are server-only (#40): write through the T1/T2 route.
+  async function updateMember(memberId: string, patch: Partial<Pick<AdminMember, "tier" | "is_active" | "is_alumni">>) {
     setUpdating(memberId);
-    const supabase = createClient();
-    await supabase
-      .from("profiles")
-      .update({ tier: newTier })
-      .eq("id", memberId);
-    setMembers((prev) =>
-      prev.map((m) => (m.id === memberId ? { ...m, tier: newTier } : m))
-    );
+    const res = await fetch(`/api/admin/members/${memberId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(patch),
+    });
+    if (res.ok) {
+      setMembers((prev) => prev.map((m) => (m.id === memberId ? { ...m, ...patch } : m)));
+    } else {
+      const body = await res.json().catch(() => null);
+      alert(body?.error ?? "Couldn't save the change.");
+    }
     setUpdating(null);
   }
 
-  async function toggleActive(memberId: string, isActive: boolean) {
-    setUpdating(memberId);
-    const supabase = createClient();
-    await supabase
-      .from("profiles")
-      .update({ is_active: !isActive })
-      .eq("id", memberId);
-    setMembers((prev) =>
-      prev.map((m) =>
-        m.id === memberId ? { ...m, is_active: !isActive } : m
-      )
-    );
-    setUpdating(null);
-  }
-
-  async function toggleAlumni(memberId: string, isAlumni: boolean) {
-    setUpdating(memberId);
-    const supabase = createClient();
-    await supabase
-      .from("profiles")
-      .update({ is_alumni: !isAlumni })
-      .eq("id", memberId);
-    setMembers((prev) =>
-      prev.map((m) =>
-        m.id === memberId ? { ...m, is_alumni: !isAlumni } : m
-      )
-    );
-    setUpdating(null);
-  }
+  const updateTier = (memberId: string, tier: Tier) => updateMember(memberId, { tier });
+  const toggleActive = (memberId: string, isActive: boolean) => updateMember(memberId, { is_active: !isActive });
+  const toggleAlumni = (memberId: string, isAlumni: boolean) => updateMember(memberId, { is_alumni: !isAlumni });
 
   const filtered = members.filter(
     (m) =>
@@ -95,6 +72,7 @@ export default function AdminMembersPage() {
     2: "T2 · Exec",
     3: "T3 · Member",
     4: "T4 · General",
+    5: "T5 · Public",
   };
 
   const tierColors: Record<number, string> = {
@@ -102,6 +80,7 @@ export default function AdminMembersPage() {
     2: "text-[var(--color-brand-yellow)]",
     3: "text-[var(--color-brand-blue)]",
     4: "text-[var(--color-text-muted)]",
+    5: "text-[var(--color-text-muted)]",
   };
 
   return (

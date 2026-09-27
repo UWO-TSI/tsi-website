@@ -63,6 +63,9 @@ import type { ResultView } from "@/lib/oracle/service";
 import { keyLabel, setFamily, useWorldIdentity, type WorldIdentity } from "@/lib/game/identity";
 import { actionForKey } from "@/lib/identity/settings";
 import MuseumInterior from "./peaceful/MuseumInterior";
+import AudioController from "./AudioController";
+import type { AmbientPhase } from "@/lib/game/audio";
+import { useMusicDirector } from "@/lib/game/musicDirector";
 import DonateSheet from "./peaceful/DonateSheet";
 import { ShowcaseSheet, TrophySheet } from "./peaceful/ShowcaseSheets";
 import type { MuseumWing } from "@/lib/collections/logic";
@@ -457,6 +460,12 @@ function DefaultIslandWorldContent() {
   const [nowTick, setNowTick] = useState(() => Date.now());
   useEffect(() => { const t = window.setInterval(() => setNowTick(Date.now()), 60_000); return () => window.clearInterval(t); }, []);
   const peaceful = usePeacefulContext(weather, nowTick);
+  // Audio pass (row 169 / polish-ownership item 9): the hourly music player
+  // follows the real clock everywhere on this island; cafe and other
+  // interiors override the outdoor block with their own bed.
+  const musicOverride = inside === "cafe" ? "cafe" : inside ? "interior" : null;
+  useMusicDirector({ season: season.season, override: musicOverride });
+  const ambientPhase: AmbientPhase = phase === "evening" ? "dusk" : phase;
   const [fishing, setFishing] = useState(false);
   const [bagOpen, setBagOpen] = useState(false);
   const identity = useWorldIdentity();
@@ -605,6 +614,7 @@ function DefaultIslandWorldContent() {
   }, [act, near, inside, atHome, decor, identity.settings]);
   return (
     <main className={styles.world} data-light={phase} data-inside={inside ?? undefined}>
+      <AudioController phase={ambientPhase} weather={weather} season={season.season} />
       <Canvas tabIndex={0} role="application" aria-label="Island walking area" style={{ zIndex: 0, imageRendering: graphics.pixelated ? "pixelated" : "auto" }} gl={{ antialias: false, powerPreference: "high-performance" }} dpr={graphics.pixelated ? 0.5 : [1, 1.5]}
         camera={{ position: [0, 10.2, -21], fov: 48, near: 0.1, far: 120 }} shadows={castShadows ? "percentage" : false}
         onCreated={({ gl }) => { gl.info.autoReset = false; gl.toneMapping = THREE.NeutralToneMapping; gl.outputColorSpace = THREE.SRGBColorSpace; }}>
