@@ -29,7 +29,7 @@ export type IslandWater = typeof water;
  * key, carrying most of the light (§5.5), over a lower neutral fill; lamp
  * pools stay warm. AO and the grade come from the look through PostFX.
  */
-const HQ_DAY = { keyColor: CURRENT.light.sunColor, ambient: 0.32, hemisphere: 0.36, key: 1.5, ceiling: 16, lamp: 9, desk: 4, grade: { ...CURRENT.grade, warmth: 0.2, vignette: 0.13 } };
+const HQ_DAY = { keyColor: CURRENT.light.sunColor, ambient: 0.32, hemisphere: 0.36, key: 1.5, ceiling: 16, lamp: 9, desk: 4, grade: { ...CURRENT.grade, exposure: 1.1, warmth: 0.2, vignette: 0.13 } };
 export const CLUBHOUSE_LIGHTING: Record<IslandPhase, typeof HQ_DAY> = {
   dawn: { ...HQ_DAY, ambient: 0.3, hemisphere: 0.34, key: 1.2, ceiling: 16, lamp: 11, desk: 4.5, grade: { ...HQ_DAY.grade, warmth: 0.22, vignette: 0.15 } },
   day: HQ_DAY,

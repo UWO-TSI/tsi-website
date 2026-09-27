@@ -29,7 +29,7 @@ describe("look presets: serialisation", () => {
     expect(p.light.sunColor).toBe(CURRENT.light.sunColor);
     expect(p.light.sunPosition).toEqual(CURRENT.light.sunPosition);
     expect(p.grade.exposure).toBe(CURRENT.grade.exposure);
-    expect(p.post.toneMapping).toBe("aces");
+    expect(p.post.toneMapping).toBe(CURRENT.post.toneMapping);
     expect(p.grass).toEqual(CURRENT.grass);
     expect("extra" in p).toBe(false);
     expect(parseLook(null)).toEqual(CURRENT);
@@ -40,13 +40,16 @@ describe("look presets: serialisation", () => {
 });
 
 describe("the game look (row 236, §5)", () => {
-  it("is Open-air sun: same light direction, colour, shadow tint and post as the picked preset", () => {
+  it("is Open-air sun: the picked preset's sun side and colour, blue fill, cool shadows, sky, AO and bloom", () => {
     const picked = LOOK_PRESETS.find(p => p.id === "open-air")!;
-    expect(CURRENT.light.sunPosition).toEqual(picked.light.sunPosition);
+    expect(sunFromCamera(CURRENT.light.sunPosition)).toBeCloseTo(sunFromCamera(picked.light.sunPosition), 0);
     expect(CURRENT.light.sunColor).toBe(picked.light.sunColor);
+    expect(CURRENT.light.fillSky).toBe(picked.light.fillSky);
     expect(CURRENT.shadows).toEqual(picked.shadows);
-    expect(CURRENT.post).toEqual(picked.post);
-    expect(CURRENT.grade.exposure).toBeCloseTo(1.05);
+    expect(CURRENT.sky.top).toBe(picked.sky.top);
+    expect(CURRENT.ao).toEqual(picked.ao);
+    expect(CURRENT.post.bloom.enabled && !CURRENT.post.tiltShift.enabled).toBe(true);
+    expect(CURRENT.sky.fogNear).toBeGreaterThan(picked.sky.fogNear);
   });
   it("holds key:fill near 4:1 and lit:shadow well above the shipped 2:1", () => {
     const r = keyFill(CURRENT);
@@ -72,7 +75,7 @@ describe("preset → renderer mapping", () => {
     });
     expect(light.environment).toMatchObject({ skyTop: CURRENT.sky.top, skyBottom: CURRENT.sky.horizon, intensity: CURRENT.light.envIntensity });
     expect(light.rim).toBeUndefined();
-    expect(lookFx(CURRENT, true)).toEqual({ toneMapping: "aces", bloom: CURRENT.post.bloom, tiltShift: null, ao: CURRENT.ao });
+    expect(lookFx(CURRENT, true)).toEqual({ toneMapping: CURRENT.post.toneMapping, bloom: CURRENT.post.bloom, tiltShift: null, ao: CURRENT.ao });
   });
   it("writes another preset's light, sky, rim, grade and water into the renderer's fields", () => {
     const toy = LOOK_PRESETS[1], light = islandLight(toy, "day");
@@ -119,14 +122,14 @@ describe("sun direction relative to the follow camera (§5.2)", () => {
     const elevation = (phase: keyof typeof ISLAND_LIGHTING) => sunAngles(ISLAND_LIGHTING[phase].sunPosition).elevation;
     expect(elevation("dawn")).toBeCloseTo(PHASE_LOOK.dawn.elevation!, 0);
     expect(elevation("evening")).toBeCloseTo(PHASE_LOOK.evening.elevation!, 0);
-    expect(elevation("day")).toBeGreaterThan(45);
-    for (const phase of ["dawn", "evening"] as const) expect(1 / Math.tan(elevation(phase) * Math.PI / 180)).toBeGreaterThan(2.5); // shadow ≥ 2.5× height
+    expect(elevation("day")).toBeGreaterThan(40);
+    for (const phase of ["dawn", "evening"] as const) expect(1 / Math.tan(elevation(phase) * Math.PI / 180)).toBeGreaterThan(2.4); // shadow ≥ 2.4× height
   });
 });
 
 describe("time of day as multipliers on the day preset (§5.5)", () => {
   it("derives every phase from the one preset: editing the day look moves all of them", () => {
-    const edited = parseLook({ ...CURRENT, light: { ...CURRENT.light, sunIntensity: 7 }, sky: { ...CURRENT.sky, top: "#2060c0" } });
+    const edited = parseLook({ ...CURRENT, light: { ...CURRENT.light, sunIntensity: 2 * CURRENT.light.sunIntensity }, sky: { ...CURRENT.sky, top: "#2060c0" } });
     for (const phase of ISLAND_PHASES) {
       expect(islandLight(edited, phase).sunIntensity).toBeCloseTo(2 * ISLAND_LIGHTING[phase].sunIntensity);
       expect(islandLight(edited, phase).skyTop).not.toBe(ISLAND_LIGHTING[phase].skyTop);

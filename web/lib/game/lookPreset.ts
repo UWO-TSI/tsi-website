@@ -54,13 +54,17 @@ const SHIPPED_GRASS = { detail: 0.38, hue: 0 };
 
 /**
  * The game's look: hard warm sun 3/4 from screen-left and a little toward the
- * camera, blue sky fill at about 4:1, crisp cool shadows, AO, bloom on the
- * highlights, blue sky and air (§5 items 1-4).
+ * camera (44° up, 61° off the camera axis, so shadows fall sideways into
+ * view), blue sky fill at about 4:1, crisp cool shadows, AO, bloom on sunlit
+ * whites, blue sky and air (§5 items 1-4). Neutral tone mapping at exposure
+ * 1.5 instead of the picked preset's ACES 0.9: ACES could not lift bright
+ * ground past L* 80 without washing the grass pale yellow
+ * (specs/look-development-questions.md §10).
  */
 export const CURRENT: LookPreset = {
   id: "current", name: "Current",
   light: {
-    sunColor: "#ffe9c4", sunIntensity: 3.5, sunPosition: [18, 24, -10],
+    sunColor: "#ffe9c4", sunIntensity: 3.8, sunPosition: [20, 22, -11],
     fillSky: "#9cc8f0", fillGround: "#b5a77a", hemisphere: 0.58, ambient: 0.05, envIntensity: 0.13,
     rimColor: "#ffffff", rimIntensity: 0,
   },
@@ -73,11 +77,11 @@ export const CURRENT: LookPreset = {
     water: { saturation: 1.25, value: 1, roughness: 1, gloss: 0.5 },
     characters: { saturation: 1.05, value: 1, roughness: 1, gloss: 0.25 },
   },
-  grass: { detail: 0.7, hue: 0.5 },
-  grade: { exposure: 1.05, contrast: 1, vibrance: 0.12, desat: -0.04, warmth: 0.15, lift: 0.2, vignette: 0.12 },
+  grass: { detail: 0.8, hue: 0.5 },
+  grade: { exposure: 1.5, contrast: 1, vibrance: 0, desat: -0.04, warmth: 0.15, lift: 0.2, vignette: 0.12 },
   post: {
-    toneMapping: "aces",
-    bloom: { enabled: true, threshold: 0.85, intensity: 0.35 },
+    toneMapping: "neutral",
+    bloom: { enabled: true, threshold: 0.65, intensity: 0.35 },
     tiltShift: { enabled: false, blur: 0.15, taper: 0.25, offset: 0 },
   },
   sky: { top: "#4a9de0", horizon: "#bfe0f2", fog: "#cde6f2", fogNear: 34, fogFar: 96, gradient: true },
@@ -197,18 +201,18 @@ const DAY: PhaseLook = {
 export const PHASE_LOOK: Record<IslandPhase, PhaseLook> = {
   // Cool-pink: low peach sun from the east side, lilac fill, periwinkle sky over a pink horizon, long soft shadows.
   dawn: {
-    elevation: 17, mirror: false, sun: [1, 0.69, 0.71], sunIntensity: 0.62,
-    fill: [1.46, 0.81, 0.93], bounce: [0.85, 0.85, 0.95], fillIntensity: 1.15,
+    elevation: 21, mirror: false, sun: [1, 0.69, 0.71], sunIntensity: 0.62,
+    fill: [1.46, 0.81, 0.93], bounce: [0.85, 0.85, 0.95], fillIntensity: 1.3,
     skyTop: [4.01, 1.07, 0.96], skyHorizon: [1.7, 0.82, 0.65], fog: 0.85,
-    shadowRadius: 2.5, shadowIntensity: 0.85, rim: 0.15, exposure: 1, warmth: 0.05, lift: 0.05, desat: 0,
+    shadowRadius: 2.5, shadowIntensity: 0.85, rim: 0.15, exposure: 1.08, warmth: 0.05, lift: 0.05, desat: 0,
   },
   day: DAY,
   // Golden hour: warm low sun from the west (screen-right), cooler violet fill, a warm rim, long shadows.
   evening: {
-    elevation: 18, mirror: true, sun: [1, 0.56, 0.28], sunIntensity: 0.85,
-    fill: [1.18, 0.77, 0.87], bounce: [1, 0.85, 0.75], fillIntensity: 1,
+    elevation: 22, mirror: true, sun: [1, 0.56, 0.28], sunIntensity: 0.85,
+    fill: [1.18, 0.77, 0.87], bounce: [1, 0.85, 0.75], fillIntensity: 1.15,
     skyTop: [2.32, 0.81, 0.92], skyHorizon: [1.77, 0.77, 0.37], fog: 0.85,
-    shadowRadius: 1.6, shadowIntensity: 0.95, rim: 0.6, exposure: 1, warmth: 0.15, lift: 0.05, desat: 0,
+    shadowRadius: 1.6, shadowIntensity: 0.95, rim: 0.6, exposure: 1.08, warmth: 0.15, lift: 0.05, desat: 0,
   },
   // Blue moonlight key, deep blue sky; the lamps and windows (islandLighting PHASE_BASE) stay warm.
   night: {
