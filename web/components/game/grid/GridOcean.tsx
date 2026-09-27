@@ -3,7 +3,7 @@
 import { useEffect, useMemo } from "react";
 import * as THREE from "three";
 import { type IslandMap, WATER_DROP, LEVEL_STEP, cellToWorldX, cellToWorldZ, isRiver, levelAt, surfaceAt } from "@/lib/game/grid";
-import { WATER_CHOP, WATER_OPTICS, WATER_SWELL, facetTilt } from "@/lib/game/waterShader";
+import { WATER_CHOP, WATER_CLOUDS, WATER_OPTICS, WATER_SWELL, facetTilt } from "@/lib/game/waterShader";
 import { WATER_RIPPLE, terrainMaterial, waterSurfaceUniforms } from "./terrainMaterials";
 
 /**
@@ -67,8 +67,9 @@ const GLINT_URL = "/assets/acnh/textures/sea-glint.png";
  * while that normal mirrors the real sun into this camera (`facetGlint`). No
  * clocks and no noise: it twinkles because the waves turn it through
  * alignment and because the viewer moves. Sun intensity and colour come from
- * the phase and weather (zero sunGlint under rain, snow and fog). HDR
- * white-gold, so bloom catches the brightest cores on High.
+ * the phase and weather (zero sunGlint under rain, snow and fog), dimmed under
+ * a passing cloud shadow. HDR white-gold, so bloom catches the brightest cores
+ * on High.
  */
 function WaterGlints({ map, lite, skip }: { map: IslandMap; lite: boolean; skip?: (x: number, z: number) => boolean }) {
   const [geometry, material] = useMemo(() => {
@@ -86,8 +87,9 @@ function WaterGlints({ map, lite, skip }: { map: IslandMap; lite: boolean; skip?
       Object.assign(shader.uniforms, {
         uTime: u.uTime, uWaveHeight: u.uWaveHeight, uWaveScale: u.uWaveScale, uWaveSpeed: u.uWaveSpeed, uRippleTexture: u.uRippleTexture, uRippleStrength: u.uRippleStrength,
         uSunDir: u.uSunDir, uSunColor: u.uSunColor, uSunGlint: u.uSunGlint, uSunSize: u.uSunSize, uRoughness: u.uRoughness,
+        uCloudMap: u.uCloudMap, uCloudUv: u.uCloudUv, uCloudShade: u.uCloudShade,
       });
-      shader.vertexShader = "attribute vec2 aTilt;\nuniform vec3 uSunDir;\nuniform float uSunGlint;\nuniform float uSunSize;\nuniform float uRoughness;\nvarying float vGlint;\n" + WATER_SWELL + WATER_RIPPLE + WATER_CHOP + WATER_OPTICS + shader.vertexShader
+      shader.vertexShader = "attribute vec2 aTilt;\nuniform vec3 uSunDir;\nuniform float uSunGlint;\nuniform float uSunSize;\nuniform float uRoughness;\nvarying float vGlint;\n" + WATER_SWELL + WATER_RIPPLE + WATER_CHOP + WATER_CLOUDS + WATER_OPTICS + shader.vertexShader
         .replace("#include <begin_vertex>", `#include <begin_vertex>
           vec3 glintAt = (modelMatrix * vec4(transformed, 1.0)).xyz;
           vec2 swellGrad;
@@ -96,7 +98,7 @@ function WaterGlints({ map, lite, skip }: { map: IslandMap; lite: boolean; skip?
           glintAt.y += swell;
           vec2 slope = waterDetailNormal(glintAt.xz) - swellGrad + (aTilt + chopSlope(glintAt.xz, uTime)) * uRoughness;
           float lit = facetGlint(uSunDir, cameraPosition, glintAt, vec3(slope.x, 1.0, slope.y), uSunSize);
-          vGlint = lit * uSunGlint;`)
+          vGlint = lit * uSunGlint * sunThroughClouds(glintAt.xz);`)
         .replace("#include <logdepthbuf_vertex>", `
           gl_PointSize *= 0.5 + 0.7 * lit;
           gl_PointSize = vGlint < 0.01 ? 0.0 : max(gl_PointSize, 3.0);

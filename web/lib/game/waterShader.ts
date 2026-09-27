@@ -286,6 +286,21 @@ ${CHOP.map(([x, z, k, w]) => `  d = vec2(${x}, ${z}); s += d * cos(${k.toFixed(5
 }
 `;
 
+/**
+ * Cloud shadows over the water: the sun is blocked where one passes, so its
+ * glare and sparkles dim there. The same drifting texture CloudShadows draws
+ * (world xz to its uv via uCloudUv), unbounded, because the clouds exist over
+ * the sea too; uCloudShade is 0 while no clouds are drawn (Light tier, indoors).
+ */
+export const WATER_CLOUDS = /* glsl */ `
+uniform sampler2D uCloudMap;
+uniform vec4 uCloudUv;
+uniform float uCloudShade;
+float sunThroughClouds(vec2 xz) {
+  return 1.0 - uCloudShade * texture2D(uCloudMap, xz * uCloudUv.xy + uCloudUv.zw).a;
+}
+`;
+
 const UNIFORM_DECLS = /* glsl */ `
 uniform float uTime;
 uniform vec3 uDeepColor;
@@ -434,7 +449,7 @@ const FRAGMENT_BODY = /* glsl */ `
   // The real sun off the ripples too small to draw (glareLobe, see WATER_OPTICS
   // in TS): a sheet around the mirror point, pushed past 1.0 so it clips to
   // white. The sharp points inside it are the sparkle sprites (GridOcean).
-  float glare = glareLobe(uSunDir, cameraPosition, vWaterWorld, N, uRoughness);
+  float glare = glareLobe(uSunDir, cameraPosition, vWaterWorld, N, uRoughness) * sunThroughClouds(vWaterWorld.xz);
 
   float rim = pow(1.0 - clamp(dot(N, V), 0.0, 1.0), 3.0);
   col += uRingColor * rim * uFresnel;
@@ -513,6 +528,7 @@ export function applyWaterShader(
         "#include <common>",
         "#include <common>\nvarying vec3 vWaterWorld;\nvarying vec2 vWaterGrad;\n" +
           UNIFORM_DECLS +
+          WATER_CLOUDS +
           opts.shore +
           (opts.extra ?? WATER_EXTRA_NONE) +
           (opts.normal ?? "vec2 waterDetailNormal(vec2 xz) { return vec2(0.0); }\n") +

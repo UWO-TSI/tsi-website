@@ -28,7 +28,8 @@ import { setTerrainHeightProvider } from "../terrain";
 import GridTerrain, { type TerrainPalette } from "./GridTerrain";
 import GridCliffs from "./GridCliffs";
 import GrassTufts from "./GrassTufts";
-import { applyGrassNormalStrength, advanceWater } from "./terrainMaterials";
+import { applyGrassNormalStrength, advanceWater, shadeWaterByClouds } from "./terrainMaterials";
+import { cloudLayer } from "../AmbienceFX";
 import { useTuning, tune as tuneNow } from "@/lib/game/tuning";
 import { useFrame } from "@react-three/fiber";
 import type { WaterParams } from "@/lib/game/waterShader";
@@ -97,6 +98,7 @@ export default function GridWorld({ map: suppliedMap, water, palette, windScale 
       sunColor.current.copy(light.color);
     }
     advanceWater(worldTime(), water ?? tuneNow().water, sunDir.current, sunColor.current);
+    shadeWaterByClouds(cloudLayer.map, cloudLayer.uv);
   });
 
   return (
