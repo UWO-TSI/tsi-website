@@ -8,7 +8,7 @@
  * outdoor tables use village world coordinates. +x is screen left.
  *
  * `facing` is the direction a seated character looks: radians of atan2(dx, dz),
- * so 0 looks north (+z, away from the camera) and π looks at the camera.
+ * so 0 looks west (+z, away from the camera) and π looks at the camera.
  * `seatY` is the furniture's measured seat top above the floor (world units,
  * at the scale StudySeats places it); `tsi:sit` lifts the character onto it.
  */

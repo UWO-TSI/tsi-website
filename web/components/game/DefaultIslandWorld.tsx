@@ -360,7 +360,7 @@ function VillageLandmarks({ ground, opened, stage, ceremony }: { ground: (x: num
     <GLBProp url="/assets/acnh/props/bulletin-board.glb" position={at("notice")} />
     <GLBProp url="/assets/acnh/props/bulletin-board.glb" position={at("catch")} />
     <GLBProp url="/assets/acnh/props/bulletin-board.glb" position={[MISSION_BOARD[0], ground(...MISSION_BOARD), MISSION_BOARD[1] + 0.3]} rotation={[0, -0.5, 0]} />
-    {/* Existing wharf pier (authored at x 43.2-45.2, z 0.4-5) moved to the south beach. */}
+    {/* Existing wharf pier (authored at x 43.2-45.2, z 0.4-5) moved to the east beach, in front of the camera. */}
     <group position={[landmark("wharf").x - 44.2, -0.12, -23.4]}><WharfPier /></group>
     {LANDMARKS.filter(l => SIGNS[l.id] && !opened.includes(l.id as WorldGoalId)).map(l => <Html key={l.id} position={[l.x, ground(l.x, l.z) + (l.half && l.half[0] > 1 ? 3.6 : 2.3), l.z - (l.half?.[1] ?? 0)]} center distanceFactor={10} zIndexRange={[3, 0]}>
       <div className={styles.cue} data-closed={!l.open}>{SIGNS[l.id]}</div>
