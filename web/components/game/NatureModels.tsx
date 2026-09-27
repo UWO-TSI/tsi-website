@@ -137,15 +137,6 @@ export function NatureMushroom({ position, seed }: { position: [number, number, 
   );
 }
 
-// ─── Stump ──────────────────────────────────────────────────────
-export function NatureStump({ position }: { position: [number, number, number] }) {
-  return (
-    <Suspense fallback={null}>
-      <GLBProp url="/assets/acnh/plants/stump.glb" scale={1} position={position} />
-    </Suspense>
-  );
-}
-
 // Art pass pt2: preload the whole world set at module scope so props/trees
 // don't pop in one by one after the loading screen ("well produced" = the
 // world arrives assembled). Files are 12-350KB each, ~2MB total.

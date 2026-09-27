@@ -36,7 +36,6 @@ export default function LabLayout({ children }: { children: React.ReactNode }) {
         <Link href="/lab" style={{ color: "#c9d1d6" }}>Index</Link>
         <Link href="/lab/island" style={{ color: "#FFD166" }}>Default island</Link>
         <Link href="/lab/look" style={{ color: "#FFD166" }}>Look lab</Link>
-        <Link href="/lab/world" style={{ color: "#c9d1d6" }}>World bench</Link>
         <Link href="/lab/fishing" style={{ color: "#c9d1d6" }}>Fishing bench</Link>
         <Link href="/lab/item" style={{ color: "#c9d1d6" }}>Item bench</Link>
         <Link href="/lab/interior" style={{ color: "#c9d1d6" }}>Interior bench</Link>

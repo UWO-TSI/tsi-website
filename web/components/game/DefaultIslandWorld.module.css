@@ -1,4 +1,4 @@
-.world { position: relative; width: 100%; height: calc(100dvh - 40px); min-height: 480px; overflow: hidden; background: #b7dce0; color: #293e3b; font-family: "IBM Plex Mono", monospace; }
+.world { position: relative; width: 100%; height: calc(100dvh - var(--island-top, 40px)); min-height: 480px; overflow: hidden; background: #b7dce0; color: #293e3b; font-family: "IBM Plex Mono", monospace; }
 .heading { position: absolute; top: 32px; left: 36px; pointer-events: none; text-shadow: 0 1px 10px #ffffff70; }
 .heading h1 { margin: 0; font-size: clamp(20px, 2.4vw, 30px); font-weight: 600; letter-spacing: -1.2px; }
 .heading p { margin-top: 6px; font-size: 12px; }

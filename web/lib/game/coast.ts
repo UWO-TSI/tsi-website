@@ -13,8 +13,7 @@
  *
  * coastDist(x,z) = |xz| − wobble: distance in a space where the coast is
  * a 52-circle again — every legacy threshold (sand 48.5 / sink 49.5 /
- * waterline ≈51.4) keeps working. The Ocean + ground shaders carry the
- * same math via COAST_GLSL — edit the tables here only.
+ * waterline ≈51.4) keeps working.
  */
 
 export const COAST_BASE = 52;
@@ -127,18 +126,3 @@ export function rimSink(e: number): number {
   const t = Math.min((e - SINK_START) / (SINK_END - SINK_START), 1);
   return t * t * (3 - 2 * t) * SINK_DEPTH;
 }
-
-/** The same wobble as a GLSL function (vec2 p in world XZ). Wobble is in
- *  the LEGACY basis — shaders convert world radius via COAST_SCALE. */
-export const COAST_GLSL = `
-const float COAST_SCALE = ${COAST_SCALE.toFixed(5)};
-float coastWobble(vec2 p) {
-  float a = atan(p.y, p.x);
-  float w = ${HARMONICS.map(([k, amp]) => `${amp.toFixed(2)} * sin(${k.toFixed(1)} * a)`).join(" + ")};
-  ${GAUSSIANS.map(([c, s, amp], i) => `float g${i} = (a - ${c.toFixed(3)}) / ${s.toFixed(3)};
-  w += ${amp.toFixed(2)} * exp(-g${i} * g${i});`).join("\n  ")}
-  ${MASKS.map(([c, s], i) => `float m${i} = (a - ${c.toFixed(3)}) / ${s.toFixed(3)};
-  w *= 1.0 - exp(-m${i} * m${i});`).join("\n  ")}
-  return w;
-}
-`;
