@@ -22,7 +22,7 @@
 
 import { useEffect, useMemo, useSyncExternalStore } from "react";
 import { useThree } from "@react-three/fiber";
-import { EffectComposer, Bloom, FXAA, N8AO, TiltShift, ToneMapping, Vignette } from "@react-three/postprocessing";
+import { EffectComposer, Bloom, FXAA, N8AO, TiltShift2, ToneMapping, Vignette } from "@react-three/postprocessing";
 import { createGraphicsContextStore } from "@/lib/game/graphicsContext";
 import { useLabState } from "@/lib/game/devLab";
 import { DEFAULT_GRADE, type Grade } from "@/lib/game/grading";
@@ -151,7 +151,10 @@ export default function PostFX({ enabled = true, antialias = false, vignetteDark
         blendFunction={BlendFunction.NORMAL}
       />
       <primitive object={pastel} />
-      {fx?.tiltShift ? <TiltShift focusArea={fx.tiltShift.focusArea} feather={fx.tiltShift.feather} offset={fx.tiltShift.offset} /> : <></>}
+      {/* Tilt-shift as two one-direction passes of r3f's TiltShift2, which samples the HDR input directly
+          (postprocessing's TiltShift blurs into an 8-bit target and bands where lit ground is above 1). */}
+      {fx?.tiltShift ? <TiltShift2 blur={fx.tiltShift.blur} taper={fx.tiltShift.taper} start={[0, 0.5 + fx.tiltShift.offset]} end={[1, 0.5 + fx.tiltShift.offset]} direction={[1, 0]} /> : <></>}
+      {fx?.tiltShift ? <TiltShift2 blur={fx.tiltShift.blur} taper={fx.tiltShift.taper} start={[0, 0.5 + fx.tiltShift.offset]} end={[1, 0.5 + fx.tiltShift.offset]} direction={[0, 1]} /> : <></>}
       {bloomFx ? (
         <Bloom
           mipmapBlur

@@ -64,9 +64,9 @@ const SECTIONS: { title: string; rows: Row[] }[] = [
     { path: "post.bloom.threshold", label: "Bloom threshold", min: 0, max: 2, step: 0.01 },
     { path: "post.bloom.intensity", label: "Bloom intensity", min: 0, max: 2, step: 0.01 },
     { path: "post.tiltShift.enabled", label: "Tilt-shift DOF" + HIGH, kind: "bool" },
-    { path: "post.tiltShift.focusArea", label: "Focus band", min: 0, max: 1, step: 0.01 },
-    { path: "post.tiltShift.feather", label: "Feather", min: 0, max: 1, step: 0.01 },
-    { path: "post.tiltShift.offset", label: "Band offset", min: -0.5, max: 0.5, step: 0.01 },
+    { path: "post.tiltShift.blur", label: "Blur at the edges", min: 0, max: 1, step: 0.01 },
+    { path: "post.tiltShift.taper", label: "Taper (sharp band)", min: 0.02, max: 0.6, step: 0.01 },
+    { path: "post.tiltShift.offset", label: "Sharp line offset (+ up)", min: -0.4, max: 0.4, step: 0.01 },
   ] },
   { title: "Sky and air", rows: [
     { path: "sky.gradient", label: "Sky gradient", kind: "bool" },

@@ -102,6 +102,29 @@ if (mode === "baseline") {
   }
 }
 
+if (mode === "quick") { // tuning loop: V1 + its no-shadow pair for each direction, High only
+  await open("ab=A&at=0,-1&weather=clear&time=day");
+  for (const id of ["toy", "open-air", "painterly"]) {
+    const preset = await presetJson(id);
+    await setLook(preset); await page.waitForTimeout(5000); await shot(`H-${id}-V1`);
+    const flat = structuredClone(preset); flat.shadows.intensity = 0;
+    await setLook(flat); await page.waitForTimeout(600); await shot(`H-${id}-V1-noshadow`);
+  }
+}
+
+if (mode === "cost") { // one expensive effect at a time on top of Current, High, V1
+  await open("ab=A&at=0,-1&weather=clear&time=day");
+  const current = await presetJson("current"), toy = await presetJson("toy");
+  const variants = {
+    "current": current,
+    "ao": { ...current, ao: { ...toy.ao } },
+    "bloom": { ...current, post: { ...current.post, bloom: { ...toy.post.bloom } } },
+    "tilt-shift": { ...current, post: { ...current.post, tiltShift: { ...toy.post.tiltShift } } },
+    "rim-light": { ...current, light: { ...current.light, rimIntensity: 0.35 } },
+  };
+  for (const [name, preset] of Object.entries(variants)) { await setLook(preset); await page.waitForTimeout(4000); await fps(`H-cost-${name}`); }
+}
+
 if (mode === "presets") {
   for (const t of ["high", "light"]) {
     await setTier(t);

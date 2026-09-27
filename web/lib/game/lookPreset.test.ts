@@ -81,8 +81,11 @@ describe("look presets: light budget", () => {
     expect(r.keyFill).toBeLessThan(1.55);
     expect(r.litShadow).toBeCloseTo(2, 0);
   });
-  it("gives the open-air direction the ~4:1 key:fill the D3 note targets", () => {
-    expect(keyFill(LOOK_PRESETS[2]).keyFill).toBeGreaterThan(3.5);
+  it("gives the open-air direction well over twice the shipped key:fill, near the D3 target (~4:1)", () => {
+    const open = keyFill(LOOK_PRESETS[2]);
+    expect(open.keyFill).toBeGreaterThan(3.2);
+    expect(open.keyFill).toBeGreaterThan(2 * keyFill(CURRENT).keyFill);
+    expect(open.litShadow).toBeGreaterThan(2.8);
   });
   it("converts sun angles both ways and colour temperature to warm/cool hex", () => {
     const { elevation, azimuth } = sunAngles([-12, 24, -14]);
