@@ -68,3 +68,9 @@ Each item has the assumption the build uses today. None blocks. Kits: `web/lib/c
    - Summoner is the quickest Warden. Elementalist and Gunslinger are the frailest on the hard run (lowest health 40–45%) but still clear it.
    *Assumption:* starting numbers; retune from the member playtest.
 9. **Keys.** The four slots are 1–4 and the weapon swap moved to Q. The key store is now `tsi.combatKeys.v2`, so anyone who remapped the prototype runes starts from the defaults once.
+
+## Coordinator rulings on Part B (2026-09-26)
+- Guardian buckler: modelled in the next character/props art pass and granted with the Guardian subclass choice (until then, half-strength block as built).
+- Hunter volley arrows barely visible: VFX follow-up in the look pass (projectile trails/glow).
+- Weapon swap on Q and the one-time key reset: accepted.
+- Other Part B assumptions accepted as built; balance numbers retune after the member playtest.
