@@ -198,6 +198,7 @@ export default function GrassTufts({ map, windScale = 1 }: { map: IslandMap; win
 
   const material = useMemo(() => {
     const m = new THREE.MeshStandardMaterial({
+      name: "terrain:tufts",
       // White base when the pack supplies colour through COLOR_0; the flat green
       // is only for the procedural cards, which carry no vertex colour.
       color: useModel ? 0xffffff : 0x86b862,

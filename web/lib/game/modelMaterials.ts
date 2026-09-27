@@ -107,6 +107,8 @@ export function prepareModel(source: Object3D, url: string, castShadow: boolean,
       const existing = materials.get(original);
       if (existing) return existing;
       const material = original.clone();
+      // Material class for the look lab (lookPreset.ts).
+      material.userData.lookClass = url.includes("/plants/") ? "foliage" : "props";
       material.side = glassShell ? FrontSide : DoubleSide;
       if (glassShell) material.depthWrite = false;
       if (material instanceof MeshStandardMaterial && material.emissiveMap && emissiveIntensity !== undefined) {
