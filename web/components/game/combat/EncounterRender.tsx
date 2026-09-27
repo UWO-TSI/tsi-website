@@ -55,6 +55,8 @@ const poseM = new THREE.Matrix4(), poseQ = new THREE.Quaternion(), poseE = new T
  * from the shared telegraph helper (partPose/glow) every frame; the whole
  * mesh is culled when none of its instances is on screen.
  */
+const DYNAMIC = { sunCaster: "dynamic" };
+
 export function EnemyInstances({ typeId, capacity, ground, allies = false }: { typeId: string; capacity: number; ground: Ground;
   /** Your summons that borrow this model (kits.ts UNITS `model`, a Necromancer's shades): tinted spirit-green or shade-violet, a little smaller. */
   allies?: boolean }) {
@@ -102,7 +104,8 @@ export function EnemyInstances({ typeId, capacity, ground, allies = false }: { t
       mesh.computeBoundingSphere();
     }
   });
-  return <>{parts.map((p, i) => <instancedMesh key={i} ref={el => { refs.current[i] = el; }} args={[p.geometry, p.material, capacity]} />)}</>;
+  // Solids that move: they cast the sun shadow every frame (SunShadows) and receive.
+  return <>{parts.map((p, i) => <instancedMesh key={i} ref={el => { refs.current[i] = el; }} args={[p.geometry, p.material, capacity]} castShadow receiveShadow userData={DYNAMIC} />)}</>;
 }
 
 /** Outline and fill colours: red for danger, violet for the guardian's summon. */

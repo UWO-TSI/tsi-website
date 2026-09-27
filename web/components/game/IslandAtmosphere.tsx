@@ -9,7 +9,7 @@
 import { useEffect, useMemo } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
-import BlobShadows from "./BlobShadows";
+import ContactShadows, { SoftDiscs } from "./ContactShadows";
 import { CloudShadows, MistBanks, TreeLeaves } from "./AmbienceFX";
 import { Fireflies } from "./AmbientLife";
 import RainFX from "./RainFX";
@@ -78,13 +78,13 @@ export function IslandAtmosphere({ phase, light, look, weather, liteMode, castSh
     const models = SEASON_TREES[look.season];
     return sheddingTrees(trees.map(t => ({ x: t.x, y: ground(t.x, t.z), z: t.z, model: models[t.seed % models.length], scale: treeScale(t.seed) })), look.season);
   }, [trees, ground, look.season]);
-  const puddleBlobs = useMemo(() => puddles.map(([x, z], i) => ({ x, z, y: ground(x, z) + 0.01, rx: 0.5 + (i % 3) * 0.18, rz: 0.32 + (i % 2) * 0.12 })), [puddles, ground]);
+  const puddleBlobs = useMemo(() => puddles.map(([x, z], i) => ({ x, z, y: ground(x, z) + 0.01, rx: 0.5 + (i % 3) * 0.18, rz: 0.32 + (i % 2) * 0.12, yaw: 0 })), [puddles, ground]);
   return <>
     {light.skyTop ? <SkyGradient top={light.skyTop} horizon={light.sky} /> : <color attach="background" args={[light.sky]} />}
     <fog attach="fog" args={[light.fogColor, overview ? light.fogNear + 28 : light.fogNear, overview ? light.fogFar + 15 : light.fogFar]} />
     <ambientLight intensity={light.ambient} color={light.fill} />
     <hemisphereLight args={[light.fill, light.bounce, light.hemisphere]} />
-    <directionalLight position={light.sunPosition} color={light.sun} intensity={light.sunIntensity} castShadow={castShadows}
+    <directionalLight name="sun" position={light.sunPosition} color={light.sun} intensity={light.sunIntensity} castShadow={castShadows}
       shadow-mapSize={[2048, 2048]} shadow-camera-left={-shadowExtent} shadow-camera-right={shadowExtent}
       shadow-camera-top={shadowHalf} shadow-camera-bottom={-shadowHalf} shadow-camera-near={1} shadow-camera-far={75}
       onUpdate={key => key.shadow.camera.updateProjectionMatrix()}
@@ -92,7 +92,8 @@ export function IslandAtmosphere({ phase, light, look, weather, liteMode, castSh
     {light.rim && <directionalLight position={RIM_POSITION} color={light.rim.color} intensity={light.rim.intensity} />}
     {!liteMode && <CloudShadows phase={ENV_KEY[phase]} size={cloudSize} bounded />}
     {(weather === "rain" || weather === "snow") && <RainFX kind={weather} wind={wind} groundHeight={ground} />}
-    {weather === "rain" && puddleBlobs.length > 0 && <BlobShadows placements={puddleBlobs} opacity={0.5} color="#8ea7b8" />}
+    <ContactShadows tint={shadow.tint} intensity={shadow.intensity} sunMap={castShadows} />
+    {weather === "rain" && puddleBlobs.length > 0 && <SoftDiscs spots={puddleBlobs} opacity={0.5} color="#8ea7b8" />}
     {weather === "fog" && <MistBanks color={light.sky} opacity={liteMode ? 0.22 : 0.34} wind={wind} ground={ground} />}
     {!liteMode && weather !== "rain" && weather !== "snow" && (look.season === "spring" || look.season === "autumn") &&
       <TreeLeaves trees={leafTrees} mode={look.season === "spring" ? "petals" : "leaves"} wind={wind} ground={ground} />}

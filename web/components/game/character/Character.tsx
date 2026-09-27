@@ -8,7 +8,7 @@
  * write speed/yaw/pose/one-shots into `motion`.
  */
 import { useDeferredValue, useEffect, useMemo, useRef, type RefObject } from "react";
-import { useFrame, useLoader } from "@react-three/fiber";
+import { useFrame, useLoader, useThree } from "@react-three/fiber";
 import { useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js";
@@ -18,11 +18,14 @@ import { WEAPON_HAND, isLoop, resolveClip, tempo, type CharacterMotion, type Cli
 import { adoptPrimitive, materialName, mergeLook, refCache, skinnedPrimitives } from "@/lib/game/character/rig";
 import type { WeaponGrip, WeaponKind } from "@/lib/game/combat/contract";
 import { tagLookClasses } from "@/lib/game/modelMaterials";
+import { addContact } from "../ContactShadows";
 
 export type { CharacterMotion, ClipName } from "@/lib/game/character/clips";
 /** v6 is 1.045 m tall; at 1.3 a character stands ~1.36 world units, a little over one tile (ACNH). */
 export const CHARACTER_SCALE = 1.3;
 export const CHARACTER_HEIGHT = 1.045 * CHARACTER_SCALE;
+/** A character's contact shadow: about its shoulders' width, its height for the Light tier's sun shadow. */
+const CONTACT = { cx: 0, cz: 0, rx: 0.4, rz: 0.34, height: CHARACTER_HEIGHT };
 
 type Gltf = { scene: THREE.Object3D; animations: THREE.AnimationClip[] };
 const BODY_MATERIAL = new THREE.MeshStandardMaterial({ name: "CharacterBody", vertexColors: true, roughness: 0.85, metalness: 0 });
@@ -77,6 +80,9 @@ class Puppet {
       parent.add(mesh);
       mesh.bind(skeleton, first.bindMatrix);
       mesh.receiveShadow = true;
+      // Characters are solids that move: they cast the sun shadow every frame (SunShadows).
+      mesh.castShadow = true;
+      mesh.userData.sunCaster = "dynamic";
       // Lying and rolling clips leave the rest pose; one generous sphere keeps culling cheap and never clips a pose.
       mesh.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0.5, 0), 1.2);
       return mesh;
@@ -84,6 +90,7 @@ class Puppet {
     this.body = make(new THREE.BufferGeometry(), BODY_MATERIAL);
     this.face = make(facePrim.geometry, BODY_MATERIAL);
     this.decal = make(new THREE.BufferGeometry(), BODY_MATERIAL);
+    this.decal.castShadow = false; // a print on the shirt, inside the body's silhouette
     this.body.visible = this.face.visible = this.decal.visible = false; // until dress()
     this.sockets = { R: this.root.getObjectByName("Socket_R_Hand")!, L: this.root.getObjectByName("Socket_L_Hand")!, Back: this.root.getObjectByName("Socket_Back")! };
     this.mixer = new THREE.AnimationMixer(this.root);
@@ -211,7 +218,8 @@ function placeWeapon(model: THREE.Object3D, weapon: WeaponView, socket: THREE.Ob
   const g = weapon.grip ?? GRIP[weapon.kind];
   model.scale.setScalar(weapon.modelScale / CHARACTER_SCALE);
   model.rotation.set(...(weapon.inHand ? g.hand : g.back));
-  model.traverse(o => { o.castShadow = false; });
+  // Part of the character's silhouette: it casts with them.
+  model.traverse(o => { o.castShadow = true; o.userData.sunCaster = "dynamic"; });
   socket.add(model);
 }
 
@@ -240,6 +248,12 @@ export default function Character({ look, motion, walkSpeed = 7.4, weapon = null
     dressPuppet(puppet, shown, parts, loaded.slice(1).map(g => g.scene), atlas, decalMap, faceSize);
   }, [puppet, shown, parts, loaded, atlas, decalMap, faceSize]);
   const group = useRef<THREE.Group>(null);
+  // The contact sits under the caller's anchor (ground level), not the group that lifts for seats and hops.
+  const scene = useThree(s => s.scene);
+  useEffect(() => {
+    const anchor = group.current?.parent;
+    return anchor ? addContact(scene, anchor, CONTACT) : undefined;
+  }, [scene]);
   useFrame((_, delta) => {
     const m = motion.current, g = group.current;
     if (!m || !g) return;
