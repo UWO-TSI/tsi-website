@@ -1,0 +1,12 @@
+# World FX (row 238, look spec §7.1–7.3): questions and assumptions
+
+Branch `game/world-fx`. None of these blocked the work; each lists the assumption taken.
+
+1. **Wrap hour.** The world clock wraps at 08:00 UTC, i.e. 04:00 Toronto in summer (EDT) and 03:00 in winter (EST), not at 04:00 Toronto all year. A fixed UTC hour removes all time-zone and DST arithmetic and keeps every day exactly 86 400 s. *Assumed fine: both are quiet hours.*
+2. **Shader precision (for the water agent).** `uTime` in the water block is now world seconds, up to 86 400 (was seconds since page load). float32 resolves 7.8 ms there, fine for `sin(uTime * w)` at the current speeds. Anything like `fract(uTime * k)` or a hash of time also works but loses fraction bits as `k` grows; GridOcean's glint `cycle` term is one (its own §7.4 rewrite removes it anyway).
+3. **Wind direction.** One constant prevailing direction (toward +x, screen left, tilted 20° into the screen); the weather sets only the strength (fog 0.25, clear 0.8, snow 1.1, rain 2.6, windy 3.4 u/s). The old rain already slanted +x; the old cloud texture drifted the other way and now agrees. Open-Meteo's real wind direction would need a new field on `/api/weather`. *Assumed out of scope.*
+4. **Cloud drift speed.** Cloud shadows drift at a constant 0.15 u/s along the wind (the old speed), not at the weather's wind speed. The drift is integrated from world time, so a speed tied to the weather would jump the shadows whenever the weather changes. Direction is shared, speed is the cloud layer's.
+5. **Which trees shed.** Spring: `tree-blossom` (cherry) only. Autumn: `tree-hardwood-a`/`-b`. Cedars never shed; summer and winter shed nothing (winter snow is the weather's). The ruins have no trees, so no leaves there (before, the player-box leaves also fell in the ruins).
+6. **Leaf fade.** Leaves "fade" by shrinking over 1 s rather than by alpha: one shared material keeps it a single draw call with no per-instance alpha attribute. At 0.15 u the two read the same at game distance.
+7. **Mist count.** 16 banks on a jittered 4×4 grid per 32 u world tile (the old ring had 9 around the player, about the same density). That is 16 sprite draws on fog days instead of 9.
+8. **Leaf size.** Kept the old sizes (leaves 0.15, petals 0.11). Shed from trees they gather near trunks and are harder to spot than the old box of flakes; if David wants them to read more, raise `LEAF_LOOKS.size` in `AmbienceFX.tsx`.
