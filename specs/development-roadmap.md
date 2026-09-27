@@ -30,8 +30,9 @@ The coordinator (Claude) runs this without check-ins (David, 2026-09-26): verifi
 | Character art pass 2 (crafted wearables, real Stretch clip, beanie/cap/backpack/skirt fixes) | **Done, merged** (`f838efb8`) | Every craftable wearable is wearable |
 | Launch-readiness fixes (membership default/backfill, public tier 5, un-RSVP, atomic chapter rewards, launch runbook) | **Done, merged**: membership backfill (43 members / 272 public, rerun-safe), public = T5, un-RSVP, retry-safe chapter rewards, admin members editor via a T1/T2 server route, `specs/launch-runbook.md`; 915 tests | Fail-first tests; staging reruns pass |
 | Audio pass (sound on, settings, 12-block hourly music player, ambience, SFX map) | **Done, merged**: sound unlocks on first gesture everywhere, Sound settings, 12 real-time blocks with fallbacks until Suno tracks arrive; 932 tests | Chime and music play by default; blocks follow real time |
-| Phone companion (Study/Club/Me shell, 3D table view) | Paused at a clean commit to free memory for the look work; resumes after the look lab | Phone member can study, see club tools, profile, bag, journal, mail |
-| Seasonal events, chapters 3–4 check, admin pass (mark-member UI, merch staff screen, moderation queue, residents/recipes/events editors) | Later waves | Per spec in `specs/` |
+| Phone companion (Study/Club/Me shell, 3D table view) | Resumed (branch `game/companion`) | Phone member can study, see club tools, profile, bag, journal, mail |
+| Admin pass (shared T1/T2 gate, mark-member UI, merch staff screen, moderation queue, residents/recipes/events editors) | Running (branch `game/admin-pass`) | Every admin route behind one gate; staff can run the club's content without code |
+| Seasonal events, chapters 3–4 check, server-authoritative catches | Later waves | Per spec in `specs/` |
 | Launch (Phase 4) | After all of the above | Member playtest, David's local review, migrations in one window |
 
 Waves run at most three code-writing agents at once (Mac memory). The account's session limit has stopped all agents twice; lighter, well-specified tasks run on Sonnet to spread the load, and agents commit early so an interruption loses little. Each area: spec in `specs/<area>.md`, one fresh agent, questions in `specs/<area>-questions.md`, coordinator review, merge.
