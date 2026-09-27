@@ -116,6 +116,28 @@ if (mode === "quick-game") { // the game look (slot A): V1 at each phase, the da
   await shot("H-V1-overcast");
 }
 
+// §6 (row 237): the look cameras at day + golden hour, close-ups (glint path, a window, a lamp post), FPS per tier.
+//   PORT=4800 node specs/evidence/look/shots.mjs glints /tmp/look/glints-after   (glints-close: the close-ups only)
+if (mode === "glints" || mode === "glints-close") {
+  for (const t of mode === "glints" ? ["high", "light"] : ["high"]) {
+    await setTier(t);
+    const T = t === "high" ? "H" : "L";
+    if (mode === "glints") {
+      await open("ab=A&at=0,-1&weather=clear&time=day");
+      await shot(`${T}-V1-day`); await fps(`${T}-V1-day`);
+      await time("evening"); await shot(`${T}-V1-evening`);
+      if (t === "light") continue;
+      await view("Overview"); await shot("H-V2-evening"); await time("day"); await shot("H-V2-day"); await view("Walk");
+      await open("ab=A&at=6,-16&weather=clear&time=day"); await shot("H-V3-day"); await time("evening"); await shot("H-V3-evening");
+    }
+    // The follow camera at a fraction of its distance (?zoom, dev only).
+    for (const [name, at, zoom, phases] of [["glint", "3.2,-1.5", 0.55, ["day", "evening"]], ["window", "-1.7,2.2", 0.42, ["day", "night"]], ["lamp", "4.1,-0.2", 0.42, ["day", "night"]]]) {
+      await open(`ab=A&at=${at}&zoom=${zoom}&weather=clear&time=${phases[0]}`);
+      for (const phase of phases) { if (phase !== phases[0]) await time(phase); await shot(`H-close-${name}-${phase}`); }
+    }
+  }
+}
+
 if (mode === "quick") { // tuning loop: V1 + its no-shadow pair for each direction, High only
   await open("ab=A&at=0,-1&weather=clear&time=day");
   for (const id of ["toy", "open-air", "painterly"]) {
