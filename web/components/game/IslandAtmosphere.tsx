@@ -22,6 +22,7 @@ import type { IslandPhase } from "@/lib/game/islandTime";
 import { setLeafTint, TREE_WIND, WORLD_SNOW } from "@/lib/game/modelMaterials";
 import { TERRAIN_SNOW } from "./grid/GridTerrain";
 import { WORLD_BEND } from "@/lib/game/curvedWorld";
+import { worldTime } from "@/lib/game/worldClock";
 
 /** Screen-space vertical sky gradient (a plain 2D background texture): `top` at the top, `horizon` from mid-screen down. */
 export function SkyGradient({ top, horizon }: { top: string; horizon: string }) {
@@ -41,8 +42,8 @@ export function SkyGradient({ top, horizon }: { top: string; horizon: string }) 
 
 /** Drives the shared tree sway uniform; eases between calm, breezy and off (Light). */
 function TreeWind({ strength }: { strength: number }) {
-  useFrame(({ clock }, delta) => {
-    TREE_WIND.value.x = clock.elapsedTime;
+  useFrame((_, delta) => {
+    TREE_WIND.value.x = worldTime();
     TREE_WIND.value.y = THREE.MathUtils.damp(TREE_WIND.value.y, strength, 1.5, delta);
   });
   useEffect(() => () => { TREE_WIND.value.y = 0; }, []);

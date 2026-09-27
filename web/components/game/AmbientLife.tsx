@@ -10,6 +10,7 @@ import { tune } from "@/lib/game/tuning";
 import { gullPose, type GullParams } from "@/lib/game/gullPath";
 import { GLBProp } from "./NatureModels";
 import { fireflyOffset } from "@/lib/game/fireflyPath";
+import { worldTime } from "@/lib/game/worldClock";
 
 /**
  * Ambient life — sprint A6. Fireflies use the existing ACNH insect asset.
@@ -140,9 +141,9 @@ function Firefly({ seed, anchor, groundHeight = sampleTerrainHeightFast }: { see
     };
   }, [seed, anchor]);
 
-  useFrame((state) => {
+  useFrame(() => {
     if (!ref.current) return;
-    const t = state.clock.elapsedTime;
+    const t = worldTime();
     const offset = fireflyOffset(seed, t);
     const x = home.x + offset[0] * drift;
     const z = home.z + offset[2] * drift;

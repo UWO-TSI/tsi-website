@@ -32,6 +32,7 @@ import { applyGrassNormalStrength, advanceWater } from "./terrainMaterials";
 import { useTuning, tune as tuneNow } from "@/lib/game/tuning";
 import { useFrame } from "@react-three/fiber";
 import type { WaterParams } from "@/lib/game/waterShader";
+import { worldTime } from "@/lib/game/worldClock";
 
 let cached: { map: IslandMap; props: PlacedProp[] } | null = null;
 
@@ -95,7 +96,7 @@ export default function GridWorld({ map: suppliedMap, water, palette, windScale 
       sunDir.current.sub(lightTarget.current);
       sunColor.current.copy(light.color);
     }
-    advanceWater(state.clock.elapsedTime, water ?? tuneNow().water, sunDir.current, state.camera, sunColor.current);
+    advanceWater(worldTime(), water ?? tuneNow().water, sunDir.current, state.camera, sunColor.current);
   });
 
   return (
