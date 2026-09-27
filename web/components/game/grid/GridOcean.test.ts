@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { PerspectiveCamera, Vector3 } from "three";
-import { facetGlint, facetTilt, glareLobe, halfVector, type Vec3 } from "@/lib/game/waterShader";
+import { chopSlope, facetGlint, facetTilt, glareLobe, halfVector, type Vec3 } from "@/lib/game/waterShader";
 import { ISLAND_LIGHTING, withWeather } from "@/lib/game/islandLighting";
 import { sunFromAngles } from "@/lib/game/lookPreset";
 import { createDefaultIsland } from "@/lib/game/defaultIsland";
@@ -31,9 +31,14 @@ function onScreen(camera: PerspectiveCamera): number[] {
   }
   return out;
 }
-/** Each point's facet on flat water: only its own fixed tilt. */
-const flatFacet = (i: number, roughness: number): Vec3 => { const [tx, tz] = facetTilt(POINTS[i * 3], POINTS[i * 3 + 2]); return [tx * roughness, 1, tz * roughness]; };
-const lit = (sun: Vec3, eye: Vec3, ids: number[], p = WATER) => ids.filter(i => facetGlint(sun, eye, at(i), flatFacet(i, p.roughness), p.sunSize) > 0);
+/** A facet's own slope at world time t (its fixed tilt + the chop passing it), in units of roughness. */
+const ownSlope = (i: number, t: number): [number, number] => {
+  const [tx, tz] = facetTilt(POINTS[i * 3], POINTS[i * 3 + 2]), [cx, cz] = chopSlope(POINTS[i * 3], POINTS[i * 3 + 2], t);
+  return [tx + cx, tz + cz];
+};
+/** Each point's facet on flat water (the drawn waves only add slow motion). */
+const flatFacet = (i: number, roughness: number, t = 100): Vec3 => { const [sx, sz] = ownSlope(i, t); return [sx * roughness, 1, sz * roughness]; };
+const lit = (sun: Vec3, eye: Vec3, ids: number[], p = WATER, t = 100) => ids.filter(i => facetGlint(sun, eye, at(i), flatFacet(i, p.roughness, t), p.sunSize) > 0);
 /** Where flat water mirrors the sun into the eye. */
 function mirrorPoint(sun: Vec3, eye: Vec3): [number, number] {
   const s = new Vector3(...sun).normalize(), t = (eye[1] + WATER_DROP) / s.y;
@@ -43,7 +48,7 @@ function mirrorPoint(sun: Vec3, eye: Vec3): [number, number] {
 /**
  * The steepest the water gets: the swell's slope bound, the ripple texture's
  * (mSeaWater_Nrm's largest |rg| is 0.704, two layers at 1 + 0.5), and a facet's
- * own tilt (cut at 1.5 RMS).
+ * own slope (fixed tilt + chop, at most 1.5 roughness).
  */
 const steepest = (p = WATER) => 2 * Math.PI / p.waveScale * p.waveHeight * (0.62 + 0.38 * 1.63) + 0.705 * 1.5 * (p.rippleStrength ?? 0) + 1.5 * p.roughness;
 /** The facet, tilted as far as the water allows toward mirroring the sun: the best any point can do. */
@@ -102,19 +107,36 @@ describe("sun on the water is optics (row 238, look spec §7.4)", () => {
 
   it("depends only on its inputs: same inputs, same light, whatever the clock or Math.random say", () => {
     const { eye } = followCamera([0, 14]), p: Vec3 = [3, -WATER_DROP, 30], n: Vec3 = [0.02, 1, -0.3];
-    const first = [facetGlint(AFTERNOON, eye, p, n, 5), glareLobe(AFTERNOON, eye, p, n, 0.11), ...facetTilt(3, 30)];
+    const first = [facetGlint(AFTERNOON, eye, p, n, 5), glareLobe(AFTERNOON, eye, p, n, 0.11), ...facetTilt(3, 30), ...chopSlope(3, 30, 51234.5)];
     vi.spyOn(Math, "random").mockReturnValue(0.123);
     vi.useFakeTimers().setSystemTime(new Date("2031-01-01T04:00:00Z"));
-    expect([facetGlint(AFTERNOON, eye, p, n, 5), glareLobe(AFTERNOON, eye, p, n, 0.11), ...facetTilt(3, 30)]).toEqual(first);
+    expect([facetGlint(AFTERNOON, eye, p, n, 5), glareLobe(AFTERNOON, eye, p, n, 0.11), ...facetTilt(3, 30), ...chopSlope(3, 30, 51234.5)]).toEqual(first);
     expect(facetTilt(3, 30)).not.toEqual(facetTilt(3.5, 30));
   });
 
-  it("spreads each facet's own tilt like the sheet, cut at 1.5 RMS", () => {
-    const tilts = Array.from({ length: POINTS.length / 3 }, (_, i) => Math.hypot(...facetTilt(POINTS[i * 3], POINTS[i * 3 + 2])));
-    expect(Math.max(...tilts)).toBeLessThanOrEqual(1.5);
-    const rms = Math.sqrt(tilts.reduce((a, t) => a + t * t, 0) / tilts.length);
-    expect(rms).toBeGreaterThan(0.75);
-    expect(rms).toBeLessThan(0.9);
+  it("keeps each facet's own slope within 1.5 roughness: a Beckmann tilt cut at 0.9 plus chop of at most 0.6", () => {
+    const n = POINTS.length / 3, tilts = Array.from({ length: n }, (_, i) => Math.hypot(...facetTilt(POINTS[i * 3], POINTS[i * 3 + 2])));
+    expect(Math.max(...tilts)).toBeLessThanOrEqual(0.9);
+    const rms = Math.sqrt(tilts.reduce((a, t) => a + t * t, 0) / n);
+    expect(rms).toBeGreaterThan(0.45);
+    expect(rms).toBeLessThan(0.54);
+    for (const t of [0, 0.37, 1234.5, 86399]) for (let i = 0; i < n; i += 7) expect(Math.hypot(...ownSlope(i, t))).toBeLessThanOrEqual(1.5);
+  });
+
+  it("flashes briefly at a fixed eye: the chop turns facets through alignment in well under half a second", () => {
+    const { camera, eye } = followCamera([0, 17.2]), ids = onScreen(camera), dt = 1 / 60, start = new Map<number, number>(), flashes: number[] = [];
+    let litFrames = 0;
+    for (let f = 0; f <= 6 * 60; f++) {
+      const on = new Set(lit(AFTERNOON, eye, ids, WATER, 40000 + f * dt));
+      litFrames += on.size;
+      for (const i of on) if (!start.has(i)) start.set(i, f);
+      for (const [i, f0] of start) if (!on.has(i)) { flashes.push((f - f0) * dt); start.delete(i); }
+    }
+    flashes.sort((a, b) => a - b);
+    const median = flashes[flashes.length >> 1];
+    expect(litFrames / 361).toBeGreaterThan(5);
+    expect(median).toBeLessThan(0.35);
+    expect(median).toBeGreaterThan(0.05);
   });
 });
 

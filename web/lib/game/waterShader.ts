@@ -180,15 +180,16 @@ export function writeWaterUniforms(u: WaterUniforms, p: WaterParams): void {
  * key light into this eye: its normal must lie along the half vector between
  * the sun and the eye. With the sun behind the follow camera that needs 29°+
  * of tilt; the drawn surface (swell + ripple texture) gives about 9° and the
- * ripples below it at most 1.5 RMS more, so nothing lights. With the sun
- * ahead the light sits around the mirror point and slides as the eye moves.
+ * ripples below it at most 1.5 roughness more, so nothing lights. With the
+ * sun ahead the light sits around the mirror point and slides as the eye moves.
  *
  *  - `glareLobe`: the ripples too small to draw, averaged. Their slopes spread
  *    about the drawn normal by `roughness` (a Beckmann lobe), so the sheet is
  *    the share of them aimed at the eye. Calm water is tight; wind is wide.
- *  - `facetGlint`: one of those ripples, a sparkle sprite with its own normal.
- *    It lights while the sun's disc sits in its mirror direction (`sunSize`,
- *    the disc's radius; the normal's tolerance is half that).
+ *  - `facetGlint`: one of those ripples, a sparkle sprite with its own normal
+ *    (drawn normal + `facetTilt` + `chopSlope`). It lights while the sun's
+ *    disc sits in its mirror direction (`sunSize`, the disc's radius; the
+ *    normal's tolerance is half that).
  *
  * MIRRORED IN GLSL (`WATER_OPTICS` below). Change both together.
  */
@@ -218,9 +219,10 @@ export function facetGlint(sun: Vec3, eye: Vec3, point: Vec3, normal: Vec3, sunS
 /**
  * The fixed tilt of the unresolved ripple at world (x, z), in units of
  * `roughness`: a property of that bit of water, seeded by where it is, so
- * every client agrees. Beckmann-distributed like `glareLobe`'s facets, so the
- * sparkles fall where the sheet is, and cut at 1.5 RMS: they stay inside its
- * bright part and none can reach a sun behind the camera, even in wind.
+ * every client agrees. Beckmann-distributed like `glareLobe`'s facets (RMS
+ * 0.6) so the sparkles fall in the sheet, cut at 0.9; with `chopSlope` (at
+ * most 0.6) a facet never tilts past 1.5 roughness, so none can reach a sun
+ * behind the camera, even in wind.
  */
 export function facetTilt(x: number, z: number): [number, number] {
   let h = Math.imul(Math.round(x * 1024), 0x9e3779b1) ^ Math.imul(Math.round(z * 1024), 0x85ebca77);
@@ -229,8 +231,28 @@ export function facetTilt(x: number, z: number): [number, number] {
     h = Math.imul(h ^ (h >>> 15), 0x735a2d97);
     return ((h ^ (h >>> 15)) >>> 0) / 4294967296;
   };
-  const r = Math.sqrt(-Math.log(1 - next() * (1 - Math.exp(-2.25)))), a = next() * 2 * Math.PI;
+  const r = 0.6 * Math.sqrt(-Math.log(1 - next() * (1 - Math.exp(-2.25)))), a = next() * 2 * Math.PI;
   return [r * Math.cos(a), r * Math.sin(a)];
+}
+
+/**
+ * Short wind waves below the drawn ripples, in units of `roughness`: three
+ * trains 0.43-0.61 units long on deep-water dispersion (ω = √(g k), about
+ * 2 Hz), 0.2 of slope each. A function of world position and world time only.
+ * They turn each facet through alignment fast, so a sparkle flashes for about
+ * 0.2 s instead of drifting in and out with the drawn waves. Mirrored in
+ * `WATER_CHOP`.
+ */
+const CHOP = ([[0.8, 0.6, 0.43], [-0.5, 0.866, 0.61], [0.96, -0.28, 0.53]] as const).map(([x, z, length]) => {
+  // Rounded as the GLSL prints them, so the mirror is exact.
+  const k = +(2 * Math.PI / length).toFixed(5);
+  return [x, z, k, +Math.sqrt(9.8 * k).toFixed(5)] as const;
+});
+const CHOP_SLOPE = 0.2;
+export function chopSlope(x: number, z: number, t: number): [number, number] {
+  let sx = 0, sz = 0;
+  for (const [dx, dz, k, w] of CHOP) { const c = Math.cos(k * (dx * x + dz * z) - w * t); sx += dx * c; sz += dz * c; }
+  return [sx * CHOP_SLOPE, sz * CHOP_SLOPE];
 }
 
 /** Mirrors halfVector / glareLobe / facetGlint above. For the water fragment and the sparkle sprites. */
@@ -253,6 +275,15 @@ float facetGlint(vec3 sun, vec3 eye, vec3 p, vec3 n, float sunSize) {
  */
 const WATER_PHASE = /* glsl */ `
 float waterPhase(float x) { return mod(x, 6.2831853); }
+`;
+
+/** Mirrors chopSlope. Needs waterPhase (WATER_SWELL brings it). */
+export const WATER_CHOP = /* glsl */ `
+vec2 chopSlope(vec2 xz, float t) {
+  vec2 s = vec2(0.0), d;
+${CHOP.map(([x, z, k, w]) => `  d = vec2(${x}, ${z}); s += d * cos(${k.toFixed(5)} * dot(xz, d) - waterPhase(${w.toFixed(5)} * t));`).join("\n")}
+  return s * ${CHOP_SLOPE.toFixed(2)};
+}
 `;
 
 const UNIFORM_DECLS = /* glsl */ `
