@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { Color, ShaderChunk, ShaderLib } from "three";
+import { Color, ShaderChunk, ShaderLib, Vector3 } from "three";
 import { ISLAND_LIGHTING, islandLight, withSeason, withWeather, type IslandLight } from "./islandLighting";
-import { CURRENT, LOOK_LIGHTS_CHUNK, LOOK_PRESETS, LOOK_REFLECT_EDITS, MATERIAL_CLASSES, MIN_SUN_ELEVATION, PHASE_LOOK, keyFill, kelvinHex, lookFx, lookRoughness, parseLook, sunAngles, sunFromAngles, sunFromCamera } from "./lookPreset";
+import { CURRENT, LOOK_LIGHTS_CHUNK, LOOK_PRESETS, LOOK_REFLECT_EDITS, MATERIAL_CLASSES, MIN_SUN_ELEVATION, PHASE_LOOK, keyFill, shadowHalfHeight, kelvinHex, lookFx, lookRoughness, parseLook, sunAngles, sunFromAngles, sunFromCamera } from "./lookPreset";
 import { solarPosition } from "./sunPath";
 import { seasonLook } from "./seasonalLook";
 import { parseSeasonOverride } from "./season";
@@ -148,6 +148,20 @@ describe("the real sun (row 239, §8)", () => {
     expect(key("2026-06-21T02:00:00-04:00", "night")).toEqual(moon);
     expect(sunAngles(moon).elevation).toBeCloseTo(PHASE_LOOK.night.elevation!, 0);
     expect(sunAngles(moon).azimuth).toBeCloseTo(sunAngles(CURRENT.light.sunPosition).azimuth, 0);
+  });
+  it("fits the shadow box to the sun: the whole island and its casters inside, a low sun's box tighter", () => {
+    for (const elevation of [MIN_SUN_ELEVATION, 25, 44, 71]) for (const azimuth of [90, 180, 250, 300]) {
+      const sun = islandLight(CURRENT, "day", { elevation, azimuth }).sunPosition, half = shadowHalfHeight(sun, 26);
+      const d = new Vector3(...sun).normalize(), up = new Vector3(0, 1, 0).addScaledVector(d, -d.y).normalize();
+      for (let a = 0; a < 360; a += 15) for (const h of [0, 4.8]) {
+        const p = new Vector3(26 * Math.cos(a * Math.PI / 180), h, 26 * Math.sin(a * Math.PI / 180));
+        expect(Math.abs(p.dot(up)), `${elevation}° ${azimuth}°`).toBeLessThanOrEqual(half);
+        expect(32 - p.dot(d)).toBeGreaterThan(1); // inside the near and far planes (1, 75)
+        expect(32 - p.dot(d)).toBeLessThan(75);
+      }
+    }
+    expect(shadowHalfHeight(CURRENT.light.sunPosition, 26)).toBeCloseTo(22.4, 1);
+    expect(shadowHalfHeight(ISLAND_LIGHTING.evening.sunPosition, 26)).toBeLessThan(12);
   });
   it("keeps the preset's own key without a sun (/lab/look's sliders)", () => {
     for (const phase of ["dawn", "day", "evening"] as const) expect(islandLight(LOOK_PRESETS[1], phase).sunPosition).toEqual(LOOK_PRESETS[1].light.sunPosition);

@@ -243,6 +243,19 @@ const SUN_DISTANCE = 32;
  * horizon (34.4° down, 48° FOV), so from 12° the sunset glitter lane stays in view.
  */
 export const MIN_SUN_ELEVATION = 12;
+/** Tallest caster the key light's shadow box holds (world units; the clubhouse and its flag are 4.8). */
+const CASTER_HEIGHT = 6;
+
+/**
+ * Half-height of the key light's orthographic shadow box for a scene `extent` in radius (the box is
+ * ±extent across): that ground seen from the sun's elevation plus the tallest caster, so the island stays
+ * covered as the sun moves and a low sun gets its texels back for its long shadows (row 239). The picked
+ * 44° sun gives 22.4, about the shipped fixed 24.
+ */
+export function shadowHalfHeight(sunPosition: readonly number[], extent: number): number {
+  const e = sunAngles(sunPosition).elevation * Math.PI / 180;
+  return extent * Math.sin(e) + CASTER_HEIGHT * Math.cos(e);
+}
 
 function tint(hex: string, m: Tint): string {
   const c = new Color(hex);
