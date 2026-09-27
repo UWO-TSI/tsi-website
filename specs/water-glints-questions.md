@@ -6,7 +6,7 @@ Build notes for `specs/look-development.md` §7.4 (row 238). Each item states th
 
 2. **The sun's apparent size.** No sun disc is drawn in the sky. The environment map paints a sun blob with a ~14° core (a 64×32 lighting canvas, blurred again by PMREM), which is a lighting stand-in, not a disc. Assumption: the water has its own `sunSize` = the sun disc's radius as the water mirrors it, 5°. A facet lights while the disc sits in its mirror direction, so the tolerance on the facet's normal is half that (2.5°). The old tight lobe had a ~2.3° half-width; 5° is what gives a handful to a few dozen sparkles in the band with the shipped point layout (the lit count scales with the tolerance squared and does not depend on roughness).
 
-3. **Twinkle speed with a fixed micro-tilt.** As specified, a facet's own tilt never changes; only the drawn waves (swell + ripple texture) turn it through alignment. Those move a facet's normal about 1-2° per second, so for a viewer standing still a sparkle lasts about 1.5 s (median, simulated over 10 s from the north beach at 16:00-17:00, 8-14 lit at once, 3-6 new ones a second); walking changes them much faster. Real glitter flashes in a tenth of a second because capillary ripples are fast. If David wants that, the physical addition is a short, fast capillary wave field (a function of world position and world time, still pure optics, same for every client): the simulation gives flashes of ~0.2 s with the same number lit. Not built, because the brief fixes the tilt; ask after he sees it.
+3. **Twinkle speed with a fixed micro-tilt.** *Resolved 2026-09-27: David approved the fast chop (look spec §7.4), now built; flashes are ~0.2 s.* As specified, a facet's own tilt never changes; only the drawn waves (swell + ripple texture) turn it through alignment. Those move a facet's normal about 1-2° per second, so for a viewer standing still a sparkle lasts about 1.5 s (median, simulated over 10 s from the north beach at 16:00-17:00, 8-14 lit at once, 3-6 new ones a second); walking changes them much faster. Real glitter flashes in a tenth of a second because capillary ripples are fast. If David wants that, the physical addition is a short, fast capillary wave field (a function of world position and world time, still pure optics, same for every client): the simulation gives flashes of ~0.2 s with the same number lit. Not built, because the brief fixes the tilt; ask after he sees it.
 
 4. **Rain, snow and fog remove the glare sheet too,** not only the sparkles: both are the sun's disc, which is behind cloud. The sky sheen at grazing angles (`fresnel`) stays.
 
@@ -22,7 +22,8 @@ Build notes for `specs/look-development.md` §7.4 (row 238). Each item states th
 
 10. **World clock.** `advanceWater`'s time becomes world seconds (up to 86 400). Every phase that meets `sin()` is wrapped to one turn and the ripple scroll is `fract`ed, so GPU fast-math `sin` stays accurate and the scroll stays smooth; checked in the lab at t = 86 000.
 
+11. **Cloud dimming strength.** Sunlight left under a cloud = 1 − the cloud texture's alpha (its dense cores are 0.85, so the band keeps ~15% there). The drawn ground shadow is much lighter (opacity 0.12 by day) because it is stylised; the water uses the cloud's cover, not that opacity, since a cloud blocks the sun's disc outright. Over the open sea the drawn shadow plane has faded out, so there the missing glitter is what shows the cloud.
+
 ## Follow-ups
-- Cloud-shadow dimming of the glare and sparkles at a point, once the world clock and cloud offset land (`lib/game/worldClock.ts`, other agent).
-- Water time (`uTime`) still comes from `state.clock.elapsedTime` in `GridWorld`; the other agent's world-clock switch makes the waves, and so the sparkles, agree across clients.
+- (Done 2026-09-27) cloud-shadow dimming and the world clock.
 - Optional Fresnel on the glare (a low sun reflects several times more than a high one); not added.
