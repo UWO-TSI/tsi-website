@@ -361,7 +361,7 @@ function VillageLandmarks({ ground, opened, stage, ceremony }: { ground: (x: num
     <GLBProp url="/assets/acnh/props/bulletin-board.glb" position={at("notice")} />
     <GLBProp url="/assets/acnh/props/bulletin-board.glb" position={at("catch")} />
     <GLBProp url="/assets/acnh/props/bulletin-board.glb" position={[MISSION_BOARD[0], ground(...MISSION_BOARD), MISSION_BOARD[1] + 0.3]} rotation={[0, -0.5, 0]} />
-    {/* Existing wharf pier (authored at x 43.2-45.2, z 0.4-5) moved to the south beach. */}
+    {/* Existing wharf pier (authored at x 43.2-45.2, z 0.4-5) moved to the east beach, in front of the camera. */}
     <group position={[landmark("wharf").x - 44.2, -0.12, -23.4]}><WharfPier /></group>
     {LANDMARKS.filter(l => SIGNS[l.id] && !opened.includes(l.id as WorldGoalId)).map(l => <Html key={l.id} position={[l.x, ground(l.x, l.z) + (l.half && l.half[0] > 1 ? 3.6 : 2.3), l.z - (l.half?.[1] ?? 0)]} center distanceFactor={10} zIndexRange={[3, 0]}>
       <div className={styles.cue} data-closed={!l.open}>{SIGNS[l.id]}</div>
@@ -440,8 +440,8 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
     setRuinsRun(n => n + 1);
   }, []);
   const [gate, setGate] = useState<{ open: boolean; reason: string | null }>({ open: false, reason: "Checking the gate…" });
-  // Dev: ?at=x,z starts the village walk at that spot (screenshots of shore/shop details).
-  const [devAt] = useState<[number, number, number] | null>(() => { const v = devHome.get("at")?.split(",").map(Number); return v?.length === 2 && v.every(Number.isFinite) ? [v[0], 0, v[1]] : null; });
+  // Dev: ?at=x,z starts the village walk at that spot (screenshots of shore/shop details); ?at=HH:MM is the clock (useIslandConditions).
+  const [devAt] = useState<[number, number, number] | null>(() => { const v = devHome.getAll("at").map(a => a.split(",").map(Number)).find(p => p.length === 2 && p.every(Number.isFinite)); return v ? [v[0], 0, v[1]] : null; });
   // Follow-camera distance scale for close-up captures (dev only, e.g. ?zoom=0.45).
   const [devZoom] = useState(() => Number(devHome.get("zoom")) || 1);
   const [donateOpen, setDonateOpen] = useState(false);
@@ -528,7 +528,9 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed by value: the blend object is rebuilt every render.
   const look = useMemo(() => seasonLook(season, paletteBySeason(seasonRows)), [seasonKey, seasonRows]);
   const lookPreset = preset ?? CURRENT;
-  const light = useMemo(() => withWeather(withSeason(islandLight(lookPreset, phase), look), weather), [phase, look, weather, lookPreset]);
+  // The key light follows the real sun (row 239); /lab/look's edited preset keeps its own sun sliders.
+  const sun = preset ? null : conditions.sun;
+  const light = useMemo(() => withWeather(withSeason(islandLight(lookPreset, phase, sun), look), weather), [phase, look, weather, lookPreset, sun]);
   const conditionsLabel = `${season.season[0].toUpperCase()}${season.season.slice(1)}${Object.values(season.weights).some(w => w > 0 && w < 1) ? " (changing)" : ""} · ${weather[0].toUpperCase()}${weather.slice(1)}`;
   const grade = inside ? CLUBHOUSE_LIGHTING[phase].grade : light.grade;
   const atHome = site === "home";

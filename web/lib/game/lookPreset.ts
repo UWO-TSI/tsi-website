@@ -2,6 +2,7 @@ import { Color, ShaderChunk } from "three";
 import type { Grade } from "./grading";
 import type { IslandLight, IslandWater } from "./islandLighting";
 import type { IslandPhase } from "./islandTime";
+import type { SunAngles } from "./sunPath";
 
 /**
  * Look presets (ledger rows 235-236, specs/look-development.md). One plain
@@ -190,12 +191,11 @@ const WHITE: Tint = [1, 1, 1];
  * A time of day as multipliers on the day look (§5.5). Colours multiply
  * channel-wise in linear light and numbers scale, so the day preset stays the
  * one source of truth. The real sunrise/sunset clock picks the phase
- * (rows 173, 188); the phase sets the sun's elevation, and the evening sun is
- * mirrored to screen-right (it sets in the west, opposite the dawn side).
+ * (rows 173, 188); the key light's direction is the real sun (row 239, §8).
  */
 export interface PhaseLook {
-  /** Sun elevation in degrees; null keeps the preset's position. */
-  elevation: number | null; mirror: boolean;
+  /** A fixed key at this elevation (degrees) on the preset's azimuth: night's moon. Null = the sun. */
+  elevation: number | null;
   sun: Tint; sunIntensity: number;
   fill: Tint; bounce: Tint; fillIntensity: number;
   skyTop: Tint; skyHorizon: Tint; fog: number;
@@ -206,29 +206,29 @@ export interface PhaseLook {
 }
 
 const DAY: PhaseLook = {
-  elevation: null, mirror: false, sun: WHITE, sunIntensity: 1, fill: WHITE, bounce: WHITE, fillIntensity: 1,
+  elevation: null, sun: WHITE, sunIntensity: 1, fill: WHITE, bounce: WHITE, fillIntensity: 1,
   skyTop: WHITE, skyHorizon: WHITE, fog: 1, shadowRadius: 1, shadowIntensity: 1, rim: 0, exposure: 1, warmth: 0, lift: 0, desat: 0,
 };
 
 export const PHASE_LOOK: Record<IslandPhase, PhaseLook> = {
-  // Cool-pink: low peach sun from the east side, lilac fill, periwinkle sky over a pink horizon, long soft shadows.
+  // Cool-pink: low peach sun from the east (behind the camera), lilac fill, periwinkle sky over a pink horizon, long soft shadows.
   dawn: {
-    elevation: 21, mirror: false, sun: [1, 0.69, 0.71], sunIntensity: 0.72,
+    elevation: null, sun: [1, 0.69, 0.71], sunIntensity: 0.72,
     fill: [1.46, 0.81, 0.93], bounce: [0.85, 0.85, 0.95], fillIntensity: 1.3,
     skyTop: [4.01, 1.07, 0.96], skyHorizon: [1.7, 0.82, 0.65], fog: 0.85,
     shadowRadius: 2.5, shadowIntensity: 0.85, rim: 0.15, exposure: 1.08, warmth: 0.05, lift: 0.05, desat: 0,
   },
   day: DAY,
-  // Golden hour: warm low sun from the west (screen-right), cooler violet fill, a warm rim, long shadows.
+  // Golden hour: warm low sun from the west (ahead of the camera), cooler violet fill, a warm rim, long shadows.
   evening: {
-    elevation: 22, mirror: true, sun: [1, 0.56, 0.28], sunIntensity: 1,
+    elevation: null, sun: [1, 0.56, 0.28], sunIntensity: 1,
     fill: [1.18, 0.77, 0.87], bounce: [1, 0.85, 0.75], fillIntensity: 1.15,
     skyTop: [2.32, 0.81, 0.92], skyHorizon: [1.77, 0.77, 0.37], fog: 0.85,
     shadowRadius: 1.6, shadowIntensity: 0.95, rim: 0.6, exposure: 1.08, warmth: 0.15, lift: 0.05, desat: 0,
   },
   // Blue moonlight key, deep blue sky; the lamps and windows (islandLighting PHASE_BASE) stay warm.
   night: {
-    elevation: 40, mirror: false, sun: [0.34, 0.57, 1.52], sunIntensity: 0.34,
+    elevation: 40, sun: [0.34, 0.57, 1.52], sunIntensity: 0.34,
     fill: [0.46, 0.45, 0.65], bounce: [0.4, 0.45, 0.55], fillIntensity: 1.2,
     skyTop: [0.11, 0.05, 0.09], skyHorizon: [0.07, 0.09, 0.18], fog: 0.85,
     shadowRadius: 2, shadowIntensity: 0.75, rim: 0, exposure: 1.1, warmth: -0.15, lift: 0, desat: 0.03,
@@ -237,6 +237,25 @@ export const PHASE_LOOK: Record<IslandPhase, PhaseLook> = {
 
 /** Distance of the key light from the island centre (the shadow camera sits there). */
 const SUN_DISTANCE = 32;
+/**
+ * The lowest the key light goes (degrees), so dawn and dusk never light edge-on. A flat mirror shows the sun
+ * as far below the horizon as the sun is above it, and the follow camera's frame ends 10.4° below the
+ * horizon (34.4° down, 48° FOV), so from 12° the sunset glitter lane stays in view.
+ */
+export const MIN_SUN_ELEVATION = 12;
+/** Tallest caster the key light's shadow box holds (world units; the clubhouse and its flag are 4.8). */
+const CASTER_HEIGHT = 6;
+
+/**
+ * Half-height of the key light's orthographic shadow box for a scene `extent` in radius (the box is
+ * ±extent across): that ground seen from the sun's elevation plus the tallest caster, so the island stays
+ * covered as the sun moves and a low sun gets its texels back for its long shadows (row 239). The picked
+ * 44° sun gives 22.4, about the shipped fixed 24.
+ */
+export function shadowHalfHeight(sunPosition: readonly number[], extent: number): number {
+  const e = sunAngles(sunPosition).elevation * Math.PI / 180;
+  return extent * Math.sin(e) + CASTER_HEIGHT * Math.cos(e);
+}
 
 function tint(hex: string, m: Tint): string {
   const c = new Color(hex);
@@ -261,12 +280,16 @@ function waterLook(water: IslandWater, look: ClassLook): IslandWater {
 /** What a phase keeps from islandLighting: the water palette and the lamps (gameplay, not look). */
 export type PhaseBase = Pick<IslandLight, "water" | "lamp" | "lampsOn" | "windowGlow" | "fireflies">;
 
-/** Preset onto a phase: the day look times the phase's multipliers. */
-export function lookToLight(p: LookPreset, base: PhaseBase, phase: IslandPhase = "day"): IslandLight {
+/**
+ * Preset onto a phase: the day look times the phase's multipliers, with the key light on the real sun
+ * (`solar`, compass angles; world direction per the compass in defaultIsland.ts, lab azimuth = compass − 180).
+ * Without `solar` the key stays where the preset puts it (/lab/look's sliders).
+ */
+export function lookToLight(p: LookPreset, base: PhaseBase, phase: IslandPhase = "day", solar: SunAngles | null = null): IslandLight {
   const { light, sky } = p, m = PHASE_LOOK[phase];
-  const { elevation, azimuth } = sunAngles(light.sunPosition);
-  const elev = m.elevation ?? elevation;
-  const sunPosition = m.elevation === null && !m.mirror ? light.sunPosition : sunFromAngles(elev, m.mirror ? 180 - azimuth : azimuth, SUN_DISTANCE);
+  const sunPosition = m.elevation !== null ? sunFromAngles(m.elevation, sunAngles(light.sunPosition).azimuth, SUN_DISTANCE)
+    : solar ? sunFromAngles(Math.max(MIN_SUN_ELEVATION, solar.elevation), solar.azimuth - 180, SUN_DISTANCE) : light.sunPosition;
+  const { elevation: elev, azimuth } = sunAngles(sunPosition);
   const sun = tint(light.sunColor, m.sun), top = tint(sky.top, m.skyTop), horizon = tint(sky.horizon, m.skyHorizon);
   const fill = tint(light.fillSky, m.fill), bounce = tint(light.fillGround, m.bounce);
   const rim = light.rimIntensity + m.rim;
@@ -275,7 +298,7 @@ export function lookToLight(p: LookPreset, base: PhaseBase, phase: IslandPhase =
     sky: horizon, sun, sunIntensity: light.sunIntensity * m.sunIntensity, sunPosition,
     fill, bounce, ambient: light.ambient * m.fillIntensity, hemisphere: light.hemisphere * m.fillIntensity,
     fogNear: sky.fogNear * m.fog, fogFar: sky.fogFar * m.fog, fogColor: tint(sky.fog, m.skyHorizon),
-    environment: { skyTop: top, skyBottom: horizon, sun, ground: bounce, intensity: light.envIntensity * m.fillIntensity, sunElev: elev / 90, sunAzimuth: sunAngles(sunPosition).azimuth },
+    environment: { skyTop: top, skyBottom: horizon, sun, ground: bounce, intensity: light.envIntensity * m.fillIntensity, sunElev: elev / 90, sunAzimuth: azimuth },
     grade: { ...p.grade, exposure: p.grade.exposure * m.exposure, warmth: p.grade.warmth + m.warmth, lift: p.grade.lift + m.lift, desat: p.grade.desat + m.desat },
     water: waterLook(base.water, p.materials.water),
     shadow: { radius: p.shadows.radius * m.shadowRadius, intensity: p.shadows.intensity * m.shadowIntensity, tint: p.shadows.tint },

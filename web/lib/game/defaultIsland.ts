@@ -5,10 +5,13 @@ import {
 import { studySolid } from "@/lib/study/seats";
 
 /**
- * Default island: the village core (ledger rows 155, 156). World +x is screen
- * left from the follow camera, +z is north (up-screen). Landmarks reuse the
- * existing ACNH buildings/props; closed landmarks show a boarded, signed state.
- * Never reads or overwrites the authored island or browser drafts.
+ * Default island: the village core (ledger rows 155, 156). Compass (row 239):
+ * the follow camera looks +z, which is west (up-screen); +x, screen left, is
+ * south. A compass azimuth A (from north, clockwise) is the world direction
+ * (x, z) = (−cos A, −sin A), so north is −x and east is −z (toward the viewer).
+ * Landmarks reuse the existing ACNH buildings/props; closed landmarks show a
+ * boarded, signed state. Never reads or overwrites the authored island or
+ * browser drafts.
  */
 export const DEFAULT_SPAWN: [number, number, number] = [0, 0, -10];
 /** Island ellipse radii (world units): grass inside 0.85, sand to 1.0. */
@@ -95,11 +98,11 @@ export function createDefaultIsland() {
         if (inRect(wx, wz, -12, 12, -10, -9)) surface = Surface.Soil;
         if (inRect(wx, wz, 1, 16, -3, -2)) surface = Surface.Soil;
         if (inRect(wx, wz, -11, -1, 5, 6) || inRect(wx, wz, -12, -10, 5, 7)) surface = Surface.Soil;
-        // Plaza in front of the clubhouse, widened west for the club monument.
+        // Plaza in front of the clubhouse, widened north for the club monument.
         if (inRect(wx, wz, -7, 4, 2, 5)) surface = Surface.Stone;
         if (Math.hypot(wx - POND.x, wz - POND.z) < POND.r) surface = Surface.River;
       }
-      // The river crosses the island just south of the plaza; wooden bridge on the path.
+      // The river crosses the island just east of the plaza; wooden bridge on the path.
       if (radius < 1 && wz >= 0 && wz <= 1) surface = Math.abs(wx) <= 1 ? Surface.Wood : Surface.River;
       // Oracle rise: a one-level (blended half step) plateau north-west.
       const level = radius < 0.82 && wx <= -6 && wz >= 6 ? 1 : 0;

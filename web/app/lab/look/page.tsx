@@ -6,7 +6,9 @@
  * The real village (DefaultIslandWorld) with one LookPreset driving its
  * lighting, shadows, materials, grade, post and sky. A = the game as shipped
  * (its look is the "Current" preset, row 236), B = the edited preset; the
- * time/weather/season of the world apply to both. Every value is on screen; "Copy preset
+ * time/weather/season of the world apply to both. A's key light is the real
+ * sun (row 239; `?at=HH:MM&date=` forces the clock), B's is the Sun sliders
+ * (Current's is the picked 11:45 key). Every value is on screen; "Copy preset
  * JSON" is what comes back into the repo. Dev-only via the lab layout.
  *
  * URL: ?preset=<id> or ?look=<json>, &ab=A. Capture scripts drive

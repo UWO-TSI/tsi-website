@@ -15,7 +15,7 @@ import { Fireflies } from "./AmbientLife";
 import RainFX from "./RainFX";
 import { applyEnvironment, disposeEnvironment } from "@/lib/game/envLight";
 import { ENV_KEY, fireflyNight, type IslandLight } from "@/lib/game/islandLighting";
-import { RIM_POSITION } from "@/lib/game/lookPreset";
+import { RIM_POSITION, shadowHalfHeight } from "@/lib/game/lookPreset";
 import { SEASON_TREES, type SeasonLook } from "@/lib/game/seasonalLook";
 import type { IslandWeather } from "@/lib/game/islandWeather";
 import type { IslandPhase } from "@/lib/game/islandTime";
@@ -71,7 +71,7 @@ export function IslandAtmosphere({ phase, light, look, weather, liteMode, castSh
     applyEnvironment(gl, scene, ENV_KEY[phase], light.environment);
     return () => disposeEnvironment(scene);
   }, [gl, scene, phase, light]);
-  const { shadow } = light;
+  const { shadow } = light, shadowHalf = shadowHalfHeight(light.sunPosition, shadowExtent);
   // One world wind from the shared weather: rain slant, leaves and mist agree.
   const wind = useMemo(() => worldWind(weather), [weather]);
   const leafTrees = useMemo(() => {
@@ -86,7 +86,8 @@ export function IslandAtmosphere({ phase, light, look, weather, liteMode, castSh
     <hemisphereLight args={[light.fill, light.bounce, light.hemisphere]} />
     <directionalLight position={light.sunPosition} color={light.sun} intensity={light.sunIntensity} castShadow={castShadows}
       shadow-mapSize={[2048, 2048]} shadow-camera-left={-shadowExtent} shadow-camera-right={shadowExtent}
-      shadow-camera-top={shadowExtent - 2} shadow-camera-bottom={-(shadowExtent - 2)} shadow-camera-near={1} shadow-camera-far={75}
+      shadow-camera-top={shadowHalf} shadow-camera-bottom={-shadowHalf} shadow-camera-near={1} shadow-camera-far={75}
+      onUpdate={key => key.shadow.camera.updateProjectionMatrix()}
       shadow-radius={shadow.radius} shadow-intensity={shadow.intensity} shadow-normalBias={0.02} shadow-bias={-0.0002} />
     {light.rim && <directionalLight position={RIM_POSITION} color={light.rim.color} intensity={light.rim.intensity} />}
     {!liteMode && <CloudShadows phase={ENV_KEY[phase]} size={cloudSize} bounded />}

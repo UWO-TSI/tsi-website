@@ -6,6 +6,7 @@ import { Color } from "three";
 import type { IslandWeather } from "./islandWeather";
 import { leanHue, leanWater, type SeasonLook } from "./seasonalLook";
 import { CURRENT, lookToLight, type LookPreset, type PhaseBase } from "./lookPreset";
+import { phaseInstant, solarPosition, type SunAngles } from "./sunPath";
 
 /**
  * Member and applicant island lighting. The look (sun, fill, sky, fog, grade,
@@ -77,12 +78,16 @@ const PHASE_BASE: Record<IslandPhase, PhaseBase> = {
   },
 };
 
-/** A look preset at a phase of the day. */
-export function islandLight(look: LookPreset, phase: IslandPhase): IslandLight {
-  return lookToLight(look, PHASE_BASE[phase], phase);
+/** A look preset at a phase of the day, lit by the real sun (compass angles; null keeps the preset's key). */
+export function islandLight(look: LookPreset, phase: IslandPhase, sun: SunAngles | null = null): IslandLight {
+  return lookToLight(look, PHASE_BASE[phase], phase, sun);
 }
 
-export const ISLAND_LIGHTING = Object.fromEntries(ISLAND_PHASES.map(phase => [phase, islandLight(CURRENT, phase)])) as Record<IslandPhase, IslandLight>;
+/** The day David picked the look (row 236). Its 11:45 sun is the picked key light, within 3.5° (row 239). */
+const LOOK_DAY = new Date("2026-09-27T16:00:00Z");
+/** Each phase under the real sun at its preview time on LOOK_DAY (the applicant island and the tests). */
+export const ISLAND_LIGHTING = Object.fromEntries(ISLAND_PHASES.map(phase =>
+  [phase, islandLight(CURRENT, phase, solarPosition(phaseInstant(phase, LOOK_DAY)))])) as Record<IslandPhase, IslandLight>;
 
 /** envLight.ts keys its built-in palettes dawn/day/dusk/night. */
 export const ENV_KEY: Record<IslandPhase, "dawn" | "day" | "dusk" | "night"> = { dawn: "dawn", day: "day", evening: "dusk", night: "night" };

@@ -48,12 +48,12 @@ type MapPing = { id: number; x: number; z: number } | null;
 
 /**
  * Custom island geometry for another map (e.g. the default island). Drawn in
- * world units with z negated (north up); replaces the legacy island drawing
- * and skips legacy landmark discovery.
+ * world units with z negated (the camera's forward up); replaces the legacy
+ * island drawing and skips legacy landmark discovery. `north` places the N.
  */
 export interface MiniMapPlot {
   viewBox: string; content: ReactNode; north: [number, number]; label?: string;
-  /** Draw world +x to the left, matching a camera that looks north with +x on screen left. */
+  /** Draw world +x to the left, matching the follow camera (looks +z, +x on screen left). */
   mirrorX?: boolean;
 }
 

@@ -12,7 +12,7 @@ export const RUINS_SPAWN: [number, number, number] = [0, 0, -28];
 export const GATE_PLAZA: Rect = { x0: -4.6, x1: 4.6, z0: -31.5, z1: -24.6 };
 export const COURTYARD: Rect = { x0: -6.5, x1: 6.5, z0: 4, z1: 12.5 };
 export const TEMPLE_STEPS: Vec = { x: 0, z: 1.2 };
-/** Fetch: the old lantern by the fox den (outer wild, north-west corner). */
+/** Fetch: the old lantern by the fox den (outer wild, south-east corner). */
 export const LANTERN_SPOT: Vec = { x: 11.5, z: -20 };
 /** Fetch items by mission `item`: the lantern at the fox den, the sealed tome in the temple library corner. */
 export const FETCH_SPOTS: Record<string, Vec & { model: string; scale: number; hint: string }> = {

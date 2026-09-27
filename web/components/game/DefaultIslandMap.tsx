@@ -13,7 +13,8 @@ const FILL: Partial<Record<number, string>> = {
 /**
  * Minimap plot for the default island, drawn from the same grid the world
  * renders (row runs per surface) plus the landmark table. World x is mirrored
- * so the map matches the follow camera (+x on screen left).
+ * so the map matches the follow camera (+x on screen left). The camera faces
+ * west, so north (−x) is on the right edge (row 239).
  */
 export function useDefaultIslandPlot(): MiniMapPlot {
   return useMemo(() => {
@@ -40,7 +41,7 @@ export function useDefaultIslandPlot(): MiniMapPlot {
         fill={l.color} opacity={l.open ? 1 : 0.55} stroke={l.open ? "rgba(0,0,0,0.3)" : "#3b2f25"} strokeWidth={0.35} strokeDasharray={l.open ? undefined : "0.8 0.6"}>
         <title>{l.open ? l.label : `${l.label} (closed)`}</title></rect>)}
     </g>;
-    return { viewBox: `${-hx} ${-hz + 3} ${hx * 2} ${hz * 2 - 3}`, content, north: [hx - 2.5, -hz + 7], mirrorX: true,
-      label: "Village map. The yellow marker shows your position; north is up. Dashed buildings are closed." };
+    return { viewBox: `${-hx} ${-hz + 3} ${hx * 2} ${hz * 2 - 3}`, content, north: [hx - 2.5, 3], mirrorX: true,
+      label: "Village map. The yellow marker shows your position; north is to the right. Dashed buildings are closed." };
   }, []);
 }
