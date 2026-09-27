@@ -29,7 +29,9 @@ export default function PathSheet({ view, onClose, onChanged }: { view: Progress
   const current = subclassByKey(view.subclass?.key); // the local kit objects, so ability identity checks hold
   const [tab, setTab] = useState<Tab>(current ? "abilities" : "subclass");
   const [confirm, setConfirm] = useState<Subclass | null>(null);
-  const [picked, setPicked] = useState<string[]>(view.loadout);
+  // Loadout edits in progress; null follows the server's loadout (after a save or a subclass change).
+  const [pending, setPending] = useState<string[] | null>(null);
+  const picked = pending ?? view.loadout;
   const [add, setAdd] = useState<StatBlock>({ might: 0, finesse: 0, arcana: 0, spirit: 0, vitality: 0 });
   const [resetting, setResetting] = useState(false);
   const [note, setNote] = useState<string | null>(null);
@@ -47,10 +49,10 @@ export default function PathSheet({ view, onClose, onChanged }: { view: Progress
   const unlocked = view.level >= SUBCLASS_LEVEL;
   const choose = (s: Subclass) => {
     if (current && !confirm) { setConfirm(s); return; }
-    void run(() => chooseSubclassRemote(s.key), current ? `You walk the ${s.name}'s path now.` : `You're a ${s.name}. The ruins gate is open.`).then(ok => { if (ok) { setConfirm(null); setTab("abilities"); } });
+    void run(() => chooseSubclassRemote(s.key), current ? `You walk the ${s.name}'s path now.` : `You're a ${s.name}. The ruins gate is open.`).then(ok => { if (ok) { setConfirm(null); setPending(null); setTab("abilities"); } });
   };
   const options = current ? kitOptions(current, view.traits) : [];
-  const toggle = (key: string) => setPicked(p => p.includes(key) ? p.filter(k => k !== key) : p.length < SLOTS ? [...p, key] : p);
+  const toggle = (key: string) => setPending(picked.includes(key) ? picked.filter(k => k !== key) : picked.length < SLOTS ? [...picked, key] : picked);
   const left = view.points_available - STATS.reduce((n, k) => n + add[k], 0);
   const preset = () => {
     const target = view.preset?.at_level;
@@ -73,22 +75,22 @@ export default function PathSheet({ view, onClose, onChanged }: { view: Progress
     </div>
 
     {tab === "subclass" && <div className={styles.pathCards} data-testid="subclass-choice">
-      {subclassesFor(family).map(s => <article key={s.key} data-current={current?.key === s.key || undefined} style={{ ["--family" as string]: color }}>
-        <header><b>{s.name}</b><small>{s.weapon_affinity.join(" · ")}</small></header>
-        <AbilityLine a={s.signature} />
-        {s.abilities.map(a => <AbilityLine key={a.key} a={a} />)}
-        {s.key === "transmuter" && <small className={styles.pathNote}>Learns an ability from each monster species it defeats.</small>}
-        <p><b>{s.passive.name}</b> <small>{s.passive.description}</small></p>
-        {s.starter_note && <small className={styles.pathNote}>{s.starter_note}</small>}
-        {current?.key === s.key ? <span className={styles.pathBadge}>Your subclass</span>
-          : <button className={styles.oracleBegin} disabled={!unlocked || busy} onClick={() => choose(s)}>
-            {!unlocked ? `Level ${SUBCLASS_LEVEL}` : current ? `Change · ${view.fees.subclass_change} coins` : "Choose"}</button>}
-      </article>)}
       {confirm && <div className={styles.pathConfirm} role="alertdialog" aria-label="Confirm the change">
         <p>Change from {current?.name} to {confirm.name} for {view.fees.subclass_change} coins? Your level, stats and gear stay; family abilities you equipped stay equipped.</p>
         <button className={styles.oracleBegin} disabled={busy} onClick={() => choose(confirm)}>Pay {view.fees.subclass_change} and change</button>
         <button className={styles.oracleBack} onClick={() => setConfirm(null)}>Keep {current?.name}</button>
       </div>}
+      {subclassesFor(family).map(s =><article key={s.key} data-current={current?.key === s.key || undefined} style={{ ["--family" as string]: color }}>
+        <header><b>{s.name}</b><small>{s.weapon_affinity.join(" · ")}</small></header>
+        <AbilityLine a={s.signature} />
+        {s.abilities.map(a => <AbilityLine key={a.key} a={a} />)}
+        {s.key === "transmuter" && <small className={styles.pathNote}>Learns an ability from each monster species it defeats.</small>}
+        <p><small>Passive</small> <b>{s.passive.name}</b> <small>{s.passive.description}</small></p>
+        {s.starter_note && <small className={styles.pathNote}>{s.starter_note}</small>}
+        {current?.key === s.key ? <span className={styles.pathBadge}>Your subclass</span>
+          : <button className={styles.oracleBegin} disabled={!unlocked || busy} onClick={() => choose(s)}>
+            {!unlocked ? `Level ${SUBCLASS_LEVEL}` : current ? `Change · ${view.fees.subclass_change} coins` : "Choose"}</button>}
+      </article>)}
     </div>}
 
     {tab === "abilities" && current && <div data-testid="loadout">
@@ -99,7 +101,7 @@ export default function PathSheet({ view, onClose, onChanged }: { view: Progress
         return <li key={a.key}><button aria-pressed={slot >= 0} onClick={() => toggle(a.key)}>
           <kbd>{slot >= 0 ? slot + 1 : "·"}</kbd><AbilityLine a={a} /><em>{tag}</em></button></li>;
       })}</ul>
-      <button className={styles.oracleBegin} disabled={busy || !picked.length || picked.join() === view.loadout.join()} onClick={() => void run(() => setLoadoutRemote(picked), "Loadout saved.")}>Save loadout</button>
+      <button className={styles.oracleBegin} disabled={busy || !picked.length || picked.join() === view.loadout.join()} onClick={() => void run(() => setLoadoutRemote(picked), "Loadout saved.").then(ok => { if (ok) setPending(null); })}>Save loadout</button>
     </div>}
 
     {tab === "stats" && <div data-testid="stats">

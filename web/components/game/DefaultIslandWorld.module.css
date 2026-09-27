@@ -124,7 +124,7 @@ p.interact[data-closed="true"] { margin: 0; cursor: default; color: #6a4b2f; }
 .oracleBack, .oracleBegin { margin-top: 12px; min-height: 40px; padding: 8px 18px; border-radius: 999px; font: inherit; font-weight: 600; cursor: pointer; }
 .oracleBegin { border: 0; background: #5a4a7e; color: #fbf7ff; }
 .oracleBack { border: 1px solid #c9b8dd; background: transparent; color: #5a4a7e; }
-.oracleBack:disabled { opacity: 0.4; cursor: default; }
+.oracleBack:disabled, .oracleBegin:disabled { opacity: 0.4; cursor: default; }
 .oracleResult { margin: 0; padding: 12px; border-left: 4px solid var(--family); border-radius: 8px; background: #fff; }
 /* The Oracle's path sheet: subclass choice, loadout, stats (combat B) */
 .pathSheet { width: min(760px, calc(100% - 32px)); }

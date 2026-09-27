@@ -442,7 +442,8 @@ function DefaultIslandWorldContent() {
   const loadMuseum = useCallback(() => { apiCall<MuseumWing[]>("/api/collections/museum", "wings").then(setMuseumWings, () => {}); }, []);
   const [fading, setFading] = useState(false);
   const [near, setNear] = useState<Near>(null);
-  const [sheet, setSheet] = useState<Sheet>(null);
+  // Dev (screenshots): `?sheet=path` opens the Oracle path sheet once progression loads.
+  const [sheet, setSheet] = useState<Sheet>(() => (devHome.get("sheet") === "path" ? "path" : null));
   const [shopTab, setShopTab] = useState<"outfits" | "furniture" | null>(null);
   const [mapOpen, setMapOpen] = useState(true);
   const plot = useDefaultIslandPlot();

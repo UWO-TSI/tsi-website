@@ -152,7 +152,7 @@ export const SUBCLASSES: Subclass[] = [
       [{ kind: "transform", duration: 8 }, buff("damage", 0.2, 8), buff("speed", 0.15, 8)]),
     abilities: [], // monster traits are its other abilities (TRAITS, row 37)
     passive: { name: "Shed Skin", description: "Transforming grants a small barrier.", kind: "transform_shield", value: 0.08 },
-    starter_note: "Starts with the Fox Stride trait before its first kill; each new monster species it defeats teaches a basic trait (row 40).",
+    starter_note: "Starts with the Fox Stride trait before its first kill; each new monster species it defeats teaches a basic trait.",
   }),
   // ── Ranger / SJ ────────────────────────────────────────────────────────────
   k({

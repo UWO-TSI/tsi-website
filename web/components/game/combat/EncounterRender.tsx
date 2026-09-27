@@ -47,7 +47,7 @@ function useRig(url: string) {
   }, [scene]);
 }
 
-const ALLY_TINT = new THREE.Color(0.55, 1.25, 0.7), SHADE_TINT = new THREE.Color(0.8, 0.55, 1.35);
+const ALLY_TINT = new THREE.Color(0.9, 2.2, 1.1), SHADE_TINT = new THREE.Color(1.5, 1.2, 2.6);
 const poseM = new THREE.Matrix4(), poseQ = new THREE.Quaternion(), poseE = new THREE.Euler(), poseP = new THREE.Vector3(), poseS = new THREE.Vector3();
 
 /**
@@ -193,29 +193,30 @@ export function Wisps({ ground, max = 10 }: { ground: Ground; max?: number }) {
   </sprite>)}</>;
 }
 
-/** Totems (a carved post and the circle it covers, so overlaps read) and tripwires (a small ring). */
-const TOTEM_COLOR: Record<string, string> = { "totem-ember": "#ff8a3d", "totem-mending": "#7dff9e", "totem-warding": "#8fd0ff", tripwire: "#ffe08a" };
-export function Totems({ ground, max = 5 }: { ground: Ground; max?: number }) {
+/** Totems (a carved post and the circle it covers, so overlaps read), tripwires (a small disc), and a ring under each of your summons: green, violet for a shade. */
+const TOTEM_COLOR: Record<string, string> = { "totem-ember": "#ff8a3d", "totem-mending": "#7dff9e", "totem-warding": "#8fd0ff", tripwire: "#ffe08a", shade: "#c9a7ff", decoy: "#d9b8ff" };
+export function Totems({ ground, max = 16 }: { ground: Ground; max?: number }) {
   const posts = useRef<(THREE.Mesh | null)[]>([]), rings = useRef<(THREE.Mesh | null)[]>([]);
   const ring = useMemo(() => new THREE.RingGeometry(0.94, 1, 64).rotateX(-Math.PI / 2), []);
   const disc = useMemo(() => new THREE.CircleGeometry(1, 48).rotateX(-Math.PI / 2), []);
   useEffect(() => () => { ring.dispose(); disc.dispose(); }, [ring, disc]);
   useFrame(({ clock }) => {
-    const list = combat.rt.units.filter(u => u.def.kind === "totem" || u.def.kind === "trap");
+    const list = combat.rt.units.filter(u => u.source !== "weapon");
     for (let i = 0; i < max; i++) {
       const post = posts.current[i], r = rings.current[i], u = list[i];
       if (!post || !r) continue;
       post.visible = r.visible = !!u;
       if (!u) continue;
-      const g = ground(u.x, u.z), c = TOTEM_COLOR[u.def.key], totem = u.def.kind === "totem";
+      const g = ground(u.x, u.z), c = TOTEM_COLOR[u.def.key] ?? "#7dff9e", totem = u.def.kind === "totem", area = totem || u.def.kind === "trap";
       post.visible = totem;
+      r.geometry = area ? disc : ring;
       post.position.set(u.x, g + 0.6, u.z);
       (post.material as THREE.MeshStandardMaterial).color.set(c);
       (post.material as THREE.MeshStandardMaterial).emissive.set(c);
       r.position.set(u.x, g + 0.05, u.z);
-      r.scale.setScalar(u.def.radius!);
+      r.scale.setScalar(area ? u.def.radius! : 0.75);
       const m = r.material as THREE.MeshBasicMaterial;
-      m.color.set(c); m.opacity = totem ? 0.16 + Math.sin(clock.elapsedTime * 3 + i) * 0.04 : 0.55;
+      m.color.set(c); m.opacity = totem ? 0.16 + Math.sin(clock.elapsedTime * 3 + i) * 0.04 : area ? 0.55 : 0.85;
     }
   });
   return <>{Array.from({ length: max }, (_, i) => <group key={i}>

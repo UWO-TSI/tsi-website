@@ -110,6 +110,15 @@ export default function RuinsScene({ phase, light, look, weather, liteMode, zoom
     // Dev (screenshots): hold a telegraph with __combat.freeze, stage mission steps with __combatDev.
     if (process.env.NODE_ENV !== "production") Object.assign(window, { __combatDev: { player: player.current, missionEvent: (ev: Parameters<typeof missionEvent>[1]) => missionEvent(combat.rt, ev), spawnWave: (id: string, i: number) => spawnWave(combat.rt, WAVES[id][i]) } });
   }, [player, spawn]);
+  // Dev (screenshots): where a ground point is on the page, to aim the mouse at an enemy.
+  useEffect(() => {
+    if (process.env.NODE_ENV === "production") return;
+    const w = window as unknown as { __combatDev?: Record<string, unknown> }, v = new THREE.Vector3();
+    w.__combatDev = { ...w.__combatDev, screenOf: (x: number, z: number) => {
+      const r = gl.domElement.getBoundingClientRect(); v.set(x, ruins.ground(x, z) + 0.5, z).project(camera);
+      return { x: r.left + ((v.x + 1) / 2) * r.width, y: r.top + ((1 - v.y) / 2) * r.height };
+    } };
+  }, [camera, gl, ruins, spawn]);
   useFollowCamera(player, zoom, null);
 
   // Mouse aim + click attack on the canvas; Space dodge; ability keys (remappable).
