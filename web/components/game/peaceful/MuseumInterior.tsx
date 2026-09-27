@@ -17,8 +17,11 @@ import type { Exhibit, MuseumWing } from "@/lib/collections/logic";
 import type { Wing } from "@/lib/collections/roster";
 import { ROSTER } from "@/lib/collections/roster";
 import styles from "../DefaultIslandWorld.module.css";
+import { CLUBHOUSE_LIGHTING } from "@/lib/game/islandLighting";
 
 preloadPieces(["museum-tank", "museum-case", "museum-stand"]);
+/** Daytime interior light, shared with the clubhouse (the museum has no phase). */
+const MUSEUM_LIGHT = CLUBHOUSE_LIGHTING.day;
 const BOUNDS: RoomBounds = { halfW: 9, halfD: 5, spawn: [0, -3.4] };
 const CASES_PER_WING = 6;
 const WING_X: Record<Wing, number> = { aquarium: 6, insect_hall: 0, nature_room: -6 };
@@ -76,9 +79,9 @@ export default function MuseumInterior({ wings, frozen, player, onNear }: {
     return !blocked(nx, nz) ? [nx, nz] : !blocked(nx, z) ? [nx, z] : !blocked(x, nz) ? [x, nz] : [x, z];
   };
   return <>
-    <ambientLight intensity={0.75} color="#fff6ea" />
-    <hemisphereLight args={["#e6efff", "#b49f80", 0.55]} />
-    <directionalLight intensity={0.7} position={[3, 8, -4]} color="#fff2dc" />
+    <ambientLight intensity={MUSEUM_LIGHT.ambient} color="#fff6ea" />
+    <hemisphereLight args={["#e6efff", "#b49f80", MUSEUM_LIGHT.hemisphere]} />
+    <directionalLight intensity={MUSEUM_LIGHT.key} position={[3, 8, -4]} color={MUSEUM_LIGHT.keyColor} />
     {(["aquarium", "insect_hall", "nature_room"] as Wing[]).map(wing => {
       const cx = WING_X[wing], cases = wingCases(byWing.get(wing)), w = byWing.get(wing);
       return <group key={wing}>

@@ -1,16 +1,20 @@
 import { Color, ShaderChunk } from "three";
 import type { Grade } from "./grading";
-import { DEFAULT_SHADOW, ISLAND_LIGHTING, type IslandLight, type IslandWater } from "./islandLighting";
+import type { IslandLight, IslandWater } from "./islandLighting";
+import type { IslandPhase } from "./islandTime";
 
 /**
- * Look presets (ledger row 235, specs/look-development.md §2). One plain JSON
- * object carries every value that shapes the day look: key/fill light,
- * shadows, AO, per-class materials, grade, post and sky. `lookToLight` maps it
- * onto the game's own `IslandLight` (so season and weather still layer on
- * top), `lookFx` onto PostFX, and the lab's LookRig onto scene materials.
+ * Look presets (ledger rows 235-236, specs/look-development.md). One plain
+ * JSON object carries every value that shapes the look: key/fill light,
+ * shadows, AO, per-class materials, grass detail, grade, post and sky.
+ * `lookToLight` maps it onto the game's `IslandLight` for a phase (so season
+ * and weather still layer on top), `lookFx` onto PostFX, and LookMaterials
+ * onto scene materials.
  *
- * "current" is the shipped day profile exactly. The three directions are
- * starting points from general rendering practice, not from any image.
+ * `CURRENT` is the game's look: the "Open-air sun" direction David picked
+ * (row 236), applied per §5. Dawn, golden hour and night are multipliers on
+ * it (`PHASE_LOOK`), so editing this one object in /lab/look moves them all.
+ * The other presets are the lab's starting directions, kept for comparison.
  */
 export type MaterialClass = "terrain" | "props" | "foliage" | "water" | "characters";
 export const MATERIAL_CLASSES: readonly MaterialClass[] = ["terrain", "props", "foliage", "water", "characters"];
@@ -30,6 +34,8 @@ export interface LookPreset {
   shadows: { radius: number; intensity: number; tint: string };
   ao: { enabled: boolean; radius: number; intensity: number };
   materials: Record<MaterialClass, ClassLook>;
+  /** Share of the grass texture's own contrast kept (0.38 = as shipped before row 236); hue = broad yellow/blue-green patches (0 = none). */
+  grass: { detail: number; hue: number };
   grade: Grade;
   post: {
     toneMapping: ToneMap;
@@ -37,34 +43,48 @@ export interface LookPreset {
     /** Blur 0-1 at the frame edges; taper = share of the frame the blur ramps over; offset moves the sharp line (+ = up). */
     tiltShift: { enabled: boolean; blur: number; taper: number; offset: number };
   };
-  /** Gradient off = flat horizon-coloured background, as shipped. */
+  /** Gradient off = flat horizon-coloured background. */
   sky: { top: string; horizon: string; fog: string; fogNear: number; fogFar: number; gradient: boolean };
 }
 
 /** Rim/back light comes from the far side of the scene (the camera looks +z). */
 export const RIM_POSITION: [number, number, number] = [0, 10, 24];
 const GLOSS_ROUGHNESS = 0.3;
-const SAME: ClassLook = { saturation: 1, value: 1, roughness: 1, gloss: 0 };
-const day = ISLAND_LIGHTING.day;
-const hex = (n: number) => `#${n.toString(16).padStart(6, "0")}`;
+const SHIPPED_GRASS = { detail: 0.38, hue: 0 };
 
+/**
+ * The game's look: hard warm sun 3/4 from screen-left and a little toward the
+ * camera (44° up, 61° off the camera axis, so shadows fall sideways into
+ * view), blue sky fill at about 4:1, crisp cool shadows, AO, bloom on sunlit
+ * whites, blue sky and air (§5 items 1-4). Neutral tone mapping at exposure
+ * 1.5 instead of the picked preset's ACES 0.9: ACES could not lift bright
+ * ground past L* 80 without washing the grass pale yellow
+ * (specs/look-development-questions.md §10).
+ */
 export const CURRENT: LookPreset = {
   id: "current", name: "Current",
   light: {
-    sunColor: day.sun, sunIntensity: day.sunIntensity, sunPosition: day.sunPosition,
-    fillSky: day.fill, fillGround: day.bounce, hemisphere: day.hemisphere, ambient: day.ambient, envIntensity: day.environment.intensity,
+    sunColor: "#ffe9c4", sunIntensity: 3.8, sunPosition: [20, 22, -11],
+    fillSky: "#9cc8f0", fillGround: "#b5a77a", hemisphere: 0.58, ambient: 0.05, envIntensity: 0.13,
     rimColor: "#ffffff", rimIntensity: 0,
   },
-  shadows: { ...DEFAULT_SHADOW, tint: "#000000" },
-  ao: { enabled: false, radius: 1.2, intensity: 1.5 },
-  materials: { terrain: SAME, props: SAME, foliage: SAME, water: SAME, characters: SAME },
-  grade: day.grade,
+  shadows: { radius: 1.5, intensity: 0.92, tint: "#2a4078" },
+  ao: { enabled: true, radius: 1, intensity: 1.2 },
+  materials: {
+    terrain: { saturation: 1.05, value: 1, roughness: 1, gloss: 0 },
+    props: { saturation: 1.08, value: 1, roughness: 1, gloss: 0.25 },
+    foliage: { saturation: 1.1, value: 1.02, roughness: 1, gloss: 0 },
+    water: { saturation: 1.25, value: 1, roughness: 1, gloss: 0.5 },
+    characters: { saturation: 1.05, value: 1, roughness: 1, gloss: 0.25 },
+  },
+  grass: { detail: 0.8, hue: 0.5 },
+  grade: { exposure: 1.5, contrast: 1, vibrance: 0, desat: -0.04, warmth: 0.15, lift: 0.2, vignette: 0.12 },
   post: {
     toneMapping: "neutral",
-    bloom: { enabled: false, threshold: 1, intensity: 0.22 },
+    bloom: { enabled: true, threshold: 0.65, intensity: 0.35 },
     tiltShift: { enabled: false, blur: 0.15, taper: 0.25, offset: 0 },
   },
-  sky: { top: day.environment.skyTop, horizon: day.sky, fog: day.sky, fogNear: day.fogNear, fogFar: day.fogFar, gradient: false },
+  sky: { top: "#4a9de0", horizon: "#bfe0f2", fog: "#cde6f2", fogNear: 34, fogFar: 96, gradient: true },
 };
 
 /** Miniature photography: tilt-shift, glossy plastic, saturated, soft AO, a 3/4 key from screen-left. */
@@ -84,6 +104,7 @@ const TOY: LookPreset = {
     water: { saturation: 1.2, value: 1, roughness: 1, gloss: 0.3 },
     characters: { saturation: 1.1, value: 1, roughness: 1, gloss: 0.6 },
   },
+  grass: SHIPPED_GRASS,
   grade: { exposure: 1, contrast: 1.06, vibrance: 0.12, desat: -0.04, warmth: 0.22, lift: 0.1, vignette: 0.28 },
   post: {
     toneMapping: "neutral",
@@ -93,9 +114,9 @@ const TOY: LookPreset = {
   sky: { top: "#6fb6ec", horizon: "#cfe8f4", fog: "#cfe8f4", fogNear: 26, fogFar: 80, gradient: true },
 };
 
-/** Hard midday sun: warm 3/4 key from screen-left, blue sky fill, crisp cool shadows, AO, bloom on highlights. */
+/** The direction as David picked it (row 236), before §5's tuning. */
 const OPEN_AIR: LookPreset = {
-  id: "open-air", name: "Open-air sun",
+  id: "open-air", name: "Open-air sun (as picked)",
   light: {
     sunColor: "#ffe9c4", sunIntensity: 3.5, sunPosition: [18, 24, -10],
     fillSky: "#9cc8f0", fillGround: "#b5a77a", hemisphere: 0.6, ambient: 0.05, envIntensity: 0.18,
@@ -110,6 +131,7 @@ const OPEN_AIR: LookPreset = {
     water: { saturation: 1.25, value: 1, roughness: 1, gloss: 0.5 },
     characters: { saturation: 1.05, value: 1, roughness: 1, gloss: 0.15 },
   },
+  grass: SHIPPED_GRASS,
   grade: { exposure: 0.9, contrast: 1, vibrance: 0.12, desat: -0.04, warmth: 0.15, lift: 0.2, vignette: 0.12 },
   post: {
     toneMapping: "aces",
@@ -136,6 +158,7 @@ const PAINTERLY: LookPreset = {
     water: { saturation: 1.15, value: 1.02, roughness: 1, gloss: 0 },
     characters: { saturation: 1.1, value: 1.02, roughness: 1, gloss: 0 },
   },
+  grass: SHIPPED_GRASS,
   grade: { exposure: 1, contrast: 0.97, vibrance: 0.25, desat: -0.05, warmth: 0.3, lift: 0.25, vignette: 0.08 },
   post: {
     toneMapping: "neutral",
@@ -146,6 +169,67 @@ const PAINTERLY: LookPreset = {
 };
 
 export const LOOK_PRESETS: readonly LookPreset[] = [CURRENT, TOY, OPEN_AIR, PAINTERLY];
+
+/** Linear-light RGB multiplier: the day colour times this is the phase's colour. */
+type Tint = readonly [number, number, number];
+const WHITE: Tint = [1, 1, 1];
+
+/**
+ * A time of day as multipliers on the day look (§5.5). Colours multiply
+ * channel-wise in linear light and numbers scale, so the day preset stays the
+ * one source of truth. The real sunrise/sunset clock picks the phase
+ * (rows 173, 188); the phase sets the sun's elevation, and the evening sun is
+ * mirrored to screen-right (it sets in the west, opposite the dawn side).
+ */
+export interface PhaseLook {
+  /** Sun elevation in degrees; null keeps the preset's position. */
+  elevation: number | null; mirror: boolean;
+  sun: Tint; sunIntensity: number;
+  fill: Tint; bounce: Tint; fillIntensity: number;
+  skyTop: Tint; skyHorizon: Tint; fog: number;
+  shadowRadius: number; shadowIntensity: number;
+  /** Rim/back light intensity added to the preset's, coloured by `sun`. */
+  rim: number;
+  exposure: number; warmth: number; lift: number; desat: number;
+}
+
+const DAY: PhaseLook = {
+  elevation: null, mirror: false, sun: WHITE, sunIntensity: 1, fill: WHITE, bounce: WHITE, fillIntensity: 1,
+  skyTop: WHITE, skyHorizon: WHITE, fog: 1, shadowRadius: 1, shadowIntensity: 1, rim: 0, exposure: 1, warmth: 0, lift: 0, desat: 0,
+};
+
+export const PHASE_LOOK: Record<IslandPhase, PhaseLook> = {
+  // Cool-pink: low peach sun from the east side, lilac fill, periwinkle sky over a pink horizon, long soft shadows.
+  dawn: {
+    elevation: 21, mirror: false, sun: [1, 0.69, 0.71], sunIntensity: 0.72,
+    fill: [1.46, 0.81, 0.93], bounce: [0.85, 0.85, 0.95], fillIntensity: 1.3,
+    skyTop: [4.01, 1.07, 0.96], skyHorizon: [1.7, 0.82, 0.65], fog: 0.85,
+    shadowRadius: 2.5, shadowIntensity: 0.85, rim: 0.15, exposure: 1.08, warmth: 0.05, lift: 0.05, desat: 0,
+  },
+  day: DAY,
+  // Golden hour: warm low sun from the west (screen-right), cooler violet fill, a warm rim, long shadows.
+  evening: {
+    elevation: 22, mirror: true, sun: [1, 0.56, 0.28], sunIntensity: 1,
+    fill: [1.18, 0.77, 0.87], bounce: [1, 0.85, 0.75], fillIntensity: 1.15,
+    skyTop: [2.32, 0.81, 0.92], skyHorizon: [1.77, 0.77, 0.37], fog: 0.85,
+    shadowRadius: 1.6, shadowIntensity: 0.95, rim: 0.6, exposure: 1.08, warmth: 0.15, lift: 0.05, desat: 0,
+  },
+  // Blue moonlight key, deep blue sky; the lamps and windows (islandLighting PHASE_BASE) stay warm.
+  night: {
+    elevation: 40, mirror: false, sun: [0.34, 0.57, 1.52], sunIntensity: 0.34,
+    fill: [0.46, 0.45, 0.65], bounce: [0.4, 0.45, 0.55], fillIntensity: 1.2,
+    skyTop: [0.11, 0.05, 0.09], skyHorizon: [0.07, 0.09, 0.18], fog: 0.85,
+    shadowRadius: 2, shadowIntensity: 0.75, rim: 0, exposure: 1.1, warmth: -0.15, lift: 0, desat: 0.03,
+  },
+};
+
+/** Distance of the key light from the island centre (the shadow camera sits there). */
+const SUN_DISTANCE = 32;
+
+function tint(hex: string, m: Tint): string {
+  const c = new Color(hex);
+  return `#${c.setRGB(Math.min(1, c.r * m[0]), Math.min(1, c.g * m[1]), Math.min(1, c.b * m[2])).getHexString()}`;
+}
 
 function adjust(color: number, look: ClassLook): number {
   const c = new Color(color), hsl = { h: 0, s: 0, l: 0 };
@@ -162,20 +246,29 @@ function waterLook(water: IslandWater, look: ClassLook): IslandWater {
   };
 }
 
-/** Preset onto a phase profile. Current on the day profile reproduces it exactly. */
-export function lookToLight(p: LookPreset, base: IslandLight): IslandLight {
-  const { light, sky } = p;
+/** What a phase keeps from islandLighting: the water palette and the lamps (gameplay, not look). */
+export type PhaseBase = Pick<IslandLight, "water" | "lamp" | "lampsOn" | "windowGlow" | "fireflies">;
+
+/** Preset onto a phase: the day look times the phase's multipliers. */
+export function lookToLight(p: LookPreset, base: PhaseBase, phase: IslandPhase = "day"): IslandLight {
+  const { light, sky } = p, m = PHASE_LOOK[phase];
+  const { elevation, azimuth } = sunAngles(light.sunPosition);
+  const elev = m.elevation ?? elevation;
+  const sunPosition = m.elevation === null && !m.mirror ? light.sunPosition : sunFromAngles(elev, m.mirror ? 180 - azimuth : azimuth, SUN_DISTANCE);
+  const sun = tint(light.sunColor, m.sun), top = tint(sky.top, m.skyTop), horizon = tint(sky.horizon, m.skyHorizon);
+  const fill = tint(light.fillSky, m.fill), bounce = tint(light.fillGround, m.bounce);
+  const rim = light.rimIntensity + m.rim;
   return {
     ...base,
-    sky: sky.horizon, sun: light.sunColor, sunIntensity: light.sunIntensity, sunPosition: light.sunPosition,
-    fill: light.fillSky, bounce: light.fillGround, ambient: light.ambient, hemisphere: light.hemisphere,
-    fogNear: sky.fogNear, fogFar: sky.fogFar, fogColor: sky.fog,
-    environment: { ...base.environment, skyTop: sky.top, skyBottom: sky.horizon, sun: light.sunColor, ground: light.fillGround, intensity: light.envIntensity },
-    grade: p.grade,
+    sky: horizon, sun, sunIntensity: light.sunIntensity * m.sunIntensity, sunPosition,
+    fill, bounce, ambient: light.ambient * m.fillIntensity, hemisphere: light.hemisphere * m.fillIntensity,
+    fogNear: sky.fogNear * m.fog, fogFar: sky.fogFar * m.fog, fogColor: tint(sky.fog, m.skyHorizon),
+    environment: { skyTop: top, skyBottom: horizon, sun, ground: bounce, intensity: light.envIntensity * m.fillIntensity, sunElev: elev / 90 },
+    grade: { ...p.grade, exposure: p.grade.exposure * m.exposure, warmth: p.grade.warmth + m.warmth, lift: p.grade.lift + m.lift, desat: p.grade.desat + m.desat },
     water: waterLook(base.water, p.materials.water),
-    shadow: { radius: p.shadows.radius, intensity: p.shadows.intensity },
-    ...(light.rimIntensity > 0 ? { rim: { color: light.rimColor, intensity: light.rimIntensity } } : {}),
-    ...(sky.gradient ? { skyTop: sky.top } : {}),
+    shadow: { radius: p.shadows.radius * m.shadowRadius, intensity: p.shadows.intensity * m.shadowIntensity, tint: p.shadows.tint },
+    ...(rim > 0 ? { rim: { color: tint(light.rimColor, m.sun), intensity: rim } } : {}),
+    ...(sky.gradient ? { skyTop: top } : {}),
   };
 }
 
@@ -196,13 +289,13 @@ export function lookFx(p: LookPreset, highTier: boolean): LookFx {
   };
 }
 
-/** three's lights chunk with the key light's shadow multiply lerping toward `uLookShadowTint` (LookRig). */
+/** three's lights chunk with the key light's shadow multiply lerping toward `uLookShadowTint` (LookMaterials). */
 export const LOOK_LIGHTS_CHUNK = ShaderChunk.lights_fragment_begin.replace(
   /directLight\.color \*= (\( directLight\.visible && receiveShadow \) \? getShadow\( directionalShadowMap[^;]*);/,
   "directLight.color *= mix( uLookShadowTint, vec3( 1.0 ), $1 );",
 );
 
-/** Roughness the lab writes onto a material of this class (base = its authored roughness). */
+/** Roughness written onto a material of this class (base = its authored roughness). */
 export function lookRoughness(base: number, look: ClassLook): number {
   const r = Math.min(1, Math.max(0.03, base * look.roughness));
   return look.gloss ? Math.min(r, r + (GLOSS_ROUGHNESS - r) * look.gloss) : r;
@@ -235,6 +328,14 @@ export function sunFromAngles(elevation: number, azimuth: number, distance = 30)
   const e = elevation * Math.PI / 180, a = azimuth * Math.PI / 180, r = (v: number) => Math.round(v * 100) / 100;
   return [r(distance * Math.cos(e) * Math.cos(a)), r(distance * Math.sin(e)), r(distance * Math.cos(e) * Math.sin(a))];
 }
+/**
+ * The sun's horizontal angle from the fixed follow camera, which sits on −z
+ * looking +z (IslandAtmosphere, ApplicantWorld): 0 = straight behind the
+ * camera, ±90 = pure side light, + = screen-left (+x).
+ */
+export function sunFromCamera([x, , z]: readonly number[]): number {
+  return Math.atan2(x, -z) * 180 / Math.PI;
+}
 
 /** Colour temperature to sRGB hex (Tanner Helland's blackbody fit, 1000-40000 K). */
 export function kelvinHex(kelvin: number): string {
@@ -242,7 +343,7 @@ export function kelvinHex(kelvin: number): string {
   const r = t <= 66 ? 255 : 329.698727446 * Math.pow(t - 60, -0.1332047592);
   const g = t <= 66 ? 99.4708025861 * Math.log(t) - 161.1195681661 : 288.1221695283 * Math.pow(t - 60, -0.0755148492);
   const b = t >= 66 ? 255 : t <= 19 ? 0 : 138.5177312231 * Math.log(t - 10) - 305.0447927307;
-  return hex((clamp(r) << 16) | (clamp(g) << 8) | clamp(b));
+  return `#${((clamp(r) << 16) | (clamp(g) << 8) | clamp(b)).toString(16).padStart(6, "0")}`;
 }
 
 /**

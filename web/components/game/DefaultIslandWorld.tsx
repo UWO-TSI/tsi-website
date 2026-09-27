@@ -28,7 +28,7 @@ import confetti from "canvas-confetti";
 import type { InteriorStation } from "./interiorShared";
 import { POND, ISLAND_RADII, createDefaultIsland, DEFAULT_SPAWN, ISLAND_TREES, ISLAND_BUSHES, ISLAND_FLOWERS, ISLAND_PROPS, LANDMARKS, landmark, benchSeat, BENCH_SEAT_TOP, type Landmark } from "@/lib/game/defaultIsland";
 import { useGraphicsSettings } from "@/lib/game/useGraphicsSettings";
-import { ISLAND_LIGHTING, CLUBHOUSE_LIGHTING, ISLAND_TERRAIN, withWeather, withSeason, type IslandLight } from "@/lib/game/islandLighting";
+import { CLUBHOUSE_LIGHTING, ISLAND_TERRAIN, islandLight, withWeather, withSeason, type IslandLight } from "@/lib/game/islandLighting";
 import { paletteBySeason, seasonLook, SEASON_TREES, SEASON_BUSHES, SEASON_FLOWERS, type SeasonLook } from "@/lib/game/seasonalLook";
 import { useSeasonPalettes } from "@/lib/content/loader";
 import type { IslandWeather } from "@/lib/game/islandWeather";
@@ -93,7 +93,8 @@ import StudyHud from "./study/StudyHud";
 import CafeInterior from "./study/CafeInterior";
 import { studyHoldsPrompt } from "@/lib/study/worldStore";
 import "@/lib/game/aerialFog";
-import { lookFx, lookToLight, type LookPreset } from "@/lib/game/lookPreset";
+import { CURRENT, lookFx, type LookPreset } from "@/lib/game/lookPreset";
+import LookMaterials from "./LookMaterials";
 import styles from "./DefaultIslandWorld.module.css";
 
 type Metrics = { fps: number; frameMs: number; calls: number; triangles: number; x: number; z: number };
@@ -254,8 +255,8 @@ function IslandScene({ identity, devAt, exitFrom, peaceful, fishSpot, fishing, c
       <GridOcean map={island.map} />
       <PeacefulLayer map={island.map} nodes={VILLAGE_NODES} moment={peaceful.moment} member={peaceful.member} player={player} ground={island.ground} highTier={!liteMode} active={!fishing} />
       <BeachBottle player={player} ground={island.ground} />
-      <BlobShadows placements={plantShadows} opacity={0.16} />
-      {!castShadows && <BlobShadows placements={solidShadows} opacity={0.45} />}
+      <BlobShadows placements={plantShadows} opacity={0.16} color={light.shadow.tint} />
+      {!castShadows && <BlobShadows placements={solidShadows} opacity={0.45} color={light.shadow.tint} />}
       <StudySeats area="village" player={player} ground={island.ground} />
       <VillageLandmarks ground={island.ground} opened={progression.opened} stage={progression.stage} ceremony={ceremony} />
       <GLBProp url="/assets/acnh/props/bridge-wooden.glb" position={[0, -0.065, 0.5]} rotation={[0, Math.PI / 2, 0]} />
@@ -402,7 +403,7 @@ function LoadingStatus() {
   return <div className={styles.loading} role="status">Preparing the island · {Math.round(progress)}%</div>;
 }
 
-/** `preset` and `children` (mounted inside the Canvas) are for /lab/look only. */
+/** `preset` (default: the game look, CURRENT) and `children` (mounted inside the Canvas) are for /lab/look only. */
 export default function DefaultIslandWorld({ preset, children }: { preset?: LookPreset; children?: ReactNode }) {
   return <GameSceneBoundary><DefaultIslandWorldContent preset={preset}>{children}</DefaultIslandWorldContent></GameSceneBoundary>;
 }
@@ -523,7 +524,8 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   const seasonKey = JSON.stringify(season.weights);
   // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed by value: the blend object is rebuilt every render.
   const look = useMemo(() => seasonLook(season, paletteBySeason(seasonRows)), [seasonKey, seasonRows]);
-  const light = useMemo(() => withWeather(withSeason(preset ? lookToLight(preset, ISLAND_LIGHTING[phase]) : ISLAND_LIGHTING[phase], look), weather), [phase, look, weather, preset]);
+  const lookPreset = preset ?? CURRENT;
+  const light = useMemo(() => withWeather(withSeason(islandLight(lookPreset, phase), look), weather), [phase, look, weather, lookPreset]);
   const conditionsLabel = `${season.season[0].toUpperCase()}${season.season.slice(1)}${Object.values(season.weights).some(w => w > 0 && w < 1) ? " (changing)" : ""} · ${weather[0].toUpperCase()}${weather.slice(1)}`;
   const grade = inside ? CLUBHOUSE_LIGHTING[phase].grade : light.grade;
   const atHome = site === "home";
@@ -634,8 +636,8 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
               decorating={decor.decorating} selected={decor.selected} onPlace={item => decor.place("outdoor", item)} onPickUp={item => decor.pickUp("outdoor", item)} />
             : <IslandScene identity={identity} devAt={devAt} exitFrom={exitFrom} peaceful={peaceful} fishSpot={fishSpot} fishing={fishing} chapter={chapterFlags} fromBoat={fromBoat} progression={progressionWorld} ceremony={ceremony} phase={phase} light={light} look={look} weather={weather} overview={overview} zoom={zoomed ? 1.4 : 1} reset={reset} returned={returned} liteMode={liteMode} castShadows={castShadows} player={player} onMove={move} onNear={setNear} />}
           {identity.family && identity.aura && <Suspense fallback={null}><FamilyAura player={player} color={FAMILIES[identity.family].light} /></Suspense>}
-          <PostFX antialias={!graphics.liteMode && !graphics.pixelated} bloom={!graphics.liteMode && graphics.bloom} bloomIntensity={0.22} grade={grade}
-            fx={preset && !inside ? lookFx(preset, !liteMode) : undefined} />
+          <PostFX antialias={!graphics.liteMode && !graphics.pixelated} grade={grade} fx={lookFx(lookPreset, !liteMode)} />
+          <LookMaterials preset={lookPreset} />
           <StaticShadows phase={phase} enabled={castShadows} inside={!!inside || atHome} sun={light.sunPosition.join()} />
           <Performance player={player} onMetrics={setMetrics} />
           <QualityProbe onTier={onTier} />

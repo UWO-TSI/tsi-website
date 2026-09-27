@@ -88,7 +88,7 @@ export default function CafeInterior({ phase, player, frozen, identity, onMove, 
   return <>
     <ambientLight color="#fff3e2" intensity={light.ambient} />
     <hemisphereLight args={["#ffe9cc", "#9c7a58", light.hemisphere]} />
-    <directionalLight color="#fff4df" intensity={light.key} position={[3, 8, -4]} />
+    <directionalLight color={light.keyColor} intensity={light.key} position={[3, 8, -4]} />
     <Suspense fallback={null}><Room phase={phase} /></Suspense>
     <Suspense fallback={null}>
       <Piece name="bookshelf" position={[-8.5, 0, 0.2]} rotY={-Math.PI / 2} />

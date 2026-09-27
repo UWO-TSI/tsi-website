@@ -28,6 +28,9 @@ import { constrainClubhouse, HQ_CLOCK, HQ_LAYOUT, HQ_BOARD_APPROACH } from "@/li
 import type { Position } from "@/lib/recruitment";
 import ApplicationCountdown from "./ApplicationCountdown";
 import { ISLAND_LIGHTING, CLUBHOUSE_LIGHTING, ISLAND_TERRAIN } from "@/lib/game/islandLighting";
+import { CURRENT, RIM_POSITION, lookFx } from "@/lib/game/lookPreset";
+import LookMaterials from "@/components/game/LookMaterials";
+import { SkyGradient } from "@/components/game/IslandAtmosphere";
 import { applyEnvironment, disposeEnvironment } from "@/lib/game/envLight";
 import { CloudShadows } from "@/components/game/AmbienceFX";
 import { Lantern } from "@/components/game/AmbientProps";
@@ -196,18 +199,19 @@ function Village({ guideToHQ, returned, paused, onAction, onNear, phase, fishing
     if (near.current !== next) { near.current = next; onNear(next); }
   }, -2);
   return <>
-    <color attach="background" args={[lighting.sky]} />
-    <fog attach="fog" args={[lighting.sky, lighting.fogNear, lighting.fogFar]} />
+    {lighting.skyTop ? <SkyGradient top={lighting.skyTop} horizon={lighting.sky} /> : <color attach="background" args={[lighting.sky]} />}
+    <fog attach="fog" args={[lighting.fogColor, lighting.fogNear, lighting.fogFar]} />
     <ambientLight intensity={lighting.ambient} color={lighting.fill} />
     <hemisphereLight args={[lighting.fill, lighting.bounce, lighting.hemisphere]} />
     <directionalLight position={lighting.sunPosition} color={lighting.sun} intensity={lighting.sunIntensity} castShadow
       shadow-mapSize={[2048, 2048]} shadow-camera-left={-24} shadow-camera-right={24}
       shadow-camera-top={24} shadow-camera-bottom={-24} shadow-camera-far={75}
-      shadow-radius={3} shadow-intensity={0.85} shadow-normalBias={0.02} shadow-bias={-0.0002} />
+      shadow-radius={lighting.shadow.radius} shadow-intensity={lighting.shadow.intensity} shadow-normalBias={0.02} shadow-bias={-0.0002} />
+    {lighting.rim && <directionalLight position={RIM_POSITION} color={lighting.rim.color} intensity={lighting.rim.intensity} />}
     <GridWorld map={island.map} water={lighting.water} palette={ISLAND_TERRAIN} />
     <GridOcean map={island.map} />
-    <BlobShadows placements={GUIDE_SHADOW} opacity={0.5} />
-    <BlobShadows placements={plantShadows} opacity={0.16} />
+    <BlobShadows placements={GUIDE_SHADOW} opacity={0.5} color={lighting.shadow.tint} />
+    <BlobShadows placements={plantShadows} opacity={0.16} color={lighting.shadow.tint} />
     {!graphics.liteMode && <CloudShadows phase={phase === "evening" ? "dusk" : phase} size={[28, 25]} bounded />}
     <Seagulls anchors={GULL_ANCHORS} />
     <FishingBobber towardWater playerPosRef={player} waterHeight={fishingWaterHeight} />
@@ -343,7 +347,9 @@ export default function ApplicantWorld(props: Props) {
     onCreated={({ gl }) => { gl.info.autoReset = false; gl.toneMapping = THREE.NeutralToneMapping; gl.outputColorSpace = THREE.SRGBColorSpace; }}>
     <Suspense fallback={null}>
       {props.inside ? <Interior {...props} /> : <Village {...props} />}
-      <PostFX enabled={!graphics.liteMode} antialias={!graphics.pixelated} bloom={graphics.bloom} bloomIntensity={0.22} grade={props.inside ? CLUBHOUSE_LIGHTING[props.phase].grade : ISLAND_LIGHTING[props.phase].grade} />
+      {/* The member island's look (lookPreset CURRENT) on both tiers; Light drops AO, bloom and the shadow map. */}
+      <PostFX antialias={!graphics.liteMode && !graphics.pixelated} grade={props.inside ? CLUBHOUSE_LIGHTING[props.phase].grade : ISLAND_LIGHTING[props.phase].grade} fx={lookFx(CURRENT, !graphics.liteMode)} />
+      <LookMaterials preset={CURRENT} />
       <SceneStatus onReady={props.onReady} onFailure={props.onFailure} inside={props.inside} phase={props.phase} />
       <Performance onMetrics={props.onMetrics} />
     </Suspense>

@@ -1,8 +1,10 @@
 // Look development captures (specs/look-development.md §1-2). Headed Chromium (WebGL; headless has none here),
-// 1280x720 canvas at DPR 1, smooth mode (pixel filter off), summer, dev server on :4600 (no .env, signed out).
+// 1280x720 canvas at DPR 1, smooth mode (pixel filter off), summer, dev server on :$PORT (default 4600; no .env, signed out).
 // Uncapped frame rate (--disable-gpu-vsync --disable-frame-rate-limit) so FPS reflects cost, not the display.
 //   node specs/evidence/look/shots.mjs baseline /tmp/look/baseline
 //   node specs/evidence/look/shots.mjs presets  /tmp/look/presets
+//   PORT=4700 node specs/evidence/look/shots.mjs baseline /tmp/look/after   (§5 after: the same cameras on the applied look)
+//   node specs/evidence/look/shots.mjs quick-game /tmp/look/tune             (tuning loop: V1 per phase + rain, High)
 // Writes PNGs + metrics.json into the out dir; measure.py reads them, then cwebp to specs/evidence/look/*/.
 //
 // Fixed cameras (the only ones used):
@@ -17,7 +19,7 @@ const { chromium } = require("playwright");
 
 const [mode, OUT] = process.argv.slice(2);
 mkdirSync(OUT, { recursive: true });
-const BASE = "http://localhost:4600/lab/look";
+const BASE = `http://localhost:${process.env.PORT ?? 4600}/lab/look`;
 const LOOK = { skin: 3, hair: 2, eyes: "F1.1", mouth: "M1.1", brows: "brow_soft", extras: [], bangs: "bangs_curtain", back: "back_bob",
   top: "top_hoodie", bottom: "bottom_joggers", onepiece: null, shoes: "shoes_sneakers", acc: {}, colors: {} };
 const metrics = {};
@@ -32,7 +34,7 @@ const page = await ctx.newPage();
 page.on("pageerror", e => console.log("pageerror", e.message.slice(0, 200)));
 await page.addInitScript(() => {
   const style = document.createElement("style");
-  style.textContent = "html.shot [data-look-panel], html.shot main > :not(:first-child), html.shot nav, html.shot nextjs-portal { visibility: hidden !important; }";
+  style.textContent = "html.shot [data-look-panel], html.shot main > :not(:has(canvas)), html.shot nav, html.shot nextjs-portal { visibility: hidden !important; }";
   document.addEventListener("DOMContentLoaded", () => document.head.appendChild(style));
 });
 
@@ -100,6 +102,18 @@ if (mode === "baseline") {
       await shot(`${T}-${name}-day`);
     }
   }
+}
+
+if (mode === "quick-game") { // the game look (slot A): V1 at each phase, the day no-shadow pair, rain; High only
+  await setTier("high");
+  await open("ab=A&at=0,-1&weather=clear&time=day");
+  for (const phase of ["day", "evening", "dawn", "night"]) { await time(phase); await shot(`H-V1-${phase}`); }
+  await time("day");
+  await fps("H-A-V1-day");
+  const noShadow = await page.evaluate(() => { const p = structuredClone(window.__presets.current); p.shadows.intensity = 0; return p; });
+  await shot("H-V1-day-pairA"); await setLook(noShadow); await page.waitForTimeout(600); await shot("H-V1-day-noshadow"); await page.evaluate(() => window.__ab("A"));
+  await open("ab=A&at=0,-1&weather=rain&time=day");
+  await shot("H-V1-overcast");
 }
 
 if (mode === "quick") { // tuning loop: V1 + its no-shadow pair for each direction, High only
