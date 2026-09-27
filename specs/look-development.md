@@ -35,3 +35,11 @@ Starting from the preset's exact values (`web/lib/game/lookPreset.ts`) and the b
 6. **Tiers:** High gets AO, bloom and soft shadows; Light keeps the same colours, ratio and sky with blob shadows and no AO/bloom, and must stay at 30 FPS on integrated graphics.
 7. **Applicant island** uses the same look.
 8. **Evidence:** the baseline cameras re-shot after (`specs/evidence/look/after/`) with before/after sheets per camera and time of day, the pixel measurements repeated (ratio, RMS contrast, saturation, highlight share), and FPS per tier. The lab's "Current" preset becomes the new look so further tuning keeps working in `/lab/look`.
+
+## 6. Glints and reflections (row 237)
+- **Water:** a sun glint path on the sea/river/pond that follows the real sun azimuth, and white sparkle highlights on wave crests (small, flickering, brightest near the glint path), bloom catching them on High; Light keeps a cheaper sparkle without bloom. Reuse the existing sea-glint sprite system (July: dump sparkle sprite, two counter-phase point clouds) and the water shader rather than adding a new one.
+- **Glass:** building windows and glass props reflect the sky/environment and show a sun specular; night keeps the warm lit windows.
+- **Metal:** lamp posts, signs, clock, railings, metal fittings and weapons get metallic response with environment reflections and a crisp sun highlight.
+- **Unchanged:** characters (matte), terrain, foliage, fabrics, wood.
+- **Tone mapping:** Neutral stays (row 237).
+- Evidence: before/after at the look cameras (day, golden hour) plus close-ups of the glint path, a window and a lamp post; highlight share re-measured; FPS per tier.
