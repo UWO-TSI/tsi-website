@@ -15,7 +15,7 @@ import GridOcean from "../grid/GridOcean";
 import PlayerAvatar from "../PlayerAvatar";
 import { ACNHParts, CHALET_VARIANTS } from "../ACNHBuilding";
 import { GLBProp, NatureTree, NatureBush, NatureFlowerCluster } from "../NatureModels";
-import { IslandAtmosphere, useFollowCamera } from "../IslandAtmosphere";
+import { IslandAtmosphere, useFollowCamera, type TreeSpot } from "../IslandAtmosphere";
 import { PlacementLayer, type GridMapping } from "./PlacementLayer";
 import { createHomeIsland, HOME_SPAWN, HOUSE, HOME_MAILBOX, HOME_DOCK, HOME_TREES, HOME_BUSHES, HOME_FLOWERS, HOME_RADII } from "@/lib/game/homeIsland";
 import { ISLAND_TERRAIN, type IslandLight } from "@/lib/game/islandLighting";
@@ -35,6 +35,7 @@ const SEA = () => "sea" as const;
 
 export type HomeNear = "house" | "village" | "mailbox" | "fish" | "forage" | "net" | null;
 const TREE_SEEDS = [0, 1, 3, 2];
+const TREES: TreeSpot[] = HOME_TREES.map(([x, z], i) => ({ x, z, seed: TREE_SEEDS[i] }));
 const DOOR_SPAWN: [number, number, number] = [HOUSE.door[0], 0, HOUSE.door[1] - 0.6];
 
 export default function HomeIslandScene({ identity, peaceful, fishSpot, fishing, phase, light, look, weather, liteMode, castShadows, zoom, overview, returned, player, onMove, onNear, outdoor, decorating, selected, onPlace, onPickUp }: {
@@ -81,7 +82,7 @@ export default function HomeIslandScene({ identity, peaceful, fishSpot, fishing,
   }), [home]);
   return <>
     <IslandAtmosphere phase={phase} light={light} look={look} weather={weather} liteMode={liteMode} castShadows={castShadows} overview={overview}
-      player={player} ground={home.ground} cloudSize={[HOME_RADII.x * 2 + 4, HOME_RADII.z * 2 + 4]} shadowExtent={16} fireflyAnchors={HOME_BUSHES} />
+      ground={home.ground} cloudSize={[HOME_RADII.x * 2 + 4, HOME_RADII.z * 2 + 4]} shadowExtent={16} fireflyAnchors={HOME_BUSHES} trees={TREES} />
     <GridWorld map={home.map} water={light.water} palette={terrain} windScale={liteMode ? 0 : weather === "wind" ? 2.2 : 1} />
     <GridOcean map={home.map} lite={liteMode} />
     <PeacefulLayer map={home.map} nodes={HOME_NODES} moment={peaceful.moment} member={peaceful.member} player={player} ground={home.ground} highTier={!liteMode} active={!fishing && !decorating} />
@@ -92,7 +93,7 @@ export default function HomeIslandScene({ identity, peaceful, fishSpot, fishing,
     <GLBProp url="/assets/acnh/furniture/monument-sign.glb" position={[HOME_DOCK[0] + 1.3, home.ground(...HOME_DOCK), HOME_DOCK[1] + 0.4]} scale={0.08} rotation={[0, -0.4, 0]} />
     <Html position={[HOME_DOCK[0], 2.4, HOME_DOCK[1]]} center distanceFactor={10} zIndexRange={[3, 0]}><div className={styles.cue}>Boat to the village</div></Html>
     <Html position={[HOUSE.x, 4.2, HOUSE.z - HOUSE.halfD]} center distanceFactor={10} zIndexRange={[3, 0]}><div className={styles.cue}>Your house</div></Html>
-    {HOME_TREES.map(([x, z], i) => <NatureTree key={i} position={[x, home.ground(x, z), z]} seed={TREE_SEEDS[i]} models={SEASON_TREES[look.season]} />)}
+    {TREES.map(({ x, z, seed }, i) => <NatureTree key={i} position={[x, home.ground(x, z), z]} seed={seed} models={SEASON_TREES[look.season]} />)}
     {HOME_BUSHES.map(([x, z], i) => <NatureBush key={i} position={[x, home.ground(x, z), z]} seed={i} models={SEASON_BUSHES[look.season]} />)}
     {SEASON_FLOWERS[look.season].length > 0 && HOME_FLOWERS.map(([x, z], i) => <NatureFlowerCluster key={i} position={[x, home.ground(x, z), z]} seed={i * 3} models={SEASON_FLOWERS[look.season]} />)}
     <PlacementLayer items={outdoor} mapping={mapping} context={{ inside: home.placeable }} active={decorating} selected={selected}
