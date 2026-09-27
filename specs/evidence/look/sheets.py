@@ -1,6 +1,6 @@
 """Before/after contact sheets and a numbers table for look-development §5.8.
 
-python3 specs/evidence/look/sheets.py specs/evidence/look/baseline specs/evidence/look/after
+python3 specs/evidence/look/sheets.py specs/evidence/look/baseline specs/evidence/look/after [before.json after.json]
 
 Per sheet: one row per frame, before (baseline) on the left, after on the right, 640x360 each.
 Prints a markdown table of the measure.json numbers side by side.
@@ -17,7 +17,7 @@ SHEETS = {
 }
 W, H = 640, 360
 
-def main(before, after):
+def main(before, after, before_json=None, after_json=None):
     before, after = pathlib.Path(before), pathlib.Path(after)
     for sheet, names in SHEETS.items():
         rows = [n for n in names if (before / f"{n}.webp").exists() and (after / f"{n}.webp").exists()]
@@ -31,7 +31,7 @@ def main(before, after):
                 draw.text((j * W + 10, i * H + 9), label, fill=(255, 255, 255))
         img.save(after / f"sheet-{sheet}.webp", quality=82)
         print("sheet", sheet, len(rows))
-    b, a = (json.loads((d / "measure.json").read_text()) for d in (before, after))
+    b, a = (json.loads(pathlib.Path(j or d / "measure.json").read_text()) for d, j in ((before, before_json), (after, after_json)))
     keys = ["rms_contrast", "mean_saturation", "highlight_share", "mid_band_share", "L_p5_p50_p95", "top_band_sat", "shadow_share", "lit_shadow_grass"]
     print("| frame | " + " | ".join(keys) + " |")
     print("|" + "---|" * (len(keys) + 1))
@@ -39,4 +39,4 @@ def main(before, after):
         print(f"| {n} | " + " | ".join(f"{b[n].get(k, '–')} → {a[n].get(k, '–')}" for k in keys) + " |")
 
 if __name__ == "__main__":
-    main(*sys.argv[1:3])
+    main(*sys.argv[1:5])
