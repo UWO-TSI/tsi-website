@@ -92,9 +92,9 @@ export default function RecipeEditor({ mode, initial }: { mode: "new" | "edit"; 
         <Field label="Ingredients" hint="Collection item keys (fish, bugs, flowers, shells, minerals, wood_branch) and how many">
           <div className="space-y-2">
             {form.ingredients.map(([key, n], i) => (
-              <div key={i} className="flex gap-2">
-                <input className={`${inputCls} flex-1`} list="recipe-ingredients" value={key} onChange={(e) => setIngredient(i, e.target.value, n)} spellCheck={false} />
-                <input className={`${inputCls} w-24`} type="number" min={1} max={99} value={n} onChange={(e) => setIngredient(i, key, Number(e.target.value))} />
+              <div key={i} className="grid grid-cols-[1fr_96px_auto] gap-2">
+                <input className={inputCls} list="recipe-ingredients" aria-label="Ingredient" value={key} onChange={(e) => setIngredient(i, e.target.value, n)} spellCheck={false} />
+                <input className={inputCls} aria-label="Count" type="number" min={1} max={99} value={n} onChange={(e) => setIngredient(i, key, Number(e.target.value))} />
                 <button type="button" aria-label="Remove ingredient" onClick={() => set("ingredients", form.ingredients.filter((_, j) => j !== i))} className="px-2 text-[var(--color-text-muted)] hover:text-red-400"><Trash2 size={14} /></button>
               </div>
             ))}

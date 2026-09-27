@@ -41,16 +41,18 @@ export default function AdminSeasonalPage() {
         <div className="bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-lg overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-[var(--glass-border)]">{["Event", "This year", "Status", "Target", "Unlocks", ""].map((h) => <th key={h} className={thCls}>{h}</th>)}</tr>
+              <tr className="border-b border-[var(--glass-border)]">{["Event", "Window (yearly)", "Status", "Target", "Unlocks", ""].map((h) => <th key={h} className={thCls}>{h}</th>)}</tr>
             </thead>
             <tbody>
               {rows.map((g) => {
                 const c = goalCycle(g, now);
+                // The last cycle ended: the next one opens a year after it.
+                const next = c.start && c.start <= now ? new Date(new Date(c.start).setUTCFullYear(c.start.getUTCFullYear() + 1)) : c.start;
                 return (
                   <tr key={g.id} className="border-b border-[var(--glass-border)]/40 last:border-b-0">
                     <td className="px-4 py-3 text-[var(--color-text-primary)]">{g.title}<div className="font-mono text-[0.65rem] text-[var(--color-accent-cyan)]">{g.slug}</div></td>
                     <td className="px-4 py-3 font-mono text-xs">{day(c.start)} – {day(c.end)}</td>
-                    <td className="px-4 py-3 font-mono text-xs">{!g.active ? "inactive" : c.open ? "running now" : now < (c.start ?? now) ? "upcoming" : "ended"}</td>
+                    <td className="px-4 py-3 font-mono text-xs">{!g.active ? "inactive" : c.open ? `running until ${day(c.end)}` : `opens ${day(next)}`}</td>
                     <td className="px-4 py-3 font-mono text-xs">{g.target_points.toLocaleString()} pts</td>
                     <td className="px-4 py-3 font-mono text-xs text-[var(--color-text-muted)]">{g.unlocks.join(", ") || "—"}</td>
                     <td className="px-4 py-3 text-right whitespace-nowrap">

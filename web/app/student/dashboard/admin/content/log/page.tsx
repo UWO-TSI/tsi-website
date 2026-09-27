@@ -481,5 +481,6 @@ function rowDisplay(v: {
       ? (v.snapshot_data.display_name as string)
       : null;
   if (name) return name;
-  return v.row_id.slice(0, 8);
+  // uuid rows shorten; text-keyed rows (recipes) are their own name.
+  return /^[0-9a-f]{8}-/.test(v.row_id) ? v.row_id.slice(0, 8) : v.row_id;
 }

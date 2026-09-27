@@ -89,8 +89,9 @@ async function fetchNPCPersonas(permanentOnly: boolean): Promise<NPCPersona[]> {
       .eq("active", true);
     if (permanentOnly) query = query.eq("is_permanent", true);
     const { data, error } = await query;
-    if (error || !data) {
-      console.warn("[contentLoader] npc_personas fetch failed, using defaults", error);
+    // No rows (signed out, or every resident switched off) also falls back: the world never empties (principle 2).
+    if (error || !data?.length) {
+      if (error) console.warn("[contentLoader] npc_personas fetch failed, using defaults", error);
       return filterPermanent(DEFAULT_NPC_PERSONAS, permanentOnly);
     }
     return data as unknown as NPCPersona[];
