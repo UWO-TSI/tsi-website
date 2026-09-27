@@ -20,9 +20,9 @@ describe("water glint path (row 237)", () => {
       expect(deg(Math.atan2(Math.abs(g.x), g.z)), phase).toBeLessThan(35); // the horizontal half-FOV is 38° at 16:9
     }
   });
-  it("is left by day and right at golden hour (screen-left is +x)", () => {
+  it("is left by day and near the middle at golden hour, when the real sun sets ahead (screen-left is +x, row 239)", () => {
     expect(glintDirection(new Vector3(...ISLAND_LIGHTING.day.sunPosition), FORWARD).x).toBeGreaterThan(0);
-    expect(glintDirection(new Vector3(...ISLAND_LIGHTING.evening.sunPosition), FORWARD).x).toBeLessThan(0);
+    expect(Math.abs(glintDirection(new Vector3(...ISLAND_LIGHTING.evening.sunPosition), FORWARD).x)).toBeLessThan(0.1);
   });
   it("follows any camera heading, and leaves a sun dead ahead where it is", () => {
     const turned = glintDirection(new Vector3(0, 1, -1), new Vector3(1, 0, 0));

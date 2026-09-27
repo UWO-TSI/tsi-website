@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { Color, ShaderChunk, ShaderLib } from "three";
 import { ISLAND_LIGHTING, islandLight, withSeason, withWeather, type IslandLight } from "./islandLighting";
-import { CURRENT, LOOK_LIGHTS_CHUNK, LOOK_PRESETS, LOOK_REFLECT_EDITS, MATERIAL_CLASSES, PHASE_LOOK, keyFill, kelvinHex, lookFx, lookRoughness, parseLook, sunAngles, sunFromAngles, sunFromCamera } from "./lookPreset";
+import { CURRENT, LOOK_LIGHTS_CHUNK, LOOK_PRESETS, LOOK_REFLECT_EDITS, MATERIAL_CLASSES, MIN_SUN_ELEVATION, PHASE_LOOK, keyFill, kelvinHex, lookFx, lookRoughness, parseLook, sunAngles, sunFromAngles, sunFromCamera } from "./lookPreset";
+import { solarPosition } from "./sunPath";
 import { seasonLook } from "./seasonalLook";
 import { parseSeasonOverride } from "./season";
-import { ISLAND_PHASES } from "./islandTime";
+import { ISLAND_PHASES, type IslandPhase } from "./islandTime";
 import { ISLAND_WEATHERS } from "./islandWeather";
 
 const lin = (hex: string) => new Color(hex);
@@ -56,7 +57,7 @@ describe("the game look (row 236, §5)", () => {
     expect(r.keyFill).toBeGreaterThan(3.7);
     expect(r.keyFill).toBeLessThan(4.3);
     expect(r.litShadow).toBeGreaterThan(3);
-    expect(ratio(ISLAND_LIGHTING.day)).toBeCloseTo(r.keyFill, 1);
+    expect(ratio(islandLight(CURRENT, "day"))).toBeCloseTo(r.keyFill, 1);
   });
   it("restores grass texture contrast with a hue variation", () => {
     expect(CURRENT.grass.detail).toBeGreaterThan(0.38 * 1.5);
@@ -66,7 +67,7 @@ describe("the game look (row 236, §5)", () => {
 
 describe("preset → renderer mapping", () => {
   it("maps Current onto the day profile exactly", () => {
-    const light = ISLAND_LIGHTING.day;
+    const light = islandLight(CURRENT, "day");
     expect(light).toMatchObject({
       sun: CURRENT.light.sunColor, sunIntensity: CURRENT.light.sunIntensity, sunPosition: CURRENT.light.sunPosition,
       fill: CURRENT.light.fillSky, bounce: CURRENT.light.fillGround, ambient: CURRENT.light.ambient, hemisphere: CURRENT.light.hemisphere,
@@ -103,27 +104,53 @@ describe("preset → renderer mapping", () => {
   });
 });
 
-describe("sun direction relative to the follow camera (§5.2)", () => {
-  it("puts the sun side-front, not behind the camera, at every sunlit phase", () => {
-    expect(sunFromCamera([-12, 24, -14])).toBeCloseTo(-40.6, 0); // the shipped day sun, behind the camera
-    for (const phase of ["dawn", "day", "evening"] as const) {
-      const off = Math.abs(sunFromCamera(ISLAND_LIGHTING[phase].sunPosition));
-      expect(off, phase).toBeGreaterThanOrEqual(50);
-      expect(off, phase).toBeLessThanOrEqual(75);
-    }
+describe("the real sun (row 239, §8)", () => {
+  const key = (iso: string, phase: IslandPhase = "day") => islandLight(CURRENT, phase, solarPosition(new Date(iso))).sunPosition;
+  const angle = (a: readonly number[], b: readonly number[]) => {
+    const dot = a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+    return Math.acos(Math.min(1, dot / Math.hypot(...a) / Math.hypot(...b))) * 180 / Math.PI;
+  };
+  /** Degrees off straight ahead of the camera (+z), + = screen-left. */
+  const ahead = ([x, , z]: readonly number[]) => Math.atan2(x, z) * 180 / Math.PI;
+
+  it("maps the compass onto the world: the camera looks west (+z), screen-left is south (+x)", () => {
+    const flat = (azimuth: number) => { const [x, , z] = islandLight(CURRENT, "day", { elevation: 30, azimuth }).sunPosition; return [Math.round(x) || 0, Math.round(z) || 0]; };
+    expect(flat(270)).toEqual([0, 28]);
+    expect(flat(180)).toEqual([28, 0]);
+    expect(flat(90)).toEqual([0, -28]);
+    expect(flat(0)).toEqual([-28, 0]);
   });
-  it("lights from screen-left in the morning and by day, from screen-right at golden hour (the sun sets opposite)", () => {
-    expect(sunFromCamera(ISLAND_LIGHTING.dawn.sunPosition)).toBeGreaterThan(0);
-    expect(sunFromCamera(ISLAND_LIGHTING.day.sunPosition)).toBeGreaterThan(0);
-    expect(sunFromCamera(ISLAND_LIGHTING.evening.sunPosition)).toBeLessThan(0);
-    expect(sunFromCamera(ISLAND_LIGHTING.evening.sunPosition)).toBeCloseTo(-sunFromCamera(ISLAND_LIGHTING.day.sunPosition), 0);
+  it("puts the 11:45 sun of Sep 27 within 3.5° of the picked Open-air key light", () => {
+    expect(angle(key("2026-09-27T11:45:00-04:00"), CURRENT.light.sunPosition)).toBeLessThan(3.5);
+    expect(angle(ISLAND_LIGHTING.day.sunPosition, CURRENT.light.sunPosition)).toBeLessThan(3.5);
   });
-  it("sets elevation per phase: low and long-shadowed at dawn and golden hour, high by day", () => {
-    const elevation = (phase: keyof typeof ISLAND_LIGHTING) => sunAngles(ISLAND_LIGHTING[phase].sunPosition).elevation;
-    expect(elevation("dawn")).toBeCloseTo(PHASE_LOOK.dawn.elevation!, 0);
-    expect(elevation("evening")).toBeCloseTo(PHASE_LOOK.evening.elevation!, 0);
-    expect(elevation("day")).toBeGreaterThan(40);
-    for (const phase of ["dawn", "evening"] as const) expect(1 / Math.tan(elevation(phase) * Math.PI / 180)).toBeGreaterThan(2.4); // shadow ≥ 2.4× height
+  it("front-lights the morning, lights midday from the left and comes round ahead from 15:00 (Sep 27)", () => {
+    expect(sunFromCamera(key("2026-09-27T09:00:00-04:00"))).toBeGreaterThan(10);
+    expect(sunFromCamera(key("2026-09-27T09:00:00-04:00"))).toBeLessThan(70);
+    expect(sunFromCamera(key("2026-09-27T13:00:00-04:00"))).toBeGreaterThan(70);
+    expect(sunFromCamera(key("2026-09-27T13:00:00-04:00"))).toBeLessThan(110);
+    expect(ahead(key("2026-09-27T15:00:00-04:00"))).toBeLessThan(60);
+    expect(ahead(key("2026-09-27T18:30:00-04:00", "evening"))).toBeLessThan(15);
+  });
+  it("sets ahead of the camera: just left in late September, right in June, left in December", () => {
+    expect(ahead(key("2026-09-27T19:14:00-04:00", "evening"))).toBeCloseTo(1.7, 0);
+    expect(ahead(key("2026-06-21T21:08:00-04:00", "evening"))).toBeCloseTo(-33.9, 0);
+    expect(ahead(key("2026-12-21T16:54:00-05:00", "evening"))).toBeCloseTo(31.9, 0);
+  });
+  it("never lights edge-on: the key stays at least MIN_SUN_ELEVATION up around sunrise and sunset", () => {
+    expect(solarPosition(new Date("2026-09-27T06:47:00-04:00")).elevation).toBeLessThan(0);
+    expect(sunAngles(ISLAND_LIGHTING.dawn.sunPosition).elevation).toBeCloseTo(MIN_SUN_ELEVATION, 1);
+    expect(sunAngles(key("2026-09-27T19:40:00-04:00", "evening")).elevation).toBeCloseTo(MIN_SUN_ELEVATION, 1);
+    expect(sunAngles(key("2026-06-21T13:30:00-04:00")).elevation).toBeGreaterThan(65);
+  });
+  it("keeps night's fixed moon wherever the sun is", () => {
+    const moon = key("2026-09-27T23:00:00-04:00", "night");
+    expect(key("2026-06-21T02:00:00-04:00", "night")).toEqual(moon);
+    expect(sunAngles(moon).elevation).toBeCloseTo(PHASE_LOOK.night.elevation!, 0);
+    expect(sunAngles(moon).azimuth).toBeCloseTo(sunAngles(CURRENT.light.sunPosition).azimuth, 0);
+  });
+  it("keeps the preset's own key without a sun (/lab/look's sliders)", () => {
+    for (const phase of ["dawn", "day", "evening"] as const) expect(islandLight(LOOK_PRESETS[1], phase).sunPosition).toEqual(LOOK_PRESETS[1].light.sunPosition);
   });
 });
 
