@@ -79,6 +79,8 @@ Send it through the management API as in step 2 and delete any local file that h
 
 Merge the launch PR into `main`; Vercel builds production. Schema first, then code (the reverse of #40): `/api/economy`, `awardRewards` and the island need the economy, Gem-ledger and identity tables. Before merging, check the Vercel production env has `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` and `SUPABASE_SERVICE_ROLE_KEY` (unchanged from today).
 
+The merge ships the member world **closed**: `/student/dashboard`, `/student/onboarding` and `/student/companion` show `/student/opening-soon`, and "Log in" still lands on the applicant portal. To open it, set `NEXT_PUBLIC_MEMBER_WORLD=open` for Production in Vercel, then **redeploy** that deployment (the value is inlined at build time; an env change alone does nothing). To close again, remove the variable and redeploy, or promote the previous deployment. Smoke flow 3 below needs it open.
+
 ## 5. Verification queries (read-only)
 
 ```sql

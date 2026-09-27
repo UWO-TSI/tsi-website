@@ -133,7 +133,8 @@ cover layer.
 |-------|----------|
 | Current sprint goal | `AGENT_LOG.md` → "Current Sprint" |
 | Build/lint baseline + bug list | `specs/qa.md` |
-| 3D game world component | `web/components/game/GameWorld.tsx` |
+| 3D game world component | `web/components/game/DefaultIslandWorld.tsx` (served at `/student/dashboard`; the legacy `GameWorld.tsx` was deleted 2026-09-27) |
+| Member world launch switch | `NEXT_PUBLIC_MEMBER_WORLD=open` (`web/lib/recruitment-access.ts`); closed shows `/student/opening-soon` |
 | **Terrain drafting tool** | `web/app/lab/map` — where the layout of every island gets planned. See below. |
 | Player avatar + sprite sheet | `web/components/game/PlayerAvatar.tsx` |
 | Dashboard pages (overlays) | `web/app/student/dashboard/*/page.tsx` |
@@ -200,6 +201,8 @@ These guide every scope and design decision. When trade-offs arise, choose the o
 - Build agents: when scope is unclear, ask reviewer (David) before guessing. Don't add features the spec doesn't list.
 
 ## Known foundational defects (measured 2026-07-26, not yet fixed)
+
+> D2, D3, D6 and the `GameWorld.tsx` half of D8 went with the legacy world (deleted 2026-09-27); re-measure them on `DefaultIslandWorld` before acting.
 
 Do not "fix" the symptoms of these by adding another layer. Each has a documented
 root cause in the file that owns it. Full detail:

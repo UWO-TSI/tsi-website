@@ -3,11 +3,6 @@ import Link from "next/link";
 const CARDS = [
   { href: "/lab/island", title: "Default island", desc: "The first revamp slice: a small walkable island, existing assets, lighting presets and a persistent pixel filter." },
   {
-    href: "/lab/world",
-    title: "World bench",
-    desc: "The real island with experiment knobs: scrub time of day (skies), force weather, override the seasonal palette live, drive the pastel-grade uniforms, spawn presets. Try a look here, screenshot it, get the verdict, bake the values into the game.",
-  },
-  {
     href: "/lab/fishing",
     title: "Fishing bench",
     desc: "Fight any species directly (no cast RNG), force mystery vs known, preview each tier's catch celebration, and validate rarity odds with a 1000-cast simulator under any hour/weather.",

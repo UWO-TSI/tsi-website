@@ -6,12 +6,25 @@ import { updateSession } from "@/lib/supabase/middleware";
 vi.mock("@/lib/supabase/middleware", () => ({ updateSession: vi.fn(async (request: NextRequest) => NextResponse.next({ request })) }));
 afterEach(() => { vi.unstubAllEnvs(); vi.clearAllMocks(); });
 
-describe("unpublished world boundary", () => {
-  it("redirects production member requests before contacting auth", async () => {
+describe("member world launch switch", () => {
+  it("sends production member requests to the opening-soon page before contacting auth while the flag is unset", async () => {
     vi.stubEnv("NODE_ENV", "production");
     const response = await middleware(new NextRequest("https://tethos.ca/student/dashboard?preview=1"));
-    expect(response.headers.get("location")).toBe("https://tethos.ca/student/apply/portal");
+    expect(response.headers.get("location")).toBe("https://tethos.ca/student/opening-soon");
     expect(updateSession).not.toHaveBeenCalled();
+  });
+  it("closes the phone companion with the island", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    const response = await middleware(new NextRequest("https://tethos.ca/student/companion"));
+    expect(response.headers.get("location")).toBe("https://tethos.ca/student/opening-soon");
+  });
+  it("lets member requests through to session handling once NEXT_PUBLIC_MEMBER_WORLD=open", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("NEXT_PUBLIC_MEMBER_WORLD", "open");
+    const response = await middleware(new NextRequest("https://tethos.ca/student/dashboard"));
+    expect(response.headers.get("location")).toBeNull();
+    await middleware(new NextRequest("https://tethos.ca/student/companion"));
+    expect(updateSession).toHaveBeenCalledTimes(2);
   });
   it("preserves the legacy recruitment admin bookmark outside the member shell", async () => {
     vi.stubEnv("NODE_ENV", "production");

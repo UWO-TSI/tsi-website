@@ -39,6 +39,7 @@ export const config = {
     "/student/login",
     "/student/signup",
     "/student/onboarding/:path*",
+    "/student/companion/:path*",
     "/student/election",
     "/student/apply/:path*",
     "/admin/:path*",

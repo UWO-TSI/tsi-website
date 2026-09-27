@@ -90,7 +90,7 @@ export default function LoginPage() {
       return;
     }
 
-    router.push("/student/apply/portal");
+    router.push("/student/go");
     router.refresh();
   }
 

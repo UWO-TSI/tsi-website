@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import TsiLogo from "@/components/ui/TsiLogo";
+import { memberWorldIsAvailable } from "@/lib/recruitment-access";
 
 const NAV_ITEMS = [
   { label: "Home", href: "/" },
@@ -17,9 +18,12 @@ const NAV_ITEMS = [
 ];
 
 const CONTACT = { label: "Contact", href: "mailto:team@tethos.ca" };
-// General account entry is the applicant village; recruitment administration stays separate.
+// "Log in" goes through /student/go. Signed in: the game portal once the member world
+// opens (NEXT_PUBLIC_MEMBER_WORLD), the applicant village until then.
 const LOGIN = { label: "Log in", href: "/student/go" };
-const ACCOUNT = { label: "Applicant portal", href: "/student/apply/portal" };
+const ACCOUNT = memberWorldIsAvailable()
+  ? { label: "Game portal", href: "/student/dashboard" }
+  : { label: "Applicant portal", href: "/student/apply/portal" };
 const ADMIN = { label: "Admin dashboard", href: "/admin/recruit" };
 
 /* Spring configs */

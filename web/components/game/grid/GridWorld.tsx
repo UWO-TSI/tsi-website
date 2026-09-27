@@ -44,26 +44,6 @@ export function getIslandMap(): { map: IslandMap; props: PlacedProp[] } {
   return cached;
 }
 
-/**
- * Is the tile world switched on for this page load?
- *
- * A plain function, not a hook: the flag is read from the URL once and cannot
- * change without a navigation, and it is needed from more than one component
- * (GameWorld mounts the substrate in one place and gates RoadTiles in
- * another). Making it a hook would force a hook call inside a JSX expression
- * in a second component, which is exactly the kind of thing that later breaks
- * when someone wraps it in a condition. Follows the `?aerial=1` precedent in
- * curvedWorld.ts, which reads its param at module init for the same reason.
- */
-let gridFlag: boolean | null = null;
-export function isGridEnabled(): boolean {
-  if (gridFlag === null) {
-    gridFlag =
-      typeof window !== "undefined" && new URLSearchParams(window.location.search).get("grid") === "1";
-  }
-  return gridFlag;
-}
-
 export default function GridWorld({ map: suppliedMap, water, palette, windScale }: { map?: IslandMap; water?: WaterParams; palette?: TerrainPalette; windScale?: number }) {
   const map = useMemo(() => suppliedMap ?? getIslandMap().map, [suppliedMap]);
   const t = useTuning();

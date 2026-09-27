@@ -62,7 +62,7 @@ import * as THREE from "three";
 // lateral it sinks 0.44u, just enough to bow the skyline.
 export const WORLD_BEND = 0.0032;
 export const WORLD_BEND_SIDE = 0.0011;
-const aerialSurvey = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("aerial") === "1";
+const aerialSurvey = process.env.NODE_ENV !== "production" && typeof window !== "undefined" && new URLSearchParams(window.location.search).get("aerial") === "1";
 export const ACTIVE_WORLD_BEND = aerialSurvey ? 0 : WORLD_BEND;
 export const ACTIVE_WORLD_BEND_SIDE = aerialSurvey ? 0 : WORLD_BEND_SIDE;
 
