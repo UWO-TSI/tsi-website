@@ -14,6 +14,9 @@ SHEETS = {
     "L-V1": ["L-V1-day", "L-V1-evening", "L-V1-dawn", "L-V1-night", "L-V1-overcast"],
     "H-V3-L-V2": ["H-V3-day", "L-V2-day"],
     "interiors": ["H-hq-day", "H-cafe-day", "H-ruins-day", "L-hq-day", "L-cafe-day", "L-ruins-day"],
+    # §6 glints (shots.mjs glints)
+    "H-V3": ["H-V3-day", "H-V3-evening"],
+    "close": ["H-close-glint-day", "H-close-glint-evening", "H-close-window-day", "H-close-window-night", "H-close-lamp-day", "H-close-lamp-night"],
 }
 W, H = 640, 360
 
@@ -21,6 +24,8 @@ def main(before, after, before_json=None, after_json=None):
     before, after = pathlib.Path(before), pathlib.Path(after)
     for sheet, names in SHEETS.items():
         rows = [n for n in names if (before / f"{n}.webp").exists() and (after / f"{n}.webp").exists()]
+        if not rows:
+            continue
         img = Image.new("RGB", (2 * W, len(rows) * H), "white")
         draw = ImageDraw.Draw(img)
         for i, n in enumerate(rows):
