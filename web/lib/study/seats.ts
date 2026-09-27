@@ -67,6 +67,17 @@ export function seatsOf(anchor: string, ground: Ground = flat): WorldSeat[] {
   });
 }
 
+/**
+ * A table's seats recentred on the origin (the table itself at `[0,0]`):
+ * for the phone companion's isolated table scene (specs/companion.md
+ * deliverable 2), which places one table alone instead of in the cafe room.
+ */
+export function localSeats(anchor: string): WorldSeat[] {
+  const t = tableLayout(anchor);
+  if (!t) return [];
+  return seatsOf(anchor).map((seat) => ({ ...seat, x: seat.x - t.at[0], z: seat.z - t.at[1] }));
+}
+
 export function seatAt(anchor: string, seat: number, ground: Ground = flat): WorldSeat | null {
   return seatsOf(anchor, ground)[seat - 1] ?? null;
 }

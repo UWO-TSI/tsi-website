@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_TABLES } from "./tables";
-import { STUDY_LAYOUT, WALK_AWAY_RADIUS, nearestSeat, seatAt, seatsOf, studySolid, walkedAway } from "./seats";
+import { STUDY_LAYOUT, WALK_AWAY_RADIUS, localSeats, nearestSeat, seatAt, seatsOf, studySolid, walkedAway } from "./seats";
 import { STUDY_CLIP, poseOf, sitDetail, studyPose } from "./worldStore";
 import type { StudyHook } from "./useStudySession";
 
@@ -40,6 +40,24 @@ describe("seat anchors (study-world §1)", () => {
     expect(nearestSeat("village", mid[0] + 0.05, mid[1], (_, seat) => seat === 1)).toMatchObject({ seat: 2 });
     expect(nearestSeat("cafe", a.x, a.z)?.anchor).not.toBe("study:plaza-picnic");
     expect(nearestSeat("village", b.x, b.z + 3)).toBeNull();
+  });
+});
+
+describe("localSeats (phone companion table scene, companion.md #2)", () => {
+  it("recentres every table's seats on the origin, keeping their spread and facing", () => {
+    for (const l of STUDY_LAYOUT) {
+      const world = seatsOf(l.anchor), local = localSeats(l.anchor);
+      expect(local.map(s => s.seat)).toEqual(world.map(s => s.seat));
+      local.forEach((s, i) => {
+        expect(s.x).toBeCloseTo(world[i].x - l.at[0]);
+        expect(s.z).toBeCloseTo(world[i].z - l.at[1]);
+        expect(s.y).toBe(world[i].y); // seat height doesn't move, only x/z
+        expect(s.facing).toBe(world[i].facing);
+      });
+    }
+  });
+  it("is empty for an unknown anchor", () => {
+    expect(localSeats("study:nowhere")).toEqual([]);
   });
 });
 

@@ -30,8 +30,13 @@ const standUp = (seat: WorldSeat) => window.dispatchEvent(new CustomEvent("tsi:s
 const sitIn = (seat: WorldSeat, phase: Mate["phase"] | undefined) => window.dispatchEvent(new CustomEvent("tsi:sit", { detail: sitDetail(seat, phase) }));
 const atSeat = (seat: WorldSeat, p: THREE.Vector3) => Math.abs(p.x - seat.x) < 0.01 && Math.abs(p.z - seat.z) < 0.01;
 
-/** Placeholder furniture per kind, from the HQ clubhouse family (tables, chairs, sofa) and village props (benches, parasol). */
-function TableFurniture({ t, ground }: { t: TableLayout; ground: (x: number, z: number) => number }) {
+/**
+ * Placeholder furniture per kind, from the HQ clubhouse family (tables,
+ * chairs, sofa) and village props (benches, parasol). Exported for the
+ * phone companion's isolated table scene (specs/companion.md deliverable 2),
+ * which places one table at the origin instead of a room full of them.
+ */
+export function TableFurniture({ t, ground }: { t: TableLayout; ground: (x: number, z: number) => number }) {
   const seats = FURNITURE[t.furniture].seats;
   const tables = t.furniture === "four" || t.furniture === "picnic" ? [0.49, -0.49] : t.furniture === "couch" ? [] : [0];
   const y = ground(t.at[0], t.at[1]);
