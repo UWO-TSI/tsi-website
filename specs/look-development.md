@@ -24,3 +24,14 @@ For each reference: what makes it sunny (light direction and ratio, shadow colou
 
 ## 4. Apply
 Replace the lighting/grade/material values in the game with the chosen preset per time of day and season, keep the quality tiers, re-shoot the baseline cameras for a before/after, and keep the applicant island on the same look.
+
+## 5. Apply "Open-air sun" (David's pick, row 236)
+Starting from the preset's exact values (`web/lib/game/lookPreset.ts`) and the baseline findings (`specs/look/baseline.md`):
+1. **Day look = the preset**, with exposure nudged toward 1.05 so bright ground reaches about L* 80–85, and the key:fill ratio held near 4:1 (sky-light/IBL fill reduced, hemisphere fill blue from the sky).
+2. **Put the sun where shadows read:** the baseline found the sun behind the camera (shadows cover 16% of the plaza). Move the sun's azimuth to a side-front angle relative to the fixed follow camera so every building and tree casts a visible shadow toward the viewer's side, while real sunrise/sunset timing (rows 173, 188) still drives elevation and colour.
+3. **Sky and air:** saturated blue sky gradient and a blue aerial perspective with fog starting further out; sea and river saturation matched.
+4. **Materials:** restore the grass texture's contrast (baseline: 38% kept at `GridTerrain.tsx:679`) with a light hue variation; a little specular/lower roughness on props, water and characters so highlights appear (target a few percent of pixels near white on a sunny frame, not 0.4%); foliage keeps a soft wrap so trees are not black on the shadow side.
+5. **Derived looks:** dawn (cool-pink, long soft shadows), golden hour (warm, long shadows, stronger rim), night (blue moonlight key, warm lamp pools and windows kept), overcast/rain/fog/snow (lower ratio, softer shadows, never grey-flat), and the four seasons' tints, all as multipliers on the day preset so one preset stays the source of truth. Interiors (HQ, cafe, museum, homes) get matching warm key light and AO.
+6. **Tiers:** High gets AO, bloom and soft shadows; Light keeps the same colours, ratio and sky with blob shadows and no AO/bloom, and must stay at 30 FPS on integrated graphics.
+7. **Applicant island** uses the same look.
+8. **Evidence:** the baseline cameras re-shot after (`specs/evidence/look/after/`) with before/after sheets per camera and time of day, the pixel measurements repeated (ratio, RMS contrast, saturation, highlight share), and FPS per tier. The lab's "Current" preset becomes the new look so further tuning keeps working in `/lab/look`.
