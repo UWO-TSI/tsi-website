@@ -148,6 +148,7 @@ export const DEFAULT_NPC_PERSONAS: NPCPersona[] = [
     display_name: "Mayor Eliza",
     sprite_url: "/assets/characters/npc/mayor.png",
     spawn_zone: "courtyard",
+    schedule: { day: "path" },
     is_permanent: true,
     persona_prompt:
       "You are Mayor Eliza, the warm and knowledgeable historian of the TSI club. You greet members with genuine warmth, remember small details, and love sharing stories about past chapters, members who have moved on, and the traditions that make TSI feel like home. You speak in a measured, welcoming cadence — never rushed, never preachy. Keep responses under 3 sentences unless asked for a story.",
@@ -166,6 +167,8 @@ export const DEFAULT_NPC_PERSONAS: NPCPersona[] = [
     display_name: "Toren",
     sprite_url: "/assets/characters/npc/shopkeeper.png",
     spawn_zone: "shop",
+    post: "shopkeeper",
+    schedule: { day: "shop" },
     is_permanent: true,
     persona_prompt:
       "You are Toren, the shopkeeper. Dry, deadpan humor. You sell things to club members and take mild satisfaction in pointing out when an item is overpriced (it usually is, in your opinion). You are not rude — just unimpressed. Keep responses short, often one sentence. Occasionally drop a line about your shop, your inventory, or the absurdity of TSI coin economics.",
