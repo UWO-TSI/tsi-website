@@ -28,7 +28,6 @@ import { getGrassTexture } from "@/lib/game/grassTexture";
 import { GRASS_COLOR } from "@/lib/game/grid";
 import {
   applyWaterShader,
-  glintDirection,
   waterUniforms,
   writeWaterUniforms,
   SHORE_FROM_FIELD,
@@ -268,6 +267,21 @@ export function terrainMaterial(name: string): THREE.Material | null {
 }
 
 /**
+ * The ripple normal (xz slope) at a world point and time. Shared with the sparkle sprites, which need the same
+ * waves. The scroll is `fract`ed: uTime is world seconds (up to a day), and the texture repeats, so the wrap is seamless.
+ */
+export const WATER_RIPPLE = /* glsl */ `
+uniform sampler2D uRippleTexture;
+uniform float uRippleStrength;
+vec2 waterDetailNormal(vec2 xz) {
+  if (uRippleStrength <= 0.0) return vec2(0.0);
+  vec2 a = texture2D(uRippleTexture, xz * 0.22 + fract(uTime * vec2(0.014, 0.009))).rg * 2.0 - 1.0;
+  vec2 b = texture2D(uRippleTexture, xz.yx * 0.31 - fract(uTime * vec2(0.008, 0.011))).rg * 2.0 - 1.0;
+  return (a + b * 0.5) * uRippleStrength;
+}
+`;
+
+/**
  * The river surface.
  *
  * Was a MeshStandardMaterial with a scrolling `mRiver_Nrm`. That normal map is
@@ -280,19 +294,7 @@ export function terrainMaterial(name: string): THREE.Material | null {
 function waterMaterial(): THREE.MeshBasicMaterial {
   const mat = new THREE.MeshBasicMaterial({ color: 0xffffff });
   mat.name = "terrain:mRiver";
-  applyWaterShader(mat, () => waterUniformBlock, {
-    shore: SHORE_FROM_FIELD,
-    normal: `
-      uniform sampler2D uRippleTexture;
-      uniform float uRippleStrength;
-      vec2 waterDetailNormal(vec2 xz) {
-        if (uRippleStrength <= 0.0) return vec2(0.0);
-        vec2 a = texture2D(uRippleTexture, xz * 0.22 + uTime * vec2(0.014, 0.009)).rg * 2.0 - 1.0;
-        vec2 b = texture2D(uRippleTexture, xz.yx * 0.31 - uTime * vec2(0.008, 0.011)).rg * 2.0 - 1.0;
-        return (a + b * 0.5) * uRippleStrength;
-      }
-    `,
-  });
+  applyWaterShader(mat, () => waterUniformBlock, { shore: SHORE_FROM_FIELD, normal: WATER_RIPPLE });
   return mat;
 }
 
@@ -345,14 +347,12 @@ export function setShoreField(f: {
  * Apply the bench's water settings and advance the clock. Called once per frame
  * from GridWorld, and from the bench.
  *
- * `sunWorld` is the scene's key-light direction. It stays in WORLD space now —
- * the old shader converted it to view space on the CPU to save a per-fragment
- * reconstruction, but `cameraPosition` is a built-in uniform, so the fragment
- * shader can build the view vector itself and the conversion bought nothing.
- * With the camera, the glint path is folded into view (`glintDirection`, row
- * 237); `sunColor` tints it (a warm white by day, gold at golden hour).
+ * `sunWorld` is the scene's key-light direction (sun by day, moon by night), in
+ * WORLD space and used as is: the water mirrors the real light, and each
+ * viewer's own camera decides what reaches their eye (row 238). `sunColor`
+ * tints it (a warm white by day, gold at golden hour).
  */
-export function advanceWater(elapsed: number, cfg: WaterParams, sunWorld?: THREE.Vector3, camera?: THREE.Camera, sunColor?: THREE.Color): void {
+export function advanceWater(elapsed: number, cfg: WaterParams, sunWorld?: THREE.Vector3, sunColor?: THREE.Color): void {
   waterUniformBlock.uRippleStrength.value = cfg.rippleStrength ?? 0;
   if (cfg.rippleStrength && !waterUniformBlock.uRippleTexture.value) {
     waterUniformBlock.uRippleTexture.value = loadTexture(new THREE.TextureLoader(), "mSeaWater_Nrm.png", TEX_DIR, THREE.NoColorSpace);
@@ -360,11 +360,9 @@ export function advanceWater(elapsed: number, cfg: WaterParams, sunWorld?: THREE
   }
   waterUniformBlock.uTime.value = elapsed;
   writeWaterUniforms(waterUniformBlock, cfg);
-  if (sunWorld && camera) glintDirection(sunWorld, camera.getWorldDirection(_forward), waterUniformBlock.uSunDir.value);
-  else if (sunWorld) waterUniformBlock.uSunDir.value.copy(sunWorld).normalize();
+  if (sunWorld) waterUniformBlock.uSunDir.value.copy(sunWorld).normalize();
   if (sunColor) waterUniformBlock.uSunColor.value.copy(sunColor).lerp(WHITE, 0.2);
 }
-const _forward = new THREE.Vector3();
 const WHITE = new THREE.Color(1, 1, 1);
 
 /** The live water uniforms, for layers that ride the same surface and sun (the glint sprites). */

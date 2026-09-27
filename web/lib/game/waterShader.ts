@@ -75,12 +75,14 @@ export interface WaterParams {
   shoreAlpha: number;
   opacity: number;
   fresnel: number;
+  /** Peak of the glare sheet (the sun off the ripples too small to draw). Past 1 clips to white. */
   glare: number;
-  glareWidth: number;
+  /** RMS slope (tan) of those ripples about the drawn surface (Cox-Munk): the sheet's width and the sparkles' spread. */
+  roughness: number;
+  /** Brightness of one sparkle: a facet mirroring the sun straight into the eye. */
   sunGlint: number;
-  sunSharp: number;
-  sparkle: number;
-  sparkleSpeed: number;
+  /** The sun's apparent radius, degrees: a facet flashes while the sun's disc sits in its mirror direction. */
+  sunSize: number;
   waveHeight: number;
   waveScale: number;
   waveSpeed: number;
@@ -128,11 +130,9 @@ export function waterUniforms(p: WaterParams) {
     uOpacity: { value: p.opacity },
     uFresnel: { value: p.fresnel },
     uGlare: { value: p.glare },
-    uGlareWidth: { value: p.glareWidth },
+    uRoughness: { value: p.roughness },
     uSunGlint: { value: p.sunGlint },
-    uSunSharp: { value: p.sunSharp },
-    uSparkle: { value: p.sparkle },
-    uSparkleSpeed: { value: p.sparkleSpeed },
+    uSunSize: { value: p.sunSize },
     uWaveHeight: { value: p.waveHeight },
     uWaveScale: { value: p.waveScale },
     uWaveSpeed: { value: p.waveSpeed },
@@ -166,38 +166,94 @@ export function writeWaterUniforms(u: WaterUniforms, p: WaterParams): void {
   u.uOpacity.value = p.opacity;
   u.uFresnel.value = p.fresnel;
   u.uGlare.value = p.glare;
-  u.uGlareWidth.value = p.glareWidth;
+  u.uRoughness.value = p.roughness;
   u.uSunGlint.value = p.sunGlint;
-  u.uSunSharp.value = p.sunSharp;
-  u.uSparkle.value = p.sparkle;
-  u.uSparkleSpeed.value = p.sparkleSpeed;
+  u.uSunSize.value = p.sunSize;
   u.uWaveHeight.value = p.waveHeight;
   u.uWaveScale.value = p.waveScale;
   u.uWaveSpeed.value = p.waveSpeed;
 }
 
-/** Share of the sun's angle off the view axis the glint path keeps (glintDirection). */
-export const GLINT_FOLD = 0.45;
+/**
+ * ── SUN ON THE WATER IS OPTICS (row 238, specs/look-development.md §7.4) ──
+ * Water shows the sun only where a bit of surface is tilted to mirror the real
+ * key light into this eye: its normal must lie along the half vector between
+ * the sun and the eye. With the sun behind the follow camera that needs 29°+
+ * of tilt; the drawn surface (swell + ripple texture) gives about 9° and the
+ * ripples below it at most 1.5 RMS more, so nothing lights. With the sun
+ * ahead the light sits around the mirror point and slides as the eye moves.
+ *
+ *  - `glareLobe`: the ripples too small to draw, averaged. Their slopes spread
+ *    about the drawn normal by `roughness` (a Beckmann lobe), so the sheet is
+ *    the share of them aimed at the eye. Calm water is tight; wind is wide.
+ *  - `facetGlint`: one of those ripples, a sparkle sprite with its own normal.
+ *    It lights while the sun's disc sits in its mirror direction (`sunSize`,
+ *    the disc's radius; the normal's tolerance is half that).
+ *
+ * MIRRORED IN GLSL (`WATER_OPTICS` below). Change both together.
+ */
+export type Vec3 = readonly [number, number, number];
+const unit = ([x, y, z]: Vec3): Vec3 => { const l = Math.hypot(x, y, z) || 1; return [x / l, y / l, z / l]; };
+const dot = (a: Vec3, b: Vec3) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+
+/** The normal a facet at `point` needs to mirror the sun (a direction) into `eye` (a position). */
+export function halfVector(sun: Vec3, eye: Vec3, point: Vec3): Vec3 {
+  const s = unit(sun), v = unit([eye[0] - point[0], eye[1] - point[1], eye[2] - point[2]]);
+  return unit([s[0] + v[0], s[1] + v[1], s[2] + v[2]]);
+}
+
+/** Glare sheet, 0-1 at its peak: the share of sub-pixel facets about `normal` that mirror the sun into the eye. */
+export function glareLobe(sun: Vec3, eye: Vec3, point: Vec3, normal: Vec3, roughness: number): number {
+  const c = Math.max(dot(unit(normal), halfVector(sun, eye, point)), 1e-3), m = Math.max(roughness, 1e-3);
+  return sun[1] >= 0 ? Math.exp(-(1 - c * c) / (c * c) / (m * m)) : 0;
+}
+
+/** One facet's flash, 0-1: 1 when it mirrors the sun's centre into the eye, 0 once the disc leaves its mirror direction. */
+export function facetGlint(sun: Vec3, eye: Vec3, point: Vec3, normal: Vec3, sunSize: number): number {
+  const edge = Math.cos(sunSize * Math.PI / 360);
+  const t = Math.min(Math.max((dot(unit(normal), halfVector(sun, eye, point)) - edge) / (1 - edge), 0), 1);
+  return t * t * (3 - 2 * t);
+}
 
 /**
- * The direction the water's glint path reflects (row 237, specs/look-development.md §6).
- *
- * A real glint path lies on the water between the viewer and the sun. The
- * follow camera looks away from the sun (§5.2 puts the sun 61° off the
- * camera's back axis so shadows fall into view), so a physically placed path
- * would always be behind the viewer. This keeps the sun's elevation and its
- * side of the screen, folds it into the view's front half and pulls it toward
- * the view axis by `GLINT_FOLD`: high on the left by day, low over the sea on
- * the right at golden hour, a moon lane at night. Unit length in, unit out.
+ * The fixed tilt of the unresolved ripple at world (x, z), in units of
+ * `roughness`: a property of that bit of water, seeded by where it is, so
+ * every client agrees. Beckmann-distributed like `glareLobe`'s facets, so the
+ * sparkles fall where the sheet is, and cut at 1.5 RMS: they stay inside its
+ * bright part and none can reach a sun behind the camera, even in wind.
  */
-export function glintDirection(sun: THREE.Vector3, forward: THREE.Vector3, out = new THREE.Vector3()): THREE.Vector3 {
-  const s = out.copy(sun).normalize();
-  const fl = Math.hypot(forward.x, forward.z) || 1, fx = forward.x / fl, fz = forward.z / fl;
-  const along = s.x * fx + s.z * fz, side = s.z * fx - s.x * fz, h = Math.hypot(along, side);
-  if (h < 1e-6) return s;
-  const angle = Math.atan2(side, Math.abs(along)) * GLINT_FOLD, a = Math.cos(angle) * h, b = Math.sin(angle) * h;
-  return out.set(a * fx - b * fz, s.y, a * fz + b * fx);
+export function facetTilt(x: number, z: number): [number, number] {
+  let h = Math.imul(Math.round(x * 1024), 0x9e3779b1) ^ Math.imul(Math.round(z * 1024), 0x85ebca77);
+  const next = () => {
+    h = Math.imul(h ^ (h >>> 16), 0x21f0aaad);
+    h = Math.imul(h ^ (h >>> 15), 0x735a2d97);
+    return ((h ^ (h >>> 15)) >>> 0) / 4294967296;
+  };
+  const r = Math.sqrt(-Math.log(1 - next() * (1 - Math.exp(-2.25)))), a = next() * 2 * Math.PI;
+  return [r * Math.cos(a), r * Math.sin(a)];
 }
+
+/** Mirrors halfVector / glareLobe / facetGlint above. For the water fragment and the sparkle sprites. */
+export const WATER_OPTICS = /* glsl */ `
+vec3 halfVector(vec3 sun, vec3 eye, vec3 p) { return normalize(normalize(sun) + normalize(eye - p)); }
+float glareLobe(vec3 sun, vec3 eye, vec3 p, vec3 n, float roughness) {
+  float c = max(dot(normalize(n), halfVector(sun, eye, p)), 1e-3), m = max(roughness, 1e-3);
+  return step(0.0, sun.y) * exp(-(1.0 - c * c) / (c * c) / (m * m));
+}
+float facetGlint(vec3 sun, vec3 eye, vec3 p, vec3 n, float sunSize) {
+  return smoothstep(cos(radians(sunSize) * 0.5), 1.0, dot(normalize(n), halfVector(sun, eye, p)));
+}
+`;
+
+/**
+ * A time phase wrapped to one turn before it meets sin(). uTime is world
+ * seconds (up to 86 400, lib/game/worldClock.ts), so t * speed reaches 10^5
+ * rad, where GPU fast-math sin loses its accuracy; the wrap keeps it in range
+ * and is seamless, because sin repeats.
+ */
+const WATER_PHASE = /* glsl */ `
+float waterPhase(float x) { return mod(x, 6.2831853); }
+`;
 
 const UNIFORM_DECLS = /* glsl */ `
 uniform float uTime;
@@ -226,11 +282,7 @@ uniform float uShoreAlpha;
 uniform float uOpacity;
 uniform float uFresnel;
 uniform float uGlare;
-uniform float uGlareWidth;
-uniform float uSunGlint;
-uniform float uSunSharp;
-uniform float uSparkle;
-uniform float uSparkleSpeed;
+uniform float uRoughness;
 `;
 
 /**
@@ -243,7 +295,7 @@ uniform float uSparkleSpeed;
  * go.
  */
 const WATER_FUNCTIONS = /* glsl */ `
-// Mirrors bedDepth() in waterShader.ts. Change both together.
+${WATER_PHASE}// Mirrors bedDepth() in waterShader.ts. Change both together.
 float bedDepthAt(float d) {
   return uBedDepth * (1.0 - exp(-max(d, 0.0) / max(uBedSlope, 0.01)));
 }
@@ -262,11 +314,11 @@ vec3 waterRamp(float t) {
 // the plaid that two crossed waves give.
 float blobField(vec2 p, float t) {
   vec2 q = p / max(uBlobScale, 0.01);
-  float a = sin(q.x * 1.00 + t * 0.31) * sin(q.y * 0.87 - t * 0.23);
-  float b = sin((q.x + q.y) * 0.61 - t * 0.19) * sin((q.x - q.y) * 0.53 + t * 0.27);
+  float a = sin(q.x * 1.00 + waterPhase(t * 0.31)) * sin(q.y * 0.87 - waterPhase(t * 0.23));
+  float b = sin((q.x + q.y) * 0.61 - waterPhase(t * 0.19)) * sin((q.x - q.y) * 0.53 + waterPhase(t * 0.27));
   return a * 0.6 + b * 0.4;
 }
-`;
+${WATER_OPTICS}`;
 
 /**
  * Swell. Two waves at different angles and incommensurate frequencies, so the
@@ -284,12 +336,13 @@ uniform float uTime;
 uniform float uWaveHeight;
 uniform float uWaveScale;
 uniform float uWaveSpeed;
+${WATER_PHASE}
 float waterSwell(vec2 xz, out vec2 grad) {
   float k = 6.2831853 / max(uWaveScale, 0.001);
   vec2 d1 = normalize(vec2(1.0, 0.35));
   vec2 d2 = normalize(vec2(-0.42, 1.0));
-  float a1 = dot(xz, d1) * k + uTime * uWaveSpeed;
-  float a2 = dot(xz, d2) * k * 1.63 + uTime * uWaveSpeed * 1.31;
+  float a1 = dot(xz, d1) * k + waterPhase(uTime * uWaveSpeed);
+  float a2 = dot(xz, d2) * k * 1.63 + waterPhase(uTime * uWaveSpeed * 1.31);
   grad = d1 * (cos(a1) * 0.62 * k * uWaveHeight)
        + d2 * (cos(a2) * 0.38 * k * 1.63 * uWaveHeight);
   return (sin(a1) * 0.62 + sin(a2) * 0.38) * uWaveHeight;
@@ -320,7 +373,7 @@ const FRAGMENT_BODY = /* glsl */ `
   // cells apart are at different points in the same swash. This is the sea's
   // original lapping foam, restored as a parameter and now shared with the
   // river, where it wants to be near zero.
-  float lap = sin(vWaterWorld.x * 0.9 + vWaterWorld.z * 0.7 + uTime * uFoamWaveSpeed) * uFoamWave;
+  float lap = sin(vWaterWorld.x * 0.9 + vWaterWorld.z * 0.7 + waterPhase(uTime * uFoamWaveSpeed)) * uFoamWave;
 
   float edge = max(shore - lap, 0.0);
   float depth = bedDepthAt(edge);
@@ -341,28 +394,16 @@ const FRAGMENT_BODY = /* glsl */ `
 
   col = waterExtra(col, t, vWaterWorld.xz);
 
-  // Surface normal from the swell gradient, then the sun off it in world
+  // Surface normal from the swell gradient and the ripple texture, in world
   // space. cameraPosition is a built-in, so no view-space bookkeeping.
   vec2 detailNormal = waterDetailNormal(vWaterWorld.xz);
   vec3 N = normalize(vec3(-vWaterGrad.x + detailNormal.x, 1.0, -vWaterGrad.y + detailNormal.y));
   vec3 V = normalize(cameraPosition - vWaterWorld);
-  vec3 S = normalize(uSunDir);
 
-  // Two lobes plus a sparkle field. One tight lobe reads as a dull dot, which
-  // is what it is; the reference has a BROAD blown-out sheet with sharp points
-  // flickering inside it. Broad is deliberately pushed past 1.0 so it clips to
-  // white and reads as overexposure. The sparkle term is three sines beating
-  // against each other over world position and time: their product is near
-  // zero most of the time and occasionally spikes, so flares come and go
-  // instead of sitting there.
-  float sd = max(dot(reflect(-V, N), S), 0.0);
-  float broad = pow(sd, max(uGlareWidth, 0.5));
-  float tight = pow(sd, max(uSunSharp, 1.0));
-  float st = uTime * uSparkleSpeed;
-  float n = sin(vWaterWorld.x * 2.7 + st * 1.7)
-          * sin(vWaterWorld.z * 2.3 - st * 1.3)
-          * sin((vWaterWorld.x + vWaterWorld.z) * 1.7 + st * 2.3);
-  float spark = mix(1.0, smoothstep(0.15, 0.85, n * 0.5 + 0.5), uSparkle);
+  // The real sun off the ripples too small to draw (glareLobe, see WATER_OPTICS
+  // in TS): a sheet around the mirror point, pushed past 1.0 so it clips to
+  // white. The sharp points inside it are the sparkle sprites (GridOcean).
+  float glare = glareLobe(uSunDir, cameraPosition, vWaterWorld, N, uRoughness);
 
   float rim = pow(1.0 - clamp(dot(N, V), 0.0, 1.0), 3.0);
   col += uRingColor * rim * uFresnel;
@@ -378,7 +419,7 @@ const FRAGMENT_BODY = /* glsl */ `
   foam *= step(0.0, shore); // nothing under the land itself
   foam = clamp(foam * uFoamStrength, 0.0, 1.0);
 
-  col += uSunColor * (broad * uGlare + tight * uSunGlint * spark) * (1.0 - foam);
+  col += uSunColor * glare * uGlare * (1.0 - foam);
   col = mix(col, uFoamColor, foam);
 
   diffuseColor.rgb = col;

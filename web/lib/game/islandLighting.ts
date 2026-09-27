@@ -20,9 +20,10 @@ const water = {
   deepColor: 0x398d9f, midColor: 0x78bdbe, shallowColor: 0xc4ddd0, bedColor: 0xf0e2c6,
   foamWidth: 0.2, foamStrength: 0.42, foamSoft: 0.17, foamWave: 0.07, foamWaveSpeed: 0.85,
   blobScale: 1.35, blobDarken: 0.96, blobSpeed: 0.16, ringWidth: 0.12, ringStrength: 0.035,
-  // Glint path (row 237): a broad sheet toward the folded sun, sharp flickering flares inside it;
-  // sunGlint also drives the crest sparkle sprites (GridOcean).
-  glare: 0.2, glareWidth: 40, sunGlint: 2, sunSharp: 900, sparkle: 0.8, rippleStrength: 0.12,
+  // The real sun on the water (row 238, look spec §7.4): a glare sheet from the ripples too small to
+  // draw (roughness = their RMS slope on a calm day, Cox-Munk) and the sparkle sprites (GridOcean), each
+  // a facet that flashes while the sun's disc (sunSize = its radius, degrees) sits in its mirror direction.
+  glare: 0.2, roughness: 0.11, sunGlint: 2, sunSize: 5, rippleStrength: 0.12,
 };
 export type IslandWater = typeof water;
 
@@ -91,13 +92,19 @@ export const ENV_KEY: Record<IslandPhase, "dawn" | "day" | "dusk" | "night"> = {
  * lower key:fill), softer and lighter shadows, thicker haze. Sky colours keep
  * part of their saturation so a wet day is soft, never grey-flat. Colours
  * are desaturated in place so night stays night.
+ *
+ * The water mirrors the sun's disc (look spec §7.4): gone behind rain, snow
+ * and fog cloud (`glare` 0 takes the sheet and the sparkles), and wind
+ * roughens the ripples (Cox-Munk: RMS slope about 1.6× a calm day's at the
+ * 30 km/h windy line), spreading the same light wider, so the sheet's peak
+ * falls by the square.
  */
-const WEATHER_MOD: Record<IslandWeather, { desat: number; dim: number; sun: number; fill: number; fog: number; shadowRadius: number; shadowIntensity: number; grade: number; glare: number }> = {
-  clear: { desat: 0, dim: 1, sun: 1, fill: 1, fog: 1, shadowRadius: 1, shadowIntensity: 1, grade: 0, glare: 1 },
-  rain: { desat: 0.45, dim: 0.9, sun: 0.45, fill: 1.3, fog: 0.75, shadowRadius: 3, shadowIntensity: 0.5, grade: 0.08, glare: 0.4 },
-  snow: { desat: 0.45, dim: 1.08, sun: 0.6, fill: 1.3, fog: 0.7, shadowRadius: 2.5, shadowIntensity: 0.65, grade: 0.05, glare: 0.6 },
-  fog: { desat: 0.45, dim: 1.02, sun: 0.6, fill: 1.25, fog: 0.4, shadowRadius: 2.5, shadowIntensity: 0.6, grade: 0.06, glare: 0.5 },
-  wind: { desat: 0.05, dim: 1, sun: 0.95, fill: 1, fog: 0.95, shadowRadius: 1, shadowIntensity: 1, grade: 0, glare: 1.1 },
+const WEATHER_MOD: Record<IslandWeather, { desat: number; dim: number; sun: number; fill: number; fog: number; shadowRadius: number; shadowIntensity: number; grade: number; glare: number; roughness: number }> = {
+  clear: { desat: 0, dim: 1, sun: 1, fill: 1, fog: 1, shadowRadius: 1, shadowIntensity: 1, grade: 0, glare: 1, roughness: 1 },
+  rain: { desat: 0.45, dim: 0.9, sun: 0.45, fill: 1.3, fog: 0.75, shadowRadius: 3, shadowIntensity: 0.5, grade: 0.08, glare: 0, roughness: 1 },
+  snow: { desat: 0.45, dim: 1.08, sun: 0.6, fill: 1.3, fog: 0.7, shadowRadius: 2.5, shadowIntensity: 0.65, grade: 0.05, glare: 0, roughness: 1 },
+  fog: { desat: 0.45, dim: 1.02, sun: 0.6, fill: 1.25, fog: 0.4, shadowRadius: 2.5, shadowIntensity: 0.6, grade: 0.06, glare: 0, roughness: 1 },
+  wind: { desat: 0.05, dim: 1, sun: 0.95, fill: 1, fog: 0.95, shadowRadius: 1, shadowIntensity: 1, grade: 0, glare: 1, roughness: 1.6 },
 };
 
 function soften(hex: string, desat: number, dim: number): string {
@@ -124,7 +131,7 @@ export function withWeather(light: IslandLight, weather: IslandWeather): IslandL
     fogFar: light.fogFar * Math.max(m.fog, 0.55),
     environment: { ...light.environment, skyBottom: sky, intensity: light.environment.intensity * m.fill },
     grade: { ...light.grade, desat: light.grade.desat + m.grade },
-    water: { ...light.water, glare: light.water.glare * m.glare, sunGlint: light.water.sunGlint * m.glare },
+    water: { ...light.water, glare: light.water.glare * m.glare / m.roughness ** 2, sunGlint: light.water.sunGlint * m.glare, roughness: light.water.roughness * m.roughness },
     shadow: { ...light.shadow, radius: light.shadow.radius * m.shadowRadius, intensity: light.shadow.intensity * m.shadowIntensity },
   };
 }
