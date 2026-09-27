@@ -88,3 +88,34 @@ David picked "real sun, sparkle afternoons" (2026-09-27). Measured sun over Lond
 4. **Night:** the moon stays today's fixed key light (no moon lane while it sits behind the camera). A real moon is a later option.
 5. **Previews:** `/lab/island?time=<phase>` keeps working with a representative time per phase; add `?at=HH:MM` (Toronto time, optional `&date=YYYY-MM-DD`) to force a clock time for review. `/lab/look` keeps its manual sliders.
 6. **Evidence:** village frames at 09:00, 11:45, 13:00, 15:00, 17:00 and 18:30 on Sep 27, plus 17:00 on Jun 21 and Dec 21; before/after of the 11:45 frame against the approved look (should match closely); FPS unchanged.
+
+## 9. Shadows: one logic for every asset (row 240)
+David (2026-09-27): "I need you to redo the shadow logic of all the assets, because they are all over the place and inconsistent, look at the root cause, is it because the assets were using from the acnh folder inconsistent, because the orientation for the assets are sometimes upside down or not right side up."
+
+### 9.1 Root cause (measured 2026-09-27)
+- **Not orientation.** A census of all 550 GLBs (`specs/evidence/shadows/census-glb.mjs`, `census-normals.mjs`): every island asset is Y-up and rests on y≈0 (the critters' Z-up exports carry a correcting root rotation), none is mirrored, triangle winding agrees with the normals, normals point outward (canopies 90–98%, rocks 100%), and no placement in code flips anything.
+- **The ACNH import is part of it.** ACNH's oak and cherry trees (`PltTreeOak3`, `PltTreeOak4`, `PltTreeOak4Sakura`, and their snow variants) ship a dedicated low-poly shadow caster: `mShadow` (a closed hull the size of the tree, 659 vertices) and `mShadowShake` (the canopy caster, with its sway pivot in the vertex colour). The visible leaf cards are not meant to cast. `scripts/extract-acnh-kit.mjs` drops both (`EFFECT_MATERIALS`), so in our game the double-sided leaf cards cast and self-shadow into dark blotches (the canopies near the camera), patched with a receive-off exception for two species only. ACNH does **not** bake shadows into every asset: of 11,234 source models only interior room shells, those oaks and two snow bushes carry `mShadow`; props and buildings are closed solids that cast with their own mesh. CLAUDE.md rule 7 and the `organize-dump.mjs` note said otherwise and were wrong.
+- **Three render systems that disagree:**
+  1. A directional shadow map on High, cached (`gl.shadowMap.autoUpdate = false`) and refreshed only on phase, sun, quality or loading changes (`StaticShadows`, `DefaultIslandWorld.tsx`), so anything that changes without a load keeps a stale shadow.
+  2. Centred blob circles: always under bushes and flowers (opacity 0.16) on top of their real shadows, and under trees, props and landmarks on Light (0.45), pointing nowhere.
+  3. Characters (player, residents, NPCs) never cast (`character/Character.tsx`) and only get a centred blob, next to props whose shadows fall away from the sun.
+  On top of that, per-call-site opt-outs (`castShadow={false}` on fences, small rocks and plants, grass tufts, several ruins, home, study and workshop props), and every GLB material forced `DoubleSide` in `prepareModel`, so all thin geometry writes both faces into the shadow map.
+
+### 9.2 The logic
+One classification decides every asset's shadow role, in one place (like `lookClassFor`), not per call site:
+
+| Class | Sun shadow (High) | Contact shadow (both tiers) | Receives |
+|---|---|---|---|
+| Solid: buildings, props, furniture, rocks, fences, bridges, benches, lamps, characters, enemies | casts | yes, sized to its footprint | yes |
+| Foliage: tree canopies, bushes | casts through a clean caster: ACNH's `mShadow`/`mShadowShake` where the source has one, otherwise a closed low-poly hull or front faces only; leaf cards never cast | yes | canopy cards do not (no self-blotching); trunks do |
+| Small: flowers, shells, pebbles, grass tufts, pickups | no | small | yes |
+| None: water, effects, glass shells, sky, UI | no | no | as today |
+
+- **Sun shadows follow the real sun (row 239)** and look the same on every object: one directional shadow map on High, fitted to the island for the current sun direction; the static world stays cached and refreshes whenever a static caster is added, removed or moved (a change counter, not only loads) and when the sun moves (the sun-path cadence). Characters and other moving things cast real sun shadows that move with them every frame without re-rendering the whole static map each frame (measure the options three r182 offers, e.g. per-light `shadow.autoUpdate`, layers, a second caster pass; pick the cheapest correct one and record its FPS cost).
+- **Contact shadows** give every grounded object the soft darkening directly under it, on both tiers (the grounded ACNH look). One component and one look (the phase's shadow tint) replaces every current `BlobShadows` use (plants, Light-tier solids, character blobs). On High they sit lighter under the sun shadow so the two never double up.
+- **Light tier:** contact shadows plus a cheap sun-directed shadow for tall casters (a soft shape offset and stretched along the sun direction by the object's height), so both tiers agree on direction. No shadow map.
+- The approved look stays the source: shadow tint, softness and opacity per phase from `lookPreset`.
+- Scope: member island, home island, ruins, applicant island (shared code). Interiors wait (row 237) but pick up the classification wherever they use `prepareModel`.
+
+### 9.3 Evidence
+Before: `specs/evidence/shadows/before/` (plaza, shore, west and east trees, north, after a walk), captured with `specs/evidence/shadows/shots.mjs` from the demo server. After: the same cameras, plus a close-up of an oak and a cherry canopy, a fence run, the player beside a lamp post at 11:45 and 17:00 (both shadows pointing the same way), the Light tier, and FPS per tier.

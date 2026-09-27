@@ -120,7 +120,7 @@ Rules that follow, all enforced by ACNH and none of them optional if the art is 
    tile lengths; inclines are 2x4.
 6. **Seasons are a tint on greyscale albedo** (`_AlbGry`), with explicit `Snow`
    variants only where the pattern changes, not the colour.
-7. **Shadows are baked into the assets** as `mShadow` meshes. No realtime shadow map.
+7. ~~Shadows are baked into the assets as `mShadow` meshes. No realtime shadow map.~~ **Wrong (measured 2026-09-27, row 240):** only interior room shells, the oak/cherry trees and two snow bushes carry `mShadow`, and on the trees it is a low-poly shadow *caster* (the leaf cards are not meant to cast), not a baked ground shadow. Shadow logic: `specs/look-development.md` section 9.
 8. **Animation is a separate model** (`*Anim` variants), swapped in, not always paid for.
 
 Anything that needs a flatten zone, a blend radius, a slab disc, a bank ribbon or a
