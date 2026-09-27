@@ -92,9 +92,9 @@ export const ENV_KEY: Record<IslandPhase, "dawn" | "day" | "dusk" | "night"> = {
  */
 const WEATHER_MOD: Record<IslandWeather, { desat: number; dim: number; sun: number; fill: number; fog: number; shadowRadius: number; shadowIntensity: number; grade: number; glare: number }> = {
   clear: { desat: 0, dim: 1, sun: 1, fill: 1, fog: 1, shadowRadius: 1, shadowIntensity: 1, grade: 0, glare: 1 },
-  rain: { desat: 0.35, dim: 0.92, sun: 0.5, fill: 1.3, fog: 0.75, shadowRadius: 3, shadowIntensity: 0.55, grade: 0.03, glare: 0.4 },
-  snow: { desat: 0.45, dim: 1.08, sun: 0.6, fill: 1.3, fog: 0.7, shadowRadius: 2.5, shadowIntensity: 0.65, grade: 0.03, glare: 0.6 },
-  fog: { desat: 0.45, dim: 1.02, sun: 0.6, fill: 1.25, fog: 0.4, shadowRadius: 2.5, shadowIntensity: 0.6, grade: 0.04, glare: 0.5 },
+  rain: { desat: 0.45, dim: 0.9, sun: 0.45, fill: 1.3, fog: 0.75, shadowRadius: 3, shadowIntensity: 0.5, grade: 0.08, glare: 0.4 },
+  snow: { desat: 0.45, dim: 1.08, sun: 0.6, fill: 1.3, fog: 0.7, shadowRadius: 2.5, shadowIntensity: 0.65, grade: 0.05, glare: 0.6 },
+  fog: { desat: 0.45, dim: 1.02, sun: 0.6, fill: 1.25, fog: 0.4, shadowRadius: 2.5, shadowIntensity: 0.6, grade: 0.06, glare: 0.5 },
   wind: { desat: 0.05, dim: 1, sun: 0.95, fill: 1, fog: 0.95, shadowRadius: 1, shadowIntensity: 1, grade: 0, glare: 1.1 },
 };
 

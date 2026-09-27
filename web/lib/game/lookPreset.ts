@@ -201,7 +201,7 @@ const DAY: PhaseLook = {
 export const PHASE_LOOK: Record<IslandPhase, PhaseLook> = {
   // Cool-pink: low peach sun from the east side, lilac fill, periwinkle sky over a pink horizon, long soft shadows.
   dawn: {
-    elevation: 21, mirror: false, sun: [1, 0.69, 0.71], sunIntensity: 0.62,
+    elevation: 21, mirror: false, sun: [1, 0.69, 0.71], sunIntensity: 0.72,
     fill: [1.46, 0.81, 0.93], bounce: [0.85, 0.85, 0.95], fillIntensity: 1.3,
     skyTop: [4.01, 1.07, 0.96], skyHorizon: [1.7, 0.82, 0.65], fog: 0.85,
     shadowRadius: 2.5, shadowIntensity: 0.85, rim: 0.15, exposure: 1.08, warmth: 0.05, lift: 0.05, desat: 0,
@@ -209,7 +209,7 @@ export const PHASE_LOOK: Record<IslandPhase, PhaseLook> = {
   day: DAY,
   // Golden hour: warm low sun from the west (screen-right), cooler violet fill, a warm rim, long shadows.
   evening: {
-    elevation: 22, mirror: true, sun: [1, 0.56, 0.28], sunIntensity: 0.85,
+    elevation: 22, mirror: true, sun: [1, 0.56, 0.28], sunIntensity: 1,
     fill: [1.18, 0.77, 0.87], bounce: [1, 0.85, 0.75], fillIntensity: 1.15,
     skyTop: [2.32, 0.81, 0.92], skyHorizon: [1.77, 0.77, 0.37], fog: 0.85,
     shadowRadius: 1.6, shadowIntensity: 0.95, rim: 0.6, exposure: 1.08, warmth: 0.15, lift: 0.05, desat: 0,
