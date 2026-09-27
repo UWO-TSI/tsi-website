@@ -14,7 +14,7 @@ import { CloudShadows, MistBanks, SeasonalParticles } from "./AmbienceFX";
 import { Fireflies } from "./AmbientLife";
 import RainFX from "./RainFX";
 import { applyEnvironment, disposeEnvironment } from "@/lib/game/envLight";
-import { DEFAULT_SHADOW, ENV_KEY, fireflyNight, type IslandLight } from "@/lib/game/islandLighting";
+import { ENV_KEY, fireflyNight, type IslandLight } from "@/lib/game/islandLighting";
 import { RIM_POSITION } from "@/lib/game/lookPreset";
 import type { SeasonLook } from "@/lib/game/seasonalLook";
 import type { IslandWeather } from "@/lib/game/islandWeather";
@@ -24,7 +24,7 @@ import { TERRAIN_SNOW } from "./grid/GridTerrain";
 import { WORLD_BEND } from "@/lib/game/curvedWorld";
 
 /** Screen-space vertical sky gradient (a plain 2D background texture): `top` at the top, `horizon` from mid-screen down. */
-function SkyGradient({ top, horizon }: { top: string; horizon: string }) {
+export function SkyGradient({ top, horizon }: { top: string; horizon: string }) {
   const texture = useMemo(() => {
     const canvas = document.createElement("canvas");
     canvas.width = 1; canvas.height = 64;
@@ -62,11 +62,11 @@ export function IslandAtmosphere({ phase, light, look, weather, liteMode, castSh
     applyEnvironment(gl, scene, ENV_KEY[phase], light.environment);
     return () => disposeEnvironment(scene);
   }, [gl, scene, phase, light]);
-  const shadow = light.shadow ?? DEFAULT_SHADOW;
+  const { shadow } = light;
   const puddleBlobs = useMemo(() => puddles.map(([x, z], i) => ({ x, z, y: ground(x, z) + 0.01, rx: 0.5 + (i % 3) * 0.18, rz: 0.32 + (i % 2) * 0.12 })), [puddles, ground]);
   return <>
     {light.skyTop ? <SkyGradient top={light.skyTop} horizon={light.sky} /> : <color attach="background" args={[light.sky]} />}
-    <fog attach="fog" args={[light.fogColor ?? light.sky, overview ? light.fogNear + 28 : light.fogNear, overview ? light.fogFar + 15 : light.fogFar]} />
+    <fog attach="fog" args={[light.fogColor, overview ? light.fogNear + 28 : light.fogNear, overview ? light.fogFar + 15 : light.fogFar]} />
     <ambientLight intensity={light.ambient} color={light.fill} />
     <hemisphereLight args={[light.fill, light.bounce, light.hemisphere]} />
     <directionalLight position={light.sunPosition} color={light.sun} intensity={light.sunIntensity} castShadow={castShadows}

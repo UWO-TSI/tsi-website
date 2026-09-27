@@ -239,7 +239,7 @@ export default function RuinsScene({ phase, light, look, weather, liteMode, zoom
     <IslandAtmosphere phase={phase} light={light} look={look} weather={weather} liteMode={liteMode} castShadows={false} overview={false}
       player={player} ground={ruins.ground} cloudSize={[40, 66]} shadowExtent={16} fireflyAnchors={[]} />
     <GridWorld map={ruins.map} water={light.water} palette={terrain} windScale={liteMode ? 0 : 1} />
-    <BlobShadows placements={blobs} opacity={0.4} />
+    <BlobShadows placements={blobs} opacity={0.4} color={light.shadow.tint} />
     <Suspense fallback={null}>
       {/* Gate plaza (safe) and the way back. */}
       <GLBProp url={`${F}ruins-arch.glb`} position={[0, ruins.ground(0, -24.4), -24.4]} scale={0.1} castShadow={false} />

@@ -5,7 +5,8 @@
  *
  * The real village (DefaultIslandWorld) with one LookPreset driving its
  * lighting, shadows, materials, grade, post and sky. A = the game as shipped
- * (no preset), B = the edited preset. Every value is on screen; "Copy preset
+ * (its look is the "Current" preset, row 236), B = the edited preset; the
+ * time/weather/season of the world apply to both. Every value is on screen; "Copy preset
  * JSON" is what comes back into the repo. Dev-only via the lab layout.
  *
  * URL: ?preset=<id> or ?look=<json>, &ab=A. Capture scripts drive
@@ -14,7 +15,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
-import LookRig, { materialSummary, type LookMetrics } from "@/components/lab/LookRig";
+import LookRig, { type LookMetrics } from "@/components/lab/LookRig";
+import { materialSummary } from "@/components/game/LookMaterials";
 import { useGraphicsSettings } from "@/lib/game/useGraphicsSettings";
 import {
   CURRENT, LOOK_PRESETS, MATERIAL_CLASSES, keyFill, kelvinHex, parseLook, sunAngles, sunFromAngles, type LookPreset,
@@ -51,6 +53,9 @@ const SECTIONS: { title: string; rows: Row[] }[] = [
     { path: `materials.${c}.value`, label: `${c} · value`, min: 0.5, max: 1.5, step: 0.01 },
     ...(c === "water" ? [] : [{ path: `materials.${c}.roughness`, label: `${c} · roughness ×`, min: 0.1, max: 2, step: 0.01 }]),
     { path: `materials.${c}.gloss`, label: c === "water" ? "water · sun glint +" : `${c} · toy gloss`, min: 0, max: 1, step: 0.01 },
+  ]).concat([
+    { path: "grass.detail", label: "grass · texture contrast kept", min: 0, max: 1, step: 0.01 },
+    { path: "grass.hue", label: "grass · hue variation", min: 0, max: 1.5, step: 0.01 },
   ]) },
   { title: "Post", rows: [
     { path: "grade.exposure", label: "Exposure", min: 0.3, max: 2, step: 0.01 },
@@ -123,7 +128,7 @@ export default function LookLab() {
 
   return (
     <div style={{ position: "relative", width: "100%", height: "calc(100vh - 40px)", overflow: "hidden" }}>
-      <DefaultIslandWorld preset={active}><LookRig preset={active ?? null} onMetrics={onMetrics} /></DefaultIslandWorld>
+      <DefaultIslandWorld preset={active}><LookRig onMetrics={onMetrics} /></DefaultIslandWorld>
       {!open ? <button style={{ ...btn, position: "absolute", left: 8, top: 8, zIndex: 150 }} onClick={() => setOpen(true)}>Look lab</button> : (
         <aside style={box} aria-label="Look lab" data-look-panel>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>

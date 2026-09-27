@@ -360,6 +360,8 @@ export type TerrainPalette = { grass: string; soil: string; sand: string };
  * dump's own `mSandSnow_Alb` snow variant (FldUnit), on grass, paths and beach.
  */
 export const TERRAIN_SNOW = { value: 0 };
+/** Grass detail and hue variation from the look preset (x = texture contrast kept, y = patch hue); LookMaterials writes it. */
+export const TERRAIN_GRASS = { value: new THREE.Vector2(0.38, 0) };
 let snowGrain: THREE.Texture | null = null;
 function getSnowGrain(): THREE.Texture {
   if (!snowGrain) {
@@ -673,15 +675,20 @@ export default function GridTerrain({ map, palette }: { map: IslandMap; palette?
           if (palette && s === Surface.Grass) {
             overlay.onBeforeCompile = (shader, renderer) => {
               shared.onBeforeCompile(shader, renderer);
-              shader.fragmentShader = shader.fragmentShader.replace("#include <map_fragment>", `
+              shader.uniforms.uGrassLook = TERRAIN_GRASS;
+              shader.fragmentShader = "uniform vec2 uGrassLook;\n" + shader.fragmentShader.replace("#include <map_fragment>", `
                 #include <map_fragment>
                 #ifdef USE_MAP
-                  diffuseColor.rgb = diffuse * mix(vec3(0.9, 0.96, 0.88), sampledDiffuseColor.rgb, 0.38);
+                  // Broad (~12 unit) patches lean yellow-green or blue-green.
+                  vec2 grassQ = vMapUv * 0.9;
+                  float grassHue = sin(grassQ.x * 1.3 + sin(grassQ.y * 1.1) * 1.6) * sin(grassQ.y * 1.5 + sin(grassQ.x * 0.9) * 1.8);
+                  vec3 grassShift = mix(vec3(1.0), grassHue > 0.0 ? vec3(1.08, 1.02, 0.82) : vec3(0.9, 1.0, 1.06), abs(grassHue) * uGrassLook.y);
+                  diffuseColor.rgb = diffuse * mix(vec3(0.9, 0.96, 0.88), sampledDiffuseColor.rgb, uGrassLook.x) * grassShift;
                 #endif
               `);
               addSnow(shader, 0.96);
             };
-            overlay.customProgramCacheKey = () => "island-grass-detail-v3";
+            overlay.customProgramCacheKey = () => "island-grass-detail-v4";
           }
           if (palette && s === Surface.Soil) {
             // The supplied soil albedo contains broad bright marks. Keep its

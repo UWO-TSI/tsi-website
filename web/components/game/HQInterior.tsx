@@ -83,7 +83,7 @@ export default function HQInterior({
       <ambientLight color={clubhouse ? "#fff7ed" : "#FFD9A0"} intensity={clubhouse ? light.ambient : 0.34} />
       {clubhouse && <hemisphereLight args={["#dde8ff", "#b79c80", light.hemisphere]} />}
       {!clubhouse && <pointLight color="#FFC985" intensity={32} distance={16} position={[0, 3.8, 0.6]} />}
-      <directionalLight color="#fff4df" intensity={clubhouse ? light.key : 0.18} position={[3, 8, -4]}
+      <directionalLight color={clubhouse ? light.keyColor : "#fff4df"} intensity={clubhouse ? light.key : 0.18} position={[3, 8, -4]}
         castShadow={clubhouse} shadow-mapSize={[2048, 2048]} shadow-radius={3}
         shadow-bias={-0.00015} shadow-normalBias={0.025}
         shadow-camera-left={-12} shadow-camera-right={12} shadow-camera-top={12} shadow-camera-bottom={-12}

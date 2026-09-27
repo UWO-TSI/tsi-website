@@ -128,7 +128,7 @@ export default function HomeInterior({ layout, phase, frozen, player, onNear, de
   return <>
     <ambientLight color="#fff7ed" intensity={light.ambient} />
     <hemisphereLight args={["#dde8ff", "#b79c80", light.hemisphere]} />
-    <directionalLight color="#fff4df" intensity={light.key} position={[3, 8, -4]} />
+    <directionalLight color={light.keyColor} intensity={light.key} position={[3, 8, -4]} />
     {layout.rooms.map((room, i) => <group key={room.id}>
       <RoomShell index={i} count={n} wallpaper={room.wallpaper} flooring={room.flooring} />
       <pointLight color="#ffe3ba" intensity={light.ceiling * 0.55} distance={9} position={[roomLeft(i, n) - RW / 2, 2.8, 0.4]} />
