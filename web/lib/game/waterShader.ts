@@ -109,6 +109,8 @@ export function waterUniforms(p: WaterParams) {
     uFoamColor: { value: new THREE.Color(p.foamColor) },
     uRingColor: { value: new THREE.Color(p.ringColor) },
     uSunDir: { value: new THREE.Vector3(0, 1, 0) },
+    /** The key light's colour, so the glint turns gold at golden hour and blue under the moon. */
+    uSunColor: { value: new THREE.Color(1, 0.98, 0.92) },
     uDepthFalloff: { value: p.depthFalloff },
     uBedDepth: { value: p.bedDepth },
     uBedSlope: { value: p.bedSlope },
@@ -174,6 +176,29 @@ export function writeWaterUniforms(u: WaterUniforms, p: WaterParams): void {
   u.uWaveSpeed.value = p.waveSpeed;
 }
 
+/** Share of the sun's angle off the view axis the glint path keeps (glintDirection). */
+export const GLINT_FOLD = 0.45;
+
+/**
+ * The direction the water's glint path reflects (row 237, specs/look-development.md §6).
+ *
+ * A real glint path lies on the water between the viewer and the sun. The
+ * follow camera looks away from the sun (§5.2 puts the sun 61° off the
+ * camera's back axis so shadows fall into view), so a physically placed path
+ * would always be behind the viewer. This keeps the sun's elevation and its
+ * side of the screen, folds it into the view's front half and pulls it toward
+ * the view axis by `GLINT_FOLD`: high on the left by day, low over the sea on
+ * the right at golden hour, a moon lane at night. Unit length in, unit out.
+ */
+export function glintDirection(sun: THREE.Vector3, forward: THREE.Vector3, out = new THREE.Vector3()): THREE.Vector3 {
+  const s = out.copy(sun).normalize();
+  const fl = Math.hypot(forward.x, forward.z) || 1, fx = forward.x / fl, fz = forward.z / fl;
+  const along = s.x * fx + s.z * fz, side = s.z * fx - s.x * fz, h = Math.hypot(along, side);
+  if (h < 1e-6) return s;
+  const angle = Math.atan2(side, Math.abs(along)) * GLINT_FOLD, a = Math.cos(angle) * h, b = Math.sin(angle) * h;
+  return out.set(a * fx - b * fz, s.y, a * fz + b * fx);
+}
+
 const UNIFORM_DECLS = /* glsl */ `
 uniform float uTime;
 uniform vec3 uDeepColor;
@@ -183,6 +208,7 @@ uniform vec3 uBedColor;
 uniform vec3 uFoamColor;
 uniform vec3 uRingColor;
 uniform vec3 uSunDir;
+uniform vec3 uSunColor;
 uniform float uDepthFalloff;
 uniform float uBedDepth;
 uniform float uBedSlope;
@@ -242,15 +268,6 @@ float blobField(vec2 p, float t) {
 }
 `;
 
-const VERTEX_DECLS = /* glsl */ `
-varying vec3 vWaterWorld;
-varying vec2 vWaterGrad;
-uniform float uTime;
-uniform float uWaveHeight;
-uniform float uWaveScale;
-uniform float uWaveSpeed;
-`;
-
 /**
  * Swell. Two waves at different angles and incommensurate frequencies, so the
  * surface is never uniformly up or down (David: "waves that aren't uniform").
@@ -259,20 +276,36 @@ uniform float uWaveSpeed;
  *
  * The analytic gradient rides out as a varying: without it the swell would move
  * the surface without changing how it catches light, which reads as a sliding
- * texture rather than as water.
+ * texture rather than as water. Exported for the glint sprites
+ * (GridOcean), which ride the same crests.
  */
-const VERTEX_BODY = /* glsl */ `
-{
-  vec3 wp = (modelMatrix * vec4(transformed, 1.0)).xyz;
+export const WATER_SWELL = /* glsl */ `
+uniform float uTime;
+uniform float uWaveHeight;
+uniform float uWaveScale;
+uniform float uWaveSpeed;
+float waterSwell(vec2 xz, out vec2 grad) {
   float k = 6.2831853 / max(uWaveScale, 0.001);
   vec2 d1 = normalize(vec2(1.0, 0.35));
   vec2 d2 = normalize(vec2(-0.42, 1.0));
-  float a1 = dot(wp.xz, d1) * k + uTime * uWaveSpeed;
-  float a2 = dot(wp.xz, d2) * k * 1.63 + uTime * uWaveSpeed * 1.31;
-  float h = (sin(a1) * 0.62 + sin(a2) * 0.38) * uWaveHeight;
+  float a1 = dot(xz, d1) * k + uTime * uWaveSpeed;
+  float a2 = dot(xz, d2) * k * 1.63 + uTime * uWaveSpeed * 1.31;
+  grad = d1 * (cos(a1) * 0.62 * k * uWaveHeight)
+       + d2 * (cos(a2) * 0.38 * k * 1.63 * uWaveHeight);
+  return (sin(a1) * 0.62 + sin(a2) * 0.38) * uWaveHeight;
+}
+`;
+
+const VERTEX_DECLS = /* glsl */ `
+varying vec3 vWaterWorld;
+varying vec2 vWaterGrad;
+${WATER_SWELL}`;
+
+const VERTEX_BODY = /* glsl */ `
+{
+  vec3 wp = (modelMatrix * vec4(transformed, 1.0)).xyz;
+  float h = waterSwell(wp.xz, vWaterGrad);
   transformed.y += h;
-  vWaterGrad = d1 * (cos(a1) * 0.62 * k * uWaveHeight)
-             + d2 * (cos(a2) * 0.38 * k * 1.63 * uWaveHeight);
   vWaterWorld = wp;
   vWaterWorld.y += h;
 }
@@ -345,7 +378,7 @@ const FRAGMENT_BODY = /* glsl */ `
   foam *= step(0.0, shore); // nothing under the land itself
   foam = clamp(foam * uFoamStrength, 0.0, 1.0);
 
-  col += vec3(1.0, 0.98, 0.92) * (broad * uGlare + tight * uSunGlint * spark) * (1.0 - foam);
+  col += uSunColor * (broad * uGlare + tight * uSunGlint * spark) * (1.0 - foam);
   col = mix(col, uFoamColor, foam);
 
   diffuseColor.rgb = col;

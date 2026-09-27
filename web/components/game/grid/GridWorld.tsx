@@ -101,6 +101,7 @@ export default function GridWorld({ map: suppliedMap, water, palette, windScale 
   // sun maths — one source of truth, and it stays correct if that arc changes.
   const sunDir = useRef(new THREE.Vector3(0, 1, 0));
   const lightTarget = useRef(new THREE.Vector3());
+  const sunColor = useRef(new THREE.Color(1, 1, 1));
   useFrame((state) => {
     let key: THREE.DirectionalLight | null = null;
     state.scene.traverse((o) => {
@@ -112,8 +113,9 @@ export default function GridWorld({ map: suppliedMap, water, palette, windScale 
       light.getWorldPosition(sunDir.current);
       light.target.getWorldPosition(lightTarget.current);
       sunDir.current.sub(lightTarget.current);
+      sunColor.current.copy(light.color);
     }
-    advanceWater(state.clock.elapsedTime, water ?? tuneNow().water, sunDir.current);
+    advanceWater(state.clock.elapsedTime, water ?? tuneNow().water, sunDir.current, state.camera, sunColor.current);
   });
 
   return (

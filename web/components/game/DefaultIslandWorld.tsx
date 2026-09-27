@@ -26,7 +26,7 @@ import JournalSheet from "@/components/progression/JournalSheet";
 import { useProgressionWorld, useCeremony, useChapterActions, type WorldGoalId } from "@/lib/game/progressionBridge";
 import confetti from "canvas-confetti";
 import type { InteriorStation } from "./interiorShared";
-import { POND, ISLAND_RADII, createDefaultIsland, DEFAULT_SPAWN, ISLAND_TREES, ISLAND_BUSHES, ISLAND_FLOWERS, ISLAND_PROPS, LANDMARKS, landmark, benchSeat, BENCH_SEAT_TOP, type Landmark } from "@/lib/game/defaultIsland";
+import { POND, ISLAND_RADII, WHARF_DECK, createDefaultIsland, DEFAULT_SPAWN, ISLAND_TREES, ISLAND_BUSHES, ISLAND_FLOWERS, ISLAND_PROPS, LANDMARKS, landmark, benchSeat, BENCH_SEAT_TOP, type Landmark } from "@/lib/game/defaultIsland";
 import { useGraphicsSettings } from "@/lib/game/useGraphicsSettings";
 import { CLUBHOUSE_LIGHTING, ISLAND_TERRAIN, islandLight, withWeather, withSeason, type IslandLight } from "@/lib/game/islandLighting";
 import { paletteBySeason, seasonLook, SEASON_TREES, SEASON_BUSHES, SEASON_FLOWERS, type SeasonLook } from "@/lib/game/seasonalLook";
@@ -181,6 +181,8 @@ function QualityProbe({ onTier }: { onTier: (tier: QualityTier) => void }) {
 const VILLAGE_NODES = villageNodes();
 const VILLAGE_WATER = villageWaterType(ISLAND_RADII, POND);
 const VILLAGE_OVERVIEW = { focus: [0, 0, 0] as [number, number, number], offset: [12, 21, -27] as [number, number, number] };
+/** No water glints under the wharf deck: it sits a few centimetres above the water and they would show through. */
+const UNDER_WHARF = (x: number, z: number) => x > WHARF_DECK.x0 - 0.4 && x < WHARF_DECK.x1 + 0.4 && z > WHARF_DECK.z0 - 0.4 && z < WHARF_DECK.z1 + 0.4;
 const PUDDLE_SPOTS: [number, number][] = [[0.3, -12.5], [-0.4, -7.2], [0.5, -4.4], [-2.8, 3.1], [2.1, 4.2], [-6.5, -9.4], [6.8, -9.6], [9.5, -2.6], [-0.2, -15]];
 
 function Performance({ player, onMetrics }: { player: React.RefObject<THREE.Vector3>; onMetrics: (metrics: Metrics) => void }) {
@@ -252,7 +254,7 @@ function IslandScene({ identity, devAt, exitFrom, peaceful, fishSpot, fishing, c
       <IslandAtmosphere phase={phase} light={light} look={look} weather={weather} liteMode={liteMode} castShadows={castShadows} overview={overview}
         player={player} ground={island.ground} puddles={PUDDLE_SPOTS} cloudSize={[46, 38]} fireflyAnchors={ISLAND_BUSHES} />
       <GridWorld map={island.map} water={light.water} palette={terrain} windScale={liteMode ? 0 : weather === "wind" ? 2.2 : 1} />
-      <GridOcean map={island.map} />
+      <GridOcean map={island.map} lite={liteMode} skip={UNDER_WHARF} />
       <PeacefulLayer map={island.map} nodes={VILLAGE_NODES} moment={peaceful.moment} member={peaceful.member} player={player} ground={island.ground} highTier={!liteMode} active={!fishing} />
       <BeachBottle player={player} ground={island.ground} />
       <BlobShadows placements={plantShadows} opacity={0.16} color={light.shadow.tint} />

@@ -9,6 +9,11 @@
  *   - roughness and toy gloss (lookRoughness)
  *   - shadow tint: the key light's shadow term leaks this colour instead of
  *     going to black
+ *   - glass and metal (row 237, §6): reflections of the environment at the
+ *     sky's own brightness (the IBL's intensity is a fill budget, not the
+ *     sky's), glass at its reflectance and seeing the sky rather than the lawn
+ *     when viewed from above, metal at its metalness with a floor on how dark
+ *     its reflection gets, so painted posts read as metal, not black
  * and writes the grass detail uniform. Water is unlit and takes its class
  * look through `lookToLight`. New materials are caught every frame while
  * assets load, then every half second.
@@ -17,7 +22,7 @@ import { useEffect, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { useProgress } from "@react-three/drei";
 import * as THREE from "three";
-import { LOOK_LIGHTS_CHUNK, lookRoughness, type LookPreset, type MaterialClass } from "@/lib/game/lookPreset";
+import { LOOK_LIGHTS_CHUNK, LOOK_REFLECT_EDITS, lookRoughness, type LookPreset, type MaterialClass } from "@/lib/game/lookPreset";
 import { TERRAIN_GRASS } from "./grid/GridTerrain";
 
 type Lit = Exclude<MaterialClass, "water">;
@@ -25,7 +30,10 @@ type Lit = Exclude<MaterialClass, "water">;
 const CLASS_UNIFORMS: Record<Lit, { value: THREE.Vector2 }> = {
   terrain: { value: new THREE.Vector2(1, 1) }, props: { value: new THREE.Vector2(1, 1) },
   foliage: { value: new THREE.Vector2(1, 1) }, characters: { value: new THREE.Vector2(1, 1) },
+  glass: { value: new THREE.Vector2(1, 1) }, metal: { value: new THREE.Vector2(1, 1) },
 };
+/** Glass reflectance and metal metalness (the classes' gloss). */
+const REFLECT = { glass: { value: 0 }, metal: { value: 0 } };
 const SHADOW_TINT = { value: new THREE.Color(0, 0, 0) };
 /** Patched materials: class and authored roughness. A WeakMap, not userData, which clones would copy. */
 const PATCHED = new WeakMap<THREE.Material, { cls: Lit; roughness: number }>();
@@ -53,8 +61,12 @@ function patch(material: THREE.MeshStandardMaterial, cls: Lit) {
       .replace("#include <color_fragment>", `#include <color_fragment>
         diffuseColor.rgb = max(mix(vec3(dot(diffuseColor.rgb, vec3(0.2126, 0.7152, 0.0722))), diffuseColor.rgb, uLookClass.x), 0.0) * uLookClass.y;`)
       .replace("#include <lights_fragment_begin>", LOOK_LIGHTS_CHUNK);
+    const edits = cls === "glass" || cls === "metal" ? LOOK_REFLECT_EDITS[cls] : null;
+    if (!edits) return;
+    shader.uniforms.uLookReflect = REFLECT[cls as keyof typeof REFLECT];
+    shader.fragmentShader = "uniform float uLookReflect;\n" + edits.reduce((f, [chunk, next]) => f.replace(chunk, next), shader.fragmentShader);
   };
-  material.customProgramCacheKey = () => `${key}|look-v1`;
+  material.customProgramCacheKey = () => `${key}|look-v1${cls === "glass" || cls === "metal" ? `-${cls}` : ""}`;
   PATCHED.set(material, { cls, roughness: material.roughness });
   material.needsUpdate = true;
 }
@@ -62,11 +74,13 @@ function patch(material: THREE.MeshStandardMaterial, cls: Lit) {
 function setLook(preset: LookPreset | null) {
   const look = preset?.materials;
   for (const cls of Object.keys(CLASS_UNIFORMS) as Lit[]) CLASS_UNIFORMS[cls].value.set(look?.[cls].saturation ?? 1, look?.[cls].value ?? 1);
+  REFLECT.glass.value = look?.glass.gloss ?? 0;
+  REFLECT.metal.value = look?.metal.gloss ?? 0;
   SHADOW_TINT.value.set(preset?.shadows.tint ?? "#000000");
   TERRAIN_GRASS.value.set(preset?.grass.detail ?? 0.38, preset?.grass.hue ?? 0);
   for (const m of LIVE) {
     const { cls, roughness } = PATCHED.get(m)!;
-    m.roughness = look ? lookRoughness(roughness, look[cls]) : roughness;
+    m.roughness = look ? lookRoughness(roughness, look[cls], cls) : roughness;
   }
 }
 

@@ -22,6 +22,8 @@ export interface EnvPhaseSpec {
   ground: string;
   intensity: number;
   sunElev: number; // 0..1, fraction of height from horizon
+  /** Degrees, 0 = +x, 90 = +z (lookPreset sunAngles): puts the blob where the key light is, so glass and metal reflect the sun on the right side. Absent = the painted default. */
+  sunAzimuth?: number;
 }
 
 // Lighting v3 (2026-07-14 lab): env trimmed with the other fills so the
@@ -67,18 +69,25 @@ function paintEquirect(spec: EnvPhaseSpec): HTMLCanvasElement {
   gnd.addColorStop(1, spec.ground);
   ctx.fillStyle = gnd;
   ctx.fillRect(0, h / 2, w, h / 2);
-  // sun blob: hot core + warm halo
-  const sx = w * 0.3;
+  // sun blob: hot core + warm halo, drawn again one width over so it wraps the seam
+  const sx = spec.sunAzimuth === undefined ? w * 0.3 : w * sunU(spec.sunAzimuth);
   const sy = h / 2 - spec.sunElev * (h / 2);
-  const halo = ctx.createRadialGradient(sx, sy, 0, sx, sy, 7);
-  halo.addColorStop(0, spec.sun);
-  halo.addColorStop(0.35, spec.sun + "");
-  halo.addColorStop(1, "rgba(255,255,255,0)");
   ctx.globalAlpha = 0.9;
-  ctx.fillStyle = halo;
-  ctx.fillRect(sx - 8, sy - 8, 16, 16);
+  for (const x of [sx - w, sx, sx + w]) {
+    const halo = ctx.createRadialGradient(x, sy, 0, x, sy, 7);
+    halo.addColorStop(0, spec.sun);
+    halo.addColorStop(0.35, spec.sun + "");
+    halo.addColorStop(1, "rgba(255,255,255,0)");
+    ctx.fillStyle = halo;
+    ctx.fillRect(x - 8, sy - 8, 16, 16);
+  }
   ctx.globalAlpha = 1;
   return cv;
+}
+
+/** Equirect u (0-1) of a world azimuth in degrees; three samples u = atan(z, x) / 2π + 0.5. */
+export function sunU(azimuth: number): number {
+  return (((azimuth / 360 + 0.5) % 1) + 1) % 1;
 }
 
 /** Regenerate + apply the environment for a phase. No-op if unchanged. */

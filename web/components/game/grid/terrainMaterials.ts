@@ -28,6 +28,7 @@ import { getGrassTexture } from "@/lib/game/grassTexture";
 import { GRASS_COLOR } from "@/lib/game/grid";
 import {
   applyWaterShader,
+  glintDirection,
   waterUniforms,
   writeWaterUniforms,
   SHORE_FROM_FIELD,
@@ -348,8 +349,10 @@ export function setShoreField(f: {
  * the old shader converted it to view space on the CPU to save a per-fragment
  * reconstruction, but `cameraPosition` is a built-in uniform, so the fragment
  * shader can build the view vector itself and the conversion bought nothing.
+ * With the camera, the glint path is folded into view (`glintDirection`, row
+ * 237); `sunColor` tints it (a warm white by day, gold at golden hour).
  */
-export function advanceWater(elapsed: number, cfg: WaterParams, sunWorld?: THREE.Vector3): void {
+export function advanceWater(elapsed: number, cfg: WaterParams, sunWorld?: THREE.Vector3, camera?: THREE.Camera, sunColor?: THREE.Color): void {
   waterUniformBlock.uRippleStrength.value = cfg.rippleStrength ?? 0;
   if (cfg.rippleStrength && !waterUniformBlock.uRippleTexture.value) {
     waterUniformBlock.uRippleTexture.value = loadTexture(new THREE.TextureLoader(), "mSeaWater_Nrm.png", TEX_DIR, THREE.NoColorSpace);
@@ -357,8 +360,15 @@ export function advanceWater(elapsed: number, cfg: WaterParams, sunWorld?: THREE
   }
   waterUniformBlock.uTime.value = elapsed;
   writeWaterUniforms(waterUniformBlock, cfg);
-  if (sunWorld) waterUniformBlock.uSunDir.value.copy(sunWorld).normalize();
+  if (sunWorld && camera) glintDirection(sunWorld, camera.getWorldDirection(_forward), waterUniformBlock.uSunDir.value);
+  else if (sunWorld) waterUniformBlock.uSunDir.value.copy(sunWorld).normalize();
+  if (sunColor) waterUniformBlock.uSunColor.value.copy(sunColor).lerp(WHITE, 0.2);
 }
+const _forward = new THREE.Vector3();
+const WHITE = new THREE.Color(1, 1, 1);
+
+/** The live water uniforms, for layers that ride the same surface and sun (the glint sprites). */
+export const waterSurfaceUniforms = () => waterUniformBlock;
 
 /** Swap a loaded kit piece onto the shared materials, in place. */
 export function applyTerrainMaterials(root: THREE.Object3D): void {

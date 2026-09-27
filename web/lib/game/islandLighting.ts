@@ -20,7 +20,9 @@ const water = {
   deepColor: 0x398d9f, midColor: 0x78bdbe, shallowColor: 0xc4ddd0, bedColor: 0xf0e2c6,
   foamWidth: 0.2, foamStrength: 0.42, foamSoft: 0.17, foamWave: 0.07, foamWaveSpeed: 0.85,
   blobScale: 1.35, blobDarken: 0.96, blobSpeed: 0.16, ringWidth: 0.12, ringStrength: 0.035,
-  glare: 0.2, sunGlint: 0.7, sparkle: 0.45, rippleStrength: 0.12,
+  // Glint path (row 237): a broad sheet toward the folded sun, sharp flickering flares inside it;
+  // sunGlint also drives the crest sparkle sprites (GridOcean).
+  glare: 0.2, glareWidth: 40, sunGlint: 2, sunSharp: 900, sparkle: 0.8, rippleStrength: 0.12,
 };
 export type IslandWater = typeof water;
 
@@ -60,16 +62,16 @@ export interface IslandLight {
 /** Per phase: the water palette and the lamps (look values come from the preset). */
 const PHASE_BASE: Record<IslandPhase, PhaseBase> = {
   dawn: {
-    water: { ...water, deepColor: 0x4a7d93, midColor: 0x7ea9b3, shallowColor: 0xb7c9c6, glare: 0.16, sunGlint: 0.55 },
+    water: { ...water, deepColor: 0x4a7d93, midColor: 0x7ea9b3, shallowColor: 0xb7c9c6, glare: 0.18, sunGlint: 1.8 },
     lamp: 2, lampsOn: true, windowGlow: 0.8, fireflies: false,
   },
   day: { water, lamp: 0.6, lampsOn: false, windowGlow: 0.3, fireflies: false },
   evening: {
-    water: { ...water, deepColor: 0x426f87, midColor: 0x649ca7, shallowColor: 0x95b7b1, glare: 0.18, sunGlint: 0.65 },
+    water: { ...water, deepColor: 0x426f87, midColor: 0x649ca7, shallowColor: 0x95b7b1, glare: 0.25, sunGlint: 2.2 },
     lamp: 4, lampsOn: true, windowGlow: 1.15, fireflies: true,
   },
   night: {
-    water: { ...water, deepColor: 0x152943, midColor: 0x284c67, shallowColor: 0x516e81, bedColor: 0x394b59, foamColor: 0x8babc2, ringColor: 0x7493aa, glare: 0.08, sunGlint: 0.25 },
+    water: { ...water, deepColor: 0x152943, midColor: 0x284c67, shallowColor: 0x516e81, bedColor: 0x394b59, foamColor: 0x8babc2, ringColor: 0x7493aa, glare: 0.06, sunGlint: 0.4 },
     lamp: 6, lampsOn: true, windowGlow: 1.6, fireflies: true,
   },
 };

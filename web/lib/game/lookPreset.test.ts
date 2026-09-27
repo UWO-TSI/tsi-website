@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { Color } from "three";
+import { Color, ShaderChunk, ShaderLib } from "three";
 import { ISLAND_LIGHTING, islandLight, withSeason, withWeather, type IslandLight } from "./islandLighting";
-import { CURRENT, LOOK_LIGHTS_CHUNK, LOOK_PRESETS, PHASE_LOOK, keyFill, kelvinHex, lookFx, lookRoughness, parseLook, sunAngles, sunFromAngles, sunFromCamera } from "./lookPreset";
+import { CURRENT, LOOK_LIGHTS_CHUNK, LOOK_PRESETS, LOOK_REFLECT_EDITS, MATERIAL_CLASSES, PHASE_LOOK, keyFill, kelvinHex, lookFx, lookRoughness, parseLook, sunAngles, sunFromAngles, sunFromCamera } from "./lookPreset";
 import { seasonLook } from "./seasonalLook";
 import { parseSeasonOverride } from "./season";
 import { ISLAND_PHASES } from "./islandTime";
@@ -188,5 +188,32 @@ describe("light budget helpers", () => {
     expect(kelvinHex(6600)).toBe("#ffffff");
     expect(parseInt(kelvinHex(3000).slice(5), 16)).toBeLessThan(parseInt(kelvinHex(3000).slice(1, 3), 16));
     expect(parseInt(kelvinHex(10000).slice(5), 16)).toBe(255);
+  });
+});
+
+describe("glints and reflections (row 237, §6)", () => {
+  it("makes glass and metal reflective in the game look and leaves characters, terrain and foliage as they were", () => {
+    expect(CURRENT.materials.glass.gloss).toBeGreaterThan(0.1);
+    expect(CURRENT.materials.metal.gloss).toBeGreaterThan(0.5);
+    expect(CURRENT.materials.characters).toEqual({ saturation: 1.05, value: 1, roughness: 1, gloss: 0.25 });
+    expect(CURRENT.materials.terrain.gloss).toBe(0);
+    expect(CURRENT.materials.foliage.gloss).toBe(0);
+    expect(CURRENT.post.toneMapping).toBe("neutral");
+    for (const p of LOOK_PRESETS.slice(1)) expect([p.materials.glass.gloss, p.materials.metal.gloss], p.id).toEqual([0, 0]);
+    expect(MATERIAL_CLASSES).toContain("glass");
+  });
+  it("keeps glass and metal roughness where the look sets it, without the toy-gloss pull", () => {
+    expect(lookRoughness(0.9, CURRENT.materials.glass, "glass")).toBeLessThan(0.12);
+    expect(lookRoughness(1, CURRENT.materials.metal, "metal")).toBeCloseTo(CURRENT.materials.metal.roughness);
+    expect(lookRoughness(0.2, { saturation: 1, value: 1, roughness: 1, gloss: 1 }, "metal")).toBe(0.2);
+  });
+  it("patches chunks three still has (fails if three changes them)", () => {
+    const frag = ShaderLib.physical.fragmentShader;
+    for (const [chunk] of [...LOOK_REFLECT_EDITS.glass, ...LOOK_REFLECT_EDITS.metal]) expect(frag, chunk).toContain(chunk);
+    expect(LOOK_REFLECT_EDITS.glass[0][1]).toContain("reflectVec.y = abs( reflectVec.y )");
+    for (const field of ["material.diffuseContribution", "material.specularColorBlended"]) expect(ShaderChunk.lights_physical_fragment).toContain(field);
+  });
+  it("tells the environment where the sun is, per phase", () => {
+    for (const phase of ISLAND_PHASES) expect(ISLAND_LIGHTING[phase].environment.sunAzimuth).toBeCloseTo(sunAngles(ISLAND_LIGHTING[phase].sunPosition).azimuth);
   });
 });

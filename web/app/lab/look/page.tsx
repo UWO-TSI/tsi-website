@@ -26,6 +26,7 @@ const DefaultIslandWorld = dynamic(() => import("@/components/game/DefaultIsland
 
 type Row = { path: string; label: string; min?: number; max?: number; step?: number; kind?: "color" | "bool" };
 const HIGH = " · High only";
+const GLOSS_LABEL: Partial<Record<string, string>> = { water: "water · sun glint +", glass: "glass · reflectance", metal: "metal · metalness" };
 const SECTIONS: { title: string; rows: Row[] }[] = [
   { title: "Light", rows: [
     { path: "light.sunIntensity", label: "Sun intensity", min: 0, max: 6, step: 0.05 },
@@ -52,7 +53,7 @@ const SECTIONS: { title: string; rows: Row[] }[] = [
     { path: `materials.${c}.saturation`, label: `${c} · saturation`, min: 0, max: 2, step: 0.01 },
     { path: `materials.${c}.value`, label: `${c} · value`, min: 0.5, max: 1.5, step: 0.01 },
     ...(c === "water" ? [] : [{ path: `materials.${c}.roughness`, label: `${c} · roughness ×`, min: 0.1, max: 2, step: 0.01 }]),
-    { path: `materials.${c}.gloss`, label: c === "water" ? "water · sun glint +" : `${c} · toy gloss`, min: 0, max: 1, step: 0.01 },
+    { path: `materials.${c}.gloss`, label: GLOSS_LABEL[c] ?? `${c} · toy gloss`, min: 0, max: 1, step: 0.01 },
   ]).concat([
     { path: "grass.detail", label: "grass · texture contrast kept", min: 0, max: 1, step: 0.01 },
     { path: "grass.hue", label: "grass · hue variation", min: 0, max: 1.5, step: 0.01 },
