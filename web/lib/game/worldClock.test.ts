@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { setWorldClockOffset, worldTime, worldTimeAt } from "./worldClock";
+import { setWorldClockOffset, worldNow, worldTime, worldTimeAt } from "./worldClock";
 
 describe("world clock", () => {
   afterEach(() => setWorldClockOffset(0));
@@ -28,5 +28,12 @@ describe("world clock", () => {
     expect(gap(worldTime(), worldTimeAt(Date.now()))).toBeLessThan(0.3);
     setWorldClockOffset(90_000);
     expect(gap(worldTime(), worldTimeAt(Date.now() + 90_000))).toBeLessThan(0.3);
+  });
+
+  it("gives the calendar instant on the same clock, offset included", () => {
+    expect(Math.abs(worldNow() - Date.now())).toBeLessThan(300);
+    setWorldClockOffset(-3_600_000);
+    expect(Math.abs(worldNow() - (Date.now() - 3_600_000))).toBeLessThan(300);
+    expect(worldTime()).toBeCloseTo(worldTimeAt(worldNow()), 0);
   });
 });
