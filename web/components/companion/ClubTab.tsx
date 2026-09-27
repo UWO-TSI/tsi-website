@@ -23,7 +23,15 @@ export default function ClubTab() {
           </button>
         ))}
       </div>
-      <div className={s.pageEmbed}>
+      {/*
+        These pages read --color-text-main etc. from tokens.css, which
+        default to the DARK palette unless an ancestor sets data-theme
+        (ThemeToggle normally does this on <html>, per the user's setting).
+        The companion shell is cream/light regardless of that setting, so
+        pin the light palette here — otherwise the dashboard's light-on-dark
+        text goes near-invisible on this light card.
+      */}
+      <div className={s.pageEmbed} data-theme="light">
         {sub === "bounties" ? <BountyPage /> : <CalendarPage />}
       </div>
     </>
