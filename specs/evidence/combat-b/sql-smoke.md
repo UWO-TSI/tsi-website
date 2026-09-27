@@ -1,6 +1,6 @@
 # SQL smoke: combat B draft `20260926210000_combat_kits` (2026-09-26)
 
-`zsh specs/evidence/combat-b/sql-smoke.sh`: throwaway Homebrew Postgres 16 (port 55443, deleted after; never Supabase), main's chain, then all 25 game drafts through `20260926190000_combat_content` and `20260926210000_combat_kits`, then every game smoke.
+`zsh specs/evidence/combat-b/sql-smoke.sh`: throwaway Homebrew Postgres 16 (port 55443, deleted after; never Supabase), main's chain, then every game draft in order (with the seeds) through `20260926190000_combat_content`, the launch fixes `20260926200000`/`200100` (merged from `feat/game-default-island`) and `20260926210000_combat_kits`, then every game smoke including `phase1_regressions` and `launch_fixes_smoke`.
 
 `web/supabase/tests/combat_kits_smoke.sql` checks:
 - **Traits seeded:** seven species carry a trait; the guardian teaches none.
@@ -11,7 +11,7 @@
 
 Output (tail):
 ```
-chain ok (game): 25 game drafts, last 20260926210000_combat_kits
+chain ok (game): 28 game drafts, last 20260926210000_combat_kits
 NOTICE:  029 ok … NOTICE:  035 ok
 NOTICE:  security 1 collections ok … security 4 class server-only ok
 NOTICE:  crafting ok
@@ -19,6 +19,7 @@ ownership smoke ok
 NOTICE:  combat content ok
 NOTICE:  combat content: boss reward not callable by members ok
 NOTICE:  combat content: materials not callable by members ok
+NOTICE:  launch 1 membership backfill ok … launch 4 un-RSVP ok
 NOTICE:  combat kits ok
 NOTICE:  combat kits: loadout not callable by members ok
 NOTICE:  combat kits: kills not callable by members ok
