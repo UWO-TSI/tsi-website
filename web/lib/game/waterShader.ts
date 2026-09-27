@@ -178,8 +178,9 @@ export function writeWaterUniforms(u: WaterUniforms, p: WaterParams): void {
  * ── SUN ON THE WATER IS OPTICS (row 238, specs/look-development.md §7.4) ──
  * Water shows the sun only where a bit of surface is tilted to mirror the real
  * key light into this eye: its normal must lie along the half vector between
- * the sun and the eye. The drawn surface (swell + ripple texture) tilts about
- * 9° at most, so with the sun behind the camera nothing lights; with the sun
+ * the sun and the eye. With the sun behind the follow camera that needs 29°+
+ * of tilt; the drawn surface (swell + ripple texture) gives about 9° and the
+ * ripples below it at most 1.5 RMS more, so nothing lights. With the sun
  * ahead the light sits around the mirror point and slides as the eye moves.
  *
  *  - `glareLobe`: the ripples too small to draw, averaged. Their slopes spread
