@@ -19,3 +19,6 @@ Kept building on each; assumption stated, flag if wrong.
 8. **`ClubTab` forces `data-theme="light"` on the embedded dashboard pages.** `BountyPage`/`CalendarPage` read `--color-text-main` etc. from `tokens.css`, which default to the dark palette unless an ancestor sets `data-theme`. Without this override their text is near-invisible on the companion's cream card. This is a CSS attribute on my wrapper only — no edits to the reused pages themselves.
 
 9. **Evidence gap: no live 3D screenshot.** This sandbox's headless Chromium reports no WebGL support (`getContext('webgl2'|'webgl')` returns null), so the Study tab evidence shows the WebGL fallback card, not the actual table/character render. The fallback path itself is now real evidence that it works; the happy-path 3D render is unverified by screenshot (code reuses `Character`/`TableFurniture` verbatim from the already-shipped cafe, and `localSeats()` has a unit test for its placement math).
+
+## Coordinator rulings (2026-09-27)
+All companion assumptions accepted ("journal" = collections). The live 3D table view needs a real-phone/headed check (fallback card verified only): added to the launch QA list.
