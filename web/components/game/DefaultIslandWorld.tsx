@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Html, useProgress, useTexture } from "@react-three/drei";
 import * as THREE from "three";
@@ -87,6 +87,7 @@ import StudyHud from "./study/StudyHud";
 import CafeInterior from "./study/CafeInterior";
 import { studyHoldsPrompt } from "@/lib/study/worldStore";
 import "@/lib/game/aerialFog";
+import { lookFx, lookToLight, type LookPreset } from "@/lib/game/lookPreset";
 import styles from "./DefaultIslandWorld.module.css";
 
 type Metrics = { fps: number; frameMs: number; calls: number; triangles: number; x: number; z: number };
@@ -144,10 +145,10 @@ function refreshStaticShadows(gl: THREE.WebGLRenderer) {
 }
 
 /** Cached shadow map: refresh after scene, phase, quality or late asset changes. */
-function StaticShadows({ phase, enabled, inside }: { phase: IslandPhase; enabled: boolean; inside: boolean }) {
+function StaticShadows({ phase, enabled, inside, sun }: { phase: IslandPhase; enabled: boolean; inside: boolean; sun: string }) {
   const { gl } = useThree();
   const wasLoading = useRef(false);
-  useEffect(() => { refreshStaticShadows(gl); }, [gl, phase, enabled, inside]);
+  useEffect(() => { refreshStaticShadows(gl); }, [gl, phase, enabled, inside, sun]);
   useFrame(() => {
     const { active } = useProgress.getState();
     if (wasLoading.current && !active) refreshStaticShadows(gl);
@@ -395,11 +396,12 @@ function LoadingStatus() {
   return <div className={styles.loading} role="status">Preparing the island · {Math.round(progress)}%</div>;
 }
 
-export default function DefaultIslandWorld() {
-  return <GameSceneBoundary><DefaultIslandWorldContent /></GameSceneBoundary>;
+/** `preset` and `children` (mounted inside the Canvas) are for /lab/look only. */
+export default function DefaultIslandWorld({ preset, children }: { preset?: LookPreset; children?: ReactNode }) {
+  return <GameSceneBoundary><DefaultIslandWorldContent preset={preset}>{children}</DefaultIslandWorldContent></GameSceneBoundary>;
 }
 
-function DefaultIslandWorldContent() {
+function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; children?: ReactNode }) {
   const [graphics, actions] = useGraphicsSettings();
   const conditions = useIslandConditions();
   const { phase, forcedPhase: forced, setForcedPhase: setForced, weather, season } = conditions;
@@ -504,7 +506,7 @@ function DefaultIslandWorldContent() {
   const seasonKey = JSON.stringify(season.weights);
   // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed by value: the blend object is rebuilt every render.
   const look = useMemo(() => seasonLook(season, paletteBySeason(seasonRows)), [seasonKey, seasonRows]);
-  const light = useMemo(() => withWeather(withSeason(ISLAND_LIGHTING[phase], look), weather), [phase, look, weather]);
+  const light = useMemo(() => withWeather(withSeason(preset ? lookToLight(preset, ISLAND_LIGHTING[phase]) : ISLAND_LIGHTING[phase], look), weather), [phase, look, weather, preset]);
   const conditionsLabel = `${season.season[0].toUpperCase()}${season.season.slice(1)}${Object.values(season.weights).some(w => w > 0 && w < 1) ? " (changing)" : ""} · ${weather[0].toUpperCase()}${weather.slice(1)}`;
   const grade = inside ? CLUBHOUSE_LIGHTING[phase].grade : light.grade;
   const atHome = site === "home";
@@ -614,10 +616,12 @@ function DefaultIslandWorldContent() {
               decorating={decor.decorating} selected={decor.selected} onPlace={item => decor.place("outdoor", item)} onPickUp={item => decor.pickUp("outdoor", item)} />
             : <IslandScene identity={identity} devAt={devAt} exitFrom={exitFrom} peaceful={peaceful} fishSpot={fishSpot} fishing={fishing} chapter={chapterFlags} fromBoat={fromBoat} progression={progressionWorld} ceremony={ceremony} phase={phase} light={light} look={look} weather={weather} overview={overview} zoom={zoomed ? 1.4 : 1} reset={reset} returned={returned} liteMode={liteMode} castShadows={castShadows} player={player} onMove={move} onNear={setNear} />}
           {identity.family && identity.aura && <Suspense fallback={null}><FamilyAura player={player} color={FAMILIES[identity.family].light} /></Suspense>}
-          <PostFX antialias={!graphics.liteMode && !graphics.pixelated} bloom={!graphics.liteMode && graphics.bloom} bloomIntensity={0.22} grade={grade} />
-          <StaticShadows phase={phase} enabled={castShadows} inside={!!inside || atHome} />
+          <PostFX antialias={!graphics.liteMode && !graphics.pixelated} bloom={!graphics.liteMode && graphics.bloom} bloomIntensity={0.22} grade={grade}
+            fx={preset && !inside ? lookFx(preset, !liteMode) : undefined} />
+          <StaticShadows phase={phase} enabled={castShadows} inside={!!inside || atHome} sun={light.sunPosition.join()} />
           <Performance player={player} onMetrics={setMetrics} />
           <QualityProbe onTier={onTier} />
+          {children}
           {!inside && !atHome && site !== "ruins" && near !== "enter" && <Html position={[0, 2.9, 6.3]} center distanceFactor={10} zIndexRange={[3, 0]}>
             <div className={styles.cue}>Clubhouse</div>
           </Html>}

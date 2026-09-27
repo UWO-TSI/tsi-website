@@ -14,13 +14,30 @@ import { CloudShadows, MistBanks, SeasonalParticles } from "./AmbienceFX";
 import { Fireflies } from "./AmbientLife";
 import RainFX from "./RainFX";
 import { applyEnvironment, disposeEnvironment } from "@/lib/game/envLight";
-import { ENV_KEY, fireflyNight, type IslandLight } from "@/lib/game/islandLighting";
+import { DEFAULT_SHADOW, ENV_KEY, fireflyNight, type IslandLight } from "@/lib/game/islandLighting";
+import { RIM_POSITION } from "@/lib/game/lookPreset";
 import type { SeasonLook } from "@/lib/game/seasonalLook";
 import type { IslandWeather } from "@/lib/game/islandWeather";
 import type { IslandPhase } from "@/lib/game/islandTime";
 import { setLeafTint, TREE_WIND, WORLD_SNOW } from "@/lib/game/modelMaterials";
 import { TERRAIN_SNOW } from "./grid/GridTerrain";
 import { WORLD_BEND } from "@/lib/game/curvedWorld";
+
+/** Screen-space vertical sky gradient (a plain 2D background texture): `top` at the top, `horizon` from mid-screen down. */
+function SkyGradient({ top, horizon }: { top: string; horizon: string }) {
+  const texture = useMemo(() => {
+    const canvas = document.createElement("canvas");
+    canvas.width = 1; canvas.height = 64;
+    const ctx = canvas.getContext("2d")!, gradient = ctx.createLinearGradient(0, 0, 0, 64);
+    gradient.addColorStop(0, top); gradient.addColorStop(0.55, horizon); gradient.addColorStop(1, horizon);
+    ctx.fillStyle = gradient; ctx.fillRect(0, 0, 1, 64);
+    const t = new THREE.CanvasTexture(canvas);
+    t.colorSpace = THREE.SRGBColorSpace;
+    return t;
+  }, [top, horizon]);
+  useEffect(() => () => texture.dispose(), [texture]);
+  return <primitive attach="background" object={texture} />;
+}
 
 /** Drives the shared tree sway uniform; eases between calm, breezy and off (Light). */
 function TreeWind({ strength }: { strength: number }) {
@@ -45,16 +62,18 @@ export function IslandAtmosphere({ phase, light, look, weather, liteMode, castSh
     applyEnvironment(gl, scene, ENV_KEY[phase], light.environment);
     return () => disposeEnvironment(scene);
   }, [gl, scene, phase, light]);
+  const shadow = light.shadow ?? DEFAULT_SHADOW;
   const puddleBlobs = useMemo(() => puddles.map(([x, z], i) => ({ x, z, y: ground(x, z) + 0.01, rx: 0.5 + (i % 3) * 0.18, rz: 0.32 + (i % 2) * 0.12 })), [puddles, ground]);
   return <>
-    <color attach="background" args={[light.sky]} />
-    <fog attach="fog" args={[light.sky, overview ? light.fogNear + 28 : light.fogNear, overview ? light.fogFar + 15 : light.fogFar]} />
+    {light.skyTop ? <SkyGradient top={light.skyTop} horizon={light.sky} /> : <color attach="background" args={[light.sky]} />}
+    <fog attach="fog" args={[light.fogColor ?? light.sky, overview ? light.fogNear + 28 : light.fogNear, overview ? light.fogFar + 15 : light.fogFar]} />
     <ambientLight intensity={light.ambient} color={light.fill} />
     <hemisphereLight args={[light.fill, light.bounce, light.hemisphere]} />
     <directionalLight position={light.sunPosition} color={light.sun} intensity={light.sunIntensity} castShadow={castShadows}
       shadow-mapSize={[2048, 2048]} shadow-camera-left={-shadowExtent} shadow-camera-right={shadowExtent}
       shadow-camera-top={shadowExtent - 2} shadow-camera-bottom={-(shadowExtent - 2)} shadow-camera-near={1} shadow-camera-far={75}
-      shadow-radius={3} shadow-intensity={0.85} shadow-normalBias={0.02} shadow-bias={-0.0002} />
+      shadow-radius={shadow.radius} shadow-intensity={shadow.intensity} shadow-normalBias={0.02} shadow-bias={-0.0002} />
+    {light.rim && <directionalLight position={RIM_POSITION} color={light.rim.color} intensity={light.rim.intensity} />}
     {!liteMode && <CloudShadows phase={ENV_KEY[phase]} size={cloudSize} bounded />}
     {(weather === "rain" || weather === "snow") && <RainFX kind={weather} playerPosRef={player} groundHeight={ground} />}
     {weather === "rain" && puddleBlobs.length > 0 && <BlobShadows placements={puddleBlobs} opacity={0.5} color="#8ea7b8" />}

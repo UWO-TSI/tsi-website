@@ -22,6 +22,8 @@ const water = {
   glare: 0.2, sunGlint: 0.7, sparkle: 0.45, rippleStrength: 0.12,
 };
 export type IslandWater = typeof water;
+/** Cast-shadow PCF radius and opacity as shipped (IslandAtmosphere). */
+export const DEFAULT_SHADOW = { radius: 3, intensity: 0.85 };
 
 // Warm, motivated pools sit above a readable neutral/cool room fill.
 const HQ_DAY = { ambient: 0.55, hemisphere: 0.55, key: 0.7, ceiling: 18, lamp: 9, desk: 4, grade: { ...grade, warmth: 0.2, vignette: 0.13 } };
@@ -45,6 +47,12 @@ export interface IslandLight {
   windowGlow: number;
   /** Fireflies out (evening/night only). */
   fireflies: boolean;
+  /** Look lab (lookPreset.ts); absent = as shipped. */
+  shadow?: { radius: number; intensity: number };
+  rim?: { color: string; intensity: number };
+  /** Screen-space sky gradient from this colour down to `sky`; absent = flat `sky`. */
+  skyTop?: string;
+  fogColor?: string;
 }
 
 export const ISLAND_LIGHTING: Record<IslandPhase, IslandLight> = {
@@ -115,6 +123,8 @@ export function withWeather(light: IslandLight, weather: IslandWeather): IslandL
   return {
     ...light,
     sky,
+    ...(light.skyTop && { skyTop: soften(light.skyTop, m.desat, m.dim) }),
+    ...(light.fogColor && { fogColor: soften(light.fogColor, m.desat, m.dim) }),
     sun: soften(light.sun, m.desat * 0.7, 1),
     sunIntensity: light.sunIntensity * m.sun,
     fill: soften(light.fill, m.desat * 0.5, 1),
@@ -136,6 +146,7 @@ export function withSeason(light: IslandLight, look: SeasonLook): IslandLight {
   return {
     ...light,
     sky,
+    ...(light.fogColor && { fogColor: leanHue(light.fogColor, look.sky, 0.25) }),
     environment: { ...light.environment, skyBottom: leanHue(light.environment.skyBottom, look.sky, 0.25) },
     water: {
       ...light.water,
