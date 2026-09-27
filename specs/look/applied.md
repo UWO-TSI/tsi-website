@@ -82,3 +82,38 @@ High adds about 1.9 ms, mostly AO and bloom (`presets.md` measured the Open-air 
 adds 0.4-0.8 ms: the patched material shaders plus run-to-run noise on this shared machine (two after runs
 read 424 and 357 FPS). Both stay far above the 30 FPS Light target on this integrated GPU; these rank cost,
 they are not a laptop benchmark (questions §9).
+
+## Glints and reflections (§6, row 237)
+
+Branch `game/look-glints`, 2026-09-27, same rig, captured with `PORT=4800 node specs/evidence/look/shots.mjs glints <dir>`
+(V1, V2, V3 at day and golden hour; close-ups of the glint path, an HQ window and the plaza lamp post through the
+dev-only `?zoom` follow-camera scale). Frames and sheets (before left, after right): `specs/evidence/look/glints/`
+(`sheet-H-V1`, `sheet-H-V2`, `sheet-H-V3`, `sheet-L-V1`, `sheet-close`).
+
+![close-ups](../evidence/look/glints/after/sheet-close.webp)
+
+- **Water** (`waterShader.ts`, `terrainMaterials.ts`, `GridOcean.tsx`): the glint path uses `glintDirection`, the
+  sun's elevation and side folded into the camera's view (questions §18), tinted by the key light: high on the left
+  by day, a warm sheet over the sea on the right at golden hour, a faint moon lane at night. Sharper flares
+  (`sunSharp` 900) replace the broad sheen. The July sea-glint sprites cover every grid water surface as one point
+  cloud (9,628 in the village, one draw; Light draws half): each rides the swell, flashes near a crest, brightens
+  along the path and blooms on High. Glint strength per phase stays in `islandLighting.ts`, so weather scales it.
+- **Glass and metal** (`lookClassFor` in `modelMaterials.ts`, `LOOK_REFLECT_EDITS` in `lookPreset.ts`,
+  `LookMaterials.tsx`): two new material classes in the preset (`materials.glass`, `materials.metal`, tunable in
+  `/lab/look`). Their reflections see the environment at the sky's own brightness (the IBL intensity stays the
+  fill budget); glass takes a 0.18 reflectance, darkens the room behind it and reflects the sky when seen from
+  above; metal takes 0.85 metalness where the paint is dark or mid, with a gunmetal floor so painted posts do not
+  go black. The environment's sun blob now sits at the real sun azimuth. Characters, terrain, foliage, wood,
+  fabric, interiors and tone mapping (Neutral) are unchanged; the other lab presets keep glass and metal matte.
+
+| Frame | Highlights (L* > 90) | RMS contrast | L* p95 |
+|---|---|---|---|
+| H-V1-day | 0.5% → 0.6% | 0.201 → 0.204 | 81.0 → 81.1 |
+| H-V1-evening | 0.3% → 0.4% | 0.167 → 0.170 | 74.3 → 75.3 |
+| H-V2-evening (sea path) | 0.3% → 2.0% | 0.162 → 0.172 | 79.9 → 84.3 |
+| H-V3-day (near sea) | 0.3% → 1.7% | 0.207 → 0.210 | 88.0 → 88.3 |
+| H-close-lamp-day | 0.9% → 3.9% | 0.219 → 0.231 | 82.9 → 88.5 |
+| L-V1-day | 0.7% → 0.9% | 0.192 → 0.193 | 81.0 → 81.3 |
+
+Frame rate at V1 day (uncapped, dev build, same M4, other agents running): High 227 → 238 FPS (429 → 432 draws),
+Light 426 → 446 FPS (367 → 369 draws); the sprites and shader edits are within run-to-run noise.

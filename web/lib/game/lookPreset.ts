@@ -16,10 +16,13 @@ import type { IslandPhase } from "./islandTime";
  * it (`PHASE_LOOK`), so editing this one object in /lab/look moves them all.
  * The other presets are the lab's starting directions, kept for comparison.
  */
-export type MaterialClass = "terrain" | "props" | "foliage" | "water" | "characters";
-export const MATERIAL_CLASSES: readonly MaterialClass[] = ["terrain", "props", "foliage", "water", "characters"];
+export type MaterialClass = "terrain" | "props" | "foliage" | "water" | "characters" | "glass" | "metal";
+export const MATERIAL_CLASSES: readonly MaterialClass[] = ["terrain", "props", "foliage", "water", "characters", "glass", "metal"];
 export type ToneMap = "neutral" | "aces" | "agx";
-/** Saturation and value scale the albedo; roughness scales roughness; gloss pulls it toward a toy-plastic 0.3 (water: sun glint). */
+/**
+ * Saturation and value scale the albedo; roughness scales roughness; gloss pulls it toward a toy-plastic 0.3
+ * (water: sun glint; glass: reflectance at normal incidence; metal: metalness, row 237).
+ */
 export interface ClassLook { saturation: number; value: number; roughness: number; gloss: number }
 
 export interface LookPreset {
@@ -51,6 +54,8 @@ export interface LookPreset {
 export const RIM_POSITION: [number, number, number] = [0, 10, 24];
 const GLOSS_ROUGHNESS = 0.3;
 const SHIPPED_GRASS = { detail: 0.38, hue: 0 };
+/** Glass and metal as they were before row 237: matte props. */
+const MATTE: ClassLook = { saturation: 1, value: 1, roughness: 1, gloss: 0 };
 
 /**
  * The game's look: hard warm sun 3/4 from screen-left and a little toward the
@@ -76,6 +81,10 @@ export const CURRENT: LookPreset = {
     foliage: { saturation: 1.1, value: 1.02, roughness: 1, gloss: 0 },
     water: { saturation: 1.25, value: 1, roughness: 1, gloss: 0.5 },
     characters: { saturation: 1.05, value: 1, roughness: 1, gloss: 0.25 },
+    // Row 237: windows and lamp globes darken toward the room behind them and reflect the sky; lamp posts,
+    // fittings and weapons turn metal with a crisp sun highlight.
+    glass: { saturation: 1, value: 0.5, roughness: 0.1, gloss: 0.18 },
+    metal: { saturation: 1, value: 1, roughness: 0.25, gloss: 0.85 },
   },
   grass: { detail: 0.8, hue: 0.5 },
   grade: { exposure: 1.5, contrast: 1, vibrance: 0, desat: -0.04, warmth: 0.15, lift: 0.2, vignette: 0.12 },
@@ -103,6 +112,7 @@ const TOY: LookPreset = {
     foliage: { saturation: 1.08, value: 1, roughness: 1, gloss: 0 },
     water: { saturation: 1.2, value: 1, roughness: 1, gloss: 0.3 },
     characters: { saturation: 1.1, value: 1, roughness: 1, gloss: 0.6 },
+    glass: MATTE, metal: MATTE,
   },
   grass: SHIPPED_GRASS,
   grade: { exposure: 1, contrast: 1.06, vibrance: 0.12, desat: -0.04, warmth: 0.22, lift: 0.1, vignette: 0.28 },
@@ -130,6 +140,7 @@ const OPEN_AIR: LookPreset = {
     foliage: { saturation: 1.1, value: 1.02, roughness: 1, gloss: 0 },
     water: { saturation: 1.25, value: 1, roughness: 1, gloss: 0.5 },
     characters: { saturation: 1.05, value: 1, roughness: 1, gloss: 0.15 },
+    glass: MATTE, metal: MATTE,
   },
   grass: SHIPPED_GRASS,
   grade: { exposure: 0.9, contrast: 1, vibrance: 0.12, desat: -0.04, warmth: 0.15, lift: 0.2, vignette: 0.12 },
@@ -157,6 +168,7 @@ const PAINTERLY: LookPreset = {
     foliage: { saturation: 1.1, value: 1.02, roughness: 1, gloss: 0 },
     water: { saturation: 1.15, value: 1.02, roughness: 1, gloss: 0 },
     characters: { saturation: 1.1, value: 1.02, roughness: 1, gloss: 0 },
+    glass: MATTE, metal: MATTE,
   },
   grass: SHIPPED_GRASS,
   grade: { exposure: 1, contrast: 0.97, vibrance: 0.25, desat: -0.05, warmth: 0.3, lift: 0.25, vignette: 0.08 },
@@ -263,7 +275,7 @@ export function lookToLight(p: LookPreset, base: PhaseBase, phase: IslandPhase =
     sky: horizon, sun, sunIntensity: light.sunIntensity * m.sunIntensity, sunPosition,
     fill, bounce, ambient: light.ambient * m.fillIntensity, hemisphere: light.hemisphere * m.fillIntensity,
     fogNear: sky.fogNear * m.fog, fogFar: sky.fogFar * m.fog, fogColor: tint(sky.fog, m.skyHorizon),
-    environment: { skyTop: top, skyBottom: horizon, sun, ground: bounce, intensity: light.envIntensity * m.fillIntensity, sunElev: elev / 90 },
+    environment: { skyTop: top, skyBottom: horizon, sun, ground: bounce, intensity: light.envIntensity * m.fillIntensity, sunElev: elev / 90, sunAzimuth: sunAngles(sunPosition).azimuth },
     grade: { ...p.grade, exposure: p.grade.exposure * m.exposure, warmth: p.grade.warmth + m.warmth, lift: p.grade.lift + m.lift, desat: p.grade.desat + m.desat },
     water: waterLook(base.water, p.materials.water),
     shadow: { radius: p.shadows.radius * m.shadowRadius, intensity: p.shadows.intensity * m.shadowIntensity, tint: p.shadows.tint },
@@ -295,10 +307,55 @@ export const LOOK_LIGHTS_CHUNK = ShaderChunk.lights_fragment_begin.replace(
   "directLight.color *= mix( uLookShadowTint, vec3( 1.0 ), $1 );",
 );
 
-/** Roughness written onto a material of this class (base = its authored roughness). */
-export function lookRoughness(base: number, look: ClassLook): number {
+const LUMA = "vec3(0.2126, 0.7152, 0.0722)";
+/** Reflections see the environment at its painted (sky) brightness; the IBL intensity is a fill budget, not the sky's. */
+const SKY_RADIANCE = `#include <lights_fragment_maps>
+  #if defined( USE_ENVMAP ) && defined( RE_IndirectSpecular )
+    if (uLookReflect > 0.0) radiance /= max(envMapIntensity, 1e-3);
+  #endif`;
+
+/**
+ * Glass and metal shader edits (row 237, LookMaterials): [three chunk, replacement], with `uLookReflect` =
+ * the class's gloss. Every edit is inert at 0, so a preset whose glass and metal are MATTE renders them as
+ * the matte props they were.
+ */
+export const LOOK_REFLECT_EDITS: Record<"glass" | "metal", [string, string][]> = {
+  glass: [
+    // Vertical panes seen from the follow camera reflect the lawn; glass reads as glass when it shows the sky.
+    ["#include <envmap_physical_pars_fragment>", ShaderChunk.envmap_physical_pars_fragment.replace(
+      "reflectVec = inverseTransformDirection( reflectVec, viewMatrix );",
+      "reflectVec = inverseTransformDirection( reflectVec, viewMatrix );\n\t\t\tif ( uLookReflect > 0.0 ) reflectVec.y = abs( reflectVec.y );")],
+    // Reflectance at normal incidence; the rest of the light goes into the dim room behind the pane.
+    ["#include <lights_physical_fragment>", `#include <lights_physical_fragment>
+      if (uLookReflect > 0.0) {
+        material.diffuseContribution *= 1.0 - uLookReflect;
+        material.specularColor = vec3(uLookReflect);
+        material.specularColorBlended = mix(material.specularColor, material.diffuseColor, metalnessFactor);
+      }`],
+    ["#include <lights_fragment_maps>", SKY_RADIANCE],
+    // Reflections and the sun's glint stay visible on see-through glass (lamp globes, the clock dome).
+    ["#include <opaque_fragment>", `if (uLookReflect > 0.0) diffuseColor.a = clamp(diffuseColor.a + dot(reflectedLight.directSpecular + reflectedLight.indirectSpecular, ${LUMA}), 0.0, 1.0);
+      #include <opaque_fragment>`],
+  ],
+  metal: [
+    // Metal where the paint is dark or mid; light paint on the same atlas (a clock face) stays dielectric.
+    ["#include <metalnessmap_fragment>", `#include <metalnessmap_fragment>
+      if (uLookReflect > 0.0) metalnessFactor = uLookReflect * (1.0 - smoothstep(0.55, 0.8, dot(diffuseColor.rgb, ${LUMA})));`],
+    // A dark painted post reflects at least a gunmetal share of its surroundings, in its own hue, instead of going black.
+    // (three r182 reads the metallic F0 from material.diffuseColor; diffuse light uses diffuseContribution.)
+    ["#include <lights_physical_fragment>", `#include <lights_physical_fragment>
+      if (uLookReflect > 0.0) {
+        material.diffuseColor = min(diffuseColor.rgb * max(1.0, 0.1 / max(dot(diffuseColor.rgb, ${LUMA}), 1e-3)), vec3(1.0));
+        material.specularColorBlended = mix(material.specularColor, material.diffuseColor, metalnessFactor);
+      }`],
+    ["#include <lights_fragment_maps>", SKY_RADIANCE],
+  ],
+};
+
+/** Roughness written onto a material of this class (base = its authored roughness); glass and metal use gloss for reflection instead. */
+export function lookRoughness(base: number, look: ClassLook, cls?: MaterialClass): number {
   const r = Math.min(1, Math.max(0.03, base * look.roughness));
-  return look.gloss ? Math.min(r, r + (GLOSS_ROUGHNESS - r) * look.gloss) : r;
+  return look.gloss && cls !== "glass" && cls !== "metal" ? Math.min(r, r + (GLOSS_ROUGHNESS - r) * look.gloss) : r;
 }
 
 const lum = (color: string) => { const c = new Color(color); return 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b; };

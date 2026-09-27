@@ -26,7 +26,7 @@ import JournalSheet from "@/components/progression/JournalSheet";
 import { useProgressionWorld, useCeremony, useChapterActions, type WorldGoalId } from "@/lib/game/progressionBridge";
 import confetti from "canvas-confetti";
 import type { InteriorStation } from "./interiorShared";
-import { POND, ISLAND_RADII, createDefaultIsland, DEFAULT_SPAWN, ISLAND_TREES, ISLAND_BUSHES, ISLAND_FLOWERS, ISLAND_PROPS, LANDMARKS, landmark, benchSeat, BENCH_SEAT_TOP, type Landmark } from "@/lib/game/defaultIsland";
+import { POND, ISLAND_RADII, WHARF_DECK, createDefaultIsland, DEFAULT_SPAWN, ISLAND_TREES, ISLAND_BUSHES, ISLAND_FLOWERS, ISLAND_PROPS, LANDMARKS, landmark, benchSeat, BENCH_SEAT_TOP, type Landmark } from "@/lib/game/defaultIsland";
 import { useGraphicsSettings } from "@/lib/game/useGraphicsSettings";
 import { CLUBHOUSE_LIGHTING, ISLAND_TERRAIN, islandLight, withWeather, withSeason, type IslandLight } from "@/lib/game/islandLighting";
 import { paletteBySeason, seasonLook, SEASON_TREES, SEASON_BUSHES, SEASON_FLOWERS, type SeasonLook } from "@/lib/game/seasonalLook";
@@ -181,6 +181,8 @@ function QualityProbe({ onTier }: { onTier: (tier: QualityTier) => void }) {
 const VILLAGE_NODES = villageNodes();
 const VILLAGE_WATER = villageWaterType(ISLAND_RADII, POND);
 const VILLAGE_OVERVIEW = { focus: [0, 0, 0] as [number, number, number], offset: [12, 21, -27] as [number, number, number] };
+/** No water glints under the wharf deck: it sits a few centimetres above the water and they would show through. */
+const UNDER_WHARF = (x: number, z: number) => x > WHARF_DECK.x0 - 0.4 && x < WHARF_DECK.x1 + 0.4 && z > WHARF_DECK.z0 - 0.4 && z < WHARF_DECK.z1 + 0.4;
 const PUDDLE_SPOTS: [number, number][] = [[0.3, -12.5], [-0.4, -7.2], [0.5, -4.4], [-2.8, 3.1], [2.1, 4.2], [-6.5, -9.4], [6.8, -9.6], [9.5, -2.6], [-0.2, -15]];
 
 function Performance({ player, onMetrics }: { player: React.RefObject<THREE.Vector3>; onMetrics: (metrics: Metrics) => void }) {
@@ -252,7 +254,7 @@ function IslandScene({ identity, devAt, exitFrom, peaceful, fishSpot, fishing, c
       <IslandAtmosphere phase={phase} light={light} look={look} weather={weather} liteMode={liteMode} castShadows={castShadows} overview={overview}
         player={player} ground={island.ground} puddles={PUDDLE_SPOTS} cloudSize={[46, 38]} fireflyAnchors={ISLAND_BUSHES} />
       <GridWorld map={island.map} water={light.water} palette={terrain} windScale={liteMode ? 0 : weather === "wind" ? 2.2 : 1} />
-      <GridOcean map={island.map} />
+      <GridOcean map={island.map} lite={liteMode} skip={UNDER_WHARF} />
       <PeacefulLayer map={island.map} nodes={VILLAGE_NODES} moment={peaceful.moment} member={peaceful.member} player={player} ground={island.ground} highTier={!liteMode} active={!fishing} />
       <BeachBottle player={player} ground={island.ground} />
       <BlobShadows placements={plantShadows} opacity={0.16} color={light.shadow.tint} />
@@ -442,6 +444,8 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   const [gate, setGate] = useState<{ open: boolean; reason: string | null }>({ open: false, reason: "Checking the gate…" });
   // Dev: ?at=x,z starts the village walk at that spot (screenshots of shore/shop details).
   const [devAt] = useState<[number, number, number] | null>(() => { const v = devHome.get("at")?.split(",").map(Number); return v?.length === 2 && v.every(Number.isFinite) ? [v[0], 0, v[1]] : null; });
+  // Follow-camera distance scale for close-up captures (dev only, e.g. ?zoom=0.45).
+  const [devZoom] = useState(() => Number(devHome.get("zoom")) || 1);
   const [donateOpen, setDonateOpen] = useState(false);
   const [museumWings, setMuseumWings] = useState<MuseumWing[] | null>(null);
   const loadMuseumRef = useRef(false);
@@ -623,7 +627,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
         camera={{ position: [0, 10.2, -21], fov: 48, near: 0.1, far: 120 }} shadows={castShadows ? "percentage" : false}
         onCreated={({ gl }) => { gl.info.autoReset = false; gl.toneMapping = THREE.NeutralToneMapping; gl.outputColorSpace = THREE.SRGBColorSpace; }}>
         <Suspense fallback={null}>
-          {site === "ruins" ? <RuinsScene key={`ruins-${ruinsRun}`} phase={phase} light={light} look={look} weather={weather} liteMode={liteMode} zoom={zoomed ? 1.4 : 1} player={player} onMove={move}
+          {site === "ruins" ? <RuinsScene key={`ruins-${ruinsRun}`} phase={phase} light={light} look={look} weather={weather} liteMode={liteMode} zoom={zoomed ? 1.4 : devZoom} player={player} onMove={move}
               onNear={n => setNear(n === "exit" ? "ruins_exit" : n)} onDefeat={onRuinsDefeat} start={ruinsRun <= 1 ? devAt : null} />
             : inside === "oracle" ? <OracleTemple frozen={fading || sheet === "oracle"} player={player} onNear={n => setNear(n)} ceremony={reveal} />
             : inside === "cafe" ? <CafeInterior phase={phase} player={player} frozen={fading || !!sheet} identity={identity} onMove={move} onNear={setNear} />
@@ -631,10 +635,10 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
             : inside === "hq" ? <Clubhouse phase={phase} player={player} frozen={fading} onNear={setNear} />
             : inside === "house" ? <HomeInterior layout={layout} phase={phase} frozen={fading} player={player} onNear={(n: HouseNear) => setNear(n)}
               decorating={decor.decorating} selected={decor.selected} onPlace={decor.place} onPickUp={decor.pickUp} />
-            : atHome ? <HomeIslandScene identity={identity} peaceful={peaceful} fishSpot={fishSpot} fishing={fishing} phase={phase} light={light} look={look} weather={weather} liteMode={liteMode} castShadows={castShadows} zoom={zoomed ? 1.4 : 1}
+            : atHome ? <HomeIslandScene identity={identity} peaceful={peaceful} fishSpot={fishSpot} fishing={fishing} phase={phase} light={light} look={look} weather={weather} liteMode={liteMode} castShadows={castShadows} zoom={zoomed ? 1.4 : devZoom}
               overview={overview} returned={returned} player={player} onMove={move} onNear={(n: HomeNear) => setNear(n)} outdoor={layout.outdoor}
               decorating={decor.decorating} selected={decor.selected} onPlace={item => decor.place("outdoor", item)} onPickUp={item => decor.pickUp("outdoor", item)} />
-            : <IslandScene identity={identity} devAt={devAt} exitFrom={exitFrom} peaceful={peaceful} fishSpot={fishSpot} fishing={fishing} chapter={chapterFlags} fromBoat={fromBoat} progression={progressionWorld} ceremony={ceremony} phase={phase} light={light} look={look} weather={weather} overview={overview} zoom={zoomed ? 1.4 : 1} reset={reset} returned={returned} liteMode={liteMode} castShadows={castShadows} player={player} onMove={move} onNear={setNear} />}
+            : <IslandScene identity={identity} devAt={devAt} exitFrom={exitFrom} peaceful={peaceful} fishSpot={fishSpot} fishing={fishing} chapter={chapterFlags} fromBoat={fromBoat} progression={progressionWorld} ceremony={ceremony} phase={phase} light={light} look={look} weather={weather} overview={overview} zoom={zoomed ? 1.4 : devZoom} reset={reset} returned={returned} liteMode={liteMode} castShadows={castShadows} player={player} onMove={move} onNear={setNear} />}
           {identity.family && identity.aura && <Suspense fallback={null}><FamilyAura player={player} color={FAMILIES[identity.family].light} /></Suspense>}
           <PostFX antialias={!graphics.liteMode && !graphics.pixelated} grade={grade} fx={lookFx(lookPreset, !liteMode)} />
           <LookMaterials preset={lookPreset} />

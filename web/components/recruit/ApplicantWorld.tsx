@@ -209,7 +209,7 @@ function Village({ guideToHQ, returned, paused, onAction, onNear, phase, fishing
       shadow-radius={lighting.shadow.radius} shadow-intensity={lighting.shadow.intensity} shadow-normalBias={0.02} shadow-bias={-0.0002} />
     {lighting.rim && <directionalLight position={RIM_POSITION} color={lighting.rim.color} intensity={lighting.rim.intensity} />}
     <GridWorld map={island.map} water={lighting.water} palette={ISLAND_TERRAIN} />
-    <GridOcean map={island.map} />
+    <GridOcean map={island.map} lite={graphics.liteMode} />
     <BlobShadows placements={GUIDE_SHADOW} opacity={0.5} color={lighting.shadow.tint} />
     <BlobShadows placements={plantShadows} opacity={0.16} color={lighting.shadow.tint} />
     {!graphics.liteMode && <CloudShadows phase={phase === "evening" ? "dusk" : phase} size={[28, 25]} bounded />}

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as THREE from "three";
-import { applyEnvironment, disposeEnvironment, ENV_PHASES } from "./envLight";
+import { applyEnvironment, disposeEnvironment, ENV_PHASES, sunU } from "./envLight";
 
 const mocks = vi.hoisted(() => ({ generators: [] as { renderer: unknown; dispose: ReturnType<typeof vi.fn> }[], targets: [] as import("three").WebGLRenderTarget[], fail: false }));
 vi.mock("three", async (importOriginal) => {
@@ -109,4 +109,12 @@ describe("environment GPU resource ownership", () => {
     expect(ENV_PHASES.day).toEqual(original);
     disposeEnvironment(scene);
   });
+});
+
+it("maps a world azimuth onto three's equirect u (u = atan(z, x) / 2π + 0.5)", () => {
+  expect(sunU(0)).toBeCloseTo(0.5);
+  expect(sunU(90)).toBeCloseTo(0.75);
+  expect(sunU(-90)).toBeCloseTo(0.25);
+  expect(sunU(180)).toBeCloseTo(0);
+  expect(sunU(-28.8)).toBeCloseTo(0.42, 2);
 });

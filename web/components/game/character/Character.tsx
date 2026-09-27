@@ -17,6 +17,7 @@ import { CLIP_EXPRESSION, composeFace, type Ctx2D, type Expression } from "@/lib
 import { WEAPON_HAND, isLoop, resolveClip, tempo, type CharacterMotion, type ClipName } from "@/lib/game/character/clips";
 import { adoptPrimitive, materialName, mergeLook, refCache, skinnedPrimitives } from "@/lib/game/character/rig";
 import type { WeaponGrip, WeaponKind } from "@/lib/game/combat/contract";
+import { tagLookClasses } from "@/lib/game/modelMaterials";
 
 export type { CharacterMotion, ClipName } from "@/lib/game/character/clips";
 /** v6 is 1.045 m tall; at 1.3 a character stands ~1.36 world units, a little over one tile (ACNH). */
@@ -193,7 +194,7 @@ const gripQ = new THREE.Quaternion(), gripE = new THREE.Euler();
 
 function HeldWeapon({ puppet, weapon: { kind, model: url, modelScale, inHand, grip } }: { puppet: Puppet; weapon: WeaponView }) {
   const { scene } = useGLTF(url);
-  const model = useMemo(() => scene.clone(true), [scene]);
+  const model = useMemo(() => tagLookClasses(scene.clone(true), url), [scene, url]);
   useEffect(() => {
     placeWeapon(model, { kind, model: url, modelScale, inHand, grip }, inHand ? puppet.sockets[WEAPON_HAND[kind]] : puppet.sockets.Back);
     return () => { model.removeFromParent(); };

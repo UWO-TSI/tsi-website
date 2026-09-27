@@ -1,6 +1,6 @@
 import { expect, it, vi } from "vitest";
 import { BoxGeometry, FrontSide, Frustum, Group, Matrix4, Mesh, MeshStandardMaterial, PerspectiveCamera, Texture, Vector3 } from "three";
-import { disposeModelMaterials, lightHQWindows, prepareModel } from "./modelMaterials";
+import { disposeModelMaterials, lightHQWindows, lookClassFor, prepareModel, tagLookClasses } from "./modelMaterials";
 import { bendViewPoint } from "./worldProjection";
 
 it("lights only instance-owned HQ glass while preserving frames and cached textures", () => {
@@ -100,4 +100,32 @@ it("keeps repaired glass transparent and out of the opaque shadow pass", () => {
     source.geometry.dispose();
     glass.dispose();
   }
+});
+
+it("classes outdoor glass and metal for reflections (row 237) and leaves characters, interiors, wood and fabric alone", () => {
+  const A = "/assets/acnh/", G = "/assets/game/";
+  // Glass: building windows, lamp globes, the clock dome, the outdoor fitting-room mirror, the message bottle.
+  for (const [url, name] of [[`${A}buildings/hq-office.glb`, "mWindowL"], [`${A}buildings/hq-office.glb`, "mSideWindow"], [`${A}buildings/chalet-wall-a.glb`, "mWindowGlass"],
+    [`${A}buildings/shop-market.glb`, "mRoofWindow"], [`${A}buildings/shop-market-door.glb`, "mWindow"], [`${A}props/streetlamp.glb`, "mGlassF"], [`${A}props/park-clock.glb`, "mGlass"],
+    [`${A}furniture/fitting-room.glb`, "mMirror"], [`${G}props/message-bottle.glb`, "M_Glass"]]) expect(lookClassFor(url, name), `${url} ${name}`).toBe("glass");
+  // Metal: lamp post, clock post, mailbox, workbench fittings, the weapons' blades and brass.
+  for (const [url, name] of [[`${A}props/streetlamp.glb`, "mReBody"], [`${A}props/park-clock.glb`, "mReBody"], [`${A}furniture/mailbox.glb`, "mBody"],
+    [`${G}props/workbench.glb`, "M_Iron"], [`${G}props/workbench.glb`, "M_Steel"], [`${G}weapons/sword-iron.glb`, "M_Blade"], [`${G}weapons/sword-iron.glb`, "M_Brass"],
+    [`${G}weapons/revolver-brass.glb`, "M_Drum"], [`${G}weapons/staff-rune.glb`, "M_Brass"]]) expect(lookClassFor(url, name), `${url} ${name}`).toBe("metal");
+  // Unchanged: walls, wood, fabric, grips, the driftwood sword, interior furniture glass, character accessories and outfits.
+  for (const [url, name] of [[`${A}buildings/hq-office.glb`, "mWall"], [`${A}props/bench-park.glb`, "mReBody"], [`${A}furniture/fitting-room.glb`, "mReFabric"],
+    [`${G}weapons/sword-iron.glb`, "M_Grip"], [`${G}weapons/sword-driftwood.glb`, "M_Blade"], [`${A}furniture/museum-case.glb`, "mGlass"], [`${A}furniture/wall-clock.glb`, "mGlass"],
+    [`${A}furniture/weapon-sword.glb`, "mReBody"], ["/assets/characters/v6/accessories/accessory/acc_glasses_round.glb", "M_Main"],
+    ["/assets/characters/v6/outfits/onepiece/outfit_koi_kimono.glb", "M_Gold"]]) expect(lookClassFor(url, name), `${url} ${name}`).toBe("props");
+  expect(lookClassFor(`${A}plants/tree-hardwood-a.glb`, "mGlass")).toBe("foliage");
+});
+
+it("tags prepared clones and held weapons with their look class", () => {
+  const blade = new MeshStandardMaterial({ name: "M_Blade" }), grip = new MeshStandardMaterial({ name: "M_Grip" });
+  const weapon = tagLookClasses(new Mesh(new BoxGeometry(), [blade, grip]), "/assets/game/weapons/sword-iron.glb");
+  expect([blade.userData.lookClass, grip.userData.lookClass]).toEqual(["metal", "props"]);
+  const lamp = prepareModel(new Mesh(new BoxGeometry(), new MeshStandardMaterial({ name: "mReBody" })), "/assets/acnh/props/streetlamp.glb", true) as Mesh<BoxGeometry, MeshStandardMaterial>;
+  expect(lamp.material.userData.lookClass).toBe("metal");
+  disposeModelMaterials(lamp);
+  weapon.geometry.dispose(); blade.dispose(); grip.dispose();
 });
