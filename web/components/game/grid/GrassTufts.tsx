@@ -37,6 +37,7 @@ import {
   cellToWorldZ,
 } from "@/lib/game/grid";
 import { useTuning } from "@/lib/game/tuning";
+import { worldTime } from "@/lib/game/worldClock";
 
 const PACK_URL = "/assets/nature/grass-tufts.glb";
 useGLTF.preload(PACK_URL);
@@ -222,8 +223,8 @@ export default function GrassTufts({ map, windScale = 1 }: { map: IslandMap; win
   }, [material]);
   useEffect(() => () => cardGeometry.dispose(), [cardGeometry]);
 
-  useFrame((state) => {
-    uTime.current.value = state.clock.elapsedTime;
+  useFrame(() => {
+    uTime.current.value = worldTime();
     uWind.current.value.set(t.grass.swayAmount * windScale, t.grass.swaySpeed, t.grass.gustLength, t.grass.tuftHeight);
   });
 

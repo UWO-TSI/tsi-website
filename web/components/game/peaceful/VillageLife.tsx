@@ -21,6 +21,7 @@ import { bugReaction, hasClue, hourKey, nodeAvailable, rollNode } from "@/lib/ga
 import { setPeacefulTarget, type PeacefulTarget } from "@/lib/game/peacefulNear";
 import type { Biome, Species } from "@/lib/collections/roster";
 import type { WorldMoment } from "@/lib/collections/logic";
+import { worldTime } from "@/lib/game/worldClock";
 
 export interface NodeSpec { id: string; x: number; z: number; biomes: Biome[]; categories: Species["category"][]; /** Tree canopy (fruit hangs up here). */ canopy?: boolean; /** Always this species (a tree's branch) instead of a roster roll. */ drop?: Species }
 
@@ -107,7 +108,7 @@ export default function VillageLife({ nodes, bugNodes, moment, member, player, g
     return () => window.removeEventListener("tsi:peaceful-act", onAct);
   });
 
-  useFrame(({ clock }, delta) => {
+  useFrame((_, delta) => {
     const p = player.current;
     // A jump of more than a stride in one frame is a spawn or teleport, not running at the bug.
     const step = Math.hypot(p.x - last.current.x, p.z - last.current.z);
@@ -119,7 +120,7 @@ export default function VillageLife({ nodes, bugNodes, moment, member, player, g
       if (hasClue(sp) && d < 5 && !chimed.current.has(n.id)) { chimed.current.add(n.id); AudioManager.playSFX("blip3"); }
       if (d < REACH && (!best || d < best.distance)) best = { id: n.id, kind: sp!.tool === "shovel" ? "dig" : "forage", label: n.canopy ? "Shake the tree" : sp!.category === "mineral" ? "Strike the rock" : buried(sp!) ? "Dig it up" : sp!.sub === "shell" ? "Pick up the shell" : "Pick it", distance: d, at: [n.x, n.z] };
     }
-    const t = clock.elapsedTime;
+    const t = worldTime();
     for (const bug of bugState.current.values()) {
       const g = groups.current.get(bug.id);
       if (!g) continue;

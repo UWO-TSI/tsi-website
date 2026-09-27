@@ -50,9 +50,12 @@ const TREE_MODELS = [
 ];
 
 /** `models` swaps the four tree slots (oak a, oak b, blossom, cedar), e.g. for seasonal dressing. */
+/** A tree's size from its seed (also where its crown sheds leaves, IslandAtmosphere). */
+export const treeScale = (seed: number) => 0.85 + (seed % 5) * 0.08;
+
 export function NatureTree({ position, seed, models = TREE_MODELS }: { position: [number, number, number]; seed: number; models?: readonly string[] }) {
   const url = models[seed % models.length];
-  const s = 0.85 + (seed % 5) * 0.08;
+  const s = treeScale(seed);
   const r: [number, number, number] = [0, treeYaw(seed), 0];
   return (
     <Suspense fallback={null}>

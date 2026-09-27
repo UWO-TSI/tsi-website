@@ -33,7 +33,7 @@ import { paletteBySeason, seasonLook, SEASON_TREES, SEASON_BUSHES, SEASON_FLOWER
 import { useNPCPersonas, useSeasonPalettes } from "@/lib/content/loader";
 import type { IslandWeather } from "@/lib/game/islandWeather";
 import { useIslandConditions } from "@/lib/game/useIslandConditions";
-import { IslandAtmosphere, useFollowCamera } from "./IslandAtmosphere";
+import { IslandAtmosphere, useFollowCamera, type TreeSpot } from "./IslandAtmosphere";
 import PeacefulLayer, { peacefulNear } from "./peaceful/PeacefulLayer";
 import WardrobeSheet from "./peaceful/WardrobeSheet";
 import { ShopBody } from "@/components/economy/EconomySheets";
@@ -102,6 +102,7 @@ type Near = "enter" | "exit" | "board" | "display" | "desk" | "shelf" | "clock" 
 type Sheet = "notice" | "letters" | "journal" | "trophies" | "showcase" | "closet" | "fitting" | "oracle" | "path" | "settings" | "missions" | null;
 const PHASE_NAMES: Record<IslandPhase, string> = { dawn: "Dawn", day: "Daylight", evening: "Evening", night: "Night" };
 const TREE_SEEDS = [0, 3, 2, 5, 7, 8, 1, 3];
+const VILLAGE_TREES: TreeSpot[] = ISLAND_TREES.map(([x, z], i) => ({ x, z, seed: TREE_SEEDS[i % TREE_SEEDS.length] }));
 const HQ_DOOR: [number, number] = [0, 6.3];
 /** Oracle temple steps (landmark front at z 7.3) and where you come back out. */
 const ORACLE_DOOR: [number, number] = [-11, 6.8];
@@ -254,7 +255,7 @@ function IslandScene({ identity, devAt, exitFrom, peaceful, fishSpot, fishing, c
   return (
     <>
       <IslandAtmosphere phase={phase} light={light} look={look} weather={weather} liteMode={liteMode} castShadows={castShadows} overview={overview}
-        player={player} ground={island.ground} puddles={PUDDLE_SPOTS} cloudSize={[46, 38]} fireflyAnchors={ISLAND_BUSHES} />
+        ground={island.ground} puddles={PUDDLE_SPOTS} cloudSize={[46, 38]} fireflyAnchors={ISLAND_BUSHES} trees={VILLAGE_TREES} />
       <GridWorld map={island.map} water={light.water} palette={terrain} windScale={liteMode ? 0 : weather === "wind" ? 2.2 : 1} />
       <GridOcean map={island.map} lite={liteMode} skip={UNDER_WHARF} />
       <PeacefulLayer map={island.map} nodes={VILLAGE_NODES} moment={peaceful.moment} member={peaceful.member} player={player} ground={island.ground} highTier={!liteMode} active={!fishing} />
@@ -270,7 +271,7 @@ function IslandScene({ identity, devAt, exitFrom, peaceful, fishSpot, fishing, c
       <Lantern position={[4.6, 0, 2.4]} intensity={light.lampsOn ? light.lamp * 1.5 : 0} glow={light.lampsOn ? 1.2 : 0} />
       {ISLAND_PROPS.map((prop, i) => <GLBProp key={`prop-${i}`} url={`/assets/acnh/props/${prop.model}.glb`}
         position={[prop.x, island.ground(prop.x, prop.z), prop.z]} scale={prop.scale} rotation={[0, prop.yaw, 0]} />)}
-      {ISLAND_TREES.map(([x, z], i) => <NatureTree key={`tree-${i}`} position={[x, island.ground(x, z), z]} seed={TREE_SEEDS[i % TREE_SEEDS.length]} models={SEASON_TREES[look.season]} />)}
+      {VILLAGE_TREES.map(({ x, z, seed }, i) => <NatureTree key={`tree-${i}`} position={[x, island.ground(x, z), z]} seed={seed} models={SEASON_TREES[look.season]} />)}
       {ISLAND_BUSHES.map(([x, z], i) => <NatureBush key={`bush-${i}`} position={[x, island.ground(x, z), z]} seed={i} models={SEASON_BUSHES[look.season]} />)}
       {SEASON_FLOWERS[look.season].length > 0 && ISLAND_FLOWERS.map(([x, z], i) => <NatureFlowerCluster key={`flower-${i}`} position={[x, island.ground(x, z), z]} seed={i * 2} models={SEASON_FLOWERS[look.season]} />)}
       {/* Residents stand where their schedule puts them this phase; during a ceremony they stroll to the monument and cheer. */}

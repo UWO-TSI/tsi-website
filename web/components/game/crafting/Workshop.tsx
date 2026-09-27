@@ -16,6 +16,7 @@ import { AudioManager } from "@/lib/game/audio";
 import { constrainClubhouse } from "@/lib/game/clubhouse";
 import { villageBottleSpot } from "@/lib/game/islandNodes";
 import { setPeacefulTarget } from "@/lib/game/peacefulNear";
+import { worldTime } from "@/lib/game/worldClock";
 import { installCraftingDemo } from "@/lib/crafting/demo";
 import type { RecipeBook, RecipeView } from "@/lib/crafting/service";
 import { torontoDay } from "@/lib/wallet/rules";
@@ -76,10 +77,10 @@ export function BeachBottle({ player, ground }: { player: React.RefObject<THREE.
     window.addEventListener("tsi:peaceful-act", onAct);
     return () => { alive = false; window.removeEventListener("tsi:peaceful-act", onAct); setPeacefulTarget(null, "bottle"); };
   }, []);
-  useFrame(({ clock }) => {
+  useFrame(() => {
     const d = Math.hypot(player.current.x - spot[0], player.current.z - spot[1]);
     setPeacefulTarget(out.current && d < 1.7 ? { id: "bottle", kind: "forage", label: "Open the message bottle", distance: d } : null, "bottle");
-    if (rock.current) rock.current.rotation.x = Math.sin(clock.elapsedTime * 1.3) * 0.08;
+    if (rock.current) rock.current.rotation.x = Math.sin(worldTime() * 1.3) * 0.08;
   });
   if (!available) return null;
   return <group position={[spot[0], ground(spot[0], spot[1]) + 0.14, spot[1]]} rotation={[0, 0.8, 0]} scale={1.3}>
