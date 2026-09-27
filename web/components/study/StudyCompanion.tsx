@@ -9,14 +9,19 @@ import { COINS } from "@/lib/economy";
 import { AudioManager } from "@/lib/game/audio";
 import { LIMITS, PRESETS, type Settings } from "@/lib/study/rules";
 import type { TableView } from "@/lib/study/service";
-import type { StudyTransport } from "@/lib/study/transport";
-import { formatClock, useStudySession, type StudyHook } from "@/lib/study/useStudySession";
+import { formatClock, type StudyHook } from "@/lib/study/useStudySession";
 import s from "./companion.module.css";
 
 const LOCATION: Record<string, string> = { cafe: "Cafe", "outdoor-plaza": "Plaza", "outdoor-pier": "Pier" };
 
-export default function StudyCompanion({ transport }: { transport?: StudyTransport }) {
-  const study = useStudySession({ transport });
+/**
+ * The companion's content, without the full-page `.shell`/`.wrap` chrome —
+ * for embedding inside another shell (the `/student/companion` tab bar).
+ * `study` comes from the caller so a page that also needs `table`/`mates`
+ * elsewhere (the tab shell's 3D table view) shares one hook instance
+ * instead of polling the study API twice.
+ */
+export function StudyCompanionBody({ study }: { study: StudyHook }) {
   const { session } = study;
   // Audio pass (row 169 / polish-ownership item 9): the block-end chime
   // goes through AudioManager.playSFX("confirm"), which stays silent until
@@ -32,30 +37,38 @@ export default function StudyCompanion({ transport }: { transport?: StudyTranspo
     };
   }, []);
   return (
+    <>
+      <header className={s.top}>
+        <h1>Study</h1>
+        <span className={s.coins} aria-label="Coins earned this visit">+{study.coinsEarned} {COINS.symbol}</span>
+      </header>
+      {study.error ? <p className={`${s.note} ${s.err}`} role="alert">{study.error}</p> : null}
+      {study.signedOut ? (
+        <section className={s.card}>
+          <h2>Study with the club</h2>
+          <p className={s.muted}>Sit at a cafe table, run your own Pomodoro timer next to other people, and earn coins for every focus minute.</p>
+          <div className={s.row} style={{ marginTop: 12 }}>
+            <a className={s.btn} href="/student/login?next=/student/companion/study" style={{ display: "grid", placeItems: "center", textDecoration: "none" }}>Sign in to study</a>
+          </div>
+        </section>
+      ) : null}
+      {study.lastEnded && !session ? <Ended study={study} /> : null}
+      {!study.loaded && !study.signedOut ? <p className={s.muted}>Finding a table…</p> : null}
+      {study.loaded && !session ? <Tables study={study} /> : null}
+      {session?.phase === "seated" ? <Setup study={study} /> : null}
+      {session && (session.phase === "focus" || session.phase === "break") ? <Timer study={study} /> : null}
+      {session ? <Mates study={study} /> : null}
+      {session && !study.chatMuted ? <Chat study={study} /> : null}
+      <Stats study={study} />
+    </>
+  );
+}
+
+export default function StudyCompanion({ study }: { study: StudyHook }) {
+  return (
     <div className={s.shell}>
       <div className={s.wrap}>
-        <header className={s.top}>
-          <h1>Study</h1>
-          <span className={s.coins} aria-label="Coins earned this visit">+{study.coinsEarned} {COINS.symbol}</span>
-        </header>
-        {study.error ? <p className={`${s.note} ${s.err}`} role="alert">{study.error}</p> : null}
-        {study.signedOut ? (
-          <section className={s.card}>
-            <h2>Study with the club</h2>
-            <p className={s.muted}>Sit at a cafe table, run your own Pomodoro timer next to other people, and earn coins for every focus minute.</p>
-            <div className={s.row} style={{ marginTop: 12 }}>
-              <a className={s.btn} href="/student/login?next=/student/companion/study" style={{ display: "grid", placeItems: "center", textDecoration: "none" }}>Sign in to study</a>
-            </div>
-          </section>
-        ) : null}
-        {study.lastEnded && !session ? <Ended study={study} /> : null}
-        {!study.loaded && !study.signedOut ? <p className={s.muted}>Finding a table…</p> : null}
-        {study.loaded && !session ? <Tables study={study} /> : null}
-        {session?.phase === "seated" ? <Setup study={study} /> : null}
-        {session && (session.phase === "focus" || session.phase === "break") ? <Timer study={study} /> : null}
-        {session ? <Mates study={study} /> : null}
-        {session && !study.chatMuted ? <Chat study={study} /> : null}
-        <Stats study={study} transport={transport} />
+        <StudyCompanionBody study={study} />
       </div>
     </div>
   );
@@ -196,7 +209,7 @@ function Ended({ study }: { study: StudyHook }) {
   );
 }
 
-function Stats({ study }: { study: StudyHook; transport?: StudyTransport }) {
+function Stats({ study }: { study: StudyHook }) {
   const st = study.stats;
   if (!st) return null;
   return (

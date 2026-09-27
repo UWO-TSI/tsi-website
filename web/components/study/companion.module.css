@@ -55,3 +55,20 @@
 .msg[data-mine="true"] { background: #f6ecdc; }
 .report { margin-left: auto; border: 0; background: transparent; color: #8a3417; font-size: 12px; min-height: 32px; padding: 0 6px; }
 .input { flex: 1; min-height: 48px; border-radius: 14px; border: 1px solid #5c746c55; padding: 0 12px; font: inherit; font-size: 16px; background: #fff; color: #293e3b; }
+
+/* ── /student/companion shell chrome (tab bar, sub-tabs, embeds, Me tab) ── */
+.tabbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; display: flex; gap: 4px; padding: 6px 10px calc(6px + env(safe-area-inset-bottom)); background: #f8f7e9f2; border-top: 1px solid #5c746c26; backdrop-filter: blur(6px); }
+.tabbtn { flex: 1; min-height: 52px; border: 0; border-radius: 14px; background: transparent; color: #607069; font-weight: 700; font-size: 13px; display: grid; place-items: center; gap: 2px; }
+.tabbtn[aria-current="true"] { background: #e3efdc; color: #2f5a36; }
+.sceneWrap { border-radius: 18px; overflow: hidden; border: 1px solid #5c746c2e; height: 46vh; min-height: 220px; max-height: 320px; background: #cfd9c3; }
+.sceneWrap canvas { display: block; }
+.subtabs { display: flex; gap: 6px; }
+.subtab { flex: 1; min-height: 44px; border-radius: 12px; border: 1.5px solid #5c746c40; background: #fff; color: #42544e; font-weight: 700; font-size: 13px; }
+.subtab[aria-selected="true"] { border-color: #6c9a6f; background: #e3efdc; color: #2f5a36; }
+.pageEmbed { background: #ffffffd9; border: 1px solid #5c746c2e; border-radius: 18px; overflow: hidden; }
+.meHead { display: flex; align-items: center; gap: 12px; }
+.meAvatar { width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; background: #dfe6d6; font-weight: 800; font-size: 20px; color: #42544e; flex: none; }
+.meName { display: flex; align-items: center; gap: 6px; font-size: 18px; font-weight: 700; }
+.dot { width: 9px; height: 9px; border-radius: 50%; background: #4a90d9; box-shadow: 0 0 0 3px #4a90d933; display: inline-block; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.tile { min-height: 72px; border-radius: 16px; border: 1px solid #5c746c2e; background: #fff; display: grid; place-items: center; gap: 4px; font-weight: 700; font-size: 14px; color: #293e3b; }
