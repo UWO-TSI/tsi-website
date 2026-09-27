@@ -36,3 +36,6 @@ Answers to 2, 5 and 7 above as applied: overcast is still the rain state (no new
 
 ## Coordinator rulings on 18–23 (2026-09-27)
 Glint path stylised into frame on the sun side: accepted (readability over physics). Clubhouse windows: glass by day, warm amber from golden hour on. Highlights only on curved/tilted parts from this camera: accepted. Metal weapons covered by tests: accepted; verify visually when a metal weapon is crafted.
+
+## Reversed by David (row 238), 2026-09-27
+Rulings 18 (glint path folded into view) and 23 (sprites with their own flash clock) are reversed: sparkle must come from the real sun, the waves and the viewer's position. Measured: with the sun behind the camera, no physical sparkle can reach the screen (a facet would need 29°+ of tilt; ours reach about 9°). The sun's placement goes to David as row 239. See `specs/look-development.md` section 7.
