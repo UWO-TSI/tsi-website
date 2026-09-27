@@ -108,3 +108,29 @@ export const outputName = (recipe: Recipe) => NAMES.get(recipe.output.key) ?? re
 /** Shop recipe cards (row 199): buying one teaches the recipe (member_inventory trigger). */
 export const RECIPE_CARDS: CatalogueEntry[] = RECIPES.filter(x => x.sources.includes("shop")).map(x =>
   item(`card-${x.id}`, `${outputName(x)} recipe`, "tool", 300, { catalogue_ref: `recipe:${x.id}`, description: "Recipe card. Buying it teaches you the recipe." }));
+
+export const RECIPE_SOURCES: readonly RecipeSource[] = ["starter", "shop", "bottle", "quest"];
+const KEY = /^[a-z0-9_-]{1,64}$/;
+const isCount = (v: unknown, max: number) => typeof v === "number" && Number.isInteger(v) && v >= 1 && v <= max;
+
+/** Server-side check before a crafting_recipes draft is saved (admin Recipes editor). Outputs must exist: the foreign keys refuse the publish otherwise. */
+export function validateRecipeDraft(d: Record<string, unknown>): string[] {
+  const errors: string[] = [];
+  if (typeof d.id !== "string" || !/^[a-z0-9-]{1,48}$/.test(d.id)) errors.push("id: lowercase letters, numbers, dashes");
+  const item = typeof d.output_item === "string" && KEY.test(d.output_item), weapon = typeof d.output_weapon === "string" && KEY.test(d.output_weapon);
+  if (item === weapon || (!item && d.output_item != null) || (!weapon && d.output_weapon != null)) errors.push("output: exactly one shop item or weapon");
+  if (!isCount(d.output_qty, 20)) errors.push("output_qty: 1-20");
+  const ing = d.ingredients as Record<string, unknown> | undefined;
+  if (!ing || typeof ing !== "object" || Array.isArray(ing) || !Object.keys(ing).length || Object.entries(ing).some(([k, n]) => !KEY.test(k) || !isCount(n, 99))) errors.push("ingredients: item key → 1-99");
+  if (!Array.isArray(d.sources) || !d.sources.length || d.sources.some(s => !(RECIPE_SOURCES as readonly unknown[]).includes(s))) errors.push("sources: starter, shop, bottle and/or quest");
+  if (d.position !== undefined && !Number.isInteger(d.position)) errors.push("position: whole number");
+  return errors;
+}
+
+/** A crafting_recipes row as the service's Recipe (the database is the live copy; RECIPES is its seed). */
+export const recipeFromRow = (r: Record<string, unknown>): Recipe => ({
+  id: String(r.id),
+  output: r.output_weapon ? { kind: "weapon", key: String(r.output_weapon), qty: Number(r.output_qty) } : { kind: "item", key: String(r.output_item), qty: Number(r.output_qty) },
+  ingredients: r.ingredients as Record<string, number>,
+  sources: r.sources as RecipeSource[],
+});

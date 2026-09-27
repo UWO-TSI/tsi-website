@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { supabaseProgressionStore } from "@/lib/progression/supabaseStore";
-import { badRequest, forbidden, isAdminTier, jsonResult, withStore } from "@/lib/server/memberContext";
+import { badRequest, jsonResult } from "@/lib/server/memberContext";
+import { withAdminStore } from "@/lib/server/adminContext";
 import { adminCredit } from "@/lib/progression/service";
 
 const Body = z.object({
@@ -13,9 +14,8 @@ const Body = z.object({
 
 // POST /api/progression/goals/:slug/credit (T1/T2): admin-logged real contribution.
 export async function POST(request: Request, { params }: { params: Promise<{ slug: string }> }) {
-  const ctx = await withStore(supabaseProgressionStore);
+  const ctx = await withAdminStore(supabaseProgressionStore);
   if (ctx instanceof NextResponse) return ctx;
-  if (!isAdminTier(ctx.tier)) return forbidden();
   const { slug } = await params;
   const parsed = Body.safeParse(await request.json().catch(() => null));
   if (!parsed.success || !/^[a-z0-9-]{1,64}$/.test(slug)) return badRequest();

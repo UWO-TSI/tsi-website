@@ -8,8 +8,7 @@
 // `url` is the permanent public URL and goes straight into sprite_url.
 
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { adminContext } from "@/lib/server/adminContext";
 
 const BUCKET = "content-assets";
 const MAX_BYTES = 5 * 1024 * 1024; // 5 MB
@@ -38,37 +37,16 @@ function slugify(name: string): string {
 }
 
 export async function POST(request: Request) {
-  // 1. Must be multipart
+  // 1. T1/T2 gate before anything else
+  const ctx = await adminContext();
+  if (ctx instanceof NextResponse) return ctx;
+
+  // 2. Must be multipart
   const contentType = request.headers.get("content-type") ?? "";
   if (!contentType.toLowerCase().includes("multipart/form-data")) {
     return NextResponse.json(
       { ok: false, error: "Expected multipart/form-data" },
       { status: 400 },
-    );
-  }
-
-  // 2. Auth + T1/T2 gate via the regular SSR client
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json(
-      { ok: false, error: "Unauthorized" },
-      { status: 401 },
-    );
-  }
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("tier")
-    .eq("id", user.id)
-    .single();
-
-  if (!profile || (profile.tier !== 1 && profile.tier !== 2)) {
-    return NextResponse.json(
-      { ok: false, error: "Forbidden — T1/T2 only" },
-      { status: 403 },
     );
   }
 
@@ -116,7 +94,7 @@ export async function POST(request: Request) {
 
   // 6. Upload via service-role client (bypasses RLS — auth gate above is
   // what actually gates the operation)
-  const admin = createAdminClient();
+  const admin = ctx.db;
   const buffer = Buffer.from(await file.arrayBuffer());
   const { error: uploadError } = await admin.storage
     .from(BUCKET)
