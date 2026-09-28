@@ -24,3 +24,10 @@ A smooth flat walk (`PlayerAvatar.tsx`, `lib/game/locomotion.ts`): 7.4 u/s walk,
 
 ## Evidence
 Frame strips (or short recordings) of each move in the lab; tests; FPS unchanged; David's verdict on the feel in `/lab/move` before step 4.
+
+## Built: steps 1 to 3 (branch `game/movement`, 2026-09-28)
+- **Sim** `web/lib/game/movement/sim.ts`: `stepMove(state, input, dt, world, tuning)` at a fixed 120 Hz, `advanceMove` drives it per frame and `interpolated` draws between steps. Modes: ground, air, skid, roll, recover, mantle, splash. Every feel value is `MOVE_TUNING`. The world is `{ top(x, z), wet(x, z) }`, which `islandOf` (`lib/game/defaultIsland.ts`) now answers for any village, so the lab course and the village share one adapter. Tests: `sim.test.ts` (coyote, buffer, variable height, chain cap, long jump, rivers, dash, skid, drops, mantle, ramps, tunnelling at 30/60/144 Hz, fuzzed edges and the whole course, same path at any frame rate, a scripted lap).
+- **Lab** `/lab/move` (`web/components/game/movement/MoveLab.tsx`, `MoveAvatar.tsx`, course in `lib/game/movement/course.ts`): tuning panel with presets and Copy JSON, per-move numbers, slow motion, key remap, touch joystick and buttons, lap timer.
+- **Clips** Jump, Fall, Land, Roll, Mantle, Dash, Skid in `art/characters/base/build_clips.py`; the character plays them through a `move` state channel and one-shots.
+- **Controls** `lib/game/movement/keys.ts` (remappable, this device); ruins: Q dodges, swap on R.
+- **Step 4 (integration)**: move `MoveAvatar`'s frame loop into `PlayerAvatar` in place of `advanceMotion` and the cosmetic hop, keeping seats, tap-to-walk, world clips, emotes, nameplate and `onMove`; village world = `villageIsland()`; home and ruins need a `{ top, wet }` from their walkers; the ruins pass the dodge's `DODGE` timings as the dash tuning with i-frames, and Space becomes jump there. Questions: `specs/movement-questions.md`.

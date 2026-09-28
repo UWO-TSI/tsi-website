@@ -9,6 +9,7 @@ import type { Enemy, Vec } from "./sim";
 import { PLAYER_BASE, WEAPONS, WEAPON_ORDER } from "./data";
 import { ZERO_STATS, type Stat, type StatBlock } from "@/lib/combat/progression";
 import type { Ability, BuffStat, Element, Status, Subclass, UnitDef } from "@/lib/combat/kits";
+import { DEFAULT_MOVE_KEYS, readMoveKeys } from "@/lib/game/movement/keys";
 
 /** A shot. Weapon shots carry nothing; ability and unit shots carry what they do on impact. */
 export interface ShotHit { power: number; stat?: Stat; tier?: number; pierce?: boolean; splash?: number; status?: Status; unit?: boolean; hitIds?: string[] }
@@ -116,16 +117,20 @@ export function useCombatVersion(): number {
   return useSyncExternalStore(l => { listeners.add(l); return () => { listeners.delete(l); }; }, () => version, () => 0);
 }
 
-// ── Ability keys (slots 1–4 and the weapon swap Q, remappable) ──────
+// ── Ability keys (slots 1–4 and the weapon swap R, remappable) ──────
+// Q is the dash, and the dodge in the ruins (specs/movement.md), so the swap moved from Q to R.
 const KEYS_KEY = "tsi.combatKeys.v2"; // v1 bound the prototype runes, not slots
-export const DEFAULT_ABILITY_KEYS: Record<AbilityId, string> = { slot1: "1", slot2: "2", slot3: "3", slot4: "4", swap: "q" };
-const RESERVED = new Set(["w", "a", "s", "d", " ", "e", "escape", "shift", "tab", "c", "z", "m", "j", "b", "i"]);
+export const DEFAULT_ABILITY_KEYS: Record<AbilityId, string> = { slot1: "1", slot2: "2", slot3: "3", slot4: "4", swap: "r" };
+const MENU_KEYS = ["e", "escape", "tab", "z", "m", "j", "b", "i"];
+/** Movement keys (whatever this device bound them to) and the menu keys. */
+const reserved = () => new Set([...MENU_KEYS, ...Object.values(DEFAULT_MOVE_KEYS), ...Object.values(readMoveKeys())]);
 export function readAbilityKeys(): Record<AbilityId, string> {
   try {
     const raw = JSON.parse(localStorage.getItem(KEYS_KEY) ?? "null");
     if (raw && typeof raw === "object") {
       const out = { ...DEFAULT_ABILITY_KEYS };
-      for (const a of Object.keys(out) as AbilityId[]) if (typeof raw[a] === "string" && raw[a].length === 1 && !RESERVED.has(raw[a])) out[a] = raw[a];
+      const taken = reserved();
+      for (const a of Object.keys(out) as AbilityId[]) if (typeof raw[a] === "string" && raw[a].length === 1 && !taken.has(raw[a])) out[a] = raw[a];
       if (new Set(Object.values(out)).size === ABILITIES.length) return out;
     }
   } catch { /* defaults */ }
@@ -134,7 +139,7 @@ export function readAbilityKeys(): Record<AbilityId, string> {
 /** Rebind an ability; taking another ability's key swaps them. Movement, dodge and menu keys are refused. */
 export function remapAbility(keys: Record<AbilityId, string>, id: AbilityId, raw: string): { ok: true; keys: Record<AbilityId, string> } | { ok: false; error: string } {
   const k = raw.toLowerCase();
-  if (k.length !== 1 || RESERVED.has(k)) return { ok: false, error: `${raw === " " ? "Space" : raw.toUpperCase()} is already used.` };
+  if (k.length !== 1 || reserved().has(k)) return { ok: false, error: `${raw === " " ? "Space" : raw.toUpperCase()} is already used.` };
   const other = (Object.keys(keys) as AbilityId[]).find(a => a !== id && keys[a] === k);
   const next = { ...keys, [id]: k };
   if (other) next[other] = keys[id];

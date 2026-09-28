@@ -8,14 +8,20 @@ import { CLIP_BY_NAME } from "./look";
 import type { WeaponKind } from "@/lib/game/combat/contract";
 
 export type ClipName = "Idle" | "Walk" | "Run" | "Sit" | "Study" | "Sleep" | "Fish" | "FishHold" | "Forage" | "Dig" | "Net"
-  | "Wave" | "Cheer" | "Laugh" | "Sad" | "Dance" | "AttackMelee" | "AttackBow" | "AttackCast" | "DodgeRoll" | "Hit" | "Defeat" | "Trace" | "Stretch";
+  | "Wave" | "Cheer" | "Laugh" | "Sad" | "Dance" | "AttackMelee" | "AttackBow" | "AttackCast" | "DodgeRoll" | "Hit" | "Defeat" | "Trace" | "Stretch"
+  | "Jump" | "Fall" | "Land" | "Roll" | "Mantle" | "Dash" | "Skid";
+/** Movement clips (lib/game/movement): quick crossfades so hops and landings read on time. */
+export const SNAPPY_CLIPS = new Set<ClipName>(["DodgeRoll", "Hit", "Jump", "Fall", "Land", "Roll", "Mantle", "Dash", "Skid"]);
 
 /**
  * What the world asks of a character each frame. `speed` is ground speed in
  * world units/s; `pose` is a held clip (null = free); `play` is a one-shot
- * request that the character consumes (sets back to null) when it starts.
+ * request that the character consumes (sets back to null) when it starts;
+ * `move` is a movement state (in the air, skidding) that holds over locomotion.
  */
-export interface CharacterMotion { speed: number; yaw: number; lift: number; pose?: ClipName | null; play?: ClipName | null }
+export interface CharacterMotion { speed: number; yaw: number; lift: number; pose?: ClipName | null; play?: ClipName | null; move?: ClipName | null;
+  /** Animation clock rate (slow motion in /lab/move; 1 when unset). */
+  rate?: number }
 
 export const isLoop = (clip: ClipName) => CLIP_BY_NAME.get(clip)?.loop ?? true;
 
@@ -30,9 +36,10 @@ export function tempo(clip: ClipName, speed: number, walkSpeed: number): number 
   return 1;
 }
 
-/** One-shot (if still running) > held pose > locomotion. A pose is dropped the moment the character moves. */
-export function resolveClip(s: { speed: number; walkSpeed: number; pose: ClipName | null; oneShot: ClipName | null }): ClipName {
+/** One-shot (if still running) > movement state > held pose > locomotion. A pose is dropped the moment the character moves. */
+export function resolveClip(s: { speed: number; walkSpeed: number; pose: ClipName | null; oneShot: ClipName | null; move?: ClipName | null }): ClipName {
   if (s.oneShot) return s.oneShot;
+  if (s.move) return s.move;
   if (s.pose && s.speed < 0.08) return s.pose;
   return locomotion(s.speed, s.walkSpeed);
 }

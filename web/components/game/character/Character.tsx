@@ -14,7 +14,7 @@ import * as THREE from "three";
 import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js";
 import { BASE_URL, FACE_ATLAS_URL, PALETTE, TSI_DECAL_URL, CLIP_BY_NAME, bodyKey, faceKey, resolveParts, type CharacterLook, type ResolvedPart } from "@/lib/game/character/look";
 import { CLIP_EXPRESSION, composeFace, type Ctx2D, type Expression } from "@/lib/game/character/face";
-import { WEAPON_HAND, isLoop, resolveClip, tempo, type CharacterMotion, type ClipName } from "@/lib/game/character/clips";
+import { SNAPPY_CLIPS, WEAPON_HAND, isLoop, resolveClip, tempo, type CharacterMotion, type ClipName } from "@/lib/game/character/clips";
 import { adoptPrimitive, materialName, mergeLook, refCache, skinnedPrimitives } from "@/lib/game/character/rig";
 import type { WeaponGrip, WeaponKind } from "@/lib/game/combat/contract";
 import { tagLookClasses } from "@/lib/game/modelMaterials";
@@ -152,7 +152,7 @@ class Puppet {
     next.reset().setLoop(loop ? THREE.LoopRepeat : THREE.LoopOnce, Infinity);
     next.clampWhenFinished = !loop;
     next.setEffectiveWeight(1).play();
-    if (this.action && this.action !== next) this.action.crossFadeTo(next, name === "DodgeRoll" || name === "Hit" ? 0.06 : 0.16, false);
+    if (this.action && this.action !== next) this.action.crossFadeTo(next, SNAPPY_CLIPS.has(name) ? 0.06 : 0.16, false);
     this.action = next;
     this.clip = name;
   }
@@ -165,7 +165,7 @@ class Puppet {
     if (motion.play) { this.oneShot = motion.play; motion.play = null; restart = true; }
     if (motion.speed >= 0.08) motion.pose = null;
     if (this.oneShot && this.clip === this.oneShot && !restart && this.action && this.action.time >= this.action.getClip().duration - 1e-3) this.oneShot = null;
-    const want = resolveClip({ speed: motion.speed, walkSpeed, pose: motion.pose ?? null, oneShot: this.oneShot });
+    const want = resolveClip({ speed: motion.speed, walkSpeed, pose: motion.pose ?? null, oneShot: this.oneShot, move: motion.move });
     if (want !== this.clip || restart) this.play(want);
     this.action!.setEffectiveTimeScale(tempo(want, motion.speed, walkSpeed));
     let expression = CLIP_EXPRESSION[want] ?? "neutral";
@@ -263,7 +263,7 @@ export default function Character({ look, motion, walkSpeed = 7.4, weapon = null
     if (!m || !g) return;
     g.rotation.y = m.yaw;
     g.position.y = m.lift;
-    puppet.update(Math.min(delta, 0.1), m, walkSpeed);
+    puppet.update(Math.min(delta, 0.1) * (m.rate ?? 1), m, walkSpeed);
   });
   return <group ref={group}>
     <primitive object={puppet.root} scale={scale} dispose={null} />

@@ -22,6 +22,7 @@ import { IslandAtmosphere, useFollowCamera } from "../IslandAtmosphere";
 import { AimReticle, Blasts, EnemyInstances, FloaterProjector, PlayerAuras, Projectiles, Telegraphs, Totems, Wisps } from "./EncounterRender";
 import { BOSS_CENTER, ESCORT_PATHS, EXIT_SPOT, FETCH_SPOTS, GATE_PLAZA, RUINS_BROKEN_ARCHES, RUINS_MOAI, RUINS_PILLARS, RUINS_ROCKS, RUINS_SPAWN, RUINS_TORCHES, SURVIVE_CIRCLES, createRuins } from "@/lib/game/ruins";
 import { combat, publishCombat, readAbilityKeys, takeMissionQueue, type AbilityId } from "@/lib/game/combat/runtime";
+import { readMoveKeys } from "@/lib/game/movement/keys";
 import { attack, missionEvent, spawnWave, startDodge, triggerAbility } from "@/lib/game/combat/actions";
 import { stepCombat } from "@/lib/game/combat/encounter";
 import { claimBossReward, postKill, postMissionEvents } from "@/lib/game/combat/progression";
@@ -121,10 +122,10 @@ export default function RuinsScene({ phase, light, look, weather, liteMode, cast
   }, [camera, gl, ruins, spawn]);
   useFollowCamera(player, zoom, null);
 
-  // Mouse aim + click attack on the canvas; Space dodge; ability keys (remappable).
+  // Mouse aim + click attack on the canvas; Q (the dash key) dodges, and Space until the movement kit reaches the ruins; ability keys (remappable).
   useEffect(() => {
     const el = gl.domElement;
-    const keys = readAbilityKeys();
+    const keys = readAbilityKeys(), dash = readMoveKeys().dash;
     const move = (e: PointerEvent) => { const r = el.getBoundingClientRect(); input.current.ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1); input.current.hasPointer = true; };
     const down = (e: PointerEvent) => { if (e.button === 0) { move(e); input.current.attack = true; } };
     const up = () => { input.current.attack = false; };
@@ -133,7 +134,7 @@ export default function RuinsScene({ phase, light, look, weather, liteMode, cast
       const k = e.key.toLowerCase();
       if (k in input.current.keys) input.current.keys[k as "w"] = on;
       if (!on || e.repeat) return;
-      if (k === " ") { input.current.dodge = true; e.preventDefault(); }
+      if (k === " " || k === dash) { input.current.dodge = true; e.preventDefault(); }
       const ability = (Object.keys(keys) as AbilityId[]).find(a => keys[a] === k);
       if (ability) input.current.abilities.push(ability);
     };
