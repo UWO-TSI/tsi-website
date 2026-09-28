@@ -65,6 +65,7 @@ export const BRIDGE_DECK_HALF: [number, number] = [1.9, 1.2];
 /** Solid footprints (half width, half depth, before rotation and scale), from the measured GLB bounds. */
 export const PROP_FOOTPRINT: Record<string, [number, number]> = {
   "bench-wood": [0.98, 0.27], "rock-a": [0.48, 0.45], "rock-b": [0.46, 0.42], "rock-c": [0.5, 0.5],
+  "fence-country-a": [0.5, 0.16], "fence-country-b": [0.5, 0.16],
 };
 /** A tree trunk blocks this far from its centre. */
 export const TREE_TRUNK = 0.65;
@@ -119,7 +120,7 @@ export function villageSpawn(v: Village = village()): [number, number, number] {
   return [x, 0, z];
 }
 
-/** Solid footprint of a bench or rock: half extents × scale, and its yaw. */
+/** Solid footprint of a bench, rock or fence: half extents × scale (before its yaw). */
 export function propFootprint(o: MapObject): [number, number] | null {
   const f = o.model ? PROP_FOOTPRINT[o.model] : undefined;
   return f ? [f[0] * (o.scale ?? 1), f[1] * (o.scale ?? 1)] : null;
@@ -153,7 +154,7 @@ export function islandOf(v: Village): VillageIsland {
   const surface = (x: number, z: number) => surfaceAt(map, worldToCellX(map, x), worldToCellZ(map, z));
   const decks = [wharfDeck(v), ...bridgeDecks(v)].filter(d => d !== null);
   const solids = landmarks(v).filter(l => l.half);
-  const props = [...objectsOf("bench", v), ...objectsOf("rock", v)].flatMap(o => {
+  const props = [...objectsOf("bench", v), ...objectsOf("rock", v), ...objectsOf("fence", v)].flatMap(o => {
     const f = propFootprint(o);
     return f ? [{ x: o.x, z: o.z, yaw: o.yaw ?? 0, hw: f[0], hd: f[1] }] : [];
   });

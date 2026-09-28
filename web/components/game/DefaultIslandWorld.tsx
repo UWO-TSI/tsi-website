@@ -147,7 +147,7 @@ function villageLayout(v: Village) {
     flowers: objectsOf("flower", v).map(o => ({ x: o.x, z: o.z, seed: o.seed ?? 0 })),
     fireflies: objectsOf("bush", v).map(xz),
     puddles: objectsOf("puddle", v).map(xz),
-    props: [...objectsOf("bench", v), ...objectsOf("rock", v)].filter(o => o.model),
+    props: [...objectsOf("bench", v), ...objectsOf("rock", v), ...objectsOf("fence", v)].filter(o => o.model),
     lamps: objectsOf("lamp", v),
     bridges: objectsOf("bridge", v).map(o => ({ ...o, y: levelAt(v.map, worldToCellX(v.map, o.x), worldToCellZ(v.map, o.z)) * LEVEL_STEP - 0.065 })),
     doors: { hq: landmarkPoint("hq", "door", v), oracle: landmarkPoint("oracle", "door", v), boat: landmarkPoint("wharf", "door", v) },

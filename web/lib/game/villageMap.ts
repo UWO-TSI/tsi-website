@@ -22,7 +22,7 @@
 import villageDoc from "@/data/village-map.json";
 import {
   heightField, isRiver, isVoid, parseIslandMap, serialiseIslandMap, surfaceAt, Surface,
-  type IslandMap, type IslandMapDoc, type MapAnnotation,
+  type IslandMap, type IslandMapDoc, type MapAnnotation, type PlacedProp,
 } from "./grid";
 
 /** Object vocabulary. Append only: kinds are persisted in the map file. */
@@ -69,8 +69,9 @@ export function normaliseSea(map: IslandMap): number {
   return changed;
 }
 
-export function parseVillage(doc: VillageDoc): { map: IslandMap; objects: MapObject[]; annotations: MapAnnotation[] } {
-  const { map, annotations } = parseIslandMap(doc);
+/** Parse a map document. `props` are legacy planning markers (island-map.json), carried for the painter only. */
+export function parseVillage(doc: VillageDoc): { map: IslandMap; objects: MapObject[]; annotations: MapAnnotation[]; props: PlacedProp[] } {
+  const { map, annotations, props } = parseIslandMap(doc);
   normaliseSea(map);
   const objects: MapObject[] = [];
   for (const o of doc.objects ?? []) {
@@ -83,7 +84,7 @@ export function parseVillage(doc: VillageDoc): { map: IslandMap; objects: MapObj
       ...(typeof o.model === "string" ? { model: o.model } : {}),
     });
   }
-  return { map, objects, annotations };
+  return { map, objects, annotations, props };
 }
 
 /** The whole document, as the painter exports it. Legacy cell markers are not carried. */
@@ -131,8 +132,16 @@ export interface Village {
 
 export function buildVillage(doc: VillageDoc): Village {
   const { map, objects } = parseVillage(doc);
+  return villageOf(map, objects);
+}
+
+/** A village from a map already in memory (the painter's draft). */
+export function villageOf(map: IslandMap, objects: readonly MapObject[]): Village {
   return { map, field: heightField(map), objects, bounds: landBounds(map) };
 }
+
+/** Where /lab/map autosaves its working draft, and where `/lab/island?draft=1` reads it. */
+export const PAINTER_DRAFT_KEY = "lab-map-village-draft-v1";
 
 let source: VillageDoc = villageDoc as VillageDoc;
 let current: Village | null = null;
