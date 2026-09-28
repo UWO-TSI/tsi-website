@@ -1,4 +1,5 @@
-import { Color, DoubleSide, FrontSide, Material, Mesh, MeshStandardMaterial, Object3D, SRGBColorSpace, Texture, TextureLoader, Vector2, type WebGLProgramParametersWithUniforms } from "three";
+import { Color, DoubleSide, FrontSide, Material, Mesh, MeshBasicMaterial, MeshDepthMaterial, MeshStandardMaterial, Object3D, SRGBColorSpace, Texture, TextureLoader, Vector2, type WebGLProgramParametersWithUniforms } from "three";
+import { CASTER_MATERIAL, meshShadow, shadowClassFor, type ShadowClass } from "./shadows";
 
 let flagTexture: Texture | null = null;
 let shopSignTexture: Texture | null = null;
@@ -66,6 +67,11 @@ function addTreeSway(shader: WebGLProgramParametersWithUniforms) {
     transformed.z += cos(swayPhase * 0.8) * uTreeWind.y * 0.6 * swayH;`);
 }
 
+/** The shadow pass of ACNH's swaying canopy caster (mShadowShake): the leaves' own wind, so shadow and canopy move together. */
+const SWAY_DEPTH = new MeshDepthMaterial();
+SWAY_DEPTH.onBeforeCompile = addTreeSway;
+SWAY_DEPTH.customProgramCacheKey = () => "tree-sway-depth";
+
 /**
  * Winter snow caps (0..1): a top-down snow blend on outdoor props and
  * buildings — roofs, bridge deck, benches, fences, lamp tops — wherever the
@@ -112,26 +118,39 @@ export function tagLookClasses<T extends Object3D>(model: T, url: string): T {
   return model;
 }
 
-/** Clone materials as well as nodes so one instance cannot recolor cached GLTF assets. */
-export function prepareModel(source: Object3D, url: string, castShadow: boolean, emissiveIntensity?: number): Object3D {
+/**
+ * Clone materials as well as nodes so one instance cannot recolor cached GLTF
+ * assets. Shadows follow the model's class (lib/game/shadows.ts); `shadow`
+ * overrides it only where a use differs from what the URL says.
+ */
+export function prepareModel(source: Object3D, url: string, emissiveIntensity?: number, shadow: ShadowClass = shadowClassFor(url)): Object3D {
   const materials = new Map<Material, Material>();
   const clone = source.clone(true);
+  let casters = false;
+  clone.traverse((object) => {
+    const mesh = object as Mesh;
+    if (mesh.isMesh && (Array.isArray(mesh.material) ? mesh.material : [mesh.material]).some(m => CASTER_MATERIAL.test(m.name))) casters = true;
+  });
   clone.traverse((object) => {
     const mesh = object as Mesh;
     if (!mesh.isMesh) return;
     // The vertex shader bends distant models back into view. Their original
     // bounds cannot determine visibility in the curved world.
     mesh.frustumCulled = false;
-    mesh.castShadow = castShadow;
     const originals = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
     const glassShell = /\/props\/(streetlamp|park-clock)\.glb$/.test(url)
       && originals.every((material) => material.transparent && material.name.startsWith("mGlass"));
-    if (glassShell) mesh.castShadow = false;
-    const layeredCanopy = /\/plants\/tree-(hardwood-|blossom)/.test(url)
-      && originals.every((material) => /OakLeaf|SakuraBack|SakuraBloom/.test(material.name));
-    // Layered foliage cards self-shadow into hard patches. Keep their light
-    // response and ground shadow without shadowing one card onto the next.
-    mesh.receiveShadow = !layeredCanopy;
+    const role = meshShadow(shadow, originals[0].name, { casters, glass: glassShell });
+    mesh.castShadow = role.cast;
+    mesh.receiveShadow = role.receive;
+    if (role.caster) {
+      // Depth only: hidden until SunShadows draws it into the shadow map.
+      mesh.material = new MeshBasicMaterial({ name: originals[0].name, side: DoubleSide, colorWrite: false, depthWrite: false });
+      mesh.visible = false;
+      mesh.userData.casterOnly = true;
+      if (role.caster === "sway") { mesh.userData.sunCaster = "dynamic"; mesh.customDepthMaterial = SWAY_DEPTH; }
+      return;
+    }
     const adapt = (original: Material) => {
       const existing = materials.get(original);
       if (existing) return existing;
@@ -139,6 +158,7 @@ export function prepareModel(source: Object3D, url: string, castShadow: boolean,
       // Material class for the look (lookPreset.ts).
       material.userData.lookClass = lookClassFor(url, material.name);
       material.side = glassShell ? FrontSide : DoubleSide;
+      if (role.front) material.shadowSide = FrontSide;
       if (glassShell) material.depthWrite = false;
       if (material instanceof MeshStandardMaterial && material.emissiveMap && emissiveIntensity !== undefined) {
         material.emissiveIntensity = emissiveIntensity;

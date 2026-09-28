@@ -36,16 +36,16 @@ import { execFileSync } from "child_process";
 //    the game is missing its own ground, which is why the terrain has to fill
 //    in behind it and the seam never resolves.
 //
-//  * tree-blossom lost 2 of 5 source meshes. PltTreeOak4Sakura.dae contains
-//    LB014__mShadow (659v) and PetalL010__mShadowShake (394v) — ACNH BAKES
-//    CONTACT SHADOWS INTO EVERY ASSET AS GEOMETRY. That is why ACNH has no
-//    dynamic shadow cost. This pipeline deletes them, and the game then runs a
-//    1024² realtime PCF-soft shadow map to recreate the effect at ~7 FPS on
-//    M1 (and misaligned, see lib/game/curvedWorld.ts).
+//  * tree-blossom lost 2 of 5 source meshes: LB014__mShadow (659v) and
+//    PetalL010__mShadowShake (394v). This note once read them as contact
+//    shadows baked into every asset. Wrong (measured 2026-09-27, row 240): only
+//    interior room shells, the oak/cherry trees and two snow bushes carry
+//    mShadow, and on the trees it is the shadow CASTER (the leaf cards are not
+//    meant to cast). extract-acnh-kit.mjs keeps them now; look spec §9.
 //
 // REQUIRED before any further extraction: fail loudly on a mesh-count
 // mismatch between the source .dae and the exported .glb instead of writing a
-// partial file, then re-export the 12 above WITH their mShadow meshes.
+// partial file (extract-acnh-kit.mjs does).
 //
 // ── ACNH kit constants (measured, canonical — see specs/acnh-system-reference.md) ──
 //

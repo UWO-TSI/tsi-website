@@ -3,29 +3,29 @@
 import { Suspense, useEffect, useMemo } from "react";
 import { useGLTF } from "@react-three/drei";
 import { prepareModel, disposeModelMaterials, applyModelTextures } from "@/lib/game/modelMaterials";
+import { shadowClassFor, type ShadowClass } from "@/lib/game/shadows";
+import { modelContact, useContactShadow } from "./ContactShadows";
 
 /**
  * GLB model loader (Kenney kits + ACNH pack).
- * Loads, clones, and renders assets with shadows. Exported as GLBProp for
- * one-off prop placement (AmbientProps, benches, bridge).
+ * Loads, clones, and renders assets with their shadow class (sun shadow and
+ * contact, lib/game/shadows.ts). Exported as GLBProp for one-off prop placement.
  */
-export function GLBProp({ url, scale = 1, position, rotation, castShadow = true, emissiveIntensity, hideMaterial }: {
+export function GLBProp({ url, scale = 1, position, rotation, shadow, emissiveIntensity, hideMaterial }: {
   url: string;
   scale?: number;
   position?: [number, number, number];
   rotation?: [number, number, number];
-  /**
-   * When false, the GLB skips the shadow-cast pass. Saves ~1 draw per
-   * sub-mesh per frame. Use false for ground props (flowers, mushrooms,
-   * small rocks) where the shadow is invisible at game camera distance.
-   */
-  castShadow?: boolean;
+  /** Overrides the URL's shadow class, only where this use is not what the asset is; say why at the call site. */
+  shadow?: ShadowClass;
   emissiveIntensity?: number;
   /** Hide sub-meshes using this material name (e.g. a scaffold's tarp). */
   hideMaterial?: string;
 }) {
   const { scene } = useGLTF(url);
-  const clone = useMemo(() => prepareModel(scene, url, castShadow, emissiveIntensity), [scene, url, castShadow, emissiveIntensity]);
+  const cls = shadow ?? shadowClassFor(url);
+  const clone = useMemo(() => prepareModel(scene, url, emissiveIntensity, cls), [scene, url, emissiveIntensity, cls]);
+  useContactShadow(clone, useMemo(() => modelContact(clone, url, cls), [clone, url, cls]));
   useEffect(() => {
     clone.traverse((object) => {
       const mesh = object as import("three").Mesh;
@@ -110,7 +110,6 @@ export function NatureFlowerCluster({ position, seed, models = FLOWER_MODELS }: 
             scale={0.8}
             position={[(j - 1) * 0.4, 0, ((j * 7 + seed) % 3 - 1) * 0.3]}
             rotation={[0, j * 2.1, 0]}
-            castShadow={false}
           />
         ))}
       </Suspense>
@@ -135,7 +134,7 @@ export function NatureMushroom({ position, seed }: { position: [number, number, 
   const url = seed % 2 === 0 ? "/assets/nature/mushroom_red.glb" : "/assets/nature/mushroom_tan.glb";
   return (
     <Suspense fallback={null}>
-      <GLBProp url={url} scale={0.5} position={position} rotation={[0, seed * 2.7, 0]} castShadow={false} />
+      <GLBProp url={url} scale={0.5} position={position} rotation={[0, seed * 2.7, 0]} />
     </Suspense>
   );
 }
@@ -169,7 +168,7 @@ export function NatureRock({ position, seed }: { position: [number, number, numb
   const url = seed % 2 === 0 ? "/assets/nature/rock_smallA.glb" : "/assets/nature/rock_smallB.glb";
   return (
     <Suspense fallback={null}>
-      <GLBProp url={url} scale={0.5 + (seed % 3) * 0.15} position={position} rotation={[0, seed * 1.9, 0]} castShadow={false} />
+      <GLBProp url={url} scale={0.5 + (seed % 3) * 0.15} position={position} rotation={[0, seed * 1.9, 0]} />
     </Suspense>
   );
 }

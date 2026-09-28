@@ -57,7 +57,7 @@ export function PlacementLayer({ items, mapping, context, active, selected, onPl
       const { position, rotY } = mapping.toWorld(item);
       return <group key={item.uid} position={position} rotation={[0, rotY, 0]}
         onClick={active && !selected ? (e) => { e.stopPropagation(); onPickUp(item); } : undefined}>
-        <Suspense fallback={null}><GLBProp url={def.url} scale={def.scale} castShadow={def.mount !== "rug"} /></Suspense>
+        <Suspense fallback={null}><GLBProp url={def.url} scale={def.scale} /></Suspense>
       </group>;
     })}
     {ghost && quad && <>
@@ -68,8 +68,9 @@ export function PlacementLayer({ items, mapping, context, active, selected, onPl
       {(() => {
         const def = catalogueItem(ghost.piece)!;
         const { position, rotY } = mapping.toWorld(ghost);
+        // The ghost is a preview under the pointer, not a placed object: no shadow of any kind.
         return <group position={position} rotation={[0, rotY, 0]} raycast={() => {}}>
-          <Suspense fallback={null}><GLBProp url={def.url} scale={def.scale} castShadow={false} /></Suspense>
+          <Suspense fallback={null}><GLBProp url={def.url} scale={def.scale} shadow="none" /></Suspense>
         </group>;
       })()}
     </>}

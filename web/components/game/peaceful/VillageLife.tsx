@@ -48,13 +48,13 @@ function NodeVisual({ sp, x, y, z, canopy }: { sp: Species; x: number; y: number
   if (sp.category === "fruit") {
     const color = FRUIT_COLOR[sp.key] ?? "#d8433b";
     const at: [number, number, number][] = canopy ? [[0.5, 2.1, -0.3], [-0.45, 2.3, -0.2], [0.1, 2.5, -0.55]] : [[0, 0.35, 0], [0.18, 0.28, 0.1]];
-    return <group position={[x, y, z]}>{at.map((p, i) => <mesh key={i} position={p} castShadow><sphereGeometry args={[canopy ? 0.16 : 0.09, 10, 8]} /><meshStandardMaterial color={color} roughness={0.55} /></mesh>)}</group>;
+    return <group position={[x, y, z]}>{at.map((p, i) => <mesh key={i} position={p}><sphereGeometry args={[canopy ? 0.16 : 0.09, 10, 8]} /><meshStandardMaterial color={color} roughness={0.55} /></mesh>)}</group>;
   }
   if (sp.sub === "wood") return null; // still up in the tree until it's shaken
   if (sp.sub === "mushroom") return <NatureMushroom position={[x, y, z]} seed={sp.position} />;
   // Buried (a shovel find that isn't a rock): only a dark dig spot shows in the sand.
   if (buried(sp)) return <mesh position={[x, y + 0.012, z]} rotation={[-Math.PI / 2, 0, 0]}><circleGeometry args={[0.17, 10]} /><meshStandardMaterial color="#6e5a3e" roughness={1} /></mesh>;
-  if (sp.model) return <GLBProp url={sp.model} position={[x, y + 0.02, z]} scale={1} castShadow={false} />;
+  if (sp.model) return <GLBProp url={sp.model} position={[x, y + 0.02, z]} scale={1} />;
   if (sp.category === "mineral") return <mesh position={[x, y + 0.12, z]}><dodecahedronGeometry args={[0.16, 0]} /><meshStandardMaterial color={sp.key.includes("gold") ? "#e2b640" : sp.key.includes("crystal") ? "#b9e3f2" : "#8d8a84"} roughness={0.5} metalness={sp.key.includes("gold") ? 0.6 : 0} /></mesh>;
   // Flowers and anything without a model: a small bright tuft.
   return <mesh position={[x, y + 0.12, z]}><icosahedronGeometry args={[0.12, 0]} /><meshStandardMaterial color="#e9a3c3" roughness={0.7} /></mesh>;
@@ -154,7 +154,7 @@ export default function VillageLife({ nodes, bugNodes, moment, member, player, g
     {bugs.map(b => {
       const model = MODEL_OF.get(b.sp.key)!;
       return <group key={b.id} ref={g => { if (g) groups.current.set(b.id, g); else groups.current.delete(b.id); }}>
-        <Suspense fallback={null}><GLBProp url={model.model} scale={model.scale} castShadow={false} /></Suspense>
+        <Suspense fallback={null}><GLBProp url={model.model} scale={model.scale} /></Suspense>
         {hasClue(b.sp) && <Suspense fallback={null}><Sparkle position={[0, 0.35, 0]} strong={highTier} /></Suspense>}
       </group>;
     })}

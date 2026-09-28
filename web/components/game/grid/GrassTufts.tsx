@@ -38,9 +38,12 @@ import {
 } from "@/lib/game/grid";
 import { useTuning } from "@/lib/game/tuning";
 import { worldTime } from "@/lib/game/worldClock";
+import { meshShadow, shadowClassFor } from "@/lib/game/shadows";
 
 const PACK_URL = "/assets/nature/grass-tufts.glb";
 useGLTF.preload(PACK_URL);
+/** Tufts are the Small shadow class: no sun shadow, they receive. */
+const TUFT_SHADOW = meshShadow(shadowClassFor(PACK_URL), "tuft");
 
 /** Deterministic per-cell hash in [0, 1). Same cell, same tuft, every load. */
 function hash01(cx: number, cz: number, salt: number): number {
@@ -263,8 +266,8 @@ export default function GrassTufts({ map, windScale = 1 }: { map: IslandMap; win
             ref={setMatricesFor(i, variants.length)}
             args={[geo, material, placements.length]}
             frustumCulled={false}
-            castShadow={false}
-            receiveShadow
+            castShadow={TUFT_SHADOW.cast}
+            receiveShadow={TUFT_SHADOW.receive}
           />
         ))}
       </group>
@@ -276,8 +279,8 @@ export default function GrassTufts({ map, windScale = 1 }: { map: IslandMap; win
       ref={setMatricesFor(0, 1)}
       args={[cardGeometry, material, placements.length]}
       frustumCulled={false}
-      castShadow={false}
-      receiveShadow
+      castShadow={TUFT_SHADOW.cast}
+      receiveShadow={TUFT_SHADOW.receive}
     />
   );
 }

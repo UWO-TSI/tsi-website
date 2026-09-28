@@ -1,0 +1,12 @@
+In-game Performance panel, /lab/island plaza (?time=day&weather=clear&season=summer&at=0,-1), headed Chromium on
+Metal, 1280x760 canvas, dev server. Median of eight 1 s readings after the scene settled. The display caps at ~142 FPS.
+
+Same session, back to back (2026-09-28 ~01:30, shots.mjs fps):
+  base branch (cached map, no character shadows) High 142 FPS / 7.0 ms, 420 draws   Light 142 FPS, 357 draws
+  one map + per-frame depth blit (superseded)    High  90 FPS / 11.1 ms, 460 draws  Light 141 FPS
+  one map, every caster every frame (option A)   High  92-95 FPS, 630 draws          Light 141 FPS
+  shipped: cached static map + moving map        High 142 FPS / 7.0 ms, 457-459 draws Light 142 FPS, 384 draws
+
+Evidence run (02:30, machine under load from other agents, load average ~7; not comparable to the above):
+  High plaza: median 50 FPS · 20.1 ms/frame | 461 draws · 196,756 triangles | Position 0.0, -1.0 (range 50-51 FPS)
+  Light plaza: median 104 FPS · 9.7 ms/frame | 384 draws · 175,725 triangles | Position 0.0, -1.0 (range 95-127 FPS)

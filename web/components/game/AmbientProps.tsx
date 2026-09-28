@@ -183,8 +183,8 @@ export default function AmbientProps({ lampsOn = false }: { lampsOn?: boolean })
       </group>
 
       <group name="fences">
-        <InstancedGLB url="/assets/acnh/props/fence-country-a.glb" placements={FENCE_SEGMENTS.country} castShadow={false} />
-        <InstancedGLB url="/assets/acnh/props/fence-log-a.glb" placements={FENCE_SEGMENTS.log} castShadow={false} />
+        <InstancedGLB url="/assets/acnh/props/fence-country-a.glb" placements={FENCE_SEGMENTS.country} />
+        <InstancedGLB url="/assets/acnh/props/fence-log-a.glb" placements={FENCE_SEGMENTS.log} />
       </group>
 
       <group name="lanterns">

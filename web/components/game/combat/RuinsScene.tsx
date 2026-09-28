@@ -7,7 +7,8 @@
  * encounter loop (aim, attack, dodge, abilities, enemies from the spawn
  * table, the guardian's patterns, projectiles, missions, safe-zone reset,
  * defeat → wake at the gate) runs here every frame against the combat
- * runtime. No shadow maps: blob shadows only (30 FPS on integrated graphics).
+ * runtime. Shadows follow the islands' logic (look spec §9): sun shadows on
+ * High, contact shadows on both tiers.
  */
 import { Suspense, useEffect, useMemo, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
@@ -18,7 +19,6 @@ import PlayerAvatar from "../PlayerAvatar";
 import { GLBProp } from "../NatureModels";
 import { InteriorKeeper } from "../interiorShared";
 import { IslandAtmosphere, useFollowCamera } from "../IslandAtmosphere";
-import BlobShadows from "../BlobShadows";
 import { AimReticle, Blasts, EnemyInstances, FloaterProjector, PlayerAuras, Projectiles, Telegraphs, Totems, Wisps } from "./EncounterRender";
 import { BOSS_CENTER, ESCORT_PATHS, EXIT_SPOT, FETCH_SPOTS, GATE_PLAZA, RUINS_BROKEN_ARCHES, RUINS_MOAI, RUINS_PILLARS, RUINS_ROCKS, RUINS_SPAWN, RUINS_TORCHES, SURVIVE_CIRCLES, createRuins } from "@/lib/game/ruins";
 import { combat, publishCombat, readAbilityKeys, takeMissionQueue, type AbilityId } from "@/lib/game/combat/runtime";
@@ -86,8 +86,8 @@ function bossVictory(eventKey: string, now: number) {
   });
 }
 
-export default function RuinsScene({ phase, light, look, weather, liteMode, zoom, player, onMove, onNear, onDefeat, start }: {
-  phase: IslandPhase; light: IslandLight; look: SeasonLook; weather: IslandWeather; liteMode: boolean; zoom: number;
+export default function RuinsScene({ phase, light, look, weather, liteMode, castShadows, zoom, player, onMove, onNear, onDefeat, start }: {
+  phase: IslandPhase; light: IslandLight; look: SeasonLook; weather: IslandWeather; liteMode: boolean; castShadows: boolean; zoom: number;
   player: React.RefObject<THREE.Vector3>; onMove: (p: THREE.Vector3) => void; onNear: (near: RuinsNear) => void; onDefeat: () => void;
   /** Dev: start somewhere other than the gate (screenshots). */
   start?: [number, number, number] | null;
@@ -231,24 +231,20 @@ export default function RuinsScene({ phase, light, look, weather, liteMode, zoom
     }
   });
 
-  const blobs = useMemo(() => [
-    ...RUINS_PILLARS.map(p => ({ ...p, y: 0, rx: 0.9, rz: 0.8 })), ...RUINS_ROCKS.map(p => ({ ...p, y: 0, rx: 1, rz: 0.8 })),
-    ...RUINS_MOAI.map(p => ({ ...p, y: 0, rx: 1, rz: 1 })),
-  ], []);
   return <>
-    <IslandAtmosphere phase={phase} light={light} look={look} weather={weather} liteMode={liteMode} castShadows={false} overview={false}
-      ground={ruins.ground} cloudSize={[40, 66]} shadowExtent={16} fireflyAnchors={[]} />
+    {/* The shadow box spans the 40 × 66 canyon (half-diagonal ~39). */}
+    <IslandAtmosphere phase={phase} light={light} look={look} weather={weather} liteMode={liteMode} castShadows={castShadows} overview={false}
+      ground={ruins.ground} cloudSize={[40, 66]} shadowExtent={36} fireflyAnchors={[]} />
     <GridWorld map={ruins.map} water={light.water} palette={terrain} windScale={liteMode ? 0 : 1} />
-    <BlobShadows placements={blobs} opacity={0.4} color={light.shadow.tint} />
     <Suspense fallback={null}>
       {/* Gate plaza (safe) and the way back. */}
-      <GLBProp url={`${F}ruins-arch.glb`} position={[0, ruins.ground(0, -24.4), -24.4]} scale={0.1} castShadow={false} />
-      <GLBProp url={`${F}ruins-arch.glb`} position={[0, ruins.ground(0, 1.2), 1.2]} scale={0.1} castShadow={false} />
-      {RUINS_BROKEN_ARCHES.map((a, i) => <GLBProp key={i} url={`${F}ruins-arch-broken.glb`} position={[a.x, ruins.ground(a.x, a.z), a.z]} rotation={[0, a.yaw, 0]} scale={0.1} castShadow={false} />)}
-      {RUINS_PILLARS.map((p, i) => <GLBProp key={i} url={`${F}ruins-pillar.glb`} position={[p.x, ruins.ground(p.x, p.z), p.z]} rotation={[0, i * 1.3, 0]} scale={0.09} castShadow={false} />)}
-      {RUINS_ROCKS.map((r, i) => <GLBProp key={i} url={`/assets/acnh/props/${r.model}.glb`} position={[r.x, ruins.ground(r.x, r.z), r.z]} rotation={[0, r.yaw, 0]} castShadow={false} />)}
-      {RUINS_MOAI.map((m, i) => <GLBProp key={i} url={`${F}ruins-moai.glb`} position={[m.x, ruins.ground(m.x, m.z), m.z]} rotation={[0, Math.PI, 0]} scale={0.07} castShadow={false} />)}
-      {RUINS_TORCHES.map((t, i) => <GLBProp key={i} url={`${F}ruins-torch.glb`} position={[t.x, ruins.ground(t.x, t.z), t.z]} scale={0.1} castShadow={false} />)}
+      <GLBProp url={`${F}ruins-arch.glb`} position={[0, ruins.ground(0, -24.4), -24.4]} scale={0.1} />
+      <GLBProp url={`${F}ruins-arch.glb`} position={[0, ruins.ground(0, 1.2), 1.2]} scale={0.1} />
+      {RUINS_BROKEN_ARCHES.map((a, i) => <GLBProp key={i} url={`${F}ruins-arch-broken.glb`} position={[a.x, ruins.ground(a.x, a.z), a.z]} rotation={[0, a.yaw, 0]} scale={0.1} />)}
+      {RUINS_PILLARS.map((p, i) => <GLBProp key={i} url={`${F}ruins-pillar.glb`} position={[p.x, ruins.ground(p.x, p.z), p.z]} rotation={[0, i * 1.3, 0]} scale={0.09} />)}
+      {RUINS_ROCKS.map((r, i) => <GLBProp key={i} url={`/assets/acnh/props/${r.model}.glb`} position={[r.x, ruins.ground(r.x, r.z), r.z]} rotation={[0, r.yaw, 0]} />)}
+      {RUINS_MOAI.map((m, i) => <GLBProp key={i} url={`${F}ruins-moai.glb`} position={[m.x, ruins.ground(m.x, m.z), m.z]} rotation={[0, Math.PI, 0]} scale={0.07} />)}
+      {RUINS_TORCHES.map((t, i) => <GLBProp key={i} url={`${F}ruins-torch.glb`} position={[t.x, ruins.ground(t.x, t.z), t.z]} scale={0.1} />)}
       <pointLight position={[BOSS_CENTER.x, 3, BOSS_CENTER.z]} color="#ffb366" intensity={light.lampsOn ? 18 : 6} distance={12} />
       {TYPES.map(t => <EnemyInstances key={t} typeId={t} capacity={capacity(t)} ground={ruins.ground} />)}
       {Object.entries(SURVIVE_CIRCLES).map(([id, c]) => <RuneCircle key={id} id={id} circle={c} ground={ruins.ground} />)}
@@ -280,7 +276,8 @@ function FetchItem({ item, spot, ground, player }: { item: string; spot: (typeof
     g.position.set(at.x, (rt.idol === "carried" ? player.current.y + 1.5 : ground(at.x, at.z)) + Math.sin(clock.elapsedTime * 2) * 0.05, at.z);
     g.rotation.y = clock.elapsedTime * 0.8;
   });
-  return <group ref={ref} visible={false}><GLBProp url={spot.model} scale={spot.scale} castShadow={false} /></group>;
+  // A pickup that hovers, spins and rides overhead once carried: nothing under it is its ground.
+  return <group ref={ref} visible={false}><GLBProp url={spot.model} scale={spot.scale} shadow="none" /></group>;
 }
 
 /** A survive mission's circle: a faint ring on the ground (brighter while its waves run). */

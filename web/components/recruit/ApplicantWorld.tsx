@@ -34,7 +34,8 @@ import { SkyGradient } from "@/components/game/IslandAtmosphere";
 import { applyEnvironment, disposeEnvironment } from "@/lib/game/envLight";
 import { CloudShadows } from "@/components/game/AmbienceFX";
 import { Lantern } from "@/components/game/AmbientProps";
-import BlobShadows from "@/components/game/BlobShadows";
+import ContactShadows from "@/components/game/ContactShadows";
+import SunShadows from "@/components/game/SunShadows";
 import { Fireflies } from "@/components/game/AmbientLife";
 import "@/lib/game/aerialFog";
 import { useGraphicsSettings } from "@/lib/game/useGraphicsSettings";
@@ -56,7 +57,6 @@ const JAYDEN: CharacterLook = { ...DEFAULT_LOOK, skin: 6, hair: 0, eyes: "E5.4",
 const GULL_ANCHORS: [number, number][] = [[-16, 0], [12, 10], [0, 16]];
 const fishingWaterHeight = () => -WATER_DROP;
 const RETURN_SPAWN: [number, number, number] = [0, 0, 5.4];
-const GUIDE_SHADOW = [{ x: -2.6, y: 0, z: -6, rx: 0.55, rz: 0.55 }];
 
 type Props = {
   phase: ApplicantDayPhase; countdownPositions: Position[]; nearClock: boolean;
@@ -70,23 +70,10 @@ type Props = {
   onMetrics: (value: string) => void;
 };
 
-function refreshShadows(gl: THREE.WebGLRenderer) {
-  gl.shadowMap.autoUpdate = false;
-  gl.shadowMap.needsUpdate = true;
-}
-
-function SceneStatus({ onReady, onFailure, inside, phase }: Pick<Props, "onReady" | "onFailure" | "inside" | "phase">) {
+function SceneStatus({ onReady, onFailure }: Pick<Props, "onReady" | "onFailure">) {
   const { gl } = useThree();
-  const [graphics] = useGraphicsSettings();
-  const wasLoading = useRef(false);
-  useEffect(() => {
-    refreshShadows(gl);
-  }, [gl, inside, phase, graphics.shadows, graphics.liteMode]);
   useFrame(() => {
-    const status = useProgress.getState();
-    if (wasLoading.current && !status.active) refreshShadows(gl);
-    wasLoading.current = status.active;
-    if (status.errors.length) onFailure();
+    if (useProgress.getState().errors.length) onFailure();
   });
   useEffect(() => {
     const canvas = gl.domElement;
@@ -127,10 +114,6 @@ function DirectionArrow({ player, target, paused }: { player: React.RefObject<TH
 
 function Village({ guideToHQ, returned, paused, onAction, onNear, phase, fishing, arrival, onArrived, pickedFlowers, onFlowerNear, onPickFlower, collectionScope, onFishingTarget }: Props) {
   const island = useMemo(() => createApplicantVillage(), []);
-  const plantShadows = useMemo(() => [
-    ...ISLAND_BUSHES.map(([x, z]) => ({ x, z, y: island.ground(x, z), rx: 0.5, rz: 0.4 })),
-    ...ISLAND_FLOWERS.flatMap(([x, z], i) => pickedFlowers.includes(i) ? [] : [{ x, z, y: island.ground(x, z), rx: 0.58, rz: 0.32 }]),
-  ], [island, pickedFlowers]);
   const spawn = returned ? RETURN_SPAWN : APPLICANT_SPAWN;
   const player = useRef(new THREE.Vector3(...spawn));
   const guideMotion = useRef({ speed: 0, yaw: Math.PI, lift: 0 });
@@ -203,15 +186,14 @@ function Village({ guideToHQ, returned, paused, onAction, onNear, phase, fishing
     <fog attach="fog" args={[lighting.fogColor, lighting.fogNear, lighting.fogFar]} />
     <ambientLight intensity={lighting.ambient} color={lighting.fill} />
     <hemisphereLight args={[lighting.fill, lighting.bounce, lighting.hemisphere]} />
-    <directionalLight position={lighting.sunPosition} color={lighting.sun} intensity={lighting.sunIntensity} castShadow
+    <directionalLight name="sun" position={lighting.sunPosition} color={lighting.sun} intensity={lighting.sunIntensity} castShadow
       shadow-mapSize={[2048, 2048]} shadow-camera-left={-24} shadow-camera-right={24}
       shadow-camera-top={24} shadow-camera-bottom={-24} shadow-camera-far={75}
       shadow-radius={lighting.shadow.radius} shadow-intensity={lighting.shadow.intensity} shadow-normalBias={0.02} shadow-bias={-0.0002} />
     {lighting.rim && <directionalLight position={RIM_POSITION} color={lighting.rim.color} intensity={lighting.rim.intensity} />}
     <GridWorld map={island.map} water={lighting.water} palette={ISLAND_TERRAIN} />
     <GridOcean map={island.map} lite={graphics.liteMode} />
-    <BlobShadows placements={GUIDE_SHADOW} opacity={0.5} color={lighting.shadow.tint} />
-    <BlobShadows placements={plantShadows} opacity={0.16} color={lighting.shadow.tint} />
+    <ContactShadows tint={lighting.shadow.tint} intensity={lighting.shadow.intensity} sunMap={graphics.shadows && !graphics.liteMode} />
     {!graphics.liteMode && <CloudShadows phase={phase === "evening" ? "dusk" : phase} size={[28, 25]} bounded />}
     <Seagulls anchors={GULL_ANCHORS} />
     <FishingBobber towardWater playerPosRef={player} waterHeight={fishingWaterHeight} />
@@ -350,7 +332,8 @@ export default function ApplicantWorld(props: Props) {
       {/* The member island's look (lookPreset CURRENT) on both tiers; Light drops AO, bloom and the shadow map. */}
       <PostFX antialias={!graphics.liteMode && !graphics.pixelated} grade={props.inside ? CLUBHOUSE_LIGHTING[props.phase].grade : ISLAND_LIGHTING[props.phase].grade} fx={lookFx(CURRENT, !graphics.liteMode)} />
       <LookMaterials preset={CURRENT} />
-      <SceneStatus onReady={props.onReady} onFailure={props.onFailure} inside={props.inside} phase={props.phase} />
+      <SceneStatus onReady={props.onReady} onFailure={props.onFailure} />
+      <SunShadows />
       <Performance onMetrics={props.onMetrics} />
     </Suspense>
   </Canvas>;

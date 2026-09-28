@@ -63,25 +63,23 @@ const DROPPED_SLOTS = ["normalTexture", "metallicRoughnessTexture", "occlusionTe
 // layers that its own renderer draws with custom blending, and glTF has no way
 // to carry that intent — exported as ordinary PBR they come out OPAQUE:
 //
-//   mShadow / mShadowShake  the baked contact shadow + falling-petal layer.
-//                           Meant to be multiply-blended onto the ground.
-//                           As standard PBR they render as a solid white/grey
-//                           mass swallowing the tree canopy.
 //   mWinterSnow             the seasonal snow overlay, full building size.
 //                           ACNH swaps it in during winter; drawn always, every
 //                           roof is permanently snow-capped.
-//   mSoftMesh               soft shadow blob, same family as mShadow.
+//   mSoftMesh               soft shadow blob.
 //
-// The lost original pipeline dropped these, which is WHY the shipped assets
-// looked right. Excluding them here is deliberate and reported, unlike that
-// pipeline's silent drops — the mesh-count gate below subtracts them so a real
-// geometry loss is still caught.
+// The mesh-count gate below subtracts them so a real geometry loss is still
+// caught.
 //
-// FOLLOW-UP worth doing: mShadow IS the ACNH contact shadow, and wiring it with
-// a multiply-blend material would let us delete the realtime shadow map (~7 FPS
-// on M1, and misaligned per D1). That needs a custom material, not an export
-// flag, so it is its own task.
-const EFFECT_MATERIALS = [/mShadow/i, /mShadowShake/i, /mWinterSnow/i, /mSoftMesh/i];
+// KEPT since 2026-09-27 (row 240): mShadow / mShadowShake. They are not effect
+// layers but the oak and cherry trees' shadow CASTERS: mShadow a closed
+// low-poly hull the size of the tree, mShadowShake the canopy cards that sway
+// (pivot in the vertex colour, which stripSkinning drops; the game sways them
+// with the leaves' own wind). The visible leaf cards are not meant to cast.
+// Dropping them left the double-sided leaf cards casting and self-shadowing
+// into blotches. prepareModel draws them into the shadow map only, never in
+// colour (lib/game/shadows.ts), so they no longer render as a white mass.
+const EFFECT_MATERIALS = [/mWinterSnow/i, /mSoftMesh/i];
 
 function isEffectMaterial(name) {
   return !!name && EFFECT_MATERIALS.some((re) => re.test(name));
