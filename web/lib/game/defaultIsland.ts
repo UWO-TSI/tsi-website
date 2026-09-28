@@ -67,6 +67,10 @@ export const PROP_FOOTPRINT: Record<string, [number, number]> = {
   "bench-wood": [0.98, 0.27], "rock-a": [0.48, 0.45], "rock-b": [0.46, 0.42], "rock-c": [0.5, 0.5],
   "fence-country-a": [0.5, 0.16], "fence-country-b": [0.5, 0.16],
 };
+/** Prop tops before scale, measured from the GLB bounds: what a jump clears or lands on (lib/game/movement). */
+export const PROP_TOP: Record<string, number> = {
+  "bench-wood": 0.51, "rock-a": 0.61, "rock-b": 0.59, "rock-c": 0.52, "fence-country-a": 0.7, "fence-country-b": 0.69,
+};
 /** A tree trunk blocks this far from its centre. */
 export const TREE_TRUNK = 0.65;
 export const TREE_SEEDS = [0, 3, 2, 5, 7, 8, 1, 3];
@@ -145,6 +149,10 @@ export interface VillageIsland {
   surface: (x: number, z: number) => number;
   standable: (x: number, z: number) => boolean;
   move: (fromX: number, fromZ: number, toX: number, toZ: number) => [number, number];
+  /** Water with no land or deck (lib/game/movement's `wet`). */
+  wet: (x: number, z: number) => boolean;
+  /** The highest thing at a point: ground, a prop's top, Infinity for a building, trunk or study furniture (movement's `top`). */
+  top: (x: number, z: number) => number;
 }
 
 /** Walking on a village: ground height, solids and the stepping rule, from its map and objects. */
@@ -156,7 +164,7 @@ export function islandOf(v: Village): VillageIsland {
   const solids = landmarks(v).filter(l => l.half);
   const props = [...objectsOf("bench", v), ...objectsOf("rock", v), ...objectsOf("fence", v)].flatMap(o => {
     const f = propFootprint(o);
-    return f ? [{ x: o.x, z: o.z, yaw: o.yaw ?? 0, hw: f[0], hd: f[1] }] : [];
+    return f ? [{ x: o.x, z: o.z, yaw: o.yaw ?? 0, hw: f[0], hd: f[1], top: (PROP_TOP[o.model!] ?? Infinity) * (o.scale ?? 1) }] : [];
   });
   // Trees and props by 4-unit bucket, so a painted island with hundreds of them walks as cheaply as a small one.
   const bucket = (x: number, z: number) => `${Math.floor(x / 4)},${Math.floor(z / 4)}`;
@@ -170,19 +178,22 @@ export function islandOf(v: Village): VillageIsland {
     };
   };
   const propsNear = near(props), treesNear = near(objectsOf("tree", v));
-  const standable = (x: number, z: number) => {
-    if (decks.some(d => inRect(x, z, d))) return true;
-    if (!isGroundAtWorld(map, x, z)) return false;
-    if (solids.some(l => Math.abs(x - l.x) < l.half![0] && Math.abs(z - l.z) < l.half![1])) return false;
-    if (propsNear(x, z).some((p) => {
+  const onDeck = (x: number, z: number) => decks.some(d => inRect(x, z, d));
+  const wet = (x: number, z: number) => !onDeck(x, z) && !isGroundAtWorld(map, x, z);
+  /** Top of the solid at a point: a prop's measured top, Infinity for buildings, study furniture and trunks, -Infinity for none. */
+  const solidTop = (x: number, z: number) => {
+    if (solids.some(l => Math.abs(x - l.x) < l.half![0] && Math.abs(z - l.z) < l.half![1])) return Infinity;
+    let top = -Infinity;
+    for (const p of propsNear(x, z)) {
       const dx = x - p.x, dz = z - p.z;
       const localX = dx * Math.cos(p.yaw) - dz * Math.sin(p.yaw);
       const localZ = dx * Math.sin(p.yaw) + dz * Math.cos(p.yaw);
-      return Math.abs(localX) < p.hw && Math.abs(localZ) < p.hd;
-    })) return false;
-    if (studySolid("village", x, z, 0, v)) return false;
-    return !treesNear(x, z).some(t => Math.hypot(t.x - x, t.z - z) < TREE_TRUNK);
+      if (Math.abs(localX) < p.hw && Math.abs(localZ) < p.hd) top = Math.max(top, p.top);
+    }
+    if (top === Infinity || studySolid("village", x, z, 0, v)) return Infinity;
+    return treesNear(x, z).some(t => Math.hypot(t.x - x, t.z - z) < TREE_TRUNK) ? Infinity : top;
   };
+  const standable = (x: number, z: number) => onDeck(x, z) || (!wet(x, z) && solidTop(x, z) === -Infinity);
   /** How much of the body (5 probe points) stands on free ground; 5 = fits. */
   const clearance = (x: number, z: number) =>
     [[0, 0], [-0.2, 0], [0.2, 0], [0, -0.2], [0, 0.2]].filter(([dx, dz]) => standable(x + dx, z + dz)).length;
@@ -207,7 +218,8 @@ export function islandOf(v: Village): VillageIsland {
     }
     return [x, z];
   };
-  return { map, ground, surface, standable, move };
+  const top = (x: number, z: number) => Math.max(ground(x, z), solidTop(x, z));
+  return { map, ground, surface, standable, move, wet, top };
 }
 
 const islands = new WeakMap<Village, VillageIsland>();
