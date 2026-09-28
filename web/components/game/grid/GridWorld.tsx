@@ -46,7 +46,8 @@ export function getIslandMap(): { map: IslandMap; props: PlacedProp[] } {
   return cached;
 }
 
-export default function GridWorld({ map: suppliedMap, water, palette, windScale }: { map?: IslandMap; water?: WaterParams; palette?: TerrainPalette; windScale?: number }) {
+/** `field`: the map's height field when the caller already built it (the village builds it once). */
+export default function GridWorld({ map: suppliedMap, field: suppliedField, water, palette, windScale }: { map?: IslandMap; field?: Float32Array; water?: WaterParams; palette?: TerrainPalette; windScale?: number }) {
   const map = useMemo(() => suppliedMap ?? getIslandMap().map, [suppliedMap]);
   const t = useTuning();
 
@@ -71,12 +72,12 @@ export default function GridWorld({ map: suppliedMap, water, palette, windScale 
     // not the one being drawn.
     // Same guard as GridTerrain: inert at CLIFF_LEVELS 1, and the two MUST
     // agree or the player walks on a different surface from the one drawn.
-    const field = CLIFF_LEVELS > 1 ? heightField(map) : null;
+    const field = CLIFF_LEVELS > 1 ? suppliedField ?? heightField(map) : null;
     setTerrainHeightProvider((x, z) =>
       field ? sampleGroundHeight(map, field, x, z) : rampHeightAt(map, x, z) ?? heightAtWorld(map, x, z)
     );
     return () => setTerrainHeightProvider(null);
-  }, [map]);
+  }, [map, suppliedField]);
 
   // The river flows, swells and catches the sun. One uniform block per frame.
   // The key light is found by traversal rather than duplicated from GameWorld's
@@ -103,7 +104,7 @@ export default function GridWorld({ map: suppliedMap, water, palette, windScale 
 
   return (
     <group>
-      <GridTerrain map={map} palette={palette} />
+      <GridTerrain map={map} field={suppliedField} palette={palette} />
       <GridCliffs map={map} />
       <GrassTufts map={map} windScale={windScale} />
     </group>

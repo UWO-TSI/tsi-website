@@ -61,7 +61,12 @@ function addTreeSway(shader: WebGLProgramParametersWithUniforms) {
     #include <begin_vertex>
     float swayH = clamp(position.y / 3.0, 0.0, 1.0);
     swayH *= swayH;
-    vec4 swayRoot = modelMatrix * vec4(0.0, 0.0, 0.0, 1.0);
+    // The tree's own root: an instanced tree's is its instance's, so each sways in its own phase.
+    #ifdef USE_INSTANCING
+      vec4 swayRoot = modelMatrix * instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0);
+    #else
+      vec4 swayRoot = modelMatrix * vec4(0.0, 0.0, 0.0, 1.0);
+    #endif
     float swayPhase = uTreeWind.x * 1.7 + swayRoot.x * 0.37 + swayRoot.z * 0.23;
     transformed.x += sin(swayPhase) * uTreeWind.y * swayH;
     transformed.z += cos(swayPhase * 0.8) * uTreeWind.y * 0.6 * swayH;`);

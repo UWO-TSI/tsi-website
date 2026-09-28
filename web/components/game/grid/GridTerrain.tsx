@@ -385,7 +385,7 @@ function addSnow(shader: THREE.WebGLProgramParametersWithUniforms, cover: number
     #include <normal_fragment_begin>`);
 }
 
-export default function GridTerrain({ map, palette }: { map: IslandMap; palette?: TerrainPalette }) {
+export default function GridTerrain({ map, field: heights, palette }: { map: IslandMap; field?: Float32Array; palette?: TerrainPalette }) {
   // ONE field, read twice: the seabed geometry samples it on the CPU, the water
   // shader samples it on the GPU. Two bakes would be two shorelines.
   const field = useMemo(() => shoreSdf(map), [map]);
@@ -401,8 +401,8 @@ export default function GridTerrain({ map, palette }: { map: IslandMap; palette?
     // change is a cliff, so the blur has nothing it is allowed to cross and
     // every corner keeps its own height -- 20ms of work for an identical result.
     // The branch stays so raising the constant revives smoothing for free.
-    () => (CLIFF_LEVELS > 1 ? heightField(map) : null),
-    [map]
+    () => (CLIFF_LEVELS > 1 ? heights ?? heightField(map) : null),
+    [map, heights]
   );
 
   const chunks = useMemo(() => {

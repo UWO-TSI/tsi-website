@@ -1,0 +1,19 @@
+# Island painter: questions and the assumptions taken
+
+Build agent, `game/island-painter`, 2026-09-28. None of these blocked; each says what was done. Scope change from David mid-build ("dont make the island ill make it"): no island is authored, the coastline generator is dropped, the draft walk is proven with today's island.
+
+1. **Doors, exits and the wharf's deck, boat and arrival point** are offsets on their landmark (`LANDMARK_INFO` in `lib/game/defaultIsland.ts`), not separate objects in the file. Moving a building in the painter moves its door and exit with it, as in ACNH. The file carries one named spawn, `default` (where a visit starts). If David wants a door placed apart from its building, it becomes an optional per-object override.
+2. **Buildings do not rotate.** They face the camera (ACNH), so yaw is offered only for the wharf, benches, rocks, fences, bridges, study tables and the mission board. Trees, bushes and flowers take their turn from their seed.
+3. **One sea: River at level 0.** Painted Void (the legacy draft's sea) becomes River on load. `web/data/island-map.json` is untouched on disk; exporting a legacy draft from the painter writes River where it had Void.
+4. **Pond vs river.** Water that cannot reach the map edge is a pond; open edge-connected water is sea; the rest is river. The shipped pond opens onto the river, so the pond landmark also marks it: the open water around the marker (2+ cells from land) and its banks are pond. Fishing near the pond mouth was already pond under the old disc rule.
+5. **Flat-share rule** (health, and so the suite): level 0 at least 70% of land; half-step cells (land with a neighbour one level away) at most 8% of land (today 5.1%); no level above 4. The one-cell-wall check now counts full cliff walls only; today's Oracle rise has a one-cell half-step ridge, which the blur rounds into a walkable bump.
+6. **Content minimums in health** are the tests' existing ones: 12+ bug spots, 5+ trees (branches), at least one fruit tree, shell and rock, 2+ bottle spots, 60+ shore fishing spots. They will show as problems on a small or sparse painted island until it has enough.
+7. **Overlaps are warnings**, not failures (today's island has one: rock-0 and rock-1 touch; buildings keep a 1-tile gap).
+8. **Shells and bottle spots are placed objects** (today's beach-ring points, exported), so the shipped island is unchanged and David places them on his; nothing is derived from the ellipse any more.
+9. **The fitting room and the mission board are their own kinds**, not landmarks, so the landmark list, its collision and its signs are unchanged.
+10. **Shadows and clouds stay centred on the world origin** (every map is centred), sized to reach the land's farthest edge; the shadow camera's depth grows with it. Shadow resolution over a much bigger extent is the shadows owner's call (2048 map today).
+11. **Glints** reach 58 + half the map from its centre (90 today) and thin to at most 12,000 inside the map on a big painted sea.
+12. **Minimap** terrain is now drawn on its true cells; the code-built plot sat half a cell off. This is the one intentional visual change (HUD only).
+13. **Instanced nature keeps GLBProp's contact shadows** (one per instance, from the model's own bounds, lib/game/shadows.ts) rather than a footprint from the file, so both tiers look as before.
+14. **Mechanics tests** that need one known geometry (the bridge at x 0, the river at x 6, the bench at 5, 4.5) run on a frozen copy of today's island (`web/lib/game/fixtures/village-2026-09-28.json`); what the live map must satisfy is `mapHealth` via `villageMap.test.ts`.
+15. **Draft storage:** the painter autosaves to `lab-map-village-draft-v1`; its pre-village autosave (`lab-map-draft-v1`, legacy edits) is offered under "open" and never overwritten.

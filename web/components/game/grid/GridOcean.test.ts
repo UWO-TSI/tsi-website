@@ -3,11 +3,13 @@ import { PerspectiveCamera, Vector3 } from "three";
 import { chopSlope, facetGlint, facetTilt, glareLobe, halfVector, type Vec3 } from "@/lib/game/waterShader";
 import { ISLAND_LIGHTING, withWeather } from "@/lib/game/islandLighting";
 import { sunFromAngles } from "@/lib/game/lookPreset";
-import { createDefaultIsland } from "@/lib/game/defaultIsland";
+import { buildVillage, type VillageDoc } from "@/lib/game/villageMap";
+import frozen from "@/lib/game/fixtures/village-2026-09-28.json";
 import { WATER_DROP, isRiver, surfaceAt, worldToCellX, worldToCellZ } from "@/lib/game/grid";
 import { glintPoints } from "./GridOcean";
 
-const { map } = createDefaultIsland();
+// Water optics on a frozen copy of the 2026-09-28 village (camera spots and the deck below are its geometry).
+const { map } = buildVillage(frozen as VillageDoc);
 const POINTS = glintPoints(map);
 const at = (i: number): Vec3 => [POINTS[i * 3], POINTS[i * 3 + 1], POINTS[i * 3 + 2]];
 const WATER = ISLAND_LIGHTING.day.water, WIND = withWeather(ISLAND_LIGHTING.day, "wind").water;

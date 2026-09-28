@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { homeNodes, villageBottleSpot, villageNodes } from "./islandNodes";
-import { createDefaultIsland } from "./defaultIsland";
+import { villageIsland } from "./defaultIsland";
 import { createHomeIsland } from "./homeIsland";
 import { isGroundAtWorld } from "./grid";
 
 describe("island nodes", () => {
   it("puts every village node on dry, walkable-adjacent land with unique ids", () => {
-    const island = createDefaultIsland();
+    const island = villageIsland();
     const { forage, bugs } = villageNodes();
     const all = [...forage, ...bugs];
     expect(new Set(all.map(n => n.id)).size).toBe(all.length);
@@ -18,8 +18,8 @@ describe("island nodes", () => {
     expect(forage.filter(n => n.drop?.key === "wood_branch").length).toBeGreaterThan(4);
   });
   it("washes the message bottle up on the beach, one spot per day", () => {
-    const island = createDefaultIsland();
-    const days = ["2026-09-24", "2026-09-25", "2026-09-26", "2026-09-27"].map(villageBottleSpot);
+    const island = villageIsland();
+    const days = ["2026-09-24", "2026-09-25", "2026-09-26", "2026-09-27"].map(d => villageBottleSpot(d));
     for (const [x, z] of days) expect(isGroundAtWorld(island.map, x, z)).toBe(true);
     expect(new Set(days.map(String)).size).toBeGreaterThan(1);
     expect(villageBottleSpot("2026-09-24")).toEqual(days[0]);

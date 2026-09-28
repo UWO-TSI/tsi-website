@@ -157,19 +157,27 @@ screenshot.
 Consequences for anyone working on terrain:
 
 - **Do not tune terrain by editing `author-elevation.mjs` constants** unless
-  David asks for that specifically. Ask him to draw it, or draw a proposal
-  yourself in the editor and export it.
-- The editor edits the SHIPPED `web/data/island-map.json` and exports the whole
-  document to the clipboard. There is no write path to disk on purpose.
+  David asks for that specifically. Ask him to draw it. **David paints the
+  village himself** (rows 241, 246; 2026-09-28: "dont make the island ill make
+  it"): agents do not author, paint or rearrange island layouts or objects.
+- The editor opens the SHIPPED `web/data/village-map.json` (terrain plus the
+  object layer the game loads: every building, tree, prop, table, anchor,
+  spawn; `lib/game/villageMap.ts`) and exports the whole document to the
+  clipboard. There is no write path to disk on purpose. `island-map.json` is
+  the preserved legacy draft, still openable. `/lab/island?draft=1` walks the
+  painter's working draft. Spec: `specs/island-painter.md`.
 - **`author-elevation.mjs` overwrites hand edits.** Its output is also its own
   input, which is how 21 stale ramp cells accumulated in the shipped map. If you
   run it, expect to lose hand-drawn work.
 - Named drafts live in the browser's localStorage, so they are per-machine.
   Anything worth keeping has to be exported into the repo.
-- The health panel checks exactly what `web/lib/game/islandMap.test.ts` asserts:
-  reachability, cliff-piece coverage, orphan ramps, one-cell walls, faces taller
-  than the kit can draw. **If the panel says healthy, the paste keeps the suite
-  green.** Keep those two in sync when adding a check to either.
+- The health panel is `web/lib/game/mapHealth.ts`, which
+  `web/lib/game/villageMap.test.ts` asserts on the shipped file: reachability
+  from spawn, cliff-piece coverage, orphan ramps, cliff walls, faces taller than
+  the kit can draw, the flat share, every landmark placed on dry land and
+  reachable, resident anchors, study tables, forage and bug spots, a fishable
+  sea. **If the panel says healthy, the paste keeps the suite green.** Add a
+  check there and both follow.
 
 ## Design principles (set 2026-05-25)
 

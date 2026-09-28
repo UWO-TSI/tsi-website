@@ -16,7 +16,7 @@ import { useProgressionWorldSource, type WorldGoalId, type WorldProgression } fr
 import { useProgression, setProgressionState } from "@/lib/progression/useProgression";
 import { advance } from "@/lib/progression/client";
 import type { ObjectiveAnchor } from "@/lib/progression/types";
-import { landmark } from "./defaultIsland";
+import { landmark, landmarkPoint, type LandmarkId } from "./defaultIsland";
 import { installIslandProgressionDemo } from "./progressionDemo";
 
 installIslandProgressionDemo();
@@ -40,16 +40,17 @@ export function ceremonyDue(goal: Pick<WorldGoal, "id" | "completed"> | null, se
   return !!goal && goal.completed && (force || !seen.includes(goal.id));
 }
 
-/** Objective anchors → village XZ (door fronts, the pier for fishing). */
+/** Objective anchors → village XZ (door fronts, the wharf for fishing), from the village map. */
 export function resolveAnchor(anchor: ObjectiveAnchor): [number, number] | null {
-  const front = (id: Parameters<typeof landmark>[0]) => { const l = landmark(id); return [l.x, l.z - (l.half?.[1] ?? 0) - 0.6] as [number, number]; };
+  const front = (id: LandmarkId): [number, number] | null => { const l = landmark(id); return l && [l.x, l.z - (l.half?.[1] ?? 0) - 0.6]; };
+  const at = (id: LandmarkId, dx = 0): [number, number] | null => { const l = landmark(id); return l && [l.x + dx, l.z]; };
   switch (anchor) {
-    case "hq": return [0, 6.3];
+    case "hq": return landmarkPoint("hq", "door");
     case "monument": return front("monument");
-    case "fishing_spot": return [8, -19.5];
+    case "fishing_spot": return at("wharf");
     case "museum": return front("museum");
     case "oracle": return front("oracle");
-    case "ruins_gate": return [landmark("ruins").x - 0.8, landmark("ruins").z];
+    case "ruins_gate": return at("ruins", -0.8);
     default: return null;
   }
 }
