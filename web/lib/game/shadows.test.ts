@@ -58,6 +58,7 @@ describe("contact size", () => {
     const flower = contactSize(`${A}plants/flower-rose.glb`, "small", box(-0.5, 0.5, -0.3, 0.43, 0.6))!;
     expect(flower.rx).toBeLessThan(0.5);
     expect(flower.height).toBe(0);
+    expect(flower.strength).toBeLessThan(1);
     expect(contactSize(`${A}critters/firefly.glb`, "none", box(-1, 1, -1, 1, 1))).toBeNull();
     expect(contactSize(`${A}props/bridge-wooden.glb`, "solid", box(-3, 3, -1, 1, 1))).toBeNull();
   });

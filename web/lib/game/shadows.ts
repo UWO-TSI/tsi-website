@@ -53,8 +53,8 @@ export function meshShadow(cls: ShadowClass, material: string, { casters = false
   return casters ? { cast: false, receive: false } : { cast: true, receive: false, front: true };
 }
 
-/** A contact shadow in the object's own frame: footprint centre, half extents, height. */
-export interface ContactSize { cx: number; cz: number; rx: number; rz: number; height: number }
+/** A contact shadow in the object's own frame: footprint centre, half extents, height, and how dark (small things are faint). */
+export interface ContactSize { cx: number; cz: number; rx: number; rz: number; height: number; strength: number }
 
 /**
  * The soft darkening under a grounded object, from its local bounds: the
@@ -67,7 +67,7 @@ export function contactSize(url: string, cls: ShadowClass, box: { min: { x: numb
   return {
     cx: (box.min.x + box.max.x) / 2, cz: (box.min.z + box.max.z) / 2,
     rx: ((box.max.x - box.min.x) / 2) * grow + margin, rz: ((box.max.z - box.min.z) / 2) * grow + margin,
-    height: small ? 0 : Math.max(0, box.max.y),
+    height: small ? 0 : Math.max(0, box.max.y), strength: small ? 0.45 : 1,
   };
 }
 

@@ -25,7 +25,7 @@ export type { CharacterMotion, ClipName } from "@/lib/game/character/clips";
 export const CHARACTER_SCALE = 1.3;
 export const CHARACTER_HEIGHT = 1.045 * CHARACTER_SCALE;
 /** A character's contact shadow: about its shoulders' width, its height for the Light tier's sun shadow. */
-const CONTACT = { cx: 0, cz: 0, rx: 0.4, rz: 0.34, height: CHARACTER_HEIGHT };
+const CONTACT = { cx: 0, cz: 0, rx: 0.4, rz: 0.34, height: CHARACTER_HEIGHT, strength: 1 };
 
 type Gltf = { scene: THREE.Object3D; animations: THREE.AnimationClip[] };
 const BODY_MATERIAL = new THREE.MeshStandardMaterial({ name: "CharacterBody", vertexColors: true, roughness: 0.85, metalness: 0 });
@@ -90,7 +90,9 @@ class Puppet {
     this.body = make(new THREE.BufferGeometry(), BODY_MATERIAL);
     this.face = make(facePrim.geometry, BODY_MATERIAL);
     this.decal = make(new THREE.BufferGeometry(), BODY_MATERIAL);
-    this.decal.castShadow = false; // a print on the shirt, inside the body's silhouette
+    // A print on the shirt, inside the body's silhouette: not a caster.
+    this.decal.castShadow = false;
+    delete this.decal.userData.sunCaster;
     this.body.visible = this.face.visible = this.decal.visible = false; // until dress()
     this.sockets = { R: this.root.getObjectByName("Socket_R_Hand")!, L: this.root.getObjectByName("Socket_L_Hand")!, Back: this.root.getObjectByName("Socket_Back")! };
     this.mixer = new THREE.AnimationMixer(this.root);

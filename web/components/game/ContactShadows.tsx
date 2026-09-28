@@ -53,12 +53,18 @@ function discVertex(shader: THREE.WebGLProgramParametersWithUniforms) {
   shader.fragmentShader = "varying vec2 vDisc;\n" + shader.fragmentShader;
 }
 
-/** Soft disc, darkening only where the sun still reaches (getShadowMask is 1 without a shadow map). */
+/** Soft disc, darkening only where the sun still reaches (getShadowMask is 1 without a shadow map); the instance colour's red is its strength. */
 function contactMaterial() {
   const material = new THREE.ShadowMaterial({ depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
   material.onBeforeCompile = shader => {
     discVertex(shader);
-    shader.fragmentShader = shader.fragmentShader.replace("opacity * ( 1.0 - getShadowMask() )", `opacity * ${FALLOFF} * getShadowMask()`);
+    shader.vertexShader = "varying float vStrength;\n" + shader.vertexShader.replace("#include <begin_vertex>", `#include <begin_vertex>
+  #ifdef USE_INSTANCING_COLOR
+    vStrength = instanceColor.r;
+  #else
+    vStrength = 1.0;
+  #endif`);
+    shader.fragmentShader = "varying float vStrength;\n" + shader.fragmentShader.replace("opacity * ( 1.0 - getShadowMask() )", `opacity * vStrength * ${FALLOFF} * getShadowMask()`);
   };
   material.customProgramCacheKey = () => "contact-shadow-v1";
   return material;
@@ -70,7 +76,7 @@ const CONTACT = { sunMap: 0.3, none: 0.42 };
 const DIRECTED = 0.36;
 const CAPACITY = 1024;
 const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _p = new THREE.Vector3(), _s = new THREE.Vector3(), _up = new THREE.Vector3(0, 1, 0);
-const _sun = new THREE.Vector3(), _target = new THREE.Vector3();
+const _sun = new THREE.Vector3(), _target = new THREE.Vector3(), _strength = new THREE.Color();
 
 function place(mesh: THREE.InstancedMesh, i: number, e: Ellipse, y: number) {
   mesh.setMatrixAt(i, _m.compose(_p.set(e.x, y, e.z), _q.setFromAxisAngle(_up, e.yaw), _s.set(e.rx, 1, e.rz)));
@@ -126,12 +132,14 @@ class ContactLayer {
       const e = c.object.matrixWorld.elements;
       const sx = Math.hypot(e[0], e[1], e[2]), sy = Math.hypot(e[4], e[5], e[6]), sz = Math.hypot(e[8], e[9], e[10]);
       const foot: Ellipse = { x: e[0] * c.cx + e[8] * c.cz + e[12], z: e[2] * c.cx + e[10] * c.cz + e[14], rx: c.rx * sx, rz: c.rz * sz, yaw: Math.atan2(e[8], e[10]) };
+      a.setColorAt(n, _strength.setScalar(c.strength));
       place(a, n++, foot, e[13] + 0.03);
       const cast = light ? sunShadow(foot, c.height * sy, [_sun.x, _sun.y, _sun.z]) : null;
       if (cast) place(b, d++, cast, e[13] + 0.025);
     }
     a.count = n; b.count = d;
     a.instanceMatrix.needsUpdate = b.instanceMatrix.needsUpdate = true;
+    if (a.instanceColor) a.instanceColor.needsUpdate = true;
   }
 }
 

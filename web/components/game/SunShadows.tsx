@@ -9,6 +9,9 @@
  * clears the light's map as usual, the first caster in the scene (`base`)
  * blits that copy back in, and the dynamic casters draw on top of it with the
  * depth test, so the map holds both without re-rendering the static world.
+ * A re-capture happens at the same point of that frame's shadow pass (three
+ * only renders shadows inside a render): `base` renders the statics alone,
+ * keeps the depth, and the pass goes on to draw the dynamic casters.
  *
  * The copy is re-rendered when anything it holds changes: a static caster
  * added, removed, hidden or moved (checked every frame against the capture),
@@ -34,9 +37,11 @@ function lightKey(light: THREE.DirectionalLight): string {
 
 class SunShadowCache {
   readonly base: THREE.Mesh;
+  private scene: THREE.Scene | null = null;
   private light: THREE.DirectionalLight | null = null;
   private key = "";
   private copy: THREE.WebGLRenderTarget | null = null;
+  private pending = true;
   private capturing = false;
   private active = false;
   private readonly statics = new Map<Caster, THREE.Matrix4>();
@@ -49,12 +54,40 @@ class SunShadowCache {
     this.base = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false }));
     this.base.castShadow = true;
     this.base.frustumCulled = false;
-    this.base.onBeforeShadow = (renderer, _object, _camera, shadowCamera) => {
+    this.base.onBeforeShadow = (renderer, _object, camera, shadowCamera) => {
       const light = this.light, map = light?.shadow.map;
-      if (this.capturing || !light || !map?.depthTexture || !this.copy || shadowCamera !== light.shadow.camera) return;
-      renderer.copyTextureToTexture(this.copy.depthTexture!, map.depthTexture);
-      renderer.setRenderTarget(map);
+      if (this.capturing || !light || !map?.depthTexture || shadowCamera !== light.shadow.camera) return;
+      if (this.pending || !this.copy) this.capture(renderer, camera, light, map);
+      else {
+        renderer.copyTextureToTexture(this.copy.depthTexture!, map.depthTexture);
+        renderer.setRenderTarget(map);
+      }
     };
+  }
+
+  /** Inside the shadow pass: render the static casters alone into the map, keep a copy, then let the pass draw the dynamic ones. */
+  private capture(renderer: THREE.WebGLRenderer, camera: THREE.Camera, light: THREE.DirectionalLight, map: THREE.WebGLRenderTarget) {
+    for (const mesh of this.seen) { mesh.castShadow = true; if (mesh.userData.casterOnly) mesh.visible = true; }
+    for (const mesh of this.dynamics) mesh.castShadow = false;
+    this.capturing = true;
+    renderer.shadowMap.render([light], this.scene!, camera);
+    this.capturing = false;
+    if (!this.copy || this.copy.width !== map.width || this.copy.height !== map.height) {
+      this.copy?.dispose();
+      this.copy = new THREE.WebGLRenderTarget(map.width, map.height, { format: THREE.RedFormat, depthTexture: new THREE.DepthTexture(map.width, map.height, THREE.UnsignedIntType) });
+      renderer.initRenderTarget(this.copy);
+    }
+    renderer.copyTextureToTexture(map.depthTexture!, this.copy.depthTexture!);
+    renderer.setRenderTarget(map);
+    this.statics.clear();
+    for (const mesh of this.seen) {
+      this.statics.set(mesh, mesh.matrixWorld.clone());
+      mesh.castShadow = false;
+      if (mesh.userData.casterOnly) mesh.visible = false;
+    }
+    for (const mesh of this.dynamics) mesh.castShadow = true;
+    this.key = lightKey(light);
+    this.pending = false;
   }
 
   /** The blit must run before any caster draws: keep `base` first in traversal order. */
@@ -90,7 +123,9 @@ class SunShadowCache {
     return dirty;
   }
 
-  frame(gl: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.Camera) {
+  /** Before the render: find the key light and the casters, and whether the static copy is still true. */
+  frame(gl: THREE.WebGLRenderer, scene: THREE.Scene) {
+    this.scene = scene;
     this.first(scene);
     this.light = null;
     this.seen.length = 0;
@@ -105,31 +140,7 @@ class SunShadowCache {
     this.active = true;
     gl.shadowMap.autoUpdate = true;
     for (const mesh of this.dynamics) { mesh.castShadow = true; if (mesh.userData.casterOnly) mesh.visible = true; }
-    if (!dirty && this.seen.length === this.statics.size && this.copy && lightKey(light) === this.key) return;
-
-    // Capture the static casters alone into the copy.
-    scene.updateMatrixWorld();
-    light.target.updateMatrixWorld();
-    for (const mesh of this.seen) { mesh.castShadow = true; if (mesh.userData.casterOnly) mesh.visible = true; }
-    for (const mesh of this.dynamics) mesh.castShadow = false;
-    this.capturing = true;
-    gl.shadowMap.render([light], scene, camera);
-    this.capturing = false;
-    const map = light.shadow.map!;
-    if (!this.copy || this.copy.width !== map.width || this.copy.height !== map.height) {
-      this.copy?.dispose();
-      this.copy = new THREE.WebGLRenderTarget(map.width, map.height, { format: THREE.RedFormat, depthTexture: new THREE.DepthTexture(map.width, map.height, THREE.UnsignedIntType) });
-      gl.initRenderTarget(this.copy);
-    }
-    gl.copyTextureToTexture(map.depthTexture!, this.copy.depthTexture!);
-    this.statics.clear();
-    for (const mesh of this.seen) {
-      this.statics.set(mesh, mesh.matrixWorld.clone());
-      mesh.castShadow = false;
-      if (mesh.userData.casterOnly) mesh.visible = false;
-    }
-    for (const mesh of this.dynamics) mesh.castShadow = true;
-    this.key = lightKey(light);
+    if (dirty || this.seen.length !== this.statics.size || lightKey(light) !== this.key) this.pending = true;
   }
 
   attach(scene: THREE.Scene) {
@@ -140,6 +151,7 @@ class SunShadowCache {
       (this.base.material as THREE.Material).dispose();
       this.copy?.dispose();
       this.copy = null;
+      this.pending = true;
       for (const mesh of [...this.statics.keys(), ...this.dynamics]) {
         mesh.castShadow = true;
         if (mesh.userData.casterOnly) mesh.visible = false;
@@ -153,6 +165,6 @@ export default function SunShadows() {
   const scene = useThree(s => s.scene);
   const cache = useMemo(() => new SunShadowCache(), []);
   useEffect(() => cache.attach(scene), [cache, scene]);
-  useFrame(({ gl, scene, camera }) => cache.frame(gl, scene, camera));
+  useFrame(({ gl, scene }) => cache.frame(gl, scene));
   return null;
 }
