@@ -516,14 +516,14 @@ for _s, _sx in SIDES:
     arm(CROUCH_IN, _s, V(_sx * 0.45, -0.55, -0.7), V(-_sx * 0.2, -0.7, -0.5))
 
 
-@clip("DodgeRoll", 0.7, False, ground="frame", ground_w=lambda p: ss(0.1, 0.2, p) * (1 - ss(0.76, 0.88, p)))
-def dodge_roll(p):
-    if p < 0.15:
-        return plant(keys(p / 0.15, [(0, N, "lin"), (1, CROUCH_IN, "io")]))
-    if p > 0.8:
-        return plant(keys((p - 0.8) / 0.2, [(0, CROUCH_IN, "lin"), (0.6, body(crouch=-0.01), "back"), (1, N, "io")]))
-    u = (p - 0.15) / 0.65
-    th = 360 * EASE["io"](u)
+def roll_pose(p, a, b, spin="io"):
+    """Crouch in until a, a full forward roll until b, stand up after."""
+    if p < a:
+        return plant(keys(p / a, [(0, N, "lin"), (1, CROUCH_IN, "io")]))
+    if p > b:
+        return plant(keys((p - b) / (1 - b), [(0, CROUCH_IN, "lin"), (0.6, body(crouch=-0.01), "back"), (1, N, "io")]))
+    u = (p - a) / (b - a)
+    th = 360 * EASE[spin](u)
     P = mix(CROUCH_IN, TUCK, ss(0, 0.15, u) * (1 - ss(0.85, 1, u)))
     hip = HEAD0["Hips"] + P.loc
     C = (hip + P.head("Head") + P.acc("Head") @ V(0, 0, 0.22)) / 2
@@ -531,6 +531,11 @@ def dodge_roll(p):
     P.R["Hips"] = R @ P.q("Hips")
     P.loc = (C + R @ (hip - C)) - HEAD0["Hips"]
     return P
+
+
+@clip("DodgeRoll", 0.7, False, ground="frame", ground_w=lambda p: ss(0.1, 0.2, p) * (1 - ss(0.76, 0.88, p)))
+def dodge_roll(p):
+    return roll_pose(p, 0.15, 0.8)
 
 
 def hit_keys():
@@ -591,6 +596,122 @@ def trace(p):
     hand(P, "Left", V(0.07 + 0.035 * c, -0.21, 0.46 + 0.035 * s))
     hand(P, "Right", V(-0.02, -0.14, 0.4))
     return plant(P, ankles={"Left": V(0.085, -0.03, ANKLE["Left"].z), "Right": V(-0.085, 0.03, ANKLE["Right"].z)})
+
+
+# ================================================================ movement (specs/movement.md): the sim lifts the root, clips pose the body
+def legs(P, thigh, knee, splay=4.0, foot=20.0):
+    """Both legs from the hip: thigh forward by `thigh` (deg), knee bent by `knee`; (left, right) pairs allowed."""
+    th = thigh if isinstance(thigh, tuple) else (thigh, thigh)
+    kn = knee if isinstance(knee, tuple) else (knee, knee)
+    for (s, sx), t, k in zip(SIDES, th, kn):
+        P.R[f"{s}UpLeg"] = rx(-t) @ rz(sx * splay)
+        P.R[f"{s}Leg"] = rx(k)
+        P.R[f"{s}Foot"] = rx(foot)
+        P.R[f"{s}ToeBase"] = Quaternion()
+    return P
+
+
+def balance(P, up=0.55, fwd=-0.1, bend=0.25):
+    """Arms out for balance: up = how raised (0 level), fwd = forward (-) / back (+)."""
+    for s, sx in SIDES:
+        arm(P, s, V(sx * 0.8, fwd, up), V(sx * 0.7, fwd - bend, up + 0.2))
+    return P
+
+
+def fall_pose(p):
+    """In the air: knees bent under, a slow bicycle, arms out and up."""
+    c, s2 = math.sin(TAU * p), math.sin(2 * TAU * p)
+    P = body(lean=-3 + 2 * s2, nod=-6)
+    legs(P, (32 + 12 * c, 32 - 12 * c), (55 - 12 * c, 55 + 12 * c))
+    return balance(P, up=0.62 + 0.08 * s2, fwd=-0.05)
+
+
+@clip("Fall", 0.6, True)
+def fall(p):
+    return fall_pose(p)
+
+
+JUMP = [(0, N, "lin"),
+        (0.22, balance(legs(body(lean=8, nod=-6), 6, 4, foot=35), up=0.35, fwd=-0.55, bend=0.1), "out"),  # push off, arms swing up
+        (0.6, balance(legs(body(lean=6, nod=-2), 70, 95), up=0.7, fwd=-0.2), "out"),  # tuck
+        (1.0, fall_pose(0), "io")]
+
+
+@clip("Jump", 0.3, False, endsOn="Fall")
+def jump(p):
+    return keys(p, JUMP)
+
+
+def land_keys():
+    def squat(crouch, lean, nod):
+        P = body(crouch=crouch, lean=lean, nod=nod)
+        for s, sx in SIDES:
+            arm(P, s, V(sx * 0.55, -0.55, -0.55), V(sx * 0.3, -0.8, -0.4))
+        return P
+    return [(0, squat(0.06, 16, 8), "lin"), (0.35, squat(0.07, 18, 10), "out"), (1.0, N, "back")]
+
+
+LAND = land_keys()
+
+
+@clip("Land", 0.28, False)
+def land(p):
+    return plant(keys(p, LAND))
+
+
+@clip("Roll", 0.36, False, ground="frame", ground_w=lambda p: ss(0.05, 0.12, p) * (1 - ss(0.82, 0.92, p)))
+def roll(p):
+    """The landing roll: straight into the tuck (the sim is already moving), quicker than the dodge."""
+    return roll_pose(p, 0.08, 0.86, spin="lin")
+
+
+def mantle_keys():
+    reach = body(lean=-6, nod=-16)
+    legs(reach, 12, 25, foot=35)
+    for s, sx in SIDES:
+        arm(reach, s, V(sx * 0.3, -0.45, 0.84), V(sx * 0.2, -0.55, 0.8))  # hands up on the lip
+    pull = body(lean=18, nod=4, crouch=0.01)
+    legs(pull, (95, 20), (120, 35))  # left knee up onto the ledge
+    for s, sx in SIDES:
+        arm(pull, s, V(sx * 0.5, -0.5, 0.1), V(sx * 0.1, -0.7, -0.55))  # pushing down on the lip
+    step = body(lean=10, nod=2)
+    legs(step, (40, -10), (60, 15), foot=10)
+    balance(step, up=0.1, fwd=0.2)
+    return [(0, reach, "lin"), (0.35, reach, "lin"), (0.62, pull, "io"), (0.85, step, "out"), (1.0, N, "io")]
+
+
+MANTLE = mantle_keys()
+
+
+@clip("Mantle", 0.32, False)
+def mantle(p):
+    return keys(p, MANTLE)
+
+
+def dash_pose():
+    P = body(lean=28, nod=-10, crouch=0.02)
+    legs(P, (55, -35), (70, 30), foot=30)  # front knee driving, back leg trailing
+    for s, sx in SIDES:
+        arm(P, s, V(sx * 0.45, 0.75, -0.35), V(sx * 0.3, 0.9, -0.2))  # swept back
+    return P
+
+
+DASH = dash_pose()
+
+
+@clip("Dash", 0.24, False, ground="frame")
+def dash(p):
+    return keys(p, [(0, N, "lin"), (0.18, DASH, "out"), (0.7, DASH, "lin"), (1.0, N, "io")])
+
+
+@clip("Skid", 0.4, True, ground="frame")
+def skid(p):
+    """Digging in to turn round: leaning into the new way, the back foot braced out behind, arms out; a slide judder."""
+    j = math.sin(TAU * 2 * p)
+    P = body(lean=16 + 2 * j, side=3 * j, crouch=0.04, nod=-4)
+    legs(P, (40, -45), (70, 10), foot=10)
+    balance(P, up=0.25 + 0.05 * j, fwd=-0.35)
+    return P
 
 
 # ================================================================ bake, ground, check

@@ -1266,6 +1266,54 @@
    "loop": true,
    "frames": 60,
    "hand": "L"
+  },
+  {
+   "name": "Fall",
+   "length": 0.6,
+   "loop": true,
+   "frames": 18
+  },
+  {
+   "name": "Jump",
+   "length": 0.3,
+   "loop": false,
+   "frames": 9,
+   "endsNeutral": false,
+   "endsOn": "Fall"
+  },
+  {
+   "name": "Land",
+   "length": 0.267,
+   "loop": false,
+   "frames": 8,
+   "endsNeutral": true
+  },
+  {
+   "name": "Roll",
+   "length": 0.367,
+   "loop": false,
+   "frames": 11,
+   "endsNeutral": true
+  },
+  {
+   "name": "Mantle",
+   "length": 0.333,
+   "loop": false,
+   "frames": 10,
+   "endsNeutral": true
+  },
+  {
+   "name": "Dash",
+   "length": 0.233,
+   "loop": false,
+   "frames": 7,
+   "endsNeutral": true
+  },
+  {
+   "name": "Skid",
+   "length": 0.4,
+   "loop": true,
+   "frames": 12
   }
  ],
  "hair": [
