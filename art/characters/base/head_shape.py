@@ -48,3 +48,21 @@ def hair_point(lat, lon, off):
     p = head_point(lat, lon)
     d = p - HC
     return HC + d * (1 + off / d.length)
+
+
+# ---------------------------------------------------------------- the hair volume everything on the head fits to
+INNER = -0.004        # hair undersides sit 4 mm inside the scalp: no gap shows between hair and head from any angle
+
+
+def hair_vol(lat):
+    """Outer surface of the hair mass, metres above the scalp: 1.1 cm at the hairline and below, fuller toward the
+    crown (2.4 cm), the chunky ref-18 mass. Back caps follow it, bangs tuck their roots just under it, hats and
+    bands sit on it (avatar-fit, row 242)."""
+    return 0.011 + 0.013 * _ss(0, 80, lat)
+
+
+def hairline(lon):
+    """Front edge of the back caps (lat, degrees): 44 above the brow centre, down to 22 at the temples (|lon| 60),
+    where the side panels start. Bangs lie on the forehead below it and tuck their roots under it."""
+    a = min(abs(lon), 60.0) / 60.0
+    return 22 + 22 * (1 - a * a) ** 0.7

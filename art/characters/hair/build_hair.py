@@ -13,8 +13,14 @@ Output:
 With `render`, also writes one PNG per style (on the v6 head) for the contact sheets (see make_sheets.py).
 
 Style language (David's S/B/N sheets): each piece is a few chunky masses, smooth-shaded by angle, with a
-handful of sharp tufts. Bangs lie on top of the back-hair cap (larger offset), so any bangs + back pair
-connects without gaps.
+handful of sharp tufts.
+
+Fit (avatar-fit, row 242): every piece is a closed solid (outer surface, underside tucked 4 mm into the scalp, walls
+on every edge), so nothing reads as paper and the engine's back-face culling cannot hollow it. The outer surface
+follows head_shape.hair_vol: 0.9-1.1 cm off the scalp at the fringe and hem, fuller toward the crown. Back caps
+cover the crown down to head_shape.hairline (44 deg above the brows, 22 at the temples); bangs lie on the forehead
+below it and run their roots under it, so the seam is the cap's front edge and there is no crown ledge.
+Checked by art/characters/fit_check.py.
 """
 import bpy, json, math, os, sys
 from mathutils import Vector
@@ -23,13 +29,14 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, ".."))
 import kit  # noqa: E402  (shared Piece, rig loader, export, render helpers)
 from kit import Piece, TAU, hair_point, HC  # noqa: E402
-from head_shape import head_point, CHIN, HEAD_Z  # noqa: E402
+from head_shape import head_point, CHIN, HEAD_Z, INNER, hair_vol, hairline, _ss  # noqa: E402
 
 ARGS = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
 RENDER_DIR = ARGS[ARGS.index("render") + 1] if "render" in ARGS else None
 HAIR = kit.PAL["hair"][kit.PAL["ref_girl_defaults"]["hair"]]
 SHARP = 40.0          # degrees; tufts and parting edges stay sharp, masses read smooth
-MAX_TRIS = 250
+MAX_TRIS = 900         # closed solids: about half of it is the underside tucked inside the head (never drawn)
+ZRANGE = (CHIN, 1.03)  # one COLOR_0 gradient for every hair piece: no shade step where bangs meet the cap
 
 bpy.ops.wm.read_factory_settings(use_empty=True)
 scene = bpy.context.scene
@@ -39,25 +46,55 @@ HEAD_BONE = "mixamorig:Head"
 
 
 # ================================================================ bangs (N sheet families)
-def bangs(lons, fringe, drops=None, top=74, offs=(0.044, 0.056, 0.058), shift=None, gap=None, extra=None):
-    """fringe(lon)->lat of the fringe edge; drops(i)->tip drop in degrees (0 = none); shift(i)->tip lon offset."""
+FRINGE_OFF = 0.009    # the fringe edge lies on the forehead
+ROOT_DIP = 0.004      # roots run this far under the thinnest back cap (the seam hides under the cap's front edge)
+
+
+def root_lat(lon):
+    """Bangs roots: behind the hairline, under the back cap (or the hat's tuck)."""
+    return hairline(lon) + 12
+
+
+def side(lon):
+    """0 over the forehead, 1 where a side lock lies over the back cap's side panel (|lon| >= 64)."""
+    return _ss(48, 64, abs(lon))
+
+
+def bangs(lons, fringe, drops=None, top=None, vol=1.0, shift=None, gap=None, extra=None):
+    """fringe(lon)->lat of the fringe edge; drops(i)->tip drop in degrees (0 = none); shift(i)->tip lon offset.
+    A closed solid in four rows: fringe edge on the forehead, a middle row that bellies out a little (chunky, not a
+    sheet), the hairline row just under the cap's front edge (kit.seam_off), and the root row under the cap.
+    Side locks lie over the cap's side panels and dive under it by the hairline row. Tips are wedges."""
     pc = Piece()
+    top = top or root_lat
 
     def rows(lon):
         f0 = fringe(lon)
-        return [f0, f0 + (top - f0) * 0.5, top]
+        h = max(hairline(lon), f0 + 6)
+        return [f0, (f0 + h) / 2, h, max(top(lon), h + 8)]
+
+    def edge_off(f0, lon):
+        return FRINGE_OFF + side(lon) * (hair_vol(f0) + 0.004 - FRINGE_OFF)
 
     def off(lat, lon, ri):
-        return offs[ri]
+        f0, _, h, r = rows(lon)
+        if ri == 3:
+            return kit.seam_off(r) - ROOT_DIP
+        o0, oh = edge_off(f0, lon), kit.seam_off(h) - 0.002
+        t = (0.0, 0.5, 1.0)[ri]
+        o = o0 + (oh - o0) * t + 0.004 * vol * (1 - side(lon)) * math.sin(math.pi * t)
+        # wherever a cap covers the scalp (above the hairline), bangs run under its front edge, never over it
+        return min(o, kit.seam_off(lat) - 0.002) if lat >= hairline(lon) - 1 else o
 
     def tips(i, la, lb):
         d = drops(i) if drops else 0
         if not d:
             return None
-        mid = (la + lb) / 2 + (shift(i) if shift else 0)
-        return (min(fringe(la), fringe(lb)) - d, mid, offs[0] - 0.002)
+        mid_lon = (la + lb) / 2 + (shift(i) if shift else 0)
+        f0 = min(fringe(la), fringe(lb))
+        return (f0 - d, mid_lon, edge_off(f0, mid_lon) - 0.002)
 
-    pc.patch(lons, rows, off, tips=tips, skip=(lambda i, r: gap(lons[i], lons[i + 1], r)) if gap else None)
+    pc.solid_patch(lons, rows, off, tips=tips, skip=(lambda i, r: gap(lons[i], lons[i + 1], r)) if gap else None)
     if extra:
         extra(pc)
     return pc
@@ -69,16 +106,30 @@ L12 = [-80, -66, -52, -38, -24, -8, 8, 24, 38, 52, 66, 80]
 alt = lambda a, b_: (lambda i: a if i % 2 == 0 else b_)
 
 
-def side_fringe(front, side, edge=40, far=62):
-    return lambda lon: front if abs(lon) <= edge else (side if abs(lon) >= far else front + (side - front) * (abs(lon) - edge) / (far - edge))
+def side_fringe(front, side_lat, edge=40, far=62):
+    return lambda lon: front if abs(lon) <= edge else (side_lat if abs(lon) >= far else front + (side_lat - front) * (abs(lon) - edge) / (far - edge))
 
 
 def wispy():
+    """See-through: five separate strands, forehead showing between them up to the cap's hairline."""
     pc = Piece()
     for c in (-46, -23, 0, 23, 46):
-        pc.patch([c - 7, c + 7], lambda lon: [8, 38, 64], lambda lat, lon, ri: (0.048, 0.052, 0.046)[ri],
-                 tips=lambda i, la, lb, c=c: (8 - 10, c + (3 if c < 0 else -3 if c > 0 else 0), 0.046))
+        strand = bangs([c - 7, c + 7], lambda lon: 8, drops=lambda i, c=c: 10, shift=lambda i, c=c: (3 if c < 0 else -3 if c > 0 else 0),
+                       vol=0.6)
+        merge(pc, strand)
     return pc
+
+
+def merge(pc, other):
+    """Copy another piece's geometry (verts, faces, refs, materials) into pc."""
+    vmap = {}
+    for v in other.bm.verts:
+        vmap[v] = pc.v(v.co.copy())
+    for f in other.bm.faces:
+        pc.mat = other.fmat.get(f, pc.mat)
+        pc.f([vmap[v] for v in f.verts], other.ref.get(f, HC))
+    pc.mat = "M_Hair"
+    other.bm.free()
 
 
 def swept(direction):
@@ -96,15 +147,14 @@ def curtain(side_lat):
 
 def single_strand():
     pc = bangs(L8, side_fringe(24, 0), drops=alt(3, 4))
-    pc.patch([-26, -12], lambda lon: [-18, 24, 74], lambda lat, lon, ri: (0.05, 0.06, 0.06)[ri],
-             tips=lambda i, la, lb: (-26, -21, 0.048))
+    merge(pc, bangs([-26, -12], lambda lon: -18, drops=lambda i: 8, shift=lambda i: 2))
     return pc
 
 
 BANGS = [  # id, name, N cell (nearest), builder
     ("bangs_straight", "Straight cut", "N4.2", lambda: bangs(L10, side_fringe(12, -8), drops=alt(3, 4))),
     ("bangs_straight_long", "Straight cut, long", "N3.3", lambda: bangs(L10, side_fringe(6, -22), drops=alt(4, 5))),
-    ("bangs_bowl", "Rounded bowl", "N4.1", lambda: bangs(L10, side_fringe(16, 2), drops=None, offs=(0.056, 0.066, 0.062))),
+    ("bangs_bowl", "Rounded bowl", "N4.1", lambda: bangs(L10, side_fringe(16, 2), drops=None, vol=2.0)),
     ("bangs_wispy", "See-through wispy", "N6.1", wispy),
     ("bangs_swept_l", "Side-swept left", "N2.2", lambda: swept(1)),
     ("bangs_swept_r", "Side-swept right", "N6.4", lambda: swept(-1)),
@@ -120,8 +170,8 @@ BANGS = [  # id, name, N cell (nearest), builder
         lambda lon: 10 if abs(lon) <= 40 else (-50 if abs(lon) >= 66 else -8), drops=alt(2, 2))),
     ("bangs_choppy", "Short choppy", "N1.5", lambda: bangs(L12, side_fringe(28, 14), drops=alt(4, 7),
                                                            shift=lambda i: 4 if i % 3 else -4)),
-    ("bangs_swept_back", "Swept back", "N5.4", lambda: bangs(L8, lambda lon: 42 if abs(lon) < 60 else 26, drops=None,
-                                                             top=80, offs=(0.05, 0.072, 0.06))),
+    # swept back: no fringe, a rolled lift pushed back against the cap's hairline
+    ("bangs_swept_back", "Swept back", "N5.4", lambda: bangs(L8, lambda lon: 34 if abs(lon) < 60 else 16, drops=None, vol=2.5)),
     ("bangs_single_strand", "Short with one long strand", "N5.3", single_strand),
     ("bangs_wavy", "Wavy swept", "N3.1", lambda: bangs(L10, lambda lon: 22 - 18 * (lon + 80) / 160 if abs(lon) < 70 else -10,
                                                        drops=alt(9, 5), shift=lambda i: 8 * math.sin(i * 1.7))),
@@ -131,117 +181,98 @@ BANGS = [  # id, name, N cell (nearest), builder
 
 
 # ================================================================ back (B sheet families)
-BACK_L = [0, 30, 60, 90, 120, 150, 180, -150, -120, -90, -60, -30]
-WINDOW = 61       # |lon| below this is the face opening (open below lat 22)
+BACK_L, WINDOW = kit.CAP_LONS, kit.WINDOW
+cap = kit.hair_cap
 
 
-def cmid(a, b_):
-    """circular mean of two longitudes (degrees)."""
-    return math.degrees(math.atan2(math.sin(math.radians(a)) + math.sin(math.radians(b_)),
-                                   math.cos(math.radians(a)) + math.cos(math.radians(b_))))
+def skirt_ring(bottom, lons=None):
+    """New verts just above a cap's hem (inside the cap) from one face edge round the back, for a hanging length."""
+    pc_lons = sorted([l for l in (lons or BACK_L) if abs(l) >= WINDOW - 2], key=lambda l: l % 360)
+    return pc_lons, [(bottom(l) + 8, l) for l in pc_lons]
 
 
-def cap(bottom, offs=(0.05, 0.044, 0.038, 0.042, 0.044), tips=None, top_rows=(22, 52, 74)):
-    """Full crown cap + sides/back down to bottom(lon) lat. Returns (piece, grid, lons) for extensions."""
-    pc = Piece()
-    lons = BACK_L + [BACK_L[0]]           # wrap
-
-    def rows(lon):
-        bt = bottom(lon)
-        mid = (bt + top_rows[0]) / 2
-        return [bt, mid] + list(top_rows)
-
-    def off(lat, lon, ri):
-        return offs[ri]
-
-    win = lambda i, r: max(abs(lons[i]), abs(lons[i + 1])) < WINDOW and r < 2
-    grid = pc.patch(lons, rows, off, skip=win,
-                    tips=(lambda i, la, lb: None if max(abs(la), abs(lb)) < WINDOW else tips(i, la, lb, cmid(la, lb))) if tips else None)
-    apex = pc.v(hair_point(90, 0, offs[-1]))
-    for i in range(len(lons) - 1):
-        pc.f([grid[i][-1], grid[i + 1][-1], apex], HC)
-    return pc, grid, lons
-
-
-def back_row(grid, lons):
-    """Bottom verts of the non-window columns, ordered from one face edge round the back to the other."""
-    idx = [i for i, l in enumerate(lons[:-1]) if abs(l) >= WINDOW - 2]
-    idx.sort(key=lambda i: (lons[i] % 360))
-    return [grid[i][0] for i in idx]
+def hang(pc, bottom, z_end, **kw):
+    lons, pts = skirt_ring(bottom)
+    ring = [pc.hv(la, lo, 0.004) for la, lo in pts]
+    return pc.skirt(ring, z_end, thick=0.012, **kw)
 
 
 def bob():
-    pc, g, l = cap(lambda lon: -44 if abs(lon) >= 90 else -38,
-                   tips=lambda i, la, lb, mid: (-54, mid, 0.052) if i % 2 == 0 else None)
+    pc, g, l = cap(lambda lon: -44 if abs(lon) >= 90 else -38, vol=1.1,
+                   tips=lambda i, la, lb, mid: (-52, mid, 0.008) if i % 2 == 0 else None)
     return pc
 
 
 def wolf():
-    pc, g, l = cap(lambda lon: -30, offs=(0.05, 0.05, 0.042, 0.046, 0.05))
-    pc.skirt(back_row(g, l), CHIN - 0.03, nrows=1, flare=1.12, tip_drop=0.05, tip_every=1)
+    pc, g, l = cap(lambda lon: -30, vol=1.25)
+    hang(pc, lambda lon: -30, CHIN - 0.03, nrows=1, flare=1.12, tip_drop=0.05, tip_every=1)
     return pc
 
 
 def long_straight(z_end=0.38, wave=0.0, flare=1.06):
     pc, g, l = cap(lambda lon: -40)
-    pc.skirt(back_row(g, l), z_end, nrows=2, flare=flare, wave=wave, tip_drop=0.03, tip_every=2)
+    hang(pc, lambda lon: -40, z_end, nrows=2, flare=flare, wave=wave, tip_drop=0.03, tip_every=2)
     return pc
 
 
 def high_pony():
-    pc, g, l = cap(lambda lon: -22, offs=(0.03, 0.032, 0.034, 0.04, 0.042))
-    base = hair_point(48, 180, 0.045)
+    pc, g, l = cap(lambda lon: -22, vol=0.85)
+    base = hair_point(48, 180, 0.03)
     pc.tube([base, base + Vector((0, 0.06, 0.02)), base + Vector((0, 0.1, -0.07)), base + Vector((0, 0.11, -0.2))],
-            [0.05, 0.058, 0.046, 0.026], sides=8)
+            [0.045, 0.058, 0.046, 0.026], sides=8)
     return pc
 
 
 def pigtails():
-    pc, g, l = cap(lambda lon: -26, offs=(0.03, 0.032, 0.034, 0.04, 0.042))
+    pc, g, l = cap(lambda lon: -26, vol=0.85)
     for s in (1, -1):
-        base = hair_point(-6, s * 108, 0.04)
+        base = hair_point(-6, s * 108, 0.022)
         out = Vector((s * 0.025, 0.01, 0))
         pc.tube([base, base + out + Vector((0, 0, -0.05)), base + out * 1.3 + Vector((0, 0, -0.15)),
-                 base + out * 1.2 + Vector((0, 0.005, -0.26))], [0.04, 0.048, 0.04, 0.024], sides=6)
+                 base + out * 1.2 + Vector((0, 0.005, -0.26))], [0.036, 0.046, 0.04, 0.024], sides=6)
     return pc
 
 
 def twin_buns():
     pc, g, l = cap(lambda lon: -30)
     for s in (1, -1):
-        pc.blob(hair_point(56, s * 62, 0.09), 0.062)
+        pc.blob(hair_point(56, s * 62, hair_vol(56) + 0.036), 0.058)       # sunk about 40% into the hair
     return pc
 
 
 def single_bun():
     pc, g, l = cap(lambda lon: -34)
-    pc.blob(hair_point(66, 180, 0.1), (0.085, 0.08, 0.075))
+    pc.blob(hair_point(66, 180, hair_vol(66) + 0.05), (0.082, 0.078, 0.072))
     return pc
 
 
 def braided_crown():
-    pc, g, l = cap(lambda lon: -36, offs=(0.046, 0.04, 0.036, 0.04, 0.042))
-    n = 12
-    path = [hair_point(40, 360 * k / n + 15, 0.05) for k in range(n)]
-    radii = [0.034 if k % 2 == 0 else 0.022 for k in range(n)]
+    """A plait ringing the head just behind the cap's front edge and round the back, half sunk into the hair."""
+    pc, g, l = cap(lambda lon: -36, vol=0.9)
+    n = 16
+    lons = [((360 * k / n + 11 + 180) % 360) - 180 for k in range(n)]
+    lat = lambda lon: hairline(lon) + 6 if abs(lon) < 75 else 30
+    path = [hair_point(lat(lo), lo, hair_vol(lat(lo)) * 0.9 - 0.002) for lo in lons]
+    radii = [0.022 if k % 2 == 0 else 0.016 for k in range(n)]
     pc.tube(path, radii, sides=6, closed_loop=True)
     return pc
 
 
 def short_spiky():
-    pc, g, l = cap(lambda lon: -18, offs=(0.034, 0.036, 0.036, 0.04, 0.042))
+    pc, g, l = cap(lambda lon: -18, vol=0.85)
     for lat, lon in ((50, 20), (50, -30), (62, 80), (62, -90), (58, 160), (40, 130), (40, -140), (76, 0)):
-        pc.spike(lat, lon, 0.036, 0.06, width=14, lean=(-8, 10 if lon >= 0 else -10))
+        pc.spike(lat, lon, hair_vol(lat) * 0.85 - 0.006, 0.058, width=14, lean=(-8, 10 if lon >= 0 else -10))
     return pc
 
 
 def undercut():
-    pc, g, l = cap(lambda lon: -8 if abs(lon) < 100 else -42, offs=(0.012, 0.014, 0.05, 0.064, 0.066))
+    """Shaved sides and back (a 4 mm layer below the hairline row), full top."""
+    pc, g, l = cap(lambda lon: -8 if abs(lon) < 100 else -42, vol=1.35, hem=0.006, side=0.0075)
     return pc
 
 
 def bowl():
-    pc, g, l = cap(lambda lon: 0 if abs(lon) < 95 else -40 * min(1.0, (abs(lon) - 95) / 50), offs=(0.056, 0.056, 0.05, 0.05, 0.05))
+    pc, g, l = cap(lambda lon: 0 if abs(lon) < 95 else -40 * min(1.0, (abs(lon) - 95) / 50), vol=1.3, hem=0.012)
     return pc
 
 
@@ -270,7 +301,7 @@ catalog = {"note": "Hair library (rows 135, 191, 192). Each GLB = CharacterRig +
 objs = {}
 for slot, table in (("bangs", BANGS), ("back", BACKS)):
     for sid, name, cell, fn in table:
-        ob = fn().finish(sid, rig, {"M_Hair": mat}, sharp=SHARP)
+        ob = fn().finish(sid, rig, {"M_Hair": mat}, sharp=SHARP, zrange=ZRANGE)
         tris = sum(len(p.vertices) - 2 for p in ob.data.polygons)
         objs[sid] = ob
         catalog[slot].append({"id": sid, "name": name, "sheet_cell": cell, "tris": tris, "file": f"{slot}/{sid}.glb"})

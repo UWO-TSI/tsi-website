@@ -13,8 +13,10 @@ Measured on the exported GLBs in rest pose (what the engine binds), against the 
   glasses   lens centre vs the painted centre of every eye variant, front view
   face      stretch of the face texture on the head where features are painted (worst linear stretch and
             anisotropy of the UV chart), how far round the head the eyes reach (longitude, degrees)
-Rays: directions head_point(lat, lon) - HC on a 2 x 3 degree grid; back pieces are measured above lat -30 (the cap;
-hanging lengths below it are free by design), bangs above lat -60, only where the hair is within 12 cm of the scalp.
+Rays: directions head_point(lat, lon) - HC on a 2 x 3 degree grid; back pieces are measured above lat -24 (the caps;
+pigtails and lengths hanging below them are free by design), bangs above lat -60, only where the hair is within 12 cm
+of the scalp. A gap counts where it also shows on the neighbouring rays (a ray grazing a radial edge wall is not air).
+--root <dir>: measure another art/characters tree (the before numbers come from the pre-fit commit).
 Exits 1 when a threshold fails, unless --no-fail. Numbers: specs/evidence/avatar-fit/fit-*.json.
 """
 import bpy, bmesh, json, math, os, sys
@@ -23,10 +25,12 @@ from mathutils import Vector
 from mathutils.bvhtree import BVHTree
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.join(HERE, "base"))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "base"))
 from head_shape import head_point, HC, CHIN, HRZT  # noqa: E402
 
 ARGS = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
+if "--root" in ARGS:                  # measure another checkout's art/characters (e.g. the before state)
+    HERE = os.path.abspath(ARGS[ARGS.index("--root") + 1])
 OUT_JSON = ARGS[ARGS.index("--json") + 1] if "--json" in ARGS else None
 NO_FAIL = "--no-fail" in ARGS
 
@@ -152,12 +156,31 @@ def ray_table(bvh):
     return inn, out
 
 
+NLA, NLO = len(LATS), len(LONS)
+
+
+def erode(a):
+    """Per ray, the smallest value among it and its four grid neighbours (NaN neighbours ignored)."""
+    g = a.reshape(NLA, NLO)
+    out = g.copy()
+    for dy, dx in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+        sh = np.roll(g, (dy, dx), axis=(0, 1))
+        if dy == 1:
+            sh[0] = np.nan
+        if dy == -1:
+            sh[-1] = np.nan
+        out = np.where(np.isnan(sh), out, np.fmin(out, sh))
+    return np.where(np.isnan(g), np.nan, out).reshape(-1)
+
+
 def stats(a):
-    a = a[~np.isnan(a)]
-    if not len(a):
+    ok = ~np.isnan(a)
+    if not ok.any():
         return {"max": None, "median": None, "p95": None, "n": 0}
-    return {"max": round(float(a.max()), 4), "median": round(float(np.median(a)), 4),
-            "p95": round(float(np.percentile(a, 95)), 4), "n": int(len(a))}
+    w = int(np.nanargmax(a))
+    b = a[ok]
+    return {"max": round(float(b.max()), 4), "median": round(float(np.median(b)), 4),
+            "p95": round(float(np.percentile(b, 95)), 4), "n": int(len(b)), "worst_at": [int(LAT[w]), int(LON[w])]}
 
 
 # ================================================================ face: chart stretch, eye reach, painted centres
@@ -280,9 +303,9 @@ for part in CAT["hair"]:
     bvh, _ = bvh_of(groups)
     inn, out = ray_table(bvh)
     tables[part["id"]] = (inn, out)
-    region = (LAT >= (-60 if part["slot"] == "bangs" else -30))
+    region = (LAT >= (-60 if part["slot"] == "bangs" else -24))
     on = region & ~np.isnan(inn) & (inn - R_SCALP <= 0.12)
-    gap = np.where(on, np.maximum(0.0, inn - R_SCALP), np.nan)
+    gap = erode(np.where(on, np.maximum(0.0, inn - R_SCALP), np.nan))
     rec = {"slot": part["slot"], "tris": part["tris"], "open_edges": open_e, "gap": stats(gap),
            "tuck_share": round(float(np.mean((inn - R_SCALP)[on] <= 5e-4)), 3) if on.any() else None,
            "outer_median": stats(np.where(on, out - R_SCALP, np.nan))["median"]}
@@ -290,20 +313,27 @@ for part in CAT["hair"]:
         hidden = sum(1 for p in BROW_PTS if bvh.ray_cast(p + Vector((0, -1e-3, 0)), Vector((0, -1, 0)), 1.0)[0] is not None)
         rec["brow_cover"] = round(hidden / len(BROW_PTS), 3)
     hair[part["id"]] = rec
-    print(f"HAIR {part['id']:20s} open={open_e:3d} gap max={rec['gap']['max']} med={rec['gap']['median']} "
+    print(f"HAIR {part['id']:20s} open={open_e:3d} gap max={rec['gap']['max']} at={rec['gap'].get('worst_at')} med={rec['gap']['median']} "
           f"tuck={rec['tuck_share']} outer={rec['outer_median']}" + (f" brow_cover={rec.get('brow_cover')}" if "brow_cover" in rec else ""))
 
 crown = (LAT >= 30) & (np.abs(LON) <= 70)
-ledges = {}
+ledges, ledge_at = {}, {}
 for b in (p["id"] for p in CAT["hair"] if p["slot"] == "bangs"):
     for k in (p["id"] for p in CAT["hair"] if p["slot"] == "back"):
         ob, ok = tables[b][1], tables[k][1]
         m = crown & ~np.isnan(ob) & ~np.isnan(ok)
-        ledges[f"{b}+{k}"] = round(float((ob - ok)[m].max()), 4) if m.any() else 0.0
+        if m.any():
+            d = np.where(m, ob - ok, -1.0)
+            w = int(np.argmax(d))
+            ledges[f"{b}+{k}"] = round(float(d[w]), 4)
+            ledge_at[f"{b}+{k}"] = [int(LAT[w]), int(LON[w])]
+        else:
+            ledges[f"{b}+{k}"] = 0.0
 worst_pair = max(ledges, key=ledges.get)
-seam = {"ledge_max": ledges[worst_pair], "worst_pair": worst_pair,
+seam = {"ledge_max": ledges[worst_pair], "worst_pair": worst_pair, "worst_at": ledge_at.get(worst_pair),
         "default_pair": ledges[f"{DEFAULT_BANGS}+{DEFAULT_BACK}"],
-        "median_over_pairs": round(float(np.median(list(ledges.values()))), 4)}
+        "median_over_pairs": round(float(np.median(list(ledges.values()))), 4),
+        "over": {k: [v, ledge_at.get(k)] for k, v in sorted(ledges.items(), key=lambda kv: -kv[1]) if v > LIMITS["seam_ledge_max"]}}
 
 # ================================================================ headwear + glasses
 headwear, glasses = {}, {}
@@ -351,7 +381,7 @@ for part in CAT["accessories"]:
         below = [h for h in hair_hits[i] if h <= h_in[i] + 1e-4]
         gap[i] = h_in[i] - max(below)
         poke[i] = max(0.0, max(hair_hits[i]) - h_out[i])
-    headwear[part["id"]] = {"open_edges": open_e, "hides_back_hair": part["hidesBackHair"], "gap": stats(gap),
+    headwear[part["id"]] = {"open_edges": open_e, "hides_back_hair": part["hidesBackHair"], "gap": stats(erode(gap)),
                             "poke_max": stats(poke)["max"]}
     print(f"HEADWEAR {part['id']:20s} open={open_e:3d} gap max={headwear[part['id']]['gap']['max']} "
           f"med={headwear[part['id']]['gap']['median']} poke={headwear[part['id']]['poke_max']}")
