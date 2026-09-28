@@ -20,7 +20,8 @@ describe("character catalogue", () => {
     expect(new Set(PARTS.map(p => p.id)).size).toBe(PARTS.length);
     for (const p of PARTS) {
       expect(["bangs", "back", "top", "bottom", "onepiece", "shoes", "accessory"]).toContain(p.slot);
-      expect(p.tris, p.id).toBeLessThanOrEqual(300);
+      // Hair and headwear are closed solids (avatar-fit); a hat carries its own hair tuck and replaces the back hair.
+      expect(p.tris, p.id).toBeLessThanOrEqual(p.slot === "bangs" || p.slot === "back" ? 700 : p.group === "head" ? 1100 : 300);
       if (p.slot === "accessory") expect(["face", "head", "bag", "neck"]).toContain(p.group);
       if (p.variantOf) expect(PART_BY_ID.has(p.variantOf)).toBe(true);
       for (const m of p.materials) if (m.tint === "outfit") expect(m.default as number).toBeLessThan(PALETTE.outfit.length);

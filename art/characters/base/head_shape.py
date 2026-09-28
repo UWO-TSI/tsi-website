@@ -1,4 +1,5 @@
-"""Shared head surface for hair/accessory generators (same maths as build_v6.py `head_point`).
+"""Shared head surface for hair/accessory generators (same maths as build_v6.py `head_point`), plus what fits to it:
+the hair volume and hairline (avatar-fit) and the face chart and measured feature placement (face_on_head).
 
 Measurements come from ref18_measurements.json, so re-measuring or tweaking the head here regenerates every
 piece that is built against it. Keep in sync with build_v6.py (v6 has its own copy so its build stays frozen
@@ -48,3 +49,46 @@ def hair_point(lat, lon, off):
     p = head_point(lat, lon)
     d = p - HC
     return HC + d * (1 + off / d.length)
+
+
+# ---------------------------------------------------------------- the hair volume everything on the head fits to
+INNER = -0.004        # hair undersides sit 4 mm inside the scalp: no gap shows between hair and head from any angle
+
+
+def hair_vol(lat):
+    """Outer surface of the hair mass, metres above the scalp: 1.1 cm at the hairline and below, fuller toward the
+    crown (2.4 cm), the chunky ref-18 mass. Back caps follow it, bangs tuck their roots just under it, hats and
+    bands sit on it (avatar-fit, row 242)."""
+    return 0.011 + 0.013 * _ss(0, 80, lat)
+
+
+def hairline(lon):
+    """Front edge of the back caps (lat, degrees): 44 above the brow centre, down to 22 at the temples (|lon| 60),
+    where the side panels start. Bangs lie on the forehead below it and tuck their roots under it."""
+    a = min(abs(lon), 60.0) / 60.0
+    return 22 + 22 * (1 - a * a) ** 0.7
+
+
+# ---------------------------------------------------------------- the face chart (UVs of the painted face)
+FH = HRZT             # the face canvas spans 2 FH metres of arc each way (unchanged canvas size)
+_FACE = json.load(open(os.path.join(HERE, "ref18_measurements.json")))["face_on_head"]
+EYE_LAT, EYE_LON, MOUTH_LAT = _FACE["eye_lat_deg"], _FACE["eye_lon_deg"], _FACE["mouth_lat_deg"]
+
+
+def _arc(fn, a, b, n):
+    s, prev = 0.0, fn(a)
+    for i in range(1, n + 1):
+        cur = fn(a + (b - a) * i / n)
+        s += (cur - prev).length
+        prev = cur
+    return s if b >= a else -s
+
+
+def face_chart(lat, lon, n=32):
+    """Face canvas coordinates (U right, W down, 0..1) of head_point(lat, lon): U = 0.5 + arc length along the parallel
+    from the centre line, W = 0.5 - arc length along the meridian from the equator, both over 2 FH. Arc lengths follow
+    the head's curvature, so a painted feature keeps its size and shape wherever it sits (a front planar projection
+    stretched the eyes 1.7x toward the sides and slid the far eye round the head in 3/4 view)."""
+    su = _arc(lambda t: head_point(lat, t), 0.0, lon, n) if lon else 0.0
+    sw = _arc(lambda t: head_point(t, lon), 0.0, lat, n) if lat else 0.0
+    return 0.5 + su / (2 * FH), 0.5 - sw / (2 * FH)

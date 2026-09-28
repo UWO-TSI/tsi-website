@@ -28,7 +28,9 @@ export const CHARACTER_HEIGHT = 1.045 * CHARACTER_SCALE;
 const CONTACT = { cx: 0, cz: 0, rx: 0.4, rz: 0.34, height: CHARACTER_HEIGHT, strength: 1 };
 
 type Gltf = { scene: THREE.Object3D; animations: THREE.AnimationClip[] };
-const BODY_MATERIAL = new THREE.MeshStandardMaterial({ name: "CharacterBody", vertexColors: true, roughness: 0.85, metalness: 0 });
+// Double-sided: clothes, hoods and capes are open shells whose insides show (hair and hats are closed solids, whose
+// tucked undersides stay behind the head). The shadow pass keeps back faces only, as for a front-sided material.
+const BODY_MATERIAL = new THREE.MeshStandardMaterial({ name: "CharacterBody", vertexColors: true, roughness: 0.85, metalness: 0, side: THREE.DoubleSide, shadowSide: THREE.BackSide });
 let decalMaterial: THREE.MeshStandardMaterial | null = null;
 const bodies = refCache<THREE.BufferGeometry>();
 const faces = refCache<{ material: THREE.MeshStandardMaterial; dispose(): void }>();
@@ -60,7 +62,7 @@ class Puppet {
   private held = new Map<Expression, { key: string; material: THREE.MeshStandardMaterial }>();
   private look: CharacterLook | null = null;
   private atlas: HTMLImageElement | null = null;
-  private faceSize = 256;
+  private faceSize = 512;
   private action: THREE.AnimationAction | null = null;
   private clip: ClipName | null = null;
   private oneShot: ClipName | null = null;
@@ -231,12 +233,12 @@ export interface CharacterProps {
   /** Normal walking pace for this controller (Walk plays at 1x there). */
   walkSpeed?: number;
   weapon?: WeaponView | null;
-  /** Face texture resolution: 256 in the world, 512 in close-up views. */
+  /** Face texture resolution: 512 in the world (sharp at village distance), 1024 in the creator. */
   faceSize?: number;
   scale?: number;
 }
 
-export default function Character({ look, motion, walkSpeed = 7.4, weapon = null, faceSize = 256, scale = CHARACTER_SCALE }: CharacterProps) {
+export default function Character({ look, motion, walkSpeed = 7.4, weapon = null, faceSize = 512, scale = CHARACTER_SCALE }: CharacterProps) {
   // While a newly chosen part loads, keep showing the previous look instead of suspending.
   const shown = useDeferredValue(look);
   const parts = useMemo(() => resolveParts(shown), [shown]);

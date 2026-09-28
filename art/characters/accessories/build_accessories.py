@@ -4,9 +4,11 @@ pass 2: the crafted straw hat, flower crown, crystal circlet and shell necklace 
   /Applications/Blender.app/Contents/MacOS/Blender -b -P art/characters/accessories/build_accessories.py
 
 Same contract as the outfits (kit.build_parts): each GLB = CharacterRig + one skinned mesh, flat palette materials.
-Glasses and hats are built on head_shape.py and skinned to the Head bone. Hats set hidesBackHair (row 191) and carry a
-short M_Hair tuck at the sides and nape (tinted with the hair colour at runtime), so the head never reads bald under
-the brim; the chosen bangs still show. Bags are worn, never held (row 136). Catalogue section "accessories"; `group`
+Glasses and hats are built on head_shape.py and skinned to the Head bone. Glasses sit on the measured eye centre
+(face_on_head), which every eye variant is painted around. Hats set hidesBackHair (row 191) and carry a closed M_Hair
+tuck (the shared back cap at bob length, tinted with the hair colour at runtime), so the head never reads bald under
+the brim; the chosen bangs still show and tuck under it. Hats are closed solids sitting HAT_CLEAR over the hair
+volume (head_shape.hair_vol), brims closed slabs; bands (crown, circlet) rest on the hair (avatar-fit, row 242). Bags are worn, never held (row 136). Catalogue section "accessories"; `group`
 says which accessories can stack: face, head, bag, neck (one of each).
 """
 import bpy, math, os, sys
@@ -16,7 +18,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, ".."))
 import kit  # noqa: E402
 from kit import body as B, hair_point, HC  # noqa: E402
-from head_shape import head_point, HEAD_Z, HRZB  # noqa: E402
+from head_shape import head_point, HEAD_Z, HRZB, EYE_LAT, EYE_LON, hair_vol  # noqa: E402
 
 bpy.ops.wm.read_factory_settings(use_empty=True)
 rig = kit.load_rig(bpy.context.scene)
@@ -26,14 +28,10 @@ WRAP = [30 * k for k in range(12)] + [360]
 
 
 # ================================================================ glasses
-def face_frame(x, z):
-    """Point on the face at (x, z) plus the rim frame (normal halfway to straight ahead, horizontal u, vertical w)."""
-    lat = -math.degrees(math.asin(((HEAD_Z - z) / HRZB) ** (1 / 0.62)))
-    lo, hi = 0.0, 89.0 * (1 if x > 0 else -1)
-    for _ in range(40):
-        mid = (lo + hi) / 2
-        lo, hi = (mid, hi) if abs(head_point(lat, mid).x) < abs(x) else (lo, mid)
-    lon = (lo + hi) / 2
+def eye_frame(sx):
+    """The measured eye centre (face_on_head) and the rim frame there: normal halfway to straight ahead, horizontal u,
+    vertical w. Every eye variant is painted around this centre, so one pair of glasses fits them all."""
+    lat, lon = EYE_LAT, sx * EYE_LON
     p = head_point(lat, lon)
     n = (head_point(lat + 1, lon) - head_point(lat - 1, lon)).cross(head_point(lat, lon + 1) - head_point(lat, lon - 1)).normalized()
     if n.dot(p - HC) < 0:
@@ -43,21 +41,19 @@ def face_frame(x, z):
     return p, n, u, n.cross(u).normalized(), lat
 
 
-EYE_X, EYE_Z = 0.118, 0.724              # centre of the painted F1.1 eye + lid (v6 face canvas)
-
-
 def glasses(pc, outline):
     """outline: [(a, b)] rim points in the rim plane (a along u, b along w), per eye; mirrored for the right eye."""
     pc.region, rims = "head", []
     for sx in (1, -1):
-        p, n, u, w, lat = face_frame(sx * EYE_X, EYE_Z)
+        p, n, u, w, lat = eye_frame(sx)
         c = p + n * 0.017
         pts = [c + u * a * sx + w * b for a, b in outline]
         pc.tube(pts, [(0.0055, 0.004)] * len(pts), sides=4, closed_loop=True, up=n)
         inner = min(pts, key=lambda q: abs(q.x))
         outer = max(pts, key=lambda q: abs(q.x))
         rims.append((inner, outer, lat, c))
-        pc.tube([outer, hair_point(lat + 3, sx * 96, 0.012), hair_point(lat - 2, sx * 124, 0.01)], [0.004] * 3,
+        # temples run back into the hair above the ears (their ends are buried in it)
+        pc.tube([outer, hair_point(lat + 3, sx * 96, 0.006), hair_point(lat - 2, sx * 124, 0.004)], [0.004] * 3,
                 sides=4, tip=False, cap=False)
     (il, _, _, cl), (ir, _, _, cr) = rims
     mid = (il + ir) / 2 + Vector((0, -0.006, 0.012))
@@ -79,28 +75,46 @@ def glasses_square(pc):
     glasses(pc, SQUARE)
 
 
-# ================================================================ hats (hide the back hair, keep a short tuck)
-def dome(pc, edge, rows, offs, apex_off):
-    """Crown over the head from edge(lon) up; rows(lon) -> lats, offs[ri]."""
+# ================================================================ hats (hide the back hair, carry a hair tuck)
+HAT_CLEAR = 0.004            # the inside of a hat sits this far over the hair (hair_vol; the tuck and bangs are under it)
+LONS = kit.CAP_LONS          # 15 deg columns: a flat quad sags less than the clearance
+
+
+def hat_in(lat):
+    return hair_vol(lat) + HAT_CLEAR
+
+
+def dome(pc, edge, rows, thick, ribbon=None):
+    """Closed crown from edge(lon) up: rows(lon) -> lats; outer = hat_in + thick(lat, lon, ri), inner = hat_in.
+    ribbon = row index whose band is painted M_Accent (a hat ribbon as a colour band, no extra geometry)."""
     pc.region = "head"
-    g = pc.patch(WRAP, rows, lambda lat, lon, ri: offs[ri])
-    ring = [hair_point(rows(l)[-1], l, offs[-1]) for l in WRAP[:-1]]
-    apex = pc.v(hair_point(90, 0, apex_off))
-    vs = [pc.v(p) for p in ring]
-    for k in range(len(vs)):
-        pc.f([vs[k], vs[(k + 1) % len(vs)], apex], HC)
+    n0 = pc.mark()
+    g = pc.patch(LONS, rows, lambda lat, lon, ri: hat_in(lat) + thick(lat, lon, ri), wrap=True)
+    if ribbon is not None:
+        pc.bm.faces.ensure_lookup_table()
+        for f in pc.since(n0):
+            if any(v in (g[i][ribbon] for i in range(len(LONS))) for v in f.verts) and \
+                    any(v in (g[i][ribbon + 1] for i in range(len(LONS))) for v in f.verts):
+                pc.fmat[f] = "M_Accent"
+    apex = pc.hv(90, 0, hat_in(90) + thick(90, 0, len(rows(0)) - 1))
+    for i in range(len(LONS)):
+        pc.f([g[i][-1], g[i + 1][-1], apex], HC)
+    # closed with walls down to the hair and a fan inside the head: under the edge the hat meets the hair, no gap
+    pc.close_fan(pc.since(n0), lambda v: hair_point(*pc.sph[v], hat_in(pc.sph[v][0]) - HAT_CLEAR - 0.002))
     return g
 
 
 def tuck(pc, edge):
-    """Short hair at the sides and nape under a hat brim (bob length, the face window left open), plus the crown
-    behind the bangs where the back hair's cap would be (lat 22 up), so see-through bangs show hair, not forehead."""
-    keep, pc.mat, pc.region = pc.mat, "M_Hair", "head"
-    lons = [60, 90, 120, 150, 180, 210, 240, 270, 300]
-    rows = lambda lon: [-42 + (edge(lon) + 47) * k / 3 for k in range(4)]     # 3 rows: long chords would sag into the head
-    pc.patch(lons, rows, lambda lat, lon, ri: (0.05, 0.048, 0.056, 0.064)[ri],
-             tips=lambda i, la, lb: (-52, (la + lb) / 2, 0.052) if i % 2 == 0 else None)
-    pc.patch([-60, -30, 0, 30, 60], lambda lon: [22, 43, 64], lambda lat, lon, ri: 0.038)   # runs on up under the crown
+    """The hair under a hat: the shared back cap at bob length (sides to lat -30, nape to -40) running 16 deg up under
+    the hat's edge, closed and fitted like any back hair, so the head never reads bald under the brim and the bangs
+    tuck under it as usual. Under the crown the hat sits on hair_vol directly."""
+    t, _, _ = kit.hair_cap(lambda lon: -40 if abs(lon) >= 100 else -30, vol=1.0, top=lambda lon: edge(lon) + 16,
+                           tips=lambda i, la, lb, mid: (-48, mid, 0.008) if i % 2 == 0 and abs(mid) > 100 else None)
+    keep = pc.mat
+    for f in t.fmat:
+        t.fmat[f] = "M_Hair"
+    pc.mat = "M_Hair"
+    kit.merge_piece(pc, t)
     pc.mat = keep
 
 
@@ -109,25 +123,38 @@ def outward(p):
     return d.normalized()
 
 
-def brim(pc, rings, closed=True):
-    """A brim or visor as a thin slab: the top sheet, and 3 mm under it the underside facing down, because the
-    engine's character material culls back faces (a single sheet vanishes from below)."""
-    n = len(rings) - 1
+def brim(pc, rings, closed=True, thick=0.004):
+    """A brim or visor as a closed slab: the top sheet and its underside `thick` below, joined round every edge."""
     pc.region = "head"
-    pc.band(rings, closed=closed, refs=[HC - Vector((0, 0, 0.3))] * n)
-    pc.band([[p - Vector((0, 0, 0.003)) for p in r] for r in rings], closed=closed, refs=[HC + Vector((0, 0, 0.6))] * n)
+    n0 = pc.mark()
+    pc.band(rings, closed=closed, refs=[HC - Vector((0, 0, 0.3))] * (len(rings) - 1))
+    pc.thicken(pc.since(n0), lambda v: v.co - Vector((0, 0, thick)))
+
+
+def hat_rows(edge, *band, span=15.0, low=None):
+    """Dome rows: the edge, the band rows above it (fold, ribbon) as offsets from the edge, then even steps to lat 84
+    no taller than `span` degrees where the edge is lowest (`low`), since a flat quad over the head sags by
+    R(1 - cos(step / 2)) and must stay above the hair."""
+    top0 = band[-1] if band else 0
+    k = max(1, math.ceil((84 - (low + top0)) / span))
+
+    def rows(lon):
+        e = edge(lon)
+        start = e + top0
+        return [e, *[e + b for b in band], *[start + (84 - start) * j / k for j in range(1, k + 1)]]
+    return rows
 
 
 @part("acc_beanie", "accessory", "Beanie", {"M_Main": ("outfit", 7), "M_Accent": ("outfit", 0), "M_Hair": ("hair", None)},
       sharp=45, hidesBackHair=True, group="head")
 def beanie(pc):
-    """Snug knit cap pulled down over the head: a folded brim standing proud of a rounded crown that hugs the head,
+    """Snug knit cap pulled down over the hair: a folded brim standing 1 cm proud of a crown that hugs the hair,
     small pompom."""
     edge = lambda lon: 10 + 12 * math.cos(math.radians(lon))
-    dome(pc, edge, lambda lon: [edge(lon) - 3, edge(lon), edge(lon) + 13, edge(lon) + 15, 50, 70, 84],
-         (0.066, 0.086, 0.086, 0.074, 0.08, 0.088, 0.092), 0.093)
+    fold = lambda lat, lon, ri: 0.016 if ri < 2 else 0.008
+    dome(pc, edge, hat_rows(edge, 13, 15, low=-2), fold)
     pc.mat = "M_Accent"
-    pc.blob(hair_point(90, 0, 0.093) + Vector((0, 0, 0.018)), 0.026, segs=6, rings=4)
+    pc.blob(hair_point(90, 0, hat_in(90) + 0.008) + Vector((0, 0, 0.018)), 0.026, segs=6, rings=4)
     pc.mat = "M_Main"
     tuck(pc, edge)
 
@@ -136,14 +163,10 @@ def beanie(pc):
       sharp=40, hidesBackHair=True, group="head")
 def sunhat(pc):
     edge = lambda lon: 24 + 14 * math.cos(math.radians(lon))
-    dome(pc, edge, lambda lon: [edge(lon), edge(lon) + 14, 60, 78], (0.082, 0.09, 0.09, 0.086), 0.086)
-    rim = [hair_point(edge(l), l, 0.082) for l in WRAP[:-1]]
-    pc.region = "head"
+    dome(pc, edge, hat_rows(edge, 1, 9, low=10), lambda lat, lon, ri: 0.005, ribbon=1)
+    rim = [hair_point(edge(l), l, hat_in(edge(l)) + 0.004) for l in LONS]
     brim(pc, [rim, [p + outward(p) * 0.06 - Vector((0, 0, 0.006)) for p in rim],
               [p + outward(p) * 0.12 - Vector((0, 0, 0.022)) for p in rim]])
-    pc.mat = "M_Accent"
-    pc.patch(WRAP, lambda lon: [edge(lon) + 1, edge(lon) + 9], lambda lat, lon, ri: 0.095)
-    pc.mat = "M_Main"
     tuck(pc, edge)
 
 
@@ -151,15 +174,14 @@ def sunhat(pc):
       sharp=40, hidesBackHair=True, group="head")
 def cap(pc):
     edge = lambda lon: 14 + 26 * math.cos(math.radians(lon))
-    dome(pc, edge, lambda lon: [edge(lon), edge(lon) + 16, 58, 78], (0.078, 0.086, 0.086, 0.082), 0.08)
-    lons = [-60, -30, 0, 30, 60]
-    base = [hair_point(edge(l), l, 0.078) for l in lons]
+    dome(pc, edge, hat_rows(edge, low=-12), lambda lat, lon, ri: 0.005)
+    lons = [-60, -45, -30, -15, 0, 15, 30, 45, 60]
+    base = [hair_point(edge(l), l, hat_in(edge(l)) + 0.004) for l in lons]
     reach = [0.135 * math.cos(math.radians(l)) ** 0.6 for l in lons]
-    pc.region = "head"
     brim(pc, [base, [p + outward(p) * r * 0.5 - Vector((0, 0, 0.004)) for p, r in zip(base, reach)],
               [p + outward(p) * r - Vector((0, 0, 0.022)) for p, r in zip(base, reach)]], closed=False)
     pc.mat = "M_Accent"
-    pc.blob(hair_point(90, 0, 0.08) + Vector((0, 0, 0.004)), (0.014, 0.014, 0.008), segs=5, rings=3)
+    pc.blob(hair_point(90, 0, hat_in(90) + 0.005) + Vector((0, 0, 0.004)), (0.014, 0.014, 0.008), segs=5, rings=3)
     pc.mat = "M_Main"
     tuck(pc, edge)
 
@@ -169,31 +191,32 @@ def cap(pc):
 def straw_hat(pc):
     """Round crown, wide flat brim with an upturned edge, a ribbon round the crown."""
     edge = lambda lon: 20 + 10 * math.cos(math.radians(lon))
-    dome(pc, edge, lambda lon: [edge(lon), edge(lon) + 12, 62, 80], (0.084, 0.09, 0.096, 0.092), 0.09)
-    rim = [hair_point(edge(l), l, 0.084) for l in WRAP[:-1]]
-    pc.region = "head"
-    brim(pc, [rim, [p + outward(p) * 0.075 for p in rim], [p + outward(p) * 0.145 + Vector((0, 0, 0.014)) for p in rim]])
-    pc.mat = "M_Accent"
-    pc.patch(WRAP, lambda lon: [edge(lon) + 1, edge(lon) + 9], lambda lat, lon, ri: 0.093)
-    pc.mat = "M_Main"
+    dome(pc, edge, hat_rows(edge, 1, 9, low=10), lambda lat, lon, ri: 0.006, ribbon=1)
+    rim = [hair_point(edge(l), l, hat_in(edge(l)) + 0.005) for l in LONS]
+    brim(pc, [rim, [p + outward(p) * 0.075 for p in rim], [p + outward(p) * 0.145 + Vector((0, 0, 0.014)) for p in rim]],
+         thick=0.005)
     tuck(pc, edge)
 
 
 def blossom(pc, c, n, r=0.03, petals=5):
-    """Flat five-petal flower at c facing along n: petal star (current material) with an M_Centre heart."""
+    """Flat five-petal flower at c facing along n: petal star (current material) with an M_Centre heart, both closed
+    thin solids (no paper edges)."""
     u = n.orthogonal().normalized()
     w = n.cross(u).normalized()
+    n0 = pc.mark()
     ring = [c + (u * math.cos(a) + w * math.sin(a)) * (r if k % 2 == 0 else r * 0.5) + n * (0.004 if k % 2 == 0 else 0)
             for k, a in enumerate(math.tau * k / (2 * petals) for k in range(2 * petals))]
     mid = pc.v(c + n * 0.002)
     vs = [pc.v(p) for p in ring]
     for k in range(len(vs)):
         pc.f([vs[k], vs[(k + 1) % len(vs)], mid], c - n)
+    pc.thicken(pc.since(n0), lambda v: v.co - n * 0.004)
     keep, pc.mat = pc.mat, "M_Centre"
-    heart = [pc.v(c + n * 0.005 + (u * math.cos(math.tau * k / 5) + w * math.sin(math.tau * k / 5)) * r * 0.36) for k in range(5)]
+    heart = [pc.v(c + n * 0.003 + (u * math.cos(math.tau * k / 5) + w * math.sin(math.tau * k / 5)) * r * 0.36) for k in range(5)]
     top = pc.v(c + n * 0.008)
     for k in range(5):
         pc.f([heart[k], heart[(k + 1) % 5], top], c - n)
+    pc.f(heart, c + n)                   # a closed little pyramid, its base inside the petals
     pc.mat = keep
 
 
@@ -201,17 +224,16 @@ def blossom(pc, c, n, r=0.03, petals=5):
       {"M_Main": ("outfit", 9), "M_Accent": ("outfit", 1), "M_Trim": ("outfit", 2), "M_Centre": ("outfit", 6)},
       sharp=50, group="head", item="acc-flower-crown")
 def flower_crown(pc):
-    """A green vine ring resting on the hair (on the bangs at the front), higher at the front, with eight blossoms
-    alternating pink and white."""
+    """A green vine ring resting on the hair behind the hairline, with eight blossoms alternating pink and white."""
     pc.region = "head"
-    lat = lambda lon: 34 + 9 * math.cos(math.radians(lon))
-    off = lambda lon: 0.05 + 0.012 * max(0.0, math.cos(math.radians(lon)))
+    lat = lambda lon: 46 + 10 * math.cos(math.radians(lon))      # behind the bangs' roots, on the cap all round
+    off = lambda lon: hair_vol(lat(lon)) + 0.004
     pc.mat = "M_Trim"
-    pc.tube([hair_point(lat(l), l, off(l)) for l in range(0, 360, 30)], [(0.0065, 0.005)] * 12, sides=4, closed_loop=True)
+    pc.tube([hair_point(lat(l), l, off(l)) for l in range(0, 360, 20)], [(0.0065, 0.005)] * 18, sides=4, closed_loop=True)
     for k, l in enumerate(range(0, 360, 45)):
         pc.mat = "M_Main" if k % 2 == 0 else "M_Accent"
-        c = hair_point(lat(l), l, off(l) + 0.006)
-        blossom(pc, c, (c - HC).normalized())
+        c = hair_point(lat(l), l, off(l))
+        blossom(pc, c, (c - HC).normalized(), r=0.026)
     pc.mat = "M_Main"
 
 
@@ -221,11 +243,11 @@ def crystal_circlet(pc):
     """A thin gold band across the brow, over the bangs, dipping to a crystal at the front with two small side stones."""
     pc.region = "head"
     lat = lambda lon: 16 + 2 * math.cos(math.radians(lon)) - 3 * max(0.0, math.cos(math.radians(lon))) ** 8
-    off = lambda lon: 0.048 + 0.004 * max(0.0, math.cos(math.radians(lon)))
-    pc.tube([hair_point(lat(l), l, off(l)) for l in range(0, 360, 30)], [(0.0032, 0.0065)] * 12, sides=4, closed_loop=True)
+    off = lambda lon: max(0.013, hair_vol(lat(lon)) * 1.1) + 0.004     # on the fringe at the front, the cap elsewhere
+    pc.tube([hair_point(lat(l), l, off(l)) for l in range(0, 360, 15)], [(0.0032, 0.0065)] * 24, sides=4, closed_loop=True)
     pc.mat = "M_Accent"
     for lon, h, wd in ((0, 0.05, 0.022), (-32, 0.022, 0.012), (32, 0.022, 0.012)):
-        c = hair_point(lat(lon) + (5 if lon == 0 else 0), lon, off(lon) + 0.008)
+        c = hair_point(lat(lon) + (5 if lon == 0 else 0), lon, off(lon) + 0.004)
         n = (c - HC).normalized()
         u = Vector((0, 0, 1)).cross(n).normalized()
         up = n.cross(u).normalized()

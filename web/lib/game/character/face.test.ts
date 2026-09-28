@@ -18,15 +18,19 @@ describe("face composition", () => {
     const log: string[] = [];
     const look = { ...DEFAULT_LOOK, skin: 7, hair: 9, extras: ["blush"] };
     composeFace(recorder("face", log), { ctx: recorder("scratch", log), image: { tag: "scratch" } as unknown as CanvasImageSource }, { tag: "atlas" } as unknown as CanvasImageSource, look, "neutral", 256);
-    const [eu0, ew0, eu1, ew1] = FACE.layers.eyes.dest;
+    const k = 256 / FACE.canvas;
+    const drawn = (layer: "eyes" | "extras", id: string) => {
+      const [x, y, w, h, dx, dy] = FACE.layers[layer].items[id], [u0, w0] = FACE.layers[layer].dest;
+      return [x, y, w, h, u0 * 256 + dx * k, w0 * 256 + dy * k, w * k, h * k].map(v => Math.round(v)).join(",");
+    };
     expect(log).toEqual([
       `face.fill ${PALETTE.skin[7]} source-over 0,0,256,256`,
-      `face.draw atlas ${[...FACE.layers.extras.items.blush, ...FACE.layers.extras.dest.map((v, i) => (i < 2 ? v : v - FACE.layers.extras.dest[i - 2]) * 256)].map(v => Math.round(v)).join(",")}`,
+      `face.draw atlas ${drawn("extras", "blush")}`,
       "scratch.clear",
       expect.stringMatching(/^scratch\.draw atlas /),
       `scratch.fill ${PALETTE.hair[9]} source-in 0,0,256,256`,
       "face.draw scratch 0,0",
-      `face.draw atlas ${[...FACE.layers.eyes.items["F1.1"], eu0 * 256, ew0 * 256, (eu1 - eu0) * 256, (ew1 - ew0) * 256].map(v => Math.round(v)).join(",")}`,
+      `face.draw atlas ${drawn("eyes", "F1.1")}`,
       expect.stringMatching(/^face\.draw atlas /),
     ]);
   });

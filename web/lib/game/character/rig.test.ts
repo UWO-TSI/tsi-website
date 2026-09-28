@@ -4,6 +4,7 @@ import { join } from "node:path";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { adoptPrimitive, mergeLook, refCache, skinnedPrimitives } from "./rig";
+import { PART_BY_ID } from "./look";
 
 function skinned(boneNames: string[], joints: number[], color?: number[]) {
   const bones = boneNames.map(n => Object.assign(new THREE.Bone(), { name: n }));
@@ -43,7 +44,7 @@ describe("character rig assembly", () => {
     expect(bones).toHaveLength(22);
     const merged = mergeLook([{ root: bangs, tints: { M_Hair: "#8C5E3C" } }, { root: back, tints: { M_Hair: "#8C5E3C" } }], bones);
     const tris = (merged.index!.count) / 3;
-    expect(tris).toBe(45 + 96);
+    expect(tris).toBe(PART_BY_ID.get("bangs_straight")!.tris + PART_BY_ID.get("back_bob")!.tris);
     const head = bones.findIndex(b => b.name === "mixamorigHead");
     const idx = merged.getAttribute("skinIndex"), w = merged.getAttribute("skinWeight");
     for (let i = 0; i < idx.count; i++) if (w.getX(i) > 0.99) expect(idx.getX(i)).toBe(head); // hair is skinned 100% to the head

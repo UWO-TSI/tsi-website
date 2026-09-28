@@ -7,15 +7,20 @@ Run from the repo root:
 Writes next to this script:
   v6.blend, v6.glb          rig + V6_Body (skin, bare feet), V6_Top (tee), V6_Bottom (shorts), V6_Head, V6_HairBangs, V6_HairBack
   v6_face_default.png       512x512 baked face (skin + brows + F1.1 + M1.1), embedded in the GLB
-  v6_face_features.png      feature atlas; face_variants.json maps ids to atlas and face-canvas rects
+  v6_face_features.png      feature atlas drawn for a 1024 px face canvas, each cell cropped to its ink;
+                            face_variants.json maps ids to atlas rects and their place on the face canvas
 No outfit pieces: hood, dress and shoes are accessories/slots (see v4 for the #18 outfit).
-Body height 1.0 m (bare head top to sole). Face canvas: u = (x + FH) / (2 FH), w = (HEAD_TOP - z) / (2 FH).
+Body height 1.0 m (bare head top to sole). Face UVs: head_shape.face_chart, arc lengths over the head (avatar-fit;
+v6 shipped a front planar projection, u = (x + FH) / (2 FH), that stretched features toward the sides). Features are
+placed where measure_face_ref18.py found them on reference 18 (face_on_head in ref18_measurements.json).
 """
 import bpy, bmesh, json, math, os, sys, random
 import numpy as np
 from mathutils import Vector, Quaternion, Matrix
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
+from head_shape import face_chart, EYE_LAT, EYE_LON, MOUTH_LAT  # noqa: E402  (same head maths as head_point below)
 VARIANT_DIR = sys.argv[sys.argv.index("--") + 1] if "--" in sys.argv and len(sys.argv) > sys.argv.index("--") + 1 else None
 PAL = json.load(open(os.path.join(HERE, "..", "palette.json")))
 FPS = 30
@@ -53,7 +58,8 @@ HRZT = HRZB = M["head_height"] / 2                  # 0.2245
 HEAD_Z = 1.0 - HRZT                                 # head top at 1.0, chin at 1 - head_height
 FH = HRZT                                           # face canvas half-size (metres)
 HEAD_TOP = HEAD_Z + FH
-FACE_PX = 512
+FACE_PX = 1024         # atlas resolution: the creator composes the face at 1024, the world at 512
+GLB_FACE_PX = 512      # the default face embedded in the GLB (Blender renders only; the engine composes its own)
 
 # ============================================================================ face painting
 C_EYE = hex_srgb("#3E3438")      # soft dark grey-brown blob (F sheet)
@@ -69,22 +75,25 @@ C_TONGUE = hex_srgb("#F07A8A")
 C_BLUSH = hex_srgb("#F4A0A0")
 C_MOLE = hex_srgb("#5A3A2E")
 
-# Features are authored at a base size and scaled up around their new centres (see Layer.warp):
-# eyes K_EYE bigger, wider apart and in the lower half of the face; mouth K_MOUTH bigger.
+# Features are authored at a base size around authoring centres and moved/scaled onto the canvas (see Layer.warp).
+# Canvas units are metres of arc over 2 FH (face_chart), so sizes are true sizes on the head. Placement and size are
+# measured on reference 18 (measure_face_ref18.py): eye centres at lat EYE_LAT, lon +-EYE_LON (0.116 m of arc from
+# the centre line), iris 0.068 m wide; K_EYE = 1.2 makes the authored irises that size (1.5 before, on a chart that
+# also stretched them 1.3-1.7x sideways). The mouth sits on the centre line at MOUTH_LAT.
 EYE_Y, EYE_L, EYE_R = 0.60, 0.29, 0.71          # authoring centres
-NEW_EYE_Y = (HEAD_TOP - M["eye_height_from_sole"]) / (2 * FH)
-NEW_EYE_L, NEW_EYE_R = 0.5 - M["eye_spacing_centres_frontal_est"] / 2 / (2 * FH), 0.5 + M["eye_spacing_centres_frontal_est"] / 2 / (2 * FH)
-K_EYE = 1.5
+NEW_EYE_L, NEW_EYE_Y = face_chart(EYE_LAT, -EYE_LON)
+NEW_EYE_R = 1 - NEW_EYE_L
+K_EYE = 1.2
 BROW_Y = 0.458                                  # authoring brow line
-NEW_BROW_Y = NEW_EYE_Y - 0.155
+NEW_BROW_Y = NEW_EYE_Y - 0.14                   # 0.063 m of arc above the eye centre (lat ~2): over F1.1's crease, under every fringe
 MX, MY = 0.5, 0.755
-NEW_MY, K_MOUTH = (HEAD_TOP - M["mouth_height_from_sole"]) / (2 * FH), 1.3
+NEW_MY, K_MOUTH = face_chart(MOUTH_LAT, 0)[1], 1.3
 
-DEST = {  # u0, w0, u1, w1 on the face canvas
-    "extras": (0.04, 0.62, 0.96, 0.92),
-    "brows": (0.06, 0.395, 0.94, 0.49),
-    "eyes": (0.04, 0.44, 0.96, 0.77),
-    "mouth": (0.34, 0.8, 0.66, 0.95),
+DEST = {  # u0, w0, u1, w1 on the face canvas; every layer rect is a band around its measured feature line
+    "extras": (0.04, NEW_EYE_Y + 0.07, 0.96, NEW_MY + 0.05),
+    "brows": (NEW_EYE_L - 0.1, NEW_BROW_Y - 0.04, NEW_EYE_R + 0.1, NEW_BROW_Y + 0.04),
+    "eyes": (NEW_EYE_L - 0.16, NEW_EYE_Y - 0.14, NEW_EYE_R + 0.16, NEW_EYE_Y + 0.12),
+    "mouth": (0.34, NEW_MY - 0.082, 0.66, NEW_MY + 0.068),
 }
 
 
@@ -206,34 +215,45 @@ def lid_arc(L, P, pts, r0, r1, r2):
     L.paint(L.stroke(c, taper(len(c), r0, r1, r2)), C_LID)
 
 
+def below(L, P, pts):
+    """Mask of what lies under a lid line (the iris is tucked under its lid, never floating below it)."""
+    c = bez([P(*p) for p in pts], 24)
+    return L.poly(c + [(c[-1][0], c[-1][1] + 0.4), (c[0][0], c[0][1] + 0.4)])
+
+
+# F sheet (row 192, less detail, no highlight per row 209): the iris is a flat blob whose top is cut by a thick lid
+# line that sits ON it, the lid runs past the iris both sides and ends in a small outer wing.
+F11_LID = [(-0.094, -0.006), (-0.05, -0.07), (0.056, -0.074), (0.1, -0.024)]     # ref 18: lid 1.8x the iris wide
+
+
 @eye_pair
 def F1_1(L, cx, cy, s, P):
-    blob = L.ellipse(*P(0.004, 0.018), 0.064, 0.07) & (L.V > cy - 0.036)
-    L.paint(blob, C_EYE)
-    lid_arc(L, P, [(-0.07, -0.02), (-0.03, -0.075), (0.06, -0.06), (0.1, -0.012)], 0.004, 0.011, 0.005)
-    c = bez([P(-0.055, -0.07), P(0.0, -0.095), P(0.06, -0.07)], 12)
+    L.paint(L.ellipse(*P(0.004, 0.004), 0.06, 0.07) & below(L, P, F11_LID), C_EYE)
+    lid_arc(L, P, F11_LID, 0.004, 0.013, 0.008)
+    L.paint(L.poly([P(0.092, -0.034), P(0.118, -0.008), P(0.104, -0.028), P(0.096, -0.018)]), C_LID)   # outer wing
+    c = bez([P(-0.056, -0.082), P(0.0, -0.104), P(0.07, -0.086)], 12)
     L.paint(L.stroke(c, taper(len(c), 0.002, 0.004, 0.002)), C_CREASE, 0.8)
 
 
 @eye_pair
 def F1_2(L, cx, cy, s, P):
-    L.paint(L.squircle(*P(-0.004, 0.012), 0.058, 3.2), C_EYE)
-    lid_arc(L, P, [(0.078, 0.045), (0.09, -0.07), (-0.02, -0.085), (-0.07, -0.05)], 0.004, 0.012, 0.004)
+    lid = [(-0.07, -0.03), (-0.03, -0.074), (0.06, -0.07), (0.084, 0.03)]
+    L.paint(L.squircle(*P(-0.004, 0.006), 0.056, 3.2) & below(L, P, lid), C_EYE)
+    lid_arc(L, P, lid, 0.004, 0.012, 0.005)
 
 
 @eye_pair
 def F2_1(L, cx, cy, s, P):
-    lid_y = lambda: cy - 0.012
-    blob = L.ellipse(*P(0.0, 0.012), 0.058, 0.045) & (L.V > cy - 0.014)
-    L.paint(blob, C_EYE)
-    lid_arc(L, P, [(-0.075, -0.004), (-0.02, -0.024), (0.05, -0.024), (0.098, 0.0)], 0.004, 0.011, 0.004)
+    lid = [(-0.075, -0.004), (-0.02, -0.03), (0.05, -0.03), (0.098, 0.0)]
+    L.paint(L.ellipse(*P(0.0, 0.012), 0.058, 0.045) & below(L, P, lid), C_EYE)
+    lid_arc(L, P, lid, 0.004, 0.011, 0.004)
 
 
 @eye_pair
 def F2_2(L, cx, cy, s, P):
-    blob = L.ellipse(*P(0.0, 0.018), 0.056, 0.05) & (L.V > cy - 0.006)
-    L.paint(blob, C_EYE)
-    lid_arc(L, P, [(-0.075, 0.012), (-0.03, -0.045), (0.05, -0.045), (0.098, -0.012)], 0.004, 0.012, 0.004)
+    lid = [(-0.075, 0.012), (-0.03, -0.04), (0.05, -0.04), (0.098, -0.012)]
+    L.paint(L.ellipse(*P(0.0, 0.014), 0.056, 0.05) & below(L, P, lid), C_EYE)
+    lid_arc(L, P, lid, 0.004, 0.012, 0.004)
 
 
 def highlight(L, P, r=0.018, dx=-0.024, dy=-0.022):
@@ -483,33 +503,40 @@ def brow_flat(L):
 
 
 BROWS = {"brow_soft": brow_soft, "brow_flat": brow_flat}
+CHEEK = [face_chart(-24, lo) for lo in (-36, 36)]      # under each eye, on the cheek
+MOLE = face_chart(-44, 16)
 EXTRAS = {
-    "blush": lambda L: [L.paint(L.ellipse(u, 0.76, 0.075, 0.036), C_BLUSH, 0.45) for u in (0.15, 0.85)],
-    "mole": lambda L: L.paint(L.ellipse(0.66, 0.86, 0.008), C_MOLE),
-    "freckles": lambda L: [L.paint(L.ellipse(u + du, 0.75 + dv, 0.0055), C_MOLE, 0.55)
-                           for u in (0.15, 0.85) for du, dv in ((-0.02, -0.01), (0.012, -0.018), (0.01, 0.012))],
+    "blush": lambda L: [L.paint(L.ellipse(u, w, 0.075, 0.036), C_BLUSH, 0.45) for u, w in CHEEK],
+    "mole": lambda L: L.paint(L.ellipse(*MOLE, 0.008), C_MOLE),
+    "freckles": lambda L: [L.paint(L.ellipse(u + du, w + dv, 0.0055), C_MOLE, 0.55)
+                           for u, w in CHEEK for du, dv in ((-0.02, -0.01), (0.012, -0.018), (0.01, 0.012))],
 }
 
 LAYERS = [("extras", EXTRAS), ("brows", BROWS), ("eyes", EYES), ("mouth", MOUTHS)]
 DEFAULTS = {"extras": None, "brows": "brow_soft", "eyes": "F1.1", "mouth": "M1.1"}
 
-# render every feature to its own cell
-cells = {}
+# render every feature to its own cell, cropped to its ink (offset = where the crop sits in the layer rect, canvas px)
+cells, offsets = {}, {}
 for layer, table in LAYERS:
     for fid, fn in table.items():
         L = Layer(DEST[layer], warp=warp_for(layer))
         fn(L)
-        cells[(layer, fid)] = L.image()
+        img = L.image()
+        ys, xs = np.nonzero(img[..., 3] > 1 / 255)
+        y0, y1 = max(0, ys.min() - 1), min(img.shape[0], ys.max() + 2)
+        x0, x1 = max(0, xs.min() - 1), min(img.shape[1], xs.max() + 2)
+        cells[(layer, fid)] = img[y0:y1, x0:x1]
+        offsets[(layer, fid)] = (int(x0), int(y0))
 
-# pack into the atlas (rows per layer)
+# shelf-pack into the atlas, tallest first
 ATLAS_W = 2048
-placements, x, y, row_h, cur_layer = {}, 0, 0, 0, None
-for (layer, fid), img in cells.items():
-    h, w = img.shape[:2]
-    if layer != cur_layer or x + w > ATLAS_W:
+placements, x, y, row_h = {}, 0, 0, 0
+for key in sorted(cells, key=lambda k: -cells[k].shape[0]):
+    h, w = cells[key].shape[:2]
+    if x + w > ATLAS_W:
         y += row_h
-        x, row_h, cur_layer = 0, 0, layer
-    placements[(layer, fid)] = (x, y, w, h)
+        x, row_h = 0, 0
+    placements[key] = (x, y, w, h)
     x += w + 2
     row_h = max(row_h, h + 2)
 ATLAS_H = int(math.ceil((y + row_h) / 4) * 4)
@@ -528,7 +555,8 @@ def compose(eyes, mouth, brows="brow_soft", extras=None, skin=SKIN, hair=HAIR):
         if layer == "brows":
             img[..., :3] *= np.array(hex_srgb(hair), np.float32)
         u0, w0 = DEST[layer][0], DEST[layer][1]
-        x0, y0 = round(u0 * FACE_PX), round(w0 * FACE_PX)
+        ox, oy = offsets[(layer, fid)]
+        x0, y0 = round(u0 * FACE_PX) + ox, round(w0 * FACE_PX) + oy
         h, w = img.shape[:2]
         a = img[..., 3:4]
         out[y0:y0 + h, x0:x0 + w] = out[y0:y0 + h, x0:x0 + w] * (1 - a) + img[..., :3] * a
@@ -549,19 +577,28 @@ def save_png(name, arr, path, pack=False):
     return img
 
 
-face_img = save_png("V6FaceDefault", compose(DEFAULTS["eyes"], DEFAULTS["mouth"]), os.path.join(HERE, "v6_face_default.png"), True)
+def shrink(a, k):
+    h, w = a.shape[:2]
+    return a.reshape(h // k, k, w // k, k, a.shape[2]).mean(axis=(1, 3))
+
+
+face_img = save_png("V6FaceDefault", shrink(compose(DEFAULTS["eyes"], DEFAULTS["mouth"]), FACE_PX // GLB_FACE_PX),
+                    os.path.join(HERE, "v6_face_default.png"), True)
 save_png("V6FaceFeatures", atlas, os.path.join(HERE, "v6_face_features.png"))
 
 variants = {
     "note": "Face layers for the creator. Compose on a canvas of size `canvas`: fill skin colour, then draw each "
-            "layer in compose_order from the atlas rect [x, y, w, h] (pixels, top-left origin) into the layer's "
-            "dest rect [u0, w0, u1, w1] (fractions of the canvas, top-left origin). Layers with tint='hair' are "
-            "drawn white; multiply by the hair colour. Eye/mouth ids are the cell codes on David's labelled sheets; "
-            "G mouths are parametric approximations per row.",
+            "layer in compose_order: item [x, y, w, h, dx, dy] = atlas rect (pixels, top-left origin) drawn at "
+            "(dx, dy) canvas pixels inside the layer's dest rect [u0, w0, u1, w1] (fractions of the canvas, "
+            "top-left origin), at 1:1 on a `canvas`-sized canvas (scale everything by size/canvas otherwise). "
+            "Layers with tint='hair' are drawn white; multiply by the hair colour. Eye/mouth ids are the cell codes "
+            "on David's labelled sheets; G mouths are parametric approximations per row.",
     "canvas": FACE_PX,
     "atlas": "v6_face_features.png",
     "atlas_size": [ATLAS_W, ATLAS_H],
-    "face_uv": {"u": f"(x + {FH:.4f}) / {2 * FH:.4f}", "w": f"({HEAD_TOP:.4f} - z) / {2 * FH:.4f}", "space": "Blender metres, front planar"},
+    "face_uv": {"chart": "art/characters/base/head_shape.py face_chart: arc lengths over the head, 2 FH = "
+                         f"{2 * FH:.4f} m per canvas", "eye_centres": [round(NEW_EYE_L, 4), round(NEW_EYE_R, 4), round(NEW_EYE_Y, 4)],
+                "mouth_centre": [0.5, round(NEW_MY, 4)]},
     "compose_order": ["extras", "brows", "eyes", "mouth"],
     "layers": {},
 }
@@ -572,7 +609,7 @@ for layer, table in LAYERS:
         "optional": layer == "extras",
         "multi": layer == "extras",
         "tint": "hair" if layer == "brows" else None,
-        "items": {fid: list(placements[(layer, fid)]) for fid in table},
+        "items": {fid: [*placements[(layer, fid)], *offsets[(layer, fid)]] for fid in table},
     }
 json.dump(variants, open(os.path.join(HERE, "face_variants.json"), "w"), indent=1)
 
@@ -597,6 +634,7 @@ def new_mat(name, hexcol=None, image=None, double=False):
     if image is not None:
         t = m.node_tree.nodes.new("ShaderNodeTexImage")
         t.image = image
+        t.extension = "EXTEND"      # the face chart runs past the canvas at the sides: skin, never a wrapped feature
         m.node_tree.links.new(t.outputs["Color"], b.inputs["Base Color"])
     else:
         c = (*lin(hex_srgb(hexcol)), 1)
@@ -693,10 +731,16 @@ HRY = HRX * 0.87
 
 
 HEAD_SEGS, HEAD_RINGS = 18, 12
-head_rows = []
+head_rows, HEAD_LL = [], {}
 for j in range(1, HEAD_RINGS):
     lat = -90 + 180 * j / HEAD_RINGS
-    head_rows.append([vnew(head_point(lat, -180 + 360 * k / HEAD_SEGS + 180), "head") for k in range(HEAD_SEGS)])
+    row = []
+    for k in range(HEAD_SEGS):
+        lon = ((-180 + 360 * k / HEAD_SEGS + 180) + 180) % 360 - 180
+        v = vnew(head_point(lat, lon), "head")
+        HEAD_LL[v] = (lat, lon)
+        row.append(v)
+    head_rows.append(row)
 h_bot = vnew(head_point(-90, 0), "head")
 h_top = vnew(head_point(90, 0), "head")
 
@@ -963,8 +1007,7 @@ for face in bm.faces:
             s = 0.84 + 0.16 * t                                  # gentle on skin
         loop[col] = (s, s, s, 1.0)
         if mat == "M_Face":
-            u = (p.x + FH) / (2 * FH)
-            w = (HEAD_TOP - p.z) / (2 * FH)
+            u, w = face_chart(*HEAD_LL[loop.vert])
             loop[uv].uv = (u, 1 - w)
         else:
             loop[uv].uv = (0.02, 0.02)                           # skin corner of the face texture

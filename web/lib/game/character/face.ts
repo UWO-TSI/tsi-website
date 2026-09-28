@@ -21,17 +21,24 @@ export const EXPRESSION_FACE: Record<Exclude<Expression, "neutral">, { eyes?: st
 
 export interface FaceDraw { layer: FaceLayer; id: string; src: [number, number, number, number]; dest: [number, number, number, number]; tint: string | null }
 
-/** The draw list for one face: atlas source rect → destination rect in canvas pixels. */
+/**
+ * The draw list for one face: atlas source rect → destination rect in canvas pixels. Atlas cells are cropped to
+ * their ink and drawn 1:1 at (dx, dy) inside their layer's rect on a FACE.canvas-sized face; other sizes scale.
+ */
 export function faceDraws(look: CharacterLook, expression: Expression, size: number): FaceDraw[] {
   const swap = expression === "neutral" ? {} : EXPRESSION_FACE[expression];
+  const k = size / FACE.canvas;
   const chosen: Record<FaceLayer, string[]> = { extras: look.extras, brows: [look.brows], eyes: [swap.eyes ?? look.eyes], mouth: [swap.mouth ?? look.mouth] };
   return FACE.compose_order.flatMap(layer => {
-    const { dest: [u0, w0, u1, w1], items, tint } = FACE.layers[layer];
-    return chosen[layer].filter(id => id in items).map(id => ({
-      layer, id, src: items[id],
-      dest: [u0 * size, w0 * size, (u1 - u0) * size, (w1 - w0) * size] as [number, number, number, number],
-      tint: tint === "hair" ? PALETTE.hair[look.hair] : null,
-    }));
+    const { dest: [u0, w0], items, tint } = FACE.layers[layer];
+    return chosen[layer].filter(id => id in items).map(id => {
+      const [x, y, w, h, dx, dy] = items[id];
+      return {
+        layer, id, src: [x, y, w, h] as [number, number, number, number],
+        dest: [u0 * size + dx * k, w0 * size + dy * k, w * k, h * k] as [number, number, number, number],
+        tint: tint === "hair" ? PALETTE.hair[look.hair] : null,
+      };
+    });
   });
 }
 

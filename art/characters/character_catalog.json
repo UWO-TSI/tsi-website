@@ -830,7 +830,7 @@
    "slot": "accessory",
    "name": "Beanie",
    "glb": "accessories/accessory/acc_beanie.glb",
-   "tris": 260,
+   "tris": 842,
    "materials": [
     {
      "name": "M_Main",
@@ -857,7 +857,7 @@
    "slot": "accessory",
    "name": "Sun hat",
    "glb": "accessories/accessory/acc_sunhat.glb",
-   "tris": 272,
+   "tris": 1094,
    "materials": [
     {
      "name": "M_Main",
@@ -884,7 +884,7 @@
    "slot": "accessory",
    "name": "Cap",
    "glb": "accessories/accessory/acc_cap.glb",
-   "tris": 204,
+   "tris": 930,
    "materials": [
     {
      "name": "M_Main",
@@ -911,7 +911,7 @@
    "slot": "accessory",
    "name": "Straw hat",
    "glb": "accessories/accessory/acc_straw_hat.glb",
-   "tris": 272,
+   "tris": 1094,
    "materials": [
     {
      "name": "M_Main",
@@ -939,7 +939,7 @@
    "slot": "accessory",
    "name": "Flower crown",
    "glb": "accessories/accessory/acc_flower_crown.glb",
-   "tris": 216,
+   "tris": 528,
    "materials": [
     {
      "name": "M_Main",
@@ -973,7 +973,7 @@
    "slot": "accessory",
    "name": "Crystal circlet",
    "glb": "accessories/accessory/acc_crystal_circlet.glb",
-   "tris": 120,
+   "tris": 216,
    "materials": [
     {
      "name": "M_Main",
@@ -1274,7 +1274,7 @@
    "slot": "bangs",
    "name": "Straight cut",
    "glb": "hair/bangs/bangs_straight.glb",
-   "tris": 45,
+   "tris": 162,
    "materials": [
     {
      "name": "M_Hair",
@@ -1291,7 +1291,7 @@
    "slot": "bangs",
    "name": "Straight cut, long",
    "glb": "hair/bangs/bangs_straight_long.glb",
-   "tris": 45,
+   "tris": 162,
    "materials": [
     {
      "name": "M_Hair",
@@ -1308,7 +1308,7 @@
    "slot": "bangs",
    "name": "Rounded bowl",
    "glb": "hair/bangs/bangs_bowl.glb",
-   "tris": 36,
+   "tris": 126,
    "materials": [
     {
      "name": "M_Hair",
@@ -1325,7 +1325,7 @@
    "slot": "bangs",
    "name": "See-through wispy",
    "glb": "hair/bangs/bangs_wispy.glb",
-   "tris": 25,
+   "tris": 170,
    "materials": [
     {
      "name": "M_Hair",
@@ -1342,7 +1342,7 @@
    "slot": "bangs",
    "name": "Side-swept left",
    "glb": "hair/bangs/bangs_swept_l.glb",
-   "tris": 45,
+   "tris": 162,
    "materials": [
     {
      "name": "M_Hair",
@@ -1359,7 +1359,7 @@
    "slot": "bangs",
    "name": "Side-swept right",
    "glb": "hair/bangs/bangs_swept_r.glb",
-   "tris": 45,
+   "tris": 162,
    "materials": [
     {
      "name": "M_Hair",
@@ -1376,7 +1376,7 @@
    "slot": "bangs",
    "name": "Curtain",
    "glb": "hair/bangs/bangs_curtain.glb",
-   "tris": 43,
+   "tris": 172,
    "materials": [
     {
      "name": "M_Hair",
@@ -1393,7 +1393,7 @@
    "slot": "bangs",
    "name": "Curtain, long",
    "glb": "hair/bangs/bangs_curtain_long.glb",
-   "tris": 43,
+   "tris": 172,
    "materials": [
     {
      "name": "M_Hair",
@@ -1410,7 +1410,7 @@
    "slot": "bangs",
    "name": "Centre split",
    "glb": "hair/bangs/bangs_centre_split.glb",
-   "tris": 40,
+   "tris": 164,
    "materials": [
     {
      "name": "M_Hair",
@@ -1427,7 +1427,7 @@
    "slot": "bangs",
    "name": "Spiky tufts",
    "glb": "hair/bangs/bangs_spiky.glb",
-   "tris": 45,
+   "tris": 162,
    "materials": [
     {
      "name": "M_Hair",
@@ -1444,7 +1444,7 @@
    "slot": "bangs",
    "name": "Hime side-locks",
    "glb": "hair/bangs/bangs_hime.glb",
-   "tris": 45,
+   "tris": 162,
    "materials": [
     {
      "name": "M_Hair",
@@ -1461,7 +1461,7 @@
    "slot": "bangs",
    "name": "Short choppy",
    "glb": "hair/bangs/bangs_choppy.glb",
-   "tris": 55,
+   "tris": 194,
    "materials": [
     {
      "name": "M_Hair",
@@ -1478,7 +1478,7 @@
    "slot": "bangs",
    "name": "Swept back",
    "glb": "hair/bangs/bangs_swept_back.glb",
-   "tris": 28,
+   "tris": 102,
    "materials": [
     {
      "name": "M_Hair",
@@ -1495,7 +1495,7 @@
    "slot": "bangs",
    "name": "Short with one long strand",
    "glb": "hair/bangs/bangs_single_strand.glb",
-   "tris": 40,
+   "tris": 164,
    "materials": [
     {
      "name": "M_Hair",
@@ -1512,7 +1512,7 @@
    "slot": "bangs",
    "name": "Wavy swept",
    "glb": "hair/bangs/bangs_wavy.glb",
-   "tris": 45,
+   "tris": 162,
    "materials": [
     {
      "name": "M_Hair",
@@ -1529,7 +1529,7 @@
    "slot": "bangs",
    "name": "Asymmetric block",
    "glb": "hair/bangs/bangs_asym_block.glb",
-   "tris": 45,
+   "tris": 162,
    "materials": [
     {
      "name": "M_Hair",
@@ -1546,7 +1546,7 @@
    "slot": "back",
    "name": "Bob",
    "glb": "hair/back/back_bob.glb",
-   "tris": 96,
+   "tris": 386,
    "materials": [
     {
      "name": "M_Hair",
@@ -1563,7 +1563,7 @@
    "slot": "back",
    "name": "Wolf cut",
    "glb": "hair/back/back_wolf.glb",
-   "tris": 116,
+   "tris": 550,
    "materials": [
     {
      "name": "M_Hair",
@@ -1580,7 +1580,7 @@
    "slot": "back",
    "name": "Long straight",
    "glb": "hair/back/back_long.glb",
-   "tris": 128,
+   "tris": 586,
    "materials": [
     {
      "name": "M_Hair",
@@ -1597,7 +1597,7 @@
    "slot": "back",
    "name": "Wavy long",
    "glb": "hair/back/back_wavy_long.glb",
-   "tris": 128,
+   "tris": 586,
    "materials": [
     {
      "name": "M_Hair",
@@ -1614,7 +1614,7 @@
    "slot": "back",
    "name": "High ponytail",
    "glb": "hair/back/back_high_pony.glb",
-   "tris": 156,
+   "tris": 418,
    "materials": [
     {
      "name": "M_Hair",
@@ -1631,7 +1631,7 @@
    "slot": "back",
    "name": "Low pigtails",
    "glb": "hair/back/back_pigtails.glb",
-   "tris": 188,
+   "tris": 450,
    "materials": [
     {
      "name": "M_Hair",
@@ -1648,7 +1648,7 @@
    "slot": "back",
    "name": "Twin buns",
    "glb": "hair/back/back_twin_buns.glb",
-   "tris": 220,
+   "tris": 482,
    "materials": [
     {
      "name": "M_Hair",
@@ -1665,7 +1665,7 @@
    "slot": "back",
    "name": "Single top bun",
    "glb": "hair/back/back_bun.glb",
-   "tris": 156,
+   "tris": 418,
    "materials": [
     {
      "name": "M_Hair",
@@ -1682,7 +1682,7 @@
    "slot": "back",
    "name": "Braided crown",
    "glb": "hair/back/back_braid_crown.glb",
-   "tris": 236,
+   "tris": 546,
    "materials": [
     {
      "name": "M_Hair",
@@ -1699,7 +1699,7 @@
    "slot": "back",
    "name": "Short spiky",
    "glb": "hair/back/back_short_spiky.glb",
-   "tris": 116,
+   "tris": 386,
    "materials": [
     {
      "name": "M_Hair",
@@ -1716,7 +1716,7 @@
    "slot": "back",
    "name": "Undercut",
    "glb": "hair/back/back_undercut.glb",
-   "tris": 92,
+   "tris": 354,
    "materials": [
     {
      "name": "M_Hair",
@@ -1733,7 +1733,7 @@
    "slot": "back",
    "name": "Bowl",
    "glb": "hair/back/back_bowl.glb",
-   "tris": 92,
+   "tris": 354,
    "materials": [
     {
      "name": "M_Hair",
