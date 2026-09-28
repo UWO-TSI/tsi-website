@@ -21,6 +21,16 @@ const BASELINE_ADMINS = [
   "dliu468@uwo.ca",
   "anguyen.hba2027@ivey.ca",
   "jhogan53@uwo.ca", // Jack Hogan, added by David 2026-09-12
+  // Application-portal reviewers, added by David 2026-09-28. Both known
+  // emails listed where a person has two accounts.
+  "sierra.xwlin@gmail.com", // Sierra Lin
+  "slin542@uwo.ca", // Sierra Lin
+  "judygao07@gmail.com", // Judy Gao
+  "jgao537@uwo.ca", // Judy Gao
+  "danielrltan@gmail.com", // Daniel Tan
+  "matthew.zhou07@gmail.com", // Matthew Zhou
+  "mzhou446@uwo.ca", // Matthew Zhou
+  "emmayclii@gmail.com", // Emma Li
 ];
 
 /** Check if an email is in the admin whitelist */
