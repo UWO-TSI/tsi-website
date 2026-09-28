@@ -387,3 +387,30 @@ David's feedback on v5 had three points: the head needs a wider lower half and a
 - **Muzzle:** the side locks hide it in the profile view. It reads best in the front and 3/4 views.
 - **Sleeves:** the tee sleeve hem crumples slightly at the armpit in the arms-down pose.
 - **Crown:** a small tuft stands proud at the top of the crown in profile.
+
+# Face fit (avatar-fit, row 242)
+
+David (2026-09-28): the eyes and mouth "look detached and poorly modeled". The v6 shape is untouched (vertex
+positions identical, checked against the previous GLBs); the face texture, its UVs and the atlas changed.
+
+- **Measured placement** (`measure_face_ref18.py` → `face_on_head` in `ref18_measurements.json`). Reference 18 is
+  a 3/4 view; both iris centres and widths are fitted through the v6 head (orthographic 3/4 model, mouth on the
+  centre line): view yaw 26°, eyes at lat −5.3°, lon ±30° (0.116 m of arc from the centre line), iris 0.068 m
+  wide, 0.071 m tall, lid 1.8× the iris wide, mouth at lat −40°. This replaces the "/cos 25°" spacing guess.
+- **Face UVs follow the head** (`head_shape.face_chart`): U and W are arc lengths along the parallel and the
+  meridian, over the unchanged 2 FH canvas. The old front planar projection stretched features 1.3–2.4× toward
+  the sides and put the far eye's outer end 63° round the head. Now the texture stretch is ≤1.06 under the eyes
+  and brows and ≤1.1 under the mouth (`fit_check.py`), and the eyes reach 47° (visible at the 32° reference yaw).
+  The chart runs past the canvas at the sides; the face texture is clamped there (skin).
+- **Eyes** keep their authored shapes, scaled 1.2× (was 1.5× on the stretched chart), centred on the measured
+  spots. The F eyes (F1.1 default) now tuck the iris under a lid that sits on it (the lid floated above a flat
+  disc), F1.1's lid runs 1.8× the iris wide with a small outer wing, as on David's F sheet and reference 18. No
+  highlight (row 209).
+- **Brows** sit 0.063 m of arc above the eye centre (lat ≈ 2°), above F1.1's crease and below the default fringe
+  (`brow_cover` 0 for `bangs_straight`); long bangs still cover them (row 209).
+- **Resolution**: the atlas is drawn for a 1024 px face canvas (creator 1024, world 512; the world was 256), each
+  cell cropped to its ink: 2048×1260, smaller than the old 2048×1444 at 512.
+- The default face embedded in the GLBs stays 512 (Blender renders only; the engine composes its own).
+
+Rebuild order after a face or head change: `build_v6.py` → `build_clips.py` → `hair/build_hair.py` →
+`accessories/build_accessories.py` → `fit_check.py` → `web/scripts/sync-character-assets.mjs`.

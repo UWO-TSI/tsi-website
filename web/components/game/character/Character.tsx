@@ -62,7 +62,7 @@ class Puppet {
   private held = new Map<Expression, { key: string; material: THREE.MeshStandardMaterial }>();
   private look: CharacterLook | null = null;
   private atlas: HTMLImageElement | null = null;
-  private faceSize = 256;
+  private faceSize = 512;
   private action: THREE.AnimationAction | null = null;
   private clip: ClipName | null = null;
   private oneShot: ClipName | null = null;
@@ -233,12 +233,12 @@ export interface CharacterProps {
   /** Normal walking pace for this controller (Walk plays at 1x there). */
   walkSpeed?: number;
   weapon?: WeaponView | null;
-  /** Face texture resolution: 256 in the world, 512 in close-up views. */
+  /** Face texture resolution: 512 in the world (sharp at village distance), 1024 in the creator. */
   faceSize?: number;
   scale?: number;
 }
 
-export default function Character({ look, motion, walkSpeed = 7.4, weapon = null, faceSize = 256, scale = CHARACTER_SCALE }: CharacterProps) {
+export default function Character({ look, motion, walkSpeed = 7.4, weapon = null, faceSize = 512, scale = CHARACTER_SCALE }: CharacterProps) {
   // While a newly chosen part loads, keep showing the previous look instead of suspending.
   const shown = useDeferredValue(look);
   const parts = useMemo(() => resolveParts(shown), [shown]);

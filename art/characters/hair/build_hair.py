@@ -80,11 +80,11 @@ def bangs(lons, fringe, drops=None, top=None, vol=1.0, shift=None, gap=None, ext
         f0, _, h, r = rows(lon)
         if ri == 3:
             return kit.seam_off(r) - ROOT_DIP
-        o0, oh = edge_off(f0, lon), kit.seam_off(h) - 0.002
+        o0, oh = edge_off(f0, lon), kit.seam_off(h) - 0.001
         t = (0.0, 0.5, 1.0)[ri]
         o = o0 + (oh - o0) * t + 0.004 * vol * (1 - side(lon)) * math.sin(math.pi * t)
         # wherever a cap covers the scalp (above the hairline), bangs run under its front edge, never over it
-        return min(o, kit.seam_off(lat) - 0.002) if lat >= hairline(lon) - 1 else o
+        return min(o, kit.seam_off(lat) - 0.001) if lat >= hairline(lon) - 1 else o
 
     def tips(i, la, lb):
         d = drops(i) if drops else 0
@@ -115,7 +115,7 @@ def wispy():
     pc = Piece()
     for c in (-46, -23, 0, 23, 46):
         strand = bangs([c - 7, c + 7], lambda lon: 8, drops=lambda i, c=c: 10, shift=lambda i, c=c: (3 if c < 0 else -3 if c > 0 else 0),
-                       vol=0.6)
+                       vol=0.3)
         merge(pc, strand)
     return pc
 
@@ -161,7 +161,7 @@ BANGS = [  # id, name, N cell (nearest), builder
     ("bangs_curtain", "Curtain", "N3.2", lambda: curtain(-8)),
     ("bangs_curtain_long", "Curtain, long", "N6.2", lambda: curtain(-42)),
     ("bangs_centre_split", "Centre split", "N1.4", lambda: bangs(
-        [-80, -58, -36, -16, -5, 5, 16, 36, 58, 80], lambda lon: 56 if abs(lon) < 6 else side_fringe(10, -14)(lon),
+        [-80, -58, -36, -16, -5, 5, 16, 36, 58, 80], lambda lon: 40 if abs(lon) < 6 else side_fringe(10, -14)(lon),
         drops=lambda i: 0 if i == 4 else (7 if i % 2 else 10), gap=lambda la, lb, r: abs(la + lb) < 1)),
     ("bangs_spiky", "Spiky tufts", "N4.3", lambda: bangs(L10, side_fringe(22, 0), drops=alt(14, 6),
                                                           shift=lambda i: 7 if i % 2 else -7)),
@@ -247,11 +247,11 @@ def single_bun():
 
 
 def braided_crown():
-    """A plait ringing the head just behind the cap's front edge and round the back, half sunk into the hair."""
+    """A plait ringing the head behind the bangs' roots and round the back, half sunk into the hair."""
     pc, g, l = cap(lambda lon: -36, vol=0.9)
     n = 16
     lons = [((360 * k / n + 11 + 180) % 360) - 180 for k in range(n)]
-    lat = lambda lon: hairline(lon) + 6 if abs(lon) < 75 else 30
+    lat = lambda lon: hairline(lon) + 16 if abs(lon) < 75 else 32
     path = [hair_point(lat(lo), lo, hair_vol(lat(lo)) * 0.9 - 0.002) for lo in lons]
     radii = [0.022 if k % 2 == 0 else 0.016 for k in range(n)]
     pc.tube(path, radii, sides=6, closed_loop=True)
@@ -260,7 +260,7 @@ def braided_crown():
 
 def short_spiky():
     pc, g, l = cap(lambda lon: -18, vol=0.85)
-    for lat, lon in ((50, 20), (50, -30), (62, 80), (62, -90), (58, 160), (40, 130), (40, -140), (76, 0)):
+    for lat, lon in ((60, 22), (60, -30), (62, 80), (62, -90), (58, 160), (40, 130), (40, -140), (76, 0)):
         pc.spike(lat, lon, hair_vol(lat) * 0.85 - 0.006, 0.058, width=14, lean=(-8, 10 if lon >= 0 else -10))
     return pc
 

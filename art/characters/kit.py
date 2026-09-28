@@ -376,8 +376,8 @@ CAP_MIN = 0.8         # the thinnest cap's share of hair_vol
 
 
 def seam_off(lat):
-    """Offset of every cap's front edge at the hairline: all caps come down to the same height there, so bangs can
-    run under any of them with a 2 mm step and no crown ledge."""
+    """The shared seam height at the hairline: every cap's front edge sits 5 mm under it, bangs 1 mm under it, and
+    behind the hairline the cap rises through the bangs, so bangs and back meet in a clean crossing on any pair."""
     return CAP_MIN * hair_vol(lat)
 
 
@@ -407,7 +407,8 @@ def hair_cap(bottom, vol=1.0, hem=0.009, tips=None, side=None, lons=None):
         if ri in (1, 2):
             return side if side is not None else max(v, (v + hem) / 2 + 0.002)
         if ri == 3 and abs(lon) <= 75:
-            return seam_off(lat)
+            return seam_off(lat) - 0.005      # the front edge runs under the bangs: the seam is where the cap rises
+                                              # through them behind the hairline, not an edge wall
         return v
 
     def cmid(a, b_):

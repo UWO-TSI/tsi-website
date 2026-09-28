@@ -55,7 +55,7 @@ function colourTarget(tab: string, look: CharacterLook, lastAccessory: string | 
 }
 
 const STILL: CharacterMotion = { speed: 0, yaw: -0.4, lift: 0, pose: null, play: null };
-function Stage({ look, framing, yaw = -0.4, faceSize = 256 }: { look: CharacterLook; framing: "head" | "body"; yaw?: number; faceSize?: number }) {
+function Stage({ look, framing, yaw = -0.4, faceSize = 512 }: { look: CharacterLook; framing: "head" | "body"; yaw?: number; faceSize?: number }) {
   const motion = useRef<CharacterMotion>({ ...STILL, yaw });
   useEffect(() => { motion.current.yaw = yaw; }, [yaw]);
   const head = framing === "head";
@@ -141,7 +141,7 @@ export default function CharacterCreator({ initial, mode = "create", title, askN
   return <section ref={root} className={styles.creator} role="dialog" aria-modal="true" aria-labelledby="creator-title" data-mode={mode}>
     <div className={styles.preview}>
       <h1 id="creator-title">{title ?? (mode === "wardrobe" ? "Your closet" : "Make your character")}</h1>
-      <View className={styles.stage}><Stage look={look} framing="body" yaw={yaw} faceSize={512} /></View>
+      <View className={styles.stage}><Stage look={look} framing="body" yaw={yaw} faceSize={1024} /></View>
       <div className={styles.turn} aria-label="Turn the character">
         <button onClick={() => setYaw(y => y - Math.PI / 4)} aria-label="Turn left">⟲</button>
         <button onClick={() => setYaw(y => y + Math.PI / 4)} aria-label="Turn right">⟳</button>

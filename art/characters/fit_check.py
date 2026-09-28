@@ -6,13 +6,14 @@ Measured on the exported GLBs in rest pose (what the engine binds), against the 
   hair      per bangs/back piece: open (boundary) edges; the air gap between the scalp and the hair's underside
             along rays from the head centre (max, median); share of rays where the hair tucks into the scalp;
             brow_cover = share of the default brows hidden behind the piece from the front (bangs only)
-  seam      the crown ledge: how far a bangs piece stands proud of a back piece where both cover the crown,
-            over every bangs x back pair
+  seam      the crown ledge over every bangs x back pair: how far the bangs' root edge stands out of the cap, or the
+            cap's front edge out of the bangs (0 when each edge is buried in the other piece)
   headwear  hats and bands: gap between the inside of the hat and the hair (or scalp) under it (max, median),
             hair poking out through it, open edges
   glasses   lens centre vs the painted centre of every eye variant, front view
   face      stretch of the face texture on the head where features are painted (worst linear stretch and
-            anisotropy of the UV chart), how far round the head the eyes reach (longitude, degrees)
+            anisotropy of the UV chart), how far round the head the eyes reach (the angle between the surface normal
+            under any eye pixel and straight ahead)
 Rays: directions head_point(lat, lon) - HC on a 2 x 3 degree grid; back pieces are measured above lat -24 (the caps;
 pigtails and lengths hanging below them are free by design), bangs above lat -60, only where the hair is within 12 cm
 of the scalp. A gap counts where it also shows on the neighbouring rays (a ray grazing a radial edge wall is not air).
@@ -38,7 +39,7 @@ LIMITS = {
     "hair_open_edges": 0,          # closed shells only
     "hair_gap_max": 0.004,         # m of air under the hair anywhere on the scalp region
     "hair_gap_median": 0.001,
-    "seam_ledge_max": 0.003,       # bangs standing proud of the back cap at the crown
+    "seam_ledge_max": 0.003,       # step where bangs and back cap meet over the crown
     "brow_cover_default": 0.05,    # default brows hidden by the default bangs, front view
     "hat_open_edges": 0,
     "hat_gap_max": 0.010,          # spec: hats sit on the hair, under 1 cm
@@ -46,7 +47,8 @@ LIMITS = {
     "glasses_offset_max": 0.012,   # lens centre vs painted eye centre
     "face_stretch_max": 1.2,       # texture stretch where features are painted
     "face_aniso_max": 1.25,
-    "eye_reach_max_deg": 48.0,     # ref 18: the lid's outer end sits about 45 degrees round the head
+    "eye_reach_max_deg": 58.0,     # surface normal under any eye pixel vs straight ahead: both eyes face the camera at
+                                   # the 3/4 yaw of ref 18 and the creator (32 deg); the far eye stays on the face
 }
 FH = HRZT
 DEFAULT_BANGS, DEFAULT_BACK = "bangs_straight", "back_bob"
@@ -190,12 +192,19 @@ ATLAS = np.array(atlas_img.pixels[:], np.float32).reshape(AH, AW, 4)[::-1]      
 
 
 def item_alpha(layer, fid, res):
-    """The item's alpha drawn into a res x res face canvas (nearest sampling)."""
-    x, y, w, h = FACEV["layers"][layer]["items"][fid][:4]
+    """The item's alpha drawn into a res x res face canvas (nearest sampling). Items are [x, y, w, h] (drawn over the
+    whole layer rect) or [x, y, w, h, dx, dy] (a crop drawn 1:1 at dx, dy canvas px inside the layer rect)."""
+    it = FACEV["layers"][layer]["items"][fid]
+    x, y, w, h = it[:4]
     u0, w0, u1, w1 = FACEV["layers"][layer]["dest"]
+    k = res / FACEV["canvas"]
+    if len(it) >= 6:
+        X0, Y0 = u0 * res + it[4] * k, w0 * res + it[5] * k
+        W_, H_ = w * k, h * k
+    else:
+        X0, Y0, W_, H_ = u0 * res, w0 * res, (u1 - u0) * res, (w1 - w0) * res
     canvas = np.zeros((res, res), np.float32)
-    X0, Y0 = int(round(u0 * res)), int(round(w0 * res))
-    W_, H_ = max(1, int(round((u1 - u0) * res))), max(1, int(round((w1 - w0) * res)))
+    X0, Y0, W_, H_ = int(round(X0)), int(round(Y0)), max(1, int(round(W_))), max(1, int(round(H_)))
     ys = (np.arange(H_) + 0.5) / H_ * h
     xs = (np.arange(W_) + 0.5) / W_ * w
     cell = ATLAS[(y + ys.astype(int)).clip(0, AH - 1)][:, (x + xs.astype(int)).clip(0, AW - 1), 3]
@@ -228,45 +237,72 @@ def locate(U, W):
     return None
 
 
-RES = 256
-feature = np.zeros((RES, RES), np.float32)
-for layer in ("eyes", "brows", "mouth"):
-    for fid in FACEV["layers"][layer]["items"]:
-        feature = np.maximum(feature, item_alpha(layer, fid, RES))
+def lon_of(p):
+    return math.degrees(math.atan2(p.x - HC.x, -(p.y - HC.y)))
 
-worst_stretch, worst_aniso, n_feat = 1.0, 1.0, 0
-for P, T in TRI:
-    us = [t[0] for t in T]
-    ws = [t[1] for t in T]
-    i0, i1 = max(0, int(min(us) * RES)), min(RES - 1, int(max(us) * RES) + 1)
-    j0, j1 = max(0, int(min(ws) * RES)), min(RES - 1, int(max(ws) * RES) + 1)
-    if i1 < 0 or j1 < 0 or i0 >= RES or j0 >= RES:
-        continue
-    gy, gx = np.mgrid[j0:j1 + 1, i0:i1 + 1]
-    U, W = (gx + 0.5) / RES, (gy + 0.5) / RES
+
+def facing(p):
+    """Angle (deg) between the head's surface normal at p and straight ahead: 90 minus it is the widest view yaw at
+    which p still faces the camera."""
+    loc, nrm, _, _ = HEAD.find_nearest(p)
+    return math.degrees(math.acos(max(-1.0, min(1.0, -nrm.y))))
+
+
+RES = 256
+LAYER_MASK = {}
+for layer in ("eyes", "brows", "mouth"):
+    m = np.zeros((RES, RES), np.float32)
+    for fid in FACEV["layers"][layer]["items"]:
+        m = np.maximum(m, item_alpha(layer, fid, RES))
+    LAYER_MASK[layer] = m
+
+
+def tri_distortion(P, T):
+    """(linear stretch, anisotropy) of the texture on one flat face triangle: singular values of surface -> canvas."""
     (x0, y0), (x1, y1), (x2, y2) = T
-    den = (y1 - y2) * (x0 - x2) + (x2 - x1) * (y0 - y2)
-    if abs(den) < 1e-12:
-        continue
-    a = ((y1 - y2) * (U - x2) + (x2 - x1) * (W - y2)) / den
-    b = ((y2 - y0) * (U - x2) + (x0 - x2) * (W - y2)) / den
-    inside = (a >= 0) & (b >= 0) & (1 - a - b >= 0)
-    if not (feature[gy, gx][inside] > 0.1).any():
-        continue
-    n_feat += 1
     e1 = (P[1] - P[0]).normalized()
     nrm = (P[1] - P[0]).cross(P[2] - P[0]).normalized()
     e2 = nrm.cross(e1)
     S = np.array([[(P[1] - P[0]).dot(e1), (P[2] - P[0]).dot(e1)], [(P[1] - P[0]).dot(e2), (P[2] - P[0]).dot(e2)]])
     Tm = np.array([[x1 - x0, x2 - x0], [y1 - y0, y2 - y0]]) * 2 * FH
-    J = Tm @ np.linalg.inv(S)                   # surface metres -> texture metres
-    s = np.linalg.svd(J, compute_uv=False)
-    worst_stretch = max(worst_stretch, 1 / s[1], s[0])
-    worst_aniso = max(worst_aniso, s[0] / s[1])
+    s = np.linalg.svd(Tm @ np.linalg.inv(S), compute_uv=False)
+    return max(1 / s[1], s[0]), s[0] / s[1]
 
 
-def lon_of(p):
-    return math.degrees(math.atan2(p.x - HC.x, -(p.y - HC.y)))
+def covers(T, mask):
+    us = [t[0] for t in T]
+    ws = [t[1] for t in T]
+    i0, i1 = max(0, int(min(us) * RES)), min(RES - 1, int(max(us) * RES) + 1)
+    j0, j1 = max(0, int(min(ws) * RES)), min(RES - 1, int(max(ws) * RES) + 1)
+    if i1 < i0 or j1 < j0:
+        return False
+    gy, gx = np.mgrid[j0:j1 + 1, i0:i1 + 1]
+    U, W = (gx + 0.5) / RES, (gy + 0.5) / RES
+    (x0, y0), (x1, y1), (x2, y2) = T
+    den = (y1 - y2) * (x0 - x2) + (x2 - x1) * (y0 - y2)
+    if abs(den) < 1e-12:
+        return False
+    a = ((y1 - y2) * (U - x2) + (x2 - x1) * (W - y2)) / den
+    b = ((y2 - y0) * (U - x2) + (x0 - x2) * (W - y2)) / den
+    inside = (a >= 0) & (b >= 0) & (1 - a - b >= 0)
+    return bool((mask[gy, gx][inside] > 0.1).any())
+
+
+per_layer = {}
+worst_stretch, worst_aniso, n_feat, worst_at = 1.0, 1.0, 0, None
+for layer, mask in LAYER_MASK.items():
+    ls, la = 1.0, 1.0
+    for P, T in TRI:
+        if not covers(T, mask):
+            continue
+        st, an = tri_distortion(P, T)
+        n_feat += 1
+        if st > worst_stretch:
+            c = (P[0] + P[1] + P[2]) / 3
+            worst_at = [layer, round(lon_of(c)), round(c.z, 3)]
+        ls, la = max(ls, st), max(la, an)
+        worst_stretch, worst_aniso = max(worst_stretch, st), max(worst_aniso, an)
+    per_layer[layer] = {"stretch": round(ls, 3), "aniso": round(la, 3)}
 
 
 eye_reach, eye_centres = 0.0, {}
@@ -276,7 +312,7 @@ for fid in FACEV["layers"]["eyes"]["items"]:
     for k in range(0, len(xs), 3):
         p = locate((xs[k] + 0.5) / RES, (ys[k] + 0.5) / RES)
         if p is not None:
-            eye_reach = max(eye_reach, abs(lon_of(p)))
+            eye_reach = max(eye_reach, facing(p))
     cen = {}
     for side, mask in (("R", xs < RES / 2), ("L", xs >= RES / 2)):     # canvas left = the character's right (-X)
         if mask.any():
@@ -290,8 +326,8 @@ brow = item_alpha("brows", FACEV["layers"]["brows"]["default"], RES)
 by, bx = np.nonzero(brow > 0.5)
 BROW_PTS = [p for p in (locate((bx[k] + 0.5) / RES, (by[k] + 0.5) / RES) for k in range(0, len(bx), 2)) if p is not None]
 dflt = eye_centres[FACEV["layers"]["eyes"]["default"]]
-face = {"feature_tris": n_feat, "stretch_max": round(worst_stretch, 3), "aniso_max": round(worst_aniso, 3),
-        "eye_reach_deg": round(eye_reach, 1),
+face = {"feature_tris": n_feat, "stretch_max": round(worst_stretch, 3), "aniso_max": round(worst_aniso, 3), "per_layer": per_layer,
+        "stretch_worst_at": worst_at, "eye_reach_deg": round(eye_reach, 1),
         "default_eye_centre_lon_deg": round(abs(lon_of(dflt["L"])), 1) if dflt.get("L") else None,
         "default_eye_centre_z": round(dflt["L"].z, 4) if dflt.get("L") else None}
 
@@ -316,19 +352,39 @@ for part in CAT["hair"]:
     print(f"HAIR {part['id']:20s} open={open_e:3d} gap max={rec['gap']['max']} at={rec['gap'].get('worst_at')} med={rec['gap']['median']} "
           f"tuck={rec['tuck_share']} outer={rec['outer_median']}" + (f" brow_cover={rec.get('brow_cover')}" if "brow_cover" in rec else ""))
 
-crown = (LAT >= 30) & (np.abs(LON) <= 70)
+def seam_step(ob, ok):
+    """The crown ledge between a bangs piece and a back cap, per ray column (fixed lon, |lon| <= 70, lat >= 20): on the
+    bangs' last ray, how far they stand out of the cap there; on the cap's first ray, how far its front edge stands
+    out of the bangs there. Roots buried under the cap and a cap edge buried under the bangs give <= 0; where only one
+    piece is present (a parting, the fringe) there is no seam. Returns (worst step, [lat, lon])."""
+    b, k = ob.reshape(NLA, NLO), ok.reshape(NLA, NLO)
+    hb, hk = ~np.isnan(b), ~np.isnan(k)
+    best, at = 0.0, None
+    for j, lon in enumerate(LONS):
+        if abs(lon) > 70:
+            continue
+        for i in range(NLA - 1):
+            if LATS[i] < 20:
+                continue
+            d = None
+            if hb[i, j] and not hb[i + 1, j]:                           # bangs top edge: over or under the cap there?
+                d = b[i, j] - k[i, j] if hk[i, j] else None
+                where = LATS[i]
+            if d is not None and d > best:
+                best, at = float(d), [where, lon]
+            d = None
+            if hk[i + 1, j] and not hk[i, j]:                           # cap front edge: over or under the bangs?
+                d = k[i + 1, j] - b[i + 1, j] if hb[i + 1, j] else None
+                where = LATS[i + 1]
+            if d is not None and d > best:
+                best, at = float(d), [where, lon]
+    return round(best, 4), at
+
+
 ledges, ledge_at = {}, {}
 for b in (p["id"] for p in CAT["hair"] if p["slot"] == "bangs"):
     for k in (p["id"] for p in CAT["hair"] if p["slot"] == "back"):
-        ob, ok = tables[b][1], tables[k][1]
-        m = crown & ~np.isnan(ob) & ~np.isnan(ok)
-        if m.any():
-            d = np.where(m, ob - ok, -1.0)
-            w = int(np.argmax(d))
-            ledges[f"{b}+{k}"] = round(float(d[w]), 4)
-            ledge_at[f"{b}+{k}"] = [int(LAT[w]), int(LON[w])]
-        else:
-            ledges[f"{b}+{k}"] = 0.0
+        ledges[f"{b}+{k}"], ledge_at[f"{b}+{k}"] = seam_step(tables[b][1], tables[k][1])
 worst_pair = max(ledges, key=ledges.get)
 seam = {"ledge_max": ledges[worst_pair], "worst_pair": worst_pair, "worst_at": ledge_at.get(worst_pair),
         "default_pair": ledges[f"{DEFAULT_BANGS}+{DEFAULT_BACK}"],

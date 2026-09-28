@@ -35,7 +35,8 @@ export const CLIP_BY_NAME = new Map(CLIPS.map(c => [c.name, c]));
 export const PALETTE = { skin: palette.skin, hair: palette.hair, outfit: palette.outfit };
 export const FACE = faceVariants as unknown as {
   canvas: number; atlas_size: [number, number]; compose_order: FaceLayer[];
-  layers: Record<FaceLayer, { dest: [number, number, number, number]; default: string | null; multi: boolean; tint: "hair" | null; items: Record<string, [number, number, number, number]> }>;
+  /** items: atlas rect [x, y, w, h] and its place [dx, dy] (canvas px) inside the layer's dest rect. */
+  layers: Record<FaceLayer, { dest: [number, number, number, number]; default: string | null; multi: boolean; tint: "hair" | null; items: Record<string, [number, number, number, number, number, number]> }>;
 };
 export type FaceLayer = "extras" | "brows" | "eyes" | "mouth";
 export const partsIn = (slot: PartSlot) => PARTS.filter(p => p.slot === slot);
