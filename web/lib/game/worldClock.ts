@@ -7,7 +7,11 @@
  *   `performance.now()` so frames advance evenly; it re-anchors whenever the
  *   wall clock jumps (sleep, NTP), so it never drifts from UTC.
  * - **Multiplayer:** `setWorldClockOffset` is the one place a server clock
- *   offset plugs in (server minus local, in ms). Nothing else changes.
+ *   offset plugs in (server minus local, in ms). Nothing else changes. The
+ *   dev preview `?at=HH:MM&date=` uses it too (useIslandConditions), so the
+ *   previewed sun, water, clouds and leaves share one time.
+ * - **Calendar:** `worldNow()` is the same clock as an epoch instant; the
+ *   sun, the phase, the weather hour and the season are read from it.
  * - **Wrap:** seconds since the most recent 08:00 UTC, i.e. 04:00 Toronto in
  *   summer (EDT) and 03:00 in winter (EST). A fixed UTC hour, so there is no
  *   time-zone or DST arithmetic and every day is exactly 86 400 s. Anything
@@ -45,7 +49,12 @@ function nowMs(): number {
   return anchor + mono;
 }
 
+/** The world clock as epoch ms (UTC plus the offset): the instant the sun and the phase are read at. */
+export function worldNow(): number {
+  return nowMs() + serverOffsetMs;
+}
+
 /** Seconds of world time, now: identical on every client with a correct clock. */
 export function worldTime(): number {
-  return worldTimeAt(nowMs() + serverOffsetMs);
+  return worldTimeAt(worldNow());
 }

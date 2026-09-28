@@ -2,6 +2,7 @@
 // smooth mode, High tier with shadows, clear summer weather so only the sun changes, dev server on :$PORT (3103).
 //   node specs/evidence/sun-path/shots.mjs before /tmp/sun-path/before   (the shipped look, ?time=day)
 //   node specs/evidence/sun-path/shots.mjs after  /tmp/sun-path/after    (the real sun at the listed clock times)
+//   node specs/evidence/sun-path/shots.mjs clock  /tmp/sun-path/clock    (?at=17:00 today on the world clock)
 // V1 = the look evidence's plaza camera (follow camera, player at 0,-1). Frames are PNG; towebp.sh makes the WebP.
 import { createRequire } from "node:module";
 import { mkdirSync } from "node:fs";
@@ -71,6 +72,13 @@ if (mode === "after") {
     await shot(`V1-${date}-${at.replace(":", "")}`);
     if (date === "2026-09-27" && at === "11:45") await minimap("minimap");
   }
+}
+
+if (mode === "clock") { // ?at on the world clock: today 17:00 at V1 and on the west shore, looking over the sea toward the sun
+  await open("at=0,-1&at=17:00");
+  await shot("clock-V1-1700");
+  await open("at=0,15&at=17:00");
+  await shot("clock-west-shore-1700");
 }
 
 await browser.close();
