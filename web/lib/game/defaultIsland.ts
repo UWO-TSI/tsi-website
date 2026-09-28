@@ -158,19 +158,30 @@ export function islandOf(v: Village): VillageIsland {
     const f = propFootprint(o);
     return f ? [{ x: o.x, z: o.z, yaw: o.yaw ?? 0, hw: f[0], hd: f[1] }] : [];
   });
-  const trees = objectsOf("tree", v);
+  // Trees and props by 4-unit bucket, so a painted island with hundreds of them walks as cheaply as a small one.
+  const bucket = (x: number, z: number) => `${Math.floor(x / 4)},${Math.floor(z / 4)}`;
+  const near = <T extends { x: number; z: number }>(items: readonly T[]) => {
+    const grid = new Map<string, T[]>();
+    for (const it of items) { const k = bucket(it.x, it.z); grid.set(k, [...(grid.get(k) ?? []), it]); }
+    return (x: number, z: number) => {
+      const out: T[] = [], bx = Math.floor(x / 4), bz = Math.floor(z / 4);
+      for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) out.push(...(grid.get(`${bx + dx},${bz + dz}`) ?? []));
+      return out;
+    };
+  };
+  const propsNear = near(props), treesNear = near(objectsOf("tree", v));
   const standable = (x: number, z: number) => {
     if (decks.some(d => inRect(x, z, d))) return true;
     if (!isGroundAtWorld(map, x, z)) return false;
     if (solids.some(l => Math.abs(x - l.x) < l.half![0] && Math.abs(z - l.z) < l.half![1])) return false;
-    if (props.some((p) => {
+    if (propsNear(x, z).some((p) => {
       const dx = x - p.x, dz = z - p.z;
       const localX = dx * Math.cos(p.yaw) - dz * Math.sin(p.yaw);
       const localZ = dx * Math.sin(p.yaw) + dz * Math.cos(p.yaw);
       return Math.abs(localX) < p.hw && Math.abs(localZ) < p.hd;
     })) return false;
     if (studySolid("village", x, z, 0, v)) return false;
-    return !trees.some(t => Math.hypot(t.x - x, t.z - z) < TREE_TRUNK);
+    return !treesNear(x, z).some(t => Math.hypot(t.x - x, t.z - z) < TREE_TRUNK);
   };
   /** How much of the body (5 probe points) stands on free ground; 5 = fits. */
   const clearance = (x: number, z: number) =>
