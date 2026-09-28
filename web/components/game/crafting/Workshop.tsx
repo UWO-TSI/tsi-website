@@ -50,7 +50,7 @@ export function Workbench({ player }: { player: React.RefObject<THREE.Vector3> }
   useEffect(() => () => { window.dispatchEvent(new CustomEvent("tsi:workbench-near", { detail: false })); }, []);
   return <Suspense fallback={null}>
     <GLBProp url={`${P}workbench.glb`} scale={1.3} position={[BENCH.x, 0, BENCH.z]} rotation={[0, Math.PI / 2, 0]} />
-    <GLBProp url={`${P}branch.glb`} scale={1.3} position={[BENCH.x - 0.1, 0.585, BENCH.z + 0.45]} rotation={[0, 0.4, 0]} castShadow={false} />
+    <GLBProp url={`${P}branch.glb`} scale={1.3} position={[BENCH.x - 0.1, 0.585, BENCH.z + 0.45]} rotation={[0, 0.4, 0]} />
     <Piece shadows name="cardboard-pile" position={[BENCH.x, 0, BENCH.z - 1.4]} rotY={Math.PI / 2} />
   </Suspense>;
 }

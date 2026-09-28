@@ -1,5 +1,5 @@
 import { expect, it, vi } from "vitest";
-import { BoxGeometry, FrontSide, Frustum, Group, Matrix4, Mesh, MeshStandardMaterial, PerspectiveCamera, Texture, Vector3 } from "three";
+import { BoxGeometry, FrontSide, Frustum, Group, Matrix4, Mesh, MeshBasicMaterial, MeshStandardMaterial, PerspectiveCamera, Texture, Vector3 } from "three";
 import { disposeModelMaterials, lightHQWindows, lookClassFor, prepareModel, tagLookClasses } from "./modelMaterials";
 import { bendViewPoint } from "./worldProjection";
 
@@ -8,7 +8,7 @@ it("lights only instance-owned HQ glass while preserving frames and cached textu
   const glass = new MeshStandardMaterial({ name: "mWindowL", map: texture, emissiveMap: texture });
   const wall = new MeshStandardMaterial({ name: "mWall", map: texture, emissiveMap: texture });
   const source = new Mesh(new BoxGeometry(), [glass, wall]);
-  const clone = prepareModel(source, "/assets/acnh/buildings/hq-office.glb", true) as Mesh<BoxGeometry, MeshStandardMaterial[]>;
+  const clone = prepareModel(source, "/assets/acnh/buildings/hq-office.glb") as Mesh<BoxGeometry, MeshStandardMaterial[]>;
   lightHQWindows(clone, "#ffc95a");
   expect(clone.material[0].map).toBeNull();
   expect(clone.material[0].emissiveMap).toBeNull();
@@ -30,7 +30,7 @@ it("keeps source materials intact and disposes only the instance's shared clones
   const originalDispose = vi.spyOn(material, "dispose");
   const geometryDispose = vi.spyOn(geometry, "dispose");
   const textureDispose = vi.spyOn(texture, "dispose");
-  const clone = prepareModel(source, "/assets/acnh/plants/tree-hardwood-a.glb", true);
+  const clone = prepareModel(source, "/assets/acnh/plants/tree-hardwood-a.glb");
   const first = clone.children[0] as Mesh<BoxGeometry, MeshStandardMaterial>;
   const second = clone.children[1] as Mesh<BoxGeometry, MeshStandardMaterial[]>;
   expect(first.material).not.toBe(material);
@@ -58,7 +58,7 @@ it("keeps a curved-world model visible when its unbent bounds are above the view
   expect(frustum.intersectsObject(source)).toBe(false);
   const drawn = bendViewPoint(new Vector3(0, 5, 30).applyMatrix4(camera.matrixWorldInverse)).applyMatrix4(camera.projectionMatrix);
   expect(Math.abs(drawn.y)).toBeLessThan(1);
-  const prepared = prepareModel(source, "/assets/acnh/buildings/oracle-museum.glb", true);
+  const prepared = prepareModel(source, "/assets/acnh/buildings/oracle-museum.glb");
   expect(prepared.frustumCulled).toBe(false);
   expect(source.frustumCulled).toBe(true);
   disposeModelMaterials(prepared);
@@ -70,8 +70,8 @@ it("changes mapped lamp glow per instance without lighting glass or mutating the
   const body = new MeshStandardMaterial({ emissive: "white", emissiveMap: new Texture() });
   const glass = new MeshStandardMaterial({ transparent: true, opacity: 0.4 });
   const source = new Mesh(new BoxGeometry(), [body, glass]);
-  const day = prepareModel(source, "/assets/acnh/props/streetlamp.glb", true, 0) as Mesh<BoxGeometry, MeshStandardMaterial[]>;
-  const night = prepareModel(source, "/assets/acnh/props/streetlamp.glb", true, 2.2) as Mesh<BoxGeometry, MeshStandardMaterial[]>;
+  const day = prepareModel(source, "/assets/acnh/props/streetlamp.glb", 0) as Mesh<BoxGeometry, MeshStandardMaterial[]>;
+  const night = prepareModel(source, "/assets/acnh/props/streetlamp.glb", 2.2) as Mesh<BoxGeometry, MeshStandardMaterial[]>;
   expect(day.material[0].emissiveIntensity).toBe(0);
   expect(night.material[0].emissiveIntensity).toBe(2.2);
   expect(body.emissiveIntensity).toBe(1);
@@ -91,7 +91,7 @@ it("keeps repaired glass transparent and out of the opaque shadow pass", () => {
   for (const prop of ["streetlamp", "park-clock"]) {
     const glass = new MeshStandardMaterial({ name: "mGlassF", transparent: true, opacity: 0.4 });
     const source = new Mesh(new BoxGeometry(), glass);
-    const clone = prepareModel(source, `/assets/acnh/props/${prop}.glb`, true) as Mesh<BoxGeometry, MeshStandardMaterial>;
+    const clone = prepareModel(source, `/assets/acnh/props/${prop}.glb`) as Mesh<BoxGeometry, MeshStandardMaterial>;
     expect(clone.castShadow).toBe(false);
     expect(clone.material.side).toBe(FrontSide);
     expect(clone.material.depthWrite).toBe(false);
@@ -100,6 +100,35 @@ it("keeps repaired glass transparent and out of the opaque shadow pass", () => {
     source.geometry.dispose();
     glass.dispose();
   }
+});
+
+it("applies the shadow class: ACNH tree casters cast depth only, leaf cards stop casting and receiving (row 240)", () => {
+  const part = (name: string) => new Mesh(new BoxGeometry(), new MeshStandardMaterial({ name }));
+  const source = new Group();
+  source.add(part("mShadow"), part("mShadowShake"), part("mTreeOakLeaf"), part("mPltTreeOakTrunk"));
+  const oak = prepareModel(source, "/assets/acnh/plants/tree-hardwood-a.glb");
+  const [hull, sway, leaf, trunk] = oak.children as Mesh[];
+  for (const caster of [hull, sway]) {
+    expect(caster.castShadow).toBe(true);
+    expect(caster.receiveShadow).toBe(false);
+    expect(caster.visible).toBe(false);
+    expect((caster.material as MeshBasicMaterial).colorWrite).toBe(false);
+  }
+  expect(sway.userData.sunCaster).toBe("dynamic");
+  expect(sway.customDepthMaterial).toBeDefined();
+  expect(hull.userData.sunCaster).toBeUndefined();
+  expect([leaf.castShadow, leaf.receiveShadow, leaf.visible]).toEqual([false, false, true]);
+  expect([trunk.castShadow, trunk.receiveShadow]).toEqual([false, true]);
+  disposeModelMaterials(oak);
+  // Foliage without ACNH casters casts its outline (front faces) and never shades itself.
+  const bush = prepareModel(part("PltBushHolly__PltBushHolly4_mat0"), "/assets/acnh/plants/bush-holly.glb") as Mesh<BoxGeometry, MeshStandardMaterial>;
+  expect([bush.castShadow, bush.receiveShadow, bush.material.shadowSide]).toEqual([true, false, FrontSide]);
+  // Small things receive only; an override wins over the URL.
+  const flower = prepareModel(part("PltFlwRose__PltFlwRose2_mat0"), "/assets/acnh/plants/flower-rose.glb");
+  expect([flower.castShadow, flower.receiveShadow]).toEqual([false, true]);
+  const lantern = prepareModel(part("mReBody"), "/assets/acnh/props/stone-lantern.glb", undefined, "none");
+  expect(lantern.castShadow).toBe(false);
+  for (const m of [bush, flower, lantern]) disposeModelMaterials(m);
 });
 
 it("classes outdoor glass and metal for reflections (row 237) and leaves characters, interiors, wood and fabric alone", () => {
@@ -124,7 +153,7 @@ it("tags prepared clones and held weapons with their look class", () => {
   const blade = new MeshStandardMaterial({ name: "M_Blade" }), grip = new MeshStandardMaterial({ name: "M_Grip" });
   const weapon = tagLookClasses(new Mesh(new BoxGeometry(), [blade, grip]), "/assets/game/weapons/sword-iron.glb");
   expect([blade.userData.lookClass, grip.userData.lookClass]).toEqual(["metal", "props"]);
-  const lamp = prepareModel(new Mesh(new BoxGeometry(), new MeshStandardMaterial({ name: "mReBody" })), "/assets/acnh/props/streetlamp.glb", true) as Mesh<BoxGeometry, MeshStandardMaterial>;
+  const lamp = prepareModel(new Mesh(new BoxGeometry(), new MeshStandardMaterial({ name: "mReBody" })), "/assets/acnh/props/streetlamp.glb") as Mesh<BoxGeometry, MeshStandardMaterial>;
   expect(lamp.material.userData.lookClass).toBe("metal");
   disposeModelMaterials(lamp);
   weapon.geometry.dispose(); blade.dispose(); grip.dispose();

@@ -5,7 +5,6 @@ import { useFrame, ThreeEvent } from "@react-three/fiber";
 import { Html } from "@react-three/drei";
 import * as THREE from "three";
 import { getTerrainHeight } from "./terrain";
-import { getBlobTexture } from "./BlobShadows";
 import Character, { CHARACTER_HEIGHT, type CharacterMotion } from "./character/Character";
 import { hashSeed, randomLook, seeded } from "@/lib/game/character/look";
 import { calculateCurvedHtmlPosition } from "@/lib/game/worldProjection";
@@ -244,11 +243,6 @@ export default function NPC({ persona, position, playerPosition, playerPositionR
 
   return (
     <group ref={groupRef} position={grounded}>
-      {/* Art pass 2026-07-07: New Leaf blob shadow (shadow maps are gone). */}
-      <mesh position={[0, 0.04, 0]} rotation={[-Math.PI / 2, 0, 0]} renderOrder={1}>
-        <planeGeometry args={[0.8, 0.55]} />
-        <meshBasicMaterial map={getBlobTexture()} transparent opacity={0.3} depthWrite={false} polygonOffset polygonOffsetFactor={-2} polygonOffsetUnits={-2} />
-      </mesh>
       <group ref={visualRef}>
       <group onClick={handleClick} onPointerOver={handlePointerOver} onPointerOut={handlePointerOut}>
         <Suspense fallback={null}><Character look={look} motion={motion} walkSpeed={2} /></Suspense>

@@ -159,7 +159,7 @@ function Firefly({ seed, anchor, groundHeight = sampleTerrainHeightFast }: { see
 
   return (
     <group ref={ref} position={[home.x, 1.0, home.z]}>
-      <GLBProp url="/assets/acnh/critters/firefly.glb" scale={0.012} rotation={[-Math.PI / 2, 0, 0]} castShadow={false} />
+      <GLBProp url="/assets/acnh/critters/firefly.glb" scale={0.012} rotation={[-Math.PI / 2, 0, 0]} />
       <sprite scale={[0.13, 0.13, 1]}>
         <spriteMaterial ref={matRef} map={glow} color="#ffec8b" transparent opacity={0.5} depthWrite={false} toneMapped={false} blending={THREE.AdditiveBlending} />
       </sprite>

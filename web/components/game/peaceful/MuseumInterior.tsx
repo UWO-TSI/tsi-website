@@ -53,7 +53,7 @@ function Case({ wing, exhibit, x, z }: { wing: Wing; exhibit: Exhibit; x: number
   return <group position={[x, 0, z]}>
     <Suspense fallback={null}><Piece name={piece} position={[0, 0, 0]} scale={wing === "aquarium" ? 0.27 : 0.1} glassMaterial={wing === "aquarium" ? TANK_GLASS : wing === "insect_hall" ? CASE_GLASS : undefined} /></Suspense>
     {exhibit.donated && (model
-      ? <Suspense fallback={null}><GLBProp url={model} position={[0, itemY - 0.2, 0]} scale={1.2} castShadow={false} /></Suspense>
+      ? <Suspense fallback={null}><GLBProp url={model} position={[0, itemY - 0.2, 0]} scale={1.2} /></Suspense>
       : exhibit.icon ? <Suspense fallback={null}><IconSprite url={exhibit.icon} y={itemY} z={wing === "aquarium" ? -0.38 : 0} /></Suspense> : null)}
     <Html position={[0, 0.25, -0.75]} center distanceFactor={9} zIndexRange={[3, 0]}>
       <div className={styles.plaque} data-empty={!exhibit.donated}>{exhibit.donated ? <><b>{exhibit.name}</b><span>Donated by {exhibit.donor_name}</span></> : <span>Empty case</span>}</div>
