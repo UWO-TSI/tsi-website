@@ -742,7 +742,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       <ShowcaseSheet open={sheet === "showcase"} onClose={() => setSheet(null)} />
       <MissionBoardSheet open={sheet === "missions"} onClose={() => setSheet(null)} gateNote={gate.open ? null : gate.reason} />
       {site === "ruins" && <CombatHud player={player} />}
-      {site === "ruins" ? <div className={styles.controls} data-combat><span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> Move</span><span>Mouse Aim</span><span>Click Attack</span><span><kbd>Space</kbd> Dodge</span><span><kbd>1</kbd>–<kbd>4</kbd> Abilities</span><span><kbd>E</kbd> Interact</span></div>
+      {site === "ruins" ? <div className={styles.controls} data-combat><span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> Move</span><span>Mouse Aim</span><span>Click Attack</span><span><kbd>Q</kbd> Dodge</span><span><kbd>1</kbd>–<kbd>4</kbd> Abilities</span><span><kbd>R</kbd> Swap</span><span><kbd>E</kbd> Interact</span></div>
       : <div className={styles.controls}><span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> Walk</span><span><kbd>Shift</kbd> Run</span><span><kbd>Space</kbd> Hop</span><span><kbd>E</kbd> Interact</span><span><kbd>Z</kbd> Zoom</span><span><kbd>{keyLabel(identity.settings.key_bindings.openMap)}</kbd> Map</span><span><kbd>J</kbd> Quests</span><span><kbd>{keyLabel(identity.settings.key_bindings.openJournal)}</kbd> Collection</span><span><kbd>C</kbd> Sneak</span></div>}
       <p className={styles.touchControls}>Tap the ground to move</p>
       <div className={styles.fade} data-active={fading} aria-hidden="true" />

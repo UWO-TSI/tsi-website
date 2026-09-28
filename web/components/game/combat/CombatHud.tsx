@@ -7,6 +7,7 @@
  * defeat card, pooled damage numbers, and the incantation overlay.
  */
 import { ENERGY, SLOT_IDS, combat, publishCombat, readAbilityKeys, useCombatVersion } from "@/lib/game/combat/runtime";
+import { keyName, readMoveKeys } from "@/lib/game/movement/keys";
 import { WEAPONS } from "@/lib/game/combat/data";
 import { resolveCast } from "@/lib/game/combat/actions";
 import { cancelCast } from "@/lib/game/combat/abilities";
@@ -41,7 +42,7 @@ export default function CombatHud({ player }: { player: React.RefObject<{ x: num
       <div className={styles.weaponLine}>
         <span>{w.name}</span>
         <small data-broken={p.durability[p.weapon] <= 0 || undefined}>Durability {p.durability[p.weapon]}/{w.maxDurability}{p.durability[p.weapon] <= 0 ? " · broken, half damage" : ""}</small>
-        <small className={styles.dodgePip} data-ready={p.dodgeCd <= 0 || undefined}><kbd>Space</kbd> Dodge · <kbd>{keys.swap.toUpperCase()}</kbd> Swap</small>
+        <small className={styles.dodgePip} data-ready={p.dodgeCd <= 0 || undefined}><kbd>{keyName(readMoveKeys().dash)}</kbd> Dodge · <kbd>{keys.swap.toUpperCase()}</kbd> Swap</small>
       </div>
       {kit && <small className={styles.kitLine}>{kit.subclass.name} · {kit.subclass.passive.name}{rt.transform ? ` · ${rt.transform.name}` : ""}
         {summons ? ` · Summons ${minions.reduce((n, u) => n + (u.def.cost ?? 1), 0)}/${kit.capacity}` : ""}{usesTotems ? ` · Totems ${totems.length}/${CAPS.totems}` : ""}</small>}
