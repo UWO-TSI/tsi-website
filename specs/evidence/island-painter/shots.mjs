@@ -30,7 +30,16 @@ async function open(q) {
   await page.clock.setSystemTime(new Date(T0.getTime() + 60000));
   await page.clock.runFor(2000);
 }
-async function shot(name) { const box = await page.locator("canvas").first().boundingBox(); await page.screenshot({ path: `${OUT}/${name}.png`, clip: box }); console.log("shot", name); }
+async function shot(name) {
+  const box = await page.locator("canvas").first().boundingBox();
+  await page.screenshot({ path: `${OUT}/${name}.png`, clip: box });
+  // Draw calls and triangles from the world's own Performance readout (one fake second of frames).
+  await page.evaluate(() => { const d = document.querySelector("details"); if (d) d.open = true; });
+  await page.clock.runFor(1200);
+  const perf = await page.evaluate(() => document.querySelector("details output")?.textContent?.replace(/\s+/g, " ") ?? "");
+  await page.evaluate(() => { const d = document.querySelector("details"); if (d) d.open = false; });
+  console.log("shot", name, "|", perf);
+}
 const views = (process.env.VIEWS ?? "spawn:0,-10 plaza:0,-1 shore:6,-16 west:-9,-3 east:10,6 north:0,10").split(" ").map(v => v.split(":"));
 for (const [name, at] of views) { await open(`time=day&weather=clear&season=summer&at=${at}`); await shot(name); }
 if (!process.env.NO_OVERVIEW) {

@@ -53,15 +53,31 @@ const TREE_MODELS = [
 /** A tree's size from its seed (also where its crown sheds leaves, IslandAtmosphere). */
 export const treeScale = (seed: number) => 0.85 + (seed % 5) * 0.08;
 
-export function NatureTree({ position, seed, models = TREE_MODELS }: { position: [number, number, number]; seed: number; models?: readonly string[] }) {
-  const url = models[seed % models.length];
-  const s = treeScale(seed);
-  const r: [number, number, number] = [0, treeYaw(seed), 0];
+/**
+ * The model(s) a nature spot places, relative to the spot: url, offset, yaw
+ * and scale by seed. NatureTree/Bush/FlowerCluster and the village's
+ * instanced nature (InstancedModels) both read these, so they match exactly.
+ */
+export interface NaturePart { url: string; offset: [number, number, number]; yaw: number; scale: number }
+export const treeParts = (seed: number, models: readonly string[] = TREE_MODELS): NaturePart[] =>
+  [{ url: models[seed % models.length], offset: [0, 0, 0], yaw: treeYaw(seed), scale: treeScale(seed) }];
+export const bushParts = (seed: number, models: readonly string[] = BUSH_MODELS): NaturePart[] =>
+  [{ url: models[seed % models.length], offset: [0, 0, 0], yaw: seed * 1.3, scale: 0.9 + (seed % 3) * 0.15 }];
+export const flowerParts = (seed: number, models: readonly string[] = FLOWER_MODELS): NaturePart[] =>
+  [0, 1, 2].map(j => ({ url: models[(seed + j) % models.length], offset: [(j - 1) * 0.4, 0, ((j * 7 + seed) % 3 - 1) * 0.3], yaw: j * 2.1, scale: 0.8 }));
+
+function Parts({ position, parts }: { position: [number, number, number]; parts: NaturePart[] }) {
   return (
-    <Suspense fallback={null}>
-      <GLBProp url={url} scale={s} position={position} rotation={r} />
-    </Suspense>
+    <group position={position}>
+      <Suspense fallback={null}>
+        {parts.map((p, j) => <GLBProp key={j} url={p.url} scale={p.scale} position={p.offset} rotation={[0, p.yaw, 0]} />)}
+      </Suspense>
+    </group>
   );
+}
+
+export function NatureTree({ position, seed, models = TREE_MODELS }: { position: [number, number, number]; seed: number; models?: readonly string[] }) {
+  return <Parts position={position} parts={treeParts(seed, models)} />;
 }
 
 export function treeYaw(seed: number): number {
@@ -79,12 +95,7 @@ const BUSH_MODELS = [
 ];
 
 export function NatureBush({ position, seed, models = BUSH_MODELS }: { position: [number, number, number]; seed: number; models?: readonly string[] }) {
-  const url = models[seed % models.length];
-  return (
-    <Suspense fallback={null}>
-      <GLBProp url={url} scale={0.9 + (seed % 3) * 0.15} position={position} rotation={[0, seed * 1.3, 0]} />
-    </Suspense>
-  );
+  return <Parts position={position} parts={bushParts(seed, models)} />;
 }
 
 // ─── Flowers ────────────────────────────────────────────────────
@@ -100,21 +111,7 @@ const FLOWER_MODELS = [
 ];
 
 export function NatureFlowerCluster({ position, seed, models = FLOWER_MODELS }: { position: [number, number, number]; seed: number; models?: readonly string[] }) {
-  return (
-    <group position={position}>
-      <Suspense fallback={null}>
-        {[0, 1, 2].map((j) => (
-          <GLBProp
-            key={j}
-            url={models[(seed + j) % models.length]}
-            scale={0.8}
-            position={[(j - 1) * 0.4, 0, ((j * 7 + seed) % 3 - 1) * 0.3]}
-            rotation={[0, j * 2.1, 0]}
-          />
-        ))}
-      </Suspense>
-    </group>
-  );
+  return <Parts position={position} parts={flowerParts(seed, models)} />;
 }
 
 // ─── Fence (ACNH 1-tile segments) ───────────────────────────────

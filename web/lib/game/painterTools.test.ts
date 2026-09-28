@@ -53,7 +53,7 @@ describe("organic brushes (one step per stroke)", () => {
     let changed = 0;
     for (let z = 0; z < 40; z++) for (let x = 0; x < 40; x++) {
       const was = x < 20, now = !isRiver(surfaceAt(a, x, z));
-      if (was !== now) { changed++; expect(x >= 18 && x <= 21, `${x},${z}`).toBe(true); }
+      if (was !== now) { changed++; expect(x === 19 || x === 20, `${x},${z}`).toBe(true); }
     }
     expect(changed).toBeGreaterThan(5);
     expect(valueNoise(1.3, 2.7, 3)).toBe(valueNoise(1.3, 2.7, 3));

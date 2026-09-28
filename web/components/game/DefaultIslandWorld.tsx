@@ -14,7 +14,8 @@ import PostFX from "./PostFX";
 import HQInterior from "./HQInterior";
 import SunShadows from "./SunShadows";
 import { Lantern } from "./AmbientProps";
-import { GLBProp, NatureTree, NatureBush, NatureFlowerCluster } from "./NatureModels";
+import { GLBProp, treeParts, bushParts, flowerParts, type NaturePart } from "./NatureModels";
+import { InstancedModels, type ModelPlacement } from "./InstancedNature";
 import { ACNHBuilding, ACNHParts, CHALET_VARIANTS } from "./ACNHBuilding";
 import { NatureFence } from "./NatureModels";
 import WharfPier from "./WharfPier";
@@ -217,6 +218,18 @@ function IslandScene({ identity, devAt, exitFrom, peaceful, fishSpot, fishing, c
   const exitSpot = exitFrom === "museum" ? spawns.museum : exitFrom === "cafe" ? spawns.cafe : exitFrom === "oracle" ? spawns.oracle : exitFrom === "ruins" ? spawns.ruins : null;
   const spawn = (devAt && !returned && !fromBoat && !exitFrom ? devAt : fromBoat ? spawns.boat : exitSpot ?? (returned ? spawns.returned : null)) ?? spawns.start;
   const terrain = useMemo(() => ({ ...ISLAND_TERRAIN, grass: look.grass }), [look.grass]);
+  const scenery = useMemo(() => {
+    const at = (spots: readonly { x: number; z: number; seed: number }[], parts: (seed: number) => NaturePart[]) => spots.flatMap(({ x, z, seed }) => {
+      const y = island.ground(x, z);
+      return parts(seed).map((p): ModelPlacement => ({ url: p.url, position: [x + p.offset[0], y + p.offset[1], z + p.offset[2]], rotation: p.yaw, scale: p.scale }));
+    });
+    return [
+      ...at(layout.trees, seed => treeParts(seed, SEASON_TREES[look.season])),
+      ...at(layout.bushes, seed => bushParts(seed, SEASON_BUSHES[look.season])),
+      ...(SEASON_FLOWERS[look.season].length ? at(layout.flowers, seed => flowerParts(seed, SEASON_FLOWERS[look.season])) : []),
+      ...layout.props.map((p): ModelPlacement => ({ url: `/assets/acnh/props/${p.model}.glb`, position: [p.x, island.ground(p.x, p.z), p.z], rotation: p.yaw ?? 0, scale: p.scale ?? 1 })),
+    ];
+  }, [layout, island, look.season]);
   const near = useRef<Near>(null);
   useEffect(() => { player.current.set(...spawn); }, [reset, spawn, player]);
   useFollowCamera(player, zoom, overview ? layout.scale.overview : null);
@@ -257,11 +270,8 @@ function IslandScene({ identity, devAt, exitFrom, peaceful, fishSpot, fishing, c
       <VillageLandmarks layout={layout} ground={island.ground} opened={progression.opened} stage={progression.stage} ceremony={ceremony} light={light} />
       {layout.bridges.map(b => <GLBProp key={b.id} url="/assets/acnh/props/bridge-wooden.glb" position={[b.x, b.y, b.z]} rotation={[0, b.yaw ?? 0, 0]} />)}
       {layout.lamps.map(l => <Lantern key={l.id} position={[l.x, island.ground(l.x, l.z), l.z]} intensity={light.lampsOn ? light.lamp * 1.5 : 0} glow={light.lampsOn ? 1.2 : 0} />)}
-      {layout.props.map(prop => <GLBProp key={prop.id} url={`/assets/acnh/props/${prop.model}.glb`}
-        position={[prop.x, island.ground(prop.x, prop.z), prop.z]} scale={prop.scale ?? 1} rotation={[0, prop.yaw ?? 0, 0]} />)}
-      {layout.trees.map(({ x, z, seed }, i) => <NatureTree key={`tree-${i}`} position={[x, island.ground(x, z), z]} seed={seed} models={SEASON_TREES[look.season]} />)}
-      {layout.bushes.map(({ x, z, seed }, i) => <NatureBush key={`bush-${i}`} position={[x, island.ground(x, z), z]} seed={seed} models={SEASON_BUSHES[look.season]} />)}
-      {SEASON_FLOWERS[look.season].length > 0 && layout.flowers.map(({ x, z, seed }, i) => <NatureFlowerCluster key={`flower-${i}`} position={[x, island.ground(x, z), z]} seed={seed} models={SEASON_FLOWERS[look.season]} />)}
+      {/* Nature and props from the map, instanced: one draw per model sub-mesh however many the island has. */}
+      <InstancedModels items={scenery} />
       {/* Residents stand where their schedule puts them this phase; during a ceremony they stroll to the monument and cheer. */}
       {residents.map(({ persona, home, plaza }) => <NPC key={`npc-${persona.id}-${home.join()}-${reset}`} persona={persona} position={ceremony ? plaza : home} playerPositionRef={player}
         groundHeight={island.ground} constrainMove={island.move}

@@ -44,9 +44,9 @@ export type OrganicOp = "smooth" | "grow" | "shrink" | "jitter";
  *   narrow).
  * - smooth: majority of the 3×3 decides land or water, and a stray level with
  *   fewer than three matching neighbours joins the level most of them share.
- * - jitter: within two cells of the coastline, low-frequency noise decides land
- *   or water (level-0 ground only), so a straight painted edge becomes bays and
- *   headlands a cell or two deep.
+ * - jitter: on the coastline, low-frequency noise decides land or water
+ *   (level-0 ground only), so a straight painted edge becomes bays and
+ *   headlands; each stroke rolls new noise and moves the coast a cell.
  */
 export function organicCell(op: OrganicOp, map: IslandMap, before: CellSnapshot, x: number, z: number, seed = 1): void {
   if (!inBounds(map, x, z)) return;
@@ -61,19 +61,13 @@ export function organicCell(op: OrganicOp, map: IslandMap, before: CellSnapshot,
     return;
   }
   if (op === "jitter") {
-    // Within two cells of the coast (as the stroke began), noise decides: bays and headlands up to two deep.
-    let shore = false, landSurface = -1;
-    for (let dz = -2; dz <= 2; dz++) for (let dx = -2; dx <= 2; dx++) {
-      if (!inBounds(map, x + dx, z + dz)) continue;
-      const h = heightOf(map, before, x + dx, z + dz);
-      if ((h < 0) !== (here < 0)) shore = true;
-      if (h === 0 && landSurface < 0 && Math.abs(dx) + Math.abs(dz) <= 2) landSurface = before.surfaces[(z + dz) * map.width + x + dx];
-    }
-    if (!shore || here > 0) return;
+    // Only the coastline itself moves, one cell per stroke either way, so a bay never strands a pocket of water.
+    const other = around.find(n => (n.h < 0) !== (here < 0));
+    if (!other || here > 0) return;
     const land = valueNoise(x / 3.2, z / 3.2, seed) > 0.5;
     if (land === here >= 0) return;
     if (!land) setWater(map, i);
-    else if (landSurface >= 0) setLand(map, i, 0, landSurface);
+    else if (other.h === 0) setLand(map, i, 0, other.s);
     return;
   }
   // smooth
