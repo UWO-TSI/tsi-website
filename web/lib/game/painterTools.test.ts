@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cellsInPolygon, generateCoast, nextObjectId, organicCell, snapPlacement, snapshotCells, valueNoise, type OrganicOp } from "./painterTools";
+import { cellsInPolygon, nextObjectId, organicCell, snapPlacement, snapshotCells, valueNoise, type OrganicOp } from "./painterTools";
 import { createCenteredMap, levelAt, setCell, surfaceAt, Surface, isRiver, type IslandMap } from "./grid";
 import { LANDMARK_INFO } from "./defaultIsland";
 
@@ -65,22 +65,6 @@ describe("lasso", () => {
     const cells = cellsInPolygon([[0.5, 0.5], [4.5, 0.5], [4.5, 3.5], [0.5, 3.5]], 10, 10);
     expect(cells).toHaveLength(12);
     expect(cellsInPolygon([[0, 0], [1, 1]], 10, 10)).toEqual([]);
-  });
-});
-
-describe("coastline generator", () => {
-  it("makes one seeded island: grass inside a sand ring, sea at the edges", () => {
-    const a = createCenteredMap(96, 96), b = createCenteredMap(96, 96);
-    generateCoast(a, { seed: 5 }); generateCoast(b, { seed: 5 });
-    expect([...a.surfaces]).toEqual([...b.surfaces]);
-    expect(surfaceAt(a, 48, 48)).toBe(Surface.Grass);
-    expect(surfaceAt(a, 0, 0)).toBe(Surface.River);
-    const grass = [...a.surfaces].filter(s => s === Surface.Grass).length, sand = [...a.surfaces].filter(s => s === Surface.Sand).length;
-    expect(grass / (96 * 96)).toBeGreaterThan(0.2);
-    expect(sand).toBeGreaterThan(100);
-    const c = createCenteredMap(96, 96);
-    generateCoast(c, { seed: 6 });
-    expect([...c.surfaces]).not.toEqual([...a.surfaces]);
   });
 });
 

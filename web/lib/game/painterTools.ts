@@ -12,7 +12,6 @@
  * River or legacy Void.
  */
 import { CLIFF_LEVELS, MAX_LEVEL, Surface, inBounds, isRamp, isRiver, isVoid, type IslandMap } from "./grid";
-import { GAUSSIANS, HARMONICS } from "./coast";
 import type { MapObject, ObjectKind } from "./villageMap";
 
 export interface CellSnapshot { levels: Uint8Array; surfaces: Uint8Array }
@@ -121,29 +120,6 @@ export function cellsInPolygon(poly: readonly (readonly [number, number])[], wid
     }
   }
   return out;
-}
-
-/**
- * A starting coastline: coast.ts's harmonics (the legacy island's organic
- * lobes) with seeded phases and two seeded bays, scaled to `radius` cells,
- * centred on the map. Grass inside, a `beach`-cell sand ring, sea outside, all
- * at level 0. Replaces the terrain; objects are the caller's to keep.
- */
-export function generateCoast(map: IslandMap, { seed = 1, radius = Math.min(map.width, map.depth) * 0.36, beach = 2 } = {}): void {
-  let s = seed >>> 0 || 1;
-  const rnd = () => (s = (Math.imul(s, 1664525) + 1013904223) >>> 0) / 4294967296;
-  const phases = HARMONICS.map(() => rnd() * Math.PI * 2);
-  const bays = GAUSSIANS.slice(0, 2).map(([, sigma, amp]) => [rnd() * Math.PI * 2, sigma * 1.4, amp] as const);
-  const k = radius / 52, cx = (map.width - 1) / 2, cz = (map.depth - 1) / 2;
-  for (let z = 0; z < map.depth; z++) for (let x = 0; x < map.width; x++) {
-    const a = Math.atan2(z - cz, x - cx), r = Math.hypot(x - cx, z - cz);
-    let wobble = 0;
-    HARMONICS.forEach(([h, amp], n) => { wobble += amp * Math.sin(h * a + phases[n]); });
-    for (const [at, sigma, amp] of bays) { const d = Math.atan2(Math.sin(a - at), Math.cos(a - at)) / sigma; wobble += amp * Math.exp(-d * d); }
-    const edge = radius + wobble * k * 1.6, i = z * map.width + x;
-    map.levels[i] = 0;
-    map.surfaces[i] = r < edge - beach ? Surface.Grass : r < edge ? Surface.Sand : Surface.River;
-  }
 }
 
 /** The next free id for a kind: `tree-17`. */

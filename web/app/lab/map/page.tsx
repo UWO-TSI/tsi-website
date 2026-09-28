@@ -63,7 +63,7 @@ import { BRIDGE_DECK_HALF, LANDMARK_IDS, LANDMARK_INFO, PROP_FOOTPRINT, TREE_TRU
 import { villageHealth, type VillageHealth } from "@/lib/game/mapHealth";
 import { mapBudget } from "@/lib/game/mapBudget";
 import { classifyWater, WATER_CLASS } from "@/lib/game/fishingSpots";
-import { cellsInPolygon, generateCoast, nextObjectId, organicCell, snapPlacement, snapshotCells, type CellSnapshot, type OrganicOp } from "@/lib/game/painterTools";
+import { cellsInPolygon, nextObjectId, organicCell, snapPlacement, snapshotCells, type CellSnapshot, type OrganicOp } from "@/lib/game/painterTools";
 import { RESIDENT_ANCHORS, SHARED_SPACING } from "@/lib/content/residents";
 import { FURNITURE, type Furniture } from "@/lib/study/seats";
 import { DEFAULT_TABLES } from "@/lib/study/tables";
@@ -354,8 +354,6 @@ export default function MapLab() {
   const [importText, setImportText] = useState("");
   const [importError, setImportError] = useState("");
   const [legalised, setLegalised] = useState(0);
-  const [coastSeed, setCoastSeed] = useState(7);
-  const [coastSize, setCoastSize] = useState(36);
   const [placeKind, setPlaceKind] = useState<ObjectKind | "select">("select");
   const [placeId, setPlaceId] = useState("");
   const [placeModel, setPlaceModel] = useState("");
@@ -1702,31 +1700,6 @@ export default function MapLab() {
             </div>
             <div style={{ color: "#5c6670", marginTop: 5, lineHeight: 1.5 }}>
               Keeps world positions, so the island and its objects stay put and the new edge is sea. Shrinking discards whatever falls outside.
-            </div>
-          </div>
-
-          <div style={{ borderTop: "1px solid #232a31", paddingTop: 10, marginBottom: 10 }}>
-            <div style={{ color: "#7d868e", marginBottom: 5 }}>coastline generator</div>
-            <div style={{ display: "flex", gap: 4, alignItems: "center", marginBottom: 6 }}>
-              <span>seed</span>
-              <input type="number" value={coastSeed} onChange={(e) => setCoastSeed(Math.round(Number(e.target.value)))} style={{ ...field, width: 64 }} />
-              <button onClick={() => setCoastSeed(Math.floor(Math.random() * 10000))} style={btn(false, { padding: "4px 6px" })}>🎲</button>
-              <span>size</span>
-              <input type="number" min={15} max={48} value={coastSize} onChange={(e) => setCoastSize(Number(e.target.value))} style={{ ...field, width: 52 }} />
-              <span>%</span>
-            </div>
-            <button
-              onClick={() => {
-                commit();
-                generateCoast(world().map, { seed: coastSeed, radius: (Math.min(map.width, map.depth) * coastSize) / 100 });
-                bump();
-              }}
-              style={btn(false, { width: "100%" })}
-            >
-              generate a starting coast
-            </button>
-            <div style={{ color: "#5c6670", marginTop: 5, lineHeight: 1.5 }}>
-              The legacy island&apos;s coast harmonics with a new seed: grass, a sand ring, sea. Replaces the terrain (undoable); objects stay.
             </div>
           </div>
 

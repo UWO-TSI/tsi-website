@@ -73,3 +73,27 @@ describe("size-dependent settings follow the map's land", () => {
     expect(s.glintRadius).toBe(138);
   });
 });
+
+describe("lab drafts (/lab/island?draft=1)", () => {
+  it("swaps what every system reads, then back to the shipped file", async () => {
+    const { villageIsland, villageSpawn, landmarks } = await import("./defaultIsland");
+    const { setVillageDoc } = await import("./villageMap");
+    const shipped = village();
+    // A tiny synthetic draft: a 6×6 grass square in a 16×16 sea, a spawn and one tree.
+    const map = createCenteredMap(16, 16);
+    map.surfaces.fill(Surface.River);
+    for (let z = 5; z < 11; z++) for (let x = 5; x < 11; x++) setCell(map, x, z, 0, Surface.Grass);
+    setVillageDoc(serialiseVillage(map, [{ id: "default", kind: "spawn", x: -1, z: 1 }, { id: "tree-0", kind: "tree", x: 1, z: 0, seed: 0 }]));
+    try {
+      expect(village()).not.toBe(shipped);
+      expect(village().map.width).toBe(16);
+      expect(villageSpawn()).toEqual([-1, 0, 1]);
+      expect(landmarks()).toEqual([]);
+      expect(villageIsland().standable(-1, 1)).toBe(true);
+      expect(villageIsland().standable(1, 0)).toBe(false);
+    } finally {
+      setVillageDoc(doc as VillageDoc);
+    }
+    expect(village().map.width).toBe(shipped.map.width);
+  });
+});

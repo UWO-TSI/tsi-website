@@ -44,41 +44,36 @@ await page.mouse.click(sx, sy); await page.waitForTimeout(400);
 await shot("painter-object-selected");
 await page.keyboard.press("Control+z");
 
-// 3. A fresh 96×96 island from the coastline generator.
+// 3. The tools on a scratch patch (nothing here is an island design; it is not saved or shipped):
+//    "new" clears to sea, a land rectangle, then each brush along its edges.
 await button("new").click();
-await button("96").click();
-await button("generate a starting coast").click(); await page.waitForTimeout(800);
-await zoom(7);
-await shot("painter-coast-generator");
-
-// 4. Organic brushes: jitter the south-east (screen-left) coast, grow the east (bottom) coast, shrink the west (top).
+await zoom(8);
+await button("land").click(); await button("rect").click();
+await drag([[20, 20], [44, 42]]);
 const box = await canvas.boundingBox(), clip = { x: box.x, y: box.y, width: box.width, height: box.height };
-const coast = [[83, 28], [83, 40], [83, 52], [82, 62]];
 await shot("painter-before-organic", clip);
-await button("jitter").click(); await drag(coast); await drag(coast.map(([x, z]) => [x - 1, z])); await drag(coast.map(([x, z]) => [x + 1, z]));
+await button("free").click();
+const edge = [[44, 22], [44, 30], [44, 38], [44, 42]];
+await button("jitter").click(); await drag(edge); await drag(edge);
 await shot("painter-jitter", clip);
-await button("smooth").click(); await drag(coast);
+await button("smooth").click(); await drag(edge); await drag([[20, 20], [44, 20]]);
 await shot("painter-smooth", clip);
-await button("grow").click();
-for (let i = 0; i < 3; i++) await drag([[36, 15], [48, 14], [60, 15]]);
-await button("shrink").click();
-for (let i = 0; i < 3; i++) await drag([[38, 78], [48, 79], [58, 78]]);
+await button("grow").click(); for (let i = 0; i < 2; i++) await drag([[24, 42], [40, 42]]);
+await button("shrink").click(); for (let i = 0; i < 2; i++) await drag([[20, 26], [20, 36]]);
 await shot("painter-grow-shrink", clip);
 
-// 5. Lasso a plateau (flat L2) and ramp into it.
+// 4. Lasso a flat L2 plateau on the patch.
 await button("flat").click(); await button("L2").click(); await button("lasso").click();
-await drag([[40, 40], [50, 38], [56, 46], [50, 54], [42, 52], [38, 46], [40, 40]]);
+await drag([[27, 26], [34, 25], [37, 31], [33, 36], [27, 35], [26, 30], [27, 26]]);
 await shot("painter-lasso-plateau", clip);
 
-// 6. Place objects: a building, a tree and a bench, then select the building.
+// 5. The object layer: place a tree and a bench, turn the bench, select the tree.
 await button("object").click();
-await page.getByRole("button", { name: "landmark", exact: true }).click();
-const [bx, by] = await at(46, 30); await page.mouse.click(bx, by);
 await page.getByRole("button", { name: "tree", exact: true }).click();
-for (const [x, z] of [[36, 36], [38, 58], [58, 36]]) { const [px, py] = await at(x, z); await page.mouse.click(px, py); }
+const [tx, ty] = await at(40, 24); await page.mouse.click(tx, ty);
 await page.getByRole("button", { name: "bench", exact: true }).click();
-const [cx, cy] = await at(44, 36); await page.mouse.click(cx, cy); await page.keyboard.press("r");
+const [cx, cy] = await at(40, 36); await page.mouse.click(cx, cy); await page.keyboard.press("r");
 await page.getByRole("button", { name: "select / move", exact: true }).click();
-await page.mouse.click(bx, by); await page.waitForTimeout(600);
+await page.mouse.click(tx, ty); await page.waitForTimeout(600);
 await shot("painter-objects-placed");
 await browser.close();

@@ -23,9 +23,8 @@ export const COAST_BASE = 52;
 export const COAST_SCALE = 61 / 52;
 
 // [harmonic k, amplitude] — S1 character pass: amplitudes +35% so the
-// bigger island reads MORE irregular, not just larger (never oval). Also the
-// painter's coastline generator (lib/game/painterTools.ts), scaled to its size.
-export const HARMONICS: [number, number][] = [
+// bigger island reads MORE irregular, not just larger (never oval).
+const HARMONICS: [number, number][] = [
   [2, 4.6],
   [3, 3.3],
   [5, 1.9],
@@ -34,7 +33,7 @@ export const HARMONICS: [number, number][] = [
 
 // [center angle, sigma, amplitude] — cove bay + framing headlands, plus
 // the S1 NW INLET (a narrow deep bite with a small framing headland).
-export const GAUSSIANS: [number, number, number][] = [
+const GAUSSIANS: [number, number, number][] = [
   [1.16, 0.14, -3.2],
   [0.8, 0.1, 3.4],
   [1.54, 0.1, 3.4],
