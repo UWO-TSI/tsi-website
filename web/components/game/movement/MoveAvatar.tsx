@@ -93,6 +93,11 @@ function place(group: THREE.Object3D, x: number, y: number, z: number, sy: numbe
   group.scale.set(sxz, sy, sxz);
 }
 
+function screenOf([x, y, z]: [number, number, number], camera: THREE.Camera, canvas: HTMLCanvasElement) {
+  const v = new THREE.Vector3(x, y + 0.7, z).project(camera), r = canvas.getBoundingClientRect();
+  return { x: r.left + ((v.x + 1) / 2) * r.width, y: r.top + ((1 - v.y) / 2) * r.height };
+}
+
 /** The presses went to the sim this frame. */
 function consumePresses(stick: StickInput) { stick.jumpPressed = stick.dashPressed = false; }
 
@@ -116,7 +121,7 @@ export default function MoveAvatar({ world, tuning, juice, spawn, stick, binding
   onEvents?: (events: MoveEvent[]) => void;
   frozen?: boolean;
 }) {
-  const { camera } = useThree();
+  const { camera, gl } = useThree();
   const { look } = useMyLook();
   const { play: playSFX } = useSFX();
   const anchor = useRef<THREE.Group>(null);
@@ -145,8 +150,10 @@ export default function MoveAvatar({ world, tuning, juice, spawn, stick, binding
       pause: () => { dev.current.paused = true; dev.current.budget = 0; },
       run: (seconds: number) => { dev.current.paused = true; dev.current.budget += seconds; },
       resume: () => { dev.current.paused = false; },
+      /** Where the avatar is on the page (evidence crops). */
+      screen: () => (sim.current ? screenOf(interpolated(sim.current), camera, gl.domElement) : null),
     } });
-  }, [world]);
+  }, [world, camera, gl]);
 
   useEffect(() => {
     if (frozen) return;

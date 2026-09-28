@@ -8,7 +8,7 @@
  * readout. Dev only (the /lab layout 404s in production).
  *
  * URL: ?at=x,z starts somewhere else, ?touch=1 shows the touch controls on a
- * desktop, ?panel=0 hides the panel (evidence frames).
+ * desktop, ?panel=0 hides the panel and the signs, ?zoom=0.6 brings the camera closer (evidence frames).
  */
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
@@ -34,6 +34,7 @@ import { COURSE_GATES, COURSE_SIGNS, COURSE_SPAWN, NEW_LAP, course, gateAt, lapS
 import { MOVE_TUNING, createMoveState, stepMove, NO_INPUT, STEP, type MoveInput, type MoveTuning, type MoveWorld } from "@/lib/game/movement/sim";
 import { MOVE_ACTIONS, keyName, readMoveKeys, remapMove, type MoveAction } from "@/lib/game/movement/keys";
 import { readAbilityKeys } from "@/lib/game/combat/runtime";
+import { AudioManager } from "@/lib/game/audio";
 
 const SUMMER = { season: "summer" as const, weights: { spring: 0, summer: 1, autumn: 0, winter: 0 } };
 const LOOK = seasonLook(SUMMER, {});
@@ -98,14 +99,14 @@ function LapTracker({ telemetry, lap, timeScale }: { telemetry: React.RefObject<
   return null;
 }
 
-function CourseScene({ world, tuning, juice, spawn, stick, bindings, telemetry, timeScale, lap, walkSpeed, lite, shadows }: {
+function CourseScene({ world, tuning, juice, spawn, stick, bindings, telemetry, timeScale, lap, walkSpeed, lite, shadows, zoom, signs }: {
   world: ReturnType<typeof islandOf>; tuning: React.RefObject<MoveTuning>; juice: React.RefObject<MoveJuice>; spawn: [number, number];
   stick: React.RefObject<StickInput>; bindings: Record<MoveAction, string>; telemetry: React.RefObject<MoveTelemetry>;
-  timeScale: React.RefObject<number>; lap: React.RefObject<{ lap: Lap; now: number }>; walkSpeed: number; lite: boolean; shadows: boolean;
+  timeScale: React.RefObject<number>; lap: React.RefObject<{ lap: Lap; now: number }>; walkSpeed: number; lite: boolean; shadows: boolean; zoom: number; signs: boolean;
 }) {
   const v = course();
   const camTarget = useRef(new THREE.Vector3(spawn[0], 0, spawn[1]));
-  useFollowCamera(camTarget, 1, null);
+  useFollowCamera(camTarget, zoom, null);
   const trees = useMemo(() => objectsOf("tree", v).map((o): TreeSpot => ({ x: o.x, z: o.z, seed: o.seed ?? 0 })), [v]);
   const scenery = useMemo((): ModelPlacement[] => [
     ...trees.flatMap(({ x, z, seed }) => treeParts(seed, SEASON_TREES.summer).map((p): ModelPlacement => ({ url: p.url, position: [x + p.offset[0], world.ground(x, z) + p.offset[1], z + p.offset[2]], rotation: p.yaw, scale: p.scale }))),
@@ -119,7 +120,7 @@ function CourseScene({ world, tuning, juice, spawn, stick, bindings, telemetry, 
     <GridOcean map={v.map} lite={lite} />
     <InstancedModels items={scenery} />
     <group position={[cafe.x, 0, cafe.z]}><ACNHParts parts={CHALET_VARIANTS.brown} rotationY={Math.PI} /></group>
-    {COURSE_SIGNS.map(s => <Html key={s.text} position={[s.x, world.ground(s.x, s.z) + 2.4, s.z]} center distanceFactor={12} zIndexRange={[3, 0]}>
+    {signs && COURSE_SIGNS.map(s => <Html key={s.text} position={[s.x, world.ground(s.x, s.z) + 2.4, s.z]} center distanceFactor={12} zIndexRange={[3, 0]}>
       <div style={{ background: "rgba(15,15,16,0.62)", color: "#f1ffff", padding: "2px 8px", borderRadius: 4, font: "600 12px ui-monospace, Menlo, monospace", whiteSpace: "nowrap", pointerEvents: "none" }}>{s.text}</div>
     </Html>)}
     <MoveAvatar world={world} tuning={tuning} juice={juice} spawn={spawn} stick={stick} bindings={bindings} camTarget={camTarget} telemetry={telemetry} timeScale={timeScale} walkSpeed={walkSpeed} />
@@ -173,8 +174,10 @@ export default function MoveLab() {
   const [bindings, setBindings] = useState<Record<MoveAction, string>>(readMoveKeys);
   const [listening, setListening] = useState<MoveAction | null>(null);
   const [note, setNote] = useState<string | null>(null);
-  const [panel, setPanel] = useState(params.get("panel") !== "0");
   const [touch] = useState(() => params.get("touch") === "1" || (typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches));
+  const [narrow] = useState(() => typeof window !== "undefined" && window.innerWidth < 720);
+  // The panel starts closed on a phone (it would cover the course).
+  const [panel, setPanel] = useState(params.get("panel") ? params.get("panel") !== "0" : !touch);
   const [hud, setHud] = useState<{ t: MoveTelemetry; lap: Lap; now: number } | null>(null);
   const [respawn, setRespawn] = useState(0);
   const tuningRef = useRef(tuning), juiceRef = useRef(juice), timeScale = useRef(slow);
@@ -184,6 +187,13 @@ export default function MoveLab() {
   useEffect(() => { tuningRef.current = tuning; }, [tuning]);
   useEffect(() => { juiceRef.current = juice; }, [juice]);
   useEffect(() => { timeScale.current = slow; }, [slow]);
+  // Sound effects unlock on the first key or tap (browsers need a gesture).
+  useEffect(() => {
+    const unlock = () => AudioManager.enable();
+    window.addEventListener("pointerdown", unlock, { once: true });
+    window.addEventListener("keydown", unlock, { once: true });
+    return () => { window.removeEventListener("pointerdown", unlock); window.removeEventListener("keydown", unlock); };
+  }, []);
 
   // The panel's values survive a reload (this browser only); Copy JSON is how they reach the repo.
   useEffect(() => {
@@ -227,7 +237,7 @@ export default function MoveLab() {
       onCreated={({ gl }) => { gl.toneMapping = THREE.NeutralToneMapping; gl.outputColorSpace = THREE.SRGBColorSpace; }}>
       <Suspense fallback={null}>
         <CourseScene key={respawn} world={world} tuning={tuningRef} juice={juiceRef} spawn={spawn} stick={stick} bindings={bindings} telemetry={telemetry}
-          timeScale={timeScale} lap={lap} walkSpeed={tuning.walkSpeed} lite={graphics.liteMode} shadows={graphics.shadows && !graphics.liteMode} />
+          timeScale={timeScale} lap={lap} walkSpeed={tuning.walkSpeed} lite={graphics.liteMode} shadows={graphics.shadows && !graphics.liteMode} zoom={Number(params.get("zoom")) || 1} signs={params.get("panel") !== "0"} />
         <PostFX antialias={!graphics.liteMode && !graphics.pixelated} grade={LIGHT.grade} fx={lookFx(CURRENT, !graphics.liteMode)} />
         <LookMaterials preset={CURRENT} />
         <SunShadows />
@@ -245,14 +255,14 @@ export default function MoveLab() {
     </div>}
 
     {/* Lap timer */}
-    {h && <div data-testid="move-lap" style={{ ...box, position: "absolute", left: "50%", top: 12, transform: "translateX(-50%)", padding: "8px 14px", textAlign: "center" }}>
+    {h && <div data-testid="move-lap" style={{ ...box, position: "absolute", padding: "8px 14px", textAlign: "center", ...(narrow ? { left: 12, top: 118 } : { left: "50%", top: 12, transform: "translateX(-50%)" }) }}>
       <div style={{ fontSize: 20, fontWeight: 700 }}>{h.lap.running ? fmt(h.now - h.lap.start) : "0:00.00"}</div>
       <div style={{ color: "#c9d1d6" }}>{h.lap.running ? (h.lap.next < COURSE_GATES.length ? `Next: ${COURSE_GATES[h.lap.next].name} (${h.lap.next}/${COURSE_GATES.length - 1})` : "Next: the start line") : "Cross the brick line to start a lap"}</div>
       <div style={{ color: "#8a939a" }}>Last {h.lap.last === null ? "—" : fmt(h.lap.last)} · Best {h.lap.best === null ? "—" : fmt(h.lap.best)}</div>
     </div>}
 
     <div style={{ ...box, position: "absolute", left: 12, bottom: touch ? 180 : 12, padding: "6px 10px", color: "#c9d1d6" }}>
-      {MOVE_ACTIONS.filter(a => !["forward", "left", "back", "right"].includes(a.id)).map(a => <span key={a.id} style={{ marginRight: 10 }}><kbd>{keyName(bindings[a.id])}</kbd> {a.name}</span>)}
+      {!touch && MOVE_ACTIONS.filter(a => !["forward", "left", "back", "right"].includes(a.id)).map(a => <span key={a.id} style={{ marginRight: 10 }}><kbd>{keyName(bindings[a.id])}</kbd> {a.name}</span>)}
       <button onClick={() => { lap.current = { lap: NEW_LAP, now: lap.current.now }; setRespawn(n => n + 1); }} style={{ marginLeft: 6, color: "#FFD166" }}>Back to start</button>
     </div>
 
@@ -260,7 +270,7 @@ export default function MoveLab() {
 
     {/* Tuning panel */}
     <button onClick={() => setPanel(p => !p)} style={{ ...box, position: "absolute", right: 12, top: 12, padding: "6px 10px", zIndex: 30 }}>{panel ? "Hide tuning" : "Tuning"}</button>
-    {panel && <aside data-testid="move-panel" style={{ ...box, position: "absolute", right: 12, top: 48, bottom: 12, width: 320, maxWidth: "calc(100vw - 24px)", overflowY: "auto", padding: 12, zIndex: 25 }}>
+    {panel && <aside data-testid="move-panel" style={{ ...box, position: "absolute", right: 12, top: 48, bottom: 12, width: 340, maxWidth: "calc(100vw - 24px)", overflowY: "auto", overflowX: "hidden", boxSizing: "border-box", padding: 12, zIndex: 25 }}>
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
         <select value={preset} onChange={e => { const p = e.target.value; setPreset(p); if (PRESETS[p]) setTuning({ ...MOVE_TUNING, ...PRESETS[p] }); }} style={{ background: "#1b2230", color: "#fff" }}>
           {[...Object.keys(PRESETS), ...(PRESETS[preset] ? [] : [preset])].map(p => <option key={p}>{p}</option>)}
@@ -278,17 +288,17 @@ export default function MoveLab() {
       </p>
       {GROUPS.map(g => <fieldset key={g.name} style={{ border: "1px solid rgba(255,255,255,0.12)", borderRadius: 6, margin: "8px 0", padding: "4px 8px" }}>
         <legend style={{ color: "#FFD166" }}>{g.name}</legend>
-        {g.keys.map(([k, min, max, step]) => <label key={k} style={{ display: "grid", gridTemplateColumns: "120px 1fr 44px", gap: 6, alignItems: "center", margin: "3px 0" }}>
+        {g.keys.map(([k, min, max, step]) => <label key={k} style={{ display: "grid", gridTemplateColumns: "118px minmax(0, 1fr) 46px", gap: 6, alignItems: "center", margin: "3px 0" }}>
           <span>{label(k)}</span>
-          <input type="range" min={min} max={max} step={step} value={tuning[k]} onChange={e => set(k, Number(e.target.value))} />
+          <input type="range" min={min} max={max} step={step} value={tuning[k]} style={{ width: "100%", minWidth: 0 }} onChange={e => set(k, Number(e.target.value))} />
           <output style={{ textAlign: "right" }}>{tuning[k]}</output>
         </label>)}
       </fieldset>)}
       <fieldset style={{ border: "1px solid rgba(255,255,255,0.12)", borderRadius: 6, margin: "8px 0", padding: "4px 8px" }}>
         <legend style={{ color: "#FFD166" }}>Juice</legend>
-        {JUICE_KEYS.map(([k, min, max, step]) => <label key={k} style={{ display: "grid", gridTemplateColumns: "120px 1fr 44px", gap: 6, alignItems: "center", margin: "3px 0" }}>
+        {JUICE_KEYS.map(([k, min, max, step]) => <label key={k} style={{ display: "grid", gridTemplateColumns: "118px minmax(0, 1fr) 46px", gap: 6, alignItems: "center", margin: "3px 0" }}>
           <span>{label(k)}</span>
-          <input type="range" min={min} max={max} step={step} value={juice[k]} onChange={e => { setJuice(j => ({ ...j, [k]: Number(e.target.value) })); setPreset("Custom"); }} />
+          <input type="range" min={min} max={max} step={step} value={juice[k]} style={{ width: "100%", minWidth: 0 }} onChange={e => { setJuice(j => ({ ...j, [k]: Number(e.target.value) })); setPreset("Custom"); }} />
           <output style={{ textAlign: "right" }}>{juice[k]}</output>
         </label>)}
       </fieldset>

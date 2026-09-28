@@ -154,7 +154,7 @@ export const LAP_ROUTE: RouteStep[] = [
 
 /** Input for each step along a route; returns null when the route is done. */
 export function routePilot(route: readonly RouteStep[] = LAP_ROUTE) {
-  let i = 0, phase = 0, t = 0;
+  let i = 0, phase = 0, t = 0, ready = true;
   return (s: { x: number; z: number; y: number; vy: number; mode: string; vx: number; vz: number }, dt: number) => {
     if (i >= route.length) return null;
     const step = route[i], next = route[i + 1] ?? step;
@@ -175,7 +175,9 @@ export function routePilot(route: readonly RouteStep[] = LAP_ROUTE) {
       if (step.move === "dash-jump" || step.move === "dash") return { ...input, jump: false, dashPressed: true };
       return { ...input, jumpPressed: true };
     }
-    if (step.move === "hops" && s.mode === "air" && s.vy < 0 && s.y < 0.3 && phase < 5) { phase++; return { ...input, jumpPressed: true }; }
+    if (s.vy > 0) ready = true;
+    // One press per descent, just before touching down: each lands as a timed hop.
+    if (step.move === "hops" && ready && s.mode === "air" && s.vy < 0 && s.y < 0.3 && phase < 5) { ready = false; phase++; return { ...input, jumpPressed: true }; }
     if (step.move === "hops" && phase < 5) return input;
     if (step.move === "long-dash" && phase === 2 && s.mode === "air" && s.vy < 0) { phase = 3; return { ...input, dashPressed: true }; }
     if (step.move === "dash-jump" && phase === 2 && t > 0.06) { phase = 3; return { ...input, jumpPressed: true }; }
