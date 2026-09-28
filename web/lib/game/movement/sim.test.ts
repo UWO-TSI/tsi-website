@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { advanceMove, createMoveSim, createMoveState, interpolated, stepMove, MOVE_TUNING as T, NO_INPUT, STEP, type MoveEvent, type MoveInput, type MoveState, type MoveWorld } from "./sim";
-import { COURSE_GATES, COURSE_SPAWN, NEW_LAP, course, gateAt, lapStep } from "./course";
+import { COURSE_GATES, COURSE_SPAWN, NEW_LAP, course, gateAt, lapStep, routePilot } from "./course";
 import { islandOf } from "../defaultIsland";
 import { villageOf, type MapObject } from "../villageMap";
 import { CLIFF_LEVELS, Surface, createCenteredMap, setCell } from "../grid";
@@ -384,6 +384,23 @@ describe("the lab course", () => {
     const health = terrainHealth(v.map, [COURSE_SPAWN[0] - v.map.originX, COURSE_SPAWN[1] - v.map.originZ]);
     expect(terrainProblems(health)).toEqual({});
     expect(health.stranded).toBe(0);
+  });
+  it("goes round in a scripted lap: long jumps over the rivers, two mantles, the 3u drop rolled, never a splash", () => {
+    const w = islandOf(course()), pilot = routePilot(), events: MoveEvent[] = [];
+    let s = createMoveState(COURSE_SPAWN[0], COURSE_SPAWN[1], w), lap = NEW_LAP, time = 0;
+    for (let input = pilot(s, STEP); input && time < 60; input = pilot(s, STEP)) {
+      s = stepMove(s, { ...NO_INPUT, ...input }, STEP, w);
+      time += STEP;
+      lap = lapStep(lap, gateAt(s.x, s.z), time);
+      events.push(...s.events);
+    }
+    const k = kinds(events);
+    expect(lap.last).not.toBeNull();
+    expect(lap.last!).toBeLessThan(25);
+    expect(k.filter(e => e === "long").length).toBeGreaterThanOrEqual(3);
+    expect(k.filter(e => e === "mantle")).toHaveLength(2);
+    expect(events.find(e => e.kind === "roll")?.drop).toBeCloseTo(3, 1);
+    expect(k).not.toContain("splash");
   });
   it("times a lap only through every checkpoint in order", () => {
     let lap = lapStep(NEW_LAP, 0, 0);

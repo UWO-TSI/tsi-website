@@ -13,6 +13,8 @@ describe("character state machine", () => {
     expect(resolveClip({ speed: 0, walkSpeed: 7.4, pose: "FishHold", oneShot: "Fish" })).toBe("Fish");
     expect(resolveClip({ speed: 5, walkSpeed: 7.4, pose: "Sit", oneShot: null })).toBe("Walk");
     expect(resolveClip({ speed: 5, walkSpeed: 7.4, pose: null, oneShot: "Wave" })).toBe("Wave");
+    expect(resolveClip({ speed: 9, walkSpeed: 7.4, pose: null, oneShot: null, move: "Fall" })).toBe("Fall");
+    expect(resolveClip({ speed: 9, walkSpeed: 7.4, pose: null, oneShot: "Jump", move: "Fall" })).toBe("Jump");
   });
   it("turns encounter edges into one-shots and holds Trace/Defeat", () => {
     const idle: CombatView = { alive: true, dodgeAge: null, hurt: 0, attackCd: 0 };

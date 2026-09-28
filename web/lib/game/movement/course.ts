@@ -116,3 +116,70 @@ export function lapStep(lap: Lap, gate: number, now: number): Lap {
   if (lap.running && gate === lap.next) return { ...lap, next: lap.next + 1, splits: [...lap.splits, now - lap.start] };
   return lap;
 }
+
+/**
+ * A scripted lap: waypoints with the move to make on reaching each one. Drives
+ * the lap test and the evidence recording (`__move.autopilot()` in dev); it is
+ * not a player feature.
+ */
+export interface RouteStep { to: [number, number]; sprint?: boolean; move?: "jump" | "long-dash" | "dash-jump" | "mantle" | "dash" | "hops"; r?: number }
+export const LAP_ROUTE: RouteStep[] = [
+  { to: [-17, -17.5] },
+  { to: [-17, 15], sprint: true, r: 1 }, // the sprint lane
+  { to: [-15.5, 20.8], sprint: true, r: 1 },
+  { to: [-11.3, 21], sprint: true, move: "jump", r: 0.35 }, // 2 tiles
+  { to: [-3.4, 21], sprint: true, move: "jump", r: 0.35 }, // 3 tiles: a long jump at sprint speed
+  { to: [6.8, 21], sprint: true, move: "long-dash", r: 0.35 }, // 4 tiles: long jump, then the air dash
+  { to: [13.5, 21], sprint: true, r: 1 },
+  { to: [20, 13], sprint: true, r: 0.6 },
+  { to: [20, 4.5], r: 0.4 }, // past the building
+  { to: [17, 3.8], r: 0.3 },
+  { to: [17, 1], r: 0.4 }, // the gap in the fence
+  { to: [17.4, -3], r: 0.5 },
+  { to: [17.3, -8.5], r: 0.5 }, // between the rocks
+  { to: [17, -11], r: 0.5 },
+  { to: [15.5, -13.5], r: 0.5 },
+  { to: [15.5, -16.5], r: 0.5 }, // round the bench
+  { to: [15.5, -20], sprint: true, r: 0.5 },
+  { to: [14.25, -20], move: "mantle", r: 0.15 }, // the first cliff
+  { to: [11, -22.5], r: 0.5 },
+  { to: [7.25, -22.5], move: "mantle", r: 0.15 }, // the second level
+  { to: [5, -21], sprint: true, r: 0.6 },
+  { to: [-4, -21], sprint: true, r: 0.8 }, // off the top: the 3u drop
+  { to: [-6, -21], r: 0.3 },
+  { to: [-12, -21], r: 0.4 }, // the narrow bridge
+  { to: [-17, -19.5], r: 0.6 },
+  { to: [-17, -15], r: 0.6 }, // the start line: lap
+];
+
+/** Input for each step along a route; returns null when the route is done. */
+export function routePilot(route: readonly RouteStep[] = LAP_ROUTE) {
+  let i = 0, phase = 0, t = 0;
+  return (s: { x: number; z: number; y: number; vy: number; mode: string; vx: number; vz: number }, dt: number) => {
+    if (i >= route.length) return null;
+    const step = route[i], next = route[i + 1] ?? step;
+    const aim = (p: [number, number]) => { const dx = p[0] - s.x, dz = p[1] - s.z, d = Math.hypot(dx, dz) || 1; return { x: dx / d, z: dz / d, d }; };
+    const go = aim(step.to);
+    const base = { x: go.x, z: go.z, sprint: !!step.sprint, sneak: false, jump: false, jumpPressed: false, dashPressed: false };
+    if (phase === 0) {
+      if (go.d > (step.r ?? 0.5)) return base;
+      if (!step.move) { i++; return base; }
+      phase = 1; t = 0;
+    }
+    // The move: along the way to the next waypoint (into the wall for a mantle).
+    t += dt;
+    const along = step.move === "mantle" ? { x: Math.sign(next.to[0] - step.to[0]) || 0, z: 0 } : aim(next.to);
+    const input = { ...base, x: along.x, z: along.z, sprint: !!step.sprint, jump: true };
+    if (phase === 1) {
+      phase = 2;
+      if (step.move === "dash-jump" || step.move === "dash") return { ...input, jump: false, dashPressed: true };
+      return { ...input, jumpPressed: true };
+    }
+    if (step.move === "hops" && s.mode === "air" && s.vy < 0 && s.y < 0.3 && phase < 5) { phase++; return { ...input, jumpPressed: true }; }
+    if (step.move === "hops" && phase < 5) return input;
+    if (step.move === "long-dash" && phase === 2 && s.mode === "air" && s.vy < 0) { phase = 3; return { ...input, dashPressed: true }; }
+    if (step.move === "dash-jump" && phase === 2 && t > 0.06) { phase = 3; return { ...input, jumpPressed: true }; }
+    if (t > 0.1 && s.mode === "ground") { i++; phase = 0; }
+    return input;
+  };
+}

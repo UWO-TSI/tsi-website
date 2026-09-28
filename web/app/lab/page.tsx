@@ -2,6 +2,7 @@ import Link from "next/link";
 
 const CARDS = [
   { href: "/lab/island", title: "Default island", desc: "The first revamp slice: a small walkable island, existing assets, lighting presets and a persistent pixel filter." },
+  { href: "/lab/move", title: "Movement lab", desc: "Momentum hops, long jumps, the Q dash, mantles and drops on a test course, with a live tuning panel (presets, copy JSON) and a lap timer." },
   {
     href: "/lab/fishing",
     title: "Fishing bench",
