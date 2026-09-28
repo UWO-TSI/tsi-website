@@ -13,7 +13,7 @@
  * camera looks.
  */
 
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { useTexture } from "@react-three/drei";
@@ -63,8 +63,12 @@ function getCloudTexture(): THREE.CanvasTexture {
 
 const frac = (v: number) => v - Math.floor(v);
 
+/** The drawn cloud layer for others (the water dims the sun under it): its texture and world (x, z) → uv, while a CloudShadows is mounted. */
+export const cloudLayer = { map: null as THREE.Texture | null, uv: new THREE.Vector4() };
+
 export function CloudShadows({ phase, size = [240, 240], bounded = false }: { phase: Phase; size?: [number, number]; bounded?: boolean }) {
   const matRef = useRef<THREE.MeshBasicMaterial>(null);
+  useEffect(() => () => { cloudLayer.map = null; }, []);
   useFrame((_, delta) => {
     // Module-cached texture — mutated through the getter so the compiler's
     // frozen-memo rule stays satisfied.
@@ -73,6 +77,9 @@ export function CloudShadows({ phase, size = [240, 240], bounded = false }: { ph
     // and a growing offset slides the pattern toward -u, hence the signs.
     const drift = worldTime() * CLOUD_SPEED;
     tex.offset.set(frac(-WIND_DIR.x * drift * tex.repeat.x / size[0]), frac(WIND_DIR.z * drift * tex.repeat.y / size[1]));
+    // The plane's uv is (x / w + 0.5, 0.5 - z / h) (lying flat, local +y = world -z); the texture reads uv * repeat + offset.
+    cloudLayer.map = tex;
+    cloudLayer.uv.set(tex.repeat.x / size[0], -tex.repeat.y / size[1], tex.repeat.x * 0.5 + tex.offset.x, tex.repeat.y * 0.5 + tex.offset.y);
     if (matRef.current) {
       const target = phase === "day" ? 0.12 : phase === "night" ? 0 : 0.07;
       matRef.current.opacity = THREE.MathUtils.damp(matRef.current.opacity, target, 1.5, delta);

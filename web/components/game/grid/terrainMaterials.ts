@@ -310,7 +310,21 @@ const waterUniformBlock = {
   uShoreMap: { value: null as THREE.Texture | null },
   /** World rect the field covers: (minX, minZ, sizeX, sizeZ). */
   uShoreRect: { value: new THREE.Vector4(0, 0, 1, 1) },
+  uCloudMap: { value: null as THREE.Texture | null },
+  uCloudUv: { value: new THREE.Vector4() },
+  uCloudShade: { value: 0 },
 };
+
+/**
+ * The cloud layer CloudShadows draws (its texture and world-to-uv transform),
+ * so the sun's glare and sparkles dim where a cloud shadow passes; null while
+ * none is drawn. Called once per frame from GridWorld.
+ */
+export function shadeWaterByClouds(map: THREE.Texture | null, uv: THREE.Vector4): void {
+  waterUniformBlock.uCloudMap.value = map;
+  waterUniformBlock.uCloudUv.value.copy(uv);
+  waterUniformBlock.uCloudShade.value = map ? 1 : 0;
+}
 
 /**
  * Hand the water shader its distance field.

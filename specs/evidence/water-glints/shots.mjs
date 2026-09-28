@@ -22,14 +22,14 @@ const LOOK = { skin: 3, hair: 2, eyes: "F1.1", mouth: "M1.1", brows: "brow_soft"
 await ctx.addInitScript(look => {
   try { localStorage.setItem("tsi.look.v1", look); localStorage.setItem("tsi.pixelated.v1", "false"); localStorage.setItem("tsi.shadows.v1", "true"); } catch {}
 }, JSON.stringify(LOOK));
-const page = await ctx.newPage();
-page.on("pageerror", e => console.log("pageerror", e.message.slice(0, 300)));
-page.on("console", m => { if (m.type() === "error" && !m.text().includes("503")) console.log("console", m.text().slice(0, 600)); });
-await page.addInitScript(() => {
+await ctx.addInitScript(() => {
   const style = document.createElement("style");
   style.textContent = "html.shot [data-look-panel], html.shot main > :not(:has(canvas)), html.shot nav, html.shot nextjs-portal { visibility: hidden !important; }";
   document.addEventListener("DOMContentLoaded", () => document.head.appendChild(style));
 });
+const page = await ctx.newPage();
+page.on("pageerror", e => console.log("pageerror", e.message.slice(0, 300)));
+page.on("console", m => { if (m.type() === "error" && !m.text().includes("503")) console.log("console", m.text().slice(0, 600)); });
 const setTier = t => ctx.addInitScript(l => { try { localStorage.setItem("tsi.liteMode.v1", l); } catch {} }, String(t === "light"));
 
 async function open(query) {
@@ -60,7 +60,7 @@ async function shot(name) {
   await page.evaluate(() => document.documentElement.classList.remove("shot"));
   console.log("shot", name, new Date().toISOString().slice(11, 19));
 }
-const want = k => !ONLY || ONLY.includes(k);
+const want = k => ONLY ? ONLY.includes(k) : !["twinkle", "clouds"].includes(k);
 
 await setTier("high");
 if (want("suns")) {
@@ -100,5 +100,38 @@ if (want("light")) {
   await setTier("light");
   await open(`at=${SHORE}&weather=clear&time=day`);
   await sun("17h"); await shot("L-day-17h");
+}
+if (want("twinkle") || want("clouds")) {
+  // Fake clock (Date, performance.now, rAF), so world time is exact: frames 0.1 s apart however slowly SwiftShader draws.
+  // World seconds count from 08:00 UTC (lib/game/worldClock.ts).
+  const worldAt = s => new Date(Date.UTC(2026, 8, 27, 8) + s * 1000);
+  const run = async (key, s, frames, step) => {
+    const p = await ctx.newPage();
+    await p.clock.install({ time: worldAt(s - 600) });
+    p.on("pageerror", e => console.log("pageerror", e.message.slice(0, 300)));
+    await p.goto(`${BASE}?at=${SHORE}&weather=clear&time=day&season=summer`, { waitUntil: "domcontentloaded" });
+    await p.waitForSelector("canvas", { timeout: 300000 });
+    for (let quiet = 0; quiet < 3;) { await p.waitForTimeout(1500); quiet = await p.evaluate(() => !document.querySelector('[role="status"]')?.textContent?.includes("Preparing") && !!window.__metrics?.()) ? quiet + 1 : 0; }
+    await p.evaluate(([az, el]) => {
+      const q = structuredClone(window.__presets.current), a = az * Math.PI / 180, e = el * Math.PI / 180;
+      q.light.sunPosition = [30 * Math.cos(e) * Math.cos(a), 30 * Math.sin(e), 30 * Math.cos(e) * Math.sin(a)];
+      window.__look(q); window.__ab("B");
+    }, SUNS["17h"]);
+    await p.clock.pauseAt(worldAt(s));
+    await p.clock.runFor(200);
+    await p.evaluate(() => document.documentElement.classList.add("shot"));
+    for (let i = 0; i < frames; i++) {
+      if (i && step > 1000) { await p.clock.fastForward(step); await p.clock.runFor(200); } else if (i) await p.clock.runFor(step);
+      await p.waitForTimeout(1500);
+      const box = await p.locator("canvas").first().boundingBox();
+      await p.screenshot({ path: `${OUT}/${key}-${i}.png`, clip: box });
+      console.log("shot", `${key}-${i}`);
+    }
+    await p.close();
+  };
+  // 17:00 sun, camera still: six frames 0.1 s apart.
+  if (want("twinkle")) await run("H-twinkle-17h", 40000, 6, 100);
+  // A cloud's densest part over the band at world 21.5 s (or 78 533 s if the texture's v runs the other way), then 60 s on as it drifts off.
+  if (want("clouds")) { await run("H-cloud-17h-a", 21.5, 2, 60000); await run("H-cloud-17h-b", 78533, 1, 0); }
 }
 await browser.close();
