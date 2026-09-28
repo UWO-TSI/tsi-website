@@ -324,10 +324,20 @@ export function lookFx(p: LookPreset, highTier: boolean): LookFx {
   };
 }
 
-/** three's lights chunk with the key light's shadow multiply lerping toward `uLookShadowTint` (LookMaterials). */
+/**
+ * three's lights chunk with the key light's shadow multiply lerping toward `uLookShadowTint` (LookMaterials).
+ * A second directional shadow is SunShadows' moving-caster map for the same key light (that light has no
+ * intensity): the key light takes the darker of the two, so the cached statics and the characters read as
+ * one shadow.
+ */
+const MOVING_SHADOW = "getShadow( directionalShadowMap[ 1 ], directionalLightShadows[ 1 ].shadowMapSize, directionalLightShadows[ 1 ].shadowIntensity, directionalLightShadows[ 1 ].shadowBias, directionalLightShadows[ 1 ].shadowRadius, vDirectionalShadowCoord[ 1 ] )";
 export const LOOK_LIGHTS_CHUNK = ShaderChunk.lights_fragment_begin.replace(
   /directLight\.color \*= (\( directLight\.visible && receiveShadow \) \? getShadow\( directionalShadowMap[^;]*);/,
-  "directLight.color *= mix( uLookShadowTint, vec3( 1.0 ), $1 );",
+  `#if UNROLLED_LOOP_INDEX == 0 && NUM_DIR_LIGHT_SHADOWS > 1
+		directLight.color *= mix( uLookShadowTint, vec3( 1.0 ), min( $1, receiveShadow ? ${MOVING_SHADOW} : 1.0 ) );
+		#elif UNROLLED_LOOP_INDEX == 0
+		directLight.color *= mix( uLookShadowTint, vec3( 1.0 ), $1 );
+		#endif`,
 );
 
 const LUMA = "vec3(0.2126, 0.7152, 0.0722)";

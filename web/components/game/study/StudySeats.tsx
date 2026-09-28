@@ -50,7 +50,7 @@ export function TableFurniture({ t, ground }: { t: TableLayout; ground: (x: numb
       ? [...new Set(seats.map(([, z]) => z))].map(z => <GLBProp key={z} url={`${P}bench-wood.glb`} position={[0, 0, z]} />)
       : seats.map(([x, z, facing], i) => <GLBProp key={i} url={`${F}study-chair.glb`} position={[x, 0, z]} scale={0.1} rotation={[0, facing, 0]} />)}
     {t.furniture === "pier" && <GLBProp url={`${P}beach-parasol.glb`} position={[-2.4, 0, 0.3]} />}
-    {t.furniture !== "couch" && <GLBProp url={`${F}lounge-book.glb`} position={[0.15, 0.84, 0]} scale={0.065} rotation={[0, 0.3, 0]} castShadow={false} />}
+    {t.furniture !== "couch" && <GLBProp url={`${F}lounge-book.glb`} position={[0.15, 0.84, 0]} scale={0.065} rotation={[0, 0.3, 0]} />}
   </group>;
 }
 

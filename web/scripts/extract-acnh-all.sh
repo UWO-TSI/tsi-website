@@ -30,6 +30,7 @@ echo "── plants (world-scale) ──"
 $X --kit PltTreeOakSakura --out plants --only PltTreeOak4Sakura --name tree-blossom     --scale 0.1
 $X --kit PltTreeOak       --out plants --only PltTreeOak3       --name tree-hardwood-a  --scale 0.1
 $X --kit PltTreeOak       --out plants --only PltTreeOak4       --name tree-hardwood-b  --scale 0.1
+$X --kit PltTreeOakSnow   --out plants --only PltTreeOak4Snow   --name tree-hardwood-snow --scale 0.1
 
 echo "── buildings (raw; composed from parts by Building.tsx) ──"
 $X --kit StrcMuseumA02 --out buildings --only StrcMuseumA02      --name oracle-museum

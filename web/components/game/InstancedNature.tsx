@@ -31,19 +31,15 @@ export interface NaturePlacement {
   scale?: number;
 }
 
-interface SubMesh {
-  geometry: THREE.BufferGeometry;
-  material: THREE.Material | THREE.Material[];
-  receiveShadow: boolean;
-  castShadow: boolean;
-}
+/** A prepared sub-mesh and its shadow role (prepareModel): caster-only meshes stay hidden until SunShadows draws them. */
+type SubMesh = Pick<THREE.Mesh, "geometry" | "material" | "receiveShadow" | "castShadow" | "visible" | "userData" | "customDepthMaterial">;
 
 function extractSubMeshes(scene: THREE.Object3D): SubMesh[] {
   const out: SubMesh[] = [];
   scene.traverse((child) => {
     const m = child as THREE.Mesh;
     if (m.isMesh && m.geometry) {
-      out.push({ geometry: m.geometry, material: m.material, receiveShadow: m.receiveShadow, castShadow: m.castShadow });
+      out.push({ geometry: m.geometry, material: m.material, receiveShadow: m.receiveShadow, castShadow: m.castShadow, visible: m.visible, userData: { ...m.userData }, customDepthMaterial: m.customDepthMaterial });
     }
   });
   return out;
@@ -52,8 +48,6 @@ function extractSubMeshes(scene: THREE.Object3D): SubMesh[] {
 interface InstancedGLBProps {
   url: string;
   placements: NaturePlacement[];
-  castShadow?: boolean;
-  receiveShadow?: boolean;
   /** Per-instance scale multiplier — multiplied with the placement's scale. */
   baseScale?: number;
   emissiveIntensity?: number;
@@ -67,13 +61,11 @@ interface InstancedGLBProps {
 export default function InstancedGLB({
   url,
   placements,
-  castShadow = true,
-  receiveShadow = true,
   baseScale = 1,
   emissiveIntensity,
 }: InstancedGLBProps) {
   const { scene } = useGLTF(url);
-  const model = useMemo(() => prepareModel(scene, url, castShadow, emissiveIntensity), [scene, url, castShadow, emissiveIntensity]);
+  const model = useMemo(() => prepareModel(scene, url, emissiveIntensity), [scene, url, emissiveIntensity]);
   const subMeshes = useMemo(() => extractSubMeshes(model), [model]);
   useEffect(() => () => disposeModelMaterials(model), [model]);
 
@@ -90,8 +82,11 @@ export default function InstancedGLB({
           geometry={sm.geometry}
           material={sm.material}
           dispose={null}
-          castShadow={castShadow && sm.castShadow}
-          receiveShadow={receiveShadow && sm.receiveShadow}
+          castShadow={sm.castShadow}
+          receiveShadow={sm.receiveShadow}
+          visible={sm.visible}
+          userData={sm.userData}
+          customDepthMaterial={sm.customDepthMaterial}
         >
           {placements.map((p, j) => (
             <Instance

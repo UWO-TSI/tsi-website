@@ -12,7 +12,7 @@ import { residentSpots } from "@/lib/content/residents";
 import GameSceneBoundary from "./GameSceneBoundary";
 import PostFX from "./PostFX";
 import HQInterior from "./HQInterior";
-import BlobShadows from "./BlobShadows";
+import SunShadows from "./SunShadows";
 import { Lantern } from "./AmbientProps";
 import { GLBProp, NatureTree, NatureBush, NatureFlowerCluster } from "./NatureModels";
 import { ACNHBuilding, ACNHParts, CHALET_VARIANTS } from "./ACNHBuilding";
@@ -26,7 +26,7 @@ import JournalSheet from "@/components/progression/JournalSheet";
 import { useProgressionWorld, useCeremony, useChapterActions, type WorldGoalId } from "@/lib/game/progressionBridge";
 import confetti from "canvas-confetti";
 import type { InteriorStation } from "./interiorShared";
-import { villageIsland, villageSpawn, villageScale, landmarks, landmarkPoint, propFootprint, wharfDeck, benchSeat, BENCH_SEAT_TOP, type Landmark } from "@/lib/game/defaultIsland";
+import { villageIsland, villageSpawn, villageScale, landmarks, landmarkPoint, wharfDeck, benchSeat, BENCH_SEAT_TOP, type Landmark } from "@/lib/game/defaultIsland";
 import { village, objectsOf, type Village } from "@/lib/game/villageMap";
 import { LEVEL_STEP, levelAt, worldToCellX, worldToCellZ } from "@/lib/game/grid";
 import { useGraphicsSettings } from "@/lib/game/useGraphicsSettings";
@@ -171,24 +171,6 @@ const BOTANICAL_TEXTURES = ["/assets/acnh/icons/flower_rose.png", "/assets/acnh/
 useTexture.preload(BOTANICAL_TEXTURES);
 useTexture.preload("/assets/acnh/interior/hq-parquet-albedo.png");
 
-function refreshStaticShadows(gl: THREE.WebGLRenderer) {
-  gl.shadowMap.autoUpdate = false;
-  gl.shadowMap.needsUpdate = true;
-}
-
-/** Cached shadow map: refresh after scene, phase, quality or late asset changes. */
-function StaticShadows({ phase, enabled, inside, sun }: { phase: IslandPhase; enabled: boolean; inside: boolean; sun: string }) {
-  const { gl } = useThree();
-  const wasLoading = useRef(false);
-  useEffect(() => { refreshStaticShadows(gl); }, [gl, phase, enabled, inside, sun]);
-  useFrame(() => {
-    const { active } = useProgress.getState();
-    if (wasLoading.current && !active) refreshStaticShadows(gl);
-    wasLoading.current = active;
-  });
-  return null;
-}
-
 /** First-frame timing probe: once assets settle, pick Light or High for this device. */
 function QualityProbe({ onTier }: { onTier: (tier: QualityTier) => void }) {
   const samples = useRef<number[]>([]);
@@ -234,17 +216,6 @@ function IslandScene({ identity, devAt, exitFrom, peaceful, fishSpot, fishing, c
   const residents = useMemo(() => residentSpots(personas, phase, v), [personas, phase, v]);
   const exitSpot = exitFrom === "museum" ? spawns.museum : exitFrom === "cafe" ? spawns.cafe : exitFrom === "oracle" ? spawns.oracle : exitFrom === "ruins" ? spawns.ruins : null;
   const spawn = (devAt && !returned && !fromBoat && !exitFrom ? devAt : fromBoat ? spawns.boat : exitSpot ?? (returned ? spawns.returned : null)) ?? spawns.start;
-  const winterBare = SEASON_FLOWERS[look.season].length === 0;
-  const plantShadows = useMemo(() => [
-    ...layout.bushes.map(({ x, z }) => ({ x, z, y: island.ground(x, z), rx: 0.5, rz: 0.4 })),
-    ...(winterBare ? [] : layout.flowers.map(({ x, z }) => ({ x, z, y: island.ground(x, z), rx: 0.58, rz: 0.32 }))),
-  ], [layout, island, winterBare]);
-  // Light tier has no shadow map: trees, props and the clubhouse sit on blobs instead.
-  const solidShadows = useMemo(() => [
-    ...layout.trees.map(({ x, z }) => ({ x, z, y: island.ground(x, z), rx: 1.4, rz: 1.2 })),
-    ...layout.props.map(p => { const [hw, hd] = propFootprint(p) ?? [0.5, 0.5]; return { x: p.x, z: p.z, y: island.ground(p.x, p.z), rx: hw + 0.3, rz: hd + 0.3 }; }),
-    ...layout.landmarks.filter(l => l.half).map(l => ({ x: l.x, z: l.z, y: island.ground(l.x, l.z), rx: l.half![0] + 0.7, rz: l.half![1] + 0.7 })),
-  ], [layout, island]);
   const terrain = useMemo(() => ({ ...ISLAND_TERRAIN, grass: look.grass }), [look.grass]);
   const near = useRef<Near>(null);
   useEffect(() => { player.current.set(...spawn); }, [reset, spawn, player]);
@@ -282,8 +253,6 @@ function IslandScene({ identity, devAt, exitFrom, peaceful, fishSpot, fishing, c
       <GridOcean map={island.map} lite={liteMode} skip={layout.underWharf} radius={layout.scale.glintRadius} />
       <PeacefulLayer map={island.map} nodes={layout.nodes} moment={peaceful.moment} member={peaceful.member} player={player} ground={island.ground} highTier={!liteMode} active={!fishing} />
       <BeachBottle player={player} ground={island.ground} />
-      <BlobShadows placements={plantShadows} opacity={0.16} color={light.shadow.tint} />
-      {!castShadows && <BlobShadows placements={solidShadows} opacity={0.45} color={light.shadow.tint} />}
       <StudySeats area="village" player={player} ground={island.ground} />
       <VillageLandmarks layout={layout} ground={island.ground} opened={progression.opened} stage={progression.stage} ceremony={ceremony} light={light} />
       {layout.bridges.map(b => <GLBProp key={b.id} url="/assets/acnh/props/bridge-wooden.glb" position={[b.x, b.y, b.z]} rotation={[0, b.yaw ?? 0, 0]} />)}
@@ -317,7 +286,7 @@ function ClubMonument({ position, stage, ceremony }: { position: [number, number
     {!done && <>
       <GLBProp url={`${F}monument-sign.glb`} position={[1.3, 0, -1.25]} scale={0.1} rotation={[0, -0.3, 0]} />
       {[[-1.1, -1.1, 0], [1.1, -1.1, 0], [-1.1, 1.1, Math.PI], [1.1, 1.1, Math.PI]].map(([x, z, r], i) => (
-        <GLBProp key={i} url="/assets/acnh/props/fence-rope-a.glb" position={[x, 0, z]} rotation={[0, r, 0]} castShadow={false} />
+        <GLBProp key={i} url="/assets/acnh/props/fence-rope-a.glb" position={[x, 0, z]} rotation={[0, r, 0]} />
       ))}
     </>}
     {stage >= 1 && !done && <>
@@ -656,7 +625,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
         camera={{ position: [0, 10.2, -21], fov: 48, near: 0.1, far: 120 }} shadows={castShadows ? "percentage" : false}
         onCreated={({ gl }) => { gl.info.autoReset = false; gl.toneMapping = THREE.NeutralToneMapping; gl.outputColorSpace = THREE.SRGBColorSpace; }}>
         <Suspense fallback={null}>
-          {site === "ruins" ? <RuinsScene key={`ruins-${ruinsRun}`} phase={phase} light={light} look={look} weather={weather} liteMode={liteMode} zoom={zoomed ? 1.4 : devZoom} player={player} onMove={move}
+          {site === "ruins" ? <RuinsScene key={`ruins-${ruinsRun}`} phase={phase} light={light} look={look} weather={weather} liteMode={liteMode} castShadows={castShadows} zoom={zoomed ? 1.4 : devZoom} player={player} onMove={move}
               onNear={n => setNear(n === "exit" ? "ruins_exit" : n)} onDefeat={onRuinsDefeat} start={ruinsRun <= 1 ? devAt : null} />
             : inside === "oracle" ? <OracleTemple frozen={fading || sheet === "oracle"} player={player} onNear={n => setNear(n)} ceremony={reveal} />
             : inside === "cafe" ? <CafeInterior phase={phase} player={player} frozen={fading || !!sheet} identity={identity} onMove={move} onNear={setNear} />
@@ -671,7 +640,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
           {identity.family && identity.aura && <Suspense fallback={null}><FamilyAura player={player} color={FAMILIES[identity.family].light} /></Suspense>}
           <PostFX antialias={!graphics.liteMode && !graphics.pixelated} grade={grade} fx={lookFx(lookPreset, !liteMode)} />
           <LookMaterials preset={lookPreset} />
-          <StaticShadows phase={phase} enabled={castShadows} inside={!!inside || atHome} sun={light.sunPosition.join()} />
+          <SunShadows />
           <Performance player={player} onMetrics={setMetrics} />
           <QualityProbe onTier={onTier} />
           {children}

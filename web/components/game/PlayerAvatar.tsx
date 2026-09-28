@@ -17,7 +17,6 @@ import { pickCurvedGround } from "@/lib/game/groundPick";
 import { juiceFovOffset } from "@/lib/game/cameraJuice";
 import { getLabFov } from "@/lib/game/devLab";
 import MoveTargetIndicator from "./MoveTargetIndicator";
-import { getBlobTexture } from "./BlobShadows";
 import type { EmoteType } from "@/lib/content/types";
 import Character, { CHARACTER_HEIGHT, CHARACTER_SCALE, type CharacterMotion, type ClipName } from "./character/Character";
 import type { CharacterLook } from "@/lib/game/character/look";
@@ -556,10 +555,6 @@ export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Play
           </div>
         </div>
       </Html>}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]} renderOrder={1}>
-        <planeGeometry args={[1.1, 1.1]} />
-        <meshBasicMaterial map={getBlobTexture()} transparent opacity={0.5} depthWrite={false} />
-      </mesh>
 
       {/* Cozy sit beat: a brief contented note over the head. */}
       {sitNote && (
