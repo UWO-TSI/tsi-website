@@ -8,9 +8,10 @@ import { WATER_RIPPLE, terrainMaterial, waterSurfaceUniforms } from "./terrainMa
 
 /**
  * Continue the grid's water outside its editable rectangle to the horizon, with its glint sprites
- * (`lite`: half of them; `skip`: water under a deck, where a sparkle would show through the planks).
+ * (`lite`: half of them; `skip`: water under a deck, where a sparkle would show through the planks;
+ * `radius`: how far from the map's centre they reach, which grows with the map).
  */
-export default function GridOcean({ map, lite = false, skip }: { map: IslandMap; lite?: boolean; skip?: (x: number, z: number) => boolean }) {
+export default function GridOcean({ map, lite = false, skip, radius }: { map: IslandMap; lite?: boolean; skip?: (x: number, z: number) => boolean; radius?: number }) {
   const material = useMemo(() => terrainMaterial("mRiver")!, []);
   const minX = map.originX - 0.5, minZ = map.originZ - 0.5;
   const maxX = minX + map.width, maxZ = minZ + map.depth;
@@ -25,23 +26,30 @@ export default function GridOcean({ map, lite = false, skip }: { map: IslandMap;
     <mesh key={i} position={[x, -WATER_DROP, z]} rotation={[-Math.PI / 2, 0, 0]} material={material}>
       <planeGeometry args={[width, depth, 20, 20]} />
     </mesh>
-  ))}<WaterGlints map={map} lite={lite} skip={skip} /></group>;
+  ))}<WaterGlints map={map} lite={lite} skip={skip} radius={radius} /></group>;
 }
+
+/** At most this many glints inside the map: a big painted sea thins its two-per-cell. */
+export const GLINT_CELL_POINTS = 12000;
 
 /**
  * Where the glint sprites sit: two per water cell inside the map (river,
- * pond, the sea ring) and one per ~5 units² of open sea outside it, out to
- * `radius` (the fog). xyz per point, seeded so every client has the same
- * points, shuffled so any prefix is an even spread (Light draws half).
+ * pond, the sea ring; fewer once that passes GLINT_CELL_POINTS) and one per
+ * ~5 units² of open sea outside it, out to `radius` (the fog). xyz per point,
+ * seeded so every client has the same points, shuffled so any prefix is an
+ * even spread (Light draws half).
  */
 export function glintPoints(map: IslandMap, skip?: (x: number, z: number) => boolean, radius = 90, seed = 7): Float32Array {
   let s = seed >>> 0;
   const rnd = () => (s = (s * 1664525 + 1013904223) >>> 0) / 4294967296;
   let pts: number[][] = [];
+  let cells = 0;
+  for (let i = 0; i < map.surfaces.length; i++) if (isRiver(map.surfaces[i])) cells++;
+  const keep = Math.min(1, GLINT_CELL_POINTS / (2 * cells));
   for (let cz = 0; cz < map.depth; cz++) {
     for (let cx = 0; cx < map.width; cx++) {
       if (!isRiver(surfaceAt(map, cx, cz))) continue;
-      for (let k = 0; k < 2; k++) pts.push([cellToWorldX(map, cx) + (rnd() - 0.5) * 0.8, levelAt(map, cx, cz) * LEVEL_STEP - WATER_DROP, cellToWorldZ(map, cz) + (rnd() - 0.5) * 0.8]);
+      for (let k = 0; k < 2; k++) if (keep === 1 || rnd() < keep) pts.push([cellToWorldX(map, cx) + (rnd() - 0.5) * 0.8, levelAt(map, cx, cz) * LEVEL_STEP - WATER_DROP, cellToWorldZ(map, cz) + (rnd() - 0.5) * 0.8]);
     }
   }
   const minX = map.originX - 0.5, minZ = map.originZ - 0.5, maxX = minX + map.width, maxZ = minZ + map.depth;
@@ -71,9 +79,9 @@ const GLINT_URL = "/assets/acnh/textures/sea-glint.png";
  * a passing cloud shadow. HDR white-gold, so bloom catches the brightest cores
  * on High.
  */
-function WaterGlints({ map, lite, skip }: { map: IslandMap; lite: boolean; skip?: (x: number, z: number) => boolean }) {
+function WaterGlints({ map, lite, skip, radius }: { map: IslandMap; lite: boolean; skip?: (x: number, z: number) => boolean; radius?: number }) {
   const [geometry, material] = useMemo(() => {
-    const position = glintPoints(map, skip), n = position.length / 3, tilt = new Float32Array(n * 2);
+    const position = glintPoints(map, skip, radius), n = position.length / 3, tilt = new Float32Array(n * 2);
     for (let i = 0; i < n; i++) tilt.set(facetTilt(position[i * 3], position[i * 3 + 2]), i * 2);
     const g = new THREE.BufferGeometry();
     g.setAttribute("position", new THREE.BufferAttribute(position, 3));
@@ -113,7 +121,7 @@ function WaterGlints({ map, lite, skip }: { map: IslandMap; lite: boolean; skip?
           diffuseColor.rgb = uSunColor * vGlint * star * 1.2;`);
     };
     return [g, m];
-  }, [map, lite, skip]);
+  }, [map, lite, skip, radius]);
   useEffect(() => () => { geometry.dispose(); material.map?.dispose(); material.dispose(); }, [geometry, material]);
   return <points geometry={geometry} material={material} frustumCulled={false} />;
 }

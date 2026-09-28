@@ -16,7 +16,7 @@ import Character, { CHARACTER_SCALE, type CharacterMotion } from "../character/C
 import { calculateCurvedHtmlPosition } from "@/lib/game/worldProjection";
 import { hashSeed, parseLook, randomLook, seeded } from "@/lib/game/character/look";
 import { seatLift } from "@/lib/game/character/clips";
-import { FURNITURE, STUDY_LAYOUT, nearestSeat, seatAt, walkedAway, type SeatArea, type TableLayout, type WorldSeat } from "@/lib/study/seats";
+import { FURNITURE, studyLayout, nearestSeat, seatAt, walkedAway, type SeatArea, type TableLayout, type WorldSeat } from "@/lib/study/seats";
 import { STUDY_CLIP, getWorldStudy, poseOf, seatAvatar, setWorldStudy, sitDetail, useWorldStudy } from "@/lib/study/worldStore";
 import type { Mate } from "@/lib/study/service";
 import { formatClock } from "@/lib/study/useStudySession";
@@ -94,7 +94,7 @@ function MyOverhead({ player }: { player: React.RefObject<THREE.Vector3> }) {
 export default function StudySeats({ area, player, ground = flat, board }: {
   area: SeatArea; player: React.RefObject<THREE.Vector3>; ground?: (x: number, z: number) => number; board?: [number, number];
 }) {
-  const layouts = useMemo(() => STUDY_LAYOUT.filter(t => t.area === area), [area]);
+  const layouts = useMemo(() => studyLayout().filter(t => t.area === area), [area]);
   const anchors = useMemo(() => new Set(layouts.map(l => l.anchor)), [layouts]);
   const tables = useWorldStudy(w => w.study?.tables);
   const session = useWorldStudy(w => w.study?.session ?? null);

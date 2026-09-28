@@ -6,7 +6,7 @@
  * village (DefaultIslandWorld) and the personal home island so both run on
  * the same light, time, season and weather systems (specs/homes.md §1).
  */
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import BlobShadows from "./BlobShadows";
@@ -56,8 +56,10 @@ function TreeWind({ strength }: { strength: number }) {
 export interface TreeSpot { x: number; z: number; seed: number }
 const NO_TREES: readonly TreeSpot[] = [];
 
-export function IslandAtmosphere({ phase, light, look, weather, liteMode, castShadows, overview = false, ground, puddles = [], cloudSize, shadowExtent = 26, fireflyAnchors, trees = NO_TREES }: {
+export function IslandAtmosphere({ phase, light, look, weather, liteMode, castShadows, overview = false, overviewFog = 0, ground, puddles = [], cloudSize, shadowExtent = 26, fireflyAnchors, trees = NO_TREES }: {
   phase: IslandPhase; light: IslandLight; look: SeasonLook; weather: IslandWeather; liteMode: boolean; castShadows: boolean; overview?: boolean;
+  /** Extra overview fog distance: a bigger island puts the overview camera further out. */
+  overviewFog?: number;
   ground: (x: number, z: number) => number;
   puddles?: readonly [number, number][]; cloudSize: [number, number]; shadowExtent?: number;
   fireflyAnchors: readonly (readonly [number, number])[];
@@ -81,12 +83,12 @@ export function IslandAtmosphere({ phase, light, look, weather, liteMode, castSh
   const puddleBlobs = useMemo(() => puddles.map(([x, z], i) => ({ x, z, y: ground(x, z) + 0.01, rx: 0.5 + (i % 3) * 0.18, rz: 0.32 + (i % 2) * 0.12 })), [puddles, ground]);
   return <>
     {light.skyTop ? <SkyGradient top={light.skyTop} horizon={light.sky} /> : <color attach="background" args={[light.sky]} />}
-    <fog attach="fog" args={[light.fogColor, overview ? light.fogNear + 28 : light.fogNear, overview ? light.fogFar + 15 : light.fogFar]} />
+    <fog attach="fog" args={[light.fogColor, overview ? light.fogNear + 28 + overviewFog : light.fogNear, overview ? light.fogFar + 15 + overviewFog : light.fogFar]} />
     <ambientLight intensity={light.ambient} color={light.fill} />
     <hemisphereLight args={[light.fill, light.bounce, light.hemisphere]} />
     <directionalLight position={light.sunPosition} color={light.sun} intensity={light.sunIntensity} castShadow={castShadows}
       shadow-mapSize={[2048, 2048]} shadow-camera-left={-shadowExtent} shadow-camera-right={shadowExtent}
-      shadow-camera-top={shadowHalf} shadow-camera-bottom={-shadowHalf} shadow-camera-near={1} shadow-camera-far={75}
+      shadow-camera-top={shadowHalf} shadow-camera-bottom={-shadowHalf} shadow-camera-near={1} shadow-camera-far={75 + Math.max(0, shadowExtent - 26) * 2}
       onUpdate={key => key.shadow.camera.updateProjectionMatrix()}
       shadow-radius={shadow.radius} shadow-intensity={shadow.intensity} shadow-normalBias={0.02} shadow-bias={-0.0002} />
     {light.rim && <directionalLight position={RIM_POSITION} color={light.rim.color} intensity={light.rim.intensity} />}
@@ -101,12 +103,19 @@ export function IslandAtmosphere({ phase, light, look, weather, liteMode, castSh
   </>;
 }
 
-/** Applicant camera as shipped: elevated follow with a slight forward lead; optional overview. */
-export function useFollowCamera(player: React.RefObject<THREE.Vector3>, zoom: number, overview: { focus: [number, number, number]; offset: [number, number, number] } | null) {
+/** Applicant camera as shipped: elevated follow with a slight forward lead; optional overview (`far`: its far plane, for a big island). */
+export function useFollowCamera(player: React.RefObject<THREE.Vector3>, zoom: number, overview: { focus: [number, number, number]; offset: [number, number, number]; far?: number } | null) {
   const { camera } = useThree();
+  const baseFar = useRef<number | null>(null);
   const focus = useMemo(() => new THREE.Vector3(), []);
   const destination = useMemo(() => new THREE.Vector3(), []);
   useFrame((_, delta) => {
+    // A big island's overview needs a deeper far plane; walking keeps the canvas's own.
+    if (camera instanceof THREE.PerspectiveCamera) {
+      baseFar.current ??= camera.far;
+      const far = Math.max(baseFar.current, overview?.far ?? 0);
+      if (camera.far !== far) { camera.far = far; camera.updateProjectionMatrix(); }
+    }
     if (overview) {
       focus.set(...overview.focus);
       destination.set(overview.offset[0] + overview.focus[0], overview.offset[1], overview.offset[2] + overview.focus[2]);

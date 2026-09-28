@@ -3,7 +3,8 @@
  * water within reach decides the spot, and its water type decides the pool.
  * Water type is read from the island's own layout, not placed shadows.
  */
-import { Surface, isGroundAtWorld, surfaceAt, worldToCellX, worldToCellZ, type IslandMap } from "./grid";
+import { objectsOf, village, type Village } from "./villageMap";
+import { Surface, inBounds, isGroundAtWorld, isRiver, isVoid, surfaceAt, worldToCellX, worldToCellZ, type IslandMap } from "./grid";
 
 export type WaterType = "river" | "pond" | "sea";
 export interface FishingSpot { target: [number, number]; water: WaterType }
@@ -36,8 +37,127 @@ export function fishingSpot(map: IslandMap, classify: (x: number, z: number) => 
   return { target, water: classify(target[0], target[1]) };
 }
 
-/** Village classifier: sea outside the island ellipse, the pond by its disc, else the river. */
-export function villageWaterType(radii: { x: number; z: number }, pond: { x: number; z: number; r: number }) {
-  return (x: number, z: number): WaterType =>
-    Math.hypot(x / radii.x, z / radii.z) >= 0.97 ? "sea" : Math.hypot(x - pond.x, z - pond.z) < pond.r + 0.8 ? "pond" : "river";
+/** Water class per cell: 0 land, 1 sea, 2 river, 3 pond. */
+export const WATER_CLASS = { land: 0, sea: 1, river: 2, pond: 3 } as const;
+
+/**
+ * Sea, river and pond from water connectivity, not from the island's shape
+ * (specs/island-painter.md §3). Water that cannot reach the map edge is a pond.
+ * Water that can is the sea where it is open, at least `open + 1` cells from
+ * any land and joined to the edge through such cells, grown back `open` cells
+ * toward the shore; a narrower channel (a river, even one running out to sea)
+ * stays river. A pond that opens onto a river is found from its `ponds` marker
+ * (the pond landmark): the open water around it (2+ cells from land), grown one
+ * cell to its banks. Off the map is sea.
+ */
+export function classifyWater(map: IslandMap, ponds: readonly (readonly [number, number])[] = [], open = 2): Uint8Array {
+  const { width: W, depth: D } = map, n = W * D;
+  const water = (i: number) => { const s = map.surfaces[i]; return isRiver(s) || isVoid(s); };
+  const out = new Uint8Array(n);
+  // Distance to land in cells (8-neighbour steps), capped at open + 1.
+  const far = open + 1, dist = new Uint8Array(n).fill(far);
+  let frontier: number[] = [];
+  for (let i = 0; i < n; i++) if (!water(i)) { dist[i] = 0; frontier.push(i); }
+  for (let d = 1; d <= open && frontier.length; d++) {
+    const next: number[] = [];
+    for (const i of frontier) {
+      const x = i % W, z = (i / W) | 0;
+      for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) {
+        if (!inBounds(map, x + dx, z + dz)) continue;
+        const j = (z + dz) * W + x + dx;
+        if (dist[j] > d) { dist[j] = d; next.push(j); }
+      }
+    }
+    frontier = next;
+  }
+  // Every water cell starts as river; ponds are components that never touch the edge.
+  const seen = new Uint8Array(n);
+  for (let i = 0; i < n; i++) {
+    if (!water(i) || seen[i]) continue;
+    const comp: number[] = [], stack = [i];
+    let edge = false;
+    seen[i] = 1;
+    while (stack.length) {
+      const k = stack.pop()!, x = k % W, z = (k / W) | 0;
+      comp.push(k);
+      if (x === 0 || z === 0 || x === W - 1 || z === D - 1) edge = true;
+      for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        if (!inBounds(map, x + dx, z + dz)) continue;
+        const j = (z + dz) * W + x + dx;
+        if (!seen[j] && water(j)) { seen[j] = 1; stack.push(j); }
+      }
+    }
+    for (const k of comp) out[k] = edge ? WATER_CLASS.river : WATER_CLASS.pond;
+  }
+  // Open sea: far-from-land water joined to the edge (4-neighbour flood), then grown back to the shore.
+  const spread = (from: number[], steps: number, diagonal: boolean, open_: (j: number) => boolean) => {
+    for (let step = 0; from.length && step < steps; step++) {
+      const next: number[] = [];
+      for (const i of from) {
+        const x = i % W, z = (i / W) | 0;
+        for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) {
+          if ((!diagonal && dx && dz) || !inBounds(map, x + dx, z + dz)) continue;
+          const j = (z + dz) * W + x + dx;
+          if (out[j] === WATER_CLASS.river && open_(j)) { out[j] = WATER_CLASS.sea; next.push(j); }
+        }
+      }
+      from = next;
+    }
+  };
+  const edge: number[] = [];
+  for (let i = 0; i < n; i++) {
+    const x = i % W, z = (i / W) | 0;
+    if ((x === 0 || z === 0 || x === W - 1 || z === D - 1) && out[i] === WATER_CLASS.river && dist[i] === far) { out[i] = WATER_CLASS.sea; edge.push(i); }
+  }
+  spread(edge, n, false, j => dist[j] === far);
+  const core: number[] = [];
+  for (let i = 0; i < n; i++) if (out[i] === WATER_CLASS.sea) core.push(i);
+  spread(core, open, true, () => true);
+  // Ponds joined to a river: the open water around each marker, then its banks.
+  for (const [px, pz] of ponds) {
+    const cx = worldToCellX(map, px), cz = worldToCellZ(map, pz), i = cz * W + cx;
+    if (!inBounds(map, cx, cz) || out[i] !== WATER_CLASS.river) continue;
+    const mark = (from: number[], steps: number, diagonal: boolean, ok: (j: number) => boolean) => {
+      for (let step = 0; from.length && step < steps; step++) {
+        const next: number[] = [];
+        for (const k of from) {
+          const x = k % W, z = (k / W) | 0;
+          for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) {
+            if ((!diagonal && dx && dz) || !inBounds(map, x + dx, z + dz)) continue;
+            const j = (z + dz) * W + x + dx;
+            if (out[j] === WATER_CLASS.river && ok(j)) { out[j] = WATER_CLASS.pond; next.push(j); }
+          }
+        }
+        from = next;
+      }
+    };
+    out[i] = WATER_CLASS.pond;
+    const coreCells = [i];
+    mark(coreCells, n, false, j => dist[j] >= 2);
+    const pond: number[] = [];
+    for (let k = 0; k < n; k++) if (out[k] === WATER_CLASS.pond) pond.push(k);
+    mark(pond, 1, true, () => true);
+  }
+  return out;
+}
+
+const NAMES: WaterType[] = ["river", "sea", "river", "pond"];
+/** The water type at a world point, from `classifyWater`. */
+export function waterClassifier(map: IslandMap, classes: Uint8Array = classifyWater(map)) {
+  return (x: number, z: number): WaterType => {
+    const cx = worldToCellX(map, x), cz = worldToCellZ(map, z);
+    return inBounds(map, cx, cz) ? NAMES[classes[cz * map.width + cx]] : "sea";
+  };
+}
+
+const waters = new WeakMap<Village, { classes: Uint8Array; classify: (x: number, z: number) => WaterType }>();
+/** The village map's water classes and classifier, built once per loaded map. */
+export function villageWater(v: Village = village()) {
+  let w = waters.get(v);
+  if (!w) {
+    const ponds = objectsOf("landmark", v).filter(o => o.id === "pond").map(o => [o.x, o.z] as const);
+    const classes = classifyWater(v.map, ponds);
+    waters.set(v, w = { classes, classify: waterClassifier(v.map, classes) });
+  }
+  return w;
 }
