@@ -1,5 +1,6 @@
 // Island painter evidence: deterministic frames of /lab/island (headed Chromium; WebGL needs it here).
 // node shots.mjs <outDir> [base=http://localhost:3105] [query-extra]
+// DRAFT=<map.json> puts a painter draft in localStorage (walk it with query-extra "&draft=1").
 // The page clock is Playwright's fake clock at a fixed instant, and every run renders the same
 // number of frames, so two builds of the same island give the same pixels (the frame diff).
 import { createRequire } from "node:module";
@@ -11,6 +12,7 @@ const LOOK = JSON.stringify({ skin: 3, hair: 2, eyes: "F1.1", mouth: "M1.1", bro
 const browser = await chromium.launch({ headless: false, args: ["--use-angle=metal", "--ignore-gpu-blocklist"] });
 const ctx = await browser.newContext({ viewport: { width: 1280, height: 760 }, deviceScaleFactor: 1 });
 await ctx.addInitScript(look => { try { localStorage.setItem("tsi.look.v1", look); localStorage.setItem("tsi.pixelated.v1", "false"); localStorage.setItem("tsi.shadows.v1", "true"); localStorage.setItem("tsi.liteMode.v1", "false"); } catch {} }, LOOK);
+if (process.env.DRAFT) await ctx.addInitScript(doc => { try { localStorage.setItem("lab-map-village-draft-v1", doc); } catch {} }, (await import("node:fs")).readFileSync(process.env.DRAFT, "utf8"));
 const page = await ctx.newPage();
 page.on("pageerror", e => console.log("pageerror", e.message.slice(0, 200)));
 async function open(q) {

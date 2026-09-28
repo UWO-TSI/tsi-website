@@ -1,32 +1,37 @@
 "use client";
 
 /**
- * /lab/map — the tile editor (M6).
+ * /lab/map — the island painter (M6; rows 241, 246, specs/island-painter.md).
  *
  * WHY THIS EXISTS. Six of the last eight terrain changes were David describing
  * what he wanted and me guessing at numbers in `author-elevation.mjs`: "less
  * hills", "too vertical", "half steps should blend", each one a round trip
  * through a script, a regenerate and a screenshot. This turns that into
- * drawing.
+ * drawing. Since 2026-09-28 it paints the real village: David places every
+ * building, tree and prop himself, and the game loads exactly what is painted.
  *
- * It edits the SHIPPED map, not a copy of the authoring script's inputs, so
- * what you paint is what loads. Export puts the whole `island-map.json` on the
- * clipboard, following the "Export all → clipboard" convention already in
- * `components/lab/LabPanel.tsx` — no API route, no write path to disk, which
- * keeps a dev tool from being able to corrupt the world.
+ * It opens the SHIPPED `web/data/village-map.json` (the legacy
+ * `island-map.json` draft is still openable), so what you paint is what loads.
+ * Export puts the whole document on the clipboard, following the "Export all →
+ * clipboard" convention in `components/lab/LabPanel.tsx`: no API route, no
+ * write path to disk, which keeps a dev tool from being able to corrupt the
+ * world. "Walk it" opens the working draft in 3D at `/lab/island?draft=1`.
  *
  * THE CHECKS ARE THE POINT. A hand-painted map breaks in ways that are invisible
- * until you walk it: an unreachable terrace, a cliff with no piece, a one-cell
- * wall, a face too tall for the kit to draw. Those all cost real debugging, so
- * they run live in the panel on every edit rather than at the end. The panel
- * checks exactly what `lib/game/islandMap.test.ts` asserts: if it says healthy,
- * pasting the export keeps the suite green.
+ * until you walk it: an unreachable terrace, a cliff with no piece, a landmark
+ * on water, a resident anchor with no room. The panel runs `lib/game/mapHealth.ts`
+ * on every edit, and `villageMap.test.ts` asserts the same function on the
+ * shipped file: if it says healthy, pasting the export keeps the suite green.
+ *
+ * ORIENTATION. The default view is the game's: camera forward (+z, west) at the
+ * top and +x on the left, so north (−x) is on the right, as on the minimap.
+ * The raw view keeps cell (0, 0) at the top left.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import islandMapDoc from "@/data/island-map.json";
+import villageDoc from "@/data/village-map.json";
 import {
-  parseIslandMap,
   serialiseIslandMap,
   resizeMap,
   legaliseTerraces,
@@ -39,7 +44,6 @@ import {
   needsCliff,
   cliffPieceFor,
   rampDir,
-  rampRun,
   halfCliffEdges,
   Surface,
   MAX_LEVEL,
@@ -51,9 +55,22 @@ import {
   type PlacedProp,
   type MapAnnotation,
 } from "@/lib/game/grid";
+import {
+  PAINTER_DRAFT_KEY, normaliseSea, parseVillage, serialiseVillage, villageJson, villageOf,
+  type MapObject, type ObjectKind, type VillageDoc,
+} from "@/lib/game/villageMap";
+import { BRIDGE_DECK_HALF, LANDMARK_IDS, LANDMARK_INFO, PROP_FOOTPRINT, TREE_TRUNK, WHARF_DECK_LOCAL, type LandmarkId } from "@/lib/game/defaultIsland";
+import { villageHealth, type VillageHealth } from "@/lib/game/mapHealth";
+import { mapBudget } from "@/lib/game/mapBudget";
+import { classifyWater, WATER_CLASS } from "@/lib/game/fishingSpots";
+import { cellsInPolygon, generateCoast, nextObjectId, organicCell, snapPlacement, snapshotCells, type CellSnapshot, type OrganicOp } from "@/lib/game/painterTools";
+import { RESIDENT_ANCHORS, SHARED_SPACING } from "@/lib/content/residents";
+import { FURNITURE, type Furniture } from "@/lib/study/seats";
+import { DEFAULT_TABLES } from "@/lib/study/tables";
 
 const mono = "ui-monospace, SFMono-Regular, Menlo, monospace";
-const DRAFT_KEY = "lab-map-draft-v1";
+/** The pre-village autosave (legacy island-map.json edits); offered under "open" if present. */
+const LEGACY_DRAFT_KEY = "lab-map-draft-v1";
 
 /** Cell colours, close enough to the world's own palette to read as the map. */
 const SURFACE_FILL: Record<number, string> = {
@@ -67,6 +84,8 @@ const SURFACE_FILL: Record<number, string> = {
   [Surface.Void]: "#1b2733",
   [Surface.Ramp]: "#D8CFC0",
 };
+/** The open sea, told from river and pond by connectivity (fishingSpots.classifyWater). */
+const SEA_FILL = "#2c5a78";
 
 const SURFACE_NAME: Record<number, string> = {
   [Surface.Grass]: "grass",
@@ -75,23 +94,28 @@ const SURFACE_NAME: Record<number, string> = {
   [Surface.Sand]: "sand",
   [Surface.Wood]: "wood",
   [Surface.Brick]: "brick",
-  [Surface.River]: "river",
-  [Surface.Void]: "sea",
+  [Surface.River]: "water",
   [Surface.Ramp]: "ramp",
 };
 
-const TOOLS = ["land", "sea", "raise", "lower", "flat", "surface", "ramp", "prop", "label"] as const;
+const TOOLS = ["land", "sea", "raise", "lower", "flat", "surface", "ramp", "smooth", "grow", "shrink", "jitter", "object", "prop", "label"] as const;
 type Tool = (typeof TOOLS)[number];
+const ORGANIC: readonly Tool[] = ["smooth", "grow", "shrink", "jitter"];
 
 const TOOL_HELP: Record<Tool, string> = {
-  land: "sea → grass at level 0. The coastline brush.",
-  sea: "erase back to open water.",
+  land: "water → grass at level 0. The coastline brush.",
+  sea: "back to open water (river at level 0 is the sea).",
   raise: "+1 level. Land only.",
   lower: "−1 level. Land only.",
   flat: "set an exact level. How you draw a plateau.",
   surface: "paint a surface, terrain untouched.",
   ramp: "mark a ramp cell. It climbs toward the higher neighbour.",
-  prop: "drag a rectangle for a building plot, click for a point marker. Click either again to remove.",
+  smooth: "rounds off jaggies: the 3×3 majority decides land or water, stray levels join their neighbours.",
+  grow: "spreads land into the sea and plateaus outward, one cell per stroke.",
+  shrink: "pulls coasts and plateaus back, one cell per stroke.",
+  jitter: "breaks a straight coastline into small bays and headlands. Each stroke rolls new noise.",
+  object: "place, select, drag. R turns (shift: 15°), Delete removes, arrows nudge, Esc deselects.",
+  prop: "planning markers (legacy): drag a rectangle for a plot, click for a point. The game does not read these; use objects.",
   label: "paint a named thing of your own: fencing, hedges, a note. Terrain untouched.",
 };
 
@@ -99,16 +123,7 @@ const TOOL_HELP: Record<Tool, string> = {
  * Colours offered for a new label. Chosen to stay legible over grass, sand and
  * water, since a label is useless if it disappears into the ground it marks.
  */
-const LABEL_COLORS = [
-  "#ff4d6d",
-  "#ffa62b",
-  "#ffe066",
-  "#7bf1a8",
-  "#4cc9f0",
-  "#b892ff",
-  "#ffffff",
-  "#1b1b1b",
-];
+const LABEL_COLORS = ["#ff4d6d", "#ffa62b", "#ffe066", "#7bf1a8", "#4cc9f0", "#b892ff", "#ffffff", "#1b1b1b"];
 
 /**
  * WHERE a tool applies, independent of WHAT it does.
@@ -118,7 +133,7 @@ const LABEL_COLORS = [
  * wrong instrument for a rectangular plot or a straight road, and dabbing one
  * out cell by cell is how you get a wobbly blob that reads as an accident.
  */
-const SHAPES = ["free", "rect", "line", "fill"] as const;
+const SHAPES = ["free", "rect", "line", "fill", "lasso"] as const;
 type Shape = (typeof SHAPES)[number];
 
 const SHAPE_HELP: Record<Shape, string> = {
@@ -126,152 +141,48 @@ const SHAPE_HELP: Record<Shape, string> = {
   rect: "drag a rectangle, fills on release",
   line: "drag a straight run, snapped to 8 directions",
   fill: "click to flood the matching region",
+  lasso: "draw a loop freehand, fills inside on release",
 };
 
-/**
- * Marker kinds. The first six are what `island-map.json` already carries; the
- * rest are layout language for planning a map before any of it is built.
- *
- * A marker is just a `PlacedProp`, so a plan drawn here and a shippable map are
- * the same file. `id` is free text and becomes the building id the renderer
- * looks up ("hq", "shop", "oracle"), or a note to yourself on a draft.
- */
-const PROP_KINDS = [
-  "building",
-  "npc",
-  "tree",
-  "bush",
-  "flower",
-  "lamp",
-  "spawn",
-  "note",
-] as const;
-
+/** Legacy planning marker kinds (island-map.json). */
+const PROP_KINDS = ["building", "npc", "tree", "bush", "flower", "lamp", "spawn", "note"] as const;
 const PROP_COLOR: Record<string, string> = {
-  building: "#ff8f4a",
-  npc: "#d98fff",
-  tree: "#3f8f4f",
-  bush: "#5aab5f",
-  flower: "#ff7fa8",
-  lamp: "#ffd166",
-  spawn: "#4ad8ff",
-  note: "#ffffff",
+  building: "#ff8f4a", npc: "#d98fff", tree: "#3f8f4f", bush: "#5aab5f", flower: "#ff7fa8", lamp: "#ffd166", spawn: "#4ad8ff", note: "#ffffff",
 };
 
-/** Grid sizes offered by the resize control. Multiples of CHUNK (16). */
-const SIZES = [96, 128, 160, 192, 224, 256];
+/** How each object kind reads on the map. */
+const OBJECT_STYLE: Record<ObjectKind, { color: string; r: number; label: string }> = {
+  spawn: { color: "#4ad8ff", r: 0.55, label: "spawn" },
+  landmark: { color: "#ff8f4a", r: 0.6, label: "landmark" },
+  fitting: { color: "#e59ad8", r: 0.5, label: "fitting room" },
+  missions: { color: "#c9a26b", r: 0.5, label: "mission board" },
+  bridge: { color: "#a0784e", r: 0.6, label: "bridge" },
+  lamp: { color: "#ffd166", r: 0.3, label: "lamp" },
+  fence: { color: "#7a5a3a", r: 0.3, label: "fence" },
+  bench: { color: "#9b6b40", r: 0.4, label: "bench" },
+  rock: { color: "#8d8a84", r: 0.45, label: "rock" },
+  tree: { color: "#2f6b3a", r: TREE_TRUNK, label: "tree" },
+  bush: { color: "#4f9a55", r: 0.45, label: "bush" },
+  flower: { color: "#ff7fa8", r: 0.35, label: "flowers" },
+  study: { color: "#d4b483", r: 0.5, label: "study table" },
+  anchor: { color: "#b892ff", r: 0.45, label: "resident anchor" },
+  gather: { color: "#8a6ad8", r: 0.25, label: "ceremony spot" },
+  puddle: { color: "#9fc7df", r: 0.4, label: "puddle" },
+  bug: { color: "#f0e36c", r: 0.22, label: "bug spot" },
+  shell: { color: "#fff5e0", r: 0.22, label: "shell" },
+  bottle: { color: "#7fe0d8", r: 0.25, label: "bottle spot" },
+};
+/** Placement palette order. */
+const PALETTE: readonly ObjectKind[] = ["landmark", "tree", "bush", "flower", "rock", "bench", "fence", "lamp", "bridge", "study", "anchor", "gather", "spawn", "fitting", "missions", "puddle", "bug", "shell", "bottle"];
+const ROCK_MODELS = ["rock-a", "rock-b", "rock-c"];
+const FENCE_MODELS = ["fence-country-a", "fence-country-b"];
+const BUG_BIOMES = ["water_edge", "ground"];
+const TREE_NAMES = ["oak", "oak (b)", "blossom", "cedar"];
+/** Outdoor study tables the backend expects (`study_tables.anchor`). */
+const OUTDOOR_TABLES = DEFAULT_TABLES.filter(t => t.location !== "cafe");
 
-interface Health {
-  reachable: number;
-  walkable: number;
-  stranded: number;
-  cliffCells: number;
-  missingPiece: number;
-  thinWalls: number;
-  orphanRamps: number;
-  tooTall: number;
-  levels: Record<number, number>;
-}
-
-/**
- * Every check that cost real debugging, run on the live map.
- *
- * Reachability is the one that matters most and the one nothing else surfaces:
- * with hard cliffs a terrace can be perfectly drawn and simply unreachable, and
- * the only symptom is a player who cannot get there.
- */
-function measure(map: IslandMap): Health {
-  const W = map.width;
-  const D = map.depth;
-  const walkAt = (x: number, z: number) =>
-    inBounds(map, x, z) && !isVoid(surfaceAt(map, x, z)) && !isRiver(surfaceAt(map, x, z));
-
-  let walkable = 0;
-  let cliffCells = 0;
-  let missingPiece = 0;
-  let thinWalls = 0;
-  let orphanRamps = 0;
-  let tooTall = 0;
-  const levels: Record<number, number> = {};
-  let seed: [number, number] | null = null;
-
-  for (let z = 0; z < D; z++) {
-    for (let x = 0; x < W; x++) {
-      if (isVoid(surfaceAt(map, x, z))) continue;
-      const l = levelAt(map, x, z);
-      levels[l] = (levels[l] ?? 0) + 1;
-      if (walkAt(x, z)) {
-        walkable++;
-        if (!seed && l === 0) seed = [x, z];
-      }
-      if (needsCliff(map, x, z)) {
-        cliffCells++;
-        if (!cliffPieceFor(map, x, z)) missingPiece++;
-      }
-      if (isRamp(surfaceAt(map, x, z)) && !rampDir(map, x, z)) orphanRamps++;
-      // The cliff kit is one piece tall and does not stack, so a face taller
-      // than CLIFF_LEVELS has nothing to draw it and renders as a hole. The
-      // authoring script enforces this; a hand edit can break it in one click.
-      for (const [dx, dz] of ORTHOGONAL) {
-        if (!inBounds(map, x + dx, z + dz)) continue;
-        const ns = surfaceAt(map, x + dx, z + dz);
-        const nl = isVoid(ns) ? 0 : levelAt(map, x + dx, z + dz);
-        if (Math.abs(l - nl) > CLIFF_LEVELS) tooTall++;
-      }
-      // A raised cell with lower ground on both sides of an axis is a wall you
-      // cannot stand on.
-      const lower = (dx: number, dz: number) =>
-        walkAt(x + dx, z + dz) && levelAt(map, x + dx, z + dz) < l;
-      if (l > 0 && ((lower(-1, 0) && lower(1, 0)) || (lower(0, -1) && lower(0, 1)))) thinWalls++;
-    }
-  }
-
-  // A ramp is only a route if its RUN resolves. Keying on the surface alone
-  // said a broken ramp was walkable: painting a second ramp straight onto the
-  // first merged them into one run climbing further than the kit allows, all
-  // three cells reported as orphans, and stranded still dropped from 48 to 30
-  // as though a route had opened. Precomputed because rampRun walks the run.
-  const ramped = new Uint8Array(W * D);
-  for (let z = 0; z < D; z++) {
-    for (let x = 0; x < W; x++) {
-      if (isRamp(surfaceAt(map, x, z)) && rampRun(map, x, z)) ramped[z * W + x] = 1;
-    }
-  }
-
-  let reachable = 0;
-  if (seed) {
-    const seen = new Uint8Array(W * D);
-    const stack: [number, number][] = [seed];
-    while (stack.length) {
-      const [x, z] = stack.pop()!;
-      const i = z * W + x;
-      if (seen[i] || !walkAt(x, z)) continue;
-      seen[i] = 1;
-      reachable++;
-      for (const [dx, dz] of ORTHOGONAL) {
-        const nx = x + dx;
-        const nz = z + dz;
-        if (!walkAt(nx, nz)) continue;
-        const d = Math.abs(levelAt(map, nx, nz) - levelAt(map, x, z));
-        const viaRamp = ramped[nz * W + nx] === 1 || ramped[i] === 1;
-        // A blended half step is walkable; a full cliff needs a working ramp.
-        if (d < CLIFF_LEVELS || viaRamp) stack.push([nx, nz]);
-      }
-    }
-  }
-
-  return {
-    reachable,
-    walkable,
-    stranded: walkable - reachable,
-    cliffCells,
-    missingPiece,
-    thinWalls,
-    orphanRamps,
-    tooTall,
-    levels,
-  };
-}
+/** Grid sizes offered by the resize control: 64 up to 256 per side. */
+const SIZES = [64, 80, 96, 112, 128, 160, 192, 224, 256];
 
 /**
  * Named drafts, so this can hold more than one island.
@@ -279,9 +190,8 @@ function measure(map: IslandMap): Health {
  * David, 2026-07-30: this page is where the general layout for all future
  * terrain and islands gets drafted. One autosave slot is crash protection, not
  * a library — without named slots, starting a second island destroys the first.
- * Kept in localStorage next to the working draft; a draft is just the same
- * `island-map.json` document, so anything saved here can be exported and
- * shipped unchanged.
+ * A draft is the same document the export writes, so anything saved here can
+ * be exported and shipped unchanged.
  */
 const LIBRARY_KEY = "lab-map-library-v1";
 
@@ -309,16 +219,34 @@ function writeLibrary(lib: Record<string, IslandMapDoc>) {
  * would be pointless — and the react-compiler lint (correctly) forbids mutating
  * anything that came out of useState or useMemo. So the working copy sits here
  * and `version` is what React actually re-renders on.
+ *
+ * `source` says which file it came from: the village (the game's) or the legacy
+ * island-map.json draft, which exports in its own format.
  */
 interface World {
   map: IslandMap;
   props: PlacedProp[];
   annotations: MapAnnotation[];
+  objects: MapObject[];
+  source: "village" | "legacy";
 }
 let WORLD: World | null = null;
+
+/** Any document into the working world: one sea convention (Void becomes River at level 0). */
+function fromDoc(doc: VillageDoc, source?: World["source"]): World {
+  const { map, objects, annotations, props } = parseVillage(doc);
+  return { map, objects, annotations, props, source: source ?? (doc.objects ? "village" : "legacy") };
+}
+function shippedVillage(): World {
+  return fromDoc(villageDoc as VillageDoc, "village");
+}
 function world(): World {
-  if (!WORLD) WORLD = parseIslandMap(islandMapDoc as IslandMapDoc);
+  if (!WORLD) WORLD = shippedVillage();
   return WORLD;
+}
+/** The working draft as a document: the village format, plus legacy markers so a legacy draft survives a reload. */
+function draftDoc(w: World): VillageDoc {
+  return { ...serialiseVillage(w.map, w.objects, w.annotations), ...(w.props.length ? { props: w.props } : {}), ...(w.source === "legacy" ? { objects: undefined } : {}) };
 }
 
 /**
@@ -330,48 +258,34 @@ function world(): World {
  * clamps at MAX_LEVEL or skips void.
  */
 interface Snapshot {
-  width: number;
-  depth: number;
-  originX: number;
-  originZ: number;
-  levels: Uint8Array;
-  surfaces: Uint8Array;
+  map: IslandMap;
   props: PlacedProp[];
   annotations: MapAnnotation[];
+  objects: MapObject[];
+  source: World["source"];
 }
 const HISTORY_LIMIT = 80;
 const UNDO: Snapshot[] = [];
 let REDO: Snapshot[] = [];
 
 function snapshot(): Snapshot {
-  const { map, props, annotations } = world();
+  const { map, props, annotations, objects, source } = world();
   return {
-    width: map.width,
-    depth: map.depth,
-    originX: map.originX,
-    originZ: map.originZ,
-    levels: map.levels.slice(),
-    surfaces: map.surfaces.slice(),
+    map: { ...map, levels: map.levels.slice(), surfaces: map.surfaces.slice() },
     props: props.map((p) => ({ ...p, cell: [p.cell[0], p.cell[1]] })),
     annotations: annotations.map((a) => ({ ...a, cells: a.cells.map((c) => [c[0], c[1]] as [number, number]) })),
+    objects: objects.map((o) => ({ ...o })),
+    source,
   };
 }
 
 function restore(s: Snapshot) {
   WORLD = {
-    map: {
-      width: s.width,
-      depth: s.depth,
-      originX: s.originX,
-      originZ: s.originZ,
-      levels: s.levels.slice(),
-      surfaces: s.surfaces.slice(),
-    },
+    map: { ...s.map, levels: s.map.levels.slice(), surfaces: s.map.surfaces.slice() },
     props: s.props.map((p) => ({ ...p, cell: [p.cell[0], p.cell[1]] as [number, number] })),
-    annotations: s.annotations.map((a) => ({
-      ...a,
-      cells: a.cells.map((c) => [c[0], c[1]] as [number, number]),
-    })),
+    annotations: s.annotations.map((a) => ({ ...a, cells: a.cells.map((c) => [c[0], c[1]] as [number, number]) })),
+    objects: s.objects.map((o) => ({ ...o })),
+    source: s.source,
   };
 }
 
@@ -382,19 +296,49 @@ function commit() {
   REDO = [];
 }
 
+/** Stroke state for the organic brushes: the map as the stroke began, and the cells already changed. */
+let STROKE: { before: CellSnapshot; touched: Uint8Array; seed: number } | null = null;
+let STROKE_SEED = 1;
+
+const water = (s: number) => isVoid(s) || isRiver(s);
+const keyOf = (o: MapObject) => `${o.kind}:${o.id}`;
+/** Kinds the game turns by their yaw. Buildings face the camera (ACNH); nature takes its turn from its seed. */
+const TURNS = (o: MapObject) => ["bench", "rock", "fence", "bridge", "study", "missions"].includes(o.kind) || (o.kind === "landmark" && o.id === "wharf");
+const turn = (dx: number, dz: number, yaw = 0): [number, number] =>
+  [dx * Math.cos(yaw) + dz * Math.sin(yaw), -dx * Math.sin(yaw) + dz * Math.cos(yaw)];
+const deg = (rad = 0) => Math.round((rad * 180) / Math.PI * 10) / 10;
+
+/** Local outline (before yaw) of an object's footprint, for drawing and hit tests; null = drawn as a dot. */
+function objectOutline(o: MapObject): [number, number][] | null {
+  const rect = (hw: number, hd: number, cx = 0, cz = 0): [number, number][] => [[cx - hw, cz - hd], [cx + hw, cz - hd], [cx + hw, cz + hd], [cx - hw, cz + hd]];
+  if (o.kind === "landmark") {
+    const info = LANDMARK_INFO[o.id as LandmarkId];
+    if (o.id === "wharf") return rect((WHARF_DECK_LOCAL.x1 - WHARF_DECK_LOCAL.x0) / 2, (WHARF_DECK_LOCAL.z1 - WHARF_DECK_LOCAL.z0) / 2, (WHARF_DECK_LOCAL.x0 + WHARF_DECK_LOCAL.x1) / 2, (WHARF_DECK_LOCAL.z0 + WHARF_DECK_LOCAL.z1) / 2);
+    return info?.half ? rect(info.half[0], info.half[1]) : null;
+  }
+  if (o.kind === "bridge") return rect(BRIDGE_DECK_HALF[0], BRIDGE_DECK_HALF[1]);
+  if (o.kind === "study" && o.model && o.model in FURNITURE) {
+    const solid = FURNITURE[o.model as Furniture].solid[0];
+    return rect(solid[2], solid[3], solid[0], solid[1]);
+  }
+  const f = o.model ? PROP_FOOTPRINT[o.model] : undefined;
+  return f ? rect(f[0] * (o.scale ?? 1), f[1] * (o.scale ?? 1)) : null;
+}
+
 export default function MapLab() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const offscreen = useRef<HTMLCanvasElement | null>(null);
-  const { map, props, annotations } = world();
-  const [tool, setTool] = useState<Tool>("raise");
+  const { map, props, annotations, objects, source } = world();
+  const [tool, setTool] = useState<Tool>("object");
   const [shape, setShape] = useState<Shape>("free");
+  const [view, setView] = useState<"game" | "raw">("game");
   const [dragFrom, setDragFrom] = useState<{ x: number; z: number } | null>(null);
   const [brush, setBrush] = useState(3);
   const [round, setRound] = useState(true);
   const [paintSurface, setPaintSurface] = useState<number>(Surface.Grass);
   const [paintLevel, setPaintLevel] = useState(0);
-  const [zoom, setZoom] = useState(7);
-  const [hover, setHover] = useState<{ x: number; z: number } | null>(null);
+  const [zoom, setZoom] = useState(9);
+  const [hover, setHover] = useState<{ x: number; z: number; u: number; v: number } | null>(null);
   const [copied, setCopied] = useState(false);
   const [edited, setEdited] = useState(false);
   const [propKind, setPropKind] = useState<string>("building");
@@ -404,14 +348,25 @@ export default function MapLab() {
   const [labelColor, setLabelColor] = useState(LABEL_COLORS[0]);
   const [labelErase, setLabelErase] = useState(false);
   const [library, setLibrary] = useState<string[]>([]);
+  const [legacyDraft, setLegacyDraft] = useState(false);
   const [saveName, setSaveName] = useState("");
   const [sheet, setSheet] = useState<"none" | "open" | "import">("none");
   const [importText, setImportText] = useState("");
   const [importError, setImportError] = useState("");
   const [legalised, setLegalised] = useState(0);
+  const [coastSeed, setCoastSeed] = useState(7);
+  const [coastSize, setCoastSize] = useState(36);
+  const [placeKind, setPlaceKind] = useState<ObjectKind | "select">("select");
+  const [placeId, setPlaceId] = useState("");
+  const [placeModel, setPlaceModel] = useState("");
+  const [snap, setSnap] = useState(0.5);
+  const [selected, setSelected] = useState<string | null>(null);
+  const [health, setHealth] = useState<VillageHealth | null>(null);
   const [version, setVersion] = useState(0);
   const painting = useRef(false);
   const lastCell = useRef<{ x: number; z: number } | null>(null);
+  const lasso = useRef<[number, number][]>([]);
+  const moving = useRef<{ key: string; dx: number; dz: number; committed: boolean } | null>(null);
   /**
    * The authoritative drag origin.
    *
@@ -436,14 +391,21 @@ export default function MapLab() {
     setEdited(false);
   }, []);
 
-  // Keyed on version, so hovering a cell does not re-run the whole audit.
-  // `version` looks unnecessary to the linter because the mutation it stands for
-  // happens inside `map`'s typed arrays, which it cannot see. It is the key.
+  const selectedObject = objects.find((o) => keyOf(o) === selected) ?? null;
+
+  // Health: everything the suite asserts, a beat after the last edit (a 256² map takes a moment).
+  // `version` stands for mutations inside `map`'s typed arrays, which the linter cannot see.
+  useEffect(() => {
+    const t = setTimeout(() => setHealth(villageHealth(villageOf(map, objects))), 250);
+    return () => clearTimeout(t);
+  }, [map, objects, version]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const health = useMemo(() => measure(map), [map, version]);
+  const budget = useMemo(() => mapBudget(map), [map, version]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const waterClass = useMemo(() => classifyWater(map), [map, version]);
 
   /**
-   * Restore an autosaved draft.
+   * Restore the autosaved draft.
    *
    * localStorage is an external store, which is the documented case for reading
    * one in an effect — the lint rule just cannot tell the difference. It has to
@@ -454,13 +416,14 @@ export default function MapLab() {
   useEffect(() => {
     let saved: string | null = null;
     try {
-      saved = window.localStorage.getItem(DRAFT_KEY);
+      saved = window.localStorage.getItem(PAINTER_DRAFT_KEY);
+      setLegacyDraft(!!window.localStorage.getItem(LEGACY_DRAFT_KEY));
     } catch {
       return;
     }
     if (!saved) return;
     try {
-      WORLD = parseIslandMap(JSON.parse(saved) as IslandMapDoc);
+      WORLD = fromDoc(JSON.parse(saved) as VillageDoc);
     } catch {
       return;
     }
@@ -474,6 +437,14 @@ export default function MapLab() {
     setLibrary(Object.keys(readLibrary()).sort());
   }, []);
 
+  const saveNow = useCallback(() => {
+    try {
+      window.localStorage.setItem(PAINTER_DRAFT_KEY, JSON.stringify(draftDoc(world())));
+    } catch {
+      /* quota or private mode: autosave is a convenience, not a guarantee */
+    }
+  }, []);
+
   // Autosave. Debounced, because serialising 256² to JSON on every brush dab
   // would be the slowest thing on the page.
   //
@@ -483,15 +454,9 @@ export default function MapLab() {
   // banner claims a draft that is really just the shipped map.
   useEffect(() => {
     if (!edited) return;
-    const t = setTimeout(() => {
-      try {
-        window.localStorage.setItem(DRAFT_KEY, JSON.stringify(serialiseIslandMap(map, props, annotations)));
-      } catch {
-        /* quota or private mode: autosave is a convenience, not a guarantee */
-      }
-    }, 700);
+    const t = setTimeout(saveNow, 700);
     return () => clearTimeout(t);
-  }, [map, props, annotations, version, edited]);
+  }, [version, edited, saveNow]);
 
   const undo = useCallback(() => {
     if (!UNDO.length) return;
@@ -509,9 +474,10 @@ export default function MapLab() {
 
   /** Replace the working map wholesale. Undoable, and marks the map dirty. */
   const load = useCallback(
-    (doc: IslandMapDoc) => {
+    (next: World) => {
       commit();
-      WORLD = parseIslandMap(doc);
+      WORLD = next;
+      setSelected(null);
       bump();
     },
     [bump]
@@ -531,17 +497,46 @@ export default function MapLab() {
     setNewLabel("");
   }, [newLabel, labelColor, bump]);
 
-  const saveDraft = useCallback(
-    (name: string) => {
-      const n = name.trim();
-      if (!n) return;
-      const lib = readLibrary();
-      lib[n] = serialiseIslandMap(map, props, annotations);
-      writeLibrary(lib);
-      setLibrary(Object.keys(lib).sort());
-      setSaveName("");
+  const saveDraft = useCallback((name: string) => {
+    const n = name.trim();
+    if (!n) return;
+    const lib = readLibrary();
+    lib[n] = draftDoc(world());
+    writeLibrary(lib);
+    setLibrary(Object.keys(lib).sort());
+    setSaveName("");
+  }, []);
+
+  /** Change one object (undoable). */
+  const updateObject = useCallback(
+    (key: string, patch: Partial<MapObject>, record = true) => {
+      const w = world();
+      if (record) commit();
+      w.objects = w.objects.map((o) => (keyOf(o) === key ? { ...o, ...patch } : o));
+      if (patch.id !== undefined || patch.kind !== undefined) setSelected(`${patch.kind ?? key.split(":")[0]}:${patch.id ?? key.split(":").slice(1).join(":")}`);
+      bump();
     },
-    [map, props, annotations]
+    [bump]
+  );
+
+  const deleteObject = useCallback(
+    (key: string) => {
+      const w = world();
+      commit();
+      w.objects = w.objects.filter((o) => keyOf(o) !== key);
+      setSelected(null);
+      bump();
+    },
+    [bump]
+  );
+
+  /** Snap a world point for an object of this kind (buildings: footprint edges on cell edges). */
+  const snapFor = useCallback(
+    (kind: ObjectKind, id: string, x: number, z: number): [number, number] => {
+      const half = kind === "landmark" && snap > 0 ? LANDMARK_INFO[id as LandmarkId]?.half : undefined;
+      return snapPlacement(x, z, snap, half && half[0] > 1 ? half : undefined);
+    },
+    [snap]
   );
 
   useEffect(() => {
@@ -549,10 +544,19 @@ export default function MapLab() {
       // Otherwise "[" typed into the draft-name or prop-id field resizes the
       // brush, and Cmd+Z in a text field undoes the MAP instead of the text.
       const el = e.target as HTMLElement | null;
-      if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA")) return;
+      if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT")) return;
       if (!(e.metaKey || e.ctrlKey)) {
         if (e.key === "[") setBrush((b) => Math.max(1, b - 1));
         if (e.key === "]") setBrush((b) => Math.min(16, b + 1));
+        const o = selected && world().objects.find((ob) => keyOf(ob) === selected);
+        if (o) {
+          if (e.key === "Escape") setSelected(null);
+          if (e.key === "Delete" || e.key === "Backspace") { e.preventDefault(); deleteObject(selected!); }
+          if (e.key.toLowerCase() === "r" && TURNS(o)) updateObject(selected!, { yaw: ((o.yaw ?? 0) + (e.shiftKey ? Math.PI / 12 : Math.PI / 2)) % (Math.PI * 2) });
+          const step = snap || 0.1, flip = view === "game" ? -1 : 1;
+          const arrows: Record<string, [number, number]> = { ArrowLeft: [-flip * step, 0], ArrowRight: [flip * step, 0], ArrowUp: [0, -flip * step], ArrowDown: [0, flip * step] };
+          if (arrows[e.key]) { e.preventDefault(); updateObject(selected!, { x: Math.round((o.x + arrows[e.key][0]) * 1e6) / 1e6, z: Math.round((o.z + arrows[e.key][1]) * 1e6) / 1e6 }); }
+        }
         return;
       }
       if (e.key.toLowerCase() !== "z" && e.key.toLowerCase() !== "y") return;
@@ -562,15 +566,23 @@ export default function MapLab() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [undo, redo]);
+  }, [undo, redo, selected, deleteObject, updateObject, snap, view]);
+
+  const flip = view === "game";
+  /** Cell space (cell (x, z) spans [x, x + 1] × [z, z + 1]) → canvas pixels, for text drawn unflipped. */
+  const toPx = useCallback(
+    (u: number, v: number): [number, number] => (flip ? [(map.width - u) * zoom, (map.depth - v) * zoom] : [u * zoom, v * zoom]),
+    [flip, map.width, map.depth, zoom]
+  );
 
   /**
-   * Repaint the terrain into an offscreen canvas.
+   * Repaint the terrain and objects into an offscreen canvas.
    *
    * Separate from the hover cursor on purpose. At 256² this loop touches 65k
    * cells twice plus every edge; running it on mousemove made the cursor lag.
    * Now it runs only when the map actually changes, and moving the mouse costs
-   * one blit.
+   * one blit. Everything draws in cell space under one transform, so the game
+   * view is a flip of the same drawing; text is placed with `toPx`, unflipped.
    */
   const repaint = useCallback(() => {
     const W = map.width;
@@ -585,20 +597,41 @@ export default function MapLab() {
     const ctx = off.getContext("2d");
     if (!ctx) return;
     ctx.imageSmoothingEnabled = false;
+    const cellSpace = () => ctx.setTransform(flip ? -zoom : zoom, 0, 0, flip ? -zoom : zoom, flip ? W * zoom : 0, flip ? D * zoom : 0);
+    const px = (n: number) => n / zoom;
+    // World → cell space.
+    const cellU = (x: number) => x - map.originX + 0.5;
+    const cellV = (z: number) => z - map.originZ + 0.5;
+    const text = (s: string, u: number, v: number, color = "#fff", align: CanvasTextAlign = "center") => {
+      if (zoom < 4) return;
+      ctx.save();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      const [x, y] = toPx(u, v);
+      ctx.font = `${Math.max(9, zoom * 1.05)}px ${mono}`;
+      ctx.textAlign = align;
+      ctx.textBaseline = "middle";
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = "rgba(0,0,0,0.85)";
+      ctx.strokeText(s, x, y);
+      ctx.fillStyle = color;
+      ctx.fillText(s, x, y);
+      ctx.restore();
+    };
+    cellSpace();
 
     for (let z = 0; z < D; z++) {
       for (let x = 0; x < W; x++) {
         const s = surfaceAt(map, x, z);
         const l = levelAt(map, x, z);
-        ctx.fillStyle = SURFACE_FILL[s] ?? "#f0f";
-        ctx.fillRect(x * zoom, z * zoom, zoom, zoom);
+        ctx.fillStyle = water(s) && waterClass[z * W + x] === WATER_CLASS.sea ? SEA_FILL : SURFACE_FILL[s] ?? "#f0f";
+        ctx.fillRect(x, z, 1, 1);
         // Level as brightness: higher ground reads lighter, which is the only
         // way to see elevation on a flat map. Tuned against a screenshot, not
         // guessed -- at 0.10 per level the level-2 plateaus were the same green
         // as the level-0 ground and the map read as flat.
-        if (!isVoid(s) && l > 0) {
+        if (!water(s) && l > 0) {
           ctx.fillStyle = `rgba(255,247,225,${Math.min(0.5, 0.17 * l)})`;
-          ctx.fillRect(x * zoom, z * zoom, zoom, zoom);
+          ctx.fillRect(x, z, 1, 1);
         }
       }
     }
@@ -606,32 +639,30 @@ export default function MapLab() {
     // Cliff and half-step edges, drawn as the lines they will become.
     for (let z = 0; z < D; z++) {
       for (let x = 0; x < W; x++) {
-        if (isVoid(surfaceAt(map, x, z))) continue;
+        if (water(surfaceAt(map, x, z))) continue;
         for (const [dx, dz] of ORTHOGONAL) {
           if (!inBounds(map, x + dx, z + dz)) continue;
           const d = levelAt(map, x, z) - levelAt(map, x + dx, z + dz);
           if (d <= 0) continue;
           // Half steps get their own colour, not a fainter version of the cliff
-          // line. They are the thing being tuned -- rare, blended, for
-          // naturalness -- so "where are they and how many" has to be answerable
-          // at a glance, and a 1px brown line at zoom 5 was not.
+          // line: "where are they and how many" has to be answerable at a glance.
           ctx.strokeStyle = d >= CLIFF_LEVELS ? "#20140c" : "#e8a13c";
-          ctx.lineWidth = d >= CLIFF_LEVELS ? Math.max(1.5, zoom * 0.3) : Math.max(1, zoom * 0.2);
+          ctx.lineWidth = px(d >= CLIFF_LEVELS ? Math.max(1.5, zoom * 0.3) : Math.max(1, zoom * 0.2));
           ctx.beginPath();
-          const x0 = (x + (dx > 0 ? 1 : 0)) * zoom;
-          const z0 = (z + (dz > 0 ? 1 : 0)) * zoom;
+          const x0 = x + (dx > 0 ? 1 : 0);
+          const z0 = z + (dz > 0 ? 1 : 0);
           if (dx !== 0) {
-            ctx.moveTo(x0, z * zoom);
-            ctx.lineTo(x0, (z + 1) * zoom);
+            ctx.moveTo(x0, z);
+            ctx.lineTo(x0, z + 1);
           } else {
-            ctx.moveTo(x * zoom, z0);
-            ctx.lineTo((x + 1) * zoom, z0);
+            ctx.moveTo(x, z0);
+            ctx.lineTo(x + 1, z0);
           }
           ctx.stroke();
         }
         if (needsCliff(map, x, z) && !cliffPieceFor(map, x, z)) {
           ctx.fillStyle = "#ff0055";
-          ctx.fillRect(x * zoom, z * zoom, zoom, zoom);
+          ctx.fillRect(x, z, 1, 1);
         }
       }
     }
@@ -642,23 +673,18 @@ export default function MapLab() {
         if (!isRamp(surfaceAt(map, x, z))) continue;
         const dir = rampDir(map, x, z);
         ctx.fillStyle = dir ? "#2b7fff" : "#ff0055";
-        ctx.fillRect(x * zoom, z * zoom, zoom, zoom);
+        ctx.fillRect(x, z, 1, 1);
         if (dir) {
           ctx.strokeStyle = "#fff";
-          ctx.lineWidth = Math.max(1, zoom * 0.18);
+          ctx.lineWidth = px(Math.max(1, zoom * 0.18));
           ctx.beginPath();
-          const cx = (x + 0.5) * zoom;
-          const cz = (z + 0.5) * zoom;
-          ctx.moveTo(cx - dir[0] * zoom * 0.35, cz - dir[1] * zoom * 0.35);
-          ctx.lineTo(cx + dir[0] * zoom * 0.35, cz + dir[1] * zoom * 0.35);
+          ctx.moveTo(x + 0.5 - dir[0] * 0.35, z + 0.5 - dir[1] * 0.35);
+          ctx.lineTo(x + 0.5 + dir[0] * 0.35, z + 0.5 + dir[1] * 0.35);
           ctx.stroke();
         }
       }
     }
 
-    // Markers, coloured by kind so a layout reads at a glance without hovering
-    // every dot. Buildings get their id written next to them, since "where does
-    // HQ go" is the actual question a layout draft answers.
     // Labels sit under the markers and over the terrain. Semi-transparent with
     // a solid centre dot: a fence line has to read as a line at a glance, but
     // you still need to see the ground it is drawn on.
@@ -666,75 +692,112 @@ export default function MapLab() {
       ctx.fillStyle = a.color;
       for (const [x, z] of a.cells) {
         ctx.globalAlpha = 0.45;
-        ctx.fillRect(x * zoom, z * zoom, zoom, zoom);
+        ctx.fillRect(x, z, 1, 1);
         ctx.globalAlpha = 1;
-        ctx.fillRect(x * zoom + zoom * 0.35, z * zoom + zoom * 0.35, zoom * 0.3, zoom * 0.3);
+        ctx.fillRect(x + 0.35, z + 0.35, 0.3, 0.3);
       }
       // The name once, at the first cell, so a map with six labels is readable
       // instead of being the same word stamped four hundred times.
       const first = a.cells[0];
-      if (first && zoom >= 4) {
-        ctx.font = `${Math.max(9, zoom * 1.1)}px ${mono}`;
-        ctx.textBaseline = "bottom";
-        ctx.lineWidth = 3;
-        ctx.strokeStyle = "rgba(0,0,0,0.85)";
-        ctx.strokeText(a.name, first[0] * zoom, first[1] * zoom - 2);
-        ctx.fillStyle = a.color;
-        ctx.fillText(a.name, first[0] * zoom, first[1] * zoom - 2);
-      }
+      if (first) text(a.name, first[0] + 0.5, first[1] - 0.2, a.color);
     }
 
+    // Legacy planning markers (island-map.json): the game reads objects, not these.
     for (const p of props) {
       const colour = PROP_COLOR[p.kind] ?? "#ffd166";
       const [pw, pd] = p.size ?? [1, 1];
-      const plot = pw > 1 || pd > 1;
-      let lx: number;
-      let lz: number;
-
-      if (plot) {
-        // A plot is drawn as its actual footprint, hatched rather than solid so
-        // the terrain underneath still reads. Blocking out where a building goes
-        // is only useful if you can see what it is standing on.
-        const x = p.cell[0] * zoom;
-        const z = p.cell[1] * zoom;
-        const w = pw * zoom;
-        const d = pd * zoom;
-        ctx.fillStyle = colour;
-        ctx.globalAlpha = 0.3;
-        ctx.fillRect(x, z, w, d);
-        ctx.globalAlpha = 1;
-        ctx.strokeStyle = colour;
-        ctx.lineWidth = 2;
-        ctx.strokeRect(x + 1, z + 1, w - 2, d - 2);
-        lx = x + w / 2;
-        lz = z + d / 2;
-      } else {
-        lx = (p.cell[0] + 0.5) * zoom;
-        lz = (p.cell[1] + 0.5) * zoom;
-        const r = Math.max(2, zoom * 0.34);
-        ctx.beginPath();
-        ctx.arc(lx, lz, r, 0, Math.PI * 2);
-        ctx.fillStyle = colour;
-        ctx.fill();
-        ctx.lineWidth = 1;
-        ctx.strokeStyle = "rgba(0,0,0,0.65)";
-        ctx.stroke();
-        lx += r + 3;
-      }
-
-      if (p.id && zoom >= 5) {
-        ctx.font = `${Math.max(9, zoom * 1.1)}px ${mono}`;
-        ctx.textBaseline = "middle";
-        ctx.textAlign = plot ? "center" : "left";
-        ctx.lineWidth = 3;
-        ctx.strokeStyle = "rgba(0,0,0,0.8)";
-        ctx.strokeText(p.id, lx, lz);
-        ctx.fillStyle = "#fff";
-        ctx.fillText(p.id, lx, lz);
-        ctx.textAlign = "left";
-      }
+      ctx.fillStyle = colour;
+      ctx.globalAlpha = 0.3;
+      ctx.fillRect(p.cell[0], p.cell[1], pw, pd);
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = colour;
+      ctx.lineWidth = px(2);
+      ctx.strokeRect(p.cell[0], p.cell[1], pw, pd);
+      if (p.id) text(p.id, p.cell[0] + pw / 2, p.cell[1] + pd / 2);
     }
-  }, [map, props, annotations, zoom]);
+
+    // Objects: footprints where they have one, dots otherwise; ids on the ones people ask about.
+    const overlapping = new Set((health?.warnings ?? []).flatMap((w) => w.split(" overlaps ").map((s) => s.split(" (")[0])));
+    const outlinePath = (o: MapObject, pts: [number, number][]) => {
+      ctx.beginPath();
+      pts.forEach(([a, b], i) => {
+        const [dx, dz] = turn(a, b, o.yaw);
+        const u = cellU(o.x + dx), v = cellV(o.z + dz);
+        if (i) ctx.lineTo(u, v);
+        else ctx.moveTo(u, v);
+      });
+      ctx.closePath();
+    };
+    for (const o of objects) {
+      const st = OBJECT_STYLE[o.kind];
+      const color = o.kind === "landmark" ? LANDMARK_INFO[o.id as LandmarkId]?.color ?? st.color : st.color;
+      const u = cellU(o.x), v = cellV(o.z);
+      const outline = objectOutline(o);
+      const isSel = keyOf(o) === selected;
+      if (outline) {
+        outlinePath(o, outline);
+        ctx.fillStyle = color;
+        ctx.globalAlpha = o.kind === "landmark" ? 0.75 : 0.9;
+        ctx.fill();
+        ctx.globalAlpha = 1;
+        ctx.lineWidth = px(isSel ? 3 : 1.5);
+        ctx.strokeStyle = isSel ? "#ffd166" : overlapping.has(o.id) ? "#ff3355" : "rgba(0,0,0,0.6)";
+        ctx.stroke();
+      } else {
+        ctx.beginPath();
+        ctx.arc(u, v, st.r, 0, Math.PI * 2);
+        ctx.fillStyle = color;
+        ctx.fill();
+        ctx.lineWidth = px(isSel ? 3 : 1);
+        ctx.strokeStyle = isSel ? "#ffd166" : overlapping.has(o.id) ? "#ff3355" : "rgba(0,0,0,0.65)";
+        ctx.stroke();
+      }
+      // A tree's crown, faint, so spacing reads as the game will.
+      if (o.kind === "tree") {
+        ctx.beginPath();
+        ctx.arc(u, v, 1.3, 0, Math.PI * 2);
+        ctx.strokeStyle = "rgba(47,107,58,0.55)";
+        ctx.lineWidth = px(1);
+        ctx.stroke();
+      }
+      // Doors and exits (they move with their building), and three residents' room at an anchor.
+      if (o.kind === "landmark") {
+        const info = LANDMARK_INFO[o.id as LandmarkId];
+        for (const [which, c] of [["door", "#ffffff"], ["exit", "#4ad8ff"]] as const) {
+          const off = info?.[which];
+          if (!off) continue;
+          const [dx, dz] = turn(off[0], off[1], o.yaw);
+          ctx.beginPath();
+          ctx.arc(cellU(o.x + dx), cellV(o.z + dz), 0.22, 0, Math.PI * 2);
+          ctx.fillStyle = c;
+          ctx.fill();
+        }
+      }
+      if (o.kind === "anchor") {
+        ctx.fillStyle = "rgba(184,146,255,0.35)";
+        for (let k = 1; k < 3; k++) { ctx.beginPath(); ctx.arc(u + k * SHARED_SPACING, v, 0.3, 0, Math.PI * 2); ctx.fill(); }
+      }
+      if (o.kind === "study" && o.model && o.model in FURNITURE) {
+        ctx.fillStyle = "#fff";
+        for (const [sx, sz] of FURNITURE[o.model as Furniture].seats) {
+          const [dx, dz] = turn(sx, sz, o.yaw);
+          ctx.fillRect(cellU(o.x + dx) - 0.12, cellV(o.z + dz) - 0.12, 0.24, 0.24);
+        }
+      }
+      const named = o.kind === "landmark" || o.kind === "anchor" || o.kind === "study" || o.kind === "spawn" || o.kind === "fitting" || o.kind === "missions";
+      if (named || isSel) text(o.kind === "anchor" ? `⚑ ${o.id}` : o.id.replace(/^study:/, ""), u, v - (outline ? 0 : 0.9), isSel ? "#ffd166" : "#fff");
+    }
+
+    // Compass: north is −x. In the game view that is the right edge, as on the minimap.
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.font = `bold 13px ${mono}`;
+    ctx.textBaseline = "middle";
+    ctx.fillStyle = "#ffd166";
+    ctx.textAlign = flip ? "right" : "left";
+    ctx.fillText(flip ? "N ▶" : "◀ N", flip ? W * zoom - 6 : 6, (D * zoom) / 2);
+    ctx.textAlign = "center";
+    ctx.fillText(flip ? "▲ W (camera forward)" : "▼ W", (W * zoom) / 2, flip ? 12 : D * zoom - 12);
+  }, [map, props, annotations, objects, zoom, flip, toPx, waterClass, selected, health]);
 
   const blit = useCallback(() => {
     const cv = canvasRef.current;
@@ -747,47 +810,52 @@ export default function MapLab() {
     ctx.imageSmoothingEnabled = false;
     ctx.drawImage(off, 0, 0);
     if (!hover) return;
+    ctx.setTransform(flip ? -zoom : zoom, 0, 0, flip ? -zoom : zoom, flip ? map.width * zoom : 0, flip ? map.depth * zoom : 0);
+    const px = (n: number) => n / zoom;
 
-    // A pending rect or line, drawn before it is committed. Without this you
-    // are dragging blind and only find out the plot was the wrong size after
+    // A pending rect, line or lasso, drawn before it is committed. Without this
+    // you are dragging blind and only find out the plot was the wrong size after
     // it lands.
-    const pending = dragFrom && (tool === "prop" || shape === "rect" || shape === "line");
+    if (shape === "lasso" && lasso.current.length > 1 && tool !== "object") {
+      ctx.strokeStyle = "#ffd166";
+      ctx.lineWidth = px(2);
+      ctx.beginPath();
+      lasso.current.forEach(([u, v], i) => (i ? ctx.lineTo(u, v) : ctx.moveTo(u, v)));
+      ctx.stroke();
+    }
+    const pending = dragFrom && (tool === "prop" || shape === "rect" || shape === "line") && tool !== "object";
     if (pending && dragFrom) {
       ctx.strokeStyle = "#ffd166";
-      ctx.lineWidth = 2;
+      ctx.lineWidth = px(2);
       if (shape === "line" && tool !== "prop") {
         const end = snapLine(dragFrom, hover);
         ctx.beginPath();
-        ctx.moveTo((dragFrom.x + 0.5) * zoom, (dragFrom.z + 0.5) * zoom);
-        ctx.lineTo((end.x + 0.5) * zoom, (end.z + 0.5) * zoom);
+        ctx.moveTo(dragFrom.x + 0.5, dragFrom.z + 0.5);
+        ctx.lineTo(end.x + 0.5, end.z + 0.5);
         ctx.stroke();
       } else {
         const { x0, z0, x1, z1 } = rectOf(dragFrom, hover);
-        ctx.strokeRect(
-          x0 * zoom + 1,
-          z0 * zoom + 1,
-          (x1 - x0 + 1) * zoom - 2,
-          (z1 - z0 + 1) * zoom - 2
-        );
+        ctx.strokeRect(x0, z0, x1 - x0 + 1, z1 - z0 + 1);
       }
     }
 
     ctx.strokeStyle = "#fff";
-    ctx.lineWidth = 1;
-    const r = tool === "prop" || shape === "rect" || shape === "fill" ? 0 : brush - 1;
+    ctx.lineWidth = px(1);
+    if (tool === "object") {
+      ctx.beginPath();
+      ctx.arc(hover.u, hover.v, 0.3, 0, Math.PI * 2);
+      ctx.stroke();
+      return;
+    }
+    const r = tool === "prop" || shape === "rect" || shape === "fill" || shape === "lasso" ? 0 : brush - 1;
     if (round && r > 0) {
       ctx.beginPath();
-      ctx.arc((hover.x + 0.5) * zoom, (hover.z + 0.5) * zoom, (r + 0.5) * zoom, 0, Math.PI * 2);
+      ctx.arc(hover.x + 0.5, hover.z + 0.5, r + 0.5, 0, Math.PI * 2);
       ctx.stroke();
     } else {
-      ctx.strokeRect(
-        (hover.x - r) * zoom + 0.5,
-        (hover.z - r) * zoom + 0.5,
-        (r * 2 + 1) * zoom - 1,
-        (r * 2 + 1) * zoom - 1
-      );
+      ctx.strokeRect(hover.x - r, hover.z - r, r * 2 + 1, r * 2 + 1);
     }
-  }, [hover, brush, zoom, round, dragFrom, shape, tool]);
+  }, [hover, brush, zoom, round, dragFrom, shape, tool, flip, map.width, map.depth]);
 
   useEffect(() => {
     repaint();
@@ -826,31 +894,43 @@ export default function MapLab() {
           paintLabel(x, z);
           break;
         case "prop":
-          // Handled on mousedown, one per click. Dragging a brush of them
-          // would carpet the map.
+        case "object":
+          // Handled on mousedown/mouseup. Dragging a brush of them would carpet the map.
           break;
         case "land":
           // Only fills water. Painting over existing ground would silently
           // erase whatever surface was there.
-          if (isVoid(s)) setCell(map, x, z, 0, Surface.Grass);
+          if (water(s)) setCell(map, x, z, 0, Surface.Grass);
           break;
         case "sea":
-          setCell(map, x, z, 0, Surface.Void);
+          setCell(map, x, z, 0, Surface.River);
           break;
         case "surface":
-          setCell(map, x, z, levelAt(map, x, z), paintSurface);
+          setCell(map, x, z, water(paintSurface) ? 0 : levelAt(map, x, z), paintSurface);
           break;
         case "ramp":
-          if (!isVoid(s)) setCell(map, x, z, levelAt(map, x, z), Surface.Ramp);
+          if (!water(s)) setCell(map, x, z, levelAt(map, x, z), Surface.Ramp);
           break;
         case "flat":
-          if (!isVoid(s)) setCell(map, x, z, paintLevel, s);
+          if (!water(s)) setCell(map, x, z, paintLevel, s);
           break;
         case "raise":
         case "lower": {
-          if (isVoid(s)) break;
+          if (water(s)) break;
           const d = tool === "raise" ? 1 : -1;
           setCell(map, x, z, Math.min(MAX_LEVEL, Math.max(0, levelAt(map, x, z) + d)), s);
+          break;
+        }
+        case "smooth":
+        case "grow":
+        case "shrink":
+        case "jitter": {
+          // Once per cell per stroke, from the map as the stroke began.
+          if (!STROKE) STROKE = { before: snapshotCells(map), touched: new Uint8Array(map.width * map.depth), seed: STROKE_SEED };
+          const i = z * map.width + x;
+          if (STROKE.touched[i]) break;
+          STROKE.touched[i] = 1;
+          organicCell(tool as OrganicOp, map, STROKE.before, x, z, STROKE.seed);
           break;
         }
       }
@@ -944,10 +1024,7 @@ export default function MapLab() {
       } else {
         const steps = Math.max(Math.abs(cx - from.x), Math.abs(cz - from.z));
         for (let i = 1; i <= steps; i++) {
-          dab(
-            Math.round(from.x + ((cx - from.x) * i) / steps),
-            Math.round(from.z + ((cz - from.z) * i) / steps)
-          );
+          dab(Math.round(from.x + ((cx - from.x) * i) / steps), Math.round(from.z + ((cz - from.z) * i) / steps));
         }
       }
       lastCell.current = { x: cx, z: cz };
@@ -956,17 +1033,19 @@ export default function MapLab() {
     [dab, bump]
   );
 
-  const cellFrom = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  /** Pointer → cell (floor), cell space (u, v) and world coordinates. */
+  const pointer = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
-    return {
-      x: Math.floor((e.clientX - rect.left) / zoom),
-      z: Math.floor((e.clientY - rect.top) / zoom),
-    };
+    const ax = (e.clientX - rect.left) / zoom, ay = (e.clientY - rect.top) / zoom;
+    const u = flip ? map.width - ax : ax, v = flip ? map.depth - ay : ay;
+    return { x: Math.floor(u), z: Math.floor(v), u, v, wx: map.originX + u - 0.5, wz: map.originZ + v - 0.5 };
   };
 
   const endStroke = () => {
     painting.current = false;
     lastCell.current = null;
+    if (STROKE) STROKE_SEED++;
+    STROKE = null;
   };
 
   /** Fill every cell of a rectangle. Used by the rect shape. */
@@ -988,10 +1067,7 @@ export default function MapLab() {
         return;
       }
       for (let i = 0; i <= steps; i++) {
-        dab(
-          Math.round(a.x + ((end.x - a.x) * i) / steps),
-          Math.round(a.z + ((end.z - a.z) * i) / steps)
-        );
+        dab(Math.round(a.x + ((end.x - a.x) * i) / steps), Math.round(a.z + ((end.z - a.z) * i) / steps));
       }
     },
     [dab]
@@ -1004,7 +1080,7 @@ export default function MapLab() {
   };
 
   /**
-   * Place or remove a marker.
+   * Place or remove a planning marker (legacy).
    *
    * Click a covered cell to remove whatever is there, so a mis-drawn plot is one
    * click to undo rather than a hunt for its corner. Otherwise a drag defines a
@@ -1031,8 +1107,6 @@ export default function MapLab() {
           kind: propKind,
           ...(id ? { id } : {}),
           cell: [x0, z0] as [number, number],
-          // A marker sits on the ground it is placed on; the renderer reads
-          // this rather than re-deriving it, so it has to match.
           level: levelAt(map, x0, z0),
           ...(sw > 1 || sd > 1 ? { size: [sw, sd] as [number, number] } : {}),
         },
@@ -1040,6 +1114,68 @@ export default function MapLab() {
       bump();
     },
     [map, propKind, propId, bump]
+  );
+
+  /** The topmost object under a world point: inside its footprint, or near its dot. */
+  const objectAt = useCallback(
+    (wx: number, wz: number): MapObject | null => {
+      for (let i = objects.length - 1; i >= 0; i--) {
+        const o = objects[i], outline = objectOutline(o);
+        const [lx, lz] = turn(wx - o.x, wz - o.z, -(o.yaw ?? 0));
+        if (outline) {
+          const xs = outline.map((p) => p[0]), zs = outline.map((p) => p[1]);
+          if (lx >= Math.min(...xs) && lx <= Math.max(...xs) && lz >= Math.min(...zs) && lz <= Math.max(...zs)) return o;
+        } else if (Math.hypot(lx, lz) <= Math.max(0.45, OBJECT_STYLE[o.kind].r)) return o;
+      }
+      return null;
+    },
+    [objects]
+  );
+
+  /** Ids a unique kind may still take (landmarks, anchors, outdoor tables). */
+  const freeIds = useMemo(() => {
+    const has = (kind: ObjectKind, id: string) => objects.some((o) => o.kind === kind && o.id === id);
+    return {
+      landmark: LANDMARK_IDS.filter((id) => !has("landmark", id)),
+      anchor: Object.keys(RESIDENT_ANCHORS).filter((id) => !has("anchor", id)),
+      study: OUTDOOR_TABLES.map((t) => t.anchor).filter((id) => !has("study", id)),
+    };
+  }, [objects]);
+
+  /** Place a new object of the palette's kind at a world point. Returns its key, or null. */
+  const placeObject = useCallback(
+    (wx: number, wz: number): string | null => {
+      if (placeKind === "select") return null;
+      const kind = placeKind, w = world();
+      let id = "", extra: Partial<MapObject> = {};
+      if (kind === "landmark" || kind === "anchor" || kind === "study") {
+        const free: readonly string[] = freeIds[kind];
+        id = free.includes(placeId) ? placeId : free[0] ?? "";
+        if (!id) return null;
+        if (kind === "study") {
+          const seats = OUTDOOR_TABLES.find((t) => t.anchor === id)?.seats ?? 4;
+          extra = { model: (Object.keys(FURNITURE) as Furniture[]).find((f) => FURNITURE[f].seats.length === seats && ["picnic", "pier"].includes(f)) ?? "picnic" };
+        }
+      } else if (kind === "spawn") {
+        id = w.objects.some((o) => o.kind === "spawn" && o.id === "default") ? nextObjectId(kind, w.objects) : "default";
+      } else if (kind === "fitting" || kind === "missions") {
+        id = w.objects.some((o) => o.kind === kind && o.id === kind) ? nextObjectId(kind, w.objects) : kind;
+      } else {
+        id = nextObjectId(kind, w.objects);
+      }
+      if (kind === "tree" || kind === "bush" || kind === "flower") extra = { seed: kind === "tree" ? Number(placeModel || 0) + 4 * Math.floor(Math.random() * 3) : Math.floor(Math.random() * 32) };
+      if (kind === "rock") extra = { model: ROCK_MODELS.includes(placeModel) ? placeModel : ROCK_MODELS[0], scale: 1 };
+      if (kind === "bench") extra = { model: "bench-wood" };
+      if (kind === "fence") extra = { model: FENCE_MODELS.includes(placeModel) ? placeModel : FENCE_MODELS[0] };
+      if (kind === "bug") extra = { model: BUG_BIOMES.includes(placeModel) ? placeModel : BUG_BIOMES[1] };
+      if (kind === "bridge") extra = { yaw: Math.PI / 2 };
+      const [x, z] = snapFor(kind, id, wx, wz);
+      commit();
+      w.objects = [...w.objects, { id, kind, x, z, ...extra }];
+      bump();
+      return `${kind}:${id}`;
+    },
+    [placeKind, placeId, placeModel, freeIds, snapFor, bump]
   );
 
   const btn = (active: boolean, extra?: React.CSSProperties) => ({
@@ -1053,31 +1189,39 @@ export default function MapLab() {
     cursor: "pointer",
     ...extra,
   });
+  const field: React.CSSProperties = {
+    padding: "4px 6px", fontSize: 12, fontFamily: mono, borderRadius: 4, border: "1px solid #3a4148", background: "#12161a", color: "#c8cfd4", minWidth: 0,
+  };
 
-  // Everything `islandMap.test.ts` asserts. If the panel says healthy, pasting
-  // the export over the map keeps the suite green -- that equivalence is the
-  // whole contract, so a check must not be countable-but-ignored here.
-  const bad =
-    health.stranded > 0 ||
-    health.missingPiece > 0 ||
-    health.orphanRamps > 0 ||
-    health.thinWalls > 0 ||
-    health.tooTall > 0;
-
-  const landCells = Object.values(health.levels).reduce((a, b) => a + b, 0);
+  const problems = health ? Object.entries(health.problems) : [];
+  const bad = problems.length > 0;
+  const landCells = budget.land;
 
   return (
-    <div style={{ position: "fixed", inset: 0, background: "#11151a", display: "flex", color: "#c8cfd4" }}>
+    <div style={{ position: "fixed", inset: 0, top: 40, background: "#11151a", display: "flex", color: "#c8cfd4" }}>
       <div style={{ flex: 1, overflow: "auto", padding: 16 }}>
         <canvas
           ref={canvasRef}
-          style={{ cursor: "crosshair", imageRendering: "pixelated" }}
+          data-testid="painter-canvas"
+          style={{ cursor: tool === "object" ? "default" : "crosshair", imageRendering: "pixelated" }}
           onMouseDown={(e) => {
-            const c = cellFrom(e);
+            const c = pointer(e);
+            if (tool === "object") {
+              const hit = objectAt(c.wx, c.wz);
+              const key = hit ? keyOf(hit) : placeObject(c.wx, c.wz);
+              setSelected(key);
+              const o = hit ?? (key ? world().objects.find((ob) => keyOf(ob) === key) : null);
+              moving.current = o && key ? { key, dx: o.x - c.wx, dz: o.z - c.wz, committed: !hit } : null;
+              return;
+            }
             dragRef.current = c;
             setDragFrom(c);
             painting.current = true;
             lastCell.current = null;
+            if (shape === "lasso" && tool !== "prop") {
+              lasso.current = [[c.u, c.v]];
+              return;
+            }
             // The prop tool and the deferred shapes decide what to do on
             // RELEASE, once the drag is known. Only free painting and fill act
             // immediately.
@@ -1085,18 +1229,28 @@ export default function MapLab() {
             commit();
             if (shape === "fill") {
               for (const [x, z] of fillRegion(c.x, c.z)) paintCell(x, z);
+              endStroke();
               bump();
               return;
             }
             stroke(c.x, c.z);
           }}
           onMouseUp={(e) => {
-            const c = cellFrom(e);
+            const c = pointer(e);
+            if (tool === "object") {
+              moving.current = null;
+              return;
+            }
             const from = dragRef.current;
             dragRef.current = null;
             if (from) {
               if (tool === "prop") {
                 placeProp(from, c);
+              } else if (shape === "lasso") {
+                commit();
+                for (const [x, z] of cellsInPolygon(lasso.current.map(([u, v]) => [u - 0.5, v - 0.5]), map.width, map.depth)) paintCell(x, z);
+                lasso.current = [];
+                bump();
               } else if (shape === "rect") {
                 commit();
                 applyRect(from, c);
@@ -1111,46 +1265,50 @@ export default function MapLab() {
             endStroke();
           }}
           onMouseLeave={() => {
-            // Abandon a pending rect/line rather than guessing where it ended.
+            // Abandon a pending rect/line/lasso rather than guessing where it ended.
             dragRef.current = null;
+            moving.current = null;
+            lasso.current = [];
             setDragFrom(null);
             endStroke();
             setHover(null);
           }}
           onMouseMove={(e) => {
-            const c = cellFrom(e);
+            const c = pointer(e);
             setHover(c);
-            if (painting.current && shape === "free" && tool !== "prop") stroke(c.x, c.z);
+            const m = moving.current;
+            if (m && tool === "object" && e.buttons === 1) {
+              const o = world().objects.find((ob) => keyOf(ob) === m.key);
+              if (!o) return;
+              const [x, z] = snapFor(o.kind, o.id, c.wx + m.dx, c.wz + m.dz);
+              if (x === o.x && z === o.z) return;
+              updateObject(m.key, { x, z }, !m.committed);
+              m.committed = true;
+              return;
+            }
+            if (painting.current && shape === "lasso" && tool !== "prop") {
+              lasso.current.push([c.u, c.v]);
+              blit();
+              return;
+            }
+            if (painting.current && shape === "free" && tool !== "prop" && tool !== "object") stroke(c.x, c.z);
           }}
         />
       </div>
 
-      <div
-        style={{
-          width: 320,
-          borderLeft: "1px solid #232a31",
-          fontFamily: mono,
-          fontSize: 12,
-          display: "flex",
-          flexDirection: "column",
-          minHeight: 0,
-        }}
-      >
+      <div style={{ width: 340, borderLeft: "1px solid #232a31", fontFamily: mono, fontSize: 12, display: "flex", flexDirection: "column", minHeight: 0 }}>
         {/* Pinned. Which island you are on, and how to get to another one, are
             the two things that must never be scrolled off a drafting tool. */}
         <div style={{ borderBottom: "1px solid #232a31", padding: "12px 14px", flexShrink: 0 }}>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-            <span style={{ fontSize: 13, color: "#ffd166" }}>/lab/map</span>
-            <span style={{ color: edited ? "#7fd1c0" : "#5c6670" }}>
-              {edited ? "draft autosaved" : "shipped map"}
-            </span>
+            <span style={{ fontSize: 13, color: "#ffd166" }}>/lab/map · {source === "village" ? "village-map.json" : "legacy island-map.json"}</span>
+            <span style={{ color: edited ? "#7fd1c0" : "#5c6670" }}>{edited ? "draft autosaved" : "shipped"}</span>
           </div>
           <div style={{ display: "flex", gap: 4, marginBottom: 6 }}>
-            <button onClick={undo} disabled={!UNDO.length} style={btn(false, { flex: 1, opacity: UNDO.length ? 1 : 0.35 })}>
-              ↶ undo
-            </button>
-            <button onClick={redo} disabled={!REDO.length} style={btn(false, { flex: 1, opacity: REDO.length ? 1 : 0.35 })}>
-              ↷ redo
+            <button onClick={undo} disabled={!UNDO.length} style={btn(false, { flex: 1, opacity: UNDO.length ? 1 : 0.35 })}>↶ undo</button>
+            <button onClick={redo} disabled={!REDO.length} style={btn(false, { flex: 1, opacity: REDO.length ? 1 : 0.35 })}>↷ redo</button>
+            <button onClick={() => setView(view === "game" ? "raw" : "game")} style={btn(false, { flex: 1.4 })} title="game view: camera forward (west) at the top, north on the right">
+              {view === "game" ? "game view" : "raw view"}
             </button>
           </div>
           <div style={{ display: "flex", gap: 4 }}>
@@ -1159,11 +1317,12 @@ export default function MapLab() {
                 commit();
                 const { map: m } = world();
                 m.levels.fill(0);
-                m.surfaces.fill(Surface.Void);
-                // Props and labels go with the terrain. Leaving them behind
+                m.surfaces.fill(Surface.River);
+                // Objects and labels go with the terrain. Leaving them behind
                 // floats every building over open water on a map that no longer
                 // has ground.
-                WORLD = { map: m, props: [], annotations: [] };
+                WORLD = { ...world(), map: m, props: [], annotations: [], objects: [] };
+                setSelected(null);
                 bump();
               }}
               style={btn(false, { flex: 1 })}
@@ -1173,496 +1332,525 @@ export default function MapLab() {
             <button onClick={() => setSheet(sheet === "open" ? "none" : "open")} style={btn(sheet === "open", { flex: 1 })}>
               open {library.length ? `(${library.length})` : ""}
             </button>
-            <button onClick={() => setSheet(sheet === "import" ? "none" : "import")} style={btn(sheet === "import", { flex: 1 })}>
-              import
+            <button onClick={() => setSheet(sheet === "import" ? "none" : "import")} style={btn(sheet === "import", { flex: 1 })}>import</button>
+            <button
+              onClick={() => {
+                saveNow();
+                window.open("/lab/island?draft=1", "_blank");
+              }}
+              style={btn(false, { flex: 1.3, borderColor: "#7fd1c0", color: "#7fd1c0" })}
+              title="open this draft in 3D at /lab/island?draft=1"
+            >
+              walk it ↗
             </button>
           </div>
         </div>
 
         <div style={{ flex: 1, overflowY: "auto", padding: 14, minHeight: 0 }}>
-        {sheet === "open" && (
-          <div style={{ border: "1px solid #3a4148", borderRadius: 4, padding: 10, marginBottom: 12 }}>
-            <div style={{ color: "#ffd166", marginBottom: 6 }}>saved islands</div>
-            {library.length === 0 && (
-              <div style={{ color: "#5c6670", marginBottom: 8 }}>none yet</div>
-            )}
-            {library.map((name) => (
-              <div key={name} style={{ display: "flex", gap: 4, marginBottom: 4, alignItems: "center" }}>
+          {sheet === "open" && (
+            <div style={{ border: "1px solid #3a4148", borderRadius: 4, padding: 10, marginBottom: 12 }}>
+              <div style={{ color: "#ffd166", marginBottom: 6 }}>shipped</div>
+              <button onClick={() => { load(shippedVillage()); setSheet("none"); }} style={btn(false, { width: "100%", textAlign: "left", marginBottom: 4 })}>
+                village-map.json (the game&apos;s)
+              </button>
+              <button onClick={() => { load(fromDoc(islandMapDoc as IslandMapDoc, "legacy")); setSheet("none"); }} style={btn(false, { width: "100%", textAlign: "left", marginBottom: 4 })}>
+                island-map.json (legacy 128 draft)
+              </button>
+              {legacyDraft && (
                 <button
                   onClick={() => {
-                    const doc = readLibrary()[name];
-                    if (doc) load(doc);
+                    try {
+                      const raw = window.localStorage.getItem(LEGACY_DRAFT_KEY);
+                      if (raw) load(fromDoc(JSON.parse(raw) as IslandMapDoc, "legacy"));
+                    } catch {
+                      /* unreadable autosave */
+                    }
                     setSheet("none");
                   }}
-                  style={btn(false, { flex: 1, textAlign: "left" })}
+                  style={btn(false, { width: "100%", textAlign: "left", marginBottom: 4 })}
+                >
+                  legacy autosave (this browser)
+                </button>
+              )}
+              <div style={{ color: "#ffd166", margin: "8px 0 6px" }}>saved islands</div>
+              {library.length === 0 && <div style={{ color: "#5c6670", marginBottom: 8 }}>none yet</div>}
+              {library.map((name) => (
+                <div key={name} style={{ display: "flex", gap: 4, marginBottom: 4, alignItems: "center" }}>
+                  <button
+                    onClick={() => {
+                      const doc = readLibrary()[name];
+                      if (doc) load(fromDoc(doc as VillageDoc));
+                      setSheet("none");
+                    }}
+                    style={btn(false, { flex: 1, textAlign: "left" })}
+                  >
+                    {name}
+                  </button>
+                  <button
+                    onClick={() => {
+                      const lib = readLibrary();
+                      delete lib[name];
+                      writeLibrary(lib);
+                      setLibrary(Object.keys(lib).sort());
+                    }}
+                    style={btn(false, { color: "#ff5577" })}
+                    title={`delete ${name}`}
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+              <div style={{ display: "flex", gap: 4, marginTop: 8 }}>
+                <input
+                  value={saveName}
+                  onChange={(e) => setSaveName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") saveDraft(saveName);
+                  }}
+                  placeholder="name this island"
+                  style={{ ...field, flex: 1, padding: "5px 8px" }}
+                />
+                <button onClick={() => saveDraft(saveName)} style={btn(false)}>save</button>
+              </div>
+              <div style={{ color: "#5c6670", marginTop: 6, lineHeight: 1.5 }}>
+                Saving under an existing name overwrites it. Stored in this browser, so export anything you want to keep.
+              </div>
+            </div>
+          )}
+
+          {sheet === "import" && (
+            <div style={{ border: "1px solid #3a4148", borderRadius: 4, padding: 10, marginBottom: 12 }}>
+              <div style={{ color: "#ffd166", marginBottom: 6 }}>paste a map document</div>
+              <textarea
+                value={importText}
+                onChange={(e) => setImportText(e.target.value)}
+                rows={5}
+                placeholder='{"width":96,"depth":96,...}'
+                style={{ ...field, width: "100%", boxSizing: "border-box", padding: 8, fontSize: 11, resize: "vertical" }}
+              />
+              {importError && <div style={{ color: "#ff5577", marginTop: 6 }}>{importError}</div>}
+              <button
+                onClick={() => {
+                  try {
+                    const doc = JSON.parse(importText) as VillageDoc;
+                    // Validate before replacing: a bad paste that half-loads
+                    // would look like a corrupted map rather than a typo.
+                    if (!doc.width || !doc.depth || !Array.isArray(doc.levels) || !Array.isArray(doc.surfaces)) {
+                      setImportError("not an island map: needs width, depth, levels, surfaces");
+                      return;
+                    }
+                    load(fromDoc(doc));
+                    setImportError("");
+                    setImportText("");
+                    setSheet("none");
+                  } catch (err) {
+                    setImportError(`not valid JSON: ${String(err).slice(0, 80)}`);
+                  }
+                }}
+                style={btn(false, { width: "100%", marginTop: 6 })}
+              >
+                load it
+              </button>
+            </div>
+          )}
+
+          <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 6 }}>
+            {TOOLS.map((t) => (
+              <button key={t} onClick={() => setTool(t)} style={btn(tool === t, ORGANIC.includes(t) ? { borderColor: "#5aab5f" } : t === "object" ? { borderColor: "#ff8f4a" } : undefined)}>
+                {t}
+              </button>
+            ))}
+          </div>
+          <div style={{ color: "#5c6670", marginBottom: 8, lineHeight: 1.5 }}>{TOOL_HELP[tool]}</div>
+
+          {tool !== "prop" && tool !== "object" && (
+            <>
+              <div style={{ display: "flex", gap: 4, marginBottom: 6 }}>
+                {SHAPES.map((s) => (
+                  <button key={s} onClick={() => setShape(s)} style={btn(shape === s, { flex: 1, padding: "5px 4px" })}>{s}</button>
+                ))}
+              </div>
+              <div style={{ color: "#5c6670", marginBottom: 10, lineHeight: 1.5 }}>{SHAPE_HELP[shape]}</div>
+            </>
+          )}
+
+          {/* Live size while dragging. Blocking out a plot is a question about
+              dimensions, and counting cells off a screenshot is not an answer. */}
+          {dragFrom && hover && tool !== "object" && shape !== "lasso" && (
+            <div style={{ border: "1px solid #ffd166", borderRadius: 4, padding: "6px 9px", marginBottom: 10, color: "#ffd166" }}>
+              {(() => {
+                const { x0, z0, x1, z1 } = rectOf(dragFrom, hover);
+                const w = x1 - x0 + 1;
+                const d = z1 - z0 + 1;
+                if (shape === "line" && tool !== "prop") {
+                  const end = snapLine(dragFrom, hover);
+                  const len = Math.max(Math.abs(end.x - dragFrom.x), Math.abs(end.z - dragFrom.z)) + 1;
+                  return `${len} cells long, ${brush * 2 - 1} wide`;
+                }
+                return `${w} × ${d} cells  (${w * d})`;
+              })()}
+            </div>
+          )}
+
+          {tool === "surface" && (
+            <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 10 }}>
+              {Object.entries(SURFACE_NAME).map(([id, name]) => (
+                <button
+                  key={id}
+                  onClick={() => setPaintSurface(Number(id))}
+                  style={btn(false, { background: SURFACE_FILL[Number(id)], color: "#12161a", outline: paintSurface === Number(id) ? "2px solid #ffd166" : "none" })}
                 >
                   {name}
                 </button>
-                <button
-                  onClick={() => {
-                    const lib = readLibrary();
-                    delete lib[name];
-                    writeLibrary(lib);
-                    setLibrary(Object.keys(lib).sort());
-                  }}
-                  style={btn(false, { color: "#ff5577" })}
-                  title={`delete ${name}`}
-                >
-                  ✕
-                </button>
-              </div>
-            ))}
-            <div style={{ display: "flex", gap: 4, marginTop: 8 }}>
-              <input
-                value={saveName}
-                onChange={(e) => setSaveName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") saveDraft(saveName);
-                }}
-                placeholder="name this island"
-                style={{
-                  flex: 1,
-                  minWidth: 0,
-                  padding: "5px 8px",
-                  fontSize: 12,
-                  fontFamily: mono,
-                  borderRadius: 4,
-                  border: "1px solid #3a4148",
-                  background: "#12161a",
-                  color: "#c8cfd4",
-                }}
-              />
-              <button onClick={() => saveDraft(saveName)} style={btn(false)}>
-                save
-              </button>
-            </div>
-            <div style={{ color: "#5c6670", marginTop: 6, lineHeight: 1.5 }}>
-              Saving under an existing name overwrites it. Stored in this
-              browser, so export anything you want to keep.
-            </div>
-          </div>
-        )}
-
-        {sheet === "import" && (
-          <div style={{ border: "1px solid #3a4148", borderRadius: 4, padding: 10, marginBottom: 12 }}>
-            <div style={{ color: "#ffd166", marginBottom: 6 }}>paste island-map.json</div>
-            <textarea
-              value={importText}
-              onChange={(e) => setImportText(e.target.value)}
-              rows={5}
-              placeholder='{"width":128,"depth":128,...}'
-              style={{
-                width: "100%",
-                boxSizing: "border-box",
-                padding: 8,
-                fontSize: 11,
-                fontFamily: mono,
-                borderRadius: 4,
-                border: "1px solid #3a4148",
-                background: "#12161a",
-                color: "#c8cfd4",
-                resize: "vertical",
-              }}
-            />
-            {importError && <div style={{ color: "#ff5577", marginTop: 6 }}>{importError}</div>}
-            <button
-              onClick={() => {
-                try {
-                  const doc = JSON.parse(importText) as IslandMapDoc;
-                  // Validate before replacing: a bad paste that half-loads
-                  // would look like a corrupted map rather than a typo.
-                  if (!doc.width || !doc.depth || !Array.isArray(doc.levels) || !Array.isArray(doc.surfaces)) {
-                    setImportError("not an island map: needs width, depth, levels, surfaces");
-                    return;
-                  }
-                  load(doc);
-                  setImportError("");
-                  setImportText("");
-                  setSheet("none");
-                } catch (err) {
-                  setImportError(`not valid JSON: ${String(err).slice(0, 80)}`);
-                }
-              }}
-              style={btn(false, { width: "100%", marginTop: 6 })}
-            >
-              load it
-            </button>
-          </div>
-        )}
-
-        <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 6 }}>
-          {TOOLS.map((t) => (
-            <button key={t} onClick={() => setTool(t)} style={btn(tool === t)}>
-              {t}
-            </button>
-          ))}
-        </div>
-        <div style={{ color: "#5c6670", marginBottom: 8, lineHeight: 1.5 }}>{TOOL_HELP[tool]}</div>
-
-        {tool !== "prop" && (
-          <>
-            <div style={{ display: "flex", gap: 4, marginBottom: 6 }}>
-              {SHAPES.map((s) => (
-                <button key={s} onClick={() => setShape(s)} style={btn(shape === s, { flex: 1 })}>
-                  {s}
-                </button>
               ))}
             </div>
-            <div style={{ color: "#5c6670", marginBottom: 10, lineHeight: 1.5 }}>
-              {SHAPE_HELP[shape]}
+          )}
+
+          {tool === "flat" && (
+            <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 10 }}>
+              {Array.from({ length: MAX_LEVEL + 1 }, (_, l) => (
+                <button key={l} onClick={() => setPaintLevel(l)} style={btn(paintLevel === l)}>L{l}</button>
+              ))}
             </div>
-          </>
-        )}
+          )}
 
-        {/* Live size while dragging. Blocking out a plot is a question about
-            dimensions, and counting cells off a screenshot is not an answer. */}
-        {dragFrom && hover && (
-          <div
-            style={{
-              border: "1px solid #ffd166",
-              borderRadius: 4,
-              padding: "6px 9px",
-              marginBottom: 10,
-              color: "#ffd166",
-            }}
-          >
-            {(() => {
-              const { x0, z0, x1, z1 } = rectOf(dragFrom, hover);
-              const w = x1 - x0 + 1;
-              const d = z1 - z0 + 1;
-              if (shape === "line" && tool !== "prop") {
-                const end = snapLine(dragFrom, hover);
-                const len = Math.max(Math.abs(end.x - dragFrom.x), Math.abs(end.z - dragFrom.z)) + 1;
-                return `${len} cells long, ${brush * 2 - 1} wide`;
-              }
-              return `${w} × ${d} cells  (${w * d})`;
-            })()}
-          </div>
-        )}
+          {tool === "object" && (
+            <div style={{ marginBottom: 10 }}>
+              <div style={{ display: "flex", gap: 3, flexWrap: "wrap", marginBottom: 6 }}>
+                <button onClick={() => setPlaceKind("select")} style={btn(placeKind === "select")}>select / move</button>
+                {PALETTE.map((k) => (
+                  <button
+                    key={k}
+                    onClick={() => { setPlaceKind(k); setPlaceId(""); setPlaceModel(""); }}
+                    style={btn(false, { background: OBJECT_STYLE[k].color, color: "#12161a", outline: placeKind === k ? "2px solid #ffd166" : "none", padding: "4px 7px" })}
+                  >
+                    {OBJECT_STYLE[k].label}
+                  </button>
+                ))}
+              </div>
+              {(placeKind === "landmark" || placeKind === "anchor" || placeKind === "study") && (
+                <select value={placeId} onChange={(e) => setPlaceId(e.target.value)} style={{ ...field, width: "100%", marginBottom: 6 }}>
+                  {freeIds[placeKind].length ? freeIds[placeKind].map((id) => (
+                    <option key={id} value={id}>{placeKind === "landmark" ? `${id} · ${LANDMARK_INFO[id as LandmarkId].label}` : placeKind === "anchor" ? `${id} · ${RESIDENT_ANCHORS[id as keyof typeof RESIDENT_ANCHORS].label}` : id}</option>
+                  )) : <option value="">all placed</option>}
+                </select>
+              )}
+              {(placeKind === "tree" || placeKind === "rock" || placeKind === "fence" || placeKind === "bug") && (
+                <select value={placeModel} onChange={(e) => setPlaceModel(e.target.value)} style={{ ...field, width: "100%", marginBottom: 6 }}>
+                  {(placeKind === "tree" ? TREE_NAMES.map((n, i) => [String(i), n]) : (placeKind === "rock" ? ROCK_MODELS : placeKind === "fence" ? FENCE_MODELS : BUG_BIOMES).map((m) => [m, m])).map(([v, n]) => (
+                    <option key={v} value={v}>{n}</option>
+                  ))}
+                </select>
+              )}
+              <div style={{ display: "flex", gap: 4, alignItems: "center", marginBottom: 6 }}>
+                <span style={{ color: "#7d868e" }}>snap</span>
+                {[[1, "cells"], [0.5, "half"], [0, "free"]].map(([v, n]) => (
+                  <button key={n} onClick={() => setSnap(v as number)} style={btn(snap === v, { flex: 1, padding: "4px 4px" })}>{n}</button>
+                ))}
+              </div>
+              <div style={{ color: "#5c6670", lineHeight: 1.5, marginBottom: 6 }}>
+                Buildings put their footprint on whole cells. Landmarks, resident anchors and study tables are one each: the list shows what is left to place.
+              </div>
+              {selectedObject && (
+                <div style={{ border: "1px solid #ffd166", borderRadius: 4, padding: 8 }}>
+                  <div style={{ color: "#ffd166", marginBottom: 6 }}>
+                    {OBJECT_STYLE[selectedObject.kind].label} · {selectedObject.id}
+                    {selectedObject.kind === "landmark" && ` · ${LANDMARK_INFO[selectedObject.id as LandmarkId]?.label ?? "unknown"}`}
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "auto 1fr auto 1fr", gap: 4, alignItems: "center" }}>
+                    <span>x</span>
+                    <input type="number" step={0.1} value={selectedObject.x} onChange={(e) => updateObject(selected!, { x: Number(e.target.value) })} style={field} />
+                    <span>z</span>
+                    <input type="number" step={0.1} value={selectedObject.z} onChange={(e) => updateObject(selected!, { z: Number(e.target.value) })} style={field} />
+                    {TURNS(selectedObject) ? <><span>yaw°</span>
+                      <input type="number" step={15} value={deg(selectedObject.yaw)} onChange={(e) => updateObject(selected!, { yaw: (Number(e.target.value) * Math.PI) / 180 })} style={field} /></> : <><span /><span style={{ color: "#5c6670" }}>faces the camera</span></>}
+                    {selectedObject.kind === "rock" ? <><span>scale</span><input type="number" step={0.1} min={0.3} max={3} value={selectedObject.scale ?? 1} onChange={(e) => updateObject(selected!, { scale: Number(e.target.value) })} style={field} /></> : <><span /><span /></>}
+                    {(selectedObject.kind === "tree" || selectedObject.kind === "bush" || selectedObject.kind === "flower") && (
+                      <>
+                        <span>seed</span>
+                        <input type="number" step={1} min={0} value={selectedObject.seed ?? 0} onChange={(e) => updateObject(selected!, { seed: Math.max(0, Math.round(Number(e.target.value))) })} style={field} />
+                        <span />
+                        <span style={{ color: "#7d868e" }}>{selectedObject.kind === "tree" ? TREE_NAMES[(selectedObject.seed ?? 0) % 4] : ""}</span>
+                      </>
+                    )}
+                  </div>
+                  {(selectedObject.kind === "rock" || selectedObject.kind === "fence" || selectedObject.kind === "bug") && (
+                    <select value={selectedObject.model ?? ""} onChange={(e) => updateObject(selected!, { model: e.target.value })} style={{ ...field, width: "100%", marginTop: 6 }}>
+                      {(selectedObject.kind === "rock" ? ROCK_MODELS : selectedObject.kind === "fence" ? FENCE_MODELS : BUG_BIOMES).map((m) => <option key={m} value={m}>{m}</option>)}
+                    </select>
+                  )}
+                  <div style={{ display: "flex", gap: 4, marginTop: 6 }}>
+                    {TURNS(selectedObject) && <button onClick={() => updateObject(selected!, { yaw: ((selectedObject.yaw ?? 0) + Math.PI / 2) % (Math.PI * 2) })} style={btn(false, { flex: 1 })}>turn 90°</button>}
+                    <button onClick={() => deleteObject(selected!)} style={btn(false, { flex: 1, color: "#ff5577" })}>delete</button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
-        {tool === "surface" && (
-          <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 10 }}>
-            {Object.entries(SURFACE_NAME).map(([id, name]) => (
-              <button
-                key={id}
-                onClick={() => setPaintSurface(Number(id))}
-                style={btn(false, {
-                  background: SURFACE_FILL[Number(id)],
-                  color: "#12161a",
-                  outline: paintSurface === Number(id) ? "2px solid #ffd166" : "none",
-                })}
-              >
-                {name}
-              </button>
-            ))}
-          </div>
-        )}
+          {tool === "label" && (
+            <div style={{ marginBottom: 10 }}>
+              {annotations.map((a) => (
+                <div key={a.name} style={{ display: "flex", gap: 4, marginBottom: 4, alignItems: "center" }}>
+                  <button
+                    onClick={() => setActiveLabel(a.name)}
+                    style={btn(false, { flex: 1, textAlign: "left", borderLeft: `6px solid ${a.color}`, outline: activeLabel === a.name ? "2px solid #ffd166" : "none" })}
+                  >
+                    {a.name} <span style={{ color: "#7d868e" }}>{a.cells.length}</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      commit();
+                      const w = world();
+                      w.annotations = w.annotations.filter((n) => n.name !== a.name);
+                      if (activeLabel === a.name) setActiveLabel("");
+                      bump();
+                    }}
+                    style={btn(false, { color: "#ff5577" })}
+                    title={`delete ${a.name}`}
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+              <div style={{ display: "flex", gap: 3, flexWrap: "wrap", margin: "8px 0 6px" }}>
+                {LABEL_COLORS.map((c) => (
+                  <button
+                    key={c}
+                    onClick={() => setLabelColor(c)}
+                    style={{ width: 22, height: 22, background: c, borderRadius: 4, cursor: "pointer", border: labelColor === c ? "2px solid #ffd166" : "1px solid #3a4148" }}
+                    title={c}
+                  />
+                ))}
+              </div>
+              <div style={{ display: "flex", gap: 4 }}>
+                <input
+                  value={newLabel}
+                  onChange={(e) => setNewLabel(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") addLabel();
+                  }}
+                  placeholder="new label, e.g. fencing"
+                  style={{ ...field, flex: 1, padding: "5px 8px" }}
+                />
+                <button onClick={addLabel} style={btn(false)}>add</button>
+              </div>
+              <div style={{ display: "flex", gap: 4, marginTop: 6 }}>
+                <button onClick={() => setLabelErase(false)} style={btn(!labelErase, { flex: 1 })}>paint</button>
+                <button onClick={() => setLabelErase(true)} style={btn(labelErase, { flex: 1 })}>erase</button>
+              </div>
+              <div style={{ color: "#5c6670", marginTop: 6, lineHeight: 1.5 }}>
+                {activeLabel
+                  ? `Painting “${activeLabel}”. Labels are free text and never touch the terrain — they ride along in the exported JSON as instructions.`
+                  : "Add a label, then pick it to paint. Works with every shape: line for a fence run, rect for a zone, fill for a whole region."}
+              </div>
+            </div>
+          )}
 
-        {tool === "flat" && (
-          <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 10 }}>
-            {Array.from({ length: MAX_LEVEL + 1 }, (_, l) => (
-              <button key={l} onClick={() => setPaintLevel(l)} style={btn(paintLevel === l)}>
-                L{l}
-              </button>
-            ))}
-          </div>
-        )}
+          {tool === "prop" && (
+            <div style={{ marginBottom: 10 }}>
+              <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 6 }}>
+                {PROP_KINDS.map((k) => (
+                  <button key={k} onClick={() => setPropKind(k)} style={btn(false, { background: PROP_COLOR[k], color: "#12161a", outline: propKind === k ? "2px solid #ffd166" : "none" })}>{k}</button>
+                ))}
+              </div>
+              <input value={propId} onChange={(e) => setPropId(e.target.value)} placeholder="id / label, e.g. hq" style={{ ...field, width: "100%", boxSizing: "border-box", padding: "5px 8px" }} />
+            </div>
+          )}
 
-        {tool === "label" && (
-          <div style={{ marginBottom: 10 }}>
-            {annotations.map((a) => (
-              <div key={a.name} style={{ display: "flex", gap: 4, marginBottom: 4, alignItems: "center" }}>
+          {tool !== "object" && tool !== "prop" && (
+            <>
+              <label style={{ display: "block", marginBottom: 4 }}>
+                brush {brush * 2 - 1} <span style={{ color: "#5c6670" }}>[ ]</span>
+                <input type="range" min={1} max={16} value={brush} onChange={(e) => setBrush(+e.target.value)} style={{ width: "100%" }} />
+              </label>
+              <div style={{ display: "flex", gap: 4, marginBottom: 8 }}>
+                <button onClick={() => setRound(true)} style={btn(round, { flex: 1 })}>round</button>
+                <button onClick={() => setRound(false)} style={btn(!round, { flex: 1 })}>square</button>
+              </div>
+            </>
+          )}
+          <label style={{ display: "block", marginBottom: 12 }}>
+            zoom {zoom}px
+            <input type="range" min={2} max={16} value={zoom} onChange={(e) => setZoom(+e.target.value)} style={{ width: "100%" }} />
+          </label>
+
+          <div style={{ borderTop: "1px solid #232a31", paddingTop: 10, marginBottom: 10 }}>
+            <div style={{ color: "#7d868e", marginBottom: 5 }}>
+              grid {map.width}×{map.depth} · {landCells} land cells · island {budget.spanX}×{budget.spanZ}u
+            </div>
+            <div style={{ display: "flex", gap: 3, flexWrap: "wrap" }}>
+              {SIZES.map((n) => (
                 <button
-                  onClick={() => setActiveLabel(a.name)}
-                  style={btn(false, {
-                    flex: 1,
-                    textAlign: "left",
-                    borderLeft: `6px solid ${a.color}`,
-                    outline: activeLabel === a.name ? "2px solid #ffd166" : "none",
-                  })}
-                >
-                  {a.name}{" "}
-                  <span style={{ color: "#7d868e" }}>{a.cells.length}</span>
-                </button>
-                <button
+                  key={n}
                   onClick={() => {
+                    if (n === map.width && n === map.depth) return;
                     commit();
                     const w = world();
-                    w.annotations = w.annotations.filter((n) => n.name !== a.name);
-                    if (activeLabel === a.name) setActiveLabel("");
+                    const next = resizeMap(w.map, w.props, n, w.annotations);
+                    normaliseSea(next.map);
+                    // Objects keep their world positions; anything off the new grid is dropped.
+                    const m = next.map, inside = (v: number, o: number) => v >= o - 0.5 && v < o + n - 0.5;
+                    WORLD = { ...w, ...next, objects: w.objects.filter((o) => inside(o.x, m.originX) && inside(o.z, m.originZ)) };
                     bump();
                   }}
-                  style={btn(false, { color: "#ff5577" })}
-                  title={`delete ${a.name}`}
+                  style={btn(n === map.width, { padding: "4px 6px" })}
                 >
-                  ✕
-                </button>
-              </div>
-            ))}
-
-            <div style={{ display: "flex", gap: 3, flexWrap: "wrap", margin: "8px 0 6px" }}>
-              {LABEL_COLORS.map((c) => (
-                <button
-                  key={c}
-                  onClick={() => setLabelColor(c)}
-                  style={{
-                    width: 22,
-                    height: 22,
-                    background: c,
-                    borderRadius: 4,
-                    cursor: "pointer",
-                    border: labelColor === c ? "2px solid #ffd166" : "1px solid #3a4148",
-                  }}
-                  title={c}
-                />
-              ))}
-            </div>
-
-            <div style={{ display: "flex", gap: 4 }}>
-              <input
-                value={newLabel}
-                onChange={(e) => setNewLabel(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") addLabel();
-                }}
-                placeholder="new label, e.g. fencing"
-                style={{
-                  flex: 1,
-                  minWidth: 0,
-                  padding: "5px 8px",
-                  fontSize: 12,
-                  fontFamily: mono,
-                  borderRadius: 4,
-                  border: "1px solid #3a4148",
-                  background: "#12161a",
-                  color: "#c8cfd4",
-                }}
-              />
-              <button onClick={addLabel} style={btn(false)}>
-                add
-              </button>
-            </div>
-
-            <div style={{ display: "flex", gap: 4, marginTop: 6 }}>
-              <button onClick={() => setLabelErase(false)} style={btn(!labelErase, { flex: 1 })}>
-                paint
-              </button>
-              <button onClick={() => setLabelErase(true)} style={btn(labelErase, { flex: 1 })}>
-                erase
-              </button>
-            </div>
-
-            <div style={{ color: "#5c6670", marginTop: 6, lineHeight: 1.5 }}>
-              {activeLabel
-                ? `Painting “${activeLabel}”. Labels are free text and never touch the terrain — they ride along in the exported JSON as instructions.`
-                : "Add a label, then pick it to paint. Works with every shape: line for a fence run, rect for a zone, fill for a whole region."}
-            </div>
-          </div>
-        )}
-
-        {tool === "prop" && (
-          <div style={{ marginBottom: 10 }}>
-            <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 6 }}>
-              {PROP_KINDS.map((k) => (
-                <button
-                  key={k}
-                  onClick={() => setPropKind(k)}
-                  style={btn(false, {
-                    background: PROP_COLOR[k],
-                    color: "#12161a",
-                    outline: propKind === k ? "2px solid #ffd166" : "none",
-                  })}
-                >
-                  {k}
+                  {n}
                 </button>
               ))}
             </div>
-            <input
-              value={propId}
-              onChange={(e) => setPropId(e.target.value)}
-              placeholder="id / label, e.g. hq"
-              style={{
-                width: "100%",
-                boxSizing: "border-box",
-                padding: "5px 8px",
-                fontSize: 12,
-                fontFamily: mono,
-                borderRadius: 4,
-                border: "1px solid #3a4148",
-                background: "#12161a",
-                color: "#c8cfd4",
-              }}
-            />
             <div style={{ color: "#5c6670", marginTop: 5, lineHeight: 1.5 }}>
-              For a building the id is what the renderer looks up: hq, shop,
-              oracle, house, wharf, bounty, jobs, leaderboard. On a draft it is
-              just a note to yourself.
+              Keeps world positions, so the island and its objects stay put and the new edge is sea. Shrinking discards whatever falls outside.
             </div>
           </div>
-        )}
 
-        <label style={{ display: "block", marginBottom: 4 }}>
-          brush {brush * 2 - 1}  <span style={{ color: "#5c6670" }}>[ ]</span>
-          <input type="range" min={1} max={16} value={brush} onChange={(e) => setBrush(+e.target.value)} style={{ width: "100%" }} />
-        </label>
-        <div style={{ display: "flex", gap: 4, marginBottom: 8 }}>
-          <button onClick={() => setRound(true)} style={btn(round, { flex: 1 })}>round</button>
-          <button onClick={() => setRound(false)} style={btn(!round, { flex: 1 })}>square</button>
-        </div>
-        <label style={{ display: "block", marginBottom: 12 }}>
-          zoom {zoom}px
-          <input type="range" min={2} max={14} value={zoom} onChange={(e) => setZoom(+e.target.value)} style={{ width: "100%" }} />
-        </label>
-
-        <div style={{ borderTop: "1px solid #232a31", paddingTop: 10, marginBottom: 10 }}>
-          <div style={{ color: "#7d868e", marginBottom: 5 }}>
-            grid {map.width}×{map.depth} · {landCells} land cells
-          </div>
-          <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-            {SIZES.map((n) => (
-              <button
-                key={n}
-                onClick={() => {
-                  if (n === map.width) return;
-                  commit();
-                  WORLD = resizeMap(map, props, n, annotations);
-                  bump();
-                }}
-                style={btn(n === map.width)}
-              >
-                {n}
-              </button>
-            ))}
-          </div>
-          <div style={{ color: "#5c6670", marginTop: 5, lineHeight: 1.5 }}>
-            Keeps world positions, so props and buildings stay put. Shrinking
-            discards whatever falls outside.
-          </div>
-        </div>
-
-        <button
-          onClick={() => {
-            commit();
-            WORLD = parseIslandMap(islandMapDoc as IslandMapDoc);
-            try {
-              window.localStorage.removeItem(DRAFT_KEY);
-            } catch {
-              /* nothing to clear */
-            }
-            bumpClean();
-          }}
-          style={btn(false, { width: "100%", marginBottom: 6 })}
-        >
-          reload shipped island
-        </button>
-        <div style={{ color: "#5c6670", marginBottom: 10, lineHeight: 1.5 }}>
-          Undoable. Work autosaves to this browser; this throws the working
-          draft away. Named saves under “open” are untouched.
-        </div>
-
-        <div style={{ borderTop: "1px solid #232a31", paddingTop: 10, marginBottom: 10 }}>
-          <div style={{ color: bad ? "#ff5577" : "#7fd1c0", marginBottom: 6 }}>
-            {bad ? "PROBLEMS" : "healthy"}
-          </div>
-          <Row k="reachable" v={`${health.reachable}/${health.walkable}`} warn={health.stranded > 0} />
-          <Row k="stranded" v={String(health.stranded)} warn={health.stranded > 0} />
-          <Row k="cliff cells" v={String(health.cliffCells)} />
-          <Row k="no kit piece" v={String(health.missingPiece)} warn={health.missingPiece > 0} />
-          <Row k="orphan ramps" v={String(health.orphanRamps)} warn={health.orphanRamps > 0} />
-          <Row k="1-cell walls" v={String(health.thinWalls)} warn={health.thinWalls > 0} />
-          <Row k="faces too tall" v={String(health.tooTall)} warn={health.tooTall > 0} />
-          {health.tooTall > 0 && (
+          <div style={{ borderTop: "1px solid #232a31", paddingTop: 10, marginBottom: 10 }}>
+            <div style={{ color: "#7d868e", marginBottom: 5 }}>coastline generator</div>
+            <div style={{ display: "flex", gap: 4, alignItems: "center", marginBottom: 6 }}>
+              <span>seed</span>
+              <input type="number" value={coastSeed} onChange={(e) => setCoastSeed(Math.round(Number(e.target.value)))} style={{ ...field, width: 64 }} />
+              <button onClick={() => setCoastSeed(Math.floor(Math.random() * 10000))} style={btn(false, { padding: "4px 6px" })}>🎲</button>
+              <span>size</span>
+              <input type="number" min={15} max={48} value={coastSize} onChange={(e) => setCoastSize(Number(e.target.value))} style={{ ...field, width: 52 }} />
+              <span>%</span>
+            </div>
             <button
               onClick={() => {
                 commit();
-                const moved = legaliseTerraces(map);
-                setLegalised(moved);
+                generateCoast(world().map, { seed: coastSeed, radius: (Math.min(map.width, map.depth) * coastSize) / 100 });
                 bump();
               }}
-              style={btn(false, { width: "100%", marginTop: 6 })}
+              style={btn(false, { width: "100%" })}
             >
-              terrace them ({health.tooTall})
+              generate a starting coast
             </button>
-          )}
-          {legalised > 0 && health.tooTall === 0 && (
-            <div style={{ color: "#7fd1c0", marginTop: 5, lineHeight: 1.5 }}>
-              Lowered {legalised} cells. The peak stays where you drew it; each
-              tier insets until every face fits one cliff piece.
+            <div style={{ color: "#5c6670", marginTop: 5, lineHeight: 1.5 }}>
+              The legacy island&apos;s coast harmonics with a new seed: grass, a sand ring, sea. Replaces the terrain (undoable); objects stay.
+            </div>
+          </div>
+
+          <button
+            onClick={() => {
+              commit();
+              WORLD = shippedVillage();
+              setSelected(null);
+              try {
+                window.localStorage.removeItem(PAINTER_DRAFT_KEY);
+              } catch {
+                /* nothing to clear */
+              }
+              bumpClean();
+            }}
+            style={btn(false, { width: "100%", marginBottom: 6 })}
+          >
+            reload shipped village
+          </button>
+          <div style={{ color: "#5c6670", marginBottom: 10, lineHeight: 1.5 }}>
+            Undoable. Work autosaves to this browser; this throws the working draft away. Named saves under “open” are untouched.
+          </div>
+
+          <div style={{ borderTop: "1px solid #232a31", paddingTop: 10, marginBottom: 10 }}>
+            <div style={{ color: !health ? "#7d868e" : bad ? "#ff5577" : "#7fd1c0", marginBottom: 6 }} data-testid="health">
+              {!health ? "checking…" : bad ? "PROBLEMS" : "healthy"}
+            </div>
+            {problems.map(([check, what]) => (
+              <Row key={check} k={check} v={what.length > 3 ? `${what.slice(0, 3).join(", ")} +${what.length - 3}` : what.join(", ")} warn />
+            ))}
+            {health && (
+              <>
+                <Row k="reachable from spawn" v={`${health.terrain.reachable}/${health.terrain.walkable}`} warn={health.terrain.stranded > 0} />
+                <Row k="cliff cells" v={String(health.terrain.cliffCells)} />
+                <Row k="half-step cells" v={String(health.terrain.halfSteps)} />
+                {health.warnings.length > 0 && (
+                  <div style={{ color: "#ffa62b", marginTop: 6, lineHeight: 1.5 }}>
+                    {health.warnings.length} overlap{health.warnings.length > 1 ? "s" : ""} (outlined red): {health.warnings.slice(0, 3).join("; ")}
+                    {health.warnings.length > 3 ? " …" : ""}
+                  </div>
+                )}
+              </>
+            )}
+            {health && health.terrain.tooTall > 0 && (
+              <button
+                onClick={() => {
+                  commit();
+                  const moved = legaliseTerraces(map);
+                  setLegalised(moved);
+                  bump();
+                }}
+                style={btn(false, { width: "100%", marginTop: 6 })}
+              >
+                terrace them ({health.terrain.tooTall})
+              </button>
+            )}
+            {legalised > 0 && health?.terrain.tooTall === 0 && (
+              <div style={{ color: "#7fd1c0", marginTop: 5, lineHeight: 1.5 }}>
+                Lowered {legalised} cells. The peak stays where you drew it; each tier insets until every face fits one cliff piece.
+              </div>
+            )}
+          </div>
+
+          <div style={{ borderTop: "1px solid #232a31", paddingTop: 10, marginBottom: 10 }} data-testid="budget">
+            <div style={{ color: "#7d868e", marginBottom: 5 }}>budget (scripts/map-budget.mjs)</div>
+            <Row k="terrain draws (worst)" v={`${budget.terrainDraws} · ${budget.chunksUsed} chunks`} warn={budget.terrainDraws > 300} />
+            <Row k="terrain triangles" v={budget.terrainTriangles.toLocaleString()} />
+            <Row k="cliff pieces" v={String(budget.cliffPieces)} warn={budget.cliffsWithoutPiece > 0} />
+            <Row k="shore field · height field" v={`${budget.shoreSdfMB.toFixed(2)} · ${budget.heightFieldMB.toFixed(2)} MB`} />
+            <Row k="objects" v={`${objects.length} (${objects.filter((o) => o.kind === "tree" || o.kind === "bush" || o.kind === "flower").length} nature, instanced)`} />
+            {Object.keys(budget.levels).map(Number).sort((a, b) => a - b).map((l) => (
+              <Row key={l} k={`level ${l}`} v={`${budget.levels[l]}  ${((100 * budget.levels[l]) / Math.max(1, landCells)).toFixed(1)}%`} />
+            ))}
+          </div>
+
+          <div style={{ borderTop: "1px solid #232a31", paddingTop: 10, marginBottom: 10, lineHeight: 1.7 }}>
+            <Legend c="#20140c" label="full cliff (hard barrier)" />
+            <Legend c="#e8a13c" label="half step (walkable, blended)" />
+            <Legend c="#2b7fff" label="ramp, arrow points uphill" />
+            <Legend c="#ff0055" label="broken: no kit piece or no climb" />
+            <Legend c={SEA_FILL} label="open sea (by connectivity); lighter blue is river or pond" />
+            <Legend c="#ffffff" label="door · cyan: where you come back out" />
+          </div>
+
+          {hover && inBounds(map, hover.x, hover.z) && (
+            <div style={{ borderTop: "1px solid #232a31", paddingTop: 10, marginBottom: 10, color: "#8b949e" }}>
+              <Row k="world x, z" v={`${(map.originX + hover.u - 0.5).toFixed(2)}, ${(map.originZ + hover.v - 0.5).toFixed(2)}`} />
+              <Row k="cell (world)" v={`${map.originX + hover.x}, ${map.originZ + hover.z}`} />
+              <Row k="cell (grid)" v={`${hover.x}, ${hover.z}`} />
+              <Row k="level" v={String(levelAt(map, hover.x, hover.z))} />
+              <Row
+                k="surface"
+                v={water(surfaceAt(map, hover.x, hover.z)) ? ["land", "sea", "river", "pond"][waterClass[hover.z * map.width + hover.x]] : SURFACE_NAME[surfaceAt(map, hover.x, hover.z)] ?? "?"}
+              />
+              <Row k="half steps" v={String(halfCliffEdges(map, hover.x, hover.z).length)} />
+              <Row k="full cliff" v={needsCliff(map, hover.x, hover.z) ? "yes" : "no"} />
             </div>
           )}
-        </div>
-
-        <div style={{ borderTop: "1px solid #232a31", paddingTop: 10, marginBottom: 10 }}>
-          {Object.keys(health.levels)
-            .map(Number)
-            .sort((a, b) => a - b)
-            .map((l) => (
-              <Row
-                key={l}
-                k={`level ${l}`}
-                v={`${health.levels[l]}  ${((100 * health.levels[l]) / Math.max(1, landCells)).toFixed(1)}%`}
-              />
-            ))}
-        </div>
-
-        <div style={{ borderTop: "1px solid #232a31", paddingTop: 10, marginBottom: 10, lineHeight: 1.7 }}>
-          <Legend c="#20140c" label="full cliff (hard barrier)" />
-          <Legend c="#e8a13c" label="half step (walkable, blended)" />
-          <Legend c="#2b7fff" label="ramp, arrow points uphill" />
-          <Legend c="#ff0055" label="broken: no kit piece or no climb" />
-          <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginTop: 4 }}>
-            {PROP_KINDS.map((k) => (
-              <span key={k} style={{ display: "flex", alignItems: "center", gap: 4, color: "#7d868e" }}>
-                <span
-                  style={{
-                    width: 9,
-                    height: 9,
-                    background: PROP_COLOR[k],
-                    borderRadius: "50%",
-                    border: "1px solid rgba(0,0,0,0.6)",
-                  }}
-                />
-                {k}
-              </span>
-            ))}
-          </div>
-          <Row k="markers placed" v={String(props.length)} />
-        </div>
-
-        {hover && inBounds(map, hover.x, hover.z) && (
-          <div style={{ borderTop: "1px solid #232a31", paddingTop: 10, marginBottom: 10, color: "#8b949e" }}>
-            <Row k="cell" v={`${hover.x}, ${hover.z}`} />
-            <Row k="level" v={String(levelAt(map, hover.x, hover.z))} />
-            <Row k="surface" v={SURFACE_NAME[surfaceAt(map, hover.x, hover.z)] ?? "?"} />
-            <Row k="half steps" v={String(halfCliffEdges(map, hover.x, hover.z).length)} />
-            <Row k="full cliff" v={needsCliff(map, hover.x, hover.z) ? "yes" : "no"} />
-          </div>
-        )}
         </div>
 
         {/* Pinned. It is the only action that leaves the page, and with the
             checks and legend above it it was otherwise below the fold. */}
         <div style={{ borderTop: "1px solid #232a31", padding: 14, flexShrink: 0 }}>
-        <button
-          onClick={() => {
-            const out = { ...islandMapDoc, ...serialiseIslandMap(map, props, annotations) };
-            void navigator.clipboard.writeText(JSON.stringify(out, null, 1));
-            setCopied(true);
-            setTimeout(() => setCopied(false), 1400);
-          }}
-          style={btn(false, {
-            width: "100%",
-            padding: "9px 0",
-            background: copied ? "#7fd1c0" : "#1c2126",
-            color: copied ? "#12161a" : "#c8cfd4",
-          })}
-        >
-          {copied ? "copied — paste into data/island-map.json" : "Export map → clipboard"}
-        </button>
-        <div style={{ color: "#5c6670", marginTop: 8, lineHeight: 1.5 }}>
-          Paste over <code>web/data/island-map.json</code>. Re-running
-          <code> author-elevation.mjs</code> overwrites hand edits.
-        </div>
+          <button
+            onClick={() => {
+              const w = world();
+              const out = w.source === "village"
+                ? villageJson(serialiseVillage(w.map, w.objects, w.annotations))
+                : JSON.stringify({ ...islandMapDoc, ...serialiseIslandMap(w.map, w.props, w.annotations) }, null, 1);
+              void navigator.clipboard.writeText(out);
+              setCopied(true);
+              setTimeout(() => setCopied(false), 1400);
+            }}
+            style={btn(false, { width: "100%", padding: "9px 0", background: copied ? "#7fd1c0" : "#1c2126", color: copied ? "#12161a" : "#c8cfd4" })}
+          >
+            {copied ? `copied — paste into data/${source === "village" ? "village" : "island"}-map.json` : "Export map → clipboard"}
+          </button>
+          <div style={{ color: "#5c6670", marginTop: 8, lineHeight: 1.5 }}>
+            {source === "village" ? (
+              <>Paste over <code>web/data/village-map.json</code> (the coordinator commits it). Healthy above means the suite stays green.</>
+            ) : (
+              <>Legacy draft: paste over <code>web/data/island-map.json</code>. The game reads the village file.</>
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -1681,9 +1869,10 @@ function Legend({ c, label }: { c: string; label: string }) {
 
 function Row({ k, v, warn }: { k: string; v: string; warn?: boolean }) {
   return (
-    <div style={{ display: "flex", justifyContent: "space-between", padding: "1px 0" }}>
+    <div style={{ display: "flex", justifyContent: "space-between", gap: 8, padding: "1px 0" }}>
       <span style={{ color: "#7d868e" }}>{k}</span>
-      <span style={{ color: warn ? "#ff5577" : "#c8cfd4" }}>{v}</span>
+      <span style={{ color: warn ? "#ff5577" : "#c8cfd4", textAlign: "right" }}>{v}</span>
     </div>
   );
 }
+
