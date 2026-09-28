@@ -1,0 +1,39 @@
+HAIR bangs_straight       open=  0 gap max=0.0 at=[-10, -72] med=0.0 on_scalp=1.0 outer=0.0121 brow_cover=0.0
+HAIR bangs_straight_long  open=  0 gap max=0.0 at=[-26, -54] med=0.0 on_scalp=0.999 outer=0.0114 brow_cover=0.713
+HAIR bangs_bowl           open=  0 gap max=0.0 at=[4, -78] med=0.0 on_scalp=0.998 outer=0.0134 brow_cover=0.0
+HAIR bangs_wispy          open=  0 gap max=0.0 at=[-2, 0] med=0.0 on_scalp=1.0 outer=0.0121 brow_cover=0.181
+HAIR bangs_swept_l        open=  0 gap max=0.0 at=[-18, -66] med=0.0 on_scalp=0.973 outer=0.0124 brow_cover=0.0
+HAIR bangs_swept_r        open=  0 gap max=0.0 at=[-18, 63] med=0.0 on_scalp=0.977 outer=0.0121 brow_cover=0.0
+HAIR bangs_curtain        open=  0 gap max=0.0 at=[-12, -75] med=0.0 on_scalp=1.0 outer=0.0118 brow_cover=0.0
+HAIR bangs_curtain_long   open=  0 gap max=0.0 at=[-48, -60] med=0.0 on_scalp=0.972 outer=0.0101 brow_cover=0.0
+HAIR bangs_centre_split   open=  0 gap max=0.0 at=[-24, -69] med=0.0 on_scalp=0.998 outer=0.011 brow_cover=0.436
+HAIR bangs_spiky          open=  0 gap max=0.0 at=[-14, -78] med=0.0 on_scalp=1.0 outer=0.0124 brow_cover=0.0
+HAIR bangs_hime           open=  0 gap max=0.0 at=[-52, -75] med=0.0 on_scalp=0.961 outer=0.0107 brow_cover=0.0
+HAIR bangs_choppy         open=  0 gap max=0.0 at=[10, -57] med=0.0 on_scalp=0.994 outer=0.0132 brow_cover=0.0
+HAIR bangs_swept_back     open=  0 gap max=0.0 at=[18, -78] med=0.0 on_scalp=1.0 outer=0.0126 brow_cover=0.0
+HAIR bangs_single_strand  open=  0 gap max=0.0 at=[-24, -18] med=0.0 on_scalp=1.0 outer=0.0117 brow_cover=0.106
+HAIR bangs_wavy           open=  0 gap max=0.0 at=[-18, 78] med=0.0 on_scalp=1.0 outer=0.0125 brow_cover=0.362
+HAIR bangs_asym_block     open=  0 gap max=0.0 at=[-32, -72] med=0.0 on_scalp=0.976 outer=0.012 brow_cover=0.0
+HAIR back_bob             open=  0 gap max=0.0 at=[-24, -180] med=0.0 on_scalp=1.0 outer=0.0178
+HAIR back_wolf            open=  0 gap max=0.0 at=[-24, -180] med=0.0 on_scalp=1.0 outer=0.0202
+HAIR back_long            open=  0 gap max=0.0 at=[-24, -180] med=0.0 on_scalp=1.0 outer=0.0162
+HAIR back_wavy_long       open=  0 gap max=0.0 at=[-24, -180] med=0.0 on_scalp=1.0 outer=0.0162
+HAIR back_high_pony       open=  0 gap max=0.0 at=[-22, -180] med=0.0 on_scalp=1.0 outer=0.0145
+HAIR back_pigtails        open=  0 gap max=0.0 at=[-24, -180] med=0.0 on_scalp=0.999 outer=0.0143
+HAIR back_twin_buns       open=  0 gap max=0.0 at=[-24, -180] med=0.0 on_scalp=1.0 outer=0.0163
+HAIR back_bun             open=  0 gap max=0.0 at=[-24, -180] med=0.0 on_scalp=0.999 outer=0.0162
+HAIR back_braid_crown     open=  0 gap max=0.0 at=[-24, -180] med=0.0 on_scalp=0.999 outer=0.0153
+HAIR back_short_spiky     open=  0 gap max=0.0 at=[-18, -180] med=0.0 on_scalp=0.998 outer=0.0142
+HAIR back_undercut        open=  0 gap max=0.0 at=[-24, -180] med=0.0 on_scalp=0.997 outer=0.0222
+HAIR back_bowl            open=  0 gap max=0.0 at=[-24, -180] med=0.0 on_scalp=0.999 outer=0.0218
+GLASSES acc_glasses_round    offset max=0.0109 default=0.0045
+GLASSES acc_glasses_square   offset max=0.0109 default=0.0045
+HEADWEAR acc_beanie           open=  0 gap max=0.0 med=0.0 rise max=0.0535 poke=0.0
+HEADWEAR acc_sunhat           open=  0 gap max=0.0 med=0.0 rise max=0.0115 poke=0.0
+HEADWEAR acc_cap              open=  0 gap max=0.0 med=0.0 rise max=0.0195 poke=0.0
+HEADWEAR acc_straw_hat        open=  0 gap max=0.0 med=0.0 rise max=0.0124 poke=0.0
+HEADWEAR acc_flower_crown     open=  0 gap max=0.0078 med=0.0009 rise max=0.0155 poke=0.0
+HEADWEAR acc_crystal_circlet  open=  0 gap max=0.0099 med=0.0044 rise max=0.0226 poke=0.0
+FACE {"feature_tris": 20, "stretch_max": 1.104, "aniso_max": 1.196, "per_layer": {"eyes": {"stretch": 1.054, "aniso": 1.103}, "brows": {"stretch": 1.054, "aniso": 1.103}, "mouth": {"stretch": 1.104, "aniso": 1.196}}, "stretch_worst_at": ["mouth", 8, 0.586], "eye_reach_deg": 46.7, "eye_reach_lon_deg": 51.0, "default_eye_centre_lon_deg": 35.0, "default_eye_centre_z": 0.7285}
+SEAM {"ledge_max": 0.0, "worst_pair": "bangs_straight+back_bob", "worst_at": null, "default_pair": 0.0, "median_over_pairs": 0.0, "over": {}}
+FIT_CHECK PASS (0 over the limits)

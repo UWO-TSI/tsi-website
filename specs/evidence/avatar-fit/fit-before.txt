@@ -1,138 +1,144 @@
-HAIR bangs_straight       open= 31 gap max=0.0588 med=0.0464 tuck=0.0 outer=0.0464 brow_cover=0.0
-HAIR bangs_straight_long  open= 31 gap max=0.0592 med=0.0442 tuck=0.0 outer=0.0442 brow_cover=0.557
-HAIR bangs_bowl           open= 22 gap max=0.0682 med=0.0567 tuck=0.0 outer=0.0567 brow_cover=0.0
-HAIR bangs_wispy          open= 35 gap max=0.055 med=0.0453 tuck=0.0 outer=0.0453 brow_cover=0.67
-HAIR bangs_swept_l        open= 31 gap max=0.0588 med=0.0486 tuck=0.0 outer=0.0486 brow_cover=0.0
-HAIR bangs_swept_r        open= 31 gap max=0.0588 med=0.0481 tuck=0.0 outer=0.0481 brow_cover=0.0
-HAIR bangs_curtain        open= 35 gap max=0.0588 med=0.0462 tuck=0.0 outer=0.0462 brow_cover=0.0
-HAIR bangs_curtain_long   open= 35 gap max=0.0588 med=0.0427 tuck=0.005 outer=0.0427 brow_cover=0.0
-HAIR bangs_centre_split   open= 32 gap max=0.0587 med=0.0439 tuck=0.0 outer=0.0439 brow_cover=0.742
-HAIR bangs_spiky          open= 31 gap max=0.0588 med=0.0475 tuck=0.0 outer=0.0475 brow_cover=0.01
-HAIR bangs_hime           open= 31 gap max=0.0587 med=0.0415 tuck=0.056 outer=0.0415 brow_cover=0.0
-HAIR bangs_choppy         open= 37 gap max=0.0587 med=0.0513 tuck=0.0 outer=0.0513 brow_cover=0.0
-HAIR bangs_swept_back     open= 18 gap max=0.0731 med=0.0615 tuck=0.0 outer=0.0615 brow_cover=0.0
-HAIR bangs_single_strand  open= 32 gap max=0.0606 med=0.0472 tuck=0.0 outer=0.048 brow_cover=0.258
-HAIR bangs_wavy           open= 31 gap max=0.0588 med=0.0482 tuck=0.0 outer=0.0482 brow_cover=0.165
-HAIR bangs_asym_block     open= 31 gap max=0.0588 med=0.0482 tuck=0.0 outer=0.0482 brow_cover=0.0
-HAIR back_bob             open= 20 gap max=0.0483 med=0.0358 tuck=0.0 outer=0.0358
-HAIR back_wolf            open= 26 gap max=0.0546 med=0.0415 tuck=0.0 outer=0.0415
-HAIR back_long            open= 24 gap max=0.0482 med=0.0359 tuck=0.0 outer=0.0359
-HAIR back_wavy_long       open= 24 gap max=0.0482 med=0.0359 tuck=0.0 outer=0.0359
-HAIR back_high_pony       open= 16 gap max=0.0428 med=0.0317 tuck=0.0 outer=0.0325
-HAIR back_pigtails        open= 16 gap max=0.0849 med=0.0312 tuck=0.0 outer=0.0319
-HAIR back_twin_buns       open= 16 gap max=0.053 med=0.0374 tuck=0.0 outer=0.0377
-HAIR back_bun             open= 16 gap max=0.0492 med=0.0364 tuck=0.0 outer=0.0368
-HAIR back_braid_crown     open= 16 gap max=0.0438 med=0.0334 tuck=0.0 outer=0.0366
-HAIR back_short_spiky     open= 40 gap max=0.0428 med=0.0341 tuck=0.0 outer=0.0345
-HAIR back_undercut        open= 16 gap max=0.0668 med=0.0496 tuck=0.047 outer=0.0496
-HAIR back_bowl            open= 16 gap max=0.0598 med=0.0467 tuck=0.0 outer=0.0467
+HAIR bangs_straight       open= 31 gap max=0.0572 at=[74, -9] med=0.0444 on_scalp=0.0 outer=0.0464 brow_cover=0.0
+HAIR bangs_straight_long  open= 31 gap max=0.0569 at=[74, -9] med=0.042 on_scalp=0.0 outer=0.0442 brow_cover=0.557
+HAIR bangs_bowl           open= 22 gap max=0.0649 at=[46, 9] med=0.0556 on_scalp=0.0 outer=0.0567 brow_cover=0.0
+HAIR bangs_wispy          open= 35 gap max=0.0523 at=[38, 6] med=0.0444 on_scalp=0.0 outer=0.0453 brow_cover=0.67
+HAIR bangs_swept_l        open= 31 gap max=0.0575 at=[74, -45] med=0.0472 on_scalp=0.0 outer=0.0486 brow_cover=0.0
+HAIR bangs_swept_r        open= 31 gap max=0.0575 at=[74, 63] med=0.0465 on_scalp=0.0 outer=0.0481 brow_cover=0.0
+HAIR bangs_curtain        open= 35 gap max=0.058 at=[74, -9] med=0.0446 on_scalp=0.0 outer=0.0462 brow_cover=0.0
+HAIR bangs_curtain_long   open= 35 gap max=0.058 at=[74, -9] med=0.0396 on_scalp=0.001 outer=0.0427 brow_cover=0.0
+HAIR bangs_centre_split   open= 32 gap max=0.0584 at=[74, 6] med=0.0422 on_scalp=0.0 outer=0.0439 brow_cover=0.742
+HAIR bangs_spiky          open= 31 gap max=0.0575 at=[74, -9] med=0.0463 on_scalp=0.0 outer=0.0475 brow_cover=0.01
+HAIR bangs_hime           open= 31 gap max=0.0569 at=[74, -12] med=0.0395 on_scalp=0.003 outer=0.042 brow_cover=0.0
+HAIR bangs_choppy         open= 37 gap max=0.0577 at=[74, 9] med=0.05 on_scalp=0.0 outer=0.0513 brow_cover=0.0
+HAIR bangs_swept_back     open= 18 gap max=0.0702 at=[54, 78] med=0.0606 on_scalp=0.0 outer=0.0615 brow_cover=0.0
+HAIR bangs_single_strand  open= 32 gap max=0.0574 at=[74, -12] med=0.0458 on_scalp=0.0 outer=0.048 brow_cover=0.258
+HAIR bangs_wavy           open= 31 gap max=0.0572 at=[74, -9] med=0.0467 on_scalp=0.0 outer=0.0482 brow_cover=0.165
+HAIR bangs_asym_block     open= 31 gap max=0.0577 at=[74, 9] med=0.0468 on_scalp=0.0 outer=0.0482 brow_cover=0.0
+HAIR back_bob             open= 20 gap max=0.0444 at=[-10, 90] med=0.0341 on_scalp=0.0 outer=0.0363
+HAIR back_wolf            open= 26 gap max=0.0501 at=[-4, 90] med=0.0385 on_scalp=0.0 outer=0.0409
+HAIR back_long            open= 24 gap max=0.0443 at=[-8, 90] med=0.034 on_scalp=0.0 outer=0.0364
+HAIR back_wavy_long       open= 24 gap max=0.0443 at=[-8, 90] med=0.034 on_scalp=0.0 outer=0.0364
+HAIR back_high_pony       open= 16 gap max=0.0417 at=[88, -150] med=0.03 on_scalp=0.0 outer=0.0325
+HAIR back_pigtails        open= 16 gap max=0.0417 at=[88, -150] med=0.0295 on_scalp=0.0 outer=0.032
+HAIR back_twin_buns       open= 16 gap max=0.0442 at=[-4, -150] med=0.0344 on_scalp=0.0 outer=0.0373
+HAIR back_bun             open= 16 gap max=0.0455 at=[-6, -150] med=0.0339 on_scalp=0.0 outer=0.0366
+HAIR back_braid_crown     open= 16 gap max=0.0417 at=[88, -150] med=0.031 on_scalp=0.0 outer=0.037
+HAIR back_short_spiky     open= 40 gap max=0.0417 at=[88, -150] med=0.032 on_scalp=0.0 outer=0.0345
+HAIR back_undercut        open= 16 gap max=0.0656 at=[88, -150] med=0.0492 on_scalp=0.002 outer=0.0507
+HAIR back_bowl            open= 16 gap max=0.056 at=[-8, -150] med=0.0456 on_scalp=0.0 outer=0.0469
 GLASSES acc_glasses_round    offset max=0.0106 default=0.003
 GLASSES acc_glasses_square   offset max=0.0106 default=0.003
-HEADWEAR acc_beanie           open= 50 gap max=0.0937 med=0.0727 poke=0.0
-HEADWEAR acc_sunhat           open= 98 gap max=0.0937 med=0.0836 poke=0.0
-HEADWEAR acc_cap              open= 66 gap max=0.0886 med=0.0723 poke=0.0
-HEADWEAR acc_straw_hat        open= 98 gap max=0.0974 med=0.0834 poke=0.0
-HEADWEAR acc_flower_crown     open=120 gap max=0.0345 med=0.0167 poke=0.0
-HEADWEAR acc_crystal_circlet  open=  0 gap max=0.0206 med=0.0117 poke=0.0
-FACE {"feature_tris": 27, "stretch_max": 2.39, "aniso_max": 2.39, "eye_reach_deg": 63.1, "default_eye_centre_lon_deg": 37.0, "default_eye_centre_z": 0.724}
-SEAM {"ledge_max": 0.0391, "worst_pair": "bangs_bowl+back_high_pony", "default_pair": 0.0265, "median_over_pairs": 0.0265}
-FIT_CHECK FAIL (99 over the limits)
+HEADWEAR acc_beanie           open= 50 gap max=0.0683 med=0.0561 rise max=0.1099 poke=0.0
+HEADWEAR acc_sunhat           open= 98 gap max=0.0755 med=0.0612 rise max=0.0857 poke=0.0
+HEADWEAR acc_cap              open= 66 gap max=0.0635 med=0.0538 rise max=0.0662 poke=0.0
+HEADWEAR acc_straw_hat        open= 98 gap max=0.076 med=0.0642 rise max=0.0839 poke=0.0
+HEADWEAR acc_flower_crown     open=120 gap max=0.0307 med=0.011 rise max=0.0356 poke=0.0
+HEADWEAR acc_crystal_circlet  open=  0 gap max=0.0187 med=0.0111 rise max=0.0315 poke=0.0
+FACE {"feature_tris": 32, "stretch_max": 2.39, "aniso_max": 2.39, "per_layer": {"eyes": {"stretch": 1.471, "aniso": 1.471}, "brows": {"stretch": 1.471, "aniso": 1.471}, "mouth": {"stretch": 2.39, "aniso": 2.39}}, "stretch_worst_at": ["mouth", 8, 0.586], "eye_reach_deg": 47.2, "eye_reach_lon_deg": 63.1, "default_eye_centre_lon_deg": 37.0, "default_eye_centre_z": 0.724}
+SEAM {"ledge_max": 0.0251, "worst_pair": "bangs_wispy+back_high_pony", "worst_at": [36, -39], "default_pair": 0.015, "median_over_pairs": 0.0151, "over": {"bangs_wispy+back_high_pony": [0.0251, [36, -39]], "bangs_wispy+back_pigtails": [0.0251, [36, -39]], "bangs_wispy+back_short_spiky": [0.024, [36, -39]], "bangs_centre_split+back_undercut": [0.0236, [24, 9]], "bangs_centre_split+back_bowl": [0.023, [24, 9]], "bangs_wispy+back_bob": [0.0221, [36, -39]], "bangs_wispy+back_long": [0.0221, [36, -39]], "bangs_wispy+back_wavy_long": [0.0221, [36, -39]], "bangs_wispy+back_twin_buns": [0.0221, [36, -39]], "bangs_wispy+back_bun": [0.0221, [36, -39]], "bangs_bowl+back_high_pony": [0.021, [74, 45]], "bangs_bowl+back_pigtails": [0.021, [74, 45]], "bangs_bowl+back_braid_crown": [0.021, [74, 45]], "bangs_bowl+back_short_spiky": [0.021, [74, 45]], "bangs_swept_back+back_high_pony": [0.0203, [80, 39]], "bangs_swept_back+back_pigtails": [0.0203, [80, 39]], "bangs_swept_back+back_braid_crown": [0.0203, [80, 39]], "bangs_swept_back+back_short_spiky": [0.0203, [80, 39]], "bangs_single_strand+back_high_pony": [0.0191, [74, -12]], "bangs_single_strand+back_pigtails": [0.0191, [74, -12]], "bangs_single_strand+back_braid_crown": [0.0191, [74, -12]], "bangs_single_strand+back_short_spiky": [0.0191, [74, -12]], "bangs_bowl+back_bob": [0.019, [74, -45]], "bangs_bowl+back_long": [0.019, [74, -45]], "bangs_bowl+back_wavy_long": [0.019, [74, -45]], "bangs_bowl+back_twin_buns": [0.019, [74, -45]], "bangs_bowl+back_bun": [0.019, [74, -45]], "bangs_wispy+back_wolf": [0.0183, [36, -39]], "bangs_swept_back+back_bob": [0.0183, [80, 39]], "bangs_swept_back+back_long": [0.0183, [80, 39]], "bangs_swept_back+back_wavy_long": [0.0183, [80, 39]], "bangs_swept_back+back_twin_buns": [0.0183, [80, 39]], "bangs_swept_back+back_bun": [0.0183, [80, 39]], "bangs_spiky+back_undercut": [0.0172, [24, -54]], "bangs_straight+back_undercut": [0.0171, [24, -51]], "bangs_curtain+back_high_pony": [0.0171, [36, -6]], "bangs_curtain+back_pigtails": [0.0171, [36, -6]], "bangs_curtain_long+back_high_pony": [0.0171, [36, -6]], "bangs_curtain_long+back_pigtails": [0.0171, [36, -6]], "bangs_centre_split+back_high_pony": [0.0171, [74, 15]], "bangs_centre_split+back_pigtails": [0.0171, [74, 15]], "bangs_centre_split+back_braid_crown": [0.0171, [74, 15]], "bangs_centre_split+back_short_spiky": [0.0171, [74, 15]], "bangs_single_strand+back_bob": [0.0171, [74, -12]], "bangs_single_strand+back_long": [0.0171, [74, -12]], "bangs_single_strand+back_wavy_long": [0.0171, [74, -12]], "bangs_single_strand+back_twin_buns": [0.0171, [74, -12]], "bangs_single_strand+back_bun": [0.0171, [74, -12]], "bangs_straight+back_high_pony": [0.017, [74, 45]], "bangs_straight+back_pigtails": [0.017, [74, 45]], "bangs_straight+back_braid_crown": [0.017, [74, 45]], "bangs_straight+back_short_spiky": [0.017, [74, 45]], "bangs_straight_long+back_high_pony": [0.017, [74, 45]], "bangs_straight_long+back_pigtails": [0.017, [74, 45]], "bangs_straight_long+back_braid_crown": [0.017, [74, 45]], "bangs_straight_long+back_short_spiky": [0.017, [74, 45]], "bangs_swept_l+back_high_pony": [0.017, [74, -45]], "bangs_swept_l+back_pigtails": [0.017, [74, -45]], "bangs_swept_l+back_braid_crown": [0.017, [74, -45]], "bangs_swept_l+back_short_spiky": [0.017, [74, -45]], "bangs_swept_r+back_high_pony": [0.017, [74, 45]], "bangs_swept_r+back_pigtails": [0.017, [74, 45]], "bangs_swept_r+back_braid_crown": [0.017, [74, 45]], "bangs_swept_r+back_short_spiky": [0.017, [74, 45]], "bangs_curtain+back_braid_crown": [0.017, [74, 45]], "bangs_curtain+back_short_spiky": [0.017, [74, 45]], "bangs_curtain_long+back_braid_crown": [0.017, [74, 45]], "bangs_curtain_long+back_short_spiky": [0.017, [74, 45]], "bangs_spiky+back_high_pony": [0.017, [74, 45]], "bangs_spiky+back_pigtails": [0.017, [74, 45]], "bangs_spiky+back_braid_crown": [0.017, [74, 45]], "bangs_spiky+back_short_spiky": [0.017, [74, 45]], "bangs_wavy+back_high_pony": [0.017, [74, -45]], "bangs_wavy+back_pigtails": [0.017, [74, -45]], "bangs_wavy+back_braid_crown": [0.017, [74, -45]], "bangs_wavy+back_short_spiky": [0.017, [74, -45]], "bangs_asym_block+back_high_pony": [0.017, [74, 45]], "bangs_asym_block+back_pigtails": [0.017, [74, 45]], "bangs_asym_block+back_braid_crown": [0.017, [74, 45]], "bangs_asym_block+back_short_spiky": [0.017, [74, 45]], "bangs_hime+back_high_pony": [0.0169, [74, -12]], "bangs_hime+back_pigtails": [0.0169, [74, -12]], "bangs_hime+back_braid_crown": [0.0169, [74, -12]], "bangs_hime+back_short_spiky": [0.0169, [74, -12]], "bangs_choppy+back_high_pony": [0.0169, [74, -39]], "bangs_choppy+back_pigtails": [0.0169, [74, -39]], "bangs_choppy+back_braid_crown": [0.0169, [74, -39]], "bangs_choppy+back_short_spiky": [0.0169, [74, -39]], "bangs_straight+back_bowl": [0.0165, [24, -51]], "bangs_spiky+back_bowl": [0.0165, [24, -54]], "bangs_single_strand+back_undercut": [0.0161, [24, -51]], "bangs_hime+back_undercut": [0.016, [24, -45]], "bangs_hime+back_bowl": [0.0155, [24, -45]], "bangs_single_strand+back_bowl": [0.0155, [24, -51]], "bangs_centre_split+back_wolf": [0.0154, [24, 9]], "bangs_centre_split+back_bob": [0.0151, [74, 15]], "bangs_centre_split+back_long": [0.0151, [74, 15]], "bangs_centre_split+back_wavy_long": [0.0151, [74, 15]], "bangs_centre_split+back_twin_buns": [0.0151, [74, 15]], "bangs_centre_split+back_bun": [0.0151, [74, 15]], "bangs_straight+back_bob": [0.015, [74, 45]], "bangs_straight+back_long": [0.015, [74, 45]], "bangs_straight+back_wavy_long": [0.015, [74, 45]], "bangs_straight+back_twin_buns": [0.015, [74, 45]], "bangs_straight+back_bun": [0.015, [74, 45]], "bangs_straight_long+back_bob": [0.015, [74, 45]], "bangs_straight_long+back_long": [0.015, [74, 45]], "bangs_straight_long+back_wavy_long": [0.015, [74, 45]], "bangs_straight_long+back_twin_buns": [0.015, [74, 45]], "bangs_straight_long+back_bun": [0.015, [74, 45]], "bangs_swept_l+back_bob": [0.015, [74, -45]], "bangs_swept_l+back_long": [0.015, [74, -45]], "bangs_swept_l+back_wavy_long": [0.015, [74, -45]], "bangs_swept_l+back_twin_buns": [0.015, [74, -45]], "bangs_swept_l+back_bun": [0.015, [74, -45]], "bangs_swept_r+back_bob": [0.015, [74, 45]], "bangs_swept_r+back_long": [0.015, [74, 45]], "bangs_swept_r+back_wavy_long": [0.015, [74, 45]], "bangs_swept_r+back_twin_buns": [0.015, [74, 45]], "bangs_swept_r+back_bun": [0.015, [74, 45]], "bangs_curtain+back_bob": [0.015, [74, 45]], "bangs_curtain+back_long": [0.015, [74, 45]], "bangs_curtain+back_wavy_long": [0.015, [74, 45]], "bangs_curtain+back_twin_buns": [0.015, [74, 45]], "bangs_curtain+back_bun": [0.015, [74, 45]], "bangs_curtain+back_undercut": [0.015, [24, -51]], "bangs_curtain_long+back_bob": [0.015, [74, 45]], "bangs_curtain_long+back_long": [0.015, [74, 45]], "bangs_curtain_long+back_wavy_long": [0.015, [74, 45]], "bangs_curtain_long+back_twin_buns": [0.015, [74, 45]], "bangs_curtain_long+back_bun": [0.015, [74, 45]], "bangs_spiky+back_bob": [0.015, [74, 45]], "bangs_spiky+back_long": [0.015, [74, 45]], "bangs_spiky+back_wavy_long": [0.015, [74, 45]], "bangs_spiky+back_twin_buns": [0.015, [74, 45]], "bangs_spiky+back_bun": [0.015, [74, 45]], "bangs_wavy+back_bob": [0.015, [74, -45]], "bangs_wavy+back_long": [0.015, [74, -45]], "bangs_wavy+back_wavy_long": [0.015, [74, -45]], "bangs_wavy+back_twin_buns": [0.015, [74, -45]], "bangs_wavy+back_bun": [0.015, [74, -45]], "bangs_asym_block+back_bob": [0.015, [74, 45]], "bangs_asym_block+back_long": [0.015, [74, 45]], "bangs_asym_block+back_wavy_long": [0.015, [74, 45]], "bangs_asym_block+back_twin_buns": [0.015, [74, 45]], "bangs_asym_block+back_bun": [0.015, [74, 45]], "bangs_hime+back_bob": [0.0149, [74, -12]], "bangs_hime+back_long": [0.0149, [74, -12]], "bangs_hime+back_wavy_long": [0.0149, [74, -12]], "bangs_hime+back_twin_buns": [0.0149, [74, -12]], "bangs_hime+back_bun": [0.0149, [74, -12]], "bangs_choppy+back_bob": [0.0149, [74, -39]], "bangs_choppy+back_long": [0.0149, [74, -39]], "bangs_choppy+back_wavy_long": [0.0149, [74, -39]], "bangs_choppy+back_twin_buns": [0.0149, [74, -39]], "bangs_choppy+back_bun": [0.0149, [74, -39]], "bangs_asym_block+back_undercut": [0.0148, [24, -3]], "bangs_curtain+back_bowl": [0.0144, [24, -51]], "bangs_asym_block+back_bowl": [0.014, [24, -3]], "bangs_straight_long+back_undercut": [0.0139, [24, -48]], "bangs_straight_long+back_bowl": [0.0133, [24, -48]], "bangs_bowl+back_wolf": [0.0132, [72, -9]], "bangs_bowl+back_bowl": [0.013, [74, -45]], "bangs_curtain_long+back_undercut": [0.013, [24, -36]], "bangs_wispy+back_bowl": [0.0124, [36, -39]], "bangs_curtain_long+back_bowl": [0.0124, [24, -36]], "bangs_swept_back+back_wolf": [0.0123, [80, 39]], "bangs_swept_back+back_bowl": [0.0123, [80, 39]], "bangs_swept_r+back_undercut": [0.0114, [24, -30]], "bangs_single_strand+back_wolf": [0.0111, [74, -12]], "bangs_wavy+back_undercut": [0.0107, [24, 30]], "bangs_wispy+back_braid_crown": [0.0105, [64, -18]], "bangs_swept_r+back_bowl": [0.0105, [24, -30]], "bangs_curtain+back_wolf": [0.0103, [36, -6]], "bangs_curtain_long+back_wolf": [0.0103, [36, -6]], "bangs_swept_l+back_undercut": [0.0098, [24, 30]], "bangs_wavy+back_bowl": [0.0098, [24, 30]], "bangs_straight+back_wolf": [0.0091, [74, 45]], "bangs_straight_long+back_wolf": [0.0091, [74, 45]], "bangs_swept_l+back_wolf": [0.0091, [74, -45]], "bangs_swept_r+back_wolf": [0.0091, [74, 45]], "bangs_spiky+back_wolf": [0.0091, [74, 45]], "bangs_wavy+back_wolf": [0.0091, [74, -45]], "bangs_asym_block+back_wolf": [0.0091, [74, 45]], "bangs_swept_l+back_bowl": [0.009, [74, -45]], "bangs_hime+back_wolf": [0.009, [74, -12]], "bangs_choppy+back_wolf": [0.0089, [72, -24]], "bangs_choppy+back_bowl": [0.0088, [74, -39]], "bangs_wispy+back_undercut": [0.0084, [24, 0]], "bangs_choppy+back_undercut": [0.0076, [24, -57]], "bangs_bowl+back_undercut": [0.0036, [24, -54]]}}
+FIT_CHECK FAIL (105 over the limits)
   FAIL bangs_straight: open_edges 31 > 0
-  FAIL bangs_straight: gap_max 0.0588 > 0.004
-  FAIL bangs_straight: gap_median 0.0464 > 0.001
+  FAIL bangs_straight: gap_max 0.0572 > 0.004
+  FAIL bangs_straight: gap_median 0.0444 > 0.001
   FAIL bangs_straight_long: open_edges 31 > 0
-  FAIL bangs_straight_long: gap_max 0.0592 > 0.004
-  FAIL bangs_straight_long: gap_median 0.0442 > 0.001
+  FAIL bangs_straight_long: gap_max 0.0569 > 0.004
+  FAIL bangs_straight_long: gap_median 0.042 > 0.001
   FAIL bangs_bowl: open_edges 22 > 0
-  FAIL bangs_bowl: gap_max 0.0682 > 0.004
-  FAIL bangs_bowl: gap_median 0.0567 > 0.001
+  FAIL bangs_bowl: gap_max 0.0649 > 0.004
+  FAIL bangs_bowl: gap_median 0.0556 > 0.001
   FAIL bangs_wispy: open_edges 35 > 0
-  FAIL bangs_wispy: gap_max 0.055 > 0.004
-  FAIL bangs_wispy: gap_median 0.0453 > 0.001
+  FAIL bangs_wispy: gap_max 0.0523 > 0.004
+  FAIL bangs_wispy: gap_median 0.0444 > 0.001
   FAIL bangs_swept_l: open_edges 31 > 0
-  FAIL bangs_swept_l: gap_max 0.0588 > 0.004
-  FAIL bangs_swept_l: gap_median 0.0486 > 0.001
+  FAIL bangs_swept_l: gap_max 0.0575 > 0.004
+  FAIL bangs_swept_l: gap_median 0.0472 > 0.001
   FAIL bangs_swept_r: open_edges 31 > 0
-  FAIL bangs_swept_r: gap_max 0.0588 > 0.004
-  FAIL bangs_swept_r: gap_median 0.0481 > 0.001
+  FAIL bangs_swept_r: gap_max 0.0575 > 0.004
+  FAIL bangs_swept_r: gap_median 0.0465 > 0.001
   FAIL bangs_curtain: open_edges 35 > 0
-  FAIL bangs_curtain: gap_max 0.0588 > 0.004
-  FAIL bangs_curtain: gap_median 0.0462 > 0.001
+  FAIL bangs_curtain: gap_max 0.058 > 0.004
+  FAIL bangs_curtain: gap_median 0.0446 > 0.001
   FAIL bangs_curtain_long: open_edges 35 > 0
-  FAIL bangs_curtain_long: gap_max 0.0588 > 0.004
-  FAIL bangs_curtain_long: gap_median 0.0427 > 0.001
+  FAIL bangs_curtain_long: gap_max 0.058 > 0.004
+  FAIL bangs_curtain_long: gap_median 0.0396 > 0.001
   FAIL bangs_centre_split: open_edges 32 > 0
-  FAIL bangs_centre_split: gap_max 0.0587 > 0.004
-  FAIL bangs_centre_split: gap_median 0.0439 > 0.001
+  FAIL bangs_centre_split: gap_max 0.0584 > 0.004
+  FAIL bangs_centre_split: gap_median 0.0422 > 0.001
   FAIL bangs_spiky: open_edges 31 > 0
-  FAIL bangs_spiky: gap_max 0.0588 > 0.004
-  FAIL bangs_spiky: gap_median 0.0475 > 0.001
+  FAIL bangs_spiky: gap_max 0.0575 > 0.004
+  FAIL bangs_spiky: gap_median 0.0463 > 0.001
   FAIL bangs_hime: open_edges 31 > 0
-  FAIL bangs_hime: gap_max 0.0587 > 0.004
-  FAIL bangs_hime: gap_median 0.0415 > 0.001
+  FAIL bangs_hime: gap_max 0.0569 > 0.004
+  FAIL bangs_hime: gap_median 0.0395 > 0.001
   FAIL bangs_choppy: open_edges 37 > 0
-  FAIL bangs_choppy: gap_max 0.0587 > 0.004
-  FAIL bangs_choppy: gap_median 0.0513 > 0.001
+  FAIL bangs_choppy: gap_max 0.0577 > 0.004
+  FAIL bangs_choppy: gap_median 0.05 > 0.001
   FAIL bangs_swept_back: open_edges 18 > 0
-  FAIL bangs_swept_back: gap_max 0.0731 > 0.004
-  FAIL bangs_swept_back: gap_median 0.0615 > 0.001
+  FAIL bangs_swept_back: gap_max 0.0702 > 0.004
+  FAIL bangs_swept_back: gap_median 0.0606 > 0.001
   FAIL bangs_single_strand: open_edges 32 > 0
-  FAIL bangs_single_strand: gap_max 0.0606 > 0.004
-  FAIL bangs_single_strand: gap_median 0.0472 > 0.001
+  FAIL bangs_single_strand: gap_max 0.0574 > 0.004
+  FAIL bangs_single_strand: gap_median 0.0458 > 0.001
   FAIL bangs_wavy: open_edges 31 > 0
-  FAIL bangs_wavy: gap_max 0.0588 > 0.004
-  FAIL bangs_wavy: gap_median 0.0482 > 0.001
+  FAIL bangs_wavy: gap_max 0.0572 > 0.004
+  FAIL bangs_wavy: gap_median 0.0467 > 0.001
   FAIL bangs_asym_block: open_edges 31 > 0
-  FAIL bangs_asym_block: gap_max 0.0588 > 0.004
-  FAIL bangs_asym_block: gap_median 0.0482 > 0.001
+  FAIL bangs_asym_block: gap_max 0.0577 > 0.004
+  FAIL bangs_asym_block: gap_median 0.0468 > 0.001
   FAIL back_bob: open_edges 20 > 0
-  FAIL back_bob: gap_max 0.0483 > 0.004
-  FAIL back_bob: gap_median 0.0358 > 0.001
+  FAIL back_bob: gap_max 0.0444 > 0.004
+  FAIL back_bob: gap_median 0.0341 > 0.001
   FAIL back_wolf: open_edges 26 > 0
-  FAIL back_wolf: gap_max 0.0546 > 0.004
-  FAIL back_wolf: gap_median 0.0415 > 0.001
+  FAIL back_wolf: gap_max 0.0501 > 0.004
+  FAIL back_wolf: gap_median 0.0385 > 0.001
   FAIL back_long: open_edges 24 > 0
-  FAIL back_long: gap_max 0.0482 > 0.004
-  FAIL back_long: gap_median 0.0359 > 0.001
+  FAIL back_long: gap_max 0.0443 > 0.004
+  FAIL back_long: gap_median 0.034 > 0.001
   FAIL back_wavy_long: open_edges 24 > 0
-  FAIL back_wavy_long: gap_max 0.0482 > 0.004
-  FAIL back_wavy_long: gap_median 0.0359 > 0.001
+  FAIL back_wavy_long: gap_max 0.0443 > 0.004
+  FAIL back_wavy_long: gap_median 0.034 > 0.001
   FAIL back_high_pony: open_edges 16 > 0
-  FAIL back_high_pony: gap_max 0.0428 > 0.004
-  FAIL back_high_pony: gap_median 0.0317 > 0.001
+  FAIL back_high_pony: gap_max 0.0417 > 0.004
+  FAIL back_high_pony: gap_median 0.03 > 0.001
   FAIL back_pigtails: open_edges 16 > 0
-  FAIL back_pigtails: gap_max 0.0849 > 0.004
-  FAIL back_pigtails: gap_median 0.0312 > 0.001
+  FAIL back_pigtails: gap_max 0.0417 > 0.004
+  FAIL back_pigtails: gap_median 0.0295 > 0.001
   FAIL back_twin_buns: open_edges 16 > 0
-  FAIL back_twin_buns: gap_max 0.053 > 0.004
-  FAIL back_twin_buns: gap_median 0.0374 > 0.001
+  FAIL back_twin_buns: gap_max 0.0442 > 0.004
+  FAIL back_twin_buns: gap_median 0.0344 > 0.001
   FAIL back_bun: open_edges 16 > 0
-  FAIL back_bun: gap_max 0.0492 > 0.004
-  FAIL back_bun: gap_median 0.0364 > 0.001
+  FAIL back_bun: gap_max 0.0455 > 0.004
+  FAIL back_bun: gap_median 0.0339 > 0.001
   FAIL back_braid_crown: open_edges 16 > 0
-  FAIL back_braid_crown: gap_max 0.0438 > 0.004
-  FAIL back_braid_crown: gap_median 0.0334 > 0.001
+  FAIL back_braid_crown: gap_max 0.0417 > 0.004
+  FAIL back_braid_crown: gap_median 0.031 > 0.001
   FAIL back_short_spiky: open_edges 40 > 0
-  FAIL back_short_spiky: gap_max 0.0428 > 0.004
-  FAIL back_short_spiky: gap_median 0.0341 > 0.001
+  FAIL back_short_spiky: gap_max 0.0417 > 0.004
+  FAIL back_short_spiky: gap_median 0.032 > 0.001
   FAIL back_undercut: open_edges 16 > 0
-  FAIL back_undercut: gap_max 0.0668 > 0.004
-  FAIL back_undercut: gap_median 0.0496 > 0.001
+  FAIL back_undercut: gap_max 0.0656 > 0.004
+  FAIL back_undercut: gap_median 0.0492 > 0.001
   FAIL back_bowl: open_edges 16 > 0
-  FAIL back_bowl: gap_max 0.0598 > 0.004
-  FAIL back_bowl: gap_median 0.0467 > 0.001
-  FAIL bangs_bowl+back_high_pony: ledge_max 0.0391 > 0.003
+  FAIL back_bowl: gap_max 0.056 > 0.004
+  FAIL back_bowl: gap_median 0.0456 > 0.001
+  FAIL bangs_wispy+back_high_pony: ledge_max 0.0251 > 0.003
   FAIL acc_beanie: open_edges 50 > 0
-  FAIL acc_beanie: gap_max 0.0937 > 0.01
+  FAIL acc_beanie: gap_max 0.0683 > 0.01
+  FAIL acc_beanie: rise_median 0.0577 > 0.014
   FAIL acc_sunhat: open_edges 98 > 0
-  FAIL acc_sunhat: gap_max 0.0937 > 0.01
+  FAIL acc_sunhat: gap_max 0.0755 > 0.01
+  FAIL acc_sunhat: rise_median 0.062 > 0.014
   FAIL acc_cap: open_edges 66 > 0
-  FAIL acc_cap: gap_max 0.0886 > 0.01
+  FAIL acc_cap: gap_max 0.0635 > 0.01
+  FAIL acc_cap: rise_median 0.0567 > 0.014
   FAIL acc_straw_hat: open_edges 98 > 0
-  FAIL acc_straw_hat: gap_max 0.0974 > 0.01
+  FAIL acc_straw_hat: gap_max 0.076 > 0.01
+  FAIL acc_straw_hat: rise_median 0.0666 > 0.014
   FAIL acc_flower_crown: open_edges 120 > 0
-  FAIL acc_flower_crown: gap_max 0.0345 > 0.01
-  FAIL acc_crystal_circlet: gap_max 0.0206 > 0.01
+  FAIL acc_flower_crown: gap_max 0.0307 > 0.01
+  FAIL acc_flower_crown: rise_median 0.0199 > 0.014
+  FAIL acc_crystal_circlet: gap_max 0.0187 > 0.01
+  FAIL acc_crystal_circlet: rise_median 0.0151 > 0.014
   FAIL face: stretch_max 2.39 > 1.2
   FAIL face: aniso_max 2.39 > 1.25
-  FAIL face: eye_reach_deg 63.1 > 48.0
+  FAIL face: eye_reach_lon_deg 63.1 > 55.0

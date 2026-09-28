@@ -13,8 +13,8 @@ Measured on the exported GLBs in rest pose (what the engine binds), against the 
             open edges
   glasses   lens centre vs the painted centre of every eye variant, front view
   face      stretch of the face texture on the head where features are painted (worst linear stretch and
-            anisotropy of the UV chart), how far round the head the eyes reach (the angle between the surface normal
-            under any eye pixel and straight ahead)
+            anisotropy of the UV chart), how far round the head the eyes reach (azimuth; also the angle between the
+            surface normal under any eye pixel and straight ahead)
 Rays: directions head_point(lat, lon) - HC on a 2 x 3 degree grid; back pieces are measured above lat -24 (the caps;
 pigtails and lengths hanging below them are free by design), bangs above lat -60, only where the hair is within 12 cm
 of the scalp. A gap counts where it also shows on the neighbouring rays (a ray grazing a radial edge wall is not air).
@@ -50,8 +50,8 @@ LIMITS = {
     "glasses_offset_max": 0.012,   # lens centre vs painted eye centre
     "face_stretch_max": 1.2,       # texture stretch where features are painted
     "face_aniso_max": 1.25,
-    "eye_reach_max_deg": 58.0,     # surface normal under any eye pixel vs straight ahead: both eyes face the camera at
-                                   # the 3/4 yaw of ref 18 and the creator (32 deg); the far eye stays on the face
+    "eye_reach_lon_max_deg": 55.0,  # how far round the head (azimuth) any eye pixel sits: ref 18's lid ends ~51 deg
+                                    # round, so both eyes stay on the face in 3/4 view (v6 shipped 63)
 }
 FH = HRZT
 DEFAULT_BANGS, DEFAULT_BACK = "bangs_straight", "back_bob"
@@ -323,7 +323,7 @@ for layer, mask in LAYER_MASK.items():
     per_layer[layer] = {"stretch": round(ls, 3), "aniso": round(la, 3)}
 
 
-eye_reach, eye_centres = 0.0, {}
+eye_reach, eye_lon, eye_centres = 0.0, 0.0, {}
 for fid in FACEV["layers"]["eyes"]["items"]:
     a = item_alpha("eyes", fid, RES)
     ys, xs = np.nonzero(a > 0.5)
@@ -331,6 +331,7 @@ for fid in FACEV["layers"]["eyes"]["items"]:
         p = locate((xs[k] + 0.5) / RES, (ys[k] + 0.5) / RES)
         if p is not None:
             eye_reach = max(eye_reach, facing(p))
+            eye_lon = max(eye_lon, abs(lon_of(p)))
     cen = {}
     for side, mask in (("R", xs < RES / 2), ("L", xs >= RES / 2)):     # canvas left = the character's right (-X)
         if mask.any():
@@ -345,7 +346,7 @@ by, bx = np.nonzero(brow > 0.5)
 BROW_PTS = [p for p in (locate((bx[k] + 0.5) / RES, (by[k] + 0.5) / RES) for k in range(0, len(bx), 2)) if p is not None]
 dflt = eye_centres[FACEV["layers"]["eyes"]["default"]]
 face = {"feature_tris": n_feat, "stretch_max": round(worst_stretch, 3), "aniso_max": round(worst_aniso, 3), "per_layer": per_layer,
-        "stretch_worst_at": worst_at, "eye_reach_deg": round(eye_reach, 1),
+        "stretch_worst_at": worst_at, "eye_reach_deg": round(eye_reach, 1), "eye_reach_lon_deg": round(eye_lon, 1),
         "default_eye_centre_lon_deg": round(abs(lon_of(dflt["L"])), 1) if dflt.get("L") else None,
         "default_eye_centre_z": round(dflt["L"].z, 4) if dflt.get("L") else None}
 
@@ -358,7 +359,7 @@ for part in CAT["hair"]:
     inn, out, every = ray_table(bvh, keep_all=True)
     tables[part["id"]] = (inn, out)
     region = (LAT >= (-60 if part["slot"] == "bangs" else -24))
-    on = region & ~np.isnan(inn) & (inn - R_SCALP <= 0.12)
+    on = region & ~np.isnan(inn) & (inn - R_SCALP <= 0.12) & (out - R_SCALP >= -0.005)   # (not a ray grazing a hidden fan)
     air = np.array([air_above(every[i], R_SCALP[i], open_e == 0) if on[i] else np.nan for i in range(len(RAYS))])
     gap = erode(air)
     rec = {"slot": part["slot"], "tris": part["tris"], "open_edges": open_e, "gap": stats(gap),
@@ -480,7 +481,7 @@ for pid, r in glasses.items():
     check("offset_max", r["offset_max"], LIMITS["glasses_offset_max"], pid)
 check("stretch_max", face["stretch_max"], LIMITS["face_stretch_max"], "face")
 check("aniso_max", face["aniso_max"], LIMITS["face_aniso_max"], "face")
-check("eye_reach_deg", face["eye_reach_deg"], LIMITS["eye_reach_max_deg"], "face")
+check("eye_reach_lon_deg", face["eye_reach_lon_deg"], LIMITS["eye_reach_lon_max_deg"], "face")
 
 report = {"limits": LIMITS, "face": face, "seam": seam, "hair": hair, "headwear": headwear, "glasses": glasses,
           "fails": fails}

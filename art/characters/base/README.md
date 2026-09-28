@@ -414,3 +414,28 @@ positions identical, checked against the previous GLBs); the face texture, its U
 
 Rebuild order after a face or head change: `build_v6.py` → `build_clips.py` → `hair/build_hair.py` →
 `accessories/build_accessories.py` → `fit_check.py` → `web/scripts/sync-character-assets.mjs`.
+
+## Fit check (`art/characters/fit_check.py`)
+
+Runs in Blender on the exported GLBs in rest pose (what the engine binds) and exits 1 over a limit:
+
+```
+/Applications/Blender.app/Contents/MacOS/Blender -b -P art/characters/fit_check.py [-- --json out.json] [--no-fail] [--root <other art/characters>]
+```
+
+| Check | Limit | Before (d7a22995) | After |
+|---|---|---|---|
+| Hair open edges per piece | 0 | 16–40 | 0 |
+| Air under hair, max per piece | 4 mm | 4.2–7.0 cm | 0 |
+| Crown step where bangs meet a back cap (192 pairs) | 3 mm | 2.5 cm worst, 1.5 cm default | 0 |
+| Default brows hidden by the default bangs | 5% | 0 | 0 |
+| Hats: air over the hair / open edges | 1 cm / 0 | 6.4–7.6 cm / 50–98 | 0 / 0 |
+| Hats and bands: outside over the hair, median | 1.4 cm | 1.5–6.7 cm | 0.9–1.2 cm |
+| Glasses lens to painted eye, worst eye | 1.2 cm | 1.1 cm | 1.1 cm |
+| Face texture stretch under features | 1.2 | 2.39 | 1.10 |
+| Face anisotropy under features | 1.25 | 2.39 | 1.20 |
+| Eye reach round the head (azimuth) | 55° | 63° | 51° |
+
+The table is `specs/evidence/avatar-fit/fit-summary.txt` (made by `fit_summary.py` there). Air is measured along rays
+from the head centre: zero when the scalp point is inside a closed piece (winding), else the distance to the first
+surface beyond it; a gap must show on neighbouring rays too, so a ray grazing an edge wall is not air.

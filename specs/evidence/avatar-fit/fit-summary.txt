@@ -1,0 +1,41 @@
+Fit check before/after (art/characters/fit_check.py; before = the pre-fit assets at d7a22995, same script).
+Distances in metres (the body is 1 m tall). Limits: hair_open_edges 0, hair_gap_max 0.004, hair_gap_median 0.001, seam_ledge_max 0.003, brow_cover_default 0.05, hat_open_edges 0, hat_gap_max 0.01, hat_rise_median 0.014, hat_poke_max 0.002, glasses_offset_max 0.012, face_stretch_max 1.2, face_aniso_max 1.25, eye_reach_lon_max_deg 55.0
+
+metric                                                         before                after
+hair: open edges per piece (bangs)                              18-37                  0-0
+hair: open edges per piece (back)                               16-40                  0-0
+hair: air under bangs, median                           0.0395-0.0606              0.0-0.0
+hair: air under bangs, max                              0.0523-0.0702              0.0-0.0
+hair: air under back caps, median                       0.0295-0.0492              0.0-0.0
+hair: air under back caps, max                          0.0417-0.0656              0.0-0.0
+hair: outer surface over scalp (bangs)                   0.042-0.0615        0.0101-0.0134
+hair: outer surface over scalp (back)                    0.032-0.0507        0.0142-0.0222
+seam: crown step, default pair                                  0.015                  0.0
+seam: crown step, median of 192 pairs                          0.0151                  0.0
+seam: crown step, worst of 192 pairs                           0.0251                  0.0
+brows hidden by the default bangs (share)                         0.0                  0.0
+acc_beanie: air over hair, max / open edges               0.0683 / 50              0.0 / 0
+acc_beanie: rise over hair, median                             0.0577               0.0124
+acc_sunhat: air over hair, max / open edges               0.0755 / 98              0.0 / 0
+acc_sunhat: rise over hair, median                              0.062               0.0096
+acc_cap: air over hair, max / open edges                  0.0635 / 66              0.0 / 0
+acc_cap: rise over hair, median                                0.0567               0.0096
+acc_straw_hat: air over hair, max / open edges             0.076 / 98              0.0 / 0
+acc_straw_hat: rise over hair, median                          0.0666               0.0105
+acc_flower_crown: air over hair, max / open edges         0.0307 / 120           0.0078 / 0
+acc_flower_crown: rise over hair, median                       0.0199               0.0086
+acc_crystal_circlet: air over hair, max / open edges           0.0187 / 0           0.0099 / 0
+acc_crystal_circlet: rise over hair, median                    0.0151               0.0088
+acc_glasses_round: lens to eye, F1.1 / worst eye       0.003 / 0.0106      0.0045 / 0.0109
+acc_glasses_square: lens to eye, F1.1 / worst eye       0.003 / 0.0106      0.0045 / 0.0109
+face: texture stretch under eyes                                1.471                1.054
+face: texture stretch under brows                               1.471                1.054
+face: texture stretch under mouths                               2.39                1.104
+face: anisotropy, worst feature                                  2.39                1.196
+face: eye reach round the head (deg azimuth)                     63.1                 51.0
+face: eye reach, surface normal (deg)                            47.2                 46.7
+F1.1 centre: azimuth deg / height m                      37.0 / 0.724        35.0 / 0.7285
+verdict                                                    FAIL (105)                 PASS
+
+Before, the glasses matched the old painted eyes; pinned to that spot they sat 1.0-1.5 cm off the re-measured
+eyes, which the refit fixed. Per-piece lines: fit-before.txt, fit-after.txt.
