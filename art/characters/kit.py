@@ -141,11 +141,43 @@ class Piece:
         self.mat = keep
         return inner
 
+    def close_fan(self, faces, inner_of, apex=None):
+        """Close a radial surface (built over the scalp: every ray from HC crosses it once) into a solid: a wall from
+        every open edge down to inner_of(vert) (under the scalp) and a fan from the walls' foot to the head centre.
+        The same closed solid as thicken() with about half the triangles, all of the added ones inside the head."""
+        faces = [f for f in faces if f is not None and f.is_valid]
+        apex = Vector(apex or HC)
+        inner, uses = {}, {}
+        for f in faces:
+            for e in f.edges:
+                uses[e] = uses.get(e, 0) + 1
+
+        def iv(v):
+            if v not in inner:
+                keep = self.region
+                self.region = self.vreg.get(v, keep)
+                inner[v] = self.v(inner_of(v))
+                self.region = keep
+            return inner[v]
+        a_v = self.v(apex)
+        keep = self.mat
+        for f in faces:
+            vs = list(f.verts)
+            c = f.calc_center_median()
+            self.mat = self.fmat.get(f, keep)
+            for a, b_ in zip(vs, vs[1:] + vs[:1]):
+                e = next((x for x in a.link_edges if b_ in x.verts), None)
+                if e is not None and uses.get(e) == 1:
+                    self.f([a, b_, iv(b_), iv(a)], c + (apex - c).normalized() * 0.006)
+                    self.f([iv(a), iv(b_), a_v], (c + apex) / 2)
+        self.mat = keep
+        return inner
+
     def solid_patch(self, lons, rows_fn, off_fn, tips=None, skip=None, inner=INNER, wrap=False):
-        """patch() closed into a solid whose underside is tucked `inner` into the scalp (hair, hat tucks)."""
+        """patch() closed into a solid whose edges tuck `inner` into the scalp (hair, hat tucks): close_fan."""
         n0 = self.mark()
         grid = self.patch(lons, rows_fn, off_fn, tips=tips, skip=skip, wrap=wrap)
-        self.thicken(self.since(n0), lambda v: hair_point(*self.sph[v], inner) if v in self.sph else v.co.copy())
+        self.close_fan(self.since(n0), lambda v: hair_point(*self.sph[v], inner) if v in self.sph else v.co.copy())
         return grid
 
     def f(self, vs, ref, uv=None):
@@ -369,6 +401,24 @@ class Piece:
         return ob
 
 
+def merge_piece(pc, other):
+    """Copy another piece's faces into pc (materials, refs, regions and head coordinates kept); frees `other`."""
+    vmap = {}
+    for v in other.bm.verts:
+        keep = pc.region
+        pc.region = other.vreg.get(v, keep)
+        vmap[v] = pc.v(v.co.copy())
+        pc.region = keep
+        if v in other.sph:
+            pc.sph[vmap[v]] = other.sph[v]
+    keep = pc.mat
+    for f in other.bm.faces:
+        pc.mat = other.fmat.get(f, keep)
+        pc.f([vmap[v] for v in f.verts], other.ref.get(f, HC))
+    pc.mat = keep
+    other.bm.free()
+
+
 # ================================================================ hair caps (back hair, hat tucks)
 CAP_LONS = [15 * k - 180 for k in range(24)]   # 15 deg: a flat quad over the scalp sags ~5 mm, less than the hair is thick
 WINDOW = 61           # |lon| below this is the face opening: the cap is open below the hairline there
@@ -381,7 +431,7 @@ def seam_off(lat):
     return CAP_MIN * hair_vol(lat)
 
 
-def hair_cap(bottom, vol=1.0, hem=0.009, tips=None, side=None, lons=None):
+def hair_cap(bottom, vol=1.0, hem=0.009, tips=None, side=None, lons=None, top=None):
     """Closed crown cap on the scalp: the face window open below the hairline, sides and back down to bottom(lon) lat,
     outer surface on hair_vol x vol, tapering to seam_off at the front edge and to `hem` at the bottom edge (side =
     fixed offset for the rows above the hem, e.g. an undercut), underside tucked into the scalp. Rows: hem, two
@@ -394,7 +444,9 @@ def hair_cap(bottom, vol=1.0, hem=0.009, tips=None, side=None, lons=None):
 
     def rows(lon):
         hl = hairline(lon)
-        up = [hl, hl + 12, (hl + 96) / 2, 84]
+        up = [hl, hl + 12, (hl + 96) / 2, 84]                       # a row 12 deg behind the hairline, over the bang roots
+        if top:                                                      # a band that stops under a hat (tuck)
+            up = [hl, hl + 12, max(top(lon), hl + 16)]
         if abs(lon) < WINDOW - 2:
             return [hl - 3, hl - 2, hl - 1] + up                   # window columns: the lower three rows are skipped
         bt = bottom(lon)
@@ -418,10 +470,11 @@ def hair_cap(bottom, vol=1.0, hem=0.009, tips=None, side=None, lons=None):
     win = lambda i, r: max(abs(lons[i]), abs(lons[i + 1])) < WINDOW and r < 3
     grid = pc.patch(base, rows, off, skip=win, wrap=True,
                     tips=(lambda i, la, lb: None if max(abs(la), abs(lb)) < WINDOW else tips(i, la, lb, cmid(la, lb))) if tips else None)
-    apex = pc.hv(90, 0, hair_vol(90) * vol)
-    for i in range(len(lons) - 1):
-        pc.f([grid[i][-1], grid[i + 1][-1], apex], HC)
-    pc.thicken(pc.since(n0), lambda v: hair_point(*pc.sph[v], INNER))
+    if not top:
+        apex = pc.hv(90, 0, hair_vol(90) * vol)
+        for i in range(len(lons) - 1):
+            pc.f([grid[i][-1], grid[i + 1][-1], apex], HC)
+    pc.close_fan(pc.since(n0), lambda v: hair_point(*pc.sph[v], INNER))
     return pc, grid, lons
 
 
@@ -478,6 +531,9 @@ def registry():
     return parts, part
 
 
+HEADWEAR_TRIS = 1100   # hats carry their own closed hair tuck and replace the back hair while worn (avatar-fit)
+
+
 def build_parts(parts, rig, section, subdir, images=None, max_tris=300):
     """Build, export (<subdir>/<slot>/<id>.glb) and catalogue every part; one part in the scene at a time so
     material names stay exact (M_Main, not M_Main.001)."""
@@ -511,7 +567,8 @@ def build_parts(parts, rig, section, subdir, images=None, max_tris=300):
             **{key: m[key] for key in ("group", "variantOf", "item") if key in m},
         })
         unused = set(spec["mats"]) - set(used)
-        print(f"PART {spec['id']} tris={tris}" + ("  OVER BUDGET" if tris > max_tris else "") + (f"  UNUSED {unused}" if unused else ""))
+        limit = HEADWEAR_TRIS if m.get("group") == "head" else max_tris
+        print(f"PART {spec['id']} tris={tris}" + ("  OVER BUDGET" if tris > limit else "") + (f"  UNUSED {unused}" if unused else ""))
         me = ob.data
         bpy.data.objects.remove(ob)
         bpy.data.meshes.remove(me)

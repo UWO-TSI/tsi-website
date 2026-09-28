@@ -30,11 +30,11 @@ python3 art/characters/hair/make_sheets.py /tmp/hair
 
 | Slot | Triangles per piece |
 |---|---|
-| Bangs | 124–232 |
-| Back | 588–820 |
+| Bangs | 102–194 |
+| Back | 354–586 |
 
-Every piece is under 900. About half of each count is the underside tucked inside the head, which is never
-visible; the visible surface is 60–110 tris for bangs and 300–420 for backs. The back caps use 15° columns because a
+Every piece is under 700. About a third of each count is hidden inside the head (the walls under the scalp and the
+fan that closes the solid); the visible surface is 60–110 tris for bangs and 300–420 for backs. The back caps use 15° columns because a
 flat quad over the scalp sags by more than the hair is thick at 30° (skin showed through the middle of each quad).
 
 ## Fit (avatar-fit, row 242)
@@ -42,16 +42,19 @@ flat quad over the scalp sags by more than the hair is thick at 30° (skin showe
 David (2026-09-28): the hair "looks detached and poorly modeled". It was a zero-thickness sheet 4–6 cm off the scalp,
 and the engine culled its inside. Now:
 
-- **Closed solids.** `kit.Piece.thicken` closes every surface: an inner copy tucked 4 mm into the scalp
-  (`head_shape.INNER`) and a wall on every open edge. Tips are wedges, spikes and tubes are closed, long lengths are
-  12 mm slabs. No paper edges, and back-face culling cannot hollow a piece.
+- **Closed solids.** Pieces built over the scalp are closed by `kit.Piece.close_fan`: a wall from every open edge
+  down to 4 mm inside the scalp (`head_shape.INNER`) and a fan from there to the head centre, all hidden inside the
+  head. Tips are wedges, spikes, buns and tubes are closed, long lengths are 12 mm slabs (`thicken`). No paper
+  edges, and back-face culling cannot hollow a piece.
 - **On the scalp.** The outer surface follows `head_shape.hair_vol`: 0.9–1.1 cm off the scalp at the fringe and the
   hem, 2.4 cm at the crown.
 - **One seam rule.** Back caps (`kit.hair_cap`) cover the crown down to `head_shape.hairline` (44° above the brows,
   22° at the temples, 60° wide face window) and every cap comes down to the same height there (`kit.seam_off`).
-  Bangs have four rows: the fringe on the forehead, a middle row that bellies out a little, the hairline row 2 mm
-  under the cap's edge, and the roots 12° behind it under the cap. Side locks lie on the cap's side panels and dive
-  under it at the hairline. So bangs and back never meet edge to edge and never stack into a ledge.
+  Bangs have four rows: the fringe on the forehead, a middle row that bellies out a little, the hairline row 1 mm
+  under the seam height, and the roots 12° behind it under the cap. The cap's front edge runs 5 mm under the seam
+  height, i.e. under the bangs, and rises through them behind the hairline. Side locks lie on the cap's side panels
+  and dive under it at the hairline. So neither piece shows an edge at the crown (seam step 0 on the default pair,
+  ≤3 mm on all 192).
 - **Shading.** One COLOR_0 gradient over the head height for every piece (`zrange`), so pieces that meet shade alike.
 - **Checked** by `art/characters/fit_check.py` (hair gap, open edges, crown ledge over all 192 bangs × back pairs).
 

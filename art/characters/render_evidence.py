@@ -67,8 +67,12 @@ def shot(path, yaw, view="body", res=(300, 366)):
     bpy.ops.render.render(write_still=True)
 
 
-def wear(ids, hair=None):
-    """Import parts by catalogue id and the hair GLBs (bangs, back); hide what they replace. Returns new objects."""
+DEFAULT_HAIR = ("bangs_straight", "back_bob")      # the engine's DEFAULT_LOOK hair (v6's own hair is never shown)
+
+
+def wear(ids, hair=DEFAULT_HAIR):
+    """Import parts by catalogue id and the hair GLBs (bangs, back); hide what they replace. Returns new objects.
+    Always the library hair the engine wears, so the sheets show what the game shows (avatar-fit)."""
     objs = []
     hidden = set()
     for pid in ids:
@@ -85,8 +89,7 @@ def wear(ids, hair=None):
         hidden |= {"base_bangs", "base_back"}
     BASE["V6_Top"].hide_render = "top" in hidden
     BASE["V6_Bottom"].hide_render = "bottom" in hidden
-    BASE["V6_HairBangs"].hide_render = "base_bangs" in hidden
-    BASE["V6_HairBack"].hide_render = "back" in hidden or "base_back" in hidden
+    BASE["V6_HairBangs"].hide_render = BASE["V6_HairBack"].hide_render = True
     if hair and "back" in hidden:
         for o in objs:
             if o.name.startswith(hair[1]):
@@ -99,7 +102,7 @@ def strip_off(objs):
     for o in objs:
         bpy.data.objects.remove(o, do_unlink=True)
     for o in BASE.values():
-        o.hide_render = False
+        o.hide_render = o.name.startswith("V6_Hair")
 
 
 def tint(objs, mat_prefix, hexcol):
@@ -158,6 +161,7 @@ elif MODE == "accessories":
         strip_off(objs)
 
 elif MODE == "clips":
+    wear([])
     SHOWCASE = {"Fish": [0.42, 0.58, 1.0], "Forage": [0.3, 0.45, 0.72], "Dig": [0.2, 0.42, 0.8], "Net": [0.25, 0.48, 0.62],
                 "Wave": [0.18, 0.3, 0.42], "Cheer": [0.16, 0.4, 0.64], "Laugh": [0.14, 0.4, 0.9], "Sad": [0.22, 0.5, 0.9],
                 "AttackMelee": [0.3, 0.48, 0.62], "AttackBow": [0.22, 0.5, 0.7], "AttackCast": [0.28, 0.46, 0.8],

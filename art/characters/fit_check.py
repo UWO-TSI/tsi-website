@@ -8,8 +8,9 @@ Measured on the exported GLBs in rest pose (what the engine binds), against the 
             brow_cover = share of the default brows hidden behind the piece from the front (bangs only)
   seam      the crown ledge over every bangs x back pair: how far the bangs' root edge stands out of the cap, or the
             cap's front edge out of the bangs (0 when each edge is buried in the other piece)
-  headwear  hats and bands: gap between the inside of the hat and the hair (or scalp) under it (max, median),
-            hair poking out through it, open edges
+  headwear  hats and bands: air between the piece and the hair it rests on (worn hair, or for hats the hair volume
+            hair_vol they are fitted to), how far its outside rises over that hair, hair poking out through it,
+            open edges
   glasses   lens centre vs the painted centre of every eye variant, front view
   face      stretch of the face texture on the head where features are painted (worst linear stretch and
             anisotropy of the UV chart), how far round the head the eyes reach (the angle between the surface normal
@@ -27,7 +28,7 @@ from mathutils.bvhtree import BVHTree
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "base"))
-from head_shape import head_point, HC, CHIN, HRZT  # noqa: E402
+from head_shape import head_point, HC, CHIN, HRZT, hair_vol  # noqa: E402
 
 ARGS = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
 if "--root" in ARGS:                  # measure another checkout's art/characters (e.g. the before state)
@@ -42,7 +43,9 @@ LIMITS = {
     "seam_ledge_max": 0.003,       # step where bangs and back cap meet over the crown
     "brow_cover_default": 0.05,    # default brows hidden by the default bangs, front view
     "hat_open_edges": 0,
-    "hat_gap_max": 0.010,          # spec: hats sit on the hair, under 1 cm
+    "hat_gap_max": 0.010,          # spec: hats sit on the hair, under 1 cm of air
+    "hat_rise_median": 0.014,      # outside of a hat or band over the hair it rests on, its own shell included (median:
+                                   # pompoms, crystals and blossoms stand up on purpose)
     "hat_poke_max": 0.002,         # hair showing through a hat
     "glasses_offset_max": 0.012,   # lens centre vs painted eye centre
     "face_stretch_max": 1.2,       # texture stretch where features are painted
@@ -132,14 +135,15 @@ LAT = np.array([r[0] for r in RAYS], float)
 LON = np.array([r[1] for r in RAYS], float)
 
 
-def hits(bvh, d, far=0.7):
+def hits(bvh, d, far=0.7, signed=False):
+    """Hit distances along HC + t d; signed: (t, +1 leaving a surface's front side / -1 entering) pairs."""
     out, t = [], 0.0
     while t < far:
         loc, nrm, idx, dist = bvh.ray_cast(HC + d * t, d, far - t)
         if loc is None:
             break
         t += dist
-        out.append(t)
+        out.append((t, 1 if nrm.dot(d) > 0 else -1) if signed else t)
         t += 2e-4
     return out
 
@@ -147,15 +151,29 @@ def hits(bvh, d, far=0.7):
 R_SCALP = np.array([(hits(HEAD, d, 0.5) or [np.nan])[-1] for _, _, d in RAYS])   # the outermost head hit
 
 
-def ray_table(bvh):
-    """Per ray: (innermost, outermost) hit distance, NaN where the ray misses."""
+def ray_table(bvh, keep_all=False):
+    """Per ray: (innermost, outermost) hit distance, NaN where the ray misses (+ every hit list with keep_all)."""
     inn = np.full(len(RAYS), np.nan)
     out = np.full(len(RAYS), np.nan)
+    every = []
     for i, (_, _, d) in enumerate(RAYS):
-        h = hits(bvh, d)
+        h = hits(bvh, d, signed=True)
         if h:
-            inn[i], out[i] = h[0], h[-1]
-    return inn, out
+            inn[i], out[i] = h[0][0], h[-1][0]
+        every.append(h)
+    return (inn, out, every) if keep_all else (inn, out)
+
+
+def air_above(h_list, base, closed):
+    """Air between `base` (distance along the ray) and the piece: 0 when base is inside a closed piece (beyond it the
+    ray leaves the piece's solids more often than it enters them; overlapping solids count once), else the distance
+    to the first surface beyond it (NaN if none). Open sheets have no inside."""
+    beyond = [(t, sg) for t, sg in h_list if t > base + 2e-4]
+    if not beyond:
+        return np.nan
+    if closed and sum(sg for _, sg in beyond) > 0:
+        return 0.0
+    return beyond[0][0] - base
 
 
 NLA, NLO = len(LATS), len(LONS)
@@ -337,20 +355,21 @@ tables = {}
 for part in CAT["hair"]:
     groups, open_e, _ = load_glb(os.path.join(HERE, part["glb"]))
     bvh, _ = bvh_of(groups)
-    inn, out = ray_table(bvh)
+    inn, out, every = ray_table(bvh, keep_all=True)
     tables[part["id"]] = (inn, out)
     region = (LAT >= (-60 if part["slot"] == "bangs" else -24))
     on = region & ~np.isnan(inn) & (inn - R_SCALP <= 0.12)
-    gap = erode(np.where(on, np.maximum(0.0, inn - R_SCALP), np.nan))
+    air = np.array([air_above(every[i], R_SCALP[i], open_e == 0) if on[i] else np.nan for i in range(len(RAYS))])
+    gap = erode(air)
     rec = {"slot": part["slot"], "tris": part["tris"], "open_edges": open_e, "gap": stats(gap),
-           "tuck_share": round(float(np.mean((inn - R_SCALP)[on] <= 5e-4)), 3) if on.any() else None,
+           "on_scalp_share": round(float(np.mean(air[on] <= 5e-4)), 3) if on.any() else None,
            "outer_median": stats(np.where(on, out - R_SCALP, np.nan))["median"]}
     if part["slot"] == "bangs" and BROW_PTS:
         hidden = sum(1 for p in BROW_PTS if bvh.ray_cast(p + Vector((0, -1e-3, 0)), Vector((0, -1, 0)), 1.0)[0] is not None)
         rec["brow_cover"] = round(hidden / len(BROW_PTS), 3)
     hair[part["id"]] = rec
     print(f"HAIR {part['id']:20s} open={open_e:3d} gap max={rec['gap']['max']} at={rec['gap'].get('worst_at')} med={rec['gap']['median']} "
-          f"tuck={rec['tuck_share']} outer={rec['outer_median']}" + (f" brow_cover={rec.get('brow_cover')}" if "brow_cover" in rec else ""))
+          f"on_scalp={rec['on_scalp_share']} outer={rec['outer_median']}" + (f" brow_cover={rec.get('brow_cover')}" if "brow_cover" in rec else ""))
 
 def seam_step(ob, ok):
     """The crown ledge between a bangs piece and a back cap, per ray column (fixed lon, |lon| <= 70, lat >= 20): on the
@@ -415,32 +434,27 @@ for part in CAT["accessories"]:
         continue
     hat_bvh, _ = bvh_of(groups, lambda n: n != "M_Hair")
     tuck_bvh, _ = bvh_of(groups, lambda n: n == "M_Hair")
-    under = [tables[DEFAULT_BANGS]] + ([] if part["hidesBackHair"] else [tables[DEFAULT_BACK]])
-    h_in, h_out = ray_table(hat_bvh)
+    hat = part["hidesBackHair"]
+    under = [tables[DEFAULT_BANGS]] + ([] if hat else [tables[DEFAULT_BACK]])
+    h_in, h_out, h_every = ray_table(hat_bvh, keep_all=True)
     if tuck_bvh:
         under.append(ray_table(tuck_bvh))
-    hair_hits = []
-    for i, (_, _, d) in enumerate(RAYS):
-        hs = [R_SCALP[i]]
-        for inn, out in under:
-            if not np.isnan(inn[i]):
-                hs += [inn[i], out[i]]
-        hair_hits.append(hs)
-    if part["hidesBackHair"]:           # hats: the crown only (brims hang outside the head below these latitudes)
-        region = np.where(np.abs(LON) < 45, LAT >= 44, np.where(np.abs(LON) < 135, LAT >= 28, LAT >= 14))
+    if hat:                             # hats: the crown only (every hat's edge and brim lie below these latitudes)
+        region = np.where(np.abs(LON) < 135, LAT >= 46, LAT >= 16)
     else:
         region = np.ones(len(RAYS), bool)
     on = region & ~np.isnan(h_in) & (h_in - R_SCALP <= 0.15)
-    gap = np.full(len(RAYS), np.nan)
-    poke = np.full(len(RAYS), np.nan)
+    gap, rise, poke = (np.full(len(RAYS), np.nan) for _ in range(3))
     for i in np.nonzero(on)[0]:
-        below = [h for h in hair_hits[i] if h <= h_in[i] + 1e-4]
-        gap[i] = h_in[i] - max(below)
-        poke[i] = max(0.0, max(hair_hits[i]) - h_out[i])
-    headwear[part["id"]] = {"open_edges": open_e, "hides_back_hair": part["hidesBackHair"], "gap": stats(erode(gap)),
-                            "poke_max": stats(poke)["max"]}
+        # the hair the piece rests on: worn hair where there is some, else (hats) the hair volume they are fitted to
+        top = max([R_SCALP[i] + (hair_vol(LAT[i]) if hat else 0.0)] + [o[i] for _, o in under if not np.isnan(o[i])])
+        gap[i] = air_above(h_every[i], top, open_e == 0)
+        rise[i] = h_out[i] - top
+        poke[i] = max(0.0, top - h_out[i])
+    headwear[part["id"]] = {"open_edges": open_e, "hides_back_hair": hat, "gap": stats(erode(gap)),
+                            "rise": stats(rise), "poke_max": stats(poke)["max"], "poke_at": stats(poke).get("worst_at")}
     print(f"HEADWEAR {part['id']:20s} open={open_e:3d} gap max={headwear[part['id']]['gap']['max']} "
-          f"med={headwear[part['id']]['gap']['median']} poke={headwear[part['id']]['poke_max']}")
+          f"med={headwear[part['id']]['gap']['median']} rise max={headwear[part['id']]['rise']['max']} poke={headwear[part['id']]['poke_max']}")
 
 # ================================================================ verdict
 fails = []
@@ -460,6 +474,7 @@ check("brow_cover", hair[DEFAULT_BANGS].get("brow_cover"), LIMITS["brow_cover_de
 for pid, r in headwear.items():
     check("open_edges", r["open_edges"], LIMITS["hat_open_edges"], pid)
     check("gap_max", r["gap"]["max"], LIMITS["hat_gap_max"], pid)
+    check("rise_median", r["rise"]["median"], LIMITS["hat_rise_median"], pid)
     check("poke_max", r["poke_max"], LIMITS["hat_poke_max"], pid)
 for pid, r in glasses.items():
     check("offset_max", r["offset_max"], LIMITS["glasses_offset_max"], pid)

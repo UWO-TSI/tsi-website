@@ -35,7 +35,7 @@ ARGS = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
 RENDER_DIR = ARGS[ARGS.index("render") + 1] if "render" in ARGS else None
 HAIR = kit.PAL["hair"][kit.PAL["ref_girl_defaults"]["hair"]]
 SHARP = 40.0          # degrees; tufts and parting edges stay sharp, masses read smooth
-MAX_TRIS = 900         # closed solids: about half of it is the underside tucked inside the head (never drawn)
+MAX_TRIS = 700         # closed solids: walls and a closing fan hidden inside the head add about a third
 ZRANGE = (CHIN, 1.03)  # one COLOR_0 gradient for every hair piece: no shade step where bangs meet the cap
 
 bpy.ops.wm.read_factory_settings(use_empty=True)
@@ -116,20 +116,8 @@ def wispy():
     for c in (-46, -23, 0, 23, 46):
         strand = bangs([c - 7, c + 7], lambda lon: 8, drops=lambda i, c=c: 10, shift=lambda i, c=c: (3 if c < 0 else -3 if c > 0 else 0),
                        vol=0.3)
-        merge(pc, strand)
+        kit.merge_piece(pc, strand)
     return pc
-
-
-def merge(pc, other):
-    """Copy another piece's geometry (verts, faces, refs, materials) into pc."""
-    vmap = {}
-    for v in other.bm.verts:
-        vmap[v] = pc.v(v.co.copy())
-    for f in other.bm.faces:
-        pc.mat = other.fmat.get(f, pc.mat)
-        pc.f([vmap[v] for v in f.verts], other.ref.get(f, HC))
-    pc.mat = "M_Hair"
-    other.bm.free()
 
 
 def swept(direction):
@@ -147,7 +135,7 @@ def curtain(side_lat):
 
 def single_strand():
     pc = bangs(L8, side_fringe(24, 0), drops=alt(3, 4))
-    merge(pc, bangs([-26, -12], lambda lon: -18, drops=lambda i: 8, shift=lambda i: 2))
+    kit.merge_piece(pc, bangs([-26, -12], lambda lon: -18, drops=lambda i: 8, shift=lambda i: 2))
     return pc
 
 
