@@ -1,4 +1,6 @@
-# Island painter: David paints the real village (rows 241, 246)
+# Island painter: David paints the real village (rows 241, 246, 247)
+
+> **David, 2026-09-28: "dont make the island ill make it".** Agents build the tool and the loader only. No agent authors, paints or rearranges any island layout; today's island is exported unchanged as the baseline until David's own design replaces it.
 
 David (2026-09-28): "the island is poorly designed and i will design the island with the island painter feature in the lab, it should be bigger, more organic, things less cramped." He places everything himself (row 246). This spec prepares the painter so that what he paints is exactly what the game loads.
 
@@ -13,7 +15,7 @@ David (2026-09-28): "the island is poorly designed and i will design the island 
 1. **One village map file** `web/data/village-map.json`, in the existing document format extended with an object layer. `island-map.json` stays as David's preserved legacy draft. `createDefaultIsland` loads the village file. The first version is today's code-built island exported into it, so nothing changes visually until David paints (prove it with a frame diff).
 2. **The painter opens the village file by default** (legacy file still openable), supports sizes from 64 up to 256 cells per side, shows world coordinates under the cursor, and has a **game-view orientation** (camera forward, west, at the top; north marker on the right, matching the minimap).
 3. **One sea convention** shared by painter, terrain, ocean, glints and fishing; sea, pond and river are classified from water connectivity, not the ellipse.
-4. **Organic tools:** smooth, grow and shrink brushes; a noise/jitter brush for coastlines; lasso fill; a coastline generator (port `coast.ts` harmonics) as a starting shape. Existing tools stay.
+4. **Organic tools:** smooth, grow and shrink brushes; a noise/jitter brush for coastlines; lasso fill. Existing tools stay. No auto-generated coastlines or layouts (row 247).
 5. **Object layer** (reuse `lib/homes/catalogue.ts`, `lib/homes/layout.ts` and `home/PlacementLayer.tsx` patterns): every object has a stable id, kind/model, position, rotation and scale where it makes sense. Kinds: the landmarks (HQ, shop, oracle, café, museum, fitting room, mission board, notice/catch boards, monument, mailbox), wharf, bridges, trees/bushes/flowers (with seed), rocks, benches (their seats), lamps, fences, study tables, resident anchors (keep the existing keys; saved schedules reference them), named spawns and door/prompt points, puddles, bug/firefly anchors. Place, move, rotate, delete; footprint overlap warnings. ACNH grid law still holds (buildings on integer cells with a 1-tile gap, cliffs 1.5u, ramps).
 6. **The game reads everything from the file**: landmarks, nature, props, wharf deck and pier, bridge, study tables, resident anchors, spawns, doors and prompts, quest markers, forage and bug nodes, puddles, collision. Tests pinned to today's coordinates read from the file.
 7. **Size-dependent systems follow the map's bounds**: shadow extent and target, cloud plane, fog and far plane, overview camera, minimap viewBox and clip, glint radius and density, beach ring from shore cells.
@@ -22,6 +24,6 @@ David (2026-09-28): "the island is poorly designed and i will design the island 
 10. **Performance**: instance nature and props, build the island and its height field once, and show the `map-budget` numbers live in the painter so David sees the cost of size as he paints.
 
 ## Evidence
-Painter screenshots of each new tool and the object layer; frame diff of today's island loaded from the file vs the code-built one (≈0); a quick bigger draft (e.g. 96×96) walked in `/lab/island?draft=1`; budget numbers for 64/96/128.
+Painter screenshots of each new tool and the object layer; frame diff of today's island loaded from the file vs the code-built one (≈0); walk-the-draft shown with today's island or a tiny synthetic fixture (no designed layout); budget numbers for 64/96/128.
 
 Row 156 ("the old 256×256 draft and /lab/map drawing are not the target") is superseded by rows 241 and 246.
