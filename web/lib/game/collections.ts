@@ -4,11 +4,11 @@
  * Local-first collections (loop iter 4, David bug report 2026-07-24:
  * "fish, foraging, flower etc does not show in items tab").
  *
- * Every catch/pick POSTs /api/collections — but without a session (or on
- * the env-less preview) that 401s and the item vanishes. This helper
- * records everything in localStorage too, and readers merge both, so the
- * Collection Book always reflects what you actually did. Server stays the
- * source of truth when it works; local fills the gaps.
+ * The server rolls and records every member catch (catchRequest). Without a
+ * session (or on the env-less preview) there is no server record, so this
+ * keeps one in localStorage too, and readers merge both, so the Collection
+ * Book always reflects what you actually did. Server stays the source of
+ * truth when it works; local fills the gaps.
  */
 
 const KEY = "tsi.collections.local.v1";
@@ -39,33 +39,22 @@ export function localRecords(): Record<string, number> {
   try { return collectionCounts(JSON.parse(localStorage.getItem(RECORDS_KEY) ?? "{}")); } catch { return {}; }
 }
 
-export interface CatchRecord { newRecord: boolean; best: number | null }
-/**
- * Collect with a size (fish/shells): posts `size_cm` so the server keeps the
- * personal best and weekly trophy, and resolves whether this beat the
- * previous record (server answer, else the local mirror).
- */
-export async function collectWithSize(itemKey: string, sizeCm: number | null): Promise<CatchRecord> {
+/** Keep a size against this browser's personal bests; true when it beat a previous one. */
+export function localRecord(itemKey: string, sizeCm: number | null): boolean {
   const records = localRecords();
   const prior = records[itemKey];
-  const localNew = sizeCm !== null && prior !== undefined && sizeCm > prior;
   if (sizeCm !== null && (prior === undefined || sizeCm > prior)) {
     try { localStorage.setItem(RECORDS_KEY, JSON.stringify({ ...records, [itemKey]: sizeCm })); } catch { /* private browsing */ }
   }
-  const server = collect(itemKey, { sizeCm });
-  try {
-    const res = await server;
-    if (res && typeof res.new_record === "boolean") return { newRecord: res.new_record && res.total_collected !== 1, best: res.best_size_cm ?? sizeCm };
-  } catch { /* offline: fall back to the local mirror */ }
-  return { newRecord: localNew, best: Math.max(prior ?? 0, sizeCm ?? 0) || null };
+  return sizeCm !== null && prior !== undefined && sizeCm > prior;
 }
 
 /**
- * Record an item locally AND post it to the server. A `scope` (the applicant
- * island) keeps a separate local record and never posts.
+ * Record an item in this browser (the mirror of a server catch, or the whole
+ * record signed out). A `scope` (the applicant island) keeps a separate record.
  */
-export function collect(itemKey: string, { scope, sizeCm = null }: { scope?: string; sizeCm?: number | null } = {}): Promise<{ new_record?: boolean; best_size_cm?: number | null; total_collected?: number } | null> {
-  if (!validItemKey(itemKey)) return Promise.resolve(null);
+export function collect(itemKey: string, { scope }: { scope?: string } = {}): void {
+  if (!validItemKey(itemKey)) return;
   try {
     const all = localCollections(scope);
     all[itemKey] = Math.min(Number.MAX_SAFE_INTEGER, (all[itemKey] ?? 0) + 1);
@@ -73,13 +62,32 @@ export function collect(itemKey: string, { scope, sizeCm = null }: { scope?: str
   } catch {
     /* private browsing */
   }
-  if (scope) return Promise.resolve(null);
-  return fetch("/api/collections", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(sizeCm !== null ? { item_key: itemKey, size_cm: sizeCm } : { item_key: itemKey }),
-  }).then(r => (r.ok ? r.json() : null)).catch(() => null);
 }
+
+/** A recorded catch (harvest, land), or a cast's roll waiting to be landed. */
+export interface CatchReply { item_key: string; size_cm: number | null; roll?: string; count?: number; total_collected?: number; new_record?: boolean }
+export type CatchAnswer = { ok: true; catch: CatchReply } | { ok: false; error: string; code?: string };
+
+/**
+ * POST /api/collections: the server rolls and records the catch
+ * (lib/collections/service.ts catchAction). null = no account or no server:
+ * the caller rolls locally and keeps it in this browser, as before.
+ */
+async function catchRequest(body: Record<string, unknown>): Promise<CatchAnswer | null> {
+  try {
+    const res = await fetch("/api/collections", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    if (res.status === 401 || res.status === 503) return null;
+    const json = await res.json().catch(() => null);
+    return res.ok && json?.catch ? { ok: true, catch: json.catch } : { ok: false, error: json?.error ?? "Something went wrong. Try again.", code: json?.code };
+  } catch {
+    return null;
+  }
+}
+/** A forage node or bug spot, from where the player stands. */
+export const harvestNode = (node: string, at: [number, number]) => catchRequest({ action: "harvest", node, at });
+/** Roll the fish that will bite, from where the player stands; landed with landCatch when the reel is won. */
+export const castLine = (site: "village" | "home", at: [number, number], power: number) => catchRequest({ action: "cast", site, at, power });
+export const landCatch = (roll: string) => catchRequest({ action: "land", roll });
 
 /**
  * Spend/remove n of an item from the LOCAL record (Wharf Shack sales, E3).

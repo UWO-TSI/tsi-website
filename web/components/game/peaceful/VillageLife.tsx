@@ -7,7 +7,8 @@
  * diegetic tell: a sparkle (stronger on High) and a soft chime when you come
  * near. Bugs use the existing ACNH critter models (Critters.SPECIES) and
  * sneak-and-swing: rush in and they fly off; hold C to tiptoe, then E swings
- * the net. Harvest and catches post to /api/collections.
+ * the net. The server rolls and records each harvest (the node's own roll
+ * when signed out, kept in this browser).
  */
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
@@ -16,7 +17,9 @@ import * as THREE from "three";
 import { GLBProp, NatureMushroom } from "../NatureModels";
 import { SPECIES as CRITTERS } from "../Critters";
 import { AudioManager } from "@/lib/game/audio";
-import { collectWithSize, localCollections } from "@/lib/game/collections";
+import { collect, harvestNode, localCollections, localRecord } from "@/lib/game/collections";
+import { ROSTER } from "@/lib/collections/roster";
+import { forageSize } from "@/lib/collections/rolls";
 import { bugReaction, hasClue, hourKey, nodeAvailable, rollNode } from "@/lib/game/peaceful";
 import { setPeacefulTarget, type PeacefulTarget } from "@/lib/game/peacefulNear";
 import type { Biome, Species } from "@/lib/collections/roster";
@@ -96,13 +99,19 @@ export default function VillageLife({ nodes, bugNodes, moment, member, player, g
       const bug = bugState.current.get(id);
       const sp = node?.sp ?? (bug && !bug.fled ? bug.sp : null);
       if (!sp) return;
-      const isNew = !(sp.key in localCollections());
-      const size = sp.size ? Math.round((sp.size[0] + (sp.size[1] - sp.size[0]) * Math.random()) * 10) / 10 : null;
-      void collectWithSize(sp.key, size);
       markHarvested(id);
-      AudioManager.playSFX(bug ? "confirm" : "click");
-      window.dispatchEvent(new CustomEvent("tsi:toast", { detail: { text: `${isNew ? "NEW! " : ""}${bug ? "Caught" : "Got"} ${sp.name}${size ? `, ${size} cm` : ""}!` } }));
-      window.dispatchEvent(new CustomEvent("tsi:peaceful-got", { detail: { key: sp.key, name: sp.name, rarity: sp.rarity, one_liner: sp.oneLiner, size, isNew, bug: !!bug } }));
+      void harvestNode(id, [player.current.x, player.current.z]).then(answer => {
+        if (answer && !answer.ok) { window.dispatchEvent(new CustomEvent("tsi:toast", { detail: { text: answer.error } })); return; }
+        // The server's roll is the catch (normally the same species this node showed).
+        const got = answer ? ROSTER.find(s => s.key === answer.catch.item_key) ?? sp : sp;
+        const size = answer ? answer.catch.size_cm : forageSize(got);
+        const isNew = answer ? answer.catch.total_collected === 1 : !(got.key in localCollections());
+        collect(got.key);
+        localRecord(got.key, size);
+        AudioManager.playSFX(bug ? "confirm" : "click");
+        window.dispatchEvent(new CustomEvent("tsi:toast", { detail: { text: `${isNew ? "NEW! " : ""}${bug ? "Caught" : "Got"} ${got.name}${size ? `, ${size} cm` : ""}!` } }));
+        window.dispatchEvent(new CustomEvent("tsi:peaceful-got", { detail: { key: got.key, name: got.name, rarity: got.rarity, one_liner: got.oneLiner, size, isNew, bug: !!bug } }));
+      });
     };
     window.addEventListener("tsi:peaceful-act", onAct);
     return () => window.removeEventListener("tsi:peaceful-act", onAct);

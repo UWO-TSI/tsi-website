@@ -21,15 +21,17 @@
  * "???" with a blacked-out silhouette. The catch card does the reveal:
  * name + size + rarity chip + NEW! badge, with tier-scaled celebration.
  *
- * A catch collects to member_collections — cosmetic only, no TC/XP
- * (principle #3). The reel loop is a rAF writing styles through refs (zero
+ * On the member island the server rolls the fish when the line is cast
+ * (species and size, lib/collections/service.ts) and records it when the reel
+ * is won; signed out, and on the applicant island, it rolls here and stays in
+ * this browser. The reel loop is a rAF writing styles through refs (zero
  * React re-renders per frame).
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import FishReveal from "./FishReveal";
 import { AudioManager } from "@/lib/game/audio";
-import { collect, collectWithSize, localCollections, mergeWithLocal } from "@/lib/game/collections";
+import { castLine, collect, landCatch, localCollections, localRecord, mergeWithLocal, type CatchAnswer } from "@/lib/game/collections";
 import { rodByTier, type RodTier } from "@/lib/game/rods";
 import { oneLinerFor, rollFishFor } from "@/lib/game/peaceful";
 import type { WaterType } from "@/lib/game/fishingSpots";
@@ -38,6 +40,7 @@ import { coastDist } from "@/lib/game/coast";
 import {
   CAST,
   CELEBRATE,
+  FISH,
   HOLO_GRADIENT,
   RARITY_META,
   START_PROGRESS,
@@ -58,7 +61,7 @@ type Phase = "idle" | "charging" | "casting" | "waiting" | "bite" | "reeling" | 
 
 const BITE_WINDOW_MS = 1400;
 
-/** `rod` (rods.ts) widens the hook window, slows the drain and adds rare luck; `tsi:fish-start` may carry `water` (fishingSpots.ts). */
+/** `rod` (rods.ts) widens the hook window, slows the drain and adds rare luck; `tsi:fish-start` may carry `water` (fishingSpots.ts), and on the member island `site` and `from` (where the player stands) for the server roll. */
 export default function FishingOverlay({ onActiveChange, collectionScope, zoneOverride, rod = rodByTier(1) }: { onActiveChange?: (active: boolean) => void; collectionScope?: string; zoneOverride?: "river" | "sea"; rod?: RodTier }) {
   const [phase, setPhase] = useState<Phase>("idle");
   const phaseRef = useRef<Phase>("idle");
@@ -74,9 +77,19 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
   const [caughtSize, setCaughtSize] = useState<number | null>(null);
   const [wasNew, setWasNew] = useState(false);
   const [newRecord, setNewRecord] = useState(false);
+  const [missNote, setMissNote] = useState<string | null>(null);
   const waterRef = useRef<WaterType | null>(null);
+  const castFromRef = useRef<{ site: "village" | "home"; from: [number, number] } | null>(null);
+  // The server's roll for this cast (null: roll here), and once hooked, the roll to land.
+  const rollRef = useRef<Promise<CatchAnswer | null> | null>(null);
+  const landRef = useRef<{ roll: string; size: number | null } | null>(null);
+  const hookedRef = useRef(false);
   useEffect(() => {
-    const onStart = (e: Event) => { waterRef.current = (e as CustomEvent<{ water?: WaterType }>).detail?.water ?? null; };
+    const onStart = (e: Event) => {
+      const d = (e as CustomEvent<{ water?: WaterType; site?: "village" | "home"; from?: [number, number] }>).detail;
+      waterRef.current = d?.water ?? null;
+      castFromRef.current = d?.site && d.from ? { site: d.site, from: d.from } : null;
+    };
     window.addEventListener("tsi:fish-start", onStart, true);
     return () => window.removeEventListener("tsi:fish-start", onStart, true);
   }, []);
@@ -121,11 +134,23 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
     setCaughtSize(null);
     setWasNew(false);
     setNewRecord(false);
+    setMissNote(null);
     setMaxCast(false);
     powerRef.current = 0;
+    rollRef.current = null;
+    landRef.current = null;
+    hookedRef.current = false;
     setTensionZoom(0);
     window.dispatchEvent(new CustomEvent("tsi:fish-end"));
   }, [changePhase]);
+
+  const miss = (note: string | null = null) => {
+    clearTimers();
+    setMissNote(note);
+    changePhase("missed");
+    AudioManager.playSFX("exit");
+    timersRef.current.push(window.setTimeout(cancel, 1800));
+  };
 
   const beginWait = () => {
     if (phaseRef.current !== "casting") return;
@@ -200,27 +225,45 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
       AudioManager.playSFX("click");
     }
     changePhase("casting");
+    // Member island: the server rolls what will bite now; a refusal (too soon, no water here) ends the cast.
+    const from = collectionScope ? null : castFromRef.current;
+    rollRef.current = from && castLine(from.site, from.from, power);
+    void rollRef.current?.then(answer => {
+      if (answer && !answer.ok && (phaseRef.current === "casting" || phaseRef.current === "waiting")) miss(answer.error);
+    });
+    hookedRef.current = false;
+    landRef.current = null;
     const spot = spotRef.current ?? { x: 0, z: 0 };
     window.dispatchEvent(new CustomEvent("tsi:fish-cast", { detail: { x: spot.x, z: spot.z, power } }));
     timersRef.current.push(window.setTimeout(beginWait, 650));
   };
 
-  /** Bite hooked (E or click) → roll the species, open the reel. */
+  /** Bite hooked (E or click) → the server's roll (or a local one), open the reel. */
   const hook = (input: KeyboardEvent | PointerEvent) => {
-    if (phaseRef.current !== "bite") return;
+    if (phaseRef.current !== "bite" || hookedRef.current) return;
     if (performance.now() > biteDeadlineRef.current) return;
+    hookedRef.current = true;
     clearTimers();
-    const luck = powerRef.current + (powerRef.current >= CAST.maxZone ? CAST.maxBonus : 0);
-    // Sea spots (deck + cove, out past the sand line) roll the SEA pool.
-    const sp = spotRef.current;
-    const zone: "river" | "sea" = zoneOverride ?? (sp && coastDist(sp.x, sp.z) > 47 ? "sea" : "river");
-    // Spots that report their water type (pond/river/sea) use the rod-aware pool.
-    setFish(waterRef.current ? rollFishFor(waterRef.current, luck, rod, currentFishingContext()) : rollFish(luck + rod.rarityBonus, zone));
     reelInputRef.current.keys.clear(); reelInputRef.current.pointers.clear();
     if ("key" in input) reelInputRef.current.keys.add(input.key.toLowerCase());
     else reelInputRef.current.pointers.add(input.pointerId);
-    changePhase("reeling");
-    AudioManager.playSFX("click");
+    const local = () => {
+      const luck = powerRef.current + (powerRef.current >= CAST.maxZone ? CAST.maxBonus : 0);
+      // Sea spots (deck + cove, out past the sand line) roll the SEA pool.
+      const sp = spotRef.current;
+      const zone: "river" | "sea" = zoneOverride ?? (sp && coastDist(sp.x, sp.z) > 47 ? "sea" : "river");
+      // Spots that report their water type (pond/river/sea) use the rod-aware pool.
+      return waterRef.current ? rollFishFor(waterRef.current, luck, rod, currentFishingContext()) : rollFish(luck + rod.rarityBonus, zone);
+    };
+    void (rollRef.current ?? Promise.resolve(null)).then(answer => {
+      if (phaseRef.current !== "bite") return;
+      if (answer && !answer.ok) { miss(answer.error); return; }
+      const rolled = answer && FISH.find(f => f.key === answer.catch.item_key);
+      landRef.current = rolled && answer.catch.roll ? { roll: answer.catch.roll, size: answer.catch.size_cm } : null;
+      setFish(rolled || local());
+      changePhase("reeling");
+      AudioManager.playSFX("click");
+    });
   };
 
   /** Reel finished. Success → collect + celebrate; fail → it got away. */
@@ -231,7 +274,8 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
         const isNew = !ownedRef.current.has(fish.key);
         ownedRef.current.add(fish.key);
         setWasNew(isNew);
-        const size = rollSize(fish.sizeCm);
+        const landing = landRef.current;
+        const size = landing?.size ?? rollSize(fish.sizeCm);
         setCaughtSize(size);
         setNewRecord(false);
         // Signals the "catch a fish" onboarding quest (auto-complete).
@@ -241,8 +285,19 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
             detail: { key: fish.key, model: fish.model, raw: fish.raw, zone: fish.zone ?? "river", x: spotRef.current?.x, z: spotRef.current?.z },
           })
         );
-        if (collectionScope) void collect(fish.key, { scope: collectionScope });
-        else void collectWithSize(fish.key, size).then(r => setNewRecord(!isNew && r.newRecord));
+        if (collectionScope) collect(fish.key, { scope: collectionScope });
+        else if (landing) {
+          void landCatch(landing.roll).then(answer => {
+            // Refused (the hourly cap): the card stands, the catch isn't kept.
+            if (answer && !answer.ok) { window.dispatchEvent(new CustomEvent("tsi:toast", { detail: { text: answer.error } })); return; }
+            collect(fish.key);
+            const beat = localRecord(fish.key, size);
+            setNewRecord(!isNew && (answer ? answer.catch.new_record === true && answer.catch.total_collected !== 1 : beat));
+          });
+        } else {
+          collect(fish.key);
+          setNewRecord(!isNew && localRecord(fish.key, size));
+        }
         if (isNew) {
           // Blind-box ceremony (David 2026-07-23): first catches get the
           // fullscreen staged reveal — it owns the celebration (confetti
@@ -331,7 +386,7 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
           ? "!!  Hook it!"
           : phase === "caught"
             ? `You caught ${fish?.label ?? "a fish"}!`
-            : "It got away…";
+            : missNote ?? "It got away…";
   const icon = phase === "caught" && fish ? iconFor(fish) : null;
   const rarity = fish ? RARITY_META[fish.rarity] : null;
   const glow = phase === "caught" && fish ? CELEBRATE[fish.rarity].glow : false;

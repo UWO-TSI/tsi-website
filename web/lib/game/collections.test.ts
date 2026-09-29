@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { collect, collectionCounts, localCollections, mergeWithLocal, spendCollected } from "./collections";
+import { castLine, collect, collectionCounts, harvestNode, localCollections, mergeWithLocal, spendCollected } from "./collections";
 
 const KEY = "tsi.collections.local.v1";
 let saved: Map<string, string>;
@@ -21,7 +21,7 @@ describe("collection discovery and stock", () => {
     expect(localCollections()).toEqual({ fish_dace: 0 });
     collect("fish_dace");
     expect(localCollections()).toEqual({ fish_dace: 1 });
-    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(fetch).not.toHaveBeenCalled();
   });
 
   it.each([null, [], "fish", 12, true])("rejects non-record data: %s", (value) => {
@@ -69,14 +69,14 @@ describe("collection discovery and stock", () => {
     });
   });
 
-  it("still submits a catch when browser storage is unavailable", () => {
-    vi.stubGlobal("localStorage", {
-      getItem: () => { throw new Error("blocked"); },
-      setItem: () => { throw new Error("blocked"); },
-    });
-    collect("apple");
-    expect(fetch).toHaveBeenCalledWith("/api/collections", expect.objectContaining({
-      method: "POST", body: '{"item_key":"apple"}',
-    }));
+  it("asks the server for a roll by place, never with a species", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ ok: true, catch: { item_key: "apple", size_cm: null } }) }));
+    expect(await harvestNode("fruit-1", [1, 2])).toEqual({ ok: true, catch: { item_key: "apple", size_cm: null } });
+    expect(fetch).toHaveBeenCalledWith("/api/collections", expect.objectContaining({ method: "POST", body: '{"action":"harvest","node":"fruit-1","at":[1,2]}' }));
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 429, json: async () => ({ ok: false, error: "Too quick.", code: "too_fast" }) }));
+    expect(await castLine("village", [0, 0], 1)).toEqual({ ok: false, error: "Too quick.", code: "too_fast" });
+    // Signed out: no server record, the world keeps it local.
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 401, json: async () => ({}) }));
+    expect(await castLine("village", [0, 0], 1)).toBeNull();
   });
 });

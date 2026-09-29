@@ -7,7 +7,7 @@
  */
 import { memoryCollectionsStore } from "@/lib/collections/memoryStore";
 import { torontoParts } from "@/lib/time";
-import { donate, getShowcase, journal, museum, recordCatch, setShowcase, trophies } from "@/lib/collections/service";
+import { catchAction, donate, getShowcase, journal, museum, recordCatch, setShowcase, trophies } from "@/lib/collections/service";
 import { installDemoFetch, reply } from "./demoFetch";
 
 const ME = "00000000-0000-4000-8000-000000000001";
@@ -36,10 +36,7 @@ export function installCollectionsDemo(): void {
       const now = new Date();
       switch (path) {
         case "/api/collections":
-          if (method === "POST") {
-            const r = await recordCatch(m.store, ME, body.item_key, body.size_cm);
-            return new Response(JSON.stringify(r.ok ? { ok: true, catch: r.data, ...r.data } : { error: r.error }), { status: r.ok ? 200 : 500 });
-          }
+          if (method === "POST") return reply(await catchAction(m.store, ME, body, now, "clear"), "catch");
           return new Response(JSON.stringify({ collections: (await m.store.memberItems(ME)).map(i => ({ item_key: i.item_key, count: i.count })) }));
         case "/api/collections/journal": {
           const { hour, month } = torontoParts(now);

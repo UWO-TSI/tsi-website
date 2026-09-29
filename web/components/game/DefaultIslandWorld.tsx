@@ -563,7 +563,8 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
     }
     if (action === "fish") {
       const spot = fishSpot.current;
-      if (spot) window.dispatchEvent(new CustomEvent("tsi:fish-start", { detail: { x: spot.target[0], z: spot.target[1], water: spot.water } }));
+      // site + where the player stands: the server rolls the catch from there (FishingOverlay).
+      if (spot) window.dispatchEvent(new CustomEvent("tsi:fish-start", { detail: { x: spot.target[0], z: spot.target[1], water: spot.water, site: atHome ? "home" : "village", from: [player.current.x, player.current.z] } }));
       return;
     }
     if (action === "forage" || action === "net") {
@@ -606,7 +607,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       if (action === "exit" || action === "enter") setFromBoat(false);
     }, 320);
     window.setTimeout(() => setFading(false), 900);
-  }, [fading, chapterActions, homeActions, inside, gate, layout]);
+  }, [fading, chapterActions, homeActions, inside, gate, layout, atHome]);
   useEffect(() => {
     const key = (event: KeyboardEvent) => {
       if (event.repeat || (event.target instanceof HTMLElement && event.target.closest("input, select, textarea, button"))) return;
