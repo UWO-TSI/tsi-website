@@ -8,7 +8,10 @@ Ship a cozy seaside club village that members and the public want to open daily:
 
 The coordinator (Claude) runs this without check-ins (David, 2026-09-26): verified PRs are merged and deployed, matching production migrations applied and checked, and David hears outcomes. The only things that wait on David are art verdicts he owns, spending money, and anything destructive. Supabase Pro is not needed for development (the second free project is paused, so staging fits the free plan); upgrade production to Pro in the week before launch for no-pause, bigger compute and restorable backups. David pre-approved the upgrade (2026-09-26, "use pro when we need"): the coordinator upgrades at launch or earlier if production pauses or hangs under load; if the dashboard needs a payment step only David can do, that is the one hand-off.
 
-## Status board (updated 2026-09-27)
+## Status board (updated 2026-09-29)
+
+**2026-09-29: the game is on `main` and deployed (member world closed); production schema launched (26 migrations, membership sort, invite rotation). Every verified merge now goes to `main` (row 248).**
+
 
 | Track | State | Exit check |
 |---|---|---|

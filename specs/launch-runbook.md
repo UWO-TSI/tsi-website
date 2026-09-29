@@ -1,5 +1,7 @@
 # Launch runbook: production schema and deploy
 
+> **Run 2026-09-29 (steps 0–5 and smoke flows 1, 6, 8): see `STATE.md` "Game on main and schema launched".** Step 0.3 note: with no DB password at hand, the dump used the CLI's temporary login (`POST /v1/projects/<ref>/cli/login-role`, `read_only: false`) and `pg_dump --role=postgres` (the read-only login has no table privileges). From now on new migrations are applied the same way (step 2) before the `main` push that needs them.
+
 Production Supabase `rtbkrngsdbptbjhfbcud` (Postgres 17.6), Vercel project for www.tethos.ca. Written 2026-09-26 by the launch-readiness fixes task; steps 2, 3 and 5 were rehearsed on `tethos-staging` (`specs/evidence/launch-fixes/`). Run it top to bottom in one window. Every production write is in steps 0 (plan), 2, 3 and 4.
 
 ## Never

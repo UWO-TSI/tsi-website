@@ -3,7 +3,14 @@
 > Read this before `AGENT_LOG.md`. It answers "which branch, what's live, what's next"
 > in one page. Update it whenever direction changes. Last updated **2026-09-17**.
 
-## Game branch (2026-09-26)
+## Game on main and schema launched (2026-09-29)
+
+- **Where:** `main` carries the member game (PR #42 merged as `272c00d7`, deployed to www.tethos.ca). `feat/game-default-island` fast-forwards to `main`; from now on every verified merge is pushed to `main` promptly (ledger row 248). The member world ships **closed**: `/student/dashboard`, `/student/onboarding`, `/student/companion` show `/student/opening-soon` until `NEXT_PUBLIC_MEMBER_WORLD=open` is set for Production in Vercel and redeployed.
+- **Production schema:** all 26 game/launch migrations after `20260926130000` applied 2026-09-29 00:27–00:28 EDT through the management API, one transaction each, all `[]` (`specs/launch-runbook.md` step 2). Next free migration timestamp: after `20260927090000`. Membership sort: 43 members (T1 1, T2 1, T4 41), 273 public at T5; `data_backfills.membership_launch` recorded. Invite code rotated (W26 off; the new code lives only in David's keychain, "Tethos invite code"). Verification query: every key as expected. Smoke: sign-up rules, self-promotion 403s, `wallet_apply` server-only, `invite_codes` hidden, `member_badges` closed to anon, recruitment cron succeeding; probes deleted.
+- **Safety copies (local, outside the repo):** `~/tethos-prod-2026-09-29.dump` (public, auth, cron, migration ledger before any write) and `~/tethos-launch-2026-09-29/` (migration log, pre-sort membership snapshot). Production is on the Free plan: no platform backups; Pro upgrade still pending (pre-approved; needs David's payment step).
+- **Still to run with David:** runbook §6 flows 2 and 7 (need a T1/T2 session), 3–5 (need the member world open).
+
+## Game branch (2026-09-26, superseded above)
 
 - **Where:** `feat/game-default-island` (worktree `.claude/worktrees/restart-art-cohesion`), draft PR into `main`, not merged, not deployed. Contains `main` through PR #41. Rollback point: `wip/game-snapshot-2026-09-26` (d890a24). Decisions: `specs/game-world-development-plan.md`; order of work: `specs/development-roadmap.md`.
 - **Built (local only, in-memory or throwaway Postgres):** island core (Toronto time with real sunrise/sunset, seasons, weather, quality tiers), progression (chapters, club goals, letters, notice board, admin editors), homes (islet, rooms, decorating), peaceful loop (rod tiers, bugs, foraging, museum, wardrobe), study (Pomodoro tables, companion page), economy (wallet ledger, shop, selling, merch), Oracle and identity (64-item reading, families, display names, settings), combat foundation (XP curve, kits, ruins, missions). Base body v6 and the hair library are in `art/characters/`, awaiting review.
