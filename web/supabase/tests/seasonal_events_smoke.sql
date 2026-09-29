@@ -101,6 +101,11 @@ BEGIN
   owned := (SELECT count(*) FROM member_inventory);
   INSERT INTO club_goal_completions (goal_id, cycle, total_points) VALUES ((SELECT id FROM club_goals WHERE slug = 'reopen-cafe'), 0, 15000);
   ASSERT (SELECT count(*) FROM member_inventory) = owned AND members > 1, 'goals without rewards grant nothing';
+  -- An admin listing a tool or merch as a reward grants only the cosmetics.
+  UPDATE club_goals SET event = jsonb_set(event, '{rewards}', '["rod-glass", "furn-monument-banner"]') WHERE slug = 'genesis-week';
+  INSERT INTO club_goal_completions (goal_id, cycle, total_points) VALUES ((SELECT id FROM club_goals WHERE slug = 'genesis-week'), 2026, 7500);
+  ASSERT NOT EXISTS (SELECT 1 FROM member_inventory WHERE item_id = (SELECT id FROM shop_items WHERE slug = 'rod-glass')), 'no tools as rewards';
+  ASSERT (SELECT count(*) FROM member_inventory WHERE item_id = (SELECT id FROM shop_items WHERE slug = 'furn-monument-banner')) = members, 'the banner still lands';
   RAISE NOTICE 'seasonal 4 completion rewards ok';
 END $$;
 

@@ -110,7 +110,8 @@ GRANT EXECUTE ON FUNCTION public.tourney_record_catch(UUID, TEXT, NUMERIC, BOOLE
 -- ─── 7. Completion reward: every active member gets the goal's reward items ──
 -- club_goal_completions has one row per goal and cycle (service role inserts
 -- it once, progression service maybeComplete), so this runs once per cycle.
--- Items a member already owns stay as they are.
+-- Items a member already owns stay as they are. Cosmetics only: tools, recipe
+-- cards and campus merch (Gems) are never granted this way (principle 3).
 CREATE OR REPLACE FUNCTION public.club_goal_grant_rewards()
 RETURNS TRIGGER
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
@@ -119,7 +120,7 @@ BEGIN
   SELECT p.id, s.id, 1, s.slot
     FROM club_goals g
     CROSS JOIN LATERAL jsonb_array_elements_text(CASE WHEN jsonb_typeof(g.event -> 'rewards') = 'array' THEN g.event -> 'rewards' ELSE '[]'::jsonb END) AS r (slug)
-    JOIN shop_items s ON s.slug = r.slug
+    JOIN shop_items s ON s.slug = r.slug AND s.category IN ('outfit', 'hair', 'accessory', 'furniture', 'wallpaper', 'flooring')
     CROSS JOIN profiles p
    WHERE g.id = NEW.goal_id AND p.membership = 'member' AND p.is_active
   ON CONFLICT (member_id, item_id) DO NOTHING;
