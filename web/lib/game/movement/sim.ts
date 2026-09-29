@@ -2,7 +2,7 @@
  * Movement simulation (rows 243, 244; specs/movement.md). One pure fixed-step
  * function, `stepMove(state, input, dt, world, tuning) → state`, owns walking,
  * sprint momentum, jumps (variable height, coyote time, buffering, apex hang),
- * timed hop chains, the long jump, the Q dash, skids, ledge grabs and mantles,
+ * the held bunny-hop, the long jump, the Q dash, skids, ledge grabs and mantles,
  * falls, landing rolls and the water rule. The renderer interpolates between
  * steps and plays each step's `events` (dust, thumps, clips) on the avatar that
  * moved (look spec §7.1); the same function can later drive multiplayer
@@ -45,18 +45,19 @@ export const MOVE_TUNING = {
   coyoteTime: 0.1,
   jumpBuffer: 0.12,
   airControl: 0.35, // fraction of the ground response in the air
-  hopWindow: 0.12, // after landing, a jump in this window chains
-  hopBoost: 0.6,
-  hopChainMax: 3,
+  hopBoost: 0.7, // speed each held hop adds (row 249: hold Space while sprinting to bunny-hop)
+  hopChainMax: 3, // hops that add speed; 0 turns the bunny-hop off
   longJumpAt: 0.92, // fraction of sprint speed where a jump becomes a long jump
   longJumpHeight: 0.5,
   longJumpApexTime: 0.18,
   longJumpBoost: 1.06,
-  dashSpeed: 14,
-  dashTime: 0.18,
-  dashCooldown: 0.45,
-  dashExit: 0.7, // fraction of the dash speed kept when it ends
+  dashSpeed: 18, // at the press: the burst
+  dashTime: 0.2,
+  dashExit: 0.55, // fraction of the burst it eases out to and keeps
+  dashEase: 2, // how it eases out: 0 holds the burst then drops to the exit (the first cut), 2 settles smoothly
+  dashCooldown: 0.5, // from the press
   airDashes: 1,
+  airDashLift: 2, // u/s up at an air dash's start, easing to an apex at its end
   dashJumpWindow: 0.12,
   grabReach: 1.15, // how far above the feet a ledge can be caught
   grabRise: 3, // caught only once rising slower than this (u/s)
@@ -69,6 +70,8 @@ export const MOVE_TUNING = {
   stepUp: 0.3,
 };
 export type MoveTuning = typeof MOVE_TUNING;
+/** The fastest the kit goes for more than a moment: a long jump plus a full bunny-hop chain. A dash-jump carries no more. */
+export const topSpeed = (t: MoveTuning) => t.sprintSpeed * t.longJumpBoost + t.hopChainMax * t.hopBoost;
 
 export type MoveMode = "ground" | "air" | "skid" | "roll" | "recover" | "mantle" | "splash";
 export type MoveEventKind = "jump" | "hop" | "long" | "dashjump" | "land" | "roll" | "recover" | "dash" | "skid" | "mantle" | "splash" | "respawn" | "bonk";
@@ -88,8 +91,9 @@ export interface MoveState {
   airMax: number;
   /** Highest point since leaving the ground: the drop a landing measures. */
   topY: number;
-  hops: number; hopT: number;
-  dashT: number; dashCd: number; dashCarry: number; dashX: number; dashZ: number; dashSpeed: number; airDashes: number;
+  hops: number;
+  /** The dash: time left, cooldown, the after-window a jump still carries it, its direction, burst and exit speeds. */
+  dashT: number; dashCd: number; dashCarry: number; dashX: number; dashZ: number; dashSpeed: number; dashEnd: number; airDashes: number;
   /** Mantle path. */
   from: [number, number, number]; to: [number, number, number];
   /** Last spot stood on, clear of water: where a splash puts you back. */
@@ -106,7 +110,7 @@ export function createMoveState(x: number, z: number, world: MoveWorld, facing =
   const y = world.top(x, z);
   return {
     x, y, z, vx: 0, vy: 0, vz: 0, mode: "ground", modeT: 0, facing, coyote: 0, buffer: 0, cut: false, long: false,
-    airMax: 0, topY: y, hops: 0, hopT: 0, dashT: 0, dashCd: 0, dashCarry: 0, dashX: Math.sin(facing), dashZ: Math.cos(facing), dashSpeed: 0, airDashes: 0,
+    airMax: 0, topY: y, hops: 0, dashT: 0, dashCd: 0, dashCarry: 0, dashX: Math.sin(facing), dashZ: Math.cos(facing), dashSpeed: 0, dashEnd: 0, airDashes: 0,
     from: [x, y, z], to: [x, y, z], safe: [x, y, z], events: [],
   };
 }
@@ -204,11 +208,11 @@ function jump(s: MoveState, t: MoveTuning, input: MoveInput, chained: boolean) {
     speed = Math.min(speed, t.walkSpeed * 0.6);
     s.vx = (input.x / len) * speed; s.vz = (input.z / len) * speed;
   }
-  // Chained hops add hopBoost up to hopChainMax of them over the pace you run at; a long jump lunges to at least sprint × longJumpBoost.
-  const cap = (input.sprint ? t.sprintSpeed * t.longJumpBoost : t.walkSpeed) + t.hopChainMax * t.hopBoost;
-  const hop = chained && !dashing && speed >= t.walkSpeed * 0.9;
+  // A held hop adds hopBoost, up to hopChainMax of them over the long jump; a long jump lunges to at least sprint × longJumpBoost; a dash-jump carries the dash up to the same top.
+  const hop = chained && !dashing;
   s.hops = hop ? Math.min(s.hops + 1, t.hopChainMax) : 0;
-  if (hop) speed = Math.max(speed, Math.min(speed + t.hopBoost, cap));
+  if (hop) speed = Math.max(speed, Math.min(speed + t.hopBoost, topSpeed(t)));
+  if (dashing) speed = Math.min(speed, topSpeed(t));
   s.long = speed >= t.longJumpAt * t.sprintSpeed;
   if (s.long && !dashing) speed = Math.max(speed, t.sprintSpeed * t.longJumpBoost);
   const len = hypot(s.vx, s.vz);
@@ -217,21 +221,22 @@ function jump(s: MoveState, t: MoveTuning, input: MoveInput, chained: boolean) {
   s.vy = (2 * h) / apex;
   s.cut = !input.jump;
   s.airMax = speed;
-  s.topY = s.y; s.coyote = 0; s.buffer = 0; s.hopT = 0; s.dashT = 0; s.dashCarry = 0;
+  s.topY = s.y; s.coyote = 0; s.buffer = 0; s.dashT = 0; s.dashCarry = 0;
   setMode(s, "air");
-  emit(s, dashing ? "dashjump" : s.long ? "long" : hop ? "hop" : "jump");
+  emit(s, dashing ? "dashjump" : hop ? "hop" : s.long ? "long" : "jump");
 }
 
 function land(s: MoveState, t: MoveTuning, input: MoveInput, y: number) {
   const drop = s.topY - y, speed = hypot(s.vx, s.vz);
   s.y = y; s.vy = 0; s.airDashes = 0; s.dashT = 0; s.cut = false; s.long = false;
   emit(s, "land", drop);
-  // A jump pressed just before touching down is the timed hop.
-  if (s.buffer > 0 && drop < t.recoverDrop) { setMode(s, "ground"); jump(s, t, input, true); return; }
+  // Space held while sprinting: the next hop goes off on the landing step (the bunny-hop). A press just before touching down is a plain jump.
+  const hop = input.jump && input.sprint && t.hopChainMax > 0 && speed >= t.walkSpeed * 0.9;
+  if ((hop || s.buffer > 0) && drop < t.recoverDrop) { setMode(s, "ground"); jump(s, t, input, hop); return; }
+  s.hops = 0;
   if (drop >= t.rollDrop && speed >= t.rollSpeed) { setMode(s, "roll"); emit(s, "roll", drop); return; }
   if (drop >= t.recoverDrop) { setMode(s, "recover"); emit(s, "recover", drop); return; }
   setMode(s, "ground");
-  s.hopT = t.hopWindow;
 }
 
 /** A ledge in reach along (dx, dz): its top above the step and within `grabReach` of the feet, with room to stand. Returns where the body ends up. */
@@ -314,29 +319,32 @@ export function stepMove(prev: MoveState, input: MoveInput, dt: number, w: MoveW
 
   // ── Dash (Q): on the ground, or once in the air ──────────────────
   if (input.dashPressed && s.mode !== "recover" && s.dashCd <= 0 && (s.mode !== "air" || s.airDashes < t.airDashes)) {
-    const [dx, dz] = steering ? [ix, iz] : [Math.sin(s.facing), Math.cos(s.facing)];
-    if (s.mode === "air") { s.airDashes++; s.vy = 0; s.topY = s.y; }
+    // The stick's way (camera-relative), or the way you face; the burst eases out to dashExit of itself, or to the speed you came in with.
+    const [dx, dz] = steering ? [ix, iz] : [Math.sin(s.facing), Math.cos(s.facing)], entry = Math.max(0, s.vx * dx + s.vz * dz);
+    if (s.mode === "air") { s.airDashes++; s.vy = t.airDashLift; s.topY = s.y; }
     else setMode(s, "ground");
-    s.dashX = dx; s.dashZ = dz;
-    s.dashSpeed = Math.max(t.dashSpeed, s.vx * dx + s.vz * dz);
+    s.dashX = dx; s.dashZ = dz; s.facing = Math.atan2(dx, dz);
+    s.dashSpeed = Math.max(t.dashSpeed, entry);
+    s.dashEnd = Math.min(s.dashSpeed, Math.max(s.dashSpeed * t.dashExit, entry));
     s.dashT = t.dashTime; s.dashCd = t.dashCooldown; s.hops = 0;
     s.vx = dx * s.dashSpeed; s.vz = dz * s.dashSpeed;
     emit(s, "dash");
   }
 
   // ── Jump: from the ground, a skid, a roll, or within coyote time ─
-  if (s.buffer > 0 && ((onFoot(s) && s.mode !== "recover") || (s.mode === "air" && s.coyote > 0))) jump(s, t, input, s.hopT > 0);
+  if (s.buffer > 0 && ((onFoot(s) && s.mode !== "recover") || (s.mode === "air" && s.coyote > 0))) jump(s, t, input, false);
 
   // ── Horizontal speed ─────────────────────────────────────────────
   const speed = hypot(s.vx, s.vz);
   if (s.dashT > 0) {
+    // The burst eases out to its exit speed; an air dash floats up and eases to its apex, a dash run off an edge holds level.
     s.dashT -= dt;
-    s.vx = s.dashX * s.dashSpeed; s.vz = s.dashZ * s.dashSpeed;
-    if (s.mode === "air") s.vy = 0; // an air dash hovers
+    const left = Math.max(0, s.dashT) / t.dashTime, v = s.dashT > 0 ? s.dashEnd + (s.dashSpeed - s.dashEnd) * left ** t.dashEase : s.dashEnd;
+    s.vx = s.dashX * v; s.vz = s.dashZ * v;
+    if (s.mode === "air") s.vy = s.airDashes > 0 ? t.airDashLift * left : 0;
     if (s.dashT <= 0) {
-      s.vx *= t.dashExit; s.vz *= t.dashExit;
       s.dashCarry = t.dashJumpWindow;
-      s.airMax = Math.max(s.airMax, hypot(s.vx, s.vz));
+      s.airMax = Math.max(s.airMax, v);
     }
   } else if (s.mode === "ground") {
     const target = mag * (input.sneak ? t.sneakSpeed : input.sprint ? t.sprintSpeed : t.walkSpeed);
@@ -364,17 +372,16 @@ export function stepMove(prev: MoveState, input: MoveInput, dt: number, w: MoveW
     } else if (speed > 1e-6) { s.vx *= sp / speed; s.vz *= sp / speed; }
   } else if (s.mode === "roll") {
     if (steering && speed > 1e-3) steer(s, ix, iz, 3, dt);
-    if (s.modeT >= t.rollTime) { setMode(s, "ground"); s.hopT = t.hopWindow; }
+    if (s.modeT >= t.rollTime) setMode(s, "ground");
   } else if (s.mode === "recover") {
     const k = Math.exp(-14 * dt);
     s.vx *= k; s.vz *= k;
-    if (s.modeT >= t.recoverTime) { setMode(s, "ground"); s.hopT = t.hopWindow; }
+    if (s.modeT >= t.recoverTime) setMode(s, "ground");
   } else if (s.mode === "air" && steering) {
     // Steer toward the stick at the takeoff speed, or your walking (sneaking) pace if that was slower.
     const k = 1 - Math.exp(-t.groundResponse * t.airControl * dt), cap = Math.max(s.airMax, input.sneak ? t.sneakSpeed : t.walkSpeed) * mag;
     s.vx += (ix * cap - s.vx) * k; s.vz += (iz * cap - s.vz) * k;
   }
-  if (s.mode === "ground" && s.hopT > 0 && (s.hopT -= dt) <= 0) s.hops = 0;
 
   // ── Ledge: pushing into a wall within reach, not rising fast ─────
   if (s.mode === "air" && s.vy <= t.grabRise) {
@@ -401,12 +408,10 @@ export function stepMove(prev: MoveState, input: MoveInput, dt: number, w: MoveW
   if (s.mode === "air") {
     s.coyote = Math.max(0, s.coyote - dt);
     if (!input.jump && s.vy > 0) s.cut = true;
-    if (s.dashT <= 0) {
-      const g = gravity(s, t, input.jump), y = s.y + s.vy * dt - 0.5 * g * dt * dt;
-      s.vy = Math.max(-t.maxFallSpeed, s.vy - g * dt);
-      s.topY = Math.max(s.topY, y);
-      descend(s, w, t, input, y);
-    }
+    const g = s.dashT > 0 ? 0 : gravity(s, t, input.jump), y = s.y + s.vy * dt - 0.5 * g * dt * dt;
+    s.vy = Math.max(-t.maxFallSpeed, s.vy - g * dt);
+    s.topY = Math.max(s.topY, y);
+    descend(s, w, t, input, y);
   }
   if ((s.mode as MoveMode) !== "splash") depenetrate(s, w, t, dt); // descend() may have splashed
   if (s.mode === "ground" && !w.wet(s.x, s.z) && overlap(w, s.x, s.z, s.y, true, t, 0) === 0) s.safe = [s.x, s.y, s.z];

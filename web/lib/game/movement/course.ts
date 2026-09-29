@@ -6,7 +6,7 @@
  * ramps, integer cells). The camera looks +z and +x is screen left, so the
  * sections that need to see ahead run up the screen or across it:
  *
- *   right lane, up      sprint lane (dirt track) and room to chain hops
+ *   right lane, up      sprint lane (dirt track) and room to bunny-hop
  *   top stretch, left   rivers 2, 3 and 4 tiles wide, seen side on; 1-wide
  *                       causeways (the narrow bridge) across the 3 and 4
  *   left lane, down     obstacles: a building, fences with a gap, rocks,
@@ -38,7 +38,7 @@ export const COURSE_GATES: { name: string; rect: Rect }[] = [
 
 /** Labels over each section, for the lab. */
 export const COURSE_SIGNS: { text: string; x: number; z: number }[] = [
-  { text: "Sprint lane · chain hops", x: -17, z: -8 },
+  { text: "Sprint lane · hold Space to bunny-hop", x: -17, z: -8 },
   { text: "2 tiles", x: -9.5, z: 21 },
   { text: "3 tiles", x: -1, z: 21 },
   { text: "4 tiles", x: 9.5, z: 21 },
@@ -154,31 +154,30 @@ export const LAP_ROUTE: RouteStep[] = [
 
 /** Input for each step along a route; returns null when the route is done. */
 export function routePilot(route: readonly RouteStep[] = LAP_ROUTE) {
-  let i = 0, phase = 0, t = 0, ready = true;
+  let i = 0, phase = 0, t = 0, hold = false;
   return (s: { x: number; z: number; y: number; vy: number; mode: string; vx: number; vz: number }, dt: number) => {
     if (i >= route.length) return null;
     const step = route[i], next = route[i + 1] ?? step;
     const aim = (p: [number, number]) => { const dx = p[0] - s.x, dz = p[1] - s.z, d = Math.hypot(dx, dz) || 1; return { x: dx / d, z: dz / d, d }; };
     const go = aim(step.to);
-    const base = { x: go.x, z: go.z, sprint: !!step.sprint, sneak: false, jump: false, jumpPressed: false, dashPressed: false };
+    const base = { x: go.x, z: go.z, sprint: !!step.sprint, sneak: false, jump: hold, jumpPressed: false, dashPressed: false };
     if (phase === 0) {
       if (go.d > (step.r ?? 0.5)) return base;
-      if (!step.move) { i++; return base; }
+      hold = false;
+      if (!step.move) { i++; return { ...base, jump: false }; }
+      // Hops: press Space and hold it to the next waypoint, a hop on every landing.
+      if (step.move === "hops") { i++; hold = true; return { ...base, jump: true, jumpPressed: true }; }
       phase = 1; t = 0;
     }
-    // The move: along the way to the next waypoint (into the wall for a mantle).
+    // The move: along the way to the next waypoint (into the wall for a mantle); Space held on the ground and rising, let go coming down so a landing does not hop again.
     t += dt;
     const along = step.move === "mantle" ? { x: Math.sign(next.to[0] - step.to[0]) || 0, z: 0 } : aim(next.to);
-    const input = { ...base, x: along.x, z: along.z, sprint: !!step.sprint, jump: true };
+    const input = { ...base, x: along.x, z: along.z, sprint: !!step.sprint, jump: s.mode !== "air" || s.vy > 0 };
     if (phase === 1) {
       phase = 2;
       if (step.move === "dash-jump" || step.move === "dash") return { ...input, jump: false, dashPressed: true };
       return { ...input, jumpPressed: true };
     }
-    if (s.vy > 0) ready = true;
-    // One press per descent, just before touching down: each lands as a timed hop.
-    if (step.move === "hops" && ready && s.mode === "air" && s.vy < 0 && s.y < 0.3 && phase < 5) { ready = false; phase++; return { ...input, jumpPressed: true }; }
-    if (step.move === "hops" && phase < 5) return input;
     if (step.move === "long-dash" && phase === 2 && s.mode === "air" && s.vy < 0) { phase = 3; return { ...input, dashPressed: true }; }
     if (step.move === "dash-jump" && phase === 2 && t > 0.06) { phase = 3; return { ...input, jumpPressed: true }; }
     if (t > 0.1 && s.mode === "ground") { i++; phase = 0; }

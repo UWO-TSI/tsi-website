@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { advanceMove, createMoveSim, createMoveState, interpolated, stepMove, MOVE_TUNING as T, NO_INPUT, STEP, type MoveEvent, type MoveInput, type MoveState, type MoveWorld } from "./sim";
+import { advanceMove, createMoveSim, createMoveState, interpolated, stepMove, topSpeed, MOVE_TUNING as T, NO_INPUT, STEP, type MoveEvent, type MoveInput, type MoveState, type MoveTuning, type MoveWorld } from "./sim";
 import { COURSE_GATES, COURSE_SPAWN, NEW_LAP, course, gateAt, lapStep, routePilot } from "./course";
 import { islandOf } from "../defaultIsland";
 import { villageOf, type MapObject } from "../villageMap";
@@ -21,10 +21,10 @@ const G = Surface.Grass, W = Surface.River;
 
 type Script = (time: number, s: MoveState) => Partial<MoveInput>;
 /** Run fixed steps under a script; presses are whatever the script returns on that step. */
-function drive(s: MoveState, w: MoveWorld, seconds: number, script: Script, each?: (s: MoveState, time: number) => void) {
+function drive(s: MoveState, w: MoveWorld, seconds: number, script: Script, each?: (s: MoveState, time: number) => void, t: MoveTuning = T) {
   const n = Math.round(seconds / STEP);
   for (let i = 0; i < n; i++) {
-    s = stepMove(s, { ...NO_INPUT, ...script(i * STEP, s) }, STEP, w);
+    s = stepMove(s, { ...NO_INPUT, ...script(i * STEP, s) }, STEP, w, t);
     each?.(s, (i + 1) * STEP);
   }
   return s;
@@ -57,8 +57,8 @@ describe("the jump", () => {
     return events;
   };
   it("still jumps just after running off an edge (coyote time), not later", () => {
-    expect(offEdge(T.coyoteTime * 0.6)).toContain("jump");
-    expect(offEdge(T.coyoteTime + 0.05)).not.toContain("jump");
+    expect(offEdge(T.coyoteTime * 0.6)[0]).toBe("jump");
+    expect(offEdge(T.coyoteTime + 0.05)[0]).toBe("land"); // (then the press, buffered, jumps off the landing)
   });
 
   it("buffers a press just before landing into a jump on the landing step, not an early one", () => {
@@ -73,28 +73,69 @@ describe("the jump", () => {
     expect(drop(T.jumpBuffer * 0.7).jumped).toBe(true);
     expect(drop(T.jumpBuffer + 0.06).jumped).toBe(false);
   });
+});
 
-  it("chains timed hops up to a low cap, and a late hop starts the chain over", () => {
-    let s = drive(createMoveState(0, 0, flat), flat, 2.5, () => ({ z: 1, sprint: true }));
-    const speeds: number[] = [], hops: number[] = [];
-    // Press just before touching down each time: the buffered hop fires on the landing step.
-    let armed = true;
-    s = drive(s, flat, 3, (time, q) => {
-      const press = time === 0 || (armed && q.mode === "air" && q.vy < 0 && q.y < 0.3);
-      if (press) armed = false;
-      return { z: 1, sprint: true, jump: true, jumpPressed: press };
-    }, q => {
-      const e = q.events.find(x => x.kind === "hop" || x.kind === "long" || x.kind === "jump");
-      if (e) { armed = true; speeds.push(e.speed); hops.push(q.hops); }
+describe("the bunny-hop (row 249)", () => {
+  const TAKEOFF = new Set(["jump", "hop", "long", "dashjump"]);
+  /** Sprint up to speed, then press Space and hold it for `release` seconds. */
+  const hopRun = (release: number, sprint = true, seconds = 3) => {
+    const s0 = drive(createMoveState(0, 0, flat), flat, 2.5, () => ({ z: 1, sprint }));
+    const takeoffs: MoveEvent[] = [], hops: number[] = [];
+    const s = drive(s0, flat, seconds, time => ({ z: 1, sprint, jump: time < release, jumpPressed: at(time, 0) }), q => {
+      for (const e of q.events) if (TAKEOFF.has(e.kind)) { takeoffs.push(e); hops.push(q.hops); }
     });
-    const cap = T.sprintSpeed * T.longJumpBoost + T.hopChainMax * T.hopBoost;
+    return { s, takeoffs, hops };
+  };
+
+  it("holding Space while sprinting hops on every landing, adding speed up to a low cap", () => {
+    const { takeoffs, hops } = hopRun(Infinity);
+    expect(takeoffs.length).toBeGreaterThanOrEqual(6);
+    expect(takeoffs.slice(1).every(e => e.kind === "hop")).toBe(true);
     expect(Math.max(...hops)).toBe(T.hopChainMax);
-    expect(Math.max(...speeds)).toBeCloseTo(cap, 1);
-    expect(speeds[1]).toBeGreaterThan(speeds[0]);
-    // Wait out the window on the ground: the next jump is a plain one.
-    s = drive(s, flat, 1, () => ({ z: 1, sprint: true }));
-    s = drive(s, flat, 0.05, time => ({ z: 1, sprint: true, jump: true, jumpPressed: at(time, 0) }));
-    expect(s.hops).toBe(0);
+    const speeds = takeoffs.map(e => e.speed);
+    for (let i = 1; i <= T.hopChainMax; i++) expect(speeds[i]).toBeGreaterThan(speeds[i - 1] + T.hopBoost * 0.9);
+    // Past the cap the speed holds: not too crazy.
+    for (const v of speeds.slice(T.hopChainMax + 1)) expect(v).toBeCloseTo(topSpeed(T), 3);
+    expect(topSpeed(T)).toBeLessThan(T.sprintSpeed * 1.3);
+  });
+
+  it("a tap is one jump; letting go ends the chain on the next landing", () => {
+    const tap = hopRun(STEP * 2);
+    expect(tap.takeoffs).toHaveLength(1);
+    expect(tap.s.mode).toBe("ground");
+    // Held for two hops, then released in the air: that landing stays down and the chain resets.
+    const held = hopRun(0.8);
+    const before = held.takeoffs.filter(e => e.kind === "hop").length;
+    expect(before).toBeGreaterThanOrEqual(2);
+    expect(held.s.mode).toBe("ground");
+    expect(held.s.hops).toBe(0);
+    expect(held.takeoffs.length).toBe(before + 1);
+  });
+
+  it("only while sprinting: holding Space at a walk lands and stays down", () => {
+    const walk = hopRun(Infinity, false);
+    expect(walk.takeoffs).toHaveLength(1);
+    expect(walk.s.mode).toBe("ground");
+  });
+
+  it("builds the same chain at 30, 60 and 144 Hz", () => {
+    const chain = (fps: number) => {
+      const sim = createMoveSim(createMoveState(0, 0, flat));
+      const kinds: string[] = [];
+      for (let f = 0; f < fps * 5; f++) {
+        const t = f / fps + 1e-9;
+        kinds.push(...advanceMove(sim, { ...NO_INPUT, z: 1, sprint: true, jump: t >= 2 && t < 4, jumpPressed: f === 2 * fps }, 1 / fps, flat).map(e => e.kind));
+      }
+      return { hops: kinds.filter(k => k === "hop").length, z: sim.state.z, speed: speedOf(sim.state) };
+    };
+    const ref = chain(144);
+    expect(ref.hops).toBeGreaterThanOrEqual(4);
+    for (const fps of [30, 60]) {
+      const c = chain(fps);
+      expect(c.hops).toBe(ref.hops);
+      expect(c.z).toBeCloseTo(ref.z, 6);
+      expect(c.speed).toBeCloseTo(ref.speed, 6);
+    }
   });
 });
 
@@ -107,7 +148,7 @@ describe("the long jump", () => {
       s = drive(s, flat, 0.02, time => ({ z: 1, sprint, jump: true, jumpPressed: at(time, 0) }));
       let guard = 0;
       while (s.mode === "air" && guard++ < 400) {
-        s = stepMove(s, { ...NO_INPUT, z: 1, sprint, jump: true }, STEP, flat);
+        s = stepMove(s, { ...NO_INPUT, z: 1, sprint, jump: s.vy > 0 }, STEP, flat); // let go coming down: no bunny-hop
         top = Math.max(top, s.y);
       }
       return { distance: s.z - z0, top };
@@ -128,7 +169,7 @@ describe("the long jump", () => {
     const s = drive(createMoveState(0, from, rivers), rivers, 3.5, (_t, q) => {
       const press = !jumped && q.mode === "ground" && q.z >= bank - early;
       if (press) jumped = true;
-      return { z: 1, sprint, jump: jumped, jumpPressed: press };
+      return { z: 1, sprint, jump: press || (jumped && q.vy > 0), jumpPressed: press };
     }, q => events.push(...kinds(q.events)));
     return { s, splash: events.includes("splash"), events };
   };
@@ -145,28 +186,50 @@ describe("the long jump", () => {
 });
 
 describe("the Q dash", () => {
-  it("bursts about 2.5 tiles, waits out its cooldown, and gives one air dash per jump", () => {
-    let s = createMoveState(0, 0, flat);
-    const events: string[] = [];
-    s = drive(s, flat, T.dashTime, time => ({ z: 1, dashPressed: at(time, 0) }), q => events.push(...kinds(q.events)));
-    expect(s.z).toBeCloseTo(T.dashSpeed * T.dashTime, 0);
-    s = drive(s, flat, 0.1, time => ({ z: 1, dashPressed: at(time, 0) }), q => events.push(...kinds(q.events)));
-    expect(events.filter(k => k === "dash")).toHaveLength(1);
-    // In the air: one dash, then none until landing.
-    s = drive(s, flat, 1, () => ({}));
-    const air: string[] = [];
-    drive(s, flat, 1, time => ({ z: 1, jump: true, jumpPressed: at(time, 0), dashPressed: at(time, 0.1) || at(time, 0.3) }), q => air.push(...kinds(q.events)));
-    expect(air.filter(k => k === "dash")).toHaveLength(1);
+  it("bursts about 2.5 tiles at once, eases out to its exit with no step at the end, and waits out its cooldown", () => {
+    const speeds: number[] = [], events: string[] = [];
+    let s = drive(createMoveState(0, 0, flat), flat, T.dashTime, time => ({ z: 1, dashPressed: at(time, 0) }), q => { speeds.push(speedOf(q)); events.push(...kinds(q.events)); });
+    expect(speeds[0]).toBeGreaterThan(T.dashSpeed * 0.9);
+    expect(s.z).toBeCloseTo(T.dashSpeed * T.dashTime * (T.dashExit + (1 - T.dashExit) / (T.dashEase + 1)), 1);
+    expect(s.z).toBeGreaterThan(2.3);
+    expect(speeds.at(-1)).toBeCloseTo(T.dashSpeed * T.dashExit, 5);
+    // Walking on: from the second half of the burst into the run, no step bigger than a gentle ease.
+    s = drive(s, flat, 0.3, time => ({ z: 1, dashPressed: at(time, 0.1) }), q => { speeds.push(speedOf(q)); events.push(...kinds(q.events)); });
+    const half = Math.round(T.dashTime / STEP / 2);
+    for (let i = half; i < speeds.length; i++) expect(Math.abs(speeds[i] - speeds[i - 1])).toBeLessThan(0.5);
+    expect(events.filter(k => k === "dash")).toHaveLength(1); // the second press came inside the cooldown
   });
-  it("hovers in the air while dashing, and a dash then jump carries the dash speed", () => {
+  it("goes the way of the stick, or the way you face with none", () => {
+    const facingX = drive(createMoveState(0, 0, flat, Math.PI / 2), flat, T.dashTime, time => ({ dashPressed: at(time, 0) }));
+    expect(facingX.x).toBeGreaterThan(2.3);
+    expect(Math.abs(facingX.z)).toBeLessThan(1e-6);
+    const stick = drive(createMoveState(0, 0, flat, Math.PI / 2), flat, T.dashTime, time => ({ z: -1, dashPressed: at(time, 0) }));
+    expect(stick.z).toBeLessThan(-2.3);
+    expect(stick.facing).toBeCloseTo(Math.PI, 1);
+  });
+  it("in the air: one dash per jump, floating up a little and easing to an apex before the fall", () => {
+    const free = { ...T, dashCooldown: 0 };
+    const air: string[] = [];
+    drive(createMoveState(0, 0, flat), flat, 1, time => ({ z: 1, jump: true, jumpPressed: at(time, 0), dashPressed: at(time, 0.1) || at(time, 0.35) }), q => air.push(...kinds(q.events)), free);
+    expect(air.filter(k => k === "dash")).toHaveLength(1);
     let s = drive(createMoveState(0, 0, flat), flat, 0.2, time => ({ z: 1, jump: true, jumpPressed: at(time, 0) }));
     const y = s.y;
-    s = drive(s, flat, T.dashTime * 0.8, time => ({ z: 1, dashPressed: at(time, 0) }));
-    expect(s.y).toBeCloseTo(y, 5);
-    let takeoff = 0;
-    drive(createMoveState(0, 0, flat), flat, 0.3, time => ({ z: 1, dashPressed: at(time, 0), jump: time > 0.1, jumpPressed: at(time, 0.1) }),
-      q => { if (q.events.some(e => e.kind === "dashjump")) takeoff = speedOf(q); });
-    expect(takeoff).toBeGreaterThan(T.dashSpeed * 0.9);
+    s = drive(s, flat, T.dashTime, time => ({ z: 1, dashPressed: at(time, 0) }));
+    expect(s.y - y).toBeCloseTo((T.airDashLift * T.dashTime) / 2, 1);
+    expect(s.vy).toBeCloseTo(0, 5);
+    s = drive(s, flat, 0.1, () => ({ z: 1 }));
+    expect(s.vy).toBeLessThan(0);
+  });
+  it("a dash then jump carries the dash speed, up to the kit's top speed", () => {
+    const takeoff = (after: number) => {
+      let v = 0;
+      drive(createMoveState(0, 0, flat), flat, 0.3, time => ({ z: 1, dashPressed: at(time, 0), jump: time >= after, jumpPressed: at(time, after) }),
+        q => { if (q.events.some(e => e.kind === "dashjump")) v = speedOf(q); });
+      return v;
+    };
+    expect(takeoff(0.05)).toBeGreaterThan(T.sprintSpeed);
+    expect(takeoff(0.05)).toBeLessThanOrEqual(topSpeed(T) + 1e-9);
+    expect(takeoff(STEP)).toBeCloseTo(topSpeed(T), 6);
   });
 });
 
