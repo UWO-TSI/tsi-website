@@ -161,6 +161,7 @@ class Puppet {
     this.clock += delta;
     let restart = false;
     // A looping clip asked for as a one-shot (Dance) holds as a pose; moving ends any pose.
+    if (motion.stop) { this.oneShot = null; motion.stop = false; }
     if (motion.play && isLoop(motion.play)) { motion.pose = motion.play; motion.play = null; }
     if (motion.play) { this.oneShot = motion.play; motion.play = null; restart = true; }
     if (motion.speed >= 0.08) motion.pose = null;

@@ -21,7 +21,9 @@ export const SNAPPY_CLIPS = new Set<ClipName>(["DodgeRoll", "Hit", "Jump", "Fall
  */
 export interface CharacterMotion { speed: number; yaw: number; lift: number; pose?: ClipName | null; play?: ClipName | null; move?: ClipName | null;
   /** Animation clock rate (slow motion in /lab/move; 1 when unset). */
-  rate?: number }
+  rate?: number;
+  /** End the running one-shot now (a landing cuts a short hop's Jump); the character clears it. */
+  stop?: boolean }
 
 export const isLoop = (clip: ClipName) => CLIP_BY_NAME.get(clip)?.loop ?? true;
 
