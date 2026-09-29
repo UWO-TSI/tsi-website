@@ -12,8 +12,13 @@ interface Who { id: string; name: string; world_name: string | null; muted_until
 interface Report { id: string; body: string; subject: string | null; reason: string | null; reported_at: string; author: Who | null; reporter: Who | null }
 interface LogEntry { id: number; action: string; item_kind: string; item_id: string | null; excerpt: string | null; created_at: string; actor: Who | null; target: Who | null }
 type Kind = "letter" | "chat";
-const ACTION: Record<string, string> = { remove: "removed", remove_mute: "removed and muted", dismiss: "dismissed", mute: "muted", unmute: "unmuted", reset_name: "reset the name of" };
-const KIND: Record<string, string> = { letter: "note", chat: "table chat", name: "name", member: "member" };
+const ON_TEXT: Record<string, string> = { remove: "removed", remove_mute: "removed and muted", dismiss: "dismissed" };
+const ON_MEMBER: Record<string, string> = { mute: "muted", unmute: "unmuted", reset_name: "reset the name of", dismiss: "dismissed a name report about" };
+/** "removed a note by Juniper · “…”", "reset the name of Islander 3f2a · “Rudename”". */
+const described = (e: LogEntry) =>
+  e.item_kind === "letter" || e.item_kind === "chat"
+    ? `${ON_TEXT[e.action] ?? e.action} ${e.item_kind === "letter" ? "a note" : "table chat"} by ${label(e.target)}${e.excerpt ? ` · “${e.excerpt}”` : ""}`
+    : `${ON_MEMBER[e.action] ?? e.action} ${label(e.target)}${e.excerpt && e.excerpt !== e.target?.world_name ? ` · was “${e.excerpt}”` : ""}`;
 const btn = "px-2 py-1 border font-mono text-xs rounded";
 const label = (w: Who | null) => (w ? `${w.world_name ?? w.name}${w.world_name ? ` (${w.name})` : ""}` : "A former member");
 
@@ -99,8 +104,7 @@ export default function ModerationPage() {
             <ul className="space-y-1">
               {queue.log.map((e) => (
                 <li key={e.id} className="text-xs font-mono text-[var(--color-text-muted)]">
-                  {new Date(e.created_at).toLocaleString("en-CA")} · <span className="text-[var(--color-text-primary)]">{label(e.actor)}</span> {ACTION[e.action] ?? e.action} {KIND[e.item_kind] ?? e.item_kind}
-                  {e.target ? ` by ${label(e.target)}` : ""}{e.excerpt ? ` · “${e.excerpt}”` : ""}
+                  {new Date(e.created_at).toLocaleString("en-CA")} · <span className="text-[var(--color-text-primary)]">{label(e.actor)}</span> {described(e)}
                 </li>
               ))}
             </ul>
