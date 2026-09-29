@@ -2,16 +2,17 @@
 
 /**
  * /lab/move — the movement lab (specs/movement.md, build order 2). The test
- * course on the real grid terrain, the real character and follow camera, the
- * movement sim, and a live tuning panel with every feel value, presets and
- * "Copy JSON", so David tunes the feel himself; a lap timer is the skill
- * readout. Dev only (the /lab layout 404s in production).
+ * course on the real grid terrain, the real character and the follow camera's
+ * framing, the movement sim, and a live tuning panel with every feel value,
+ * presets (and dash presets to compare) and "Copy JSON", so David tunes the
+ * feel himself; a lap timer is the skill readout. Dev only (the /lab layout
+ * 404s in production).
  *
  * URL: ?at=x,z starts somewhere else, ?touch=1 shows the touch controls on a
  * desktop, ?panel=0 hides the panel and the signs, ?zoom=0.6 brings the camera closer (evidence frames).
  */
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Canvas, useFrame } from "@react-three/fiber";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Html } from "@react-three/drei";
 import * as THREE from "three";
 import GridWorld from "../grid/GridWorld";
@@ -22,7 +23,7 @@ import LookMaterials from "../LookMaterials";
 import { ACNHParts, CHALET_VARIANTS } from "../ACNHBuilding";
 import { treeParts } from "../NatureModels";
 import { InstancedModels, type ModelPlacement } from "../InstancedNature";
-import { IslandAtmosphere, useFollowCamera, type TreeSpot } from "../IslandAtmosphere";
+import { IslandAtmosphere, type TreeSpot } from "../IslandAtmosphere";
 import MoveAvatar, { MOVE_JUICE, newStick, type MoveJuice, type MoveTelemetry, type StickInput } from "./MoveAvatar";
 import { ISLAND_TERRAIN, islandLight, withSeason } from "@/lib/game/islandLighting";
 import { SEASON_TREES, seasonLook } from "@/lib/game/seasonalLook";
@@ -31,7 +32,7 @@ import { useGraphicsSettings } from "@/lib/game/useGraphicsSettings";
 import { islandOf } from "@/lib/game/defaultIsland";
 import { objectsOf } from "@/lib/game/villageMap";
 import { COURSE_GATES, COURSE_SIGNS, COURSE_SPAWN, NEW_LAP, course, gateAt, lapStep, type Lap } from "@/lib/game/movement/course";
-import { MOVE_TUNING, createMoveState, stepMove, NO_INPUT, STEP, type MoveInput, type MoveTuning, type MoveWorld } from "@/lib/game/movement/sim";
+import { MOVE_TUNING, createMoveState, stepMove, topSpeed, NO_INPUT, STEP, type MoveInput, type MoveTuning, type MoveWorld } from "@/lib/game/movement/sim";
 import { MOVE_ACTIONS, keyName, readMoveKeys, remapMove, type MoveAction } from "@/lib/game/movement/keys";
 import { readAbilityKeys } from "@/lib/game/combat/runtime";
 import { AudioManager } from "@/lib/game/audio";
@@ -40,7 +41,7 @@ const SUMMER = { season: "summer" as const, weights: { spring: 0, summer: 1, aut
 const LOOK = seasonLook(SUMMER, {});
 const LIGHT = withSeason(islandLight(CURRENT, "day"), LOOK);
 const TERRAIN = { ...ISLAND_TERRAIN, grass: LOOK.grass };
-const STORE = "tsi.moveLab.v1";
+const STORE = "tsi.moveLab.v2"; // v2: the held bunny-hop and the eased dash (2026-09-29) start from the new defaults
 
 // ── The tuning panel's table: every value, its range, its group ────
 type Range = [min: number, max: number, step: number];
@@ -49,17 +50,25 @@ const GROUPS: { name: string; keys: [keyof MoveTuning, ...Range][] }[] = [
     ["stopResponse", 2, 30, 0.5], ["overspeedDecay", 0, 20, 0.5], ["turnAtSpeed", 1, 30, 0.5], ["skidSpeed", 2, 20, 0.5], ["skidAngle", 60, 180, 5], ["skidDecel", 5, 100, 1], ["stepUp", 0.05, 0.6, 0.01]] },
   { name: "Jump", keys: [["jumpHeight", 0.3, 2, 0.05], ["jumpApexTime", 0.1, 0.5, 0.01], ["fallGravity", 0.5, 3, 0.05], ["jumpCutGravity", 1, 5, 0.1], ["apexHangSpeed", 0, 4, 0.1],
     ["apexHangGravity", 0.1, 1, 0.05], ["maxFallSpeed", 5, 40, 1], ["coyoteTime", 0, 0.3, 0.01], ["jumpBuffer", 0, 0.3, 0.01], ["airControl", 0, 1, 0.05]] },
-  { name: "Hops and long jump", keys: [["hopWindow", 0, 0.4, 0.01], ["hopBoost", 0, 2, 0.05], ["hopChainMax", 0, 6, 1], ["longJumpAt", 0.5, 1.2, 0.01], ["longJumpHeight", 0.2, 1.5, 0.05],
+  { name: "Bunny-hop and long jump", keys: [["hopBoost", 0, 2, 0.05], ["hopChainMax", 0, 6, 1], ["longJumpAt", 0.5, 1.2, 0.01], ["longJumpHeight", 0.2, 1.5, 0.05],
     ["longJumpApexTime", 0.08, 0.4, 0.01], ["longJumpBoost", 1, 1.4, 0.01]] },
-  { name: "Dash (Q)", keys: [["dashSpeed", 5, 30, 0.5], ["dashTime", 0.05, 0.5, 0.01], ["dashCooldown", 0, 2, 0.05], ["dashExit", 0, 1, 0.05], ["airDashes", 0, 3, 1], ["dashJumpWindow", 0, 0.4, 0.01]] },
+  { name: "Dash (Q)", keys: [["dashSpeed", 5, 40, 0.5], ["dashTime", 0.05, 0.5, 0.01], ["dashExit", 0, 1, 0.05], ["dashEase", 0, 4, 0.25], ["dashCooldown", 0, 2, 0.05], ["airDashes", 0, 3, 1],
+    ["airDashLift", 0, 6, 0.25], ["dashJumpWindow", 0, 0.4, 0.01]] },
   { name: "Climb and drops", keys: [["grabReach", 0.3, 2, 0.05], ["grabRise", 0, 10, 0.5], ["mantleTime", 0.1, 1, 0.02], ["rollDrop", 0.3, 4, 0.1], ["rollSpeed", 0, 15, 0.5], ["rollTime", 0.1, 1, 0.02],
     ["recoverDrop", 0.5, 6, 0.1], ["recoverTime", 0, 1, 0.02]] },
 ];
-const JUICE_KEYS: [keyof MoveJuice, ...Range][] = [["camLead", 0, 0.4, 0.01], ["fovKick", 0, 10, 0.5], ["squash", 0, 2, 0.05], ["dust", 0, 2, 0.05]];
+const JUICE_KEYS: [keyof MoveJuice, ...Range][] = [["camLead", 0, 0.4, 0.01], ["fovKick", 0, 10, 0.5], ["dashKick", 0, 8, 0.5], ["squash", 0, 2, 0.05], ["dust", 0, 2, 0.05], ["streaks", 0, 2, 0.05]];
+/** Dash shapes to compare (row 250), about the same reach each: only the dash values change. */
+const DASH_PRESETS: Record<string, Partial<MoveTuning>> = {
+  Burst: { dashSpeed: 18, dashTime: 0.2, dashExit: 0.55, dashEase: 2, dashCooldown: 0.5, airDashLift: 2 },
+  Glide: { dashSpeed: 13.5, dashTime: 0.21, dashExit: 0.8, dashEase: 1, dashCooldown: 0.45, airDashLift: 1 },
+  Blink: { dashSpeed: 28, dashTime: 0.16, dashExit: 0.38, dashEase: 3, dashCooldown: 0.6, airDashLift: 0 },
+  "First cut": { dashSpeed: 14, dashTime: 0.18, dashExit: 0.7, dashEase: 0, dashCooldown: 0.45, airDashLift: 0 },
+};
 const PRESETS: Record<string, Partial<MoveTuning>> = {
   Juicy: {},
-  Cozy: { sprintSpeed: 10.5, jumpHeight: 0.85, jumpApexTime: 0.26, fallGravity: 1.3, hopBoost: 0.4, hopChainMax: 2, dashSpeed: 12, airControl: 0.45, skidSpeed: 7, turnAtSpeed: 9 },
-  Snappy: { jumpApexTime: 0.19, fallGravity: 1.8, jumpCutGravity: 3, airControl: 0.5, sprintBuild: 0.6, dashCooldown: 0.35, turnAtSpeed: 10, mantleTime: 0.26 },
+  Cozy: { sprintSpeed: 10.5, jumpHeight: 0.85, jumpApexTime: 0.26, fallGravity: 1.3, hopBoost: 0.4, hopChainMax: 2, ...DASH_PRESETS.Glide, airControl: 0.45, skidSpeed: 7, turnAtSpeed: 9 },
+  Snappy: { jumpApexTime: 0.19, fallGravity: 1.8, jumpCutGravity: 3, airControl: 0.5, sprintBuild: 0.6, dashCooldown: 0.4, turnAtSpeed: 10, mantleTime: 0.26 },
   "Today's walk": { sprintSpeed: 13.69, sprintBuild: 0.05, turnAtSpeed: 30, skidSpeed: 99, hopBoost: 0, hopChainMax: 0, longJumpAt: 9 },
 };
 const label = (k: string) => k.replace(/([A-Z])/g, " $1").toLowerCase();
@@ -72,7 +81,9 @@ function measure(t: MoveTuning) {
     for (let i = 0; i < Math.round(seconds / STEP); i++) {
       const time = i * STEP;
       if (jumpAt !== null && Math.abs(time - jumpAt) < STEP / 2) z0 = s.z;
-      s = stepMove(s, { ...NO_INPUT, ...setup, jump: jumpAt !== null && time >= jumpAt, jumpPressed: jumpAt !== null && Math.abs(time - jumpAt) < STEP / 2, dashPressed: dashAt !== null && Math.abs(time - dashAt) < STEP / 2 }, STEP, flat, t);
+      // Space held from the press; sprint only up to the takeoff, or the landing would bunny-hop on.
+      const sprint = !!setup.sprint && (jumpAt === null || time < jumpAt + STEP);
+      s = stepMove(s, { ...NO_INPUT, ...setup, sprint, jump: jumpAt !== null && time >= jumpAt, jumpPressed: jumpAt !== null && Math.abs(time - jumpAt) < STEP / 2, dashPressed: dashAt !== null && Math.abs(time - dashAt) < STEP / 2 }, STEP, flat, t);
       top = Math.max(top, Math.hypot(s.vx, s.vz));
       if (jumpAt !== null && time >= jumpAt) {
         if (s.mode === "air") { air += STEP; peak = Math.max(peak, s.y); } else if (air > 0 && landed === null) landed = s.z - z0;
@@ -81,10 +92,15 @@ function measure(t: MoveTuning) {
     return { peak, air, distance: landed ?? 0, top, z: s.z };
   };
   const stand = run({}, 1.5, 0.1, null), walk = run({ z: 1 }, 2, 1, null), long = run({ z: 1, sprint: true }, 4.5, 3.5, null);
-  const dash = run({ z: 1 }, 0.1 + t.dashTime, null, 0), dashJump = run({ z: 1 }, 2, 0.1, 0.05);
-  let s = createMoveState(0, 0, flat);
-  for (let i = 0; i < 600; i++) s = stepMove(s, { ...NO_INPUT, z: 1, sprint: true, jump: true, jumpPressed: i === 360 || (s.mode === "air" && s.vy < 0 && s.y < 0.25) }, STEP, flat, t);
-  return { jump: stand.peak, air: stand.air, walkJump: walk.distance, longJump: long.distance, dash: dash.z, dashJump: dashJump.distance, top: Math.hypot(s.vx, s.vz) };
+  const dash = run({ z: 1 }, t.dashTime, null, 0), dashJump = run({ z: 1 }, 2, 0.1, 0.05);
+  // Sprint, then hold Space: how fast the bunny-hop gets, and how soon.
+  let s = createMoveState(0, 0, flat), top = 0, toTop = 0;
+  for (let i = 0; i < 960; i++) {
+    s = stepMove(s, { ...NO_INPUT, z: 1, sprint: true, jump: i >= 360, jumpPressed: i === 360 }, STEP, flat, t);
+    const v = Math.hypot(s.vx, s.vz);
+    if (i >= 360 && v > top + 1e-6) { top = v; toTop = (i - 360) * STEP; }
+  }
+  return { jump: stand.peak, air: stand.air, walkJump: walk.distance, longJump: long.distance, dash: dash.z, dashJump: dashJump.distance, top, toTop };
 }
 
 function tickLap(l: { lap: Lap; now: number }, p: MoveTelemetry, dt: number) {
@@ -99,6 +115,21 @@ function LapTracker({ telemetry, lap, timeScale }: { telemetry: React.RefObject<
   return null;
 }
 
+/**
+ * The lab's follow camera: the shipped framing (IslandAtmosphere useFollowCamera: focus + (0, 7.4, -10.8) × zoom) set
+ * rigidly on the focus MoveAvatar writes (its lead, level and pans), so it keeps up at any speed without lagging,
+ * swinging sideways or bobbing. Yaw stays fixed (rows 5, 154).
+ */
+function placeCamera(camera: THREE.Camera, { x, y, z }: THREE.Vector3, zoom: number) {
+  camera.position.set(x, y + 0.7 + 7.4 * zoom, z + 1.5 - 10.8 * zoom);
+  camera.lookAt(x, y + 0.7, z + 1.5);
+  camera.updateMatrixWorld();
+}
+function useMoveCamera(focus: React.RefObject<THREE.Vector3>, zoom: number) {
+  const { camera } = useThree();
+  useFrame(() => placeCamera(camera, focus.current, zoom), -3);
+}
+
 function CourseScene({ world, tuning, juice, spawn, stick, bindings, telemetry, timeScale, lap, walkSpeed, lite, shadows, zoom, signs }: {
   world: ReturnType<typeof islandOf>; tuning: React.RefObject<MoveTuning>; juice: React.RefObject<MoveJuice>; spawn: [number, number];
   stick: React.RefObject<StickInput>; bindings: Record<MoveAction, string>; telemetry: React.RefObject<MoveTelemetry>;
@@ -106,7 +137,7 @@ function CourseScene({ world, tuning, juice, spawn, stick, bindings, telemetry, 
 }) {
   const v = course();
   const camTarget = useRef(new THREE.Vector3(spawn[0], 0, spawn[1]));
-  useFollowCamera(camTarget, zoom, null);
+  useMoveCamera(camTarget, zoom);
   const trees = useMemo(() => objectsOf("tree", v).map((o): TreeSpot => ({ x: o.x, z: o.z, seed: o.seed ?? 0 })), [v]);
   const scenery = useMemo((): ModelPlacement[] => [
     ...trees.flatMap(({ x, z, seed }) => treeParts(seed, SEASON_TREES.summer).map((p): ModelPlacement => ({ url: p.url, position: [x + p.offset[0], world.ground(x, z) + p.offset[1], z + p.offset[2]], rotation: p.yaw, scale: p.scale }))),
@@ -228,7 +259,8 @@ export default function MoveLab() {
     void navigator.clipboard?.writeText(JSON.stringify({ move: tuning, juice }, null, 2)).then(() => setNote("Copied the tuning JSON."), () => setNote("Clipboard blocked: select the JSON below."));
   }, [tuning, juice]);
   const fmt = (s: number) => `${Math.floor(s / 60)}:${(s % 60).toFixed(2).padStart(5, "0")}`;
-  const h = hud, top = tuning.sprintSpeed * tuning.longJumpBoost + tuning.hopChainMax * tuning.hopBoost;
+  const h = hud, top = topSpeed(tuning), hopBase = tuning.sprintSpeed * tuning.longJumpBoost;
+  const dashPreset = Object.keys(DASH_PRESETS).find(p => Object.entries(DASH_PRESETS[p]).every(([k, v]) => tuning[k as keyof MoveTuning] === v));
 
   return <div style={{ position: "fixed", inset: "40px 0 0 0", background: "#0b0e14", overflow: "hidden" }}>
     <Canvas tabIndex={0} role="application" aria-label="Movement lab course" gl={{ antialias: false, powerPreference: "high-performance" }} dpr={graphics.pixelated ? 0.5 : [1, 1.5]}
@@ -250,7 +282,11 @@ export default function MoveLab() {
       <div style={{ height: 6, background: "rgba(255,255,255,0.12)", borderRadius: 3, margin: "4px 0 8px" }}>
         <div style={{ height: 6, width: `${Math.min(100, (h.t.speed / top) * 100)}%`, background: h.t.speed > tuning.sprintSpeed * 1.01 ? "#FFD166" : "#7fd1c0", borderRadius: 3 }} />
       </div>
-      <div>Hop chain {Array.from({ length: tuning.hopChainMax }, (_, i) => <span key={i} style={{ display: "inline-block", width: 10, height: 10, marginLeft: 4, borderRadius: 2, background: i < h.t.hops ? "#FFD166" : "rgba(255,255,255,0.18)" }} />)}</div>
+      {/* A pip per hop's worth of speed over the long jump: they fill as the held hops build and drain as the speed bleeds off. */}
+      {tuning.hopChainMax > 0 && <div style={{ display: "flex", alignItems: "center", gap: 4 }}>Bunny-hop {Array.from({ length: tuning.hopChainMax }, (_, i) =>
+        <span key={i} style={{ display: "inline-block", width: 14, height: 10, borderRadius: 2, background: h.t.speed >= hopBase + (i + 1) * tuning.hopBoost - 0.05 ? "#FFD166" : "rgba(255,255,255,0.18)" }} />)}
+        {h.t.speed >= top - 0.05 && <span style={{ color: "#FFD166", fontWeight: 700 }}>max</span>}</div>}
+      <div style={{ color: "#8a939a", fontSize: 11 }}>sprint and hold Space to bunny-hop</div>
       <div style={{ marginTop: 4, color: "#c9d1d6" }}>{h.t.mode}{h.t.long ? " · long jump" : ""} · dash {h.t.dashReady ? "ready" : "…"}</div>
     </div>}
 
@@ -262,7 +298,7 @@ export default function MoveLab() {
     </div>}
 
     <div style={{ ...box, position: "absolute", left: 12, bottom: touch ? 180 : 12, padding: "6px 10px", color: "#c9d1d6" }}>
-      {!touch && MOVE_ACTIONS.filter(a => !["forward", "left", "back", "right"].includes(a.id)).map(a => <span key={a.id} style={{ marginRight: 10 }}><kbd>{keyName(bindings[a.id])}</kbd> {a.name}</span>)}
+      {!touch && MOVE_ACTIONS.filter(a => !["forward", "left", "back", "right"].includes(a.id)).map(a => <span key={a.id} style={{ marginRight: 10 }}><kbd>{keyName(bindings[a.id])}</kbd> {a.name}{a.id === "jump" ? " (hold while sprinting: bunny-hop)" : ""}</span>)}
       <button onClick={() => { lap.current = { lap: NEW_LAP, now: lap.current.now }; setRespawn(n => n + 1); }} style={{ marginLeft: 6, color: "#FFD166" }}>Back to start</button>
     </div>
 
@@ -284,10 +320,14 @@ export default function MoveLab() {
       {note && <p role="status" style={{ color: "#7fd1c0", margin: "6px 0 0" }}>{note}</p>}
       <p style={{ color: "#c9d1d6", margin: "8px 0", lineHeight: 1.5 }}>
         Jump {numbers.jump.toFixed(2)}u in {numbers.air.toFixed(2)}s · walking jump {numbers.walkJump.toFixed(1)}u · long jump {numbers.longJump.toFixed(1)}u ·
-        dash {numbers.dash.toFixed(1)}u · dash jump {numbers.dashJump.toFixed(1)}u · top chained speed {numbers.top.toFixed(1)} u/s (walk {tuning.walkSpeed}, sprint {tuning.sprintSpeed})
+        dash {numbers.dash.toFixed(1)}u · dash jump {numbers.dashJump.toFixed(1)}u · held bunny-hop tops out at {numbers.top.toFixed(1)} u/s after {numbers.toTop.toFixed(1)}s (walk {tuning.walkSpeed}, sprint {tuning.sprintSpeed})
       </p>
       {GROUPS.map(g => <fieldset key={g.name} style={{ border: "1px solid rgba(255,255,255,0.12)", borderRadius: 6, margin: "8px 0", padding: "4px 8px" }}>
         <legend style={{ color: "#FFD166" }}>{g.name}</legend>
+        {g.name === "Dash (Q)" && <div role="group" aria-label="Dash presets" style={{ display: "flex", gap: 6, flexWrap: "wrap", margin: "2px 0 6px" }}>
+          {Object.keys(DASH_PRESETS).map(p => <button key={p} aria-pressed={dashPreset === p} onClick={() => { setTuning(t => ({ ...t, ...DASH_PRESETS[p] })); setPreset("Custom"); }}
+            style={{ color: dashPreset === p ? "#0b0e14" : "#f1ffff", background: dashPreset === p ? "#FFD166" : "#1b2230", borderRadius: 4, padding: "1px 8px" }}>{p}</button>)}
+        </div>}
         {g.keys.map(([k, min, max, step]) => <label key={k} style={{ display: "grid", gridTemplateColumns: "118px minmax(0, 1fr) 46px", gap: 6, alignItems: "center", margin: "3px 0" }}>
           <span>{label(k)}</span>
           <input type="range" min={min} max={max} step={step} value={tuning[k]} style={{ width: "100%", minWidth: 0 }} onChange={e => set(k, Number(e.target.value))} />
