@@ -12,3 +12,17 @@ Each has the assumption the build took; none blocked. Tune the numbers in `/lab/
 8. **Long jump is automatic** at 92% of sprint speed or more (no extra key), and a dash-jump uses its flatter arc while carrying the dash speed.
 9. **Props are hop-able.** Rocks (0.52 to 0.61u), benches (0.51u) and fence rails (0.7u) have their measured tops: a jump clears them and you can land or mantle onto the rocks and bench. Buildings, trunks and study furniture are walls of any height.
 10. **Not ported to the lab:** today's sprint wind streaks, surface footstep sounds (bridge knock, brick tap) and wet-step ripples. They stay in `PlayerAvatar` and carry over at integration.
+
+## Refine pass (build agent, 2026-09-29)
+
+None blocked; each has the assumption the build took.
+
+11. **Bunny-hop only while sprinting.** Holding Space at a walk lands and stays down; a quick re-press just before landing is a plain buffered jump that keeps your speed but adds none. The cap went from 14.5 to 14.8 u/s (0.7 per hop instead of 0.6) so each hop is felt; still under 1.25× sprint.
+12. **One top speed.** A dash-jump now carries at most the bunny-hop top (14.8 u/s). Before, it carried the dash's 14 and a burst start could have carried 18.
+13. **Dash cooldown 0.5 s** (was 0.45), counted from the press, now that the ring shows it. The facing snaps to the dash direction at once rather than turning over ~70 ms.
+14. **Air dash arc.** It floats up 0.2u and eases to an apex before the fall, rather than holding dead level; a ground dash that runs off an edge still holds level. "First cut" in the dash presets is the old flat dash for comparison.
+15. **Camera is lab-only for now.** The rigid follow and the level lock are in `/lab/move`; the village, home island and ruins keep the shipped lerping `useFollowCamera` until integration. Should the village camera become rigid too at integration (it is the lag you felt)? Assumed yes, with the kit.
+16. **Saved lab values reset.** The panel's storage key moved to `tsi.moveLab.v2` so the new dash and hop defaults take effect; values saved before sit under `tsi.moveLab.v1` in this browser.
+17. **Speed lines, not afterimages.** The dash streak is the village's sprint wind rods (stronger through the dash). A ghost copy of the character per dash would mean a second skinned character; the rods, dust, squash and FOV punch read clearly in the strips.
+18. **The cooldown ring stays on the ground** under the avatar, in the air too, where it shows empty while the air dash is spent.
+19. **Shared character change.** `CharacterMotion.stop` ends a running one-shot (a landing ends a short hop's Jump); only the movement avatar sets it.
