@@ -41,7 +41,7 @@ const FALLBACK_COPY: Record<string, StepCopy> = {
   contribute: { label: "Contribute to the club goal" },
   goal_complete: { label: "Club goal reaches its target" },
   oracle_quiz: { label: "Complete the Oracle quiz" },
-  family_trial: { label: "Finish the family trial" },
+  family_trial: { label: "Reach level 10 and choose your subclass" },
   enter_gate: { label: "Open the ruins gate" },
 };
 
@@ -187,7 +187,7 @@ export function validateAdvance(
     case "complete":
       if (settle) return { ok: false, status: 422, error: "Report to HQ to finish this chapter." };
       if (view.status !== "ready") {
-        return { ok: false, status: 409, error: chapter.requirement === "club_goal" ? "The club goal isn't complete yet." : "Oracle quiz and family trial come first." };
+        return { ok: false, status: 409, error: chapter.requirement === "club_goal" ? "The club goal isn't complete yet." : "The Oracle quiz, level 10 and your subclass come first." };
       }
       steps[chapter.requirement === "club_goal" ? "goal_complete" : "enter_gate"] = at;
       return { ok: true, next: { status: "completed", steps_done: steps, donated_item_key: donated }, completedChapter: true };
