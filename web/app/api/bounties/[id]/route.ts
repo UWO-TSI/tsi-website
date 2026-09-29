@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { adminContext } from "@/lib/server/adminContext";
 import { z } from "zod";
 
 const UpdateBountySchema = z.object({
@@ -107,28 +108,12 @@ export async function DELETE(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("tier")
-    .eq("id", user.id)
-    .single();
-
-  if (!profile || profile.tier > 2) {
-    return NextResponse.json({ error: "Forbidden — T1-T2 only" }, { status: 403 });
-  }
+  const ctx = await adminContext();
+  if (ctx instanceof NextResponse) return ctx;
 
   const { id } = await params;
 
-  const { error } = await supabase.from("bounties").delete().eq("id", id);
+  const { error } = await ctx.db.from("bounties").delete().eq("id", id);
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });

@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { adminContext } from "@/lib/server/adminContext";
 
 // GET /api/npc/spend
-// T1-only. Aggregates this calendar month's npc_conversations into token
+// T1/T2 (adminContext). Aggregates this calendar month's npc_conversations into token
 // totals + estimated cost + top users / NPCs. Computed in-memory because
 // total rows per month is bounded (~22.5k at peak), and SWR caches client-side.
 
@@ -28,23 +27,8 @@ interface SpendResponse {
 }
 
 export async function GET() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("tier")
-    .eq("id", user.id)
-    .maybeSingle();
-  const tier = (profile?.tier as number | undefined) ?? 5;
-  if (tier !== 1) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  const ctx = await adminContext();
+  if (ctx instanceof NextResponse) return ctx;
 
   const monthStart = new Date();
   monthStart.setUTCDate(1);
@@ -53,7 +37,7 @@ export async function GET() {
     monthStart.getUTCMonth() + 1,
   ).padStart(2, "0")}`;
 
-  const admin = createAdminClient();
+  const admin = ctx.db;
   const { data: rows, error } = await admin
     .from("npc_conversations")
     .select("npc_id, user_id, tokens_in, tokens_out")

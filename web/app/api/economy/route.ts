@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
   });
 }
 
-// POST /api/economy — purchase item or admin award
+// POST /api/economy — purchase item (the admin Gem award is /api/economy/admin/award)
 const PurchaseSchema = z.object({
   action: z.literal("purchase"),
   item_id: z.string().uuid(),
@@ -67,14 +67,7 @@ const PurchaseAvatarSchema = z.object({
   item_id: z.string().uuid(),
 });
 
-const AwardSchema = z.object({
-  action: z.literal("award"),
-  user_id: z.string().uuid(),
-  amount: z.number().int().min(1).max(100000),
-  description: z.string().max(200).optional(),
-});
-
-const ActionSchema = z.discriminatedUnion("action", [PurchaseSchema, PurchaseAvatarSchema, AwardSchema]);
+const ActionSchema = z.discriminatedUnion("action", [PurchaseSchema, PurchaseAvatarSchema]);
 
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -107,10 +100,6 @@ export async function POST(request: Request) {
 
   if (parsed.data.action === "purchase_avatar") {
     return handleAvatarPurchase(supabase, user.id, parsed.data);
-  }
-
-  if (parsed.data.action === "award") {
-    return handleAward(supabase, user.id, parsed.data);
   }
 
   return NextResponse.json({ error: "Unknown action" }, { status: 400 });
@@ -239,45 +228,5 @@ async function handleAvatarPurchase(
     item_name: item.name,
     item_id: data.item_id,
     total_cost: cost,
-  });
-}
-
-async function handleAward(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  callerId: string,
-  data: z.infer<typeof AwardSchema>
-) {
-  // Only T1-T2 can award coins
-  const { data: callerProfile } = await supabase
-    .from("profiles")
-    .select("tier")
-    .eq("id", callerId)
-    .single();
-
-  if (!callerProfile || callerProfile.tier > 2) {
-    return NextResponse.json({ error: "Forbidden — T1-T2 only" }, { status: 403 });
-  }
-
-  const { data: targetProfile } = await supabase
-    .from("profiles")
-    .select("id")
-    .eq("id", data.user_id)
-    .single();
-
-  if (!targetProfile) {
-    return NextResponse.json({ error: "Target user not found" }, { status: 404 });
-  }
-
-  // Another member's Gems: service role, after the tier check.
-  const credited = await applyGems(data.user_id, data.amount, "earn_admin", data.description ?? `Admin award by ${callerId}`, `award:${crypto.randomUUID()}`);
-  if ("error" in credited) {
-    return NextResponse.json({ error: "Failed to award" }, { status: 500 });
-  }
-
-  return NextResponse.json({
-    success: true,
-    user: data.user_id,
-    awarded: data.amount,
-    new_balance: credited.balance,
   });
 }
