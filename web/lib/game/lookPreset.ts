@@ -243,6 +243,12 @@ const SUN_DISTANCE = 32;
  * horizon (34.4° down, 48° FOV), so from 12° the sunset glitter lane stays in view.
  */
 export const MIN_SUN_ELEVATION = 12;
+/**
+ * Extra sky fill while the real sun is ahead of the camera (row 253): the fronts the camera sees are then lit
+ * by fill alone, so fill rises by up to this share (sun straight ahead), scaled by how far ahead it is.
+ * Nothing changes with the sun behind or beside the camera, or for the fixed night moon.
+ */
+export const BACKLIT_FILL = 0.35;
 /** Tallest caster the key light's shadow box holds (world units; the clubhouse and its flag are 4.8). */
 const CASTER_HEIGHT = 6;
 
@@ -293,12 +299,15 @@ export function lookToLight(p: LookPreset, base: PhaseBase, phase: IslandPhase =
   const sun = tint(light.sunColor, m.sun), top = tint(sky.top, m.skyTop), horizon = tint(sky.horizon, m.skyHorizon);
   const fill = tint(light.fillSky, m.fill), bounce = tint(light.fillGround, m.bounce);
   const rim = light.rimIntensity + m.rim;
+  // Camera forward is +z (west): the sun's share of its horizontal direction along +z is how backlit the view is.
+  const ahead = solar ? Math.max(0, sunPosition[2] / (Math.hypot(sunPosition[0], sunPosition[2]) || 1)) : 0;
+  const fillIntensity = m.fillIntensity * (1 + BACKLIT_FILL * ahead);
   return {
     ...base,
     sky: horizon, sun, sunIntensity: light.sunIntensity * m.sunIntensity, sunPosition,
-    fill, bounce, ambient: light.ambient * m.fillIntensity, hemisphere: light.hemisphere * m.fillIntensity,
+    fill, bounce, ambient: light.ambient * fillIntensity, hemisphere: light.hemisphere * fillIntensity,
     fogNear: sky.fogNear * m.fog, fogFar: sky.fogFar * m.fog, fogColor: tint(sky.fog, m.skyHorizon),
-    environment: { skyTop: top, skyBottom: horizon, sun, ground: bounce, intensity: light.envIntensity * m.fillIntensity, sunElev: elev / 90, sunAzimuth: azimuth },
+    environment: { skyTop: top, skyBottom: horizon, sun, ground: bounce, intensity: light.envIntensity * fillIntensity, sunElev: elev / 90, sunAzimuth: azimuth },
     grade: { ...p.grade, exposure: p.grade.exposure * m.exposure, warmth: p.grade.warmth + m.warmth, lift: p.grade.lift + m.lift, desat: p.grade.desat + m.desat },
     water: waterLook(base.water, p.materials.water),
     shadow: { radius: p.shadows.radius * m.shadowRadius, intensity: p.shadows.intensity * m.shadowIntensity, tint: p.shadows.tint },

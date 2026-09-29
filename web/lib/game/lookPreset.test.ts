@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { Color, ShaderChunk, ShaderLib, Vector3 } from "three";
 import { ISLAND_LIGHTING, islandLight, withSeason, withWeather, type IslandLight } from "./islandLighting";
-import { CURRENT, LOOK_LIGHTS_CHUNK, LOOK_PRESETS, LOOK_REFLECT_EDITS, MATERIAL_CLASSES, MIN_SUN_ELEVATION, PHASE_LOOK, keyFill, shadowHalfHeight, kelvinHex, lookFx, lookRoughness, parseLook, sunAngles, sunFromAngles, sunFromCamera } from "./lookPreset";
+import { BACKLIT_FILL, CURRENT, LOOK_LIGHTS_CHUNK, LOOK_PRESETS, LOOK_REFLECT_EDITS, MATERIAL_CLASSES, MIN_SUN_ELEVATION, PHASE_LOOK, keyFill, shadowHalfHeight, kelvinHex, lookFx, lookRoughness, parseLook, sunAngles, sunFromAngles, sunFromCamera } from "./lookPreset";
 import { solarPosition } from "./sunPath";
 import { seasonLook } from "./seasonalLook";
 import { parseSeasonOverride } from "./season";
@@ -105,6 +105,15 @@ describe("preset → renderer mapping", () => {
 });
 
 describe("the real sun (row 239, §8)", () => {
+  it("lifts the fill while the sun is ahead of the camera, never when it is behind (row 253)", () => {
+    const at = (iso: string) => islandLight(CURRENT, "day", solarPosition(new Date(iso)));
+    const morning = at("2026-09-27T10:00:00-04:00"), afternoon = at("2026-09-27T17:00:00-04:00");
+    const base = islandLight(CURRENT, "day");
+    expect(morning.hemisphere).toBeCloseTo(base.hemisphere, 6);
+    expect(afternoon.hemisphere).toBeGreaterThan(base.hemisphere * 1.2);
+    expect(afternoon.hemisphere).toBeLessThanOrEqual(base.hemisphere * (1 + BACKLIT_FILL) + 1e-9);
+    expect(afternoon.ambient / base.ambient).toBeCloseTo(afternoon.hemisphere / base.hemisphere, 6);
+  });
   const key = (iso: string, phase: IslandPhase = "day") => islandLight(CURRENT, phase, solarPosition(new Date(iso))).sunPosition;
   const angle = (a: readonly number[], b: readonly number[]) => {
     const dot = a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
