@@ -9,6 +9,7 @@ import Link from "next/link";
 import { Shield, ArrowLeft } from "lucide-react";
 import { useUser } from "@/components/portal/UserContext";
 import { createClient } from "@/lib/supabase/client";
+import NameReportsPanel from "@/components/portal/NameReportsPanel";
 
 const PAGE_SIZE = 20;
 const TABLE_OPTIONS = [
@@ -16,6 +17,9 @@ const TABLE_OPTIONS = [
   { value: "npc_personas", label: "npc_personas" },
   { value: "shop_items", label: "shop_items" },
   { value: "seasonal_palettes", label: "seasonal_palettes" },
+  { value: "quest_chapters", label: "quest_chapters" },
+  { value: "club_goals", label: "club_goals" },
+  { value: "crafting_recipes", label: "crafting_recipes" },
 ] as const;
 
 type TableFilter = (typeof TABLE_OPTIONS)[number]["value"];
@@ -24,6 +28,9 @@ const HISTORY_ROUTE: Record<string, string> = {
   npc_personas: "/student/dashboard/admin/content/npcs",
   shop_items: "/student/dashboard/admin/content/shop",
   seasonal_palettes: "/student/dashboard/admin/content/palettes",
+  quest_chapters: "/student/dashboard/admin/content/chapters",
+  club_goals: "/student/dashboard/admin/content/goals",
+  crafting_recipes: "/student/dashboard/admin/content/recipes",
 };
 
 interface VersionEntry {
@@ -246,6 +253,8 @@ export default function AdminContentLogPage() {
           All admin publish events across NPCs, shop, and palettes.
         </p>
       </div>
+
+      <NameReportsPanel />
 
       <div className="bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-lg p-4 mb-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
@@ -472,5 +481,6 @@ function rowDisplay(v: {
       ? (v.snapshot_data.display_name as string)
       : null;
   if (name) return name;
-  return v.row_id.slice(0, 8);
+  // uuid rows shorten; text-keyed rows (recipes) are their own name.
+  return /^[0-9a-f]{8}-/.test(v.row_id) ? v.row_id.slice(0, 8) : v.row_id;
 }

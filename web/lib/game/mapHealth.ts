@@ -1,0 +1,261 @@
+/**
+ * Map health: every check the village map must pass, in one place
+ * (specs/island-painter.md §9). `/lab/map` shows it live on every edit and
+ * `villageMap.test.ts` asserts it on the shipped file, so "healthy" in the
+ * panel means pasting the export keeps the suite green. Add a check here and
+ * both follow.
+ *
+ * Terrain checks cost real debugging once each (an unreachable terrace, a
+ * cliff with no piece, a one-cell wall, a face too tall for the kit). Village
+ * checks are what the game's systems need from a painted island: every
+ * landmark placed, on dry land, approachable and reachable from spawn;
+ * resident anchors with room for three; every study table placed; enough
+ * forage and bug spots; a fishable sea.
+ */
+import {
+  CLIFF_LEVELS, ORTHOGONAL, cliffPieceFor, inBounds, isGroundAtWorld, isRamp, isRiver, isVoid, levelAt,
+  needsCliff, rampDir, rampRun, surfaceAt, worldToCellX, worldToCellZ, type IslandMap,
+} from "./grid";
+import { LANDMARK_IDS, LANDMARK_INFO, bridgeDecks, islandOf, landmarks, propFootprint, wharfDeck, type LandmarkId } from "./defaultIsland";
+import { CAST_REACH, WATER_CLASS, classifyWater, fishingSpot, waterClassifier } from "./fishingSpots";
+import { villageNodes, villageBottleSpot } from "./islandNodes";
+import { OBJECT_KINDS, objectsOf, villageSpawnPoint, type MapObject, type Village } from "./villageMap";
+import { RESIDENT_ANCHORS, SHARED_SPACING, type ResidentAnchor } from "@/lib/content/residents";
+import { FURNITURE, seatsOf, studySolid, type Furniture } from "@/lib/study/seats";
+import { DEFAULT_TABLES } from "@/lib/study/tables";
+
+export interface TerrainHealth {
+  reachable: number;
+  walkable: number;
+  stranded: number;
+  cliffCells: number;
+  missingPiece: number;
+  thinWalls: number;
+  orphanRamps: number;
+  tooTall: number;
+  /** Land cells per level (water excluded). */
+  levels: Record<number, number>;
+  /** Land cells with an orthogonal neighbour exactly one level away: the blended half steps (at most 8% of land). */
+  halfSteps: number;
+  /** Reachable cells from the seed, as a mask (1 = reachable). */
+  reach: Uint8Array;
+}
+
+const walkAt = (map: IslandMap, x: number, z: number) =>
+  inBounds(map, x, z) && !isVoid(surfaceAt(map, x, z)) && !isRiver(surfaceAt(map, x, z));
+
+/** Terrain checks on any map. `seed` is the cell reachability starts from (default: the first level-0 land cell). */
+export function terrainHealth(map: IslandMap, seed?: [number, number] | null): TerrainHealth {
+  const W = map.width, D = map.depth;
+  let walkable = 0, cliffCells = 0, missingPiece = 0, thinWalls = 0, orphanRamps = 0, tooTall = 0, halfSteps = 0;
+  const levels: Record<number, number> = {};
+  let first: [number, number] | null = null;
+  for (let z = 0; z < D; z++) {
+    for (let x = 0; x < W; x++) {
+      if (!walkAt(map, x, z)) continue;
+      const l = levelAt(map, x, z);
+      levels[l] = (levels[l] ?? 0) + 1;
+      walkable++;
+      if (!first && l === 0) first = [x, z];
+      if (needsCliff(map, x, z)) {
+        cliffCells++;
+        if (!cliffPieceFor(map, x, z)) missingPiece++;
+      }
+      if (isRamp(surfaceAt(map, x, z)) && !rampDir(map, x, z)) orphanRamps++;
+      let half = false;
+      for (const [dx, dz] of ORTHOGONAL) {
+        if (!inBounds(map, x + dx, z + dz)) continue;
+        const ns = surfaceAt(map, x + dx, z + dz);
+        const nl = isVoid(ns) ? 0 : levelAt(map, x + dx, z + dz);
+        // The cliff kit is one piece tall and does not stack: a taller face renders as a hole.
+        if (Math.abs(l - nl) > CLIFF_LEVELS) tooTall++;
+        if (walkAt(map, x + dx, z + dz) && Math.abs(l - nl) === 1) half = true;
+      }
+      if (half) halfSteps++;
+      // A cell a full cliff above the ground on both sides of an axis is a wall you cannot stand on.
+      // (A one-cell half-step ridge is a walkable bump the blur rounds off.)
+      const lower = (dx: number, dz: number) => walkAt(map, x + dx, z + dz) && levelAt(map, x + dx, z + dz) <= l - CLIFF_LEVELS;
+      if (l > 0 && ((lower(-1, 0) && lower(1, 0)) || (lower(0, -1) && lower(0, 1)))) thinWalls++;
+    }
+  }
+  // Only a ramp whose RUN resolves is a route (a broken one renders flat and climbs nothing).
+  const ramped = new Uint8Array(W * D);
+  for (let z = 0; z < D; z++) for (let x = 0; x < W; x++) if (isRamp(surfaceAt(map, x, z)) && rampRun(map, x, z)) ramped[z * W + x] = 1;
+  const reach = new Uint8Array(W * D);
+  let reachable = 0;
+  const start = seed && walkAt(map, seed[0], seed[1]) ? seed : first;
+  if (start) {
+    const stack: [number, number][] = [start];
+    while (stack.length) {
+      const [x, z] = stack.pop()!;
+      const i = z * W + x;
+      if (reach[i] || !walkAt(map, x, z)) continue;
+      reach[i] = 1;
+      reachable++;
+      for (const [dx, dz] of ORTHOGONAL) {
+        const nx = x + dx, nz = z + dz;
+        if (!walkAt(map, nx, nz)) continue;
+        const d = Math.abs(levelAt(map, nx, nz) - levelAt(map, x, z));
+        // A blended half step is walkable; a full cliff needs a working ramp.
+        if (d < CLIFF_LEVELS || ramped[nz * W + nx] || ramped[i]) stack.push([nx, nz]);
+      }
+    }
+  }
+  return { reachable, walkable, stranded: walkable - reachable, cliffCells, missingPiece, thinWalls, orphanRamps, tooTall, levels, halfSteps, reach };
+}
+
+/** Terrain problems as named counts; empty = healthy terrain. */
+export function terrainProblems(t: TerrainHealth): Record<string, number> {
+  const land = Math.max(1, t.walkable), max = Math.max(0, ...Object.keys(t.levels).map(Number));
+  const out: Record<string, number> = {
+    "stranded cells": t.stranded, "cliffs with no kit piece": t.missingPiece, "orphan ramps": t.orphanRamps,
+    "1-cell walls": t.thinWalls, "faces too tall": t.tooTall,
+    // Flat share (CLAUDE.md 1b): mostly flat, half steps rare, at most two cliffs up.
+    "flat ground under 70%": (t.levels[0] ?? 0) / land < 0.7 ? 1 : 0,
+    "half steps over 8% of land": t.halfSteps / land > 0.08 ? t.halfSteps : 0,
+    "levels above 4": max > CLIFF_LEVELS * 2 ? max : 0,
+  };
+  return Object.fromEntries(Object.entries(out).filter(([, n]) => n > 0));
+}
+
+export interface VillageHealth {
+  terrain: TerrainHealth;
+  /** Each failing check → what fails it (ids or counts). Empty = healthy. */
+  problems: Record<string, string[]>;
+  /** Overlapping footprints (buildings keep a 1-tile gap): shown, not failing. */
+  warnings: string[];
+}
+
+const probe = [[0, 0], [-0.2, 0], [0.2, 0], [0, -0.2], [0, 0.2]];
+const inRect = (x: number, z: number, r: { x0: number; x1: number; z0: number; z1: number }) => x >= r.x0 && x <= r.x1 && z >= r.z0 && z <= r.z1;
+
+/** Axis-aligned footprint of an object, for overlap warnings (null = a point). */
+export function footprintOf(o: MapObject): { x0: number; x1: number; z0: number; z1: number; building: boolean } | null {
+  if (o.kind === "landmark") {
+    const l = LANDMARK_INFO[o.id as LandmarkId]?.half;
+    return l ? { x0: o.x - l[0], x1: o.x + l[0], z0: o.z - l[1], z1: o.z + l[1], building: l[0] > 1 } : null;
+  }
+  if (o.kind === "tree") return { x0: o.x - 0.65, x1: o.x + 0.65, z0: o.z - 0.65, z1: o.z + 0.65, building: false };
+  const f = propFootprint(o);
+  if (!f) return null;
+  const c = Math.abs(Math.cos(o.yaw ?? 0)), s = Math.abs(Math.sin(o.yaw ?? 0));
+  const hx = f[0] * c + f[1] * s, hz = f[0] * s + f[1] * c;
+  return { x0: o.x - hx, x1: o.x + hx, z0: o.z - hz, z1: o.z + hz, building: false };
+}
+
+/** Every check on a village (its map and objects). */
+export function villageHealth(v: Village): VillageHealth {
+  const { map } = v;
+  const island = islandOf(v);
+  const [sx, sz] = villageSpawnPoint(v);
+  const terrain = terrainHealth(map, [worldToCellX(map, sx), worldToCellZ(map, sz)]);
+  const problems: Record<string, string[]> = {};
+  const add = (check: string, what: string) => (problems[check] ??= []).push(what);
+  for (const [check, n] of Object.entries(terrainProblems(terrain))) add(check, String(n));
+  const reached = (x: number, z: number) => {
+    const cx = worldToCellX(map, x), cz = worldToCellZ(map, z);
+    return inBounds(map, cx, cz) && terrain.reach[cz * map.width + cx] === 1;
+  };
+  const deck = wharfDeck(v);
+  const onDeck = (x: number, z: number) => !!deck && inRect(x, z, deck);
+
+  // Ids: unique within a kind, known kinds only.
+  const seen = new Set<string>();
+  for (const o of v.objects) {
+    const key = `${o.kind}:${o.id}`;
+    if (seen.has(key)) add("duplicate ids", key);
+    seen.add(key);
+    if (!OBJECT_KINDS.includes(o.kind)) add("unknown kinds", key);
+  }
+
+  if (!island.standable(sx, sz)) add("spawn not on open ground", `${sx},${sz}`);
+
+  // Landmarks (row 155: every landmark exists from day one).
+  const placed = landmarks(v);
+  for (const id of LANDMARK_IDS) if (!placed.some(l => l.id === id)) add("landmarks missing", id);
+  for (const l of placed) {
+    if (l.id === "pond") { if (isGroundAtWorld(map, l.x, l.z)) add("pond not on water", l.id); continue; }
+    if (l.id === "wharf") continue;
+    const h = l.half ?? [0, 0];
+    const dry = [[0, 0], [-1, -1], [1, -1], [-1, 1], [1, 1]].every(([a, b]) => isGroundAtWorld(map, l.x + a * h[0] * 0.95, l.z + b * h[1] * 0.95));
+    if (!dry) add("landmarks not on dry land", l.id);
+    if (!l.half) continue;
+    const frontZ = l.z - h[1] - 0.6;
+    const approach = [[l.x, frontZ], [l.x + 0.8, frontZ], [l.x - 0.8, frontZ]].find(([x, z]) => island.standable(x, z));
+    if (!approach) add("landmarks with no approach", l.id);
+    else if (!reached(approach[0], approach[1])) add("landmarks not reachable from spawn", l.id);
+  }
+  if (deck) {
+    const mid: [number, number] = [(deck.x0 + deck.x1) / 2, (deck.z0 + deck.z1) / 2];
+    if (!island.standable(...mid)) add("wharf deck not walkable", "wharf");
+    if (![[deck.x0, deck.z0], [deck.x1, deck.z0], [deck.x0, deck.z1], [deck.x1, deck.z1]].some(([x, z]) => !isGroundAtWorld(map, x, z))) add("wharf not over water", "wharf");
+  }
+  // Bridges: walk the deck end to end.
+  for (const [i, d] of bridgeDecks(v).entries()) {
+    const alongX = d.x1 - d.x0 >= d.z1 - d.z0, cx = (d.x0 + d.x1) / 2, cz = (d.z0 + d.z1) / 2;
+    const [a, b]: [number, number][] = alongX ? [[d.x0 - 0.8, cz], [d.x1 + 0.8, cz]] : [[cx, d.z0 - 0.8], [cx, d.z1 + 0.8]];
+    const end = island.move(a[0], a[1], b[0], b[1]);
+    if (!island.standable(...a) || Math.hypot(end[0] - b[0], end[1] - b[1]) > 0.2) add("bridges not crossable", objectsOf("bridge", v)[i].id);
+  }
+
+  // Everything that stands on the ground.
+  const grounded = new Set(["spawn", "fitting", "missions", "lamp", "fence", "bench", "rock", "tree", "bush", "flower", "study", "anchor", "gather", "puddle", "bug", "shell", "bottle"]);
+  const landCell = (x: number, z: number) => walkAt(map, worldToCellX(map, x), worldToCellZ(map, z));
+  for (const o of v.objects) if (grounded.has(o.kind) && !landCell(o.x, o.z) && !onDeck(o.x, o.z)) add("objects off land", `${o.kind}:${o.id}`);
+
+  // Resident anchors: open ground for three residents side by side.
+  for (const key of Object.keys(RESIDENT_ANCHORS) as ResidentAnchor[]) {
+    const a = objectsOf("anchor", v).find(o => o.id === key);
+    if (!a) { add("resident anchors missing", key); continue; }
+    for (let k = 0; k < 3; k++) if (!probe.every(([dx, dz]) => island.standable(a.x + k * SHARED_SPACING + dx, a.z + dz))) { add("resident anchors without room for 3", key); break; }
+  }
+  if (!objectsOf("gather", v).length) add("no ceremony gather spots", "gather");
+
+  // Study tables: every backend outdoor table placed, with its seat count, seats clear and apart.
+  const village = DEFAULT_TABLES.filter(t => t.location !== "cafe");
+  for (const t of village) {
+    const o = objectsOf("study", v).find(s => s.id === t.anchor);
+    if (!o) { add("study tables missing", t.anchor); continue; }
+    if (!o.model || !(o.model in FURNITURE) || FURNITURE[o.model as Furniture].seats.length !== t.seats) add("study tables with the wrong furniture", t.anchor);
+  }
+  const seats = objectsOf("study", v).flatMap(o => seatsOf(o.id, undefined, v));
+  for (const s of seats) if (studySolid("village", s.x, s.z, 0.2, v)) add("study seats blocked", `${s.anchor}#${s.seat}`);
+  for (const a of seats) for (const b of seats) if (a !== b && a.anchor < b.anchor && Math.hypot(a.x - b.x, a.z - b.z) <= 0.8) add("study seats too close", `${a.anchor}#${a.seat}`);
+
+  // Forage and bugs (peaceful loop): enough of each to play.
+  const { forage, bugs } = villageNodes(v);
+  const count = (pred: (n: (typeof forage)[number]) => boolean) => forage.filter(pred).length;
+  if (!count(n => n.categories.includes("fruit") && n.biomes.includes("trees"))) add("forage", "no fruit trees");
+  if (!count(n => n.biomes.includes("beach"))) add("forage", "no beach shells");
+  if (!count(n => n.categories.includes("mineral"))) add("forage", "no rocks or branches");
+  if (count(n => n.drop?.key === "wood_branch") <= 4) add("forage", "5+ trees needed for branches");
+  if (bugs.length < 12) add("forage", `12+ bug spots needed (${bugs.length})`);
+  const bottles = new Set(["2026-09-24", "2026-09-25", "2026-09-26", "2026-09-27"].map(d => String(villageBottleSpot(d, v))));
+  if (objectsOf("bottle", v).filter(o => isGroundAtWorld(map, o.x, o.z)).length < 2 || bottles.size < 2) add("forage", "2+ bottle spots needed on the beach");
+
+  // Fishing: the sea is fishable from the shore, and every water body there is.
+  const classes = classifyWater(map), classify = waterClassifier(map, classes);
+  const present = new Set<number>(classes);
+  const fished = new Set<string>();
+  let spots = 0;
+  for (let cz = 0; cz < map.depth; cz++) for (let cx = 0; cx < map.width; cx++) {
+    if (classes[cz * map.width + cx] !== WATER_CLASS.land) continue;
+    const x = map.originX + cx, z = map.originZ + cz;
+    if (!island.standable(x, z) || !reached(x, z)) continue;
+    const s = fishingSpot(map, classify, x, z);
+    if (s) { spots++; fished.add(s.water); }
+  }
+  if (!present.has(WATER_CLASS.sea) || !fished.has("sea")) add("fishing", "no sea to fish from the shore");
+  if (present.has(WATER_CLASS.river) && !fished.has("river")) add("fishing", "river not fishable");
+  if (present.has(WATER_CLASS.pond) && !fished.has("pond")) add("fishing", "pond not fishable");
+  if (spots < 60) add("fishing", `60+ shore spots needed (${spots}, reach ${CAST_REACH})`);
+
+  // Overlaps: warnings only.
+  const warnings: string[] = [];
+  const boxes = v.objects.flatMap(o => { const f = footprintOf(o); return f ? [{ o, f }] : []; });
+  for (let i = 0; i < boxes.length; i++) for (let j = i + 1; j < boxes.length; j++) {
+    const a = boxes[i], b = boxes[j], gap = a.f.building && b.f.building ? 1 : 0;
+    if (a.f.x0 < b.f.x1 + gap && b.f.x0 < a.f.x1 + gap && a.f.z0 < b.f.z1 + gap && b.f.z0 < a.f.z1 + gap) warnings.push(`${a.o.id} overlaps ${b.o.id}${gap ? " (buildings keep a 1-tile gap)" : ""}`);
+  }
+  return { terrain, problems, warnings };
+}

@@ -1,27 +1,16 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { adminContext } from "@/lib/server/adminContext";
 
-// GET — fetch a single draft by id. RLS restricts visibility (author or T1/T2 admin).
+// GET — fetch a single draft by id (T1/T2).
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
-  }
+  const ctx = await adminContext();
+  if (ctx instanceof NextResponse) return ctx;
 
   const { id } = await params;
-
-  const { data, error } = await supabase
-    .from("content_drafts")
-    .select("*")
-    .eq("id", id)
-    .single();
+  const { data, error } = await ctx.db.from("content_drafts").select("*").eq("id", id).maybeSingle();
 
   if (error || !data) {
     return NextResponse.json(

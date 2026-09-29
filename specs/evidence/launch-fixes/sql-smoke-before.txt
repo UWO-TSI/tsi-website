@@ -1,0 +1,7 @@
+ERROR:  unreleased verdict is not hired
+ERROR:  inactive code sign-up is public T5
+ERROR:  function admin_set_membership(unknown, unknown, unknown) does not exist
+ERROR:  current transaction is aborted, commands ignored until end of transaction block
+ERROR:  current transaction is aborted, commands ignored until end of transaction block
+ERROR:  current transaction is aborted, commands ignored until end of transaction block
+ERROR:  un-RSVP left the row

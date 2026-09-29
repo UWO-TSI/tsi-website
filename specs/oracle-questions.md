@@ -1,200 +1,36 @@
-# Oracle Temple — MBTI Quiz Question Bank
+# Oracle/identity: open questions for David
 
-> **Owner:** UXUI · **Date:** 2026-03-30
-> **Spec:** `specs/ux-oracle.md`
-> **Format:** 12 questions, 2–4 answer cards each, click the most accurate
-> **Scoring:** 3 questions per MBTI dichotomy (E/I, S/N, T/F, J/P). Majority wins each axis → 4-letter type → class + subclass.
 
----
+## 2026-09-24 (systems agent, deliverables 1–3)
 
-## Scoring Key
+1. **Answer scale.** 64 original agree/disagree statements (16 per dichotomy, half keyed each way) on a 5-point scale, plus 16 forced-choice tie-breakers that are served only when a dichotomy sums to exactly 0. If those also tie, the single strongest answer decides; failing that, I/N/F/P is used and the result is marked low-clarity. *Assumed.* All wording is authored for Tethos, not adapted from any published instrument. Please read the bank before launch (`web/lib/oracle/items.ts`).
+2. **Respec terms (row 20).** The first reading is free. Each later reading costs 250 coins and waits 7 days after the last result. An open reading always resumes; there's no free reroll. You're charged even if the result is the same family. Earlier auras stay unlocked. *Assumed;* the numbers are placeholders.
+3. **`profiles.class` now holds the family** (Arcane/Ranger/Vanguard/Warden) so chapter 4's "Oracle done" check keeps working. The legacy 12-question `/api/oracle/quiz` and `/api/oracle/result` (old 9-class map) are untouched. Should they be retired once the island's new quiz sheet ships?
+4. **Name rules.**
+   - 3–16 characters: letters (any script), digits, and single spaces, dashes, dots, apostrophes or underscores between them.
+   - Unique by a normalised key, so case, separators and digit look-alikes (0→o, 1→i, 3→e…) all collapse to one name.
+   - Reserved words (admin, tsi, oracle, keeper…) are refused.
+   - The first name is free; after that, one change per 30 days.
+   - A T1/T2 reset gives the placeholder "Islander xxxxxx" and skips the limit.
+   - The filter also catches profanity hidden inside joined-up names (e.g. "sh1thead"), at the cost of the occasional false positive (the "Scunthorpe" problem).
 
-Each answer maps to one side of a dichotomy. After 12 questions, tally each axis:
-- **E/I** (Extraversion vs Introversion) — Questions 1, 2, 3
-- **S/N** (Sensing vs iNtuition) — Questions 4, 5, 6
-- **T/F** (Thinking vs Feeling) — Questions 7, 8, 9
-- **J/P** (Judging vs Perceiving) — Questions 10, 11, 12
+   OK?
+5. **Membership flag.** There was no way to tell TSI members from public accounts, so 034 adds `profiles.membership` ('member' | 'public', default 'member' so existing profiles keep the badge). The public sign-up path needs to set 'public'. The badge is 'member' when membership = member and the account is active; alumni keep it. Which path creates public accounts?
+6. **Mute (row 221).** A T1/T2 mute lasts 7 days and blocks letters/notes and table chat, checked in those routes. There is no admin UI yet, only `POST /api/identity/moderate`. Reports land in `identity_reports`. Should they also appear in the content activity log?
+7. **Menu key remap.** Covers journal, bag, map, wallet, mailbox, next/previous tab and confirm. Escape always closes a sheet. WASD, the arrow keys, Space, Tab and Shift belong to the game's own remap (row 49) and can't be used for menu actions.
 
----
+## 2026-09-24 (island agent, deliverables 4–7)
 
-## Questions
+8. **The collection bag moves from B to I.** The island now reads menu keys from the account settings, and `DEFAULT_KEYS.openBag` is "i", so the bag no longer opens on B. Should the default be "b" to match what players already know? (Systems owns `lib/identity/settings.ts`.) The wallet key has no island sheet yet, and Confirm is left to the focused button.
+9. **Sigils are placeholder art.** The four family sigils are drawn in code: a ring plus a star, compass needle, spark or leaf. Do you have sigil art, or should I generate a set?
+10. **The aura is shown everywhere, all the time.** Once you have a family, a few motes in the family colour follow you on the island and inside buildings. Should there be a toggle to turn it off? Senior members may want one (design principle 7).
+11. **Only the island's own sheets scale with text size.** That includes the minimap, prompts, controls, wardrobe, and the Oracle, settings and museum sheets. The progression and collection sheets have their own styles and stay at 100%. Should I extend it to them?
+12. **The legacy temple quiz.** GameWorld's OracleInterior still opens the old 12-question sheet. The island uses the new reading. Retire the old one along with the routes (see question 3)?
 
-### Q1 — E/I (Extraversion vs Introversion)
-
-**"When you join a new team or club, you tend to..."**
-
-| Card | Text | Scores |
-|------|------|--------|
-| A | Jump in, introduce yourself, and start talking to everyone | **E** |
-| B | Observe first, then connect with one or two people you click with | **I** |
-| C | Look for a role or task to do — you connect through work | **I** |
-| D | Bring energy to the room and rally people around an idea | **E** |
-
----
-
-### Q2 — E/I
-
-**"After a long day of meetings and collaboration, you recharge by..."**
-
-| Card | Text | Scores |
-|------|------|--------|
-| A | Going out with friends — more people, more energy | **E** |
-| B | Spending time alone with music, a book, or a personal project | **I** |
-
----
-
-### Q3 — E/I
-
-**"In a brainstorm session, your natural role is..."**
-
-| Card | Text | Scores |
-|------|------|--------|
-| A | Throwing out ideas quickly and building on others' suggestions out loud | **E** |
-| B | Listening carefully, then offering one well-thought-out idea | **I** |
-| C | Facilitating — making sure everyone's voice is heard | **E** |
-| D | Sketching or writing notes quietly, then sharing a synthesis | **I** |
-
----
-
-### Q4 — S/N (Sensing vs iNtuition)
-
-**"When learning a new technology or framework, you prefer to..."**
-
-| Card | Text | Scores |
-|------|------|--------|
-| A | Follow the official tutorial step by step, building something concrete | **S** |
-| B | Skim the docs to understand the big picture, then experiment | **N** |
-| C | Look at real-world examples and replicate what works | **S** |
-| D | Imagine what you could build with it, then learn what you need as you go | **N** |
-
----
-
-### Q5 — S/N
-
-**"When planning a project, you focus first on..."**
-
-| Card | Text | Scores |
-|------|------|--------|
-| A | What's been done before that works — proven patterns and templates | **S** |
-| B | What's possible — new approaches nobody has tried yet | **N** |
-
----
-
-### Q6 — S/N
-
-**"A teammate says 'this feature is 80% done.' You think..."**
-
-| Card | Text | Scores |
-|------|------|--------|
-| A | What specific tasks are left? Show me the checklist. | **S** |
-| B | Is the remaining 20% the critical part that makes it actually good? | **N** |
-| C | Let me test what's built so far — I trust what I can see | **S** |
-| D | What could we add to make it 10× better instead of just finishing it? | **N** |
-
----
-
-### Q7 — T/F (Thinking vs Feeling)
-
-**"Two teammates disagree on a technical approach. You..."**
-
-| Card | Text | Scores |
-|------|------|--------|
-| A | Evaluate both options on merit — data, performance, maintainability | **T** |
-| B | Consider how each person feels about their approach and find a compromise | **F** |
-| C | Pick the one that ships faster — efficiency matters most | **T** |
-| D | Make sure neither person feels dismissed, even if one approach is clearly better | **F** |
-
----
-
-### Q8 — T/F
-
-**"When giving feedback on someone's work, you prioritize..."**
-
-| Card | Text | Scores |
-|------|------|--------|
-| A | Being direct and specific — they need to know exactly what to fix | **T** |
-| B | Being encouraging first, then gently suggesting improvements | **F** |
-
----
-
-### Q9 — T/F
-
-**"A nonprofit client requests a feature that's technically simple but you think is a bad UX decision. You..."**
-
-| Card | Text | Scores |
-|------|------|--------|
-| A | Present the data and logic for why it's bad UX — let the evidence decide | **T** |
-| B | Understand why they want it — there might be user needs you're missing | **F** |
-| C | Build both options and A/B test — remove opinions from the equation | **T** |
-| D | Find a middle ground that respects their vision while improving the experience | **F** |
-
----
-
-### Q10 — J/P (Judging vs Perceiving)
-
-**"Your ideal project workflow looks like..."**
-
-| Card | Text | Scores |
-|------|------|--------|
-| A | Clear milestones, deadlines, and a structured plan from day one | **J** |
-| B | A rough direction, then adapt as you learn and discover | **P** |
-| C | Sprints with defined goals, but flexibility within each sprint | **J** |
-| D | Work on whatever feels most important right now — plans change anyway | **P** |
-
----
-
-### Q11 — J/P
-
-**"It's Friday and your weekend is free. You..."**
-
-| Card | Text | Scores |
-|------|------|--------|
-| A | Already have plans — you like knowing what's happening | **J** |
-| B | Keep it open — the best weekends are spontaneous | **P** |
-
----
-
-### Q12 — J/P
-
-**"A deadline just moved up by a week. Your reaction..."**
-
-| Card | Text | Scores |
-|------|------|--------|
-| A | Immediately restructure the plan — reprioritize tasks, cut scope, notify the team | **J** |
-| B | Stay calm — you work well under pressure and figure it out as you go | **P** |
-| C | Check what's already done and make a checklist of what absolutely must ship | **J** |
-| D | Get excited — constraints force creativity and the best work happens fast | **P** |
-
----
-
-## Class Mapping (from ux-oracle.md)
-
-| MBTI | Class | Subclass |
-|------|-------|----------|
-| ENTJ | Warrior | Tactical Commander |
-| ESTJ | Warrior | Iron Marshal |
-| ESTP | Warrior | Vanguard Striker |
-| ENTP | Warrior | Battle Strategist |
-| INTJ | Mage | Arcane Architect |
-| INTP | Mage | Lore Seeker |
-| INFJ | Mage | Oracle Sage |
-| INFP | Mage | Dream Weaver |
-| ENFJ | Healer | Beacon Guide |
-| ENFP | Healer | Spirit Catalyst |
-| ESFJ | Healer | Shield Warden |
-| ISFJ | Healer | Sanctuary Keeper |
-| ISTP | Rogue | Shadow Tinker |
-| ISFP | Rogue | Wandering Artisan |
-| ISTJ | Rogue | Silent Sentinel |
-| ESFP | Rogue | Blaze Performer |
-
----
-
-## Implementation Notes for Frontend
-
-- Questions should be shuffled order per session (but keep the axis grouping — shuffle within each group of 3)
-- Answer cards should also be shuffled order per question (avoid pattern bias)
-- Store answers as an array: `[{question: 1, answer: "A", axis: "EI", value: "E"}, ...]`
-- After 12 answers: count E vs I, S vs N, T vs F, J vs P → 4-letter type
-- Tie-breaker: if 1.5 vs 1.5 on any axis (rare with 3 questions), default to the first letter (E, S, T, J)
-- Save result to `profile.class` and `profile.subclass` via PATCH `/api/profile`
+### Resolved 2026-09-26 (coordinator)
+- Q2: respec terms stand (250 coins, 7-day cooldown, charged even if the family is unchanged).
+- Q5: public vs member is set in the profile-creation path. 034 replaces `handle_new_user()` (003's trigger, same name). A sign-in is a member when its email is in the new T1/T2-managed `member_email_whitelist` or it signed up with an active invite code; otherwise it's `public`. Existing profiles are grandfathered as members. Members can't change their own `membership`, `class` or `subclass` (column-level revoke). Smoke-tested in `034_smoke.sql`.
+- Q3: the legacy quizzes are retired. `/api/oracle/quiz` and `/api/oracle/result` are deleted, and `/student/dashboard/oracle` (also the OverlaySheet target) now runs the 64-item reading on `/api/oracle/*` (`components/oracle/OracleReading.tsx`). 034 migrates old `profiles.class` values from both legacy vocabularies (the 9-class API map and the dashboard's Warrior/Mage/Healer/Rogue) by subclass → type → family, and unlocks that aura. Class names alone are ambiguous (ORACLE = INTP or INFJ, COMMANDER = ENTJ or ENFJ), so rows with no known subclass are cleared and get a free new reading. Migrated members may also take the full reading once for free, since the old 12/16-question result wasn't a full reading. Smoke-tested in `034_legacy_smoke.sql`.
+- Q6: name reports now appear in the admin Content Activity Log (`NameReportsPanel`), with Reset name / Mute 7d / Dismiss. Any action closes that member's open reports.
+- Q1: David will read the bank before launch.
+- Default journal/collection key is **B** (`lib/identity/settings.ts`), matching the island.

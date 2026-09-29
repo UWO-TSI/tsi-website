@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, ExternalLink } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import type { EmoteType } from "@/lib/game/contentTypes";
+import type { EmoteType } from "@/lib/content/types";
 import ImageUploadButton from "@/components/portal/ImageUploadButton";
 
 // ─── EmoteEditor (sprint E8) ────────────────────────────────────────────────

@@ -5,7 +5,7 @@ import { Shield } from "lucide-react";
 import { useUser } from "@/components/portal/UserContext";
 import { createClient } from "@/lib/supabase/client";
 import EmoteEditor from "@/components/portal/EmoteEditor";
-import type { EmoteType } from "@/lib/game/contentTypes";
+import type { EmoteType } from "@/lib/content/types";
 
 export default function EditEmotePage({
   params,

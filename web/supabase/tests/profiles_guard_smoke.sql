@@ -15,6 +15,8 @@ INSERT INTO auth.users (id, email) VALUES
   ('00000000-0000-4000-8000-00000000000c', 'c@example.test');
 -- handle_new_user created the profiles; the SQL editor (postgres) can still promote.
 UPDATE profiles SET tier = 1 WHERE id = '00000000-0000-4000-8000-00000000000c';
+-- From 20260926200000 a plain sign-up is a public T5 account; A and B are members.
+UPDATE profiles SET tier = 4 WHERE id IN ('00000000-0000-4000-8000-00000000000a', '00000000-0000-4000-8000-00000000000b');
 INSERT INTO npc_personas (slug, display_name, spawn_zone, active) VALUES ('hidden', 'Hidden', 'shop', false);
 DO $$ BEGIN
   ASSERT (SELECT tier FROM profiles WHERE id = '00000000-0000-4000-8000-00000000000c') = 1;
@@ -37,7 +39,8 @@ BEGIN
     'is_alumni = true', 'has_voted = true', 'login_streak = 99', 'login_count = 99',
     'email = ''x@evil.test''', 'uwo_email = ''x@evil.test''', 'gdrive_email = ''x@evil.test''',
     'id = ''00000000-0000-4000-8000-00000000000b''', 'created_at = now() - interval ''1 year''',
-    'last_login_at = now()', 'first_seen_at = now()', 'portfolio = ''x''', 'side = ''x'''
+    'last_login_at = now()', 'first_seen_at = now()', 'portfolio = ''x''', 'side = ''x''',
+    'avatar_config = ''{"hair":"a"}'''
   ] LOOP
     BEGIN
       EXECUTE 'UPDATE profiles SET ' || col || ' WHERE id = auth.uid()';
@@ -59,8 +62,8 @@ BEGIN
     birthday = '2004-01-01', phone = '555', preferred_email = 'm@example.test',
     github_username = 'maya', instagram = 'maya', linkedin = 'maya', discord_tag = 'maya',
     favourite_music = 'x', dream_retirement = 'x', spirit_animal = 'x', fun_fact = 'x',
-    avatar_url = 'x', avatar_config = '{"hair":"a"}', skills = '{go}', social_links = '{"github":"maya"}',
-    active_theme = 'light', preferences = '{"sfx":0.2}', class = 'Mage', subclass = 'INTJ',
+    avatar_url = 'x', skills = '{go}', social_links = '{"github":"maya"}',
+    active_theme = 'light', preferences = '{"sfx":0.2}',
     onboarding_step = 4, onboarding_completed = true, last_seen_at = now(), updated_at = now()
   WHERE id = auth.uid();
   GET DIAGNOSTICS n = ROW_COUNT;
@@ -69,7 +72,7 @@ BEGIN
   UPDATE profiles SET tier = tier, tethos_coins = tethos_coins, display_name = 'Maya L' WHERE id = auth.uid();
   GET DIAGNOSTICS n = ROW_COUNT;
   ASSERT n = 1, 'FAIL: no-op write of privileged column refused';
-  RAISE NOTICE 'ok: all 28 editable columns update on own row';
+  RAISE NOTICE 'ok: all 25 editable columns update on own row (class/subclass server-only since 20260926151200, avatar_config since 20260926180000)';
 
   -- No self-insert (the INSERT policy is gone; handle_new_user creates rows).
   BEGIN

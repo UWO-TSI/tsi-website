@@ -12,36 +12,7 @@ export const MAX_MESSAGE_LEN = 500;
 export const MONTHLY_INTERACTION_CAP = 200;
 export const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-export const PROFANITY_BLOCKLIST = [
-  "fuck",
-  "shit",
-  "bitch",
-  "asshole",
-  "bastard",
-  "cunt",
-  "dick",
-  "pussy",
-  "slut",
-  "whore",
-  "fag",
-  "faggot",
-  "nigger",
-  "nigga",
-  "retard",
-  "tranny",
-  "kike",
-  "spic",
-  "chink",
-  "gook",
-] as const;
-
-export function containsProfanity(message: string): boolean {
-  const lowered = message.toLowerCase();
-  return PROFANITY_BLOCKLIST.some((bad) => {
-    const re = new RegExp(`\\b${bad}\\b`, "i");
-    return re.test(lowered);
-  });
-}
+export { containsProfanity } from "@/lib/moderation/profanity";
 
 export type MemoryState = {
   facts?: string[];

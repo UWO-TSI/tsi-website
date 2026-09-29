@@ -12,7 +12,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, ChevronDown, ChevronRight, RotateCcw } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
-type TableName = "npc_personas" | "shop_items" | "seasonal_palettes";
+type TableName = "npc_personas" | "shop_items" | "seasonal_palettes" | "quest_chapters" | "club_goals" | "crafting_recipes";
 
 interface VersionRow {
   id: string;
@@ -37,6 +37,9 @@ const EDITOR_ROUTE: Record<TableName, string> = {
   npc_personas: "/student/dashboard/admin/content/npcs",
   shop_items: "/student/dashboard/admin/content/shop",
   seasonal_palettes: "/student/dashboard/admin/content/palettes",
+  quest_chapters: "/student/dashboard/admin/content/chapters",
+  club_goals: "/student/dashboard/admin/content/goals",
+  crafting_recipes: "/student/dashboard/admin/content/recipes",
 };
 
 export default function VersionHistory({
@@ -334,6 +337,10 @@ function SnapshotView({
       <div className="space-y-2">
         <KV label="slug" value={String(data.slug ?? "—")} />
         <KV label="display_name" value={String(data.display_name ?? "—")} />
+        <KV label="post" value={String(data.post ?? "—")} />
+        <KV label="tone" value={String(data.tone ?? "—")} />
+        <KV label="schedule" value={JSON.stringify(data.schedule ?? {})} />
+        <KV label="bio" value={data.bio ? String(data.bio) : "—"} multiline />
         <KV label="spawn_zone" value={String(data.spawn_zone ?? "—")} />
         <KV label="is_permanent" value={String(data.is_permanent ?? false)} />
         <KV label="active" value={String(data.active ?? false)} />

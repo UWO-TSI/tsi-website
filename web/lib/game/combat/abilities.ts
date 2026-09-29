@@ -1,0 +1,424 @@
+/**
+ * The one ability system (combat content B): runs the kits in
+ * web/lib/combat/kits.ts for all sixteen subclasses. An ability is a list of
+ * shared effect primitives (projectile, area, dash, shield, heal, summon,
+ * buff, transform); every hit, from a weapon, an ability or a summon, goes
+ * through `strike`, where the passives read and write their few numbers.
+ * Summons, totems, traps and decoys are `rt.units`, capped per kind (row 50).
+ * Incantation abilities open the rune overlay; the world keeps running and a
+ * dodge cancels (rows 52, 53, C3). Pure over the runtime, no three.js.
+ */
+import { CAPS, FAMILY_STAT, UNITS, minionFor, resolveLoadout, TRAITS, traitTier, type Ability, type Effect, type Element, type Status, type Subclass } from "@/lib/combat/kits";
+import { derived, type Stat } from "@/lib/combat/progression";
+import { damage as ruleDamage, WEAPONS as SYSTEM_WEAPONS } from "@/lib/combat/weapons";
+import type { IncantationScore } from "./contract";
+import { ENEMIES } from "./data";
+import { advanceMission, type MissionEvent } from "./missions";
+import { angleDiff, BOSS, damageEnemy, facingTo, inArc, spawnEnemy, staggered, type Enemy, type Vec } from "./sim";
+import { SLOT_IDS, type Buff, type CombatRuntime, type ShotHit, type Unit } from "./runtime";
+
+/** Plan §Combat and incantation defaults: starting a drawing spends 25% of its energy, a fizzle or cancel costs a short recovery instead of the cooldown. */
+export const CAST = { start: 0.25, recovery: 1.5 } as const;
+export const DASH_SPEED = 18;
+/** Potency caps (plan): damage takes the full 0.5–1.5, shields and heals at most 1.2, control never more than 1. */
+const SUPPORT_CAP = 1.2, CONTROL_CAP = 1;
+const AIM_RANGE = 12, GUARD_CAP = 0.6, SHIELD_CAP = 0.6;
+const ELEMENTS: Element[] = ["fire", "frost", "lightning"];
+const COLOR = { fire: "#ff8a3d", frost: "#8fd8ff", lightning: "#ffe36e", Arcane: "#b48cff", Ranger: "#8fd0ff", Vanguard: "#ffd27a", Warden: "#8fe39a", heal: "#9dffb0", shield: "#bfe3ff" } as const;
+const dist = (a: Vec, b: Vec) => Math.hypot(a.x - b.x, a.z - b.z);
+
+export function floater(rt: CombatRuntime, at: Vec, y: number, text: string, kind: "hit" | "crit" | "hurt" | "info") {
+  rt.floaters.push({ id: rt.seq++, x: at.x, y, z: at.z, text, kind, age: 0 });
+  if (rt.floaters.length > 16) rt.floaters.shift();
+}
+export function missionEvent(rt: CombatRuntime, ev: MissionEvent) {
+  if (rt.mission) rt.mission = advanceMission(rt.mission, ev);
+}
+export function spend(rt: CombatRuntime, energy: number): boolean {
+  const p = rt.player;
+  if (p.energy < energy) return false;
+  p.energy -= energy; p.sinceSpend = 0;
+  return true;
+}
+
+// ── Kit ─────────────────────────────────────────────────────────
+/** Equip the member's kit and loadout (from /api/combat/progression). Units whose ability left the loadout are dismissed (row 50). */
+export function equipKit(rt: CombatRuntime, subclass: Subclass | null, loadout: string[] = [], traits: Record<string, number> = {}) {
+  const abilities = subclass ? resolveLoadout(subclass, loadout, traits) : [];
+  rt.kit = subclass ? { subclass, capacity: derived(rt.player.stats, rt.player.level, subclass.mods).summon_capacity, traits } : null;
+  rt.slots = SLOT_IDS.map((_, i) => abilities[i] ?? null);
+  const kept = new Set(abilities.map(a => a.key));
+  rt.units = rt.units.filter(u => u.source === "weapon" || kept.has(u.source));
+}
+const passiveOf = (rt: CombatRuntime) => rt.kit?.subclass.passive ?? null;
+export const buffSum = (rt: CombatRuntime, stat: Buff["stat"]) => rt.buffs.reduce((n, b) => n + (b.stat === stat && b.t > 0 ? b.value : 0), 0);
+export const critChance = (rt: CombatRuntime) => derived(rt.player.stats, rt.player.level).crit_chance + buffSum(rt, "crit");
+/** Speed multiplier: stats and kit (the Assassin), buffs, Monk momentum. */
+export function moveSpeed(rt: CombatRuntime): number {
+  const pv = passiveOf(rt);
+  return derived(rt.player.stats, rt.player.level, rt.kit?.subclass.mods).move_speed * (1 + buffSum(rt, "speed") + (pv?.kind === "momentum" ? pv.value * rt.passive.momentum : 0));
+}
+export const distracted = (rt: CombatRuntime, e: Enemy) => e.status.distract > 0 || e.status.hold > 0 || rt.units.some(u => u.def.kind === "decoy" && dist(u, e) < e.type.aggroRadius + 3);
+
+// ── Hits ────────────────────────────────────────────────────────
+export interface HitSrc { power: number; from: Vec; stat?: Stat; tier?: number; unit?: boolean; knock?: number; status?: Status }
+
+/** The passive's damage bonus for this hit (a fraction). */
+function passiveBonus(rt: CombatRuntime, e: Enemy, src: HitSrc): number {
+  const pv = passiveOf(rt), me = rt.player.last;
+  if (!pv) return 0;
+  if (src.unit) return pv.kind === "pack_bond" ? pv.value * Math.max(0, rt.units.filter(u => u.def.kind === "minion" && u.source !== "weapon").length - 1) : 0;
+  switch (pv.kind) {
+    case "distracted": return distracted(rt, e) ? pv.value : 0;
+    case "still": return rt.player.still >= 0.8 ? pv.value : 0;
+    case "same_target": return rt.passive.target === e.id ? pv.value * rt.passive.stacks : 0;
+    case "distance": return me ? pv.value * Math.min(1, dist(me, e) / (pv.cap ?? 12)) : 0;
+    default: return 0;
+  }
+}
+
+/** What a hit would deal: the systems damage rule on the equipped weapon (or a trait's tier), scaled by the ability's stat, buffs, passive, mark and stagger. */
+export function hitAmount(rt: CombatRuntime, e: Enemy, src: HitSrc, random: () => number = Math.random): { amount: number; crit: boolean } {
+  const p = rt.player, def = SYSTEM_WEAPONS.find(w => w.key === p.weapon)!;
+  const weapon = src.stat || src.tier ? { ...def, scaling: src.stat ? [src.stat] : def.scaling, tier: (src.tier ?? def.tier) as typeof def.tier } : def;
+  const crit = random() < critChance(rt);
+  const mult = src.power * (staggered(e) ? BOSS.staggerBonus : 1) * (1 + buffSum(rt, "damage") + passiveBonus(rt, e, src) + e.status.mark);
+  return { amount: ruleDamage({ weapon, durability: src.tier ? 1 : p.durability[p.weapon], stats: p.stats, level: p.level, enemyDefense: e.type.defense, enemyArmor: e.type.armor, crit, potency: mult }), crit };
+}
+
+/** One hit on an enemy from anything the player owns: damage, statuses, passives, kill bookkeeping. Returns the damage dealt. */
+export function strike(rt: CombatRuntime, e: Enemy, src: HitSrc, random: () => number = Math.random): number {
+  if (e.state === "dead" || e.state === "return") return 0;
+  const { amount, crit } = hitAmount(rt, e, src, random);
+  const held = e.status.hold > 0;
+  const killed = damageEnemy(e, amount, src.from, src.knock ?? 0);
+  if (e.flash === 0.18) floater(rt, e, 1.4 + e.type.hover, String(amount), crit ? "crit" : "hit");
+  if (src.status && !killed) applyStatus(e, src.status);
+  if (!src.unit) onPlayerHit(rt, e, amount, crit, held);
+  if (killed) onKill(rt, e);
+  return amount;
+}
+
+function onPlayerHit(rt: CombatRuntime, e: Enemy, amount: number, crit: boolean, held: boolean) {
+  const pv = passiveOf(rt), s = rt.passive;
+  if (!pv) return;
+  if (pv.kind === "lifesteal") heal(rt, amount * pv.value * (held ? 2 : 1));
+  if (pv.kind === "same_target") { if (s.target === e.id) s.stacks = Math.min(pv.cap ?? 5, s.stacks + 1); else { s.target = e.id; s.stacks = 1; } }
+  if (pv.kind === "momentum") { s.momentum = Math.min(pv.cap ?? 5, s.momentum + 1); s.momentumT = 2; }
+  if (pv.kind === "crit_cdr" && crit && s.procs < (pv.cap ?? 3)) {
+    const i = rt.slots.findIndex(a => a?.key === rt.kit?.subclass.signature.key);
+    if (i >= 0 && rt.cooldowns[SLOT_IDS[i]] > 0) { rt.cooldowns[SLOT_IDS[i]] = Math.max(0, rt.cooldowns[SLOT_IDS[i]] - pv.value); s.procs++; }
+  }
+}
+
+function onKill(rt: CombatRuntime, e: Enemy) {
+  rt.killQueue.push({ enemy: e.type.id, key: `kill:${e.id}:${rt.seq++}:${Date.now().toString(36)}` });
+  missionEvent(rt, { kind: "kill", enemy: e.type.id });
+  const pv = passiveOf(rt), me = rt.player.last;
+  if (pv?.kind === "kill_heal" && me && dist(me, e) <= (pv.cap ?? 9)) heal(rt, rt.player.maxHp * pv.value);
+}
+
+/** Bosses shrug off most control, elites some (row 51: the boss is a wall). */
+const resist = (e: Enemy) => (e.type.kind === "boss" ? 0.3 : e.type.elite ? 0.6 : 1);
+export function applyStatus(e: Enemy, st: Status, ctl = 1) {
+  const s = e.status, r = resist(e);
+  if (st.hold) s.hold = Math.max(s.hold, st.hold * ctl * r);
+  if (st.slow) { s.slow = Math.max(s.slow, st.slow[0] * (e.type.kind === "boss" ? 0.5 : 1)); s.slowFor = Math.max(s.slowFor, st.slow[1] * ctl); }
+  if (st.mark) { s.mark = Math.max(s.mark, st.mark[0]); s.markFor = Math.max(s.markFor, st.mark[1]); }
+  if (st.distract) s.distract = Math.max(s.distract, st.distract * ctl * r);
+}
+
+// ── Self: heal, shield, buffs ───────────────────────────────────
+/** Heal; past full, the Priest's Sanctuary turns the rest into a shield. Returns the health restored. */
+export function heal(rt: CombatRuntime, amount: number): number {
+  const p = rt.player;
+  if (!p.alive || amount <= 0) return 0;
+  const gained = Math.min(amount, p.maxHp - p.hp);
+  p.hp += gained;
+  const pv = passiveOf(rt);
+  if (pv?.kind === "overheal_shield" && amount > gained) addShield(rt, Math.min((amount - gained) * pv.value, p.maxHp * (pv.cap ?? 0.3) - p.shield), 6);
+  return gained;
+}
+export function addShield(rt: CombatRuntime, amount: number, duration: number) {
+  const p = rt.player;
+  if (amount <= 0) return;
+  p.shield = Math.min(p.maxHp * SHIELD_CAP, p.shield + amount);
+  p.shieldFor = Math.max(p.shieldFor, duration);
+}
+function addBuff(rt: CombatRuntime, b: Buff) {
+  rt.buffs = rt.buffs.filter(x => !(x.stat === b.stat && x.onBlock === b.onBlock && b.onBlock)); // re-raising a guard refreshes it
+  rt.buffs.push(b);
+}
+
+/** Damage to the player after guard, a frontal block and the shield. Returns what's left for health; triggers block passives/answers. */
+export function mitigate(rt: CombatRuntime, amount: number, from: Vec, me: Vec): { damage: number; blocked: boolean } {
+  const p = rt.player;
+  let dmg = amount * (1 - Math.min(GUARD_CAP, buffSum(rt, "guard")));
+  const block = rt.buffs.find(b => b.stat === "block" && b.t > 0);
+  const frontal = angleDiff(facingTo(me, from), p.facing) < 1.1;
+  let blocked = false;
+  if (block && frontal) {
+    blocked = true;
+    dmg *= 1 - block.value;
+    floater(rt, me, 1.9, "Blocked", "info");
+    const pv = passiveOf(rt);
+    if (pv?.kind === "block_shield") addShield(rt, p.maxHp * pv.value, 5);
+    if (block.onBlock?.on_block && !block.answered) { block.answered = true; runEffects(rt, block.onBlock.on_block, context(rt, block.onBlock, me, 1, from), Math.random); }
+  }
+  const soak = Math.min(p.shield, dmg);
+  p.shield -= soak;
+  return { damage: Math.round(dmg - soak), blocked };
+}
+
+// ── Using a slot ────────────────────────────────────────────────
+interface Ctx { ability: Ability; pos: Vec; aim: Vec; dir: Vec; dmg: number; sup: number; ctl: number; gear: number; stat: Stat; tier?: number; color: string }
+
+function context(rt: CombatRuntime, ability: Ability, me: Vec, potency: number, aimAt: Vec): Ctx {
+  const p = rt.player, sub = rt.kit?.subclass, family = sub?.family ?? "Vanguard";
+  const d = Math.hypot(aimAt.x - me.x, aimAt.z - me.z);
+  const dir = d > 0.05 ? { x: (aimAt.x - me.x) / d, z: (aimAt.z - me.z) / d } : { x: Math.sin(p.facing), z: Math.cos(p.facing) };
+  const aim = d > AIM_RANGE ? { x: me.x + dir.x * AIM_RANGE, z: me.z + dir.z * AIM_RANGE } : { ...aimAt };
+  const type = SYSTEM_WEAPONS.find(w => w.key === p.weapon)?.type;
+  const gear = ability.gear && type !== ability.gear.type ? ability.gear.without : 1;
+  // Elemental Rhythm: a different element than the last strengthens this cast.
+  let elementBonus = 0;
+  if (ability.element) {
+    const el = ability.element === "cycle" ? ELEMENTS[(ELEMENTS.indexOf(rt.passive.element ?? "lightning") + 1) % 3] : ability.element;
+    const pv = passiveOf(rt);
+    if (pv?.kind === "element_switch" && rt.passive.element && rt.passive.element !== el) elementBonus = pv.value;
+    rt.passive.element = el;
+  }
+  const trait = TRAITS.find(t => t.ability.key === ability.key);
+  return {
+    ability, pos: { ...me }, aim, dir, gear,
+    dmg: potency * gear * (1 + elementBonus), sup: Math.min(potency, SUPPORT_CAP), ctl: Math.min(potency, CONTROL_CAP),
+    stat: ability.stat ?? FAMILY_STAT[family], tier: trait ? traitTier(rt.kit?.traits[trait.key] ?? 0) : undefined,
+    color: ability.element ? COLOR[rt.passive.element ?? "fire"] : COLOR[family],
+  };
+}
+
+/** Ability keys 1–4. Drawn abilities open the rune overlay (25% energy now, the rest on release); others fire at once. */
+export function fireSlot(rt: CombatRuntime, slot: number, me: Vec, random: () => number = Math.random): boolean {
+  const p = rt.player, ab = rt.slots[slot], id = SLOT_IDS[slot];
+  if (!ab) { floater(rt, me, 1.9, rt.kit ? "Empty slot · set it at the Oracle" : "Choose a subclass at the Oracle", "info"); return false; }
+  if (!p.alive || rt.cooldowns[id] > 0 || rt.casting || p.dash) return false;
+  if (p.energy < ab.energy) { floater(rt, me, 1.9, "Not enough energy", "info"); return false; }
+  if (ab.incantation) {
+    spend(rt, Math.ceil(ab.energy * CAST.start));
+    rt.casting = { id: rt.seq++, rune: ab.incantation, aim: { ...p.aim }, slot, ability: ab };
+    return true;
+  }
+  spend(rt, ab.energy);
+  rt.cooldowns[id] = ab.cooldown_s;
+  if (ab.key === rt.kit?.subclass.signature.key) rt.passive.procs = 0;
+  p.attackCd = Math.max(p.attackCd, 0.25); p.swing = 0.22; // the attack clip plays
+  runEffects(rt, ab.effects, context(rt, ab, me, 1, p.aim), random);
+  return true;
+}
+
+/** Finish a drawing: a fizzle pays only the start and a short recovery; a cast pays the rest and scales by the score (row C2). */
+export function resolveCast(rt: CombatRuntime, me: Vec, score: IncantationScore, random: () => number = Math.random) {
+  const c = rt.casting;
+  if (!c) return;
+  rt.casting = null;
+  const id = SLOT_IDS[c.slot], pct = Math.round(score.accuracy);
+  if (score.outcome === "fail") { rt.cooldowns[id] = CAST.recovery; floater(rt, me, 1.9, `Fizzled · ${pct}%`, "info"); return; }
+  const p = rt.player;
+  p.energy = Math.max(0, p.energy - (c.ability.energy - Math.ceil(c.ability.energy * CAST.start))); p.sinceSpend = 0;
+  rt.cooldowns[id] = c.ability.cooldown_s;
+  floater(rt, me, 1.9, `${score.outcome === "enhanced" ? "Empowered" : "Cast"} · ${c.ability.name} · ${pct}%`, "info");
+  p.attackCd = Math.max(p.attackCd, 0.25);
+  runEffects(rt, c.ability.effects, context(rt, c.ability, me, score.power, c.aim), random);
+}
+/** Dodge or Escape while drawing: the start cost is gone, the slot recovers briefly (row C3). */
+export function cancelCast(rt: CombatRuntime) {
+  if (!rt.casting) return;
+  rt.cooldowns[SLOT_IDS[rt.casting.slot]] = CAST.recovery;
+  rt.casting = null;
+}
+
+// ── Effects ─────────────────────────────────────────────────────
+function segDist(p: Vec, a: Vec, b: Vec) {
+  const dx = b.x - a.x, dz = b.z - a.z, l2 = dx * dx + dz * dz;
+  const t = l2 ? Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.z - a.z) * dz) / l2)) : 0;
+  return Math.hypot(a.x + dx * t - p.x, a.z + dz * t - p.z);
+}
+const scaled = (st: Status | undefined, ctl: number): Status | undefined => st && {
+  hold: st.hold && st.hold * ctl, distract: st.distract && st.distract * ctl, mark: st.mark,
+  slow: st.slow && [st.slow[0], st.slow[1] * ctl],
+};
+
+export function runEffects(rt: CombatRuntime, effects: Effect[], ctx: Ctx, random: () => number) {
+  const p = rt.player, alive = () => rt.enemies.filter(e => e.state !== "dead" && e.state !== "return");
+  for (let i = 0; i < effects.length; i++) {
+    const ef = effects[i];
+    const src = (power: number, from: Vec, more: Partial<HitSrc> = {}): HitSrc => ({ power: power * ctx.dmg, from, stat: ctx.stat, tier: ctx.tier, ...more });
+    switch (ef.kind) {
+      case "projectile": {
+        const n = ef.count ?? 1, speed = ef.speed ?? 16, base = Math.atan2(ctx.dir.x, ctx.dir.z);
+        for (let k = 0; k < n; k++) {
+          const a = base + (n > 1 ? (k / (n - 1) - 0.5) * (ef.spread ?? 0) : 0), vx = Math.sin(a), vz = Math.cos(a);
+          const hit: ShotHit = { power: ef.power * ctx.dmg, stat: ctx.stat, tier: ctx.tier, pierce: ef.pierce, splash: ef.splash, status: scaled(ef.status, ctx.ctl), hitIds: [] };
+          rt.projectiles.push({ id: rt.seq++, x: ctx.pos.x + vx * 0.5, z: ctx.pos.z + vz * 0.5, vx: vx * speed, vz: vz * speed, life: (ef.range ?? 10) / speed,
+            from: "player", damage: 0, kind: ctx.stat === "finesse" ? "arrow" : "bolt", radius: 0.25, hit });
+        }
+        break;
+      }
+      case "area": {
+        const center = ef.at === "aim" ? ctx.aim : ctx.pos, face = Math.atan2(ctx.dir.x, ctx.dir.z);
+        const end = ef.length ? { x: ctx.pos.x + ctx.dir.x * ef.length, z: ctx.pos.z + ctx.dir.z * ef.length } : null;
+        for (const e of alive()) {
+          const inside = end ? segDist(e, ctx.pos, end) <= ef.radius + e.type.radius
+            : ef.arc ? inArc(center, face, ef.radius, ef.arc, e, e.type.radius)
+            : dist(center, e) <= ef.radius + e.type.radius;
+          if (inside && ef.power > 0) strike(rt, e, src(ef.power, center, { knock: ef.knock ?? 3, status: scaled(ef.status, ctx.ctl) }), random);
+          else if (inside && ef.status) applyStatus(e, ef.status, ctx.ctl);
+        }
+        rt.blasts.push({ id: rt.seq++, x: center.x, z: center.z, radius: ef.length ? ef.radius : ef.radius, color: ctx.color, age: 0, life: 0.5, arc: ef.arc, rot: face, length: ef.length });
+        break;
+      }
+      case "dash": {
+        const d = ef.back ? { x: -ctx.dir.x, z: -ctx.dir.z } : ctx.dir;
+        const travel = ef.back ? ef.distance : Math.min(ef.distance, Math.max(1.5, dist(ctx.pos, ctx.aim) + (ef.power ? 1.5 : 0)));
+        const end = { x: ctx.pos.x + d.x * travel, z: ctx.pos.z + d.z * travel };
+        if (ef.power) for (const e of alive()) if (segDist(e, ctx.pos, end) <= 0.9 + e.type.radius) strike(rt, e, src(ef.power, ctx.pos, { knock: 3 }), random);
+        const rest = effects.slice(i + 1);
+        p.dash = { x: d.x, z: d.z, speed: DASH_SPEED, left: travel / DASH_SPEED, iframes: !!ef.iframes,
+          then: rest.length ? (at: Vec) => runEffects(rt, rest, { ...ctx, pos: { ...at } }, random) : null };
+        return; // what follows a dash happens where it lands
+      }
+      case "shield": addShield(rt, ef.amount * ctx.sup * p.maxHp, ef.duration); floater(rt, ctx.pos, 2.1, "Shield", "info"); break;
+      case "heal": { const got = heal(rt, ef.amount * ctx.sup * p.maxHp); floater(rt, ctx.pos, 2.1, `+${Math.round(got)}`, "info"); break; }
+      case "summon": summon(rt, ef.unit, ef.count ?? 1, ctx, ctx.ability.key); break;
+      case "buff": addBuff(rt, { stat: ef.stat, value: ef.stat === "block" ? ef.value * ctx.gear : ef.value, t: ef.duration, onBlock: ef.stat === "block" ? ctx.ability : undefined }); break;
+      case "transform": {
+        rt.transform = { name: ctx.ability.name, t: Math.max(ef.duration, rt.transform?.t ?? 0) };
+        const pv = passiveOf(rt);
+        if (pv?.kind === "transform_shield") addShield(rt, p.maxHp * pv.value, 4);
+        break;
+      }
+    }
+  }
+}
+
+// ── Units ───────────────────────────────────────────────────────
+const minionCost = (u: Unit) => (u.def.kind === "minion" && u.source !== "weapon" ? u.def.cost ?? 1 : 0);
+/** Caps (row 50): the oldest goes when a new one would pass them. */
+function enforceCaps(rt: CombatRuntime, added: Unit) {
+  const drop = (pred: (u: Unit) => boolean, max: number) => {
+    let list = rt.units.filter(pred);
+    while (list.length > max) { const old = list[0]; rt.units = rt.units.filter(u => u !== old); list = list.slice(1); }
+  };
+  const k = added.def.kind;
+  if (k === "totem") { rt.units = rt.units.filter(u => u === added || u.def.key !== added.def.key); drop(u => u.def.kind === "totem", CAPS.totems); }
+  else if (k === "trap") drop(u => u.def.kind === "trap", CAPS.traps);
+  else if (k === "decoy") drop(u => u.def.kind === "decoy", CAPS.decoys);
+  else if (added.source === "weapon") drop(u => u.source === "weapon", CAPS.weaponWisps);
+  else {
+    const cap = rt.kit?.capacity ?? 2;
+    while (rt.units.reduce((n, u) => n + minionCost(u), 0) > cap) {
+      const old = rt.units.find(u => minionCost(u) > 0 && u !== added);
+      if (!old) break;
+      rt.units = rt.units.filter(u => u !== old);
+    }
+  }
+}
+
+export function summon(rt: CombatRuntime, key: string, count: number, ctx: Pick<Ctx, "pos" | "aim" | "dir" | "sup" | "stat">, source: string) {
+  const p = rt.player;
+  for (let n = 0; n < count; n++) {
+    let unit = key === "weapon" ? minionFor(p.weapon) : key;
+    let body: Enemy | null = null;
+    if (unit === "corpse") { // Raise Shade: the freshest body nearby, else a bone wisp (plan edge case)
+      const corpse = rt.enemies.filter(e => e.state === "dead" && !e.raised && e.deadFor < 20 && dist(e, ctx.pos) < 8 && e.type.kind !== "boss").sort((a, b) => a.deadFor - b.deadFor)[0];
+      if (corpse) { corpse.raised = true; unit = "shade"; body = spawnEnemy(`shade-${rt.seq}`, corpse.type, corpse.x, corpse.z); }
+      else unit = "bone-wisp";
+    }
+    const def = UNITS[unit];
+    const side = (n % 2 ? -1 : 1) * (0.9 + n * 0.3);
+    const at = def.kind === "totem" || def.kind === "trap" ? ctx.aim : def.kind === "decoy" ? ctx.pos
+      : body ? { x: body.x, z: body.z } : { x: ctx.pos.x - ctx.dir.z * side, z: ctx.pos.z + ctx.dir.x * side };
+    if (!body && def.model) body = spawnEnemy(`ally-${rt.seq}`, ENEMIES[def.model], at.x, at.z);
+    if (body) body.state = "chase";
+    const hp = body && unit === "shade" ? Math.min(140, Math.round(body.type.hp * 0.6)) : def.hp;
+    const u: Unit = { id: rt.seq++, def, source, x: at.x, z: at.z, hp, maxHp: hp, life: def.life ?? null, cd: 0.3, power: (def.power ?? 0) * ctx.sup, stat: ctx.stat, body };
+    rt.units.push(u);
+    enforceCaps(rt, u);
+  }
+  if (source !== "weapon") floater(rt, ctx.pos, 2.1, UNITS[key]?.name ?? (key === "corpse" ? "Raise Shade" : "Summon"), "info");
+}
+
+/** Totem circles covering a spot (Shaman Resonance: two or more overlapping work harder). */
+function resonance(rt: CombatRuntime, at: Vec): number {
+  const pv = passiveOf(rt);
+  if (pv?.kind !== "resonance") return 1;
+  return rt.units.filter(u => u.def.kind === "totem" && dist(u, at) <= u.def.radius!).length >= 2 ? 1 + pv.value : 1;
+}
+
+/** Summons chase and fight, totems pulse each second, traps spring, decoys hold aggro; the player-relative leash keeps them close. */
+export function stepUnits(rt: CombatRuntime, me: Vec, dt: number, random: () => number = Math.random) {
+  const p = rt.player;
+  const foes = rt.enemies.filter(e => e.state !== "dead" && e.state !== "return");
+  for (const u of [...rt.units]) {
+    if (u.life !== null) u.life -= dt;
+    if ((u.life !== null && u.life <= 0) || u.hp <= 0) { rt.units = rt.units.filter(x => x !== u); continue; }
+    u.cd -= dt;
+    const d = u.def;
+    if (d.kind === "totem") {
+      if (u.cd > 0) continue;
+      u.cd = 1;
+      const pl = d.pulse!;
+      for (const e of foes) if (dist(u, e) <= d.radius! + e.type.radius) {
+        if (pl.damage) strike(rt, e, { power: pl.damage * resonance(rt, e), from: u, stat: u.stat, unit: true, knock: 0 }, random);
+        if (pl.slow) applyStatus(e, { slow: [pl.slow, 1.3] });
+      }
+      if (dist(u, me) <= d.radius!) {
+        if (pl.heal) heal(rt, pl.heal * p.maxHp * resonance(rt, me));
+        if (pl.shield && p.shield < p.maxHp * 0.25) addShield(rt, pl.shield * p.maxHp * resonance(rt, me), 2);
+      }
+      rt.blasts.push({ id: rt.seq++, x: u.x, z: u.z, radius: d.radius!, color: pl.damage ? "#ff9d5c" : pl.heal ? COLOR.heal : COLOR.shield, age: 0, life: 0.45 });
+      continue;
+    }
+    if (d.kind === "trap") {
+      const e = foes.find(f => dist(u, f) <= d.radius! + f.type.radius);
+      if (e) {
+        strike(rt, e, { power: u.power, from: u, stat: u.stat, unit: true, knock: 0, status: { hold: 3 } }, random);
+        rt.blasts.push({ id: rt.seq++, x: u.x, z: u.z, radius: 1.4, color: "#ffe08a", age: 0, life: 0.5 });
+        rt.units = rt.units.filter(x => x !== u);
+      }
+      continue;
+    }
+    if (d.kind === "decoy") continue;
+    // Minions: the nearest foe within reach of both it and you, else back to your side.
+    const target = foes.filter(e => dist(e, u) < 9 && dist(e, me) < 12).sort((a, b) => dist(a, u) - dist(b, u))[0];
+    const range = d.range ?? 1.5, gap = target ? dist(target, u) : dist(me, u);
+    const goal = dist(me, u) > 12 || !target ? me : target;
+    const stop = target && goal === target ? range * 0.8 : 1.4;
+    if (gap > stop || goal === me) {
+      const g = dist(goal, u);
+      if (g > stop) { const step = Math.min(g - stop, (d.speed ?? 5) * dt); u.x += ((goal.x - u.x) / g) * step; u.z += ((goal.z - u.z) / g) * step; }
+    }
+    if (u.body) { u.body.x = u.x; u.body.z = u.z; u.body.facing = facingTo(u, target ?? me); u.body.t += dt; if (u.body.state === "recover" && u.body.t > 0.5) { u.body.state = "chase"; u.body.t = 0; } }
+    if (!target || dist(target, u) > range + target.type.radius || u.cd > 0) continue;
+    u.cd = d.rate ?? 1;
+    if (d.ranged) {
+      const g = dist(target, u) || 1;
+      rt.projectiles.push({ id: rt.seq++, x: u.x, z: u.z, vx: ((target.x - u.x) / g) * 14, vz: ((target.z - u.z) / g) * 14, life: (range + 1) / 14, from: "player", damage: 0, kind: "bolt", radius: 0.2,
+        hit: { power: u.power, stat: u.stat, unit: true } });
+    } else {
+      strike(rt, target, { power: u.power, from: u, stat: u.stat, unit: true, knock: 1.5 }, random);
+      if (u.body) { u.body.state = "recover"; u.body.t = 0; }
+    }
+  }
+}
+
+/** Enemy attacks landing on units (strikes on the ring or arc they aimed, spit shots): they have health too. */
+export function hurtUnits(rt: CombatRuntime, lands: (u: Unit) => boolean, amount: number) {
+  for (const u of rt.units) if (u.def.kind !== "trap" && lands(u)) { u.hp -= amount; floater(rt, u, 1.4, `-${amount}`, "hurt"); }
+}
+/** Where an enemy goes: a phantom or a bulwark crab near it draws it; a distracted one wanders home. */
+export function enemyTarget(rt: CombatRuntime, e: Enemy, player: Vec & { safe: boolean; alive: boolean }): Vec & { safe: boolean; alive: boolean } {
+  if (e.status.distract > 0) return { x: e.spawnX, z: e.spawnZ, safe: player.safe, alive: player.alive };
+  const t = rt.units.filter(u => u.def.taunt && dist(u, e) < e.type.aggroRadius + 3).sort((a, b) => dist(a, e) - dist(b, e))[0];
+  return t ? { x: t.x, z: t.z, safe: player.safe, alive: player.alive } : player;
+}

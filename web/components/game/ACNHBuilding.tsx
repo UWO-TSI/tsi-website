@@ -5,6 +5,7 @@ import { useGLTF } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { applyModelTextures, disposeModelMaterials, lightHQWindows, prepareModel } from "@/lib/game/modelMaterials";
+import { modelContact, useContactShadow } from "./ContactShadows";
 
 // ─── ACNH textured building models (2026-07 revamp) ─────────────
 // Source pack is authored at ~10 units per meter; ACNH_SCALE brings them
@@ -42,19 +43,17 @@ export const CHALET_VARIANTS = {
 } as const;
 
 export const ACNH_GLB: Record<string, { parts: string[]; scale?: number; yOffset?: number; rotationY?: number }> = {
-  hq: { parts: [`${B}/hq-office-village.glb`, `${B}/hq-office-door.glb`], rotationY: Math.PI },
+  hq: { parts: [`${B}/hq-office.glb`, `${B}/hq-office-door.glb`], rotationY: Math.PI },
   shop: { parts: [`${B}/shop-market.glb`, `${B}/shop-market-door.glb`], rotationY: Math.PI },
   oracle: { parts: [`${B}/oracle-museum.glb`], rotationY: Math.PI },
   house: { parts: CHALET_VARIANTS.brown, rotationY: Math.PI },
 };
 
 /** Shared material pass: ACNH albedo carries the look, so kill PBR shine. */
-function matteACNH(root: THREE.Object3D, castShadow: boolean) {
+function matteACNH(root: THREE.Object3D) {
   root.traverse((child) => {
     if (!(child as THREE.Mesh).isMesh) return;
     const mesh = child as THREE.Mesh;
-    mesh.castShadow = castShadow;
-    mesh.receiveShadow = true;
     const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
     for (const m of mats) {
       const std = m as THREE.MeshStandardMaterial;
@@ -77,7 +76,6 @@ export function ACNHParts({
   scale = 1,
   yOffset = 0,
   rotationY = 0,
-  castShadow = true,
   windowGlow,
   windowColor,
 }: {
@@ -85,21 +83,21 @@ export function ACNHParts({
   scale?: number;
   yOffset?: number;
   rotationY?: number;
-  castShadow?: boolean;
   windowGlow?: number;
   windowColor?: string;
 }) {
   const gltfs = useGLTF(parts as string[]);
   const group = useMemo(() => {
     const g = new THREE.Group();
-    gltfs.forEach(({ scene }, index) => g.add(prepareModel(scene, parts[index], castShadow)));
+    gltfs.forEach(({ scene }, index) => g.add(prepareModel(scene, parts[index])));
     g.scale.setScalar(scale * ACNH_SCALE);
     g.position.y = yOffset;
     g.rotation.y = rotationY;
-    matteACNH(g, castShadow);
+    matteACNH(g);
     if (windowColor) lightHQWindows(g, windowColor);
     return g;
-  }, [gltfs, parts, scale, yOffset, rotationY, castShadow, windowColor]);
+  }, [gltfs, parts, scale, yOffset, rotationY, windowColor]);
+  useContactShadow(group, useMemo(() => modelContact(group, parts[0], "solid"), [group, parts]));
 
   const emitters = useRef<{ material: THREE.MeshStandardMaterial; gain: number }[]>([]);
   useEffect(() => {
@@ -111,7 +109,7 @@ export function ACNHParts({
         if (material instanceof THREE.MeshStandardMaterial && (material.emissiveMap || windowColor && /^m(?:Window[LR]|SideWindow)$/.test(material.name))) materials.add(material);
       }
     });
-    const isHQ = parts.some((part) => part.endsWith("/hq-office-village.glb"));
+    const isHQ = parts.some((part) => part.endsWith("/hq-office.glb"));
     emitters.current = [...materials].map((material) => ({
       material,
       // The HQ window lightmaps are much dimmer than its clock/lamp map.

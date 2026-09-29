@@ -11,26 +11,44 @@
  * The default URL is unchanged until David approves the slice.
  */
 
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
+import islandMapDoc from "@/data/island-map.json";
 import {
+  parseIslandMap,
   heightAtWorld,
   CLIFF_LEVELS,
   heightField,
   sampleGroundHeight,
   rampHeightAt,
   type IslandMap,
+  type PlacedProp,
 } from "@/lib/game/grid";
 import { setTerrainHeightProvider } from "../terrain";
 import GridTerrain, { type TerrainPalette } from "./GridTerrain";
 import GridCliffs from "./GridCliffs";
 import GrassTufts from "./GrassTufts";
-import { applyGrassNormalStrength, advanceWater } from "./terrainMaterials";
+import { applyGrassNormalStrength, advanceWater, shadeWaterByClouds } from "./terrainMaterials";
+import { cloudLayer } from "../AmbienceFX";
 import { useTuning, tune as tuneNow } from "@/lib/game/tuning";
 import { useFrame } from "@react-three/fiber";
 import type { WaterParams } from "@/lib/game/waterShader";
+import { worldTime } from "@/lib/game/worldClock";
 
-export default function GridWorld({ map, water, palette }: { map: IslandMap; water?: WaterParams; palette?: TerrainPalette }) {
+let cached: { map: IslandMap; props: PlacedProp[] } | null = null;
+
+/**
+ * Parse once per page load. The map is 128x128 and static; re-parsing it on
+ * every mount would cost 16k cells of work for nothing.
+ */
+export function getIslandMap(): { map: IslandMap; props: PlacedProp[] } {
+  if (!cached) cached = parseIslandMap(islandMapDoc);
+  return cached;
+}
+
+/** `field`: the map's height field when the caller already built it (the village builds it once). */
+export default function GridWorld({ map: suppliedMap, field: suppliedField, water, palette, windScale }: { map?: IslandMap; field?: Float32Array; water?: WaterParams; palette?: TerrainPalette; windScale?: number }) {
+  const map = useMemo(() => suppliedMap ?? getIslandMap().map, [suppliedMap]);
   const t = useTuning();
 
   // The ground material is shared and cached, so the normal-map settings are
@@ -54,18 +72,19 @@ export default function GridWorld({ map, water, palette }: { map: IslandMap; wat
     // not the one being drawn.
     // Same guard as GridTerrain: inert at CLIFF_LEVELS 1, and the two MUST
     // agree or the player walks on a different surface from the one drawn.
-    const field = CLIFF_LEVELS > 1 ? heightField(map) : null;
+    const field = CLIFF_LEVELS > 1 ? suppliedField ?? heightField(map) : null;
     setTerrainHeightProvider((x, z) =>
       field ? sampleGroundHeight(map, field, x, z) : rampHeightAt(map, x, z) ?? heightAtWorld(map, x, z)
     );
     return () => setTerrainHeightProvider(null);
-  }, [map]);
+  }, [map, suppliedField]);
 
   // The river flows, swells and catches the sun. One uniform block per frame.
   // The key light is found by traversal rather than duplicated from GameWorld's
   // sun maths — one source of truth, and it stays correct if that arc changes.
   const sunDir = useRef(new THREE.Vector3(0, 1, 0));
   const lightTarget = useRef(new THREE.Vector3());
+  const sunColor = useRef(new THREE.Color(1, 1, 1));
   useFrame((state) => {
     let key: THREE.DirectionalLight | null = null;
     state.scene.traverse((o) => {
@@ -77,15 +96,17 @@ export default function GridWorld({ map, water, palette }: { map: IslandMap; wat
       light.getWorldPosition(sunDir.current);
       light.target.getWorldPosition(lightTarget.current);
       sunDir.current.sub(lightTarget.current);
+      sunColor.current.copy(light.color);
     }
-    advanceWater(state.clock.elapsedTime, water ?? tuneNow().water, sunDir.current);
+    advanceWater(worldTime(), water ?? tuneNow().water, sunDir.current, sunColor.current);
+    shadeWaterByClouds(cloudLayer.map, cloudLayer.uv);
   });
 
   return (
     <group>
-      <GridTerrain map={map} palette={palette} />
+      <GridTerrain map={map} field={suppliedField} palette={palette} />
       <GridCliffs map={map} />
-      <GrassTufts map={map} />
+      <GrassTufts map={map} windScale={windScale} />
     </group>
   );
 }

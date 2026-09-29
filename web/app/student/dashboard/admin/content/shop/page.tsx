@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Shield, ArrowLeft, Plus, Pencil } from "lucide-react";
 import { useUser } from "@/components/portal/UserContext";
-import { useShopItems } from "@/lib/game/contentLoader";
+import { useShopItems } from "@/lib/content/loader";
 
 const rarityColors: Record<string, string> = {
   common: "text-[var(--color-text-muted)] bg-[var(--color-text-muted)]/10",

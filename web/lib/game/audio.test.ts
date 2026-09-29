@@ -56,7 +56,7 @@ describe("world audio lifecycle", () => {
     manager.setPhase("applicant-hq"); frame(800);
     expect(FakeAudio.all.at(-1)?.src).toBe("/audio/ambient/applicant-willow-tree.ogg");
     expect(FakeAudio.all.at(-1)?.volume).toBeCloseTo(0.7 * 0.6 * 0.18);
-    expect(manager.getState().volumes).toEqual({ master: 0.7, ambient: 0.6, sfx: 0.8 });
+    expect(manager.getState().volumes).toEqual({ master: 0.7, ambient: 0.6, music: 0.55, sfx: 0.8 });
     manager.setPhase("day"); frame(1600);
     expect(FakeAudio.all.at(-1)?.volume).toBeCloseTo(0.42);
     manager.dispose();
@@ -115,8 +115,8 @@ describe("world audio lifecycle", () => {
   });
   it("rejects malformed saved volumes and keeps runtime values finite", () => {
     saved.set("tsi.audio.v1", JSON.stringify({ master: "loud", ambient: {}, sfx: -2 }));
-    const manager = new AudioManagerImpl(); expect(manager.getState().volumes).toEqual({ master: 0.7, ambient: 0.6, sfx: 0 });
-    manager.setVolumes({ master: NaN, ambient: Infinity, sfx: 4 }); expect(manager.getState().volumes).toEqual({ master: 0.7, ambient: 0.6, sfx: 1 }); manager.dispose();
+    const manager = new AudioManagerImpl(); expect(manager.getState().volumes).toEqual({ master: 0.7, ambient: 0.6, music: 0.55, sfx: 0 });
+    manager.setVolumes({ master: NaN, ambient: Infinity, sfx: 4 }); expect(manager.getState().volumes).toEqual({ master: 0.7, ambient: 0.6, music: 0.55, sfx: 1 }); manager.dispose();
   });
   it("releases finished one-shots from live volume updates", () => {
     const manager = new AudioManagerImpl(); manager.enable(); manager.playSFX("confirm"); const sound = FakeAudio.all[0]; const initial = sound.volume;

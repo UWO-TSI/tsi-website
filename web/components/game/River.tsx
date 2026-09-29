@@ -1,6 +1,41 @@
 "use client";
 
 /**
+ * ⚠️ WORLD MODEL NOTICE (David ruling 2026-07-26) — the river is a SPLINE here
+ * and ACNH's is a TILE CHAIN. Read `specs/acnh-system-reference.md` before
+ * editing. Three problems, all structural:
+ *
+ * 1. THREE CONFLICTING DATUMS. The ACNH kit puts ground at 0, the water
+ *    surface at -0.078u and the bed walls down to -1.125u (measured from
+ *    River0A_0: Grass__mGrass y[-0.78, 0], RiverAC__mRiver y[-11.25, -0.78],
+ *    raw). terrain.ts carves the channel to -0.95u. This file floats water at
+ *    WATER_Y = -0.32u. The water therefore sits 0.63u above the carved floor
+ *    and 0.24u below where the kit's grass fringe expects it. RiverBanks.tsx
+ *    and RiverBankWalls.tsx exist only to paper that gap, which is why the
+ *    banks read as applied decoration instead of as the edge of the water.
+ *
+ * 2. THE CORRECT KIT IS ON DISK AND UNUSED. `public/assets/acnh/river/*.glb`
+ *    holds 12 extracted autotile pieces. grep across components/, lib/ and
+ *    app/ returns ZERO references. The full kit is 45 pieces in
+ *    `FldUnitRiver` and it shares the class/variant/rotation vocabulary with
+ *    the cliff and road kits. The four extracted bank-*.glb pieces are also
+ *    missing their own ground surface (mesh index 0 was dropped at export —
+ *    see scripts/organize-dump.mjs).
+ *
+ * 3. NO GRADIENT, SO NO REAL FLOW. RIVER_DEPTH is constant across the whole
+ *    island, so the river is a level channel coast to coast and motion is a
+ *    scrolling texture over flat geometry. ACNH's river descends through
+ *    waterfall pieces at level boundaries; the 47-piece FldUnitFall kit is not
+ *    extracted at all. Flow direction should be a property of the level map,
+ *    not a shader uniform.
+ *
+ * Target replacement: river becomes a `surface` cell type on the tile grid at
+ * the kit's own datum, with Fall pieces emitted wherever a river cell borders
+ * a lower level. That deletes WATER_Y, RIVER_DEPTH, RiverBanks and
+ * RiverBankWalls.
+ *
+ * ── Original header ──────────────────────────────────────────────
+ *
  * Curved river mesh with animated procedural flow.
  *
  * Sprint A3 (2026-05-21). Replaces the previous straight 80×3 plane water
@@ -24,25 +59,24 @@
  * GameWorld can sit on the spline at the right tangent / height.
  */
 
+import { RIVER_WATER_Y as WATER_Y } from "@/lib/game/waterLevels";
 import { useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { getCausticTexture } from "@/lib/game/causticTexture";
+import { riverWidthScale } from "./terrain";
 
 /** Control points for the river spline. East-west run with gentle bends. */
 export const RIVER_CONTROL_POINTS: [number, number][] = [
-  [-52, 2], [-30, 5], [-12, 5], [-3, 1], [5, 4], [16, 2], [30, 4], [52, 3],
+  // GEO S1: endpoints pushed to the new coast; interior bends unchanged
+  // so the bridge/spots/stones keep their exact geometry.
+  [-61, 2], [-40, 4], [-30, 5], [-12, 5], [-3, 1], [5, 4], [16, 2], [30, 4], [45, 3.5], [61, 3],
 ];
 
 /** Default river width — slightly wider than paths (2.8) to feel substantial. */
 const RIVER_WIDTH = 3.8;
 const ROWS = 5; // 5 rows: 2 banks + 3 inner — denser cross-section than Path
-const SEGMENTS = 96;
-
-/** Y offset of the water surface relative to the terrain baseline (y=0). */
-// River v2 (2026-07-14): water dropped so the new bank walls
-// (RiverBankWalls) get real ACNH presence above the surface.
-const WATER_Y = -0.2;
+const SEGMENTS = 144; // river v3: denser sampling keeps the narrows/pool edges smooth
 
 const _curve = new THREE.CatmullRomCurve3(
   RIVER_CONTROL_POINTS.map(([x, z]) => new THREE.Vector3(x, 0, z)),
@@ -105,6 +139,7 @@ const DEFAULT_SHALLOW = "#A8D8E8"; // light blue foam highlight
 // palette so the water bodies read as one at dusk/night instead of the river
 // staying day-blue.
 type RiverPhase = "dawn" | "day" | "dusk" | "night";
+const RIVER_HIGHLIGHT_LIGHT: Record<RiverPhase, number> = { dawn: 0.5, day: 1, dusk: 0.3, night: 0 };
 const RIVER_PALETTE: Record<RiverPhase, [string, string]> = {
   dawn: ["#5378B0", "#C4D8E8"],
   day: ["#3A6EA5", "#A8D8E8"],
@@ -161,9 +196,10 @@ export default function River({
 
       const v = cumLengths[i] / Math.max(totalLength, 0.0001);
 
+      const wScale = riverWidthScale(point.x);
       for (let r = 0; r < ROWS; r++) {
         const u = r / (ROWS - 1); // 0, 0.25, 0.5, 0.75, 1
-        const offset = (u - 0.5) * width;
+        const offset = (u - 0.5) * width * wScale;
         const vx = point.x + nx * offset;
         const vz = point.z + nz * offset;
 
@@ -220,9 +256,10 @@ export default function River({
       const nx = px / plen;
       const nz = pz / plen;
 
+      const wScale = riverWidthScale(point.x);
       for (let r = 0; r < 3; r++) {
         const u = r / 2;
-        const offset = (u - 0.5) * bedWidth;
+        const offset = (u - 0.5) * bedWidth * wScale;
         const idx = i * 3 + r;
         positions[idx * 3] = point.x + nx * offset;
         positions[idx * 3 + 1] = WATER_Y - 0.08;
@@ -271,6 +308,7 @@ export default function River({
       deep: { value: new THREE.Color(deepColor) },
       shallow: { value: new THREE.Color(shallowColor) },
       surfaceAlpha: { value: opacity },
+      highlightLight: { value: 1 },
     };
 
     mat.onBeforeCompile = (shader) => {
@@ -278,6 +316,7 @@ export default function River({
       shader.uniforms.deep = uniforms.deep;
       shader.uniforms.shallow = uniforms.shallow;
       shader.uniforms.surfaceAlpha = uniforms.surfaceAlpha;
+      shader.uniforms.highlightLight = uniforms.highlightLight;
       shader.uniforms.uCaustic = { value: getCausticTexture() };
 
       shader.vertexShader = shader.vertexShader
@@ -295,6 +334,7 @@ export default function River({
             "uniform vec3 deep;",
             "uniform vec3 shallow;",
             "uniform float surfaceAlpha;",
+            "uniform float highlightLight;",
             "varying vec2 vRiverUv;",
             "void main() {",
           ].join("\n"),
@@ -328,8 +368,9 @@ export default function River({
             "float chevron = smoothstep(0.38, 0.32, chevSaw) * (1.0 - chevX) * 0.55;",
             // Color mix: deep base + wave-modulated shallow tone + crest highlight + arrow.
             "vec3 water = mix(deep, shallow, wave1 * 0.35);",
-            "water = mix(water, vec3(0.92, 0.98, 1.0), cells);",
-            "water += highlight * 0.35;",
+            "vec3 cellLight = mix(shallow, vec3(0.92, 0.98, 1.0), highlightLight);",
+            "water = mix(water, cellLight, cells);",
+            "water += highlight * mix(0.06, 0.35, highlightLight);",
             "water = mix(water, shallow, chevron);",
             "diffuseColor.rgb = water;",
             "diffuseColor.a = surfaceAlpha * edge;",
@@ -345,21 +386,19 @@ export default function River({
   }, [deepColor, shallowColor, opacity]);
 
   const materialRef = useRef(material);
+  useEffect(() => { materialRef.current = material; }, [material]);
 
-  // P4 memory: dispose River's BufferGeometries + Material on unmount.
-  useEffect(() => {
-    return () => {
-      geometry.dispose();
-      riverbedGeometry.dispose();
-      material.dispose();
-    };
-  }, [geometry, riverbedGeometry, material]);
+  useEffect(() => () => {
+    geometry.dispose();
+    riverbedGeometry.dispose();
+  }, [geometry, riverbedGeometry]);
+  useEffect(() => () => material.dispose(), [material]);
 
   useFrame((_, delta) => {
     const mat = materialRef.current as THREE.MeshBasicMaterial & {
       userData: { uniforms: { time: { value: number } } };
     };
-    const u = (mat.userData as { uniforms?: { time: { value: number }; deep: { value: THREE.Color }; shallow: { value: THREE.Color } } }).uniforms;
+    const u = (mat.userData as { uniforms?: { time: { value: number }; deep: { value: THREE.Color }; shallow: { value: THREE.Color }; highlightLight: { value: number } } }).uniforms;
     if (u?.time) {
       u.time.value += delta;
       // V6: ease water color toward the current phase (~0.5s constant).
@@ -367,6 +406,7 @@ export default function River({
       const k = 1 - Math.exp(-delta / 0.5);
       u.deep.value.lerp(_riverTgt.set(pal[0]), k);
       u.shallow.value.lerp(_riverTgt.set(pal[1]), k);
+      u.highlightLight.value += (RIVER_HIGHLIGHT_LIGHT[phaseRef.current] - u.highlightLight.value) * k;
     }
   });
 

@@ -1,0 +1,52 @@
+block | toronto-hour | override | candidates (first = what plays until Suno tracks land)
+----------------------------------------------------------------------------------------------------
+Midnight, outdoors
+  block=00  torontoHour=0.00  override=none
+  candidates: /assets/audio/music/00.mp3 -> /audio/ambient/applicant-willow-tree.ogg
+  plays today (no assets authored yet): /audio/ambient/applicant-willow-tree.ogg (== fallbackTrackFor: /audio/ambient/applicant-willow-tree.ogg)
+
+One minute before midnight (previous block)
+  block=22  torontoHour=23.98  override=none
+  candidates: /assets/audio/music/22.mp3 -> /audio/ambient/applicant-willow-tree.ogg
+  plays today (no assets authored yet): /audio/ambient/applicant-willow-tree.ogg (== fallbackTrackFor: /audio/ambient/applicant-willow-tree.ogg)
+
+One minute after midnight (next block)
+  block=00  torontoHour=0.02  override=none
+  candidates: /assets/audio/music/00.mp3 -> /audio/ambient/applicant-willow-tree.ogg
+  plays today (no assets authored yet): /audio/ambient/applicant-willow-tree.ogg (== fallbackTrackFor: /audio/ambient/applicant-willow-tree.ogg)
+
+Dawn, 06:30
+  block=06  torontoHour=6.50  override=none
+  candidates: /assets/audio/music/06.mp3 -> /audio/ambient/applicant-ocean-railway.ogg
+  plays today (no assets authored yet): /audio/ambient/applicant-ocean-railway.ogg (== fallbackTrackFor: /audio/ambient/applicant-ocean-railway.ogg)
+
+Midday, 13:00, winter variant requested
+  block=12  torontoHour=13.00  override=none  season=winter
+  candidates: /assets/audio/music/12-winter.mp3 -> /assets/audio/music/12.mp3 -> /audio/ambient/applicant-ocean-railway.ogg
+  plays today (no assets authored yet): /audio/ambient/applicant-ocean-railway.ogg (== fallbackTrackFor: /audio/ambient/applicant-ocean-railway.ogg)
+
+Evening, 19:15
+  block=18  torontoHour=19.25  override=none
+  candidates: /assets/audio/music/18.mp3 -> /audio/ambient/applicant-ocean-railway.ogg
+  plays today (no assets authored yet): /audio/ambient/applicant-ocean-railway.ogg (== fallbackTrackFor: /audio/ambient/applicant-ocean-railway.ogg)
+
+Inside the cafe at midday
+  block=12  torontoHour=13.00  override=cafe
+  candidates: /assets/audio/music/cafe.mp3 -> /audio/ambient/applicant-ocean-railway.ogg
+  plays today (no assets authored yet): /audio/ambient/applicant-ocean-railway.ogg (== fallbackTrackFor: /audio/ambient/applicant-ocean-railway.ogg)
+
+Inside HQ (generic interior) at midday
+  block=12  torontoHour=13.00  override=interior
+  candidates: /assets/audio/music/interior.mp3 -> /audio/ambient/applicant-ocean-railway.ogg
+  plays today (no assets authored yet): /audio/ambient/applicant-ocean-railway.ogg (== fallbackTrackFor: /audio/ambient/applicant-ocean-railway.ogg)
+
+DST spring-forward: 01:59 EST, just before the jump
+  block=00  torontoHour=1.98  override=none
+  candidates: /assets/audio/music/00.mp3 -> /audio/ambient/applicant-willow-tree.ogg
+  plays today (no assets authored yet): /audio/ambient/applicant-willow-tree.ogg (== fallbackTrackFor: /audio/ambient/applicant-willow-tree.ogg)
+
+DST spring-forward: 03:01 EDT, just after the jump
+  block=02  torontoHour=3.02  override=none
+  candidates: /assets/audio/music/02.mp3 -> /audio/ambient/applicant-willow-tree.ogg
+  plays today (no assets authored yet): /audio/ambient/applicant-willow-tree.ogg (== fallbackTrackFor: /audio/ambient/applicant-willow-tree.ogg)
+

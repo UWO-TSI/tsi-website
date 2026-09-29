@@ -29,7 +29,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import FishReveal from "./FishReveal";
 import { AudioManager } from "@/lib/game/audio";
-import { collect, localCollections, mergeWithLocal } from "@/lib/game/collections";
+import { collect, collectWithSize, localCollections, mergeWithLocal } from "@/lib/game/collections";
+import { rodByTier, type RodTier } from "@/lib/game/rods";
+import { oneLinerFor, rollFishFor } from "@/lib/game/peaceful";
+import type { WaterType } from "@/lib/game/fishingSpots";
 import { punchZoom, setTensionZoom } from "@/lib/game/cameraJuice";
 import { coastDist } from "@/lib/game/coast";
 import {
@@ -39,6 +42,7 @@ import {
   RARITY_META,
   START_PROGRESS,
   celebrate,
+  currentFishingContext,
   rollFish,
   rollSize,
   type FishDef,
@@ -54,7 +58,8 @@ type Phase = "idle" | "charging" | "casting" | "waiting" | "bite" | "reeling" | 
 
 const BITE_WINDOW_MS = 1400;
 
-export default function FishingOverlay({ onActiveChange, collectionScope, zoneOverride }: { onActiveChange?: (active: boolean) => void; collectionScope?: string; zoneOverride?: "river" | "sea" }) {
+/** `rod` (rods.ts) widens the hook window, slows the drain and adds rare luck; `tsi:fish-start` may carry `water` (fishingSpots.ts). */
+export default function FishingOverlay({ onActiveChange, collectionScope, zoneOverride, rod = rodByTier(1) }: { onActiveChange?: (active: boolean) => void; collectionScope?: string; zoneOverride?: "river" | "sea"; rod?: RodTier }) {
   const [phase, setPhase] = useState<Phase>("idle");
   const phaseRef = useRef<Phase>("idle");
   const releaseRequestedRef = useRef(false);
@@ -68,6 +73,13 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
   const [fish, setFish] = useState<FishDef | null>(null);
   const [caughtSize, setCaughtSize] = useState<number | null>(null);
   const [wasNew, setWasNew] = useState(false);
+  const [newRecord, setNewRecord] = useState(false);
+  const waterRef = useRef<WaterType | null>(null);
+  useEffect(() => {
+    const onStart = (e: Event) => { waterRef.current = (e as CustomEvent<{ water?: WaterType }>).detail?.water ?? null; };
+    window.addEventListener("tsi:fish-start", onStart, true);
+    return () => window.removeEventListener("tsi:fish-start", onStart, true);
+  }, []);
   const timersRef = useRef<number[]>([]);
   const biteDeadlineRef = useRef(0);
   // Discovery survives depleted stock and unavailable account sync.
@@ -108,6 +120,7 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
     setFish(null);
     setCaughtSize(null);
     setWasNew(false);
+    setNewRecord(false);
     setMaxCast(false);
     powerRef.current = 0;
     setTensionZoom(0);
@@ -156,7 +169,7 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
         );
         AudioManager.playSFX("confirm");
         // Cast power widens the hook window (max cast: 1.4s → 2.2s).
-        const windowMs = BITE_WINDOW_MS + CAST.biteBonusMs * powerRef.current;
+        const windowMs = BITE_WINDOW_MS + CAST.biteBonusMs * powerRef.current + rod.biteWindowMs;
         biteDeadlineRef.current = performance.now() + windowMs;
         // Auto-miss if the window lapses.
         timersRef.current.push(
@@ -201,7 +214,8 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
     // Sea spots (deck + cove, out past the sand line) roll the SEA pool.
     const sp = spotRef.current;
     const zone: "river" | "sea" = zoneOverride ?? (sp && coastDist(sp.x, sp.z) > 47 ? "sea" : "river");
-    setFish(rollFish(luck, zone));
+    // Spots that report their water type (pond/river/sea) use the rod-aware pool.
+    setFish(waterRef.current ? rollFishFor(waterRef.current, luck, rod, currentFishingContext()) : rollFish(luck + rod.rarityBonus, zone));
     reelInputRef.current.keys.clear(); reelInputRef.current.pointers.clear();
     if ("key" in input) reelInputRef.current.keys.add(input.key.toLowerCase());
     else reelInputRef.current.pointers.add(input.pointerId);
@@ -217,7 +231,9 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
         const isNew = !ownedRef.current.has(fish.key);
         ownedRef.current.add(fish.key);
         setWasNew(isNew);
-        setCaughtSize(rollSize(fish.sizeCm));
+        const size = rollSize(fish.sizeCm);
+        setCaughtSize(size);
+        setNewRecord(false);
         // Signals the "catch a fish" onboarding quest (auto-complete).
         // zone + spot coords ride along for world reactions (gull swoop).
         window.dispatchEvent(
@@ -225,7 +241,8 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
             detail: { key: fish.key, model: fish.model, raw: fish.raw, zone: fish.zone ?? "river", x: spotRef.current?.x, z: spotRef.current?.z },
           })
         );
-        collect(fish.key, collectionScope);
+        if (collectionScope) void collect(fish.key, { scope: collectionScope });
+        else void collectWithSize(fish.key, size).then(r => setNewRecord(!isNew && r.newRecord));
         if (isNew) {
           // Blind-box ceremony (David 2026-07-23): first catches get the
           // fullscreen staged reveal — it owns the celebration (confetti
@@ -309,7 +326,7 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
         ? "MAX CAST!!"
         : "Casting…"
       : phase === "waiting"
-        ? "Waiting for a bite…"
+        ? rod.tier > 1 ? `Waiting for a bite… · ${rod.name}` : "Waiting for a bite…"
         : phase === "bite"
           ? "!!  Hook it!"
           : phase === "caught"
@@ -339,7 +356,7 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
       {phase === "charging" ? (
         <CastMeter onRelease={castNow} releaseRequestedRef={releaseRequestedRef} />
       ) : phase === "reeling" && fish ? (
-        <ReelMinigame fish={fish} known={ownedRef.current.has(fish.key)} onDone={onReelDone} initialInput={reelInputRef.current} />
+        <ReelMinigame fish={fish} known={ownedRef.current.has(fish.key)} onDone={onReelDone} initialInput={reelInputRef.current} tensionMul={rod.tensionMul} />
       ) : (
         <div
           style={{
@@ -425,6 +442,11 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
               }}
             />
           )}
+          {phase === "caught" && newRecord && (
+            <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.06em", color: "#FFFDF5", background: "#C2410C", borderRadius: 999, padding: "3px 8px" }}>
+              NEW RECORD
+            </span>
+          )}
           {phase === "caught" && wasNew && (
             <span
               style={{
@@ -440,6 +462,11 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
               NEW!
             </span>
           )}
+        </div>
+      )}
+      {phase === "caught" && fish && oneLinerFor(fish.key) && (
+        <div style={{ fontFamily: "var(--font-highlight, sans-serif)", fontSize: 12, fontStyle: "italic", color: "#FFFDF5", textShadow: "0 1px 3px rgba(0,0,0,0.55)", maxWidth: 360, textAlign: "center" }} data-testid="catch-one-liner">
+          “{oneLinerFor(fish.key)}”
         </div>
       )}
       {phase === "charging" && (
@@ -528,11 +555,13 @@ export function ReelMinigame({
   known,
   onDone,
   initialInput,
+  tensionMul = 1,
 }: {
   fish: FishDef;
   known: boolean;
   onDone: (success: boolean) => void;
   initialInput?: FishingHeldInput;
+  tensionMul?: number;
 }) {
   const reelRef = useRef<HTMLDivElement>(null);
   const pausedLabelRef = useRef<HTMLDivElement>(null);
@@ -571,7 +600,7 @@ export function ReelMinigame({
         raf = requestAnimationFrame(step);
         return;
       }
-      const events = advanceFishingReel(simulation, dt, holdingRef.current, weatherMods(getTodayWeather()).dartChanceMul);
+      const events = advanceFishingReel(simulation, dt, holdingRef.current, weatherMods(getTodayWeather()).dartChanceMul, Math.random, tensionMul);
       const { position: pos, fishPosition: fishPos, inside, progress, tension } = simulation;
       if (simulation.result !== null) return finish(simulation.result);
 

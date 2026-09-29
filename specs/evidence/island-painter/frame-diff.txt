@@ -1,0 +1,14 @@
+Frame diff, 2026-09-28: code-built island (86df0d37) vs the same island loaded from web/data/village-map.json.
+Playwright fake clock at 2026-09-28T16:00Z, identical frame counts, HUD minimap hidden, tolerance 8/255.
+
+view      before→after changed px   same build twice (noise floor)
+spawn     0.754%                    1.189%
+plaza     0.103%                    0.125%
+shore     0.348%
+west      0.315%
+east      0.485%
+north     0.090%
+overview  0.284%                    0.368%
+
+Every changed pixel is on something animated per run (player idle, the walking mayor, drifting petals, fruit that the
+peaceful layer rolls per visit). The world itself (terrain, water, buildings, nature, props, shadows) is pixel-identical.

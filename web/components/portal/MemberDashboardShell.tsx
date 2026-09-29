@@ -3,7 +3,6 @@
 import { type ReactNode, useState, useRef, useCallback } from "react";
 import { Menu } from "lucide-react";
 import Sidebar from "@/components/portal/Sidebar";
-import { TransitionProvider } from "@/components/game/TransitionOverlay";
 import { UserProvider } from "@/components/portal/UserContext";
 import PreviewBanner from "@/components/portal/PreviewBanner";
 import QuestChecklist from "@/components/portal/QuestChecklist";
@@ -49,7 +48,6 @@ export default function MemberDashboardShell({ children }: { children: ReactNode
 
   return (
     <UserProvider>
-      <TransitionProvider>
         <PreviewBanner />
         <div
           className="fixed inset-0 z-50 flex"
@@ -155,7 +153,6 @@ export default function MemberDashboardShell({ children }: { children: ReactNode
             }
           `}</style>
         </div>
-      </TransitionProvider>
     </UserProvider>
   );
 }

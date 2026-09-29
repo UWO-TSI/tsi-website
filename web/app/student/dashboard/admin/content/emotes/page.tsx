@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Shield, ArrowLeft, Plus, Pencil } from "lucide-react";
 import { useUser } from "@/components/portal/UserContext";
 import { createClient } from "@/lib/supabase/client";
-import type { EmoteType } from "@/lib/game/contentTypes";
+import type { EmoteType } from "@/lib/content/types";
 
 export default function AdminContentEmotesPage() {
   const { profile, loading } = useUser();

@@ -2,36 +2,33 @@
 
 /**
  * AmbienceFX (game-feel wave G2, 2026-07-07) — the approved ambience set:
- * drifting cloud shadows, night stars + shooting stars, water sparkles,
- * periodic leaf gusts, night window glow, and the E-target ground glow.
+ * drifting cloud shadows, periodic leaf gusts, falling leaves and mist.
  *
- * Everything here is deliberately cheap: one scrolling texture plane, three
- * Points clouds, one small InstancedMesh, and a handful of quads. No
- * postprocessing, no per-frame allocations.
+ * Everything here is deliberately cheap: one scrolling texture plane, a few
+ * small InstancedMeshes and quads. No postprocessing, no per-frame allocations.
+ *
+ * Clouds, leaves and mist are world state (look spec §7, row 238): placed by
+ * lib/game/worldFx.ts from world position, the world clock and the world wind,
+ * never around the player. The view only culls what is far from where the
+ * camera looks.
  */
 
-import { useMemo, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
-import { sampleRiverPoint } from "./River";
-
-// Deterministic PRNG — react-compiler forbids Math.random() during render,
-// and stable layouts across mounts are nicer anyway.
-function mulberry32(seed: number) {
-  let a = seed >>> 0;
-  return () => {
-    a |= 0; a = (a + 0x6d2b79f5) | 0;
-    let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
+import { useTexture } from "@react-three/drei";
+import { worldTime } from "@/lib/game/worldClock";
+import {
+  CLOUD_SPEED, LEAF_SLOTS, MIST_BANKS, MIST_TILE, WIND_DIR, leafAt, mistBank, viewFocus, windowFade,
+  type LeafPose, type LeafTree, type WorldWind,
+} from "@/lib/game/worldFx";
 
 type Phase = "day" | "night" | "dawn" | "dusk";
 
 // ─── Cloud shadows (item 20) ────────────────────────────────────────────
-// A big transparent plane with a few soft dark blobs, slowly scrolling its
-// UVs — reads as clouds drifting over the fields for one texture sample.
+// A big transparent plane with a few soft dark blobs, its UVs offset by the
+// world clock along the world wind — clouds drifting over the fields for one
+// texture sample, in the same place on every client.
 let _cloudTex: THREE.CanvasTexture | null = null;
 function getCloudTexture(): THREE.CanvasTexture {
   if (_cloudTex) return _cloudTex;
@@ -64,14 +61,25 @@ function getCloudTexture(): THREE.CanvasTexture {
   return _cloudTex;
 }
 
+const frac = (v: number) => v - Math.floor(v);
+
+/** The drawn cloud layer for others (the water dims the sun under it): its texture and world (x, z) → uv, while a CloudShadows is mounted. */
+export const cloudLayer = { map: null as THREE.Texture | null, uv: new THREE.Vector4() };
+
 export function CloudShadows({ phase, size = [240, 240], bounded = false }: { phase: Phase; size?: [number, number]; bounded?: boolean }) {
   const matRef = useRef<THREE.MeshBasicMaterial>(null);
+  useEffect(() => () => { cloudLayer.map = null; }, []);
   useFrame((_, delta) => {
     // Module-cached texture — mutated through the getter so the compiler's
     // frozen-memo rule stays satisfied.
     const tex = getCloudTexture();
-    tex.offset.x += delta * 0.006;
-    tex.offset.y += delta * 0.0028;
+    // World drift → UV offset. The plane lies with local +y along world -z,
+    // and a growing offset slides the pattern toward -u, hence the signs.
+    const drift = worldTime() * CLOUD_SPEED;
+    tex.offset.set(frac(-WIND_DIR.x * drift * tex.repeat.x / size[0]), frac(WIND_DIR.z * drift * tex.repeat.y / size[1]));
+    // The plane's uv is (x / w + 0.5, 0.5 - z / h) (lying flat, local +y = world -z); the texture reads uv * repeat + offset.
+    cloudLayer.map = tex;
+    cloudLayer.uv.set(tex.repeat.x / size[0], -tex.repeat.y / size[1], tex.repeat.x * 0.5 + tex.offset.x, tex.repeat.y * 0.5 + tex.offset.y);
     if (matRef.current) {
       const target = phase === "day" ? 0.12 : phase === "night" ? 0 : 0.07;
       matRef.current.opacity = THREE.MathUtils.damp(matRef.current.opacity, target, 1.5, delta);
@@ -88,126 +96,6 @@ export function CloudShadows({ phase, size = [240, 240], bounded = false }: { ph
           }
         }} customProgramCacheKey={() => `cloud-shade-${bounded}`} />
     </mesh>
-  );
-}
-
-// ─── Night stars + occasional shooting star (item 22) ───────────────────
-export function NightStars({ phase }: { phase: Phase }) {
-  const matRef = useRef<THREE.PointsMaterial>(null);
-  const shootRef = useRef<THREE.Mesh>(null);
-  const shootState = useRef({ next: 70, t: -1, from: new THREE.Vector3(), dir: new THREE.Vector3() });
-  const clock = useRef(0);
-
-  const geometry = useMemo(() => {
-    const g = new THREE.BufferGeometry();
-    const N = 220;
-    const pos = new Float32Array(N * 3);
-    const rng = mulberry32(1138);
-    for (let i = 0; i < N; i++) {
-      // Upper dome, radius ~92 (inside the r=100 sky sphere).
-      const az = rng() * Math.PI * 2;
-      const el = 0.25 + rng() * 1.2; // stay above the horizon band
-      pos[i * 3] = Math.cos(el) * Math.sin(az) * 92;
-      pos[i * 3 + 1] = Math.sin(el) * 92;
-      pos[i * 3 + 2] = Math.cos(el) * Math.cos(az) * 92;
-    }
-    g.setAttribute("position", new THREE.BufferAttribute(pos, 3));
-    return g;
-  }, []);
-
-  useFrame((_, delta) => {
-    clock.current += delta;
-    if (matRef.current) {
-      const target = phase === "night" ? 0.9 : phase === "dusk" ? 0.25 : 0;
-      matRef.current.opacity = THREE.MathUtils.damp(matRef.current.opacity, target, 1.2, delta);
-    }
-    // Shooting star: brief streak every ~1.5-3.5 minutes at night.
-    const st = shootState.current;
-    if (phase === "night") {
-      if (st.t < 0) {
-        st.next -= delta;
-        if (st.next <= 0) {
-          st.t = 0;
-          st.next = 90 + Math.random() * 120;
-          const az = Math.random() * Math.PI * 2;
-          st.from.set(Math.sin(az) * 60, 55 + Math.random() * 15, Math.cos(az) * 60);
-          st.dir.set(0.8 - Math.random() * 1.6, -0.35, 0.8 - Math.random() * 1.6).normalize();
-        }
-      } else {
-        st.t += delta;
-        if (st.t > 1.1) st.t = -1;
-      }
-    } else {
-      st.t = -1;
-    }
-    if (shootRef.current) {
-      const active = st.t >= 0;
-      shootRef.current.visible = active;
-      if (active) {
-        const p = st.t / 1.1;
-        shootRef.current.position.copy(st.from).addScaledVector(st.dir, p * 34);
-        const m = shootRef.current.material as THREE.MeshBasicMaterial;
-        m.opacity = Math.sin(p * Math.PI) * 0.9;
-        shootRef.current.lookAt(shootRef.current.position.clone().add(st.dir));
-      }
-    }
-  });
-
-  return (
-    <group>
-      <points geometry={geometry} renderOrder={-1}>
-        <pointsMaterial ref={matRef} color="#FFFDF0" size={1.6} sizeAttenuation={false} transparent opacity={0} depthWrite={false} fog={false} />
-      </points>
-      <mesh ref={shootRef} visible={false} renderOrder={-1}>
-        <planeGeometry args={[3.2, 0.12]} />
-        <meshBasicMaterial color="#FFFFFF" transparent opacity={0} depthWrite={false} fog={false} side={THREE.DoubleSide} />
-      </mesh>
-    </group>
-  );
-}
-
-// ─── Water sparkles (item 24) — NL's little glints on the river ─────────
-export function WaterSparkles() {
-  const aRef = useRef<THREE.PointsMaterial>(null);
-  const bRef = useRef<THREE.PointsMaterial>(null);
-  const clock = useRef(3.7);
-
-  const [geoA, geoB] = useMemo(() => {
-    const rng = mulberry32(917);
-    const make = (offset: number) => {
-      const g = new THREE.BufferGeometry();
-      const N = 26;
-      const pos = new Float32Array(N * 3);
-      for (let i = 0; i < N; i++) {
-        const t = (i + offset) / N;
-        const { position, tangent } = sampleRiverPoint(Math.min(t, 0.999));
-        const nx = -tangent.z, nz = tangent.x;
-        const off = (rng() - 0.5) * 2.2;
-        pos[i * 3] = position.x + nx * off;
-        pos[i * 3 + 1] = 0.02;
-        pos[i * 3 + 2] = position.z + nz * off;
-      }
-      g.setAttribute("position", new THREE.BufferAttribute(pos, 3));
-      return g;
-    };
-    return [make(0), make(0.5)];
-  }, []);
-
-  useFrame((_, delta) => {
-    clock.current += delta;
-    if (aRef.current) aRef.current.opacity = 0.35 + Math.sin(clock.current * 2.1) * 0.35;
-    if (bRef.current) bRef.current.opacity = 0.35 + Math.cos(clock.current * 1.7) * 0.35;
-  });
-
-  return (
-    <group>
-      <points geometry={geoA}>
-        <pointsMaterial ref={aRef} color="#FFFFFF" size={0.14} transparent opacity={0.4} depthWrite={false} blending={THREE.AdditiveBlending} />
-      </points>
-      <points geometry={geoB}>
-        <pointsMaterial ref={bRef} color="#EAF9FF" size={0.11} transparent opacity={0.4} depthWrite={false} blending={THREE.AdditiveBlending} />
-      </points>
-    </group>
   );
 }
 
@@ -269,86 +157,87 @@ export function LeafGusts() {
   );
 }
 
-// ─── Night window glow (item 25) ────────────────────────────────────────
-// Warm quads on the four main facades; opacity follows dusk/night. All
-// share one material so the whole set is a single opacity write.
-const WINDOWS: { x: number; y: number; z: number; w: number; h: number }[] = [
-  // HQ (facade at z=-4, faces south/-z)
-  { x: -2.1, y: 1.55, z: -4.04, w: 0.7, h: 0.85 },
-  { x: 2.1, y: 1.55, z: -4.04, w: 0.7, h: 0.85 },
-  // Shop (facade at z=12)
-  { x: -26.35, y: 1.35, z: 11.96, w: 0.95, h: 0.8 },
-  { x: -21.7, y: 1.35, z: 11.96, w: 0.95, h: 0.8 },
-  // Oracle museum (facade at z=30)
-  { x: -2.5, y: 1.85, z: 29.96, w: 0.6, h: 1.1 },
-  { x: 2.5, y: 1.85, z: 29.96, w: 0.6, h: 1.1 },
-  // House chalet (facade plane x=24 area faces -x… rotated house; front at x≈22.9)
-  { x: 22.92, y: 1.5, z: 12.9, w: 0.7, h: 0.8 },
-  { x: 22.92, y: 1.5, z: 15.1, w: 0.7, h: 0.8 },
-];
+// ─── Leaves and petals shed by the trees (wake 65; world 2026-09-27) ──────
+// Autumn leaves and spring petals fall from the actual trees on the map
+// (`leafAt`): each tree drops a few from its crown on its own seeded
+// schedule, they drift with the world wind, rest on the ground and fade. No
+// tree nearby, no leaves. One InstancedMesh; trees far from where the camera
+// looks are skipped (culled, not stopped), and only leaves in the air or on
+// the ground take an instance.
+const LEAF_POOL = 130;
+const LEAF_VIEW = 30;
+const LEAF_LOOKS = {
+  leaves: { color: "#C7823A", size: 0.15, fall: 0.7, flutter: 0.35, spin: 9, opacity: 0.92 },
+  petals: { color: "#F5B8CC", size: 0.11, fall: 0.55, flutter: 0.45, spin: 6, opacity: 0.9 },
+};
+const _fp = new THREE.Vector3();
+const _fe = new THREE.Euler();
+const _fq = new THREE.Quaternion();
+const _fs = new THREE.Vector3();
+const _fm = new THREE.Matrix4();
+const _dir = new THREE.Vector3();
+const _focus = { x: 0, z: 0 };
+const _leaf: LeafPose = { x: 0, y: 0, z: 0, rx: 0, ry: 0, rz: 0, scale: 0 };
 
-let _windowMat: THREE.MeshBasicMaterial | null = null;
-function getWindowMaterial(): THREE.MeshBasicMaterial {
-  if (!_windowMat) {
-    _windowMat = new THREE.MeshBasicMaterial({ color: "#FFC97A", transparent: true, opacity: 0, depthWrite: false });
-  }
-  return _windowMat;
-}
+export function TreeLeaves({ trees, mode, wind, ground }: { trees: readonly LeafTree[]; mode: keyof typeof LEAF_LOOKS; wind: WorldWind; ground: (x: number, z: number) => number }) {
+  const look = LEAF_LOOKS[mode];
+  const meshRef = useRef<THREE.InstancedMesh>(null);
 
-export function NightWindows({ phase }: { phase: Phase }) {
-  useFrame((_, delta) => {
-    const m = getWindowMaterial();
-    const target = phase === "night" ? 0.85 : phase === "dusk" ? 0.5 : 0;
-    m.opacity = THREE.MathUtils.damp(m.opacity, target, 1.5, delta);
+  useFrame(({ camera }) => {
+    const mesh = meshRef.current;
+    if (!mesh) return;
+    viewFocus(camera.position, camera.getWorldDirection(_dir), _focus);
+    const t = worldTime();
+    let n = 0;
+    for (let i = 0; i < trees.length && n < LEAF_POOL; i++) {
+      const tree = trees[i];
+      if (Math.hypot(tree.x - _focus.x, tree.z - _focus.z) > LEAF_VIEW) continue;
+      for (let slot = 0; slot < LEAF_SLOTS && n < LEAF_POOL; slot++) {
+        leafAt(tree, slot, t, wind, look, ground, _leaf);
+        if (_leaf.scale <= 0) continue;
+        _fq.setFromEuler(_fe.set(_leaf.rx, _leaf.ry, _leaf.rz));
+        _fm.compose(_fp.set(_leaf.x, _leaf.y, _leaf.z), _fq, _fs.setScalar(look.size * _leaf.scale));
+        mesh.setMatrixAt(n++, _fm);
+      }
+    }
+    mesh.count = n;
+    mesh.instanceMatrix.needsUpdate = true;
   });
+
+  if (!trees.length) return null;
   return (
-    <group>
-      {WINDOWS.map((w, i) => (
-        <mesh
-          key={i}
-          position={[w.x, w.y, w.z]}
-          rotation={w.x > 20 ? [0, -Math.PI / 2, 0] : [0, Math.PI, 0]}
-          material={getWindowMaterial()}
-        >
-          <planeGeometry args={[w.w, w.h]} />
-        </mesh>
-      ))}
-    </group>
+    <instancedMesh ref={meshRef} args={[undefined, undefined, LEAF_POOL]} frustumCulled={false}>
+      <planeGeometry args={[1, 1]} />
+      <meshBasicMaterial color={look.color} transparent opacity={look.opacity} depthWrite={false} side={THREE.DoubleSide} />
+    </instancedMesh>
   );
 }
 
-// ─── E-target ground glow (item 19) ─────────────────────────────────────
-// A soft pulsing ring under whatever the interact sweep currently targets.
-export function TargetGlow({ targetRef }: { targetRef: React.MutableRefObject<[number, number, number] | null> }) {
-  const groupRef = useRef<THREE.Group>(null);
-  const matRef = useRef<THREE.MeshBasicMaterial>(null);
-  const clock = useRef(0);
-  useFrame((_, delta) => {
-    clock.current += delta;
-    const g = groupRef.current;
+// ─── Mist banks (2026-09-24; world 2026-09-27) ───────────────────────────
+// Fog-day haze that hugs the ground: large soft sprites (the existing
+// sun-glow radial) tinted with the fog colour. The banks are world state
+// (`mistBank`): they drift with the world wind, pool over the sea, the river
+// and low ground and thin over rises. The one tile around where the camera
+// looks is drawn, fading at its edge. Normal blending, no depth write.
+const _bank = { x: 0, y: 0, z: 0, strength: 0 };
+export function MistBanks({ color, opacity = 0.32, wind, ground }: { color: string; opacity?: number; wind: WorldWind; ground: (x: number, z: number) => number }) {
+  const glow = useTexture("/assets/sky/sun.png");
+  const group = useRef<THREE.Group>(null);
+  useFrame(({ camera }) => {
+    const g = group.current;
     if (!g) return;
-    const t = targetRef.current;
-    if (!t) {
-      if (matRef.current) matRef.current.opacity = THREE.MathUtils.damp(matRef.current.opacity, 0, 10, delta);
-      return;
-    }
-    g.position.set(
-      THREE.MathUtils.damp(g.position.x, t[0], 14, delta),
-      t[1] + 0.05,
-      THREE.MathUtils.damp(g.position.z, t[2], 14, delta)
-    );
-    const s = 1 + Math.sin(clock.current * 5) * 0.08;
-    g.scale.set(s, 1, s);
-    if (matRef.current) {
-      matRef.current.opacity = THREE.MathUtils.damp(matRef.current.opacity, 0.4 + Math.sin(clock.current * 5) * 0.1, 10, delta);
+    viewFocus(camera.position, camera.getWorldDirection(_dir), _focus);
+    const t = worldTime();
+    for (let k = 0; k < g.children.length; k++) {
+      const sprite = g.children[k] as THREE.Sprite;
+      mistBank(k, t, wind, _focus.x, _focus.z, ground, _bank);
+      sprite.position.set(_bank.x, _bank.y, _bank.z);
+      sprite.material.opacity = opacity * _bank.strength * windowFade(_bank.x - _focus.x, _bank.z - _focus.z, MIST_TILE);
     }
   });
-  return (
-    <group ref={groupRef}>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} renderOrder={3}>
-        <ringGeometry args={[0.55, 0.78, 24]} />
-        <meshBasicMaterial ref={matRef} color="#FFE9A8" transparent opacity={0} depthWrite={false} blending={THREE.AdditiveBlending} side={THREE.DoubleSide} />
-      </mesh>
-    </group>
-  );
+  return <group ref={group}>{Array.from({ length: MIST_BANKS }, (_, i) => (
+    <sprite key={i} scale={[9 + (i % 3) * 2, 3.2, 1]} renderOrder={4}>
+      <spriteMaterial map={glow} color={color} transparent opacity={0} depthWrite={false} fog={false} />
+    </sprite>
+  ))}</group>;
 }

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, ExternalLink } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import type { SeasonalPalette, PaletteColors } from "@/lib/game/contentTypes";
+import type { SeasonalPalette, PaletteColors } from "@/lib/content/types";
 
 // ─── PaletteEditor ──────────────────────────────────────────────────────────
 // Shared form component used by both /new and /[id]/edit. Mirrors NPCEditor /
@@ -30,6 +30,9 @@ const COLOR_KEYS: (keyof PaletteColors)[] = [
   "water",
   "building_primary",
   "building_accent",
+  // Member island seasonal tints (ground over grass texture, oak foliage).
+  "island_grass",
+  "leaf",
 ];
 
 const DEFAULT_COLORS: PaletteColors = {
@@ -40,6 +43,8 @@ const DEFAULT_COLORS: PaletteColors = {
   water: "#4A90D9",
   building_primary: "#D4A574",
   building_accent: "#8B6F4E",
+  island_grass: "#91B47F",
+  leaf: "#9BC87E",
 };
 
 interface FormState {
@@ -100,6 +105,8 @@ function toFormState(row: Partial<SeasonalPalette> | null | undefined): FormStat
         palette.building_primary ?? DEFAULT_COLORS.building_primary,
       building_accent:
         palette.building_accent ?? DEFAULT_COLORS.building_accent,
+      island_grass: palette.island_grass ?? DEFAULT_COLORS.island_grass,
+      leaf: palette.leaf ?? DEFAULT_COLORS.leaf,
     },
     scheduled_start: toLocalDatetime(row.scheduled_start ?? null),
     scheduled_end: toLocalDatetime(row.scheduled_end ?? null),
@@ -339,7 +346,7 @@ export default function PaletteEditor({
               <ColorRow
                 key={key}
                 label={key}
-                value={form.colors[key]}
+                value={form.colors[key] ?? ""}
                 onChange={(v) => updateColor(key, v)}
               />
             ))}
@@ -469,7 +476,7 @@ function validate(
   }
 
   for (const key of COLOR_KEYS) {
-    if (!HEX_REGEX.test(form.colors[key])) {
+    if (!HEX_REGEX.test(form.colors[key] ?? "")) {
       errors.colors = `Invalid hex for ${key}`;
       break;
     }

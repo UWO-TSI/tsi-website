@@ -11,6 +11,7 @@ import { Suspense, useEffect } from "react";
 import { useThree, type ThreeEvent } from "@react-three/fiber";
 import { AudioManager } from "@/lib/game/audio";
 import {
+  InteriorKeeper,
   InteriorPlayer, Piece, applyInteriorBackdrop, nearestStation, preloadPieces,
   type InteriorStation, type RoomBounds,
 } from "./interiorShared";
@@ -102,6 +103,8 @@ export default function ShopInterior({
         <Piece name="yellow-message-mat" position={[0, 0.015, -4.3]} scale={0.12} />
       </Suspense>
 
+      {/* wake 69: shopkeep behind the counter (cap, market-green apron) */}
+      <InteriorKeeper position={[0, 0, 3.5]} watch={[0, 2.6]} colors={{ apron: "#4E7A52", shirt: "#E8D5A4" }} hat="cap" playerPosRef={playerPosRef} />
       <InteriorPlayer
         frozen={frozen}
         bounds={BOUNDS}

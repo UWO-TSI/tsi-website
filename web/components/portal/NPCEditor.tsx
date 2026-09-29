@@ -5,12 +5,14 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Plus, Trash2, ExternalLink } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import type { NPCPersona, SpawnZone } from "@/lib/game/contentTypes";
+import type { NPCPersona, SpawnZone } from "@/lib/content/types";
 import ImageUploadButton from "@/components/portal/ImageUploadButton";
+import { PHASES, RESIDENT_ANCHORS, RESIDENT_POSTS, type ResidentSchedule } from "@/lib/content/residents";
 
-// ─── NPCEditor ──────────────────────────────────────────────────────────────
+// ─── NPCEditor (Residents) ──────────────────────────────────────────────────
 // Shared form component used by both /new and /[id]/edit. Renders all NPC
-// fields, validates client-side, then drives the B3 draft/preview/publish API.
+// fields plus the resident roster fields (post, bio, tone, schedule; rows 122,
+// 218), validates client-side, then drives the B3 draft/preview/publish API.
 //
 // `mode = "new"` — slug uniqueness is enforced; row_id sent as null.
 // `mode = "edit"` — initial row + id loaded by the page wrapper; slug
@@ -18,6 +20,10 @@ import ImageUploadButton from "@/components/portal/ImageUploadButton";
 
 const SLUG_REGEX = /^[a-z0-9-]+$/;
 const SPAWN_ZONES: SpawnZone[] = ["courtyard", "shop", "temple", "roaming"];
+const POST_LABELS: Record<(typeof RESIDENT_POSTS)[number], string> = {
+  hq_lead: "HQ lead", shopkeeper: "Shopkeeper", cafe_owner: "Café owner", museum_curator: "Museum curator",
+  wharf_keeper: "Wharf keeper", oracle_keeper: "Oracle keeper", workshop_crafter: "Workshop crafter", villager: "Villager",
+};
 
 interface FormState {
   slug: string;
@@ -28,6 +34,10 @@ interface FormState {
   canned_dialogue: string[];
   sprite_url: string;
   active: boolean;
+  post: string;
+  bio: string;
+  tone: string;
+  schedule: ResidentSchedule;
 }
 
 interface NPCEditorProps {
@@ -45,6 +55,10 @@ const EMPTY_FORM: FormState = {
   canned_dialogue: [],
   sprite_url: "",
   active: true,
+  post: "",
+  bio: "",
+  tone: "",
+  schedule: {},
 };
 
 function toFormState(row: Partial<NPCPersona> | null | undefined): FormState {
@@ -60,6 +74,10 @@ function toFormState(row: Partial<NPCPersona> | null | undefined): FormState {
       : [],
     sprite_url: row.sprite_url ?? "",
     active: row.active ?? true,
+    post: row.post ?? "",
+    bio: row.bio ?? "",
+    tone: row.tone ?? "",
+    schedule: (row.schedule ?? {}) as ResidentSchedule,
   };
 }
 
@@ -151,6 +169,10 @@ export default function NPCEditor({ mode, rowId, initial }: NPCEditorProps) {
             .filter((l) => l.length > 0),
           sprite_url: form.sprite_url.trim() || null,
           active: form.active,
+          post: form.post || null,
+          bio: form.bio.trim(),
+          tone: form.tone.trim() || null,
+          schedule: form.schedule,
         },
       };
       const res = await fetch("/api/content/drafts", {
@@ -246,13 +268,13 @@ export default function NPCEditor({ mode, rowId, initial }: NPCEditorProps) {
           className="inline-flex items-center gap-1 text-xs font-mono text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
         >
           <ArrowLeft size={12} />
-          Back to NPCs
+          Back to Residents
         </Link>
       </div>
 
       <div className="mb-6">
         <h1 className="text-2xl font-heading font-bold text-[var(--color-text-primary)]">
-          {mode === "new" ? "New NPC" : `Edit: ${initial?.display_name ?? "NPC"}`}
+          {mode === "new" ? "New resident" : `Edit: ${initial?.display_name ?? "Resident"}`}
         </h1>
         <p className="text-sm font-mono text-[var(--color-text-muted)] mt-1">
           Drafts stay invisible to members until published.
@@ -297,7 +319,53 @@ export default function NPCEditor({ mode, rowId, initial }: NPCEditorProps) {
           />
         </Field>
 
-        <Field label="Spawn Zone">
+        <div className="grid gap-5 md:grid-cols-2">
+          <Field label="Post" hint="The service post they staff (row 122), or a flavour villager">
+            <select value={form.post} onChange={(e) => update("post", e.target.value)} className={inputCls}>
+              <option value="">(none)</option>
+              {RESIDENT_POSTS.map((p) => (
+                <option key={p} value={p}>{POST_LABELS[p]}</option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Tone" hint="How they talk: warm, dry, playful, earnest…" error={errors.tone}>
+            <input type="text" list="resident-tones" value={form.tone} onChange={(e) => update("tone", e.target.value)} className={inputCls} placeholder="warm" />
+            <datalist id="resident-tones">
+              {["warm", "dry", "playful", "earnest"].map((t) => <option key={t} value={t} />)}
+            </datalist>
+          </Field>
+        </div>
+
+        <Field label="Bio" hint="Authored background for writers and the resident card. Up to 1000 characters." error={errors.bio}>
+          <textarea rows={3} value={form.bio} onChange={(e) => update("bio", e.target.value)} className={`${inputCls} resize-y`} maxLength={1000} />
+        </Field>
+
+        <Field label="Schedule" hint="Where they stand on the island in each part of the day. Empty = their day spot (or the plaza).">
+          <div className="grid gap-3 grid-cols-2 md:grid-cols-4">
+            {PHASES.map((phase) => (
+              <label key={phase} className="block">
+                <span className="block text-[0.6rem] font-mono uppercase text-[var(--color-text-muted)] mb-1">{phase}</span>
+                <select
+                  value={form.schedule[phase] ?? ""}
+                  onChange={(e) => {
+                    const next = { ...form.schedule };
+                    if (e.target.value) next[phase] = e.target.value as keyof typeof RESIDENT_ANCHORS;
+                    else delete next[phase];
+                    update("schedule", next);
+                  }}
+                  className={inputCls}
+                >
+                  <option value="">{phase === "day" ? "(plaza)" : "(day spot)"}</option>
+                  {Object.entries(RESIDENT_ANCHORS).map(([key, a]) => (
+                    <option key={key} value={key}>{a.label}</option>
+                  ))}
+                </select>
+              </label>
+            ))}
+          </div>
+        </Field>
+
+        <Field label="Spawn Zone" hint="Legacy portal world only; the member island uses the schedule.">
           <select
             value={form.spawn_zone}
             onChange={(e) => update("spawn_zone", e.target.value as SpawnZone)}
@@ -344,8 +412,8 @@ export default function NPCEditor({ mode, rowId, initial }: NPCEditorProps) {
         </Field>
 
         <Field
-          label="Canned Dialogue"
-          hint="Fallback lines used when the LLM is unavailable. ≤ 200 chars per line."
+          label="Dialogue lines"
+          hint="What they say in their speech bubble when you pass by. ≤ 200 chars per line."
           error={errors.canned_dialogue}
         >
           <div className="space-y-2">
@@ -468,6 +536,9 @@ function validate(
   } else if (name.length > 80) {
     errors.display_name = "Keep under 80 characters";
   }
+
+  if (form.tone.trim().length > 40) errors.tone = "Keep the tone under 40 characters";
+  if (form.bio.length > 1000) errors.bio = "Keep the bio under 1000 characters";
 
   if (form.persona_prompt.length > 2000) {
     errors.persona_prompt = "Persona prompt must be ≤ 2000 characters";

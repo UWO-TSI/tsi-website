@@ -5,7 +5,7 @@
 
 ---
 
-## 🟡 CURRENT VISION DELTAS (updated 2026-07-13)
+## 🟡 CURRENT VISION DELTAS (updated 2026-07-25, loop wake 70)
 
 This bible was written before the 2026-03-29 product pivot to a **2.5D MMO RPG game world**. Most feature specs below (Bounty mechanics, Calendar, Kanban, Marketplace, Job Board, Directory) are still authoritative. The following sections have **drifted** and the corrections live in the sections themselves:
 
@@ -15,7 +15,7 @@ This bible was written before the 2026-03-29 product pivot to a **2.5D MMO RPG g
 | §2 Architecture | Next.js + Supabase | + **React Three Fiber + Drei + PS1 shader**; Colyseus deferred for multiplayer |
 | §4 RBAC | 4-tier (T1-T4) | **5-tier (T1-T5)** — T1 David / T2 chapter presidents / T3 PMs+VPs / T4 directors+devs / T5 volunteers+general |
 | §6 Class System | Position-based (`ARCHITECT`, `ORACLE`, etc.) | **MBTI-based** — 4 main classes (Analyst/Diplomat/Sentinel/Explorer) + 16 subclasses, determined via Oracle Temple quiz |
-| §7 Coin Economy | Explicit `100 TC ≈ $1 CAD` reveal | **Internal-only** — never expose conversion rate in user-facing content |
+| §7 Coin Economy | Explicit `100 TC ≈ $1 CAD` reveal | **Economy v2 (2026-07-25, David-ruled):** the money-equivalent wallet is now **Gems 💎** (the legacy `tc_*` DB columns, display-renamed only); **TC 🪙 is the in-game PLAY currency** — earned by selling catches at the Wharf Shack, spent on gear. Coins NEVER convert to Gems or CAD; no rate anywhere. See `specs/economy-v2-currencies.md` |
 | §5 Onboarding | Terminal hacker theme | Theme retained; **adds Oracle Temple MBTI step + game-world tutorial** |
 
 **Additions since 2026-05-21 (shipped, not yet reflected in sections below):**
@@ -29,12 +29,31 @@ This bible was written before the 2026-03-29 product pivot to a **2.5D MMO RPG g
 | World assets | `~/Downloads/GLB` dump is the **primary asset source** (David ruling 2026-07-13): ACNH road tiles, water caustics, furniture, landmarks, seasonal garlands wired to the admin palette |
 | Lighting | PMREM environment (IBL) from the TOD palette — the "ACNH cozy reflections" pass |
 
+**Additions 2026-07-24 → 07-25 (loop wakes 46-69, branch `restart/art-cohesion-v2` — merge-ready per QA Wave 30):**
+
+| Area | Current state |
+|------|---------------|
+| Geography v2 | Island **+18%** with organic coastline (S1-S7 all done): loop/network roads, **Wharf district** (pier + enterable Wharf Shack), **Temple Rise** (Oracle on a 2.3u cliff plateau with stone stairs), **Isla Chica** (boat-only islet, rowboat fade-travel both ways), **The Reedmarsh** (wetland ponds/reeds/cattails), **The Flats** (broad tidal-sand fishery, 3 sea cast spots), river v3 (width narrows under both bridges + the x≈22 bend pool) |
+| Fishing | **91 species** (fishCatalog auto-import + core roster), rarity reranked (legendary tight at 7; **Sea King tier vacant** until David's models), zone-scoped odds (river/sea by coastDist), per-rarity sell prices |
+| Economy v2 | Coins wallet local-first (`lib/game/coins.ts`) + DRAFT migrations **024** (coins column-revoked, `earn_coins`/`sell_catches`/`buy_gear` SECURITY DEFINER RPCs, server-side `fish_prices` 91-key + `gear_prices`) and **025** (seasonal seed) — NOT applied; see `specs/launch-batch.md` |
+| Wharf Shack | 4th interior: sell-catches counter sheet (per-rarity prices, sell 1/all, coin tick-up) + **gear shelf** (Cedar Rod 350 / Lucky Bobber 600 / Glass Rod 1200, local-first ownership) |
+| Interiors | **All four rooms staffed** with procedural `InteriorKeeper` figures (straw/cap/bun/hood variants, idle bob + lean-to-customer) |
+| Seasons | **End-to-end seasonal system**: 5 palettes (default/halloween/autumn/winter/spring) in `seasonal_palettes` + DEFAULT_PALETTES fallback; grass tint wired into terrain vertex colors; **seasonal particles** (snow/leaves/petals); admin flips a table row, no deploy — `specs/seasonal-palettes.md` |
+| Furniture | **Recolor pipeline** (data-driven material tints, `/lab/furniture` bench with material-slot inspector); furnishing HOLDS for David's shortlist + HQ floor-plan ruling |
+| Discovery | Zones with pings: Beach Cove, Lighthouse, **Isla Chica, The Flats, The Reedmarsh**; minimap shows all new geography |
+| QA hooks | `?spawnat=x,z`, `?aerial=1&ax&az&ah&dir`, /lab/interior + /lab/furniture benches, LabPanel time/palette headless-drivable — see AGENT_LOG wakes 55-65 for the harness lessons |
+
 **Canonical sources for current state:**
 - `specs/asset-stack.md` — confirmed tech architecture (R3F + Drei + PS1 + Colyseus deferred + 2D sprite chars via Nano Banana)
 - `specs/ux-status.md` — current sprint punch list (Tier-1 design debt, Tier-2 next sprint, Tier-3 future)
 - `specs/ux-game-world-v2.md` — game world spec (AC overhaul)
 - `specs/ux-oracle-v2.md` — MBTI quiz card-game encounter (stretch goal)
 - `specs/ux-classes.md` — 4 main classes + 16 subclasses visual identity
+- `specs/geo-master-plan-v2.md` — geography v2 (S1-S7, all built)
+- `specs/economy-v2-currencies.md` — TC/Gems split doctrine
+- `specs/seasonal-palettes.md` — seasonal system + admin flow
+- `specs/launch-batch.md` — beta-day migration/smoke checklist
+- `specs/collab-design-track.md` — David-collab workflow (geo packs, interiors, furniture)
 - Memory file: `project_student_portal_vision.md` (in `~/.claude/projects/-Users-DavidLiu-Documents-GitHub-uwotsi/memory/`)
 
 **Onboarding new agents:** Read `CLAUDE.md` (entry point) → `AGENT_LOG.md` (current sprint + your role) → role-specific specs in `specs/`. Use this bible for feature mechanics; trust the canonical sources above for architecture and class/tier system.

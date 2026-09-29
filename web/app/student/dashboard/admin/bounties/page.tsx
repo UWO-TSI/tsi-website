@@ -97,7 +97,7 @@ export default function AdminBountiesPage() {
           <p className="text-sm font-mono text-[var(--color-text-muted)] mt-1">
             {view === "postings"
               ? `${bounties.filter((b) => b.status === "pending").length} pending review`
-              : "Deliverables awaiting TC payout decisions"}
+              : "Deliverables awaiting Gem payout decisions"}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -433,7 +433,7 @@ function SubmissionsReview() {
                       disabled={busy === sub.id}
                       className="px-3 py-1.5 rounded text-xs font-mono text-green-400 bg-green-400/10 hover:bg-green-400/20 transition-all disabled:opacity-50"
                     >
-                      Approve + pay TC
+                      Approve + pay Gems
                     </button>
                     <button
                       onClick={() => review(sub, "revision_requested")}

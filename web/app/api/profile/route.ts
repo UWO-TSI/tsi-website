@@ -3,6 +3,9 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { z } from "zod";
 import type { Profile } from "@/lib/supabase/types";
+import { lookRefs, parseLook } from "@/lib/game/character/look";
+import { supabaseEconomyStore } from "@/lib/wallet/supabaseStore";
+import { ownedRefs } from "@/lib/wallet/service";
 
 const ProfileUpdateSchema = z.object({
   display_name: z.string().min(1).max(50).optional(),
@@ -28,6 +31,8 @@ const ProfileUpdateSchema = z.object({
       hair_color: z.string().optional(),
       skin_color: z.string().optional(),
       outfit_color: z.string().optional(),
+      // Character creator look (row 142), normalised against the catalogue.
+      look: z.unknown().optional().transform(v => (v === undefined ? undefined : parseLook(v))),
     })
     .optional(),
   year: z.string().max(20).nullable().optional(),
@@ -113,21 +118,32 @@ export async function PATCH(request: Request) {
     );
   }
 
-  const updates = {
-    ...parsed.data,
-    updated_at: new Date().toISOString(),
-  };
+  const { avatar_config, ...fields } = parsed.data;
+  const admin = createAdminClient();
+  // avatar_config is server-only (20260926180000_ownership): the look may wear
+  // only owned clothes and dyes, checked here, then written as service_role.
+  if (avatar_config?.look) {
+    const owned = await ownedRefs(supabaseEconomyStore(admin), user.id);
+    if (!owned.ok) return NextResponse.json({ error: owned.error, code: owned.code }, { status: owned.status });
+    const missing = lookRefs(avatar_config.look).filter((ref) => !owned.data.has(ref));
+    if (missing.length) return NextResponse.json({ error: "You don't own everything in that look.", code: "not_owned", missing }, { status: 403 });
+  }
 
+  const updated_at = new Date().toISOString();
   const { error: updateError } = await supabase
     .from("profiles")
-    .update(updates)
+    .update({ ...fields, updated_at })
     .eq("id", user.id);
 
   if (updateError) {
     return NextResponse.json({ error: updateError.message }, { status: 500 });
   }
+  if (avatar_config) {
+    const { error: lookError } = await admin.from("profiles").update({ avatar_config }).eq("id", user.id);
+    if (lookError) return NextResponse.json({ error: lookError.message }, { status: 500 });
+  }
 
-  const { data, error } = await createAdminClient()
+  const { data, error } = await admin
     .from("profiles")
     .select("*")
     .eq("id", user.id)

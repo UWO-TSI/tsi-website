@@ -61,16 +61,11 @@ export default function SignupPage() {
     try {
       const supabase = createClient();
 
-      // Validate invite code if provided
+      // Validate invite code if provided (codes aren't readable, migration 20260926155300)
       if (inviteCode) {
-        const { data: code } = await supabase
-          .from("invite_codes")
-          .select("id, is_active")
-          .eq("code", inviteCode.toUpperCase().trim())
-          .eq("is_active", true)
-          .single();
+        const { data: valid } = await supabase.rpc("invite_code_valid", { p_code: inviteCode });
 
-        if (!code) {
+        if (!valid) {
           setError("Invalid or expired invite code.");
           setLoading(false);
           return;
@@ -86,7 +81,7 @@ export default function SignupPage() {
             display_name: displayName,
             invite_code: inviteCode || null,
           },
-          emailRedirectTo: `${window.location.origin}/student/auth/callback?next=/student/apply/portal`,
+          emailRedirectTo: `${window.location.origin}/student/auth/callback?next=/student/go`,
         },
       });
 
@@ -121,7 +116,7 @@ export default function SignupPage() {
         return;
       }
 
-      router.push("/student/apply/portal");
+      router.push("/student/go");
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong.");

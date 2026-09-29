@@ -1,0 +1,122 @@
+
+=== security guarantees (member JWT + public anon key) ===
+SQL> select tier, class, tethos_coins, xp, membership from profiles where id = 'c2982825-3dd1-4572-a9d0-4b7fadd306d6'
+tier | class | tethos_coins | xp | membership
+4 | Warden | 850 | 0 | member
+member: PATCH /rest/v1/profiles?id=eq.c2982825-3dd1-4572-a9d0-4b7fadd306d6 {"tier":1} -> 403 {"code":"42501","details":null,"hint":null,"message":"profiles: tier can only be changed by the server"}
+PASS: member can't set own tier (guard)
+member: PATCH /rest/v1/profiles?id=eq.c2982825-3dd1-4572-a9d0-4b7fadd306d6 {"class":"Arcane"} -> 403 {"code":"42501","details":null,"hint":null,"message":"profiles: class can only be changed by the server"}
+PASS: member can't set own class (guard)
+member: PATCH /rest/v1/profiles?id=eq.c2982825-3dd1-4572-a9d0-4b7fadd306d6 {"subclass":"Sage"} -> 403 {"code":"42501","details":null,"hint":null,"message":"profiles: subclass can only be changed by the server"}
+PASS: member can't set own subclass (guard)
+member: PATCH /rest/v1/profiles?id=eq.c2982825-3dd1-4572-a9d0-4b7fadd306d6 {"tethos_coins":99999} -> 403 {"code":"42501","details":null,"hint":null,"message":"profiles: tethos_coins can only be changed by the server"}
+PASS: member can't set own tethos_coins (guard)
+member: PATCH /rest/v1/profiles?id=eq.c2982825-3dd1-4572-a9d0-4b7fadd306d6 {"xp":99999} -> 403 {"code":"42501","details":null,"hint":null,"message":"profiles: xp can only be changed by the server"}
+PASS: member can't set own xp (guard)
+member: PATCH /rest/v1/profiles?id=eq.c2982825-3dd1-4572-a9d0-4b7fadd306d6 {"level":50} -> 403 {"code":"42501","details":null,"hint":null,"message":"profiles: level can only be changed by the server"}
+PASS: member can't set own level (guard)
+member: PATCH /rest/v1/profiles?id=eq.c2982825-3dd1-4572-a9d0-4b7fadd306d6 {"membership":"public"} -> 403 {"code":"42501","details":null,"hint":null,"message":"profiles: membership can only be changed by the server"}
+PASS: member can't set own membership (guard)
+member: PATCH /rest/v1/profiles?id=eq.c2982825-3dd1-4572-a9d0-4b7fadd306d6 {"is_active":false} -> 403 {"code":"42501","details":null,"hint":null,"message":"profiles: is_active can only be changed by the server"}
+PASS: member can't set own is_active (guard)
+member: PATCH /rest/v1/profiles?id=eq.c2982825-3dd1-4572-a9d0-4b7fadd306d6 {"avatar_config":{"look":{"hair":99,"top":"top_founder_cape"}}} -> 403 {"code":"42501","details":null,"hint":null,"message":"profiles: avatar_config can only be changed by the server"}
+PASS: member can't set own avatar_config (guard)
+public: PATCH /rest/v1/profiles?id=eq.4e294cb3-7032-433c-971e-90f855021d10 {"membership":"member"} -> 403 {"code":"42501","details":null,"hint":null,"message":"profiles: membership can only be changed by the server"}
+PASS: public account can't make itself a member
+member: PATCH /rest/v1/profiles?id=eq.c2982825-3dd1-4572-a9d0-4b7fadd306d6 {"bio":"allowed edit"} -> 204 
+PASS: member can still edit their own bio
+SQL> select tier, class, subclass, tethos_coins, xp, level, membership, is_active from profiles where id = 'c2982825-3dd1-4572-a9d0-4b7fadd306d6'
+tier | class | subclass | tethos_coins | xp | level | membership | is_active
+4 | Warden |  | 850 | 0 | 1 | member | t
+member: POST /rest/v1/wallet_ledger {"member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","amount":5000,"balance_after":5000,"source":"admin","idempotency_key":"exploit-ledger-1"} -> 403 {"code":"42501","details":null,"hint":null,"message":"new row violates row-level security policy for table \"wallet_ledger\""}
+PASS: member can't insert into wallet_ledger
+member: POST /rest/v1/wallets {"member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","coins":5000} -> 403 {"code":"42501","details":null,"hint":null,"message":"new row violates row-level security policy for table \"wallets\""}
+PASS: member can't insert into wallets
+member: POST /rest/v1/tc_transactions {"user_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","amount":5000,"balance_after":5000,"type":"earn_admin","description":"exploit"} -> 403 {"code":"42501","details":null,"hint":null,"message":"new row violates row-level security policy for table \"tc_transactions\""}
+PASS: member can't insert into tc_transactions
+member: POST /rest/v1/member_collections {"user_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","item_key":"fish_golden_koi","count":99} -> 403 {"code":"42501","details":null,"hint":"Grant the required privileges to the current role with: GRANT INSERT ON public.member_collections TO authenticated;","message":"permission denied for table member_collections"}
+PASS: member can't insert into member_collections
+member: POST /rest/v1/museum_donations {"species_key":"fish_koi","donor_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","idempotency_key":"exploit-donate-1"} -> 403 {"code":"42501","details":null,"hint":null,"message":"new row violates row-level security policy for table \"museum_donations\""}
+PASS: member can't insert into museum_donations
+member: POST /rest/v1/club_goal_contributions {"goal_id":"00000000-0000-4000-8000-000000000001","member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","source":"admin","amount":1,"amount_used":1,"weight":1,"credited_points":15000,"idempotency_key":"exploit-goal-1"} -> 403 {"code":"42501","details":null,"hint":null,"message":"new row violates row-level security policy for table \"club_goal_contributions\""}
+PASS: member can't insert into club_goal_contributions
+member: POST /rest/v1/combat_xp_ledger {"member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","amount":99999,"source":"admin","idempotency_key":"exploit-xp-1"} -> 403 {"code":"42501","details":null,"hint":null,"message":"new row violates row-level security policy for table \"combat_xp_ledger\""}
+PASS: member can't insert into combat_xp_ledger
+member: POST /rest/v1/member_progression {"member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","xp":999999,"level":50} -> 403 {"code":"42501","details":null,"hint":null,"message":"new row violates row-level security policy for table \"member_progression\""}
+PASS: member can't insert into member_progression
+member: POST /rest/v1/member_weapons {"member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","weapon_key":"staff-elder","durability":999} -> 403 {"code":"42501","details":null,"hint":null,"message":"new row violates row-level security policy for table \"member_weapons\""}
+PASS: member can't insert into member_weapons
+member: POST /rest/v1/member_inventory {"member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","item_id":"1afd7d2e-b300-43a8-84d8-9d8f633aaad3","qty":1} -> 403 {"code":"42501","details":null,"hint":null,"message":"new row violates row-level security policy for table \"member_inventory\""}
+PASS: member can't insert into member_inventory
+member: POST /rest/v1/merch_reservations {"member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","item_id":"d142560c-549a-4525-9dba-e0bb32f3268f","gems":0,"pickup_code":"EXPLOIT","idempotency_key":"exploit-merch-1"} -> 403 {"code":"42501","details":null,"hint":null,"message":"new row violates row-level security policy for table \"merch_reservations\""}
+PASS: member can't insert into merch_reservations
+member: POST /rest/v1/letters {"kind":"system","recipient_id":"4e294cb3-7032-433c-971e-90f855021d10","subject":"Official","body":"fake system letter"} -> 403 {"code":"42501","details":null,"hint":null,"message":"new row violates row-level security policy for table \"letters\""}
+PASS: member can't insert into letters
+member: POST /rest/v1/study_sessions {"member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","table_id":"00000000-0000-4000-8000-000000005109","seat":2,"coins_paid":999} -> 403 {"code":"42501","details":null,"hint":null,"message":"new row violates row-level security policy for table \"study_sessions\""}
+PASS: member can't insert into study_sessions
+member: POST /rest/v1/member_identity {"member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","family":"Arcane","mbti_type":"INTJ"} -> 403 {"code":"42501","details":null,"hint":null,"message":"new row violates row-level security policy for table \"member_identity\""}
+PASS: member can't insert into member_identity
+member: POST /rest/v1/home_room_purchases {"member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","room_number":4,"price_coins":0,"idempotency_key":"exploit-room-1"} -> 403 {"code":"42501","details":null,"hint":null,"message":"new row violates row-level security policy for table \"home_room_purchases\""}
+PASS: member can't insert into home_room_purchases
+member: PATCH /rest/v1/wallets?member_id=eq.c2982825-3dd1-4572-a9d0-4b7fadd306d6 {"coins":99999} -> 200 []
+PASS: member can't update wallets
+member: PATCH /rest/v1/member_progression?member_id=eq.c2982825-3dd1-4572-a9d0-4b7fadd306d6 {"xp":999999} -> 200 []
+PASS: member can't update member_progression
+member: PATCH /rest/v1/member_weapons?member_id=eq.c2982825-3dd1-4572-a9d0-4b7fadd306d6 {"durability":9999} -> 200 []
+PASS: member can't update member_weapons
+member: PATCH /rest/v1/member_collections?user_id=eq.c2982825-3dd1-4572-a9d0-4b7fadd306d6 {"count":99} -> 403 {"code":"42501","details":null,"hint":"Grant the required privileges to the current role with: GRANT UPDATE ON public.member_collections TO authenticated;","message":"permission denied for table member_collections"}
+PASS: member can't update member_collections
+member: PATCH /rest/v1/study_sessions?member_id=eq.c2982825-3dd1-4572-a9d0-4b7fadd306d6 {"coins_paid":999} -> 200 []
+PASS: member can't update study_sessions
+member: PATCH /rest/v1/member_identity?member_id=eq.c2982825-3dd1-4572-a9d0-4b7fadd306d6 {"family":"Warden"} -> 200 []
+PASS: member can't update member_identity
+member: POST /rest/v1/rpc/wallet_apply {"p_member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","p_currency":"coins","p_amount":5000,"p_source":"admin","p_ref":"x","p_idempotency_key":"exploit-rpc-1"} -> 403 {"code":"42501","details":null,"hint":null,"message":"permission denied for function wallet_apply"}
+PASS: member can't call wallet_apply
+member: POST /rest/v1/rpc/wallet_apply {"p_member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","p_currency":"gems","p_amount":5000,"p_source":"admin","p_ref":"x","p_idempotency_key":"exploit-rpc-2"} -> 403 {"code":"42501","details":null,"hint":null,"message":"permission denied for function wallet_apply"}
+PASS: member can't call wallet_apply
+member: POST /rest/v1/rpc/combat_grant_xp {"p_member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","p_amount":5000,"p_source":"admin","p_ref":"x","p_key":"exploit-rpc-3"} -> 403 {"code":"42501","details":null,"hint":null,"message":"permission denied for function combat_grant_xp"}
+PASS: member can't call combat_grant_xp
+member: POST /rest/v1/rpc/study_settle {"p_session_id":"00000000-0000-4000-8000-000000000000"} -> 404 {"code":"PGRST202","details":"Searched for the function public.study_settle with parameter p_session_id or with a single unnamed json/jsonb parameter, but no matches were found in the schema cache.","hint":"Perhaps you m
+PASS: member can't call study_settle
+member: POST /rest/v1/rpc/daily_gift_claim {"p_member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6"} -> 403 {"code":"42501","details":null,"hint":null,"message":"permission denied for function daily_gift_claim"}
+PASS: member can't call daily_gift_claim
+member: GET /rest/v1/profiles?select=id,email,phone&id=eq.4e294cb3-7032-433c-971e-90f855021d10  -> 403 {"code":"42501","details":null,"hint":"Grant the required privileges to the current role with: GRANT SELECT ON public.profiles TO authenticated;","message":"permission denied for table profiles"}
+PASS: member can't read another member's email/phone
+member: GET /rest/v1/wallet_ledger?member_id=eq.4e294cb3-7032-433c-971e-90f855021d10  -> 200 []
+PASS: member can't read another member's ledger
+member: GET /rest/v1/letters?recipient_id=eq.4e294cb3-7032-433c-971e-90f855021d10&or=(sender_id.is.null,sender_id.neq.c2982825-3dd1-4572-a9d0-4b7fadd306d6)  -> 200 []
+PASS: member can't read another member's mail
+SQL> insert into events (title, event_type, is_irl, start_time, created_by) values ('Phase1 IRL test event', 'club', true, now(), '6d14b24f-7005-4194-adf2-4fc02d186c45') returning id
+id
+b96b913a-c18e-4417-a874-0f41f8bc2d23
+member: POST /rest/v1/event_attendance {"event_id":"b96b913a-c18e-4417-a874-0f41f8bc2d23","user_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","status":"attended"} -> 403 {"code":"42501","details":null,"hint":null,"message":"new row violates row-level security policy for table \"event_attendance\""}
+PASS: member can't mark themselves attended at an IRL event
+SQL> insert into events (title, event_type, is_irl, start_time, created_by) values ('Phase1 RSVP test event', 'club', true, now(), '6d14b24f-7005-4194-adf2-4fc02d186c45') returning id
+id
+2b43ebdf-a750-4183-b5b7-1f13130a99af
+member: POST /rest/v1/event_attendance {"event_id":"2b43ebdf-a750-4183-b5b7-1f13130a99af","user_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","status":"registered"} -> 201 [{"id":"09b5272f-34cd-4126-976d-2d2abd6cc989","event_id":"2b43ebdf-a750-4183-b5b7-1f13130a99af","user_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","status":"registered"}]
+PASS: member can still RSVP (registered)
+SQL> select status from event_attendance where user_id = 'c2982825-3dd1-4572-a9d0-4b7fadd306d6' and event_id = 'b96b913a-c18e-4417-a874-0f41f8bc2d23'
+status
+SQL> select count(*) as event_xp_rows from combat_xp_ledger where member_id = 'c2982825-3dd1-4572-a9d0-4b7fadd306d6' and source = 'event'
+event_xp_rows
+0
+SQL> select count(*) as event_coin_rows from wallet_ledger where member_id = 'c2982825-3dd1-4572-a9d0-4b7fadd306d6' and source = 'event'
+event_coin_rows
+0
+anon: GET /rest/v1/invite_codes?select=code,is_active  -> 200 []
+PASS: anon can't list invite codes
+public: GET /rest/v1/invite_codes?select=code,is_active  -> 200 []
+PASS: a signed-in public account can't list invite codes
+anon: GET /rest/v1/member_badges?select=member_id,badge,family  -> 401 {"code":"42501","details":null,"hint":null,"message":"permission denied for view member_badges"}
+PASS: anon can't list member badges
+member: GET /rest/v1/member_badges?select=member_id,badge&member_id=eq.c2982825-3dd1-4572-a9d0-4b7fadd306d6  -> 200 [{"member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","badge":"member"}]
+PASS: signed-in users still read badges
+google-shaped create 200
+invite signup 200
+email|display_name|membership|tier
+phase1-google@tethos-staging.test|Grace Hopper|public|4
+phase1-invite@tethos-staging.test|Invite Test|member|4
+(2 rows)
+delete 200
+delete 200

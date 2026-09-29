@@ -22,18 +22,6 @@ const StepSchema = z.object({
       bio: z.string().max(500).optional(),
       program: z.string().max(100).optional(),
       year: z.string().max(20).optional(),
-      avatar_config: z
-        .object({
-          body: z.string().optional(),
-          hair: z.string().optional(),
-          face: z.string().optional(),
-          outfit: z.string().optional(),
-          accessory: z.string().optional(),
-          hair_color: z.string().optional(),
-          skin_color: z.string().optional(),
-          outfit_color: z.string().optional(),
-        })
-        .optional(),
     })
     .optional(),
 });
@@ -121,14 +109,13 @@ export async function POST(request: Request) {
     updated_at: new Date().toISOString(),
   };
 
-  // Save profile data if provided (steps 2 and 3)
+  // Save profile data if provided (step 2). The character look is server-checked in PATCH /api/profile.
   if (parsed.data.profile_data) {
     const pd = parsed.data.profile_data;
     if (pd.display_name) updates.display_name = pd.display_name;
     if (pd.bio) updates.bio = pd.bio;
     if (pd.program) updates.program = pd.program;
     if (pd.year) updates.year = pd.year;
-    if (pd.avatar_config) updates.avatar_config = pd.avatar_config;
   }
 
   // Final step — mark completed and award starter coins + XP
@@ -157,6 +144,7 @@ export async function POST(request: Request) {
       coinType: "earn_achievement",
       xpType: "achievement",
       description: "Onboarding completed — welcome bonus!",
+      key: "onboarding",
     });
   }
 

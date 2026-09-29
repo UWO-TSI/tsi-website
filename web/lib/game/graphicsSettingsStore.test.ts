@@ -79,4 +79,19 @@ describe("shared graphics settings", () => {
     for (const value of [undefined, NaN, Infinity, -1, 0, 8]) expect(automaticGraphics(value).liteMode).toBe(false);
     for (const value of [0.5, 2, 4]) expect(automaticGraphics(value).liteMode).toBe(true);
   });
+  it("applies a measured tier without overriding the player's saved choice", () => {
+    const { store, saved } = fixture(8);
+    expect(store.getSnapshot().liteMode).toBe(false);
+    store.detect({ liteMode: true, shadows: false });
+    expect(store.getSnapshot()).toMatchObject({ liteMode: true, shadows: false });
+    expect(store.isExplicit("liteMode")).toBe(false);
+    expect(saved.has(GRAPHICS_KEYS.liteMode)).toBe(false);
+    store.set("liteMode", false);
+    expect(store.isExplicit("liteMode")).toBe(true);
+    store.detect({ liteMode: true });
+    expect(store.getSnapshot().liteMode).toBe(false);
+    store.unset("liteMode");
+    expect(store.isExplicit("liteMode")).toBe(false);
+    expect(store.getSnapshot().liteMode).toBe(true);
+  });
 });

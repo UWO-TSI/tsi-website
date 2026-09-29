@@ -1,0 +1,120 @@
+=== A. Admin marks a member (POST /api/admin/members/:id/membership) ===
+created launch-l1@tethos-staging.test (8b41199c-f94f-4557-bfa8-8e75e4c11d3f) through the GoTrue admin API; password in the keychain as "tethos-staging launch-l1@tethos-staging.test"
+SQL> select p.tier, p.membership, b.badge from profiles p join member_badges b on b.member_id = p.id where p.id = '8b41199c-f94f-4557-bfa8-8e75e4c11d3f'
+tier | membership | badge
+5 | public | 
+PASS: new plain account is public T5 (sign-up trigger)
+2026-09-26T17:58:48.203Z member POST /api/admin/members/8b41199c-f94f-4557-bfa8-8e75e4c11d3f/membership {"membership":"member"} -> 403 {"ok":false,"error":"Forbidden: T1/T2 only"}
+PASS: a T4 member can't mark members
+2026-09-26T17:58:48.468Z staff POST /api/admin/members/8b41199c-f94f-4557-bfa8-8e75e4c11d3f/membership {"membership":"boss"} -> 400 {"ok":false,"error":"Invalid request"}
+PASS: bad body refused
+2026-09-26T17:58:48.983Z staff POST /api/admin/members/8b41199c-f94f-4557-bfa8-8e75e4c11d3f/membership {"membership":"member"} -> 200 {"ok":true,"member":{"id":"8b41199c-f94f-4557-bfa8-8e75e4c11d3f","membership":"member","tier":4}}
+PASS: T2 marks the public account a member: T4
+2026-09-26T17:58:49.298Z staff POST /api/admin/members/8b41199c-f94f-4557-bfa8-8e75e4c11d3f/membership {"membership":"member"} -> 200 {"ok":true,"member":{"id":"8b41199c-f94f-4557-bfa8-8e75e4c11d3f","membership":"member","tier":4}}
+PASS: marking again is a no-op
+SQL> select p.tier, p.membership, b.badge from profiles p join member_badges b on b.member_id = p.id where p.id = '8b41199c-f94f-4557-bfa8-8e75e4c11d3f'
+tier | membership | badge
+4 | member | member
+PASS: readback: member, T4, member badge
+2026-09-26T17:58:50.298Z staff POST /api/admin/members/6d14b24f-7005-4194-adf2-4fc02d186c45/membership {"membership":"public"} -> 409 {"ok":false,"error":"Staff (T1-T3) stay members. Change their tier first."}
+PASS: staff (T2) can't be made public
+2026-09-26T17:58:50.754Z staff POST /api/admin/members/00000000-0000-4000-8000-000000000999/membership {"membership":"public"} -> 404 {"ok":false,"error":"Member not found."}
+PASS: unknown account 404
+2026-09-26T17:58:51.208Z staff POST /api/admin/members/c2982825-3dd1-4572-a9d0-4b7fadd306d6/membership {"membership":"public"} -> 200 {"ok":true,"member":{"id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","membership":"public","tier":5}}
+PASS: T2 makes a member public: T5
+2026-09-26T17:58:51.559Z staff POST /api/admin/members/c2982825-3dd1-4572-a9d0-4b7fadd306d6/membership {"membership":"member"} -> 200 {"ok":true,"member":{"id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","membership":"member","tier":4}}
+PASS: and back to member: T4
+SQL> select p.tier, p.membership, b.badge from profiles p join member_badges b on b.member_id = p.id where p.id = 'c2982825-3dd1-4572-a9d0-4b7fadd306d6'
+tier | membership | badge
+4 | member | member
+2026-09-26T17:58:52.894Z public POST /api/admin/members/c2982825-3dd1-4572-a9d0-4b7fadd306d6/membership {"membership":"public"} -> 403 {"ok":false,"error":"Forbidden: T1/T2 only"}
+PASS: a public account can't either
+
+=== B. Un-RSVP through /api/events/[id]/rsvp (member) ===
+2026-09-26T17:58:53.801Z member POST /api/events/2b43ebdf-a750-4183-b5b7-1f13130a99af/rsvp -> 200 {"action":"registered","event_id":"2b43ebdf-a750-4183-b5b7-1f13130a99af","event_title":"Phase1 RSVP test event"}
+PASS: RSVP
+SQL> select status from event_attendance where event_id = '2b43ebdf-a750-4183-b5b7-1f13130a99af' and user_id = 'c2982825-3dd1-4572-a9d0-4b7fadd306d6'
+status
+registered
+PASS: readback: RSVP row
+2026-09-26T17:58:55.118Z member POST /api/events/2b43ebdf-a750-4183-b5b7-1f13130a99af/rsvp -> 200 {"action":"unregistered","event_id":"2b43ebdf-a750-4183-b5b7-1f13130a99af","event_title":"Phase1 RSVP test event"}
+PASS: un-RSVP answered
+SQL> select status from event_attendance where event_id = '2b43ebdf-a750-4183-b5b7-1f13130a99af' and user_id = 'c2982825-3dd1-4572-a9d0-4b7fadd306d6'
+(no rows)
+PASS: readback: RSVP row gone
+2026-09-26T17:58:56.321Z member POST /api/events/2b43ebdf-a750-4183-b5b7-1f13130a99af/rsvp -> 200 {"action":"registered","event_id":"2b43ebdf-a750-4183-b5b7-1f13130a99af","event_title":"Phase1 RSVP test event"}
+PASS: RSVP again after cancelling
+SQL> insert into event_attendance (event_id, user_id, status) values ('b96b913a-c18e-4417-a874-0f41f8bc2d23', '8b41199c-f94f-4557-bfa8-8e75e4c11d3f', 'attended') on conflict (event_id, user_id) do update set status = 'attended'
+(no rows)
+launch-l1 DELETE /rest/v1/event_attendance (own check-in) -> 200 []
+SQL> select status from event_attendance where event_id = 'b96b913a-c18e-4417-a874-0f41f8bc2d23' and user_id = '8b41199c-f94f-4557-bfa8-8e75e4c11d3f'
+status
+attended
+PASS: a check-in ('attended') can't be deleted by its owner
+launch-l1 DELETE /rest/v1/event_attendance (the member's RSVP) -> 200 []
+SQL> select status from event_attendance where event_id = '2b43ebdf-a750-4183-b5b7-1f13130a99af' and user_id = 'c2982825-3dd1-4572-a9d0-4b7fadd306d6'
+status
+registered
+PASS: someone else's RSVP can't be deleted
+
+=== C. Chapter 1 with the letter failing after the reward (launch-l1, member) ===
+2026-09-26T17:59:03.352Z launch-l1 POST /api/progression/chapters/advance {"chapter_slug":"settle-in","action":"claim_plot"} -> 200 {"ok":true,"state":{"chapters":[{"slug":"settle-in","position":1,"title":"Settle in","summary":"Claim your plot, make your first catch and donate it, then report to HQ.","requirement":"settle_in","goal_slug":null,"status":"active","steps":[{"key":"claim_plot",
+PASS: claim_plot
+2026-09-26T17:59:04.052Z launch-l1 POST /api/collections {"item_key":"fish_anchovy","size_cm":11.5} -> 200 {"item_key":"fish_anchovy","count":1,"total_collected":1,"best_size_cm":11.5,"new_record":true}
+PASS: first catch
+2026-09-26T17:59:05.340Z launch-l1 POST /api/progression/chapters/advance {"chapter_slug":"settle-in","action":"donate_catch"} -> 200 {"ok":true,"state":{"chapters":[{"slug":"settle-in","position":1,"title":"Settle in","summary":"Claim your plot, make your first catch and donate it, then report to HQ.","requirement":"settle_in","goal_slug":null,"status":"ready","steps":[{"key":"claim_plot","
+PASS: donate_catch (chapter now ready)
+INJECT: trigger tmp_launch_fail on letters (raises for this account's chapter:settle-in letter)
+2026-09-26T17:59:07.140Z launch-l1 POST /api/progression/chapters/advance {"chapter_slug":"settle-in","action":"report_hq"} -> 500 {"ok":false,"error":"Something went wrong. Try again.","code":"failed"}
+PASS: report_hq fails while the letter insert raises
+SQL> select q.status, q.completed_at is not null as completed, (select count(*) from wallet_ledger l where l.member_id = '8b41199c-f94f-4557-bfa8-8e75e4c11d3f' and l.idempotency_key = 'chapter:settle-in') as reward_rows, (select coalesce(sum(amount), 0) from wallet_ledger l where l.member_id = '8b41199c-f94f-4557-bfa8-8e75e4c11d3f' and l.source = 'chapter') as reward_coins, (select count(*) from letters l where l.recipient_id = '8b41199c-f94f-4557-bfa8-8e75e4c11d3f' and l.broadcast_key = 'chapter:settle-in') as letters from member_quest_progress q join quest_chapters c on c.id = q.chapter_id where q.member_id = '8b41199c-f94f-4557-bfa8-8e75e4c11d3f' and c.slug = 'settle-in'
+status | completed | reward_rows | reward_coins | letters
+active | false | 1 | 100 | 0
+PASS: chapter not saved as completed after the letter failure
+INJECT removed
+2026-09-26T17:59:10.229Z launch-l1 POST /api/progression/chapters/advance {"chapter_slug":"settle-in","action":"report_hq"} -> 200 {"ok":true,"state":{"chapters":[{"slug":"settle-in","position":1,"title":"Settle in","summary":"Claim your plot, make your first catch and donate it, then report to HQ.","requirement":"settle_in","goal_slug":null,"status":"completed","steps":[{"key":"claim_plo
+PASS: retry of report_hq completes the chapter
+SQL> select q.status, q.completed_at is not null as completed, (select count(*) from wallet_ledger l where l.member_id = '8b41199c-f94f-4557-bfa8-8e75e4c11d3f' and l.idempotency_key = 'chapter:settle-in') as reward_rows, (select coalesce(sum(amount), 0) from wallet_ledger l where l.member_id = '8b41199c-f94f-4557-bfa8-8e75e4c11d3f' and l.source = 'chapter') as reward_coins, (select count(*) from letters l where l.recipient_id = '8b41199c-f94f-4557-bfa8-8e75e4c11d3f' and l.broadcast_key = 'chapter:settle-in') as letters from member_quest_progress q join quest_chapters c on c.id = q.chapter_id where q.member_id = '8b41199c-f94f-4557-bfa8-8e75e4c11d3f' and c.slug = 'settle-in'
+status | completed | reward_rows | reward_coins | letters
+completed | true | 1 | 100 | 1
+PASS: reward paid once (100), letter once
+2026-09-26T17:59:11.507Z launch-l1 POST /api/progression/chapters/advance {"chapter_slug":"settle-in","action":"report_hq"} -> 409 {"ok":false,"error":"Chapter already finished.","code":"rejected"}
+PASS: a third report_hq: already finished, nothing more paid
+SQL> select q.status, q.completed_at is not null as completed, (select count(*) from wallet_ledger l where l.member_id = '8b41199c-f94f-4557-bfa8-8e75e4c11d3f' and l.idempotency_key = 'chapter:settle-in') as reward_rows, (select coalesce(sum(amount), 0) from wallet_ledger l where l.member_id = '8b41199c-f94f-4557-bfa8-8e75e4c11d3f' and l.source = 'chapter') as reward_coins, (select count(*) from letters l where l.recipient_id = '8b41199c-f94f-4557-bfa8-8e75e4c11d3f' and l.broadcast_key = 'chapter:settle-in') as letters from member_quest_progress q join quest_chapters c on c.id = q.chapter_id where q.member_id = '8b41199c-f94f-4557-bfa8-8e75e4c11d3f' and c.slug = 'settle-in'
+status | completed | reward_rows | reward_coins | letters
+completed | true | 1 | 100 | 1
+PASS: still one reward row
+
+=== D. Chapter 1 with the reward failing (launch-l2, public T5 account) ===
+created launch-l2@tethos-staging.test (6a1535a0-ce83-4051-804a-b9d719795cc4) through the GoTrue admin API; password in the keychain as "tethos-staging launch-l2@tethos-staging.test"
+SQL> select p.tier, p.membership, b.badge from profiles p join member_badges b on b.member_id = p.id where p.id = '6a1535a0-ce83-4051-804a-b9d719795cc4'
+tier | membership | badge
+5 | public | 
+2026-09-26T17:59:15.081Z launch-l2 POST /api/progression/chapters/advance {"chapter_slug":"settle-in","action":"claim_plot"} -> 200 {"ok":true,"state":{"chapters":[{"slug":"settle-in","position":1,"title":"Settle in","summary":"Claim your plot, make your first catch and donate it, then report to HQ.","requirement":"settle_in","goal_slug":null,"status":"active","steps":[{"key":"claim_plot",
+PASS: claim_plot
+2026-09-26T17:59:15.522Z launch-l2 POST /api/collections {"item_key":"fish_anchovy","size_cm":11.5} -> 200 {"item_key":"fish_anchovy","count":1,"total_collected":1,"best_size_cm":11.5,"new_record":true}
+PASS: first catch
+2026-09-26T17:59:16.782Z launch-l2 POST /api/progression/chapters/advance {"chapter_slug":"settle-in","action":"donate_catch"} -> 200 {"ok":true,"state":{"chapters":[{"slug":"settle-in","position":1,"title":"Settle in","summary":"Claim your plot, make your first catch and donate it, then report to HQ.","requirement":"settle_in","goal_slug":null,"status":"ready","steps":[{"key":"claim_plot","
+PASS: donate_catch (chapter now ready)
+INJECT: trigger tmp_launch_fail on wallet_ledger (raises for this account's chapter:settle-in credit)
+2026-09-26T17:59:18.308Z launch-l2 POST /api/progression/chapters/advance {"chapter_slug":"settle-in","action":"report_hq"} -> 500 {"ok":false,"error":"Something went wrong. Try again.","code":"failed"}
+PASS: report_hq fails while the credit insert raises
+SQL> select q.status, q.completed_at is not null as completed, (select count(*) from wallet_ledger l where l.member_id = '6a1535a0-ce83-4051-804a-b9d719795cc4' and l.idempotency_key = 'chapter:settle-in') as reward_rows, (select coalesce(sum(amount), 0) from wallet_ledger l where l.member_id = '6a1535a0-ce83-4051-804a-b9d719795cc4' and l.source = 'chapter') as reward_coins, (select count(*) from letters l where l.recipient_id = '6a1535a0-ce83-4051-804a-b9d719795cc4' and l.broadcast_key = 'chapter:settle-in') as letters from member_quest_progress q join quest_chapters c on c.id = q.chapter_id where q.member_id = '6a1535a0-ce83-4051-804a-b9d719795cc4' and c.slug = 'settle-in'
+status | completed | reward_rows | reward_coins | letters
+active | false | 0 | 0 | 0
+PASS: chapter not saved as completed after the credit failure
+INJECT removed
+2026-09-26T17:59:21.653Z launch-l2 POST /api/progression/chapters/advance {"chapter_slug":"settle-in","action":"report_hq"} -> 200 {"ok":true,"state":{"chapters":[{"slug":"settle-in","position":1,"title":"Settle in","summary":"Claim your plot, make your first catch and donate it, then report to HQ.","requirement":"settle_in","goal_slug":null,"status":"completed","steps":[{"key":"claim_plo
+PASS: retry of report_hq completes the chapter
+SQL> select q.status, q.completed_at is not null as completed, (select count(*) from wallet_ledger l where l.member_id = '6a1535a0-ce83-4051-804a-b9d719795cc4' and l.idempotency_key = 'chapter:settle-in') as reward_rows, (select coalesce(sum(amount), 0) from wallet_ledger l where l.member_id = '6a1535a0-ce83-4051-804a-b9d719795cc4' and l.source = 'chapter') as reward_coins, (select count(*) from letters l where l.recipient_id = '6a1535a0-ce83-4051-804a-b9d719795cc4' and l.broadcast_key = 'chapter:settle-in') as letters from member_quest_progress q join quest_chapters c on c.id = q.chapter_id where q.member_id = '6a1535a0-ce83-4051-804a-b9d719795cc4' and c.slug = 'settle-in'
+status | completed | reward_rows | reward_coins | letters
+completed | true | 1 | 100 | 1
+PASS: reward paid once (100), letter once
+2026-09-26T17:59:25.750Z launch-l2 POST /api/progression/chapters/advance {"chapter_slug":"settle-in","action":"report_hq"} -> 409 {"ok":false,"error":"Chapter already finished.","code":"rejected"}
+PASS: a third report_hq: already finished, nothing more paid
+SQL> select q.status, q.completed_at is not null as completed, (select count(*) from wallet_ledger l where l.member_id = '6a1535a0-ce83-4051-804a-b9d719795cc4' and l.idempotency_key = 'chapter:settle-in') as reward_rows, (select coalesce(sum(amount), 0) from wallet_ledger l where l.member_id = '6a1535a0-ce83-4051-804a-b9d719795cc4' and l.source = 'chapter') as reward_coins, (select count(*) from letters l where l.recipient_id = '6a1535a0-ce83-4051-804a-b9d719795cc4' and l.broadcast_key = 'chapter:settle-in') as letters from member_quest_progress q join quest_chapters c on c.id = q.chapter_id where q.member_id = '6a1535a0-ce83-4051-804a-b9d719795cc4' and c.slug = 'settle-in'
+status | completed | reward_rows | reward_coins | letters
+completed | true | 1 | 100 | 1
+PASS: still one reward row
+
+ALL PASS

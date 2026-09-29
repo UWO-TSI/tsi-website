@@ -1,7 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  turbopack: {},
+  turbopack: { root: __dirname },
+  outputFileTracingRoot: __dirname,
   webpack: (config) => {
     config.module.rules.push({
       test: /\.glb$/i,

@@ -2,18 +2,21 @@
 
 /**
  * interiorShared (2026-07-14) — the room kit extracted from HQInterior so
- * Shop and Oracle rooms reuse one implementation: sprite walker with
+ * Shop and Oracle rooms reuse one implementation: character walker with
  * parameterized bounds, GLB furniture piece, scene backdrop swap, and the
  * station type the central E-handler consumes.
  */
 
-import { useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { useGLTF } from "@react-three/drei";
 import { bindGameKeys } from "@/lib/game/keyboardInput";
 import { PIECE_TINTS, type Tint } from "@/lib/game/furniturePalettes";
 import * as THREE from "three";
-import ApplicantCharacter, { type ApplicantMotion } from "@/components/recruit/ApplicantCharacter";
+import Character, { CHARACTER_SCALE, type CharacterMotion, type ClipName } from "./character/Character";
+import { useWorldClips } from "./character/useWorldClips";
+import { useMyLook } from "@/lib/game/character/lookStore";
+import { seatLift } from "@/lib/game/character/clips";
 import { easeFacing } from "@/lib/game/locomotion";
 
 export interface InteriorStation {
@@ -32,35 +35,7 @@ export interface RoomBounds {
 
 const WALK_MARGIN = 0.8;
 const PLAYER_SPEED = 4.6;
-const SHEET_COLS = 4;
-const SHEET_ROWS = 4;
-const FRAME_RATE = 8;
 const keys: Record<string, boolean> = {};
-
-let _walkTex: THREE.Texture | null = null;
-function getWalkTexture(): THREE.Texture {
-  if (!_walkTex) {
-    const tex = new THREE.Texture();
-    tex.magFilter = THREE.NearestFilter;
-    tex.minFilter = THREE.NearestFilter;
-    tex.generateMipmaps = false;
-    tex.colorSpace = THREE.SRGBColorSpace;
-    tex.repeat.set(1 / SHEET_COLS, 1 / SHEET_ROWS);
-    tex.offset.set(0, 1 - 1 / SHEET_ROWS);
-    _walkTex = tex;
-  }
-  return _walkTex;
-}
-
-let walkLoading = false;
-function loadWalkTexture() {
-  if (walkLoading) return;
-  walkLoading = true;
-  const image = new Image();
-  image.onload = () => { const tex = getWalkTexture(); tex.image = image; tex.needsUpdate = true; };
-  image.onerror = () => { walkLoading = false; };
-  image.src = "/assets/characters/player_walk.png";
-}
 
 // Module escape hatches for imperative three mutations (react-compiler).
 export function applyInteriorBackdrop(scene: THREE.Scene, color = "#14100C"): () => void {
@@ -77,38 +52,49 @@ export function applyInteriorBackdrop(scene: THREE.Scene, color = "#14100C"): ()
   };
 }
 
-function followInteriorCamera(camera: THREE.Camera, px: number, pz: number, delta: number) {
+export function followInteriorCamera(camera: THREE.Camera, px: number, pz: number, delta: number) {
   camera.position.x = THREE.MathUtils.damp(camera.position.x, px, 6, delta);
   camera.position.y = THREE.MathUtils.damp(camera.position.y, 8.4, 6, delta);
   camera.position.z = THREE.MathUtils.damp(camera.position.z, pz - 7.2, 6, delta);
   camera.lookAt(px, 0.7, pz + 1.2);
 }
 
+/**
+ * Interior walker. Seats work as outdoors: `tsi:sit {x, z, clip?, seatY?, yaw?}`
+ * (x/z in room space) sits, studies or sleeps there until a move key.
+ */
 export function InteriorPlayer({
-  avatarMode = "sprite",
   frozen,
   bounds,
   playerPosRef,
   onMove,
   constrainMove,
 }: {
-  avatarMode?: "sprite" | "applicant";
   frozen: boolean;
   bounds: RoomBounds;
   playerPosRef: React.MutableRefObject<THREE.Vector3>;
   onMove: (x: number, z: number) => void;
   constrainMove?: (x: number, z: number, nx: number, nz: number) => [number, number];
 }) {
-  const meshRef = useRef<THREE.Mesh>(null);
-  const applicantMotion = useRef<ApplicantMotion>({ speed: 0, yaw: 0, lift: 0.018 });
+  const motion = useRef<CharacterMotion>({ speed: 0, yaw: 0, lift: 0, pose: null, play: null });
+  const { look } = useMyLook();
   const groupRef = useRef<THREE.Group>(null);
   const posRef = useRef({ x: bounds.spawn[0], z: bounds.spawn[1] });
   const targetRef = useRef<{ x: number; z: number } | null>(null);
-  const dirRef = useRef(1);
-  const animRef = useRef(0);
-  const tex = useMemo(() => getWalkTexture(), []);
-  useEffect(loadWalkTexture, []);
+  const seatRef = useRef<{ x: number; z: number; clip: ClipName; lift: number; yaw: number } | null>(null);
   const { camera } = useThree();
+  const face = useCallback((x: number, z: number) => { motion.current.yaw = Math.atan2(x - posRef.current.x, z - posRef.current.z); }, []);
+  useWorldClips(motion, face);
+  useEffect(() => {
+    const onSit = (e: Event) => {
+      const { x, z, clip = "Sit", seatY = 0, yaw = 0 } = (e as CustomEvent<{ x: number; z: number; clip?: ClipName; seatY?: number; yaw?: number }>).detail;
+      const cur = seatRef.current, down = !(cur && cur.x === x && cur.z === z);
+      seatRef.current = down ? { x, z, clip, yaw, lift: seatLift(clip, seatY, CHARACTER_SCALE) } : null;
+      motion.current.pose = down ? clip : null;
+    };
+    window.addEventListener("tsi:sit", onSit);
+    return () => window.removeEventListener("tsi:sit", onSit);
+  }, []);
 
   useEffect(() => {
     if (frozen) return;
@@ -135,6 +121,17 @@ export function InteriorPlayer({
     const p = posRef.current;
     const previousX = p.x, previousZ = p.z;
     let vx = 0, vz = 0;
+    const seat = seatRef.current;
+    if (seat && !frozen && (keys["w"] || keys["a"] || keys["s"] || keys["d"] || keys["arrowup"] || keys["arrowdown"] || keys["arrowleft"] || keys["arrowright"] || targetRef.current)) {
+      seatRef.current = null; motion.current.pose = null;
+    } else if (seat) {
+      p.x = seat.x; p.z = seat.z;
+      Object.assign(motion.current, { speed: 0, yaw: seat.yaw, lift: seat.lift });
+      groupRef.current?.position.set(p.x, 0, p.z);
+      playerPosRef.current.set(p.x, 0, p.z);
+      followInteriorCamera(camera, p.x, p.z, delta);
+      return;
+    }
     if (!frozen) {
       if (keys["w"] || keys["arrowup"]) vz += 1;
       if (keys["s"] || keys["arrowdown"]) vz -= 1;
@@ -158,38 +155,20 @@ export function InteriorPlayer({
       const nx = THREE.MathUtils.clamp(p.x + vx * PLAYER_SPEED * delta, -bounds.halfW + WALK_MARGIN, bounds.halfW - WALK_MARGIN);
       const nz = THREE.MathUtils.clamp(p.z + vz * PLAYER_SPEED * delta, -bounds.halfD + WALK_MARGIN, bounds.halfD - WALK_MARGIN);
       [p.x, p.z] = constrainMove ? constrainMove(p.x, p.z, nx, nz) : [nx, nz];
-      dirRef.current = Math.abs(vx) > Math.abs(vz) ? (vx > 0 ? 2 : 3) : vz > 0 ? 1 : 0;
-      animRef.current += delta * FRAME_RATE;
       onMove(p.x, p.z);
       playerPosRef.current.set(p.x, 0, p.z);
-    } else {
-      animRef.current = 0;
     }
-
-    const col = dirRef.current;
-    const row = moving ? Math.floor(animRef.current) % SHEET_ROWS : 0;
-    tex.offset.set(col / SHEET_COLS, 1 - (row + 1) / SHEET_ROWS);
 
     if (groupRef.current) groupRef.current.position.set(p.x, 0, p.z);
-    applicantMotion.current.speed = delta > 0 ? Math.hypot(p.x - previousX, p.z - previousZ) / delta : 0;
-    if (moving) applicantMotion.current.yaw = easeFacing(applicantMotion.current.yaw, Math.atan2(vx, vz), 10, delta);
-    if (meshRef.current) {
-      const bob = moving ? Math.sin(animRef.current * Math.PI) * 0.04 : Math.sin(performance.now() / 600) * 0.015;
-      meshRef.current.position.y = 0.82 + bob;
-    }
+    motion.current.lift = 0;
+    motion.current.speed = delta > 0 ? Math.hypot(p.x - previousX, p.z - previousZ) / delta : 0;
+    if (moving) motion.current.yaw = easeFacing(motion.current.yaw, Math.atan2(vx, vz), 10, delta);
     followInteriorCamera(camera, p.x, p.z, delta);
   });
 
   return (
     <group ref={groupRef} position={[bounds.spawn[0], 0, bounds.spawn[1]]}>
-      {avatarMode === "applicant" ? <ApplicantCharacter motion={applicantMotion} frozen={frozen} walkSpeed={PLAYER_SPEED} /> : <><mesh position={[0, 0.82, -0.012]} scale={[1.07, 1.07, 1]}>
-        <planeGeometry args={[1.45, 1.45]} />
-        <meshBasicMaterial map={tex} color="#2A2118" transparent opacity={0.55} alphaTest={0.1} side={THREE.DoubleSide} depthWrite={false} />
-      </mesh>
-      <mesh ref={meshRef} position={[0, 0.82, 0]}>
-        <planeGeometry args={[1.45, 1.45]} />
-        <meshBasicMaterial map={tex} transparent alphaTest={0.1} side={THREE.DoubleSide} />
-      </mesh></>}
+      <Character look={look} motion={motion} walkSpeed={PLAYER_SPEED} />
       <mesh position={[0, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <circleGeometry args={[0.42, 20]} />
         <meshBasicMaterial color="#000000" transparent opacity={0.18} depthWrite={false} />
@@ -226,7 +205,7 @@ export function applyTint(root: THREE.Object3D, tint: Tint): void {
   });
 }
 
-export function Piece({ name, position, rotY = 0, rotX = 0, scale = 0.1, tint, glassMaterial, shadows = false }: { name: string; position: [number, number, number]; rotY?: number; rotX?: number; scale?: number; tint?: Tint | null; glassMaterial?: string; shadows?: boolean }) {
+export function Piece({ name, position, rotY = 0, rotX = 0, scale = 0.1, tint, glassMaterial, shadows = false }: { name: string; position: [number, number, number]; rotY?: number; rotX?: number; scale?: number; tint?: Tint | null; glassMaterial?: string | readonly string[]; shadows?: boolean }) {
   const { scene } = useGLTF(pieceUrl(name));
   const clone = useMemo(() => {
     const c = scene.clone(true);
@@ -242,7 +221,7 @@ export function Piece({ name, position, rotY = 0, rotX = 0, scale = 0.1, tint, g
       if (!(object instanceof THREE.Mesh)) return;
       const materials = Array.isArray(object.material) ? object.material : [object.material];
       const adjusted = materials.map(material => {
-        if (material.name !== glassMaterial) return material;
+        if (!(typeof glassMaterial === "string" ? [glassMaterial] : glassMaterial).includes(material.name)) return material;
         const glass = material.clone();
         glass.transparent = true;
         glass.opacity = 0.12;

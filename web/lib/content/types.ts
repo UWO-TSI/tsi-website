@@ -24,6 +24,11 @@ export interface NPCPersona {
   active: boolean;
   created_at: string;
   updated_at: string;
+  /** Resident fields (20260927090000_admin_pass; lib/content/residents.ts). */
+  post?: string | null;
+  bio?: string;
+  tone?: string | null;
+  schedule?: Record<string, string>;
 }
 
 export interface ShopItem {
@@ -49,6 +54,10 @@ export interface PaletteColors {
   water: string;
   building_primary: string;
   building_accent: string;
+  /** Member island ground tint over the calibrated grass texture (seasonal rows). */
+  island_grass?: string;
+  /** Oak foliage tint over the greyscale leaf albedo (seasonal rows). */
+  leaf?: string;
 }
 
 export interface SeasonalPalette {

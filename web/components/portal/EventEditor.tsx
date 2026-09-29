@@ -379,7 +379,7 @@ export default function EventEditor({ mode, rowId, initial }: EventEditorProps) 
         </Field>
 
         <Field
-          label="TC Reward"
+          label="Gem Reward"
           hint="Granted to each member at check-in. Allowed for any event."
           error={errors.tc_reward}
         >
@@ -510,7 +510,7 @@ function validate(form: FormState): Partial<Record<keyof FormState, string>> {
 
   const tc = Number(form.tc_reward);
   if (form.tc_reward.trim() === "" || !Number.isFinite(tc) || !Number.isInteger(tc) || tc < 0) {
-    errors.tc_reward = "TC must be a whole number ≥ 0";
+    errors.tc_reward = "Gems must be a whole number ≥ 0";
   }
 
   return errors;

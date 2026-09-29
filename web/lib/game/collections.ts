@@ -33,9 +33,39 @@ export function localCollections(scope?: string): Record<string, number> {
   }
 }
 
-/** Record an item locally AND post it to the server (fire-and-forget). */
-export function collect(itemKey: string, scope?: string): void {
-  if (!validItemKey(itemKey)) return;
+const RECORDS_KEY = "tsi.records.local.v1";
+/** Local personal best sizes (cm) per species, mirrored for offline catch cards. */
+export function localRecords(): Record<string, number> {
+  try { return collectionCounts(JSON.parse(localStorage.getItem(RECORDS_KEY) ?? "{}")); } catch { return {}; }
+}
+
+export interface CatchRecord { newRecord: boolean; best: number | null }
+/**
+ * Collect with a size (fish/shells): posts `size_cm` so the server keeps the
+ * personal best and weekly trophy, and resolves whether this beat the
+ * previous record (server answer, else the local mirror).
+ */
+export async function collectWithSize(itemKey: string, sizeCm: number | null): Promise<CatchRecord> {
+  const records = localRecords();
+  const prior = records[itemKey];
+  const localNew = sizeCm !== null && prior !== undefined && sizeCm > prior;
+  if (sizeCm !== null && (prior === undefined || sizeCm > prior)) {
+    try { localStorage.setItem(RECORDS_KEY, JSON.stringify({ ...records, [itemKey]: sizeCm })); } catch { /* private browsing */ }
+  }
+  const server = collect(itemKey, { sizeCm });
+  try {
+    const res = await server;
+    if (res && typeof res.new_record === "boolean") return { newRecord: res.new_record && res.total_collected !== 1, best: res.best_size_cm ?? sizeCm };
+  } catch { /* offline: fall back to the local mirror */ }
+  return { newRecord: localNew, best: Math.max(prior ?? 0, sizeCm ?? 0) || null };
+}
+
+/**
+ * Record an item locally AND post it to the server. A `scope` (the applicant
+ * island) keeps a separate local record and never posts.
+ */
+export function collect(itemKey: string, { scope, sizeCm = null }: { scope?: string; sizeCm?: number | null } = {}): Promise<{ new_record?: boolean; best_size_cm?: number | null; total_collected?: number } | null> {
+  if (!validItemKey(itemKey)) return Promise.resolve(null);
   try {
     const all = localCollections(scope);
     all[itemKey] = Math.min(Number.MAX_SAFE_INTEGER, (all[itemKey] ?? 0) + 1);
@@ -43,12 +73,12 @@ export function collect(itemKey: string, scope?: string): void {
   } catch {
     /* private browsing */
   }
-  if (scope) return;
-  fetch("/api/collections", {
+  if (scope) return Promise.resolve(null);
+  return fetch("/api/collections", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ item_key: itemKey }),
-  }).catch(() => {});
+    body: JSON.stringify(sizeCm !== null ? { item_key: itemKey, size_cm: sizeCm } : { item_key: itemKey }),
+  }).then(r => (r.ok ? r.json() : null)).catch(() => null);
 }
 
 /**

@@ -5,7 +5,7 @@ import { Shield } from "lucide-react";
 import { useUser } from "@/components/portal/UserContext";
 import { createClient } from "@/lib/supabase/client";
 import PaletteEditor from "@/components/portal/PaletteEditor";
-import type { SeasonalPalette } from "@/lib/game/contentTypes";
+import type { SeasonalPalette } from "@/lib/content/types";
 
 export default function EditPalettePage({
   params,

@@ -66,11 +66,12 @@ function Signpost({ pos, target }: { pos: [number, number]; target: [number, num
 }
 
 // ─── Stepping stones ────────────────────────────────────────────────────
-// Lay 6 stones perpendicular to the river tangent at a narrow downstream bend.
-// Picking t≈0.78 (somewhere past control point [16, 2]) avoids the bridge at x=0.
+// Lay 6 stones perpendicular to the river tangent at a base-width stretch.
+// River v3: moved off x=11 — the bend pool (x≈22) owns the east water now;
+// x=-20 is the straight base-width west run, clear of bridges and spots.
 function SteppingStones() {
   const stones = useMemo(() => {
-    const t = findRiverTForX(11);
+    const t = findRiverTForX(-20);
     const { position, tangent } = sampleRiverPoint(t);
     // Perpendicular to tangent in XZ plane = (-tangent.z, tangent.x).
     const normal = new THREE.Vector3(-tangent.z, 0, tangent.x).normalize();
@@ -91,7 +92,7 @@ function SteppingStones() {
   return (
     <group>
       {stones.map((s, i) => (
-        <NatureRock key={i} position={[s.x, 0.05, s.z]} seed={i * 7 + 3} />
+        <NatureRock key={i} position={[s.x, -0.5, s.z]} seed={i * 7 + 3} />
       ))}
     </group>
   );
@@ -127,11 +128,11 @@ const FENCE_SEGMENTS: { country: NaturePlacement[]; log: NaturePlacement[] } = (
 // ─── Lantern (ACNH round streetlamp) ────────────────────────────────────
 // Model is ~2.7u tall with the globe at the top; the warm point light sits
 // in the globe so night pools read like the W7 cozy lamps.
-export function Lantern({ position, intensity = 0.4, glow }: { position: [number, number, number]; intensity?: number; glow?: number }) {
+export function Lantern({ position, lampsOn = true, intensity, glow }: { position: [number, number, number]; lampsOn?: boolean; intensity?: number; glow?: number }) {
   return (
     <group position={position}>
-      <GLBProp url="/assets/acnh/props/streetlamp.glb" emissiveIntensity={glow} />
-      <pointLight color={C.lanternEmissive} intensity={intensity} distance={5} position={[0, 2.4, 0]} />
+      <GLBProp url="/assets/acnh/props/streetlamp.glb" emissiveIntensity={glow ?? (lampsOn ? 2.2 : 0)} />
+      <pointLight color={C.lanternEmissive} intensity={intensity ?? (lampsOn ? 0.4 : 0)} distance={5} position={[0, 2.4, 0]} />
     </group>
   );
 }
@@ -168,7 +169,7 @@ function Campfire({ position }: { position: [number, number, number] }) {
 // The classic ACNH sky beat: a gift balloon drifts across every few
 // minutes. Pure ambience — no popping, no rewards (principle #3). The
 // cycle starts mid-flight so a fresh visitor's first minute includes one.
-export default function AmbientProps() {
+export default function AmbientProps({ lampsOn = false }: { lampsOn?: boolean }) {
   return (
     <group>
       <group name="signposts">
@@ -182,14 +183,14 @@ export default function AmbientProps() {
       </group>
 
       <group name="fences">
-        <InstancedGLB url="/assets/acnh/props/fence-country-a.glb" placements={FENCE_SEGMENTS.country} castShadow={false} />
-        <InstancedGLB url="/assets/acnh/props/fence-log-a.glb" placements={FENCE_SEGMENTS.log} castShadow={false} />
+        <InstancedGLB url="/assets/acnh/props/fence-country-a.glb" placements={FENCE_SEGMENTS.country} />
+        <InstancedGLB url="/assets/acnh/props/fence-log-a.glb" placements={FENCE_SEGMENTS.log} />
       </group>
 
       <group name="lanterns">
         {LANTERNS.map(([x, z], i) => {
           const y = getTerrainHeight(x, z);
-          return <Lantern key={i} position={[x, y, z]} />;
+          return <Lantern key={i} position={[x, y, z]} lampsOn={lampsOn} />;
         })}
       </group>
 
@@ -235,14 +236,8 @@ export default function AmbientProps() {
         ))}
       </group>
 
-      {/* HQ entry glow — the RS doorway recess reads as a black hole at
-          distance; a warm pane + soft light make it read as an open,
-          lit lobby (day and night). Door plane is at z=-4 facing south. */}
+      {/* Light the recessed HQ door without covering its textured panels. */}
       <group name="hq-entry">
-        <mesh position={[0, 1.5, -3.2]} rotation={[0, Math.PI, 0]}>
-          <planeGeometry args={[1.7, 2.4]} />
-          <meshStandardMaterial color="#FFE9C0" emissive="#FFC878" emissiveIntensity={0.55} roughness={0.6} metalness={0} />
-        </mesh>
         <pointLight color="#FFD9A0" intensity={0.5} distance={4.5} position={[0, 1.6, -4.6]} />
       </group>
     </group>

@@ -1,4 +1,7 @@
 import { createApplicantVillage } from "./applicantVillage";
+import { islandOf } from "./defaultIsland";
+import { buildVillage, type VillageDoc } from "./villageMap";
+import frozen from "./fixtures/village-2026-09-28.json";
 import { describe, expect, it } from "vitest";
 import { advanceVelocity, advanceMotion, easeFacing, relativeFacingAngle } from "./locomotion";
 
@@ -56,6 +59,21 @@ describe("tap movement", () => {
     expect(state.vz).toBe(0);
     const stopped = advanceMotion(state, { x: 0, z: 0, speed: 7.4, response: 7.5 }, 0.1, (_x, _z, x, z) => [x, z]);
     expect(stopped.z).toBe(state.z);
+  });
+  it("cannot move through a river or keep walking feedback active against its bank", () => {
+    // The frozen 2026-09-28 village: a river crosses x = 6 at z 0..1.
+    const island = islandOf(buildVillage(frozen as VillageDoc));
+    let state = { x: 6, z: -3, vx: 0, vz: 0 };
+    let moving = true;
+    for (let frame = 0; frame < 90; frame++) {
+      const result = advanceMotion(state, { x: 0, z: 1, speed: 13.69, response: 12 }, 1 / 15, island.move);
+      state = result;
+      moving = result.moving;
+    }
+    expect(state.z).toBeLessThan(-0.5);
+    expect(island.standable(state.x, state.z)).toBe(true);
+    expect(moving).toBe(false);
+    expect(state.vz).toBe(0);
   });
   it("cannot walk into the ocean or keep walking feedback active against the shore", () => {
     const island = createApplicantVillage();

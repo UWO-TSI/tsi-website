@@ -1,0 +1,5 @@
+ERROR:  TETHOS-W26 sign-up stays a member (ruling 2026-09-26)
+ERROR:  rerun demoted a member marked since
+NOTICE:  launch 2 sign-up tiers ok
+NOTICE:  launch 3 admin membership ok
+NOTICE:  launch 4 un-RSVP ok

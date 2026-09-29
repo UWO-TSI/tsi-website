@@ -1,0 +1,13 @@
+.map { position: absolute; top: 60px; right: 16px; z-index: 50; width: 190px; max-width: calc(100% - 32px); border-radius: 12px; overflow: hidden; border: 1px solid #a8bdba; background: #f5f1df; color: #283e3b; box-shadow: 0 5px 18px #132e3640; animation: mapIn 0.22s ease-out; pointer-events: none; font-family: "IBM Plex Mono", monospace; }
+.header { height: 44px; display: flex; align-items: center; justify-content: space-between; padding-left: 12px; font-size: 12px; font-weight: 600; }
+.close { width: 44px; height: 44px; display: grid; place-items: center; pointer-events: auto; border: 0; background: transparent; color: inherit; cursor: pointer; }
+.close:hover { background: #dce5d9; }
+.close:focus-visible { outline: 3px solid #9b6428; outline-offset: -4px; }
+.plot { display: block; width: 100%; aspect-ratio: 1; background: #76b4c6; }
+.legend { height: 26px; display: flex; align-items: center; justify-content: space-between; padding: 0 11px; font-size: 10px; }
+.you { display: flex; align-items: center; gap: 5px; }
+.you::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: #ffdd57; border: 1px solid #7a5a00; }
+.ping { animation: ping 0.9s ease-out 2; transform-box: fill-box; transform-origin: center; }
+@keyframes mapIn { from { opacity: 0; transform: scale(0.94); } to { opacity: 1; transform: none; } }
+@keyframes ping { from { opacity: 1; transform: scale(0.5); } to { opacity: 0; transform: scale(2.6); } }
+@media (prefers-reduced-motion: reduce) { .map, .ping { animation: none; } }

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, Github, Linkedin, Globe, Twitter, Pencil, Loader2, User } from "lucide-react";
 import { TIER_COLORS, TIER_LABELS, getXpProgress } from "./types";
 import { CLASS_META, ClassBadge } from "./classIdentity";
-import type { Profile, PublicProfile, Tier, SocialLinks } from "@/lib/supabase/types";
+import type { Profile, PublicProfile, SocialLinks } from "@/lib/supabase/types";
 
 const SOCIAL_ICONS: Record<string, typeof Github> = {
   github: Github, linkedin: Linkedin, website: Globe,

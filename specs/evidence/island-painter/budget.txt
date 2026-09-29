@@ -1,0 +1,59 @@
+Budget, 2026-09-28 (node web/scripts/map-budget.mjs; the painter shows the same numbers live).
+=== shipped village-map.json ===
+grid              64 x 64  (4096 cells)
+land cells        1400  (34.2% of grid), water 2696
+island span       47 x 39 world units
+chunks            16 used / 16 total
+terrain draws     47  (worst case, all on screen)
+terrain triangles 13584
+cliff instances   0
+shore SDF         0.13 MB
+height field      0.02 MB
+=== 64x64 island at the same land share ===
+grid              64 x 64  (4096 cells)
+land cells        1405  (34.3% of grid), water 2691
+island span       43 x 43 world units
+chunks            16 used / 16 total
+terrain draws     28  (worst case, all on screen)
+terrain triangles 13574
+cliff instances   56
+shore SDF         0.13 MB
+height field      0.02 MB
+=== 96x96 island at the same land share ===
+grid              96 x 96  (9216 cells)
+land cells        3149  (34.2% of grid), water 6067
+island span       63 x 63 world units
+chunks            36 used / 36 total
+terrain draws     48  (worst case, all on screen)
+terrain triangles 30566
+cliff instances   88
+shore SDF         0.28 MB
+height field      0.04 MB
+=== 128x128 island at the same land share ===
+grid              128 x 128  (16384 cells)
+land cells        5621  (34.3% of grid), water 10763
+island span       85 x 85 world units
+chunks            64 used / 64 total
+terrain draws     84  (worst case, all on screen)
+terrain triangles 54294
+cliff instances   112
+shore SDF         0.50 MB
+height field      0.06 MB
+=== 256x256 island at the same land share ===
+grid              256 x 256  (65536 cells)
+land cells        22413  (34.2% of grid), water 43123
+island span       169 x 169 world units
+chunks            256 used / 256 total
+terrain draws     300  (worst case, all on screen)
+terrain triangles 217318
+cliff instances   232
+shore SDF         2.00 MB
+height field      0.25 MB
+
+Draw calls in the live scene (Performance readout, fake clock, High tier, 1280x760), clones vs instanced nature and props:
+view      clones  instanced  triangles
+spawn     532     364        220,523 / 220,329
+plaza     467     298        200,438 / 199,974
+east      455     287        194,439 / 194,115
+overview  563     395        225,671 / 225,477
+Frame diff clones vs instanced: spawn 0.686%, plaza 0.159%, east 0.665%, overview 0.375% changed pixels (same-build noise floor 0.13-1.19%); instancing-diff-east.webp shows the changes are fruit rolled per visit and sub-pixel cedar edges.

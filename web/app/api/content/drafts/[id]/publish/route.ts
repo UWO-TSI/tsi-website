@@ -1,49 +1,25 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { adminContext } from "@/lib/server/adminContext";
+import { CONTENT_TABLES } from "@/lib/content/drafts";
 
-const ALLOWED_TABLES = new Set([
-  "npc_personas",
-  "shop_items",
-  "seasonal_palettes",
-  "emote_types",
-]);
-
+// POST — publish a draft (T1/T2): snapshot the live row into content_versions
+// (rollback + activity log), then update it or insert the new row.
 export async function POST(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
-  }
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("tier")
-    .eq("id", user.id)
-    .single();
-
-  if (!profile || (profile.tier !== 1 && profile.tier !== 2)) {
-    return NextResponse.json(
-      { ok: false, error: "Forbidden — T1/T2 only" },
-      { status: 403 },
-    );
-  }
+  const ctx = await adminContext();
+  if (ctx instanceof NextResponse) return ctx;
 
   const { id: draftId } = await params;
-  const admin = createAdminClient();
+  const admin = ctx.db;
 
   // 1. Read the draft row
   const { data: draft, error: draftError } = await admin
     .from("content_drafts")
     .select("*")
     .eq("id", draftId)
-    .single();
+    .maybeSingle();
 
   if (draftError || !draft) {
     return NextResponse.json(
@@ -59,7 +35,7 @@ export async function POST(
     );
   }
 
-  if (!ALLOWED_TABLES.has(draft.table_name)) {
+  if (!CONTENT_TABLES.has(draft.table_name)) {
     return NextResponse.json(
       { ok: false, error: "Invalid target table" },
       { status: 400 },
@@ -87,7 +63,7 @@ export async function POST(
         row_id: draft.row_id,
         snapshot_data: liveRow,
         draft_id: draft.id,
-        published_by: user.id,
+        published_by: ctx.userId,
       });
       if (snapError) {
         return NextResponse.json(

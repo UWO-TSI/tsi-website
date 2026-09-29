@@ -1,10 +1,323 @@
 # QA Report
 
 > Owner: QA agent. All agents check this for bugs in their area.
-> Last updated: 2026-07-13 (Wave 27 — dump program)
+> Last updated: 2026-07-29 (Wave 35 — water distance field, art-cohesion branch)
 > **Lint baseline updated 2026-07-13: 74 errors / 52 warnings** (was 74/59 — seven genuinely-unused eslint-disable directives removed; mentorship/page.tsx keeps its two, the "unused" report there is a react-compiler two-pass quirk shielding a real declaration-order error).
 
 ---
+
+## Wave 35 — 2026-07-29 Water: the foam regression, and its actual cause
+
+**Regression introduced by Wave 34's last commit (`35a89f6`, solid foam).** The
+river rendered as a chunky white stair-stepped tube. Found by inspecting the
+world screenshot; the tuning bench showed it clean.
+
+### Root cause
+Not the foam. `shoreDistance()` returned one integer per CELL. Every vertex of a
+cell got the same value, so the attribute was constant across each quad and
+anything keyed on it changed in whole-cell steps. The soft gradient it was
+originally written for hid that. The hard edge exposed it.
+
+### Why the bench did not catch it
+`WaterSpecimen` computed its own distance analytically (`shoreAt(z) - x`, min
+against rock radii). That function is smooth by construction, so the bench was
+*incapable* of reproducing a defect caused by quantisation. A tuning tool that
+does not share the shipped code path can only confirm the shipped code path by
+coincidence.
+
+### Fix
+`shoreSdf()` in `lib/game/grid.ts`. Exact signed Euclidean distance in cells,
+positive in water, two passes of Felzenszwalb, rasterised at 4 samples/cell
+against the **eased** outline (the visible shoreline), uploaded as an R16F
+texture and sampled per FRAGMENT. Per-vertex was considered and rejected: the
+water mesh is one quad per cell, so its finest carryable detail is one cell and
+curved banks facet along the triangle diagonals.
+
+The bench now bakes its own field through the same `sdfFromMask`.
+
+### Evidence
+- field spans -31.34 .. 36.07 cells over the shipped map; bake 27ms; 512KB R16F
+- sign changes on a test scanline land exactly on the banks (verified against
+  `surfaceAt` rows 59-68: river starts row 64, field reads -0.50 at row 63)
+- 27 distinct values across a river band where the old field had ~6
+- `THREE.DataUtils.toHalfFloat(-1.25)` = 0xbd00, correct binary16
+
+### Not verified
+**No on-screen check.** The gstack browse instance cannot create a WebGL context
+on this machine (`SwiftShader ... BindToCurrentSequence failed`), headless or
+headed. Everything above is numeric. David should eyeball `?grid=1` and
+`/lab/tune`.
+
+### Gates
+`npx tsc --noEmit` clean · `npm run lint` 74/52 (baseline) · `npm test` 78/78
+
+---
+
+## Wave 34 — 2026-07-28 Terrain leveling: a level is now HALF a cliff
+
+David: "there should be logic for terrain leveling, and also the height for each
+terrain is too tall, i think it should be half as tall for each inciment, so 0.5
+is walkable but a 1 would be considered a cliff."
+
+**The constraint that shapes the whole change.** `LEVEL_STEP` could not simply be
+halved: the kit's wall is 1.5u and it does not stack (`Cliff0A_0` tops at y=0 and
+drops to exactly y=-15 raw). So 1.5u stays what a CLIFF is, and it now spans
+**two** levels instead of one. `CLIFF_LEVELS = 2` is the only knob; the invariant
+`LEVEL_STEP * CLIFF_LEVELS === CLIFF_HEIGHT` is a test.
+
+| drop | world | what it is |
+|---|---|---|
+| 1 level | 0.75u | **bank** — walkable, no kit piece, sloped skirt |
+| 2 levels | 1.5u | **cliff** — kit piece, not walkable |
+| 3+ | — | illegal; `enforceSteps` caps it, nothing can draw it |
+
+**Renderer.** `bankEdges()` reports which of a cell's four orthogonal edges fall
+a walkable step; `GridTerrain.addBank` emits a sloped skirt for each, with the
+true slope normal so it shades differently from the flat ground on either side —
+that shading difference is most of what makes the step readable. Banks
+deliberately overlap the lower cell rather than meeting it exactly, because an
+exact meeting leaves a hairline of sky at grazing angles.
+
+**Autotiler.** `sameLevelOrHigher` now means same TIER (`> level - CLIFF_LEVELS`).
+A one-level neighbour reads as the same ground, so no wall grows along a bank.
+Getting this wrong would have put a cliff face on every bank.
+
+**Ramps — the leveling rule that makes a plateau reachable.** A terrace at level
+2 sits behind a 1.5u wall on every side. ACNH solves this with an incline kit;
+**the dump has none** — searched all 57,822 entries, `FldUISlope` is a UI icon
+and there is no ramp, stair or slope model anywhere. So the ramp is built from
+terrain, which the half-step scale now allows: `ground 0 -> ramp 1 -> terrace 2`,
+each a walkable 0.75u bank. The cliff autotiler agrees for free and leaves a gap
+in the wall exactly where the ramp meets it. One per plateau, sited at whichever
+boundary cell is closest to a road. 8 carved.
+
+**Authoring.** The main uplands now rise through a walkable RIM (taper of 1 level
+rather than a full cliff), so most relief is soft:
+
+```
+relief: 898 walkable bank cells (75%) vs 303 cliff-face cells
+levels over land: 0 → 67.0% · 1 → 11.8% · 2 → 19.9% · 4 → 1.3%
+```
+
+**Ground height is now the grid.** `terrain.ts` gained a registered height
+provider that `GridWorld` installs on mount, so the player, NPCs, click-to-move
+and the prop scatter all read `heightAtWorld` instead of the FBM heightfield.
+Without it a bank you can see is not a bank you can walk up. A registered
+provider rather than an import because `terrain.ts` is pulled in by the
+extraction scripts under `--experimental-strip-types`, which cannot load the JSON
+map. It is also cheaper than the bilinear sample it replaces.
+
+**Bug found and fixed in the same pass.** The bank winding flip keyed on
+`dx + dz > 0`, the SIGN of the step direction; the correct discriminator is the
+AXIS. Two of the four directions came out backfacing, and a culled bank showed as
+a pale hole straight through the terrain to the sky. Replaced the hand-cased flip
+with a cross product compared against the normal we already know, which cannot
+get it wrong.
+
+Gates: tsc clean, tests 78/78 (6 new for the leveling rule), lint 74/52.
+
+---
+
+## Wave 33 — 2026-07-27 "looks like Minecraft" — easing land connections
+
+David: "game looks like minecraft now, need you to have logic that eases land
+connections." Two mechanisms landed, both measured.
+
+**What was actually blocky, measured rather than assumed.** The autotiler was
+NOT at fault: sampling the west-coast run shows it picking corner pieces (`3`,
+`7`) at every turn and straight walls (`5`) along runs, which is correct. And
+the four straight-wall variants have **byte-identical edge profiles** at the
+tiling seam (`-3.67,-14.84,5.00 | -4.22,-0.39,5.00 | ...` on all of
+`5-b-0..3`), so they tile exactly and mixing them opens no gap.
+
+The blockiness was two other things:
+
+1. **The ground plane had no corner geometry at all.** Every boundary on a tile
+   grid is axis-aligned cell edges, so grass/sand, road/grass and the shoreline
+   all came out as pixel staircases.
+2. **Elevation ran straight into the sea.** 243 cliff cells sat within 4 cells
+   of open water, so the island's own SILHOUETTE was a flight of rock stairs
+   descending one cell per row. ACNH never shows this: its shoreline is always a
+   flat level-0 beach and cliffs only start inland, which is why its outline
+   against the sea is a curve the engine can round rather than a stack of square
+   pieces it cannot.
+
+**Fix 1 — corner easing (`easedCellOutline` in `lib/game/grid.ts`).** A cell on a
+boundary gets its convex corners cut by a quarter-circle. Interior cells keep the
+cheap two-triangle quad, so the extra geometry stays where it does something.
+The useful property: a full-tile cut turns a staircase into an exact straight
+diagonal (blob `{x >= z}` — cell (1,1) contributes the hypotenuse (0.5,0.5) →
+(1.5,1.5), cell (2,2) contributes (1.5,1.5) → (2.5,2.5), and they meet exactly).
+`EASE_RADIUS` is 0.72, below a full tile, which leaves the gentle scallop ACNH
+coastlines have.
+
+This forced `GridTerrain` into **two layers instead of seven buckets**: grass
+everywhere, other surfaces painted on top. Cutting a corner off a sand cell has
+to reveal something, and in a one-layer world it revealed a hole. It is also
+ACNH's own model — `Base_0` is grass and roads are autotiled decals over it.
+River is deliberately NOT eased and drawn full-square: nothing is beneath the
+water, so cutting its corners would show sky; the rounded grass bank overlaps it
+from above instead.
+
+**Fix 2 — a coastal beach apron (`COAST_APRON = 4`).** No elevation within 4
+cells of the sea. **243 → 0 cliff cells at the waterline.** The shelf features
+from the 2026-07-26 ask moved from `coastDist` 47.5 to 42 so they still read as
+a low rock bluff overlooking the sand rather than as the sand's own edge.
+
+**Fix 3 — `straighten(2)`, and an honest note on it.** A 3×3 majority vote on
+the level field. It flipped **14 cells** and took one-cell ridges 2 → 0, and
+that is all: a 45° boundary is already a fixed point of a majority filter, so
+the diagonal stairs are a real diagonal and not noise. Kept as a cheap guard,
+not as the fix it was intended to be.
+
+| | before | after |
+|---|---|---|
+| cliff cells inside the 4-cell beach apron | 243 | **0** |
+| one-cell-wide ridges | 2 | **0** |
+| edge cells / raised cells | 21% | 20% |
+| corner (wall turns here) cells | 27% of perimeter | 27% |
+
+**Still blocky, and why.** The cliff FACE still reads as 1×1 blocks. That is not
+geometry — the pieces tile exactly, measured above. It is shading: the rock
+relief has no ambient occlusion, no baked contact shadow (the extractor drops
+`mShadow`, which needs multiply blending and renders as opaque white under
+standard PBR), and faces pointing away from the sun get key ≈ 0. Fixing it means
+restoring `mShadow` with a `THREE.MultiplyBlending` material, which is the same
+thing V7 in Wave 32 needs.
+
+Gates: tsc clean, tests 70/70, lint 74/52 (= baseline).
+
+---
+
+## Wave 32 — 2026-07-26 Visual QA of `?grid=1` — **FAIL, 6 open defects**
+
+David: "qa and see whats wrong visually". Headed Chromium via gstack browse,
+`/lab/world?grid=1`, aerial rig at several azimuths, clock forced so lighting
+is constant between shots. Perf sampled with F3.
+
+Perf at the player camera: **60 FPS · 439 draws · 339.7k tris** (dev build,
+non-M1 hardware, so relative only).
+
+### Fixed this wave
+
+- **V0 — cliff walls landed on the wrong sides.** `derive-kit-mapping.mjs`
+  reports each piece's INTRINSIC rotation and the config table discarded it.
+  `7-a` (134 placements) is modelled at rotation 3, so a third of the cliff
+  runs faced inward and the map showed sky through the gaps. Added
+  `baseRotation` to all 14 entries and subtract it in `cliffPieceFor`. This had
+  been misdiagnosed twice as a material problem.
+- **V1 — the uplands were ribbons, not landforms.** `author-elevation.mjs`
+  skipped protected cells *inside* the blob loop, so every road punched a
+  level-0 slot through whatever plateau it crossed. Measured **42% of raised
+  cells sitting on a cliff edge**: two-to-three-cell ribbons wrapping the road
+  network, which rendered as garden edging and as canyon walls flanking the
+  main avenue. Also found: the `t < 0.55` taper was applied at level 1, where
+  there is no lower terrace to inset onto, so every stated radius was silently
+  45% too small.
+  Fix: a Chebyshev clearance field (blobs need MARGIN=3 cells of flat apron
+  from any road, bank or building), no taper at level 1, a morphological
+  open(2) to delete anything thinner than 5 cells, and re-siting on the
+  clearance field's own local maxima instead of eyeballed coordinates.
+  **42% → 21% edge · 5 → 2 one-cell ridges · raised land 12% → 33%**, and the
+  island now has a level-2 summit and relief on both halves instead of one.
+- **V2 — `web/data/island-map.json` was never committable.** The repo-root
+  `.gitignore` has a blanket `*.json`; the map — the entire world — existed on
+  one machine only. Added the un-ignore next to the globe-data ones.
+
+### Open
+
+| # | Defect | Root cause | Where |
+|---|---|---|---|
+| V3 | The river is a painted stripe: flat quad at ground −0.078u, hard stair-step edges, no bank, no depth, no waterfall. Reads as a canal, and it is the most broken thing in frame | the 45-piece river kit and 47-piece fall kit are extracted but not wired; `GridTerrain` draws river cells as plain quads | `grid/GridTerrain.tsx` |
+| V4 | The river bisects the island edge-to-edge, 5-9 cells wide, no source and no mouth — it stops in grass at both ends | inherited from the pre-grid `riverInfluence` field, snapped verbatim | `data/island-map.json` |
+| V5 | Roads render as flat untextured colour, and the N-S spine is a different grey from the brown avenues | `SURFACE_COLOR` fallback; the road kit is not on the grid | `grid/GridTerrain.tsx` |
+| V6 | The coastline is a 45° pixel staircase with a uniform-width sand ring | the coast is the grid's own cell edge; no beach/cliff kit at the waterline | `data/island-map.json` |
+| V7 | The new plateau is a large empty lawn. Shape now measures correct but it still does not *read* as terrain: nothing lives on the upper level, and upper and lower grass are the same value with no contact shadow at the cliff base | content, not geometry. ACNH sells the level with baked `mShadow` contact darkening plus stuff on top; our extractor drops `mShadow` (they need multiply blending, not standard PBR) | M7 |
+| V8 | Draw calls **439** vs 227-360 on the legacy world | chunking without a texture atlas costs more than it saves; one material per surface per chunk | atlas pass |
+
+Gates: tsc clean, tests 70/70, lint 74/52 (= baseline).
+
+---
+
+## Wave 31 — 2026-07-26 M0/M1 foundations + FPS A/B — **PASS**
+
+Branch `feat/acnh-tile-grid` (off `restart/art-cohesion-v2`). David asked for a
+performance check after the M1 asset re-export.
+
+**Method.** Headed Chromium via gstack browse (real WebGL — headless has no GL
+context here and silently renders nothing), `/lab/world`, player at spawn
+`[0, 0, -15]`, clock forced to Noon so lighting is identical between runs,
+F3 overlay sampled 4-6 times per config. Dev build, so treat absolute numbers
+as relative-only.
+
+**M1 is performance-neutral vs M0.** Same camera, same settings:
+
+| | FPS (median) | Draws | Tris | Geoms | Texs |
+|---|---|---|---|---|---|
+| M0 `1dd1dda` | ~49 | 243-353 | 308-415k | 255-259 | 128-129 |
+| M1 `b90ad41` | ~49 | 242-357 | 305-414k | 263-267 | 123-124 |
+
+Geoms up slightly (buildings now composed from parts), Texs down slightly
+(texture slimming). Draw/tri figures oscillate between two bands as ambient
+life moves in and out of frustum.
+
+**Lever A/B — bloom is the entire gap.**
+
+| Config | FPS | Frame |
+|---|---|---|
+| default (bloom on, shadows on, dpr 2) | ~49 | 21.4ms |
+| `pixelated` on (dpr 0.66) | ~48 | 19.3ms |
+| shadows off | ~47 | 21.6ms |
+| **bloom off** | **60 (vsync cap)** | **16.7ms** |
+| **defaults after the fix** | **60** | **16.1-16.8ms** |
+
+dpr and the realtime shadow map — the two obvious suspects, and the ones the
+foundations doc flagged as D8 — cost almost nothing here. Bloom costs ~11 FPS.
+
+**Root cause.** `useGraphicsSettings` enabled bloom when
+`navigator.deviceMemory >= 8`. Chrome CAPS that value at 8 regardless of real
+RAM, and Safari/Firefox do not implement it at all so the 8 fallback applies.
+The condition was true for essentially every visitor. Bloom now defaults OFF,
+opt-in via Settings → Graphics. A real fix probes frame time; deviceMemory
+cannot answer the question it was being asked.
+
+**Also verified this wave:** shaders compile with the D1 depth-pass guard,
+zero asset 404s, `--audit` clean (no dropped meshes, no dangling texture refs),
+trees render normal green after the COLOR_0 strip.
+
+Gates: tsc clean, tests 32/32, lint 74/52 (= baseline).
+
+---
+
+## Wave 30 — 2026-07-25 Mini-sweep after wakes 46-60 — **PASS, ready for David's eyeball**
+
+Wave 29 passed but the world changed a LOT since (geo master plan S1-S7, river v3, economy E1-E4, recolor pipeline, polish batches — 15 wakes). This sweep re-baselines everything for David's pre-merge playtest. HEAD `f862f5c`.
+
+- **Build:** ✓ compiled 7.0s, **110** static pages (was 106 — +lab/furniture, +api/sell, +api/gear, +lab growth), zero errors. Note: env-less builds fail at `/admin/recruit` static export (needs Supabase env at build) — NOT a regression, Wave 29 built with env too; only affects env-stripped builds.
+- **Lint:** exactly 74/52 baseline. **Tests:** 32/32.
+- **Runtime smoke (env-less :3099):** 11 routes 200 (incl. the new /lab/furniture), 4 APIs 200 (/api/shop, /api/collections, /api/coins, /api/gear — the last two degrade to null-wallet/null-gear env-less as designed; /api/sell 401s unauthed).
+- **Flow sweep, all headless-verified, zero pageerrors:**
+  - 6/6 sheet deep-links open (shop/bounty/jobs/leaderboard/oracle/**wharfsell**)
+  - 4/4 interiors render via /lab/interior (oracle/shop/hq/**wharf**)
+  - Fishing at the **bend pool** cast spot: prompt + cast-start
+  - **Boat trip**: prompt + "Rowed out" toast (round trip verified wake 55)
+  - **Sell + gear flow**: exact coin math, OWNED persistence (wake 58)
+  - Discovery pings: Isla Chica (w55), The Flats (w57), **The Reedmarsh (this wave)**
+- **Screenshot pack** (job dir `tmp/w61pack/`): hero aerials of village, wharf, Temple Rise, Isla Chica, The Flats, bend pool, whole-island + all 4 interiors + fishing/reedmarsh ground shots.
+- **Breaks found: NONE** (one false alarm — the first fishing check spawned at the 2.4-radius edge; re-spawned in range, clean).
+- **Merge blockers: NONE.** Migration 024 remains DRAFT (launch-window batch: coins, fish_prices, sell_catches, gear, buy_gear). Branch is ready for David's in-game eyeball → merge → smoke tethos.ca (prod auto-deploys from main).
+
+## Wave 29 — 2026-07-25 Pre-merge gate on restart/art-cohesion-v2 — **PASS, merge-ready**
+
+David-ordered pre-merge wave on the art-cohesion branch (HEAD `2a9052e` at start; two QA-authored fixes landed in-wave, commit `6fe182a`). Scope: full static gates + runtime smoke + the widest visual sweep to date.
+
+- **Build:** ✓ compiled 9.0s, 106 static pages, zero errors.
+- **Lint:** found **75/52** (+1 vs baseline) — `PlazaSparrows.tsx` react-compiler error (mutable frame state in a useMemo; wake-34's targeted grep missed the two-line format). Fixed in-wave (useRef pattern per FishShadows). **Now exactly 74/52 = baseline.**
+- **Tests:** 32/32.
+- **Runtime smoke (env-less dev :3099):** all 10 routes 200 (/, login, dashboard, shop, bounty, all 5 lab pages), /api/shop 200.
+- **REAL BUG FOUND + FIXED — `/api/collections` stale key enum:** the POST schema still whitelisted the RETIRED legacy keys (apple/fish_common/flower_red…), so the server 400-rejected every modern catch key (`fish_dace`, `sea_scallop`, `bug_*`, `shore_*`, species flowers) — silently masked by the local-first localStorage fallback, but **server-side collection persistence was dead on prod** and would have shipped broken into the beta (no cross-device sync). Fixed: shape validation (`^[a-z0-9_]+$`, ≤64 chars — collections are reward-free per principle #3, a whitelist buys nothing and rots every content drop). Also: GET 500'd env-less (createClient throw) — now returns an empty book like /api/shop's fallback; POST env-less 401s. Verified: GET 200, auth gate intact.
+- **Visual sweep, zero pageerrors across all of it:** world under sunny/cloudy/rain each at noon AND night (lab clock scrub), all 6 dock overlays open/close, all 3 interiors via the new /lab/interior bench, all 4 lab benches incl. the icon stage.
+- **Merge blockers: NONE.** Branch is merge-ready pending David's in-game eyeball (his ruling: QA wave → his playtest → merge). Note for the merge moment: prod deploys from main on push — merge when David is available to smoke tethos.ca after.
 
 ## Wave 28 — 2026-07-14 Stabilize: measured shadows + prod pipeline
 

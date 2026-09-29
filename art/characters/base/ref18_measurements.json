@@ -1,0 +1,106 @@
+{
+  "source": "specs/references/characters/david/character-ref-18.png (800x800, 3/4 front, slight low camera, mid-stride)",
+  "method": "Pixel rows/columns read from a colour segmentation (hood blue, skin, hair) plus a 50 px gridded overlay; values in px of the source image.",
+  "assumptions": [
+    "Bare head = hood minus a thin shell of ~5% of hood size on each side (top 58 instead of 40; width 353*0.9).",
+    "Body shoulder width = cape width at the shoulder line minus ~15% cape bulk.",
+    "Crotch hidden by the dress; estimated at y 570 from the leg angle and hem.",
+    "Eye spacing is foreshortened by the 3/4 view; frontal spacing estimated as measured / cos(~25 deg).",
+    "Base-body 'hem' guide = bottom of the undergarment zone, placed at the reference dress hem height.",
+    "Eye rows (2026-09-28, avatar-fit): per-row extents of the dark eye pixels; iris = rows below the lid line (258-262 are clean), lid = the widest dark run near the top. The eye_spacing_centres_frontal_est '/cos 25' guess is superseded by face_on_head, fitted by measure_face_ref18.py."
+  ],
+  "px": {
+    "hood_top": 40,
+    "bare_head_top": 58,
+    "sole": 758,
+    "hood_bottom_neck": 392,
+    "hood_width": 353,
+    "bare_head_width": 318,
+    "chin": 372,
+    "face_skin_top_center": 130,
+    "face_skin_bottom": 372,
+    "face_width": 268,
+    "eye_center_y": 248,
+    "eye_near_x": [
+      318,
+      400
+    ],
+    "eye_far_x": [
+      470,
+      540
+    ],
+    "eye_height": 58,
+    "mouth_y": 335,
+    "nose_y": 280,
+    "shoulder_line_y": 420,
+    "cape_width_at_shoulders": 251,
+    "hem_y": 605,
+    "crotch_est_y": 570,
+    "hand_near_bbox_wh": [
+      55,
+      45
+    ],
+    "iris_near_x": [
+      335,
+      383
+    ],
+    "iris_far_x": [
+      484,
+      513
+    ],
+    "iris_y": [
+      226,
+      276
+    ],
+    "lid_near_x": [
+      314,
+      401
+    ],
+    "lid_far_x": [
+      471,
+      528
+    ],
+    "lid_top_y": 218,
+    "mouth_centre_x": 437
+  },
+  "ratios_of_body_height": {
+    "note": "body height = bare head top (58) to sole (758) = 700 px",
+    "head_height": 0.449,
+    "head_width": 0.454,
+    "hooded_head_share_of_hooded_height": 0.49,
+    "face_oval_width": 0.383,
+    "face_oval_height": 0.346,
+    "eye_height_from_sole": 0.729,
+    "eye_width_near": 0.114,
+    "eye_height": 0.083,
+    "eye_spacing_centres_frontal_est": 0.23,
+    "mouth_height_from_sole": 0.604,
+    "chin_height_from_sole": 0.551,
+    "shoulder_line_from_sole": 0.483,
+    "body_shoulder_width_est": 0.3,
+    "hem_height_from_sole": 0.219,
+    "crotch_height_from_sole_est": 0.269,
+    "hand_length": 0.079,
+    "hand_width": 0.064
+  },
+  "derived": {
+    "head_width_over_shoulders": 1.51,
+    "face_width_over_head_width": 0.84,
+    "face_height_over_head_height": 0.77,
+    "eye_position_down_head": 0.6,
+    "torso_chin_to_crotch_over_leg_crotch_to_sole": 1.05
+  },
+  "face_on_head": {
+    "method": "measure_face_ref18.py: yaw, eye longitude and iris half-width fitted to both iris centres and widths through the v6 head (orthographic 3/4 model, mouth on the centre line); heights read directly.",
+    "rms_px": 1.85,
+    "view_yaw_deg": 26.25,
+    "eye_lat_deg": -5.29,
+    "eye_lon_deg": 30.0,
+    "eye_centre_arc_from_centre_line_m": 0.116,
+    "iris_width_arc_m": 0.0683,
+    "iris_height_m": 0.0714,
+    "lid_width_near_px_over_iris_width_near_px": 1.812,
+    "lid_top_above_eye_centre_m": 0.0471,
+    "mouth_lat_deg": -40.24
+  }
+}

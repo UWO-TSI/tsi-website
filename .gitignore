@@ -12,6 +12,19 @@
 !web/data/globe-nodes.json
 !web/data/globe-countries.json
 !web/lib/recruitment-round-drafts.json
+
+# The tile map IS the world. The blanket *.json above was silently keeping it
+# out of every commit, so the grid island existed only on one machine.
+!web/data/island-map.json
+!web/data/characters/*.json
+
+# Catalogue data that ships with the art and the sky textures
+!art/characters/base/face_variants.json
+!art/characters/base/ref18_measurements.json
+!art/characters/hair/hair_catalog.json
+!art/characters/character_catalog.json
+!art/characters/palette.json
+!web/public/assets/sky/layers/manifest.json
 .vercel
 *.jpeg
 .playwright-mcp/

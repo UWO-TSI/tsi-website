@@ -3,7 +3,7 @@ import * as THREE from "three";
 /**
  * envLight (P3 polish 2026-07-13) — the ACNH "cozy reflections" pass.
  *
- * Our approximation of soft outdoor reflection: every prop sits in a
+ * ACNH's warmth comes from image-based lighting: every prop sits in a
  * bright sky-colored light field with a hot sun spot, so surfaces pick up
  * soft colored reflections instead of flat diffuse. Three.js equivalent:
  * scene.environment from a PMREM. We bake a tiny equirect (64x32 canvas —
@@ -22,18 +22,32 @@ export interface EnvPhaseSpec {
   ground: string;
   intensity: number;
   sunElev: number; // 0..1, fraction of height from horizon
+  /** Degrees, 0 = +x, 90 = +z (lookPreset sunAngles): puts the blob where the key light is, so glass and metal reflect the sun on the right side. Absent = the painted default. */
+  sunAzimuth?: number;
 }
 
 // Lighting v3 (2026-07-14 lab): env trimmed with the other fills so the
 // stronger sun's shadows survive — see TOD_KEYS note in GameWorld.
+//
+// D3 retune (2026-07-26): the IBL is part of the fill budget, and the budget
+// was measured at 1.30 against a key of 1.40 (a 2.2:1 contrast ratio). Day is
+// cut hardest because that is where a key exists to carve form; night is left
+// as shipped because there the IBL IS the lighting. Dawn and dusk sit between,
+// scaled by how much sun they actually have.
+//   day  0.40 -> 0.20 · dawn 0.40 -> 0.26 · dusk 0.50 -> 0.30 · night 0.22 kept
+// See the fill-budget block in GameWorld.tsx for the full arithmetic.
 export const ENV_PHASES: Record<"dawn" | "day" | "dusk" | "night", EnvPhaseSpec> = {
-  dawn: { skyTop: "#C8BCFF", skyBottom: "#FFDDB8", sun: "#FFD9B0", ground: "#7BA55E", intensity: 0.4, sunElev: 0.22 },
-  day: { skyTop: "#4FB6F5", skyBottom: "#A9DCF2", sun: "#FFFDF4", ground: "#84CB47", intensity: 0.4, sunElev: 0.6 },
-  dusk: { skyTop: "#2D2D6B", skyBottom: "#FFD4A8", sun: "#FF9966", ground: "#6E8A50", intensity: 0.5, sunElev: 0.16 },
+  dawn: { skyTop: "#C8BCFF", skyBottom: "#FFDDB8", sun: "#FFD9B0", ground: "#7BA55E", intensity: 0.26, sunElev: 0.22 },
+  day: { skyTop: "#4FB6F5", skyBottom: "#A9DCF2", sun: "#FFFDF4", ground: "#84CB47", intensity: 0.2, sunElev: 0.6 },
+  dusk: { skyTop: "#2D2D6B", skyBottom: "#FFD4A8", sun: "#FF9966", ground: "#6E8A50", intensity: 0.3, sunElev: 0.16 },
   night: { skyTop: "#0E0E28", skyBottom: "#2D2D6B", sun: "#AAB4E8", ground: "#2E4A38", intensity: 0.22, sunElev: 0.4 },
 };
 
-const environments = new WeakMap<THREE.Scene, { gl: THREE.WebGLRenderer; pmrem: THREE.PMREMGenerator; target: THREE.WebGLRenderTarget; spec: EnvPhaseSpec }>();
+const environments = new WeakMap<THREE.Scene, {
+  renderer: THREE.WebGLRenderer;
+  spec: EnvPhaseSpec;
+  target: THREE.WebGLRenderTarget;
+}>();
 
 function paintEquirect(spec: EnvPhaseSpec): HTMLCanvasElement {
   const w = 64;
@@ -55,18 +69,25 @@ function paintEquirect(spec: EnvPhaseSpec): HTMLCanvasElement {
   gnd.addColorStop(1, spec.ground);
   ctx.fillStyle = gnd;
   ctx.fillRect(0, h / 2, w, h / 2);
-  // sun blob: hot core + warm halo
-  const sx = w * 0.3;
+  // sun blob: hot core + warm halo, drawn again one width over so it wraps the seam
+  const sx = spec.sunAzimuth === undefined ? w * 0.3 : w * sunU(spec.sunAzimuth);
   const sy = h / 2 - spec.sunElev * (h / 2);
-  const halo = ctx.createRadialGradient(sx, sy, 0, sx, sy, 7);
-  halo.addColorStop(0, spec.sun);
-  halo.addColorStop(0.35, spec.sun + "");
-  halo.addColorStop(1, "rgba(255,255,255,0)");
   ctx.globalAlpha = 0.9;
-  ctx.fillStyle = halo;
-  ctx.fillRect(sx - 8, sy - 8, 16, 16);
+  for (const x of [sx - w, sx, sx + w]) {
+    const halo = ctx.createRadialGradient(x, sy, 0, x, sy, 7);
+    halo.addColorStop(0, spec.sun);
+    halo.addColorStop(0.35, spec.sun + "");
+    halo.addColorStop(1, "rgba(255,255,255,0)");
+    ctx.fillStyle = halo;
+    ctx.fillRect(x - 8, sy - 8, 16, 16);
+  }
   ctx.globalAlpha = 1;
   return cv;
+}
+
+/** Equirect u (0-1) of a world azimuth in degrees; three samples u = atan(z, x) / 2π + 0.5. */
+export function sunU(azimuth: number): number {
+  return (((azimuth / 360 + 0.5) % 1) + 1) % 1;
 }
 
 /** Regenerate + apply the environment for a phase. No-op if unchanged. */
@@ -77,27 +98,35 @@ export function applyEnvironment(
   override?: EnvPhaseSpec,
 ): void {
   const spec = override ?? ENV_PHASES[phase];
-  const existing = environments.get(scene);
-  if (existing?.gl === gl && existing.spec === spec && scene.environment === existing.target.texture) return;
-  if (existing && existing.gl !== gl) disposeEnvironment(scene);
-  const previous = environments.get(scene);
-  const pmrem = previous?.pmrem ?? new THREE.PMREMGenerator(gl);
-  const tex = new THREE.CanvasTexture(paintEquirect(spec));
-  tex.mapping = THREE.EquirectangularReflectionMapping;
-  tex.colorSpace = THREE.SRGBColorSpace;
-  const rt = pmrem.fromEquirectangular(tex);
-  tex.dispose();
-  scene.environment = rt.texture;
+  const current = environments.get(scene);
+  if (current?.renderer === gl && current.spec === spec && scene.environment === current.target.texture) return;
+  // PMREM generators retain their renderer. Keep one only for this synchronous
+  // bake so a remounted Canvas cannot reuse the previous renderer's resources.
+  const generator = new THREE.PMREMGenerator(gl);
+  let tex: THREE.CanvasTexture | null = null;
+  let target: THREE.WebGLRenderTarget;
+  try {
+    tex = new THREE.CanvasTexture(paintEquirect(spec));
+    tex.mapping = THREE.EquirectangularReflectionMapping;
+    tex.colorSpace = THREE.SRGBColorSpace;
+    target = generator.fromEquirectangular(tex);
+  } finally {
+    tex?.dispose();
+    generator.dispose();
+  }
+  scene.environment = target.texture;
   scene.environmentIntensity = spec.intensity;
-  environments.set(scene, { gl, pmrem, target: rt, spec });
-  previous?.target.dispose();
+  environments.set(scene, { renderer: gl, spec, target });
+  current?.target.dispose();
 }
 
 export function disposeEnvironment(scene: THREE.Scene): void {
-  scene.environment = null;
-  scene.environmentIntensity = 1;
-  const existing = environments.get(scene);
-  existing?.target.dispose();
-  existing?.pmrem.dispose();
+  const current = environments.get(scene);
+  if (!current) return;
+  if (scene.environment === current.target.texture) {
+    scene.environment = null;
+    scene.environmentIntensity = 1;
+  }
+  current.target.dispose();
   environments.delete(scene);
 }

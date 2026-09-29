@@ -17,13 +17,11 @@ export default function CoinWidget({ profile }: { profile: Profile }) {
           {profile.tethos_coins.toLocaleString()}
         </span>
         <span className="text-xs font-mono text-[var(--color-text-muted)]">
-          TC
+          Gems 💎
         </span>
       </div>
 
-      <p className="text-[0.65rem] font-mono text-[var(--color-text-muted)]">
-        ≈ ${(profile.tethos_coins / 100).toFixed(2)} CAD value
-      </p>
+      {/* CAD line removed (economy v2): the Gem ≈ CAD rate is never shown. */}
     </div>
   );
 }

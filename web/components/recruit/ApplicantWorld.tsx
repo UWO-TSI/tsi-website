@@ -2,13 +2,14 @@
 
 import { Suspense, useCallback, useEffect, useMemo, useRef } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { Html, useGLTF, useProgress, useTexture } from "@react-three/drei";
+import { Html, useProgress, useTexture } from "@react-three/drei";
 import * as THREE from "three";
 import { useReducedMotion } from "framer-motion";
 import GridWorld from "@/components/game/grid/GridWorld";
 import GridOcean from "@/components/game/grid/GridOcean";
 import PlayerAvatar from "@/components/game/PlayerAvatar";
-import ApplicantCharacter from "./ApplicantCharacter";
+import Character from "@/components/game/character/Character";
+import { DEFAULT_LOOK, type CharacterLook } from "@/lib/game/character/look";
 import Seagulls from "@/components/game/Seagulls";
 import FishingBobber from "@/components/game/FishingBobber";
 import FishCatchFX from "@/components/game/FishCatchFX";
@@ -22,14 +23,19 @@ import HQInterior, { type InteriorStation } from "@/components/game/HQInterior";
 import PostFX from "@/components/game/PostFX";
 import { ACNHBuilding } from "@/components/game/ACNHBuilding";
 import { GLBProp, NatureTree, NatureBush, NatureFlowerCluster, NatureFence } from "@/components/game/NatureModels";
-import { createApplicantVillage, constrainApplicantHQ, APPLICANT_SPAWN, ISLAND_TREES, ISLAND_BUSHES, ISLAND_FLOWERS, ISLAND_PROPS, HQ_CLOCK, HQ_LAYOUT, HQ_BOARD_APPROACH } from "@/lib/game/applicantVillage";
+import { createApplicantVillage, APPLICANT_SPAWN, ISLAND_TREES, ISLAND_BUSHES, ISLAND_FLOWERS, ISLAND_PROPS } from "@/lib/game/applicantVillage";
+import { constrainClubhouse, HQ_CLOCK, HQ_LAYOUT, HQ_BOARD_APPROACH } from "@/lib/game/clubhouse";
 import type { Position } from "@/lib/recruitment";
 import ApplicationCountdown from "./ApplicationCountdown";
-import { APPLICANT_LIGHTING, APPLICANT_HQ_LIGHTING, APPLICANT_TERRAIN } from "@/lib/game/applicantLighting";
+import { ISLAND_LIGHTING, CLUBHOUSE_LIGHTING, ISLAND_TERRAIN } from "@/lib/game/islandLighting";
+import { CURRENT, RIM_POSITION, lookFx } from "@/lib/game/lookPreset";
+import LookMaterials from "@/components/game/LookMaterials";
+import { SkyGradient } from "@/components/game/IslandAtmosphere";
 import { applyEnvironment, disposeEnvironment } from "@/lib/game/envLight";
 import { CloudShadows } from "@/components/game/AmbienceFX";
 import { Lantern } from "@/components/game/AmbientProps";
-import BlobShadows from "@/components/game/BlobShadows";
+import ContactShadows from "@/components/game/ContactShadows";
+import SunShadows from "@/components/game/SunShadows";
 import { Fireflies } from "@/components/game/AmbientLife";
 import "@/lib/game/aerialFog";
 import { useGraphicsSettings } from "@/lib/game/useGraphicsSettings";
@@ -46,13 +52,11 @@ const ROOM_TEXTURES = ["/assets/acnh/road/mRoadWood_Alb.png", "/assets/acnh/icon
 ROOM_TEXTURES.forEach(url => useTexture.preload(url));
 const BOTANICAL_TEXTURES = ROOM_TEXTURES.slice(1);
 useTexture.preload(BOTANICAL_TEXTURES);
-useGLTF.preload("/assets/characters/applicant/jayden.gltf");
-useGLTF.preload("/assets/characters/applicant/player.gltf");
-useGLTF.preload("/assets/characters/applicant/player-female.gltf");
+/** Jayden, the applicant guide, on the shared rig. */
+const JAYDEN: CharacterLook = { ...DEFAULT_LOOK, skin: 6, hair: 0, eyes: "E5.4", mouth: "M4.2", bangs: "bangs_swept_r", back: "back_short_spiky", top: "top_tsi_crew", bottom: "bottom_trousers", shoes: "shoes_sneakers" };
 const GULL_ANCHORS: [number, number][] = [[-16, 0], [12, 10], [0, 16]];
 const fishingWaterHeight = () => -WATER_DROP;
 const RETURN_SPAWN: [number, number, number] = [0, 0, 5.4];
-const GUIDE_SHADOW = [{ x: -2.6, y: 0, z: -6, rx: 0.55, rz: 0.55 }];
 
 type Props = {
   phase: ApplicantDayPhase; countdownPositions: Position[]; nearClock: boolean;
@@ -66,23 +70,10 @@ type Props = {
   onMetrics: (value: string) => void;
 };
 
-function refreshShadows(gl: THREE.WebGLRenderer) {
-  gl.shadowMap.autoUpdate = false;
-  gl.shadowMap.needsUpdate = true;
-}
-
-function SceneStatus({ onReady, onFailure, inside, phase }: Pick<Props, "onReady" | "onFailure" | "inside" | "phase">) {
+function SceneStatus({ onReady, onFailure }: Pick<Props, "onReady" | "onFailure">) {
   const { gl } = useThree();
-  const [graphics] = useGraphicsSettings();
-  const wasLoading = useRef(false);
-  useEffect(() => {
-    refreshShadows(gl);
-  }, [gl, inside, phase, graphics.shadows, graphics.liteMode]);
   useFrame(() => {
-    const status = useProgress.getState();
-    if (wasLoading.current && !status.active) refreshShadows(gl);
-    wasLoading.current = status.active;
-    if (status.errors.length) onFailure();
+    if (useProgress.getState().errors.length) onFailure();
   });
   useEffect(() => {
     const canvas = gl.domElement;
@@ -123,14 +114,10 @@ function DirectionArrow({ player, target, paused }: { player: React.RefObject<TH
 
 function Village({ guideToHQ, returned, paused, onAction, onNear, phase, fishing, arrival, onArrived, pickedFlowers, onFlowerNear, onPickFlower, collectionScope, onFishingTarget }: Props) {
   const island = useMemo(() => createApplicantVillage(), []);
-  const plantShadows = useMemo(() => [
-    ...ISLAND_BUSHES.map(([x, z]) => ({ x, z, y: island.ground(x, z), rx: 0.5, rz: 0.4 })),
-    ...ISLAND_FLOWERS.flatMap(([x, z], i) => pickedFlowers.includes(i) ? [] : [{ x, z, y: island.ground(x, z), rx: 0.58, rz: 0.32 }]),
-  ], [island, pickedFlowers]);
   const spawn = returned ? RETURN_SPAWN : APPLICANT_SPAWN;
   const player = useRef(new THREE.Vector3(...spawn));
   const guideMotion = useRef({ speed: 0, yaw: Math.PI, lift: 0 });
-  const lighting = APPLICANT_LIGHTING[phase];
+  const lighting = ISLAND_LIGHTING[phase];
   const [graphics] = useGraphicsSettings();
   const guide = useRef(new THREE.Vector3(-2.6, 0, -6));
   const cameraTarget = useMemo(() => new THREE.Vector3(), []);
@@ -195,18 +182,18 @@ function Village({ guideToHQ, returned, paused, onAction, onNear, phase, fishing
     if (near.current !== next) { near.current = next; onNear(next); }
   }, -2);
   return <>
-    <color attach="background" args={[lighting.sky]} />
-    <fog attach="fog" args={[lighting.sky, lighting.fogNear, lighting.fogFar]} />
+    {lighting.skyTop ? <SkyGradient top={lighting.skyTop} horizon={lighting.sky} /> : <color attach="background" args={[lighting.sky]} />}
+    <fog attach="fog" args={[lighting.fogColor, lighting.fogNear, lighting.fogFar]} />
     <ambientLight intensity={lighting.ambient} color={lighting.fill} />
     <hemisphereLight args={[lighting.fill, lighting.bounce, lighting.hemisphere]} />
-    <directionalLight position={lighting.sunPosition} color={lighting.sun} intensity={lighting.sunIntensity} castShadow
+    <directionalLight name="sun" position={lighting.sunPosition} color={lighting.sun} intensity={lighting.sunIntensity} castShadow
       shadow-mapSize={[2048, 2048]} shadow-camera-left={-24} shadow-camera-right={24}
       shadow-camera-top={24} shadow-camera-bottom={-24} shadow-camera-far={75}
-      shadow-radius={3} shadow-intensity={0.85} shadow-normalBias={0.02} shadow-bias={-0.0002} />
-    <GridWorld map={island.map} water={lighting.water} palette={APPLICANT_TERRAIN} />
-    <GridOcean map={island.map} />
-    <BlobShadows placements={GUIDE_SHADOW} opacity={0.5} />
-    <BlobShadows placements={plantShadows} opacity={0.16} />
+      shadow-radius={lighting.shadow.radius} shadow-intensity={lighting.shadow.intensity} shadow-normalBias={0.02} shadow-bias={-0.0002} />
+    {lighting.rim && <directionalLight position={RIM_POSITION} color={lighting.rim.color} intensity={lighting.rim.intensity} />}
+    <GridWorld map={island.map} water={lighting.water} palette={ISLAND_TERRAIN} />
+    <GridOcean map={island.map} lite={graphics.liteMode} />
+    <ContactShadows tint={lighting.shadow.tint} intensity={lighting.shadow.intensity} sunMap={graphics.shadows && !graphics.liteMode} />
     {!graphics.liteMode && <CloudShadows phase={phase === "evening" ? "dusk" : phase} size={[28, 25]} bounded />}
     <Seagulls anchors={GULL_ANCHORS} />
     <FishingBobber towardWater playerPosRef={player} waterHeight={fishingWaterHeight} />
@@ -228,10 +215,10 @@ function Village({ guideToHQ, returned, paused, onAction, onNear, phase, fishing
     <Lantern position={[3.8, 0, 4.6]} intensity={phase === "day" ? 0 : lighting.lamp * 1.5} glow={phase === "day" ? 0 : 1.2} />
     <pointLight position={[0, 1.6, 5.6]} color="#ffd68b" intensity={lighting.lamp * 1.5} distance={5.5} />
     <group position={[-2.6, 0.018, -6]} onClick={e => { e.stopPropagation(); if (!paused && player.current.distanceTo(guide.current) < 3.2) onAction("guide"); }}>
-      <ApplicantCharacter guide motion={guideMotion} frozen={paused} />
-      <Html position={[0, 2.2, 0]} center distanceFactor={13} zIndexRange={[3, 0]}><span className="village-sign">Jayden · Your guide</span></Html>
+      <Character look={JAYDEN} motion={guideMotion} />
+      <Html position={[0, 1.8, 0]} center distanceFactor={13} zIndexRange={[3, 0]}><span className="village-sign">Jayden · Your guide</span></Html>
     </group>
-    <PlayerAvatar avatarMode="applicant" spawnPosition={spawn} playerName="You" showNameplate={false} onMove={move} frozen={paused || fishing || arrival} desktopClickToMove
+    <PlayerAvatar spawnPosition={spawn} playerName="You" showNameplate={false} onMove={move} frozen={paused || fishing || arrival} desktopClickToMove
       groundHeight={island.ground} groundSurface={island.surface} constrainMove={island.move} />
     <DirectionArrow player={player} target={[0, 6.3]} paused={paused || fishing || arrival || !guideToHQ} />
   </>;
@@ -303,7 +290,7 @@ function Interior({ guideToBoard, paused, onNear, onSelectRole, postings, phase,
   useEffect(() => { camera.position.set(0, 8.4, -11.4); onNear("exit"); }, [camera, onNear]);
   const station = useCallback((s: InteriorStation | null) => onNear(s?.id === "board" ? "board" : s?.id === "clock" ? "clock" : s?.id === "exit" ? "exit" : null), [onNear]);
   return <>
-    <HQInterior avatarMode="applicant" recruitment phase={phase} floorTexture={floor} frozen={paused} playerPosRef={player} onNearestStation={station} stations={STATIONS} constrainMove={constrainApplicantHQ} />
+    <HQInterior clubhouse phase={phase} floorTexture={floor} frozen={paused} playerPosRef={player} onNearestStation={station} stations={STATIONS} constrainMove={constrainClubhouse} />
     <DirectionArrow player={player} target={HQ_BOARD_APPROACH} paused={paused || !guideToBoard} />
     <BotanicalFrames />
     {nearClock && !paused && <Html position={[HQ_CLOCK[0], 3.6, HQ_CLOCK[2] - 0.3]} center zIndexRange={[8, 0]} style={{ pointerEvents: "none" }}><ApplicationCountdown positions={countdownPositions} /></Html>}
@@ -342,8 +329,11 @@ export default function ApplicantWorld(props: Props) {
     onCreated={({ gl }) => { gl.info.autoReset = false; gl.toneMapping = THREE.NeutralToneMapping; gl.outputColorSpace = THREE.SRGBColorSpace; }}>
     <Suspense fallback={null}>
       {props.inside ? <Interior {...props} /> : <Village {...props} />}
-      <PostFX enabled={!graphics.liteMode} antialias={!graphics.pixelated} bloom={graphics.bloom} bloomIntensity={0.22} grade={props.inside ? APPLICANT_HQ_LIGHTING[props.phase].grade : APPLICANT_LIGHTING[props.phase].grade} />
-      <SceneStatus onReady={props.onReady} onFailure={props.onFailure} inside={props.inside} phase={props.phase} />
+      {/* The member island's look (lookPreset CURRENT) on both tiers; Light drops AO, bloom and the shadow map. */}
+      <PostFX antialias={!graphics.liteMode && !graphics.pixelated} grade={props.inside ? CLUBHOUSE_LIGHTING[props.phase].grade : ISLAND_LIGHTING[props.phase].grade} fx={lookFx(CURRENT, !graphics.liteMode)} />
+      <LookMaterials preset={CURRENT} />
+      <SceneStatus onReady={props.onReady} onFailure={props.onFailure} />
+      <SunShadows />
       <Performance onMetrics={props.onMetrics} />
     </Suspense>
   </Canvas>;

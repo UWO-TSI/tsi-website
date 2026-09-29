@@ -37,9 +37,13 @@ import {
   cellToWorldZ,
 } from "@/lib/game/grid";
 import { useTuning } from "@/lib/game/tuning";
+import { worldTime } from "@/lib/game/worldClock";
+import { meshShadow, shadowClassFor } from "@/lib/game/shadows";
 
 const PACK_URL = "/assets/nature/grass-tufts.glb";
 useGLTF.preload(PACK_URL);
+/** Tufts are the Small shadow class: no sun shadow, they receive. */
+const TUFT_SHADOW = meshShadow(shadowClassFor(PACK_URL), "tuft");
 
 /** Deterministic per-cell hash in [0, 1). Same cell, same tuft, every load. */
 function hash01(cx: number, cz: number, salt: number): number {
@@ -137,7 +141,8 @@ export function patchWind(
   mat.needsUpdate = true;
 }
 
-export default function GrassTufts({ map }: { map: IslandMap }) {
+/** `windScale` multiplies sway: 0 for the Light tier, >1 on windy days. */
+export default function GrassTufts({ map, windScale = 1 }: { map: IslandMap; windScale?: number }) {
   const t = useTuning();
   // Plain memo, not a ref: these objects are handed to the shader once and then
   // mutated per frame, and reading a ref during render to build the material is
@@ -197,6 +202,7 @@ export default function GrassTufts({ map }: { map: IslandMap }) {
 
   const material = useMemo(() => {
     const m = new THREE.MeshStandardMaterial({
+      name: "terrain:tufts",
       // White base when the pack supplies colour through COLOR_0; the flat green
       // is only for the procedural cards, which carry no vertex colour.
       color: useModel ? 0xffffff : 0x86b862,
@@ -220,9 +226,9 @@ export default function GrassTufts({ map }: { map: IslandMap }) {
   }, [material]);
   useEffect(() => () => cardGeometry.dispose(), [cardGeometry]);
 
-  useFrame((state) => {
-    uTime.current.value = state.clock.elapsedTime;
-    uWind.current.value.set(t.grass.swayAmount, t.grass.swaySpeed, t.grass.gustLength, t.grass.tuftHeight);
+  useFrame(() => {
+    uTime.current.value = worldTime();
+    uWind.current.value.set(t.grass.swayAmount * windScale, t.grass.swaySpeed, t.grass.gustLength, t.grass.tuftHeight);
   });
 
   const setMatricesFor = (variant: number, total: number) => (inst: THREE.InstancedMesh | null) => {
@@ -260,8 +266,8 @@ export default function GrassTufts({ map }: { map: IslandMap }) {
             ref={setMatricesFor(i, variants.length)}
             args={[geo, material, placements.length]}
             frustumCulled={false}
-            castShadow={false}
-            receiveShadow
+            castShadow={TUFT_SHADOW.cast}
+            receiveShadow={TUFT_SHADOW.receive}
           />
         ))}
       </group>
@@ -273,8 +279,8 @@ export default function GrassTufts({ map }: { map: IslandMap }) {
       ref={setMatricesFor(0, 1)}
       args={[cardGeometry, material, placements.length]}
       frustumCulled={false}
-      castShadow={false}
-      receiveShadow
+      castShadow={TUFT_SHADOW.cast}
+      receiveShadow={TUFT_SHADOW.receive}
     />
   );
 }

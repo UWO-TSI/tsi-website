@@ -354,7 +354,38 @@ function build(mesh: Mesh): THREE.BufferGeometry | null {
 
 export type TerrainPalette = { grass: string; soil: string; sand: string };
 
-export default function GridTerrain({ map, palette }: { map: IslandMap; palette?: TerrainPalette }) {
+/**
+ * Winter snow cover on palette terrain (0..1), shared uniform so a daily
+ * season blend does not rebuild materials. Grain (luminance only) is the
+ * dump's own `mSandSnow_Alb` snow variant (FldUnit), on grass, paths and beach.
+ */
+export const TERRAIN_SNOW = { value: 0 };
+/** Grass detail and hue variation from the look preset (x = texture contrast kept, y = patch hue); LookMaterials writes it. */
+export const TERRAIN_GRASS = { value: new THREE.Vector2(0.38, 0) };
+let snowGrain: THREE.Texture | null = null;
+function getSnowGrain(): THREE.Texture {
+  if (!snowGrain) {
+    snowGrain = new THREE.TextureLoader().load("/assets/acnh/terrain/mSandSnow_Alb.png");
+    snowGrain.wrapS = snowGrain.wrapT = THREE.RepeatWrapping;
+    snowGrain.colorSpace = THREE.SRGBColorSpace;
+  }
+  return snowGrain;
+}
+/** Paths keep a little of their colour through the snow; grass is covered. */
+function addSnow(shader: THREE.WebGLProgramParametersWithUniforms, cover: number) {
+  shader.uniforms.uSnow = TERRAIN_SNOW;
+  shader.uniforms.uSnowGrain = { value: getSnowGrain() };
+  shader.fragmentShader = "uniform float uSnow;\nuniform sampler2D uSnowGrain;\n" + shader.fragmentShader.replace("#include <normal_fragment_begin>", `
+    #ifdef USE_MAP
+      // The dump's snow albedo is warm-tinted; keep only its grain and use ACNH's cool snow ground.
+      float snowGrain = dot(texture2D(uSnowGrain, vMapUv * 1.3).rgb, vec3(0.2126, 0.7152, 0.0722));
+      vec3 snow = vec3(0.9, 0.93, 0.97) * (0.86 + (snowGrain - 0.55) * 0.35);
+      diffuseColor.rgb = mix(diffuseColor.rgb, snow, uSnow * ${cover.toFixed(2)});
+    #endif
+    #include <normal_fragment_begin>`);
+}
+
+export default function GridTerrain({ map, field: heights, palette }: { map: IslandMap; field?: Float32Array; palette?: TerrainPalette }) {
   // ONE field, read twice: the seabed geometry samples it on the CPU, the water
   // shader samples it on the GPU. Two bakes would be two shorelines.
   const field = useMemo(() => shoreSdf(map), [map]);
@@ -370,8 +401,8 @@ export default function GridTerrain({ map, palette }: { map: IslandMap; palette?
     // change is a cliff, so the blur has nothing it is allowed to cross and
     // every corner keeps its own height -- 20ms of work for an identical result.
     // The branch stays so raising the constant revives smoothing for free.
-    () => (CLIFF_LEVELS > 1 ? heightField(map) : null),
-    [map]
+    () => (CLIFF_LEVELS > 1 ? heights ?? heightField(map) : null),
+    [map, heights]
   );
 
   const chunks = useMemo(() => {
@@ -603,6 +634,14 @@ export default function GridTerrain({ map, palette }: { map: IslandMap; palette?
     ]) {
       const sharedName = SHARED[s];
       const shared = sharedName ? terrainMaterial(sharedName) : null;
+      if (shared && palette && s === Surface.Stone) {
+        // Island stone (plaza) keeps its shared look and gains winter snow cover.
+        const stone = shared.clone() as THREE.MeshStandardMaterial;
+        stone.onBeforeCompile = (shader, renderer) => { shared.onBeforeCompile(shader, renderer); addSnow(shader, 0.8); };
+        stone.customProgramCacheKey = () => "island-stone-snow-v1";
+        m.set(s, stone);
+        continue;
+      }
       if (shared) {
         if (s === Surface.Sand || s === Surface.Soil || palette && s === Surface.Grass) {
           const overlay = shared.clone() as THREE.MeshStandardMaterial;
@@ -636,14 +675,20 @@ export default function GridTerrain({ map, palette }: { map: IslandMap; palette?
           if (palette && s === Surface.Grass) {
             overlay.onBeforeCompile = (shader, renderer) => {
               shared.onBeforeCompile(shader, renderer);
-              shader.fragmentShader = shader.fragmentShader.replace("#include <map_fragment>", `
+              shader.uniforms.uGrassLook = TERRAIN_GRASS;
+              shader.fragmentShader = "uniform vec2 uGrassLook;\n" + shader.fragmentShader.replace("#include <map_fragment>", `
                 #include <map_fragment>
                 #ifdef USE_MAP
-                  diffuseColor.rgb = diffuse * mix(vec3(0.9, 0.96, 0.88), sampledDiffuseColor.rgb, 0.38);
+                  // Broad (~12 unit) patches lean yellow-green or blue-green.
+                  vec2 grassQ = vMapUv * 0.9;
+                  float grassHue = sin(grassQ.x * 1.3 + sin(grassQ.y * 1.1) * 1.6) * sin(grassQ.y * 1.5 + sin(grassQ.x * 0.9) * 1.8);
+                  vec3 grassShift = mix(vec3(1.0), grassHue > 0.0 ? vec3(1.08, 1.02, 0.82) : vec3(0.9, 1.0, 1.06), abs(grassHue) * uGrassLook.y);
+                  diffuseColor.rgb = diffuse * mix(vec3(0.9, 0.96, 0.88), sampledDiffuseColor.rgb, uGrassLook.x) * grassShift;
                 #endif
               `);
+              addSnow(shader, 0.96);
             };
-            overlay.customProgramCacheKey = () => "island-grass-detail-v2";
+            overlay.customProgramCacheKey = () => "island-grass-detail-v4";
           }
           if (palette && s === Surface.Soil) {
             // The supplied soil albedo contains broad bright marks. Keep its
@@ -662,8 +707,9 @@ export default function GridTerrain({ map, palette }: { map: IslandMap; palette?
                   diffuseColor.rgb = diffuse * mix(vec3(0.82), soilDetail, 0.18) * (0.8 + grain * 0.5);
                 #endif
               `);
+              addSnow(shader, 0.7);
             };
-            overlay.customProgramCacheKey = () => "island-soil-detail-v2";
+            overlay.customProgramCacheKey = () => "island-soil-detail-v3";
           }
           if (palette && s === Surface.Sand) {
             // Retain the supplied sand grain while reducing its baked orange cast.
@@ -676,8 +722,9 @@ export default function GridTerrain({ map, palette }: { map: IslandMap; palette?
                   diffuseColor.rgb = diffuse * (0.84 + (sandLuma - 0.4) * 0.32);
                 #endif
               `);
+              addSnow(shader, 0.85);
             };
-            overlay.customProgramCacheKey = () => "island-sand-detail-v2";
+            overlay.customProgramCacheKey = () => "island-sand-detail-v3";
           }
           m.set(s, overlay);
         } else m.set(s, shared);
@@ -710,6 +757,7 @@ export default function GridTerrain({ map, palette }: { map: IslandMap; palette?
     materials.get(Surface.Sand)?.dispose();
     materials.get(Surface.Soil)?.dispose();
     if (palette) materials.get(Surface.Grass)?.dispose();
+    if (palette) materials.get(Surface.Stone)?.dispose();
   }, [materials, palette]);
 
   return (

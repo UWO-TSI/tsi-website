@@ -18,7 +18,11 @@
 
 import * as THREE from "three";
 
-const DESAT = 0.35; // fraction of full grayscale at fogFactor = 1
+// 0.35 → 0.18 (David report 2026-07-23: fog made colors read "weird" —
+// the wash was strongest at night where the indigo tint stacked on the
+// desat and greyed the whole midground). 0.18 keeps the layered-depth
+// read without the milk.
+const DESAT = 0.18; // fraction of full grayscale at fogFactor = 1
 
 const MARKER = "// tsi-aerial-fog";
 

@@ -14,6 +14,7 @@ import { FISH, RARITY_META, iconFor, type FishDef } from "@/lib/game/fishing";
 import { AudioManager } from "@/lib/game/audio";
 import { localCollections, mergeWithLocal } from "@/lib/game/collections";
 import { X } from "lucide-react";
+import JournalPages, { fetchJournalPage } from "./JournalPages";
 
 interface Row {
   item_key: string;
@@ -104,6 +105,14 @@ function OpenCollectionBook({ onClose, collectionScope }: { onClose: () => void;
   const [sync, setSync] = useState<"loading" | "synced" | "local">(collectionScope ? "local" : "loading");
   const [detailKey, setDetailKey] = useState<string | null>(null);
   const [fishFilter, setFishFilter] = useState<"all" | "river" | "sea" | "caught">("all");
+  // Journal pages from /api/collections/journal when the server has them; the local catalog otherwise.
+  const [journal, setJournal] = useState<Awaited<ReturnType<typeof fetchJournalPage>>>(null);
+  useEffect(() => {
+    if (collectionScope) return;
+    let alive = true;
+    void fetchJournalPage("fish").then(p => { if (alive) setJournal(p); });
+    return () => { alive = false; };
+  }, [collectionScope]);
   const dialogRef = useRef<HTMLDivElement>(null);
   const closeRef = useRef(onClose);
   useEffect(() => { closeRef.current = onClose; }, [onClose]);
@@ -236,7 +245,7 @@ function OpenCollectionBook({ onClose, collectionScope }: { onClose: () => void;
           </p>
         </header>
 
-        {CATALOG.map((g) => {
+        {journal ? <JournalPages initial={journal} /> : CATALOG.map((g) => {
           // Loop wake 27: per-group completion count — the Critterpedia
           // "how far along am I" read; gold ✓ once the group is complete.
           const got = g.items.filter((it) => Object.hasOwn(counts, it.key)).length;

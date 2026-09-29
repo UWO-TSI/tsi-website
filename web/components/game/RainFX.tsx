@@ -1,41 +1,27 @@
 "use client";
 
 /**
- * RainFX (rain days v1, 2026-07-12) — instanced rain streaks.
+ * RainFX (rain days v1, 2026-07-12; world field 2026-09-27, look spec §7.3) —
+ * instanced rain streaks and snowflakes.
  *
- * 240 thin vertical quads falling inside a 36x18x36 box that follows the
- * player. Each streak wraps back to the top with a new seeded XZ when it
- * passes the ground. One InstancedMesh + one module-scope material: a
- * single draw call, no per-frame allocation (module scratch objects, same
- * pattern as LeafGusts in AmbienceFX).
- *
- * Deterministic layout via mulberry32 (react-compiler: no Math.random in
- * render). Lite mode / graphics settings gate mounting in GameWorld, not
- * here.
+ * The rain is WORLD state: `rainStreak` (lib/game/worldFx.ts) places every
+ * streak from world position and world time, one 36-unit tile repeating over
+ * the whole world, slanted by the world wind. This component only draws the
+ * one tile around where the camera looks, so walking never drags the rain and
+ * two players under the same cloud see the same streaks. One InstancedMesh +
+ * one module-scope material: a single draw call, no per-frame allocation.
+ * Lite mode / graphics settings gate mounting, not here.
  */
 
 import { useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { sampleTerrainHeightFast } from "./terrain";
+import { worldTime } from "@/lib/game/worldClock";
+import { rainStreak, viewFocus, type WorldWind } from "@/lib/game/worldFx";
 
 const COUNT = 240;
-const BOX = 36; // XZ extent around the player
-const TOP = 16; // spawn height band top
-const FALL_SPEED = 21;
-const SLANT = 2.6; // slight wind lean, units/sec in +x
 
-function mulberry32(a: number) {
-  return function () {
-    let t = (a += 0x6d2b79f5);
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
-// Per-streak state lives in flat arrays owned by the component instance via
-// refs; the material + scratch objects are module singletons.
 let _rainMat: THREE.MeshBasicMaterial | null = null;
 function getRainMaterial(): THREE.MeshBasicMaterial {
   if (!_rainMat) {
@@ -50,61 +36,57 @@ function getRainMaterial(): THREE.MeshBasicMaterial {
   }
   return _rainMat;
 }
-
-const _m = new THREE.Matrix4();
-const _q = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0, 0.12));
-const _s = new THREE.Vector3(1, 1, 1);
-const _p = new THREE.Vector3();
-
-function buildDrops(): Float32Array {
-  const rnd = mulberry32(7741);
-  const arr = new Float32Array(COUNT * 4); // x, y, z, speedJitter
-  for (let i = 0; i < COUNT; i++) {
-    arr[i * 4] = (rnd() - 0.5) * BOX;
-    arr[i * 4 + 1] = rnd() * TOP;
-    arr[i * 4 + 2] = (rnd() - 0.5) * BOX;
-    arr[i * 4 + 3] = 0.75 + rnd() * 0.5;
+let _snowMat: THREE.MeshBasicMaterial | null = null;
+function getSnowMaterial(): THREE.MeshBasicMaterial {
+  if (!_snowMat) {
+    // Round flakes from the existing soft sun-glow sprite texture.
+    const flake = new THREE.TextureLoader().load("/assets/sky/sun.png");
+    flake.colorSpace = THREE.SRGBColorSpace;
+    _snowMat = new THREE.MeshBasicMaterial({ color: "#F4F8FC", map: flake, transparent: true, opacity: 0.95, depthWrite: false, side: THREE.DoubleSide });
   }
-  return arr;
+  return _snowMat;
 }
 
-export default function RainFX({ playerPosRef }: { playerPosRef: React.MutableRefObject<THREE.Vector3> }) {
-  const meshRef = useRef<THREE.InstancedMesh>(null);
-  // Drop state lives in a ref, seeded lazily on the first frame — the
-  // react-compiler freezes useMemo results, and ref writes during render
-  // are equally off-limits, so the init happens inside useFrame.
-  const dropsRef = useRef<Float32Array | null>(null);
+/** Same streak field, re-tuned: slow, swaying flakes for snowfall (2026-09-24). */
+const KINDS = {
+  rain: { fall: 21, sway: 0, size: [0.03, 0.7] as [number, number] },
+  snow: { fall: 2.1, sway: 0.6, size: [0.16, 0.16] as [number, number] },
+};
 
-  useFrame((_, delta) => {
+const _m = new THREE.Matrix4();
+const _q = new THREE.Quaternion();
+const _s = new THREE.Vector3();
+const _p = new THREE.Vector3();
+const _v = new THREE.Vector3();
+const _dir = new THREE.Vector3();
+const _up = new THREE.Vector3(0, 1, 0);
+const _pt = { x: 0, y: 0, z: 0 };
+const _focus = { x: 0, z: 0 };
+
+export default function RainFX({ wind, groundHeight = sampleTerrainHeightFast, kind = "rain" }: { wind: WorldWind; groundHeight?: (x: number, z: number) => number; kind?: keyof typeof KINDS }) {
+  const look = KINDS[kind];
+  const meshRef = useRef<THREE.InstancedMesh>(null);
+
+  useFrame(({ camera }) => {
     const mesh = meshRef.current;
     if (!mesh) return;
-    let drops = dropsRef.current;
-    if (!drops) drops = dropsRef.current = buildDrops();
-    const pp = playerPosRef.current;
-    const d = Math.min(delta, 0.05);
+    viewFocus(camera.position, camera.getWorldDirection(_dir), _focus);
+    const t = worldTime();
+    // Streaks lie along their velocity: the fall plus the wind.
+    _q.setFromUnitVectors(_up, _v.set(-wind.x, look.fall, -wind.z).normalize());
     for (let i = 0; i < COUNT; i++) {
-      const j = i * 4;
-      drops[j + 1] -= FALL_SPEED * drops[j + 3] * d;
-      drops[j] += SLANT * d;
-      // wrap in XZ so the box stays centered on the player
-      let lx = drops[j];
-      const lz = drops[j + 2];
-      if (lx > BOX / 2) { drops[j] = lx -= BOX; }
-      const wx = pp.x + lx;
-      const wz = pp.z + lz;
-      if (drops[j + 1] < sampleTerrainHeightFast(wx, wz) - pp.y) {
-        drops[j + 1] = TOP * (0.7 + 0.3 * drops[j + 3]);
-      }
-      _p.set(wx, pp.y + drops[j + 1], wz);
-      _m.compose(_p, _q, _s);
+      rainStreak(i, t, wind, look, _focus.x, _focus.z, _pt);
+      // Below the ground it has landed: not drawn until its next fall.
+      _s.setScalar(_pt.y < groundHeight(_pt.x, _pt.z) ? 0 : 1);
+      _m.compose(_p.set(_pt.x, _pt.y, _pt.z), _q, _s);
       mesh.setMatrixAt(i, _m);
     }
     mesh.instanceMatrix.needsUpdate = true;
   });
 
   return (
-    <instancedMesh ref={meshRef} args={[undefined, undefined, COUNT]} frustumCulled={false} material={getRainMaterial()} renderOrder={5}>
-      <planeGeometry args={[0.03, 0.7]} />
+    <instancedMesh ref={meshRef} args={[undefined, undefined, COUNT]} frustumCulled={false} material={kind === "snow" ? getSnowMaterial() : getRainMaterial()} renderOrder={5}>
+      <planeGeometry args={look.size} />
     </instancedMesh>
   );
 }

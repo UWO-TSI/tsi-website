@@ -155,7 +155,7 @@ export async function updateSession(request: NextRequest) {
     user
   ) {
     const url = request.nextUrl.clone();
-    url.pathname = APPLICANT_PORTAL;
+    url.pathname = "/student/go";
     return NextResponse.redirect(url);
   }
 

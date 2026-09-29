@@ -1,0 +1,74 @@
+{
+  "note": "Shared character palette (decision 143). sRGB hex. Creator swatches, residents and merch all read from here. Outfit set keeps the Tethos accents: sage #9CAF88, warm wood #A07850, cream #F3E9D2.",
+  "skin": [
+    "#FBE3CF",
+    "#F6D5B8",
+    "#EFC4A0",
+    "#E8B58A",
+    "#DDA27A",
+    "#D09068",
+    "#C07F58",
+    "#AD6E4B",
+    "#975C3D",
+    "#7E4A31",
+    "#663A27",
+    "#4E2C1F"
+  ],
+  "hair": [
+    "#2B211C",
+    "#4A3326",
+    "#6B3A22",
+    "#8C5E3C",
+    "#B07A4A",
+    "#D6A866",
+    "#EBCB8B",
+    "#C25B3A",
+    "#9E3B2E",
+    "#8A8F99",
+    "#F0A3B5",
+    "#6F8FC9"
+  ],
+  "outfit": [
+    "#F3E9D2",
+    "#FAF7F0",
+    "#9CAF88",
+    "#5F7A55",
+    "#A07850",
+    "#6E4E35",
+    "#F0D24A",
+    "#D0764F",
+    "#E27AB0",
+    "#F2B8C0",
+    "#7FBFEA",
+    "#4F76B0",
+    "#34466B",
+    "#B7A6D6",
+    "#4A4A4F",
+    "#5FA3A0"
+  ],
+  "counts": {
+    "skin": 12,
+    "hair": 12,
+    "outfit": 16
+  },
+  "base_body_defaults": {
+    "skin": 3,
+    "top": 0,
+    "bottom": 2,
+    "socks": 1,
+    "shoes": 6
+  },
+  "derived": {
+    "note": "Fixed shades derived from palette colours, not creator swatches.",
+    "shoe_sole": "#C9A63A",
+    "nose_highlight": "#FBE3CF"
+  },
+  "ref_girl_defaults": {
+    "skin": 3,
+    "hair": 2,
+    "hood": 10,
+    "underskirt": 8,
+    "socks": 1,
+    "shoes": 6
+  }
+}

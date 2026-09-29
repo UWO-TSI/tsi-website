@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { createClient } from "@/lib/supabase/client";
 import { Search, ChevronUp, ChevronDown } from "lucide-react";
 import type { Tier } from "@/lib/supabase/types";
 
@@ -10,6 +9,7 @@ interface AdminMember {
   display_name: string;
   email: string;
   tier: Tier;
+  membership: "member" | "public";
   position: string | null;
   class: string | null;
   level: number;
@@ -41,48 +41,43 @@ export default function AdminMembersPage() {
     fetchMembers();
   }, []);
 
-  async function updateTier(memberId: string, newTier: Tier) {
+  // tier / is_active / is_alumni are server-only (#40): write through the T1/T2 route.
+  async function updateMember(memberId: string, patch: Partial<Pick<AdminMember, "tier" | "is_active" | "is_alumni">>) {
     setUpdating(memberId);
-    const supabase = createClient();
-    await supabase
-      .from("profiles")
-      .update({ tier: newTier })
-      .eq("id", memberId);
-    setMembers((prev) =>
-      prev.map((m) => (m.id === memberId ? { ...m, tier: newTier } : m))
-    );
+    const res = await fetch(`/api/admin/members/${memberId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(patch),
+    });
+    if (res.ok) {
+      setMembers((prev) => prev.map((m) => (m.id === memberId ? { ...m, ...patch } : m)));
+    } else {
+      const body = await res.json().catch(() => null);
+      alert(body?.error ?? "Couldn't save the change.");
+    }
     setUpdating(null);
   }
 
-  async function toggleActive(memberId: string, isActive: boolean) {
-    setUpdating(memberId);
-    const supabase = createClient();
-    await supabase
-      .from("profiles")
-      .update({ is_active: !isActive })
-      .eq("id", memberId);
-    setMembers((prev) =>
-      prev.map((m) =>
-        m.id === memberId ? { ...m, is_active: !isActive } : m
-      )
-    );
+  // Ruling 1: T1/T2 mark who is a TSI member. The route moves the tier with it (public = T5, marked = T4).
+  async function setMembership(member: AdminMember, membership: AdminMember["membership"]) {
+    setUpdating(member.id);
+    const res = await fetch(`/api/admin/members/${member.id}/membership`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ membership }),
+    });
+    const body = await res.json().catch(() => null);
+    if (res.ok && body?.ok) {
+      setMembers((prev) => prev.map((m) => (m.id === member.id ? { ...m, membership: body.member.membership, tier: body.member.tier } : m)));
+    } else {
+      alert(body?.error ?? "Couldn't save the change.");
+    }
     setUpdating(null);
   }
 
-  async function toggleAlumni(memberId: string, isAlumni: boolean) {
-    setUpdating(memberId);
-    const supabase = createClient();
-    await supabase
-      .from("profiles")
-      .update({ is_alumni: !isAlumni })
-      .eq("id", memberId);
-    setMembers((prev) =>
-      prev.map((m) =>
-        m.id === memberId ? { ...m, is_alumni: !isAlumni } : m
-      )
-    );
-    setUpdating(null);
-  }
+  const updateTier = (memberId: string, tier: Tier) => updateMember(memberId, { tier });
+  const toggleActive = (memberId: string, isActive: boolean) => updateMember(memberId, { is_active: !isActive });
+  const toggleAlumni = (memberId: string, isAlumni: boolean) => updateMember(memberId, { is_alumni: !isAlumni });
 
   const filtered = members.filter(
     (m) =>
@@ -95,6 +90,7 @@ export default function AdminMembersPage() {
     2: "T2 · Exec",
     3: "T3 · Member",
     4: "T4 · General",
+    5: "T5 · Public",
   };
 
   const tierColors: Record<number, string> = {
@@ -102,6 +98,7 @@ export default function AdminMembersPage() {
     2: "text-[var(--color-brand-yellow)]",
     3: "text-[var(--color-brand-blue)]",
     4: "text-[var(--color-text-muted)]",
+    5: "text-[var(--color-text-muted)]",
   };
 
   return (
@@ -112,7 +109,7 @@ export default function AdminMembersPage() {
             Member Management
           </h1>
           <p className="text-sm font-mono text-[var(--color-text-muted)] mt-1">
-            {members.length} total accounts
+            {members.length} total accounts · {members.filter((m) => m.membership === "member").length} members
           </p>
         </div>
       </div>
@@ -145,6 +142,9 @@ export default function AdminMembersPage() {
                 </th>
                 <th className="text-left px-4 py-3 font-mono text-[0.65rem] text-[var(--color-text-muted)] uppercase tracking-wider">
                   Tier
+                </th>
+                <th className="text-left px-4 py-3 font-mono text-[0.65rem] text-[var(--color-text-muted)] uppercase tracking-wider">
+                  Membership
                 </th>
                 <th className="text-left px-4 py-3 font-mono text-[0.65rem] text-[var(--color-text-muted)] uppercase tracking-wider">
                   Level
@@ -211,6 +211,28 @@ export default function AdminMembersPage() {
                           <ChevronDown size={12} />
                         </button>
                       </div>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      {member.membership === "member" ? (
+                        <span className="text-[0.6rem] font-mono text-[var(--color-brand-blue)] bg-[var(--color-brand-blue)]/10 px-2 py-0.5 rounded">
+                          Member
+                        </span>
+                      ) : (
+                        <span className="text-[0.6rem] font-mono text-[var(--color-text-muted)] bg-white/5 px-2 py-0.5 rounded">
+                          Public
+                        </span>
+                      )}
+                      {member.tier >= 4 ? (
+                        <button
+                          onClick={() => setMembership(member, member.membership === "member" ? "public" : "member")}
+                          disabled={updating === member.id}
+                          className="text-[0.65rem] font-mono text-[var(--color-accent-cyan)] hover:underline disabled:opacity-50"
+                        >
+                          {member.membership === "member" ? "Make public" : "Mark member"}
+                        </button>
+                      ) : null}
                     </div>
                   </td>
                   <td className="px-4 py-3">

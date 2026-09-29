@@ -1,0 +1,102 @@
+{
+  "cirrus": {
+    "file": "cirrus.webp",
+    "size": 1024,
+    "twoChannel": false
+  },
+  "cirrostratus": {
+    "file": "cirrostratus.webp",
+    "size": 1024,
+    "twoChannel": false
+  },
+  "altocumulus": {
+    "file": "altocumulus.webp",
+    "size": 1024,
+    "twoChannel": false
+  },
+  "chemtrails": {
+    "file": "chemtrails.webp",
+    "size": 1024,
+    "twoChannel": false
+  },
+  "cloud": {
+    "file": "cloud.webp",
+    "size": 1024,
+    "twoChannel": true
+  },
+  "partlyCloudy": {
+    "file": "partlyCloudy.webp",
+    "size": 1024,
+    "twoChannel": true
+  },
+  "mostlyCloudy": {
+    "file": "mostlyCloudy.webp",
+    "size": 1024,
+    "twoChannel": true
+  },
+  "overcast": {
+    "file": "overcast.webp",
+    "size": 1024,
+    "twoChannel": false
+  },
+  "denseOvercast": {
+    "file": "denseOvercast.webp",
+    "size": 1024,
+    "twoChannel": false
+  },
+  "lowNimbus": {
+    "file": "lowNimbus.webp",
+    "size": 1024,
+    "twoChannel": true
+  },
+  "midNimbus": {
+    "file": "midNimbus.webp",
+    "size": 1024,
+    "twoChannel": true
+  },
+  "highNimbus": {
+    "file": "highNimbus.webp",
+    "size": 1024,
+    "twoChannel": true
+  },
+  "highBorder": {
+    "file": "highBorder.webp",
+    "size": 1024,
+    "twoChannel": true
+  },
+  "luxuryVariation": {
+    "file": "luxuryVariation.webp",
+    "size": 1024,
+    "twoChannel": false
+  },
+  "cumulusNoise": {
+    "file": "cumulusNoise.webp",
+    "size": 1024,
+    "twoChannel": false
+  },
+  "ghibliNoise": {
+    "file": "ghibliNoise.webp",
+    "size": 1024,
+    "twoChannel": false
+  },
+  "borderNoise": {
+    "file": "borderNoise.webp",
+    "size": 1024,
+    "twoChannel": false
+  },
+  "stars": {
+    "file": "stars.webp",
+    "size": 2048,
+    "twoChannel": false
+  },
+  "galaxy": {
+    "file": "galaxy.webp",
+    "size": 2048,
+    "twoChannel": false
+  },
+  "moon": {
+    "file": "moon.webp",
+    "size": 512,
+    "twoChannel": false
+  }
+}

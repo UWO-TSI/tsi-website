@@ -65,7 +65,7 @@ export default function FlowerPickFX({ collectionScope }: { collectionScope?: st
         flower,
       };
       setPicks((p) => [...p.slice(-3), pk]);
-      collect(flower.key, collectionScope);
+      collect(flower.key, { scope: collectionScope });
     };
     window.addEventListener("tsi:flower-pick", onPick);
     return () => window.removeEventListener("tsi:flower-pick", onPick);

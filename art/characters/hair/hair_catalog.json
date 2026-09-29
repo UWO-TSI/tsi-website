@@ -1,0 +1,204 @@
+{
+ "note": "Hair library (rows 135, 191, 192). Each GLB = CharacterRig + one mesh skinned 100% to mixamorig:Head; bind to the character skeleton by bone name. M_Hair is tinted from palette.json hair colours. Sheet cells are the nearest reference cell on David's labelled sheets.",
+ "head": "art/characters/base/head_shape.py (ref18_measurements.json)",
+ "bangs": [
+  {
+   "id": "bangs_straight",
+   "name": "Straight cut",
+   "sheet_cell": "N4.2",
+   "tris": 162,
+   "file": "bangs/bangs_straight.glb"
+  },
+  {
+   "id": "bangs_straight_long",
+   "name": "Straight cut, long",
+   "sheet_cell": "N3.3",
+   "tris": 162,
+   "file": "bangs/bangs_straight_long.glb"
+  },
+  {
+   "id": "bangs_bowl",
+   "name": "Rounded bowl",
+   "sheet_cell": "N4.1",
+   "tris": 126,
+   "file": "bangs/bangs_bowl.glb"
+  },
+  {
+   "id": "bangs_wispy",
+   "name": "See-through wispy",
+   "sheet_cell": "N6.1",
+   "tris": 170,
+   "file": "bangs/bangs_wispy.glb"
+  },
+  {
+   "id": "bangs_swept_l",
+   "name": "Side-swept left",
+   "sheet_cell": "N2.2",
+   "tris": 162,
+   "file": "bangs/bangs_swept_l.glb"
+  },
+  {
+   "id": "bangs_swept_r",
+   "name": "Side-swept right",
+   "sheet_cell": "N6.4",
+   "tris": 162,
+   "file": "bangs/bangs_swept_r.glb"
+  },
+  {
+   "id": "bangs_curtain",
+   "name": "Curtain",
+   "sheet_cell": "N3.2",
+   "tris": 172,
+   "file": "bangs/bangs_curtain.glb"
+  },
+  {
+   "id": "bangs_curtain_long",
+   "name": "Curtain, long",
+   "sheet_cell": "N6.2",
+   "tris": 172,
+   "file": "bangs/bangs_curtain_long.glb"
+  },
+  {
+   "id": "bangs_centre_split",
+   "name": "Centre split",
+   "sheet_cell": "N1.4",
+   "tris": 164,
+   "file": "bangs/bangs_centre_split.glb"
+  },
+  {
+   "id": "bangs_spiky",
+   "name": "Spiky tufts",
+   "sheet_cell": "N4.3",
+   "tris": 162,
+   "file": "bangs/bangs_spiky.glb"
+  },
+  {
+   "id": "bangs_hime",
+   "name": "Hime side-locks",
+   "sheet_cell": "N6.3",
+   "tris": 162,
+   "file": "bangs/bangs_hime.glb"
+  },
+  {
+   "id": "bangs_choppy",
+   "name": "Short choppy",
+   "sheet_cell": "N1.5",
+   "tris": 194,
+   "file": "bangs/bangs_choppy.glb"
+  },
+  {
+   "id": "bangs_swept_back",
+   "name": "Swept back",
+   "sheet_cell": "N5.4",
+   "tris": 102,
+   "file": "bangs/bangs_swept_back.glb"
+  },
+  {
+   "id": "bangs_single_strand",
+   "name": "Short with one long strand",
+   "sheet_cell": "N5.3",
+   "tris": 164,
+   "file": "bangs/bangs_single_strand.glb"
+  },
+  {
+   "id": "bangs_wavy",
+   "name": "Wavy swept",
+   "sheet_cell": "N3.1",
+   "tris": 162,
+   "file": "bangs/bangs_wavy.glb"
+  },
+  {
+   "id": "bangs_asym_block",
+   "name": "Asymmetric block",
+   "sheet_cell": "N6.5",
+   "tris": 162,
+   "file": "bangs/bangs_asym_block.glb"
+  }
+ ],
+ "back": [
+  {
+   "id": "back_bob",
+   "name": "Bob",
+   "sheet_cell": "B2.1",
+   "tris": 386,
+   "file": "back/back_bob.glb"
+  },
+  {
+   "id": "back_wolf",
+   "name": "Wolf cut",
+   "sheet_cell": "B4.4",
+   "tris": 550,
+   "file": "back/back_wolf.glb"
+  },
+  {
+   "id": "back_long",
+   "name": "Long straight",
+   "sheet_cell": "B3.1",
+   "tris": 586,
+   "file": "back/back_long.glb"
+  },
+  {
+   "id": "back_wavy_long",
+   "name": "Wavy long",
+   "sheet_cell": "B4.5",
+   "tris": 586,
+   "file": "back/back_wavy_long.glb"
+  },
+  {
+   "id": "back_high_pony",
+   "name": "High ponytail",
+   "sheet_cell": "B6.5",
+   "tris": 418,
+   "file": "back/back_high_pony.glb"
+  },
+  {
+   "id": "back_pigtails",
+   "name": "Low pigtails",
+   "sheet_cell": "B3.2",
+   "tris": 450,
+   "file": "back/back_pigtails.glb"
+  },
+  {
+   "id": "back_twin_buns",
+   "name": "Twin buns",
+   "sheet_cell": "B2.5",
+   "tris": 482,
+   "file": "back/back_twin_buns.glb"
+  },
+  {
+   "id": "back_bun",
+   "name": "Single top bun",
+   "sheet_cell": "B1.1",
+   "tris": 418,
+   "file": "back/back_bun.glb"
+  },
+  {
+   "id": "back_braid_crown",
+   "name": "Braided crown",
+   "sheet_cell": "B7.2",
+   "tris": 546,
+   "file": "back/back_braid_crown.glb"
+  },
+  {
+   "id": "back_short_spiky",
+   "name": "Short spiky",
+   "sheet_cell": "B3.4",
+   "tris": 386,
+   "file": "back/back_short_spiky.glb"
+  },
+  {
+   "id": "back_undercut",
+   "name": "Undercut",
+   "sheet_cell": "B3.5",
+   "tris": 354,
+   "file": "back/back_undercut.glb"
+  },
+  {
+   "id": "back_bowl",
+   "name": "Bowl",
+   "sheet_cell": "B1.5",
+   "tris": 354,
+   "file": "back/back_bowl.glb"
+  }
+ ]
+}

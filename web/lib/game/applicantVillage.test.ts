@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { createApplicantVillage, constrainApplicantHQ, APPLICANT_SPAWN, ISLAND_PROPS } from "./applicantVillage";
+import { createApplicantVillage, APPLICANT_SPAWN, ISLAND_PROPS } from "./applicantVillage";
 import { createCenteredMap, setCell, Surface, heightField, sampleGroundHeight, sampleHeightField, isGroundAtWorld } from "./grid";
 
 describe("default island movement", () => {
@@ -73,13 +73,6 @@ it("blocks the water exposed by rounded land corners while keeping straight cros
 });
 
 
-it("keeps a wide direct route from entry to the centered hiring board", () => {
-  for (const x of [-1, 0, 1]) {
-    expect(constrainApplicantHQ(x, -4.2, x, 4.3)).toEqual([expect.closeTo(x, 5), expect.closeTo(4.3, 5)]);
-  }
-  expect(constrainApplicantHQ(0, -2.4, -6, -2.4)[0]).toBeGreaterThan(-3.9);
-});
-
 it("offers fishing around the whole shoreline and keeps casts in water", () => {
   const island = createApplicantVillage();
   const quadrants = new Set<string>();
@@ -103,19 +96,4 @@ it("offers fishing around the whole shoreline and keeps casts in water", () => {
   expect(quadrants.size).toBeGreaterThanOrEqual(4);
   expect(island.fishingTarget(0, 0)).toBeNull();
   expect(island.fishingTarget(20, 20)).toBeNull();
-});
-
-it("allows approaching the clock while blocking its footprint", () => {
-  expect(constrainApplicantHQ(-7, 4.1, -7, 4.6)[1]).toBeCloseTo(4.6);
-  expect(constrainApplicantHQ(-7, 4.5, -7, 5.8)[1]).toBeLessThan(5);
-  expect(constrainApplicantHQ(0, 2, -6.1, 2)).toEqual([expect.closeTo(-6.1, 5), expect.closeTo(2, 5)]);
-  expect(constrainApplicantHQ(-6.1, 2, -6.1, 4.3)[1]).toBeCloseTo(4.3);
-});
-
-it("keeps the lounge solid with open routes to the bookshelf and seats", () => {
-  expect(constrainApplicantHQ(2, 2.85, 4.85, 2.85)[0]).toBeLessThan(3.6);
-  expect(constrainApplicantHQ(2, 4.8, 4.85, 4.8)[0]).toBeLessThan(3.2);
-  expect(constrainApplicantHQ(0, -1.3, 6.6, -1.3)[0]).toBeCloseTo(6.6);
-  expect(constrainApplicantHQ(6.6, -1.3, 8, -1.3)[0]).toBeLessThan(7.3);
-  expect(constrainApplicantHQ(2.5, 0, 2.5, 4)).toEqual([expect.closeTo(2.5, 5), expect.closeTo(4, 5)]);
 });

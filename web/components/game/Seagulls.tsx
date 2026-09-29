@@ -7,6 +7,7 @@ import { clone as cloneSkeleton } from "three/examples/jsm/utils/SkeletonUtils.j
 import * as THREE from "three";
 import { tune } from "@/lib/game/tuning";
 import { gullPose, type GullParams } from "@/lib/game/gullPath";
+import { worldTime } from "@/lib/game/worldClock";
 
 /**
  * Ambient life — sprint A6. Butterflies (day), fireflies (night),
@@ -85,9 +86,9 @@ function Gull({ anchor, seed, idx, swoopRef }: { anchor: [number, number]; seed:
     phase,
   });
 
-  useFrame((state) => {
+  useFrame(() => {
     if (!ref.current) return;
-    const t = state.clock.elapsedTime;
+    const t = worldTime();
     const g = tune().gull;
 
     const p = params.current;
