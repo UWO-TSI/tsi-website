@@ -68,7 +68,16 @@ export const CATALOGUE: readonly CatalogueItem[] = [
   o("flower-tulip", "Tulips", [1, 1], `${PL}flower-tulip.glb`),
   o("flower-rose", "Roses", [1, 1], `${PL}flower-rose.glb`),
   o("tree-hardwood-a", "Tree", [1, 1], `${PL}tree-hardwood-a.glb`),
+  // Seasonal event furniture (EVENT_PIECE_IDS).
+  f("silver-hha-trophy", "Tourney cup", [1, 1]),
+  f("lounge-tea", "Cocoa set", [1, 1]),
+  o("tree-cedar-snow", "Festive fir", [1, 1], `${PL}tree-cedar-snow.glb`),
+  { ...o("monument-banner", "Showcase banner", [1, 1], `${F}monument-banner.glb`), scale: 0.1 },
+  { ...o("beach-towel", "Picnic blanket", [2, 1]), mount: "rug" },
 ];
+
+/** Seasonal event furniture (specs/seasonal-events.md): given to every member when its event goal completes, never sold. */
+export const EVENT_PIECE_IDS: ReadonlySet<string> = new Set(["silver-hha-trophy", "lounge-tea", "tree-cedar-snow", "monument-banner", "beach-towel"]);
 
 const BY_ID = new Map(CATALOGUE.map(item => [item.id, item]));
 export function catalogueItem(id: string): CatalogueItem | undefined {

@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { DEFAULT_CHAPTERS, DEFAULT_GOALS } from "./defaults";
+import { DEFAULT_CHAPTERS, DEFAULT_GOALS, SEASONAL_GOALS } from "./defaults";
 import { goalCycle, monumentStage, normalizeGoal, planContribution, validateGoalDraft } from "./goals";
+import { seasonalGoalsSql } from "./seed";
 
 const cafe = DEFAULT_GOALS[0];
 const none = { credited_points: 0, delivery_points: 0 };
@@ -58,6 +59,23 @@ describe("goal cycles and monument", () => {
     const winter = { ...fest, window_start: "2026-12-15T00:00:00Z", window_end: "2027-01-15T00:00:00Z" };
     expect(goalCycle(winter, new Date("2028-01-05T00:00:00Z"))).toMatchObject({ cycle: 2027, open: true });
   });
+  it("repeats on the Toronto date across New Year, whatever UTC says", () => {
+    const lights = SEASONAL_GOALS.find((g) => g.slug === "winter-lights")!; // Dec 1 → Jan 1, midnight Toronto
+    // 23:30 on Dec 31 in Toronto is already Jan 1 in UTC: still the 2027 festival.
+    expect(goalCycle(lights, new Date("2028-01-01T04:30:00Z"))).toMatchObject({ cycle: 2027, open: true });
+    expect(goalCycle(lights, new Date("2028-01-01T05:30:00Z"))).toMatchObject({ cycle: 2027, open: false });
+    // Opens at midnight Toronto on Dec 1 (05:00Z), not midnight UTC.
+    expect(goalCycle(lights, new Date("2027-12-01T04:30:00Z"))).toMatchObject({ cycle: 2026, open: false });
+    expect(goalCycle(lights, new Date("2027-12-01T05:00:00Z"))).toMatchObject({ cycle: 2027, open: true });
+    expect(goalCycle(lights, new Date("2027-12-01T05:00:00Z")).end?.toISOString()).toBe("2028-01-01T05:00:00.000Z");
+  });
+  it("keeps the Toronto wall-clock time when DST falls on a different date", () => {
+    // Mar 10 2026 is already EDT (DST began Mar 8); Mar 10 2027 is still EST (DST begins Mar 14).
+    const genesis = { ...SEASONAL_GOALS.find((g) => g.slug === "genesis-week")!, window_start: "2026-03-10T04:00:00Z", window_end: "2026-03-17T04:00:00Z" };
+    const c = goalCycle(genesis, new Date("2027-03-12T12:00:00Z"));
+    expect([c.cycle, c.start?.toISOString(), c.end?.toISOString(), c.open]).toEqual([2027, "2027-03-10T05:00:00.000Z", "2027-03-17T04:00:00.000Z", true]);
+    expect(goalCycle(genesis, new Date("2027-03-10T04:30:00Z")).open).toBe(false); // 23:30 EST on Mar 9: not yet
+  });
   it("maps percent to five monument stages", () => {
     expect([0, 24, 25, 50, 74, 75, 99, 100].map(monumentStage)).toEqual([0, 0, 1, 2, 2, 3, 3, 4]);
   });
@@ -74,7 +92,13 @@ describe("goal cycles and monument", () => {
 describe("seed content", () => {
   it("defaults.ts mirrors the goals and chapters seeded by 20260926150200_progression.sql", () => {
     const sql = readFileSync(join(__dirname, "../../supabase/migrations/20260926150200_progression.sql"), "utf8");
-    const texts = [...DEFAULT_GOALS.flatMap((g) => [g.slug, g.title, g.summary, g.completion_letter_subject, g.completion_letter_body]), ...DEFAULT_CHAPTERS.flatMap((c) => [c.slug, c.title, c.summary])];
+    const story = DEFAULT_GOALS.filter((g) => g.goal_type === "story");
+    const texts = [...story.flatMap((g) => [g.slug, g.title, g.summary, g.completion_letter_subject, g.completion_letter_body]), ...DEFAULT_CHAPTERS.flatMap((c) => [c.slug, c.title, c.summary])];
     for (const t of texts) if (t) expect(sql).toContain(t.replace(/'/g, "''"));
+  });
+  it("seeds the four seasonal goals verbatim in 20260929120000_seasonal_events.sql, each a valid draft", () => {
+    expect(readFileSync(join(__dirname, "../../supabase/migrations/20260929120000_seasonal_events.sql"), "utf8")).toContain(seasonalGoalsSql());
+    expect(SEASONAL_GOALS.map((g) => g.event.decor)).toEqual(["fall-tourney", "winter-lights", "genesis", "spring-picnic"]);
+    for (const g of SEASONAL_GOALS) expect(validateGoalDraft({ ...g }), g.slug).toEqual([]);
   });
 });

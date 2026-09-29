@@ -75,11 +75,21 @@ export function supabaseCollectionsStore(db: SupabaseClient): CollectionsStore {
       const n = await names(db, [...new Set(rows.map((r) => String(r.user_id)))]);
       return rows.map((r): WeeklyBest => ({ user_id: String(r.user_id), member_name: n.get(String(r.user_id)) ?? "Member", item_key: String(r.item_key), size_cm: Number(r.size_cm), caught_at: String(r.caught_at) }));
     },
-    async recordCatch(memberId, key, size, trophy) {
-      const { data, error } = await db.rpc("collections_record_catch", { p_member_id: memberId, p_item_key: key, p_size: size, p_trophy: trophy });
+    async recordCatch(memberId, key, size, trophy, tourney) {
+      const base = { p_member_id: memberId, p_item_key: key, p_size: size, p_trophy: trophy };
+      const { data, error } = tourney
+        ? await db.rpc("tourney_record_catch", { ...base, p_goal_id: tourney.goal_id, p_cycle: tourney.cycle })
+        : await db.rpc("collections_record_catch", base);
       if (error) raise(error);
       const r = (Array.isArray(data) ? data[0] : data) as Row;
       return { count: Number(r.count), total_collected: Number(r.total_collected), best_size_cm: num(r.best_size_cm), new_record: r.new_record === true };
+    },
+    async tourneyEntries(goalId, cycle) {
+      const { data, error } = await db.from("tourney_entries").select("member_id, category, item_key, size_cm, caught_at").eq("goal_id", goalId).eq("cycle", cycle);
+      if (error) raise(error);
+      const rows = (data ?? []) as Row[];
+      const n = await names(db, [...new Set(rows.map((r) => String(r.member_id)))]);
+      return rows.map((r) => ({ member_id: String(r.member_id), member_name: n.get(String(r.member_id)) ?? "Member", category: r.category as "fish" | "sea", item_key: String(r.item_key), size_cm: Number(r.size_cm), caught_at: String(r.caught_at) }));
     },
     async showcase(memberId) {
       const { data, error } = await db.from("member_showcase").select("slot, item_key").eq("member_id", memberId);

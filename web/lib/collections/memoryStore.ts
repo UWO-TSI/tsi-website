@@ -2,6 +2,7 @@
 import { weekStart, type Donation, type MemberItem, type WeeklyBest } from "./logic";
 import { ROSTER } from "./roster";
 import { CollectionsError, type CollectionsStore } from "./store";
+import type { TourneyEntry } from "@/lib/progression/seasonal";
 
 export function memoryCollectionsStore(now: () => Date = () => new Date("2026-09-24T16:00:00Z")) {
   const items = new Map<string, MemberItem>(); // `${member}:${key}`
@@ -9,6 +10,7 @@ export function memoryCollectionsStore(now: () => Date = () => new Date("2026-09
   const bests = new Map<string, WeeklyBest & { week: string }>();
   const names = new Map<string, string>();
   const showcases = new Map<string, (string | null)[]>();
+  const entries = new Map<string, TourneyEntry & { goal: string }>(); // `${goal}:${cycle}:${member}:${category}`
   const store: CollectionsStore = {
     async roster() {
       return ROSTER;
@@ -37,7 +39,7 @@ export function memoryCollectionsStore(now: () => Date = () => new Date("2026-09
     async weeklyBests(week) {
       return [...bests.values()].filter((b) => b.week === week).map(({ week: _w, ...b }) => (void _w, { ...b, member_name: names.get(b.user_id) ?? "Member" }));
     },
-    async recordCatch(m, key, size, trophy) {
+    async recordCatch(m, key, size, trophy, tourney) {
       const k = `${m}:${key}`;
       const row = items.get(k) ?? { item_key: key, count: 0, total_collected: 0, best_size_cm: null, first_collected_at: now().toISOString() };
       const newRecord = size !== null && (row.best_size_cm === null || size > row.best_size_cm);
@@ -51,7 +53,15 @@ export function memoryCollectionsStore(now: () => Date = () => new Date("2026-09
         const cur = bests.get(bk);
         if (!cur || size > cur.size_cm) bests.set(bk, { week, user_id: m, member_name: "", item_key: key, size_cm: size, caught_at: now().toISOString() });
       }
+      const category = ROSTER.find((s) => s.key === key)?.category;
+      if (tourney && size !== null && (category === "fish" || category === "sea")) {
+        const ek = `${tourney.goal_id}:${tourney.cycle}:${m}:${category}`;
+        if (size > (entries.get(ek)?.size_cm ?? 0)) entries.set(ek, { goal: `${tourney.goal_id}:${tourney.cycle}`, member_id: m, member_name: "", category, item_key: key, size_cm: size, caught_at: now().toISOString() });
+      }
       return { count: row.count, total_collected: row.total_collected, best_size_cm: row.best_size_cm, new_record: newRecord };
+    },
+    async tourneyEntries(goalId, cycle) {
+      return [...entries.values()].filter((e) => e.goal === `${goalId}:${cycle}`).map(({ goal: _g, ...e }) => (void _g, { ...e, member_name: names.get(e.member_id) ?? "Member" }));
     },
     async showcase(m) {
       return showcases.get(m) ?? [null, null, null];

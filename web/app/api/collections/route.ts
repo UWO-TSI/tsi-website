@@ -4,6 +4,8 @@ import { createClient } from "@/lib/supabase/server";
 import { recordCatch } from "@/lib/collections/service";
 import { supabaseCollectionsStore } from "@/lib/collections/supabaseStore";
 import { withStore } from "@/lib/server/memberContext";
+import { supabaseProgressionStore } from "@/lib/progression/supabaseStore";
+import { catchRule } from "@/lib/progression/seasonal";
 
 /**
  * Member collections: stackable collectibles (fruit, flowers, fish). The
@@ -63,9 +65,17 @@ export async function POST(request: Request) {
   }
   const { item_key, size_cm } = parsed.data;
 
+  // Seasonal events: limited-time catches only while their event runs; a catch
+  // during the fishing tourney also enters it. No club goals yet: no events.
+  const goals = await supabaseProgressionStore(ctx.db).listGoals().catch(() => []);
+  const rule = catchRule(goals, item_key, ctx.now);
+  if (!rule.ok) return NextResponse.json({ error: `That one only bites during the ${rule.event}.`, code: "out_of_season" }, { status: 409 });
+
   // Service role only: members can't write member_collections (20260926150900),
   // and collections_record_catch caps catches per species per hour.
-  const r = await recordCatch(ctx.store, ctx.userId, item_key, size_cm);
+  // ponytail: the catch and its size are client-rolled (bounded by those caps);
+  // server-issued catch tokens are the upgrade if the tourney attracts forgers.
+  const r = await recordCatch(ctx.store, ctx.userId, item_key, size_cm, rule.tourney);
   if (r.ok) return NextResponse.json(r.data);
   return NextResponse.json({ error: r.error }, { status: r.status });
 }

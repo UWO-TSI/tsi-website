@@ -6,7 +6,7 @@
  * (or Gems for merch). No real-money value appears anywhere.
  */
 import { dyeRef, FREE_HAIR_COLOURS, PARTS, STARTER_PARTS } from "@/lib/game/character/look";
-import { CATALOGUE as PIECES } from "@/lib/homes/catalogue";
+import { CATALOGUE as PIECES, EVENT_PIECE_IDS } from "@/lib/homes/catalogue";
 
 export type ShopCategory ="tool" | "outfit" | "hair" | "accessory" | "furniture" | "wallpaper" | "flooring" | "merch";
 export type Tier = "basic" | "mid" | "premium";
@@ -97,6 +97,7 @@ export const STARTER_REFS: ReadonlyMap<string, number> = new Map([...STARTER_PAR
 const DYES = ["Wheat blonde", "Copper", "Rust red", "Silver", "Blossom pink", "Sea blue"];
 const WEAR_PRICE: Record<string, number> = { top: 150, bottom: 140, onepiece: 180, shoes: 110, accessory: 80 };
 const HAS_FURNITURE = new Set(CATALOGUE.map((c) => c.catalogue_ref));
+const pieceValue = (p: (typeof PIECES)[number]) => 60 + (p.mount === "rug" ? 15 : 40) * p.size[0] * p.size[1];
 pos = 199;
 
 /**
@@ -107,12 +108,19 @@ export const OWNERSHIP_ITEMS: CatalogueEntry[] = [
   ...PARTS.filter((p) => p.slot !== "bangs" && p.slot !== "back" && !p.variantOf && !p.item).map((p) =>
     e(`wear-${p.id.replace(/_/g, "-")}`, p.name.replace(/ \(#\d+\)$/, ""), p.slot === "accessory" ? "accessory" : "outfit", WEAR_PRICE[p.slot], { catalogue_ref: p.id, special_pool: !STARTER_REFS.has(p.id) })),
   ...DYES.map((name, i) => e(`dye-${name.toLowerCase().replace(/ /g, "-")}`, `${name} hair dye`, "hair", 140, { catalogue_ref: dyeRef(FREE_HAIR_COLOURS + i), special_pool: true })),
-  ...PIECES.filter((p) => !HAS_FURNITURE.has(p.id)).map((p) => furniture(p.id, p.label, 60 + (p.mount === "rug" ? 15 : 40) * p.size[0] * p.size[1])),
+  ...PIECES.filter((p) => !HAS_FURNITURE.has(p.id) && !EVENT_PIECE_IDS.has(p.id)).map((p) => furniture(p.id, p.label, pieceValue(p))),
 ];
 /** Pre-ownership outfit rows with no character part: off sale. */
 export const RETIRED = ["outfit-sage-overalls", "outfit-cream-knit", "outfit-wharf-raincoat", "outfit-club-tee", "hair-chestnut", "hair-sea-glass", "hair-sunset", "acc-straw-hat", "acc-round-glasses", "acc-bandana"];
 /** Sold, as opposed to only granted: starter clothes stay off sale. */
 export const onSale = (c: CatalogueEntry) => !RETIRED.includes(c.slug) && !(c.category !== "furniture" && c.catalogue_ref !== null && STARTER_REFS.has(c.catalogue_ref));
+
+/**
+ * Seasonal event furniture (20260929120000_seasonal_events.sql): seeded off
+ * sale and given to every member by the event goal's completion; `price_coins`
+ * is only the catalogue's nominal value.
+ */
+export const EVENT_ITEMS: CatalogueEntry[] = PIECES.filter((p) => EVENT_PIECE_IDS.has(p.id)).map((p) => ({ ...furniture(p.id, p.label, pieceValue(p)), special_pool: false }));
 
 /** Sell prices by category and rarity (row 91), in play coins per item. */
 export const SELL_PRICES: Record<string, Record<string, number>> = {

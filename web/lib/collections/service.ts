@@ -4,7 +4,9 @@ import {
 } from "./logic";
 import { CATEGORIES, type Category } from "./roster";
 import { toFailure, type Result } from "@/lib/result";
-import type { CatchResult, CollectionsStore } from "./store";
+import type { CatchResult, CollectionsStore, TourneyRef } from "./store";
+import { latestTourney, tourneyBoards, type TourneyBoard } from "@/lib/progression/seasonal";
+import type { ClubGoal } from "@/lib/progression/types";
 
 const ERRORS: Record<string, [number, string]> = {
   unavailable: [503, "Collections aren't available yet."],
@@ -16,12 +18,12 @@ const ERRORS: Record<string, [number, string]> = {
 };
 const fail = <T>(err: unknown): Result<T> => toFailure(ERRORS, err);
 
-export async function recordCatch(store: CollectionsStore, memberId: string, itemKey: string, sizeCm: number | null | undefined): Promise<Result<CatchResult & { item_key: string }>> {
+export async function recordCatch(store: CollectionsStore, memberId: string, itemKey: string, sizeCm: number | null | undefined, tourney: TourneyRef | null = null): Promise<Result<CatchResult & { item_key: string }>> {
   try {
     const sp = (await store.roster()).find((s) => s.key === itemKey);
     const size = clampSize(sp, sizeCm);
     const trophy = !!sp && (sp.category === "fish" || sp.category === "sea") && size !== null;
-    return { ok: true, data: { item_key: itemKey, ...(await store.recordCatch(memberId, itemKey, size, trophy)) } };
+    return { ok: true, data: { item_key: itemKey, ...(await store.recordCatch(memberId, itemKey, size, trophy, trophy ? tourney : null)) } };
   } catch (err) {
     return fail(err);
   }
@@ -114,6 +116,32 @@ export async function setShowcase(store: CollectionsStore, memberId: string, key
     if (!check.ok) return { ok: false, status: 422, error: check.error, code: "invalid" };
     await store.setShowcase(memberId, check.keys);
     return getShowcase(store, memberId);
+  } catch (err) {
+    return fail(err);
+  }
+}
+
+export interface TourneyView {
+  slug: string;
+  title: string;
+  cycle: number;
+  open: boolean;
+  start: string | null;
+  end: string | null;
+  boards: TourneyBoard[];
+}
+
+/** The fishing tourney board (open, or the last one run) as this member may see it (principle 6: tourneyBoards). */
+export async function tourney(store: CollectionsStore, goals: ClubGoal[], memberId: string, now: Date): Promise<Result<TourneyView | null>> {
+  try {
+    const t = latestTourney(goals, now);
+    if (!t) return { ok: true, data: null };
+    const [roster, entries] = await Promise.all([store.roster(), store.tourneyEntries(t.goal.id, t.cycle)]);
+    const name = (key: string) => roster.find((s) => s.key === key)?.name ?? key;
+    return {
+      ok: true,
+      data: { slug: t.goal.slug, title: t.goal.title, cycle: t.cycle, open: t.open, start: t.start?.toISOString() ?? null, end: t.end?.toISOString() ?? null, boards: tourneyBoards(entries, memberId, name) },
+    };
   } catch (err) {
     return fail(err);
   }

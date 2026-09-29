@@ -7,7 +7,7 @@ import { ROSTER } from "@/lib/collections/roster";
 import { FISH } from "@/lib/game/fishing";
 import { fnv1a, seededRandom } from "@/lib/game/weatherSystem";
 import { torontoParts } from "@/lib/time";
-import { CATALOGUE, OWNERSHIP_ITEMS, onSale, SELL_PRICES, SETTINGS, type ShopCategory, type Slot, type Tier } from "./catalogue";
+import { CATALOGUE, EVENT_ITEMS, OWNERSHIP_ITEMS, onSale, SELL_PRICES, SETTINGS, type ShopCategory, type Slot, type Tier } from "./catalogue";
 import type { InventoryRow } from "./store";
 
 export interface ShopItem {
@@ -89,10 +89,10 @@ export function sellPrice(category: string, rarity: string, table: Record<string
 
 /** Catalogue rows as the memory store / previews see them (033's seed, then the ownership migration's). */
 export function seedItems(): ShopItem[] {
-  return [...CATALOGUE, ...OWNERSHIP_ITEMS].map((c, i) => ({
+  return [...CATALOGUE, ...OWNERSHIP_ITEMS, ...EVENT_ITEMS].map((c, i) => ({
     ...c,
     id: `00000000-0000-4000-8000-0000000e${String(i + 1).padStart(4, "0")}`,
-    active: onSale(c),
+    active: onSale(c) && !EVENT_ITEMS.includes(c),
     available_from: null,
     available_until: null,
   }));

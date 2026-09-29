@@ -12,12 +12,16 @@ import type { DeliveryKind, GoalProgressView, LetterView, ProgressionState } fro
 import { ApiError, apiCall } from "@/lib/apiClient";
 
 export function previewState(now = new Date()): ProgressionState {
-  const goals: GoalProgressView[] = DEFAULT_GOALS.map((g, i) => ({
-    slug: g.slug, title: g.title, summary: g.summary, goal_type: g.goal_type, cycle: 0, open: goalCycle(g, now).open && i === 0,
-    locked_by: i === 0 ? null : DEFAULT_GOALS[i - 1].slug,
-    target_points: g.target_points, points: 0, percent: 0, stage: 0, completed: false, completed_at: null, contributors: 0,
-    accepts: g.accepts, weights: g.weights, caps: g.caps, unlocks: g.unlocks, monument_key: g.monument_key, my_points: 0, my_delivery_points: 0,
-  }));
+  const goals: GoalProgressView[] = DEFAULT_GOALS.map((g, i) => {
+    const c = goalCycle(g, now), first = i === 0 || g.goal_type === "seasonal";
+    return {
+      slug: g.slug, title: g.title, summary: g.summary, goal_type: g.goal_type, cycle: c.cycle, open: c.open && first,
+      locked_by: first ? null : DEFAULT_GOALS[i - 1].slug,
+      target_points: g.target_points, points: 0, percent: 0, stage: 0, completed: false, completed_at: null, contributors: 0,
+      accepts: g.accepts, weights: g.weights, caps: g.caps, unlocks: g.unlocks, monument_key: g.monument_key,
+      window_start: g.window_start, window_end: g.window_end, event: g.event, my_points: 0, my_delivery_points: 0,
+    };
+  });
   const chapters = evaluateChapters(DEFAULT_CHAPTERS, [], {
     tier: 5, oracleDone: false, trialDone: false, firstCatchKey: null,
     goals: Object.fromEntries(goals.map((g) => [g.slug, { completed: false, myPoints: 0 }])),

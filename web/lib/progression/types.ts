@@ -21,6 +21,21 @@ export interface GoalCaps {
 
 export type GoalType = "story" | "seasonal";
 
+/**
+ * A seasonal goal's event (specs/seasonal-events.md), edited on the Seasonal
+ * Events page: the decoration set the village hangs for the window, whether it
+ * runs the fishing tourney, species that only bite while it runs, the shop
+ * items every member gets when the goal completes (20260929120000_seasonal_events.sql
+ * grants them), and GENESIS week's project posters.
+ */
+export interface GoalEvent {
+  decor: string | null;
+  tourney: boolean;
+  catches: string[];
+  rewards: string[];
+  posters: string[];
+}
+
 export interface ClubGoal {
   id: string;
   slug: string;
@@ -39,6 +54,7 @@ export interface ClubGoal {
   completion_letter_body: string;
   position: number;
   active: boolean;
+  event: GoalEvent;
   created_at?: string;
 }
 
@@ -104,6 +120,10 @@ export interface GoalProgressView {
   caps: GoalCaps;
   unlocks: string[];
   monument_key: string;
+  /** The authored window (seasonal goals repeat it yearly: goalCycle). */
+  window_start: string | null;
+  window_end: string | null;
+  event: GoalEvent;
   /** Caller's own credited points this cycle (private). */
   my_points: number;
   my_delivery_points: number;

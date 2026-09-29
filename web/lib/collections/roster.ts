@@ -191,7 +191,8 @@ const MINERAL_ROWS: Row[] = [
   ["rock_crystal", "Crystal", "rocks", "rare", null, null],
 ];
 
-export const ROSTER: Species[] = [
+/** The launch roster, seeded by 20260926150400_collections.sql. */
+export const LAUNCH_ROSTER: Species[] = [
   ...make("fish", "rod", "aquarium", FISH_ROWS, { model: null }),
   ...make("sea", "rod", "aquarium", SEA_ROWS),
   ...make("bug", "net", "insect_hall", BUG_ROWS).map((s) => (BUG_MODELLED.has(s.key) ? s : { ...s, icon: null, assetReady: false })),
@@ -199,6 +200,19 @@ export const ROSTER: Species[] = [
   ...make("nature", "hand", "nature_room", NATURE_ROWS),
   ...make("mineral", "shovel", null, MINERAL_ROWS, { icon: null, assetReady: false }),
 ];
+
+/**
+ * Limited-time catches (specs/seasonal-events.md): modelled fish that only
+ * bite while their seasonal event runs (the goal's event.catches), seeded by
+ * 20260929120000_seasonal_events.sql.
+ */
+export const EVENT_SPECIES: Species[] = make("fish", "rod", "aquarium", [
+  ["fish_yellow_perch", "Yellow Perch", "river", "common", [20, 30], null, { months: [9], oneLiner: "Tourney season's favourite. Striped like the leaves." }],
+  ["fish_sturgeon", "Sturgeon", "river", "legendary", [100, 200], null, { months: [9], oneLiner: "Older than the lake. Only surfaces for the tourney." }],
+  ["fish_giant_trevally", "Giant Trevally", "sea", "rare", [80, 150], null, { months: [9], oneLiner: "Hits the line like it has a grudge." }],
+], { model: null });
+
+export const ROSTER: Species[] = [...LAUNCH_ROSTER, ...EVENT_SPECIES];
 
 export const CATEGORIES: Category[] = ["fish", "sea", "bug", "fruit", "nature", "mineral"];
 export const RARITY_RANK: Record<Rarity, number> = { common: 0, uncommon: 1, rare: 2, epic: 3, legendary: 4 };
