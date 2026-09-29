@@ -5,6 +5,8 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { DEFAULT_CAPS, DEFAULT_TARGET, DEFAULT_WEIGHTS } from "@/lib/progression/defaults";
 import { validateGoalDraft } from "@/lib/progression/goals";
+import { DECOR_SETS } from "@/lib/progression/seasonal";
+import { torontoInstant, torontoParts } from "@/lib/time";
 import { DELIVERY_KINDS, type ClubGoal, type DeliveryKind, type GoalType, type WeightKey } from "@/lib/progression/types";
 import { DraftBar, Field, inputCls, listToText, textToList, Toggle, useDraftFlow } from "./ProgressionAdminShared";
 
@@ -12,7 +14,9 @@ import { DraftBar, Field, inputCls, listToText, textToList, Toggle, useDraftFlow
 // Server-wide goal: type (story one-time / seasonal yearly), target, weights
 // per source, per-member caps, accepted deliveries, window, unlocks and the
 // completion letter sent to every member. `seasonal` is the Seasonal Events
-// editor: the same goal, type fixed to seasonal (row 212; specs/seasonal-events.md).
+// editor: the same goal, type fixed to seasonal (row 212; specs/seasonal-events.md),
+// plus its event: decoration set, fishing tourney, limited-time catches, the
+// items every member gets on completion, GENESIS posters. Windows are Toronto time.
 
 const GOALS = "/student/dashboard/admin/content/goals";
 export const SEASONAL = "/student/dashboard/admin/content/seasonal";
@@ -25,8 +29,13 @@ const WEIGHT_LABELS: Record<WeightKey, string> = {
   admin: "Admin-logged (per pt)",
 };
 
-const toLocalInput = (iso: string | null | undefined) => (iso ? new Date(iso).toISOString().slice(0, 16) : "");
-const fromLocalInput = (v: string) => (v ? new Date(`${v}:00Z`).toISOString() : null);
+const pad = (n: number) => String(n).padStart(2, "0");
+const toLocalInput = (iso: string | null | undefined) => {
+  if (!iso) return "";
+  const t = torontoParts(new Date(iso));
+  return `${t.date}T${pad(t.hour)}:${pad(t.minute)}`;
+};
+const fromLocalInput = (v: string) => (v ? torontoInstant(v.slice(0, 10), Number(v.slice(11, 13)) + Number(v.slice(14, 16)) / 60).toISOString() : null);
 
 export default function ClubGoalEditor({ mode, initial, seasonal = false }: { mode: "new" | "edit"; initial?: Partial<ClubGoal> | null; seasonal?: boolean }) {
   const BACK = seasonal ? SEASONAL : GOALS;
@@ -48,6 +57,11 @@ export default function ClubGoalEditor({ mode, initial, seasonal = false }: { mo
     completion_letter_body: initial?.completion_letter_body ?? "",
     position: initial?.position ?? 10,
     active: initial?.active ?? true,
+    decor: initial?.event?.decor ?? "",
+    tourney: initial?.event?.tourney ?? false,
+    catches: listToText(initial?.event?.catches),
+    rewards: listToText(initial?.event?.rewards),
+    posters: (initial?.event?.posters ?? []).join("\n"),
   }));
   const flow = useDraftFlow("club_goals", mode === "edit" ? initial?.id : undefined, BACK);
   const set = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) => setForm((f) => ({ ...f, [k]: v }));
@@ -70,6 +84,13 @@ export default function ClubGoalEditor({ mode, initial, seasonal = false }: { mo
       completion_letter_body: form.completion_letter_body.trim(),
       position: Math.floor(Number(form.position)),
       active: form.active,
+      event: {
+        decor: form.decor || null,
+        tourney: form.tourney,
+        catches: textToList(form.catches),
+        rewards: textToList(form.rewards),
+        posters: form.posters.split("\n").map((t) => t.trim()).filter(Boolean),
+      },
     }),
     [form],
   );
@@ -130,10 +151,10 @@ export default function ClubGoalEditor({ mode, initial, seasonal = false }: { mo
           </div>
         </Field>
         <div className="grid gap-5 md:grid-cols-2">
-          <Field label="Window start (UTC)" hint={form.goal_type === "seasonal" ? "Required; repeats on this date yearly" : "Optional"}>
+          <Field label="Window start (Toronto)" hint={form.goal_type === "seasonal" ? "Required; repeats on this date and time yearly" : "Optional"}>
             <input className={inputCls} type="datetime-local" value={form.window_start} onChange={(e) => set("window_start", e.target.value)} />
           </Field>
-          <Field label="Window end (UTC)">
+          <Field label="Window end (Toronto)">
             <input className={inputCls} type="datetime-local" value={form.window_end} onChange={(e) => set("window_end", e.target.value)} />
           </Field>
         </div>
@@ -147,6 +168,29 @@ export default function ClubGoalEditor({ mode, initial, seasonal = false }: { mo
         <Field label="Completion letter" hint="Sent to every active member once, when the goal completes.">
           <textarea className={`${inputCls} min-h-[90px]`} value={form.completion_letter_body} maxLength={2000} onChange={(e) => set("completion_letter_body", e.target.value)} />
         </Field>
+        {form.goal_type === "seasonal" ? (
+          <fieldset className="space-y-4 border-t border-[var(--glass-border)] pt-5">
+            <legend className="block text-[0.65rem] font-mono uppercase tracking-wider text-[var(--color-text-muted)] mb-1.5">Event (while the window is open)</legend>
+            <div className="grid gap-5 md:grid-cols-2">
+              <Field label="Decorations" hint="What goes up around the plaza for the window">
+                <select className={inputCls} value={form.decor} onChange={(e) => set("decor", e.target.value)}>
+                  <option value="">None</option>
+                  {Object.entries(DECOR_SETS).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
+                </select>
+              </Field>
+              <Toggle label="Fishing tourney" hint="Catches during the window go on the tourney board; top half shown by name, the rest only see their own place." checked={form.tourney} onChange={(v) => set("tourney", v)} />
+            </div>
+            <Field label="Limited-time catches" hint="Species keys that only bite during this event, e.g. fish_sturgeon">
+              <input className={inputCls} value={form.catches} onChange={(e) => set("catches", e.target.value)} spellCheck={false} />
+            </Field>
+            <Field label="Reward items" hint="Shop item slugs every active member gets once when the club completes this goal, e.g. acc-flower-crown, furn-beach-towel. Cosmetics only.">
+              <input className={inputCls} value={form.rewards} onChange={(e) => set("rewards", e.target.value)} spellCheck={false} />
+            </Field>
+            <Field label="Project posters" hint="One title per line (GENESIS week). The stage shows the first two; the poster sheet lists them all.">
+              <textarea className={`${inputCls} min-h-[70px]`} value={form.posters} onChange={(e) => set("posters", e.target.value)} />
+            </Field>
+          </fieldset>
+        ) : null}
         <Toggle label="Active" hint="Inactive goals are hidden and take no contributions." checked={form.active} onChange={(v) => set("active", v)} />
         {errors.length ? <ul className="text-[0.65rem] font-mono text-red-400 list-disc pl-4">{errors.map((e) => <li key={e}>{e}</li>)}</ul> : null}
       </div>

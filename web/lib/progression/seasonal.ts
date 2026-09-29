@@ -22,6 +22,9 @@ export function eventOpen(goal: EventGoal, now: Date): boolean {
   return goal.goal_type === "seasonal" && goalCycle({ ...goal, active: goal.active !== false }, now).open;
 }
 
+/** Goals the notice board and journal list: story goals always, a seasonal goal while it runs or once the club has completed it. */
+export const onBoard = (g: { goal_type: string; open: boolean; completed: boolean }) => g.goal_type === "story" || g.open || g.completed;
+
 /** The event the village dresses for: the first open seasonal goal with a decoration set. */
 export function runningEvent<G extends EventGoal>(goals: readonly G[], now: Date): G | null {
   return goals.find((g) => g.event.decor && eventOpen(g, now)) ?? null;

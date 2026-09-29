@@ -6,6 +6,8 @@ import { ArrowLeft, History, Pencil, Plus } from "lucide-react";
 import { AdminGate, thCls } from "@/components/portal/ProgressionAdminShared";
 import { SEASONAL } from "@/components/portal/ClubGoalEditor";
 import { goalCycle, normalizeGoal } from "@/lib/progression/goals";
+import { DECOR_SETS } from "@/lib/progression/seasonal";
+import { rewardName } from "@/components/progression/GoalCard";
 import type { ClubGoal } from "@/lib/progression/types";
 import { createClient } from "@/lib/supabase/client";
 
@@ -41,7 +43,7 @@ export default function AdminSeasonalPage() {
         <div className="bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-lg overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-[var(--glass-border)]">{["Event", "Window (yearly)", "Status", "Target", "Unlocks", ""].map((h) => <th key={h} className={thCls}>{h}</th>)}</tr>
+              <tr className="border-b border-[var(--glass-border)]">{["Event", "Window (yearly)", "Status", "Target", "Brings", ""].map((h) => <th key={h} className={thCls}>{h}</th>)}</tr>
             </thead>
             <tbody>
               {rows.map((g) => {
@@ -54,7 +56,10 @@ export default function AdminSeasonalPage() {
                     <td className="px-4 py-3 font-mono text-xs">{day(c.start)} – {day(c.end)}</td>
                     <td className="px-4 py-3 font-mono text-xs">{!g.active ? "inactive" : c.open ? `running until ${day(c.end)}` : `opens ${day(next)}`}</td>
                     <td className="px-4 py-3 font-mono text-xs">{g.target_points.toLocaleString()} pts</td>
-                    <td className="px-4 py-3 font-mono text-xs text-[var(--color-text-muted)]">{g.unlocks.join(", ") || "—"}</td>
+                    <td className="px-4 py-3 font-mono text-xs text-[var(--color-text-muted)]">
+                      {[g.event.decor && DECOR_SETS[g.event.decor], g.event.tourney && "fishing tourney", g.event.catches.length && `${g.event.catches.length} limited-time catches`, ...g.unlocks].filter(Boolean).join(" · ") || "—"}
+                      {g.event.rewards.length ? <div className="text-[var(--color-text-primary)]">Rewards: {g.event.rewards.map(rewardName).join(", ")}</div> : null}
+                    </td>
                     <td className="px-4 py-3 text-right whitespace-nowrap">
                       <Link href={`${SEASONAL}/${g.id}/edit`} className="inline-flex items-center gap-1 text-xs font-mono text-[var(--color-accent-cyan)] hover:underline mr-3"><Pencil size={12} /> Edit</Link>
                       <Link href={`/student/dashboard/admin/content/goals/${g.id}/history`} className="inline-flex items-center gap-1 text-xs font-mono text-[var(--color-text-muted)] hover:underline"><History size={12} /> History</Link>

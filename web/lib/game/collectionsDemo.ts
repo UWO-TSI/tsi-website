@@ -2,22 +2,26 @@
 
 /**
  * Dev-only `?collections=demo`: the collections service on its in-memory
- * store, so the journal, museum, trophies and catch cards show mid-game data
- * without a signed-in account.
+ * store, so the journal, museum, trophies, catch cards and the fishing
+ * tourney board show mid-game data without a signed-in account.
  */
 import { memoryCollectionsStore } from "@/lib/collections/memoryStore";
 import { torontoParts } from "@/lib/time";
-import { donate, getShowcase, journal, museum, recordCatch, setShowcase, trophies } from "@/lib/collections/service";
+import { donate, getShowcase, journal, museum, recordCatch, setShowcase, tourney, trophies } from "@/lib/collections/service";
+import { DEFAULT_GOALS } from "@/lib/progression/defaults";
+import { catchRule, latestTourney } from "@/lib/progression/seasonal";
 import { installDemoFetch, reply } from "./demoFetch";
 
 const ME = "00000000-0000-4000-8000-000000000001";
 const OTHERS = [["00000000-0000-4000-8000-0000000001a1", "Maya Chen"], ["00000000-0000-4000-8000-0000000001a2", "Jordan Park"], ["00000000-0000-4000-8000-0000000001a3", "Priya Shah"]] as const;
+/** More anglers for the tourney board, so "You" lands in its private bottom half. */
+const ANGLERS = [["00000000-0000-4000-8000-0000000001b1", "Sam Okafor"], ["00000000-0000-4000-8000-0000000001b2", "Alex Rivera"], ["00000000-0000-4000-8000-0000000001b3", "Riley Chen"], ["00000000-0000-4000-8000-0000000001b4", "Noor Haddad"]] as const;
 
 export function installCollectionsDemo(): void {
   installDemoFetch("collections", "/api/collections", () => {
     const m = memoryCollectionsStore(() => new Date());
     m.name(ME, "You");
-    OTHERS.forEach(([id, name]) => m.name(id, name));
+    [...OTHERS, ...ANGLERS].forEach(([id, name]) => m.name(id, name));
     const ready = (async () => {
       const seed: [string, string, number | null][] = [
         [ME, "fish_dace", 14], [ME, "fish_pale_chub", 11], [ME, "fish_loach", 16], [ME, "fish_black_bass", 42], [ME, "bug_common_butterfly", null],
@@ -30,6 +34,15 @@ export function installCollectionsDemo(): void {
       await donate(m.store, OTHERS[0][0], "fish_dace", "demo-don-2");
       await donate(m.store, OTHERS[1][0], "bug_monarch_butterfly", "demo-don-3");
       await donate(m.store, OTHERS[2][0], "shell_whelk", "demo-don-4");
+      // The tourney running now (or the last one): the board's catches.
+      const t = latestTourney(DEFAULT_GOALS, new Date());
+      const ref = t && { goal_id: t.goal.id, cycle: t.cycle };
+      const entries: [string, string, number][] = [
+        [OTHERS[1][0], "fish_sturgeon", 152], [OTHERS[1][0], "fish_pike", 84], [OTHERS[0][0], "fish_salmon", 74], [OTHERS[2][0], "fish_sea_bass", 66],
+        [ANGLERS[0][0], "fish_black_bass", 51], [ANGLERS[1][0], "fish_black_bass", 44], [ANGLERS[2][0], "fish_yellow_perch", 29], [ME, "fish_yellow_perch", 26],
+        [ANGLERS[3][0], "fish_dace", 17], [OTHERS[2][0], "sea_dungeness_crab", 21], [ME, "sea_sea_star", 13],
+      ];
+      for (const [who, key, size] of entries) await recordCatch(m.store, who, key, size, ref);
     })();
     return async (path, body, url, method) => {
       await ready;
@@ -37,7 +50,9 @@ export function installCollectionsDemo(): void {
       switch (path) {
         case "/api/collections":
           if (method === "POST") {
-            const r = await recordCatch(m.store, ME, body.item_key, body.size_cm);
+            const rule = catchRule(DEFAULT_GOALS, body.item_key, now);
+            if (!rule.ok) return new Response(JSON.stringify({ error: `That one only bites during the ${rule.event}.` }), { status: 409 });
+            const r = await recordCatch(m.store, ME, body.item_key, body.size_cm, rule.tourney);
             return new Response(JSON.stringify(r.ok ? { ok: true, catch: r.data, ...r.data } : { error: r.error }), { status: r.ok ? 200 : 500 });
           }
           return new Response(JSON.stringify({ collections: (await m.store.memberItems(ME)).map(i => ({ item_key: i.item_key, count: i.count })) }));
@@ -48,6 +63,7 @@ export function installCollectionsDemo(): void {
         case "/api/collections/museum": return reply(await museum(m.store), "wings");
         case "/api/collections/museum/donate": return reply(await donate(m.store, ME, body.species_key, body.idempotency_key), "donation");
         case "/api/collections/trophies": return reply(await trophies(m.store, now), "case");
+        case "/api/collections/tourney": return reply(await tourney(m.store, DEFAULT_GOALS, ME, now), "tourney");
         case "/api/collections/showcase": return reply(method === "PUT" ? await setShowcase(m.store, ME, body.items) : await getShowcase(m.store, ME), "showcase");
         default: return null;
       }

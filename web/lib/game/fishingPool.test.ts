@@ -1,6 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { FISH, fishWeight, fishingPool, rollFish } from "./fishing";
+import { FISH, fishWeight, fishingPool, rollFish, setEventCatches } from "./fishing";
 import { weatherMods } from "./weatherPerks";
+import { SEASONAL_GOALS } from "@/lib/progression/defaults";
+
+/** Limited-time catches stay out of the pool until their event runs (lib/game/seasonalEvents.ts). */
+const LIMITED = new Set(SEASONAL_GOALS.flatMap((g) => g.event.catches));
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -11,7 +15,7 @@ describe("shared fishing odds and rolls", () => {
       for (const hour of [0, 4, 9, 12, 16, 20, 23]) {
         for (const luck of [0, 0.5, 1.3]) {
           const context = { hour, weather };
-          const originalPool = FISH.filter((fish) => (fish.zone ?? "river") === zone && (!fish.when || fish.when(hour, weather)));
+          const originalPool = FISH.filter((fish) => (fish.zone ?? "river") === zone && (!fish.when || fish.when(hour, weather)) && !LIMITED.has(fish.key));
           const originalWeights = originalPool.map((fish) => {
             let weight = fishWeight(fish, weather);
             const boost = luck + weatherMods(weather).rareLuckBonus;
@@ -29,6 +33,16 @@ describe("shared fishing odds and rolls", () => {
         }
       }
     }
+  });
+
+  it("offers limited-time catches only while their event runs", () => {
+    const keys = (zone: "river" | "sea") => fishingPool(0, zone, { hour: 12, weather: "sunny" }).map((r) => r.fish.key);
+    expect([...keys("river"), ...keys("sea")].filter((k) => LIMITED.has(k))).toEqual([]);
+    setEventCatches({ limited: LIMITED, open: new Set(["fish_sturgeon", "fish_giant_trevally"]) });
+    expect(keys("river")).toContain("fish_sturgeon");
+    expect(keys("river")).not.toContain("fish_yellow_perch");
+    expect(keys("sea")).toContain("fish_giant_trevally");
+    setEventCatches({ limited: LIMITED, open: new Set() });
   });
 
   it("always provides a finite nonempty habitat pool, with time-gated species excluded", () => {

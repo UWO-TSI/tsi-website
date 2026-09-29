@@ -20,6 +20,7 @@ import { getTodayWeather } from "./weather";
 import { getLabHour } from "./devLab";
 import { EXTRA_FISH } from "./fishCatalog";
 import { weatherMods } from "./weatherPerks";
+import { SEASONAL_GOALS } from "@/lib/progression/defaults";
 
 export type Rarity = "common" | "uncommon" | "rare" | "epic" | "legendary" | "seaking";
 
@@ -150,6 +151,19 @@ const SEA_CREATURES: FishDef[] = [
 
 export const FISH: FishDef[] = [...CORE_FISH, ...EXTRA_FISH, ...SEA_CREATURES];
 
+/**
+ * Limited-time catches (specs/seasonal-events.md): species a seasonal goal
+ * gates bite only while their event runs. The island sets both sets from the
+ * club goals and the world clock (lib/game/seasonalEvents.ts); the catch
+ * route refuses them outside the window too.
+ */
+let eventCatches: { limited: ReadonlySet<string>; open: ReadonlySet<string> } = { limited: new Set(SEASONAL_GOALS.flatMap((g) => g.event.catches)), open: new Set() };
+export function setEventCatches(next: typeof eventCatches): void {
+  eventCatches = next;
+}
+const biting = (f: FishDef, zone: "river" | "sea", hour: number, weather: string) =>
+  (f.zone ?? "river") === zone && (!f.when || f.when(hour, weather)) && (!eventCatches.limited.has(f.key) || eventCatches.open.has(f.key));
+
 export function currentFishingContext(): { hour: number; weather: string } {
   const hour = getLabHour() ?? new Date().getHours() + new Date().getMinutes() / 60;
   return { hour, weather: getTodayWeather() };
@@ -184,7 +198,7 @@ export function fishingPool(luck = 0, zone: "river" | "sea" = "river", context =
   const { hour, weather } = context;
   const totalLuck = luck + weatherMods(weather).rareLuckBonus;
   return FISH
-    .filter((f) => (f.zone ?? "river") === zone && (!f.when || f.when(hour, weather)))
+    .filter((f) => biting(f, zone, hour, weather))
     .map((fish) => ({ fish, weight: luckWeight(fish, weather, totalLuck) }));
 }
 
@@ -251,7 +265,7 @@ export function fishOdds(fish: FishDef): number {
   // Odds are within the species' own zone pool (a sea catch competes with
   // the sea roster, not the whole book).
   const zone = fish.zone ?? "river";
-  const pool = FISH.filter((f) => (f.zone ?? "river") === zone && (!f.when || f.when(hour, weather)));
+  const pool = FISH.filter((f) => biting(f, zone, hour, weather));
   const total = pool.reduce((s, f) => s + fishWeight(f, weather), 0);
   const w = fishWeight(fish, weather);
   return Math.max(1, Math.round(total / w));

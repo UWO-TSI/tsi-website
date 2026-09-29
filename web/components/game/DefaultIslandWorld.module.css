@@ -103,6 +103,13 @@ p.interact[data-closed="true"] { margin: 0; cursor: default; color: #6a4b2f; }
 .trophyList li { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 10px; background: #fffdf3; border: 1px solid #e3d8ba; }
 .trophyList small { display: block; font-size: 10px; color: #6f624a; }
 .trophyRank { width: 22px; height: 22px; display: grid; place-items: center; border-radius: 99px; background: #d9a441; color: #fffdf3; font-weight: 700; font-size: 11px; }
+/* Seasonal events: the tourney board (your row highlighted, unnamed neighbours muted), GENESIS posters, the trophy cue's leaders */
+.tourneyBoard h3 { margin: 14px 0 0; font-size: 13px; display: flex; justify-content: space-between; align-items: baseline; }
+.tourneyBoard h3 small { margin: 0; }
+.trophyList li[data-mine] { border-color: #426b5b; background: #eef5e8; }
+.trophyList li[data-anon] { color: #6f624a; background: transparent; border-style: dashed; }
+.posterList { margin: 10px 0 0; padding-left: 18px; display: grid; gap: 4px; }
+.cue small { display: block; font-weight: 500; font-size: 10px; }
 .showcaseSlots { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 8px; }
 .showcaseSlots button { min-height: 86px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; border: 2px dashed #cdbf9b; border-radius: 12px; background: #fffdf3; cursor: pointer; font: inherit; font-size: 11px; color: #293e3b; }
 .showcaseSlots button[aria-pressed="true"] { border-style: solid; border-color: #426b5b; }
