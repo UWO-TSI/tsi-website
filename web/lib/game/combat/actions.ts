@@ -101,7 +101,7 @@ export function dashDodge(rt: CombatRuntime, dir: Vec): boolean {
 }
 /** What moves you in the ruins besides the kit: an ability's dash and knockback (the dodge's own movement is the kit's dash). */
 export function combatPush(p: CombatRuntime["player"]): Vec | undefined {
-  return p.alive && p.dodgeAge === null && (p.impulse.x || p.impulse.z) ? p.impulse : undefined;
+  return p.alive && (p.impulse.x || p.impulse.z) ? p.impulse : undefined;
 }
 
 /** Damage the player unless safe or in i-frames (dodge, or a dash that grants them); guard, a frontal block and the shield soak first. Returns health lost. */

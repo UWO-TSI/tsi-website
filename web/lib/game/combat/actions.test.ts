@@ -133,7 +133,6 @@ describe("the ruins dodge on the movement kit (specs/movement.md)", () => {
     rt.player.safe = false;
     startDodge(rt, { x: 0, z: 1 });
     stepCombat(rt, { x: 0, z: 0 }, 0.05);
-    expect(rt.player.impulse.z).toBeGreaterThan(0);
     expect(combatPush(rt.player)).toBeUndefined();
     rt.player.dodgeAge = null; rt.player.dash = { x: 1, z: 0, speed: 20, left: 0.2, iframes: false, then: null };
     stepCombat(rt, { x: 0, z: 0 }, 0.05);

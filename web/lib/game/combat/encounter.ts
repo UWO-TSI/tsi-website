@@ -1,7 +1,7 @@
 /**
  * One encounter tick, shared by the ruins scene and the scripted balance run
- * (balance.ts): timers, statuses and buffs, energy, dodge/dash/knockback
- * impulse, enemies (aimed at you or at a phantom/crab that draws them),
+ * (balance.ts): timers, statuses and buffs, energy, the dodge's clock,
+ * dash/knockback impulse, enemies (aimed at you or at a phantom/crab that draws them),
  * projectiles, summons and totems, effects. Inputs (aim, attack, dodge, keys),
  * missions, respawns and server sync stay with the caller.
  */
@@ -25,12 +25,11 @@ export function stepCombat(rt: CombatRuntime, me: Vec, dt: number, free: (x: num
   p.last = { ...me };
   p.speed = moveSpeed(rt);
   regenEnergy(rt, dt);
-  // Dodge roll, ability dash (what follows it lands where it ends), knockback.
+  // The dodge's clock (the movement kit's dash moves you), ability dash (what follows it lands where it ends), knockback.
   if (p.dodgeAge !== null) {
     p.dodgeAge += dt;
-    const on = p.dodgeAge < DODGE.duration, k = DODGE.speed * (1 - (p.dodgeAge / DODGE.duration) * 0.6);
-    p.impulse = on ? { x: p.dodgeDir.x * k, z: p.dodgeDir.z * k } : { x: 0, z: 0 };
-    if (!on) p.dodgeAge = null;
+    if (p.dodgeAge >= DODGE.duration) p.dodgeAge = null;
+    p.impulse = { x: 0, z: 0 };
   } else if (p.dash) {
     p.impulse = { x: p.dash.x * p.dash.speed, z: p.dash.z * p.dash.speed };
     if ((p.dash.left -= dt) <= 0) { const then = p.dash.then; p.dash = null; p.impulse = { x: 0, z: 0 }; then?.(me); }
