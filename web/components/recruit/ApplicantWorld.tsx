@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useMemo, useRef } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useSyncExternalStore } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Html, useProgress, useTexture } from "@react-three/drei";
 import * as THREE from "three";
@@ -27,8 +27,11 @@ import { createApplicantVillage, APPLICANT_SPAWN, ISLAND_TREES, ISLAND_BUSHES, I
 import { constrainClubhouse, HQ_CLOCK, HQ_LAYOUT, HQ_BOARD_APPROACH } from "@/lib/game/clubhouse";
 import type { Position } from "@/lib/recruitment";
 import ApplicationCountdown from "./ApplicationCountdown";
-import { ISLAND_LIGHTING, CLUBHOUSE_LIGHTING, ISLAND_TERRAIN } from "@/lib/game/islandLighting";
-import { CURRENT, RIM_POSITION, lookFx } from "@/lib/game/lookPreset";
+import { ISLAND_LIGHTING, CLUBHOUSE_LIGHTING, ISLAND_TERRAIN, islandLight } from "@/lib/game/islandLighting";
+import { CURRENT, RIM_POSITION, lookFx, shadowHalfHeight } from "@/lib/game/lookPreset";
+import { solarPosition, SUN_STEP_MS } from "@/lib/game/sunPath";
+import { worldNow } from "@/lib/game/worldClock";
+import { subscribeClock } from "./RecruitmentAppearance";
 import LookMaterials from "@/components/game/LookMaterials";
 import { SkyGradient } from "@/components/game/IslandAtmosphere";
 import { applyEnvironment, disposeEnvironment } from "@/lib/game/envLight";
@@ -118,7 +121,10 @@ function Village({ guideToHQ, returned, paused, onAction, onNear, phase, fishing
   const spawn = returned ? RETURN_SPAWN : APPLICANT_SPAWN;
   const player = useRef(new THREE.Vector3(...spawn));
   const guideMotion = useRef({ speed: 0, yaw: Math.PI, lift: 0 });
-  const lighting = ISLAND_LIGHTING[phase];
+  // The member island's real sun (row 239): world-clock time, one light per two-minute step.
+  const sunStep = useSyncExternalStore(subscribeClock, () => Math.floor(worldNow() / SUN_STEP_MS));
+  const lighting = useMemo(() => islandLight(CURRENT, phase, solarPosition(new Date(sunStep * SUN_STEP_MS))), [phase, sunStep]);
+  const shadowHalf = shadowHalfHeight(lighting.sunPosition, 24);
   const [graphics] = useGraphicsSettings();
   const guide = useRef(new THREE.Vector3(-2.6, 0, -6));
   const cameraTarget = useMemo(() => new THREE.Vector3(), []);
@@ -188,7 +194,8 @@ function Village({ guideToHQ, returned, paused, onAction, onNear, phase, fishing
     <hemisphereLight args={[lighting.fill, lighting.bounce, lighting.hemisphere]} />
     <directionalLight name="sun" position={lighting.sunPosition} color={lighting.sun} intensity={lighting.sunIntensity} castShadow
       shadow-mapSize={[2048, 2048]} shadow-camera-left={-24} shadow-camera-right={24}
-      shadow-camera-top={24} shadow-camera-bottom={-24} shadow-camera-far={75}
+      shadow-camera-top={shadowHalf} shadow-camera-bottom={-shadowHalf} shadow-camera-far={75}
+      onUpdate={key => key.shadow.camera.updateProjectionMatrix()}
       shadow-radius={lighting.shadow.radius} shadow-intensity={lighting.shadow.intensity} shadow-normalBias={0.02} shadow-bias={-0.0002} />
     {lighting.rim && <directionalLight position={RIM_POSITION} color={lighting.rim.color} intensity={lighting.rim.intensity} />}
     <GridWorld map={island.map} light={lighting} palette={ISLAND_TERRAIN} />
