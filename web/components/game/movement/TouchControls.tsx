@@ -17,11 +17,12 @@ export default function TouchControls({ left = 24, bottom = 28 }: { left?: numbe
   };
   const end = () => { stick.x = stick.z = 0; setKnob([0, 0]); };
   // Unmounted mid-press (entering a building): let go, or the avatar walks or hops on its own when it comes back.
-  useEffect(() => () => { stick.x = stick.z = 0; stick.jump = stick.dash = stick.jumpPressed = stick.dashPressed = false; }, []);
+  useEffect(() => () => { stick.x = stick.z = 0; stick.jump = stick.jumpPressed = stick.dashPressed = false; }, []);
+  // Jump is also held (a held jump goes higher); a dash is a press.
   const button = (kind: "jump" | "dash", text: string, size: number) => (
     <button aria-label={text} style={{ width: size, height: size, borderRadius: "50%", border: "2px solid rgba(255,255,255,0.5)", background: "rgba(15,15,16,0.45)", color: "#fff", font: "700 14px ui-monospace, Menlo, monospace", touchAction: "none" }}
-      onPointerDown={e => { e.preventDefault(); stick[kind] = true; stick[kind === "jump" ? "jumpPressed" : "dashPressed"] = true; }}
-      onPointerUp={() => { stick[kind] = false; }} onPointerCancel={() => { stick[kind] = false; }} onPointerLeave={() => { stick[kind] = false; }}>{text}</button>
+      onPointerDown={e => { e.preventDefault(); if (kind === "jump") stick.jump = stick.jumpPressed = true; else stick.dashPressed = true; }}
+      onPointerUp={() => { stick.jump = false; }} onPointerCancel={() => { stick.jump = false; }} onPointerLeave={() => { stick.jump = false; }}>{text}</button>
   );
   return <>
     <div ref={base} data-testid="touch-stick" onPointerDown={e => { (e.target as HTMLElement).setPointerCapture(e.pointerId); move(e); }} onPointerMove={e => { if (e.buttons) move(e); }} onPointerUp={end} onPointerCancel={end}

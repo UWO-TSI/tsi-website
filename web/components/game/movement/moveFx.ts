@@ -20,8 +20,8 @@ export const MOVE_JUICE = {
 export type MoveJuice = typeof MOVE_JUICE;
 
 /** Touch intent (screen space: x right, z up the screen) and presses waiting for the sim; TouchControls writes it, the avatar reads it. */
-export interface StickInput { x: number; z: number; jump: boolean; dash: boolean; jumpPressed: boolean; dashPressed: boolean }
-export const touchStick: StickInput = { x: 0, z: 0, jump: false, dash: false, jumpPressed: false, dashPressed: false };
+export interface StickInput { x: number; z: number; jump: boolean; jumpPressed: boolean; dashPressed: boolean }
+export const touchStick: StickInput = { x: 0, z: 0, jump: false, jumpPressed: false, dashPressed: false };
 
 /** What the HUD reads (a few times a second). */
 export interface MoveTelemetry { x: number; y: number; z: number; speed: number; mode: string; hops: number; dashReady: boolean; long: boolean }

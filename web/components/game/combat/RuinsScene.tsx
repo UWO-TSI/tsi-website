@@ -23,6 +23,7 @@ import { AimReticle, Blasts, EnemyInstances, FloaterProjector, PlayerAuras, Proj
 import { BOSS_CENTER, ESCORT_PATHS, EXIT_SPOT, FETCH_SPOTS, GATE_PLAZA, RUINS_BROKEN_ARCHES, RUINS_MOAI, RUINS_PILLARS, RUINS_ROCKS, RUINS_SPAWN, RUINS_TORCHES, SURVIVE_CIRCLES, createRuins } from "@/lib/game/ruins";
 import { combat, publishCombat, takeMissionQueue, type AbilityId } from "@/lib/game/combat/runtime";
 import { useAbilityKeys } from "@/lib/game/movement/keys";
+import { screenOf } from "../movement/moveFx";
 import { attack, missionEvent, spawnWave, triggerAbility } from "@/lib/game/combat/actions";
 import { stepCombat } from "@/lib/game/combat/encounter";
 import { claimBossReward, postKill, postMissionEvents } from "@/lib/game/combat/progression";
@@ -114,11 +115,9 @@ export default function RuinsScene({ level, phase, light, look, weather, liteMod
   // Dev (screenshots): where a ground point is on the page, to aim the mouse at an enemy.
   useEffect(() => {
     if (process.env.NODE_ENV === "production") return;
-    const w = window as unknown as { __combatDev?: Record<string, unknown> }, v = new THREE.Vector3();
-    w.__combatDev = { ...w.__combatDev, screenOf: (x: number, z: number) => {
-      const r = gl.domElement.getBoundingClientRect(); v.set(x, ruins.ground(x, z) + 0.5, z).project(camera);
-      return { x: r.left + ((v.x + 1) / 2) * r.width, y: r.top + ((1 - v.y) / 2) * r.height };
-    } };
+    const w = window as unknown as { __combatDev?: Record<string, unknown> };
+    // Half a unit above the ground (screenOf lifts 0.7).
+    w.__combatDev = { ...w.__combatDev, screenOf: (x: number, z: number) => screenOf([x, ruins.ground(x, z) - 0.2, z], camera, gl.domElement) };
   }, [camera, gl, ruins, spawn]);
   const focus = useRef(new THREE.Vector3(...spawn));
   useFollowCamera(focus, zoom, null);
