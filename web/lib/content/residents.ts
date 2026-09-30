@@ -3,13 +3,12 @@
  * bio, a tone and a schedule of where they stand in each island phase.
  * Edited by T1/T2 in the Residents editor (draft → publish, versioned).
  */
-import type { IslandPhase } from "@/lib/game/islandTime";
+import { ISLAND_PHASES, type IslandPhase } from "@/lib/game/islandTime";
 import type { NPCPersona } from "./types";
 import { objectById, objectsOf, village, villageSpawnPoint, type Village } from "@/lib/game/villageMap";
 
 export const RESIDENT_POSTS = ["hq_lead", "shopkeeper", "cafe_owner", "museum_curator", "wharf_keeper", "oracle_keeper", "workshop_crafter", "villager"] as const;
 export type ResidentPost = (typeof RESIDENT_POSTS)[number];
-export const PHASES: readonly IslandPhase[] = ["dawn", "day", "evening", "night"];
 
 /**
  * Schedule anchors (keys are stable: saved schedules reference them). Where each
@@ -48,10 +47,11 @@ export function validateResidentDraft(d: Record<string, unknown>): string[] {
   if (d.post != null && !(RESIDENT_POSTS as readonly unknown[]).includes(d.post)) errors.push("post: one of the service posts or villager");
   if (d.bio !== undefined && (typeof d.bio !== "string" || d.bio.length > 1000)) errors.push("bio: up to 1000 characters");
   if (d.tone != null && (typeof d.tone !== "string" || d.tone.length > 40)) errors.push("tone: up to 40 characters");
+  if (d.persona_prompt != null && (typeof d.persona_prompt !== "string" || d.persona_prompt.length > 2000)) errors.push("persona_prompt: up to 2000 characters");
   const lines = d.canned_dialogue;
   if (lines !== undefined && (!Array.isArray(lines) || lines.length > 30 || lines.some((l) => typeof l !== "string" || !l.trim() || l.length > 200))) errors.push("dialogue: up to 30 lines of 1-200 characters");
   const s = d.schedule;
-  if (s !== undefined && (!s || typeof s !== "object" || Array.isArray(s) || Object.entries(s).some(([k, v]) => !(PHASES as readonly string[]).includes(k) || !isAnchor(v)))) errors.push("schedule: phase → anchor");
+  if (s !== undefined && (!s || typeof s !== "object" || Array.isArray(s) || Object.entries(s).some(([k, v]) => !(ISLAND_PHASES as readonly string[]).includes(k) || !isAnchor(v)))) errors.push("schedule: phase → anchor");
   return errors;
 }
 

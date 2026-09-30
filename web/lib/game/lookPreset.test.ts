@@ -1,12 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { Color, ShaderChunk, ShaderLib, Vector3 } from "three";
 import { ISLAND_LIGHTING, islandLight, withSeason, withWeather, type IslandLight } from "./islandLighting";
-import { BACKLIT_FILL, CURRENT, LOOK_LIGHTS_CHUNK, LOOK_PRESETS, LOOK_REFLECT_EDITS, MATERIAL_CLASSES, MIN_SUN_ELEVATION, PHASE_LOOK, keyFill, shadowHalfHeight, kelvinHex, lookFx, lookRoughness, parseLook, sunAngles, sunFromAngles, sunFromCamera } from "./lookPreset";
+import { BACKLIT_FILL, CURRENT, LOOK_LIGHTS_CHUNK, LOOK_PRESETS, LOOK_REFLECT_EDITS, MATERIAL_CLASSES, MIN_SUN_ELEVATION, PHASE_LOOK, keyFill, shadowHalfHeight, kelvinHex, lookFx, lookRoughness, parseLook, sunAngles, sunFromAngles } from "./lookPreset";
 import { solarPosition } from "./sunPath";
 import { seasonLook } from "./seasonalLook";
 import { parseSeasonOverride } from "./season";
 import { ISLAND_PHASES, type IslandPhase } from "./islandTime";
 import { ISLAND_WEATHERS } from "./islandWeather";
+
+/** The sun's horizontal angle from the fixed follow camera (on −z looking +z): 0 = straight behind it, + = screen-left (+x). */
+const sunFromCamera = ([x, , z]: readonly number[]) => Math.atan2(x, -z) * 180 / Math.PI;
 
 const lin = (hex: string) => new Color(hex);
 const lum = (hex: string) => { const c = lin(hex); return 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b; };

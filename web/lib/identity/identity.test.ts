@@ -87,8 +87,10 @@ describe("account settings (row 220)", () => {
     expect(mergeSettings(DEFAULT_SETTINGS, { key_bindings: { openJournal: "W" } })).toMatchObject({ ok: false });
     expect(mergeSettings(DEFAULT_SETTINGS, { key_bindings: { openJournal: "i" } })).toMatchObject({ ok: false, error: "i is bound twice." });
     expect(mergeSettings(DEFAULT_SETTINGS, { key_bindings: { teleport: "t" } })).toMatchObject({ ok: false });
-    const swapped = mergeSettings(DEFAULT_SETTINGS, { key_bindings: { openJournal: "i", openBag: "j" } });
+    const swapped = mergeSettings(DEFAULT_SETTINGS, { key_bindings: { openJournal: "i", openBag: "n" } });
     expect(swapped.ok && actionForKey(swapped.settings, "I")).toBe("openJournal");
+    // The fixed game keys (interact, zoom, quests, decorate, emotes, put away) are never menu keys.
+    for (const key of ["e", "z", "j", "f", "g", "x"]) expect(mergeSettings(DEFAULT_SETTINGS, { key_bindings: { openMap: key } })).toMatchObject({ ok: false });
     const m = memoryIdentityStore(() => now);
     expect(await updateSettings(m.store, A, { text_size: "large" })).toMatchObject({ ok: true });
     expect(await updateSettings(m.store, A, { key_bindings: { openMap: "f5" } })).toMatchObject({ ok: true, data: { text_size: "large", key_bindings: { openMap: "f5" } } });

@@ -29,12 +29,14 @@ export function inArc(origin: Vec, facing: number, range: number, arc: number, t
   return angleDiff(facingTo(origin, target), facing) <= arc / 2 + slack;
 }
 
-/** Projectile travelling from→to this frame: did it pass within `radius` of `center`? */
-export function sweptHit(from: Vec, to: Vec, center: Vec, radius: number): boolean {
-  const dx = to.x - from.x, dz = to.z - from.z, len2 = dx * dx + dz * dz;
-  const t = len2 === 0 ? 0 : Math.max(0, Math.min(1, ((center.x - from.x) * dx + (center.z - from.z) * dz) / len2));
-  return Math.hypot(from.x + dx * t - center.x, from.z + dz * t - center.z) <= radius;
+/** Distance from `p` to the segment a→b. */
+export function segDist(p: Vec, a: Vec, b: Vec): number {
+  const dx = b.x - a.x, dz = b.z - a.z, l2 = dx * dx + dz * dz;
+  const t = l2 ? Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.z - a.z) * dz) / l2)) : 0;
+  return Math.hypot(a.x + dx * t - p.x, a.z + dz * t - p.z);
 }
+/** Projectile travelling from→to this frame: did it pass within `radius` of `center`? */
+export const sweptHit = (from: Vec, to: Vec, center: Vec, radius: number) => segDist(center, from, to) <= radius;
 
 /** Seconds since the dodge began → invulnerable? */
 export function invulnerable(dodgeAge: number | null): boolean {

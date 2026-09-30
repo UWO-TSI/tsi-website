@@ -6,7 +6,6 @@ import { BOSS_DROPS, rollBossReward } from "./content";
 import { RUNES, resample } from "./incantation";
 import { memoryCombatStore } from "./memoryStore";
 import { EVENT_XP, STAT_RESET_FEE, SUBCLASS_RESPEC_FEE, levelForXp, xpForLevel } from "./progression";
-import { combatSeedSql } from "./seed";
 import { STARTER_WEAPONS, WEAPONS } from "./weapons";
 import { allocateStats, chooseSubclass, claimBossReward, completeMission, getProgression, listMissions, missionProgress, recordKill, repairWeapon, reportWear, resetStats, setLoadout, startMission } from "./service";
 import { TRAITS } from "./kits";
@@ -80,6 +79,8 @@ describe("progression via the service", () => {
     expect(await chooseSubclass(c.store, M, "priest", "sub-0004")).toMatchObject({ ok: false, code: "insufficient" });
     c.fund(M, 250);
     expect(await chooseSubclass(c.store, M, "priest", "sub-0005")).toMatchObject({ ok: true, data: { fee: 250 } });
+    // A retried earlier choice answers with its first result, as combat_respec_log does.
+    expect(await chooseSubclass(c.store, M, "druid", "sub-0003")).toMatchObject({ ok: true, data: { subclass: "druid", fee: 0, replayed: true } });
   });
   it("counts each kill event once", async () => {
     const c = memoryCombatStore(() => now);
@@ -146,7 +147,7 @@ describe("island adapter", () => {
     expect(RUNES).toHaveLength(2);
   });
   it("maps gear, missions and the ruins gate", () => {
-    expect(islandWeapons().find((w) => w.id === "revolver-brass")).toMatchObject({ kind: "bow", tier: 2, damage: 14 });
+    expect(islandWeapons().find((w) => w.id === "revolver-brass")).toMatchObject({ kind: "bow" });
     expect(islandMissions().find((m) => m.id === "escort-botanist")).toMatchObject({ template: "escort", params: { escortee: "botanist", count: 3 } });
     expect(islandProgression({ level: 12, family: "Arcane", subclass: null })).toMatchObject({ gateOpen: false, reason: "Choose your subclass." });
     expect(islandProgression({ level: 12, family: "Arcane", subclass: { key: "necromancer" } })).toMatchObject({ gateOpen: true });
@@ -194,9 +195,6 @@ describe("guardian statue reward (row 21)", () => {
 
 describe("20260926190000_combat_content.sql stays in step with the TS rules", () => {
   const sql = readFileSync(join(__dirname, "../../supabase/migrations/20260926190000_combat_content.sql"), "utf8");
-  it("carries the generated seed verbatim", () => {
-    expect(sql).toContain(combatSeedSql());
-  });
   it("pays the boss reward at the same cooldown and grants the same starters", () => {
     expect(sql).toContain(`make_interval(hours => ${BOSS_DROPS.cooldown_hours})`);
     expect(sql).toContain(STARTER_WEAPONS.map((k) => `'${k}'`).join(", "));

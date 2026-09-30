@@ -2,6 +2,18 @@
 // App-level views over the Supabase content_pipeline tables (migration 014).
 // These mirror the table shapes — keep in sync if the migration changes.
 
+const ADMIN = "/student/dashboard/admin/content";
+/** Versioned content tables and their admin list; each row edits at `/[id]/edit` and shows its history at `/[id]/history`. */
+export const CONTENT_ROUTES = {
+  npc_personas: `${ADMIN}/npcs`,
+  shop_items: `${ADMIN}/shop`,
+  seasonal_palettes: `${ADMIN}/palettes`,
+  quest_chapters: `${ADMIN}/chapters`,
+  club_goals: `${ADMIN}/goals`,
+  crafting_recipes: `${ADMIN}/recipes`,
+} as const;
+export type VersionedTable = keyof typeof CONTENT_ROUTES;
+
 export type SpawnZone = "courtyard" | "shop" | "temple" | "roaming";
 
 export type ShopCategory =

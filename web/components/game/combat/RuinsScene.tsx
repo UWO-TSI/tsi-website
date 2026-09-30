@@ -21,8 +21,11 @@ import { InteriorKeeper } from "../interiorShared";
 import { IslandAtmosphere, useFollowCamera } from "../IslandAtmosphere";
 import { AimReticle, Blasts, EnemyInstances, FloaterProjector, PlayerAuras, Projectiles, Telegraphs, Totems, Wisps } from "./EncounterRender";
 import { BOSS_CENTER, ESCORT_PATHS, EXIT_SPOT, FETCH_SPOTS, GATE_PLAZA, RUINS_BROKEN_ARCHES, RUINS_MOAI, RUINS_PILLARS, RUINS_ROCKS, RUINS_SPAWN, RUINS_TORCHES, SURVIVE_CIRCLES, createRuins } from "@/lib/game/ruins";
-import { combat, publishCombat, readAbilityKeys, takeMissionQueue, type AbilityId } from "@/lib/game/combat/runtime";
-import { attack, missionEvent, spawnWave, triggerAbility } from "@/lib/game/combat/actions";
+import { combat, publishCombat, takeMissionQueue, type AbilityId } from "@/lib/game/combat/runtime";
+import { useAbilityKeys } from "@/lib/game/movement/keys";
+import { screenOf } from "../movement/moveFx";
+import { attack, spawnWave, triggerAbility } from "@/lib/game/combat/actions";
+import { missionEvent } from "@/lib/game/combat/abilities";
 import { stepCombat } from "@/lib/game/combat/encounter";
 import { claimBossReward, postKill, postMissionEvents } from "@/lib/game/combat/progression";
 import { materialsLabel } from "@/lib/game/combat/missions";
@@ -86,11 +89,14 @@ function bossVictory(eventKey: string, now: number) {
   });
 }
 
-export default function RuinsScene({ phase, light, look, weather, liteMode, castShadows, zoom, player, onMove, onNear, onDefeat, start }: {
+const ENGAGED = new Set(["chase", "windup", "active", "recover"]);
+
+export default function RuinsScene({ level, phase, light, look, weather, liteMode, castShadows, zoom, player, onNear, onDefeat, start }: {
   phase: IslandPhase; light: IslandLight; look: SeasonLook; weather: IslandWeather; liteMode: boolean; castShadows: boolean; zoom: number;
-  player: React.RefObject<THREE.Vector3>; onMove: (p: THREE.Vector3) => void; onNear: (near: RuinsNear) => void; onDefeat: () => void;
+  player: React.RefObject<THREE.Vector3>; onNear: (near: RuinsNear) => void; onDefeat: () => void;
   /** Dev: start somewhere other than the gate (screenshots). */
   start?: [number, number, number] | null;
+  level?: number;
 }) {
   const spawn = start ?? RUINS_SPAWN;
   const ruins = useMemo(() => createRuins(), []);
@@ -112,19 +118,17 @@ export default function RuinsScene({ phase, light, look, weather, liteMode, cast
   // Dev (screenshots): where a ground point is on the page, to aim the mouse at an enemy.
   useEffect(() => {
     if (process.env.NODE_ENV === "production") return;
-    const w = window as unknown as { __combatDev?: Record<string, unknown> }, v = new THREE.Vector3();
-    w.__combatDev = { ...w.__combatDev, screenOf: (x: number, z: number) => {
-      const r = gl.domElement.getBoundingClientRect(); v.set(x, ruins.ground(x, z) + 0.5, z).project(camera);
-      return { x: r.left + ((v.x + 1) / 2) * r.width, y: r.top + ((1 - v.y) / 2) * r.height };
-    } };
+    const w = window as unknown as { __combatDev?: Record<string, unknown> };
+    // Half a unit above the ground (screenOf lifts 0.7).
+    w.__combatDev = { ...w.__combatDev, screenOf: (x: number, z: number) => screenOf([x, ruins.ground(x, z) - 0.2, z], camera, gl.domElement) };
   }, [camera, gl, ruins, spawn]);
   const focus = useRef(new THREE.Vector3(...spawn));
   useFollowCamera(focus, zoom, null);
 
   // Mouse aim + click attack on the canvas; ability keys (remappable). Movement, Space's jump and Q's dash-dodge are PlayerAvatar's (the kit).
+  const keys = useAbilityKeys();
   useEffect(() => {
     const el = gl.domElement;
-    const keys = readAbilityKeys();
     const move = (e: PointerEvent) => { const r = el.getBoundingClientRect(); input.current.ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1); input.current.hasPointer = true; };
     const down = (e: PointerEvent) => { if (e.button === 0) { move(e); input.current.attack = true; } };
     const up = () => { input.current.attack = false; };
@@ -133,14 +137,13 @@ export default function RuinsScene({ phase, light, look, weather, liteMode, cast
       const k = e.key.toLowerCase(), ability = (Object.keys(keys) as AbilityId[]).find(a => keys[a] === k);
       if (ability) input.current.abilities.push(ability);
     };
-    const onKeys = () => Object.assign(keys, readAbilityKeys());
     el.addEventListener("pointermove", move); el.addEventListener("pointerdown", down); window.addEventListener("pointerup", up);
-    window.addEventListener("keydown", kd); window.addEventListener("tsi:ability-keys", onKeys);
+    window.addEventListener("keydown", kd);
     return () => {
       el.removeEventListener("pointermove", move); el.removeEventListener("pointerdown", down); window.removeEventListener("pointerup", up);
-      window.removeEventListener("keydown", kd); window.removeEventListener("tsi:ability-keys", onKeys);
+      window.removeEventListener("keydown", kd);
     };
-  }, [gl]);
+  }, [gl, keys]);
 
   useFrame(({ clock }, rawDelta) => {
     const dt = combat.freeze ? 0 : Math.min(rawDelta, 0.05);
@@ -156,7 +159,7 @@ export default function RuinsScene({ phase, light, look, weather, liteMode, cast
     // Defeat: wake at the gate (row 229).
     if (!p.alive) {
       p.downFor += dt;
-      if (p.downFor > 1.8) { missionEvent(rt, { kind: "defeated" }); onDefeat(); }
+      if (p.downFor > 1.8) { missionEvent(rt, { type: "defeat" }); onDefeat(); }
     }
     // Inputs.
     while (inp.abilities.length) triggerAbility(rt, inp.abilities.shift()!, me);
@@ -168,13 +171,13 @@ export default function RuinsScene({ phase, light, look, weather, liteMode, cast
       const after = e.state === "dead" && !e.summoned ? respawnAfter(e.id) : 0;
       if (after && e.deadFor > after && Math.hypot(pl.x - e.spawnX, pl.z - e.spawnZ) > 12) rt.enemies[i] = spawnEnemy(e.id, e.type, e.spawnX, e.spawnZ);
     }
-    rt.bossEngaged = rt.enemies.some(e => e.type.kind === "boss" && ["chase", "windup", "active", "recover"].includes(e.state));
+    rt.bossEngaged = rt.enemies.some(e => e.type.kind === "boss" && ENGAGED.has(e.state));
     if (rt.banner && clock.elapsedTime > rt.banner.until) rt.banner = null;
     // Places → mission events.
     const mission = rt.mission?.status === "active" ? rt.mission : null;
     const circle = mission ? SURVIVE_CIRCLES[mission.def.id] : undefined;
     const inCircle = !!circle && Math.hypot(me.x - circle.x, me.z - circle.z) < circle.r;
-    if (p.safe && !zones.current.gate && rt.idol === "carried") missionEvent(rt, { kind: "return" });
+    if (p.safe && !zones.current.gate && rt.idol === "carried") missionEvent(rt, { type: "return" });
     zones.current = { gate: p.safe, circle: inCircle };
     if (rt.idol === "carried" && rt.mission?.status === "complete" && rt.mission.def.template === "fetch") rt.idol = "returned";
     // Survive waves: start on stepping into the mission's circle; next wave when the last is down.
@@ -182,7 +185,7 @@ export default function RuinsScene({ phase, light, look, weather, liteMode, cast
     if (mission && waves) {
       if (!rt.wave && inCircle) { rt.wave = { index: 0, active: true }; spawnWave(rt, waves[0]); }
       if (rt.wave?.active && waves[rt.wave.index].every(w => rt.enemies.find(e => e.id === w.id)?.state === "dead")) {
-        missionEvent(rt, { kind: "wave-cleared", wave: rt.wave.index + 1 });
+        missionEvent(rt, { type: "wave_cleared", wave: rt.wave.index + 1 });
         const next = rt.wave.index + 1;
         if (next < waves.length && rt.mission?.status === "active") { rt.wave = { index: next, active: true }; spawnWave(rt, waves[next]); } else rt.wave.active = false;
       }
@@ -194,9 +197,9 @@ export default function RuinsScene({ phase, light, look, weather, liteMode, cast
       const esc = rt.escort, wp = path[Math.min(esc.waypoint, path.length - 1)];
       const d = Math.hypot(wp.x - esc.x, wp.z - esc.z);
       if (Math.hypot(pl.x - esc.x, pl.z - esc.z) < 5 && d > 0.1) { const st = Math.min(d, 2.6 * dt); esc.x += ((wp.x - esc.x) / d) * st; esc.z += ((wp.z - esc.z) / d) * st; }
-      if (d < 0.3 && esc.waypoint < path.length - 1) { missionEvent(rt, { kind: "checkpoint", n: esc.waypoint }); esc.waypoint++; }
-      if (esc.hp <= 0) { missionEvent(rt, { kind: "escort-down" }); rt.escort = null; }
-      else { const end = path[path.length - 1]; if (esc.waypoint === path.length - 1 && Math.hypot(esc.x - end.x, esc.z - end.z) < 0.3) missionEvent(rt, { kind: "arrived" }); }
+      if (d < 0.3 && esc.waypoint < path.length - 1) { missionEvent(rt, { type: "checkpoint", n: esc.waypoint }); esc.waypoint++; }
+      if (esc.hp <= 0) { missionEvent(rt, { type: "escort_down" }); rt.escort = null; }
+      else { const end = path[path.length - 1]; if (esc.waypoint === path.length - 1 && Math.hypot(esc.x - end.x, esc.z - end.z) < 0.3) missionEvent(rt, { type: "arrived" }); }
     }
     // Prompts.
     const spot = mission?.def.template === "fetch" ? FETCH_SPOTS[mission.def.params.item ?? ""] : undefined;
@@ -220,7 +223,7 @@ export default function RuinsScene({ phase, light, look, weather, liteMode, cast
     {/* The shadow box spans the 40 × 66 canyon (half-diagonal ~39). */}
     <IslandAtmosphere phase={phase} light={light} look={look} weather={weather} liteMode={liteMode} castShadows={castShadows} overview={false}
       ground={ruins.ground} cloudSize={[40, 66]} shadowExtent={36} fireflyAnchors={[]} />
-    <GridWorld map={ruins.map} water={light.water} palette={terrain} windScale={liteMode ? 0 : 1} />
+    <GridWorld map={ruins.map} light={light} palette={terrain} windScale={liteMode ? 0 : 1} />
     <Suspense fallback={null}>
       {/* Gate plaza (safe) and the way back. */}
       <GLBProp url={`${F}ruins-arch.glb`} position={[0, ruins.ground(0, -24.4), -24.4]} scale={0.1} />
@@ -246,7 +249,7 @@ export default function RuinsScene({ phase, light, look, weather, liteMode, cast
     <AimReticle player={player} ground={ruins.ground} />
     <FloaterProjector />
     <Html position={[EXIT_SPOT.x, 2.2, EXIT_SPOT.z]} center distanceFactor={10} zIndexRange={[3, 0]}><div className={styles.cue}>Gate · safe zone</div></Html>
-    <PlayerAvatar spawnPosition={spawn} playerName="You" onMove={onMove}
+    <PlayerAvatar spawnPosition={spawn} playerName="You" playerLevel={level} player={player}
       world={ruins.world} groundHeight={ruins.ground} camTarget={focus} combat />
   </>;
 }

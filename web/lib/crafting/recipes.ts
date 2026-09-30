@@ -4,8 +4,8 @@
  * catalogue (outputs), plus what crafting adds to both: the tree branch
  * material, the craft-only outputs (tool tiers 3-5, top outfits) and the shop's
  * recipe cards. Combat gear outputs are existing `weapons` rows.
- * Mirrored into supabase/migrations/20260926160000_crafting.sql by
- * scripts/gen-crafting-seed.mjs; crafting.test.ts keeps them in sync.
+ * Seeded from here (lib/seedMigrations.ts: after a change run
+ * scripts/gen-seeds.mjs); seedMigrations.test.ts keeps them in sync.
  */
 import type { Species } from "@/lib/collections/roster";
 import { WEAPONS } from "@/lib/combat/weapons";

@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, History, Pencil, Plus } from "lucide-react";
 import { AdminGate, thCls } from "@/components/portal/ProgressionAdminShared";
-import { PHASES, RESIDENT_ANCHORS, type ResidentAnchor } from "@/lib/content/residents";
+import { RESIDENT_ANCHORS, type ResidentAnchor } from "@/lib/content/residents";
+import { ISLAND_PHASES } from "@/lib/game/islandTime";
 import type { NPCPersona } from "@/lib/content/types";
 import { createClient } from "@/lib/supabase/client";
 
@@ -44,7 +45,7 @@ export default function AdminResidentsPage() {
                   <td className="px-4 py-3 font-mono text-xs text-[var(--color-text-muted)]">{r.post?.replace("_", " ") ?? "—"}</td>
                   <td className="px-4 py-3 font-mono text-xs text-[var(--color-text-muted)]">{r.tone ?? "—"}</td>
                   <td className="px-4 py-3 font-mono text-[0.65rem] text-[var(--color-text-muted)]">
-                    {PHASES.filter((p) => r.schedule?.[p]).map((p) => `${p} · ${RESIDENT_ANCHORS[r.schedule![p] as ResidentAnchor]?.label ?? r.schedule![p]}`).join(", ") || "plaza"}
+                    {ISLAND_PHASES.filter((p) => r.schedule?.[p]).map((p) => `${p} · ${RESIDENT_ANCHORS[r.schedule![p] as ResidentAnchor]?.label ?? r.schedule![p]}`).join(", ") || "plaza"}
                   </td>
                   <td className="px-4 py-3 font-mono text-xs">{r.canned_dialogue?.length ?? 0}</td>
                   <td className="px-4 py-3 font-mono text-xs">{r.active ? "active" : "inactive"}</td>

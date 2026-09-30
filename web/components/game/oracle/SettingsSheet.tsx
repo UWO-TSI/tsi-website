@@ -8,11 +8,11 @@
  * otherwise kept on this device. The movement keys (jump, dash, sprint,
  * sneak) and the ruins' ability keys are remapped on this device.
  */
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { ACTION_LABEL, MENU_ACTIONS, TEXT_SIZES, normalizeKey, type MenuAction, type TextSize } from "@/lib/identity/settings";
-import { keyLabel, saveSettings, setAuraVisible, useWorldIdentity } from "@/lib/game/identity";
-import { ABILITIES, readAbilityKeys, remapAbility, type AbilityId } from "@/lib/game/combat/runtime";
-import { MOVE_ACTIONS, MOVE_KEYS_EVENT, keyName, remapMove, useMoveKeys, type MoveAction } from "@/lib/game/movement/keys";
+import { saveSettings, setAuraVisible, useWorldIdentity } from "@/lib/game/identity";
+import { ABILITIES, type AbilityId } from "@/lib/game/combat/runtime";
+import { MOVE_ACTIONS, keyName, remapAbility, remapMove, useAbilityKeys, useMoveKeys, useNextKey, type MoveAction } from "@/lib/game/movement/keys";
 import { AudioManager, type AudioVolumes } from "@/lib/game/audio";
 import { useAudioState } from "@/lib/game/useAudio";
 import IslandSheet from "../IslandSheet";
@@ -33,61 +33,37 @@ export default function SettingsSheet({ open, onClose }: { open: boolean; onClos
   const audio = useAudioState();
   const [listening, setListening] = useState<MenuAction | null>(null);
   const [note, setNote] = useState<string | null>(null);
-  const [abilityKeys, setAbilityKeys] = useState(readAbilityKeys);
+  const abilityKeys = useAbilityKeys();
   const [abilityListen, setAbilityListen] = useState<AbilityId | null>(null);
   const [abilityNote, setAbilityNote] = useState<string | null>(null);
   const moveKeys = useMoveKeys();
   const [moveListen, setMoveListen] = useState<MoveAction | null>(null);
   const [moveNote, setMoveNote] = useState<string | null>(null);
-  useEffect(() => {
-    if (!moveListen) return;
-    const onKey = (e: KeyboardEvent) => {
-      e.preventDefault(); e.stopPropagation();
-      if (e.key === "Escape") { setMoveListen(null); setMoveNote(null); return; }
-      const r = remapMove(moveKeys, moveListen, e.key, [...Object.values(abilityKeys), ...Object.values(settings.key_bindings)]);
-      if (!r.ok) { setMoveNote(r.error); return; }
-      setMoveListen(null); setMoveNote(null);
-      window.dispatchEvent(new Event(MOVE_KEYS_EVENT));
-    };
-    window.addEventListener("keydown", onKey, true);
-    return () => window.removeEventListener("keydown", onKey, true);
-  }, [moveListen, moveKeys, abilityKeys, settings.key_bindings]);
-  useEffect(() => {
-    if (!abilityListen) return;
-    const onKey = (e: KeyboardEvent) => {
-      e.preventDefault(); e.stopPropagation();
-      if (e.key === "Escape") { setAbilityListen(null); setAbilityNote(null); return; }
-      const r = remapAbility(abilityKeys, abilityListen, e.key);
-      if (!r.ok) { setAbilityNote(r.error); return; }
-      setAbilityKeys(r.keys); setAbilityListen(null); setAbilityNote(null);
-      window.dispatchEvent(new Event("tsi:ability-keys"));
-    };
-    window.addEventListener("keydown", onKey, true);
-    return () => window.removeEventListener("keydown", onKey, true);
-  }, [abilityListen, abilityKeys]);
+  useNextKey(moveListen !== null, key => {
+    const r = remapMove(moveKeys, moveListen!, key);
+    setMoveNote(r.ok ? null : r.error);
+    if (r.ok) setMoveListen(null);
+  }, () => { setMoveListen(null); setMoveNote(null); });
+  useNextKey(abilityListen !== null, key => {
+    const r = remapAbility(abilityKeys, abilityListen!, key);
+    setAbilityNote(r.ok ? null : r.error);
+    if (r.ok) setAbilityListen(null);
+  }, () => { setAbilityListen(null); setAbilityNote(null); });
   const save = async (patch: Parameters<typeof saveSettings>[0], ok?: string) => {
     const error = await saveSettings(patch);
     setNote(error ?? ok ?? null);
   };
-  useEffect(() => {
-    if (!listening) return;
-    const onKey = (e: KeyboardEvent) => {
-      e.preventDefault(); e.stopPropagation();
-      if (e.key === "Escape") { setListening(null); setNote(null); return; }
-      const key = normalizeKey(e.key);
-      if (Object.values(moveKeys).includes(key)) { setNote(`${keyLabel(key)} is a movement key.`); return; }
-      const other = MENU_ACTIONS.find(a => a !== listening && settings.key_bindings[a] === key);
-      const patch = { ...settings.key_bindings, [listening]: key, ...(other ? { [other]: settings.key_bindings[listening] } : {}) };
-      const action = listening;
-      void saveSettings({ key_bindings: patch }).then(error => {
-        if (error) { setNote(error); return; }
-        setListening(null);
-        setNote(`${ACTION_LABEL[action]} is now ${keyLabel(key)}.${other ? ` ${ACTION_LABEL[other]} moved to ${keyLabel(settings.key_bindings[action])}.` : ""}`);
-      });
-    };
-    window.addEventListener("keydown", onKey, true);
-    return () => window.removeEventListener("keydown", onKey, true);
-  }, [listening, settings.key_bindings, moveKeys]);
+  useNextKey(listening !== null, raw => {
+    const key = normalizeKey(raw), action = listening!;
+    if ([...Object.values(moveKeys), ...Object.values(abilityKeys)].includes(key)) { setNote(`${keyName(key)} is already used.`); return; }
+    const other = MENU_ACTIONS.find(a => a !== action && settings.key_bindings[a] === key);
+    const patch = { ...settings.key_bindings, [action]: key, ...(other ? { [other]: settings.key_bindings[action] } : {}) };
+    void saveSettings({ key_bindings: patch }).then(error => {
+      if (error) { setNote(error); return; }
+      setListening(null);
+      setNote(`${ACTION_LABEL[action]} is now ${keyName(key)}.${other ? ` ${ACTION_LABEL[other]} moved to ${keyName(settings.key_bindings[action])}.` : ""}`);
+    });
+  }, () => { setListening(null); setNote(null); });
   if (!open) return null;
   return <IslandSheet title="Settings" onClose={onClose} className={styles.settingsSheet} testId="settings-sheet">
     <fieldset>
@@ -115,7 +91,7 @@ export default function SettingsSheet({ open, onClose }: { open: boolean; onClos
       <ul className={styles.keyList}>{MENU_ACTIONS.map(a => <li key={a}>
         <span>{ACTION_LABEL[a]}</span>
         <button aria-pressed={listening === a} onClick={() => { setListening(a); setNote("Press a key (Esc to cancel)."); }}>
-          {listening === a ? "Press a key…" : <kbd>{keyLabel(settings.key_bindings[a])}</kbd>}
+          {listening === a ? "Press a key…" : <kbd>{keyName(settings.key_bindings[a])}</kbd>}
         </button>
       </li>)}</ul>
       {note && <p className={styles.hint} role="status">{note}</p>}

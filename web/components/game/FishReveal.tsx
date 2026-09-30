@@ -46,7 +46,8 @@ export default function FishReveal({
   onDone,
 }: {
   fish: FishDef;
-  sizeCm: number;
+  /** Null: no size recorded (a fish off the roster). */
+  sizeCm: number | null;
   /** A recipe the catch taught (rare catches). */
   recipe?: string | null;
   onDone: () => void;
@@ -385,7 +386,7 @@ export default function FishReveal({
             >
               NEW!
             </span>
-            <span style={{ fontSize: 13, color: "rgba(255, 253, 245, 0.85)", fontWeight: 600 }}>{sizeCm} cm</span>
+            {sizeCm !== null && <span style={{ fontSize: 13, color: "rgba(255, 253, 245, 0.85)", fontWeight: 600 }}>{sizeCm} cm</span>}
             <span
               style={{
                 fontSize: 11,
@@ -429,7 +430,7 @@ export default function FishReveal({
             whiteSpace: "nowrap",
           }}
         >
-          ⚡ {meta.label.toUpperCase()} CATCH — {fish.name}, {sizeCm} cm
+          ⚡ {meta.label.toUpperCase()} CATCH — {fish.name}{sizeCm !== null ? `, ${sizeCm} cm` : ""}
         </div>
       )}
 

@@ -21,7 +21,7 @@
  */
 import villageDoc from "@/data/village-map.json";
 import {
-  heightField, isRiver, isVoid, parseIslandMap, serialiseIslandMap, surfaceAt, Surface,
+  heightField, isVoid, isWater, parseIslandMap, serialiseIslandMap, surfaceAt, Surface,
   type IslandMap, type IslandMapDoc, type MapAnnotation, type PlacedProp,
 } from "./grid";
 
@@ -114,7 +114,7 @@ export function landBounds(map: IslandMap): Bounds {
   let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity;
   for (let cz = 0; cz < map.depth; cz++) for (let cx = 0; cx < map.width; cx++) {
     const s = surfaceAt(map, cx, cz);
-    if (isVoid(s) || isRiver(s)) continue;
+    if (isWater(s)) continue;
     if (cx < x0) x0 = cx; if (cx > x1) x1 = cx; if (cz < z0) z0 = cz; if (cz > z1) z1 = cz;
   }
   if (x0 > x1) { x0 = 0; x1 = map.width - 1; z0 = 0; z1 = map.depth - 1; }

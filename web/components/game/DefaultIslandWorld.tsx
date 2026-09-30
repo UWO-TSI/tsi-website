@@ -14,11 +14,12 @@ import PostFX from "./PostFX";
 import HQInterior from "./HQInterior";
 import SunShadows from "./SunShadows";
 import { Lantern } from "./AmbientProps";
-import { GLBProp, treeParts, bushParts, flowerParts, type NaturePart } from "./NatureModels";
-import { InstancedModels, type ModelPlacement } from "./InstancedNature";
+import { GLBProp, sceneryOf } from "./NatureModels";
+import { InstancedModels } from "./InstancedNature";
 import { ACNHBuilding, ACNHParts, CHALET_VARIANTS } from "./ACNHBuilding";
 import { NatureFence } from "./NatureModels";
 import WharfPier from "./WharfPier";
+import { BASE_FOV } from "./movement/moveFx";
 import MiniMap from "./MiniMap";
 import { useDefaultIslandPlot } from "./DefaultIslandMap";
 import LettersSheet from "@/components/progression/LettersSheet";
@@ -32,7 +33,7 @@ import { village, objectsOf, type Village } from "@/lib/game/villageMap";
 import { LEVEL_STEP, levelAt, worldToCellX, worldToCellZ } from "@/lib/game/grid";
 import { useGraphicsSettings } from "@/lib/game/useGraphicsSettings";
 import { CLUBHOUSE_LIGHTING, ISLAND_TERRAIN, islandLight, withWeather, withSeason, type IslandLight } from "@/lib/game/islandLighting";
-import { paletteBySeason, seasonLook, SEASON_TREES, SEASON_BUSHES, SEASON_FLOWERS, type SeasonLook } from "@/lib/game/seasonalLook";
+import { paletteBySeason, seasonLook, type SeasonLook } from "@/lib/game/seasonalLook";
 import { useNPCPersonas, useSeasonPalettes } from "@/lib/content/loader";
 import type { IslandWeather } from "@/lib/game/islandWeather";
 import { useIslandConditions } from "@/lib/game/useIslandConditions";
@@ -49,7 +50,7 @@ import RuinsScene from "./combat/RuinsScene";
 import CombatHud from "./combat/CombatHud";
 import MissionBoardSheet from "./combat/MissionBoardSheet";
 import { attachProgressId, combat, publishCombat, setMission, setOwnedWeapons } from "@/lib/game/combat/runtime";
-import { missionEvent } from "@/lib/game/combat/actions";
+import { missionEvent } from "@/lib/game/combat/abilities";
 import { combatProgression, postWear, startMissionRemote, type ProgressionView } from "@/lib/game/combat/progression";
 import { equipKit } from "@/lib/game/combat/abilities";
 import { subclassByKey } from "@/lib/combat/kits";
@@ -63,7 +64,7 @@ import FamilyAura from "./oracle/FamilyAura";
 import { FAMILIES } from "@/lib/game/oracle/family";
 import type { Family } from "@/lib/oracle/engine";
 import type { ResultView } from "@/lib/oracle/service";
-import { keyLabel, setFamily, useWorldIdentity, type WorldIdentity } from "@/lib/game/identity";
+import { setFamily, useWorldIdentity, type WorldIdentity } from "@/lib/game/identity";
 import { actionForKey } from "@/lib/identity/settings";
 import { keyName, useMoveKeys } from "@/lib/game/movement/keys";
 import { useCoarsePointer } from "@/lib/game/useMediaQuery";
@@ -71,7 +72,7 @@ import TouchControls from "./movement/TouchControls";
 import MuseumInterior from "./peaceful/MuseumInterior";
 import AudioController from "./AudioController";
 import type { AmbientPhase } from "@/lib/game/audio";
-import { useMusicDirector } from "@/lib/game/musicDirector";
+import { useMusicDirector } from "@/lib/game/useAudio";
 import DonateSheet from "./peaceful/DonateSheet";
 import { ShowcaseSheet, TrophySheet } from "./peaceful/ShowcaseSheets";
 import type { MuseumWing } from "@/lib/collections/logic";
@@ -105,7 +106,6 @@ import { EventDecor, eventSpots, PostersSheet, TourneySheet } from "./SeasonalEv
 import { useIslandEvent, type IslandEvent } from "@/lib/game/seasonalEvents";
 import styles from "./DefaultIslandWorld.module.css";
 
-type Metrics = { fps: number; frameMs: number; calls: number; triangles: number; x: number; z: number };
 type Near = "enter" | "exit" | "board" | "display" | "desk" | "shelf" | "clock" | "notice" | "catch" | "cafe" | "museum" | "ruins" | "mailbox" | "monument" | "home" | "house" | "village" | "buy" | "claim" | "donate" | "report" | "fish" | "forage" | "net" | "museum_enter" | "cafe_enter" | "curator" | "closet" | "fitting" | "oracle_enter" | "altar" | "missions" | "ruins_exit" | "lantern" | "bench" | "bed" | "trophy" | "posters" | "cocoa" | "picnic" | null;
 type Sheet = "notice" | "letters" | "journal" | "trophies" | "showcase" | "closet" | "fitting" | "oracle" | "path" | "settings" | "missions" | "tourney" | "posters" | null;
 const PHASE_NAMES: Record<IslandPhase, string> = { dawn: "Dawn", day: "Daylight", evening: "Evening", night: "Night" };
@@ -145,16 +145,14 @@ const xz = (o: { x: number; z: number }): [number, number] => [o.x, o.z];
  */
 function villageLayout(v: Village) {
   const deck = wharfDeck(v);
-  const fitting = objectsOf("fitting", v)[0], missions = objectsOf("missions", v)[0];
+  const fitting = objectsOf("fitting", v)[0], missions = objectsOf("missions", v)[0], marks = landmarks(v);
   return {
     island: villageIsland(v),
-    landmarks: landmarks(v),
+    landmarks: marks,
     trees: objectsOf("tree", v).map((o): TreeSpot => ({ x: o.x, z: o.z, seed: o.seed ?? 0 })),
-    bushes: objectsOf("bush", v).map(o => ({ x: o.x, z: o.z, seed: o.seed ?? 0 })),
-    flowers: objectsOf("flower", v).map(o => ({ x: o.x, z: o.z, seed: o.seed ?? 0 })),
     fireflies: objectsOf("bush", v).map(xz),
     puddles: objectsOf("puddle", v).map(xz),
-    props: [...objectsOf("bench", v), ...objectsOf("rock", v), ...objectsOf("fence", v)].filter(o => o.model),
+    benches: objectsOf("bench", v),
     lamps: objectsOf("lamp", v),
     bridges: objectsOf("bridge", v).map(o => ({ ...o, y: levelAt(v.map, worldToCellX(v.map, o.x), worldToCellZ(v.map, o.z)) * LEVEL_STEP - 0.065 })),
     doors: { hq: landmarkPoint("hq", "door", v), oracle: landmarkPoint("oracle", "door", v), boat: landmarkPoint("wharf", "door", v) },
@@ -165,7 +163,7 @@ function villageLayout(v: Village) {
     /** Fitting room beside the shop; ruins mission board beside the cliff gate (combat-foundation.md §6). */
     fitting: fitting ? xz(fitting) : null,
     missions: missions ? { at: xz(missions), yaw: missions.yaw ?? 0 } : null,
-    prompts: landmarks(v).filter(l => PROMPT_IDS.includes(l.id)),
+    prompts: marks.filter(l => PROMPT_IDS.includes(l.id)),
     nodes: villageNodes(v),
     water: villageWater(v).classify,
     scale: villageScale(v),
@@ -193,28 +191,32 @@ function QualityProbe({ onTier }: { onTier: (tier: QualityTier) => void }) {
 }
 
 
-function Performance({ player, onMetrics }: { player: React.RefObject<THREE.Vector3>; onMetrics: (metrics: Metrics) => void }) {
+/** Module scope: the react compiler forbids writing through a prop. */
+const writeText = (el: HTMLElement | null, text: string) => { if (el) el.textContent = text; };
+
+/** Once a second into the options' Performance readout, straight to the DOM: a 1 Hz setState re-rendered the whole island. */
+function Performance({ player, output }: { player: React.RefObject<THREE.Vector3>; output: React.RefObject<HTMLOutputElement | null> }) {
   const samples = useRef({ seconds: 0, frames: 0 });
   useFrame(({ gl }, delta) => {
     const calls = gl.info.render.calls, triangles = gl.info.render.triangles;
     gl.info.reset();
-    samples.current.seconds += delta;
-    samples.current.frames++;
-    if (samples.current.seconds >= 1) {
-      onMetrics({ fps: Math.round(samples.current.frames / samples.current.seconds), frameMs: samples.current.seconds * 1000 / samples.current.frames,
-        calls, triangles, x: player.current.x, z: player.current.z });
-      samples.current = { seconds: 0, frames: 0 };
+    const s = samples.current;
+    s.seconds += delta;
+    s.frames++;
+    if (s.seconds >= 1) {
+      writeText(output.current, `${Math.round(s.frames / s.seconds)} FPS · ${(s.seconds * 1000 / s.frames).toFixed(1)} ms/frame\n${calls} draws · ${triangles.toLocaleString()} triangles\nPosition ${player.current.x.toFixed(1)}, ${player.current.z.toFixed(1)}`);
+      s.seconds = 0; s.frames = 0;
     }
   }, -100);
   return null;
 }
 
-function IslandScene({ identity, devAt, exitFrom, peaceful, fishSpot, fishing, chapter, phase, light, look, weather, overview, zoom, reset, returned, fromBoat, liteMode, castShadows, player, onMove, onNear, progression, ceremony, event }: {
+function IslandScene({ identity, level, devAt, exitFrom, peaceful, fishSpot, fishing, chapter, phase, light, look, weather, overview, zoom, reset, returned, fromBoat, liteMode, castShadows, player, onNear, progression, ceremony, event }: {
   progression: { stage: number; opened: readonly WorldGoalId[] }; ceremony: boolean; fromBoat: boolean; event: IslandEvent | null;
   chapter: { claim: boolean; donate: boolean; report: boolean };
-  peaceful: { moment: WorldMoment; member: string }; fishSpot: { current: FishingSpot | null }; fishing: boolean; exitFrom: "museum" | "oracle" | "ruins" | "cafe" | null; devAt: [number, number, number] | null; identity: WorldIdentity;
+  peaceful: { moment: WorldMoment; member: string }; fishSpot: { current: FishingSpot | null }; fishing: boolean; exitFrom: "museum" | "oracle" | "ruins" | "cafe" | null; devAt: [number, number, number] | null; identity: WorldIdentity; level?: number;
   phase: IslandPhase; light: IslandLight; look: SeasonLook; weather: IslandWeather; overview: boolean; zoom: number; reset: number; returned: boolean; liteMode: boolean; castShadows: boolean;
-  player: React.RefObject<THREE.Vector3>; onMove: (position: THREE.Vector3) => void; onNear: (near: Near) => void;
+  player: React.RefObject<THREE.Vector3>; onNear: (near: Near) => void;
 }) {
   const v = village();
   const layout = useMemo(() => villageLayout(v), [v]);
@@ -224,18 +226,7 @@ function IslandScene({ identity, devAt, exitFrom, peaceful, fishSpot, fishing, c
   const exitSpot = exitFrom === "museum" ? spawns.museum : exitFrom === "cafe" ? spawns.cafe : exitFrom === "oracle" ? spawns.oracle : exitFrom === "ruins" ? spawns.ruins : null;
   const spawn = (devAt && !returned && !fromBoat && !exitFrom ? devAt : fromBoat ? spawns.boat : exitSpot ?? (returned ? spawns.returned : null)) ?? spawns.start;
   const terrain = useMemo(() => ({ ...ISLAND_TERRAIN, grass: look.grass }), [look.grass]);
-  const scenery = useMemo(() => {
-    const at = (spots: readonly { x: number; z: number; seed: number }[], parts: (seed: number) => NaturePart[]) => spots.flatMap(({ x, z, seed }) => {
-      const y = island.ground(x, z);
-      return parts(seed).map((p): ModelPlacement => ({ url: p.url, position: [x + p.offset[0], y + p.offset[1], z + p.offset[2]], rotation: p.yaw, scale: p.scale }));
-    });
-    return [
-      ...at(layout.trees, seed => treeParts(seed, SEASON_TREES[look.season])),
-      ...at(layout.bushes, seed => bushParts(seed, SEASON_BUSHES[look.season])),
-      ...(SEASON_FLOWERS[look.season].length ? at(layout.flowers, seed => flowerParts(seed, SEASON_FLOWERS[look.season])) : []),
-      ...layout.props.map((p): ModelPlacement => ({ url: `/assets/acnh/props/${p.model}.glb`, position: [p.x, island.ground(p.x, p.z), p.z], rotation: p.yaw ?? 0, scale: p.scale ?? 1 })),
-    ];
-  }, [layout, island, look.season]);
+  const scenery = useMemo(() => sceneryOf(v, island.ground, look.season), [v, island, look.season]);
   const near = useRef<Near>(null);
   const spots = useMemo(() => eventSpots(event?.decor ?? null), [event]);
   useEffect(() => { player.current.set(...spawn); }, [reset, spawn, player]);
@@ -249,7 +240,7 @@ function IslandScene({ identity, devAt, exitFrom, peaceful, fishSpot, fishing, c
       : within(layout.fitting, 1.5) ? "fitting"
       : within(doors.oracle, 1.6) ? "oracle_enter"
       : within(layout.missions?.at ?? null, 1.5) ? "missions" : null;
-    const b = benchSeat(player.current.x, player.current.z);
+    const b = benchSeat(player.current.x, player.current.z, 1.3, v, layout.benches);
     benchSpot.current = b && { ...b, seatY: island.ground(b.x, b.z) + BENCH_SEAT_TOP };
     // An event spot and a bench both in reach: the nearer one takes E.
     const ev = spots.find(s => within([s.x, s.z], s.range)), seat = benchSpot.current;
@@ -273,13 +264,13 @@ function IslandScene({ identity, devAt, exitFrom, peaceful, fishSpot, fishing, c
     <>
       <IslandAtmosphere phase={phase} light={light} look={look} weather={weather} liteMode={liteMode} castShadows={castShadows} overview={overview} overviewFog={layout.scale.overviewFog}
         ground={island.ground} puddles={layout.puddles} cloudSize={layout.scale.cloudSize} shadowExtent={layout.scale.shadowExtent} fireflyAnchors={layout.fireflies} trees={layout.trees} />
-      <GridWorld map={island.map} field={v.field} water={light.water} palette={terrain} windScale={liteMode ? 0 : weather === "wind" ? 2.2 : 1} />
+      <GridWorld map={island.map} field={v.field} light={light} palette={terrain} windScale={liteMode ? 0 : weather === "wind" ? 2.2 : 1} />
       <GridOcean map={island.map} lite={liteMode} skip={layout.underWharf} radius={layout.scale.glintRadius} />
       <PeacefulLayer map={island.map} nodes={layout.nodes} moment={peaceful.moment} member={peaceful.member} player={player} ground={island.ground} highTier={!liteMode} active={!fishing} />
       <BeachBottle player={player} ground={island.ground} />
       <StudySeats area="village" player={player} ground={island.ground} />
       <VillageLandmarks layout={layout} ground={island.ground} opened={progression.opened} stage={progression.stage} ceremony={ceremony} light={light} />
-      <EventDecor event={event} ground={island.ground} light={light} />
+      <EventDecor event={event} ground={island.ground} light={light} weather={weather} />
       {layout.bridges.map(b => <GLBProp key={b.id} url="/assets/acnh/props/bridge-wooden.glb" position={[b.x, b.y, b.z]} rotation={[0, b.yaw ?? 0, 0]} />)}
       {layout.lamps.map(l => <Lantern key={l.id} position={[l.x, island.ground(l.x, l.z), l.z]} intensity={light.lampsOn ? light.lamp * 1.5 : 0} glow={light.lampsOn ? 1.2 : 0} />)}
       {/* Nature and props from the map, instanced: one draw per model sub-mesh however many the island has. */}
@@ -288,7 +279,7 @@ function IslandScene({ identity, devAt, exitFrom, peaceful, fishSpot, fishing, c
       {residents.map(({ persona, home, plaza }) => <NPC key={`npc-${persona.id}-${home.join()}-${reset}`} persona={persona} position={ceremony ? plaza : home} playerPositionRef={player}
         groundHeight={island.ground} constrainMove={island.move}
         onClick={() => window.dispatchEvent(new CustomEvent("tsi:npc-greet", { detail: { id: persona.id } }))} />)}
-      <PlayerAvatar key={`${reset}-${returned}-${fromBoat}-${exitFrom}`} spawnPosition={spawn} playerName={identity.display_name} member={identity.member} onMove={onMove} frozen={fishing}
+      <PlayerAvatar key={`${reset}-${returned}-${fromBoat}-${exitFrom}`} spawnPosition={spawn} playerName={identity.display_name} playerLevel={level} member={identity.member} player={player} frozen={fishing}
         world={island} groundHeight={island.ground} groundSurface={island.surface} camTarget={focus} />
       <CharacterCrowd player={player} ground={island.ground} />
     </>
@@ -368,8 +359,8 @@ function VillageLandmarks({ layout, ground, opened, stage, ceremony, light }: { 
     {shop && <group position={at(shop)}><ACNHBuilding id="shop" /></group>}
     {fitting && <GLBProp url="/assets/acnh/furniture/fitting-room.glb" position={[fitting[0], ground(...fitting), fitting[1] + 0.45]} scale={0.1} rotation={[0, Math.PI, 0]} />}
     {oracle && <group position={at(oracle)}><ACNHBuilding id="oracle" /></group>}
-    {cafe && <group position={at(cafe)}><ACNHParts parts={CHALET_VARIANTS.yellow} rotationY={Math.PI} /></group>}
-    {museum && <group position={at(museum)}><ACNHParts parts={CHALET_VARIANTS.red} rotationY={Math.PI} /></group>}
+    {cafe && <group position={at(cafe)}><ACNHParts parts={CHALET_VARIANTS.yellow} /></group>}
+    {museum && <group position={at(museum)}><ACNHParts parts={CHALET_VARIANTS.red} /></group>}
     {/* Boarded doors: the existing log fence across each closed entrance. */}
     {[cafe, museum].filter(l => l && !opened.includes(l.id as WorldGoalId)).map(l => [-0.6, 0.6].map(dx => <NatureFence key={`${l!.id}${dx}`} position={[l!.x + dx, ground(l!.x, l!.z), front(l!) - 0.35]} variant={1} />))}
     {ruins && [-1.2, 0, 1.2].map(dz => <group key={dz} position={[ruins.x, ground(ruins.x, ruins.z + dz), ruins.z + dz]} rotation={[0, Math.PI / 2, 0]}><NatureFence position={[0, 0, 0]} variant={1} /></group>)}
@@ -379,8 +370,7 @@ function VillageLandmarks({ layout, ground, opened, stage, ceremony, light }: { 
     {notice && <GLBProp url="/assets/acnh/props/bulletin-board.glb" position={at(notice)} />}
     {board && <GLBProp url="/assets/acnh/props/bulletin-board.glb" position={at(board)} />}
     {missions && <GLBProp url="/assets/acnh/props/bulletin-board.glb" position={[missions.at[0], ground(...missions.at), missions.at[1] + 0.3]} rotation={[0, missions.yaw, 0]} />}
-    {/* Existing wharf pier (authored at x 43.2-45.2, z 0.4-5), its stub end 3.9 in front of the wharf point. */}
-    {wharf && <group position={[wharf.x, 0, wharf.z]} rotation={[0, wharf.yaw ?? 0, 0]}><group position={[-44.2, -0.12, -3.9]}><WharfPier /></group></group>}
+    {wharf && <group position={[wharf.x, 0, wharf.z]} rotation={[0, wharf.yaw ?? 0, 0]}><WharfPier /></group>}
     {layout.landmarks.filter(l => SIGNS[l.id] && !opened.includes(l.id as WorldGoalId)).map(l => <Html key={l.id} position={[l.x, ground(l.x, l.z) + (l.half && l.half[0] > 1 ? 3.6 : 2.3), l.z - (l.half?.[1] ?? 0)]} center distanceFactor={10} zIndexRange={[3, 0]}>
       <div className={styles.cue} data-closed={!l.open}>{SIGNS[l.id]}</div>
     </Html>)}
@@ -429,7 +419,7 @@ export default function DefaultIslandWorld({ preset, children }: { preset?: Look
 function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; children?: ReactNode }) {
   const [graphics, actions] = useGraphicsSettings();
   const conditions = useIslandConditions();
-  const islandEvent = useIslandEvent();
+  const islandEvent = useIslandEvent(conditions.now);
   const { phase, forcedPhase: forced, setForcedPhase: setForced, weather, season } = conditions;
   const [optionsOpen, setOptionsOpen] = useState(false);
   const optionsToggleRef = useRef<HTMLButtonElement>(null);
@@ -481,9 +471,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
     [chapterActions.claim, chapterActions.donate, chapterActions.report]);
   const [actionNote, setActionNote] = useState<string | null>(null);
   useEffect(() => { if (inside === "museum" && !loadMuseumRef.current) { loadMuseumRef.current = true; loadMuseum(); } if (inside !== "museum") loadMuseumRef.current = false; }, [inside, loadMuseum]);
-  const [nowTick, setNowTick] = useState(() => Date.now());
-  useEffect(() => { const t = window.setInterval(() => setNowTick(Date.now()), 60_000); return () => window.clearInterval(t); }, []);
-  const peaceful = usePeacefulContext(weather, nowTick);
+  const peaceful = usePeacefulContext(weather, conditions.now);
   // Audio pass (row 169 / polish-ownership item 9): the hourly music player
   // follows the real clock everywhere on this island; cafe and other
   // interiors override the outdoor block with their own bed.
@@ -499,10 +487,12 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   // Bumped by the Oracle's path sheet after a subclass, loadout or stat change so the encounter re-reads them.
   const [pathTick, setPathTick] = useState(0);
   const [pathView, setPathView] = useState<ProgressionView | null>(null);
+  const [level, setLevel] = useState<number>();
   useEffect(() => { let alive = true; void combatProgression().then(g => {
     if (!alive) return;
     setGate({ open: g.gateOpen, reason: g.gateOpen ? null : /^Sealed/.test(g.reason ?? "") ? g.reason : `Sealed. ${g.reason ?? ""}`.trim() });
     setPathView(g.view);
+    setLevel(g.level);
     // Progression feeds the encounter: stats, max HP, the subclass kit and loadout, weapon durability.
     const p = combat.rt.player;
     p.armed = g.gateOpen;
@@ -527,10 +517,9 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   const objectivePlot = useMemo(() => target ? { ...plot, content: <>{plot.content}
     <g className={styles.objectiveMarker}><circle cx={-target[0]} cy={-target[1]} r={1.9} fill="none" stroke="#e8704a" strokeWidth={0.6} />
       <path d={`M ${-target[0]} ${-target[1] - 2.9} l 1.3 -2.1 h -2.6 z`} fill="#e8704a" /></g></> } : plot, [plot, target]);
-  const [metrics, setMetrics] = useState<Metrics | null>(null);
+  const perfOutput = useRef<HTMLOutputElement>(null);
   const player = useRef(new THREE.Vector3(...villageSpawn()));
   const hqDoor = useMemo(() => landmarkPoint("hq", "door"), []);
-  const move = useCallback((position: THREE.Vector3) => { player.current.copy(position); }, []);
   const [detectedTier, setDetectedTier] = useState<QualityTier | null>(null);
   const onTier = useCallback((tier: QualityTier) => {
     setDetectedTier(tier);
@@ -574,7 +563,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       window.setTimeout(() => setActionNote(null), 3500);
       return;
     }
-    if (action === "lantern") { combat.rt.idol = "carried"; missionEvent(combat.rt, { kind: "pickup", item: combat.rt.mission?.def.params.item ?? "old-lantern" }); publishCombat(); return; }
+    if (action === "lantern") { combat.rt.idol = "carried"; missionEvent(combat.rt, { type: "pickup", item: combat.rt.mission?.def.params.item ?? "old-lantern" }); publishCombat(); return; }
     if (action === "ruins" && !gate.open) { setActionNote(gate.reason); window.setTimeout(() => setActionNote(null), 3500); return; }
     if (action === "buy") {
       void homeActions.buyRoom(homeActions.roomPrice() ?? ROOM_PRICE.coins).then(result => {
@@ -655,26 +644,26 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
     <main className={styles.world} data-light={phase} data-inside={inside ?? undefined}>
       <AudioController phase={ambientPhase} weather={weather} season={season.season} />
       <Canvas tabIndex={0} role="application" aria-label="Island walking area" style={{ zIndex: 0, imageRendering: graphics.pixelated ? "pixelated" : "auto" }} gl={{ antialias: false, powerPreference: "high-performance" }} dpr={graphics.pixelated ? 0.5 : [1, 1.5]}
-        camera={{ position: [0, 10.2, -21], fov: 48, near: 0.1, far: 120 }} shadows={castShadows ? "percentage" : false}
+        camera={{ position: [0, 10.2, -21], fov: BASE_FOV, near: 0.1, far: 120 }} shadows={castShadows ? "percentage" : false}
         onCreated={({ gl }) => { gl.info.autoReset = false; gl.toneMapping = THREE.NeutralToneMapping; gl.outputColorSpace = THREE.SRGBColorSpace; }}>
         <Suspense fallback={null}>
-          {site === "ruins" ? <RuinsScene key={`ruins-${ruinsRun}`} phase={phase} light={light} look={look} weather={weather} liteMode={liteMode} castShadows={castShadows} zoom={zoomed ? 1.4 : devZoom} player={player} onMove={move}
+          {site === "ruins" ? <RuinsScene key={`ruins-${ruinsRun}`} level={level} phase={phase} light={light} look={look} weather={weather} liteMode={liteMode} castShadows={castShadows} zoom={zoomed ? 1.4 : devZoom} player={player}
               onNear={n => setNear(n === "exit" ? "ruins_exit" : n)} onDefeat={onRuinsDefeat} start={ruinsRun <= 1 ? devAt : null} />
             : inside === "oracle" ? <OracleTemple frozen={fading || sheet === "oracle"} player={player} onNear={n => setNear(n)} ceremony={reveal} />
-            : inside === "cafe" ? <CafeInterior phase={phase} player={player} frozen={fading || !!sheet} identity={identity} onMove={move} onNear={setNear} />
+            : inside === "cafe" ? <CafeInterior phase={phase} player={player} frozen={fading || !!sheet} identity={identity} level={level} onNear={setNear} />
             : inside === "museum" ? <MuseumInterior wings={museumWings} frozen={fading || donateOpen} player={player} onNear={n => setNear(n === "donate" ? "curator" : n)} />
             : inside === "hq" ? <Clubhouse phase={phase} player={player} frozen={fading} onNear={setNear} />
             : inside === "house" ? <HomeInterior layout={layout} phase={phase} frozen={fading} player={player} onNear={(n: HouseNear) => setNear(n)}
               decorating={decor.decorating} selected={decor.selected} onPlace={decor.place} onPickUp={decor.pickUp} />
-            : atHome ? <HomeIslandScene identity={identity} peaceful={peaceful} fishSpot={fishSpot} fishing={fishing} phase={phase} light={light} look={look} weather={weather} liteMode={liteMode} castShadows={castShadows} zoom={zoomed ? 1.4 : devZoom}
-              overview={overview} returned={returned} player={player} onMove={move} onNear={(n: HomeNear) => setNear(n)} outdoor={layout.outdoor}
+            : atHome ? <HomeIslandScene identity={identity} level={level} peaceful={peaceful} fishSpot={fishSpot} fishing={fishing} phase={phase} light={light} look={look} weather={weather} liteMode={liteMode} castShadows={castShadows} zoom={zoomed ? 1.4 : devZoom}
+              overview={overview} returned={returned} player={player} onNear={(n: HomeNear) => setNear(n)} outdoor={layout.outdoor}
               decorating={decor.decorating} selected={decor.selected} onPlace={item => decor.place("outdoor", item)} onPickUp={item => decor.pickUp("outdoor", item)} />
-            : <IslandScene identity={identity} devAt={devAt} exitFrom={exitFrom} peaceful={peaceful} fishSpot={fishSpot} fishing={fishing} chapter={chapterFlags} fromBoat={fromBoat} progression={progressionWorld} ceremony={ceremony} event={islandEvent} phase={phase} light={light} look={look} weather={weather} overview={overview} zoom={zoomed ? 1.4 : devZoom} reset={reset} returned={returned} liteMode={liteMode} castShadows={castShadows} player={player} onMove={move} onNear={setNear} />}
+            : <IslandScene identity={identity} level={level} devAt={devAt} exitFrom={exitFrom} peaceful={peaceful} fishSpot={fishSpot} fishing={fishing} chapter={chapterFlags} fromBoat={fromBoat} progression={progressionWorld} ceremony={ceremony} event={islandEvent} phase={phase} light={light} look={look} weather={weather} overview={overview} zoom={zoomed ? 1.4 : devZoom} reset={reset} returned={returned} liteMode={liteMode} castShadows={castShadows} player={player} onNear={setNear} />}
           {identity.family && identity.aura && <Suspense fallback={null}><FamilyAura player={player} color={FAMILIES[identity.family].light} /></Suspense>}
           <PostFX antialias={!graphics.liteMode && !graphics.pixelated} grade={grade} fx={lookFx(lookPreset, !liteMode)} />
           <LookMaterials preset={lookPreset} />
           <SunShadows />
-          <Performance player={player} onMetrics={setMetrics} />
+          <Performance player={player} output={perfOutput} />
           <QualityProbe onTier={onTier} />
           {children}
           {!inside && !atHome && site !== "ruins" && near !== "enter" && hqDoor && <Html position={[hqDoor[0], 2.9, hqDoor[1]]} center distanceFactor={10} zIndexRange={[3, 0]}>
@@ -716,7 +705,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
         <button className={styles.return} onClick={() => { setInside(null); setSite("village"); setReturned(false); setReset((n) => n + 1); setOverview(false); }}>Return to clearing</button>
         <details className={styles.performance}>
           <summary>Performance</summary>
-          <output>{metrics ? `${metrics.fps} FPS · ${metrics.frameMs.toFixed(1)} ms/frame\n${metrics.calls} draws · ${metrics.triangles.toLocaleString()} triangles\nPosition ${metrics.x.toFixed(1)}, ${metrics.z.toFixed(1)}` : "Measuring…"}</output>
+          <output ref={perfOutput}>Measuring…</output>
           <label className={styles.preset}>
             <span>Quality</span>
             <select value={quality} onChange={(e) => setQuality(e.target.value)} data-testid="quality">
@@ -738,7 +727,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       <StudyHud />
       <CraftingSheet />
       <CollectionBook open={bagOpen} onClose={() => setBagOpen(false)} />
-      {!bagOpen && <button className={styles.bagButton} onClick={() => setBagOpen(true)} aria-label="Open your collection journal"><kbd>{keyLabel(identity.settings.key_bindings.openJournal)}</kbd> Journal</button>}
+      {!bagOpen && <button className={styles.bagButton} onClick={() => setBagOpen(true)} aria-label="Open your collection journal"><kbd>{keyName(identity.settings.key_bindings.openJournal)}</kbd> Journal</button>}
       {mapOpen && !inside && !atHome && site !== "ruins" && <div className={styles.minimap} data-minimap>
         <MiniMap playerPosRef={player} plot={objectivePlot} onClose={() => setMapOpen(false)} />
         {progression.objective.text && <p className={styles.objective} data-testid="objective"><span aria-hidden="true">◆</span> {progression.objective.text}</p>}
@@ -768,7 +757,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       <PostersSheet open={sheet === "posters"} onClose={() => setSheet(null)} event={islandEvent} />
       {site === "ruins" && <CombatHud player={player} />}
       {site === "ruins" ? <div className={styles.controls} data-combat><span>{[moveKeys.forward, moveKeys.left, moveKeys.back, moveKeys.right].map(k => <kbd key={k}>{keyName(k)}</kbd>)} Move</span><span>Mouse Aim</span><span>Click Attack</span><span><kbd>{keyName(moveKeys.jump)}</kbd> Jump</span><span><kbd>{keyName(moveKeys.dash)}</kbd> Dodge</span><span><kbd>1</kbd>–<kbd>4</kbd> Abilities</span><span><kbd>R</kbd> Swap</span><span><kbd>E</kbd> Interact</span></div>
-      : <div className={styles.controls}><span>{[moveKeys.forward, moveKeys.left, moveKeys.back, moveKeys.right].map(k => <kbd key={k}>{keyName(k)}</kbd>)} Walk</span><span><kbd>{keyName(moveKeys.sprint)}</kbd> Run</span><span><kbd>{keyName(moveKeys.jump)}</kbd> Jump</span><span><kbd>{keyName(moveKeys.dash)}</kbd> Dash</span><span><kbd>E</kbd> Interact</span><span><kbd>Z</kbd> Zoom</span><span><kbd>{keyLabel(identity.settings.key_bindings.openMap)}</kbd> Map</span><span><kbd>J</kbd> Quests</span><span><kbd>{keyLabel(identity.settings.key_bindings.openJournal)}</kbd> Collection</span><span><kbd>{keyName(moveKeys.sneak)}</kbd> Sneak</span></div>}
+      : <div className={styles.controls}><span>{[moveKeys.forward, moveKeys.left, moveKeys.back, moveKeys.right].map(k => <kbd key={k}>{keyName(k)}</kbd>)} Walk</span><span><kbd>{keyName(moveKeys.sprint)}</kbd> Run</span><span><kbd>{keyName(moveKeys.jump)}</kbd> Jump</span><span><kbd>{keyName(moveKeys.dash)}</kbd> Dash</span><span><kbd>E</kbd> Interact</span><span><kbd>Z</kbd> Zoom</span><span><kbd>{keyName(identity.settings.key_bindings.openMap)}</kbd> Map</span><span><kbd>J</kbd> Quests</span><span><kbd>{keyName(identity.settings.key_bindings.openJournal)}</kbd> Collection</span><span><kbd>{keyName(moveKeys.sneak)}</kbd> Sneak</span></div>}
       {/* Clear of the minimap (left) and the audio widget (bottom right). */}
       {touch && (!inside || inside === "cafe") && <TouchControls left={212} bottom={64} />}
       <p className={styles.touchControls}>Tap the ground to move</p>

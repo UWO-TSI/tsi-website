@@ -1,19 +1,17 @@
 "use client";
 
 /**
- * WharfPier (GEO S3, 2026-07-25) — a fixed-height plank pier jutting north
- * off the wharf apron over the carved river channel, ending at the pier-tip
- * fishing spot. RoadTiles can't decking over water (tiles follow terrain
- * into the carve), so this is a small static mesh: planks + posts sunk to
- * the channel bed. Walk support lives in terrain.ts (flat 0.12 override).
+ * WharfPier (GEO S3, 2026-07-25) — a fixed-height plank pier off the wharf
+ * apron, ending at the pier-tip fishing spot: planks + posts sunk to the
+ * bed. Authored in the wharf landmark's frame (before its yaw), the stub tip
+ * at z −3.5; walk support is WHARF_DECK_LOCAL (lib/game/defaultIsland.ts).
  */
 
-
-const X0 = 43.2;
-const X1 = 45.2;
-const Z0 = 0.4;
-const Z1 = 5.0;
-const DECK_Y = 0.1;
+const X0 = -1;
+const X1 = 1;
+const Z0 = -3.5;
+const Z1 = 1.1;
+const DECK_Y = -0.02;
 
 const PLANKS: { z: number }[] = [];
 for (let z = Z0 + 0.25; z < Z1; z += 0.5) PLANKS.push({ z });
@@ -37,18 +35,18 @@ export default function WharfPier() {
         </mesh>
       ))}
       {POSTS.map(([x, z], i) => (
-        <mesh key={`p${i}`} position={[x, -0.55, z]} castShadow>
+        <mesh key={`p${i}`} position={[x, -0.67, z]} castShadow>
           <cylinderGeometry args={[0.09, 0.11, 1.5, 8]} />
           <meshStandardMaterial color="#7A5A3A" roughness={0.92} metalness={0} />
         </mesh>
       ))}
       {/* end rail so the tip reads as a casting perch */}
-      <mesh position={[(X0 + X1) / 2, 0.42, Z1 - 0.06]} castShadow>
+      <mesh position={[(X0 + X1) / 2, 0.3, Z1 - 0.06]} castShadow>
         <boxGeometry args={[X1 - X0, 0.07, 0.09]} />
         <meshStandardMaterial color="#7A5A3A" roughness={0.9} metalness={0} />
       </mesh>
       {[X0 + 0.12, X1 - 0.12].map((x, i) => (
-        <mesh key={`r${i}`} position={[x, 0.26, Z1 - 0.06]} castShadow>
+        <mesh key={`r${i}`} position={[x, 0.14, Z1 - 0.06]} castShadow>
           <cylinderGeometry args={[0.045, 0.05, 0.34, 6]} />
           <meshStandardMaterial color="#7A5A3A" roughness={0.9} metalness={0} />
         </mesh>

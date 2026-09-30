@@ -38,8 +38,6 @@ import {
   setCell,
   levelAt,
   surfaceAt,
-  isVoid,
-  isRiver,
   isRamp,
   needsCliff,
   cliffPieceFor,
@@ -50,6 +48,7 @@ import {
   CLIFF_LEVELS,
   ORTHOGONAL,
   inBounds,
+  isWater,
   type IslandMap,
   type IslandMapDoc,
   type PlacedProp,
@@ -59,7 +58,7 @@ import {
   PAINTER_DRAFT_KEY, normaliseSea, parseVillage, serialiseVillage, villageJson, villageOf,
   type MapObject, type ObjectKind, type VillageDoc,
 } from "@/lib/game/villageMap";
-import { BRIDGE_DECK_HALF, LANDMARK_IDS, LANDMARK_INFO, PROP_FOOTPRINT, TREE_TRUNK, WHARF_DECK_LOCAL, type LandmarkId } from "@/lib/game/defaultIsland";
+import { LANDMARK_IDS, LANDMARK_INFO, PROP_FOOTPRINT, TREE_SLOTS, TREE_TRUNK, objectFootprint, turn, type LandmarkId } from "@/lib/game/defaultIsland";
 import { villageHealth, type VillageHealth } from "@/lib/game/mapHealth";
 import { mapBudget } from "@/lib/game/mapBudget";
 import { classifyWater, WATER_CLASS } from "@/lib/game/fishingSpots";
@@ -174,8 +173,8 @@ const OBJECT_STYLE: Record<ObjectKind, { color: string; r: number; label: string
 };
 /** Placement palette order. */
 const PALETTE: readonly ObjectKind[] = ["landmark", "tree", "bush", "flower", "rock", "bench", "fence", "lamp", "bridge", "study", "anchor", "gather", "spawn", "fitting", "missions", "puddle", "bug", "shell", "bottle"];
-const ROCK_MODELS = ["rock-a", "rock-b", "rock-c"];
-const FENCE_MODELS = ["fence-country-a", "fence-country-b"];
+const ROCK_MODELS = Object.keys(PROP_FOOTPRINT).filter((m) => m.startsWith("rock-"));
+const FENCE_MODELS = Object.keys(PROP_FOOTPRINT).filter((m) => m.startsWith("fence-"));
 const BUG_BIOMES = ["water_edge", "ground"];
 const TREE_NAMES = ["oak", "oak (b)", "blossom", "cedar"];
 /** Outdoor study tables the backend expects (`study_tables.anchor`). */
@@ -257,19 +256,13 @@ function draftDoc(w: World): VillageDoc {
  * cannot be subtly wrong the way a replayed-operations log can be when a brush
  * clamps at MAX_LEVEL or skips void.
  */
-interface Snapshot {
-  map: IslandMap;
-  props: PlacedProp[];
-  annotations: MapAnnotation[];
-  objects: MapObject[];
-  source: World["source"];
-}
+type Snapshot = World;
 const HISTORY_LIMIT = 80;
 const UNDO: Snapshot[] = [];
 let REDO: Snapshot[] = [];
 
-function snapshot(): Snapshot {
-  const { map, props, annotations, objects, source } = world();
+/** A deep copy: the typed arrays, markers, labels and objects. */
+function cloneWorld({ map, props, annotations, objects, source }: World): World {
   return {
     map: { ...map, levels: map.levels.slice(), surfaces: map.surfaces.slice() },
     props: props.map((p) => ({ ...p, cell: [p.cell[0], p.cell[1]] })),
@@ -279,14 +272,9 @@ function snapshot(): Snapshot {
   };
 }
 
+const snapshot = (): Snapshot => cloneWorld(world());
 function restore(s: Snapshot) {
-  WORLD = {
-    map: { ...s.map, levels: s.map.levels.slice(), surfaces: s.map.surfaces.slice() },
-    props: s.props.map((p) => ({ ...p, cell: [p.cell[0], p.cell[1]] as [number, number] })),
-    annotations: s.annotations.map((a) => ({ ...a, cells: a.cells.map((c) => [c[0], c[1]] as [number, number]) })),
-    objects: s.objects.map((o) => ({ ...o })),
-    source: s.source,
-  };
+  WORLD = cloneWorld(s);
 }
 
 /** Call BEFORE mutating. Every edit path goes through this or it is not undoable. */
@@ -300,29 +288,15 @@ function commit() {
 let STROKE: { before: CellSnapshot; touched: Uint8Array; seed: number } | null = null;
 let STROKE_SEED = 1;
 
-const water = (s: number) => isVoid(s) || isRiver(s);
 const keyOf = (o: MapObject) => `${o.kind}:${o.id}`;
 /** Kinds the game turns by their yaw. Buildings face the camera (ACNH); nature takes its turn from its seed. */
 const TURNS = (o: MapObject) => ["bench", "rock", "fence", "bridge", "study", "missions"].includes(o.kind) || (o.kind === "landmark" && o.id === "wharf");
-const turn = (dx: number, dz: number, yaw = 0): [number, number] =>
-  [dx * Math.cos(yaw) + dz * Math.sin(yaw), -dx * Math.sin(yaw) + dz * Math.cos(yaw)];
 const deg = (rad = 0) => Math.round((rad * 180) / Math.PI * 10) / 10;
 
 /** Local outline (before yaw) of an object's footprint, for drawing and hit tests; null = drawn as a dot. */
 function objectOutline(o: MapObject): [number, number][] | null {
-  const rect = (hw: number, hd: number, cx = 0, cz = 0): [number, number][] => [[cx - hw, cz - hd], [cx + hw, cz - hd], [cx + hw, cz + hd], [cx - hw, cz + hd]];
-  if (o.kind === "landmark") {
-    const info = LANDMARK_INFO[o.id as LandmarkId];
-    if (o.id === "wharf") return rect((WHARF_DECK_LOCAL.x1 - WHARF_DECK_LOCAL.x0) / 2, (WHARF_DECK_LOCAL.z1 - WHARF_DECK_LOCAL.z0) / 2, (WHARF_DECK_LOCAL.x0 + WHARF_DECK_LOCAL.x1) / 2, (WHARF_DECK_LOCAL.z0 + WHARF_DECK_LOCAL.z1) / 2);
-    return info?.half ? rect(info.half[0], info.half[1]) : null;
-  }
-  if (o.kind === "bridge") return rect(BRIDGE_DECK_HALF[0], BRIDGE_DECK_HALF[1]);
-  if (o.kind === "study" && o.model && o.model in FURNITURE) {
-    const solid = FURNITURE[o.model as Furniture].solid[0];
-    return rect(solid[2], solid[3], solid[0], solid[1]);
-  }
-  const f = o.model ? PROP_FOOTPRINT[o.model] : undefined;
-  return f ? rect(f[0] * (o.scale ?? 1), f[1] * (o.scale ?? 1)) : null;
+  const f = objectFootprint(o);
+  return f && [[f.cx - f.hw, f.cz - f.hd], [f.cx + f.hw, f.cz - f.hd], [f.cx + f.hw, f.cz + f.hd], [f.cx - f.hw, f.cz + f.hd]];
 }
 
 export default function MapLab() {
@@ -391,16 +365,17 @@ export default function MapLab() {
 
   const selectedObject = objects.find((o) => keyOf(o) === selected) ?? null;
 
-  // Health: everything the suite asserts, a beat after the last edit (a 256² map takes a moment).
-  // `version` stands for mutations inside `map`'s typed arrays, which the linter cannot see.
+  // Health, the budget and the sea/river/pond classes: a beat after the last edit (a 256² map takes a moment),
+  // not on every brush step. `version` stands for mutations inside `map`'s typed arrays, which the linter cannot see.
+  const [derived, setDerived] = useState(() => ({ budget: mapBudget(map), waterClass: classifyWater(map) }));
+  const { budget, waterClass } = derived;
   useEffect(() => {
-    const t = setTimeout(() => setHealth(villageHealth(villageOf(map, objects))), 250);
+    const t = setTimeout(() => {
+      setHealth(villageHealth(villageOf(map, objects)));
+      setDerived({ budget: mapBudget(map), waterClass: classifyWater(map) });
+    }, 250);
     return () => clearTimeout(t);
   }, [map, objects, version]);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const budget = useMemo(() => mapBudget(map), [map, version]);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const waterClass = useMemo(() => classifyWater(map), [map, version]);
 
   /**
    * Restore the autosaved draft.
@@ -621,13 +596,13 @@ export default function MapLab() {
       for (let x = 0; x < W; x++) {
         const s = surfaceAt(map, x, z);
         const l = levelAt(map, x, z);
-        ctx.fillStyle = water(s) && waterClass[z * W + x] === WATER_CLASS.sea ? SEA_FILL : SURFACE_FILL[s] ?? "#f0f";
+        ctx.fillStyle = isWater(s) && waterClass[z * W + x] === WATER_CLASS.sea ? SEA_FILL : SURFACE_FILL[s] ?? "#f0f";
         ctx.fillRect(x, z, 1, 1);
         // Level as brightness: higher ground reads lighter, which is the only
         // way to see elevation on a flat map. Tuned against a screenshot, not
         // guessed -- at 0.10 per level the level-2 plateaus were the same green
         // as the level-0 ground and the map read as flat.
-        if (!water(s) && l > 0) {
+        if (!isWater(s) && l > 0) {
           ctx.fillStyle = `rgba(255,247,225,${Math.min(0.5, 0.17 * l)})`;
           ctx.fillRect(x, z, 1, 1);
         }
@@ -637,7 +612,7 @@ export default function MapLab() {
     // Cliff and half-step edges, drawn as the lines they will become.
     for (let z = 0; z < D; z++) {
       for (let x = 0; x < W; x++) {
-        if (water(surfaceAt(map, x, z))) continue;
+        if (isWater(surfaceAt(map, x, z))) continue;
         for (const [dx, dz] of ORTHOGONAL) {
           if (!inBounds(map, x + dx, z + dz)) continue;
           const d = levelAt(map, x, z) - levelAt(map, x + dx, z + dz);
@@ -739,7 +714,7 @@ export default function MapLab() {
         ctx.fill();
         ctx.globalAlpha = 1;
         ctx.lineWidth = px(isSel ? 3 : 1.5);
-        ctx.strokeStyle = isSel ? "#ffd166" : overlapping.has(o.id) ? "#ff3355" : "rgba(0,0,0,0.6)";
+        ctx.strokeStyle = isSel ? "#ffd166" : overlapping.has(keyOf(o)) ? "#ff3355" : "rgba(0,0,0,0.6)";
         ctx.stroke();
       } else {
         ctx.beginPath();
@@ -747,7 +722,7 @@ export default function MapLab() {
         ctx.fillStyle = color;
         ctx.fill();
         ctx.lineWidth = px(isSel ? 3 : 1);
-        ctx.strokeStyle = isSel ? "#ffd166" : overlapping.has(o.id) ? "#ff3355" : "rgba(0,0,0,0.65)";
+        ctx.strokeStyle = isSel ? "#ffd166" : overlapping.has(keyOf(o)) ? "#ff3355" : "rgba(0,0,0,0.65)";
         ctx.stroke();
       }
       // A tree's crown, faint, so spacing reads as the game will.
@@ -855,10 +830,9 @@ export default function MapLab() {
     }
   }, [hover, brush, zoom, round, dragFrom, shape, tool, flip, map.width, map.depth]);
 
-  useEffect(() => {
-    repaint();
-    blit();
-  }, [repaint, blit, version]);
+  // The terrain repaints when the map changes; a mouse move only re-blits it under the cursor.
+  useEffect(() => repaint(), [repaint, version]);
+  useEffect(() => blit(), [blit, repaint, version]);
 
   /**
    * Add or remove one cell from the active label.
@@ -898,23 +872,23 @@ export default function MapLab() {
         case "land":
           // Only fills water. Painting over existing ground would silently
           // erase whatever surface was there.
-          if (water(s)) setCell(map, x, z, 0, Surface.Grass);
+          if (isWater(s)) setCell(map, x, z, 0, Surface.Grass);
           break;
         case "sea":
           setCell(map, x, z, 0, Surface.River);
           break;
         case "surface":
-          setCell(map, x, z, water(paintSurface) ? 0 : levelAt(map, x, z), paintSurface);
+          setCell(map, x, z, isWater(paintSurface) ? 0 : levelAt(map, x, z), paintSurface);
           break;
         case "ramp":
-          if (!water(s)) setCell(map, x, z, levelAt(map, x, z), Surface.Ramp);
+          if (!isWater(s)) setCell(map, x, z, levelAt(map, x, z), Surface.Ramp);
           break;
         case "flat":
-          if (!water(s)) setCell(map, x, z, paintLevel, s);
+          if (!isWater(s)) setCell(map, x, z, paintLevel, s);
           break;
         case "raise":
         case "lower": {
-          if (water(s)) break;
+          if (isWater(s)) break;
           const d = tool === "raise" ? 1 : -1;
           setCell(map, x, z, Math.min(MAX_LEVEL, Math.max(0, levelAt(map, x, z) + d)), s);
           break;
@@ -1161,7 +1135,7 @@ export default function MapLab() {
       } else {
         id = nextObjectId(kind, w.objects);
       }
-      if (kind === "tree" || kind === "bush" || kind === "flower") extra = { seed: kind === "tree" ? Number(placeModel || 0) + 4 * Math.floor(Math.random() * 3) : Math.floor(Math.random() * 32) };
+      if (kind === "tree" || kind === "bush" || kind === "flower") extra = { seed: kind === "tree" ? Number(placeModel || 0) + TREE_SLOTS * Math.floor(Math.random() * 3) : Math.floor(Math.random() * 32) };
       if (kind === "rock") extra = { model: ROCK_MODELS.includes(placeModel) ? placeModel : ROCK_MODELS[0], scale: 1 };
       if (kind === "bench") extra = { model: "bench-wood" };
       if (kind === "fence") extra = { model: FENCE_MODELS.includes(placeModel) ? placeModel : FENCE_MODELS[0] };
@@ -1568,7 +1542,7 @@ export default function MapLab() {
                         <span>seed</span>
                         <input type="number" step={1} min={0} value={selectedObject.seed ?? 0} onChange={(e) => updateObject(selected!, { seed: Math.max(0, Math.round(Number(e.target.value))) })} style={field} />
                         <span />
-                        <span style={{ color: "#7d868e" }}>{selectedObject.kind === "tree" ? TREE_NAMES[(selectedObject.seed ?? 0) % 4] : ""}</span>
+                        <span style={{ color: "#7d868e" }}>{selectedObject.kind === "tree" ? TREE_NAMES[(selectedObject.seed ?? 0) % TREE_SLOTS] : ""}</span>
                       </>
                     )}
                   </div>
@@ -1792,7 +1766,7 @@ export default function MapLab() {
               <Row k="level" v={String(levelAt(map, hover.x, hover.z))} />
               <Row
                 k="surface"
-                v={water(surfaceAt(map, hover.x, hover.z)) ? ["land", "sea", "river", "pond"][waterClass[hover.z * map.width + hover.x]] : SURFACE_NAME[surfaceAt(map, hover.x, hover.z)] ?? "?"}
+                v={isWater(surfaceAt(map, hover.x, hover.z)) ? ["land", "sea", "river", "pond"][waterClass[hover.z * map.width + hover.x]] : SURFACE_NAME[surfaceAt(map, hover.x, hover.z)] ?? "?"}
               />
               <Row k="half steps" v={String(halfCliffEdges(map, hover.x, hover.z).length)} />
               <Row k="full cliff" v={needsCliff(map, hover.x, hover.z) ? "yes" : "no"} />

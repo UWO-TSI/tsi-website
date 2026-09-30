@@ -49,6 +49,6 @@ export async function POST(request: Request) {
   // goals carry the seasonal events (limited-time fish, the tourney); with none
   // (before 20260929120000) the limited-time fish stay shut.
   const body = await request.json().catch(() => null);
-  const goals = await supabaseProgressionStore(ctx.db).listGoals().catch(() => []);
-  return jsonResult(await catchAction(ctx.store, ctx.userId, body, ctx.now, await islandWeatherNow(ctx.now), goals), "catch");
+  const goals = () => supabaseProgressionStore(ctx.db).listGoals().catch(() => []);
+  return jsonResult(await catchAction(ctx.store, ctx.userId, body, ctx.now, () => islandWeatherNow(ctx.now), goals), "catch");
 }

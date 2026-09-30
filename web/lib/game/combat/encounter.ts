@@ -1,36 +1,36 @@
 /**
  * One encounter tick, shared by the ruins scene and the scripted balance run
- * (balance.ts): timers, statuses and buffs, energy, dodge/dash/knockback
- * impulse, enemies (aimed at you or at a phantom/crab that draws them),
+ * (balance.ts): timers, statuses and buffs, energy, the dodge's clock,
+ * dash/knockback impulse, enemies (aimed at you or at a phantom/crab that draws them),
  * projectiles, summons and totems, effects. Inputs (aim, attack, dodge, keys),
  * missions, respawns and server sync stay with the caller.
  */
-import { enemyTarget, hurtUnits, moveSpeed, stepUnits } from "./abilities";
-import { floater, hurtPlayer, regenEnergy, resolvePlayerShot, summonWisps } from "./actions";
+import { enemyTarget, floater, hurtUnits, moveSpeed, stepUnits } from "./abilities";
+import { hurtPlayer, regenEnergy, resolvePlayerShot, summonWisps } from "./actions";
 import { SLOT_IDS, type AbilityId, type CombatRuntime } from "./runtime";
 import { beamLands, DODGE, stepEnemy, strikeLands, sweptHit, type Vec } from "./sim";
+
+const ABILITY_IDS: readonly AbilityId[] = [...SLOT_IDS, "swap"];
 
 export function stepCombat(rt: CombatRuntime, me: Vec, dt: number, free: (x: number, z: number, r: number) => boolean = () => true, random: () => number = Math.random) {
   const p = rt.player;
   // Timers, buffs, shield, passive stacks, the transformation.
   p.attackCd = Math.max(0, p.attackCd - dt); p.swing = Math.max(0, p.swing - dt); p.dodgeCd = Math.max(0, p.dodgeCd - dt); p.hurt = Math.max(0, p.hurt - dt);
-  for (const k of [...SLOT_IDS, "swap"] as AbilityId[]) rt.cooldowns[k] = Math.max(0, rt.cooldowns[k] - dt);
-  for (const b of rt.buffs) b.t -= dt;
-  rt.buffs = rt.buffs.filter(b => b.t > 0);
+  for (const k of ABILITY_IDS) rt.cooldowns[k] = Math.max(0, rt.cooldowns[k] - dt);
+  for (let i = rt.buffs.length - 1; i >= 0; i--) if ((rt.buffs[i].t -= dt) <= 0) rt.buffs.splice(i, 1);
   p.shieldFor = Math.max(0, p.shieldFor - dt); if (!p.shieldFor) p.shield = 0;
   const s = rt.passive;
   s.momentumT = Math.max(0, s.momentumT - dt); if (!s.momentumT) s.momentum = 0;
   if (rt.transform && (rt.transform.t -= dt) <= 0) rt.transform = null;
   p.still = p.last && Math.hypot(p.last.x - me.x, p.last.z - me.z) < 0.01 ? p.still + dt : 0;
-  p.last = { ...me };
+  if (p.last) { p.last.x = me.x; p.last.z = me.z; } else p.last = { x: me.x, z: me.z };
   p.speed = moveSpeed(rt);
   regenEnergy(rt, dt);
-  // Dodge roll, ability dash (what follows it lands where it ends), knockback.
+  // The dodge's clock (the movement kit's dash moves you), ability dash (what follows it lands where it ends), knockback.
   if (p.dodgeAge !== null) {
     p.dodgeAge += dt;
-    const on = p.dodgeAge < DODGE.duration, k = DODGE.speed * (1 - (p.dodgeAge / DODGE.duration) * 0.6);
-    p.impulse = on ? { x: p.dodgeDir.x * k, z: p.dodgeDir.z * k } : { x: 0, z: 0 };
-    if (!on) p.dodgeAge = null;
+    if (p.dodgeAge >= DODGE.duration) p.dodgeAge = null;
+    p.impulse = { x: 0, z: 0 };
   } else if (p.dash) {
     p.impulse = { x: p.dash.x * p.dash.speed, z: p.dash.z * p.dash.speed };
     if ((p.dash.left -= dt) <= 0) { const then = p.dash.then; p.dash = null; p.impulse = { x: 0, z: 0 }; then?.(me); }
@@ -62,7 +62,7 @@ export function stepCombat(rt: CombatRuntime, me: Vec, dt: number, free: (x: num
     sh.x += sh.vx * dt; sh.z += sh.vz * dt; sh.life -= dt;
     const to = { x: sh.x, z: sh.z };
     let gone = sh.life <= 0 || !free(sh.x, sh.z, 0.05);
-    if (!gone && sh.from === "player") gone = resolvePlayerShot(rt, i, from, to, sweptHit, random);
+    if (!gone && sh.from === "player") gone = resolvePlayerShot(rt, i, from, to, random);
     else if (!gone && sh.from === "enemy") {
       const unit = rt.units.find(u => u.def.kind !== "trap" && sweptHit(from, to, u, 0.4 + sh.radius));
       if (sweptHit(from, to, me, 0.35 + sh.radius)) { hurtPlayer(rt, sh.damage, from, me); gone = true; }

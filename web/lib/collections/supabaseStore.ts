@@ -81,11 +81,6 @@ export function supabaseCollectionsStore(db: SupabaseClient): CollectionsStore {
       const n = await names(db, [...new Set(rows.map((r) => String(r.user_id)))]);
       return rows.map((r): WeeklyBest => ({ user_id: String(r.user_id), member_name: n.get(String(r.user_id)) ?? "Member", item_key: String(r.item_key), size_cm: Number(r.size_cm), caught_at: String(r.caught_at) }));
     },
-    async recordCatch(memberId, key, size, trophy) {
-      const { data, error } = await db.rpc("collections_record_catch", { p_member_id: memberId, p_item_key: key, p_size: size, p_trophy: trophy });
-      if (error) raise(error);
-      return caught(one(data));
-    },
     async cast(memberId, key, size, trophy) {
       const { data, error } = await db.rpc("collections_cast", { p_member_id: memberId, p_item_key: key, p_size: size, p_trophy: trophy });
       if (error) raise(error);
@@ -104,9 +99,9 @@ export function supabaseCollectionsStore(db: SupabaseClient): CollectionsStore {
       return caught(one(data));
     },
     async ownedGear(memberId) {
-      // Before the economy migration nobody owns gear: the starter rod.
+      // A failed read fails the request: a transient error must not roll a tier-4/5 rod owner with the starter rod.
       const { data, error } = await db.from("member_inventory").select("shop_items(catalogue_ref)").eq("member_id", memberId);
-      if (error) return [];
+      if (error) raise(error);
       return ((data ?? []) as Row[]).flatMap((r) => ((r.shop_items as Row | null)?.catalogue_ref as string | null) ?? []);
     },
     async tourneyEntries(goalId, cycle) {

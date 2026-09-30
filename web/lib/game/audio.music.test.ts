@@ -40,7 +40,7 @@ afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 describe("music channel", () => {
   it("starts the hourly block on enable and crossfades independently of the ambient bed", () => {
     const manager = new AudioManagerImpl();
-    manager.setPhase("day");
+    manager.setAmbience({ phase: "day" });
     manager.setMusic({ block: "12" });
     manager.enable();
     // Both channels start: one ambient element, one music element.
@@ -57,7 +57,7 @@ describe("music channel", () => {
       expect.arrayContaining(["/audio/ambient/day.ogg", "/assets/audio/music/14.mp3"]),
     );
     expect(music.paused).toBe(true); // the old block track was faded out and stopped
-    manager.dispose();
+    manager.stop();
   });
 
   it("does not restart the block when setMusic is called again with the same key", () => {
@@ -67,7 +67,7 @@ describe("music channel", () => {
     expect(FakeAudio.all).toHaveLength(1);
     manager.setMusic({ block: "10" });
     expect(FakeAudio.all).toHaveLength(1); // no-op, same candidate list
-    manager.dispose();
+    manager.stop();
   });
 
   it("falls back to the plain block file when no seasonal variant is present, then to the existing track", async () => {
@@ -85,7 +85,7 @@ describe("music channel", () => {
     await Promise.resolve(); // let the rejection advance to the next candidate
     expect(started.src).toBe("/assets/audio/music/16.mp3");
     FakeAudio.failure = null;
-    manager.dispose();
+    manager.stop();
   });
 
   it("uses the cafe override ahead of the hourly block, and interior for other rooms", () => {
@@ -95,12 +95,12 @@ describe("music channel", () => {
     expect(FakeAudio.all[0].src).toBe("/assets/audio/music/cafe.mp3");
     manager.setMusic({ block: "08", override: "interior" });
     expect(FakeAudio.all.at(-1)?.src).toBe("/assets/audio/music/interior.mp3");
-    manager.dispose();
+    manager.stop();
   });
 
   it("mute silences music and ambient without changing the saved slider values", () => {
     const manager = new AudioManagerImpl();
-    manager.setPhase("day");
+    manager.setAmbience({ phase: "day" });
     manager.setMusic({ block: "12" });
     manager.enable();
     expect(manager.getState().muted).toBe(false);
@@ -109,7 +109,7 @@ describe("music channel", () => {
     expect(manager.getState().volumes).toEqual({ master: 0.7, ambient: 0.6, music: 0.55, sfx: 0.8 });
     manager.setMuted(false);
     expect(FakeAudio.all.every(a => a.volume > 0)).toBe(true);
-    manager.dispose();
+    manager.stop();
   });
 
   it("persists mute and the music volume alongside the existing sliders", () => {
@@ -122,13 +122,13 @@ describe("music channel", () => {
     const reloaded = new AudioManagerImpl();
     expect(reloaded.getState().muted).toBe(true);
     expect(reloaded.getState().volumes.music).toBeCloseTo(0.3);
-    manager.dispose(); reloaded.dispose();
+    manager.stop(); reloaded.stop();
   });
 
   it("reports the current block and override through getState", () => {
     const manager = new AudioManagerImpl();
     manager.setMusic({ block: "20", override: "cafe" });
     expect(manager.getState().music).toEqual({ block: "20", override: "cafe" });
-    manager.dispose();
+    manager.stop();
   });
 });

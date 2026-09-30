@@ -62,7 +62,7 @@ function Overhead({ name, phase, remaining }: { name?: string; phase: Mate["phas
 }
 
 /** Seat-mate (no multiplayer yet): the shared rig in their stored look, or a steady default per member, studying/stretching/sitting by phase. */
-function MateFigure({ mate, seat, floor, remaining }: { mate: Mate; seat: WorldSeat; floor: number; remaining: number | null }) {
+export function MateFigure({ mate, seat, floor = 0, remaining = null, overhead = true }: { mate: Mate; seat: WorldSeat; floor?: number; remaining?: number | null; overhead?: boolean }) {
   const stored = JSON.stringify(mate.look ?? null);
   const look = useMemo(() => (stored !== "null" ? parseLook(JSON.parse(stored)) : randomLook(seeded(hashSeed(mate.member_id)))), [stored, mate.member_id]);
   const clip = STUDY_CLIP[poseOf(mate.phase)];
@@ -71,9 +71,9 @@ function MateFigure({ mate, seat, floor, remaining }: { mate: Mate; seat: WorldS
   useEffect(() => { Object.assign(motion.current, { yaw: seat.facing, lift, pose: clip }); }, [seat.facing, lift, clip]);
   return <group position={[seat.x, floor, seat.z]}>
     <Character look={look} motion={motion} />
-    <Html calculatePosition={calculateCurvedHtmlPosition} position={[0, seat.y - floor + 1.25, 0]} center zIndexRange={[35, 0]} style={{ pointerEvents: "none" }}>
+    {overhead && <Html calculatePosition={calculateCurvedHtmlPosition} position={[0, seat.y - floor + 1.25, 0]} center zIndexRange={[35, 0]} style={{ pointerEvents: "none" }}>
       <Overhead name={mate.name.split(" ")[0]} phase={mate.phase} remaining={remaining} />
-    </Html>
+    </Html>}
   </group>;
 }
 

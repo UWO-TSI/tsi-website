@@ -16,8 +16,9 @@
  */
 
 import confetti from "canvas-confetti";
-import { getTodayWeather } from "./weather";
 import { getLabHour } from "./devLab";
+import { liveIslandWeather, reelWeather } from "./islandWeather";
+import { torontoParts } from "@/lib/time";
 import { EXTRA_FISH } from "./fishCatalog";
 import { weatherMods } from "./weatherPerks";
 import { SEASONAL_GOALS } from "@/lib/progression/defaults";
@@ -32,17 +33,6 @@ export type Rarity = "common" | "uncommon" | "rare" | "epic" | "legendary" | "se
  */
 export const HOLO_GRADIENT =
   "linear-gradient(115deg, #5EE7F7 0%, #6EA8FF 18%, #B57AFF 38%, #FF7AD9 58%, #7DFFC4 78%, #5EE7F7 100%)";
-
-/** Wharf Shack buy prices per rarity (economy v2 E3 — coins 🪙, count-based
- *  v1; size factor lands with server-side sales). */
-export const SELL_PRICES: Record<Rarity, number> = {
-  common: 8,
-  uncommon: 20,
-  rare: 60,
-  epic: 180,
-  legendary: 600,
-  seaking: 2500,
-};
 
 export const RARITY_META: Record<
   Rarity,
@@ -176,9 +166,10 @@ const biting = (f: FishDef, zone: "river" | "sea", { hour, weather, month, catch
   return month === undefined || (SEASON_MONTHS.get(f.key)?.includes(month) ?? true);
 };
 
+/** The reel's context: Toronto hour and month and the island's weather, as the server roll sees them (lib/collections/rolls.ts). */
 export function currentFishingContext(): FishingContext {
-  const hour = getLabHour() ?? new Date().getHours() + new Date().getMinutes() / 60;
-  return { hour, weather: getTodayWeather(), month: new Date().getMonth() + 1 };
+  const { hour, minute, month } = torontoParts();
+  return { hour: getLabHour() ?? hour + minute / 60, weather: reelWeather(liveIslandWeather()), month };
 }
 
 export function fishWeight(f: FishDef, weather: string): number {

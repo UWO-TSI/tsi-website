@@ -12,8 +12,10 @@ export const SUBCLASS_LEVEL = 10;
 export const POINTS_PER_LEVEL = 3;
 export const SESSION_XP = 400; // an ordinary play session, for balancing only
 export const EVENT_XP = 2000; // an in-person club event (QR check-in)
+// The source for the economy_settings rows the SQL charges (seeded by 20260926150800_combat.sql); change both together.
 export const STAT_RESET_FEE = 200; // coins, at the Oracle (row 38)
 export const SUBCLASS_RESPEC_FEE = 250;
+export const KILL_XP_PER_HOUR_CAP = 6000;
 
 export const xpToNext = (level: number) => 100 * level + 25 * level * level;
 

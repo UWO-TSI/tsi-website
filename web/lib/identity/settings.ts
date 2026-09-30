@@ -16,8 +16,10 @@ export const ACTION_LABEL: Record<MenuAction, string> = {
 export const DEFAULT_KEYS: Record<MenuAction, string> = {
   openJournal: "b", openBag: "i", openMap: "m", openWallet: "k", openMail: "l", nextTab: "]", prevTab: "[", confirm: "enter",
 };
-/** Escape always closes the open sheet and can't be rebound; movement keys (Space jump, Q dash, Shift, C sneak) belong to the game remap (rows 49, 244). */
-export const RESERVED_KEYS = ["escape", "w", "a", "s", "d", "arrowup", "arrowdown", "arrowleft", "arrowright", " ", "tab", "shift", "q", "c"];
+/** Keys no remap can take: interact E, Escape, Tab, zoom Z, quests J, decorate F, emotes G, put away X. */
+export const FIXED_KEYS: readonly string[] = ["e", "escape", "tab", "z", "j", "f", "g", "x"];
+/** Fixed keys, and the movement defaults (Space jump, Q dash, Shift, C sneak, WASD, arrows), which belong to the game remap (rows 49, 244). */
+export const RESERVED_KEYS = [...FIXED_KEYS, "w", "a", "s", "d", "arrowup", "arrowdown", "arrowleft", "arrowright", " ", "shift", "q", "c"];
 const ALLOWED = /^(?:[a-z0-9]|f(?:[1-9]|1[0-2])|enter|backspace|\[|\]|;|'|,|\.|\/|-|=|`|\\)$/;
 
 export interface AccountSettings {

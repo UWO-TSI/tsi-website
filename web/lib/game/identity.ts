@@ -73,10 +73,9 @@ function subscribe(l: () => void) {
   if (!loaded) { loaded = true; installOracleDemo(); void refreshIdentity(); }
   return () => { listeners.delete(l); };
 }
+/** This account's menu keys right now (the device key maps refuse them). */
+export const menuKeys = (): string[] => Object.values(snapshot.settings.key_bindings);
 export function useWorldIdentity(): WorldIdentity {
   return useSyncExternalStore(subscribe, () => snapshot, () => FALLBACK_IDENTITY);
 }
 
-export function keyLabel(key: string): string {
-  return key === " " ? "Space" : key.length === 1 ? key.toUpperCase() : key[0].toUpperCase() + key.slice(1);
-}

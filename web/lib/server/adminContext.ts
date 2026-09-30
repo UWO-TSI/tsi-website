@@ -5,6 +5,8 @@
  */
 import { NextResponse } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { User } from "@supabase/supabase-js";
+import { createClient } from "@/lib/supabase/server";
 import { forbidden, isAdminTier, memberContext, withStore, type MemberContext } from "./memberContext";
 
 export async function adminContext(): Promise<MemberContext | NextResponse> {
@@ -18,4 +20,14 @@ export async function withAdminStore<S>(make: (db: SupabaseClient) => S): Promis
   const ctx = await withStore(make);
   if (ctx instanceof NextResponse) return ctx;
   return isAdminTier(ctx.tier) ? ctx : forbidden();
+}
+
+/** The staff gate (T1-T3: events, bounties, quests, achievements) on the caller's own RLS client, which the route keeps for its writes. */
+export async function staffContext(): Promise<{ supabase: SupabaseClient; user: User } | NextResponse> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const { data: profile } = await supabase.from("profiles").select("tier").eq("id", user.id).single();
+  if (!profile || profile.tier > 3) return NextResponse.json({ error: "Forbidden — T1-T3 only" }, { status: 403 });
+  return { supabase, user };
 }

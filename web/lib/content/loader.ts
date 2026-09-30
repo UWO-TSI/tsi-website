@@ -1,20 +1,16 @@
 "use client";
 
 // ─── Content Loader Hooks ───────────────────────────────────────────────────
-// Fetch NPC personas, shop items, and the active seasonal palette from Supabase.
+// Fetch NPC personas, shop items, season palettes and emotes from Supabase.
 // Cache for 5 minutes; fall back to bundled JSON defaults when Supabase env
 // vars are missing or the query errors. Never throws to the UI.
 //
-// Preview mode: when the URL has ?preview=draft-<draftId>, the hooks fetch
-// the named draft row from content_drafts and overlay it on the matching
-// table. Falls back to live data if the draft is missing or shape-mismatched.
+// Preview mode: when the URL has ?preview=draft-<draftId>, useNPCPersonas
+// fetches the named draft row from content_drafts and overlays it on the
+// residents. Falls back to live data if the draft is missing or shape-mismatched.
 
-import { useSyncExternalStore } from "react";
 import useSWR from "swr";
 import { createClient } from "@/lib/supabase/client";
-import { getLabPalette, labSubscribe } from "@/lib/game/devLab";
-
-const getNullLabPalette = () => null;
 import {
   DEFAULT_EMOTE_TYPES,
   DEFAULT_NPC_PERSONAS,
@@ -24,7 +20,6 @@ import {
 import type {
   EmoteType,
   NPCPersona,
-  PaletteColors,
   SeasonalPalette,
   ShopCategory,
   ShopItem,
@@ -188,128 +183,15 @@ function filterShop(rows: ShopItem[], category?: ShopCategory): ShopItem[] {
   return category ? active.filter((r) => r.category === category) : active;
 }
 
-function applyShopDraft(rows: ShopItem[], draft: Record<string, unknown>): ShopItem[] {
-  if (!draft || typeof draft !== "object" || !("slug" in draft)) return rows;
-  const slug = draft.slug as string;
-  const idx = rows.findIndex((r) => r.slug === slug);
-  if (idx === -1) {
-    const synthetic = {
-      id: `preview-${slug}`,
-      slug,
-      display_name: (draft.display_name as string) ?? slug,
-      category: (draft.category as ShopCategory) ?? "merch",
-      sprite_url: (draft.sprite_url as string | null) ?? null,
-      description: (draft.description as string | null) ?? null,
-      tc_price: Number(draft.tc_price ?? 0),
-      rarity: (draft.rarity as ShopItem["rarity"]) ?? null,
-      stock: (draft.stock as number | null) ?? null,
-      active: true,
-      released_at: new Date().toISOString(),
-      retired_at: null,
-    } as ShopItem;
-    return [...rows, synthetic];
-  }
-  const merged = { ...rows[idx], ...draft } as ShopItem;
-  const next = rows.slice();
-  next[idx] = merged;
-  return next;
-}
-
-export function useShopItems(options?: {
-  category?: ShopCategory;
-  previewDraftId?: string | null;
-}) {
+export function useShopItems(options?: { category?: ShopCategory }) {
   const category = options?.category;
-  const previewId = options?.previewDraftId ?? getPreviewDraftId();
-  const key = `shop_items:${category ?? "all"}:${previewId ?? "live"}`;
   const { data, error, isLoading } = useSWR<ShopItem[]>(
-    key,
-    async () => {
-      const live = await fetchShopItems(category);
-      if (!previewId) return live;
-      const draft = await fetchDraftData(previewId, "shop_items");
-      return draft ? applyShopDraft(live, draft) : live;
-    },
+    `shop_items:${category ?? "all"}`,
+    () => fetchShopItems(category),
     SWR_OPTS,
   );
   return {
     data: data ?? filterShop(DEFAULT_SHOP_ITEMS, category),
-    isLoading,
-    error,
-  };
-}
-
-// ─── Active palette ─────────────────────────────────────────────────────────
-
-function defaultActivePalette(): SeasonalPalette {
-  return DEFAULT_PALETTES.find((p) => p.active) ?? DEFAULT_PALETTES[0];
-}
-
-async function fetchActivePalette(): Promise<SeasonalPalette> {
-  if (!hasSupabaseEnv()) return defaultActivePalette();
-  try {
-    const supabase = createClient();
-    const { data, error } = await supabase
-      .from("seasonal_palettes")
-      .select(
-        "id, slug, display_name, palette, active, scheduled_start, scheduled_end, created_at",
-      )
-      .eq("active", true)
-      .limit(1)
-      .maybeSingle();
-    if (error || !data) {
-      console.warn("[contentLoader] seasonal_palettes fetch failed, using defaults", error);
-      return defaultActivePalette();
-    }
-    const row = data as unknown as SeasonalPalette;
-    // Sanity check: palette must be an object with expected keys; otherwise fall back.
-    const paletteObj = row.palette as unknown as Record<string, unknown> | null;
-    if (!paletteObj || typeof paletteObj !== "object" || !("sky" in paletteObj)) {
-      console.warn("[contentLoader] active palette malformed, using defaults");
-      return defaultActivePalette();
-    }
-    return row;
-  } catch (err) {
-    console.warn("[contentLoader] seasonal_palettes threw, using defaults", err);
-    return defaultActivePalette();
-  }
-}
-
-function applyPaletteDraft(
-  live: SeasonalPalette,
-  draft: Record<string, unknown>,
-): SeasonalPalette {
-  const paletteDraft = draft.palette as Record<string, unknown> | undefined;
-  if (!paletteDraft || typeof paletteDraft !== "object" || !("sky" in paletteDraft)) {
-    return live;
-  }
-  return {
-    ...live,
-    slug: (draft.slug as string) ?? live.slug,
-    display_name: (draft.display_name as string) ?? live.display_name,
-    palette: paletteDraft as unknown as PaletteColors,
-  };
-}
-
-export function useActivePalette(options?: { previewDraftId?: string | null }) {
-  const previewId = options?.previewDraftId ?? getPreviewDraftId();
-  const key = `seasonal_palettes:active:${previewId ?? "live"}`;
-  const { data, error, isLoading } = useSWR<SeasonalPalette>(
-    key,
-    async () => {
-      const live = await fetchActivePalette();
-      if (!previewId) return live;
-      const draft = await fetchDraftData(previewId, "seasonal_palettes");
-      return draft ? applyPaletteDraft(live, draft) : live;
-    },
-    SWR_OPTS,
-  );
-  // /lab/world palette bench: a dev-only override painted over whatever the
-  // live/preview palette resolved to. getLabPalette is null always in prod.
-  const labPalette = useSyncExternalStore(labSubscribe, getLabPalette, getNullLabPalette);
-  const resolved = data ?? defaultActivePalette();
-  return {
-    data: labPalette ? { ...resolved, palette: labPalette } : resolved,
     isLoading,
     error,
   };
@@ -384,8 +266,3 @@ export function useEmoteTypes() {
     error,
   };
 }
-
-// Helpers exported for non-hook contexts (e.g., server components / tests)
-export const _fallbackActivePalette = defaultActivePalette;
-export { getPreviewDraftId };
-export type { PaletteColors };

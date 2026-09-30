@@ -21,7 +21,6 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { Billboard, Html } from "@react-three/drei";
 import * as THREE from "three";
 import { AudioManager } from "@/lib/game/audio";
-import { legacyFishingWaterHeight } from "@/lib/game/fishingWater";
 import { getCameraForwardXZ } from "@/lib/game/cameraBasis";
 
 interface CastDetail {
@@ -30,7 +29,7 @@ interface CastDetail {
   power: number;
 }
 
-export default function FishingBobber({ playerPosRef, waterHeight = legacyFishingWaterHeight, towardWater = false }: { playerPosRef: React.MutableRefObject<THREE.Vector3>; waterHeight?: (x: number, z: number) => number; towardWater?: boolean }) {
+export default function FishingBobber({ playerPosRef, waterHeight, towardWater = false }: { playerPosRef: React.MutableRefObject<THREE.Vector3>; waterHeight: (x: number, z: number) => number; towardWater?: boolean }) {
   const { camera } = useThree();
   const [active, setActive] = useState(false);
   const activeRef = useRef(false);

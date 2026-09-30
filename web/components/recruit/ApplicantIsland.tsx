@@ -10,7 +10,7 @@ import { createClient } from "@/lib/supabase/client";
 import { isPositionOpen, type Position } from "@/lib/recruitment";
 import { getRoleContent } from "@/lib/recruitment-content";
 import { AudioManager } from "@/lib/game/audio";
-import { useAmbientAudio, useAudioState } from "@/lib/game/useAudio";
+import { useAmbience, useAudioState } from "@/lib/game/useAudio";
 import { useGraphicsSettings } from "@/lib/game/useGraphicsSettings";
 import { isGameControlTarget } from "@/lib/game/keyboardInput";
 import type { VillageAction } from "./ApplicantWorld";
@@ -80,7 +80,7 @@ export default function ApplicantIsland() {
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const [graphics, graphicsActions] = useGraphicsSettings();
   const audio = useAudioState();
-  useAmbientAudio(inside ? "applicant-hq" : "applicant-island");
+  useAmbience({ phase: inside ? "applicant-hq" : "applicant-island" });
   const direct = `/student/apply?view=form${preview ? "&preview=1" : ""}`;
   const play = !compact && !failed && loadState === "ready" && (preview || !!user);
   const position = selected === null ? null : positions[selected];

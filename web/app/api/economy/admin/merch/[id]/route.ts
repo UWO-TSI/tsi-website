@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { supabaseEconomyStore } from "@/lib/wallet/supabaseStore";
-import { jsonResult } from "@/lib/server/memberContext";
+import { badRequest, jsonResult } from "@/lib/server/memberContext";
 import { withAdminStore } from "@/lib/server/adminContext";
 import { resolveMerch } from "@/lib/wallet/service";
 
@@ -13,6 +13,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (ctx instanceof NextResponse) return ctx;
   const { id } = await params;
   const parsed = Body.safeParse(await request.json().catch(() => null));
-  if (!parsed.success || !z.string().uuid().safeParse(id).success) return NextResponse.json({ ok: false, error: "Invalid request" }, { status: 400 });
+  if (!parsed.success || !z.string().uuid().safeParse(id).success) return badRequest();
   return jsonResult(await resolveMerch(ctx.store, ctx.userId, { reservation_id: id, ...parsed.data }), "resolution");
 }

@@ -1,10 +1,5 @@
-import { coastDist } from "./coast";
 import { inBounds, waterHeightAt, worldToCellX, worldToCellZ, type IslandMap } from "./grid";
-import { OCEAN_WATER_Y, RIVER_WATER_Y } from "./waterLevels";
-
-export function legacyFishingWaterHeight(x: number, z: number): number {
-  return coastDist(x, z) > 47 ? OCEAN_WATER_Y : RIVER_WATER_Y;
-}
+import { OCEAN_WATER_Y } from "./waterLevels";
 
 /** Grid rivers follow their cell level; the legacy ocean remains outside this map. */
 export function gridFishingWaterHeight(map: IslandMap, x: number, z: number): number {

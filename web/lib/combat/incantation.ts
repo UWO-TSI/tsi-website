@@ -15,6 +15,8 @@
  * rates don't change the score. Past the spell's time limit the cast fails.
  * <50 fizzles; 50–94 scales potency 0.5→1.0; 95+ is enhanced (1.5 for damage).
  */
+import { ENHANCED_MULT } from "./weapons";
+
 export interface Pt {
   x: number;
   y: number;
@@ -105,7 +107,7 @@ export interface Score {
 
 export function potencyFor(accuracy: number): { outcome: Exclude<CastOutcome, "timeout">; potency: number } {
   if (accuracy < 50) return { outcome: "fizzle", potency: 0 };
-  if (accuracy >= 95) return { outcome: "enhanced", potency: 1.5 };
+  if (accuracy >= 95) return { outcome: "enhanced", potency: ENHANCED_MULT };
   return { outcome: "cast", potency: Math.round((0.5 + (0.5 * (accuracy - 50)) / 45) * 100) / 100 };
 }
 

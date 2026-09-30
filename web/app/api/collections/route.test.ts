@@ -14,6 +14,7 @@ import { DEFAULT_GOALS, SEASONAL_GOALS } from "@/lib/progression/defaults";
 import { memoryCraftingStore } from "@/lib/crafting/memoryStore";
 import { RECIPE_DROPS, RECIPE_DROP_CHANCE } from "@/lib/crafting/recipes";
 import { seededRandom } from "@/lib/game/weatherSystem";
+import { ROSTER } from "@/lib/collections/roster";
 
 const mock = vi.hoisted(() => ({ ctx: null as unknown, weather: "clear", goals: [] as unknown[] }));
 vi.mock("@/lib/server/memberContext", async (original) => ({
@@ -133,6 +134,21 @@ describe("POST /api/collections: the server rolls every catch", () => {
     later(3_600_000);
     await m.store.harvest(A, "n3", "2026-09-24T12", "fish_golden_koi", 70, true);
     expect(m.countOf(A, "fish_golden_koi")).toBe(4);
+  });
+
+  it("tells the catch card the size it records: none for a fish off the roster", async () => {
+    const random = seededRandom(7);
+    vi.spyOn(Math, "random").mockImplementation(random);
+    const seen = { on: 0, off: 0 };
+    for (let i = 0; i < 80 && !(seen.on && seen.off); i++) {
+      const { item_key, size_cm } = (await post({ action: "cast", site: "village", at: SHORE, power: 0.5 })).body.catch;
+      const sp = ROSTER.find((r) => r.key === item_key);
+      if (sp?.size) { seen.on++; expect(size_cm).toBeGreaterThanOrEqual(sp.size[0]); expect(size_cm).toBeLessThanOrEqual(sp.size[1]); }
+      else { seen.off++; expect(size_cm).toBeNull(); }
+      later(5000);
+    }
+    expect(seen.on && seen.off).toBeTruthy();
+    vi.restoreAllMocks();
   });
 
   it("passes through signed-out", async () => {

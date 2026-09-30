@@ -51,6 +51,7 @@ import {
   shoreSdf,
   sampleShore,
   easedCellOutline,
+  isLandCell,
   type LayerTest,
 } from "@/lib/game/grid";
 import { createSurfaceBlend } from "@/lib/game/surfaceBlend";
@@ -464,8 +465,7 @@ export default function GridTerrain({ map, field: heights, palette }: { map: Isl
       return 1;
     };
 
-    const inGround: LayerTest = (cx, cz) =>
-      inBounds(map, cx, cz) && !isVoid(surfaceAt(map, cx, cz)) && !isRiver(surfaceAt(map, cx, cz));
+    const inGround: LayerTest = (cx, cz) => isLandCell(map, cx, cz);
     const inSurface = (s: number): LayerTest => (cx, cz) =>
       inBounds(map, cx, cz) && surfaceAt(map, cx, cz) === s;
 

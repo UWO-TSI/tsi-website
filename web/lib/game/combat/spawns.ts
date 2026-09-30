@@ -23,7 +23,8 @@ export const SPAWN_TABLE: SpawnRow[] = [
   { zone: "boss", type: "guardian-statue", respawn: 0, at: [[0, 25.5]] },
 ];
 export const SPAWNS: SpawnPoint[] = SPAWN_TABLE.flatMap(r => r.at.map(([x, z], i) => ({ id: `${r.type}-${i + 1}`, type: r.type, x, z })));
-export const respawnAfter = (id: string) => SPAWN_TABLE.find(r => SPAWNS.some(s => s.id === id && s.type === r.type))?.respawn ?? 0;
+const RESPAWN = new Map(SPAWNS.map(s => [s.id, SPAWN_TABLE.find(r => r.type === s.type)!.respawn]));
+export const respawnAfter = (id: string) => RESPAWN.get(id) ?? 0;
 
 const ring = (c: { x: number; z: number }, r: number, types: string[], wave: number, turn = 0): SpawnPoint[] =>
   types.map((type, i) => { const a = turn + (i / types.length) * Math.PI * 2; return { id: `wv${wave}-${i}`, type, x: c.x + Math.sin(a) * r, z: c.z + Math.cos(a) * r }; });

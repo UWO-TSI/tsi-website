@@ -13,11 +13,11 @@
  * forage and bug spots; a fishable sea.
  */
 import {
-  CLIFF_LEVELS, ORTHOGONAL, cliffPieceFor, inBounds, isGroundAtWorld, isRamp, isRiver, isVoid, levelAt,
+  CLIFF_LEVELS, ORTHOGONAL, cliffPieceFor, inBounds, isGroundAtWorld, isLandCell, isRamp, isVoid, levelAt,
   needsCliff, rampDir, rampRun, surfaceAt, worldToCellX, worldToCellZ, type IslandMap,
 } from "./grid";
-import { LANDMARK_IDS, LANDMARK_INFO, bridgeDecks, islandOf, landmarks, propFootprint, wharfDeck, type LandmarkId } from "./defaultIsland";
-import { CAST_REACH, WATER_CLASS, classifyWater, fishingSpot, waterClassifier } from "./fishingSpots";
+import { LANDMARK_IDS, PROBE, TREE_TRUNK, bridgeDecks, inRect, islandOf, landmarks, objectFootprint, turn, wharfDeck } from "./defaultIsland";
+import { CAST_REACH, WATER_CLASS, fishingSpot, villageWater } from "./fishingSpots";
 import { villageNodes, villageBottleSpot } from "./islandNodes";
 import { OBJECT_KINDS, objectsOf, villageSpawnPoint, type MapObject, type Village } from "./villageMap";
 import { RESIDENT_ANCHORS, SHARED_SPACING, type ResidentAnchor } from "@/lib/content/residents";
@@ -41,8 +41,6 @@ export interface TerrainHealth {
   reach: Uint8Array;
 }
 
-const walkAt = (map: IslandMap, x: number, z: number) =>
-  inBounds(map, x, z) && !isVoid(surfaceAt(map, x, z)) && !isRiver(surfaceAt(map, x, z));
 
 /** Terrain checks on any map. `seed` is the cell reachability starts from (default: the first level-0 land cell). */
 export function terrainHealth(map: IslandMap, seed?: [number, number] | null): TerrainHealth {
@@ -52,7 +50,7 @@ export function terrainHealth(map: IslandMap, seed?: [number, number] | null): T
   let first: [number, number] | null = null;
   for (let z = 0; z < D; z++) {
     for (let x = 0; x < W; x++) {
-      if (!walkAt(map, x, z)) continue;
+      if (!isLandCell(map, x, z)) continue;
       const l = levelAt(map, x, z);
       levels[l] = (levels[l] ?? 0) + 1;
       walkable++;
@@ -69,12 +67,12 @@ export function terrainHealth(map: IslandMap, seed?: [number, number] | null): T
         const nl = isVoid(ns) ? 0 : levelAt(map, x + dx, z + dz);
         // The cliff kit is one piece tall and does not stack: a taller face renders as a hole.
         if (Math.abs(l - nl) > CLIFF_LEVELS) tooTall++;
-        if (walkAt(map, x + dx, z + dz) && Math.abs(l - nl) === 1) half = true;
+        if (isLandCell(map, x + dx, z + dz) && Math.abs(l - nl) === 1) half = true;
       }
       if (half) halfSteps++;
       // A cell a full cliff above the ground on both sides of an axis is a wall you cannot stand on.
       // (A one-cell half-step ridge is a walkable bump the blur rounds off.)
-      const lower = (dx: number, dz: number) => walkAt(map, x + dx, z + dz) && levelAt(map, x + dx, z + dz) <= l - CLIFF_LEVELS;
+      const lower = (dx: number, dz: number) => isLandCell(map, x + dx, z + dz) && levelAt(map, x + dx, z + dz) <= l - CLIFF_LEVELS;
       if (l > 0 && ((lower(-1, 0) && lower(1, 0)) || (lower(0, -1) && lower(0, 1)))) thinWalls++;
     }
   }
@@ -83,18 +81,18 @@ export function terrainHealth(map: IslandMap, seed?: [number, number] | null): T
   for (let z = 0; z < D; z++) for (let x = 0; x < W; x++) if (isRamp(surfaceAt(map, x, z)) && rampRun(map, x, z)) ramped[z * W + x] = 1;
   const reach = new Uint8Array(W * D);
   let reachable = 0;
-  const start = seed && walkAt(map, seed[0], seed[1]) ? seed : first;
+  const start = seed && isLandCell(map, seed[0], seed[1]) ? seed : first;
   if (start) {
     const stack: [number, number][] = [start];
     while (stack.length) {
       const [x, z] = stack.pop()!;
       const i = z * W + x;
-      if (reach[i] || !walkAt(map, x, z)) continue;
+      if (reach[i] || !isLandCell(map, x, z)) continue;
       reach[i] = 1;
       reachable++;
       for (const [dx, dz] of ORTHOGONAL) {
         const nx = x + dx, nz = z + dz;
-        if (!walkAt(map, nx, nz)) continue;
+        if (!isLandCell(map, nx, nz)) continue;
         const d = Math.abs(levelAt(map, nx, nz) - levelAt(map, x, z));
         // A blended half step is walkable; a full cliff needs a working ramp.
         if (d < CLIFF_LEVELS || ramped[nz * W + nx] || ramped[i]) stack.push([nx, nz]);
@@ -122,25 +120,19 @@ export interface VillageHealth {
   terrain: TerrainHealth;
   /** Each failing check → what fails it (ids or counts). Empty = healthy. */
   problems: Record<string, string[]>;
-  /** Overlapping footprints (buildings keep a 1-tile gap): shown, not failing. */
+  /** Overlapping footprints as "kind:id overlaps kind:id" (buildings keep a 1-tile gap): shown, not failing. */
   warnings: string[];
 }
 
-const probe = [[0, 0], [-0.2, 0], [0.2, 0], [0, -0.2], [0, 0.2]];
-const inRect = (x: number, z: number, r: { x0: number; x1: number; z0: number; z1: number }) => x >= r.x0 && x <= r.x1 && z >= r.z0 && z <= r.z1;
 
-/** Axis-aligned footprint of an object, for overlap warnings (null = a point). */
-export function footprintOf(o: MapObject): { x0: number; x1: number; z0: number; z1: number; building: boolean } | null {
-  if (o.kind === "landmark") {
-    const l = LANDMARK_INFO[o.id as LandmarkId]?.half;
-    return l ? { x0: o.x - l[0], x1: o.x + l[0], z0: o.z - l[1], z1: o.z + l[1], building: l[0] > 1 } : null;
-  }
-  if (o.kind === "tree") return { x0: o.x - 0.65, x1: o.x + 0.65, z0: o.z - 0.65, z1: o.z + 0.65, building: false };
-  const f = propFootprint(o);
+/** Axis-aligned footprint of an object (its objectFootprint turned by its yaw; a tree's trunk), for overlap warnings (null = a point). */
+function footprintOf(o: MapObject): { x0: number; x1: number; z0: number; z1: number; building: boolean } | null {
+  const f = o.kind === "tree" ? { hw: TREE_TRUNK, hd: TREE_TRUNK, cx: 0, cz: 0 } : objectFootprint(o);
   if (!f) return null;
-  const c = Math.abs(Math.cos(o.yaw ?? 0)), s = Math.abs(Math.sin(o.yaw ?? 0));
-  const hx = f[0] * c + f[1] * s, hz = f[0] * s + f[1] * c;
-  return { x0: o.x - hx, x1: o.x + hx, z0: o.z - hz, z1: o.z + hz, building: false };
+  const yaw = o.yaw ?? 0, c = Math.abs(Math.cos(yaw)), s = Math.abs(Math.sin(yaw));
+  const [ox, oz] = turn(f.cx, f.cz, yaw), x = o.x + ox, z = o.z + oz;
+  const hx = f.hw * c + f.hd * s, hz = f.hw * s + f.hd * c;
+  return { x0: x - hx, x1: x + hx, z0: z - hz, z1: z + hz, building: o.kind === "landmark" && f.hw > 1 };
 }
 
 /** Every check on a village (its map and objects). */
@@ -159,13 +151,12 @@ export function villageHealth(v: Village): VillageHealth {
   const deck = wharfDeck(v);
   const onDeck = (x: number, z: number) => !!deck && inRect(x, z, deck);
 
-  // Ids: unique within a kind, known kinds only.
+  // Ids: unique within a kind (parseVillage drops unknown kinds).
   const seen = new Set<string>();
   for (const o of v.objects) {
     const key = `${o.kind}:${o.id}`;
     if (seen.has(key)) add("duplicate ids", key);
     seen.add(key);
-    if (!OBJECT_KINDS.includes(o.kind)) add("unknown kinds", key);
   }
 
   if (!island.standable(sx, sz)) add("spawn not on open ground", `${sx},${sz}`);
@@ -199,15 +190,15 @@ export function villageHealth(v: Village): VillageHealth {
   }
 
   // Everything that stands on the ground.
-  const grounded = new Set(["spawn", "fitting", "missions", "lamp", "fence", "bench", "rock", "tree", "bush", "flower", "study", "anchor", "gather", "puddle", "bug", "shell", "bottle"]);
-  const landCell = (x: number, z: number) => walkAt(map, worldToCellX(map, x), worldToCellZ(map, z));
+  const grounded = new Set<string>(OBJECT_KINDS.filter(k => k !== "landmark" && k !== "bridge"));
+  const landCell = (x: number, z: number) => isLandCell(map, worldToCellX(map, x), worldToCellZ(map, z));
   for (const o of v.objects) if (grounded.has(o.kind) && !landCell(o.x, o.z) && !onDeck(o.x, o.z)) add("objects off land", `${o.kind}:${o.id}`);
 
   // Resident anchors: open ground for three residents side by side.
   for (const key of Object.keys(RESIDENT_ANCHORS) as ResidentAnchor[]) {
     const a = objectsOf("anchor", v).find(o => o.id === key);
     if (!a) { add("resident anchors missing", key); continue; }
-    for (let k = 0; k < 3; k++) if (!probe.every(([dx, dz]) => island.standable(a.x + k * SHARED_SPACING + dx, a.z + dz))) { add("resident anchors without room for 3", key); break; }
+    for (let k = 0; k < 3; k++) if (!PROBE.every(([dx, dz]) => island.standable(a.x + k * SHARED_SPACING + dx, a.z + dz))) { add("resident anchors without room for 3", key); break; }
   }
   if (!objectsOf("gather", v).length) add("no ceremony gather spots", "gather");
 
@@ -233,8 +224,8 @@ export function villageHealth(v: Village): VillageHealth {
   const bottles = new Set(["2026-09-24", "2026-09-25", "2026-09-26", "2026-09-27"].map(d => String(villageBottleSpot(d, v))));
   if (objectsOf("bottle", v).filter(o => isGroundAtWorld(map, o.x, o.z)).length < 2 || bottles.size < 2) add("forage", "2+ bottle spots needed on the beach");
 
-  // Fishing: the sea is fishable from the shore, and every water body there is.
-  const classes = classifyWater(map), classify = waterClassifier(map, classes);
+  // Fishing: the sea is fishable from the shore, and every water body there is, classified as the game does (pond markers included).
+  const { classes, classify } = villageWater(v);
   const present = new Set<number>(classes);
   const fished = new Set<string>();
   let spots = 0;
@@ -255,7 +246,7 @@ export function villageHealth(v: Village): VillageHealth {
   const boxes = v.objects.flatMap(o => { const f = footprintOf(o); return f ? [{ o, f }] : []; });
   for (let i = 0; i < boxes.length; i++) for (let j = i + 1; j < boxes.length; j++) {
     const a = boxes[i], b = boxes[j], gap = a.f.building && b.f.building ? 1 : 0;
-    if (a.f.x0 < b.f.x1 + gap && b.f.x0 < a.f.x1 + gap && a.f.z0 < b.f.z1 + gap && b.f.z0 < a.f.z1 + gap) warnings.push(`${a.o.id} overlaps ${b.o.id}${gap ? " (buildings keep a 1-tile gap)" : ""}`);
+    if (a.f.x0 < b.f.x1 + gap && b.f.x0 < a.f.x1 + gap && a.f.z0 < b.f.z1 + gap && b.f.z0 < a.f.z1 + gap) warnings.push(`${a.o.kind}:${a.o.id} overlaps ${b.o.kind}:${b.o.id}${gap ? " (buildings keep a 1-tile gap)" : ""}`);
   }
   return { terrain, problems, warnings };
 }

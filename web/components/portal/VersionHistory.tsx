@@ -11,8 +11,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ChevronDown, ChevronRight, RotateCcw } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { CONTENT_ROUTES, type VersionedTable } from "@/lib/content/types";
 
-type TableName = "npc_personas" | "shop_items" | "seasonal_palettes" | "quest_chapters" | "club_goals" | "crafting_recipes";
+type TableName = VersionedTable;
 
 interface VersionRow {
   id: string;
@@ -33,14 +34,6 @@ interface VersionHistoryProps {
   displayName: string;
 }
 
-const EDITOR_ROUTE: Record<TableName, string> = {
-  npc_personas: "/student/dashboard/admin/content/npcs",
-  shop_items: "/student/dashboard/admin/content/shop",
-  seasonal_palettes: "/student/dashboard/admin/content/palettes",
-  quest_chapters: "/student/dashboard/admin/content/chapters",
-  club_goals: "/student/dashboard/admin/content/goals",
-  crafting_recipes: "/student/dashboard/admin/content/recipes",
-};
 
 export default function VersionHistory({
   tableName,
@@ -136,7 +129,7 @@ export default function VersionHistory({
         setConfirmingId(null);
         return;
       }
-      router.push(`${EDITOR_ROUTE[tableName]}/${rowId}/edit`);
+      router.push(`${CONTENT_ROUTES[tableName]}/${rowId}/edit`);
     } catch (err) {
       setMessage({
         kind: "err",
@@ -152,7 +145,7 @@ export default function VersionHistory({
     <div>
       <div className="mb-2">
         <Link
-          href={`${EDITOR_ROUTE[tableName]}/${rowId}/edit`}
+          href={`${CONTENT_ROUTES[tableName]}/${rowId}/edit`}
           className="inline-flex items-center gap-1 text-xs font-mono text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
         >
           <ArrowLeft size={12} />

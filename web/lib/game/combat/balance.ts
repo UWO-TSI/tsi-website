@@ -10,7 +10,7 @@
  * specs/evidence/combat-b/balance.md is this table.
  */
 import { FAMILY_STAT, resolveLoadout, subclassByKey, UNITS, type Ability, type Subclass } from "@/lib/combat/kits";
-import { WEAPONS as SYSTEM_WEAPONS } from "@/lib/combat/weapons";
+import { STARTER_WEAPONS, WEAPONS as SYSTEM_WEAPONS } from "@/lib/combat/weapons";
 import { derived, presetAllocation } from "@/lib/combat/progression";
 import { potencyFor } from "@/lib/combat/incantation";
 import { SURVIVE_CIRCLES } from "@/lib/game/ruins";
@@ -19,15 +19,14 @@ import { attack, spawnWave, startDodge } from "./actions";
 import { PLAYER_BASE, WEAPONS } from "./data";
 import { stepCombat } from "./encounter";
 import { createRuntime, type CombatRuntime } from "./runtime";
-import { strikeLands, type Enemy, type Vec } from "./sim";
+import { DODGE, strikeLands, type Enemy, type Vec } from "./sim";
 import { WAVES } from "./spawns";
 
-export const STARTERS = ["sword-driftwood", "bow-willow", "staff-oak", "tome-spirits", "wraps-cloth"];
 const FALLBACK: Record<string, string> = { Arcane: "staff-oak", Ranger: "bow-willow", Vanguard: "sword-driftwood", Warden: "tome-spirits" };
 /** What a sensible member carries: the first starter the kit suggests that scales with the family's stat (row 31), else the family's own. */
 export function starterWeapon(s: Subclass): string {
   for (const t of s.weapon_affinity) {
-    const w = SYSTEM_WEAPONS.find(x => STARTERS.includes(x.key) && x.type === t);
+    const w = SYSTEM_WEAPONS.find(x => STARTER_WEAPONS.includes(x.key) && x.type === t);
     if (w && w.scaling[0] === FAMILY_STAT[s.family]) return w.key;
   }
   return FALLBACK[s.family];
@@ -122,8 +121,9 @@ export function runSurvive(subclassKey: string, missionId: "survive-circle" | "s
       mx = ux * push - uz * strafe * 0.35; mz = uz * push + ux * strafe * 0.35;
       const l = Math.hypot(mx, mz) || 1; mx /= l; mz /= l;
     }
-    const v = PLAYER_BASE.speed * p.speed;
-    me = { x: me.x + (mx * v + p.impulse.x) * dt, z: me.z + (mz * v + p.impulse.z) * dt };
+    // The bot's dodge roll: 14 u/s easing to 40% over its time, as the kit's dash in the ruins (combatTuning).
+    const v = PLAYER_BASE.speed * p.speed, roll = p.dodgeAge === null ? 0 : DODGE.speed * (1 - (p.dodgeAge / DODGE.duration) * 0.6);
+    me = { x: me.x + (mx * v + p.impulse.x + p.dodgeDir.x * roll) * dt, z: me.z + (mz * v + p.impulse.z + p.dodgeDir.z * roll) * dt };
   }
   return { cleared: false, seconds: t, dealt, taken, minHp: minHp / p.maxHp, died: false };
 }

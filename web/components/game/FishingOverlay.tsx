@@ -36,7 +36,6 @@ import { rodByTier, type RodTier } from "@/lib/game/rods";
 import { oneLinerFor, rollFishFor } from "@/lib/game/peaceful";
 import type { WaterType } from "@/lib/game/fishingSpots";
 import { punchZoom, setTensionZoom } from "@/lib/game/cameraJuice";
-import { coastDist } from "@/lib/game/coast";
 import {
   CAST,
   CELEBRATE,
@@ -52,7 +51,7 @@ import {
   iconFor,
 } from "@/lib/game/fishing";
 import { weatherMods } from "@/lib/game/weatherPerks";
-import { getTodayWeather } from "@/lib/game/weather";
+import { liveIslandWeather, reelWeather } from "@/lib/game/islandWeather";
 import { advanceFishingReel, createFishingReel } from "@/lib/game/fishingReel";
 import { bindFishingCastLifecycle, bindFishingInput, type FishingHeldInput } from "@/lib/game/fishingInput";
 import { isGameControlTarget } from "@/lib/game/keyboardInput";
@@ -158,7 +157,7 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
     changePhase("waiting");
     // Cast power shortens the wait (max cast halves it); rain days shorten
     // it further (weather perk).
-    const wait = (2000 + Math.random() * 4000) * (1 - CAST.waitScale * powerRef.current) * weatherMods(getTodayWeather()).biteWaitMul;
+    const wait = (2000 + Math.random() * 4000) * (1 - CAST.waitScale * powerRef.current) * weatherMods(reelWeather(liveIslandWeather())).biteWaitMul;
     // Fake nibbles (refinement 2026-07-23): 1-2 false-alarm tugs, never in
     // the last 1.2s before the real bite. Bobber dips + ripple + soft blip.
     if (wait > 2600) {
@@ -250,9 +249,8 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
     else reelInputRef.current.pointers.add(input.pointerId);
     const local = () => {
       const luck = powerRef.current + (powerRef.current >= CAST.maxZone ? CAST.maxBonus : 0);
-      // Sea spots (deck + cove, out past the sand line) roll the SEA pool.
-      const sp = spotRef.current;
-      const zone: "river" | "sea" = zoneOverride ?? (sp && coastDist(sp.x, sp.z) > 47 ? "sea" : "river");
+      // Every world cast names its water (tsi:fish-start); the applicant's shore casts roll the sea.
+      const zone: "river" | "sea" = zoneOverride ?? "river";
       // Spots that report their water type (pond/river/sea) use the rod-aware pool.
       return waterRef.current ? rollFishFor(waterRef.current, luck, rod, currentFishingContext()) : rollFish(luck + rod.rarityBonus, zone);
     };
@@ -276,7 +274,8 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
         ownedRef.current.add(fish.key);
         setWasNew(isNew);
         const landing = landRef.current;
-        const size = landing?.size ?? rollSize(fish.sizeCm);
+        // A server roll shows the size it records (none off the roster); the local demo rolls its own.
+        const size = landing ? landing.size : rollSize(fish.sizeCm);
         setCaughtSize(size);
         setNewRecord(false);
         setLearned(null);
@@ -374,7 +373,7 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
   if (phase === "idle") return null;
 
   // First-catch blind-box ceremony — fullscreen, replaces the bottom card.
-  if (phase === "revealing" && fish && caughtSize !== null) {
+  if (phase === "revealing" && fish) {
     return <FishReveal fish={fish} sizeCm={caughtSize} recipe={learned} onDone={cancel} />;
   }
 
@@ -663,7 +662,7 @@ export function ReelMinigame({
         raf = requestAnimationFrame(step);
         return;
       }
-      const events = advanceFishingReel(simulation, dt, holdingRef.current, weatherMods(getTodayWeather()).dartChanceMul, Math.random, tensionMul);
+      const events = advanceFishingReel(simulation, dt, holdingRef.current, weatherMods(reelWeather(liveIslandWeather())).dartChanceMul, Math.random, tensionMul);
       const { position: pos, fishPosition: fishPos, inside, progress, tension } = simulation;
       if (simulation.result !== null) return finish(simulation.result);
 
@@ -905,7 +904,7 @@ function CastMeter({ onRelease, releaseRequestedRef }: { onRelease: (power: numb
     let speedMul = 1;
     let lastCycle = 0;
     // Weather perk: sunny days slow the meter (easier MAX CAST).
-    const cycleMs = CAST.cycleMs * weatherMods(getTodayWeather()).castCycleMul;
+    const cycleMs = CAST.cycleMs * weatherMods(reelWeather(liveIslandWeather())).castCycleMul;
     releasedRef.current = false;
     const step = (now: number) => {
       if (releaseRequestedRef.current) {

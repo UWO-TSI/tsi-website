@@ -4,20 +4,17 @@ import { useRef, useState, useEffect, useCallback, useMemo } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { Html } from "@react-three/drei";
 import * as THREE from "three";
-import { getTodayWeather } from "@/lib/game/weather";
-import { useSFX } from "@/lib/game/useAudio";
+import { liveIslandWeather } from "@/lib/game/islandWeather";
+import { AudioManager, type SFXName } from "@/lib/game/audio";
 import { getCameraForwardXZ } from "@/lib/game/cameraBasis";
 import { bindGameKeys } from "@/lib/game/keyboardInput";
 import { Surface, WATER_DROP } from "@/lib/game/grid";
-import { calculateCurvedHtmlPosition } from "@/lib/game/worldProjection";
-import { pickCurvedGround } from "@/lib/game/groundPick";
-import { getLabFov } from "@/lib/game/devLab";
+import { calculateCurvedHtmlPosition, pickCurvedSurface } from "@/lib/game/worldProjection";
 import MoveTargetIndicator from "./MoveTargetIndicator";
-import type { EmoteType } from "@/lib/content/types";
 import Character, { CHARACTER_HEIGHT, CHARACTER_SCALE, type CharacterMotion, type ClipName } from "./character/Character";
 import type { CharacterLook } from "@/lib/game/character/look";
 import { useMyLook } from "@/lib/game/character/lookStore";
-import { EMOTE_CLIPS, combatClip, seatLift, type CombatView } from "@/lib/game/character/clips";
+import { combatClip, seatLift, type CombatView } from "@/lib/game/character/clips";
 import { useWorldClips } from "./character/useWorldClips";
 import { combat, useCombatVersion } from "@/lib/game/combat/runtime";
 import { combatPush, combatTuning, dashDodge } from "@/lib/game/combat/actions";
@@ -25,7 +22,7 @@ import { WEAPONS } from "@/lib/game/combat/data";
 import { STUCK_TIME, advanceMove, clearSpot, createMoveSim, createMoveState, interpolated, topSpeed, towards, MOVE_TUNING, NO_INPUT, type MoveEvent, type MoveInput, type MoveSim, type MoveState, type MoveTuning, type MoveWorld } from "@/lib/game/movement/sim";
 import { useMoveKeys } from "@/lib/game/movement/keys";
 import { routePilot, type RouteStep } from "@/lib/game/movement/course";
-import { DashRing, DustPool, EVENT_CLIP, MOVE_JUICE, Streaks, TAKEOFF, applyFov, screenOf, touchStick, type MoveJuice, type MoveTelemetry } from "./movement/moveFx";
+import { BASE_FOV, DashRing, DustPool, EVENT_CLIP, MOVE_JUICE, Streaks, TAKEOFF, applyFov, screenOf, touchStick, type MoveJuice, type MoveTelemetry } from "./movement/moveFx";
 
 /**
  * The player on the movement kit (specs/movement.md): keys, the touch stick or
@@ -38,15 +35,15 @@ import { DashRing, DustPool, EVENT_CLIP, MOVE_JUICE, Streaks, TAKEOFF, applyFov,
  *
  * World interactions become clip requests: sit/study/sleep seats (tsi:sit),
  * fishing (tsi:fish-cast / tsi:fish-end), forage and net (tsi:peaceful-act,
- * tsi:flower-pick, tsi:critter-catch), emotes (activeEmote or tsi:emote
- * {clip}), and the encounter state when `combat` is set: there Q's dash is the
+ * tsi:flower-pick, tsi:critter-catch), emotes (tsi:emote {clip}), and the encounter state when `combat` is set: there Q's dash is the
  * dodge (its i-frames), knockback and ability dashes push through the sim, and
  * a cast roots you until a dodge breaks it.
  */
 
 interface PlayerAvatarProps {
   spawnPosition: [number, number, number];
-  onMove: (position: THREE.Vector3) => void;
+  /** Written when the avatar moves: where the player stands (the scene's shared position). */
+  player?: React.RefObject<THREE.Vector3>;
   /** What the kit walks on: `top` and `wet` (lib/game/movement/sim). */
   world: MoveWorld;
   groundHeight: (x: number, z: number) => number;
@@ -55,21 +52,23 @@ interface PlayerAvatarProps {
   camTarget?: React.RefObject<THREE.Vector3>;
   playerName?: string;
   showNameplate?: boolean;
+  /** The member's level (combat progression); the nameplate leaves it out until known. */
   playerLevel?: number;
   /** TSI member (row 223): subtle blue dot + glow on the nameplate. */
   member?: boolean;
   /** Encounter: the ruins' kit (Q dodges); clips and facing follow the combat runtime; the weapon is in hand. */
   combat?: boolean;
-  activeEmote?: EmoteType | null;
   frozen?: boolean;
   desktopClickToMove?: boolean;
   /** /lab/move: live tuning and juice, slow motion, the HUD's readout and the Walk clip's pace. */
-  tuning?: React.RefObject<MoveTuning>;
-  juice?: React.RefObject<MoveJuice>;
-  timeScale?: React.RefObject<number>;
+  tuning?: MoveTuning;
+  juice?: MoveJuice;
+  timeScale?: number;
   telemetry?: React.RefObject<MoveTelemetry>;
   walkSpeed?: number;
 }
+
+const playSFX = (name: SFXName) => AudioManager.playSFX(name);
 
 /** Face a point (module scope: the react compiler freezes values reached through hooks inside component code). */
 function turnTo(s: MoveState | undefined, x: number, z: number) { if (s) s.facing = Math.atan2(x - s.x, z - s.z); }
@@ -78,20 +77,19 @@ function turnTo(s: MoveState | undefined, x: number, z: number) { if (s) s.facin
 const SEAT_CLIPS = new Set<ClipName>(["Sit", "Study", "Stretch", "Sleep"]);
 type Seat = { x: number; z: number; clip: ClipName; lift: number; yaw: number };
 
-export default function PlayerAvatar({ spawnPosition, onMove, world, groundHeight, groundSurface, camTarget, playerName = "Player", showNameplate = true, playerLevel = 1, member = false, combat: inCombat = false, activeEmote = null, frozen = false, desktopClickToMove = false, tuning, juice, timeScale, telemetry, walkSpeed = MOVE_TUNING.walkSpeed }: PlayerAvatarProps) {
+export default function PlayerAvatar({ spawnPosition, player, world, groundHeight, groundSurface, camTarget, playerName = "Player", showNameplate = true, playerLevel, member = false, combat: inCombat = false, frozen = false, desktopClickToMove = false, tuning, juice, timeScale, telemetry, walkSpeed = MOVE_TUNING.walkSpeed }: PlayerAvatarProps) {
   const anchor = useRef<THREE.Group>(null), body = useRef<THREE.Group>(null), head = useRef<THREE.Group>(null);
   const motion = useRef<CharacterMotion>({ speed: 0, yaw: 0, lift: 0, pose: null, play: null, move: null });
   const { look } = useMyLook();
   const { camera, gl } = useThree();
-  const { play: playSFX } = useSFX();
   const bindings = useMoveKeys();
   const [x0, , z0] = spawnPosition;
-  const sim = useRef<MoveSim | null>(null), simAt = useRef("");
+  const sim = useRef<MoveSim | null>(null), simAt = useRef<[number, number] | null>(null);
   const keys = useRef<Record<string, boolean>>({});
   const presses = useRef({ jump: false, dash: false });
   const target = useRef<{ x: number; z: number } | null>(null);
   const seat = useRef<Seat | null>(null);
-  const reported = useRef<[number, number, number] | null>(null);
+  const reported = useRef<THREE.Vector3 | null>(null);
   const fx = useRef({ sq: 0, sqv: 0, step: 0, trail: 0, stuck: 0, level: 0, punch: 0, lead: new THREE.Vector2(), pan: new THREE.Vector2(), rise: new THREE.Vector2(), focus: new THREE.Vector3(x0, 0, z0) });
   const dust = useMemo(() => new DustPool(), []);
   const streaks = useMemo(() => new Streaks(), []);
@@ -131,14 +129,14 @@ export default function PlayerAvatar({ spawnPosition, onMove, world, groundHeigh
     const rect = gl.domElement.getBoundingClientRect();
     raycaster.current.setFromCamera(new THREE.Vector2(((e.clientX - rect.left) / rect.width) * 2 - 1, -((e.clientY - rect.top) / rect.height) * 2 + 1), camera);
     // Against the visually curved heightfield, not a flat plane (2026-07-08 sync fix).
-    const hit = pickCurvedGround(raycaster.current.ray, camera, groundHeight);
+    const hit = pickCurvedSurface(raycaster.current.ray, camera, groundHeight);
     if (!hit) return;
     target.current = { x: hit.x, z: hit.z };
     fx.current.stuck = 0;
     playSFX("click");
     const id = indicatorId.current++;
     setIndicators(prev => [...prev, { id, position: [hit.x, groundHeight(hit.x, hit.z), hit.z] }]);
-  }, [camera, gl, playSFX, groundHeight, frozen, desktopClickToMove]);
+  }, [camera, gl, groundHeight, frozen, desktopClickToMove]);
   useEffect(() => {
     gl.domElement.addEventListener("click", handleClick);
     return () => gl.domElement.removeEventListener("click", handleClick);
@@ -186,10 +184,6 @@ export default function PlayerAvatar({ spawnPosition, onMove, world, groundHeigh
   // World interactions → clips (fish, forage, net, emotes).
   const faceToward = useCallback((x: number, z: number) => turnTo(sim.current?.state, x, z), []);
   useWorldClips(motion, faceToward);
-  useEffect(() => {
-    const clip = activeEmote ? EMOTE_CLIPS[activeEmote.animation_key] : null;
-    if (clip) motion.current.play = clip;
-  }, [activeEmote]);
 
   useEffect(() => {
     // Dev (evidence scripts): read the sim, teleport, drive a route, step the sim a moment at a time.
@@ -210,11 +204,11 @@ export default function PlayerAvatar({ spawnPosition, onMove, world, groundHeigh
   useFrame((_, rawDelta) => {
     const g = anchor.current, bd = body.current, hd = head.current;
     if (!g || !bd || !hd) return;
-    const p = combat.rt.player, d = dev.current, f = fx.current, m = motion.current, j = juice?.current ?? MOVE_JUICE, st = touchStick, k = keys.current, b = bindings;
-    const t = inCombat ? combatTuning(p.speed) : tuning?.current ?? MOVE_TUNING;
-    if (!sim.current || simAt.current !== `${x0},${z0}`) {
+    const p = combat.rt.player, d = dev.current, f = fx.current, m = motion.current, j = juice ?? MOVE_JUICE, st = touchStick, k = keys.current, b = bindings;
+    const t = inCombat ? combatTuning(p.speed) : tuning ?? MOVE_TUNING;
+    if (!sim.current || simAt.current?.[0] !== x0 || simAt.current[1] !== z0) {
       sim.current = createMoveSim(createMoveState(x0, z0, world));
-      simAt.current = `${x0},${z0}`;
+      simAt.current = [x0, z0];
     }
     // Spawned or built into something (an exit painted inside a prop, furniture placed where you stand): step out to the nearest open spot.
     const at = sim.current.state;
@@ -223,7 +217,7 @@ export default function PlayerAvatar({ spawnPosition, onMove, world, groundHeigh
       sim.current = createMoveSim(createMoveState(x, z, world, at.facing));
     }
     if (!reported.current) f.level = sim.current.state.y;
-    let dt = Math.min(rawDelta, 0.1) * (timeScale?.current ?? 1);
+    let dt = Math.min(rawDelta, 0.1) * (timeScale ?? 1);
     if (d.paused) { dt = Math.min(dt, d.budget); d.budget -= dt; }
 
     // Intent: keys give a unit direction, the stick keeps its tilt; either drops a tap target, and any move gets you up from a seat.
@@ -308,7 +302,7 @@ export default function PlayerAvatar({ spawnPosition, onMove, world, groundHeigh
       f.step += dt;
       if (f.step >= Math.max(0.2, 2.96 / speed)) {
         f.step = 0;
-        const surface = groundSurface?.(x, z), bridge = surface === Surface.Wood, brick = surface === Surface.Brick || surface === Surface.Stone, rain = getTodayWeather() === "rain";
+        const surface = groundSurface?.(x, z), bridge = surface === Surface.Wood, brick = surface === Surface.Brick || surface === Surface.Stone, rain = liveIslandWeather() === "rain";
         playSFX(bridge ? "blip4" : brick ? "blip3" : "footstep");
         if (!bridge && (!brick || rain)) dust.spawn(x - state.vx * 0.03, groundY, z - state.vz * 0.03, (0.6 + speed * 0.055) * j.dust, rain);
       }
@@ -359,13 +353,13 @@ export default function PlayerAvatar({ spawnPosition, onMove, world, groundHeigh
     camTarget?.current.copy(f.focus);
     f.punch *= Math.exp(-6 * dt);
     const fast = THREE.MathUtils.clamp((speed - t.walkSpeed) / Math.max(0.1, topSpeed(t) - t.walkSpeed), 0, 1);
-    applyFov(camera, (getLabFov() ?? 48) + j.fovKick * fast + f.punch, Math.min(rawDelta, 0.1));
+    applyFov(camera, BASE_FOV + j.fovKick * fast + f.punch, Math.min(rawDelta, 0.1));
 
     if (telemetry) Object.assign(telemetry.current, { x, y, z, speed, mode: state.mode, hops: state.hops, dashReady, long: state.long });
     const last = reported.current;
-    if (!last || Math.abs(last[0] - x) + Math.abs(last[1] - y) + Math.abs(last[2] - z) > 1e-4) {
-      reported.current = [x, y, z];
-      onMove(new THREE.Vector3(x, y, z));
+    if (!last || Math.abs(last.x - x) + Math.abs(last.y - y) + Math.abs(last.z - z) > 1e-4) {
+      (reported.current ??= new THREE.Vector3()).set(x, y, z);
+      player?.current.set(x, y, z);
     }
   }, -4);
 
@@ -373,7 +367,7 @@ export default function PlayerAvatar({ spawnPosition, onMove, world, groundHeigh
     <>
       {/* Sprint A8: tap-to-walk target rings in world space */}
       {indicators.map((ind) => (
-        <MoveTargetIndicator key={ind.id} position={ind.position} groundHeight={groundHeight}
+        <MoveTargetIndicator key={ind.id} position={ind.position}
           onComplete={() => setIndicators((prev) => prev.filter((i) => i.id !== ind.id))} />
       ))}
       <primitive object={dust.group} />
@@ -402,9 +396,9 @@ export default function PlayerAvatar({ spawnPosition, onMove, world, groundHeigh
               {member && <span aria-label="TSI member" title="TSI member" style={{ width: 6, height: 6, borderRadius: "50%", background: "#60A5FA", boxShadow: "0 0 4px #60A5FA", flex: "none" }} />}
               {playerName}
             </div>
-            <div style={{ fontSize: "9px", color: "#b8c3c3", fontFamily: "'IBM Plex Mono', monospace", lineHeight: 1.2 }}>
+            {playerLevel !== undefined && <div style={{ fontSize: "9px", color: "#b8c3c3", fontFamily: "'IBM Plex Mono', monospace", lineHeight: 1.2 }}>
               Lv. {playerLevel}
-            </div>
+            </div>}
           </div>
         </Html>}
 
@@ -429,7 +423,11 @@ export default function PlayerAvatar({ spawnPosition, onMove, world, groundHeigh
 /** The player's character, with the equipped weapon: in hand in an encounter, across the back once the ruins gate is open (row 140). */
 function PlayerCharacter({ look, motion, inCombat, walkSpeed }: { look: CharacterLook; motion: React.RefObject<CharacterMotion>; inCombat: boolean; walkSpeed: number }) {
   useCombatVersion();
-  const p = combat.rt.player, w = WEAPONS[p.weapon];
-  const weapon = w?.model && (inCombat ? p.alive : p.armed) ? { kind: w.kind, model: w.model, modelScale: w.modelScale, inHand: inCombat, grip: w.grip } : null;
+  const p = combat.rt.player, key = p.weapon, shown = inCombat ? p.alive : p.armed;
+  // The same object until the weapon, or whether it shows, changes (the runtime publishes ~10×/s).
+  const weapon = useMemo(() => {
+    const w = WEAPONS[key];
+    return w?.model && shown ? { kind: w.kind, model: w.model, modelScale: w.modelScale, inHand: inCombat, grip: w.grip } : null;
+  }, [key, shown, inCombat]);
   return <Character look={look} motion={motion} walkSpeed={walkSpeed} weapon={weapon} />;
 }

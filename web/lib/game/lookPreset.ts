@@ -427,14 +427,6 @@ export function sunFromAngles(elevation: number, azimuth: number, distance = 30)
   const e = elevation * Math.PI / 180, a = azimuth * Math.PI / 180, r = (v: number) => Math.round(v * 100) / 100;
   return [r(distance * Math.cos(e) * Math.cos(a)), r(distance * Math.sin(e)), r(distance * Math.cos(e) * Math.sin(a))];
 }
-/**
- * The sun's horizontal angle from the fixed follow camera, which sits on −z
- * looking +z (IslandAtmosphere, ApplicantWorld): 0 = straight behind the
- * camera, ±90 = pure side light, + = screen-left (+x).
- */
-export function sunFromCamera([x, , z]: readonly number[]): number {
-  return Math.atan2(x, -z) * 180 / Math.PI;
-}
 
 /** Colour temperature to sRGB hex (Tanner Helland's blackbody fit, 1000-40000 K). */
 export function kelvinHex(kelvin: number): string {

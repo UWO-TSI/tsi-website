@@ -1,5 +1,6 @@
 import { LONDON_ON } from "./islandWeather";
-import { torontoInstant, type IslandPhase } from "./islandTime";
+import type { IslandPhase } from "./islandTime";
+import { torontoInstant } from "@/lib/time";
 import { DAWN_HOURS, EVENING_HALF_HOURS, sunFor, torontoDate, type SunDay } from "./sunTimes";
 
 /**

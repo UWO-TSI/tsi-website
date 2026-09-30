@@ -681,3 +681,99 @@ After these, the hot-path items with no line change: 2.1, 3.4, 3.5, 4.2, 6.5 and
 | **Total with decisions** | **~4,400** |
 
 About 815 of the 3,400 is [carried] code (7.1, 7.3, 7.5, 6.1, 4.7, part of 1.8) that predates becb580 but was left dead or duplicated by changes in this range. The other ~2,550 landed in the range or was orphaned by it, mostly by the GameWorld deletion in f0e99747.
+
+## Applied (2026-09-30, branch `game/cleanup` from 7ca8f4c2)
+
+Net for the range 7ca8f4c2..6cf19ab4: +2,426 / −5,608 = **−3,182 lines** in `web/`. Excluding tests: +2,095 / −5,394 = −3,299. No migration was added or edited; `node scripts/gen-seeds.mjs` reports the seeds up to date.
+
+**Applied, one commit each:**
+
+| Item | Commit | Note |
+|---|---|---|
+| 1.1 | 76880612 | |
+| 1.2 | d0b749da | |
+| 1.3 | 70ba9968 | Bug 6: the dead emote/shop/palette Preview links are gone. Set Active (D3) untouched. |
+| 1.4 | 3bd3468b | |
+| 1.5 | cbbbe819 | Partial: audio keeps its own "dusk" ambience key. |
+| 1.6 | ee594414 | |
+| 1.7 | 408c9016 | Generated uniforms checked equal to the old hand-written set. |
+| 1.8 | 500de9b6 | |
+| 1.9 | 908423ff | `?time=` now takes phase names only; STATE.md's `?time=18.5` example is stale. |
+| 1.10 | a6717d05 | |
+| 1.11 | 5e2c1971 | Partial: dawn glow 1.6 → 0.8 via `lighting.windowGlow`. Mounting IslandAtmosphere left for "later", as the item says (live recruitment page). |
+| 1.12 | 765708e0 | Bug 7: petals follow the real wind. |
+| 1.13 | 7a4b6181 | Bug 9. |
+| 2.1 | 554ac03d | Bug 11: draws in chunks of 1024. |
+| 2.2 | 7169da4d | |
+| 2.3 | 55b60bb8 | |
+| 3.1 | b7c4eea1 | |
+| 3.2 | d80cfe42 | |
+| 3.3 | f31df2ae | |
+| 3.4 | d8bdcaa7 | Bug 13. |
+| 3.5 | 4fe8f28d | |
+| 3.6 | a6b166aa | The bench spot object is allocated only inside bench range. |
+| 3.7 | a99d8b6d | |
+| 3.8 | 4c3dccc2 | |
+| 3.9 | 19474090 | |
+| 3.10 | e0110a66 | |
+| 3.11 | 1b00dd61 | |
+| 3.12 | e936a7d0 | |
+| 3.13 | 14b8fa29 | |
+| 3.14 | edd8cb41 | |
+| 3.15 | 48bf2fff | |
+| 4.1 | 9d27600a | |
+| 4.2 | ecc1f7d5 | |
+| 4.3 | 5431236b | Bug 4. The CombatHud key hooks (4.10) landed here. |
+| 4.5 | 9ce18698 | |
+| 4.6 | f8f9ca56 | |
+| 4.8 | 696c3d45 | |
+| 4.9 | 5aeff4d2 | Partial: one `BASE_FOV` constant instead of reading `camera.fov` (a remount would compound the zoom). Walk speed is in `components/game/character/**`, off-limits to this branch. |
+| 4.10 | 03050fee | |
+| 5.1 | 4b9e63a3 | |
+| 5.2 | 36e8f169 | |
+| 5.3 | 6cf1fd36 | Bug 8. |
+| 5.4 | 9a5174e2 | Bug 1. |
+| 5.5 | a8c48a03 | |
+| 5.6 | 05b791a4 | |
+| 5.7 | 1dccd4e4 | |
+| 5.8 | 7705437c | |
+| 5.9 | fd86de2c | Generated SQL unchanged. |
+| 5.11 | f2ecee1f | Bug 10. |
+| 6.1 | ebb555da | |
+| 6.2 | b66fecd5 | Balance table byte-identical before and after. |
+| 6.3 | d9ccd086 | Partial: `derived().energy` stays, because /dev/combat (D2) reads it. |
+| 6.4 | 2e3efadd | |
+| 6.5 | 60cdc5b5 | |
+| 6.6 | 8861c305 | |
+| 6.7 | 23a4e9e7 | |
+| 6.8 | f6dfd4af | Partial: the `me`, `aim` and impulse objects stay, since their references escape into the sim input. The EncounterRender filters and the Blasts `color.set` stay. Balance table unchanged. |
+| 6.9 | 137df67f | The TS fees are marked as the source of the settings. |
+| 7.1 | c8eafb4d | |
+| 7.2 | 3ad56df9 | Bug 16: the persona prompt cap is checked on the server. |
+| 7.3 | cb9905b1 | |
+| 7.4 | 58e0339b | Partial: GameContentIndex keeps its AREAS list, which carries per-area copy. |
+| 7.5 | 56460b8d | |
+| 7.6 | ad176c1c | Partial: the service's tier re-check stays as defense in depth. |
+| 7.7 | 002ab384 | |
+| 7.9 | c0d2f3c1, 0515db0b | Bug 15 (spend widget for T2). Partial: the directory route stays on `adminContext`, because adminRoutes.test.ts forbids a route's own T1/T2 check. |
+| 8.1 | c3e94b4a | |
+| 8.2 | 1312dc86 | |
+| 8.3 | 0ac1a0f3 | |
+| 8.4 | 1de78d42 | |
+| 8.5 | cbcc4c37 | Partial: CombatHarness (D2) untouched. |
+| 8.6 | d97e0cd5 | |
+| 9.1 | 6cf19ab4 | Scope: the hand-written SQL parity tests (study tables, combat fees, kit traits, progression chapters) are unchanged. |
+
+**Bugs fixed outside an item:**
+- Bug 2 (catch card size): f599edb3.
+- Bug 3 (nameplate "Lv. 1"): e7cfedec. Callers pass the combat-progression level. The Lv row is hidden until the level is known, and shows 1 when signed out.
+- Bug 5 (touch stick): 325234b9.
+- Bug 12 (painter health): bf4df4c8.
+
+**Skipped:**
+- **4.4.** PlayerAvatar is keyed and remounts on travel. Owning the focus there would reset the follow camera's state and far plane on every trip.
+- **4.7.** `components/game/character/**` is off-limits (avatar v7 branch).
+- **5.10 / Bug 14.** David's call.
+- **7.8.** Deriving the mode from `goal_type` changes the goals editor for seasonal rows (the type locks and the back link changes).
+- **Bug 16, second half** (the Transmuter banner showing twice). Not in this pass.
+- **D1-D5.** Left exactly as they are.

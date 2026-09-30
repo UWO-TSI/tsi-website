@@ -13,6 +13,10 @@ describe("movement keys", () => {
     expect(readMoveKeys()).toMatchObject({ dash: " ", jump: "q" });
     expect(remapMove(DEFAULT_MOVE_KEYS, "dash", "e")).toMatchObject({ ok: false });
     expect(remapMove(DEFAULT_MOVE_KEYS, "dash", "1", ["1", "2", "3", "4", "r"])).toMatchObject({ ok: false });
+    // Emotes (G) and put away (X) are fixed keys; the menu keys (account settings) are taken.
+    for (const key of ["g", "x", "b", "l"]) expect(remapMove(DEFAULT_MOVE_KEYS, "sprint", key)).toMatchObject({ ok: false });
+    saved.set("tsi.moveKeys.v1", JSON.stringify({ ...DEFAULT_MOVE_KEYS, sprint: "g" })); // saved before G was fixed
+    expect(readMoveKeys().sprint).toBe("shift");
     saved.set("tsi.moveKeys.v1", JSON.stringify({ ...DEFAULT_MOVE_KEYS, jump: "w" })); // a clash: back to the defaults
     expect(readMoveKeys()).toEqual(DEFAULT_MOVE_KEYS);
   });

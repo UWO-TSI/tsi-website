@@ -1,7 +1,7 @@
 import {
   CLIFF_LEVELS, isGroundAtWorld, levelAt, rampRun, sampleGroundHeight, surfaceAt, worldToCellX, worldToCellZ,
 } from "./grid";
-import { studySolid } from "@/lib/study/seats";
+import { FURNITURE, studySolid, type Furniture } from "@/lib/study/seats";
 import { objectsOf, village, villageSpawnPoint, type MapObject, type Village } from "./villageMap";
 
 /**
@@ -74,8 +74,11 @@ export const PROP_TOP: Record<string, number> = {
 /** A tree trunk blocks this far from its centre. */
 export const TREE_TRUNK = 0.65;
 export const TREE_SEEDS = [0, 3, 2, 5, 7, 8, 1, 3];
+/** A tree's seed picks one of the season's TREE_SLOTS models (SEASON_TREES); slot 3 is the cedar (no fruit, any turn). */
+export const TREE_SLOTS = 4;
+export const isCedar = (seed: number) => seed % TREE_SLOTS === 3;
 
-const turn = (dx: number, dz: number, yaw = 0): [number, number] =>
+export const turn = (dx: number, dz: number, yaw = 0): [number, number] =>
   yaw ? [dx * Math.cos(yaw) + dz * Math.sin(yaw), -dx * Math.sin(yaw) + dz * Math.cos(yaw)] : [dx, dz];
 
 /** Landmarks placed on the map, in the table's order. */
@@ -124,24 +127,56 @@ export function villageSpawn(v: Village = village()): [number, number, number] {
   return [x, 0, z];
 }
 
+/** The benches, rocks and fences: the props with a solid footprint. */
+export const propsOf = (v: Village = village()) => [...objectsOf("bench", v), ...objectsOf("rock", v), ...objectsOf("fence", v)];
+
 /** Solid footprint of a bench, rock or fence: half extents × scale (before its yaw). */
-export function propFootprint(o: MapObject): [number, number] | null {
+export function propFootprint(o: Pick<MapObject, "model" | "scale">): [number, number] | null {
   const f = o.model ? PROP_FOOTPRINT[o.model] : undefined;
   return f ? [f[0] * (o.scale ?? 1), f[1] * (o.scale ?? 1)] : null;
 }
 
+/** Whether (x, z) is inside half extents hw × hd around `at`, turned by `yaw`. */
+export function inFootprint(x: number, z: number, at: { x: number; z: number }, yaw: number, hw: number, hd: number): boolean {
+  const dx = x - at.x, dz = z - at.z;
+  return Math.abs(dx * Math.cos(yaw) - dz * Math.sin(yaw)) < hw && Math.abs(dx * Math.sin(yaw) + dz * Math.cos(yaw)) < hd;
+}
+
+/**
+ * An object's footprint in its own frame (before its yaw): half extents and centre offset; null = a point.
+ * Buildings, the wharf deck, bridges, study furniture and props. The painter draws and picks with it;
+ * the health check's overlap warnings test it.
+ */
+export function objectFootprint(o: MapObject): { hw: number; hd: number; cx: number; cz: number } | null {
+  if (o.kind === "landmark") {
+    const d = WHARF_DECK_LOCAL, half = LANDMARK_INFO[o.id as LandmarkId]?.half;
+    if (o.id === "wharf") return { hw: (d.x1 - d.x0) / 2, hd: (d.z1 - d.z0) / 2, cx: (d.x0 + d.x1) / 2, cz: (d.z0 + d.z1) / 2 };
+    return half ? { hw: half[0], hd: half[1], cx: 0, cz: 0 } : null;
+  }
+  if (o.kind === "bridge") return { hw: BRIDGE_DECK_HALF[0], hd: BRIDGE_DECK_HALF[1], cx: 0, cz: 0 };
+  if (o.kind === "study" && o.model && o.model in FURNITURE) {
+    const [cx, cz, hw, hd] = FURNITURE[o.model as Furniture].solid[0];
+    return { hw, hd, cx, cz };
+  }
+  const f = propFootprint(o);
+  return f ? { hw: f[0], hd: f[1], cx: 0, cz: 0 } : null;
+}
+
 /** Bench-wood seat top: its slats measure 0.48–0.51 above the ground. */
 export const BENCH_SEAT_TOP = 0.5;
-/** The village bench within reach, as a `tsi:sit` spot: its middle, facing the side you stand on. */
-export function benchSeat(x: number, z: number, range = 1.3, v: Village = village()): { x: number; z: number; yaw: number } | null {
-  const b = objectsOf("bench", v).find(p => Math.hypot(p.x - x, p.z - z) < range);
+/** The village bench within reach, as a `tsi:sit` spot: its middle, facing the side you stand on. `benches`: the village's, when the caller holds them (every frame). */
+export function benchSeat(x: number, z: number, range = 1.3, v: Village = village(), benches: readonly MapObject[] = objectsOf("bench", v)): { x: number; z: number; yaw: number } | null {
+  const b = benches.find(p => Math.hypot(p.x - x, p.z - z) < range);
   if (!b) return null;
   const yaw = b.yaw ?? 0;
   const front = (x - b.x) * Math.sin(yaw) + (z - b.z) * Math.cos(yaw) >= 0;
   return { x: b.x, z: b.z, yaw: yaw + (front ? 0 : Math.PI) };
 }
 
-const inRect = (x: number, z: number, r: { x0: number; x1: number; z0: number; z1: number }) => x >= r.x0 && x <= r.x1 && z >= r.z0 && z <= r.z1;
+export const inRect = (x: number, z: number, r: { x0: number; x1: number; z0: number; z1: number }) => x >= r.x0 && x <= r.x1 && z >= r.z0 && z <= r.z1;
+/** The body's footprint: 5 probe points, the centre and 0.2 out along each axis. */
+export const PROBE: readonly (readonly [number, number])[] = [[0, 0], [-0.2, 0], [0.2, 0], [0, -0.2], [0, 0.2]];
+const NONE: readonly never[] = [];
 
 /**
  * Solid footprints of the running seasonal event's decorations (world XZ),
@@ -169,41 +204,42 @@ export function islandOf(v: Village): VillageIsland {
   const surface = (x: number, z: number) => surfaceAt(map, worldToCellX(map, x), worldToCellZ(map, z));
   const decks = [wharfDeck(v), ...bridgeDecks(v)].filter(d => d !== null);
   const solids = landmarks(v).filter(l => l.half);
-  const props = [...objectsOf("bench", v), ...objectsOf("rock", v), ...objectsOf("fence", v)].flatMap(o => {
+  const props = propsOf(v).flatMap(o => {
     const f = propFootprint(o);
     return f ? [{ x: o.x, z: o.z, yaw: o.yaw ?? 0, hw: f[0], hd: f[1], top: (PROP_TOP[o.model!] ?? Infinity) * (o.scale ?? 1) }] : [];
   });
-  // Trees and props by 4-unit bucket, so a painted island with hundreds of them walks as cheaply as a small one.
-  const bucket = (x: number, z: number) => `${Math.floor(x / 4)},${Math.floor(z / 4)}`;
-  const near = <T extends { x: number; z: number }>(items: readonly T[]) => {
-    const grid = new Map<string, T[]>();
-    for (const it of items) { const k = bucket(it.x, it.z); grid.set(k, [...(grid.get(k) ?? []), it]); }
-    return (x: number, z: number) => {
-      const out: T[] = [], bx = Math.floor(x / 4), bz = Math.floor(z / 4);
-      for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) out.push(...(grid.get(`${bx + dx},${bz + dz}`) ?? []));
-      return out;
-    };
+  // Trees and props by 4-unit bucket (numeric keys), so a painted island with hundreds of them walks as cheaply as a small one.
+  const buckets = <T extends { x: number; z: number }>(items: readonly T[]) => {
+    const grid = new Map<number, T[]>();
+    for (const it of items) {
+      const k = Math.floor(it.x / 4) * 4096 + Math.floor(it.z / 4), b = grid.get(k);
+      if (b) b.push(it); else grid.set(k, [it]);
+    }
+    return grid;
   };
-  const propsNear = near(props), treesNear = near(objectsOf("tree", v));
+  const propGrid = buckets(props), treeGrid = buckets(objectsOf("tree", v));
   const onDeck = (x: number, z: number) => decks.some(d => inRect(x, z, d));
   const wet = (x: number, z: number) => !onDeck(x, z) && !isGroundAtWorld(map, x, z);
   /** Top of the solid at a point: a prop's measured top, Infinity for buildings, study furniture and trunks, -Infinity for none. */
   const solidTop = (x: number, z: number) => {
     if (solids.some(l => Math.abs(x - l.x) < l.half![0] && Math.abs(z - l.z) < l.half![1]) || eventSolids.some(r => inRect(x, z, r))) return Infinity;
-    let top = -Infinity;
-    for (const p of propsNear(x, z)) {
-      const dx = x - p.x, dz = z - p.z;
-      const localX = dx * Math.cos(p.yaw) - dz * Math.sin(p.yaw);
-      const localZ = dx * Math.sin(p.yaw) + dz * Math.cos(p.yaw);
-      if (Math.abs(localX) < p.hw && Math.abs(localZ) < p.hd) top = Math.max(top, p.top);
+    let top = -Infinity, trunk = false;
+    const bx = Math.floor(x / 4), bz = Math.floor(z / 4);
+    for (let oz = -1; oz <= 1; oz++) for (let ox = -1; ox <= 1; ox++) {
+      const k = (bx + ox) * 4096 + bz + oz;
+      for (const p of propGrid.get(k) ?? NONE) if (inFootprint(x, z, p, p.yaw, p.hw, p.hd)) top = Math.max(top, p.top);
+      for (const t of treeGrid.get(k) ?? NONE) if (Math.hypot(t.x - x, t.z - z) < TREE_TRUNK) trunk = true;
     }
     if (top === Infinity || studySolid("village", x, z, 0, v)) return Infinity;
-    return treesNear(x, z).some(t => Math.hypot(t.x - x, t.z - z) < TREE_TRUNK) ? Infinity : top;
+    return trunk ? Infinity : top;
   };
   const standable = (x: number, z: number) => onDeck(x, z) || (!wet(x, z) && solidTop(x, z) === -Infinity);
   /** How much of the body (5 probe points) stands on free ground; 5 = fits. */
-  const clearance = (x: number, z: number) =>
-    [[0, 0], [-0.2, 0], [0.2, 0], [0, -0.2], [0, 0.2]].filter(([dx, dz]) => standable(x + dx, z + dz)).length;
+  const clearance = (x: number, z: number) => {
+    let n = 0;
+    for (const [dx, dz] of PROBE) if (standable(x + dx, z + dz)) n++;
+    return n;
+  };
   const canStep = (x: number, z: number, nx: number, nz: number) => {
     // Never lose clearance: out in the open every step must fit; sitting on a bench leaves you inside
     // its footprint, and from there any step that frees as much or more of you walks you off it.
@@ -235,17 +271,6 @@ export function villageIsland(v: Village = village()): VillageIsland {
   let island = islands.get(v);
   if (!island) islands.set(v, island = islandOf(v));
   return island;
-}
-
-/** Nearest landmark within `range` of a point (for proximity prompts and discovery). */
-export function nearestLandmark(x: number, z: number, range: number, ids?: readonly LandmarkId[], v: Village = village()): Landmark | null {
-  let best: Landmark | null = null, distance = range;
-  for (const l of landmarks(v)) {
-    if (ids && !ids.includes(l.id)) continue;
-    const d = Math.hypot(l.x - x, l.z - z);
-    if (d < distance) { best = l; distance = d; }
-  }
-  return best;
 }
 
 /**
