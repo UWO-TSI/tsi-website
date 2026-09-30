@@ -60,14 +60,17 @@ describe("goal cycles and monument", () => {
     expect(goalCycle(winter, new Date("2028-01-05T00:00:00Z"))).toMatchObject({ cycle: 2027, open: true });
   });
   it("repeats on the Toronto date across New Year, whatever UTC says", () => {
-    const lights = SEASONAL_GOALS.find((g) => g.slug === "winter-lights")!; // Dec 1 → Jan 1, midnight Toronto
-    // 23:30 on Dec 31 in Toronto is already Jan 1 in UTC: still the 2027 festival.
+    const lights = SEASONAL_GOALS.find((g) => g.slug === "winter-lights")!; // Dec 1 → Jan 8, midnight Toronto (through Jan 7)
+    // 23:30 on Dec 31 in Toronto is already Jan 1 in UTC; the 2027 festival runs on through New Year's week.
     expect(goalCycle(lights, new Date("2028-01-01T04:30:00Z"))).toMatchObject({ cycle: 2027, open: true });
-    expect(goalCycle(lights, new Date("2028-01-01T05:30:00Z"))).toMatchObject({ cycle: 2027, open: false });
+    expect(goalCycle(lights, new Date("2028-01-01T05:30:00Z"))).toMatchObject({ cycle: 2027, open: true });
+    // It ends at midnight Toronto starting Jan 8 (05:00Z), not midnight UTC.
+    expect(goalCycle(lights, new Date("2028-01-08T04:30:00Z"))).toMatchObject({ cycle: 2027, open: true });
+    expect(goalCycle(lights, new Date("2028-01-08T05:30:00Z"))).toMatchObject({ cycle: 2027, open: false });
     // Opens at midnight Toronto on Dec 1 (05:00Z), not midnight UTC.
     expect(goalCycle(lights, new Date("2027-12-01T04:30:00Z"))).toMatchObject({ cycle: 2026, open: false });
     expect(goalCycle(lights, new Date("2027-12-01T05:00:00Z"))).toMatchObject({ cycle: 2027, open: true });
-    expect(goalCycle(lights, new Date("2027-12-01T05:00:00Z")).end?.toISOString()).toBe("2028-01-01T05:00:00.000Z");
+    expect(goalCycle(lights, new Date("2027-12-01T05:00:00Z")).end?.toISOString()).toBe("2028-01-08T05:00:00.000Z");
   });
   it("keeps the Toronto wall-clock time when DST falls on a different date", () => {
     // Mar 10 2026 is already EDT (DST began Mar 8); Mar 10 2027 is still EST (DST begins Mar 14).

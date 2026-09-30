@@ -15,6 +15,7 @@ DO $$ BEGIN
     = 'fall-fishing-tourney:fall-tourney,winter-lights:winter-lights,genesis-week:genesis,spring-picnic:spring-picnic', 'four seasonal goals';
   ASSERT (SELECT event -> 'tourney' FROM club_goals WHERE slug = 'fall-fishing-tourney') = 'true'::jsonb, 'fall is the tourney';
   ASSERT (SELECT window_start FROM club_goals WHERE slug = 'winter-lights') = '2026-12-01 00:00 America/Toronto'::timestamptz, 'winter opens at Toronto midnight';
+  ASSERT (SELECT window_end FROM club_goals WHERE slug = 'winter-lights') = '2027-01-08 00:00 America/Toronto'::timestamptz, 'winter runs through Jan 7';
   ASSERT (SELECT event FROM club_goals WHERE slug = 'reopen-cafe') = '{}'::jsonb, 'story goals carry no event';
   ASSERT (SELECT count(*) FROM collection_species WHERE key IN ('fish_yellow_perch', 'fish_sturgeon', 'fish_giant_trevally') AND donatable) = 3, 'limited-time catches in the roster';
   ASSERT (SELECT count(*) FROM shop_items WHERE slug IN ('furn-silver-hha-trophy', 'furn-lounge-tea', 'furn-tree-cedar-snow', 'furn-monument-banner', 'furn-beach-towel') AND NOT active) = 5, 'event furniture seeded off sale';

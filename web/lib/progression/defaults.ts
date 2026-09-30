@@ -28,8 +28,9 @@ export const SEASONAL_GOALS: ClubGoal[] = [
     { decor: "fall-tourney", tourney: true, catches: ["fish_yellow_perch", "fish_sturgeon", "fish_giant_trevally"], rewards: ["furn-silver-hha-trophy"] },
     ["The fall tourney goal is done", "The club filled the fall tourney goal. A tourney cup is waiting in your storage, and the winners stay on the plaza trophy until the month is out."]),
   seasonal(2, "winter-lights", "Winter lights festival",
-    "Lanterns go up over the plaza and the cafe starts pouring cocoa. Chip in coins and materials at the monument, and every club event you check into this month counts extra.",
-    ["2026-12-01T05:00:00.000Z", "2027-01-01T05:00:00.000Z"], ["coins", "material"],
+    "Lanterns go up over the plaza and the cafe starts pouring cocoa, through New Year's week. Chip in coins and materials at the monument, and every club event you check into during the festival counts extra.",
+    // Dec 1 through Jan 7 (David, 2026-09-30): it ends at midnight on Jan 8, Toronto.
+    ["2026-12-01T05:00:00.000Z", "2027-01-08T05:00:00.000Z"], ["coins", "material"],
     { decor: "winter-lights", rewards: ["furn-tree-cedar-snow", "furn-lounge-tea"] },
     ["The lights stay on", "The club filled the winter lights goal. A festive fir and a cocoa set are in your storage. Happy holidays from everyone at TSI."]),
   seasonal(3, "genesis-week", "GENESIS week",

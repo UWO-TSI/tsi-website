@@ -25,8 +25,9 @@ describe("event windows (Toronto time)", () => {
     expect(decor("2027-12-01T04:30:00Z")).toBeNull(); // Nov 30, 23:30 in Toronto
     expect(decor("2027-12-01T05:30:00Z")).toBe("winter-lights");
     expect(decor("2028-01-01T00:30:00Z")).toBe("winter-lights"); // Dec 31, 19:30 in Toronto; UTC has already turned
-    expect(decor("2028-01-01T04:30:00Z")).toBe("winter-lights"); // 23:30 on New Year's Eve
-    expect(decor("2028-01-01T05:30:00Z")).toBeNull(); // 00:30 on Jan 1
+    expect(decor("2028-01-01T05:30:00Z")).toBe("winter-lights"); // 00:30 on Jan 1: New Year's week is in
+    expect(decor("2028-01-08T04:30:00Z")).toBe("winter-lights"); // 23:30 on Jan 7
+    expect(decor("2028-01-08T05:30:00Z")).toBeNull(); // 00:30 on Jan 8
     expect(decor("2026-10-01T03:30:00Z")).toBe("fall-tourney"); // Sep 30, 23:30 EDT
     expect(decor("2026-10-01T04:30:00Z")).toBeNull();
   });
