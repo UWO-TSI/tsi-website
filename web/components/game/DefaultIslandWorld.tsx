@@ -106,7 +106,6 @@ import { EventDecor, eventSpots, PostersSheet, TourneySheet } from "./SeasonalEv
 import { useIslandEvent, type IslandEvent } from "@/lib/game/seasonalEvents";
 import styles from "./DefaultIslandWorld.module.css";
 
-type Metrics = { fps: number; frameMs: number; calls: number; triangles: number; x: number; z: number };
 type Near = "enter" | "exit" | "board" | "display" | "desk" | "shelf" | "clock" | "notice" | "catch" | "cafe" | "museum" | "ruins" | "mailbox" | "monument" | "home" | "house" | "village" | "buy" | "claim" | "donate" | "report" | "fish" | "forage" | "net" | "museum_enter" | "cafe_enter" | "curator" | "closet" | "fitting" | "oracle_enter" | "altar" | "missions" | "ruins_exit" | "lantern" | "bench" | "bed" | "trophy" | "posters" | "cocoa" | "picnic" | null;
 type Sheet = "notice" | "letters" | "journal" | "trophies" | "showcase" | "closet" | "fitting" | "oracle" | "path" | "settings" | "missions" | "tourney" | "posters" | null;
 const PHASE_NAMES: Record<IslandPhase, string> = { dawn: "Dawn", day: "Daylight", evening: "Evening", night: "Night" };
@@ -192,17 +191,21 @@ function QualityProbe({ onTier }: { onTier: (tier: QualityTier) => void }) {
 }
 
 
-function Performance({ player, onMetrics }: { player: React.RefObject<THREE.Vector3>; onMetrics: (metrics: Metrics) => void }) {
+/** Module scope: the react compiler forbids writing through a prop. */
+const writeText = (el: HTMLElement | null, text: string) => { if (el) el.textContent = text; };
+
+/** Once a second into the options' Performance readout, straight to the DOM: a 1 Hz setState re-rendered the whole island. */
+function Performance({ player, output }: { player: React.RefObject<THREE.Vector3>; output: React.RefObject<HTMLOutputElement | null> }) {
   const samples = useRef({ seconds: 0, frames: 0 });
   useFrame(({ gl }, delta) => {
     const calls = gl.info.render.calls, triangles = gl.info.render.triangles;
     gl.info.reset();
-    samples.current.seconds += delta;
-    samples.current.frames++;
-    if (samples.current.seconds >= 1) {
-      onMetrics({ fps: Math.round(samples.current.frames / samples.current.seconds), frameMs: samples.current.seconds * 1000 / samples.current.frames,
-        calls, triangles, x: player.current.x, z: player.current.z });
-      samples.current = { seconds: 0, frames: 0 };
+    const s = samples.current;
+    s.seconds += delta;
+    s.frames++;
+    if (s.seconds >= 1) {
+      writeText(output.current, `${Math.round(s.frames / s.seconds)} FPS · ${(s.seconds * 1000 / s.frames).toFixed(1)} ms/frame\n${calls} draws · ${triangles.toLocaleString()} triangles\nPosition ${player.current.x.toFixed(1)}, ${player.current.z.toFixed(1)}`);
+      s.seconds = 0; s.frames = 0;
     }
   }, -100);
   return null;
@@ -514,7 +517,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   const objectivePlot = useMemo(() => target ? { ...plot, content: <>{plot.content}
     <g className={styles.objectiveMarker}><circle cx={-target[0]} cy={-target[1]} r={1.9} fill="none" stroke="#e8704a" strokeWidth={0.6} />
       <path d={`M ${-target[0]} ${-target[1] - 2.9} l 1.3 -2.1 h -2.6 z`} fill="#e8704a" /></g></> } : plot, [plot, target]);
-  const [metrics, setMetrics] = useState<Metrics | null>(null);
+  const perfOutput = useRef<HTMLOutputElement>(null);
   const player = useRef(new THREE.Vector3(...villageSpawn()));
   const hqDoor = useMemo(() => landmarkPoint("hq", "door"), []);
   const [detectedTier, setDetectedTier] = useState<QualityTier | null>(null);
@@ -660,7 +663,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
           <PostFX antialias={!graphics.liteMode && !graphics.pixelated} grade={grade} fx={lookFx(lookPreset, !liteMode)} />
           <LookMaterials preset={lookPreset} />
           <SunShadows />
-          <Performance player={player} onMetrics={setMetrics} />
+          <Performance player={player} output={perfOutput} />
           <QualityProbe onTier={onTier} />
           {children}
           {!inside && !atHome && site !== "ruins" && near !== "enter" && hqDoor && <Html position={[hqDoor[0], 2.9, hqDoor[1]]} center distanceFactor={10} zIndexRange={[3, 0]}>
@@ -702,7 +705,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
         <button className={styles.return} onClick={() => { setInside(null); setSite("village"); setReturned(false); setReset((n) => n + 1); setOverview(false); }}>Return to clearing</button>
         <details className={styles.performance}>
           <summary>Performance</summary>
-          <output>{metrics ? `${metrics.fps} FPS · ${metrics.frameMs.toFixed(1)} ms/frame\n${metrics.calls} draws · ${metrics.triangles.toLocaleString()} triangles\nPosition ${metrics.x.toFixed(1)}, ${metrics.z.toFixed(1)}` : "Measuring…"}</output>
+          <output ref={perfOutput}>Measuring…</output>
           <label className={styles.preset}>
             <span>Quality</span>
             <select value={quality} onChange={(e) => setQuality(e.target.value)} data-testid="quality">
