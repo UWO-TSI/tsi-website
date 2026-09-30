@@ -74,6 +74,9 @@ export const PROP_TOP: Record<string, number> = {
 /** A tree trunk blocks this far from its centre. */
 export const TREE_TRUNK = 0.65;
 export const TREE_SEEDS = [0, 3, 2, 5, 7, 8, 1, 3];
+/** A tree's seed picks one of the season's TREE_SLOTS models (SEASON_TREES); slot 3 is the cedar (no fruit, any turn). */
+export const TREE_SLOTS = 4;
+export const isCedar = (seed: number) => seed % TREE_SLOTS === 3;
 
 export const turn = (dx: number, dz: number, yaw = 0): [number, number] =>
   yaw ? [dx * Math.cos(yaw) + dz * Math.sin(yaw), -dx * Math.sin(yaw) + dz * Math.cos(yaw)] : [dx, dz];

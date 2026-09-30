@@ -58,7 +58,7 @@ import {
   PAINTER_DRAFT_KEY, normaliseSea, parseVillage, serialiseVillage, villageJson, villageOf,
   type MapObject, type ObjectKind, type VillageDoc,
 } from "@/lib/game/villageMap";
-import { LANDMARK_IDS, LANDMARK_INFO, PROP_FOOTPRINT, TREE_TRUNK, objectFootprint, turn, type LandmarkId } from "@/lib/game/defaultIsland";
+import { LANDMARK_IDS, LANDMARK_INFO, PROP_FOOTPRINT, TREE_SLOTS, TREE_TRUNK, objectFootprint, turn, type LandmarkId } from "@/lib/game/defaultIsland";
 import { villageHealth, type VillageHealth } from "@/lib/game/mapHealth";
 import { mapBudget } from "@/lib/game/mapBudget";
 import { classifyWater, WATER_CLASS } from "@/lib/game/fishingSpots";
@@ -1135,7 +1135,7 @@ export default function MapLab() {
       } else {
         id = nextObjectId(kind, w.objects);
       }
-      if (kind === "tree" || kind === "bush" || kind === "flower") extra = { seed: kind === "tree" ? Number(placeModel || 0) + 4 * Math.floor(Math.random() * 3) : Math.floor(Math.random() * 32) };
+      if (kind === "tree" || kind === "bush" || kind === "flower") extra = { seed: kind === "tree" ? Number(placeModel || 0) + TREE_SLOTS * Math.floor(Math.random() * 3) : Math.floor(Math.random() * 32) };
       if (kind === "rock") extra = { model: ROCK_MODELS.includes(placeModel) ? placeModel : ROCK_MODELS[0], scale: 1 };
       if (kind === "bench") extra = { model: "bench-wood" };
       if (kind === "fence") extra = { model: FENCE_MODELS.includes(placeModel) ? placeModel : FENCE_MODELS[0] };
@@ -1542,7 +1542,7 @@ export default function MapLab() {
                         <span>seed</span>
                         <input type="number" step={1} min={0} value={selectedObject.seed ?? 0} onChange={(e) => updateObject(selected!, { seed: Math.max(0, Math.round(Number(e.target.value))) })} style={field} />
                         <span />
-                        <span style={{ color: "#7d868e" }}>{selectedObject.kind === "tree" ? TREE_NAMES[(selectedObject.seed ?? 0) % 4] : ""}</span>
+                        <span style={{ color: "#7d868e" }}>{selectedObject.kind === "tree" ? TREE_NAMES[(selectedObject.seed ?? 0) % TREE_SLOTS] : ""}</span>
                       </>
                     )}
                   </div>

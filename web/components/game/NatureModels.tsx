@@ -5,6 +5,7 @@ import { useGLTF } from "@react-three/drei";
 import { prepareModel, disposeModelMaterials, applyModelTextures } from "@/lib/game/modelMaterials";
 import { shadowClassFor, type ShadowClass } from "@/lib/game/shadows";
 import { modelContact, useContactShadow } from "./ContactShadows";
+import { isCedar } from "@/lib/game/defaultIsland";
 
 /**
  * GLB model loader (Kenney kits + ACNH pack).
@@ -83,7 +84,7 @@ export function NatureTree({ position, seed, models = TREE_MODELS }: { position:
 export function treeYaw(seed: number): number {
   // Broadleaf canopies are authored wider than they are deep; a side-on
   // quarter turn makes the leaf cards look like a thin sheet.
-  const yaw = seed % TREE_MODELS.length === 3 ? seed * 137.5 : 180 + ((seed % 5) - 2) * 8;
+  const yaw = isCedar(seed) ? seed * 137.5 : 180 + ((seed % 5) - 2) * 8;
   return (yaw * Math.PI) / 180;
 }
 
