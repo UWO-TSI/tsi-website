@@ -939,7 +939,7 @@
    "slot": "accessory",
    "name": "Flower crown",
    "glb": "accessories/accessory/acc_flower_crown.glb",
-   "tris": 528,
+   "tris": 624,
    "materials": [
     {
      "name": "M_Main",
@@ -973,7 +973,7 @@
    "slot": "accessory",
    "name": "Crystal circlet",
    "glb": "accessories/accessory/acc_crystal_circlet.glb",
-   "tris": 216,
+   "tris": 600,
    "materials": [
     {
      "name": "M_Main",
@@ -1093,9 +1093,10 @@
  ],
  "base": {
   "glb": "base/v6.glb",
-  "clips_glb": "base/v6_clips.glb",
+  "clips_glb": "base/v7_clips.glb",
   "fps": 30,
-  "note": "v6_clips.glb = the v6 base body (tee + shorts + default hair) with every clip. Sit/Study sit on a seat at seatHeight; Sleep/Defeat lie on the back with the head toward the character's back (+Y Blender, -Z glTF). hand = the socket that holds the weapon."
+  "head": "v7/head.blend",
+  "note": "v7_clips.glb = the v6 base body (tee + shorts + default hair) with every clip, and the hand-modeled v7 head (avatar v7). Sit/Study sit on a seat at seatHeight; Sleep/Defeat lie on the back with the head toward the character's back (+Y Blender, -Z glTF). hand = the socket that holds the weapon."
  },
  "clips": [
   {
@@ -1322,7 +1323,7 @@
    "slot": "bangs",
    "name": "Straight cut",
    "glb": "hair/bangs/bangs_straight.glb",
-   "tris": 162,
+   "tris": 450,
    "materials": [
     {
      "name": "M_Hair",
@@ -1332,7 +1333,10 @@
    "decalSlot": null,
    "hidesBackHair": false,
    "hides": [],
-   "sheetCell": "N4.2"
+   "sheetCell": "N4.2",
+   "locks": 9,
+   "v7": true,
+   "style": "bob"
   },
   {
    "id": "bangs_straight_long",
@@ -1424,7 +1428,7 @@
    "slot": "bangs",
    "name": "Curtain",
    "glb": "hair/bangs/bangs_curtain.glb",
-   "tris": 172,
+   "tris": 480,
    "materials": [
     {
      "name": "M_Hair",
@@ -1434,7 +1438,10 @@
    "decalSlot": null,
    "hidesBackHair": false,
    "hides": [],
-   "sheetCell": "N3.2"
+   "sheetCell": "N3.2",
+   "locks": 8,
+   "v7": true,
+   "style": "long"
   },
   {
    "id": "bangs_curtain_long",
@@ -1475,7 +1482,7 @@
    "slot": "bangs",
    "name": "Spiky tufts",
    "glb": "hair/bangs/bangs_spiky.glb",
-   "tris": 162,
+   "tris": 380,
    "materials": [
     {
      "name": "M_Hair",
@@ -1485,7 +1492,10 @@
    "decalSlot": null,
    "hidesBackHair": false,
    "hides": [],
-   "sheetCell": "N4.3"
+   "sheetCell": "B6.2",
+   "locks": 8,
+   "v7": true,
+   "style": "short"
   },
   {
    "id": "bangs_hime",
@@ -1594,7 +1604,7 @@
    "slot": "back",
    "name": "Bob",
    "glb": "hair/back/back_bob.glb",
-   "tris": 386,
+   "tris": 930,
    "materials": [
     {
      "name": "M_Hair",
@@ -1604,7 +1614,11 @@
    "decalSlot": null,
    "hidesBackHair": false,
    "hides": [],
-   "sheetCell": "B2.1"
+   "sheetCell": "B2.1",
+   "locks": 9,
+   "v7": true,
+   "style": "bob",
+   "capFrom": -28
   },
   {
    "id": "back_wolf",
@@ -1628,7 +1642,7 @@
    "slot": "back",
    "name": "Long straight",
    "glb": "hair/back/back_long.glb",
-   "tris": 586,
+   "tris": 1002,
    "materials": [
     {
      "name": "M_Hair",
@@ -1638,7 +1652,11 @@
    "decalSlot": null,
    "hidesBackHair": false,
    "hides": [],
-   "sheetCell": "B3.1"
+   "sheetCell": "B3.1",
+   "locks": 9,
+   "v7": true,
+   "style": "long",
+   "capFrom": -34
   },
   {
    "id": "back_wavy_long",
@@ -1745,9 +1763,9 @@
   {
    "id": "back_short_spiky",
    "slot": "back",
-   "name": "Short spiky",
+   "name": "Short layered",
    "glb": "hair/back/back_short_spiky.glb",
-   "tris": 386,
+   "tris": 978,
    "materials": [
     {
      "name": "M_Hair",
@@ -1757,7 +1775,11 @@
    "decalSlot": null,
    "hidesBackHair": false,
    "hides": [],
-   "sheetCell": "B3.4"
+   "sheetCell": "B6.2",
+   "locks": 12,
+   "v7": true,
+   "style": "short",
+   "capFrom": -6
   },
   {
    "id": "back_undercut",

@@ -6,8 +6,10 @@
    "id": "bangs_straight",
    "name": "Straight cut",
    "sheet_cell": "N4.2",
-   "tris": 162,
-   "file": "bangs/bangs_straight.glb"
+   "tris": 450,
+   "file": "bangs/bangs_straight.glb",
+   "locks": 9,
+   "source": "v7/hair_bob.blend"
   },
   {
    "id": "bangs_straight_long",
@@ -48,8 +50,10 @@
    "id": "bangs_curtain",
    "name": "Curtain",
    "sheet_cell": "N3.2",
-   "tris": 172,
-   "file": "bangs/bangs_curtain.glb"
+   "tris": 480,
+   "file": "bangs/bangs_curtain.glb",
+   "locks": 8,
+   "source": "v7/hair_long.blend"
   },
   {
    "id": "bangs_curtain_long",
@@ -68,9 +72,11 @@
   {
    "id": "bangs_spiky",
    "name": "Spiky tufts",
-   "sheet_cell": "N4.3",
-   "tris": 162,
-   "file": "bangs/bangs_spiky.glb"
+   "sheet_cell": "B6.2",
+   "tris": 380,
+   "file": "bangs/bangs_spiky.glb",
+   "locks": 8,
+   "source": "v7/hair_short.blend"
   },
   {
    "id": "bangs_hime",
@@ -120,8 +126,10 @@
    "id": "back_bob",
    "name": "Bob",
    "sheet_cell": "B2.1",
-   "tris": 386,
-   "file": "back/back_bob.glb"
+   "tris": 930,
+   "file": "back/back_bob.glb",
+   "locks": 9,
+   "source": "v7/hair_bob.blend"
   },
   {
    "id": "back_wolf",
@@ -134,8 +142,10 @@
    "id": "back_long",
    "name": "Long straight",
    "sheet_cell": "B3.1",
-   "tris": 586,
-   "file": "back/back_long.glb"
+   "tris": 1002,
+   "file": "back/back_long.glb",
+   "locks": 9,
+   "source": "v7/hair_long.blend"
   },
   {
    "id": "back_wavy_long",
@@ -181,10 +191,12 @@
   },
   {
    "id": "back_short_spiky",
-   "name": "Short spiky",
-   "sheet_cell": "B3.4",
-   "tris": 386,
-   "file": "back/back_short_spiky.glb"
+   "name": "Short layered",
+   "sheet_cell": "B6.2",
+   "tris": 978,
+   "file": "back/back_short_spiky.glb",
+   "locks": 12,
+   "source": "v7/hair_short.blend"
   },
   {
    "id": "back_undercut",
