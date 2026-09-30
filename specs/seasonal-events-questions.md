@@ -17,3 +17,13 @@ Built: the four events as seasonal club goals with an `event` on each goal (migr
 10. **Assets (asks, not blockers).** The stage is the wooden bridge deck with banners and lamps; the picnic blanket is the blue beach towel. A real stage and a gingham blanket would read better if you have packs for them.
 11. **Monument.** The plaza monument keeps showing the story goals; seasonal goals show on the notice board and journal only (and only while they run or once completed). No confetti ceremony for seasonal goals: the completion letter and the rewards.
 12. **Catch trust.** Catches and sizes are still client-rolled (bounded by the hourly caps). If the tourney attracts forged sizes, server-issued catch tokens are the upgrade.
+
+## Answered (David, 2026-09-30)
+
+- **Q4, event items in the shop:** rewards only, not sold during the window. Kept as built.
+- **Q7, winter window:** Dec 1 through Jan 7, New Year's week included. Seeded as Dec 1 00:00 to Jan 8 00:00 Toronto (the window's end is exclusive, like the others); the editor shows it as such for admins to retune. Tests and evidence moved with it (`V-06b` Jan 1 00:30 still up, `V-06d` Jan 7 23:30 up, `V-06e` Jan 8 00:30 down).
+- **Fish follow their listed months** (hardening question 1): the server roll only draws in-season fish; the three limited-time fish follow the tourney's window instead of their "Sep" months, so an admin moving the tourney moves them too.
+
+## Merge with server-rolled catches (2026-09-30)
+
+`game/hardening` made catches server-authoritative. On top of it: the limited-time fish are only in the server's roll while their event runs (and with no club goals at all they stay shut), and the tourney entry is written by the server's land step (`seasonal_land` wraps `collections_land` in one transaction; a limited-time fish landed after its window closes lands nothing). Nothing the client reports reaches the board. Only reeled catches enter the tourney; hand-gathered shore crabs don't (it's a fishing tourney). Species outside the roster land with no size, so they can't enter either, same as the weekly trophy case.
