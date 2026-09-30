@@ -4,7 +4,7 @@ import { useRef, useState, useEffect, useCallback, useMemo } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { Html } from "@react-three/drei";
 import * as THREE from "three";
-import { getTodayWeather } from "@/lib/game/weather";
+import { liveIslandWeather } from "@/lib/game/islandWeather";
 import { useSFX } from "@/lib/game/useAudio";
 import { getCameraForwardXZ } from "@/lib/game/cameraBasis";
 import { bindGameKeys } from "@/lib/game/keyboardInput";
@@ -308,7 +308,7 @@ export default function PlayerAvatar({ spawnPosition, onMove, world, groundHeigh
       f.step += dt;
       if (f.step >= Math.max(0.2, 2.96 / speed)) {
         f.step = 0;
-        const surface = groundSurface?.(x, z), bridge = surface === Surface.Wood, brick = surface === Surface.Brick || surface === Surface.Stone, rain = getTodayWeather() === "rain";
+        const surface = groundSurface?.(x, z), bridge = surface === Surface.Wood, brick = surface === Surface.Brick || surface === Surface.Stone, rain = liveIslandWeather() === "rain";
         playSFX(bridge ? "blip4" : brick ? "blip3" : "footstep");
         if (!bridge && (!brick || rain)) dust.spawn(x - state.vx * 0.03, groundY, z - state.vz * 0.03, (0.6 + speed * 0.055) * j.dust, rain);
       }

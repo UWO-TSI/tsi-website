@@ -4,7 +4,7 @@
  * forecast; when it is unavailable the seeded daily weather from `weather.ts`
  * is used, so every player still sees the same sky.
  */
-import { weatherForDate } from "./weather";
+import { weatherForDate, type Weather } from "./weather";
 import type { Season } from "./season";
 import type { SunDay } from "./sunTimes";
 import { torontoParts } from "@/lib/time";
@@ -58,6 +58,18 @@ export function torontoHourKey(date = new Date()): string {
 /** Roster weather words from the island's weather states (fog/wind read as cloudy). */
 export function rosterWeather(weather: IslandWeather): "clear" | "cloudy" | "rain" | "snow" {
   return weather === "rain" ? "rain" : weather === "snow" ? "snow" : weather === "clear" ? "clear" : "cloudy";
+}
+
+/** Reel words (weatherPerks, fish hours) from the island's weather states. */
+export function reelWeather(weather: IslandWeather): Weather {
+  return weather === "rain" ? "rain" : weather === "clear" ? "sunny" : "cloudy";
+}
+
+/** The island weather the world shows now, published by useIslandConditions for code outside React (footsteps, the reel). */
+let live: IslandWeather = "clear";
+export const liveIslandWeather = (): IslandWeather => live;
+export function setLiveIslandWeather(weather: IslandWeather): void {
+  live = weather;
 }
 
 export function weatherAt(report: WeatherReport, date = new Date()): IslandWeather | null {

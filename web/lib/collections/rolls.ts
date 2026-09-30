@@ -11,11 +11,10 @@ import { fishingSpot, villageWater, type WaterType } from "@/lib/game/fishingSpo
 import { inBounds, worldToCellX, worldToCellZ } from "@/lib/game/grid";
 import { createHomeIsland } from "@/lib/game/homeIsland";
 import { homeNodes, villageNodes } from "@/lib/game/islandNodes";
-import { rosterWeather, type IslandWeather } from "@/lib/game/islandWeather";
+import { reelWeather, rosterWeather, type IslandWeather } from "@/lib/game/islandWeather";
 import { hourKey, rollFishFor, rollNode } from "@/lib/game/peaceful";
 import type { RodTier } from "@/lib/game/rods";
 import { village } from "@/lib/game/villageMap";
-import type { Weather } from "@/lib/game/weather";
 import { torontoParts } from "@/lib/time";
 import type { WorldMoment } from "./logic";
 import type { Species } from "./roster";
@@ -71,9 +70,6 @@ export function castWater(site: Site, [x, z]: [number, number]): WaterType | nul
   return fishingSpot(map, classify, x, z)?.water ?? null;
 }
 
-/** Reel weather words from the island's weather states. */
-const REEL_WEATHER: Record<IslandWeather, Weather> = { clear: "sunny", rain: "rain", snow: "cloudy", fog: "cloudy", wind: "cloudy" };
-
 /**
  * The fish that bites: the reel's pool (FishingOverlay) for the water, rod and cast power, at the Toronto hour, month and real weather.
  * `catches`: the seasonal events' limited-time species and the ones biting now (lib/progression/seasonal.ts eventCatches);
@@ -82,6 +78,6 @@ const REEL_WEATHER: Record<IslandWeather, Weather> = { clear: "sunny", rain: "ra
 export function fishRoll(water: WaterType, power: number, rod: RodTier, now: Date, weather: IslandWeather, random = Math.random, catches?: EventCatches): { fish: FishDef; size: number } {
   const { hour, minute, month } = torontoParts(now);
   const luck = power + (power >= CAST.maxZone ? CAST.maxBonus : 0);
-  const fish = rollFishFor(water, luck, rod, { hour: hour + minute / 60, weather: REEL_WEATHER[weather], month, catches }, random);
+  const fish = rollFishFor(water, luck, rod, { hour: hour + minute / 60, weather: reelWeather(weather), month, catches }, random);
   return { fish, size: rollSize(fish.sizeCm, random) };
 }

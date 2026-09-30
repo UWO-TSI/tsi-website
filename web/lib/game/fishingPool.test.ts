@@ -1,12 +1,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { FISH, fishWeight, fishingPool, rollFish, setEventCatches } from "./fishing";
+import { FISH, currentFishingContext, fishWeight, fishingPool, rollFish, setEventCatches } from "./fishing";
+import { setLiveIslandWeather } from "./islandWeather";
 import { weatherMods } from "./weatherPerks";
 import { SEASONAL_GOALS } from "@/lib/progression/defaults";
 
 /** Limited-time catches stay out of the pool until their event runs (lib/game/seasonalEvents.ts). */
 const LIMITED = new Set(SEASONAL_GOALS.flatMap((g) => g.event.catches));
 
-afterEach(() => vi.restoreAllMocks());
+afterEach(() => { vi.restoreAllMocks(); vi.useRealTimers(); setLiveIslandWeather("clear"); });
 
 describe("shared fishing odds and rolls", () => {
   it.each(["sunny", "cloudy", "rain"])("preserves the authored roll distribution in %s", (weather) => {
@@ -61,5 +62,27 @@ describe("shared fishing odds and rolls", () => {
         }
       }
     }
+  });
+});
+
+describe("the reel reads the island's weather on Toronto time (the server roll's sky and clock)", () => {
+  it("follows the island weather the world shows, not a seeded daily hash", () => {
+    setLiveIslandWeather("rain");
+    expect(currentFishingContext().weather).toBe("rain");
+    setLiveIslandWeather("clear");
+    expect(currentFishingContext().weather).toBe("sunny");
+    setLiveIslandWeather("fog");
+    expect(currentFishingContext().weather).toBe("cloudy");
+  });
+  it("uses the Toronto hour and month whatever the device's timezone", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-07-15T16:30:00Z")); // 12:30 in Toronto
+    // A device clock on another continent.
+    vi.spyOn(Date.prototype, "getHours").mockReturnValue(3);
+    vi.spyOn(Date.prototype, "getMinutes").mockReturnValue(0);
+    vi.spyOn(Date.prototype, "getMonth").mockReturnValue(0);
+    const ctx = currentFishingContext();
+    expect(ctx.hour).toBeCloseTo(12.5);
+    expect(ctx.month).toBe(7);
   });
 });

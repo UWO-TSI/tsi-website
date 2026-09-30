@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { islandPhase, parseClockOverride, parseTimeOverride, type IslandPhase } from "./islandTime";
-import { parseWeatherOverride, weatherAt, type IslandWeather, type WeatherReport } from "./islandWeather";
+import { parseWeatherOverride, setLiveIslandWeather, weatherAt, type IslandWeather, type WeatherReport } from "./islandWeather";
 import { parseSeasonOverride, seasonBlend, type SeasonBlend } from "./season";
 import { sunFor } from "./sunTimes";
 import { phaseInstant, solarPosition, SUN_STEP_MS, type SunAngles } from "./sunPath";
@@ -65,9 +65,12 @@ export function useIslandConditions(): IslandConditions {
   const livePhase = islandPhase(date, report?.sun);
   const sunStep = Math.floor((forcedPhase ? phaseInstant(forcedPhase, date, report?.sun) : date).getTime() / SUN_STEP_MS);
   const sun = useMemo(() => solarPosition(new Date(sunStep * SUN_STEP_MS)), [sunStep]);
+  const weather = weatherOverride ?? (report && weatherAt(report, date)) ?? "clear";
+  // Footsteps and the reel read it outside React (liveIslandWeather).
+  useEffect(() => setLiveIslandWeather(weather), [weather]);
   return {
     phase: forcedPhase ?? livePhase, forcedPhase, setForcedPhase, livePhase,
-    weather: weatherOverride ?? (report && weatherAt(report, date)) ?? "clear",
+    weather,
     season: seasonOverride ?? seasonBlend(date),
     sunSource: sunFor(date, report?.sun).source,
     sun,
