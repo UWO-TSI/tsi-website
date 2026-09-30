@@ -18,11 +18,19 @@ export interface LandSeason {
   tourney: TourneyRef | null;
 }
 
+/** A recipe a rare catch taught (20260930100000 crafting_catch_drop). */
+export interface LearnedRecipe {
+  id: string;
+  name: string;
+}
+
 export interface CatchResult {
   count: number;
   total_collected: number;
   best_size_cm: number | null;
   new_record: boolean;
+  /** Land and harvest: the recipe this catch taught, in the same transaction; null when none. */
+  recipe?: LearnedRecipe | null;
 }
 
 export interface CollectionsStore {
@@ -40,9 +48,10 @@ export interface CollectionsStore {
   /**
    * Atomic: record the member's latest cast once, MIN_REEL_MS to ROLL_TTL_MS after it (recordCatch caps apply).
    * `seasonal` (20260929120000): refuse a limited-time catch whose event is `closed`, and enter the open `tourney`.
+   * A rare catch may teach a recipe with it (20260930100000).
    */
   land(memberId: string, rollId: string, seasonal?: LandSeason): Promise<CatchResult & { item_key: string; size_cm: number | null }>;
-  /** Atomic: one harvest per node per hour, recorded through recordCatch (a capped one leaves the node unharvested). */
+  /** Atomic: one harvest per node per hour, recorded through recordCatch (a capped one leaves the node unharvested); a rare one may teach a recipe. */
   harvest(memberId: string, nodeId: string, hourKey: string, itemKey: string, sizeCm: number | null, trophyEligible: boolean): Promise<CatchResult>;
   /** Catalogue refs of the member's owned gear (rods). */
   ownedGear(memberId: string): Promise<string[]>;

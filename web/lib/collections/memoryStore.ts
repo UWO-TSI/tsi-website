@@ -1,15 +1,16 @@
-/** In-memory CollectionsStore mirroring the 031, 036, catch-roll and seasonal-land SQL functions (tests, dev harness). */
+/** In-memory CollectionsStore mirroring the 031, 036, catch-roll, seasonal-land and recipe-drop SQL functions (tests, dev harness). */
 import { FISH } from "@/lib/game/fishing";
 import { weekStart, type Donation, type MemberItem, type WeeklyBest } from "./logic";
 import { CAST_GAP_MS, MIN_REEL_MS, ROLL_TTL_MS } from "./rolls";
 import { ROSTER } from "./roster";
-import { CollectionsError, type CollectionsStore } from "./store";
+import { CollectionsError, type CollectionsStore, type LearnedRecipe } from "./store";
 import type { TourneyEntry } from "@/lib/progression/seasonal";
 
 /** collections_record_catch's hourly caps: per species by rarity, and 200 per member. */
 const CAP: Record<string, number> = { legendary: 3, seaking: 3, epic: 6, rare: 12, uncommon: 30 };
 
-export function memoryCollectionsStore(now: () => Date = () => new Date("2026-09-24T16:00:00Z")) {
+/** `drop`: crafting_catch_drop (memoryCraftingStore's catchDrop); without it catches teach nothing. */
+export function memoryCollectionsStore(now: () => Date = () => new Date("2026-09-24T16:00:00Z"), drop: (member: string, itemKey: string) => LearnedRecipe | null = () => null) {
   const items = new Map<string, MemberItem>(); // `${member}:${key}`
   const donations: (Donation & { key: string })[] = [];
   const bests = new Map<string, WeeklyBest & { week: string }>();
@@ -99,13 +100,13 @@ export function memoryCollectionsStore(now: () => Date = () => new Date("2026-09
       const res = await store.recordCatch(m, r.key, r.size, r.trophy);
       r.landed = true;
       if (seasonal?.tourney) enter(seasonal.tourney.goal_id, seasonal.tourney.cycle, m, r.key, r.size);
-      return { item_key: r.key, size_cm: r.size, ...res };
+      return { item_key: r.key, size_cm: r.size, ...res, recipe: drop(m, r.key) };
     },
     async harvest(m, node, hourKey, key, size, trophy) {
       if (harvests.has(`${m}:${node}:${hourKey}`)) throw new CollectionsError("already_harvested");
       const res = await store.recordCatch(m, key, size, trophy);
       harvests.add(`${m}:${node}:${hourKey}`);
-      return res;
+      return { ...res, recipe: drop(m, key) };
     },
     async ownedGear(m) {
       return gear.get(m) ?? [];

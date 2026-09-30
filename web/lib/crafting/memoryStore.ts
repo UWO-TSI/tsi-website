@@ -1,10 +1,13 @@
-/** In-memory CraftingStore over the economy memory store, mirroring 20260926160000_crafting.sql (tests, dev demo). */
+/** In-memory CraftingStore over the economy memory store, mirroring 20260926160000_crafting.sql and 20260930100000_recipe_drops.sql (tests, dev demo). */
+import { ROSTER } from "@/lib/collections/roster";
+import type { LearnedRecipe } from "@/lib/collections/store";
 import { memoryEconomyStore } from "@/lib/wallet/memoryStore";
 import { torontoDay } from "@/lib/wallet/rules";
-import { CRAFTED_ITEMS, RECIPE_CARDS, RECIPES } from "./recipes";
+import { CRAFTED_ITEMS, DROP_RARITIES, RECIPE_CARDS, RECIPE_DROP_CHANCE, RECIPE_DROPS, RECIPES, outputName, type DropRarity } from "./recipes";
 import { CraftingError, type CraftingStore } from "./service";
 
-export function memoryCraftingStore(eco = memoryEconomyStore(), clock: () => Date = () => new Date()) {
+/** `random`: crafting_catch_drop's random() (the drop's chance, then which recipe). */
+export function memoryCraftingStore(eco = memoryEconomyStore(), clock: () => Date = () => new Date(), random = Math.random) {
   // The migration's seed: craft-only outputs (inactive) and recipe cards (on sale).
   [...CRAFTED_ITEMS, ...RECIPE_CARDS].forEach((c, i) => eco.items.push({
     ...c, id: `00000000-0000-4000-8000-0000000c${String(i + 1).padStart(4, "0")}`, active: RECIPE_CARDS.includes(c), available_from: null, available_until: null,
@@ -85,5 +88,16 @@ export function memoryCraftingStore(eco = memoryEconomyStore(), clock: () => Dat
       return RECIPES;
     },
   };
-  return { store, eco };
+  /** crafting_catch_drop: a rare catch may teach a drop recipe the member lacks (memoryCollectionsStore's land/harvest call it). */
+  const catchDrop = (m: string, itemKey: string): LearnedRecipe | null => {
+    const rarity = ROSTER.find(s => s.key === itemKey)?.rarity as DropRarity;
+    if (!(rarity in RECIPE_DROP_CHANCE) || random() >= RECIPE_DROP_CHANCE[rarity]) return null;
+    const rank = (r: DropRarity) => DROP_RARITIES.indexOf(r);
+    const pool = RECIPES.filter(r => r.id in RECIPE_DROPS && rank(RECIPE_DROPS[r.id]) <= rank(rarity) && !knows(m, r.id));
+    const pick = pool[Math.floor(random() * pool.length)];
+    if (!pick) return null;
+    taught.set(`${m}:${pick.id}`, { source: "catch", day: null });
+    return { id: pick.id, name: outputName(pick) };
+  };
+  return { store, eco, catchDrop };
 }

@@ -64,8 +64,8 @@ export function collect(itemKey: string, { scope }: { scope?: string } = {}): vo
   }
 }
 
-/** A recorded catch (harvest, land), or a cast's roll waiting to be landed. */
-export interface CatchReply { item_key: string; size_cm: number | null; roll?: string; count?: number; total_collected?: number; new_record?: boolean }
+/** A recorded catch (harvest, land), or a cast's roll waiting to be landed. `recipe`: what a rare catch taught. */
+export interface CatchReply { item_key: string; size_cm: number | null; roll?: string; count?: number; total_collected?: number; new_record?: boolean; recipe?: { id: string; name: string } | null }
 export type CatchAnswer = { ok: true; catch: CatchReply } | { ok: false; error: string; code?: string };
 
 /**

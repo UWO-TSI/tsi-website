@@ -7,8 +7,8 @@ import { bestOwnedRod, canHook } from "@/lib/game/rods";
 import { CATALOGUE } from "@/lib/wallet/catalogue";
 import { buy, getInventory } from "@/lib/wallet/service";
 import { memoryCraftingStore } from "./memoryStore";
-import { CRAFTED_ITEMS, MATERIALS, RECIPE_CARDS, RECIPES } from "./recipes";
-import { craftingSeedSql } from "./seed";
+import { CRAFTED_ITEMS, MATERIALS, RECIPE_CARDS, RECIPE_DROPS, RECIPES, validateRecipeDraft } from "./recipes";
+import { craftingSeedSql, recipeDropsSql } from "./seed";
 import { craft, learnFromQuest, openBottle, recipeBook } from "./service";
 
 const A = "00000000-0000-4000-8000-0000000000aa";
@@ -41,6 +41,17 @@ describe("recipe data", () => {
   it("is mirrored verbatim in 20260926160000_crafting.sql", () => {
     const sql = readFileSync(join(__dirname, "..", "..", "supabase/migrations/20260926160000_crafting.sql"), "utf8");
     expect(sql).toContain(craftingSeedSql());
+  });
+  it("drops only bottle recipes from rare catches, as seeded in 20260930100000_recipe_drops.sql", () => {
+    for (const id of Object.keys(RECIPE_DROPS)) expect(RECIPES.find(r => r.id === id)?.sources, id).toEqual(["bottle"]);
+    expect(Object.keys(RECIPE_DROPS).length).toBe(RECIPES.filter(r => r.sources.join() === "bottle").length);
+    const sql = readFileSync(join(__dirname, "..", "..", "supabase/migrations/20260930100000_recipe_drops.sql"), "utf8");
+    expect(sql).toContain(recipeDropsSql());
+    const row = { id: "furn-x", output_item: "furn-campfire", output_weapon: null, output_qty: 1, ingredients: { wood_branch: 1 }, sources: ["bottle"] };
+    expect(validateRecipeDraft({ ...row, drop_rarity: "epic" })).toEqual([]);
+    expect(validateRecipeDraft({ ...row, drop_rarity: null })).toEqual([]);
+    expect(validateRecipeDraft({ ...row, drop_rarity: "common" })).toHaveLength(1);
+    expect(validateRecipeDraft({ ...row, sources: ["shop"], drop_rarity: "rare" })).toHaveLength(1);
   });
 });
 

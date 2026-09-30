@@ -77,6 +77,7 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
   const [caughtSize, setCaughtSize] = useState<number | null>(null);
   const [wasNew, setWasNew] = useState(false);
   const [newRecord, setNewRecord] = useState(false);
+  const [learned, setLearned] = useState<string | null>(null); // a recipe the landed catch taught
   const [missNote, setMissNote] = useState<string | null>(null);
   const waterRef = useRef<WaterType | null>(null);
   const castFromRef = useRef<{ site: "village" | "home"; from: [number, number] } | null>(null);
@@ -278,6 +279,7 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
         const size = landing?.size ?? rollSize(fish.sizeCm);
         setCaughtSize(size);
         setNewRecord(false);
+        setLearned(null);
         // Signals the "catch a fish" onboarding quest (auto-complete).
         // zone + spot coords ride along for world reactions (gull swoop).
         window.dispatchEvent(
@@ -291,6 +293,7 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
             // Refused (the hourly cap): the card stands, the catch isn't kept.
             if (answer && !answer.ok) { window.dispatchEvent(new CustomEvent("tsi:toast", { detail: { text: answer.error } })); return; }
             collect(fish.key);
+            setLearned(answer?.catch.recipe?.name ?? null);
             const beat = localRecord(fish.key, size);
             setNewRecord(!isNew && (answer ? answer.catch.new_record === true && answer.catch.total_collected !== 1 : beat));
           });
@@ -372,7 +375,7 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
 
   // First-catch blind-box ceremony — fullscreen, replaces the bottom card.
   if (phase === "revealing" && fish && caughtSize !== null) {
-    return <FishReveal fish={fish} sizeCm={caughtSize} onDone={cancel} />;
+    return <FishReveal fish={fish} sizeCm={caughtSize} recipe={learned} onDone={cancel} />;
   }
 
   const label =
@@ -522,6 +525,11 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
       {phase === "caught" && fish && oneLinerFor(fish.key) && (
         <div style={{ fontFamily: "var(--font-highlight, sans-serif)", fontSize: 12, fontStyle: "italic", color: "#FFFDF5", textShadow: "0 1px 3px rgba(0,0,0,0.55)", maxWidth: 360, textAlign: "center" }} data-testid="catch-one-liner">
           “{oneLinerFor(fish.key)}”
+        </div>
+      )}
+      {phase === "caught" && learned && (
+        <div style={{ fontFamily: "var(--font-highlight, sans-serif)", fontSize: 13, fontWeight: 700, color: "#FFFDF5", textShadow: "0 1px 3px rgba(0,0,0,0.55)" }} data-testid="catch-recipe">
+          You learned a recipe: {learned}
         </div>
       )}
       {phase === "charging" && (

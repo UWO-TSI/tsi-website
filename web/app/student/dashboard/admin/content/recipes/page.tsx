@@ -48,7 +48,7 @@ export default function AdminRecipesPage() {
                   <td className="px-4 py-3 font-mono text-xs text-[var(--color-accent-cyan)]">{r.id}</td>
                   <td className="px-4 py-3 font-mono text-xs">{r.output_qty} × {r.output_weapon ?? r.output_item}{r.output_weapon ? " (weapon)" : ""}</td>
                   <td className="px-4 py-3 font-mono text-[0.65rem] text-[var(--color-text-muted)]">{Object.entries(r.ingredients).map(([k, n]) => `${n} ${k}`).join(", ")}</td>
-                  <td className="px-4 py-3 font-mono text-xs text-[var(--color-text-muted)]">{r.sources.join(", ")}</td>
+                  <td className="px-4 py-3 font-mono text-xs text-[var(--color-text-muted)]">{[...r.sources, ...(r.drop_rarity ? [`${r.drop_rarity}+ catch`] : [])].join(", ")}</td>
                   <td className="px-4 py-3 font-mono text-xs">{r.active ? "active" : "inactive"}</td>
                   <td className="px-4 py-3 text-right whitespace-nowrap">
                     <Link href={`/student/dashboard/admin/content/recipes/${r.id}/edit`} className="inline-flex items-center gap-1 text-xs font-mono text-[var(--color-accent-cyan)] hover:underline mr-3"><Pencil size={12} /> Edit</Link>

@@ -61,6 +61,8 @@ const trophyFor = (sp: { category: string } | undefined, size: number | null) =>
  * Seasonal events (`goals`, the active club goals): limited-time fish are in
  * the roll only while their event runs and never land outside it; a fish
  * landed while the fishing tourney runs enters it, in the same transaction.
+ * A landed or harvested rare catch may teach a recipe (`recipe` in the reply,
+ * 20260930100000 crafting_catch_drop), also in that transaction.
  */
 export async function catchAction(store: CollectionsStore, memberId: string, body: unknown, now: Date, weather: IslandWeather, goals: readonly ClubGoal[] = [], random = Math.random): Promise<Result<CatchReply>> {
   const parsed = CatchRequest.safeParse(body);

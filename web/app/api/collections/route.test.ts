@@ -11,6 +11,9 @@ import { fishingSpot, villageWater } from "@/lib/game/fishingSpots";
 import { village } from "@/lib/game/villageMap";
 import { isGroundAtWorld } from "@/lib/game/grid";
 import { DEFAULT_GOALS, SEASONAL_GOALS } from "@/lib/progression/defaults";
+import { memoryCraftingStore } from "@/lib/crafting/memoryStore";
+import { RECIPE_DROPS, RECIPE_DROP_CHANCE } from "@/lib/crafting/recipes";
+import { seededRandom } from "@/lib/game/weatherSystem";
 
 const mock = vi.hoisted(() => ({ ctx: null as unknown, weather: "clear", goals: [] as unknown[] }));
 vi.mock("@/lib/server/memberContext", async (original) => ({
@@ -185,5 +188,112 @@ describe("POST /api/collections: seasonal events on the server's catches", () =>
     expect((await post({ action: "land", roll: crypto.randomUUID(), item_key: "fish_sturgeon", size_cm: 200 })).status).toBe(404);
     expect(await m.store.memberItems(A)).toEqual([]);
     expect(await entries()).toEqual([]);
+  });
+});
+
+describe("POST /api/collections: rare catches can teach a recipe (rows 199, 258)", () => {
+  // The drop's own dice (crafting_catch_drop's random()): 0 always drops, 0.999 never.
+  let dice: () => number;
+  let c: ReturnType<typeof memoryCraftingStore>;
+  const TIERS = ["rare", "epic", "legendary"];
+  const pool = (rarity: string) => Object.keys(RECIPE_DROPS).filter((id) => TIERS.indexOf(RECIPE_DROPS[id]) <= TIERS.indexOf(rarity));
+  const byCatch = async (member = A) => (await c.store.learned(member)).filter((r) => r.source === "catch").map((r) => r.recipe_id);
+  const fish = async (key: string) => {
+    later(10_000);
+    const roll = await m.store.cast(A, key, 50, true);
+    later(5000);
+    return post({ action: "land", roll });
+  };
+  beforeEach(() => {
+    dice = () => 0;
+    c = memoryCraftingStore(undefined, () => clock, () => dice());
+    m = memoryCollectionsStore(() => clock, c.catchDrop);
+    as(A);
+  });
+
+  it("never takes a recipe from the client", async () => {
+    const forged = { recipe_id: "rod-tidewarden", recipe: { id: "rod-tidewarden" }, learn: "rod-tidewarden" };
+    expect((await post({ action: "learn", ...forged })).status).toBe(400);
+    const rock = node("rock-");
+    const harvest = await post({ action: "harvest", node: rock.id, at: [rock.x, rock.z], ...forged });
+    expect(harvest.status).toBe(200);
+    const land = await fish("fish_black_bass");
+    const landed = await post({ action: "land", roll: crypto.randomUUID(), ...forged });
+    expect(landed.status).toBe(404);
+    // Whatever was taught is the server's pick from the drop pool, never the named quest recipe.
+    const got = [harvest.body.catch.recipe, land.body.catch.recipe].filter(Boolean).map((r) => r.id);
+    expect(got.length).toBeGreaterThan(0); // the black bass is rare: the dice always drop
+    expect(await byCatch()).toEqual(got);
+    for (const id of got) expect(Object.keys(RECIPE_DROPS)).toContain(id);
+    expect(await byCatch()).not.toContain("rod-tidewarden");
+  });
+
+  it("teaches a rare catch a recipe with the catch, shown by name", async () => {
+    const land = await fish("fish_black_bass");
+    expect(land.status).toBe(200);
+    const { recipe } = land.body.catch;
+    expect(pool("rare")).toContain(recipe.id);
+    expect(typeof recipe.name).toBe("string");
+    expect(recipe.name).not.toBe(recipe.id);
+    expect(await byCatch()).toEqual([recipe.id]);
+  });
+
+  it("never teaches from common or uncommon catches, or a quiet dice", async () => {
+    expect((await fish("fish_dace")).body.catch.recipe).toBeNull();
+    expect((await fish("fish_carp")).body.catch.recipe).toBeNull();
+    dice = () => 0.999;
+    expect((await fish("fish_black_bass")).body.catch.recipe).toBeNull();
+    expect(await c.store.learned(A)).toEqual([]);
+  });
+
+  it("teaches each recipe once: a known recipe never drops again", async () => {
+    const bottle = (await c.store.openBottle(A)).recipe_id;
+    const got: (string | null)[] = [];
+    for (let i = 0; i < pool("rare").length + 4; i++) {
+      later(3_600_000); // a new hour: clear of the hourly caps
+      got.push((await m.store.harvest(A, `n${i}`, `h${i}`, "bug_mantis", null, false)).recipe?.id ?? null);
+    }
+    const taught = got.filter((id): id is string => id !== null);
+    expect(new Set(taught).size).toBe(taught.length);
+    expect(new Set(taught)).toEqual(new Set(pool("rare").filter((id) => id !== bottle)));
+    expect(got.slice(-4)).toEqual([null, null, null, null]); // the rare pool is spent
+    expect(taught).not.toContain(bottle);
+    // The epic-only recipes wait for an epic catch.
+    const epic = (await m.store.harvest(A, "gold", "h-gold", "rock_gold_nugget", null, false)).recipe?.id;
+    expect(pool("epic").filter((id) => !pool("rare").includes(id))).toContain(epic);
+    expect((await c.store.learned(A)).filter((r) => r.recipe_id === epic)).toHaveLength(1);
+  });
+
+  it("records the drop with the catch: a refused land or harvest teaches nothing", async () => {
+    // Too fast: the reel was under 3 s.
+    later(10_000);
+    const quick = await m.store.cast(A, "fish_black_bass", 40, true);
+    later(1000);
+    expect((await post({ action: "land", roll: quick })).status).toBe(429);
+    // Out of season: a limited-time rare fish with its event shut.
+    expect((await fish("fish_giant_trevally")).status).toBe(409);
+    // Over the hourly cap: twelve rare mantises this hour on a quiet dice, then the dice would drop.
+    dice = () => 0.999;
+    for (let i = 0; i < 12; i++) await m.store.harvest(A, `cap${i}`, "h-cap", "bug_mantis", null, false);
+    dice = () => 0;
+    await expect(m.store.harvest(A, "cap12", "h-cap", "bug_mantis", null, false)).rejects.toMatchObject({ code: "rate_limited" });
+    expect(await c.store.learned(A)).toEqual([]);
+    // A landed one does.
+    expect((await fish("fish_black_bass")).body.catch.recipe).toMatchObject({ id: expect.any(String) });
+  });
+
+  it("drops at the documented chance per rarity over many server rolls", () => {
+    const random = seededRandom(258);
+    c = memoryCraftingStore(undefined, () => clock, random);
+    const N = 10_000;
+    const close = (observed: number, p: number) => Math.abs(observed - p) <= 4 * Math.sqrt((p * (1 - p)) / N) + 0.002;
+    for (const [key, rarity] of [["bug_mantis", "rare"], ["rock_gold_nugget", "epic"], ["fish_golden_koi", "legendary"]] as const) {
+      let hits = 0;
+      for (let i = 0; i < N; i++) if (c.catchDrop(`${rarity}-${i}`, key)) hits++;
+      expect(close(hits / N, RECIPE_DROP_CHANCE[rarity]), `${rarity}: ${hits}/${N}`).toBe(true);
+    }
+    for (const key of ["fish_dace", "fish_carp", "wood_branch", "no_such_species"]) {
+      expect(Array.from({ length: 2000 }, (_, i) => c.catchDrop(`plain-${i}`, key)).filter(Boolean)).toEqual([]);
+    }
   });
 });
