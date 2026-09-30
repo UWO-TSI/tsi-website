@@ -210,12 +210,10 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* T1-only spend widget */}
-      {userTier === 1 && (
-        <div className="mb-6">
-          <NPCSpendWidget />
-        </div>
-      )}
+      {/* Spend widget: T1/T2, as /api/npc/spend allows (the page is already T1/T2 only) */}
+      <div className="mb-6">
+        <NPCSpendWidget />
+      </div>
 
       <GameContentIndex />
 
