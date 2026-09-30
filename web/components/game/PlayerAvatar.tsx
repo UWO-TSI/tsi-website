@@ -62,9 +62,9 @@ interface PlayerAvatarProps {
   frozen?: boolean;
   desktopClickToMove?: boolean;
   /** /lab/move: live tuning and juice, slow motion, the HUD's readout and the Walk clip's pace. */
-  tuning?: React.RefObject<MoveTuning>;
-  juice?: React.RefObject<MoveJuice>;
-  timeScale?: React.RefObject<number>;
+  tuning?: MoveTuning;
+  juice?: MoveJuice;
+  timeScale?: number;
   telemetry?: React.RefObject<MoveTelemetry>;
   walkSpeed?: number;
 }
@@ -204,8 +204,8 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
   useFrame((_, rawDelta) => {
     const g = anchor.current, bd = body.current, hd = head.current;
     if (!g || !bd || !hd) return;
-    const p = combat.rt.player, d = dev.current, f = fx.current, m = motion.current, j = juice?.current ?? MOVE_JUICE, st = touchStick, k = keys.current, b = bindings;
-    const t = inCombat ? combatTuning(p.speed) : tuning?.current ?? MOVE_TUNING;
+    const p = combat.rt.player, d = dev.current, f = fx.current, m = motion.current, j = juice ?? MOVE_JUICE, st = touchStick, k = keys.current, b = bindings;
+    const t = inCombat ? combatTuning(p.speed) : tuning ?? MOVE_TUNING;
     if (!sim.current || simAt.current?.[0] !== x0 || simAt.current[1] !== z0) {
       sim.current = createMoveSim(createMoveState(x0, z0, world));
       simAt.current = [x0, z0];
@@ -217,7 +217,7 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
       sim.current = createMoveSim(createMoveState(x, z, world, at.facing));
     }
     if (!reported.current) f.level = sim.current.state.y;
-    let dt = Math.min(rawDelta, 0.1) * (timeScale?.current ?? 1);
+    let dt = Math.min(rawDelta, 0.1) * (timeScale ?? 1);
     if (d.paused) { dt = Math.min(dt, d.budget); d.budget -= dt; }
 
     // Intent: keys give a unit direction, the stick keeps its tilt; either drops a tap target, and any move gets you up from a seat.

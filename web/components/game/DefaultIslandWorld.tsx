@@ -14,8 +14,8 @@ import PostFX from "./PostFX";
 import HQInterior from "./HQInterior";
 import SunShadows from "./SunShadows";
 import { Lantern } from "./AmbientProps";
-import { GLBProp, treeParts, bushParts, flowerParts, type NaturePart } from "./NatureModels";
-import { InstancedModels, type ModelPlacement } from "./InstancedNature";
+import { GLBProp, sceneryOf } from "./NatureModels";
+import { InstancedModels } from "./InstancedNature";
 import { ACNHBuilding, ACNHParts, CHALET_VARIANTS } from "./ACNHBuilding";
 import { NatureFence } from "./NatureModels";
 import WharfPier from "./WharfPier";
@@ -27,12 +27,12 @@ import JournalSheet from "@/components/progression/JournalSheet";
 import { useProgressionWorld, useCeremony, useChapterActions, type WorldGoalId } from "@/lib/game/progressionBridge";
 import confetti from "canvas-confetti";
 import type { InteriorStation } from "./interiorShared";
-import { villageIsland, villageSpawn, villageScale, landmarks, landmarkPoint, wharfDeck, benchSeat, propsOf, BENCH_SEAT_TOP, type Landmark } from "@/lib/game/defaultIsland";
+import { villageIsland, villageSpawn, villageScale, landmarks, landmarkPoint, wharfDeck, benchSeat, BENCH_SEAT_TOP, type Landmark } from "@/lib/game/defaultIsland";
 import { village, objectsOf, type Village } from "@/lib/game/villageMap";
 import { LEVEL_STEP, levelAt, worldToCellX, worldToCellZ } from "@/lib/game/grid";
 import { useGraphicsSettings } from "@/lib/game/useGraphicsSettings";
 import { CLUBHOUSE_LIGHTING, ISLAND_TERRAIN, islandLight, withWeather, withSeason, type IslandLight } from "@/lib/game/islandLighting";
-import { paletteBySeason, seasonLook, SEASON_TREES, SEASON_BUSHES, SEASON_FLOWERS, type SeasonLook } from "@/lib/game/seasonalLook";
+import { paletteBySeason, seasonLook, type SeasonLook } from "@/lib/game/seasonalLook";
 import { useNPCPersonas, useSeasonPalettes } from "@/lib/content/loader";
 import type { IslandWeather } from "@/lib/game/islandWeather";
 import { useIslandConditions } from "@/lib/game/useIslandConditions";
@@ -150,11 +150,8 @@ function villageLayout(v: Village) {
     island: villageIsland(v),
     landmarks: marks,
     trees: objectsOf("tree", v).map((o): TreeSpot => ({ x: o.x, z: o.z, seed: o.seed ?? 0 })),
-    bushes: objectsOf("bush", v).map(o => ({ x: o.x, z: o.z, seed: o.seed ?? 0 })),
-    flowers: objectsOf("flower", v).map(o => ({ x: o.x, z: o.z, seed: o.seed ?? 0 })),
     fireflies: objectsOf("bush", v).map(xz),
     puddles: objectsOf("puddle", v).map(xz),
-    props: propsOf(v).filter(o => o.model),
     benches: objectsOf("bench", v),
     lamps: objectsOf("lamp", v),
     bridges: objectsOf("bridge", v).map(o => ({ ...o, y: levelAt(v.map, worldToCellX(v.map, o.x), worldToCellZ(v.map, o.z)) * LEVEL_STEP - 0.065 })),
@@ -225,18 +222,7 @@ function IslandScene({ identity, level, devAt, exitFrom, peaceful, fishSpot, fis
   const exitSpot = exitFrom === "museum" ? spawns.museum : exitFrom === "cafe" ? spawns.cafe : exitFrom === "oracle" ? spawns.oracle : exitFrom === "ruins" ? spawns.ruins : null;
   const spawn = (devAt && !returned && !fromBoat && !exitFrom ? devAt : fromBoat ? spawns.boat : exitSpot ?? (returned ? spawns.returned : null)) ?? spawns.start;
   const terrain = useMemo(() => ({ ...ISLAND_TERRAIN, grass: look.grass }), [look.grass]);
-  const scenery = useMemo(() => {
-    const at = (spots: readonly { x: number; z: number; seed: number }[], parts: (seed: number) => NaturePart[]) => spots.flatMap(({ x, z, seed }) => {
-      const y = island.ground(x, z);
-      return parts(seed).map((p): ModelPlacement => ({ url: p.url, position: [x + p.offset[0], y + p.offset[1], z + p.offset[2]], rotation: p.yaw, scale: p.scale }));
-    });
-    return [
-      ...at(layout.trees, seed => treeParts(seed, SEASON_TREES[look.season])),
-      ...at(layout.bushes, seed => bushParts(seed, SEASON_BUSHES[look.season])),
-      ...(SEASON_FLOWERS[look.season].length ? at(layout.flowers, seed => flowerParts(seed, SEASON_FLOWERS[look.season])) : []),
-      ...layout.props.map((p): ModelPlacement => ({ url: `/assets/acnh/props/${p.model}.glb`, position: [p.x, island.ground(p.x, p.z), p.z], rotation: p.yaw ?? 0, scale: p.scale ?? 1 })),
-    ];
-  }, [layout, island, look.season]);
+  const scenery = useMemo(() => sceneryOf(v, island.ground, look.season), [v, island, look.season]);
   const near = useRef<Near>(null);
   const spots = useMemo(() => eventSpots(event?.decor ?? null), [event]);
   useEffect(() => { player.current.set(...spawn); }, [reset, spawn, player]);

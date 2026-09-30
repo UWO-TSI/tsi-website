@@ -5,7 +5,11 @@ import { useGLTF } from "@react-three/drei";
 import { prepareModel, disposeModelMaterials, applyModelTextures } from "@/lib/game/modelMaterials";
 import { shadowClassFor, type ShadowClass } from "@/lib/game/shadows";
 import { modelContact, useContactShadow } from "./ContactShadows";
-import { isCedar } from "@/lib/game/defaultIsland";
+import { isCedar, propsOf } from "@/lib/game/defaultIsland";
+import { SEASON_BUSHES, SEASON_FLOWERS, SEASON_TREES } from "@/lib/game/seasonalLook";
+import type { Season } from "@/lib/game/season";
+import { objectsOf, type Village } from "@/lib/game/villageMap";
+import type { ModelPlacement } from "./InstancedNature";
 
 /**
  * GLB model loader (Kenney kits + ACNH pack).
@@ -65,6 +69,20 @@ export const bushParts = (seed: number, models: readonly string[] = BUSH_MODELS)
   [{ url: models[seed % models.length], offset: [0, 0, 0], yaw: seed * 1.3, scale: 0.9 + (seed % 3) * 0.15 }];
 export const flowerParts = (seed: number, models: readonly string[] = FLOWER_MODELS): NaturePart[] =>
   [0, 1, 2].map(j => ({ url: models[(seed + j) % models.length], offset: [(j - 1) * 0.4, 0, ((j * 7 + seed) % 3 - 1) * 0.3], yaw: j * 2.1, scale: 0.8 }));
+
+/** A map's trees, bushes, flowers and props as instanced placements, dressed for the season (the village and the movement lab). */
+export function sceneryOf(v: Village, ground: (x: number, z: number) => number, season: Season): ModelPlacement[] {
+  const at = (kind: "tree" | "bush" | "flower", parts: (seed: number) => NaturePart[]) => objectsOf(kind, v).flatMap(({ x, z, seed = 0 }) => {
+    const y = ground(x, z);
+    return parts(seed).map((p): ModelPlacement => ({ url: p.url, position: [x + p.offset[0], y + p.offset[1], z + p.offset[2]], rotation: p.yaw, scale: p.scale }));
+  });
+  return [
+    ...at("tree", seed => treeParts(seed, SEASON_TREES[season])),
+    ...at("bush", seed => bushParts(seed, SEASON_BUSHES[season])),
+    ...(SEASON_FLOWERS[season].length ? at("flower", seed => flowerParts(seed, SEASON_FLOWERS[season])) : []),
+    ...propsOf(v).filter(o => o.model).map((p): ModelPlacement => ({ url: `/assets/acnh/props/${p.model}.glb`, position: [p.x, ground(p.x, p.z), p.z], rotation: p.yaw ?? 0, scale: p.scale ?? 1 })),
+  ];
+}
 
 function Parts({ position, parts }: { position: [number, number, number]; parts: NaturePart[] }) {
   return (
