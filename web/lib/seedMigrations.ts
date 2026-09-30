@@ -11,7 +11,7 @@
  */
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { EVENT_SPECIES, LAUNCH_ROSTER } from "./collections/roster";
+import { EVENT_SPECIES, LAUNCH_ROSTER, REEL_FISH } from "./collections/roster";
 import { seedSql } from "./collections/seed";
 import { craftingSeedSql, recipeDropsSql } from "./crafting/seed";
 import { combatSeedSql } from "./combat/seed";
@@ -22,7 +22,7 @@ export const MIGRATIONS = join(__dirname, "../supabase/migrations");
 
 export interface Seed { name: string; /** The migration with its first block. */ file: string; sql: () => string }
 export const SEEDS: readonly Seed[] = [
-  { name: "roster", file: "20260926150400_collections.sql", sql: () => seedSql(LAUNCH_ROSTER) },
+  { name: "roster", file: "20260926150400_collections.sql", sql: () => seedSql([...LAUNCH_ROSTER, ...REEL_FISH]) },
   { name: "economy", file: "20260926150600_economy.sql", sql: economySeedSql },
   { name: "crafting", file: "20260926160000_crafting.sql", sql: craftingSeedSql },
   { name: "ownership", file: "20260926180000_ownership.sql", sql: ownershipSeedSql },
