@@ -220,7 +220,7 @@ export default function RuinsScene({ phase, light, look, weather, liteMode, cast
     {/* The shadow box spans the 40 × 66 canyon (half-diagonal ~39). */}
     <IslandAtmosphere phase={phase} light={light} look={look} weather={weather} liteMode={liteMode} castShadows={castShadows} overview={false}
       ground={ruins.ground} cloudSize={[40, 66]} shadowExtent={36} fireflyAnchors={[]} />
-    <GridWorld map={ruins.map} water={light.water} palette={terrain} windScale={liteMode ? 0 : 1} />
+    <GridWorld map={ruins.map} light={light} palette={terrain} windScale={liteMode ? 0 : 1} />
     <Suspense fallback={null}>
       {/* Gate plaza (safe) and the way back. */}
       <GLBProp url={`${F}ruins-arch.glb`} position={[0, ruins.ground(0, -24.4), -24.4]} scale={0.1} />

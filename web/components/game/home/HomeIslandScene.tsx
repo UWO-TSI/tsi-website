@@ -84,7 +84,7 @@ export default function HomeIslandScene({ identity, peaceful, fishSpot, fishing,
   return <>
     <IslandAtmosphere phase={phase} light={light} look={look} weather={weather} liteMode={liteMode} castShadows={castShadows} overview={overview}
       ground={home.ground} cloudSize={[HOME_RADII.x * 2 + 4, HOME_RADII.z * 2 + 4]} shadowExtent={16} fireflyAnchors={HOME_BUSHES} trees={TREES} />
-    <GridWorld map={home.map} water={light.water} palette={terrain} windScale={liteMode ? 0 : weather === "wind" ? 2.2 : 1} />
+    <GridWorld map={home.map} light={light} palette={terrain} windScale={liteMode ? 0 : weather === "wind" ? 2.2 : 1} />
     <GridOcean map={home.map} lite={liteMode} />
     <PeacefulLayer map={home.map} nodes={HOME_NODES} moment={peaceful.moment} member={peaceful.member} player={player} ground={home.ground} highTier={!liteMode} active={!fishing && !decorating} />
     {/* The dump's chalet house (5 × 4.2 cells, same model family as the village café/museum). */}
