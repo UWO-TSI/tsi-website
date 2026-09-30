@@ -170,7 +170,9 @@ export function benchSeat(x: number, z: number, range = 1.3, v: Village = villag
   return { x: b.x, z: b.z, yaw: yaw + (front ? 0 : Math.PI) };
 }
 
-const inRect = (x: number, z: number, r: { x0: number; x1: number; z0: number; z1: number }) => x >= r.x0 && x <= r.x1 && z >= r.z0 && z <= r.z1;
+export const inRect = (x: number, z: number, r: { x0: number; x1: number; z0: number; z1: number }) => x >= r.x0 && x <= r.x1 && z >= r.z0 && z <= r.z1;
+/** The body's footprint: 5 probe points, the centre and 0.2 out along each axis. */
+export const PROBE: readonly (readonly [number, number])[] = [[0, 0], [-0.2, 0], [0.2, 0], [0, -0.2], [0, 0.2]];
 const NONE: readonly never[] = [];
 
 /**
@@ -230,8 +232,11 @@ export function islandOf(v: Village): VillageIsland {
   };
   const standable = (x: number, z: number) => onDeck(x, z) || (!wet(x, z) && solidTop(x, z) === -Infinity);
   /** How much of the body (5 probe points) stands on free ground; 5 = fits. */
-  const clearance = (x: number, z: number) =>
-    [[0, 0], [-0.2, 0], [0.2, 0], [0, -0.2], [0, 0.2]].filter(([dx, dz]) => standable(x + dx, z + dz)).length;
+  const clearance = (x: number, z: number) => {
+    let n = 0;
+    for (const [dx, dz] of PROBE) if (standable(x + dx, z + dz)) n++;
+    return n;
+  };
   const canStep = (x: number, z: number, nx: number, nz: number) => {
     // Never lose clearance: out in the open every step must fit; sitting on a bench leaves you inside
     // its footprint, and from there any step that frees as much or more of you walks you off it.

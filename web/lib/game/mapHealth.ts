@@ -16,7 +16,7 @@ import {
   CLIFF_LEVELS, ORTHOGONAL, cliffPieceFor, inBounds, isGroundAtWorld, isLandCell, isRamp, isVoid, levelAt,
   needsCliff, rampDir, rampRun, surfaceAt, worldToCellX, worldToCellZ, type IslandMap,
 } from "./grid";
-import { LANDMARK_IDS, TREE_TRUNK, bridgeDecks, islandOf, landmarks, objectFootprint, turn, wharfDeck } from "./defaultIsland";
+import { LANDMARK_IDS, PROBE, TREE_TRUNK, bridgeDecks, inRect, islandOf, landmarks, objectFootprint, turn, wharfDeck } from "./defaultIsland";
 import { CAST_REACH, WATER_CLASS, fishingSpot, villageWater } from "./fishingSpots";
 import { villageNodes, villageBottleSpot } from "./islandNodes";
 import { OBJECT_KINDS, objectsOf, villageSpawnPoint, type MapObject, type Village } from "./villageMap";
@@ -124,8 +124,6 @@ export interface VillageHealth {
   warnings: string[];
 }
 
-const probe = [[0, 0], [-0.2, 0], [0.2, 0], [0, -0.2], [0, 0.2]];
-const inRect = (x: number, z: number, r: { x0: number; x1: number; z0: number; z1: number }) => x >= r.x0 && x <= r.x1 && z >= r.z0 && z <= r.z1;
 
 /** Axis-aligned footprint of an object (its objectFootprint turned by its yaw; a tree's trunk), for overlap warnings (null = a point). */
 function footprintOf(o: MapObject): { x0: number; x1: number; z0: number; z1: number; building: boolean } | null {
@@ -153,13 +151,12 @@ export function villageHealth(v: Village): VillageHealth {
   const deck = wharfDeck(v);
   const onDeck = (x: number, z: number) => !!deck && inRect(x, z, deck);
 
-  // Ids: unique within a kind, known kinds only.
+  // Ids: unique within a kind (parseVillage drops unknown kinds).
   const seen = new Set<string>();
   for (const o of v.objects) {
     const key = `${o.kind}:${o.id}`;
     if (seen.has(key)) add("duplicate ids", key);
     seen.add(key);
-    if (!OBJECT_KINDS.includes(o.kind)) add("unknown kinds", key);
   }
 
   if (!island.standable(sx, sz)) add("spawn not on open ground", `${sx},${sz}`);
@@ -193,7 +190,7 @@ export function villageHealth(v: Village): VillageHealth {
   }
 
   // Everything that stands on the ground.
-  const grounded = new Set(["spawn", "fitting", "missions", "lamp", "fence", "bench", "rock", "tree", "bush", "flower", "study", "anchor", "gather", "puddle", "bug", "shell", "bottle"]);
+  const grounded = new Set<string>(OBJECT_KINDS.filter(k => k !== "landmark" && k !== "bridge"));
   const landCell = (x: number, z: number) => isLandCell(map, worldToCellX(map, x), worldToCellZ(map, z));
   for (const o of v.objects) if (grounded.has(o.kind) && !landCell(o.x, o.z) && !onDeck(o.x, o.z)) add("objects off land", `${o.kind}:${o.id}`);
 
@@ -201,7 +198,7 @@ export function villageHealth(v: Village): VillageHealth {
   for (const key of Object.keys(RESIDENT_ANCHORS) as ResidentAnchor[]) {
     const a = objectsOf("anchor", v).find(o => o.id === key);
     if (!a) { add("resident anchors missing", key); continue; }
-    for (let k = 0; k < 3; k++) if (!probe.every(([dx, dz]) => island.standable(a.x + k * SHARED_SPACING + dx, a.z + dz))) { add("resident anchors without room for 3", key); break; }
+    for (let k = 0; k < 3; k++) if (!PROBE.every(([dx, dz]) => island.standable(a.x + k * SHARED_SPACING + dx, a.z + dz))) { add("resident anchors without room for 3", key); break; }
   }
   if (!objectsOf("gather", v).length) add("no ceremony gather spots", "gather");
 
