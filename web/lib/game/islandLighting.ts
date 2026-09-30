@@ -85,7 +85,7 @@ export function islandLight(look: LookPreset, phase: IslandPhase, sun: SunAngles
 
 /** The day David picked the look (row 236). Its 11:45 sun is the picked key light, within 3.5° (row 239). */
 const LOOK_DAY = new Date("2026-09-27T16:00:00Z");
-/** Each phase under the real sun at its preview time on LOOK_DAY (the applicant island and the tests). */
+/** Each phase under the real sun at its preview time on LOOK_DAY (the applicant island's grade and the tests). */
 export const ISLAND_LIGHTING = Object.fromEntries(ISLAND_PHASES.map(phase =>
   [phase, islandLight(CURRENT, phase, solarPosition(phaseInstant(phase, LOOK_DAY)))])) as Record<IslandPhase, IslandLight>;
 
