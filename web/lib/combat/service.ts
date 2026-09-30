@@ -112,14 +112,16 @@ export const setLoadout = (store: CombatStore, m: string, loadout: unknown) =>
 async function requireGate(store: CombatStore, m: string) {
   const [p, family] = await Promise.all([store.progression(m), store.family(m)]);
   if (!islandProgression({ level: p.level, family, subclass: p.subclass ? { key: p.subclass } : null }).gateOpen) throw new CombatError("gate_closed");
+  return p;
 }
 
 /** A kill; for a Transmuter the first defeat of a species also names the trait it just learned (row 40, counted in the same transaction). */
 export const recordKill = (store: CombatStore, m: string, enemyKey: string, eventKey: string) =>
   run(async () => {
-    await requireGate(store, m);
-    const t = traitFor(enemyKey);
-    const before = t ? (await store.progression(m)).traits[t.key] ?? 0 : 0;
+    const p = await requireGate(store, m);
+    // Only a Transmuter's defeats count traits (combat_kits): nobody else needs the second read.
+    const t = p.subclass === "transmuter" ? traitFor(enemyKey) : undefined;
+    const before = t ? p.traits[t.key] ?? 0 : 0;
     const r = await store.recordKill(m, enemyKey, eventKey);
     const after = t && !r.replayed ? (await store.progression(m)).traits[t.key] ?? 0 : 0;
     return { ...r, trait_unlocked: t && before === 0 && after > 0 ? t.key : null };
