@@ -35,8 +35,7 @@ import { islandOf } from "@/lib/game/defaultIsland";
 import { objectsOf } from "@/lib/game/villageMap";
 import { COURSE_GATES, COURSE_SIGNS, COURSE_SPAWN, NEW_LAP, course, gateAt, lapStep, type Lap } from "@/lib/game/movement/course";
 import { MOVE_TUNING, createMoveState, stepMove, topSpeed, NO_INPUT, STEP, type MoveInput, type MoveTuning, type MoveWorld } from "@/lib/game/movement/sim";
-import { MOVE_ACTIONS, MOVE_KEYS_EVENT, keyName, readMoveKeys, remapMove, type MoveAction } from "@/lib/game/movement/keys";
-import { readAbilityKeys } from "@/lib/game/combat/runtime";
+import { MOVE_ACTIONS, keyName, remapMove, useMoveKeys, useNextKey, type MoveAction } from "@/lib/game/movement/keys";
 import { AudioManager } from "@/lib/game/audio";
 
 const SUMMER = { season: "summer" as const, weights: { spring: 0, summer: 1, autumn: 0, winter: 0 } };
@@ -163,7 +162,7 @@ export default function MoveLab() {
   const [juice, setJuice] = useState<MoveJuice>(MOVE_JUICE);
   const [preset, setPreset] = useState("Juicy");
   const [slow, setSlow] = useState(1);
-  const [bindings, setBindings] = useState<Record<MoveAction, string>>(readMoveKeys);
+  const bindings = useMoveKeys();
   const [listening, setListening] = useState<MoveAction | null>(null);
   const [note, setNote] = useState<string | null>(null);
   const [touch] = useState(() => params.get("touch") === "1" || (typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches));
@@ -200,19 +199,11 @@ export default function MoveLab() {
     return () => window.clearInterval(id);
   }, []);
   // Remap: the next key press binds.
-  useEffect(() => {
-    if (!listening) return;
-    const onKey = (e: KeyboardEvent) => {
-      e.preventDefault(); e.stopPropagation();
-      if (e.key === "Escape") { setListening(null); setNote(null); return; }
-      const r = remapMove(bindings, listening, e.key, Object.values(readAbilityKeys()));
-      if (!r.ok) { setNote(r.error); return; }
-      setBindings(r.keys); setListening(null); setNote(null);
-      window.dispatchEvent(new Event(MOVE_KEYS_EVENT));
-    };
-    window.addEventListener("keydown", onKey, true);
-    return () => window.removeEventListener("keydown", onKey, true);
-  }, [listening, bindings]);
+  useNextKey(listening !== null, key => {
+    const r = remapMove(bindings, listening!, key);
+    setNote(r.ok ? null : r.error);
+    if (r.ok) setListening(null);
+  }, () => { setListening(null); setNote(null); });
 
   const numbers = useMemo(() => measure(tuning), [tuning]);
   const set = (k: keyof MoveTuning, value: number) => { setTuning(t => ({ ...t, [k]: value })); setPreset("Custom"); };

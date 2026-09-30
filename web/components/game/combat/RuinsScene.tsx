@@ -21,7 +21,8 @@ import { InteriorKeeper } from "../interiorShared";
 import { IslandAtmosphere, useFollowCamera } from "../IslandAtmosphere";
 import { AimReticle, Blasts, EnemyInstances, FloaterProjector, PlayerAuras, Projectiles, Telegraphs, Totems, Wisps } from "./EncounterRender";
 import { BOSS_CENTER, ESCORT_PATHS, EXIT_SPOT, FETCH_SPOTS, GATE_PLAZA, RUINS_BROKEN_ARCHES, RUINS_MOAI, RUINS_PILLARS, RUINS_ROCKS, RUINS_SPAWN, RUINS_TORCHES, SURVIVE_CIRCLES, createRuins } from "@/lib/game/ruins";
-import { combat, publishCombat, readAbilityKeys, takeMissionQueue, type AbilityId } from "@/lib/game/combat/runtime";
+import { combat, publishCombat, takeMissionQueue, type AbilityId } from "@/lib/game/combat/runtime";
+import { useAbilityKeys } from "@/lib/game/movement/keys";
 import { attack, missionEvent, spawnWave, triggerAbility } from "@/lib/game/combat/actions";
 import { stepCombat } from "@/lib/game/combat/encounter";
 import { claimBossReward, postKill, postMissionEvents } from "@/lib/game/combat/progression";
@@ -122,9 +123,9 @@ export default function RuinsScene({ phase, light, look, weather, liteMode, cast
   useFollowCamera(focus, zoom, null);
 
   // Mouse aim + click attack on the canvas; ability keys (remappable). Movement, Space's jump and Q's dash-dodge are PlayerAvatar's (the kit).
+  const keys = useAbilityKeys();
   useEffect(() => {
     const el = gl.domElement;
-    const keys = readAbilityKeys();
     const move = (e: PointerEvent) => { const r = el.getBoundingClientRect(); input.current.ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1); input.current.hasPointer = true; };
     const down = (e: PointerEvent) => { if (e.button === 0) { move(e); input.current.attack = true; } };
     const up = () => { input.current.attack = false; };
@@ -133,14 +134,13 @@ export default function RuinsScene({ phase, light, look, weather, liteMode, cast
       const k = e.key.toLowerCase(), ability = (Object.keys(keys) as AbilityId[]).find(a => keys[a] === k);
       if (ability) input.current.abilities.push(ability);
     };
-    const onKeys = () => Object.assign(keys, readAbilityKeys());
     el.addEventListener("pointermove", move); el.addEventListener("pointerdown", down); window.addEventListener("pointerup", up);
-    window.addEventListener("keydown", kd); window.addEventListener("tsi:ability-keys", onKeys);
+    window.addEventListener("keydown", kd);
     return () => {
       el.removeEventListener("pointermove", move); el.removeEventListener("pointerdown", down); window.removeEventListener("pointerup", up);
-      window.removeEventListener("keydown", kd); window.removeEventListener("tsi:ability-keys", onKeys);
+      window.removeEventListener("keydown", kd);
     };
-  }, [gl]);
+  }, [gl, keys]);
 
   useFrame(({ clock }, rawDelta) => {
     const dt = combat.freeze ? 0 : Math.min(rawDelta, 0.05);

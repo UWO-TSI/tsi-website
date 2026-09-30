@@ -63,7 +63,7 @@ import FamilyAura from "./oracle/FamilyAura";
 import { FAMILIES } from "@/lib/game/oracle/family";
 import type { Family } from "@/lib/oracle/engine";
 import type { ResultView } from "@/lib/oracle/service";
-import { keyLabel, setFamily, useWorldIdentity, type WorldIdentity } from "@/lib/game/identity";
+import { setFamily, useWorldIdentity, type WorldIdentity } from "@/lib/game/identity";
 import { actionForKey } from "@/lib/identity/settings";
 import { keyName, useMoveKeys } from "@/lib/game/movement/keys";
 import { useCoarsePointer } from "@/lib/game/useMediaQuery";
@@ -738,7 +738,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       <StudyHud />
       <CraftingSheet />
       <CollectionBook open={bagOpen} onClose={() => setBagOpen(false)} />
-      {!bagOpen && <button className={styles.bagButton} onClick={() => setBagOpen(true)} aria-label="Open your collection journal"><kbd>{keyLabel(identity.settings.key_bindings.openJournal)}</kbd> Journal</button>}
+      {!bagOpen && <button className={styles.bagButton} onClick={() => setBagOpen(true)} aria-label="Open your collection journal"><kbd>{keyName(identity.settings.key_bindings.openJournal)}</kbd> Journal</button>}
       {mapOpen && !inside && !atHome && site !== "ruins" && <div className={styles.minimap} data-minimap>
         <MiniMap playerPosRef={player} plot={objectivePlot} onClose={() => setMapOpen(false)} />
         {progression.objective.text && <p className={styles.objective} data-testid="objective"><span aria-hidden="true">◆</span> {progression.objective.text}</p>}
@@ -768,7 +768,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       <PostersSheet open={sheet === "posters"} onClose={() => setSheet(null)} event={islandEvent} />
       {site === "ruins" && <CombatHud player={player} />}
       {site === "ruins" ? <div className={styles.controls} data-combat><span>{[moveKeys.forward, moveKeys.left, moveKeys.back, moveKeys.right].map(k => <kbd key={k}>{keyName(k)}</kbd>)} Move</span><span>Mouse Aim</span><span>Click Attack</span><span><kbd>{keyName(moveKeys.jump)}</kbd> Jump</span><span><kbd>{keyName(moveKeys.dash)}</kbd> Dodge</span><span><kbd>1</kbd>–<kbd>4</kbd> Abilities</span><span><kbd>R</kbd> Swap</span><span><kbd>E</kbd> Interact</span></div>
-      : <div className={styles.controls}><span>{[moveKeys.forward, moveKeys.left, moveKeys.back, moveKeys.right].map(k => <kbd key={k}>{keyName(k)}</kbd>)} Walk</span><span><kbd>{keyName(moveKeys.sprint)}</kbd> Run</span><span><kbd>{keyName(moveKeys.jump)}</kbd> Jump</span><span><kbd>{keyName(moveKeys.dash)}</kbd> Dash</span><span><kbd>E</kbd> Interact</span><span><kbd>Z</kbd> Zoom</span><span><kbd>{keyLabel(identity.settings.key_bindings.openMap)}</kbd> Map</span><span><kbd>J</kbd> Quests</span><span><kbd>{keyLabel(identity.settings.key_bindings.openJournal)}</kbd> Collection</span><span><kbd>{keyName(moveKeys.sneak)}</kbd> Sneak</span></div>}
+      : <div className={styles.controls}><span>{[moveKeys.forward, moveKeys.left, moveKeys.back, moveKeys.right].map(k => <kbd key={k}>{keyName(k)}</kbd>)} Walk</span><span><kbd>{keyName(moveKeys.sprint)}</kbd> Run</span><span><kbd>{keyName(moveKeys.jump)}</kbd> Jump</span><span><kbd>{keyName(moveKeys.dash)}</kbd> Dash</span><span><kbd>E</kbd> Interact</span><span><kbd>Z</kbd> Zoom</span><span><kbd>{keyName(identity.settings.key_bindings.openMap)}</kbd> Map</span><span><kbd>J</kbd> Quests</span><span><kbd>{keyName(identity.settings.key_bindings.openJournal)}</kbd> Collection</span><span><kbd>{keyName(moveKeys.sneak)}</kbd> Sneak</span></div>}
       {/* Clear of the minimap (left) and the audio widget (bottom right). */}
       {touch && (!inside || inside === "cafe") && <TouchControls left={212} bottom={64} />}
       <p className={styles.touchControls}>Tap the ground to move</p>
