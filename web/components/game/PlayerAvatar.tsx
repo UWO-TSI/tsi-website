@@ -5,7 +5,7 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { Html } from "@react-three/drei";
 import * as THREE from "three";
 import { liveIslandWeather } from "@/lib/game/islandWeather";
-import { useSFX } from "@/lib/game/useAudio";
+import { AudioManager, type SFXName } from "@/lib/game/audio";
 import { getCameraForwardXZ } from "@/lib/game/cameraBasis";
 import { bindGameKeys } from "@/lib/game/keyboardInput";
 import { Surface, WATER_DROP } from "@/lib/game/grid";
@@ -68,6 +68,8 @@ interface PlayerAvatarProps {
   walkSpeed?: number;
 }
 
+const playSFX = (name: SFXName) => AudioManager.playSFX(name);
+
 /** Face a point (module scope: the react compiler freezes values reached through hooks inside component code). */
 function turnTo(s: MoveState | undefined, x: number, z: number) { if (s) s.facing = Math.atan2(x - s.x, z - s.z); }
 
@@ -80,7 +82,6 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
   const motion = useRef<CharacterMotion>({ speed: 0, yaw: 0, lift: 0, pose: null, play: null, move: null });
   const { look } = useMyLook();
   const { camera, gl } = useThree();
-  const { play: playSFX } = useSFX();
   const bindings = useMoveKeys();
   const [x0, , z0] = spawnPosition;
   const sim = useRef<MoveSim | null>(null), simAt = useRef<[number, number] | null>(null);
@@ -135,7 +136,7 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
     playSFX("click");
     const id = indicatorId.current++;
     setIndicators(prev => [...prev, { id, position: [hit.x, groundHeight(hit.x, hit.z), hit.z] }]);
-  }, [camera, gl, playSFX, groundHeight, frozen, desktopClickToMove]);
+  }, [camera, gl, groundHeight, frozen, desktopClickToMove]);
   useEffect(() => {
     gl.domElement.addEventListener("click", handleClick);
     return () => gl.domElement.removeEventListener("click", handleClick);

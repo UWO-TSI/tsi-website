@@ -72,7 +72,7 @@ import TouchControls from "./movement/TouchControls";
 import MuseumInterior from "./peaceful/MuseumInterior";
 import AudioController from "./AudioController";
 import type { AmbientPhase } from "@/lib/game/audio";
-import { useMusicDirector } from "@/lib/game/musicDirector";
+import { useMusicDirector } from "@/lib/game/useAudio";
 import DonateSheet from "./peaceful/DonateSheet";
 import { ShowcaseSheet, TrophySheet } from "./peaceful/ShowcaseSheets";
 import type { MuseumWing } from "@/lib/collections/logic";

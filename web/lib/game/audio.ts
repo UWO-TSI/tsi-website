@@ -109,7 +109,7 @@ interface StoredPrefs {
   muted: boolean;
 }
 
-const DEFAULT_VOLUMES: AudioVolumes = { master: 0.7, ambient: 0.6, music: 0.55, sfx: 0.8 };
+export const DEFAULT_VOLUMES: AudioVolumes = { master: 0.7, ambient: 0.6, music: 0.55, sfx: 0.8 };
 
 function readStoredPrefs(): StoredPrefs {
   if (typeof window === "undefined") {
