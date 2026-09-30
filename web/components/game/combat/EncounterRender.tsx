@@ -111,18 +111,24 @@ export function EnemyInstances({ typeId, capacity, ground, allies = false }: { t
 /** Outline and fill colours: red for danger, violet for the guardian's summon. */
 const TONES = { danger: [new THREE.Color("#ff4040"), new THREE.Color("#ff2a2a")], summon: [new THREE.Color("#b48cff"), new THREE.Color("#9a6bff")] };
 
+/** Unit sectors by arc, face up and opening toward -Z: made once per arc, disposed with the component. */
+function useSectors(segments: number) {
+  const cache = useRef(new Map<number, THREE.CircleGeometry>());
+  useEffect(() => { const c = cache.current; return () => c.forEach(g => g.dispose()); }, []);
+  return (arc: number) => {
+    const key = Math.round(arc * 100);
+    let g = cache.current.get(key);
+    if (!g) cache.current.set(key, g = new THREE.CircleGeometry(1, segments, Math.PI / 2 - arc / 2, arc).rotateX(-Math.PI / 2));
+    return g;
+  };
+}
+
 /** Ground markers from marker(): sectors, circles, the smash's ring and the beam line, filling as the windup completes. */
 export function Telegraphs({ ground, max = 24 }: { ground: Ground; max?: number }) {
   const refs = useRef<(THREE.Mesh | null)[]>([]);
   const fills = useRef<(THREE.Mesh | null)[]>([]);
-  const geos = useRef(new Map<number, THREE.CircleGeometry>());
-  const geo = (arc: number) => {
-    const key = Math.round(arc * 100);
-    // Face up; the sector opens toward -Z, so yaw + π points it along the enemy's facing (sin, cos).
-    if (!geos.current.has(key)) geos.current.set(key, new THREE.CircleGeometry(1, 40, Math.PI / 2 - arc / 2, arc).rotateX(-Math.PI / 2));
-    return geos.current.get(key)!;
-  };
-  useEffect(() => { const cache = geos.current; return () => cache.forEach(g => g.dispose()); }, []);
+  // The sector opens toward -Z, so yaw + π points it along the enemy's facing (sin, cos).
+  const geo = useSectors(40);
   useFrame(() => {
     let n = 0;
     for (const e of combat.rt.enemies) {
@@ -173,7 +179,8 @@ export function Projectiles({ ground, max = 48 }: { ground: Ground; max?: number
 }
 
 /** Glow-sprite units: wisps (the charm's and the kits'), bone wisps, the Illusionist's phantom. */
-const SPRITE_TINT: Record<string, string> = { wisp: "#9fe8ff", "weapon-wisp": "#9fe8ff", "bone-wisp": "#f2ecdc", decoy: "#d9b8ff" };
+const colors = (hex: Record<string, string>) => Object.fromEntries(Object.entries(hex).map(([k, v]) => [k, new THREE.Color(v)]));
+const SPRITE_TINT = colors({ wisp: "#9fe8ff", "weapon-wisp": "#9fe8ff", "bone-wisp": "#f2ecdc", decoy: "#d9b8ff" });
 export function Wisps({ ground, max = 10 }: { ground: Ground; max?: number }) {
   const glow = useTexture("/assets/sky/sun.png");
   const refs = useRef<(THREE.Sprite | null)[]>([]);
@@ -187,7 +194,7 @@ export function Wisps({ ground, max = 10 }: { ground: Ground; max?: number }) {
       const decoy = m.def.kind === "decoy";
       s.position.set(m.x, ground(m.x, m.z) + (decoy ? 0.9 : 1.1 + Math.sin(clock.elapsedTime * 4 + i) * 0.15), m.z);
       s.scale.set(decoy ? 1.1 : 0.7, decoy ? 1.9 : 0.7, 1);
-      s.material.color.set(SPRITE_TINT[m.def.key]);
+      s.material.color.copy(SPRITE_TINT[m.def.key]);
       s.material.opacity = Math.min(1, m.life ?? 1) * (decoy ? 0.55 + Math.sin(clock.elapsedTime * 9) * 0.1 : 0.9);
     }
   });
@@ -197,7 +204,7 @@ export function Wisps({ ground, max = 10 }: { ground: Ground; max?: number }) {
 }
 
 /** Totems (a carved post and the circle it covers, so overlaps read), tripwires (a small disc), and a ring under each of your summons: green, violet for a shade. */
-const TOTEM_COLOR: Record<string, string> = { "totem-ember": "#ff8a3d", "totem-mending": "#7dff9e", "totem-warding": "#8fd0ff", tripwire: "#ffe08a", shade: "#c9a7ff", decoy: "#d9b8ff" };
+const TOTEM_COLOR = colors({ "totem-ember": "#ff8a3d", "totem-mending": "#7dff9e", "totem-warding": "#8fd0ff", tripwire: "#ffe08a", shade: "#c9a7ff", decoy: "#d9b8ff" }), TOTEM_DEFAULT = TOTEM_COLOR["totem-mending"];
 export function Totems({ ground, max = 16 }: { ground: Ground; max?: number }) {
   const posts = useRef<(THREE.Mesh | null)[]>([]), rings = useRef<(THREE.Mesh | null)[]>([]);
   const ring = useMemo(() => new THREE.RingGeometry(0.94, 1, 64).rotateX(-Math.PI / 2), []);
@@ -210,16 +217,16 @@ export function Totems({ ground, max = 16 }: { ground: Ground; max?: number }) {
       if (!post || !r) continue;
       post.visible = r.visible = !!u;
       if (!u) continue;
-      const g = ground(u.x, u.z), c = TOTEM_COLOR[u.def.key] ?? "#7dff9e", totem = u.def.kind === "totem", area = totem || u.def.kind === "trap";
+      const g = ground(u.x, u.z), c = TOTEM_COLOR[u.def.key] ?? TOTEM_DEFAULT, totem = u.def.kind === "totem", area = totem || u.def.kind === "trap";
       post.visible = totem;
       r.geometry = area ? disc : ring;
       post.position.set(u.x, g + 0.6, u.z);
-      (post.material as THREE.MeshStandardMaterial).color.set(c);
-      (post.material as THREE.MeshStandardMaterial).emissive.set(c);
+      (post.material as THREE.MeshStandardMaterial).color.copy(c);
+      (post.material as THREE.MeshStandardMaterial).emissive.copy(c);
       r.position.set(u.x, g + 0.05, u.z);
       r.scale.setScalar(area ? u.def.radius! : 0.75);
       const m = r.material as THREE.MeshBasicMaterial;
-      m.color.set(c); m.opacity = totem ? 0.16 + Math.sin(clock.elapsedTime * 3 + i) * 0.04 : area ? 0.55 : 0.85;
+      m.color.copy(c); m.opacity = totem ? 0.16 + Math.sin(clock.elapsedTime * 3 + i) * 0.04 : area ? 0.55 : 0.85;
     }
   });
   return <>{Array.from({ length: max }, (_, i) => <group key={i}>
@@ -269,13 +276,8 @@ export function Blasts({ ground, max = 12 }: { ground: Ground; max?: number }) {
   const refs = useRef<(THREE.Mesh | null)[]>([]);
   const ring = useMemo(() => new THREE.RingGeometry(0.82, 1, 48).rotateX(-Math.PI / 2), []);
   const strip = useMemo(() => new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2).translate(0, 0, 0.5), []);
-  const sectors = useRef(new Map<number, THREE.BufferGeometry>());
-  const sector = (a: number) => {
-    const k = Math.round(a * 100);
-    if (!sectors.current.has(k)) sectors.current.set(k, new THREE.CircleGeometry(1, 32, Math.PI / 2 - a / 2, a).rotateX(-Math.PI / 2));
-    return sectors.current.get(k)!;
-  };
-  useEffect(() => { const cache = sectors.current; return () => { ring.dispose(); strip.dispose(); cache.forEach(g => g.dispose()); }; }, [ring, strip]);
+  const sector = useSectors(32);
+  useEffect(() => () => { ring.dispose(); strip.dispose(); }, [ring, strip]);
   useFrame(() => {
     for (let i = 0; i < max; i++) {
       const m = refs.current[i]; if (!m) continue;

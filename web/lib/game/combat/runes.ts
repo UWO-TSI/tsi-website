@@ -10,13 +10,10 @@ import type { IncantationScore } from "./contract";
 
 export type Pt = [number, number];
 export type TracePt = [number, number, number];
-export interface Rune { id: "spark" | "binding"; name: string; difficulty: "easy" | "hard"; effect: string; strokes: Pt[][]; timeLimitMs: number; energy: number }
+export interface Rune { id: "spark" | "binding"; name: string; difficulty: "easy" | "hard"; strokes: Pt[][]; timeLimitMs: number }
 
-const EFFECT: Record<string, string> = { spark: "A burst of lightning where you aim.", binding: "A sigil that damages and roots everything around you." };
-/** Placeholder energy costs until the kits give standalone runes a number (energy ruling: 100 max, 12/s regen). */
-const ENERGY: Record<string, number> = { spark: 20, binding: 45 };
 export const RUNES: Rune[] = SYSTEM_RUNES.map(r => ({
-  id: r.key as Rune["id"], name: r.name, difficulty: r.difficulty, effect: EFFECT[r.key] ?? "", timeLimitMs: r.time_limit_ms, energy: ENERGY[r.key] ?? 30,
+  id: r.key as Rune["id"], name: r.name, difficulty: r.difficulty, timeLimitMs: r.time_limit_ms,
   strokes: r.strokes.map(s => s.map(p => [p.x, p.y] as Pt)),
 }));
 export const runeById = (id: string) => RUNES.find(r => r.id === id)!;

@@ -6,10 +6,10 @@
  * totem caps, mission tracker, boss bar, safe-zone badge, hurt vignette,
  * defeat card, pooled damage numbers, and the incantation overlay.
  */
-import { ENERGY, SLOT_IDS, combat, publishCombat, readAbilityKeys, useCombatVersion } from "@/lib/game/combat/runtime";
-import { keyName, readMoveKeys } from "@/lib/game/movement/keys";
+import { ENERGY, SLOT_IDS, combat, publishCombat, useCombatVersion } from "@/lib/game/combat/runtime";
+import { keyName, useAbilityKeys, useMoveKeys } from "@/lib/game/movement/keys";
 import { WEAPONS } from "@/lib/game/combat/data";
-import { resolveCast } from "@/lib/game/combat/actions";
+import { resolveCast } from "@/lib/game/combat/abilities";
 import { cancelCast } from "@/lib/game/combat/abilities";
 import { CAPS } from "@/lib/combat/kits";
 import { staggered } from "@/lib/game/combat/sim";
@@ -21,7 +21,7 @@ import styles from "../DefaultIslandWorld.module.css";
 export default function CombatHud({ player }: { player: React.RefObject<{ x: number; z: number }> }) {
   useCombatVersion();
   const rt = combat.rt, p = rt.player, w = WEAPONS[p.weapon];
-  const keys = readAbilityKeys();
+  const keys = useAbilityKeys(), dash = useMoveKeys().dash;
   const boss = rt.enemies.find(e => e.type.kind === "boss");
   const onDone = (score: IncantationScore) => { const at = player.current; resolveCast(combat.rt, { x: at.x, z: at.z }, score); publishCombat(); };
   const onCancel = () => { cancelCast(combat.rt); publishCombat(); };
@@ -42,7 +42,7 @@ export default function CombatHud({ player }: { player: React.RefObject<{ x: num
       <div className={styles.weaponLine}>
         <span>{w.name}</span>
         <small data-broken={p.durability[p.weapon] <= 0 || undefined}>Durability {p.durability[p.weapon]}/{w.maxDurability}{p.durability[p.weapon] <= 0 ? " · broken, half damage" : ""}</small>
-        <small className={styles.dodgePip} data-ready={p.dodgeCd <= 0 || undefined}><kbd>{keyName(readMoveKeys().dash)}</kbd> Dodge · <kbd>{keys.swap.toUpperCase()}</kbd> Swap</small>
+        <small className={styles.dodgePip} data-ready={p.dodgeCd <= 0 || undefined}><kbd>{keyName(dash)}</kbd> Dodge · <kbd>{keys.swap.toUpperCase()}</kbd> Swap</small>
       </div>
       {kit && <small className={styles.kitLine}>{kit.subclass.name} · {kit.subclass.passive.name}{rt.transform ? ` · ${rt.transform.name}` : ""}
         {summons ? ` · Summons ${minions.reduce((n, u) => n + (u.def.cost ?? 1), 0)}/${kit.capacity}` : ""}{usesTotems ? ` · Totems ${totems.length}/${CAPS.totems}` : ""}</small>}

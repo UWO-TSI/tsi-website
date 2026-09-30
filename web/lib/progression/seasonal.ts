@@ -7,6 +7,7 @@
 import { SEASONAL_GOALS } from "./defaults";
 import { goalCycle } from "./goals";
 import type { ClubGoal, GoalEvent } from "./types";
+import type { LandSeason } from "@/lib/collections/store";
 
 /** The decoration sets the island knows (components/game/SeasonalEvents.tsx). */
 export const DECOR_SETS: Record<string, string> = {
@@ -49,7 +50,7 @@ export function eventCatches(goals: readonly EventGoal[], now: Date): { limited:
  * seasonal_land): limited-time species whose event isn't running land
  * nothing; a catch landed while a tourney runs enters it.
  */
-export function landSeason(goals: readonly (EventGoal & { id: string })[], now: Date): { closed: string[]; tourney: { goal_id: string; cycle: number } | null } {
+export function landSeason(goals: readonly (EventGoal & { id: string })[], now: Date): LandSeason {
   const { limited, open } = eventCatches(goals, now);
   const t = goals.find((g) => g.event.tourney && eventOpen(g, now));
   return { closed: [...limited].filter((k) => !open.has(k)), tourney: t ? { goal_id: t.id, cycle: goalCycle({ ...t, active: true }, now).cycle } : null };

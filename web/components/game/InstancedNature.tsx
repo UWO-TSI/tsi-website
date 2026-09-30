@@ -98,7 +98,7 @@ export interface ModelPlacement extends NaturePlacement { url: string }
 export function InstancedModels({ items }: { items: readonly ModelPlacement[] }) {
   const groups = useMemo(() => {
     const byUrl = new Map<string, NaturePlacement[]>();
-    for (const { url, ...p } of items) byUrl.set(url, [...(byUrl.get(url) ?? []), p]);
+    for (const { url, ...p } of items) { const group = byUrl.get(url); if (group) group.push(p); else byUrl.set(url, [p]); }
     return [...byUrl];
   }, [items]);
   return <>{groups.map(([url, placements]) => <Suspense key={url} fallback={null}><InstancedGLB url={url} placements={placements} /></Suspense>)}</>;

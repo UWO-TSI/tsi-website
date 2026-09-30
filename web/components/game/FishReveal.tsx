@@ -42,10 +42,14 @@ type Stage = "suspense" | "freeze" | "flash" | "landed";
 export default function FishReveal({
   fish,
   sizeCm,
+  recipe,
   onDone,
 }: {
   fish: FishDef;
-  sizeCm: number;
+  /** Null: no size recorded (a fish off the roster). */
+  sizeCm: number | null;
+  /** A recipe the catch taught (rare catches). */
+  recipe?: string | null;
   onDone: () => void;
 }) {
   const cfg = REVEAL[fish.rarity];
@@ -382,7 +386,7 @@ export default function FishReveal({
             >
               NEW!
             </span>
-            <span style={{ fontSize: 13, color: "rgba(255, 253, 245, 0.85)", fontWeight: 600 }}>{sizeCm} cm</span>
+            {sizeCm !== null && <span style={{ fontSize: 13, color: "rgba(255, 253, 245, 0.85)", fontWeight: 600 }}>{sizeCm} cm</span>}
             <span
               style={{
                 fontSize: 11,
@@ -397,6 +401,7 @@ export default function FishReveal({
             </span>
           </div>
           {oneLinerFor(fish.key) && <p style={{ margin: "10px 0 0", fontSize: 13, fontStyle: "italic", color: "rgba(255, 253, 245, 0.85)", textAlign: "center" }}>“{oneLinerFor(fish.key)}”</p>}
+          {recipe && <p style={{ margin: "8px 0 0", fontSize: 13, fontWeight: 700, color: "#FFFDF5", textAlign: "center" }} data-testid="reveal-recipe">You learned a recipe: {recipe}</p>}
         </div>
       </div>
 
@@ -425,7 +430,7 @@ export default function FishReveal({
             whiteSpace: "nowrap",
           }}
         >
-          ⚡ {meta.label.toUpperCase()} CATCH — {fish.name}, {sizeCm} cm
+          ⚡ {meta.label.toUpperCase()} CATCH — {fish.name}{sizeCm !== null ? `, ${sizeCm} cm` : ""}
         </div>
       )}
 

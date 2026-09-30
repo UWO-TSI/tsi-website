@@ -1,12 +1,11 @@
 /**
- * SQL seed for weapons, enemy types and missions, kept verbatim in
- * 20260926190000_combat_content.sql. Upserts, so the content pass overwrites
- * the first seed in 20260926150800_combat.sql (web/scripts/gen-seeds.mjs).
+ * SQL seed for weapons, enemy types and missions (first block in
+ * 20260926190000_combat_content.sql; changes: lib/seedMigrations.ts). Upserts,
+ * so the content pass overwrites the first seed in 20260926150800_combat.sql.
  */
 import { ENEMIES, MISSIONS } from "./content";
 import { WEAPONS } from "./weapons";
-
-const q = (v: string) => `'${v.replace(/'/g, "''")}'`;
+import { q } from "@/lib/collections/seed";
 const upsert = (cols: string[]) => `ON CONFLICT (key) DO UPDATE SET ${cols.filter((c) => c !== "key").map((c) => `${c} = EXCLUDED.${c}`).join(", ")};`;
 export const SEED_BEGIN = "-- BEGIN GENERATED COMBAT SEED (web/scripts/gen-seeds.mjs)";
 export const SEED_END = "-- END GENERATED COMBAT SEED";

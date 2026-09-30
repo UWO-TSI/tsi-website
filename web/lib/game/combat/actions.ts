@@ -7,15 +7,13 @@
  */
 import { ENEMIES, WEAPONS } from "./data";
 import type { Vec } from "./sim";
-import { BOSS, DODGE, inArc, invulnerable, spawnEnemy, type Enemy } from "./sim";
+import { BOSS, DODGE, inArc, invulnerable, spawnEnemy, sweptHit, type Enemy } from "./sim";
 import { ENERGY, SLOT_IDS, type AbilityId, type CombatRuntime } from "./runtime";
-import { cancelCast, floater, hitAmount, mitigate, strike, summon, fireSlot } from "./abilities";
+import { cancelCast, floater, mitigate, strike, summon, fireSlot } from "./abilities";
 import type { SpawnPoint } from "./spawns";
 import { FAMILY_STAT } from "@/lib/combat/kits";
 import { WEAPONS as SYSTEM_WEAPONS } from "@/lib/combat/weapons";
 import { MOVE_TUNING, type MoveTuning } from "@/lib/game/movement/sim";
-
-export { floater, missionEvent, resolveCast } from "./abilities";
 
 /** Energy regen: after ENERGY.delay seconds without spending, never while tracing. */
 export function regenEnergy(rt: CombatRuntime, dt: number) {
@@ -23,9 +21,6 @@ export function regenEnergy(rt: CombatRuntime, dt: number) {
   p.sinceSpend += dt;
   if (!rt.casting && p.sinceSpend >= ENERGY.delay) p.energy = Math.min(ENERGY.max, p.energy + ENERGY.regen * dt);
 }
-
-/** One hit from the equipped weapon (systems damage formula); a staggered boss takes half again. */
-export const weaponDamage = (rt: CombatRuntime, e: Enemy, random: () => number, potency = 1) => hitAmount(rt, e, { power: potency, from: e }, random);
 
 const wearHit = (rt: CombatRuntime) => { const p = rt.player; p.hits[p.weapon] = (p.hits[p.weapon] ?? 0) + 1; p.durability[p.weapon] = Math.max(0, p.durability[p.weapon] - 1); };
 
@@ -53,7 +48,7 @@ export function attack(rt: CombatRuntime, player: Vec, random = Math.random): bo
 }
 
 /** Player projectile hits: weapon shots at weapon damage (staff bolts splash at half), ability and summon shots carry their own power. */
-export function resolvePlayerShot(rt: CombatRuntime, shotIdx: number, from: Vec, to: Vec, sweptHit: (a: Vec, b: Vec, c: Vec, r: number) => boolean, random = Math.random): boolean {
+export function resolvePlayerShot(rt: CombatRuntime, shotIdx: number, from: Vec, to: Vec, random = Math.random): boolean {
   const s = rt.projectiles[shotIdx], h = s.hit;
   const target = rt.enemies.find(e => e.state !== "dead" && e.state !== "return" && !h?.hitIds?.includes(e.id) && sweptHit(from, to, e, e.type.radius + s.radius));
   if (!target) return false;
@@ -89,10 +84,13 @@ export function startDodge(rt: CombatRuntime, dir: Vec): boolean {
  * The ruins on the movement kit (specs/movement.md): Q's dash is the dodge (its speed and time, easing to 0.4 of the
  * burst as the roll did, its cooldown), and walking and sprint scale with the combat speed stat.
  */
+let tuned: { speed: number; t: MoveTuning } | null = null;
 export function combatTuning(speed: number): MoveTuning {
+  if (tuned?.speed === speed) return tuned.t; // the avatar asks every frame; the speed stat changes rarely
   const t = MOVE_TUNING;
-  return { ...t, walkSpeed: t.walkSpeed * speed, sneakSpeed: t.sneakSpeed * speed, sprintSpeed: t.sprintSpeed * speed,
-    dashSpeed: DODGE.speed, dashTime: DODGE.duration, dashExit: 0.4, dashEase: 1, dashCooldown: DODGE.duration + DODGE.cooldown };
+  tuned = { speed, t: { ...t, walkSpeed: t.walkSpeed * speed, sneakSpeed: t.sneakSpeed * speed, sprintSpeed: t.sprintSpeed * speed,
+    dashSpeed: DODGE.speed, dashTime: DODGE.duration, dashExit: 0.4, dashEase: 1, dashCooldown: DODGE.duration + DODGE.cooldown } };
+  return tuned.t;
 }
 /** The kit's dash in the ruins: the sim moves you and its cooldown (the same DODGE timings) gates it; this gives it the dodge's i-frames and cancels a cast. */
 export function dashDodge(rt: CombatRuntime, dir: Vec): boolean {
@@ -101,7 +99,7 @@ export function dashDodge(rt: CombatRuntime, dir: Vec): boolean {
 }
 /** What moves you in the ruins besides the kit: an ability's dash and knockback (the dodge's own movement is the kit's dash). */
 export function combatPush(p: CombatRuntime["player"]): Vec | undefined {
-  return p.alive && p.dodgeAge === null && (p.impulse.x || p.impulse.z) ? p.impulse : undefined;
+  return p.alive && (p.impulse.x || p.impulse.z) ? p.impulse : undefined;
 }
 
 /** Damage the player unless safe or in i-frames (dodge, or a dash that grants them); guard, a frontal block and the shield soak first. Returns health lost. */

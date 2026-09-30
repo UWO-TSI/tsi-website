@@ -6,9 +6,7 @@
  */
 export type WeaponKind = "melee" | "bow" | "staff" | "summon";
 export interface Weapon {
-  id: string; name: string; kind: WeaponKind; tier: number;
-  /** Base damage per hit before stats. */
-  damage: number;
+  id: string; name: string; kind: WeaponKind;
   /** Seconds between attacks. */
   cooldown: number;
   /** Melee reach / projectile range, world units. */
@@ -17,7 +15,7 @@ export interface Weapon {
   arc: number;
   /** Projectile speed, world units/s (bow, staff). */
   speed?: number;
-  durability: number; maxDurability: number;
+  maxDurability: number;
   model: string; modelScale: number;
   /** Socket-space Euler overrides for a model that doesn't follow its kind's grip (the revolver's barrel is +Z). */
   grip?: WeaponGrip;

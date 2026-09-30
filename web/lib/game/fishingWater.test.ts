@@ -1,12 +1,7 @@
 import { expect, it } from "vitest";
 import { createCenteredMap, LEVEL_STEP, setCell, Surface, WATER_DROP } from "./grid";
-import { gridFishingWaterHeight, legacyFishingWaterHeight } from "./fishingWater";
-import { OCEAN_WATER_Y, RIVER_WATER_Y } from "./waterLevels";
-
-it("matches the legacy river and distant sea surfaces", () => {
-  expect(legacyFishingWaterHeight(-12, 6.2)).toBe(RIVER_WATER_Y);
-  expect(legacyFishingWaterHeight(-26, 76.5)).toBe(OCEAN_WATER_Y);
-});
+import { gridFishingWaterHeight } from "./fishingWater";
+import { OCEAN_WATER_Y } from "./waterLevels";
 
 it("places effects on sea-level and raised grid water without changing the map", () => {
   const map = createCenteredMap(8, 8);

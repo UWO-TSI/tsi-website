@@ -54,7 +54,7 @@ export interface IslandLight {
   windowGlow: number;
   /** Fireflies out (evening/night only). */
   fireflies: boolean;
-  /** Cast-shadow PCF radius, opacity and tint (the Light tier's blob shadows take the tint). */
+  /** Cast-shadow PCF radius, opacity and tint (the contact shadows take the tint). */
   shadow: { radius: number; intensity: number; tint: string };
   rim?: { color: string; intensity: number };
   /** Screen-space sky gradient from this colour down to `sky`; absent = flat `sky`. */
@@ -85,12 +85,9 @@ export function islandLight(look: LookPreset, phase: IslandPhase, sun: SunAngles
 
 /** The day David picked the look (row 236). Its 11:45 sun is the picked key light, within 3.5° (row 239). */
 const LOOK_DAY = new Date("2026-09-27T16:00:00Z");
-/** Each phase under the real sun at its preview time on LOOK_DAY (the applicant island and the tests). */
+/** Each phase under the real sun at its preview time on LOOK_DAY (the applicant island's grade and the tests). */
 export const ISLAND_LIGHTING = Object.fromEntries(ISLAND_PHASES.map(phase =>
   [phase, islandLight(CURRENT, phase, solarPosition(phaseInstant(phase, LOOK_DAY)))])) as Record<IslandPhase, IslandLight>;
-
-/** envLight.ts keys its built-in palettes dawn/day/dusk/night. */
-export const ENV_KEY: Record<IslandPhase, "dawn" | "day" | "dusk" | "night"> = { dawn: "dawn", day: "day", evening: "dusk", night: "night" };
 
 /**
  * Weather layered on a time-of-day profile (§5.5): less sun and more fill (a

@@ -14,7 +14,7 @@ import { damage as ruleDamage, WEAPONS as SYSTEM_WEAPONS } from "@/lib/combat/we
 import type { IncantationScore } from "./contract";
 import { ENEMIES } from "./data";
 import { advanceMission, type MissionEvent } from "./missions";
-import { angleDiff, BOSS, damageEnemy, facingTo, inArc, spawnEnemy, staggered, type Enemy, type Vec } from "./sim";
+import { angleDiff, BOSS, damageEnemy, facingTo, inArc, segDist, spawnEnemy, staggered, type Enemy, type Vec } from "./sim";
 import { SLOT_IDS, type Buff, type CombatRuntime, type ShotHit, type Unit } from "./runtime";
 
 /** Plan §Combat and incantation defaults: starting a drawing spends 25% of its energy, a fizzle or cancel costs a short recovery instead of the cooldown. */
@@ -54,9 +54,12 @@ const passiveOf = (rt: CombatRuntime) => rt.kit?.subclass.passive ?? null;
 export const buffSum = (rt: CombatRuntime, stat: Buff["stat"]) => rt.buffs.reduce((n, b) => n + (b.stat === stat && b.t > 0 ? b.value : 0), 0);
 export const critChance = (rt: CombatRuntime) => derived(rt.player.stats, rt.player.level).crit_chance + buffSum(rt, "crit");
 /** Speed multiplier: stats and kit (the Assassin), buffs, Monk momentum. */
+/** derived()'s move speed for the last stats, level and kit mods seen (the encounter asks every frame; they change rarely). */
+let base: { stats: object; level: number; mods: object | undefined; speed: number } | null = null;
 export function moveSpeed(rt: CombatRuntime): number {
-  const pv = passiveOf(rt);
-  return derived(rt.player.stats, rt.player.level, rt.kit?.subclass.mods).move_speed * (1 + buffSum(rt, "speed") + (pv?.kind === "momentum" ? pv.value * rt.passive.momentum : 0));
+  const pv = passiveOf(rt), p = rt.player, mods = rt.kit?.subclass.mods;
+  if (!base || base.stats !== p.stats || base.level !== p.level || base.mods !== mods) base = { stats: p.stats, level: p.level, mods, speed: derived(p.stats, p.level, mods).move_speed };
+  return base.speed * (1 + buffSum(rt, "speed") + (pv?.kind === "momentum" ? pv.value * rt.passive.momentum : 0));
 }
 export const distracted = (rt: CombatRuntime, e: Enemy) => e.status.distract > 0 || e.status.hold > 0 || rt.units.some(u => u.def.kind === "decoy" && dist(u, e) < e.type.aggroRadius + 3);
 
@@ -113,7 +116,7 @@ function onPlayerHit(rt: CombatRuntime, e: Enemy, amount: number, crit: boolean,
 
 function onKill(rt: CombatRuntime, e: Enemy) {
   rt.killQueue.push({ enemy: e.type.id, key: `kill:${e.id}:${rt.seq++}:${Date.now().toString(36)}` });
-  missionEvent(rt, { kind: "kill", enemy: e.type.id });
+  missionEvent(rt, { type: "kill", enemy: e.type.id });
   const pv = passiveOf(rt), me = rt.player.last;
   if (pv?.kind === "kill_heal" && me && dist(me, e) <= (pv.cap ?? 9)) heal(rt, rt.player.maxHp * pv.value);
 }
@@ -238,11 +241,6 @@ export function cancelCast(rt: CombatRuntime) {
 }
 
 // ── Effects ─────────────────────────────────────────────────────
-function segDist(p: Vec, a: Vec, b: Vec) {
-  const dx = b.x - a.x, dz = b.z - a.z, l2 = dx * dx + dz * dz;
-  const t = l2 ? Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.z - a.z) * dz) / l2)) : 0;
-  return Math.hypot(a.x + dx * t - p.x, a.z + dz * t - p.z);
-}
 const scaled = (st: Status | undefined, ctl: number): Status | undefined => st && {
   hold: st.hold && st.hold * ctl, distract: st.distract && st.distract * ctl, mark: st.mark,
   slow: st.slow && [st.slow[0], st.slow[1] * ctl],
@@ -274,7 +272,7 @@ export function runEffects(rt: CombatRuntime, effects: Effect[], ctx: Ctx, rando
           if (inside && ef.power > 0) strike(rt, e, src(ef.power, center, { knock: ef.knock ?? 3, status: scaled(ef.status, ctx.ctl) }), random);
           else if (inside && ef.status) applyStatus(e, ef.status, ctx.ctl);
         }
-        rt.blasts.push({ id: rt.seq++, x: center.x, z: center.z, radius: ef.length ? ef.radius : ef.radius, color: ctx.color, age: 0, life: 0.5, arc: ef.arc, rot: face, length: ef.length });
+        rt.blasts.push({ id: rt.seq++, x: center.x, z: center.z, radius: ef.radius, color: ctx.color, age: 0, life: 0.5, arc: ef.arc, rot: face, length: ef.length });
         break;
       }
       case "dash": {

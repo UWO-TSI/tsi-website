@@ -26,12 +26,10 @@
  *   AudioManager.enable()                        — user gesture unlock
  *   AudioManager.setVolumes({ master, ambient, music, sfx })
  *   AudioManager.setMuted(bool)                   — silences all channels, keeps sliders
- *   AudioManager.setPhase(phase)                  — crossfade ambient track (time only)
  *   AudioManager.setAmbience({ phase, weather, season }) — crossfade ambient, richer key
  *   AudioManager.setMusic({ block, season, override }) — crossfade the hourly music bed
  *   AudioManager.playSFX(name)                   — one-shot, overlapping safe
  *   AudioManager.playBlip()                      — random dialogue voice blip
- *   AudioManager.dispose()
  *   AudioManager.subscribe(listener)             — for React UI sync
  *   AudioManager.getState()
  */
@@ -111,7 +109,7 @@ interface StoredPrefs {
   muted: boolean;
 }
 
-const DEFAULT_VOLUMES: AudioVolumes = { master: 0.7, ambient: 0.6, music: 0.55, sfx: 0.8 };
+export const DEFAULT_VOLUMES: AudioVolumes = { master: 0.7, ambient: 0.6, music: 0.55, sfx: 0.8 };
 
 function readStoredPrefs(): StoredPrefs {
   if (typeof window === "undefined") {
@@ -260,20 +258,6 @@ export class AudioManagerImpl {
     for (const [sound, name] of this.oneShots) sound.volume = this.sfxTargetVolume(name);
   }
 
-  private playElement(el: HTMLAudioElement, src: string): void {
-    void el.play().catch((error: unknown) => {
-      if (!this.isTracked(el)) return;
-      if (error instanceof DOMException && error.name === "NotAllowedError") {
-        this.enabled = false;
-        this.stop();
-        this.notify();
-      } else if (error instanceof DOMException && error.name === "NotSupportedError") {
-        this.markMissing(src);
-      }
-      this.oneShots.delete(el);
-    });
-  }
-
   private mutedGain(): number {
     return this.muted ? 0 : 1;
   }
@@ -292,11 +276,6 @@ export class AudioManagerImpl {
     const sceneGain = applicant ? 0.25 : 1;
     const movementGain = applicant && (name === "footstep" || name === "jump") ? 0.35 : 1;
     return this.volumes.master * this.volumes.sfx * sceneGain * movementGain * this.mutedGain();
-  }
-
-  /** Time-of-day only — kept for existing callers (GameWorld, ApplicantIsland). */
-  setPhase(phase: AmbientPhase): void {
-    this.setAmbience({ phase });
   }
 
   /** Richer ambient key: time of day, plus an optional weather/season variant tried first. */
@@ -350,7 +329,7 @@ export class AudioManagerImpl {
     );
   }
 
-  private newTrackElement(loop: boolean): HTMLAudioElement | null {
+  private newAudio(loop: boolean): HTMLAudioElement | null {
     if (typeof window === "undefined") return null;
     try {
       const el = new Audio();
@@ -371,6 +350,7 @@ export class AudioManagerImpl {
     el.src = src;
     void el.play().catch((error: unknown) => {
       if (!this.isTracked(el)) return;
+      this.oneShots.delete(el); // a one-shot that failed is done
       if (error instanceof DOMException && error.name === "NotAllowedError") {
         this.enabled = false;
         this.stop();
@@ -386,7 +366,7 @@ export class AudioManagerImpl {
 
   private startChannel(name: ChannelName, candidates: string[]): void {
     if (typeof window === "undefined") return;
-    const el = this.newTrackElement(true);
+    const el = this.newAudio(true);
     if (!el) return;
     el.volume = this.targetVolume(name);
     this.channel(name).current = el;
@@ -406,7 +386,7 @@ export class AudioManagerImpl {
       ch.next = null;
     }
 
-    const next = this.newTrackElement(true);
+    const next = this.newAudio(true);
     if (!next) {
       if (ch.current) {
         ch.current.pause();
@@ -443,13 +423,13 @@ export class AudioManagerImpl {
     if (!this.enabled || typeof window === "undefined") return;
     const src = MANIFEST.sfx[name];
     if (this.missingFiles.has(src)) return; // already known missing
-    const el = this.createAudioElement(src, false);
+    const el = this.newAudio(false);
     if (!el) return;
     el.volume = this.sfxTargetVolume(name);
     this.oneShots.set(el, name);
     el.onended = () => this.oneShots.delete(el);
-    el.addEventListener("error", () => this.oneShots.delete(el), { once: true });
-    this.playElement(el, src);
+    el.addEventListener("error", () => { if (el.error?.code === 4) this.markMissing(src); this.oneShots.delete(el); }, { once: true });
+    this.playCascading(el, [src], 0);
   }
 
   /** Random short voice blip for NPC dialogue reveal (animalese-lite). */
@@ -476,34 +456,6 @@ export class AudioManagerImpl {
     }
     for (const sound of this.oneShots.keys()) sound.pause();
     this.oneShots.clear();
-  }
-
-  dispose(): void {
-    this.stop();
-    this.enabled = false;
-    this.phase = null;
-    this.ambientKey = null;
-    this.ambientCandidates = [];
-    this.musicKey = null;
-    this.musicCandidates = [];
-    this.musicBlock = null;
-    this.musicOverride = null;
-    this.notify();
-    this.listeners.clear();
-  }
-
-  private createAudioElement(src: string, loop: boolean): HTMLAudioElement | null {
-    if (this.missingFiles.has(src)) return null;
-    try {
-      const el = new Audio(src);
-      el.loop = loop;
-      el.preload = "auto";
-      el.onerror = () => { if (el.error?.code === 4) this.markMissing(src); };
-      return el;
-    } catch {
-      this.markMissing(src);
-      return null;
-    }
   }
 
   private markMissing(src: string): void {

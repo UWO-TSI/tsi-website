@@ -12,8 +12,10 @@ export const SUBCLASS_LEVEL = 10;
 export const POINTS_PER_LEVEL = 3;
 export const SESSION_XP = 400; // an ordinary play session, for balancing only
 export const EVENT_XP = 2000; // an in-person club event (QR check-in)
+// The source for the economy_settings rows the SQL charges (seeded by 20260926150800_combat.sql); change both together.
 export const STAT_RESET_FEE = 200; // coins, at the Oracle (row 38)
 export const SUBCLASS_RESPEC_FEE = 250;
+export const KILL_XP_PER_HOUR_CAP = 6000;
 
 export const xpToNext = (level: number) => 100 * level + 25 * level * level;
 
@@ -90,7 +92,6 @@ export function presetAllocation(family: string, level: number): StatBlock {
 export function derived(stats: StatBlock, level: number, mods: { max_hp?: number; speed?: number; capacity?: number } = {}) {
   return {
     max_hp: Math.round((100 + level * 12 + stats.vitality * 15) * (1 + (mods.max_hp ?? 0))),
-    energy: 100 + stats.arcana * 3 + stats.spirit * 3,
     crit_chance: Math.min(0.5, 0.05 + stats.finesse * 0.006),
     summon_capacity: 2 + Math.floor(stats.spirit / 5) + (mods.capacity ?? 0), // row 43
     move_speed: (1 + Math.min(0.25, stats.finesse * 0.004)) * (1 + (mods.speed ?? 0)),

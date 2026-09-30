@@ -3,7 +3,6 @@ import { ENEMIES, MISSIONS } from "./content";
 import { RUNES, resample, scoreTrace, potencyFor, type Pt, type TracePt } from "./incantation";
 import { SUBCLASSES, subclassesFor } from "./kits";
 import { applyEvent, applyEvents, canStart, initialProgress, type MissionEvent } from "./missions";
-import { aggroStep, canDodge, DODGE, dodgeCancelsCast, hostileHitAllowed, isInvulnerable, type EnemyAggro } from "./movement";
 import { allocate, derived, levelForXp, levelProgress, pointsEarned, presetAllocation, SUBCLASS_LEVEL, xpForLevel, xpToNext, ZERO_STATS, EVENT_XP, SESSION_XP, MAX_LEVEL } from "./progression";
 import { damage, repairCost, wear, WEAPONS } from "./weapons";
 
@@ -63,30 +62,6 @@ describe("damage and durability", () => {
     expect(wear(sword, 120, 0, true)).toBe(108);
     expect(wear(sword, 3, 10, true)).toBe(0);
     expect(repairCost(sword, 100)).toBe(20 * 2);
-  });
-});
-
-describe("dodge and aggro", () => {
-  it("has an i-frame window, a cooldown, and cancels casting", () => {
-    expect([0, 59, 60, 200, 319, 320].map((t) => isInvulnerable(1000, 1000 + t))).toEqual([false, false, true, true, true, false]);
-    expect(isInvulnerable(null, 5)).toBe(false);
-    expect(canDodge(1000, 1000 + DODGE.cooldown_ms - 1)).toBe(false);
-    expect(dodgeCancelsCast(true)).toEqual({ cancelled: true });
-  });
-  it("chases outside the village, gives up at the boundary or leash, and heals on returning home", () => {
-    const village = { contains: (p: { x: number; z: number }) => p.x < 0 };
-    let e: EnemyAggro = { state: "idle", home: { x: 10, z: 0 }, pos: { x: 10, z: 0 }, hp: 100, max_hp: 100, aggro_radius: 6, attack_range: 1.5, leash_radius: 18 };
-    e = aggroStep(e, { x: 20, z: 0 }, village);
-    expect(e.state).toBe("idle");
-    e = aggroStep(e, { x: 14, z: 0 }, village);
-    expect(e.state).toBe("chase");
-    e = aggroStep({ ...e, pos: { x: 3, z: 0 }, hp: 40 }, { x: -1, z: 0 }, village); // player steps into the village
-    expect(e.state).toBe("return");
-    e = aggroStep({ ...e, pos: { x: 10.2, z: 0 } }, { x: -1, z: 0 }, village);
-    expect(e).toMatchObject({ state: "idle", hp: 100 });
-    expect(hostileHitAllowed({ x: -2, z: 0 }, village)).toBe(false);
-    const leashed = aggroStep({ ...e, state: "chase", pos: { x: 40, z: 0 } }, { x: 45, z: 0 }, village);
-    expect(leashed.state).toBe("return");
   });
 });
 

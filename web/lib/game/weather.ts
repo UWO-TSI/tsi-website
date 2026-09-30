@@ -2,8 +2,9 @@
  * Daily weather (rain days v1, approved big swing #21, 2026-07-12).
  *
  * Deterministic per-calendar-day: every player sees the same weather on the
- * same date with zero backend. 58% sunny / 24% cloudy / 18% rain.
- * `?sunny=1` / `?cloudy=1` / `?rain=1` force a state for testing.
+ * same date with zero backend. 58% sunny / 24% cloudy / 18% rain. Now only
+ * the island weather's offline fallback (islandWeather.ts fallbackWeather);
+ * the world reads the island weather.
  *
  * The hash is one mulberry32 scramble of yyyymmdd — cheap, stable, and the
  * same trick the ambience seeds use. Phase 2 can swap this for an
@@ -22,15 +23,4 @@ export function weatherForDate(d: Date): Weather {
   if (r < 0.18) return "rain";
   if (r < 0.42) return "cloudy";
   return "sunny";
-}
-
-/** Client-only convenience: today's weather with URL overrides (development only). */
-export function getTodayWeather(): Weather {
-  if (process.env.NODE_ENV !== "production" && typeof window !== "undefined") {
-    const q = window.location.search;
-    if (q.includes("rain")) return "rain";
-    if (q.includes("cloudy")) return "cloudy";
-    if (q.includes("sunny")) return "sunny";
-  }
-  return weatherForDate(new Date());
 }

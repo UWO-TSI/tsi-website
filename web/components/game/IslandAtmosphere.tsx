@@ -14,7 +14,7 @@ import { CloudShadows, MistBanks, TreeLeaves } from "./AmbienceFX";
 import { Fireflies } from "./AmbientLife";
 import RainFX from "./RainFX";
 import { applyEnvironment, disposeEnvironment } from "@/lib/game/envLight";
-import { ENV_KEY, fireflyNight, type IslandLight } from "@/lib/game/islandLighting";
+import { fireflyNight, type IslandLight } from "@/lib/game/islandLighting";
 import { RIM_POSITION, shadowHalfHeight } from "@/lib/game/lookPreset";
 import { SEASON_TREES, type SeasonLook } from "@/lib/game/seasonalLook";
 import type { IslandWeather } from "@/lib/game/islandWeather";
@@ -24,7 +24,7 @@ import { TERRAIN_SNOW } from "./grid/GridTerrain";
 import { WORLD_BEND } from "@/lib/game/curvedWorld";
 import { worldTime } from "@/lib/game/worldClock";
 import { sheddingTrees, worldWind } from "@/lib/game/worldFx";
-import { treeScale } from "./NatureModels";
+import { treeParts } from "./NatureModels";
 
 /** Screen-space vertical sky gradient (a plain 2D background texture): `top` at the top, `horizon` from mid-screen down. */
 export function SkyGradient({ top, horizon }: { top: string; horizon: string }) {
@@ -70,15 +70,15 @@ export function IslandAtmosphere({ phase, light, look, weather, liteMode, castSh
   useEffect(() => { TERRAIN_SNOW.value = look.snow; WORLD_SNOW.value = look.snow; setLeafTint(look.leaf); }, [look.snow, look.leaf]);
   useEffect(() => () => { TERRAIN_SNOW.value = 0; WORLD_SNOW.value = 0; }, []);
   useEffect(() => {
-    applyEnvironment(gl, scene, ENV_KEY[phase], light.environment);
+    applyEnvironment(gl, scene, light.environment);
     return () => disposeEnvironment(scene);
-  }, [gl, scene, phase, light]);
+  }, [gl, scene, light]);
   const { shadow } = light, shadowHalf = shadowHalfHeight(light.sunPosition, shadowExtent);
   // One world wind from the shared weather: rain slant, leaves and mist agree.
   const wind = useMemo(() => worldWind(weather), [weather]);
   const leafTrees = useMemo(() => {
     const models = SEASON_TREES[look.season];
-    return sheddingTrees(trees.map(t => ({ x: t.x, y: ground(t.x, t.z), z: t.z, model: models[t.seed % models.length], scale: treeScale(t.seed) })), look.season);
+    return sheddingTrees(trees.map(t => { const [tree] = treeParts(t.seed, models); return { x: t.x, y: ground(t.x, t.z), z: t.z, model: tree.url, scale: tree.scale }; }), look.season);
   }, [trees, ground, look.season]);
   const puddleBlobs = useMemo(() => puddles.map(([x, z], i) => ({ x, z, y: ground(x, z) + 0.01, rx: 0.5 + (i % 3) * 0.18, rz: 0.32 + (i % 2) * 0.12, yaw: 0 })), [puddles, ground]);
   return <>
@@ -92,7 +92,7 @@ export function IslandAtmosphere({ phase, light, look, weather, liteMode, castSh
       onUpdate={key => key.shadow.camera.updateProjectionMatrix()}
       shadow-radius={shadow.radius} shadow-intensity={shadow.intensity} shadow-normalBias={0.02} shadow-bias={-0.0002} />
     {light.rim && <directionalLight position={RIM_POSITION} color={light.rim.color} intensity={light.rim.intensity} />}
-    {!liteMode && <CloudShadows phase={ENV_KEY[phase]} size={cloudSize} bounded />}
+    {!liteMode && <CloudShadows phase={phase} size={cloudSize} bounded />}
     {(weather === "rain" || weather === "snow") && <RainFX kind={weather} wind={wind} groundHeight={ground} />}
     <ContactShadows tint={shadow.tint} intensity={shadow.intensity} sunMap={castShadows} />
     {weather === "rain" && puddleBlobs.length > 0 && <SoftDiscs spots={puddleBlobs} opacity={0.5} color="#8ea7b8" />}

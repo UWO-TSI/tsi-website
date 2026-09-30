@@ -4,7 +4,7 @@ import { useSyncExternalStore, type ReactNode } from "react";
 import { applicantDayPhase } from "@/lib/game/applicantTime";
 import styles from "./appearance.module.css";
 
-function subscribeClock(onChange: () => void) {
+export function subscribeClock(onChange: () => void) {
   const timer = window.setInterval(onChange, 60_000);
   document.addEventListener("visibilitychange", onChange);
   return () => { clearInterval(timer); document.removeEventListener("visibilitychange", onChange); };

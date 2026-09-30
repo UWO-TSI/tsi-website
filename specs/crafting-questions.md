@@ -22,3 +22,23 @@ Each has the assumption the build uses today. None blocks.
 10. Resident quests call `learnFromQuest()` when the resident roster lands (waits on David's founders' names and traits, row 217).
 11. Rare-catch recipe drops wait for server-rolled catches. Backlog item "server-authoritative catch rolls" added to the roadmap: catches are client-reported with hourly caps today, which bounds but does not remove farming.
 12. Accepted.
+
+## Rare-catch recipe drops (2026-09-30, `game/recipe-drops`, rows 199, 258)
+
+Built: question 11 above. Rules, drop table and tests are in `evidence/recipe-drops/README.md`. None of these block.
+
+13. **Chances.** A catch that is rare by roster rarity teaches a recipe 2% of the time, epic 5%, legendary 15%. That comes to about 2 recipes over a season for someone who fishes about 10 hours. The chances live in `recipe_drop_chances` with no editor, so changing them takes one SQL update. Which recipes drop, and from which rarity, is set in the Recipes editor. *Assumption:* no editor for the three chances until you want to tune them.
+14. **Pool.** The pool is the 16 bottle-only recipes. The tier-4 net and shovel and the monarch cape need an epic catch. Quest-tagged recipes (rods 4-5 and the other top tier) are left out until question 10 is answered. *Ask:* should a legendary catch be able to teach a top-tier recipe?
+15. **Off-roster fish never drop.** About half of river landings are reel species that have no `collection_species` row, so they have no roster rarity to roll on. *Assumption:* roster rarity only, as specified. Adding those fish to the roster would bring them in.
+16. **Every server-rolled catch counts,** not just fish: bugs, rare flowers and shells, and crystal or gold struck from rocks. The existing hourly caps limit how fast a script can farm drops. At the cap it could empty the 16-recipe pool in about a day. *Assumption:* acceptable, since these are recipes, not currency.
+
+## Every reel fish on the roster (2026-09-30, `game/roster-removals`, rows 260-261)
+
+Question 15 is answered by row 260: the reel's 38 other fish are roster species (`REEL_FISH` in `web/lib/collections/roster.ts`, migration `20260930142943_catalogue_seed`), so they record sizes and get journal and aquarium pages, weekly trophies, tourney entries and recipe drops. Drop chances unchanged (row 261). None of these block.
+
+17. **Rarity is the reel's.** Each species keeps the rarity the reel already rolls it at, because the roster mirrors the reel (tests hold them equal). That is 8 common, 15 uncommon, 2 rare, 11 epic and 2 legendary (Golden Arowana, Hammerhead Shark). The 15 rare-and-up ones now roll recipe drops. *Ask:* demote any? That also changes their reel odds and fight.
+18. **The tourney favours giants.** The biggest catch in cm wins, and the Whale Shark (up to 800 cm), Oarfish and Great White (500 cm) and Arapaima (300 cm) now enter. Whoever lands one leads the fish board. *Assumption:* as-is. The alternative is ranking by size relative to the species' maximum, as the weekly trophy case does.
+19. **Months.** Northern-hemisphere seasons, as the launch fish use (tropical and deep-sea fish run roughly Jun to Sep). Doctor Fish has no reference season: May to Sep. Pop-eyed Goldfish, Ranchu Goldfish and Barreleye bite all year. *Assumption:* fine.
+20. **Pond.** Crayfish, Pop-eyed Goldfish and Ranchu Goldfish are pond species now, so they bite only in the pond (they bit in the river before). The other 15 river fish stay in the river and the 20 sea fish at sea. *Assumption:* fine.
+21. **Art.** All 38 already had an icon and a model, so nothing is borrowed. The museum shows roster fish by icon, as before.
+22. **Palette cards still show "active".** Set Active is gone (row 259), but the listing still shows each palette's `active` flag from the table, and nothing sets or reads it. *Assumption:* leave it. It can go with the column.

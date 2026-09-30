@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { memoryCollectionsStore } from "@/lib/collections/memoryStore";
-import { donate, recordCatch } from "@/lib/collections/service";
+import { donate } from "@/lib/collections/service";
 import { postDonation } from "./DonateSheet";
 
 /** Routes the sheet's POST through the real donation service, answering the way the route does. */
@@ -17,8 +17,8 @@ describe("donation sheet", () => {
   it("thanks the first donor and refuses a duplicate with the curator's line", async () => {
     const m = memoryCollectionsStore();
     m.name("a", "Maya Chen");
-    await recordCatch(m.store, "a", "fish_dace", 12);
-    await recordCatch(m.store, "b", "fish_dace", 15);
+    m.record("a", "fish_dace", 12);
+    m.record("b", "fish_dace", 15);
     routeTo(m, "a");
     const first = await postDonation("fish_dace", "Dace");
     expect(first).toContain("Dace");
@@ -29,8 +29,8 @@ describe("donation sheet", () => {
   });
   it("treats the donor's retry as the same donation, not a duplicate", async () => {
     const m = memoryCollectionsStore();
-    await recordCatch(m.store, "a", "fish_dace", 12);
-    await recordCatch(m.store, "a", "fish_dace", 13);
+    m.record("a", "fish_dace", 12);
+    m.record("a", "fish_dace", 13);
     routeTo(m, "a");
     vi.useFakeTimers({ toFake: ["Date"] });
     await postDonation("fish_dace", "Dace");

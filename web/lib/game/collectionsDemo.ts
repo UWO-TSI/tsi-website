@@ -7,7 +7,7 @@
  */
 import { memoryCollectionsStore } from "@/lib/collections/memoryStore";
 import { torontoParts } from "@/lib/time";
-import { catchAction, donate, getShowcase, journal, museum, recordCatch, setShowcase, tourney, trophies } from "@/lib/collections/service";
+import { catchAction, donate, getShowcase, journal, museum, setShowcase, tourney, trophies } from "@/lib/collections/service";
 import { DEFAULT_GOALS } from "@/lib/progression/defaults";
 import { latestTourney } from "@/lib/progression/seasonal";
 import { installDemoFetch, reply } from "./demoFetch";
@@ -29,7 +29,7 @@ export function installCollectionsDemo(): void {
         [OTHERS[0][0], "fish_salmon", 71], [OTHERS[0][0], "fish_dace", 17], [OTHERS[1][0], "bug_monarch_butterfly", null],
         [OTHERS[1][0], "fish_pike", 84], [OTHERS[2][0], "shell_whelk", 13], [OTHERS[2][0], "fish_sea_bass", 66],
       ];
-      for (const [who, key, size] of seed) await recordCatch(m.store, who, key, size);
+      for (const [who, key, size] of seed) m.record(who, key, size);
       await donate(m.store, OTHERS[0][0], "fish_salmon", "demo-don-1");
       await donate(m.store, OTHERS[0][0], "fish_dace", "demo-don-2");
       await donate(m.store, OTHERS[1][0], "bug_monarch_butterfly", "demo-don-3");
@@ -48,7 +48,7 @@ export function installCollectionsDemo(): void {
       const now = new Date();
       switch (path) {
         case "/api/collections":
-          if (method === "POST") return reply(await catchAction(m.store, ME, body, now, "clear", DEFAULT_GOALS), "catch");
+          if (method === "POST") return reply(await catchAction(m.store, ME, body, now, async () => "clear", async () => DEFAULT_GOALS), "catch");
           return new Response(JSON.stringify({ collections: (await m.store.memberItems(ME)).map(i => ({ item_key: i.item_key, count: i.count })) }));
         case "/api/collections/journal": {
           const { hour, month } = torontoParts(now);

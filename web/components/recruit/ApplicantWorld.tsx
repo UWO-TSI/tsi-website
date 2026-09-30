@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useMemo, useRef } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useSyncExternalStore } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Html, useProgress, useTexture } from "@react-three/drei";
 import * as THREE from "three";
@@ -27,13 +27,17 @@ import { createApplicantVillage, APPLICANT_SPAWN, ISLAND_TREES, ISLAND_BUSHES, I
 import { constrainClubhouse, HQ_CLOCK, HQ_LAYOUT, HQ_BOARD_APPROACH } from "@/lib/game/clubhouse";
 import type { Position } from "@/lib/recruitment";
 import ApplicationCountdown from "./ApplicationCountdown";
-import { ISLAND_LIGHTING, CLUBHOUSE_LIGHTING, ISLAND_TERRAIN } from "@/lib/game/islandLighting";
-import { CURRENT, RIM_POSITION, lookFx } from "@/lib/game/lookPreset";
+import { ISLAND_LIGHTING, CLUBHOUSE_LIGHTING, ISLAND_TERRAIN, islandLight } from "@/lib/game/islandLighting";
+import { CURRENT, RIM_POSITION, lookFx, shadowHalfHeight } from "@/lib/game/lookPreset";
+import { solarPosition, SUN_STEP_MS } from "@/lib/game/sunPath";
+import { worldNow } from "@/lib/game/worldClock";
+import { subscribeClock } from "./RecruitmentAppearance";
 import LookMaterials from "@/components/game/LookMaterials";
 import { SkyGradient } from "@/components/game/IslandAtmosphere";
 import { applyEnvironment, disposeEnvironment } from "@/lib/game/envLight";
 import { CloudShadows } from "@/components/game/AmbienceFX";
 import { Lantern } from "@/components/game/AmbientProps";
+import { BASE_FOV } from "@/components/game/movement/moveFx";
 import ContactShadows from "@/components/game/ContactShadows";
 import SunShadows from "@/components/game/SunShadows";
 import { Fireflies } from "@/components/game/AmbientLife";
@@ -117,7 +121,10 @@ function Village({ guideToHQ, returned, paused, onAction, onNear, phase, fishing
   const spawn = returned ? RETURN_SPAWN : APPLICANT_SPAWN;
   const player = useRef(new THREE.Vector3(...spawn));
   const guideMotion = useRef({ speed: 0, yaw: Math.PI, lift: 0 });
-  const lighting = ISLAND_LIGHTING[phase];
+  // The member island's real sun (row 239): world-clock time, one light per two-minute step.
+  const sunStep = useSyncExternalStore(subscribeClock, () => Math.floor(worldNow() / SUN_STEP_MS));
+  const lighting = useMemo(() => islandLight(CURRENT, phase, solarPosition(new Date(sunStep * SUN_STEP_MS))), [phase, sunStep]);
+  const shadowHalf = shadowHalfHeight(lighting.sunPosition, 24);
   const [graphics] = useGraphicsSettings();
   const guide = useRef(new THREE.Vector3(-2.6, 0, -6));
   const cameraTarget = useMemo(() => new THREE.Vector3(), []);
@@ -128,10 +135,9 @@ function Village({ guideToHQ, returned, paused, onAction, onNear, phase, fishing
   const sweep = useRef({ active: false, smoothTime: 2.6, position: new THREE.Vector3(), target: new THREE.Vector3(), look: new THREE.Vector3() });
   const { camera, gl, scene } = useThree();
   useEffect(() => {
-    applyEnvironment(gl, scene, phase === "evening" ? "dusk" : phase, lighting.environment);
+    applyEnvironment(gl, scene, lighting.environment);
     return () => disposeEnvironment(scene);
-  }, [gl, scene, phase, lighting]);
-  const move = useCallback((position: THREE.Vector3) => { player.current.copy(position); }, []);
+  }, [gl, scene, lighting]);
   useEffect(() => {
     camera.position.set(spawn[0], 7.4, spawn[2] - 10.8);
     const wheel = (event: WheelEvent) => { event.preventDefault(); zoom.current = THREE.MathUtils.clamp(zoom.current + event.deltaY * 0.0005, 0.94, 1.08); };
@@ -188,19 +194,20 @@ function Village({ guideToHQ, returned, paused, onAction, onNear, phase, fishing
     <hemisphereLight args={[lighting.fill, lighting.bounce, lighting.hemisphere]} />
     <directionalLight name="sun" position={lighting.sunPosition} color={lighting.sun} intensity={lighting.sunIntensity} castShadow
       shadow-mapSize={[2048, 2048]} shadow-camera-left={-24} shadow-camera-right={24}
-      shadow-camera-top={24} shadow-camera-bottom={-24} shadow-camera-far={75}
+      shadow-camera-top={shadowHalf} shadow-camera-bottom={-shadowHalf} shadow-camera-far={75}
+      onUpdate={key => key.shadow.camera.updateProjectionMatrix()}
       shadow-radius={lighting.shadow.radius} shadow-intensity={lighting.shadow.intensity} shadow-normalBias={0.02} shadow-bias={-0.0002} />
     {lighting.rim && <directionalLight position={RIM_POSITION} color={lighting.rim.color} intensity={lighting.rim.intensity} />}
-    <GridWorld map={island.map} water={lighting.water} palette={ISLAND_TERRAIN} />
+    <GridWorld map={island.map} light={lighting} palette={ISLAND_TERRAIN} />
     <GridOcean map={island.map} lite={graphics.liteMode} />
     <ContactShadows tint={lighting.shadow.tint} intensity={lighting.shadow.intensity} sunMap={graphics.shadows && !graphics.liteMode} />
-    {!graphics.liteMode && <CloudShadows phase={phase === "evening" ? "dusk" : phase} size={[28, 25]} bounded />}
+    {!graphics.liteMode && <CloudShadows phase={phase} size={[28, 25]} bounded />}
     <Seagulls anchors={GULL_ANCHORS} />
     <FishingBobber towardWater playerPosRef={player} waterHeight={fishingWaterHeight} />
     <FishCatchFX playerPosRef={player} />
     <ToolFlourish playerPosRef={player} />
     <FlowerPickFX collectionScope={collectionScope} />
-    <group position={[0, 0, 7]}><ACNHBuilding id="hq" windowColor="#ffc95a" windowGlow={phase === "day" ? 0.3 : phase === "evening" ? 1.15 : 1.6} /></group>
+    <group position={[0, 0, 7]}><ACNHBuilding id="hq" windowColor="#ffc95a" windowGlow={lighting.windowGlow} /></group>
     {phase !== "day" && <Fireflies anchors={ISLAND_BUSHES} count={graphics.liteMode ? 8 : ISLAND_BUSHES.length} groundHeight={island.ground} />}
     {[-2, 2].map(x => <pointLight key={x} position={[x, 1.25, 5.7]} color="#ffd17a" intensity={phase === "day" ? 0 : lighting.lamp * 0.85} distance={4} decay={2} />)}
     <Html position={[0, 1.4, 6.3]} center distanceFactor={18} zIndexRange={[3, 0]}>
@@ -218,7 +225,7 @@ function Village({ guideToHQ, returned, paused, onAction, onNear, phase, fishing
       <Character look={JAYDEN} motion={guideMotion} />
       <Html position={[0, 1.8, 0]} center distanceFactor={13} zIndexRange={[3, 0]}><span className="village-sign">Jayden · Your guide</span></Html>
     </group>
-    <PlayerAvatar spawnPosition={spawn} playerName="You" showNameplate={false} onMove={move} frozen={paused || fishing || arrival} desktopClickToMove
+    <PlayerAvatar spawnPosition={spawn} playerName="You" showNameplate={false} player={player} frozen={paused || fishing || arrival} desktopClickToMove
       world={island} groundHeight={island.ground} groundSurface={island.surface} />
     <DirectionArrow player={player} target={[0, 6.3]} paused={paused || fishing || arrival || !guideToHQ} />
   </>;
@@ -325,7 +332,7 @@ export default function ApplicantWorld(props: Props) {
   return <Canvas tabIndex={0} role="application" aria-label="Tech for Social Impact applicant village. WASD or click the ground to walk. E to interact."
     frameloop={props.hidden ? "never" : props.paused && !props.loading ? "demand" : "always"} dpr={graphics.pixelated ? 0.5 : [1, 1.5]} shadows={graphics.shadows && !graphics.liteMode ? "percentage" : false}
     style={{ imageRendering: graphics.pixelated ? "pixelated" : "auto" }}
-    gl={{ antialias: false, powerPreference: "high-performance" }} camera={{ position: [0, 10.2, -21], fov: 48, near: 0.1, far: 100 }}
+    gl={{ antialias: false, powerPreference: "high-performance" }} camera={{ position: [0, 10.2, -21], fov: BASE_FOV, near: 0.1, far: 100 }}
     onCreated={({ gl }) => { gl.info.autoReset = false; gl.toneMapping = THREE.NeutralToneMapping; gl.outputColorSpace = THREE.SRGBColorSpace; }}>
     <Suspense fallback={null}>
       {props.inside ? <Interior {...props} /> : <Village {...props} />}

@@ -77,7 +77,7 @@ function GullSpecimen() {
   });
 
   // No yaw correction — the model's forward is +Z, which is what gullPose
-  // assumes. See the note in AmbientLife.
+  // assumes. See the note in Seagulls.tsx.
   const body = useMemo(() => cloneSkeleton(scene) as THREE.Group, [scene]);
 
   useEffect(() => {
@@ -270,7 +270,8 @@ function WaterSpecimen() {
   // The water is unlit now, so it does NOT pick this up on its own — the sun has
   // to be handed to it the same way GridWorld hands it the scene's key.
   const sun = useMemo(() => new THREE.Vector3(6, 10, 4).normalize(), []);
-  useFrame((state) => advanceWater(state.clock.elapsedTime, t.water, sun));
+  // A copy per frame: the bench edits t.water in place, and advanceWater only rewrites a new cfg.
+  useFrame((state) => advanceWater(state.clock.elapsedTime, { ...t.water }, sun));
 
   const waterMat = useMemo(() => terrainMaterial("mRiver"), []);
   const landMat = useMemo(() => terrainMaterial("mGrass"), []);

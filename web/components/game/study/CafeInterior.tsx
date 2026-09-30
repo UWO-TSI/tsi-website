@@ -62,9 +62,9 @@ function Room({ phase }: { phase: IslandPhase }) {
   </>;
 }
 
-export default function CafeInterior({ phase, player, frozen, identity, onMove, onNear }: {
-  phase: IslandPhase; player: React.RefObject<THREE.Vector3>; frozen: boolean; identity: WorldIdentity;
-  onMove: (position: THREE.Vector3) => void; onNear: (near: "exit" | null) => void;
+export default function CafeInterior({ phase, player, frozen, identity, level, onNear }: {
+  phase: IslandPhase; player: React.RefObject<THREE.Vector3>; frozen: boolean; identity: WorldIdentity; level?: number;
+  onNear: (near: "exit" | null) => void;
 }) {
   const { scene, camera } = useThree();
   const light = CLUBHOUSE_LIGHTING[phase];
@@ -101,7 +101,7 @@ export default function CafeInterior({ phase, player, frozen, identity, onMove, 
     <Html position={[BOARD[0], 2.55, BOARD[2] - 0.2]} center distanceFactor={10} zIndexRange={[3, 0]}><div className={world.cue}>Study board</div></Html>
     <InteriorKeeper position={[8.55, 0, -0.95]} rotY={-Math.PI / 2} watch={[7, -0.95]} colors={{ apron: "#7a4f2e", shirt: "#f3e6cf" }} hat="cap" playerPosRef={player as React.MutableRefObject<THREE.Vector3>} />
     <StudySeats area="cafe" player={player} board={BOARD_SPOT} />
-    <PlayerAvatar spawnPosition={SPAWN} playerName={identity.display_name} member={identity.member} onMove={onMove} frozen={frozen}
+    <PlayerAvatar spawnPosition={SPAWN} playerName={identity.display_name} playerLevel={level} member={identity.member} player={player} frozen={frozen}
       world={CAFE} groundHeight={flat} />
   </>;
 }

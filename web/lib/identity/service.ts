@@ -80,8 +80,11 @@ export async function reportName(store: IdentityStore, reporter: string, target:
   }
 }
 
+/** How long a moderation mute lasts (names and the reported-text queue). */
+export const MUTE_DAYS = 7;
+
 /** Row 221: T1-T2 can mute (letters/notes/chat) or remove a name (reset to a placeholder). */
-export async function moderate(store: IdentityStore, actor: string, actorTier: number, target: string, action: "mute" | "unmute" | "reset_name" | "dismiss", now: Date, muteDays = 7): Promise<Result<{ action: string }>> {
+export async function moderate(store: IdentityStore, actor: string, actorTier: number, target: string, action: "mute" | "unmute" | "reset_name" | "dismiss", now: Date, muteDays = MUTE_DAYS): Promise<Result<{ action: string }>> {
   if (actorTier !== 1 && actorTier !== 2) return { ok: false, status: 403, code: "forbidden", error: ERR.forbidden[1] };
   try {
     if (action === "mute") await store.setMute(target, new Date(now.getTime() + muteDays * 86_400_000).toISOString());

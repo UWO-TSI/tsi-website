@@ -10,6 +10,7 @@ import { HOME_FLOWERS, HOME_RADII, HOME_TREES, createHomeIsland } from "./homeIs
 import { isGroundAtWorld } from "./grid";
 import { MATERIALS } from "@/lib/crafting/recipes";
 import { objectsOf, village, type Village } from "./villageMap";
+import { isCedar } from "./defaultIsland";
 
 /** Any tree can be shaken for a branch (crafting); a fruit tree gives its fruit first. */
 const BRANCH = MATERIALS.find(m => m.key === "wood_branch")!;
@@ -21,8 +22,8 @@ const xz = (o: { x: number; z: number }): [number, number] => [o.x, o.z];
 
 export function villageNodes(v: Village = village()): { forage: NodeSpec[]; bugs: NodeSpec[] } {
   const trees = objectsOf("tree", v), flowers = objectsOf("flower", v).map(xz);
-  // Seed % 4 === 3 is a cedar, which bears no fruit.
-  const fruit = trees.filter(t => (t.seed ?? 0) % 4 !== 3)
+  // A cedar bears no fruit.
+  const fruit = trees.filter(t => !isCedar(t.seed ?? 0))
     .map(({ x, z }, i): NodeSpec => ({ id: `fruit-${i}`, x, z: z - 0.9, biomes: ["trees"], categories: ["fruit"], canopy: true }));
   const shells = objectsOf("shell", v).map(({ x, z }, i): NodeSpec => ({ id: `shell-${i}`, x, z, biomes: ["beach"], categories: ["nature", "fruit"] }));
   const rocks = objectsOf("rock", v).map((p, i): NodeSpec => ({ id: `rock-${i}`, x: p.x, z: p.z - 0.9, biomes: ["rocks"], categories: ["mineral"] }));

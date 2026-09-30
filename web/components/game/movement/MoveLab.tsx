@@ -21,23 +21,23 @@ import PostFX from "../PostFX";
 import SunShadows from "../SunShadows";
 import LookMaterials from "../LookMaterials";
 import { ACNHParts, CHALET_VARIANTS } from "../ACNHBuilding";
-import { treeParts } from "../NatureModels";
-import { InstancedModels, type ModelPlacement } from "../InstancedNature";
+import { sceneryOf } from "../NatureModels";
+import { InstancedModels } from "../InstancedNature";
 import { IslandAtmosphere, useFollowCamera, type TreeSpot } from "../IslandAtmosphere";
 import PlayerAvatar from "../PlayerAvatar";
 import TouchControls from "./TouchControls";
-import { MOVE_JUICE, type MoveJuice, type MoveTelemetry } from "./moveFx";
+import { BASE_FOV, MOVE_JUICE, type MoveJuice, type MoveTelemetry } from "./moveFx";
 import { ISLAND_TERRAIN, islandLight, withSeason } from "@/lib/game/islandLighting";
-import { SEASON_TREES, seasonLook } from "@/lib/game/seasonalLook";
+import { seasonLook } from "@/lib/game/seasonalLook";
 import { CURRENT, lookFx } from "@/lib/game/lookPreset";
 import { useGraphicsSettings } from "@/lib/game/useGraphicsSettings";
 import { islandOf } from "@/lib/game/defaultIsland";
 import { objectsOf } from "@/lib/game/villageMap";
 import { COURSE_GATES, COURSE_SIGNS, COURSE_SPAWN, NEW_LAP, course, gateAt, lapStep, type Lap } from "@/lib/game/movement/course";
 import { MOVE_TUNING, createMoveState, stepMove, topSpeed, NO_INPUT, STEP, type MoveInput, type MoveTuning, type MoveWorld } from "@/lib/game/movement/sim";
-import { MOVE_ACTIONS, MOVE_KEYS_EVENT, keyName, readMoveKeys, remapMove, type MoveAction } from "@/lib/game/movement/keys";
-import { readAbilityKeys } from "@/lib/game/combat/runtime";
-import { AudioManager } from "@/lib/game/audio";
+import { MOVE_ACTIONS, keyName, remapMove, useMoveKeys, useNextKey, type MoveAction } from "@/lib/game/movement/keys";
+import { useSoundUnlock } from "@/lib/game/useAudio";
+import { useCoarsePointer } from "@/lib/game/useMediaQuery";
 
 const SUMMER = { season: "summer" as const, weights: { spring: 0, summer: 1, autumn: 0, winter: 0 } };
 const LOOK = seasonLook(SUMMER, {});
@@ -62,7 +62,8 @@ const GROUPS: { name: string; keys: [keyof MoveTuning, ...Range][] }[] = [
 const JUICE_KEYS: [keyof MoveJuice, ...Range][] = [["camLead", 0, 0.4, 0.01], ["fovKick", 0, 10, 0.5], ["dashKick", 0, 8, 0.5], ["squash", 0, 2, 0.05], ["dust", 0, 2, 0.05], ["streaks", 0, 2, 0.05]];
 /** Dash shapes to compare (row 250), about the same reach each: only the dash values change. */
 const DASH_PRESETS: Record<string, Partial<MoveTuning>> = {
-  Burst: { dashSpeed: 18, dashTime: 0.2, dashExit: 0.55, dashEase: 2, dashCooldown: 0.5, airDashLift: 2 },
+  // The shipped dash (MOVE_TUNING), so "current preset" keeps matching when the defaults are retuned.
+  Burst: (({ dashSpeed, dashTime, dashExit, dashEase, dashCooldown, airDashLift }) => ({ dashSpeed, dashTime, dashExit, dashEase, dashCooldown, airDashLift }))(MOVE_TUNING),
   Glide: { dashSpeed: 13.5, dashTime: 0.21, dashExit: 0.8, dashEase: 1, dashCooldown: 0.45, airDashLift: 1 },
   Blink: { dashSpeed: 28, dashTime: 0.16, dashExit: 0.38, dashEase: 3, dashCooldown: 0.6, airDashLift: 0 },
   "First cut": { dashSpeed: 14, dashTime: 0.18, dashExit: 0.7, dashEase: 0, dashCooldown: 0.45, airDashLift: 0 },
@@ -110,40 +111,36 @@ function tickLap(l: { lap: Lap; now: number }, p: MoveTelemetry, dt: number) {
   l.lap = lapStep(l.lap, p.y > -1 ? gateAt(p.x, p.z) : -1, l.now);
 }
 /** Lap timing on sim time (slow motion slows the clock too). */
-function LapTracker({ telemetry, lap, timeScale }: { telemetry: React.RefObject<MoveTelemetry>; lap: React.RefObject<{ lap: Lap; now: number }>; timeScale: React.RefObject<number> }) {
+function LapTracker({ telemetry, lap, timeScale }: { telemetry: React.RefObject<MoveTelemetry>; lap: React.RefObject<{ lap: Lap; now: number }>; timeScale: number }) {
   useFrame((_, delta) => {
-    tickLap(lap.current, telemetry.current, Math.min(delta, 0.1) * timeScale.current);
+    tickLap(lap.current, telemetry.current, Math.min(delta, 0.1) * timeScale);
   });
   return null;
 }
 
-const noop = () => {};
 function CourseScene({ world, tuning, juice, spawn, telemetry, timeScale, lap, walkSpeed, lite, shadows, zoom, signs }: {
-  world: ReturnType<typeof islandOf>; tuning: React.RefObject<MoveTuning>; juice: React.RefObject<MoveJuice>; spawn: [number, number];
+  world: ReturnType<typeof islandOf>; tuning: MoveTuning; juice: MoveJuice; spawn: [number, number];
   telemetry: React.RefObject<MoveTelemetry>;
-  timeScale: React.RefObject<number>; lap: React.RefObject<{ lap: Lap; now: number }>; walkSpeed: number; lite: boolean; shadows: boolean; zoom: number; signs: boolean;
+  timeScale: number; lap: React.RefObject<{ lap: Lap; now: number }>; walkSpeed: number; lite: boolean; shadows: boolean; zoom: number; signs: boolean;
 }) {
   const v = course();
   const camTarget = useRef(new THREE.Vector3(spawn[0], 0, spawn[1]));
   useFollowCamera(camTarget, zoom, null);
   const start = useMemo((): [number, number, number] => [spawn[0], 0, spawn[1]], [spawn]);
   const trees = useMemo(() => objectsOf("tree", v).map((o): TreeSpot => ({ x: o.x, z: o.z, seed: o.seed ?? 0 })), [v]);
-  const scenery = useMemo((): ModelPlacement[] => [
-    ...trees.flatMap(({ x, z, seed }) => treeParts(seed, SEASON_TREES.summer).map((p): ModelPlacement => ({ url: p.url, position: [x + p.offset[0], world.ground(x, z) + p.offset[1], z + p.offset[2]], rotation: p.yaw, scale: p.scale }))),
-    ...[...objectsOf("rock", v), ...objectsOf("fence", v), ...objectsOf("bench", v)].map((p): ModelPlacement => ({ url: `/assets/acnh/props/${p.model}.glb`, position: [p.x, world.ground(p.x, p.z), p.z], rotation: p.yaw ?? 0, scale: p.scale ?? 1 })),
-  ], [v, trees, world]);
+  const scenery = useMemo(() => sceneryOf(v, world.ground, "summer"), [v, world]);
   const cafe = objectsOf("landmark", v).find(o => o.id === "cafe")!;
   return <>
     <IslandAtmosphere phase="day" light={LIGHT} look={LOOK} weather="clear" liteMode={lite} castShadows={shadows} ground={world.ground}
       cloudSize={[44, 52]} shadowExtent={30} fireflyAnchors={[]} trees={trees} />
-    <GridWorld map={v.map} field={v.field} water={LIGHT.water} palette={TERRAIN} windScale={lite ? 0 : 1} />
+    <GridWorld map={v.map} field={v.field} light={LIGHT} palette={TERRAIN} windScale={lite ? 0 : 1} />
     <GridOcean map={v.map} lite={lite} />
     <InstancedModels items={scenery} />
-    <group position={[cafe.x, 0, cafe.z]}><ACNHParts parts={CHALET_VARIANTS.brown} rotationY={Math.PI} /></group>
+    <group position={[cafe.x, 0, cafe.z]}><ACNHParts parts={CHALET_VARIANTS.brown} /></group>
     {signs && COURSE_SIGNS.map(s => <Html key={s.text} position={[s.x, world.ground(s.x, s.z) + 2.4, s.z]} center distanceFactor={12} zIndexRange={[3, 0]}>
       <div style={{ background: "rgba(15,15,16,0.62)", color: "#f1ffff", padding: "2px 8px", borderRadius: 4, font: "600 12px ui-monospace, Menlo, monospace", whiteSpace: "nowrap", pointerEvents: "none" }}>{s.text}</div>
     </Html>)}
-    <PlayerAvatar world={world} groundHeight={world.ground} groundSurface={world.surface} spawnPosition={start} onMove={noop} showNameplate={false}
+    <PlayerAvatar world={world} groundHeight={world.ground} groundSurface={world.surface} spawnPosition={start} showNameplate={false}
       camTarget={camTarget} tuning={tuning} juice={juice} telemetry={telemetry} timeScale={timeScale} walkSpeed={walkSpeed} />
     <LapTracker telemetry={telemetry} lap={lap} timeScale={timeScale} />
   </>;
@@ -163,28 +160,18 @@ export default function MoveLab() {
   const [juice, setJuice] = useState<MoveJuice>(MOVE_JUICE);
   const [preset, setPreset] = useState("Juicy");
   const [slow, setSlow] = useState(1);
-  const [bindings, setBindings] = useState<Record<MoveAction, string>>(readMoveKeys);
+  const bindings = useMoveKeys();
   const [listening, setListening] = useState<MoveAction | null>(null);
   const [note, setNote] = useState<string | null>(null);
-  const [touch] = useState(() => params.get("touch") === "1" || (typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches));
+  const coarse = useCoarsePointer(), touch = params.get("touch") === "1" || coarse;
   const [narrow] = useState(() => typeof window !== "undefined" && window.innerWidth < 720);
   // The panel starts closed on a phone (it would cover the course).
   const [panel, setPanel] = useState(params.get("panel") ? params.get("panel") !== "0" : !touch);
   const [hud, setHud] = useState<{ t: MoveTelemetry; lap: Lap; now: number } | null>(null);
   const [respawn, setRespawn] = useState(0);
-  const tuningRef = useRef(tuning), juiceRef = useRef(juice), timeScale = useRef(slow);
   const telemetry = useRef<MoveTelemetry>({ x: 0, y: 0, z: 0, speed: 0, mode: "ground", hops: 0, dashReady: true, long: false });
   const lap = useRef<{ lap: Lap; now: number }>({ lap: NEW_LAP, now: 0 });
-  useEffect(() => { tuningRef.current = tuning; }, [tuning]);
-  useEffect(() => { juiceRef.current = juice; }, [juice]);
-  useEffect(() => { timeScale.current = slow; }, [slow]);
-  // Sound effects unlock on the first key or tap (browsers need a gesture).
-  useEffect(() => {
-    const unlock = () => AudioManager.enable();
-    window.addEventListener("pointerdown", unlock, { once: true });
-    window.addEventListener("keydown", unlock, { once: true });
-    return () => { window.removeEventListener("pointerdown", unlock); window.removeEventListener("keydown", unlock); };
-  }, []);
+  useSoundUnlock();
 
   // The panel's values survive a reload (this browser only); Copy JSON is how they reach the repo.
   useEffect(() => {
@@ -200,19 +187,11 @@ export default function MoveLab() {
     return () => window.clearInterval(id);
   }, []);
   // Remap: the next key press binds.
-  useEffect(() => {
-    if (!listening) return;
-    const onKey = (e: KeyboardEvent) => {
-      e.preventDefault(); e.stopPropagation();
-      if (e.key === "Escape") { setListening(null); setNote(null); return; }
-      const r = remapMove(bindings, listening, e.key, Object.values(readAbilityKeys()));
-      if (!r.ok) { setNote(r.error); return; }
-      setBindings(r.keys); setListening(null); setNote(null);
-      window.dispatchEvent(new Event(MOVE_KEYS_EVENT));
-    };
-    window.addEventListener("keydown", onKey, true);
-    return () => window.removeEventListener("keydown", onKey, true);
-  }, [listening, bindings]);
+  useNextKey(listening !== null, key => {
+    const r = remapMove(bindings, listening!, key);
+    setNote(r.ok ? null : r.error);
+    if (r.ok) setListening(null);
+  }, () => { setListening(null); setNote(null); });
 
   const numbers = useMemo(() => measure(tuning), [tuning]);
   const set = (k: keyof MoveTuning, value: number) => { setTuning(t => ({ ...t, [k]: value })); setPreset("Custom"); };
@@ -225,12 +204,12 @@ export default function MoveLab() {
 
   return <div style={{ position: "fixed", inset: "40px 0 0 0", background: "#0b0e14", overflow: "hidden" }}>
     <Canvas tabIndex={0} role="application" aria-label="Movement lab course" gl={{ antialias: false, powerPreference: "high-performance" }} dpr={graphics.pixelated ? 0.5 : [1, 1.5]}
-      style={{ imageRendering: graphics.pixelated ? "pixelated" : "auto" }} camera={{ position: [spawn[0], 8, spawn[1] - 11], fov: 48, near: 0.1, far: 120 }}
+      style={{ imageRendering: graphics.pixelated ? "pixelated" : "auto" }} camera={{ position: [spawn[0], 8, spawn[1] - 11], fov: BASE_FOV, near: 0.1, far: 120 }}
       shadows={graphics.shadows && !graphics.liteMode ? "percentage" : false}
       onCreated={({ gl }) => { gl.toneMapping = THREE.NeutralToneMapping; gl.outputColorSpace = THREE.SRGBColorSpace; }}>
       <Suspense fallback={null}>
-        <CourseScene key={respawn} world={world} tuning={tuningRef} juice={juiceRef} spawn={spawn} telemetry={telemetry}
-          timeScale={timeScale} lap={lap} walkSpeed={tuning.walkSpeed} lite={graphics.liteMode} shadows={graphics.shadows && !graphics.liteMode} zoom={Number(params.get("zoom")) || 1} signs={params.get("panel") !== "0"} />
+        <CourseScene key={respawn} world={world} tuning={tuning} juice={juice} spawn={spawn} telemetry={telemetry}
+          timeScale={slow} lap={lap} walkSpeed={tuning.walkSpeed} lite={graphics.liteMode} shadows={graphics.shadows && !graphics.liteMode} zoom={Number(params.get("zoom")) || 1} signs={params.get("panel") !== "0"} />
         <PostFX antialias={!graphics.liteMode && !graphics.pixelated} grade={LIGHT.grade} fx={lookFx(CURRENT, !graphics.liteMode)} />
         <LookMaterials preset={CURRENT} />
         <SunShadows />

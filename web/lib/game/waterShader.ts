@@ -101,77 +101,33 @@ export function bedDepth(d: number, p: Pick<WaterParams, "bedDepth" | "bedSlope"
   return p.bedDepth * (1 - Math.exp(-Math.max(d, 0) / Math.max(p.bedSlope, 0.01)));
 }
 
+/** Every WaterParams key but rippleStrength, each the shader's `u<Key>` uniform (a Color when the key ends in Color). */
+const WATER_KEYS = [
+  "deepColor", "midColor", "shallowColor", "bedColor", "foamColor", "ringColor", "depthFalloff", "bedDepth", "bedSlope",
+  "foamWidth", "foamStrength", "foamSoft", "foamWave", "foamWaveSpeed", "blobScale", "blobDarken", "blobSpeed", "ringWidth",
+  "ringStrength", "shoreAlpha", "opacity", "fresnel", "glare", "roughness", "sunGlint", "sunSize", "waveHeight", "waveScale", "waveSpeed",
+] as const satisfies readonly (keyof WaterParams)[];
+const uniformOf = (k: string) => `u${k[0].toUpperCase()}${k.slice(1)}`;
+
 export function waterUniforms(p: WaterParams) {
+  const block: Record<string, THREE.IUniform> = {};
+  for (const k of WATER_KEYS) block[uniformOf(k)] = { value: k.endsWith("Color") ? new THREE.Color(p[k]) : p[k] };
   return {
+    ...block,
     uTime: { value: 0 },
-    uDeepColor: { value: new THREE.Color(p.deepColor) },
-    uMidColor: { value: new THREE.Color(p.midColor) },
-    uShallowColor: { value: new THREE.Color(p.shallowColor) },
-    uBedColor: { value: new THREE.Color(p.bedColor) },
-    uFoamColor: { value: new THREE.Color(p.foamColor) },
-    uRingColor: { value: new THREE.Color(p.ringColor) },
     uSunDir: { value: new THREE.Vector3(0, 1, 0) },
     /** The key light's colour, so the glint turns gold at golden hour and blue under the moon. */
     uSunColor: { value: new THREE.Color(1, 0.98, 0.92) },
-    uDepthFalloff: { value: p.depthFalloff },
-    uBedDepth: { value: p.bedDepth },
-    uBedSlope: { value: p.bedSlope },
-    uFoamWidth: { value: p.foamWidth },
-    uFoamStrength: { value: p.foamStrength },
-    uFoamSoft: { value: p.foamSoft },
-    uFoamWave: { value: p.foamWave },
-    uFoamWaveSpeed: { value: p.foamWaveSpeed },
-    uBlobScale: { value: p.blobScale },
-    uBlobDarken: { value: p.blobDarken },
-    uBlobSpeed: { value: p.blobSpeed },
-    uRingWidth: { value: p.ringWidth },
-    uRingStrength: { value: p.ringStrength },
-    uShoreAlpha: { value: p.shoreAlpha },
-    uOpacity: { value: p.opacity },
-    uFresnel: { value: p.fresnel },
-    uGlare: { value: p.glare },
-    uRoughness: { value: p.roughness },
-    uSunGlint: { value: p.sunGlint },
-    uSunSize: { value: p.sunSize },
-    uWaveHeight: { value: p.waveHeight },
-    uWaveScale: { value: p.waveScale },
-    uWaveSpeed: { value: p.waveSpeed },
   };
 }
 
-export type WaterUniforms = ReturnType<typeof waterUniforms>;
-
 /** Push a params block onto live uniforms without recompiling the shader. */
-export function writeWaterUniforms(u: WaterUniforms, p: WaterParams): void {
-  u.uDeepColor.value.setHex(p.deepColor);
-  u.uMidColor.value.setHex(p.midColor);
-  u.uShallowColor.value.setHex(p.shallowColor);
-  u.uBedColor.value.setHex(p.bedColor);
-  u.uFoamColor.value.setHex(p.foamColor);
-  u.uRingColor.value.setHex(p.ringColor);
-  u.uDepthFalloff.value = p.depthFalloff;
-  u.uBedDepth.value = p.bedDepth;
-  u.uBedSlope.value = p.bedSlope;
-  u.uFoamWidth.value = p.foamWidth;
-  u.uFoamStrength.value = p.foamStrength;
-  u.uFoamSoft.value = p.foamSoft;
-  u.uFoamWave.value = p.foamWave;
-  u.uFoamWaveSpeed.value = p.foamWaveSpeed;
-  u.uBlobScale.value = p.blobScale;
-  u.uBlobDarken.value = p.blobDarken;
-  u.uBlobSpeed.value = p.blobSpeed;
-  u.uRingWidth.value = p.ringWidth;
-  u.uRingStrength.value = p.ringStrength;
-  u.uShoreAlpha.value = p.shoreAlpha;
-  u.uOpacity.value = p.opacity;
-  u.uFresnel.value = p.fresnel;
-  u.uGlare.value = p.glare;
-  u.uRoughness.value = p.roughness;
-  u.uSunGlint.value = p.sunGlint;
-  u.uSunSize.value = p.sunSize;
-  u.uWaveHeight.value = p.waveHeight;
-  u.uWaveScale.value = p.waveScale;
-  u.uWaveSpeed.value = p.waveSpeed;
+export function writeWaterUniforms(u: Record<string, THREE.IUniform>, p: WaterParams): void {
+  for (const k of WATER_KEYS) {
+    const uniform = u[uniformOf(k)];
+    if (uniform.value instanceof THREE.Color) uniform.value.setHex(p[k]);
+    else uniform.value = p[k];
+  }
 }
 
 /**
@@ -303,43 +259,12 @@ float sunThroughClouds(vec2 xz) {
 
 const UNIFORM_DECLS = /* glsl */ `
 uniform float uTime;
-uniform vec3 uDeepColor;
-uniform vec3 uMidColor;
-uniform vec3 uShallowColor;
-uniform vec3 uBedColor;
-uniform vec3 uFoamColor;
-uniform vec3 uRingColor;
 uniform vec3 uSunDir;
 uniform vec3 uSunColor;
-uniform float uDepthFalloff;
-uniform float uBedDepth;
-uniform float uBedSlope;
-uniform float uFoamWidth;
-uniform float uFoamStrength;
-uniform float uFoamSoft;
-uniform float uFoamWave;
-uniform float uFoamWaveSpeed;
-uniform float uBlobScale;
-uniform float uBlobDarken;
-uniform float uBlobSpeed;
-uniform float uRingWidth;
-uniform float uRingStrength;
-uniform float uShoreAlpha;
-uniform float uOpacity;
-uniform float uFresnel;
-uniform float uGlare;
-uniform float uRoughness;
+${WATER_KEYS.map(k => `uniform ${k.endsWith("Color") ? "vec3" : "float"} ${uniformOf(k)};`).join("\n")}
 `;
 
-/**
- * The shading itself, minus where the shore distance comes from.
- *
- * Callers inject a `float shoreDistance(vec2 xz)` — the grid reads the baked
- * field, the legacy sea evaluates coast.ts harmonics. Keeping that pluggable is
- * what lets one shader serve both while the old terrain path still exists; when
- * the grid becomes the default the sea switches to the field and the harmonics
- * go.
- */
+/** The shading itself; `shoreDistance` comes from the baked field (SHORE_FROM_FIELD). */
 const WATER_FUNCTIONS = /* glsl */ `
 ${WATER_PHASE}// Mirrors bedDepth() in waterShader.ts. Change both together.
 float bedDepthAt(float d) {
@@ -438,8 +363,6 @@ const FRAGMENT_BODY = /* glsl */ `
   float ringB = 1.0 - smoothstep(0.0, w * 2.2, abs(field + 0.30));
   col += uRingColor * (ringA * uRingStrength + ringB * uRingStrength * 0.45);
 
-  col = waterExtra(col, t, vWaterWorld.xz);
-
   // Surface normal from the swell gradient and the ripple texture, in world
   // space. cameraPosition is a built-in, so no view-space bookkeeping.
   vec2 detailNormal = waterDetailNormal(vWaterWorld.xz);
@@ -477,47 +400,31 @@ const FRAGMENT_BODY = /* glsl */ `
 }
 `;
 
-/** No extra layers. The river uses this; the sea overrides it with caustics. */
-export const WATER_EXTRA_NONE = /* glsl */ `
-vec3 waterExtra(vec3 col, float t, vec2 xz) { return col; }
+/**
+ * The ripple normal (xz slope) at a world point and time. Shared with the sparkle sprites, which need the same
+ * waves. The scroll is `fract`ed: uTime is world seconds (up to a day), and the texture repeats, so the wrap is seamless.
+ */
+export const WATER_RIPPLE = /* glsl */ `
+uniform sampler2D uRippleTexture;
+uniform float uRippleStrength;
+vec2 waterDetailNormal(vec2 xz) {
+  if (uRippleStrength <= 0.0) return vec2(0.0);
+  vec2 a = texture2D(uRippleTexture, xz * 0.22 + fract(uTime * vec2(0.014, 0.009))).rg * 2.0 - 1.0;
+  vec2 b = texture2D(uRippleTexture, xz.yx * 0.31 - fract(uTime * vec2(0.008, 0.011))).rg * 2.0 - 1.0;
+  return (a + b * 0.5) * uRippleStrength;
+}
 `;
 
-export interface WaterShaderOptions {
-  /** Defines `float shoreDistance(vec2 xz)`, in CELLS, negative inland. */
-  shore: string;
-  /** Optionally replaces `waterExtra`, which runs between the cel layers and the foam. */
-  extra?: string;
-  /** Optional small-wave normal from existing assets. */
-  normal?: string;
-  /**
-   * Transparent water needs something under it. The river has a bed; the open
-   * sea does not, so it stays opaque and keeps writing depth rather than
-   * joining the transparent queue for nothing.
-   */
-  transparent?: boolean;
-}
-
 /**
- * Patch a MeshBasicMaterial into water.
- *
- * `getUniforms` is a THUNK, not the object. It is only called when the shader
- * compiles, which lets a React caller hold its uniform block in a ref: the
- * block exists to be written every frame, and the react-compiler lint rejects
- * mutating anything a hook returned. Reading the ref inside this closure is
- * not a render-phase read.
+ * The water material: an unlit MeshBasicMaterial with the shore distance read
+ * from the baked field (SHORE_FROM_FIELD) and the ripple normal. Transparent
+ * over its bed, so it must not write depth: it would z-fight the bed and hide
+ * it outright. `uniforms` is the shared live block the frame loop writes.
  */
-export function applyWaterShader(
-  mat: THREE.MeshBasicMaterial,
-  getUniforms: () => Record<string, { value: unknown }>,
-  opts: WaterShaderOptions
-): void {
-  const transparent = opts.transparent ?? true;
-  mat.transparent = transparent;
-  // A transparent surface viewed from above with a bed underneath must not
-  // write depth: it would z-fight the bed and hide it outright.
-  mat.depthWrite = !transparent;
+export function waterMaterial(uniforms: Record<string, THREE.IUniform>): THREE.MeshBasicMaterial {
+  const mat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, depthWrite: false });
   mat.onBeforeCompile = (shader) => {
-    for (const [k, v] of Object.entries(getUniforms())) shader.uniforms[k] = v as THREE.IUniform;
+    Object.assign(shader.uniforms, uniforms);
 
     shader.vertexShader = shader.vertexShader
       .replace("#include <common>", "#include <common>\n" + VERTEX_DECLS)
@@ -529,15 +436,14 @@ export function applyWaterShader(
         "#include <common>\nvarying vec3 vWaterWorld;\nvarying vec2 vWaterGrad;\n" +
           UNIFORM_DECLS +
           WATER_CLOUDS +
-          opts.shore +
-          (opts.extra ?? WATER_EXTRA_NONE) +
-          (opts.normal ?? "vec2 waterDetailNormal(vec2 xz) { return vec2(0.0); }\n") +
+          SHORE_FROM_FIELD +
+          WATER_RIPPLE +
           WATER_FUNCTIONS
       )
       .replace("#include <color_fragment>", "#include <color_fragment>\n" + FRAGMENT_BODY);
   };
-  mat.customProgramCacheKey = () => `water:${opts.shore}:${opts.extra ?? ""}:${opts.normal ?? ""}`;
-  mat.needsUpdate = true;
+  mat.customProgramCacheKey = () => "water";
+  return mat;
 }
 
 /** Shore distance read from the baked field. Grid path. */

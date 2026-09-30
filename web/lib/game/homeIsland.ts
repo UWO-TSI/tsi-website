@@ -4,6 +4,7 @@ import {
 } from "./grid";
 import { cellsOf, type PlacedItem } from "@/lib/homes/layout";
 import { standWorld, type MoveWorld } from "./movement/sim";
+import { TREE_TRUNK } from "./defaultIsland";
 
 /**
  * Personal home island (specs/homes.md §1): a fixed natural islet about a
@@ -39,7 +40,7 @@ export function createHomeIsland() {
   const fixedFree = (x: number, z: number) => isGroundAtWorld(map, x, z)
     && !inRect(x, z, HOUSE.x, HOUSE.z, HOUSE.halfW, HOUSE.halfD)
     && !inRect(x, z, HOME_MAILBOX[0], HOME_MAILBOX[1], 0.35, 0.35)
-    && !HOME_TREES.some(([tx, tz]) => Math.hypot(tx - x, tz - z) < 0.65);
+    && !HOME_TREES.some(([tx, tz]) => Math.hypot(tx - x, tz - z) < TREE_TRUNK);
   /** Can a placed item cover this cell? Needs all four corners of the cell free, and keeps the door approach open. */
   const placeable = (cx: number, cz: number) =>
     [[0.1, 0.1], [0.9, 0.1], [0.1, 0.9], [0.9, 0.9]].every(([dx, dz]) => fixedFree(cx + dx, cz + dz))

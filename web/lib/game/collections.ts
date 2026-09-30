@@ -11,6 +11,8 @@
  * truth when it works; local fills the gaps.
  */
 
+import type { CatchReply } from "@/lib/collections/service";
+
 const KEY = "tsi.collections.local.v1";
 
 function validItemKey(key: string): boolean {
@@ -64,8 +66,6 @@ export function collect(itemKey: string, { scope }: { scope?: string } = {}): vo
   }
 }
 
-/** A recorded catch (harvest, land), or a cast's roll waiting to be landed. */
-export interface CatchReply { item_key: string; size_cm: number | null; roll?: string; count?: number; total_collected?: number; new_record?: boolean }
 export type CatchAnswer = { ok: true; catch: CatchReply } | { ok: false; error: string; code?: string };
 
 /**

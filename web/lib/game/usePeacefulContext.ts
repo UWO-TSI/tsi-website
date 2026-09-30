@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import type { WorldMoment } from "@/lib/collections/logic";
-import { rosterWeather, type IslandWeather } from "./islandWeather";
-import { torontoParts } from "@/lib/time";
+import { momentAt, type WorldMoment } from "@/lib/collections/logic";
+import type { IslandWeather } from "./islandWeather";
 import { bestOwnedRod, type RodTier } from "./rods";
 import { httpEconomyTransport } from "@/lib/wallet/transport";
 import { installCollectionsDemo } from "./collectionsDemo";
@@ -41,7 +40,8 @@ export function usePeacefulContext(weather: IslandWeather, now: number): { momen
     return () => window.removeEventListener("tsi:crafted", load);
   }, []);
   const rod = bestOwnedRod(owned);
-  const { hour, month } = torontoParts(new Date(now));
-  const moment = useMemo(() => ({ hour: hour + 0.5, month, weather: rosterWeather(weather) }), [hour, month, weather]);
+  // The same object for the whole hour (Toronto hours start on the UTC hour).
+  const hourStart = Math.floor(now / 3_600_000) * 3_600_000;
+  const moment = useMemo(() => momentAt(new Date(hourStart), weather), [hourStart, weather]);
   return { moment, member, rod };
 }

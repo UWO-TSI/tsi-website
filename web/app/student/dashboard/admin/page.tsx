@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { useUser } from "@/components/portal/UserContext";
 import Link from "next/link";
 import {
   Users,
@@ -13,7 +14,6 @@ import {
   Shield,
   Vote,
   MessageSquareWarning,
-  BookOpen,
 } from "lucide-react";
 import NPCSpendWidget from "@/components/portal/NPCSpendWidget";
 import GameContentIndex from "@/components/portal/GameContentIndex";
@@ -84,18 +84,12 @@ const adminSections = [
     href: "/student/dashboard/admin/npc-conversations",
     color: "#ef4444",
   },
-  {
-    title: "Guestbook",
-    description: "Moderate guestbook wall entries (hide / unhide)",
-    icon: <BookOpen size={20} />,
-    href: "/student/dashboard/admin/guestbook",
-    color: "#fbbf24",
-  },
 ];
 
 export default function AdminPage() {
   const [stats, setStats] = useState<Stats | null>(null);
-  const [userTier, setUserTier] = useState<number>(4);
+  const { profile } = useUser();
+  const userTier = profile?.tier ?? 4;
 
   useEffect(() => {
     async function fetchStats() {
@@ -105,14 +99,6 @@ export default function AdminPage() {
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) return;
-
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("tier")
-        .eq("id", user.id)
-        .single();
-
-      if (profile) setUserTier(profile.tier);
 
       // Fetch stats in parallel
       const [members, bounties, quests] = await Promise.all([
@@ -210,12 +196,10 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* T1-only spend widget */}
-      {userTier === 1 && (
-        <div className="mb-6">
-          <NPCSpendWidget />
-        </div>
-      )}
+      {/* Spend widget: T1/T2, as /api/npc/spend allows (the page is already T1/T2 only) */}
+      <div className="mb-6">
+        <NPCSpendWidget />
+      </div>
 
       <GameContentIndex />
 

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { DEFAULT_ABILITY_KEYS, readAbilityKeys, remapAbility } from "./runtime";
+import { DEFAULT_ABILITY_KEYS, readAbilityKeys, remapAbility } from "../movement/keys";
 
 const saved = new Map<string, string>();
 beforeEach(() => { saved.clear(); vi.stubGlobal("localStorage", { getItem: (k: string) => saved.get(k) ?? null, setItem: (k: string, v: string) => { saved.set(k, v); } }); });
@@ -19,6 +19,8 @@ describe("ability keys", () => {
     expect(remapAbility(DEFAULT_ABILITY_KEYS, "slot1", " ")).toMatchObject({ ok: false });
     expect(remapAbility(DEFAULT_ABILITY_KEYS, "slot1", "w")).toMatchObject({ ok: false });
     expect(remapAbility(DEFAULT_ABILITY_KEYS, "slot1", "b")).toMatchObject({ ok: false });
+    // The mailbox (L) and wallet (K) menu keys, and the fixed decorate, emote and put-away keys.
+    for (const key of ["l", "k", "f", "g", "x"]) expect(remapAbility(DEFAULT_ABILITY_KEYS, "slot1", key)).toMatchObject({ ok: false });
     expect(remapAbility(DEFAULT_ABILITY_KEYS, "slot4", "r")).toMatchObject({ ok: true, keys: { slot4: "r", swap: "4" } });
   });
 });

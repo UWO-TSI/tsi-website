@@ -1,10 +1,8 @@
-/** SQL seed for crafting (kept verbatim in 20260926160000_crafting.sql; regenerate with scripts/gen-crafting-seed.mjs). */
-import { seedSql } from "@/lib/collections/seed";
+/** SQL seed for crafting (first block in 20260926160000_crafting.sql; changes: lib/seedMigrations.ts, whose scripts/gen-seeds.mjs replaced the marker's script). */
+import { n, q, seedSql } from "@/lib/collections/seed";
 import type { CatalogueEntry } from "@/lib/wallet/catalogue";
-import { CRAFTED_ITEMS, MATERIALS, RECIPE_CARDS, RECIPES } from "./recipes";
+import { CRAFTED_ITEMS, MATERIALS, RECIPE_CARDS, RECIPE_DROP_CHANCE, RECIPE_DROPS, RECIPES } from "./recipes";
 
-const q = (v: string | null) => (v === null ? "NULL" : `'${v.replace(/'/g, "''")}'`);
-const n = (v: number | null) => (v === null ? "NULL" : String(v));
 export const SEED_BEGIN = "-- BEGIN GENERATED CRAFTING SEED (web/scripts/gen-crafting-seed.mjs)";
 export const SEED_END = "-- END GENERATED CRAFTING SEED";
 
@@ -25,5 +23,18 @@ export function craftingSeedSql(): string {
     recipes.join(",\n"),
     "ON CONFLICT (id) DO NOTHING;",
     SEED_END,
+  ].join("\n");
+}
+
+/** The rare-catch drop table, kept verbatim in 20260930100000_recipe_drops.sql (crafting.test.ts checks it). */
+export function recipeDropsSql(): string {
+  return [
+    "-- BEGIN GENERATED RECIPE DROPS (web/lib/crafting/seed.ts recipeDropsSql)",
+    "UPDATE crafting_recipes r SET drop_rarity = d.rarity FROM (VALUES",
+    Object.entries(RECIPE_DROPS).map(([id, rarity]) => `  (${q(id)}, ${q(rarity)})`).join(",\n"),
+    ") AS d (id, rarity) WHERE r.id = d.id AND r.drop_rarity IS NULL;",
+    `INSERT INTO recipe_drop_chances (rarity, chance) VALUES ${Object.entries(RECIPE_DROP_CHANCE).map(([k, p]) => `(${q(k)}, ${p})`).join(", ")}`,
+    "ON CONFLICT (rarity) DO NOTHING;",
+    "-- END GENERATED RECIPE DROPS",
   ].join("\n");
 }

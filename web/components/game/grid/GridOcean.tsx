@@ -3,8 +3,8 @@
 import { useEffect, useMemo } from "react";
 import * as THREE from "three";
 import { type IslandMap, WATER_DROP, LEVEL_STEP, cellToWorldX, cellToWorldZ, isRiver, levelAt, surfaceAt } from "@/lib/game/grid";
-import { WATER_CHOP, WATER_CLOUDS, WATER_OPTICS, WATER_SWELL, facetTilt } from "@/lib/game/waterShader";
-import { WATER_RIPPLE, terrainMaterial, waterSurfaceUniforms } from "./terrainMaterials";
+import { WATER_CHOP, WATER_CLOUDS, WATER_OPTICS, WATER_RIPPLE, WATER_SWELL, facetTilt } from "@/lib/game/waterShader";
+import { terrainMaterial, waterSurfaceUniforms } from "./terrainMaterials";
 
 /**
  * Continue the grid's water outside its editable rectangle to the horizon, with its glint sprites

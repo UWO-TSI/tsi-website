@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { ENEMIES, WEAPONS } from "./data";
-import { summonWisps, weaponDamage } from "./actions";
+import { summonWisps } from "./actions";
+import { hitAmount } from "./abilities";
 import { createRuntime } from "./runtime";
 import { BOSS, beamLands, damageEnemy, spawnEnemy, stepEnemy, strikeLands, type Enemy, type EnemyEvent } from "./sim";
 import { glow, marker, partPose } from "./telegraph";
@@ -47,7 +48,7 @@ describe("guardian statue: three patterns and phase transitions", () => {
     expect(b.move.stagger).toBe(true);
     const rt = createRuntime(); rt.player.weapon = "sword-iron";
     const normal = spawnEnemy("n", BOSS_TYPE, 0, 1);
-    expect(weaponDamage(rt, b, () => 0.5).amount).toBeGreaterThan(weaponDamage(rt, normal, () => 0.5).amount);
+    expect(hitAmount(rt, b, { power: 1, from: b }, () => 0.5).amount).toBeGreaterThan(hitAmount(rt, normal, { power: 1, from: normal }, () => 0.5).amount);
     expect(glow(b, 0)).toBeLessThan(glow(normal, 0)); // the light goes out: the opening
   });
   it("below half it calls two rune wisps (topped up, never more), and enrages at a fifth", () => {

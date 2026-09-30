@@ -4,9 +4,9 @@
  * Phone study companion (row 81): same tables, timers and coins as the 3D
  * cafe, through the shared useStudySession hook. Mobile-first, no canvas.
  */
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { COINS } from "@/lib/economy";
-import { AudioManager } from "@/lib/game/audio";
+import { useSoundUnlock } from "@/lib/game/useAudio";
 import { LIMITS, PRESETS, type Settings } from "@/lib/study/rules";
 import type { TableView } from "@/lib/study/service";
 import { formatClock, type StudyHook } from "@/lib/study/useStudySession";
@@ -27,15 +27,7 @@ export function StudyCompanionBody({ study }: { study: StudyHook }) {
   // goes through AudioManager.playSFX("confirm"), which stays silent until
   // something calls enable(). The companion has no canvas to click into, so
   // the first tap or key anywhere on the page unlocks it.
-  useEffect(() => {
-    const unlock = () => AudioManager.enable();
-    window.addEventListener("pointerdown", unlock, { once: true });
-    window.addEventListener("keydown", unlock, { once: true });
-    return () => {
-      window.removeEventListener("pointerdown", unlock);
-      window.removeEventListener("keydown", unlock);
-    };
-  }, []);
+  useSoundUnlock();
   return (
     <>
       <header className={s.top}>

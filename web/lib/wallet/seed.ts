@@ -1,8 +1,7 @@
-/** SQL seeds for the economy catalogue (kept verbatim in 20260926150600_economy.sql and 20260926180000_ownership.sql). */
+/** SQL seeds for the economy catalogue (first blocks in 20260926150600_economy.sql and 20260926180000_ownership.sql; changes: lib/seedMigrations.ts). */
 import { CATALOGUE, EVENT_ITEMS, onSale, OWNERSHIP_ITEMS, RETIRED, SELL_PRICES, SETTINGS, STARTER_REFS, type CatalogueEntry } from "./catalogue";
+import { n, q } from "@/lib/collections/seed";
 
-const q = (v: string | null) => (v === null ? "NULL" : `'${v.replace(/'/g, "''")}'`);
-const n = (v: number | null) => (v === null ? "NULL" : String(v));
 const b = (v: boolean) => (v ? "TRUE" : "FALSE");
 const cols = (c: CatalogueEntry) => [q(c.slug), q(c.display_name), q(c.category), q(c.description), n(c.price_coins), n(c.price_gems), q(c.tier), q(c.slot), b(c.special_pool), b(c.stackable), n(c.stock), q(c.catalogue_ref), n(c.position)];
 const ITEM_COLS = "slug, display_name, category, description, price_coins, tc_price, tier, slot, special_pool, stackable, stock, catalogue_ref, position";

@@ -299,6 +299,9 @@ Historical decision ledger, extended as the interview continues. Earlier consequ
 | 256 | **Seasonal event items are rewards only (David, 2026-09-30).** | Earned from the club's seasonal goal, not sold in the shop during the window. |
 | 257 | **Winter lights run Dec 1 to Jan 7 (David, 2026-09-30).** | Covers New Year's week. |
 | 258 | **Rare-catch recipe drops next (David, 2026-09-30).** | Rare server-rolled catches can grant a crafting recipe, once per recipe per member. Queued after the current agents. |
+| 259 | **Remove unused surfaces (David, 2026-09-30):** the painter's old prop tool, `/dev/combat`, the palette "Set Active" button, the duplicate audio sliders, and the guestbook moderation page. | Delete them and their dead routes/code. |
+| 260 | **Every catchable fish is a roster entry (David, 2026-09-30).** | The river's filler fish join the roster: sizes, months, rarity, journal and aquarium, trophies, tourney and recipe drops. |
+| 261 | **Recipe drop rates stay 2/5/15% (David, 2026-09-30).** | Rods 4–5 stay craft-only. |
 
 Currency names, earning ratios and unlock pacing remain undecided. Decision 48 establishes the legacy-data policy; identifying protected balances and the exact reset procedure still requires a data audit. No economy migration or reward implementation is authorized by this planning document alone.
 

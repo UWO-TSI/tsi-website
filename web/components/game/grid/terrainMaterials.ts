@@ -26,13 +26,7 @@
 import * as THREE from "three";
 import { getGrassTexture } from "@/lib/game/grassTexture";
 import { GRASS_COLOR } from "@/lib/game/grid";
-import {
-  applyWaterShader,
-  waterUniforms,
-  writeWaterUniforms,
-  SHORE_FROM_FIELD,
-  type WaterParams,
-} from "@/lib/game/waterShader";
+import { waterMaterial, waterUniforms, writeWaterUniforms, type WaterParams } from "@/lib/game/waterShader";
 import { TUNING_DEFAULTS } from "@/lib/game/tuning";
 
 const TEX_DIR = "/assets/acnh/terrain/";
@@ -191,25 +185,24 @@ export function terrainMaterial(name: string): THREE.Material | null {
   if (procKey) {
     const hit = cache.get(procKey);
     if (hit) return hit;
-    const isWater = procKey === "mRiver";
-    if (isWater) {
-      const mat = waterMaterial();
+    if (procKey === "mRiver") {
+      // Unlit, from lib/game/waterShader.ts: a lit material greys out the flat saturated cyan of David's references.
+      const mat = waterMaterial(waterUniformBlock);
+      mat.name = "terrain:mRiver";
       cache.set(procKey, mat);
       return mat;
     }
     const mat = new THREE.MeshStandardMaterial({
-      map: isWater ? undefined : getGrassTexture(),
+      map: getGrassTexture(),
       // ACNH's grass has NO albedo texture — the colour comes from the ramp.
       // What gives its ground blade detail is `mGrass_Nrm`, a 256x256 tangent
       // normal map we were not using at all, which is why the lawn read as one
       // flat green. Strength is on the bench (`tuning.grass.normalStrength`).
-      normalMap: isWater ? undefined : grassNormal(),
-      normalScale: isWater ? undefined : new THREE.Vector2(0, 0),
-      color: isWater ? 0x568cb2 : GRASS_COLOR,
-      roughness: isWater ? 0.4 : 0.92,
+      normalMap: grassNormal(),
+      normalScale: new THREE.Vector2(0, 0),
+      color: GRASS_COLOR,
+      roughness: 0.92,
       metalness: 0,
-      transparent: isWater,
-      opacity: isWater ? 0.85 : 1,
     });
     mat.onBeforeCompile = (shader) => {
       shader.fragmentShader = shader.fragmentShader.replace("#include <normal_fragment_maps>",
@@ -263,38 +256,6 @@ export function terrainMaterial(name: string): THREE.Material | null {
   }
   mat.name = `terrain:${key}`;
   cache.set(key, mat);
-  return mat;
-}
-
-/**
- * The ripple normal (xz slope) at a world point and time. Shared with the sparkle sprites, which need the same
- * waves. The scroll is `fract`ed: uTime is world seconds (up to a day), and the texture repeats, so the wrap is seamless.
- */
-export const WATER_RIPPLE = /* glsl */ `
-uniform sampler2D uRippleTexture;
-uniform float uRippleStrength;
-vec2 waterDetailNormal(vec2 xz) {
-  if (uRippleStrength <= 0.0) return vec2(0.0);
-  vec2 a = texture2D(uRippleTexture, xz * 0.22 + fract(uTime * vec2(0.014, 0.009))).rg * 2.0 - 1.0;
-  vec2 b = texture2D(uRippleTexture, xz.yx * 0.31 - fract(uTime * vec2(0.008, 0.011))).rg * 2.0 - 1.0;
-  return (a + b * 0.5) * uRippleStrength;
-}
-`;
-
-/**
- * The river surface.
- *
- * Was a MeshStandardMaterial with a scrolling `mRiver_Nrm`. That normal map is
- * real and the flow trick worked, but a LIT material cannot produce the flat
- * saturated cyan David's references are made of: ambient + hemi + env IBL land
- * on top of everything the shader does and grey it out. The whole look now
- * lives in `lib/game/waterShader.ts`, on an unlit MeshBasicMaterial, shared
- * with the sea.
- */
-function waterMaterial(): THREE.MeshBasicMaterial {
-  const mat = new THREE.MeshBasicMaterial({ color: 0xffffff });
-  mat.name = "terrain:mRiver";
-  applyWaterShader(mat, () => waterUniformBlock, { shore: SHORE_FROM_FIELD, normal: WATER_RIPPLE });
   return mat;
 }
 
@@ -373,22 +334,13 @@ export function advanceWater(elapsed: number, cfg: WaterParams, sunWorld?: THREE
     waterUniformBlock.uRippleTexture.value.magFilter = THREE.LinearFilter;
   }
   waterUniformBlock.uTime.value = elapsed;
-  writeWaterUniforms(waterUniformBlock, cfg);
+  // cfg changes with phase, weather or season; the bench hands a fresh copy per frame.
+  if (cfg !== written) writeWaterUniforms(waterUniformBlock, written = cfg);
   if (sunWorld) waterUniformBlock.uSunDir.value.copy(sunWorld).normalize();
   if (sunColor) waterUniformBlock.uSunColor.value.copy(sunColor).lerp(WHITE, 0.2);
 }
 const WHITE = new THREE.Color(1, 1, 1);
+let written: WaterParams | null = null;
 
 /** The live water uniforms, for layers that ride the same surface and sun (the glint sprites). */
-export const waterSurfaceUniforms = () => waterUniformBlock;
-
-/** Swap a loaded kit piece onto the shared materials, in place. */
-export function applyTerrainMaterials(root: THREE.Object3D): void {
-  root.traverse((o) => {
-    const mesh = o as THREE.Mesh;
-    if (!mesh.isMesh) return;
-    const current = Array.isArray(mesh.material) ? mesh.material[0] : mesh.material;
-    const shared = terrainMaterial(current?.name ?? mesh.name ?? "");
-    if (shared) mesh.material = shared;
-  });
-}
+export const waterSurfaceUniforms = (): Record<string, THREE.IUniform> => waterUniformBlock;

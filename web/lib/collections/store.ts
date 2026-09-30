@@ -18,11 +18,19 @@ export interface LandSeason {
   tourney: TourneyRef | null;
 }
 
+/** A recipe a rare catch taught (20260930100000 crafting_catch_drop). */
+export interface LearnedRecipe {
+  id: string;
+  name: string;
+}
+
 export interface CatchResult {
   count: number;
   total_collected: number;
   best_size_cm: number | null;
   new_record: boolean;
+  /** Land and harvest: the recipe this catch taught, in the same transaction; null when none. */
+  recipe?: LearnedRecipe | null;
 }
 
 export interface CollectionsStore {
@@ -33,16 +41,15 @@ export interface CollectionsStore {
   /** Atomic: refuse duplicates, consume one specimen, record the donor. */
   donate(memberId: string, speciesKey: string, idempotencyKey: string, sizeCm: number | null): Promise<{ replayed: boolean }>;
   weeklyBests(weekStart: string): Promise<WeeklyBest[]>;
-  /** Atomic: count+1, lifetime total+1, personal best size, this week's best; capped per species and member per hour. */
-  recordCatch(memberId: string, itemKey: string, sizeCm: number | null, trophyEligible: boolean): Promise<CatchResult>;
   /** Atomic: a server-rolled cast waiting to be landed (too_fast within CAST_GAP_MS of the last). Returns its id. */
   cast(memberId: string, itemKey: string, sizeCm: number | null, trophyEligible: boolean): Promise<string>;
   /**
-   * Atomic: record the member's latest cast once, MIN_REEL_MS to ROLL_TTL_MS after it (recordCatch caps apply).
+   * Atomic: record the member's latest cast once, MIN_REEL_MS to ROLL_TTL_MS after it (collections_record_catch's caps apply).
    * `seasonal` (20260929120000): refuse a limited-time catch whose event is `closed`, and enter the open `tourney`.
+   * A rare catch may teach a recipe with it (20260930100000).
    */
   land(memberId: string, rollId: string, seasonal?: LandSeason): Promise<CatchResult & { item_key: string; size_cm: number | null }>;
-  /** Atomic: one harvest per node per hour, recorded through recordCatch (a capped one leaves the node unharvested). */
+  /** Atomic: one harvest per node per hour, recorded with collections_record_catch's caps (a capped one leaves the node unharvested); a rare one may teach a recipe. */
   harvest(memberId: string, nodeId: string, hourKey: string, itemKey: string, sizeCm: number | null, trophyEligible: boolean): Promise<CatchResult>;
   /** Catalogue refs of the member's owned gear (rods). */
   ownedGear(memberId: string): Promise<string[]>;

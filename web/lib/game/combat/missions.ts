@@ -15,15 +15,9 @@ const NAMES = new Map([...ROSTER, ...MATERIALS].map(s => [s.key, s.name]));
 /** "Crystal ×2, Gold Nugget ×1" for mission and boss rewards. */
 export const materialsLabel = (items: Record<string, number>) => Object.entries(items).map(([k, n]) => `${NAMES.get(k) ?? k} ×${n}`).join(", ");
 
-export type MissionEvent =
-  | { kind: "kill"; enemy: string }
-  | { kind: "pickup"; item: string }
-  | { kind: "return" }
-  | { kind: "wave-cleared"; wave: number }
-  | { kind: "checkpoint"; n: number }
-  | { kind: "arrived" }
-  | { kind: "escort-down" }
-  | { kind: "defeated" };
+type WithoutId<E> = E extends unknown ? Omit<E, "id"> : never;
+/** A systems mission event before it gets its id (the island never abandons through the tracker). */
+export type MissionEvent = WithoutId<Exclude<SystemEvent, { type: "abandon" }>>;
 
 export interface MissionState {
   def: MissionDef; progress: MissionProgress;
@@ -39,19 +33,6 @@ const systemDef = (id: string) => SYSTEM_MISSIONS.find(m => m.key === id)!;
 export function startMission(def: MissionDef, progressId: string | null = null): MissionState {
   const goal = def.params.count ?? def.params.waves ?? 1;
   return withNote({ def, progress: initialProgress(), progressId, queue: [], seq: 0, status: "active", goal, note: "", rewarded: false });
-}
-
-function toSystem(ev: MissionEvent, id: string): SystemEvent {
-  switch (ev.kind) {
-    case "kill": return { id, type: "kill", enemy: ev.enemy };
-    case "pickup": return { id, type: "pickup", item: ev.item };
-    case "return": return { id, type: "return" };
-    case "wave-cleared": return { id, type: "wave_cleared", wave: ev.wave };
-    case "checkpoint": return { id, type: "checkpoint", n: ev.n };
-    case "arrived": return { id, type: "arrived" };
-    case "escort-down": return { id, type: "escort_down" };
-    case "defeated": return { id, type: "defeat" };
-  }
 }
 
 const plural = (w: string) => (/(x|s|ch|sh)$/.test(w) ? `${w}es` : `${w}s`);
@@ -70,7 +51,7 @@ function withNote(s: MissionState): MissionState {
 
 export function advanceMission(s: MissionState, ev: MissionEvent): MissionState {
   if (s.status !== "active") return s;
-  const sys = toSystem(ev, `${s.def.id}:${s.seq + 1}:${ev.kind}`);
+  const sys = { ...ev, id: `${s.def.id}:${s.seq + 1}:${ev.type}` } as SystemEvent;
   const progress = applyEvent(systemDef(s.def.id), s.progress, sys);
   if (progress === s.progress) return s;
   return withNote({ ...s, progress, seq: s.seq + 1, queue: [...s.queue, sys] });

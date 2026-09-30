@@ -8,7 +8,7 @@
  *
  * Objects register themselves: every prepared model (GLBProp, ACNH buildings)
  * from its class and its own bounds (lib/game/shadows.ts), every character
- * from Character. One instanced draw per scene reads them each frame, so a
+ * from Character. Instanced draws (1024 each) read them each frame, so a
  * moved, hidden or removed object takes its contact with it.
  *
  * With the sun's shadow map (High) the contact is lighter and only darkens
@@ -74,9 +74,12 @@ function contactMaterial() {
 const CONTACT = { sunMap: 0.3, none: 0.42 };
 /** The Light tier's sun-directed shadow, per unit of shadow intensity. */
 const DIRECTED = 0.36;
-const CAPACITY = 1024;
+/** Instances per draw; past it the layer adds another (a bigger painted island). */
+const CHUNK = 1024;
 const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _p = new THREE.Vector3(), _s = new THREE.Vector3(), _up = new THREE.Vector3(0, 1, 0);
 const _sun = new THREE.Vector3(), _target = new THREE.Vector3(), _strength = new THREE.Color();
+const _sunXYZ: [number, number, number] = [0, 0, 0];
+const _foot: Ellipse = { x: 0, z: 0, rx: 0, rz: 0, yaw: 0 }, _cast: Ellipse = { x: 0, z: 0, rx: 0, rz: 0, yaw: 0 };
 
 function place(mesh: THREE.InstancedMesh, i: number, e: Ellipse, y: number) {
   mesh.setMatrixAt(i, _m.compose(_p.set(e.x, y, e.z), _q.setFromAxisAngle(_up, e.yaw), _s.set(e.rx, 1, e.rz)));
@@ -91,19 +94,40 @@ function shown(object: THREE.Object3D, scene: THREE.Object3D): boolean {
   return false;
 }
 
-/** The scene's contact layer: every registered contact as one instanced draw, the Light tier's directed shadows as a second. */
-class ContactLayer {
-  readonly contacts = new THREE.InstancedMesh(DISC, contactMaterial(), CAPACITY);
-  readonly directed = new THREE.InstancedMesh(DISC, contactMaterial(), CAPACITY);
+/** Instanced discs in draws of CHUNK, one material; grows by a draw when an instance passes the last. */
+class Discs extends THREE.Group {
+  private meshes: THREE.InstancedMesh[] = [];
+  constructor(readonly material: THREE.ShadowMaterial) { super(); }
+  /** The mesh holding instance n (at slot n % CHUNK). */
+  at(n: number): THREE.InstancedMesh {
+    const i = Math.floor(n / CHUNK);
+    while (this.meshes.length <= i) {
+      const mesh = new THREE.InstancedMesh(DISC, this.material, CHUNK);
+      mesh.frustumCulled = false; mesh.receiveShadow = true; mesh.renderOrder = 1; mesh.count = 0;
+      this.meshes.push(mesh);
+      this.add(mesh);
+    }
+    return this.meshes[i];
+  }
+  /** Draw the first n instances. */
+  show(n: number) {
+    this.meshes.forEach((mesh, i) => {
+      mesh.count = Math.min(Math.max(n - i * CHUNK, 0), CHUNK);
+      mesh.instanceMatrix.needsUpdate = true;
+      if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+    });
+  }
+}
+
+/** The scene's contact layer: every registered contact as instanced draws, the Light tier's directed shadows as a second set. */
+export class ContactLayer {
+  readonly contacts = new Discs(contactMaterial());
+  readonly directed = new Discs(contactMaterial());
   private sun: THREE.DirectionalLight | null = null;
   private sunMap = false;
 
-  constructor() {
-    for (const mesh of [this.contacts, this.directed]) { mesh.frustumCulled = false; mesh.receiveShadow = true; mesh.renderOrder = 1; mesh.count = 0; }
-  }
-
   look(tint: string, intensity: number, sunMap: boolean) {
-    const [a, b] = [this.contacts.material, this.directed.material] as THREE.ShadowMaterial[];
+    const [a, b] = [this.contacts.material, this.directed.material];
     a.color.set(tint); b.color.set(tint);
     a.opacity = intensity * (sunMap ? CONTACT.sunMap : CONTACT.none);
     b.opacity = intensity * DIRECTED;
@@ -125,21 +149,20 @@ class ContactLayer {
     const a = this.contacts, b = this.directed;
     if (!this.sunMap && (!this.sun || !shown(this.sun, scene))) this.sun = (scene.getObjectByName("sun") as THREE.DirectionalLight | undefined) ?? null;
     const light = this.sunMap ? null : this.sun;
-    if (light) _sun.setFromMatrixPosition(light.matrixWorld).sub(_target.setFromMatrixPosition(light.target.matrixWorld));
+    if (light) _sun.setFromMatrixPosition(light.matrixWorld).sub(_target.setFromMatrixPosition(light.target.matrixWorld)).toArray(_sunXYZ);
     let n = 0, d = 0;
     for (const c of CONTACTS.get(scene) ?? []) {
-      if (n >= CAPACITY || !shown(c.object, scene)) continue;
+      if (!shown(c.object, scene)) continue;
       const e = c.object.matrixWorld.elements;
       const sx = Math.hypot(e[0], e[1], e[2]), sy = Math.hypot(e[4], e[5], e[6]), sz = Math.hypot(e[8], e[9], e[10]);
-      const foot: Ellipse = { x: e[0] * c.cx + e[8] * c.cz + e[12], z: e[2] * c.cx + e[10] * c.cz + e[14], rx: c.rx * sx, rz: c.rz * sz, yaw: Math.atan2(e[8], e[10]) };
-      a.setColorAt(n, _strength.setScalar(c.strength));
-      place(a, n++, foot, e[13] + 0.03);
-      const cast = light ? sunShadow(foot, c.height * sy, [_sun.x, _sun.y, _sun.z]) : null;
-      if (cast) place(b, d++, cast, e[13] + 0.025);
+      _foot.x = e[0] * c.cx + e[8] * c.cz + e[12]; _foot.z = e[2] * c.cx + e[10] * c.cz + e[14];
+      _foot.rx = c.rx * sx; _foot.rz = c.rz * sz; _foot.yaw = Math.atan2(e[8], e[10]);
+      a.at(n).setColorAt(n % CHUNK, _strength.setScalar(c.strength));
+      place(a.at(n), n % CHUNK, _foot, e[13] + 0.03);
+      n++;
+      if (light && sunShadow(_foot, c.height * sy, _sunXYZ, _cast)) { place(b.at(d), d % CHUNK, _cast, e[13] + 0.025); d++; }
     }
-    a.count = n; b.count = d;
-    a.instanceMatrix.needsUpdate = b.instanceMatrix.needsUpdate = true;
-    if (a.instanceColor) a.instanceColor.needsUpdate = true;
+    a.show(n); b.show(d);
   }
 }
 

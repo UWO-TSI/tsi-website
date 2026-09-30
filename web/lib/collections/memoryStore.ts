@@ -1,15 +1,16 @@
-/** In-memory CollectionsStore mirroring the 031, 036, catch-roll and seasonal-land SQL functions (tests, dev harness). */
+/** In-memory CollectionsStore mirroring the 031, 036, catch-roll, seasonal-land and recipe-drop SQL functions (tests, dev harness). */
 import { FISH } from "@/lib/game/fishing";
-import { weekStart, type Donation, type MemberItem, type WeeklyBest } from "./logic";
+import { clampSize, trophyFor, weekStart, type Donation, type MemberItem, type WeeklyBest } from "./logic";
 import { CAST_GAP_MS, MIN_REEL_MS, ROLL_TTL_MS } from "./rolls";
 import { ROSTER } from "./roster";
-import { CollectionsError, type CollectionsStore } from "./store";
+import { CollectionsError, type CollectionsStore, type LearnedRecipe } from "./store";
 import type { TourneyEntry } from "@/lib/progression/seasonal";
 
 /** collections_record_catch's hourly caps: per species by rarity, and 200 per member. */
 const CAP: Record<string, number> = { legendary: 3, seaking: 3, epic: 6, rare: 12, uncommon: 30 };
 
-export function memoryCollectionsStore(now: () => Date = () => new Date("2026-09-24T16:00:00Z")) {
+/** `drop`: crafting_catch_drop (memoryCraftingStore's catchDrop); without it catches teach nothing. */
+export function memoryCollectionsStore(now: () => Date = () => new Date("2026-09-24T16:00:00Z"), drop: (member: string, itemKey: string) => LearnedRecipe | null = () => null) {
   const items = new Map<string, MemberItem>(); // `${member}:${key}`
   const donations: (Donation & { key: string })[] = [];
   const bests = new Map<string, WeeklyBest & { week: string }>();
@@ -34,6 +35,24 @@ export function memoryCollectionsStore(now: () => Date = () => new Date("2026-09
     if (size === null || (category !== "fish" && category !== "sea")) return;
     const ek = `${goalId}:${cycle}:${m}:${category}`;
     if (size > (entries.get(ek)?.size_cm ?? 0)) entries.set(ek, { goal: `${goalId}:${cycle}`, member_id: m, member_name: "", category, item_key: key, size_cm: size, caught_at: now().toISOString() });
+  };
+  /** collections_record_catch: count+1, lifetime total+1, personal best size, this week's best; capped per species and member per hour. */
+  const recordCatch = (m: string, key: string, size: number | null, trophy: boolean) => {
+    capped(m, key);
+    const k = `${m}:${key}`;
+    const row = items.get(k) ?? { item_key: key, count: 0, total_collected: 0, best_size_cm: null, first_collected_at: now().toISOString() };
+    const newRecord = size !== null && (row.best_size_cm === null || size > row.best_size_cm);
+    row.count += 1;
+    row.total_collected += 1;
+    if (newRecord) row.best_size_cm = size;
+    items.set(k, row);
+    if (trophy && size !== null) {
+      const week = weekStart(now());
+      const bk = `${week}:${m}:${key}`;
+      const cur = bests.get(bk);
+      if (!cur || size > cur.size_cm) bests.set(bk, { week, user_id: m, member_name: "", item_key: key, size_cm: size, caught_at: now().toISOString() });
+    }
+    return { count: row.count, total_collected: row.total_collected, best_size_cm: row.best_size_cm, new_record: newRecord };
   };
   const store: CollectionsStore = {
     async roster() {
@@ -63,23 +82,6 @@ export function memoryCollectionsStore(now: () => Date = () => new Date("2026-09
     async weeklyBests(week) {
       return [...bests.values()].filter((b) => b.week === week).map(({ week: _w, ...b }) => (void _w, { ...b, member_name: names.get(b.user_id) ?? "Member" }));
     },
-    async recordCatch(m, key, size, trophy) {
-      capped(m, key);
-      const k = `${m}:${key}`;
-      const row = items.get(k) ?? { item_key: key, count: 0, total_collected: 0, best_size_cm: null, first_collected_at: now().toISOString() };
-      const newRecord = size !== null && (row.best_size_cm === null || size > row.best_size_cm);
-      row.count += 1;
-      row.total_collected += 1;
-      if (newRecord) row.best_size_cm = size;
-      items.set(k, row);
-      if (trophy && size !== null) {
-        const week = weekStart(now());
-        const bk = `${week}:${m}:${key}`;
-        const cur = bests.get(bk);
-        if (!cur || size > cur.size_cm) bests.set(bk, { week, user_id: m, member_name: "", item_key: key, size_cm: size, caught_at: now().toISOString() });
-      }
-      return { count: row.count, total_collected: row.total_collected, best_size_cm: row.best_size_cm, new_record: newRecord };
-    },
     async cast(m, key, size, trophy) {
       const at = now().getTime();
       if ([...rolls.values()].some((r) => r.member === m && at - r.at < CAST_GAP_MS)) throw new CollectionsError("too_fast");
@@ -96,16 +98,16 @@ export function memoryCollectionsStore(now: () => Date = () => new Date("2026-09
       if (t - r.at < MIN_REEL_MS) throw new CollectionsError("too_fast");
       // seasonal_land (20260929120000): a limited-time catch outside its event lands nothing.
       if (seasonal?.closed.includes(r.key)) throw new CollectionsError("out_of_season");
-      const res = await store.recordCatch(m, r.key, r.size, r.trophy);
+      const res = recordCatch(m, r.key, r.size, r.trophy);
       r.landed = true;
       if (seasonal?.tourney) enter(seasonal.tourney.goal_id, seasonal.tourney.cycle, m, r.key, r.size);
-      return { item_key: r.key, size_cm: r.size, ...res };
+      return { item_key: r.key, size_cm: r.size, ...res, recipe: drop(m, r.key) };
     },
     async harvest(m, node, hourKey, key, size, trophy) {
       if (harvests.has(`${m}:${node}:${hourKey}`)) throw new CollectionsError("already_harvested");
-      const res = await store.recordCatch(m, key, size, trophy);
+      const res = recordCatch(m, key, size, trophy);
       harvests.add(`${m}:${node}:${hourKey}`);
-      return res;
+      return { ...res, recipe: drop(m, key) };
     },
     async ownedGear(m) {
       return gear.get(m) ?? [];
@@ -121,7 +123,13 @@ export function memoryCollectionsStore(now: () => Date = () => new Date("2026-09
     },
   };
   return {
-    store, name: (id: string, n: string) => names.set(id, n), countOf: (m: string, k: string) => items.get(`${m}:${k}`)?.count ?? 0,
+    store, name: (id: string, n: string) => names.set(id, n),
+    /** A catch recorded directly (tests, the dev demo): the species' size clamp and trophy rule, then the capped record. */
+    record: (m: string, key: string, sizeCm: number | null) => {
+      const sp = ROSTER.find((s) => s.key === key), size = clampSize(sp, sizeCm);
+      return { item_key: key, ...recordCatch(m, key, size, trophyFor(sp, size)) };
+    },
+    countOf: (m: string, k: string) => items.get(`${m}:${k}`)?.count ?? 0,
     own: (m: string, refs: string[]) => gear.set(m, refs),
     /** Demo fixture: a tourney entry as seasonal_land would leave it. */
     enter,

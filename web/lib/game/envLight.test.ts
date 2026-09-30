@@ -1,6 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as THREE from "three";
-import { applyEnvironment, disposeEnvironment, ENV_PHASES, sunU } from "./envLight";
+import { applyEnvironment, disposeEnvironment, sunU, type EnvPhaseSpec } from "./envLight";
+
+const spec = (intensity: number): EnvPhaseSpec => ({ skyTop: "#4FB6F5", skyBottom: "#A9DCF2", sun: "#FFFDF4", ground: "#84CB47", intensity, sunElev: 0.6 });
+const DAY = spec(0.2), DUSK = spec(0.3), NIGHT = spec(0.22);
 
 const mocks = vi.hoisted(() => ({ generators: [] as { renderer: unknown; dispose: ReturnType<typeof vi.fn> }[], targets: [] as import("three").WebGLRenderTarget[], fail: false }));
 vi.mock("three", async (importOriginal) => {
@@ -35,13 +38,13 @@ describe("environment GPU resource ownership", () => {
   it("caches a phase per scene and disposes generator scratch memory after baking", () => {
     const scene = new THREE.Scene();
     const renderer = {} as THREE.WebGLRenderer;
-    applyEnvironment(renderer, scene, "day");
+    applyEnvironment(renderer, scene, DAY);
     const texture = scene.environment;
-    applyEnvironment(renderer, scene, "day");
+    applyEnvironment(renderer, scene, DAY);
     expect(scene.environment).toBe(texture);
     expect(mocks.generators).toHaveLength(1);
     expect(mocks.generators[0].dispose).toHaveBeenCalledOnce();
-    expect(scene.environmentIntensity).toBe(ENV_PHASES.day.intensity);
+    expect(scene.environmentIntensity).toBe(DAY.intensity);
     disposeEnvironment(scene);
     expect(scene.environment).toBeNull();
   });
@@ -49,12 +52,12 @@ describe("environment GPU resource ownership", () => {
   it("keeps separate scenes independent and releases only the replaced texture", () => {
     const first = new THREE.Scene(), second = new THREE.Scene();
     const renderer = {} as THREE.WebGLRenderer;
-    applyEnvironment(renderer, first, "day");
-    applyEnvironment(renderer, second, "night");
+    applyEnvironment(renderer, first, DAY);
+    applyEnvironment(renderer, second, NIGHT);
     const firstDisposed = vi.fn(), secondDisposed = vi.fn();
     mocks.targets[0].addEventListener("dispose", firstDisposed);
     mocks.targets[1].addEventListener("dispose", secondDisposed);
-    applyEnvironment(renderer, first, "dusk");
+    applyEnvironment(renderer, first, DUSK);
     expect(firstDisposed).toHaveBeenCalledOnce();
     expect(secondDisposed).not.toHaveBeenCalled();
     disposeEnvironment(first);
@@ -66,9 +69,9 @@ describe("environment GPU resource ownership", () => {
   it("uses the replacement renderer even when the phase has not changed", () => {
     const scene = new THREE.Scene();
     const oldRenderer = {} as THREE.WebGLRenderer, newRenderer = {} as THREE.WebGLRenderer;
-    applyEnvironment(oldRenderer, scene, "day");
+    applyEnvironment(oldRenderer, scene, DAY);
     const old = scene.environment;
-    applyEnvironment(newRenderer, scene, "day");
+    applyEnvironment(newRenderer, scene, DAY);
     expect(scene.environment).not.toBe(old);
     expect(mocks.generators.map((entry) => entry.renderer)).toEqual([oldRenderer, newRenderer]);
     disposeEnvironment(scene);
@@ -77,10 +80,10 @@ describe("environment GPU resource ownership", () => {
   it("preserves the previous environment and releases scratch memory after a failed bake", () => {
     const scene = new THREE.Scene();
     const renderer = {} as THREE.WebGLRenderer;
-    applyEnvironment(renderer, scene, "day");
+    applyEnvironment(renderer, scene, DAY);
     const previous = scene.environment;
     mocks.fail = true;
-    expect(() => applyEnvironment(renderer, scene, "night")).toThrow("GPU bake failed");
+    expect(() => applyEnvironment(renderer, scene, NIGHT)).toThrow("GPU bake failed");
     expect(scene.environment).toBe(previous);
     expect(mocks.generators[1].dispose).toHaveBeenCalledOnce();
     disposeEnvironment(scene);
@@ -88,7 +91,7 @@ describe("environment GPU resource ownership", () => {
 
   it("does not clear an environment installed by another owner; repeated cleanup is safe", () => {
     const scene = new THREE.Scene();
-    applyEnvironment({} as THREE.WebGLRenderer, scene, "day");
+    applyEnvironment({} as THREE.WebGLRenderer, scene, DAY);
     const disposed = vi.fn();
     mocks.targets[0].addEventListener("dispose", disposed);
     const replacement = new THREE.Texture();
@@ -100,13 +103,10 @@ describe("environment GPU resource ownership", () => {
     replacement.dispose();
   });
 
-  it("accepts an island palette without mutating the member-world default", () => {
+  it("applies the island palette it is given", () => {
     const scene = new THREE.Scene();
-    const original = { ...ENV_PHASES.day };
-    const palette = { ...original, intensity: 0.27, ground: "#b6c593" };
-    applyEnvironment({} as THREE.WebGLRenderer, scene, "day", palette);
+    applyEnvironment({} as THREE.WebGLRenderer, scene, { ...DAY, intensity: 0.27, ground: "#b6c593" });
     expect(scene.environmentIntensity).toBe(0.27);
-    expect(ENV_PHASES.day).toEqual(original);
     disposeEnvironment(scene);
   });
 });

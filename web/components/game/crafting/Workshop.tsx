@@ -168,7 +168,7 @@ export default function CraftingSheet() {
         </li>)}</ul>
         {selected && <div className={styles.detail}>
           <h3>{selected.name}{selected.qty > 1 ? ` ×${selected.qty}` : ""}</h3>
-          <small>{selected.source === "starter" ? "Everyone knows this one." : selected.source === "bottle" ? "From a message bottle." : selected.source === "shop" ? "From a recipe card." : "Taught by a resident."}</small>
+          <small>{selected.source === "starter" ? "Everyone knows this one." : selected.source === "bottle" ? "From a message bottle." : selected.source === "shop" ? "From a recipe card." : selected.source === "catch" ? "From a rare catch." : "Taught by a resident."}</small>
           <ul className={styles.ingredients} aria-label="Ingredients">{selected.ingredients.map(i => <li key={i.key} data-short={i.have < i.need}>
             {i.icon ? (
               // eslint-disable-next-line @next/next/no-img-element

@@ -1,15 +1,15 @@
 /**
  * Live encounter state: one mutable object the frame loop writes and the HUD
- * reads (published ~10×/s, never per frame). Also the ability keys (1–4,
- * remappable on this device until the account settings carry them).
+ * reads (published ~10×/s, never per frame). The ability keys live with the
+ * other device key maps (lib/game/movement/keys.ts).
  */
 import { useSyncExternalStore } from "react";
 import type { MissionState } from "./missions";
 import type { Enemy, Vec } from "./sim";
-import { PLAYER_BASE, WEAPONS, WEAPON_ORDER } from "./data";
+import { PLAYER_BASE, WEAPONS } from "./data";
+import { STARTER_WEAPONS } from "@/lib/combat/weapons";
 import { ZERO_STATS, type Stat, type StatBlock } from "@/lib/combat/progression";
 import type { Ability, BuffStat, Element, Status, Subclass, UnitDef } from "@/lib/combat/kits";
-import { DEFAULT_MOVE_KEYS, readMoveKeys } from "@/lib/game/movement/keys";
 
 /** A shot. Weapon shots carry nothing; ability and unit shots carry what they do on impact. */
 export interface ShotHit { power: number; stat?: Stat; tier?: number; pierce?: boolean; splash?: number; status?: Status; unit?: boolean; hitIds?: string[] }
@@ -84,7 +84,7 @@ export interface CombatRuntime {
 export function createRuntime(): CombatRuntime {
   return {
     player: { hp: PLAYER_BASE.maxHp, maxHp: PLAYER_BASE.maxHp, alive: true, safe: true, level: 10, stats: { ...ZERO_STATS },
-      energy: ENERGY.max, sinceSpend: 99, weapon: "sword-driftwood", owned: [...WEAPON_ORDER],
+      energy: ENERGY.max, sinceSpend: 99, weapon: "sword-driftwood", owned: [...STARTER_WEAPONS],
       durability: Object.fromEntries(Object.values(WEAPONS).map(w => [w.id, w.maxDurability])),
       hits: {},
       attackCd: 0, swing: 0, dodgeAge: null, dodgeCd: 0, dodgeDir: { x: 0, z: 1 },
@@ -102,7 +102,7 @@ export function createRuntime(): CombatRuntime {
 export function setOwnedWeapons(rt: CombatRuntime, owned: { weapon_key: string; durability: number }[]) {
   const usable = owned.filter(w => WEAPONS[w.weapon_key]);
   for (const w of usable) rt.player.durability[w.weapon_key] = w.durability;
-  rt.player.owned = [...new Set([...WEAPON_ORDER, ...usable.map(w => w.weapon_key)])];
+  rt.player.owned = [...new Set([...STARTER_WEAPONS, ...usable.map(w => w.weapon_key)])];
 }
 
 // ── HUD subscription ────────────────────────────────────────────
@@ -115,36 +115,6 @@ export function publishCombat() { version++; for (const l of listeners) l(); }
 if (process.env.NODE_ENV !== "production" && typeof window !== "undefined") Object.assign(window, { __combat: combat, __publishCombat: publishCombat });
 export function useCombatVersion(): number {
   return useSyncExternalStore(l => { listeners.add(l); return () => { listeners.delete(l); }; }, () => version, () => 0);
-}
-
-// ── Ability keys (slots 1–4 and the weapon swap R, remappable) ──────
-// Q is the dash, and the dodge in the ruins (specs/movement.md), so the swap moved from Q to R.
-const KEYS_KEY = "tsi.combatKeys.v2"; // v1 bound the prototype runes, not slots
-export const DEFAULT_ABILITY_KEYS: Record<AbilityId, string> = { slot1: "1", slot2: "2", slot3: "3", slot4: "4", swap: "r" };
-const MENU_KEYS = ["e", "escape", "tab", "z", "m", "j", "b", "i"];
-/** Movement keys (whatever this device bound them to) and the menu keys. */
-const reserved = () => new Set([...MENU_KEYS, ...Object.values(DEFAULT_MOVE_KEYS), ...Object.values(readMoveKeys())]);
-export function readAbilityKeys(): Record<AbilityId, string> {
-  try {
-    const raw = JSON.parse(localStorage.getItem(KEYS_KEY) ?? "null");
-    if (raw && typeof raw === "object") {
-      const out = { ...DEFAULT_ABILITY_KEYS };
-      const taken = reserved();
-      for (const a of Object.keys(out) as AbilityId[]) if (typeof raw[a] === "string" && raw[a].length === 1 && !taken.has(raw[a])) out[a] = raw[a];
-      if (new Set(Object.values(out)).size === ABILITIES.length) return out;
-    }
-  } catch { /* defaults */ }
-  return { ...DEFAULT_ABILITY_KEYS };
-}
-/** Rebind an ability; taking another ability's key swaps them. Movement, dodge and menu keys are refused. */
-export function remapAbility(keys: Record<AbilityId, string>, id: AbilityId, raw: string): { ok: true; keys: Record<AbilityId, string> } | { ok: false; error: string } {
-  const k = raw.toLowerCase();
-  if (k.length !== 1 || reserved().has(k)) return { ok: false, error: `${raw === " " ? "Space" : raw.toUpperCase()} is already used.` };
-  const other = (Object.keys(keys) as AbilityId[]).find(a => a !== id && keys[a] === k);
-  const next = { ...keys, [id]: k };
-  if (other) next[other] = keys[id];
-  try { localStorage.setItem(KEYS_KEY, JSON.stringify(next)); } catch { /* session only */ }
-  return { ok: true, keys: next };
 }
 
 // ── Mission board mutations (kept here so components never write the runtime directly) ──

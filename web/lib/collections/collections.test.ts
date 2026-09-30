@@ -1,12 +1,11 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { FISH } from "@/lib/game/fishing";
 import { availableAt, clueFor, journalPage, laterToday, museumWings, validateShowcase, weekStart, weeklyTrophies, type WeeklyBest } from "./logic";
 import { memoryCollectionsStore } from "./memoryStore";
-import { EVENT_SPECIES, LAUNCH_ROSTER, ROSTER, type Species } from "./roster";
-import { seedSql } from "./seed";
-import { donate, journal, recordCatch, trophies } from "./service";
+import { LAUNCH_ROSTER, ROSTER, type Species } from "./roster";
+import { donate, journal, trophies } from "./service";
 
 const A = "00000000-0000-4000-8000-0000000000aa";
 const B = "00000000-0000-4000-8000-0000000000bb";
@@ -22,7 +21,8 @@ describe("roster", () => {
     expect(new Set(ROSTER.filter((s) => s.category === "fish").map((s) => s.biome))).toEqual(new Set(["river", "pond", "cliff_pool", "sea"]));
     expect(new Set(ROSTER.filter((s) => s.category === "fish").map((s) => s.rarity)).size).toBe(5);
   });
-  it("seeds fish and sea creatures from the game's FISH table (rarity, size, hours)", () => {
+  it("seeds fish and sea creatures from the game's FISH table (rarity, size, hours), and every fish the reel lands is on it (row 260)", () => {
+    expect(FISH.filter((f) => !ROSTER.some((s) => s.key === f.key)).map((f) => f.key)).toEqual([]);
     const fish = new Map(FISH.map((f) => [f.key, f]));
     for (const s of ROSTER.filter((x) => x.category === "fish" || x.key.startsWith("sea_"))) {
       const f = fish.get(s.key);
@@ -42,10 +42,6 @@ describe("roster", () => {
   it("points every asset-ready icon at a file that exists", () => {
     for (const s of ROSTER) if (s.icon) expect(existsSync(join(WEB, "public", s.icon)), s.icon).toBe(true);
     for (const s of ROSTER) if (s.model) expect(existsSync(join(WEB, "public", s.model)), s.model).toBe(true);
-  });
-  it("is mirrored verbatim in 20260926150400_collections.sql and, for the limited-time catches, 20260929120000_seasonal_events.sql", () => {
-    expect(readFileSync(join(WEB, "supabase/migrations/20260926150400_collections.sql"), "utf8")).toContain(seedSql(LAUNCH_ROSTER));
-    expect(readFileSync(join(WEB, "supabase/migrations/20260929120000_seasonal_events.sql"), "utf8")).toContain(seedSql(EVENT_SPECIES));
   });
 });
 
@@ -70,11 +66,11 @@ describe("availability and clues", () => {
 describe("journal pages", () => {
   it("shows silhouettes with clues for unknowns and leaks no names or keys", async () => {
     const m = memoryCollectionsStore();
-    await recordCatch(m.store, A, "fish_dace", 14.2);
+    m.record(A, "fish_dace", 14.2);
     const r = await journal(m.store, A, "fish", noon);
     expect(r.ok).toBe(true);
     if (!r.ok) return;
-    expect(r.data).toMatchObject({ total: 43, discovered: 1 });
+    expect(r.data).toMatchObject({ total: 81, discovered: 1 });
     expect(r.data.entries[0]).toMatchObject({ discovered: true, key: "fish_dace", best_size_cm: 14.2, museum: { donated: false } });
     const unknown = JSON.stringify(r.data.entries.filter((e) => !e.discovered)).toLowerCase();
     for (const s of ROSTER.filter((x) => x.category === "fish" && x.key !== "fish_dace")) {
@@ -86,10 +82,10 @@ describe("journal pages", () => {
   });
   it("keeps personal size records (catch card data)", async () => {
     const m = memoryCollectionsStore();
-    expect(await recordCatch(m.store, A, "fish_carp", 50)).toMatchObject({ ok: true, data: { new_record: true, best_size_cm: 50, count: 1 } });
-    expect(await recordCatch(m.store, A, "fish_carp", 40)).toMatchObject({ ok: true, data: { new_record: false, best_size_cm: 50, count: 2, total_collected: 2 } });
-    expect(await recordCatch(m.store, A, "fish_carp", 9999)).toMatchObject({ ok: true, data: { new_record: true, best_size_cm: 70 } });
-    expect(await recordCatch(m.store, A, "flower_rose", 5)).toMatchObject({ ok: true, data: { best_size_cm: null } });
+    expect(m.record(A, "fish_carp", 50)).toMatchObject({ new_record: true, best_size_cm: 50, count: 1 });
+    expect(m.record(A, "fish_carp", 40)).toMatchObject({ new_record: false, best_size_cm: 50, count: 2, total_collected: 2 });
+    expect(m.record(A, "fish_carp", 9999)).toMatchObject({ new_record: true, best_size_cm: 70 });
+    expect(m.record(A, "flower_rose", 5)).toMatchObject({ best_size_cm: null });
   });
 });
 
@@ -97,8 +93,8 @@ describe("museum donations (rows 67, 202)", () => {
   it("puts the first donation on display with the donor's name and consumes one specimen", async () => {
     const m = memoryCollectionsStore();
     m.name(A, "Maya Chen");
-    await recordCatch(m.store, A, "fish_dace", 12);
-    await recordCatch(m.store, A, "fish_dace", 13);
+    m.record(A, "fish_dace", 12);
+    m.record(A, "fish_dace", 13);
     const r = await donate(m.store, A, "fish_dace", "donate-0001");
     expect(r).toMatchObject({ ok: true, data: { replayed: false, exhibit: { donated: true, name: "Dace", donor_name: "Maya Chen" } } });
     expect(m.countOf(A, "fish_dace")).toBe(1);
@@ -108,8 +104,8 @@ describe("museum donations (rows 67, 202)", () => {
   it("refuses duplicates and lets the second member keep theirs", async () => {
     const m = memoryCollectionsStore();
     m.name(A, "Maya Chen");
-    await recordCatch(m.store, A, "fish_dace", 12);
-    await recordCatch(m.store, B, "fish_dace", 17);
+    m.record(A, "fish_dace", 12);
+    m.record(B, "fish_dace", 17);
     await donate(m.store, A, "fish_dace", "donate-0002");
     const dup = await donate(m.store, B, "fish_dace", "donate-0003");
     expect(dup).toMatchObject({ ok: false, status: 409, code: "already_donated" });
@@ -120,17 +116,17 @@ describe("museum donations (rows 67, 202)", () => {
   it("refuses what you don't have and what the museum doesn't collect", async () => {
     const m = memoryCollectionsStore();
     expect(await donate(m.store, A, "fish_carp", "donate-0005")).toMatchObject({ ok: false, code: "not_owned" });
-    await recordCatch(m.store, A, "apple", null);
+    m.record(A, "apple", null);
     expect(await donate(m.store, A, "apple", "donate-0006")).toMatchObject({ ok: false, code: "not_donatable" });
   });
   it("lists wings without naming empty cases", () => {
     const wings = museumWings(ROSTER, [{ species_key: "bug_firefly", donor_id: A, donor_name: "Maya", donated_at: "2026-09-24T00:00:00Z", size_cm: null }]);
-    expect(wings.map((w) => [w.wing, w.total, w.donated])).toEqual([["aquarium", 55, 0], ["insect_hall", 20, 1], ["nature_room", 15, 0]]);
+    expect(wings.map((w) => [w.wing, w.total, w.donated])).toEqual([["aquarium", 93, 0], ["insect_hall", 20, 1], ["nature_room", 15, 0]]);
     expect(wings[1].exhibits.filter((e) => !e.donated).every((e) => e.key === null && e.name === null)).toBe(true);
   });
   it("keeps discovery records separate from donated stock", async () => {
     const m = memoryCollectionsStore();
-    await recordCatch(m.store, A, "fish_dace", 12);
+    m.record(A, "fish_dace", 12);
     await donate(m.store, A, "fish_dace", "donate-0007");
     const page = await journal(m.store, A, "fish", noon);
     expect(page.ok && page.data.entries[0]).toMatchObject({ discovered: true, count: 0, total_collected: 1, museum: { donated: true, by_me: true } });
@@ -166,8 +162,8 @@ describe("weekly trophy case (row 204)", () => {
     expect(weekStart(new Date("2026-09-28T03:00:00Z"))).toBe("2026-09-21"); // Sunday 23:00 Toronto
     const m = memoryCollectionsStore();
     m.name(A, "Maya");
-    await recordCatch(m.store, A, "fish_carp", 60);
-    await recordCatch(m.store, A, "fish_carp", 55);
+    m.record(A, "fish_carp", 60);
+    m.record(A, "fish_carp", 55);
     const r = await trophies(m.store, new Date("2026-09-24T16:00:00Z"));
     expect(r).toMatchObject({ ok: true, data: { week_start: "2026-09-21", trophies: [{ key: "fish_carp", size_cm: 60, member_name: "Maya" }] } });
   });

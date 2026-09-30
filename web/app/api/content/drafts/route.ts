@@ -41,24 +41,3 @@ export async function POST(request: Request) {
 
   return NextResponse.json({ ok: true, draft: data }, { status: 201 });
 }
-
-// GET — list drafts (T1/T2).
-export async function GET(request: Request) {
-  const ctx = await adminContext();
-  if (ctx instanceof NextResponse) return ctx;
-
-  const { searchParams } = new URL(request.url);
-  const status = searchParams.get("status");
-  const tableName = searchParams.get("table_name");
-
-  let query = ctx.db.from("content_drafts").select("*").order("created_at", { ascending: false });
-  if (status && ["draft", "published", "discarded"].includes(status)) query = query.eq("status", status);
-  if (tableName && CONTENT_TABLES.has(tableName)) query = query.eq("table_name", tableName);
-
-  const { data, error } = await query;
-  if (error) {
-    return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
-  }
-
-  return NextResponse.json({ ok: true, drafts: data ?? [] });
-}

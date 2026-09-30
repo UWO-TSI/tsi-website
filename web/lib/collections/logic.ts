@@ -5,11 +5,18 @@
  */
 import { RARITY_RANK, WING_OF, type Biome, type Category, type Rarity, type Species, type Wing } from "./roster";
 import { torontoParts } from "@/lib/time";
+import { rosterWeather, type IslandWeather } from "@/lib/game/islandWeather";
 
 export interface WorldMoment {
   hour: number; // 0-24 local island time
   month: number; // 1-12
   weather: "clear" | "cloudy" | "rain" | "snow";
+}
+
+/** The world moment VillageLife rolls against and the server's rolls check: Toronto hour (mid-hour), month, roster weather. */
+export function momentAt(now: Date, weather: IslandWeather): WorldMoment {
+  const { hour, month } = torontoParts(now);
+  return { hour: hour + 0.5, month, weather: rosterWeather(weather) };
 }
 
 export interface MemberItem {
@@ -200,6 +207,9 @@ export function clampSize(sp: Species | undefined, size: number | null | undefin
   if (!sp?.size || typeof size !== "number" || !Number.isFinite(size)) return null;
   return Math.round(Math.min(sp.size[1], Math.max(sp.size[0], size)) * 10) / 10;
 }
+
+/** A sized fish or sea catch counts for the weekly trophies. */
+export const trophyFor = (sp: { category: string } | undefined, size: number | null) => !!sp && (sp.category === "fish" || sp.category === "sea") && size !== null;
 
 /** Island clock for availability: Toronto hour/month unless the client passes its own. */
 export function momentFrom(url: URL, now: Date) {

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { islandPhase, parseClockOverride, parseTimeOverride, type IslandPhase } from "./islandTime";
-import { parseWeatherOverride, weatherAt, type IslandWeather, type WeatherReport } from "./islandWeather";
+import { parseWeatherOverride, setLiveIslandWeather, weatherAt, type IslandWeather, type WeatherReport } from "./islandWeather";
 import { parseSeasonOverride, seasonBlend, type SeasonBlend } from "./season";
 import { sunFor } from "./sunTimes";
 import { phaseInstant, solarPosition, SUN_STEP_MS, type SunAngles } from "./sunPath";
@@ -22,6 +22,8 @@ export interface IslandConditions {
   sunSource: "open-meteo" | "fallback";
   /** The real sun (row 239) at world-clock time, or a forced phase's preview time; the same object until it moves a step. */
   sun: SunAngles;
+  /** World-clock ms (worldNow, so `?at=` moves it), read once a minute: the events, forage and bugs follow it. */
+  now: number;
 }
 
 /**
@@ -65,11 +67,15 @@ export function useIslandConditions(): IslandConditions {
   const livePhase = islandPhase(date, report?.sun);
   const sunStep = Math.floor((forcedPhase ? phaseInstant(forcedPhase, date, report?.sun) : date).getTime() / SUN_STEP_MS);
   const sun = useMemo(() => solarPosition(new Date(sunStep * SUN_STEP_MS)), [sunStep]);
+  const weather = weatherOverride ?? (report && weatherAt(report, date)) ?? "clear";
+  // Footsteps and the reel read it outside React (liveIslandWeather).
+  useEffect(() => setLiveIslandWeather(weather), [weather]);
   return {
     phase: forcedPhase ?? livePhase, forcedPhase, setForcedPhase, livePhase,
-    weather: weatherOverride ?? (report && weatherAt(report, date)) ?? "clear",
+    weather,
     season: seasonOverride ?? seasonBlend(date),
     sunSource: sunFor(date, report?.sun).source,
     sun,
+    now,
   };
 }

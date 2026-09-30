@@ -7,8 +7,8 @@
  * flowers from FlowerPickFX, fruit from CollectionBook, shells from
  * public/assets/acnh/props/shell-*.glb. Species without a model yet are
  * `asset_ready: false` (listed so the journal and museum have their slots).
- * Mirrored into supabase/migrations/20260926150400_collections.sql by
- * scripts/gen-seeds.mjs; collections.test.ts keeps them in sync.
+ * Seeded from here (lib/seedMigrations.ts: after a change run
+ * scripts/gen-seeds.mjs); seedMigrations.test.ts keeps them in sync.
  *
  * Hours are local island time, [start, end) wrapping past midnight; null = all
  * day. Months 1-12 (northern hemisphere, Ontario); [] = all year. `weather` []
@@ -212,7 +212,61 @@ export const EVENT_SPECIES: Species[] = make("fish", "rod", "aquarium", [
   ["fish_giant_trevally", "Giant Trevally", "sea", "rare", [80, 150], null, { months: [9], oneLiner: "Hits the line like it has a grudge." }],
 ], { model: null });
 
-export const ROSTER: Species[] = [...LAUNCH_ROSTER, ...EVENT_SPECIES];
+const SUMMER = [6, 7, 8, 9];
+const WARM = [4, 5, 6, 7, 8, 9];
+const APR_NOV = [4, 5, 6, 7, 8, 9, 10, 11];
+/**
+ * The reel's other catches (row 260: every fish the reel can land is on the
+ * roster). Rarity, size and hours are the reel's own (FISH); months are the
+ * northern-hemisphere seasons the launch fish use. Seeded with the launch
+ * roster (lib/seedMigrations.ts), after the event species so no earlier
+ * position moves.
+ */
+export const REEL_FISH: Species[] = make("fish", "rod", "aquarium", [
+  // river
+  ["fish_pond_smelt", "Pond Smelt", "river", "common", [6, 10], null, { months: [12, 1, 2], oneLiner: "Bites best when the water is cold enough to hurt." }],
+  ["fish_guppy", "Guppy", "river", "common", [3, 5], DAY, { months: APR_NOV, oneLiner: "A splash of colour the size of a fingertip." }],
+  ["fish_neon_tetra", "Neon Tetra", "river", "common", [3, 4], DAY, { months: APR_NOV, oneLiner: "Lit up blue and red like a shop sign." }],
+  ["fish_angelfish", "Angelfish", "river", "uncommon", [8, 12], null, { months: [5, 6, 7, 8, 9, 10], oneLiner: "Tall, thin and very composed." }],
+  ["fish_betta", "Betta", "river", "uncommon", [6, 8], DAY, { months: [5, 6, 7, 8, 9, 10], oneLiner: "Small fins, big attitude." }],
+  ["fish_doctor_fish", "Doctor Fish", "river", "uncommon", [15, 25], null, { months: [5, 6, 7, 8, 9], oneLiner: "Will nibble your toes if you let it." }],
+  ["fish_tilapia", "Tilapia", "river", "uncommon", [25, 40], null, { months: [6, 7, 8, 9, 10], oneLiner: "Plain, sturdy and always hungry." }],
+  ["fish_soft_shelled_turtle", "Soft-shelled Turtle", "river", "uncommon", [20, 35], null, { months: [8, 9], oneLiner: "A pancake with a snorkel." }],
+  ["fish_mitten_crab", "Mitten Crab", "river", "uncommon", [10, 18], null, { months: [9, 10, 11], oneLiner: "Wears fuzzy gloves all year." }],
+  ["fish_piranha", "Piranha", "river", "rare", [25, 40], DAY, { months: SUMMER, oneLiner: "Mind the teeth when you unhook it." }],
+  ["fish_bichir", "Bichir", "river", "rare", [40, 70], NIGHT, { months: SUMMER, oneLiner: "Armoured, ancient and in no hurry." }],
+  ["fish_arowana", "Arowana", "river", "epic", [60, 90], NIGHT, { months: SUMMER, oneLiner: "Leaps out of the water for bugs." }],
+  ["fish_dorado", "Dorado", "river", "epic", [70, 100], DAY, { months: SUMMER, oneLiner: "A gold streak that pulls like the current." }],
+  ["fish_arapaima", "Arapaima", "river", "epic", [150, 300], EVE_NIGHT, { rainAnyHour: true, months: SUMMER, oneLiner: "Longer than the canoe. Bring a friend." }],
+  ["fish_golden_arowana", "Golden Arowana", "river", "legendary", [70, 100], NIGHT, { months: SUMMER, oneLiner: "Gold scales, and it knows it." }],
+  // pond
+  ["fish_crayfish", "Crayfish", "pond", "common", [5, 12], null, { months: WARM, oneLiner: "Backs away from you, claws up." }],
+  ["fish_pop_eyed_goldfish", "Pop-eyed Goldfish", "pond", "uncommon", [8, 12], null, { oneLiner: "Sees everything and is startled by all of it." }],
+  ["fish_ranchu_goldfish", "Ranchu Goldfish", "pond", "uncommon", [10, 15], null, { oneLiner: "Round, slow and proud of its head." }],
+  // sea
+  ["fish_sea_butterfly", "Sea Butterfly", "sea", "common", [2, 4], null, { months: [12, 1, 2, 3], oneLiner: "A snail that learned to fly underwater." }],
+  ["fish_clown_fish", "Clown Fish", "sea", "common", [8, 12], null, { months: WARM, oneLiner: "Lives in an anemone and pays no rent." }],
+  ["fish_surgeonfish", "Surgeonfish", "sea", "common", [15, 25], null, { months: WARM, oneLiner: "Blue, busy and a little sharp at the tail." }],
+  ["fish_dab", "Dab", "sea", "common", [25, 45], null, { months: [10, 11, 12, 1, 2, 3, 4], oneLiner: "Flat, sandy and easy to miss." }],
+  ["fish_seahorse", "Seahorse", "sea", "uncommon", [3, 6], null, { months: APR_NOV, oneLiner: "Dad carries the eggs." }],
+  ["fish_butterfly_fish", "Butterfly Fish", "sea", "uncommon", [10, 15], null, { months: WARM, oneLiner: "Dressed in stripes for a party." }],
+  ["fish_porcupine_fish", "Porcupine Fish", "sea", "uncommon", [20, 35], null, { months: [7, 8, 9], oneLiner: "Spikes out at the first sign of trouble." }],
+  ["fish_zebra_turkeyfish", "Zebra Turkeyfish", "sea", "uncommon", [25, 40], null, { months: APR_NOV, oneLiner: "Beautiful fins. Don't touch them." }],
+  ["fish_suckerfish", "Suckerfish", "sea", "uncommon", [30, 60], null, { months: SUMMER, oneLiner: "Rides along with sharks for free." }],
+  ["fish_ribbon_eel", "Ribbon Eel", "sea", "uncommon", [60, 100], null, { months: [6, 7, 8, 9, 10], oneLiner: "A streamer with a face." }],
+  ["fish_moray_eel", "Moray Eel", "sea", "uncommon", [60, 100], null, { months: [8, 9, 10], oneLiner: "Grins at you from a crack in the rock." }],
+  ["fish_barreleye", "Barreleye", "sea", "epic", [10, 15], NIGHT, { oneLiner: "You can see right through its head." }],
+  ["fish_napoleonfish", "Napoleonfish", "sea", "epic", [100, 180], DAY, { months: [7, 8], oneLiner: "Wears a bump on its head like a hat." }],
+  ["fish_saw_shark", "Saw Shark", "sea", "epic", [120, 200], NIGHT, { months: SUMMER, oneLiner: "Brings its own toolbox." }],
+  ["fish_ocean_sunfish", "Ocean Sunfish", "sea", "epic", [150, 300], null, { months: [7, 8, 9], oneLiner: "Basks at the surface like a dropped dinner plate." }],
+  ["fish_blue_marlin", "Blue Marlin", "sea", "epic", [200, 350], null, { months: [7, 8, 9, 11, 12, 1, 2, 3, 4], oneLiner: "The sword is not for show." }],
+  ["fish_oarfish", "Oarfish", "sea", "epic", [300, 500], null, { months: [12, 1, 2, 3, 4, 5], oneLiner: "Long enough to need its own postcode." }],
+  ["fish_great_white_shark", "Great White Shark", "sea", "epic", [300, 500], null, { months: SUMMER, oneLiner: "You're going to need a bigger pier." }],
+  ["fish_whale_shark", "Whale Shark", "sea", "epic", [400, 800], null, { months: SUMMER, oneLiner: "Gentle, spotted and longer than the pier." }],
+  ["fish_hammerhead_shark", "Hammerhead Shark", "sea", "legendary", [180, 350], null, { months: SUMMER, oneLiner: "Sees both sides of every argument." }],
+], { model: null });
+
+export const ROSTER: Species[] = [...LAUNCH_ROSTER, ...EVENT_SPECIES, ...REEL_FISH];
 
 export const CATEGORIES: Category[] = ["fish", "sea", "bug", "fruit", "nature", "mineral"];
 export const RARITY_RANK: Record<Rarity, number> = { common: 0, uncommon: 1, rare: 2, epic: 3, legendary: 4 };

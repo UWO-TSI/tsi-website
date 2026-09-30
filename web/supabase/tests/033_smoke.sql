@@ -32,14 +32,14 @@ BEGIN
   BEGIN PERFORM economy_buy(C, rod, 1, 100, 'b-3'); RAISE EXCEPTION 'x';
   EXCEPTION WHEN raise_exception THEN ASSERT SQLERRM = 'already_owned', '033 owned: ' || SQLERRM; END;
 
-  -- sell by rarity (roster species and a non-roster fish via 024's fish_prices)
+  -- sell by rarity (fish_guppy was priced by 024's fish_prices until row 260 put it on the roster)
   INSERT INTO member_collections (user_id, item_key, count) VALUES (C, 'fish_coelacanth', 2), (C, 'fish_guppy', 3), (C, 'bug_mantis', 1);
   SELECT * INTO r FROM economy_sell(C, 'fish_coelacanth', 1, 's-1');
   ASSERT r.paid = 600 AND r.remaining = 1 AND r.balance = 1277, '033 sell legendary fish';
   SELECT * INTO r FROM economy_sell(C, 'fish_coelacanth', 1, 's-1');
   ASSERT r.replayed AND r.remaining = 1, '033 sell replay';
   SELECT * INTO r FROM economy_sell(C, 'fish_guppy', 3, 's-2');
-  ASSERT r.paid = 24, '033 sell non-roster common fish';
+  ASSERT r.paid = 24, '033 sell common fish';
   SELECT * INTO r FROM economy_sell(C, 'bug_mantis', 1, 's-3');
   ASSERT r.paid = 50, '033 sell rare bug';
   BEGIN PERFORM economy_sell(C, 'bug_mantis', 1, 's-4'); RAISE EXCEPTION 'x';

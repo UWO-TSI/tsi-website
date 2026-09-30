@@ -102,18 +102,18 @@ export function gateAt(x: number, z: number): number {
 }
 
 /** Lap timing: the start line starts a lap, the checkpoints must follow in order, the line again finishes it. */
-export interface Lap { running: boolean; next: number; start: number; last: number | null; best: number | null; splits: number[] }
-export const NEW_LAP: Lap = { running: false, next: 1, start: 0, last: null, best: null, splits: [] };
+export interface Lap { running: boolean; next: number; start: number; last: number | null; best: number | null }
+export const NEW_LAP: Lap = { running: false, next: 1, start: 0, last: null, best: null };
 export function lapStep(lap: Lap, gate: number, now: number): Lap {
   if (gate < 0) return lap;
   if (gate === 0) {
     if (lap.running && lap.next === COURSE_GATES.length) {
       const time = now - lap.start;
-      return { running: true, next: 1, start: now, last: time, best: lap.best === null ? time : Math.min(lap.best, time), splits: [] };
+      return { running: true, next: 1, start: now, last: time, best: lap.best === null ? time : Math.min(lap.best, time) };
     }
-    return lap.running && lap.next > 1 ? lap : { ...lap, running: true, next: 1, start: now, splits: [] };
+    return lap.running && lap.next > 1 ? lap : { ...lap, running: true, next: 1, start: now };
   }
-  if (lap.running && gate === lap.next) return { ...lap, next: lap.next + 1, splits: [...lap.splits, now - lap.start] };
+  if (lap.running && gate === lap.next) return { ...lap, next: lap.next + 1 };
   return lap;
 }
 
