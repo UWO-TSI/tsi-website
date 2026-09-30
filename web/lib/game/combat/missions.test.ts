@@ -26,24 +26,24 @@ describe("missions (systems state machines)", () => {
     }
   });
   it("hunt counts only the target and queues events once each", () => {
-    const kills: MissionEvent[] = Array.from({ length: 7 }, () => ({ kind: "kill", enemy: "shadow-fox" }));
-    const s = play("hunt-foxes", [{ kind: "kill", enemy: "thorn-crab" }, ...kills]);
+    const kills: MissionEvent[] = Array.from({ length: 7 }, () => ({ type: "kill", enemy: "shadow-fox" }));
+    const s = play("hunt-foxes", [{ type: "kill", enemy: "thorn-crab" }, ...kills]);
     expect(s.status).toBe("complete");
     expect(s.progress.counter).toBe(6);
     expect(new Set(s.queue.map(e => e.id)).size).toBe(s.queue.length);
   });
   it("fetch needs the item carried back; defeat drops it", () => {
-    expect(play("fetch-lantern", [{ kind: "pickup", item: "old-lantern" }, { kind: "defeated" }, { kind: "return" }]).status).toBe("active");
-    expect(play("fetch-lantern", [{ kind: "pickup", item: "old-lantern" }, { kind: "return" }]).status).toBe("complete");
-    expect(play("fetch-tome", [{ kind: "pickup", item: "old-lantern" }, { kind: "return" }]).status).toBe("active");
-    expect(play("fetch-tome", [{ kind: "pickup", item: "sealed-tome" }, { kind: "return" }]).status).toBe("complete");
+    expect(play("fetch-lantern", [{ type: "pickup", item: "old-lantern" }, { type: "defeat" }, { type: "return" }]).status).toBe("active");
+    expect(play("fetch-lantern", [{ type: "pickup", item: "old-lantern" }, { type: "return" }]).status).toBe("complete");
+    expect(play("fetch-tome", [{ type: "pickup", item: "old-lantern" }, { type: "return" }]).status).toBe("active");
+    expect(play("fetch-tome", [{ type: "pickup", item: "sealed-tome" }, { type: "return" }]).status).toBe("complete");
   });
   it("survive and escort fail on defeat (ruling), and complete in order", () => {
-    expect(play("survive-circle", [{ kind: "wave-cleared", wave: 1 }, { kind: "defeated" }]).status).toBe("failed");
-    expect(play("survive-circle", [1, 2, 3].map(wave => ({ kind: "wave-cleared", wave }) as MissionEvent)).status).toBe("complete");
-    expect(play("survive-sanctum", [1, 2, 3].map(wave => ({ kind: "wave-cleared", wave }) as MissionEvent)).status).toBe("active");
-    expect(play("escort-botanist", [{ kind: "escort-down" }]).status).toBe("failed");
-    expect(play("escort-botanist", [...[1, 2, 3].map(n => ({ kind: "checkpoint", n }) as MissionEvent), { kind: "arrived" }]).status).toBe("complete");
-    expect(play("escort-scholar", [...[1, 2, 3].map(n => ({ kind: "checkpoint", n }) as MissionEvent), { kind: "arrived" }]).status).toBe("active");
+    expect(play("survive-circle", [{ type: "wave_cleared", wave: 1 }, { type: "defeat" }]).status).toBe("failed");
+    expect(play("survive-circle", [1, 2, 3].map(wave => ({ type: "wave_cleared", wave }) as MissionEvent)).status).toBe("complete");
+    expect(play("survive-sanctum", [1, 2, 3].map(wave => ({ type: "wave_cleared", wave }) as MissionEvent)).status).toBe("active");
+    expect(play("escort-botanist", [{ type: "escort_down" }]).status).toBe("failed");
+    expect(play("escort-botanist", [...[1, 2, 3].map(n => ({ type: "checkpoint", n }) as MissionEvent), { type: "arrived" }]).status).toBe("complete");
+    expect(play("escort-scholar", [...[1, 2, 3].map(n => ({ type: "checkpoint", n }) as MissionEvent), { type: "arrived" }]).status).toBe("active");
   });
 });

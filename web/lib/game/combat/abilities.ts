@@ -113,7 +113,7 @@ function onPlayerHit(rt: CombatRuntime, e: Enemy, amount: number, crit: boolean,
 
 function onKill(rt: CombatRuntime, e: Enemy) {
   rt.killQueue.push({ enemy: e.type.id, key: `kill:${e.id}:${rt.seq++}:${Date.now().toString(36)}` });
-  missionEvent(rt, { kind: "kill", enemy: e.type.id });
+  missionEvent(rt, { type: "kill", enemy: e.type.id });
   const pv = passiveOf(rt), me = rt.player.last;
   if (pv?.kind === "kill_heal" && me && dist(me, e) <= (pv.cap ?? 9)) heal(rt, rt.player.maxHp * pv.value);
 }

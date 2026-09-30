@@ -560,7 +560,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       window.setTimeout(() => setActionNote(null), 3500);
       return;
     }
-    if (action === "lantern") { combat.rt.idol = "carried"; missionEvent(combat.rt, { kind: "pickup", item: combat.rt.mission?.def.params.item ?? "old-lantern" }); publishCombat(); return; }
+    if (action === "lantern") { combat.rt.idol = "carried"; missionEvent(combat.rt, { type: "pickup", item: combat.rt.mission?.def.params.item ?? "old-lantern" }); publishCombat(); return; }
     if (action === "ruins" && !gate.open) { setActionNote(gate.reason); window.setTimeout(() => setActionNote(null), 3500); return; }
     if (action === "buy") {
       void homeActions.buyRoom(homeActions.roomPrice() ?? ROOM_PRICE.coins).then(result => {

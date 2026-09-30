@@ -157,7 +157,7 @@ export default function RuinsScene({ level, phase, light, look, weather, liteMod
     // Defeat: wake at the gate (row 229).
     if (!p.alive) {
       p.downFor += dt;
-      if (p.downFor > 1.8) { missionEvent(rt, { kind: "defeated" }); onDefeat(); }
+      if (p.downFor > 1.8) { missionEvent(rt, { type: "defeat" }); onDefeat(); }
     }
     // Inputs.
     while (inp.abilities.length) triggerAbility(rt, inp.abilities.shift()!, me);
@@ -175,7 +175,7 @@ export default function RuinsScene({ level, phase, light, look, weather, liteMod
     const mission = rt.mission?.status === "active" ? rt.mission : null;
     const circle = mission ? SURVIVE_CIRCLES[mission.def.id] : undefined;
     const inCircle = !!circle && Math.hypot(me.x - circle.x, me.z - circle.z) < circle.r;
-    if (p.safe && !zones.current.gate && rt.idol === "carried") missionEvent(rt, { kind: "return" });
+    if (p.safe && !zones.current.gate && rt.idol === "carried") missionEvent(rt, { type: "return" });
     zones.current = { gate: p.safe, circle: inCircle };
     if (rt.idol === "carried" && rt.mission?.status === "complete" && rt.mission.def.template === "fetch") rt.idol = "returned";
     // Survive waves: start on stepping into the mission's circle; next wave when the last is down.
@@ -183,7 +183,7 @@ export default function RuinsScene({ level, phase, light, look, weather, liteMod
     if (mission && waves) {
       if (!rt.wave && inCircle) { rt.wave = { index: 0, active: true }; spawnWave(rt, waves[0]); }
       if (rt.wave?.active && waves[rt.wave.index].every(w => rt.enemies.find(e => e.id === w.id)?.state === "dead")) {
-        missionEvent(rt, { kind: "wave-cleared", wave: rt.wave.index + 1 });
+        missionEvent(rt, { type: "wave_cleared", wave: rt.wave.index + 1 });
         const next = rt.wave.index + 1;
         if (next < waves.length && rt.mission?.status === "active") { rt.wave = { index: next, active: true }; spawnWave(rt, waves[next]); } else rt.wave.active = false;
       }
@@ -195,9 +195,9 @@ export default function RuinsScene({ level, phase, light, look, weather, liteMod
       const esc = rt.escort, wp = path[Math.min(esc.waypoint, path.length - 1)];
       const d = Math.hypot(wp.x - esc.x, wp.z - esc.z);
       if (Math.hypot(pl.x - esc.x, pl.z - esc.z) < 5 && d > 0.1) { const st = Math.min(d, 2.6 * dt); esc.x += ((wp.x - esc.x) / d) * st; esc.z += ((wp.z - esc.z) / d) * st; }
-      if (d < 0.3 && esc.waypoint < path.length - 1) { missionEvent(rt, { kind: "checkpoint", n: esc.waypoint }); esc.waypoint++; }
-      if (esc.hp <= 0) { missionEvent(rt, { kind: "escort-down" }); rt.escort = null; }
-      else { const end = path[path.length - 1]; if (esc.waypoint === path.length - 1 && Math.hypot(esc.x - end.x, esc.z - end.z) < 0.3) missionEvent(rt, { kind: "arrived" }); }
+      if (d < 0.3 && esc.waypoint < path.length - 1) { missionEvent(rt, { type: "checkpoint", n: esc.waypoint }); esc.waypoint++; }
+      if (esc.hp <= 0) { missionEvent(rt, { type: "escort_down" }); rt.escort = null; }
+      else { const end = path[path.length - 1]; if (esc.waypoint === path.length - 1 && Math.hypot(esc.x - end.x, esc.z - end.z) < 0.3) missionEvent(rt, { type: "arrived" }); }
     }
     // Prompts.
     const spot = mission?.def.template === "fetch" ? FETCH_SPOTS[mission.def.params.item ?? ""] : undefined;
