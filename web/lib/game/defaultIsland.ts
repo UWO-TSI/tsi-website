@@ -142,6 +142,7 @@ export function benchSeat(x: number, z: number, range = 1.3, v: Village = villag
 }
 
 const inRect = (x: number, z: number, r: { x0: number; x1: number; z0: number; z1: number }) => x >= r.x0 && x <= r.x1 && z >= r.z0 && z <= r.z1;
+const NONE: readonly never[] = [];
 
 /**
  * Solid footprints of the running seasonal event's decorations (world XZ),
@@ -173,32 +174,35 @@ export function islandOf(v: Village): VillageIsland {
     const f = propFootprint(o);
     return f ? [{ x: o.x, z: o.z, yaw: o.yaw ?? 0, hw: f[0], hd: f[1], top: (PROP_TOP[o.model!] ?? Infinity) * (o.scale ?? 1) }] : [];
   });
-  // Trees and props by 4-unit bucket, so a painted island with hundreds of them walks as cheaply as a small one.
-  const bucket = (x: number, z: number) => `${Math.floor(x / 4)},${Math.floor(z / 4)}`;
-  const near = <T extends { x: number; z: number }>(items: readonly T[]) => {
-    const grid = new Map<string, T[]>();
-    for (const it of items) { const k = bucket(it.x, it.z); grid.set(k, [...(grid.get(k) ?? []), it]); }
-    return (x: number, z: number) => {
-      const out: T[] = [], bx = Math.floor(x / 4), bz = Math.floor(z / 4);
-      for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) out.push(...(grid.get(`${bx + dx},${bz + dz}`) ?? []));
-      return out;
-    };
+  // Trees and props by 4-unit bucket (numeric keys), so a painted island with hundreds of them walks as cheaply as a small one.
+  const buckets = <T extends { x: number; z: number }>(items: readonly T[]) => {
+    const grid = new Map<number, T[]>();
+    for (const it of items) {
+      const k = Math.floor(it.x / 4) * 4096 + Math.floor(it.z / 4), b = grid.get(k);
+      if (b) b.push(it); else grid.set(k, [it]);
+    }
+    return grid;
   };
-  const propsNear = near(props), treesNear = near(objectsOf("tree", v));
+  const propGrid = buckets(props), treeGrid = buckets(objectsOf("tree", v));
   const onDeck = (x: number, z: number) => decks.some(d => inRect(x, z, d));
   const wet = (x: number, z: number) => !onDeck(x, z) && !isGroundAtWorld(map, x, z);
   /** Top of the solid at a point: a prop's measured top, Infinity for buildings, study furniture and trunks, -Infinity for none. */
   const solidTop = (x: number, z: number) => {
     if (solids.some(l => Math.abs(x - l.x) < l.half![0] && Math.abs(z - l.z) < l.half![1]) || eventSolids.some(r => inRect(x, z, r))) return Infinity;
-    let top = -Infinity;
-    for (const p of propsNear(x, z)) {
-      const dx = x - p.x, dz = z - p.z;
-      const localX = dx * Math.cos(p.yaw) - dz * Math.sin(p.yaw);
-      const localZ = dx * Math.sin(p.yaw) + dz * Math.cos(p.yaw);
-      if (Math.abs(localX) < p.hw && Math.abs(localZ) < p.hd) top = Math.max(top, p.top);
+    let top = -Infinity, trunk = false;
+    const bx = Math.floor(x / 4), bz = Math.floor(z / 4);
+    for (let oz = -1; oz <= 1; oz++) for (let ox = -1; ox <= 1; ox++) {
+      const k = (bx + ox) * 4096 + bz + oz;
+      for (const p of propGrid.get(k) ?? NONE) {
+        const dx = x - p.x, dz = z - p.z;
+        const localX = dx * Math.cos(p.yaw) - dz * Math.sin(p.yaw);
+        const localZ = dx * Math.sin(p.yaw) + dz * Math.cos(p.yaw);
+        if (Math.abs(localX) < p.hw && Math.abs(localZ) < p.hd) top = Math.max(top, p.top);
+      }
+      for (const t of treeGrid.get(k) ?? NONE) if (Math.hypot(t.x - x, t.z - z) < TREE_TRUNK) trunk = true;
     }
     if (top === Infinity || studySolid("village", x, z, 0, v)) return Infinity;
-    return treesNear(x, z).some(t => Math.hypot(t.x - x, t.z - z) < TREE_TRUNK) ? Infinity : top;
+    return trunk ? Infinity : top;
   };
   const standable = (x: number, z: number) => onDeck(x, z) || (!wet(x, z) && solidTop(x, z) === -Infinity);
   /** How much of the body (5 probe points) stands on free ground; 5 = fits. */
