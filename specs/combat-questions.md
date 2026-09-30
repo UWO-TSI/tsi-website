@@ -3,7 +3,7 @@
 
 ## 2026-09-26 (systems agent, deliverables 1–2)
 
-All numbers live in `web/lib/combat/*.ts` and `economy_settings`, and they're placeholders. Harness: `/dev/combat?view=progress|runes|kits|missions`.
+All numbers live in `web/lib/combat/*.ts` and `economy_settings`, and they're placeholders. In game: `?combat=demo`, the Path sheet and the balance table (`web/lib/game/combat/balance.ts`); the `/dev/combat` harness was removed (row 259).
 
 1. **XP curve and pace.** The XP to the next level is 100·L + 25·L².
    - Level 10 (subclass and ruins gate) needs 11,625 XP. That's about 30 play sessions at ~400 XP each, or about 20 with two club events.
