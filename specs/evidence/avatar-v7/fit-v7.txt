@@ -51,7 +51,7 @@ on the v6 head too, and they are rebuilt as locks after David's review.
   after:  bangs_hime: skin_through 0.0049 (a shell piece of the older library; rebuilt as locks next)
   after:  bangs_choppy: skin_through 0.0004 (a shell piece of the older library; rebuilt as locks next)
   after:  bangs_asym_block: skin_through 0.0043 (a shell piece of the older library; rebuilt as locks next)
-  after:  back_undercut: skin_through 0.0046 (a shell piece of the older library; rebuilt as locks next)
+  after:  back_undercut: skin_through 0.0043 (a shell piece of the older library; rebuilt as locks next)
   before: bangs_swept_l: skin_through 0.0047 (a shell piece of the older library; rebuilt as locks next)
   before: bangs_swept_r: skin_through 0.0047 (a shell piece of the older library; rebuilt as locks next)
   before: bangs_curtain_long: skin_through 0.0048 (a shell piece of the older library; rebuilt as locks next)
