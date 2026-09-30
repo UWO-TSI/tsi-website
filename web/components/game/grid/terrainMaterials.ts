@@ -26,13 +26,7 @@
 import * as THREE from "three";
 import { getGrassTexture } from "@/lib/game/grassTexture";
 import { GRASS_COLOR } from "@/lib/game/grid";
-import {
-  applyWaterShader,
-  waterUniforms,
-  writeWaterUniforms,
-  SHORE_FROM_FIELD,
-  type WaterParams,
-} from "@/lib/game/waterShader";
+import { waterMaterial, waterUniforms, writeWaterUniforms, type WaterParams } from "@/lib/game/waterShader";
 import { TUNING_DEFAULTS } from "@/lib/game/tuning";
 
 const TEX_DIR = "/assets/acnh/terrain/";
@@ -193,7 +187,9 @@ export function terrainMaterial(name: string): THREE.Material | null {
     if (hit) return hit;
     const isWater = procKey === "mRiver";
     if (isWater) {
-      const mat = waterMaterial();
+      // Unlit, from lib/game/waterShader.ts: a lit material greys out the flat saturated cyan of David's references.
+      const mat = waterMaterial(waterUniformBlock);
+      mat.name = "terrain:mRiver";
       cache.set(procKey, mat);
       return mat;
     }
@@ -263,38 +259,6 @@ export function terrainMaterial(name: string): THREE.Material | null {
   }
   mat.name = `terrain:${key}`;
   cache.set(key, mat);
-  return mat;
-}
-
-/**
- * The ripple normal (xz slope) at a world point and time. Shared with the sparkle sprites, which need the same
- * waves. The scroll is `fract`ed: uTime is world seconds (up to a day), and the texture repeats, so the wrap is seamless.
- */
-export const WATER_RIPPLE = /* glsl */ `
-uniform sampler2D uRippleTexture;
-uniform float uRippleStrength;
-vec2 waterDetailNormal(vec2 xz) {
-  if (uRippleStrength <= 0.0) return vec2(0.0);
-  vec2 a = texture2D(uRippleTexture, xz * 0.22 + fract(uTime * vec2(0.014, 0.009))).rg * 2.0 - 1.0;
-  vec2 b = texture2D(uRippleTexture, xz.yx * 0.31 - fract(uTime * vec2(0.008, 0.011))).rg * 2.0 - 1.0;
-  return (a + b * 0.5) * uRippleStrength;
-}
-`;
-
-/**
- * The river surface.
- *
- * Was a MeshStandardMaterial with a scrolling `mRiver_Nrm`. That normal map is
- * real and the flow trick worked, but a LIT material cannot produce the flat
- * saturated cyan David's references are made of: ambient + hemi + env IBL land
- * on top of everything the shader does and grey it out. The whole look now
- * lives in `lib/game/waterShader.ts`, on an unlit MeshBasicMaterial, shared
- * with the sea.
- */
-function waterMaterial(): THREE.MeshBasicMaterial {
-  const mat = new THREE.MeshBasicMaterial({ color: 0xffffff });
-  mat.name = "terrain:mRiver";
-  applyWaterShader(mat, () => waterUniformBlock, { shore: SHORE_FROM_FIELD, normal: WATER_RIPPLE });
   return mat;
 }
 

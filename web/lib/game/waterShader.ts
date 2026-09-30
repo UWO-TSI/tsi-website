@@ -331,15 +331,7 @@ uniform float uGlare;
 uniform float uRoughness;
 `;
 
-/**
- * The shading itself, minus where the shore distance comes from.
- *
- * Callers inject a `float shoreDistance(vec2 xz)` — the grid reads the baked
- * field, the legacy sea evaluates coast.ts harmonics. Keeping that pluggable is
- * what lets one shader serve both while the old terrain path still exists; when
- * the grid becomes the default the sea switches to the field and the harmonics
- * go.
- */
+/** The shading itself; `shoreDistance` comes from the baked field (SHORE_FROM_FIELD). */
 const WATER_FUNCTIONS = /* glsl */ `
 ${WATER_PHASE}// Mirrors bedDepth() in waterShader.ts. Change both together.
 float bedDepthAt(float d) {
@@ -438,8 +430,6 @@ const FRAGMENT_BODY = /* glsl */ `
   float ringB = 1.0 - smoothstep(0.0, w * 2.2, abs(field + 0.30));
   col += uRingColor * (ringA * uRingStrength + ringB * uRingStrength * 0.45);
 
-  col = waterExtra(col, t, vWaterWorld.xz);
-
   // Surface normal from the swell gradient and the ripple texture, in world
   // space. cameraPosition is a built-in, so no view-space bookkeeping.
   vec2 detailNormal = waterDetailNormal(vWaterWorld.xz);
@@ -477,47 +467,31 @@ const FRAGMENT_BODY = /* glsl */ `
 }
 `;
 
-/** No extra layers. The river uses this; the sea overrides it with caustics. */
-export const WATER_EXTRA_NONE = /* glsl */ `
-vec3 waterExtra(vec3 col, float t, vec2 xz) { return col; }
+/**
+ * The ripple normal (xz slope) at a world point and time. Shared with the sparkle sprites, which need the same
+ * waves. The scroll is `fract`ed: uTime is world seconds (up to a day), and the texture repeats, so the wrap is seamless.
+ */
+export const WATER_RIPPLE = /* glsl */ `
+uniform sampler2D uRippleTexture;
+uniform float uRippleStrength;
+vec2 waterDetailNormal(vec2 xz) {
+  if (uRippleStrength <= 0.0) return vec2(0.0);
+  vec2 a = texture2D(uRippleTexture, xz * 0.22 + fract(uTime * vec2(0.014, 0.009))).rg * 2.0 - 1.0;
+  vec2 b = texture2D(uRippleTexture, xz.yx * 0.31 - fract(uTime * vec2(0.008, 0.011))).rg * 2.0 - 1.0;
+  return (a + b * 0.5) * uRippleStrength;
+}
 `;
 
-export interface WaterShaderOptions {
-  /** Defines `float shoreDistance(vec2 xz)`, in CELLS, negative inland. */
-  shore: string;
-  /** Optionally replaces `waterExtra`, which runs between the cel layers and the foam. */
-  extra?: string;
-  /** Optional small-wave normal from existing assets. */
-  normal?: string;
-  /**
-   * Transparent water needs something under it. The river has a bed; the open
-   * sea does not, so it stays opaque and keeps writing depth rather than
-   * joining the transparent queue for nothing.
-   */
-  transparent?: boolean;
-}
-
 /**
- * Patch a MeshBasicMaterial into water.
- *
- * `getUniforms` is a THUNK, not the object. It is only called when the shader
- * compiles, which lets a React caller hold its uniform block in a ref: the
- * block exists to be written every frame, and the react-compiler lint rejects
- * mutating anything a hook returned. Reading the ref inside this closure is
- * not a render-phase read.
+ * The water material: an unlit MeshBasicMaterial with the shore distance read
+ * from the baked field (SHORE_FROM_FIELD) and the ripple normal. Transparent
+ * over its bed, so it must not write depth: it would z-fight the bed and hide
+ * it outright. `uniforms` is the shared live block the frame loop writes.
  */
-export function applyWaterShader(
-  mat: THREE.MeshBasicMaterial,
-  getUniforms: () => Record<string, { value: unknown }>,
-  opts: WaterShaderOptions
-): void {
-  const transparent = opts.transparent ?? true;
-  mat.transparent = transparent;
-  // A transparent surface viewed from above with a bed underneath must not
-  // write depth: it would z-fight the bed and hide it outright.
-  mat.depthWrite = !transparent;
+export function waterMaterial(uniforms: Record<string, THREE.IUniform>): THREE.MeshBasicMaterial {
+  const mat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, depthWrite: false });
   mat.onBeforeCompile = (shader) => {
-    for (const [k, v] of Object.entries(getUniforms())) shader.uniforms[k] = v as THREE.IUniform;
+    Object.assign(shader.uniforms, uniforms);
 
     shader.vertexShader = shader.vertexShader
       .replace("#include <common>", "#include <common>\n" + VERTEX_DECLS)
@@ -529,15 +503,14 @@ export function applyWaterShader(
         "#include <common>\nvarying vec3 vWaterWorld;\nvarying vec2 vWaterGrad;\n" +
           UNIFORM_DECLS +
           WATER_CLOUDS +
-          opts.shore +
-          (opts.extra ?? WATER_EXTRA_NONE) +
-          (opts.normal ?? "vec2 waterDetailNormal(vec2 xz) { return vec2(0.0); }\n") +
+          SHORE_FROM_FIELD +
+          WATER_RIPPLE +
           WATER_FUNCTIONS
       )
       .replace("#include <color_fragment>", "#include <color_fragment>\n" + FRAGMENT_BODY);
   };
-  mat.customProgramCacheKey = () => `water:${opts.shore}:${opts.extra ?? ""}:${opts.normal ?? ""}`;
-  mat.needsUpdate = true;
+  mat.customProgramCacheKey = () => "water";
+  return mat;
 }
 
 /** Shore distance read from the baked field. Grid path. */
