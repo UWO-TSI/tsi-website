@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ArrowLeft, Plus, Trash2 } from "lucide-react";
 import { ROSTER } from "@/lib/collections/roster";
 import { WEAPONS } from "@/lib/combat/weapons";
-import { CRAFTED_ITEMS, MATERIALS, RECIPE_SOURCES, validateRecipeDraft, type RecipeSource } from "@/lib/crafting/recipes";
+import { CRAFTED_ITEMS, DROP_RARITIES, MATERIALS, RECIPE_SOURCES, validateRecipeDraft, type DropRarity, type RecipeSource } from "@/lib/crafting/recipes";
 import { CATALOGUE } from "@/lib/wallet/catalogue";
 import { DraftBar, Field, inputCls, Toggle, useDraftFlow } from "./ProgressionAdminShared";
 
@@ -16,6 +16,7 @@ import { DraftBar, Field, inputCls, Toggle, useDraftFlow } from "./ProgressionAd
 
 const BACK = "/student/dashboard/admin/content/recipes";
 const SOURCE_HINT: Record<RecipeSource, string> = { starter: "everyone knows it", shop: "recipe card in the shop", bottle: "beach message bottle", quest: "a resident's quest" };
+const DROP_LABEL: Record<DropRarity, string> = { rare: "Rare, epic or legendary catches", epic: "Epic or legendary catches", legendary: "Legendary catches" };
 const ITEM_KEYS = [...CATALOGUE, ...CRAFTED_ITEMS].map((c) => c.slug);
 const INGREDIENT_KEYS = [...ROSTER, ...MATERIALS].map((s) => s.key);
 
@@ -26,6 +27,7 @@ export interface RecipeRow {
   output_qty: number;
   ingredients: Record<string, number>;
   sources: RecipeSource[];
+  drop_rarity: DropRarity | null;
   position: number;
   active: boolean;
 }
@@ -38,6 +40,7 @@ export default function RecipeEditor({ mode, initial }: { mode: "new" | "edit"; 
     output_qty: initial?.output_qty ?? 1,
     ingredients: Object.entries(initial?.ingredients ?? { "": 1 }),
     sources: initial?.sources ?? (["bottle"] as RecipeSource[]),
+    drop: initial?.drop_rarity ?? "",
     position: initial?.position ?? 100,
     active: initial?.active ?? true,
   }));
@@ -53,6 +56,7 @@ export default function RecipeEditor({ mode, initial }: { mode: "new" | "edit"; 
       output_qty: Math.floor(Number(form.output_qty)),
       ingredients: Object.fromEntries(form.ingredients.map(([k, n]) => [k.trim(), Math.floor(Number(n))])),
       sources: form.sources,
+      drop_rarity: form.drop || null,
       position: Math.floor(Number(form.position)),
       active: form.active,
     }),
@@ -111,6 +115,12 @@ export default function RecipeEditor({ mode, initial }: { mode: "new" | "edit"; 
               </label>
             ))}
           </div>
+        </Field>
+        <Field label="Rare-catch drop" hint="Which catches can teach it, once per member (the chance per catch is set by rarity). Not for starter or shop-card recipes.">
+          <select className={inputCls} value={form.drop} onChange={(e) => set("drop", e.target.value as DropRarity | "")}>
+            <option value="">Never</option>
+            {DROP_RARITIES.map((r) => <option key={r} value={r}>{DROP_LABEL[r]}</option>)}
+          </select>
         </Field>
         <Toggle label="Active" hint="Inactive recipes leave every recipe book and can't be crafted." checked={form.active} onChange={(v) => set("active", v)} />
         {errors.length ? <ul className="text-[0.65rem] font-mono text-red-400 list-disc pl-4">{errors.map((e) => <li key={e}>{e}</li>)}</ul> : null}
