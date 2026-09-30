@@ -16,3 +16,5 @@ Each has the assumption the branch uses. None blocks.
 ## Answered (David, 2026-09-30)
 
 1. **Fish follow their listed months.** Done on `game/seasonal`: the server roll (and the island's local fallback reel) only draws fish whose roster months include the current Toronto month; species without a months list bite all year. A seasonal event's limited-time fish follow their event's window instead. Test: `lib/collections/rolls.test.ts` (salmon, Sep–Nov, never rolls in May; nothing out of season rolls in May or October).
+
+4. **Rare-catch recipe drops, next** (row 258). Built on `game/recipe-drops` (migration `20260930100000_recipe_drops`). See crafting-questions 13-16.
