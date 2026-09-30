@@ -96,7 +96,8 @@ export function seatAt(anchor: string, seat: number, ground: Ground = flat): Wor
 export function nearestSeat(area: SeatArea, x: number, z: number, skip: (anchor: string, seat: number) => boolean = () => false, ground: Ground = flat): WorldSeat | null {
   let best: WorldSeat | null = null, d = SIT_RANGE;
   for (const t of studyLayout()) {
-    if (t.area !== area) continue;
+    // Seats sit within ~1.1 of their table: skip tables out of reach before building their seats.
+    if (t.area !== area || Math.hypot(t.at[0] - x, t.at[1] - z) > SIT_RANGE + 3) continue;
     for (const s of seatsOf(t.anchor, ground)) {
       const ds = Math.hypot(s.x - x, s.z - z);
       if (ds < d && !skip(s.anchor, s.seat)) { best = s; d = ds; }
