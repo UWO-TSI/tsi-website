@@ -48,11 +48,8 @@ export default function GameContentIndex() {
       const { data: people } = ids.length ? await db.from("profiles").select("id, display_name").in("id", ids) : { data: [] };
       setNames(new Map(((people ?? []) as { id: string; display_name: string }[]).map((p) => [p.id, p.display_name])));
       setLast(latest);
-      const [nameReports, text] = await Promise.all([
-        db.from("identity_reports").select("id", { count: "exact", head: true }).eq("status", "open"),
-        fetch("/api/admin/moderation").then((r) => r.json()).catch(() => null),
-      ]);
-      setOpenReports((nameReports.count ?? 0) + (text?.ok ? text.letters.length + text.chat.length : 0));
+      const queue = await fetch("/api/admin/moderation").then((r) => r.json()).catch(() => null);
+      setOpenReports(queue?.ok ? queue.names.length + queue.letters.length + queue.chat.length : 0);
     })();
   }, []);
 
