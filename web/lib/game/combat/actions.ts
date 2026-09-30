@@ -7,15 +7,13 @@
  */
 import { ENEMIES, WEAPONS } from "./data";
 import type { Vec } from "./sim";
-import { BOSS, DODGE, inArc, invulnerable, spawnEnemy, type Enemy } from "./sim";
+import { BOSS, DODGE, inArc, invulnerable, spawnEnemy, sweptHit, type Enemy } from "./sim";
 import { ENERGY, SLOT_IDS, type AbilityId, type CombatRuntime } from "./runtime";
-import { cancelCast, floater, hitAmount, mitigate, strike, summon, fireSlot } from "./abilities";
+import { cancelCast, floater, mitigate, strike, summon, fireSlot } from "./abilities";
 import type { SpawnPoint } from "./spawns";
 import { FAMILY_STAT } from "@/lib/combat/kits";
 import { WEAPONS as SYSTEM_WEAPONS } from "@/lib/combat/weapons";
 import { MOVE_TUNING, type MoveTuning } from "@/lib/game/movement/sim";
-
-export { floater, missionEvent, resolveCast } from "./abilities";
 
 /** Energy regen: after ENERGY.delay seconds without spending, never while tracing. */
 export function regenEnergy(rt: CombatRuntime, dt: number) {
@@ -23,9 +21,6 @@ export function regenEnergy(rt: CombatRuntime, dt: number) {
   p.sinceSpend += dt;
   if (!rt.casting && p.sinceSpend >= ENERGY.delay) p.energy = Math.min(ENERGY.max, p.energy + ENERGY.regen * dt);
 }
-
-/** One hit from the equipped weapon (systems damage formula); a staggered boss takes half again. */
-export const weaponDamage = (rt: CombatRuntime, e: Enemy, random: () => number, potency = 1) => hitAmount(rt, e, { power: potency, from: e }, random);
 
 const wearHit = (rt: CombatRuntime) => { const p = rt.player; p.hits[p.weapon] = (p.hits[p.weapon] ?? 0) + 1; p.durability[p.weapon] = Math.max(0, p.durability[p.weapon] - 1); };
 
@@ -53,7 +48,7 @@ export function attack(rt: CombatRuntime, player: Vec, random = Math.random): bo
 }
 
 /** Player projectile hits: weapon shots at weapon damage (staff bolts splash at half), ability and summon shots carry their own power. */
-export function resolvePlayerShot(rt: CombatRuntime, shotIdx: number, from: Vec, to: Vec, sweptHit: (a: Vec, b: Vec, c: Vec, r: number) => boolean, random = Math.random): boolean {
+export function resolvePlayerShot(rt: CombatRuntime, shotIdx: number, from: Vec, to: Vec, random = Math.random): boolean {
   const s = rt.projectiles[shotIdx], h = s.hit;
   const target = rt.enemies.find(e => e.state !== "dead" && e.state !== "return" && !h?.hitIds?.includes(e.id) && sweptHit(from, to, e, e.type.radius + s.radius));
   if (!target) return false;

@@ -10,7 +10,7 @@
  * specs/evidence/combat-b/balance.md is this table.
  */
 import { FAMILY_STAT, resolveLoadout, subclassByKey, UNITS, type Ability, type Subclass } from "@/lib/combat/kits";
-import { WEAPONS as SYSTEM_WEAPONS } from "@/lib/combat/weapons";
+import { STARTER_WEAPONS, WEAPONS as SYSTEM_WEAPONS } from "@/lib/combat/weapons";
 import { derived, presetAllocation } from "@/lib/combat/progression";
 import { potencyFor } from "@/lib/combat/incantation";
 import { SURVIVE_CIRCLES } from "@/lib/game/ruins";
@@ -22,12 +22,11 @@ import { createRuntime, type CombatRuntime } from "./runtime";
 import { DODGE, strikeLands, type Enemy, type Vec } from "./sim";
 import { WAVES } from "./spawns";
 
-export const STARTERS = ["sword-driftwood", "bow-willow", "staff-oak", "tome-spirits", "wraps-cloth"];
 const FALLBACK: Record<string, string> = { Arcane: "staff-oak", Ranger: "bow-willow", Vanguard: "sword-driftwood", Warden: "tome-spirits" };
 /** What a sensible member carries: the first starter the kit suggests that scales with the family's stat (row 31), else the family's own. */
 export function starterWeapon(s: Subclass): string {
   for (const t of s.weapon_affinity) {
-    const w = SYSTEM_WEAPONS.find(x => STARTERS.includes(x.key) && x.type === t);
+    const w = SYSTEM_WEAPONS.find(x => STARTER_WEAPONS.includes(x.key) && x.type === t);
     if (w && w.scaling[0] === FAMILY_STAT[s.family]) return w.key;
   }
   return FALLBACK[s.family];

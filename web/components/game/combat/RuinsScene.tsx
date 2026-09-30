@@ -24,7 +24,8 @@ import { BOSS_CENTER, ESCORT_PATHS, EXIT_SPOT, FETCH_SPOTS, GATE_PLAZA, RUINS_BR
 import { combat, publishCombat, takeMissionQueue, type AbilityId } from "@/lib/game/combat/runtime";
 import { useAbilityKeys } from "@/lib/game/movement/keys";
 import { screenOf } from "../movement/moveFx";
-import { attack, missionEvent, spawnWave, triggerAbility } from "@/lib/game/combat/actions";
+import { attack, spawnWave, triggerAbility } from "@/lib/game/combat/actions";
+import { missionEvent } from "@/lib/game/combat/abilities";
 import { stepCombat } from "@/lib/game/combat/encounter";
 import { claimBossReward, postKill, postMissionEvents } from "@/lib/game/combat/progression";
 import { materialsLabel } from "@/lib/game/combat/missions";

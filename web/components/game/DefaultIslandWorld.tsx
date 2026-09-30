@@ -50,7 +50,7 @@ import RuinsScene from "./combat/RuinsScene";
 import CombatHud from "./combat/CombatHud";
 import MissionBoardSheet from "./combat/MissionBoardSheet";
 import { attachProgressId, combat, publishCombat, setMission, setOwnedWeapons } from "@/lib/game/combat/runtime";
-import { missionEvent } from "@/lib/game/combat/actions";
+import { missionEvent } from "@/lib/game/combat/abilities";
 import { combatProgression, postWear, startMissionRemote, type ProgressionView } from "@/lib/game/combat/progression";
 import { equipKit } from "@/lib/game/combat/abilities";
 import { subclassByKey } from "@/lib/combat/kits";

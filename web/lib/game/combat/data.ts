@@ -10,8 +10,6 @@ import type { EnemyAttack, EnemyType, MissionDef, Weapon } from "./contract";
 
 const W = "/assets/game/weapons/", E = "/assets/game/enemies/";
 
-/** Ruling 2026-09-26: when the gate opens everyone gets one starter of each archetype. */
-export const WEAPON_ORDER = ["sword-driftwood", "bow-willow", "staff-oak", "tome-spirits", "wraps-cloth"] as const;
 type Look = Pick<Weapon, "cooldown" | "range" | "arc" | "speed" | "model" | "modelScale" | "grip">;
 const WEAPON_LOOK: Record<string, Look> = {
   "sword-driftwood": { cooldown: 0.42, range: 1.7, arc: 1.9, model: `${W}sword-driftwood.glb`, modelScale: 1.3 },

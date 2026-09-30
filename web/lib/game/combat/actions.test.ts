@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { ENEMIES, MISSIONS } from "./data";
-import { attack, combatPush, combatTuning, dashDodge, hurtPlayer, regenEnergy, resolveCast, startDodge, triggerAbility, weaponDamage } from "./actions";
+import { attack, combatPush, combatTuning, dashDodge, hurtPlayer, regenEnergy, startDodge, triggerAbility } from "./actions";
+import { hitAmount, resolveCast } from "./abilities";
+
+/** One hit from the equipped weapon (systems damage formula), as `attack` lands it. */
+const weaponDamage = (rt: Parameters<typeof hitAmount>[0], e: Parameters<typeof hitAmount>[1], random: () => number) => hitAmount(rt, e, { power: 1, from: e }, random);
 import { stepCombat } from "./encounter";
 import { NO_INPUT, STEP, createMoveState, stepMove, type MoveWorld } from "@/lib/game/movement/sim";
 import { startMission } from "./missions";

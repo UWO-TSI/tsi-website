@@ -5,8 +5,8 @@
  * projectiles, summons and totems, effects. Inputs (aim, attack, dodge, keys),
  * missions, respawns and server sync stay with the caller.
  */
-import { enemyTarget, hurtUnits, moveSpeed, stepUnits } from "./abilities";
-import { floater, hurtPlayer, regenEnergy, resolvePlayerShot, summonWisps } from "./actions";
+import { enemyTarget, floater, hurtUnits, moveSpeed, stepUnits } from "./abilities";
+import { hurtPlayer, regenEnergy, resolvePlayerShot, summonWisps } from "./actions";
 import { SLOT_IDS, type AbilityId, type CombatRuntime } from "./runtime";
 import { beamLands, DODGE, stepEnemy, strikeLands, sweptHit, type Vec } from "./sim";
 
@@ -61,7 +61,7 @@ export function stepCombat(rt: CombatRuntime, me: Vec, dt: number, free: (x: num
     sh.x += sh.vx * dt; sh.z += sh.vz * dt; sh.life -= dt;
     const to = { x: sh.x, z: sh.z };
     let gone = sh.life <= 0 || !free(sh.x, sh.z, 0.05);
-    if (!gone && sh.from === "player") gone = resolvePlayerShot(rt, i, from, to, sweptHit, random);
+    if (!gone && sh.from === "player") gone = resolvePlayerShot(rt, i, from, to, random);
     else if (!gone && sh.from === "enemy") {
       const unit = rt.units.find(u => u.def.kind !== "trap" && sweptHit(from, to, u, 0.4 + sh.radius));
       if (sweptHit(from, to, me, 0.35 + sh.radius)) { hurtPlayer(rt, sh.damage, from, me); gone = true; }

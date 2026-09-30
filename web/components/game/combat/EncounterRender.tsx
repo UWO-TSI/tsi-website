@@ -111,18 +111,24 @@ export function EnemyInstances({ typeId, capacity, ground, allies = false }: { t
 /** Outline and fill colours: red for danger, violet for the guardian's summon. */
 const TONES = { danger: [new THREE.Color("#ff4040"), new THREE.Color("#ff2a2a")], summon: [new THREE.Color("#b48cff"), new THREE.Color("#9a6bff")] };
 
+/** Unit sectors by arc, face up and opening toward -Z: made once per arc, disposed with the component. */
+function useSectors(segments: number) {
+  const cache = useRef(new Map<number, THREE.CircleGeometry>());
+  useEffect(() => { const c = cache.current; return () => c.forEach(g => g.dispose()); }, []);
+  return (arc: number) => {
+    const key = Math.round(arc * 100);
+    let g = cache.current.get(key);
+    if (!g) cache.current.set(key, g = new THREE.CircleGeometry(1, segments, Math.PI / 2 - arc / 2, arc).rotateX(-Math.PI / 2));
+    return g;
+  };
+}
+
 /** Ground markers from marker(): sectors, circles, the smash's ring and the beam line, filling as the windup completes. */
 export function Telegraphs({ ground, max = 24 }: { ground: Ground; max?: number }) {
   const refs = useRef<(THREE.Mesh | null)[]>([]);
   const fills = useRef<(THREE.Mesh | null)[]>([]);
-  const geos = useRef(new Map<number, THREE.CircleGeometry>());
-  const geo = (arc: number) => {
-    const key = Math.round(arc * 100);
-    // Face up; the sector opens toward -Z, so yaw + π points it along the enemy's facing (sin, cos).
-    if (!geos.current.has(key)) geos.current.set(key, new THREE.CircleGeometry(1, 40, Math.PI / 2 - arc / 2, arc).rotateX(-Math.PI / 2));
-    return geos.current.get(key)!;
-  };
-  useEffect(() => { const cache = geos.current; return () => cache.forEach(g => g.dispose()); }, []);
+  // The sector opens toward -Z, so yaw + π points it along the enemy's facing (sin, cos).
+  const geo = useSectors(40);
   useFrame(() => {
     let n = 0;
     for (const e of combat.rt.enemies) {
@@ -269,13 +275,8 @@ export function Blasts({ ground, max = 12 }: { ground: Ground; max?: number }) {
   const refs = useRef<(THREE.Mesh | null)[]>([]);
   const ring = useMemo(() => new THREE.RingGeometry(0.82, 1, 48).rotateX(-Math.PI / 2), []);
   const strip = useMemo(() => new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2).translate(0, 0, 0.5), []);
-  const sectors = useRef(new Map<number, THREE.BufferGeometry>());
-  const sector = (a: number) => {
-    const k = Math.round(a * 100);
-    if (!sectors.current.has(k)) sectors.current.set(k, new THREE.CircleGeometry(1, 32, Math.PI / 2 - a / 2, a).rotateX(-Math.PI / 2));
-    return sectors.current.get(k)!;
-  };
-  useEffect(() => { const cache = sectors.current; return () => { ring.dispose(); strip.dispose(); cache.forEach(g => g.dispose()); }; }, [ring, strip]);
+  const sector = useSectors(32);
+  useEffect(() => () => { ring.dispose(); strip.dispose(); }, [ring, strip]);
   useFrame(() => {
     for (let i = 0; i < max; i++) {
       const m = refs.current[i]; if (!m) continue;

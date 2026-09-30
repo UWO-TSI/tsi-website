@@ -6,7 +6,8 @@
 import { useSyncExternalStore } from "react";
 import type { MissionState } from "./missions";
 import type { Enemy, Vec } from "./sim";
-import { PLAYER_BASE, WEAPONS, WEAPON_ORDER } from "./data";
+import { PLAYER_BASE, WEAPONS } from "./data";
+import { STARTER_WEAPONS } from "@/lib/combat/weapons";
 import { ZERO_STATS, type Stat, type StatBlock } from "@/lib/combat/progression";
 import type { Ability, BuffStat, Element, Status, Subclass, UnitDef } from "@/lib/combat/kits";
 
@@ -83,7 +84,7 @@ export interface CombatRuntime {
 export function createRuntime(): CombatRuntime {
   return {
     player: { hp: PLAYER_BASE.maxHp, maxHp: PLAYER_BASE.maxHp, alive: true, safe: true, level: 10, stats: { ...ZERO_STATS },
-      energy: ENERGY.max, sinceSpend: 99, weapon: "sword-driftwood", owned: [...WEAPON_ORDER],
+      energy: ENERGY.max, sinceSpend: 99, weapon: "sword-driftwood", owned: [...STARTER_WEAPONS],
       durability: Object.fromEntries(Object.values(WEAPONS).map(w => [w.id, w.maxDurability])),
       hits: {},
       attackCd: 0, swing: 0, dodgeAge: null, dodgeCd: 0, dodgeDir: { x: 0, z: 1 },
@@ -101,7 +102,7 @@ export function createRuntime(): CombatRuntime {
 export function setOwnedWeapons(rt: CombatRuntime, owned: { weapon_key: string; durability: number }[]) {
   const usable = owned.filter(w => WEAPONS[w.weapon_key]);
   for (const w of usable) rt.player.durability[w.weapon_key] = w.durability;
-  rt.player.owned = [...new Set([...WEAPON_ORDER, ...usable.map(w => w.weapon_key)])];
+  rt.player.owned = [...new Set([...STARTER_WEAPONS, ...usable.map(w => w.weapon_key)])];
 }
 
 // ── HUD subscription ────────────────────────────────────────────

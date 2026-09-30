@@ -9,7 +9,7 @@
 import { ENERGY, SLOT_IDS, combat, publishCombat, useCombatVersion } from "@/lib/game/combat/runtime";
 import { keyName, useAbilityKeys, useMoveKeys } from "@/lib/game/movement/keys";
 import { WEAPONS } from "@/lib/game/combat/data";
-import { resolveCast } from "@/lib/game/combat/actions";
+import { resolveCast } from "@/lib/game/combat/abilities";
 import { cancelCast } from "@/lib/game/combat/abilities";
 import { CAPS } from "@/lib/combat/kits";
 import { staggered } from "@/lib/game/combat/sim";
