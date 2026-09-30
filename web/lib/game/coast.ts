@@ -75,7 +75,7 @@ export function coastDist(x: number, z: number): number {
  * Beach WIDTH variation: shifts where the sand color begins, per angle —
  * wide sandy sweeps on some stretches, grassy banks that run nearly to
  * the water on others. Purely cosmetic (color bands in the ground mesh);
- * the waterline itself stays rimSink-defined.
+ * the waterline itself is unaffected.
  */
 export function beachWidthShift(x: number, z: number): number {
   const a = Math.atan2(z, x);
@@ -83,17 +83,4 @@ export function beachWidthShift(x: number, z: number): number {
   // the sand line pulls ~5 legacy units inland across the walkable shelf.
   const flats = 5 * Math.exp(-(((a - 0.94) / 0.22) ** 2));
   return 1.1 * Math.sin(4 * a + 0.9) + 0.7 * Math.sin(6 * a + 2.6) + flats;
-}
-
-// Rim-sink profile (mirrors the ground mesh in GameWorld's Terrain —
-// keep in sync): past SINK_START the beach dives below the ocean.
-const SINK_START = 49.5;
-const SINK_END = 56;
-const SINK_DEPTH = 2.4;
-
-/** How far the beach has sunk at coast-distance e (≥ 0). */
-export function rimSink(e: number): number {
-  if (e <= SINK_START) return 0;
-  const t = Math.min((e - SINK_START) / (SINK_END - SINK_START), 1);
-  return t * t * (3 - 2 * t) * SINK_DEPTH;
 }
