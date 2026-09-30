@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { benchSeat, islandOf, landmark, landmarkPoint, landmarks, LANDMARK_IDS, nearestLandmark, propFootprint, villageIsland, villageSpawn, wharfDeck } from "./defaultIsland";
+import { benchSeat, islandOf, landmark, landmarkPoint, landmarks, LANDMARK_IDS, propFootprint, villageIsland, villageSpawn, wharfDeck } from "./defaultIsland";
 import { clearSpot, walkTo } from "./movement/sim";
 import { createCenteredMap, setCell, Surface, heightField, sampleGroundHeight, sampleHeightField, isGroundAtWorld } from "./grid";
 import { buildVillage, objectsOf, village, type VillageDoc } from "./villageMap";
@@ -72,7 +72,7 @@ describe("default island movement (frozen 2026-09-28 village)", () => {
     [x, z] = island.move(0, -9.5, -10, -9.5);
     expect(Math.hypot(x + 10, z + 9.5)).toBeLessThan(0.1);
     [x, z] = island.move(0, -10, 0, 4.5);
-    expect(nearestLandmark(x, z, 3.2, ["notice", "catch"], v0)).not.toBeNull();
+    expect(landmarks(v0).some(l => (l.id === "notice" || l.id === "catch") && Math.hypot(l.x - x, l.z - z) < 3.2)).toBe(true);
   });
   it("has water in the pond and a walkable wharf stub over the sea", () => {
     expect(island.surface(landmark("pond", v0)!.x, landmark("pond", v0)!.z)).toBe(Surface.River);

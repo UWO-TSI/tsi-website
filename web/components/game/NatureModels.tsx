@@ -50,7 +50,6 @@ const TREE_MODELS = [
   "/assets/acnh/plants/tree-cedar.glb",
 ];
 
-/** `models` swaps the four tree slots (oak a, oak b, blossom, cedar), e.g. for seasonal dressing. */
 /** A tree's size from its seed (also where its crown sheds leaves, IslandAtmosphere). */
 export const treeScale = (seed: number) => 0.85 + (seed % 5) * 0.08;
 
@@ -156,8 +155,6 @@ const PRELOAD = [
   "/assets/acnh/props/bridge-wooden.glb",
   "/assets/acnh/props/fence-country-a.glb",
   "/assets/acnh/props/fence-log-a.glb",
-  // (ambient chalets moved to Building.tsx CHALET_VARIANTS — they are
-  // composed from wall + roof + door parts now, and preloaded there)
 ];
 for (const url of PRELOAD) useGLTF.preload(url);
 

@@ -35,18 +35,17 @@ function chaletParts(wall: string, roof: string): string[] {
   return [`${B}/chalet-wall-${wall}.glb`, `${B}/chalet-roof-${roof}.glb`, `${B}/chalet-door.glb`];
 }
 
-/** Ambient chalet colourways (scenery only — see GameWorld's south green). */
+/** Chalet colourways: the café, museum, home and the movement lab's house. */
 export const CHALET_VARIANTS = {
   brown: chaletParts("a", "b"),
   red: chaletParts("c", "g"),
   yellow: chaletParts("e", "e"),
 } as const;
 
-export const ACNH_GLB: Record<string, { parts: string[]; scale?: number; yOffset?: number; rotationY?: number }> = {
-  hq: { parts: [`${B}/hq-office.glb`, `${B}/hq-office-door.glb`], rotationY: Math.PI },
-  shop: { parts: [`${B}/shop-market.glb`, `${B}/shop-market-door.glb`], rotationY: Math.PI },
-  oracle: { parts: [`${B}/oracle-museum.glb`], rotationY: Math.PI },
-  house: { parts: CHALET_VARIANTS.brown, rotationY: Math.PI },
+const ACNH_GLB: Record<string, string[]> = {
+  hq: [`${B}/hq-office.glb`, `${B}/hq-office-door.glb`],
+  shop: [`${B}/shop-market.glb`, `${B}/shop-market-door.glb`],
+  oracle: [`${B}/oracle-museum.glb`],
 };
 
 /** Shared material pass: ACNH albedo carries the look, so kill PBR shine. */
@@ -66,23 +65,17 @@ function matteACNH(root: THREE.Object3D) {
 }
 
 /**
- * Mounts a part list as one group. Parts share the source coordinate space.
+ * Mounts a part list as one group, turned to face the camera (ACNH). Parts share the source coordinate space.
  *
  * The extractor strips skinning, so node clones are sufficient; materials
  * are cloned separately before applying the instance's finish and textures.
  */
 export function ACNHParts({
   parts,
-  scale = 1,
-  yOffset = 0,
-  rotationY = 0,
   windowGlow,
   windowColor,
 }: {
   parts: readonly string[];
-  scale?: number;
-  yOffset?: number;
-  rotationY?: number;
   windowGlow?: number;
   windowColor?: string;
 }) {
@@ -90,13 +83,12 @@ export function ACNHParts({
   const group = useMemo(() => {
     const g = new THREE.Group();
     gltfs.forEach(({ scene }, index) => g.add(prepareModel(scene, parts[index])));
-    g.scale.setScalar(scale * ACNH_SCALE);
-    g.position.y = yOffset;
-    g.rotation.y = rotationY;
+    g.scale.setScalar(ACNH_SCALE);
+    g.rotation.y = Math.PI;
     matteACNH(g);
     if (windowColor) lightHQWindows(g, windowColor);
     return g;
-  }, [gltfs, parts, scale, yOffset, rotationY, windowColor]);
+  }, [gltfs, parts, windowColor]);
   useContactShadow(group, useMemo(() => modelContact(group, parts[0], "solid"), [group, parts]));
 
   const emitters = useRef<{ material: THREE.MeshStandardMaterial; gain: number }[]>([]);
@@ -136,15 +128,5 @@ export function ACNHParts({
 
 /** ACNH building: fixed scale, origin-grounded, original materials kept. */
 export function ACNHBuilding({ id, windowGlow, windowColor }: { id: string; windowGlow?: number; windowColor?: string }) {
-  const cfg = ACNH_GLB[id];
-  return (
-    <ACNHParts
-      parts={cfg.parts}
-      scale={cfg.scale ?? 1}
-      yOffset={cfg.yOffset ?? 0}
-      rotationY={cfg.rotationY ?? 0}
-      windowGlow={windowGlow}
-      windowColor={windowColor}
-    />
-  );
+  return <ACNHParts parts={ACNH_GLB[id]} windowGlow={windowGlow} windowColor={windowColor} />;
 }

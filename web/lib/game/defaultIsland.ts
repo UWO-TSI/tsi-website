@@ -273,17 +273,6 @@ export function villageIsland(v: Village = village()): VillageIsland {
   return island;
 }
 
-/** Nearest landmark within `range` of a point (for proximity prompts and discovery). */
-export function nearestLandmark(x: number, z: number, range: number, ids?: readonly LandmarkId[], v: Village = village()): Landmark | null {
-  let best: Landmark | null = null, distance = range;
-  for (const l of landmarks(v)) {
-    if (ids && !ids.includes(l.id)) continue;
-    const d = Math.hypot(l.x - x, l.z - z);
-    if (d < distance) { best = l; distance = d; }
-  }
-  return best;
-}
-
 /**
  * Everything that scales with the island (specs/island-painter.md §7), from the
  * map's land bounds. The shipped 47×39 island gives exactly the numbers these

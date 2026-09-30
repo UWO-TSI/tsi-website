@@ -88,7 +88,7 @@ export default function HomeIslandScene({ identity, peaceful, fishSpot, fishing,
     <GridOcean map={home.map} lite={liteMode} />
     <PeacefulLayer map={home.map} nodes={HOME_NODES} moment={peaceful.moment} member={peaceful.member} player={player} ground={home.ground} highTier={!liteMode} active={!fishing && !decorating} />
     {/* The dump's chalet house (5 × 4.2 cells, same model family as the village café/museum). */}
-    <group position={[HOUSE.x, 0, HOUSE.z]}><ACNHParts parts={CHALET_VARIANTS.brown} rotationY={Math.PI} /></group>
+    <group position={[HOUSE.x, 0, HOUSE.z]}><ACNHParts parts={CHALET_VARIANTS.brown} /></group>
     <pointLight position={[HOUSE.door[0], 1.4, HOUSE.door[1] - 0.2]} color="#ffd68b" intensity={light.lampsOn ? light.lamp * 1.2 : 0} distance={4} />
     <GLBProp url="/assets/acnh/furniture/mailbox.glb" position={[HOME_MAILBOX[0], home.ground(...HOME_MAILBOX), HOME_MAILBOX[1]]} scale={0.1} />
     <GLBProp url="/assets/acnh/furniture/monument-sign.glb" position={[HOME_DOCK[0] + 1.3, home.ground(...HOME_DOCK), HOME_DOCK[1] + 0.4]} scale={0.08} rotation={[0, -0.4, 0]} />

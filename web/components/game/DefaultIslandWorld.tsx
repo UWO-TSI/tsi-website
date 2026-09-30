@@ -369,8 +369,8 @@ function VillageLandmarks({ layout, ground, opened, stage, ceremony, light }: { 
     {shop && <group position={at(shop)}><ACNHBuilding id="shop" /></group>}
     {fitting && <GLBProp url="/assets/acnh/furniture/fitting-room.glb" position={[fitting[0], ground(...fitting), fitting[1] + 0.45]} scale={0.1} rotation={[0, Math.PI, 0]} />}
     {oracle && <group position={at(oracle)}><ACNHBuilding id="oracle" /></group>}
-    {cafe && <group position={at(cafe)}><ACNHParts parts={CHALET_VARIANTS.yellow} rotationY={Math.PI} /></group>}
-    {museum && <group position={at(museum)}><ACNHParts parts={CHALET_VARIANTS.red} rotationY={Math.PI} /></group>}
+    {cafe && <group position={at(cafe)}><ACNHParts parts={CHALET_VARIANTS.yellow} /></group>}
+    {museum && <group position={at(museum)}><ACNHParts parts={CHALET_VARIANTS.red} /></group>}
     {/* Boarded doors: the existing log fence across each closed entrance. */}
     {[cafe, museum].filter(l => l && !opened.includes(l.id as WorldGoalId)).map(l => [-0.6, 0.6].map(dx => <NatureFence key={`${l!.id}${dx}`} position={[l!.x + dx, ground(l!.x, l!.z), front(l!) - 0.35]} variant={1} />))}
     {ruins && [-1.2, 0, 1.2].map(dz => <group key={dz} position={[ruins.x, ground(ruins.x, ruins.z + dz), ruins.z + dz]} rotation={[0, Math.PI / 2, 0]}><NatureFence position={[0, 0, 0]} variant={1} /></group>)}
