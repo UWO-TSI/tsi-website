@@ -38,11 +38,11 @@ const TREE_SEEDS = [0, 1, 3, 2];
 const TREES: TreeSpot[] = HOME_TREES.map(([x, z], i) => ({ x, z, seed: TREE_SEEDS[i] }));
 const DOOR_SPAWN: [number, number, number] = [HOUSE.door[0], 0, HOUSE.door[1] - 0.6];
 
-export default function HomeIslandScene({ identity, level, peaceful, fishSpot, fishing, phase, light, look, weather, liteMode, castShadows, zoom, overview, returned, player, onMove, onNear, outdoor, decorating, selected, onPlace, onPickUp }: {
+export default function HomeIslandScene({ identity, level, peaceful, fishSpot, fishing, phase, light, look, weather, liteMode, castShadows, zoom, overview, returned, player, onNear, outdoor, decorating, selected, onPlace, onPickUp }: {
   phase: IslandPhase; light: IslandLight; look: SeasonLook; weather: IslandWeather; liteMode: boolean; castShadows: boolean; zoom: number; overview: boolean;
   /** Came out of the house (spawn at the door) rather than off the boat. */
   returned: boolean;
-  player: React.RefObject<THREE.Vector3>; onMove: (p: THREE.Vector3) => void; onNear: (near: HomeNear) => void;
+  player: React.RefObject<THREE.Vector3>; onNear: (near: HomeNear) => void;
   outdoor: readonly PlacedItem[]; decorating: boolean; selected: { piece: string; rot: Rotation; uid?: string } | null;
   onPlace: (item: PlacedItem) => void; onPickUp: (item: PlacedItem) => void;
   identity?: { display_name: string; member: boolean }; level?: number;
@@ -99,7 +99,7 @@ export default function HomeIslandScene({ identity, level, peaceful, fishSpot, f
     {SEASON_FLOWERS[look.season].length > 0 && HOME_FLOWERS.map(([x, z], i) => <NatureFlowerCluster key={i} position={[x, home.ground(x, z), z]} seed={i * 3} models={SEASON_FLOWERS[look.season]} />)}
     <PlacementLayer items={outdoor} mapping={mapping} context={{ inside: home.placeable }} active={decorating} selected={selected}
       onPlace={onPlace} onPickUp={onPickUp} plane={{ center: [0, 0.02, 0], size: [HOME_RADII.x * 2, HOME_RADII.z * 2] }} />
-    <PlayerAvatar key={`home-${returned}`} spawnPosition={spawn} playerName={identity?.display_name ?? "You"} playerLevel={level} member={identity?.member} onMove={onMove} frozen={fishing || (decorating && !!selected)}
+    <PlayerAvatar key={`home-${returned}`} spawnPosition={spawn} playerName={identity?.display_name ?? "You"} playerLevel={level} member={identity?.member} player={player} frozen={fishing || (decorating && !!selected)}
       world={world} groundHeight={home.ground} groundSurface={home.surface} camTarget={focus} />
   </>;
 }

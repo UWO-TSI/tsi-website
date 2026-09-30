@@ -210,12 +210,12 @@ function Performance({ player, onMetrics }: { player: React.RefObject<THREE.Vect
   return null;
 }
 
-function IslandScene({ identity, level, devAt, exitFrom, peaceful, fishSpot, fishing, chapter, phase, light, look, weather, overview, zoom, reset, returned, fromBoat, liteMode, castShadows, player, onMove, onNear, progression, ceremony, event }: {
+function IslandScene({ identity, level, devAt, exitFrom, peaceful, fishSpot, fishing, chapter, phase, light, look, weather, overview, zoom, reset, returned, fromBoat, liteMode, castShadows, player, onNear, progression, ceremony, event }: {
   progression: { stage: number; opened: readonly WorldGoalId[] }; ceremony: boolean; fromBoat: boolean; event: IslandEvent | null;
   chapter: { claim: boolean; donate: boolean; report: boolean };
   peaceful: { moment: WorldMoment; member: string }; fishSpot: { current: FishingSpot | null }; fishing: boolean; exitFrom: "museum" | "oracle" | "ruins" | "cafe" | null; devAt: [number, number, number] | null; identity: WorldIdentity; level?: number;
   phase: IslandPhase; light: IslandLight; look: SeasonLook; weather: IslandWeather; overview: boolean; zoom: number; reset: number; returned: boolean; liteMode: boolean; castShadows: boolean;
-  player: React.RefObject<THREE.Vector3>; onMove: (position: THREE.Vector3) => void; onNear: (near: Near) => void;
+  player: React.RefObject<THREE.Vector3>; onNear: (near: Near) => void;
 }) {
   const v = village();
   const layout = useMemo(() => villageLayout(v), [v]);
@@ -289,7 +289,7 @@ function IslandScene({ identity, level, devAt, exitFrom, peaceful, fishSpot, fis
       {residents.map(({ persona, home, plaza }) => <NPC key={`npc-${persona.id}-${home.join()}-${reset}`} persona={persona} position={ceremony ? plaza : home} playerPositionRef={player}
         groundHeight={island.ground} constrainMove={island.move}
         onClick={() => window.dispatchEvent(new CustomEvent("tsi:npc-greet", { detail: { id: persona.id } }))} />)}
-      <PlayerAvatar key={`${reset}-${returned}-${fromBoat}-${exitFrom}`} spawnPosition={spawn} playerName={identity.display_name} playerLevel={level} member={identity.member} onMove={onMove} frozen={fishing}
+      <PlayerAvatar key={`${reset}-${returned}-${fromBoat}-${exitFrom}`} spawnPosition={spawn} playerName={identity.display_name} playerLevel={level} member={identity.member} player={player} frozen={fishing}
         world={island} groundHeight={island.ground} groundSurface={island.surface} camTarget={focus} />
       <CharacterCrowd player={player} ground={island.ground} />
     </>
@@ -532,7 +532,6 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const player = useRef(new THREE.Vector3(...villageSpawn()));
   const hqDoor = useMemo(() => landmarkPoint("hq", "door"), []);
-  const move = useCallback((position: THREE.Vector3) => { player.current.copy(position); }, []);
   const [detectedTier, setDetectedTier] = useState<QualityTier | null>(null);
   const onTier = useCallback((tier: QualityTier) => {
     setDetectedTier(tier);
@@ -660,18 +659,18 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
         camera={{ position: [0, 10.2, -21], fov: 48, near: 0.1, far: 120 }} shadows={castShadows ? "percentage" : false}
         onCreated={({ gl }) => { gl.info.autoReset = false; gl.toneMapping = THREE.NeutralToneMapping; gl.outputColorSpace = THREE.SRGBColorSpace; }}>
         <Suspense fallback={null}>
-          {site === "ruins" ? <RuinsScene key={`ruins-${ruinsRun}`} level={level} phase={phase} light={light} look={look} weather={weather} liteMode={liteMode} castShadows={castShadows} zoom={zoomed ? 1.4 : devZoom} player={player} onMove={move}
+          {site === "ruins" ? <RuinsScene key={`ruins-${ruinsRun}`} level={level} phase={phase} light={light} look={look} weather={weather} liteMode={liteMode} castShadows={castShadows} zoom={zoomed ? 1.4 : devZoom} player={player}
               onNear={n => setNear(n === "exit" ? "ruins_exit" : n)} onDefeat={onRuinsDefeat} start={ruinsRun <= 1 ? devAt : null} />
             : inside === "oracle" ? <OracleTemple frozen={fading || sheet === "oracle"} player={player} onNear={n => setNear(n)} ceremony={reveal} />
-            : inside === "cafe" ? <CafeInterior phase={phase} player={player} frozen={fading || !!sheet} identity={identity} level={level} onMove={move} onNear={setNear} />
+            : inside === "cafe" ? <CafeInterior phase={phase} player={player} frozen={fading || !!sheet} identity={identity} level={level} onNear={setNear} />
             : inside === "museum" ? <MuseumInterior wings={museumWings} frozen={fading || donateOpen} player={player} onNear={n => setNear(n === "donate" ? "curator" : n)} />
             : inside === "hq" ? <Clubhouse phase={phase} player={player} frozen={fading} onNear={setNear} />
             : inside === "house" ? <HomeInterior layout={layout} phase={phase} frozen={fading} player={player} onNear={(n: HouseNear) => setNear(n)}
               decorating={decor.decorating} selected={decor.selected} onPlace={decor.place} onPickUp={decor.pickUp} />
             : atHome ? <HomeIslandScene identity={identity} level={level} peaceful={peaceful} fishSpot={fishSpot} fishing={fishing} phase={phase} light={light} look={look} weather={weather} liteMode={liteMode} castShadows={castShadows} zoom={zoomed ? 1.4 : devZoom}
-              overview={overview} returned={returned} player={player} onMove={move} onNear={(n: HomeNear) => setNear(n)} outdoor={layout.outdoor}
+              overview={overview} returned={returned} player={player} onNear={(n: HomeNear) => setNear(n)} outdoor={layout.outdoor}
               decorating={decor.decorating} selected={decor.selected} onPlace={item => decor.place("outdoor", item)} onPickUp={item => decor.pickUp("outdoor", item)} />
-            : <IslandScene identity={identity} level={level} devAt={devAt} exitFrom={exitFrom} peaceful={peaceful} fishSpot={fishSpot} fishing={fishing} chapter={chapterFlags} fromBoat={fromBoat} progression={progressionWorld} ceremony={ceremony} event={islandEvent} phase={phase} light={light} look={look} weather={weather} overview={overview} zoom={zoomed ? 1.4 : devZoom} reset={reset} returned={returned} liteMode={liteMode} castShadows={castShadows} player={player} onMove={move} onNear={setNear} />}
+            : <IslandScene identity={identity} level={level} devAt={devAt} exitFrom={exitFrom} peaceful={peaceful} fishSpot={fishSpot} fishing={fishing} chapter={chapterFlags} fromBoat={fromBoat} progression={progressionWorld} ceremony={ceremony} event={islandEvent} phase={phase} light={light} look={look} weather={weather} overview={overview} zoom={zoomed ? 1.4 : devZoom} reset={reset} returned={returned} liteMode={liteMode} castShadows={castShadows} player={player} onNear={setNear} />}
           {identity.family && identity.aura && <Suspense fallback={null}><FamilyAura player={player} color={FAMILIES[identity.family].light} /></Suspense>}
           <PostFX antialias={!graphics.liteMode && !graphics.pixelated} grade={grade} fx={lookFx(lookPreset, !liteMode)} />
           <LookMaterials preset={lookPreset} />

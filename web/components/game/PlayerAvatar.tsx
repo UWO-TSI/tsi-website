@@ -43,7 +43,8 @@ import { DashRing, DustPool, EVENT_CLIP, MOVE_JUICE, Streaks, TAKEOFF, applyFov,
 
 interface PlayerAvatarProps {
   spawnPosition: [number, number, number];
-  onMove: (position: THREE.Vector3) => void;
+  /** Written when the avatar moves: where the player stands (the scene's shared position). */
+  player?: React.RefObject<THREE.Vector3>;
   /** What the kit walks on: `top` and `wet` (lib/game/movement/sim). */
   world: MoveWorld;
   groundHeight: (x: number, z: number) => number;
@@ -75,7 +76,7 @@ function turnTo(s: MoveState | undefined, x: number, z: number) { if (s) s.facin
 const SEAT_CLIPS = new Set<ClipName>(["Sit", "Study", "Stretch", "Sleep"]);
 type Seat = { x: number; z: number; clip: ClipName; lift: number; yaw: number };
 
-export default function PlayerAvatar({ spawnPosition, onMove, world, groundHeight, groundSurface, camTarget, playerName = "Player", showNameplate = true, playerLevel, member = false, combat: inCombat = false, frozen = false, desktopClickToMove = false, tuning, juice, timeScale, telemetry, walkSpeed = MOVE_TUNING.walkSpeed }: PlayerAvatarProps) {
+export default function PlayerAvatar({ spawnPosition, player, world, groundHeight, groundSurface, camTarget, playerName = "Player", showNameplate = true, playerLevel, member = false, combat: inCombat = false, frozen = false, desktopClickToMove = false, tuning, juice, timeScale, telemetry, walkSpeed = MOVE_TUNING.walkSpeed }: PlayerAvatarProps) {
   const anchor = useRef<THREE.Group>(null), body = useRef<THREE.Group>(null), head = useRef<THREE.Group>(null);
   const motion = useRef<CharacterMotion>({ speed: 0, yaw: 0, lift: 0, pose: null, play: null, move: null });
   const { look } = useMyLook();
@@ -83,12 +84,12 @@ export default function PlayerAvatar({ spawnPosition, onMove, world, groundHeigh
   const { play: playSFX } = useSFX();
   const bindings = useMoveKeys();
   const [x0, , z0] = spawnPosition;
-  const sim = useRef<MoveSim | null>(null), simAt = useRef("");
+  const sim = useRef<MoveSim | null>(null), simAt = useRef<[number, number] | null>(null);
   const keys = useRef<Record<string, boolean>>({});
   const presses = useRef({ jump: false, dash: false });
   const target = useRef<{ x: number; z: number } | null>(null);
   const seat = useRef<Seat | null>(null);
-  const reported = useRef<[number, number, number] | null>(null);
+  const reported = useRef<THREE.Vector3 | null>(null);
   const fx = useRef({ sq: 0, sqv: 0, step: 0, trail: 0, stuck: 0, level: 0, punch: 0, lead: new THREE.Vector2(), pan: new THREE.Vector2(), rise: new THREE.Vector2(), focus: new THREE.Vector3(x0, 0, z0) });
   const dust = useMemo(() => new DustPool(), []);
   const streaks = useMemo(() => new Streaks(), []);
@@ -205,9 +206,9 @@ export default function PlayerAvatar({ spawnPosition, onMove, world, groundHeigh
     if (!g || !bd || !hd) return;
     const p = combat.rt.player, d = dev.current, f = fx.current, m = motion.current, j = juice?.current ?? MOVE_JUICE, st = touchStick, k = keys.current, b = bindings;
     const t = inCombat ? combatTuning(p.speed) : tuning?.current ?? MOVE_TUNING;
-    if (!sim.current || simAt.current !== `${x0},${z0}`) {
+    if (!sim.current || simAt.current?.[0] !== x0 || simAt.current[1] !== z0) {
       sim.current = createMoveSim(createMoveState(x0, z0, world));
-      simAt.current = `${x0},${z0}`;
+      simAt.current = [x0, z0];
     }
     // Spawned or built into something (an exit painted inside a prop, furniture placed where you stand): step out to the nearest open spot.
     const at = sim.current.state;
@@ -356,9 +357,9 @@ export default function PlayerAvatar({ spawnPosition, onMove, world, groundHeigh
 
     if (telemetry) Object.assign(telemetry.current, { x, y, z, speed, mode: state.mode, hops: state.hops, dashReady, long: state.long });
     const last = reported.current;
-    if (!last || Math.abs(last[0] - x) + Math.abs(last[1] - y) + Math.abs(last[2] - z) > 1e-4) {
-      reported.current = [x, y, z];
-      onMove(new THREE.Vector3(x, y, z));
+    if (!last || Math.abs(last.x - x) + Math.abs(last.y - y) + Math.abs(last.z - z) > 1e-4) {
+      (reported.current ??= new THREE.Vector3()).set(x, y, z);
+      player?.current.set(x, y, z);
     }
   }, -4);
 

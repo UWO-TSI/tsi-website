@@ -131,7 +131,6 @@ function Village({ guideToHQ, returned, paused, onAction, onNear, phase, fishing
     applyEnvironment(gl, scene, lighting.environment);
     return () => disposeEnvironment(scene);
   }, [gl, scene, lighting]);
-  const move = useCallback((position: THREE.Vector3) => { player.current.copy(position); }, []);
   useEffect(() => {
     camera.position.set(spawn[0], 7.4, spawn[2] - 10.8);
     const wheel = (event: WheelEvent) => { event.preventDefault(); zoom.current = THREE.MathUtils.clamp(zoom.current + event.deltaY * 0.0005, 0.94, 1.08); };
@@ -218,7 +217,7 @@ function Village({ guideToHQ, returned, paused, onAction, onNear, phase, fishing
       <Character look={JAYDEN} motion={guideMotion} />
       <Html position={[0, 1.8, 0]} center distanceFactor={13} zIndexRange={[3, 0]}><span className="village-sign">Jayden · Your guide</span></Html>
     </group>
-    <PlayerAvatar spawnPosition={spawn} playerName="You" showNameplate={false} onMove={move} frozen={paused || fishing || arrival} desktopClickToMove
+    <PlayerAvatar spawnPosition={spawn} playerName="You" showNameplate={false} player={player} frozen={paused || fishing || arrival} desktopClickToMove
       world={island} groundHeight={island.ground} groundSurface={island.surface} />
     <DirectionArrow player={player} target={[0, 6.3]} paused={paused || fishing || arrival || !guideToHQ} />
   </>;

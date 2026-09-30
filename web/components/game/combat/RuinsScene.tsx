@@ -87,9 +87,9 @@ function bossVictory(eventKey: string, now: number) {
   });
 }
 
-export default function RuinsScene({ level, phase, light, look, weather, liteMode, castShadows, zoom, player, onMove, onNear, onDefeat, start }: {
+export default function RuinsScene({ level, phase, light, look, weather, liteMode, castShadows, zoom, player, onNear, onDefeat, start }: {
   phase: IslandPhase; light: IslandLight; look: SeasonLook; weather: IslandWeather; liteMode: boolean; castShadows: boolean; zoom: number;
-  player: React.RefObject<THREE.Vector3>; onMove: (p: THREE.Vector3) => void; onNear: (near: RuinsNear) => void; onDefeat: () => void;
+  player: React.RefObject<THREE.Vector3>; onNear: (near: RuinsNear) => void; onDefeat: () => void;
   /** Dev: start somewhere other than the gate (screenshots). */
   start?: [number, number, number] | null;
   level?: number;
@@ -247,7 +247,7 @@ export default function RuinsScene({ level, phase, light, look, weather, liteMod
     <AimReticle player={player} ground={ruins.ground} />
     <FloaterProjector />
     <Html position={[EXIT_SPOT.x, 2.2, EXIT_SPOT.z]} center distanceFactor={10} zIndexRange={[3, 0]}><div className={styles.cue}>Gate · safe zone</div></Html>
-    <PlayerAvatar spawnPosition={spawn} playerName="You" playerLevel={level} onMove={onMove}
+    <PlayerAvatar spawnPosition={spawn} playerName="You" playerLevel={level} player={player}
       world={ruins.world} groundHeight={ruins.ground} camTarget={focus} combat />
   </>;
 }

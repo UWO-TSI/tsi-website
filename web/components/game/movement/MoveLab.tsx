@@ -116,7 +116,6 @@ function LapTracker({ telemetry, lap, timeScale }: { telemetry: React.RefObject<
   return null;
 }
 
-const noop = () => {};
 function CourseScene({ world, tuning, juice, spawn, telemetry, timeScale, lap, walkSpeed, lite, shadows, zoom, signs }: {
   world: ReturnType<typeof islandOf>; tuning: React.RefObject<MoveTuning>; juice: React.RefObject<MoveJuice>; spawn: [number, number];
   telemetry: React.RefObject<MoveTelemetry>;
@@ -142,7 +141,7 @@ function CourseScene({ world, tuning, juice, spawn, telemetry, timeScale, lap, w
     {signs && COURSE_SIGNS.map(s => <Html key={s.text} position={[s.x, world.ground(s.x, s.z) + 2.4, s.z]} center distanceFactor={12} zIndexRange={[3, 0]}>
       <div style={{ background: "rgba(15,15,16,0.62)", color: "#f1ffff", padding: "2px 8px", borderRadius: 4, font: "600 12px ui-monospace, Menlo, monospace", whiteSpace: "nowrap", pointerEvents: "none" }}>{s.text}</div>
     </Html>)}
-    <PlayerAvatar world={world} groundHeight={world.ground} groundSurface={world.surface} spawnPosition={start} onMove={noop} showNameplate={false}
+    <PlayerAvatar world={world} groundHeight={world.ground} groundSurface={world.surface} spawnPosition={start} showNameplate={false}
       camTarget={camTarget} tuning={tuning} juice={juice} telemetry={telemetry} timeScale={timeScale} walkSpeed={walkSpeed} />
     <LapTracker telemetry={telemetry} lap={lap} timeScale={timeScale} />
   </>;
