@@ -104,9 +104,9 @@ export function supabaseCollectionsStore(db: SupabaseClient): CollectionsStore {
       return caught(one(data));
     },
     async ownedGear(memberId) {
-      // Before the economy migration nobody owns gear: the starter rod.
+      // A failed read fails the request: a transient error must not roll a tier-4/5 rod owner with the starter rod.
       const { data, error } = await db.from("member_inventory").select("shop_items(catalogue_ref)").eq("member_id", memberId);
-      if (error) return [];
+      if (error) raise(error);
       return ((data ?? []) as Row[]).flatMap((r) => ((r.shop_items as Row | null)?.catalogue_ref as string | null) ?? []);
     },
     async tourneyEntries(goalId, cycle) {
