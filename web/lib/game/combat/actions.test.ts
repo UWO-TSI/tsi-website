@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { ENEMIES, MISSIONS } from "./data";
-import { attack, hurtPlayer, regenEnergy, resolveCast, startDodge, triggerAbility, weaponDamage } from "./actions";
+import { attack, combatPush, combatTuning, dashDodge, hurtPlayer, regenEnergy, resolveCast, startDodge, triggerAbility, weaponDamage } from "./actions";
+import { stepCombat } from "./encounter";
+import { NO_INPUT, STEP, createMoveState, stepMove, type MoveWorld } from "@/lib/game/movement/sim";
 import { startMission } from "./missions";
 import { createRuntime, ENERGY } from "./runtime";
 import { DODGE, spawnEnemy } from "./sim";
@@ -91,5 +93,55 @@ describe("player actions", () => {
     };
     expect(run("fail", 0)).toBe(0);
     expect(run("enhanced", 1.5)).toBeGreaterThan(run("normal", 0.8));
+  });
+});
+
+describe("the ruins dodge on the movement kit (specs/movement.md)", () => {
+  const flat: MoveWorld = { top: () => 0, wet: () => false };
+  /** Q at `presses` (seconds), as PlayerAvatar runs it: the kit's step, a dash event starts the dodge, then the encounter tick. */
+  const run = (seconds: number, presses: number[], each?: (time: number, rt: ReturnType<typeof createRuntime>, z: number) => void) => {
+    const rt = createRuntime(), t = combatTuning(1);
+    rt.player.safe = false;
+    let s = createMoveState(0, 0, flat);
+    const dashes: number[] = [];
+    for (let i = 0; i < Math.round(seconds / STEP); i++) {
+      const time = i * STEP;
+      s = stepMove(s, { ...NO_INPUT, z: 1, dashPressed: presses.some(p => Math.abs(p - time) < STEP / 2), push: combatPush(rt.player) }, STEP, flat, t);
+      if (s.events.some(e => e.kind === "dash")) { dashes.push(time); dashDodge(rt, { x: s.dashX, z: s.dashZ }); }
+      stepCombat(rt, { x: s.x, z: s.z }, STEP);
+      each?.(time + STEP, rt, s.z);
+    }
+    return { rt, s, dashes };
+  };
+  it("is Q's dash with the roll's reach and time, invulnerable through today's i-frame window", () => {
+    const hits: [number, number][] = [];
+    let atEnd = 0;
+    run(0.6, [0], (time, rt, z) => {
+      if (Math.abs(time - DODGE.duration) < STEP / 2) atEnd = z;
+      if ([0.1, 0.25, 0.45].some(t => Math.abs(time - t) < STEP / 2)) hits.push([time, hurtPlayer(rt, 10, { x: 0, z: 5 }, { x: 0, z })]);
+    });
+    // The roll moved 14 u/s easing to 40% over its 0.34 s: 3.33u, plus the walk it started from.
+    expect(atEnd).toBeGreaterThan(3.2);
+    expect(atEnd).toBeLessThan(4);
+    expect(hits.map(([, lost]) => lost > 0)).toEqual([false, false, true]);
+  });
+  it("waits out the dodge's cooldown, and the roll's own impulse never moves you twice", () => {
+    const { dashes } = run(2, [0, 0.5, DODGE.duration + DODGE.cooldown + 0.02]);
+    expect(dashes).toHaveLength(2);
+    expect(dashes[1]).toBeCloseTo(DODGE.duration + DODGE.cooldown + 0.02, 2);
+    const rt = createRuntime();
+    rt.player.safe = false;
+    startDodge(rt, { x: 0, z: 1 });
+    stepCombat(rt, { x: 0, z: 0 }, 0.05);
+    expect(rt.player.impulse.z).toBeGreaterThan(0);
+    expect(combatPush(rt.player)).toBeUndefined();
+    rt.player.dodgeAge = null; rt.player.dash = { x: 1, z: 0, speed: 20, left: 0.2, iframes: false, then: null };
+    stepCombat(rt, { x: 0, z: 0 }, 0.05);
+    expect(combatPush(rt.player)).toEqual({ x: 20, z: 0 });
+  });
+  it("walks and sprints at the combat speed stat", () => {
+    expect(combatTuning(1.2).walkSpeed).toBeCloseTo(7.4 * 1.2);
+    expect(combatTuning(1.2).sprintSpeed).toBeCloseTo(12 * 1.2);
+    expect(combatTuning(1).dashCooldown).toBeCloseTo(DODGE.duration + DODGE.cooldown);
   });
 });

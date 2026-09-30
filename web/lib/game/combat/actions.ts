@@ -13,6 +13,7 @@ import { cancelCast, floater, hitAmount, mitigate, strike, summon, fireSlot } fr
 import type { SpawnPoint } from "./spawns";
 import { FAMILY_STAT } from "@/lib/combat/kits";
 import { WEAPONS as SYSTEM_WEAPONS } from "@/lib/combat/weapons";
+import { MOVE_TUNING, type MoveTuning } from "@/lib/game/movement/sim";
 
 export { floater, missionEvent, resolveCast } from "./abilities";
 
@@ -84,6 +85,25 @@ export function startDodge(rt: CombatRuntime, dir: Vec): boolean {
   return true;
 }
 
+/**
+ * The ruins on the movement kit (specs/movement.md): Q's dash is the dodge (its speed and time, easing to 0.4 of the
+ * burst as the roll did, its cooldown), and walking and sprint scale with the combat speed stat.
+ */
+export function combatTuning(speed: number): MoveTuning {
+  const t = MOVE_TUNING;
+  return { ...t, walkSpeed: t.walkSpeed * speed, sneakSpeed: t.sneakSpeed * speed, sprintSpeed: t.sprintSpeed * speed,
+    dashSpeed: DODGE.speed, dashTime: DODGE.duration, dashExit: 0.4, dashEase: 1, dashCooldown: DODGE.duration + DODGE.cooldown };
+}
+/** The kit's dash in the ruins: the sim moves you and its cooldown (the same DODGE timings) gates it; this gives it the dodge's i-frames and cancels a cast. */
+export function dashDodge(rt: CombatRuntime, dir: Vec): boolean {
+  rt.player.dodgeCd = 0;
+  return startDodge(rt, dir);
+}
+/** What moves you in the ruins besides the kit: an ability's dash and knockback (the dodge's own movement is the kit's dash). */
+export function combatPush(p: CombatRuntime["player"]): Vec | undefined {
+  return p.alive && p.dodgeAge === null && (p.impulse.x || p.impulse.z) ? p.impulse : undefined;
+}
+
 /** Damage the player unless safe or in i-frames (dodge, or a dash that grants them); guard, a frontal block and the shield soak first. Returns health lost. */
 export function hurtPlayer(rt: CombatRuntime, amount: number, from: Vec, player: Vec): number {
   const p = rt.player;
@@ -102,7 +122,7 @@ export function hurtPlayer(rt: CombatRuntime, amount: number, from: Vec, player:
   return damage;
 }
 
-/** Keys: slots 1–4 run the equipped kit abilities; Q swaps weapons. */
+/** Keys: slots 1–4 run the equipped kit abilities; R swaps weapons. */
 export function triggerAbility(rt: CombatRuntime, id: AbilityId, player: Vec = { x: 0, z: 0 }, random = Math.random): boolean {
   const p = rt.player;
   if (id === "swap") {
