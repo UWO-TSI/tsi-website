@@ -18,12 +18,12 @@ import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { useTexture } from "@react-three/drei";
 import { worldTime } from "@/lib/game/worldClock";
+import type { IslandPhase } from "@/lib/game/islandTime";
 import {
   CLOUD_SPEED, LEAF_SLOTS, MIST_BANKS, MIST_TILE, WIND_DIR, leafAt, mistBank, viewFocus, windowFade,
   type LeafPose, type LeafTree, type WorldWind,
 } from "@/lib/game/worldFx";
 
-type Phase = "day" | "night" | "dawn" | "dusk";
 
 // ─── Cloud shadows (item 20) ────────────────────────────────────────────
 // A big transparent plane with a few soft dark blobs, its UVs offset by the
@@ -66,7 +66,7 @@ const frac = (v: number) => v - Math.floor(v);
 /** The drawn cloud layer for others (the water dims the sun under it): its texture and world (x, z) → uv, while a CloudShadows is mounted. */
 export const cloudLayer = { map: null as THREE.Texture | null, uv: new THREE.Vector4() };
 
-export function CloudShadows({ phase, size = [240, 240], bounded = false }: { phase: Phase; size?: [number, number]; bounded?: boolean }) {
+export function CloudShadows({ phase, size = [240, 240], bounded = false }: { phase: IslandPhase; size?: [number, number]; bounded?: boolean }) {
   const matRef = useRef<THREE.MeshBasicMaterial>(null);
   useEffect(() => () => { cloudLayer.map = null; }, []);
   useFrame((_, delta) => {

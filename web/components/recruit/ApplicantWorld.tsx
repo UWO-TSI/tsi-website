@@ -128,9 +128,9 @@ function Village({ guideToHQ, returned, paused, onAction, onNear, phase, fishing
   const sweep = useRef({ active: false, smoothTime: 2.6, position: new THREE.Vector3(), target: new THREE.Vector3(), look: new THREE.Vector3() });
   const { camera, gl, scene } = useThree();
   useEffect(() => {
-    applyEnvironment(gl, scene, phase === "evening" ? "dusk" : phase, lighting.environment);
+    applyEnvironment(gl, scene, lighting.environment);
     return () => disposeEnvironment(scene);
-  }, [gl, scene, phase, lighting]);
+  }, [gl, scene, lighting]);
   const move = useCallback((position: THREE.Vector3) => { player.current.copy(position); }, []);
   useEffect(() => {
     camera.position.set(spawn[0], 7.4, spawn[2] - 10.8);
@@ -194,7 +194,7 @@ function Village({ guideToHQ, returned, paused, onAction, onNear, phase, fishing
     <GridWorld map={island.map} water={lighting.water} palette={ISLAND_TERRAIN} />
     <GridOcean map={island.map} lite={graphics.liteMode} />
     <ContactShadows tint={lighting.shadow.tint} intensity={lighting.shadow.intensity} sunMap={graphics.shadows && !graphics.liteMode} />
-    {!graphics.liteMode && <CloudShadows phase={phase === "evening" ? "dusk" : phase} size={[28, 25]} bounded />}
+    {!graphics.liteMode && <CloudShadows phase={phase} size={[28, 25]} bounded />}
     <Seagulls anchors={GULL_ANCHORS} />
     <FishingBobber towardWater playerPosRef={player} waterHeight={fishingWaterHeight} />
     <FishCatchFX playerPosRef={player} />

@@ -89,9 +89,6 @@ const LOOK_DAY = new Date("2026-09-27T16:00:00Z");
 export const ISLAND_LIGHTING = Object.fromEntries(ISLAND_PHASES.map(phase =>
   [phase, islandLight(CURRENT, phase, solarPosition(phaseInstant(phase, LOOK_DAY)))])) as Record<IslandPhase, IslandLight>;
 
-/** envLight.ts keys its built-in palettes dawn/day/dusk/night. */
-export const ENV_KEY: Record<IslandPhase, "dawn" | "day" | "dusk" | "night"> = { dawn: "dawn", day: "day", evening: "dusk", night: "night" };
-
 /**
  * Weather layered on a time-of-day profile (§5.5): less sun and more fill (a
  * lower key:fill), softer and lighter shadows, thicker haze. Sky colours keep

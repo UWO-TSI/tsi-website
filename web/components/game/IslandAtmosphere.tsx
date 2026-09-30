@@ -14,7 +14,7 @@ import { CloudShadows, MistBanks, TreeLeaves } from "./AmbienceFX";
 import { Fireflies } from "./AmbientLife";
 import RainFX from "./RainFX";
 import { applyEnvironment, disposeEnvironment } from "@/lib/game/envLight";
-import { ENV_KEY, fireflyNight, type IslandLight } from "@/lib/game/islandLighting";
+import { fireflyNight, type IslandLight } from "@/lib/game/islandLighting";
 import { RIM_POSITION, shadowHalfHeight } from "@/lib/game/lookPreset";
 import { SEASON_TREES, type SeasonLook } from "@/lib/game/seasonalLook";
 import type { IslandWeather } from "@/lib/game/islandWeather";
@@ -70,9 +70,9 @@ export function IslandAtmosphere({ phase, light, look, weather, liteMode, castSh
   useEffect(() => { TERRAIN_SNOW.value = look.snow; WORLD_SNOW.value = look.snow; setLeafTint(look.leaf); }, [look.snow, look.leaf]);
   useEffect(() => () => { TERRAIN_SNOW.value = 0; WORLD_SNOW.value = 0; }, []);
   useEffect(() => {
-    applyEnvironment(gl, scene, ENV_KEY[phase], light.environment);
+    applyEnvironment(gl, scene, light.environment);
     return () => disposeEnvironment(scene);
-  }, [gl, scene, phase, light]);
+  }, [gl, scene, light]);
   const { shadow } = light, shadowHalf = shadowHalfHeight(light.sunPosition, shadowExtent);
   // One world wind from the shared weather: rain slant, leaves and mist agree.
   const wind = useMemo(() => worldWind(weather), [weather]);
@@ -92,7 +92,7 @@ export function IslandAtmosphere({ phase, light, look, weather, liteMode, castSh
       onUpdate={key => key.shadow.camera.updateProjectionMatrix()}
       shadow-radius={shadow.radius} shadow-intensity={shadow.intensity} shadow-normalBias={0.02} shadow-bias={-0.0002} />
     {light.rim && <directionalLight position={RIM_POSITION} color={light.rim.color} intensity={light.rim.intensity} />}
-    {!liteMode && <CloudShadows phase={ENV_KEY[phase]} size={cloudSize} bounded />}
+    {!liteMode && <CloudShadows phase={phase} size={cloudSize} bounded />}
     {(weather === "rain" || weather === "snow") && <RainFX kind={weather} wind={wind} groundHeight={ground} />}
     <ContactShadows tint={shadow.tint} intensity={shadow.intensity} sunMap={castShadows} />
     {weather === "rain" && puddleBlobs.length > 0 && <SoftDiscs spots={puddleBlobs} opacity={0.5} color="#8ea7b8" />}
