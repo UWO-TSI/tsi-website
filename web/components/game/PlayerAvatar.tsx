@@ -12,11 +12,10 @@ import { Surface, WATER_DROP } from "@/lib/game/grid";
 import { calculateCurvedHtmlPosition } from "@/lib/game/worldProjection";
 import { pickCurvedGround } from "@/lib/game/groundPick";
 import MoveTargetIndicator from "./MoveTargetIndicator";
-import type { EmoteType } from "@/lib/content/types";
 import Character, { CHARACTER_HEIGHT, CHARACTER_SCALE, type CharacterMotion, type ClipName } from "./character/Character";
 import type { CharacterLook } from "@/lib/game/character/look";
 import { useMyLook } from "@/lib/game/character/lookStore";
-import { EMOTE_CLIPS, combatClip, seatLift, type CombatView } from "@/lib/game/character/clips";
+import { combatClip, seatLift, type CombatView } from "@/lib/game/character/clips";
 import { useWorldClips } from "./character/useWorldClips";
 import { combat, useCombatVersion } from "@/lib/game/combat/runtime";
 import { combatPush, combatTuning, dashDodge } from "@/lib/game/combat/actions";
@@ -37,8 +36,7 @@ import { DashRing, DustPool, EVENT_CLIP, MOVE_JUICE, Streaks, TAKEOFF, applyFov,
  *
  * World interactions become clip requests: sit/study/sleep seats (tsi:sit),
  * fishing (tsi:fish-cast / tsi:fish-end), forage and net (tsi:peaceful-act,
- * tsi:flower-pick, tsi:critter-catch), emotes (activeEmote or tsi:emote
- * {clip}), and the encounter state when `combat` is set: there Q's dash is the
+ * tsi:flower-pick, tsi:critter-catch), emotes (tsi:emote {clip}), and the encounter state when `combat` is set: there Q's dash is the
  * dodge (its i-frames), knockback and ability dashes push through the sim, and
  * a cast roots you until a dodge breaks it.
  */
@@ -60,7 +58,6 @@ interface PlayerAvatarProps {
   member?: boolean;
   /** Encounter: the ruins' kit (Q dodges); clips and facing follow the combat runtime; the weapon is in hand. */
   combat?: boolean;
-  activeEmote?: EmoteType | null;
   frozen?: boolean;
   desktopClickToMove?: boolean;
   /** /lab/move: live tuning and juice, slow motion, the HUD's readout and the Walk clip's pace. */
@@ -78,7 +75,7 @@ function turnTo(s: MoveState | undefined, x: number, z: number) { if (s) s.facin
 const SEAT_CLIPS = new Set<ClipName>(["Sit", "Study", "Stretch", "Sleep"]);
 type Seat = { x: number; z: number; clip: ClipName; lift: number; yaw: number };
 
-export default function PlayerAvatar({ spawnPosition, onMove, world, groundHeight, groundSurface, camTarget, playerName = "Player", showNameplate = true, playerLevel, member = false, combat: inCombat = false, activeEmote = null, frozen = false, desktopClickToMove = false, tuning, juice, timeScale, telemetry, walkSpeed = MOVE_TUNING.walkSpeed }: PlayerAvatarProps) {
+export default function PlayerAvatar({ spawnPosition, onMove, world, groundHeight, groundSurface, camTarget, playerName = "Player", showNameplate = true, playerLevel, member = false, combat: inCombat = false, frozen = false, desktopClickToMove = false, tuning, juice, timeScale, telemetry, walkSpeed = MOVE_TUNING.walkSpeed }: PlayerAvatarProps) {
   const anchor = useRef<THREE.Group>(null), body = useRef<THREE.Group>(null), head = useRef<THREE.Group>(null);
   const motion = useRef<CharacterMotion>({ speed: 0, yaw: 0, lift: 0, pose: null, play: null, move: null });
   const { look } = useMyLook();
@@ -186,10 +183,6 @@ export default function PlayerAvatar({ spawnPosition, onMove, world, groundHeigh
   // World interactions → clips (fish, forage, net, emotes).
   const faceToward = useCallback((x: number, z: number) => turnTo(sim.current?.state, x, z), []);
   useWorldClips(motion, faceToward);
-  useEffect(() => {
-    const clip = activeEmote ? EMOTE_CLIPS[activeEmote.animation_key] : null;
-    if (clip) motion.current.play = clip;
-  }, [activeEmote]);
 
   useEffect(() => {
     // Dev (evidence scripts): read the sim, teleport, drive a route, step the sim a moment at a time.
