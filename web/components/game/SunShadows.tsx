@@ -30,17 +30,29 @@ import * as THREE from "three";
 
 type Caster = THREE.Mesh & { userData: { sunCaster?: "static" | "dynamic"; casterOnly?: boolean } };
 
-/** Light state that the cached map depends on. */
-function lightKey(light: THREE.DirectionalLight): string {
-  const { camera, mapSize } = light.shadow;
-  return [...light.matrixWorld.elements, ...light.target.matrixWorld.elements, camera.left, camera.right, camera.top, camera.bottom, camera.near, camera.far, mapSize.x, mapSize.y].join();
+/** Light state that the cached map depends on: the light's and its target's matrices, the shadow camera's box and the map size. */
+class LightKey {
+  private readonly light = new THREE.Matrix4();
+  private readonly target = new THREE.Matrix4();
+  private box: number[] = [];
+  matches(l: THREE.DirectionalLight): boolean {
+    const c = l.shadow.camera, m = l.shadow.mapSize, b = this.box;
+    return this.light.equals(l.matrixWorld) && this.target.equals(l.target.matrixWorld)
+      && b[0] === c.left && b[1] === c.right && b[2] === c.top && b[3] === c.bottom && b[4] === c.near && b[5] === c.far && b[6] === m.x && b[7] === m.y;
+  }
+  save(l: THREE.DirectionalLight) {
+    const c = l.shadow.camera, m = l.shadow.mapSize;
+    this.light.copy(l.matrixWorld);
+    this.target.copy(l.target.matrixWorld);
+    this.box = [c.left, c.right, c.top, c.bottom, c.near, c.far, m.x, m.y];
+  }
 }
 
 class SunShadowCache {
   readonly base: THREE.Mesh;
   readonly moving = new THREE.DirectionalLight(0xffffff, 0);
   private light: THREE.DirectionalLight | null = null;
-  private key = "";
+  private readonly key = new LightKey();
   private pending = true;
   private active = false;
   private readonly statics = new Map<Caster, THREE.Matrix4>();
@@ -73,7 +85,7 @@ class SunShadowCache {
     this.cast(true);
     this.statics.clear();
     for (const mesh of this.seen) this.statics.set(mesh, mesh.matrixWorld.clone());
-    this.key = lightKey(light);
+    this.key.save(light);
     this.pending = false;
   }
 
@@ -145,7 +157,7 @@ class SunShadowCache {
     this.follow(light);
     this.cast(false);
     light.shadow.autoUpdate = false;
-    if (dirty || this.seen.length !== this.statics.size || lightKey(light) !== this.key) this.pending = true;
+    if (dirty || this.seen.length !== this.statics.size || !this.key.matches(light)) this.pending = true;
     if (this.pending) light.shadow.needsUpdate = true;
   }
 
