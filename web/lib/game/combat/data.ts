@@ -86,4 +86,4 @@ const BLURB: Record<string, string> = {
 export const MISSIONS: MissionDef[] = islandMissions().map(m => ({ ...m, blurb: BLURB[m.id] ?? m.blurb }));
 
 /** Player baseline until progression loads (derived HP comes from /api/combat/progression). */
-export const PLAYER_BASE = { maxHp: 100, speed: 7.4, maxEnergy: 100 };
+export const PLAYER_BASE = { maxHp: 100, speed: 7.4 };

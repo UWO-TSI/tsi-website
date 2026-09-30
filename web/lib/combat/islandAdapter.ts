@@ -14,16 +14,13 @@ import type { CombatProgression, EnemyType, IncantationScore, MissionDef, Weapon
 import { ENEMIES, MISSIONS } from "./content";
 import { scoreTrace, type Rune } from "./incantation";
 import { SUBCLASS_LEVEL } from "./progression";
-import { TIER_BASE, WEAPONS, type WeaponType } from "./weapons";
+import { WEAPONS, type WeaponType } from "./weapons";
 
 const KIND: Record<WeaponType, WeaponKind> = { sword: "melee", shield: "melee", fists: "melee", bow: "bow", revolver: "bow", staff: "staff", tome: "summon", totem: "summon" };
 
 /** Gameplay fields; the island adds cooldown, range, arc, speed, model… */
-export function islandWeapons(owned: { weapon_key: string; durability: number }[] = []): Pick<Weapon, "id" | "name" | "kind" | "tier" | "damage" | "durability" | "maxDurability">[] {
-  return WEAPONS.map((w) => ({
-    id: w.key, name: w.name, kind: KIND[w.type], tier: w.tier, damage: TIER_BASE[w.tier],
-    durability: owned.find((o) => o.weapon_key === w.key)?.durability ?? w.max_durability, maxDurability: w.max_durability,
-  }));
+export function islandWeapons(): Pick<Weapon, "id" | "name" | "kind" | "maxDurability">[] {
+  return WEAPONS.map((w) => ({ id: w.key, name: w.name, kind: KIND[w.type], maxDurability: w.max_durability }));
 }
 
 export function islandEnemies(): (Pick<EnemyType, "id" | "name" | "kind" | "level" | "hp" | "aggroRadius" | "leashRadius" | "defense" | "armor" | "xp" | "elite"> & { damage: number; range: number })[] {

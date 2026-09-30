@@ -16,7 +16,7 @@ const toPath = (s: (Pt | TracePt)[]) => s.map(([x, y], i) => `${i ? "L" : "M"}${
 
 export default function IncantationOverlay({ runeId, title, effect, onDone, onCancel }: { runeId: string; onDone: (score: IncantationScore) => void; onCancel: () => void;
   /** The kit ability being drawn (kits.ts), shown over the rune's own name. */
-  title?: string; effect?: string }) {
+  title?: string; effect: string }) {
   const rune = runeById(runeId);
   const [strokes, setStrokes] = useState<TracePt[][]>([]);
   const [current, setCurrent] = useState<TracePt[] | null>(null);
@@ -59,7 +59,7 @@ export default function IncantationOverlay({ runeId, title, effect, onDone, onCa
   const nextStroke = Math.min(strokes.length, rune.strokes.length - 1);
   const shown = result ?? live;
   return <section className={styles.incantation} role="dialog" aria-label={`Incantation: ${rune.name}`} data-testid="incantation" data-outcome={result?.outcome}>
-    <header><b>{title ? `${title} · ` : ""}{rune.name} · {rune.difficulty === "easy" ? "easy rune" : "hard rune"}</b><small>{effect ?? rune.effect}</small></header>
+    <header><b>{title ? `${title} · ` : ""}{rune.name} · {rune.difficulty === "easy" ? "easy rune" : "hard rune"}</b><small>{effect}</small></header>
     <svg ref={box} viewBox={`0 0 ${SIZE} ${SIZE}`} width={SIZE} height={SIZE} style={{ touchAction: "none" }}
       onPointerDown={e => { if (result) return; e.currentTarget.setPointerCapture(e.pointerId); setCurrent([at(e)]); }}
       onPointerMove={e => { if (current) setCurrent(c => (c ? [...c, at(e)] : c)); }}

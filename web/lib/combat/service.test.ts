@@ -146,7 +146,7 @@ describe("island adapter", () => {
     expect(RUNES).toHaveLength(2);
   });
   it("maps gear, missions and the ruins gate", () => {
-    expect(islandWeapons().find((w) => w.id === "revolver-brass")).toMatchObject({ kind: "bow", tier: 2, damage: 14 });
+    expect(islandWeapons().find((w) => w.id === "revolver-brass")).toMatchObject({ kind: "bow" });
     expect(islandMissions().find((m) => m.id === "escort-botanist")).toMatchObject({ template: "escort", params: { escortee: "botanist", count: 3 } });
     expect(islandProgression({ level: 12, family: "Arcane", subclass: null })).toMatchObject({ gateOpen: false, reason: "Choose your subclass." });
     expect(islandProgression({ level: 12, family: "Arcane", subclass: { key: "necromancer" } })).toMatchObject({ gateOpen: true });
