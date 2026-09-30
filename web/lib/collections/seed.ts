@@ -1,4 +1,4 @@
-/** SQL seed for collection_species, generated from ROSTER (kept verbatim in 20260926150400_collections.sql). */
+/** SQL seed for collection_species, generated from ROSTER (first block in 20260926150400_collections.sql; changes: lib/seedMigrations.ts). */
 import type { Species } from "./roster";
 
 /** SQL literals for the generated seeds (collections, progression, crafting, economy, combat). */

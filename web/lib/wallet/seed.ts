@@ -1,4 +1,4 @@
-/** SQL seeds for the economy catalogue (kept verbatim in 20260926150600_economy.sql and 20260926180000_ownership.sql). */
+/** SQL seeds for the economy catalogue (first blocks in 20260926150600_economy.sql and 20260926180000_ownership.sql; changes: lib/seedMigrations.ts). */
 import { CATALOGUE, EVENT_ITEMS, onSale, OWNERSHIP_ITEMS, RETIRED, SELL_PRICES, SETTINGS, STARTER_REFS, type CatalogueEntry } from "./catalogue";
 import { n, q } from "@/lib/collections/seed";
 

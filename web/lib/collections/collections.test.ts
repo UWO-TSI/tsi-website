@@ -1,11 +1,10 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { FISH } from "@/lib/game/fishing";
 import { availableAt, clueFor, journalPage, laterToday, museumWings, validateShowcase, weekStart, weeklyTrophies, type WeeklyBest } from "./logic";
 import { memoryCollectionsStore } from "./memoryStore";
-import { EVENT_SPECIES, LAUNCH_ROSTER, ROSTER, type Species } from "./roster";
-import { seedSql } from "./seed";
+import { LAUNCH_ROSTER, ROSTER, type Species } from "./roster";
 import { donate, journal, trophies } from "./service";
 
 const A = "00000000-0000-4000-8000-0000000000aa";
@@ -42,10 +41,6 @@ describe("roster", () => {
   it("points every asset-ready icon at a file that exists", () => {
     for (const s of ROSTER) if (s.icon) expect(existsSync(join(WEB, "public", s.icon)), s.icon).toBe(true);
     for (const s of ROSTER) if (s.model) expect(existsSync(join(WEB, "public", s.model)), s.model).toBe(true);
-  });
-  it("is mirrored verbatim in 20260926150400_collections.sql and, for the limited-time catches, 20260929120000_seasonal_events.sql", () => {
-    expect(readFileSync(join(WEB, "supabase/migrations/20260926150400_collections.sql"), "utf8")).toContain(seedSql(LAUNCH_ROSTER));
-    expect(readFileSync(join(WEB, "supabase/migrations/20260929120000_seasonal_events.sql"), "utf8")).toContain(seedSql(EVENT_SPECIES));
   });
 });
 

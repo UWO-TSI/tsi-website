@@ -1,4 +1,4 @@
-/** SQL seed for the seasonal goals (kept verbatim in 20260929120000_seasonal_events.sql by scripts/gen-seeds.mjs). */
+/** SQL seed for the seasonal goals (first block in 20260929120000_seasonal_events.sql; changes: lib/seedMigrations.ts). */
 import { SEASONAL_GOALS } from "./defaults";
 import { arr, q } from "@/lib/collections/seed";
 

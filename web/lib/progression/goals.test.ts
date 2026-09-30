@@ -3,7 +3,6 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { DEFAULT_CHAPTERS, DEFAULT_GOALS, SEASONAL_GOALS } from "./defaults";
 import { goalCycle, monumentStage, normalizeGoal, planContribution, validateGoalDraft } from "./goals";
-import { seasonalGoalsSql } from "./seed";
 
 const cafe = DEFAULT_GOALS[0];
 const none = { credited_points: 0, delivery_points: 0 };
@@ -99,8 +98,7 @@ describe("seed content", () => {
     const texts = [...story.flatMap((g) => [g.slug, g.title, g.summary, g.completion_letter_subject, g.completion_letter_body]), ...DEFAULT_CHAPTERS.flatMap((c) => [c.slug, c.title, c.summary])];
     for (const t of texts) if (t) expect(sql).toContain(t.replace(/'/g, "''"));
   });
-  it("seeds the four seasonal goals verbatim in 20260929120000_seasonal_events.sql, each a valid draft", () => {
-    expect(readFileSync(join(__dirname, "../../supabase/migrations/20260929120000_seasonal_events.sql"), "utf8")).toContain(seasonalGoalsSql());
+  it("seeds the four seasonal goals (lib/seedMigrations.ts), each a valid draft", () => {
     expect(SEASONAL_GOALS.map((g) => g.event.decor)).toEqual(["fall-tourney", "winter-lights", "genesis", "spring-picnic"]);
     for (const g of SEASONAL_GOALS) expect(validateGoalDraft({ ...g }), g.slug).toEqual([]);
   });

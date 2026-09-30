@@ -1,4 +1,4 @@
-/** SQL seed for crafting (kept verbatim in 20260926160000_crafting.sql; regenerate with scripts/gen-crafting-seed.mjs). */
+/** SQL seed for crafting (first block in 20260926160000_crafting.sql; changes: lib/seedMigrations.ts, whose scripts/gen-seeds.mjs replaced the marker's script). */
 import { n, q, seedSql } from "@/lib/collections/seed";
 import type { CatalogueEntry } from "@/lib/wallet/catalogue";
 import { CRAFTED_ITEMS, MATERIALS, RECIPE_CARDS, RECIPE_DROP_CHANCE, RECIPE_DROPS, RECIPES } from "./recipes";

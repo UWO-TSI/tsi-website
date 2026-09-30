@@ -1,5 +1,3 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { ROSTER } from "@/lib/collections/roster";
 import { WEAPONS } from "@/lib/combat/weapons";
@@ -8,7 +6,6 @@ import { CATALOGUE } from "@/lib/wallet/catalogue";
 import { buy, getInventory } from "@/lib/wallet/service";
 import { memoryCraftingStore } from "./memoryStore";
 import { CRAFTED_ITEMS, MATERIALS, RECIPE_CARDS, RECIPE_DROPS, RECIPES, validateRecipeDraft } from "./recipes";
-import { craftingSeedSql, recipeDropsSql } from "./seed";
 import { craft, learnFromQuest, openBottle, recipeBook } from "./service";
 
 const A = "00000000-0000-4000-8000-0000000000aa";
@@ -38,15 +35,9 @@ describe("recipe data", () => {
     expect(CATALOGUE.some(c => c.catalogue_ref === "rod_lighthouse" || c.catalogue_ref === "rod_tidewarden")).toBe(false);
     expect(new Set(MATERIALS.map(s => s.key)).size + ROSTER.length).toBe(new Set([...ROSTER, ...MATERIALS].map(s => s.key)).size);
   });
-  it("is mirrored verbatim in 20260926160000_crafting.sql", () => {
-    const sql = readFileSync(join(__dirname, "..", "..", "supabase/migrations/20260926160000_crafting.sql"), "utf8");
-    expect(sql).toContain(craftingSeedSql());
-  });
-  it("drops only bottle recipes from rare catches, as seeded in 20260930100000_recipe_drops.sql", () => {
+  it("drops only bottle recipes from rare catches (the SQL seed: lib/seedMigrations.ts)", () => {
     for (const id of Object.keys(RECIPE_DROPS)) expect(RECIPES.find(r => r.id === id)?.sources, id).toEqual(["bottle"]);
     expect(Object.keys(RECIPE_DROPS).length).toBe(RECIPES.filter(r => r.sources.join() === "bottle").length);
-    const sql = readFileSync(join(__dirname, "..", "..", "supabase/migrations/20260930100000_recipe_drops.sql"), "utf8");
-    expect(sql).toContain(recipeDropsSql());
     const row = { id: "furn-x", output_item: "furn-campfire", output_weapon: null, output_qty: 1, ingredients: { wood_branch: 1 }, sources: ["bottle"] };
     expect(validateRecipeDraft({ ...row, drop_rarity: "epic" })).toEqual([]);
     expect(validateRecipeDraft({ ...row, drop_rarity: null })).toEqual([]);

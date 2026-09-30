@@ -1,5 +1,3 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DEFAULT_LOOK, FREE_HAIR_COLOURS, PALETTE, PARTS, STARTER_PARTS, randomLook, seeded, wear } from "@/lib/game/character/look";
 import { CATALOGUE as PIECES, EVENT_PIECE_IDS } from "@/lib/homes/catalogue";
@@ -9,7 +7,6 @@ import { memoryHomesStore } from "@/lib/homes-sync/memoryStore";
 import { CATALOGUE, EVENT_ITEMS, OWNERSHIP_ITEMS, STARTER_REFS } from "./catalogue";
 import { memoryEconomyStore } from "./memoryStore";
 import { seedItems } from "./rules";
-import { eventItemsSeedSql, ownershipSeedSql } from "./seed";
 import { buy, getInventory, ownedRefs } from "./service";
 
 const A = "00000000-0000-4000-8000-0000000000aa";
@@ -78,9 +75,7 @@ describe("ownership catalogue", () => {
     for (const ref of STARTER_REFS.keys()) expect(byRef(ref), ref).toHaveLength(1);
     expect([...STARTER_REFS.values()].filter((_, i) => i >= STARTER_PARTS.length).reduce((a, b) => a + b, 0)).toBe(14); // 4 home pieces + the 10-piece pack
   });
-  it("is mirrored in 20260926180000_ownership.sql and never reads as money", () => {
-    expect(readFileSync(join(__dirname, "../../supabase/migrations/20260926180000_ownership.sql"), "utf8")).toContain(ownershipSeedSql());
-    expect(readFileSync(join(__dirname, "../../supabase/migrations/20260929120000_seasonal_events.sql"), "utf8")).toContain(eventItemsSeedSql());
+  it("never reads as money (the SQL seeds: lib/seedMigrations.ts)", () => {
     expect(JSON.stringify([...CATALOGUE, ...OWNERSHIP_ITEMS, ...EVENT_ITEMS])).not.toMatch(/\$|CAD|dollar|USD|≈/i);
   });
   it("the creator's random look uses only starters and free colours", () => {

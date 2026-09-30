@@ -6,7 +6,6 @@ import { BOSS_DROPS, rollBossReward } from "./content";
 import { RUNES, resample } from "./incantation";
 import { memoryCombatStore } from "./memoryStore";
 import { EVENT_XP, STAT_RESET_FEE, SUBCLASS_RESPEC_FEE, levelForXp, xpForLevel } from "./progression";
-import { combatSeedSql } from "./seed";
 import { STARTER_WEAPONS, WEAPONS } from "./weapons";
 import { allocateStats, chooseSubclass, claimBossReward, completeMission, getProgression, listMissions, missionProgress, recordKill, repairWeapon, reportWear, resetStats, setLoadout, startMission } from "./service";
 import { TRAITS } from "./kits";
@@ -196,9 +195,6 @@ describe("guardian statue reward (row 21)", () => {
 
 describe("20260926190000_combat_content.sql stays in step with the TS rules", () => {
   const sql = readFileSync(join(__dirname, "../../supabase/migrations/20260926190000_combat_content.sql"), "utf8");
-  it("carries the generated seed verbatim", () => {
-    expect(sql).toContain(combatSeedSql());
-  });
   it("pays the boss reward at the same cooldown and grants the same starters", () => {
     expect(sql).toContain(`make_interval(hours => ${BOSS_DROPS.cooldown_hours})`);
     expect(sql).toContain(STARTER_WEAPONS.map((k) => `'${k}'`).join(", "));

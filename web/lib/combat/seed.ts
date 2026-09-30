@@ -1,7 +1,7 @@
 /**
- * SQL seed for weapons, enemy types and missions, kept verbatim in
- * 20260926190000_combat_content.sql. Upserts, so the content pass overwrites
- * the first seed in 20260926150800_combat.sql (web/scripts/gen-seeds.mjs).
+ * SQL seed for weapons, enemy types and missions (first block in
+ * 20260926190000_combat_content.sql; changes: lib/seedMigrations.ts). Upserts,
+ * so the content pass overwrites the first seed in 20260926150800_combat.sql.
  */
 import { ENEMIES, MISSIONS } from "./content";
 import { WEAPONS } from "./weapons";
