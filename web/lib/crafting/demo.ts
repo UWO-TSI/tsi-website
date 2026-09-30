@@ -39,7 +39,7 @@ export function installCraftingDemo(): void {
         case "/api/economy/buy": return reply(await buy(m.eco.store, ME, body, new Date()), "purchase");
         case "/api/collections": {
           if (method !== "POST") return null;
-          const r = await catchAction(rolls.store, ME, body, new Date(), "clear");
+          const r = await catchAction(rolls.store, ME, body, new Date(), async () => "clear");
           if (r.ok && !("roll" in r.data)) m.eco.give(ME, r.data.item_key, 1);
           return reply(r, "catch");
         }

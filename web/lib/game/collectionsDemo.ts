@@ -48,7 +48,7 @@ export function installCollectionsDemo(): void {
       const now = new Date();
       switch (path) {
         case "/api/collections":
-          if (method === "POST") return reply(await catchAction(m.store, ME, body, now, "clear", DEFAULT_GOALS), "catch");
+          if (method === "POST") return reply(await catchAction(m.store, ME, body, now, async () => "clear", async () => DEFAULT_GOALS), "catch");
           return new Response(JSON.stringify({ collections: (await m.store.memberItems(ME)).map(i => ({ item_key: i.item_key, count: i.count })) }));
         case "/api/collections/journal": {
           const { hour, month } = torontoParts(now);

@@ -4,7 +4,7 @@ import {
   type Exhibit, type JournalPage, type MuseumWing, type Trophy, type WorldMoment,
 } from "./logic";
 import { castWater, fishRoll, forageSize, nodeAt, nodeRoll } from "./rolls";
-import { CATEGORIES, type Category } from "./roster";
+import { CATEGORIES, ROSTER, type Category } from "./roster";
 import { toFailure, type Result } from "@/lib/result";
 import { hourKey } from "@/lib/game/peaceful";
 import { bestOwnedRod } from "@/lib/game/rods";
@@ -48,28 +48,34 @@ export type CatchReply = { item_key: string; size_cm: number | null } & (CatchRe
  * Seasonal events (`goals`, the active club goals): limited-time fish are in
  * the roll only while their event runs and never land outside it; a fish
  * landed while the fishing tourney runs enters it, in the same transaction.
+ * `weather` and `goals` are read only by the actions that use them (a land
+ * needs no weather, a harvest no goals). Sizes clamp to the code roster the
+ * roll uses (the collection_species rows are generated from it).
  * A landed or harvested rare catch may teach a recipe (`recipe` in the reply,
  * 20260930100000 crafting_catch_drop), also in that transaction.
  */
-export async function catchAction(store: CollectionsStore, memberId: string, body: unknown, now: Date, weather: IslandWeather, goals: readonly ClubGoal[] = [], random = Math.random): Promise<Result<CatchReply>> {
+export async function catchAction(
+  store: CollectionsStore, memberId: string, body: unknown, now: Date,
+  weather: () => Promise<IslandWeather>, goals: () => Promise<readonly ClubGoal[]> = async () => [], random = Math.random,
+): Promise<Result<CatchReply>> {
   const parsed = CatchRequest.safeParse(body);
   if (!parsed.success) return { ok: false, status: 400, code: "invalid", error: "Invalid request" };
   const req = parsed.data;
   try {
-    if (req.action === "land") return { ok: true, data: await store.land(memberId, req.roll, landSeason(goals, now)) };
-    const roster = await store.roster();
+    if (req.action === "land") return { ok: true, data: await store.land(memberId, req.roll, landSeason(await goals(), now)) };
     if (req.action === "harvest") {
       const node = nodeAt(req.node, req.at);
       if (!node) return { ok: false, status: 422, code: "wrong_place", error: "Nothing to gather from here." };
-      const sp = nodeRoll(memberId, node, now, weather);
+      const sp = nodeRoll(memberId, node, now, await weather());
       if (!sp) return { ok: false, status: 409, code: "nothing_here", error: "Nothing's out here right now." };
-      const size = clampSize(roster.find((s) => s.key === sp.key), forageSize(sp, random));
+      const size = clampSize(ROSTER.find((s) => s.key === sp.key), forageSize(sp, random));
       return { ok: true, data: { item_key: sp.key, size_cm: size, ...(await store.harvest(memberId, node.id, hourKey(now), sp.key, size, trophyFor(sp, size))) } };
     }
     const water = castWater(req.site, req.at);
     if (!water) return { ok: false, status: 422, code: "wrong_place", error: "No water in reach." };
-    const { fish, size } = fishRoll(water, req.power, bestOwnedRod(await store.ownedGear(memberId)), now, weather, random, eventCatches(goals, now));
-    const sp = roster.find((s) => s.key === fish.key);
+    const [sky, active, gear] = await Promise.all([weather(), goals(), store.ownedGear(memberId)]);
+    const { fish, size } = fishRoll(water, req.power, bestOwnedRod(gear), now, sky, random, eventCatches(active, now));
+    const sp = ROSTER.find((s) => s.key === fish.key);
     const kept = clampSize(sp, size);
     const roll = await store.cast(memberId, fish.key, kept, trophyFor(sp, kept));
     // Not caught yet: the reel and the card show what the land records (no size for a fish off the roster).
@@ -186,8 +192,8 @@ export async function tourney(store: CollectionsStore, goals: ClubGoal[], member
   try {
     const t = latestTourney(goals, now);
     if (!t) return { ok: true, data: null };
-    const [roster, entries] = await Promise.all([store.roster(), store.tourneyEntries(t.goal.id, t.cycle)]);
-    const name = (key: string) => roster.find((s) => s.key === key)?.name ?? key;
+    const entries = await store.tourneyEntries(t.goal.id, t.cycle);
+    const name = (key: string) => ROSTER.find((s) => s.key === key)?.name ?? key;
     return {
       ok: true,
       data: { slug: t.goal.slug, title: t.goal.title, cycle: t.cycle, open: t.open, start: t.start?.toISOString() ?? null, end: t.end?.toISOString() ?? null, boards: tourneyBoards(entries, memberId, name) },
