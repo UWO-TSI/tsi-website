@@ -3,20 +3,23 @@
  * the client asks for a roll at a place; the server checks the place, rolls
  * species and size, and records only what it rolled.
  */
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NextResponse } from "next/server";
 import { memoryCollectionsStore } from "@/lib/collections/memoryStore";
 import { villageNodes } from "@/lib/game/islandNodes";
 import { fishingSpot, villageWater } from "@/lib/game/fishingSpots";
 import { village } from "@/lib/game/villageMap";
 import { isGroundAtWorld } from "@/lib/game/grid";
+import { DEFAULT_GOALS, SEASONAL_GOALS } from "@/lib/progression/defaults";
 
-const mock = vi.hoisted(() => ({ ctx: null as unknown, weather: "clear" }));
+const mock = vi.hoisted(() => ({ ctx: null as unknown, weather: "clear", goals: [] as unknown[] }));
 vi.mock("@/lib/server/memberContext", async (original) => ({
   ...(await original<typeof import("@/lib/server/memberContext")>()),
   withStore: async () => mock.ctx,
 }));
 vi.mock("@/lib/server/weather", () => ({ islandWeatherNow: async () => mock.weather }));
+// The club goals carry the seasonal events (20260929120000); none unless a test sets them.
+vi.mock("@/lib/progression/supabaseStore", () => ({ supabaseProgressionStore: () => ({ listGoals: async () => mock.goals }) }));
 
 import { POST } from "./route";
 
@@ -44,6 +47,7 @@ beforeEach(() => {
   clock = new Date("2026-09-24T16:00:00Z"); // noon in Toronto
   m = memoryCollectionsStore(() => clock);
   mock.weather = "clear";
+  mock.goals = [];
   as(A);
 });
 
@@ -131,5 +135,55 @@ describe("POST /api/collections: the server rolls every catch", () => {
   it("passes through signed-out", async () => {
     mock.ctx = NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     expect((await POST(new Request("http://localhost/api", { method: "POST", body: "{}" }))).status).toBe(401);
+  });
+});
+
+describe("POST /api/collections: seasonal events on the server's catches", () => {
+  const fall = SEASONAL_GOALS[0];
+  const entries = () => m.store.tourneyEntries(fall.id, 2026);
+  beforeEach(() => {
+    mock.goals = DEFAULT_GOALS;
+    clock = new Date("2026-09-20T16:00:00Z"); // the fall tourney is on
+  });
+  afterEach(() => vi.restoreAllMocks());
+
+  it("never lands a limited-time fish outside its window, even one rolled inside it", async () => {
+    clock = new Date("2026-10-01T03:59:58Z"); // 23:59:58 on Sep 30 in Toronto
+    const roll = await m.store.cast(A, "fish_yellow_perch", 25, true);
+    later(5000); // the window closed at midnight
+    const land = await post({ action: "land", roll });
+    expect(land).toMatchObject({ status: 409, body: { code: "out_of_season" } });
+    expect(await m.store.memberItems(A)).toEqual([]);
+    expect(await entries()).toEqual([]);
+    // With no club goals at all the limited-time fish stay shut too.
+    mock.goals = [];
+    later(60_000);
+    const shut = await m.store.cast(A, "fish_sturgeon", 150, true);
+    later(5000);
+    expect((await post({ action: "land", roll: shut })).status).toBe(409);
+  });
+
+  it("enters exactly one tourney entry for a landed catch in the window, from the server's roll", async () => {
+    vi.spyOn(Math, "random").mockReturnValue(0.02); // first species in the pool, near its smallest size
+    const cast = await post({ action: "cast", site: "village", at: SHORE, power: 0.4, item_key: "fish_sturgeon", size_cm: 200 });
+    expect(cast.status).toBe(200);
+    const { roll, item_key } = cast.body.catch;
+    later(4000);
+    const land = await post({ action: "land", roll });
+    expect(land.status).toBe(200);
+    expect(land.body.catch.item_key).toBe(item_key);
+    const [entry, ...rest] = await entries();
+    expect(rest).toEqual([]);
+    expect(entry).toMatchObject({ member_id: A, item_key, size_cm: land.body.catch.size_cm });
+    expect(entry.item_key).not.toBe("fish_sturgeon");
+    expect((await post({ action: "land", roll })).status).toBe(409);
+    expect(await entries()).toHaveLength(1);
+  });
+
+  it("still refuses a client-reported species during the tourney", async () => {
+    expect((await post({ item_key: "fish_sturgeon", size_cm: 200 })).status).toBe(400);
+    expect((await post({ action: "land", roll: crypto.randomUUID(), item_key: "fish_sturgeon", size_cm: 200 })).status).toBe(404);
+    expect(await m.store.memberItems(A)).toEqual([]);
+    expect(await entries()).toEqual([]);
   });
 });
