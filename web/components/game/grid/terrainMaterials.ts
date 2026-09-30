@@ -185,8 +185,7 @@ export function terrainMaterial(name: string): THREE.Material | null {
   if (procKey) {
     const hit = cache.get(procKey);
     if (hit) return hit;
-    const isWater = procKey === "mRiver";
-    if (isWater) {
+    if (procKey === "mRiver") {
       // Unlit, from lib/game/waterShader.ts: a lit material greys out the flat saturated cyan of David's references.
       const mat = waterMaterial(waterUniformBlock);
       mat.name = "terrain:mRiver";
@@ -194,18 +193,16 @@ export function terrainMaterial(name: string): THREE.Material | null {
       return mat;
     }
     const mat = new THREE.MeshStandardMaterial({
-      map: isWater ? undefined : getGrassTexture(),
+      map: getGrassTexture(),
       // ACNH's grass has NO albedo texture — the colour comes from the ramp.
       // What gives its ground blade detail is `mGrass_Nrm`, a 256x256 tangent
       // normal map we were not using at all, which is why the lawn read as one
       // flat green. Strength is on the bench (`tuning.grass.normalStrength`).
-      normalMap: isWater ? undefined : grassNormal(),
-      normalScale: isWater ? undefined : new THREE.Vector2(0, 0),
-      color: isWater ? 0x568cb2 : GRASS_COLOR,
-      roughness: isWater ? 0.4 : 0.92,
+      normalMap: grassNormal(),
+      normalScale: new THREE.Vector2(0, 0),
+      color: GRASS_COLOR,
+      roughness: 0.92,
       metalness: 0,
-      transparent: isWater,
-      opacity: isWater ? 0.85 : 1,
     });
     mat.onBeforeCompile = (shader) => {
       shader.fragmentShader = shader.fragmentShader.replace("#include <normal_fragment_maps>",
@@ -345,14 +342,3 @@ const WHITE = new THREE.Color(1, 1, 1);
 
 /** The live water uniforms, for layers that ride the same surface and sun (the glint sprites). */
 export const waterSurfaceUniforms = () => waterUniformBlock;
-
-/** Swap a loaded kit piece onto the shared materials, in place. */
-export function applyTerrainMaterials(root: THREE.Object3D): void {
-  root.traverse((o) => {
-    const mesh = o as THREE.Mesh;
-    if (!mesh.isMesh) return;
-    const current = Array.isArray(mesh.material) ? mesh.material[0] : mesh.material;
-    const shared = terrainMaterial(current?.name ?? mesh.name ?? "");
-    if (shared) mesh.material = shared;
-  });
-}
