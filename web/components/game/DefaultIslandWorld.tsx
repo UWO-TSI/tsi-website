@@ -380,8 +380,7 @@ function VillageLandmarks({ layout, ground, opened, stage, ceremony, light }: { 
     {notice && <GLBProp url="/assets/acnh/props/bulletin-board.glb" position={at(notice)} />}
     {board && <GLBProp url="/assets/acnh/props/bulletin-board.glb" position={at(board)} />}
     {missions && <GLBProp url="/assets/acnh/props/bulletin-board.glb" position={[missions.at[0], ground(...missions.at), missions.at[1] + 0.3]} rotation={[0, missions.yaw, 0]} />}
-    {/* Existing wharf pier (authored at x 43.2-45.2, z 0.4-5), its stub end 3.9 in front of the wharf point. */}
-    {wharf && <group position={[wharf.x, 0, wharf.z]} rotation={[0, wharf.yaw ?? 0, 0]}><group position={[-44.2, -0.12, -3.9]}><WharfPier /></group></group>}
+    {wharf && <group position={[wharf.x, 0, wharf.z]} rotation={[0, wharf.yaw ?? 0, 0]}><WharfPier /></group>}
     {layout.landmarks.filter(l => SIGNS[l.id] && !opened.includes(l.id as WorldGoalId)).map(l => <Html key={l.id} position={[l.x, ground(l.x, l.z) + (l.half && l.half[0] > 1 ? 3.6 : 2.3), l.z - (l.half?.[1] ?? 0)]} center distanceFactor={10} zIndexRange={[3, 0]}>
       <div className={styles.cue} data-closed={!l.open}>{SIGNS[l.id]}</div>
     </Html>)}
