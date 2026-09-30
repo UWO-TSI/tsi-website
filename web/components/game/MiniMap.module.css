@@ -7,7 +7,5 @@
 .legend { height: 26px; display: flex; align-items: center; justify-content: space-between; padding: 0 11px; font-size: 10px; }
 .you { display: flex; align-items: center; gap: 5px; }
 .you::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: #ffdd57; border: 1px solid #7a5a00; }
-.ping { animation: ping 0.9s ease-out 2; transform-box: fill-box; transform-origin: center; }
 @keyframes mapIn { from { opacity: 0; transform: scale(0.94); } to { opacity: 1; transform: none; } }
-@keyframes ping { from { opacity: 1; transform: scale(0.5); } to { opacity: 0; transform: scale(2.6); } }
-@media (prefers-reduced-motion: reduce) { .map, .ping { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .map { animation: none; } }
