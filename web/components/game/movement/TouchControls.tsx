@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { touchStick as stick } from "./moveFx";
 
 /** Touch (specs/movement.md "Controls"): a joystick (push to the rim to sprint) and jump and dash buttons, into the avatar's touch stick; `left`/`bottom` clear a HUD. */
@@ -16,6 +16,8 @@ export default function TouchControls({ left = 24, bottom = 28 }: { left?: numbe
     setKnob([dx * R * 0.6, dy * R * 0.6]);
   };
   const end = () => { stick.x = stick.z = 0; setKnob([0, 0]); };
+  // Unmounted mid-press (entering a building): let go, or the avatar walks or hops on its own when it comes back.
+  useEffect(() => () => { stick.x = stick.z = 0; stick.jump = stick.dash = stick.jumpPressed = stick.dashPressed = false; }, []);
   const button = (kind: "jump" | "dash", text: string, size: number) => (
     <button aria-label={text} style={{ width: size, height: size, borderRadius: "50%", border: "2px solid rgba(255,255,255,0.5)", background: "rgba(15,15,16,0.45)", color: "#fff", font: "700 14px ui-monospace, Menlo, monospace", touchAction: "none" }}
       onPointerDown={e => { e.preventDefault(); stick[kind] = true; stick[kind === "jump" ? "jumpPressed" : "dashPressed"] = true; }}
