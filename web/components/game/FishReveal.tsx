@@ -42,10 +42,13 @@ type Stage = "suspense" | "freeze" | "flash" | "landed";
 export default function FishReveal({
   fish,
   sizeCm,
+  recipe,
   onDone,
 }: {
   fish: FishDef;
   sizeCm: number;
+  /** A recipe the catch taught (rare catches). */
+  recipe?: string | null;
   onDone: () => void;
 }) {
   const cfg = REVEAL[fish.rarity];
@@ -397,6 +400,7 @@ export default function FishReveal({
             </span>
           </div>
           {oneLinerFor(fish.key) && <p style={{ margin: "10px 0 0", fontSize: 13, fontStyle: "italic", color: "rgba(255, 253, 245, 0.85)", textAlign: "center" }}>“{oneLinerFor(fish.key)}”</p>}
+          {recipe && <p style={{ margin: "8px 0 0", fontSize: 13, fontWeight: 700, color: "#FFFDF5", textAlign: "center" }} data-testid="reveal-recipe">You learned a recipe: {recipe}</p>}
         </div>
       </div>
 

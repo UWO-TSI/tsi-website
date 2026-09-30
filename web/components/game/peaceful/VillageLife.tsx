@@ -110,6 +110,7 @@ export default function VillageLife({ nodes, bugNodes, moment, member, player, g
         localRecord(got.key, size);
         AudioManager.playSFX(bug ? "confirm" : "click");
         window.dispatchEvent(new CustomEvent("tsi:toast", { detail: { text: `${isNew ? "NEW! " : ""}${bug ? "Caught" : "Got"} ${got.name}${size ? `, ${size} cm` : ""}!` } }));
+        if (answer?.catch.recipe) window.dispatchEvent(new CustomEvent("tsi:toast", { detail: { text: `You learned a recipe: ${answer.catch.recipe.name}` } }));
         window.dispatchEvent(new CustomEvent("tsi:peaceful-got", { detail: { key: got.key, name: got.name, rarity: got.rarity, one_liner: got.oneLiner, size, isNew, bug: !!bug } }));
       });
     };
