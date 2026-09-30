@@ -21,6 +21,7 @@
 # Catalogue data that ships with the art and the sky textures
 !art/characters/base/face_variants.json
 !art/characters/base/ref18_measurements.json
+!art/characters/v7/face/face_v7.json
 !art/characters/hair/hair_catalog.json
 !art/characters/character_catalog.json
 !art/characters/palette.json
