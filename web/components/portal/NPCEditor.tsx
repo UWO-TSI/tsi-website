@@ -6,7 +6,8 @@ import { ArrowLeft, Plus, Trash2, ExternalLink } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { NPCPersona, SpawnZone } from "@/lib/content/types";
 import ImageUploadButton from "@/components/portal/ImageUploadButton";
-import { PHASES, RESIDENT_ANCHORS, RESIDENT_POSTS, validateResidentDraft, type ResidentSchedule } from "@/lib/content/residents";
+import { RESIDENT_ANCHORS, RESIDENT_POSTS, validateResidentDraft, type ResidentPost, type ResidentSchedule } from "@/lib/content/residents";
+import { ISLAND_PHASES } from "@/lib/game/islandTime";
 import { DraftBar, Field, inputCls, Toggle, useDraftFlow } from "./ProgressionAdminShared";
 
 // ─── NPCEditor (Residents) ──────────────────────────────────────────────────
@@ -20,7 +21,7 @@ import { DraftBar, Field, inputCls, Toggle, useDraftFlow } from "./ProgressionAd
 //                   uniqueness skips the current slug.
 
 const SPAWN_ZONES: SpawnZone[] = ["courtyard", "shop", "temple", "roaming"];
-const POST_LABELS: Record<(typeof RESIDENT_POSTS)[number], string> = {
+const POST_LABELS: Record<ResidentPost, string> = {
   hq_lead: "HQ lead", shopkeeper: "Shopkeeper", cafe_owner: "Café owner", museum_curator: "Museum curator",
   wharf_keeper: "Wharf keeper", oracle_keeper: "Oracle keeper", workshop_crafter: "Workshop crafter", villager: "Villager",
 };
@@ -236,7 +237,7 @@ export default function NPCEditor({ mode, rowId, initial }: NPCEditorProps) {
 
         <Field label="Schedule" hint="Where they stand on the island in each part of the day. Empty = their day spot (or the plaza).">
           <div className="grid gap-3 grid-cols-2 md:grid-cols-4">
-            {PHASES.map((phase) => (
+            {ISLAND_PHASES.map((phase) => (
               <label key={phase} className="block">
                 <span className="block text-[0.6rem] font-mono uppercase text-[var(--color-text-muted)] mb-1">{phase}</span>
                 <select

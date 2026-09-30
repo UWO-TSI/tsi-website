@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { useUser } from "@/components/portal/UserContext";
 import Link from "next/link";
 import {
   Users,
@@ -95,7 +96,8 @@ const adminSections = [
 
 export default function AdminPage() {
   const [stats, setStats] = useState<Stats | null>(null);
-  const [userTier, setUserTier] = useState<number>(4);
+  const { profile } = useUser();
+  const userTier = profile?.tier ?? 4;
 
   useEffect(() => {
     async function fetchStats() {
@@ -105,14 +107,6 @@ export default function AdminPage() {
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) return;
-
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("tier")
-        .eq("id", user.id)
-        .single();
-
-      if (profile) setUserTier(profile.tier);
 
       // Fetch stats in parallel
       const [members, bounties, quests] = await Promise.all([
