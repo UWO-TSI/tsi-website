@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { islandPhase, parseClockOverride, parseTimeOverride, phaseForHour, torontoHour, torontoInstant } from "./islandTime";
+import { islandPhase, parseClockOverride, parseTimeOverride, torontoHour } from "./islandTime";
+import { phaseForSun, sunFor } from "./sunTimes";
+import { torontoInstant } from "@/lib/time";
+
+const phaseForHour = (hour: number, date: Date, days: typeof DAYS) => phaseForSun(hour, sunFor(date, days));
 
 const SEPT = new Date("2026-09-24T16:00:00Z");
 const DAYS = [{ date: "2026-09-24", sunrise: 7.23, sunset: 19.3 }];
@@ -25,10 +29,8 @@ describe("island clock", () => {
     expect(islandPhase(new Date("2026-12-15T12:00:00Z"))).toBe("dawn"); // 07:00 EST, sunrise ~07:49
     expect(islandPhase(new Date("2026-06-15T10:00:00Z"))).toBe("day"); // 06:00 EDT, sunrise ~05:45
   });
-  it("accepts phase names or hours as a forced time", () => {
+  it("accepts phase names as a forced time", () => {
     expect(parseTimeOverride("dawn")).toBe("dawn");
-    expect(parseTimeOverride("13", SEPT)).toBe("day");
-    expect(parseTimeOverride("22", SEPT)).toBe("night");
     expect(parseTimeOverride("noon")).toBeNull();
     expect(parseTimeOverride("25")).toBeNull();
     expect(parseTimeOverride(null)).toBeNull();

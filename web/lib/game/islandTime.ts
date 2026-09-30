@@ -1,8 +1,6 @@
 import { phaseForSun, sunFor, type SunDay } from "./sunTimes";
 import { torontoInstant, torontoParts } from "@/lib/time";
 
-export { torontoInstant };
-
 /**
  * Island clock: real campus time in Toronto (ledger rows 84, 88) with phases
  * set by real sunrise/sunset for London, Ontario (decision 173, sunTimes.ts).
@@ -16,24 +14,14 @@ export function torontoHour(date = new Date()): number {
   return t.hour + t.minute / 60;
 }
 
-/** Phase for a Toronto hour on a date (defaults to today's fallback sun times). */
-export function phaseForHour(hour: number, date = new Date(), days?: readonly SunDay[] | null): IslandPhase {
-  return phaseForSun(hour, sunFor(date, days));
-}
-
+/** The phase at an instant, from the Toronto hour and that day's sun times (defaults to the fallback table). */
 export function islandPhase(date = new Date(), days?: readonly SunDay[] | null): IslandPhase {
-  return phaseForHour(torontoHour(date), date, days);
+  return phaseForSun(torontoHour(date), sunFor(date, days));
 }
 
-/**
- * Dev/QA override from the URL: `?time=dawn|day|evening|night` or an hour
- * (`?time=18.5`). Returns null when absent or invalid.
- */
-export function parseTimeOverride(value: string | null, date = new Date()): IslandPhase | null {
-  if (!value) return null;
-  if ((ISLAND_PHASES as readonly string[]).includes(value)) return value as IslandPhase;
-  const hour = Number(value);
-  return Number.isFinite(hour) && hour >= 0 && hour <= 24 ? phaseForHour(hour, date) : null;
+/** Dev/QA override from the URL: `?time=dawn|day|evening|night` (spec §8.5; `?at=HH:MM` sets a clock). Null when absent or invalid. */
+export function parseTimeOverride(value: string | null): IslandPhase | null {
+  return value && (ISLAND_PHASES as readonly string[]).includes(value) ? value as IslandPhase : null;
 }
 
 /**
