@@ -18,6 +18,7 @@ import { CLUBHOUSE_LIGHTING } from "@/lib/game/islandLighting";
 import type { IslandPhase } from "@/lib/game/islandTime";
 import type { WorldIdentity } from "@/lib/game/identity";
 import { studySolid } from "@/lib/study/seats";
+import { standWorld } from "@/lib/game/movement/sim";
 import world from "../DefaultIslandWorld.module.css";
 
 const HALF_W = 9, HALF_D = 6;
@@ -32,19 +33,9 @@ const GLASS: Record<IslandPhase, string> = { dawn: "#f6d7b8", day: "#cfe8f2", ev
 /** Solid non-table furniture: [cx, cz, halfW, halfD]. */
 const SOLID: [number, number, number, number][] = [[7.9, -0.95, 0.5, 0.95], [-8.4, 1.3, 0.4, 2.2], [8.1, 5.2, 0.5, 0.5], [-8.1, -4.9, 0.5, 0.5], [-7.4, 5.3, 0.35, 0.35]];
 
-export function constrainCafe(x: number, z: number, nx: number, nz: number): [number, number] {
-  const fits = (px: number, pz: number) => Math.abs(px) < HALF_W - 0.7 && pz > -HALF_D + 0.4 && pz < HALF_D - 0.6
-    && !studySolid("cafe", px, pz, 0.2) && !SOLID.some(([cx, cz, w, d]) => Math.abs(px - cx) < w + 0.2 && Math.abs(pz - cz) < d + 0.2);
-  const steps = Math.max(1, Math.ceil(Math.hypot(nx - x, nz - z) / 0.15));
-  const dx = (nx - x) / steps, dz = (nz - z) / steps;
-  for (let i = 0; i < steps; i++) {
-    if (fits(x + dx, z + dz)) { x += dx; z += dz; }
-    else if (fits(x + dx, z)) x += dx;
-    else if (fits(x, z + dz)) z += dz;
-    else break;
-  }
-  return [x, z];
-}
+/** The café floor for the movement kit: the walls, counter, shelves, plants and study tables are solid. */
+const CAFE = standWorld(flat, (x, z) => Math.abs(x) < HALF_W - 0.5 && z > -HALF_D + 0.2 && z < HALF_D - 0.4
+  && !studySolid("cafe", x, z) && !SOLID.some(([cx, cz, w, d]) => Math.abs(x - cx) < w && Math.abs(z - cz) < d), () => false);
 
 function Room({ phase }: { phase: IslandPhase }) {
   const wood = useTexture("/assets/acnh/interior/hq-parquet-albedo.png");
@@ -111,6 +102,6 @@ export default function CafeInterior({ phase, player, frozen, identity, onMove, 
     <InteriorKeeper position={[8.55, 0, -0.95]} rotY={-Math.PI / 2} watch={[7, -0.95]} colors={{ apron: "#7a4f2e", shirt: "#f3e6cf" }} hat="cap" playerPosRef={player as React.MutableRefObject<THREE.Vector3>} />
     <StudySeats area="cafe" player={player} board={BOARD_SPOT} />
     <PlayerAvatar spawnPosition={SPAWN} playerName={identity.display_name} member={identity.member} onMove={onMove} frozen={frozen}
-      groundHeight={flat} constrainMove={constrainCafe} />
+      world={CAFE} groundHeight={flat} />
   </>;
 }

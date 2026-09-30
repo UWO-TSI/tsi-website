@@ -22,8 +22,7 @@ import { IslandAtmosphere, useFollowCamera } from "../IslandAtmosphere";
 import { AimReticle, Blasts, EnemyInstances, FloaterProjector, PlayerAuras, Projectiles, Telegraphs, Totems, Wisps } from "./EncounterRender";
 import { BOSS_CENTER, ESCORT_PATHS, EXIT_SPOT, FETCH_SPOTS, GATE_PLAZA, RUINS_BROKEN_ARCHES, RUINS_MOAI, RUINS_PILLARS, RUINS_ROCKS, RUINS_SPAWN, RUINS_TORCHES, SURVIVE_CIRCLES, createRuins } from "@/lib/game/ruins";
 import { combat, publishCombat, readAbilityKeys, takeMissionQueue, type AbilityId } from "@/lib/game/combat/runtime";
-import { readMoveKeys } from "@/lib/game/movement/keys";
-import { attack, missionEvent, spawnWave, startDodge, triggerAbility } from "@/lib/game/combat/actions";
+import { attack, missionEvent, spawnWave, triggerAbility } from "@/lib/game/combat/actions";
 import { stepCombat } from "@/lib/game/combat/encounter";
 import { claimBossReward, postKill, postMissionEvents } from "@/lib/game/combat/progression";
 import { materialsLabel } from "@/lib/game/combat/missions";
@@ -97,8 +96,7 @@ export default function RuinsScene({ phase, light, look, weather, liteMode, cast
   const ruins = useMemo(() => createRuins(), []);
   const terrain = useMemo(() => ({ ...ISLAND_TERRAIN, grass: look.grass }), [look.grass]);
   const { camera, gl } = useThree();
-  const impulse = useRef({ x: 0, z: 0 });
-  const input = useRef({ ndc: new THREE.Vector2(0, 0), hasPointer: false, attack: false, dodge: false, abilities: [] as AbilityId[], keys: { w: false, a: false, s: false, d: false } });
+  const input = useRef({ ndc: new THREE.Vector2(0, 0), hasPointer: false, attack: false, abilities: [] as AbilityId[] });
   const near = useRef<RuinsNear>(null);
   const zones = useRef({ circle: false, gate: true });
   const syncAt = useRef(0);
@@ -120,31 +118,27 @@ export default function RuinsScene({ phase, light, look, weather, liteMode, cast
       return { x: r.left + ((v.x + 1) / 2) * r.width, y: r.top + ((1 - v.y) / 2) * r.height };
     } };
   }, [camera, gl, ruins, spawn]);
-  useFollowCamera(player, zoom, null);
+  const focus = useRef(new THREE.Vector3(...spawn));
+  useFollowCamera(focus, zoom, null);
 
-  // Mouse aim + click attack on the canvas; Q (the dash key) dodges, and Space until the movement kit reaches the ruins; ability keys (remappable).
+  // Mouse aim + click attack on the canvas; ability keys (remappable). Movement, Space's jump and Q's dash-dodge are PlayerAvatar's (the kit).
   useEffect(() => {
     const el = gl.domElement;
-    const keys = readAbilityKeys(), dash = readMoveKeys().dash;
+    const keys = readAbilityKeys();
     const move = (e: PointerEvent) => { const r = el.getBoundingClientRect(); input.current.ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1); input.current.hasPointer = true; };
     const down = (e: PointerEvent) => { if (e.button === 0) { move(e); input.current.attack = true; } };
     const up = () => { input.current.attack = false; };
-    const key = (e: KeyboardEvent, on: boolean) => {
-      if (e.target instanceof HTMLElement && e.target.closest("input, textarea, select")) return;
-      const k = e.key.toLowerCase();
-      if (k in input.current.keys) input.current.keys[k as "w"] = on;
-      if (!on || e.repeat) return;
-      if (k === " " || k === dash) { input.current.dodge = true; e.preventDefault(); }
-      const ability = (Object.keys(keys) as AbilityId[]).find(a => keys[a] === k);
+    const kd = (e: KeyboardEvent) => {
+      if (e.repeat || (e.target instanceof HTMLElement && e.target.closest("input, textarea, select"))) return;
+      const k = e.key.toLowerCase(), ability = (Object.keys(keys) as AbilityId[]).find(a => keys[a] === k);
       if (ability) input.current.abilities.push(ability);
     };
-    const kd = (e: KeyboardEvent) => key(e, true), ku = (e: KeyboardEvent) => key(e, false);
     const onKeys = () => Object.assign(keys, readAbilityKeys());
     el.addEventListener("pointermove", move); el.addEventListener("pointerdown", down); window.addEventListener("pointerup", up);
-    window.addEventListener("keydown", kd); window.addEventListener("keyup", ku); window.addEventListener("tsi:ability-keys", onKeys);
+    window.addEventListener("keydown", kd); window.addEventListener("tsi:ability-keys", onKeys);
     return () => {
       el.removeEventListener("pointermove", move); el.removeEventListener("pointerdown", down); window.removeEventListener("pointerup", up);
-      window.removeEventListener("keydown", kd); window.removeEventListener("keyup", ku); window.removeEventListener("tsi:ability-keys", onKeys);
+      window.removeEventListener("keydown", kd); window.removeEventListener("tsi:ability-keys", onKeys);
     };
   }, [gl]);
 
@@ -165,20 +159,10 @@ export default function RuinsScene({ phase, light, look, weather, liteMode, cast
       if (p.downFor > 1.8) { missionEvent(rt, { kind: "defeated" }); onDefeat(); }
     }
     // Inputs.
-    if (inp.dodge) {
-      inp.dodge = false;
-      const k = inp.keys, cf = new THREE.Vector3(); camera.getWorldDirection(cf);
-      const fx = cf.x, fz = cf.z, l = Math.hypot(fx, fz) || 1;
-      let dx = 0, dz = 0;
-      if (k.w) { dx += fx / l; dz += fz / l; } if (k.s) { dx -= fx / l; dz -= fz / l; }
-      if (k.d) { dx -= fz / l; dz += fx / l; } if (k.a) { dx += fz / l; dz -= fx / l; }
-      startDodge(rt, dx || dz ? { x: dx, z: dz } : { x: Math.sin(p.facing), z: Math.cos(p.facing) });
-    }
     while (inp.abilities.length) triggerAbility(rt, inp.abilities.shift()!, me);
     if (inp.attack) attack(rt, me);
-    // Timers, energy, enemies, projectiles, summons and totems (lib/game/combat/encounter.ts); the dodge/dash/knockback impulse feeds PlayerAvatar.
+    // Timers, energy, enemies, projectiles, summons and totems (lib/game/combat/encounter.ts); ability dashes and knockback push PlayerAvatar.
     stepCombat(rt, me, dt, ruins.free);
-    impulse.current = p.alive ? p.impulse : { x: 0, z: 0 };
     // Respawn (spawn-table enemies only) once dead long enough and you're away from the spot.
     for (const [i, e] of rt.enemies.entries()) {
       const after = e.state === "dead" && !e.summoned ? respawnAfter(e.id) : 0;
@@ -262,8 +246,8 @@ export default function RuinsScene({ phase, light, look, weather, liteMode, cast
     <AimReticle player={player} ground={ruins.ground} />
     <FloaterProjector />
     <Html position={[EXIT_SPOT.x, 2.2, EXIT_SPOT.z]} center distanceFactor={10} zIndexRange={[3, 0]}><div className={styles.cue}>Gate · safe zone</div></Html>
-    <PlayerAvatar spawnPosition={spawn} playerName="You" onMove={onMove} frozen={!!combat.rt.casting || !combat.rt.player.alive}
-      groundHeight={ruins.ground} constrainMove={ruins.move} impulse={impulse} noHop combat />
+    <PlayerAvatar spawnPosition={spawn} playerName="You" onMove={onMove}
+      world={ruins.world} groundHeight={ruins.ground} camTarget={focus} combat />
   </>;
 }
 

@@ -5,18 +5,22 @@
  * text size, high contrast, and menu key remap. Remap listens for the next
  * key; taking another menu's key swaps the two; reserved keys are refused
  * with the systems rule's reason. Saved to the account when signed in,
- * otherwise kept on this device.
+ * otherwise kept on this device. The movement keys (jump, dash, sprint,
+ * sneak) and the ruins' ability keys are remapped on this device.
  */
 import { useEffect, useState } from "react";
 import { ACTION_LABEL, MENU_ACTIONS, TEXT_SIZES, normalizeKey, type MenuAction, type TextSize } from "@/lib/identity/settings";
 import { keyLabel, saveSettings, setAuraVisible, useWorldIdentity } from "@/lib/game/identity";
 import { ABILITIES, readAbilityKeys, remapAbility, type AbilityId } from "@/lib/game/combat/runtime";
+import { MOVE_ACTIONS, MOVE_KEYS_EVENT, keyName, remapMove, useMoveKeys, type MoveAction } from "@/lib/game/movement/keys";
 import { AudioManager, type AudioVolumes } from "@/lib/game/audio";
 import { useAudioState } from "@/lib/game/useAudio";
 import IslandSheet from "../IslandSheet";
 import styles from "../DefaultIslandWorld.module.css";
 
 const SIZE_NAMES: Record<TextSize, string> = { small: "Small", default: "Standard", large: "Large", xl: "Largest" };
+/** The movement keys row (specs/movement.md): Space jump, Q dash, Shift sprint, C sneak. */
+const MOVE_ROW = MOVE_ACTIONS.filter(a => a.id === "jump" || a.id === "dash" || a.id === "sprint" || a.id === "sneak");
 const SOUND_SLIDERS: { key: keyof AudioVolumes; label: string }[] = [
   { key: "master", label: "Master" },
   { key: "music", label: "Music" },
@@ -32,6 +36,22 @@ export default function SettingsSheet({ open, onClose }: { open: boolean; onClos
   const [abilityKeys, setAbilityKeys] = useState(readAbilityKeys);
   const [abilityListen, setAbilityListen] = useState<AbilityId | null>(null);
   const [abilityNote, setAbilityNote] = useState<string | null>(null);
+  const moveKeys = useMoveKeys();
+  const [moveListen, setMoveListen] = useState<MoveAction | null>(null);
+  const [moveNote, setMoveNote] = useState<string | null>(null);
+  useEffect(() => {
+    if (!moveListen) return;
+    const onKey = (e: KeyboardEvent) => {
+      e.preventDefault(); e.stopPropagation();
+      if (e.key === "Escape") { setMoveListen(null); setMoveNote(null); return; }
+      const r = remapMove(moveKeys, moveListen, e.key, [...Object.values(abilityKeys), ...Object.values(settings.key_bindings)]);
+      if (!r.ok) { setMoveNote(r.error); return; }
+      setMoveListen(null); setMoveNote(null);
+      window.dispatchEvent(new Event(MOVE_KEYS_EVENT));
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, [moveListen, moveKeys, abilityKeys, settings.key_bindings]);
   useEffect(() => {
     if (!abilityListen) return;
     const onKey = (e: KeyboardEvent) => {
@@ -55,6 +75,7 @@ export default function SettingsSheet({ open, onClose }: { open: boolean; onClos
       e.preventDefault(); e.stopPropagation();
       if (e.key === "Escape") { setListening(null); setNote(null); return; }
       const key = normalizeKey(e.key);
+      if (Object.values(moveKeys).includes(key)) { setNote(`${keyLabel(key)} is a movement key.`); return; }
       const other = MENU_ACTIONS.find(a => a !== listening && settings.key_bindings[a] === key);
       const patch = { ...settings.key_bindings, [listening]: key, ...(other ? { [other]: settings.key_bindings[listening] } : {}) };
       const action = listening;
@@ -66,7 +87,7 @@ export default function SettingsSheet({ open, onClose }: { open: boolean; onClos
     };
     window.addEventListener("keydown", onKey, true);
     return () => window.removeEventListener("keydown", onKey, true);
-  }, [listening, settings.key_bindings]);
+  }, [listening, settings.key_bindings, moveKeys]);
   if (!open) return null;
   return <IslandSheet title="Settings" onClose={onClose} className={styles.settingsSheet} testId="settings-sheet">
     <fieldset>
@@ -98,6 +119,16 @@ export default function SettingsSheet({ open, onClose }: { open: boolean; onClos
         </button>
       </li>)}</ul>
       {note && <p className={styles.hint} role="status">{note}</p>}
+    </fieldset>
+    <fieldset>
+      <legend>Movement keys</legend>
+      <ul className={styles.keyList}>{MOVE_ROW.map(a => <li key={a.id}>
+        <span>{a.name}</span>
+        <button aria-pressed={moveListen === a.id} onClick={() => { setMoveListen(a.id); setMoveNote("Press a key (Esc to cancel)."); }}>
+          {moveListen === a.id ? "Press a key…" : <kbd>{keyName(moveKeys[a.id])}</kbd>}
+        </button>
+      </li>)}</ul>
+      {moveNote && <p className={styles.hint} role="status">{moveNote}</p>}
     </fieldset>
     <fieldset>
       <legend>Ability keys (ruins)</legend>

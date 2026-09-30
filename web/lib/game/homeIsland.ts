@@ -3,6 +3,7 @@ import {
   worldToCellX, worldToCellZ, isGroundAtWorld, surfaceAt,
 } from "./grid";
 import { cellsOf, type PlacedItem } from "@/lib/homes/layout";
+import { standWorld, type MoveWorld } from "./movement/sim";
 
 /**
  * Personal home island (specs/homes.md §1): a fixed natural islet about a
@@ -44,22 +45,10 @@ export function createHomeIsland() {
     [[0.1, 0.1], [0.9, 0.1], [0.1, 0.9], [0.9, 0.9]].every(([dx, dz]) => fixedFree(cx + dx, cz + dz))
     && !inRect(cx + 0.5, cz + 0.5, HOUSE.door[0], HOUSE.door[1] - 0.5, 1, 1)
     && !inRect(cx + 0.5, cz + 0.5, HOME_DOCK[0], HOME_DOCK[1], 1, 1.2);
-  const moveWith = (items: readonly PlacedItem[]) => {
+  /** The islet for the movement sim with these outdoor items placed (flowers are walked over). */
+  const worldWith = (items: readonly PlacedItem[]): MoveWorld => {
     const blocked = new Set(items.filter(i => !i.piece.startsWith("flower-")).flatMap(cellsOf).map(([x, z]) => `${x},${z}`));
-    const standable = (x: number, z: number) => fixedFree(x, z) && !blocked.has(`${Math.floor(x)},${Math.floor(z)}`);
-    const fits = (x: number, z: number) => [[0, 0], [-0.2, 0], [0.2, 0], [0, -0.2], [0, 0.2]].every(([dx, dz]) => standable(x + dx, z + dz));
-    return (fromX: number, fromZ: number, toX: number, toZ: number): [number, number] => {
-      const count = Math.max(1, Math.ceil(Math.hypot(toX - fromX, toZ - fromZ) / 0.15));
-      const dx = (toX - fromX) / count, dz = (toZ - fromZ) / count;
-      let x = fromX, z = fromZ;
-      for (let i = 0; i < count; i++) {
-        if (fits(x + dx, z + dz)) { x += dx; z += dz; }
-        else if (fits(x + dx, z)) x += dx;
-        else if (fits(x, z + dz)) z += dz;
-        else break;
-      }
-      return [x, z];
-    };
+    return standWorld(ground, (x, z) => fixedFree(x, z) && !blocked.has(`${Math.floor(x)},${Math.floor(z)}`), (x, z) => !isGroundAtWorld(map, x, z));
   };
-  return { map, ground, surface, fixedFree, placeable, moveWith };
+  return { map, ground, surface, fixedFree, placeable, worldWith };
 }

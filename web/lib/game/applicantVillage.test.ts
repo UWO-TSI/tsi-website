@@ -1,26 +1,32 @@
 import { describe, it, expect } from "vitest";
-import { createApplicantVillage, APPLICANT_SPAWN, ISLAND_PROPS } from "./applicantVillage";
+import { createApplicantVillage, APPLICANT_SPAWN, ISLAND_PROPS, ISLAND_TREES } from "./applicantVillage";
 import { createCenteredMap, setCell, Surface, heightField, sampleGroundHeight, sampleHeightField, isGroundAtWorld } from "./grid";
+import { walkTo } from "./movement/sim";
 
-describe("default island movement", () => {
+describe("default island movement (the movement kit)", () => {
   const island = createApplicantVillage();
+  /** Tap-to-walk from one point toward another: where it ends. */
+  const walk = (x: number, z: number, gx: number, gz: number) => { const s = walkTo(island, x, z, gx, gz); return [s.x, s.z] as const; };
+  const reaches = ([x, z]: readonly [number, number], gx: number, gz: number) => Math.hypot(x - gx, z - gz) < 0.15;
   it("starts on dry ground and follows the path to HQ", () => {
     expect(island.standable(APPLICANT_SPAWN[0], APPLICANT_SPAWN[2])).toBe(true);
-    const [x, z] = island.move(0, -3, 0, 4);
-    expect(x).toBe(0);
-    expect(z).toBeCloseTo(4);
+    expect(reaches(walk(0, -3, 0, 4), 0, 4)).toBe(true);
   });
   it("can cross the former river on either side of the main path", () => {
-    const [x, z] = island.move(6, -3, 6, 5);
-    expect(x).toBe(6);
-    expect(z).toBeCloseTo(5);
+    const [x, z] = walk(6, -3, 6, 5);
+    expect(reaches([x, z], 6, 5)).toBe(true);
     expect(island.surface(6, -1)).toBe(Surface.Grass);
     expect(island.standable(x, z)).toBe(true);
   });
   it("stops before the building, shore and tree trunks", () => {
-    expect(island.move(0, 4, 0, 15)[1]).toBeLessThan(6.7);
-    expect(island.move(0, -10, 0, -40)[1]).toBeGreaterThan(-17);
-    expect(island.move(-8, -9, -8, -6)[1]).toBeLessThan(-6.6);
+    expect(walk(0, 4, 0, 15)[1]).toBeLessThan(6.7);
+    expect(walk(0, -10, 0, -40)[1]).toBeGreaterThan(-17);
+    for (const [tx, tz] of ISLAND_TREES) {
+      const from = [[1.5, 0], [-1.5, 0], [0, 1.5], [0, -1.5]].map(([dx, dz]) => [tx + dx, tz + dz]).find(([x, z]) => island.standable(x, z));
+      if (!from) continue;
+      const [x, z] = walk(from[0], from[1], tx, tz);
+      expect(Math.hypot(x - tx, z - tz)).toBeGreaterThan(0.6);
+    }
   });
   it("keeps solid prop footprints on land and blocks entry from each side", () => {
     for (const prop of ISLAND_PROPS) {
@@ -29,20 +35,20 @@ describe("default island movement", () => {
       for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
         const fromX = prop.x + dx * 2, fromZ = prop.z + dz * 2;
         if (!island.standable(fromX, fromZ)) continue;
-        const [x, z] = island.move(fromX, fromZ, prop.x, prop.z);
+        const [x, z] = walk(fromX, fromZ, prop.x, prop.z);
         expect(island.standable(x, z)).toBe(true);
         expect(Math.hypot(x - prop.x, z - prop.z)).toBeGreaterThan(0.35);
       }
     }
   });
   it("keeps the clearing-to-HQ approach clear after furnishing", () => {
-    expect(island.move(0, -10, 0, 6)).toEqual([0, expect.closeTo(6, 5)]);
+    expect(reaches(walk(0, -10, 0, 6), 0, 6)).toBe(true);
     expect(island.standable(5.6, 4.5)).toBe(true);
     expect(island.standable(5, 5.3)).toBe(false);
   });
   it("allows a diagonal to slide along the building", () => {
-    const [x, z] = island.move(0, 6, 5, 9);
-    expect(x).toBeCloseTo(5);
+    const [x, z] = walk(0, 6, 5, 9);
+    expect(reaches([x, z], 5, 9)).toBe(true);
     expect(island.standable(x, z)).toBe(true);
   });
 });

@@ -104,28 +104,42 @@ export function IslandAtmosphere({ phase, light, look, weather, liteMode, castSh
   </>;
 }
 
-/** Applicant camera as shipped: elevated follow with a slight forward lead; optional overview (`far`: its far plane, for a big island). */
-export function useFollowCamera(player: React.RefObject<THREE.Vector3>, zoom: number, overview: { focus: [number, number, number]; offset: [number, number, number]; far?: number } | null) {
+type Overview = { focus: [number, number, number]; offset: [number, number, number]; far?: number };
+/**
+ * The follow camera (specs/movement.md, rows 250, 251): the shipped framing, focus + (0, 7.4, −10.8) × zoom looking
+ * 0.7 up and 1.5 ahead, set rigidly on the focus the player's avatar writes (a lead along its velocity, the level it
+ * stands on), so it neither lags at top speed nor bobs on hops. Fixed yaw (rows 5, 154). Zoom and the overview
+ * (`far`: its far plane, for a big island) ease in and out.
+ */
+export function useFollowCamera(focus: React.RefObject<THREE.Vector3>, zoom: number, overview: Overview | null) {
   const { camera } = useThree();
   const baseFar = useRef<number | null>(null);
-  const focus = useMemo(() => new THREE.Vector3(), []);
-  const destination = useMemo(() => new THREE.Vector3(), []);
+  const blend = useRef({ zoom, overview: overview ? 1 : 0, last: overview });
+  const look = useMemo(() => new THREE.Vector3(), []);
+  const far = useMemo(() => ({ at: new THREE.Vector3(), look: new THREE.Vector3() }), []);
   useFrame((_, delta) => {
+    const b = blend.current, dt = Math.min(delta, 0.1), f = focus.current;
+    b.last = overview ?? b.last;
+    b.zoom = THREE.MathUtils.damp(b.zoom, zoom, 5, dt);
+    b.overview = THREE.MathUtils.damp(b.overview, overview ? 1 : 0, 5, dt);
+    if (!overview && b.overview < 1e-3) b.overview = 0;
     // A big island's overview needs a deeper far plane; walking keeps the canvas's own.
     if (camera instanceof THREE.PerspectiveCamera) {
       baseFar.current ??= camera.far;
-      const far = Math.max(baseFar.current, overview?.far ?? 0);
-      if (camera.far !== far) { camera.far = far; camera.updateProjectionMatrix(); }
+      const plane = Math.max(baseFar.current, b.overview > 0 ? b.last?.far ?? 0 : 0);
+      if (camera.far !== plane) { camera.far = plane; camera.updateProjectionMatrix(); }
     }
-    if (overview) {
-      focus.set(...overview.focus);
-      destination.set(overview.offset[0] + overview.focus[0], overview.offset[1], overview.offset[2] + overview.focus[2]);
-    } else {
-      focus.set(player.current.x, player.current.y + 0.7, player.current.z + 1.5);
-      destination.set(focus.x, focus.y + 7.4 * zoom, focus.z - 10.8 * zoom);
+    look.set(f.x, f.y + 0.7, f.z + 1.5);
+    camera.position.set(look.x, look.y + 7.4 * b.zoom, look.z - 10.8 * b.zoom);
+    const o = b.last;
+    if (b.overview > 0 && o) {
+      far.at.set(o.offset[0] + o.focus[0], o.offset[1], o.offset[2] + o.focus[2]);
+      far.look.set(...o.focus);
+      far.look.y -= far.at.distanceToSquared(far.look) * WORLD_BEND;
+      camera.position.lerp(far.at, b.overview);
+      look.lerp(far.look, b.overview);
     }
-    camera.position.lerp(destination, 1 - Math.exp(-Math.min(delta, 0.1) * 5));
-    camera.lookAt(focus.x, focus.y - (overview ? camera.position.distanceToSquared(focus) * WORLD_BEND : 0), focus.z);
+    camera.lookAt(look);
     camera.updateMatrixWorld();
   }, -3);
 }

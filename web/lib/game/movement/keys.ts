@@ -2,8 +2,11 @@
  * Movement keys (rows 49, 220; specs/movement.md "Controls"): Space jump, Q dash,
  * Shift sprint, C sneak and WASD, remappable on this device like the ability
  * keys (combat/runtime.ts). Taking another movement key swaps the two; menu,
- * interact and ability keys are refused.
+ * interact, zoom, quests, decorate and ability keys are refused. A remap
+ * announces itself with MOVE_KEYS_EVENT so the avatar and the hints follow.
  */
+import { useEffect, useState } from "react";
+
 export type MoveAction = "forward" | "left" | "back" | "right" | "jump" | "dash" | "sprint" | "sneak";
 export const MOVE_ACTIONS: { id: MoveAction; name: string }[] = [
   { id: "forward", name: "Forward" }, { id: "left", name: "Left" }, { id: "back", name: "Back" }, { id: "right", name: "Right" },
@@ -11,8 +14,9 @@ export const MOVE_ACTIONS: { id: MoveAction; name: string }[] = [
 ];
 export const DEFAULT_MOVE_KEYS: Record<MoveAction, string> = { forward: "w", left: "a", back: "s", right: "d", jump: " ", dash: "q", sprint: "shift", sneak: "c" };
 const STORE = "tsi.moveKeys.v1";
-/** Interact, escape, tab and the default menu keys (lib/identity/settings). */
-const RESERVED = new Set(["e", "escape", "tab", "enter", "b", "i", "m", "k", "l", "[", "]"]);
+export const MOVE_KEYS_EVENT = "tsi:move-keys";
+/** Interact, escape, tab, the default menu keys (lib/identity/settings), zoom, quests and decorate. */
+const RESERVED = new Set(["e", "escape", "tab", "enter", "b", "i", "m", "k", "l", "[", "]", "z", "j", "f"]);
 
 export const keyName = (k: string) => (k === " " ? "Space" : k.length === 1 ? k.toUpperCase() : k[0].toUpperCase() + k.slice(1));
 
@@ -37,4 +41,15 @@ export function remapMove(keys: Record<MoveAction, string>, id: MoveAction, raw:
   if (other) next[other] = keys[id];
   try { localStorage.setItem(STORE, JSON.stringify(next)); } catch { /* session only */ }
   return { ok: true, keys: next };
+}
+
+/** This device's movement keys, following remaps. */
+export function useMoveKeys(): Record<MoveAction, string> {
+  const [keys, setKeys] = useState(readMoveKeys);
+  useEffect(() => {
+    const on = () => setKeys(readMoveKeys());
+    window.addEventListener(MOVE_KEYS_EVENT, on);
+    return () => window.removeEventListener(MOVE_KEYS_EVENT, on);
+  }, []);
+  return keys;
 }

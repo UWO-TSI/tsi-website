@@ -26,3 +26,15 @@ None blocked; each has the assumption the build took.
 17. **Speed lines, not afterimages.** The dash streak is the village's sprint wind rods (stronger through the dash). A ghost copy of the character per dash would mean a second skinned character; the rods, dust, squash and FOV punch read clearly in the strips.
 18. **The cooldown ring stays on the ground** under the avatar, in the air too, where it shows empty while the air dash is spent.
 19. **Shared character change.** `CharacterMotion.stop` ends a running one-shot (a landing ends a short hop's Jump); only the movement avatar sets it.
+
+## Integration (build agent, 2026-09-30)
+
+None blocked; each has the assumption the build took.
+
+20. **The café and the applicant island get the kit too.** Both walk on `PlayerAvatar` (the café for its study seats), so they jump and dash like the village; the clubhouse, museum, temple and house keep the simple interior walker. Say if the café or the applicant island should lose jump and dash (one flag).
+21. **The ruins stay a closed canyon.** Its walls are one cliff high (1.5u), which the kit can mantle, so the ruins world treats the cliff tops as walls: you cannot climb out of the encounter. Say if some walls should be climbable.
+22. **Getting up from a seat** puts you at the nearest open spot, its front first (in front of a bench; beside or behind a study chair, since the table is in front), easing over rather than popping, instead of walking out of the seat's footprint as before.
+23. **Tap-to-walk into something** now walks until pressed against it, slides along it a moment, and stops (it used to clamp the target to the reachable point up front).
+24. **The nameplate follows jumps and falls** (it used to stay at ground height under the cosmetic hop).
+25. **The applicant island's own camera** (recruitment, not the member follow camera) still lerps on the player, so it follows a jump a little; the member scenes use the rigid follow.
+26. **Movement keys refuse Z, J and F** (zoom, quests, decorate) as well as the menu, interact and ability keys.

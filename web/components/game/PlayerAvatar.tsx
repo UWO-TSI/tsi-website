@@ -1,20 +1,16 @@
 "use client";
 
-import { useRef, useState, useEffect, useCallback } from "react";
+import { useRef, useState, useEffect, useCallback, useMemo } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { Html } from "@react-three/drei";
 import * as THREE from "three";
-import { sampleTerrainHeightFast } from "./terrain";
-import { clampToCoast, coastDist } from "@/lib/game/coast";
 import { getTodayWeather } from "@/lib/game/weather";
 import { useSFX } from "@/lib/game/useAudio";
 import { getCameraForwardXZ } from "@/lib/game/cameraBasis";
-import { advanceMotion, easeFacing } from "@/lib/game/locomotion";
 import { bindGameKeys } from "@/lib/game/keyboardInput";
-import { Surface } from "@/lib/game/grid";
+import { Surface, WATER_DROP } from "@/lib/game/grid";
 import { calculateCurvedHtmlPosition } from "@/lib/game/worldProjection";
 import { pickCurvedGround } from "@/lib/game/groundPick";
-import { juiceFovOffset } from "@/lib/game/cameraJuice";
 import { getLabFov } from "@/lib/game/devLab";
 import MoveTargetIndicator from "./MoveTargetIndicator";
 import type { EmoteType } from "@/lib/content/types";
@@ -24,600 +20,416 @@ import { useMyLook } from "@/lib/game/character/lookStore";
 import { EMOTE_CLIPS, combatClip, seatLift, type CombatView } from "@/lib/game/character/clips";
 import { useWorldClips } from "./character/useWorldClips";
 import { combat, useCombatVersion } from "@/lib/game/combat/runtime";
+import { combatPush, combatTuning, dashDodge } from "@/lib/game/combat/actions";
 import { WEAPONS } from "@/lib/game/combat/data";
+import { STUCK_TIME, advanceMove, clearSpot, createMoveSim, createMoveState, interpolated, topSpeed, towards, MOVE_TUNING, NO_INPUT, type MoveEvent, type MoveInput, type MoveSim, type MoveState, type MoveTuning, type MoveWorld } from "@/lib/game/movement/sim";
+import { useMoveKeys } from "@/lib/game/movement/keys";
+import { routePilot, type RouteStep } from "@/lib/game/movement/course";
+import { DashRing, DustPool, EVENT_CLIP, MOVE_JUICE, Streaks, TAKEOFF, applyFov, screenOf, touchStick, type MoveJuice, type MoveTelemetry } from "./movement/moveFx";
 
 /**
- * The player: movement, collision, ground follow and feedback, drawn as the
- * shared 3D character (row 105; sprites retired). World interactions become
- * clip requests: sit/study/sleep seats (tsi:sit), fishing (tsi:fish-cast /
- * tsi:fish-end), forage and net (tsi:peaceful-act, tsi:flower-pick,
- * tsi:critter-catch), emotes (activeEmote or tsi:emote {clip}), and the
- * encounter state when `combat` is set.
+ * The player on the movement kit (specs/movement.md): keys, the touch stick or
+ * a tap, camera-relative, stepped through lib/game/movement/sim at a fixed
+ * 120 Hz on the scene's `world` and drawn between steps as the shared 3D
+ * character (row 105). Each step's events become juice on this avatar (look
+ * spec §7.1): clips, squash and stretch, dust, thumps, speed lines and the dash
+ * cooldown ring. It writes the follow camera's focus (`camTarget`: a lead along
+ * the velocity, at the level it stands on) and widens the FOV with speed.
+ *
+ * World interactions become clip requests: sit/study/sleep seats (tsi:sit),
+ * fishing (tsi:fish-cast / tsi:fish-end), forage and net (tsi:peaceful-act,
+ * tsi:flower-pick, tsi:critter-catch), emotes (activeEmote or tsi:emote
+ * {clip}), and the encounter state when `combat` is set: there Q's dash is the
+ * dodge (its i-frames), knockback and ability dashes push through the sim, and
+ * a cast roots you until a dodge breaks it.
  */
-
-const PLAYER_SPEED = 7.4; // refinement 2026-07-22 (David: walk felt slow) — was 6.3
-// Organic coast (2026-07-14): the old ±50 SQUARE clamp let players walk
-// diagonally onto open water. Radial clamp in coast-space instead — 50.6
-// reaches the deck nose + damp sand, still short of the waterline (~51.4).
-const BOUNDARY = 50.6;
-const ROTATION_LERP = 10;
-// Sprint A1: damp time for y-axis ground follow. Lower = snappier, higher
-// = more sluggish. 0.05s keeps the avatar responsive but smooths slope
-// transitions so there's no per-frame popping.
-const Y_DAMP_TIME = 0.05;
-const AVATAR_FOOT_OFFSET = 0;
-// Key state tracking
-const keys: Record<string, boolean> = {};
-
-// G1 camera feel: FOV widens a touch at sprint speed. Lives at module scope
-// because the react-compiler treats three objects reached through hooks as
-// frozen inside component code; a plain function call is the sanctioned
-// escape hatch for imperative three mutations.
-function applySprintFov(camera: THREE.Camera, speed: number, delta: number) {
-  const pcam = camera as THREE.PerspectiveCamera;
-  if (!pcam.isPerspectiveCamera) return;
-  // Fishing micro-zoom (2026-07-23): juice offsets zoom IN on bite / MAX
-  // CAST / reveal crack (decaying punch) and creep in during reel tension.
-  // /lab/world camera bench can pin the base FOV; juice still applies on top.
-  const targetFov = (getLabFov() ?? (speed > 9 ? 51 : 48)) - juiceFovOffset(delta);
-  const nextFov = THREE.MathUtils.damp(pcam.fov, targetFov, 8, delta);
-  if (Math.abs(nextFov - pcam.fov) > 0.01) {
-    pcam.fov = nextFov;
-    pcam.updateProjectionMatrix();
-  }
-}
 
 interface PlayerAvatarProps {
   spawnPosition: [number, number, number];
   onMove: (position: THREE.Vector3) => void;
+  /** What the kit walks on: `top` and `wet` (lib/game/movement/sim). */
+  world: MoveWorld;
+  groundHeight: (x: number, z: number) => number;
+  groundSurface?: (x: number, z: number) => number;
+  /** Written every frame: where the follow camera looks (IslandAtmosphere useFollowCamera). */
+  camTarget?: React.RefObject<THREE.Vector3>;
   playerName?: string;
   showNameplate?: boolean;
   playerLevel?: number;
   /** TSI member (row 223): subtle blue dot + glow on the nameplate. */
   member?: boolean;
-  /** Combat: extra velocity (dodge dash, knockback) applied through constrainMove each frame. */
-  impulse?: React.MutableRefObject<{ x: number; z: number }>;
-  /** Combat: Space belongs to dodge, so no cosmetic hop. */
-  noHop?: boolean;
-  /** Encounter: clips and facing follow the combat runtime; the weapon is in hand. */
+  /** Encounter: the ruins' kit (Q dodges); clips and facing follow the combat runtime; the weapon is in hand. */
   combat?: boolean;
   activeEmote?: EmoteType | null;
   frozen?: boolean;
   desktopClickToMove?: boolean;
-  groundHeight?: (x: number, z: number) => number;
-  groundSurface?: (x: number, z: number) => number;
-  constrainMove?: (fromX: number, fromZ: number, toX: number, toZ: number) => [number, number];
+  /** /lab/move: live tuning and juice, slow motion, the HUD's readout and the Walk clip's pace. */
+  tuning?: React.RefObject<MoveTuning>;
+  juice?: React.RefObject<MoveJuice>;
+  timeScale?: React.RefObject<number>;
+  telemetry?: React.RefObject<MoveTelemetry>;
+  walkSpeed?: number;
 }
 
-export default function PlayerAvatar({ spawnPosition, onMove, playerName = "Player", showNameplate = true, playerLevel = 1, member = false, impulse, noHop = false, combat: inCombat = false, activeEmote = null, frozen = false, desktopClickToMove = false, groundHeight = sampleTerrainHeightFast, groundSurface, constrainMove }: PlayerAvatarProps) {
-  const groupRef = useRef<THREE.Group>(null);
-  const motion = useRef<CharacterMotion>({ speed: 0, yaw: 0, lift: 0, pose: null, play: null });
+/** Face a point (module scope: the react compiler freezes values reached through hooks inside component code). */
+function turnTo(s: MoveState | undefined, x: number, z: number) { if (s) s.facing = Math.atan2(x - s.x, z - s.z); }
+
+/** Clips that hold while seated; the seat branch owns them. */
+const SEAT_CLIPS = new Set<ClipName>(["Sit", "Study", "Stretch", "Sleep"]);
+type Seat = { x: number; z: number; clip: ClipName; lift: number; yaw: number };
+
+export default function PlayerAvatar({ spawnPosition, onMove, world, groundHeight, groundSurface, camTarget, playerName = "Player", showNameplate = true, playerLevel = 1, member = false, combat: inCombat = false, activeEmote = null, frozen = false, desktopClickToMove = false, tuning, juice, timeScale, telemetry, walkSpeed = MOVE_TUNING.walkSpeed }: PlayerAvatarProps) {
+  const anchor = useRef<THREE.Group>(null), body = useRef<THREE.Group>(null), head = useRef<THREE.Group>(null);
+  const motion = useRef<CharacterMotion>({ speed: 0, yaw: 0, lift: 0, pose: null, play: null, move: null });
   const { look } = useMyLook();
-  // Initialize y on the terrain at spawn so the avatar doesn't visibly
-  // drop in from y=0 if the spawn point sits on a slope.
-  const positionRef = useRef(new THREE.Vector3(
-    spawnPosition[0],
-    groundHeight(spawnPosition[0], spawnPosition[2]) + AVATAR_FOOT_OFFSET,
-    spawnPosition[2],
-  ));
-  useEffect(() => { onMove(positionRef.current.clone()); }, [onMove]);
-  const targetRef = useRef<THREE.Vector3 | null>(null);
-  const facingRef = useRef(0);
-  // G3: bench sitting. When set, movement freezes and the avatar snaps to the
-  // seat with a down-facing idle pose. Toggled by tsi:sit window events from
-  // GameWorld's E handler; any WASD/click input also stands.
-  const sitRef = useRef<{ x: number; z: number; clip: ClipName; lift: number; yaw: number } | null>(null);
   const { camera, gl } = useThree();
   const { play: playSFX } = useSFX();
-  const footstepTimer = useRef(0);
-  // Elapsed clock for sine drivers, and active click-to-move ring indicators.
-  const clockRef = useRef(0);
-  const indicatorIdRef = useRef(0);
-  const [indicators, setIndicators] = useState<Array<{ id: number; position: [number, number, number] }>>([]);
-  // P28: small dust puffs spawned at the player's feet on each footstep.
-  // Each entry lives ~0.6s then unmounts itself.
-  const puffIdRef = useRef(0);
-  const [puffs, setPuffs] = useState<Array<{ id: number; position: [number, number, number]; scale?: number; wet?: boolean }>>([]);
-  // Micro-anim loop iter 1 (2026-07-24): cozy sit beat — settle puff + a
-  // brief contented ♪ over the head; standing gives a tiny hop.
-  const [sitNote, setSitNote] = useState(false);
-  const sitNoteTimerRef = useRef<number | null>(null);
-  // F1.2: cosmetic jump. Space triggers a brief y-arc on the sprite mesh
-  // (NOT the group — group y stays terrain-bound). Doesn't affect collision
-  // or click-to-move pathing; pure visual delight.
-  const jumpRef = useRef<{ active: boolean; t: number }>({ active: false, t: 0 });
-  // Game-feel wave G1 (2026-07-07): velocity with accel/decel easing.
-  const velRef = useRef(new THREE.Vector2(0, 0));
-  // Loop iter 6 (2026-07-24): turn-skid dust — a sharp direction reversal
-  // at speed kicks a puff behind the feet. Cooldown stops puff spam.
-  const skidCooldownRef = useRef(0);
-  // Loop iter 13 (2026-07-24): sprint wind lines — 4 faint streak rods
-  // around the player at full sprint, aligned to heading, instant fade on
-  // slowdown. All refs; no per-frame React.
-  const windGroupRef = useRef<THREE.Group>(null);
-  const windMatsRef = useRef<THREE.MeshBasicMaterial[]>([]);
+  const bindings = useMoveKeys();
+  const [x0, , z0] = spawnPosition;
+  const sim = useRef<MoveSim | null>(null), simAt = useRef("");
+  const keys = useRef<Record<string, boolean>>({});
+  const presses = useRef({ jump: false, dash: false });
+  const target = useRef<{ x: number; z: number } | null>(null);
+  const seat = useRef<Seat | null>(null);
+  const reported = useRef<[number, number, number] | null>(null);
+  const fx = useRef({ sq: 0, sqv: 0, step: 0, trail: 0, stuck: 0, level: 0, punch: 0, lead: new THREE.Vector2(), pan: new THREE.Vector2(), rise: new THREE.Vector2(), focus: new THREE.Vector3(x0, 0, z0) });
+  const dust = useMemo(() => new DustPool(), []);
+  const streaks = useMemo(() => new Streaks(), []);
+  const ring = useMemo(() => new DashRing(), []);
+  useEffect(() => () => { dust.dispose(); streaks.dispose(); ring.dispose(); }, [dust, streaks, ring]);
   const combatPrev = useRef<CombatView | null>(null);
+  const indicatorId = useRef(0);
+  const [indicators, setIndicators] = useState<Array<{ id: number; position: [number, number, number] }>>([]);
+  // Micro-anim loop iter 1 (2026-07-24): cozy sit beat, a settle puff and a brief contented ♪ over the head.
+  const [sitNote, setSitNote] = useState(false);
+  const sitNoteTimer = useRef<number | null>(null);
+  /** Dev (evidence): a scripted pilot, and pause / run-for-a-moment to shoot frames. */
+  const dev = useRef<{ pilot: ReturnType<typeof routePilot> | null; paused: boolean; budget: number }>({ pilot: null, paused: false, budget: 0 });
 
-  // Keyboard input. Sprint F1.1: track Shift for sprint multiplier and guard
-  // against typing in inputs/textareas/contentEditable so WASD doesn't fire
-  // while the user is filling out a form overlay.
+  // Keys (remappable, lib/game/movement/keys); held keys are read each frame, presses wait for the sim.
   useEffect(() => {
     if (frozen) return;
-    return bindGameKeys({ keys, accepted: ["w", "a", "s", "d", "shift", " ", "c"],
-      onReset: () => { targetRef.current = null; velRef.current.set(0, 0); },
+    const b = bindings, walk = [b.forward, b.left, b.back, b.right];
+    return bindGameKeys({ keys: keys.current, accepted: Object.values(b),
+      onReset: () => { target.current = null; },
       onPress: (e) => {
-        if (["w", "a", "s", "d"].includes(e.key.toLowerCase())) sitRef.current = null;
-        // F1.2: Space triggers cosmetic jump. Ignore key-repeat so holding
-        // Space doesn't loop the arc — only re-fires after the previous
-        // jump finishes.
-        if ((e.key === " " || e.code === "Space") && !noHop) {
-          if (!e.repeat && !jumpRef.current.active) {
-            jumpRef.current.active = true;
-            jumpRef.current.t = 0;
-            // Loop iter 14 (2026-07-24): takeoff beat — landing had squash +
-            // puff + thud, liftoff had nothing. Small kick-off puff + a light
-            // hop note completes the arc.
-            const jp = positionRef.current;
-            const id = puffIdRef.current++;
-            setPuffs((prev) => [...prev, { id, position: [jp.x, jp.y + 0.02, jp.z], scale: 0.85 }]);
-            playSFX("jump");
-          }
-          e.preventDefault();
-        }
+        const k = e.key.toLowerCase();
+        if (k === b.jump || k === b.dash) e.preventDefault();
+        if (e.repeat) return;
+        if (k === b.jump) presses.current.jump = true;
+        if (k === b.dash) presses.current.dash = true;
+        if (walk.includes(k)) target.current = null;
       },
     });
-  }, [playSFX, frozen, noHop]);
+  }, [bindings, frozen]);
 
-  // Click-to-move
+  // Tap-to-walk: touch only (refinement 2026-07-22: on fine pointers WASD is the verb and misclicks kept sending you walking).
   const raycaster = useRef(new THREE.Raycaster());
-  const mouse = useRef(new THREE.Vector2());
-
-  const handleClick = useCallback(
-    (e: MouseEvent) => {
-      if (frozen || e.defaultPrevented) return;
-      // Refinement 2026-07-22 (David): click-to-move is touch-only now.
-      // On fine-pointer devices misclicks kept sending the player walking;
-      // WASD is the desktop verb. Coarse pointers (phones/tablets in full
-      // 3D) keep tap-to-walk.
-      if (!desktopClickToMove && window.matchMedia("(pointer: fine)").matches) return;
-      const rect = gl.domElement.getBoundingClientRect();
-      mouse.current.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-      mouse.current.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
-
-      raycaster.current.setFromCamera(mouse.current, camera);
-      // 2026-07-08 sync fix: pick against the VISUALLY CURVED heightfield
-      // (terrain height + world-bend), not a flat y=0 plane — clicks were
-      // landing short of the point under the cursor.
-      const intersection = pickCurvedGround(raycaster.current.ray, camera, groundHeight);
-
-      if (intersection) {
-        const pos = positionRef.current;
-        const [cix, ciz] = constrainMove
-          ? constrainMove(pos.x, pos.z, intersection.x, intersection.z)
-          : clampToCoast(intersection.x, intersection.z, BOUNDARY);
-        intersection.x = cix;
-        intersection.z = ciz;
-        intersection.y = 0;
-        targetRef.current = intersection;
-        playSFX("click");
-        // Sprint A8: spawn expanding ring at click point. Re-clicks spawn new
-        // rings (key by counter so React mounts a fresh component).
-        const id = indicatorIdRef.current++;
-        setIndicators((prev) => [
-          ...prev,
-          { id, position: [intersection.x, groundHeight(intersection.x, intersection.z), intersection.z] },
-        ]);
-      }
-    },
-    [camera, gl, playSFX, constrainMove, groundHeight, frozen, desktopClickToMove]
-  );
-
+  const handleClick = useCallback((e: MouseEvent) => {
+    if (frozen || e.defaultPrevented) return;
+    if (!desktopClickToMove && window.matchMedia("(pointer: fine)").matches) return;
+    const rect = gl.domElement.getBoundingClientRect();
+    raycaster.current.setFromCamera(new THREE.Vector2(((e.clientX - rect.left) / rect.width) * 2 - 1, -((e.clientY - rect.top) / rect.height) * 2 + 1), camera);
+    // Against the visually curved heightfield, not a flat plane (2026-07-08 sync fix).
+    const hit = pickCurvedGround(raycaster.current.ray, camera, groundHeight);
+    if (!hit) return;
+    target.current = { x: hit.x, z: hit.z };
+    fx.current.stuck = 0;
+    playSFX("click");
+    const id = indicatorId.current++;
+    setIndicators(prev => [...prev, { id, position: [hit.x, groundHeight(hit.x, hit.z), hit.z] }]);
+  }, [camera, gl, playSFX, groundHeight, frozen, desktopClickToMove]);
   useEffect(() => {
     gl.domElement.addEventListener("click", handleClick);
     return () => gl.domElement.removeEventListener("click", handleClick);
   }, [gl, handleClick]);
 
-  // G3: sit toggle. Same seat without a clip → stand; different/first → sit
-  // at that seat. The same seat WITH a clip re-poses and stays seated (study:
-  // Study in focus, Stretch on breaks). detail.clip picks Sit/Study/Stretch/
-  // Sleep; detail.seatY is the furniture's seat (or bed) top in world y, and
-  // the clip's authored seat height is taken off it (ruling 18); detail.yaw
+  // Getting up puts you in the open beside the seat, its front first; the avatar eases over from the seat.
+  const leaveSeat = useCallback(() => {
+    const s = seat.current;
+    if (!s) return;
+    seat.current = null;
+    motion.current.pose = null;
+    const [x, z] = clearSpot(world, s.x, s.z, groundHeight(s.x, s.z), s.yaw);
+    sim.current = createMoveSim(createMoveState(x, z, world, s.yaw));
+    fx.current.rise.set(s.x - x, s.z - z);
+    fx.current.sqv += 3;
+    setSitNote(false);
+  }, [world, groundHeight]);
+
+  // G3 seats: the same seat without a clip stands you up; a different or first seat sits you there. The same seat WITH
+  // a clip re-poses you (study: Study in focus, Stretch on breaks). detail.clip picks Sit/Study/Stretch/Sleep; detail.seatY
+  // is the furniture's seat (or bed) top in world y, the clip's authored seat height taken off it (ruling 18); detail.yaw
   // faces the seat's front (default: the camera).
   useEffect(() => {
     const onSit = (e: Event) => {
       const { x, z, clip, seatY, yaw = Math.PI } = (e as CustomEvent<{ x: number; z: number; clip?: ClipName; seatY?: number; yaw?: number }>).detail;
-      const cur = sitRef.current;
-      const sameSeat = !!cur && cur.x === x && cur.z === z;
-      const seat = (c: ClipName) => ({ x, z, clip: c, yaw, lift: seatY === undefined ? 0 : seatLift(c, seatY - groundHeight(x, z), CHARACTER_SCALE) });
-      if (sameSeat && clip) { sitRef.current = seat(clip); return; }
-      const sittingDown = !sameSeat;
-      sitRef.current = sittingDown ? seat(clip ?? "Sit") : null;
-      motion.current.pose = sitRef.current?.clip ?? null;
-      if (sittingDown) {
-        targetRef.current = null;
-        jumpRef.current = { active: false, t: 0 };
-        // settle: soft dust puff at the seat + ♪ for a moment
-        const id = puffIdRef.current++;
-        setPuffs((prev) => [...prev, { id, position: [x, groundHeight(x, z) + 0.15, z], scale: 1.3 }]);
-        setSitNote(true);
-        if (sitNoteTimerRef.current) window.clearTimeout(sitNoteTimerRef.current);
-        sitNoteTimerRef.current = window.setTimeout(() => setSitNote(false), 1700);
-      } else {
-        // stand: tiny cosmetic hop (reuses the jump arc at low amplitude)
-        setSitNote(false);
-        if (!jumpRef.current.active) jumpRef.current = { active: true, t: 0.22 };
-      }
+      const cur = seat.current, same = !!cur && cur.x === x && cur.z === z;
+      const at = (c: ClipName): Seat => ({ x, z, clip: c, yaw, lift: seatY === undefined ? 0 : seatLift(c, seatY - groundHeight(x, z), CHARACTER_SCALE) });
+      if (same && clip) { seat.current = at(clip); return; }
+      if (same) { leaveSeat(); return; }
+      seat.current = at(clip ?? "Sit");
+      motion.current.pose = seat.current.clip;
+      target.current = null;
+      dust.spawn(x, groundHeight(x, z) + 0.15, z, 1.3);
+      setSitNote(true);
+      if (sitNoteTimer.current) window.clearTimeout(sitNoteTimer.current);
+      sitNoteTimer.current = window.setTimeout(() => setSitNote(false), 1700);
     };
     window.addEventListener("tsi:sit", onSit);
     return () => {
       window.removeEventListener("tsi:sit", onSit);
-      if (sitNoteTimerRef.current) window.clearTimeout(sitNoteTimerRef.current);
+      if (sitNoteTimer.current) window.clearTimeout(sitNoteTimer.current);
     };
-  }, [groundHeight]);
+  }, [groundHeight, leaveSeat, dust]);
 
   // World interactions → clips (fish, forage, net, emotes).
-  const faceToward = useCallback((x: number, z: number) => { const p = positionRef.current; facingRef.current = Math.atan2(x - p.x, z - p.z); }, []);
+  const faceToward = useCallback((x: number, z: number) => turnTo(sim.current?.state, x, z), []);
   useWorldClips(motion, faceToward);
   useEffect(() => {
     const clip = activeEmote ? EMOTE_CLIPS[activeEmote.animation_key] : null;
     if (clip) motion.current.play = clip;
   }, [activeEmote]);
 
-  // Movement + animation loop
-  useFrame((_, elapsed) => {
-    if (!groupRef.current) return;
-    const delta = Math.min(elapsed, 0.1);
-    if (frozen) { targetRef.current = null; velRef.current.set(0, 0); }
+  useEffect(() => {
+    // Dev (evidence scripts): read the sim, teleport, drive a route, step the sim a moment at a time.
+    if (process.env.NODE_ENV === "production") return;
+    Object.assign(window, { __move: {
+      sim,
+      teleport: (x: number, z: number, facing = 0) => { seat.current = null; sim.current = createMoveSim(createMoveState(x, z, world, facing)); },
+      autopilot: (route?: RouteStep[]) => { dev.current.pilot = routePilot(route); },
+      pause: () => { dev.current.paused = true; dev.current.budget = 0; },
+      run: (seconds: number) => { dev.current.paused = true; dev.current.budget += seconds; },
+      resume: () => { dev.current.paused = false; },
+      /** Where the avatar is on the page (evidence crops), and the camera (evidence: no lag, no bob). */
+      screen: () => (sim.current ? screenOf(interpolated(sim.current), camera, gl.domElement) : null),
+      camera: () => camera.position.toArray(),
+    } });
+  }, [world, camera, gl]);
 
-    clockRef.current += delta;
-    const pos = positionRef.current;
-    const prevX = pos.x;
-    const prevZ = pos.z;
-    let moving = false;
-    let dx = 0;
-    let dz = 0;
-
-    // G3: any movement input stands up. Checked before the sit branch so a
-    // held key breaks the pose immediately.
-    if (!frozen && sitRef.current && (keys["w"] || keys["a"] || keys["s"] || keys["d"] || targetRef.current)) {
-      sitRef.current = null;
+  useFrame((_, rawDelta) => {
+    const g = anchor.current, bd = body.current, hd = head.current;
+    if (!g || !bd || !hd) return;
+    const p = combat.rt.player, d = dev.current, f = fx.current, m = motion.current, j = juice?.current ?? MOVE_JUICE, st = touchStick, k = keys.current, b = bindings;
+    const t = inCombat ? combatTuning(p.speed) : tuning?.current ?? MOVE_TUNING;
+    if (!sim.current || simAt.current !== `${x0},${z0}`) {
+      sim.current = createMoveSim(createMoveState(x0, z0, world));
+      simAt.current = `${x0},${z0}`;
     }
-
-    // G3: seated — snap to the seat, freeze, hold the seat clip.
-    if (sitRef.current) {
-      const seat = sitRef.current;
-      const seatY = groundHeight(seat.x, seat.z) + AVATAR_FOOT_OFFSET;
-      const changed = pos.x !== seat.x || pos.y !== seatY || pos.z !== seat.z;
-      pos.set(seat.x, seatY, seat.z);
-      groupRef.current.position.copy(pos);
-      facingRef.current = seat.yaw;
-      Object.assign(motion.current, { speed: 0, yaw: seat.yaw, lift: seat.lift, pose: seat.clip });
-      velRef.current.set(0, 0);
-      if (changed) onMove(pos.clone());
-      return;
+    // Spawned or built into something (an exit painted inside a prop, furniture placed where you stand): step out to the nearest open spot.
+    const at = sim.current.state;
+    if (at.mode === "ground" && !seat.current && (!(at.y < Infinity) || world.wet(at.x, at.z) || world.top(at.x, at.z) > at.y + t.stepUp)) {
+      const [x, z] = clearSpot(world, at.x, at.z, groundHeight(at.x, at.z), at.facing, t);
+      sim.current = createMoveSim(createMoveState(x, z, world, at.facing));
     }
-    if (motion.current.pose && SEAT_CLIPS.has(motion.current.pose)) motion.current.pose = null;
+    if (!reported.current) f.level = sim.current.state.y;
+    let dt = Math.min(rawDelta, 0.1) * (timeScale?.current ?? 1);
+    if (d.paused) { dt = Math.min(dt, d.budget); d.budget -= dt; }
 
-    // Sprint F1.1: camera-relative WASD. Forward = camera direction projected
-    // onto XZ plane; right = forward rotated 90° clockwise. Arrow keys are
-    // reserved for camera rotation (handled in GameWorld).
-    const { fx, fz } = getCameraForwardXZ(camera);
-    const rx = -fz;
-    const rz = fx;
-    const wDown = !frozen && !!keys["w"];
-    const sDown = !frozen && !!keys["s"];
-    const aDown = !frozen && !!keys["a"];
-    const dDown = !frozen && !!keys["d"];
-    const sprint = !frozen && !!keys["shift"];
-    if (wDown) { dx += fx; dz += fz; }
-    if (sDown) { dx -= fx; dz -= fz; }
-    if (dDown) { dx += rx; dz += rz; }
-    if (aDown) { dx -= rx; dz -= rz; }
-    const keyMoving = dx !== 0 || dz !== 0;
-    if (keyMoving) {
-      // Keyboard overrides click-to-move (Q3: keep click as alt, but keyboard
-      // takes priority while keys are held).
-      targetRef.current = null;
-      const len = Math.hypot(dx, dz);
-      dx /= len;
-      dz /= len;
-      moving = true;
+    // Intent: keys give a unit direction, the stick keeps its tilt; either drops a tap target, and any move gets you up from a seat.
+    let ix = (k[b.right] ? 1 : 0) - (k[b.left] ? 1 : 0), iz = (k[b.forward] ? 1 : 0) - (k[b.back] ? 1 : 0);
+    const keyed = Math.hypot(ix, iz), tilt = Math.hypot(st.x, st.z);
+    if (keyed) { ix /= keyed; iz /= keyed; } else { ix = st.x; iz = st.z; }
+    const jumpPressed = presses.current.jump || st.jumpPressed, dashPressed = presses.current.dash || st.dashPressed;
+    presses.current.jump = presses.current.dash = false;
+    st.jumpPressed = st.dashPressed = false;
+    if (frozen || keyed || tilt > 0.05) target.current = null;
+    if (seat.current && !frozen && (keyed || tilt > 0.2 || target.current || jumpPressed || dashPressed)) leaveSeat();
+
+    const s = sim.current!, sitting = seat.current, push = inCombat ? combatPush(p) : undefined;
+    let events: MoveEvent[] = [];
+    if (!sitting) {
+      if (m.pose && SEAT_CLIPS.has(m.pose)) m.pose = null;
+      const { fx: fwdX, fz: fwdZ } = getCameraForwardXZ(camera);
+      const goal = target.current && towards(s.state, target.current.x, target.current.z, t);
+      if (!goal) target.current = null;
+      // In the ruins defeat stops you and a cast roots you; the dodge still goes, and breaks the cast (row C3).
+      const down = inCombat && !p.alive, live = !frozen && !down && !(inCombat && combat.rt.casting);
+      const piloted = d.pilot && dt > 0 ? d.pilot(s.state, dt) : null;
+      if (d.pilot && dt > 0 && !piloted) d.pilot = null;
+      const input: MoveInput = piloted ?? (live ? {
+        x: goal ? goal.x : fwdX * iz - fwdZ * ix, z: goal ? goal.z : fwdZ * iz + fwdX * ix,
+        sprint: !!k[b.sprint] || (!keyed && tilt > 0.92), sneak: !!k[b.sneak],
+        jump: !!k[b.jump] || st.jump, jumpPressed, dashPressed,
+      } : { ...NO_INPUT, dashPressed: !frozen && !down && dashPressed });
+      if (inCombat) { input.push = push; s.state.facing = p.facing; } // no stick: the dodge goes the way you aim
+      events = advanceMove(s, input, dt, world, t);
+      if (target.current) {
+        f.stuck = Math.hypot(s.state.vx, s.state.vz) < 0.3 ? f.stuck + dt : 0;
+        if (f.stuck > STUCK_TIME) target.current = null;
+      }
+      if (inCombat && events.some(e => e.kind === "dash")) dashDodge(combat.rt, { x: s.state.dashX, z: s.state.dashZ });
     }
+    const state = s.state, speed = sitting ? 0 : Math.hypot(state.vx, state.vz);
+    const [x, y, z] = sitting ? [sitting.x, groundHeight(sitting.x, sitting.z), sitting.z] : interpolated(s);
+    const wet = world.wet(x, z), floor = wet ? world.top(x, z) - WATER_DROP : world.top(x, z), groundY = Math.min(y, floor);
+    const grounded = !!sitting || (state.mode !== "air" && state.mode !== "mantle" && state.mode !== "splash");
 
-    // Click-to-move — runs only when no keyboard input is active.
-    if (!moving && targetRef.current) {
-      const toTarget = targetRef.current.clone().sub(pos);
-      toTarget.y = 0;
-      if (toTarget.length() > 0.1) {
-        toTarget.normalize();
-        dx = toTarget.x;
-        dz = toTarget.z;
-        moving = true;
-      } else {
-        targetRef.current = null;
-        velRef.current.set(0, 0);
-      }
-    }
-
-    // Apply XZ movement with easing (G1): velocity damps toward the input
-    // direction — ~80ms up to speed, ~130ms glide-out. Frame cycling below
-    // already scales by ACTUAL speed, so the walk anim eases in for free.
-    {
-      // Hold C to sneak (peaceful loop: approach bugs without startling them, rods/bugs spec).
-      const sneak = !sprint && !!keys["c"];
-      const speedMult = sprint && keyMoving ? 1.85 : sneak ? 0.3 : 1; // refinement: stronger sprint (was 1.6)
-      const vel = velRef.current;
-      const lam = moving ? 12 : 7.5;
-      // Turn-skid: desired dir opposes current velocity while moving fast.
-      skidCooldownRef.current = Math.max(0, skidCooldownRef.current - delta);
-      if (moving && skidCooldownRef.current === 0) {
-        const sp = Math.hypot(vel.x, vel.y);
-        if (sp > PLAYER_SPEED * 0.55 && dx * vel.x + dz * vel.y < -0.4 * sp) {
-          skidCooldownRef.current = 0.6;
-          const id = puffIdRef.current++;
-          setPuffs((prev) => [...prev, { id, position: [pos.x, pos.y + 0.12, pos.z], scale: 1.15 }]);
-          playSFX("footstep");
-        }
-      }
-      const motion = advanceMotion(
-        { x: pos.x, z: pos.z, vx: vel.x, vz: vel.y },
-        { x: moving ? dx : 0, z: moving ? dz : 0, speed: PLAYER_SPEED * speedMult * (inCombat ? combat.rt.player.speed : 1), response: lam, goal: targetRef.current ?? undefined },
-        delta,
-        constrainMove ?? ((_x, _z, nextX, nextZ) => clampToCoast(nextX, nextZ, BOUNDARY)),
-      );
-      pos.x = motion.x;
-      pos.z = motion.z;
-      vel.set(motion.vx, motion.vz);
-      // Combat dash / knockback rides the same collision as walking.
-      const push = impulse?.current;
-      if (push && (push.x || push.z)) {
-        const constrain = constrainMove ?? ((_x: number, _z: number, nextX: number, nextZ: number) => clampToCoast(nextX, nextZ, BOUNDARY));
-        const [px, pz] = constrain(pos.x, pos.z, pos.x + push.x * delta, pos.z + push.z * delta);
-        pos.x = px; pos.z = pz; moving = true;
-      }
-      if (motion.arrived) targetRef.current = null;
-      if (moving) {
-        const targetAngle = Math.atan2(dx, dz);
-        facingRef.current = easeFacing(facingRef.current, targetAngle, ROTATION_LERP, delta);
-      }
-      // Feedback follows movement that survived collision, including glide-out; a dodge or
-      // knockback while standing still still moves the player, so the camera and combat must hear it.
-      moving = motion.moving || !!(push && (push.x || push.z));
-      applySprintFov(camera, Math.hypot(vel.x, vel.y), delta);
-
-      // Sprint wind lines: visible only near sprint speed, sliding
-      // backward past the player; opacity collapses fast on slowdown.
-      const wg = windGroupRef.current;
-      if (wg) {
-        const spd = Math.hypot(vel.x, vel.y);
-        const showWind = spd > PLAYER_SPEED * 1.35;
-        let peak = 0;
-        for (const m of windMatsRef.current) {
-          if (!m) continue;
-          m.opacity = THREE.MathUtils.damp(m.opacity, showWind ? 0.2 : 0, showWind ? 8 : 22, delta);
-          peak = Math.max(peak, m.opacity);
-        }
-        wg.visible = peak > 0.015;
-        if (wg.visible) {
-          wg.position.set(pos.x, pos.y, pos.z);
-          wg.rotation.y = Math.atan2(vel.x, vel.y);
-          for (let i = 0; i < wg.children.length; i++) {
-            wg.children[i].position.z = -0.15 - ((clockRef.current * 5 + i * 0.65) % 1) * 1.1;
+    // ── Events → clips, dust, thumps, squash (puffs grow with speed; a trailing one at a run) ──
+    const back = speed > 0.1 ? 1 / speed : 0, puff = (e: MoveEvent, size: number) => {
+      dust.spawn(e.x, e.y, e.z, Math.min(2, size) * j.dust);
+      if (e.speed > t.walkSpeed) dust.spawn(e.x - state.vx * back * 0.45, e.y, e.z - state.vz * back * 0.45, Math.min(2, size) * 0.7 * j.dust, false, 0.45);
+    };
+    events.forEach((e, i) => {
+      const clip = EVENT_CLIP[e.kind];
+      if (clip) m.play = clip;
+      switch (e.kind) {
+        case "hop":
+          // Touch down and straight back up: a quick squash that springs into the stretch.
+          f.sq = Math.min(f.sq, -0.12 * j.squash); f.sqv = 6 * j.squash; puff(e, 0.6 + e.speed * 0.04); playSFX("jump"); break;
+        case "jump": case "long": case "dashjump":
+          f.sqv += 4.5 * j.squash; puff(e, 0.5 + e.speed * 0.04); playSFX("jump"); break;
+        case "land":
+          // A landing that launches the next hop (same step) leaves its thump to the hop; any other ends a short hop's Jump clip (no sliding feet).
+          if (events[i + 1] && TAKEOFF.has(events[i + 1].kind)) break;
+          m.stop = true;
+          if (e.drop > 0.3) {
+            f.sqv -= Math.min(9, 2.5 + e.drop * 2.4) * j.squash;
+            puff(e, 0.6 + e.drop * 0.35 + e.speed * 0.03);
+            playSFX("footstep");
+            if (e.speed < 3 && e.drop > 0.6 && !m.play) m.play = "Land";
           }
-        }
+          break;
+        case "roll": puff(e, 1.3); break;
+        case "dash": f.sqv -= 2 * j.squash; f.punch = j.dashKick; dust.spawn(e.x, e.y, e.z, 1.2 * j.dust); playSFX("blip4"); break;
+        case "skid": playSFX("footstep"); break;
+        case "mantle": playSFX("blip1"); break;
+        case "bonk": f.sqv -= 3 * j.squash; playSFX("footstep"); break;
+        case "splash": dust.spawn(e.x, e.y + 0.05, e.z, 2.2, true, 0.9); playSFX("blip5"); break;
+        case "respawn": dust.spawn(e.x, e.y, e.z, 1.2 * j.dust); playSFX("blip3"); f.pan.set(f.focus.x - x - f.lead.x, f.focus.z - z - f.lead.y); break;
       }
-    }
-
-    // Ground follow — sample terrain every frame (even when idle so the
-    // avatar settles if terrain ever changes) and damp toward it. Damping
-    // keeps slope transitions smooth instead of snapping per step.
-    // Per-frame: lookup-grid bilinear sample (~50x cheaper than FBM).
-    const targetY = groundHeight(pos.x, pos.z) + AVATAR_FOOT_OFFSET;
-    pos.y = THREE.MathUtils.damp(pos.y, targetY, 1 / Y_DAMP_TIME, delta);
-
-    groupRef.current.position.copy(pos);
-
-    // F1.2 jump arc — simple parabola over 0.5s, peak ~0.6 units.
-    let jumpY = 0;
-    if (jumpRef.current.active) {
-      jumpRef.current.t += delta;
-      const j = jumpRef.current.t / 0.5; // 0 → 1 over 0.5s
-      if (j >= 1) {
-        jumpRef.current.active = false;
-        jumpRef.current.t = 0;
-        playSFX("footstep"); // land thud
-        // P29: landing puff — bigger ring at the player's current spot.
-        const id = puffIdRef.current++;
-        setPuffs((prev) => [
-          ...prev,
-          { id, position: [pos.x, pos.y + 0.02, pos.z], scale: 1.6 },
-        ]);
-      } else {
-        // 4 * j * (1-j) peaks at j=0.5 with value 1
-        jumpY = 4 * j * (1 - j) * 0.6;
+    });
+    // Trails while skidding, rolling or dashing on the ground; footfalls while walking and running: the bridge knocks,
+    // brick and stone tap and kick no dirt unless wet, and on rain days every step is a ripple (loop iters 7, 22, 26, 31).
+    const trailing = !sitting && grounded && (state.mode === "skid" || state.mode === "roll" || state.dashT > 0);
+    f.trail -= dt;
+    if (trailing && f.trail <= 0) { f.trail = 0.05; dust.spawn(x - state.vx * 0.02, groundY, z - state.vz * 0.02, 0.8 * j.dust, false, 0.45); }
+    if (!sitting && state.mode === "ground" && speed > 1 && state.dashT <= 0) {
+      f.step += dt;
+      if (f.step >= Math.max(0.2, 2.96 / speed)) {
+        f.step = 0;
+        const surface = groundSurface?.(x, z), bridge = surface === Surface.Wood, brick = surface === Surface.Brick || surface === Surface.Stone, rain = getTodayWeather() === "rain";
+        playSFX(bridge ? "blip4" : brick ? "blip3" : "footstep");
+        if (!bridge && (!brick || rain)) dust.spawn(x - state.vx * 0.03, groundY, z - state.vz * 0.03, (0.6 + speed * 0.055) * j.dust, rain);
       }
-    }
+    } else f.step = 0;
+    dust.update(dt);
+    // Speed lines through a dash and at a sprint; the dash cooldown ring at the feet.
+    streaks.update(dt, x, y, z, state.vx, state.vz, sitting ? 0 : j.streaks * (state.dashT > 0 ? 0.4 : speed > t.walkSpeed * 1.35 ? 0.18 : 0));
+    const spent = !sitting && state.mode === "air" && state.airDashes >= t.airDashes, dashReady = !!sitting || (state.dashCd <= 0 && !spent && state.mode !== "recover");
+    ring.update(dt, x, groundY, z, spent ? 0 : 1 - state.dashCd / Math.max(0.01, t.dashCooldown), dashReady);
 
-    const m = motion.current;
-    m.speed = delta > 0 ? Math.hypot(pos.x - prevX, pos.z - prevZ) / delta : 0;
-    m.yaw = facingRef.current;
-    m.lift = jumpY;
+    // Squash and stretch: a spring, stretched by vertical speed in the air. Getting up eases over from the seat.
+    const want = !sitting && state.mode === "air" ? THREE.MathUtils.clamp(state.vy * 0.012, -0.07, 0.12) * j.squash : 0;
+    f.sqv += ((want - f.sq) * 260 - f.sqv * 16) * dt;
+    f.sq = THREE.MathUtils.clamp(f.sq + f.sqv * dt, -0.3, 0.3);
+    f.rise.multiplyScalar(Math.exp(-18 * dt));
+    const sy = 1 + f.sq, sxz = 1 / Math.sqrt(sy), rx = x + f.rise.x, rz = z + f.rise.y;
+    g.position.set(rx, groundY, rz);
+    bd.scale.set(sxz, sy, sxz);
+    hd.position.set(rx, sitting ? groundY : y, rz);
+
+    // Character: yaw, lift above the ground under it, the movement state clip; a seat holds its clip.
+    if (sitting) Object.assign(m, { speed: 0, yaw: sitting.yaw, lift: sitting.lift, pose: sitting.clip, move: null });
+    else {
+      m.yaw = state.facing;
+      m.lift = (y - groundY) / sy;
+      m.speed = state.mode === "ground" ? Math.hypot(state.vx + (push?.x ?? 0), state.vz + (push?.z ?? 0)) : 0;
+      m.move = state.mode === "air" || state.mode === "splash" ? "Fall" : state.mode === "skid" ? "Skid" : null;
+    }
+    m.rate = rawDelta > 0 ? dt / Math.min(rawDelta, 0.1) : 1;
     if (inCombat) {
       // Encounter: face the aim; attacks, dodges, hits, casting and defeat drive the clips.
-      const p = combat.rt.player, view: CombatView = { alive: p.alive, dodgeAge: p.dodgeAge, hurt: p.hurt, attackCd: p.attackCd };
+      const view: CombatView = { alive: p.alive, dodgeAge: p.dodgeAge, hurt: p.hurt, attackCd: p.attackCd };
       const next = combatClip(view, combatPrev.current ?? view, !!combat.rt.casting, WEAPONS[p.weapon].kind);
       combatPrev.current = view;
-      m.yaw = facingRef.current = p.facing;
+      m.yaw = p.facing;
       m.pose = next.pose;
       if (next.play) m.play = next.play;
     }
 
-    // Footstep SFX — fire ~every 0.4s walking, ~0.25s when sprinting (F1.6).
-    // No-op if audio is muted or assets aren't shipped (manager silently
-    // drops the call).
-    if (moving) {
-      footstepTimer.current += delta;
-      const footstepInterval = keys["shift"] ? 0.25 : 0.4;
-      if (footstepTimer.current >= footstepInterval) {
-        footstepTimer.current = 0;
-        // Loop iter 26 (2026-07-24): the bridge knocks — steps on the main
-        // river crossing play a wooden note instead of the grass scuff.
-        const surface = groundSurface?.(pos.x, pos.z);
-        const onBridge = surface !== undefined ? surface === Surface.Wood : (Math.abs(pos.x) < 2.2 && pos.z > 0 && pos.z < 6.5) || (Math.abs(pos.x - 39.25) < 1.8 && pos.z > 0.9 && pos.z < 6.6) || (pos.x > 43.2 && pos.x < 45.2 && pos.z > 0.4 && pos.z < 5); // S2+S3: crossings + pier knock
-        // Loop wake 31: the brick plaza taps — hard pavement note (matches
-        // RoadTiles' PLAZA rect), and dry brick kicks no dirt.
-        const onBrick = surface !== undefined ? surface === Surface.Brick || surface === Surface.Stone : pos.x > -5.4 && pos.x < 5.4 && pos.z > -16.6 && pos.z < -9.4;
-        playSFX(onBridge ? "blip4" : onBrick ? "blip3" : "footstep");
-        // P28: spawn a dust puff at the player's feet. Trailing slightly
-        // behind the movement direction so it reads as kicked-up dust.
-        const trailX = pos.x - (dx || 0) * 0.2;
-        const trailZ = pos.z - (dz || 0) * 0.2;
-        const id = puffIdRef.current++;
-        // Loop iter 7 (2026-07-24): on the beach band footsteps splash a
-        // wet ring instead of kicking dust (coast-space distance past the
-        // sand line ≈48.5). Iter 22: rain days make EVERY step a puddle
-        // ripple — the weather reaches the ground (incl. puddles on brick).
-        const wet = (!groundSurface && coastDist(trailX, trailZ) > 48.5) || getTodayWeather() === "rain";
-        if (!onBridge && (!onBrick || wet)) setPuffs((prev) => [...prev, { id, position: [trailX, pos.y + 0.02, trailZ], scale: keys["shift"] ? 1.3 : 1, wet }]);
-      }
-    } else {
-      footstepTimer.current = 0;
-    }
+    // Camera focus: the avatar, a lead along its velocity, and the level it stands on. A hop never lifts the level;
+    // landing on a new one, a mantle (to its top) or falling below it reframes. A respawn pans rather than cuts.
+    f.level = THREE.MathUtils.damp(f.level, !sitting && state.mode === "mantle" ? state.to[1] : grounded ? y : Math.min(f.level, y), 8, dt);
+    const lead = Math.min(1.5, speed * j.camLead), dir = speed > 0.1 ? lead / speed : 0;
+    f.lead.x = THREE.MathUtils.damp(f.lead.x, state.vx * dir, 3, dt);
+    f.lead.y = THREE.MathUtils.damp(f.lead.y, state.vz * dir, 3, dt);
+    f.pan.multiplyScalar(Math.exp(-5 * dt));
+    f.focus.set(x + f.lead.x + f.pan.x, f.level, z + f.lead.y + f.pan.y);
+    camTarget?.current.copy(f.focus);
+    f.punch *= Math.exp(-6 * dt);
+    const fast = THREE.MathUtils.clamp((speed - t.walkSpeed) / Math.max(0.1, topSpeed(t) - t.walkSpeed), 0, 1);
+    applyFov(camera, (getLabFov() ?? 48) + j.fovKick * fast + f.punch, Math.min(rawDelta, 0.1));
 
-    // Notify camera/parent when moving, or when y is still settling toward
-    // the terrain (keeps camera in sync after stopping on a slope).
-    const ySettling = Math.abs(pos.y - targetY) > 0.005;
-    if (moving || ySettling) onMove(pos.clone());
-  }, -3);
+    if (telemetry) Object.assign(telemetry.current, { x, y, z, speed, mode: state.mode, hops: state.hops, dashReady, long: state.long });
+    const last = reported.current;
+    if (!last || Math.abs(last[0] - x) + Math.abs(last[1] - y) + Math.abs(last[2] - z) > 1e-4) {
+      reported.current = [x, y, z];
+      onMove(new THREE.Vector3(x, y, z));
+    }
+  }, -4);
 
   return (
     <>
-      {/* Sprint A8: click-to-move target indicators in world space */}
+      {/* Sprint A8: tap-to-walk target rings in world space */}
       {indicators.map((ind) => (
-        <MoveTargetIndicator
-          key={ind.id}
-          position={ind.position}
-          groundHeight={groundHeight}
-          onComplete={() =>
-            setIndicators((prev) => prev.filter((i) => i.id !== ind.id))
-          }
-        />
+        <MoveTargetIndicator key={ind.id} position={ind.position} groundHeight={groundHeight}
+          onComplete={() => setIndicators((prev) => prev.filter((i) => i.id !== ind.id))} />
       ))}
-      {/* Loop iter 13: sprint wind streaks (world-space, heading-aligned) */}
-      <group ref={windGroupRef} visible={false}>
-        {[0, 1, 2, 3].map((i) => (
-          <mesh key={i} position={[i % 2 ? 0.45 : -0.45, 0.55 + (i >> 1) * 0.55, -0.4]}>
-            <boxGeometry args={[0.025, 0.025, 0.85]} />
-            <meshBasicMaterial
-              ref={(m) => { if (m) windMatsRef.current[i] = m; }}
-              color="#FFFFFF"
-              transparent
-              opacity={0}
-              depthWrite={false}
-              fog={false}
-            />
-          </mesh>
-        ))}
+      <primitive object={dust.group} />
+      <primitive object={streaks.group} />
+      <primitive object={ring.group} />
+      <group ref={anchor} position={spawnPosition}>
+        <group ref={body}><PlayerCharacter look={look} motion={motion} inCombat={inCombat} walkSpeed={walkSpeed} /></group>
       </group>
-      {/* P28: footstep dust puffs (small) + P29 landing puff (scale > 1) */}
-      {puffs.map((p) => (
-        <FootstepPuff
-          key={p.id}
-          position={p.position}
-          baseScale={p.scale ?? 1}
-          wet={p.wet}
-          onDone={() => setPuffs((prev) => prev.filter((q) => q.id !== p.id))}
-        />
-      ))}
-      <group ref={groupRef} position={spawnPosition}>
-      <PlayerCharacter look={look} motion={motion} inCombat={inCombat} />
-      {showNameplate && <Html calculatePosition={calculateCurvedHtmlPosition} zIndexRange={[40, 0]}
-        position={[0, CHARACTER_HEIGHT + 0.28, 0]}
-        center
-        style={{ pointerEvents: "none" }}
-      >
-        <div
-          className="whitespace-nowrap text-center"
-          style={{
-            background: "rgba(15, 15, 16, 0.6)",
-            padding: "2px 8px",
-            borderRadius: "4px",
-            boxShadow: member ? "0 0 0 1px rgba(96, 165, 250, 0.55), 0 0 10px rgba(96, 165, 250, 0.45)" : undefined,
-          }}
-          data-member={member || undefined}
+      <group ref={head} position={spawnPosition}>
+        {showNameplate && <Html calculatePosition={calculateCurvedHtmlPosition} zIndexRange={[40, 0]}
+          position={[0, CHARACTER_HEIGHT + 0.28, 0]}
+          center
+          style={{ pointerEvents: "none" }}
         >
-          <div style={{ fontSize: "11px", fontWeight: 700, color: "#f1ffff", lineHeight: 1.2, display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
-            {member && <span aria-label="TSI member" title="TSI member" style={{ width: 6, height: 6, borderRadius: "50%", background: "#60A5FA", boxShadow: "0 0 4px #60A5FA", flex: "none" }} />}
-            {playerName}
+          <div
+            className="whitespace-nowrap text-center"
+            style={{
+              background: "rgba(15, 15, 16, 0.6)",
+              padding: "2px 8px",
+              borderRadius: "4px",
+              boxShadow: member ? "0 0 0 1px rgba(96, 165, 250, 0.55), 0 0 10px rgba(96, 165, 250, 0.45)" : undefined,
+            }}
+            data-member={member || undefined}
+          >
+            <div style={{ fontSize: "11px", fontWeight: 700, color: "#f1ffff", lineHeight: 1.2, display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
+              {member && <span aria-label="TSI member" title="TSI member" style={{ width: 6, height: 6, borderRadius: "50%", background: "#60A5FA", boxShadow: "0 0 4px #60A5FA", flex: "none" }} />}
+              {playerName}
+            </div>
+            <div style={{ fontSize: "9px", color: "#b8c3c3", fontFamily: "'IBM Plex Mono', monospace", lineHeight: 1.2 }}>
+              Lv. {playerLevel}
+            </div>
           </div>
-          <div style={{ fontSize: "9px", color: "#b8c3c3", fontFamily: "'IBM Plex Mono', monospace", lineHeight: 1.2 }}>
-            Lv. {playerLevel}
-          </div>
-        </div>
-      </Html>}
+        </Html>}
 
-      {/* Cozy sit beat: a brief contented note over the head. */}
-      {sitNote && (
-        <Html calculatePosition={calculateCurvedHtmlPosition} position={[0, 2.1, 0]} center zIndexRange={[30, 0]} style={{ pointerEvents: "none" }}>
-          <div style={{ fontSize: 20, animation: "tsi-sit-note 1.7s ease-out forwards" }}>♪</div>
-          <style>{`
-            @keyframes tsi-sit-note {
-              0% { opacity: 0; transform: translateY(6px) rotate(-8deg); }
-              20% { opacity: 0.9; transform: translateY(0) rotate(4deg); }
-              100% { opacity: 0; transform: translateY(-14px) rotate(-4deg); }
-            }
-          `}</style>
-        </Html>
-      )}
+        {/* Cozy sit beat: a brief contented note over the head. */}
+        {sitNote && (
+          <Html calculatePosition={calculateCurvedHtmlPosition} position={[0, 2.1, 0]} center zIndexRange={[30, 0]} style={{ pointerEvents: "none" }}>
+            <div style={{ fontSize: 20, animation: "tsi-sit-note 1.7s ease-out forwards" }}>♪</div>
+            <style>{`
+              @keyframes tsi-sit-note {
+                0% { opacity: 0; transform: translateY(6px) rotate(-8deg); }
+                20% { opacity: 0.9; transform: translateY(0) rotate(4deg); }
+                100% { opacity: 0; transform: translateY(-14px) rotate(-4deg); }
+              }
+            `}</style>
+          </Html>
+        )}
       </group>
     </>
   );
 }
 
-// P28: a single dust puff at the player's feet. Expands and fades out
-// over 0.6s, then calls onDone so the parent removes it from state.
-function FootstepPuff({ position, onDone, baseScale = 1, wet = false }: { position: [number, number, number]; onDone: () => void; baseScale?: number; wet?: boolean }) {
-  const ref = useRef<THREE.Mesh>(null);
-  const matRef = useRef<THREE.MeshBasicMaterial>(null);
-  const tRef = useRef(0);
-  useFrame((_, delta) => {
-    tRef.current += delta;
-    const t = tRef.current / 0.6;
-    if (t >= 1) {
-      onDone();
-      return;
-    }
-    if (ref.current) {
-      // Wet rings spread wider and thinner than dust (iter 7).
-      const s = (wet ? 0.3 + t * 0.75 : 0.35 + t * 0.4) * baseScale;
-      ref.current.scale.set(s, s, s);
-    }
-    if (matRef.current) {
-      matRef.current.opacity = (wet ? 0.45 : 0.55) * (1 - t);
-    }
-  });
-  return (
-    <mesh ref={ref} position={position} rotation={[-Math.PI / 2, 0, 0]}>
-      {wet ? <ringGeometry args={[0.72, 1, 16]} /> : <circleGeometry args={[1, 12]} />}
-      <meshBasicMaterial
-        ref={matRef}
-        color={wet ? "#DFF2FC" : "#D8C8A8"}
-        transparent
-        opacity={0.55}
-        depthWrite={false}
-        fog={false}
-      />
-    </mesh>
-  );
-}
-
-/** Clips that hold while seated; the seat branch owns them. */
-const SEAT_CLIPS = new Set<ClipName>(["Sit", "Study", "Stretch", "Sleep"]);
-
 /** The player's character, with the equipped weapon: in hand in an encounter, across the back once the ruins gate is open (row 140). */
-function PlayerCharacter({ look, motion, inCombat }: { look: CharacterLook; motion: React.RefObject<CharacterMotion>; inCombat: boolean }) {
+function PlayerCharacter({ look, motion, inCombat, walkSpeed }: { look: CharacterLook; motion: React.RefObject<CharacterMotion>; inCombat: boolean; walkSpeed: number }) {
   useCombatVersion();
   const p = combat.rt.player, w = WEAPONS[p.weapon];
   const weapon = w?.model && (inCombat ? p.alive : p.armed) ? { kind: w.kind, model: w.model, modelScale: w.modelScale, inHand: inCombat, grip: w.grip } : null;
-  return <Character look={look} motion={motion} walkSpeed={PLAYER_SPEED} weapon={weapon} />;
+  return <Character look={look} motion={motion} walkSpeed={walkSpeed} weapon={weapon} />;
 }
