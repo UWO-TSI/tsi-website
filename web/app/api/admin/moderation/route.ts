@@ -9,8 +9,9 @@ import { z } from "zod";
 import { badRequest } from "@/lib/server/memberContext";
 import { adminContext } from "@/lib/server/adminContext";
 import { logModeration, unlogged } from "@/lib/server/moderationLog";
+import { MUTE_DAYS } from "@/lib/identity/service";
+import { supabaseIdentityStore } from "@/lib/identity/supabaseStore";
 
-const MUTE_DAYS = 7;
 const SOURCES = {
   letter: { table: "letters", author: "sender_id", cols: "id, sender_id, recipient_id, subject, body, reported_reason, reported_at" },
   chat: { table: "study_chat_messages", author: "member_id", cols: "id, member_id, reported_by, body, reported_reason, reported_at" },
@@ -76,8 +77,8 @@ export async function POST(request: Request) {
   let muted_until: string | null = null;
   if (action === "remove_mute" && author) {
     muted_until = new Date(ctx.now.getTime() + MUTE_DAYS * 86_400_000).toISOString();
-    const { error: muteError } = await ctx.db.from("member_identity").upsert({ member_id: author, muted_until }, { onConflict: "member_id" });
-    if (muteError) return NextResponse.json({ ok: false, error: "Removed, but the mute didn't save. Try again." }, { status: 500 });
+    try { await supabaseIdentityStore(ctx.db).setMute(author, muted_until); }
+    catch { return NextResponse.json({ ok: false, error: "Removed, but the mute didn't save. Try again." }, { status: 500 }); }
   }
   if (!(await logModeration(ctx.db, ctx.userId, { action, item_kind: kind, item_id: id, target_id: author, excerpt: row.body }))) return unlogged();
   return NextResponse.json({ ok: true, moderation: { kind, id, action, muted_until } });
