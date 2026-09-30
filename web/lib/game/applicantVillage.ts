@@ -1,7 +1,8 @@
 import {
   createCenteredMap, setCell, Surface, heightField, sampleGroundHeight,
-  worldToCellX, worldToCellZ, isGroundAtWorld, surfaceAt, levelAt, CLIFF_LEVELS,
+  worldToCellX, worldToCellZ, isGroundAtWorld, surfaceAt,
 } from "./grid";
+import { standWorld } from "./movement/sim";
 
 export const APPLICANT_SPAWN: [number, number, number] = [0, 0, -7];
 export const ISLAND_TREES: [number, number][] = [[-8, -6], [-12, 2], [9, -7], [12, 9], [-8, 8], [8, 11], [-11, -5], [9, 12], [-11, 6], [11, 3], [-6, 10], [5, 12], [-12, -2], [12, -5], [-5, -11], [6, -11]];
@@ -48,25 +49,6 @@ export function createApplicantVillage() {
     })) return false;
     return !ISLAND_TREES.some(([tx, tz]) => Math.hypot(tx - x, tz - z) < 0.65);
   };
-  const fits = (x: number, z: number) =>
-    [[0, 0], [-0.2, 0], [0.2, 0], [0, -0.2], [0, 0.2]].every(([dx, dz]) => standable(x + dx, z + dz));
-  const canStep = (x: number, z: number, nx: number, nz: number) => {
-    if (!fits(nx, nz)) return false;
-    return Math.abs(levelAt(map, worldToCellX(map, nx), worldToCellZ(map, nz)) -
-      levelAt(map, worldToCellX(map, x), worldToCellZ(map, z))) < CLIFF_LEVELS;
-  };
-  const move = (fromX: number, fromZ: number, toX: number, toZ: number): [number, number] => {
-    const count = Math.max(1, Math.ceil(Math.hypot(toX - fromX, toZ - fromZ) / 0.15));
-    const dx = (toX - fromX) / count, dz = (toZ - fromZ) / count;
-    let x = fromX, z = fromZ;
-    for (let i = 0; i < count; i++) {
-      if (canStep(x, z, x + dx, z + dz)) { x += dx; z += dz; }
-      else if (canStep(x, z, x + dx, z)) x += dx;
-      else if (canStep(x, z, x, z + dz)) z += dz;
-      else break;
-    }
-    return [x, z];
-  };
   // Water-side shoreline cells, derived from the same terrain the player sees.
   const shore: [number, number][] = [];
   for (let z = 1; z < map.depth - 1; z++) for (let x = 1; x < map.width - 1; x++) {
@@ -87,5 +69,5 @@ export function createApplicantVillage() {
     const target: [number, number] = [closest[0] + dx * 1.5, closest[1] + dz * 1.5];
     return isGroundAtWorld(map, ...target) ? closest : target;
   };
-  return { map, ground, surface, standable, move, fishingTarget };
+  return { map, ground, surface, standable, fishingTarget, ...standWorld(ground, standable, (x, z) => !isGroundAtWorld(map, x, z)) };
 }

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { BOSS_CENTER, COURTYARD, ESCORT_PATHS, FETCH_SPOTS, GATE_PLAZA, RUINS_SPAWN, SURVIVE_CIRCLES, TEMPLE_STEPS, createRuins, zoneAt } from "./ruins";
+import { BOSS_CENTER, COURTYARD, ESCORT_PATHS, FETCH_SPOTS, GATE_PLAZA, RUINS_PILLARS, RUINS_ROCKS, RUINS_SPAWN, SURVIVE_CIRCLES, TEMPLE_STEPS, createRuins, zoneAt } from "./ruins";
+import { NO_INPUT, STEP, createMoveState, stepMove, walkTo } from "./movement/sim";
 import { capacity, respawnAfter, SPAWN_TABLE, SPAWNS, WAVES } from "./combat/spawns";
 import { inRect } from "./combat/sim";
 import { ENEMIES } from "./combat/data";
@@ -34,6 +35,28 @@ describe("ruins zone", () => {
     }
     expect(zoneAt(COURTYARD.x0 + 1, COURTYARD.z0 + 1)).toBe("temple");
     expect(ruins.free(0, -40)).toBe(false);
+  });
+  it("walks the canyon on the movement kit: the floor is open, pillars and rocks are walls", () => {
+    const at = walkTo(ruins.world, RUINS_SPAWN[0], RUINS_SPAWN[2], 0, -14);
+    expect(Math.hypot(at.x, at.z + 14)).toBeLessThan(0.15);
+    for (const p of [...RUINS_PILLARS, ...RUINS_ROCKS]) {
+      const from = [[2, 0], [-2, 0], [0, 2], [0, -2]].map(([dx, dz]) => [p.x + dx, p.z + dz]).find(([x, z]) => ruins.free(x, z));
+      if (!from) continue;
+      const end = walkTo(ruins.world, from[0], from[1], p.x, p.z);
+      expect(Math.hypot(end.x - p.x, end.z - p.z)).toBeGreaterThan(0.7);
+    }
+  });
+  it("keeps you in the canyon: a running jump at its wall never mantles onto the cliff top", () => {
+    let s = createMoveState(2, -28, ruins.world, Math.PI / 2);
+    const seen: string[] = [];
+    for (let i = 0; i < 2.5 / STEP; i++) {
+      s = stepMove(s, { ...NO_INPUT, x: 1, sprint: true, jump: true, jumpPressed: i % 60 === 20 }, STEP, ruins.world);
+      seen.push(...s.events.map(e => e.kind));
+    }
+    expect(seen).toContain("jump");
+    expect(seen).not.toContain("mantle");
+    expect(s.y).toBeLessThan(1);
+    expect(zoneAt(s.x, s.z)).toBe("plaza");
   });
 });
 

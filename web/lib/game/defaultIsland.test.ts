@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { benchSeat, islandOf, landmark, landmarks, LANDMARK_IDS, nearestLandmark, propFootprint, villageIsland, villageSpawn, wharfDeck } from "./defaultIsland";
+import { benchSeat, islandOf, landmark, landmarkPoint, landmarks, LANDMARK_IDS, nearestLandmark, propFootprint, villageIsland, villageSpawn, wharfDeck } from "./defaultIsland";
+import { clearSpot, walkTo } from "./movement/sim";
 import { createCenteredMap, setCell, Surface, heightField, sampleGroundHeight, sampleHeightField, isGroundAtWorld } from "./grid";
 import { buildVillage, objectsOf, village, type VillageDoc } from "./villageMap";
 import frozen from "./fixtures/village-2026-09-28.json";
@@ -141,6 +142,29 @@ describe("the live village map (web/data/village-map.json)", () => {
       const yaw = b.yaw ?? 0, nx = Math.sin(yaw), nz = Math.cos(yaw);
       expect(benchSeat(b.x + nx * 0.8, b.z + nz * 0.8)?.yaw, b.id).toBeCloseTo(yaw);
       expect(benchSeat(b.x - nx * 0.8, b.z - nz * 0.8)?.yaw, b.id).toBeCloseTo(yaw + Math.PI);
+    }
+  });
+  it("on the movement kit: every door is reached from its exit spot, the spawn and exits stand in the open", () => {
+    for (const id of ["hq", "oracle", "wharf"] as const) {
+      const door = landmarkPoint(id, "door"), exit = landmarkPoint(id, "exit");
+      if (!door || !exit) continue;
+      const s = walkTo(island, exit[0], exit[1], door[0], door[1]);
+      // The scene's prompt ranges: the clubhouse door 2, the temple and the boat 1.6.
+      expect(Math.hypot(s.x - door[0], s.z - door[1]), id).toBeLessThan(1.6);
+    }
+    const [sx, , sz] = villageSpawn();
+    const exits = (["hq", "oracle", "museum", "cafe", "ruins", "wharf"] as const).map(id => landmarkPoint(id, "exit")).filter(p => p !== null);
+    for (const [x, z] of [[sx, sz], ...exits]) expect(clearSpot(island, x, z, island.ground(x, z), 0), `${x}, ${z}`).toEqual([x, z]);
+  });
+  it("gets up from every bench into the open, still in reach of it, and walks away", () => {
+    for (const b of objectsOf("bench")) {
+      const yaw = b.yaw ?? 0, seat = benchSeat(b.x + Math.sin(yaw) * 0.8, b.z + Math.cos(yaw) * 0.8)!;
+      const [x, z] = clearSpot(island, seat.x, seat.z, island.ground(seat.x, seat.z), seat.yaw);
+      expect(island.standable(x, z), b.id).toBe(true);
+      expect(Math.hypot(x - b.x, z - b.z), b.id).toBeGreaterThan(0.35);
+      expect(benchSeat(x, z), b.id).not.toBeNull(); // E sits you back down from where you got up
+      const away = walkTo(island, x, z, x + Math.sin(seat.yaw) * 2, z + Math.cos(seat.yaw) * 2);
+      expect(Math.hypot(away.x - x, away.z - z), b.id).toBeGreaterThan(0.5);
     }
   });
   it("never ends a move off open ground", () => {

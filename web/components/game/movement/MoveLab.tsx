@@ -12,7 +12,7 @@
  * desktop, ?panel=0 hides the panel and the signs, ?zoom=0.6 brings the camera closer (evidence frames).
  */
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { Canvas, useFrame } from "@react-three/fiber";
 import { Html } from "@react-three/drei";
 import * as THREE from "three";
 import GridWorld from "../grid/GridWorld";
@@ -23,8 +23,10 @@ import LookMaterials from "../LookMaterials";
 import { ACNHParts, CHALET_VARIANTS } from "../ACNHBuilding";
 import { treeParts } from "../NatureModels";
 import { InstancedModels, type ModelPlacement } from "../InstancedNature";
-import { IslandAtmosphere, type TreeSpot } from "../IslandAtmosphere";
-import MoveAvatar, { MOVE_JUICE, newStick, type MoveJuice, type MoveTelemetry, type StickInput } from "./MoveAvatar";
+import { IslandAtmosphere, useFollowCamera, type TreeSpot } from "../IslandAtmosphere";
+import PlayerAvatar from "../PlayerAvatar";
+import TouchControls from "./TouchControls";
+import { MOVE_JUICE, type MoveJuice, type MoveTelemetry } from "./moveFx";
 import { ISLAND_TERRAIN, islandLight, withSeason } from "@/lib/game/islandLighting";
 import { SEASON_TREES, seasonLook } from "@/lib/game/seasonalLook";
 import { CURRENT, lookFx } from "@/lib/game/lookPreset";
@@ -33,7 +35,7 @@ import { islandOf } from "@/lib/game/defaultIsland";
 import { objectsOf } from "@/lib/game/villageMap";
 import { COURSE_GATES, COURSE_SIGNS, COURSE_SPAWN, NEW_LAP, course, gateAt, lapStep, type Lap } from "@/lib/game/movement/course";
 import { MOVE_TUNING, createMoveState, stepMove, topSpeed, NO_INPUT, STEP, type MoveInput, type MoveTuning, type MoveWorld } from "@/lib/game/movement/sim";
-import { MOVE_ACTIONS, keyName, readMoveKeys, remapMove, type MoveAction } from "@/lib/game/movement/keys";
+import { MOVE_ACTIONS, MOVE_KEYS_EVENT, keyName, readMoveKeys, remapMove, type MoveAction } from "@/lib/game/movement/keys";
 import { readAbilityKeys } from "@/lib/game/combat/runtime";
 import { AudioManager } from "@/lib/game/audio";
 
@@ -115,29 +117,16 @@ function LapTracker({ telemetry, lap, timeScale }: { telemetry: React.RefObject<
   return null;
 }
 
-/**
- * The lab's follow camera: the shipped framing (IslandAtmosphere useFollowCamera: focus + (0, 7.4, -10.8) × zoom) set
- * rigidly on the focus MoveAvatar writes (its lead, level and pans), so it keeps up at any speed without lagging,
- * swinging sideways or bobbing. Yaw stays fixed (rows 5, 154).
- */
-function placeCamera(camera: THREE.Camera, { x, y, z }: THREE.Vector3, zoom: number) {
-  camera.position.set(x, y + 0.7 + 7.4 * zoom, z + 1.5 - 10.8 * zoom);
-  camera.lookAt(x, y + 0.7, z + 1.5);
-  camera.updateMatrixWorld();
-}
-function useMoveCamera(focus: React.RefObject<THREE.Vector3>, zoom: number) {
-  const { camera } = useThree();
-  useFrame(() => placeCamera(camera, focus.current, zoom), -3);
-}
-
-function CourseScene({ world, tuning, juice, spawn, stick, bindings, telemetry, timeScale, lap, walkSpeed, lite, shadows, zoom, signs }: {
+const noop = () => {};
+function CourseScene({ world, tuning, juice, spawn, telemetry, timeScale, lap, walkSpeed, lite, shadows, zoom, signs }: {
   world: ReturnType<typeof islandOf>; tuning: React.RefObject<MoveTuning>; juice: React.RefObject<MoveJuice>; spawn: [number, number];
-  stick: React.RefObject<StickInput>; bindings: Record<MoveAction, string>; telemetry: React.RefObject<MoveTelemetry>;
+  telemetry: React.RefObject<MoveTelemetry>;
   timeScale: React.RefObject<number>; lap: React.RefObject<{ lap: Lap; now: number }>; walkSpeed: number; lite: boolean; shadows: boolean; zoom: number; signs: boolean;
 }) {
   const v = course();
   const camTarget = useRef(new THREE.Vector3(spawn[0], 0, spawn[1]));
-  useMoveCamera(camTarget, zoom);
+  useFollowCamera(camTarget, zoom, null);
+  const start = useMemo((): [number, number, number] => [spawn[0], 0, spawn[1]], [spawn]);
   const trees = useMemo(() => objectsOf("tree", v).map((o): TreeSpot => ({ x: o.x, z: o.z, seed: o.seed ?? 0 })), [v]);
   const scenery = useMemo((): ModelPlacement[] => [
     ...trees.flatMap(({ x, z, seed }) => treeParts(seed, SEASON_TREES.summer).map((p): ModelPlacement => ({ url: p.url, position: [x + p.offset[0], world.ground(x, z) + p.offset[1], z + p.offset[2]], rotation: p.yaw, scale: p.scale }))),
@@ -154,37 +143,9 @@ function CourseScene({ world, tuning, juice, spawn, stick, bindings, telemetry, 
     {signs && COURSE_SIGNS.map(s => <Html key={s.text} position={[s.x, world.ground(s.x, s.z) + 2.4, s.z]} center distanceFactor={12} zIndexRange={[3, 0]}>
       <div style={{ background: "rgba(15,15,16,0.62)", color: "#f1ffff", padding: "2px 8px", borderRadius: 4, font: "600 12px ui-monospace, Menlo, monospace", whiteSpace: "nowrap", pointerEvents: "none" }}>{s.text}</div>
     </Html>)}
-    <MoveAvatar world={world} tuning={tuning} juice={juice} spawn={spawn} stick={stick} bindings={bindings} camTarget={camTarget} telemetry={telemetry} timeScale={timeScale} walkSpeed={walkSpeed} />
+    <PlayerAvatar world={world} groundHeight={world.ground} groundSurface={world.surface} spawnPosition={start} onMove={noop} showNameplate={false}
+      camTarget={camTarget} tuning={tuning} juice={juice} telemetry={telemetry} timeScale={timeScale} walkSpeed={walkSpeed} />
     <LapTracker telemetry={telemetry} lap={lap} timeScale={timeScale} />
-  </>;
-}
-
-/** Touch: a joystick (push to the rim to sprint) and jump and dash buttons. */
-function TouchControls({ stick }: { stick: React.RefObject<StickInput> }) {
-  const base = useRef<HTMLDivElement>(null);
-  const [knob, setKnob] = useState<[number, number]>([0, 0]);
-  const move = (e: React.PointerEvent) => {
-    const r = base.current!.getBoundingClientRect(), R = r.width / 2;
-    let dx = (e.clientX - (r.left + R)) / R, dy = (e.clientY - (r.top + R)) / R;
-    const l = Math.hypot(dx, dy);
-    if (l > 1) { dx /= l; dy /= l; }
-    stick.current.x = dx; stick.current.z = -dy;
-    setKnob([dx * R * 0.6, dy * R * 0.6]);
-  };
-  const end = () => { stick.current.x = stick.current.z = 0; setKnob([0, 0]); };
-  const button = (kind: "jump" | "dash", text: string, size: number) => (
-    <button aria-label={text} style={{ width: size, height: size, borderRadius: "50%", border: "2px solid rgba(255,255,255,0.5)", background: "rgba(15,15,16,0.45)", color: "#fff", font: "700 14px ui-monospace, Menlo, monospace", touchAction: "none" }}
-      onPointerDown={e => { e.preventDefault(); stick.current[kind] = true; stick.current[kind === "jump" ? "jumpPressed" : "dashPressed"] = true; }}
-      onPointerUp={() => { stick.current[kind] = false; }} onPointerCancel={() => { stick.current[kind] = false; }} onPointerLeave={() => { stick.current[kind] = false; }}>{text}</button>
-  );
-  return <>
-    <div ref={base} onPointerDown={e => { (e.target as HTMLElement).setPointerCapture(e.pointerId); move(e); }} onPointerMove={e => { if (e.buttons) move(e); }} onPointerUp={end} onPointerCancel={end}
-      style={{ position: "absolute", left: 24, bottom: 28, width: 132, height: 132, borderRadius: "50%", background: "rgba(15,15,16,0.35)", border: "2px solid rgba(255,255,255,0.35)", touchAction: "none", zIndex: 20 }}>
-      <div style={{ position: "absolute", left: 66 - 26 + knob[0], top: 66 - 26 + knob[1], width: 52, height: 52, borderRadius: "50%", background: "rgba(255,255,255,0.7)", pointerEvents: "none" }} />
-    </div>
-    <div style={{ position: "absolute", right: 24, bottom: 28, display: "flex", gap: 14, alignItems: "flex-end", zIndex: 20 }}>
-      {button("dash", "Dash", 64)}{button("jump", "Jump", 84)}
-    </div>
   </>;
 }
 
@@ -212,7 +173,6 @@ export default function MoveLab() {
   const [hud, setHud] = useState<{ t: MoveTelemetry; lap: Lap; now: number } | null>(null);
   const [respawn, setRespawn] = useState(0);
   const tuningRef = useRef(tuning), juiceRef = useRef(juice), timeScale = useRef(slow);
-  const stick = useRef<StickInput>(newStick());
   const telemetry = useRef<MoveTelemetry>({ x: 0, y: 0, z: 0, speed: 0, mode: "ground", hops: 0, dashReady: true, long: false });
   const lap = useRef<{ lap: Lap; now: number }>({ lap: NEW_LAP, now: 0 });
   useEffect(() => { tuningRef.current = tuning; }, [tuning]);
@@ -248,6 +208,7 @@ export default function MoveLab() {
       const r = remapMove(bindings, listening, e.key, Object.values(readAbilityKeys()));
       if (!r.ok) { setNote(r.error); return; }
       setBindings(r.keys); setListening(null); setNote(null);
+      window.dispatchEvent(new Event(MOVE_KEYS_EVENT));
     };
     window.addEventListener("keydown", onKey, true);
     return () => window.removeEventListener("keydown", onKey, true);
@@ -268,7 +229,7 @@ export default function MoveLab() {
       shadows={graphics.shadows && !graphics.liteMode ? "percentage" : false}
       onCreated={({ gl }) => { gl.toneMapping = THREE.NeutralToneMapping; gl.outputColorSpace = THREE.SRGBColorSpace; }}>
       <Suspense fallback={null}>
-        <CourseScene key={respawn} world={world} tuning={tuningRef} juice={juiceRef} spawn={spawn} stick={stick} bindings={bindings} telemetry={telemetry}
+        <CourseScene key={respawn} world={world} tuning={tuningRef} juice={juiceRef} spawn={spawn} telemetry={telemetry}
           timeScale={timeScale} lap={lap} walkSpeed={tuning.walkSpeed} lite={graphics.liteMode} shadows={graphics.shadows && !graphics.liteMode} zoom={Number(params.get("zoom")) || 1} signs={params.get("panel") !== "0"} />
         <PostFX antialias={!graphics.liteMode && !graphics.pixelated} grade={LIGHT.grade} fx={lookFx(CURRENT, !graphics.liteMode)} />
         <LookMaterials preset={CURRENT} />
@@ -302,7 +263,7 @@ export default function MoveLab() {
       <button onClick={() => { lap.current = { lap: NEW_LAP, now: lap.current.now }; setRespawn(n => n + 1); }} style={{ marginLeft: 6, color: "#FFD166" }}>Back to start</button>
     </div>
 
-    {touch && <TouchControls stick={stick} />}
+    {touch && <TouchControls />}
 
     {/* Tuning panel */}
     <button onClick={() => setPanel(p => !p)} style={{ ...box, position: "absolute", right: 12, top: 12, padding: "6px 10px", zIndex: 30 }}>{panel ? "Hide tuning" : "Tuning"}</button>

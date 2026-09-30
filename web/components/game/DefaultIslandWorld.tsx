@@ -65,6 +65,9 @@ import type { Family } from "@/lib/oracle/engine";
 import type { ResultView } from "@/lib/oracle/service";
 import { keyLabel, setFamily, useWorldIdentity, type WorldIdentity } from "@/lib/game/identity";
 import { actionForKey } from "@/lib/identity/settings";
+import { keyName, useMoveKeys } from "@/lib/game/movement/keys";
+import { useCoarsePointer } from "@/lib/game/useMediaQuery";
+import TouchControls from "./movement/TouchControls";
 import MuseumInterior from "./peaceful/MuseumInterior";
 import AudioController from "./AudioController";
 import type { AmbientPhase } from "@/lib/game/audio";
@@ -232,7 +235,8 @@ function IslandScene({ identity, devAt, exitFrom, peaceful, fishSpot, fishing, c
   }, [layout, island, look.season]);
   const near = useRef<Near>(null);
   useEffect(() => { player.current.set(...spawn); }, [reset, spawn, player]);
-  useFollowCamera(player, zoom, overview ? layout.scale.overview : null);
+  const focus = useRef(new THREE.Vector3(...spawn));
+  useFollowCamera(focus, zoom, overview ? layout.scale.overview : null);
   useFrame(() => {
     const within = (p: [number, number] | null, r: number) => !!p && Math.hypot(player.current.x - p[0], player.current.z - p[1]) < r;
     // Chapter 1 at the clubhouse door: claim the plot first, report back when ready, otherwise enter.
@@ -277,7 +281,7 @@ function IslandScene({ identity, devAt, exitFrom, peaceful, fishSpot, fishing, c
         groundHeight={island.ground} constrainMove={island.move}
         onClick={() => window.dispatchEvent(new CustomEvent("tsi:npc-greet", { detail: { id: persona.id } }))} />)}
       <PlayerAvatar key={`${reset}-${returned}-${fromBoat}-${exitFrom}`} spawnPosition={spawn} playerName={identity.display_name} member={identity.member} onMove={onMove} frozen={fishing}
-        groundHeight={island.ground} groundSurface={island.surface} constrainMove={island.move} />
+        world={island} groundHeight={island.ground} groundSurface={island.surface} camTarget={focus} />
       <CharacterCrowd player={player} ground={island.ground} />
     </>
   );
@@ -480,6 +484,8 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   const [fishing, setFishing] = useState(false);
   const [bagOpen, setBagOpen] = useState(false);
   const identity = useWorldIdentity();
+  const moveKeys = useMoveKeys();
+  const touch = useCoarsePointer() || devHome.get("touch") === "1";
   const [reveal, setReveal] = useState<{ family: Family; type: string; startedAt: number } | null>(null);
   // Bumped by the Oracle's path sheet after a subclass, loadout or stat change so the encounter re-reads them.
   const [pathTick, setPathTick] = useState(0);
@@ -743,8 +749,9 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       <ShowcaseSheet open={sheet === "showcase"} onClose={() => setSheet(null)} />
       <MissionBoardSheet open={sheet === "missions"} onClose={() => setSheet(null)} gateNote={gate.open ? null : gate.reason} />
       {site === "ruins" && <CombatHud player={player} />}
-      {site === "ruins" ? <div className={styles.controls} data-combat><span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> Move</span><span>Mouse Aim</span><span>Click Attack</span><span><kbd>Q</kbd> Dodge</span><span><kbd>1</kbd>–<kbd>4</kbd> Abilities</span><span><kbd>R</kbd> Swap</span><span><kbd>E</kbd> Interact</span></div>
-      : <div className={styles.controls}><span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> Walk</span><span><kbd>Shift</kbd> Run</span><span><kbd>Space</kbd> Hop</span><span><kbd>E</kbd> Interact</span><span><kbd>Z</kbd> Zoom</span><span><kbd>{keyLabel(identity.settings.key_bindings.openMap)}</kbd> Map</span><span><kbd>J</kbd> Quests</span><span><kbd>{keyLabel(identity.settings.key_bindings.openJournal)}</kbd> Collection</span><span><kbd>C</kbd> Sneak</span></div>}
+      {site === "ruins" ? <div className={styles.controls} data-combat><span>{[moveKeys.forward, moveKeys.left, moveKeys.back, moveKeys.right].map(k => <kbd key={k}>{keyName(k)}</kbd>)} Move</span><span>Mouse Aim</span><span>Click Attack</span><span><kbd>{keyName(moveKeys.jump)}</kbd> Jump</span><span><kbd>{keyName(moveKeys.dash)}</kbd> Dodge</span><span><kbd>1</kbd>–<kbd>4</kbd> Abilities</span><span><kbd>R</kbd> Swap</span><span><kbd>E</kbd> Interact</span></div>
+      : <div className={styles.controls}><span>{[moveKeys.forward, moveKeys.left, moveKeys.back, moveKeys.right].map(k => <kbd key={k}>{keyName(k)}</kbd>)} Walk</span><span><kbd>{keyName(moveKeys.sprint)}</kbd> Run</span><span><kbd>{keyName(moveKeys.jump)}</kbd> Jump</span><span><kbd>{keyName(moveKeys.dash)}</kbd> Dash</span><span><kbd>E</kbd> Interact</span><span><kbd>Z</kbd> Zoom</span><span><kbd>{keyLabel(identity.settings.key_bindings.openMap)}</kbd> Map</span><span><kbd>J</kbd> Quests</span><span><kbd>{keyLabel(identity.settings.key_bindings.openJournal)}</kbd> Collection</span><span><kbd>{keyName(moveKeys.sneak)}</kbd> Sneak</span></div>}
+      {touch && (!inside || inside === "cafe") && <TouchControls />}
       <p className={styles.touchControls}>Tap the ground to move</p>
       <div className={styles.fade} data-active={fading} aria-hidden="true" />
       <LoadingStatus />

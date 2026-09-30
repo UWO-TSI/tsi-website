@@ -219,7 +219,7 @@ function Village({ guideToHQ, returned, paused, onAction, onNear, phase, fishing
       <Html position={[0, 1.8, 0]} center distanceFactor={13} zIndexRange={[3, 0]}><span className="village-sign">Jayden · Your guide</span></Html>
     </group>
     <PlayerAvatar spawnPosition={spawn} playerName="You" showNameplate={false} onMove={move} frozen={paused || fishing || arrival} desktopClickToMove
-      groundHeight={island.ground} groundSurface={island.surface} constrainMove={island.move} />
+      world={island} groundHeight={island.ground} groundSurface={island.surface} />
     <DirectionArrow player={player} target={[0, 6.3]} paused={paused || fishing || arrival || !guideToHQ} />
   </>;
 }

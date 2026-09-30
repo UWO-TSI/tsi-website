@@ -6,6 +6,7 @@
  */
 import { createCenteredMap, heightField, isGroundAtWorld, levelAt, sampleGroundHeight, setCell, Surface, worldToCellX, worldToCellZ } from "./grid";
 import type { Rect, Vec } from "./combat/sim";
+import { standWorld } from "./movement/sim";
 
 export const RUINS_SPAWN: [number, number, number] = [0, 0, -28];
 /** Safe zone: the gate plaza. Hostile attacks can't land here and enemies won't follow (row 8). */
@@ -78,14 +79,7 @@ export function createRuins() {
   /** Walkable for a body of radius r (walls, cliff tops and solid props excluded). */
   const free = (x: number, z: number, r = 0.3) => floor(x, z) && floor(x + r, z) && floor(x - r, z) && floor(x, z + r) && floor(x, z - r)
     && !SOLID.some(s => Math.hypot(s.x - x, s.z - z) < s.r + r);
-  const move = (fromX: number, fromZ: number, toX: number, toZ: number): [number, number] => {
-    const n = Math.max(1, Math.ceil(Math.hypot(toX - fromX, toZ - fromZ) / 0.15));
-    const dx = (toX - fromX) / n, dz = (toZ - fromZ) / n;
-    let x = fromX, z = fromZ;
-    for (let i = 0; i < n; i++) {
-      if (free(x + dx, z + dz)) { x += dx; z += dz; } else if (free(x + dx, z)) x += dx; else if (free(x, z + dz)) z += dz; else break;
-    }
-    return [x, z];
-  };
-  return { map, ground, free, move };
+  /** The canyon for the movement sim: its walls (cliff tops included) and the props are walls of any height. */
+  const world = standWorld(ground, (x, z) => free(x, z, 0), (x, z) => !isGroundAtWorld(map, x, z));
+  return { map, ground, free, world };
 }

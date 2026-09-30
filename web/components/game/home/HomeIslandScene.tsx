@@ -49,12 +49,13 @@ export default function HomeIslandScene({ identity, peaceful, fishSpot, fishing,
   peaceful: { moment: WorldMoment; member: string }; fishSpot: { current: FishingSpot | null }; fishing: boolean;
 }) {
   const home = useMemo(() => createHomeIsland(), []);
-  const move = useMemo(() => home.moveWith(outdoor), [home, outdoor]);
+  const world = useMemo(() => home.worldWith(outdoor), [home, outdoor]);
   const spawn = returned ? DOOR_SPAWN : HOME_SPAWN;
   const terrain = useMemo(() => ({ ...ISLAND_TERRAIN, grass: look.grass }), [look.grass]);
   const near = useRef<HomeNear>(null);
   useEffect(() => { player.current.set(...spawn); }, [spawn, player]);
-  useFollowCamera(player, zoom, overview ? { focus: [0, 0, 0], offset: [6, 13, -16] } : null);
+  const focus = useRef(new THREE.Vector3(...spawn));
+  useFollowCamera(focus, zoom, overview ? { focus: [0, 0, 0], offset: [6, 13, -16] } : null);
   useFrame(() => {
     const p = player.current;
     const next: HomeNear = Math.hypot(p.x - HOUSE.door[0], p.z - HOUSE.door[1]) < 1.3 ? "house"
@@ -99,6 +100,6 @@ export default function HomeIslandScene({ identity, peaceful, fishSpot, fishing,
     <PlacementLayer items={outdoor} mapping={mapping} context={{ inside: home.placeable }} active={decorating} selected={selected}
       onPlace={onPlace} onPickUp={onPickUp} plane={{ center: [0, 0.02, 0], size: [HOME_RADII.x * 2, HOME_RADII.z * 2] }} />
     <PlayerAvatar key={`home-${returned}`} spawnPosition={spawn} playerName={identity?.display_name ?? "You"} member={identity?.member} onMove={onMove} frozen={fishing || (decorating && !!selected)}
-      groundHeight={home.ground} groundSurface={home.surface} constrainMove={move} />
+      world={world} groundHeight={home.ground} groundSurface={home.surface} camTarget={focus} />
   </>;
 }
