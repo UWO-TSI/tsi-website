@@ -11,18 +11,15 @@
  * The default URL is unchanged until David approves the slice.
  */
 
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useRef } from "react";
 import * as THREE from "three";
-import islandMapDoc from "@/data/island-map.json";
 import {
-  parseIslandMap,
   heightAtWorld,
   CLIFF_LEVELS,
   heightField,
   sampleGroundHeight,
   rampHeightAt,
   type IslandMap,
-  type PlacedProp,
 } from "@/lib/game/grid";
 import { setTerrainHeightProvider } from "../terrain";
 import GridTerrain, { type TerrainPalette } from "./GridTerrain";
@@ -35,20 +32,8 @@ import { useFrame } from "@react-three/fiber";
 import type { WaterParams } from "@/lib/game/waterShader";
 import { worldTime } from "@/lib/game/worldClock";
 
-let cached: { map: IslandMap; props: PlacedProp[] } | null = null;
-
-/**
- * Parse once per page load. The map is 128x128 and static; re-parsing it on
- * every mount would cost 16k cells of work for nothing.
- */
-export function getIslandMap(): { map: IslandMap; props: PlacedProp[] } {
-  if (!cached) cached = parseIslandMap(islandMapDoc);
-  return cached;
-}
-
 /** `field`: the map's height field when the caller already built it (the village builds it once). */
-export default function GridWorld({ map: suppliedMap, field: suppliedField, water, palette, windScale }: { map?: IslandMap; field?: Float32Array; water?: WaterParams; palette?: TerrainPalette; windScale?: number }) {
-  const map = useMemo(() => suppliedMap ?? getIslandMap().map, [suppliedMap]);
+export default function GridWorld({ map, field: suppliedField, water, palette, windScale }: { map: IslandMap; field?: Float32Array; water?: WaterParams; palette?: TerrainPalette; windScale?: number }) {
   const t = useTuning();
 
   // The ground material is shared and cached, so the normal-map settings are
