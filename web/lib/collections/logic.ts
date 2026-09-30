@@ -5,11 +5,18 @@
  */
 import { RARITY_RANK, WING_OF, type Biome, type Category, type Rarity, type Species, type Wing } from "./roster";
 import { torontoParts } from "@/lib/time";
+import { rosterWeather, type IslandWeather } from "@/lib/game/islandWeather";
 
 export interface WorldMoment {
   hour: number; // 0-24 local island time
   month: number; // 1-12
   weather: "clear" | "cloudy" | "rain" | "snow";
+}
+
+/** The world moment VillageLife rolls against and the server's rolls check: Toronto hour (mid-hour), month, roster weather. */
+export function momentAt(now: Date, weather: IslandWeather): WorldMoment {
+  const { hour, month } = torontoParts(now);
+  return { hour: hour + 0.5, month, weather: rosterWeather(weather) };
 }
 
 export interface MemberItem {

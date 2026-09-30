@@ -11,12 +11,12 @@ import { fishingSpot, villageWater, type WaterType } from "@/lib/game/fishingSpo
 import { inBounds, worldToCellX, worldToCellZ } from "@/lib/game/grid";
 import { createHomeIsland } from "@/lib/game/homeIsland";
 import { homeNodes, villageNodes } from "@/lib/game/islandNodes";
-import { reelWeather, rosterWeather, type IslandWeather } from "@/lib/game/islandWeather";
+import { reelWeather, type IslandWeather } from "@/lib/game/islandWeather";
 import { hourKey, rollFishFor, rollNode } from "@/lib/game/peaceful";
 import type { RodTier } from "@/lib/game/rods";
 import { village } from "@/lib/game/villageMap";
 import { torontoParts } from "@/lib/time";
-import type { WorldMoment } from "./logic";
+import { momentAt } from "./logic";
 import type { Species } from "./roster";
 
 export type Site = "village" | "home";
@@ -43,12 +43,6 @@ const allNodes = () => {
 export function nodeAt(id: string, [x, z]: [number, number]): (NodeSpec & { bug: boolean }) | null {
   const n = allNodes().get(id);
   return n && Math.hypot(n.x - x, n.z - z) <= NODE_REACH ? n : null;
-}
-
-/** The world moment VillageLife rolls against (usePeacefulContext): Toronto hour, month, roster weather. */
-export function momentAt(now: Date, weather: IslandWeather): WorldMoment {
-  const { hour, month } = torontoParts(now);
-  return { hour: hour + 0.5, month, weather: rosterWeather(weather) };
 }
 
 /** What the node holds for this member this hour, as the world shows it; null when nothing is out. */
