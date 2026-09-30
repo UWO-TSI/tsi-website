@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { staffContext } from "@/lib/server/adminContext";
 import { z } from "zod";
 
 // GET /api/achievements — list all achievements with user's unlock status
@@ -65,25 +66,10 @@ const CreateSchema = z.object({
 });
 
 export async function POST(request: Request) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
   // Only T1-T3 can create achievements
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("tier")
-    .eq("id", user.id)
-    .single();
-
-  if (!profile || profile.tier > 3) {
-    return NextResponse.json({ error: "Forbidden — T1-T3 only" }, { status: 403 });
-  }
+  const staff = await staffContext();
+  if (staff instanceof NextResponse) return staff;
+  const { supabase } = staff;
 
   let body: unknown;
   try {

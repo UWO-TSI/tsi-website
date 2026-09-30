@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { staffContext } from "@/lib/server/adminContext";
 import { adminContext } from "@/lib/server/adminContext";
 import { z } from "zod";
 
@@ -49,25 +50,10 @@ export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
   // Only T1-T3 can update bounties
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("tier")
-    .eq("id", user.id)
-    .single();
-
-  if (!profile || profile.tier > 3) {
-    return NextResponse.json({ error: "Forbidden — T1-T3 only" }, { status: 403 });
-  }
+  const staff = await staffContext();
+  if (staff instanceof NextResponse) return staff;
+  const { supabase, user } = staff;
 
   let body: unknown;
   try {
