@@ -143,6 +143,13 @@ export function benchSeat(x: number, z: number, range = 1.3, v: Village = villag
 
 const inRect = (x: number, z: number, r: { x0: number; x1: number; z0: number; z1: number }) => x >= r.x0 && x <= r.x1 && z >= r.z0 && z <= r.z1;
 
+/**
+ * Solid footprints of the running seasonal event's decorations (world XZ),
+ * blocked like buildings. Not map objects: SeasonalEvents.tsx sets them while
+ * an event is up and clears them when it comes down.
+ */
+export const eventSolids: { x0: number; x1: number; z0: number; z1: number }[] = [];
+
 export interface VillageIsland {
   map: Village["map"];
   ground: (x: number, z: number) => number;
@@ -182,7 +189,7 @@ export function islandOf(v: Village): VillageIsland {
   const wet = (x: number, z: number) => !onDeck(x, z) && !isGroundAtWorld(map, x, z);
   /** Top of the solid at a point: a prop's measured top, Infinity for buildings, study furniture and trunks, -Infinity for none. */
   const solidTop = (x: number, z: number) => {
-    if (solids.some(l => Math.abs(x - l.x) < l.half![0] && Math.abs(z - l.z) < l.half![1])) return Infinity;
+    if (solids.some(l => Math.abs(x - l.x) < l.half![0] && Math.abs(z - l.z) < l.half![1]) || eventSolids.some(r => inRect(x, z, r))) return Infinity;
     let top = -Infinity;
     for (const p of propsNear(x, z)) {
       const dx = x - p.x, dz = z - p.z;

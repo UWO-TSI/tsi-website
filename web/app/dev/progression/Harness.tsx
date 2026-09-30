@@ -4,6 +4,7 @@
  * /dev/progression?sheet=journal|goals|letters|contribute|notice|reader|compose[&demo=1][&goal=0.6]
  * demo=1 runs the real service against an in-memory store (no network) so
  * the sheets show mid-game state; without it the sheets call the live API.
+ * ?admin=goal|chapter|seasonal[&event=<slug>] previews an editor.
  */
 import { useEffect, useState, useSyncExternalStore } from "react";
 import ContributeSheet from "@/components/progression/ContributeSheet";
@@ -12,7 +13,7 @@ import LettersSheet, { type LettersTransport } from "@/components/progression/Le
 import NoticeSheet from "@/components/progression/NoticeSheet";
 import ClubGoalEditor from "@/components/portal/ClubGoalEditor";
 import QuestChapterEditor from "@/components/portal/QuestChapterEditor";
-import { DEFAULT_CHAPTERS, DEFAULT_GOALS } from "@/lib/progression/defaults";
+import { DEFAULT_CHAPTERS, DEFAULT_GOALS, SEASONAL_GOALS } from "@/lib/progression/defaults";
 import { memoryStore } from "@/lib/progression/memoryStore";
 import { advanceChapter, contribute, loadState, sendNote, syncRealActivity } from "@/lib/progression/service";
 import { setProgressionState } from "@/lib/progression/useProgression";
@@ -29,6 +30,8 @@ async function demo(): Promise<LettersTransport> {
   await advanceChapter(m.store, ME, { chapter_slug: "settle-in", action: "claim_plot" }, now);
   for (const [i, f] of FRIENDS.entries()) await contribute(m.store, f.id, { goal_slug: "reopen-cafe", kind: "coins", amount: 900 + i * 150, item_key: null, idempotency_key: `delivery:demo-${i}` }, now);
   await contribute(m.store, ME, { goal_slug: "reopen-cafe", kind: "coins", amount: 350, item_key: null, idempotency_key: "delivery:demo-me" }, now);
+  // Whichever seasonal event is open today gets some club progress too.
+  for (const g of SEASONAL_GOALS) for (const [i, f] of FRIENDS.entries()) await contribute(m.store, f.id, { goal_slug: g.slug, kind: "coins", amount: 1200 + i * 200, item_key: null, idempotency_key: `delivery:demo-${g.slug}-${i}` }, now);
   for (let i = 0; i < 9; i++) m.activity.push({ source: "event", ref_id: `00000000-0000-4000-8000-0000000e00${String(i).padStart(2, "0")}`, member_id: FRIENDS[i % FRIENDS.length].id });
   await syncRealActivity(m.store, m.goals[0], now);
   await m.store.sendSystemLetter(ME, "welcome", "Welcome to the island", "The Village Hall is glad you're here. Your journal lists what to do next; the plaza monument shows how the club is doing on the cafe.");
@@ -81,7 +84,9 @@ function HarnessBody({ params }: { params: URLSearchParams }) {
     return (
       <main style={{ minHeight: "100dvh", padding: "32px 24px", background: "var(--color-bg-main, #0f0f10)" }}>
         <div style={{ maxWidth: 880, margin: "0 auto" }}>
-          {admin === "goal" ? <ClubGoalEditor mode="edit" initial={DEFAULT_GOALS[0]} /> : <QuestChapterEditor mode="edit" initial={DEFAULT_CHAPTERS[0]} goalSlugs={DEFAULT_GOALS.map((g) => g.slug)} />}
+          {admin === "goal" ? <ClubGoalEditor mode="edit" initial={DEFAULT_GOALS[0]} />
+            : admin === "seasonal" ? <ClubGoalEditor mode="edit" initial={SEASONAL_GOALS.find((g) => g.slug === params.get("event")) ?? SEASONAL_GOALS[0]} seasonal />
+            : <QuestChapterEditor mode="edit" initial={DEFAULT_CHAPTERS[0]} goalSlugs={DEFAULT_GOALS.map((g) => g.slug)} />}
         </div>
       </main>
     );

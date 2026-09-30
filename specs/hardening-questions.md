@@ -12,3 +12,7 @@ Each has the assumption the branch uses. None blocks.
 8. **Chapter 4's "family trial" (fixed, found in the E2E).** Nothing ever set `family_trial_completed_at`, so chapter 4 could never finish (no member could get the gate letter or the 300 coins). Row 207 says there is no family trial: the level-10 moment is the subclass choice. The chapter now reads the subclass choice (the same thing that opens the ruins gate); the old flag still counts if an admin ever sets it. The step and chapter copy say "Reach level 10 and choose your subclass" (seed text only; an admin's edited copy is kept).
 9. **Harvested nodes are marked per browser.** The server refuses a second harvest of a node in the same hour from any device, but another browser still shows the node until the hour turns and answers E with "You've already gathered here this hour." (E2E, W-01). *Assumption:* fine for v1; the world could ask the server for this hour's harvested nodes on load if it matters.
 10. **Staging** was missing `20260926210000_combat_kits` (production has it). Applied it with this branch's migrations.
+
+## Answered (David, 2026-09-30)
+
+1. **Fish follow their listed months.** Done on `game/seasonal`: the server roll (and the island's local fallback reel) only draws fish whose roster months include the current Toronto month; species without a months list bite all year. A seasonal event's limited-time fish follow their event's window instead. Test: `lib/collections/rolls.test.ts` (salmon, Sep–Nov, never rolls in May; nothing out of season rolls in May or October).

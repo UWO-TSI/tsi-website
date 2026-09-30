@@ -1,5 +1,7 @@
 import { phaseForSun, sunFor, type SunDay } from "./sunTimes";
-import { torontoParts } from "@/lib/time";
+import { torontoInstant, torontoParts } from "@/lib/time";
+
+export { torontoInstant };
 
 /**
  * Island clock: real campus time in Toronto (ledger rows 84, 88) with phases
@@ -12,13 +14,6 @@ export const ISLAND_PHASES: readonly IslandPhase[] = ["dawn", "day", "evening", 
 export function torontoHour(date = new Date()): number {
   const t = torontoParts(date);
   return t.hour + t.minute / 60;
-}
-
-/** The instant a Toronto wall clock shows `hour` (0-24) on the Toronto day `day` ("YYYY-MM-DD"). */
-export function torontoInstant(day: string, hour: number): Date {
-  const [y, m, d] = day.split("-").map(Number), wall = Date.UTC(y, m - 1, d) + Math.round(hour * 60) * 60_000;
-  const guess = new Date(wall + 5 * 3_600_000), t = torontoParts(guess); // EST; EDT shows an hour later
-  return new Date(guess.getTime() + wall - Date.UTC(t.year, t.month - 1, t.day, t.hour, t.minute));
 }
 
 /** Phase for a Toronto hour on a date (defaults to today's fallback sun times). */

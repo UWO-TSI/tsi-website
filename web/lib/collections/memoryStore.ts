@@ -1,9 +1,10 @@
-/** In-memory CollectionsStore mirroring the 031, 036 and catch-roll SQL functions (tests, dev harness). */
+/** In-memory CollectionsStore mirroring the 031, 036, catch-roll and seasonal-land SQL functions (tests, dev harness). */
 import { FISH } from "@/lib/game/fishing";
 import { weekStart, type Donation, type MemberItem, type WeeklyBest } from "./logic";
 import { CAST_GAP_MS, MIN_REEL_MS, ROLL_TTL_MS } from "./rolls";
 import { ROSTER } from "./roster";
 import { CollectionsError, type CollectionsStore } from "./store";
+import type { TourneyEntry } from "@/lib/progression/seasonal";
 
 /** collections_record_catch's hourly caps: per species by rarity, and 200 per member. */
 const CAP: Record<string, number> = { legendary: 3, seaking: 3, epic: 6, rare: 12, uncommon: 30 };
@@ -14,6 +15,7 @@ export function memoryCollectionsStore(now: () => Date = () => new Date("2026-09
   const bests = new Map<string, WeeklyBest & { week: string }>();
   const names = new Map<string, string>();
   const showcases = new Map<string, (string | null)[]>();
+  const entries = new Map<string, TourneyEntry & { goal: string }>(); // `${goal}:${cycle}:${member}:${category}`
   const hourly = new Map<string, number>(); // `${member}:${hour}:${key}`
   const rolls = new Map<string, { member: string; key: string; size: number | null; trophy: boolean; at: number; landed: boolean }>();
   const harvests = new Set<string>(); // `${member}:${node}:${hourKey}`
@@ -25,6 +27,13 @@ export function memoryCollectionsStore(now: () => Date = () => new Date("2026-09
     const n = hourly.get(`${m}:${hour}:${key}`) ?? 0;
     if (n >= (CAP[rarity] ?? 60) || mine.reduce((s, [, c]) => s + c, 0) >= 200) throw new CollectionsError("rate_limited");
     hourly.set(`${m}:${hour}:${key}`, n + 1);
+  };
+  /** tourney_entries: each member's biggest catch per category per tourney cycle. */
+  const enter = (goalId: string, cycle: number, m: string, key: string, size: number | null) => {
+    const category = ROSTER.find((s) => s.key === key)?.category;
+    if (size === null || (category !== "fish" && category !== "sea")) return;
+    const ek = `${goalId}:${cycle}:${m}:${category}`;
+    if (size > (entries.get(ek)?.size_cm ?? 0)) entries.set(ek, { goal: `${goalId}:${cycle}`, member_id: m, member_name: "", category, item_key: key, size_cm: size, caught_at: now().toISOString() });
   };
   const store: CollectionsStore = {
     async roster() {
@@ -78,15 +87,18 @@ export function memoryCollectionsStore(now: () => Date = () => new Date("2026-09
       rolls.set(id, { member: m, key, size, trophy, at, landed: false });
       return id;
     },
-    async land(m, id) {
+    async land(m, id, seasonal) {
       const r = rolls.get(id);
       if (!r || r.member !== m) throw new CollectionsError("no_roll");
       if (r.landed) throw new CollectionsError("already_landed");
       const t = now().getTime();
       if (t - r.at > ROLL_TTL_MS || [...rolls.values()].some((o) => o.member === m && o.at > r.at)) throw new CollectionsError("roll_expired");
       if (t - r.at < MIN_REEL_MS) throw new CollectionsError("too_fast");
+      // seasonal_land (20260929120000): a limited-time catch outside its event lands nothing.
+      if (seasonal?.closed.includes(r.key)) throw new CollectionsError("out_of_season");
       const res = await store.recordCatch(m, r.key, r.size, r.trophy);
       r.landed = true;
+      if (seasonal?.tourney) enter(seasonal.tourney.goal_id, seasonal.tourney.cycle, m, r.key, r.size);
       return { item_key: r.key, size_cm: r.size, ...res };
     },
     async harvest(m, node, hourKey, key, size, trophy) {
@@ -98,6 +110,9 @@ export function memoryCollectionsStore(now: () => Date = () => new Date("2026-09
     async ownedGear(m) {
       return gear.get(m) ?? [];
     },
+    async tourneyEntries(goalId, cycle) {
+      return [...entries.values()].filter((e) => e.goal === `${goalId}:${cycle}`).map(({ goal: _g, ...e }) => (void _g, { ...e, member_name: names.get(e.member_id) ?? "Member" }));
+    },
     async showcase(m) {
       return showcases.get(m) ?? [null, null, null];
     },
@@ -108,5 +123,7 @@ export function memoryCollectionsStore(now: () => Date = () => new Date("2026-09
   return {
     store, name: (id: string, n: string) => names.set(id, n), countOf: (m: string, k: string) => items.get(`${m}:${k}`)?.count ?? 0,
     own: (m: string, refs: string[]) => gear.set(m, refs),
+    /** Demo fixture: a tourney entry as seasonal_land would leave it. */
+    enter,
   };
 }

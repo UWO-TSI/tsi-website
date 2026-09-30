@@ -6,7 +6,7 @@
  * Pure; the collections service records the result.
  */
 import type { NodeSpec } from "@/components/game/peaceful/VillageLife";
-import { CAST, rollSize, type FishDef } from "@/lib/game/fishing";
+import { CAST, rollSize, type EventCatches, type FishDef } from "@/lib/game/fishing";
 import { fishingSpot, villageWater, type WaterType } from "@/lib/game/fishingSpots";
 import { inBounds, worldToCellX, worldToCellZ } from "@/lib/game/grid";
 import { createHomeIsland } from "@/lib/game/homeIsland";
@@ -74,10 +74,14 @@ export function castWater(site: Site, [x, z]: [number, number]): WaterType | nul
 /** Reel weather words from the island's weather states. */
 const REEL_WEATHER: Record<IslandWeather, Weather> = { clear: "sunny", rain: "rain", snow: "cloudy", fog: "cloudy", wind: "cloudy" };
 
-/** The fish that bites: the reel's pool (FishingOverlay) for the water, rod and cast power, at the Toronto hour and real weather. */
-export function fishRoll(water: WaterType, power: number, rod: RodTier, now: Date, weather: IslandWeather, random = Math.random): { fish: FishDef; size: number } {
-  const { hour, minute } = torontoParts(now);
+/**
+ * The fish that bites: the reel's pool (FishingOverlay) for the water, rod and cast power, at the Toronto hour, month and real weather.
+ * `catches`: the seasonal events' limited-time species and the ones biting now (lib/progression/seasonal.ts eventCatches);
+ * without it the seeded events' catches are shut.
+ */
+export function fishRoll(water: WaterType, power: number, rod: RodTier, now: Date, weather: IslandWeather, random = Math.random, catches?: EventCatches): { fish: FishDef; size: number } {
+  const { hour, minute, month } = torontoParts(now);
   const luck = power + (power >= CAST.maxZone ? CAST.maxBonus : 0);
-  const fish = rollFishFor(water, luck, rod, { hour: hour + minute / 60, weather: REEL_WEATHER[weather] }, random);
+  const fish = rollFishFor(water, luck, rod, { hour: hour + minute / 60, weather: REEL_WEATHER[weather], month, catches }, random);
   return { fish, size: rollSize(fish.sizeCm, random) };
 }

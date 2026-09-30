@@ -4,6 +4,7 @@ import { catchAction } from "@/lib/collections/service";
 import { supabaseCollectionsStore } from "@/lib/collections/supabaseStore";
 import { jsonResult, withStore } from "@/lib/server/memberContext";
 import { islandWeatherNow } from "@/lib/server/weather";
+import { supabaseProgressionStore } from "@/lib/progression/supabaseStore";
 
 /**
  * Member collections: stackable collectibles (fish, bugs, fruit, flowers,
@@ -44,7 +45,10 @@ export async function POST(request: Request) {
   const ctx = await withStore(supabaseCollectionsStore);
   if (ctx instanceof NextResponse) return ctx;
   // Service role only: members can't write member_collections (20260926150900);
-  // the catch-roll functions (20260929100000) keep the hourly caps.
+  // the catch-roll functions (20260929100000) keep the hourly caps. The club
+  // goals carry the seasonal events (limited-time fish, the tourney); with none
+  // (before 20260929120000) the limited-time fish stay shut.
   const body = await request.json().catch(() => null);
-  return jsonResult(await catchAction(ctx.store, ctx.userId, body, ctx.now, await islandWeatherNow(ctx.now)), "catch");
+  const goals = await supabaseProgressionStore(ctx.db).listGoals().catch(() => []);
+  return jsonResult(await catchAction(ctx.store, ctx.userId, body, ctx.now, await islandWeatherNow(ctx.now), goals), "catch");
 }

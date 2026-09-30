@@ -3,12 +3,47 @@
  * supabase/migrations/20260926150200_progression.sql. Used as the fallback shape when
  * the migration is not applied (dev, previews) and by tests.
  */
-import type { ClubGoal, GoalCaps, GoalWeights, QuestChapter } from "./types";
+import type { ClubGoal, GoalCaps, GoalEvent, GoalWeights, QuestChapter } from "./types";
 
 // Row 181: ~30 event check-ins (30 × 500) or ~15,000 coins fills a story goal.
 export const DEFAULT_WEIGHTS: GoalWeights = { coins: 1, material: 20, specimen: 100, event: 500, bounty: 750, admin: 1 };
 export const DEFAULT_CAPS: GoalCaps = { member_total: 3000, delivery: 1500 };
 export const DEFAULT_TARGET = 15000;
+export const NO_EVENT: GoalEvent = { decor: null, tourney: false, catches: [], rewards: [], posters: [] };
+
+/**
+ * The four yearly events (rows 204, 212; specs/seasonal-events.md), seeded by
+ * 20260929120000_seasonal_events.sql. Windows are Toronto wall-clock dates in
+ * 2026 and repeat every year (goalCycle); admins retune them per year.
+ */
+const seasonal = (n: number, slug: string, title: string, summary: string, window: [string, string], accepts: ClubGoal["accepts"], event: Partial<GoalEvent>, letter: [string, string], target = DEFAULT_TARGET): ClubGoal => ({
+  id: `00000000-0000-4000-8000-00000000c1${String(n).padStart(2, "0")}`, slug, title, summary, goal_type: "seasonal", target_points: target,
+  weights: { ...DEFAULT_WEIGHTS }, caps: { ...DEFAULT_CAPS }, accepts, window_start: window[0], window_end: window[1], unlocks: [], monument_key: "plaza",
+  completion_letter_subject: letter[0], completion_letter_body: letter[1], position: 100 + n, active: true, event: { ...NO_EVENT, ...event },
+});
+export const SEASONAL_GOALS: ClubGoal[] = [
+  seasonal(1, "fall-fishing-tourney", "Fall fishing tourney",
+    "September is tourney month. Your biggest catch goes on the board by the plaza trophy, and a few fish only bite while it runs. Bring catches and coins to the monument, and come to club events: every check-in counts extra.",
+    ["2026-09-01T04:00:00.000Z", "2026-10-01T04:00:00.000Z"], ["coins", "specimen"],
+    { decor: "fall-tourney", tourney: true, catches: ["fish_yellow_perch", "fish_sturgeon", "fish_giant_trevally"], rewards: ["furn-silver-hha-trophy"] },
+    ["The fall tourney goal is done", "The club filled the fall tourney goal. A tourney cup is waiting in your storage, and the winners stay on the plaza trophy until the month is out."]),
+  seasonal(2, "winter-lights", "Winter lights festival",
+    "Lanterns go up over the plaza and the cafe starts pouring cocoa, through New Year's week. Chip in coins and materials at the monument, and every club event you check into during the festival counts extra.",
+    // Dec 1 through Jan 7 (David, 2026-09-30): it ends at midnight on Jan 8, Toronto.
+    ["2026-12-01T05:00:00.000Z", "2027-01-08T05:00:00.000Z"], ["coins", "material"],
+    { decor: "winter-lights", rewards: ["furn-tree-cedar-snow", "furn-lounge-tea"] },
+    ["The lights stay on", "The club filled the winter lights goal. A festive fir and a cocoa set are in your storage. Happy holidays from everyone at TSI."]),
+  seasonal(3, "genesis-week", "GENESIS week",
+    "The showcase comes to the island: banners, a stage in the plaza and a poster for every project. Checking in at GENESIS counts the most, and deliveries at the monument help too.",
+    ["2026-03-20T04:00:00.000Z", "2026-03-27T04:00:00.000Z"], ["coins", "material", "specimen"],
+    { decor: "genesis", rewards: ["furn-monument-banner"] },
+    ["GENESIS week, done", "The club filled the GENESIS goal. A showcase banner is in your storage for your own island."], 7500),
+  seasonal(4, "spring-picnic", "Spring blossom picnic",
+    "The cherry trees are out and the picnic blankets are down by the plaza. Fill the goal together and everyone gets a flower crown and a blanket of their own.",
+    ["2026-04-01T04:00:00.000Z", "2026-05-01T04:00:00.000Z"], ["coins", "material"],
+    { decor: "spring-picnic", rewards: ["acc-flower-crown", "furn-beach-towel"] },
+    ["Picnic season", "The club filled the spring picnic goal. A flower crown is in your closet and a picnic blanket is in your storage."]),
+];
 
 export const DEFAULT_GOALS: ClubGoal[] = [
   {
@@ -31,6 +66,7 @@ export const DEFAULT_GOALS: ClubGoal[] = [
       "We did it together. The boards are off the cafe and the study tables are yours. Thank you for every coin, plank and event you showed up to.",
     position: 1,
     active: true,
+    event: NO_EVENT,
   },
   {
     id: "00000000-0000-4000-8000-00000000c002",
@@ -52,7 +88,9 @@ export const DEFAULT_GOALS: ClubGoal[] = [
       "The museum doors are open and the woods path is clear. Every specimen you donated has a place on the shelves.",
     position: 2,
     active: true,
+    event: NO_EVENT,
   },
+  ...SEASONAL_GOALS,
 ];
 
 export const DEFAULT_CHAPTERS: QuestChapter[] = [

@@ -93,6 +93,9 @@ export async function goalView(store: ProgressionStore, goal: ClubGoal, memberId
     caps: goal.caps,
     unlocks: goal.unlocks,
     monument_key: goal.monument_key,
+    window_start: goal.window_start,
+    window_end: goal.window_end,
+    event: goal.event,
     my_points: mine.credited_points,
     my_delivery_points: mine.delivery_points,
   };

@@ -44,8 +44,10 @@ const CEREMONY_WINDOW_MS = 14 * 86_400_000;
 
 export function toWorldProgression(state: ProgressionState, resolve: AnchorResolver, now = Date.now()): WorldProgression {
   // The monument shows the goal being built, or the one that just finished
-  // (so the ceremony can play) when nothing else is open.
-  const building = activeGoal(state.goals) ?? [...state.goals].reverse().find((g) => g.completed) ?? null;
+  // (so the ceremony can play) when nothing else is open. Seasonal goals have
+  // their own event dressing (lib/game/seasonalEvents.ts), not the monument.
+  const buildable = state.goals.filter((g) => worldGoalId(g));
+  const building = activeGoal(buildable) ?? [...buildable].reverse().find((g) => g.completed) ?? null;
   const buildingId = building ? worldGoalId(building) : null;
   const objective = state.objective;
   const recent = state.goals

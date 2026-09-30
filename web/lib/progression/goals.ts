@@ -4,12 +4,14 @@
  * enforce the result (20260926150200_progression.sql re-checks caps under a row lock).
  */
 import { DEFAULT_CAPS, DEFAULT_WEIGHTS } from "./defaults";
+import { torontoInstant, torontoParts } from "@/lib/time";
 import {
   DELIVERY_KINDS,
   type ClubGoal,
   type ContributionSource,
   type DeliveryKind,
   type GoalCaps,
+  type GoalEvent,
   type GoalWeights,
   type WeightKey,
 } from "./types";
@@ -24,18 +26,18 @@ export interface GoalCycle {
   open: boolean;
 }
 
-const DAY = 86_400_000;
-
-function shiftToYear(date: Date, year: number): Date {
-  const d = new Date(date.getTime());
-  d.setUTCFullYear(year);
-  return d;
+/** The same Toronto wall-clock date and time `years` later, whatever DST does in between. */
+function laterYear(date: Date, years: number): Date {
+  const t = torontoParts(date);
+  return torontoInstant(`${t.year + years}-${String(t.month).padStart(2, "0")}-${String(t.day).padStart(2, "0")}`, t.hour + t.minute / 60);
 }
 
 /**
  * Story goals run in cycle 0 for their whole life. Seasonal goals repeat
- * yearly: the authored window is moved to the current year and the cycle is
- * the year the window opened (so a Dec–Jan window stays one cycle).
+ * yearly on the same Toronto dates and times: the authored window is moved to
+ * the current Toronto year and the cycle is the year the window opened (so a
+ * Dec–Jan window stays one cycle, and New Year's Eve in Toronto is still the
+ * old year even though UTC has already turned).
  */
 export function goalCycle(goal: Pick<ClubGoal, "goal_type" | "window_start" | "window_end" | "active">, now: Date): GoalCycle {
   const start = goal.window_start ? new Date(goal.window_start) : null;
@@ -44,17 +46,16 @@ export function goalCycle(goal: Pick<ClubGoal, "goal_type" | "window_start" | "w
     const open = goal.active && (!start || now >= start) && (!end || now <= end);
     return { cycle: 0, start, end, open };
   }
-  const span = Math.max(end.getTime() - start.getTime(), DAY);
-  const year = now.getUTCFullYear();
+  const first = torontoParts(start).year;
+  const year = torontoParts(now).year;
+  const window = (y: number) => ({ s: laterYear(start, y - first), e: laterYear(end, y - first) });
+  // Never a cycle before the one authored: until then the first window is next.
   for (const y of [year, year - 1]) {
-    const s = shiftToYear(start, y);
-    const e = new Date(s.getTime() + span);
-    if (now >= s) {
-      return { cycle: y, start: s, end: e, open: goal.active && now <= e };
-    }
+    const { s, e } = window(y);
+    if (y >= first && now >= s) return { cycle: y, start: s, end: e, open: goal.active && now <= e };
   }
-  const s = shiftToYear(start, year);
-  return { cycle: year, start: s, end: new Date(s.getTime() + span), open: false };
+  const next = Math.max(year, first), { s, e } = window(next);
+  return { cycle: next, start: s, end: e, open: false };
 }
 
 export function weightKeyFor(source: ContributionSource, kind: DeliveryKind | null): WeightKey | null {
@@ -149,6 +150,13 @@ export function normalizeCaps(value: unknown): GoalCaps {
   };
 }
 
+const strings = (v: unknown) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : []);
+
+export function normalizeEvent(value: unknown): GoalEvent {
+  const e = (value && typeof value === "object" ? value : {}) as Record<string, unknown>;
+  return { decor: typeof e.decor === "string" && e.decor ? e.decor : null, tourney: e.tourney === true, catches: strings(e.catches), rewards: strings(e.rewards), posters: strings(e.posters) };
+}
+
 export function normalizeGoal(row: Record<string, unknown>): ClubGoal {
   const accepts = Array.isArray(row.accepts)
     ? (row.accepts.filter((k) => (DELIVERY_KINDS as readonly string[]).includes(String(k))) as DeliveryKind[])
@@ -171,6 +179,7 @@ export function normalizeGoal(row: Record<string, unknown>): ClubGoal {
     completion_letter_body: String(row.completion_letter_body ?? ""),
     position: Math.floor(num(row.position, 0)),
     active: row.active !== false,
+    event: normalizeEvent(row.event),
     created_at: typeof row.created_at === "string" ? row.created_at : undefined,
   };
 }
@@ -192,5 +201,17 @@ export function validateGoalDraft(d: Record<string, unknown>): string[] {
   const end = d.window_end ? Date.parse(String(d.window_end)) : NaN;
   if (d.goal_type === "seasonal" && (Number.isNaN(start) || Number.isNaN(end))) errors.push("seasonal goals need a window");
   if (!Number.isNaN(start) && !Number.isNaN(end) && end <= start) errors.push("window_end must be after window_start");
+  const ev = d.event as Record<string, unknown> | undefined;
+  if (ev !== undefined) {
+    const list = (v: unknown, re: RegExp, max: number) => Array.isArray(v) && v.length <= max && v.every((x) => typeof x === "string" && re.test(x));
+    if (!ev || typeof ev !== "object") errors.push("event: object");
+    else {
+      if (ev.decor != null && (typeof ev.decor !== "string" || !/^[a-z0-9-]{1,32}$/.test(ev.decor))) errors.push("event.decor: a decoration set");
+      if (typeof ev.tourney !== "boolean") errors.push("event.tourney: true or false");
+      if (!list(ev.catches, /^[a-z0-9_]{1,64}$/, 12)) errors.push("event.catches: up to 12 species keys");
+      if (!list(ev.rewards, /^[a-z0-9-]{1,64}$/, 6)) errors.push("event.rewards: up to 6 shop item slugs");
+      if (!list(ev.posters, /^.{1,60}$/, 12)) errors.push("event.posters: up to 12 titles, 60 characters each");
+    }
+  }
   return errors;
 }

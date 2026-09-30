@@ -1,11 +1,22 @@
 import type { Donation, MemberItem, WeeklyBest } from "./logic";
 import type { Species } from "./roster";
+import type { TourneyEntry } from "@/lib/progression/seasonal";
 import { DomainError } from "@/lib/result";
 
 export type CollectionsErrorCode =
   | "unavailable" | "already_donated" | "not_owned" | "not_donatable" | "rate_limited" | "failed"
-  | "too_fast" | "no_roll" | "roll_expired" | "already_landed" | "already_harvested";
+  | "too_fast" | "no_roll" | "roll_expired" | "already_landed" | "already_harvested" | "out_of_season";
 export class CollectionsError extends DomainError<CollectionsErrorCode> {}
+
+export interface TourneyRef {
+  goal_id: string;
+  cycle: number;
+}
+/** The seasonal side of a land: limited-time species whose event isn't running, and the tourney that is. */
+export interface LandSeason {
+  closed: string[];
+  tourney: TourneyRef | null;
+}
 
 export interface CatchResult {
   count: number;
@@ -26,12 +37,17 @@ export interface CollectionsStore {
   recordCatch(memberId: string, itemKey: string, sizeCm: number | null, trophyEligible: boolean): Promise<CatchResult>;
   /** Atomic: a server-rolled cast waiting to be landed (too_fast within CAST_GAP_MS of the last). Returns its id. */
   cast(memberId: string, itemKey: string, sizeCm: number | null, trophyEligible: boolean): Promise<string>;
-  /** Atomic: record the member's latest cast once, MIN_REEL_MS to ROLL_TTL_MS after it (recordCatch caps apply). */
-  land(memberId: string, rollId: string): Promise<CatchResult & { item_key: string; size_cm: number | null }>;
+  /**
+   * Atomic: record the member's latest cast once, MIN_REEL_MS to ROLL_TTL_MS after it (recordCatch caps apply).
+   * `seasonal` (20260929120000): refuse a limited-time catch whose event is `closed`, and enter the open `tourney`.
+   */
+  land(memberId: string, rollId: string, seasonal?: LandSeason): Promise<CatchResult & { item_key: string; size_cm: number | null }>;
   /** Atomic: one harvest per node per hour, recorded through recordCatch (a capped one leaves the node unharvested). */
   harvest(memberId: string, nodeId: string, hourKey: string, itemKey: string, sizeCm: number | null, trophyEligible: boolean): Promise<CatchResult>;
   /** Catalogue refs of the member's owned gear (rods). */
   ownedGear(memberId: string): Promise<string[]>;
+  /** Every entry of one tourney cycle, with names (service role: the route applies the board's privacy). */
+  tourneyEntries(goalId: string, cycle: number): Promise<TourneyEntry[]>;
   showcase(memberId: string): Promise<(string | null)[]>;
   setShowcase(memberId: string, keys: (string | null)[]): Promise<void>;
 }

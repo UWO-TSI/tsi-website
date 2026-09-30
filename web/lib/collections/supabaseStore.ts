@@ -6,7 +6,7 @@ import type { CollectionsStore } from "./store";
 
 type Row = Record<string, unknown>;
 const raise = (error: { code?: string; message?: string } | null): never =>
-  raisePg(error, ["already_donated", "not_owned", "not_donatable", "rate_limited", "too_fast", "no_roll", "roll_expired", "already_landed", "already_harvested"]);
+  raisePg(error, ["already_donated", "not_owned", "not_donatable", "rate_limited", "too_fast", "no_roll", "roll_expired", "already_landed", "already_harvested", "out_of_season"]);
 const one = (data: unknown) => (Array.isArray(data) ? data[0] : data) as Row;
 const caught = (r: Row) => ({ count: Number(r.count), total_collected: Number(r.total_collected), best_size_cm: num(r.best_size_cm), new_record: r.new_record === true });
 const num = (v: unknown) => (v === null || v === undefined ? null : Number(v));
@@ -88,8 +88,11 @@ export function supabaseCollectionsStore(db: SupabaseClient): CollectionsStore {
       if (error) raise(error);
       return String(data);
     },
-    async land(memberId, rollId) {
-      const { data, error } = await db.rpc("collections_land", { p_member_id: memberId, p_roll_id: rollId });
+    async land(memberId, rollId, seasonal) {
+      // seasonal_land (20260929120000) wraps collections_land with the seasonal checks, in one transaction.
+      const { data, error } = seasonal
+        ? await db.rpc("seasonal_land", { p_member_id: memberId, p_roll_id: rollId, p_closed: seasonal.closed, p_goal_id: seasonal.tourney?.goal_id ?? null, p_cycle: seasonal.tourney?.cycle ?? null })
+        : await db.rpc("collections_land", { p_member_id: memberId, p_roll_id: rollId });
       if (error) raise(error);
       const r = one(data);
       return { item_key: String(r.item_key), size_cm: num(r.size_cm), ...caught(r) };
@@ -104,6 +107,13 @@ export function supabaseCollectionsStore(db: SupabaseClient): CollectionsStore {
       const { data, error } = await db.from("member_inventory").select("shop_items(catalogue_ref)").eq("member_id", memberId);
       if (error) return [];
       return ((data ?? []) as Row[]).flatMap((r) => ((r.shop_items as Row | null)?.catalogue_ref as string | null) ?? []);
+    },
+    async tourneyEntries(goalId, cycle) {
+      const { data, error } = await db.from("tourney_entries").select("member_id, category, item_key, size_cm, caught_at").eq("goal_id", goalId).eq("cycle", cycle);
+      if (error) raise(error);
+      const rows = (data ?? []) as Row[];
+      const n = await names(db, [...new Set(rows.map((r) => String(r.member_id)))]);
+      return rows.map((r) => ({ member_id: String(r.member_id), member_name: n.get(String(r.member_id)) ?? "Member", category: r.category as "fish" | "sea", item_key: String(r.item_key), size_cm: Number(r.size_cm), caught_at: String(r.caught_at) }));
     },
     async showcase(memberId) {
       const { data, error } = await db.from("member_showcase").select("slot, item_key").eq("member_id", memberId);

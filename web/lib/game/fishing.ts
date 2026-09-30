@@ -20,6 +20,8 @@ import { getTodayWeather } from "./weather";
 import { getLabHour } from "./devLab";
 import { EXTRA_FISH } from "./fishCatalog";
 import { weatherMods } from "./weatherPerks";
+import { SEASONAL_GOALS } from "@/lib/progression/defaults";
+import { ROSTER } from "@/lib/collections/roster";
 
 export type Rarity = "common" | "uncommon" | "rare" | "epic" | "legendary" | "seaking";
 
@@ -150,9 +152,33 @@ const SEA_CREATURES: FishDef[] = [
 
 export const FISH: FishDef[] = [...CORE_FISH, ...EXTRA_FISH, ...SEA_CREATURES];
 
-export function currentFishingContext(): { hour: number; weather: string } {
+/**
+ * Limited-time catches (specs/seasonal-events.md): species a seasonal goal
+ * gates bite only while their event runs. The server roll passes the sets for
+ * its own clock in the context (lib/collections/rolls.ts fishRoll); the
+ * island's local fallback reel uses the ones the world sets from the club
+ * goals and the world clock (lib/game/seasonalEvents.ts). Until told, the
+ * seeded events' catches are shut.
+ */
+export interface EventCatches { limited: ReadonlySet<string>; open: ReadonlySet<string> }
+let eventCatches: EventCatches = { limited: new Set(SEASONAL_GOALS.flatMap((g) => g.event.catches)), open: new Set() };
+export function setEventCatches(next: EventCatches): void {
+  eventCatches = next;
+}
+/** `month` (1-12, Toronto): fish with a roster months list only bite in those months (David, 2026-09-30); absent = any month. */
+export interface FishingContext { hour: number; weather: string; month?: number; catches?: EventCatches }
+/** Roster months per species that has a season (the journal's and catch board's "Sep–Nov"). */
+const SEASON_MONTHS = new Map(ROSTER.filter((s) => s.months.length).map((s) => [s.key, s.months]));
+const biting = (f: FishDef, zone: "river" | "sea", { hour, weather, month, catches = eventCatches }: FishingContext) => {
+  if ((f.zone ?? "river") !== zone || (f.when && !f.when(hour, weather))) return false;
+  // A limited-time fish's season is its event's window, wherever an admin puts it.
+  if (catches.limited.has(f.key)) return catches.open.has(f.key);
+  return month === undefined || (SEASON_MONTHS.get(f.key)?.includes(month) ?? true);
+};
+
+export function currentFishingContext(): FishingContext {
   const hour = getLabHour() ?? new Date().getHours() + new Date().getMinutes() / 60;
-  return { hour, weather: getTodayWeather() };
+  return { hour, weather: getTodayWeather(), month: new Date().getMonth() + 1 };
 }
 
 export function fishWeight(f: FishDef, weather: string): number {
@@ -180,17 +206,17 @@ function luckWeight(f: FishDef, weather: string, luck: number): number {
 }
 
 /** Available weighted catches, including weather luck, shared with the QA bench. */
-export function fishingPool(luck = 0, zone: "river" | "sea" = "river", context = currentFishingContext()) {
-  const { hour, weather } = context;
+export function fishingPool(luck = 0, zone: "river" | "sea" = "river", context: FishingContext = currentFishingContext()) {
+  const { weather } = context;
   const totalLuck = luck + weatherMods(weather).rareLuckBonus;
   return FISH
-    .filter((f) => (f.zone ?? "river") === zone && (!f.when || f.when(hour, weather)))
+    .filter((f) => biting(f, zone, context))
     .map((fish) => ({ fish, weight: luckWeight(fish, weather, totalLuck) }));
 }
 
 /** Weighted roll over the species available right now. luck 0..~1.3 from
  *  cast power — see CAST. */
-export function rollFish(luck = 0, zone: "river" | "sea" = "river", context = currentFishingContext()): FishDef {
+export function rollFish(luck = 0, zone: "river" | "sea" = "river", context: FishingContext = currentFishingContext()): FishDef {
   const pool = fishingPool(luck, zone, context);
   const total = pool.reduce((s, entry) => s + entry.weight, 0);
   let r = Math.random() * total;
@@ -247,11 +273,11 @@ export const REVEAL: Record<
 
 /** "1 in N" odds for a species under the current hour/weather pool. */
 export function fishOdds(fish: FishDef): number {
-  const { hour, weather } = currentFishingContext();
+  const context = currentFishingContext(), { weather } = context;
   // Odds are within the species' own zone pool (a sea catch competes with
   // the sea roster, not the whole book).
   const zone = fish.zone ?? "river";
-  const pool = FISH.filter((f) => (f.zone ?? "river") === zone && (!f.when || f.when(hour, weather)));
+  const pool = FISH.filter((f) => biting(f, zone, context));
   const total = pool.reduce((s, f) => s + fishWeight(f, weather), 0);
   const w = fishWeight(fish, weather);
   return Math.max(1, Math.round(total / w));

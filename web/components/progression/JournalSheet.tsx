@@ -6,6 +6,7 @@ import { ApiError } from "@/lib/apiClient";
 import type { AdvanceAction } from "@/lib/progression/chapters";
 import { refreshProgression, setProgressionState, useProgression } from "@/lib/progression/useProgression";
 import type { ChapterView } from "@/lib/progression/types";
+import { onBoard } from "@/lib/progression/seasonal";
 import ContributeSheet from "./ContributeSheet";
 import GoalCard from "./GoalCard";
 import { LettersBody } from "./LettersSheet";
@@ -130,7 +131,7 @@ export function JournalBody({ initialTab = "quests" }: { initialTab?: Tab }) {
       {tab === "goals" ? (
         <div>
           {state.goals.length === 0 ? <p className={s.empty}>No club goals right now.</p> : null}
-          {state.goals.map((g) => <GoalCard key={g.slug} goal={g} waitingOnTitle={state.goals.find((x) => x.slug === g.locked_by)?.title} onContribute={setContributeSlug} />)}
+          {state.goals.filter(onBoard).map((g) => <GoalCard key={g.slug} goal={g} waitingOnTitle={state.goals.find((x) => x.slug === g.locked_by)?.title} onContribute={setContributeSlug} />)}
           <p className={s.muted}>Real club activity counts most: QR check-ins at events and completed bounties are credited automatically.</p>
         </div>
       ) : null}

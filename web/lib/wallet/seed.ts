@@ -1,5 +1,5 @@
 /** SQL seeds for the economy catalogue (kept verbatim in 20260926150600_economy.sql and 20260926180000_ownership.sql). */
-import { CATALOGUE, onSale, OWNERSHIP_ITEMS, RETIRED, SELL_PRICES, SETTINGS, STARTER_REFS, type CatalogueEntry } from "./catalogue";
+import { CATALOGUE, EVENT_ITEMS, onSale, OWNERSHIP_ITEMS, RETIRED, SELL_PRICES, SETTINGS, STARTER_REFS, type CatalogueEntry } from "./catalogue";
 
 const q = (v: string | null) => (v === null ? "NULL" : `'${v.replace(/'/g, "''")}'`);
 const n = (v: number | null) => (v === null ? "NULL" : String(v));
@@ -44,5 +44,19 @@ export function ownershipSeedSql(): string {
     starters.map((c) => `  (${q(c.slug)}, ${STARTER_REFS.get(c.catalogue_ref!)})`).join(",\n"),
     ") AS v (slug, qty) WHERE s.slug = v.slug;",
     OWNERSHIP_END,
+  ].join("\n");
+}
+
+export const EVENT_BEGIN = "-- BEGIN GENERATED EVENT FURNITURE (web/scripts/gen-seeds.mjs)";
+export const EVENT_END = "-- END GENERATED EVENT FURNITURE";
+
+/** Seasonal event furniture: off sale, granted by the event goal. */
+export function eventItemsSeedSql(): string {
+  return [
+    EVENT_BEGIN,
+    `INSERT INTO shop_items (${ITEM_COLS}, active) VALUES`,
+    EVENT_ITEMS.map((c) => `  (${[...cols(c), "FALSE"].join(", ")})`).join(",\n"),
+    "ON CONFLICT (slug) DO NOTHING;",
+    EVENT_END,
   ].join("\n");
 }

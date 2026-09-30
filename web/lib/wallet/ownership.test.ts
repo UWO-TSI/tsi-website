@@ -2,14 +2,14 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DEFAULT_LOOK, FREE_HAIR_COLOURS, PALETTE, PARTS, STARTER_PARTS, randomLook, seeded, wear } from "@/lib/game/character/look";
-import { CATALOGUE as PIECES } from "@/lib/homes/catalogue";
+import { CATALOGUE as PIECES, EVENT_PIECE_IDS } from "@/lib/homes/catalogue";
 import { CRAFTED_ITEMS, RECIPES } from "@/lib/crafting/recipes";
 import { defaultLayout, type HomeLayoutDoc } from "@/lib/homes/layout";
 import { memoryHomesStore } from "@/lib/homes-sync/memoryStore";
-import { CATALOGUE, OWNERSHIP_ITEMS, STARTER_REFS } from "./catalogue";
+import { CATALOGUE, EVENT_ITEMS, OWNERSHIP_ITEMS, STARTER_REFS } from "./catalogue";
 import { memoryEconomyStore } from "./memoryStore";
 import { seedItems } from "./rules";
-import { ownershipSeedSql } from "./seed";
+import { eventItemsSeedSql, ownershipSeedSql } from "./seed";
 import { buy, getInventory, ownedRefs } from "./service";
 
 const A = "00000000-0000-4000-8000-0000000000aa";
@@ -72,13 +72,16 @@ describe("ownership catalogue", () => {
     expect(crafted.map((c) => c.slug).sort()).toEqual(PARTS.flatMap((p) => p.item ?? []).sort());
     for (let h = FREE_HAIR_COLOURS; h < PALETTE.hair.length; h++) expect(byRef(`hair:${h}`)[0]?.active, `dye ${h}`).toBe(true);
     expect(items.filter((i) => i.category === "hair" && i.active)).toHaveLength(6);
-    for (const p of PIECES) expect(byRef(p.id).filter((i) => i.category === "furniture" && i.active), p.id).toHaveLength(1);
+    // Seasonal event furniture is only given by its event, never sold.
+    for (const p of PIECES) expect(byRef(p.id).filter((i) => i.category === "furniture" && i.active), p.id).toHaveLength(EVENT_PIECE_IDS.has(p.id) ? 0 : 1);
+    expect(EVENT_ITEMS.map((c) => c.catalogue_ref).sort()).toEqual([...EVENT_PIECE_IDS].sort());
     for (const ref of STARTER_REFS.keys()) expect(byRef(ref), ref).toHaveLength(1);
     expect([...STARTER_REFS.values()].filter((_, i) => i >= STARTER_PARTS.length).reduce((a, b) => a + b, 0)).toBe(14); // 4 home pieces + the 10-piece pack
   });
   it("is mirrored in 20260926180000_ownership.sql and never reads as money", () => {
     expect(readFileSync(join(__dirname, "../../supabase/migrations/20260926180000_ownership.sql"), "utf8")).toContain(ownershipSeedSql());
-    expect(JSON.stringify([...CATALOGUE, ...OWNERSHIP_ITEMS])).not.toMatch(/\$|CAD|dollar|USD|≈/i);
+    expect(readFileSync(join(__dirname, "../../supabase/migrations/20260929120000_seasonal_events.sql"), "utf8")).toContain(eventItemsSeedSql());
+    expect(JSON.stringify([...CATALOGUE, ...OWNERSHIP_ITEMS, ...EVENT_ITEMS])).not.toMatch(/\$|CAD|dollar|USD|≈/i);
   });
   it("the creator's random look uses only starters and free colours", () => {
     const starters = new Set(STARTER_PARTS);

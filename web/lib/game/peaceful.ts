@@ -3,7 +3,7 @@
  * rod, bug sneak-and-swing, hourly personal respawn for foraging nodes and
  * bugs, and the museum curator's lines. Pure functions; the world wires them.
  */
-import { FISH, fishingPool, type FishDef } from "./fishing";
+import { FISH, fishingPool, type FishDef, type FishingContext } from "./fishing";
 import { canHook, castLuck, type RodTier } from "./rods";
 import type { WaterType } from "./fishingSpots";
 import { fnv1a } from "./weatherSystem";
@@ -16,7 +16,7 @@ import { availableAt, type WorldMoment } from "@/lib/collections/logic";
 const ROSTER_BIOME = new Map(ROSTER.map(s => [s.key, s.biome]));
 
 /** Weighted pool for a spot: water type picks the species, the rod gates legendaries and adds luck. */
-export function fishPoolFor(water: WaterType, luck: number, rod: RodTier, context: { hour: number; weather: string }) {
+export function fishPoolFor(water: WaterType, luck: number, rod: RodTier, context: FishingContext) {
   const base = fishingPool(castLuck(luck, rod), water === "sea" ? "sea" : "river", context).filter(({ fish }) => canHook(fish.rarity, rod));
   if (water === "sea") return base;
   // Pond vs river: species whose roster habitat is the pond only bite in ponds, and vice versa.
@@ -24,7 +24,7 @@ export function fishPoolFor(water: WaterType, luck: number, rod: RodTier, contex
   return match.length ? match : base;
 }
 
-export function rollFishFor(water: WaterType, luck: number, rod: RodTier, context: { hour: number; weather: string }, random = Math.random): FishDef {
+export function rollFishFor(water: WaterType, luck: number, rod: RodTier, context: FishingContext, random = Math.random): FishDef {
   const pool = fishPoolFor(water, luck, rod, context);
   if (!pool.length) return FISH[0];
   let r = random() * pool.reduce((s, e) => s + e.weight, 0);
