@@ -200,7 +200,7 @@ function Village({ guideToHQ, returned, paused, onAction, onNear, phase, fishing
     <FishCatchFX playerPosRef={player} />
     <ToolFlourish playerPosRef={player} />
     <FlowerPickFX collectionScope={collectionScope} />
-    <group position={[0, 0, 7]}><ACNHBuilding id="hq" windowColor="#ffc95a" windowGlow={phase === "day" ? 0.3 : phase === "evening" ? 1.15 : 1.6} /></group>
+    <group position={[0, 0, 7]}><ACNHBuilding id="hq" windowColor="#ffc95a" windowGlow={lighting.windowGlow} /></group>
     {phase !== "day" && <Fireflies anchors={ISLAND_BUSHES} count={graphics.liteMode ? 8 : ISLAND_BUSHES.length} groundHeight={island.ground} />}
     {[-2, 2].map(x => <pointLight key={x} position={[x, 1.25, 5.7]} color="#ffd17a" intensity={phase === "day" ? 0 : lighting.lamp * 0.85} distance={4} decay={2} />)}
     <Html position={[0, 1.4, 6.3]} center distanceFactor={18} zIndexRange={[3, 0]}>
