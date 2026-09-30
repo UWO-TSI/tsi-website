@@ -14,7 +14,6 @@ import {
   Shield,
   Vote,
   MessageSquareWarning,
-  BookOpen,
 } from "lucide-react";
 import NPCSpendWidget from "@/components/portal/NPCSpendWidget";
 import GameContentIndex from "@/components/portal/GameContentIndex";
@@ -84,13 +83,6 @@ const adminSections = [
     icon: <MessageSquareWarning size={20} />,
     href: "/student/dashboard/admin/npc-conversations",
     color: "#ef4444",
-  },
-  {
-    title: "Guestbook",
-    description: "Moderate guestbook wall entries (hide / unhide)",
-    icon: <BookOpen size={20} />,
-    href: "/student/dashboard/admin/guestbook",
-    color: "#fbbf24",
   },
 ];
 

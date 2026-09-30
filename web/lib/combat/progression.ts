@@ -92,7 +92,6 @@ export function presetAllocation(family: string, level: number): StatBlock {
 export function derived(stats: StatBlock, level: number, mods: { max_hp?: number; speed?: number; capacity?: number } = {}) {
   return {
     max_hp: Math.round((100 + level * 12 + stats.vitality * 15) * (1 + (mods.max_hp ?? 0))),
-    energy: 100 + stats.arcana * 3 + stats.spirit * 3,
     crit_chance: Math.min(0.5, 0.05 + stats.finesse * 0.006),
     summon_capacity: 2 + Math.floor(stats.spirit / 5) + (mods.capacity ?? 0), // row 43
     move_speed: (1 + Math.min(0.25, stats.finesse * 0.004)) * (1 + (mods.speed ?? 0)),

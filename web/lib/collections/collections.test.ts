@@ -21,7 +21,8 @@ describe("roster", () => {
     expect(new Set(ROSTER.filter((s) => s.category === "fish").map((s) => s.biome))).toEqual(new Set(["river", "pond", "cliff_pool", "sea"]));
     expect(new Set(ROSTER.filter((s) => s.category === "fish").map((s) => s.rarity)).size).toBe(5);
   });
-  it("seeds fish and sea creatures from the game's FISH table (rarity, size, hours)", () => {
+  it("seeds fish and sea creatures from the game's FISH table (rarity, size, hours), and every fish the reel lands is on it (row 260)", () => {
+    expect(FISH.filter((f) => !ROSTER.some((s) => s.key === f.key)).map((f) => f.key)).toEqual([]);
     const fish = new Map(FISH.map((f) => [f.key, f]));
     for (const s of ROSTER.filter((x) => x.category === "fish" || x.key.startsWith("sea_"))) {
       const f = fish.get(s.key);
@@ -69,7 +70,7 @@ describe("journal pages", () => {
     const r = await journal(m.store, A, "fish", noon);
     expect(r.ok).toBe(true);
     if (!r.ok) return;
-    expect(r.data).toMatchObject({ total: 43, discovered: 1 });
+    expect(r.data).toMatchObject({ total: 81, discovered: 1 });
     expect(r.data.entries[0]).toMatchObject({ discovered: true, key: "fish_dace", best_size_cm: 14.2, museum: { donated: false } });
     const unknown = JSON.stringify(r.data.entries.filter((e) => !e.discovered)).toLowerCase();
     for (const s of ROSTER.filter((x) => x.category === "fish" && x.key !== "fish_dace")) {
@@ -120,7 +121,7 @@ describe("museum donations (rows 67, 202)", () => {
   });
   it("lists wings without naming empty cases", () => {
     const wings = museumWings(ROSTER, [{ species_key: "bug_firefly", donor_id: A, donor_name: "Maya", donated_at: "2026-09-24T00:00:00Z", size_cm: null }]);
-    expect(wings.map((w) => [w.wing, w.total, w.donated])).toEqual([["aquarium", 55, 0], ["insect_hall", 20, 1], ["nature_room", 15, 0]]);
+    expect(wings.map((w) => [w.wing, w.total, w.donated])).toEqual([["aquarium", 93, 0], ["insect_hall", 20, 1], ["nature_room", 15, 0]]);
     expect(wings[1].exhibits.filter((e) => !e.donated).every((e) => e.key === null && e.name === null)).toBe(true);
   });
   it("keeps discovery records separate from donated stock", async () => {

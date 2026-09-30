@@ -136,18 +136,17 @@ describe("POST /api/collections: the server rolls every catch", () => {
     expect(m.countOf(A, "fish_golden_koi")).toBe(4);
   });
 
-  it("tells the catch card the size it records: none for a fish off the roster", async () => {
+  it("tells the catch card the size it records: every catch is a roster fish with a size (row 260)", async () => {
     const random = seededRandom(7);
     vi.spyOn(Math, "random").mockImplementation(random);
-    const seen = { on: 0, off: 0 };
-    for (let i = 0; i < 80 && !(seen.on && seen.off); i++) {
+    for (let i = 0; i < 40; i++) {
       const { item_key, size_cm } = (await post({ action: "cast", site: "village", at: SHORE, power: 0.5 })).body.catch;
       const sp = ROSTER.find((r) => r.key === item_key);
-      if (sp?.size) { seen.on++; expect(size_cm).toBeGreaterThanOrEqual(sp.size[0]); expect(size_cm).toBeLessThanOrEqual(sp.size[1]); }
-      else { seen.off++; expect(size_cm).toBeNull(); }
+      expect(sp?.size, item_key).toBeTruthy();
+      expect(size_cm).toBeGreaterThanOrEqual(sp!.size![0]);
+      expect(size_cm).toBeLessThanOrEqual(sp!.size![1]);
       later(5000);
     }
-    expect(seen.on && seen.off).toBeTruthy();
     vi.restoreAllMocks();
   });
 

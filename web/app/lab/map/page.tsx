@@ -97,7 +97,7 @@ const SURFACE_NAME: Record<number, string> = {
   [Surface.Ramp]: "ramp",
 };
 
-const TOOLS = ["land", "sea", "raise", "lower", "flat", "surface", "ramp", "smooth", "grow", "shrink", "jitter", "object", "prop", "label"] as const;
+const TOOLS = ["land", "sea", "raise", "lower", "flat", "surface", "ramp", "smooth", "grow", "shrink", "jitter", "object", "label"] as const;
 type Tool = (typeof TOOLS)[number];
 const ORGANIC: readonly Tool[] = ["smooth", "grow", "shrink", "jitter"];
 
@@ -114,7 +114,6 @@ const TOOL_HELP: Record<Tool, string> = {
   shrink: "pulls coasts and plateaus back, one cell per stroke.",
   jitter: "breaks a straight coastline into small bays and headlands. Each stroke rolls new noise.",
   object: "place, select, drag. R turns (shift: 15°), Delete removes, arrows nudge, Esc deselects.",
-  prop: "planning markers (legacy): drag a rectangle for a plot, click for a point. The game does not read these; use objects.",
   label: "paint a named thing of your own: fencing, hedges, a note. Terrain untouched.",
 };
 
@@ -143,8 +142,7 @@ const SHAPE_HELP: Record<Shape, string> = {
   lasso: "draw a loop freehand, fills inside on release",
 };
 
-/** Legacy planning marker kinds (island-map.json). */
-const PROP_KINDS = ["building", "npc", "tree", "bush", "flower", "lamp", "spawn", "note"] as const;
+/** Legacy planning markers (island-map.json), drawn read-only. */
 const PROP_COLOR: Record<string, string> = {
   building: "#ff8f4a", npc: "#d98fff", tree: "#3f8f4f", bush: "#5aab5f", flower: "#ff7fa8", lamp: "#ffd166", spawn: "#4ad8ff", note: "#ffffff",
 };
@@ -315,8 +313,6 @@ export default function MapLab() {
   const [hover, setHover] = useState<{ x: number; z: number; u: number; v: number } | null>(null);
   const [copied, setCopied] = useState(false);
   const [edited, setEdited] = useState(false);
-  const [propKind, setPropKind] = useState<string>("building");
-  const [propId, setPropId] = useState("");
   const [activeLabel, setActiveLabel] = useState("");
   const [newLabel, setNewLabel] = useState("");
   const [labelColor, setLabelColor] = useState(LABEL_COLORS[0]);
@@ -514,7 +510,7 @@ export default function MapLab() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      // Otherwise "[" typed into the draft-name or prop-id field resizes the
+      // Otherwise "[" typed into the draft-name field resizes the
       // brush, and Cmd+Z in a text field undoes the MAP instead of the text.
       const el = e.target as HTMLElement | null;
       if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT")) return;
@@ -796,11 +792,11 @@ export default function MapLab() {
       lasso.current.forEach(([u, v], i) => (i ? ctx.lineTo(u, v) : ctx.moveTo(u, v)));
       ctx.stroke();
     }
-    const pending = dragFrom && (tool === "prop" || shape === "rect" || shape === "line") && tool !== "object";
+    const pending = dragFrom && (shape === "rect" || shape === "line") && tool !== "object";
     if (pending && dragFrom) {
       ctx.strokeStyle = "#ffd166";
       ctx.lineWidth = px(2);
-      if (shape === "line" && tool !== "prop") {
+      if (shape === "line") {
         const end = snapLine(dragFrom, hover);
         ctx.beginPath();
         ctx.moveTo(dragFrom.x + 0.5, dragFrom.z + 0.5);
@@ -820,7 +816,7 @@ export default function MapLab() {
       ctx.stroke();
       return;
     }
-    const r = tool === "prop" || shape === "rect" || shape === "fill" || shape === "lasso" ? 0 : brush - 1;
+    const r = shape === "rect" || shape === "fill" || shape === "lasso" ? 0 : brush - 1;
     if (round && r > 0) {
       ctx.beginPath();
       ctx.arc(hover.x + 0.5, hover.z + 0.5, r + 0.5, 0, Math.PI * 2);
@@ -865,7 +861,6 @@ export default function MapLab() {
         case "label":
           paintLabel(x, z);
           break;
-        case "prop":
         case "object":
           // Handled on mousedown/mouseup. Dragging a brush of them would carpet the map.
           break;
@@ -1045,49 +1040,6 @@ export default function MapLab() {
     [dab]
   );
 
-  /** Does this marker cover a cell? Point markers cover one; plots cover their footprint. */
-  const propCovers = (p: PlacedProp, x: number, z: number) => {
-    const [w, d] = p.size ?? [1, 1];
-    return x >= p.cell[0] && z >= p.cell[1] && x < p.cell[0] + w && z < p.cell[1] + d;
-  };
-
-  /**
-   * Place or remove a planning marker (legacy).
-   *
-   * Click a covered cell to remove whatever is there, so a mis-drawn plot is one
-   * click to undo rather than a hunt for its corner. Otherwise a drag defines a
-   * footprint and a click defines a point.
-   */
-  const placeProp = useCallback(
-    (a: { x: number; z: number }, b: { x: number; z: number }) => {
-      if (!inBounds(map, a.x, a.z)) return;
-      const w = world();
-      const hit = w.props.findIndex((p) => propCovers(p, a.x, a.z));
-      commit();
-      if (hit >= 0) {
-        w.props = w.props.filter((_, i) => i !== hit);
-        bump();
-        return;
-      }
-      const { x0, z0, x1, z1 } = rectOf(a, b);
-      const sw = x1 - x0 + 1;
-      const sd = z1 - z0 + 1;
-      const id = propId.trim();
-      w.props = [
-        ...w.props,
-        {
-          kind: propKind,
-          ...(id ? { id } : {}),
-          cell: [x0, z0] as [number, number],
-          level: levelAt(map, x0, z0),
-          ...(sw > 1 || sd > 1 ? { size: [sw, sd] as [number, number] } : {}),
-        },
-      ];
-      bump();
-    },
-    [map, propKind, propId, bump]
-  );
-
   /** The topmost object under a world point: inside its footprint, or near its dot. */
   const objectAt = useCallback(
     (wx: number, wz: number): MapObject | null => {
@@ -1190,14 +1142,13 @@ export default function MapLab() {
             setDragFrom(c);
             painting.current = true;
             lastCell.current = null;
-            if (shape === "lasso" && tool !== "prop") {
+            if (shape === "lasso") {
               lasso.current = [[c.u, c.v]];
               return;
             }
-            // The prop tool and the deferred shapes decide what to do on
-            // RELEASE, once the drag is known. Only free painting and fill act
-            // immediately.
-            if (tool === "prop" || shape === "rect" || shape === "line") return;
+            // The deferred shapes decide what to do on RELEASE, once the drag
+            // is known. Only free painting and fill act immediately.
+            if (shape === "rect" || shape === "line") return;
             commit();
             if (shape === "fill") {
               for (const [x, z] of fillRegion(c.x, c.z)) paintCell(x, z);
@@ -1216,9 +1167,7 @@ export default function MapLab() {
             const from = dragRef.current;
             dragRef.current = null;
             if (from) {
-              if (tool === "prop") {
-                placeProp(from, c);
-              } else if (shape === "lasso") {
+              if (shape === "lasso") {
                 commit();
                 for (const [x, z] of cellsInPolygon(lasso.current.map(([u, v]) => [u - 0.5, v - 0.5]), map.width, map.depth)) paintCell(x, z);
                 lasso.current = [];
@@ -1258,12 +1207,12 @@ export default function MapLab() {
               m.committed = true;
               return;
             }
-            if (painting.current && shape === "lasso" && tool !== "prop") {
+            if (painting.current && shape === "lasso") {
               lasso.current.push([c.u, c.v]);
               blit();
               return;
             }
-            if (painting.current && shape === "free" && tool !== "prop" && tool !== "object") stroke(c.x, c.z);
+            if (painting.current && shape === "free" && tool !== "object") stroke(c.x, c.z);
           }}
         />
       </div>
@@ -1435,7 +1384,7 @@ export default function MapLab() {
           </div>
           <div style={{ color: "#5c6670", marginBottom: 8, lineHeight: 1.5 }}>{TOOL_HELP[tool]}</div>
 
-          {tool !== "prop" && tool !== "object" && (
+          {tool !== "object" && (
             <>
               <div style={{ display: "flex", gap: 4, marginBottom: 6 }}>
                 {SHAPES.map((s) => (
@@ -1454,7 +1403,7 @@ export default function MapLab() {
                 const { x0, z0, x1, z1 } = rectOf(dragFrom, hover);
                 const w = x1 - x0 + 1;
                 const d = z1 - z0 + 1;
-                if (shape === "line" && tool !== "prop") {
+                if (shape === "line") {
                   const end = snapLine(dragFrom, hover);
                   const len = Math.max(Math.abs(end.x - dragFrom.x), Math.abs(end.z - dragFrom.z)) + 1;
                   return `${len} cells long, ${brush * 2 - 1} wide`;
@@ -1619,18 +1568,7 @@ export default function MapLab() {
             </div>
           )}
 
-          {tool === "prop" && (
-            <div style={{ marginBottom: 10 }}>
-              <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 6 }}>
-                {PROP_KINDS.map((k) => (
-                  <button key={k} onClick={() => setPropKind(k)} style={btn(false, { background: PROP_COLOR[k], color: "#12161a", outline: propKind === k ? "2px solid #ffd166" : "none" })}>{k}</button>
-                ))}
-              </div>
-              <input value={propId} onChange={(e) => setPropId(e.target.value)} placeholder="id / label, e.g. hq" style={{ ...field, width: "100%", boxSizing: "border-box", padding: "5px 8px" }} />
-            </div>
-          )}
-
-          {tool !== "object" && tool !== "prop" && (
+          {tool !== "object" && (
             <>
               <label style={{ display: "block", marginBottom: 4 }}>
                 brush {brush * 2 - 1} <span style={{ color: "#5c6670" }}>[ ]</span>
