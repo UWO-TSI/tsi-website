@@ -10,18 +10,13 @@
  * the same table, not a new art pass.
  *
  * No curved-world projection here (that shader isn't mounted in this
- * scene), so unlike `StudySeats`' in-world `MateFigure` this skips the
- * overhead `<Html>` timer pill — the 2D `Mates` list right below already
+ * scene), so its `MateFigure`s (StudySeats) skip the overhead `<Html>` timer pill — the 2D `Mates` list right below already
  * shows names and phases.
  */
-import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 import { Canvas } from "@react-three/fiber";
-import Character, { CHARACTER_SCALE, type CharacterMotion } from "@/components/game/character/Character";
-import { TableFurniture } from "@/components/game/study/StudySeats";
-import { hashSeed, parseLook, randomLook, seeded } from "@/lib/game/character/look";
-import { seatLift } from "@/lib/game/character/clips";
-import { localSeats, tableLayout, type WorldSeat } from "@/lib/study/seats";
-import { poseOf, STUDY_CLIP } from "@/lib/study/worldStore";
+import { MateFigure, TableFurniture } from "@/components/game/study/StudySeats";
+import { localSeats, tableLayout } from "@/lib/study/seats";
 import type { Mate, TableView } from "@/lib/study/service";
 import s from "@/components/study/companion.module.css";
 
@@ -32,22 +27,6 @@ function hasWebGL(): boolean {
   } catch {
     return false;
   }
-}
-
-function SeatFigure({ mate, seat }: { mate: Mate; seat: WorldSeat }) {
-  const stored = JSON.stringify(mate.look ?? null);
-  const look = useMemo(() => (stored !== "null" ? parseLook(JSON.parse(stored)) : randomLook(seeded(hashSeed(mate.member_id)))), [stored, mate.member_id]);
-  const clip = STUDY_CLIP[poseOf(mate.phase)];
-  const lift = seatLift(clip, seat.y, CHARACTER_SCALE);
-  const motion = useRef<CharacterMotion>({ speed: 0, yaw: seat.facing, lift, pose: clip, play: null });
-  useEffect(() => {
-    Object.assign(motion.current, { yaw: seat.facing, lift, pose: clip });
-  }, [seat.facing, lift, clip]);
-  return (
-    <group position={[seat.x, 0, seat.z]}>
-      <Character look={look} motion={motion} />
-    </group>
-  );
 }
 
 function Scene({ table, mates }: { table: TableView; mates: Mate[] }) {
@@ -66,7 +45,7 @@ function Scene({ table, mates }: { table: TableView; mates: Mate[] }) {
       <TableFurniture t={{ ...layout, at: [0, 0] }} ground={() => 0} />
       {seats.map((seat) => {
         const mate = bySeat.get(seat.seat);
-        return mate ? <SeatFigure key={seat.seat} mate={mate} seat={seat} /> : null;
+        return mate ? <MateFigure key={seat.seat} mate={mate} seat={seat} overhead={false} /> : null;
       })}
     </>
   );

@@ -6,16 +6,14 @@
  * a link out to the full game for desktop. Fixed-position full-screen
  * `.shell`, same as the standalone study companion page it wraps.
  */
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ApiError, apiCall } from "@/lib/apiClient";
-import { useCoarsePointer } from "@/lib/game/useMediaQuery";
+import { useCoarsePointer, useSearch } from "@/lib/game/useMediaQuery";
 import StudyTab from "@/components/companion/StudyTab";
 import ClubTab from "@/components/companion/ClubTab";
 import MeTab from "@/components/companion/MeTab";
 import s from "@/components/study/companion.module.css";
-
-const noSub = () => () => {};
 
 type Tab = "study" | "club" | "me";
 const TABS: { key: Tab; label: string; icon: string }[] = [
@@ -36,7 +34,7 @@ export default function CompanionPage() {
   // `?mobile=1` (dev only, same convention as the study page's `?demo=`):
   // previews the phone shell from a mouse-driven browser, where a headless
   // or desktop browser always reports a fine pointer.
-  const search = useSyncExternalStore(noSub, () => window.location.search, () => null);
+  const search = useSearch();
   const forceMobile = process.env.NODE_ENV !== "production" && search ? new URLSearchParams(search).get("mobile") === "1" : false;
   const coarse = pointerCoarse || forceMobile;
 

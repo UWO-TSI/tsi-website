@@ -6,7 +6,8 @@
  * the sheets show mid-game state; without it the sheets call the live API.
  * ?admin=goal|chapter|seasonal[&event=<slug>] previews an editor.
  */
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useState } from "react";
+import { useSearch } from "@/lib/game/useMediaQuery";
 import ContributeSheet from "@/components/progression/ContributeSheet";
 import JournalSheet from "@/components/progression/JournalSheet";
 import LettersSheet, { type LettersTransport } from "@/components/progression/LettersSheet";
@@ -56,10 +57,8 @@ async function demo(): Promise<LettersTransport> {
   };
 }
 
-const noSubscribe = () => () => {};
-
 export default function Harness() {
-  const search = useSyncExternalStore(noSubscribe, () => window.location.search, () => null);
+  const search = useSearch();
   return search === null ? null : <HarnessBody params={new URLSearchParams(search)} />;
 }
 

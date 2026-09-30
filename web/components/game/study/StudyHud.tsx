@@ -8,7 +8,8 @@
  * cafe wall board. Dev only: `?study=tables|setup|focus|break|ended` runs the
  * companion's in-memory demo so signed-out screenshots show real state.
  */
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useState } from "react";
+import { useSearch } from "@/lib/game/useMediaQuery";
 import { COINS } from "@/lib/economy";
 import { studyDemo } from "@/lib/study/demo";
 import { httpStudyTransport, type Board, type StudyTransport } from "@/lib/study/transport";
@@ -19,10 +20,8 @@ import card from "@/components/study/companion.module.css";
 import world from "../DefaultIslandWorld.module.css";
 import s from "./study.module.css";
 
-const noSub = () => () => {};
-
 export default function StudyHud() {
-  const search = useSyncExternalStore(noSub, () => window.location.search, () => null);
+  const search = useSearch();
   const demo = process.env.NODE_ENV !== "production" && search ? new URLSearchParams(search).get("study") : null;
   if (search === null) return null;
   return demo ? <Demo scenario={demo} /> : <Hud />;
