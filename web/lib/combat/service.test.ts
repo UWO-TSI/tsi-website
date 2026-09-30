@@ -80,6 +80,8 @@ describe("progression via the service", () => {
     expect(await chooseSubclass(c.store, M, "priest", "sub-0004")).toMatchObject({ ok: false, code: "insufficient" });
     c.fund(M, 250);
     expect(await chooseSubclass(c.store, M, "priest", "sub-0005")).toMatchObject({ ok: true, data: { fee: 250 } });
+    // A retried earlier choice answers with its first result, as combat_respec_log does.
+    expect(await chooseSubclass(c.store, M, "druid", "sub-0003")).toMatchObject({ ok: true, data: { subclass: "druid", fee: 0, replayed: true } });
   });
   it("counts each kill event once", async () => {
     const c = memoryCombatStore(() => now);

@@ -1,8 +1,8 @@
-/** In-memory CombatStore mirroring 20260926150800_combat.sql (tests, dev harness). */
+/** In-memory CombatStore mirroring 20260926150800_combat.sql, 190000_combat_content and 210000_combat_kits (tests, dev harness). */
 import type { Family } from "@/lib/oracle/engine";
 import { BOSS_DROPS, ENEMIES, MISSIONS, type BossReward } from "./content";
 import { initialProgress, type MissionProgress, type MissionState } from "./missions";
-import { levelForXp, pointsEarned, pointsSpent, STATS, ZERO_STATS, STAT_RESET_FEE, SUBCLASS_RESPEC_FEE, type StatBlock } from "./progression";
+import { KILL_XP_PER_HOUR_CAP, levelForXp, pointsEarned, pointsSpent, STATS, ZERO_STATS, STAT_RESET_FEE, SUBCLASS_RESPEC_FEE, type StatBlock } from "./progression";
 import { CombatError, type CombatStore, type OwnedWeapon, type ProgressRow } from "./store";
 import { FIRST_WEAPONS, STARTER_WEAPONS, wear as wearRule, WEAPONS } from "./weapons";
 import { traitFor } from "./kits";
@@ -19,7 +19,8 @@ export function memoryCombatStore(clock: () => Date = () => new Date()) {
   const families = new Map<string, Family>();
   const missions = new Map<string, ProgressRow & { m: string; key: string }>();
   const wearKeys = new Set<string>();
-  const respecKeys = new Map<string, number>();
+  const respecKeys = new Map<string, number>(); // stat resets: key → fee
+  const subclassKeys = new Map<string, { subclass: string; fee: number }>(); // as combat_respec_log: a replay answers with the first result
   const materials = new Map<string, number>(); // `${m}:${item}` → count (member_collections)
   const bossRewards = new Map<string, { reward: BossReward; at: number }>(); // `${m}:${event}`
   const give = (m: string, items: Record<string, number>) => { for (const [k, n] of Object.entries(items)) materials.set(`${m}:${k}`, (materials.get(`${m}:${k}`) ?? 0) + n); };
@@ -58,7 +59,7 @@ export function memoryCombatStore(clock: () => Date = () => new Date()) {
       const e = ENEMIES.find((x) => x.key === enemy);
       if (!e) throw new CombatError("unknown_enemy");
       const hour = killLog.filter((k) => k.m === m && k.at > clock().getTime() - 3_600_000).reduce((n, k) => n + k.xp, 0);
-      if (hour + e.xp > 6000) throw new CombatError("kill_xp_cap");
+      if (hour + e.xp > KILL_XP_PER_HOUR_CAP) throw new CombatError("kill_xp_cap");
       kills.set(`${m}:${ev}`, e.xp);
       killEnemy.set(`${m}:${ev}`, enemy);
       const p = ensure(m), t = traitFor(enemy); // row 40: a Transmuter's defeats teach and train traits
@@ -83,7 +84,8 @@ export function memoryCombatStore(clock: () => Date = () => new Date()) {
     },
     async chooseSubclass(m, subclass, family, key) {
       const p = ensure(m);
-      if (respecKeys.has(`${m}:sub:${key}`)) return { subclass: p.subclass!, fee: respecKeys.get(`${m}:sub:${key}`)!, replayed: true };
+      const first = subclassKeys.get(`${m}:${key}`);
+      if (first) return { ...first, replayed: true };
       if (p.subclass === subclass) return { subclass, fee: 0, replayed: true };
       if (levelForXp(p.xp) < 10) throw new CombatError("level_too_low");
       const own = families.get(m);
@@ -91,7 +93,7 @@ export function memoryCombatStore(clock: () => Date = () => new Date()) {
       if (own !== family) throw new CombatError("wrong_family");
       const fee = p.subclass ? SUBCLASS_RESPEC_FEE : 0;
       if (fee) pay(m, -fee, `subclass:${key}`);
-      respecKeys.set(`${m}:sub:${key}`, fee);
+      subclassKeys.set(`${m}:${key}`, { subclass, fee });
       p.subclass = subclass;
       const list = weapons.get(m)!; // the gate opens: one starter per archetype
       for (const k of STARTER_WEAPONS) if (!list.some((w) => w.weapon_key === k)) list.push({ weapon_key: k, durability: WEAPONS.find((w) => w.key === k)!.max_durability, equipped: false });
