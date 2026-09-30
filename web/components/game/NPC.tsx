@@ -196,6 +196,7 @@ export default function NPC({ persona, position, playerPosition, playerPositionR
       bubbleUntilRef.current = now + BUBBLE_MS / 1000;
       bubbleCooldownRef.current = now + BUBBLE_COOLDOWN_S;
       setBubble(line);
+      motion.current.talk = Math.min(3.2, 0.8 + line.length * 0.045); // the painted mouth talks while the line shows
       // A couple of staggered voice blips sell the "they said something".
       AudioManager.playBlip();
       voiceTimers.current.forEach(window.clearTimeout);

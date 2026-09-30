@@ -2,8 +2,9 @@
 
 /**
  * The one runtime character (character-in-engine deliverables 1-2): the v6
- * rig with the catalogue parts a look wears, a composed face texture, and
- * the clip state machine. Player, residents, applicants, the creator and the
+ * rig and body with the hand-modeled v7 head, the catalogue parts a look
+ * wears, the animated painted face (avatar v7: blinks, a talking mouth and
+ * expressions as shader uniforms), and the clip state machine. Player, residents, applicants, the creator and the
  * wardrobe all render through this. Visual only: callers own movement and
  * write speed/yaw/pose/one-shots into `motion`.
  */
@@ -12,8 +13,9 @@ import { useFrame, useLoader, useThree } from "@react-three/fiber";
 import { useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js";
-import { BASE_URL, FACE_ATLAS_URL, PALETTE, TSI_DECAL_URL, CLIP_BY_NAME, bodyKey, faceKey, resolveParts, type CharacterLook, type ResolvedPart } from "@/lib/game/character/look";
-import { CLIP_EXPRESSION, composeFace, type Ctx2D, type Expression } from "@/lib/game/character/face";
+import { BASE_URL, FACE_ATLAS_URLS, PALETTE, TSI_DECAL_URL, CLIP_BY_NAME, bodyKey, resolveParts, type CharacterLook, type ResolvedPart } from "@/lib/game/character/look";
+import { FaceAnimator, faceSlots, poseKey } from "@/lib/game/character/face";
+import { createFaceMaterial, patchHairSheen, prepareFaceAtlas, type FaceMaterial } from "@/lib/game/character/faceMaterial";
 import { SNAPPY_CLIPS, WEAPON_HAND, isLoop, resolveClip, tempo, type CharacterMotion, type ClipName } from "@/lib/game/character/clips";
 import { adoptPrimitive, materialName, mergeLook, refCache, skinnedPrimitives } from "@/lib/game/character/rig";
 import type { WeaponGrip, WeaponKind } from "@/lib/game/combat/contract";
@@ -30,22 +32,11 @@ const CONTACT = { cx: 0, cz: 0, rx: 0.4, rz: 0.34, height: CHARACTER_HEIGHT, str
 type Gltf = { scene: THREE.Object3D; animations: THREE.AnimationClip[] };
 // Double-sided: clothes, hoods and capes are open shells whose insides show (hair and hats are closed solids, whose
 // tucked undersides stay behind the head). The shadow pass keeps back faces only, as for a front-sided material.
-const BODY_MATERIAL = new THREE.MeshStandardMaterial({ name: "CharacterBody", vertexColors: true, roughness: 0.85, metalness: 0, side: THREE.DoubleSide, shadowSide: THREE.BackSide });
+// Sculpted-lock hair draws its sheen band here (hairSheen attribute, faceMaterial.ts).
+const BODY_MATERIAL = patchHairSheen(new THREE.MeshStandardMaterial({ name: "CharacterBody", vertexColors: true, roughness: 0.85, metalness: 0, side: THREE.DoubleSide, shadowSide: THREE.BackSide }));
 let decalMaterial: THREE.MeshStandardMaterial | null = null;
 const bodies = refCache<THREE.BufferGeometry>();
-const faces = refCache<{ material: THREE.MeshStandardMaterial; dispose(): void }>();
 const decals = new Map<string, THREE.BufferGeometry>();
-
-function faceMaterial(atlas: HTMLImageElement, look: CharacterLook, expression: Expression, size: number) {
-  const canvas = document.createElement("canvas"), scratch = document.createElement("canvas");
-  canvas.width = canvas.height = scratch.width = scratch.height = size;
-  composeFace(canvas.getContext("2d") as Ctx2D, { ctx: scratch.getContext("2d") as Ctx2D, image: scratch }, atlas, look, expression, size);
-  const map = new THREE.CanvasTexture(canvas);
-  map.flipY = false; // glTF UV convention, like the texture the GLB embeds
-  map.colorSpace = THREE.SRGBColorSpace;
-  const material = new THREE.MeshStandardMaterial({ name: "CharacterFace", map, roughness: 0.85, metalness: 0 });
-  return { material, dispose() { map.dispose(); material.dispose(); } };
-}
 
 /** One character instance: its own bones and mixer, shared geometry/materials. */
 class Puppet {
@@ -58,17 +49,14 @@ class Puppet {
   private readonly face: THREE.SkinnedMesh;
   private readonly decal: THREE.SkinnedMesh;
   private bodyKey = "";
-  private faceKey = "";
-  private held = new Map<Expression, { key: string; material: THREE.MeshStandardMaterial }>();
   private look: CharacterLook | null = null;
-  private atlas: HTMLImageElement | null = null;
-  private faceSize = 512;
+  private faceMat: FaceMaterial | null = null;
+  private readonly faceAnim = new FaceAnimator();
+  private faceLookKey = "";
+  private shownFace = "";
   private action: THREE.AnimationAction | null = null;
   private clip: ClipName | null = null;
   private oneShot: ClipName | null = null;
-  private expression: Expression = "neutral";
-  private blinkAt = 1 + Math.random() * 3;
-  private clock = 0;
 
   constructor(private readonly base: Gltf) {
     this.root = cloneSkinned(base.scene);
@@ -101,7 +89,7 @@ class Puppet {
     this.clips = new Map(base.animations.map(c => [c.name, c]));
   }
 
-  dress(look: CharacterLook, parts: ResolvedPart[], scenes: THREE.Object3D[], atlas: HTMLImageElement, decalMap: THREE.Texture, faceSize: number) {
+  dress(look: CharacterLook, parts: ResolvedPart[], scenes: THREE.Object3D[], atlas: THREE.Texture, decalMap: THREE.Texture) {
     const key = bodyKey(look);
     if (key !== this.bodyKey) {
       const pieces = [{ root: this.base.scene, tints: { M_Skin: PALETTE.skin[look.skin] }, keep: (m: string) => m === "M_Skin" },
@@ -121,27 +109,26 @@ class Puppet {
         this.decal.material = decalMaterial;
       }
     }
-    const fk = `${faceKey(look)}|${faceSize}`;
-    if (fk !== this.faceKey) {
-      this.releaseFaces();
-      this.faceKey = fk; this.look = look; this.atlas = atlas; this.faceSize = faceSize;
-      this.showExpression(this.expression, true);
-    }
+    // The face is one material per character over the shared atlas; a new look or atlas only re-uploads uniforms.
+    if (!this.faceMat) this.faceMat = createFaceMaterial(atlas);
+    this.faceMat.setAtlas(atlas);
+    this.face.material = this.faceMat.material;
+    this.look = look;
+    this.faceLookKey = JSON.stringify([look.skin, look.hair, look.brows, look.eyes, look.mouth, look.extras]);
+    this.shownFace = "";
   }
 
-  /** Face textures are composed on first use and kept while this character wears the face (blinks reuse them). */
-  private showExpression(expression: Expression, force = false) {
-    if (!this.look || (!force && expression === this.expression)) return;
-    let held = this.held.get(expression);
-    if (!held) {
-      const key = `${this.faceKey}|${expression}`, { look, atlas, faceSize } = this;
-      held = { key, material: faces.acquire(key, () => faceMaterial(atlas!, look, expression, faceSize)).material };
-      this.held.set(expression, held);
-    }
-    this.face.material = held.material;
-    this.expression = expression;
+  /** Blink, talk and expression for this frame: uniform writes only, and only when the frame changes. */
+  private animateFace(delta: number, clip: ClipName, motion: CharacterMotion) {
+    if (!this.look || !this.faceMat) return;
+    const talking = (motion.talk ?? 0) > 0;
+    if (talking) motion.talk = Math.max(0, motion.talk! - delta);
+    const pose = this.faceAnim.update(delta, this.look, clip, talking, motion.face);
+    const key = `${this.faceLookKey}|${poseKey(pose)}`;
+    if (key === this.shownFace) return;
+    this.shownFace = key;
+    this.faceMat.set(PALETTE.skin[this.look.skin], faceSlots(this.look, pose));
   }
-  private releaseFaces() { for (const { key } of this.held.values()) faces.release(key); this.held.clear(); }
 
   get attacking() { return !!this.clip?.startsWith("Attack"); }
 
@@ -158,7 +145,6 @@ class Puppet {
   }
 
   update(delta: number, motion: CharacterMotion, walkSpeed: number) {
-    this.clock += delta;
     let restart = false;
     // A looping clip asked for as a one-shot (Dance) holds as a pose; moving ends any pose.
     if (motion.stop) { this.oneShot = null; motion.stop = false; }
@@ -169,12 +155,7 @@ class Puppet {
     const want = resolveClip({ speed: motion.speed, walkSpeed, pose: motion.pose ?? null, oneShot: this.oneShot, move: motion.move });
     if (want !== this.clip || restart) this.play(want);
     this.action!.setEffectiveTimeScale(tempo(want, motion.speed, walkSpeed));
-    let expression = CLIP_EXPRESSION[want] ?? "neutral";
-    if (expression === "neutral" && this.clock > this.blinkAt) {
-      expression = "blink";
-      if (this.clock > this.blinkAt + 0.13) { this.blinkAt = this.clock + 2.5 + Math.random() * 3.5; expression = "neutral"; }
-    }
-    this.showExpression(expression);
+    this.animateFace(delta, want, motion);
     this.mixer.update(delta);
   }
 
@@ -184,8 +165,9 @@ class Puppet {
     this.mixer.uncacheRoot(this.root);
     this.action = null; this.clip = null; this.oneShot = null;
     if (this.bodyKey) bodies.release(this.bodyKey);
-    this.releaseFaces();
-    this.bodyKey = ""; this.faceKey = "";
+    this.faceMat?.dispose();
+    this.faceMat = null;
+    this.bodyKey = ""; this.shownFace = "";
   }
 }
 
@@ -234,7 +216,7 @@ export interface CharacterProps {
   /** Normal walking pace for this controller (Walk plays at 1x there). */
   walkSpeed?: number;
   weapon?: WeaponView | null;
-  /** Face texture resolution: 512 in the world (sharp at village distance), 1024 in the creator. */
+  /** Face atlas density: 512 px per face canvas in the world (sharp at village distance), 1024 in the creator. */
   faceSize?: number;
   scale?: number;
 }
@@ -244,14 +226,14 @@ export default function Character({ look, motion, walkSpeed = 7.4, weapon = null
   const shown = useDeferredValue(look);
   const parts = useMemo(() => resolveParts(shown), [shown]);
   const loaded = useGLTF([BASE_URL, ...parts.map(p => p.url)]) as unknown as Gltf[];
-  const atlas = useLoader(THREE.ImageLoader, FACE_ATLAS_URL);
+  const atlas = useLoader(THREE.TextureLoader, faceSize >= 1024 ? FACE_ATLAS_URLS.creator : FACE_ATLAS_URLS.world);
   const decalMap = useLoader(THREE.TextureLoader, TSI_DECAL_URL);
   const base = loaded[0];
   const puppet = useMemo(() => new Puppet(base), [base]);
   useEffect(() => () => puppet.dispose(), [puppet]);
   useEffect(() => {
-    dressPuppet(puppet, shown, parts, loaded.slice(1).map(g => g.scene), atlas, decalMap, faceSize);
-  }, [puppet, shown, parts, loaded, atlas, decalMap, faceSize]);
+    dressPuppet(puppet, shown, parts, loaded.slice(1).map(g => g.scene), atlas, decalMap);
+  }, [puppet, shown, parts, loaded, atlas, decalMap]);
   const group = useRef<THREE.Group>(null);
   // The contact sits under the caller's anchor (ground level), not the group that lifts for seats and hops.
   const scene = useThree(s => s.scene);
@@ -271,10 +253,11 @@ export default function Character({ look, motion, walkSpeed = 7.4, weapon = null
     {weapon && <HeldWeapon puppet={puppet} weapon={weapon} />}
   </group>;
 }
-function dressPuppet(puppet: Puppet, look: CharacterLook, parts: ResolvedPart[], scenes: THREE.Object3D[], atlas: HTMLImageElement, decalMap: THREE.Texture, faceSize: number) {
+function dressPuppet(puppet: Puppet, look: CharacterLook, parts: ResolvedPart[], scenes: THREE.Object3D[], atlas: THREE.Texture, decalMap: THREE.Texture) {
   decalMap.flipY = false;
   decalMap.colorSpace = THREE.SRGBColorSpace;
-  puppet.dress(look, parts, scenes, atlas, decalMap, faceSize);
+  if (atlas.flipY) prepareFaceAtlas(atlas); // once per (shared) atlas texture
+  puppet.dress(look, parts, scenes, atlas, decalMap);
 }
 
 /** Warm the loader for a set of looks (creator pages, residents) so switching never shows a gap. */

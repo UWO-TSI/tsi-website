@@ -48,6 +48,17 @@ describe("character rig assembly", () => {
     const head = bones.findIndex(b => b.name === "mixamorigHead");
     const idx = merged.getAttribute("skinIndex"), w = merged.getAttribute("skinWeight");
     for (let i = 0; i < idx.count; i++) if (w.getX(i) > 0.99) expect(idx.getX(i)).toBe(head); // hair is skinned 100% to the head
+    // sculpted-lock hair (avatar v7) carries its lock UVs to the sheen band: across 0..1, root (v 0) to tip (v 1)
+    const sheen = merged.getAttribute("hairSheen");
+    let on = 0, rootish = 0;
+    for (let i = 0; i < sheen.count; i++) if (sheen.getX(i) === 1) { on++; if (sheen.getZ(i) < 0.05) rootish++; expect(sheen.getY(i)).toBeGreaterThanOrEqual(0); expect(sheen.getY(i)).toBeLessThanOrEqual(1); }
+    expect(on).toBeGreaterThan(sheen.count * 0.5);
+    expect(rootish).toBeGreaterThan(0);
+  });
+  it("gives no sheen to parts without lock UVs (outfits, older hair, hat tucks)", () => {
+    const part = skinned(["mixamorigHead"], [0, 0, 0]);
+    const g = adoptPrimitive(part, new Map([["mixamorigHead", 0]]), null, true);   // M_Hair, but no uv channel
+    expect(Array.from(g.getAttribute("hairSheen").array)).toEqual(new Array(9).fill(0));
   });
   it("shares identical looks and disposes after the last user", () => {
     const cache = refCache<{ dispose(): void; n: number }>();
