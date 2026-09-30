@@ -8,7 +8,10 @@ type Row = Record<string, unknown>;
 const raise = (error: { code?: string; message?: string } | null): never =>
   raisePg(error, ["already_donated", "not_owned", "not_donatable", "rate_limited", "too_fast", "no_roll", "roll_expired", "already_landed", "already_harvested", "out_of_season"]);
 const one = (data: unknown) => (Array.isArray(data) ? data[0] : data) as Row;
-const caught = (r: Row) => ({ count: Number(r.count), total_collected: Number(r.total_collected), best_size_cm: num(r.best_size_cm), new_record: r.new_record === true });
+const caught = (r: Row) => ({
+  count: Number(r.count), total_collected: Number(r.total_collected), best_size_cm: num(r.best_size_cm), new_record: r.new_record === true,
+  recipe: r.recipe_id ? { id: String(r.recipe_id), name: String(r.recipe_name) } : null,
+});
 const num = (v: unknown) => (v === null || v === undefined ? null : Number(v));
 
 function toSpecies(r: Row): Species {
@@ -89,16 +92,14 @@ export function supabaseCollectionsStore(db: SupabaseClient): CollectionsStore {
       return String(data);
     },
     async land(memberId, rollId, seasonal) {
-      // seasonal_land (20260929120000) wraps collections_land with the seasonal checks, in one transaction.
-      const { data, error } = seasonal
-        ? await db.rpc("seasonal_land", { p_member_id: memberId, p_roll_id: rollId, p_closed: seasonal.closed, p_goal_id: seasonal.tourney?.goal_id ?? null, p_cycle: seasonal.tourney?.cycle ?? null })
-        : await db.rpc("collections_land", { p_member_id: memberId, p_roll_id: rollId });
+      // collections_land_drop (20260930100000): seasonal_land (collections_land with the seasonal checks) and the recipe drop, in one transaction.
+      const { data, error } = await db.rpc("collections_land_drop", { p_member_id: memberId, p_roll_id: rollId, p_closed: seasonal?.closed ?? [], p_goal_id: seasonal?.tourney?.goal_id ?? null, p_cycle: seasonal?.tourney?.cycle ?? null });
       if (error) raise(error);
       const r = one(data);
       return { item_key: String(r.item_key), size_cm: num(r.size_cm), ...caught(r) };
     },
     async harvest(memberId, nodeId, hourKey, key, size, trophy) {
-      const { data, error } = await db.rpc("collections_harvest", { p_member_id: memberId, p_node_id: nodeId, p_hour_key: hourKey, p_item_key: key, p_size: size, p_trophy: trophy });
+      const { data, error } = await db.rpc("collections_harvest_drop", { p_member_id: memberId, p_node_id: nodeId, p_hour_key: hourKey, p_item_key: key, p_size: size, p_trophy: trophy });
       if (error) raise(error);
       return caught(one(data));
     },

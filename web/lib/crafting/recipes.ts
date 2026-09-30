@@ -101,6 +101,26 @@ export const RECIPES: Recipe[] = [
   r("staff-rune", { wood_branch: 4, rock_crystal: 2, fish_football_fish: 1 }, ["quest", "bottle"], "weapon"),
 ];
 
+/**
+ * Rare-catch drops (rows 199, 258; 20260930100000_recipe_drops.sql): a catch
+ * whose roster rarity is `rare` or rarer can teach a recipe the member lacks.
+ * RECIPE_DROPS is the seed of crafting_recipes.drop_rarity (the least rare
+ * catch that can teach it; admins edit it in the Recipes editor): every
+ * bottle-only recipe, the tier-4 tools and the rare cape from epic catches.
+ * Starter, shop-card and quest recipes stay out (crafting-questions 10).
+ * RECIPE_DROP_CHANCE seeds recipe_drop_chances: the chance one catch of each
+ * rarity teaches one.
+ */
+export type DropRarity = "rare" | "epic" | "legendary";
+export const RECIPE_DROPS: Record<string, DropRarity> = {
+  "rod-glass": "rare", "net-silk": "rare", "acc-shell-necklace": "rare", "outfit-silk-sweater": "rare",
+  "furn-study-desk": "rare", "furn-bench-park": "rare", "furn-streetlamp": "rare", "furn-plant-monstera": "rare",
+  "furn-wall-clock": "rare", "furn-wall-frame": "rare", "furn-lounge-rug": "rare", "sword-iron": "rare", "bow-yew": "rare",
+  "net-dragonfly": "epic", "shovel-crystal": "epic", "outfit-monarch-cape": "epic",
+};
+export const RECIPE_DROP_CHANCE: Record<DropRarity, number> = { rare: 0.02, epic: 0.05, legendary: 0.15 };
+export const DROP_RARITIES = Object.keys(RECIPE_DROP_CHANCE) as DropRarity[];
+
 const NAMES = new Map<string, string>([...CATALOGUE, ...CRAFTED_ITEMS].map(c => [c.slug, c.display_name]));
 for (const w of WEAPONS) NAMES.set(w.key, w.name);
 export const outputName = (recipe: Recipe) => NAMES.get(recipe.output.key) ?? recipe.output.key;
@@ -123,6 +143,7 @@ export function validateRecipeDraft(d: Record<string, unknown>): string[] {
   const ing = d.ingredients as Record<string, unknown> | undefined;
   if (!ing || typeof ing !== "object" || Array.isArray(ing) || !Object.keys(ing).length || Object.entries(ing).some(([k, n]) => !KEY.test(k) || !isCount(n, 99))) errors.push("ingredients: item key → 1-99");
   if (!Array.isArray(d.sources) || !d.sources.length || d.sources.some(s => !(RECIPE_SOURCES as readonly unknown[]).includes(s))) errors.push("sources: starter, shop, bottle and/or quest");
+  if (d.drop_rarity != null && (!(DROP_RARITIES as unknown[]).includes(d.drop_rarity) || (Array.isArray(d.sources) && d.sources.some(s => s === "starter" || s === "shop")))) errors.push("rare-catch drop: rare, epic or legendary, never for starter or shop-card recipes");
   if (d.position !== undefined && !Number.isInteger(d.position)) errors.push("position: whole number");
   return errors;
 }
