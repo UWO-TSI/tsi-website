@@ -27,7 +27,7 @@ import JournalSheet from "@/components/progression/JournalSheet";
 import { useProgressionWorld, useCeremony, useChapterActions, type WorldGoalId } from "@/lib/game/progressionBridge";
 import confetti from "canvas-confetti";
 import type { InteriorStation } from "./interiorShared";
-import { villageIsland, villageSpawn, villageScale, landmarks, landmarkPoint, wharfDeck, benchSeat, BENCH_SEAT_TOP, type Landmark } from "@/lib/game/defaultIsland";
+import { villageIsland, villageSpawn, villageScale, landmarks, landmarkPoint, wharfDeck, benchSeat, propsOf, BENCH_SEAT_TOP, type Landmark } from "@/lib/game/defaultIsland";
 import { village, objectsOf, type Village } from "@/lib/game/villageMap";
 import { LEVEL_STEP, levelAt, worldToCellX, worldToCellZ } from "@/lib/game/grid";
 import { useGraphicsSettings } from "@/lib/game/useGraphicsSettings";
@@ -145,16 +145,17 @@ const xz = (o: { x: number; z: number }): [number, number] => [o.x, o.z];
  */
 function villageLayout(v: Village) {
   const deck = wharfDeck(v);
-  const fitting = objectsOf("fitting", v)[0], missions = objectsOf("missions", v)[0];
+  const fitting = objectsOf("fitting", v)[0], missions = objectsOf("missions", v)[0], marks = landmarks(v);
   return {
     island: villageIsland(v),
-    landmarks: landmarks(v),
+    landmarks: marks,
     trees: objectsOf("tree", v).map((o): TreeSpot => ({ x: o.x, z: o.z, seed: o.seed ?? 0 })),
     bushes: objectsOf("bush", v).map(o => ({ x: o.x, z: o.z, seed: o.seed ?? 0 })),
     flowers: objectsOf("flower", v).map(o => ({ x: o.x, z: o.z, seed: o.seed ?? 0 })),
     fireflies: objectsOf("bush", v).map(xz),
     puddles: objectsOf("puddle", v).map(xz),
-    props: [...objectsOf("bench", v), ...objectsOf("rock", v), ...objectsOf("fence", v)].filter(o => o.model),
+    props: propsOf(v).filter(o => o.model),
+    benches: objectsOf("bench", v),
     lamps: objectsOf("lamp", v),
     bridges: objectsOf("bridge", v).map(o => ({ ...o, y: levelAt(v.map, worldToCellX(v.map, o.x), worldToCellZ(v.map, o.z)) * LEVEL_STEP - 0.065 })),
     doors: { hq: landmarkPoint("hq", "door", v), oracle: landmarkPoint("oracle", "door", v), boat: landmarkPoint("wharf", "door", v) },
@@ -165,7 +166,7 @@ function villageLayout(v: Village) {
     /** Fitting room beside the shop; ruins mission board beside the cliff gate (combat-foundation.md §6). */
     fitting: fitting ? xz(fitting) : null,
     missions: missions ? { at: xz(missions), yaw: missions.yaw ?? 0 } : null,
-    prompts: landmarks(v).filter(l => PROMPT_IDS.includes(l.id)),
+    prompts: marks.filter(l => PROMPT_IDS.includes(l.id)),
     nodes: villageNodes(v),
     water: villageWater(v).classify,
     scale: villageScale(v),
@@ -249,7 +250,7 @@ function IslandScene({ identity, devAt, exitFrom, peaceful, fishSpot, fishing, c
       : within(layout.fitting, 1.5) ? "fitting"
       : within(doors.oracle, 1.6) ? "oracle_enter"
       : within(layout.missions?.at ?? null, 1.5) ? "missions" : null;
-    const b = benchSeat(player.current.x, player.current.z);
+    const b = benchSeat(player.current.x, player.current.z, 1.3, v, layout.benches);
     benchSpot.current = b && { ...b, seatY: island.ground(b.x, b.z) + BENCH_SEAT_TOP };
     // An event spot and a bench both in reach: the nearer one takes E.
     const ev = spots.find(s => within([s.x, s.z], s.range)), seat = benchSpot.current;

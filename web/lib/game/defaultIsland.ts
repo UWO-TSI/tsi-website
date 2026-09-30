@@ -124,6 +124,9 @@ export function villageSpawn(v: Village = village()): [number, number, number] {
   return [x, 0, z];
 }
 
+/** The benches, rocks and fences: the props with a solid footprint. */
+export const propsOf = (v: Village = village()) => [...objectsOf("bench", v), ...objectsOf("rock", v), ...objectsOf("fence", v)];
+
 /** Solid footprint of a bench, rock or fence: half extents × scale (before its yaw). */
 export function propFootprint(o: MapObject): [number, number] | null {
   const f = o.model ? PROP_FOOTPRINT[o.model] : undefined;
@@ -132,9 +135,9 @@ export function propFootprint(o: MapObject): [number, number] | null {
 
 /** Bench-wood seat top: its slats measure 0.48–0.51 above the ground. */
 export const BENCH_SEAT_TOP = 0.5;
-/** The village bench within reach, as a `tsi:sit` spot: its middle, facing the side you stand on. */
-export function benchSeat(x: number, z: number, range = 1.3, v: Village = village()): { x: number; z: number; yaw: number } | null {
-  const b = objectsOf("bench", v).find(p => Math.hypot(p.x - x, p.z - z) < range);
+/** The village bench within reach, as a `tsi:sit` spot: its middle, facing the side you stand on. `benches`: the village's, when the caller holds them (every frame). */
+export function benchSeat(x: number, z: number, range = 1.3, v: Village = village(), benches: readonly MapObject[] = objectsOf("bench", v)): { x: number; z: number; yaw: number } | null {
+  const b = benches.find(p => Math.hypot(p.x - x, p.z - z) < range);
   if (!b) return null;
   const yaw = b.yaw ?? 0;
   const front = (x - b.x) * Math.sin(yaw) + (z - b.z) * Math.cos(yaw) >= 0;
@@ -170,7 +173,7 @@ export function islandOf(v: Village): VillageIsland {
   const surface = (x: number, z: number) => surfaceAt(map, worldToCellX(map, x), worldToCellZ(map, z));
   const decks = [wharfDeck(v), ...bridgeDecks(v)].filter(d => d !== null);
   const solids = landmarks(v).filter(l => l.half);
-  const props = [...objectsOf("bench", v), ...objectsOf("rock", v), ...objectsOf("fence", v)].flatMap(o => {
+  const props = propsOf(v).flatMap(o => {
     const f = propFootprint(o);
     return f ? [{ x: o.x, z: o.z, yaw: o.yaw ?? 0, hw: f[0], hd: f[1], top: (PROP_TOP[o.model!] ?? Infinity) * (o.scale ?? 1) }] : [];
   });
