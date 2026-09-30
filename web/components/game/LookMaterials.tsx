@@ -37,7 +37,7 @@ const REFLECT = { glass: { value: 0 }, metal: { value: 0 } };
 const SHADOW_TINT = { value: new THREE.Color(0, 0, 0) };
 /** Patched materials: class and authored roughness. A WeakMap, not userData, which clones would copy. */
 const PATCHED = new WeakMap<THREE.Material, { cls: Lit; roughness: number }>();
-/** Every patched material seen (module scope: the compiler forbids mutating hook values). */
+/** The patched materials in the scene at the last sweep (module scope: the compiler forbids mutating hook values). */
 const LIVE = new Set<THREE.MeshStandardMaterial>();
 
 function classOf(material: THREE.MeshStandardMaterial): Lit {
@@ -84,19 +84,23 @@ function setLook(preset: LookPreset | null) {
   }
 }
 
-/** Patch materials that have appeared since the last sweep (late loads, season swaps); true if any. */
-function sweepScene(scene: THREE.Scene): boolean {
+/** Patch materials that have appeared since the last sweep (late loads, season swaps) and forget ones that left; true if any appeared. */
+export function sweepScene(scene: THREE.Scene): boolean {
   let added = false;
+  const seen = new Set<THREE.Material>();
   scene.traverse(object => {
     const mesh = object as THREE.Mesh;
     if (!mesh.isMesh) return;
     for (const m of Array.isArray(mesh.material) ? mesh.material : [mesh.material]) {
-      if (!(m instanceof THREE.MeshStandardMaterial) || LIVE.has(m)) continue;
+      if (!(m instanceof THREE.MeshStandardMaterial)) continue;
+      seen.add(m);
+      if (LIVE.has(m)) continue;
       if (!PATCHED.has(m)) patch(m, classOf(m));
       LIVE.add(m);
       added = true;
     }
   });
+  for (const m of LIVE) if (!seen.has(m)) LIVE.delete(m);
   return added;
 }
 
