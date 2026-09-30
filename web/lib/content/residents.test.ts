@@ -41,4 +41,10 @@ describe("residents", () => {
     expect(validateResidentDraft({ slug: "Kit!", display_name: "", post: "wizard", canned_dialogue: [""], schedule: { noon: "wharf" } })).toHaveLength(5);
     expect(validateResidentDraft({ slug: "kit", display_name: "Kit", schedule: { day: "moon" } })).toEqual(["schedule: phase → anchor"]);
   });
+
+  it("caps the persona prompt on the server too", () => {
+    expect(validateResidentDraft({ slug: "kit", display_name: "Kit", persona_prompt: "x".repeat(2000) })).toEqual([]);
+    expect(validateResidentDraft({ slug: "kit", display_name: "Kit", persona_prompt: null })).toEqual([]);
+    expect(validateResidentDraft({ slug: "kit", display_name: "Kit", persona_prompt: "x".repeat(2001) })).toEqual(["persona_prompt: up to 2000 characters"]);
+  });
 });

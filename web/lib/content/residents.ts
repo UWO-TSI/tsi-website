@@ -48,6 +48,7 @@ export function validateResidentDraft(d: Record<string, unknown>): string[] {
   if (d.post != null && !(RESIDENT_POSTS as readonly unknown[]).includes(d.post)) errors.push("post: one of the service posts or villager");
   if (d.bio !== undefined && (typeof d.bio !== "string" || d.bio.length > 1000)) errors.push("bio: up to 1000 characters");
   if (d.tone != null && (typeof d.tone !== "string" || d.tone.length > 40)) errors.push("tone: up to 40 characters");
+  if (d.persona_prompt != null && (typeof d.persona_prompt !== "string" || d.persona_prompt.length > 2000)) errors.push("persona_prompt: up to 2000 characters");
   const lines = d.canned_dialogue;
   if (lines !== undefined && (!Array.isArray(lines) || lines.length > 30 || lines.some((l) => typeof l !== "string" || !l.trim() || l.length > 200))) errors.push("dialogue: up to 30 lines of 1-200 characters");
   const s = d.schedule;

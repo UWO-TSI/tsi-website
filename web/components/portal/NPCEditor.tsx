@@ -1,24 +1,24 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Plus, Trash2, ExternalLink } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { NPCPersona, SpawnZone } from "@/lib/content/types";
 import ImageUploadButton from "@/components/portal/ImageUploadButton";
-import { PHASES, RESIDENT_ANCHORS, RESIDENT_POSTS, type ResidentSchedule } from "@/lib/content/residents";
+import { PHASES, RESIDENT_ANCHORS, RESIDENT_POSTS, validateResidentDraft, type ResidentSchedule } from "@/lib/content/residents";
+import { DraftBar, Field, inputCls, Toggle, useDraftFlow } from "./ProgressionAdminShared";
 
 // ─── NPCEditor (Residents) ──────────────────────────────────────────────────
 // Shared form component used by both /new and /[id]/edit. Renders all NPC
 // fields plus the resident roster fields (post, bio, tone, schedule; rows 122,
-// 218), validates client-side, then drives the B3 draft/preview/publish API.
+// 218), validates with the server's validateResidentDraft, then drives the
+// shared draft/preview/publish flow.
 //
 // `mode = "new"` — slug uniqueness is enforced; row_id sent as null.
 // `mode = "edit"` — initial row + id loaded by the page wrapper; slug
 //                   uniqueness skips the current slug.
 
-const SLUG_REGEX = /^[a-z0-9-]+$/;
 const SPAWN_ZONES: SpawnZone[] = ["courtyard", "shop", "temple", "roaming"];
 const POST_LABELS: Record<(typeof RESIDENT_POSTS)[number], string> = {
   hq_lead: "HQ lead", shopkeeper: "Shopkeeper", cafe_owner: "Café owner", museum_curator: "Museum curator",
@@ -81,14 +81,11 @@ function toFormState(row: Partial<NPCPersona> | null | undefined): FormState {
   };
 }
 
+const BACK = "/student/dashboard/admin/content/npcs";
+
 export default function NPCEditor({ mode, rowId, initial }: NPCEditorProps) {
-  const router = useRouter();
   const [form, setForm] = useState<FormState>(() => toFormState(initial));
-  const [draftId, setDraftId] = useState<string | null>(null);
-  const [busy, setBusy] = useState<"save" | "publish" | "discard" | null>(null);
-  const [message, setMessage] = useState<{ kind: "ok" | "err"; text: string } | null>(
-    null,
-  );
+  const flow = useDraftFlow("npc_personas", mode === "edit" ? rowId : undefined, BACK);
   const [existingSlugs, setExistingSlugs] = useState<Set<string>>(new Set());
 
   // Load existing slugs once (live table + outstanding drafts). Skip own slug
@@ -128,8 +125,24 @@ export default function NPCEditor({ mode, rowId, initial }: NPCEditorProps) {
     };
   }, [mode, rowId]);
 
-  const errors = useMemo(() => validate(form, existingSlugs), [form, existingSlugs]);
-  const hasErrors = Object.keys(errors).length > 0;
+  const draft = useMemo(
+    () => ({
+      slug: form.slug.trim(),
+      display_name: form.display_name.trim(),
+      spawn_zone: form.spawn_zone,
+      is_permanent: form.is_permanent,
+      persona_prompt: form.persona_prompt.trim() || null,
+      canned_dialogue: form.canned_dialogue.map((l) => l.trim()).filter((l) => l.length > 0),
+      sprite_url: form.sprite_url.trim() || null,
+      active: form.active,
+      post: form.post || null,
+      bio: form.bio.trim(),
+      tone: form.tone.trim() || null,
+      schedule: form.schedule,
+    }),
+    [form],
+  );
+  const errors = [...validateResidentDraft(draft), ...(existingSlugs.has(draft.slug) ? ["slug: already in use"] : [])];
 
   const update = <K extends keyof FormState>(key: K, value: FormState[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -150,112 +163,6 @@ export default function NPCEditor({ mode, rowId, initial }: NPCEditorProps) {
     );
   };
 
-  const handleSaveDraft = async () => {
-    if (hasErrors || busy) return;
-    setBusy("save");
-    setMessage(null);
-    try {
-      const payload = {
-        table_name: "npc_personas",
-        row_id: mode === "edit" ? rowId : null,
-        draft_data: {
-          slug: form.slug.trim(),
-          display_name: form.display_name.trim(),
-          spawn_zone: form.spawn_zone,
-          is_permanent: form.is_permanent,
-          persona_prompt: form.persona_prompt.trim() || null,
-          canned_dialogue: form.canned_dialogue
-            .map((l) => l.trim())
-            .filter((l) => l.length > 0),
-          sprite_url: form.sprite_url.trim() || null,
-          active: form.active,
-          post: form.post || null,
-          bio: form.bio.trim(),
-          tone: form.tone.trim() || null,
-          schedule: form.schedule,
-        },
-      };
-      const res = await fetch("/api/content/drafts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      const body = await res.json().catch(() => ({}));
-      if (!res.ok || !body.ok) {
-        setMessage({ kind: "err", text: body.error ?? "Save failed" });
-        return;
-      }
-      setDraftId(body.draft.id as string);
-      setMessage({ kind: "ok", text: "Draft saved." });
-    } catch (err) {
-      setMessage({
-        kind: "err",
-        text: err instanceof Error ? err.message : "Save failed",
-      });
-    } finally {
-      setBusy(null);
-    }
-  };
-
-  const handlePublish = async () => {
-    if (!draftId || busy) return;
-    setBusy("publish");
-    setMessage(null);
-    try {
-      const res = await fetch(`/api/content/drafts/${draftId}/publish`, {
-        method: "POST",
-      });
-      const body = await res.json().catch(() => ({}));
-      if (!res.ok || !body.ok) {
-        setMessage({ kind: "err", text: body.error ?? "Publish failed" });
-        return;
-      }
-      router.push("/student/dashboard/admin/content/npcs");
-    } catch (err) {
-      setMessage({
-        kind: "err",
-        text: err instanceof Error ? err.message : "Publish failed",
-      });
-    } finally {
-      setBusy(null);
-    }
-  };
-
-  const handleDiscard = async () => {
-    if (!draftId || busy) return;
-    if (typeof window !== "undefined") {
-      const ok = window.confirm(
-        "Discard this draft? Unsaved changes will be lost.",
-      );
-      if (!ok) return;
-    }
-    setBusy("discard");
-    setMessage(null);
-    try {
-      const res = await fetch(`/api/content/drafts/${draftId}/discard`, {
-        method: "POST",
-      });
-      const body = await res.json().catch(() => ({}));
-      if (!res.ok || !body.ok) {
-        setMessage({ kind: "err", text: body.error ?? "Discard failed" });
-        return;
-      }
-      setDraftId(null);
-      setMessage({ kind: "ok", text: "Draft discarded." });
-    } catch (err) {
-      setMessage({
-        kind: "err",
-        text: err instanceof Error ? err.message : "Discard failed",
-      });
-    } finally {
-      setBusy(null);
-    }
-  };
-
-  const previewHref = draftId
-    ? `/student/dashboard?preview=draft-${draftId}`
-    : null;
-
   const promptLength = form.persona_prompt.length;
   const promptOver = promptLength > 2000;
   const promptWarn = !promptOver && promptLength > 1800;
@@ -264,7 +171,7 @@ export default function NPCEditor({ mode, rowId, initial }: NPCEditorProps) {
     <div>
       <div className="mb-2">
         <Link
-          href="/student/dashboard/admin/content/npcs"
+          href={BACK}
           className="inline-flex items-center gap-1 text-xs font-mono text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
         >
           <ArrowLeft size={12} />
@@ -281,23 +188,10 @@ export default function NPCEditor({ mode, rowId, initial }: NPCEditorProps) {
         </p>
       </div>
 
-      {message ? (
-        <div
-          className={`mb-4 p-3 rounded-md text-xs font-mono border ${
-            message.kind === "ok"
-              ? "bg-green-400/10 border-green-400/30 text-green-400"
-              : "bg-red-400/10 border-red-400/30 text-red-400"
-          }`}
-        >
-          {message.text}
-        </div>
-      ) : null}
-
       <div className="bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-lg p-6 space-y-5">
         <Field
           label="Slug"
           hint="kebab-case identifier, e.g. wise-shopkeeper"
-          error={errors.slug}
         >
           <input
             type="text"
@@ -309,7 +203,7 @@ export default function NPCEditor({ mode, rowId, initial }: NPCEditorProps) {
           />
         </Field>
 
-        <Field label="Display Name" error={errors.display_name}>
+        <Field label="Display Name">
           <input
             type="text"
             value={form.display_name}
@@ -328,7 +222,7 @@ export default function NPCEditor({ mode, rowId, initial }: NPCEditorProps) {
               ))}
             </select>
           </Field>
-          <Field label="Tone" hint="How they talk: warm, dry, playful, earnest…" error={errors.tone}>
+          <Field label="Tone" hint="How they talk: warm, dry, playful, earnest…">
             <input type="text" list="resident-tones" value={form.tone} onChange={(e) => update("tone", e.target.value)} className={inputCls} placeholder="warm" />
             <datalist id="resident-tones">
               {["warm", "dry", "playful", "earnest"].map((t) => <option key={t} value={t} />)}
@@ -336,7 +230,7 @@ export default function NPCEditor({ mode, rowId, initial }: NPCEditorProps) {
           </Field>
         </div>
 
-        <Field label="Bio" hint="Authored background for writers and the resident card. Up to 1000 characters." error={errors.bio}>
+        <Field label="Bio" hint="Authored background for writers and the resident card. Up to 1000 characters.">
           <textarea rows={3} value={form.bio} onChange={(e) => update("bio", e.target.value)} className={`${inputCls} resize-y`} maxLength={1000} />
         </Field>
 
@@ -389,7 +283,6 @@ export default function NPCEditor({ mode, rowId, initial }: NPCEditorProps) {
         <Field
           label="Persona Prompt"
           hint="LLM system prompt for the NPC's voice and behavior. Used when LLM-NPC ships."
-          error={errors.persona_prompt}
         >
           <textarea
             rows={6}
@@ -414,7 +307,6 @@ export default function NPCEditor({ mode, rowId, initial }: NPCEditorProps) {
         <Field
           label="Dialogue lines"
           hint="What they say in their speech bubble when you pass by. ≤ 200 chars per line."
-          error={errors.canned_dialogue}
         >
           <div className="space-y-2">
             {form.canned_dialogue.map((line, idx) => (
@@ -466,180 +358,18 @@ export default function NPCEditor({ mode, rowId, initial }: NPCEditorProps) {
         />
       </div>
 
-      <div className="mt-6 flex flex-wrap items-center gap-3">
-        <button
-          type="button"
-          onClick={handleSaveDraft}
-          disabled={hasErrors || busy !== null}
-          className={primaryBtnCls}
+      {errors.length ? <ul className="mt-4 text-[0.65rem] font-mono text-red-400 list-disc pl-4">{errors.map((e) => <li key={e}>{e}</li>)}</ul> : null}
+      <DraftBar flow={flow} canSave={errors.length === 0} onSave={() => flow.save(draft)} />
+      {flow.draftId ? (
+        <a
+          href={`/student/dashboard?preview=draft-${flow.draftId}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-3 inline-flex items-center gap-2 px-4 py-2 border border-[var(--glass-border)] text-[var(--color-text-primary)] font-mono text-xs uppercase tracking-wider rounded-md hover:border-[var(--color-accent-cyan)] transition-colors"
         >
-          {busy === "save" ? "Saving..." : "Save as draft"}
-        </button>
-
-        {previewHref ? (
-          <a
-            href={previewHref}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={secondaryBtnCls}
-          >
-            <ExternalLink size={12} /> Preview
-          </a>
-        ) : null}
-
-        {draftId ? (
-          <button
-            type="button"
-            onClick={handlePublish}
-            disabled={busy !== null}
-            className={publishBtnCls}
-          >
-            {busy === "publish" ? "Publishing..." : "Publish"}
-          </button>
-        ) : null}
-
-        {draftId ? (
-          <button
-            type="button"
-            onClick={handleDiscard}
-            disabled={busy !== null}
-            className={dangerBtnCls}
-          >
-            {busy === "discard" ? "Discarding..." : "Discard draft"}
-          </button>
-        ) : null}
-      </div>
-    </div>
-  );
-}
-
-// ─── Validation ─────────────────────────────────────────────────────────────
-
-function validate(
-  form: FormState,
-  existingSlugs: Set<string>,
-): Partial<Record<keyof FormState, string>> {
-  const errors: Partial<Record<keyof FormState, string>> = {};
-
-  const slug = form.slug.trim();
-  if (!slug) {
-    errors.slug = "Slug is required";
-  } else if (!SLUG_REGEX.test(slug)) {
-    errors.slug = "Use lowercase letters, numbers, and dashes only";
-  } else if (existingSlugs.has(slug)) {
-    errors.slug = "Slug already in use";
-  }
-
-  const name = form.display_name.trim();
-  if (!name) {
-    errors.display_name = "Display name is required";
-  } else if (name.length > 80) {
-    errors.display_name = "Keep under 80 characters";
-  }
-
-  if (form.tone.trim().length > 40) errors.tone = "Keep the tone under 40 characters";
-  if (form.bio.length > 1000) errors.bio = "Keep the bio under 1000 characters";
-
-  if (form.persona_prompt.length > 2000) {
-    errors.persona_prompt = "Persona prompt must be ≤ 2000 characters";
-  }
-
-  for (const line of form.canned_dialogue) {
-    if (line.length > 200) {
-      errors.canned_dialogue = "Each dialogue line must be ≤ 200 characters";
-      break;
-    }
-  }
-
-  return errors;
-}
-
-// ─── Sub-components / classes ───────────────────────────────────────────────
-
-const inputCls =
-  "w-full px-3 py-2 bg-[var(--color-bg)] border border-[var(--glass-border)] rounded-md text-sm text-[var(--color-text-primary)] font-mono focus:outline-none focus:border-[var(--color-accent-cyan)] transition-colors";
-
-const primaryBtnCls =
-  "inline-flex items-center gap-2 px-4 py-2 bg-[var(--color-accent-cyan)] text-[var(--color-bg)] font-mono text-xs uppercase tracking-wider rounded-md hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity";
-
-const secondaryBtnCls =
-  "inline-flex items-center gap-2 px-4 py-2 border border-[var(--glass-border)] text-[var(--color-text-primary)] font-mono text-xs uppercase tracking-wider rounded-md hover:border-[var(--color-accent-cyan)] transition-colors";
-
-const publishBtnCls =
-  "inline-flex items-center gap-2 px-4 py-2 bg-green-500 text-white font-mono text-xs uppercase tracking-wider rounded-md hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity";
-
-const dangerBtnCls =
-  "inline-flex items-center gap-2 px-4 py-2 border border-red-500/40 text-red-400 font-mono text-xs uppercase tracking-wider rounded-md hover:bg-red-500/10 disabled:opacity-40 disabled:cursor-not-allowed transition-colors";
-
-function Field({
-  label,
-  hint,
-  error,
-  children,
-}: {
-  label: string;
-  hint?: string;
-  error?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div>
-      <label className="block text-[0.65rem] font-mono uppercase tracking-wider text-[var(--color-text-muted)] mb-1.5">
-        {label}
-      </label>
-      {children}
-      {hint && !error ? (
-        <p className="mt-1 text-[0.65rem] font-mono text-[var(--color-text-muted)]/70">
-          {hint}
-        </p>
+          <ExternalLink size={12} /> Preview
+        </a>
       ) : null}
-      {error ? (
-        <p className="mt-1 text-[0.65rem] font-mono text-red-400">{error}</p>
-      ) : null}
-    </div>
-  );
-}
-
-function Toggle({
-  label,
-  hint,
-  checked,
-  onChange,
-}: {
-  label: string;
-  hint?: string;
-  checked: boolean;
-  onChange: (v: boolean) => void;
-}) {
-  return (
-    <div className="flex items-start gap-3">
-      <button
-        type="button"
-        role="switch"
-        aria-checked={checked}
-        onClick={() => onChange(!checked)}
-        className={`relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border border-[var(--glass-border)] transition-colors ${
-          checked
-            ? "bg-[var(--color-accent-cyan)]"
-            : "bg-[var(--color-bg)]"
-        }`}
-      >
-        <span
-          className={`inline-block h-4 w-4 mt-0.5 transform rounded-full bg-white transition-transform ${
-            checked ? "translate-x-6" : "translate-x-1"
-          }`}
-        />
-      </button>
-      <div className="flex-1">
-        <label className="block text-xs font-mono text-[var(--color-text-primary)]">
-          {label}
-        </label>
-        {hint ? (
-          <p className="text-[0.65rem] font-mono text-[var(--color-text-muted)]/70 mt-0.5">
-            {hint}
-          </p>
-        ) : null}
-      </div>
     </div>
   );
 }
