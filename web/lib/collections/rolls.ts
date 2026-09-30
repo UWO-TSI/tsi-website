@@ -75,13 +75,13 @@ export function castWater(site: Site, [x, z]: [number, number]): WaterType | nul
 const REEL_WEATHER: Record<IslandWeather, Weather> = { clear: "sunny", rain: "rain", snow: "cloudy", fog: "cloudy", wind: "cloudy" };
 
 /**
- * The fish that bites: the reel's pool (FishingOverlay) for the water, rod and cast power, at the Toronto hour and real weather.
+ * The fish that bites: the reel's pool (FishingOverlay) for the water, rod and cast power, at the Toronto hour, month and real weather.
  * `catches`: the seasonal events' limited-time species and the ones biting now (lib/progression/seasonal.ts eventCatches);
  * without it the seeded events' catches are shut.
  */
 export function fishRoll(water: WaterType, power: number, rod: RodTier, now: Date, weather: IslandWeather, random = Math.random, catches?: EventCatches): { fish: FishDef; size: number } {
-  const { hour, minute } = torontoParts(now);
+  const { hour, minute, month } = torontoParts(now);
   const luck = power + (power >= CAST.maxZone ? CAST.maxBonus : 0);
-  const fish = rollFishFor(water, luck, rod, { hour: hour + minute / 60, weather: REEL_WEATHER[weather], catches }, random);
+  const fish = rollFishFor(water, luck, rod, { hour: hour + minute / 60, weather: REEL_WEATHER[weather], month, catches }, random);
   return { fish, size: rollSize(fish.sizeCm, random) };
 }

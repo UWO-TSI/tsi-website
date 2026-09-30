@@ -21,6 +21,7 @@ import { getLabHour } from "./devLab";
 import { EXTRA_FISH } from "./fishCatalog";
 import { weatherMods } from "./weatherPerks";
 import { SEASONAL_GOALS } from "@/lib/progression/defaults";
+import { ROSTER } from "@/lib/collections/roster";
 
 export type Rarity = "common" | "uncommon" | "rare" | "epic" | "legendary" | "seaking";
 
@@ -164,13 +165,20 @@ let eventCatches: EventCatches = { limited: new Set(SEASONAL_GOALS.flatMap((g) =
 export function setEventCatches(next: EventCatches): void {
   eventCatches = next;
 }
-export interface FishingContext { hour: number; weather: string; catches?: EventCatches }
-const biting = (f: FishDef, zone: "river" | "sea", { hour, weather, catches = eventCatches }: FishingContext) =>
-  (f.zone ?? "river") === zone && (!f.when || f.when(hour, weather)) && (!catches.limited.has(f.key) || catches.open.has(f.key));
+/** `month` (1-12, Toronto): fish with a roster months list only bite in those months (David, 2026-09-30); absent = any month. */
+export interface FishingContext { hour: number; weather: string; month?: number; catches?: EventCatches }
+/** Roster months per species that has a season (the journal's and catch board's "Sep–Nov"). */
+const SEASON_MONTHS = new Map(ROSTER.filter((s) => s.months.length).map((s) => [s.key, s.months]));
+const biting = (f: FishDef, zone: "river" | "sea", { hour, weather, month, catches = eventCatches }: FishingContext) => {
+  if ((f.zone ?? "river") !== zone || (f.when && !f.when(hour, weather))) return false;
+  // A limited-time fish's season is its event's window, wherever an admin puts it.
+  if (catches.limited.has(f.key)) return catches.open.has(f.key);
+  return month === undefined || (SEASON_MONTHS.get(f.key)?.includes(month) ?? true);
+};
 
 export function currentFishingContext(): FishingContext {
   const hour = getLabHour() ?? new Date().getHours() + new Date().getMinutes() / 60;
-  return { hour, weather: getTodayWeather() };
+  return { hour, weather: getTodayWeather(), month: new Date().getMonth() + 1 };
 }
 
 export function fishWeight(f: FishDef, weather: string): number {
@@ -265,11 +273,11 @@ export const REVEAL: Record<
 
 /** "1 in N" odds for a species under the current hour/weather pool. */
 export function fishOdds(fish: FishDef): number {
-  const { hour, weather } = currentFishingContext();
+  const context = currentFishingContext(), { weather } = context;
   // Odds are within the species' own zone pool (a sea catch competes with
   // the sea roster, not the whole book).
   const zone = fish.zone ?? "river";
-  const pool = FISH.filter((f) => biting(f, zone, { hour, weather }));
+  const pool = FISH.filter((f) => biting(f, zone, context));
   const total = pool.reduce((s, f) => s + fishWeight(f, weather), 0);
   const w = fishWeight(fish, weather);
   return Math.max(1, Math.round(total / w));
