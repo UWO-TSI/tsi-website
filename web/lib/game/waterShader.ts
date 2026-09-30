@@ -101,77 +101,33 @@ export function bedDepth(d: number, p: Pick<WaterParams, "bedDepth" | "bedSlope"
   return p.bedDepth * (1 - Math.exp(-Math.max(d, 0) / Math.max(p.bedSlope, 0.01)));
 }
 
+/** Every WaterParams key but rippleStrength, each the shader's `u<Key>` uniform (a Color when the key ends in Color). */
+const WATER_KEYS = [
+  "deepColor", "midColor", "shallowColor", "bedColor", "foamColor", "ringColor", "depthFalloff", "bedDepth", "bedSlope",
+  "foamWidth", "foamStrength", "foamSoft", "foamWave", "foamWaveSpeed", "blobScale", "blobDarken", "blobSpeed", "ringWidth",
+  "ringStrength", "shoreAlpha", "opacity", "fresnel", "glare", "roughness", "sunGlint", "sunSize", "waveHeight", "waveScale", "waveSpeed",
+] as const satisfies readonly (keyof WaterParams)[];
+const uniformOf = (k: string) => `u${k[0].toUpperCase()}${k.slice(1)}`;
+
 export function waterUniforms(p: WaterParams) {
+  const block: Record<string, THREE.IUniform> = {};
+  for (const k of WATER_KEYS) block[uniformOf(k)] = { value: k.endsWith("Color") ? new THREE.Color(p[k]) : p[k] };
   return {
+    ...block,
     uTime: { value: 0 },
-    uDeepColor: { value: new THREE.Color(p.deepColor) },
-    uMidColor: { value: new THREE.Color(p.midColor) },
-    uShallowColor: { value: new THREE.Color(p.shallowColor) },
-    uBedColor: { value: new THREE.Color(p.bedColor) },
-    uFoamColor: { value: new THREE.Color(p.foamColor) },
-    uRingColor: { value: new THREE.Color(p.ringColor) },
     uSunDir: { value: new THREE.Vector3(0, 1, 0) },
     /** The key light's colour, so the glint turns gold at golden hour and blue under the moon. */
     uSunColor: { value: new THREE.Color(1, 0.98, 0.92) },
-    uDepthFalloff: { value: p.depthFalloff },
-    uBedDepth: { value: p.bedDepth },
-    uBedSlope: { value: p.bedSlope },
-    uFoamWidth: { value: p.foamWidth },
-    uFoamStrength: { value: p.foamStrength },
-    uFoamSoft: { value: p.foamSoft },
-    uFoamWave: { value: p.foamWave },
-    uFoamWaveSpeed: { value: p.foamWaveSpeed },
-    uBlobScale: { value: p.blobScale },
-    uBlobDarken: { value: p.blobDarken },
-    uBlobSpeed: { value: p.blobSpeed },
-    uRingWidth: { value: p.ringWidth },
-    uRingStrength: { value: p.ringStrength },
-    uShoreAlpha: { value: p.shoreAlpha },
-    uOpacity: { value: p.opacity },
-    uFresnel: { value: p.fresnel },
-    uGlare: { value: p.glare },
-    uRoughness: { value: p.roughness },
-    uSunGlint: { value: p.sunGlint },
-    uSunSize: { value: p.sunSize },
-    uWaveHeight: { value: p.waveHeight },
-    uWaveScale: { value: p.waveScale },
-    uWaveSpeed: { value: p.waveSpeed },
   };
 }
 
-export type WaterUniforms = ReturnType<typeof waterUniforms>;
-
 /** Push a params block onto live uniforms without recompiling the shader. */
-export function writeWaterUniforms(u: WaterUniforms, p: WaterParams): void {
-  u.uDeepColor.value.setHex(p.deepColor);
-  u.uMidColor.value.setHex(p.midColor);
-  u.uShallowColor.value.setHex(p.shallowColor);
-  u.uBedColor.value.setHex(p.bedColor);
-  u.uFoamColor.value.setHex(p.foamColor);
-  u.uRingColor.value.setHex(p.ringColor);
-  u.uDepthFalloff.value = p.depthFalloff;
-  u.uBedDepth.value = p.bedDepth;
-  u.uBedSlope.value = p.bedSlope;
-  u.uFoamWidth.value = p.foamWidth;
-  u.uFoamStrength.value = p.foamStrength;
-  u.uFoamSoft.value = p.foamSoft;
-  u.uFoamWave.value = p.foamWave;
-  u.uFoamWaveSpeed.value = p.foamWaveSpeed;
-  u.uBlobScale.value = p.blobScale;
-  u.uBlobDarken.value = p.blobDarken;
-  u.uBlobSpeed.value = p.blobSpeed;
-  u.uRingWidth.value = p.ringWidth;
-  u.uRingStrength.value = p.ringStrength;
-  u.uShoreAlpha.value = p.shoreAlpha;
-  u.uOpacity.value = p.opacity;
-  u.uFresnel.value = p.fresnel;
-  u.uGlare.value = p.glare;
-  u.uRoughness.value = p.roughness;
-  u.uSunGlint.value = p.sunGlint;
-  u.uSunSize.value = p.sunSize;
-  u.uWaveHeight.value = p.waveHeight;
-  u.uWaveScale.value = p.waveScale;
-  u.uWaveSpeed.value = p.waveSpeed;
+export function writeWaterUniforms(u: Record<string, THREE.IUniform>, p: WaterParams): void {
+  for (const k of WATER_KEYS) {
+    const uniform = u[uniformOf(k)];
+    if (uniform.value instanceof THREE.Color) uniform.value.setHex(p[k]);
+    else uniform.value = p[k];
+  }
 }
 
 /**
@@ -303,32 +259,9 @@ float sunThroughClouds(vec2 xz) {
 
 const UNIFORM_DECLS = /* glsl */ `
 uniform float uTime;
-uniform vec3 uDeepColor;
-uniform vec3 uMidColor;
-uniform vec3 uShallowColor;
-uniform vec3 uBedColor;
-uniform vec3 uFoamColor;
-uniform vec3 uRingColor;
 uniform vec3 uSunDir;
 uniform vec3 uSunColor;
-uniform float uDepthFalloff;
-uniform float uBedDepth;
-uniform float uBedSlope;
-uniform float uFoamWidth;
-uniform float uFoamStrength;
-uniform float uFoamSoft;
-uniform float uFoamWave;
-uniform float uFoamWaveSpeed;
-uniform float uBlobScale;
-uniform float uBlobDarken;
-uniform float uBlobSpeed;
-uniform float uRingWidth;
-uniform float uRingStrength;
-uniform float uShoreAlpha;
-uniform float uOpacity;
-uniform float uFresnel;
-uniform float uGlare;
-uniform float uRoughness;
+${WATER_KEYS.map(k => `uniform ${k.endsWith("Color") ? "vec3" : "float"} ${uniformOf(k)};`).join("\n")}
 `;
 
 /** The shading itself; `shoreDistance` comes from the baked field (SHORE_FROM_FIELD). */

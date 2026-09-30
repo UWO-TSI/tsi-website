@@ -334,11 +334,13 @@ export function advanceWater(elapsed: number, cfg: WaterParams, sunWorld?: THREE
     waterUniformBlock.uRippleTexture.value.magFilter = THREE.LinearFilter;
   }
   waterUniformBlock.uTime.value = elapsed;
-  writeWaterUniforms(waterUniformBlock, cfg);
+  // cfg changes with phase, weather or season; the bench hands a fresh copy per frame.
+  if (cfg !== written) writeWaterUniforms(waterUniformBlock, written = cfg);
   if (sunWorld) waterUniformBlock.uSunDir.value.copy(sunWorld).normalize();
   if (sunColor) waterUniformBlock.uSunColor.value.copy(sunColor).lerp(WHITE, 0.2);
 }
 const WHITE = new THREE.Color(1, 1, 1);
+let written: WaterParams | null = null;
 
 /** The live water uniforms, for layers that ride the same surface and sun (the glint sprites). */
-export const waterSurfaceUniforms = () => waterUniformBlock;
+export const waterSurfaceUniforms = (): Record<string, THREE.IUniform> => waterUniformBlock;

@@ -27,13 +27,13 @@ import GridCliffs from "./GridCliffs";
 import GrassTufts from "./GrassTufts";
 import { applyGrassNormalStrength, advanceWater, shadeWaterByClouds } from "./terrainMaterials";
 import { cloudLayer } from "../AmbienceFX";
-import { useTuning, tune as tuneNow } from "@/lib/game/tuning";
+import { useTuning } from "@/lib/game/tuning";
 import { useFrame } from "@react-three/fiber";
 import type { WaterParams } from "@/lib/game/waterShader";
 import { worldTime } from "@/lib/game/worldClock";
 
 /** `field`: the map's height field when the caller already built it (the village builds it once). */
-export default function GridWorld({ map, field: suppliedField, water, palette, windScale }: { map: IslandMap; field?: Float32Array; water?: WaterParams; palette?: TerrainPalette; windScale?: number }) {
+export default function GridWorld({ map, field: suppliedField, water, palette, windScale }: { map: IslandMap; field?: Float32Array; water: WaterParams; palette?: TerrainPalette; windScale?: number }) {
   const t = useTuning();
 
   // The ground material is shared and cached, so the normal-map settings are
@@ -83,7 +83,7 @@ export default function GridWorld({ map, field: suppliedField, water, palette, w
       sunDir.current.sub(lightTarget.current);
       sunColor.current.copy(light.color);
     }
-    advanceWater(worldTime(), water ?? tuneNow().water, sunDir.current, sunColor.current);
+    advanceWater(worldTime(), water, sunDir.current, sunColor.current);
     shadeWaterByClouds(cloudLayer.map, cloudLayer.uv);
   });
 
