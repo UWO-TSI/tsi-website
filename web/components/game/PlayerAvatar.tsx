@@ -54,6 +54,7 @@ interface PlayerAvatarProps {
   camTarget?: React.RefObject<THREE.Vector3>;
   playerName?: string;
   showNameplate?: boolean;
+  /** The member's level (combat progression); the nameplate leaves it out until known. */
   playerLevel?: number;
   /** TSI member (row 223): subtle blue dot + glow on the nameplate. */
   member?: boolean;
@@ -77,7 +78,7 @@ function turnTo(s: MoveState | undefined, x: number, z: number) { if (s) s.facin
 const SEAT_CLIPS = new Set<ClipName>(["Sit", "Study", "Stretch", "Sleep"]);
 type Seat = { x: number; z: number; clip: ClipName; lift: number; yaw: number };
 
-export default function PlayerAvatar({ spawnPosition, onMove, world, groundHeight, groundSurface, camTarget, playerName = "Player", showNameplate = true, playerLevel = 1, member = false, combat: inCombat = false, activeEmote = null, frozen = false, desktopClickToMove = false, tuning, juice, timeScale, telemetry, walkSpeed = MOVE_TUNING.walkSpeed }: PlayerAvatarProps) {
+export default function PlayerAvatar({ spawnPosition, onMove, world, groundHeight, groundSurface, camTarget, playerName = "Player", showNameplate = true, playerLevel, member = false, combat: inCombat = false, activeEmote = null, frozen = false, desktopClickToMove = false, tuning, juice, timeScale, telemetry, walkSpeed = MOVE_TUNING.walkSpeed }: PlayerAvatarProps) {
   const anchor = useRef<THREE.Group>(null), body = useRef<THREE.Group>(null), head = useRef<THREE.Group>(null);
   const motion = useRef<CharacterMotion>({ speed: 0, yaw: 0, lift: 0, pose: null, play: null, move: null });
   const { look } = useMyLook();
@@ -401,9 +402,9 @@ export default function PlayerAvatar({ spawnPosition, onMove, world, groundHeigh
               {member && <span aria-label="TSI member" title="TSI member" style={{ width: 6, height: 6, borderRadius: "50%", background: "#60A5FA", boxShadow: "0 0 4px #60A5FA", flex: "none" }} />}
               {playerName}
             </div>
-            <div style={{ fontSize: "9px", color: "#b8c3c3", fontFamily: "'IBM Plex Mono', monospace", lineHeight: 1.2 }}>
+            {playerLevel !== undefined && <div style={{ fontSize: "9px", color: "#b8c3c3", fontFamily: "'IBM Plex Mono', monospace", lineHeight: 1.2 }}>
               Lv. {playerLevel}
-            </div>
+            </div>}
           </div>
         </Html>}
 
