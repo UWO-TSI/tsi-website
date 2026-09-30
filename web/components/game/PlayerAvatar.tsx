@@ -11,7 +11,6 @@ import { bindGameKeys } from "@/lib/game/keyboardInput";
 import { Surface, WATER_DROP } from "@/lib/game/grid";
 import { calculateCurvedHtmlPosition } from "@/lib/game/worldProjection";
 import { pickCurvedGround } from "@/lib/game/groundPick";
-import { getLabFov } from "@/lib/game/devLab";
 import MoveTargetIndicator from "./MoveTargetIndicator";
 import type { EmoteType } from "@/lib/content/types";
 import Character, { CHARACTER_HEIGHT, CHARACTER_SCALE, type CharacterMotion, type ClipName } from "./character/Character";
@@ -359,7 +358,7 @@ export default function PlayerAvatar({ spawnPosition, onMove, world, groundHeigh
     camTarget?.current.copy(f.focus);
     f.punch *= Math.exp(-6 * dt);
     const fast = THREE.MathUtils.clamp((speed - t.walkSpeed) / Math.max(0.1, topSpeed(t) - t.walkSpeed), 0, 1);
-    applyFov(camera, (getLabFov() ?? 48) + j.fovKick * fast + f.punch, Math.min(rawDelta, 0.1));
+    applyFov(camera, 48 + j.fovKick * fast + f.punch, Math.min(rawDelta, 0.1));
 
     if (telemetry) Object.assign(telemetry.current, { x, y, z, speed, mode: state.mode, hops: state.hops, dashReady, long: state.long });
     const last = reported.current;

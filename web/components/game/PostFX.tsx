@@ -24,7 +24,6 @@ import { useEffect, useMemo, useSyncExternalStore } from "react";
 import { useThree } from "@react-three/fiber";
 import { EffectComposer, Bloom, FXAA, N8AO, TiltShift2, ToneMapping, Vignette } from "@react-three/postprocessing";
 import { createGraphicsContextStore } from "@/lib/game/graphicsContext";
-import { useLabState } from "@/lib/game/devLab";
 import { DEFAULT_GRADE, type Grade } from "@/lib/game/grading";
 import type { LookFx, ToneMap } from "@/lib/game/lookPreset";
 import { BlendFunction, Effect, ToneMappingMode } from "postprocessing";
@@ -108,7 +107,7 @@ interface PostFXProps {
   bloom?: boolean;
   /** G2: bloom strength by time of day — dusk glows, midday stays flat. */
   bloomIntensity?: number;
-  /** Per-weather color grade (WEATHER_GRADES). Lab override wins. */
+  /** Per-weather color grade (WEATHER_GRADES). */
   grade?: Grade;
   /** Look lab preset post (lookPreset.ts); replaces the bloom settings above. */
   fx?: LookFx;
@@ -121,11 +120,9 @@ export default function PostFX({ enabled = true, antialias = false, vignetteDark
   const gl = useThree((s) => s.gl);
   const context = useMemo(() => createGraphicsContextStore(gl.getContext(), gl.domElement), [gl]);
   const contextAvailable = useSyncExternalStore(context.subscribe, context.getSnapshot, () => false);
-  // Grade resolution: lab sliders (dev-only, always null in prod) beat the
-  // game's per-weather grade, which beats the shipped default. Every field
+  // The game's per-weather grade beats the shipped default. Every field
   // of DEFAULT_GRADE reproduces the 2026-07-14 look exactly.
-  const lab = useLabState();
-  const g: Grade = lab.grade ?? grade ?? DEFAULT_GRADE;
+  const g: Grade = grade ?? DEFAULT_GRADE;
   useEffect(() => {
     (pastel.uniforms.get("uDesat")!).value = g.desat;
     (pastel.uniforms.get("uWarmCast")!.value as Vector3).set(1 + 0.03 * g.warmth, 1.0, 1 - 0.06 * g.warmth);

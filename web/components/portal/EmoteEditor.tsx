@@ -3,14 +3,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, ExternalLink } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { EmoteType } from "@/lib/content/types";
 import ImageUploadButton from "@/components/portal/ImageUploadButton";
 
 // ─── EmoteEditor (sprint E8) ────────────────────────────────────────────────
 // Shared form component used by both /new and /[id]/edit. Mirrors the C1
-// NPCEditor draft/preview/publish flow.
+// NPCEditor draft/publish flow.
 
 const SLUG_REGEX = /^[a-z0-9-]+$/;
 
@@ -197,10 +197,6 @@ export default function EmoteEditor({ mode, rowId, initial }: EmoteEditorProps) 
     }
   };
 
-  const previewHref = draftId
-    ? `/student/dashboard?preview=draft-${draftId}`
-    : null;
-
   return (
     <div>
       <div className="mb-2">
@@ -319,17 +315,6 @@ export default function EmoteEditor({ mode, rowId, initial }: EmoteEditorProps) 
           {busy === "save" ? "Saving..." : "Save as draft"}
         </button>
 
-        {previewHref ? (
-          <a
-            href={previewHref}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={secondaryBtnCls}
-          >
-            <ExternalLink size={12} /> Preview
-          </a>
-        ) : null}
-
         {draftId ? (
           <button
             type="button"
@@ -395,9 +380,6 @@ const inputCls =
 
 const primaryBtnCls =
   "inline-flex items-center gap-2 px-4 py-2 bg-[var(--color-accent-cyan)] text-[var(--color-bg)] font-mono text-xs uppercase tracking-wider rounded-md hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity";
-
-const secondaryBtnCls =
-  "inline-flex items-center gap-2 px-4 py-2 border border-[var(--glass-border)] text-[var(--color-text-primary)] font-mono text-xs uppercase tracking-wider rounded-md hover:border-[var(--color-accent-cyan)] transition-colors";
 
 const publishBtnCls =
   "inline-flex items-center gap-2 px-4 py-2 bg-green-500 text-white font-mono text-xs uppercase tracking-wider rounded-md hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity";
