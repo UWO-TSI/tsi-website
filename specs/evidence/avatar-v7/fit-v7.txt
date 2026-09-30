@@ -1,0 +1,60 @@
+Fit check, avatar v7 milestone 1 (art/characters/fit_check.py). before = the tree at b77c0d7f (v6 head, shell hair),
+after = this branch (hand-modeled v7 head, sculpted-lock styles). Metres; the body is 1 m tall.
+
+metric                                                           before (v6)        after (v7)
+face: stretch_max                                                      1.104             1.119
+face: aniso_max                                                        1.196             1.188
+face: eye_reach_lon_deg                                                 51.0              51.0
+face: eye_reach_deg                                                     46.7              46.9
+face: per layer (eyes / brows / mouth) aniso               1.103/1.103/1.196 1.137/1.128/1.188
+bangs_spiky: tris                                                        162               380
+bangs_spiky: open edges / air max / air median                     0/0.0/0.0         0/0.0/0.0
+bangs_spiky: outer surface over the scalp (median)                    0.0125            0.0203
+bangs_spiky: locks, root verts exposed, lock dive max                      -      8, 0/48, 0.0
+back_short_spiky: tris                                                   386               978
+back_short_spiky: open edges / air max / air median                0/0.0/0.0         0/0.0/0.0
+back_short_spiky: outer surface over the scalp (median)               0.0142            0.0191
+back_short_spiky: locks, root verts exposed, lock dive max                 -     12, 0/60, 0.0
+bangs_straight: tris                                                     162               450
+bangs_straight: open edges / air max / air median                  0/0.0/0.0         0/0.0/0.0
+bangs_straight: outer surface over the scalp (median)                 0.0121             0.018
+bangs_straight: locks, root verts exposed, lock dive max                   -      9, 0/54, 0.0
+back_bob: tris                                                           386               930
+back_bob: open edges / air max / air median                        0/0.0/0.0         0/0.0/0.0
+back_bob: outer surface over the scalp (median)                       0.0178            0.0176
+back_bob: locks, root verts exposed, lock dive max                         -      9, 0/45, 0.0
+bangs_curtain: tris                                                      172               480
+bangs_curtain: open edges / air max / air median                   0/0.0/0.0         0/0.0/0.0
+bangs_curtain: outer surface over the scalp (median)                  0.0118            0.0205
+bangs_curtain: locks, root verts exposed, lock dive max                    -   8, 0/48, 0.0009
+back_long: tris                                                          586              1002
+back_long: open edges / air max / air median                       0/0.0/0.0         0/0.0/0.0
+back_long: outer surface over the scalp (median)                      0.0162             0.017
+back_long: locks, root verts exposed, lock dive max                        -      9, 0/45, 0.0
+seam: crown ledge, default pair / worst of 192                       0.0/0.0           0.0/0.0
+acc_flower_crown: air max / poke max                              0.0078/0.0        0.0099/0.0
+acc_crystal_circlet: air max / poke max                           0.0099/0.0        0.0098/0.0
+acc_glasses_round: lens to eye, default / worst                0.0045/0.0109     0.0027/0.0085
+verdict (fails / flags)                                         PASS (0 / 6)      PASS (0 / 9)
+
+Head surface (v7/head_model.deviation, against head_shape's analytic surface): v6 inside max 7.4 mm, median 1.6 mm;
+v7 inside max 4.0 mm, outside max 3.3 mm, median 0.5 mm. Neck seam within 0.4-0.8 mm of v6's all round.
+
+FLAGs (reported, not gate failures): skin standing out through a shell piece where it covers the scalp. The older
+library's long side locks and the undercut's shaved rows are 18-36 deg flat rows that sag into the head; most had it
+on the v6 head too, and they are rebuilt as locks after David's review.
+  after:  bangs_straight_long: skin_through 0.003 (a shell piece of the older library; rebuilt as locks next)
+  after:  bangs_swept_l: skin_through 0.0049 (a shell piece of the older library; rebuilt as locks next)
+  after:  bangs_swept_r: skin_through 0.0049 (a shell piece of the older library; rebuilt as locks next)
+  after:  bangs_curtain_long: skin_through 0.0049 (a shell piece of the older library; rebuilt as locks next)
+  after:  bangs_centre_split: skin_through 0.0012 (a shell piece of the older library; rebuilt as locks next)
+  after:  bangs_hime: skin_through 0.0049 (a shell piece of the older library; rebuilt as locks next)
+  after:  bangs_choppy: skin_through 0.0004 (a shell piece of the older library; rebuilt as locks next)
+  after:  bangs_asym_block: skin_through 0.0043 (a shell piece of the older library; rebuilt as locks next)
+  after:  back_undercut: skin_through 0.0046 (a shell piece of the older library; rebuilt as locks next)
+  before: bangs_swept_l: skin_through 0.0047 (a shell piece of the older library; rebuilt as locks next)
+  before: bangs_swept_r: skin_through 0.0047 (a shell piece of the older library; rebuilt as locks next)
+  before: bangs_curtain_long: skin_through 0.0048 (a shell piece of the older library; rebuilt as locks next)
+  before: bangs_hime: skin_through 0.0048 (a shell piece of the older library; rebuilt as locks next)
+  before: bangs_asym_block: skin_through 0.0049 (a shell piece of the older library; rebuilt as locks next)
+  before: back_undercut: skin_through 0.0047 (a shell piece of the older library; rebuilt as locks next)

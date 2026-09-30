@@ -5,7 +5,8 @@
 Measured on the exported GLBs in rest pose (what the engine binds), against the head of the catalogue's base clips
 GLB (base/v7_clips.glb: the hand-modeled v7 head; v6_clips.glb before avatar v7):
   hair      per bangs/back piece: open (boundary) edges; the air gap between the scalp and the hair's underside
-            along rays from the head centre (max, median); share of rays where the hair tucks into the scalp;
+            along rays from the head centre (max, median); share of rays where the hair tucks into the scalp; skin
+            standing out through a shell piece where it covers the scalp (skin_through);
             brow_cover = share of the default brows hidden behind the piece from the front (bangs only)
   seam      the crown ledge over every bangs x back pair: how far the bangs' root edge stands out of the cap, or the
             cap's front edge out of the bangs (0 when each edge is buried in the other piece)
@@ -47,6 +48,8 @@ LIMITS = {
     "hair_open_edges": 0,          # closed shells only
     "hair_gap_max": 0.004,         # m of air under the hair anywhere on the scalp region
     "hair_gap_median": 0.001,
+    "hair_skin_through_max": 0.0,  # m the head's skin stands out of a covering shell piece (neighbour-confirmed);
+                                   # reported as a FLAG: the older library's long side locks had it on v6 already
     "seam_ledge_max": 0.003,       # step where bangs and back cap meet over the crown
     "brow_cover_default": 0.05,    # default brows hidden by the default bangs, front view
     "hat_open_edges": 0,
@@ -409,9 +412,14 @@ for part in CAT["hair"]:
     on = region & ~np.isnan(inn) & (inn - R_SCALP <= 0.12) & (out - R_SCALP >= -0.005)   # (not a ray grazing a hidden fan)
     air = np.array([air_above(every[i], R_SCALP[i], open_e == 0) if on[i] else np.nan for i in range(len(RAYS))])
     gap = erode(air)
+    # skin showing through the hair: where a shell piece covers the scalp its outer surface must stay above the skin
+    # (a neighbour-confirmed dip; lock pieces bury their roots on purpose and are checked lock by lock instead)
+    under = np.where(on & (inn - R_SCALP < 0.05), R_SCALP - out, np.nan)
     rec = {"slot": part["slot"], "tris": part["tris"], "open_edges": open_e, "gap": stats(gap),
            "on_scalp_share": round(float(np.mean(air[on] <= 5e-4)), 3) if on.any() else None,
-           "outer_median": stats(np.where(on, out - R_SCALP, np.nan))["median"]}
+           "outer_median": stats(np.where(on, out - R_SCALP, np.nan))["median"],
+           **({} if part.get("v7") else (lambda st: {"skin_through": st["max"], "skin_through_at": st.get("worst_at")})(
+               stats(-erode(-np.nan_to_num(under, nan=-1.0)))))}
     if part["slot"] == "bangs" and BROW_PTS:
         hidden = sum(1 for p in BROW_PTS if bvh.ray_cast(p + Vector((0, -1e-3, 0)), Vector((0, -1, 0)), 1.0)[0] is not None)
         rec["brow_cover"] = round(hidden / len(BROW_PTS), 3)
@@ -665,7 +673,7 @@ for part in CAT["accessories"]:
           f"med={headwear[part['id']]['gap']['median']} rise max={headwear[part['id']]['rise']['max']} poke={headwear[part['id']]['poke_max']}")
 
 # ================================================================ verdict
-fails = []
+fails, flags = [], []    # flags: findings reported for the next pass, not gate failures
 
 
 def check(name, value, limit, what):
@@ -677,6 +685,8 @@ for pid, r in hair.items():
     check("open_edges", r["open_edges"], LIMITS["hair_open_edges"], pid)
     check("gap_max", r["gap"]["max"], LIMITS["hair_gap_max"], pid)
     check("gap_median", r["gap"]["median"], LIMITS["hair_gap_median"], pid)
+    if r.get("skin_through") is not None and r["skin_through"] > LIMITS["hair_skin_through_max"]:
+        flags.append(f"{pid}: skin_through {r['skin_through']} (a shell piece of the older library; rebuilt as locks next)")
 check("ledge_max", seam["ledge_max"], LIMITS["seam_ledge_max"], seam["worst_pair"])
 check("brow_cover", hair[DEFAULT_BANGS].get("brow_cover"), LIMITS["brow_cover_default"], DEFAULT_BANGS)
 for pid, r in headwear.items():
@@ -694,7 +704,7 @@ check("aniso_max", face["aniso_max"], LIMITS["face_aniso_max"], "face")
 check("eye_reach_lon_deg", face["eye_reach_lon_deg"], LIMITS["eye_reach_lon_max_deg"], "face")
 
 report = {"limits": LIMITS, "face": face, "seam": seam, "hair": hair, "locks": lock_report, "headwear": headwear,
-          "glasses": glasses, "fails": fails}
+          "glasses": glasses, "fails": fails, "flags": flags}
 print("FACE", json.dumps(face))
 print("SEAM", json.dumps(seam))
 if OUT_JSON:
@@ -703,5 +713,7 @@ if OUT_JSON:
 print(f"FIT_CHECK {'PASS' if not fails else 'FAIL'} ({len(fails)} over the limits)")
 for f in fails:
     print("  FAIL", f)
+for f in flags:
+    print("  FLAG", f)
 if fails and not NO_FAIL:
     sys.exit(1)

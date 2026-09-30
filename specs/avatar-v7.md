@@ -11,3 +11,11 @@ The v6 body and head are procedural bmesh (`art/characters/base/build_v6.py`); t
 3. **Face system: animated painted face (ACNH-style).** Eyes, brows and mouth become separate layers the engine animates without re-drawing a canvas each frame: blinks at random 2–6 s intervals, mouth frames for emotes and chat, the six expressions, all from David's picked eye and mouth sets, redrawn crisp (at least 1024 px in the creator, 512 in the world) and mapped by the new face UVs without stretch.
 4. **Pipeline.** Live Blender through the `blender` MCP (start it with `art/characters/blender_mcp_autostart.py`), with a viewport screenshot after each step; source files saved as `art/characters/v7/*.blend`; GLB export through the existing `kit.py` path so catalogue ids stay stable; `web/scripts/sync-character-assets.mjs`; engine evidence via `specs/evidence/avatar-fit/shots.mjs`.
 5. **Milestone 1 (review gate):** the new head, the face system and three hairstyles (a short one, a bob with straight bangs, a long one with curtain bangs), shipped as `.blend` files plus in-game sheets (creator close-ups, 3/4, game camera, the six expressions, a blink and a talk strip). David approves before the rest of the library (16 bangs, 12 backs) is rebuilt in the same system.
+
+## Milestone 1 status (build agent, 2026-09-30)
+Delivered for review:
+- The hand-modeled head (`art/characters/v7/head.blend`, live on `base/v7_clips.glb`).
+- The face system, drawn in the engine by `face.ts` and `faceMaterial.ts` from `art/characters/v7/face/`.
+- Three lock styles: `hair_short.blend`, `hair_bob.blend` and `hair_long.blend`, under their existing ids.
+
+The pipeline and numbers are in `art/characters/v7/README.md`. The sheets are in `specs/evidence/avatar-v7/`: open `01-styles`, `02-vs-hair-3d-set`, `05-blink-talk` and `03-vs-ref18` first. The bench is at `/lab/avatar`. Questions are in `specs/avatar-v7-questions.md`. The rest of the library (13 bangs, 9 backs) waits for David's verdict.
