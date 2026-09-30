@@ -22,7 +22,7 @@ import { WEAPONS } from "@/lib/game/combat/data";
 import { STUCK_TIME, advanceMove, clearSpot, createMoveSim, createMoveState, interpolated, topSpeed, towards, MOVE_TUNING, NO_INPUT, type MoveEvent, type MoveInput, type MoveSim, type MoveState, type MoveTuning, type MoveWorld } from "@/lib/game/movement/sim";
 import { useMoveKeys } from "@/lib/game/movement/keys";
 import { routePilot, type RouteStep } from "@/lib/game/movement/course";
-import { DashRing, DustPool, EVENT_CLIP, MOVE_JUICE, Streaks, TAKEOFF, applyFov, screenOf, touchStick, type MoveJuice, type MoveTelemetry } from "./movement/moveFx";
+import { BASE_FOV, DashRing, DustPool, EVENT_CLIP, MOVE_JUICE, Streaks, TAKEOFF, applyFov, screenOf, touchStick, type MoveJuice, type MoveTelemetry } from "./movement/moveFx";
 
 /**
  * The player on the movement kit (specs/movement.md): keys, the touch stick or
@@ -352,7 +352,7 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
     camTarget?.current.copy(f.focus);
     f.punch *= Math.exp(-6 * dt);
     const fast = THREE.MathUtils.clamp((speed - t.walkSpeed) / Math.max(0.1, topSpeed(t) - t.walkSpeed), 0, 1);
-    applyFov(camera, 48 + j.fovKick * fast + f.punch, Math.min(rawDelta, 0.1));
+    applyFov(camera, BASE_FOV + j.fovKick * fast + f.punch, Math.min(rawDelta, 0.1));
 
     if (telemetry) Object.assign(telemetry.current, { x, y, z, speed, mode: state.mode, hops: state.hops, dashReady, long: state.long });
     const last = reported.current;

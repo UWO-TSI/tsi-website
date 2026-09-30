@@ -34,6 +34,7 @@ import { SkyGradient } from "@/components/game/IslandAtmosphere";
 import { applyEnvironment, disposeEnvironment } from "@/lib/game/envLight";
 import { CloudShadows } from "@/components/game/AmbienceFX";
 import { Lantern } from "@/components/game/AmbientProps";
+import { BASE_FOV } from "@/components/game/movement/moveFx";
 import ContactShadows from "@/components/game/ContactShadows";
 import SunShadows from "@/components/game/SunShadows";
 import { Fireflies } from "@/components/game/AmbientLife";
@@ -324,7 +325,7 @@ export default function ApplicantWorld(props: Props) {
   return <Canvas tabIndex={0} role="application" aria-label="Tech for Social Impact applicant village. WASD or click the ground to walk. E to interact."
     frameloop={props.hidden ? "never" : props.paused && !props.loading ? "demand" : "always"} dpr={graphics.pixelated ? 0.5 : [1, 1.5]} shadows={graphics.shadows && !graphics.liteMode ? "percentage" : false}
     style={{ imageRendering: graphics.pixelated ? "pixelated" : "auto" }}
-    gl={{ antialias: false, powerPreference: "high-performance" }} camera={{ position: [0, 10.2, -21], fov: 48, near: 0.1, far: 100 }}
+    gl={{ antialias: false, powerPreference: "high-performance" }} camera={{ position: [0, 10.2, -21], fov: BASE_FOV, near: 0.1, far: 100 }}
     onCreated={({ gl }) => { gl.info.autoReset = false; gl.toneMapping = THREE.NeutralToneMapping; gl.outputColorSpace = THREE.SRGBColorSpace; }}>
     <Suspense fallback={null}>
       {props.inside ? <Interior {...props} /> : <Village {...props} />}

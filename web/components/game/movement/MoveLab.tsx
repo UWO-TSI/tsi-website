@@ -26,7 +26,7 @@ import { InstancedModels } from "../InstancedNature";
 import { IslandAtmosphere, useFollowCamera, type TreeSpot } from "../IslandAtmosphere";
 import PlayerAvatar from "../PlayerAvatar";
 import TouchControls from "./TouchControls";
-import { MOVE_JUICE, type MoveJuice, type MoveTelemetry } from "./moveFx";
+import { BASE_FOV, MOVE_JUICE, type MoveJuice, type MoveTelemetry } from "./moveFx";
 import { ISLAND_TERRAIN, islandLight, withSeason } from "@/lib/game/islandLighting";
 import { seasonLook } from "@/lib/game/seasonalLook";
 import { CURRENT, lookFx } from "@/lib/game/lookPreset";
@@ -62,7 +62,8 @@ const GROUPS: { name: string; keys: [keyof MoveTuning, ...Range][] }[] = [
 const JUICE_KEYS: [keyof MoveJuice, ...Range][] = [["camLead", 0, 0.4, 0.01], ["fovKick", 0, 10, 0.5], ["dashKick", 0, 8, 0.5], ["squash", 0, 2, 0.05], ["dust", 0, 2, 0.05], ["streaks", 0, 2, 0.05]];
 /** Dash shapes to compare (row 250), about the same reach each: only the dash values change. */
 const DASH_PRESETS: Record<string, Partial<MoveTuning>> = {
-  Burst: { dashSpeed: 18, dashTime: 0.2, dashExit: 0.55, dashEase: 2, dashCooldown: 0.5, airDashLift: 2 },
+  // The shipped dash (MOVE_TUNING), so "current preset" keeps matching when the defaults are retuned.
+  Burst: (({ dashSpeed, dashTime, dashExit, dashEase, dashCooldown, airDashLift }) => ({ dashSpeed, dashTime, dashExit, dashEase, dashCooldown, airDashLift }))(MOVE_TUNING),
   Glide: { dashSpeed: 13.5, dashTime: 0.21, dashExit: 0.8, dashEase: 1, dashCooldown: 0.45, airDashLift: 1 },
   Blink: { dashSpeed: 28, dashTime: 0.16, dashExit: 0.38, dashEase: 3, dashCooldown: 0.6, airDashLift: 0 },
   "First cut": { dashSpeed: 14, dashTime: 0.18, dashExit: 0.7, dashEase: 0, dashCooldown: 0.45, airDashLift: 0 },
@@ -209,7 +210,7 @@ export default function MoveLab() {
 
   return <div style={{ position: "fixed", inset: "40px 0 0 0", background: "#0b0e14", overflow: "hidden" }}>
     <Canvas tabIndex={0} role="application" aria-label="Movement lab course" gl={{ antialias: false, powerPreference: "high-performance" }} dpr={graphics.pixelated ? 0.5 : [1, 1.5]}
-      style={{ imageRendering: graphics.pixelated ? "pixelated" : "auto" }} camera={{ position: [spawn[0], 8, spawn[1] - 11], fov: 48, near: 0.1, far: 120 }}
+      style={{ imageRendering: graphics.pixelated ? "pixelated" : "auto" }} camera={{ position: [spawn[0], 8, spawn[1] - 11], fov: BASE_FOV, near: 0.1, far: 120 }}
       shadows={graphics.shadows && !graphics.liteMode ? "percentage" : false}
       onCreated={({ gl }) => { gl.toneMapping = THREE.NeutralToneMapping; gl.outputColorSpace = THREE.SRGBColorSpace; }}>
       <Suspense fallback={null}>

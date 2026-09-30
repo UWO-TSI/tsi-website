@@ -19,6 +19,7 @@ import { InstancedModels } from "./InstancedNature";
 import { ACNHBuilding, ACNHParts, CHALET_VARIANTS } from "./ACNHBuilding";
 import { NatureFence } from "./NatureModels";
 import WharfPier from "./WharfPier";
+import { BASE_FOV } from "./movement/moveFx";
 import MiniMap from "./MiniMap";
 import { useDefaultIslandPlot } from "./DefaultIslandMap";
 import LettersSheet from "@/components/progression/LettersSheet";
@@ -642,7 +643,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
     <main className={styles.world} data-light={phase} data-inside={inside ?? undefined}>
       <AudioController phase={ambientPhase} weather={weather} season={season.season} />
       <Canvas tabIndex={0} role="application" aria-label="Island walking area" style={{ zIndex: 0, imageRendering: graphics.pixelated ? "pixelated" : "auto" }} gl={{ antialias: false, powerPreference: "high-performance" }} dpr={graphics.pixelated ? 0.5 : [1, 1.5]}
-        camera={{ position: [0, 10.2, -21], fov: 48, near: 0.1, far: 120 }} shadows={castShadows ? "percentage" : false}
+        camera={{ position: [0, 10.2, -21], fov: BASE_FOV, near: 0.1, far: 120 }} shadows={castShadows ? "percentage" : false}
         onCreated={({ gl }) => { gl.info.autoReset = false; gl.toneMapping = THREE.NeutralToneMapping; gl.outputColorSpace = THREE.SRGBColorSpace; }}>
         <Suspense fallback={null}>
           {site === "ruins" ? <RuinsScene key={`ruins-${ruinsRun}`} level={level} phase={phase} light={light} look={look} weather={weather} liteMode={liteMode} castShadows={castShadows} zoom={zoomed ? 1.4 : devZoom} player={player}
