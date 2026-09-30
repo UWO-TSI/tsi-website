@@ -77,7 +77,7 @@ function GullSpecimen() {
   });
 
   // No yaw correction — the model's forward is +Z, which is what gullPose
-  // assumes. See the note in AmbientLife.
+  // assumes. See the note in Seagulls.tsx.
   const body = useMemo(() => cloneSkeleton(scene) as THREE.Group, [scene]);
 
   useEffect(() => {
