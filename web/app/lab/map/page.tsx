@@ -58,7 +58,7 @@ import {
   PAINTER_DRAFT_KEY, normaliseSea, parseVillage, serialiseVillage, villageJson, villageOf,
   type MapObject, type ObjectKind, type VillageDoc,
 } from "@/lib/game/villageMap";
-import { LANDMARK_IDS, LANDMARK_INFO, PROP_FOOTPRINT, TREE_TRUNK, objectFootprint, type LandmarkId } from "@/lib/game/defaultIsland";
+import { LANDMARK_IDS, LANDMARK_INFO, PROP_FOOTPRINT, TREE_TRUNK, objectFootprint, turn, type LandmarkId } from "@/lib/game/defaultIsland";
 import { villageHealth, type VillageHealth } from "@/lib/game/mapHealth";
 import { mapBudget } from "@/lib/game/mapBudget";
 import { classifyWater, WATER_CLASS } from "@/lib/game/fishingSpots";
@@ -256,19 +256,13 @@ function draftDoc(w: World): VillageDoc {
  * cannot be subtly wrong the way a replayed-operations log can be when a brush
  * clamps at MAX_LEVEL or skips void.
  */
-interface Snapshot {
-  map: IslandMap;
-  props: PlacedProp[];
-  annotations: MapAnnotation[];
-  objects: MapObject[];
-  source: World["source"];
-}
+type Snapshot = World;
 const HISTORY_LIMIT = 80;
 const UNDO: Snapshot[] = [];
 let REDO: Snapshot[] = [];
 
-function snapshot(): Snapshot {
-  const { map, props, annotations, objects, source } = world();
+/** A deep copy: the typed arrays, markers, labels and objects. */
+function cloneWorld({ map, props, annotations, objects, source }: World): World {
   return {
     map: { ...map, levels: map.levels.slice(), surfaces: map.surfaces.slice() },
     props: props.map((p) => ({ ...p, cell: [p.cell[0], p.cell[1]] })),
@@ -278,14 +272,9 @@ function snapshot(): Snapshot {
   };
 }
 
+const snapshot = (): Snapshot => cloneWorld(world());
 function restore(s: Snapshot) {
-  WORLD = {
-    map: { ...s.map, levels: s.map.levels.slice(), surfaces: s.map.surfaces.slice() },
-    props: s.props.map((p) => ({ ...p, cell: [p.cell[0], p.cell[1]] as [number, number] })),
-    annotations: s.annotations.map((a) => ({ ...a, cells: a.cells.map((c) => [c[0], c[1]] as [number, number]) })),
-    objects: s.objects.map((o) => ({ ...o })),
-    source: s.source,
-  };
+  WORLD = cloneWorld(s);
 }
 
 /** Call BEFORE mutating. Every edit path goes through this or it is not undoable. */
@@ -302,8 +291,6 @@ let STROKE_SEED = 1;
 const keyOf = (o: MapObject) => `${o.kind}:${o.id}`;
 /** Kinds the game turns by their yaw. Buildings face the camera (ACNH); nature takes its turn from its seed. */
 const TURNS = (o: MapObject) => ["bench", "rock", "fence", "bridge", "study", "missions"].includes(o.kind) || (o.kind === "landmark" && o.id === "wharf");
-const turn = (dx: number, dz: number, yaw = 0): [number, number] =>
-  [dx * Math.cos(yaw) + dz * Math.sin(yaw), -dx * Math.sin(yaw) + dz * Math.cos(yaw)];
 const deg = (rad = 0) => Math.round((rad * 180) / Math.PI * 10) / 10;
 
 /** Local outline (before yaw) of an object's footprint, for drawing and hit tests; null = drawn as a dot. */
