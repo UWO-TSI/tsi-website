@@ -290,8 +290,7 @@ export default function PaletteEditor({
             : `Edit: ${initial?.display_name ?? "Palette"}`}
         </h1>
         <p className="text-sm font-mono text-[var(--color-text-muted)] mt-1">
-          Drafts stay invisible to members until published. New palettes are
-          not active by default — use Set Active on the listing.
+          Drafts stay invisible to members until published.
         </p>
       </div>
 

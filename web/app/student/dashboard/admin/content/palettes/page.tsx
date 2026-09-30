@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Plus, Pencil, Check } from "lucide-react";
+import { ArrowLeft, Plus, Pencil } from "lucide-react";
 import { AdminGate } from "@/components/portal/ProgressionAdminShared";
 import { createClient } from "@/lib/supabase/client";
 import { DEFAULT_PALETTES } from "@/data/content-defaults";
@@ -16,70 +16,32 @@ function hasSupabaseEnv(): boolean {
 }
 
 export default function AdminContentPalettesPage() {
-  const [palettes, setPalettes] = useState<SeasonalPalette[] | null>(null);
+  const [palettes, setPalettes] = useState<SeasonalPalette[] | null>(hasSupabaseEnv() ? null : DEFAULT_PALETTES);
   const [fetchError, setFetchError] = useState<string | null>(null);
-  const [activating, setActivating] = useState<string | null>(null);
-  const [activateMessage, setActivateMessage] = useState<{
-    kind: "ok" | "err";
-    text: string;
-  } | null>(null);
-
-  const load = useCallback(async () => {
-    if (!hasSupabaseEnv()) {
-      setPalettes(DEFAULT_PALETTES);
-      return;
-    }
-    try {
-      const supabase = createClient();
-      const { data, error } = await supabase
-        .from("seasonal_palettes")
-        .select(
-          "id, slug, display_name, palette, active, scheduled_start, scheduled_end, created_at",
-        )
-        .order("created_at", { ascending: false });
-      if (error || !data) {
-        setFetchError(error?.message ?? "unknown");
-        setPalettes(DEFAULT_PALETTES);
-        return;
-      }
-      setPalettes(data as unknown as SeasonalPalette[]);
-    } catch (err) {
-      setFetchError(err instanceof Error ? err.message : "unknown");
-      setPalettes(DEFAULT_PALETTES);
-    }
-  }, []);
 
   useEffect(() => {
-    void load();
-  }, [load]);
-
-  const handleSetActive = async (id: string) => {
-    if (activating) return;
-    setActivating(id);
-    setActivateMessage(null);
-    try {
-      const res = await fetch(`/api/content/palettes/${id}/activate`, {
-        method: "POST",
-      });
-      const body = await res.json().catch(() => ({}));
-      if (!res.ok || !body.ok) {
-        setActivateMessage({
-          kind: "err",
-          text: body.error ?? "Activation failed",
-        });
-        return;
+    if (!hasSupabaseEnv()) return;
+    void (async () => {
+      try {
+        const supabase = createClient();
+        const { data, error } = await supabase
+          .from("seasonal_palettes")
+          .select(
+            "id, slug, display_name, palette, active, scheduled_start, scheduled_end, created_at",
+          )
+          .order("created_at", { ascending: false });
+        if (error || !data) {
+          setFetchError(error?.message ?? "unknown");
+          setPalettes(DEFAULT_PALETTES);
+          return;
+        }
+        setPalettes(data as unknown as SeasonalPalette[]);
+      } catch (err) {
+        setFetchError(err instanceof Error ? err.message : "unknown");
+        setPalettes(DEFAULT_PALETTES);
       }
-      setActivateMessage({ kind: "ok", text: "Palette activated." });
-      await load();
-    } catch (err) {
-      setActivateMessage({
-        kind: "err",
-        text: err instanceof Error ? err.message : "Activation failed",
-      });
-    } finally {
-      setActivating(null);
-    }
-  };
+    })();
+  }, []);
 
   const swatchKeys: (keyof PaletteColors)[] = [
     "sky",
@@ -110,7 +72,7 @@ export default function AdminContentPalettesPage() {
               Seasonal Palettes
             </h1>
             <p className="text-sm font-mono text-[var(--color-text-muted)] mt-1">
-              {palettes?.length ?? 0} total · only one active at a time
+              {palettes?.length ?? 0} total
             </p>
           </div>
           <Link
@@ -120,18 +82,6 @@ export default function AdminContentPalettesPage() {
             <Plus size={14} /> New Palette
           </Link>
         </div>
-
-        {activateMessage ? (
-          <div
-            className={`mb-4 p-3 rounded-md text-xs font-mono border ${
-              activateMessage.kind === "ok"
-                ? "bg-green-400/10 border-green-400/30 text-green-400"
-                : "bg-red-400/10 border-red-400/30 text-red-400"
-            }`}
-          >
-            {activateMessage.text}
-          </div>
-        ) : null}
 
         {fetchError && (
           <p className="mb-4 text-xs font-mono text-[var(--color-text-muted)]">
@@ -226,19 +176,6 @@ export default function AdminContentPalettesPage() {
                   >
                     <Pencil size={12} /> Edit
                   </Link>
-                  <button
-                    type="button"
-                    onClick={() => handleSetActive(p.id)}
-                    disabled={p.active || activating !== null}
-                    className="inline-flex items-center gap-1 text-xs font-mono text-[var(--color-brand-blue)] hover:underline disabled:opacity-40 disabled:cursor-not-allowed disabled:no-underline"
-                  >
-                    <Check size={12} />
-                    {p.active
-                      ? "Active"
-                      : activating === p.id
-                        ? "Activating..."
-                        : "Set Active"}
-                  </button>
                   <Link
                     href={`/student/dashboard/admin/content/palettes/${p.id}/history`}
                     className="text-[0.65rem] font-mono uppercase tracking-wider text-[var(--color-text-muted)] hover:text-[var(--color-accent-cyan)] transition-colors"
