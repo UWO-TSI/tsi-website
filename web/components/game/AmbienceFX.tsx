@@ -2,7 +2,7 @@
 
 /**
  * AmbienceFX (game-feel wave G2, 2026-07-07) — the approved ambience set:
- * drifting cloud shadows, periodic leaf gusts, falling leaves and mist.
+ * drifting cloud shadows, falling leaves and mist.
  *
  * Everything here is deliberately cheap: one scrolling texture plane, a few
  * small InstancedMeshes and quads. No postprocessing, no per-frame allocations.
@@ -96,64 +96,6 @@ export function CloudShadows({ phase, size = [240, 240], bounded = false }: { ph
           }
         }} customProgramCacheKey={() => `cloud-shade-${bounded}`} />
     </mesh>
-  );
-}
-
-// ─── Leaf gusts (item 27) — wind reads even with static trees ───────────
-const GUST_LEAVES = 14;
-const GUST_SEEDS = Array.from({ length: GUST_LEAVES }, (_, i) => ((i * 0.61 + 0.13) % 1));
-const _gm = new THREE.Matrix4();
-const _gq = new THREE.Quaternion();
-const _ge = new THREE.Euler();
-const _gp = new THREE.Vector3();
-const _gs = new THREE.Vector3(0.2, 0.1, 1);
-export function LeafGusts() {
-  const meshRef = useRef<THREE.InstancedMesh>(null);
-  const state = useRef({ next: 16, t: -1, ox: 0, oz: 0 });
-
-  useFrame((_, delta) => {
-    const st = state.current;
-    const mesh = meshRef.current;
-    if (!mesh) return;
-    if (st.t < 0) {
-      mesh.visible = false;
-      st.next -= delta;
-      if (st.next <= 0) {
-        st.t = 0;
-        st.next = 20 + Math.random() * 14;
-        st.ox = (Math.random() - 0.5) * 40;
-        st.oz = (Math.random() - 0.5) * 40;
-      }
-      return;
-    }
-    st.t += delta;
-    if (st.t > 2.4) { st.t = -1; return; }
-    mesh.visible = true;
-    const p = st.t / 2.4;
-    const fade = Math.sin(p * Math.PI);
-    for (let i = 0; i < GUST_LEAVES; i++) {
-      const seed = GUST_SEEDS[i];
-      const lag = seed * 0.8;
-      const lp = Math.max(0, Math.min(1, (st.t - lag * 0.5) / 2.0));
-      _gp.set(
-        st.ox + (seed - 0.5) * 7 + lp * 17,
-        0.5 + seed * 1.6 + Math.sin((lp * 6 + seed * 9)) * 0.5,
-        st.oz + ((seed * 7) % 1 - 0.5) * 7 + lp * 11
-      );
-      _ge.set(0, seed * 6, lp * 12 + seed);
-      _gq.setFromEuler(_ge);
-      _gm.compose(_gp, _gq, _gs);
-      mesh.setMatrixAt(i, _gm);
-    }
-    (mesh.material as THREE.MeshBasicMaterial).opacity = fade * 0.85;
-    mesh.instanceMatrix.needsUpdate = true;
-  });
-
-  return (
-    <instancedMesh ref={meshRef} args={[undefined, undefined, GUST_LEAVES]} visible={false} frustumCulled={false}>
-      <planeGeometry args={[1, 1]} />
-      <meshBasicMaterial color="#7FBF52" transparent opacity={0} depthWrite={false} side={THREE.DoubleSide} />
-    </instancedMesh>
   );
 }
 
