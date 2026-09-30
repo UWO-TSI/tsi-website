@@ -22,6 +22,8 @@ export interface IslandConditions {
   sunSource: "open-meteo" | "fallback";
   /** The real sun (row 239) at world-clock time, or a forced phase's preview time; the same object until it moves a step. */
   sun: SunAngles;
+  /** World-clock ms (worldNow, so `?at=` moves it), read once a minute: the events, forage and bugs follow it. */
+  now: number;
 }
 
 /**
@@ -74,5 +76,6 @@ export function useIslandConditions(): IslandConditions {
     season: seasonOverride ?? seasonBlend(date),
     sunSource: sunFor(date, report?.sun).source,
     sun,
+    now,
   };
 }

@@ -15,7 +15,6 @@ import { DECOR_SETS, eventCatches, runningEvent } from "@/lib/progression/season
 import { SEASONAL_GOALS } from "@/lib/progression/defaults";
 import type { GoalProgressView } from "@/lib/progression/types";
 import { setEventCatches } from "./fishing";
-import { worldNow } from "./worldClock";
 
 export type EventGoal = Pick<GoalProgressView, "slug" | "title" | "event">;
 export interface IslandEvent {
@@ -29,15 +28,10 @@ export function parseEventOverride(search: string, isProduction = process.env.NO
   return value === "none" || (value && DECOR_SETS[value]) ? value : null;
 }
 
-export function useIslandEvent(): IslandEvent | null {
+/** `now`: the world clock read once a minute (useIslandConditions). */
+export function useIslandEvent(now: number): IslandEvent | null {
   const { state } = useProgression();
   const [override] = useState(() => (typeof window === "undefined" ? null : parseEventOverride(window.location.search)));
-  const [now, setNow] = useState(() => worldNow());
-  useEffect(() => {
-    const tick = () => setNow(worldNow());
-    const clock = window.setInterval(tick, 60_000);
-    return () => window.clearInterval(clock);
-  }, []);
   // Re-read on the minute, not every render: the goals list is rebuilt on each progression refresh.
   const minute = Math.floor(now / 60_000);
   const event = useMemo<IslandEvent | null>(() => {

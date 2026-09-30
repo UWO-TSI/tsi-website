@@ -416,7 +416,7 @@ export default function DefaultIslandWorld({ preset, children }: { preset?: Look
 function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; children?: ReactNode }) {
   const [graphics, actions] = useGraphicsSettings();
   const conditions = useIslandConditions();
-  const islandEvent = useIslandEvent();
+  const islandEvent = useIslandEvent(conditions.now);
   const { phase, forcedPhase: forced, setForcedPhase: setForced, weather, season } = conditions;
   const [optionsOpen, setOptionsOpen] = useState(false);
   const optionsToggleRef = useRef<HTMLButtonElement>(null);
@@ -468,9 +468,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
     [chapterActions.claim, chapterActions.donate, chapterActions.report]);
   const [actionNote, setActionNote] = useState<string | null>(null);
   useEffect(() => { if (inside === "museum" && !loadMuseumRef.current) { loadMuseumRef.current = true; loadMuseum(); } if (inside !== "museum") loadMuseumRef.current = false; }, [inside, loadMuseum]);
-  const [nowTick, setNowTick] = useState(() => Date.now());
-  useEffect(() => { const t = window.setInterval(() => setNowTick(Date.now()), 60_000); return () => window.clearInterval(t); }, []);
-  const peaceful = usePeacefulContext(weather, nowTick);
+  const peaceful = usePeacefulContext(weather, conditions.now);
   // Audio pass (row 169 / polish-ownership item 9): the hourly music player
   // follows the real clock everywhere on this island; cafe and other
   // interiors override the outdoor block with their own bed.
