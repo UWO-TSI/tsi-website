@@ -1,0 +1,43 @@
+staging jjiyeroyralfbluowbjq; member c2982825-3dd1-4572-a9d0-4b7fadd306d6, staff 6d14b24f-7005-4194-adf2-4fc02d186c45 (T2), public 4e294cb3-7032-433c-971e-90f855021d10; 2026-09-29T21:46:55.088Z
+
+=== reset-C (staging fixture): the member back before chapter 4's level-10 step ===
+SQL> update member_progression set subclass = null, subclass_chosen_at = null, loadout = '{}', xp = 480, level = combat_level_for_xp(480) where member_id = 'c2982825-3dd1-4572-a9d0-4b7fadd306d6' returning xp, level, subclass
+xp | level | subclass
+480 | 3 | 
+SQL> delete from member_quest_progress where member_id = 'c2982825-3dd1-4572-a9d0-4b7fadd306d6' and chapter_id = (select id from quest_chapters where slug = 'ruins-gate') returning status
+(no rows)
+
+=== C. Chapter 4: Reach the ruins gate ===
+2026-09-29T21:46:58.077Z member GET /api/progression/state -> 200 {"ok":true,"state":{"chapters":[{"slug":"settle-in","position":1,"title":"Settle in","summary":"Claim your plot, make your first catch and donate it, then report to HQ.","requirement":"settle_in","goal_slug":null,"status":"completed","steps":[{"key":"claim_plot","label":"Claim your plot at HQ","done
+chapter 4: active · oracle_quiz:done family_trial:open enter_gate:open · labels: Complete the Oracle quiz / Reach level 10 and choose your subclass / Open the ruins gate
+PASS: C1 chapter 4 active, Oracle quiz done (class Warden)
+2026-09-29T21:46:58.885Z member POST /api/progression/chapters/advance {"chapter_slug":"ruins-gate","action":"complete"} -> 409 {"ok":false,"error":"The Oracle quiz, level 10 and your subclass come first.","code":"rejected"}
+PASS: C2 opening the gate before level 10 and the subclass choice is refused (409)
+2026-09-29T21:46:59.288Z member GET /api/combat/progression -> 200 {"ok":true,"progression":{"level":3,"xp":480,"into":55,"needed":525,"next_level_at":950,"stats":{"might":0,"finesse":0,"arcana":0,"spirit":0,"vitality":0},"points_available":6,"derived":{"max_hp":136,"energy":100,"crit_chance":0.05,"summon_capacity":2,"move_speed":1},"family":"Warden","subclass":nul
+combat gate: {"level":3,"family":"Warden","subclass":null,"gateOpen":false,"reason":"Reach level 10."}
+Staging fixture: member XP to the level-10 threshold (11625; combat XP normally comes from missions).
+SQL> update member_progression set xp = greatest(xp, 11625), level = combat_level_for_xp(greatest(xp, 11625)) where member_id = 'c2982825-3dd1-4572-a9d0-4b7fadd306d6' returning xp, level
+xp | level
+11625 | 10
+2026-09-29T21:47:00.646Z member POST /api/combat/subclass {"subclass":"druid","idempotency_key":"hardening-subclass-mun7ig6p"} -> 200 {"ok":true,"subclass":{"subclass":"druid","fee":0,"replayed":false}}
+PASS: C3 level-10 subclass choice within the Warden family (druid)
+2026-09-29T21:47:01.059Z member GET /api/combat/progression -> 200 {"ok":true,"progression":{"level":10,"xp":11625,"into":0,"needed":3500,"next_level_at":15125,"stats":{"might":0,"finesse":0,"arcana":0,"spirit":0,"vitality":0},"points_available":27,"derived":{"max_hp":220,"energy":100,"crit_chance":0.05,"summon_capacity":2,"move_speed":1},"family":"Warden","subclas
+PASS: C4 the ruins gate (combat) is open: {"level":10,"family":"Warden","subclass":"druid","gateOpen":true,"reason":null}
+2026-09-29T21:47:01.983Z member GET /api/progression/state -> 200 {"ok":true,"state":{"chapters":[{"slug":"settle-in","position":1,"title":"Settle in","summary":"Claim your plot, make your first catch and donate it, then report to HQ.","requirement":"settle_in","goal_slug":null,"status":"completed","steps":[{"key":"claim_plot","label":"Claim your plot at HQ","done
+PASS: C5 chapter 4's level-10 step is done and the chapter is ready (ready · oracle_quiz:done family_trial:done enter_gate:open)
+2026-09-29T21:47:05.132Z member POST /api/progression/chapters/advance {"chapter_slug":"ruins-gate","action":"complete"} -> 200 {"ok":true,"state":{"chapters":[{"slug":"settle-in","position":1,"title":"Settle in","summary":"Claim your plot, make your first catch and donate it, then report to HQ.","requirement":"settle_in","goal_slug":null,"status":"completed","steps":[{"key":"claim_plot","label":"Claim your plot at HQ","done
+PASS: C6 chapter 4 completed: the gate opens
+PASS: C7 the 300-coin chapter reward, paid once (725 → 725, already paid on an earlier run)
+2026-09-29T21:47:06.399Z member POST /api/progression/chapters/advance {"chapter_slug":"ruins-gate","action":"complete"} -> 409 {"ok":false,"error":"Chapter already finished.","code":"rejected"}
+PASS: C8 completing again is refused and pays nothing (409)
+2026-09-29T21:47:07.463Z member GET /api/progression/state -> 200 {"ok":true,"state":{"chapters":[{"slug":"settle-in","position":1,"title":"Settle in","summary":"Claim your plot, make your first catch and donate it, then report to HQ.","requirement":"settle_in","goal_slug":null,"status":"completed","steps":[{"key":"claim_plot","label":"Claim your plot at HQ","done
+PASS: C9 cliffs and the ruins gate open (village_core, cafe, study_tables, museum, woods, cliffs, ruins_gate)
+SQL> select subject, broadcast_key from letters where recipient_id = 'c2982825-3dd1-4572-a9d0-4b7fadd306d6' and subject = 'Reach the ruins gate'
+subject | broadcast_key
+Reach the ruins gate | chapter:ruins-gate
+SQL> select amount, balance_after, source, ref from wallet_ledger where member_id = 'c2982825-3dd1-4572-a9d0-4b7fadd306d6' and source = 'chapter' order by created_at desc limit 2
+amount | balance_after | source | ref
+300 | 725 | chapter | ruins-gate
+100 | 100 | chapter | settle-in
+
+ALL PASS

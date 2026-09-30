@@ -55,6 +55,11 @@ export function torontoHourKey(date = new Date()): string {
   return `${torontoParts(date).hourKey}:00`;
 }
 
+/** Roster weather words from the island's weather states (fog/wind read as cloudy). */
+export function rosterWeather(weather: IslandWeather): "clear" | "cloudy" | "rain" | "snow" {
+  return weather === "rain" ? "rain" : weather === "snow" ? "snow" : weather === "clear" ? "clear" : "cloudy";
+}
+
 export function weatherAt(report: WeatherReport, date = new Date()): IslandWeather | null {
   const key = torontoHourKey(date);
   return report.hours.find(hour => hour.time === key)?.state ?? null;

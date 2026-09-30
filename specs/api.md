@@ -372,11 +372,11 @@ Buy an avatar item from the `avatar_items` catalog. Deducts coins and adds item 
 
 ---
 
-### `POST /api/economy` — Admin Award
+### `POST /api/economy/admin/award` — Admin Award
 
-Award coins to a user (T1-T2 only).
+Award Gems to a user (T1-T2 only, `adminContext`).
 
-**Body:** `{ action: "award", user_id: "uuid", amount: 500, description?: "Hackathon prize" }`
+**Body:** `{ user_id: "uuid", amount: 500, description?: "Hackathon prize" }`
 
 **Response:** `{ success: true, user: "uuid", awarded: 500, new_balance: 1700 }`
 

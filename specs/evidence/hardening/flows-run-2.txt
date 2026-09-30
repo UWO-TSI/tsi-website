@@ -1,0 +1,81 @@
+staging jjiyeroyralfbluowbjq; member c2982825-3dd1-4572-a9d0-4b7fadd306d6, staff 6d14b24f-7005-4194-adf2-4fc02d186c45 (T2), public 4e294cb3-7032-433c-971e-90f855021d10; 2026-09-29T21:45:45.843Z
+
+=== C. Chapter 4: Reach the ruins gate ===
+2026-09-29T21:45:47.196Z member GET /api/progression/state -> 200 {"ok":true,"state":{"chapters":[{"slug":"settle-in","position":1,"title":"Settle in","summary":"Claim your plot, make your first catch and donate it, then report to HQ.","requirement":"settle_in","goal_slug":null,"status":"completed","steps":[{"key":"claim_plot","label":"Claim your plot at HQ","done
+chapter 4: active · oracle_quiz:done family_trial:open enter_gate:open · labels: Complete the Oracle quiz / Reach level 10 and choose your subclass / Open the ruins gate
+PASS: C1 chapter 4 active, Oracle quiz done (class Warden)
+2026-09-29T21:45:47.904Z member POST /api/progression/chapters/advance {"chapter_slug":"ruins-gate","action":"complete"} -> 409 {"ok":false,"error":"The Oracle quiz, level 10 and your subclass come first.","code":"rejected"}
+PASS: C2 opening the gate before level 10 and the subclass choice is refused (409)
+2026-09-29T21:45:48.320Z member GET /api/combat/progression -> 200 {"ok":true,"progression":{"level":3,"xp":480,"into":55,"needed":525,"next_level_at":950,"stats":{"might":0,"finesse":0,"arcana":0,"spirit":0,"vitality":0},"points_available":6,"derived":{"max_hp":136,"energy":100,"crit_chance":0.05,"summon_capacity":2,"move_speed":1},"family":"Warden","subclass":nul
+combat gate: {"level":3,"family":"Warden","subclass":null,"gateOpen":false,"reason":"Reach level 10."}
+Staging fixture: member XP to the level-10 threshold (11625; combat XP normally comes from missions).
+SQL> update member_progression set xp = greatest(xp, 11625), level = combat_level_for_xp(greatest(xp, 11625)) where member_id = 'c2982825-3dd1-4572-a9d0-4b7fadd306d6' returning xp, level
+xp | level
+11625 | 10
+2026-09-29T21:45:49.518Z member POST /api/combat/subclass {"subclass":"druid","idempotency_key":"hardening-subclass-mun7gx7n"} -> 200 {"ok":true,"subclass":{"subclass":"druid","fee":0,"replayed":false}}
+PASS: C3 level-10 subclass choice within the Warden family (druid)
+2026-09-29T21:45:49.929Z member GET /api/combat/progression -> 200 {"ok":true,"progression":{"level":10,"xp":11625,"into":0,"needed":3500,"next_level_at":15125,"stats":{"might":0,"finesse":0,"arcana":0,"spirit":0,"vitality":0},"points_available":27,"derived":{"max_hp":220,"energy":100,"crit_chance":0.05,"summon_capacity":2,"move_speed":1},"family":"Warden","subclas
+PASS: C4 the ruins gate (combat) is open: {"level":10,"family":"Warden","subclass":"druid","gateOpen":true,"reason":null}
+2026-09-29T21:45:50.852Z member GET /api/progression/state -> 200 {"ok":true,"state":{"chapters":[{"slug":"settle-in","position":1,"title":"Settle in","summary":"Claim your plot, make your first catch and donate it, then report to HQ.","requirement":"settle_in","goal_slug":null,"status":"completed","steps":[{"key":"claim_plot","label":"Claim your plot at HQ","done
+PASS: C5 chapter 4's level-10 step is done and the chapter is ready (ready · oracle_quiz:done family_trial:done enter_gate:open)
+2026-09-29T21:45:53.065Z member POST /api/progression/chapters/advance {"chapter_slug":"ruins-gate","action":"complete"} -> 200 {"ok":true,"state":{"chapters":[{"slug":"settle-in","position":1,"title":"Settle in","summary":"Claim your plot, make your first catch and donate it, then report to HQ.","requirement":"settle_in","goal_slug":null,"status":"completed","steps":[{"key":"claim_plot","label":"Claim your plot at HQ","done
+PASS: C6 chapter 4 completed: the gate opens
+PASS: C7 the 300-coin chapter reward, paid once (425 → 725)
+2026-09-29T21:45:54.377Z member POST /api/progression/chapters/advance {"chapter_slug":"ruins-gate","action":"complete"} -> 409 {"ok":false,"error":"Chapter already finished.","code":"rejected"}
+PASS: C8 completing again is refused and pays nothing (409)
+2026-09-29T21:45:55.385Z member GET /api/progression/state -> 200 {"ok":true,"state":{"chapters":[{"slug":"settle-in","position":1,"title":"Settle in","summary":"Claim your plot, make your first catch and donate it, then report to HQ.","requirement":"settle_in","goal_slug":null,"status":"completed","steps":[{"key":"claim_plot","label":"Claim your plot at HQ","done
+PASS: C9 cliffs and the ruins gate open (village_core, cafe, study_tables, museum, woods, cliffs, ruins_gate)
+SQL> select subject, broadcast_key from letters where recipient_id = 'c2982825-3dd1-4572-a9d0-4b7fadd306d6' and subject = 'Reach the ruins gate'
+subject | broadcast_key
+Reach the ruins gate | chapter:ruins-gate
+SQL> select amount, balance_after, source, ref from wallet_ledger where member_id = 'c2982825-3dd1-4572-a9d0-4b7fadd306d6' and source = 'chapter' order by created_at desc limit 2
+amount | balance_after | source | ref
+300 | 725 | chapter | ruins-gate
+100 | 100 | chapter | settle-in
+
+=== D. Admin: audit log, unmute, older routes on the gate ===
+2026-09-29T21:45:57.430Z member POST /api/progression/letters {"to":"4e294cb3-7032-433c-971e-90f855021d10","subject":"hardening","body":"a rude note for the queue 1790718356740"} -> 200 {"ok":true,"letter":{"id":"11de2032-e6e4-4739-a1f3-df31640889cc","created_at":"2026-09-29T21:45:57.409977+00:00"}}
+2026-09-29T21:45:58.409Z public PATCH /api/progression/letters/11de2032-e6e4-4739-a1f3-df31640889cc {"action":"report","reason":"rude"} -> 200 {"ok":true}
+PASS: D1 the public account reports the member's note
+2026-09-29T21:45:58.740Z member GET /api/admin/moderation -> 403 {"ok":false,"error":"Forbidden: T1/T2 only"}
+PASS: D2 a T4 member can't open the queue (403)
+2026-09-29T21:45:59.252Z staff GET /api/admin/moderation -> 200 {"ok":true,"letters":[{"id":"11de2032-e6e4-4739-a1f3-df31640889cc","body":"a rude note for the queue 1790718356740","subject":"hardening","reason":"rude","reported_at":"2026-09-29T21:45:58.222+00:00","author":{"id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","name":"Phase1 Member","world_name":"Juniper",
+PASS: D3 staff see it in the queue
+2026-09-29T21:45:59.759Z staff POST /api/admin/moderation {"kind":"letter","id":"11de2032-e6e4-4739-a1f3-df31640889cc","action":"remove_mute"} -> 200 {"ok":true,"moderation":{"kind":"letter","id":"11de2032-e6e4-4739-a1f3-df31640889cc","action":"remove_mute","muted_until":"2026-10-06T21:45:59.454Z"}}
+PASS: D4 staff remove the note and mute its author 7 days
+2026-09-29T21:46:00.057Z member POST /api/progression/letters {"to":"4e294cb3-7032-433c-971e-90f855021d10","body":"still here?"} -> 403 {"ok":false,"code":"muted","error":"You can't post until 2026-10-06."}
+PASS: D5 the muted member can't write (403)
+2026-09-29T21:46:00.473Z staff GET /api/admin/moderation -> 200 {"ok":true,"letters":[{"id":"e4d7f971-690e-4426-9c0a-4a83ea82dcba","body":"you are the worst fisher on this island, just quit","subject":"lol","reason":"[admin-pass] mean","reported_at":"2026-09-27T16:05:29.435815+00:00","author":{"id":"4e294cb3-7032-433c-971e-90f855021d10","name":"Phase1 Public","w
+PASS: D6 the member is listed under Muted now
+2026-09-29T21:46:01.044Z staff POST /api/identity/moderate {"member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","action":"unmute"} -> 200 {"ok":true,"moderation":{"action":"unmute"}}
+PASS: D7 staff unmute the member
+2026-09-29T21:46:01.676Z member POST /api/progression/letters {"to":"4e294cb3-7032-433c-971e-90f855021d10","body":"thanks for the second chance"} -> 200 {"ok":true,"letter":{"id":"1e64fe0a-e5bd-4cbf-9579-e13926586179","created_at":"2026-09-29T21:46:01.653113+00:00"}}
+PASS: D8 the member can write again
+2026-09-29T21:46:02.198Z staff GET /api/admin/moderation -> 200 {"ok":true,"letters":[{"id":"e4d7f971-690e-4426-9c0a-4a83ea82dcba","body":"you are the worst fisher on this island, just quit","subject":"lol","reason":"[admin-pass] mean","reported_at":"2026-09-27T16:05:29.435815+00:00","author":{"id":"4e294cb3-7032-433c-971e-90f855021d10","name":"Phase1 Public","w
+  2026-09-29T21:46:01.02311+00:00 Phase1 Staff unmute member  → Phase1 Member "Juniper"
+  2026-09-29T21:45:59.736743+00:00 Phase1 Staff remove_mute letter 11de2032-e6e4-4739-a1f3-df31640889cc → Phase1 Member "a rude note for the queue 1790718356740"
+PASS: D9 the audit log has both actions: who, what, which item, when
+PASS: D10 and the member is no longer muted
+SQL> select actor_id, action, item_kind, item_id, target_id, excerpt, created_at from moderation_log order by id desc limit 2
+actor_id | action | item_kind | item_id | target_id | excerpt | created_at
+6d14b24f-7005-4194-adf2-4fc02d186c45 | unmute | member |  | c2982825-3dd1-4572-a9d0-4b7fadd306d6 | Juniper | 2026-09-29 21:46:01.02311+00
+6d14b24f-7005-4194-adf2-4fc02d186c45 | remove_mute | letter | 11de2032-e6e4-4739-a1f3-df31640889cc | c2982825-3dd1-4572-a9d0-4b7fadd306d6 | a rude note for the queue 1790718356740 | 2026-09-29 21:45:59.736743+00
+2026-09-29T21:46:03.091Z member REST GET /rest/v1/moderation_log?select=id -> 200 []
+PASS: D11 a T4 member reads nothing from moderation_log directly (RLS)
+2026-09-29T21:46:03.248Z staff REST GET /rest/v1/moderation_log?select=id&limit=1 -> 200 [{"id":1}]
+PASS: D12 a T2 reads the log directly
+2026-09-29T21:46:03.546Z member GET /api/npc/spend -> 403 {"ok":false,"error":"Forbidden: T1/T2 only"}
+PASS: D13 NPC spend: T4 refused
+2026-09-29T21:46:03.866Z staff GET /api/npc/spend -> 200 {"month":"2026-09","tokens_in":0,"tokens_out":0,"estimated_cost_usd":0,"top_users":[],"top_npcs":[]}
+PASS: D14 NPC spend: T2 allowed (was T1-only)
+2026-09-29T21:46:04.050Z member POST /api/economy {"action":"award","user_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","amount":5} -> 400 {"error":"Validation failed","details":{"formErrors":[],"fieldErrors":{"action":["Invalid input"]}}}
+PASS: D15 the old award action inside /api/economy is gone (400)
+2026-09-29T21:46:04.321Z member POST /api/economy/admin/award {"user_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","amount":5} -> 403 {"ok":false,"error":"Forbidden: T1/T2 only"}
+PASS: D16 /api/economy/admin/award: T4 refused
+2026-09-29T21:46:04.759Z staff POST /api/economy/admin/award {"user_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","amount":1,"description":"hardening E2E"} -> 200 {"success":true,"user":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","awarded":1,"new_balance":701}
+PASS: D17 /api/economy/admin/award: T2 awards 1 Gem
+2026-09-29T21:46:05.137Z member GET /api/directory -> 200 {"members":[{"id":"8b41199c-f94f-4557-bfa8-8e75e4c11d3f","display_name":"Launch One","avatar_url":null,"tier":4,"position":null,"class":null,"level":1,"xp":0,"skills":[],"is_active":true},{"id":"4e294cb3-7032-433c-971e-90f855021d10","display_name":"Phase1 Public","avatar_url":null,"tier":5,"position
+2026-09-29T21:46:05.431Z staff GET /api/directory -> 200 {"members":[{"id":"8b41199c-f94f-4557-bfa8-8e75e4c11d3f","display_name":"Launch One","avatar_url":null,"tier":4,"position":null,"class":null,"level":1,"xp":0,"skills":[],"is_active":true},{"id":"4e294cb3-7032-433c-971e-90f855021d10","display_name":"Phase1 Public","avatar_url":null,"tier":5,"position
+PASS: D18 directory: T4 sees active members only; staff sees 9 (inactive included: false)
+
+ALL PASS

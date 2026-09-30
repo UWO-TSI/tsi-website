@@ -1,0 +1,31 @@
+Gates, game/hardening, 2026-09-29 18:00 EDT
+
+npx tsc --noEmit: clean
+npm test (vitest run): 119 files, 1051 tests passed (baseline 1030; +21 in app/api/collections/route.test.ts, lib/collections/rolls.test.ts, lib/server/adminRoutes.test.ts, app/api/admin/moderation/route.test.ts, lib/progression/supabaseStore.test.ts; lib/game/collections.test.ts reworked in place)
+  note: lib/game/movement's fuzz test timed out once (5.2 s > 5 s) in a full run while another agent's dev server was busy; passes alone (1.7 s) and in the final full run
+npx eslint on the 38 changed .ts/.tsx files: clean
+
+zsh specs/evidence/launch-fixes/sql-smoke.sh (throwaway Postgres 16, :55451), new sections:
+── catch_rolls_smoke.sql
+NOTICE:  catch 1 members locked out ok
+NOTICE:  catch 2 casts ok
+NOTICE:  catch 3 harvests ok
+NOTICE:  catch 4 caps ok
+── moderation_log_smoke.sql
+NOTICE:  moderation log 1 T1/T2 read-only ok
+NOTICE:  moderation log 2 checks ok
+── chapter4_copy_smoke.sql
+NOTICE:  chapter 4 copy 1 seed renamed ok
+NOTICE:  chapter 4 copy 2 admin edits kept ok
+every other section unchanged and green; no FAIL/ERROR lines
+
+Fail-first: sql-smoke.sh 20260929100000 (the three new migrations skipped):
+skipped 20260929100000_catch_rolls
+skipped 20260929100100_moderation_log
+skipped 20260929100200_chapter4_subclass_copy
+── catch_rolls_smoke.sql
+ERROR:  function collections_cast(unknown, unknown, integer, boolean) does not exist
+── moderation_log_smoke.sql
+ERROR:  relation "moderation_log" does not exist
+── chapter4_copy_smoke.sql
+ERROR:  seeded step renamed

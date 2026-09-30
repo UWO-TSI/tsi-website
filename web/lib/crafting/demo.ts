@@ -9,6 +9,8 @@
  */
 import { installDemoFetch, reply } from "@/lib/game/demoFetch";
 import { buy, getInventory, getShop } from "@/lib/wallet/service";
+import { memoryCollectionsStore } from "@/lib/collections/memoryStore";
+import { catchAction } from "@/lib/collections/service";
 import { memoryCraftingStore } from "./memoryStore";
 import { craft, learnFromQuest, openBottle, recipeBook } from "./service";
 
@@ -23,6 +25,7 @@ export function installCraftingDemo(): void {
     const pockets = { wood_branch: 4, rock_iron_nugget: 5, sea_pearl_oyster: 1, fish_black_bass: 2, rock_stone: 6, rock_clay: 2, bug_firefly: 1 };
     for (const [key, n] of Object.entries(pockets)) m.eco.give(ME, key, n);
     m.eco.fund(ME, 1500);
+    const rolls = memoryCollectionsStore(() => new Date());
     return async (path, body, _url, method) => {
       switch (path) {
         case "/api/crafting/recipes": return reply(await recipeBook(m.store, ME, new Date()), "book");
@@ -32,10 +35,12 @@ export function installCraftingDemo(): void {
         // The shop too, so wardrobe/decorate ownership can be bought into signed out.
         case "/api/economy/shop": return reply(await getShop(m.eco.store, ME, new Date()), "shop");
         case "/api/economy/buy": return reply(await buy(m.eco.store, ME, body, new Date()), "purchase");
-        case "/api/collections":
+        case "/api/collections": {
           if (method !== "POST") return null;
-          m.eco.give(ME, body.item_key, 1);
-          return new Response(JSON.stringify({ item_key: body.item_key }));
+          const r = await catchAction(rolls.store, ME, body, new Date(), "clear");
+          if (r.ok && !("roll" in r.data)) m.eco.give(ME, r.data.item_key, 1);
+          return reply(r, "catch");
+        }
         default: return null;
       }
     };

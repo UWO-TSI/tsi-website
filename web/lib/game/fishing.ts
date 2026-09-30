@@ -202,8 +202,8 @@ export function rollFish(luck = 0, zone: "river" | "sea" = "river", context = cu
 }
 
 /** Skewed size roll — most catches modest, big ones are the brag. */
-export function rollSize([min, max]: [number, number]): number {
-  return Math.round(min + (max - min) * Math.pow(Math.random(), 1.7));
+export function rollSize([min, max]: [number, number], random = Math.random): number {
+  return Math.round(min + (max - min) * Math.pow(random(), 1.7));
 }
 
 // ─── Reel tuning (track space is 0..1; bar width comes from rarity) ─────────
