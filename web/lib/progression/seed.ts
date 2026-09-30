@@ -1,8 +1,6 @@
 /** SQL seed for the seasonal goals (kept verbatim in 20260929120000_seasonal_events.sql by scripts/gen-seeds.mjs). */
 import { SEASONAL_GOALS } from "./defaults";
-
-const q = (v: string | null) => (v === null ? "NULL" : `'${v.replace(/'/g, "''")}'`);
-const arr = (v: string[]) => (v.length ? `ARRAY[${v.map(q).join(",")}]::text[]` : "'{}'::text[]");
+import { arr, q } from "@/lib/collections/seed";
 
 export const SEED_BEGIN = "-- BEGIN GENERATED SEASONAL GOALS (web/scripts/gen-seeds.mjs)";
 export const SEED_END = "-- END GENERATED SEASONAL GOALS";
