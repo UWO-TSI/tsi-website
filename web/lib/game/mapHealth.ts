@@ -16,7 +16,7 @@ import {
   CLIFF_LEVELS, ORTHOGONAL, cliffPieceFor, inBounds, isGroundAtWorld, isRamp, isRiver, isVoid, levelAt,
   needsCliff, rampDir, rampRun, surfaceAt, worldToCellX, worldToCellZ, type IslandMap,
 } from "./grid";
-import { LANDMARK_IDS, LANDMARK_INFO, bridgeDecks, islandOf, landmarks, propFootprint, wharfDeck, type LandmarkId } from "./defaultIsland";
+import { LANDMARK_IDS, TREE_TRUNK, bridgeDecks, islandOf, landmarks, objectFootprint, turn, wharfDeck } from "./defaultIsland";
 import { CAST_REACH, WATER_CLASS, fishingSpot, villageWater } from "./fishingSpots";
 import { villageNodes, villageBottleSpot } from "./islandNodes";
 import { OBJECT_KINDS, objectsOf, villageSpawnPoint, type MapObject, type Village } from "./villageMap";
@@ -129,18 +129,14 @@ export interface VillageHealth {
 const probe = [[0, 0], [-0.2, 0], [0.2, 0], [0, -0.2], [0, 0.2]];
 const inRect = (x: number, z: number, r: { x0: number; x1: number; z0: number; z1: number }) => x >= r.x0 && x <= r.x1 && z >= r.z0 && z <= r.z1;
 
-/** Axis-aligned footprint of an object, for overlap warnings (null = a point). */
-export function footprintOf(o: MapObject): { x0: number; x1: number; z0: number; z1: number; building: boolean } | null {
-  if (o.kind === "landmark") {
-    const l = LANDMARK_INFO[o.id as LandmarkId]?.half;
-    return l ? { x0: o.x - l[0], x1: o.x + l[0], z0: o.z - l[1], z1: o.z + l[1], building: l[0] > 1 } : null;
-  }
-  if (o.kind === "tree") return { x0: o.x - 0.65, x1: o.x + 0.65, z0: o.z - 0.65, z1: o.z + 0.65, building: false };
-  const f = propFootprint(o);
+/** Axis-aligned footprint of an object (its objectFootprint turned by its yaw; a tree's trunk), for overlap warnings (null = a point). */
+function footprintOf(o: MapObject): { x0: number; x1: number; z0: number; z1: number; building: boolean } | null {
+  const f = o.kind === "tree" ? { hw: TREE_TRUNK, hd: TREE_TRUNK, cx: 0, cz: 0 } : objectFootprint(o);
   if (!f) return null;
-  const c = Math.abs(Math.cos(o.yaw ?? 0)), s = Math.abs(Math.sin(o.yaw ?? 0));
-  const hx = f[0] * c + f[1] * s, hz = f[0] * s + f[1] * c;
-  return { x0: o.x - hx, x1: o.x + hx, z0: o.z - hz, z1: o.z + hz, building: false };
+  const yaw = o.yaw ?? 0, c = Math.abs(Math.cos(yaw)), s = Math.abs(Math.sin(yaw));
+  const [ox, oz] = turn(f.cx, f.cz, yaw), x = o.x + ox, z = o.z + oz;
+  const hx = f.hw * c + f.hd * s, hz = f.hw * s + f.hd * c;
+  return { x0: x - hx, x1: x + hx, z0: z - hz, z1: z + hz, building: o.kind === "landmark" && f.hw > 1 };
 }
 
 /** Every check on a village (its map and objects). */

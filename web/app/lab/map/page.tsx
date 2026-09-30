@@ -59,7 +59,7 @@ import {
   PAINTER_DRAFT_KEY, normaliseSea, parseVillage, serialiseVillage, villageJson, villageOf,
   type MapObject, type ObjectKind, type VillageDoc,
 } from "@/lib/game/villageMap";
-import { BRIDGE_DECK_HALF, LANDMARK_IDS, LANDMARK_INFO, PROP_FOOTPRINT, TREE_TRUNK, WHARF_DECK_LOCAL, type LandmarkId } from "@/lib/game/defaultIsland";
+import { LANDMARK_IDS, LANDMARK_INFO, PROP_FOOTPRINT, TREE_TRUNK, objectFootprint, type LandmarkId } from "@/lib/game/defaultIsland";
 import { villageHealth, type VillageHealth } from "@/lib/game/mapHealth";
 import { mapBudget } from "@/lib/game/mapBudget";
 import { classifyWater, WATER_CLASS } from "@/lib/game/fishingSpots";
@@ -174,8 +174,8 @@ const OBJECT_STYLE: Record<ObjectKind, { color: string; r: number; label: string
 };
 /** Placement palette order. */
 const PALETTE: readonly ObjectKind[] = ["landmark", "tree", "bush", "flower", "rock", "bench", "fence", "lamp", "bridge", "study", "anchor", "gather", "spawn", "fitting", "missions", "puddle", "bug", "shell", "bottle"];
-const ROCK_MODELS = ["rock-a", "rock-b", "rock-c"];
-const FENCE_MODELS = ["fence-country-a", "fence-country-b"];
+const ROCK_MODELS = Object.keys(PROP_FOOTPRINT).filter((m) => m.startsWith("rock-"));
+const FENCE_MODELS = Object.keys(PROP_FOOTPRINT).filter((m) => m.startsWith("fence-"));
 const BUG_BIOMES = ["water_edge", "ground"];
 const TREE_NAMES = ["oak", "oak (b)", "blossom", "cedar"];
 /** Outdoor study tables the backend expects (`study_tables.anchor`). */
@@ -310,19 +310,8 @@ const deg = (rad = 0) => Math.round((rad * 180) / Math.PI * 10) / 10;
 
 /** Local outline (before yaw) of an object's footprint, for drawing and hit tests; null = drawn as a dot. */
 function objectOutline(o: MapObject): [number, number][] | null {
-  const rect = (hw: number, hd: number, cx = 0, cz = 0): [number, number][] => [[cx - hw, cz - hd], [cx + hw, cz - hd], [cx + hw, cz + hd], [cx - hw, cz + hd]];
-  if (o.kind === "landmark") {
-    const info = LANDMARK_INFO[o.id as LandmarkId];
-    if (o.id === "wharf") return rect((WHARF_DECK_LOCAL.x1 - WHARF_DECK_LOCAL.x0) / 2, (WHARF_DECK_LOCAL.z1 - WHARF_DECK_LOCAL.z0) / 2, (WHARF_DECK_LOCAL.x0 + WHARF_DECK_LOCAL.x1) / 2, (WHARF_DECK_LOCAL.z0 + WHARF_DECK_LOCAL.z1) / 2);
-    return info?.half ? rect(info.half[0], info.half[1]) : null;
-  }
-  if (o.kind === "bridge") return rect(BRIDGE_DECK_HALF[0], BRIDGE_DECK_HALF[1]);
-  if (o.kind === "study" && o.model && o.model in FURNITURE) {
-    const solid = FURNITURE[o.model as Furniture].solid[0];
-    return rect(solid[2], solid[3], solid[0], solid[1]);
-  }
-  const f = o.model ? PROP_FOOTPRINT[o.model] : undefined;
-  return f ? rect(f[0] * (o.scale ?? 1), f[1] * (o.scale ?? 1)) : null;
+  const f = objectFootprint(o);
+  return f && [[f.cx - f.hw, f.cz - f.hd], [f.cx + f.hw, f.cz - f.hd], [f.cx + f.hw, f.cz + f.hd], [f.cx - f.hw, f.cz + f.hd]];
 }
 
 export default function MapLab() {

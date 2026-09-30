@@ -1,7 +1,7 @@
 import {
   CLIFF_LEVELS, isGroundAtWorld, levelAt, rampRun, sampleGroundHeight, surfaceAt, worldToCellX, worldToCellZ,
 } from "./grid";
-import { studySolid } from "@/lib/study/seats";
+import { FURNITURE, studySolid, type Furniture } from "@/lib/study/seats";
 import { objectsOf, village, villageSpawnPoint, type MapObject, type Village } from "./villageMap";
 
 /**
@@ -75,7 +75,7 @@ export const PROP_TOP: Record<string, number> = {
 export const TREE_TRUNK = 0.65;
 export const TREE_SEEDS = [0, 3, 2, 5, 7, 8, 1, 3];
 
-const turn = (dx: number, dz: number, yaw = 0): [number, number] =>
+export const turn = (dx: number, dz: number, yaw = 0): [number, number] =>
   yaw ? [dx * Math.cos(yaw) + dz * Math.sin(yaw), -dx * Math.sin(yaw) + dz * Math.cos(yaw)] : [dx, dz];
 
 /** Landmarks placed on the map, in the table's order. */
@@ -128,9 +128,35 @@ export function villageSpawn(v: Village = village()): [number, number, number] {
 export const propsOf = (v: Village = village()) => [...objectsOf("bench", v), ...objectsOf("rock", v), ...objectsOf("fence", v)];
 
 /** Solid footprint of a bench, rock or fence: half extents × scale (before its yaw). */
-export function propFootprint(o: MapObject): [number, number] | null {
+export function propFootprint(o: Pick<MapObject, "model" | "scale">): [number, number] | null {
   const f = o.model ? PROP_FOOTPRINT[o.model] : undefined;
   return f ? [f[0] * (o.scale ?? 1), f[1] * (o.scale ?? 1)] : null;
+}
+
+/** Whether (x, z) is inside half extents hw × hd around `at`, turned by `yaw`. */
+export function inFootprint(x: number, z: number, at: { x: number; z: number }, yaw: number, hw: number, hd: number): boolean {
+  const dx = x - at.x, dz = z - at.z;
+  return Math.abs(dx * Math.cos(yaw) - dz * Math.sin(yaw)) < hw && Math.abs(dx * Math.sin(yaw) + dz * Math.cos(yaw)) < hd;
+}
+
+/**
+ * An object's footprint in its own frame (before its yaw): half extents and centre offset; null = a point.
+ * Buildings, the wharf deck, bridges, study furniture and props. The painter draws and picks with it;
+ * the health check's overlap warnings test it.
+ */
+export function objectFootprint(o: MapObject): { hw: number; hd: number; cx: number; cz: number } | null {
+  if (o.kind === "landmark") {
+    const d = WHARF_DECK_LOCAL, half = LANDMARK_INFO[o.id as LandmarkId]?.half;
+    if (o.id === "wharf") return { hw: (d.x1 - d.x0) / 2, hd: (d.z1 - d.z0) / 2, cx: (d.x0 + d.x1) / 2, cz: (d.z0 + d.z1) / 2 };
+    return half ? { hw: half[0], hd: half[1], cx: 0, cz: 0 } : null;
+  }
+  if (o.kind === "bridge") return { hw: BRIDGE_DECK_HALF[0], hd: BRIDGE_DECK_HALF[1], cx: 0, cz: 0 };
+  if (o.kind === "study" && o.model && o.model in FURNITURE) {
+    const [cx, cz, hw, hd] = FURNITURE[o.model as Furniture].solid[0];
+    return { hw, hd, cx, cz };
+  }
+  const f = propFootprint(o);
+  return f ? { hw: f[0], hd: f[1], cx: 0, cz: 0 } : null;
 }
 
 /** Bench-wood seat top: its slats measure 0.48–0.51 above the ground. */
@@ -196,12 +222,7 @@ export function islandOf(v: Village): VillageIsland {
     const bx = Math.floor(x / 4), bz = Math.floor(z / 4);
     for (let oz = -1; oz <= 1; oz++) for (let ox = -1; ox <= 1; ox++) {
       const k = (bx + ox) * 4096 + bz + oz;
-      for (const p of propGrid.get(k) ?? NONE) {
-        const dx = x - p.x, dz = z - p.z;
-        const localX = dx * Math.cos(p.yaw) - dz * Math.sin(p.yaw);
-        const localZ = dx * Math.sin(p.yaw) + dz * Math.cos(p.yaw);
-        if (Math.abs(localX) < p.hw && Math.abs(localZ) < p.hd) top = Math.max(top, p.top);
-      }
+      for (const p of propGrid.get(k) ?? NONE) if (inFootprint(x, z, p, p.yaw, p.hw, p.hd)) top = Math.max(top, p.top);
       for (const t of treeGrid.get(k) ?? NONE) if (Math.hypot(t.x - x, t.z - z) < TREE_TRUNK) trunk = true;
     }
     if (top === Infinity || studySolid("village", x, z, 0, v)) return Infinity;
