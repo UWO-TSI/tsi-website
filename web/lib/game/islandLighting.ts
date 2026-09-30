@@ -54,7 +54,7 @@ export interface IslandLight {
   windowGlow: number;
   /** Fireflies out (evening/night only). */
   fireflies: boolean;
-  /** Cast-shadow PCF radius, opacity and tint (the Light tier's blob shadows take the tint). */
+  /** Cast-shadow PCF radius, opacity and tint (the contact shadows take the tint). */
   shadow: { radius: number; intensity: number; tint: string };
   rim?: { color: string; intensity: number };
   /** Screen-space sky gradient from this colour down to `sky`; absent = flat `sky`. */

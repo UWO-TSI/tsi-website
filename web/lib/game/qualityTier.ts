@@ -1,5 +1,5 @@
 /**
- * Quality tiers (ledger rows 145, 147). Light: blob shadows only, no wind sway,
+ * Quality tiers (ledger rows 145, 147). Light: contact and sun-directed shadows only (no shadow map), no wind sway,
  * fewer critters, colour grade kept but no FXAA/bloom. High: cached shadow maps, wind sway, full
  * ambient life, FXAA in smooth mode. Stored as the existing `liteMode` setting.
  */

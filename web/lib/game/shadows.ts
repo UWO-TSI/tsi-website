@@ -75,7 +75,7 @@ export function contactSize(url: string, cls: ShadowClass, box: { min: { x: numb
 export interface Ellipse { x: number; z: number; rx: number; rz: number; yaw: number }
 
 /** Casters at least this tall get a sun-directed shadow on Light. */
-export const TALL = 1;
+const TALL = 1;
 /** The Light tier's directed shadow flattens below this sun elevation instead of running across the island. */
 const MIN_ELEVATION = (15 * Math.PI) / 180;
 /** And never runs longer than this many times the caster's height. */
