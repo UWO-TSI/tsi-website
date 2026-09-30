@@ -6,8 +6,10 @@ import { validateRecipeDraft } from "@/lib/crafting/recipes";
 import { validateChapterDraft } from "@/lib/progression/chapters";
 import { validateGoalDraft } from "@/lib/progression/goals";
 import { validateResidentDraft } from "./residents";
+import { CONTENT_ROUTES } from "./types";
 
-export const CONTENT_TABLES = new Set(["npc_personas", "shop_items", "seasonal_palettes", "emote_types", "quest_chapters", "club_goals", "crafting_recipes"]);
+/** The versioned tables (CONTENT_ROUTES) and the emotes, which have no history page. */
+export const CONTENT_TABLES = new Set<string>([...Object.keys(CONTENT_ROUTES), "emote_types"]);
 
 export const DRAFT_VALIDATORS: Record<string, (d: Record<string, unknown>) => string[]> = {
   npc_personas: validateResidentDraft,

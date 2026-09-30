@@ -10,28 +10,14 @@ import { ArrowLeft } from "lucide-react";
 import { AdminGate } from "@/components/portal/ProgressionAdminShared";
 import { createClient } from "@/lib/supabase/client";
 import NameReportsPanel from "@/components/portal/NameReportsPanel";
+import { CONTENT_ROUTES, type VersionedTable } from "@/lib/content/types";
 
 const PAGE_SIZE = 20;
-const TABLE_OPTIONS = [
+type TableFilter = "all" | VersionedTable;
+const TABLE_OPTIONS: { value: TableFilter; label: string }[] = [
   { value: "all", label: "All tables" },
-  { value: "npc_personas", label: "npc_personas" },
-  { value: "shop_items", label: "shop_items" },
-  { value: "seasonal_palettes", label: "seasonal_palettes" },
-  { value: "quest_chapters", label: "quest_chapters" },
-  { value: "club_goals", label: "club_goals" },
-  { value: "crafting_recipes", label: "crafting_recipes" },
-] as const;
-
-type TableFilter = (typeof TABLE_OPTIONS)[number]["value"];
-
-const HISTORY_ROUTE: Record<string, string> = {
-  npc_personas: "/student/dashboard/admin/content/npcs",
-  shop_items: "/student/dashboard/admin/content/shop",
-  seasonal_palettes: "/student/dashboard/admin/content/palettes",
-  quest_chapters: "/student/dashboard/admin/content/chapters",
-  club_goals: "/student/dashboard/admin/content/goals",
-  crafting_recipes: "/student/dashboard/admin/content/recipes",
-};
+  ...(Object.keys(CONTENT_ROUTES) as VersionedTable[]).map((t) => ({ value: t, label: t })),
+];
 
 interface VersionEntry {
   id: string;
@@ -328,9 +314,8 @@ export default function AdminContentLogPage() {
               <tbody>
                 {versions.map((v) => {
                   const rowLabel = rowDisplay(v);
-                  const historyHref = HISTORY_ROUTE[v.table_name]
-                    ? `${HISTORY_ROUTE[v.table_name]}/${v.row_id}/history`
-                    : null;
+                  const route = (CONTENT_ROUTES as Record<string, string>)[v.table_name];
+                  const historyHref = route ? `${route}/${v.row_id}/history` : null;
                   return (
                     <tr
                       key={v.id}
