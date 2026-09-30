@@ -391,16 +391,17 @@ export default function MapLab() {
 
   const selectedObject = objects.find((o) => keyOf(o) === selected) ?? null;
 
-  // Health: everything the suite asserts, a beat after the last edit (a 256² map takes a moment).
-  // `version` stands for mutations inside `map`'s typed arrays, which the linter cannot see.
+  // Health, the budget and the sea/river/pond classes: a beat after the last edit (a 256² map takes a moment),
+  // not on every brush step. `version` stands for mutations inside `map`'s typed arrays, which the linter cannot see.
+  const [derived, setDerived] = useState(() => ({ budget: mapBudget(map), waterClass: classifyWater(map) }));
+  const { budget, waterClass } = derived;
   useEffect(() => {
-    const t = setTimeout(() => setHealth(villageHealth(villageOf(map, objects))), 250);
+    const t = setTimeout(() => {
+      setHealth(villageHealth(villageOf(map, objects)));
+      setDerived({ budget: mapBudget(map), waterClass: classifyWater(map) });
+    }, 250);
     return () => clearTimeout(t);
   }, [map, objects, version]);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const budget = useMemo(() => mapBudget(map), [map, version]);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const waterClass = useMemo(() => classifyWater(map), [map, version]);
 
   /**
    * Restore the autosaved draft.
@@ -855,10 +856,9 @@ export default function MapLab() {
     }
   }, [hover, brush, zoom, round, dragFrom, shape, tool, flip, map.width, map.depth]);
 
-  useEffect(() => {
-    repaint();
-    blit();
-  }, [repaint, blit, version]);
+  // The terrain repaints when the map changes; a mouse move only re-blits it under the cursor.
+  useEffect(() => repaint(), [repaint, version]);
+  useEffect(() => blit(), [blit, repaint, version]);
 
   /**
    * Add or remove one cell from the active label.
