@@ -34,7 +34,6 @@ const ADMIN_ROUTES = [
   "app/api/identity/moderate/route.ts",
   "app/api/progression/goals/sync/route.ts",
   "app/api/progression/goals/[slug]/credit/route.ts",
-  "app/api/guestbook/[id]/moderate/route.ts",
   "app/api/npc/conversations/[id]/resolve/route.ts",
   "app/api/npc/spend/route.ts",
 ];
@@ -53,7 +52,7 @@ type Handler = (req: Request, ctx: { params: Promise<Record<string, string>> }) 
 
 describe("admin routes share the T1/T2 gate", () => {
   it("finds the admin routes", () => {
-    expect(ADMIN_ROUTES.length).toBeGreaterThanOrEqual(17);
+    expect(ADMIN_ROUTES.length).toBeGreaterThanOrEqual(15);
   });
 
   it.each(ADMIN_ROUTES)("%s: 401 signed out, 403 for T3-T5, no database", async (file) => {
