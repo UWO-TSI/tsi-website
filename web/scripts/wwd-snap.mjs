@@ -14,7 +14,7 @@ const shots = [
 ];
 
 const main = async () => {
-  const browser = await chromium.launch();
+  const browser = await chromium.launch({ args: ["--mute-audio"] });
   const ctx = await browser.newContext({
     viewport: { width: 1512, height: 900 },
     deviceScaleFactor: 2,

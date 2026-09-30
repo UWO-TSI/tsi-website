@@ -33,7 +33,7 @@ const userId = u.user.id;
 const pdfPath = "/tmp/screenshot-resume.pdf";
 writeFileSync(pdfPath, "%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\n%%EOF\n");
 
-const browser = await chromium.launch({ headless: true });
+const browser = await chromium.launch({ headless: true, args: ["--mute-audio"] });
 const context = await browser.newContext({
   viewport: { width: 1280, height: 1500 },
 });

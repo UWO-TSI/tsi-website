@@ -13,7 +13,7 @@ const OUT = process.argv[2];
 // Same pre-seeded look as specs/evidence/polish/shots.mjs, to skip the
 // first-visit character creator and land straight on the island.
 const look = { skin: 3, hair: 2, eyes: "F1.1", mouth: "M1.1", brows: "brow_soft", extras: [], bangs: "bangs_curtain", back: "back_bob", top: "top_hoodie", bottom: "bottom_joggers", onepiece: null, shoes: "shoes_sneakers", acc: {}, colors: { top_hoodie: 2 } };
-const browser = await chromium.launch({ headless: false, args: ["--use-angle=metal", "--ignore-gpu-blocklist"] });
+const browser = await chromium.launch({ headless: false, args: ["--mute-audio", "--use-angle=metal", "--ignore-gpu-blocklist"] });
 const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 }, deviceScaleFactor: 1 });
 await ctx.addInitScript(l => { try { localStorage.setItem("tsi.look.v1", l); } catch {} }, JSON.stringify(look));
 const page = await ctx.newPage();

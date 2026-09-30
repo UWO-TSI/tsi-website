@@ -295,6 +295,10 @@ Historical decision ledger, extended as the interview continues. Earlier consequ
 | 252 | **Avatar needs another development pass (David, 2026-09-29):** "avatar needs more development, i need you to actually 3d model it on blender if you haven't, and have the hair system and eyes mouth system better." | The fit pass is not accepted as final. Next pass models the avatar in Blender (live, with viewport review) and rebuilds the hair system and the eyes/mouth system; approach questions go to David first. v6 proportions stay locked unless he says otherwise. |
 | 253 | **Afternoon fill lift (David, 2026-09-29):** picked "Lift fill a little" for backlit hours. | Keep the real sun and shadows; raise the sky/hemisphere fill while the sun is ahead of the camera so building fronts stay readable and sunny. |
 | 254 | **Avatar v7 direction (David, 2026-09-29):** sculpted-lock hair (like `hair-3d-set`), an animated painted face (blinks, talking mouth, expressions from his sheets), keep the v6 body and remodel the head by hand, review via `.blend` files plus in-game sheets with a 3-hairstyle first milestone. | Modeled in live Blender through the MCP bridge. Spec: `specs/avatar-v7.md`. |
+| 255 | **Fish follow their listed months (David, 2026-09-30).** | The server roll only draws catches in season for the current Toronto month; the catch board matches what can bite. |
+| 256 | **Seasonal event items are rewards only (David, 2026-09-30).** | Earned from the club's seasonal goal, not sold in the shop during the window. |
+| 257 | **Winter lights run Dec 1 to Jan 7 (David, 2026-09-30).** | Covers New Year's week. |
+| 258 | **Rare-catch recipe drops next (David, 2026-09-30).** | Rare server-rolled catches can grant a crafting recipe, once per recipe per member. Queued after the current agents. |
 
 Currency names, earning ratios and unlock pacing remain undecided. Decision 48 establishes the legacy-data policy; identifying protected balances and the exact reset procedure still requires a data audit. No economy migration or reward implementation is authorized by this planning document alone.
 

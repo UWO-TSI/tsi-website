@@ -20,7 +20,7 @@ const password = execFileSync("security", ["find-generic-password", "-s", "tetho
 const s = await (await fetch(`${env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1/token?grant_type=password`, { method: "POST", headers: { apikey: env.NEXT_PUBLIC_SUPABASE_ANON_KEY, "Content-Type": "application/json" }, body: JSON.stringify({ email: "phase1-member@tethos-staging.test", password }) })).json();
 const cookies = createChunks(`sb-${REF}-auth-token`, "base64-" + Buffer.from(JSON.stringify(s)).toString("base64url")).map((c) => ({ name: c.name, value: c.value, domain: "localhost", path: "/" }));
 
-const browser = await chromium.launch({ headless: false, args: ["--use-angle=metal", "--ignore-gpu-blocklist"] });
+const browser = await chromium.launch({ headless: false, args: ["--mute-audio", "--use-angle=metal", "--ignore-gpu-blocklist"] });
 const ctx = await browser.newContext({ viewport: { width: 1280, height: 760 } });
 await ctx.addCookies(cookies);
 const page = await ctx.newPage();

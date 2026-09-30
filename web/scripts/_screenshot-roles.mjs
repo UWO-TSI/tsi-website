@@ -22,7 +22,7 @@ await admin
   .update({ opens_at: "2026-04-01T00:00:00Z" })
   .in("slug", ["vp-internal", "vp-external", "vp-marketing"]);
 
-const browser = await chromium.launch({ headless: true });
+const browser = await chromium.launch({ headless: true, args: ["--mute-audio"] });
 const context = await browser.newContext({
   viewport: { width: 1280, height: 1800 },
 });

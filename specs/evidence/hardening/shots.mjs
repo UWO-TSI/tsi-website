@@ -26,7 +26,7 @@ const header = (u) => ({ Cookie: u.cookies.map((c) => `${c.name}=${c.value}`).jo
 const muted = await fetch(`${BASE}/api/identity/moderate`, { method: "POST", headers: header(staff), body: JSON.stringify({ member_id: pub.id, action: "mute" }) });
 console.log("mute public", muted.status);
 
-const browser = await chromium.launch({ headless: false });
+const browser = await chromium.launch({ headless: false, args: ["--mute-audio"] });
 const ctx = await browser.newContext({ viewport: { width: 1100, height: 1300 } });
 await ctx.addCookies(staff.cookies.map((c) => ({ name: c.name, value: c.value, domain: "localhost", path: "/" })));
 const page = await ctx.newPage();

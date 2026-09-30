@@ -26,7 +26,7 @@ const userId = u.user.id;
 const pdfPath = "/tmp/mkt-resume.pdf";
 writeFileSync(pdfPath, "%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\n%%EOF\n");
 
-const browser = await chromium.launch({ headless: true });
+const browser = await chromium.launch({ headless: true, args: ["--mute-audio"] });
 const ctx = await browser.newContext({ viewport: { width: 1280, height: 1700 } });
 const page = await ctx.newPage();
 

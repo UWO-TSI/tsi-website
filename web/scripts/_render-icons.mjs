@@ -36,7 +36,7 @@ if (only) species = species.filter((s) => s.key === only);
 console.log(`${species.length} species to render`);
 
 const BASE = process.env.BASE || "http://localhost:3099";
-const browser = await chromium.launch({ args: ["--use-angle=metal"] });
+const browser = await chromium.launch({ args: ["--mute-audio", "--use-angle=metal"] });
 // Viewport much larger than the 128px stage so the Next dev-tools badge
 // (fixed, bottom-left) can't bleed into the element screenshot.
 const page = await browser.newPage({ viewport: { width: 500, height: 500 } });

@@ -8,7 +8,7 @@ import { chromium } from "playwright";
 const APP_URL = process.env.APP_URL || "http://localhost:3001";
 const ACCESS_CODE = "tsi-alumni-2026";
 
-const browser = await chromium.launch({ headless: true });
+const browser = await chromium.launch({ headless: true, args: ["--mute-audio"] });
 const ctx = await browser.newContext({ viewport: { width: 1280, height: 1500 } });
 const page = await ctx.newPage();
 
