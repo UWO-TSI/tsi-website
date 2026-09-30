@@ -19,7 +19,7 @@ const admin = createClient(SUPA_URL, SVC_KEY, {
 });
 
 let exitCode = 0;
-const browser = await chromium.launch({ headless: true });
+const browser = await chromium.launch({ headless: true, args: ["--mute-audio"] });
 
 // ─────────────────────────────────────────────────────────
 // Test A: ?error=auth banner shows

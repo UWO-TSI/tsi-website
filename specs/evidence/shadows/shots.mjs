@@ -12,7 +12,7 @@ const { chromium } = require("playwright");
 const [mode = "before", OUT] = process.argv.slice(2);
 mkdirSync(OUT, { recursive: true });
 const BASE = `http://localhost:${process.env.PORT ?? 3000}/lab/island`;
-const args = ["--use-angle=metal", "--ignore-gpu-blocklist"];
+const args = ["--mute-audio", "--use-angle=metal", "--ignore-gpu-blocklist"];
 const view = process.env.BIG ? { viewport: { width: 1600, height: 1000 }, deviceScaleFactor: 2 } : { viewport: { width: 1280, height: 760 }, deviceScaleFactor: 1 };
 const browser = await chromium.launch({ headless: false, args });
 const LOOK = JSON.stringify({ skin: 3, hair: 2, eyes: "F1.1", mouth: "M1.1", brows: "brow_soft", extras: [], bangs: "bangs_curtain", back: "back_bob", top: "top_hoodie", bottom: "bottom_joggers", onepiece: null, shoes: "shoes_sneakers", acc: {}, colors: {} });

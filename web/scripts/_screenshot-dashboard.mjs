@@ -48,7 +48,7 @@ const { data: app } = await admin
   .select()
   .single();
 
-const browser = await chromium.launch({ headless: true });
+const browser = await chromium.launch({ headless: true, args: ["--mute-audio"] });
 const context = await browser.newContext({
   viewport: { width: 1280, height: 1500 },
   reducedMotion: "reduce",

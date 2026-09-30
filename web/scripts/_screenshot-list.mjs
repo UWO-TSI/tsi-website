@@ -2,7 +2,7 @@ import { chromium } from "playwright";
 
 const browser = await chromium.launch({
   headless: true,
-  args: ["--force-prefers-reduced-motion"],
+  args: ["--mute-audio", "--force-prefers-reduced-motion"],
 });
 const context = await browser.newContext({
   viewport: { width: 1280, height: 1800 },

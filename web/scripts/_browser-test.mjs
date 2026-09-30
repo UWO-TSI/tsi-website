@@ -78,7 +78,7 @@ writeFileSync(
   ])
 );
 
-const browser = await chromium.launch({ headless: true });
+const browser = await chromium.launch({ headless: true, args: ["--mute-audio"] });
 const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
 const page = await context.newPage();
 

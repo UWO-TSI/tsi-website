@@ -29,7 +29,7 @@ const SHOTS = [
   ["A2-11-backpack-long-hair", dress({ acc: { bag: "acc_backpack" }, back: "back_long", top: "top_raincoat", bottom: "bottom_trousers", shoes: "shoes_rainboots" }), "back"],
 ];
 
-const browser = await chromium.launch({ headless: false, args: ["--use-angle=metal", "--ignore-gpu-blocklist"] });
+const browser = await chromium.launch({ headless: false, args: ["--mute-audio", "--use-angle=metal", "--ignore-gpu-blocklist"] });
 const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2 });
 await ctx.addInitScript(() => {
   window.__REACT_DEVTOOLS_GLOBAL_HOOK__ = {

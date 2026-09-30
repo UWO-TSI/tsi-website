@@ -4,7 +4,7 @@ import { createRequire } from "node:module";
 const require = createRequire("/opt/homebrew/lib/node_modules/");
 const { chromium } = require("playwright");
 const [OUT, BASE = "http://localhost:3105"] = process.argv.slice(2);
-const browser = await chromium.launch({ headless: false, args: ["--use-angle=metal"] });
+const browser = await chromium.launch({ headless: false, args: ["--mute-audio", "--use-angle=metal"] });
 const page = await (await browser.newContext({ viewport: { width: 1500, height: 1000 }, deviceScaleFactor: 1 })).newPage();
 page.on("pageerror", e => console.log("pageerror", e.message.slice(0, 200)));
 await page.goto(`${BASE}/lab/map`);

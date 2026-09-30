@@ -86,7 +86,7 @@ try {
   const anon = await fetch(`${APP_URL}/api/applications`);
   ok("anonymous GET /api/applications forbidden", anon.status === 401 || anon.status === 403, String(anon.status));
 
-  const browser = await chromium.launch();
+  const browser = await chromium.launch({ args: ["--mute-audio"] });
   const ctx = await browser.newContext({ viewport: { width: 1360, height: 900 } });
   await ctx.addCookies(adminCookies.map((c) => ({ ...c, domain: "localhost", path: "/" })));
   const page = await ctx.newPage();

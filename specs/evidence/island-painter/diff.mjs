@@ -5,7 +5,7 @@ import fs from "node:fs";
 const require = createRequire("/opt/homebrew/lib/node_modules/");
 const { chromium } = require("playwright");
 const [A, B, TOL = "8"] = process.argv.slice(2);
-const browser = await chromium.launch();
+const browser = await chromium.launch({ args: ["--mute-audio"] });
 const page = await browser.newPage();
 for (const f of fs.readdirSync(A).filter(f => f.endsWith(".png") && !f.startsWith("diff-") && fs.existsSync(`${B}/${f}`))) {
   const a = fs.readFileSync(`${A}/${f}`).toString("base64"), b = fs.readFileSync(`${B}/${f}`).toString("base64");

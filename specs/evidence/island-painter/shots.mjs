@@ -9,7 +9,7 @@ const { chromium } = require("playwright");
 const [OUT, BASE = "http://localhost:3105", EXTRA = ""] = process.argv.slice(2);
 const T0 = new Date("2026-09-28T16:00:00Z");
 const LOOK = JSON.stringify({ skin: 3, hair: 2, eyes: "F1.1", mouth: "M1.1", brows: "brow_soft", extras: [], bangs: "bangs_curtain", back: "back_bob", top: "top_hoodie", bottom: "bottom_joggers", onepiece: null, shoes: "shoes_sneakers", acc: {}, colors: {} });
-const browser = await chromium.launch({ headless: false, args: ["--use-angle=metal", "--ignore-gpu-blocklist"] });
+const browser = await chromium.launch({ headless: false, args: ["--mute-audio", "--use-angle=metal", "--ignore-gpu-blocklist"] });
 const ctx = await browser.newContext({ viewport: { width: 1280, height: 760 }, deviceScaleFactor: 1 });
 await ctx.addInitScript(look => { try { localStorage.setItem("tsi.look.v1", look); localStorage.setItem("tsi.pixelated.v1", "false"); localStorage.setItem("tsi.shadows.v1", "true"); localStorage.setItem("tsi.liteMode.v1", "false"); } catch {} }, LOOK);
 if (process.env.DRAFT) await ctx.addInitScript(doc => { try { localStorage.setItem("lab-map-village-draft-v1", doc); } catch {} }, (await import("node:fs")).readFileSync(process.env.DRAFT, "utf8"));
