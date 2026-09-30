@@ -36,7 +36,6 @@ import { rodByTier, type RodTier } from "@/lib/game/rods";
 import { oneLinerFor, rollFishFor } from "@/lib/game/peaceful";
 import type { WaterType } from "@/lib/game/fishingSpots";
 import { punchZoom, setTensionZoom } from "@/lib/game/cameraJuice";
-import { coastDist } from "@/lib/game/coast";
 import {
   CAST,
   CELEBRATE,
@@ -250,9 +249,8 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
     else reelInputRef.current.pointers.add(input.pointerId);
     const local = () => {
       const luck = powerRef.current + (powerRef.current >= CAST.maxZone ? CAST.maxBonus : 0);
-      // Sea spots (deck + cove, out past the sand line) roll the SEA pool.
-      const sp = spotRef.current;
-      const zone: "river" | "sea" = zoneOverride ?? (sp && coastDist(sp.x, sp.z) > 47 ? "sea" : "river");
+      // Every world cast names its water (tsi:fish-start); the applicant's shore casts roll the sea.
+      const zone: "river" | "sea" = zoneOverride ?? "river";
       // Spots that report their water type (pond/river/sea) use the rod-aware pool.
       return waterRef.current ? rollFishFor(waterRef.current, luck, rod, currentFishingContext()) : rollFish(luck + rod.rarityBonus, zone);
     };
