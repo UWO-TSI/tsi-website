@@ -9,8 +9,7 @@ import { useSFX } from "@/lib/game/useAudio";
 import { getCameraForwardXZ } from "@/lib/game/cameraBasis";
 import { bindGameKeys } from "@/lib/game/keyboardInput";
 import { Surface, WATER_DROP } from "@/lib/game/grid";
-import { calculateCurvedHtmlPosition } from "@/lib/game/worldProjection";
-import { pickCurvedGround } from "@/lib/game/groundPick";
+import { calculateCurvedHtmlPosition, pickCurvedSurface } from "@/lib/game/worldProjection";
 import MoveTargetIndicator from "./MoveTargetIndicator";
 import Character, { CHARACTER_HEIGHT, CHARACTER_SCALE, type CharacterMotion, type ClipName } from "./character/Character";
 import type { CharacterLook } from "@/lib/game/character/look";
@@ -129,7 +128,7 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
     const rect = gl.domElement.getBoundingClientRect();
     raycaster.current.setFromCamera(new THREE.Vector2(((e.clientX - rect.left) / rect.width) * 2 - 1, -((e.clientY - rect.top) / rect.height) * 2 + 1), camera);
     // Against the visually curved heightfield, not a flat plane (2026-07-08 sync fix).
-    const hit = pickCurvedGround(raycaster.current.ray, camera, groundHeight);
+    const hit = pickCurvedSurface(raycaster.current.ray, camera, groundHeight);
     if (!hit) return;
     target.current = { x: hit.x, z: hit.z };
     fx.current.stuck = 0;
@@ -367,7 +366,7 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
     <>
       {/* Sprint A8: tap-to-walk target rings in world space */}
       {indicators.map((ind) => (
-        <MoveTargetIndicator key={ind.id} position={ind.position} groundHeight={groundHeight}
+        <MoveTargetIndicator key={ind.id} position={ind.position}
           onComplete={() => setIndicators((prev) => prev.filter((i) => i.id !== ind.id))} />
       ))}
       <primitive object={dust.group} />

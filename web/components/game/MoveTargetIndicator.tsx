@@ -3,7 +3,6 @@
 import { useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
-import { getTerrainHeight } from "./terrain";
 
 /**
  * MoveTargetIndicator — expanding ring sprite that fades out at a click-to-move
@@ -20,12 +19,12 @@ const INNER_RADIUS = 0.5;
 const OUTER_RADIUS = 0.6;
 
 interface MoveTargetIndicatorProps {
+  /** On the ground (PlayerAvatar grounds the tap). */
   position: [number, number, number];
   onComplete: () => void;
-  groundHeight?: (x: number, z: number) => number;
 }
 
-export default function MoveTargetIndicator({ position, onComplete, groundHeight = getTerrainHeight }: MoveTargetIndicatorProps) {
+export default function MoveTargetIndicator({ position, onComplete }: MoveTargetIndicatorProps) {
   const meshRef = useRef<THREE.Mesh>(null);
   const matRef = useRef<THREE.MeshBasicMaterial>(null);
   // Juice round 2: a second, slightly delayed ring + a center dot that
@@ -37,8 +36,7 @@ export default function MoveTargetIndicator({ position, onComplete, groundHeight
   const elapsedRef = useRef(0);
   const doneRef = useRef(false);
 
-  const [x, , z] = position;
-  const groundY = groundHeight(x, z) + 0.05;
+  const [x, y, z] = position;
 
   useFrame((_, delta) => {
     if (doneRef.current) return;
@@ -74,7 +72,7 @@ export default function MoveTargetIndicator({ position, onComplete, groundHeight
   });
 
   return (
-    <group position={[x, groundY, z]}>
+    <group position={[x, y + 0.05, z]}>
       <mesh ref={meshRef} rotation={[-Math.PI / 2, 0, 0]} scale={[0, 0, 0]}>
         <ringGeometry args={[INNER_RADIUS, OUTER_RADIUS, 32]} />
         <meshBasicMaterial
