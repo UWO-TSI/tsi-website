@@ -739,7 +739,7 @@ export default function MapLab() {
         ctx.fill();
         ctx.globalAlpha = 1;
         ctx.lineWidth = px(isSel ? 3 : 1.5);
-        ctx.strokeStyle = isSel ? "#ffd166" : overlapping.has(o.id) ? "#ff3355" : "rgba(0,0,0,0.6)";
+        ctx.strokeStyle = isSel ? "#ffd166" : overlapping.has(keyOf(o)) ? "#ff3355" : "rgba(0,0,0,0.6)";
         ctx.stroke();
       } else {
         ctx.beginPath();
@@ -747,7 +747,7 @@ export default function MapLab() {
         ctx.fillStyle = color;
         ctx.fill();
         ctx.lineWidth = px(isSel ? 3 : 1);
-        ctx.strokeStyle = isSel ? "#ffd166" : overlapping.has(o.id) ? "#ff3355" : "rgba(0,0,0,0.65)";
+        ctx.strokeStyle = isSel ? "#ffd166" : overlapping.has(keyOf(o)) ? "#ff3355" : "rgba(0,0,0,0.65)";
         ctx.stroke();
       }
       // A tree's crown, faint, so spacing reads as the game will.

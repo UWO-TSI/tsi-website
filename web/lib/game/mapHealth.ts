@@ -17,7 +17,7 @@ import {
   needsCliff, rampDir, rampRun, surfaceAt, worldToCellX, worldToCellZ, type IslandMap,
 } from "./grid";
 import { LANDMARK_IDS, LANDMARK_INFO, bridgeDecks, islandOf, landmarks, propFootprint, wharfDeck, type LandmarkId } from "./defaultIsland";
-import { CAST_REACH, WATER_CLASS, classifyWater, fishingSpot, waterClassifier } from "./fishingSpots";
+import { CAST_REACH, WATER_CLASS, fishingSpot, villageWater } from "./fishingSpots";
 import { villageNodes, villageBottleSpot } from "./islandNodes";
 import { OBJECT_KINDS, objectsOf, villageSpawnPoint, type MapObject, type Village } from "./villageMap";
 import { RESIDENT_ANCHORS, SHARED_SPACING, type ResidentAnchor } from "@/lib/content/residents";
@@ -122,7 +122,7 @@ export interface VillageHealth {
   terrain: TerrainHealth;
   /** Each failing check → what fails it (ids or counts). Empty = healthy. */
   problems: Record<string, string[]>;
-  /** Overlapping footprints (buildings keep a 1-tile gap): shown, not failing. */
+  /** Overlapping footprints as "kind:id overlaps kind:id" (buildings keep a 1-tile gap): shown, not failing. */
   warnings: string[];
 }
 
@@ -233,8 +233,8 @@ export function villageHealth(v: Village): VillageHealth {
   const bottles = new Set(["2026-09-24", "2026-09-25", "2026-09-26", "2026-09-27"].map(d => String(villageBottleSpot(d, v))));
   if (objectsOf("bottle", v).filter(o => isGroundAtWorld(map, o.x, o.z)).length < 2 || bottles.size < 2) add("forage", "2+ bottle spots needed on the beach");
 
-  // Fishing: the sea is fishable from the shore, and every water body there is.
-  const classes = classifyWater(map), classify = waterClassifier(map, classes);
+  // Fishing: the sea is fishable from the shore, and every water body there is, classified as the game does (pond markers included).
+  const { classes, classify } = villageWater(v);
   const present = new Set<number>(classes);
   const fished = new Set<string>();
   let spots = 0;
@@ -255,7 +255,7 @@ export function villageHealth(v: Village): VillageHealth {
   const boxes = v.objects.flatMap(o => { const f = footprintOf(o); return f ? [{ o, f }] : []; });
   for (let i = 0; i < boxes.length; i++) for (let j = i + 1; j < boxes.length; j++) {
     const a = boxes[i], b = boxes[j], gap = a.f.building && b.f.building ? 1 : 0;
-    if (a.f.x0 < b.f.x1 + gap && b.f.x0 < a.f.x1 + gap && a.f.z0 < b.f.z1 + gap && b.f.z0 < a.f.z1 + gap) warnings.push(`${a.o.id} overlaps ${b.o.id}${gap ? " (buildings keep a 1-tile gap)" : ""}`);
+    if (a.f.x0 < b.f.x1 + gap && b.f.x0 < a.f.x1 + gap && a.f.z0 < b.f.z1 + gap && b.f.z0 < a.f.z1 + gap) warnings.push(`${a.o.kind}:${a.o.id} overlaps ${b.o.kind}:${b.o.id}${gap ? " (buildings keep a 1-tile gap)" : ""}`);
   }
   return { terrain, problems, warnings };
 }
