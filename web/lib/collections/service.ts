@@ -35,8 +35,8 @@ const CatchRequest = z.discriminatedUnion("action", [
   z.object({ action: z.literal("cast"), site: z.enum(["village", "home"]), at: XZ, power: z.number().min(0).max(1) }),
   z.object({ action: z.literal("land"), roll: z.string().uuid() }),
 ]);
-/** A recorded catch (harvest, land), or a cast's roll waiting to be landed. */
-export type CatchReply = { item_key: string; size_cm: number | null } & (CatchResult | { roll: string });
+/** A recorded catch (harvest, land: its counts, record and any recipe taught), or a cast's `roll` waiting to be landed. */
+export type CatchReply = { item_key: string; size_cm: number | null; roll?: string } & Partial<CatchResult>;
 
 /**
  * A catch from the world (roadmap "Server-authoritative catch rolls"). The
