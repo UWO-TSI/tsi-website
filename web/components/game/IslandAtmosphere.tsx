@@ -24,7 +24,7 @@ import { TERRAIN_SNOW } from "./grid/GridTerrain";
 import { WORLD_BEND } from "@/lib/game/curvedWorld";
 import { worldTime } from "@/lib/game/worldClock";
 import { sheddingTrees, worldWind } from "@/lib/game/worldFx";
-import { treeScale } from "./NatureModels";
+import { treeParts } from "./NatureModels";
 
 /** Screen-space vertical sky gradient (a plain 2D background texture): `top` at the top, `horizon` from mid-screen down. */
 export function SkyGradient({ top, horizon }: { top: string; horizon: string }) {
@@ -78,7 +78,7 @@ export function IslandAtmosphere({ phase, light, look, weather, liteMode, castSh
   const wind = useMemo(() => worldWind(weather), [weather]);
   const leafTrees = useMemo(() => {
     const models = SEASON_TREES[look.season];
-    return sheddingTrees(trees.map(t => ({ x: t.x, y: ground(t.x, t.z), z: t.z, model: models[t.seed % models.length], scale: treeScale(t.seed) })), look.season);
+    return sheddingTrees(trees.map(t => { const [tree] = treeParts(t.seed, models); return { x: t.x, y: ground(t.x, t.z), z: t.z, model: tree.url, scale: tree.scale }; }), look.season);
   }, [trees, ground, look.season]);
   const puddleBlobs = useMemo(() => puddles.map(([x, z], i) => ({ x, z, y: ground(x, z) + 0.01, rx: 0.5 + (i % 3) * 0.18, rz: 0.32 + (i % 2) * 0.12, yaw: 0 })), [puddles, ground]);
   return <>

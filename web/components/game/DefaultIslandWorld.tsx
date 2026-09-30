@@ -279,7 +279,7 @@ function IslandScene({ identity, devAt, exitFrom, peaceful, fishSpot, fishing, c
       <BeachBottle player={player} ground={island.ground} />
       <StudySeats area="village" player={player} ground={island.ground} />
       <VillageLandmarks layout={layout} ground={island.ground} opened={progression.opened} stage={progression.stage} ceremony={ceremony} light={light} />
-      <EventDecor event={event} ground={island.ground} light={light} />
+      <EventDecor event={event} ground={island.ground} light={light} weather={weather} />
       {layout.bridges.map(b => <GLBProp key={b.id} url="/assets/acnh/props/bridge-wooden.glb" position={[b.x, b.y, b.z]} rotation={[0, b.yaw ?? 0, 0]} />)}
       {layout.lamps.map(l => <Lantern key={l.id} position={[l.x, island.ground(l.x, l.z), l.z]} intensity={light.lampsOn ? light.lamp * 1.5 : 0} glow={light.lampsOn ? 1.2 : 0} />)}
       {/* Nature and props from the map, instanced: one draw per model sub-mesh however many the island has. */}
