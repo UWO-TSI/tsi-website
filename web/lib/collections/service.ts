@@ -85,8 +85,8 @@ export async function catchAction(store: CollectionsStore, memberId: string, bod
     const sp = roster.find((s) => s.key === fish.key);
     const kept = clampSize(sp, size);
     const roll = await store.cast(memberId, fish.key, kept, trophyFor(sp, kept));
-    // Not caught yet: the reel and the card use this; the record happens on land.
-    return { ok: true, data: { roll, item_key: fish.key, size_cm: size } };
+    // Not caught yet: the reel and the card show what the land records (no size for a fish off the roster).
+    return { ok: true, data: { roll, item_key: fish.key, size_cm: kept } };
   } catch (err) {
     return fail(err);
   }

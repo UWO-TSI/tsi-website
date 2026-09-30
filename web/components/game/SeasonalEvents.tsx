@@ -211,7 +211,7 @@ export function TourneySheet({ open, onClose }: { open: boolean; onClose: () => 
       <p className={styles.hint}>{data.title} {data.cycle} · {data.open ? `biggest catch wins, until ${until(data.end)}` : "final standings"}. The top half is on the board by name; everyone else sees only their own place.</p>
       {data.boards.map(b => <section key={b.category} className={styles.tourneyBoard}>
         <h3>{CATEGORY_LABEL[b.category]} <small>{b.entrants} {b.entrants === 1 ? "entrant" : "entrants"}</small></h3>
-        {b.entrants === 0 ? <p className={styles.hint}>No entries yet. Any catch during the tourney counts.</p> : <ol className={styles.trophyList}>
+        {b.entrants === 0 ? <p className={styles.hint}>No entries yet. Any roster fish caught during the tourney counts.</p> : <ol className={styles.trophyList}>
           {b.top.map(r => <li key={r.rank} data-mine={r.mine || undefined}><span className={styles.trophyRank}>{r.rank}</span><span><b>{r.name}</b> · {r.size_cm} cm<small>{r.species}</small></span></li>)}
           {b.me && !b.top.some(r => r.mine) && <>
             {b.around.filter(r => r.rank < b.me!.rank).map(r => <li key={r.rank} data-anon><span className={styles.trophyRank}>{r.rank}</span><span>A member · {r.size_cm} cm</span></li>)}

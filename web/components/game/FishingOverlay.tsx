@@ -276,7 +276,8 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
         ownedRef.current.add(fish.key);
         setWasNew(isNew);
         const landing = landRef.current;
-        const size = landing?.size ?? rollSize(fish.sizeCm);
+        // A server roll shows the size it records (none off the roster); the local demo rolls its own.
+        const size = landing ? landing.size : rollSize(fish.sizeCm);
         setCaughtSize(size);
         setNewRecord(false);
         setLearned(null);
@@ -374,7 +375,7 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
   if (phase === "idle") return null;
 
   // First-catch blind-box ceremony — fullscreen, replaces the bottom card.
-  if (phase === "revealing" && fish && caughtSize !== null) {
+  if (phase === "revealing" && fish) {
     return <FishReveal fish={fish} sizeCm={caughtSize} recipe={learned} onDone={cancel} />;
   }
 
