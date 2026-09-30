@@ -3,7 +3,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { Volume2, VolumeX, Settings2 } from "lucide-react";
 import { AudioManager, type AmbientPhase } from "@/lib/game/audio";
-import { useAmbience, useAudioState } from "@/lib/game/useAudio";
+import { useAmbience, useAudioState, useSoundUnlock } from "@/lib/game/useAudio";
 import type { IslandWeather } from "@/lib/game/islandWeather";
 import type { Season } from "@/lib/game/season";
 
@@ -36,13 +36,7 @@ export default function AudioController({ phase, weather, season }: { phase: Amb
   useEffect(() => { if (panelOpen) panelRef.current?.querySelector("input")?.focus(); }, [panelOpen]);
   const closePanel = () => { setPanelOpen(false); buttonRef.current?.focus(); };
 
-  useEffect(() => {
-    if (state.enabled) return;
-    const unlock = () => AudioManager.enable();
-    window.addEventListener("pointerdown", unlock);
-    window.addEventListener("keydown", unlock);
-    return () => { window.removeEventListener("pointerdown", unlock); window.removeEventListener("keydown", unlock); };
-  }, [state.enabled]);
+  useSoundUnlock();
 
   const handleEnable = () => {
     setPanelOpen(false);

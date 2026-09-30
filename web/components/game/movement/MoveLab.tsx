@@ -36,7 +36,7 @@ import { objectsOf } from "@/lib/game/villageMap";
 import { COURSE_GATES, COURSE_SIGNS, COURSE_SPAWN, NEW_LAP, course, gateAt, lapStep, type Lap } from "@/lib/game/movement/course";
 import { MOVE_TUNING, createMoveState, stepMove, topSpeed, NO_INPUT, STEP, type MoveInput, type MoveTuning, type MoveWorld } from "@/lib/game/movement/sim";
 import { MOVE_ACTIONS, keyName, remapMove, useMoveKeys, useNextKey, type MoveAction } from "@/lib/game/movement/keys";
-import { AudioManager } from "@/lib/game/audio";
+import { useSoundUnlock } from "@/lib/game/useAudio";
 import { useCoarsePointer } from "@/lib/game/useMediaQuery";
 
 const SUMMER = { season: "summer" as const, weights: { spring: 0, summer: 1, autumn: 0, winter: 0 } };
@@ -171,13 +171,7 @@ export default function MoveLab() {
   const [respawn, setRespawn] = useState(0);
   const telemetry = useRef<MoveTelemetry>({ x: 0, y: 0, z: 0, speed: 0, mode: "ground", hops: 0, dashReady: true, long: false });
   const lap = useRef<{ lap: Lap; now: number }>({ lap: NEW_LAP, now: 0 });
-  // Sound effects unlock on the first key or tap (browsers need a gesture).
-  useEffect(() => {
-    const unlock = () => AudioManager.enable();
-    window.addEventListener("pointerdown", unlock, { once: true });
-    window.addEventListener("keydown", unlock, { once: true });
-    return () => { window.removeEventListener("pointerdown", unlock); window.removeEventListener("keydown", unlock); };
-  }, []);
+  useSoundUnlock();
 
   // The panel's values survive a reload (this browser only); Copy JSON is how they reach the repo.
   useEffect(() => {

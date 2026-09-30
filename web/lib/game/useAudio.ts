@@ -14,6 +14,7 @@ import type { Season } from "./season";
  *   bed on the caller's time of day, trying a weather/season variant first.
  * - `useMusicDirector({ season, override })` keeps the music channel on the clock.
  * - `useAudioState()` exposes the manager state to UI (enable prompt + sliders).
+ * - `useSoundUnlock()` turns sound on at the first tap or key (browsers need a gesture).
  */
 
 export function useAmbience(input: { phase: AmbientPhase; weather?: IslandWeather; season?: Season }): void {
@@ -55,4 +56,16 @@ export function useAudioState(): AudioState {
     () => AudioManager.getState(),
     () => EMPTY_STATE,
   );
+}
+
+/** Sound turns on at the first tap or key anywhere on the page, and again if the browser turned it off. */
+export function useSoundUnlock(): void {
+  const { enabled } = useAudioState();
+  useEffect(() => {
+    if (enabled) return;
+    const unlock = () => AudioManager.enable();
+    window.addEventListener("pointerdown", unlock);
+    window.addEventListener("keydown", unlock);
+    return () => { window.removeEventListener("pointerdown", unlock); window.removeEventListener("keydown", unlock); };
+  }, [enabled]);
 }
