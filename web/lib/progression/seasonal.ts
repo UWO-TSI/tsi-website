@@ -4,6 +4,7 @@
  * Pure; the catch route, /api/collections/tourney and the island share it.
  * An event is a seasonal club goal plus its `event` (types.ts GoalEvent).
  */
+import { SEASONAL_GOALS } from "./defaults";
 import { goalCycle } from "./goals";
 import type { ClubGoal, GoalEvent } from "./types";
 
@@ -30,27 +31,28 @@ export function runningEvent<G extends EventGoal>(goals: readonly G[], now: Date
   return goals.find((g) => g.event.decor && eventOpen(g, now)) ?? null;
 }
 
-/** Limited-time catches: every species some seasonal goal gates, and the ones biting now. */
+/**
+ * Limited-time catches: every species a seasonal goal gates (the seeded events'
+ * always count, so a missing goal list shuts them rather than freeing them),
+ * and the ones biting now.
+ */
 export function eventCatches(goals: readonly EventGoal[], now: Date): { limited: Set<string>; open: Set<string> } {
   const seasonal = goals.filter((g) => g.goal_type === "seasonal");
   return {
-    limited: new Set(seasonal.flatMap((g) => g.event.catches)),
+    limited: new Set([...SEASONAL_GOALS, ...seasonal].flatMap((g) => g.event.catches)),
     open: new Set(seasonal.filter((g) => eventOpen(g, now)).flatMap((g) => g.event.catches)),
   };
 }
 
-export type CatchRule = { ok: true; tourney: { goal_id: string; cycle: number } | null } | { ok: false; event: string };
-
 /**
- * What a catch at `now` may do: a limited-time species outside its event is
- * refused (the pool never offers it, so only a forged request gets here); a
- * catch during an open tourney also enters it.
+ * What the server's land step checks (collections store `land`, SQL
+ * seasonal_land): limited-time species whose event isn't running land
+ * nothing; a catch landed while a tourney runs enters it.
  */
-export function catchRule(goals: readonly (EventGoal & { id: string })[], itemKey: string, now: Date): CatchRule {
-  const gating = goals.filter((g) => g.goal_type === "seasonal" && g.event.catches.includes(itemKey));
-  if (gating.length && !gating.some((g) => eventOpen(g, now))) return { ok: false, event: gating[0].title };
+export function landSeason(goals: readonly (EventGoal & { id: string })[], now: Date): { closed: string[]; tourney: { goal_id: string; cycle: number } | null } {
+  const { limited, open } = eventCatches(goals, now);
   const t = goals.find((g) => g.event.tourney && eventOpen(g, now));
-  return { ok: true, tourney: t ? { goal_id: t.id, cycle: goalCycle({ ...t, active: true }, now).cycle } : null };
+  return { closed: [...limited].filter((k) => !open.has(k)), tourney: t ? { goal_id: t.id, cycle: goalCycle({ ...t, active: true }, now).cycle } : null };
 }
 
 /** The tourney the board shows: the open one, else the one that ran most recently (until the next opens). */

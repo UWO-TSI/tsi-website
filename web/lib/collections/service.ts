@@ -1,11 +1,16 @@
+import { z } from "zod";
 import {
   checkDonation, clampSize, journalPage, museumWings, validateShowcase, weekStart, weeklyTrophies,
   type Exhibit, type JournalPage, type MuseumWing, type Trophy, type WorldMoment,
 } from "./logic";
+import { castWater, fishRoll, forageSize, nodeAt, nodeRoll } from "./rolls";
 import { CATEGORIES, type Category } from "./roster";
 import { toFailure, type Result } from "@/lib/result";
-import type { CatchResult, CollectionsStore, TourneyRef } from "./store";
-import { latestTourney, tourneyBoards, type TourneyBoard } from "@/lib/progression/seasonal";
+import { hourKey } from "@/lib/game/peaceful";
+import { bestOwnedRod } from "@/lib/game/rods";
+import type { IslandWeather } from "@/lib/game/islandWeather";
+import type { CatchResult, CollectionsStore } from "./store";
+import { eventCatches, landSeason, latestTourney, tourneyBoards, type TourneyBoard } from "@/lib/progression/seasonal";
 import type { ClubGoal } from "@/lib/progression/types";
 
 const ERRORS: Record<string, [number, string]> = {
@@ -14,16 +19,72 @@ const ERRORS: Record<string, [number, string]> = {
   not_owned: [409, "You need one in your pockets to donate it."],
   not_donatable: [422, "The museum doesn't collect that."],
   rate_limited: [429, "That's plenty of those for this hour. Try again later."],
+  too_fast: [429, "Too quick. Give it a moment."],
+  no_roll: [404, "Nothing on the line."],
+  roll_expired: [410, "That one got away. Cast again."],
+  already_landed: [409, "Already landed."],
+  already_harvested: [409, "You've already gathered here this hour."],
+  out_of_season: [409, "That one only bites during its seasonal event."],
   failed: [500, "Something went wrong. Try again."],
 };
 const fail = <T>(err: unknown): Result<T> => toFailure(ERRORS, err);
 
-export async function recordCatch(store: CollectionsStore, memberId: string, itemKey: string, sizeCm: number | null | undefined, tourney: TourneyRef | null = null): Promise<Result<CatchResult & { item_key: string }>> {
+/** Test fixtures and the dev demos; catches from the world go through catchAction. */
+export async function recordCatch(store: CollectionsStore, memberId: string, itemKey: string, sizeCm: number | null | undefined): Promise<Result<CatchResult & { item_key: string }>> {
   try {
     const sp = (await store.roster()).find((s) => s.key === itemKey);
     const size = clampSize(sp, sizeCm);
     const trophy = !!sp && (sp.category === "fish" || sp.category === "sea") && size !== null;
-    return { ok: true, data: { item_key: itemKey, ...(await store.recordCatch(memberId, itemKey, size, trophy, trophy ? tourney : null)) } };
+    return { ok: true, data: { item_key: itemKey, ...(await store.recordCatch(memberId, itemKey, size, trophy)) } };
+  } catch (err) {
+    return fail(err);
+  }
+}
+
+const XZ = z.tuple([z.number().finite(), z.number().finite()]);
+const CatchRequest = z.discriminatedUnion("action", [
+  z.object({ action: z.literal("harvest"), node: z.string().max(64), at: XZ }),
+  z.object({ action: z.literal("cast"), site: z.enum(["village", "home"]), at: XZ, power: z.number().min(0).max(1) }),
+  z.object({ action: z.literal("land"), roll: z.string().uuid() }),
+]);
+/** A recorded catch (harvest, land), or a cast's roll waiting to be landed. */
+export type CatchReply = { item_key: string; size_cm: number | null } & (CatchResult | { roll: string });
+const trophyFor = (sp: { category: string } | undefined, size: number | null) => !!sp && (sp.category === "fish" || sp.category === "sea") && size !== null;
+
+/**
+ * A catch from the world (roadmap "Server-authoritative catch rolls"). The
+ * client names an action and where it stands; the server checks the place,
+ * rolls on its own clock and weather, and records only its roll:
+ *   harvest { node, at }        a forage node or bug spot: one per node per hour
+ *   cast    { site, at, power } rolls the fish that will bite (roll id; recorded on land)
+ *   land    { roll }            the reel was won: records that roll once
+ * Seasonal events (`goals`, the active club goals): limited-time fish are in
+ * the roll only while their event runs and never land outside it; a fish
+ * landed while the fishing tourney runs enters it, in the same transaction.
+ */
+export async function catchAction(store: CollectionsStore, memberId: string, body: unknown, now: Date, weather: IslandWeather, goals: readonly ClubGoal[] = [], random = Math.random): Promise<Result<CatchReply>> {
+  const parsed = CatchRequest.safeParse(body);
+  if (!parsed.success) return { ok: false, status: 400, code: "invalid", error: "Invalid request" };
+  const req = parsed.data;
+  try {
+    if (req.action === "land") return { ok: true, data: await store.land(memberId, req.roll, landSeason(goals, now)) };
+    const roster = await store.roster();
+    if (req.action === "harvest") {
+      const node = nodeAt(req.node, req.at);
+      if (!node) return { ok: false, status: 422, code: "wrong_place", error: "Nothing to gather from here." };
+      const sp = nodeRoll(memberId, node, now, weather);
+      if (!sp) return { ok: false, status: 409, code: "nothing_here", error: "Nothing's out here right now." };
+      const size = clampSize(roster.find((s) => s.key === sp.key), forageSize(sp, random));
+      return { ok: true, data: { item_key: sp.key, size_cm: size, ...(await store.harvest(memberId, node.id, hourKey(now), sp.key, size, trophyFor(sp, size))) } };
+    }
+    const water = castWater(req.site, req.at);
+    if (!water) return { ok: false, status: 422, code: "wrong_place", error: "No water in reach." };
+    const { fish, size } = fishRoll(water, req.power, bestOwnedRod(await store.ownedGear(memberId)), now, weather, random, eventCatches(goals, now));
+    const sp = roster.find((s) => s.key === fish.key);
+    const kept = clampSize(sp, size);
+    const roll = await store.cast(memberId, fish.key, kept, trophyFor(sp, kept));
+    // Not caught yet: the reel and the card use this; the record happens on land.
+    return { ok: true, data: { roll, item_key: fish.key, size_cm: size } };
   } catch (err) {
     return fail(err);
   }

@@ -90,8 +90,8 @@ describe("goal cycles and monument", () => {
 });
 
 describe("seed content", () => {
-  it("defaults.ts mirrors the goals and chapters seeded by 20260926150200_progression.sql", () => {
-    const sql = readFileSync(join(__dirname, "../../supabase/migrations/20260926150200_progression.sql"), "utf8");
+  it("defaults.ts mirrors the goals and chapters seeded by 20260926150200_progression.sql (chapter 4's copy: 20260929100200)", () => {
+    const sql = ["20260926150200_progression", "20260929100200_chapter4_subclass_copy"].map((f) => readFileSync(join(__dirname, `../../supabase/migrations/${f}.sql`), "utf8")).join("\n");
     const story = DEFAULT_GOALS.filter((g) => g.goal_type === "story");
     const texts = [...story.flatMap((g) => [g.slug, g.title, g.summary, g.completion_letter_subject, g.completion_letter_body]), ...DEFAULT_CHAPTERS.flatMap((c) => [c.slug, c.title, c.summary])];
     for (const t of texts) if (t) expect(sql).toContain(t.replace(/'/g, "''"));

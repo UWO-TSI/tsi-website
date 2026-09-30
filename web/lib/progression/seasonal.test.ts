@@ -1,8 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { SEASONAL_GOALS, DEFAULT_GOALS } from "./defaults";
-import { catchRule, eventCatches, latestTourney, runningEvent, tourneyBoards, type TourneyEntry } from "./seasonal";
+import { eventCatches, landSeason, latestTourney, runningEvent, tourneyBoards, type TourneyEntry } from "./seasonal";
 import { memoryCollectionsStore } from "@/lib/collections/memoryStore";
-import { recordCatch, tourney } from "@/lib/collections/service";
+import { tourney } from "@/lib/collections/service";
+import { fishRoll } from "@/lib/collections/rolls";
+import { rodByTier } from "@/lib/game/rods";
+import { seededRandom } from "@/lib/game/weatherSystem";
+import type { ClubGoal } from "./types";
 
 const at = (iso: string) => new Date(iso);
 const decor = (iso: string) => runningEvent(DEFAULT_GOALS, at(iso))?.event.decor ?? null;
@@ -30,13 +34,29 @@ describe("event windows (Toronto time)", () => {
 
 describe("limited-time catches and tourney entry", () => {
   const perch = "fish_yellow_perch";
+  const LIMITED = ["fish_yellow_perch", "fish_sturgeon", "fish_giant_trevally"];
   it("gates the event's species to its window and nothing else", () => {
-    expect(catchRule(DEFAULT_GOALS, perch, at("2027-09-10T16:00:00Z"))).toEqual({ ok: true, tourney: { goal_id: fall.id, cycle: 2027 } });
-    expect(catchRule(DEFAULT_GOALS, perch, at("2027-10-10T16:00:00Z"))).toEqual({ ok: false, event: "Fall fishing tourney" });
-    expect(catchRule(DEFAULT_GOALS, "fish_dace", at("2027-10-10T16:00:00Z"))).toEqual({ ok: true, tourney: null });
+    expect(landSeason(DEFAULT_GOALS, at("2027-09-10T16:00:00Z"))).toEqual({ closed: [], tourney: { goal_id: fall.id, cycle: 2027 } });
+    expect(landSeason(DEFAULT_GOALS, at("2027-10-10T16:00:00Z"))).toEqual({ closed: LIMITED, tourney: null });
+    // No club goals (a failed read, or before the migration): shut, never free.
+    expect(landSeason([], at("2027-09-10T16:00:00Z"))).toEqual({ closed: LIMITED, tourney: null });
     const c = eventCatches(DEFAULT_GOALS, at("2027-10-10T16:00:00Z"));
     expect([c.limited.has(perch), c.open.has(perch), c.limited.has("fish_dace")]).toEqual([true, false, false]);
     expect(eventCatches(DEFAULT_GOALS, at("2027-09-10T16:00:00Z")).open.has(perch)).toBe(true);
+  });
+  it("never rolls a limited-time fish on the server outside its window, and does inside it", () => {
+    const rolls = (iso: string, goals: readonly ClubGoal[], water: "river" | "sea") => {
+      const random = seededRandom(11), now = at(iso), catches = eventCatches(goals, now);
+      return new Set(Array.from({ length: 4000 }, () => fishRoll(water, 1, rodByTier(5), now, "clear", random, catches).fish.key));
+    };
+    for (const water of ["river", "sea"] as const) {
+      for (const [iso, goals] of [["2026-10-10T16:00:00Z", DEFAULT_GOALS], ["2026-09-10T16:00:00Z", []]] as const) {
+        const got = rolls(iso, goals, water);
+        expect(LIMITED.filter((k) => got.has(k)), `${water} ${iso} ${goals.length}`).toEqual([]);
+      }
+    }
+    expect(rolls("2026-09-10T16:00:00Z", DEFAULT_GOALS, "river").has(perch)).toBe(true);
+    expect(rolls("2026-09-10T16:00:00Z", DEFAULT_GOALS, "sea").has("fish_giant_trevally")).toBe(true);
   });
   it("shows the open tourney, then the last one until the next opens", () => {
     expect(latestTourney(DEFAULT_GOALS, at("2026-09-20T16:00:00Z"))).toMatchObject({ cycle: 2026, open: true });
@@ -71,17 +91,23 @@ describe("tourney board privacy (principle 6)", () => {
     for (const n of [4, 6]) expect(json).not.toContain(`Member ${n}`);
     for (const n of [1, 2, 3, 4, 6, 7]) expect(json).not.toContain(id(n));
   });
-  it("records entries from catches during the tourney, keeping each member's biggest per category", async () => {
-    const m = memoryCollectionsStore(() => at("2026-09-20T16:00:00Z"));
+  it("enters only what the server landed during the tourney, keeping each member's biggest per category", async () => {
+    let clock = at("2026-09-20T16:00:00Z");
+    const m = memoryCollectionsStore(() => clock);
     m.name(id(1), "Maya");
     m.name(id(2), "Jordan");
-    const ref = { goal_id: fall.id, cycle: 2026 };
-    await recordCatch(m.store, id(1), "fish_carp", 60, ref);
-    await recordCatch(m.store, id(1), "fish_carp", 40, ref);
-    await recordCatch(m.store, id(1), "sea_scallop", 12, ref);
-    await recordCatch(m.store, id(2), "fish_black_bass", 50, ref);
-    await recordCatch(m.store, id(2), "fish_black_bass", 55, null); // not during the tourney
-    await recordCatch(m.store, id(2), "apple", null, ref); // no size, no entry
+    const land = async (member: string, key: string, size: number | null, now: string) => {
+      clock = at(now);
+      const roll = await m.store.cast(member, key, size, size !== null);
+      clock = new Date(clock.getTime() + 5000);
+      return m.store.land(member, roll, landSeason(DEFAULT_GOALS, clock));
+    };
+    await land(id(1), "fish_carp", 60, "2026-09-20T16:00:00Z");
+    await land(id(1), "fish_carp", 40, "2026-09-20T16:01:00Z");
+    await land(id(1), "sea_scallop", 12, "2026-09-20T16:02:00Z");
+    await land(id(2), "fish_black_bass", 50, "2026-09-20T16:03:00Z");
+    await land(id(2), "fish_black_bass", 55, "2026-10-02T16:00:00Z"); // after the tourney
+    await m.store.cast(id(2), "fish_pike", 90, true); // a lost reel: never landed
     const r = await tourney(m.store, DEFAULT_GOALS, id(2), at("2026-09-20T16:00:00Z"));
     expect(r.ok && r.data).toMatchObject({ slug: "fall-fishing-tourney", cycle: 2026, open: true });
     const [fish, sea] = r.ok && r.data ? r.data.boards : [];

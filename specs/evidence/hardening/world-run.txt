@@ -1,0 +1,24 @@
+In-world runs (specs/evidence/hardening/world.mjs), staging, dev server :3110, headed Chromium, member "Juniper".
+POST /api/collections requests and answers as the page sent them (E at shell-3, then hold/release E to cast at the south shore, E on the bite, reel played by the script).
+
+Run 1 (17:53 EDT; screenshots not kept, the reel was lost):
+request {"action":"harvest","node":"shell-3","at":[-8.3,-16.25]}
+response 200 {"ok":true,"catch":{"item_key":"shell_asari","size_cm":5.9,"count":1,"total_collected":1,"best_size_cm":5.9,"new_record":true}}
+  toast: "NEW! Got Asari Clam, 5.9 cm!"
+request {"action":"cast","site":"village","at":[-6.5,-19.5],"power":0.6979999999989325}
+response 200 {"ok":true,"catch":{"roll":"0653e8b0-b0a7-4f02-871b-af0ca6e53441","item_key":"sea_garden_eel","size_cm":35}}
+  reel lost ("It got away…"): no land request, nothing recorded
+
+Run 2 (fresh browser, same hour; W-01..W-03):
+request {"action":"harvest","node":"shell-3","at":[-8.3,-16.25]}
+response 409 {"ok":false,"error":"You've already gathered here this hour.","code":"already_harvested"}
+request {"action":"cast","site":"village","at":[-6.5,-19.5],"power":0.7285714285719587}
+response 200 {"ok":true,"catch":{"roll":"f1e1c103-62b4-41b6-95c7-c5a73762ccfd","item_key":"sea_sea_star","size_cm":9}}
+request {"action":"land","roll":"f1e1c103-62b4-41b6-95c7-c5a73762ccfd"}
+response 200 {"ok":true,"catch":{"item_key":"sea_sea_star","size_cm":9,"count":1,"total_collected":1,"best_size_cm":9,"new_record":true}}
+
+Gates run (node world.mjs <out> gates), after chapters 3 and 4 were completed (flows-run-1/2):
+museum before E: Tethos Island
+museum after E: Museum          (W-04: the museum is open; cases show the donors)
+ruins before E: Tethos Island
+ruins after E: The ruins        (W-05: through the gate, Druid kit loaded)

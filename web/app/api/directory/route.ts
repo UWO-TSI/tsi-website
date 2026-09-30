@@ -1,11 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { adminContext } from "@/lib/server/adminContext";
 import type { DirectoryMember } from "@/lib/supabase/types";
 
 const DIRECTORY_FIELDS =
   "id, display_name, avatar_url, tier, position, class, level, xp, skills, is_active";
 
 export async function GET(request: NextRequest) {
+  // T1/T2 see everyone; T3+ see only active members. The gate answers both (401 signed out).
+  const gate = await adminContext();
+  if (gate instanceof NextResponse && gate.status !== 403) return gate;
+  const staff = !(gate instanceof NextResponse);
+
   let supabase;
   try {
     supabase = await createClient();
@@ -14,25 +20,6 @@ export async function GET(request: NextRequest) {
       { error: "Service unavailable — database not configured", members: [] },
       { status: 503 }
     );
-  }
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  // Get caller's tier for visibility rules
-  const { data: callerProfile } = await supabase
-    .from("profiles")
-    .select("tier")
-    .eq("id", user.id)
-    .single();
-
-  if (!callerProfile) {
-    return NextResponse.json({ error: "Profile not found" }, { status: 404 });
   }
 
   const { searchParams } = new URL(request.url);
@@ -46,10 +33,7 @@ export async function GET(request: NextRequest) {
     .select(DIRECTORY_FIELDS)
     .order("level", { ascending: false });
 
-  // T1/T2 see everyone; T3+ see only active members
-  if (callerProfile.tier > 2) {
-    query = query.eq("is_active", true);
-  }
+  if (!staff) query = query.eq("is_active", true);
 
   if (role) {
     query = query.eq("position", role);

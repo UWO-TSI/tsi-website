@@ -153,18 +153,22 @@ export const FISH: FishDef[] = [...CORE_FISH, ...EXTRA_FISH, ...SEA_CREATURES];
 
 /**
  * Limited-time catches (specs/seasonal-events.md): species a seasonal goal
- * gates bite only while their event runs. The island sets both sets from the
- * club goals and the world clock (lib/game/seasonalEvents.ts); the catch
- * route refuses them outside the window too.
+ * gates bite only while their event runs. The server roll passes the sets for
+ * its own clock in the context (lib/collections/rolls.ts fishRoll); the
+ * island's local fallback reel uses the ones the world sets from the club
+ * goals and the world clock (lib/game/seasonalEvents.ts). Until told, the
+ * seeded events' catches are shut.
  */
-let eventCatches: { limited: ReadonlySet<string>; open: ReadonlySet<string> } = { limited: new Set(SEASONAL_GOALS.flatMap((g) => g.event.catches)), open: new Set() };
-export function setEventCatches(next: typeof eventCatches): void {
+export interface EventCatches { limited: ReadonlySet<string>; open: ReadonlySet<string> }
+let eventCatches: EventCatches = { limited: new Set(SEASONAL_GOALS.flatMap((g) => g.event.catches)), open: new Set() };
+export function setEventCatches(next: EventCatches): void {
   eventCatches = next;
 }
-const biting = (f: FishDef, zone: "river" | "sea", hour: number, weather: string) =>
-  (f.zone ?? "river") === zone && (!f.when || f.when(hour, weather)) && (!eventCatches.limited.has(f.key) || eventCatches.open.has(f.key));
+export interface FishingContext { hour: number; weather: string; catches?: EventCatches }
+const biting = (f: FishDef, zone: "river" | "sea", { hour, weather, catches = eventCatches }: FishingContext) =>
+  (f.zone ?? "river") === zone && (!f.when || f.when(hour, weather)) && (!catches.limited.has(f.key) || catches.open.has(f.key));
 
-export function currentFishingContext(): { hour: number; weather: string } {
+export function currentFishingContext(): FishingContext {
   const hour = getLabHour() ?? new Date().getHours() + new Date().getMinutes() / 60;
   return { hour, weather: getTodayWeather() };
 }
@@ -194,17 +198,17 @@ function luckWeight(f: FishDef, weather: string, luck: number): number {
 }
 
 /** Available weighted catches, including weather luck, shared with the QA bench. */
-export function fishingPool(luck = 0, zone: "river" | "sea" = "river", context = currentFishingContext()) {
-  const { hour, weather } = context;
+export function fishingPool(luck = 0, zone: "river" | "sea" = "river", context: FishingContext = currentFishingContext()) {
+  const { weather } = context;
   const totalLuck = luck + weatherMods(weather).rareLuckBonus;
   return FISH
-    .filter((f) => biting(f, zone, hour, weather))
+    .filter((f) => biting(f, zone, context))
     .map((fish) => ({ fish, weight: luckWeight(fish, weather, totalLuck) }));
 }
 
 /** Weighted roll over the species available right now. luck 0..~1.3 from
  *  cast power — see CAST. */
-export function rollFish(luck = 0, zone: "river" | "sea" = "river", context = currentFishingContext()): FishDef {
+export function rollFish(luck = 0, zone: "river" | "sea" = "river", context: FishingContext = currentFishingContext()): FishDef {
   const pool = fishingPool(luck, zone, context);
   const total = pool.reduce((s, entry) => s + entry.weight, 0);
   let r = Math.random() * total;
@@ -216,8 +220,8 @@ export function rollFish(luck = 0, zone: "river" | "sea" = "river", context = cu
 }
 
 /** Skewed size roll — most catches modest, big ones are the brag. */
-export function rollSize([min, max]: [number, number]): number {
-  return Math.round(min + (max - min) * Math.pow(Math.random(), 1.7));
+export function rollSize([min, max]: [number, number], random = Math.random): number {
+  return Math.round(min + (max - min) * Math.pow(random(), 1.7));
 }
 
 // ─── Reel tuning (track space is 0..1; bar width comes from rarity) ─────────
@@ -265,7 +269,7 @@ export function fishOdds(fish: FishDef): number {
   // Odds are within the species' own zone pool (a sea catch competes with
   // the sea roster, not the whole book).
   const zone = fish.zone ?? "river";
-  const pool = FISH.filter((f) => biting(f, zone, hour, weather));
+  const pool = FISH.filter((f) => biting(f, zone, { hour, weather }));
   const total = pool.reduce((s, f) => s + fishWeight(f, weather), 0);
   const w = fishWeight(fish, weather);
   return Math.max(1, Math.round(total / w));

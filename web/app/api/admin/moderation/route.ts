@@ -1,11 +1,14 @@
 // Moderation queue (row 221) for reported member text: notes in the letters
-// table and study-table chat. Name reports keep /api/identity/moderate.
-// T1/T2 remove (hidden: a note stays only in its sender's sent list), remove
-// and mute the author 7 days, or dismiss (clear the report, the text stays).
+// table and study-table chat. Name reports, mutes and unmutes keep
+// /api/identity/moderate. T1/T2 remove (hidden: a note stays only in its
+// sender's sent list), remove and mute the author 7 days, or dismiss (clear
+// the report, the text stays). Every action goes in the audit log, which GET
+// returns with the members muted now.
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { badRequest } from "@/lib/server/memberContext";
 import { adminContext } from "@/lib/server/adminContext";
+import { logModeration, unlogged } from "@/lib/server/moderationLog";
 
 const MUTE_DAYS = 7;
 const SOURCES = {
@@ -19,10 +22,16 @@ export async function GET() {
   if (ctx instanceof NextResponse) return ctx;
   const read = (s: (typeof SOURCES)[keyof typeof SOURCES]) =>
     ctx.db.from(s.table).select(s.cols).eq("reported", true).eq("hidden", false).order("reported_at", { ascending: false }).limit(100);
-  const [letters, chat] = await Promise.all([read(SOURCES.letter), read(SOURCES.chat)]);
-  if (letters.error || chat.error) return NextResponse.json({ ok: false, error: "Couldn't load reports." }, { status: 500 });
+  const [letters, chat, muted, log] = await Promise.all([
+    read(SOURCES.letter),
+    read(SOURCES.chat),
+    ctx.db.from("member_identity").select("member_id").gt("muted_until", ctx.now.toISOString()).order("muted_until").limit(100),
+    ctx.db.from("moderation_log").select("id, actor_id, action, item_kind, item_id, target_id, excerpt, created_at").order("created_at", { ascending: false }).limit(50),
+  ]);
+  if (letters.error || chat.error || muted.error || log.error) return NextResponse.json({ ok: false, error: "Couldn't load reports." }, { status: 500 });
   const rows = [...((letters.data ?? []) as unknown as Row[]), ...((chat.data ?? []) as unknown as Row[])];
-  const ids = [...new Set(rows.flatMap((r) => [r.sender_id, r.recipient_id, r.member_id, r.reported_by]).filter((x): x is string => !!x))];
+  const logRows = (log.data ?? []) as Row[], mutedIds = ((muted.data ?? []) as Row[]).map((m) => m.member_id);
+  const ids = [...new Set([...rows.flatMap((r) => [r.sender_id, r.recipient_id, r.member_id, r.reported_by]), ...logRows.flatMap((e) => [e.actor_id, e.target_id]), ...mutedIds].filter((x): x is string => !!x))];
   const [profiles, idents] = ids.length
     ? await Promise.all([ctx.db.from("profiles").select("id, display_name").in("id", ids), ctx.db.from("member_identity").select("member_id, world_name, muted_until").in("member_id", ids)])
     : [{ data: [] }, { data: [] }];
@@ -38,6 +47,8 @@ export async function GET() {
       ok: true,
       letters: ((letters.data ?? []) as unknown as Row[]).map((r) => view(r, r.sender_id, r.recipient_id)),
       chat: ((chat.data ?? []) as unknown as Row[]).map((r) => view(r, r.member_id, r.reported_by)),
+      muted: mutedIds.map(who),
+      log: logRows.map((e) => ({ id: e.id, action: e.action, item_kind: e.item_kind, item_id: e.item_id, excerpt: e.excerpt, created_at: e.created_at, actor: who(e.actor_id), target: who(e.target_id) })),
     },
     { headers: { "Cache-Control": "no-store" } },
   );
@@ -57,7 +68,7 @@ export async function POST(request: Request) {
     .update(action === "dismiss" ? { reported: false } : { hidden: true })
     .eq("id", id)
     .eq("reported", true)
-    .select(s.author);
+    .select(`${s.author}, body`);
   if (error) return NextResponse.json({ ok: false, error: "Something went wrong. Try again." }, { status: 500 });
   const row = ((data ?? []) as unknown as Row[])[0];
   if (!row) return NextResponse.json({ ok: false, error: "That report is already closed." }, { status: 404 });
@@ -68,5 +79,6 @@ export async function POST(request: Request) {
     const { error: muteError } = await ctx.db.from("member_identity").upsert({ member_id: author, muted_until }, { onConflict: "member_id" });
     if (muteError) return NextResponse.json({ ok: false, error: "Removed, but the mute didn't save. Try again." }, { status: 500 });
   }
+  if (!(await logModeration(ctx.db, ctx.userId, { action, item_kind: kind, item_id: id, target_id: author, excerpt: row.body }))) return unlogged();
   return NextResponse.json({ ok: true, moderation: { kind, id, action, muted_until } });
 }

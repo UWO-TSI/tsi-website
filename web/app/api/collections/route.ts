@@ -1,28 +1,20 @@
 import { NextResponse } from "next/server";
-import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { recordCatch } from "@/lib/collections/service";
+import { catchAction } from "@/lib/collections/service";
 import { supabaseCollectionsStore } from "@/lib/collections/supabaseStore";
-import { withStore } from "@/lib/server/memberContext";
+import { jsonResult, withStore } from "@/lib/server/memberContext";
+import { islandWeatherNow } from "@/lib/server/weather";
 import { supabaseProgressionStore } from "@/lib/progression/supabaseStore";
-import { catchRule } from "@/lib/progression/seasonal";
 
 /**
- * Member collections: stackable collectibles (fruit, flowers, fish). The
- * stock sells for play coins through /api/economy/sell.
+ * Member collections: stackable collectibles (fish, bugs, fruit, flowers,
+ * shells, minerals). The stock sells for play coins through /api/economy/sell.
  *
  * GET  → the caller's collection rows.
- * POST → collect one item through collections_record_catch (count+1, capped).
+ * POST → a catch from the world, rolled and recorded by the server
+ *        (lib/collections/service.ts catchAction): harvest, cast, land.
+ *        A client-reported species or size is never accepted.
  */
-
-// Shape validation only, so new species need zero API edits. Sold stock is
-// bounded by the per-species hourly cap in collections_record_catch, and only
-// roster / fish_prices species have a sell price.
-const CollectSchema = z.object({
-  item_key: z.string().min(1).max(64).regex(/^[a-z0-9_]+$/),
-  // 031: catch size for the catch card / personal record (clamped server-side).
-  size_cm: z.number().positive().max(10000).optional(),
-});
 
 export async function GET() {
   let supabase: Awaited<ReturnType<typeof createClient>>;
@@ -52,30 +44,11 @@ export async function GET() {
 export async function POST(request: Request) {
   const ctx = await withStore(supabaseCollectionsStore);
   if (ctx instanceof NextResponse) return ctx;
-
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
-  }
-  const parsed = CollectSchema.safeParse(body);
-  if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid item_key" }, { status: 400 });
-  }
-  const { item_key, size_cm } = parsed.data;
-
-  // Seasonal events: limited-time catches only while their event runs; a catch
-  // during the fishing tourney also enters it. No club goals yet: no events.
+  // Service role only: members can't write member_collections (20260926150900);
+  // the catch-roll functions (20260929100000) keep the hourly caps. The club
+  // goals carry the seasonal events (limited-time fish, the tourney); with none
+  // (before 20260929120000) the limited-time fish stay shut.
+  const body = await request.json().catch(() => null);
   const goals = await supabaseProgressionStore(ctx.db).listGoals().catch(() => []);
-  const rule = catchRule(goals, item_key, ctx.now);
-  if (!rule.ok) return NextResponse.json({ error: `That one only bites during the ${rule.event}.`, code: "out_of_season" }, { status: 409 });
-
-  // Service role only: members can't write member_collections (20260926150900),
-  // and collections_record_catch caps catches per species per hour.
-  // ponytail: the catch and its size are client-rolled (bounded by those caps);
-  // server-issued catch tokens are the upgrade if the tourney attracts forgers.
-  const r = await recordCatch(ctx.store, ctx.userId, item_key, size_cm, rule.tourney);
-  if (r.ok) return NextResponse.json(r.data);
-  return NextResponse.json({ error: r.error }, { status: r.status });
+  return jsonResult(await catchAction(ctx.store, ctx.userId, body, ctx.now, await islandWeatherNow(ctx.now), goals), "catch");
 }

@@ -1,0 +1,96 @@
+staging jjiyeroyralfbluowbjq; member c2982825-3dd1-4572-a9d0-4b7fadd306d6, staff 6d14b24f-7005-4194-adf2-4fc02d186c45 (T2), public 4e294cb3-7032-433c-971e-90f855021d10; 2026-09-29T21:44:46.147Z
+
+=== A. Catches are rolled by the server (member) ===
+2026-09-29T21:44:47.173Z member POST /api/collections {"item_key":"fish_golden_koi","size_cm":95} -> 400 {"ok":false,"code":"invalid","error":"Invalid request"}
+PASS: A1 a client-reported species and size is refused (400)
+2026-09-29T21:44:47.811Z member POST /api/collections {"action":"harvest","node":"rock-0","at":[0,0]} -> 422 {"ok":false,"code":"wrong_place","error":"Nothing to gather from here."}
+PASS: A2 a node out of reach is the wrong place (422)
+2026-09-29T21:44:48.488Z member POST /api/collections {"action":"harvest","node":"rock-1","at":[-18,-8.9],"item_key":"rock_gold_nugget"} -> 200 {"ok":true,"catch":{"item_key":"rock_clay","size_cm":null,"count":1,"total_collected":1,"best_size_cm":null,"new_record":false}}
+PASS: A3 harvest rock-1 from beside it: 200 rock_clay
+2026-09-29T21:44:48.922Z member POST /api/collections {"action":"harvest","node":"rock-1","at":[-18,-8.9]} -> 409 {"ok":false,"error":"You've already gathered here this hour.","code":"already_harvested"}
+PASS: A4 the same node again this hour is refused (409)
+2026-09-29T21:44:49.556Z member POST /api/collections {"action":"cast","site":"village","at":[-6.5,-17.5],"power":1} -> 422 {"ok":false,"code":"wrong_place","error":"No water in reach."}
+PASS: A5 a cast with no water in reach is the wrong place (422)
+2026-09-29T21:44:50.108Z member POST /api/collections {"action":"cast","site":"village","at":[-6.5,-19.5],"power":1,"item_key":"fish_golden_koi"} -> 200 {"ok":true,"catch":{"roll":"dcde44f4-65b9-4f76-be60-9c41b57bfaf0","item_key":"fish_horse_mackerel","size_cm":38}}
+PASS: A6 cast from the sea shore: the server rolled fish_horse_mackerel 38 cm
+2026-09-29T21:44:50.413Z member POST /api/collections {"action":"land","roll":"dcde44f4-65b9-4f76-be60-9c41b57bfaf0"} -> 429 {"ok":false,"error":"Too quick. Give it a moment.","code":"too_fast"}
+PASS: A7 landing under 3 s after the roll is too fast (429)
+2026-09-29T21:44:51.054Z member POST /api/collections {"action":"cast","site":"village","at":[-6.5,-19.5],"power":1} -> 429 {"ok":false,"error":"Too quick. Give it a moment.","code":"too_fast"}
+PASS: A8 a second cast inside 4 s is too fast (429)
+2026-09-29T21:44:54.687Z member POST /api/collections {"action":"land","roll":"dcde44f4-65b9-4f76-be60-9c41b57bfaf0","item_key":"fish_golden_koi","size_cm":999} -> 200 {"ok":true,"catch":{"item_key":"fish_horse_mackerel","size_cm":38,"count":1,"total_collected":1,"best_size_cm":38,"new_record":true}}
+PASS: A9 land after the reel: the rolled species is recorded, not the client's
+2026-09-29T21:44:55.026Z member POST /api/collections {"action":"land","roll":"dcde44f4-65b9-4f76-be60-9c41b57bfaf0"} -> 409 {"ok":false,"error":"Already landed.","code":"already_landed"}
+PASS: A10 landing the same roll again is refused (409)
+2026-09-29T21:44:55.334Z public POST /api/collections {"action":"land","roll":"dcde44f4-65b9-4f76-be60-9c41b57bfaf0"} -> 404 {"ok":false,"error":"Nothing on the line.","code":"no_roll"}
+PASS: A11 another member can't land it (404)
+SQL> select node_id, hour_key, item_key, size_cm, landed_at is not null landed from catch_rolls where member_id = 'c2982825-3dd1-4572-a9d0-4b7fadd306d6' order by rolled_at desc limit 3
+node_id | hour_key | item_key | size_cm | landed
+ |  | fish_horse_mackerel | 38 | true
+rock-1 | 2026-09-29T17 | rock_clay |  | true
+SQL> select item_key, count, best_size_cm from member_collections where user_id = 'c2982825-3dd1-4572-a9d0-4b7fadd306d6' and item_key in ('fish_horse_mackerel', 'rock_clay')
+item_key | count | best_size_cm
+fish_horse_mackerel | 1 | 38.0
+rock_clay | 1 | 
+
+=== B. Chapter 3: Fund the museum ===
+2026-09-29T21:44:58.962Z member GET /api/progression/state -> 200 {"ok":true,"state":{"chapters":[{"slug":"settle-in","position":1,"title":"Settle in","summary":"Claim your plot, make your first catch and donate it, then report to HQ.","requirement":"settle_in","goal_slug":null,"status":"completed","steps":[{"key":"claim_plot","label":"Claim your plot at HQ","done
+chapter 3: active · contribute:open goal_complete:open
+PASS: B1 chapter 3 is active after chapters 1-2
+2026-09-29T21:44:59.981Z member POST /api/progression/chapters/advance {"chapter_slug":"fund-museum","action":"complete"} -> 409 {"ok":false,"error":"The club goal isn't complete yet.","code":"rejected"}
+PASS: B2 finishing before the museum fund is complete is refused (409)
+2026-09-29T21:45:00.882Z member POST /api/progression/chapters/advance {"chapter_slug":"fund-museum","action":"skip"} -> 403 {"ok":false,"error":"This chapter can't be skipped.","code":"rejected"}
+PASS: B3 a club-goal chapter can't be skipped (403)
+2026-09-29T21:45:02.276Z member POST /api/progression/contribute {"goal_slug":"fund-museum","kind":"coins","amount":10,"idempotency_key":"hardening-coins-mun7fw0i"} -> 200 {"ok":true,"contribution":{"replayed":false,"credited_points":10,"amount_used":10,"capped":false,"goal":{"slug":"fund-museum","title":"Fund the museum","summary":"The museum needs funding before its doors open. Coins and donated specimens count here, and so does showing up to club events.","goal_typ
+PASS: B4 coins delivered to the museum fund
+2026-09-29T21:45:03.801Z member POST /api/progression/contribute {"goal_slug":"fund-museum","kind":"specimen","item_key":"fish_horse_mackerel","amount":1,"idempotency_key":"hardening-specimen-mun7fx38"} -> 200 {"ok":true,"contribution":{"replayed":false,"credited_points":100,"amount_used":1,"capped":false,"goal":{"slug":"fund-museum","title":"Fund the museum","summary":"The museum needs funding before its doors open. Coins and donated specimens count here, and so does showing up to club events.","goal_typ
+PASS: B5 the server-rolled fish_horse_mackerel delivered as a specimen
+2026-09-29T21:45:04.947Z member GET /api/progression/state -> 200 {"ok":true,"state":{"chapters":[{"slug":"settle-in","position":1,"title":"Settle in","summary":"Claim your plot, make your first catch and donate it, then report to HQ.","requirement":"settle_in","goal_slug":null,"status":"completed","steps":[{"key":"claim_plot","label":"Claim your plot at HQ","done
+PASS: B6 the contribute step is done (contribute:done goal_complete:open)
+fund-museum: 610/15000, mine 110
+2026-09-29T21:45:07.207Z member GET /api/progression/state -> 200 {"ok":true,"state":{"chapters":[{"slug":"settle-in","position":1,"title":"Settle in","summary":"Claim your plot, make your first catch and donate it, then report to HQ.","requirement":"settle_in","goal_slug":null,"status":"completed","steps":[{"key":"claim_plot","label":"Claim your plot at HQ","done
+2026-09-29T21:45:08.654Z staff POST /api/progression/goals/fund-museum/credit {"member_id":"8b41199c-f94f-4557-bfa8-8e75e4c11d3f","points":3000,"note":"hardening E2E fill","idempotency_key":"hardening-8b41199c-mun7g0w8"} -> 200 {"ok":true,"credit":{"replayed":false,"credited_points":3000,"goal":{"slug":"fund-museum","title":"Fund the museum","summary":"The museum needs funding before its doors open. Coins and donated specimens count here, and so does showing up to club events.","goal_type":"story","cycle":0,"open":true,"lo
+2026-09-29T21:45:09.584Z member GET /api/progression/state -> 200 {"ok":true,"state":{"chapters":[{"slug":"settle-in","position":1,"title":"Settle in","summary":"Claim your plot, make your first catch and donate it, then report to HQ.","requirement":"settle_in","goal_slug":null,"status":"completed","steps":[{"key":"claim_plot","label":"Claim your plot at HQ","done
+2026-09-29T21:45:10.402Z staff POST /api/progression/goals/fund-museum/credit {"member_id":"6a1535a0-ce83-4051-804a-b9d719795cc4","points":3000,"note":"hardening E2E fill","idempotency_key":"hardening-6a1535a0-mun7g2q8"} -> 200 {"ok":true,"credit":{"replayed":false,"credited_points":3000,"goal":{"slug":"fund-museum","title":"Fund the museum","summary":"The museum needs funding before its doors open. Coins and donated specimens count here, and so does showing up to club events.","goal_type":"story","cycle":0,"open":true,"lo
+2026-09-29T21:45:11.308Z member GET /api/progression/state -> 200 {"ok":true,"state":{"chapters":[{"slug":"settle-in","position":1,"title":"Settle in","summary":"Claim your plot, make your first catch and donate it, then report to HQ.","requirement":"settle_in","goal_slug":null,"status":"completed","steps":[{"key":"claim_plot","label":"Claim your plot at HQ","done
+2026-09-29T21:45:12.128Z staff POST /api/progression/goals/fund-museum/credit {"member_id":"5faa1816-f2e2-478a-89fb-83f783ea6d3a","points":3000,"note":"hardening E2E fill","idempotency_key":"hardening-5faa1816-mun7g426"} -> 200 {"ok":true,"credit":{"replayed":false,"credited_points":3000,"goal":{"slug":"fund-museum","title":"Fund the museum","summary":"The museum needs funding before its doors open. Coins and donated specimens count here, and so does showing up to club events.","goal_type":"story","cycle":0,"open":true,"lo
+2026-09-29T21:45:13.104Z member GET /api/progression/state -> 200 {"ok":true,"state":{"chapters":[{"slug":"settle-in","position":1,"title":"Settle in","summary":"Claim your plot, make your first catch and donate it, then report to HQ.","requirement":"settle_in","goal_slug":null,"status":"completed","steps":[{"key":"claim_plot","label":"Claim your plot at HQ","done
+2026-09-29T21:45:13.961Z staff POST /api/progression/goals/fund-museum/credit {"member_id":"1d96428b-43d9-4c28-a11b-9bc3b541282b","points":3000,"note":"hardening E2E fill","idempotency_key":"hardening-1d96428b-mun7g5g0"} -> 200 {"ok":true,"credit":{"replayed":false,"credited_points":3000,"goal":{"slug":"fund-museum","title":"Fund the museum","summary":"The museum needs funding before its doors open. Coins and donated specimens count here, and so does showing up to club events.","goal_type":"story","cycle":0,"open":true,"lo
+2026-09-29T21:45:15.135Z member GET /api/progression/state -> 200 {"ok":true,"state":{"chapters":[{"slug":"settle-in","position":1,"title":"Settle in","summary":"Claim your plot, make your first catch and donate it, then report to HQ.","requirement":"settle_in","goal_slug":null,"status":"completed","steps":[{"key":"claim_plot","label":"Claim your plot at HQ","done
+2026-09-29T21:45:16.292Z staff POST /api/progression/goals/fund-museum/credit {"member_id":"94db7037-6338-4352-b28a-55022044be81","points":2390,"note":"hardening E2E fill","idempotency_key":"hardening-94db7037-mun7g70f"} -> 200 {"ok":true,"credit":{"replayed":false,"credited_points":2390,"goal":{"slug":"fund-museum","title":"Fund the museum","summary":"The museum needs funding before its doors open. Coins and donated specimens count here, and so does showing up to club events.","goal_type":"story","cycle":0,"open":false,"l
+2026-09-29T21:45:17.215Z member GET /api/progression/state -> 200 {"ok":true,"state":{"chapters":[{"slug":"settle-in","position":1,"title":"Settle in","summary":"Claim your plot, make your first catch and donate it, then report to HQ.","requirement":"settle_in","goal_slug":null,"status":"completed","steps":[{"key":"claim_plot","label":"Claim your plot at HQ","done
+2026-09-29T21:45:17.435Z member POST /api/progression/goals/fund-museum/credit {"member_id":"c2982825-3dd1-4572-a9d0-4b7fadd306d6","points":10,"idempotency_key":"hardening-self-mun7g8m8"} -> 403 {"ok":false,"error":"Forbidden: T1/T2 only"}
+PASS: B7 a member can't credit the goal (403)
+2026-09-29T21:45:18.516Z member GET /api/progression/state -> 200 {"ok":true,"state":{"chapters":[{"slug":"settle-in","position":1,"title":"Settle in","summary":"Claim your plot, make your first catch and donate it, then report to HQ.","requirement":"settle_in","goal_slug":null,"status":"completed","steps":[{"key":"claim_plot","label":"Claim your plot at HQ","done
+PASS: B8 the fund is complete; chapter 3 ready (contribute:done goal_complete:done)
+PASS: B9 museum and woods open for the member (village_core, cafe, study_tables, museum, woods)
+2026-09-29T21:45:19.604Z public GET /api/progression/state -> 200 {"ok":true,"state":{"chapters":[{"slug":"settle-in","position":1,"title":"Settle in","summary":"Claim your plot, make your first catch and donate it, then report to HQ.","requirement":"settle_in","goal_slug":null,"status":"active","steps":[{"key":"claim_plot","label":"Claim your plot at HQ","done":f
+PASS: B10 and for the public account, whose chapter 3 is locked (club goals open for everyone)
+2026-09-29T21:45:21.315Z member POST /api/progression/chapters/advance {"chapter_slug":"fund-museum","action":"complete"} -> 200 {"ok":true,"state":{"chapters":[{"slug":"settle-in","position":1,"title":"Settle in","summary":"Claim your plot, make your first catch and donate it, then report to HQ.","requirement":"settle_in","goal_slug":null,"status":"completed","steps":[{"key":"claim_plot","label":"Claim your plot at HQ","done
+PASS: B11 chapter 3 completed
+2026-09-29T21:45:22.164Z member POST /api/progression/chapters/advance {"chapter_slug":"fund-museum","action":"complete"} -> 409 {"ok":false,"error":"Chapter already finished.","code":"rejected"}
+PASS: B12 completing again is refused (409)
+SQL> select subject, broadcast_key, count(*) from letters where broadcast_key like 'goal:fund-museum%' group by 1, 2
+subject | broadcast_key | count
+The museum is open | goal:fund-museum:0 | 9
+2026-09-29T21:45:23.611Z public GET /api/progression/letters -> 200 {"ok":true,"letters":[{"id":"e3735c0e-cb57-41a6-acdd-b3597890487e","kind":"system","sender_id":null,"sender_name":"Village Hall","recipient_id":"4e294cb3-7032-433c-971e-90f855021d10","recipient_name":"Phase1 Public","subject":"The museum is open","body":"The museum doors are open and the woods path 
+PASS: B13 every member has the museum letter (public account's mailbox)
+
+=== C. Chapter 4: Reach the ruins gate ===
+2026-09-29T21:45:24.572Z member GET /api/progression/state -> 200 {"ok":true,"state":{"chapters":[{"slug":"settle-in","position":1,"title":"Settle in","summary":"Claim your plot, make your first catch and donate it, then report to HQ.","requirement":"settle_in","goal_slug":null,"status":"completed","steps":[{"key":"claim_plot","label":"Claim your plot at HQ","done
+chapter 4: active · oracle_quiz:done family_trial:open enter_gate:open · labels: Complete the Oracle quiz / Reach level 10 and choose your subclass / Open the ruins gate
+PASS: C1 chapter 4 active, Oracle quiz done (class Warden)
+2026-09-29T21:45:25.330Z member POST /api/progression/chapters/advance {"chapter_slug":"ruins-gate","action":"complete"} -> 409 {"ok":false,"error":"The Oracle quiz, level 10 and your subclass come first.","code":"rejected"}
+PASS: C2 opening the gate before level 10 and the subclass choice is refused (409)
+2026-09-29T21:45:25.827Z member GET /api/combat/progression -> 200 {"ok":true,"progression":{"level":3,"xp":480,"into":55,"needed":525,"next_level_at":950,"stats":{"might":0,"finesse":0,"arcana":0,"spirit":0,"vitality":0},"points_available":6,"derived":{"max_hp":136,"energy":100,"crit_chance":0.05,"summon_capacity":2,"move_speed":1},"family":"Warden","subclass":nul
+combat gate: {"level":3,"family":"Warden","subclass":null,"gateOpen":false,"reason":"Reach level 10."}
+Staging fixture: member XP to the level-10 threshold (11625; combat XP normally comes from missions).
+file:///Users/DavidLiu/Developer/uwotsi/.claude/worktrees/hardening/specs/evidence/hardening/flows.mjs:25
+  if (!Array.isArray(j)) throw new Error(`sql: ${JSON.stringify(j)}`);
+                               ^
+
+Error: sql: {"message":"Failed to run sql query: ERROR:  23514: new row for relation \"member_progression\" violates check constraint \"member_progression_check\"\nDETAIL:  Failing row contains (c2982825-3dd1-4572-a9d0-4b7fadd306d6, 11625, 3, {\"might\": 0, \"arcana\": 0, \"spirit\": 0, \"finesse\": 0, \"vitality\":..., null, null, 2026-09-26 17:17:55.354543+00, {}, {}).\n"}
+    at sql (file:///Users/DavidLiu/Developer/uwotsi/.claude/worktrees/hardening/specs/evidence/hardening/flows.mjs:25:32)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async file:///Users/DavidLiu/Developer/uwotsi/.claude/worktrees/hardening/specs/evidence/hardening/flows.mjs:164:1
+
+Node.js v25.9.0

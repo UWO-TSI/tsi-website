@@ -2,10 +2,10 @@
 --
 -- Spec: specs/seasonal-events.md (ledger rows 96, 99, 184, 204, 212).
 -- Needs 20260926150200_progression (club_goals, club_goal_completions),
--- 20260926150400_collections and 150900 (collection_species,
--- collections_record_catch), 20260926150600_economy (shop_items,
--- member_inventory), 20260926160000_crafting (acc-flower-crown) and
--- 20260926200000_membership_launch (profiles.membership). Idempotent.
+-- 20260926150400_collections (collection_species), 20260926150600_economy
+-- (shop_items, member_inventory), 20260926160000_crafting (acc-flower-crown),
+-- 20260926200000_membership_launch (profiles.membership) and
+-- 20260929100000_catch_rolls (collections_land). Idempotent.
 -- Test: web/supabase/tests/seasonal_events_smoke.sql.
 --
 --   * club_goals.event: a seasonal goal's event, edited on the Seasonal Events
@@ -20,8 +20,10 @@
 --     cycle, readable only by its owner. /api/collections/tourney serves the
 --     board: the top half by name, the bottom half only as the caller's own
 --     rank and unnamed neighbours (design principle 6).
---   * tourney_record_catch: collections_record_catch plus the entry, in one
---     transaction (service role).
+--   * seasonal_land: the server's land step (collections_land) plus the
+--     seasonal checks, in one transaction (service role): a limited-time fish
+--     outside its event lands nothing; a fish landed during the tourney
+--     enters it. Nothing the client reports reaches an entry.
 --   * Completing a goal gives every active member its reward items, once: a
 --     trigger on club_goal_completions (one row per goal and cycle).
 
@@ -82,30 +84,36 @@ CREATE POLICY "Tourney entries readable by owner" ON tourney_entries
   FOR SELECT USING (member_id = (select auth.uid()));
 REVOKE INSERT, UPDATE, DELETE ON tourney_entries FROM anon, authenticated;
 
--- ─── 6. A catch during a tourney: the catch and its entry together ───────────
--- The route passes the open tourney goal and cycle (lib/progression/seasonal.ts);
--- a goal that isn't a tourney records the catch and no entry.
-CREATE OR REPLACE FUNCTION public.tourney_record_catch(p_member_id UUID, p_item_key TEXT, p_size NUMERIC, p_trophy BOOLEAN, p_goal_id UUID, p_cycle INTEGER)
-RETURNS TABLE (count INTEGER, total_collected INTEGER, best_size_cm NUMERIC, new_record BOOLEAN)
+-- ─── 6. Landing a cast in season: the catch and its tourney entry together ───
+-- Wraps collections_land (20260929100000: the server's own roll, landed once,
+-- its timing and caps) in one transaction. The route passes, for its clock
+-- (lib/progression/seasonal.ts landSeason): the limited-time species whose
+-- event isn't running (a roll of one lands nothing, out_of_season), and the
+-- open tourney goal and cycle (the landed roll's species and size enter it).
+CREATE OR REPLACE FUNCTION public.seasonal_land(p_member_id UUID, p_roll_id UUID, p_closed TEXT[], p_goal_id UUID, p_cycle INTEGER)
+RETURNS TABLE (item_key TEXT, size_cm NUMERIC, count INTEGER, total_collected INTEGER, best_size_cm NUMERIC, new_record BOOLEAN)
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 #variable_conflict use_column
 DECLARE
+  r RECORD;
   v_category TEXT;
 BEGIN
-  RETURN QUERY SELECT * FROM public.collections_record_catch(p_member_id, p_item_key, p_size, p_trophy);
-  SELECT s.category INTO v_category FROM collection_species s WHERE s.key = p_item_key AND s.category IN ('fish', 'sea');
-  IF p_size IS NOT NULL AND v_category IS NOT NULL
+  SELECT * INTO r FROM public.collections_land(p_member_id, p_roll_id);
+  IF r.item_key = ANY(COALESCE(p_closed, '{}')) THEN RAISE EXCEPTION 'out_of_season'; END IF;
+  SELECT s.category INTO v_category FROM collection_species s WHERE s.key = r.item_key AND s.category IN ('fish', 'sea');
+  IF p_goal_id IS NOT NULL AND r.size_cm IS NOT NULL AND v_category IS NOT NULL
      AND EXISTS (SELECT 1 FROM club_goals g WHERE g.id = p_goal_id AND g.goal_type = 'seasonal' AND g.event -> 'tourney' = 'true'::jsonb) THEN
     INSERT INTO tourney_entries AS t (goal_id, cycle, member_id, category, item_key, size_cm)
-    VALUES (p_goal_id, p_cycle, p_member_id, v_category, p_item_key, p_size)
+    VALUES (p_goal_id, p_cycle, p_member_id, v_category, r.item_key, r.size_cm)
     ON CONFLICT (goal_id, cycle, member_id, category) DO UPDATE
       SET item_key = EXCLUDED.item_key, size_cm = EXCLUDED.size_cm, caught_at = NOW()
       WHERE EXCLUDED.size_cm > t.size_cm;
   END IF;
+  RETURN QUERY SELECT r.item_key, r.size_cm, r.count, r.total_collected, r.best_size_cm, r.new_record;
 END;
 $$;
-REVOKE ALL ON FUNCTION public.tourney_record_catch(UUID, TEXT, NUMERIC, BOOLEAN, UUID, INTEGER) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.tourney_record_catch(UUID, TEXT, NUMERIC, BOOLEAN, UUID, INTEGER) TO service_role;
+REVOKE ALL ON FUNCTION public.seasonal_land(UUID, UUID, TEXT[], UUID, INTEGER) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.seasonal_land(UUID, UUID, TEXT[], UUID, INTEGER) TO service_role;
 
 -- ─── 7. Completion reward: every active member gets the goal's reward items ──
 -- club_goal_completions has one row per goal and cycle (service role inserts

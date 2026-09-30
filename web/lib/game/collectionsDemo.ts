@@ -7,9 +7,9 @@
  */
 import { memoryCollectionsStore } from "@/lib/collections/memoryStore";
 import { torontoParts } from "@/lib/time";
-import { donate, getShowcase, journal, museum, recordCatch, setShowcase, tourney, trophies } from "@/lib/collections/service";
+import { catchAction, donate, getShowcase, journal, museum, recordCatch, setShowcase, tourney, trophies } from "@/lib/collections/service";
 import { DEFAULT_GOALS } from "@/lib/progression/defaults";
-import { catchRule, latestTourney } from "@/lib/progression/seasonal";
+import { latestTourney } from "@/lib/progression/seasonal";
 import { installDemoFetch, reply } from "./demoFetch";
 
 const ME = "00000000-0000-4000-8000-000000000001";
@@ -34,27 +34,21 @@ export function installCollectionsDemo(): void {
       await donate(m.store, OTHERS[0][0], "fish_dace", "demo-don-2");
       await donate(m.store, OTHERS[1][0], "bug_monarch_butterfly", "demo-don-3");
       await donate(m.store, OTHERS[2][0], "shell_whelk", "demo-don-4");
-      // The tourney running now (or the last one): the board's catches.
+      // The tourney running now (or the last one): the board as landed catches would leave it.
       const t = latestTourney(DEFAULT_GOALS, new Date());
-      const ref = t && { goal_id: t.goal.id, cycle: t.cycle };
       const entries: [string, string, number][] = [
         [OTHERS[1][0], "fish_sturgeon", 152], [OTHERS[1][0], "fish_pike", 84], [OTHERS[0][0], "fish_salmon", 74], [OTHERS[2][0], "fish_sea_bass", 66],
         [ANGLERS[0][0], "fish_black_bass", 51], [ANGLERS[1][0], "fish_black_bass", 44], [ANGLERS[2][0], "fish_yellow_perch", 29], [ME, "fish_yellow_perch", 26],
         [ANGLERS[3][0], "fish_dace", 17], [OTHERS[2][0], "sea_dungeness_crab", 21], [ME, "sea_sea_star", 13],
       ];
-      for (const [who, key, size] of entries) await recordCatch(m.store, who, key, size, ref);
+      if (t) for (const [who, key, size] of entries) m.enter(t.goal.id, t.cycle, who, key, size);
     })();
     return async (path, body, url, method) => {
       await ready;
       const now = new Date();
       switch (path) {
         case "/api/collections":
-          if (method === "POST") {
-            const rule = catchRule(DEFAULT_GOALS, body.item_key, now);
-            if (!rule.ok) return new Response(JSON.stringify({ error: `That one only bites during the ${rule.event}.` }), { status: 409 });
-            const r = await recordCatch(m.store, ME, body.item_key, body.size_cm, rule.tourney);
-            return new Response(JSON.stringify(r.ok ? { ok: true, catch: r.data, ...r.data } : { error: r.error }), { status: r.ok ? 200 : 500 });
-          }
+          if (method === "POST") return reply(await catchAction(m.store, ME, body, now, "clear", DEFAULT_GOALS), "catch");
           return new Response(JSON.stringify({ collections: (await m.store.memberItems(ME)).map(i => ({ item_key: i.item_key, count: i.count })) }));
         case "/api/collections/journal": {
           const { hour, month } = torontoParts(now);

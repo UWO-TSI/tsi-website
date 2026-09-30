@@ -48,10 +48,11 @@ export function supabaseProgressionStore(db: SupabaseClient): ProgressionStore {
       if (error) raise(error);
     },
     async memberFacts(memberId) {
-      const [profile, prefs, fish] = await Promise.all([
+      const [profile, prefs, fish, combat] = await Promise.all([
         db.from("profiles").select("tier, class").eq("id", memberId).maybeSingle(),
         db.from("member_quest_prefs").select("hud_muted, family_trial_completed_at").eq("member_id", memberId).maybeSingle(),
         db.from("member_collections").select("item_key").eq("user_id", memberId).like("item_key", "fish\\_%").limit(1),
+        db.from("member_progression").select("subclass").eq("member_id", memberId).maybeSingle(),
       ]);
       if (profile.error) raise(profile.error);
       if (prefs.error) raise(prefs.error);
@@ -61,7 +62,9 @@ export function supabaseProgressionStore(db: SupabaseClient): ProgressionStore {
       return {
         tier: typeof p.tier === "number" ? p.tier : 5,
         oracleDone: typeof p.class === "string" && p.class.length > 0,
-        trialDone: typeof pr.family_trial_completed_at === "string",
+        // Row 207: no family trial; the level-10 moment is the subclass choice (what opens the ruins gate).
+        // The flag stays for a manual grant. Before the combat migration: not done.
+        trialDone: typeof pr.family_trial_completed_at === "string" || typeof (combat.data as Row | null)?.subclass === "string",
         firstCatchKey: firstFish,
         hudMuted: pr.hud_muted === true,
       };

@@ -1,6 +1,7 @@
 -- Seasonal events (specs/seasonal-events.md). Throwaway local Postgres after every
--- migration through 20260929120000_seasonal_events, with the pre_* seeds. Never
--- Supabase. Each section fails before 20260929120000.
+-- migration through 20260929120000_seasonal_events (on top of 20260929100000's
+-- server-rolled catches), with the pre_* seeds. Never Supabase. Each section
+-- fails before 20260929120000.
 \set ON_ERROR_STOP 1
 INSERT INTO auth.users (id, email) VALUES
   ('00000000-0000-4000-8000-0000000005e1', 'se-maya@x'), ('00000000-0000-4000-8000-0000000005e2', 'se-jordan@x'),
@@ -25,27 +26,55 @@ DO $$ BEGIN
   RAISE NOTICE 'seasonal 1 seeds ok';
 END $$;
 
--- ─── 2. A catch during the tourney enters it; the biggest per category stays ──
+-- ─── 2. Landing in season: the server's roll enters the tourney; closed species land nothing ─
+-- A cast, aged past the 3 s reel minimum (NOW() is fixed in a transaction), landed through
+-- seasonal_land with what the route would pass: the closed limited-time species, the open tourney.
+CREATE FUNCTION pg_temp.fish(m UUID, item TEXT, size NUMERIC, closed TEXT[], goal UUID, cyc INTEGER)
+RETURNS TABLE (item_key TEXT, size_cm NUMERIC, count INTEGER, total_collected INTEGER, best_size_cm NUMERIC, new_record BOOLEAN)
+LANGUAGE plpgsql AS $$
+DECLARE rid UUID;
+BEGIN
+  UPDATE catch_rolls c SET rolled_at = c.rolled_at - INTERVAL '10 seconds' WHERE c.member_id = m;
+  rid := collections_cast(m, item, size, size IS NOT NULL);
+  UPDATE catch_rolls c SET rolled_at = c.rolled_at - INTERVAL '5 seconds' WHERE c.id = rid;
+  RETURN QUERY SELECT * FROM seasonal_land(m, rid, closed, goal, cyc);
+END;
+$$;
+
 DO $$
 DECLARE
   M uuid := '00000000-0000-4000-8000-0000000005e1';
   J uuid := '00000000-0000-4000-8000-0000000005e2';
   T uuid := (SELECT id FROM club_goals WHERE slug = 'fall-fishing-tourney');
   W uuid := (SELECT id FROM club_goals WHERE slug = 'winter-lights');
+  OFF text[] := ARRAY['fish_yellow_perch', 'fish_sturgeon', 'fish_giant_trevally'];
+  r record; rid uuid;
 BEGIN
-  PERFORM tourney_record_catch(M, 'fish_carp', 60, true, T, 2026);
-  PERFORM tourney_record_catch(M, 'fish_black_bass', 40, true, T, 2026);  -- smaller: entry keeps the carp
-  PERFORM tourney_record_catch(M, 'sea_scallop', 12, true, T, 2026);      -- its own category
-  PERFORM tourney_record_catch(M, 'bug_ladybug', NULL, false, T, 2026);   -- no size: caught, no entry
-  PERFORM tourney_record_catch(J, 'fish_sturgeon', 150, true, W, 2026);   -- not a tourney goal: caught, no entry
-  PERFORM tourney_record_catch(J, 'fish_pike', 70, true, T, 2026);
+  -- Out of season: a limited-time fish lands nothing and its roll stays unlanded.
+  BEGIN PERFORM pg_temp.fish(J, 'fish_sturgeon', 150, OFF, NULL, NULL); RAISE EXCEPTION 'x';
+  EXCEPTION WHEN raise_exception THEN ASSERT SQLERRM = 'out_of_season', 'closed species: ' || SQLERRM; END;
+  ASSERT NOT EXISTS (SELECT 1 FROM member_collections WHERE user_id = J AND item_key = 'fish_sturgeon'), 'out of season: nothing recorded';
+  -- In the tourney (nothing closed): the landed roll's species and size enter it, once.
+  SELECT * INTO r FROM pg_temp.fish(J, 'fish_sturgeon', 150, '{}', T, 2026);
+  ASSERT r.item_key = 'fish_sturgeon' AND r.count = 1, 'the limited-time fish lands in season';
+  ASSERT (SELECT count(*) FROM tourney_entries WHERE member_id = J) = 1, 'one landed catch, one entry';
+  rid := (SELECT id FROM catch_rolls WHERE member_id = J AND landed_at IS NOT NULL);
+  BEGIN PERFORM seasonal_land(J, rid, '{}', T, 2026); RAISE EXCEPTION 'x';
+  EXCEPTION WHEN raise_exception THEN ASSERT SQLERRM = 'already_landed', 'landed twice: ' || SQLERRM; END;
+  ASSERT (SELECT count(*) FROM tourney_entries WHERE member_id = J) = 1, 'still one entry';
+  PERFORM pg_temp.fish(M, 'fish_carp', 60, OFF, T, 2026);
+  PERFORM pg_temp.fish(M, 'fish_black_bass', 40, OFF, T, 2026);  -- smaller: the entry keeps the carp
+  PERFORM pg_temp.fish(M, 'sea_scallop', 12, OFF, T, 2026);      -- its own category
+  PERFORM pg_temp.fish(M, 'fish_pike', 70, OFF, W, 2026);        -- not a tourney goal: caught, no entry
+  PERFORM pg_temp.fish(M, 'fish_dace', 15, OFF, NULL, NULL);     -- no tourney running: caught, no entry
   ASSERT (SELECT string_agg(category || ':' || item_key || ':' || size_cm, ',' ORDER BY category) FROM tourney_entries WHERE member_id = M) = 'fish:fish_carp:60.0,sea:sea_scallop:12.0', 'Maya''s entries';
-  ASSERT (SELECT count(*) FROM tourney_entries WHERE member_id = J) = 1, 'Jordan: one entry, from the tourney goal only';
-  ASSERT (SELECT count FROM member_collections WHERE user_id = J AND item_key = 'fish_sturgeon') = 1, 'the non-tourney catch still landed';
-  ASSERT (SELECT count FROM member_collections WHERE user_id = M AND item_key = 'bug_ladybug') = 1, 'the sizeless catch still landed';
-  PERFORM tourney_record_catch(M, 'fish_carp', 65, true, T, 2026);
+  ASSERT (SELECT count FROM member_collections WHERE user_id = M AND item_key = 'fish_pike') = 1, 'the non-tourney catch still landed';
+  PERFORM pg_temp.fish(M, 'fish_carp', 65, OFF, T, 2026);
   ASSERT (SELECT size_cm FROM tourney_entries WHERE member_id = M AND category = 'fish') = 65, 'a bigger catch replaces the entry';
-  RAISE NOTICE 'seasonal 2 tourney entries ok';
+  -- A lost reel (never landed) enters nothing.
+  PERFORM collections_cast(M, 'fish_catfish', 110, true);
+  ASSERT NOT EXISTS (SELECT 1 FROM tourney_entries WHERE item_key = 'fish_catfish'), 'unlanded roll: no entry';
+  RAISE NOTICE 'seasonal 2 landing in season ok';
 END $$;
 
 -- ─── 3. Members read only their own entry and can't write or call the function ─
@@ -67,8 +96,8 @@ DO $$ BEGIN
   EXCEPTION WHEN insufficient_privilege THEN NULL;
   END;
   BEGIN
-    PERFORM tourney_record_catch('00000000-0000-4000-8000-0000000005e2', 'fish_sturgeon', 200, true, (SELECT id FROM club_goals WHERE slug = 'fall-fishing-tourney'), 2026);
-    RAISE EXCEPTION 'a member called tourney_record_catch';
+    PERFORM seasonal_land('00000000-0000-4000-8000-0000000005e2', gen_random_uuid(), '{}', (SELECT id FROM club_goals WHERE slug = 'fall-fishing-tourney'), 2026);
+    RAISE EXCEPTION 'a member called seasonal_land';
   EXCEPTION WHEN insufficient_privilege THEN NULL;
   END;
   BEGIN

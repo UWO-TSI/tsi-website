@@ -16,7 +16,7 @@ const BACK = "/student/dashboard/admin/content/chapters";
 const REQUIREMENTS: { value: ChapterRequirement; label: string }[] = [
   { value: "settle_in", label: "Settle in (claim plot, first catch, donate, report)" },
   { value: "club_goal", label: "Club goal (completes when the club goal does)" },
-  { value: "oracle_trial", label: "Oracle quiz + family trial" },
+  { value: "oracle_trial", label: "Oracle quiz + level-10 subclass" },
 ];
 
 export default function QuestChapterEditor({ mode, initial, goalSlugs }: { mode: "new" | "edit"; initial?: Partial<QuestChapter> | null; goalSlugs: string[] }) {
