@@ -422,7 +422,11 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
 /** The player's character, with the equipped weapon: in hand in an encounter, across the back once the ruins gate is open (row 140). */
 function PlayerCharacter({ look, motion, inCombat, walkSpeed }: { look: CharacterLook; motion: React.RefObject<CharacterMotion>; inCombat: boolean; walkSpeed: number }) {
   useCombatVersion();
-  const p = combat.rt.player, w = WEAPONS[p.weapon];
-  const weapon = w?.model && (inCombat ? p.alive : p.armed) ? { kind: w.kind, model: w.model, modelScale: w.modelScale, inHand: inCombat, grip: w.grip } : null;
+  const p = combat.rt.player, key = p.weapon, shown = inCombat ? p.alive : p.armed;
+  // The same object until the weapon, or whether it shows, changes (the runtime publishes ~10×/s).
+  const weapon = useMemo(() => {
+    const w = WEAPONS[key];
+    return w?.model && shown ? { kind: w.kind, model: w.model, modelScale: w.modelScale, inHand: inCombat, grip: w.grip } : null;
+  }, [key, shown, inCombat]);
   return <Character look={look} motion={motion} walkSpeed={walkSpeed} weapon={weapon} />;
 }
