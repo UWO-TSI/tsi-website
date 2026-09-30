@@ -92,16 +92,16 @@ function support(e: Ellipse, ux: number, uz: number): number {
  * footprint away from the sun, as long as the caster's shadow on flat ground
  * (height / tan elevation, bounded), as wide as the footprint across the sun.
  * `sun` points toward the sun (the key light's position minus its target).
+ * Written into `out` (the frame loop passes a scratch ellipse).
  */
-export function sunShadow(footprint: Ellipse, height: number, sun: readonly [number, number, number]): Ellipse | null {
+export function sunShadow(footprint: Ellipse, height: number, sun: readonly [number, number, number], out: Ellipse = { x: 0, z: 0, rx: 0, rz: 0, yaw: 0 }): Ellipse | null {
   const flat = Math.hypot(sun[0], sun[2]);
   if (height < TALL || flat < 1e-6 || sun[1] <= 0) return null;
   const ux = -sun[0] / flat, uz = -sun[2] / flat;
   const elevation = Math.max(Math.atan2(sun[1], flat), MIN_ELEVATION);
   const length = Math.min(height / Math.tan(elevation), height * MAX_STRETCH);
-  return {
-    x: footprint.x + ux * length / 2, z: footprint.z + uz * length / 2,
-    rx: support(footprint, uz, -ux), rz: length / 2 + support(footprint, ux, uz),
-    yaw: Math.atan2(ux, uz),
-  };
+  out.x = footprint.x + ux * length / 2; out.z = footprint.z + uz * length / 2;
+  out.rx = support(footprint, uz, -ux); out.rz = length / 2 + support(footprint, ux, uz);
+  out.yaw = Math.atan2(ux, uz);
+  return out;
 }
