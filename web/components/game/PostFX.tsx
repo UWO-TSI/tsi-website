@@ -24,7 +24,7 @@ import { useEffect, useMemo, useSyncExternalStore } from "react";
 import { useThree } from "@react-three/fiber";
 import { EffectComposer, Bloom, FXAA, N8AO, TiltShift2, ToneMapping, Vignette } from "@react-three/postprocessing";
 import { createGraphicsContextStore } from "@/lib/game/graphicsContext";
-import { DEFAULT_GRADE, type Grade } from "@/lib/game/grading";
+import type { Grade } from "@/lib/game/grading";
 import type { LookFx, ToneMap } from "@/lib/game/lookPreset";
 import { BlendFunction, Effect, ToneMappingMode } from "postprocessing";
 import { Uniform, Vector3 } from "three";
@@ -99,30 +99,19 @@ class PastelEffect extends Effect {
 interface PostFXProps {
   /** Smooth mode only; keep the intentionally pixelated target unfiltered. */
   antialias?: boolean;
-  /** Toggle the whole pipeline (lite mode disables it). */
-  enabled?: boolean;
-  /** Vignette darkening intensity 0-1. Higher during transitions. */
-  vignetteDarkness?: number;
-  /** Include bloom — opt-in (settings toggle) until re-measured. */
-  bloom?: boolean;
-  /** G2: bloom strength by time of day — dusk glows, midday stays flat. */
-  bloomIntensity?: number;
   /** Per-weather color grade (WEATHER_GRADES). */
-  grade?: Grade;
-  /** Look lab preset post (lookPreset.ts); replaces the bloom settings above. */
-  fx?: LookFx;
+  grade: Grade;
+  /** Look preset post (lookPreset.ts). */
+  fx: LookFx;
 }
 
 const TONE_MAPPING: Record<ToneMap, ToneMappingMode> = { neutral: ToneMappingMode.NEUTRAL, aces: ToneMappingMode.ACES_FILMIC, agx: ToneMappingMode.AGX };
 
-export default function PostFX({ enabled = true, antialias = false, vignetteDarkness = 0.4, bloom = false, bloomIntensity = 0.55, grade, fx }: PostFXProps) {
+export default function PostFX({ antialias = false, grade: g, fx }: PostFXProps) {
   const pastel = useMemo(() => new PastelEffect(), []);
   const gl = useThree((s) => s.gl);
   const context = useMemo(() => createGraphicsContextStore(gl.getContext(), gl.domElement), [gl]);
   const contextAvailable = useSyncExternalStore(context.subscribe, context.getSnapshot, () => false);
-  // The game's per-weather grade beats the shipped default. Every field
-  // of DEFAULT_GRADE reproduces the 2026-07-14 look exactly.
-  const g: Grade = grade ?? DEFAULT_GRADE;
   useEffect(() => {
     (pastel.uniforms.get("uDesat")!).value = g.desat;
     (pastel.uniforms.get("uWarmCast")!.value as Vector3).set(1 + 0.03 * g.warmth, 1.0, 1 - 0.06 * g.warmth);
@@ -132,26 +121,26 @@ export default function PostFX({ enabled = true, antialias = false, vignetteDark
     setExposure(gl, g.exposure);
   }, [g, pastel, gl]);
   if (typeof window !== "undefined" && window.location.search.includes("nofx")) return null;
-  if (!enabled || !contextAvailable) return null;
-  const bloomFx = fx ? fx.bloom : bloom ? { threshold: 1, intensity: bloomIntensity } : null;
+  if (!contextAvailable) return null;
+  const bloomFx = fx.bloom;
   return (
     <EffectComposer multisampling={0}>
       {/* Look lab AO runs on the raw scene render, before anything filters it. */}
-      {fx?.ao ? <N8AO aoRadius={fx.ao.radius} intensity={fx.ao.intensity} distanceFalloff={1} quality="performance" halfRes /> : <></>}
+      {fx.ao ? <N8AO aoRadius={fx.ao.radius} intensity={fx.ao.intensity} distanceFalloff={1} quality="performance" halfRes /> : <></>}
       {/* FXAA samples neighboring input pixels. Run it before the merged grade
           so its center and neighbor samples use the same color space. */}
       {antialias ? <FXAA /> : <></>}
       <Vignette
         offset={0.32}
-        darkness={g.vignette ?? vignetteDarkness}
+        darkness={g.vignette ?? 0.4}
         eskil={false}
         blendFunction={BlendFunction.NORMAL}
       />
       <primitive object={pastel} />
       {/* Tilt-shift as two one-direction passes of r3f's TiltShift2, which samples the HDR input directly
           (postprocessing's TiltShift blurs into an 8-bit target and bands where lit ground is above 1). */}
-      {fx?.tiltShift ? <TiltShift2 blur={fx.tiltShift.blur} taper={fx.tiltShift.taper} start={[0, 0.5 + fx.tiltShift.offset]} end={[1, 0.5 + fx.tiltShift.offset]} direction={[1, 0]} /> : <></>}
-      {fx?.tiltShift ? <TiltShift2 blur={fx.tiltShift.blur} taper={fx.tiltShift.taper} start={[0, 0.5 + fx.tiltShift.offset]} end={[1, 0.5 + fx.tiltShift.offset]} direction={[0, 1]} /> : <></>}
+      {fx.tiltShift ? <TiltShift2 blur={fx.tiltShift.blur} taper={fx.tiltShift.taper} start={[0, 0.5 + fx.tiltShift.offset]} end={[1, 0.5 + fx.tiltShift.offset]} direction={[1, 0]} /> : <></>}
+      {fx.tiltShift ? <TiltShift2 blur={fx.tiltShift.blur} taper={fx.tiltShift.taper} start={[0, 0.5 + fx.tiltShift.offset]} end={[1, 0.5 + fx.tiltShift.offset]} direction={[0, 1]} /> : <></>}
       {bloomFx ? (
         <Bloom
           mipmapBlur
@@ -162,7 +151,7 @@ export default function PostFX({ enabled = true, antialias = false, vignetteDark
       ) : <></>}
       {/* The composer disables renderer tone mapping. Preserve the Canvas's
           neutral operator here, after HDR effects, so exposure still works. */}
-      <ToneMapping mode={TONE_MAPPING[fx?.toneMapping ?? "neutral"]} />
+      <ToneMapping mode={TONE_MAPPING[fx.toneMapping]} />
     </EffectComposer>
   );
 }
