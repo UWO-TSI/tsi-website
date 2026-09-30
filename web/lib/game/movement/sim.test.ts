@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { advanceMove, createMoveSim, createMoveState, interpolated, stepMove, topSpeed, MOVE_TUNING as T, NO_INPUT, STEP, type MoveEvent, type MoveInput, type MoveState, type MoveTuning, type MoveWorld } from "./sim";
+import { advanceMove, clearSpot, createMoveSim, createMoveState, interpolated, standWorld, stepMove, topSpeed, towards, walkTo, MOVE_TUNING as T, NO_INPUT, STEP, type MoveEvent, type MoveInput, type MoveState, type MoveTuning, type MoveWorld } from "./sim";
 import { COURSE_GATES, COURSE_SPAWN, NEW_LAP, course, gateAt, lapStep, routePilot } from "./course";
 import { islandOf } from "../defaultIsland";
 import { villageOf, type MapObject } from "../villageMap";
@@ -328,6 +328,46 @@ describe("collision", () => {
   it("clears a fence with a jump", () => {
     const s = drive(createMoveState(0.4, -3, w), w, 1.5, (_t, q) => ({ z: 1, jump: true, jumpPressed: q.z > -1.2 && q.z < -1.05 && q.mode === "ground" }));
     expect(s.z).toBeGreaterThan(1);
+  });
+});
+
+describe("in the game (step 4)", () => {
+  it("taps to walk: arrives at the target and stops there, at any frame rate", () => {
+    for (const fps of [10, 30, 60, 144]) {
+      const sim = createMoveSim(createMoveState(0, -5, flat));
+      let arrived = -1;
+      for (let f = 0; f < fps * 4 && arrived < 0; f++) {
+        const go = towards(sim.state, 0, -1);
+        if (!go) arrived = f;
+        else advanceMove(sim, { ...NO_INPUT, ...go }, 1 / fps, flat);
+        expect(sim.state.z, `${fps} Hz`).toBeLessThan(-0.95);
+      }
+      expect(arrived, `${fps} Hz`).toBeGreaterThan(0);
+      expect(Math.abs(sim.state.z + 1)).toBeLessThan(0.12);
+    }
+  });
+  it("taps to walk into water or a wall: stops on the bank and gives up", () => {
+    // Water from z >= 3, a building (a wall of any height) at x >= 4.
+    const w = standWorld(() => 0, (x, z) => z < 3 && x < 4, (_x, z) => z >= 3);
+    expect(walkTo(w, 0, 0, 0, 10).z).toBeLessThan(3);
+    expect(walkTo(w, 0, 0, 10, 0).x).toBeLessThan(4);
+    expect(walkTo(w, 0, 0, 10, 0).x).toBeGreaterThan(3.5);
+  });
+  it("pushes (knockback, an ability's dash) through the same collision", () => {
+    const w = standWorld(() => 0, x => x < 2, () => false);
+    const s = drive(createMoveState(0, 0, w), w, 1, () => ({ push: { x: 20, z: 0 } }));
+    expect(s.x).toBeGreaterThan(1.5);
+    expect(s.x).toBeLessThan(2);
+    expect(Math.atan2(Math.sin(s.facing), Math.cos(s.facing))).toBeCloseTo(0); // a push doesn't turn you
+  });
+  it("gets up from a seat in a solid into the open beside it, the front first, and walks off", () => {
+    const bench = standWorld(() => 0, (x, z) => !(Math.abs(x) < 1 && Math.abs(z) < 0.27), () => false);
+    const [x, z] = clearSpot(bench, 0, 0, 0, 0);
+    expect(x).toBeCloseTo(0);
+    expect(z).toBeGreaterThan(0.45);
+    expect(z).toBeLessThan(0.7);
+    expect(clearSpot(bench, 0, 0, 0, Math.PI)[1]).toBeLessThan(-0.45);
+    expect(drive(createMoveState(x, z, bench), bench, 0.5, () => ({ z: 1 })).z).toBeGreaterThan(z + 1);
   });
 });
 

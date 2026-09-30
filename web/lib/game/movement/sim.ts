@@ -77,8 +77,11 @@ export type MoveMode = "ground" | "air" | "skid" | "roll" | "recover" | "mantle"
 export type MoveEventKind = "jump" | "hop" | "long" | "dashjump" | "land" | "roll" | "recover" | "dash" | "skid" | "mantle" | "splash" | "respawn" | "bonk";
 export interface MoveEvent { kind: MoveEventKind; x: number; y: number; z: number; speed: number; drop: number }
 
-/** World-space intent. `x`/`z` has length ≤ 1 (a stick can walk slower); `*Pressed` are edges since the last step. */
-export interface MoveInput { x: number; z: number; sprint: boolean; sneak: boolean; jump: boolean; jumpPressed: boolean; dashPressed: boolean }
+/**
+ * World-space intent. `x`/`z` has length ≤ 1 (a stick can walk slower); `*Pressed` are edges since the last step.
+ * `push` is velocity from outside the kit (a knockback, an ability's dash), moved through the same collision.
+ */
+export interface MoveInput { x: number; z: number; sprint: boolean; sneak: boolean; jump: boolean; jumpPressed: boolean; dashPressed: boolean; push?: { x: number; z: number } }
 export const NO_INPUT: MoveInput = { x: 0, z: 0, sprint: false, sneak: false, jump: false, jumpPressed: false, dashPressed: false };
 
 export interface MoveState {
@@ -399,8 +402,8 @@ export function stepMove(prev: MoveState, input: MoveInput, dt: number, w: MoveW
   }
 
   // ── Move ─────────────────────────────────────────────────────────
-  const before = hypot(s.vx, s.vz);
-  const { hitX, hitZ } = slide(s, w, t, s.vx * dt, s.vz * dt);
+  const before = hypot(s.vx, s.vz), px = input.push?.x ?? 0, pz = input.push?.z ?? 0;
+  const { hitX, hitZ } = slide(s, w, t, (s.vx + px) * dt, (s.vz + pz) * dt);
   if (hitX) s.vx = 0;
   if (hitZ) s.vz = 0;
   if ((hitX || hitZ) && s.dashT > 0 && hypot(s.vx, s.vz) < before * 0.5) { s.dashT = 0; emit(s, "bonk"); }
@@ -451,4 +454,40 @@ export function interpolated(sim: MoveSim): [number, number, number] {
   const a = Math.min(1, sim.acc / STEP), p = sim.prev, s = sim.state;
   if (s.events.some(e => e.kind === "respawn")) return [s.x, s.y, s.z];
   return [p.x + (s.x - p.x) * a, p.y + (s.y - p.y) * a, p.z + (s.z - p.z) * a];
+}
+
+/** Tap-to-walk intent: toward a goal at walking pace, easing into it; null once there. */
+export function towards(s: MoveState, gx: number, gz: number, t: MoveTuning = MOVE_TUNING): { x: number; z: number } | null {
+  const dx = gx - s.x, dz = gz - s.z, d = hypot(dx, dz);
+  if (d < 0.12) return null;
+  const k = Math.min(1, (d * 4) / t.walkSpeed) / d;
+  return { x: dx * k, z: dz * k };
+}
+/** Tap-to-walk gives up once held this long under 0.3 u/s (pressed against something it can't pass). */
+export const STUCK_TIME = 0.25;
+
+/** A tap-to-walk run out: from (x, z) toward (gx, gz) until there or stuck. */
+export function walkTo(w: MoveWorld, x: number, z: number, gx: number, gz: number, t: MoveTuning = MOVE_TUNING): MoveState {
+  let s = createMoveState(x, z, w), stuck = 0;
+  for (let i = 0; i < 20 / STEP && stuck < STUCK_TIME; i++) {
+    const go = towards(s, gx, gz, t);
+    if (!go) break;
+    s = stepMove(s, { ...NO_INPUT, ...go }, STEP, w, t);
+    stuck = hypot(s.vx, s.vz) < 0.3 ? stuck + STEP : 0;
+  }
+  return s;
+}
+
+/** Where the body stands clear nearest (x, z) on the floor at `y`, the `facing` side first: where getting up from a seat puts you. */
+export function clearSpot(w: MoveWorld, x: number, z: number, y: number, facing: number, t: MoveTuning = MOVE_TUNING): [number, number] {
+  for (let r = 0; r <= 2; r += 0.1) for (let a = 0; a < 16; a++) {
+    const ang = facing + (a % 2 ? -1 : 1) * Math.ceil(a / 2) * (Math.PI / 8), px = x + Math.sin(ang) * r, pz = z + Math.cos(ang) * r;
+    if (overlap(w, px, pz, y, true, t, 0) === 0) return [px, pz];
+  }
+  return [x, z];
+}
+
+/** A walker's rule as a sim world (the home island, the ruins, the café, the applicant island): where you can't stand is a wall of any height, water with no land is wet. */
+export function standWorld(ground: (x: number, z: number) => number, standable: (x: number, z: number) => boolean, wet: (x: number, z: number) => boolean): MoveWorld {
+  return { wet, top: (x, z) => (standable(x, z) || wet(x, z) ? ground(x, z) : Infinity) };
 }
