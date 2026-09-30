@@ -4,7 +4,7 @@
  * Water type is read from the island's own layout, not placed shadows.
  */
 import { objectsOf, village, type Village } from "./villageMap";
-import { Surface, inBounds, isGroundAtWorld, isRiver, isVoid, surfaceAt, worldToCellX, worldToCellZ, type IslandMap } from "./grid";
+import { ORTHOGONAL, Surface, inBounds, isGroundAtWorld, isWater, surfaceAt, worldToCellX, worldToCellZ, type IslandMap } from "./grid";
 
 export type WaterType = "river" | "pond" | "sea";
 export interface FishingSpot { target: [number, number]; water: WaterType }
@@ -52,7 +52,7 @@ export const WATER_CLASS = { land: 0, sea: 1, river: 2, pond: 3 } as const;
  */
 export function classifyWater(map: IslandMap, ponds: readonly (readonly [number, number])[] = [], open = 2): Uint8Array {
   const { width: W, depth: D } = map, n = W * D;
-  const water = (i: number) => { const s = map.surfaces[i]; return isRiver(s) || isVoid(s); };
+  const water = (i: number) => isWater(map.surfaces[i]);
   const out = new Uint8Array(n);
   // Distance to land in cells (8-neighbour steps), capped at open + 1.
   const far = open + 1, dist = new Uint8Array(n).fill(far);
@@ -81,7 +81,7 @@ export function classifyWater(map: IslandMap, ponds: readonly (readonly [number,
       const k = stack.pop()!, x = k % W, z = (k / W) | 0;
       comp.push(k);
       if (x === 0 || z === 0 || x === W - 1 || z === D - 1) edge = true;
-      for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      for (const [dx, dz] of ORTHOGONAL) {
         if (!inBounds(map, x + dx, z + dz)) continue;
         const j = (z + dz) * W + x + dx;
         if (!seen[j] && water(j)) { seen[j] = 1; stack.push(j); }

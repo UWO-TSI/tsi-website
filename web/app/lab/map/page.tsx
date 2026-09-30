@@ -38,8 +38,6 @@ import {
   setCell,
   levelAt,
   surfaceAt,
-  isVoid,
-  isRiver,
   isRamp,
   needsCliff,
   cliffPieceFor,
@@ -50,6 +48,7 @@ import {
   CLIFF_LEVELS,
   ORTHOGONAL,
   inBounds,
+  isWater,
   type IslandMap,
   type IslandMapDoc,
   type PlacedProp,
@@ -300,7 +299,6 @@ function commit() {
 let STROKE: { before: CellSnapshot; touched: Uint8Array; seed: number } | null = null;
 let STROKE_SEED = 1;
 
-const water = (s: number) => isVoid(s) || isRiver(s);
 const keyOf = (o: MapObject) => `${o.kind}:${o.id}`;
 /** Kinds the game turns by their yaw. Buildings face the camera (ACNH); nature takes its turn from its seed. */
 const TURNS = (o: MapObject) => ["bench", "rock", "fence", "bridge", "study", "missions"].includes(o.kind) || (o.kind === "landmark" && o.id === "wharf");
@@ -611,13 +609,13 @@ export default function MapLab() {
       for (let x = 0; x < W; x++) {
         const s = surfaceAt(map, x, z);
         const l = levelAt(map, x, z);
-        ctx.fillStyle = water(s) && waterClass[z * W + x] === WATER_CLASS.sea ? SEA_FILL : SURFACE_FILL[s] ?? "#f0f";
+        ctx.fillStyle = isWater(s) && waterClass[z * W + x] === WATER_CLASS.sea ? SEA_FILL : SURFACE_FILL[s] ?? "#f0f";
         ctx.fillRect(x, z, 1, 1);
         // Level as brightness: higher ground reads lighter, which is the only
         // way to see elevation on a flat map. Tuned against a screenshot, not
         // guessed -- at 0.10 per level the level-2 plateaus were the same green
         // as the level-0 ground and the map read as flat.
-        if (!water(s) && l > 0) {
+        if (!isWater(s) && l > 0) {
           ctx.fillStyle = `rgba(255,247,225,${Math.min(0.5, 0.17 * l)})`;
           ctx.fillRect(x, z, 1, 1);
         }
@@ -627,7 +625,7 @@ export default function MapLab() {
     // Cliff and half-step edges, drawn as the lines they will become.
     for (let z = 0; z < D; z++) {
       for (let x = 0; x < W; x++) {
-        if (water(surfaceAt(map, x, z))) continue;
+        if (isWater(surfaceAt(map, x, z))) continue;
         for (const [dx, dz] of ORTHOGONAL) {
           if (!inBounds(map, x + dx, z + dz)) continue;
           const d = levelAt(map, x, z) - levelAt(map, x + dx, z + dz);
@@ -887,23 +885,23 @@ export default function MapLab() {
         case "land":
           // Only fills water. Painting over existing ground would silently
           // erase whatever surface was there.
-          if (water(s)) setCell(map, x, z, 0, Surface.Grass);
+          if (isWater(s)) setCell(map, x, z, 0, Surface.Grass);
           break;
         case "sea":
           setCell(map, x, z, 0, Surface.River);
           break;
         case "surface":
-          setCell(map, x, z, water(paintSurface) ? 0 : levelAt(map, x, z), paintSurface);
+          setCell(map, x, z, isWater(paintSurface) ? 0 : levelAt(map, x, z), paintSurface);
           break;
         case "ramp":
-          if (!water(s)) setCell(map, x, z, levelAt(map, x, z), Surface.Ramp);
+          if (!isWater(s)) setCell(map, x, z, levelAt(map, x, z), Surface.Ramp);
           break;
         case "flat":
-          if (!water(s)) setCell(map, x, z, paintLevel, s);
+          if (!isWater(s)) setCell(map, x, z, paintLevel, s);
           break;
         case "raise":
         case "lower": {
-          if (water(s)) break;
+          if (isWater(s)) break;
           const d = tool === "raise" ? 1 : -1;
           setCell(map, x, z, Math.min(MAX_LEVEL, Math.max(0, levelAt(map, x, z) + d)), s);
           break;
@@ -1781,7 +1779,7 @@ export default function MapLab() {
               <Row k="level" v={String(levelAt(map, hover.x, hover.z))} />
               <Row
                 k="surface"
-                v={water(surfaceAt(map, hover.x, hover.z)) ? ["land", "sea", "river", "pond"][waterClass[hover.z * map.width + hover.x]] : SURFACE_NAME[surfaceAt(map, hover.x, hover.z)] ?? "?"}
+                v={isWater(surfaceAt(map, hover.x, hover.z)) ? ["land", "sea", "river", "pond"][waterClass[hover.z * map.width + hover.x]] : SURFACE_NAME[surfaceAt(map, hover.x, hover.z)] ?? "?"}
               />
               <Row k="half steps" v={String(halfCliffEdges(map, hover.x, hover.z).length)} />
               <Row k="full cliff" v={needsCliff(map, hover.x, hover.z) ? "yes" : "no"} />

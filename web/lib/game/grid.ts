@@ -379,6 +379,11 @@ export function isRiver(s: number): boolean {
   return s === Surface.River;
 }
 
+/** Water: the sea/river surface, or legacy Void. */
+export const isWater = (s: number) => isRiver(s) || isVoid(s);
+/** A cell on the map that is not water. */
+export const isLandCell = (map: IslandMap, cx: number, cz: number) => inBounds(map, cx, cz) && !isWater(surfaceAt(map, cx, cz));
+
 export function isRamp(s: number): boolean {
   return s === Surface.Ramp;
 }
@@ -1399,10 +1404,7 @@ export function easedCellOutline(inLayer: LayerTest, cx: number, cz: number): nu
 /** Whether a point lies on the same eased land footprint drawn by GridTerrain. */
 export function isGroundAtWorld(map: IslandMap, x: number, z: number): boolean {
   const cx = worldToCellX(map, x), cz = worldToCellZ(map, z);
-  const inGround = (nx: number, nz: number) => {
-    const surface = surfaceAt(map, nx, nz);
-    return inBounds(map, nx, nz) && !isVoid(surface) && !isRiver(surface);
-  };
+  const inGround = (nx: number, nz: number) => isLandCell(map, nx, nz);
   if (!inGround(cx, cz)) return false;
   const outline = easedCellOutline(inGround, cx, cz);
   return !outline || pointInPolygon(x - cellToWorldX(map, cx), z - cellToWorldZ(map, cz), outline);
@@ -1472,8 +1474,7 @@ export function shoreSdf(map: IslandMap, scale = SHORE_SDF_SCALE): ShoreSdf {
   const width = map.width * scale;
   const height = map.depth * scale;
 
-  const inGround: LayerTest = (cx, cz) =>
-    inBounds(map, cx, cz) && !isVoid(surfaceAt(map, cx, cz)) && !isRiver(surfaceAt(map, cx, cz));
+  const inGround: LayerTest = (cx, cz) => isLandCell(map, cx, cz);
 
   // Rasterise the LAND, cell by cell, through the same outline the mesh uses.
   // Sampling the cell grid instead would put the field's shoreline on the

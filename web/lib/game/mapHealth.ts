@@ -13,7 +13,7 @@
  * forage and bug spots; a fishable sea.
  */
 import {
-  CLIFF_LEVELS, ORTHOGONAL, cliffPieceFor, inBounds, isGroundAtWorld, isRamp, isRiver, isVoid, levelAt,
+  CLIFF_LEVELS, ORTHOGONAL, cliffPieceFor, inBounds, isGroundAtWorld, isLandCell, isRamp, isVoid, levelAt,
   needsCliff, rampDir, rampRun, surfaceAt, worldToCellX, worldToCellZ, type IslandMap,
 } from "./grid";
 import { LANDMARK_IDS, TREE_TRUNK, bridgeDecks, islandOf, landmarks, objectFootprint, turn, wharfDeck } from "./defaultIsland";
@@ -41,8 +41,6 @@ export interface TerrainHealth {
   reach: Uint8Array;
 }
 
-const walkAt = (map: IslandMap, x: number, z: number) =>
-  inBounds(map, x, z) && !isVoid(surfaceAt(map, x, z)) && !isRiver(surfaceAt(map, x, z));
 
 /** Terrain checks on any map. `seed` is the cell reachability starts from (default: the first level-0 land cell). */
 export function terrainHealth(map: IslandMap, seed?: [number, number] | null): TerrainHealth {
@@ -52,7 +50,7 @@ export function terrainHealth(map: IslandMap, seed?: [number, number] | null): T
   let first: [number, number] | null = null;
   for (let z = 0; z < D; z++) {
     for (let x = 0; x < W; x++) {
-      if (!walkAt(map, x, z)) continue;
+      if (!isLandCell(map, x, z)) continue;
       const l = levelAt(map, x, z);
       levels[l] = (levels[l] ?? 0) + 1;
       walkable++;
@@ -69,12 +67,12 @@ export function terrainHealth(map: IslandMap, seed?: [number, number] | null): T
         const nl = isVoid(ns) ? 0 : levelAt(map, x + dx, z + dz);
         // The cliff kit is one piece tall and does not stack: a taller face renders as a hole.
         if (Math.abs(l - nl) > CLIFF_LEVELS) tooTall++;
-        if (walkAt(map, x + dx, z + dz) && Math.abs(l - nl) === 1) half = true;
+        if (isLandCell(map, x + dx, z + dz) && Math.abs(l - nl) === 1) half = true;
       }
       if (half) halfSteps++;
       // A cell a full cliff above the ground on both sides of an axis is a wall you cannot stand on.
       // (A one-cell half-step ridge is a walkable bump the blur rounds off.)
-      const lower = (dx: number, dz: number) => walkAt(map, x + dx, z + dz) && levelAt(map, x + dx, z + dz) <= l - CLIFF_LEVELS;
+      const lower = (dx: number, dz: number) => isLandCell(map, x + dx, z + dz) && levelAt(map, x + dx, z + dz) <= l - CLIFF_LEVELS;
       if (l > 0 && ((lower(-1, 0) && lower(1, 0)) || (lower(0, -1) && lower(0, 1)))) thinWalls++;
     }
   }
@@ -83,18 +81,18 @@ export function terrainHealth(map: IslandMap, seed?: [number, number] | null): T
   for (let z = 0; z < D; z++) for (let x = 0; x < W; x++) if (isRamp(surfaceAt(map, x, z)) && rampRun(map, x, z)) ramped[z * W + x] = 1;
   const reach = new Uint8Array(W * D);
   let reachable = 0;
-  const start = seed && walkAt(map, seed[0], seed[1]) ? seed : first;
+  const start = seed && isLandCell(map, seed[0], seed[1]) ? seed : first;
   if (start) {
     const stack: [number, number][] = [start];
     while (stack.length) {
       const [x, z] = stack.pop()!;
       const i = z * W + x;
-      if (reach[i] || !walkAt(map, x, z)) continue;
+      if (reach[i] || !isLandCell(map, x, z)) continue;
       reach[i] = 1;
       reachable++;
       for (const [dx, dz] of ORTHOGONAL) {
         const nx = x + dx, nz = z + dz;
-        if (!walkAt(map, nx, nz)) continue;
+        if (!isLandCell(map, nx, nz)) continue;
         const d = Math.abs(levelAt(map, nx, nz) - levelAt(map, x, z));
         // A blended half step is walkable; a full cliff needs a working ramp.
         if (d < CLIFF_LEVELS || ramped[nz * W + nx] || ramped[i]) stack.push([nx, nz]);
@@ -196,7 +194,7 @@ export function villageHealth(v: Village): VillageHealth {
 
   // Everything that stands on the ground.
   const grounded = new Set(["spawn", "fitting", "missions", "lamp", "fence", "bench", "rock", "tree", "bush", "flower", "study", "anchor", "gather", "puddle", "bug", "shell", "bottle"]);
-  const landCell = (x: number, z: number) => walkAt(map, worldToCellX(map, x), worldToCellZ(map, z));
+  const landCell = (x: number, z: number) => isLandCell(map, worldToCellX(map, x), worldToCellZ(map, z));
   for (const o of v.objects) if (grounded.has(o.kind) && !landCell(o.x, o.z) && !onDeck(o.x, o.z)) add("objects off land", `${o.kind}:${o.id}`);
 
   // Resident anchors: open ground for three residents side by side.

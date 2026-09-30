@@ -11,25 +11,23 @@
  * every op that turns land into water writes that, and "water" below means
  * River or legacy Void.
  */
-import { CLIFF_LEVELS, MAX_LEVEL, Surface, inBounds, isRamp, isRiver, isVoid, type IslandMap } from "./grid";
+import { CLIFF_LEVELS, MAX_LEVEL, ORTHOGONAL, Surface, inBounds, isRamp, isWater, type IslandMap } from "./grid";
 import type { MapObject, ObjectKind } from "./villageMap";
 
 export interface CellSnapshot { levels: Uint8Array; surfaces: Uint8Array }
 export const snapshotCells = (map: IslandMap): CellSnapshot => ({ levels: map.levels.slice(), surfaces: map.surfaces.slice() });
 
-const water = (s: number) => isRiver(s) || isVoid(s);
-const N4: readonly [number, number][] = [[1, 0], [-1, 0], [0, 1], [0, -1]];
 
 /** Height for the morphology ops: water is below every level. */
 function heightOf(map: IslandMap, snap: CellSnapshot, x: number, z: number): number {
   const i = z * map.width + x;
-  return water(snap.surfaces[i]) ? -1 : snap.levels[i];
+  return isWater(snap.surfaces[i]) ? -1 : snap.levels[i];
 }
 function setWater(map: IslandMap, i: number) { map.surfaces[i] = Surface.River; map.levels[i] = 0; }
 /** Land a cell takes from a neighbour: its level, and its surface unless that is a ramp. */
 function setLand(map: IslandMap, i: number, level: number, surface: number) {
   map.levels[i] = Math.max(0, Math.min(MAX_LEVEL, level));
-  map.surfaces[i] = isRamp(surface) || water(surface) ? Surface.Grass : surface;
+  map.surfaces[i] = isRamp(surface) || isWater(surface) ? Surface.Grass : surface;
 }
 
 export type OrganicOp = "smooth" | "grow" | "shrink" | "jitter";
@@ -50,7 +48,7 @@ export type OrganicOp = "smooth" | "grow" | "shrink" | "jitter";
 export function organicCell(op: OrganicOp, map: IslandMap, before: CellSnapshot, x: number, z: number, seed = 1): void {
   if (!inBounds(map, x, z)) return;
   const i = z * map.width + x, here = heightOf(map, before, x, z);
-  const around = N4.filter(([dx, dz]) => inBounds(map, x + dx, z + dz)).map(([dx, dz]) => ({ h: heightOf(map, before, x + dx, z + dz), s: before.surfaces[(z + dz) * map.width + x + dx] }));
+  const around = ORTHOGONAL.filter(([dx, dz]) => inBounds(map, x + dx, z + dz)).map(([dx, dz]) => ({ h: heightOf(map, before, x + dx, z + dz), s: before.surfaces[(z + dz) * map.width + x + dx] }));
   if (op === "grow" || op === "shrink") {
     const pick = around.reduce((best, n) => (op === "grow" ? n.h > best.h : n.h < best.h) ? n : best, { h: here, s: before.surfaces[i] });
     if (pick.h === here) return;
