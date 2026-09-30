@@ -247,8 +247,10 @@ function IslandScene({ identity, devAt, exitFrom, peaceful, fishSpot, fishing, c
       : within(layout.missions?.at ?? null, 1.5) ? "missions" : null;
     const b = benchSeat(player.current.x, player.current.z);
     benchSpot.current = b && { ...b, seatY: island.ground(b.x, b.z) + BENCH_SEAT_TOP };
-    if (!next && benchSpot.current) next = "bench";
-    if (!next) next = spots.find(s => within([s.x, s.z], s.range))?.near ?? null;
+    // An event spot and a bench both in reach: the nearer one takes E.
+    const ev = spots.find(s => within([s.x, s.z], s.range)), seat = benchSpot.current;
+    const nearer = (p: { x: number; z: number }) => Math.hypot(player.current.x - p.x, player.current.z - p.z);
+    if (!next && (ev || seat)) next = ev && (!seat || nearer(ev) < nearer(seat)) ? ev.near : "bench";
     if (!next) {
       let best = 1.4;
       for (const l of layout.prompts) {

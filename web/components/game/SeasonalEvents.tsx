@@ -40,6 +40,8 @@ interface Spot { near: EventNear; at: At; range: number }
 
 /** The event lawn east of the plaza, between the plaza and the museum. */
 const lawn = (dx: number, dz: number): At => ["plaza", 9.3 + dx, 0.4 + dz];
+/** The fall tourney's plaza trophy, in front of the catch board (clear of the bench beside it). */
+const TROPHY: At = ["catch", 0.8, -1.0];
 /** GENESIS: the stage is a wooden deck (its top 0.36 up) with the poster board at the back (the board model's origin is its left end). */
 const STAGE_TOP = 0.36;
 const POSTER_BOARD: At = lawn(-0.84, 1.43);
@@ -53,10 +55,10 @@ const DECOR: Record<string, { pieces: Piece[]; spots: Spot[]; lights?: At[] }> =
   "fall-tourney": {
     pieces: [
       ...garland(`${S}harvest-garland-n.glb`),
-      { at: ["catch", 1.3, -0.9], url: `${F}museum-stand.glb`, scale: 0.08, solid: [0.45, 0.45] },
-      { at: ["catch", 1.3, -0.9], url: `${F}gold-hha-trophy.glb`, scale: 0.12, lift: 0.8 },
+      { at: TROPHY, url: `${F}museum-stand.glb`, scale: 0.08, solid: [0.45, 0.45] },
+      { at: TROPHY, url: `${F}gold-hha-trophy.glb`, scale: 0.12, lift: 0.8 },
     ],
-    spots: [{ near: "trophy", at: ["catch", 1.3, -0.9], range: 1.7 }],
+    spots: [{ near: "trophy", at: TROPHY, range: 1.6 }],
   },
   "winter-lights": {
     pieces: [
@@ -152,7 +154,7 @@ function TrophyCue({ ground }: { ground: (x: number, z: number) => number }) {
   const [board, setBoard] = useState<TourneyView | null>(null);
   useEffect(() => { apiCall<TourneyView | null>("/api/collections/tourney", "tourney").then(setBoard, () => {}); }, []);
   const leaders = board?.boards.flatMap(b => (b.top[0] ? [`${b.category === "fish" ? "Fish" : "Sea"}: ${b.top[0].name} · ${b.top[0].size_cm} cm`] : [])) ?? [];
-  return <EventCue at={["catch", 1.3, -0.9]} lift={2.2} ground={ground}>{board?.title ?? "Fall fishing tourney"}{leaders.map(l => <small key={l}>{l}</small>)}</EventCue>;
+  return <EventCue at={TROPHY} lift={2.2} ground={ground}>{board?.title ?? "Fall fishing tourney"}{leaders.map(l => <small key={l}>{l}</small>)}</EventCue>;
 }
 
 /** A GENESIS poster: the project's title on a paper card (canvas texture), pinned to the board. */
