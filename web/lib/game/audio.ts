@@ -26,12 +26,10 @@
  *   AudioManager.enable()                        — user gesture unlock
  *   AudioManager.setVolumes({ master, ambient, music, sfx })
  *   AudioManager.setMuted(bool)                   — silences all channels, keeps sliders
- *   AudioManager.setPhase(phase)                  — crossfade ambient track (time only)
  *   AudioManager.setAmbience({ phase, weather, season }) — crossfade ambient, richer key
  *   AudioManager.setMusic({ block, season, override }) — crossfade the hourly music bed
  *   AudioManager.playSFX(name)                   — one-shot, overlapping safe
  *   AudioManager.playBlip()                      — random dialogue voice blip
- *   AudioManager.dispose()
  *   AudioManager.subscribe(listener)             — for React UI sync
  *   AudioManager.getState()
  */
@@ -294,11 +292,6 @@ export class AudioManagerImpl {
     return this.volumes.master * this.volumes.sfx * sceneGain * movementGain * this.mutedGain();
   }
 
-  /** Time-of-day only — kept for existing callers (GameWorld, ApplicantIsland). */
-  setPhase(phase: AmbientPhase): void {
-    this.setAmbience({ phase });
-  }
-
   /** Richer ambient key: time of day, plus an optional weather/season variant tried first. */
   setAmbience(input: { phase: AmbientPhase; weather?: IslandWeather; season?: Season }): void {
     const candidates = ambientCandidates(input);
@@ -476,20 +469,6 @@ export class AudioManagerImpl {
     }
     for (const sound of this.oneShots.keys()) sound.pause();
     this.oneShots.clear();
-  }
-
-  dispose(): void {
-    this.stop();
-    this.enabled = false;
-    this.phase = null;
-    this.ambientKey = null;
-    this.ambientCandidates = [];
-    this.musicKey = null;
-    this.musicCandidates = [];
-    this.musicBlock = null;
-    this.musicOverride = null;
-    this.notify();
-    this.listeners.clear();
   }
 
   private createAudioElement(src: string, loop: boolean): HTMLAudioElement | null {
