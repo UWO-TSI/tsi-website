@@ -201,6 +201,9 @@ export function clampSize(sp: Species | undefined, size: number | null | undefin
   return Math.round(Math.min(sp.size[1], Math.max(sp.size[0], size)) * 10) / 10;
 }
 
+/** A sized fish or sea catch counts for the weekly trophies. */
+export const trophyFor = (sp: { category: string } | undefined, size: number | null) => !!sp && (sp.category === "fish" || sp.category === "sea") && size !== null;
+
 /** Island clock for availability: Toronto hour/month unless the client passes its own. */
 export function momentFrom(url: URL, now: Date) {
   const t = torontoParts(now);

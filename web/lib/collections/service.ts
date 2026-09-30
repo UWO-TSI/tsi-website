@@ -1,6 +1,6 @@
 import { z } from "zod";
 import {
-  checkDonation, clampSize, journalPage, museumWings, validateShowcase, weekStart, weeklyTrophies,
+  checkDonation, clampSize, journalPage, museumWings, trophyFor, validateShowcase, weekStart, weeklyTrophies,
   type Exhibit, type JournalPage, type MuseumWing, type Trophy, type WorldMoment,
 } from "./logic";
 import { castWater, fishRoll, forageSize, nodeAt, nodeRoll } from "./rolls";
@@ -29,18 +29,6 @@ const ERRORS: Record<string, [number, string]> = {
 };
 const fail = <T>(err: unknown): Result<T> => toFailure(ERRORS, err);
 
-/** Test fixtures and the dev demos; catches from the world go through catchAction. */
-export async function recordCatch(store: CollectionsStore, memberId: string, itemKey: string, sizeCm: number | null | undefined): Promise<Result<CatchResult & { item_key: string }>> {
-  try {
-    const sp = (await store.roster()).find((s) => s.key === itemKey);
-    const size = clampSize(sp, sizeCm);
-    const trophy = !!sp && (sp.category === "fish" || sp.category === "sea") && size !== null;
-    return { ok: true, data: { item_key: itemKey, ...(await store.recordCatch(memberId, itemKey, size, trophy)) } };
-  } catch (err) {
-    return fail(err);
-  }
-}
-
 const XZ = z.tuple([z.number().finite(), z.number().finite()]);
 const CatchRequest = z.discriminatedUnion("action", [
   z.object({ action: z.literal("harvest"), node: z.string().max(64), at: XZ }),
@@ -49,7 +37,6 @@ const CatchRequest = z.discriminatedUnion("action", [
 ]);
 /** A recorded catch (harvest, land), or a cast's roll waiting to be landed. */
 export type CatchReply = { item_key: string; size_cm: number | null } & (CatchResult | { roll: string });
-const trophyFor = (sp: { category: string } | undefined, size: number | null) => !!sp && (sp.category === "fish" || sp.category === "sea") && size !== null;
 
 /**
  * A catch from the world (roadmap "Server-authoritative catch rolls"). The

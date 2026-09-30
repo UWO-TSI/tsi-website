@@ -81,11 +81,6 @@ export function supabaseCollectionsStore(db: SupabaseClient): CollectionsStore {
       const n = await names(db, [...new Set(rows.map((r) => String(r.user_id)))]);
       return rows.map((r): WeeklyBest => ({ user_id: String(r.user_id), member_name: n.get(String(r.user_id)) ?? "Member", item_key: String(r.item_key), size_cm: Number(r.size_cm), caught_at: String(r.caught_at) }));
     },
-    async recordCatch(memberId, key, size, trophy) {
-      const { data, error } = await db.rpc("collections_record_catch", { p_member_id: memberId, p_item_key: key, p_size: size, p_trophy: trophy });
-      if (error) raise(error);
-      return caught(one(data));
-    },
     async cast(memberId, key, size, trophy) {
       const { data, error } = await db.rpc("collections_cast", { p_member_id: memberId, p_item_key: key, p_size: size, p_trophy: trophy });
       if (error) raise(error);
