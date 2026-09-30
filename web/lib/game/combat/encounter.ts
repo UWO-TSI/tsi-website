@@ -10,19 +10,20 @@ import { hurtPlayer, regenEnergy, resolvePlayerShot, summonWisps } from "./actio
 import { SLOT_IDS, type AbilityId, type CombatRuntime } from "./runtime";
 import { beamLands, DODGE, stepEnemy, strikeLands, sweptHit, type Vec } from "./sim";
 
+const ABILITY_IDS: readonly AbilityId[] = [...SLOT_IDS, "swap"];
+
 export function stepCombat(rt: CombatRuntime, me: Vec, dt: number, free: (x: number, z: number, r: number) => boolean = () => true, random: () => number = Math.random) {
   const p = rt.player;
   // Timers, buffs, shield, passive stacks, the transformation.
   p.attackCd = Math.max(0, p.attackCd - dt); p.swing = Math.max(0, p.swing - dt); p.dodgeCd = Math.max(0, p.dodgeCd - dt); p.hurt = Math.max(0, p.hurt - dt);
-  for (const k of [...SLOT_IDS, "swap"] as AbilityId[]) rt.cooldowns[k] = Math.max(0, rt.cooldowns[k] - dt);
-  for (const b of rt.buffs) b.t -= dt;
-  rt.buffs = rt.buffs.filter(b => b.t > 0);
+  for (const k of ABILITY_IDS) rt.cooldowns[k] = Math.max(0, rt.cooldowns[k] - dt);
+  for (let i = rt.buffs.length - 1; i >= 0; i--) if ((rt.buffs[i].t -= dt) <= 0) rt.buffs.splice(i, 1);
   p.shieldFor = Math.max(0, p.shieldFor - dt); if (!p.shieldFor) p.shield = 0;
   const s = rt.passive;
   s.momentumT = Math.max(0, s.momentumT - dt); if (!s.momentumT) s.momentum = 0;
   if (rt.transform && (rt.transform.t -= dt) <= 0) rt.transform = null;
   p.still = p.last && Math.hypot(p.last.x - me.x, p.last.z - me.z) < 0.01 ? p.still + dt : 0;
-  p.last = { ...me };
+  if (p.last) { p.last.x = me.x; p.last.z = me.z; } else p.last = { x: me.x, z: me.z };
   p.speed = moveSpeed(rt);
   regenEnergy(rt, dt);
   // The dodge's clock (the movement kit's dash moves you), ability dash (what follows it lands where it ends), knockback.

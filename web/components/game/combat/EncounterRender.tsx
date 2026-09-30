@@ -179,7 +179,8 @@ export function Projectiles({ ground, max = 48 }: { ground: Ground; max?: number
 }
 
 /** Glow-sprite units: wisps (the charm's and the kits'), bone wisps, the Illusionist's phantom. */
-const SPRITE_TINT: Record<string, string> = { wisp: "#9fe8ff", "weapon-wisp": "#9fe8ff", "bone-wisp": "#f2ecdc", decoy: "#d9b8ff" };
+const colors = (hex: Record<string, string>) => Object.fromEntries(Object.entries(hex).map(([k, v]) => [k, new THREE.Color(v)]));
+const SPRITE_TINT = colors({ wisp: "#9fe8ff", "weapon-wisp": "#9fe8ff", "bone-wisp": "#f2ecdc", decoy: "#d9b8ff" });
 export function Wisps({ ground, max = 10 }: { ground: Ground; max?: number }) {
   const glow = useTexture("/assets/sky/sun.png");
   const refs = useRef<(THREE.Sprite | null)[]>([]);
@@ -193,7 +194,7 @@ export function Wisps({ ground, max = 10 }: { ground: Ground; max?: number }) {
       const decoy = m.def.kind === "decoy";
       s.position.set(m.x, ground(m.x, m.z) + (decoy ? 0.9 : 1.1 + Math.sin(clock.elapsedTime * 4 + i) * 0.15), m.z);
       s.scale.set(decoy ? 1.1 : 0.7, decoy ? 1.9 : 0.7, 1);
-      s.material.color.set(SPRITE_TINT[m.def.key]);
+      s.material.color.copy(SPRITE_TINT[m.def.key]);
       s.material.opacity = Math.min(1, m.life ?? 1) * (decoy ? 0.55 + Math.sin(clock.elapsedTime * 9) * 0.1 : 0.9);
     }
   });
@@ -203,7 +204,7 @@ export function Wisps({ ground, max = 10 }: { ground: Ground; max?: number }) {
 }
 
 /** Totems (a carved post and the circle it covers, so overlaps read), tripwires (a small disc), and a ring under each of your summons: green, violet for a shade. */
-const TOTEM_COLOR: Record<string, string> = { "totem-ember": "#ff8a3d", "totem-mending": "#7dff9e", "totem-warding": "#8fd0ff", tripwire: "#ffe08a", shade: "#c9a7ff", decoy: "#d9b8ff" };
+const TOTEM_COLOR = colors({ "totem-ember": "#ff8a3d", "totem-mending": "#7dff9e", "totem-warding": "#8fd0ff", tripwire: "#ffe08a", shade: "#c9a7ff", decoy: "#d9b8ff" }), TOTEM_DEFAULT = TOTEM_COLOR["totem-mending"];
 export function Totems({ ground, max = 16 }: { ground: Ground; max?: number }) {
   const posts = useRef<(THREE.Mesh | null)[]>([]), rings = useRef<(THREE.Mesh | null)[]>([]);
   const ring = useMemo(() => new THREE.RingGeometry(0.94, 1, 64).rotateX(-Math.PI / 2), []);
@@ -216,16 +217,16 @@ export function Totems({ ground, max = 16 }: { ground: Ground; max?: number }) {
       if (!post || !r) continue;
       post.visible = r.visible = !!u;
       if (!u) continue;
-      const g = ground(u.x, u.z), c = TOTEM_COLOR[u.def.key] ?? "#7dff9e", totem = u.def.kind === "totem", area = totem || u.def.kind === "trap";
+      const g = ground(u.x, u.z), c = TOTEM_COLOR[u.def.key] ?? TOTEM_DEFAULT, totem = u.def.kind === "totem", area = totem || u.def.kind === "trap";
       post.visible = totem;
       r.geometry = area ? disc : ring;
       post.position.set(u.x, g + 0.6, u.z);
-      (post.material as THREE.MeshStandardMaterial).color.set(c);
-      (post.material as THREE.MeshStandardMaterial).emissive.set(c);
+      (post.material as THREE.MeshStandardMaterial).color.copy(c);
+      (post.material as THREE.MeshStandardMaterial).emissive.copy(c);
       r.position.set(u.x, g + 0.05, u.z);
       r.scale.setScalar(area ? u.def.radius! : 0.75);
       const m = r.material as THREE.MeshBasicMaterial;
-      m.color.set(c); m.opacity = totem ? 0.16 + Math.sin(clock.elapsedTime * 3 + i) * 0.04 : area ? 0.55 : 0.85;
+      m.color.copy(c); m.opacity = totem ? 0.16 + Math.sin(clock.elapsedTime * 3 + i) * 0.04 : area ? 0.55 : 0.85;
     }
   });
   return <>{Array.from({ length: max }, (_, i) => <group key={i}>

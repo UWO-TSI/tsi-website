@@ -54,9 +54,12 @@ const passiveOf = (rt: CombatRuntime) => rt.kit?.subclass.passive ?? null;
 export const buffSum = (rt: CombatRuntime, stat: Buff["stat"]) => rt.buffs.reduce((n, b) => n + (b.stat === stat && b.t > 0 ? b.value : 0), 0);
 export const critChance = (rt: CombatRuntime) => derived(rt.player.stats, rt.player.level).crit_chance + buffSum(rt, "crit");
 /** Speed multiplier: stats and kit (the Assassin), buffs, Monk momentum. */
+/** derived()'s move speed for the last stats, level and kit mods seen (the encounter asks every frame; they change rarely). */
+let base: { stats: object; level: number; mods: object | undefined; speed: number } | null = null;
 export function moveSpeed(rt: CombatRuntime): number {
-  const pv = passiveOf(rt);
-  return derived(rt.player.stats, rt.player.level, rt.kit?.subclass.mods).move_speed * (1 + buffSum(rt, "speed") + (pv?.kind === "momentum" ? pv.value * rt.passive.momentum : 0));
+  const pv = passiveOf(rt), p = rt.player, mods = rt.kit?.subclass.mods;
+  if (!base || base.stats !== p.stats || base.level !== p.level || base.mods !== mods) base = { stats: p.stats, level: p.level, mods, speed: derived(p.stats, p.level, mods).move_speed };
+  return base.speed * (1 + buffSum(rt, "speed") + (pv?.kind === "momentum" ? pv.value * rt.passive.momentum : 0));
 }
 export const distracted = (rt: CombatRuntime, e: Enemy) => e.status.distract > 0 || e.status.hold > 0 || rt.units.some(u => u.def.kind === "decoy" && dist(u, e) < e.type.aggroRadius + 3);
 

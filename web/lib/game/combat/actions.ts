@@ -84,10 +84,13 @@ export function startDodge(rt: CombatRuntime, dir: Vec): boolean {
  * The ruins on the movement kit (specs/movement.md): Q's dash is the dodge (its speed and time, easing to 0.4 of the
  * burst as the roll did, its cooldown), and walking and sprint scale with the combat speed stat.
  */
+let tuned: { speed: number; t: MoveTuning } | null = null;
 export function combatTuning(speed: number): MoveTuning {
+  if (tuned?.speed === speed) return tuned.t; // the avatar asks every frame; the speed stat changes rarely
   const t = MOVE_TUNING;
-  return { ...t, walkSpeed: t.walkSpeed * speed, sneakSpeed: t.sneakSpeed * speed, sprintSpeed: t.sprintSpeed * speed,
-    dashSpeed: DODGE.speed, dashTime: DODGE.duration, dashExit: 0.4, dashEase: 1, dashCooldown: DODGE.duration + DODGE.cooldown };
+  tuned = { speed, t: { ...t, walkSpeed: t.walkSpeed * speed, sneakSpeed: t.sneakSpeed * speed, sprintSpeed: t.sprintSpeed * speed,
+    dashSpeed: DODGE.speed, dashTime: DODGE.duration, dashExit: 0.4, dashEase: 1, dashCooldown: DODGE.duration + DODGE.cooldown } };
+  return tuned.t;
 }
 /** The kit's dash in the ruins: the sim moves you and its cooldown (the same DODGE timings) gates it; this gives it the dodge's i-frames and cancels a cast. */
 export function dashDodge(rt: CombatRuntime, dir: Vec): boolean {

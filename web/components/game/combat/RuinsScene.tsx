@@ -89,6 +89,8 @@ function bossVictory(eventKey: string, now: number) {
   });
 }
 
+const ENGAGED = new Set(["chase", "windup", "active", "recover"]);
+
 export default function RuinsScene({ level, phase, light, look, weather, liteMode, castShadows, zoom, player, onNear, onDefeat, start }: {
   phase: IslandPhase; light: IslandLight; look: SeasonLook; weather: IslandWeather; liteMode: boolean; castShadows: boolean; zoom: number;
   player: React.RefObject<THREE.Vector3>; onNear: (near: RuinsNear) => void; onDefeat: () => void;
@@ -169,7 +171,7 @@ export default function RuinsScene({ level, phase, light, look, weather, liteMod
       const after = e.state === "dead" && !e.summoned ? respawnAfter(e.id) : 0;
       if (after && e.deadFor > after && Math.hypot(pl.x - e.spawnX, pl.z - e.spawnZ) > 12) rt.enemies[i] = spawnEnemy(e.id, e.type, e.spawnX, e.spawnZ);
     }
-    rt.bossEngaged = rt.enemies.some(e => e.type.kind === "boss" && ["chase", "windup", "active", "recover"].includes(e.state));
+    rt.bossEngaged = rt.enemies.some(e => e.type.kind === "boss" && ENGAGED.has(e.state));
     if (rt.banner && clock.elapsedTime > rt.banner.until) rt.banner = null;
     // Places → mission events.
     const mission = rt.mission?.status === "active" ? rt.mission : null;
