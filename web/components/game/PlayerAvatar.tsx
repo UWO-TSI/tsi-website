@@ -24,7 +24,7 @@ import { STUCK_TIME, advanceMove, clearSpot, createMoveSim, createMoveState, int
 import { crouchKey, useKeyboardLocked, useMoveKeys } from "@/lib/game/movement/keys";
 import { routePilot, type RouteStep } from "@/lib/game/movement/course";
 import { BASE_FOV, EVENT_CLIP, MOVE_JUICE, TAKEOFF, applyFov, liveWind, momentumOf, screenOf, touchStick, useMoveParticles, type MoveJuice, type MoveTelemetry } from "./movement/moveFx";
-import { cooldownWisp, dashBurst, dashReady as dashBack, footstep, groundUnder, handPuff, landKind, landing, leafBits, puffRing, scuff, settle, slideBurst, slidePop, slideTrail, splash, streak, takeoff, trail, type GroundKind } from "@/lib/game/movement/juice";
+import { cooldownWisp, dashBurst, dashReady as dashBack, footprint, footstep, groundUnder, handPuff, landKind, landing, leafBits, puffRing, scuff, settle, slideBurst, slidePop, slideTrail, splash, streak, takeoff, trail, type GroundKind } from "@/lib/game/movement/juice";
 
 /**
  * The player on the movement kit (specs/movement.md): keys, the touch stick or
@@ -392,8 +392,9 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
       f.steps = m.steps;
       if (!sitting && state.mode === "ground" && speed > 0.6 && state.dashT <= 0) {
         const side = m.foot === 0 ? 0.1 : -0.1, a = state.facing, px = x + Math.cos(a) * side + Math.sin(a) * 0.05, pz = z - Math.sin(a) * side + Math.cos(a) * 0.05;
-        // Crouch-walking tiptoes: half the dust and a softer step.
-        const soft = state.crouch ? 0.5 : 1, sound = footstep(pool, groundAt(groundSurface, world, px, pz), px, groundY, pz, state.vx, state.vz, rain, j.footsteps * soft);
+        // Crouch-walking tiptoes: half the dust and a softer step. Sand, wet sand and snow keep a print of the foot.
+        const g = groundAt(groundSurface, world, px, pz), soft = state.crouch ? 0.5 : 1, sound = footstep(pool, g, px, groundY, pz, state.vx, state.vz, rain, j.footsteps * soft);
+        footprint(particles.prints, g, px, groundY, pz, state.facing, j.prints);
         playSFX(sound.name, sound.rate, sound.gain * soft);
       }
     }

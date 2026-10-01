@@ -78,7 +78,7 @@ export const stepSound = (g: GroundKind) => GROUND[g].sound;
 
 /** Salts keep two bursts of one event apart. */
 const SALT = { step: 1, rain: 2, kick: 3, extra: 4, ring: 5, plume: 6, dash: 7, side: 8, air: 9, swirl: 10, streak: 11, trail: 12, settle: 13, wisp: 14, ready: 15, splash: 16, ripple: 17, leaf: 18, mantle: 19, scuff: 20, sit: 21,
-  slide: 24, slideSpray: 25, slideScuff: 26, slideBurst: 27, slidePop: 28 };
+  slide: 24, slideSpray: 25, slideScuff: 26, slideBurst: 27, slidePop: 28, print: 29 };
 
 /**
  * A foot comes down: flecks and a mote on grass, a sand kick, a snow puff, a dust puff on soil; nothing on stone or
@@ -269,3 +269,26 @@ export function slidePop(pool: ParticlePool, g: GroundKind, x: number, y: number
   const n = pool.burst(SLIDE_POP, x, y, z, y, 0, 0, amount, GROUND[g].dust, seedAt(x, z, SALT.slidePop), HARD.has(g) ? 0.45 : 1);
   pool.carry(n, vx * 0.25, vz * 0.25);
 }
+
+// ── Footprints (specs/movement-feel.md, milestone 2) ─────────────────
+/** A shoe's print: pressed in at once, the edge crumbling in and the floor filling as it goes (the sprite's frames), then fading. */
+const PRINT: Recipe = { sprite: "footprint", count: [1, 1], life: [7, 7], size: [0.26, 0.26], grow: 1, speed: [0, 0], spread: 0, up: [0, 0], gravity: 0, drag: 0, wind: 0, alpha: 0.75, face: FACE.ground, fadeIn: 2000 };
+/** Which grounds take a print, its tint (darker than the ground: the dent) and how long it lasts (seconds). */
+const PRINTS: Partial<Record<GroundKind, { tint: number; life: number; alpha: number }>> = {
+  sand: { tint: 0xc3a571, life: 7, alpha: 0.7 },
+  wetSand: { tint: 0x8a744f, life: 11, alpha: 0.85 },
+  snow: { tint: 0xb3c2d6, life: 12, alpha: 0.8 },
+};
+export const takesPrints = (g: GroundKind) => !!PRINTS[g];
+/**
+ * A footprint on sand, wet sand or snow where a foot came down at (x, z), its toe the way the body faces: crisp at
+ * first, crumbling and filling in, gone after a few seconds (longest in wet sand and snow). Into the scene's print
+ * pool (its own decal layer); nothing on any other ground.
+ */
+export function footprint(prints: ParticlePool, g: GroundKind, x: number, y: number, z: number, facing: number, amount = 1) {
+  const p = PRINTS[g];
+  if (!p || amount <= 0) return;
+  const r: Recipe = PRINT_BY[g] ??= { ...PRINT, life: [p.life, p.life], alpha: p.alpha };
+  prints.burst(r, x, y, z, y, Math.sin(facing), Math.cos(facing), 1, p.tint, seedAt(x, z, SALT.print), Math.min(1.5, amount));
+}
+const PRINT_BY: Partial<Record<GroundKind, Recipe>> = {};

@@ -464,6 +464,25 @@ def marker(t):
     return A, colour(np.clip(val, 0, 1), 0.5)
 
 
+def footprint(t):
+    """A shoe pressed into sand or snow, seen from above, the toe along +u: a toe pad and a heel joined by a narrow waist,
+    its floor darker than the ground with faint tread lines across it, a crumbly lip of pushed-up ground round it. Over
+    its life the edge crumbles in, the floor fills and the tread goes, until it is a soft dent."""
+    toe = ((U - 0.34) / 0.36) ** 2 + (V / 0.27) ** 2
+    heel = ((U + 0.44) / 0.25) ** 2 + (V / 0.205) ** 2
+    waist = ((U + 0.04) / 0.52) ** 2 + (V / 0.16) ** 2
+    field = np.minimum(np.minimum(toe, heel), waist)
+    n = fbm(U * 7 + 3, V * 7 + 5, 1616)
+    crumble = (n - 0.5) * (0.18 + 0.7 * t)
+    inside = ss(1.0, 0.84, field + crumble)
+    lip = np.clip(ss(1.55, 1.08, field + crumble * 1.4) - inside, 0, 1) * (0.55 + 0.45 * vnoise(U * 14, V * 14, 1617))
+    tread = (0.5 + 0.5 * np.sin(U * 40)) ** 3 * ss(-0.04, 0.04, np.abs(U + 0.05) - 0.15)   # bars across the toe and heel, not the waist
+    floor = 0.58 + 0.16 * tread * (1 - ss(0.1, 0.55, t)) + 0.28 * ss(0.2, 1.0, t) + 0.05 * (n - 0.5)
+    A = inside * (0.9 - 0.42 * t) + lip * 0.5 * (1 - ss(0.3, 1.0, t))
+    val = np.where(inside > lip, floor, 1.04)
+    return np.clip(A, 0, 1), colour(np.clip(val, 0, 1.05), 0.3)
+
+
 # ---------------------------------------------------------------- the pack
 # name, painter, what it is (one row each, FRAMES frames). Append only: rows are indices in the engine.
 SPRITES = [
@@ -480,6 +499,7 @@ SPRITES = [
     ("scuff", scuff, "skid scuff (lies on the ground)"),
     ("sparkle", sparkle, "tiny sparkle"),
     ("marker", marker, "ground marker (target)"),
+    ("footprint", footprint, "footprint (lies on sand, snow)"),
 ]
 
 # How the sheet shows each row: the tint the engine gives it and the ground behind it.
@@ -489,6 +509,7 @@ SHEET = {
     "snow": ("#f4f8fc", "#b8c4d0"), "leaf": ("#c98a4b", "#8fa16c"), "streak": ("#ffffff", "#8fa16c"),
     "swirl": ("#f6fbff", "#8fa16c"), "scuff": ("#ba9664", "#ba9664"), "sparkle": ("#fff6dc", "#5f7a55"),
     "marker": ("#fff4c8", "#8c8577"),
+    "footprint": ("#c9ad78", "#e2cb93"),
 }
 
 

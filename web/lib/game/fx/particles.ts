@@ -49,6 +49,8 @@ export interface Recipe {
   jitter?: number;
   /** Height the particles start above the point, [min, max]. */
   rise?: readonly [number, number];
+  /** How fast it fades in, in lives (10: over its first tenth); a footprint is there at once. */
+  fadeIn?: number;
 }
 
 const FRAMES = PACK_COLS;
@@ -86,7 +88,7 @@ export class ParticlePool {
   private readonly rot; private readonly spin; private readonly row; private readonly fps; private readonly frame0;
   private readonly cr; private readonly cg; private readonly cb; private readonly alpha;
   private readonly gravity; private readonly drag; private readonly windK; private readonly lift; private readonly ground;
-  private readonly face; private readonly ax; private readonly az;
+  private readonly face; private readonly ax; private readonly az; private readonly fadeIn;
   private readonly order: Uint16Array; private readonly depth: Float32Array;
 
   constructor(capacity = 384) {
@@ -97,7 +99,7 @@ export class ParticlePool {
     this.rot = f(); this.spin = f(); this.row = f(); this.fps = f(); this.frame0 = f();
     this.cr = f(); this.cg = f(); this.cb = f(); this.alpha = f();
     this.gravity = f(); this.drag = f(); this.windK = f(); this.lift = f(); this.ground = f();
-    this.face = new Uint8Array(capacity); this.ax = f(); this.az = f();
+    this.face = new Uint8Array(capacity); this.ax = f(); this.az = f(); this.fadeIn = f();
     this.order = new Uint16Array(capacity); this.depth = f();
     this.a = new Float32Array(capacity * 4); this.b = new Float32Array(capacity * 4);
     this.c = new Float32Array(capacity * 4); this.d = new Float32Array(capacity * 4);
@@ -135,7 +137,7 @@ export class ParticlePool {
       this.row[i] = sprite; this.fps[i] = r.fps ?? 0; this.frame0[i] = Math.floor(rnd() * FRAMES);
       this.cr[i] = tr; this.cg[i] = tg; this.cb[i] = tb; this.alpha[i] = r.alpha * alpha;
       this.gravity[i] = r.gravity; this.drag[i] = r.drag; this.windK[i] = r.wind; this.lift[i] = r.lift ?? 0; this.ground[i] = groundY;
-      this.face[i] = r.face;
+      this.face[i] = r.face; this.fadeIn[i] = r.fadeIn ?? 10;
       // A streak lies along its direction (or its velocity); a ground decal turns to it.
       this.ax[i] = round ? sx : dirX / dl; this.az[i] = round ? sz : dirZ / dl;
       if (r.face === FACE.ground && !round) this.rot[i] = Math.atan2(-this.az[i], this.ax[i]);
@@ -189,8 +191,8 @@ export class ParticlePool {
       const i = this.order[o], t = this.age[i] / this.life[i], q = o * 4;
       const size = this.size[i] * (1 + (this.grow[i] - 1) * (1 - (1 - t) * (1 - t)));
       const frame = this.fps[i] > 0 ? (this.frame0[i] + Math.floor(this.age[i] * this.fps[i])) % FRAMES : Math.min(FRAMES - 1, Math.floor(t * FRAMES));
-      // Fade in over the first tenth, out over the last third (the flipbook also breaks up as it goes).
-      const fade = Math.min(1, t * 10) * (1 - smooth(0.62, 1, t));
+      // Fade in over the first tenth (or as the recipe says), out over the last third (the flipbook also breaks up as it goes).
+      const fade = Math.min(1, t * this.fadeIn[i]) * (1 - smooth(0.62, 1, t));
       this.a[q] = this.px[i]; this.a[q + 1] = this.py[i]; this.a[q + 2] = this.pz[i]; this.a[q + 3] = this.ground[i];
       this.b[q] = size; this.b[q + 1] = size * this.aspect[i]; this.b[q + 2] = this.rot[i]; this.b[q + 3] = this.row[i] * FRAMES + frame;
       this.c[q] = this.cr[i]; this.c[q + 1] = this.cg[i]; this.c[q + 2] = this.cb[i]; this.c[q + 3] = this.alpha[i] * fade;

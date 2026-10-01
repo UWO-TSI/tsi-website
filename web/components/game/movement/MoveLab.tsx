@@ -75,7 +75,7 @@ const GROUPS: { name: string; keys: [keyof MoveTuning, ...Range][] }[] = [
 const JUICE_KEYS: [keyof MoveJuice, ...Range][] = [["camLead", 0, 0.4, 0.01], ["fovKick", 0, 10, 0.5], ["dashKick", 0, 8, 0.5], ["squash", 0, 2, 0.05],
   ["anticipation", 0, 2, 0.05], ["footsteps", 0, 2, 0.05], ["takeoff", 0, 2, 0.05], ["landing", 0, 2, 0.05], ["camDip", 0, 3, 0.1],
   ["dashBurst", 0, 2, 0.05], ["streaks", 0, 2, 0.05], ["afterimage", 0, 1, 1], ["cooldown", 0, 2, 0.05],
-  ["slideTrail", 0, 2, 0.05], ["slideBurst", 0, 2, 0.05], ["slideKick", 0, 6, 0.25], ["slideDrop", 0, 0.5, 0.01]];
+  ["slideTrail", 0, 2, 0.05], ["slideBurst", 0, 2, 0.05], ["slideKick", 0, 6, 0.25], ["slideDrop", 0, 0.5, 0.01], ["prints", 0, 1.5, 0.05]];
 /** Dash shapes to compare (row 250), about the same reach each: only the dash values change. */
 const DASH_PRESETS: Record<string, Partial<MoveTuning>> = {
   // The shipped dash (MOVE_TUNING), so "current preset" keeps matching when the defaults are retuned.

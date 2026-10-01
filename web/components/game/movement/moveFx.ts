@@ -37,6 +37,8 @@ export const MOVE_JUICE = {
   slideBurst: 1, // the spray of a dash- or land-slide, the pop of a slide-jump
   slideKick: 1.5, // degrees the FOV punches out as a slide starts
   slideDrop: 0.18, // how far the camera's focus drops while sliding (world units)
+  // Milestone 2 (specs/movement-feel.md)
+  prints: 1, // footprints on sand, wet sand and snow
 };
 export type MoveJuice = typeof MOVE_JUICE;
 /** The follow camera's field of view at a walk (the Canvases' camera); speed and dashes widen it from here. */
@@ -58,8 +60,8 @@ export function momentumOf(s: { mode: string; dashT: number; keep: number; bleed
   return (tech && speed > walkSpeed + 0.05) || speed > sprintSpeed + 0.05 ? "kept" : "";
 }
 export const TAKEOFF = new Set<MoveEvent["kind"]>(["jump", "hop", "long", "dashjump"]);
-/** Particles a scene's system holds at once (all avatars and the ruins' puffs together). */
-const FX_CAPACITY = 384;
+/** Particles a scene's system holds at once (all avatars and the ruins' puffs together), and footprints apart from them. */
+const FX_CAPACITY = 384, PRINT_CAPACITY = 160;
 
 // ── The movement particles: our painted pack, one instanced draw per scene ──
 let packTexture: THREE.Texture | null = null;
@@ -130,19 +132,14 @@ function moveParticleMaterial(): THREE.MeshStandardMaterial {
 }
 
 const camPos = new THREE.Vector3(), camDir = new THREE.Vector3();
-/**
- * The movement particle system (specs/movement-feel.md deliverable 2): a ParticlePool drawn as one instanced quad
- * mesh, sorted back to front, in our pack. Shared by everything in a scene that throws particles (useMoveParticles).
- */
-export class MoveParticles {
-  readonly pool = new ParticlePool(FX_CAPACITY);
+/** One pool drawn as one instanced quad mesh in our pack, sorted back to front. */
+class PoolMesh {
   readonly mesh: THREE.Mesh;
   private readonly geometry = new THREE.InstancedBufferGeometry();
   private readonly attrs: THREE.InstancedBufferAttribute[];
-  private stamp = -1;
   /** Drawn once (empty) with the scene, so its shader compiles at load, not as the first puff hitches a frame. */
   private warm = false;
-  constructor() {
+  constructor(readonly pool: ParticlePool, label: string, renderOrder: number) {
     const quad = new THREE.PlaneGeometry(1, 1);
     this.geometry.index = quad.index;
     for (const name of ["position", "normal", "uv"]) this.geometry.setAttribute(name, quad.getAttribute(name));
@@ -153,19 +150,14 @@ export class MoveParticles {
     });
     this.geometry.instanceCount = 0;
     this.mesh = new THREE.Mesh(this.geometry, moveParticleMaterial());
-    this.mesh.name = "MoveParticles";
+    this.mesh.name = label;
     this.mesh.frustumCulled = false; // placed in the shader; the pool is small
     this.mesh.receiveShadow = true;
-    this.mesh.renderOrder = 3;
+    this.mesh.renderOrder = renderOrder;
     this.mesh.onAfterRender = () => { this.warm = true; };
   }
-  /** Step and draw, once per frame: the first caller's `dt` wins (the avatar's slow motion and pauses), the rest are skipped. */
-  tick(stamp: number, dt: number, camera: THREE.Camera, wind: { x: number; z: number }) {
-    if (stamp === this.stamp) return;
-    this.stamp = stamp;
+  step(dt: number, wind: { x: number; z: number }) {
     this.pool.update(dt, wind.x, wind.z);
-    camera.getWorldPosition(camPos);
-    camera.getWorldDirection(camDir);
     const n = this.pool.write(camPos.x, camPos.y, camPos.z, camDir.x, camDir.y, camDir.z);
     this.geometry.instanceCount = n;
     this.mesh.visible = n > 0 || !this.warm;
@@ -173,6 +165,28 @@ export class MoveParticles {
     for (const a of this.attrs) { a.clearUpdateRanges(); a.addUpdateRange(0, n * 4); a.needsUpdate = true; }
   }
   dispose() { this.geometry.dispose(); }
+}
+/**
+ * The movement particle system (specs/movement-feel.md deliverable 2): a ParticlePool drawn as one instanced quad
+ * mesh, sorted back to front, in our pack, and a second for the footprints (a decal pool, drawn under the effects),
+ * so a burst of dust never pushes out a print. Shared by everything in a scene that throws particles (useMoveParticles).
+ */
+export class MoveParticles {
+  readonly pool = new ParticlePool(FX_CAPACITY);
+  readonly prints = new ParticlePool(PRINT_CAPACITY);
+  private readonly layers = [new PoolMesh(this.prints, "MovePrints", 2), new PoolMesh(this.pool, "MoveParticles", 3)];
+  readonly meshes = this.layers.map(l => l.mesh);
+  private stamp = -1;
+  /** Step and draw, once per frame: the first caller's `dt` wins (the avatar's slow motion and pauses), the rest are skipped. */
+  tick(stamp: number, dt: number, camera: THREE.Camera, wind: { x: number; z: number }) {
+    if (stamp === this.stamp) return;
+    this.stamp = stamp;
+    camera.getWorldPosition(camPos);
+    camera.getWorldDirection(camDir);
+    for (const l of this.layers) l.step(dt, wind);
+  }
+  clear() { this.pool.clear(); this.prints.clear(); }
+  dispose() { for (const l of this.layers) l.dispose(); }
 }
 
 let windOf: IslandWeather | null = null, wind: WorldWind = worldWind("clear");
@@ -194,8 +208,8 @@ export function useMoveParticles(): MoveParticles {
   }, [scene]);
   useEffect(() => {
     const e = SHARED.get(scene)!;
-    if (e.users++ === 0) scene.add(e.fx.mesh);
-    return () => { if (--e.users === 0) { scene.remove(e.fx.mesh); e.fx.pool.clear(); e.fx.dispose(); } };
+    if (e.users++ === 0) scene.add(...e.fx.meshes);
+    return () => { if (--e.users === 0) { scene.remove(...e.fx.meshes); e.fx.clear(); e.fx.dispose(); } };
   }, [scene]);
   // Steps at real time unless an avatar already stepped it this frame (its slow motion and dev pauses win).
   useFrame((state, delta) => fx.tick(state.clock.elapsedTime, Math.min(delta, 0.1), state.camera, liveWind()));
