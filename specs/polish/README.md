@@ -24,10 +24,10 @@ Combat, café, movement feel and the avatar have their own specs in `specs/`.
 ## Order (two code agents at a time)
 | # | Spec | Depends on | State |
 |---|---|---|---|
-| — | Combat polish (`specs/combat-polish.md`) | — | running |
-| — | Café polish (`specs/cafe-polish.md`) | — | running |
-| 1 | Movement feel (`specs/movement-feel.md`): our particle pack and particle system | combat merged (shared dash and avatar files) | next |
-| 2 | HUD frame and first login (`hud-first-login.md`) | café merged (shared HUD files) | next |
+| — | Combat polish (`specs/combat-polish.md`) | — | on main |
+| — | Café polish (`specs/cafe-polish.md`) | — | on main |
+| 1 | Movement feel (`specs/movement-feel.md`): our particle pack and particle system | combat merged (shared dash and avatar files) | running (milestone 1) |
+| 2 | HUD frame and first login (`hud-first-login.md`) | café merged (shared HUD files) | running |
 | 3 | Living village (`living-village.md`) | 1 (particles for rain splashes, leaf bits) | queued |
 | 4 | Interiors (`interiors.md`) | café merged (keeper → character pattern) | queued |
 | 5 | Menus and sheets (`menus.md`) | 2 | queued |
@@ -57,3 +57,5 @@ Combat, café, movement feel and the avatar have their own specs in `specs/`.
 ## Follow-ups found along the way
 - **Combat target marker.** The white target ring under enemies is a flat ring. Replace it with a painted marker from the particle pack (movement feel).
 - **Lost palette file.** `art/props-enemies/palette_ext.json` was never committed and is lost. The weapon, enemy and prop builders that name its colours can't rebuild on a fresh checkout (`pe.py` now loads without it). Rebuild it from the shipped GLBs' material colours.
+- **Café ceiling hotspot.** The eye-level reference shot shows a blown-out light on the ceiling (`specs/evidence/cafe-polish/19-ref1-beside-interior.webp`). Soften it when the café is next touched.
+- **Toast over the seat prompt.** The café agent saw the toast cover the seat prompt at bottom centre; the HUD spec's toast lane fixes it.
