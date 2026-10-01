@@ -92,7 +92,7 @@ function AvatarBench() {
   }, [sheet, yaw, q]);
   const root = useRef<HTMLDivElement>(null);
   const cols = sheet === "styles" || sheet === "backs" || sheet === "beanie" || sheet === "backpack" ? 6 : sheet === "turn" ? 9
-    : sheet === "bangs" || sheet === "hats" ? 8 : sheet === "hacc" ? 4 : cells.length;
+    : sheet === "bangs" || sheet === "hats" ? 8 : sheet === "hacc" ? 6 : cells.length;
   return <div ref={root} style={{ position: "relative", paddingTop: 48, minHeight: "100vh", background: "#efe7d6" }}>
     <div data-sheet={sheet} style={{ display: "grid", gridTemplateColumns: `repeat(${cols}, ${cols === 1 ? "420px" : "1fr"})`, gap: 8, padding: 8 }}>
       {cells.map(c => <figure key={c.label} style={{ margin: 0 }}>

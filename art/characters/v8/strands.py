@@ -34,8 +34,8 @@ for k in range(34):                   # fine strands: mostly darker lines, every
     v0, v1 = rng.uniform(0.0, 0.25), rng.uniform(0.6, 1.0)
     wob = rng.uniform(0.002, 0.006) * np.sin(V * rng.uniform(4, 9) + rng.uniform(0, 6.3))
     img += a * np.exp(-((U - c - wob) / w) ** 2) * ss(v0, v0 + 0.08, V) * (1 - ss(v1 - 0.12, v1, V))
-img *= 0.8 + 0.2 * ss(0.0, 0.2, np.minimum(U, 1 - U))      # the sides turn into the next lock
-img *= 0.86 + 0.14 * ss(0.0, 0.55, V)                       # root-to-tip value shift
+img *= 0.86 + 0.14 * ss(0.0, 0.2, np.minimum(U, 1 - U))      # the sides turn into the next lock
+img *= 0.88 + 0.12 * ss(0.0, 0.55, V)                       # root-to-tip value shift
 img = np.clip(img, 0, 1)
 out = os.path.join(os.path.dirname(os.path.abspath(__file__)), "hair_strands.png")
 Image.fromarray((img * 255 + 0.5).astype(np.uint8), "L").save(out, optimize=True)

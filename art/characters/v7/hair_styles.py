@@ -490,7 +490,7 @@ def ball(lat, lon, r, base=None, sink=0.35, tall=0.85, dlat=0.0, dlon=0.0):
     return dict(pts=[("s", lat, lon, c - r * tall), ("s", lat + dlat, lon + dlon, c + r * tall)], w=[r, r], coil=1, hug=0)
 
 
-def afro(n=19):
+def afro(n=15):
     """The afro (avatar v8, no reference sheet: drawn in hair-acnh's language): a round mass (the under-cap, built in
     hair_build) covered in big soft curl clumps, so the silhouette is a lumpy cloud; it covers the front crown as well,
     so any fringe tucks under it."""
@@ -504,6 +504,9 @@ def afro(n=19):
             lat, r = hairline(lon) + 30 + (k % 3) * 3, r * 0.8    # the front: behind the hairline, so the mass rises from the fringe
         out.append(ball(lat, lon, r, base=lambda la, lo=lon: afro_outer(la, lo) - 0.012,
                         sink=0.3, dlat=4 * math.sin(k), dlon=5 * math.cos(k * 1.3)))
+    for s_ in (1, -1):                         # round volume framing the face at the cheeks and temples
+        for lat, lon, r in ((6, 74, 0.054), (22, 80, 0.05)):
+            out.append(ball(lat, s_ * lon, r, base=lambda la, lo=s_ * lon: afro_outer(la, lo) - 0.012, sink=0.35, dlat=3))
     return out
 
 

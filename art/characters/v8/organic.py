@@ -20,8 +20,8 @@ import locks
 
 SOFT = 0.72          # share of the mass normal in a hair vertex's normal
 REACH = 0.03         # m: occluders farther than this do not darken a vertex
-FLOOR = 0.6          # the darkest a fully enclosed vertex gets (a groove, the hair against the scalp)
-GRAD = (0.8, 1.0)    # the top-light COLOR_0 gradient (v7: 0.62-1.0); the occlusion now carries most of the depth
+FLOOR = 0.68         # the darkest a fully enclosed vertex gets (a groove, the hair against the scalp)
+GRAD = (0.84, 1.0)   # the top-light COLOR_0 gradient (v7: 0.62-1.0); the occlusion now carries most of the depth
 
 
 def _dirs(n=24):

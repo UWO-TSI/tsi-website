@@ -87,8 +87,8 @@ def piece(pid, rig, mat, name=None, head=None):
         groove = hs.GROOVE_V8 if v8 else hs.GROOVE
         outer = hs.OUTER.get(pid) or (lambda lat: hs.cap_outer(lat, tight, groove))
         pc, _, _ = kit.hair_cap(hs.BACKS[pid][3], outer=outer, outer_ll=hs.OUTER_LL.get(pid), hem=hs.CAP_FLOOR, lons=CAP_LONS)
-        for f in pc.since(0):
-            pc.fuv[f] = {v: (0.0, 0.5) for v in f.verts}        # matte: u 0 is off the lock ridges, no gloss band
+        for f in pc.since(0):     # one value: u 0 (v7, off the lock ridges); v8 flat caps a mid strand-texture value
+            pc.fuv[f] = {v: (0.5, 0.7) if v8 else (0.0, 0.5) for v in f.verts}
         cap = set(pc.since(0))
         if v8 and pid not in hs.FLAT_CAP:
             cap_uvs(pc)
