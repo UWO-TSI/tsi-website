@@ -104,6 +104,6 @@ export default function CafeInterior({ phase, player, frozen, identity, level, o
     <InteriorKeeper position={[8.55, 0, -0.95]} rotY={-Math.PI / 2} watch={[7, -0.95]} colors={{ apron: "#7a4f2e", shirt: "#f3e6cf" }} hat="cap" playerPosRef={player as React.MutableRefObject<THREE.Vector3>} />
     <StudySeats area="cafe" player={player} board={BOARD_SPOT} />
     <PlayerAvatar spawnPosition={SPAWN} playerName={identity.display_name} playerLevel={level} member={identity.member} player={player} frozen={frozen}
-      world={CAFE} groundHeight={flat} />
+      world={CAFE} groundHeight={flat} walkOnly />
   </>;
 }

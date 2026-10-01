@@ -73,6 +73,8 @@ interface PlayerAvatarProps {
   timeScale?: number;
   telemetry?: React.RefObject<MoveTelemetry>;
   walkSpeed?: number;
+  /** Walk only (the café, cafe-polish §4): no running, jumping or dashing. */
+  walkOnly?: boolean;
 }
 
 const playSFX = (name: SFXName) => AudioManager.playSFX(name);
@@ -95,7 +97,7 @@ const GRIP_Y = 0.58 * CHARACTER_SCALE;
 const SEAT_CLIPS = new Set<ClipName>(["Sit", "Study", "Stretch", "Sleep"]);
 type Seat = { x: number; z: number; clip: ClipName; lift: number; yaw: number };
 
-export default function PlayerAvatar({ spawnPosition, player, world, groundHeight, groundSurface, camTarget, playerName = "Player", showNameplate = true, playerLevel, member = false, combat: inCombat = false, glider = false, frozen = false, desktopClickToMove = false, tuning, juice, timeScale, telemetry, walkSpeed = MOVE_TUNING.walkSpeed }: PlayerAvatarProps) {
+export default function PlayerAvatar({ spawnPosition, player, world, groundHeight, groundSurface, camTarget, playerName = "Player", showNameplate = true, playerLevel, member = false, combat: inCombat = false, glider = false, frozen = false, desktopClickToMove = false, tuning, juice, timeScale, telemetry, walkSpeed = MOVE_TUNING.walkSpeed, walkOnly = false }: PlayerAvatarProps) {
   const anchor = useRef<THREE.Group>(null), body = useRef<THREE.Group>(null), head = useRef<THREE.Group>(null);
   const motion = useRef<CharacterMotion>({ speed: 0, yaw: 0, lift: 0, pose: null, play: null, move: null });
   const { look } = useMyLook();
@@ -245,7 +247,7 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
     let ix = (k[b.right] ? 1 : 0) - (k[b.left] ? 1 : 0), iz = (k[b.forward] ? 1 : 0) - (k[b.back] ? 1 : 0);
     const keyed = Math.hypot(ix, iz), tilt = Math.hypot(st.x, st.z);
     if (keyed) { ix /= keyed; iz /= keyed; } else { ix = st.x; iz = st.z; }
-    const jumpPressed = presses.current.jump || st.jumpPressed, dashPressed = presses.current.dash || st.dashPressed;
+    const jumpPressed = !walkOnly && (presses.current.jump || st.jumpPressed), dashPressed = !walkOnly && (presses.current.dash || st.dashPressed);
     presses.current.jump = presses.current.dash = false;
     st.jumpPressed = st.dashPressed = false;
     if (frozen || keyed || tilt > 0.05) target.current = null;
@@ -264,8 +266,8 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
       if (d.pilot && dt > 0 && !piloted) d.pilot = null;
       const input: MoveInput = piloted ?? (live ? {
         x: goal ? goal.x : fwdX * iz - fwdZ * ix, z: goal ? goal.z : fwdZ * iz + fwdX * ix,
-        sprint: !!k[b.sprint] || (!keyed && tilt > 0.92), sneak: !!k[b.sneak],
-        jump: !!k[b.jump] || st.jump, jumpPressed, dashPressed,
+        sprint: !walkOnly && (!!k[b.sprint] || (!keyed && tilt > 0.92)), sneak: !!k[b.sneak],
+        jump: !walkOnly && (!!k[b.jump] || st.jump), jumpPressed, dashPressed,
       } : { ...NO_INPUT, dashPressed: !frozen && !down && dashPressed });
       if (inCombat) { input.push = push; s.state.facing = p.facing; } // no stick: the dodge goes the way you aim
       events = advanceMove(s, input, dt, world, t);
