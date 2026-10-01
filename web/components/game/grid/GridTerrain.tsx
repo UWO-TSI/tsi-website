@@ -57,6 +57,7 @@ import {
   cellPieces,
   latticeAt,
   overlayAlpha,
+  smoothstep,
   type ShoreSdf,
 } from "@/lib/game/grid";
 import { terrainMaterial, setShoreField } from "./terrainMaterials";
@@ -108,6 +109,12 @@ const WATER_FRINGE = 9;
  */
 const RAMP_LAYER = 10;
 
+/** Render layer for rock showing through steep ground (derived from slope, not painted). */
+const ROCK_LAYER = 11;
+
+/** The cliff kit's grass drape, in the island's grass colour. */
+export const CLIFF_FRINGE = 12;
+
 
 /**
  * How far the fringe card sits OUTBOARD of the land edge, in tiles.
@@ -138,6 +145,20 @@ interface Mesh {
 const emptyMesh = (): Mesh => ({ pos: [], uv: [], nrm: [], idx: [], color: [] });
 
 type Height = (x: number, z: number) => number;
+
+/**
+ * Rise over run where rock starts to show through the grass, and where it is all rock. A
+ * lone one-level slope (about 0.3 at its steepest) and a Slope-brush hill (a level per
+ * 2.5 cells, 0.3) stay green; the steepest slope the rule allows (a level per 1.5 cells,
+ * 0.5) is a rocky mountainside.
+ */
+const ROCK_FROM = 0.36, ROCK_TO = 0.55;
+
+/** How steep a height function is at a point, rise over run. */
+function steepness(h: Height, x: number, z: number): number {
+  const e = 0.05;
+  return Math.hypot(h(x + e, z) - h(x - e, z), h(x, z + e) - h(x, z - e)) / (2 * e);
+}
 
 /**
  * One vertex on a height function: world UVs so neighbouring cells continue
@@ -372,6 +393,7 @@ export function terrainChunks(map: IslandMap, heights: Float32Array | null, shor
     const bed = emptyMesh();
     const fringe = emptyMesh();
     const ramp = emptyMesh();
+    const rock = emptyMesh();
     const overlays = new Map<number, Mesh>();
 
     for (let cz = chunk.minCellZ; cz <= chunk.maxCellZ; cz++) {
@@ -418,6 +440,11 @@ export function terrainChunks(map: IslandMap, heights: Float32Array | null, shor
         const pieces = land === "full" ? cellSquares(map, cx, cz, curves(h, cx, cz) ? S : 1) : land;
         addPolygons(grass, pieces, (px, pz) => vertex(grass, h, px, pz));
 
+        // Rock shows through where the ground is steep: a slope class read off the height field itself.
+        if (pieces.length > 1 && [[0, 0], [-0.5, -0.5], [0.5, -0.5], [0.5, 0.5], [-0.5, 0.5]].some(([a, b]) => steepness(h, x + a, z + b) > ROCK_FROM)) {
+          addPolygons(rock, pieces, (px, pz) => vertex(rock, h, px, pz, 0.002, [1, 1, 1, smoothstep(ROCK_FROM, ROCK_TO, steepness(h, px, pz))]));
+        }
+
         for (const surface of OVERLAY_SURFACES) {
           const f = terrain.overlays.get(surface);
           if (!f) continue;
@@ -458,6 +485,7 @@ export function terrainChunks(map: IslandMap, heights: Float32Array | null, shor
     emit(Surface.River, river);
     emit(WATER_FRINGE, fringe);
     emit(RAMP_LAYER, ramp);
+    emit(ROCK_LAYER, rock);
     for (const s of OVERLAY_SURFACES) {
       const m = overlays.get(s);
       if (m) emit(s, m);
@@ -499,29 +527,15 @@ function addSnow(shader: THREE.WebGLProgramParametersWithUniforms, cover: number
     #include <normal_fragment_begin>`);
 }
 
-export default function GridTerrain({ map, field: heights, palette }: { map: IslandMap; field?: Float32Array; palette?: TerrainPalette }) {
-  // ONE field, read twice: the seabed geometry samples it on the CPU, the water
-  // shader samples it on the GPU. Two bakes would be two shorelines.
-  const field = useMemo(() => shoreSdf(map), [map]);
+/** Every terrain layer's material, keyed by surface or render layer. Shared by the ground and the cliff kit. */
+export type TerrainMaterials = Map<number, THREE.Material>;
 
-  /**
-   * The continuous ground height. One field, read by the mesh here and by the
-   * height provider in GridWorld, so the player walks on exactly the surface
-   * that is drawn -- two separate calculations is how a character ends up
-   * hovering over a hill.
-   */
-  const chunks = useMemo(
-    // Guarded on the constant: at CLIFF_LEVELS 1 every level change is a cliff and the blur has nothing to cross.
-    () => terrainChunks(map, CLIFF_LEVELS > 1 ? heights ?? heightField(map) : null, field),
-    [map, heights, field]
-  );
-
-  // The water reads its distance to the shore from a baked field rather than
-  // from anything on the mesh, so this is a one-shot upload, not geometry.
-  useEffect(() => {
-    setShoreField(field);
-  }, [field]);
-
+/**
+ * The terrain's materials for a palette. GridWorld builds them once and hands
+ * the same instances to the ground and to the cliff kit, so a cliff's top grass
+ * and its drape are the island's grass, not a second green.
+ */
+export function useTerrainMaterials(palette?: TerrainPalette): TerrainMaterials {
   const materials = useMemo(() => {
     // Names, not files — terrainMaterial() decides whether a surface gets an
     // ACNH texture or a procedural one, because two of the ACNH files are not
@@ -544,6 +558,7 @@ export default function GridTerrain({ map, field: heights, palette }: { map: Isl
       [RIVER_BED]: "mRiverBed",
       [WATER_FRINGE]: "mGrassRiverXlu",
       [RAMP_LAYER]: "mRoadStone",
+      [CLIFF_FRINGE]: "mGrassCliffXlu",
     };
     const m = new Map<number, THREE.Material>();
     for (const s of [
@@ -551,6 +566,7 @@ export default function GridTerrain({ map, field: heights, palette }: { map: Isl
       RIVER_BED,
       Surface.River,
       WATER_FRINGE,
+      CLIFF_FRINGE,
       RAMP_LAYER,
       ...OVERLAY_SURFACES,
     ]) {
@@ -562,6 +578,15 @@ export default function GridTerrain({ map, field: heights, palette }: { map: Isl
         stone.onBeforeCompile = (shader, renderer) => { shared.onBeforeCompile(shader, renderer); addSnow(shader, 0.8); };
         stone.customProgramCacheKey = () => "island-stone-snow-v1";
         m.set(s, stone);
+        continue;
+      }
+      if (shared && palette && (s === WATER_FRINGE || s === CLIFF_FRINGE)) {
+        // The grass drapes take the island's grass colour, or they read as a different lawn hanging off it.
+        const drape = shared.clone() as THREE.MeshStandardMaterial;
+        drape.onBeforeCompile = shared.onBeforeCompile;
+        drape.customProgramCacheKey = shared.customProgramCacheKey;
+        drape.color.set(palette.grass);
+        m.set(s, drape);
         continue;
       }
       if (shared) {
@@ -609,8 +634,20 @@ export default function GridTerrain({ map, field: heights, palette }: { map: Isl
                 #endif
               `);
               addSnow(shader, 0.96);
+              // The cliff kit's grass is instanced and carries its own UVs: give it the ground's world
+              // UVs, so a plateau top is the same lawn as the ground around it.
+              shader.vertexShader = shader.vertexShader.replace("#include <uv_vertex>", `#include <uv_vertex>
+                #ifdef USE_INSTANCING
+                  vec2 worldUv = (modelMatrix * instanceMatrix * vec4(position, 1.0)).xz * ${UV.toFixed(4)};
+                  #ifdef USE_MAP
+                    vMapUv = (mapTransform * vec3(worldUv, 1.0)).xy;
+                  #endif
+                  #ifdef USE_NORMALMAP
+                    vNormalMapUv = (normalMapTransform * vec3(worldUv, 1.0)).xy;
+                  #endif
+                #endif`);
             };
-            overlay.customProgramCacheKey = () => "island-grass-detail-v4";
+            overlay.customProgramCacheKey = () => "island-grass-detail-v5";
           }
           if (palette && s === Surface.Soil) {
             // The supplied soil albedo contains broad bright marks. Keep its
@@ -666,10 +703,15 @@ export default function GridTerrain({ map, field: heights, palette }: { map: Isl
         })
       );
     }
+    // Steep ground shows rock through the grass: the cliff kit's own rock, faded in by slope.
+    const rock = (terrainMaterial("mCliff") as THREE.MeshStandardMaterial).clone();
+    rock.vertexColors = true;
+    rock.transparent = true;
+    rock.depthWrite = false;
+    m.set(ROCK_LAYER, rock);
     return m;
   }, [palette]);
 
-  useEffect(() => () => { chunks.forEach(({ geometry }) => geometry.dispose()); }, [chunks]);
   useEffect(() => () => {
     if (palette) for (const surface of [Surface.Grass, Surface.Soil, Surface.Sand]) {
       const material = materials.get(surface) as THREE.MeshStandardMaterial;
@@ -680,13 +722,43 @@ export default function GridTerrain({ map, field: heights, palette }: { map: Isl
     materials.get(Surface.Soil)?.dispose();
     if (palette) materials.get(Surface.Grass)?.dispose();
     if (palette) materials.get(Surface.Stone)?.dispose();
+    if (palette) materials.get(WATER_FRINGE)?.dispose();
+    if (palette) materials.get(CLIFF_FRINGE)?.dispose();
+    materials.get(ROCK_LAYER)?.dispose();
   }, [materials, palette]);
 
+  return materials;
+}
+
+export default function GridTerrain({ map, field: heights, materials }: { map: IslandMap; field?: Float32Array; materials: TerrainMaterials }) {
+  // ONE field, read twice: the seabed geometry samples it on the CPU, the water
+  // shader samples it on the GPU. Two bakes would be two shorelines.
+  const field = useMemo(() => shoreSdf(map), [map]);
+
+  /**
+   * The continuous ground height. One field, read by the mesh here and by the
+   * height provider in GridWorld, so the player walks on exactly the surface
+   * that is drawn -- two separate calculations is how a character ends up
+   * hovering over a hill.
+   */
+  const chunks = useMemo(
+    // Guarded on the constant: at CLIFF_LEVELS 1 every level change is a cliff and the blur has nothing to cross.
+    () => terrainChunks(map, CLIFF_LEVELS > 1 ? heights ?? heightField(map) : null, field),
+    [map, heights, field]
+  );
+
+  // The water reads its distance to the shore from a baked field rather than
+  // from anything on the mesh, so this is a one-shot upload, not geometry.
+  useEffect(() => {
+    setShoreField(field);
+  }, [field]);
+
+  useEffect(() => () => { chunks.forEach(({ geometry }) => geometry.dispose()); }, [chunks]);
   return (
     <group>
       {chunks.map((c) => (
-        // Sand then soil, so where a path meets the beach the soil is always the one on top.
-        <mesh key={c.key} geometry={c.geometry} material={materials.get(c.surface)} receiveShadow renderOrder={c.surface === Surface.Sand ? 1 : c.surface === Surface.Soil ? 2 : 0} />
+        // Rock, then sand, then soil: where a path meets the beach the soil is always the one on top.
+        <mesh key={c.key} geometry={c.geometry} material={materials.get(c.surface)} receiveShadow renderOrder={c.surface === ROCK_LAYER ? 1 : c.surface === Surface.Sand ? 2 : c.surface === Surface.Soil ? 3 : 0} />
       ))}
     </group>
   );

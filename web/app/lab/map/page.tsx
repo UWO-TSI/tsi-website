@@ -1646,7 +1646,7 @@ export default function MapLab() {
               <>
                 <Row k="reachable from spawn" v={`${health.terrain.reachable}/${health.terrain.walkable}`} warn={health.terrain.stranded > 0} />
                 <Row k="cliff cells" v={String(health.terrain.cliffCells)} />
-                <Row k="half-step cells" v={String(health.terrain.halfSteps)} />
+                <Row k="slope cells · flat" v={`${health.terrain.slopeCells} · ${Math.round((100 * health.terrain.flatCells) / Math.max(1, health.terrain.walkable))}%`} />
                 {health.warnings.length > 0 && (
                   <div style={{ color: "#ffa62b", marginTop: 6, lineHeight: 1.5 }}>
                     {health.warnings.length} overlap{health.warnings.length > 1 ? "s" : ""} (outlined red): {health.warnings.slice(0, 3).join("; ")}

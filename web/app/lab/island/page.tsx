@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { PAINTER_DRAFT_KEY, setVillageDoc, type VillageDoc } from "@/lib/game/villageMap";
+import { terrainFixtureDoc } from "@/lib/game/fixtures/terrainFixture";
 
 const DefaultIslandWorld = dynamic(() => import("@/components/game/DefaultIslandWorld"), {
   ssr: false,
@@ -12,7 +13,8 @@ const DefaultIslandWorld = dynamic(() => import("@/components/game/DefaultIsland
 
 /**
  * The member island bench. `?draft=1` walks the /lab/map painter's working
- * draft (its autosave in this browser) instead of the shipped village file:
+ * draft (its autosave in this browser) instead of the shipped village file
+ * (`?fixture=terrain`: the synthetic natural-terrain test island):
  * the document is swapped in before the world mounts, and every system reads
  * the village from it (specs/island-painter.md §8). Nothing is written back.
  */
@@ -22,7 +24,10 @@ export default function IslandBench() {
   useEffect(() => {
     let next: "shipped" | "draft" | "no-draft" = "shipped";
     try {
-      if (new URLSearchParams(window.location.search).get("draft") === "1") {
+      const query = new URLSearchParams(window.location.search);
+      // The natural-terrain test island (lib/game/fixtures/terrainFixture.ts), never the shipped one.
+      if (query.get("fixture") === "terrain") setVillageDoc(terrainFixtureDoc());
+      else if (query.get("draft") === "1") {
         const raw = window.localStorage.getItem(PAINTER_DRAFT_KEY);
         if (raw) setVillageDoc(JSON.parse(raw) as VillageDoc);
         next = raw ? "draft" : "no-draft";

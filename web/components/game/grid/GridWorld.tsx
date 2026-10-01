@@ -14,6 +14,7 @@
 import { useEffect, useMemo } from "react";
 import * as THREE from "three";
 import {
+  Surface,
   heightAtWorld,
   CLIFF_LEVELS,
   heightField,
@@ -22,7 +23,7 @@ import {
   type IslandMap,
 } from "@/lib/game/grid";
 import { setTerrainHeightProvider } from "../terrain";
-import GridTerrain, { type TerrainPalette } from "./GridTerrain";
+import GridTerrain, { CLIFF_FRINGE, useTerrainMaterials, type TerrainPalette } from "./GridTerrain";
 import GridCliffs from "./GridCliffs";
 import GrassTufts from "./GrassTufts";
 import { applyGrassNormalStrength, advanceWater, shadeWaterByClouds } from "./terrainMaterials";
@@ -36,6 +37,7 @@ import { worldTime } from "@/lib/game/worldClock";
 /** `light`: the scene's IslandLight; the water mirrors its key light (sun by day, moon by night) in its colour. */
 export default function GridWorld({ map, field: suppliedField, light, palette, windScale }: { map: IslandMap; field?: Float32Array; light: Pick<IslandLight, "water" | "sunPosition" | "sun">; palette?: TerrainPalette; windScale?: number }) {
   const t = useTuning();
+  const materials = useTerrainMaterials(palette);
 
   // The ground material is shared and cached, so the normal-map settings are
   // pushed onto it rather than recreated — a slider move must not rebuild every
@@ -75,8 +77,8 @@ export default function GridWorld({ map, field: suppliedField, light, palette, w
 
   return (
     <group>
-      <GridTerrain map={map} field={suppliedField} palette={palette} />
-      <GridCliffs map={map} />
+      <GridTerrain map={map} field={suppliedField} materials={materials} />
+      <GridCliffs map={map} grass={materials.get(Surface.Grass)} drape={materials.get(CLIFF_FRINGE)} />
       <GrassTufts map={map} windScale={windScale} />
     </group>
   );

@@ -128,50 +128,66 @@ export const SLOPE_SPREAD = 3;
  *   · overlapping transitions SUM, so a staircase merges into one long ramp
  *     automatically -- the lookahead is emergent, not coded
  *
- * CLIFFS ARE BARRIERS. A sample is only accumulated if its level is within
- * CLIFF_LEVELS of the corner's home level. So a cliff-top corner never averages
- * in the ground below it: the plateau stays flat right up to the lip and the kit
- * piece still sits correctly. Without this the blur would round every cliff into
- * a slope and the 44-piece cliff kit would have nothing to draw.
+ * The blur is a DIFFUSION (binomial passes over the cells), and CLIFFS ARE
+ * BARRIERS: nothing flows between two neighbours a full cliff apart. So a
+ * cliff-top never averages in the ground below it -- the plateau stays flat
+ * right up to the lip and the kit piece sits correctly -- while a hill built of
+ * one-level steps blurs as one surface, however many levels it climbs.
+ *
+ * Diffusion rather than a direct kernel with a level window, and the difference
+ * is the whole slope class (rows 262, 263): the window ("skip any sample a full
+ * cliff from this corner's level") also skipped the far side of every hill, so
+ * a mountain of one-level rings snapped each corner back toward its own ring and
+ * came out as terraces. Diffusion only asks whether two NEIGHBOURS are a cliff
+ * apart, so the barrier is wherever the kit draws a face and nowhere else.
  *
  * Corners, not centres, because a quad with four independent corner heights is
- * already a continuous surface -- no subdivision needed, so this costs the same
- * geometry the stepped version did.
+ * already a continuous surface. A corner is the average of the cells meeting
+ * there on its own tier (the highest of them), so a blend is centred on the
+ * boundary between its levels.
  */
 export function heightField(map: IslandMap, spread = SLOPE_SPREAD): Float32Array {
-  const W = map.width + 1;
-  const D = map.depth + 1;
-  const out = new Float32Array(W * D);
-
-  // Transition width of a blurred step is about 3 sigma, so solve for sigma.
-  const sigma = Math.max(0.5, spread / 3);
-  // Each cell weighs the kernel's integral over its own square, measured from the CORNER, so a
-  // blend is centred on the boundary between the levels. (Weighing by distance from one cell's
-  // centre, as this did, shifted every slope half a cell toward +x and +z.)
-  const { r: radius, w: weight } = cornerKernel(sigma);
-
-  for (let iz = 0; iz < D; iz++) {
-    for (let ix = 0; ix < W; ix++) {
-      // The highest of the four cells meeting at the corner is its home: at a cliff lip the
-      // corner belongs to the top, which the pinning pass below makes exact.
-      const home = Math.max(levelAt(map, ix - 1, iz - 1), levelAt(map, ix, iz - 1), levelAt(map, ix - 1, iz), levelAt(map, ix, iz));
-      let sum = 0;
-      let wsum = 0;
-      for (let dz = -radius; dz < radius; dz++) {
-        for (let dx = -radius; dx < radius; dx++) {
-          const cx = ix + dx;
-          const cz = iz + dz;
-          if (!inBounds(map, cx, cz)) continue;
-          const l = levelAt(map, cx, cz);
-          // The cliff barrier. Anything a full cliff away is a different
-          // terrace and must not bleed across.
-          if (Math.abs(l - home) >= CLIFF_LEVELS) continue;
-          const w = weight[dx + radius] * weight[dz + radius];
-          sum += l * w;
-          wsum += w;
+  const W = map.width, D = map.depth, CW = W + 1;
+  const out = new Float32Array(CW * (D + 1));
+  // A blurred step spans about 3 sigma; each [1 2 1] pass adds half a cell of variance per axis.
+  const passes = Math.max(1, Math.round(2 * (spread / 3) ** 2));
+  let v = Float32Array.from(map.levels), next = new Float32Array(W * D);
+  const B = [1, 2, 1];
+  for (let pass = 0; pass < passes; pass++) {
+    for (let cz = 0; cz < D; cz++) {
+      for (let cx = 0; cx < W; cx++) {
+        const here = map.levels[cz * W + cx];
+        let sum = 0, wsum = 0;
+        for (let dz = -1; dz <= 1; dz++) {
+          for (let dx = -1; dx <= 1; dx++) {
+            const nx = cx + dx, nz = cz + dz;
+            if (nx < 0 || nz < 0 || nx >= W || nz >= D) continue;
+            const j = nz * W + nx;
+            if (Math.abs(map.levels[j] - here) >= CLIFF_LEVELS) continue; // a cliff: nothing crosses
+            const w = B[dx + 1] * B[dz + 1];
+            sum += v[j] * w;
+            wsum += w;
+          }
+        }
+        next[cz * W + cx] = sum / wsum;
+      }
+    }
+    [v, next] = [next, v];
+  }
+  for (let iz = 0; iz <= D; iz++) {
+    for (let ix = 0; ix <= W; ix++) {
+      let home = -1;
+      for (let dz = -1; dz <= 0; dz++) for (let dx = -1; dx <= 0; dx++) if (inBounds(map, ix + dx, iz + dz)) home = Math.max(home, levelAt(map, ix + dx, iz + dz));
+      let sum = 0, n = 0;
+      for (let dz = -1; dz <= 0; dz++) {
+        for (let dx = -1; dx <= 0; dx++) {
+          const cx = ix + dx, cz = iz + dz;
+          if (!inBounds(map, cx, cz) || home - levelAt(map, cx, cz) >= CLIFF_LEVELS) continue;
+          sum += v[cz * W + cx];
+          n++;
         }
       }
-      out[iz * W + ix] = (wsum > 0 ? sum / wsum : home) * LEVEL_STEP;
+      out[iz * CW + ix] = (n ? sum / n : 0) * LEVEL_STEP;
     }
   }
 
@@ -197,7 +213,7 @@ export function heightField(map: IslandMap, spread = SLOPE_SPREAD): Float32Array
       if (!needsCliff(map, cx, cz)) continue;
       const top = levelAt(map, cx, cz) * LEVEL_STEP;
       for (const [ox, oz] of [[0, 0], [1, 0], [0, 1], [1, 1]] as const) {
-        const i = (cz + oz) * W + (cx + ox);
+        const i = (cz + oz) * CW + (cx + ox);
         if (top > out[i]) out[i] = top;
       }
     }
@@ -1160,15 +1176,18 @@ export function neighbourMask(
   return mask;
 }
 
-// ── Leveling: bank vs cliff ──────────────────────────────────────
+// ── Leveling: slope vs cliff ─────────────────────────────────────
 //
 // One rule, applied everywhere: how far a neighbour sits BELOW a cell decides
-// what goes between them.
+// what goes between them. It is the whole slope class (rows 262, 263); no cell
+// carries a flag for it.
 //
 //   drop of 0 levels                  nothing — flat ground
-//   drop of 1 level  (0.75u)          a BANK. Walkable. A sloped grass skirt,
-//                                     drawn by GridTerrain, no kit piece.
-//   drop of CLIFF_LEVELS+ (1.5u+)     a CLIFF. Not walkable. A kit piece.
+//   drop of 1 level  (0.75u)          a SLOPE. Walkable. Blended by `heightField`,
+//                                     so a stack of one-level steps is one hill or
+//                                     mountain, any height; rock shows where steep.
+//   drop of CLIFF_LEVELS+ (1.5u+)     a CLIFF. Not walkable. A kit piece; crossed
+//                                     by a ramp or a mantle.
 //
 // Everything downstream — which cells the autotiler sees as "same", where the
 // terrain mesh skips a quad, what the authoring script is allowed to build —
@@ -1203,13 +1222,14 @@ export function isWalkableDrop(drop: number): boolean {
  *
  * David, 2026-07-30: "the half steps needs blending, and will be rarely used for
  * island naturalness, otherwise keep everything either flat or with 1 unit high
- * cliffs."
+ * cliffs." Then 2026-09-30 (rows 262, 263): cliffs AND natural slopes, so
+ * hills and mountains are stacks of these.
  *
- * So the island has exactly three states, and only one of them is a face:
+ * So the island has three states, and only one of them is a face:
  *
- *   flat                          the overwhelming majority
- *   2 levels  1.50u  FULL CLIFF   the kit piece, wherever ground does change
- *   1 level   0.75u  HALF STEP    BLENDED by heightField, rare, for naturalness
+ *   flat                          most of the island (health: 60%+)
+ *   2 levels  1.50u  FULL CLIFF   the kit piece
+ *   1 level   0.75u  SLOPE        BLENDED by heightField: a rise, a hill, a mountain
  *
  * A half step is deliberately NOT geometry. `heightField`'s blur crosses any
  * drop under CLIFF_LEVELS and treats a full drop as a barrier, so this falls out
@@ -1389,13 +1409,6 @@ function phi(x: number): number {
   const z = Math.abs(x) * Math.SQRT1_2, t = 1 / (1 + 0.3275911 * z);
   const erf = 1 - ((((1.061405429 * t - 1.453152027) * t + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-z * z);
   return x < 0 ? 0.5 * (1 - erf) : 0.5 * (1 + erf);
-}
-
-/** Box-Gaussian weight of cell `corner + d`, d in [-r, r), for a point on a cell corner. */
-function cornerKernel(sigma: number): { r: number; w: Float64Array } {
-  const r = Math.ceil(3 * sigma) + 1, w = new Float64Array(2 * r);
-  for (let d = -r; d < r; d++) w[d + r] = phi((d + 1) / sigma) - phi(d / sigma);
-  return { r, w };
 }
 
 type Wave = readonly [wavelength: number, weight: number, seed: number];
