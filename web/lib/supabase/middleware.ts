@@ -103,13 +103,17 @@ export async function updateSession(request: NextRequest) {
     return supabaseResponse;
   }
 
-  // ─── Dashboard routes — require auth + onboarding ─────────────────────
+  // ─── Dashboard routes — require auth; portal pages require onboarding ─
   if (pathname.startsWith("/student/dashboard")) {
     if (!user) {
       const url = request.nextUrl.clone();
       url.pathname = "/student/login";
       return NextResponse.redirect(url);
     }
+
+    // The island itself skips the portal profile wizard: game players name
+    // themselves in the character creator (hud-first-login §6, row 211).
+    if (pathname.replace(/\/+$/, "") === "/student/dashboard") return supabaseResponse;
 
     const { data: profile } = await supabase
       .from("profiles")

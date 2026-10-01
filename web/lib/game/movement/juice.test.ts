@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { ParticlePool } from "@/lib/game/fx/particles";
 import { PACK, PACK_COLS } from "@/lib/game/fx/pack";
 import { Surface } from "@/lib/game/grid";
-import { LAND, dashBurst, footstep, groundUnder, landKind, landing, takeoff } from "./juice";
+import { LAND, dashBurst, footstep, groundUnder, landKind, landing, slideBurst, slidePop, slideTrail, takeoff } from "./juice";
 
 const dry = () => false;
 /** Sprite names written to the pool, sorted (what a move threw). */
@@ -85,5 +85,28 @@ describe("what each move throws", () => {
     expect(thrown(ground)).toEqual(expect.arrayContaining(["dust", "dustLow", "grass"]));
     expect(thrown(air)).toContain("swirl");
     expect(thrown(air)).not.toContain("grass");
+  });
+});
+
+describe("the slide's juice (specs/movement-slide.md)", () => {
+  const beat = (g: Parameters<typeof slideTrail>[1], scuffIt = true, amount = 1) => { const p = new ParticlePool(64); slideTrail(p, g, 0, 0, 0, 0, 0.36, 0, 14, scuffIt, amount); return thrown(p); };
+  it("trails dust off the heels with the ground's own spray and scuffs: flecks on grass, sand on sand; only faint dust on built ground", () => {
+    expect(beat("grass")).toEqual(expect.arrayContaining(["dustLow", "grass", "scuff"]));
+    expect(beat("sand")).toEqual(expect.arrayContaining(["dustLow", "sand", "scuff"]));
+    expect(beat("snow")).toEqual(expect.arrayContaining(["dustLow", "snow"]));
+    expect(beat("grass", false)).not.toContain("scuff");
+    expect(beat("stone")).toEqual(["dustLow"]);
+    expect(beat("water")).toEqual([]);
+    expect(beat("grass", true, 0)).toEqual([]);
+    // Seeded from the spot: the same slide throws the same trail on every client.
+    expect(beat("grass")).toEqual(beat("grass"));
+  });
+  it("a dash- or land-slide sprays ahead; the slide-jump pops a ring of dust", () => {
+    const p = new ParticlePool(64);
+    slideBurst(p, "sand", 0, 0, 0, 0, 16);
+    expect(thrown(p)).toEqual(expect.arrayContaining(["dust", "sand"]));
+    const q = new ParticlePool(64);
+    slidePop(q, "soil", 0, 0, 0, 0, 14);
+    expect(new Set(thrown(q))).toEqual(new Set(["dustLow"]));
   });
 });

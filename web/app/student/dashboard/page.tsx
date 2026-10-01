@@ -4,9 +4,10 @@ import { useEffect, type CSSProperties } from "react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useMediaQuery } from "@/lib/game/useMediaQuery";
+import IslandLoading from "@/components/game/IslandLoading";
 
-
-const Loading = () => <p style={{ padding: 32, color: "var(--color-text-muted)" }}>Preparing Tethos Island…</p>;
+// The island's own loading screen from the first byte: the world keeps it up through warm-up, then fades it.
+const Loading = () => <IslandLoading />;
 
 const DefaultIslandWorld = dynamic(() => import("@/components/game/DefaultIslandWorld"), { ssr: false, loading: Loading });
 

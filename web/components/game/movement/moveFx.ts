@@ -32,17 +32,31 @@ export const MOVE_JUICE = {
   cooldown: 1, // wind at the heels while the dash recharges
   anticipation: 1, // the jump's crouch before the spring
   camDip: 1, // the camera's dip on a heavy landing
+  // The slide (specs/movement-slide.md)
+  slideTrail: 1, // dust off the heels, the ground's spray (flecks, sand) and scuffs
+  slideBurst: 1, // the spray of a dash- or land-slide, the pop of a slide-jump
+  slideKick: 1.5, // degrees the FOV punches out as a slide starts
+  slideDrop: 0.18, // how far the camera's focus drops while sliding (world units)
 };
 export type MoveJuice = typeof MOVE_JUICE;
 /** The follow camera's field of view at a walk (the Canvases' camera); speed and dashes widen it from here. */
 export const BASE_FOV = 48;
 
-/** Touch intent (screen space: x right, z up the screen) and presses waiting for the sim; TouchControls writes it, the avatar reads it. */
-export interface StickInput { x: number; z: number; jump: boolean; jumpPressed: boolean; dashPressed: boolean }
-export const touchStick: StickInput = { x: 0, z: 0, jump: false, jumpPressed: false, dashPressed: false };
+/** Touch intent (screen space: x right, z up the screen) and presses waiting for the sim; TouchControls writes it, the avatar reads it. `crouch`: the Slide button held. */
+export interface StickInput { x: number; z: number; jump: boolean; jumpPressed: boolean; dashPressed: boolean; crouch: boolean }
+export const touchStick: StickInput = { x: 0, z: 0, jump: false, jumpPressed: false, dashPressed: false, crouch: false };
 
-/** What the HUD reads (a few times a second). */
-export interface MoveTelemetry { x: number; y: number; z: number; speed: number; mode: string; hops: number; dashReady: boolean; long: boolean }
+/**
+ * What the HUD reads. `momentum`: speed over a walk carried by tech ("kept": in the air, sliding, dashing or in the
+ * grace after a landing) or bleeding back on plain ground ("bleeding"); "" at a run or slower.
+ */
+export interface MoveTelemetry { x: number; y: number; z: number; speed: number; mode: string; hops: number; dashReady: boolean; long: boolean; momentum: "" | "kept" | "bleeding"; slideJump: boolean }
+/** The HUD's momentum status for a sim state (David's momentum model, specs/movement-slide.md). */
+export function momentumOf(s: { mode: string; dashT: number; keep: number; bleed: boolean }, speed: number, walkSpeed: number, sprintSpeed: number): MoveTelemetry["momentum"] {
+  if (s.bleed) return "bleeding";
+  const tech = s.mode === "slide" || s.mode === "air" || s.mode === "glide" || s.dashT > 0 || s.keep > 0;
+  return (tech && speed > walkSpeed + 0.05) || speed > sprintSpeed + 0.05 ? "kept" : "";
+}
 export const TAKEOFF = new Set<MoveEvent["kind"]>(["jump", "hop", "long", "dashjump"]);
 /** Particles a scene's system holds at once (all avatars and the ruins' puffs together). */
 const FX_CAPACITY = 384;
@@ -208,4 +222,6 @@ export function screenOf([x, y, z]: [number, number, number], camera: THREE.Came
 }
 
 /** One-shot clip per event (the character plays it once over locomotion). */
-export const EVENT_CLIP: Partial<Record<MoveEvent["kind"], ClipName>> = { jump: "Jump", hop: "Jump", long: "Jump", dashjump: "Jump", roll: "Roll", mantle: "Mantle", dash: "Dash", recover: "LandHeavy" };
+export const EVENT_CLIP: Partial<Record<MoveEvent["kind"], ClipName>> = { jump: "Jump", hop: "Jump", long: "Jump", dashjump: "Jump", roll: "Roll", mantle: "Mantle", dash: "Dash", recover: "LandHeavy",
+  // The slide (specs/movement-slide.md): a drop from the run; a sharper, lower one out of a dash or a landing; the spring out. Its exits are by state (PlayerAvatar).
+  slide: "SlideIn", dashslide: "SlideInDash", landslide: "SlideInDash", slidejump: "SlideJump" };

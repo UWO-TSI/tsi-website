@@ -73,7 +73,7 @@ const labelPoint = (object: THREE.Object3D, camera: THREE.Camera, size: { width:
 interface Ui { bubble: RefObject<HTMLDivElement | null>; text: RefObject<HTMLSpanElement | null>; notice: RefObject<HTMLDivElement | null>; plate: RefObject<HTMLDivElement | null> }
 /** One resident's live state, owned by its figure and driven by the residents' frame loop. */
 interface Runtime {
-  id: string; seed: number; lines: readonly string[]; day: ResidentDay; gather: readonly [number, number];
+  id: string; slug: string; seed: number; lines: readonly string[]; day: ResidentDay; gather: readonly [number, number];
   home: readonly [number, number] | null;
   pose: ResidentPose; motion: RefObject<CharacterMotion>; group: RefObject<THREE.Group | null>; visual: RefObject<THREE.Group | null>; ui: Ui;
   ready: boolean; x: number; z: number; speed: number;
@@ -113,7 +113,7 @@ interface Clock { span: DaySpan | null; forced: IslandPhase | null; base: number
  * The residents' frame, at module scope (the react compiler forbids writing through hook values): where each one is,
  * the chats, then each one's clip, facing, talk and overhead UI.
  */
-function tick(list: readonly Runtime[], c: Clock, dt: number, p: THREE.Vector3, phase: IslandPhase, ceremony: boolean, nav: NavGrid, island: VillageIsland, monument: { x: number; z: number } | null) {
+function tick(list: readonly Runtime[], c: Clock, dt: number, p: THREE.Vector3, phase: IslandPhase, ceremony: boolean, nav: NavGrid, island: VillageIsland, monument: { x: number; z: number } | null, away: string | null) {
   const now = worldNow() / 1000, days = liveSunDays();
   if (!c.span || now < c.span.t0 || now >= c.span.t1) c.span = daySpan(now * 1000, days);
   // A forced phase (?time=, the options menu) runs the routine from that phase's preview time on.
@@ -185,6 +185,7 @@ function tick(list: readonly Runtime[], c: Clock, dt: number, p: THREE.Vector3, 
     // Face the way they walk; stopped, the seat's way or the place's view (chat and you come next).
     r.want = speed > 0.05 ? yaw : onRoutine ? pose.yaw : ceremony && monument ? Math.atan2(monument.x - r.x, monument.z - r.z) : m.yaw;
     r.chat = null;
+    if (r.slug === away) r.hidden = true;
   }
 
   // 2. Chats: two stopped standing residents near each other face each other and talk, taking turns.
@@ -284,8 +285,10 @@ function show(el: HTMLElement | null, on: boolean) {
   if (el && el.hidden === on) el.hidden = !on;
 }
 
-export default function Residents({ personas, phase, ceremony, player, island, v }: {
+export default function Residents({ personas, phase, ceremony, player, island, v, away = null }: {
   personas: readonly NPCPersona[]; phase: IslandPhase; ceremony: boolean; player: RefObject<THREE.Vector3>; island: VillageIsland; v: Village;
+  /** A resident (slug) who is somewhere else for now (the HQ lead greeting a first login on the wharf): out of sight, routine running. */
+  away?: string | null;
 }) {
   const nav = useMemo(() => navGrid(island, v), [island, v]);
   // Dev only: `?residents=N` keeps the first N (by slug), for performance checks like CharacterCrowd's `?crowd=N`.
@@ -318,7 +321,7 @@ export default function Residents({ personas, phase, ceremony, player, island, v
     return () => window.removeEventListener("tsi:npc-greet", onGreet);
   }, []);
 
-  useFrame((_, raw) => tick(registry.current.list, clock.current, Math.min(raw, 0.1), player.current, phase, ceremony, nav, island, monument), -3);
+  useFrame((_, raw) => tick(registry.current.list, clock.current, Math.min(raw, 0.1), player.current, phase, ceremony, nav, island, monument, away), -3);
 
   return <>{residents.map(({ persona, day, look, gather, plan }) => (
     <Figure key={persona.id} persona={persona} day={day} look={look} gather={gather} home={plan.home?.door ?? null} seed={plan.seed} registry={registry} />
@@ -335,7 +338,7 @@ function Figure({ persona, day, look, gather, home, seed, registry }: {
   const runtime = useRef<Runtime | null>(null);
   useEffect(() => {
     const r: Runtime = {
-      id: persona.id, seed, lines: persona.canned_dialogue?.length ? persona.canned_dialogue : FILLER_LINES, day, gather, home,
+      id: persona.id, slug: persona.slug, seed, lines: persona.canned_dialogue?.length ? persona.canned_dialogue : FILLER_LINES, day, gather, home,
       pose: newPose(), motion, group, visual, ui: { bubble, text, notice, plate },
       ready: false, x: 0, z: 0, speed: 0, ox: 0, oz: 0, hidden: false, lift: 0, lag: 0, detour: null, detourAt: 0, detourGoal: [0, 0],
       want: 0, line: "", noticed: false, bubbleUntil: 0, bubbleNext: 0, shown: -1, idleKey: -1, idleVisit: -1, laughBeat: -1, chat: null, hopT: -1, hopNext: 0, greetAt: 0, hovered: false, timers: [],

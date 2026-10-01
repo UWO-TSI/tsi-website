@@ -2,25 +2,30 @@
 
 /**
  * Settings sheet (row 220) over the account settings (lib/identity/settings):
- * text size, high contrast, and menu key remap. Remap listens for the next
+ * text size, high contrast, and menu key remap; the island's look and
+ * performance (pixel finish, quality, shadows) are this device's
+ * (useGraphicsSettings, hud-first-login §4). Remap listens for the next
  * key; taking another menu's key swaps the two; reserved keys are refused
  * with the systems rule's reason. Saved to the account when signed in,
  * otherwise kept on this device. The movement keys (jump, dash, sprint,
- * sneak) and the ruins' ability keys are remapped on this device.
+ * crouch/slide) and the ruins' ability keys are remapped on this device.
+ * Outside macOS, Ctrl crouches only in fullscreen with the keyboard locked.
  */
 import { useState } from "react";
+import { useGraphicsSettings } from "@/lib/game/useGraphicsSettings";
+import type { QualityTier } from "@/lib/game/qualityTier";
 import { ACTION_LABEL, MENU_ACTIONS, TEXT_SIZES, normalizeKey, type MenuAction, type TextSize } from "@/lib/identity/settings";
 import { saveSettings, setAuraVisible, useWorldIdentity } from "@/lib/game/identity";
 import { ABILITIES, type AbilityId } from "@/lib/game/combat/runtime";
-import { MOVE_ACTIONS, keyName, remapAbility, remapMove, useAbilityKeys, useMoveKeys, useNextKey, type MoveAction } from "@/lib/game/movement/keys";
+import { IS_MAC, MOVE_ACTIONS, canLockKeyboard, crouchKey, keyName, playFullscreenWithCtrl, remapAbility, remapMove, useAbilityKeys, useKeyboardLocked, useMoveKeys, useNextKey, type MoveAction } from "@/lib/game/movement/keys";
 import { AudioManager, type AudioVolumes } from "@/lib/game/audio";
 import { useAudioState } from "@/lib/game/useAudio";
 import IslandSheet from "../IslandSheet";
 import styles from "../DefaultIslandWorld.module.css";
 
 const SIZE_NAMES: Record<TextSize, string> = { small: "Small", default: "Standard", large: "Large", xl: "Largest" };
-/** The movement keys row (specs/movement.md): Space jump, Q dash, Shift sprint, C sneak. */
-const MOVE_ROW = MOVE_ACTIONS.filter(a => a.id === "jump" || a.id === "dash" || a.id === "sprint" || a.id === "sneak");
+/** The movement keys row (specs/movement.md): Space jump, Q dash, Shift sprint, crouch/slide (Ctrl on macOS, C elsewhere). */
+const MOVE_ROW = MOVE_ACTIONS.filter(a => a.id === "jump" || a.id === "dash" || a.id === "sprint" || a.id === "crouch");
 const SOUND_SLIDERS: { key: keyof AudioVolumes; label: string }[] = [
   { key: "master", label: "Master" },
   { key: "music", label: "Music" },
@@ -28,15 +33,24 @@ const SOUND_SLIDERS: { key: keyof AudioVolumes; label: string }[] = [
   { key: "sfx", label: "Sound effects" },
 ];
 
-export default function SettingsSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
+export default function SettingsSheet({ open, onClose, detectedTier = null }: { open: boolean; onClose: () => void; detectedTier?: QualityTier | null }) {
   const { settings, signedIn, aura } = useWorldIdentity();
+  const [graphics, graphicsActions] = useGraphicsSettings();
+  // isExplicit isn't part of the store snapshot: re-render on a change so Auto shows as chosen.
+  const [, rerender] = useState(0);
+  const quality = graphicsActions.isExplicit("liteMode") ? (graphics.liteMode ? "light" : "high") : "auto";
+  const setQuality = (value: string) => {
+    rerender(n => n + 1);
+    if (value === "auto") graphicsActions.unset("liteMode");
+    else { graphicsActions.setLiteMode(value === "light"); if (value === "high") graphicsActions.setShadows(true); }
+  };
   const audio = useAudioState();
   const [listening, setListening] = useState<MenuAction | null>(null);
   const [note, setNote] = useState<string | null>(null);
   const abilityKeys = useAbilityKeys();
   const [abilityListen, setAbilityListen] = useState<AbilityId | null>(null);
   const [abilityNote, setAbilityNote] = useState<string | null>(null);
-  const moveKeys = useMoveKeys();
+  const moveKeys = useMoveKeys(), keyLock = useKeyboardLocked();
   const [moveListen, setMoveListen] = useState<MoveAction | null>(null);
   const [moveNote, setMoveNote] = useState<string | null>(null);
   useNextKey(moveListen !== null, key => {
@@ -69,6 +83,20 @@ export default function SettingsSheet({ open, onClose }: { open: boolean; onClos
     <fieldset>
       <legend>Text size</legend>
       <div className={styles.segmented}>{TEXT_SIZES.map(s => <button key={s} aria-pressed={settings.text_size === s} onClick={() => void save({ text_size: s })}>{SIZE_NAMES[s]}</button>)}</div>
+    </fieldset>
+    <fieldset>
+      <legend>Look and performance</legend>
+      <label className={styles.toggle}><span>Pixel finish</span><input type="checkbox" checked={graphics.pixelated} onChange={e => graphicsActions.setPixelated(e.target.checked)} /></label>
+      <p className={styles.hint}>The world stays the same. Choose its finish.</p>
+      <label className={styles.preset}>
+        <span>Quality</span>
+        <select value={quality} onChange={e => setQuality(e.target.value)} data-testid="quality">
+          <option value="auto">Auto · {detectedTier ? (detectedTier === "light" ? "Light" : "High") : "measuring"}</option>
+          <option value="light">Light</option>
+          <option value="high">High</option>
+        </select>
+      </label>
+      <label className={styles.toggle}><span>Shadows</span><input type="checkbox" checked={graphics.shadows} disabled={graphics.liteMode} onChange={e => graphicsActions.setShadows(e.target.checked)} /></label>
     </fieldset>
     <label className={styles.toggle}><span>Show my family aura</span><input type="checkbox" checked={aura} onChange={e => setAuraVisible(e.target.checked)} /></label>
     <label className={styles.toggle}><span>High contrast</span><input type="checkbox" checked={settings.high_contrast} onChange={e => void save({ high_contrast: e.target.checked })} /></label>
@@ -104,6 +132,11 @@ export default function SettingsSheet({ open, onClose }: { open: boolean; onClos
           {moveListen === a.id ? "Press a key…" : <kbd>{keyName(moveKeys[a.id])}</kbd>}
         </button>
       </li>)}</ul>
+      {/* Outside macOS Ctrl+W closes the tab and a page can't stop it: Ctrl crouches only in fullscreen with the keyboard locked. */}
+      {!IS_MAC && canLockKeyboard() && (moveKeys.crouch !== "control" || !keyLock) && <p className={styles.hint}>
+        {moveKeys.crouch === "control" ? `Ctrl crouches in fullscreen; until then ${crouchKey(moveKeys, false) ? keyName(crouchKey(moveKeys, false)) : "nothing"} does.` : "Ctrl can crouch and slide in fullscreen, where the keyboard is locked (hold Esc to leave)."}{" "}
+        <button onClick={() => { void playFullscreenWithCtrl(moveKeys).then(e => setMoveNote(e)); }}>Play fullscreen with Ctrl</button>
+      </p>}
       {moveNote && <p className={styles.hint} role="status">{moveNote}</p>}
     </fieldset>
     <fieldset>
@@ -111,7 +144,7 @@ export default function SettingsSheet({ open, onClose }: { open: boolean; onClos
       <ul className={styles.keyList}>{ABILITIES.map(a => <li key={a.id}>
         <span>{a.name}</span>
         <button aria-pressed={abilityListen === a.id} onClick={() => { setAbilityListen(a.id); setAbilityNote("Press a key (Esc to cancel)."); }}>
-          {abilityListen === a.id ? "Press a key…" : <kbd>{abilityKeys[a.id].toUpperCase()}</kbd>}
+          {abilityListen === a.id ? "Press a key…" : <kbd>{keyName(abilityKeys[a.id])}</kbd>}
         </button>
       </li>)}</ul>
       {abilityNote && <p className={styles.hint} role="status">{abilityNote}</p>}

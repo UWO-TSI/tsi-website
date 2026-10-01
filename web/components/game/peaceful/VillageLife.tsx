@@ -6,7 +6,7 @@
  * hourly personal respawn, lib/game/peaceful.ts). Rare rolls give a
  * diegetic tell: a sparkle (stronger on High) and a soft chime when you come
  * near. Bugs use the existing ACNH critter models (Critters.SPECIES) and
- * sneak-and-swing: rush in and they fly off; hold C to tiptoe, then E swings
+ * sneak-and-swing: rush in and they fly off; crouch (Ctrl, or C) to tiptoe, then E swings
  * the net. The server rolls and records each harvest (the node's own roll
  * when signed out, kept in this browser).
  */

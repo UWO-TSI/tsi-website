@@ -15,7 +15,7 @@ import { derived, presetAllocation, ZERO_STATS } from "@/lib/combat/progression"
 import { potencyFor } from "@/lib/combat/incantation";
 import { SURVIVE_CIRCLES } from "@/lib/game/ruins";
 import { equipKit, fireSlot, resolveCast } from "./abilities";
-import { attack, spawnWave, startDodge } from "./actions";
+import { DODGE_SHAPE, attack, spawnWave, startDodge } from "./actions";
 import { ENEMIES, PLAYER_BASE, WEAPONS } from "./data";
 import { stepCombat } from "./encounter";
 import { createRuntime, type CombatRuntime } from "./runtime";
@@ -122,9 +122,9 @@ export function runSurvive(subclassKey: string, missionId: "survive-circle" | "s
       mx = ux * push - uz * strafe * 0.35; mz = uz * push + ux * strafe * 0.35;
       const l = Math.hypot(mx, mz) || 1; mx /= l; mz /= l;
     }
-    // The bot's dodge: the kit's dash (combatTuning), its burst easing to dashExit over dashTime.
+    // The bot's dodge: the kit's dash (combatTuning), its burst easing to the dodge's exit over dashTime.
     const v = PLAYER_BASE.speed * p.speed, k = p.dodgeAge === null ? 1 : Math.min(1, p.dodgeAge / MOVE_TUNING.dashTime);
-    const roll = p.dodgeAge === null ? 0 : MOVE_TUNING.dashSpeed * (MOVE_TUNING.dashExit + (1 - MOVE_TUNING.dashExit) * (1 - k) ** MOVE_TUNING.dashEase);
+    const roll = p.dodgeAge === null ? 0 : MOVE_TUNING.dashSpeed * (DODGE_SHAPE.dashExit + (1 - DODGE_SHAPE.dashExit) * (1 - k) ** MOVE_TUNING.dashEase);
     me = { x: me.x + (mx * v + p.impulse.x + p.dodgeDir.x * roll) * dt, z: me.z + (mz * v + p.impulse.z + p.dodgeDir.z * roll) * dt };
   }
   return { cleared: false, seconds: t, dealt, taken, minHp: minHp / p.maxHp, died: false };

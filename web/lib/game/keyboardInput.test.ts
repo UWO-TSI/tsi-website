@@ -1,12 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
 import { bindGameKeys } from "./keyboardInput";
 
-function harness() {
+function harness(accepted = ["w", "shift", "arrowleft", " "]) {
   const win = new EventTarget();
   const doc = Object.assign(new EventTarget(), { hidden: false, activeElement: null as Element | null });
   const keys: Record<string, boolean> = {};
   const onPress = vi.fn(), onReset = vi.fn();
-  const dispose = bindGameKeys({ keys, accepted: ["w", "shift", "arrowleft", " "], onPress, onReset, windowTarget: win, documentTarget: doc });
+  const dispose = bindGameKeys({ keys, accepted, onPress, onReset, windowTarget: win, documentTarget: doc });
   const key = (type: string, value: string, extra = {}) => {
     const event = Object.assign(new Event(type, { cancelable: true }), { key: value, ...extra });
     win.dispatchEvent(event);
@@ -39,6 +39,15 @@ describe("world keyboard ownership", () => {
     const h = harness();
     h.key("keydown", "w"); h.key("keydown", "w", { [modifier]: true });
     expect(h.keys.w).toBe(false); expect(h.onPress).toHaveBeenCalledTimes(1);
+    h.dispose();
+  });
+  it("with Ctrl bound (crouch/slide), Ctrl and the keys pressed with it are play; Cmd and Alt still leave", () => {
+    const h = harness(["w", " ", "control"]);
+    h.key("keydown", "Control", { ctrlKey: true }); h.key("keydown", "w", { ctrlKey: true }); h.key("keydown", " ", { ctrlKey: true });
+    expect(h.keys).toEqual({ control: true, w: true, " ": true });
+    expect(h.onPress).toHaveBeenCalledTimes(3);
+    h.key("keyup", "Control"); expect(h.keys.control).toBe(false);
+    h.key("keydown", "w", { metaKey: true }); expect(h.keys.w).toBe(false);
     h.dispose();
   });
   it("does not consume control or already-handled key presses", () => {

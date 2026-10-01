@@ -1,7 +1,8 @@
 "use client";
 
 /**
- * MiniMap (game-feel wave G3, item 15) — a small corner map, toggled with M.
+ * MiniMap (game-feel wave G3, item 15) — a small corner map, toggled with the
+ * account's map key (`toggleKey`, M by default; row 220 remaps).
  * Draws the island plot it is given, with a live player dot polled from
  * playerPosRef at 5Hz.
  */
@@ -10,6 +11,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { X } from "lucide-react";
 import styles from "./MiniMap.module.css";
 import * as THREE from "three";
+import { keyName } from "@/lib/game/movement/keys";
 
 /**
  * Island geometry for the map (e.g. the default island). Drawn in world units
@@ -21,8 +23,8 @@ export interface MiniMapPlot {
   mirrorX?: boolean;
 }
 
-export default function MiniMap({ playerPosRef, onClose, plot }: {
-  playerPosRef: React.RefObject<THREE.Vector3>; onClose: () => void; plot: MiniMapPlot;
+export default function MiniMap({ playerPosRef, onClose, plot, toggleKey = "m" }: {
+  playerPosRef: React.RefObject<THREE.Vector3>; onClose: () => void; plot: MiniMapPlot; toggleKey?: string;
 }) {
   const [dot, setDot] = useState<[number, number] | null>(null);
   const opener = useRef<HTMLElement | null>(null);
@@ -47,7 +49,7 @@ export default function MiniMap({ playerPosRef, onClose, plot }: {
       <header className={styles.header}>
         <span>Island map</span>
         <button className={styles.close} aria-label="Close map" onClick={close} onKeyDown={(event) => {
-          if (event.key === "Escape" || (event.key.toLowerCase() === "m" && !event.metaKey && !event.ctrlKey && !event.altKey)) {
+          if (event.key === "Escape" || (event.key.toLowerCase() === toggleKey && !event.metaKey && !event.ctrlKey && !event.altKey)) {
             event.preventDefault(); event.stopPropagation(); if (!event.repeat) close();
           }
         }}><X size={17} aria-hidden /></button>
@@ -58,7 +60,7 @@ export default function MiniMap({ playerPosRef, onClose, plot }: {
         {/* player */}
         {dot ? <circle cx={sx(dot[0])} cy={-dot[1]} r={1.1} fill="#FFDD57" stroke="#7A5A00" strokeWidth="0.7" /> : null}
       </svg>
-      <footer className={styles.legend}><span className={styles.you}>You</span><span>M to hide</span></footer>
+      <footer className={styles.legend}><span className={styles.you}>You</span><span>{keyName(toggleKey)} to hide</span></footer>
     </section>
   );
 }

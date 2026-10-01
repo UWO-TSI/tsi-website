@@ -11,6 +11,11 @@
  * The leaf glider (specs/glider.md) has its own lane north of the lap, an
  * "owns the leaf glider" toggle and a Glide group with presets.
  *
+ * The slide (specs/movement-slide.md) has its lane north-east of the lap (a
+ * dash-slide straight to a water gap, a ramp launch, a long ramp, a terrain
+ * slope), Slide and Momentum groups with presets, and a speed readout that
+ * says whether the momentum is kept or bleeding, with a trace of the last 3 s.
+ *
  * URL: ?at=x,z starts somewhere else, ?touch=1 shows the touch controls on a
  * desktop, ?panel=0 hides the panel and the signs, ?zoom=0.6 brings the camera closer (evidence frames).
  */
@@ -37,9 +42,9 @@ import { CURRENT, lookFx } from "@/lib/game/lookPreset";
 import { useGraphicsSettings } from "@/lib/game/useGraphicsSettings";
 import { islandOf } from "@/lib/game/defaultIsland";
 import { objectsOf } from "@/lib/game/villageMap";
-import { COURSE_GATES, COURSE_SIGNS, COURSE_SPAWN, GLIDE_SPAWN, NEW_LAP, course, gateAt, lapStep, type Lap } from "@/lib/game/movement/course";
+import { COURSE_GATES, COURSE_SIGNS, COURSE_SPAWN, GLIDE_SPAWN, NEW_LAP, SLIDE_SPAWN, course, gateAt, lapStep, type Lap } from "@/lib/game/movement/course";
 import { MOVE_TUNING, createMoveState, stepMove, topSpeed, NO_INPUT, STEP, type MoveInput, type MoveTuning, type MoveWorld } from "@/lib/game/movement/sim";
-import { MOVE_ACTIONS, keyName, remapMove, useMoveKeys, useNextKey, type MoveAction } from "@/lib/game/movement/keys";
+import { MOVE_ACTIONS, crouchKey, keyName, remapMove, useKeyboardLocked, useMoveKeys, useNextKey, type MoveAction } from "@/lib/game/movement/keys";
 import { useSoundUnlock } from "@/lib/game/useAudio";
 import { useCoarsePointer } from "@/lib/game/useMediaQuery";
 
@@ -47,7 +52,7 @@ const SUMMER = { season: "summer" as const, weights: { spring: 0, summer: 1, aut
 const LOOK = seasonLook(SUMMER, {});
 const LIGHT = withSeason(islandLight(CURRENT, "day"), LOOK);
 const TERRAIN = { ...ISLAND_TERRAIN, grass: LOOK.grass };
-const STORE = "tsi.moveLab.v3"; // v3: the Juice panel's per-effect amounts (movement feel, 2026-10-01) start from the defaults
+const STORE = "tsi.moveLab.v4"; // v4: the slide and David's momentum model (2026-10-01) start from the defaults
 
 // ── The tuning panel's table: every value, its range, its group ────
 type Range = [min: number, max: number, step: number];
@@ -63,10 +68,14 @@ const GROUPS: { name: string; keys: [keyof MoveTuning, ...Range][] }[] = [
   { name: "Climb and drops", keys: [["grabReach", 0.3, 2, 0.05], ["grabRise", 0, 10, 0.5], ["mantleTime", 0.1, 1, 0.02], ["rollDrop", 0.3, 4, 0.1], ["rollSpeed", 0, 15, 0.5], ["rollTime", 0.1, 1, 0.02],
     ["recoverDrop", 0.5, 6, 0.1], ["recoverTime", 0, 1, 0.02]] },
   { name: "Glide (leaf)", keys: [["glideSpeed", 3, 16, 0.1], ["glideSink", 0.5, 5, 0.05], ["glideEase", 0.5, 12, 0.25], ["glideOpen", 1, 20, 0.5], ["glideTurn", 0.5, 8, 0.25]] },
+  { name: "Slide", keys: [["slideEnterAt", 1, 1.6, 0.01], ["slideEndAt", 0.5, 1.4, 0.01], ["slideFriction", 0, 12, 0.1], ["slideSlope", 0, 40, 0.5], ["slideTurn", 0.5, 8, 0.1],
+    ["slideJumpHeight", 0.2, 1.2, 0.05], ["slideJumpApexTime", 0.1, 0.4, 0.01], ["techBoost", 0, 2, 0.05]] },
+  { name: "Momentum", keys: [["keepGrace", 0, 0.4, 0.01], ["momentumCeiling", 12, 30, 0.5], ["downhillCeiling", 0, 20, 0.5], ["ceilingBleed", 5, 80, 1]] },
 ];
 const JUICE_KEYS: [keyof MoveJuice, ...Range][] = [["camLead", 0, 0.4, 0.01], ["fovKick", 0, 10, 0.5], ["dashKick", 0, 8, 0.5], ["squash", 0, 2, 0.05],
   ["anticipation", 0, 2, 0.05], ["footsteps", 0, 2, 0.05], ["takeoff", 0, 2, 0.05], ["landing", 0, 2, 0.05], ["camDip", 0, 3, 0.1],
-  ["dashBurst", 0, 2, 0.05], ["streaks", 0, 2, 0.05], ["afterimage", 0, 1, 1], ["cooldown", 0, 2, 0.05]];
+  ["dashBurst", 0, 2, 0.05], ["streaks", 0, 2, 0.05], ["afterimage", 0, 1, 1], ["cooldown", 0, 2, 0.05],
+  ["slideTrail", 0, 2, 0.05], ["slideBurst", 0, 2, 0.05], ["slideKick", 0, 6, 0.25], ["slideDrop", 0, 0.5, 0.01]];
 /** Dash shapes to compare (row 250), about the same reach each: only the dash values change. */
 const DASH_PRESETS: Record<string, Partial<MoveTuning>> = {
   // The shipped dash (MOVE_TUNING), so "current preset" keeps matching when the defaults are retuned.
@@ -80,6 +89,19 @@ const GLIDE_PRESETS: Record<string, Partial<MoveTuning>> = {
   Leaf: (({ glideSpeed, glideSink, glideEase, glideOpen, glideTurn }) => ({ glideSpeed, glideSink, glideEase, glideOpen, glideTurn }))(MOVE_TUNING),
   Floaty: { glideSpeed: 8, glideSink: 1.6, glideEase: 2.5, glideOpen: 6, glideTurn: 2.5 }, // the spec's first numbers: ~15 tiles
   Brisk: { glideSpeed: 10.5, glideSink: 2.8, glideEase: 5, glideOpen: 10, glideTurn: 3.5 },
+};
+/** Slide shapes to compare (specs/movement-slide.md): only the slide values change. */
+const SLIDE_PRESETS: Record<string, Partial<MoveTuning>> = {
+  Slick: (({ slideFriction, slideSlope, slideTurn, slideJumpHeight, slideJumpApexTime, techBoost }) => ({ slideFriction, slideSlope, slideTurn, slideJumpHeight, slideJumpApexTime, techBoost }))(MOVE_TUNING),
+  Short: { slideFriction: 6, slideSlope: 16, slideTurn: 3, slideJumpHeight: 0.6, slideJumpApexTime: 0.22, techBoost: 0.3 },
+  Long: { slideFriction: 2.2, slideSlope: 26, slideTurn: 1.7, slideJumpHeight: 0.5, slideJumpApexTime: 0.3, techBoost: 0.5 },
+};
+/** How strict the momentum is (David, 2026-10-01): the grace and the bleed on plain ground. */
+const MOMENTUM_PRESETS: Record<string, Partial<MoveTuning>> = {
+  Kept: (({ keepGrace, overspeedDecay, momentumCeiling }) => ({ keepGrace, overspeedDecay, momentumCeiling }))(MOVE_TUNING),
+  Forgiving: { keepGrace: 0.22, overspeedDecay: 10, momentumCeiling: 18 },
+  Strict: { keepGrace: 0.06, overspeedDecay: 30, momentumCeiling: 18 },
+  "Before (fade)": { keepGrace: 0, overspeedDecay: 5, momentumCeiling: 18, dashExit: 0.55 },
 };
 const PRESETS: Record<string, Partial<MoveTuning>> = {
   Juicy: {},
@@ -97,9 +119,9 @@ function measure(t: MoveTuning) {
     for (let i = 0; i < Math.round(seconds / STEP); i++) {
       const time = i * STEP;
       if (jumpAt !== null && Math.abs(time - jumpAt) < STEP / 2) z0 = s.z;
-      // Space held from the press; sprint only up to the takeoff, or the landing would bunny-hop on.
+      // Space held from the press while rising, let go coming down; sprint only up to the takeoff: the landing must not bunny-hop on.
       const sprint = !!setup.sprint && (jumpAt === null || time < jumpAt + STEP);
-      s = stepMove(s, { ...NO_INPUT, ...setup, sprint, jump: jumpAt !== null && time >= jumpAt, jumpPressed: jumpAt !== null && Math.abs(time - jumpAt) < STEP / 2, dashPressed: dashAt !== null && Math.abs(time - dashAt) < STEP / 2 }, STEP, flat, t);
+      s = stepMove(s, { ...NO_INPUT, ...setup, sprint, jump: jumpAt !== null && time >= jumpAt && (s.mode !== "air" || s.vy > 0), jumpPressed: jumpAt !== null && Math.abs(time - jumpAt) < STEP / 2, dashPressed: dashAt !== null && Math.abs(time - dashAt) < STEP / 2 }, STEP, flat, t);
       top = Math.max(top, Math.hypot(s.vx, s.vz));
       if (jumpAt !== null && time >= jumpAt) {
         if (s.mode === "air") { air += STEP; peak = Math.max(peak, s.y); } else if (air > 0 && landed === null) landed = s.z - z0;
@@ -124,25 +146,71 @@ function measure(t: MoveTuning) {
     const v = Math.hypot(s.vx, s.vz);
     if (i >= 360 && v > top + 1e-6) { top = v; toTop = (i - 360) * STEP; }
   }
-  return { jump: stand.peak, air: stand.air, walkJump: walk.distance, longJump: long.distance, dash: dash.z, dashJump: dashJump.distance, top, toTop, glide: c.z - 0.5 };
+  // The slide: from a full sprint, how long and how far; a slide-jump off it and off a dash-slide.
+  const slideFrom = (dash: boolean) => {
+    let q = createMoveState(0, 0, flat), time = 0, z0 = 0, sliding = false, slideTime = 0, slideDist = 0, jumpDist = 0;
+    for (let i = 0; i < 1200; i++, time += STEP) {
+      const sneak = time >= 2.5, press = dash && Math.abs(time - 2.5) < STEP / 2;
+      q = stepMove(q, { ...NO_INPUT, z: 1, sprint: time < 2.5, sneak, dashPressed: press }, STEP, flat, t);
+      if (!sliding && q.mode === "slide") { sliding = true; z0 = q.z; slideTime = time; }
+      if (sliding && q.mode !== "slide") { slideTime = time - slideTime; slideDist = q.z - z0; break; }
+    }
+    // A slide-jump a fifth of a second into the slide.
+    let j = createMoveState(0, 0, flat), jz = 0, left = false;
+    for (let i = 0, time2 = 0; i < 1200; i++, time2 += STEP) {
+      const inSlide = j.mode === "slide" && j.modeT > 0.2 && !left;
+      if (inSlide) { left = true; jz = j.z; }
+      j = stepMove(j, { ...NO_INPUT, z: 1, sprint: time2 < 2.5, sneak: time2 >= 2.5, dashPressed: dash && Math.abs(time2 - 2.5) < STEP / 2, jump: inSlide, jumpPressed: inSlide }, STEP, flat, t);
+      if (left && j.mode !== "air" && j.mode !== "slide") { jumpDist = j.z - jz; break; }
+      if (left && j.mode === "slide" && j.modeT === STEP) { jumpDist = j.z - jz; break; }
+    }
+    return { slideTime, slideDist, jumpDist };
+  };
+  const slide = slideFrom(false), dashSlide = slideFrom(true);
+  return { jump: stand.peak, air: stand.air, walkJump: walk.distance, longJump: long.distance, dash: dash.z, dashJump: dashJump.distance, top, toTop, glide: c.z - 0.5, slide, dashSlide };
 }
 
-function tickLap(l: { lap: Lap; now: number }, p: MoveTelemetry, dt: number) {
+/** The last 3 s of speed, 20 samples a second, with how the momentum stood (0 none, 1 kept, 2 bleeding): the readout's trace. */
+const TRACE = 60;
+interface Trace { speed: Float32Array; state: Uint8Array; next: number; t: number }
+function tickLap(l: { lap: Lap; now: number }, p: MoveTelemetry, dt: number, trace: Trace) {
   l.now += dt;
   l.lap = lapStep(l.lap, p.y > -1 ? gateAt(p.x, p.z) : -1, l.now);
+  trace.t += dt;
+  while (trace.t >= 0.05) {
+    trace.t -= 0.05;
+    trace.speed[trace.next] = p.speed;
+    trace.state[trace.next] = p.momentum === "kept" ? 1 : p.momentum === "bleeding" ? 2 : 0;
+    trace.next = (trace.next + 1) % TRACE;
+  }
 }
-/** Lap timing on sim time (slow motion slows the clock too). */
-function LapTracker({ telemetry, lap, timeScale }: { telemetry: React.RefObject<MoveTelemetry>; lap: React.RefObject<{ lap: Lap; now: number }>; timeScale: number }) {
+/** Lap timing on sim time (slow motion slows the clock too), and the speed trace. */
+function LapTracker({ telemetry, lap, timeScale, trace }: { telemetry: React.RefObject<MoveTelemetry>; lap: React.RefObject<{ lap: Lap; now: number }>; timeScale: number; trace: React.RefObject<Trace> }) {
   useFrame((_, delta) => {
-    tickLap(lap.current, telemetry.current, Math.min(delta, 0.1) * timeScale);
+    tickLap(lap.current, telemetry.current, Math.min(delta, 0.1) * timeScale, trace.current);
   });
   return null;
 }
+const TRACE_COLOR = ["#7fd1c0", "#FFD166", "#ef8a62"];
+/** The trace as an SVG: speed over the last 3 s against the sprint and the ceiling, coloured kept (gold) or bleeding (coral). */
+function SpeedTrace({ trace, sprint, ceiling }: { trace: Trace; sprint: number; ceiling: number }) {
+  const W = 200, H = 46, top = ceiling * 1.15, y = (v: number) => H - (Math.min(v, top) / top) * H;
+  const segs: { d: string; c: number }[] = [];
+  for (let i = 1; i < TRACE; i++) {
+    const a = (trace.next + i - 1) % TRACE, b = (trace.next + i) % TRACE;
+    segs.push({ d: `M${((i - 1) / (TRACE - 1)) * W},${y(trace.speed[a]).toFixed(1)}L${(i / (TRACE - 1)) * W},${y(trace.speed[b]).toFixed(1)}`, c: trace.state[b] });
+  }
+  return <svg width={W} height={H} style={{ display: "block", margin: "4px 0" }} aria-label="Speed over the last 3 seconds">
+    <line x1={0} x2={W} y1={y(ceiling)} y2={y(ceiling)} stroke="rgba(255,255,255,0.35)" strokeDasharray="3 3" />
+    <line x1={0} x2={W} y1={y(sprint)} y2={y(sprint)} stroke="rgba(255,255,255,0.18)" />
+    {segs.map((s, i) => <path key={i} d={s.d} stroke={TRACE_COLOR[s.c]} strokeWidth={2} fill="none" />)}
+  </svg>;
+}
 
-function CourseScene({ world, tuning, juice, spawn, telemetry, timeScale, lap, walkSpeed, lite, shadows, zoom, signs }: {
+function CourseScene({ world, tuning, juice, spawn, telemetry, timeScale, lap, trace, walkSpeed, lite, shadows, zoom, signs }: {
   world: ReturnType<typeof islandOf>; tuning: MoveTuning; juice: MoveJuice; spawn: [number, number];
   telemetry: React.RefObject<MoveTelemetry>;
-  timeScale: number; lap: React.RefObject<{ lap: Lap; now: number }>; walkSpeed: number; lite: boolean; shadows: boolean; zoom: number; signs: boolean;
+  timeScale: number; lap: React.RefObject<{ lap: Lap; now: number }>; trace: React.RefObject<Trace>; walkSpeed: number; lite: boolean; shadows: boolean; zoom: number; signs: boolean;
 }) {
   const v = course();
   const camTarget = useRef(new THREE.Vector3(spawn[0], 0, spawn[1]));
@@ -163,7 +231,7 @@ function CourseScene({ world, tuning, juice, spawn, telemetry, timeScale, lap, w
     </Html>)}
     <PlayerAvatar world={world} groundHeight={world.ground} groundSurface={world.surface} spawnPosition={start} showNameplate={false}
       camTarget={camTarget} tuning={tuning} juice={juice} telemetry={telemetry} timeScale={timeScale} walkSpeed={walkSpeed} />
-    <LapTracker telemetry={telemetry} lap={lap} timeScale={timeScale} />
+    <LapTracker telemetry={telemetry} lap={lap} timeScale={timeScale} trace={trace} />
   </>;
 }
 
@@ -183,17 +251,18 @@ export default function MoveLab() {
   const [juice, setJuice] = useState<MoveJuice>(MOVE_JUICE);
   const [preset, setPreset] = useState("Juicy");
   const [slow, setSlow] = useState(1);
-  const bindings = useMoveKeys();
+  const bindings = useMoveKeys(), crouchNow = crouchKey(bindings, useKeyboardLocked());
   const [listening, setListening] = useState<MoveAction | null>(null);
   const [note, setNote] = useState<string | null>(null);
   const coarse = useCoarsePointer(), touch = params.get("touch") === "1" || coarse;
   const [narrow] = useState(() => typeof window !== "undefined" && window.innerWidth < 720);
   // The panel starts closed on a phone (it would cover the course).
   const [panel, setPanel] = useState(params.get("panel") ? params.get("panel") !== "0" : !touch);
-  const [hud, setHud] = useState<{ t: MoveTelemetry; lap: Lap; now: number } | null>(null);
+  const [hud, setHud] = useState<{ t: MoveTelemetry; lap: Lap; now: number; trace: Trace } | null>(null);
   const [respawn, setRespawn] = useState(0);
-  const telemetry = useRef<MoveTelemetry>({ x: 0, y: 0, z: 0, speed: 0, mode: "ground", hops: 0, dashReady: true, long: false });
+  const telemetry = useRef<MoveTelemetry>({ x: 0, y: 0, z: 0, speed: 0, mode: "ground", hops: 0, dashReady: true, long: false, momentum: "", slideJump: false });
   const lap = useRef<{ lap: Lap; now: number }>({ lap: NEW_LAP, now: 0 });
+  const trace = useRef<Trace>({ speed: new Float32Array(TRACE), state: new Uint8Array(TRACE), next: 0, t: 0 });
   useSoundUnlock();
 
   // The panel's values survive a reload (this browser only); Copy JSON is how they reach the repo.
@@ -206,7 +275,10 @@ export default function MoveLab() {
   }, []);
   useEffect(() => { try { localStorage.setItem(STORE, JSON.stringify({ move: tuning, juice, preset })); } catch { /* session only */ } }, [tuning, juice, preset]);
   useEffect(() => {
-    const id = window.setInterval(() => setHud({ t: { ...telemetry.current }, lap: lap.current.lap, now: lap.current.now }), 100);
+    const id = window.setInterval(() => {
+      const tr = trace.current;
+      setHud({ t: { ...telemetry.current }, lap: lap.current.lap, now: lap.current.now, trace: { speed: tr.speed.slice(), state: tr.state.slice(), next: tr.next, t: 0 } });
+    }, 100);
     return () => window.clearInterval(id);
   }, []);
   // Remap: the next key press binds.
@@ -225,7 +297,7 @@ export default function MoveLab() {
   const fmt = (s: number) => `${Math.floor(s / 60)}:${(s % 60).toFixed(2).padStart(5, "0")}`;
   const h = hud, top = topSpeed(tuning), hopBase = tuning.sprintSpeed * tuning.longJumpBoost;
   const presetOf = (presets: Record<string, Partial<MoveTuning>>) => Object.keys(presets).find(p => Object.entries(presets[p]).every(([k, v]) => tuning[k as keyof MoveTuning] === v));
-  const dashPreset = presetOf(DASH_PRESETS), glidePreset = presetOf(GLIDE_PRESETS);
+  const dashPreset = presetOf(DASH_PRESETS), glidePreset = presetOf(GLIDE_PRESETS), slidePreset = presetOf(SLIDE_PRESETS), momentumPreset = presetOf(MOMENTUM_PRESETS);
 
   return <div style={{ position: "fixed", inset: "40px 0 0 0", background: "#0b0e14", overflow: "hidden" }}>
     <Canvas tabIndex={0} role="application" aria-label="Movement lab course" gl={{ antialias: false, powerPreference: "high-performance" }} dpr={graphics.pixelated ? 0.5 : [1, 1.5]}
@@ -234,7 +306,7 @@ export default function MoveLab() {
       onCreated={({ gl }) => { gl.toneMapping = THREE.NeutralToneMapping; gl.outputColorSpace = THREE.SRGBColorSpace; }}>
       <Suspense fallback={null}>
         <CourseScene key={respawn} world={world} tuning={simTuning} juice={juice} spawn={spawn} telemetry={telemetry}
-          timeScale={slow} lap={lap} walkSpeed={tuning.walkSpeed} lite={graphics.liteMode} shadows={graphics.shadows && !graphics.liteMode} zoom={Number(params.get("zoom")) || 1} signs={params.get("panel") !== "0"} />
+          timeScale={slow} lap={lap} trace={trace} walkSpeed={tuning.walkSpeed} lite={graphics.liteMode} shadows={graphics.shadows && !graphics.liteMode} zoom={Number(params.get("zoom")) || 1} signs={params.get("panel") !== "0"} />
         <PostFX antialias={!graphics.liteMode && !graphics.pixelated} grade={LIGHT.grade} fx={lookFx(CURRENT, !graphics.liteMode)} />
         <LookMaterials preset={CURRENT} />
         <SunShadows />
@@ -252,7 +324,14 @@ export default function MoveLab() {
         <span key={i} style={{ display: "inline-block", width: 14, height: 10, borderRadius: 2, background: h.t.speed >= hopBase + (i + 1) * tuning.hopBoost - 0.05 ? "#FFD166" : "rgba(255,255,255,0.18)" }} />)}
         {h.t.speed >= top - 0.05 && <span style={{ color: "#FFD166", fontWeight: 700 }}>max</span>}</div>}
       <div style={{ color: "#8a939a", fontSize: 11 }}>sprint and hold Space to bunny-hop</div>
-      <div style={{ marginTop: 4, color: "#c9d1d6" }}>{h.t.mode}{h.t.long ? " · long jump" : ""} · dash {h.t.dashReady ? "ready" : "…"}</div>
+      {/* Momentum (David, 2026-10-01): kept through tech, bleeding on plain ground; the trace shows the last 3 s against the sprint and the ceiling. */}
+      <div data-testid="move-momentum" style={{ marginTop: 6, display: "flex", justifyContent: "space-between" }}>
+        <span>Momentum</span>
+        <span style={{ fontWeight: 700, color: h.t.momentum === "kept" ? "#FFD166" : h.t.momentum === "bleeding" ? "#ef8a62" : "#8a939a" }}>{h.t.momentum === "kept" ? "kept" : h.t.momentum === "bleeding" ? "bleeding" : "—"}</span>
+      </div>
+      <SpeedTrace trace={h.trace} sprint={tuning.sprintSpeed} ceiling={tuning.momentumCeiling} />
+      <div style={{ color: "#8a939a", fontSize: 11 }}>dashed line: the ceiling ({tuning.momentumCeiling}) · gold kept · coral bleeding</div>
+      <div style={{ marginTop: 4, color: "#c9d1d6" }}>{h.t.mode}{h.t.long ? " · long jump" : ""}{h.t.slideJump ? " · slide-jump" : ""} · dash {h.t.dashReady ? "ready" : "…"}</div>
     </div>}
 
     {/* Lap timer */}
@@ -263,10 +342,11 @@ export default function MoveLab() {
     </div>}
 
     <div style={{ ...box, position: "absolute", left: 12, bottom: touch ? 180 : 12, padding: "6px 10px", color: "#c9d1d6" }}>
-      {!touch && MOVE_ACTIONS.filter(a => !["forward", "left", "back", "right"].includes(a.id)).map(a => <span key={a.id} style={{ marginRight: 10 }}><kbd>{keyName(bindings[a.id])}</kbd> {a.name}{a.id === "jump" ? ` (hold while sprinting: bunny-hop${glider ? "; again while falling, held: glide" : ""})` : ""}</span>)}
+      {!touch && MOVE_ACTIONS.filter(a => !["forward", "left", "back", "right"].includes(a.id)).map(a => <span key={a.id} style={{ marginRight: 10 }}><kbd>{keyName(a.id === "crouch" ? crouchNow || bindings.crouch : bindings[a.id])}</kbd> {a.name}{a.id === "jump" ? ` (hold while sprinting: bunny-hop${glider ? "; again while falling, held: glide" : ""})` : a.id === "crouch" ? " (held at speed: slide)" : ""}</span>)}
       <label style={{ marginLeft: 6 }}><input type="checkbox" checked={glider} onChange={e => setGlider(e.target.checked)} /> Owns the leaf glider</label>
       <button onClick={() => { lap.current = { lap: NEW_LAP, now: lap.current.now }; setSpawn(COURSE_SPAWN); setRespawn(n => n + 1); }} style={{ marginLeft: 6, color: "#FFD166" }}>Back to start</button>
       <button onClick={() => { setSpawn(GLIDE_SPAWN); setRespawn(n => n + 1); }} style={{ marginLeft: 6, color: "#FFD166" }}>Glide lane</button>
+      <button onClick={() => { setSpawn(SLIDE_SPAWN); setRespawn(n => n + 1); }} style={{ marginLeft: 6, color: "#FFD166" }}>Slide lane</button>
     </div>
 
     {touch && <TouchControls />}
@@ -288,11 +368,13 @@ export default function MoveLab() {
       <p style={{ color: "#c9d1d6", margin: "8px 0", lineHeight: 1.5 }}>
         Jump {numbers.jump.toFixed(2)}u in {numbers.air.toFixed(2)}s · walking jump {numbers.walkJump.toFixed(1)}u · long jump {numbers.longJump.toFixed(1)}u ·
         dash {numbers.dash.toFixed(1)}u · dash jump {numbers.dashJump.toFixed(1)}u · held bunny-hop tops out at {numbers.top.toFixed(1)} u/s after {numbers.toTop.toFixed(1)}s (walk {tuning.walkSpeed}, sprint {tuning.sprintSpeed}) ·
-        glide {numbers.glide.toFixed(1)} tiles off a 1.5u cliff (jump at the edge, Space again at the top)
+        glide {numbers.glide.toFixed(1)} tiles off a 1.5u cliff (jump at the edge, Space again at the top) ·
+        slide from a sprint {numbers.slide.slideTime.toFixed(2)}s over {numbers.slide.slideDist.toFixed(1)}u, slide-jump {numbers.slide.jumpDist.toFixed(1)}u ·
+        dash-slide {numbers.dashSlide.slideTime.toFixed(2)}s over {numbers.dashSlide.slideDist.toFixed(1)}u, its slide-jump {numbers.dashSlide.jumpDist.toFixed(1)}u (the lane&apos;s gap is 7)
       </p>
       {GROUPS.map(g => <fieldset key={g.name} style={{ border: "1px solid rgba(255,255,255,0.12)", borderRadius: 6, margin: "8px 0", padding: "4px 8px" }}>
         <legend style={{ color: "#FFD166" }}>{g.name}</legend>
-        {[["Dash (Q)", DASH_PRESETS, dashPreset] as const, ["Glide (leaf)", GLIDE_PRESETS, glidePreset] as const].filter(([name]) => name === g.name).map(([name, presets, current]) =>
+        {[["Dash (Q)", DASH_PRESETS, dashPreset] as const, ["Glide (leaf)", GLIDE_PRESETS, glidePreset] as const, ["Slide", SLIDE_PRESETS, slidePreset] as const, ["Momentum", MOMENTUM_PRESETS, momentumPreset] as const].filter(([name]) => name === g.name).map(([name, presets, current]) =>
           <div key={name} role="group" aria-label={`${name} presets`} style={{ display: "flex", gap: 6, flexWrap: "wrap", margin: "2px 0 6px" }}>
             {Object.keys(presets).map(p => <button key={p} aria-pressed={current === p} onClick={() => { setTuning(t => ({ ...t, ...presets[p] })); setPreset("Custom"); }}
               style={{ color: current === p ? "#0b0e14" : "#f1ffff", background: current === p ? "#FFD166" : "#1b2230", borderRadius: 4, padding: "1px 8px" }}>{p}</button>)}

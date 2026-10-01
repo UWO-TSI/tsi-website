@@ -103,6 +103,11 @@ export function startDodge(rt: CombatRuntime, dir: Vec): boolean {
 }
 
 /**
+ * The dodge keeps the dash's arena shape: the burst eases to 0.55 of itself and plain ground bleeds as before. The
+ * village dash's carried momentum (specs/movement-slide.md) stays out of the arena, so dodges and the balance hold.
+ */
+export const DODGE_SHAPE = { dashExit: 0.55, overspeedDecay: 5, keepGrace: 0 } as const;
+/**
  * The ruins on the movement kit (specs/movement.md): Q's dash is the dodge, the village dash's own burst with the
  * dodge's cooldown (combat polish 9: one dash), and walking and sprint scale with the combat speed stat.
  */
@@ -111,7 +116,7 @@ export function combatTuning(speed: number): MoveTuning {
   if (tuned?.speed === speed) return tuned.t; // the avatar asks every frame; the speed stat changes rarely
   const t = MOVE_TUNING;
   tuned = { speed, t: { ...t, walkSpeed: t.walkSpeed * speed, sneakSpeed: t.sneakSpeed * speed, sprintSpeed: t.sprintSpeed * speed,
-    dashCooldown: DODGE.duration + DODGE.cooldown } };
+    dashCooldown: DODGE.duration + DODGE.cooldown, ...DODGE_SHAPE } };
   return tuned.t;
 }
 /**
