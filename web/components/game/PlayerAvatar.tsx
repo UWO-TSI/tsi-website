@@ -17,7 +17,7 @@ import { useMyLook } from "@/lib/game/character/lookStore";
 import { combatClip, seatLift, type CombatView } from "@/lib/game/character/clips";
 import { useWorldClips } from "./character/useWorldClips";
 import { combat, useCombatVersion } from "@/lib/game/combat/runtime";
-import { combatPush, combatTuning, dashDodge } from "@/lib/game/combat/actions";
+import { combatFacing, combatPush, combatTuning, dashDodge } from "@/lib/game/combat/actions";
 import { WEAPONS } from "@/lib/game/combat/data";
 import { STUCK_TIME, advanceMove, clearSpot, createMoveSim, createMoveState, interpolated, topSpeed, towards, MOVE_TUNING, NO_INPUT, type MoveEvent, type MoveInput, type MoveSim, type MoveState, type MoveTuning, type MoveWorld } from "@/lib/game/movement/sim";
 import { useMoveKeys } from "@/lib/game/movement/keys";
@@ -268,7 +268,7 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
         sprint: !!k[b.sprint] || (!keyed && tilt > 0.92), sneak: !!k[b.sneak],
         jump: !!k[b.jump] || st.jump, jumpPressed, dashPressed,
       } : { ...NO_INPUT, dashPressed: !frozen && !down && dashPressed });
-      if (inCombat) { input.push = push; s.state.facing = p.facing; } // no stick: the dodge goes the way you aim
+      if (inCombat) { input.push = push; if (p.aimHold > 0 || Math.hypot(s.state.vx, s.state.vz) < 0.6) s.state.facing = p.facing; } // attacking or standing: the kit turns from your facing (a dash with no stick goes that way)
       events = advanceMove(s, input, dt, world, t);
       if (target.current) {
         f.stuck = Math.hypot(s.state.vx, s.state.vz) < 0.3 ? f.stuck + dt : 0;
@@ -366,10 +366,11 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
     bankAbout(bd, state.facing, f.bank, y - groundY + GRIP_Y);
     m.rate = rawDelta > 0 ? dt / Math.min(rawDelta, 0.1) : 1;
     if (inCombat) {
-      // Encounter: face the aim; attacks, dodges, hits, casting and defeat drive the clips.
+      // Encounter: face the way you move, the aim when standing or attacking (combatFacing); attacks, dodges, hits, casting and defeat drive the clips.
       const view: CombatView = { alive: p.alive, dodgeAge: p.dodgeAge, hurt: p.hurt, attackCd: p.attackCd };
       const next = combatClip(view, combatPrev.current ?? view, !!combat.rt.casting, WEAPONS[p.weapon].kind);
       combatPrev.current = view;
+      if (p.alive && dt > 0) p.facing = combatFacing(p, { x, z }, state.facing, state.mode === "ground" ? speed : 0, dt);
       m.yaw = p.facing;
       m.pose = next.pose;
       if (next.play) m.play = next.play;

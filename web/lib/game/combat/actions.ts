@@ -24,12 +24,33 @@ export function regenEnergy(rt: CombatRuntime, dt: number) {
 
 const wearHit = (rt: CombatRuntime) => { const p = rt.player; p.hits[p.weapon] = (p.hits[p.weapon] ?? 0) + 1; p.durability[p.weapon] = Math.max(0, p.durability[p.weapon] - 1); };
 
+/**
+ * Facing (combat polish 10): an attack or ability snaps you to the aim and holds it AIM_HOLD s; otherwise you face the
+ * way you move (the movement kit's own turn, `travel`), and standing you turn to the aim. No more sliding feet.
+ */
+export const AIM_HOLD = 0.6;
+const MOVING = 0.6, AIM_TURN = 18;
+const aimYaw = (p: CombatRuntime["player"], at: Vec) => {
+  const dx = p.aim.x - at.x, dz = p.aim.z - at.z;
+  return Math.hypot(dx, dz) > 0.3 ? Math.atan2(dx, dz) : p.facing; // the aim right under you keeps the facing
+};
+/** Snap to the aim for an attack and hold it. */
+export function faceAim(p: CombatRuntime["player"], at: Vec) { p.facing = aimYaw(p, at); p.aimHold = AIM_HOLD; }
+/** This frame's facing: `travel` is the movement kit's facing and `speed` how fast you move (PlayerAvatar). */
+export function combatFacing(p: CombatRuntime["player"], at: Vec, travel: number, speed: number, dt: number): number {
+  if (p.aimHold > 0) return aimYaw(p, at);
+  if (speed > MOVING) return travel;
+  const to = aimYaw(p, at);
+  return p.facing + Math.atan2(Math.sin(to - p.facing), Math.cos(to - p.facing)) * (1 - Math.exp(-AIM_TURN * dt));
+}
+
 /** Primary attack with the equipped weapon toward the aim. Returns true if it fired. */
 export function attack(rt: CombatRuntime, player: Vec, random = Math.random): boolean {
   const p = rt.player;
   if (!p.alive || p.attackCd > 0 || rt.casting || p.dash || (p.dodgeAge !== null && p.dodgeAge < DODGE.duration)) return false;
   const w = WEAPONS[p.weapon];
   p.attackCd = w.cooldown;
+  faceAim(p, player);
   cue(rt, "swing", player);
   const dir = { x: Math.sin(p.facing), z: Math.cos(p.facing) };
   if (w.kind === "melee") {
@@ -163,7 +184,9 @@ export function triggerAbility(rt: CombatRuntime, id: AbilityId, player: Vec = {
     p.weapon = p.owned[(p.owned.indexOf(p.weapon) + 1) % p.owned.length]; p.attackCd = 0.2; rt.cooldowns.swap = 0.4;
     return true;
   }
-  return fireSlot(rt, SLOT_IDS.indexOf(id), player, random);
+  const fired = fireSlot(rt, SLOT_IDS.indexOf(id), player, random);
+  if (fired) faceAim(p, player);
+  return fired;
 }
 
 export function spawnWave(rt: CombatRuntime, wave: SpawnPoint[]) {

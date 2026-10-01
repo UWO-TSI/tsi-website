@@ -19,6 +19,7 @@ export function stepCombat(rt: CombatRuntime, me: Vec, dt: number, free: (x: num
   const p = rt.player;
   // Timers, buffs, shield, passive stacks, the transformation.
   p.attackCd = Math.max(0, p.attackCd - dt); p.swing = Math.max(0, p.swing - dt); p.dodgeCd = Math.max(0, p.dodgeCd - dt); p.hurt = Math.max(0, p.hurt - dt);
+  p.aimHold = Math.max(0, p.aimHold - dt);
   for (const k of ABILITY_IDS) rt.cooldowns[k] = Math.max(0, rt.cooldowns[k] - dt);
   for (let i = rt.buffs.length - 1; i >= 0; i--) if ((rt.buffs[i].t -= dt) <= 0) rt.buffs.splice(i, 1);
   p.shieldFor = Math.max(0, p.shieldFor - dt); if (!p.shieldFor) p.shield = 0;

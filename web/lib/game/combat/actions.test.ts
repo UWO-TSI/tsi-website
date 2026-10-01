@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ENEMIES, MISSIONS } from "./data";
-import { BUFFER, attack, combatPush, combatTuning, createInputs, dashDodge, hurtPlayer, regenEnergy, runInputs, startDodge, triggerAbility } from "./actions";
+import { AIM_HOLD, BUFFER, attack, combatFacing, combatPush, combatTuning, createInputs, dashDodge, hurtPlayer, regenEnergy, runInputs, startDodge, triggerAbility } from "./actions";
 import { FLOATERS, floater, hitAmount, resolveCast } from "./abilities";
 
 /** One hit from the equipped weapon (systems damage formula), as `attack` lands it. */
@@ -271,5 +271,31 @@ describe("HUD pools (combat polish 8)", () => {
     for (let i = 0; i < 6; i++) floater(rt, at, 1, `note ${i}`, "info");
     expect(rt.floaters.filter(f => f.kind === "info").map(f => f.text)).toEqual(["note 2", "note 3", "note 4", "note 5"]);
     expect(rt.floaters.filter(f => f.kind !== "info")).toHaveLength(FLOATERS.damage);
+  });
+});
+
+describe("facing (combat polish 10)", () => {
+  const E = Math.PI / 2; // +x
+  it("faces the way you move, snaps to the aim for an attack and holds it, then turns back to the way you move", () => {
+    const rt = createRuntime(), p = rt.player, me = { x: 0, z: 0 };
+    p.facing = 0; p.aim = { x: 5, z: 0 }; // aiming at +x while running +z
+    expect(combatFacing(p, me, 0, 7, 1 / 60)).toBe(0); // running: the way you move
+    attack(rt, me, fixed);
+    expect(p.facing).toBeCloseTo(E); // the swing snaps to the aim
+    let t = 0;
+    for (; t < 1 && combatFacing(p, me, 0, 7, 1 / 60) !== 0; t += 1 / 60) stepCombat(rt, me, 1 / 60);
+    expect(t).toBeGreaterThan(AIM_HOLD - 0.05);
+    expect(t).toBeLessThan(AIM_HOLD + 0.05);
+  });
+  it("standing, turns to the aim (eased, not a pop); an aim right underfoot keeps the facing", () => {
+    const rt = createRuntime(), p = rt.player, me = { x: 0, z: 0 };
+    p.facing = 0; p.aim = { x: 5, z: 0 };
+    const first = combatFacing(p, me, 0, 0, 1 / 60);
+    expect(first).toBeGreaterThan(0);
+    expect(first).toBeLessThan(E / 2);
+    for (let i = 0; i < 30; i++) p.facing = combatFacing(p, me, 0, 0, 1 / 60);
+    expect(p.facing).toBeCloseTo(E, 2);
+    p.aim = { x: 0.1, z: 0.1 };
+    expect(combatFacing(p, me, 0, 0, 1 / 60)).toBeCloseTo(E, 2);
   });
 });

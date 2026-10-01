@@ -419,10 +419,11 @@ export function AimReticle({ player, ground }: { player: React.RefObject<THREE.V
     const kind = WEAPONS[p.weapon].kind, ranged = kind === "bow" || kind === "staff";
     if (ring.current) { ring.current.position.set(a.x, ground(a.x, a.z) + 0.06, a.z); ring.current.visible = p.alive && !combat.rt.casting; }
     if (line.current) {
-      const len = Math.min(Math.hypot(a.x - pl.x, a.z - pl.z), WEAPONS[p.weapon].range);
+      // Toward the aim (your facing turns with your movement between shots).
+      const len = Math.min(Math.hypot(a.x - pl.x, a.z - pl.z), WEAPONS[p.weapon].range), yaw = Math.atan2(a.x - pl.x, a.z - pl.z);
       line.current.visible = ranged && p.alive;
-      line.current.position.set(pl.x + Math.sin(p.facing) * len / 2, ground(pl.x, pl.z) + 0.05, pl.z + Math.cos(p.facing) * len / 2);
-      line.current.rotation.set(-Math.PI / 2, 0, p.facing + Math.PI);
+      line.current.position.set(pl.x + Math.sin(yaw) * len / 2, ground(pl.x, pl.z) + 0.05, pl.z + Math.cos(yaw) * len / 2);
+      line.current.rotation.set(-Math.PI / 2, 0, yaw + Math.PI);
       line.current.scale.set(0.06, len, 1);
     }
   });

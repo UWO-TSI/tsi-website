@@ -195,12 +195,11 @@ export default function RuinsScene({ level, phase, light, look, weather, liteMod
     combat.hitstop = Math.max(0, combat.hitstop - rawDelta);
     const rt = combat.rt, p = rt.player, pl = player.current, inp = input.current;
     const me = { x: pl.x, z: pl.z };
-    // Aim: pointer ray onto the floor plane; facing follows the aim.
+    // Aim: pointer ray onto the floor plane (until the mouse moves, ahead of you). Facing is PlayerAvatar's (combatFacing).
     if (inp.hasPointer) {
       ray.setFromCamera(inp.ndc, camera); plane.current.constant = -ruins.ground(pl.x, pl.z);
-      if (ray.ray.intersectPlane(plane.current, hit)) p.aim = { x: hit.x, z: hit.z };
-    } else p.aim = { x: pl.x, z: pl.z + 3 };
-    p.facing = Math.atan2(p.aim.x - pl.x, p.aim.z - pl.z);
+      if (ray.ray.intersectPlane(plane.current, hit)) { p.aim.x = hit.x; p.aim.z = hit.z; }
+    } else { p.aim.x = pl.x + Math.sin(p.facing) * 3; p.aim.z = pl.z + Math.cos(p.facing) * 3; }
     p.safe = inRect(me, GATE_PLAZA);
     // Defeat: wake at the gate (row 229).
     if (!p.alive) {

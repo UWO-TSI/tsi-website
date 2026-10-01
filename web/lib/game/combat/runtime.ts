@@ -51,7 +51,8 @@ export interface CombatRuntime {
     weapon: string; owned: string[]; durability: Record<string, number>; hits: Record<string, number>;
     /** `dodgeDir` is also the way the last hit pushes you, `knock` how hard (that attack's knockback). */
     attackCd: number; swing: number; dodgeAge: number | null; dodgeCd: number; dodgeDir: Vec; knock: number;
-    aim: Vec; facing: number; hurt: number; downFor: number;
+    /** `aimHold`: seconds an attack or ability keeps you facing the aim (combat polish 10, actions.ts combatFacing). */
+    aim: Vec; facing: number; aimHold: number; hurt: number; downFor: number;
     /** Weapons granted (the ruins gate is open): the equipped one shows on the character's back in the village (row 140). */
     armed: boolean;
     /** Absorbs damage first, for `shieldFor` seconds. */
@@ -95,7 +96,7 @@ export function createRuntime(): CombatRuntime {
       durability: Object.fromEntries(Object.values(WEAPONS).map(w => [w.id, w.maxDurability])),
       hits: {},
       attackCd: 0, swing: 0, dodgeAge: null, dodgeCd: 0, dodgeDir: { x: 0, z: 1 }, knock: 0,
-      aim: { x: 0, z: 0 }, facing: 0, hurt: 0, downFor: 0, armed: false,
+      aim: { x: 0, z: 0 }, facing: 0, aimHold: 0, hurt: 0, downFor: 0, armed: false,
       shield: 0, shieldFor: 0, dash: null, impulse: { x: 0, z: 0 }, speed: 1, still: 0, last: null },
     cooldowns: { slot1: 0, slot2: 0, slot3: 0, slot4: 0, swap: 0 }, denied: { slot1: 0, slot2: 0, slot3: 0, slot4: 0, swap: 0 },
     enemies: [], projectiles: [], units: [], buffs: [], floaters: [], blasts: [], cues: [],
