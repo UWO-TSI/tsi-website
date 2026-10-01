@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ENEMIES, MISSIONS } from "./data";
-import { AIM_HOLD, BUFFER, attack, combatFacing, combatPush, combatTuning, createInputs, dashDodge, hurtPlayer, regenEnergy, runInputs, startDodge, triggerAbility } from "./actions";
+import { AIM_HOLD, BUFFER, DODGE_SHAPE, attack, combatFacing, combatPush, combatTuning, createInputs, dashDodge, hurtPlayer, regenEnergy, runInputs, startDodge, triggerAbility } from "./actions";
 import { FLOATERS, floater, hitAmount, resolveCast } from "./abilities";
 
 /** One hit from the equipped weapon (systems damage formula), as `attack` lands it. */
@@ -119,7 +119,7 @@ describe("the ruins dodge on the movement kit (specs/movement.md)", () => {
   };
   it("is the village dash (one dash, combat polish 9): the same burst and reach, invulnerable through it and a beat past", () => {
     const t = combatTuning(1);
-    expect([t.dashSpeed, t.dashTime, t.dashExit, t.dashEase]).toEqual([MOVE_TUNING.dashSpeed, MOVE_TUNING.dashTime, MOVE_TUNING.dashExit, MOVE_TUNING.dashEase]);
+    expect([t.dashSpeed, t.dashTime, t.dashExit, t.dashEase]).toEqual([MOVE_TUNING.dashSpeed, MOVE_TUNING.dashTime, DODGE_SHAPE.dashExit, MOVE_TUNING.dashEase]);
     expect(t.dashCooldown).toBeCloseTo(0.6);
     const hits: [number, number][] = [];
     let atEnd = 0;

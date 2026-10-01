@@ -77,7 +77,8 @@ const HARD = new Set<GroundKind>(["stone", "wood"]);
 export const stepSound = (g: GroundKind) => GROUND[g].sound;
 
 /** Salts keep two bursts of one event apart. */
-const SALT = { step: 1, rain: 2, kick: 3, extra: 4, ring: 5, plume: 6, dash: 7, side: 8, air: 9, swirl: 10, streak: 11, trail: 12, settle: 13, wisp: 14, ready: 15, splash: 16, ripple: 17, leaf: 18, mantle: 19, scuff: 20, sit: 21 };
+const SALT = { step: 1, rain: 2, kick: 3, extra: 4, ring: 5, plume: 6, dash: 7, side: 8, air: 9, swirl: 10, streak: 11, trail: 12, settle: 13, wisp: 14, ready: 15, splash: 16, ripple: 17, leaf: 18, mantle: 19, scuff: 20, sit: 21,
+  slide: 24, slideSpray: 25, slideScuff: 26, slideBurst: 27, slidePop: 28 };
 
 /**
  * A foot comes down: flecks and a mote on grass, a sand kick, a snow puff, a dust puff on soil; nothing on stone or
@@ -228,4 +229,43 @@ export function scuff(pool: ParticlePool, g: GroundKind, x: number, y: number, z
 export function defeatPuff(pool: ParticlePool, x: number, y: number, z: number, big = 1) {
   pool.burst(DEFEAT, x, y, z, y, 0, 0, big, 0xe2d6c0, seedAt(x, z, 22));
   pool.burst(RING, x, y, z, y, 0, 0, big, 0xe2d6c0, seedAt(x, z, 23), 0.8);
+}
+
+// ── The slide (specs/movement-slide.md) ──────────────────────────────
+/** Low dust off the heels, trailing; the ground's own spray (flecks on grass, a sand spray, snow) thrown up and out from the lead heel; scuffs left on the ground. */
+const SLIDE_DUST: Recipe = { sprite: "dustLow", count: [1, 1], life: [0.42, 0.55], size: [0.5, 0.62], grow: 1.6, speed: [0.3, 0.7], spread: 0.9, up: [0.05, 0.2], gravity: 0, drag: 4, wind: 0.5, lift: 0.08, alpha: 0.8, face: FACE.standing, jitter: 0.08 };
+const SLIDE_FLECKS: Recipe = { ...STEP_FLECKS, count: [2, 2], speed: [1.2, 2], spread: 1.3, up: [1.5, 2.3], size: [0.42, 0.5] };
+const SLIDE_SAND: Recipe = { ...STEP_SAND, count: [1, 2], size: [0.7, 0.85], speed: [1.2, 1.9], spread: 1.1, up: [0.9, 1.5] };
+const SLIDE_SNOW: Recipe = { ...STEP_SNOW, count: [1, 2], speed: [1, 1.6], spread: 1.2, up: [0.6, 1] };
+const SLIDE_SCUFF: Recipe = { ...SCUFF, life: [0.9, 1.1], size: [0.5, 0.6], alpha: 0.45 };
+const SLIDE_BURST: Recipe = { ...DASH_KICK, count: [3, 4], speed: [2.4, 3.6], spread: 1.3, up: [0.25, 0.6], size: [0.38, 0.5], alpha: 0.7 };
+const SLIDE_POP: Recipe = { ...RING, count: [7, 8], speed: [1.8, 2.6], size: [0.6, 0.72], life: [0.42, 0.52] };
+const SLIDE_SPRAY: Partial<Record<GroundKind, Recipe>> = { grass: SLIDE_FLECKS, sand: SLIDE_SAND, wetSand: SLIDE_SAND, snow: SLIDE_SNOW };
+
+/**
+ * One beat of the slide's trail (the caller spaces them by speed): dust low off the heels at (x, z) blowing back,
+ * the ground's spray up and out from the lead heel at (hx, hz), and every `scuff`th beat a scuff on the ground.
+ * Nothing on stone, boards or water but a faint pale dust.
+ */
+export function slideTrail(pool: ParticlePool, g: GroundKind, x: number, y: number, z: number, hx: number, hz: number, vx: number, vz: number, scuffIt: boolean, amount = 1) {
+  if (amount <= 0 || g === "water") return;
+  const fx = GROUND[g], hard = HARD.has(g), speed = Math.hypot(vx, vz), k = amount * (0.75 + Math.min(speed, 18) * 0.02);
+  pool.burst(SLIDE_DUST, x, y, z, y, -vx, -vz, k, fx.dust, seedAt(x, z, SALT.slide), hard ? 0.4 : 1);
+  if (hard) return;
+  const spray = SLIDE_SPRAY[g];
+  if (spray) pool.burst(spray, hx, y, hz, y, vx, vz, k * 0.9, fx.extraTint, seedAt(hx, hz, SALT.slideSpray));
+  if (scuffIt && fx.scuff) pool.burst(SLIDE_SCUFF, x, y + 0.01, z, y, vx, vz, amount, fx.scuff, seedAt(x, z, SALT.slideScuff));
+}
+/** Dropping into a slide out of a dash (or a landing): a spray of dust and the ground's grains thrown ahead and out. */
+export function slideBurst(pool: ParticlePool, g: GroundKind, x: number, y: number, z: number, vx: number, vz: number, amount = 1) {
+  if (amount <= 0 || g === "water") return;
+  const fx = GROUND[g], soft = HARD.has(g) ? 0.45 : 1, l = Math.hypot(vx, vz) || 1;
+  pool.burst(SLIDE_BURST, x, y, z, y, vx / l, vz / l, amount, fx.dust, seedAt(x, z, SALT.slideBurst), soft);
+  if (fx.extra && !HARD.has(g)) pool.burst(fx.extra, x, y, z, y, vx, vz, amount, fx.extraTint, seedAt(x, z, SALT.extra));
+}
+/** The slide-jump: a pop of dust in a ring where it left the ground, carried a little along. */
+export function slidePop(pool: ParticlePool, g: GroundKind, x: number, y: number, z: number, vx: number, vz: number, amount = 1) {
+  if (amount <= 0 || g === "water") return;
+  const n = pool.burst(SLIDE_POP, x, y, z, y, 0, 0, amount, GROUND[g].dust, seedAt(x, z, SALT.slidePop), HARD.has(g) ? 0.45 : 1);
+  pool.carry(n, vx * 0.25, vz * 0.25);
 }

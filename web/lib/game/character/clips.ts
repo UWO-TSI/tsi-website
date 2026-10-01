@@ -5,14 +5,36 @@
  * Pure so it can be tested; Character.tsx drives the mixer with it.
  */
 import { CLIP_BY_NAME } from "./look";
+import { MOVE_TUNING } from "@/lib/game/movement/sim";
 import type { WeaponKind } from "@/lib/game/combat/contract";
 import type { FaceOverride } from "./face";
 
 export type ClipName = "Idle" | "Walk" | "Run" | "Sit" | "Study" | "Sleep" | "Fish" | "FishHold" | "Forage" | "Dig" | "Net"
   | "Wave" | "Cheer" | "Laugh" | "Sad" | "Dance" | "AttackMelee" | "AttackBow" | "AttackCast" | "DodgeRoll" | "Hit" | "Defeat" | "Trace" | "Stretch"
-  | "Jump" | "Air" | "Fall" | "Land" | "LandHeavy" | "Roll" | "Mantle" | "Dash" | "Skid" | "Glide";
+  | "Jump" | "Air" | "Fall" | "Land" | "LandHeavy" | "Roll" | "Mantle" | "Dash" | "Skid" | "Glide"
+  | "CrouchIdle" | "CrouchWalk" | "Slide" | "SlideIn" | "SlideInDash" | "SlideUp" | "SlideJump" | "SlideStand" | "SlideBonk";
 /** Movement clips (lib/game/movement): quick crossfades so hops and landings read on time. */
-export const SNAPPY_CLIPS = new Set<ClipName>(["DodgeRoll", "Hit", "Jump", "Air", "Fall", "Land", "LandHeavy", "Roll", "Mantle", "Dash", "Skid", "Glide"]);
+export const SNAPPY_CLIPS = new Set<ClipName>(["DodgeRoll", "Hit", "Jump", "Air", "Fall", "Land", "LandHeavy", "Roll", "Mantle", "Dash", "Skid", "Glide",
+  "Slide", "SlideIn", "SlideInDash", "SlideUp", "SlideJump", "SlideStand", "SlideBonk"]);
+
+/**
+ * The transition table (specs/movement-feel.md §5; milestone 2 fills in the rest): crossfade seconds from one clip
+ * to the next. Run, slide, slide-jump, air and land-slide hand over in a few hundredths so the chain never pops; the
+ * crouch eases in and out. A pair not listed: 0.06 into a snappy movement clip, else 0.16.
+ */
+const FADES: Readonly<Record<string, number>> = {
+  "Run>SlideIn": 0.05, "Walk>SlideIn": 0.06, "Dash>SlideInDash": 0.03, "Air>SlideInDash": 0.05, "Fall>SlideInDash": 0.06, "Jump>SlideInDash": 0.05,
+  "SlideIn>Slide": 0.04, "SlideInDash>Slide": 0.04, "Air>Slide": 0.08, "Slide>Dash": 0.04,
+  "Slide>SlideJump": 0.03, "SlideIn>SlideJump": 0.03, "SlideInDash>SlideJump": 0.03, "SlideJump>Air": 0.03,
+  "Slide>SlideUp": 0.04, "SlideUp>Run": 0.08, "SlideUp>Walk": 0.12, "SlideUp>Idle": 0.14,
+  "Slide>SlideStand": 0.05, "SlideStand>CrouchIdle": 0.06, "SlideStand>CrouchWalk": 0.1,
+  "Slide>SlideBonk": 0.03, "SlideBonk>Idle": 0.12, "SlideBonk>CrouchIdle": 0.12, "SlideBonk>Walk": 0.14,
+  "Idle>CrouchIdle": 0.18, "CrouchIdle>Idle": 0.18, "Walk>CrouchWalk": 0.14, "CrouchWalk>Walk": 0.14, "Run>CrouchWalk": 0.12,
+  "CrouchIdle>CrouchWalk": 0.12, "CrouchWalk>CrouchIdle": 0.15, "Idle>CrouchWalk": 0.15, "CrouchWalk>Idle": 0.15, "Walk>CrouchIdle": 0.15, "CrouchIdle>Walk": 0.15,
+};
+export function crossfade(from: ClipName | null, to: ClipName): number {
+  return (from && FADES[`${from}>${to}`]) || (SNAPPY_CLIPS.has(to) ? 0.06 : 0.16);
+}
 
 /**
  * What the world asks of a character each frame. `speed` is ground speed in
@@ -49,6 +71,7 @@ export function locomotion(speed: number, walkSpeed: number): "Idle" | "Walk" | 
 /** Playback rate: locomotion follows actual ground speed so feet don't skate. */
 export function tempo(clip: ClipName, speed: number, walkSpeed: number): number {
   if (clip === "Walk") return Math.min(1.6, Math.max(0.35, speed / walkSpeed));
+  if (clip === "CrouchWalk") return Math.min(1.6, Math.max(0.4, speed / (walkSpeed * (MOVE_TUNING.sneakSpeed / MOVE_TUNING.walkSpeed))));
   if (clip === "Run") return Math.min(1.4, Math.max(0.6, speed / (walkSpeed * 1.85)));
   return 1;
 }

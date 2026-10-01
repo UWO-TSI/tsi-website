@@ -1344,6 +1344,75 @@
    "length": 2.0,
    "loop": true,
    "frames": 60
+  },
+  {
+   "name": "CrouchIdle",
+   "length": 2.0,
+   "loop": true,
+   "frames": 60
+  },
+  {
+   "name": "CrouchWalk",
+   "length": 0.8,
+   "loop": true,
+   "frames": 24,
+   "contacts": [
+    0.0808,
+    0.5808
+   ]
+  },
+  {
+   "name": "Slide",
+   "length": 1.2,
+   "loop": true,
+   "frames": 36
+  },
+  {
+   "name": "SlideIn",
+   "length": 0.2,
+   "loop": false,
+   "frames": 6,
+   "endsNeutral": false,
+   "endsOn": "Slide"
+  },
+  {
+   "name": "SlideInDash",
+   "length": 0.167,
+   "loop": false,
+   "frames": 5,
+   "endsNeutral": false,
+   "endsOn": "Slide"
+  },
+  {
+   "name": "SlideUp",
+   "length": 0.267,
+   "loop": false,
+   "frames": 8,
+   "endsNeutral": false,
+   "endsOn": "Run"
+  },
+  {
+   "name": "SlideJump",
+   "length": 0.167,
+   "loop": false,
+   "frames": 5,
+   "endsNeutral": false,
+   "endsOn": "Air"
+  },
+  {
+   "name": "SlideStand",
+   "length": 0.333,
+   "loop": false,
+   "frames": 10,
+   "endsNeutral": false,
+   "endsOn": "CrouchIdle"
+  },
+  {
+   "name": "SlideBonk",
+   "length": 0.5,
+   "loop": false,
+   "frames": 15,
+   "endsNeutral": true
   }
  ],
  "hair": [

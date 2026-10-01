@@ -829,6 +829,215 @@ def glide(p):
     return P
 
 
+# ================================================================ crouch and the slide (specs/movement-slide.md, row 274)
+CROUCH = 0.15                                 # the crouch's hip drop (rig m): low, knees out, sneaking
+
+
+def crouch_body(breath=0.0, bob=0.0, lean=32.0, side=0.0, twist=0.0):
+    """Hips down, leaning in, the head kept level (looking ahead, not at the feet); `breath` lifts the chest."""
+    P = body(crouch=CROUCH - bob - 0.003 * breath, lean=lean + 1.2 * breath, side=side, twist=twist)
+    for sd, sx in SIDES:
+        P.rot(f"{sd}Shoulder", ry(-sx * 2.5 * breath))
+    P.world("Head", rx(6 - 1.5 * breath) @ rz(-twist * 0.4))
+    return P
+
+
+def crouch_hands(P, swing=0.0, breath=0.0):
+    """Hands loose and low in front of the knees, swinging a little against the step."""
+    for sd, sx in SIDES:
+        k = swing * sx
+        hand(P, sd, P.head("Hips") + V(sx * 0.11, -0.14 - 0.035 * k, 0.04 + 0.012 * abs(k) + 0.004 * breath), V(sx * 0.7, 0.4, -1))
+    return P
+
+
+@clip("CrouchIdle", 2.0, True, ground="frame", ground_w=lambda p: 0.0)   # lifted only where a toe would dip under
+def crouch_idle(p):
+    """Crouched still: a slow breath (the chest and shoulders rise), a little weight shift side to side."""
+    b, w = math.sin(TAU * p), math.sin(TAU * p + 1.1)
+    P = crouch_body(breath=b, side=1.2 * w)
+    P.loc.x += 0.004 * w
+    crouch_hands(P, breath=b)
+    return plant(P, knees_out=0.5)
+
+
+STRIDE, LIFT = 0.075, 0.05                    # crouch-walk step reach either side of the hip (rig m) and foot lift
+
+
+@clip("CrouchWalk", 0.8, True, ground="frame", ground_w=lambda p: 0.0)
+def crouch_walk(p):
+    """Tiptoeing low: short careful steps, the foot lifted high and set down, hips bobbing at each footfall, hands low
+    and swinging against the legs. The left foot comes down at p = 0, the right at 0.5 (measured contacts)."""
+    ankles = {}
+    for (sd, sx), ph in zip(SIDES, (0.0, 0.5)):
+        q = (p + ph) % 1
+        if q < 0.55:                                            # stance: planted, sliding back under the hips
+            y, z = -STRIDE + 2 * STRIDE * q / 0.55, 0.0
+        else:                                                   # swing: lift high and carry forward, set down softly
+            u = (q - 0.55) / 0.45
+            y, z = STRIDE - 2 * STRIDE * EASE["io"](u), LIFT * math.sin(math.pi * u) ** 0.8
+        ankles[sd] = ANKLE[sd] + V(sx * 0.012, y, z)
+    c2 = math.cos(2 * TAU * p)
+    P = crouch_body(bob=0.008 * (1 + c2) / 2, lean=34, side=2.5 * math.sin(TAU * p), twist=7 * math.sin(TAU * p))
+    crouch_hands(P, swing=math.sin(TAU * p))
+    plant(P, ankles=ankles, knees_out=0.45)
+    for (sd, sx), ph in zip(SIDES, (0.0, 0.5)):                  # the lifted foot's toes hang a little
+        q = (p + ph) % 1
+        if q >= 0.55:
+            P.world(f"{sd}Foot", rx(26 * math.sin(math.pi * (q - 0.55) / 0.45) ** 2))
+    return P
+
+
+def slide_pose(settle=0.0, skim=0.0, deep=0.0):
+    """The slide: leaning back, the lead (left) leg out in front with the heel down and toes up, the back leg folded
+    under, the right hand trailing on the ground, the left arm out ahead for balance, the head level and looking where
+    it goes. `settle` breathes the torso, `skim` drags the trailing hand, `deep` lies it back further."""
+    P = body(hips=rx(-28 - 6 * deep), lean=-20 - 2.5 * settle - 6 * deep, side=-14, twist=10, crouch=0.22)
+    P.aim("LeftUpLeg", V(0.05, -0.97, -0.2 + 0.06 * deep)).aim("LeftLeg", V(0.03, -0.99, -0.08 + 0.05 * deep))
+    P.world("LeftFoot", rx(-55)); P.R["LeftToeBase"] = Quaternion()
+    P.aim("RightUpLeg", V(-0.55, -0.8, -0.18)).aim("RightLeg", V(-0.1, 0.95, -0.28))
+    P.world("RightFoot", rx(80) @ rz(-25)); P.R["RightToeBase"] = Quaternion()
+    hip = P.head("Hips")
+    hand(P, "Right", hip + V(-0.21 - 0.006 * skim, 0.08 + 0.012 * skim, -0.01 + 0.005 * abs(skim)), V(-1, 0.4, 0.4))
+    arm(P, "Left", V(0.85, -0.12, 0.52 + 0.03 * settle), V(0.55, -0.35, 0.76 + 0.03 * settle))
+    P.world("Head", rx(10) @ rz(-6) @ ry(3))
+    return P
+
+
+SLIDE0 = slide_pose()
+
+
+@clip("Slide", 1.2, True, ground="frame")
+def slide(p):
+    """The slide held (a loop, not a frozen pose): the torso settles and lifts a touch, the trailing hand skims and
+    drags, the lead arm rides the bumps, the head stays level. Steering lean and depth with speed are the engine's."""
+    s, c = math.sin(TAU * p), math.cos(TAU * p)
+    P = slide_pose(settle=s, skim=math.sin(2 * TAU * p))
+    P.rot("LeftForeArm", rx(3 * math.sin(2 * TAU * p + 0.6)))
+    P.rot("Spine1", ry(1.5 * c))
+    return P
+
+
+RUN0 = run(0.0)
+
+
+def slide_in_keys(dash):
+    """Run (or the dash's lunge) to the slide: the hips drop, the lead leg kicks out, the back leg folds under, the torso
+    leans back. From a dash the drop is sharper: deeper, past the slide, then settling into it."""
+    drop = body(hips=rx(-6), lean=-2 if not dash else -10, crouch=0.13 if not dash else 0.19, nod=-4)
+    drop.aim("LeftUpLeg", V(0.05, -0.85, -0.52)).aim("LeftLeg", V(0.03, -0.9, -0.42))
+    drop.world("LeftFoot", rx(-30))
+    drop.aim("RightUpLeg", V(-0.25, -0.3, -0.92)).aim("RightLeg", V(-0.1, 0.62, -0.78))
+    drop.world("RightFoot", rx(55))
+    for sd, sx in SIDES:
+        arm(drop, sd, V(sx * 0.7, -0.25, 0.25), V(sx * 0.55, -0.45, 0.35))
+    if dash:
+        return [(0, DASH, "lin"), (0.4, drop, "out"), (0.72, slide_pose(deep=1.0), "out"), (1.0, SLIDE0, "io")]
+    return [(0, RUN0, "lin"), (0.45, drop, "out"), (1.0, SLIDE0, "back")]
+
+
+SLIDE_IN, SLIDE_IN_DASH = slide_in_keys(False), slide_in_keys(True)
+
+
+@clip("SlideIn", 0.2, False, ground="frame", endsOn="Slide")
+def slide_in(p):
+    return keys(p, SLIDE_IN)
+
+
+@clip("SlideInDash", 0.16, False, ground="frame", endsOn="Slide")
+def slide_in_dash(p):
+    return keys(p, SLIDE_IN_DASH)
+
+
+def slide_up_keys():
+    """Pop up into the run: the back foot plants under the hips, the torso comes forward over it, the lead leg pulls
+    through into a stride."""
+    push = body(lean=18, crouch=0.09, nod=6)
+    push.aim("RightUpLeg", V(-0.1, -0.45, -0.89)).aim("RightLeg", V(-0.05, 0.42, -0.9))
+    push.world("RightFoot", Quaternion())
+    push.aim("LeftUpLeg", V(0.06, -0.8, -0.6)).aim("LeftLeg", V(0.03, -0.3, -0.95))
+    push.world("LeftFoot", rx(-10))
+    for sd, sx in SIDES:
+        arm(push, sd, V(sx * 0.45, -0.45 * sx, -0.6), V(sx * 0.2, -0.75 * sx, -0.3))
+    return [(0, SLIDE0, "lin"), (0.42, push, "out"), (1.0, RUN0, "io")]
+
+
+SLIDE_UP = slide_up_keys()
+
+
+@clip("SlideUp", 0.26, False, ground="frame", endsOn="Run")
+def slide_up(p):
+    return keys(p, SLIDE_UP)
+
+
+def slide_jump_keys():
+    """Out of the slide into the slide-jump: a quick gather (legs under, arms back) and the spring, arms swinging up,
+    legs pushing long, into the Air clip's take-off."""
+    gather = body(lean=6, crouch=0.13, nod=4)
+    gather.aim("LeftUpLeg", V(0.06, -0.62, -0.78)).aim("LeftLeg", V(0.03, 0.2, -0.98))
+    gather.aim("RightUpLeg", V(-0.08, -0.5, -0.86)).aim("RightLeg", V(-0.04, 0.35, -0.94))
+    for sd, sx in SIDES:
+        gather.world(f"{sd}Foot", rx(10))
+        arm(gather, sd, V(sx * 0.4, 0.62, -0.68), V(sx * 0.25, 0.78, -0.58))
+    return [(0, SLIDE0, "lin"), (0.4, gather, "out"), (1.0, takeoff_pose(), "out")]
+
+
+SLIDE_JUMP = slide_jump_keys()
+
+
+@clip("SlideJump", 0.16, False, ground="frame", ground_w=lambda p: 1 - ss(0.45, 0.9, p), endsOn="Air")
+def slide_jump(p):
+    return keys(p, SLIDE_JUMP)
+
+
+def slide_stand_keys():
+    """Slowed to a stop with the key held: sit up, draw the legs in and rise into the crouch."""
+    sit = body(lean=4, crouch=0.17, nod=2)
+    sit.aim("LeftUpLeg", V(0.15, -0.8, -0.58)).aim("LeftLeg", V(0.06, 0.15, -0.99))
+    sit.aim("RightUpLeg", V(-0.2, -0.55, -0.81)).aim("RightLeg", V(-0.08, 0.5, -0.86))
+    for sd, sx in SIDES:
+        sit.world(f"{sd}Foot", Quaternion())
+    crouch_hands(sit)
+    end = crouch_body()
+    crouch_hands(end)
+    plant(end, knees_out=0.5)
+    return [(0, SLIDE0, "lin"), (0.5, sit, "io"), (1.0, end, "io")]
+
+
+SLIDE_STAND = slide_stand_keys()
+
+
+@clip("SlideStand", 0.34, False, ground="frame", endsOn="CrouchIdle")
+def slide_stand(p):
+    return keys(p, SLIDE_STAND)
+
+
+def slide_bonk_keys():
+    """A slide into something: the feet hit, the body jolts forward over them, rocks back, scrambles up with the arms
+    out and stands."""
+    hit = slide_pose(settle=-1)
+    hit.R["Hips"] = rx(-4)
+    hit.rot("Spine", rx(14)).rot("Spine1", rx(8))
+    hit.aim("LeftUpLeg", V(0.08, -0.8, -0.6)).aim("LeftLeg", V(0.04, -0.2, -0.98))   # the lead knee buckles
+    for sd, sx in SIDES:
+        arm(hit, sd, V(sx * 0.55, -0.75, -0.1), V(sx * 0.35, -0.9, 0.0))
+    back = body(lean=-14, crouch=0.14, nod=-8, tilt=6)
+    back.aim("LeftUpLeg", V(0.15, -0.75, -0.65)).aim("LeftLeg", V(0.06, 0.1, -0.99))
+    back.aim("RightUpLeg", V(-0.15, -0.6, -0.78)).aim("RightLeg", V(-0.06, 0.3, -0.95))
+    balance(back, up=0.45, fwd=0.05)
+    up = body(lean=8, crouch=0.04, side=4, nod=4)
+    balance(up, up=0.3, fwd=-0.1)
+    plant(up, knees_out=0.35)
+    return [(0, SLIDE0, "lin"), (0.16, hit, "out"), (0.42, back, "io"), (0.72, up, "io"), (1.0, N, "io")]
+
+
+SLIDE_BONK = slide_bonk_keys()
+
+
+@clip("SlideBonk", 0.5, False, ground="frame", ground_w=lambda p: 1 - ss(0.75, 0.95, p))
+def slide_bonk(p):
+    return keys(p, SLIDE_BONK)
+
+
 # ================================================================ bake, ground, check
 MESHES = [bpy.data.objects[n] for n in ("V6_Body", HEAD_OB)]
 
@@ -956,7 +1165,7 @@ for c in CLIPS:
     meta = {k: v for k, v in c["meta"].items() if k != "ground_w"}
     catalog.append({"name": c["name"], "length": round(c["frames"] / FPS, 3), "loop": c["loop"], "frames": c["frames"],
                     **({} if c["loop"] else {"endsNeutral": meta.pop("endsNeutral", "endsOn" not in meta)}), **meta,
-                    **({"contacts": contacts(act, c["frames"])} if c["name"] == "Run" else {})})
+                    **({"contacts": contacts(act, c["frames"])} if c["name"] in ("Run", "CrouchWalk") else {})})
     print(f"CLIP {c['name']:12s} {c['frames'] / FPS:4.2f}s loop={c['loop']!s:5s} head_intrusion={worst:5.3f} min_z={lowest:+.3f}")
 
 rig.animation_data.action = bpy.data.actions["Idle"]

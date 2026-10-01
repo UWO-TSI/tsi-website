@@ -19,6 +19,14 @@
  *                       2-tile island and a 5-tile sea gap to a beach, 10
  *                       tiles from the tower's edge; a causeway down the
  *                       right side walks back
+ *   north of the top    the slide lane (specs/movement-slide.md), on a
+ *   left corner, up     one-level shelf reached by a ramp: the dash-slide
+ *                       straight to a 7-tile water gap only a slide-jump
+ *                       clears;
+ *                       a two-level tower whose ramp slides you off a lip
+ *                       (the ramp launch); a run-up to a four-cell long
+ *                       ramp and a terrain slope of two banks; one low
+ *                       field round them all
  *
  * A lap starts on the brick line in the right lane, passes the four
  * checkpoints in order and ends back on the line.
@@ -55,20 +63,32 @@ export const COURSE_SIGNS: { text: string; x: number; z: number }[] = [
   { text: "Glide lane · jump off, press Space again, hold", x: -17, z: 27 },
   { text: "River 3", x: -17, z: 30 },
   { text: "Sea gap 5", x: -17, z: 35.5 },
+  { text: "Slide lane · hold Ctrl (C) at speed to slide", x: 17.5, z: 24.6 },
+  { text: "Dash-slide straight · Q, then hold the slide", x: 17, z: 33 },
+  { text: "Gap 7 · only a slide-jump clears it", x: 17, z: 48 },
+  { text: "Ramp launch · up the tower, dash, slide off the lip", x: 10, z: 34 },
+  { text: "Long ramp", x: 3, z: 38.5 },
+  { text: "Terrain slope", x: -3.5, z: 38.5 },
 ];
 /** The glide lane: the tower's top (one level), its north edge, and the beach 10 tiles on. */
 export const GLIDE_TOWER: Rect = [-20, -16, 25, 28];
 export const GLIDE_SPAWN: [number, number] = [-18, 26];
+/** The slide lane: the shelf's runway (one level), the gap across it, the launch tower and lip, the long ramp, the banks. */
+export const SLIDE_SPAWN: [number, number] = [17.5, 25.5];
+export const SLIDE_GAP: Rect = [15, 19, 45, 51];
+export const SLIDE_TOWER: Rect = [9, 11, 30, 36];
+export const SLIDE_LIP: Rect = [8, 12, 39, 40];
 
 /** The course terrain: land, water, the two plateaus and their ramps. */
 export function courseMap(): IslandMap {
-  const map = createMap(48, 76, -24, -28); // the lap's 48 x 56 (centred), and the glide lane north of it
+  const map = createMap(48, 96, -24, -28); // the lap's 48 x 56 (centred), the glide lane and the slide lane north of it
   const land = (x: number, z: number) =>
     (x >= -20 && x <= 20 && z >= -24 && z <= 24 && !inside(x, z, [-13, 13, -17, 17]) // the ring around the pond
     && !inside(x, z, [-10, -9, 18, 23]) && !inside(x, z, [-2, 0, 18, 23]) && !inside(x, z, [8, 11, 18, 23]) // rivers, causeways on z 24
     && !(inside(x, z, [-11, -7, -24, -18]) && z !== -21)) // the narrow-bridge pond
     || inside(x, z, [-20, -12, 25, 28]) || inside(x, z, [-20, -14, 32, 33]) || inside(x, z, [-20, -14, 39, 44]) // the glide lane: tower base, island, beach
-    || inside(x, z, [-21, -21, 24, 44]); // its causeway
+    || inside(x, z, [-21, -21, 24, 44]) // its causeway
+    || (inside(x, z, [-8, 20, 25, 62]) && !inside(x, z, SLIDE_GAP)); // the slide lane's apron, shelf and field, and its water gap
   for (let cz = 0; cz < map.depth; cz++) for (let cx = 0; cx < map.width; cx++) {
     const x = cx + map.originX, z = cz + map.originZ;
     let level = 0, surface: number = land(x, z) ? Surface.Grass : Surface.River;
@@ -80,6 +100,16 @@ export function courseMap(): IslandMap {
       if (z === -16 && x >= -20 && x <= -14) surface = Surface.Brick; // start line
       if (inside(x, z, GLIDE_TOWER)) level = CLIFF_LEVELS; // the glide tower
       if (x === -21) surface = Surface.Soil;
+      // The slide lane: a one-level shelf along its south side with a run-up block on the west, the runway north to
+      // the gap and a landing past it, the launch block round a two-level tower (inset a tile) and its lip, the two
+      // banks of the terrain slope (one level, then none).
+      if (inside(x, z, [-8, 19, 27, 30]) || inside(x, z, [-8, 7, 31, 36]) || inside(x, z, [15, 19, 31, 44]) || inside(x, z, [15, 19, 52, 55]) || inside(x, z, [8, 12, 31, 40])) level = CLIFF_LEVELS;
+      if (inside(x, z, SLIDE_TOWER)) level = 2 * CLIFF_LEVELS;
+      if (inside(x, z, [-6, -1, 37, 39])) level = 1;
+      if ((x === 17 && z >= 27 && z <= 44) || (x === 10 && z >= 30 && z <= 36) || ((x === 3 || x === -3) && z >= 31 && z <= 36)) surface = Surface.Soil; // the run-up tracks
+      if (z === 44 && x >= 15 && x <= 19) surface = Surface.Brick; // the lip of the gap
+      if (inside(x, z, [8, 12, 41, 55]) && (z - 41) % 2 === 1) surface = Surface.Sand; // the launch field, a stripe every 2 tiles
+      if (inside(x, z, [-8, 20, 59, 62])) surface = Surface.Sand; // a sandy end to slide out on
     }
     setCell(map, cx, cz, level, surface);
   }
@@ -89,6 +119,16 @@ export function courseMap(): IslandMap {
   // Ramps (stored at the lower level, climbing toward -x): onto the first plateau at its near edge, onto the second in its middle.
   for (const [x, z, level] of [[12, -24, 0], [13, -24, 0], [12, -23, 0], [13, -23, 0], [7, -21, 2], [8, -21, 2], [7, -20, 2], [8, -20, 2], [-15, 25, 0], [-14, 25, 0], [-15, 26, 0], [-14, 26, 0]] as const)
     setCell(map, worldToCellX(map, x), worldToCellZ(map, z), level, Surface.Ramp);
+  // The slide lane's ramps: up onto the shelf (four wide), up onto the launch tower, the launch ramp off the tower to
+  // its lip, the long ramp (four cells) down to the field, and down off the gap's landing.
+  const ramp = (x0: number, x1: number, z0: number, z1: number, level: number) => {
+    for (let x = x0; x <= x1; x++) for (let z = z0; z <= z1; z++) setCell(map, worldToCellX(map, x), worldToCellZ(map, z), level, Surface.Ramp);
+  };
+  ramp(16, 19, 25, 26, 0);
+  ramp(9, 11, 28, 29, CLIFF_LEVELS);
+  ramp(9, 11, 37, 38, CLIFF_LEVELS);
+  ramp(1, 5, 37, 40, 0);
+  ramp(15, 19, 56, 57, 0);
   return map;
 }
 
@@ -138,7 +178,8 @@ export function lapStep(lap: Lap, gate: number, now: number): Lap {
  * the lap test and the evidence recording (`__move.autopilot()` in dev); it is
  * not a player feature.
  */
-export interface RouteStep { to: [number, number]; sprint?: boolean; move?: "jump" | "long-dash" | "dash-jump" | "mantle" | "dash" | "hops" | "glide" | "glide-gust"; r?: number }
+/** `crouch` holds the crouch/slide key on the way to this waypoint (a slide at speed; a jump there is a slide-jump). */
+export interface RouteStep { to: [number, number]; sprint?: boolean; crouch?: boolean; move?: "jump" | "long-dash" | "dash-jump" | "mantle" | "dash" | "hops" | "glide" | "glide-gust"; r?: number }
 export const LAP_ROUTE: RouteStep[] = [
   { to: [-17, -17.5] },
   { to: [-17, 15], sprint: true, r: 1 }, // the sprint lane
@@ -176,7 +217,7 @@ export function routePilot(route: readonly RouteStep[] = LAP_ROUTE) {
     const step = route[i], next = route[i + 1] ?? step;
     const aim = (p: [number, number]) => { const dx = p[0] - s.x, dz = p[1] - s.z, d = Math.hypot(dx, dz) || 1; return { x: dx / d, z: dz / d, d }; };
     const go = aim(step.to);
-    const base = { x: go.x, z: go.z, sprint: !!step.sprint, sneak: false, jump: hold, jumpPressed: false, dashPressed: false };
+    const base = { x: go.x, z: go.z, sprint: !!step.sprint, sneak: !!step.crouch, jump: hold, jumpPressed: false, dashPressed: false };
     if (phase === 0) {
       if (go.d > (step.r ?? 0.5)) return base;
       hold = false;
@@ -206,7 +247,7 @@ export function routePilot(route: readonly RouteStep[] = LAP_ROUTE) {
       }
     }
     if (step.move === "dash-jump" && phase === 2 && t > 0.06) { phase = 3; return { ...input, jumpPressed: true }; }
-    if (t > 0.1 && s.mode === "ground") { i++; phase = 0; }
+    if (t > 0.1 && (s.mode === "ground" || s.mode === "slide")) { i++; phase = 0; } // down again (a land into a slide counts)
     return input;
   };
 }

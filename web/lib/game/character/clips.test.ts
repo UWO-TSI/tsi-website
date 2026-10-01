@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { airPhase, combatClip, contactCrossed, locomotion, resolveClip, seatLift, tempo, type CombatView } from "./clips";
+import { airPhase, combatClip, contactCrossed, crossfade, locomotion, resolveClip, seatLift, tempo, type CombatView } from "./clips";
 import { CLIP_BY_NAME } from "./look";
 
 describe("character state machine", () => {
@@ -71,5 +71,27 @@ describe("movement feel: foot contacts and the air pose", () => {
     const rising = [8, 6, 4, 2, 0, -2, -4, -8].map(v => airPhase(v, 8.6, true));
     expect(rising).toEqual([...rising].sort((a, b) => a - b)); // never pops backwards through the arc
     expect(airPhase(0, 8.6, false)).toBe(0.75);
+  });
+});
+
+describe("crouch and the slide (specs/movement-slide.md)", () => {
+  it("has its clips in the catalogue: loops for the crouch and the slide, one-shots that hand over to what follows them", () => {
+    for (const name of ["CrouchIdle", "CrouchWalk", "Slide"]) expect(CLIP_BY_NAME.get(name)?.loop, name).toBe(true);
+    expect(Object.fromEntries(["SlideIn", "SlideInDash", "SlideUp", "SlideJump", "SlideStand"].map(n => [n, CLIP_BY_NAME.get(n)?.endsOn])))
+      .toEqual({ SlideIn: "Slide", SlideInDash: "Slide", SlideUp: "Run", SlideJump: "Air", SlideStand: "CrouchIdle" });
+    expect(CLIP_BY_NAME.get("SlideInDash")!.length).toBeLessThan(CLIP_BY_NAME.get("SlideIn")!.length); // the dash's drop is sharper
+    expect(CLIP_BY_NAME.get("SlideBonk")).toMatchObject({ loop: false, endsNeutral: true });
+    // Crouch walk carries its measured footfalls (the footstep dust comes from them), half a cycle apart.
+    const c = CLIP_BY_NAME.get("CrouchWalk")!.contacts!;
+    expect(c).toHaveLength(2);
+    expect(Math.abs(((c[1] - c[0] + 1) % 1) - 0.5)).toBeLessThan(0.08);
+    expect(tempo("CrouchWalk", 2.2, 7.4)).toBeCloseTo(1, 2);
+  });
+  it("crossfades run, slide, slide-jump, air and land-slide in a few hundredths; the crouch eases", () => {
+    for (const [a, b] of [["Run", "SlideIn"], ["SlideIn", "Slide"], ["Slide", "SlideJump"], ["SlideJump", "Air"], ["Air", "SlideInDash"], ["Dash", "SlideInDash"], ["Slide", "SlideUp"]] as const)
+      expect(crossfade(a, b), `${a} > ${b}`).toBeLessThanOrEqual(0.06);
+    expect(crossfade("Idle", "CrouchIdle")).toBeGreaterThan(0.1);
+    expect(crossfade("Walk", "Jump")).toBe(0.06); // not listed: the snappy default
+    expect(crossfade(null, "Idle")).toBe(0.16);
   });
 });

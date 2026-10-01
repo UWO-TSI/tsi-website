@@ -8,7 +8,8 @@
  * key; taking another menu's key swaps the two; reserved keys are refused
  * with the systems rule's reason. Saved to the account when signed in,
  * otherwise kept on this device. The movement keys (jump, dash, sprint,
- * sneak) and the ruins' ability keys are remapped on this device.
+ * crouch/slide) and the ruins' ability keys are remapped on this device.
+ * Outside macOS, Ctrl crouches only in fullscreen with the keyboard locked.
  */
 import { useState } from "react";
 import { useGraphicsSettings } from "@/lib/game/useGraphicsSettings";
@@ -16,15 +17,15 @@ import type { QualityTier } from "@/lib/game/qualityTier";
 import { ACTION_LABEL, MENU_ACTIONS, TEXT_SIZES, normalizeKey, type MenuAction, type TextSize } from "@/lib/identity/settings";
 import { saveSettings, setAuraVisible, useWorldIdentity } from "@/lib/game/identity";
 import { ABILITIES, type AbilityId } from "@/lib/game/combat/runtime";
-import { MOVE_ACTIONS, keyName, remapAbility, remapMove, useAbilityKeys, useMoveKeys, useNextKey, type MoveAction } from "@/lib/game/movement/keys";
+import { IS_MAC, MOVE_ACTIONS, canLockKeyboard, crouchKey, keyName, playFullscreenWithCtrl, remapAbility, remapMove, useAbilityKeys, useKeyboardLocked, useMoveKeys, useNextKey, type MoveAction } from "@/lib/game/movement/keys";
 import { AudioManager, type AudioVolumes } from "@/lib/game/audio";
 import { useAudioState } from "@/lib/game/useAudio";
 import IslandSheet from "../IslandSheet";
 import styles from "../DefaultIslandWorld.module.css";
 
 const SIZE_NAMES: Record<TextSize, string> = { small: "Small", default: "Standard", large: "Large", xl: "Largest" };
-/** The movement keys row (specs/movement.md): Space jump, Q dash, Shift sprint, C sneak. */
-const MOVE_ROW = MOVE_ACTIONS.filter(a => a.id === "jump" || a.id === "dash" || a.id === "sprint" || a.id === "sneak");
+/** The movement keys row (specs/movement.md): Space jump, Q dash, Shift sprint, crouch/slide (Ctrl on macOS, C elsewhere). */
+const MOVE_ROW = MOVE_ACTIONS.filter(a => a.id === "jump" || a.id === "dash" || a.id === "sprint" || a.id === "crouch");
 const SOUND_SLIDERS: { key: keyof AudioVolumes; label: string }[] = [
   { key: "master", label: "Master" },
   { key: "music", label: "Music" },
@@ -49,7 +50,7 @@ export default function SettingsSheet({ open, onClose, detectedTier = null }: { 
   const abilityKeys = useAbilityKeys();
   const [abilityListen, setAbilityListen] = useState<AbilityId | null>(null);
   const [abilityNote, setAbilityNote] = useState<string | null>(null);
-  const moveKeys = useMoveKeys();
+  const moveKeys = useMoveKeys(), keyLock = useKeyboardLocked();
   const [moveListen, setMoveListen] = useState<MoveAction | null>(null);
   const [moveNote, setMoveNote] = useState<string | null>(null);
   useNextKey(moveListen !== null, key => {
@@ -131,6 +132,11 @@ export default function SettingsSheet({ open, onClose, detectedTier = null }: { 
           {moveListen === a.id ? "Press a key…" : <kbd>{keyName(moveKeys[a.id])}</kbd>}
         </button>
       </li>)}</ul>
+      {/* Outside macOS Ctrl+W closes the tab and a page can't stop it: Ctrl crouches only in fullscreen with the keyboard locked. */}
+      {!IS_MAC && canLockKeyboard() && (moveKeys.crouch !== "control" || !keyLock) && <p className={styles.hint}>
+        {moveKeys.crouch === "control" ? `Ctrl crouches in fullscreen; until then ${crouchKey(moveKeys, false) ? keyName(crouchKey(moveKeys, false)) : "nothing"} does.` : "Ctrl can crouch and slide in fullscreen, where the keyboard is locked (hold Esc to leave)."}{" "}
+        <button onClick={() => { void playFullscreenWithCtrl(moveKeys).then(e => setMoveNote(e)); }}>Play fullscreen with Ctrl</button>
+      </p>}
       {moveNote && <p className={styles.hint} role="status">{moveNote}</p>}
     </fieldset>
     <fieldset>

@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { advanceMove, clearSpot, createMoveSim, createMoveState, interpolated, standWorld, stepMove, topSpeed, towards, walkTo, MOVE_TUNING as T, NO_INPUT, STEP, type MoveEvent, type MoveInput, type MoveState, type MoveTuning, type MoveWorld } from "./sim";
-import { COURSE_GATES, COURSE_SPAWN, GLIDE_SPAWN, NEW_LAP, course, gateAt, lapStep, routePilot } from "./course";
+import { advanceMove, clearSpot, createMoveSim, createMoveState, interpolated, slopeAt, standWorld, stepMove, topSpeed, towards, walkTo, MOVE_TUNING as T, NO_INPUT, STEP, type MoveEvent, type MoveInput, type MoveState, type MoveTuning, type MoveWorld } from "./sim";
+import { COURSE_GATES, COURSE_SPAWN, GLIDE_SPAWN, NEW_LAP, SLIDE_GAP, SLIDE_SPAWN, course, gateAt, lapStep, routePilot, type RouteStep } from "./course";
 import { islandOf } from "../defaultIsland";
+import { bugReaction, SNEAK_SPEED } from "../peaceful";
 import { villageOf, type MapObject } from "../villageMap";
 import { CLIFF_LEVELS, Surface, createCenteredMap, setCell } from "../grid";
 import { terrainHealth, terrainProblems } from "../mapHealth";
@@ -220,16 +221,18 @@ describe("the Q dash", () => {
     s = drive(s, flat, 0.1, () => ({ z: 1 }));
     expect(s.vy).toBeLessThan(0);
   });
-  it("a dash then jump carries the dash speed, up to the kit's top speed", () => {
+  it("a dash then jump carries the dash speed (momentum, David 2026-10-01), under the momentum ceiling", () => {
     const takeoff = (after: number) => {
       let v = 0;
-      drive(createMoveState(0, 0, flat), flat, 0.3, time => ({ z: 1, dashPressed: at(time, 0), jump: time >= after, jumpPressed: at(time, after) }),
+      drive(createMoveState(0, 0, flat), flat, 0.5, time => ({ z: 1, dashPressed: at(time, 0), jump: time >= after, jumpPressed: at(time, after) }),
         q => { if (q.events.some(e => e.kind === "dashjump")) v = speedOf(q); });
       return v;
     };
-    expect(takeoff(0.05)).toBeGreaterThan(T.sprintSpeed);
-    expect(takeoff(0.05)).toBeLessThanOrEqual(topSpeed(T) + 1e-9);
-    expect(takeoff(STEP)).toBeCloseTo(topSpeed(T), 6);
+    expect(takeoff(0.05)).toBeGreaterThan(topSpeed(T));
+    expect(takeoff(STEP)).toBeGreaterThan(takeoff(0.05));
+    expect(takeoff(STEP)).toBeLessThanOrEqual(T.momentumCeiling + 1e-9);
+    // Just after the dash (inside the window): the speed it keeps.
+    expect(takeoff(T.dashTime + 0.05)).toBeCloseTo(T.dashSpeed * T.dashExit, 6);
   });
 });
 
@@ -736,5 +739,358 @@ describe("the lab course", () => {
     expect(lap.last).toBe(55);
     expect(lap.best).toBe(55);
     expect(gateAt(-17, -16)).toBe(0);
+  });
+});
+
+describe("momentum (David, 2026-10-01): kept while you chain tech, lost only on plain ground", () => {
+  /** Speeds and events of a run; `script` gives the input at each step. */
+  const record = (w: MoveWorld, s0: MoveState, seconds: number, script: Script, t: MoveTuning = T) => {
+    const steps: MoveState[] = [];
+    drive(s0, w, seconds, script, q => steps.push(q), t);
+    return { steps, events: steps.flatMap(q => q.events), speeds: steps.map(speedOf), end: steps.at(-1)! };
+  };
+  const firstAt = (steps: MoveState[], kind: string) => steps.findIndex(q => q.events.some(e => e.kind === kind));
+
+  it("a dash keeps a high speed after its burst; with nothing after it on the ground, it holds for the grace and then bleeds quickly", () => {
+    const { steps, speeds } = record(flat, createMoveState(0, 0, flat), 1.5, time => ({ z: 1, dashPressed: at(time, 0) }));
+    const end = Math.round(T.dashTime / STEP) - 1, kept = T.dashSpeed * T.dashExit;
+    expect(speeds[end]).toBeCloseTo(kept, 5);
+    expect(kept).toBeGreaterThan(topSpeed(T));
+    expect(kept).toBeLessThan(T.momentumCeiling);
+    // Held through the grace...
+    const graceEnd = end + Math.round(T.keepGrace / STEP);
+    for (let i = end; i < graceEnd; i++) expect(speeds[i]).toBeCloseTo(kept, 5);
+    expect(steps.slice(end, graceEnd).some(q => q.bleed)).toBe(false);
+    // ...then bleeds back to a walk, quickly (well under a second) and visibly (the bleed flag for the lab's readout).
+    expect(steps[graceEnd + 2].bleed).toBe(true);
+    const walking = speeds.findIndex((v, i) => i > graceEnd && v <= T.walkSpeed + 1e-6);
+    expect((walking - graceEnd) * STEP).toBeLessThan(0.6);
+  });
+
+  it("a dash then a slide or a jump inside the window keeps it; later, it has bled", () => {
+    const after = (wait: number, move: "slide" | "jump") => {
+      const press = T.dashTime + wait;
+      const { steps } = record(flat, createMoveState(0, 0, flat), 1, time => ({ z: 1, dashPressed: at(time, 0), sneak: move === "slide" && time >= press, jump: move === "jump" && time >= press, jumpPressed: move === "jump" && at(time, press) }));
+      const i = steps.findIndex(q => q.events.some(e => ["slide", "dashslide", "dashjump", "jump", "long"].includes(e.kind)));
+      return { speed: i < 0 ? 0 : speedOf(steps[i]), kind: i < 0 ? "" : steps[i].events.at(-1)!.kind };
+    };
+    const kept = T.dashSpeed * T.dashExit;
+    expect(after(0.05, "slide")).toEqual({ speed: expect.closeTo(kept - T.slideFriction * STEP, 5), kind: "dashslide" }); // (a step of slide friction)
+    expect(after(0.05, "jump")).toEqual({ speed: expect.closeTo(kept, 5), kind: "dashjump" });
+    expect(after(T.keepGrace - 0.02, "slide").speed).toBeCloseTo(kept - T.slideFriction * STEP, 5); // a slightly late slide still catches it
+    expect(after(T.keepGrace + 0.25, "slide").speed).toBeLessThan(kept - 3);
+    expect(after(T.keepGrace + 0.25, "jump").speed).toBeLessThan(kept - 3);
+  });
+
+  it("the air keeps horizontal speed, with the stick held or let go", () => {
+    for (const stick of [1, 0]) {
+      const { steps } = record(flat, createMoveState(0, 0, flat), 1.2, time => ({ z: time < T.dashTime + 0.05 ? 1 : stick, dashPressed: at(time, 0), jump: time >= T.dashTime + 0.05 && time < 0.4, jumpPressed: at(time, T.dashTime + 0.05) }));
+      const air = steps.filter(q => q.mode === "air");
+      expect(air.length).toBeGreaterThan(20);
+      for (const q of air) expect(speedOf(q)).toBeCloseTo(T.dashSpeed * T.dashExit, 5);
+    }
+  });
+
+  it("a landing with no tech bleeds after the grace; a landing into a slide or a hop keeps the speed", () => {
+    // Off a dash-jump: land and let go of everything but the stick (and sprint), hold the crouch key, or keep Space held.
+    const land = (then: Partial<MoveInput>) => record(flat, createMoveState(0, 0, flat), 1.6, time => ({ z: 1, sprint: true, dashPressed: at(time, 0),
+      jump: at(time, T.dashTime + 0.02) || (time > T.dashTime + 0.1 && !!then.jump), jumpPressed: at(time, T.dashTime + 0.02), sneak: time > T.dashTime + 0.1 && !!then.sneak }));
+    const plain = land({}), slide = land({ sneak: true }), hop = land({ jump: true });
+    const landed = (r: ReturnType<typeof land>) => firstAt(r.steps, "land");
+    const atLanding = speedOf(plain.steps[landed(plain)]);
+    expect(atLanding).toBeGreaterThan(topSpeed(T));
+    // Plain: held for the grace, then down to the sprint within a short beat.
+    const i = landed(plain), grace = Math.round(T.keepGrace / STEP);
+    expect(plain.speeds[i + grace - 1]).toBeCloseTo(atLanding, 5);
+    expect(plain.speeds[i + grace + Math.round(0.3 / STEP)]).toBeCloseTo(T.sprintSpeed, 5);
+    // Into a slide: the landing's speed (plus a little), no roll.
+    const ls = slide.steps[landed(slide)];
+    expect(kinds(ls.events)).toEqual(["land", "landslide"]);
+    expect(speedOf(ls)).toBeCloseTo(atLanding + T.techBoost, 5);
+    // Into a hop: off again on the landing step at the same speed.
+    const h = hop.steps[landed(hop)];
+    expect(kinds(h.events)).toEqual(["land", "hop"]);
+    expect(speedOf(h)).toBeCloseTo(atLanding, 5);
+  });
+});
+
+describe("the slide (row 274)", () => {
+  const sprinted = () => drive(createMoveState(0, 0, flat), flat, 2, () => ({ z: 1, sprint: true }));
+  const slideOn = (w: MoveWorld, s0: MoveState, seconds: number, script: Script = () => ({ z: 1, sneak: true }), t: MoveTuning = T) => {
+    const steps: MoveState[] = [];
+    drive(s0, w, seconds, script, q => steps.push(q), t);
+    return steps;
+  };
+  const ev = (steps: MoveState[]) => steps.flatMap(q => kinds(q.events));
+
+  it("crouches at a walk or slower (crouch-walking at sneak speed, slow enough that bugs stay), slides faster than that", () => {
+    const crouch = slideOn(flat, createMoveState(0, 0, flat), 2, () => ({ z: 1, sneak: true }));
+    expect(ev(crouch)).not.toContain("slide");
+    expect(crouch.at(-1)!.crouch).toBe(true);
+    expect(speedOf(crouch.at(-1)!)).toBeCloseTo(T.sneakSpeed, 3);
+    expect(speedOf(crouch.at(-1)!)).toBeLessThan(SNEAK_SPEED);
+    expect(bugReaction(2, speedOf(crouch.at(-1)!), "rare")).not.toBe("flee");
+    // At a walk, pressing it crouches (no slide); from a sprint, it slides at the sprint's speed.
+    const walk = slideOn(flat, drive(createMoveState(0, 0, flat), flat, 1, () => ({ z: 1 })), 0.5);
+    expect(ev(walk)).not.toContain("slide");
+    const run = slideOn(flat, sprinted(), 0.1);
+    expect(run[0].mode).toBe("slide");
+    expect(kinds(run[0].events)).toEqual(["slide"]);
+    expect(speedOf(run[0])).toBeGreaterThan(T.sprintSpeed - 0.1);
+  });
+
+  it("decays slowly on flat ground: about 1 to 1.5 s from a sprint, then stands up into the crouch", () => {
+    const steps = slideOn(flat, sprinted(), 3);
+    const stand = steps.findIndex(q => q.events.some(e => e.kind === "stand"));
+    expect(stand * STEP).toBeGreaterThan(1);
+    expect(stand * STEP).toBeLessThan(1.5);
+    expect(steps[stand].mode).toBe("ground");
+    expect(steps.at(-1)!.crouch).toBe(true);
+    // Every step in between is a slide, wearing down evenly.
+    for (let i = 1; i < stand; i++) expect(speedOf(steps[i])).toBeLessThan(speedOf(steps[i - 1]));
+  });
+
+  it("ends the moment the key is let go, standing up into the run with the speed held for the grace", () => {
+    const steps = slideOn(flat, sprinted(), 0.6, time => ({ z: 1, sprint: true, sneak: time < 0.3 }));
+    const stand = steps.findIndex(q => q.events.some(e => e.kind === "stand"));
+    expect(stand * STEP).toBeCloseTo(0.3, 1);
+    expect(steps[stand].keep).toBeGreaterThan(0);
+    expect(steps.at(-1)!.mode).toBe("ground");
+  });
+
+  it("steers gently", () => {
+    const steps = slideOn(flat, sprinted(), 0.8, () => ({ x: 1, sneak: true }));
+    const heading = (q: MoveState) => Math.atan2(q.vx, q.vz);
+    expect(heading(steps[Math.round(0.1 / STEP)])).toBeLessThan(0.35); // no snap
+    expect(heading(steps.at(-1)!)).toBeGreaterThan(0.8); // but it does come round
+  });
+
+  // A two-level plateau (1.5u) for z >= 4, reached by a four-cell ramp at z 0..3 (grade 0.375), and a steep two-cell one.
+  const long = grid(12, 50, (_x, z) => (z >= 0 && z <= 3 ? [0, Surface.Ramp] : [z >= 4 ? CLIFF_LEVELS : 0, G]));
+  const steep = grid(12, 50, (_x, z) => (z >= 0 && z <= 1 ? [0, Surface.Ramp] : [z >= 2 ? CLIFF_LEVELS : 0, G]));
+  // Terrain: a staircase of one-level banks (blended slopes, no kit pieces) falling toward -z.
+  const banks = grid(12, 50, (_x, z) => [Math.max(0, Math.min(4, Math.floor((z + 2) / 3))), G]);
+
+  it("reads the ground's real slope: ramps, blended banks; cliffs and walls are edges, not slopes", () => {
+    expect(slopeAt(long, 0, 1.5)[1]).toBeCloseTo(1.5 / 4, 2);
+    expect(slopeAt(steep, 0, 0.5)[1]).toBeCloseTo(0.75, 2);
+    expect(slopeAt(flat, 3, 3)).toEqual([0, 0]);
+    expect(slopeAt(banks, 0, 2.5)[1]).toBeGreaterThan(0.1);
+    const cliff = grid(12, 20, (_x, z) => [z >= 2 ? CLIFF_LEVELS : 0, G]);
+    expect(slopeAt(cliff, 0, 1.5)[1]).toBe(0);
+  });
+
+  it("speeds up downhill and slows uphill, against the same slide on the flat", () => {
+    // From a sprint on the high ground, a slide down toward -z: past the bottom it is faster than the same slide on flat ground.
+    const down = (w: MoveWorld) => slideOn(w, drive(createMoveState(0, 22, w, Math.PI), w, 1.2, () => ({ z: -1, sprint: true })), 2.5, () => ({ z: -1, sneak: true }));
+    const speedAt = (steps: MoveState[], z: number) => speedOf(steps.find(q => q.z <= z)!);
+    for (const w of [long, steep, banks]) expect(speedAt(down(w), -1.5)).toBeGreaterThan(speedAt(down(flat), -1.5) + 1);
+    // On the way down it gains, more than its friction takes: the steep ramp most, the long ramp and the banks less.
+    for (const [w, top, bottom, gain] of [[long, 3.4, -0.7, 1], [steep, 1.4, -0.7, 1.2], [banks, 10, -1, 0.6]] as const) expect(speedAt(down(w), bottom)).toBeGreaterThan(speedAt(down(w), top) + gain);
+    // Uphill: the slide up the long ramp slows faster than on flat ground and stands up sooner.
+    const up = slideOn(long, drive(createMoveState(0, -22, long), long, 1.5, () => ({ z: 1, sprint: true })), 3);
+    const flatUp = slideOn(flat, drive(createMoveState(0, -22, flat), flat, 1.5, () => ({ z: 1, sprint: true })), 3);
+    const standAt = (steps: MoveState[]) => steps.findIndex(q => q.events.some(e => e.kind === "stand"));
+    expect(standAt(up)).toBeLessThan(standAt(flatUp));
+  });
+
+  it("goes past the ceiling only downhill, and bleeds back under it fast once off the slope", () => {
+    // A slide started at the ceiling at the top of the steep ramp: faster on the way down, back to the ceiling within 0.25 s after.
+    const top = { ...createMoveState(0, 3, steep, Math.PI) };
+    const s0: MoveState = { ...top, vz: -T.momentumCeiling, mode: "slide", slid: true };
+    const steps = slideOn(steep, s0, 1, () => ({ z: -1, sneak: true }));
+    expect(Math.max(...steps.map(speedOf))).toBeGreaterThan(T.momentumCeiling + 0.5);
+    const off = steps.findIndex(q => q.z < -1.2);
+    expect(speedOf(steps[off + Math.round(0.25 / STEP)])).toBeLessThanOrEqual(T.momentumCeiling + 1e-6);
+    // On flat ground nothing gets past it.
+    const flatSteps = slideOn(flat, { ...createMoveState(0, 0, flat), vz: T.momentumCeiling + 4, mode: "slide", slid: true }, 0.3);
+    expect(speedOf(flatSteps[Math.round(0.2 / STEP)])).toBeLessThanOrEqual(T.momentumCeiling);
+  });
+
+  it("dash into a slide: holding the key through the dash slides at the dash's kept speed once the burst plays out", () => {
+    const steps = slideOn(flat, createMoveState(0, 0, flat), 0.6, time => ({ z: 1, sneak: true, dashPressed: at(time, 0) }));
+    const i = steps.findIndex(q => q.events.some(e => e.kind === "dashslide"));
+    expect(i * STEP).toBeCloseTo(T.dashTime, 1);
+    expect(steps[i].events.find(e => e.kind === "dashslide")!.speed).toBeCloseTo(T.dashSpeed * T.dashExit, 5);
+    expect(ev(steps)).not.toContain("slide");
+  });
+
+  it("slide-jump: keeps the slide's speed (plus a little) on a lower, longer arc than the long jump", () => {
+    const fromSlide = (sneak: boolean) => {
+      let s = drive(sprinted(), flat, 0.15, () => ({ z: 1, sneak, sprint: !sneak }));
+      const v0 = speedOf(s), z0 = s.z;
+      let peak = 0, kind = "";
+      s = drive(s, flat, 0.02, time => ({ z: 1, sneak, jump: true, jumpPressed: at(time, 0) }), q => { kind ||= q.events.find(e => e.kind !== "land")?.kind ?? ""; });
+      let guard = 0;
+      while (s.mode === "air" && guard++ < 400) { s = stepMove(s, { ...NO_INPUT, z: 1, jump: s.vy > 0 }, STEP, flat); peak = Math.max(peak, s.y); }
+      return { v0, kind, peak, distance: s.z - z0, landed: speedOf(s) };
+    };
+    const sj = fromSlide(true), long = fromSlide(false);
+    expect(sj.kind).toBe("slidejump");
+    expect(long.kind).toBe("long");
+    expect(sj.landed).toBeCloseTo(sj.v0 + T.techBoost, 6);
+    expect(sj.peak).toBeLessThan(T.jumpHeight);
+    expect(sj.peak).toBeGreaterThan(long.peak);
+    expect(sj.distance).toBeGreaterThan(long.distance + 0.4);
+  });
+
+  it("land into a slide off a drop: no roll and no recovery, at the landing's speed; without the key it rolls", () => {
+    const terrace = grid(12, 44, (_x, z) => [z <= 0 ? 2 * CLIFF_LEVELS : 0, G]); // 3u, steeper than the grid allows, to measure it
+    const off = (sneak: boolean) => slideOn(terrace, createMoveState(0, -16, terrace), 3, (_t, q) => ({ z: 1, sprint: true, sneak: sneak && q.z > -4 }));
+    const withKey = ev(off(true)), without = ev(off(false));
+    expect(withKey).toContain("slide"); // it slides along the plateau first, then off the edge
+    expect(withKey).toContain("landslide");
+    expect(withKey).not.toContain("roll");
+    expect(withKey).not.toContain("recover");
+    expect(without).toContain("roll");
+  });
+
+  it("hop, slide, hop: each link keeps the speed and adds at most a little; a whole chain stays under the ceiling", () => {
+    // Dash, slide, jump, land into a slide, jump, ... for four seconds: the speed never passes the ceiling.
+    const chain: MoveState[] = [];
+    let phase = "dash", s = createMoveState(0, 0, flat);
+    for (let i = 0; i < 4 / STEP; i++) {
+      const input: Partial<MoveInput> = { z: 1, sprint: true };
+      if (phase === "dash") { input.dashPressed = true; phase = "toSlide"; }
+      else if (phase === "toSlide") { input.sneak = true; if (s.mode === "slide" && s.modeT > 0.08) { input.jump = input.jumpPressed = true; phase = "air"; } }
+      else if (phase === "air") { input.sneak = true; if (s.mode === "slide") phase = "toSlide"; }
+      s = stepMove(s, { ...NO_INPUT, ...input }, STEP, flat);
+      chain.push(s);
+    }
+    const links = chain.filter(q => q.events.some(e => e.kind === "slidejump" || e.kind === "landslide"));
+    expect(links.length).toBeGreaterThan(8);
+    let last = speedOf(chain[0]);
+    for (const q of chain) {
+      const v = speedOf(q);
+      expect(v).toBeLessThanOrEqual(T.momentumCeiling + 1e-9);
+      expect(v - last).toBeLessThanOrEqual(T.techBoost + 1e-9);
+      last = v;
+    }
+  });
+
+  it("follows the same path at 30, 60 and 144 Hz through a full chain: dash, slide, jump, land into a slide, jump", () => {
+    const path = (fps: number) => {
+      const sim = createMoveSim(createMoveState(0, 0, flat));
+      const out: string[] = [], frame = (sixths: number) => Math.round((sixths / 6) * fps);
+      const speeds: number[] = [];
+      for (let f = 0; f < fps * 4; f++) {
+        const jumpAt = f === frame(4) || f === frame(9);
+        out.push(...advanceMove(sim, { ...NO_INPUT, z: 1, sprint: true, dashPressed: f === frame(1), sneak: f >= frame(1), jump: jumpAt || (f > frame(4) && f < frame(5)), jumpPressed: jumpAt }, 1 / fps, flat).map(e => e.kind));
+        if ((f + 1) % (fps / 6) === 0) speeds.push(speedOf(sim.state));
+      }
+      return { out, end: interpolated(sim), speeds };
+    };
+    const ref = path(144);
+    expect(ref.out).toEqual(expect.arrayContaining(["dash", "dashslide", "slidejump", "land", "landslide"]));
+    for (const fps of [30, 60]) {
+      const p = path(fps);
+      expect(p.out).toEqual(ref.out);
+      p.end.forEach((v, i) => expect(v).toBeCloseTo(ref.end[i], 6));
+      p.speeds.forEach((v, i) => expect(v).toBeCloseTo(ref.speeds[i], 6));
+    }
+  });
+
+  it("slide off a cliff into the glider: the slide's speed carries into the glide and eases to glide speed, further than walking off", () => {
+    const GT: MoveTuning = { ...T, glider: 1 }, cliff = grid(12, 70, (_x, z) => [z <= 0 ? 4 * CLIFF_LEVELS : 0, G]); // 6u, to measure it
+    const off = (sneak: boolean, sprint = true) => {
+      const steps: MoveState[] = [];
+      let pressed = false;
+      drive(createMoveState(0, -12, cliff), cliff, 4, (_t, q) => {
+        const press = !pressed && q.mode === "air" && q.coyote <= 0 && q.y < 5.6; // past coyote time (a press there is a slide-jump)
+        pressed ||= press;
+        return { z: 1, sprint, sneak: sneak && q.z > -3, jump: pressed, jumpPressed: press };
+      }, q => steps.push(q), GT);
+      return steps;
+    };
+    const slid = off(true), walked = off(false, false);
+    const open = (steps: MoveState[]) => steps.find(q => q.events.some(e => e.kind === "glide"))!;
+    expect(slid.flatMap(q => kinds(q.events))).toEqual(expect.arrayContaining(["slide", "glide", "furl", "land"]));
+    expect(speedOf(open(slid))).toBeGreaterThan(GT.glideSpeed + 2);
+    expect(speedOf(slid.find(q => q.mode === "glide" && q.modeT > 1.5)!)).toBeCloseTo(GT.glideSpeed, 0);
+    const landed = (steps: MoveState[]) => steps.find((q, i) => i > 0 && q.mode === "ground" && steps[i - 1].mode === "glide")!.z;
+    expect(landed(slid)).toBeGreaterThan(landed(walked) + 0.5);
+  });
+
+  it("in the lab's slide lane: only a slide-jump clears the 7-tile gap, the launch carries a slide off the lip, the long ramp and the banks speed one up", () => {
+    const w = islandOf(course());
+    const fly = (route: RouteStep[], from: [number, number]) => {
+      const pilot = routePilot(route), out: MoveEvent[] = [];
+      let s = createMoveState(from[0], from[1], w), top = 0;
+      for (let input = pilot(s, STEP), n = 0; input && n < 2400; input = pilot(s, STEP), n++) { s = stepMove(s, { ...NO_INPUT, ...input }, STEP, w); out.push(...s.events); top = Math.max(top, speedOf(s)); }
+      return { s, out, k: kinds(out), top };
+    };
+    const up: RouteStep[] = [{ to: [17.5, 27.5], sprint: true }], far = SLIDE_GAP[3] + 0.5, lip = SLIDE_GAP[2] - 0.5;
+    expect(lip).toBe(44.5);
+    const across = fly([...up, { to: [17.5, 40], sprint: true, move: "dash", r: 0.4 }, { to: [17.5, 44.2], crouch: true, move: "jump", r: 0.35 }, { to: [17.5, 56] }], SLIDE_SPAWN);
+    expect(across.k).toEqual(expect.arrayContaining(["dashslide", "slidejump"]));
+    expect(across.k).not.toContain("splash");
+    expect(across.k).not.toContain("mantle");
+    expect(across.out.find(e => e.kind === "land")!.z).toBeGreaterThan(far - 0.35);
+    for (const short of [
+      [...up, { to: [17.5, 43.9], sprint: true, move: "jump", r: 0.35 }, { to: [17.5, 56] }], // a long jump
+      [...up, { to: [17.5, 38], sprint: true }, { to: [17.5, 44.2], sprint: true, crouch: true, move: "jump", r: 0.35 }, { to: [17.5, 56] }], // a sprint's slide-jump
+    ] as RouteStep[][]) expect(fly(short, SLIDE_SPAWN).k).toContain("splash");
+    // A dash-jump at the lip falls short and at best catches the far ledge (a mantle), never lands across.
+    const dj = fly([...up, { to: [17.5, 43.4], sprint: true, move: "dash-jump", r: 0.35 }, { to: [17.5, 56] }], SLIDE_SPAWN);
+    expect(dj.k.some(k => k === "mantle" || k === "splash")).toBe(true);
+    // The ramp launch: up the tower, dash, slide down its ramp and off the lip: a long way out at speed, into a land-slide.
+    const launch = fly([{ to: [10, 33.5], sprint: true, move: "dash", r: 0.3 }, { to: [10, 40.4], crouch: true }, { to: [10, 56], crouch: true }], [10, 27.5]);
+    const landed = launch.out.find(e => e.kind === "land")!;
+    expect(landed.z).toBeGreaterThan(43);
+    expect(landed.speed).toBeGreaterThan(15);
+    expect(launch.k).toContain("landslide");
+    // The long ramp and the banks: a slide down either goes on much further than the same slide on flat ground (13 u).
+    for (const x of [3, -3.5]) {
+      const r = fly([{ to: [x, 35.5], sprint: true }, { to: [x, 58], crouch: true }], [x, 27.5]);
+      const start = r.out.find(e => e.kind === "slide")!, stand = r.out.find(e => e.kind === "stand")!;
+      expect(stand.z - start.z, `x ${x}`).toBeGreaterThan(15);
+    }
+  });
+
+  it("walk only (the café): crouching at a walk never slides", () => {
+    const out: string[] = [];
+    drive(createMoveState(0, 0, flat), flat, 4, time => ({ x: Math.sin(time), z: Math.cos(time), sneak: Math.floor(time * 3) % 2 === 0 }), q => out.push(...kinds(q.events)));
+    expect(out.filter(k => k.includes("slide"))).toEqual([]);
+  });
+
+  it("never grounds on water, ends inside something or gets stuck sliding at walls, cliff edges, ramps and water, fuzzed", () => {
+    const objects: MapObject[] = [{ id: "cafe", kind: "landmark", x: 3.5, z: -3.4 }, { id: "r1", kind: "rock", x: -2, z: 2, model: "rock-a" }];
+    const edges = grid(20, 20, (x, z) => (x === -3 && (z === 4 || z === 5) ? [0, Surface.Ramp] : [x >= 1 && z >= 1 ? CLIFF_LEVELS : x <= -4 && z >= 4 ? CLIFF_LEVELS : 0, x <= -7 || z <= -8 ? W : G]), objects);
+    for (const [w, starts] of [[edges, [[-1, -1], [0, 0], [-2, 4.5], [-5, -5]]], [islandOf(course()), [[-17, -10], [6.5, 21], [12, -20], [-18, 26], [15, 1], [17.5, 30], [17.5, 43], [10, 33], [3, 35], [-3.5, 36], [17.5, 53]]]] as const) {
+      let seed = 23;
+      const rand = () => ((seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648);
+      for (const [sx, sz] of starts) for (let run = 0; run < 4; run++) {
+        let s = createMoveState(sx, sz, w), input: Partial<MoveInput> = {};
+        s = drive(s, w, 4, time => {
+          if (Math.round(time / STEP) % 20 === 0) {
+            const a = rand() * Math.PI * 2;
+            input = { x: Math.sin(a), z: Math.cos(a), sprint: rand() < 0.7, sneak: rand() < 0.6, jump: rand() < 0.4, jumpPressed: rand() < 0.3, dashPressed: rand() < 0.3 };
+          } else input = { ...input, jumpPressed: false, dashPressed: false };
+          return input;
+        }, q => {
+          const where = `${sx},${sz} run ${run} at ${q.x.toFixed(2)},${q.z.toFixed(2)} y ${q.y.toFixed(2)} ${q.mode}`;
+          if (q.mode === "ground" || q.mode === "slide" || q.mode === "skid" || q.mode === "roll" || q.mode === "recover") {
+            expect(w.wet(q.x, q.z), `on water: ${where}`).toBe(false);
+            expect(w.top(q.x, q.z), `inside: ${where}`).toBeLessThanOrEqual(q.y + T.stepUp);
+          }
+          expect(speedOf(q), `too fast: ${where}`).toBeLessThan(T.momentumCeiling + T.downhillCeiling);
+        });
+        s = drive(s, w, 2, () => ({}));
+        let free = 0;
+        for (let a = 0; a < 8; a++) {
+          const e = drive(s, w, 0.4, () => ({ x: Math.sin((a * Math.PI) / 4), z: Math.cos((a * Math.PI) / 4) }));
+          if (Math.hypot(e.x - s.x, e.z - s.z) > 0.25) free++;
+        }
+        expect(free, `stuck: ${sx},${sz} run ${run} at ${s.x.toFixed(2)},${s.z.toFixed(2)} (${s.mode})`).toBeGreaterThanOrEqual(2);
+      }
+    }
+  });
+
+  it("a slide into a wall bonks and stands: never stuck, and the crouch walks away", () => {
+    const wall = standWorld(() => 0, (_x, z) => z < 3, () => false);
+    const steps = slideOn(wall, drive(createMoveState(0, -20, wall), wall, 2, () => ({ z: 1, sprint: true })), 2, () => ({ z: 1, sneak: true }));
+    expect(ev(steps)).toContain("bonk");
+    expect(steps.at(-1)!.mode).toBe("ground");
+    expect(drive(steps.at(-1)!, wall, 0.5, () => ({ z: -1, sneak: true })).z).toBeLessThan(steps.at(-1)!.z - 0.5);
   });
 });
