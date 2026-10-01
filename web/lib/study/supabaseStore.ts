@@ -97,6 +97,13 @@ export function supabaseStudyStore(db: SupabaseClient): StudyStore {
       if (error) raise(error);
       return new Set(((data ?? []) as Row[]).map((r) => String(r.member_id)));
     },
+    async cafeOpen() {
+      // Story goals have one cycle (0). Closed on any error: the café never opens by accident (row 177).
+      const { data: goals, error } = await db.from("club_goals").select("id").eq("goal_type", "story").contains("unlocks", ["cafe"]);
+      if (error || !goals?.length) return false;
+      const { data, error: done } = await db.from("club_goal_completions").select("goal_id").in("goal_id", (goals as Row[]).map((g) => String(g.id))).eq("cycle", 0).limit(1);
+      return !done && (data ?? []).length > 0;
+    },
     async setBoardOptIn(m, on) {
       const { error } = await db.from("member_study_prefs").upsert({ member_id: m, board_opt_in: on, updated_at: new Date().toISOString() }, { onConflict: "member_id" });
       if (error) raise(error);

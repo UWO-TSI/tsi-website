@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import { touchStick as stick } from "./moveFx";
 
 /** Touch (specs/movement.md "Controls"): a joystick (push to the rim to sprint) and jump and dash buttons, into the avatar's touch stick; `left`/`bottom` clear a HUD. */
-export default function TouchControls({ left = 24, bottom = 28 }: { left?: number; bottom?: number }) {
+export default function TouchControls({ left = 24, bottom = 28, walkOnly = false }: { left?: number; bottom?: number; walkOnly?: boolean }) {
   const base = useRef<HTMLDivElement>(null), knob = useRef<HTMLDivElement>(null);
   // The knob moves through its style, not state: pointermove fires far more often than a render is worth.
   const setKnob = (x: number, y: number) => { if (knob.current) knob.current.style.transform = `translate(${x}px, ${y}px)`; };
@@ -31,7 +31,7 @@ export default function TouchControls({ left = 24, bottom = 28 }: { left?: numbe
       <div ref={knob} style={{ position: "absolute", left: 66 - 26, top: 66 - 26, width: 52, height: 52, borderRadius: "50%", background: "rgba(255,255,255,0.7)", pointerEvents: "none" }} />
     </div>
     <div style={{ position: "absolute", right: 24, bottom, display: "flex", gap: 14, alignItems: "flex-end", zIndex: 20 }}>
-      {button("dash", "Dash", 64)}{button("jump", "Jump", 84)}
+      {!walkOnly && <>{button("dash", "Dash", 64)}{button("jump", "Jump", 84)}</>}
     </div>
   </>;
 }

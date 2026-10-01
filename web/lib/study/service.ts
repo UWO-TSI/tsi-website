@@ -85,12 +85,17 @@ export interface TableView {
   is_private: boolean;
   /** Private tables read as occupied to anyone the host didn't let in (row 168). */
   can_join: boolean;
+  /** A café table before the chapter 2 goal opens the café (row 177): shown, never joinable. */
+  closed: boolean;
   host_name: string | null;
   mates: Mate[];
 }
 
+/** Café tables wait for the chapter 2 club goal (row 177); outdoor tables are open from day one. */
+const shut = (t: Pick<StudyTable, "location">, cafeOpen: boolean) => t.location === "cafe" && !cafeOpen;
+
 async function tableViews(store: StudyStore, me: string, now: Date): Promise<TableView[]> {
-  const [tables, sessions] = await Promise.all([store.listTables(), store.activeSessions()]);
+  const [tables, sessions, cafeOpen] = await Promise.all([store.listTables(), store.activeSessions(), store.cafeOpen()]);
   const seated = [...new Set(sessions.map((s) => s.member_id))];
   const [names, looks] = await Promise.all([
     store.names([...new Set([...seated, ...tables.flatMap((t) => (t.host_id ? [t.host_id] : []))])]),
@@ -105,7 +110,7 @@ async function tableViews(store: StudyStore, me: string, now: Date): Promise<Tab
     return {
       id: t.id, slug: t.slug, label: t.label, location: t.location, anchor: t.anchor, kind: t.kind, seats: t.seats,
       taken: allowed ? here.map((s) => s.seat) : Array.from({ length: t.seats }, (_, i) => i + 1),
-      is_private: t.is_private, can_join: allowed && here.length < t.seats,
+      is_private: t.is_private, can_join: allowed && here.length < t.seats && !shut(t, cafeOpen), closed: shut(t, cafeOpen),
       host_name: t.host_id ? (names.get(t.host_id) ?? "Member") : null, mates,
     };
   });
@@ -158,6 +163,7 @@ export async function sit(store: StudyStore, me: string, input: { table_id: stri
     const table = (await store.listTables()).find((t) => t.id === input.table_id);
     if (!table) return fail(404, "not_found", "That table isn't here.");
     if (!Number.isInteger(input.seat) || input.seat < 1 || input.seat > table.seats) return fail(400, "bad_seat", "That seat doesn't exist.");
+    if (shut(table, await store.cafeOpen())) return fail(403, "cafe_closed", "The café opens when the club reopens it at the monument.");
     const mine = await store.memberActive(me);
     if (mine) {
       if (mine.table_id === input.table_id && mine.seat === input.seat) return { ok: true, data: await state(store, me, now) }; // retry-safe

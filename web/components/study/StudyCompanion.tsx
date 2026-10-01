@@ -76,16 +76,17 @@ function Tables({ study }: { study: StudyHook }) {
       {[...groups.entries()].map(([loc, tables]) => (
         <div key={loc}>
           <div className={s.eyebrow}>{LOCATION[loc] ?? loc}</div>
+          {tables.every((t) => t.closed) ? <p className={s.muted} style={{ margin: "0 0 8px" }}>Boarded up for now. The café opens for everyone when the club fills its goal at the monument.</p> : null}
           <div className={s.tables}>
             {tables.map((t) => (
               <div key={t.id} className={s.table}>
                 <span className={s.name}>{t.label}</span>
-                {t.is_private && !t.can_join ? <span className={s.lockTag}>Private</span> : <span className={s.muted}>{t.taken.length}/{t.seats}</span>}
+                {t.closed ? <span className={s.lockTag}>Closed</span> : t.is_private && !t.can_join ? <span className={s.lockTag}>Private</span> : <span className={s.muted}>{t.taken.length}/{t.seats}</span>}
                 <div className={s.seats}>
                   {Array.from({ length: t.seats }, (_, i) => i + 1).map((seat) => {
                     const taken = t.taken.includes(seat);
                     return (
-                      <button key={seat} className={s.seat} disabled={taken || !t.can_join || study.busy} onClick={() => study.sit(t.id, seat)} aria-label={`${t.label}, seat ${seat}${taken ? ", taken" : ""}`}>
+                      <button key={seat} className={s.seat} disabled={taken || !t.can_join || study.busy} onClick={() => study.sit(t.id, seat)} aria-label={`${t.label}, seat ${seat}${t.closed ? ", closed" : taken ? ", taken" : ""}`}>
                         {taken ? "●" : seat}
                       </button>
                     );

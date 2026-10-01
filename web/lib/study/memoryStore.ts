@@ -4,8 +4,9 @@ import { coinsFor, type StudySession } from "./rules";
 import { StudyError, type ChatMessage, type StudyStore, type StudyTable, type WeekStat } from "./store";
 import { DEFAULT_TABLES } from "./tables";
 
-export function memoryStudyStore(tables: StudyTable[] = DEFAULT_TABLES) {
+export function memoryStudyStore(tables: StudyTable[] = DEFAULT_TABLES, opts: { cafeOpen?: boolean } = {}) {
   const t = structuredClone(tables);
+  let cafeOpen = opts.cafeOpen ?? true;
   const sessions: StudySession[] = [];
   const coins = new Map<string, number>();
   const names = new Map<string, string>();
@@ -74,6 +75,9 @@ export function memoryStudyStore(tables: StudyTable[] = DEFAULT_TABLES) {
     async boardOptIns() {
       return new Set(optIns);
     },
+    async cafeOpen() {
+      return cafeOpen;
+    },
     async setBoardOptIn(m, on) {
       if (on) optIns.add(m);
       else optIns.delete(m);
@@ -97,5 +101,5 @@ export function memoryStudyStore(tables: StudyTable[] = DEFAULT_TABLES) {
       return true;
     },
   };
-  return { store, chat, setChatClock: (t: number) => (chatClock = t), sessions, tables: t, coinsOf: (m: string) => coins.get(m) ?? 0, name: (id: string, n: string) => names.set(id, n) };
+  return { store, chat, setChatClock: (t: number) => (chatClock = t), setCafeOpen: (open: boolean) => (cafeOpen = open), sessions, tables: t, coinsOf: (m: string) => coins.get(m) ?? 0, name: (id: string, n: string) => names.set(id, n) };
 }

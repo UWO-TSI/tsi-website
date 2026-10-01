@@ -1,107 +1,149 @@
 "use client";
 
 /**
- * Café interior (specs/study-world.md §2): a cozy placeholder from the HQ
- * clubhouse furniture family until David's interior design lands. Warm wood,
- * window light, bookshelves, plants, a counter; the study tables themselves
- * come from lib/study/seats.ts through StudySeats, the wall board opens the
- * top-studiers sheet. The walker is PlayerAvatar so `tsi:sit` works indoors.
+ * The café (specs/cafe-polish.md item 7, row 270): the premium interior from
+ * David's four references, hand-modeled in art/cafe/build_cafe.py. Warm wood
+ * panelling, the long espresso bar with its order counter, pastry case and
+ * pick-up end, lightbox signs and menu boards, a window wall, about twenty
+ * seats (lib/study/seats.ts) through StudySeats, the owner behind the bar and
+ * ambient patrons. Warm, dim amber light from three lights and the glowing
+ * signs, panels and sconces. The walker is PlayerAvatar (walk only) so
+ * `tsi:sit` works; the wall board opens the top-studiers sheet.
+ *
+ * Dev (evidence): `?cafecam=x,y,z,lx,ly,lz[&fov=60]` holds the camera at a
+ * reference's angle, which also shows the ceiling the game camera cuts away;
+ * `?cafeat=x,z` starts the walk there (beside a patron, to watch them yield).
  */
 import { Suspense, useEffect, useMemo, useRef } from "react";
 import { useThree, useFrame } from "@react-three/fiber";
-import { Html, useTexture } from "@react-three/drei";
+import { Html } from "@react-three/drei";
 import * as THREE from "three";
 import PlayerAvatar from "../PlayerAvatar";
-import { InteriorKeeper, Piece, applyInteriorBackdrop, followInteriorCamera } from "../interiorShared";
+import { applyInteriorBackdrop, followInteriorCamera } from "../interiorShared";
+import ContactShadows from "../ContactShadows";
+import CafeOwner from "./CafeOwner";
+import CafePatrons from "./CafePatrons";
+import CafeSigns from "./CafeSigns";
 import StudySeats from "./StudySeats";
-import { CLUBHOUSE_LIGHTING } from "@/lib/game/islandLighting";
+import { useCafeModel, preloadCafe } from "./CafeModel";
+import { useNPCPersonas } from "@/lib/content/loader";
 import type { IslandPhase } from "@/lib/game/islandTime";
 import type { WorldIdentity } from "@/lib/game/identity";
-import { studySolid } from "@/lib/study/seats";
 import { standWorld } from "@/lib/game/movement/sim";
+import { studyHoldsPrompt } from "@/lib/study/worldStore";
+import { CAFE_BOARD, CAFE_DOOR, CAFE_EXIT_RANGE, CAFE_ROOM, CAFE_SPAWN, CAFE_WINDOW, OWNER_TALK, cafeWalkable } from "@/lib/game/cafe";
 import world from "../DefaultIslandWorld.module.css";
 
-const HALF_W = 9, HALF_D = 6;
 const flat = () => 0;
-const DOOR: [number, number] = [0, -5.4];
-const SPAWN: [number, number, number] = [0, 0, -4.6];
-/** Wall board and where you stand to read it. */
-const BOARD: [number, number, number] = [-1.4, 1.28, 5.78];
-const BOARD_SPOT: [number, number] = [-1.4, 4.5];
-const WINDOWS = [5.6, 2.6];
-const GLASS: Record<IslandPhase, string> = { dawn: "#f6d7b8", day: "#cfe8f2", evening: "#f3b98a", night: "#2c3a5c" };
-/** Solid non-table furniture: [cx, cz, halfW, halfD]. */
-const SOLID: [number, number, number, number][] = [[7.9, -0.95, 0.5, 0.95], [-8.4, 1.3, 0.4, 2.2], [8.1, 5.2, 0.5, 0.5], [-8.1, -4.9, 0.5, 0.5], [-7.4, 5.3, 0.35, 0.35]];
+const SPAWN: [number, number, number] = [CAFE_SPAWN[0], 0, CAFE_SPAWN[1]];
+/** The café floor for the movement kit: inside the walls, clear of the bar, the shelves, the plants and the study tables. */
+const CAFE = standWorld(flat, (x, z) => cafeWalkable(x, z), () => false);
+preloadCafe(["cafe-room", "cafe-kit"]);
 
-/** The café floor for the movement kit: the walls, counter, shelves, plants and study tables are solid. */
-const CAFE = standWorld(flat, (x, z) => Math.abs(x) < HALF_W - 0.5 && z > -HALF_D + 0.2 && z < HALF_D - 0.4
-  && !studySolid("cafe", x, z) && !SOLID.some(([cx, cz, w, d]) => Math.abs(x - cx) < w && Math.abs(z - cz) < d), () => false);
+/** Outside the window wall, per phase: sky, a haze band and the far hedge line. */
+const OUTSIDE: Record<IslandPhase, [string, string, string]> = {
+  dawn: ["#f4c9a8", "#f7dcc0", "#8f8a6a"], day: ["#bfe0ec", "#e8f0e2", "#7f9f6a"],
+  evening: ["#e98f5a", "#f6c28a", "#6a5040"], night: ["#16203a", "#26304e", "#141a26"],
+};
 
-function Room({ phase }: { phase: IslandPhase }) {
-  const wood = useTexture("/assets/acnh/interior/hq-parquet-albedo.png");
-  const floor = useMemo(() => {
-    const tex = wood.clone(); tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.repeat.set(1.15, 0.8);
-    tex.colorSpace = THREE.SRGBColorSpace; tex.needsUpdate = true; return tex;
-  }, [wood]);
-  useEffect(() => () => floor.dispose(), [floor]);
-  const wall = "#efe0c4", trim = "#8a5f3c";
+function outsideTexture(phase: IslandPhase) {
+  const [sky, haze, hedge] = OUTSIDE[phase];
+  const c = document.createElement("canvas");
+  c.width = 512; c.height = 256;
+  const g = c.getContext("2d")!;
+  const grad = g.createLinearGradient(0, 0, 0, 256);
+  grad.addColorStop(0, sky); grad.addColorStop(0.62, haze); grad.addColorStop(1, haze);
+  g.fillStyle = grad; g.fillRect(0, 0, 512, 256);
+  // A soft line of bushes and tree crowns along the bottom: the village beyond the glass, out of focus.
+  g.fillStyle = hedge;
+  g.filter = "blur(6px)";
+  for (let i = 0; i < 26; i++) { const x = (i * 97) % 540 - 10, r = 22 + ((i * 37) % 30); g.beginPath(); g.arc(x, 236 - ((i * 53) % 40), r, 0, Math.PI * 2); g.fill(); }
+  g.fillRect(0, 220, 512, 36);
+  if (phase === "night") { g.filter = "blur(2px)"; g.fillStyle = "#ffd58a"; for (const [x, y] of [[80, 196], [300, 205], [430, 190]]) { g.beginPath(); g.arc(x, y, 3, 0, Math.PI * 2); g.fill(); } }
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+function Outside({ phase }: { phase: IslandPhase }) {
+  const texture = useMemo(() => outsideTexture(phase), [phase]);
+  useEffect(() => () => texture.dispose(), [texture]);
+  const { z0, z1, y0, y1 } = CAFE_WINDOW;
+  return <mesh position={[-CAFE_ROOM.halfW - 0.75, (y0 + y1) / 2, (z0 + z1) / 2]} rotation={[0, Math.PI / 2, 0]}>
+    <planeGeometry args={[z1 - z0 + 1.2, y1 - y0 + 0.8]} />
+    <meshBasicMaterial map={texture} toneMapped={false} />
+  </mesh>;
+}
+
+/** Module scope (the react compiler forbids writing through hook values): the dollhouse cut and the dev camera's lens. */
+const cutAway = (ceiling: THREE.Object3D | undefined, camera: THREE.Camera) => { if (ceiling) ceiling.visible = camera.position.y < CAFE_ROOM.ceiling - 0.05; };
+function setFov(camera: THREE.Camera, fov: number) {
+  if (!(camera instanceof THREE.PerspectiveCamera) || camera.fov === fov) return;
+  camera.fov = fov;
+  camera.updateProjectionMatrix();
+}
+
+/** The room: shell, bar and décor in one model; the ceiling layer only for a camera below the ceiling. */
+function Room() {
+  const room = useCafeModel("cafe-room");
+  const ceiling = useMemo(() => room.getObjectByName("cafe_ceiling"), [room]);
+  useFrame(({ camera }) => cutAway(ceiling, camera));
+  return <primitive object={room} />;
+}
+
+/** Three real lights (cafe-polish §7) under a warm fill: over the bar, over the seating, and the window's daylight. */
+function Lights({ phase }: { phase: IslandPhase }) {
+  const daylight = phase === "day" ? 1 : phase === "dawn" || phase === "evening" ? 0.55 : 0;
   return <>
-    <mesh rotation={[-Math.PI / 2, 0, 0]}><planeGeometry args={[HALF_W * 2, HALF_D * 2]} /><meshStandardMaterial map={floor} color="#ffe9cf" roughness={0.9} /></mesh>
-    {/* North and side walls full height, south a low lip (dollhouse cutaway), warm wainscoting below. */}
-    {([[0, 2, HALF_D + 0.15, HALF_W * 2 + 0.6, 4, 0.3], [-HALF_W - 0.15, 2, 0, 0.3, 4, HALF_D * 2 + 0.6], [HALF_W + 0.15, 2, 0, 0.3, 4, HALF_D * 2 + 0.6], [0, 0.5, -HALF_D - 0.15, HALF_W * 2 + 0.6, 1, 0.3]] as const).map(([x, y, z, w, h, d], i) => <group key={i}>
-      <mesh position={[x, y, z]}><boxGeometry args={[w, h, d]} /><meshStandardMaterial color={wall} roughness={0.95} /></mesh>
-      {i < 3 && <mesh position={[x - Math.sign(x) * 0.16, 0.6, z - Math.sign(z) * 0.16]}><boxGeometry args={[i ? 0.06 : w, 1.2, i ? d : 0.06]} /><meshStandardMaterial color={trim} roughness={0.85} /></mesh>}
-    </group>)}
-    {/* Window light over the window tables. */}
-    {WINDOWS.map(x => <group key={x} position={[x, 2.3, HALF_D - 0.02]}>
-      <mesh><boxGeometry args={[1.9, 1.5, 0.12]} /><meshStandardMaterial color={trim} roughness={0.8} /></mesh>
-      <mesh position={[0, 0, -0.07]}><planeGeometry args={[1.6, 1.2]} /><meshBasicMaterial color={GLASS[phase]} side={THREE.DoubleSide} /></mesh>
-      <mesh position={[0, 0, -0.09]}><boxGeometry args={[0.06, 1.2, 0.02]} /><meshStandardMaterial color={trim} /></mesh>
-      <pointLight position={[0, 0, -1.2]} color={phase === "night" ? "#9fb4e0" : "#fff1d6"} intensity={phase === "night" ? 2 : 7} distance={5} />
-    </group>)}
+    <ambientLight color="#ffe3c0" intensity={0.42} />
+    <hemisphereLight args={["#ffd9a8", "#5a3a22", 0.55]} />
+    <pointLight color="#ffcf8f" intensity={26} distance={11} decay={1.6} position={[3.5, 3.3, 3.6]} />
+    <pointLight color="#ffc983" intensity={20} distance={11} decay={1.6} position={[-4.4, 3.1, 0.6]} />
+    <pointLight color={phase === "evening" ? "#ffb070" : "#fff0dc"} intensity={6 + 16 * daylight} distance={9} decay={1.6} position={[-7.4, 2.6, -1.9]} />
   </>;
 }
 
 export default function CafeInterior({ phase, player, frozen, identity, level, onNear }: {
   phase: IslandPhase; player: React.RefObject<THREE.Vector3>; frozen: boolean; identity: WorldIdentity; level?: number;
-  onNear: (near: "exit" | null) => void;
+  onNear: (near: "exit" | "owner" | null) => void;
 }) {
   const { scene, camera } = useThree();
-  const light = CLUBHOUSE_LIGHTING[phase];
-  useEffect(() => applyInteriorBackdrop(scene, "#20170f"), [scene]);
-  useEffect(() => { camera.position.set(SPAWN[0], 8.4, SPAWN[2] - 7.2); }, [camera]);
-  const near = useRef<"exit" | null>(null);
+  useEffect(() => applyInteriorBackdrop(scene, "#1a120c"), [scene]);
+  const devCam = useMemo(() => {
+    if (process.env.NODE_ENV === "production" || typeof window === "undefined") return null;
+    const q = new URLSearchParams(window.location.search), v = q.get("cafecam")?.split(",").map(Number);
+    return v?.length === 6 && v.every(Number.isFinite) ? { at: v.slice(0, 3) as [number, number, number], look: v.slice(3) as [number, number, number], fov: Number(q.get("fov")) || 0 } : null;
+  }, []);
+  const spawn = useMemo((): [number, number, number] => {
+    if (process.env.NODE_ENV === "production" || typeof window === "undefined") return SPAWN;
+    const v = new URLSearchParams(window.location.search).get("cafeat")?.split(",").map(Number);
+    return v?.length === 2 && v.every(Number.isFinite) ? [v[0], 0, v[1]] : SPAWN;
+  }, []);
+  useEffect(() => { camera.position.set(spawn[0], 8.4, spawn[2] - 7.2); }, [camera, spawn]);
+  const near = useRef<"exit" | "owner" | null>(null);
+  // A Residents-editor persona on the café owner post names her and gives her lines; else the proposed defaults.
+  const { data: personas } = useNPCPersonas({ permanentOnly: true });
+  const persona = personas.find(p => p.post === "cafe_owner");
   useFrame((_, delta) => {
-    followInteriorCamera(camera, player.current.x, player.current.z, Math.min(delta, 0.1));
-    const next = Math.hypot(player.current.x - DOOR[0], player.current.z - DOOR[1]) < 1.4 ? "exit" : null;
+    // After PlayerAvatar's frame (its movement feel sets the lens every frame).
+    if (devCam) { camera.position.set(...devCam.at); camera.lookAt(...devCam.look); if (devCam.fov) setFov(camera, devCam.fov); }
+    else followInteriorCamera(camera, player.current.x, player.current.z, Math.min(delta, 0.1));
+    // A study seat's prompt takes E while it is up.
+    const { x, z } = player.current;
+    const next = studyHoldsPrompt() ? null : Math.hypot(x - CAFE_DOOR[0], z - CAFE_DOOR[1]) < CAFE_EXIT_RANGE ? "exit"
+      : Math.hypot(x - OWNER_TALK.at[0], z - OWNER_TALK.at[1]) < OWNER_TALK.range ? "owner" : null;
     if (next !== near.current) { near.current = next; onNear(next); }
   });
   return <>
-    <ambientLight color="#fff3e2" intensity={light.ambient} />
-    <hemisphereLight args={["#ffe9cc", "#9c7a58", light.hemisphere]} />
-    <directionalLight color={light.keyColor} intensity={light.key} position={[3, 8, -4]} />
-    <Suspense fallback={null}><Room phase={phase} /></Suspense>
-    <Suspense fallback={null}>
-      <Piece name="bookshelf" position={[-8.5, 0, 0.2]} rotY={-Math.PI / 2} />
-      <Piece name="bookshelf" position={[-8.5, 0, 2.4]} rotY={-Math.PI / 2} />
-      <Piece name="plant-monstera" position={[8.1, 0, 5.2]} />
-      <Piece name="plant-yucca" position={[-8.1, 0, -4.9]} />
-      <Piece name="floor-lamp" position={[-7.4, 0, 5.3]} scale={0.115} />
-      <Piece name="lounge-rug" position={[-5, 0.012, 4.2]} scale={0.11} />
-      <Piece name="counter-register" position={[7.9, 0, -1.4]} rotY={Math.PI / 2} scale={0.12} />
-      <Piece name="counter-register" position={[7.9, 0, -0.45]} rotY={Math.PI / 2} scale={0.12} />
-      <Piece name="lounge-tea" position={[7.9, 0.96, -1.2]} rotY={Math.PI / 2} scale={0.075} />
-      <Piece name="wall-clock" position={[8.95, 2.6, 2.4]} rotY={-Math.PI / 2} />
-      <Piece name="bulletinboard" position={BOARD} scale={0.2} rotY={Math.PI} />
-      <Piece name="yellow-message-mat" rotX={Math.PI} rotY={Math.PI} position={[0, 0.015, -5.2]} scale={0.14} />
-    </Suspense>
-    <pointLight color="#ffdfae" intensity={light.lamp * 0.5} distance={4.8} position={[-7.4, 1.5, 5.3]} />
-    {/* Warm pools over the tables (no pendant meshes: the steep camera puts them in front of the seats). */}
-    {[[3.8, 0.9], [-4.6, 0.9], [4.4, -3], [-6.2, -3.2]].map(([x, z]) => <pointLight key={x} color="#ffdcaa" intensity={light.ceiling * 0.4} distance={6} position={[x, 3, z]} />)}
-    <Html position={[BOARD[0], 2.55, BOARD[2] - 0.2]} center distanceFactor={10} zIndexRange={[3, 0]}><div className={world.cue}>Study board</div></Html>
-    <InteriorKeeper position={[8.55, 0, -0.95]} rotY={-Math.PI / 2} watch={[7, -0.95]} colors={{ apron: "#7a4f2e", shirt: "#f3e6cf" }} hat="cap" playerPosRef={player as React.MutableRefObject<THREE.Vector3>} />
-    <StudySeats area="cafe" player={player} board={BOARD_SPOT} />
-    <PlayerAvatar spawnPosition={SPAWN} playerName={identity.display_name} playerLevel={level} member={identity.member} player={player} frozen={frozen}
-      world={CAFE} groundHeight={flat} />
+    <Lights phase={phase} />
+    <ContactShadows tint="#2b1a0e" intensity={1.1} sunMap={false} />
+    <Outside phase={phase} />
+    <Suspense fallback={null}><Room /><CafeSigns /></Suspense>
+    <Html position={[CAFE_BOARD.at[0] - 0.3, CAFE_BOARD.at[1] + 0.85, CAFE_BOARD.at[2]]} center distanceFactor={10} zIndexRange={[3, 0]}><div className={world.cue}>Study board</div></Html>
+    <CafeOwner player={player} name={persona?.display_name} lines={persona?.canned_dialogue.length ? persona.canned_dialogue : undefined} />
+    <StudySeats area="cafe" player={player} board={CAFE_BOARD.spot} />
+    <CafePatrons player={player} />
+    <PlayerAvatar spawnPosition={spawn} playerName={identity.display_name} playerLevel={level} member={identity.member} player={player} frozen={frozen}
+      world={CAFE} groundHeight={flat} walkOnly />
   </>;
 }

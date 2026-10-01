@@ -310,5 +310,5 @@ describe("POST /api/collections: rare catches can teach a recipe (rows 199, 258)
     for (const key of ["fish_dace", "fish_carp", "wood_branch", "no_such_species"]) {
       expect(Array.from({ length: 2000 }, (_, i) => c.catchDrop(`plain-${i}`, key)).filter(Boolean)).toEqual([]);
     }
-  });
+  }, 30_000); // 38k seeded rolls: ~3 s alone, past the 5 s default when other agents load the machine
 });

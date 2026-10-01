@@ -33,3 +33,11 @@
 
 @media (max-width: 700px) { .startSheet { left: 16px; top: auto; bottom: 70px; transform: none; } .panel { top: auto; bottom: 70px; left: 12px; width: calc(100% - 24px); max-height: 45%; } }
 @media (prefers-reduced-motion: reduce) { .overhead[data-phase="break"] { animation: none; } }
+
+/* The café owner's greeting bubble and nameplate (cafe-polish §6): the residents' cream bubble with a tail. */
+.bubble { position: relative; max-width: 220px; width: max-content; padding: 8px 12px; border-radius: 14px; background: #fffdf5; color: #4a4034; border: 2px solid #e8dfc8; box-shadow: 0 3px 10px #3c2d142e; font: 500 12px/1.35 system-ui, -apple-system, "Segoe UI", sans-serif; text-align: center; animation: pop 0.25s ease-out; }
+.bubble::after { content: ""; position: absolute; left: 50%; bottom: -7px; width: 12px; height: 12px; background: #fffdf5; border-right: 2px solid #e8dfc8; border-bottom: 2px solid #e8dfc8; transform: translateX(-50%) rotate(45deg); }
+.nameplate { display: grid; justify-items: center; padding: 2px 10px 3px; border-radius: 999px; background: #3a2a1ccc; color: #fff4e2; font: 700 11px/1.2 system-ui, -apple-system, "Segoe UI", sans-serif; white-space: nowrap; }
+.nameplate small { font-size: 9px; font-weight: 500; color: #e8cfa6; }
+@keyframes pop { from { transform: scale(0.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .bubble { animation: none; } }

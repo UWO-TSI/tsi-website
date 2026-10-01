@@ -1,12 +1,14 @@
 /**
- * Study seat layout (specs/study-world.md §1): where each backend table
- * (`study_tables.anchor`, see tables.ts) stands in the world, and its seats.
+ * Study seat layout (specs/study-world.md §1, specs/cafe-polish.md item 7):
+ * where each backend table (`study_tables.anchor`, see tables.ts) stands in
+ * the world, and its seats.
  *
- * This is the one file David's cafe interior design replaces: move a table's
- * `at`, turn it with `yaw`, or swap its `furniture`. Seat positions follow.
- * Cafe tables use cafe-room coordinates (walls x ±9, z ±6, door at z -6).
- * Outdoor tables are `study` objects in the village map file (id = anchor,
- * model = furniture), placed in `/lab/map`. +x is screen left.
+ * Move a table's `at`, turn it with `yaw`, or swap its `furniture`: seat
+ * positions follow. Café tables use café-room coordinates (lib/game/cafe.ts:
+ * walls x ±8.5, z ±6, door at z −6). Outdoor tables are `study` objects in the
+ * village map file (id = anchor, model = furniture), placed in `/lab/map`.
+ * +x is screen left. The café furniture models (art/cafe/build_cafe.py, one
+ * GLB per kind) put their seats exactly where FURNITURE says.
  *
  * `facing` is the direction a seated character looks: radians of atan2(dx, dz),
  * so 0 looks west (+z, away from the camera) and π looks at the camera.
@@ -16,32 +18,36 @@
 import { objectsOf, village, type Village } from "@/lib/game/villageMap";
 
 export type SeatArea = "cafe" | "village";
-export type Furniture = "window" | "two" | "four" | "couch" | "picnic" | "pier";
+/** Café: window bar stools, tables for two and four, the booth, the communal table. Outdoors: picnic table, pier bench. */
+export type Furniture = "bar" | "two" | "four" | "booth" | "communal" | "picnic" | "pier";
 export interface TableLayout { anchor: string; area: SeatArea; at: [number, number]; yaw: number; furniture: Furniture }
 /** `y` is the seat top in world y (floor height at the seat + the furniture's seatY). */
 export interface WorldSeat { anchor: string; seat: number; x: number; z: number; facing: number; y: number }
 
 const PI = Math.PI;
-/** Seat tops measured from the GLBs: study-chair at 0.1, lounge-sofa cushions at 0.16, bench-wood slats at 1. */
-const CHAIR = 0.52, SOFA = 0.78, BENCH = 0.5;
-/** Seats, seat top and solid rects ([cx, cz, halfW, halfD]) relative to the table, before `yaw`. */
-export const FURNITURE: Record<Furniture, { seats: [number, number, number][]; seatY: number; solid: [number, number, number, number][] }> = {
-  window: { seats: [[0.45, -0.8, 0], [-0.45, -0.8, 0]], seatY: CHAIR, solid: [[0, 0, 0.5, 0.42]] },
-  two: { seats: [[0.85, 0, -PI / 2], [-0.85, 0, PI / 2]], seatY: CHAIR, solid: [[0, 0, 0.5, 0.42]] },
-  four: { seats: [[0.55, -0.9, 0], [-0.55, -0.9, 0], [0.55, 0.9, PI], [-0.55, 0.9, PI]], seatY: CHAIR, solid: [[0, 0, 1, 0.42]] },
-  couch: { seats: [[0.9, -0.15, PI], [0, -0.15, PI], [-0.9, -0.15, PI]], seatY: SOFA, solid: [[0, 0.45, 1.45, 0.25], [0, -1.35, 0.9, 0.46]] },
+/** Seat tops: café chairs, booth and banquette cushions 0.4, window stools 0.6 (each a Study-clip desk, 0.2, under its table or counter), bench-wood slats 0.5. */
+const CHAIR = 0.4, STOOL = 0.6, BENCH = 0.5;
+/** Seats, seat top and solid rects ([cx, cz, halfW, halfD]) relative to the table, before `yaw`. Chairs and stools are not solid. */
+/** `top`: the table top a sitter works at; `reach`: how far in front of the seat their cup or laptop goes on it (café patrons). */
+export const FURNITURE: Record<Furniture, { seats: [number, number, number][]; seatY: number; solid: [number, number, number, number][]; top?: number; reach?: number }> = {
+  bar: { seats: [[0.45, -0.55, 0], [-0.45, -0.55, 0]], seatY: STOOL, solid: [[0, 0, 0.5, 0.28]], top: 0.8, reach: 0.45 },
+  two: { seats: [[0.66, 0, -PI / 2], [-0.66, 0, PI / 2]], seatY: CHAIR, solid: [[0, 0, 0.36, 0.36]], top: 0.6, reach: 0.42 },
+  four: { seats: [[0.42, -0.7, 0], [-0.42, -0.7, 0], [0.42, 0.7, PI], [-0.42, 0.7, PI]], seatY: CHAIR, solid: [[0, 0, 0.52, 0.34]], top: 0.6, reach: 0.45 },
+  booth: { seats: [[0.42, -0.72, 0], [-0.42, -0.72, 0], [0.42, 0.72, PI], [-0.42, 0.72, PI]], seatY: CHAIR, solid: [[0, 0, 0.55, 0.3], [0, -0.99, 0.68, 0.06], [0, 0.99, 0.68, 0.06]], top: 0.6, reach: 0.5 },
+  communal: { seats: [[0.55, -0.68, 0], [-0.55, -0.68, 0], [0.55, 0.68, PI], [-0.55, 0.68, PI]], seatY: CHAIR, solid: [[0, 0, 1.1, 0.33], [0, 0.95, 1.15, 0.06]], top: 0.6, reach: 0.42 },
   picnic: { seats: [[0.5, -0.8, 0], [-0.5, -0.8, 0], [0.5, 0.8, PI], [-0.5, 0.8, PI]], seatY: BENCH, solid: [[0, 0, 1, 0.42]] },
   pier: { seats: [[0.45, 0.8, PI], [-0.45, 0.8, PI]], seatY: BENCH, solid: [[0, 0, 0.5, 0.42]] },
 };
 
+/** The café (row 270): 20 seats — four window stools, two tables for two, a four-top, a four-seat booth and a small communal table. */
 const CAFE_LAYOUT: TableLayout[] = [
-  { anchor: "study:cafe-window-1", area: "cafe", at: [5.6, 5.1], yaw: 0, furniture: "window" },
-  { anchor: "study:cafe-window-2", area: "cafe", at: [2.6, 5.1], yaw: 0, furniture: "window" },
-  { anchor: "study:cafe-couch", area: "cafe", at: [-5, 5.1], yaw: 0, furniture: "couch" },
-  { anchor: "study:cafe-four-1", area: "cafe", at: [3.8, 0.9], yaw: 0, furniture: "four" },
-  { anchor: "study:cafe-four-2", area: "cafe", at: [-4.6, 0.9], yaw: 0, furniture: "four" },
-  { anchor: "study:cafe-two-1", area: "cafe", at: [4.4, -3], yaw: 0, furniture: "two" },
-  { anchor: "study:cafe-two-2", area: "cafe", at: [-6.2, -3.2], yaw: 0, furniture: "two" },
+  { anchor: "study:cafe-window-1", area: "cafe", at: [-8.22, -2.9], yaw: -PI / 2, furniture: "bar" },
+  { anchor: "study:cafe-window-2", area: "cafe", at: [-8.22, -0.5], yaw: -PI / 2, furniture: "bar" },
+  { anchor: "study:cafe-couch", area: "cafe", at: [-7.2, 5.05], yaw: PI / 2, furniture: "booth" },
+  { anchor: "study:cafe-four-1", area: "cafe", at: [-3.6, -1.9], yaw: 0, furniture: "four" },
+  { anchor: "study:cafe-four-2", area: "cafe", at: [-3.3, 4.95], yaw: 0, furniture: "communal" },
+  { anchor: "study:cafe-two-1", area: "cafe", at: [3.0, 0.5], yaw: 0, furniture: "two" },
+  { anchor: "study:cafe-two-2", area: "cafe", at: [5.6, -4.0], yaw: 0, furniture: "two" },
 ];
 
 const layouts = new WeakMap<Village, TableLayout[]>();

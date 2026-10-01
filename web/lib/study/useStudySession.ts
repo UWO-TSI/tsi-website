@@ -15,7 +15,7 @@
  *   const study = useStudySession();            // game or companion
  *   study.sit(tableId, seat); study.start({ focus_len: 25, break_len: 5, cycles: 4 });
  */
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { ApiError } from "@/lib/apiClient";
 import { AudioManager } from "@/lib/game/audio";
 import type { ChatView } from "./chat";
@@ -33,7 +33,10 @@ export interface StudyHook {
   busy: boolean;
   session: SessionView | null;
   table: TableView | null;
+  /** The server's tables as last fetched: the same array until the next answer (seat-mates' `remaining_s` as of `asOf`). */
   tables: TableView[];
+  /** When `tables` was fetched (ms): a seat-mate's live countdown is `remaining_s` less the seconds since. */
+  asOf: number;
   mates: Mate[];
   remaining: number | null;
   chatMuted: boolean;
@@ -147,6 +150,8 @@ export function useStudySession(opts: { transport?: StudyTransport; heartbeatMs?
 
   const age = Math.floor((now - fetchedAt) / 1000);
   const tick = (m: Mate): Mate => (m.remaining_s === null ? m : { ...m, remaining_s: Math.max(0, m.remaining_s - age) });
+  // Rebuilt only when the server answers, not on the 1 Hz tick: the world's seats and seat-mates redraw on change.
+  const tables = useMemo(() => state?.tables ?? [], [state]);
 
   const remaining = active?.phase_ends_at ? Math.max(0, Math.ceil((Date.parse(active.phase_ends_at) - now) / 1000)) : null;
 
@@ -193,7 +198,8 @@ export function useStudySession(opts: { transport?: StudyTransport; heartbeatMs?
     busy,
     session: active,
     table: state?.table ?? null,
-    tables: (state?.tables ?? []).map((t) => ({ ...t, mates: t.mates.map(tick) })),
+    tables,
+    asOf: fetchedAt,
     mates: (state?.table?.mates ?? []).map(tick),
     remaining,
     chatMuted,
@@ -243,3 +249,22 @@ export function useStudySession(opts: { transport?: StudyTransport; heartbeatMs?
     refresh,
   };
 }
+
+/** A shared once-a-second clock (seconds since the epoch) for countdowns drawn from `asOf`; it runs only while something reads it. */
+let second = 0;
+let clock = 0;
+const seconds = new Set<() => void>();
+function subscribeSecond(f: () => void) {
+  seconds.add(f);
+  if (!clock) {
+    second = Math.floor(Date.now() / 1000);
+    clock = window.setInterval(() => { second = Math.floor(Date.now() / 1000); seconds.forEach(g => g()); }, 1000);
+  }
+  return () => {
+    seconds.delete(f);
+    if (!seconds.size) { window.clearInterval(clock); clock = 0; }
+  };
+}
+export const useSecond = () => useSyncExternalStore(subscribeSecond, () => second, () => 0);
+/** A seat-mate's countdown now, from the snapshot it came in. */
+export const liveRemaining = (remaining: number | null, asOf: number, now: number) => (remaining === null ? null : Math.max(0, remaining - Math.max(0, now - Math.floor(asOf / 1000))));

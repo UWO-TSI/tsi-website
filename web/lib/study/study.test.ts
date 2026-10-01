@@ -5,6 +5,7 @@ import { memoryStudyStore } from "./memoryStore";
 import { advance, blockBonus, coinsFor, heartbeat, leave, start, takeBreak, resume, type StudySession } from "./rules";
 import { beat, board, breakNow, endNow, getState, lock, myStats, resumeNow, sit, startSession, topStudiers } from "./service";
 import { DEFAULT_TABLES } from "./tables";
+import { SEEDS, currentSeed } from "@/lib/seedMigrations";
 
 const T0 = Date.parse("2026-09-24T14:00:00Z");
 const at = (min: number, sec = 0) => new Date(T0 + min * 60_000 + sec * 1000);
@@ -225,9 +226,34 @@ describe("table chat (row 77)", () => {
 });
 
 describe("seed", () => {
-  it("DEFAULT_TABLES mirror 20260926150500_study.sql's study_tables seed", () => {
-    const sql = readFileSync(join(__dirname, "../../supabase/migrations/20260926150500_study.sql"), "utf8");
+  it("DEFAULT_TABLES are the newest study-tables seed block (lib/seedMigrations.ts), on the original ids", () => {
+    const { file, block } = currentSeed(SEEDS.find((x) => x.name === "study-tables")!);
     const rows = DEFAULT_TABLES.map((t) => `  ('${t.id}', '${t.slug}', '${t.label}', '${t.location}', '${t.anchor}', '${t.kind}', ${t.seats}, ${t.position})`);
-    expect(sql).toContain(["INSERT INTO study_tables (id, slug, label, location, anchor, kind, seats, position) VALUES", rows.join(",\n"), "ON CONFLICT (slug) DO NOTHING;"].join("\n"));
+    expect(block).toContain(rows.join(",\n"));
+    expect(file > "20260926150500_study.sql").toBe(true);
+    // The original 7 café table ids stay; the café holds about 20 seats (row 270).
+    const original = readFileSync(join(__dirname, "../../supabase/migrations/20260926150500_study.sql"), "utf8");
+    for (const t of DEFAULT_TABLES) expect(original).toContain(`('${t.id}', '${t.slug}'`);
+    expect(DEFAULT_TABLES.filter((t) => t.location === "cafe").reduce((n, t) => n + t.seats, 0)).toBe(20);
+  });
+});
+
+describe("the café gate (row 177)", () => {
+  const cafe = DEFAULT_TABLES.filter((t) => t.location === "cafe");
+  const outdoor = DEFAULT_TABLES.filter((t) => t.location !== "cafe");
+  it("keeps café seats shut until the chapter 2 goal opens the café; outdoor tables stay open", async () => {
+    const m = memoryStudyStore(DEFAULT_TABLES, { cafeOpen: false });
+    for (const t of cafe) expect(await sit(m.store, A, { table_id: t.id, seat: 1 }, at(0)), t.slug).toMatchObject({ ok: false, status: 403, code: "cafe_closed" });
+    const closed = await getState(m.store, A, at(0));
+    expect(closed.ok && closed.data.tables.filter((t) => t.location === "cafe").map((t) => [t.closed, t.can_join])).toEqual(cafe.map(() => [true, false]));
+    expect(closed.ok && closed.data.tables.filter((t) => t.location !== "cafe").map((t) => [t.closed, t.can_join])).toEqual(outdoor.map(() => [false, true]));
+    expect(await sit(m.store, A, { table_id: outdoor[0].id, seat: 1 }, at(0))).toMatchObject({ ok: true });
+  });
+  it("opens every café seat once the goal completes", async () => {
+    const m = memoryStudyStore(DEFAULT_TABLES, { cafeOpen: false });
+    m.setCafeOpen(true);
+    expect(await sit(m.store, A, { table_id: cafe[0].id, seat: 1 }, at(0))).toMatchObject({ ok: true });
+    const open = await getState(m.store, B, at(0));
+    expect(open.ok && open.data.tables.every((t) => !t.closed)).toBe(true);
   });
 });

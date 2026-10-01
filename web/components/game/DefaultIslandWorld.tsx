@@ -71,7 +71,7 @@ import { useCoarsePointer } from "@/lib/game/useMediaQuery";
 import TouchControls from "./movement/TouchControls";
 import MuseumInterior from "./peaceful/MuseumInterior";
 import AudioController from "./AudioController";
-import type { AmbientPhase } from "@/lib/game/audio";
+import { AudioManager, type AmbientPhase } from "@/lib/game/audio";
 import { useMusicDirector } from "@/lib/game/useAudio";
 import DonateSheet from "./peaceful/DonateSheet";
 import { ShowcaseSheet, TrophySheet } from "./peaceful/ShowcaseSheets";
@@ -98,6 +98,9 @@ import CraftingSheet, { BeachBottle, Workbench, constrainWorkshop } from "./craf
 import StudySeats from "./study/StudySeats";
 import StudyHud from "./study/StudyHud";
 import CafeInterior from "./study/CafeInterior";
+import CafeGoalSheet from "./study/CafeGoalSheet";
+import CafeBuilding from "./study/CafeBuilding";
+import { CAFE_GRADE, CAFE_OWNER } from "@/lib/game/cafe";
 import { studyHoldsPrompt } from "@/lib/study/worldStore";
 import "@/lib/game/aerialFog";
 import { CURRENT, lookFx, type LookPreset } from "@/lib/game/lookPreset";
@@ -106,8 +109,8 @@ import { EventDecor, eventSpots, PostersSheet, TourneySheet } from "./SeasonalEv
 import { useIslandEvent, type IslandEvent } from "@/lib/game/seasonalEvents";
 import styles from "./DefaultIslandWorld.module.css";
 
-type Near = "enter" | "exit" | "board" | "display" | "desk" | "shelf" | "clock" | "notice" | "catch" | "cafe" | "museum" | "ruins" | "mailbox" | "monument" | "home" | "house" | "village" | "buy" | "claim" | "donate" | "report" | "fish" | "forage" | "net" | "museum_enter" | "cafe_enter" | "curator" | "closet" | "fitting" | "oracle_enter" | "altar" | "missions" | "ruins_exit" | "lantern" | "bench" | "bed" | "trophy" | "posters" | "cocoa" | "picnic" | null;
-type Sheet = "notice" | "letters" | "journal" | "trophies" | "showcase" | "closet" | "fitting" | "oracle" | "path" | "settings" | "missions" | "tourney" | "posters" | null;
+type Near = "enter" | "exit" | "board" | "display" | "desk" | "shelf" | "clock" | "notice" | "catch" | "cafe" | "museum" | "ruins" | "mailbox" | "monument" | "home" | "house" | "village" | "buy" | "claim" | "donate" | "report" | "fish" | "forage" | "net" | "museum_enter" | "cafe_enter" | "curator" | "closet" | "fitting" | "oracle_enter" | "altar" | "missions" | "ruins_exit" | "lantern" | "bench" | "bed" | "trophy" | "posters" | "cocoa" | "picnic" | "owner" | null;
+type Sheet = "notice" | "letters" | "journal" | "trophies" | "showcase" | "closet" | "fitting" | "oracle" | "path" | "settings" | "missions" | "tourney" | "posters" | "cafe" | null;
 const PHASE_NAMES: Record<IslandPhase, string> = { dawn: "Dawn", day: "Daylight", evening: "Evening", night: "Night" };
 const CLUBHOUSE_STATIONS: InteriorStation[] = [
   { id: "board", name: "Notice board", pos: HQ_BOARD_APPROACH, action: "board", range: 2.3 },
@@ -124,16 +127,19 @@ const NEAR_LABELS: Record<Exclude<Near, null>, string> = {
   museum_enter: "Enter the museum", cafe_enter: "Enter the café", curator: "Talk to the curator", closet: "Open the closet", fitting: "Try on outfits", oracle_enter: "Enter the Oracle temple", altar: "Consult the crystal",
   home: "Take the boat home", fish: "Cast your line", forage: "Gather", net: "Swing the net", claim: "Claim your plot", donate: "Donate your first catch to the museum", report: "Report to HQ", house: "Enter your house", village: "Take the boat to the village",
   buy: `Add a room · ${ROOM_PRICE.coins} coins + ${ROOM_PRICE.materials}`,
-  cafe: "Café · Opening soon", museum: "Museum · Closed for now", ruins: "Enter the ruins", missions: "Read the mission board", ruins_exit: "Back to the village", lantern: "Pick it up",
+  cafe: "Boarded up · help reopen it at the monument", museum: "Museum · Closed for now", ruins: "Enter the ruins", missions: "Read the mission board", ruins_exit: "Back to the village", lantern: "Pick it up",
   bench: "Sit on the bench", bed: "Sleep in your bed",
   trophy: "Read the tourney board", posters: "Look at the GENESIS posters", cocoa: "Get a hot cocoa", picnic: "Join the picnic",
+  owner: `Talk to ${CAFE_OWNER.name}`,
 };
-const CLOSED: Near[] = ["cafe", "museum", "monument"];
+const CLOSED: Near[] = ["museum", "monument"];
 /** The village bench in reach as a `tsi:sit` detail: IslandScene writes it each frame, E sits (or stands) there. */
 const benchSpot: { current: { x: number; z: number; yaw: number; seatY: number } | null } = { current: null };
 /** Distance from a point to a landmark's footprint edge. */
 const footprintDistance = (l: Landmark, x: number, z: number) => Math.hypot(Math.max(0, Math.abs(x - l.x) - (l.half?.[0] ?? 0)), Math.max(0, Math.abs(z - l.z) - (l.half?.[1] ?? 0)));
-const PROMPT_IDS: readonly Landmark["id"][] = ["notice", "catch", "cafe", "museum", "ruins", "mailbox", "monument"];
+const PROMPT_IDS: readonly Landmark["id"][] = ["notice", "catch", "museum", "ruins", "mailbox", "monument"];
+/** The café's prompt is its door's, open or boarded up (cafe-polish §2). */
+const CAFE_DOOR_RANGE = 1.4;
 type Spot = [number, number, number];
 const spot = (p: [number, number] | null): Spot | null => p && [p[0], 0, p[1]];
 const xz = (o: { x: number; z: number }): [number, number] => [o.x, o.z];
@@ -155,7 +161,7 @@ function villageLayout(v: Village) {
     benches: objectsOf("bench", v),
     lamps: objectsOf("lamp", v),
     bridges: objectsOf("bridge", v).map(o => ({ ...o, y: levelAt(v.map, worldToCellX(v.map, o.x), worldToCellZ(v.map, o.z)) * LEVEL_STEP - 0.065 })),
-    doors: { hq: landmarkPoint("hq", "door", v), oracle: landmarkPoint("oracle", "door", v), boat: landmarkPoint("wharf", "door", v) },
+    doors: { hq: landmarkPoint("hq", "door", v), oracle: landmarkPoint("oracle", "door", v), boat: landmarkPoint("wharf", "door", v), cafe: landmarkPoint("cafe", "door", v) },
     spawns: {
       start: villageSpawn(v), returned: spot(landmarkPoint("hq", "exit", v)), oracle: spot(landmarkPoint("oracle", "exit", v)),
       museum: spot(landmarkPoint("museum", "exit", v)), cafe: spot(landmarkPoint("cafe", "exit", v)), ruins: spot(landmarkPoint("ruins", "exit", v)), boat: spot(landmarkPoint("wharf", "exit", v)),
@@ -171,7 +177,7 @@ function villageLayout(v: Village) {
     underWharf: (x: number, z: number) => !!deck && x > deck.x0 - 0.4 && x < deck.x1 + 0.4 && z > deck.z0 - 0.4 && z < deck.z1 + 0.4,
   };
 }
-const SIGNS: Partial<Record<Landmark["id"], string>> = { cafe: "Café · Opening soon", museum: "Museum · Closed", ruins: "Ruins gate", notice: "Notices", catch: "Catch board", shop: "Shop", oracle: "Oracle temple" };
+const SIGNS: Partial<Record<Landmark["id"], string>> = { museum: "Museum · Closed", ruins: "Ruins gate", notice: "Notices", catch: "Catch board", shop: "Shop", oracle: "Oracle temple" };
 const BOTANICAL_TEXTURES = ["/assets/acnh/icons/flower_rose.png", "/assets/acnh/icons/flower_cosmos.png"];
 useTexture.preload(BOTANICAL_TEXTURES);
 useTexture.preload("/assets/acnh/interior/hq-parquet-albedo.png");
@@ -239,6 +245,7 @@ function IslandScene({ identity, level, devAt, exitFrom, peaceful, fishSpot, fis
       : within(doors.boat, 1.6) ? "home"
       : within(layout.fitting, 1.5) ? "fitting"
       : within(doors.oracle, 1.6) ? "oracle_enter"
+      : within(doors.cafe, CAFE_DOOR_RANGE) ? (progression.opened.includes("cafe") ? "cafe_enter" : "cafe")
       : within(layout.missions?.at ?? null, 1.5) ? "missions" : null;
     const b = benchSeat(player.current.x, player.current.z, 1.3, v, layout.benches);
     benchSpot.current = b && { ...b, seatY: island.ground(b.x, b.z) + BENCH_SEAT_TOP };
@@ -251,13 +258,15 @@ function IslandScene({ identity, level, devAt, exitFrom, peaceful, fishSpot, fis
       for (const l of layout.prompts) {
         // An opened goal building (boards off) no longer shows its closed prompt.
         const opened = progression.opened.includes(l.id as WorldGoalId);
-        if (opened && l.id !== "museum" && l.id !== "cafe") continue;
+        if (opened && l.id !== "museum") continue;
         const d = footprintDistance(l, player.current.x, player.current.z);
-        if (opened && d < best) { best = d; next = l.id === "cafe" ? "cafe_enter" : "museum_enter"; continue; }
+        if (opened && d < best) { best = d; next = "museum_enter"; continue; }
         if (d < best) { best = d; next = l.id === "museum" && chapter.donate ? "donate" : l.id as Near; }
       }
     }
-    if (!next && !fishing && !studyHoldsPrompt()) next = peacefulNear(island.map, layout.water, player.current.x, player.current.z, fishSpot);
+    // A study seat's prompt (or your seat) takes E: the island offers nothing while it is up.
+    if (studyHoldsPrompt()) next = null;
+    else if (!next && !fishing) next = peacefulNear(island.map, layout.water, player.current.x, player.current.z, fishSpot);
     if (near.current !== next) { near.current = next; onNear(next); }
   }, -2);
   return (
@@ -359,10 +368,10 @@ function VillageLandmarks({ layout, ground, opened, stage, ceremony, light }: { 
     {shop && <group position={at(shop)}><ACNHBuilding id="shop" /></group>}
     {fitting && <GLBProp url="/assets/acnh/furniture/fitting-room.glb" position={[fitting[0], ground(...fitting), fitting[1] + 0.45]} scale={0.1} rotation={[0, Math.PI, 0]} />}
     {oracle && <group position={at(oracle)}><ACNHBuilding id="oracle" /></group>}
-    {cafe && <group position={at(cafe)}><ACNHParts parts={CHALET_VARIANTS.yellow} /></group>}
+    {cafe && <group position={at(cafe)}><CafeBuilding open={opened.includes("cafe")} light={light} /></group>}
     {museum && <group position={at(museum)}><ACNHParts parts={CHALET_VARIANTS.red} /></group>}
-    {/* Boarded doors: the existing log fence across each closed entrance. */}
-    {[cafe, museum].filter(l => l && !opened.includes(l.id as WorldGoalId)).map(l => [-0.6, 0.6].map(dx => <NatureFence key={`${l!.id}${dx}`} position={[l!.x + dx, ground(l!.x, l!.z), front(l!) - 0.35]} variant={1} />))}
+    {/* Boarded doors: the existing log fence across the museum's entrance (the café boards its own, CafeBuilding). */}
+    {[museum].filter(l => l && !opened.includes(l.id as WorldGoalId)).map(l => [-0.6, 0.6].map(dx => <NatureFence key={`${l!.id}${dx}`} position={[l!.x + dx, ground(l!.x, l!.z), front(l!) - 0.35]} variant={1} />))}
     {ruins && [-1.2, 0, 1.2].map(dz => <group key={dz} position={[ruins.x, ground(ruins.x, ruins.z + dz), ruins.z + dz]} rotation={[0, Math.PI / 2, 0]}><NatureFence position={[0, 0, 0]} variant={1} /></group>)}
     {ruins && [-1.9, 1.9].map(dz => <GLBProp key={dz} url="/assets/acnh/props/stone-lantern.glb" position={[ruins.x, ground(ruins.x, ruins.z + dz), ruins.z + dz]} />)}
     {monument && <ClubMonument position={at(monument)} stage={stage} ceremony={ceremony} />}
@@ -462,8 +471,8 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   const [sheet, setSheet] = useState<Sheet>(() => (devHome.get("sheet") === "path" ? "path" : null));
   const [shopTab, setShopTab] = useState<"outfits" | "furniture" | null>(null);
   const [mapOpen, setMapOpen] = useState(true);
-  const plot = useDefaultIslandPlot();
   const progression = useProgressionWorld();
+  const plot = useDefaultIslandPlot(progression.completedGoals);
   const ceremony = useCeremony(progression.ceremonyGoal, progression.forceCeremony);
   const chapterActions = useChapterActions();
   const chapterFlags = useMemo(() => ({ claim: chapterActions.claim, donate: chapterActions.donate, report: chapterActions.report }),
@@ -542,10 +551,12 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   const sun = preset ? null : conditions.sun;
   const light = useMemo(() => withWeather(withSeason(islandLight(lookPreset, phase, sun), look), weather), [phase, look, weather, lookPreset, sun]);
   const conditionsLabel = `${season.season[0].toUpperCase()}${season.season.slice(1)}${Object.values(season.weights).some(w => w > 0 && w < 1) ? " (changing)" : ""} · ${weather[0].toUpperCase()}${weather.slice(1)}`;
-  const grade = inside ? CLUBHOUSE_LIGHTING[phase].grade : light.grade;
+  const grade = inside === "cafe" ? { ...CLUBHOUSE_LIGHTING[phase].grade, ...CAFE_GRADE } : inside ? CLUBHOUSE_LIGHTING[phase].grade : light.grade;
   const atHome = site === "home";
   const act = useCallback((action: Near) => {
     if (action === "notice") { setSheet("notice"); return; }
+    if (action === "cafe") { setSheet("cafe"); return; }
+    if (action === "owner") { window.dispatchEvent(new CustomEvent("tsi:cafe-owner-talk")); return; }
     // The catch board's clues are the collection journal's.
     if (action === "catch") { setBagOpen(true); return; }
     if (action === "mailbox") { setSheet("letters"); return; }
@@ -599,6 +610,8 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
     }
     if (fading || !action || !["enter", "exit", "house", "home", "village", "museum_enter", "cafe_enter", "oracle_enter", "ruins", "ruins_exit"].includes(action)) return;
     setFading(true); setNear(null);
+    // The café's door sounds as you go in and out (the café bell, row 125, replaces enter.ogg when it lands).
+    if (action === "cafe_enter" || (action === "exit" && inside === "cafe")) AudioManager.playSFX(action === "exit" ? "exit" : "enter");
     window.setTimeout(() => {
       if (action === "enter") setInside("hq");
       if (action === "house") setInside("house");
@@ -672,7 +685,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       </Canvas>
       <header className={styles.heading}>
         <h1>{site === "ruins" ? "The ruins" : inside === "oracle" ? "Oracle temple" : inside === "museum" ? "Museum" : inside === "cafe" ? "Café" : inside === "hq" ? "Clubhouse" : inside === "house" ? "Your house" : atHome ? "Your island" : "Tethos Island"}</h1>
-        <p>{!inside && !atHome && site === "village" && islandEvent ? `${islandEvent.goal.title} is on.` : "A little space to make our own."}</p>
+        <p>{inside === "cafe" ? "Warm drinks and quiet tables. Find a seat to study." : !inside && !atHome && site === "village" && islandEvent ? `${islandEvent.goal.title} is on.` : "A little space to make our own."}</p>
       </header>
       <button ref={optionsToggleRef} className={styles.panelToggle} aria-expanded={optionsOpen} aria-controls="island-options" onClick={() => setOptionsOpen((open) => !open)}>View options</button>
       <section id="island-options" className={styles.panel} data-open={optionsOpen} aria-label="Island view and graphics" onKeyDown={(event) => {
@@ -723,7 +736,8 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       <FishingOverlay rod={peaceful.rod} onActiveChange={setFishing} />
       <DonateSheet open={donateOpen} onClose={() => setDonateOpen(false)} onDonated={loadMuseum} />
       <ToastHub />
-      <StudyHud />
+      {/* Study tables are in the village and the café only: the HUD (its polling and session) lives there. */}
+      {(inside === "cafe" || (!inside && site === "village")) && <StudyHud />}
       <CraftingSheet />
       <CollectionBook open={bagOpen} onClose={() => setBagOpen(false)} />
       {!bagOpen && <button className={styles.bagButton} onClick={() => setBagOpen(true)} aria-label="Open your collection journal"><kbd>{keyName(identity.settings.key_bindings.openJournal)}</kbd> Journal</button>}
@@ -754,11 +768,14 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       <MissionBoardSheet open={sheet === "missions"} onClose={() => setSheet(null)} gateNote={gate.open ? null : gate.reason} />
       <TourneySheet open={sheet === "tourney"} onClose={() => setSheet(null)} />
       <PostersSheet open={sheet === "posters"} onClose={() => setSheet(null)} event={islandEvent} />
+      <CafeGoalSheet open={sheet === "cafe"} onClose={() => setSheet(null)} />
       {site === "ruins" && <CombatHud player={player} />}
       {site === "ruins" ? <div className={styles.controls} data-combat><span>{[moveKeys.forward, moveKeys.left, moveKeys.back, moveKeys.right].map(k => <kbd key={k}>{keyName(k)}</kbd>)} Move</span><span>Mouse Aim</span><span>Click Attack</span><span><kbd>{keyName(moveKeys.jump)}</kbd> Jump</span><span><kbd>{keyName(moveKeys.dash)}</kbd> Dodge</span><span>{SLOT_IDS.map(s => <kbd key={s}>{keyName(abilityKeys[s])}</kbd>)} Abilities</span><span><kbd>{keyName(abilityKeys.swap)}</kbd> Swap</span><span><kbd>E</kbd> Interact</span></div>
+      // Indoors you walk (cafe-polish §4): no run, jump, dash, zoom or map.
+      : inside ? <div className={styles.controls}><span>{[moveKeys.forward, moveKeys.left, moveKeys.back, moveKeys.right].map(k => <kbd key={k}>{keyName(k)}</kbd>)} Walk</span><span><kbd>E</kbd> Interact</span><span><kbd>J</kbd> Quests</span><span><kbd>{keyName(identity.settings.key_bindings.openJournal)}</kbd> Collection</span></div>
       : <div className={styles.controls}><span>{[moveKeys.forward, moveKeys.left, moveKeys.back, moveKeys.right].map(k => <kbd key={k}>{keyName(k)}</kbd>)} Walk</span><span><kbd>{keyName(moveKeys.sprint)}</kbd> Run</span><span><kbd>{keyName(moveKeys.jump)}</kbd> Jump</span>{peaceful.glider && <span><kbd>{keyName(moveKeys.jump)}</kbd> again in the air Glide</span>}<span><kbd>{keyName(moveKeys.dash)}</kbd> Dash</span><span><kbd>E</kbd> Interact</span><span><kbd>Z</kbd> Zoom</span><span><kbd>{keyName(identity.settings.key_bindings.openMap)}</kbd> Map</span><span><kbd>J</kbd> Quests</span><span><kbd>{keyName(identity.settings.key_bindings.openJournal)}</kbd> Collection</span><span><kbd>{keyName(moveKeys.sneak)}</kbd> Sneak</span></div>}
       {/* Clear of the minimap (left) and the audio widget (bottom right). */}
-      {touch && (!inside || inside === "cafe") && <TouchControls left={212} bottom={64} />}
+      {touch && (!inside || inside === "cafe") && <TouchControls left={212} bottom={64} walkOnly={inside === "cafe"} />}
       <p className={styles.touchControls}>Tap the ground to move</p>
       <div className={styles.fade} data-active={fading} aria-hidden="true" />
       <LoadingStatus />

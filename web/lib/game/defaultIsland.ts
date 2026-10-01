@@ -47,7 +47,9 @@ export const LANDMARK_INFO: Record<LandmarkId, LandmarkInfo> = {
   notice: { label: "Notice board", open: true, half: [0.75, 0.25], color: "#8A6A4A" },
   catch: { label: "Catch board", open: true, half: [0.75, 0.25], color: "#3E7FA6" },
   shop: { label: "Shop", open: true, half: [3.25, 1.8], color: "#2B4EA0" },
-  cafe: { label: "Café", open: false, half: [2.5, 2.1], color: "#C9A227", exit: [0, -2.9] },
+  // The prompt is the door's (cafe-polish §2); you come back out past its range.
+  // A 5 x 5 footprint on the grid (art/cafe/build_building.py), its porch inside it.
+  cafe: { label: "Café", open: false, half: [2.5, 2.5], color: "#C9A227", door: [0, -2.8], exit: [0, -4.3] },
   oracle: { label: "Oracle temple", open: true, half: [3.4, 1.7], color: "#2E8B8B", door: [0, -2.2], exit: [0, -3.1] },
   museum: { label: "Museum", open: false, half: [2.5, 2.1], color: "#9A4A3A", exit: [0, -3] },
   ruins: { label: "Ruins gate", open: false, half: [0.4, 1.6], color: "#6F6A62", exit: [-1.6, 0] },
@@ -81,15 +83,15 @@ export const isCedar = (seed: number) => seed % TREE_SLOTS === 3;
 export const turn = (dx: number, dz: number, yaw = 0): [number, number] =>
   yaw ? [dx * Math.cos(yaw) + dz * Math.sin(yaw), -dx * Math.sin(yaw) + dz * Math.cos(yaw)] : [dx, dz];
 
-/** Landmarks placed on the map, in the table's order. */
-export function landmarks(v: Village = village()): Landmark[] {
+/** Landmarks placed on the map, in the table's order; `opened` lists the buildings completed club goals have opened (the café, the museum). */
+export function landmarks(v: Village = village(), opened: readonly string[] = []): Landmark[] {
   const placed = new Map(objectsOf("landmark", v).map(o => [o.id, o]));
   return LANDMARK_IDS.flatMap((id) => {
     const o = placed.get(id);
     if (!o) return [];
     const { door: _door, exit: _exit, ...info } = LANDMARK_INFO[id];
     void _door; void _exit;
-    return [{ id, x: o.x, z: o.z, ...info, ...(o.yaw ? { yaw: o.yaw } : {}) }];
+    return [{ id, x: o.x, z: o.z, ...info, open: info.open || opened.includes(id), ...(o.yaw ? { yaw: o.yaw } : {}) }];
   });
 }
 export const landmark = (id: LandmarkId, v: Village = village()): Landmark | null => landmarks(v).find(l => l.id === id) ?? null;
