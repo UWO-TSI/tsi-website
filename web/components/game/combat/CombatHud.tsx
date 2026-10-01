@@ -46,7 +46,7 @@ export default function CombatHud({ player }: { player: React.RefObject<{ x: num
       </div>
       {kit && <small className={styles.kitLine}>{kit.subclass.name} · {kit.subclass.passive.name}{rt.transform ? ` · ${rt.transform.name}` : ""}
         {summons ? ` · Summons ${minions.reduce((n, u) => n + (u.def.cost ?? 1), 0)}/${kit.capacity}` : ""}{usesTotems ? ` · Totems ${totems.length}/${CAPS.totems}` : ""}</small>}
-      <ol className={styles.abilityBar}>{SLOT_IDS.map((id, i) => { const a = rt.slots[i]; return <li key={id} data-cooling={rt.cooldowns[id] > 0 || undefined} data-rune={a?.incantation || undefined} title={a?.description}>
+      <ol className={styles.abilityBar}>{SLOT_IDS.map((id, i) => { const a = rt.slots[i]; return <li key={`${id}-${rt.denied[id]}`} data-denied={rt.denied[id] > 0 || undefined} data-cooling={rt.cooldowns[id] > 0 || undefined} data-rune={a?.incantation || undefined} title={a?.description}>
         <kbd>{keys[id].toUpperCase()}</kbd><span>{a?.name ?? (kit ? "Empty" : "Choose a subclass")}</span>
         {a && <small>{a.incantation ? "Rune · " : ""}{a.energy}</small>}
         {rt.cooldowns[id] > 0 && <em>{Math.ceil(rt.cooldowns[id])}</em>}

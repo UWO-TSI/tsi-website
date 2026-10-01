@@ -59,6 +59,8 @@ export interface CombatRuntime {
     speed: number; still: number; last: Vec | null;
   };
   cooldowns: Record<AbilityId, number>;
+  /** Presses refused because the slot can't be ready in time (actions.ts runInputs): the HUD pulses the slot on each. */
+  denied: Record<AbilityId, number>;
   enemies: Enemy[];
   projectiles: Projectile[]; units: Unit[]; buffs: Buff[]; floaters: Floater[]; blasts: Blast[];
   casting: { id: number; rune: "spark" | "binding"; aim: Vec; slot: number; ability: Ability } | null;
@@ -90,7 +92,7 @@ export function createRuntime(): CombatRuntime {
       attackCd: 0, swing: 0, dodgeAge: null, dodgeCd: 0, dodgeDir: { x: 0, z: 1 },
       aim: { x: 0, z: 0 }, facing: 0, hurt: 0, downFor: 0, armed: false,
       shield: 0, shieldFor: 0, dash: null, impulse: { x: 0, z: 0 }, speed: 1, still: 0, last: null },
-    cooldowns: { slot1: 0, slot2: 0, slot3: 0, slot4: 0, swap: 0 },
+    cooldowns: { slot1: 0, slot2: 0, slot3: 0, slot4: 0, swap: 0 }, denied: { slot1: 0, slot2: 0, slot3: 0, slot4: 0, swap: 0 },
     enemies: [], projectiles: [], units: [], buffs: [], floaters: [], blasts: [],
     casting: null, kit: null, slots: [null, null, null, null],
     passive: { element: null, target: null, stacks: 0, momentum: 0, momentumT: 0, procs: 0 }, transform: null,

@@ -24,7 +24,7 @@ import { BOSS_CENTER, ESCORT_PATHS, EXIT_SPOT, FETCH_SPOTS, GATE_PLAZA, RUINS_BR
 import { combat, publishCombat, takeMissionQueue, type AbilityId } from "@/lib/game/combat/runtime";
 import { useAbilityKeys } from "@/lib/game/movement/keys";
 import { screenOf } from "../movement/moveFx";
-import { attack, spawnWave, triggerAbility } from "@/lib/game/combat/actions";
+import { BUFFER, createInputs, runInputs, spawnWave } from "@/lib/game/combat/actions";
 import { missionEvent } from "@/lib/game/combat/abilities";
 import { stepCombat } from "@/lib/game/combat/encounter";
 import { claimBossReward, postKill, postMissionEvents } from "@/lib/game/combat/progression";
@@ -102,7 +102,7 @@ export default function RuinsScene({ level, phase, light, look, weather, liteMod
   const ruins = useMemo(() => createRuins(), []);
   const terrain = useMemo(() => ({ ...ISLAND_TERRAIN, grass: look.grass }), [look.grass]);
   const { camera, gl } = useThree();
-  const input = useRef({ ndc: new THREE.Vector2(0, 0), hasPointer: false, attack: false, abilities: [] as AbilityId[] });
+  const input = useRef({ ndc: new THREE.Vector2(0, 0), hasPointer: false, presses: createInputs() });
   const near = useRef<RuinsNear>(null);
   const zones = useRef({ circle: false, gate: true });
   const syncAt = useRef(0);
@@ -125,17 +125,18 @@ export default function RuinsScene({ level, phase, light, look, weather, liteMod
   const focus = useRef(new THREE.Vector3(...spawn));
   useFollowCamera(focus, zoom, null);
 
-  // Mouse aim + click attack on the canvas; ability keys (remappable). Movement, Space's jump and Q's dash-dodge are PlayerAvatar's (the kit).
+  // Mouse aim + click attack on the canvas; ability keys (remappable). A click or key waits BUFFER s for its cooldown (runInputs).
+  // Movement, Space's jump and Q's dash-dodge are PlayerAvatar's (the kit).
   const keys = useAbilityKeys();
   useEffect(() => {
     const el = gl.domElement;
     const move = (e: PointerEvent) => { const r = el.getBoundingClientRect(); input.current.ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1); input.current.hasPointer = true; };
-    const down = (e: PointerEvent) => { if (e.button === 0) { move(e); input.current.attack = true; } };
-    const up = () => { input.current.attack = false; };
+    const down = (e: PointerEvent) => { if (e.button === 0) { move(e); input.current.presses.held = true; input.current.presses.attack = BUFFER; } };
+    const up = () => { input.current.presses.held = false; };
     const kd = (e: KeyboardEvent) => {
       if (e.repeat || (e.target instanceof HTMLElement && e.target.closest("input, textarea, select"))) return;
       const k = e.key.toLowerCase(), ability = (Object.keys(keys) as AbilityId[]).find(a => keys[a] === k);
-      if (ability) input.current.abilities.push(ability);
+      if (ability) input.current.presses.keys.push({ id: ability, left: BUFFER });
     };
     el.addEventListener("pointermove", move); el.addEventListener("pointerdown", down); window.addEventListener("pointerup", up);
     window.addEventListener("keydown", kd);
@@ -162,8 +163,7 @@ export default function RuinsScene({ level, phase, light, look, weather, liteMod
       if (p.downFor > 1.8) { missionEvent(rt, { type: "defeat" }); onDefeat(); }
     }
     // Inputs.
-    while (inp.abilities.length) triggerAbility(rt, inp.abilities.shift()!, me);
-    if (inp.attack) attack(rt, me);
+    if (runInputs(rt, inp.presses, me, Math.min(rawDelta, 0.05))) publishCombat(); // a refused key pulses its slot now
     // Timers, energy, enemies, projectiles, summons and totems (lib/game/combat/encounter.ts); ability dashes and knockback push PlayerAvatar.
     stepCombat(rt, me, dt, ruins.free);
     // Respawn (spawn-table enemies only) once dead long enough and you're away from the spot.

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ENEMIES, MISSIONS } from "./data";
-import { attack, combatPush, combatTuning, dashDodge, hurtPlayer, regenEnergy, startDodge, triggerAbility } from "./actions";
+import { BUFFER, attack, combatPush, combatTuning, createInputs, dashDodge, hurtPlayer, regenEnergy, runInputs, startDodge, triggerAbility } from "./actions";
 import { hitAmount, resolveCast } from "./abilities";
 
 /** One hit from the equipped weapon (systems damage formula), as `attack` lands it. */
@@ -146,5 +146,53 @@ describe("the ruins dodge on the movement kit (specs/movement.md)", () => {
     expect(combatTuning(1.2).walkSpeed).toBeCloseTo(7.4 * 1.2);
     expect(combatTuning(1.2).sprintSpeed).toBeCloseTo(12 * 1.2);
     expect(combatTuning(1).dashCooldown).toBeCloseTo(DODGE.duration + DODGE.cooldown);
+  });
+});
+
+describe("input buffering (combat polish 1)", () => {
+  const me = { x: 0, z: 0 }, frame = 1 / 60;
+  it("a click is a queued attack: a tap that goes down and up between two frames still swings", () => {
+    const rt = createRuntime(), q = createInputs();
+    rt.player.safe = false;
+    q.held = true; q.attack = BUFFER; q.held = false; // pointerdown, pointerup, then the frame
+    runInputs(rt, q, me, frame);
+    expect(rt.player.attackCd).toBeGreaterThan(0);
+    expect(q.attack).toBe(0); // consumed once
+  });
+  it("a click in the last 150 ms of the cooldown swings the moment it is back; an earlier one is dropped", () => {
+    const rt = createRuntime(), q = createInputs();
+    rt.player.attackCd = 0.1; q.attack = BUFFER;
+    let swung = -1;
+    for (let t = 0; t < 0.3; t += frame) { const before = rt.player.attackCd; runInputs(rt, q, me, frame); stepCombat(rt, me, frame); if (swung < 0 && rt.player.attackCd > before) swung = t; }
+    expect(swung).toBeGreaterThan(0.09);
+    expect(swung).toBeLessThan(0.13);
+    const late = createRuntime(), r = createInputs();
+    late.player.attackCd = 0.3; r.attack = BUFFER;
+    for (let t = 0; t < 0.5; t += frame) { runInputs(late, r, me, frame); stepCombat(late, me, frame); }
+    expect(late.player.attackCd).toBe(0); // never swung
+  });
+  it("a click during the dodge lands as the dodge ends", () => {
+    const rt = createRuntime(), q = createInputs();
+    startDodge(rt, { x: 1, z: 0 });
+    rt.player.dodgeAge = DODGE.duration - 0.05; q.attack = BUFFER;
+    for (let t = 0; t < 0.2; t += frame) { runInputs(rt, q, me, frame); stepCombat(rt, me, frame); }
+    expect(rt.player.swing).toBeGreaterThan(0);
+  });
+  it("an ability pressed in the last 150 ms of its cooldown fires when it is ready", () => {
+    const rt = caster(), q = createInputs();
+    rt.cooldowns.slot1 = 0.1;
+    q.keys.push({ id: "slot1", left: BUFFER });
+    for (let t = 0; t < 0.2 && !rt.casting; t += frame) { runInputs(rt, q, me, frame); stepCombat(rt, me, frame); }
+    expect(rt.casting).not.toBeNull();
+    expect(rt.denied.slot1).toBe(0);
+  });
+  it("an ability pressed with more cooldown than that pulses its slot and never fires later", () => {
+    const rt = caster(), q = createInputs();
+    rt.cooldowns.slot1 = 0.6;
+    q.keys.push({ id: "slot1", left: BUFFER });
+    expect(runInputs(rt, q, me, frame)).toBe(true); // refused: the scene publishes the pulse at once
+    expect(rt.denied.slot1).toBe(1);
+    for (let t = 0; t < 1; t += frame) { runInputs(rt, q, me, frame); stepCombat(rt, me, frame); }
+    expect(rt.casting).toBeNull();
   });
 });

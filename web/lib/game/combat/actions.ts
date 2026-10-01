@@ -120,6 +120,31 @@ export function hurtPlayer(rt: CombatRuntime, amount: number, from: Vec, player:
   return damage;
 }
 
+/** Presses wait this long for the attack or a slot to be ready: a tap between two frames, a press just before a cooldown ends. */
+export const BUFFER = 0.15;
+/** The player's presses for the frame loop: the mouse button held, a queued click (seconds it still waits), queued keys. */
+export interface InputQueue { held: boolean; attack: number; keys: { id: AbilityId; left: number }[] }
+export const createInputs = (): InputQueue => ({ held: false, attack: 0, keys: [] });
+
+/**
+ * One frame of presses. A held or queued click attacks as soon as it can. A key fires once its slot is ready, waiting up
+ * to BUFFER; a slot that can't be ready in time counts in `rt.denied` (its slot pulses). Returns true when one was denied.
+ */
+export function runInputs(rt: CombatRuntime, q: InputQueue, me: Vec, dt: number, random = Math.random): boolean {
+  if ((q.held || q.attack > 0) && attack(rt, me, random)) q.attack = 0;
+  q.attack = Math.max(0, q.attack - dt);
+  let denied = false;
+  for (let i = 0; i < q.keys.length; i++) {
+    const k = q.keys[i], cd = rt.cooldowns[k.id];
+    let done = true;
+    if (cd > k.left) { rt.denied[k.id]++; denied = true; }
+    else if (cd > 0 || rt.casting || rt.player.dash) done = (k.left -= dt) <= 0;
+    else triggerAbility(rt, k.id, me, random);
+    if (done) q.keys.splice(i--, 1);
+  }
+  return denied;
+}
+
 /** Keys: slots 1–4 run the equipped kit abilities; R swaps weapons. */
 export function triggerAbility(rt: CombatRuntime, id: AbilityId, player: Vec = { x: 0, z: 0 }, random = Math.random): boolean {
   const p = rt.player;
