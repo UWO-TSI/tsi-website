@@ -12,6 +12,9 @@ import { useEffect, useState } from "react";
 import { useSearch } from "@/lib/game/useMediaQuery";
 import { COINS } from "@/lib/economy";
 import { studyDemo } from "@/lib/study/demo";
+import { settlementToast } from "@/lib/study/settlement";
+import { AudioManager } from "@/lib/game/audio";
+import { toast } from "../ToastHub";
 import { httpStudyTransport, type Board, type StudyTransport } from "@/lib/study/transport";
 import { formatClock, useStudySession, type StudyHook } from "@/lib/study/useStudySession";
 import { seatAvatar, setWorldStudy, useWorldStudy } from "@/lib/study/worldStore";
@@ -66,12 +69,13 @@ function Hud({ transport }: { transport?: StudyTransport }) {
     return () => window.removeEventListener("keydown", key);
   });
 
+  // Settlement (cafe-polish §5): a coin toast and the confirm chime (the café bell when it lands, row 125).
   const ended = study.lastEnded;
-  const [dismissed, setDismissed] = useState<string | null>(null);
   useEffect(() => {
-    if (!ended) return;
-    const t = window.setTimeout(() => setDismissed(ended.id), 6000);
-    return () => window.clearTimeout(t);
+    const told = ended && settlementToast(ended);
+    if (!told) return;
+    toast(told.text);
+    if (told.coins > 0) AudioManager.playSFX("confirm");
   }, [ended]);
 
   return <>
@@ -83,10 +87,6 @@ function Hud({ transport }: { transport?: StudyTransport }) {
       <Timer study={study} />
       {!study.chatMuted && <Chat study={study} />}
     </div>}
-    {!session && ended && dismissed !== ended.id && <p className={world.actionNote} role="status">
-      {ended.end_reason === "finished" ? "Session complete" : ended.end_reason === "timeout" ? "Session ended after 5 minutes away" : "You left your seat"}
-      {` · +${ended.coins_paid ?? ended.coins_pending} ${COINS.symbol} · ${ended.minutes_completed} focus min`}
-    </p>}
     {study.error && (near || session) && <p className={world.actionNote} role="alert">{study.error}</p>}
     {boardOpen && <BoardSheet study={study} transport={transport ?? httpStudyTransport} onClose={() => setBoardOpen(false)} />}
   </>;
