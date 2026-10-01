@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { advanceMove, clearSpot, createMoveSim, createMoveState, interpolated, slopeAt, standWorld, stepMove, topSpeed, towards, walkTo, MOVE_TUNING as T, NO_INPUT, STEP, type MoveEvent, type MoveInput, type MoveState, type MoveTuning, type MoveWorld } from "./sim";
-import { COURSE_GATES, COURSE_SPAWN, GLIDE_SPAWN, NEW_LAP, course, gateAt, lapStep, routePilot } from "./course";
+import { COURSE_GATES, COURSE_SPAWN, GLIDE_SPAWN, NEW_LAP, SLIDE_GAP, SLIDE_SPAWN, course, gateAt, lapStep, routePilot, type RouteStep } from "./course";
 import { islandOf } from "../defaultIsland";
 import { bugReaction, SNEAK_SPEED } from "../peaceful";
 import { villageOf, type MapObject } from "../villageMap";
@@ -1011,6 +1011,42 @@ describe("the slide (row 274)", () => {
     expect(landed(slid)).toBeGreaterThan(landed(walked) + 0.5);
   });
 
+  it("in the lab's slide lane: only a slide-jump clears the 7-tile gap, the launch carries a slide off the lip, the long ramp and the banks speed one up", () => {
+    const w = islandOf(course());
+    const fly = (route: RouteStep[], from: [number, number]) => {
+      const pilot = routePilot(route), out: MoveEvent[] = [];
+      let s = createMoveState(from[0], from[1], w), top = 0;
+      for (let input = pilot(s, STEP), n = 0; input && n < 2400; input = pilot(s, STEP), n++) { s = stepMove(s, { ...NO_INPUT, ...input }, STEP, w); out.push(...s.events); top = Math.max(top, speedOf(s)); }
+      return { s, out, k: kinds(out), top };
+    };
+    const up: RouteStep[] = [{ to: [17.5, 27.5], sprint: true }], far = SLIDE_GAP[3] + 0.5, lip = SLIDE_GAP[2] - 0.5;
+    expect(lip).toBe(44.5);
+    const across = fly([...up, { to: [17.5, 40], sprint: true, move: "dash", r: 0.4 }, { to: [17.5, 44.2], crouch: true, move: "jump", r: 0.35 }, { to: [17.5, 56] }], SLIDE_SPAWN);
+    expect(across.k).toEqual(expect.arrayContaining(["dashslide", "slidejump"]));
+    expect(across.k).not.toContain("splash");
+    expect(across.k).not.toContain("mantle");
+    expect(across.out.find(e => e.kind === "land")!.z).toBeGreaterThan(far - 0.35);
+    for (const short of [
+      [...up, { to: [17.5, 43.9], sprint: true, move: "jump", r: 0.35 }, { to: [17.5, 56] }], // a long jump
+      [...up, { to: [17.5, 38], sprint: true }, { to: [17.5, 44.2], sprint: true, crouch: true, move: "jump", r: 0.35 }, { to: [17.5, 56] }], // a sprint's slide-jump
+    ] as RouteStep[][]) expect(fly(short, SLIDE_SPAWN).k).toContain("splash");
+    // A dash-jump at the lip falls short and at best catches the far ledge (a mantle), never lands across.
+    const dj = fly([...up, { to: [17.5, 43.4], sprint: true, move: "dash-jump", r: 0.35 }, { to: [17.5, 56] }], SLIDE_SPAWN);
+    expect(dj.k.some(k => k === "mantle" || k === "splash")).toBe(true);
+    // The ramp launch: up the tower, dash, slide down its ramp and off the lip: a long way out at speed, into a land-slide.
+    const launch = fly([{ to: [10, 33.5], sprint: true, move: "dash", r: 0.3 }, { to: [10, 40.4], crouch: true }, { to: [10, 56], crouch: true }], [10, 27.5]);
+    const landed = launch.out.find(e => e.kind === "land")!;
+    expect(landed.z).toBeGreaterThan(43);
+    expect(landed.speed).toBeGreaterThan(15);
+    expect(launch.k).toContain("landslide");
+    // The long ramp and the banks: a slide down either goes on much further than the same slide on flat ground (13 u).
+    for (const x of [3, -3.5]) {
+      const r = fly([{ to: [x, 35.5], sprint: true }, { to: [x, 58], crouch: true }], [x, 27.5]);
+      const start = r.out.find(e => e.kind === "slide")!, stand = r.out.find(e => e.kind === "stand")!;
+      expect(stand.z - start.z, `x ${x}`).toBeGreaterThan(15);
+    }
+  });
+
   it("walk only (the café): crouching at a walk never slides", () => {
     const out: string[] = [];
     drive(createMoveState(0, 0, flat), flat, 4, time => ({ x: Math.sin(time), z: Math.cos(time), sneak: Math.floor(time * 3) % 2 === 0 }), q => out.push(...kinds(q.events)));
@@ -1020,7 +1056,7 @@ describe("the slide (row 274)", () => {
   it("never grounds on water, ends inside something or gets stuck sliding at walls, cliff edges, ramps and water, fuzzed", () => {
     const objects: MapObject[] = [{ id: "cafe", kind: "landmark", x: 3.5, z: -3.4 }, { id: "r1", kind: "rock", x: -2, z: 2, model: "rock-a" }];
     const edges = grid(20, 20, (x, z) => (x === -3 && (z === 4 || z === 5) ? [0, Surface.Ramp] : [x >= 1 && z >= 1 ? CLIFF_LEVELS : x <= -4 && z >= 4 ? CLIFF_LEVELS : 0, x <= -7 || z <= -8 ? W : G]), objects);
-    for (const [w, starts] of [[edges, [[-1, -1], [0, 0], [-2, 4.5], [-5, -5]]], [islandOf(course()), [[-17, -10], [6.5, 21], [12, -20], [-18, 26], [15, 1]]]] as const) {
+    for (const [w, starts] of [[edges, [[-1, -1], [0, 0], [-2, 4.5], [-5, -5]]], [islandOf(course()), [[-17, -10], [6.5, 21], [12, -20], [-18, 26], [15, 1], [17.5, 30], [17.5, 43], [10, 33], [3, 35], [-3.5, 36], [17.5, 53]]]] as const) {
       let seed = 23;
       const rand = () => ((seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648);
       for (const [sx, sz] of starts) for (let run = 0; run < 4; run++) {

@@ -23,7 +23,7 @@ import { WEAPONS } from "@/lib/game/combat/data";
 import { STUCK_TIME, advanceMove, clearSpot, createMoveSim, createMoveState, interpolated, topSpeed, towards, MOVE_TUNING, NO_INPUT, type MoveEvent, type MoveInput, type MoveSim, type MoveState, type MoveTuning, type MoveWorld } from "@/lib/game/movement/sim";
 import { crouchKey, useKeyboardLocked, useMoveKeys } from "@/lib/game/movement/keys";
 import { routePilot, type RouteStep } from "@/lib/game/movement/course";
-import { BASE_FOV, EVENT_CLIP, MOVE_JUICE, TAKEOFF, applyFov, liveWind, screenOf, touchStick, useMoveParticles, type MoveJuice, type MoveTelemetry } from "./movement/moveFx";
+import { BASE_FOV, EVENT_CLIP, MOVE_JUICE, TAKEOFF, applyFov, liveWind, momentumOf, screenOf, touchStick, useMoveParticles, type MoveJuice, type MoveTelemetry } from "./movement/moveFx";
 import { cooldownWisp, dashBurst, dashReady as dashBack, footstep, groundUnder, handPuff, landKind, landing, leafBits, puffRing, scuff, settle, slideBurst, slidePop, slideTrail, splash, streak, takeoff, trail, type GroundKind } from "@/lib/game/movement/juice";
 
 /**
@@ -509,7 +509,7 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
     const fast = THREE.MathUtils.clamp((speed - t.walkSpeed) / Math.max(0.1, topSpeed(t) - t.walkSpeed), 0, 1);
     applyFov(camera, BASE_FOV + j.fovKick * fast + f.punch, Math.min(rawDelta, 0.1));
 
-    if (telemetry) Object.assign(telemetry.current, { x, y, z, speed, mode: state.mode, hops: state.hops, dashReady, long: state.long });
+    if (telemetry) Object.assign(telemetry.current, { x, y, z, speed, mode: state.mode, hops: state.hops, dashReady, long: state.long, momentum: momentumOf(state, speed, t.walkSpeed, t.sprintSpeed), slideJump: state.slideJump });
     const last = reported.current;
     if (!last || Math.abs(last.x - x) + Math.abs(last.y - y) + Math.abs(last.z - z) > 1e-4) {
       (reported.current ??= new THREE.Vector3()).set(x, y, z);

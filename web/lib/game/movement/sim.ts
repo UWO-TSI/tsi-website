@@ -97,7 +97,7 @@ export const MOVE_TUNING = {
   slideSlope: 20, // u/s² along the slope × its sine: faster downhill, slower uphill
   slideTurn: 2.2, // heading ease toward the stick (1/s): gentle
   slideJumpHeight: 0.55, // a slide-jump: lower and longer than a jump
-  slideJumpApexTime: 0.22,
+  slideJumpApexTime: 0.26,
 };
 export type MoveTuning = typeof MOVE_TUNING;
 /** The bunny-hop's cap: a long jump plus a full chain of held hops. Past it only tech carries speed, up to `momentumCeiling`. */
