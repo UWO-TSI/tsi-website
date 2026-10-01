@@ -13,7 +13,8 @@ import type { Ability, BuffStat, Element, Status, Subclass, UnitDef } from "@/li
 
 /** A shot. Weapon shots carry nothing; ability and unit shots carry what they do on impact. */
 export interface ShotHit { power: number; stat?: Stat; tier?: number; pierce?: boolean; splash?: number; status?: Status; unit?: boolean; hitIds?: string[] }
-export interface Projectile { id: number; x: number; z: number; vx: number; vz: number; life: number; from: "player" | "enemy"; damage: number; kind: "arrow" | "bolt" | "spit"; radius: number; hit?: ShotHit }
+/** `knock`: an enemy shot's push on you (its attack's knockback). */
+export interface Projectile { id: number; x: number; z: number; vx: number; vz: number; life: number; from: "player" | "enemy"; damage: number; kind: "arrow" | "bolt" | "spit"; radius: number; hit?: ShotHit; knock?: number }
 /** Summons, totems, traps and decoys (kits.ts UNITS): `source` is the ability that made it ("weapon" for the summoning charm's wisps). */
 export interface Unit {
   id: number; def: UnitDef; source: string; x: number; z: number; hp: number; maxHp: number;
@@ -25,6 +26,9 @@ export interface Unit {
 }
 export interface Buff { stat: BuffStat; value: number; t: number; onBlock?: Ability; answered?: boolean }
 export interface Floater { id: number; x: number; y: number; z: number; text: string; kind: "hit" | "crit" | "hurt" | "info"; age: number }
+/** Something the scene plays (sound, hitstop, camera shake, a puff): pushed by the pure combat code, drained every frame. */
+export type CueKind = "swing" | "hit" | "crit" | "hurt" | "defeat" | "windup" | "stagger" | "bossDefeat";
+export interface Cue { kind: CueKind; x: number; z: number; melee: boolean }
 export interface Blast { id: number; x: number; z: number; radius: number; color: string; age: number; life: number; arc?: number; rot?: number; length?: number }
 /** Four equipped ability slots (row 50) plus the weapon swap. */
 export type AbilityId = "slot1" | "slot2" | "slot3" | "slot4" | "swap";
@@ -45,8 +49,10 @@ export interface CombatRuntime {
     energy: number; sinceSpend: number;
     /** Equipped weapon id and the owned ones the swap key cycles (starters until progression loads). */
     weapon: string; owned: string[]; durability: Record<string, number>; hits: Record<string, number>;
-    attackCd: number; swing: number; dodgeAge: number | null; dodgeCd: number; dodgeDir: Vec;
-    aim: Vec; facing: number; hurt: number; downFor: number;
+    /** `dodgeDir` is also the way the last hit pushes you, `knock` how hard (that attack's knockback). */
+    attackCd: number; swing: number; dodgeAge: number | null; dodgeCd: number; dodgeDir: Vec; knock: number;
+    /** `aimHold`: seconds an attack or ability keeps you facing the aim (combat polish 10, actions.ts combatFacing). */
+    aim: Vec; facing: number; aimHold: number; hurt: number; downFor: number;
     /** Weapons granted (the ruins gate is open): the equipped one shows on the character's back in the village (row 140). */
     armed: boolean;
     /** Absorbs damage first, for `shieldFor` seconds. */
@@ -59,8 +65,10 @@ export interface CombatRuntime {
     speed: number; still: number; last: Vec | null;
   };
   cooldowns: Record<AbilityId, number>;
+  /** Presses refused because the slot can't be ready in time (actions.ts runInputs): the HUD pulses the slot on each. */
+  denied: Record<AbilityId, number>;
   enemies: Enemy[];
-  projectiles: Projectile[]; units: Unit[]; buffs: Buff[]; floaters: Floater[]; blasts: Blast[];
+  projectiles: Projectile[]; units: Unit[]; buffs: Buff[]; floaters: Floater[]; blasts: Blast[]; cues: Cue[];
   casting: { id: number; rune: "spark" | "binding"; aim: Vec; slot: number; ability: Ability } | null;
   /** The subclass kit from /api/combat/progression: equipped abilities, capacity for summons, owned monster traits. */
   kit: { subclass: Subclass; capacity: number; traits: Record<string, number> } | null;
@@ -76,8 +84,8 @@ export interface CombatRuntime {
   escort: { x: number; z: number; hp: number; waypoint: number } | null;
   wave: { index: number; active: boolean } | null;
   bossEngaged: boolean;
-  /** A card in the middle of the screen (boss victory reward), until `until` seconds of encounter time. */
-  banner: { text: string; until: number } | null;
+  /** A card in the middle of the screen (the boss's victory and reward, a learned trait), until `until` seconds of encounter time. */
+  banner: { kind: "victory" | "trait"; title: string; text: string; until: number } | null;
   seq: number;
 }
 
@@ -87,11 +95,11 @@ export function createRuntime(): CombatRuntime {
       energy: ENERGY.max, sinceSpend: 99, weapon: "sword-driftwood", owned: [...STARTER_WEAPONS],
       durability: Object.fromEntries(Object.values(WEAPONS).map(w => [w.id, w.maxDurability])),
       hits: {},
-      attackCd: 0, swing: 0, dodgeAge: null, dodgeCd: 0, dodgeDir: { x: 0, z: 1 },
-      aim: { x: 0, z: 0 }, facing: 0, hurt: 0, downFor: 0, armed: false,
+      attackCd: 0, swing: 0, dodgeAge: null, dodgeCd: 0, dodgeDir: { x: 0, z: 1 }, knock: 0,
+      aim: { x: 0, z: 0 }, facing: 0, aimHold: 0, hurt: 0, downFor: 0, armed: false,
       shield: 0, shieldFor: 0, dash: null, impulse: { x: 0, z: 0 }, speed: 1, still: 0, last: null },
-    cooldowns: { slot1: 0, slot2: 0, slot3: 0, slot4: 0, swap: 0 },
-    enemies: [], projectiles: [], units: [], buffs: [], floaters: [], blasts: [],
+    cooldowns: { slot1: 0, slot2: 0, slot3: 0, slot4: 0, swap: 0 }, denied: { slot1: 0, slot2: 0, slot3: 0, slot4: 0, swap: 0 },
+    enemies: [], projectiles: [], units: [], buffs: [], floaters: [], blasts: [], cues: [],
     casting: null, kit: null, slots: [null, null, null, null],
     passive: { element: null, target: null, stacks: 0, momentum: 0, momentumT: 0, procs: 0 }, transform: null,
     killQueue: [], mission: null, idol: "temple", escort: null, wave: null, bossEngaged: false, banner: null, seq: 1,
@@ -106,15 +114,23 @@ export function setOwnedWeapons(rt: CombatRuntime, owned: { weapon_key: string; 
 }
 
 // ── HUD subscription ────────────────────────────────────────────
-/** `freeze` (dev, via window.__combat): the encounter clock stops so a telegraph can be held for a screenshot. */
-export const combat = { rt: createRuntime(), freeze: false };
+/**
+ * `freeze` (dev, via window.__combat): the encounter clock stops so a telegraph can be held for a screenshot.
+ * `hitstop`: seconds the encounter and your avatar hold still after a melee hit, a crit or a hit taken (the ruins scene sets it).
+ */
+export const combat = { rt: createRuntime(), freeze: false, hitstop: 0 };
 let version = 0;
 const listeners = new Set<() => void>();
 export function publishCombat() { version++; for (const l of listeners) l(); }
 // Dev (screenshots): the runtime and a publish, in the village as well as the ruins.
 if (process.env.NODE_ENV !== "production" && typeof window !== "undefined") Object.assign(window, { __combat: combat, __publishCombat: publishCombat });
+const subscribe = (l: () => void) => { listeners.add(l); return () => { listeners.delete(l); }; };
 export function useCombatVersion(): number {
-  return useSyncExternalStore(l => { listeners.add(l); return () => { listeners.delete(l); }; }, () => version, () => 0);
+  return useSyncExternalStore(subscribe, () => version, () => 0);
+}
+/** Re-render only when `pick` (a primitive read from the runtime) changes, not on every ~10/s publish. */
+export function useCombatValue<T extends string | number | boolean>(pick: () => T): T {
+  return useSyncExternalStore(subscribe, pick, pick);
 }
 
 // ── Mission board mutations (kept here so components never write the runtime directly) ──

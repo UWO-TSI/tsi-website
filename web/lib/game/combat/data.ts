@@ -12,12 +12,14 @@ const W = "/assets/game/weapons/", E = "/assets/game/enemies/";
 
 type Look = Pick<Weapon, "cooldown" | "range" | "arc" | "speed" | "model" | "modelScale" | "grip">;
 const WEAPON_LOOK: Record<string, Look> = {
-  "sword-driftwood": { cooldown: 0.42, range: 1.7, arc: 1.9, model: `${W}sword-driftwood.glb`, modelScale: 1.3 },
+  // Combat polish 11 (specs/evidence/combat-b/balance.md): the driftwood sword 0.42 → 0.45, the oak staff 0.75 → 0.5 with a
+  // faster bolt (11 → 15), the wraps 0.32 → 0.42, so every subclass's normal-mission DPS sits within ±25% of the median.
+  "sword-driftwood": { cooldown: 0.45, range: 1.7, arc: 1.9, model: `${W}sword-driftwood.glb`, modelScale: 1.3 },
   "bow-willow": { cooldown: 0.6, range: 11, arc: 0, speed: 18, model: `${W}bow-willow.glb`, modelScale: 1.3 },
-  "staff-oak": { cooldown: 0.75, range: 8, arc: 0, speed: 11, model: `${W}staff-oak.glb`, modelScale: 1.3 },
+  "staff-oak": { cooldown: 0.5, range: 8, arc: 0, speed: 15, model: `${W}staff-oak.glb`, modelScale: 1.3 },
   "tome-spirits": { cooldown: 6, range: 7, arc: 0, model: `${W}tome-spirits.glb`, modelScale: 1.3 },
   // Bare hands with wraps (the Monk's full combo): quick, short, nothing held.
-  "wraps-cloth": { cooldown: 0.32, range: 1.35, arc: 1.7, model: "", modelScale: 1 },
+  "wraps-cloth": { cooldown: 0.42, range: 1.35, arc: 1.7, model: "", modelScale: 1 },
   // Crafted (lib/crafting/recipes.ts): damage comes from the tier in the weapons table; these are the feel.
   "sword-iron": { cooldown: 0.45, range: 1.9, arc: 2.0, model: `${W}sword-iron.glb`, modelScale: 1.3 },
   "bow-yew": { cooldown: 0.7, range: 14, arc: 0, speed: 22, model: `${W}bow-yew.glb`, modelScale: 1.3 },
@@ -45,8 +47,10 @@ const ENEMY_LOOK: Record<string, EnemyLook> = {
   "thorn-crab": look(1.8, 0.6, [{ shape: "sweep", windup: 0.8, recover: 0.8, arc: 2, knockback: 4 }], "thorn-crab"),
   "mushroom-beast": look(1.4, 0.55, [{ shape: "spit", windup: 0.9, recover: 1.1, arc: 0, knockback: 1.5 }], "mushroom-beast"),
   "rune-wisp": look(3.4, 0.4, [{ shape: "spit", windup: 0.7, recover: 0.9, arc: 0, knockback: 1.5 }], "rune-wisp", 1.1),
-  "animated-book": look(2.6, 0.5, [{ shape: "lunge", windup: 0.6, recover: 0.7, arc: 1.3, knockback: 3 }], "animated-book"),
-  "stone-golem": look(1.6, 0.75, [{ shape: "slam", windup: 1.0, recover: 1.1, range: 2.4, arc: Math.PI * 2, knockback: 5 }], "stone-golem"),
+  // Combat polish 11: the temple's pressure moved from the golem's slam (which only melee stood in) to the books' charge,
+  // which reaches the back line too: books 2.6 → 4.4 u/s with a 3 u lunge at ×1.3; golems 1.6 → 2.8 u/s, the slam ×0.41 with a longer recover.
+  "animated-book": look(4.4, 0.5, [{ shape: "lunge", windup: 0.6, recover: 0.7, range: 3, reach: 2.6, arc: 1.3, knockback: 3, power: 1.3 }], "animated-book"),
+  "stone-golem": look(2.8, 0.75, [{ shape: "slam", windup: 1.0, recover: 1.6, range: 2.4, arc: Math.PI * 2, knockback: 5, power: 0.41 }], "stone-golem"),
   "elder-thorn-crab": look(1.6, 0.8, [{ shape: "sweep", windup: 0.9, recover: 0.9, arc: 2.4, knockback: 5 }], "elder-thorn-crab"),
   // Three readable patterns (sim.ts BOSS_PLAN): the smash lands on a ring where you stood, the beam
   // sweeps 140° in front and leaves it staggered, the summon calls two rune wisps.

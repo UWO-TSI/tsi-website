@@ -14,7 +14,10 @@ sys.path.insert(0, os.path.join(ROOT, "art", "characters"))
 import kit  # noqa: E402
 from kit import Piece, TAU  # noqa: E402,F401
 
-EXT = json.load(open(os.path.join(HERE, "palette_ext.json")))["colors"]
+# Named extension colours ('driftwood', 'telegraph'...). palette_ext.json was never committed, so a builder that names
+# them needs it restored; '#rrggbb' and the shared palette work without it (build_combat_fx.py).
+_EXT = os.path.join(HERE, "palette_ext.json")
+EXT = json.load(open(_EXT))["colors"] if os.path.exists(_EXT) else {}
 ASSETS = os.path.join(ROOT, "web", "public", "assets", "game")
 CLIPS_GLB = os.path.join(ROOT, "art", "characters", "base", "v6_clips.glb")
 

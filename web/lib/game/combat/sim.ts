@@ -8,8 +8,12 @@ import type { AttackShape, EnemyAttack, EnemyType } from "./contract";
 
 export interface Vec { x: number; z: number }
 
-/** Dodge roll: a short dash; invulnerable for most of it (row 50). */
-export const DODGE = { duration: 0.34, speed: 14, iframeStart: 0.02, iframeEnd: 0.3, cooldown: 0.55 } as const;
+/**
+ * The dodge (row 50, combat polish 9) is the village dash (the movement kit's burst: MOVE_TUNING dashSpeed, dashEase,
+ * dashExit over its 0.2 s) with i-frames through it and a little past; `duration` is the dodge's clock (no attacks), and
+ * a press waits duration + cooldown = 0.6 s for the next. Air dashes give no i-frames (actions.ts dashDodge).
+ */
+export const DODGE = { duration: 0.34, iframeStart: 0.02, iframeEnd: 0.3, cooldown: 0.26 } as const;
 
 export const facingTo = (from: Vec, to: Vec) => Math.atan2(to.x - from.x, to.z - from.z);
 export function angleDiff(a: number, b: number): number {
@@ -65,6 +69,10 @@ export type EnemyState = "idle" | "chase" | "windup" | "active" | "recover" | "r
 export interface Enemy {
   id: string; type: EnemyType; x: number; z: number; spawnX: number; spawnZ: number;
   hp: number; state: EnemyState; t: number; facing: number;
+  /** Seconds a hit holds its chase (the stagger push); a windup already under way carries on. */
+  stun: number;
+  /** Idle: the spot it strolls to near its spawn, and how long it waits there first. */
+  wander: { x: number; z: number; wait: number };
   /** Where the attack was aimed when the windup began (the telegraph). */
   aim: Vec; flash: number; kx: number; kz: number; deadFor: number;
   /** The attack being telegraphed or thrown (the boss rotates through several). */
@@ -81,7 +89,7 @@ export interface Enemy {
   raised: boolean;
 }
 export function spawnEnemy(id: string, type: EnemyType, x: number, z: number): Enemy {
-  return { id, type, x, z, spawnX: x, spawnZ: z, hp: type.hp, state: "idle", t: 0, facing: Math.PI, aim: { x, z }, flash: 0, kx: 0, kz: 0, deadFor: 0,
+  return { id, type, x, z, spawnX: x, spawnZ: z, hp: type.hp, state: "idle", t: 0, facing: Math.PI, stun: 0, wander: { x, z, wait: 1 }, aim: { x, z }, flash: 0, kx: 0, kz: 0, deadFor: 0,
     move: type.attacks[0], phase: 1, cycle: 0, beam: Math.PI, landed: false, summoned: false,
     status: { hold: 0, slow: 0, slowFor: 0, mark: 0, markFor: 0, distract: 0 }, raised: false };
 }
@@ -97,6 +105,22 @@ export function nextMove(e: Enemy): EnemyAttack {
 }
 export const staggered = (e: Pick<Enemy, "state" | "move">) => e.state === "recover" && !!e.move.stagger;
 
+/** Idle enemies stroll (combat polish 5): to a spot within `radius` of the spawn at `speed` × their pace, then wait 1.5–4 s. */
+export const WANDER = { radius: 1.6, speed: 0.3, pause: 1.5, pauseMore: 2.5 } as const;
+/** Step toward (tx, tz), sliding along walls; returns the distance left. (Module scope: the tick allocates nothing per enemy.) */
+function walk(e: Enemy, tx: number, tz: number, speed: number, dt: number, free: (x: number, z: number) => boolean): number {
+  const d = Math.sqrt((tx - e.x) ** 2 + (tz - e.z) ** 2);
+  if (d < 1e-4) return d;
+  const step = Math.min(d, speed * dt);
+  const nx = e.x + ((tx - e.x) / d) * step, nz = e.z + ((tz - e.z) / d) * step;
+  if (free(nx, nz)) { e.x = nx; e.z = nz; } else if (free(nx, e.z)) e.x = nx; else if (free(e.x, nz)) e.z = nz;
+  e.facing = Math.atan2(tx - e.x, tz - e.z);
+  return d - step;
+}
+
+/** Packs keep apart: bodies closer than their radii plus `gap` push off each other at up to `speed` u/s. */
+export const SEPARATION = { gap: 0.3, speed: 4 } as const;
+
 export type EnemyEvent =
   | { kind: "strike"; enemy: Enemy }           // melee shapes resolved now
   | { kind: "spit"; enemy: Enemy; to: Vec }    // ranged: caller spawns the projectile
@@ -110,8 +134,9 @@ export type EnemyEvent =
  * so every enemy gives up, walks home and heals (row 8). Leaving the leash
  * radius does the same.
  */
-export function stepEnemy(e: Enemy, player: Vec & { safe: boolean; alive: boolean }, dt: number, free: (x: number, z: number) => boolean = () => true): EnemyEvent | null {
+export function stepEnemy(e: Enemy, player: Vec & { safe: boolean; alive: boolean }, dt: number, free: (x: number, z: number) => boolean = () => true, random: () => number = Math.random): EnemyEvent | null {
   e.flash = Math.max(0, e.flash - dt);
+  e.stun = Math.max(0, e.stun - dt);
   if (e.state === "dead") { e.deadFor += dt; return null; }
   // Knockback slides first, blocked by walls.
   if (e.kx || e.kz) {
@@ -131,30 +156,30 @@ export function stepEnemy(e: Enemy, player: Vec & { safe: boolean; alive: boolea
   st.distract = Math.max(0, st.distract - dt);
   if (st.hold > 0 && e.state !== "return") { st.hold = Math.max(0, st.hold - dt); return null; }
   const a = e.move;
-  const home = Math.hypot(e.x - e.spawnX, e.z - e.spawnZ);
-  const dist = Math.hypot(player.x - e.x, player.z - e.z);
+  const home = Math.sqrt((e.x - e.spawnX) ** 2 + (e.z - e.spawnZ) ** 2);
+  const dist = Math.sqrt((player.x - e.x) ** 2 + (player.z - e.z) ** 2);
   if (e.state !== "return" && e.state !== "idle" && (home > e.type.leashRadius || player.safe || !player.alive)) { e.state = "return"; e.t = 0; }
-  const move = (tx: number, tz: number, speed: number) => {
-    const d = Math.hypot(tx - e.x, tz - e.z);
-    if (d < 1e-4) return d;
-    const step = Math.min(d, speed * dt);
-    const nx = e.x + ((tx - e.x) / d) * step, nz = e.z + ((tz - e.z) / d) * step;
-    if (free(nx, nz)) { e.x = nx; e.z = nz; } else if (free(nx, e.z)) e.x = nx; else if (free(e.x, nz)) e.z = nz;
-    e.facing = Math.atan2(tx - e.x, tz - e.z);
-    return d - step;
-  };
   switch (e.state) {
-    case "idle":
-      if (player.alive && !player.safe && dist < e.type.aggroRadius) { e.state = "chase"; e.t = 0; e.move = nextMove(e); }
+    case "idle": {
+      if (player.alive && !player.safe && dist < e.type.aggroRadius) { e.state = "chase"; e.t = 0; e.move = nextMove(e); return null; }
+      const w = e.wander;
+      if (e.type.kind === "boss" || (w.wait -= dt) > 0) return null;
+      if (walk(e, w.x, w.z, e.type.speed * WANDER.speed, dt, free) < 0.05) {
+        const a = random() * Math.PI * 2, r = Math.sqrt(random()) * WANDER.radius;
+        w.x = e.spawnX + Math.sin(a) * r; w.z = e.spawnZ + Math.cos(a) * r; w.wait = WANDER.pause + random() * WANDER.pauseMore;
+      }
       return null;
+    }
     case "return":
-      if (move(e.spawnX, e.spawnZ, e.type.speed * 1.5) < 0.05) {
+      if (walk(e, e.spawnX, e.spawnZ, e.type.speed * 1.5, dt, free) < 0.05) {
         e.state = "idle"; e.hp = e.type.hp; e.facing = Math.PI; e.phase = 1; e.cycle = 0; e.move = e.type.attacks[0];
+        e.wander.x = e.spawnX; e.wander.z = e.spawnZ; e.wander.wait = WANDER.pause;
         return { kind: "reset", enemy: e };
       }
       return null;
     case "chase": {
-      if (dist > (a.reach ?? a.range * 0.8)) { move(player.x, player.z, e.type.speed * (1 - st.slow)); return null; }
+      if (e.stun > 0) return null;
+      if (dist > (a.reach ?? a.range * 0.8)) { walk(e, player.x, player.z, e.type.speed * (1 - st.slow), dt, free); return null; }
       e.state = "windup"; e.t = 0; e.facing = facingTo(e, player); e.aim = { x: player.x, z: player.z }; e.landed = false;
       return null;
     }
@@ -177,6 +202,28 @@ export function stepEnemy(e: Enemy, player: Vec & { safe: boolean; alive: boolea
   }
 }
 
+/** Packs keep apart: each overlapping pair of live enemies eases off along the line between them (the boss stands its ground). */
+export function separate(list: Enemy[], dt: number, free: (x: number, z: number, r: number) => boolean = () => true) {
+  const step = SEPARATION.speed * dt;
+  for (let i = 0; i < list.length; i++) {
+    const a = list[i];
+    if (a.state === "dead") continue;
+    for (let j = i + 1; j < list.length; j++) {
+      const b = list[j];
+      if (b.state === "dead") continue;
+      const min = a.type.radius + b.type.radius + SEPARATION.gap, d2 = (b.x - a.x) ** 2 + (b.z - a.z) ** 2;
+      if (d2 >= min * min) continue; // most pairs: no square root, nothing allocated
+      const stacked = d2 < 1e-8, d = stacked ? 1 : Math.sqrt(d2);
+      const dx = stacked ? Math.sin(i + j) : b.x - a.x, dz = stacked ? Math.cos(i + j) : b.z - a.z; // exactly stacked: any way apart
+      const fixedA = a.type.kind === "boss", fixedB = b.type.kind === "boss";
+      if (fixedA && fixedB) continue;
+      const push = Math.min(min - d, step), ux = dx / d, uz = dz / d, ka = fixedA ? 0 : fixedB ? 1 : 0.5, kb = 1 - ka;
+      if (ka && free(a.x - ux * push * ka, a.z - uz * push * ka, a.type.radius * 0.6)) { a.x -= ux * push * ka; a.z -= uz * push * ka; }
+      if (kb && free(b.x + ux * push * kb, b.z + uz * push * kb, b.type.radius * 0.6)) { b.x += ux * push * kb; b.z += uz * push * kb; }
+    }
+  }
+}
+
 /** Does a strike land on the player? Arcs and slams from the enemy, smashes on the ring marker they aimed. */
 export function strikeLands(e: Enemy, player: Vec, playerRadius = 0.35): boolean {
   const a = e.move;
@@ -195,7 +242,9 @@ export function beamLands(e: Enemy, player: Vec, playerRadius = 0.35): boolean {
   return true;
 }
 
-/** Apply damage + knockback; returns true when this hit kills. Enemies walking home take no damage. */
+/** A hit's stagger: the enemy's chase holds this long (elites half, the boss not at all), so the push reads. */
+export const STUN = 0.15;
+/** Apply damage + knockback and the stagger; returns true when this hit kills. Enemies walking home take no damage. */
 export function damageEnemy(e: Enemy, amount: number, from: Vec, knock: number): boolean {
   if (e.state === "dead" || e.state === "return") return false;
   e.hp = Math.max(0, e.hp - amount);
@@ -203,6 +252,7 @@ export function damageEnemy(e: Enemy, amount: number, from: Vec, knock: number):
   const d = Math.hypot(e.x - from.x, e.z - from.z) || 1;
   const k = e.type.kind === "boss" ? knock * 0.1 : e.type.kind === "construct" ? knock * 0.5 : knock;
   e.kx = ((e.x - from.x) / d) * k; e.kz = ((e.z - from.z) / d) * k;
+  e.stun = e.type.kind === "boss" ? 0 : e.type.elite ? STUN * 0.5 : STUN;
   if (e.state === "idle") { e.state = "chase"; e.t = 0; e.move = nextMove(e); }
   if (e.hp === 0) { e.state = "dead"; e.deadFor = 0; return true; }
   return false;

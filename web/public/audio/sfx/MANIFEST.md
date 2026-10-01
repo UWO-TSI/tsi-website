@@ -2,11 +2,7 @@
 
 Audio pass, item 3 (ledger row 125): peaceful, crafting and combat events
 mapped onto the existing CC0 files (`CREDITS.md`) so nothing is silent while
-real generated SFX are pending. This is a naming/documentation map, not new
-runtime code — combat is out of this pass's scope (see
-`specs/audio-pass-questions.md`), so nothing here is wired into
-`web/lib/game/combat/**`; a combat agent can read this table when it adds
-its own `AudioManager.playSFX(...)` calls.
+real generated SFX are pending.
 
 ## Peaceful loop (already wired)
 
@@ -28,18 +24,31 @@ its own `AudioManager.playSFX(...)` calls.
 | Recipe learned | `confirm` | `Workshop.tsx` |
 | Craft complete | `confirm` | `Workshop.tsx` |
 
-## Combat (mapped, not yet wired — combat is out of scope for this pass)
+## Combat (wired 2026-10-01, combat polish 3)
 
-| Event | Suggested existing SFX | Notes |
+The encounter pushes cues (`rt.cues`, `lib/game/combat/runtime.ts`) and the
+ruins scene plays them (`CUE_SOUND` in `components/game/combat/RuinsScene.tsx`)
+through `AudioManager.playSFX(name, { rate, gain })`, so the Sound settings
+(master, effects, mute) apply. `rate` re-pitches a file (below 1 is lower and
+longer), which is how one CC0 file serves two cues. One of each cue per frame;
+a crit replaces the hit; windups play only within 10 units. Chosen without
+listening: they need ears at the playtest.
+
+| Event | SFX (rate, gain) | Notes |
 |---|---|---|
-| Hit landed | `blip3` | Placeholder tone, not a real impact sound |
-| Dodge | `footstep` | Placeholder whoosh |
-| Ability cast | `click` | Placeholder |
-| Mission start / accept | `enter` | Matches building-enter cue |
-| Mission complete | `confirm` | Matches existing success chime |
-| Enemy defeated | `confirm` | Same chime as other completions — needs a distinct sound |
-| Boss stagger / enrage | — | No good existing match; generate |
-| Level up | — | No good existing match; generate |
+| Swing: sword, wraps | `footstep` (1.5, 0.7) | The manifest's placeholder whoosh, quicker |
+| Shot: bow, revolver | `click` (0.7, 0.7) | |
+| Bolt: staff | `blip2` (0.8, 0.5) | |
+| Charm wisp | `blip1` (1.2, 0.5) | |
+| Hit landed | `blip3` (0.8, 0.9) | As mapped |
+| Crit | `blip3` (0.62) + `click` (0.85) | Lower hit plus a crisp tick |
+| Hurt | `exit` (1.35, 0.75) | The door knock, shorter: a thud |
+| Dodge | `blip4` | The kit's dash sound: one dash everywhere |
+| Enemy windup | `blip1` (0.7, 0.4) | Quiet; within 10 units |
+| Enemy defeated | `confirm` (0.75, 0.6) | As mapped, lower than the crafting chime |
+| Boss stagger | `exit` (0.6, 1) | Deep knock |
+| Boss defeated | `enter` (0.6) + `confirm` (0.6) | |
+| Ability cast, mission start/complete | not wired | Outside combat polish 3 |
 
 ## Still to generate (Higgsfield or ElevenLabs; CC0 packs remain the fallback per row 125)
 

@@ -12,7 +12,7 @@
  * `incantation` marks the selected powerful spells that are drawn (rows 52,
  * C2): the Elementalist's burst, the Summoner's call and the two family
  * rituals; everything else is instant. Every number is a balance placeholder
- * (specs/evidence/combat-b/balance.md).
+ * (specs/evidence/combat-b/balance.md; retuned in combat polish 11).
  */
 import type { Family } from "@/lib/oracle/engine";
 import type { Stat } from "./progression";
@@ -121,17 +121,17 @@ export const SUBCLASSES: Subclass[] = [
     signature: a("elementalist.burst", "Elemental Burst", "A drawn burst of the element you didn't use last: fire, frost or lightning.", 10, 35,
       [hit(2.4, 2.4, "aim")], { incantation: "spark", element: "cycle" }),
     abilities: [
-      a("elementalist.firebolt", "Firebolt", "A bolt of fire that bursts on impact.", 3, 15, [shot(1.3, { speed: 16, range: 10, splash: 1.2 })], { element: "fire" }),
-      a("elementalist.frost-nova", "Frost Nova", "Freeze everything around you in place.", 10, 25, [hit(0.9, 3, "self", { status: { hold: 1.5 } })], { element: "frost" }),
+      a("elementalist.firebolt", "Firebolt", "A bolt of fire that bursts on impact.", 2.5, 15, [shot(1.6, { speed: 16, range: 10, splash: 1.2 })], { element: "fire" }),
+      a("elementalist.frost-nova", "Frost Nova", "Freeze everything around you in place.", 10, 25, [hit(0.9, 3, "self", { status: { hold: 2 } })], { element: "frost" }),
     ],
     passive: { name: "Elemental Rhythm", description: "A different element than the last strengthens that hit.", kind: "element_switch", value: 0.25 },
   }),
   k({
     key: "illusionist", name: "Illusionist", family: "Arcane", weapon_affinity: ["staff", "tome"],
-    signature: a("illusionist.decoy-step", "Decoy Step", "Slip back untouchable and leave a phantom that draws enemies to it.", 10, 25, [{ kind: "summon", unit: "decoy" }, dash(4, { back: true, iframes: true })]),
+    signature: a("illusionist.decoy-step", "Decoy Step", "Slip back untouchable and leave a phantom that draws enemies to it.", 10, 25, [{ kind: "summon", unit: "decoy" }, dash(2.5, { back: true, iframes: true })]),
     abilities: [
-      a("illusionist.mirror-bolts", "Mirror Bolts", "Two bolts, one real enough to hurt, then both.", 4, 15, [shot(0.8, { count: 2, spread: 0.15, speed: 15, range: 10 })]),
-      a("illusionist.mass-confusion", "Mass Confusion", "Enemies in the aimed area forget you and wander off.", 14, 30, [hit(0.6, 3, "aim", { status: { distract: 4 } })]),
+      a("illusionist.mirror-bolts", "Mirror Bolts", "Two bolts, one real enough to hurt, then both.", 3, 15, [shot(1.05, { count: 2, spread: 0.15, speed: 15, range: 10 })]),
+      a("illusionist.mass-confusion", "Mass Confusion", "Enemies in the aimed area forget you and wander off.", 14, 30, [hit(0.6, 3, "aim", { status: { distract: 2 } })]),
     ],
     passive: { name: "Misdirection", description: "Hits on a distracted enemy deal more.", kind: "distracted", value: 0.3 },
   }),
@@ -149,7 +149,7 @@ export const SUBCLASSES: Subclass[] = [
   k({
     key: "transmuter", name: "Transmuter", family: "Arcane", weapon_affinity: ["fists", "staff"],
     signature: a("transmuter.aspect", "Monster Aspect", "Take on your monster traits' body for a while: stronger and quicker.", 14, 30,
-      [{ kind: "transform", duration: 8 }, buff("damage", 0.2, 8), buff("speed", 0.15, 8)]),
+      [{ kind: "transform", duration: 8 }, buff("damage", 0.4, 8), buff("speed", 0.15, 8)]),
     abilities: [], // monster traits are its other abilities (TRAITS, row 37)
     passive: { name: "Shed Skin", description: "Transforming grants a small barrier.", kind: "transform_shield", value: 0.08 },
     starter_note: "Starts with the Fox Stride trait before its first kill; each new monster species it defeats teaches a basic trait.",
@@ -178,7 +178,7 @@ export const SUBCLASSES: Subclass[] = [
     signature: a("sniper.tripwire", "Tripwire", "Set a trap at your aim that holds the first enemy through it for a follow-up shot.", 10, 25, [{ kind: "summon", unit: "tripwire" }]),
     abilities: [
       a("sniper.long-shot", "Long Shot", "A slow, heavy shot from far away.", 6, 25, [shot(2.0, { speed: 32, range: 16, pierce: true })]),
-      a("sniper.smoke-step", "Smoke Step", "Drop smoke and slip back; what's close loses you.", 10, 15, [hit(0, 2.5, "self", { status: { distract: 2 } }), dash(5, { back: true, iframes: true })]),
+      a("sniper.smoke-step", "Smoke Step", "Drop smoke and slip back; what's close loses you.", 10, 15, [hit(0, 2.5, "self", { status: { distract: 0.5 } }), dash(2, { back: true, iframes: true })]),
     ],
     passive: { name: "Long Sight", description: "Ranged damage grows with distance, up to 12 m.", kind: "distance", value: 0.3, cap: 12 },
   }),
@@ -195,13 +195,13 @@ export const SUBCLASSES: Subclass[] = [
   // ── Vanguard / SP ──────────────────────────────────────────────────────────
   k({
     key: "guardian", name: "Guardian", family: "Vanguard", weapon_affinity: ["shield", "sword"],
-    signature: a("guardian.counter", "Shield Counter", "Raise your guard against frontal hits; the first blocked hit is answered with a bash.", 8, 20,
-      [buff("block", 0.8, 1.5)], { gear: { type: "shield", without: 0.5 }, on_block: [hit(1.8, 2.4, "self", { arc: 1.8, knock: 5 })] }),
+    signature: a("guardian.counter", "Shield Counter", "Raise your guard against frontal hits; the first blocked hit is answered with a bash.", 15, 20,
+      [buff("block", 0.4, 1)], { gear: { type: "shield", without: 0.5 }, on_block: [hit(1.8, 2.4, "self", { arc: 1.8, knock: 5 })] }),
     abilities: [
       a("guardian.bash", "Shield Bash", "A bash in front that staggers.", 6, 20, [hit(1.3, 2.2, "self", { arc: 1.6, status: { hold: 0.8 } })]),
       a("guardian.stalwart", "Stalwart", "Plant your feet: take less damage and hold a ward.", 14, 20, [buff("guard", 0.3, 6), { kind: "shield", amount: 0.12, duration: 6 }]),
     ],
-    passive: { name: "Bulwark", description: "Each blocked hit builds a small barrier.", kind: "block_shield", value: 0.06 },
+    passive: { name: "Bulwark", description: "Each blocked hit builds a small barrier.", kind: "block_shield", value: 0.01 },
     starter_note: "Without a shield the guard blocks half as much.",
   }),
   k({
@@ -209,7 +209,7 @@ export const SUBCLASSES: Subclass[] = [
     signature: a("monk.flow", "Flowing Strikes", "Advance through a short martial-arts combo.", 6, 25, [dash(2.5, { power: 0.8 }), hit(1.4, 2.2, "self", { arc: 2 })], { gear: { type: "fists", without: 0.85 } }),
     abilities: [
       a("monk.palm", "Palm Wave", "A wave of force from an open palm.", 4, 15, [shot(1.1, { speed: 16, range: 7, pierce: true })], { gear: { type: "fists", without: 0.85 } }),
-      a("monk.iron-body", "Iron Body", "Harden and breathe: less damage taken, a little health back.", 14, 20, [buff("guard", 0.35, 4), { kind: "heal", amount: 0.08 }]),
+      a("monk.iron-body", "Iron Body", "Harden and breathe: less damage taken, a little health back.", 14, 20, [buff("guard", 0.45, 6), { kind: "heal", amount: 0.08 }]),
     ],
     passive: { name: "Momentum", description: "Consecutive hits briefly increase your speed.", kind: "momentum", value: 0.05, cap: 5 },
     starter_note: "Works with any weapon at 85%; wraps or bare hands get the full combo.",
@@ -219,14 +219,14 @@ export const SUBCLASSES: Subclass[] = [
     signature: a("juggernaut.slam", "Ground Slam", "A heavy slam that staggers everything around you.", 10, 35, [hit(2.1, 3.2, "self", { knock: 4, status: { hold: 1 } })]),
     abilities: [
       a("juggernaut.charge", "Charge", "Barrel through a line of enemies toward your aim.", 9, 25, [dash(6, { power: 1.2 })]),
-      a("juggernaut.war-cry", "War Cry", "Roar: more damage dealt, less taken.", 16, 20, [buff("damage", 0.25, 6), buff("guard", 0.15, 6)]),
+      a("juggernaut.war-cry", "War Cry", "Roar: more damage dealt, less taken.", 16, 20, [buff("damage", 0.25, 6), buff("guard", 0.45, 8)]),
     ],
     passive: { name: "Unstoppable", description: "Hits never knock you back.", kind: "poise", value: 1 },
     mods: { max_hp: 0.1 },
   }),
   k({
     key: "assassin", name: "Assassin", family: "Vanguard", weapon_affinity: ["sword", "fists"],
-    signature: a("assassin.lunge", "Blood Lunge", "Dash through a target with a quick strike.", 6, 20, [dash(5, { power: 1.7, iframes: true })]),
+    signature: a("assassin.lunge", "Blood Lunge", "Dash through a target with a quick strike, then slip its answer for a moment.", 6, 20, [dash(5, { power: 1.7, iframes: true }), buff("guard", 0.3, 2.5)]),
     abilities: [
       a("assassin.shadow-step", "Shadow Step", "Vanish toward your aim; your next strikes find weak spots.", 9, 15, [dash(6, { iframes: true }), buff("crit", 0.3, 3)]),
       a("assassin.knives", "Fan of Knives", "Knives in every direction around you.", 7, 20, [hit(1.2, 2.6)]),
@@ -243,7 +243,7 @@ export const SUBCLASSES: Subclass[] = [
       a("summoner.crab-guard", "Crab Bulwark", "A sturdy crab that draws enemies onto its shell.", 16, 35, [{ kind: "summon", unit: "crab" }]),
     ],
     passive: { name: "Pack Bond", description: "Each companion makes the others a little stronger.", kind: "pack_bond", value: 0.05 },
-    mods: { capacity: 1 },
+    mods: { capacity: 1, max_hp: 0.25 },
   }),
   k({
     key: "shaman", name: "Shaman", family: "Warden", weapon_affinity: ["totem"],
@@ -253,24 +253,27 @@ export const SUBCLASSES: Subclass[] = [
       a("shaman.warding", "Warding Totem", "A totem that slows enemies in its circle and wards you inside it.", 8, 25, [{ kind: "summon", unit: "totem-warding" }]),
     ],
     passive: { name: "Resonance", description: "Where two totem circles overlap, both work harder.", kind: "resonance", value: 0.35 },
+    mods: { max_hp: 0.25 },
   }),
   k({
     key: "druid", name: "Druid", family: "Warden", weapon_affinity: ["staff", "totem"],
     signature: a("druid.rootbind", "Rootbind", "Roots burst from the ground at your aim, holding and hurting.", 7, 30, [hit(1.9, 2.5, "aim", { status: { hold: 2.5 } })]),
     abilities: [
-      a("druid.thorn-lash", "Thorn Lash", "A thorny vine lashes the enemies in front of you.", 3, 15, [hit(1.1, 3, "self", { arc: 1.4, status: { slow: [0.3, 2] } })]),
+      a("druid.thorn-lash", "Thorn Lash", "A thorny vine lashes the enemies in front of you.", 3, 15, [hit(1.5, 3, "self", { arc: 1.4, status: { slow: [0.3, 2] } })]),
       a("druid.wild-growth", "Wild Growth", "Green growth closes your wounds under a leaf ward.", 12, 25, [{ kind: "heal", amount: 0.15 }, { kind: "shield", amount: 0.08, duration: 6 }]),
     ],
     passive: { name: "Verdant Thirst", description: "Your hits return health, twice as much from held enemies.", kind: "lifesteal", value: 0.06 },
+    mods: { max_hp: 0.25 },
   }),
   k({
     key: "priest", name: "Priest", family: "Warden", weapon_affinity: ["staff", "tome"],
-    signature: a("priest.holy-beam", "Holy Beam", "A beam of light through everything in a line toward your aim.", 4, 20, [hit(2.2, 0.8, "self", { length: 9 })]),
+    signature: a("priest.holy-beam", "Holy Beam", "A beam of light through everything in a line toward your aim.", 4, 20, [hit(2.9, 0.8, "self", { length: 9 })]),
     abilities: [
-      a("priest.radiant-shield", "Radiant Shield", "A strong shield of light.", 14, 30, [{ kind: "shield", amount: 0.35, duration: 8 }]),
+      a("priest.radiant-shield", "Radiant Shield", "A strong shield of light.", 10, 30, [{ kind: "shield", amount: 0.45, duration: 8 }]),
       a("priest.mend", "Mend", "A strong heal.", 10, 25, [{ kind: "heal", amount: 0.3 }]),
     ],
     passive: { name: "Sanctuary", description: "Healing past full becomes a shield.", kind: "overheal_shield", value: 0.5, cap: 0.3 },
+    mods: { max_hp: 0.25 },
   }),
 ];
 
@@ -295,17 +298,17 @@ export interface UnitDef {
   pulse?: { damage?: number; heal?: number; slow?: number; shield?: number };
 }
 export const UNITS: Record<string, UnitDef> = {
-  wisp: { key: "wisp", name: "Spirit wisp", kind: "minion", hp: 40, cost: 1, speed: 5, range: 6, power: 0.55, rate: 0.9, ranged: true },
-  fox: { key: "fox", name: "Spirit fox", kind: "minion", hp: 70, cost: 1, speed: 6.5, range: 1.4, power: 0.6, rate: 0.8, model: "shadow-fox" },
-  crab: { key: "crab", name: "Bulwark crab", kind: "minion", hp: 180, cost: 2, speed: 3, range: 1.5, power: 0.45, rate: 1.1, taunt: true, model: "thorn-crab" },
-  shade: { key: "shade", name: "Shade", kind: "minion", hp: 60, cost: 1, life: 20, speed: 5, range: 1.5, power: 0.8, rate: 0.9 },
-  "bone-wisp": { key: "bone-wisp", name: "Bone wisp", kind: "minion", hp: 35, cost: 1, life: 20, speed: 5, range: 6, power: 0.55, rate: 0.9, ranged: true },
-  "weapon-wisp": { key: "weapon-wisp", name: "Wisp", kind: "minion", hp: 30, life: 12, speed: 5, range: 6, power: 0.6, rate: 0.9, ranged: true },
+  wisp: { key: "wisp", name: "Spirit wisp", kind: "minion", hp: 40, cost: 1, speed: 5, range: 6, power: 0.38, rate: 0.9, ranged: true },
+  fox: { key: "fox", name: "Spirit fox", kind: "minion", hp: 70, cost: 1, speed: 6.5, range: 1.4, power: 0.4, rate: 0.8, model: "shadow-fox" },
+  crab: { key: "crab", name: "Bulwark crab", kind: "minion", hp: 400, cost: 2, speed: 3, range: 1.5, power: 0.45, rate: 1.1, taunt: true, model: "thorn-crab" },
+  shade: { key: "shade", name: "Shade", kind: "minion", hp: 60, cost: 1, life: 20, speed: 5, range: 1.5, power: 0.55, rate: 0.9 },
+  "bone-wisp": { key: "bone-wisp", name: "Bone wisp", kind: "minion", hp: 35, cost: 1, life: 20, speed: 5, range: 6, power: 0.45, rate: 0.9, ranged: true },
+  "weapon-wisp": { key: "weapon-wisp", name: "Wisp", kind: "minion", hp: 30, life: 12, speed: 5, range: 6, power: 0.85, rate: 0.9, ranged: true },
   "totem-ember": { key: "totem-ember", name: "Ember totem", kind: "totem", hp: 90, radius: 3.4, pulse: { damage: 0.55 } },
   "totem-mending": { key: "totem-mending", name: "Mending totem", kind: "totem", hp: 90, radius: 3.4, pulse: { heal: 0.025 } },
   "totem-warding": { key: "totem-warding", name: "Warding totem", kind: "totem", hp: 90, radius: 3.4, pulse: { slow: 0.35, shield: 0.015 } },
   tripwire: { key: "tripwire", name: "Tripwire", kind: "trap", hp: 1, life: 25, radius: 1.2, power: 0.8 },
-  decoy: { key: "decoy", name: "Phantom", kind: "decoy", hp: 50, life: 5, taunt: true },
+  decoy: { key: "decoy", name: "Phantom", kind: "decoy", hp: 50, life: 3, taunt: true },
 };
 /** Caps (row 50): minions share the capacity stat; one totem per role and three at most; two traps; one decoy; two weapon wisps. */
 export const CAPS = { totems: 3, traps: 2, decoys: 1, weaponWisps: 2 } as const;
@@ -324,7 +327,7 @@ export interface Trait { key: string; from: string[]; part: string; ability: Abi
 const trait = (key: string, from: string[], part: string, name: string, description: string, cooldown_s: number, energy: number, effects: Effect[]): Trait =>
   ({ key, from, part, ability: a(`trait.${key}`, name, description, cooldown_s, energy, [{ kind: "transform", duration: 2 }, ...effects]) });
 export const TRAITS: Trait[] = [
-  trait("fox-stride", ["shadow-fox"], "fox legs", "Fox Stride", "Fox legs: pounce through enemies toward your aim and keep the pace.", 6, 20, [dash(5, { power: 1.3 }), buff("speed", 0.25, 3)]),
+  trait("fox-stride", ["shadow-fox"], "fox legs", "Fox Stride", "Fox legs: pounce through enemies toward your aim and keep the pace.", 6, 20, [dash(5, { power: 1.7 }), buff("speed", 0.25, 3)]),
   trait("crab-shell", ["thorn-crab", "elder-thorn-crab"], "crab shell", "Crab Shell", "A crab's shell: a barrier, and hits glance off for a while.", 12, 25, [{ kind: "shield", amount: 0.18, duration: 5 }, buff("guard", 0.25, 5)]),
   trait("spore-sac", ["mushroom-beast"], "spore sac", "Spore Sac", "A mushroom's sac: spit spores that hurt and slow where you aim.", 8, 20, [hit(1.2, 2.4, "aim", { status: { slow: [0.4, 3] } })]),
   trait("wisp-core", ["rune-wisp"], "wisp core", "Wisp Core", "A wisp's glowing core: three rune bolts.", 4, 15, [shot(0.6, { count: 3, spread: 0.2, speed: 16, range: 10 })]),

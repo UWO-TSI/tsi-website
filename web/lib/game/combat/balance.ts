@@ -10,16 +10,17 @@
  * specs/evidence/combat-b/balance.md is this table.
  */
 import { FAMILY_STAT, resolveLoadout, subclassByKey, UNITS, type Ability, type Subclass } from "@/lib/combat/kits";
-import { STARTER_WEAPONS, WEAPONS as SYSTEM_WEAPONS } from "@/lib/combat/weapons";
-import { derived, presetAllocation } from "@/lib/combat/progression";
+import { damage, STARTER_WEAPONS, WEAPONS as SYSTEM_WEAPONS } from "@/lib/combat/weapons";
+import { derived, presetAllocation, ZERO_STATS } from "@/lib/combat/progression";
 import { potencyFor } from "@/lib/combat/incantation";
 import { SURVIVE_CIRCLES } from "@/lib/game/ruins";
 import { equipKit, fireSlot, resolveCast } from "./abilities";
 import { attack, spawnWave, startDodge } from "./actions";
-import { PLAYER_BASE, WEAPONS } from "./data";
+import { ENEMIES, PLAYER_BASE, WEAPONS } from "./data";
 import { stepCombat } from "./encounter";
 import { createRuntime, type CombatRuntime } from "./runtime";
-import { DODGE, strikeLands, type Enemy, type Vec } from "./sim";
+import { strikeLands, type Enemy, type Vec } from "./sim";
+import { MOVE_TUNING } from "@/lib/game/movement/sim";
 import { WAVES } from "./spawns";
 
 const FALLBACK: Record<string, string> = { Arcane: "staff-oak", Ranger: "bow-willow", Vanguard: "sword-driftwood", Warden: "tome-spirits" };
@@ -121,8 +122,9 @@ export function runSurvive(subclassKey: string, missionId: "survive-circle" | "s
       mx = ux * push - uz * strafe * 0.35; mz = uz * push + ux * strafe * 0.35;
       const l = Math.hypot(mx, mz) || 1; mx /= l; mz /= l;
     }
-    // The bot's dodge roll: 14 u/s easing to 40% over its time, as the kit's dash in the ruins (combatTuning).
-    const v = PLAYER_BASE.speed * p.speed, roll = p.dodgeAge === null ? 0 : DODGE.speed * (1 - (p.dodgeAge / DODGE.duration) * 0.6);
+    // The bot's dodge: the kit's dash (combatTuning), its burst easing to dashExit over dashTime.
+    const v = PLAYER_BASE.speed * p.speed, k = p.dodgeAge === null ? 1 : Math.min(1, p.dodgeAge / MOVE_TUNING.dashTime);
+    const roll = p.dodgeAge === null ? 0 : MOVE_TUNING.dashSpeed * (MOVE_TUNING.dashExit + (1 - MOVE_TUNING.dashExit) * (1 - k) ** MOVE_TUNING.dashEase);
     me = { x: me.x + (mx * v + p.impulse.x + p.dodgeDir.x * roll) * dt, z: me.z + (mz * v + p.impulse.z + p.dodgeDir.z * roll) * dt };
   }
   return { cleared: false, seconds: t, dealt, taken, minHp: minHp / p.maxHp, died: false };
@@ -141,6 +143,15 @@ export function balanceTable(missionId: "survive-circle" | "survive-sanctum", se
       minHp: runs.reduce((n, r) => n + r.minHp, 0) / seeds, deaths: runs.filter(r => r.died).length,
     };
   });
+}
+/**
+ * Minutes to bring the guardian down with one weapon at level 10, all 27 points in its stat, landing half the time,
+ * one hit in ten a crit (the content pass's measure; boss.test.ts holds it to 4–6 minutes for the starters).
+ */
+export function bossMinutes(weaponKey: string): number {
+  const w = SYSTEM_WEAPONS.find(x => x.key === weaponKey)!, stats = { ...ZERO_STATS, [w.scaling[0]]: 27 }, boss = ENEMIES["guardian-statue"];
+  const hit = (crit: boolean) => damage({ weapon: w, durability: 99, stats, level: 10, enemyDefense: boss.defense, enemyArmor: boss.armor, crit });
+  return boss.hp / ((0.9 * hit(false) + 0.1 * hit(true)) / WEAPONS[weaponKey].cooldown) / 0.5 / 60;
 }
 /** Family averages of the rows (clear rate, DPS, lowest health). */
 export function familyAverages(rows: BalanceRow[]) {

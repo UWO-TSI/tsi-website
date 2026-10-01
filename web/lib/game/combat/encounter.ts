@@ -5,17 +5,25 @@
  * projectiles, summons and totems, effects. Inputs (aim, attack, dodge, keys),
  * missions, respawns and server sync stay with the caller.
  */
-import { enemyTarget, floater, hurtUnits, moveSpeed, stepUnits } from "./abilities";
+import { cue, enemyTarget, floater, hurtUnits, moveSpeed, stepUnits } from "./abilities";
 import { hurtPlayer, regenEnergy, resolvePlayerShot, summonWisps } from "./actions";
 import { SLOT_IDS, type AbilityId, type CombatRuntime } from "./runtime";
-import { beamLands, DODGE, stepEnemy, strikeLands, sweptHit, type Vec } from "./sim";
+import { beamLands, DODGE, separate, stepEnemy, strikeLands, sweptHit, type Vec } from "./sim";
 
 const ABILITY_IDS: readonly AbilityId[] = [...SLOT_IDS, "swap"];
+
+/** A hit's push: `knock` × this u/s at the hit, easing to nothing over the flinch's first 0.15 s (0.225 u per point of knockback). */
+const KNOCK_SPEED = 3;
+/** Scratch the tick reuses every frame (combat polish 12: nothing allocated per frame in a fight). */
+const YOU = { x: 0, z: 0, safe: false, alive: true }, FROM = { x: 0, z: 0 }, TO = { x: 0, z: 0 };
+let freeFor: (x: number, z: number, r: number) => boolean = () => true, bodyR = 0;
+const freeBody = (x: number, z: number) => freeFor(x, z, bodyR);
 
 export function stepCombat(rt: CombatRuntime, me: Vec, dt: number, free: (x: number, z: number, r: number) => boolean = () => true, random: () => number = Math.random) {
   const p = rt.player;
   // Timers, buffs, shield, passive stacks, the transformation.
   p.attackCd = Math.max(0, p.attackCd - dt); p.swing = Math.max(0, p.swing - dt); p.dodgeCd = Math.max(0, p.dodgeCd - dt); p.hurt = Math.max(0, p.hurt - dt);
+  p.aimHold = Math.max(0, p.aimHold - dt);
   for (const k of ABILITY_IDS) rt.cooldowns[k] = Math.max(0, rt.cooldowns[k] - dt);
   for (let i = rt.buffs.length - 1; i >= 0; i--) if ((rt.buffs[i].t -= dt) <= 0) rt.buffs.splice(i, 1);
   p.shieldFor = Math.max(0, p.shieldFor - dt); if (!p.shieldFor) p.shield = 0;
@@ -27,46 +35,60 @@ export function stepCombat(rt: CombatRuntime, me: Vec, dt: number, free: (x: num
   p.speed = moveSpeed(rt);
   regenEnergy(rt, dt);
   // The dodge's clock (the movement kit's dash moves you), ability dash (what follows it lands where it ends), knockback.
+  const push = p.impulse;
+  push.x = push.z = 0;
   if (p.dodgeAge !== null) {
     p.dodgeAge += dt;
     if (p.dodgeAge >= DODGE.duration) p.dodgeAge = null;
-    p.impulse = { x: 0, z: 0 };
   } else if (p.dash) {
-    p.impulse = { x: p.dash.x * p.dash.speed, z: p.dash.z * p.dash.speed };
-    if ((p.dash.left -= dt) <= 0) { const then = p.dash.then; p.dash = null; p.impulse = { x: 0, z: 0 }; then?.(me); }
-  } else p.impulse = p.hurt > 0.2 ? { x: p.dodgeDir.x * 5, z: p.dodgeDir.z * 5 } : { x: 0, z: 0 };
+    push.x = p.dash.x * p.dash.speed; push.z = p.dash.z * p.dash.speed;
+    if ((p.dash.left -= dt) <= 0) { const then = p.dash.then; p.dash = null; push.x = push.z = 0; then?.(me); }
+  } else if (p.hurt > 0.2) {
+    const k = p.knock * KNOCK_SPEED * Math.min(1, (p.hurt - 0.2) / 0.15);
+    push.x = p.dodgeDir.x * k; push.z = p.dodgeDir.z * k;
+  }
   // Enemies.
-  const you = { x: me.x, z: me.z, safe: p.safe, alive: p.alive };
-  for (const e of [...rt.enemies]) {
-    const ev = stepEnemy(e, enemyTarget(rt, e, you), dt, (x, z) => free(x, z, e.type.radius * 0.6));
+  const you = YOU, list = rt.enemies;
+  you.x = me.x; you.z = me.z; you.safe = p.safe; you.alive = p.alive; // a boss reset or summon makes a new list: this frame keeps the old
+  freeFor = free;
+  for (let i = 0; i < list.length; i++) {
+    const e = list[i], was = e.state;
+    bodyR = e.type.radius * 0.6;
+    const ev = stepEnemy(e, enemyTarget(rt, e, you), dt, freeBody, random);
+    if (was !== "windup" && e.state === "windup") cue(rt, "windup", e);
+    else if (was === "active" && e.state === "recover" && e.move.stagger) cue(rt, "stagger", e);
     if (!ev) continue;
     const dmg = e.move.damage;
     if (ev.kind === "strike") {
-      if (strikeLands(e, me)) hurtPlayer(rt, dmg, e.move.shape === "smash" ? e.aim : e, me);
+      if (strikeLands(e, me)) hurtPlayer(rt, dmg, e.move.shape === "smash" ? e.aim : e, me, e.move.knockback, random);
       hurtUnits(rt, u => strikeLands(e, u, 0.4), dmg);
       if (rt.escort && strikeLands(e, rt.escort, 0.4)) { rt.escort.hp -= dmg; floater(rt, rt.escort, 1.8, `-${dmg}`, "hurt"); }
       if (rt.escort && Math.hypot(rt.escort.x - e.x, rt.escort.z - e.z) < Math.hypot(me.x - e.x, me.z - e.z)) e.aim = { x: rt.escort.x, z: rt.escort.z };
       if (e.move.shape === "smash") rt.blasts.push({ id: rt.seq++, x: e.aim.x, z: e.aim.z, radius: e.move.range, color: "#ffd9a0", age: 0, life: 0.45 });
     } else if (ev.kind === "spit") {
       const d = Math.hypot(ev.to.x - e.x, ev.to.z - e.z) || 1, sp = 9;
-      rt.projectiles.push({ id: rt.seq++, x: e.x, z: e.z, vx: ((ev.to.x - e.x) / d) * sp, vz: ((ev.to.z - e.z) / d) * sp, life: (e.move.range + 2) / sp, from: "enemy", damage: dmg, kind: "spit", radius: 0.3 });
+      rt.projectiles.push({ id: rt.seq++, x: e.x, z: e.z, vx: ((ev.to.x - e.x) / d) * sp, vz: ((ev.to.z - e.z) / d) * sp, life: (e.move.range + 2) / sp, from: "enemy", damage: dmg, kind: "spit", radius: 0.3, knock: e.move.knockback });
     } else if (ev.kind === "beam") {
-      if (beamLands(e, me)) hurtPlayer(rt, dmg, e, me);
+      if (beamLands(e, me)) hurtPlayer(rt, dmg, e, me, e.move.knockback, random);
     } else if (ev.kind === "summon") summonWisps(rt, e);
     else if (ev.kind === "phase") floater(rt, e, 3.4, e.phase === 3 ? "Enraged" : "The guardian calls for help", "info");
     else if (ev.kind === "reset" && e.type.kind === "boss") rt.enemies = rt.enemies.filter(x => !x.summoned);
   }
+  separate(rt.enemies, dt, free);
   // Projectiles: yours hit enemies (pierce keeps going), theirs hit you or a unit.
   for (let i = rt.projectiles.length - 1; i >= 0; i--) {
-    const sh = rt.projectiles[i], from = { x: sh.x, z: sh.z };
+    const sh = rt.projectiles[i], from = FROM, to = TO;
+    from.x = sh.x; from.z = sh.z;
     sh.x += sh.vx * dt; sh.z += sh.vz * dt; sh.life -= dt;
-    const to = { x: sh.x, z: sh.z };
+    to.x = sh.x; to.z = sh.z;
     let gone = sh.life <= 0 || !free(sh.x, sh.z, 0.05);
     if (!gone && sh.from === "player") gone = resolvePlayerShot(rt, i, from, to, random);
     else if (!gone && sh.from === "enemy") {
-      const unit = rt.units.find(u => u.def.kind !== "trap" && sweptHit(from, to, u, 0.4 + sh.radius));
-      if (sweptHit(from, to, me, 0.35 + sh.radius)) { hurtPlayer(rt, sh.damage, from, me); gone = true; }
-      else if (unit) { hurtUnits(rt, u => u === unit, sh.damage); gone = true; }
+      if (sweptHit(from, to, me, 0.35 + sh.radius)) { hurtPlayer(rt, sh.damage, from, me, sh.knock, random); gone = true; }
+      else {
+        const unit = rt.units.find(u => u.def.kind !== "trap" && sweptHit(from, to, u, 0.4 + sh.radius));
+        if (unit) { hurtUnits(rt, u => u === unit, sh.damage); gone = true; }
+      }
     }
     if (gone) rt.projectiles.splice(i, 1);
   }

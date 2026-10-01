@@ -15,6 +15,8 @@
  */
 
 let punchDeg = 0;
+let shake = 0, shakeT = 0;
+const SHAKE_DECAY = 16; // exponential /s: a shake is gone in ~0.25 s
 let tension = 0;
 
 const PUNCH_DECAY = 5; // exponential /s — a 4° punch fades in ~0.5s
@@ -26,6 +28,21 @@ export function punchZoom(deg: number): void {
 
 export function setTensionZoom(v: number): void {
   tension = Math.max(0, Math.min(1, v));
+}
+
+/** A small camera shake (combat hits), `amount` world units at its start; never with reduced motion. */
+export function shakeCamera(amount: number): void {
+  if (typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+  shake = Math.max(shake, amount);
+}
+
+/** Called once per frame by the follow camera: the shake's offset (screen x, y in world units), decaying. */
+export function juiceShake(delta: number, out: { x: number; y: number }): void {
+  shake *= Math.exp(-SHAKE_DECAY * delta);
+  if (shake < 0.002) shake = 0;
+  shakeT += delta;
+  out.x = shake * Math.sin(shakeT * 71);
+  out.y = shake * Math.sin(shakeT * 53 + 1.3);
 }
 
 /** Called once per frame by the FOV pass; decays the punch and returns

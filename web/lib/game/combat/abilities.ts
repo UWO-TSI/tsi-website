@@ -15,7 +15,7 @@ import type { IncantationScore } from "./contract";
 import { ENEMIES } from "./data";
 import { advanceMission, type MissionEvent } from "./missions";
 import { angleDiff, BOSS, damageEnemy, facingTo, inArc, segDist, spawnEnemy, staggered, type Enemy, type Vec } from "./sim";
-import { SLOT_IDS, type Buff, type CombatRuntime, type ShotHit, type Unit } from "./runtime";
+import { SLOT_IDS, type Buff, type CombatRuntime, type CueKind, type ShotHit, type Unit } from "./runtime";
 
 /** Plan §Combat and incantation defaults: starting a drawing spends 25% of its energy, a fizzle or cancel costs a short recovery instead of the cooldown. */
 export const CAST = { start: 0.25, recovery: 1.5 } as const;
@@ -27,9 +27,19 @@ const ELEMENTS: Element[] = ["fire", "frost", "lightning"];
 const COLOR = { fire: "#ff8a3d", frost: "#8fd8ff", lightning: "#ffe36e", Arcane: "#b48cff", Ranger: "#8fd0ff", Vanguard: "#ffd27a", Warden: "#8fe39a", heal: "#9dffb0", shield: "#bfe3ff" } as const;
 const dist = (a: Vec, b: Vec) => Math.hypot(a.x - b.x, a.z - b.z);
 
+/** Damage numbers and status words ("Dodged", "Not enough energy") keep separate pools, so a flurry of hits never pushes a status out. */
+export const FLOATERS = { damage: 12, info: 4 } as const;
 export function floater(rt: CombatRuntime, at: Vec, y: number, text: string, kind: "hit" | "crit" | "hurt" | "info") {
   rt.floaters.push({ id: rt.seq++, x: at.x, y, z: at.z, text, kind, age: 0 });
-  if (rt.floaters.length > 16) rt.floaters.shift();
+  const info = kind === "info";
+  let n = 0;
+  for (const f of rt.floaters) if ((f.kind === "info") === info) n++;
+  if (n > (info ? FLOATERS.info : FLOATERS.damage)) rt.floaters.splice(rt.floaters.findIndex(f => (f.kind === "info") === info), 1);
+}
+/** A cue for the scene (sound, hitstop, shake, puff); at most 32 wait, for runs nobody drains (the balance harness). */
+export function cue(rt: CombatRuntime, kind: CueKind, at: Vec, melee = false) {
+  rt.cues.push({ kind, x: at.x, z: at.z, melee });
+  if (rt.cues.length > 32) rt.cues.shift();
 }
 export function missionEvent(rt: CombatRuntime, ev: MissionEvent) {
   if (rt.mission) rt.mission = advanceMission(rt.mission, ev);
@@ -64,7 +74,8 @@ export function moveSpeed(rt: CombatRuntime): number {
 export const distracted = (rt: CombatRuntime, e: Enemy) => e.status.distract > 0 || e.status.hold > 0 || rt.units.some(u => u.def.kind === "decoy" && dist(u, e) < e.type.aggroRadius + 3);
 
 // ── Hits ────────────────────────────────────────────────────────
-export interface HitSrc { power: number; from: Vec; stat?: Stat; tier?: number; unit?: boolean; knock?: number; status?: Status }
+/** `melee`: a weapon swing (its hits stop time for a beat). */
+export interface HitSrc { power: number; from: Vec; stat?: Stat; tier?: number; unit?: boolean; knock?: number; status?: Status; melee?: boolean }
 
 /** The passive's damage bonus for this hit (a fraction). */
 function passiveBonus(rt: CombatRuntime, e: Enemy, src: HitSrc): number {
@@ -97,7 +108,7 @@ export function strike(rt: CombatRuntime, e: Enemy, src: HitSrc, random: () => n
   const killed = damageEnemy(e, amount, src.from, src.knock ?? 0);
   if (e.flash === 0.18) floater(rt, e, 1.4 + e.type.hover, String(amount), crit ? "crit" : "hit");
   if (src.status && !killed) applyStatus(e, src.status);
-  if (!src.unit) onPlayerHit(rt, e, amount, crit, held);
+  if (!src.unit) { onPlayerHit(rt, e, amount, crit, held); cue(rt, crit ? "crit" : "hit", e, !!src.melee); }
   if (killed) onKill(rt, e);
   return amount;
 }
@@ -116,6 +127,7 @@ function onPlayerHit(rt: CombatRuntime, e: Enemy, amount: number, crit: boolean,
 
 function onKill(rt: CombatRuntime, e: Enemy) {
   rt.killQueue.push({ enemy: e.type.id, key: `kill:${e.id}:${rt.seq++}:${Date.now().toString(36)}` });
+  cue(rt, e.type.kind === "boss" ? "bossDefeat" : "defeat", e);
   missionEvent(rt, { type: "kill", enemy: e.type.id });
   const pv = passiveOf(rt), me = rt.player.last;
   if (pv?.kind === "kill_heal" && me && dist(me, e) <= (pv.cap ?? 9)) heal(rt, rt.player.maxHp * pv.value);
@@ -154,7 +166,7 @@ function addBuff(rt: CombatRuntime, b: Buff) {
 }
 
 /** Damage to the player after guard, a frontal block and the shield. Returns what's left for health; triggers block passives/answers. */
-export function mitigate(rt: CombatRuntime, amount: number, from: Vec, me: Vec): { damage: number; blocked: boolean } {
+export function mitigate(rt: CombatRuntime, amount: number, from: Vec, me: Vec, random: () => number = Math.random): { damage: number; blocked: boolean } {
   const p = rt.player;
   let dmg = amount * (1 - Math.min(GUARD_CAP, buffSum(rt, "guard")));
   const block = rt.buffs.find(b => b.stat === "block" && b.t > 0);
@@ -166,7 +178,7 @@ export function mitigate(rt: CombatRuntime, amount: number, from: Vec, me: Vec):
     floater(rt, me, 1.9, "Blocked", "info");
     const pv = passiveOf(rt);
     if (pv?.kind === "block_shield") addShield(rt, p.maxHp * pv.value, 5);
-    if (block.onBlock?.on_block && !block.answered) { block.answered = true; runEffects(rt, block.onBlock.on_block, context(rt, block.onBlock, me, 1, from), Math.random); }
+    if (block.onBlock?.on_block && !block.answered) { block.answered = true; runEffects(rt, block.onBlock.on_block, context(rt, block.onBlock, me, 1, from), random); }
   }
   const soak = Math.min(p.shield, dmg);
   p.shield -= soak;
@@ -354,10 +366,11 @@ function resonance(rt: CombatRuntime, at: Vec): number {
 }
 
 /** Summons chase and fight, totems pulse each second, traps spring, decoys hold aggro; the player-relative leash keeps them close. */
+const foe = (e: Enemy) => e.state !== "dead" && e.state !== "return";
 export function stepUnits(rt: CombatRuntime, me: Vec, dt: number, random: () => number = Math.random) {
-  const p = rt.player;
-  const foes = rt.enemies.filter(e => e.state !== "dead" && e.state !== "return");
-  for (const u of [...rt.units]) {
+  const p = rt.player, foes = rt.enemies, units = rt.units; // a unit that leaves makes a new list: this frame keeps the old
+  for (let ui = 0; ui < units.length; ui++) {
+    const u = units[ui];
     if (u.life !== null) u.life -= dt;
     if ((u.life !== null && u.life <= 0) || u.hp <= 0) { rt.units = rt.units.filter(x => x !== u); continue; }
     u.cd -= dt;
@@ -366,7 +379,7 @@ export function stepUnits(rt: CombatRuntime, me: Vec, dt: number, random: () => 
       if (u.cd > 0) continue;
       u.cd = 1;
       const pl = d.pulse!;
-      for (const e of foes) if (dist(u, e) <= d.radius! + e.type.radius) {
+      for (const e of foes) if (foe(e) && dist(u, e) <= d.radius! + e.type.radius) {
         if (pl.damage) strike(rt, e, { power: pl.damage * resonance(rt, e), from: u, stat: u.stat, unit: true, knock: 0 }, random);
         if (pl.slow) applyStatus(e, { slow: [pl.slow, 1.3] });
       }
@@ -378,7 +391,7 @@ export function stepUnits(rt: CombatRuntime, me: Vec, dt: number, random: () => 
       continue;
     }
     if (d.kind === "trap") {
-      const e = foes.find(f => dist(u, f) <= d.radius! + f.type.radius);
+      const e = foes.find(f => foe(f) && dist(u, f) <= d.radius! + f.type.radius);
       if (e) {
         strike(rt, e, { power: u.power, from: u, stat: u.stat, unit: true, knock: 0, status: { hold: 3 } }, random);
         rt.blasts.push({ id: rt.seq++, x: u.x, z: u.z, radius: 1.4, color: "#ffe08a", age: 0, life: 0.5 });
@@ -388,7 +401,8 @@ export function stepUnits(rt: CombatRuntime, me: Vec, dt: number, random: () => 
     }
     if (d.kind === "decoy") continue;
     // Minions: the nearest foe within reach of both it and you, else back to your side.
-    const target = foes.filter(e => dist(e, u) < 9 && dist(e, me) < 12).sort((a, b) => dist(a, u) - dist(b, u))[0];
+    let target: Enemy | undefined, near = 9;
+    for (const e of foes) { const de = foe(e) && dist(e, me) < 12 ? dist(e, u) : Infinity; if (de < near) { near = de; target = e; } }
     const range = d.range ?? 1.5, gap = target ? dist(target, u) : dist(me, u);
     const goal = dist(me, u) > 12 || !target ? me : target;
     const stop = target && goal === target ? range * 0.8 : 1.4;
@@ -414,9 +428,12 @@ export function stepUnits(rt: CombatRuntime, me: Vec, dt: number, random: () => 
 export function hurtUnits(rt: CombatRuntime, lands: (u: Unit) => boolean, amount: number) {
   for (const u of rt.units) if (u.def.kind !== "trap" && lands(u)) { u.hp -= amount; floater(rt, u, 1.4, `-${amount}`, "hurt"); }
 }
-/** Where an enemy goes: a phantom or a bulwark crab near it draws it; a distracted one wanders home. */
+/** Where an enemy goes: a phantom or a bulwark crab near it draws it; a distracted one wanders home. (One scratch target: read it before the next call.) */
+const TARGET = { x: 0, z: 0, safe: false, alive: true };
 export function enemyTarget(rt: CombatRuntime, e: Enemy, player: Vec & { safe: boolean; alive: boolean }): Vec & { safe: boolean; alive: boolean } {
-  if (e.status.distract > 0) return { x: e.spawnX, z: e.spawnZ, safe: player.safe, alive: player.alive };
-  const t = rt.units.filter(u => u.def.taunt && dist(u, e) < e.type.aggroRadius + 3).sort((a, b) => dist(a, e) - dist(b, e))[0];
-  return t ? { x: t.x, z: t.z, safe: player.safe, alive: player.alive } : player;
+  let t: Vec | null = e.status.distract > 0 ? { x: e.spawnX, z: e.spawnZ } : null, best = e.type.aggroRadius + 3;
+  if (!t) for (const u of rt.units) { const d = u.def.taunt ? dist(u, e) : Infinity; if (d < best) { best = d; t = u; } }
+  if (!t) return player;
+  TARGET.x = t.x; TARGET.z = t.z; TARGET.safe = player.safe; TARGET.alive = player.alive;
+  return TARGET;
 }

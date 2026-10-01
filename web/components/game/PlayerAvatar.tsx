@@ -16,8 +16,8 @@ import type { CharacterLook } from "@/lib/game/character/look";
 import { useMyLook } from "@/lib/game/character/lookStore";
 import { combatClip, seatLift, type CombatView } from "@/lib/game/character/clips";
 import { useWorldClips } from "./character/useWorldClips";
-import { combat, useCombatVersion } from "@/lib/game/combat/runtime";
-import { combatPush, combatTuning, dashDodge } from "@/lib/game/combat/actions";
+import { combat, useCombatValue } from "@/lib/game/combat/runtime";
+import { combatFacing, combatPush, combatTuning, dashDodge } from "@/lib/game/combat/actions";
 import { WEAPONS } from "@/lib/game/combat/data";
 import { STUCK_TIME, advanceMove, clearSpot, createMoveSim, createMoveState, interpolated, topSpeed, towards, MOVE_TUNING, NO_INPUT, type MoveEvent, type MoveInput, type MoveSim, type MoveState, type MoveTuning, type MoveWorld } from "@/lib/game/movement/sim";
 import { useMoveKeys } from "@/lib/game/movement/keys";
@@ -63,6 +63,8 @@ interface PlayerAvatarProps {
   member?: boolean;
   /** Encounter: the ruins' kit (Q dodges); clips and facing follow the combat runtime; the weapon is in hand. */
   combat?: boolean;
+  /** A change puts you back at the spawn (the ruins' defeat wakes you at the gate without remounting the scene). */
+  respawn?: number;
   /** The leaf glider: owned, and this area allows it (the village and the home island; never the ruins). */
   glider?: boolean;
   frozen?: boolean;
@@ -95,14 +97,14 @@ const GRIP_Y = 0.58 * CHARACTER_SCALE;
 const SEAT_CLIPS = new Set<ClipName>(["Sit", "Study", "Stretch", "Sleep"]);
 type Seat = { x: number; z: number; clip: ClipName; lift: number; yaw: number };
 
-export default function PlayerAvatar({ spawnPosition, player, world, groundHeight, groundSurface, camTarget, playerName = "Player", showNameplate = true, playerLevel, member = false, combat: inCombat = false, glider = false, frozen = false, desktopClickToMove = false, tuning, juice, timeScale, telemetry, walkSpeed = MOVE_TUNING.walkSpeed }: PlayerAvatarProps) {
+export default function PlayerAvatar({ spawnPosition, player, world, groundHeight, groundSurface, camTarget, playerName = "Player", showNameplate = true, playerLevel, member = false, combat: inCombat = false, respawn = 0, glider = false, frozen = false, desktopClickToMove = false, tuning, juice, timeScale, telemetry, walkSpeed = MOVE_TUNING.walkSpeed }: PlayerAvatarProps) {
   const anchor = useRef<THREE.Group>(null), body = useRef<THREE.Group>(null), head = useRef<THREE.Group>(null);
   const motion = useRef<CharacterMotion>({ speed: 0, yaw: 0, lift: 0, pose: null, play: null, move: null });
   const { look } = useMyLook();
   const { camera, gl } = useThree();
   const bindings = useMoveKeys();
   const [x0, , z0] = spawnPosition;
-  const sim = useRef<MoveSim | null>(null), simAt = useRef<[number, number] | null>(null);
+  const sim = useRef<MoveSim | null>(null), simAt = useRef<[number, number, number] | null>(null);
   const keys = useRef<Record<string, boolean>>({});
   const presses = useRef({ jump: false, dash: false });
   const target = useRef<{ x: number; z: number } | null>(null);
@@ -227,9 +229,9 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
     if (!g || !bd || !hd) return;
     const p = combat.rt.player, d = dev.current, f = fx.current, m = motion.current, j = juice ?? MOVE_JUICE, st = touchStick, k = keys.current, b = bindings;
     const t = inCombat ? combatTuning(p.speed) : kit;
-    if (!sim.current || simAt.current?.[0] !== x0 || simAt.current[1] !== z0) {
+    if (!sim.current || simAt.current?.[0] !== x0 || simAt.current[1] !== z0 || simAt.current[2] !== respawn) {
       sim.current = createMoveSim(createMoveState(x0, z0, world));
-      simAt.current = [x0, z0];
+      simAt.current = [x0, z0, respawn];
     }
     // Spawned or built into something (an exit painted inside a prop, furniture placed where you stand): step out to the nearest open spot.
     const at = sim.current.state;
@@ -240,6 +242,7 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
     if (!reported.current) f.level = sim.current.state.y;
     let dt = Math.min(rawDelta, 0.1) * (timeScale ?? 1);
     if (d.paused) { dt = Math.min(dt, d.budget); d.budget -= dt; }
+    if (inCombat && combat.hitstop > 0) dt = 0; // a beat of hitstop: the swing's pose holds too (m.rate)
 
     // Intent: keys give a unit direction, the stick keeps its tilt; either drops a tap target, and any move gets you up from a seat.
     let ix = (k[b.right] ? 1 : 0) - (k[b.left] ? 1 : 0), iz = (k[b.forward] ? 1 : 0) - (k[b.back] ? 1 : 0);
@@ -267,13 +270,13 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
         sprint: !!k[b.sprint] || (!keyed && tilt > 0.92), sneak: !!k[b.sneak],
         jump: !!k[b.jump] || st.jump, jumpPressed, dashPressed,
       } : { ...NO_INPUT, dashPressed: !frozen && !down && dashPressed });
-      if (inCombat) { input.push = push; s.state.facing = p.facing; } // no stick: the dodge goes the way you aim
+      if (inCombat) { input.push = push; if (p.aimHold > 0 || Math.hypot(s.state.vx, s.state.vz) < 0.6) s.state.facing = p.facing; } // attacking or standing: the kit turns from your facing (a dash with no stick goes that way)
       events = advanceMove(s, input, dt, world, t);
       if (target.current) {
         f.stuck = Math.hypot(s.state.vx, s.state.vz) < 0.3 ? f.stuck + dt : 0;
         if (f.stuck > STUCK_TIME) target.current = null;
       }
-      if (inCombat && events.some(e => e.kind === "dash")) dashDodge(combat.rt, { x: s.state.dashX, z: s.state.dashZ });
+      if (inCombat && events.some(e => e.kind === "dash")) dashDodge(combat.rt, { x: s.state.dashX, z: s.state.dashZ }, s.state.airDashes > 0); // an air dash: no i-frames
     }
     const state = s.state, speed = sitting ? 0 : Math.hypot(state.vx, state.vz);
     const [x, y, z] = sitting ? [sitting.x, groundHeight(sitting.x, sitting.z), sitting.z] : interpolated(s);
@@ -365,10 +368,11 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
     bankAbout(bd, state.facing, f.bank, y - groundY + GRIP_Y);
     m.rate = rawDelta > 0 ? dt / Math.min(rawDelta, 0.1) : 1;
     if (inCombat) {
-      // Encounter: face the aim; attacks, dodges, hits, casting and defeat drive the clips.
+      // Encounter: face the way you move, the aim when standing or attacking (combatFacing); attacks, dodges, hits, casting and defeat drive the clips.
       const view: CombatView = { alive: p.alive, dodgeAge: p.dodgeAge, hurt: p.hurt, attackCd: p.attackCd };
       const next = combatClip(view, combatPrev.current ?? view, !!combat.rt.casting, WEAPONS[p.weapon].kind);
       combatPrev.current = view;
+      if (p.alive && dt > 0) p.facing = combatFacing(p, { x, z }, state.facing, state.mode === "ground" ? speed : 0, dt);
       m.yaw = p.facing;
       m.pose = next.pose;
       if (next.play) m.play = next.play;
@@ -456,9 +460,8 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
 
 /** The player's character, with the equipped weapon: in hand in an encounter, across the back once the ruins gate is open (row 140). */
 function PlayerCharacter({ look, motion, inCombat, walkSpeed, leaf }: { look: CharacterLook; motion: React.RefObject<CharacterMotion>; inCombat: boolean; walkSpeed: number; leaf: boolean }) {
-  useCombatVersion();
-  const p = combat.rt.player, key = p.weapon, shown = inCombat ? p.alive : p.armed;
-  // The same object until the weapon, or whether it shows, changes (the runtime publishes ~10×/s).
+  // Only the weapon, and whether it shows, re-render the character (the runtime publishes ~10×/s).
+  const key = useCombatValue(() => combat.rt.player.weapon), shown = useCombatValue(() => (inCombat ? combat.rt.player.alive : combat.rt.player.armed));
   const weapon = useMemo(() => {
     const w = WEAPONS[key];
     return w?.model && shown ? { kind: w.kind, model: w.model, modelScale: w.modelScale, inHand: inCombat, grip: w.grip } : null;

@@ -185,7 +185,8 @@ describe("starters and missing gear (plan edge cases)", () => {
     expect(flow("sword-driftwood")).toBeLessThan(flow("wraps-cloth"));
     const { rt } = setup("guardian");
     press(rt, 0);
-    expect(rt.buffs.find(b => b.stat === "block")!.value).toBeCloseTo(0.4); // no buckler: 0.8 × 0.5
+    const block = (subclassByKey("guardian")!.signature.effects[0] as { value: number }).value;
+    expect(rt.buffs.find(b => b.stat === "block")!.value).toBeCloseTo(block * 0.5); // no buckler: half
   });
 });
 
@@ -195,8 +196,8 @@ describe("passives (one modifier each on the shared hooks)", () => {
     const { rt, dummy } = setup("guardian");
     rt.player.weapon = "shield-buckler";
     press(rt, 0);
-    const took = hurtPlayer(rt, 40, { x: 0, z: 2 }, ME);
-    expect(took).toBeLessThanOrEqual(Math.round(40 * 0.2));
+    const took = hurtPlayer(rt, 2, { x: 0, z: 2 }, ME);
+    expect(took).toBe(0); // blocked, and the barrier the block built soaks the rest
     expect(rt.player.shield).toBeGreaterThan(0);
     expect(dummy.hp).toBeLessThan(5000); // Shield Counter's bash
     rt.player.shield = 0;

@@ -1,15 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { ENEMIES, MISSIONS } from "./data";
-import { attack, combatPush, combatTuning, dashDodge, hurtPlayer, regenEnergy, startDodge, triggerAbility } from "./actions";
-import { hitAmount, resolveCast } from "./abilities";
+import { AIM_HOLD, BUFFER, attack, combatFacing, combatPush, combatTuning, createInputs, dashDodge, hurtPlayer, regenEnergy, runInputs, startDodge, triggerAbility } from "./actions";
+import { FLOATERS, floater, hitAmount, resolveCast } from "./abilities";
 
 /** One hit from the equipped weapon (systems damage formula), as `attack` lands it. */
 const weaponDamage = (rt: Parameters<typeof hitAmount>[0], e: Parameters<typeof hitAmount>[1], random: () => number) => hitAmount(rt, e, { power: 1, from: e }, random);
 import { stepCombat } from "./encounter";
-import { NO_INPUT, STEP, createMoveState, stepMove, type MoveWorld } from "@/lib/game/movement/sim";
+import { MOVE_TUNING, NO_INPUT, STEP, createMoveState, stepMove, type MoveWorld } from "@/lib/game/movement/sim";
 import { startMission } from "./missions";
 import { createRuntime, ENERGY } from "./runtime";
-import { DODGE, spawnEnemy } from "./sim";
+import { DODGE, STUN, damageEnemy, spawnEnemy, stepEnemy } from "./sim";
 import { equipKit } from "./abilities";
 import { subclassByKey } from "@/lib/combat/kits";
 
@@ -117,17 +117,29 @@ describe("the ruins dodge on the movement kit (specs/movement.md)", () => {
     }
     return { rt, s, dashes };
   };
-  it("is Q's dash with the roll's reach and time, invulnerable through today's i-frame window", () => {
+  it("is the village dash (one dash, combat polish 9): the same burst and reach, invulnerable through it and a beat past", () => {
+    const t = combatTuning(1);
+    expect([t.dashSpeed, t.dashTime, t.dashExit, t.dashEase]).toEqual([MOVE_TUNING.dashSpeed, MOVE_TUNING.dashTime, MOVE_TUNING.dashExit, MOVE_TUNING.dashEase]);
+    expect(t.dashCooldown).toBeCloseTo(0.6);
     const hits: [number, number][] = [];
     let atEnd = 0;
     run(0.6, [0], (time, rt, z) => {
-      if (Math.abs(time - DODGE.duration) < STEP / 2) atEnd = z;
-      if ([0.1, 0.25, 0.45].some(t => Math.abs(time - t) < STEP / 2)) hits.push([time, hurtPlayer(rt, 10, { x: 0, z: 5 }, { x: 0, z })]);
+      if (Math.abs(time - MOVE_TUNING.dashTime) < STEP / 2) atEnd = z;
+      if ([0.05, 0.25, 0.4].some(t => Math.abs(time - t) < STEP / 2)) hits.push([time, hurtPlayer(rt, 10, { x: 0, z: 5 }, { x: 0, z })]);
     });
-    // The roll moved 14 u/s easing to 40% over its 0.34 s: 3.33u, plus the walk it started from.
-    expect(atEnd).toBeGreaterThan(3.2);
-    expect(atEnd).toBeLessThan(4);
+    // 18 u/s easing to 0.55 of it over 0.2 s: the village dash's 2.5u.
+    expect(atEnd).toBeGreaterThan(2.4);
+    expect(atEnd).toBeLessThan(2.8);
     expect(hits.map(([, lost]) => lost > 0)).toEqual([false, false, true]);
+  });
+  it("an air dash gives no i-frames (it still breaks a cast)", () => {
+    const rt = caster();
+    rt.player.safe = false;
+    triggerAbility(rt, "slot1");
+    expect(dashDodge(rt, { x: 1, z: 0 }, true)).toBe(false);
+    expect(rt.casting).toBeNull();
+    expect(rt.player.dodgeAge).toBeNull();
+    expect(hurtPlayer(rt, 10, { x: 1, z: 0 }, { x: 0, z: 0 })).toBe(10);
   });
   it("waits out the dodge's cooldown, and the roll's own impulse never moves you twice", () => {
     const { dashes } = run(2, [0, 0.5, DODGE.duration + DODGE.cooldown + 0.02]);
@@ -146,5 +158,144 @@ describe("the ruins dodge on the movement kit (specs/movement.md)", () => {
     expect(combatTuning(1.2).walkSpeed).toBeCloseTo(7.4 * 1.2);
     expect(combatTuning(1.2).sprintSpeed).toBeCloseTo(12 * 1.2);
     expect(combatTuning(1).dashCooldown).toBeCloseTo(DODGE.duration + DODGE.cooldown);
+  });
+});
+
+describe("input buffering (combat polish 1)", () => {
+  const me = { x: 0, z: 0 }, frame = 1 / 60;
+  it("a click is a queued attack: a tap that goes down and up between two frames still swings", () => {
+    const rt = createRuntime(), q = createInputs();
+    rt.player.safe = false;
+    q.held = true; q.attack = BUFFER; q.held = false; // pointerdown, pointerup, then the frame
+    runInputs(rt, q, me, frame);
+    expect(rt.player.attackCd).toBeGreaterThan(0);
+    expect(q.attack).toBe(0); // consumed once
+  });
+  it("a click in the last 150 ms of the cooldown swings the moment it is back; an earlier one is dropped", () => {
+    const rt = createRuntime(), q = createInputs();
+    rt.player.attackCd = 0.1; q.attack = BUFFER;
+    let swung = -1;
+    for (let t = 0; t < 0.3; t += frame) { const before = rt.player.attackCd; runInputs(rt, q, me, frame); stepCombat(rt, me, frame); if (swung < 0 && rt.player.attackCd > before) swung = t; }
+    expect(swung).toBeGreaterThan(0.09);
+    expect(swung).toBeLessThan(0.13);
+    const late = createRuntime(), r = createInputs();
+    late.player.attackCd = 0.3; r.attack = BUFFER;
+    for (let t = 0; t < 0.5; t += frame) { runInputs(late, r, me, frame); stepCombat(late, me, frame); }
+    expect(late.player.attackCd).toBe(0); // never swung
+  });
+  it("a click during the dodge lands as the dodge ends", () => {
+    const rt = createRuntime(), q = createInputs();
+    startDodge(rt, { x: 1, z: 0 });
+    rt.player.dodgeAge = DODGE.duration - 0.05; q.attack = BUFFER;
+    for (let t = 0; t < 0.2; t += frame) { runInputs(rt, q, me, frame); stepCombat(rt, me, frame); }
+    expect(rt.player.swing).toBeGreaterThan(0);
+  });
+  it("an ability pressed in the last 150 ms of its cooldown fires when it is ready", () => {
+    const rt = caster(), q = createInputs();
+    rt.cooldowns.slot1 = 0.1;
+    q.keys.push({ id: "slot1", left: BUFFER });
+    for (let t = 0; t < 0.2 && !rt.casting; t += frame) { runInputs(rt, q, me, frame); stepCombat(rt, me, frame); }
+    expect(rt.casting).not.toBeNull();
+    expect(rt.denied.slot1).toBe(0);
+  });
+  it("an ability pressed with more cooldown than that pulses its slot and never fires later", () => {
+    const rt = caster(), q = createInputs();
+    rt.cooldowns.slot1 = 0.6;
+    q.keys.push({ id: "slot1", left: BUFFER });
+    expect(runInputs(rt, q, me, frame)).toBe(true); // refused: the scene publishes the pulse at once
+    expect(rt.denied.slot1).toBe(1);
+    for (let t = 0; t < 1; t += frame) { runInputs(rt, q, me, frame); stepCombat(rt, me, frame); }
+    expect(rt.casting).toBeNull();
+  });
+});
+
+describe("combat cues (combat polish 3): the encounter says what happened, the scene plays it", () => {
+  it("a killing swing cues the swing, the hit and the defeat; a hit taken cues the hurt", () => {
+    const rt = createRuntime();
+    rt.player.safe = false; rt.player.facing = 0;
+    rt.enemies = [spawnEnemy("a", { ...ENEMIES["shadow-fox"], hp: 5 }, 0, 1.2)];
+    attack(rt, { x: 0, z: 0 }, fixed);
+    expect(rt.cues.map(c => [c.kind, c.melee])).toEqual([["swing", false], ["hit", true], ["defeat", false]]);
+    rt.cues.length = 0;
+    hurtPlayer(rt, 10, { x: 0, z: 1 }, { x: 0, z: 0 });
+    expect(rt.cues.map(c => c.kind)).toEqual(["hurt"]);
+  });
+  it("an enemy's windup and the guardian's stagger window cue once each", () => {
+    const rt = createRuntime();
+    rt.player.safe = false;
+    const boss = spawnEnemy("b", ENEMIES["guardian-statue"], 0, 0);
+    boss.state = "chase"; boss.move = ENEMIES["guardian-statue"].attacks.find(m => m.shape === "beam")!;
+    rt.enemies = [boss];
+    const kinds: string[] = [];
+    for (let t = 0; t < 3.5; t += 1 / 60) { stepCombat(rt, { x: 0, z: 5 }, 1 / 60); kinds.push(...rt.cues.map(c => c.kind)); rt.cues.length = 0; }
+    expect(kinds.filter(k => k === "windup")).toHaveLength(1);
+    expect(kinds.filter(k => k === "stagger")).toHaveLength(1);
+  });
+});
+
+describe("impact (combat polish 4)", () => {
+  /** How far a hit with this knockback pushes you over its flinch (the encounter's impulse, integrated). */
+  const pushed = (knock: number) => {
+    const rt = createRuntime(), me = { x: 0, z: 0 };
+    rt.player.safe = false;
+    hurtPlayer(rt, 5, { x: 0, z: -1 }, me, knock);
+    let z = 0;
+    for (let t = 0; t < 0.4; t += 1 / 120) { stepCombat(rt, me, 1 / 120); z += rt.player.impulse.z / 120; }
+    return z;
+  };
+  it("pushes you by the attack's own knockback: a golem's slam further than a spit", () => {
+    const golem = ENEMIES["stone-golem"].attacks[0].knockback, spit = ENEMIES["mushroom-beast"].attacks[0].knockback;
+    expect(pushed(golem) / golem).toBeGreaterThan(0.2); // about 0.225 u per point
+    expect(pushed(golem) / golem).toBeLessThan(0.24);
+    expect(pushed(golem)).toBeGreaterThan(pushed(spit) * 2);
+  });
+  it("a hit staggers an enemy's chase for a beat (elites half), the boss not at all", () => {
+    const fox = spawnEnemy("f", ENEMIES["shadow-fox"], 0, 0), boss = spawnEnemy("b", ENEMIES["guardian-statue"], 0, 0), golem = spawnEnemy("g", ENEMIES["stone-golem"], 0, 0);
+    fox.state = "chase";
+    damageEnemy(fox, 1, { x: 0, z: -1 }, 0); damageEnemy(boss, 1, { x: 0, z: -1 }, 0); damageEnemy(golem, 1, { x: 0, z: -1 }, 0);
+    expect([fox.stun, golem.stun, boss.stun]).toEqual([STUN, STUN / 2, 0]);
+    stepEnemy(fox, { x: 0, z: 5, safe: false, alive: true }, 0.1);
+    expect(fox.z).toBe(0); // held
+    stepEnemy(fox, { x: 0, z: 5, safe: false, alive: true }, 0.1);
+    expect(fox.z).toBeGreaterThan(0); // chasing again
+  });
+});
+
+describe("HUD pools (combat polish 8)", () => {
+  it("status words keep their own pool: a flurry of damage numbers never pushes one out", () => {
+    const rt = createRuntime(), at = { x: 0, z: 0 };
+    floater(rt, at, 1, "Dodged", "info");
+    for (let i = 0; i < 30; i++) floater(rt, at, 1, String(i), "hit");
+    expect(rt.floaters.filter(f => f.kind === "info").map(f => f.text)).toEqual(["Dodged"]);
+    expect(rt.floaters.filter(f => f.kind !== "info")).toHaveLength(FLOATERS.damage);
+    for (let i = 0; i < 6; i++) floater(rt, at, 1, `note ${i}`, "info");
+    expect(rt.floaters.filter(f => f.kind === "info").map(f => f.text)).toEqual(["note 2", "note 3", "note 4", "note 5"]);
+    expect(rt.floaters.filter(f => f.kind !== "info")).toHaveLength(FLOATERS.damage);
+  });
+});
+
+describe("facing (combat polish 10)", () => {
+  const E = Math.PI / 2; // +x
+  it("faces the way you move, snaps to the aim for an attack and holds it, then turns back to the way you move", () => {
+    const rt = createRuntime(), p = rt.player, me = { x: 0, z: 0 };
+    p.facing = 0; p.aim = { x: 5, z: 0 }; // aiming at +x while running +z
+    expect(combatFacing(p, me, 0, 7, 1 / 60)).toBe(0); // running: the way you move
+    attack(rt, me, fixed);
+    expect(p.facing).toBeCloseTo(E); // the swing snaps to the aim
+    let t = 0;
+    for (; t < 1 && combatFacing(p, me, 0, 7, 1 / 60) !== 0; t += 1 / 60) stepCombat(rt, me, 1 / 60);
+    expect(t).toBeGreaterThan(AIM_HOLD - 0.05);
+    expect(t).toBeLessThan(AIM_HOLD + 0.05);
+  });
+  it("standing, turns to the aim (eased, not a pop); an aim right underfoot keeps the facing", () => {
+    const rt = createRuntime(), p = rt.player, me = { x: 0, z: 0 };
+    p.facing = 0; p.aim = { x: 5, z: 0 };
+    const first = combatFacing(p, me, 0, 0, 1 / 60);
+    expect(first).toBeGreaterThan(0);
+    expect(first).toBeLessThan(E / 2);
+    for (let i = 0; i < 30; i++) p.facing = combatFacing(p, me, 0, 0, 1 / 60);
+    expect(p.facing).toBeCloseTo(E, 2);
+    p.aim = { x: 0.1, z: 0.1 };
+    expect(combatFacing(p, me, 0, 0, 1 / 60)).toBeCloseTo(E, 2);
   });
 });

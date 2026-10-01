@@ -9,7 +9,7 @@ import { ENEMIES, WEAPONS } from "./data";
 import type { Vec } from "./sim";
 import { BOSS, DODGE, inArc, invulnerable, spawnEnemy, sweptHit, type Enemy } from "./sim";
 import { ENERGY, SLOT_IDS, type AbilityId, type CombatRuntime } from "./runtime";
-import { cancelCast, floater, mitigate, strike, summon, fireSlot } from "./abilities";
+import { cancelCast, cue, floater, mitigate, strike, summon, fireSlot } from "./abilities";
 import type { SpawnPoint } from "./spawns";
 import { FAMILY_STAT } from "@/lib/combat/kits";
 import { WEAPONS as SYSTEM_WEAPONS } from "@/lib/combat/weapons";
@@ -24,17 +24,39 @@ export function regenEnergy(rt: CombatRuntime, dt: number) {
 
 const wearHit = (rt: CombatRuntime) => { const p = rt.player; p.hits[p.weapon] = (p.hits[p.weapon] ?? 0) + 1; p.durability[p.weapon] = Math.max(0, p.durability[p.weapon] - 1); };
 
+/**
+ * Facing (combat polish 10): an attack or ability snaps you to the aim and holds it AIM_HOLD s; otherwise you face the
+ * way you move (the movement kit's own turn, `travel`), and standing you turn to the aim. No more sliding feet.
+ */
+export const AIM_HOLD = 0.6;
+const MOVING = 0.6, AIM_TURN = 18;
+const aimYaw = (p: CombatRuntime["player"], at: Vec) => {
+  const dx = p.aim.x - at.x, dz = p.aim.z - at.z;
+  return Math.hypot(dx, dz) > 0.3 ? Math.atan2(dx, dz) : p.facing; // the aim right under you keeps the facing
+};
+/** Snap to the aim for an attack and hold it. */
+export function faceAim(p: CombatRuntime["player"], at: Vec) { p.facing = aimYaw(p, at); p.aimHold = AIM_HOLD; }
+/** This frame's facing: `travel` is the movement kit's facing and `speed` how fast you move (PlayerAvatar). */
+export function combatFacing(p: CombatRuntime["player"], at: Vec, travel: number, speed: number, dt: number): number {
+  if (p.aimHold > 0) return aimYaw(p, at);
+  if (speed > MOVING) return travel;
+  const to = aimYaw(p, at);
+  return p.facing + Math.atan2(Math.sin(to - p.facing), Math.cos(to - p.facing)) * (1 - Math.exp(-AIM_TURN * dt));
+}
+
 /** Primary attack with the equipped weapon toward the aim. Returns true if it fired. */
 export function attack(rt: CombatRuntime, player: Vec, random = Math.random): boolean {
   const p = rt.player;
   if (!p.alive || p.attackCd > 0 || rt.casting || p.dash || (p.dodgeAge !== null && p.dodgeAge < DODGE.duration)) return false;
   const w = WEAPONS[p.weapon];
   p.attackCd = w.cooldown;
+  faceAim(p, player);
+  cue(rt, "swing", player);
   const dir = { x: Math.sin(p.facing), z: Math.cos(p.facing) };
   if (w.kind === "melee") {
     p.swing = 0.22;
     let landed = false;
-    for (const e of rt.enemies) if (e.state !== "dead" && inArc(player, p.facing, w.range, w.arc, e, e.type.radius)) { strike(rt, e, { power: 1, from: player, knock: 4 }, random); landed = true; }
+    for (const e of rt.enemies) if (e.state !== "dead" && inArc(player, p.facing, w.range, w.arc, e, e.type.radius)) { strike(rt, e, { power: 1, from: player, knock: 4, melee: true }, random); landed = true; }
     if (landed) wearHit(rt);
   } else if (w.kind === "bow" || w.kind === "staff") {
     const speed = w.speed ?? 12;
@@ -81,19 +103,23 @@ export function startDodge(rt: CombatRuntime, dir: Vec): boolean {
 }
 
 /**
- * The ruins on the movement kit (specs/movement.md): Q's dash is the dodge (its speed and time, easing to 0.4 of the
- * burst as the roll did, its cooldown), and walking and sprint scale with the combat speed stat.
+ * The ruins on the movement kit (specs/movement.md): Q's dash is the dodge, the village dash's own burst with the
+ * dodge's cooldown (combat polish 9: one dash), and walking and sprint scale with the combat speed stat.
  */
 let tuned: { speed: number; t: MoveTuning } | null = null;
 export function combatTuning(speed: number): MoveTuning {
   if (tuned?.speed === speed) return tuned.t; // the avatar asks every frame; the speed stat changes rarely
   const t = MOVE_TUNING;
   tuned = { speed, t: { ...t, walkSpeed: t.walkSpeed * speed, sneakSpeed: t.sneakSpeed * speed, sprintSpeed: t.sprintSpeed * speed,
-    dashSpeed: DODGE.speed, dashTime: DODGE.duration, dashExit: 0.4, dashEase: 1, dashCooldown: DODGE.duration + DODGE.cooldown } };
+    dashCooldown: DODGE.duration + DODGE.cooldown } };
   return tuned.t;
 }
-/** The kit's dash in the ruins: the sim moves you and its cooldown (the same DODGE timings) gates it; this gives it the dodge's i-frames and cancels a cast. */
-export function dashDodge(rt: CombatRuntime, dir: Vec): boolean {
+/**
+ * The kit's dash in the ruins: the sim moves you and its cooldown (the same DODGE timings) gates it. On the ground this
+ * gives it the dodge's i-frames and cancels a cast; an air dash only cancels the cast (no i-frames off a jump).
+ */
+export function dashDodge(rt: CombatRuntime, dir: Vec, aloft = false): boolean {
+  if (aloft) { cancelCast(rt); return false; }
   rt.player.dodgeCd = 0;
   return startDodge(rt, dir);
 }
@@ -102,22 +128,52 @@ export function combatPush(p: CombatRuntime["player"]): Vec | undefined {
   return p.alive && (p.impulse.x || p.impulse.z) ? p.impulse : undefined;
 }
 
-/** Damage the player unless safe or in i-frames (dodge, or a dash that grants them); guard, a frontal block and the shield soak first. Returns health lost. */
-export function hurtPlayer(rt: CombatRuntime, amount: number, from: Vec, player: Vec): number {
+/**
+ * Damage the player unless safe or in i-frames (dodge, or a dash that grants them); guard, a frontal block and the shield
+ * soak first. `knock` is the attack's knockback (data.ts): how hard it pushes you away. Returns health lost.
+ */
+export function hurtPlayer(rt: CombatRuntime, amount: number, from: Vec, player: Vec, knock = 3, random: () => number = Math.random): number {
   const p = rt.player;
   if (!p.alive || p.safe) return 0;
   if (invulnerable(p.dodgeAge) || p.dash?.iframes) { floater(rt, player, 1.7, "Dodged", "info"); return 0; }
-  const { damage } = mitigate(rt, amount, from, player);
+  const { damage } = mitigate(rt, amount, from, player, random); // the seeded roll in the balance runs (a block's counter can crit)
   p.hurt = 0.35;
   if (rt.kit?.subclass.passive.kind !== "poise") {
     const d = Math.hypot(player.x - from.x, player.z - from.z) || 1;
     p.dodgeDir = { x: (player.x - from.x) / d, z: (player.z - from.z) / d };
+    p.knock = knock;
   } else p.hurt = 0.19; // Unstoppable: the flinch shows, no knockback
   if (damage <= 0) return 0;
   p.hp = Math.max(0, p.hp - damage);
   floater(rt, player, 1.7, `-${damage}`, "hurt");
+  cue(rt, "hurt", player);
   if (p.hp === 0) { p.alive = false; p.downFor = 0; rt.casting = null; }
   return damage;
+}
+
+/** Presses wait this long for the attack or a slot to be ready: a tap between two frames, a press just before a cooldown ends. */
+export const BUFFER = 0.15;
+/** The player's presses for the frame loop: the mouse button held, a queued click (seconds it still waits), queued keys. */
+export interface InputQueue { held: boolean; attack: number; keys: { id: AbilityId; left: number }[] }
+export const createInputs = (): InputQueue => ({ held: false, attack: 0, keys: [] });
+
+/**
+ * One frame of presses. A held or queued click attacks as soon as it can. A key fires once its slot is ready, waiting up
+ * to BUFFER; a slot that can't be ready in time counts in `rt.denied` (its slot pulses). Returns true when one was denied.
+ */
+export function runInputs(rt: CombatRuntime, q: InputQueue, me: Vec, dt: number, random = Math.random): boolean {
+  if ((q.held || q.attack > 0) && attack(rt, me, random)) q.attack = 0;
+  q.attack = Math.max(0, q.attack - dt);
+  let denied = false;
+  for (let i = 0; i < q.keys.length; i++) {
+    const k = q.keys[i], cd = rt.cooldowns[k.id];
+    let done = true;
+    if (cd > k.left) { rt.denied[k.id]++; denied = true; }
+    else if (cd > 0 || rt.casting || rt.player.dash) done = (k.left -= dt) <= 0;
+    else triggerAbility(rt, k.id, me, random);
+    if (done) q.keys.splice(i--, 1);
+  }
+  return denied;
 }
 
 /** Keys: slots 1–4 run the equipped kit abilities; R swaps weapons. */
@@ -128,7 +184,9 @@ export function triggerAbility(rt: CombatRuntime, id: AbilityId, player: Vec = {
     p.weapon = p.owned[(p.owned.indexOf(p.weapon) + 1) % p.owned.length]; p.attackCd = 0.2; rt.cooldowns.swap = 0.4;
     return true;
   }
-  return fireSlot(rt, SLOT_IDS.indexOf(id), player, random);
+  const fired = fireSlot(rt, SLOT_IDS.indexOf(id), player, random);
+  if (fired) faceAim(p, player);
+  return fired;
 }
 
 export function spawnWave(rt: CombatRuntime, wave: SpawnPoint[]) {

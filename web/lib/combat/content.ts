@@ -40,8 +40,9 @@ export const ENEMIES: EnemyType[] = [
   e("stone-golem", "Stone golem", "elite", "inner", 420, 22, 0.45, 6, 2.5, 220, "Raises both fists, core glows, then slams the ground around it.", 2),
   e("elder-thorn-crab", "Elder thorn crab", "elite", "outer", 300, 16, 0.4, 5, 1.8, 160, "A slower, wider claw sweep; hit it from behind."),
   // Wakes when you step into its chamber and never leaves it (leash 11 from its plinth).
-  e("guardian-statue", "Guardian statue", "boss", "boss", 1800, 28, 0.35, 9, 3, 1200,
-    "Overhead slam on a ring marker, a sigil beam sweep with a stagger after it, two rune wisps below half health, enraged at a fifth.", 9, 11),
+  // Combat polish 11: 1800 HP and armor 9 → 1700 and 7: about 4–6 minutes with a starter weapon, 2 with tier 2+ (boss.test.ts).
+  e("guardian-statue", "Guardian statue", "boss", "boss", 1700, 28, 0.35, 9, 3, 1200,
+    "Overhead slam on a ring marker, a sigil beam sweep with a stagger after it, two rune wisps below half health, enraged at a fifth.", 7, 11),
 ];
 
 export type Template = "hunt" | "fetch" | "survive" | "escort";
