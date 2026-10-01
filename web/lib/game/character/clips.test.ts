@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { airPhase, combatClip, contactCrossed, crossfade, locomotion, resolveClip, seatLift, tempo, type CombatView } from "./clips";
-import { CLIP_BY_NAME } from "./look";
+import { airPhase, combatClip, contactCrossed, crossfade, locomotion, matchPhase, resolveClip, seatLift, tempo, type ClipName, type CombatView } from "./clips";
+import { CLIPS, CLIP_BY_NAME } from "./look";
 
 describe("character state machine", () => {
   it("picks locomotion from speed", () => {
@@ -91,7 +91,37 @@ describe("crouch and the slide (specs/movement-slide.md)", () => {
     for (const [a, b] of [["Run", "SlideIn"], ["SlideIn", "Slide"], ["Slide", "SlideJump"], ["SlideJump", "Air"], ["Air", "SlideInDash"], ["Dash", "SlideInDash"], ["Slide", "SlideUp"]] as const)
       expect(crossfade(a, b), `${a} > ${b}`).toBeLessThanOrEqual(0.06);
     expect(crossfade("Idle", "CrouchIdle")).toBeGreaterThan(0.1);
-    expect(crossfade("Walk", "Jump")).toBe(0.06); // not listed: the snappy default
     expect(crossfade(null, "Idle")).toBe(0.16);
+  });
+});
+
+describe("the transition table and stride matching (movement feel milestone 2)", () => {
+  const names = CLIPS.map(c => c.name as ClipName);
+  it("gives every pair of clips a crossfade: quick for movement, a landing cuts into a fall, seats and lying down ease", () => {
+    expect(names.length).toBeGreaterThan(40);
+    for (const a of names) for (const b of names) {
+      const t = crossfade(a, b);
+      expect(t, `${a} > ${b}`).toBeGreaterThanOrEqual(0.03);
+      expect(t, `${a} > ${b}`).toBeLessThanOrEqual(0.3);
+    }
+    for (const from of ["Air", "Fall"] as const) for (const to of ["Land", "LandHeavy", "Roll"] as const) expect(crossfade(from, to)).toBeLessThanOrEqual(0.05);
+    for (const to of ["Sit", "Study", "Sleep"] as const) expect(crossfade("Walk", to)).toBeGreaterThanOrEqual(0.2);
+    expect(crossfade("Run", "Hit")).toBe(0.04);
+    expect(crossfade("Walk", "Jump")).toBeLessThanOrEqual(0.06);
+  });
+  it("hands walk, run and crouch-walk over in step, the same foot coming down; anything else starts at the top", () => {
+    const walk = CLIP_BY_NAME.get("Walk")!.contacts!, run = CLIP_BY_NAME.get("Run")!.contacts!;
+    expect(matchPhase("Walk", walk[0], "Run")).toBeCloseTo(run[0], 6); // the left foot down in both
+    expect(matchPhase("Walk", walk[1], "Run")!).toBeCloseTo(((run[0] + walk[1] - walk[0]) % 1 + 1) % 1, 6);
+    expect(matchPhase("Run", 0.3, "CrouchWalk")).not.toBeNull();
+    expect(matchPhase("Idle", 0.3, "Walk")).toBeNull();
+    expect(matchPhase("Walk", 0.3, "Jump")).toBeNull();
+    for (let p = 0; p < 1; p += 0.13) { const q = matchPhase("Run", p, "Walk")!; expect(q).toBeGreaterThanOrEqual(0); expect(q).toBeLessThan(1); }
+  });
+  it("keeps the run down to 1.15x walking pace once running, so a speed on the line never flickers", () => {
+    expect(locomotion(8.9, 7.4)).toBe("Walk");
+    expect(locomotion(8.9, 7.4, "Run")).toBe("Run");
+    expect(locomotion(8.4, 7.4, "Run")).toBe("Walk");
+    expect(tempo("Walk", 1.5, 7.4)).toBeCloseTo(1.5 / 7.4, 6); // cadence follows a slow amble too
   });
 });

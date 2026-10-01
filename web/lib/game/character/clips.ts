@@ -18,11 +18,38 @@ export const SNAPPY_CLIPS = new Set<ClipName>(["DodgeRoll", "Hit", "Jump", "Air"
   "Slide", "SlideIn", "SlideInDash", "SlideUp", "SlideJump", "SlideStand", "SlideBonk"]);
 
 /**
- * The transition table (specs/movement-feel.md §5; milestone 2 fills in the rest): crossfade seconds from one clip
- * to the next. Run, slide, slide-jump, air and land-slide hand over in a few hundredths so the chain never pops; the
- * crouch eases in and out. A pair not listed: 0.06 into a snappy movement clip, else 0.16.
+ * The transition table (specs/movement-feel.md §5): crossfade seconds for every pair of clips. Each clip belongs to a
+ * family and `FAMILY_FADE` gives every family pair its time; `FADES` overrides the pairs that matter one by one. A
+ * landing cuts into a fall in a few hundredths (it interrupts it cleanly); run, slide, slide-jump, air and land-slide
+ * hand over as fast; sitting down, lying down and getting up ease; a hit is immediate.
  */
+type Family = "loco" | "air" | "land" | "move" | "seat" | "act" | "combat";
+const FAMILY: Record<ClipName, Family> = {
+  Idle: "loco", Walk: "loco", Run: "loco", CrouchIdle: "loco", CrouchWalk: "loco",
+  Jump: "air", Air: "air", Fall: "air", Glide: "air", SlideJump: "air",
+  Land: "land", LandHeavy: "land", Roll: "land", Mantle: "land",
+  Dash: "move", Skid: "move", DodgeRoll: "move", Slide: "move", SlideIn: "move", SlideInDash: "move", SlideUp: "move", SlideStand: "move", SlideBonk: "move",
+  Sit: "seat", Study: "seat", Stretch: "seat", Sleep: "seat",
+  Fish: "act", FishHold: "act", Forage: "act", Dig: "act", Net: "act", Wave: "act", Cheer: "act", Laugh: "act", Sad: "act", Dance: "act", Trace: "act",
+  AttackMelee: "combat", AttackBow: "combat", AttackCast: "combat", Hit: "combat", Defeat: "combat",
+};
+/** From a family (row) into a family (column). */
+const FAMILY_FADE: Readonly<Record<Family, Readonly<Record<Family, number>>>> = {
+  loco: { loco: 0.16, air: 0.05, land: 0.05, move: 0.05, seat: 0.25, act: 0.15, combat: 0.08 },
+  air: { loco: 0.1, air: 0.06, land: 0.04, move: 0.05, seat: 0.25, act: 0.15, combat: 0.08 },
+  land: { loco: 0.12, air: 0.05, land: 0.06, move: 0.05, seat: 0.25, act: 0.15, combat: 0.08 },
+  move: { loco: 0.1, air: 0.04, land: 0.05, move: 0.05, seat: 0.25, act: 0.15, combat: 0.08 },
+  seat: { loco: 0.22, air: 0.1, land: 0.1, move: 0.08, seat: 0.3, act: 0.2, combat: 0.1 },
+  act: { loco: 0.18, air: 0.08, land: 0.08, move: 0.06, seat: 0.25, act: 0.16, combat: 0.08 },
+  combat: { loco: 0.14, air: 0.06, land: 0.06, move: 0.05, seat: 0.25, act: 0.15, combat: 0.06 },
+};
 const FADES: Readonly<Record<string, number>> = {
+  // Locomotion among itself: the walk and the run cross in step (`matchPhase`), the crouch eases.
+  "Idle>Walk": 0.2, "Walk>Idle": 0.2, "Walk>Run": 0.15, "Run>Walk": 0.15, "Idle>Run": 0.12, "Run>Idle": 0.16,
+  "Fall>Land": 0.04, "Fall>LandHeavy": 0.04, "Fall>Roll": 0.04, "Air>Land": 0.04, "Air>LandHeavy": 0.04, "Air>Roll": 0.04, "Air>Fall": 0.12, "Fall>Air": 0.08,
+  "Jump>Air": 0.03, "Mantle>Idle": 0.1, "Mantle>Walk": 0.08, "Mantle>Run": 0.08, "Skid>Run": 0.06, "Skid>Walk": 0.08, "Dash>Idle": 0.14,
+  "Glide>Land": 0.08, "Glide>Fall": 0.1, "Air>Glide": 0.08, "Fall>Glide": 0.08,
+  "Defeat>Idle": 0.3, "Sleep>Idle": 0.3, "Idle>Sleep": 0.3,
   "Run>SlideIn": 0.05, "Walk>SlideIn": 0.06, "Dash>SlideInDash": 0.03, "Air>SlideInDash": 0.05, "Fall>SlideInDash": 0.06, "Jump>SlideInDash": 0.05,
   "SlideIn>Slide": 0.04, "SlideInDash>Slide": 0.04, "Air>Slide": 0.08, "Slide>Dash": 0.04,
   "Slide>SlideJump": 0.03, "SlideIn>SlideJump": 0.03, "SlideInDash>SlideJump": 0.03, "SlideJump>Air": 0.03,
@@ -33,7 +60,22 @@ const FADES: Readonly<Record<string, number>> = {
   "CrouchIdle>CrouchWalk": 0.12, "CrouchWalk>CrouchIdle": 0.15, "Idle>CrouchWalk": 0.15, "CrouchWalk>Idle": 0.15, "Walk>CrouchIdle": 0.15, "CrouchIdle>Walk": 0.15,
 };
 export function crossfade(from: ClipName | null, to: ClipName): number {
-  return (from && FADES[`${from}>${to}`]) || (SNAPPY_CLIPS.has(to) ? 0.06 : 0.16);
+  if (!from) return 0.16;
+  if (to === "Hit") return 0.04; // a hit lands now
+  return FADES[`${from}>${to}`] ?? FAMILY_FADE[FAMILY[from]][FAMILY[to]];
+}
+
+/** Locomotion loops that cross into each other in step: the next one starts with the same foot coming down. */
+const STEPPED = new Set<ClipName>(["Walk", "Run", "CrouchWalk"]);
+/**
+ * Stride matching across loops: where `to` should start when `from` was at `phase`, so the same foot is at the same
+ * point of its step (both loops' measured contacts: left foot down, half a cycle later the right). Null: start at 0.
+ */
+export function matchPhase(from: ClipName | null, phase: number, to: ClipName): number | null {
+  if (!from || from === to || !STEPPED.has(from) || !STEPPED.has(to)) return null;
+  const a = CLIP_BY_NAME.get(from)?.contacts, b = CLIP_BY_NAME.get(to)?.contacts;
+  if (!a?.length || !b?.length) return null;
+  return (((b[0] + phase - a[0]) % 1) + 1) % 1;
 }
 
 /**
@@ -64,13 +106,20 @@ export interface CharacterMotion { speed: number; yaw: number; lift: number; pos
 
 export const isLoop = (clip: ClipName) => CLIP_BY_NAME.get(clip)?.loop ?? true;
 
-/** Idle below a crawl, Run above 1.25x walking pace (sprint is 1.85x). */
-export function locomotion(speed: number, walkSpeed: number): "Idle" | "Walk" | "Run" {
-  return speed < 0.08 ? "Idle" : speed > walkSpeed * 1.25 ? "Run" : "Walk";
+/**
+ * Idle below a crawl, Run above 1.25x walking pace (sprint is 1.85x). Already running, it keeps the run down to 1.15x,
+ * so a speed hovering at the line never flickers between the two.
+ */
+export function locomotion(speed: number, walkSpeed: number, current?: ClipName | null): "Idle" | "Walk" | "Run" {
+  return speed < 0.08 ? "Idle" : speed > walkSpeed * (current === "Run" ? 1.15 : 1.25) ? "Run" : "Walk";
 }
-/** Playback rate: locomotion follows actual ground speed so feet don't skate. */
+/**
+ * Playback rate: each loop's cadence follows ground speed in proportion, from a slow amble up (the walk no longer
+ * treads in place below a third of its pace). The feet still slide at full speed: a 1.36u character walking 7.4u/s
+ * would need about 23 steps a second to plant them (specs/movement-feel.md, stride matching).
+ */
 export function tempo(clip: ClipName, speed: number, walkSpeed: number): number {
-  if (clip === "Walk") return Math.min(1.6, Math.max(0.35, speed / walkSpeed));
+  if (clip === "Walk") return Math.min(1.6, Math.max(0.15, speed / walkSpeed));
   if (clip === "CrouchWalk") return Math.min(1.6, Math.max(0.4, speed / (walkSpeed * (MOVE_TUNING.sneakSpeed / MOVE_TUNING.walkSpeed))));
   if (clip === "Run") return Math.min(1.4, Math.max(0.6, speed / (walkSpeed * 1.85)));
   return 1;
@@ -104,11 +153,11 @@ export function airPhase(vy: number, vy0: number, jumped: boolean): number {
 }
 
 /** One-shot (if still running) > movement state > held pose > locomotion. A pose is dropped the moment the character moves. */
-export function resolveClip(s: { speed: number; walkSpeed: number; pose: ClipName | null; oneShot: ClipName | null; move?: ClipName | null }): ClipName {
+export function resolveClip(s: { speed: number; walkSpeed: number; pose: ClipName | null; oneShot: ClipName | null; move?: ClipName | null; current?: ClipName | null }): ClipName {
   if (s.oneShot) return s.oneShot;
   if (s.move) return s.move;
   if (s.pose && s.speed < 0.08) return s.pose;
-  return locomotion(s.speed, s.walkSpeed);
+  return locomotion(s.speed, s.walkSpeed, s.current);
 }
 
 /** Emote menu keys (content EmoteType.animation_key) → clips. "sit" has no clip: Sit needs a seat (tsi:sit). */
