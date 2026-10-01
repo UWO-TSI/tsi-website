@@ -63,6 +63,17 @@ p.interact[data-closed="true"] { margin: 0; cursor: default; color: #6a4b2f; }
 .mapButton:hover { background: #fffdf3; }
 .mapButton:focus-visible { outline: 3px solid #bb813f; outline-offset: 3px; }
 .mapButton kbd { font: inherit; background: #426b5b; color: #fffdf0; border-radius: 4px; padding: 0 5px; }
+/* First login: the minimap and the chapter 1 objective arrive after the HQ lead's greeting (hud-first-login §6). */
+.minimap[data-new] { animation: objectiveIn 0.7s cubic-bezier(0.2, 0.9, 0.3, 1.2) both; }
+.minimap[data-new] .objective { animation: objectiveGlow 2.2s ease-out 0.5s both; }
+@keyframes objectiveIn { from { opacity: 0; transform: translateY(14px) scale(0.96); } }
+@keyframes objectiveGlow { 0%, 100% { box-shadow: 0 4px 14px #132e3625; } 30% { box-shadow: 0 0 0 4px #e8704a55, 0 4px 14px #132e3625; } }
+/* The HQ lead's greeting box (the recruit kit's NPCDialogue) at the foot of the screen. */
+.greeting { position: absolute; left: 50%; bottom: 40px; transform: translateX(-50%); width: min(720px, calc(100% - 32px)); z-index: 30; animation: greetingIn 0.35s ease-out both; }
+.greetingSkip { position: absolute; top: -14px; right: 22px; min-height: 32px; padding: 0 14px; border: 1px solid #5c746c40; border-radius: 999px; background: #f8f7e9; color: #4f625b; font: 600 12px "IBM Plex Mono", monospace; cursor: pointer; box-shadow: 0 2px 0 #47625218; }
+.greetingSkip:focus-visible { outline: 3px solid #bb813f; outline-offset: 3px; }
+@keyframes greetingIn { from { opacity: 0; transform: translate(-50%, 16px); } }
+@media (prefers-reduced-motion: reduce) { .minimap[data-new], .minimap[data-new] .objective, .greeting { animation: none; } }
 .objectiveMarker { animation: markerPulse 1.6s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
 @keyframes markerPulse { 50% { opacity: 0.45; } }
 @media (prefers-reduced-motion: reduce) { .objectiveMarker { animation: none; } }
