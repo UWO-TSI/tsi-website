@@ -132,11 +132,11 @@ export function combatPush(p: CombatRuntime["player"]): Vec | undefined {
  * Damage the player unless safe or in i-frames (dodge, or a dash that grants them); guard, a frontal block and the shield
  * soak first. `knock` is the attack's knockback (data.ts): how hard it pushes you away. Returns health lost.
  */
-export function hurtPlayer(rt: CombatRuntime, amount: number, from: Vec, player: Vec, knock = 3): number {
+export function hurtPlayer(rt: CombatRuntime, amount: number, from: Vec, player: Vec, knock = 3, random: () => number = Math.random): number {
   const p = rt.player;
   if (!p.alive || p.safe) return 0;
   if (invulnerable(p.dodgeAge) || p.dash?.iframes) { floater(rt, player, 1.7, "Dodged", "info"); return 0; }
-  const { damage } = mitigate(rt, amount, from, player);
+  const { damage } = mitigate(rt, amount, from, player, random); // the seeded roll in the balance runs (a block's counter can crit)
   p.hurt = 0.35;
   if (rt.kit?.subclass.passive.kind !== "poise") {
     const d = Math.hypot(player.x - from.x, player.z - from.z) || 1;

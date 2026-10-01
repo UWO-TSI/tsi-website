@@ -166,7 +166,7 @@ function addBuff(rt: CombatRuntime, b: Buff) {
 }
 
 /** Damage to the player after guard, a frontal block and the shield. Returns what's left for health; triggers block passives/answers. */
-export function mitigate(rt: CombatRuntime, amount: number, from: Vec, me: Vec): { damage: number; blocked: boolean } {
+export function mitigate(rt: CombatRuntime, amount: number, from: Vec, me: Vec, random: () => number = Math.random): { damage: number; blocked: boolean } {
   const p = rt.player;
   let dmg = amount * (1 - Math.min(GUARD_CAP, buffSum(rt, "guard")));
   const block = rt.buffs.find(b => b.stat === "block" && b.t > 0);
@@ -178,7 +178,7 @@ export function mitigate(rt: CombatRuntime, amount: number, from: Vec, me: Vec):
     floater(rt, me, 1.9, "Blocked", "info");
     const pv = passiveOf(rt);
     if (pv?.kind === "block_shield") addShield(rt, p.maxHp * pv.value, 5);
-    if (block.onBlock?.on_block && !block.answered) { block.answered = true; runEffects(rt, block.onBlock.on_block, context(rt, block.onBlock, me, 1, from), Math.random); }
+    if (block.onBlock?.on_block && !block.answered) { block.answered = true; runEffects(rt, block.onBlock.on_block, context(rt, block.onBlock, me, 1, from), random); }
   }
   const soak = Math.min(p.shield, dmg);
   p.shield -= soak;

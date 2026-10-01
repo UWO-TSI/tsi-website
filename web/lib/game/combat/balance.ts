@@ -10,13 +10,13 @@
  * specs/evidence/combat-b/balance.md is this table.
  */
 import { FAMILY_STAT, resolveLoadout, subclassByKey, UNITS, type Ability, type Subclass } from "@/lib/combat/kits";
-import { STARTER_WEAPONS, WEAPONS as SYSTEM_WEAPONS } from "@/lib/combat/weapons";
-import { derived, presetAllocation } from "@/lib/combat/progression";
+import { damage, STARTER_WEAPONS, WEAPONS as SYSTEM_WEAPONS } from "@/lib/combat/weapons";
+import { derived, presetAllocation, ZERO_STATS } from "@/lib/combat/progression";
 import { potencyFor } from "@/lib/combat/incantation";
 import { SURVIVE_CIRCLES } from "@/lib/game/ruins";
 import { equipKit, fireSlot, resolveCast } from "./abilities";
 import { attack, spawnWave, startDodge } from "./actions";
-import { PLAYER_BASE, WEAPONS } from "./data";
+import { ENEMIES, PLAYER_BASE, WEAPONS } from "./data";
 import { stepCombat } from "./encounter";
 import { createRuntime, type CombatRuntime } from "./runtime";
 import { strikeLands, type Enemy, type Vec } from "./sim";
@@ -143,6 +143,15 @@ export function balanceTable(missionId: "survive-circle" | "survive-sanctum", se
       minHp: runs.reduce((n, r) => n + r.minHp, 0) / seeds, deaths: runs.filter(r => r.died).length,
     };
   });
+}
+/**
+ * Minutes to bring the guardian down with one weapon at level 10, all 27 points in its stat, landing half the time,
+ * one hit in ten a crit (the content pass's measure; boss.test.ts holds it to 4–6 minutes for the starters).
+ */
+export function bossMinutes(weaponKey: string): number {
+  const w = SYSTEM_WEAPONS.find(x => x.key === weaponKey)!, stats = { ...ZERO_STATS, [w.scaling[0]]: 27 }, boss = ENEMIES["guardian-statue"];
+  const hit = (crit: boolean) => damage({ weapon: w, durability: 99, stats, level: 10, enemyDefense: boss.defense, enemyArmor: boss.armor, crit });
+  return boss.hp / ((0.9 * hit(false) + 0.1 * hit(true)) / WEAPONS[weaponKey].cooldown) / 0.5 / 60;
 }
 /** Family averages of the rows (clear rate, DPS, lowest health). */
 export function familyAverages(rows: BalanceRow[]) {

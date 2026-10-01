@@ -53,7 +53,7 @@ export function stepCombat(rt: CombatRuntime, me: Vec, dt: number, free: (x: num
     if (!ev) continue;
     const dmg = e.move.damage;
     if (ev.kind === "strike") {
-      if (strikeLands(e, me)) hurtPlayer(rt, dmg, e.move.shape === "smash" ? e.aim : e, me, e.move.knockback);
+      if (strikeLands(e, me)) hurtPlayer(rt, dmg, e.move.shape === "smash" ? e.aim : e, me, e.move.knockback, random);
       hurtUnits(rt, u => strikeLands(e, u, 0.4), dmg);
       if (rt.escort && strikeLands(e, rt.escort, 0.4)) { rt.escort.hp -= dmg; floater(rt, rt.escort, 1.8, `-${dmg}`, "hurt"); }
       if (rt.escort && Math.hypot(rt.escort.x - e.x, rt.escort.z - e.z) < Math.hypot(me.x - e.x, me.z - e.z)) e.aim = { x: rt.escort.x, z: rt.escort.z };
@@ -62,7 +62,7 @@ export function stepCombat(rt: CombatRuntime, me: Vec, dt: number, free: (x: num
       const d = Math.hypot(ev.to.x - e.x, ev.to.z - e.z) || 1, sp = 9;
       rt.projectiles.push({ id: rt.seq++, x: e.x, z: e.z, vx: ((ev.to.x - e.x) / d) * sp, vz: ((ev.to.z - e.z) / d) * sp, life: (e.move.range + 2) / sp, from: "enemy", damage: dmg, kind: "spit", radius: 0.3, knock: e.move.knockback });
     } else if (ev.kind === "beam") {
-      if (beamLands(e, me)) hurtPlayer(rt, dmg, e, me, e.move.knockback);
+      if (beamLands(e, me)) hurtPlayer(rt, dmg, e, me, e.move.knockback, random);
     } else if (ev.kind === "summon") summonWisps(rt, e);
     else if (ev.kind === "phase") floater(rt, e, 3.4, e.phase === 3 ? "Enraged" : "The guardian calls for help", "info");
     else if (ev.kind === "reset" && e.type.kind === "boss") rt.enemies = rt.enemies.filter(x => !x.summoned);
@@ -77,7 +77,7 @@ export function stepCombat(rt: CombatRuntime, me: Vec, dt: number, free: (x: num
     if (!gone && sh.from === "player") gone = resolvePlayerShot(rt, i, from, to, random);
     else if (!gone && sh.from === "enemy") {
       const unit = rt.units.find(u => u.def.kind !== "trap" && sweptHit(from, to, u, 0.4 + sh.radius));
-      if (sweptHit(from, to, me, 0.35 + sh.radius)) { hurtPlayer(rt, sh.damage, from, me, sh.knock); gone = true; }
+      if (sweptHit(from, to, me, 0.35 + sh.radius)) { hurtPlayer(rt, sh.damage, from, me, sh.knock, random); gone = true; }
       else if (unit) { hurtUnits(rt, u => u === unit, sh.damage); gone = true; }
     }
     if (gone) rt.projectiles.splice(i, 1);

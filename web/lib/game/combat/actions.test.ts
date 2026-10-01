@@ -117,7 +117,7 @@ describe("the ruins dodge on the movement kit (specs/movement.md)", () => {
     }
     return { rt, s, dashes };
   };
-  it("is the village dash (one dash, combat polish 9): the same burst and reach, invulnerable through it", () => {
+  it("is the village dash (one dash, combat polish 9): the same burst and reach, invulnerable through it and a beat past", () => {
     const t = combatTuning(1);
     expect([t.dashSpeed, t.dashTime, t.dashExit, t.dashEase]).toEqual([MOVE_TUNING.dashSpeed, MOVE_TUNING.dashTime, MOVE_TUNING.dashExit, MOVE_TUNING.dashEase]);
     expect(t.dashCooldown).toBeCloseTo(0.6);
@@ -125,7 +125,7 @@ describe("the ruins dodge on the movement kit (specs/movement.md)", () => {
     let atEnd = 0;
     run(0.6, [0], (time, rt, z) => {
       if (Math.abs(time - MOVE_TUNING.dashTime) < STEP / 2) atEnd = z;
-      if ([0.05, 0.15, 0.3].some(t => Math.abs(time - t) < STEP / 2)) hits.push([time, hurtPlayer(rt, 10, { x: 0, z: 5 }, { x: 0, z })]);
+      if ([0.05, 0.25, 0.4].some(t => Math.abs(time - t) < STEP / 2)) hits.push([time, hurtPlayer(rt, 10, { x: 0, z: 5 }, { x: 0, z })]);
     });
     // 18 u/s easing to 0.55 of it over 0.2 s: the village dash's 2.5u.
     expect(atEnd).toBeGreaterThan(2.4);

@@ -1,12 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { ENEMIES, WEAPONS } from "./data";
+import { ENEMIES } from "./data";
 import { summonWisps } from "./actions";
 import { hitAmount } from "./abilities";
 import { createRuntime } from "./runtime";
 import { BOSS, beamLands, damageEnemy, spawnEnemy, stepEnemy, strikeLands, type Enemy, type EnemyEvent } from "./sim";
 import { glow, marker, partPose } from "./telegraph";
-import { damage, WEAPONS as SYSTEM_WEAPONS } from "@/lib/combat/weapons";
-import { ZERO_STATS } from "@/lib/combat/progression";
+import { bossMinutes } from "./balance";
 
 const BOSS_TYPE = ENEMIES["guardian-statue"];
 /** Step the enemy; each event is recorded with the move and state it fired in. */
@@ -80,17 +79,13 @@ describe("guardian statue: three patterns and phase transitions", () => {
     for (let t = 0; t < 10; t += 1 / 60) stepEnemy(b, { x: 0, z: 5, safe: true, alive: true }, 1 / 60);
     expect(b).toMatchObject({ state: "idle", hp: BOSS_TYPE.hp, phase: 1 });
   });
-  it("is a wall for starter weapons and beatable at level 10 with tier 2+ (armor + defense)", () => {
+  it("takes about 4–6 minutes with a starter weapon and about 2 with tier 2+ (armor + defense; combat polish 11)", () => {
     // Level 10, all 27 points in the weapon's stat; mean hit with 10% crits; seconds to kill at 50% uptime.
-    const ttk = (key: string) => {
-      const w = SYSTEM_WEAPONS.find(x => x.key === key)!, stats = { ...ZERO_STATS, [w.scaling[0]]: 27 };
-      const hit = (crit: boolean) => damage({ weapon: w, durability: 99, stats, level: 10, enemyDefense: BOSS_TYPE.defense, enemyArmor: BOSS_TYPE.armor, crit });
-      return BOSS_TYPE.hp / ((0.9 * hit(false) + 0.1 * hit(true)) / WEAPONS[key].cooldown) / 0.5;
-    };
+    const ttk = (key: string) => bossMinutes(key) * 60;
     const starters = ["sword-driftwood", "bow-willow", "staff-oak"].map(ttk), geared = ["sword-iron", "revolver-brass", "staff-rune"].map(ttk);
-    expect(Math.min(...starters)).toBeGreaterThan(2 * Math.max(...geared.slice(0, 1)));
-    expect(Math.max(...geared)).toBeLessThan(5 * 60);
-    expect(Math.min(...starters)).toBeGreaterThan(5 * 60);
+    for (const s of starters) { expect(s).toBeGreaterThanOrEqual(4 * 60); expect(s).toBeLessThanOrEqual(6 * 60); }
+    expect(Math.max(...geared)).toBeLessThan(2.5 * 60);
+    expect(Math.min(...starters)).toBeGreaterThan(1.6 * Math.max(...geared)); // gear still matters
   });
 });
 
