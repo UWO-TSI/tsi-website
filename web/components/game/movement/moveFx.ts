@@ -32,6 +32,11 @@ export const MOVE_JUICE = {
   cooldown: 1, // wind at the heels while the dash recharges
   anticipation: 1, // the jump's crouch before the spring
   camDip: 1, // the camera's dip on a heavy landing
+  // The slide (specs/movement-slide.md)
+  slideTrail: 1, // dust off the heels, the ground's spray (flecks, sand) and scuffs
+  slideBurst: 1, // the spray of a dash- or land-slide, the pop of a slide-jump
+  slideKick: 1.5, // degrees the FOV punches out as a slide starts
+  slideDrop: 0.18, // how far the camera's focus drops while sliding (world units)
 };
 export type MoveJuice = typeof MOVE_JUICE;
 /** The follow camera's field of view at a walk (the Canvases' camera); speed and dashes widen it from here. */
