@@ -10,12 +10,13 @@ import bpy, os, sys
 
 V7 = os.path.dirname(os.path.abspath(__file__)) if "__file__" in dir() else \
     "/Users/DavidLiu/Developer/uwotsi/.claude/worktrees/avatar-v7/art/characters/v7"
-for p in (V7, os.path.join(V7, ".."), os.path.join(V7, "..", "base")):
+for p in (V7, os.path.join(V7, ".."), os.path.join(V7, "..", "base"), os.path.join(V7, "..", "v8")):
     if p not in sys.path:
         sys.path.insert(0, p)
 import kit  # noqa: E402
 import locks  # noqa: E402
 import hair_styles as hs  # noqa: E402
+import organic  # noqa: E402  (avatar v8)
 from head_shape import CHIN, hair_point, hair_outer  # noqa: E402
 
 SHARP = 40.0                 # lock side edges stay sharp (they read as separate locks), ridges and masses smooth
@@ -36,14 +37,61 @@ def seed(pid, parent=None):
     return locks.seed(pid, seeds(pid), parent)
 
 
+def cap_uvs(pc):
+    """avatar v8: the under-cap is the smooth crown mass the locks spring from, so it carries the strand texture too:
+    per 20 deg column u runs across the column (its edges read as soft partings between clumps) and v from the crown
+    (the root) down to the hem."""
+    for f in list(pc.fuv):
+        ll = [pc.sph.get(v) for v in f.verts]
+        if any(x is None for x in ll):
+            continue                          # the closing fan inside the head
+        lons = [lo for _, lo in ll]
+        if max(lons) - min(lons) > 180:
+            lons = [lo + 360 if lo < 0 else lo for lo in lons]
+        if max(ll)[0] >= 89.9:                # the apex fan: one column's top corner
+            lo0, span = min(lo for (la, _), lo in zip(ll, lons) if la < 89.9), 20.0
+        else:
+            lo0, span = min(lons), max(max(lons) - min(lons), 1e-6)
+        pc.fuv[f] = {v: (0.5 if la >= 89.9 else min(1.0, (lo - lo0) / span), min(1.0, max(0.0, (88 - la) / 110)))
+                     for v, (la, _), lo in zip(f.verts, ll, lons)}
+
+
+def sink_cap(pc, cap, under=0.0025):
+    """avatar v8: the grooves are shallow, so a flat lock face can sag under a corner of the under-cap and show it as
+    a dark fleck. Every cap vertex just under or above a lock's outer surface (along its ray from the head centre)
+    is lowered to `under` beneath it; between the locks the cap keeps its height."""
+    from mathutils.bvhtree import BVHTree
+    lockf = [f for f in pc.bm.faces if f not in cap]
+    vs = list({v for f in lockf for v in f.verts})
+    ix = {v: i for i, v in enumerate(vs)}
+    tree = BVHTree.FromPolygons([v.co for v in vs], [[ix[v] for v in f.verts] for f in lockf])
+    for v in {v for f in cap for v in f.verts if v in pc.sph and pc.sph[v][0] < 56}:   # (the crown keeps the clumps' roots)
+        d = v.co - locks.HC
+        r, d = d.length, d.normalized()
+        t, out, o = 0.0, None, locks.HC.copy()
+        while True:
+            loc, _, _, dist = tree.ray_cast(o, d, 0.4)
+            if loc is None:
+                break
+            out = (loc - locks.HC).length
+            o = loc + d * 1e-4
+        if out is not None and out - 0.015 < r < out + 0.002:      # (a lock deeper under the cap is hidden by it)
+            v.co = locks.HC + d * min(r, out - under)
+
+
 def piece(pid, rig, mat, name=None, head=None):
     pc = kit.Piece()
+    v8 = pid in hs.V8
     if pid in hs.BACKS:
         tight = 0.008 if pid in hs.TIGHT else 0.0
-        outer = hs.OUTER.get(pid) or (lambda lat: hs.cap_outer(lat, tight))
-        pc, _, _ = kit.hair_cap(hs.BACKS[pid][3], outer=outer, hem=hs.CAP_FLOOR, lons=CAP_LONS)
+        groove = hs.GROOVE_V8 if v8 else hs.GROOVE
+        outer = hs.OUTER.get(pid) or (lambda lat: hs.cap_outer(lat, tight, groove))
+        pc, _, _ = kit.hair_cap(hs.BACKS[pid][3], outer=outer, outer_ll=hs.OUTER_LL.get(pid), hem=hs.CAP_FLOOR, lons=CAP_LONS)
         for f in pc.since(0):
             pc.fuv[f] = {v: (0.0, 0.5) for v in f.verts}        # matte: u 0 is off the lock ridges, no gloss band
+        cap = set(pc.since(0))
+        if v8 and pid not in hs.FLAT_CAP:
+            cap_uvs(pc)
         for lat, lon, r, h in hs.KNOTS.get(pid, []):
             n0 = pc.mark()
             c = hair_point(lat, lon, hair_outer(lat) + r * 0.45)
@@ -56,15 +104,21 @@ def piece(pid, rig, mat, name=None, head=None):
     coll = bpy.data.collections.get(pid)
     curves = [o for o in coll.objects if o.type == "CURVE" and not o.get("skip")] if coll else []
     if curves:
-        for ob in sorted(curves, key=lambda o: o.name):
-            locks.sweep(pc, ob, surf)
+        for i, ob in enumerate(sorted(curves, key=lambda o: o.name)):
+            locks.sweep(pc, ob, surf, flip=v8 and i % 2 == 1)
         n = len(curves)
     else:
         lks = seeds(pid)
-        for lk in lks:
-            locks.sweep(pc, locks.lock_of_seed(lk), surf)
+        for i, lk in enumerate(lks):
+            locks.sweep(pc, locks.lock_of_seed(lk), surf, flip=v8 and i % 2 == 1)
         n = len(lks)
-    ob = pc.finish(name or pid, rig, {"M_Hair": mat}, sharp=SHARP, zrange=ZRANGE)
+    if v8 and pid in hs.BACKS:
+        sink_cap(pc, cap)
+    if v8:      # avatar v8: soft hair masses (custom normals), baked occlusion and the darker inner layer, matte
+        ob = pc.finish(name or pid, rig, {"M_Hair": mat}, zrange=ZRANGE, grad=organic.GRAD,
+                       normals=organic.soft_normals(own={v for f in pc.coils for v in f.verts}), shade=organic.occlusion(surf.tree))
+    else:
+        ob = pc.finish(name or pid, rig, {"M_Hair": mat}, sharp=SHARP, zrange=ZRANGE)
     ob["locks"] = n
     return ob
 

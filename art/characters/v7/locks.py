@@ -47,6 +47,7 @@ def densify(lk, step=12.0):
     """Insert scalp points between consecutive ("s", ...) control points more than `step` degrees apart (great
     circle), interpolating lat, lon (the short way round), off, width and tilt: a straight chord between two far
     surface points runs inside the head, so a lock spanning one would dive under the skin."""
+    step = lk.get("densify", step)            # avatar v8: plaits keep their authored lobes (a coarser step)
     pts, w = lk["pts"], lk["w"] if isinstance(lk["w"], (list, tuple)) else [lk["w"]] * len(lk["pts"])
     tl = lk.get("tilt") or [0.0] * len(pts)
     P, W, T = [pts[0]], [w[0]], [tl[0]]
@@ -85,7 +86,7 @@ def spine(pts):
     return out
 
 
-def make_curve(coll, name, pts, radii, tilts=None, flat=0.45, segs=6, sides=4, blunt=0.0, hug=1, hug_from=0.03):
+def make_curve(coll, name, pts, radii, tilts=None, flat=0.45, segs=6, sides=4, blunt=0.0, hug=1, hug_from=0.03, bury=1, coil=0):
     cu = bpy.data.curves.new(name, "CURVE")
     cu.dimensions = "3D"
     sp = cu.splines.new("POLY")
@@ -96,6 +97,10 @@ def make_curve(coll, name, pts, radii, tilts=None, flat=0.45, segs=6, sides=4, b
         sp.points[i].tilt = (tilts[i] if tilts else 0.0)
     ob = bpy.data.objects.new(name, cu)
     ob["flat"], ob["segs"], ob["sides"], ob["blunt"], ob["hug"], ob["hug_from"] = flat, segs, sides, blunt, hug, hug_from
+    if not bury:
+        ob["bury"] = 0
+    if coil:
+        ob["coil"] = 1
     coll.objects.link(ob)
     return ob
 
@@ -116,8 +121,11 @@ def seed(coll_name, locks, parent=None):
         lk = densify(lk)
         pts = spine(lk["pts"])
         w = lk["w"] if isinstance(lk["w"], (list, tuple)) else [lk["w"]] * len(pts)
-        make_curve(coll, lk.get("name", f"{coll_name}_{i:02d}"), pts, w, lk.get("tilt"), lk.get("flat", 0.45),
-                   lk.get("segs", 6), lk.get("sides", 4), lk.get("blunt", 0.0), lk.get("hug", 1), lk.get("hug_from", 0.03))
+        ob = make_curve(coll, lk.get("name", f"{coll_name}_{i:02d}"), pts, w, lk.get("tilt"), lk.get("flat", 0.45),
+                   lk.get("segs", 6), lk.get("sides", 4), lk.get("blunt", 0.0), lk.get("hug", 1), lk.get("hug_from", 0.03),
+                   lk.get("bury", 1), lk.get("coil", 0))
+        if lk.get("exact"):
+            ob["exact"] = 1
     return coll
 
 
@@ -142,7 +150,7 @@ def _lerp_list(vals, t):
     return vals[i] * (1 - u) + vals[i + 1] * u
 
 
-PROPS = {"flat": 0.45, "segs": 6, "sides": 4, "blunt": 0.0, "hug": 1, "hug_from": 0.03}
+PROPS = {"flat": 0.45, "segs": 6, "sides": 4, "blunt": 0.0, "hug": 1, "hug_from": 0.03, "bury": 1, "coil": 0, "exact": 0}
 
 
 def lock_of(ob):
@@ -166,6 +174,11 @@ def lock_samples(lk):
     if not isinstance(lk, dict):
         lk = lock_of(lk)
     ps, rs, ts = lk["ps"], lk["rs"], lk["ts"]
+    if int(lk.get("exact", 0)):     # avatar v8 (plaits): one ring at every control point, so lobes land where authored
+        acc = [0.0]
+        for a, b in zip(ps[:-1], ps[1:]):
+            acc.append(acc[-1] + (b - a).length)
+        return [(p, r, t, a / acc[-1]) for p, r, t, a in zip(ps, rs, ts, acc)]
     dense, n = [], 24 * (len(ps) - 1)
     for k in range(n + 1):
         t = k / n * (len(ps) - 1)
@@ -225,20 +238,60 @@ HUG_FROM, HUG_FULL = 0.03, 0.018   # the lock's spine height over the scalp wher
 SECTIONS = {  # (across, up, u) around the section, left edge first; up +1 = away from the head
     4: [(-1.0, 0.0, 0.0), (0.0, 1.0, 0.5), (1.0, 0.0, 1.0), (0.0, -1.0, 0.5)],
     5: [(-1.0, 0.0, 0.0), (-0.45, 0.85, 0.3), (0.45, 0.85, 0.7), (1.0, 0.0, 1.0), (0.0, -0.7, 0.5)],
+    # avatar v8: a rounded clump (smooth shading, no ridge); the underside mirrors the top in u
+    6: [(-1.0, 0.0, 0.0), (-0.55, 0.85, 0.25), (0.55, 0.85, 0.75), (1.0, 0.0, 1.0), (0.5, -0.7, 0.75), (-0.5, -0.7, 0.25)],
 }
 
 
-def sweep(pc, ob, surf=None):
+def coil(pc, lk, segs=8, rings=4):
+    """avatar v8: a curl clump (the afro, curly fringes): a soft ball along the lock's two spine points (the first is
+    its bottom pole, buried in the mass; the second its top) with half width rs[0]. The strand texture runs round it
+    in a spiral (u wraps and climbs with v), so the painted strands read as coils. Returns the faces added."""
+    a, b = lk["ps"][0], lk["ps"][-1]
+    ax = (b - a)
+    h = ax.length / 2
+    c = a + ax / 2
+    n = ax.normalized()
+    t = n.orthogonal().normalized()
+    w = n.cross(t)
+    r = lk["rs"][0]
+    n0 = pc.mark()
+    rows = []
+    for i in range(1, rings):
+        la = -math.pi / 2 + math.pi * i / rings
+        row = [(pc.v(c + (t * math.cos(2 * math.pi * k / segs) + w * math.sin(2 * math.pi * k / segs)) * r * math.cos(la)
+                     + n * h * math.sin(la)), i / rings) for k in range(segs)]
+        rows.append(row + [row[0]])                          # the seam: the closing column reuses the first vertex
+    bot, top = pc.v(a), pc.v(b)
+    uv = lambda k, v: (k / segs * 3 + v * 1.6, v)            # 3 strand repeats round the ball, climbing as a spiral
+    for ra, rb in zip(rows[:-1], rows[1:]):
+        for k in range(segs):
+            pc.f([ra[k][0], ra[k + 1][0], rb[k + 1][0], rb[k][0]], c,
+                 uv=[uv(k, ra[k][1]), uv(k + 1, ra[k][1]), uv(k + 1, rb[k][1]), uv(k, rb[k][1])])
+    for k in range(segs):
+        pc.f([rows[0][k + 1][0], rows[0][k][0], bot], c, uv=[uv(k + 1, rows[0][k][1]), uv(k, rows[0][k][1]), uv(k + 0.5, 0.0)])
+        pc.f([rows[-1][k][0], rows[-1][k + 1][0], top], c, uv=[uv(k, rows[-1][k][1]), uv(k + 1, rows[-1][k][1]), uv(k + 0.5, 1.0)])
+    return pc.since(n0)
+
+
+def sweep(pc, ob, surf=None, flip=False):
     """Add one lock (a curve object, or a plain lock from lock_of / lock_of_seed) to a kit.Piece as a closed solid. Returns the number of faces added. With the head surface: the
     root ring is buried ROOT_DEPTH under the skin, and while the spine runs within HUG_FROM of the scalp the
     underside and edges are pulled down onto it (fully within HUG_FULL), so a lock lying on the head shows no air
     under it from any angle; lengths that hang free (bob hems, long backs) are left as swept."""
     lk = ob if isinstance(ob, dict) else lock_of(ob)
+    if int(lk.get("coil", 0)):
+        fs = coil(pc, lk)
+        if hasattr(pc, "coils"):
+            pc.coils.update(fs)
+        return len(fs)
     sm = lock_samples(lk)
+    if flip:            # avatar v8: every other lock reads the strand texture mirrored (u -> 1 - u), so neighbours differ
+        sec = [(ac, up, 1.0 - u) for ac, up, u in SECTIONS[int(lk["sides"])]]
     flat = float(lk["flat"])
     hug = float(lk["hug"])
     hug_from = float(lk.get("hug_from", HUG_FROM))
-    sec = SECTIONS[int(lk["sides"])]
+    sec = sec if flip else SECTIONS[int(lk["sides"])]
     n0 = pc.mark()
     rings = []
     for i, (p, r, tilt, v) in enumerate(sm[:-1]):
@@ -256,7 +309,9 @@ def sweep(pc, ob, surf=None):
             B, N = B * c + N * s, N * c - B * s
         pts = [p + B * (ac * r) + N * (up * r * flat) for ac, up, _ in sec]
         if surf is not None:
-            if i == 0:          # sink the whole root ring (its shape kept) until its highest point is under the skin
+            if i == 0 and not int(lk.get("bury", 1)):
+                pass            # avatar v8: a root inside the piece's own crown mass (the under-cap) emerges from it gradually
+            elif i == 0:        # sink the whole root ring (its shape kept) until its highest point is under the skin
                 top = max(surf.height(q) for q in pts)
                 if top > -ROOT_DEPTH:
                     dn = (p - HC).normalized() * (top + ROOT_DEPTH)
@@ -279,7 +334,7 @@ def sweep(pc, ob, surf=None):
         mid = sum((x.co for x in ra + rb), Vector()) / (2 * k)     # inside the segment even where the rings moved
         for j in range(k):
             j2 = (j + 1) % k
-            ua, ub = sec[j][2], sec[j2][2] if j2 else (1.0 if sec[j][2] > 0.5 else 0.0)
+            ua, ub = sec[j][2], sec[j2][2]
             pc.f([ra[j], ra[j2], rb[j2], rb[j]], mid, uv=[(ua, va), (ub, va), (ub, vb), (ua, vb)])
     last, pl, vl = rings[-1]
     lc = (sum((x.co for x in last), Vector()) / k * 3 + tip.co) / 4

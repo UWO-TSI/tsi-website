@@ -6,7 +6,7 @@
    "id": "bangs_straight",
    "name": "Straight cut",
    "sheet_cell": "N4.2",
-   "tris": 586,
+   "tris": 732,
    "locks": 9,
    "file": "bangs/bangs_straight.glb",
    "source": "v7/hair_bangs.blend"
@@ -60,7 +60,7 @@
    "id": "bangs_curtain",
    "name": "Curtain",
    "sheet_cell": "N3.2",
-   "tris": 560,
+   "tris": 672,
    "locks": 8,
    "file": "bangs/bangs_curtain.glb",
    "source": "v7/hair_bangs.blend"
@@ -87,8 +87,8 @@
    "id": "bangs_spiky",
    "name": "Spiky tufts",
    "sheet_cell": "B6.2",
-   "tris": 516,
-   "locks": 8,
+   "tris": 696,
+   "locks": 9,
    "file": "bangs/bangs_spiky.glb",
    "source": "v7/hair_bangs.blend"
   },
@@ -145,6 +145,24 @@
    "locks": 9,
    "file": "bangs/bangs_asym_block.glb",
    "source": "v7/hair_bangs.blend"
+  },
+  {
+   "id": "bangs_curls",
+   "name": "Curly fringe",
+   "sheet_cell": null,
+   "tris": 672,
+   "locks": 14,
+   "file": "bangs/bangs_curls.glb",
+   "source": "v7/hair_bangs.blend"
+  },
+  {
+   "id": "bangs_braids",
+   "name": "Braided front",
+   "sheet_cell": null,
+   "tris": 432,
+   "locks": 8,
+   "file": "bangs/bangs_braids.glb",
+   "source": "v7/hair_bangs.blend"
   }
  ],
  "back": [
@@ -152,8 +170,8 @@
    "id": "back_bob",
    "name": "Bob",
    "sheet_cell": "B2.1",
-   "tris": 990,
-   "locks": 9,
+   "tris": 1170,
+   "locks": 12,
    "file": "back/back_bob.glb",
    "source": "v7/hair_backs.blend"
   },
@@ -170,8 +188,8 @@
    "id": "back_long",
    "name": "Long straight",
    "sheet_cell": "B3.1",
-   "tris": 918,
-   "locks": 9,
+   "tris": 1182,
+   "locks": 10,
    "file": "back/back_long.glb",
    "source": "v7/hair_backs.blend"
   },
@@ -233,7 +251,7 @@
    "id": "back_short_spiky",
    "name": "Short layered",
    "sheet_cell": "B6.2",
-   "tris": 964,
+   "tris": 1014,
    "locks": 11,
    "file": "back/back_short_spiky.glb",
    "source": "v7/hair_backs.blend"
@@ -254,6 +272,24 @@
    "tris": 990,
    "locks": 9,
    "file": "back/back_bowl.glb",
+   "source": "v7/hair_backs.blend"
+  },
+  {
+   "id": "back_afro",
+   "name": "Afro",
+   "sheet_cell": null,
+   "tris": 1182,
+   "locks": 19,
+   "file": "back/back_afro.glb",
+   "source": "v7/hair_backs.blend"
+  },
+  {
+   "id": "back_box_braids",
+   "name": "Box braids",
+   "sheet_cell": null,
+   "tris": 1182,
+   "locks": 12,
+   "file": "back/back_box_braids.glb",
    "source": "v7/hair_backs.blend"
   }
  ]

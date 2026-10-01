@@ -90,6 +90,8 @@ class Piece:
         self.fmat = {}         # face -> material name
         self.fuv = {}          # face -> {vert: uv} (decal faces)
         self.sph = {}          # vert -> (lat, lon) of head-surface verts (hair_point), for their inner copies
+        self.coils = set()     # avatar v8: faces of curl balls (locks.coil), which keep more of their own roundness
+        self.knit = {}         # avatar v8: vert -> COLOR_0 factor of a knit's rib or purl column
 
     def v(self, p):
         vert = self.bm.verts.new(p)
@@ -342,10 +344,12 @@ class Piece:
     def tris(self):
         return sum(len(f.verts) - 2 for f in self.bm.faces)
 
-    def finish(self, name, rig, mats=None, sharp=40.0, grad=(0.62, 1.0), zrange=None):
+    def finish(self, name, rig, mats=None, sharp=40.0, grad=(0.62, 1.0), zrange=None, normals=None, shade=None):
         """Mesh object skinned to rig (rig=None: unskinned static mesh). mats: material name -> bpy material (defaults to bpy.data.materials).
         zrange=(lo, hi): the COLOR_0 gradient runs over these heights instead of the piece's own, so pieces that meet
-        (bangs, back cap, hat tuck) shade the same where they meet."""
+        (bangs, back cap, hat tuck) shade the same where they meet.
+        avatar v8: normals(bm) -> one custom normal per vertex (soft hair masses), shade(bm) -> a COLOR_0 factor per
+        vertex (baked occlusion, the darker inner layer); both get the final, outward-facing bmesh."""
         bm = self.bm
         bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-5)
         bm.normal_update()
@@ -354,8 +358,23 @@ class Piece:
             if face.normal.dot(face.calc_center_median() - Vector(ref)) < 0:
                 face.normal_flip()
         bm.normal_update()
+        bm.verts.index_update()
+        vshade = shade(bm) if shade else None
+        vnorm = normals(bm) if normals else None
+        loopn = []
+        if vnorm is not None and any(n is None for n in vnorm):
+            cos_sharp = math.cos(math.radians(sharp))
+            for face in bm.faces:
+                for loop in face.loops:
+                    n = vnorm[loop.vert.index]
+                    if n is None:
+                        n = sum((g.normal for g in loop.vert.link_faces if g.normal.dot(face.normal) >= cos_sharp), Vector())
+                        n = n.normalized() if n.length > 1e-9 else face.normal.copy()
+                    loopn.append(tuple(n))
         for e in bm.edges:
-            if len(e.link_faces) == 2:
+            if vnorm is not None:
+                e.smooth = True
+            elif len(e.link_faces) == 2:
                 a, b_ = e.link_faces
                 e.smooth = math.degrees(a.normal.angle(b_.normal, 0.0)) < sharp
             else:
@@ -374,6 +393,8 @@ class Piece:
             uvs = self.fuv.get(face)
             for loop in face.loops:
                 s = grad[0] + (grad[1] - grad[0]) * min(1.0, max(0.0, (loop.vert.co.z - lo) / max(hi - lo, 1e-6)))
+                if vshade is not None:
+                    s *= vshade[loop.vert.index]
                 loop[col] = (s, s, s, 1)
                 if uvl:
                     loop[uvl].uv = uvs.get(loop.vert, (0.5, 0.5)) if uvs else (0.5, 0.5)   # a welded vert keeps its face
@@ -381,6 +402,10 @@ class Piece:
         me = bpy.data.meshes.new(name)
         bm.to_mesh(me)
         bm.free()
+        if vnorm is not None and all(n is not None for n in vnorm):
+            me.normals_split_custom_set_from_vertices([tuple(n) for n in vnorm])
+        elif vnorm is not None:              # partial: the others shade smooth by angle (`sharp`), corner by corner
+            me.normals_split_custom_set(loopn)
         me.color_attributes.active_color = me.color_attributes["Color"]
         me.color_attributes.render_color_index = me.color_attributes.active_color_index   # glTF "ACTIVE" = render colour
         for m in names:
@@ -432,7 +457,7 @@ def seam_off(lat):
     return CAP_MIN * hair_vol(lat)
 
 
-def hair_cap(bottom, vol=1.0, hem=0.009, tips=None, side=None, lons=None, top=None, outer=None):
+def hair_cap(bottom, vol=1.0, hem=0.009, tips=None, side=None, lons=None, top=None, outer=None, outer_ll=None):
     """Closed crown cap on the scalp: the face window open below the hairline, sides and back down to bottom(lon) lat,
     outer surface on hair_vol x vol, tapering to seam_off at the front edge and to `hem` at the bottom edge (side =
     fixed offset for the rows above the hem, e.g. an undercut), underside tucked into the scalp. Rows: hem, two
@@ -454,7 +479,8 @@ def hair_cap(bottom, vol=1.0, hem=0.009, tips=None, side=None, lons=None, top=No
         return [bt, bt + (hl - bt) / 3, bt + (hl - bt) * 2 / 3] + up
 
     def off(lat, lon, ri):
-        v = outer(lat) if outer else hair_vol(lat) * vol       # outer(lat): the v7 lock hair's under-cap (avatar v7)
+        v = outer_ll(lat, lon) if outer_ll else outer(lat) if outer else hair_vol(lat) * vol   # outer(lat): the v7 lock hair's
+        #                                                       under-cap (avatar v7); outer_ll(lat, lon): avatar v8 (the afro)
         if ri == 0:
             return hem
         if ri in (1, 2):
@@ -472,7 +498,7 @@ def hair_cap(bottom, vol=1.0, hem=0.009, tips=None, side=None, lons=None, top=No
     grid = pc.patch(base, rows, off, skip=win, wrap=True,
                     tips=(lambda i, la, lb: None if max(abs(la), abs(lb)) < WINDOW else tips(i, la, lb, cmid(la, lb))) if tips else None)
     if not top:
-        apex = pc.hv(90, 0, outer(90) if outer else hair_vol(90) * vol)
+        apex = pc.hv(90, 0, outer_ll(90, 0) if outer_ll else outer(90) if outer else hair_vol(90) * vol)
         for i in range(len(lons) - 1):
             pc.f([grid[i][-1], grid[i + 1][-1], apex], HC)
     pc.close_fan(pc.since(n0), lambda v: hair_point(*pc.sph[v], INNER))
@@ -532,10 +558,12 @@ def registry():
     return parts, part
 
 
-HEADWEAR_TRIS = 1150   # hats carry their own hair tuck (avatar v7: sculpted locks) and replace the back hair while worn
+HEADWEAR_TRIS = 1700   # hats carry their own hair tuck (avatar v7: sculpted locks) and replace the back hair while worn;
+                       # avatar v8: accessories sit outside the 4,000-triangle look budget (row 265), each on its own budget
+ACCESSORY_TRIS = 600   # avatar v8: every other accessory (glasses, bags, neck, hair accessories)
 
 
-def build_parts(parts, rig, section, subdir, images=None, max_tris=300):
+def build_parts(parts, rig, section, subdir, images=None, max_tris=300, hooks=None):
     """Build, export (<subdir>/<slot>/<id>.glb) and catalogue every part; one part in the scene at a time so
     material names stay exact (M_Main, not M_Main.001)."""
     entries = []
@@ -550,7 +578,8 @@ def build_parts(parts, rig, section, subdir, images=None, max_tris=300):
                                              "fixed": lambda: val}[kind]())
         pc = Piece(region="torso", mat="M_Main")
         spec["build"](pc)
-        ob = pc.finish(spec["id"], rig, mats, sharp=spec["sharp"], grad=spec["grad"])
+        extra = hooks(pc) if hooks and spec["meta"].get("organic") else {}     # avatar v8: soft normals, baked occlusion
+        ob = pc.finish(spec["id"], rig, mats, sharp=spec["sharp"], grad=spec["grad"], **extra)
         tris = ntris(ob)
         rel = f"{subdir}/{spec['slot']}/{spec['id']}.glb"
         export(ob, rig, os.path.join(HERE, rel))
@@ -565,10 +594,10 @@ def build_parts(parts, rig, section, subdir, images=None, max_tris=300):
                           for n, (k, v) in spec["mats"].items() if n in used],
             "decalSlot": {"material": "M_Decal", "uv": [0, 0, 1, 1], "alphaMode": "MASK"} if m.get("decal") else None,
             "hidesBackHair": m.get("hidesBackHair", False), "hides": list(m.get("hides", [])),
-            **{key: m[key] for key in ("group", "variantOf", "item") if key in m},
+            **{key: m[key] for key in ("group", "variantOf", "item", "anchors", "wrap") if key in m},
         })
         unused = set(spec["mats"]) - set(used)
-        limit = HEADWEAR_TRIS if m.get("group") == "head" else max_tris
+        limit = HEADWEAR_TRIS if m.get("group") == "head" else ACCESSORY_TRIS if spec["slot"] == "accessory" else max_tris
         print(f"PART {spec['id']} tris={tris}" + ("  OVER BUDGET" if tris > limit else "") + (f"  UNUSED {unused}" if unused else ""))
         me = ob.data
         bpy.data.objects.remove(ob)

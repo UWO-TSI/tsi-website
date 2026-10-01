@@ -11,11 +11,12 @@ import bpy, json, os, sys
 
 V7 = os.path.dirname(os.path.abspath(__file__))
 ART = os.path.dirname(V7)
-for p in (V7, ART, os.path.join(ART, "base")):
+for p in (V7, ART, os.path.join(ART, "base"), os.path.join(ART, "v8")):
     sys.path.insert(0, p)
 import kit  # noqa: E402
 import hair_build  # noqa: E402
 import hair_styles as hs  # noqa: E402
+import anchors  # noqa: E402  (avatar v8: where hair accessories sit on each piece)
 
 entries = {}
 for slot, fname, table in (("bangs", "hair_bangs.blend", hs.BANGS), ("back", "hair_backs.blend", hs.BACKS)):
@@ -36,7 +37,8 @@ for slot, fname, table in (("bangs", "hair_bangs.blend", hs.BANGS), ("back", "ha
         rel = f"hair/{slot}/{pid}.glb"
         kit.export(ob, rig, os.path.join(ART, rel))
         e = {"id": pid, "slot": slot, "name": spec[0], "glb": rel, "tris": tris, "materials": [{"name": "M_Hair", "tint": "hair"}],
-             "decalSlot": None, "hidesBackHair": False, "hides": [], "sheetCell": spec[1], "locks": int(ob["locks"]), "v7": True}
+             "decalSlot": None, "hidesBackHair": False, "hides": [], "sheetCell": spec[1], "locks": int(ob["locks"]), "v7": True,
+             **({"v8": True} if pid in hs.V8 else {}), "anchors": anchors.anchors_of(pid, ob)}
         if slot == "back":   # fit_check measures the air gap over the under-cap only (hem locks flare free by design)
             e["capFrom"] = max(spec[3](lon) for lon in range(-180, 180, 5)) + 2
         entries[pid] = e

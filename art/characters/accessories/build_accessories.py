@@ -22,6 +22,10 @@ from head_shape import head_point, HEAD_Z, HRZB, EYE_LAT, EYE_LON, hair_vol, hai
 sys.path.insert(0, os.path.join(HERE, "..", "v7"))
 import locks  # noqa: E402  (avatar v7: hat tucks are sculpted locks, like every hair piece)
 import hair_styles  # noqa: E402
+sys.path.insert(0, os.path.join(HERE, "..", "v8"))
+sys.path.insert(0, HERE)
+import acc_v8  # noqa: E402  (avatar v8: the hand-remodeled accessories)
+import hair_acc  # noqa: E402  (avatar v8: hair accessories on the styles' anchors)
 
 bpy.ops.wm.read_factory_settings(use_empty=True)
 
@@ -74,7 +78,8 @@ def worn_top(lat, lon, dlat=3, dlon=8):
 rig = kit.load_rig(bpy.context.scene)
 with bpy.data.libraries.load(os.path.join(HERE, "..", "v7", "head.blend"), link=False) as (_src, _dst):
     _dst.objects = ["V7_Head"]
-HEAD_SURF = locks.Surface(_dst.objects[0])       # the v7 head the tuck locks rest on and bury their roots in
+HEAD_OBJ = _dst.objects[0]
+HEAD_SURF = locks.Surface(HEAD_OBJ)               # the v7 head the tuck locks rest on and bury their roots in
 PARTS, part = kit.registry()
 T, CL = B.torso_pt, B.CL
 WRAP = [30 * k for k in range(12)] + [360]
@@ -204,21 +209,14 @@ def hat_rows(edge, *band, span=15.0, low=None):
 
 
 @part("acc_beanie", "accessory", "Beanie", {"M_Main": ("outfit", 7), "M_Accent": ("outfit", 0), "M_Hair": ("hair", None)},
-      sharp=45, hidesBackHair=True, group="head")
+      sharp=45, hidesBackHair=True, group="head", organic=True)
 def beanie(pc):
-    """Snug knit cap pulled down over the hair: a folded brim standing 1 cm proud of a crown that hugs the hair,
-    small pompom."""
-    edge = lambda lon: 10 + 12 * math.cos(math.radians(lon))
-    fold = lambda lat, lon, ri: 0.016 if ri < 2 else 0.008
-    dome(pc, edge, hat_rows(edge, 13, 15, low=-2), fold)
-    pc.mat = "M_Accent"
-    pc.blob(hair_point(90, 0, hat_in(90) + 0.008) + Vector((0, 0, 0.018)), 0.026, segs=6, rings=4)
-    pc.mat = "M_Main"
-    tuck(pc, edge)
+    """avatar v8, remodeled by hand (acc_v8.beanie): knit ribs, a rolled ribbed cuff, a slouch, a fluffy pompom."""
+    acc_v8.beanie(pc, lambda edge: tuck(pc, edge))
 
 
 @part("acc_sunhat", "accessory", "Sun hat", {"M_Main": ("outfit", 0), "M_Accent": ("outfit", 8), "M_Hair": ("hair", None)},
-      sharp=40, hidesBackHair=True, group="head")
+      sharp=40, hidesBackHair=True, group="head", organic=True)
 def sunhat(pc):
     edge = lambda lon: 24 + 14 * math.cos(math.radians(lon))
     dome(pc, edge, hat_rows(edge, 1, 9, low=10), lambda lat, lon, ri: 0.005, ribbon=1)
@@ -229,7 +227,7 @@ def sunhat(pc):
 
 
 @part("acc_cap", "accessory", "Cap", {"M_Main": ("outfit", 11), "M_Accent": ("outfit", 1), "M_Hair": ("hair", None)},
-      sharp=40, hidesBackHair=True, group="head")
+      sharp=40, hidesBackHair=True, group="head", organic=True)
 def cap(pc):
     edge = lambda lon: 14 + 26 * math.cos(math.radians(lon))
     dome(pc, edge, hat_rows(edge, low=-12), lambda lat, lon, ri: 0.005)
@@ -245,7 +243,7 @@ def cap(pc):
 
 
 @part("acc_straw_hat", "accessory", "Straw hat", {"M_Main": ("outfit", 6), "M_Accent": ("outfit", 7), "M_Hair": ("hair", None)},
-      sharp=40, hidesBackHair=True, group="head", item="acc-straw-hat")
+      sharp=40, hidesBackHair=True, group="head", organic=True, item="acc-straw-hat")
 def straw_hat(pc):
     """Round crown, wide flat brim with an upturned edge, a ribbon round the crown."""
     edge = lambda lon: 20 + 10 * math.cos(math.radians(lon))
@@ -292,7 +290,7 @@ def flower_crown(pc):
         pc.mat = "M_Main" if k % 2 == 0 else "M_Accent"
         l = max(range(l0 - 12, l0 + 13, 3), key=lambda x: worn_top(lat(x), x, 1, 2))   # each blossom sits on a lock
         c = hair_point(lat(l), l, off(l))
-        blossom(pc, c, (c - HC).normalized(), r=0.026)
+        blossom(pc, c, (c - HC).normalized(), r=0.023)        # avatar v8: a little smaller on the softer, lumpier hair
     pc.mat = "M_Main"
 
 
@@ -330,18 +328,10 @@ def rounded_box(pc, c, t, n, hw, hd, hh, lid=None):
 
 
 @part("acc_backpack", "accessory", "Backpack", {"M_Main": ("outfit", 15), "M_Accent": ("outfit", 5), "M_Trim": ("outfit", 5)},
-      sharp=45, group="bag")
+      sharp=45, group="bag", organic=True)
 def backpack(pc):
-    pc.region = {"Spine2": 0.7, "Spine1": 0.3}
-    # slim enough to sit inside long back hair (back_long's sheet is 0.165-0.19 behind the spine), pocket below its ends
-    rounded_box(pc, Vector((0, 0.142, 0.395)), Vector((1, 0, 0)), Vector((0, 1, 0)), 0.09, 0.025, 0.09, lid="M_Accent")
-    pc.mat = "M_Accent"
-    rounded_box(pc, Vector((0, 0.171, 0.334)), Vector((1, 0, 0)), Vector((0, 1, 0)), 0.052, 0.008, 0.027)
-    pc.mat = "M_Trim"
-    for s in (1, -1):
-        path = [(155, 0.488), (125, 0.527), (62, 0.532), (36, 0.498), (28, 0.448), (30, 0.395)]
-        kit.strip(pc, [T(s * l, z, CL + 0.019) for l, z in path], 0.022)
-    pc.mat = "M_Main"
+    """avatar v8, remodeled by hand (acc_v8.backpack): a padded body, a soft flap, a puffy pocket, padded straps."""
+    acc_v8.backpack(pc)
 
 
 @part("acc_shoulder_bag", "accessory", "Shoulder bag", {"M_Main": ("outfit", 4), "M_Accent": ("outfit", 5)}, sharp=45, group="bag")
@@ -393,5 +383,26 @@ def shell_necklace(pc):
             pc.f([h, vs[k], vs[k + 1]], hinge - n)
 
 
-kit.build_parts(PARTS, rig, "accessories", "accessories")
+# ================================================================ hair accessories (avatar v8 deliverable 3)
+# group "hair": one per look, each in one colour, placed by the engine on the worn style's anchors (v8/anchors.py),
+# tried in the order of `anchors`; it hides when the style has none of them or a hat or hood is worn.
+@part("hacc_claw_clip", "accessory", "Claw clip", {"M_Main": ("outfit", 13)}, sharp=50, group="hair",
+      anchors=["pony", "bun", "crown"], organic=True)
+def claw_clip(pc):
+    hair_acc.claw_clip(pc)
+
+
+@part("hacc_bow", "accessory", "Bow", {"M_Main": ("outfit", 7)}, sharp=50, group="hair",
+      anchors=["pony", "bun", "braid_end", "side"], organic=True)
+def bow(pc):
+    hair_acc.bow(pc)
+
+
+@part("hacc_scrunchie", "accessory", "Scrunchie", {"M_Main": ("outfit", 9)}, sharp=50, group="hair",
+      anchors=["pony", "bun", "braid_end"], wrap=hair_acc.RING, organic=True)
+def scrunchie(pc):
+    hair_acc.scrunchie(pc)
+
+
+kit.build_parts(PARTS, rig, "accessories", "accessories", hooks=lambda pc: acc_v8.organic_hooks(pc, HEAD_OBJ))
 print("ACCESSORIES_OK", len(PARTS))

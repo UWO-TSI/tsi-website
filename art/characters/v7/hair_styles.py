@@ -21,8 +21,11 @@ CAP_FLOOR = 0.010       # and never nearer the scalp than this: its 20 deg quads
                         # 3.3 mm proud of the analytic surface, so a thinner cap lets skin show through in flecks
 
 
-def cap_outer(lat, tight=0.0):
-    return max(hair_outer(lat) - GROOVE - tight, CAP_FLOOR)
+GROOVE_V8 = 0.0065     # avatar v8: shallow grooves, the locks read as one soft mass
+
+
+def cap_outer(lat, tight=0.0, groove=GROOVE):
+    return max(hair_outer(lat) - groove - tight, CAP_FLOOR)
 
 
 def top(lat, lon, r, flat, dz=0.0):
@@ -58,12 +61,12 @@ def fringe(lon, tip_lat, tip_lon=None, w=0.033, w_tip=None, flat=0.42, blunt=0.0
                 hug_from=0.06)            # a fringe rests on the skin all along: its roll over the hairline is solid, no air under it
 
 
-def side_lock(s, tip_lat, lon=62, w=0.026, flat=0.42, blunt=0.0, segs=6, out=0.016):
+def side_lock(s, tip_lat, lon=62, w=0.026, flat=0.42, blunt=0.0, segs=6, out=0.016, sides=4):
     """A face-framing lock from the crown side down past the temple."""
     L = s * lon
     return dict(pts=[root(80, s * 30), top(62, s * (lon - 18), w * 0.9, flat), top(30, L, w, flat, -0.004),
                      ("s", (30 + tip_lat) / 2 + 2, L * 1.02, out + 0.004), ("s", tip_lat, L * 1.03, out)],
-                w=[w * 0.6, w * 0.9, w, w * 0.9, w * 0.25 if not blunt else w * 0.85], flat=flat, segs=segs, sides=4, blunt=blunt, hug=1)
+                w=[w * 0.6, w * 0.9, w, w * 0.9, w * 0.25 if not blunt else w * 0.85], flat=flat, segs=segs, sides=sides, blunt=blunt, hug=1)
 
 
 def crown_only(lons, w=0.034, flat=0.42):
@@ -171,25 +174,6 @@ def asym_block():
     return locks + [side_lock(-1, -30, 66, w=0.03, blunt=0.6), side_lock(1, 6, 62, w=0.022)]
 
 
-BANGS = {  # id: (name, nearest cell, seeds)
-    "bangs_straight": ("Straight cut", "N4.2", lambda: straight()),
-    "bangs_straight_long": ("Straight cut, long", "N3.3", lambda: [fringe(lon, 3 - 3 * (abs(lon) / 48) ** 2, w=0.033 * (1.22 if abs(lon) == 48 else 1.0), blunt=0.85)
-                                                                  for lon in (-48, -32, -16, 0, 16, 32, 48)] + [side_lock(s, -22, 62) for s in (1, -1)]),
-    "bangs_bowl": ("Rounded bowl", "N4.1", bowl),
-    "bangs_wispy": ("See-through wispy", "N6.1", wispy),
-    "bangs_swept_l": ("Side-swept left", "N2.2", lambda: swept(1)),
-    "bangs_swept_r": ("Side-swept right", "N6.4", lambda: swept(-1)),
-    "bangs_curtain": ("Curtain", "N3.2", lambda: curtain()),
-    "bangs_curtain_long": ("Curtain, long", "N6.2", lambda: curtain(True)),
-    "bangs_centre_split": ("Centre split", "N1.4", centre_split),
-    "bangs_spiky": ("Spiky tufts", "B6.2", spiky),
-    "bangs_hime": ("Hime side-locks", "N6.3", hime),
-    "bangs_choppy": ("Short choppy", "N1.5", choppy),
-    "bangs_swept_back": ("Swept back", "N5.4", swept_back),
-    "bangs_single_strand": ("Short with one long strand", "N5.3", single_strand),
-    "bangs_wavy": ("Wavy swept", "N3.1", wavy),
-    "bangs_asym_block": ("Asymmetric block", "N6.5", asym_block),
-}
 
 
 # ================================================================ backs (an under-cap + locks)
@@ -373,29 +357,266 @@ def undercut():
     return out
 
 
+# ================================================================ avatar v8: the organic look (rounded clumps)
+def clump(lon, hem, w=0.056, flat=0.34, root_lat=64, bulge=0.03, curl=0.012, flick=0.0, tip=0.18, blunt=0.15, segs=7,
+          lift=0.0):
+    """A soft back clump: its root tucked under the crown mass (the under-cap) at root_lat, over the head at full
+    volume, bulging below the ears and tapering to a tip at the hem lat; flick (deg) swings the tip sideways, lift (m)
+    turns it out; curl turns it under."""
+    side = 1 - min(1.0, (abs(lon) - 70) / 60)            # 1 at the sides, 0 at the back
+    r0 = w * 0.48
+    mid = -12 if hem + 8 < -16 else (16 + hem + 8) / 2    # short styles: the bulge sits between the ears' top and the hem
+    return dict(pts=[("s", root_lat, lon * 0.97, cap_outer(root_lat, 0.0, GROOVE_V8) - 0.007 - r0 * flat),   # inside the crown mass
+                     top(root_lat - 20, lon, w * 0.9, flat, -0.002), top(16, lon, w, flat, 0.002),
+                     ("s", mid, lon, bulge - 0.008 * side), ("s", hem + 8, lon + flick * 0.3, bulge + 0.002 - 0.01 * side),
+                     ("s", hem, lon + flick * 0.7, bulge - 0.008 - 0.008 * side + lift * 0.5),
+                     ("s", hem - 5, lon + flick, bulge - 0.016 - curl - 0.006 * side + lift)],
+                w=[r0, w * 0.9, w, w * 1.04, w * 0.95, w * 0.7, w * tip], flat=flat, segs=segs, sides=6, blunt=blunt,
+                hug=1 if abs(lon) < 80 else 0, bury=0)
+
+
+def bob8():
+    """The bob (A2.1): nine soft clumps over the crown mass, hems a little uneven, tips tapered and turned under,
+    a flick out at each side and a small pointed tuft at the nape."""
+    out = []
+    for lon0, (dl, dh, ws, _) in sorted(VAR.items()):
+        side = 1 - min(1.0, (abs(lon0) - 72) / 60)
+        flick = {72: 9, -72: -9, 124: 4, -152: -4}.get(lon0, 0)
+        out.append(clump(lon0 + dl + (4 if lon0 == 72 else -4 if lon0 == -72 else 0), -44 + 6 * side + dh,
+                         w=0.06 * ws * (0.8 if abs(lon0) == 72 else 1.0), flick=flick, lift=0.01 if flick else 0.0,
+                         curl=0.004 if flick else 0.012, root_lat=62 + 3 * dh))
+    for lon, hem in ((166, -50), (-166, -48), (138, -47)):       # short tapered tufts breaking the hem line
+        out.append(dict(pts=[root(10, lon), ("s", -10, lon, 0.032), ("s", hem + 6, lon + 2, 0.028), ("s", hem, lon + 4, 0.02)],
+                        w=[0.02, 0.026, 0.02, 0.004], flat=0.4, segs=4, sides=6, hug=0))
+    return out
+
+
+def straight8():
+    """The straight-cut fringe, softened: rounded clumps, the cut a little uneven, the outer clumps tapering."""
+    tips = {-48: 8, -32: 10.5, -16: 9, 0: 10.5, 16: 9.5, 32: 11, 48: 7.5}
+    locks = [fringe(lon, t, w=0.034 * (1.18 if abs(lon) == 48 else 1.0), blunt=0.75 if abs(lon) < 48 else 0.3,
+                    w_tip=None if abs(lon) < 48 else 0.02, sides=6, flat=0.4) for lon, t in tips.items()]
+    return locks + [side_lock(s, -10, 61, w=0.027, sides=6) for s in (1, -1)]
+
+
+def curtain8():
+    """Curtain bangs parted at the centre, each clump sweeping out to the temple and tapering."""
+    locks = []
+    for sd in (1, -1):
+        for k, (dt, ws) in enumerate(((-1, 1.05), (1.5, 0.95), (-1, 1.0), (2, 1.1))):
+            locks.append(fringe(sd * (6 + 12 * k), 2 - 9 * k + dt * sd, tip_lon=sd * (37 + 14 * k), w=0.031 * ws,
+                                w_tip=0.012, crown=0.1, sides=6, flat=0.4))
+    return locks
+
+
+def spiky8():
+    """Spiky tufts (A2.3, S1.1): pointed clumps of uneven length swinging both ways, a cowlick flicking up at the crown."""
+    locks = [fringe(lon, tip, tip_lon=lon + sw, w=0.035, w_tip=0.004, crown=0.3, sides=6, flat=0.42)
+             for lon, tip, sw in ((-46, 16, -6), (-28, 3, 7), (-10, -1, 9), (8, 8, 4), (25, 12, 8), (42, 18, 2))]
+    locks.append(dict(pts=[root(80, 24), ("s", 74, 34, hair_outer(74) - 0.004), ("s", 68, 46, hair_outer(68) + 0.012),
+                           ("s", 64, 58, hair_outer(64) + 0.03)], w=[0.016, 0.022, 0.016, 0.003], flat=0.45, segs=4, sides=6, hug=0))
+    return locks + [side_lock(s, -2, 64, w=0.027, sides=6) for s in (1, -1)]
+
+
+LONG_VAR = {72: (2, 1.0, 0.0), 98: (-3, 1.05, 0.02), 124: (3, 0.97, -0.015), 152: (-2, 1.05, 0.01), 180: (0, 1.03, 0.015),
+            -72: (-2, 1.02, 0.01), -98: (3, 0.96, -0.02), -124: (-3, 1.05, 0.015), -152: (2, 0.99, -0.01)}
+
+
+def long8(drop=0.26):
+    """Long straight (B3.1, K1.3): soft clumps from the crown mass hanging past the shoulders, lengths uneven, tips
+    tapered, the outer ones swinging a little."""
+    out = []
+    for lon0, (dl, ws, dz) in sorted(LONG_VAR.items()):
+        lon = lon0 + dl
+        side = 1 - min(1.0, (abs(lon0) - 72) / 50)
+        d = drop - 0.06 * side + dz
+        w, flat = 0.058 * ws, 0.34
+        r0 = w * 0.48
+        rl = 60 + dl
+        sw = {72: 0.014, -72: -0.014, 152: 0.008, -124: -0.01}.get(lon0, 0.0)
+        out.append(dict(pts=[("s", rl, lon * 0.97, cap_outer(rl, 0.0, GROOVE_V8) - 0.007 - r0 * flat), top(rl - 20, lon, w * 0.9, flat, -0.002),
+                             top(6, lon, w * 1.04, flat, 0.004), ("s", -26, lon, 0.03), ("d", 0.008, sw * 0.3, d * 0.45),
+                             ("d", 0.002, sw * 0.5, d * 0.42), ("d", -0.004 + abs(sw) * 0.5, sw, d * 0.13)],
+                        w=[r0, w * 0.9, w, w * 1.06, w, w * 0.8, w * 0.16], flat=flat, segs=8, sides=6, blunt=0.1,
+                        hug=1 if abs(lon0) < 80 else 0, bury=0))
+    out.append(dict(pts=[root(6, 140), ("s", -26, 140, 0.03), ("d", 0.006, 0, 0.13), ("d", -0.002, 0.004, 0.09)],
+                    w=[0.02, 0.026, 0.02, 0.004], flat=0.4, segs=4, sides=6, hug=0))
+    return out
+
+
+def short8():
+    """Short layered (B6.2, A2.3, S2.2): short soft clumps flicking out at the nape and over the ears, two tufts
+    breaking the crown's silhouette. One layer, so no lower tip pokes out under the one above (v7's rough spot)."""
+    out = []
+    for lon0, (dl, dh, ws, _) in sorted(VAR.items()):
+        lon = lon0 + dl
+        back = min(1.0, max(0.0, (abs(lon0) - 68) / 80))
+        flick = (9 if lon > 0 else -9) * (1 if lon0 % 3 else -0.6)
+        out.append(clump(lon, -6 - 20 * back + dh, w=0.058 * ws * (0.85 if abs(lon0) == 72 else 1.0), flat=0.36, bulge=0.03, curl=-0.002, flick=flick,
+                         lift=0.014, tip=0.12, blunt=0.0, segs=6, root_lat=60 + 2 * dh))
+    for lon, lat0, dz in ((150, 70, 0.045), (-172, 66, 0.038)):     # two crown tufts standing out of the mass
+        out.append(dict(pts=[root(lat0 + 8, lon - 20), ("s", lat0 + 2, lon - 6, hair_outer(lat0) - 0.004),
+                             ("s", lat0 - 4, lon + 6, hair_outer(lat0) + dz - 0.02)], w=[0.024, 0.026, 0.004], flat=0.5, segs=4, sides=6))
+    return out
+
+
+# ---------------------------------------------------------------- new types (avatar v8 deliverable 2): curls, braids
+def curl(lat, lon, size=0.034, base=None, turn=1, lean=0.0, bury=0):
+    """A curl clump: a fat short lock coiling out of the mass (a C seen from the side), its root buried in the mass or
+    the scalp. base(lat) is the mass's outer height (the afro), else hair_outer."""
+    h = (base or hair_outer)(lat)
+    a = lambda k: math.radians(lon + turn * k)
+    return dict(pts=[("s", lat - 4, lon - turn * 4, h - size * 0.9), ("s", lat + 2, lon + lean, h + size * 0.15),
+                     ("s", lat + 6, lon + turn * 5 + lean, h + size * 0.45), ("s", lat + 3, lon + turn * 11 + lean, h + size * 0.35),
+                     ("s", lat - 1, lon + turn * 12 + lean, h + size * 0.05)],
+                w=[size * 0.6, size, size * 0.95, size * 0.75, size * 0.25], flat=0.78, segs=4, sides=6, hug=0, bury=bury)
+
+
+AFRO = 0.062            # m the afro's mass stands out beyond the library's hair volume (hair_outer) at the crown and sides
+
+
+def afro_outer(lat, lon=180.0):
+    """The afro's mass (outer height over the scalp): hair_outer at the hairline and the nape, rounding out to +AFRO."""
+    hl = hairline(lon)
+    rise = _ss(hl + 4, hl + 36, lat) if abs(lon) < 61 else _ss(-30, 0, lat)
+    return hair_outer(lat) + AFRO * rise * (1 - 0.25 * _ss(70, 90, lat))
+
+
+def ball(lat, lon, r, base=None, sink=0.35, tall=0.85, dlat=0.0, dlon=0.0):
+    """A curl clump as a soft ball (locks.coil): its bottom pole buried in the mass (base(lat) its outer height, else
+    hair_outer), `sink` of it under that surface; dlat/dlon tip its top a little, so the clumps don't all stand straight."""
+    h = (base or hair_outer)(lat)
+    c = h - r * sink
+    return dict(pts=[("s", lat, lon, c - r * tall), ("s", lat + dlat, lon + dlon, c + r * tall)], w=[r, r], coil=1, hug=0)
+
+
+def afro(n=19):
+    """The afro (avatar v8, no reference sheet: drawn in hair-acnh's language): a round mass (the under-cap, built in
+    hair_build) covered in big soft curl clumps, so the silhouette is a lumpy cloud; it covers the front crown as well,
+    so any fringe tucks under it."""
+    out = []
+    for k in range(n):                         # a golden-angle spiral over the mass, down to the nape, outside the face
+        z = 1 - (k + 0.5) / n * 1.38
+        lat = math.degrees(math.asin(z))
+        lon = ((k * 137.508 + 20) % 360) - 180
+        r = 0.072 + 0.01 * math.sin(k * 1.7)
+        if abs(lon) < 66 and lat < hairline(lon) + 30:
+            lat, r = hairline(lon) + 30 + (k % 3) * 3, r * 0.8    # the front: behind the hairline, so the mass rises from the fringe
+        out.append(ball(lat, lon, r, base=lambda la, lo=lon: afro_outer(la, lo) - 0.012,
+                        sink=0.3, dlat=4 * math.sin(k), dlon=5 * math.cos(k * 1.3)))
+    return out
+
+
+def curls_fringe():
+    """Curly fringe (pairs with the afro and the coming curly styles): rows of curl clumps from the hairline back over
+    the front crown to the whorl, at the library's volume, so it owns the front crown like every bangs piece, sits on
+    any back piece and tucks under the afro's mass."""
+    out = [ball(hairline(lon) - 3 + 3 * (k % 2), lon, 0.03, base=lambda la: 0.024, sink=0.25, dlat=-6, dlon=3 * (k % 3 - 1))
+           for k, lon in enumerate((-36, -18, 0, 18, 36))]
+    out += [ball(hairline(lon) + 6, lon, 0.034, sink=0.7, dlat=-4) for lon in (-46, -23, 0, 23, 46)]
+    out += [ball(68, lon, 0.036, sink=0.7) for lon in (-32, 0, 32)]
+    return out + [ball(86, 0, 0.045, sink=0.75)]
+
+
+def braid(pts, w=0.017, lobes=4, length=0.24, flare=0.0):
+    """A box braid: a plait whose hanging part is `lobes` lobes, wide and narrow in turn, each wide ring twisted the
+    other way and the spine zig-zagging a little, so the diamond section reads as a three-strand plait."""
+    step = length / (2 * lobes)
+    hang = [("d", 0.002 + flare * (i == 0), (w * 0.35 if (i // 2) % 2 else -w * 0.35) if i % 2 == 0 else 0.0, step)
+            for i in range(2 * lobes)]
+    ps = pts + hang
+    ws = [w * 0.8] + [w] * (len(pts) - 1) + [w * (1.15 if i % 2 == 0 else 0.72) for i in range(2 * lobes - 1)] + [w * 0.5]
+    tl = [0.0] * len(pts) + [(0.6 if (i // 2) % 2 else -0.6) if i % 2 == 0 else 0.0 for i in range(2 * lobes)]
+    return dict(pts=ps, w=ws, tilt=tl, flat=0.75, segs=len(ps) - 1, sides=4, hug=0, blunt=0.6, exact=1, densify=27)
+
+
+def box_braids():
+    """Box braids (avatar v8, no reference sheet): chunky plaits from the crown, the sides and the back of the head
+    lying on the head, then hanging past the shoulders, over a tight under-cap."""
+    out = []
+    rows = ((60, (-150, -105, 105, 150)), (36, (-170, -128, -88, 88, 128, 170)), (8, (-150, 150)))
+    for k, (lat, lons) in enumerate(rows):
+        for lon in lons:
+            L = 0.2 + 0.03 * math.sin(lon * 0.7 + k)
+            n = max(1, math.ceil((lat + 16) / 26))
+            top_ = [root(lat, lon)] + [("s", lat - (lat + 16) * j / n, lon * (1 + 0.03 * j / n), 0.018 + 0.006 * (j / n) + 0.006 * k) for j in range(1, n + 1)]
+            out.append(braid(top_, length=L, flare=0.004 * (2 - k), lobes=3 if k == 0 else 4))
+    return out
+
+
+def braids_front():
+    """Box-braid front: flat plaits from the hairline back over the front crown, and a face-framing braid at each temple."""
+    out = []
+    for lon in (-44, -26, -9, 9, 26, 44):
+        hl = hairline(lon)
+        out.append(dict(pts=[root(hl - 1, lon), ("s", hl + 6, lon * 0.95, hair_outer(hl) - 0.008), ("s", (hl + 84) / 2, lon * 0.6, hair_outer((hl + 84) / 2) - 0.008),
+                             ("s", 84, lon * 0.2, hair_outer(84) - 0.012)], w=[0.012, 0.014, 0.014, 0.008], tilt=[0, 0.5, -0.5, 0],
+                        flat=0.7, segs=6, sides=4, hug=1, hug_from=0.06))
+    for s_ in (1, -1):
+        b = braid([root(40, s_ * 50), ("s", 22, s_ * 62, hair_outer(22) - 0.008), ("s", -8, s_ * 70, 0.016), ("s", -34, s_ * 73, 0.019),
+                   ("s", -60, s_ * 76, 0.012)], lobes=2, length=0.07)
+        b.update(hug=1, hug_from=0.06)
+        out.append(b)
+    return out
+
+
+BANGS = {  # id: (name, nearest cell, seeds)
+    "bangs_straight": ("Straight cut", "N4.2", straight8),
+    "bangs_straight_long": ("Straight cut, long", "N3.3", lambda: [fringe(lon, 3 - 3 * (abs(lon) / 48) ** 2, w=0.033 * (1.22 if abs(lon) == 48 else 1.0), blunt=0.85)
+                                                                  for lon in (-48, -32, -16, 0, 16, 32, 48)] + [side_lock(s, -22, 62) for s in (1, -1)]),
+    "bangs_bowl": ("Rounded bowl", "N4.1", bowl),
+    "bangs_wispy": ("See-through wispy", "N6.1", wispy),
+    "bangs_swept_l": ("Side-swept left", "N2.2", lambda: swept(1)),
+    "bangs_swept_r": ("Side-swept right", "N6.4", lambda: swept(-1)),
+    "bangs_curtain": ("Curtain", "N3.2", curtain8),
+    "bangs_curtain_long": ("Curtain, long", "N6.2", lambda: curtain(True)),
+    "bangs_centre_split": ("Centre split", "N1.4", centre_split),
+    "bangs_spiky": ("Spiky tufts", "B6.2", spiky8),
+    "bangs_hime": ("Hime side-locks", "N6.3", hime),
+    "bangs_choppy": ("Short choppy", "N1.5", choppy),
+    "bangs_swept_back": ("Swept back", "N5.4", swept_back),
+    "bangs_single_strand": ("Short with one long strand", "N5.3", single_strand),
+    "bangs_wavy": ("Wavy swept", "N3.1", wavy),
+    "bangs_asym_block": ("Asymmetric block", "N6.5", asym_block),
+    # avatar v8 new types
+    "bangs_curls": ("Curly fringe", None, curls_fringe),
+    "bangs_braids": ("Braided front", None, braids_front),
+}
+
+
 BACKS = {  # id: (name, nearest cell, seeds, under-cap bottom(lon) or None, extras)
-    "back_bob": ("Bob", "B2.1", bob, lambda lon: -30),
+    "back_bob": ("Bob", "B2.1", bob8, lambda lon: -30),
     "back_wolf": ("Wolf cut", "B4.4", wolf, lambda lon: -28),
-    "back_long": ("Long straight", "B3.1", lambda: long_locks(), lambda lon: -36),
+    "back_long": ("Long straight", "B3.1", long8, lambda lon: -36),
     "back_wavy_long": ("Wavy long", "B4.5", lambda: long_locks(0.3, wave=0.018, flare=0.012), lambda lon: -36),
     "back_high_pony": ("High ponytail", "B6.5", high_pony, lambda lon: -22),
     "back_pigtails": ("Low pigtails", "B3.2", pigtails, lambda lon: -26),
     "back_twin_buns": ("Twin buns", "B2.5", twin_buns, lambda lon: -30),
     "back_bun": ("Single top bun", "B1.1", single_bun, lambda lon: -34),
     "back_braid_crown": ("Braided crown", "B7.2", braid_crown, lambda lon: -34),
-    "back_short_spiky": ("Short layered", "B6.2", short_layered, lambda lon: -8 if abs(lon) < 100 else -22),
+    "back_short_spiky": ("Short layered", "B6.2", short8, lambda lon: -8 if abs(lon) < 100 else -22),
     "back_undercut": ("Undercut", "B3.5", undercut, lambda lon: -8 - 32 * _ss(90, 130, abs(lon))),
     "back_bowl": ("Bowl", "B1.5", bowl_back, lambda lon: -8 if abs(lon) < 95 else -26),
+    # avatar v8 new types
+    "back_afro": ("Afro", None, afro, lambda lon: -22),
+    "back_box_braids": ("Box braids", None, box_braids, lambda lon: -16),
 }
 # knots for the bun styles (closed blobs under the coiled locks): back id -> [(lat, lon, radius, height)]
 KNOTS = {"back_twin_buns": [(56, 62, 0.05, 0.05), (56, -62, 0.05, 0.05)], "back_bun": [(66, 180, 0.07, 0.06)]}
 for _bid, _knots in KNOTS.items():
     _fn = BACKS[_bid][2]
     BACKS[_bid] = BACKS[_bid][:2] + ((lambda f, ks: (lambda: f() + [lk for k in ks for lk in bun_coil(*k)]))(_fn, _knots),) + BACKS[_bid][3:]
+# avatar v8: pieces rebuilt with the organic look (rounded clumps, soft normals, occlusion, the strand texture)
+V8 = {"bangs_straight", "back_bob", "bangs_curtain", "back_long", "bangs_spiky", "back_short_spiky",
+      "back_afro", "bangs_curls", "back_box_braids", "bangs_braids"}
 # pulled-back styles sit closer to the head: their under-cap is lower still
-TIGHT = {"back_high_pony", "back_pigtails", "back_twin_buns", "back_bun"}
+TIGHT = {"back_high_pony", "back_pigtails", "back_twin_buns", "back_bun", "back_box_braids"}
 # under-caps that are not cap_outer: the undercut's shaved sides (the floor) under its full top
 OUTER = {"back_undercut": lambda lat: CAP_FLOOR + (cap_outer(lat) - CAP_FLOOR) * _ss(16, 30, lat)}
+# avatar v8: under-caps shaped by longitude too (the afro's mass)
+OUTER_LL = {"back_afro": lambda lat, lon: afro_outer(lat, lon) - 0.012}
+# under-caps that stay one flat, darker value (the inner layer between curls or plaits), not strand-textured
+FLAT_CAP = {"back_afro", "back_box_braids"}
 
 
 TUCK_VAR = {76: (0, 0, 1.15, 0.6), 112: (-3, -3, 1.2, 0.35), 148: (3, 2, 1.15, 0.55), 180: (0, -2, 1.2, 0.4),
@@ -414,5 +635,27 @@ def tuck(edge):
         w = 0.05 * ws
         out.append(dict(pts=[root(e + 14, lon), ("s", e + 2, lon, hair_outer(e) - 0.004), ("s", -12, lon, 0.032 - 0.008 * side),
                              ("s", hem + 7, lon, 0.034 - 0.01 * side), ("s", hem, lon, 0.026 - 0.008 * side)],
-                        w=[w * 0.7, w, w * 1.04, w * 0.9, w * 0.6], flat=0.45, segs=3, sides=4, blunt=cut, hug=1 if abs(lon0) < 80 else 0))
+                        w=[w * 0.7, w, w * 1.04, w * 0.9, w * 0.35], flat=0.4, segs=4, sides=6, blunt=cut * 0.5,
+                        hug=1 if abs(lon0) < 80 else 0))     # avatar v8: rounded, tapering clumps like the library
     return out
+
+
+# ================================================================ anchors (avatar v8 deliverable 3: hair accessories)
+# Where a hair accessory sits on a piece, by name. A piece lacking a name hides the accessories that need it.
+#   ("surf", lat, lon)                      on the piece's outer surface along the ray from the head centre
+#   ("tie", lat, lon, off, (out, side, down), r)   a gathered tie (pony base, braid end): its centre, the direction the
+#                                           gathered hair leaves it (a spine() move) and its radius
+#   ("bun", lat, lon, r)                    the base of a bun knot (KNOTS), its axis through the knot
+# Frames (v8/anchors.py): z faces out (the side the viewer sees), y runs along the hair toward its root, x = y cross z.
+SIDE = ("surf", 16, 96)            # above the character's left ear
+CROWN = ("surf", 50, 180)          # the back of the crown, where a half-up clip or tie sits
+FRINGE = ("surf", None, 36)        # on the fringe, at the character's left (lat: a little under the hairline)
+ANCHORS = {pid: {"side": [SIDE], "crown": [CROWN]} for pid in BACKS}
+ANCHORS["back_high_pony"] = {"pony": [("tie", 52, 180, hair_outer(52) - 0.004, (0.05, 0, -0.02), 0.034)], "side": [SIDE]}
+ANCHORS["back_pigtails"] = {"pony": [("tie", -8, s * 108, hair_outer(-8) - 0.004, (0.03, 0, 0.05), 0.03) for s in (1, -1)],
+                            "crown": [CROWN]}
+ANCHORS["back_bun"] = {"bun": [("bun", 66, 180, 0.07)], "side": [SIDE]}
+ANCHORS["back_twin_buns"] = {"bun": [("bun", 56, s * 62, 0.05) for s in (1, -1)], "crown": [CROWN]}
+ANCHORS["back_undercut"] = {"crown": [CROWN]}                 # the shaved sides have nothing to clip to
+for _pid in BANGS:
+    ANCHORS[_pid] = {"fringe": [FRINGE]}
