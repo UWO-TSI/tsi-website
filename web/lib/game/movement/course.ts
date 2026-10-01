@@ -137,7 +137,7 @@ export function lapStep(lap: Lap, gate: number, now: number): Lap {
  * the lap test and the evidence recording (`__move.autopilot()` in dev); it is
  * not a player feature.
  */
-export interface RouteStep { to: [number, number]; sprint?: boolean; move?: "jump" | "long-dash" | "dash-jump" | "mantle" | "dash" | "hops"; r?: number }
+export interface RouteStep { to: [number, number]; sprint?: boolean; move?: "jump" | "long-dash" | "dash-jump" | "mantle" | "dash" | "hops" | "glide" | "glide-gust"; r?: number }
 export const LAP_ROUTE: RouteStep[] = [
   { to: [-17, -17.5] },
   { to: [-17, 15], sprint: true, r: 1 }, // the sprint lane
@@ -194,6 +194,16 @@ export function routePilot(route: readonly RouteStep[] = LAP_ROUTE) {
       return { ...input, jumpPressed: true };
     }
     if (step.move === "long-dash" && phase === 2 && s.mode === "air" && s.vy < 0) { phase = 3; return { ...input, dashPressed: true }; }
+    // The glider: let go at the top of the jump, press again and hold to the landing (a gust half a second in).
+    if (step.move === "glide" || step.move === "glide-gust") {
+      if (phase === 2 && s.mode === "air" && s.vy <= 0) { phase = 3; return { ...input, jump: false }; }
+      if (phase === 3) { phase = 4; t = 0; return { ...input, jump: true, jumpPressed: true }; }
+      if (phase === 4) {
+        if (s.mode === "ground") { i++; phase = 0; }
+        const gust = step.move === "glide-gust" && t >= 0.5 && t < 0.5 + dt;
+        return { ...input, jump: true, dashPressed: gust };
+      }
+    }
     if (step.move === "dash-jump" && phase === 2 && t > 0.06) { phase = 3; return { ...input, jumpPressed: true }; }
     if (t > 0.1 && s.mode === "ground") { i++; phase = 0; }
     return input;

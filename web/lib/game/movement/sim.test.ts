@@ -652,6 +652,15 @@ describe("the leaf glider (row 245)", () => {
     expect(end.mode).toBe("ground");
     expect(end.z).toBeGreaterThan(38.5); // the beach
     expect(glide(w, T, lane).at(-1)!.z).toBeLessThan(34); // a jump reaches the island at most
+    // The dev route pilot (evidence) flies it too, and with the gust.
+    for (const move of ["glide", "glide-gust"] as const) {
+      const pilot = routePilot([{ to: [-18, 28.15], move, r: 0.2 }, { to: [-18, 42], r: 0.5 }]), out: string[] = [];
+      let s = createMoveState(GLIDE_SPAWN[0], GLIDE_SPAWN[1], w);
+      for (let input = pilot(s, STEP), n = 0; input && n < 1200; input = pilot(s, STEP), n++) { s = stepMove(s, { ...NO_INPUT, ...input }, STEP, w, GT); out.push(...kinds(s.events)); }
+      expect(out, move).toEqual(expect.arrayContaining(["glide", "furl", "land", ...(move === "glide-gust" ? ["dash"] : [])]));
+      expect(out).not.toContain("splash");
+      expect(s.z, move).toBeGreaterThan(38.5);
+    }
   });
 
   it("never grounds on water, ends inside something or gets stuck in the glide lane, fuzzed", () => {

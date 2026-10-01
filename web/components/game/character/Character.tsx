@@ -8,7 +8,7 @@
  * wardrobe all render through this. Visual only: callers own movement and
  * write speed/yaw/pose/one-shots into `motion`.
  */
-import { useDeferredValue, useEffect, useMemo, useRef, type RefObject } from "react";
+import { Suspense, useDeferredValue, useEffect, useMemo, useRef, type RefObject } from "react";
 import { useFrame, useLoader, useThree } from "@react-three/fiber";
 import { useGLTF } from "@react-three/drei";
 import * as THREE from "three";
@@ -276,7 +276,8 @@ export default function Character({ look, motion, walkSpeed = 7.4, weapon = null
   return <group ref={group}>
     <primitive object={puppet.root} scale={scale} dispose={null} />
     {weapon && <HeldWeapon puppet={puppet} weapon={weapon} />}
-    {leaf && <HeldLeaf puppet={puppet} motion={motion} scale={scale} />}
+    {/* Its own boundary: crafting the glider mid-session must not suspend the scene while the leaf loads. */}
+    {leaf && <Suspense fallback={null}><HeldLeaf puppet={puppet} motion={motion} scale={scale} /></Suspense>}
   </group>;
 }
 function dressPuppet(puppet: Puppet, look: CharacterLook, parts: ResolvedPart[], scenes: THREE.Object3D[], atlas: THREE.Texture, decalMap: THREE.Texture) {

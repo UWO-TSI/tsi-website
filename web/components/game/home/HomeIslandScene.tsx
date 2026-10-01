@@ -46,7 +46,7 @@ export default function HomeIslandScene({ identity, level, peaceful, fishSpot, f
   outdoor: readonly PlacedItem[]; decorating: boolean; selected: { piece: string; rot: Rotation; uid?: string } | null;
   onPlace: (item: PlacedItem) => void; onPickUp: (item: PlacedItem) => void;
   identity?: { display_name: string; member: boolean }; level?: number;
-  peaceful: { moment: WorldMoment; member: string }; fishSpot: { current: FishingSpot | null }; fishing: boolean;
+  peaceful: { moment: WorldMoment; member: string; glider: boolean }; fishSpot: { current: FishingSpot | null }; fishing: boolean;
 }) {
   const home = useMemo(() => createHomeIsland(), []);
   const world = useMemo(() => home.worldWith(outdoor), [home, outdoor]);
@@ -100,6 +100,6 @@ export default function HomeIslandScene({ identity, level, peaceful, fishSpot, f
     <PlacementLayer items={outdoor} mapping={mapping} context={{ inside: home.placeable }} active={decorating} selected={selected}
       onPlace={onPlace} onPickUp={onPickUp} plane={{ center: [0, 0.02, 0], size: [HOME_RADII.x * 2, HOME_RADII.z * 2] }} />
     <PlayerAvatar key={`home-${returned}`} spawnPosition={spawn} playerName={identity?.display_name ?? "You"} playerLevel={level} member={identity?.member} player={player} frozen={fishing || (decorating && !!selected)}
-      world={world} groundHeight={home.ground} groundSurface={home.surface} camTarget={focus} />
+      world={world} groundHeight={home.ground} groundSurface={home.surface} camTarget={focus} glider={peaceful.glider} />
   </>;
 }
