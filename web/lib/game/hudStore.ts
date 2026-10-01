@@ -47,6 +47,18 @@ function subscribe(l: () => void) {
   return () => { listeners.delete(l); };
 }
 
+/**
+ * Today's gift pops up once a day (hud-first-login §7): signed in, today's
+ * not claimed (the server pays once per Toronto day), and not put off today
+ * on this device.
+ */
+export function giftDue(hud: Pick<HudState, "coins" | "giftClaimed" | "day">, putOffDay: string | null): boolean {
+  return hud.coins !== null && hud.day !== null && !hud.giftClaimed && putOffDay !== hud.day;
+}
+const GIFT_LATER = "tsi.gift.later";
+export function readGiftPutOff(): string | null { try { return localStorage.getItem(GIFT_LATER); } catch { return null; } }
+export function putOffGift(day: string): void { try { localStorage.setItem(GIFT_LATER, day); } catch { /* asks again next visit */ } }
+
 export const getHud = (): HudState => state;
 export function useHud(): HudState {
   return useSyncExternalStore(subscribe, getHud, () => EMPTY);

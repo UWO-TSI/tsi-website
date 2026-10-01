@@ -81,6 +81,7 @@ import FishingOverlay from "./FishingOverlay";
 import ToastHub, { toast } from "./ToastHub";
 import IslandLoading from "./IslandLoading";
 import HQLead from "./HQLead";
+import DailyGift from "./DailyGift";
 import { NPCDialogue } from "@/components/recruit/ui";
 import { HQ_LEAD, LEAD_OFFSET, markWelcomed, readWelcomed, welcomeStep } from "@/lib/game/welcome";
 import { useMyLook } from "@/lib/game/character/lookStore";
@@ -803,6 +804,8 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       <FishingOverlay rod={peaceful.rod} onActiveChange={setFishing} />
       <DonateSheet open={donateOpen} onClose={() => setDonateOpen(false)} onDonated={loadMuseum} />
       <ToastHub />
+      {/* Today's gift once the island is showing and nothing else holds the player (first login, a fade, a sheet, a fight). */}
+      <DailyGift ready={ready && !fading && !holdObjective && !sheet && site !== "ruins"} />
       {greeting !== null && <div className={styles.greeting} data-welcome>
         <NPCDialogue key={greeting} speaker={`${HQ_LEAD.name} · ${HQ_LEAD.post}`} onContinue={nextLine} continueLabel={greeting + 1 < HQ_LEAD.lines.length ? "Next" : "Let’s go"}>
           <p>{HQ_LEAD.lines[greeting].replace(", {name}", greetingName ? `, ${greetingName}` : "")}</p>
