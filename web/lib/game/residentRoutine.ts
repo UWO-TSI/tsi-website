@@ -40,8 +40,9 @@ const PLANT_COST = 8;
 
 /** Where the inside point sits past the door, into the building (hidden there). */
 const INSIDE_DEPTH = 0.9;
-/** Seat offsets along a bench (two residents share one). */
-const SEAT_OFFSETS = [-0.42, 0.42];
+/** Seat offsets along a bench. */
+/** Three to a bench (it's nearly two units long). */
+const SEAT_OFFSETS = [-0.6, 0, 0.6];
 /** Where you stand before sitting: this far in front of the seat. */
 const SEAT_APPROACH = 0.62;
 
@@ -360,10 +361,23 @@ function wanderStops(stop: Stop, nav: NavGrid, seed: number): Stop[] {
 const POST_ANCHOR: Record<string, string> = { hq_lead: "hq", shopkeeper: "shop", cafe_owner: "cafe", museum_curator: "museum", wharf_keeper: "wharf", oracle_keeper: "oracle", workshop_crafter: "hq" };
 
 /**
- * Resolve a resident's schedule into stops on this map. `slot` spreads residents round shared anchors; `seat` is their
- * rank among the residents who sit on benches.
+ * Resolve a resident's schedule into stops on this map. `slot` spreads residents round shared anchors; `seats` is their
+ * rank among the residents who sit on a bench in each phase (residentSeats), so no two share a seat.
  */
-export function planResident(r: ResidentSource, slot: number, v: Village, island: VillageIsland, seat = slot): ResidentPlan {
+/**
+ * Each resident's rank among the residents who sit on a bench in each phase (sorted as given): the seats they take, so
+ * no two sitters in a phase share one. Phases without a bench in someone's routine leave them out.
+ */
+export function residentSeats(rs: readonly ResidentSource[]): Partial<Record<IslandPhase, number>>[] {
+  const out = rs.map(() => ({} as Partial<Record<IslandPhase, number>>));
+  for (const phase of ISLAND_PHASES) {
+    let k = 0;
+    rs.forEach((r, i) => { if (routineKeys(r.schedule, phase).includes("bench")) out[i][phase] = k++; });
+  }
+  return out;
+}
+
+export function planResident(r: ResidentSource, slot: number, v: Village, island: VillageIsland, seats: number | Partial<Record<IslandPhase, number>> = slot): ResidentPlan {
   const nav = navGrid(island, v), seed = hashStr(r.slug);
   const homeId = (typeof r.schedule?.home === "string" && (HOME_LANDMARKS as readonly string[]).includes(r.schedule.home) ? r.schedule.home : POST_HOME[r.post ?? "villager"] ?? "hq") as LandmarkId;
   const home = homeStop(homeId, v, r.slug, nav) ?? homeStop("hq", v, r.slug, nav);
@@ -374,6 +388,7 @@ export function planResident(r: ResidentSource, slot: number, v: Village, island
     let last: readonly [number, number] = home?.door ?? villageSpawnPoint(v);
     const stops: Stop[] = [];
     for (const key of routineKeys(r.schedule, phase)) {
+      const seat = typeof seats === "number" ? seats : seats[phase] ?? 0;
       const s = key === "home" ? home : key === "bench" ? benchStop(v, nav, seat, last, night) : anchorStop(key, v, nav, slot, key === work);
       if (!s) continue;
       stops.push(s);
@@ -468,8 +483,12 @@ export function buildDay(plan: ResidentPlan, span: DaySpan, nav: NavGrid): Leg[]
       // Already home at the end of a routine that ends there, or nowhere else to go: stay till the phase ends.
       if ((ends && at === stops[stops.length - 1]) || (stops.length === 1 && at === stops[0]) || guard++ > 4 * stops.length + 8) { stay(end); break; }
       const i = ends ? Math.min(k, stops.length - 1) : k % stops.length, next = stops[i];
-      // The new phase's routine starts where they already stand: carry on there.
-      if (next !== at && next.at[0] === at.at[0] && next.at[1] === at.at[1]) { at = next; continue; }
+      // The new phase's routine starts where they already stand: carry on there for the new stop's stay.
+      if (next !== at && next.at[0] === at.at[0] && next.at[1] === at.at[1]) {
+        at = next;
+        if (next.kind !== "home" || !ends) stay(Math.min(t + next.dwell[0] + (next.dwell[1] - next.dwell[0]) * hash01(plan.seed + p * 131, visit * 7 + 5), end));
+        continue;
+      }
       // Skip a stop now and then (not home, not with two or fewer), so loops don't run like clockwork.
       if (next === at || (stops.length > 2 && next.kind !== "home" && hash01(plan.seed + p * 977, k * 31 + visit) < 0.18)) continue;
       const walk = walkBetween(nav, at, next);

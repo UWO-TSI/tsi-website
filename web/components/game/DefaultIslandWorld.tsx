@@ -173,8 +173,8 @@ function villageLayout(v: Village) {
     nodes: villageNodes(v),
     water: villageWater(v).classify,
     scale: villageScale(v),
-    /** Ambient life (AmbientFauna): flowers for the butterflies, the water's kinds, gulls off every shore and the wharf. */
-    fauna: { site: { map: v.map, flowers: objectsOf("flower", v).map(xz), water: villageWater(v).classify }, gulls: gullAnchors(v.bounds, marks.filter(l => l.id === "wharf").map(l => [l.x, l.z - 4] as const)) },
+    /** Ambient life (AmbientFauna): flowers for the butterflies, the water's kinds, gulls off the shores in view. */
+    fauna: { site: { map: v.map, flowers: objectsOf("flower", v).map(xz), water: villageWater(v).classify }, gulls: gullAnchors(v.bounds) },
     /** No water glints under the wharf deck: it sits a few centimetres above the water and they would show through. */
     underWharf: (x: number, z: number) => !!deck && x > deck.x0 - 0.4 && x < deck.x1 + 0.4 && z > deck.z0 - 0.4 && z < deck.z1 + 0.4,
   };

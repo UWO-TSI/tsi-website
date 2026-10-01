@@ -1,15 +1,16 @@
 import { describe, expect, it } from "vitest";
 import { villageIsland } from "./defaultIsland";
-import { village } from "./villageMap";
+import { objectsOf, village } from "./villageMap";
 import { PROPOSED_RESIDENTS } from "@/lib/content/residentRoster";
 import { DEFAULT_NPC_PERSONAS } from "@/data/content-defaults";
 import { CLIP_BY_NAME } from "./character/look";
 import {
-  MIN_STAY, RESIDENT_WALK, ResidentDay, buildDay, daySpan, idleAt, navGrid, newPose, phaseOn, planResident, routineKeys, walkDistance, type Leg,
+  MIN_STAY, RESIDENT_WALK, ResidentDay, buildDay, daySpan, idleAt, navGrid, newPose, phaseOn, planResident, residentSeats, routineKeys, walkDistance, type Leg,
 } from "./residentRoutine";
 
 const v = village(), island = villageIsland(v), nav = navGrid(island, v);
-const plans = PROPOSED_RESIDENTS.map((r, i) => planResident(r, i, v, island, i));
+const SORTED = [...PROPOSED_RESIDENTS].sort((a, b) => a.slug.localeCompare(b.slug)), SEATS = residentSeats(SORTED);
+const plans = SORTED.map((r, i) => planResident(r, i, v, island, SEATS[i]));
 // A day in October (sun times from the monthly table).
 const T = Date.parse("2026-10-01T16:00:00Z") / 1000;
 const span = daySpan(T * 1000);
@@ -123,11 +124,19 @@ describe("resident routines", () => {
     expect(owl.plan.phases.night.map(s => s.kind)).toEqual(["sit", "stand", "sit"]);
   });
 
+  it("never seats two residents on one seat at once, and the night's sitters get the bench under the lamp", () => {
+    const sits = days.flatMap(({ plan, legs }) => legs.filter(l => !l.walk && l.stop.kind === "sit").map(l => ({ slug: plan.slug, seat: l.stop.at.join(), t0: l.t0, t1: l.t1 })));
+    const clashes = sits.filter((a, i) => sits.some((b, j) => j > i && a.slug !== b.slug && a.seat === b.seat && a.t0 < b.t1 && b.t0 < a.t1));
+    expect(clashes).toEqual([]);
+    const lamp = objectsOf("lamp", v)[0];
+    for (const { plan } of days) for (const s of plan.phases.night) if (s.kind === "sit") expect(Math.hypot(s.at[0] - lamp.x, s.at[1] - lamp.z), plan.slug).toBeLessThan(3.5);
+  });
+
   it("is the same on every client: a function of world time only", () => {
     const a = newPose(), b = newPose();
     for (const { plan } of days) for (const t of [T, T + 1234.5, T + 40000]) {
       new ResidentDay(plan, nav).at(t, null, a);
-      new ResidentDay(planResident(PROPOSED_RESIDENTS.find(r => r.slug === plan.slug)!, plans.indexOf(plan), v, island, plans.indexOf(plan)), nav).at(t, null, b);
+      new ResidentDay(planResident(SORTED[plans.indexOf(plan)], plans.indexOf(plan), v, island, SEATS[plans.indexOf(plan)]), nav).at(t, null, b);
       expect([b.x, b.z, b.yaw, b.inside]).toEqual([a.x, a.z, a.yaw, a.inside]);
     }
     expect(phaseOn(span, T)).toBe("day");

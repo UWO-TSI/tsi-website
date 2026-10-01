@@ -116,9 +116,10 @@ describe("ambient fauna", () => {
     expect(buf.slice(0, n1)).toEqual(first);
   });
 
-  it("circles gulls over the sea off every side and over extra spots", () => {
-    const g = gullAnchors(v.bounds, [[8, -23]]);
-    expect(g).toHaveLength(6);
+  it("circles gulls over the sea off the sides and the far shore, never the near shore the camera stands over", () => {
+    const g = gullAnchors(v.bounds, [[-24, 12]]);
+    expect(g).toHaveLength(5);
     for (const [x, z] of g) expect(seaAt(site, x, z)).toBe(true);
+    for (const [, z] of g) expect(z).toBeGreaterThan(v.bounds.minZ);
   });
 });

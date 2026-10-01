@@ -27,16 +27,16 @@ export interface FlyerSpecies {
   /** Toronto hours it's out, [from, to) (wrapping past midnight when from > to). */
   hours: readonly [number, number];
 }
-/** The ACNH critter models (Critters.SPECIES) as scenery: seasons and hours after ACNH's northern calendar. */
+/** The ACNH critter models (Critters.SPECIES) as scenery: seasons and hours after ACNH's northern calendar; scales give every wingspan about half a unit. */
 export const FLYERS: readonly FlyerSpecies[] = [
-  { key: "common", model: "/assets/acnh/critters/common-butterfly.glb", kind: "butterfly", scale: 0.085, seasons: ["spring", "summer", "autumn"], hours: [7, 17.5] },
+  { key: "common", model: "/assets/acnh/critters/common-butterfly.glb", kind: "butterfly", scale: 0.13, seasons: ["spring", "summer", "autumn"], hours: [7, 17.5] },
   { key: "tiger", model: "/assets/acnh/critters/tiger-butterfly.glb", kind: "butterfly", scale: 0.075, seasons: ["spring", "summer"], hours: [7.5, 17] },
   { key: "agrias", model: "/assets/acnh/critters/agrias-butterfly.glb", kind: "butterfly", scale: 0.075, seasons: ["summer"], hours: [8, 17] },
   { key: "monarch", model: "/assets/acnh/critters/monarch-butterfly.glb", kind: "butterfly", scale: 0.075, seasons: ["summer", "autumn"], hours: [8, 17] },
   { key: "peacock", model: "/assets/acnh/critters/peacock-butterfly.glb", kind: "butterfly", scale: 0.075, seasons: ["spring", "summer", "autumn"], hours: [5, 19] },
   { key: "emperor", model: "/assets/acnh/critters/emperor-butterfly.glb", kind: "butterfly", scale: 0.07, seasons: ["summer", "autumn"], hours: [17, 21] },
   { key: "darner", model: "/assets/acnh/critters/darner-dragonfly.glb", kind: "dragonfly", scale: 0.075, seasons: ["spring", "summer"], hours: [8, 17] },
-  { key: "red", model: "/assets/acnh/critters/red-dragonfly.glb", kind: "dragonfly", scale: 0.085, seasons: ["summer", "autumn"], hours: [8, 18.5] },
+  { key: "red", model: "/assets/acnh/critters/red-dragonfly.glb", kind: "dragonfly", scale: 0.1, seasons: ["summer", "autumn"], hours: [8, 18.5] },
 ];
 
 /** Flyers hide from rain and snow, and from a gale. */
@@ -248,11 +248,12 @@ export function crabStep(c: Crab, s: CrabState, t: number, dt: number, ax: numbe
 
 // ── Gulls ──────────────────────────────────────────────────────────────
 /**
- * Where the gulls circle: over the sea off each side of the island's land bounds, the near shore (toward the
- * camera, −z) twice, and over any `extra` spots (the wharf). Their orbits drift a few units round these.
+ * Where the gulls circle: just off the island's side shores and twice off its far shore, where the follow camera
+ * looks out over the sea, and over any `extra` spots. Never off the near shore (−z): flying that low there, a gull's
+ * orbit runs through the camera.
  */
 export function gullAnchors(b: { minX: number; maxX: number; minZ: number; maxZ: number; cx: number; cz: number }, extra: readonly (readonly [number, number])[] = []): [number, number][] {
-  return [[b.maxX + 5, b.cz + 3], [b.minX - 5, b.cz - 2], [b.cx + 7, b.minZ - 6], [b.cx - 6, b.minZ - 8], [b.cx - 4, b.maxZ + 6], ...extra.map(([x, z]): [number, number] => [x, z])];
+  return [[b.maxX + 4, b.cz + 3], [b.minX - 4, b.cz - 2], [b.cx - 5, b.maxZ + 4], [b.cx + 8, b.maxZ + 3], ...extra.map(([x, z]): [number, number] => [x, z])];
 }
 
 // ── Fish jumping at sea ────────────────────────────────────────────────

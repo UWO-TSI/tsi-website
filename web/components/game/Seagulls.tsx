@@ -60,7 +60,7 @@ interface GullSwoop {
 }
 const SWOOP_MS = 4200;
 
-function Gull({ anchor, seed, idx, swoopRef }: { anchor: [number, number]; seed: number; idx: number; swoopRef: React.MutableRefObject<GullSwoop | null> }) {
+function Gull({ anchor, seed, idx, swoopRef, altitude }: { anchor: [number, number]; seed: number; idx: number; swoopRef: React.MutableRefObject<GullSwoop | null>; altitude?: number }) {
   const ref = useRef<THREE.Group>(null);
   // Per-bird jitter only. Every BASE below is on the bench (`tuning.gull`) and
   // read per frame, so a slider move is immediate.
@@ -96,7 +96,7 @@ function Gull({ anchor, seed, idx, swoopRef }: { anchor: [number, number]; seed:
     p.anchorZ = anchor[1];
     p.speed = g.orbitSpeed + jSpeed;
     p.radius = g.orbitRadius + jRadius;
-    p.altitude = g.altitude + jAlt;
+    p.altitude = (altitude ?? g.altitude) + jAlt;
     p.bob = g.bob;
     p.wobble = g.wobble;
     p.drift = g.drift;
@@ -214,7 +214,8 @@ function SeagullModel({ seed }: { seed: number }) {
   return <primitive object={body} />;
 }
 
-export default function Seagulls({ anchors = GULL_ANCHORS }: { anchors?: [number, number][] }) {
+/** `altitude`: the flock's height over the water (the tuning bench's when unset); the member island's follow camera sees gulls lower. */
+export default function Seagulls({ anchors = GULL_ANCHORS, altitude }: { anchors?: [number, number][]; altitude?: number }) {
   const swoopRef = useRef<GullSwoop | null>(null);
   useEffect(() => {
     const onCatch = (e: Event) => {
@@ -238,7 +239,7 @@ export default function Seagulls({ anchors = GULL_ANCHORS }: { anchors?: [number
   return (
     <group>
       {anchors.map((a, i) => (
-        <Gull key={i} anchor={a} seed={i + 3} idx={i} swoopRef={swoopRef} />
+        <Gull key={i} anchor={a} seed={i + 3} idx={i} swoopRef={swoopRef} altitude={altitude} />
       ))}
     </group>
   );

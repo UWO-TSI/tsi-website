@@ -153,6 +153,8 @@ function Crabs({ crabs, ground, standable, player }: { crabs: readonly Crab[]; g
 const LEAP_SPLASH: Recipe = { sprite: "droplets", count: [4, 5], life: [0.45, 0.6], size: [0.26, 0.34], grow: 1, speed: [0.5, 1.1], spread: Math.PI, up: [1.8, 2.8], gravity: 9.8, drag: 0.8, wind: 0.1, alpha: 0.9, face: FACE.billboard };
 const LEAP_RIPPLE: Recipe = { sprite: "ripple", count: [1, 1], life: [0.9, 1.2], size: [0.7, 0.9], grow: 2, speed: [0, 0], spread: 0, up: [0, 0], gravity: 0, drag: 0, wind: 0, alpha: 0.65, face: FACE.ground };
 const WATER_Y = -0.078;
+/** Gulls ride low over the water here: the follow camera looks down at 34°, so a gull much above 4 units leaves the top of the frame. */
+const GULL_ALTITUDE = 3.4;
 /** How far round the view focus fish leap (the sea that's on screen). */
 const LEAP_RADIUS = 30;
 
@@ -248,7 +250,7 @@ export default function AmbientFauna({ site, ground, standable, gulls, player, s
   useFrame((_, raw) => { presence.current = THREE.MathUtils.damp(presence.current, flyingWeather(weather) ? 1 : 0, 0.6, Math.min(raw, 0.1)); });
   const anchors = useMemo(() => gulls.map(([x, z]) => [x, z] as [number, number]), [gulls]);
   return <>
-    <Seagulls anchors={anchors} />
+    <Seagulls anchors={anchors} altitude={GULL_ALTITUDE} />
     {bySpecies.map(([species, list]) => <Suspense key={species.key} fallback={null}><FlyerSwarm species={species} flyers={list} ground={ground} presence={presence} /></Suspense>)}
     <Crabs crabs={crabs} ground={ground} standable={standable} player={player} />
     <Suspense fallback={null}><LeapingFish isSea={isSea} max={liteMode ? 1 : 2} /></Suspense>

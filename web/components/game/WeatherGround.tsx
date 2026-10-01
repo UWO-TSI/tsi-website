@@ -80,8 +80,8 @@ function RainSplashes({ site, puddles }: { site: GroundSite; puddles: readonly {
 // ── Footprints in snow ─────────────────────────────────────────────────
 const MAX_PRINTS = 220;
 /** A print about a third of a unit long (the sprite's sole and heel fill most of the cell), shaded the blue of snow in shadow. */
-const PRINT_SIZE = 0.4;
-const PRINT_TINT = "#8197b4";
+const PRINT_SIZE = 0.46;
+const PRINT_TINT = "#6c84a6";
 
 function printMaterial(): THREE.MeshStandardMaterial {
   const m = new THREE.MeshStandardMaterial({ name: "SnowPrints", map: packMap(), color: PRINT_TINT, roughness: 1, metalness: 0, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });

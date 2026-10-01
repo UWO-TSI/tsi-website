@@ -39,8 +39,8 @@ export type HomeNear = "house" | "village" | "mailbox" | "fish" | "forage" | "ne
 const TREE_SEEDS = [0, 1, 3, 2];
 const TREES: TreeSpot[] = HOME_TREES.map(([x, z], i) => ({ x, z, seed: TREE_SEEDS[i] }));
 const DOOR_SPAWN: [number, number, number] = [HOUSE.door[0], 0, HOUSE.door[1] - 0.6];
-/** The islet's sea is all one: gulls round it and off the dock, butterflies on its flowers, crabs on its sand ring. */
-const HOME_GULLS = gullAnchors({ minX: -HOME_RADII.x, maxX: HOME_RADII.x, minZ: -HOME_RADII.z, maxZ: HOME_RADII.z, cx: 0, cz: 0 }, [[HOME_DOCK[0] - 3, HOME_DOCK[1] - 5]]);
+/** The islet's sea is all one: gulls off its shores in view, butterflies on its flowers, crabs on its sand ring. */
+const HOME_GULLS = gullAnchors({ minX: -HOME_RADII.x, maxX: HOME_RADII.x, minZ: -HOME_RADII.z, maxZ: HOME_RADII.z, cx: 0, cz: 0 });
 
 export default function HomeIslandScene({ identity, level, peaceful, fishSpot, fishing, phase, light, look, weather, liteMode, castShadows, zoom, overview, returned, player, onNear, outdoor, decorating, selected, onPlace, onPickUp }: {
   phase: IslandPhase; light: IslandLight; look: SeasonLook; weather: IslandWeather; liteMode: boolean; castShadows: boolean; zoom: number; overview: boolean;

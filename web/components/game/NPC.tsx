@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useRef, type RefObject } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { useFrame, type ThreeEvent } from "@react-three/fiber";
 import { Html } from "@react-three/drei";
 import * as THREE from "three";
@@ -16,7 +16,7 @@ import { phaseInstant } from "@/lib/game/sunPath";
 import { landmark, type VillageIsland } from "@/lib/game/defaultIsland";
 import { objectsOf, type Village } from "@/lib/game/villageMap";
 import type { IslandPhase } from "@/lib/game/islandTime";
-import { RESIDENT_STRIDE, RESIDENT_WALK, ResidentDay, daySpan, idleAt, navGrid, newPose, phaseOn, planResident, type DaySpan, type IdleClip, type NavGrid, type ResidentPose } from "@/lib/game/residentRoutine";
+import { RESIDENT_STRIDE, RESIDENT_WALK, ResidentDay, daySpan, idleAt, navGrid, newPose, phaseOn, planResident, residentSeats, type DaySpan, type IdleClip, type NavGrid, type ResidentPose } from "@/lib/game/residentRoutine";
 import { hash01 } from "@/lib/game/worldFx";
 import { RESIDENT_LOOKS } from "@/lib/content/residentRoster";
 import { dropWalker, setWalker } from "@/lib/game/footprintWalkers";
@@ -63,9 +63,10 @@ const POST_LABEL: Record<string, string> = {
   wharf_keeper: "Wharf keeper", oracle_keeper: "Oracle keeper", workshop_crafter: "Workshop", villager: "Villager",
 };
 
+/** Over the head, lifted clear of the prompt band; a resident below the bottom edge (off screen) takes the label with them. */
 const labelPoint = (object: THREE.Object3D, camera: THREE.Camera, size: { width: number; height: number }) => {
   const [x, y] = calculateCurvedHtmlPosition(object, camera, size);
-  return [x, Math.min(y, size.height - PROMPT_CLEAR)];
+  return [x, y > size.height ? y : Math.min(y, size.height - PROMPT_CLEAR)];
 };
 
 /** The overhead elements, as refs: drei's Html mounts them in its own root, after the figure's effects run. */
@@ -83,6 +84,8 @@ interface Runtime {
   /** The way they'd face before you or a chat turn them. */
   want: number;
   noticed: boolean; bubbleUntil: number; bubbleNext: number; shown: number;
+  /** The line being said (written into the bubble whenever it shows: drei's Html may mount after the greeting). */
+  line: string;
   idleKey: number; idleVisit: number; laughBeat: number; chat: Runtime | null; hopT: number; hopNext: number; greetAt: number; hovered: boolean;
   timers: number[];
 }
@@ -198,8 +201,13 @@ function tick(list: readonly Runtime[], c: Clock, dt: number, p: THREE.Vector3, 
 
   // 3. Each one's clip, facing, talk and overhead UI. One greeting at a time: walking into a group, the first to
   // notice you speaks and the rest just look up.
-  let speaking = false;
-  for (const r of list) if (r.bubbleUntil > now && !r.hidden) speaking = true;
+  // Only the nearest resident who notices you shows the "!" and their name (a bench of three would stack them).
+  let speaking = false, sx = 0, sz = 0, nearest: Runtime | null = null, nearestD = NOTICE_RANGE;
+  for (const r of list) {
+    if (r.bubbleUntil > now && !r.hidden) { speaking = true; sx = r.x; sz = r.z; }
+    const d = dist(p.x, p.z, r.x, r.z);
+    if (!r.hidden && d < nearestD) { nearestD = d; nearest = r; }
+  }
   for (const r of list) {
     const m = r.motion.current, pose = r.pose, g = r.group.current;
     const d = dist(p.x, p.z, r.x, r.z), stopped = r.speed < 0.05 && !r.detour, sitting = stopped && pose.seat > 0 && dist(r.x, r.z, pose.x, pose.z) < 0.05;
@@ -247,7 +255,7 @@ function tick(list: readonly Runtime[], c: Clock, dt: number, p: THREE.Vector3, 
       speaking = true;
       const line = r.lines[Math.floor(hash01(r.seed, Math.floor(now / 30)) * r.lines.length) % r.lines.length];
       r.bubbleUntil = now + BUBBLE_S; r.bubbleNext = now + BUBBLE_COOLDOWN_S;
-      if (r.ui.text.current) r.ui.text.current.textContent = line;
+      r.line = line;
       r.shown = -1;
       m.talk = Math.min(3.2, 0.8 + line.length * 0.045);
       if (stopped && !sitting && !r.chat) m.play = "Wave";
@@ -257,9 +265,13 @@ function tick(list: readonly Runtime[], c: Clock, dt: number, p: THREE.Vector3, 
     }
     r.noticed = noticed;
     // Which overhead pieces show, as bits (bubble, "!", nameplate): the DOM is touched only when they change.
-    const bubble = r.bubbleUntil > now && !r.hidden, state = (bubble ? 1 : 0) | (noticed && !bubble ? 2 : 0) | ((noticed || r.hovered) && !r.hidden ? 4 : 0);
+    // Right beside someone who's speaking, a resident's own "!" and nameplate step aside so they never cover the bubble.
+    const bubble = r.bubbleUntil > now && !r.hidden, crowded = speaking && !bubble && dist(r.x, r.z, sx, sz) < 2.5;
+    const first = r === nearest;
+    const state = (bubble ? 1 : 0) | (noticed && first && !bubble && !crowded ? 2 : 0) | (((noticed && first) || r.hovered) && !r.hidden && !crowded ? 4 : 0);
     if (state !== r.shown && r.ui.plate.current) {
       r.shown = state;
+      if (bubble && r.ui.text.current && r.ui.text.current.textContent !== r.line) r.ui.text.current.textContent = r.line;
       show(r.ui.bubble.current, bubble); show(r.ui.notice.current, (state & 2) > 0); show(r.ui.plate.current, (state & 4) > 0);
     }
   }
@@ -276,12 +288,13 @@ export default function Residents({ personas, phase, ceremony, player, island, v
   personas: readonly NPCPersona[]; phase: IslandPhase; ceremony: boolean; player: RefObject<THREE.Vector3>; island: VillageIsland; v: Village;
 }) {
   const nav = useMemo(() => navGrid(island, v), [island, v]);
+  // Dev only: `?residents=N` keeps the first N (by slug), for performance checks like CharacterCrowd's `?crowd=N`.
+  const [cap] = useState(() => (process.env.NODE_ENV !== "production" && typeof window !== "undefined" ? Number(new URLSearchParams(window.location.search).get("residents") ?? Infinity) : Infinity));
   const residents = useMemo(() => {
-    const sorted = [...personas].sort((a, b) => a.slug.localeCompare(b.slug));
-    const sitters = sorted.filter(p => Object.values(p.schedule ?? {}).some(x => x === "bench" || (Array.isArray(x) && x.includes("bench"))));
-    const gather = objectsOf("gather", v);
+    const sorted = [...personas].sort((a, b) => a.slug.localeCompare(b.slug)).slice(0, cap);
+    const seats = residentSeats(sorted), gather = objectsOf("gather", v);
     return sorted.map((persona, i) => {
-      const plan = planResident(persona, i, v, island, Math.max(0, sitters.indexOf(persona)));
+      const plan = planResident(persona, i, v, island, seats[i]);
       const g = gather.length ? gather[i % gather.length] : null;
       const authored = RESIDENT_LOOKS[persona.slug];
       return {
@@ -290,7 +303,7 @@ export default function Residents({ personas, phase, ceremony, player, island, v
         gather: (g ? [g.x, g.z] : plan.home?.door ?? [0, 0]) as readonly [number, number],
       };
     });
-  }, [personas, v, island, nav]);
+  }, [personas, v, island, nav, cap]);
   const registry = useRef<Registry>({ map: new Map(), list: [] });
   const monument = useMemo(() => landmark("monument", v), [v]);
   const clock = useRef<Clock>({ span: null, forced: null, base: 0, since: 0 });
@@ -325,7 +338,7 @@ function Figure({ persona, day, look, gather, home, seed, registry }: {
       id: persona.id, seed, lines: persona.canned_dialogue?.length ? persona.canned_dialogue : FILLER_LINES, day, gather, home,
       pose: newPose(), motion, group, visual, ui: { bubble, text, notice, plate },
       ready: false, x: 0, z: 0, speed: 0, ox: 0, oz: 0, hidden: false, lift: 0, lag: 0, detour: null, detourAt: 0, detourGoal: [0, 0],
-      want: 0, noticed: false, bubbleUntil: 0, bubbleNext: 0, shown: -1, idleKey: -1, idleVisit: -1, laughBeat: -1, chat: null, hopT: -1, hopNext: 0, greetAt: 0, hovered: false, timers: [],
+      want: 0, line: "", noticed: false, bubbleUntil: 0, bubbleNext: 0, shown: -1, idleKey: -1, idleVisit: -1, laughBeat: -1, chat: null, hopT: -1, hopNext: 0, greetAt: 0, hovered: false, timers: [],
     };
     runtime.current = r;
     const reg = registry.current;

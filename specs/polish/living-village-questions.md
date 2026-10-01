@@ -44,7 +44,7 @@ That's ten in the village plus Rosa in the café: 11 of the 8 to 12 in row 85.
    - A walking resident who meets you on their path steps half a stride off it to pass you.
    - They wait only where there's no room (a bridge). Waiting holds their routine, and they catch up a little brisker afterwards.
    - They turn to face you only once they've stopped and you're within 3.4 units.
-2. **One greeting at a time.** Walk into a group and the first to notice you says a line; the others look up (the "!" and nameplate). Each resident waits at least 22 s before greeting you again.
+2. **One greeting at a time.** Walk into a group and the first to notice you says a line. Only the nearest resident shows the "!" and a nameplate, so a bench of three never stacks three labels. Each resident waits at least 22 s before greeting you again.
 3. **Chatting.** Two stopped residents within 2.6 units face each other and take turns talking (the new Chat clip and the talking mouth), with an occasional laugh. They break off to face you if you come close.
 4. **Idles.**
    - A look round (new LookAround clip) or a standing stretch (new StretchUp clip) every 14 to 26 s at a stop.
@@ -54,7 +54,7 @@ That's ten in the village plus Rosa in the café: 11 of the 8 to 12 in row 85.
    **Question:** any idles you want added (sweeping at the shop, fishing at the pond, a yawn at night)? Each is a clip in `build_clips.py`.
 5. **Night.**
    - Residents go home in through their door. The building's front wall hides them as they reach the door, since the doors don't open.
-   - Or they sit on the bench under the lamp. There is one lamp and two benches on the map, so sitters fill the lamp bench's two seats first, then the other bench.
+   - Or they sit on the bench under the lamp. There is one lamp and two benches on the map. A bench seats three, and each phase's sitters take their own seats, the lamp bench first, so no two ever share a seat.
    - When you place more lamps (row 246), the routine finds benches under them automatically.
 
    **Question:** should doors open, as in ACNH? That needs a door-open animation on the ACNH door parts.
@@ -62,7 +62,9 @@ That's ten in the village plus Rosa in the café: 11 of the 8 to 12 in row 85.
 
 ## 3. Ambient life
 
-1. **Gulls** circle over the sea off every side of the village and the home island, and over the wharf, all day and night. **Question:** do gulls rest at night?
+1. **Gulls** circle low (3.4 units up) over the sea off both side shores and the far shore of the village and the home island, all day and night.
+   - Not off the near shore or the wharf: at that height their orbit ran through the follow camera.
+   - **Question:** do gulls rest at night?
 2. **Butterflies and dragonflies, by season and hour:**
 
    | Species | Seasons | Hours |
