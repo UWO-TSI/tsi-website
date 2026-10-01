@@ -18,27 +18,34 @@ import { addContact } from "../ContactShadows";
 export const cafeUrl = (name: string) => `/assets/game/cafe/${name}.glb`;
 const prepared = new WeakSet<THREE.Object3D>();
 
-/** A clone of a café GLB sharing its materials. */
-export function useCafeModel(name: string): THREE.Object3D {
-  const url = cafeUrl(name);
-  const { scene } = useGLTF(url);
-  return useMemo(() => {
-    if (!prepared.has(scene)) {
-      prepared.add(scene);
-      tagLookClasses(scene, url);
-      scene.traverse(o => {
-        const mesh = o as THREE.Mesh;
-        if (!mesh.isMesh) return;
-        for (const m of Array.isArray(mesh.material) ? mesh.material : [mesh.material]) if (m.transparent) m.depthWrite = false;
-      });
-    }
-    return scene.clone(true);
-  }, [scene, url]);
+function prepare(scene: THREE.Object3D, url: string) {
+  if (prepared.has(scene)) return;
+  prepared.add(scene);
+  tagLookClasses(scene, url);
+  scene.traverse(o => {
+    const mesh = o as THREE.Mesh;
+    if (!mesh.isMesh) return;
+    for (const m of Array.isArray(mesh.material) ? mesh.material : [mesh.material]) if (m.transparent) m.depthWrite = false;
+  });
 }
 
-/** One café model placed in the room; `contact` grounds it with a soft contact shadow (in its own frame). */
-export function CafeModel({ name, position = [0, 0, 0], yaw = 0, contact }: { name: string; position?: [number, number, number]; yaw?: number; contact?: ContactSize }) {
-  const model = useCafeModel(name);
+/** A clone of a café GLB (or of one named node in it, e.g. a furniture set in cafe-kit) sharing its materials. */
+export function useCafeModel(file: string, node?: string): THREE.Object3D {
+  const url = cafeUrl(file);
+  const { scene } = useGLTF(url);
+  return useMemo(() => {
+    prepare(scene, url);
+    const part = node ? scene.getObjectByName(node) : scene;
+    if (!part) throw new Error(`${file}.glb has no ${node}`);
+    const clone = part.clone(true);
+    clone.position.set(0, 0, 0);
+    return clone;
+  }, [scene, url, file, node]);
+}
+
+/** One café model (or kit node) placed in the room; `contact` grounds it with a soft contact shadow (in its own frame). */
+export function CafeModel({ name, node, position = [0, 0, 0], yaw = 0, contact }: { name: string; node?: string; position?: [number, number, number]; yaw?: number; contact?: ContactSize }) {
+  const model = useCafeModel(name, node);
   const scene = useThree(s => s.scene);
   useEffect(() => (contact ? addContact(scene, model, contact) : undefined), [scene, model, contact]);
   return <primitive object={model} position={position} rotation={[0, yaw, 0]} />;

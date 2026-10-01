@@ -37,7 +37,7 @@ const flat = () => 0;
 const SPAWN: [number, number, number] = [CAFE_SPAWN[0], 0, CAFE_SPAWN[1]];
 /** The café floor for the movement kit: inside the walls, clear of the bar, the shelves, the plants and the study tables. */
 const CAFE = standWorld(flat, (x, z) => cafeWalkable(x, z), () => false);
-preloadCafe(["cafe-room", "lightbox", "patron-props", "set-bar", "set-two", "set-four", "set-booth", "set-communal"]);
+preloadCafe(["cafe-room", "cafe-kit"]);
 
 /** Outside the window wall, per phase: sky, a haze band and the far hedge line. */
 const OUTSIDE: Record<IslandPhase, [string, string, string]> = {

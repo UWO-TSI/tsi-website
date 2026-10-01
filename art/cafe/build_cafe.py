@@ -4,9 +4,10 @@ wood-framed backlit grid panel over the bar, white and dark grid-tile backsplash
 machine, grinders, cups and jugs, a white-tiled order counter with a glass-top display, a pastry case, stainless
 under-counter fridges, open shelves with cups and paper bags, sconces and a big window wall.
 
-  /Applications/Blender.app/Contents/MacOS/Blender -b -P art/cafe/build_cafe.py [-- room sets props lightbox ...]
+  /Applications/Blender.app/Contents/MacOS/Blender -b -P art/cafe/build_cafe.py [-- room kit]
 
-Writes web/public/assets/game/cafe/*.glb. Game coordinates throughout (cafekit.G). The numbers below mirror
+Writes web/public/assets/game/cafe/cafe-room.glb (the room) and cafe-kit.glb (the furniture sets, the lightbox and
+the patrons' props, as named nodes). Game coordinates throughout (cafekit.G). The numbers below mirror
 web/lib/game/cafe.ts (room, bar, window counter, shelves, board) and web/lib/study/seats.ts (furniture seats):
 change both together. Signs' text is drawn in the engine (CafeSigns.tsx) on the lightbox model built here.
 """
@@ -598,16 +599,13 @@ def props(M):
 def main():
     K.reset()
     M = materials()
-    jobs = {
-        "room": lambda: K.export(room(M), "cafe-room"),
-        "sets": lambda: [K.export(f(M), n) for n, f in (("set-bar", set_bar), ("set-two", set_two), ("set-four", set_four), ("set-booth", set_booth), ("set-communal", set_communal))],
-        "lightbox": lambda: K.export(lightbox(M), "lightbox"),
-        "props": lambda: K.export(props(M), "patron-props"),
-    }
-    for name, job in jobs.items():
-        if ONLY and name not in ONLY:
-            continue
-        job()
+    if not ONLY or "room" in ONLY:
+        K.export(room(M), "cafe-room")
+        K.clear()
+    # The furniture sets, the lightbox and the patrons' props in one kit: one copy of each material and texture,
+    # shared by every table, sign and prop (the engine clones the node it needs by name).
+    if not ONLY or "kit" in ONLY:
+        K.export([o for f in (set_bar, set_two, set_four, set_booth, set_communal, lightbox, props) for o in f(M)], "cafe-kit")
         K.clear()
 
 

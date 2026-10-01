@@ -22,8 +22,7 @@ import { useCafeModel } from "./CafeModel";
 const PROP = { laptop: "prop_laptop", book: "prop_book", cup: "prop_cup" } as const;
 
 function Prop({ visit, views }: { visit: PatronVisit; views: React.RefObject<Map<string, PatronView>> }) {
-  const props = useCafeModel("patron-props");
-  const node = useMemo(() => props.getObjectByName(PROP[visit.activity])!, [props, visit.activity]);
+  const node = useCafeModel("cafe-kit", PROP[visit.activity]);
   const spot = useMemo(() => propSpot(visit.seat), [visit.seat]);
   const group = useRef<THREE.Group>(null);
   // On the table once they're down; gone the moment they stand.
@@ -74,7 +73,8 @@ export default function CafePatrons({ player }: { player: React.RefObject<THREE.
     const s = state.current, p = player.current, seated = getWorldStudy().seated, now = Date.now() / 1000;
     if (s.since < 0) s.since = now;
     const list = cafePatrons(now, { taken, target, player: seated ? null : [p.x, p.z], shown: s.shown, yielded: s.yielded, since: s.since });
-    views.current = new Map(list.map(v => [v.visit.id, v]));
+    views.current.clear();
+    for (const v of list) views.current.set(v.visit.id, v);
     const ids = list.map(v => v.visit.id).join();
     if (ids !== s.ids) { s.ids = ids; setVisits(list.map(v => v.visit)); }
   });

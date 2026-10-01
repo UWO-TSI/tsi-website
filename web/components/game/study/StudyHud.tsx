@@ -8,7 +8,7 @@
  * cafe wall board. Dev only: `?study=tables|setup|focus|break|ended` runs the
  * companion's in-memory demo so signed-out screenshots show real state.
  */
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSearch } from "@/lib/game/useMediaQuery";
 import { COINS } from "@/lib/economy";
 import { studyDemo } from "@/lib/study/demo";
@@ -38,8 +38,16 @@ function Demo({ scenario }: { scenario: string }) {
 
 function Hud({ transport }: { transport?: StudyTransport }) {
   const study = useStudySession({ transport, title: "Tethos Island" });
-  // The 3D seats read the live hook every render; clear it when the HUD goes.
-  useEffect(() => { setWorldStudy({ study }); });
+  // The 3D seats read the hook through worldStore: republished only when what they draw changes (your countdown
+  // ticks it once a second while you study; the table list only on a server answer). Cleared when the HUD goes.
+  const published = useRef<StudyHook | null>(null);
+  useEffect(() => {
+    const p = published.current;
+    if (p && p.tables === study.tables && p.session === study.session && p.table === study.table && p.remaining === study.remaining
+      && p.signedOut === study.signedOut && p.busy === study.busy) return;
+    published.current = study;
+    setWorldStudy({ study });
+  });
   useEffect(() => () => setWorldStudy({ study: null, near: null, seated: null }), []);
   const near = useWorldStudy(w => w.near);
   const [boardOpen, setBoardOpen] = useState(false);

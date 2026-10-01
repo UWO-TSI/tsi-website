@@ -21,7 +21,7 @@ import { seatLift } from "@/lib/game/character/clips";
 import { FURNITURE, studyLayout, nearestSeat, seatAt, walkedAway, type SeatArea, type TableLayout, type WorldSeat } from "@/lib/study/seats";
 import { STUDY_CLIP, getWorldStudy, poseOf, seatAvatar, setWorldStudy, sitDetail, useWorldStudy } from "@/lib/study/worldStore";
 import type { Mate } from "@/lib/study/service";
-import { formatClock } from "@/lib/study/useStudySession";
+import { formatClock, liveRemaining, useSecond } from "@/lib/study/useStudySession";
 import s from "./study.module.css";
 
 const F = "/assets/acnh/furniture/", P = "/assets/acnh/props/";
@@ -50,7 +50,7 @@ export function TableFurniture({ t, ground }: { t: TableLayout; ground: (x: numb
   const seats = FURNITURE[t.furniture].seats;
   const y = ground(t.at[0], t.at[1]);
   const set = CAFE_SET[t.furniture];
-  if (set) return <CafeModel name={`set-${t.furniture}`} position={[t.at[0], y, t.at[1]]} yaw={t.yaw} contact={set} />;
+  if (set) return <CafeModel name="cafe-kit" node={`set_${t.furniture}`} position={[t.at[0], y, t.at[1]]} yaw={t.yaw} contact={set} />;
   return <group position={[t.at[0], y, t.at[1]]} rotation={[0, t.yaw, 0]}>
     {t.furniture === "picnic" && [0.49, -0.49].map(x => <GLBProp key={x} url={`${F}reading-table.glb`} position={[x, 0, 0]} scale={0.1} />)}
     {[...new Set(seats.map(([, z]) => z))].map(z => <GLBProp key={z} url={`${P}bench-wood.glb`} position={[0, 0, z]} />)}
@@ -67,8 +67,14 @@ function Overhead({ name, phase, remaining }: { name?: string; phase: Mate["phas
   </div>;
 }
 
+/** A seat-mate's pill: their countdown runs on the shared second from the snapshot it came in (the table list stays put). */
+function MateOverhead({ name, phase, remaining, asOf }: { name?: string; phase: Mate["phase"]; remaining: number | null; asOf: number }) {
+  const now = useSecond();
+  return <Overhead name={name} phase={phase} remaining={liveRemaining(remaining, asOf, now)} />;
+}
+
 /** Seat-mate (no multiplayer yet): the shared rig in their stored look, or a steady default per member, studying/stretching/sitting by phase. */
-export function MateFigure({ mate, seat, floor = 0, remaining = null, overhead = true }: { mate: Mate; seat: WorldSeat; floor?: number; remaining?: number | null; overhead?: boolean }) {
+export function MateFigure({ mate, seat, floor = 0, remaining = null, asOf = 0, overhead = true }: { mate: Mate; seat: WorldSeat; floor?: number; remaining?: number | null; asOf?: number; overhead?: boolean }) {
   const stored = JSON.stringify(mate.look ?? null);
   const look = useMemo(() => (stored !== "null" ? parseLook(JSON.parse(stored)) : randomLook(seeded(hashSeed(mate.member_id)))), [stored, mate.member_id]);
   const clip = STUDY_CLIP[poseOf(mate.phase)];
@@ -78,7 +84,7 @@ export function MateFigure({ mate, seat, floor = 0, remaining = null, overhead =
   return <group position={[seat.x, floor, seat.z]}>
     <Character look={look} motion={motion} />
     {overhead && <Html calculatePosition={calculateCurvedHtmlPosition} position={[0, seat.y - floor + 1.25, 0]} center zIndexRange={[35, 0]} style={{ pointerEvents: "none" }}>
-      <Overhead name={mate.name.split(" ")[0]} phase={mate.phase} remaining={remaining} />
+      <MateOverhead name={mate.name.split(" ")[0]} phase={mate.phase} remaining={remaining} asOf={asOf} />
     </Html>}
   </group>;
 }
@@ -103,6 +109,7 @@ export default function StudySeats({ area, player, ground = flat, board }: {
   const layouts = useMemo(() => studyLayout().filter(t => t.area === area), [area]);
   const anchors = useMemo(() => new Set(layouts.map(l => l.anchor)), [layouts]);
   const tables = useWorldStudy(w => w.study?.tables);
+  const asOf = useWorldStudy(w => w.study?.asOf ?? 0);
   const session = useWorldStudy(w => w.study?.session ?? null);
   const placed = useRef<string | null>(null);
   // Walk-away only counts once the avatar has actually been in the seat.
@@ -180,7 +187,7 @@ export default function StudySeats({ area, player, ground = flat, board }: {
         {v.mates.filter(m => !m.me).map(m => {
           const seat = seatAt(v.anchor, m.seat, ground);
           return seat && <Suspense key={m.member_id} fallback={null}>
-            <MateFigure mate={m} seat={seat} floor={ground(seat.x, seat.z)} remaining={m.remaining_s} />
+            <MateFigure mate={m} seat={seat} floor={ground(seat.x, seat.z)} remaining={m.remaining_s} asOf={asOf} />
           </Suspense>;
         })}
         {v.is_private && !v.can_join && <Html position={[layout.at[0], ground(...layout.at) + 1.6, layout.at[1]]} center zIndexRange={[30, 0]} style={{ pointerEvents: "none" }}>

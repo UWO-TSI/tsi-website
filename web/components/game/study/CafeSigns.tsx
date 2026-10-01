@@ -65,8 +65,8 @@ function paint(sign: CafeSign): THREE.CanvasTexture {
 }
 
 function Lightbox({ sign }: { sign: CafeSign }) {
-  const body = useCafeModel("lightbox");
-  const [box, rod] = useMemo(() => [body.getObjectByName("lightbox_body")!, body.getObjectByName("lightbox_rod")!], [body]);
+  const box = useCafeModel("cafe-kit", "lightbox_body");
+  const rod = useCafeModel("cafe-kit", "lightbox_rod");
   const texture = useMemo(() => paint(sign), [sign]);
   // Above 1 so the High tier's bloom picks the face up, like a real backlit diffuser.
   const face = useMemo(() => new THREE.MeshBasicMaterial({ map: texture, color: new THREE.Color(1.5, 1.42, 1.3) }), [texture]);
