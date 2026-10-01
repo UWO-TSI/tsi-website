@@ -23,17 +23,19 @@ def ss(a, b, x):
 
 
 img = np.ones((H, W))
-for _ in range(4):                    # broad soft streaks
-    c, w, a = rng.uniform(0.12, 0.88), rng.uniform(0.05, 0.1), rng.uniform(-0.07, 0.05)
+for _ in range(4):                    # broad soft streaks, painted lighter and darker
+    c, w, a = rng.uniform(0.12, 0.88), rng.uniform(0.06, 0.11), rng.uniform(-0.08, 0.07)
     img += a * np.exp(-((U - c - 0.01 * np.sin(V * 5 + c * 9)) / w) ** 2)
-for k in range(34):                   # fine strands: mostly darker lines, every third a lighter one
-    light = k % 3 == 2
-    c = rng.uniform(0.04, 0.96)
-    w = rng.uniform(0.0035, 0.009)
-    a = rng.uniform(0.04, 0.07) if light else -rng.uniform(0.07, 0.17)
-    v0, v1 = rng.uniform(0.0, 0.25), rng.uniform(0.6, 1.0)
-    wob = rng.uniform(0.002, 0.006) * np.sin(V * rng.uniform(4, 9) + rng.uniform(0, 6.3))
-    img += a * np.exp(-((U - c - wob) / w) ** 2) * ss(v0, v0 + 0.08, V) * (1 - ss(v1 - 0.12, v1, V))
+# strands, spread evenly across the lock (stratified, jittered), wide enough to survive the creator's distance (a lock
+# is ~100 px across there, so a strand is 2-3 px) and the world's mipmaps: darker lines, and lighter ones between them
+for k in range(12):
+    c = (k + 0.5 + rng.uniform(-0.3, 0.3)) / 12
+    light = k % 3 == 1
+    w = rng.uniform(0.007, 0.012) if light else rng.uniform(0.009, 0.016)
+    a = rng.uniform(0.06, 0.1) if light else -rng.uniform(0.11, 0.19)
+    v0, v1 = rng.uniform(0.0, 0.2), rng.uniform(0.62, 1.0)
+    wob = rng.uniform(0.003, 0.007) * np.sin(V * rng.uniform(4, 9) + rng.uniform(0, 6.3))
+    img += a * np.exp(-((U - c - wob) / w) ** 2) * ss(v0, v0 + 0.1, V) * (1 - ss(v1 - 0.14, v1, V))
 img *= 0.86 + 0.14 * ss(0.0, 0.2, np.minimum(U, 1 - U))      # the sides turn into the next lock
 img *= 0.88 + 0.12 * ss(0.0, 0.55, V)                       # root-to-tip value shift
 img = np.clip(img, 0, 1)
