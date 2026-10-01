@@ -174,6 +174,18 @@ describe("the long jump", () => {
     }, q => events.push(...kinds(q.events)));
     return { s, splash: events.includes("splash"), events };
   };
+  it("a splash says how far it fell: a short jump's drop, more off a height", () => {
+    const short = leap(30, 35.5, false);
+    expect(short.splash).toBe(true);
+    const drops: number[] = [];
+    drive(createMoveState(0, 30, rivers), rivers, 3, (_t, q) => ({ z: 1, jump: q.mode === "ground" && q.z >= 35.15, jumpPressed: q.mode === "ground" && q.z >= 35.15 }), q => { for (const e of q.events) if (e.kind === "splash") drops.push(e.drop); });
+    expect(drops[0]).toBeGreaterThan(0.3);
+    expect(drops[0]).toBeLessThan(1.2);
+    // Off a 1.5u ledge into the sea: the cliff and the jump.
+    const ledge = grid(12, 40, (_x, z) => [z <= 0 ? CLIFF_LEVELS : 0, z >= 1 ? W : G]), high: number[] = [];
+    drive(createMoveState(0, -6, ledge), ledge, 3, (_t, q) => ({ z: 1, jump: q.mode === "ground" && q.z >= 0.2, jumpPressed: q.mode === "ground" && q.z >= 0.2 }), q => { for (const e of q.events) if (e.kind === "splash") high.push(e.drop); });
+    expect(high[0]).toBeGreaterThan(1.8);
+  });
   it("clears 2 tiles walking and 3 with a long jump; falling short splashes and puts you back on the near bank", () => {
     expect(leap(0, 5.5, false).splash).toBe(false);
     expect(leap(8.5, 19.5, true).splash).toBe(false);

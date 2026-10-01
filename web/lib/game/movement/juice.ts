@@ -78,7 +78,7 @@ export const stepSound = (g: GroundKind) => GROUND[g].sound;
 
 /** Salts keep two bursts of one event apart. */
 const SALT = { step: 1, rain: 2, kick: 3, extra: 4, ring: 5, plume: 6, dash: 7, side: 8, air: 9, swirl: 10, streak: 11, trail: 12, settle: 13, wisp: 14, ready: 15, splash: 16, ripple: 17, leaf: 18, mantle: 19, scuff: 20, sit: 21,
-  slide: 24, slideSpray: 25, slideScuff: 26, slideBurst: 27, slidePop: 28, print: 29 };
+  slide: 24, slideSpray: 25, slideScuff: 26, slideBurst: 27, slidePop: 28, print: 29, skid: 30, roll: 31 };
 
 /**
  * A foot comes down: flecks and a mote on grass, a sand kick, a snow puff, a dust puff on soil; nothing on stone or
@@ -201,11 +201,25 @@ const SCUFF: Recipe = { sprite: "scuff", count: [1, 1], life: [1.1, 1.3], size: 
 const SIT: Recipe = { ...RING, count: [4, 4], size: [0.45, 0.52], speed: [0.7, 1], life: [0.4, 0.5], alpha: 0.7 };
 const DEFEAT: Recipe = { ...PLUME, count: [4, 5], size: [0.7, 0.9], speed: [0.6, 1.2], up: [0.4, 0.8] };
 
-/** Into the water: droplets thrown up and two ripples on the surface at `waterY`. */
-export function splash(pool: ParticlePool, x: number, waterY: number, z: number, amount = 1) {
+/** Splash sizes by the drop into the water (world units from the arc's top): a step in, a jump, a fall from a cliff. */
+export const SPLASH = { small: 0.6, big: 1.8 };
+const SPLASH_SMALL: Recipe = { ...SPLASH_DROPS, count: [4, 4], up: [1.6, 2.4], speed: [0.6, 1.1], size: [0.32, 0.4] };
+const SPLASH_CROWN: Recipe = { ...SPLASH_DROPS, count: [10, 11], up: [3.6, 4.8], speed: [1.2, 2.2], size: [0.42, 0.55], life: [0.62, 0.8] };
+const SPLASH_WIDE: Recipe = { ...SPLASH_RIPPLE, count: [1, 1], size: [2.2, 2.4], grow: 1.6, life: [1.2, 1.4], alpha: 0.55 };
+const SPLASH_MIST: Recipe = { sprite: "dust", count: [3, 3], life: [0.5, 0.65], size: [0.6, 0.75], grow: 1.6, speed: [0.4, 0.8], spread: Math.PI, up: [0.5, 0.9], gravity: 0, drag: 3, wind: 0.6, lift: 0.3, alpha: 0.45, face: B, rise: [0.1, 0.2] };
+/**
+ * Into the water at `waterY`: by the drop (`drop`), a few drops and one ripple for a step in, droplets and two
+ * ripples for a jump, a crown of droplets thrown high, a wide ring and a little mist for a fall from a height.
+ */
+export function splash(pool: ParticlePool, x: number, waterY: number, z: number, amount = 1, drop = 1) {
   if (amount <= 0) return;
-  pool.burst(SPLASH_DROPS, x, waterY, z, waterY, 0, 0, amount, 0xd4ecf7, seedAt(x, z, SALT.splash));
-  pool.burst(SPLASH_RIPPLE, x, waterY + 0.01, z, waterY, 0, 0, amount, 0xe4f4fb, seedAt(x, z, SALT.ripple));
+  const big = drop >= SPLASH.big, small = drop < SPLASH.small;
+  pool.burst(big ? SPLASH_CROWN : small ? SPLASH_SMALL : SPLASH_DROPS, x, waterY, z, waterY, 0, 0, amount, 0xd4ecf7, seedAt(x, z, SALT.splash));
+  pool.burst(small ? { ...SPLASH_RIPPLE, count: [1, 1] } : SPLASH_RIPPLE, x, waterY + 0.01, z, waterY, 0, 0, amount, 0xe4f4fb, seedAt(x, z, SALT.ripple));
+  if (big) {
+    pool.burst(SPLASH_WIDE, x, waterY + 0.012, z, waterY, 0, 0, amount, 0xe4f4fb, seedAt(x, z, SALT.ripple + 40));
+    pool.burst(SPLASH_MIST, x, waterY, z, waterY, 0, 0, amount, 0xeef7fb, seedAt(x, z, SALT.splash + 40));
+  }
 }
 /** A soft ring of dust where you appear, sit or set down. */
 export function puffRing(pool: ParticlePool, g: GroundKind, x: number, y: number, z: number, amount = 1) {
@@ -292,3 +306,78 @@ export function footprint(prints: ParticlePool, g: GroundKind, x: number, y: num
   prints.burst(r, x, y, z, y, Math.sin(facing), Math.cos(facing), 1, p.tint, seedAt(x, z, SALT.print), Math.min(1.5, amount));
 }
 const PRINT_BY: Partial<Record<GroundKind, Recipe>> = {};
+
+// ── Skid, mantle, glide and roll (specs/movement-feel.md, milestone 2) ───
+const SKID_KICK: Recipe = { ...DASH_KICK, count: [4, 5], speed: [1.6, 2.8], spread: 0.55, up: [0.15, 0.45], size: [0.45, 0.6] };
+const SKID_PUSH: Recipe = { ...KICK, count: [3, 3], speed: [0.9, 1.5], spread: 0.6, size: [0.42, 0.52] };
+/** Digging in to turn round: dust thrown on the way you were going from the braced feet, the ground's grains or flecks, and the first scuff. */
+export function skidKick(pool: ParticlePool, g: GroundKind, x: number, y: number, z: number, vx: number, vz: number, amount = 1) {
+  if (amount <= 0 || g === "water") return;
+  const fx = GROUND[g], soft = HARD.has(g) ? 0.45 : 1;
+  pool.burst(SKID_KICK, x, y, z, y, vx, vz, amount, fx.dust, seedAt(x, z, SALT.skid), soft);
+  if (fx.extra && !HARD.has(g)) pool.burst(fx.extra, x, y, z, y, vx, vz, amount * 0.9, fx.extraTint, seedAt(x, z, SALT.extra + 50));
+  scuff(pool, g, x, y, z, vx, vz, amount);
+}
+/** Out of the skid: the push-off, a puff kicked back against the new way (`dirX, dirZ`). */
+export function skidPush(pool: ParticlePool, g: GroundKind, x: number, y: number, z: number, dirX: number, dirZ: number, amount = 1) {
+  if (amount <= 0 || g === "water") return;
+  pool.burst(SKID_PUSH, x, y, z, y, -dirX, -dirZ, amount, GROUND[g].dust, seedAt(x, z, SALT.skid + 1), HARD.has(g) ? 0.45 : 1);
+}
+
+const LIP_BITS: Recipe = { ...STEP_FLECKS, count: [3, 4], speed: [0.2, 0.5], spread: Math.PI, up: [0.2, 0.6], gravity: 7, size: [0.3, 0.38] };
+const LIP_GRAINS: Recipe = { ...STEP_SAND, count: [2, 2], speed: [0.2, 0.4], spread: Math.PI, up: [0.1, 0.4], gravity: 6 };
+/**
+ * Hands on a ledge: a puff off the lip under each hand (either side of the way it climbs, `dirX, dirZ`), and a few
+ * grains or flecks knocked off the edge, falling down its face.
+ */
+export function mantleGrab(pool: ParticlePool, g: GroundKind, x: number, y: number, z: number, dirX: number, dirZ: number, amount = 1) {
+  if (amount <= 0) return;
+  const l = Math.hypot(dirX, dirZ) || 1, sx = -dirZ / l * 0.17, sz = dirX / l * 0.17, soft = HARD.has(g) ? 0.5 : 1, fx = GROUND[g];
+  for (const k of [1, -1]) pool.burst(HAND_PUFF, x + sx * k, y, z + sz * k, y, 0, 0, amount * 0.85, fx.dust, seedAt(x + sx * k, z, SALT.mantle), soft);
+  const bits = g === "grass" ? LIP_BITS : g === "sand" || g === "wetSand" ? LIP_GRAINS : null;
+  if (bits) pool.burst(bits, x - dirX / l * 0.1, y, z - dirZ / l * 0.1, y - 1.6, -dirX, -dirZ, amount, fx.extraTint, seedAt(x, z, SALT.mantle + 1));
+}
+/** Stepping up onto the top: a few motes at the feet. */
+export function mantleStep(pool: ParticlePool, g: GroundKind, x: number, y: number, z: number, amount = 1) {
+  if (amount > 0 && g !== "water") pool.burst(MOTES, x, y, z, y, 0, 0, amount * 0.8, GROUND[g].dust, seedAt(x, z, SALT.mantle + 2), HARD.has(g) ? 0.45 : 1);
+}
+
+const GLIDE_AIR: Recipe = { ...AIR_PUFF, count: [4, 4], spread: Math.PI, up: [-0.6, -0.2], speed: [0.6, 1.1], alpha: 0.45 };
+const RIBBON: Recipe = { ...STREAK, life: [0.22, 0.28], size: [0.7, 0.9], aspect: 0.22, alpha: 0.4 };
+const FEW_LEAVES: Recipe = { ...LEAF_BITS, count: [2, 3], speed: [0.3, 0.7], up: [0.1, 0.4] };
+/** The leaf opens over the grip (`x, y, z`): leaf bits shaken loose and a puff of air pushed down under it. */
+export function glideOpen(pool: ParticlePool, x: number, y: number, z: number, groundY: number, amount = 1) {
+  if (amount <= 0) return;
+  pool.burst(LEAF_BITS, x, y, z, groundY, 0, 0, amount, 0x9db86a, seedAt(x, z, SALT.leaf));
+  pool.burst(GLIDE_AIR, x, y - 0.25, z, groundY, 0, 0, amount, AIR, seedAt(x, z, SALT.leaf + 1));
+}
+/**
+ * Wind ribbons off the leaf's two tips at speed (`k` alternates the tip): thin pale streaks laid along the way it
+ * flies (`dirX, dirZ`) that hang behind it.
+ */
+export function glideRibbon(pool: ParticlePool, x: number, y: number, z: number, groundY: number, dirX: number, dirZ: number, speed: number, k: number, amount = 1) {
+  if (amount <= 0) return;
+  const l = Math.hypot(dirX, dirZ) || 1, side = (k % 2 ? 0.55 : -0.55), ux = dirX / l, uz = dirZ / l;
+  const n = pool.burst(RIBBON, x + uz * side - ux * 0.2, y, z - ux * side - uz * 0.2, groundY, ux, uz, 1, WIND, seedAt(x, z, SALT.leaf + 2 + k), amount);
+  pool.carry(n, ux * speed * 0.2, uz * speed * 0.2);
+}
+/** The leaf folds in the air (let go): a couple of leaf bits. */
+export function glideFurl(pool: ParticlePool, x: number, y: number, z: number, groundY: number, amount = 1) {
+  if (amount > 0) pool.burst(FEW_LEAVES, x, y, z, groundY, 0, 0, amount, 0x9db86a, seedAt(x, z, SALT.leaf + 3));
+}
+/** The leaf sets you down: a soft ring of dust and a few leaf bits settling. */
+export function glideSetDown(pool: ParticlePool, g: GroundKind, x: number, y: number, z: number, amount = 1) {
+  if (amount <= 0) return;
+  puffRing(pool, g, x, y, z, amount);
+  pool.burst(FEW_LEAVES, x, y + 1.2, z, y, 0, 0, amount, 0x9db86a, seedAt(x, z, SALT.leaf + 4));
+}
+
+const TUMBLE: Recipe = { ...RING, count: [4, 5], speed: [0.9, 1.5], size: [0.5, 0.6], life: [0.42, 0.52] };
+/** A landing roll's back meets the ground: a low ring of dust carried along the roll, and the ground's flecks or grains. */
+export function rollTumble(pool: ParticlePool, g: GroundKind, x: number, y: number, z: number, vx: number, vz: number, amount = 1) {
+  if (amount <= 0 || g === "water") return;
+  const fx = GROUND[g], soft = HARD.has(g) ? 0.45 : 1;
+  const n = pool.burst(TUMBLE, x, y, z, y, 0, 0, amount, fx.dust, seedAt(x, z, SALT.roll), soft);
+  pool.carry(n, vx * 0.35, vz * 0.35);
+  if (fx.extra && !HARD.has(g)) pool.burst(fx.extra, x, y, z, y, vx, vz, amount * 0.7, fx.extraTint, seedAt(x, z, SALT.roll + 1));
+}

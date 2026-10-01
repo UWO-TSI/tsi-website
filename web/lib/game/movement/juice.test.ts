@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { ParticlePool } from "@/lib/game/fx/particles";
 import { PACK, PACK_COLS } from "@/lib/game/fx/pack";
 import { Surface } from "@/lib/game/grid";
-import { LAND, dashBurst, footprint, footstep, groundUnder, landKind, landing, slideBurst, slidePop, slideTrail, takeoff } from "./juice";
+import { LAND, SPLASH, dashBurst, footprint, footstep, glideFurl, glideOpen, glideRibbon, glideSetDown, groundUnder, landKind, landing, mantleGrab, mantleStep, rollTumble, skidKick, skidPush, slideBurst, slidePop, slideTrail, splash, takeoff } from "./juice";
 
 const dry = () => false;
 /** Sprite names written to the pool, sorted (what a move threw). */
@@ -135,5 +135,50 @@ describe("footprints (movement feel milestone 2)", () => {
     const off = new ParticlePool(8);
     footprint(off, "sand", 0, 0, 0, 0, 0);
     expect(off.alive).toBe(0);
+  });
+});
+
+describe("skid, mantle, glide, splash and roll (movement feel milestone 2)", () => {
+  const throw_ = (fn: (p: ParticlePool) => void) => { const p = new ParticlePool(96); fn(p); return thrown(p); };
+  it("a skid kicks dust on the old way with the ground's grains and a scuff, and pushes off against the new way", () => {
+    expect(throw_(p => skidKick(p, "grass", 0, 0, 0, 0, 12))).toEqual(expect.arrayContaining(["dust", "grass", "scuff"]));
+    expect(throw_(p => skidKick(p, "sand", 0, 0, 0, 0, 12))).toEqual(expect.arrayContaining(["dust", "sand", "scuff"]));
+    expect(throw_(p => skidKick(p, "stone", 0, 0, 0, 0, 12))).toEqual(expect.arrayContaining(["dust"]));
+    expect(throw_(p => skidKick(p, "stone", 0, 0, 0, 0, 12))).not.toContain("scuff");
+    const push = new ParticlePool(16);
+    skidPush(push, "soil", 0, 0, 0, 0, 1);
+    push.update(0.1, 0, 0);
+    push.write(0, 8, -10, 0, -0.5, 0.85);
+    expect(push.a[2]).toBeLessThan(0); // kicked back against the new way (+z)
+  });
+  it("a mantle puffs under both hands and knocks grains or flecks off the lip; the step up raises motes", () => {
+    const grab = new ParticlePool(32);
+    mantleGrab(grab, "grass", 0, 1.5, 0, 0, 1);
+    const sprites = thrown(grab);
+    expect(sprites.filter(k => k === "dust").length).toBeGreaterThanOrEqual(4); // two puffs, one per hand
+    expect(sprites).toContain("grass");
+    expect(throw_(p => mantleGrab(p, "stone", 0, 1.5, 0, 0, 1))).not.toContain("grass");
+    expect(throw_(p => mantleStep(p, "soil", 0, 1.5, 0))).toEqual(expect.arrayContaining(["dust"]));
+  });
+  it("the glider: leaf bits and an air push on opening, ribbons at speed, leaves on folding and on the set-down", () => {
+    expect(throw_(p => glideOpen(p, 0, 3, 0, 0))).toEqual(expect.arrayContaining(["leaf", "dust"]));
+    expect(throw_(p => glideRibbon(p, 0, 3, 0, 0, 0, 1, 9, 0))).toEqual(["streak"]);
+    expect(throw_(p => glideFurl(p, 0, 3, 0, 0))).toEqual(expect.arrayContaining(["leaf"]));
+    expect(throw_(p => glideSetDown(p, "grass", 0, 0, 0))).toEqual(expect.arrayContaining(["dustLow", "leaf"]));
+  });
+  it("a splash grows with the drop: a few drops and one ripple, then two, then a crown, a wide ring and mist", () => {
+    const sizes = [0.3, 1, 3].map(drop => throw_(p => splash(p, 0, 0, 0, 1, drop)));
+    expect(sizes[0].filter(k => k === "ripple")).toHaveLength(1);
+    expect(sizes[1].filter(k => k === "ripple")).toHaveLength(2);
+    expect(sizes[2].filter(k => k === "ripple")).toHaveLength(3);
+    expect(sizes[2]).toContain("dust");
+    const drops = (k: string[]) => k.filter(x => x === "droplets").length;
+    expect(drops(sizes[0])).toBeLessThan(drops(sizes[1]));
+    expect(drops(sizes[1])).toBeLessThan(drops(sizes[2]));
+    expect(SPLASH.small).toBeLessThan(SPLASH.big);
+  });
+  it("a roll tumbles a ring of dust with the ground's flecks; built ground only the faint dust", () => {
+    expect(throw_(p => rollTumble(p, "grass", 0, 0, 0, 0, 9))).toEqual(expect.arrayContaining(["dustLow", "grass"]));
+    expect(new Set(throw_(p => rollTumble(p, "wood", 0, 0, 0, 0, 9)))).toEqual(new Set(["dustLow"]));
   });
 });

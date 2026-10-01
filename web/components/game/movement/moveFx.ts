@@ -39,6 +39,11 @@ export const MOVE_JUICE = {
   slideDrop: 0.18, // how far the camera's focus drops while sliding (world units)
   // Milestone 2 (specs/movement-feel.md)
   prints: 1, // footprints on sand, wet sand and snow
+  skid: 1, // the skid's kick, scuffs, trail and push-off
+  mantle: 1, // the puffs under the hands, grains off the lip, the step up
+  glide: 1, // leaf bits and the air push on opening, wind ribbons at speed, the set-down
+  splash: 1, // droplets and ripples, sized by the drop
+  roll: 1, // the roll's tumbles, trail and pop-up
 };
 export type MoveJuice = typeof MOVE_JUICE;
 /** The follow camera's field of view at a walk (the Canvases' camera); speed and dashes widen it from here. */
