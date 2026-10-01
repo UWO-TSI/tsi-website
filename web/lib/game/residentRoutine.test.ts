@@ -52,9 +52,13 @@ describe("resident routines", () => {
   });
 
   it("never walks through a solid: every walk stays on free ground but for its last steps through a door or onto a seat", () => {
+    const bad: string[] = [];
     for (const { plan, legs } of days) {
+      // Walks are cached per pair of stops: check each distinct one once.
+      const seen = new Set<object>();
       for (const leg of legs) {
-        if (!leg.walk) continue;
+        if (!leg.walk || seen.has(leg.walk)) continue;
+        seen.add(leg.walk);
         const { pts, cum } = leg.walk, n = cum.length;
         // Segments through a door or onto a seat are the first (from one) and the last (into one).
         const first = leg.from?.door ? 1 : 0, lastSeg = leg.stop.door ? n - 2 : n - 1;
@@ -62,11 +66,12 @@ describe("resident routines", () => {
           const ax = pts[i * 2], az = pts[i * 2 + 1], bx = pts[i * 2 + 2], bz = pts[i * 2 + 3], k = Math.ceil(Math.hypot(bx - ax, bz - az) / 0.1);
           for (let j = 0; j <= k; j++) {
             const x = ax + (bx - ax) * j / k, z = az + (bz - az) * j / k;
-            expect(island.standable(x, z), `${plan.slug} ${leg.from?.id} > ${leg.stop.id} at ${x.toFixed(2)},${z.toFixed(2)}`).toBe(true);
+            if (!island.standable(x, z)) bad.push(`${plan.slug} ${leg.from?.id} > ${leg.stop.id} at ${x.toFixed(2)},${z.toFixed(2)}`);
           }
         }
       }
     }
+    expect(bad).toEqual([]);
   });
 
   it("stops at every waypoint: each walk ends in a stay of at least MIN_STAY at the same stop", () => {

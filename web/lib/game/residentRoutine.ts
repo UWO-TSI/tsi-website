@@ -33,8 +33,10 @@ const RAMP = 0.35;
 const NAV_STEP = 0.5;
 /** How far a resident keeps from anything solid, water or a cliff edge. */
 const BODY = 0.3;
-/** Bushes and flowers are walked round, not through. */
-const PLANT_CLEAR = { bush: 0.95, flower: 1.0 } as const;
+/** Bushes and flower clusters are walked round (this far from their middle), and through only when there's no other way. */
+const PLANT_CLEAR = { bush: 0.85, flower: 0.85 } as const;
+/** How much a step through a plant costs against one on open ground. */
+const PLANT_COST = 8;
 
 /** Where the inside point sits past the door, into the building (hidden there). */
 const INSIDE_DEPTH = 0.9;
@@ -113,19 +115,26 @@ export class NavGrid {
   cz(z: number) { return Math.floor((z - this.z0) / NAV_STEP); }
   wx(c: number) { return this.x0 + (c + 0.5) * NAV_STEP; }
   wz(c: number) { return this.z0 + (c + 0.5) * NAV_STEP; }
-  /** A point a resident's body fits on: free ground all round it, no plant underfoot. */
-  fits(x: number, z: number): boolean {
+  /** A point a resident's body fits on: free ground all round it (plants aside). */
+  body(x: number, z: number): boolean {
     const s = this.island.standable;
-    if (!s(x, z) || !s(x + BODY, z) || !s(x - BODY, z) || !s(x, z + BODY) || !s(x, z - BODY)) return false;
-    for (const p of this.plants) if (Math.abs(p.x - x) < p.r && Math.abs(p.z - z) < p.r && Math.hypot(p.x - x, p.z - z) < p.r) return false;
-    return true;
+    return s(x, z) && s(x + BODY, z) && s(x - BODY, z) && s(x, z + BODY) && s(x, z - BODY);
   }
-  cellFree(cx: number, cz: number): boolean {
-    if (cx < 0 || cz < 0 || cx >= this.w || cz >= this.h) return false;
+  /** A plant underfoot (a bush or a flower cluster): walked round when there's a way, through only when there isn't. */
+  plant(x: number, z: number): boolean {
+    for (const p of this.plants) if (Math.abs(p.x - x) < p.r && Math.abs(p.z - z) < p.r && Math.hypot(p.x - x, p.z - z) < p.r) return true;
+    return false;
+  }
+  /** Where a resident stops: the body fits and no plant is underfoot. */
+  fits(x: number, z: number): boolean { return this.body(x, z) && !this.plant(x, z); }
+  /** A cell's state: 0 solid or water, 1 free, 2 a plant (walkable at a cost). */
+  cell(cx: number, cz: number): number {
+    if (cx < 0 || cz < 0 || cx >= this.w || cz >= this.h) return 0;
     const i = cz * this.w + cx;
-    if (this.free[i] < 0) this.free[i] = this.fits(this.wx(cx), this.wz(cz)) ? 1 : 0;
-    return this.free[i] === 1;
+    if (this.free[i] < 0) { const x = this.wx(cx), z = this.wz(cz); this.free[i] = !this.body(x, z) ? 0 : this.plant(x, z) ? 2 : 1; }
+    return this.free[i];
   }
+  cellFree(cx: number, cz: number): boolean { return this.cell(cx, cz) === 1; }
   /** The walker's level rule (defaultIsland canStep): a ramp follows its slope, elsewhere under two levels. */
   step(x: number, z: number, nx: number, nz: number): boolean {
     const map = this.island.map, ground = this.island.ground;
@@ -177,10 +186,11 @@ export class NavGrid {
       for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) {
         if (!dx && !dz) continue;
         const nx = cx + dx, nz = cz + dz;
-        if (!this.cellFree(nx, nz)) continue;
-        if (dx && dz && (!this.cellFree(cx + dx, cz) || !this.cellFree(cx, cz + dz))) continue;
+        const c = this.cell(nx, nz);
+        if (!c) continue;
+        if (dx && dz && (!this.cell(cx + dx, cz) || !this.cell(cx, cz + dz))) continue;
         if (!this.step(this.wx(cx), this.wz(cz), this.wx(nx), this.wz(nz))) continue;
-        const j = nz * this.w + nx, gj = g0 + (dx && dz ? 1.4142 : 1) * NAV_STEP;
+        const j = nz * this.w + nx, gj = g0 + (dx && dz ? 1.4142 : 1) * NAV_STEP * (c === 2 ? PLANT_COST : 1);
         if (gj < (cost.get(j) ?? Infinity)) { cost.set(j, gj); came.set(j, i); heap.push(j, gj + heur(j)); }
       }
     }
@@ -288,15 +298,20 @@ function benchStop(v: Village, nav: NavGrid, slot: number, near: readonly [numbe
   const ranked = [...benches].sort((a, b) => (night ? Number(lit(b)) - Number(lit(a)) : 0) || Math.hypot(a.x - near[0], a.z - near[1]) - Math.hypot(b.x - near[0], b.z - near[1]));
   for (let r = 0; r < ranked.length; r++) {
     const b = ranked[(Math.floor(slot / SEAT_OFFSETS.length) + r) % ranked.length], yaw = b.yaw ?? 0;
-    // Backless bench: sit facing whichever side looks more toward the camera (−z).
-    const face = Math.cos(yaw) > 1e-6 || (Math.abs(Math.cos(yaw)) <= 1e-6 && Math.sin(yaw) < 0) ? yaw + Math.PI : yaw;
     const off = SEAT_OFFSETS[slot % SEAT_OFFSETS.length];
-    // Along the bench is its local x; facing is local ±z.
-    const ax = Math.cos(yaw), az = -Math.sin(yaw), fx = Math.sin(face), fz = Math.cos(face);
+    // Along the bench is its local x; it faces local ±z. Backless: sit facing the side you came from (the open side
+    // toward the previous stop), approaching from it.
+    const ax = Math.cos(yaw), az = -Math.sin(yaw);
     const at: [number, number] = [b.x + ax * off, b.z + az * off];
-    const front = nav.snap(at[0] + fx * SEAT_APPROACH, at[1] + fz * SEAT_APPROACH);
-    if (!front || Math.hypot(front[0] - at[0], front[1] - at[1]) > 1.2) continue;
-    return { id: `bench:${b.id}:${off}`, kind: "sit", at, door: front, yaw: face, seat: BENCH_SEAT_TOP, dwell: night ? [420, 900] : [90, 220], idles: ["idle"] };
+    let best: Stop | null = null, bestD = Infinity;
+    for (const face of [yaw, yaw + Math.PI]) {
+      const fx = Math.sin(face), fz = Math.cos(face);
+      const front = nav.snap(at[0] + fx * SEAT_APPROACH, at[1] + fz * SEAT_APPROACH);
+      if (!front || Math.hypot(front[0] - at[0], front[1] - at[1]) > 1.2) continue;
+      const d = Math.hypot(front[0] - near[0], front[1] - near[1]);
+      if (d < bestD) { bestD = d; best = { id: `bench:${b.id}:${off}`, kind: "sit", at, door: front, yaw: face, seat: BENCH_SEAT_TOP, dwell: night ? [420, 900] : [90, 220], idles: ["idle"] }; }
+    }
+    if (best) return best;
   }
   return null;
 }
@@ -422,7 +437,7 @@ const walkCache = new WeakMap<NavGrid, Map<string, Walk | null>>();
 export function walkBetween(nav: NavGrid, a: Stop, b: Stop): Walk | null {
   let cache = walkCache.get(nav);
   if (!cache) walkCache.set(nav, cache = new Map());
-  const key = `${a.at[0]},${a.at[1]}>${b.at[0]},${b.at[1]}`;
+  const key = `${a.at}|${a.door ?? ""}>${b.at}|${b.door ?? ""}`;
   if (cache.has(key)) return cache.get(key)!;
   const from = a.door ?? a.at, to = b.door ?? b.at;
   const mid = nav.path(from[0], from[1], to[0], to[1]);
