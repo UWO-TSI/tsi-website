@@ -16,7 +16,7 @@ import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js
 import { BASE_URL, FACE_ATLAS_URLS, PALETTE, TSI_DECAL_URL, CLIP_BY_NAME, bodyKey, resolveParts, type CharacterLook, type ResolvedPart } from "@/lib/game/character/look";
 import { FaceAnimator, faceSlots, poseKey } from "@/lib/game/character/face";
 import { createFaceMaterial, MATTE, prepareFaceAtlas, type FaceMaterial } from "@/lib/game/character/faceMaterial";
-import { WEAPON_HAND, contactCrossed, crossfade, isLoop, resolveClip, tempo, type CharacterMotion, type ClipName } from "@/lib/game/character/clips";
+import { WEAPON_HAND, contactCrossed, crossfade, isLoop, matchPhase, resolveClip, tempo, type CharacterMotion, type ClipName } from "@/lib/game/character/clips";
 import { adoptPrimitive, materialName, mergeLook, refCache, skinnedPrimitives } from "@/lib/game/character/rig";
 import type { WeaponGrip, WeaponKind } from "@/lib/game/combat/contract";
 import { tagLookClasses } from "@/lib/game/modelMaterials";
@@ -42,14 +42,19 @@ const GHOST = { life: 0.2, opacity: 0.17, rise: 0.04 };
 /**
  * A frozen copy of the pose: the body and face drawn again with the bone matrices of one frame. The skeleton never
  * updates (its matrices are copied in); attached binding cancels the mesh's own transform, so it stays where it was.
+ *
+ * It never films over the character, even dashing away from the camera with the afterimage between the two: it
+ * blends in the opaque pass (custom blending, no depth written) after the world (render order 1) and before the
+ * character that leaves it (`GHOST_ORDER` + 1), so the character draws over it wherever they overlap.
  */
+const GHOST_ORDER = 1;
 class Ghost {
   readonly skeleton: THREE.Skeleton;
   readonly meshes: THREE.SkinnedMesh[];
-  // Pushed back a hair in depth, so where it still overlaps the character (the first frame) the character wins.
-  readonly material = new THREE.MeshLambertMaterial({ color: "#dfe8f1", emissive: "#8ea3b8", emissiveIntensity: 0.18, transparent: true, opacity: 0, depthWrite: true, polygonOffset: true, polygonOffsetFactor: 2, polygonOffsetUnits: 2 });
+  readonly material = new THREE.MeshLambertMaterial({ color: "#dfe8f1", emissive: "#8ea3b8", emissiveIntensity: 0.18, transparent: false, blending: THREE.CustomBlending,
+    blendSrc: THREE.SrcAlphaFactor, blendDst: THREE.OneMinusSrcAlphaFactor, opacity: 0, depthWrite: false });
   age = GHOST.life;
-  /** Frames left to draw it unseen (opacity 0, no depth) so its shader compiles before the first dash. */
+  /** Frames left to draw it unseen (opacity 0) so its shader compiles before the first dash. */
   private warm = 1;
   constructor(live: THREE.Skeleton, bindMatrix: THREE.Matrix4, parent: THREE.Object3D, geometries: THREE.BufferGeometry[]) {
     this.skeleton = new THREE.Skeleton(live.bones, live.boneInverses);
@@ -59,7 +64,7 @@ class Ghost {
       m.bind(this.skeleton, bindMatrix);
       m.frustumCulled = false;
       m.visible = false;
-      m.renderOrder = 4;
+      m.renderOrder = GHOST_ORDER;
       parent.add(m);
       return m;
     });
@@ -76,7 +81,6 @@ class Ghost {
     // Eases in while you leave it (so it never films over you), then fades.
     const k = Math.max(0, 1 - this.age / GHOST.life), inn = Math.min(1, this.age / GHOST.rise);
     this.material.opacity = GHOST.opacity * inn * k * k;
-    this.material.depthWrite = !this.warm;
     for (const m of this.meshes) m.visible = k > 0 || this.warm > 0;
     if (this.warm > 0) this.warm--;
   }
@@ -188,7 +192,10 @@ class Puppet {
     const clip = this.clips.get(name) ?? this.clips.get("Idle")!;
     const next = this.mixer.clipAction(clip);
     const loop = isLoop(name);
+    // Walk, run and crouch-walk hand over in step: the next loop starts with the same foot where this one had it.
+    const prev = this.action, phase = prev ? matchPhase(this.clip, prev.time / prev.getClip().duration, name) : null;
     next.reset().setLoop(loop ? THREE.LoopRepeat : THREE.LoopOnce, Infinity);
+    if (phase !== null) next.time = phase * clip.duration;
     next.clampWhenFinished = !loop;
     next.setEffectiveWeight(1).play();
     if (this.action && this.action !== next) this.action.crossFadeTo(next, crossfade(this.clip, name), false);
@@ -205,7 +212,10 @@ class Puppet {
   }
 
   private prepareGhosts() {
+    if (this.ghosts.length) return;
     while (this.ghosts.length < 2) this.ghosts.push(new Ghost(this.skeleton, this.body.bindMatrix, this.ghostParent, [this.body.geometry, this.face.geometry]));
+    // The character that leaves afterimages draws after them (Ghost): over them where they overlap.
+    this.body.renderOrder = this.face.renderOrder = this.decal.renderOrder = GHOST_ORDER + 1;
   }
 
   update(delta: number, motion: CharacterMotion, walkSpeed: number) {
@@ -219,7 +229,7 @@ class Puppet {
     if (motion.play) { this.oneShot = motion.play; motion.play = null; restart = true; }
     if (motion.speed >= 0.08) motion.pose = null;
     if (this.oneShot && this.clip === this.oneShot && !restart && this.action && this.action.time >= this.action.getClip().duration - 1e-3) this.oneShot = null;
-    const want = resolveClip({ speed: motion.speed, walkSpeed, pose: motion.pose ?? null, oneShot: this.oneShot, move: motion.move });
+    const want = resolveClip({ speed: motion.speed, walkSpeed, pose: motion.pose ?? null, oneShot: this.oneShot, move: motion.move, current: this.clip });
     const changed = want !== this.clip || restart;
     if (changed) this.play(want);
     const action = this.action!, length = action.getClip().duration;
