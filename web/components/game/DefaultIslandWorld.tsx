@@ -249,7 +249,7 @@ function IslandScene({ identity, level, devAt, exitFrom, peaceful, fishSpot, fis
   const terrain = useMemo(() => ({ ...ISLAND_TERRAIN, grass: look.grass }), [look.grass]);
   const scenery = useMemo(() => sceneryOf(v, island.ground, look.season), [v, island, look.season]);
   const near = useRef<Near>(null);
-  const leadAt = useMemo((): [number, number] | null => anchorAt("wharf", v) ?? (spawns.boat && [spawns.boat[0] + LEAD_OFFSET[0], spawns.boat[2] + LEAD_OFFSET[1]]), [v, spawns.boat]);
+  const leadAt = useMemo((): [number, number] | null => (spawns.boat ? [spawns.boat[0] + LEAD_OFFSET[0], spawns.boat[2] + LEAD_OFFSET[1]] : anchorAt("wharf", v)), [v, spawns.boat]);
   const spots = useMemo(() => eventSpots(event?.decor ?? null), [event]);
   useEffect(() => { player.current.set(...spawn); }, [reset, spawn, player]);
   const focus = useRef(new THREE.Vector3(...spawn));
@@ -436,7 +436,7 @@ function LoadingStatus({ ready }: { ready: boolean }) {
   const [gone, setGone] = useState(false);
   useEffect(() => { if (!ready) return; const t = window.setTimeout(() => setGone(true), 700); return () => window.clearTimeout(t); }, [ready]);
   return <>
-    {!gone && <IslandLoading progress={active ? Math.min(progress, 99) : progress >= 100 ? 100 : null} leaving={ready} />}
+    {!gone && <IslandLoading stage={active ? "loading" : progress >= 100 ? "warming" : "start"} leaving={ready} />}
     {errors.length > 0 && <div className={styles.loading} role="alert">An island asset could not load.<button className={styles.return} onClick={() => window.location.reload()}>Reload island</button></div>}
   </>;
 }
@@ -522,6 +522,8 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   const identity = useWorldIdentity();
   const step = welcomeStep({ lookLoaded: mine.loaded, lookSaved: mine.saved, signedIn: identity.signedIn || devHome.get("welcome") === "1", progressionLoaded, chapterFresh: chapterActions.claim, welcomed });
   const greeting = typeof welcome === "number" ? welcome : null;
+  // Arriving or being greeted: the player holds still, so no prompt and no key hints.
+  const welcoming = welcome === "arriving" || greeting !== null;
   const moveKeys = useMoveKeys(), abilityKeys = useAbilityKeys();
   const touch = useCoarsePointer() || devHome.get("touch") === "1";
   const [reveal, setReveal] = useState<{ family: Family; type: string; startedAt: number } | null>(null);
@@ -732,7 +734,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
     return () => window.removeEventListener("keydown", key);
   }, [act, near, inside, atHome, decor, identity.settings, greeting, nextLine, finishWelcome]);
   return (
-    <main className={styles.world} data-light={phase} data-inside={inside ?? undefined}>
+    <main className={styles.world} data-light={phase} data-inside={inside ?? undefined} data-site={site}>
       <Canvas tabIndex={0} role="application" aria-label="Island walking area" style={{ zIndex: 0, imageRendering: graphics.pixelated ? "pixelated" : "auto" }} gl={{ antialias: false, powerPreference: "high-performance" }} dpr={graphics.pixelated ? 0.5 : [1, 1.5]}
         camera={{ position: [0, 10.2, -21], fov: BASE_FOV, near: 0.1, far: 120 }} shadows={castShadows ? "percentage" : false}
         onCreated={({ gl }) => { gl.info.autoReset = false; gl.toneMapping = THREE.NeutralToneMapping; gl.outputColorSpace = THREE.SRGBColorSpace; }}>
@@ -749,7 +751,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
               overview={overview} returned={returned} player={player} onNear={(n: HomeNear) => setNear(n)} outdoor={layout.outdoor}
               decorating={decor.decorating} selected={decor.selected} onPlace={item => decor.place("outdoor", item)} onPickUp={item => decor.pickUp("outdoor", item)} />
             : <IslandScene identity={identity} level={level} devAt={devAt} exitFrom={exitFrom} peaceful={peaceful} fishSpot={fishSpot} fishing={fishing} chapter={chapterFlags} fromBoat={fromBoat} progression={progressionWorld} ceremony={ceremony} event={islandEvent}
-              lead={welcome === "arriving" || greeting !== null || welcome === "done" ? { line: greeting, hold: welcome === "arriving" || greeting !== null } : null} phase={phase} light={light} look={look} weather={weather} overview={overview} zoom={zoomed ? 1.4 : devZoom} reset={reset} returned={returned} liteMode={liteMode} castShadows={castShadows} player={player} onNear={setNear} />}
+              lead={welcoming || welcome === "done" ? { line: greeting, hold: welcoming } : null} phase={phase} light={light} look={look} weather={weather} overview={overview} zoom={welcoming ? 0.7 : zoomed ? 1.4 : devZoom} reset={reset} returned={returned} liteMode={liteMode} castShadows={castShadows} player={player} onNear={setNear} />}
           {identity.family && identity.aura && <Suspense fallback={null}><FamilyAura player={player} color={FAMILIES[identity.family].light} /></Suspense>}
           <PostFX antialias={!graphics.liteMode && !graphics.pixelated} grade={grade} fx={lookFx(lookPreset, !liteMode)} />
           <LookMaterials preset={lookPreset} />
@@ -800,7 +802,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
           <output ref={perfOutput}>Measuring…</output>
         </details>
       </section>}
-      {near && !sheet && greeting === null && !(reveal && inside === "oracle") && (CLOSED.includes(near)
+      {near && !sheet && !welcoming && !(reveal && inside === "oracle") && (CLOSED.includes(near)
         ? <p className={styles.interact} data-closed="true" role="status">{NEAR_LABELS[near]}</p>
         : fishing ? null : <button className={styles.interact} onClick={() => act(near)}><kbd>E</kbd>{(near === "forage" || near === "net") ? targetLabel ?? NEAR_LABELS[near] : NEAR_LABELS[near]}</button>)}
       <FishingOverlay rod={peaceful.rod} onActiveChange={setFishing} />
@@ -848,7 +850,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       <PostersSheet open={sheet === "posters"} onClose={() => setSheet(null)} event={islandEvent} />
       <CafeGoalSheet open={sheet === "cafe"} onClose={() => setSheet(null)} />
       {site === "ruins" && <CombatHud player={player} />}
-      {greeting !== null ? null : site === "ruins" ? <div className={styles.controls} data-combat><span>{[moveKeys.forward, moveKeys.left, moveKeys.back, moveKeys.right].map(k => <kbd key={k}>{keyName(k)}</kbd>)} Move</span><span>Mouse Aim</span><span>Click Attack</span><span><kbd>{keyName(moveKeys.jump)}</kbd> Jump</span><span><kbd>{keyName(moveKeys.dash)}</kbd> Dodge</span><span>{SLOT_IDS.map(s => <kbd key={s}>{keyName(abilityKeys[s])}</kbd>)} Abilities</span><span><kbd>{keyName(abilityKeys.swap)}</kbd> Swap</span><span><kbd>E</kbd> Interact</span></div>
+      {welcoming ? null : site === "ruins" ? <div className={styles.controls} data-combat><span>{[moveKeys.forward, moveKeys.left, moveKeys.back, moveKeys.right].map(k => <kbd key={k}>{keyName(k)}</kbd>)} Move</span><span>Mouse Aim</span><span>Click Attack</span><span><kbd>{keyName(moveKeys.jump)}</kbd> Jump</span><span><kbd>{keyName(moveKeys.dash)}</kbd> Dodge</span><span>{SLOT_IDS.map(s => <kbd key={s}>{keyName(abilityKeys[s])}</kbd>)} Abilities</span><span><kbd>{keyName(abilityKeys.swap)}</kbd> Swap</span><span><kbd>E</kbd> Interact</span></div>
       // Indoors you walk (cafe-polish §4): no run, jump, dash, zoom or map.
       : inside ? <div className={styles.controls}><span>{[moveKeys.forward, moveKeys.left, moveKeys.back, moveKeys.right].map(k => <kbd key={k}>{keyName(k)}</kbd>)} Walk</span><span><kbd>E</kbd> Interact</span><span><kbd>J</kbd> Quests</span><span><kbd>{keyName(identity.settings.key_bindings.openJournal)}</kbd> Collection</span></div>
       : <div className={styles.controls}><span>{[moveKeys.forward, moveKeys.left, moveKeys.back, moveKeys.right].map(k => <kbd key={k}>{keyName(k)}</kbd>)} Walk</span><span><kbd>{keyName(moveKeys.sprint)}</kbd> Run</span><span><kbd>{keyName(moveKeys.jump)}</kbd> Jump</span>{peaceful.glider && <span><kbd>{keyName(moveKeys.jump)}</kbd> again in the air Glide</span>}<span><kbd>{keyName(moveKeys.dash)}</kbd> Dash</span><span><kbd>E</kbd> Interact</span><span><kbd>Z</kbd> Zoom</span><span><kbd>{keyName(identity.settings.key_bindings.openMap)}</kbd> Map</span><span><kbd>J</kbd> Quests</span><span><kbd>{keyName(identity.settings.key_bindings.openJournal)}</kbd> Collection</span><span><kbd>{keyName(moveKeys.sneak)}</kbd> Sneak</span></div>}

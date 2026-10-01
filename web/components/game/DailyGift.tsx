@@ -57,7 +57,10 @@ export default function DailyGift({ ready }: { ready: boolean }) {
     onKeyDown={e => { if (e.key === "Escape") { e.stopPropagation(); if (phase.at === "offer") later(); else setPhase({ at: "done" }); } }}>
     <div className={styles.box} aria-hidden="true">
       <span className={styles.gift}>🎁</span>
-      {phase.at === "opened" && [0, 1, 2, 3, 4, 5].map(i => <span key={i} className={styles.coin} style={{ "--i": i } as React.CSSProperties}>{COINS.symbol}</span>)}
+      {phase.at === "opened" && <>
+        {[0, 1, 2, 3, 4, 5].map(i => <span key={i} className={styles.coin} style={{ "--i": i } as React.CSSProperties}>{COINS.symbol}</span>)}
+        <span className={styles.prize}>{COINS.symbol}</span>
+      </>}
     </div>
     <h2 id="daily-gift-title">{phase.at === "opened" ? `+${phase.coins.toLocaleString()} ${COINS.symbol}` : "A little something for today"}</h2>
     <p>{phase.at === "opened" ? "Added to your coins. See you tomorrow!" : phase.at === "error" ? phase.text : "Everyone on the island gets a small gift each day."}</p>

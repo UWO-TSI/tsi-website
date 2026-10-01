@@ -7,6 +7,9 @@
 .card[data-phase="opening"] .gift { animation: giftShake 0.65s ease-in-out; }
 .card[data-phase="opened"] .gift { animation: giftPop 0.5s ease-out forwards; }
 .coin { position: absolute; left: 50%; top: 50%; font-size: 22px; line-height: 1; opacity: 0; animation: coinBurst 1.1s cubic-bezier(0.2, 0.8, 0.3, 1) calc(var(--i) * 45ms) forwards; --a: calc(var(--i) * 60deg - 150deg); }
+/* Where the box was: the coin it held, settling in once the burst clears. */
+.prize { position: absolute; left: 50%; top: 50%; font-size: 44px; line-height: 1; transform: translate(-50%, -50%); animation: prizeIn 0.5s cubic-bezier(0.3, 1.6, 0.5, 1) 0.35s both; }
+@keyframes prizeIn { from { opacity: 0; transform: translate(-50%, -50%) scale(0.2); } }
 .actions { display: flex; justify-content: center; gap: 8px; margin-top: 14px; }
 .primary, .quiet { min-height: 44px; padding: 0 20px; border-radius: 999px; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
 .primary { border: 0; background: #426b5b; color: #fffdf0; box-shadow: 0 3px 0 #294b3c; }
@@ -22,4 +25,4 @@
 :global(html[data-contrast="high"]) .card { background: #ffffff; color: #000000; border: 2px solid #000000; }
 :global(html[data-contrast="high"]) .card p { color: #000000; }
 @media (max-width: 700px) { .card { top: 112px; } }
-@media (prefers-reduced-motion: reduce) { .card, .gift, .card[data-phase] .gift { animation: none; } .coin { display: none; } }
+@media (prefers-reduced-motion: reduce) { .card, .gift, .card[data-phase] .gift, .prize { animation: none; } .coin { display: none; } .card[data-phase="opened"] .gift { display: none; } }

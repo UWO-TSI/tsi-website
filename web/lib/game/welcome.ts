@@ -50,5 +50,5 @@ export const HQ_LEAD = {
   ],
 } as const;
 
-/** Where Wren waits on the wharf: a step ahead of the arrival spot and to the side, facing it. */
-export const LEAD_OFFSET: [number, number] = [1.1, 1.9];
+/** Where Wren waits: a step up the wharf from the arrival spot and to its right on screen (+x is screen left), facing it. */
+export const LEAD_OFFSET: [number, number] = [-1.1, 1.7];
