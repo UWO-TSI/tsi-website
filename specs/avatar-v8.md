@@ -77,3 +77,25 @@ WebP sheets in `specs/evidence/avatar-v8/`:
 - hair accessories across styles;
 - the remodeled accessories on short, long and curly hair;
 - the game camera.
+
+## Milestone 1 status (build agent, 2026-10-01)
+**Hair: on hold.** David on the first organic pass: "looks so poorly generated and does not have the hairstyle feel". The rework waits for his game references.
+- Committed as WIP, not polished:
+  - bob, long and short reworked (rounded clumps, soft mass normals, baked occlusion, a painted strand texture, `art/characters/v8/`);
+  - the afro (`bangs_curls`, `back_afro`) and box braids (`bangs_braids`, `back_box_braids`).
+- The ACNH study (`specs/evidence/avatar-v8/acnh-hair-study.md`) sets the direction for the next pass: one smooth mass, only the outline breaks into points, strands and depth painted.
+
+Done, and independent of the hair look:
+- **Anchors.** Every bangs and back piece declares named anchors (`art/characters/v8/anchors.py`, measured on the built piece). The catalogue holds them as `[p, q, r, h]` in glTF space.
+- **Hair accessory group.** `look.ts`, `rig.ts` and `Character.tsx` handle it; the server save path goes through `parseLook`. The claw clip, bow and scrunchie (`accessories/hair_acc.py`) sit on the worn style's anchors.
+  - The hide rule: no matching anchor, or a hat or a hood is worn.
+- **Remodels.** The beanie and the backpack are remodeled by hand (`accessories/acc_v8.py`). Every hat's hair tuck now uses the rounded locks.
+- **Checks.** `fit_check` passes with 0 fails, including a new seating check for hair accessories on every style. Numbers are in `specs/evidence/avatar-v8/fit-v8.txt`.
+
+**Not sold yet.** Hair accessories are kept out of the shop seed until deliverable 5. No migration was written.
+
+Sheets are in `specs/evidence/avatar-v8/`:
+- Open first: `06-closeups`, `01-before-after-creator`, `04-hair-accessories`, `05-remodeled`.
+- Then: `02-before-after-game`, `03-new-types`, `acnh-hair-study`.
+
+Questions are in `specs/avatar-v8-questions.md`. The review files are `art/characters/v8/accessories_v8.blend` and `art/characters/v7/hair_{bangs,backs}.blend` (the WIP curves).
