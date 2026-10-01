@@ -19,3 +19,15 @@ Delivered for review:
 - Three lock styles: `hair_short.blend`, `hair_bob.blend` and `hair_long.blend`, under their existing ids.
 
 The pipeline and numbers are in `art/characters/v7/README.md`. The sheets are in `specs/evidence/avatar-v7/`: open `01-styles`, `02-vs-hair-3d-set`, `05-blink-talk` and `03-vs-ref18` first. The bench is at `/lab/avatar`. Questions are in `specs/avatar-v7-questions.md`. The rest of the library (13 bangs, 9 backs) waits for David's verdict.
+
+## Full library status (build agent, 2026-09-30)
+David approved milestone 1 with three tweaks: hair "Fuller, like the sheet", sheen "Stronger glossy band", mouths "Bigger talk shapes". All three are in:
+- fuller hair with deep grooves between locks;
+- near-white lock streaks that move with the sun;
+- four bigger talk mouths, with the resting mouth kept small.
+
+The whole library (16 bangs, 12 backs) is now sculpted locks under its existing ids, in `art/characters/v7/hair_bangs.blend` and `hair_backs.blend`. `build_hair.py` is retired. Hats carry lock tucks and sit on the fuller hair; the bands rest on the lock ridges.
+
+fit_check: PASS, 0 fails, 0 flags. The worst seam over the 192 pairs is 13.2 mm, inside the 14 mm lock-groove limit. The heaviest full look (hair or hat, outfit, glasses) is 3,995 tris.
+
+Sheets are in `specs/evidence/avatar-v7/`: open `09-before-after`, `10-library-bangs`, `11-library-backs`, `12-hats` and `04-expressions` first. Numbers are in `fit-v7.txt`, the pipeline in `art/characters/v7/README.md`, and questions in `specs/avatar-v7-questions.md`.
