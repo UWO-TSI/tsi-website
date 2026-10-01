@@ -665,15 +665,44 @@ def fall(p):
     return fall_pose(p)
 
 
-JUMP = [(0, N, "lin"),
-        (0.22, balance(legs(body(lean=8, nod=-6), 6, 4, foot=35), up=0.35, fwd=-0.55, bend=0.1), "out"),  # push off, arms swing up
-        (0.6, balance(legs(body(lean=6, nod=-2), 70, 95), up=0.7, fwd=-0.2), "out"),  # tuck
-        (1.0, fall_pose(0), "io")]
+# The jump (specs/movement-feel.md): a quick crouch-and-spring one-shot at take-off, then the Air clip, which the engine
+# scrubs by vertical speed (rise, apex tuck, fall, reaching for the ground) so the arc never pops whatever its length.
+def takeoff_pose():
+    P = body(lean=4, nod=-8)
+    legs(P, 6, 6, foot=42)                                                      # legs long, toes pointed
+    return balance(P, up=0.42, fwd=-0.62, bend=0.1)                             # arms swung up in front
 
 
-@clip("Jump", 0.3, False, endsOn="Fall")
+def air_keys():
+    rise = balance(legs(body(lean=4, nod=-6), (42, 14), (62, 24), foot=30), up=0.62, fwd=-0.38)
+    apex = balance(legs(body(lean=8, nod=-2), 66, 96), up=0.74, fwd=-0.16)     # the tuck
+    drop = balance(legs(body(lean=2, nod=-4), (30, 40), (48, 44), foot=22), up=0.7, fwd=-0.06)
+    reach = balance(legs(body(lean=6, nod=5), (16, 22), (20, 28), foot=8), up=0.56, fwd=-0.22)  # feet down for the ground
+    return [(0, takeoff_pose(), "lin"), (0.25, rise, "io"), (0.5, apex, "io"), (0.75, drop, "io"), (1.0, reach, "io")]
+
+
+AIR = air_keys()
+
+
+@clip("Air", 1.0, False, scrub=True, endsNeutral=False)
+def air(p):
+    return keys(p, AIR)
+
+
+def jump_keys():
+    crouch = body(crouch=0.05, lean=14, nod=6)
+    for s, sx in SIDES:
+        arm(crouch, s, V(sx * 0.35, 0.6, -0.72), V(sx * 0.25, 0.7, -0.66))    # arms back, ready to swing
+    return [(0, N, "lin"), (0.35, plant(crouch), "out"), (1.0, takeoff_pose(), "out")]
+
+
+JUMP = jump_keys()
+
+
+@clip("Jump", 0.14, False, endsOn="Air")
 def jump(p):
-    return keys(p, JUMP)
+    P = keys(p, JUMP)
+    return plant(P) if p < 0.35 else P
 
 
 def land_keys():
@@ -691,6 +720,28 @@ LAND = land_keys()
 @clip("Land", 0.28, False)
 def land(p):
     return plant(keys(p, LAND))
+
+
+def land_heavy_keys():
+    """A big drop: down into a deep crouch, one hand to the ground, the other arm out behind; a breath; up."""
+    low = body(crouch=0.11, lean=26, nod=7, side=-4)
+    hand(low, "Right", V(-0.075, -0.17, 0.05), V(-0.6, 0.2, -1))
+    arm(low, "Left", V(0.7, 0.45, -0.25), V(0.55, 0.6, -0.1))
+    hold = body(crouch=0.1, lean=22, nod=5, side=-3)
+    hand(hold, "Right", V(-0.075, -0.165, 0.06), V(-0.6, 0.2, -1))
+    arm(hold, "Left", V(0.72, 0.4, -0.3), V(0.58, 0.55, -0.15))
+    up = body(crouch=0.02, lean=6, nod=2)
+    for s, sx in SIDES:
+        arm(up, s, V(sx * 0.6, 0.0, -0.8))
+    return [(0, plant(low), "lin"), (0.45, plant(hold), "io"), (0.78, plant(up), "out"), (1.0, N, "io")]
+
+
+LAND_HEAVY = land_heavy_keys()
+
+
+@clip("LandHeavy", 0.55, False)
+def land_heavy(p):
+    return plant(keys(p, LAND_HEAVY))
 
 
 @clip("Roll", 0.36, False, ground="frame", ground_w=lambda p: ss(0.05, 0.12, p) * (1 - ss(0.82, 0.92, p)))
@@ -730,12 +781,27 @@ def dash_pose():
     return P
 
 
+def dash_keys():
+    """A beat of gathering (a dip, arms in front), the lunge (lean in, arms swept back), then a settle: upright, a touch
+    back past it with the arms coming forward, and home."""
+    gather = body(lean=-5, nod=5, crouch=0.03)
+    legs(gather, 22, 34, foot=18)
+    for s, sx in SIDES:
+        arm(gather, s, V(sx * 0.35, -0.62, -0.7), V(sx * 0.2, -0.85, -0.4))
+    settle = body(lean=-7, nod=7, crouch=0.022)
+    legs(settle, (18, 4), (26, 10), foot=12)
+    for s, sx in SIDES:
+        arm(settle, s, V(sx * 0.55, -0.42, -0.72), V(sx * 0.35, -0.6, -0.6))
+    return [(0, N, "lin"), (0.1, gather, "out"), (0.3, DASH, "out"), (0.6, DASH, "lin"), (0.8, settle, "io"), (1.0, N, "io")]
+
+
 DASH = dash_pose()
+DASH_KEYS = dash_keys()
 
 
-@clip("Dash", 0.24, False, ground="frame")
+@clip("Dash", 0.36, False, ground="frame")
 def dash(p):
-    return keys(p, [(0, N, "lin"), (0.18, DASH, "out"), (0.7, DASH, "lin"), (1.0, N, "io")])
+    return keys(p, DASH_KEYS)
 
 
 @clip("Skid", 0.4, True, ground="frame")
@@ -859,14 +925,38 @@ def check(name, frames):
     return worst, lowest
 
 
+def contacts(action, frames):
+    """Foot contacts of a locomotion loop as phases [left, right]: where each foot comes down to the ground (its lowest
+    tenth of travel, interpolated between frames). The engine kicks the footstep there (specs/movement-feel.md)."""
+    rig.animation_data.action = action
+    zs = {s: [] for s, _ in SIDES}
+    for f in range(frames):
+        sc.frame_set(f)
+        bpy.context.view_layer.update()
+        for s, _ in SIDES:
+            zs[s].append((rig.matrix_world @ rig.pose.bones[f"{P_}{s}Foot"].head).z)
+    out = []
+    for s, _ in SIDES:
+        z = zs[s]
+        lo, hi = min(z), max(z)
+        line = lo + 0.1 * (hi - lo)
+        for f in range(frames):
+            a, b = z[f - 1], z[f]
+            if a > line >= b:
+                out.append(round(((f - 1) % frames + (a - line) / (a - b)) / frames, 4))
+                break
+    return out
+
+
 catalog = [{"name": "Idle", "length": 2.0, "loop": True, "frames": 60, "source": "v6"},
-           {"name": "Walk", "length": 1.0, "loop": True, "frames": 30, "source": "v6"}]
+           {"name": "Walk", "length": 1.0, "loop": True, "frames": 30, "source": "v6", "contacts": contacts(bpy.data.actions["Walk"], 30)}]
 for c in CLIPS:
     act = bake(c)
     worst, lowest = check(c["name"], c["frames"])
     meta = {k: v for k, v in c["meta"].items() if k != "ground_w"}
     catalog.append({"name": c["name"], "length": round(c["frames"] / FPS, 3), "loop": c["loop"], "frames": c["frames"],
-                    **({} if c["loop"] else {"endsNeutral": meta.pop("endsNeutral", "endsOn" not in meta)}), **meta})
+                    **({} if c["loop"] else {"endsNeutral": meta.pop("endsNeutral", "endsOn" not in meta)}), **meta,
+                    **({"contacts": contacts(act, c["frames"])} if c["name"] == "Run" else {})})
     print(f"CLIP {c['name']:12s} {c['frames'] / FPS:4.2f}s loop={c['loop']!s:5s} head_intrusion={worst:5.3f} min_z={lowest:+.3f}")
 
 rig.animation_data.action = bpy.data.actions["Idle"]

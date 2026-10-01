@@ -18,6 +18,7 @@ import { ENEMIES, WEAPONS } from "@/lib/game/combat/data";
 import { glow, marker, partPose, type MarkerFamily, type PartPose } from "@/lib/game/combat/telegraph";
 import type { Enemy } from "@/lib/game/combat/sim";
 import { CAPS } from "@/lib/combat/kits";
+import { packMap, spriteQuad } from "../movement/moveFx";
 
 type Ground = (x: number, z: number) => number;
 const tmpM = new THREE.Matrix4(), tmpQ = new THREE.Quaternion(), tmpS = new THREE.Vector3(), tmpP = new THREE.Vector3(), tmpC = new THREE.Color(), UP = new THREE.Vector3(0, 1, 0);
@@ -426,13 +427,23 @@ export function Blasts({ ground, max = 12 }: { ground: Ground; max?: number }) {
   </mesh>)}</>;
 }
 
-/** Mouse aim: a ring on the ground plus a thin guide line for ranged weapons. */
+/** Mouse aim: our painted target marker on the ground (the particle pack's), breathing and turning slowly, plus a thin guide line for ranged weapons. */
 export function AimReticle({ player, ground }: { player: React.RefObject<THREE.Vector3>; ground: Ground }) {
   const ring = useRef<THREE.Mesh>(null), line = useRef<THREE.Mesh>(null);
-  useFrame(() => {
+  const marker = useMemo(() => ({
+    geometry: spriteQuad("marker", 0, 1).rotateX(-Math.PI / 2),
+    material: new THREE.MeshBasicMaterial({ map: packMap(), color: "#fff4c8", transparent: true, opacity: 0.92, depthWrite: false, toneMapped: false }),
+  }), []);
+  useEffect(() => () => { marker.geometry.dispose(); marker.material.dispose(); }, [marker]);
+  useFrame(({ clock }) => {
     const p = combat.rt.player, a = p.aim, pl = player.current;
     const kind = WEAPONS[p.weapon].kind, ranged = kind === "bow" || kind === "staff";
-    if (ring.current) { ring.current.position.set(a.x, ground(a.x, a.z) + 0.06, a.z); ring.current.visible = p.alive && !combat.rt.casting; }
+    if (ring.current) {
+      ring.current.position.set(a.x, ground(a.x, a.z) + 0.06, a.z);
+      ring.current.visible = p.alive && !combat.rt.casting;
+      ring.current.rotation.y = clock.elapsedTime * 0.6;
+      ring.current.scale.setScalar(1 + 0.04 * Math.sin(clock.elapsedTime * 4));
+    }
     if (line.current) {
       // Toward the aim (your facing turns with your movement between shots).
       const len = Math.min(Math.hypot(a.x - pl.x, a.z - pl.z), WEAPONS[p.weapon].range), yaw = Math.atan2(a.x - pl.x, a.z - pl.z);
@@ -443,7 +454,7 @@ export function AimReticle({ player, ground }: { player: React.RefObject<THREE.V
     }
   });
   return <>
-    <mesh ref={ring} rotation={[-Math.PI / 2, 0, 0]} renderOrder={5}><ringGeometry args={[0.28, 0.36, 32]} /><meshBasicMaterial color="#fff4c8" transparent opacity={0.85} depthWrite={false} toneMapped={false} /></mesh>
+    <mesh ref={ring} geometry={marker.geometry} material={marker.material} renderOrder={5} />
     <mesh ref={line} renderOrder={5}><planeGeometry args={[1, 1]} /><meshBasicMaterial color="#fff4c8" transparent opacity={0.35} depthWrite={false} toneMapped={false} /></mesh>
   </>;
 }

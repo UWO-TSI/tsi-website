@@ -1,7 +1,6 @@
 import {
   createCenteredMap, setCell, Surface, heightField, sampleGroundHeight,
-  worldToCellX, worldToCellZ, isGroundAtWorld, surfaceAt,
-} from "./grid";
+  isGroundAtWorld, surfaceAt, drawnSurfaceAt } from "./grid";
 import { standWorld } from "./movement/sim";
 import { TREE_TRUNK, inFootprint, propFootprint } from "./defaultIsland";
 
@@ -38,7 +37,7 @@ export function createApplicantVillage() {
   }
   const field = heightField(map);
   const ground = (x: number, z: number) => sampleGroundHeight(map, field, x, z);
-  const surface = (x: number, z: number) => surfaceAt(map, worldToCellX(map, x), worldToCellZ(map, z));
+  const surface = (x: number, z: number) => drawnSurfaceAt(map, x, z);
   const standable = (x: number, z: number) => {
     if (!isGroundAtWorld(map, x, z)) return false;
     if (x > -3.5 && x < 3.5 && z > 6.7 && z < 12) return false;

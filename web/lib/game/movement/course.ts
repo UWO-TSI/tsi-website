@@ -6,7 +6,7 @@
  * ramps, integer cells). The camera looks +z and +x is screen left, so the
  * sections that need to see ahead run up the screen or across it:
  *
- *   right lane, up      sprint lane (dirt track) and room to bunny-hop
+ *   right lane, up      sprint lane (dirt track, a sand strip beside it) and room to bunny-hop
  *   top stretch, left   rivers 2, 3 and 4 tiles wide, seen side on; 1-wide
  *                       causeways (the narrow bridge) across the 3 and 4
  *   left lane, down     obstacles: a building, fences with a gap, rocks,
@@ -76,6 +76,7 @@ export function courseMap(): IslandMap {
       if (inside(x, z, [-1, 13, -24, -18])) level = CLIFF_LEVELS; // first plateau
       if (inside(x, z, [0, 6, -23, -19])) level = 2 * CLIFF_LEVELS; // second level, inset a tile
       if (x === -17 && z >= -17 && z <= 17) surface = Surface.Soil; // the sprint track
+      if ((x === -19 || x === -18) && z >= -10 && z <= 10) surface = Surface.Sand; // a sand strip beside it (footsteps on sand)
       if (z === -16 && x >= -20 && x <= -14) surface = Surface.Brick; // start line
       if (inside(x, z, GLIDE_TOWER)) level = CLIFF_LEVELS; // the glide tower
       if (x === -21) surface = Surface.Soil;

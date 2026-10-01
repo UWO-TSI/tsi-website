@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { combatClip, locomotion, resolveClip, seatLift, tempo, type CombatView } from "./clips";
+import { airPhase, combatClip, contactCrossed, locomotion, resolveClip, seatLift, tempo, type CombatView } from "./clips";
 import { CLIP_BY_NAME } from "./look";
 
 describe("character state machine", () => {
@@ -36,5 +36,40 @@ describe("character state machine", () => {
   });
   it("Stretch is its own seated 2 s loop in the clip catalogue", () => {
     expect(CLIP_BY_NAME.get("Stretch")).toMatchObject({ length: 2, loop: true, seatHeight: CLIP_BY_NAME.get("Sit")!.seatHeight });
+  });
+});
+
+describe("movement feel: foot contacts and the air pose", () => {
+  it("Walk and Run carry measured foot contacts, half a cycle apart; Air is posed by phase", () => {
+    for (const name of ["Walk", "Run"]) {
+      const c = CLIP_BY_NAME.get(name)!.contacts!;
+      expect(c).toHaveLength(2);
+      expect(Math.abs(((c[1] - c[0] + 1) % 1) - 0.5)).toBeLessThan(0.08);
+    }
+    expect(CLIP_BY_NAME.get("Air")).toMatchObject({ scrub: true, loop: false });
+    expect(CLIP_BY_NAME.get("Jump")?.endsOn).toBe("Air");
+    expect(CLIP_BY_NAME.get("LandHeavy")!.length).toBeGreaterThan(CLIP_BY_NAME.get("Land")!.length);
+  });
+  it("reports the contact the playhead passed this frame, across the loop's end too", () => {
+    const c = [0.22, 0.72];
+    expect(contactCrossed(c, 0.1, 0.2)).toBe(-1);
+    expect(contactCrossed(c, 0.2, 0.25)).toBe(0);
+    expect(contactCrossed(c, 0.7, 0.75)).toBe(1);
+    expect(contactCrossed(c, 0.95, 0.23)).toBe(0); // wrapped
+    expect(contactCrossed(c, 0.6, 0.3)).toBe(0); // a long hitch over both: the later one
+    expect(contactCrossed(undefined, 0.1, 0.9)).toBe(-1);
+    // A whole cycle at a steady pace passes each contact once.
+    let steps = 0;
+    for (let t = 0; t < 1; t += 1 / 37) steps += contactCrossed(c, t % 1, (t + 1 / 37) % 1) >= 0 ? 1 : 0;
+    expect(steps).toBe(2);
+  });
+  it("the air pose follows vertical speed: take-off, apex tuck, reaching for the ground; a walk off an edge starts falling", () => {
+    expect(airPhase(8.6, 8.6, true)).toBe(0);
+    expect(airPhase(0, 8.6, true)).toBe(0.5);
+    expect(airPhase(-8.6, 8.6, true)).toBe(1);
+    expect(airPhase(-20, 8.6, true)).toBe(1);
+    const rising = [8, 6, 4, 2, 0, -2, -4, -8].map(v => airPhase(v, 8.6, true));
+    expect(rising).toEqual([...rising].sort((a, b) => a - b)); // never pops backwards through the arc
+    expect(airPhase(0, 8.6, false)).toBe(0.75);
   });
 });

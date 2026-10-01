@@ -1662,6 +1662,17 @@ export function overlayAt(map: IslandMap, surface: number, x: number, z: number)
 }
 
 /**
+ * The surface drawn at a world point (specs/movement-feel.md): the topmost overlay covering more than half of it (the
+ * organic sand and soil shapes, the built paths), else grass, or River past the coast. What the feet land on, not the
+ * painted cell, which a soft overlay edge can disagree with by half a cell.
+ */
+export function drawnSurfaceAt(map: IslandMap, x: number, z: number): number {
+  if (!isGroundAtWorld(map, x, z)) return Surface.River;
+  for (let i = OVERLAY_SURFACES.length - 1; i >= 0; i--) if (overlayAt(map, OVERLAY_SURFACES[i], x, z) > 0.5) return OVERLAY_SURFACES[i];
+  return Surface.Grass;
+}
+
+/**
  * Distance from the organic coast in cells, positive inland: the coast field
  * over its own slope. Good to about a cell and a half, which is all the beach,
  * the wet band and the near seabed ask of it; the shore field covers the rest.

@@ -1111,13 +1111,21 @@
    "length": 1.0,
    "loop": true,
    "frames": 30,
-   "source": "v6"
+   "source": "v6",
+   "contacts": [
+    0.2201,
+    0.7201
+   ]
   },
   {
    "name": "Run",
    "length": 0.6,
    "loop": true,
-   "frames": 18
+   "frames": 18,
+   "contacts": [
+    0.4388,
+    0.9388
+   ]
   },
   {
    "name": "Sit",
@@ -1275,18 +1283,33 @@
    "frames": 18
   },
   {
-   "name": "Jump",
-   "length": 0.3,
+   "name": "Air",
+   "length": 1.0,
    "loop": false,
-   "frames": 9,
+   "frames": 30,
    "endsNeutral": false,
-   "endsOn": "Fall"
+   "scrub": true
+  },
+  {
+   "name": "Jump",
+   "length": 0.133,
+   "loop": false,
+   "frames": 4,
+   "endsNeutral": false,
+   "endsOn": "Air"
   },
   {
    "name": "Land",
    "length": 0.267,
    "loop": false,
    "frames": 8,
+   "endsNeutral": true
+  },
+  {
+   "name": "LandHeavy",
+   "length": 0.533,
+   "loop": false,
+   "frames": 16,
    "endsNeutral": true
   },
   {
@@ -1305,9 +1328,9 @@
   },
   {
    "name": "Dash",
-   "length": 0.233,
+   "length": 0.367,
    "loop": false,
-   "frames": 7,
+   "frames": 11,
    "endsNeutral": true
   },
   {

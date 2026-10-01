@@ -16,7 +16,7 @@ import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js
 import { BASE_URL, FACE_ATLAS_URLS, PALETTE, TSI_DECAL_URL, CLIP_BY_NAME, bodyKey, resolveParts, type CharacterLook, type ResolvedPart } from "@/lib/game/character/look";
 import { FaceAnimator, faceSlots, poseKey } from "@/lib/game/character/face";
 import { createFaceMaterial, MATTE, prepareFaceAtlas, type FaceMaterial } from "@/lib/game/character/faceMaterial";
-import { SNAPPY_CLIPS, WEAPON_HAND, isLoop, resolveClip, tempo, type CharacterMotion, type ClipName } from "@/lib/game/character/clips";
+import { SNAPPY_CLIPS, WEAPON_HAND, contactCrossed, isLoop, resolveClip, tempo, type CharacterMotion, type ClipName } from "@/lib/game/character/clips";
 import { adoptPrimitive, materialName, mergeLook, refCache, skinnedPrimitives } from "@/lib/game/character/rig";
 import type { WeaponGrip, WeaponKind } from "@/lib/game/combat/contract";
 import { tagLookClasses } from "@/lib/game/modelMaterials";
@@ -37,6 +37,52 @@ let decalMaterial: THREE.MeshPhysicalMaterial | null = null;
 const bodies = refCache<THREE.BufferGeometry>();
 const decals = new Map<string, THREE.BufferGeometry>();
 
+/** A dash's afterimage (specs/movement-feel.md): how long it lasts and how strong it starts. Faint, short, matte. */
+const GHOST = { life: 0.2, opacity: 0.17, rise: 0.04 };
+/**
+ * A frozen copy of the pose: the body and face drawn again with the bone matrices of one frame. The skeleton never
+ * updates (its matrices are copied in); attached binding cancels the mesh's own transform, so it stays where it was.
+ */
+class Ghost {
+  readonly skeleton: THREE.Skeleton;
+  readonly meshes: THREE.SkinnedMesh[];
+  // Pushed back a hair in depth, so where it still overlaps the character (the first frame) the character wins.
+  readonly material = new THREE.MeshLambertMaterial({ color: "#dfe8f1", emissive: "#8ea3b8", emissiveIntensity: 0.18, transparent: true, opacity: 0, depthWrite: true, polygonOffset: true, polygonOffsetFactor: 2, polygonOffsetUnits: 2 });
+  age = GHOST.life;
+  /** Frames left to draw it unseen (opacity 0, no depth) so its shader compiles before the first dash. */
+  private warm = 1;
+  constructor(live: THREE.Skeleton, bindMatrix: THREE.Matrix4, parent: THREE.Object3D, geometries: THREE.BufferGeometry[]) {
+    this.skeleton = new THREE.Skeleton(live.bones, live.boneInverses);
+    this.skeleton.update = () => {};
+    this.meshes = geometries.map(geometry => {
+      const m = new THREE.SkinnedMesh(geometry, this.material);
+      m.bind(this.skeleton, bindMatrix);
+      m.frustumCulled = false;
+      m.visible = false;
+      m.renderOrder = 4;
+      parent.add(m);
+      return m;
+    });
+  }
+  snap(live: THREE.Skeleton, geometries: THREE.BufferGeometry[]) {
+    if (!live.boneMatrices || !this.skeleton.boneMatrices) return;
+    this.skeleton.boneMatrices.set(live.boneMatrices.subarray(0, live.bones.length * 16));
+    if (this.skeleton.boneTexture) this.skeleton.boneTexture.needsUpdate = true;
+    geometries.forEach((g, i) => { this.meshes[i].geometry = g; });
+    this.age = 0;
+  }
+  update(delta: number) {
+    this.age += delta;
+    // Eases in while you leave it (so it never films over you), then fades.
+    const k = Math.max(0, 1 - this.age / GHOST.life), inn = Math.min(1, this.age / GHOST.rise);
+    this.material.opacity = GHOST.opacity * inn * k * k;
+    this.material.depthWrite = !this.warm;
+    for (const m of this.meshes) m.visible = k > 0 || this.warm > 0;
+    if (this.warm > 0) this.warm--;
+  }
+  dispose() { this.material.dispose(); this.skeleton.boneTexture?.dispose(); for (const m of this.meshes) m.removeFromParent(); }
+}
+
 /** One character instance: its own bones and mixer, shared geometry/materials. */
 class Puppet {
   readonly root: THREE.Object3D;
@@ -56,6 +102,10 @@ class Puppet {
   private action: THREE.AnimationAction | null = null;
   private clip: ClipName | null = null;
   private oneShot: ClipName | null = null;
+  private readonly skeleton: THREE.Skeleton;
+  private readonly ghostParent: THREE.Object3D;
+  private readonly ghosts: Ghost[] = [];
+  private ghostNext = 0;
 
   constructor(private readonly base: Gltf) {
     this.root = cloneSkinned(base.scene);
@@ -84,6 +134,9 @@ class Puppet {
     delete this.decal.userData.sunCaster;
     this.body.visible = this.face.visible = this.decal.visible = false; // until dress()
     this.sockets = { R: this.root.getObjectByName("Socket_R_Hand")!, L: this.root.getObjectByName("Socket_L_Hand")!, Back: this.root.getObjectByName("Socket_Back")! };
+    this.skeleton = skeleton;
+    // Two afterimages, made when first asked for (only the player dashes).
+    this.ghostParent = parent;
     this.mixer = new THREE.AnimationMixer(this.root);
     this.clips = new Map(base.animations.map(c => [c.name, c]));
   }
@@ -143,8 +196,23 @@ class Puppet {
     this.clip = name;
   }
 
+  /** Leave an afterimage of the last drawn pose (the oldest of two is reused). */
+  private ghost() {
+    this.prepareGhosts();
+    const g = this.ghosts[this.ghostNext];
+    this.ghostNext = (this.ghostNext + 1) % 2;
+    g.snap(this.skeleton, [this.body.geometry, this.face.geometry]);
+  }
+
+  private prepareGhosts() {
+    while (this.ghosts.length < 2) this.ghosts.push(new Ghost(this.skeleton, this.body.bindMatrix, this.ghostParent, [this.body.geometry, this.face.geometry]));
+  }
+
   update(delta: number, motion: CharacterMotion, walkSpeed: number) {
     let restart = false;
+    if (motion.afterimages && this.body.visible) this.prepareGhosts();
+    if (motion.ghost) { motion.ghost = false; if (this.body.visible) this.ghost(); }
+    for (const g of this.ghosts) g.update(delta);
     // A looping clip asked for as a one-shot (Dance) holds as a pose; moving ends any pose.
     if (motion.stop) { this.oneShot = null; motion.stop = false; }
     if (motion.play && isLoop(motion.play)) { motion.pose = motion.play; motion.play = null; }
@@ -152,14 +220,26 @@ class Puppet {
     if (motion.speed >= 0.08) motion.pose = null;
     if (this.oneShot && this.clip === this.oneShot && !restart && this.action && this.action.time >= this.action.getClip().duration - 1e-3) this.oneShot = null;
     const want = resolveClip({ speed: motion.speed, walkSpeed, pose: motion.pose ?? null, oneShot: this.oneShot, move: motion.move });
-    if (want !== this.clip || restart) this.play(want);
-    this.action!.setEffectiveTimeScale(tempo(want, motion.speed, walkSpeed));
+    const changed = want !== this.clip || restart;
+    if (changed) this.play(want);
+    const action = this.action!, length = action.getClip().duration;
+    if (CLIP_BY_NAME.get(want)?.scrub) {
+      // Posed by its phase (Air by vertical speed), not by the clock.
+      action.setEffectiveTimeScale(0);
+      action.time = Math.min(1, Math.max(0, motion.air ?? 0)) * length * 0.999;
+    } else action.setEffectiveTimeScale(tempo(want, motion.speed, walkSpeed));
     this.animateFace(delta, want, motion);
+    // Walk and Run count each foot's contact as the playhead passes it (footsteps come from the feet, not a timer).
+    const contacts = changed ? undefined : CLIP_BY_NAME.get(want)?.contacts, before = action.time / length;
     this.mixer.update(delta);
+    const foot = contactCrossed(contacts, before, action.time / length);
+    if (foot >= 0) { motion.steps = (motion.steps ?? 0) + 1; motion.foot = foot; }
   }
 
   /** Also a reset: Strict Mode re-runs effects after this, so the next dress()/update() starts clean. */
   dispose() {
+    for (const g of this.ghosts) g.dispose();
+    this.ghosts.length = 0;
     this.mixer.stopAllAction();
     this.mixer.uncacheRoot(this.root);
     this.action = null; this.clip = null; this.oneShot = null;
