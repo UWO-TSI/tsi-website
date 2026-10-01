@@ -10,6 +10,7 @@ import type { MissionEvent } from "@/lib/combat/missions";
 import type { BossReward } from "@/lib/combat/content";
 import type { getProgression } from "@/lib/combat/service";
 import { installCombatDemo } from "./demo";
+import { announceWrite } from "@/lib/apiClient";
 
 /** GET /api/combat/progression's `progression`: level, stats and points, derived numbers, family/subclass and choices, kit and loadout, traits, fees, weapons. */
 export type ProgressionView = Extract<Awaited<ReturnType<typeof getProgression>>, { ok: true }>["data"];
@@ -21,6 +22,7 @@ async function call<T>(path: string, key: string, body?: unknown): Promise<{ ok:
     const res = await fetch(path, body === undefined ? undefined : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
     const json = await res.json().catch(() => null);
     if (!res.ok || !json?.ok) return { ok: false, status: res.status, error: json?.error ?? (res.status === 401 ? "Sign in first." : "The ruins are quiet right now.") };
+    if (body !== undefined) announceWrite(path, json[key]);
     return { ok: true, data: json[key] as T, raw: json };
   } catch { return { ok: false, status: 0, error: "The ruins couldn't be reached." }; }
 }

@@ -78,6 +78,8 @@ import { ShowcaseSheet, TrophySheet } from "./peaceful/ShowcaseSheets";
 import type { MuseumWing } from "@/lib/collections/logic";
 import FishingOverlay from "./FishingOverlay";
 import ToastHub, { toast } from "./ToastHub";
+import TopCluster, { hudButton } from "./TopCluster";
+import { setHudCoins, setHudXp } from "@/lib/game/hudStore";
 import CollectionBook from "./CollectionBook";
 import { usePeacefulContext } from "@/lib/game/usePeacefulContext";
 import { villageNodes } from "@/lib/game/islandNodes";
@@ -500,6 +502,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
     setGate({ open: g.gateOpen, reason: g.gateOpen ? null : /^Sealed/.test(g.reason ?? "") ? g.reason : `Sealed. ${g.reason ?? ""}`.trim() });
     setPathView(g.view);
     setLevel(g.level);
+    if (g.view) setHudXp(g.view.xp);
     // Progression feeds the encounter: stats, max HP, the subclass kit and loadout, weapon durability.
     const p = combat.rt.player;
     p.armed = g.gateOpen;
@@ -575,7 +578,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
     if (action === "ruins" && !gate.open) { if (gate.reason) toast(gate.reason, "🔒"); return; }
     if (action === "buy") {
       void homeActions.buyRoom(homeActions.roomPrice() ?? ROOM_PRICE.coins).then(result => {
-        if (result.ok) toast(`A new room is ready. ${result.coins} coins left.`, "🏠");
+        if (result.ok) { setHudCoins(result.coins); toast(`A new room is ready. ${result.coins} coins left.`, "🏠"); }
         else toast(/unauthori[sz]ed/i.test(result.error) ? "Sign in to add a room." : result.error);
       });
       return;
@@ -686,11 +689,11 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
         <h1>{site === "ruins" ? "The ruins" : inside === "oracle" ? "Oracle temple" : inside === "museum" ? "Museum" : inside === "cafe" ? "Café" : inside === "hq" ? "Clubhouse" : inside === "house" ? "Your house" : atHome ? "Your island" : "Tethos Island"}</h1>
         <p>{inside === "cafe" ? "Warm drinks and quiet tables. Find a seat to study." : !inside && !atHome && site === "village" && islandEvent ? `${islandEvent.goal.title} is on.` : "A little space to make our own."}</p>
       </header>
-      {/* Top-right HUD row (hud-first-login §1): sound, then the view options; panels open below it. */}
-      <div className={styles.hudRight}>
-        <AudioController phase={ambientPhase} weather={weather} season={season.season} className={styles.hudButton} />
+      {/* Top right (hud-first-login §1, §2): coins, level, clock and mail, then sound and the view options; panels open below it. */}
+      <TopCluster weather={weather} phase={phase} unread={progression.unreadLetters} mailKey={keyName(identity.settings.key_bindings.openMail)} onMail={() => setSheet("letters")}>
+        <AudioController phase={ambientPhase} weather={weather} season={season.season} className={hudButton} />
         <button ref={optionsToggleRef} className={styles.panelToggle} aria-expanded={optionsOpen} aria-controls="island-options" onClick={() => setOptionsOpen((open) => !open)}>View options</button>
-      </div>
+      </TopCluster>
       <section id="island-options" className={styles.panel} data-open={optionsOpen} aria-label="Island view and graphics" onKeyDown={(event) => {
         if (optionsOpen && event.key === "Escape" && optionsToggleRef.current?.getClientRects().length) {
           event.preventDefault();

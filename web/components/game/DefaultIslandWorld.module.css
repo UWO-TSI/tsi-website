@@ -26,17 +26,10 @@
 
 .touchControls { display: none; }
 .performance .toggle { margin-top: 10px; font-size: 10px; font-weight: 400; }
-/* Top-right HUD row: round cream buttons in the UI kit (row 124); panels drop below it. */
-.hudRight { position: absolute; top: 20px; right: 20px; display: flex; align-items: center; gap: 8px; z-index: 14; }
-.hudButton, .panelToggle { min-width: 44px; height: 44px; display: grid; place-items: center; padding: 0 14px; border: 1px solid #5c746c40; border-radius: 999px; background: #f8f7e9f2; color: #293e3b; font: inherit; font-size: 12px; font-weight: 600; box-shadow: 0 3px 0 #47625218, 0 6px 18px #29464118; cursor: pointer; }
-.hudButton { padding: 0; }
-.hudButton:hover, .panelToggle:hover { background: #fffdf3; }
-.hudButton:focus-visible, .panelToggle:focus-visible { outline: 3px solid #bb813f; outline-offset: 3px; }
-.hudButton[data-sound="off"] { color: #8a5a12; animation: soundAsk 2.4s ease-in-out infinite; }
-@keyframes soundAsk { 50% { box-shadow: 0 3px 0 #47625218, 0 0 0 7px #ffd16633; } }
+.panelToggle { height: 44px; padding: 0 14px; border: 1px solid #5c746c40; border-radius: 999px; background: #f8f7e9f2; color: #293e3b; font: inherit; font-size: 12px; font-weight: 600; box-shadow: 0 3px 0 #47625218, 0 6px 18px #29464118; cursor: pointer; }
+.panelToggle:hover { background: #fffdf3; }
+.panelToggle:focus-visible { outline: 3px solid #bb813f; outline-offset: 3px; }
 .panel[data-open="false"] { display: none; }
-@media (max-width: 700px) { .hudRight { top: 14px; right: 12px; gap: 6px; } }
-@media (prefers-reduced-motion: reduce) { .hudButton[data-sound="off"] { animation: none; } }
 @media (pointer: coarse), (pointer: none) {
   .controls { display: none; }
   .touchControls { display: block; position: absolute; bottom: 18px; left: 50%; transform: translateX(-50%); margin: 0; padding: 10px 14px; border-radius: 6px; background: #f8f7e9e8; white-space: nowrap; font-size: 11px; }
@@ -191,7 +184,7 @@ p.interact[data-closed="true"] { margin: 0; cursor: default; color: #6a4b2f; }
 .sliderRow input[type="range"] { width: 100%; min-height: 28px; accent-color: #426b5b; }
 .sliderRow span { text-align: right; color: #607069; }
 /* Text size (row 220): the HUD scales, the world doesn't. */
-.world .sheet, .world .wardrobe, .world .interact, .world .controls, .world .panel, .world .bagButton, .world .hudRight, .world .heading, .world .reveal, .world .decorateToggle, .world .minimap { zoom: var(--tsi-text-scale, 1); }
+.world .sheet, .world .wardrobe, .world .interact, .world .controls, .world .panel, .world .bagButton, .world .heading, .world .reveal, .world .decorateToggle, .world .minimap { zoom: var(--tsi-text-scale, 1); }
 /* High contrast (row 220) */
 :global(html[data-contrast="high"]) .world .sheet, :global(html[data-contrast="high"]) .world .wardrobe, :global(html[data-contrast="high"]) .world .panel, :global(html[data-contrast="high"]) .world .controls { background: #ffffff; color: #000000; border: 2px solid #000000; }
 :global(html[data-contrast="high"]) .world .interact, :global(html[data-contrast="high"]) .world .bagButton, :global(html[data-contrast="high"]) .world .cue { background: #000000; color: #ffffff; border: 2px solid #ffffff; }
