@@ -34,7 +34,7 @@ const NAV_STEP = 0.5;
 /** How far a resident keeps from anything solid, water or a cliff edge. */
 const BODY = 0.3;
 /** Bushes and flowers are walked round, not through. */
-const PLANT_CLEAR = { bush: 0.6, flower: 0.5 } as const;
+const PLANT_CLEAR = { bush: 0.95, flower: 1.0 } as const;
 
 /** Where the inside point sits past the door, into the building (hidden there). */
 const INSIDE_DEPTH = 0.9;

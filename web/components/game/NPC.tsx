@@ -16,7 +16,7 @@ import { phaseInstant } from "@/lib/game/sunPath";
 import { landmark, type VillageIsland } from "@/lib/game/defaultIsland";
 import { objectsOf, type Village } from "@/lib/game/villageMap";
 import type { IslandPhase } from "@/lib/game/islandTime";
-import { RESIDENT_STRIDE, RESIDENT_WALK, ResidentDay, daySpan, idleAt, navGrid, newPose, phaseOn, planResident, type DaySpan, type ResidentPose } from "@/lib/game/residentRoutine";
+import { RESIDENT_STRIDE, RESIDENT_WALK, ResidentDay, daySpan, idleAt, navGrid, newPose, phaseOn, planResident, type DaySpan, type NavGrid, type ResidentPose } from "@/lib/game/residentRoutine";
 import { hash01 } from "@/lib/game/worldFx";
 import { RESIDENT_LOOKS } from "@/lib/content/residentRoster";
 import type { NPCPersona } from "@/lib/content/types";
@@ -42,8 +42,10 @@ const FACE_RANGE = 3.4;
 const CHAT_RANGE = 2.6;
 /** The greeting bubble's life and the quiet after it. */
 const BUBBLE_S = 4.2, BUBBLE_COOLDOWN_S = 22;
-/** Standing this close in front of a walking resident stops them. */
+/** Standing this close in front of a walking resident stops them, when there's no room to step round. */
 const BLOCK_RANGE = 0.95;
+/** How far off their path a resident steps to pass you. */
+const CLEAR_SIDE = 0.95;
 /** How fast a resident who fell behind (waited for you, talked) catches up: the routine runs this much faster. */
 const CATCH_UP = 0.35;
 /** The bubble stack never sits lower than this above the bottom edge: the prompt lives there. */
@@ -72,7 +74,9 @@ interface Runtime {
   id: string; seed: number; lines: readonly string[]; day: ResidentDay; gather: readonly [number, number];
   home: readonly [number, number] | null;
   pose: ResidentPose; motion: RefObject<CharacterMotion>; group: RefObject<THREE.Group | null>; visual: RefObject<THREE.Group | null>; ui: Ui;
-  ready: boolean; x: number; z: number; speed: number; hidden: boolean; lift: number; lag: number;
+  ready: boolean; x: number; z: number; speed: number;
+  /** Their sidestep off the routine's path round someone in the way (eased in and out). */
+  ox: number; oz: number; hidden: boolean; lift: number; lag: number;
   /** A walk of its own off the routine (to the ceremony, catching up after a jump): points, next index. */
   detour: [number, number][] | null; detourAt: number; detourGoal: [number, number];
   /** The way they'd face before you or a chat turn them. */
@@ -81,6 +85,9 @@ interface Runtime {
   idleKey: number; idleVisit: number; laughBeat: number; chat: Runtime | null; hopT: number; hopNext: number; greetAt: number; hovered: boolean;
   timers: number[];
 }
+
+/** The residents on stage: by id (greetings) and as a list (the frame loop, which must not allocate). */
+interface Registry { map: Map<string, Runtime>; list: Runtime[] }
 
 const dist = (ax: number, az: number, bx: number, bz: number) => Math.hypot(ax - bx, az - bz);
 
@@ -95,6 +102,167 @@ function stepDetour(r: Runtime, speed: number, dt: number): number {
   }
   return moved;
 }
+
+interface Clock { span: DaySpan | null; forced: IslandPhase | null; base: number; since: number }
+/**
+ * The residents' frame, at module scope (the react compiler forbids writing through hook values): where each one is,
+ * the chats, then each one's clip, facing, talk and overhead UI.
+ */
+function tick(list: readonly Runtime[], c: Clock, dt: number, p: THREE.Vector3, phase: IslandPhase, ceremony: boolean, nav: NavGrid, island: VillageIsland, monument: { x: number; z: number } | null) {
+  const now = worldNow() / 1000, days = liveSunDays();
+  if (!c.span || now < c.span.t0 || now >= c.span.t1) c.span = daySpan(now * 1000, days);
+  // A forced phase (?time=, the options menu) runs the routine from that phase's preview time on.
+  let t = now;
+  if (phaseOn(c.span, now) !== phase) {
+    if (c.forced !== phase) { c.forced = phase; c.since = now; c.base = phaseInstant(phase, new Date(now * 1000), days).getTime() / 1000; }
+    t = c.base + (now - c.since);
+  } else c.forced = null;
+
+  // 1. Where everyone is.
+  for (const r of list) {
+    const pose = r.day.at(t - r.lag, days, r.pose), m = r.motion.current;
+    // Where to make for when off the routine: the ceremony spot, or the routine's door or seat step, or where it is.
+    const door = !ceremony && (pose.inside || pose.seat > 0) ? pose.stop?.door : null;
+    const gx = ceremony ? r.gather[0] : door ? door[0] : pose.x, gz = ceremony ? r.gather[1] : door ? door[1] : pose.z;
+    if (!r.ready) { r.ready = true; r.x = pose.x; r.z = pose.z; r.hidden = pose.inside; m.yaw = pose.yaw; }
+    // Coming out of hiding somewhere else (a forced phase while indoors): out through their own door.
+    if (r.hidden && !pose.inside && dist(r.x, r.z, pose.x, pose.z) > 0.6 && r.home) { r.x = r.home[0]; r.z = r.home[1]; }
+    const onRoutine = !ceremony && !r.detour && dist(r.x, r.z, pose.x + r.ox, pose.z + r.oz) < 0.08 + (pose.speed + 1) * dt * 1.5;
+    let speed = 0, yaw = pose.yaw, blocked = false;
+    if (onRoutine) {
+      // Someone in the way of a walking resident: they step round you off the path, or wait if there's no room.
+      let tx = 0, tz = 0;
+      if (pose.moving) {
+        const fx = Math.sin(pose.yaw), fz = Math.cos(pose.yaw), dx = p.x - pose.x, dz = p.z - pose.z;
+        const ahead = dx * fx + dz * fz, side = dx * fz - dz * fx;
+        if (ahead > -0.5 && ahead < 1.8 && Math.abs(side) < CLEAR_SIDE) {
+          // Away from you if there's room, else past your other side.
+          const away = side >= 0 ? -1 : 1, near = CLEAR_SIDE - Math.abs(side), far = CLEAR_SIDE + Math.abs(side);
+          if (nav.fits(pose.x + fz * away * near, pose.z - fx * away * near)) { tx = fz * away * near; tz = -fx * away * near; }
+          else if (nav.fits(pose.x - fz * away * far, pose.z + fx * away * far)) { tx = -fz * away * far; tz = fx * away * far; }
+          else blocked = dist(p.x, p.z, pose.x, pose.z) < BLOCK_RANGE && ahead > 0.1;
+        }
+      }
+      r.ox = THREE.MathUtils.damp(r.ox, tx, 5, dt); r.oz = THREE.MathUtils.damp(r.oz, tz, 5, dt);
+      if (blocked) r.lag += dt;
+      else {
+        const px = r.x, pz = r.z;
+        r.x = pose.x + r.ox; r.z = pose.z + r.oz;
+        const moved = dist(r.x, r.z, px, pz);
+        speed = pose.moving ? Math.max(pose.speed, dt > 0 ? moved / dt : 0) : dt > 0 && moved > 1e-4 ? moved / dt : 0;
+        if (moved > 1e-4) yaw = Math.atan2(r.x - px, r.z - pz);
+      }
+      r.hidden = pose.inside;
+    } else if (dist(r.x, r.z, gx, gz) < 0.03) {
+      // There (the ceremony spot, or a door or seat the routine is behind): step onto the routine.
+      r.detour = null;
+      if (!ceremony) { r.x = pose.x; r.z = pose.z; r.hidden = pose.inside; }
+    } else {
+      // Off the routine: walk (a path round every solid) to where it is now, or to the ceremony.
+      if (!r.detour || (dist(gx, gz, r.detourGoal[0], r.detourGoal[1]) > 1 && now - r.detourAt > 0.5)) {
+        r.detour = nav.path(r.x, r.z, gx, gz)?.slice(1) ?? [[gx, gz]];
+        r.detourAt = now; r.detourGoal[0] = gx; r.detourGoal[1] = gz;
+      }
+      const px = r.x, pz = r.z, moved = stepDetour(r, RESIDENT_WALK * (ceremony ? 1.25 : 1.35), dt);
+      speed = dt > 0 ? moved / dt : 0;
+      if (moved > 1e-5) yaw = Math.atan2(r.x - px, r.z - pz);
+      r.hidden = false;
+      if (!r.detour.length) {
+        r.detour = null;
+        // Arrived where the routine is: step back onto it (at a door or a seat, straight into it).
+        if (!ceremony && dist(r.x, r.z, gx, gz) < 0.05) { r.x = pose.x; r.z = pose.z; r.hidden = pose.inside; }
+      }
+    }
+    if (!blocked && r.lag > 0 && !(r.bubbleUntil > now && !pose.moving)) r.lag = Math.max(0, r.lag - CATCH_UP * dt);
+    if (r.bubbleUntil > now && !pose.moving) r.lag += dt; // still talking: the routine holds
+    r.speed = speed;
+    m.speed = speed;
+    // Face the way they walk; stopped, the seat's way or the place's view (chat and you come next).
+    r.want = speed > 0.05 ? yaw : onRoutine ? pose.yaw : ceremony && monument ? Math.atan2(monument.x - r.x, monument.z - r.z) : m.yaw;
+    r.chat = null;
+  }
+
+  // 2. Chats: two stopped standing residents near each other face each other and talk, taking turns.
+  for (const r of list) {
+    if (r.speed > 0.05 || r.hidden || r.pose.seat > 0 || ceremony || r.detour) continue;
+    let best: Runtime | null = null, bestD = CHAT_RANGE;
+    for (const o of list) {
+      if (o === r || o.speed > 0.05 || o.hidden || o.pose.seat > 0 || o.detour) continue;
+      const d = dist(r.x, r.z, o.x, o.z);
+      if (d < bestD) { bestD = d; best = o; }
+    }
+    r.chat = best;
+  }
+
+  // 3. Each one's clip, facing, talk and overhead UI. One greeting at a time: walking into a group, the first to
+  // notice you speaks and the rest just look up.
+  let speaking = false;
+  for (const r of list) if (r.bubbleUntil > now && !r.hidden) speaking = true;
+  for (const r of list) {
+    const m = r.motion.current, pose = r.pose, g = r.group.current;
+    const d = dist(p.x, p.z, r.x, r.z), stopped = r.speed < 0.05 && !r.detour, sitting = stopped && pose.seat > 0 && dist(r.x, r.z, pose.x, pose.z) < 0.05;
+    let want = r.want;
+    if (stopped && !sitting && !r.hidden) {
+      if (d < FACE_RANGE) want = Math.atan2(p.x - r.x, p.z - r.z);
+      else if (r.chat) want = Math.atan2(r.chat.x - r.x, r.chat.z - r.z);
+    }
+    m.yaw = easeFacing(m.yaw, want, r.speed > 0.05 ? 7 : 4, dt);
+    m.pose = sitting ? "Sit" : null;
+    // Chatting: one talks (the Chat clip, the mouth) while the other listens, swapping every few seconds; now and then a laugh.
+    if (r.chat && d >= FACE_RANGE) {
+      const pair = r.seed ^ r.chat.seed, turn = Math.floor(now / 3.4 + hash01(pair, 1) * 4) % 2;
+      const talking = (r.seed < r.chat.seed) === (turn === 0);
+      if (talking) { m.pose = "Chat"; m.talk = Math.max(m.talk ?? 0, 0.25); }
+      const beat = Math.floor(now / 6.5);
+      if (!talking && hash01(r.seed, beat) < 0.22 && r.laughBeat !== beat) { m.play = "Laugh"; r.laughBeat = beat; }
+    } else if (stopped && !sitting && pose.stop && d >= FACE_RANGE && !ceremony) {
+      // Idling at a stop: a look round, a stretch, gazing out, on the routine's own beat.
+      const { clip, key } = idleAt(pose.stop, pose.visit, r.seed, pose.stayed);
+      if (key !== r.idleKey || pose.visit !== r.idleVisit) {
+        if (clip && key >= 0) m.play = clip;
+        r.idleKey = key; r.idleVisit = pose.visit;
+      }
+    }
+    // Greeted (a click, the ceremony's cheer): a wave (a cheer at the ceremony) and a hop.
+    if (now - r.greetAt < 0.15 && r.hopT < 0) { r.hopT = 0; r.hopNext = now + 2; m.play = ceremony ? "Cheer" : sitting ? null : "Wave"; }
+    // Startle when you barge right in.
+    if (d < 1.05 && r.hopT < 0 && now > r.hopNext && !sitting && !r.hidden) { r.hopT = 0; r.hopNext = now + 3; }
+    let hop = 0;
+    if (r.hopT >= 0) { r.hopT += dt; if (r.hopT > 0.35) r.hopT = -1; else hop = Math.sin((r.hopT / 0.35) * Math.PI) * 0.38; }
+    r.lift = THREE.MathUtils.damp(r.lift, sitting ? seatLift("Sit", pose.seat, CHARACTER_SCALE) : 0, 7, dt);
+    m.lift = r.lift + hop;
+    if (g) {
+      g.visible = !r.hidden;
+      g.position.set(r.x, island.ground(r.x, r.z), r.z);
+    }
+    const vis = r.visual.current;
+    if (vis) { const k = THREE.MathUtils.damp(vis.scale.x, r.hovered ? 1.05 : 1, 12, dt); vis.scale.setScalar(k); }
+
+    // Noticing you: the name and "!" show; the first time (and after a quiet spell) they say a line.
+    const noticed = d < NOTICE_RANGE && !r.hidden;
+    if (noticed && !r.noticed && now >= r.bubbleNext && !speaking) {
+      speaking = true;
+      const line = r.lines[Math.floor(hash01(r.seed, Math.floor(now / 30)) * r.lines.length) % r.lines.length];
+      r.bubbleUntil = now + BUBBLE_S; r.bubbleNext = now + BUBBLE_COOLDOWN_S;
+      if (r.ui.text.current) r.ui.text.current.textContent = line;
+      r.shown = "";
+      m.talk = Math.min(3.2, 0.8 + line.length * 0.045);
+      if (stopped && !sitting && !r.chat) m.play = "Wave";
+      AudioManager.playBlip();
+      r.timers.forEach(window.clearTimeout);
+      r.timers = [140, 300].map(ms => window.setTimeout(() => AudioManager.playBlip(), ms));
+    }
+    r.noticed = noticed;
+    const bubble = r.bubbleUntil > now && !r.hidden, state = `${bubble ? "b" : ""}${noticed && !bubble ? "n" : ""}${(noticed || r.hovered) && !r.hidden ? "p" : ""}`;
+    if (state !== r.shown && r.ui.plate.current) {
+      r.shown = state;
+      show(r.ui.bubble.current, bubble); show(r.ui.notice.current, state.includes("n")); show(r.ui.plate.current, state.includes("p"));
+    }
+  }
+}
+
+function enroll(reg: Registry, r: Runtime) { reg.map.set(r.id, r); reg.list = [...reg.map.values()]; }
+function unenroll(reg: Registry, r: Runtime) { if (reg.map.get(r.id) === r) reg.map.delete(r.id); reg.list = [...reg.map.values()]; }
 
 function show(el: HTMLElement | null, on: boolean) {
   if (el && el.hidden === on) el.hidden = !on;
@@ -119,153 +287,21 @@ export default function Residents({ personas, phase, ceremony, player, island, v
       };
     });
   }, [personas, v, island, nav]);
-  const registry = useRef(new Map<string, Runtime>());
+  const registry = useRef<Registry>({ map: new Map(), list: [] });
   const monument = useMemo(() => landmark("monument", v), [v]);
-  const clock = useRef<{ span: DaySpan | null; forced: IslandPhase | null; base: number; since: number }>({ span: null, forced: null, base: 0, since: 0 });
+  const clock = useRef<Clock>({ span: null, forced: null, base: 0, since: 0 });
 
   // A click (and the ceremony's cheer) greets: a wave and a hop.
   useEffect(() => {
     const onGreet = (e: Event) => {
-      const r = registry.current.get((e as CustomEvent<{ id: string }>).detail?.id);
+      const r = registry.current.map.get((e as CustomEvent<{ id: string }>).detail?.id);
       if (r) r.greetAt = worldNow() / 1000;
     };
     window.addEventListener("tsi:npc-greet", onGreet);
     return () => window.removeEventListener("tsi:npc-greet", onGreet);
   }, []);
 
-  useFrame((_, raw) => {
-    const dt = Math.min(raw, 0.1), now = worldNow() / 1000, days = liveSunDays(), c = clock.current, p = player.current;
-    if (!c.span || now < c.span.t0 || now >= c.span.t1) c.span = daySpan(now * 1000, days);
-    // A forced phase (?time=, the options menu) runs the routine from that phase's preview time on.
-    let t = now;
-    if (phaseOn(c.span, now) !== phase) {
-      if (c.forced !== phase) { c.forced = phase; c.since = now; c.base = phaseInstant(phase, new Date(now * 1000), days).getTime() / 1000; }
-      t = c.base + (now - c.since);
-    } else c.forced = null;
-
-    // 1. Where everyone is.
-    for (const r of registry.current.values()) {
-      const pose = r.day.at(t - r.lag, days, r.pose), m = r.motion.current;
-      const goal: [number, number] = ceremony ? [r.gather[0], r.gather[1]] : (pose.inside || pose.seat > 0) && pose.stop?.door ? [pose.stop.door[0], pose.stop.door[1]] : [pose.x, pose.z];
-      if (!r.ready) { r.ready = true; r.x = pose.x; r.z = pose.z; r.hidden = pose.inside; m.yaw = pose.yaw; }
-      // Coming out of hiding somewhere else (a forced phase while indoors): out through their own door.
-      if (r.hidden && !pose.inside && dist(r.x, r.z, pose.x, pose.z) > 0.6 && r.home) { r.x = r.home[0]; r.z = r.home[1]; }
-      const onRoutine = !ceremony && !r.detour && dist(r.x, r.z, pose.x, pose.z) < 0.08 + (pose.speed + 1) * dt * 1.5;
-      let speed = 0, yaw = pose.yaw, blocked = false;
-      if (onRoutine) {
-        // Someone standing right in front of a walking resident: they wait (the routine waits with them).
-        const dx = p.x - pose.x, dz = p.z - pose.z;
-        blocked = pose.moving && dist(p.x, p.z, pose.x, pose.z) < BLOCK_RANGE && dx * Math.sin(pose.yaw) + dz * Math.cos(pose.yaw) > 0.1;
-        if (blocked) r.lag += dt;
-        else { speed = pose.moving ? pose.speed : 0; r.x = pose.x; r.z = pose.z; }
-        r.hidden = pose.inside;
-      } else if (dist(r.x, r.z, goal[0], goal[1]) < 0.03) {
-        // There (the ceremony spot, or a door or seat the routine is behind): step onto the routine.
-        r.detour = null;
-        if (!ceremony) { r.x = pose.x; r.z = pose.z; r.hidden = pose.inside; }
-      } else {
-        // Off the routine: walk (a path round every solid) to where it is now, or to the ceremony.
-        if (!r.detour || (dist(goal[0], goal[1], r.detourGoal[0], r.detourGoal[1]) > 1 && now - r.detourAt > 0.5)) {
-          r.detour = nav.path(r.x, r.z, goal[0], goal[1])?.slice(1) ?? [[goal[0], goal[1]]];
-          r.detourAt = now; r.detourGoal = goal;
-        }
-        const px = r.x, pz = r.z, moved = stepDetour(r, RESIDENT_WALK * (ceremony ? 1.25 : 1.35), dt);
-        speed = dt > 0 ? moved / dt : 0;
-        if (moved > 1e-5) yaw = Math.atan2(r.x - px, r.z - pz);
-        r.hidden = false;
-        if (!r.detour.length) {
-          r.detour = null;
-          // Arrived where the routine is: step back onto it (at a door or a seat, straight into it).
-          if (!ceremony && dist(r.x, r.z, goal[0], goal[1]) < 0.05) { r.x = pose.x; r.z = pose.z; r.hidden = pose.inside; }
-        }
-      }
-      if (!blocked && r.lag > 0 && !(r.bubbleUntil > now && !pose.moving)) r.lag = Math.max(0, r.lag - CATCH_UP * dt);
-      if (r.bubbleUntil > now && !pose.moving) r.lag += dt; // still talking: the routine holds
-      r.speed = speed;
-      m.speed = speed;
-      // Face the way they walk; stopped, the seat's way or the place's view (chat and you come next).
-      r.want = speed > 0.05 ? yaw : onRoutine ? pose.yaw : ceremony && monument ? Math.atan2(monument.x - r.x, monument.z - r.z) : m.yaw;
-      r.chat = null;
-    }
-
-    // 2. Chats: two stopped standing residents near each other face each other and talk, taking turns.
-    const list = [...registry.current.values()];
-    for (const r of list) {
-      if (r.speed > 0.05 || r.hidden || r.pose.seat > 0 || ceremony || r.detour) continue;
-      let best: Runtime | null = null, bestD = CHAT_RANGE;
-      for (const o of list) {
-        if (o === r || o.speed > 0.05 || o.hidden || o.pose.seat > 0 || o.detour) continue;
-        const d = dist(r.x, r.z, o.x, o.z);
-        if (d < bestD) { bestD = d; best = o; }
-      }
-      r.chat = best;
-    }
-
-    // 3. Each one's clip, facing, talk and overhead UI. One greeting at a time: walking into a group, the first to
-    // notice you speaks and the rest just look up.
-    let speaking = list.some(r => r.bubbleUntil > now && !r.hidden);
-    for (const r of list) {
-      const m = r.motion.current, pose = r.pose, g = r.group.current;
-      const d = dist(p.x, p.z, r.x, r.z), stopped = r.speed < 0.05 && !r.detour, sitting = stopped && pose.seat > 0 && dist(r.x, r.z, pose.x, pose.z) < 0.05;
-      let want = r.want;
-      if (stopped && !sitting && !r.hidden) {
-        if (d < FACE_RANGE) want = Math.atan2(p.x - r.x, p.z - r.z);
-        else if (r.chat) want = Math.atan2(r.chat.x - r.x, r.chat.z - r.z);
-      }
-      m.yaw = easeFacing(m.yaw, want, r.speed > 0.05 ? 7 : 4, dt);
-      m.pose = sitting ? "Sit" : null;
-      // Chatting: one talks (the Chat clip, the mouth) while the other listens, swapping every few seconds; now and then a laugh.
-      if (r.chat && d >= FACE_RANGE) {
-        const pair = r.seed ^ r.chat.seed, turn = Math.floor(now / 3.4 + hash01(pair, 1) * 4) % 2;
-        const talking = (r.seed < r.chat.seed) === (turn === 0);
-        if (talking) { m.pose = "Chat"; m.talk = Math.max(m.talk ?? 0, 0.25); }
-        const beat = Math.floor(now / 6.5);
-        if (!talking && hash01(r.seed, beat) < 0.22 && r.laughBeat !== beat) { m.play = "Laugh"; r.laughBeat = beat; }
-      } else if (stopped && !sitting && pose.stop && d >= FACE_RANGE && !ceremony) {
-        // Idling at a stop: a look round, a stretch, gazing out, on the routine's own beat.
-        const { clip, key } = idleAt(pose.stop, pose.visit, r.seed, pose.stayed);
-        if (key !== r.idleKey || pose.visit !== r.idleVisit) {
-          if (clip && key >= 0) m.play = clip;
-          r.idleKey = key; r.idleVisit = pose.visit;
-        }
-      }
-      // Greeted (a click, the ceremony's cheer): a wave (a cheer at the ceremony) and a hop.
-      if (now - r.greetAt < 0.15 && r.hopT < 0) { r.hopT = 0; r.hopNext = now + 2; m.play = ceremony ? "Cheer" : sitting ? null : "Wave"; }
-      // Startle when you barge right in.
-      if (d < 1.05 && r.hopT < 0 && now > r.hopNext && !sitting && !r.hidden) { r.hopT = 0; r.hopNext = now + 3; }
-      let hop = 0;
-      if (r.hopT >= 0) { r.hopT += dt; if (r.hopT > 0.35) r.hopT = -1; else hop = Math.sin((r.hopT / 0.35) * Math.PI) * 0.38; }
-      r.lift = THREE.MathUtils.damp(r.lift, sitting ? seatLift("Sit", pose.seat, CHARACTER_SCALE) : 0, 7, dt);
-      m.lift = r.lift + hop;
-      if (g) {
-        g.visible = !r.hidden;
-        g.position.set(r.x, island.ground(r.x, r.z), r.z);
-      }
-      const vis = r.visual.current;
-      if (vis) { const k = THREE.MathUtils.damp(vis.scale.x, r.hovered ? 1.05 : 1, 12, dt); vis.scale.setScalar(k); }
-
-      // Noticing you: the name and "!" show; the first time (and after a quiet spell) they say a line.
-      const noticed = d < NOTICE_RANGE && !r.hidden;
-      if (noticed && !r.noticed && now >= r.bubbleNext && !speaking) {
-        speaking = true;
-        const line = r.lines[Math.floor(hash01(r.seed, Math.floor(now / 30)) * r.lines.length) % r.lines.length];
-        r.bubbleUntil = now + BUBBLE_S; r.bubbleNext = now + BUBBLE_COOLDOWN_S;
-        if (r.ui.text.current) r.ui.text.current.textContent = line;
-        r.shown = "";
-        m.talk = Math.min(3.2, 0.8 + line.length * 0.045);
-        if (stopped && !sitting && !r.chat) m.play = "Wave";
-        AudioManager.playBlip();
-        r.timers.forEach(window.clearTimeout);
-        r.timers = [140, 300].map(ms => window.setTimeout(() => AudioManager.playBlip(), ms));
-      }
-      r.noticed = noticed;
-      const bubble = r.bubbleUntil > now && !r.hidden, state = `${bubble ? "b" : ""}${noticed && !bubble ? "n" : ""}${(noticed || r.hovered) && !r.hidden ? "p" : ""}`;
-      if (state !== r.shown && r.ui.plate.current) {
-        r.shown = state;
-        show(r.ui.bubble.current, bubble); show(r.ui.notice.current, state.includes("n")); show(r.ui.plate.current, state.includes("p"));
-      }
-    }
-  }, -3);
+  useFrame((_, raw) => tick(registry.current.list, clock.current, Math.min(raw, 0.1), player.current, phase, ceremony, nav, island, monument), -3);
 
   return <>{residents.map(({ persona, day, look, gather, plan }) => (
     <Figure key={persona.id} persona={persona} day={day} look={look} gather={gather} home={plan.home?.door ?? null} seed={plan.seed} registry={registry} />
@@ -274,7 +310,7 @@ export default function Residents({ personas, phase, ceremony, player, island, v
 
 function Figure({ persona, day, look, gather, home, seed, registry }: {
   persona: NPCPersona; day: ResidentDay; look: CharacterLook; gather: readonly [number, number]; home: readonly [number, number] | null; seed: number;
-  registry: RefObject<Map<string, Runtime>>;
+  registry: RefObject<Registry>;
 }) {
   const group = useRef<THREE.Group>(null), visual = useRef<THREE.Group>(null);
   const motion = useRef<CharacterMotion>({ speed: 0, yaw: 0, lift: 0, pose: null, play: null });
@@ -284,13 +320,13 @@ function Figure({ persona, day, look, gather, home, seed, registry }: {
     const r: Runtime = {
       id: persona.id, seed, lines: persona.canned_dialogue?.length ? persona.canned_dialogue : FILLER_LINES, day, gather, home,
       pose: newPose(), motion, group, visual, ui: { bubble, text, notice, plate },
-      ready: false, x: 0, z: 0, speed: 0, hidden: false, lift: 0, lag: 0, detour: null, detourAt: 0, detourGoal: [0, 0],
+      ready: false, x: 0, z: 0, speed: 0, ox: 0, oz: 0, hidden: false, lift: 0, lag: 0, detour: null, detourAt: 0, detourGoal: [0, 0],
       want: 0, noticed: false, bubbleUntil: 0, bubbleNext: 0, shown: "-", idleKey: -1, idleVisit: -1, laughBeat: -1, chat: null, hopT: -1, hopNext: 0, greetAt: 0, hovered: false, timers: [],
     };
     runtime.current = r;
-    const map = registry.current;
-    map.set(persona.id, r);
-    return () => { r.timers.forEach(window.clearTimeout); map.delete(persona.id); runtime.current = null; };
+    const reg = registry.current;
+    enroll(reg, r);
+    return () => { r.timers.forEach(window.clearTimeout); unenroll(reg, r); runtime.current = null; };
   }, [persona, day, gather, home, seed, registry]);
 
   const hover = (on: boolean) => (e: ThreeEvent<PointerEvent>) => {

@@ -28,6 +28,7 @@ import PeacefulLayer, { peacefulNear } from "../peaceful/PeacefulLayer";
 import { homeNodes } from "@/lib/game/islandNodes";
 import type { FishingSpot } from "@/lib/game/fishingSpots";
 import type { WorldMoment } from "@/lib/collections/logic";
+import { gullAnchors } from "@/lib/game/ambientFauna";
 import styles from "../DefaultIslandWorld.module.css";
 
 const HOME_NODES = homeNodes();
@@ -37,6 +38,8 @@ export type HomeNear = "house" | "village" | "mailbox" | "fish" | "forage" | "ne
 const TREE_SEEDS = [0, 1, 3, 2];
 const TREES: TreeSpot[] = HOME_TREES.map(([x, z], i) => ({ x, z, seed: TREE_SEEDS[i] }));
 const DOOR_SPAWN: [number, number, number] = [HOUSE.door[0], 0, HOUSE.door[1] - 0.6];
+/** The islet's sea is all one: gulls round it and off the dock, butterflies on its flowers, crabs on its sand ring. */
+const HOME_GULLS = gullAnchors({ minX: -HOME_RADII.x, maxX: HOME_RADII.x, minZ: -HOME_RADII.z, maxZ: HOME_RADII.z, cx: 0, cz: 0 }, [[HOME_DOCK[0] - 3, HOME_DOCK[1] - 5]]);
 
 export default function HomeIslandScene({ identity, level, peaceful, fishSpot, fishing, phase, light, look, weather, liteMode, castShadows, zoom, overview, returned, player, onNear, outdoor, decorating, selected, onPlace, onPickUp }: {
   phase: IslandPhase; light: IslandLight; look: SeasonLook; weather: IslandWeather; liteMode: boolean; castShadows: boolean; zoom: number; overview: boolean;
@@ -53,6 +56,7 @@ export default function HomeIslandScene({ identity, level, peaceful, fishSpot, f
   const spawn = returned ? DOOR_SPAWN : HOME_SPAWN;
   const terrain = useMemo(() => ({ ...ISLAND_TERRAIN, grass: look.grass }), [look.grass]);
   const near = useRef<HomeNear>(null);
+  const fauna = useMemo(() => ({ site: { map: home.map, flowers: HOME_FLOWERS, water: SEA }, ground: home.ground, standable: home.fixedFree, gulls: HOME_GULLS, player }), [home, player]);
   useEffect(() => { player.current.set(...spawn); }, [spawn, player]);
   const focus = useRef(new THREE.Vector3(...spawn));
   useFollowCamera(focus, zoom, overview ? { focus: [0, 0, 0], offset: [6, 13, -16] } : null);
@@ -83,7 +87,7 @@ export default function HomeIslandScene({ identity, level, peaceful, fishSpot, f
   }), [home]);
   return <>
     <IslandAtmosphere phase={phase} light={light} look={look} weather={weather} liteMode={liteMode} castShadows={castShadows} overview={overview}
-      ground={home.ground} cloudSize={[HOME_RADII.x * 2 + 4, HOME_RADII.z * 2 + 4]} shadowExtent={16} fireflyAnchors={HOME_BUSHES} trees={TREES} />
+      ground={home.ground} cloudSize={[HOME_RADII.x * 2 + 4, HOME_RADII.z * 2 + 4]} shadowExtent={16} fireflyAnchors={HOME_BUSHES} trees={TREES} fauna={fauna} />
     <GridWorld map={home.map} light={light} palette={terrain} windScale={liteMode ? 0 : weather === "wind" ? 2.2 : 1} />
     <GridOcean map={home.map} lite={liteMode} />
     <PeacefulLayer map={home.map} nodes={HOME_NODES} moment={peaceful.moment} member={peaceful.member} player={player} ground={home.ground} highTier={!liteMode} active={!fishing && !decorating} />
