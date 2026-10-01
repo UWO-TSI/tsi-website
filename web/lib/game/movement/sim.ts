@@ -244,7 +244,7 @@ function ceilingAt(w: MoveWorld, t: MoveTuning, x: number, z: number, vx: number
   return t.momentumCeiling + t.downhillCeiling * Math.max(0, down);
 }
 
-/** Into the slide at its speed (capped at `cap`), from the ground, a dash or a landing. */
+/** Into the slide at `speed`, from the ground, a dash or a landing. */
 function startSlide(s: MoveState, kind: "slide" | "dashslide" | "landslide", speed: number) {
   const len = hypot(s.vx, s.vz);
   if (len > 1e-6) { s.vx *= speed / len; s.vz *= speed / len; }
@@ -550,7 +550,7 @@ export function stepMove(prev: MoveState, input: MoveInput, dt: number, w: MoveW
   if (hitX) s.vx = 0;
   if (hitZ) s.vz = 0;
   if ((hitX || hitZ) && s.dashT > 0 && hypot(s.vx, s.vz) < before * 0.5) { s.dashT = 0; emit(s, "bonk"); }
-  if ((hitX || hitZ) && s.mode === "slide" && hypot(s.vx, s.vz) < Math.max(before * 0.5, t.walkSpeed * t.slideEndAt)) endSlide(s, t, "bonk");
+  if ((hitX || hitZ) && s.mode === "slide" && hypot(s.vx, s.vz) < before * 0.5) endSlide(s, t, "bonk"); // a graze slides on along it (or stands, slowed)
 
   if (s.mode === "air") {
     s.coyote = Math.max(0, s.coyote - dt);
@@ -567,7 +567,7 @@ export function stepMove(prev: MoveState, input: MoveInput, dt: number, w: MoveW
     descend(s, w, t, input, y);
   }
   if ((s.mode as MoveMode) !== "splash") depenetrate(s, w, t, dt); // descend() may have splashed
-  if (s.mode === "ground" && !w.wet(s.x, s.z) && overlap(w, s.x, s.z, s.y, true, t, 0) === 0) s.safe = [s.x, s.y, s.z];
+  if ((s.mode === "ground" || s.mode === "slide") && !w.wet(s.x, s.z) && overlap(w, s.x, s.z, s.y, true, t, 0) === 0) s.safe = [s.x, s.y, s.z];
   if (s.y < -8) { setMode(s, "splash"); s.modeT = 0.55; }
   if (s.mode === "ground" && s.keep <= 0) s.slid = false;
   s.crouch = s.mode === "ground" && input.sneak && s.dashT <= 0;

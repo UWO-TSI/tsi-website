@@ -247,7 +247,7 @@ export function routePilot(route: readonly RouteStep[] = LAP_ROUTE) {
       }
     }
     if (step.move === "dash-jump" && phase === 2 && t > 0.06) { phase = 3; return { ...input, jumpPressed: true }; }
-    if (t > 0.1 && s.mode === "ground") { i++; phase = 0; }
+    if (t > 0.1 && (s.mode === "ground" || s.mode === "slide")) { i++; phase = 0; } // down again (a land into a slide counts)
     return input;
   };
 }

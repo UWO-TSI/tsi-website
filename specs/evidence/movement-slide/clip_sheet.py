@@ -6,7 +6,7 @@ Renders <out_dir>/<Clip>_<view>_<n>.png from art/characters/base/v7_clips.glb wi
 materials' colours), `frames` evenly through each clip (every frame of a short one-shot); tile them with ImageMagick
 (specs/evidence/movement-slide/shots.mjs clips).
 """
-import bpy, math, os, sys
+import bpy, json, math, os, sys
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../.."))
 ARGS = sys.argv[sys.argv.index("--") + 1:]
@@ -45,16 +45,19 @@ VIEWS = {"side": ((3.0, -0.25, 0.82), (math.radians(84), 0, math.radians(90))),
          "game": ((0.0, 2.4, 2.1), (math.radians(52), 0, math.radians(180)))}   # behind and above, like the follow camera
 VIEW_ONLY = os.environ.get("VIEWS", "side,34").split(",")
 VIEWS = {k: v for k, v in VIEWS.items() if k in VIEW_ONLY}
+times = {}
 for name in CLIPS:
     act = bpy.data.actions.get(name) or next((a for a in bpy.data.actions if a.name.startswith(name)), None)
     rig.animation_data.action = act
     start, end = act.frame_range
     count = min(N, int(end - start) + 1)
+    frames = [start + (end - start) * i / max(1, count - 1) for i in range(count)]
+    times[name] = [round(f / sc.render.fps, 3) for f in frames]
     for view, (loc, rot) in VIEWS.items():
         cam.location, cam.rotation_euler = loc, rot
-        for i in range(count):
-            f = round(start + (end - start) * i / max(1, count - 1))
-            sc.frame_set(f)
+        for i, f in enumerate(frames):
+            sc.frame_set(int(f), subframe=f - int(f))
             sc.render.filepath = os.path.join(OUT, f"{name}_{view}_{i}.png")
             bpy.ops.render.render(write_still=True)
     print("SHEET", name, act.frame_range[:], count)
+json.dump(times, open(os.path.join(OUT, "times.json"), "w"))

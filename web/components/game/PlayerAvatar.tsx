@@ -483,7 +483,8 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
       const view: CombatView = { alive: p.alive, dodgeAge: p.dodgeAge, hurt: p.hurt, attackCd: p.attackCd };
       const next = combatClip(view, combatPrev.current ?? view, !!combat.rt.casting, WEAPONS[p.weapon].kind);
       combatPrev.current = view;
-      if (p.alive && dt > 0) p.facing = combatFacing(p, { x, z }, state.facing, state.mode === "ground" ? speed : 0, dt);
+      // A slide faces the way it goes like a run (its legs lead), not the aim.
+      if (p.alive && dt > 0) p.facing = combatFacing(p, { x, z }, state.facing, state.mode === "ground" || state.mode === "slide" ? speed : 0, dt);
       m.yaw = p.facing;
       m.pose = next.pose;
       if (next.play) m.play = next.play;
