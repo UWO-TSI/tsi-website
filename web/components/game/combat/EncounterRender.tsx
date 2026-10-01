@@ -14,7 +14,7 @@ import { useGLTF, useTexture } from "@react-three/drei";
 import * as THREE from "three";
 import { combat } from "@/lib/game/combat/runtime";
 import { ENEMIES, WEAPONS } from "@/lib/game/combat/data";
-import { glow, marker, partPose } from "@/lib/game/combat/telegraph";
+import { glow, marker, partPose, type MarkerFamily } from "@/lib/game/combat/telegraph";
 
 type Ground = (x: number, z: number) => number;
 const tmpM = new THREE.Matrix4(), tmpQ = new THREE.Quaternion(), tmpS = new THREE.Vector3(), tmpP = new THREE.Vector3(), tmpC = new THREE.Color(), UP = new THREE.Vector3(0, 1, 0);
@@ -111,51 +111,84 @@ export function EnemyInstances({ typeId, capacity, ground, allies = false }: { t
   return <>{parts.map((p, i) => <instancedMesh key={i} ref={el => { refs.current[i] = el; }} args={[p.geometry, p.material, capacity]} castShadow receiveShadow userData={DYNAMIC} />)}</>;
 }
 
-/** Outline and fill colours: red for danger, violet for the guardian's summon. */
-const TONES = { danger: [new THREE.Color("#ff4040"), new THREE.Color("#ff2a2a")], summon: [new THREE.Color("#b48cff"), new THREE.Color("#9a6bff")] };
+/**
+ * One look per attack family (combat polish 6): its colour, its rim's colour, and how deep the rim band is (area rings
+ * read as a thick ring). The rims draw over every fill, so overlapping markers in a pack each keep their own edge.
+ */
+const FAMILY: Record<MarkerFamily, { fill: THREE.Color; rim: THREE.Color; band: number }> = {
+  melee: { fill: new THREE.Color("#ff4538"), rim: new THREE.Color("#ffd9cf"), band: 0.93 },
+  ranged: { fill: new THREE.Color("#ffc43a"), rim: new THREE.Color("#fff3c4"), band: 0.88 },
+  area: { fill: new THREE.Color("#ff4fc8"), rim: new THREE.Color("#ffd6f3"), band: 0.82 },
+  boss: { fill: new THREE.Color("#8a6cff"), rim: new THREE.Color("#ece4ff"), band: 0.9 },
+};
 
-/** Unit sectors by arc, face up and opening toward -Z: made once per arc, disposed with the component. */
+/** Unit sectors (or, with `band`, their outer rim) by arc, face up and opening toward -Z: made once each, disposed with the component. */
 function useSectors(segments: number) {
-  const cache = useRef(new Map<number, THREE.CircleGeometry>());
+  const cache = useRef(new Map<string, THREE.BufferGeometry>());
   useEffect(() => { const c = cache.current; return () => c.forEach(g => g.dispose()); }, []);
-  return (arc: number) => {
-    const key = Math.round(arc * 100);
+  return (arc: number, band = 0) => {
+    const key = `${Math.round(arc * 100)}:${band}`;
     let g = cache.current.get(key);
-    if (!g) cache.current.set(key, g = new THREE.CircleGeometry(1, segments, Math.PI / 2 - arc / 2, arc).rotateX(-Math.PI / 2));
+    if (!g) cache.current.set(key, g = (band ? new THREE.RingGeometry(band, 1, segments, 1, Math.PI / 2 - arc / 2, arc) : new THREE.CircleGeometry(1, segments, Math.PI / 2 - arc / 2, arc)).rotateX(-Math.PI / 2));
     return g;
   };
 }
 
-/** Ground markers from marker(): sectors, circles, the smash's ring and the beam line, filling as the windup completes. */
+/**
+ * Ground markers from marker(), filling as the windup completes: a melee sector, a ranged line from the source to its
+ * landing circle, an area ring, the boss's violet (its beam a thin sweep). Each has a faint body, a growing fill and a rim.
+ */
+const MARK = ["body", "fill", "rim", "line", "lineFill"] as const;
 export function Telegraphs({ ground, max = 24 }: { ground: Ground; max?: number }) {
-  const refs = useRef<(THREE.Mesh | null)[]>([]);
-  const fills = useRef<(THREE.Mesh | null)[]>([]);
-  // The sector opens toward -Z, so yaw + π points it along the enemy's facing (sin, cos).
+  const parts = useRef(MARK.map(() => [] as (THREE.Mesh | null)[]));
+  // The sector opens toward -Z, so yaw + π points it along the enemy's facing (sin, cos). The line runs along +Z from its source.
   const geo = useSectors(40);
+  const strip = useMemo(() => new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2).translate(0, 0, 0.5), []);
+  useEffect(() => () => strip.dispose(), [strip]);
   useFrame(() => {
     let n = 0;
+    const [bodies, fills, rims, lines, lineFills] = parts.current;
     for (const e of combat.rt.enemies) {
       const mk = n < max ? marker(e) : null;
       if (!mk) continue;
-      const outline = refs.current[n], fill = fills.current[n];
-      if (!outline || !fill) continue;
-      for (const m of [outline, fill]) {
-        m.geometry = geo(mk.arc);
-        m.position.set(mk.x, ground(mk.x, mk.z) + 0.05, mk.z);
+      const body = bodies[n], fill = fills[n], rim = rims[n], line = lines[n], lineFill = lineFills[n];
+      if (!body || !fill || !rim || !line || !lineFill) continue;
+      const look = FAMILY[mk.family], y = ground(mk.x, mk.z) + 0.05;
+      for (const m of [body, fill, rim]) {
+        m.geometry = geo(mk.arc, m === rim ? look.band : 0);
+        m.position.set(mk.x, y, mk.z);
         m.rotation.y = mk.rot + Math.PI;
         m.visible = true;
-        (m.material as THREE.MeshBasicMaterial).color.copy(TONES[mk.tone][m === fill ? 1 : 0]);
+        (m.material as THREE.MeshBasicMaterial).color.copy(m === rim ? look.rim : look.fill);
       }
-      outline.scale.setScalar(mk.r);
+      body.scale.setScalar(mk.r);
+      rim.scale.setScalar(mk.r);
       fill.scale.setScalar(mk.r * mk.fill);
-      (outline.material as THREE.MeshBasicMaterial).opacity = 0.18 + 0.1 * mk.fill;
+      (body.material as THREE.MeshBasicMaterial).opacity = 0.14 + 0.1 * mk.fill;
+      (rim.material as THREE.MeshBasicMaterial).opacity = 0.55 + 0.4 * mk.fill;
+      // Ranged: the path from the source to the landing circle, filling toward it as the windup completes.
+      const from = mk.from, len = from ? Math.max(0, Math.hypot(mk.x - from.x, mk.z - from.z) - mk.r) : 0;
+      line.visible = lineFill.visible = len > 0.05;
+      if (from && len > 0.05) {
+        const yaw = Math.atan2(mk.x - from.x, mk.z - from.z);
+        for (const m of [line, lineFill]) {
+          m.position.set(from.x, ground(from.x, from.z) + 0.05, from.z);
+          m.rotation.set(0, yaw, 0);
+          (m.material as THREE.MeshBasicMaterial).color.copy(m === line ? look.fill : look.rim);
+        }
+        line.scale.set(0.22, 1, len);
+        lineFill.scale.set(0.09, 1, len * mk.fill);
+      }
       n++;
     }
-    for (let i = n; i < max; i++) { if (refs.current[i]) refs.current[i]!.visible = false; if (fills.current[i]) fills.current[i]!.visible = false; }
+    for (const list of parts.current) for (let i = n; i < max; i++) if (list[i]) list[i]!.visible = false;
   });
   return <>{Array.from({ length: max }, (_, i) => <group key={i}>
-    <mesh ref={el => { refs.current[i] = el; }} visible={false} renderOrder={2}><meshBasicMaterial color="#ff4040" transparent opacity={0.2} depthWrite={false} toneMapped={false} /></mesh>
-    <mesh ref={el => { fills.current[i] = el; }} visible={false} renderOrder={3}><meshBasicMaterial color="#ff2a2a" transparent opacity={0.35} depthWrite={false} toneMapped={false} /></mesh>
+    <mesh ref={el => { parts.current[0][i] = el; }} visible={false} renderOrder={2}><meshBasicMaterial transparent opacity={0.2} depthWrite={false} toneMapped={false} /></mesh>
+    <mesh ref={el => { parts.current[1][i] = el; }} visible={false} renderOrder={3}><meshBasicMaterial transparent opacity={0.32} depthWrite={false} toneMapped={false} /></mesh>
+    <mesh ref={el => { parts.current[2][i] = el; }} visible={false} renderOrder={4}><meshBasicMaterial transparent opacity={0.8} depthWrite={false} toneMapped={false} /></mesh>
+    <mesh ref={el => { parts.current[3][i] = el; }} geometry={strip} visible={false} renderOrder={2}><meshBasicMaterial transparent opacity={0.3} depthWrite={false} toneMapped={false} /></mesh>
+    <mesh ref={el => { parts.current[4][i] = el; }} geometry={strip} visible={false} renderOrder={4}><meshBasicMaterial transparent opacity={0.85} depthWrite={false} toneMapped={false} /></mesh>
   </group>)}</>;
 }
 

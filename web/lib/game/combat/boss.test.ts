@@ -121,4 +121,13 @@ describe("telegraph helper (one for every enemy)", () => {
     expect(marker(b)).toMatchObject({ r: b.move.range, fill: 1 });
     expect(marker(at("shadow-fox", "chase", 0))).toBeNull();
   });
+  it("gives each attack family its own marker: melee sector, ranged line from the source, area ring, the guardian's own (combat polish 6)", () => {
+    const fam = (id: string) => ENEMIES[id].attacks.map(move => marker({ ...at(id, "windup", move.windup / 2), move })!.family);
+    expect(fam("shadow-fox")).toEqual(["melee"]);
+    expect(fam("thorn-crab")).toEqual(["melee"]);
+    expect(fam("stone-golem")).toEqual(["area"]);
+    expect(fam("guardian-statue")).toEqual(["boss", "boss", "boss"]);
+    const spit = { ...at("mushroom-beast", "windup", 0.4), aim: { x: 0, z: 4 } };
+    expect(marker(spit)).toMatchObject({ family: "ranged", x: 0, z: 4, from: { x: 0, z: 0 } });
+  });
 });

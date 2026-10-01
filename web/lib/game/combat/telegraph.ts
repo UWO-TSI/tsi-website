@@ -6,10 +6,11 @@
  * attack is read from three things driven by the same state:
  *   - the part pose: crouch, lunge, claw sweep, spit, slam, beam, summon;
  *   - the glow: the telegraph parts pulse brighter as the windup fills;
- *   - the ground marker: sector, circle, ring marker or beam line.
+ *   - the ground marker, one look per attack family (combat polish 6): a melee sector,
+ *     a ranged line from the source to where it lands, an area ring, and the boss's own.
  */
 import type { AttackShape } from "./contract";
-import { staggered, type Enemy } from "./sim";
+import { staggered, type Enemy, type Vec } from "./sim";
 
 /** Offsets in the part's local space (radians / model units); scale is on local Y. */
 export interface PartPose { rx: number; ry: number; rz: number; dy: number; dz: number; sy: number }
@@ -108,17 +109,22 @@ export function glow(e: Pick<Enemy, "state" | "t" | "move" | "phase" | "deadFor"
   return rest;
 }
 
-/** Ground marker for an enemy mid-attack: where (x, z), how big (r), what sector (arc around rot), how full. */
-export interface Marker { x: number; z: number; r: number; arc: number; rot: number; fill: number; tone: "danger" | "summon" }
+/** Attack families, each with its own marker look: lunges and sweeps, spit, slams, and everything the guardian throws. */
+export type MarkerFamily = "melee" | "ranged" | "area" | "boss";
+/**
+ * Ground marker for an enemy mid-attack: where (x, z), how big (r), what sector (arc around rot), how full, its family,
+ * and for a ranged attack the source (`from`): the line runs from there to the landing circle.
+ */
+export interface Marker { x: number; z: number; r: number; arc: number; rot: number; fill: number; family: MarkerFamily; from?: Vec }
 export function marker(e: Enemy): Marker | null {
-  const m = e.move, { k } = progress(e);
-  if (e.state === "active" && m.shape === "beam") return { x: e.x, z: e.z, r: m.range, arc: 0.22, rot: e.beam, fill: 1, tone: "danger" };
+  const m = e.move, { k } = progress(e), boss = e.type.kind === "boss";
+  if (e.state === "active" && m.shape === "beam") return { x: e.x, z: e.z, r: m.range, arc: 0.22, rot: e.beam, fill: 1, family: "boss" };
   if (e.state !== "windup") return null;
   switch (m.shape) {
-    case "spit": return { x: e.aim.x, z: e.aim.z, r: 0.9, arc: Math.PI * 2, rot: 0, fill: k, tone: "danger" };
-    case "smash": return { x: e.aim.x, z: e.aim.z, r: m.range, arc: Math.PI * 2, rot: 0, fill: k, tone: "danger" };
-    case "slam": return { x: e.x, z: e.z, r: m.range, arc: Math.PI * 2, rot: 0, fill: k, tone: "danger" };
-    case "summon": return { x: e.x, z: e.z, r: 2.6, arc: Math.PI * 2, rot: 0, fill: k, tone: "summon" };
-    default: return { x: e.x, z: e.z, r: m.range, arc: m.arc, rot: e.facing, fill: k, tone: "danger" };
+    case "spit": return { x: e.aim.x, z: e.aim.z, r: 0.9, arc: Math.PI * 2, rot: 0, fill: k, family: boss ? "boss" : "ranged", from: { x: e.x, z: e.z } };
+    case "smash": return { x: e.aim.x, z: e.aim.z, r: m.range, arc: Math.PI * 2, rot: 0, fill: k, family: boss ? "boss" : "area" };
+    case "slam": return { x: e.x, z: e.z, r: m.range, arc: Math.PI * 2, rot: 0, fill: k, family: boss ? "boss" : "area" };
+    case "summon": return { x: e.x, z: e.z, r: 2.6, arc: Math.PI * 2, rot: 0, fill: k, family: "boss" };
+    default: return { x: e.x, z: e.z, r: m.range, arc: m.arc, rot: e.facing, fill: k, family: boss ? "boss" : "melee" };
   }
 }
