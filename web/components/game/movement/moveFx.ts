@@ -4,10 +4,12 @@
  * the touch stick. PlayerAvatar throws particles from each sim step's events
  * and foot contacts, on the avatar that moved (lib/game/movement/juice.ts).
  */
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef, type RefObject } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
-import type { ClipName } from "@/lib/game/character/clips";
+import type { CharacterMotion, ClipName } from "@/lib/game/character/clips";
+import { footprint, footstep, groundUnder } from "@/lib/game/movement/juice";
+import { WORLD_SNOW } from "@/lib/game/modelMaterials";
 import { juiceFovOffset } from "@/lib/game/cameraJuice";
 import { PACK, PACK_COLS, PACK_ROWS, PACK_URL, type SpriteName } from "@/lib/game/fx/pack";
 import { ParticlePool } from "@/lib/game/fx/particles";
@@ -219,6 +221,33 @@ export function useMoveParticles(): MoveParticles {
   // Steps at real time unless an avatar already stepped it this frame (its slow motion and dev pauses win).
   useFrame((state, delta) => fx.tick(state.clock.elapsedTime, Math.min(delta, 0.1), state.camera, liveWind()));
   return fx;
+}
+
+/** How much of the player's footstep dust a resident's steps throw (no sound: a crowd of them would clatter). */
+export const RESIDENT_STEPS = 0.6;
+/** The ground a resident walks: the drawn surface and the water (for wet sand). */
+export interface StepWorld { surface: (x: number, z: number) => number; wet: (x: number, z: number) => boolean }
+const stepAt = new THREE.Vector3();
+/**
+ * Footstep dust for a character the player doesn't drive (residents, the dev crowd; look spec §7.1: effects draw on
+ * every avatar that moves): each foot contact its Character counts throws the ground's puff, flecks or grains from
+ * that foot, quieter than the player's and silent, a ripple on a rain day, and a print on sand and snow.
+ */
+export function useStepDust(motion: RefObject<CharacterMotion>, anchor: RefObject<THREE.Object3D | null>, world?: StepWorld, amount = RESIDENT_STEPS) {
+  const particles = useMoveParticles();
+  const seen = useRef<number | null>(null);
+  useFrame(() => {
+    const m = motion.current, a = anchor.current;
+    if (!m || !a || m.steps === undefined || m.steps === seen.current) return;
+    const first = seen.current === null;
+    seen.current = m.steps;
+    if (first || m.speed < 0.3 || amount <= 0) return;
+    a.getWorldPosition(stepAt);
+    const side = m.foot === 0 ? 0.1 : -0.1, yaw = m.yaw, px = stepAt.x + Math.cos(yaw) * side + Math.sin(yaw) * 0.05, pz = stepAt.z - Math.sin(yaw) * side + Math.cos(yaw) * 0.05;
+    const g = groundUnder(world?.surface(px, pz), WORLD_SNOW.value, world?.wet ?? (() => false), px, pz);
+    footstep(particles.pool, g, px, stepAt.y, pz, Math.sin(yaw) * m.speed, Math.cos(yaw) * m.speed, liveIslandWeather() === "rain", amount);
+    footprint(particles.prints, g, px, stepAt.y, pz, yaw, amount);
+  });
 }
 
 /** A flat quad showing one frame of a pack sprite (the combat target marker): its UVs pick the cell. */

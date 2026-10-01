@@ -302,11 +302,11 @@ function IslandScene({ identity, level, devAt, exitFrom, peaceful, fishSpot, fis
       <InstancedModels items={scenery} />
       {/* Residents stand where their schedule puts them this phase; during a ceremony they stroll to the monument and cheer. */}
       {residents.map(({ persona, home, plaza }) => <NPC key={`npc-${persona.id}-${home.join()}-${reset}`} persona={persona} position={ceremony ? plaza : home} playerPositionRef={player}
-        groundHeight={island.ground} constrainMove={island.move}
+        groundHeight={island.ground} constrainMove={island.move} stepWorld={island}
         onClick={() => window.dispatchEvent(new CustomEvent("tsi:npc-greet", { detail: { id: persona.id } }))} />)}
       <PlayerAvatar key={`${reset}-${returned}-${fromBoat}-${exitFrom}`} spawnPosition={spawn} playerName={identity.display_name} playerLevel={level} member={identity.member} player={player} frozen={fishing || !!lead?.hold}
         world={island} groundHeight={island.ground} groundSurface={island.surface} camTarget={focus} glider={peaceful.glider} />
-      <CharacterCrowd player={player} ground={island.ground} />
+      <CharacterCrowd player={player} ground={island.ground} stepWorld={island} />
       {lead && leadAt && <HQLead at={leadAt} ground={island.ground} player={player} line={lead.line} />}
     </>
   );

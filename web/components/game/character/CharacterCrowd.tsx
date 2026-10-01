@@ -16,12 +16,14 @@ import * as THREE from "three";
 import Character, { type CharacterMotion, type ClipName } from "./Character";
 import { CLIPS, CLIP_BY_NAME, randomLook, seeded } from "@/lib/game/character/look";
 import { combat, publishCombat } from "@/lib/game/combat/runtime";
+import { useStepDust, type StepWorld } from "../movement/moveFx";
 
-function Walker({ i, n, player, origin, ground, stroll, clip, label }: { i: number; n: number; player: React.RefObject<THREE.Vector3>; origin: THREE.Vector3 | null; ground: (x: number, z: number) => number; stroll: boolean; clip: ClipName | null; label: boolean }) {
+function Walker({ i, n, player, origin, ground, stepWorld, stroll, clip, label }: { i: number; n: number; player: React.RefObject<THREE.Vector3>; origin: THREE.Vector3 | null; ground: (x: number, z: number) => number; stepWorld?: StepWorld; stroll: boolean; clip: ClipName | null; label: boolean }) {
   const look = useMemo(() => randomLook(seeded(1000 + i * 17)), [i]);
   const motion = useRef<CharacterMotion>({ speed: 0, yaw: Math.PI, lift: 0, pose: null, play: null });
   const replay = useRef(0);
   const group = useRef<THREE.Group>(null);
+  useStepDust(motion, group, stepWorld);
   const t = useRef(i / n * Math.PI * 2);
   const home = useRef<THREE.Vector3 | null>(null);
   useFrame((_, delta) => {
@@ -50,7 +52,7 @@ function Walker({ i, n, player, origin, ground, stroll, clip, label }: { i: numb
   </group>;
 }
 
-export default function CharacterCrowd({ player, ground }: { player: React.RefObject<THREE.Vector3>; ground: (x: number, z: number) => number }) {
+export default function CharacterCrowd({ player, ground, stepWorld }: { player: React.RefObject<THREE.Vector3>; ground: (x: number, z: number) => number; stepWorld?: StepWorld }) {
   const [params] = useState(() => (process.env.NODE_ENV !== "production" && typeof window !== "undefined" ? new URLSearchParams(window.location.search) : new URLSearchParams()));
   const n = Math.min(40, Number(params.get("crowd")) || 0);
   useEffect(() => {
@@ -64,6 +66,6 @@ export default function CharacterCrowd({ player, ground }: { player: React.RefOb
   const [origin] = useState(() => (at?.length === 2 && at.every(Number.isFinite) ? new THREE.Vector3(at[0], 0, at[1]) : null));
   if (!n) return null;
   const all = clip === ("all" as ClipName);
-  return <>{Array.from({ length: n }, (_, i) => <Walker key={i} i={i} n={n} player={player} origin={origin} ground={ground} stroll={params.get("stroll") === "1"} label={all}
+  return <>{Array.from({ length: n }, (_, i) => <Walker key={i} i={i} n={n} player={player} origin={origin} ground={ground} stepWorld={stepWorld} stroll={params.get("stroll") === "1"} label={all}
     clip={all ? CLIPS[i % CLIPS.length].name as ClipName : clip && CLIP_BY_NAME.has(clip) ? clip : null} />)}</>;
 }

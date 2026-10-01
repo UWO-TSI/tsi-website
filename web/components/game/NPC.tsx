@@ -9,6 +9,7 @@ import Character, { CHARACTER_HEIGHT, type CharacterMotion } from "./character/C
 import { hashSeed, randomLook, seeded } from "@/lib/game/character/look";
 import { calculateCurvedHtmlPosition } from "@/lib/game/worldProjection";
 import { AudioManager } from "@/lib/game/audio";
+import { useStepDust, type StepWorld } from "./movement/moveFx";
 import type { NPCPersona } from "@/lib/content/types";
 
 
@@ -29,6 +30,8 @@ interface NPCProps {
   worldPositionRef?: RefObject<THREE.Vector3>;
   groundHeight?: (x: number, z: number) => number;
   constrainMove?: (x: number, z: number, nx: number, nz: number) => [number, number];
+  /** The ground they walk, for their footstep dust (specs/movement-feel.md milestone 2). */
+  stepWorld?: StepWorld;
   onClick: () => void;
 }
 
@@ -88,7 +91,7 @@ function wanderOffset(t: number, phase: number): [number, number] {
   return [x, z];
 }
 
-export default function NPC({ persona, position, playerPosition, playerPositionRef, worldPositionRef, groundHeight = getTerrainHeight, constrainMove, onClick }: NPCProps) {
+export default function NPC({ persona, position, playerPosition, playerPositionRef, worldPositionRef, groundHeight = getTerrainHeight, constrainMove, stepWorld, onClick }: NPCProps) {
   const groupRef = useRef<THREE.Group>(null);
   const visualRef = useRef<THREE.Group>(null);
   const [hovered, setHovered] = useState(false);
@@ -133,6 +136,7 @@ export default function NPC({ persona, position, playerPosition, playerPositionR
 
   const look = useMemo(() => randomLook(seeded(hashSeed(persona.slug))), [persona.slug]);
   const motion = useRef<CharacterMotion>({ speed: 0, yaw: 0, lift: 0, pose: null, play: null });
+  useStepDust(motion, groupRef, stepWorld);
 
   // Daily village life v1: the anchor eases toward the (phase-dependent)
   // spawn base so a time-of-day move reads as a slow stroll, not a snap.
