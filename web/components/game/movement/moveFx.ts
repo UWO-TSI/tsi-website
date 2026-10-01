@@ -1,12 +1,19 @@
 /**
- * The movement kit's juice on the player's avatar (specs/movement.md; look
- * spec §7.1): dust, speed lines, the dash cooldown ring, the FOV, and the
- * touch stick. PlayerAvatar drives them from each sim step's events.
+ * The movement kit's juice (specs/movement.md, specs/movement-feel.md; look
+ * spec §7.1): the particle system that draws our painted pack, the FOV, and
+ * the touch stick. PlayerAvatar throws particles from each sim step's events
+ * and foot contacts, on the avatar that moved (lib/game/movement/juice.ts).
  */
+import { useEffect, useMemo } from "react";
+import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import type { ClipName } from "@/lib/game/character/clips";
 import { juiceFovOffset } from "@/lib/game/cameraJuice";
+import { PACK, PACK_COLS, PACK_ROWS, PACK_URL, type SpriteName } from "@/lib/game/fx/pack";
+import { ParticlePool } from "@/lib/game/fx/particles";
+import { liveIslandWeather } from "@/lib/game/islandWeather";
 import type { MoveEvent } from "@/lib/game/movement/sim";
+import { worldWind } from "@/lib/game/worldFx";
 
 /** Feel values on the renderer's side, tuned next to the sim's in /lab/move. */
 export const MOVE_JUICE = {
@@ -14,8 +21,16 @@ export const MOVE_JUICE = {
   fovKick: 2.5, // degrees wider at top speed
   dashKick: 2, // degrees the FOV punches out on a dash
   squash: 1, // squash and stretch amount
-  dust: 1, // dust size
-  streaks: 1, // speed lines on a dash and at a sprint
+  // Each effect's amount (0 turns it off): /lab/move's Juice panel.
+  footsteps: 1, // flecks, grains and puffs at each foot contact
+  takeoff: 1, // dust kicked back at a jump
+  landing: 1, // motes, the dust ring, the heavy burst
+  dashBurst: 1, // the dash's burst of dust (a puff of air in the air)
+  streaks: 1, // soft speed streaks through a dash and at top speed
+  afterimage: 1, // the dash's faint afterimages
+  cooldown: 1, // wind at the heels while the dash recharges
+  anticipation: 1, // the jump's crouch before the spring
+  camDip: 1, // the camera's dip on a heavy landing
 };
 export type MoveJuice = typeof MOVE_JUICE;
 /** The follow camera's field of view at a walk (the Canvases' camera); speed and dashes widen it from here. */
@@ -28,103 +43,145 @@ export const touchStick: StickInput = { x: 0, z: 0, jump: false, jumpPressed: fa
 /** What the HUD reads (a few times a second). */
 export interface MoveTelemetry { x: number; y: number; z: number; speed: number; mode: string; hops: number; dashReady: boolean; long: boolean }
 export const TAKEOFF = new Set<MoveEvent["kind"]>(["jump", "hop", "long", "dashjump"]);
+/** Particles a scene's system holds at once (all avatars and the ruins' puffs together). */
+const FX_CAPACITY = 384;
 
-// ── Dust: a small pool of flat puffs, no React per puff ────────────
-const DUST = 32;
-export class DustPool {
-  readonly group = new THREE.Group();
-  private next = 0;
-  private readonly puffs = Array.from({ length: DUST }, (_, i) => {
-    const wet = i % 4 === 3; // a quarter of the pool are water rings
-    const mesh = new THREE.Mesh(wet ? new THREE.RingGeometry(0.72, 1, 16) : new THREE.CircleGeometry(1, 12),
-      new THREE.MeshBasicMaterial({ color: wet ? "#DFF2FC" : "#D8C8A8", transparent: true, opacity: 0, depthWrite: false, fog: false }));
-    mesh.rotation.x = -Math.PI / 2;
-    mesh.visible = false;
-    this.group.add(mesh);
-    return { mesh, wet, t: 1, life: 0.6, size: 1 };
-  });
-  spawn(x: number, y: number, z: number, size: number, wet = false, life = 0.6) {
-    for (let k = 0; k < DUST; k++) {
-      const p = this.puffs[(this.next + k) % DUST];
-      if (p.wet !== wet) continue;
-      this.next = (this.next + k + 1) % DUST;
-      Object.assign(p, { t: 0, life, size });
-      p.mesh.position.set(x, y + 0.03, z);
-      p.mesh.visible = true;
-      return;
-    }
+// ── The movement particles: our painted pack, one instanced draw per scene ──
+let packTexture: THREE.Texture | null = null;
+/** The pack atlas (art/fx/build_pack.py), loaded once and shared. */
+export function packMap(): THREE.Texture {
+  if (!packTexture) {
+    packTexture = new THREE.TextureLoader().load(PACK_URL);
+    packTexture.colorSpace = THREE.SRGBColorSpace;
+    packTexture.anisotropy = 4;
   }
-  update(dt: number) {
-    for (const p of this.puffs) {
-      if (p.t >= 1) continue;
-      p.t = Math.min(1, p.t + dt / p.life);
-      const s = (p.wet ? 0.3 + p.t * 0.75 : 0.35 + p.t * 0.4) * p.size;
-      p.mesh.scale.set(s, s, s);
-      (p.mesh.material as THREE.MeshBasicMaterial).opacity = (p.wet ? 0.45 : 0.55) * (1 - p.t);
-      p.mesh.visible = p.t < 1;
-    }
-  }
-  dispose() { for (const p of this.puffs) { p.mesh.geometry.dispose(); (p.mesh.material as THREE.Material).dispose(); } }
+  return packTexture;
 }
 
-// ── Speed lines: the sprint wind rods, strong through a dash, faint at a sprint ──
-export class Streaks {
-  readonly group = new THREE.Group();
-  private readonly geometry = new THREE.BoxGeometry(0.025, 0.025, 0.85);
-  private readonly mats = [0, 1, 2, 3].map(i => {
-    const mat = new THREE.MeshBasicMaterial({ color: "#FFFFFF", transparent: true, opacity: 0, depthWrite: false, fog: false });
-    const rod = new THREE.Mesh(this.geometry, mat);
-    rod.position.set(i % 2 ? 0.45 : -0.45, 0.45 + (i >> 1) * 0.5, -0.4);
-    this.group.add(rod);
-    return mat;
-  });
-  private clock = 0;
-  update(dt: number, x: number, y: number, z: number, vx: number, vz: number, want: number) {
-    this.clock += dt;
-    let peak = 0;
-    for (const m of this.mats) { m.opacity = THREE.MathUtils.damp(m.opacity, want, want > m.opacity ? 40 : 9, dt); peak = Math.max(peak, m.opacity); }
-    this.group.visible = peak > 0.015;
-    if (!this.group.visible) return;
-    this.group.position.set(x, y, z);
-    if (Math.hypot(vx, vz) > 0.5) this.group.rotation.y = Math.atan2(vx, vz);
-    this.group.children.forEach((rod, i) => { rod.position.z = -0.15 - ((this.clock * 5 + i * 0.65) % 1) * 1.1; });
-  }
-  dispose() { this.geometry.dispose(); this.mats.forEach(m => m.dispose()); }
+/** Ground fade (world units): a puff standing on the ground fades out into it instead of being cut by it. */
+const SOFT = 0.14;
+const VERTEX_PARS = `attribute vec4 iA;
+attribute vec4 iB;
+attribute vec4 iC;
+attribute vec4 iD;
+varying vec4 vTint;
+varying float vAbove;
+`;
+/**
+ * Every particle is a quad placed in the vertex shader from its instance data (particles.ts): facing the camera
+ * (centred, or standing on its bottom edge), flat on the ground, or a streak along its axis turned to the camera.
+ * Its normal leans up and toward the eye, so the sun and the sky light it like the world round it.
+ */
+const PLACE_NORMAL = `vec3 pCentre = iA.xyz;
+vec3 toCam = normalize(cameraPosition - pCentre);
+vec3 axX = vec3(viewMatrix[0][0], viewMatrix[1][0], viewMatrix[2][0]);
+vec3 axY = vec3(viewMatrix[0][1], viewMatrix[1][1], viewMatrix[2][1]);
+vec3 objectNormal = normalize(vec3(0.0, 0.55, 0.0) + toCam * 0.45);
+float face = iD.w;
+bool onGround = face > 0.5 && face < 1.5;
+if (onGround) { axX = vec3(1.0, 0.0, 0.0); axY = vec3(0.0, 0.0, -1.0); objectNormal = vec3(0.0, 1.0, 0.0); }
+else if (face > 1.5 && face < 2.5) { axX = normalize(iD.xyz); axY = normalize(cross(toCam, axX)); }
+`;
+const PLACE_VERTEX = `float pc = cos(iB.z), ps = sin(iB.z);
+vec2 lp = position.xy * iB.xy;
+if (face > 2.5) lp.y += 0.5 * iB.y;
+vec3 transformed = pCentre + axX * (lp.x * pc - lp.y * ps) + axY * (lp.x * ps + lp.y * pc);
+vAbove = onGround ? 10.0 : transformed.y - iA.w;
+vTint = iC;
+`;
+const PICK_FRAME = `{
+  float pRow = floor((iB.w + 0.5) / ${PACK_COLS.toFixed(1)});
+  float pCol = iB.w - pRow * ${PACK_COLS.toFixed(1)};
+  vMapUv = vec2((pCol + uv.x) / ${PACK_COLS.toFixed(1)}, 1.0 - (pRow + 1.0 - uv.y) / ${PACK_ROWS.toFixed(1)});
+}`;
+
+let particleMaterial: THREE.MeshStandardMaterial | null = null;
+/** Matte and lit like the world's own surfaces (it gets the sun, the sky, the environment and the look grade). */
+function moveParticleMaterial(): THREE.MeshStandardMaterial {
+  if (particleMaterial) return particleMaterial;
+  const m = new THREE.MeshStandardMaterial({ name: "MoveParticles", map: packMap(), roughness: 1, metalness: 0, transparent: true, depthWrite: false });
+  m.onBeforeCompile = shader => {
+    shader.vertexShader = VERTEX_PARS + shader.vertexShader
+      .replace("#include <uv_vertex>", `#include <uv_vertex>\n${PICK_FRAME}`)
+      .replace("#include <beginnormal_vertex>", PLACE_NORMAL)
+      .replace("#include <begin_vertex>", PLACE_VERTEX);
+    shader.fragmentShader = "varying vec4 vTint;\nvarying float vAbove;\n" + shader.fragmentShader.replace("#include <color_fragment>", `#include <color_fragment>
+  diffuseColor *= vTint;
+  diffuseColor.a *= smoothstep(0.0, ${SOFT.toFixed(2)}, vAbove);
+  if (diffuseColor.a < 0.003) discard;`);
+  };
+  m.customProgramCacheKey = () => "move-particles-v1";
+  return (particleMaterial = m);
 }
 
-// ── Dash cooldown: a ring at the feet that fills clockwise, then flashes when the dash is back ──
-const ARCS = 24;
-export class DashRing {
-  readonly group = new THREE.Group();
-  /** Arcs filled from the top of the screen, clockwise (the camera looks +z: +x is screen left). */
-  private readonly arcs = Array.from({ length: ARCS }, (_, i) => new THREE.RingGeometry(0.34, 0.42, 2 * (i + 1), 1, 1.5 * Math.PI, -((i + 1) / ARCS) * 2 * Math.PI));
-  private readonly trackMat = new THREE.MeshBasicMaterial({ color: "#0b0e14", transparent: true, opacity: 0.3, depthWrite: false, fog: false, side: THREE.DoubleSide });
-  private readonly fillMat = new THREE.MeshBasicMaterial({ color: "#FFD166", transparent: true, opacity: 0.9, depthWrite: false, fog: false, side: THREE.DoubleSide });
-  private readonly track = new THREE.Mesh(this.arcs[ARCS - 1], this.trackMat);
-  private readonly fill = new THREE.Mesh(this.arcs[0], this.fillMat);
-  private flash = 1;
-  private ready = true;
+const camPos = new THREE.Vector3(), camDir = new THREE.Vector3();
+/**
+ * The movement particle system (specs/movement-feel.md deliverable 2): a ParticlePool drawn as one instanced quad
+ * mesh, sorted back to front, in our pack. Shared by everything in a scene that throws particles (useMoveParticles).
+ */
+export class MoveParticles {
+  readonly pool = new ParticlePool(FX_CAPACITY);
+  readonly mesh: THREE.Mesh;
+  private readonly geometry = new THREE.InstancedBufferGeometry();
+  private readonly attrs: THREE.InstancedBufferAttribute[];
+  private stamp = -1;
   constructor() {
-    this.group.rotation.x = -Math.PI / 2;
-    this.group.add(this.track, this.fill);
-    this.group.visible = false;
+    const quad = new THREE.PlaneGeometry(1, 1);
+    this.geometry.index = quad.index;
+    for (const name of ["position", "normal", "uv"]) this.geometry.setAttribute(name, quad.getAttribute(name));
+    this.attrs = [this.pool.a, this.pool.b, this.pool.c, this.pool.d].map((array, k) => {
+      const attr = new THREE.InstancedBufferAttribute(array, 4).setUsage(THREE.DynamicDrawUsage);
+      this.geometry.setAttribute(`i${"ABCD"[k]}`, attr);
+      return attr;
+    });
+    this.geometry.instanceCount = 0;
+    this.mesh = new THREE.Mesh(this.geometry, moveParticleMaterial());
+    this.mesh.name = "MoveParticles";
+    this.mesh.frustumCulled = false; // placed in the shader; the pool is small
+    this.mesh.receiveShadow = true;
+    this.mesh.renderOrder = 3;
+    this.mesh.visible = false;
   }
-  /** `fill` 0..1 of the cooldown done (0 while an air dash is spent); `ready` = a dash would go now. */
-  update(dt: number, x: number, y: number, z: number, fill: number, ready: boolean) {
-    if (ready && !this.ready) this.flash = 0;
-    this.ready = ready;
-    this.flash = Math.min(1, this.flash + dt / 0.25);
-    this.group.visible = !ready || this.flash < 1;
-    if (!this.group.visible) return;
-    this.group.position.set(x, y + 0.03, z);
-    const n = Math.round(fill * ARCS);
-    this.fill.visible = ready || n > 0;
-    this.fill.geometry = this.arcs[ready ? ARCS - 1 : Math.max(0, n - 1)];
-    this.track.visible = !ready;
-    this.fillMat.opacity = ready ? 0.9 * (1 - this.flash) : 0.9;
-    this.group.scale.setScalar(ready ? 1 + 0.4 * this.flash : 1);
+  /** Step and draw, once per frame: the first caller's `dt` wins (the avatar's slow motion and pauses), the rest are skipped. */
+  tick(stamp: number, dt: number, camera: THREE.Camera, wind: { x: number; z: number }) {
+    if (stamp === this.stamp) return;
+    this.stamp = stamp;
+    this.pool.update(dt, wind.x, wind.z);
+    camera.getWorldPosition(camPos);
+    camera.getWorldDirection(camDir);
+    const n = this.pool.write(camPos.x, camPos.y, camPos.z, camDir.x, camDir.y, camDir.z);
+    this.geometry.instanceCount = n;
+    this.mesh.visible = n > 0;
+    if (!n) return;
+    for (const a of this.attrs) { a.clearUpdateRanges(); a.addUpdateRange(0, n * 4); a.needsUpdate = true; }
   }
-  dispose() { this.arcs.forEach(a => a.dispose()); this.trackMat.dispose(); this.fillMat.dispose(); }
+  dispose() { this.geometry.dispose(); }
+}
+
+const SHARED = new WeakMap<THREE.Object3D, { fx: MoveParticles; users: number }>();
+/** The scene's movement particles: one system per scene however many avatars (and the ruins) throw into it. */
+export function useMoveParticles(): MoveParticles {
+  const scene = useThree(s => s.scene);
+  const fx = useMemo(() => {
+    let e = SHARED.get(scene);
+    if (!e) SHARED.set(scene, e = { fx: new MoveParticles(), users: 0 });
+    return e.fx;
+  }, [scene]);
+  useEffect(() => {
+    const e = SHARED.get(scene)!;
+    if (e.users++ === 0) scene.add(e.fx.mesh);
+    return () => { if (--e.users === 0) { scene.remove(e.fx.mesh); e.fx.pool.clear(); e.fx.dispose(); } };
+  }, [scene]);
+  // Steps at real time unless an avatar already stepped it this frame (its slow motion and dev pauses win).
+  useFrame((state, delta) => fx.tick(state.clock.elapsedTime, Math.min(delta, 0.1), state.camera, worldWind(liveIslandWeather())));
+  return fx;
+}
+
+/** A flat quad showing one frame of a pack sprite (the combat target marker): its UVs pick the cell. */
+export function spriteQuad(sprite: SpriteName, frame = 0, size = 1): THREE.PlaneGeometry {
+  const g = new THREE.PlaneGeometry(size, size), uv = g.getAttribute("uv") as THREE.BufferAttribute, row = PACK[sprite].row;
+  for (let i = 0; i < uv.count; i++) uv.setXY(i, (frame + uv.getX(i)) / PACK_COLS, 1 - (row + 1 - uv.getY(i)) / PACK_ROWS);
+  return g;
 }
 
 // Module scope: three objects from hooks are frozen to the react compiler inside component code.
@@ -140,4 +197,4 @@ export function screenOf([x, y, z]: [number, number, number], camera: THREE.Came
 }
 
 /** One-shot clip per event (the character plays it once over locomotion). */
-export const EVENT_CLIP: Partial<Record<MoveEvent["kind"], ClipName>> = { jump: "Jump", hop: "Jump", long: "Jump", dashjump: "Jump", roll: "Roll", mantle: "Mantle", dash: "Dash", recover: "Land" };
+export const EVENT_CLIP: Partial<Record<MoveEvent["kind"], ClipName>> = { jump: "Jump", hop: "Jump", long: "Jump", dashjump: "Jump", roll: "Roll", mantle: "Mantle", dash: "Dash", recover: "LandHeavy" };

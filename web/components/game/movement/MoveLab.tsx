@@ -30,6 +30,7 @@ import { IslandAtmosphere, useFollowCamera, type TreeSpot } from "../IslandAtmos
 import PlayerAvatar from "../PlayerAvatar";
 import TouchControls from "./TouchControls";
 import { BASE_FOV, MOVE_JUICE, type MoveJuice, type MoveTelemetry } from "./moveFx";
+import { PACK_URL } from "@/lib/game/fx/pack";
 import { ISLAND_TERRAIN, islandLight, withSeason } from "@/lib/game/islandLighting";
 import { seasonLook } from "@/lib/game/seasonalLook";
 import { CURRENT, lookFx } from "@/lib/game/lookPreset";
@@ -46,7 +47,7 @@ const SUMMER = { season: "summer" as const, weights: { spring: 0, summer: 1, aut
 const LOOK = seasonLook(SUMMER, {});
 const LIGHT = withSeason(islandLight(CURRENT, "day"), LOOK);
 const TERRAIN = { ...ISLAND_TERRAIN, grass: LOOK.grass };
-const STORE = "tsi.moveLab.v2"; // v2: the held bunny-hop and the eased dash (2026-09-29) start from the new defaults
+const STORE = "tsi.moveLab.v3"; // v3: the Juice panel's per-effect amounts (movement feel, 2026-10-01) start from the defaults
 
 // ── The tuning panel's table: every value, its range, its group ────
 type Range = [min: number, max: number, step: number];
@@ -63,7 +64,9 @@ const GROUPS: { name: string; keys: [keyof MoveTuning, ...Range][] }[] = [
     ["recoverDrop", 0.5, 6, 0.1], ["recoverTime", 0, 1, 0.02]] },
   { name: "Glide (leaf)", keys: [["glideSpeed", 3, 16, 0.1], ["glideSink", 0.5, 5, 0.05], ["glideEase", 0.5, 12, 0.25], ["glideOpen", 1, 20, 0.5], ["glideTurn", 0.5, 8, 0.25]] },
 ];
-const JUICE_KEYS: [keyof MoveJuice, ...Range][] = [["camLead", 0, 0.4, 0.01], ["fovKick", 0, 10, 0.5], ["dashKick", 0, 8, 0.5], ["squash", 0, 2, 0.05], ["dust", 0, 2, 0.05], ["streaks", 0, 2, 0.05]];
+const JUICE_KEYS: [keyof MoveJuice, ...Range][] = [["camLead", 0, 0.4, 0.01], ["fovKick", 0, 10, 0.5], ["dashKick", 0, 8, 0.5], ["squash", 0, 2, 0.05],
+  ["anticipation", 0, 2, 0.05], ["footsteps", 0, 2, 0.05], ["takeoff", 0, 2, 0.05], ["landing", 0, 2, 0.05], ["camDip", 0, 3, 0.1],
+  ["dashBurst", 0, 2, 0.05], ["streaks", 0, 2, 0.05], ["afterimage", 0, 1, 1], ["cooldown", 0, 2, 0.05]];
 /** Dash shapes to compare (row 250), about the same reach each: only the dash values change. */
 const DASH_PRESETS: Record<string, Partial<MoveTuning>> = {
   // The shipped dash (MOVE_TUNING), so "current preset" keeps matching when the defaults are retuned.
@@ -302,11 +305,17 @@ export default function MoveLab() {
       </fieldset>)}
       <fieldset style={{ border: "1px solid rgba(255,255,255,0.12)", borderRadius: 6, margin: "8px 0", padding: "4px 8px" }}>
         <legend style={{ color: "#FFD166" }}>Juice</legend>
+        <p style={{ color: "#8a939a", margin: "2px 0 6px" }}>Each effect&apos;s amount; 0 turns it off. Slow motion is the Speed menu above.</p>
         {JUICE_KEYS.map(([k, min, max, step]) => <label key={k} style={{ display: "grid", gridTemplateColumns: "118px minmax(0, 1fr) 46px", gap: 6, alignItems: "center", margin: "3px 0" }}>
           <span>{label(k)}</span>
           <input type="range" min={min} max={max} step={step} value={juice[k]} style={{ width: "100%", minWidth: 0 }} onChange={e => { setJuice(j => ({ ...j, [k]: Number(e.target.value) })); setPreset("Custom"); }} />
           <output style={{ textAlign: "right" }}>{juice[k]}</output>
         </label>)}
+        <details style={{ margin: "6px 0" }}>
+          <summary style={{ cursor: "pointer" }}>Particle pack (painted, art/fx/build_pack.py)</summary>
+          {/* eslint-disable-next-line @next/next/no-img-element -- the raw atlas, a dev preview */}
+          <img src={PACK_URL} alt="The movement particle pack: one row of eight frames per effect" style={{ width: "100%", background: "#8fa16c", borderRadius: 4, marginTop: 4 }} />
+        </details>
       </fieldset>
       <fieldset style={{ border: "1px solid rgba(255,255,255,0.12)", borderRadius: 6, margin: "8px 0", padding: "4px 8px" }}>
         <legend style={{ color: "#FFD166" }}>Keys (this device)</legend>
