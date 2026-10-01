@@ -57,7 +57,7 @@ export default function HomeIslandScene({ identity, level, peaceful, fishSpot, f
   const spawn = returned ? DOOR_SPAWN : HOME_SPAWN;
   const terrain = useMemo(() => ({ ...ISLAND_TERRAIN, grass: look.grass }), [look.grass]);
   const near = useRef<HomeNear>(null);
-  const fauna = useMemo(() => ({ site: { map: home.map, flowers: HOME_FLOWERS, water: SEA }, ground: home.ground, standable: home.fixedFree, gulls: HOME_GULLS, player }), [home, player]);
+  const fauna = useMemo(() => ({ site: { map: home.map, flowers: HOME_FLOWERS, water: SEA }, ground: home.ground, standable: home.fixedFree, surface: home.surface, gulls: HOME_GULLS, player }), [home, player]);
   useEffect(() => { player.current.set(...spawn); }, [spawn, player]);
   const focus = useRef(new THREE.Vector3(...spawn));
   useFollowCamera(focus, zoom, overview ? { focus: [0, 0, 0], offset: [6, 13, -16] } : null);

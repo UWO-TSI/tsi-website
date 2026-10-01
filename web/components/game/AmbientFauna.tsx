@@ -226,6 +226,9 @@ export interface FaunaProps {
   /** Gull orbits over the sea round the island. */
   gulls: readonly (readonly [number, number])[];
   player: React.RefObject<THREE.Vector3>;
+  /** The drawn surface and the tallest thing at a point (WeatherGround: where rain lands and prints are left). */
+  surface?: (x: number, z: number) => number;
+  top?: (x: number, z: number) => number;
 }
 
 export default function AmbientFauna({ site, ground, standable, gulls, player, season, weather, liteMode }: FaunaProps & { season: Season; weather: IslandWeather; liteMode: boolean }) {

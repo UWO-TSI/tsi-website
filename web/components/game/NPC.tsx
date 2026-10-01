@@ -19,6 +19,7 @@ import type { IslandPhase } from "@/lib/game/islandTime";
 import { RESIDENT_STRIDE, RESIDENT_WALK, ResidentDay, daySpan, idleAt, navGrid, newPose, phaseOn, planResident, type DaySpan, type NavGrid, type ResidentPose } from "@/lib/game/residentRoutine";
 import { hash01 } from "@/lib/game/worldFx";
 import { RESIDENT_LOOKS } from "@/lib/content/residentRoster";
+import { dropWalker, setWalker } from "@/lib/game/footprintWalkers";
 import type { NPCPersona } from "@/lib/content/types";
 import s from "./residents.module.css";
 
@@ -231,6 +232,7 @@ function tick(list: readonly Runtime[], c: Clock, dt: number, p: THREE.Vector3, 
     if (r.hopT >= 0) { r.hopT += dt; if (r.hopT > 0.35) r.hopT = -1; else hop = Math.sin((r.hopT / 0.35) * Math.PI) * 0.38; }
     r.lift = THREE.MathUtils.damp(r.lift, sitting ? seatLift("Sit", pose.seat, CHARACTER_SCALE) : 0, 7, dt);
     m.lift = r.lift + hop;
+    setWalker(r.id, r.x, r.z, !r.hidden && r.lift < 0.05);
     if (g) {
       g.visible = !r.hidden;
       g.position.set(r.x, island.ground(r.x, r.z), r.z);
@@ -262,7 +264,7 @@ function tick(list: readonly Runtime[], c: Clock, dt: number, p: THREE.Vector3, 
 }
 
 function enroll(reg: Registry, r: Runtime) { reg.map.set(r.id, r); reg.list = [...reg.map.values()]; }
-function unenroll(reg: Registry, r: Runtime) { if (reg.map.get(r.id) === r) reg.map.delete(r.id); reg.list = [...reg.map.values()]; }
+function unenroll(reg: Registry, r: Runtime) { if (reg.map.get(r.id) === r) reg.map.delete(r.id); reg.list = [...reg.map.values()]; dropWalker(r.id); }
 
 function show(el: HTMLElement | null, on: boolean) {
   if (el && el.hidden === on) el.hidden = !on;
