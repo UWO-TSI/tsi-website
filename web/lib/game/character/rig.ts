@@ -20,7 +20,7 @@ export const materialName = (mesh: THREE.Mesh) => (Array.isArray(mesh.material) 
 /**
  * A primitive's geometry re-expressed for the target skeleton: joint indices
  * remapped by bone name, colour = COLOR_0 (linear) x tint, a uv channel and a
- * `hairSheen` channel so every piece merges with the same attribute set.
+ * `hairSheen` and `hairTangent` channel so every piece merges with the same attribute set.
  * hairSheen = (1, lock u, lock v) on sculpted-lock hair (avatar v7: M_Hair
  * with lock UVs, u across the lock, v root to tip), 0 elsewhere; the body
  * material draws its sheen band from it (faceMaterial.ts).
@@ -37,6 +37,7 @@ export function adoptPrimitive(mesh: THREE.SkinnedMesh, boneIndex: ReadonlyMap<s
   // glTF stores v flipped (1 - Blender's v): flip back so v = 0 is the lock's root, as authored in Blender
   if (sheen && uv) for (let i = 0; i < n; i++) { lock[i * 3] = 1; lock[i * 3 + 1] = uv.getX(i); lock[i * 3 + 2] = 1 - uv.getY(i); }
   g.setAttribute("hairSheen", new THREE.BufferAttribute(lock, 3));
+  g.setAttribute("hairTangent", new THREE.BufferAttribute(sheen && uv ? lockTangents(src, lock) : new Float32Array(n * 3), 3));
   const base = src.getAttribute("color"), color = new Float32Array(n * 3), t = tint ?? new THREE.Color(1, 1, 1);
   for (let i = 0; i < n; i++) {
     color[i * 3] = (base ? base.getX(i) : 1) * t.r;
@@ -58,6 +59,33 @@ export function adoptPrimitive(mesh: THREE.SkinnedMesh, boneIndex: ReadonlyMap<s
   g.setAttribute("skinIndex", new THREE.Uint16BufferAttribute(skinIndex, 4));
   g.setAttribute("skinWeight", new THREE.BufferAttribute(skinWeight, 4));
   return g;
+}
+
+/**
+ * Per-vertex direction of each lock (root to tip, dP/dv from the lock UVs), averaged over the faces that share the
+ * vertex: the glossy band follows it smoothly across the low-poly faces instead of switching per face.
+ */
+export function lockTangents(src: THREE.BufferGeometry, lock: Float32Array): Float32Array {
+  const pos = src.getAttribute("position"), n = pos.count, out = new Float32Array(n * 3);
+  const idx = src.index ? (src.index.array as ArrayLike<number>) : Array.from({ length: n }, (_, i) => i);
+  const P = (i: number) => [pos.getX(i), pos.getY(i), pos.getZ(i)];
+  for (let t = 0; t + 2 < idx.length; t += 3) {
+    const [a, b, c] = [idx[t], idx[t + 1], idx[t + 2]];
+    const pa = P(a), pb = P(b), pc = P(c);
+    const du1 = lock[b * 3 + 1] - lock[a * 3 + 1], dv1 = lock[b * 3 + 2] - lock[a * 3 + 2];
+    const du2 = lock[c * 3 + 1] - lock[a * 3 + 1], dv2 = lock[c * 3 + 2] - lock[a * 3 + 2];
+    const det = du1 * dv2 - du2 * dv1;
+    if (Math.abs(det) < 1e-9) continue;
+    for (let k = 0; k < 3; k++) {
+      const d = ((pc[k] - pa[k]) * du1 - (pb[k] - pa[k]) * du2) / det;   // dP/dv
+      out[a * 3 + k] += d; out[b * 3 + k] += d; out[c * 3 + k] += d;
+    }
+  }
+  for (let i = 0; i < n; i++) {
+    const l = Math.hypot(out[i * 3], out[i * 3 + 1], out[i * 3 + 2]);
+    if (l > 1e-9) { out[i * 3] /= l; out[i * 3 + 1] /= l; out[i * 3 + 2] /= l; }
+  }
+  return out;
 }
 
 export interface PieceSource { root: THREE.Object3D; tints: Record<string, string>; keep?: (materialName: string) => boolean }

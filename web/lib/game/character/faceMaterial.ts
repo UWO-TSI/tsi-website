@@ -8,7 +8,7 @@
  *
  * Hair: the merged body geometry carries a `hairSheen` attribute (rig.ts: 1 and the lock UVs on sculpted-lock hair,
  * 0 elsewhere). The body material draws a glossy band down each lock that follows the key light (Kajiya-Kay on the
- * lock's tangent, taken from the lock UVs, thresholded into crisp near-white bands like David's hair-3d-set sheet),
+ * lock's per-vertex tangent from its UVs, thresholded into crisp near-white bands like David's hair-3d-set sheet),
  * strongest on the lock's ridge and fading at its root and tip, plus a soft view band in the albedo for the shade.
  */
 import * as THREE from "three";
@@ -118,26 +118,37 @@ export function prepareFaceAtlas(tex: THREE.Texture) {
 // ── hair sheen ────────────────────────────────────────────────────────────────
 const SHEEN_VERT = /* glsl */ `
 attribute vec3 hairSheen;
+attribute vec3 hairTangent;
 varying vec3 vSheen;
+varying vec3 vHairT;
+`;
+/** The lock direction, skinned and taken to view space like the normal. */
+const SHEEN_TANGENT = /* glsl */ `
+vec3 hairTo = hairTangent;
+#ifdef USE_SKINNING
+  hairTo = (skinMatrix * vec4(hairTo, 0.0)).xyz;
+#endif
+vHairT = (modelViewMatrix * vec4(hairTo, 0.0)).xyz;
 `;
 const SHEEN_FRAG_PARS = /* glsl */ `
 varying vec3 vSheen;
+varying vec3 vHairT;
 `;
 /**
- * After the normal is known, before lighting: the lock's direction (its tangent along v, from screen-space
- * derivatives of the lock UVs), the ridge/length mask, and a soft view band baked into the albedo so hair keeps a
- * little gloss in the shade.
+ * After the normal is known, before lighting: the lock's direction (the per-vertex lock tangent from rig.ts, made
+ * tangent to the surface), the ridge/length mask, and a soft view band baked into the albedo so hair keeps a little
+ * gloss in the shade.
  */
 const SHEEN_FRAG = /* glsl */ `
 vec3 hairT = vec3(0.0, 1.0, 0.0);
 float hairMask = 0.0;
 if (vSheen.x > 0.5) {
-  vec3 dp1 = dFdx(-vViewPosition), dp2 = dFdy(-vViewPosition);
-  vec2 duv1 = dFdx(vSheen.yz), duv2 = dFdy(vSheen.yz);
-  vec3 alongV = cross(dp2, normal) * duv1.y + cross(normal, dp1) * duv2.y;
+  vec3 alongV = vHairT - normal * dot(vHairT, normal);     // the smooth per-vertex lock direction, on the surface
   float lenV = length(alongV);
-  if (lenV > 1e-9) hairT = alongV / lenV;
-  float ridge = smoothstep(0.3, 0.75, 1.0 - abs(vSheen.y - 0.5) * 2.0);      // strongest down the lock's ridge
+  if (lenV > 1e-4) hairT = alongV / lenV;
+  // thin streaks along the lock, like the sheet's: a sharp one down the ridge and a fainter one either side of it
+  float c = abs(vSheen.y - 0.5);
+  float ridge = max(1.0 - smoothstep(0.03, 0.08, c), 0.55 * (1.0 - smoothstep(0.015, 0.05, abs(c - 0.21))));
   float along = smoothstep(0.0, 0.05, vSheen.z) * (1.0 - smoothstep(0.85, 1.0, vSheen.z));
   hairMask = ridge * along;
   float ring = smoothstep(0.12, 0.3, normal.y) * (1.0 - smoothstep(0.5, 0.72, normal.y)) * smoothstep(0.1, 0.4, normal.z);
@@ -159,13 +170,13 @@ if (hairMask > 0.0) {
     vec3 H = normalize(L + V);
     vec3 T1 = normalize(hairT + normal * 0.18);
     vec3 T2 = normalize(hairT - normal * 0.12);
-    float d1 = dot(T1, H), d2 = dot(T2, H);
-    float s1 = smoothstep(0.955, 0.985, sqrt(max(0.0, 1.0 - d1 * d1)));
-    float s2 = smoothstep(0.86, 0.96, sqrt(max(0.0, 1.0 - d2 * d2)));
+    // bands where the lock's tangent is (nearly) perpendicular to the half vector: |T.H| under ~0.12 (about 7 deg)
+    float s1 = 1.0 - smoothstep(0.03, 0.12, abs(dot(T1, H)));
+    float s2 = 1.0 - smoothstep(0.06, 0.26, abs(dot(T2, H)));
     float lit = smoothstep(-0.05, 0.35, dot(normal, L));
-    gloss += directionalLights[i].color * lit * (s1 * 0.75 + s2 * 0.3 * (0.35 + diffuseColor.rgb));
+    gloss += directionalLights[i].color * lit * (s1 * 0.38 + s2 * 0.12 * (0.3 + diffuseColor.rgb));
   }
-  reflectedLight.directSpecular += gloss * hairMask;
+  reflectedLight.directSpecular += min(gloss * hairMask, vec3(0.55));
 }
 #endif
 `;
@@ -177,12 +188,13 @@ export function patchHairSheen(material: THREE.MeshStandardMaterial) {
     base.call(material, shader, renderer);
     shader.vertexShader = shader.vertexShader
       .replace("#include <common>", `#include <common>\n${SHEEN_VERT}`)
-      .replace("#include <begin_vertex>", "#include <begin_vertex>\nvSheen = hairSheen;");
+      .replace("#include <begin_vertex>", "#include <begin_vertex>\nvSheen = hairSheen;")
+      .replace("#include <skinnormal_vertex>", `#include <skinnormal_vertex>\n${SHEEN_TANGENT}`);
     shader.fragmentShader = shader.fragmentShader
       .replace("#include <common>", `#include <common>\n${SHEEN_FRAG_PARS}`)
       .replace("#include <normal_fragment_maps>", `#include <normal_fragment_maps>\n${SHEEN_FRAG}`)
       .replace("#include <lights_fragment_end>", `#include <lights_fragment_end>\n${SHEEN_SPEC}`);
   };
-  material.customProgramCacheKey = () => "character-body-sheen-v7b";
+  material.customProgramCacheKey = () => "character-body-sheen-v7c";
   return material;
 }

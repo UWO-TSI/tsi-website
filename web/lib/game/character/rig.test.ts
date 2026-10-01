@@ -54,11 +54,20 @@ describe("character rig assembly", () => {
     for (let i = 0; i < sheen.count; i++) if (sheen.getX(i) === 1) { on++; if (sheen.getZ(i) < 0.05) rootish++; expect(sheen.getY(i)).toBeGreaterThanOrEqual(0); expect(sheen.getY(i)).toBeLessThanOrEqual(1); }
     expect(on).toBeGreaterThan(sheen.count * 0.5);
     expect(rootish).toBeGreaterThan(0);
+    // each lock vertex carries a unit direction along its lock (the glossy band follows it smoothly across faces)
+    const tan = merged.getAttribute("hairTangent");
+    let unit = 0, body = 0;   // lock-surface vertices: off the matte under-cap (u 0) and off the root and tip fans
+    for (let i = 0; i < tan.count; i++) if (sheen.getX(i) === 1 && sheen.getY(i) > 0.01 && sheen.getZ(i) > 0.02 && sheen.getZ(i) < 0.98) {
+      body++;
+      if (Math.abs(Math.hypot(tan.getX(i), tan.getY(i), tan.getZ(i)) - 1) < 1e-3) unit++;
+    }
+    expect(unit).toBeGreaterThan(body * 0.95);
   });
   it("gives no sheen to parts without lock UVs (outfits, older hair, hat tucks)", () => {
     const part = skinned(["mixamorigHead"], [0, 0, 0]);
     const g = adoptPrimitive(part, new Map([["mixamorigHead", 0]]), null, true);   // M_Hair, but no uv channel
     expect(Array.from(g.getAttribute("hairSheen").array)).toEqual(new Array(9).fill(0));
+    expect(Array.from(g.getAttribute("hairTangent").array)).toEqual(new Array(9).fill(0));
   });
   it("shares identical looks and disposes after the last user", () => {
     const cache = refCache<{ dispose(): void; n: number }>();
