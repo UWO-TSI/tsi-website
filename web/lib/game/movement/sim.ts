@@ -17,6 +17,13 @@
  * sets you down softly. The body is a 0.2-radius column sampled at nine
  * points, the walker's clearance probes, and no step ends with more of it
  * inside something than it started with, so nothing can leave it stuck.
+ *
+ * Crouch and the slide (row 274, specs/movement-slide.md): the crouch key
+ * (`sneak`) held at a walk or slower crouch-walks at sneak speed; held faster
+ * than a walk it slides, low friction, pushed along by the ground's slope. Speed
+ * is momentum (David, 2026-10-01): kept through the air and every tech link (a
+ * dash, a slide, a jump, a land into a slide or a hop), lost only on plain
+ * ground once a short grace runs out, and never past a ceiling for long.
  */
 
 export interface MoveWorld {
@@ -32,7 +39,7 @@ export const MOVE_TUNING = {
   sprintBuild: 0.9, // seconds from walk to sprint speed
   groundResponse: 12, // up to walk speed, as today (~80 ms)
   stopResponse: 7.5, // glide-out on release, as today (~130 ms)
-  overspeedDecay: 5, // u/s² that speed above the target bleeds on the ground
+  overspeedDecay: 18, // u/s² momentum bleeds back to a run or walk on plain ground, once the grace is over (David: quick and readable)
   turnAtSpeed: 7, // heading ease above walk speed (1/s): wider turns when fast
   skidSpeed: 6,
   skidAngle: 120, // degrees between travel and input that start a skid
@@ -55,7 +62,7 @@ export const MOVE_TUNING = {
   longJumpBoost: 1.06,
   dashSpeed: 18, // at the press: the burst
   dashTime: 0.2,
-  dashExit: 0.55, // fraction of the burst it eases out to and keeps
+  dashExit: 0.9, // fraction of the burst it eases out to: momentum that persists while you chain (16.2 u/s)
   dashEase: 2, // how it eases out: 0 holds the burst then drops to the exit (the first cut), 2 settles smoothly
   dashCooldown: 0.5, // from the press
   airDashes: 1,
@@ -77,19 +84,39 @@ export const MOVE_TUNING = {
   glideSink: 2.1, // u/s down, never up: a jump off a 1.5u cliff glides about 12 tiles
   glideOpen: 8, // how fast the fall brakes to the sink as the leaf opens (1/s)
   glideTurn: 2.5, // heading ease toward the stick (1/s)
+  // Momentum (David, 2026-10-01): kept in the air and through every tech link; plain ground bleeds it after a grace.
+  keepGrace: 0.12, // seconds plain ground holds momentum after a landing, a dash or a slide, so a late slide or jump still catches it
+  momentumCeiling: 18, // u/s the tech reaches on flat ground; more only downhill
+  downhillCeiling: 10, // the ceiling rises by this × the slope (its sine) going downhill
+  ceilingBleed: 30, // u/s² a slide over the ceiling bleeds
+  techBoost: 0.4, // a land into a slide or a slide-jump adds this, up to the ceiling: chains never stack fast
+  // The slide (row 274): the crouch key at speed.
+  slideEnterAt: 1.12, // × walk: crouch at this speed or faster drops into a slide (8.3 u/s)
+  slideEndAt: 1, // × walk: a slide slowing to this stands up (into the crouch while held)
+  slideFriction: 3.5, // u/s² on flat ground: a slide from a sprint lasts about 1.3 s
+  slideSlope: 20, // u/s² along the slope × its sine: faster downhill, slower uphill
+  slideTurn: 2.2, // heading ease toward the stick (1/s): gentle
+  slideJumpHeight: 0.55, // a slide-jump: lower and longer than a jump
+  slideJumpApexTime: 0.22,
 };
 export type MoveTuning = typeof MOVE_TUNING;
-/** The fastest the kit goes for more than a moment: a long jump plus a full bunny-hop chain. A dash-jump carries no more. */
+/** The bunny-hop's cap: a long jump plus a full chain of held hops. Past it only tech carries speed, up to `momentumCeiling`. */
 export const topSpeed = (t: MoveTuning) => t.sprintSpeed * t.longJumpBoost + t.hopChainMax * t.hopBoost;
 
-export type MoveMode = "ground" | "air" | "skid" | "roll" | "recover" | "mantle" | "splash" | "glide";
-/** `glide` opens the leaf; `furl` closes it, whatever ended the glide (let go, landed, a ledge, water). */
-export type MoveEventKind = "jump" | "hop" | "long" | "dashjump" | "land" | "roll" | "recover" | "dash" | "skid" | "mantle" | "splash" | "respawn" | "bonk" | "glide" | "furl";
+export type MoveMode = "ground" | "air" | "skid" | "roll" | "recover" | "mantle" | "splash" | "glide" | "slide";
+/**
+ * `glide` opens the leaf; `furl` closes it, whatever ended the glide (let go, landed, a ledge, water). A slide starts
+ * as `slide` (from the ground), `dashslide` (out of a dash) or `landslide` (out of a landing); `slidejump` leaves it;
+ * `stand` ends it on the ground (let go, or slowed to a walk); a slide into something is a `bonk`.
+ */
+export type MoveEventKind = "jump" | "hop" | "long" | "dashjump" | "land" | "roll" | "recover" | "dash" | "skid" | "mantle" | "splash" | "respawn" | "bonk" | "glide" | "furl"
+  | "slide" | "dashslide" | "landslide" | "slidejump" | "stand";
 export interface MoveEvent { kind: MoveEventKind; x: number; y: number; z: number; speed: number; drop: number }
 
 /**
  * World-space intent. `x`/`z` has length ≤ 1 (a stick can walk slower); `*Pressed` are edges since the last step.
- * `push` is velocity from outside the kit (a knockback, an ability's dash), moved through the same collision.
+ * `sneak` is the crouch/slide key held. `push` is velocity from outside the kit (a knockback, an ability's dash),
+ * moved through the same collision.
  */
 export interface MoveInput { x: number; z: number; sprint: boolean; sneak: boolean; jump: boolean; jumpPressed: boolean; dashPressed: boolean; push?: { x: number; z: number } }
 export const NO_INPUT: MoveInput = { x: 0, z: 0, sprint: false, sneak: false, jump: false, jumpPressed: false, dashPressed: false };
@@ -98,8 +125,8 @@ export interface MoveState {
   x: number; y: number; z: number; vx: number; vy: number; vz: number;
   mode: MoveMode; modeT: number; facing: number;
   coyote: number; buffer: number;
-  /** Rising with the button released (a short hop); a long jump has one fixed arc. */
-  cut: boolean; long: boolean;
+  /** Rising with the button released (a short hop); a long jump and a slide-jump have one fixed arc each. */
+  cut: boolean; long: boolean; slideJump: boolean;
   /** Air speed the stick can steer up to (at least walking pace): the takeoff speed. */
   airMax: number;
   /** Highest point since leaving the ground: the drop a landing measures. */
@@ -111,6 +138,10 @@ export interface MoveState {
   from: [number, number, number]; to: [number, number, number];
   /** Last spot stood on, clear of water: where a splash puts you back. */
   safe: [number, number, number];
+  /** Momentum: grace left on plain ground before it bleeds; whether it bled this step; the last ground move was a slide (a jump in the grace is a slide-jump). */
+  keep: number; bleed: boolean; slid: boolean;
+  /** Crouched on the ground (the crouch key held, not sliding): crouch idle and crouch walk. */
+  crouch: boolean;
   events: MoveEvent[];
 }
 
@@ -122,13 +153,13 @@ const PROBES: readonly (readonly [number, number])[] = [[0, 0], [R, 0], [-R, 0],
 export function createMoveState(x: number, z: number, world: MoveWorld, facing = 0): MoveState {
   const y = world.top(x, z);
   return {
-    x, y, z, vx: 0, vy: 0, vz: 0, mode: "ground", modeT: 0, facing, coyote: 0, buffer: 0, cut: false, long: false,
+    x, y, z, vx: 0, vy: 0, vz: 0, mode: "ground", modeT: 0, facing, coyote: 0, buffer: 0, cut: false, long: false, slideJump: false,
     airMax: 0, topY: y, hops: 0, dashT: 0, dashCd: 0, dashCarry: 0, dashX: Math.sin(facing), dashZ: Math.cos(facing), dashSpeed: 0, dashEnd: 0, airDashes: 0,
-    from: [x, y, z], to: [x, y, z], safe: [x, y, z], events: [],
+    from: [x, y, z], to: [x, y, z], safe: [x, y, z], keep: 0, bleed: false, slid: false, crouch: false, events: [],
   };
 }
 
-const onFoot = (s: MoveState) => s.mode === "ground" || s.mode === "skid" || s.mode === "roll" || s.mode === "recover";
+const onFoot = (s: MoveState) => s.mode === "ground" || s.mode === "skid" || s.mode === "roll" || s.mode === "recover" || s.mode === "slide";
 const hypot = Math.hypot;
 const angleTo = (a: number, b: number) => Math.atan2(Math.sin(b - a), Math.cos(b - a));
 /** Steer a speed's heading toward the stick at `rate`, keeping (or setting) its magnitude. */
@@ -188,12 +219,44 @@ function slide(s: MoveState, w: MoveWorld, t: MoveTuning, dx: number, dz: number
   return { hitX, hitZ };
 }
 
-/** Walked (or rolled, dashed) off an edge: fall, with a moment to still jump. */
+/** Walked (or rolled, dashed, slid) off an edge: fall at the speed you had, with a moment to still jump. */
 function leaveGround(s: MoveState, t: MoveTuning) {
+  s.slid = s.mode === "slide" || (s.slid && s.keep > 0);
   setMode(s, "air");
   s.coyote = t.coyoteTime;
-  s.vy = 0; s.topY = s.y; s.cut = true; s.long = false;
+  s.vy = 0; s.topY = s.y; s.cut = true; s.long = false; s.slideJump = false;
   s.airMax = hypot(s.vx, s.vz);
+}
+
+/**
+ * The ground's slope under (x, z) as its rise per unit along x and along z: ACNH ramps, terrain slopes and blended half
+ * steps. A step steeper than `MAX_GRADE` (a cliff, a wall, a prop's side) is an edge, not a slope, and counts as flat.
+ */
+const MAX_GRADE = 1.6, SLOPE_PROBE = 0.2;
+export function slopeAt(w: MoveWorld, x: number, z: number): [number, number] {
+  const axis = (a: number, b: number) => { const g = (b - a) / (2 * SLOPE_PROBE); return Number.isFinite(g) && Math.abs(g) <= MAX_GRADE ? g : 0; };
+  return [axis(w.top(x - SLOPE_PROBE, z), w.top(x + SLOPE_PROBE, z)), axis(w.top(x, z - SLOPE_PROBE), w.top(x, z + SLOPE_PROBE))];
+}
+/** The momentum ceiling here, going (vx, vz): `momentumCeiling` on flat ground, higher going downhill. */
+function ceilingAt(w: MoveWorld, t: MoveTuning, x: number, z: number, vx: number, vz: number) {
+  const [gx, gz] = slopeAt(w, x, z), sp = hypot(vx, vz);
+  const down = sp > 1e-6 ? -(gx * vx + gz * vz) / (sp * Math.sqrt(1 + gx * gx + gz * gz)) : 0;
+  return t.momentumCeiling + t.downhillCeiling * Math.max(0, down);
+}
+
+/** Into the slide at its speed (capped at `cap`), from the ground, a dash or a landing. */
+function startSlide(s: MoveState, kind: "slide" | "dashslide" | "landslide", speed: number) {
+  const len = hypot(s.vx, s.vz);
+  if (len > 1e-6) { s.vx *= speed / len; s.vz *= speed / len; }
+  s.dashT = 0; s.dashCarry = 0; s.hops = 0; s.keep = 0; s.slid = true;
+  setMode(s, "slide");
+  emit(s, kind);
+}
+/** Out of the slide on the ground: let go (stand up into a run, momentum held for the grace) or slowed to a walk (into the crouch). */
+function endSlide(s: MoveState, t: MoveTuning, kind: "stand" | "bonk") {
+  setMode(s, "ground");
+  s.keep = kind === "stand" ? t.keepGrace : 0;
+  emit(s, kind);
 }
 
 /** A body pressed into something (a fall beside a wall, a landing half on a bank) eases out, away from what it touches. */
@@ -207,16 +270,20 @@ function depenetrate(s: MoveState, w: MoveWorld, t: MoveTuning, dt: number) {
   if (!inside(w, x, z, s.y, foot, t) && overlap(w, x, z, s.y, foot, t) <= overlap(w, s.x, s.z, s.y, foot, t)) { s.x = x; s.z = z; }
 }
 
-/** Gravity at this moment of the arc: heavier falling, heavier still once the button is let go, light at a held apex. */
+/** The arc's height and time to the apex: a slide-jump's, a long jump's or a jump's. */
+const arc = (s: MoveState, t: MoveTuning) => (s.slideJump ? [t.slideJumpHeight, t.slideJumpApexTime] : s.long ? [t.longJumpHeight, t.longJumpApexTime] : [t.jumpHeight, t.jumpApexTime]);
+/** Gravity at this moment of the arc: heavier falling, heavier still once the button is let go, light at a held apex. A long jump and a slide-jump keep one arc. */
 function gravity(s: MoveState, t: MoveTuning, held: boolean) {
-  const [h, apex] = s.long ? [t.longJumpHeight, t.longJumpApexTime] : [t.jumpHeight, t.jumpApexTime];
-  const g = (2 * h) / (apex * apex), hang = held && !s.cut && !s.long && Math.abs(s.vy) < t.apexHangSpeed ? t.apexHangGravity : 1;
+  const [h, apex] = arc(s, t), fixed = s.long || s.slideJump;
+  const g = (2 * h) / (apex * apex), hang = held && !s.cut && !fixed && Math.abs(s.vy) < t.apexHangSpeed ? t.apexHangGravity : 1;
   if (s.vy <= 0) return g * t.fallGravity * hang;
-  return s.cut && !s.long ? g * t.jumpCutGravity : g * hang;
+  return s.cut && !fixed ? g * t.jumpCutGravity : g * hang;
 }
 
-function jump(s: MoveState, t: MoveTuning, input: MoveInput, chained: boolean) {
+function jump(s: MoveState, t: MoveTuning, input: MoveInput, chained: boolean, ceiling = t.momentumCeiling) {
   const dashing = s.dashT > 0 || s.dashCarry > 0;
+  // Out of a slide (or just after it ended): the slide-jump, lower and longer, adding a little up to the ceiling.
+  const sliding = s.mode === "slide" || (s.slid && (s.keep > 0 || s.coyote > 0));
   let speed = hypot(s.vx, s.vz);
   if (s.mode === "skid") {
     // Out of a skid: up and away in the new direction.
@@ -224,42 +291,49 @@ function jump(s: MoveState, t: MoveTuning, input: MoveInput, chained: boolean) {
     speed = Math.min(speed, t.walkSpeed * 0.6);
     s.vx = (input.x / len) * speed; s.vz = (input.z / len) * speed;
   }
-  // A held hop adds hopBoost, up to hopChainMax of them over the long jump; a long jump lunges to at least sprint × longJumpBoost; a dash-jump carries the dash up to the same top.
-  const hop = chained && !dashing;
+  // A held hop adds hopBoost, up to hopChainMax of them over the long jump (and keeps any speed past that); a long jump
+  // lunges to at least sprint × longJumpBoost; a dash-jump carries the dash. Every take-off stays under the ceiling.
+  const hop = chained && !dashing && !sliding;
   s.hops = hop ? Math.min(s.hops + 1, t.hopChainMax) : 0;
   if (hop) speed = Math.max(speed, Math.min(speed + t.hopBoost, topSpeed(t)));
-  if (dashing) speed = Math.min(speed, topSpeed(t));
-  s.long = speed >= t.longJumpAt * t.sprintSpeed;
+  if (sliding && !dashing) speed += t.techBoost;
+  speed = Math.min(speed, Math.max(ceiling, t.momentumCeiling));
+  s.slideJump = sliding && !dashing;
+  s.long = !s.slideJump && speed >= t.longJumpAt * t.sprintSpeed;
   if (s.long && !dashing) speed = Math.max(speed, t.sprintSpeed * t.longJumpBoost);
   const len = hypot(s.vx, s.vz);
   if (len > 1e-6) { s.vx *= speed / len; s.vz *= speed / len; }
-  const [h, apex] = s.long ? [t.longJumpHeight, t.longJumpApexTime] : [t.jumpHeight, t.jumpApexTime];
+  const [h, apex] = arc(s, t);
   s.vy = (2 * h) / apex;
   s.cut = !input.jump;
   s.airMax = speed;
-  s.topY = s.y; s.coyote = 0; s.buffer = 0; s.dashT = 0; s.dashCarry = 0;
+  s.topY = s.y; s.coyote = 0; s.buffer = 0; s.dashT = 0; s.dashCarry = 0; s.keep = 0; s.slid = false;
   setMode(s, "air");
-  emit(s, dashing ? "dashjump" : hop ? "hop" : s.long ? "long" : "jump");
+  emit(s, dashing ? "dashjump" : s.slideJump ? "slidejump" : hop ? "hop" : s.long ? "long" : "jump");
 }
 
 function land(s: MoveState, t: MoveTuning, input: MoveInput, y: number) {
+  s.slid = false;
   if (s.mode === "glide") {
     // The leaf sets you down: never a roll, a recovery or a hop, from any height.
-    s.y = y; s.vy = 0; s.airDashes = 0; s.dashT = 0; s.cut = false; s.long = false; s.hops = 0; s.buffer = 0;
+    s.y = y; s.vy = 0; s.airDashes = 0; s.dashT = 0; s.cut = false; s.long = false; s.slideJump = false; s.hops = 0; s.buffer = 0;
     setMode(s, "ground");
     emit(s, "land");
     return;
   }
   const drop = s.topY - y, speed = hypot(s.vx, s.vz);
-  s.y = y; s.vy = 0; s.airDashes = 0; s.dashT = 0; s.cut = false; s.long = false;
+  s.y = y; s.vy = 0; s.airDashes = 0; s.dashT = 0; s.cut = false; s.long = false; s.slideJump = false;
   emit(s, "land", drop);
-  // Space held while sprinting: the next hop goes off on the landing step (the bunny-hop). A press just before touching down is a plain jump.
-  const hop = input.jump && input.sprint && t.hopChainMax > 0 && speed >= t.walkSpeed * 0.9;
+  // Space held while sprinting (or carrying momentum): the next hop goes off on the landing step (the bunny-hop). A press just before touching down is a plain jump.
+  const hop = input.jump && t.hopChainMax > 0 && ((input.sprint && speed >= t.walkSpeed * 0.9) || speed > t.walkSpeed * t.slideEnterAt);
   if ((hop || s.buffer > 0) && drop < t.recoverDrop) { setMode(s, "ground"); jump(s, t, input, hop); return; }
   s.hops = 0;
+  // The crouch key held at speed: straight into a slide that keeps the landing's speed (no roll, no recovery).
+  if (input.sneak && speed > t.walkSpeed * t.slideEnterAt) { startSlide(s, "landslide", Math.min(speed + t.techBoost, Math.max(speed, t.momentumCeiling))); return; }
   if (drop >= t.rollDrop && speed >= t.rollSpeed) { setMode(s, "roll"); emit(s, "roll", drop); return; }
   if (drop >= t.recoverDrop) { setMode(s, "recover"); emit(s, "recover", drop); return; }
   setMode(s, "ground");
+  s.keep = t.keepGrace;
 }
 
 /** A ledge in reach along (dx, dz): its top above the step and within `grabReach` of the feet, with room to stand. Returns where the body ends up. */
@@ -308,10 +382,11 @@ function descend(s: MoveState, w: MoveWorld, t: MoveTuning, input: MoveInput, y:
 
 /** One fixed step. Pure: returns a new state whose `events` say what happened in it. */
 export function stepMove(prev: MoveState, input: MoveInput, dt: number, w: MoveWorld, t: MoveTuning = MOVE_TUNING): MoveState {
-  const s: MoveState = { ...prev, events: [] };
+  const s: MoveState = { ...prev, events: [], bleed: false };
   s.modeT += dt;
   s.dashCd = Math.max(0, s.dashCd - dt);
   s.dashCarry = Math.max(0, s.dashCarry - dt);
+  s.keep = Math.max(0, s.keep - dt);
   s.buffer = input.jumpPressed ? t.jumpBuffer : Math.max(0, s.buffer - dt);
   const len = hypot(input.x, input.z), mag = Math.min(1, len);
   const ix = len > 1e-3 ? input.x / len : 0, iz = len > 1e-3 ? input.z / len : 0, steering = len > 1e-3;
@@ -363,24 +438,40 @@ export function stepMove(prev: MoveState, input: MoveInput, dt: number, w: MoveW
     s.dashX = dx; s.dashZ = dz; s.facing = Math.atan2(dx, dz);
     s.dashSpeed = Math.max(t.dashSpeed, entry);
     s.dashEnd = Math.min(s.dashSpeed, Math.max(s.dashSpeed * t.dashExit, entry));
-    s.dashT = t.dashTime; s.dashCd = t.dashCooldown; s.hops = 0;
+    s.dashT = t.dashTime; s.dashCd = t.dashCooldown; s.hops = 0; s.slid = false; s.keep = 0;
     s.vx = dx * s.dashSpeed; s.vz = dz * s.dashSpeed;
     emit(s, "dash");
   }
 
-  // ── Jump: from the ground, a skid, a roll, or within coyote time ─
-  if (s.buffer > 0 && ((onFoot(s) && s.mode !== "recover") || (s.mode === "air" && s.coyote > 0))) jump(s, t, input, false);
+  // ── Jump: from the ground, a skid, a roll, a slide, or within coyote time ─
+  if (s.buffer > 0 && ((onFoot(s) && s.mode !== "recover") || (s.mode === "air" && s.coyote > 0))) jump(s, t, input, false, onFoot(s) ? ceilingAt(w, t, s.x, s.z, s.vx, s.vz) : t.momentumCeiling);
 
   // ── Glider: a fresh press while falling opens the leaf, unless you would land within the jump buffer anyway ──
   if (t.glider > 0 && input.jumpPressed && s.mode === "air" && s.vy <= 0 && s.dashT <= 0 && timeToGround(s, w, t, input.jump) > t.jumpBuffer) {
     setMode(s, "glide");
-    s.buffer = 0; s.coyote = 0; s.cut = false; s.long = false; s.hops = 0; s.topY = s.y;
+    s.buffer = 0; s.coyote = 0; s.cut = false; s.long = false; s.slideJump = false; s.hops = 0; s.topY = s.y;
     emit(s, "glide");
   }
 
+  // ── Slide: the crouch key held at speed on the ground (a dash plays out its burst first, then slides at its speed) ──
+  if (s.mode === "ground" && input.sneak && s.dashT <= 0 && hypot(s.vx, s.vz) > t.walkSpeed * t.slideEnterAt) startSlide(s, s.dashCarry > 0 ? "dashslide" : "slide", hypot(s.vx, s.vz));
+
   // ── Horizontal speed ─────────────────────────────────────────────
   const speed = hypot(s.vx, s.vz);
-  if (s.dashT > 0) {
+  if (s.mode === "slide") {
+    if (!input.sneak) endSlide(s, t, "stand");
+    else {
+      // The slope pushes it along the fall line (faster down, slower up); friction wears it down slowly; over the ceiling bleeds fast.
+      const [gx, gz] = slopeAt(w, s.x, s.z), n = Math.sqrt(1 + gx * gx + gz * gz);
+      s.vx -= ((t.slideSlope * gx) / n) * dt; s.vz -= ((t.slideSlope * gz) / n) * dt;
+      let sp = Math.max(0, hypot(s.vx, s.vz) - t.slideFriction * dt);
+      const ceiling = ceilingAt(w, t, s.x, s.z, s.vx, s.vz);
+      if (sp > ceiling) sp = Math.max(ceiling, sp - t.ceilingBleed * dt);
+      if (steering) steer(s, ix, iz, t.slideTurn, dt, sp);
+      else { const l = hypot(s.vx, s.vz); if (l > 1e-6) { s.vx *= sp / l; s.vz *= sp / l; } }
+      if (sp <= t.walkSpeed * t.slideEndAt) endSlide(s, t, "stand");
+    }
+  } else if (s.dashT > 0) {
     // The burst eases out to its exit speed; an air dash floats up and eases to its apex, a dash run off an edge holds level.
     s.dashT -= dt;
     const left = Math.max(0, s.dashT) / t.dashTime, v = s.dashT > 0 ? s.dashEnd + (s.dashSpeed - s.dashEnd) * left ** t.dashEase : s.dashEnd;
@@ -389,6 +480,7 @@ export function stepMove(prev: MoveState, input: MoveInput, dt: number, w: MoveW
     if (s.dashT <= 0) {
       s.dashCarry = t.dashJumpWindow;
       s.airMax = Math.max(s.airMax, v);
+      if (s.mode === "ground") s.keep = t.keepGrace;
     }
   } else if (s.mode === "ground") {
     const target = mag * (input.sneak ? t.sneakSpeed : input.sprint ? t.sprintSpeed : t.walkSpeed);
@@ -396,9 +488,13 @@ export function stepMove(prev: MoveState, input: MoveInput, dt: number, w: MoveW
     if (speed > t.skidSpeed && turn > (t.skidAngle * Math.PI) / 180) {
       setMode(s, "skid");
       emit(s, "skid");
+    } else if (s.keep > 0 && speed > t.walkSpeed) {
+      // The grace after a landing, a dash or a slide: momentum held (turning as at speed), so a late slide or jump still catches it.
+      if (steering) steer(s, ix, iz, t.turnAtSpeed, dt, speed);
     } else if (steering && speed > t.walkSpeed * 0.98 && (target > t.walkSpeed || speed > target)) {
-      // At speed: sprint builds over sprintBuild, extra speed (a chain, a dash) bleeds, the heading swings round.
+      // At speed: sprint builds over sprintBuild, momentum (a chain, a dash, a slide) bleeds back quickly, the heading swings round.
       const sp = speed < target ? Math.min(target, speed + ((t.sprintSpeed - t.walkSpeed) / Math.max(0.05, t.sprintBuild)) * dt) : Math.max(target, speed - t.overspeedDecay * dt);
+      s.bleed = sp < speed;
       steer(s, ix, iz, t.turnAtSpeed, dt, sp);
     } else if (steering) {
       const cap = Math.min(target, t.walkSpeed), k = 1 - Math.exp(-t.groundResponse * dt);
@@ -416,7 +512,7 @@ export function stepMove(prev: MoveState, input: MoveInput, dt: number, w: MoveW
     } else if (speed > 1e-6) { s.vx *= sp / speed; s.vz *= sp / speed; }
   } else if (s.mode === "roll") {
     if (steering && speed > 1e-3) steer(s, ix, iz, 3, dt);
-    if (s.modeT >= t.rollTime) setMode(s, "ground");
+    if (s.modeT >= t.rollTime) { setMode(s, "ground"); s.keep = t.keepGrace; }
   } else if (s.mode === "recover") {
     const k = Math.exp(-14 * dt);
     s.vx *= k; s.vz *= k;
@@ -454,6 +550,7 @@ export function stepMove(prev: MoveState, input: MoveInput, dt: number, w: MoveW
   if (hitX) s.vx = 0;
   if (hitZ) s.vz = 0;
   if ((hitX || hitZ) && s.dashT > 0 && hypot(s.vx, s.vz) < before * 0.5) { s.dashT = 0; emit(s, "bonk"); }
+  if ((hitX || hitZ) && s.mode === "slide" && hypot(s.vx, s.vz) < Math.max(before * 0.5, t.walkSpeed * t.slideEndAt)) endSlide(s, t, "bonk");
 
   if (s.mode === "air") {
     s.coyote = Math.max(0, s.coyote - dt);
@@ -472,6 +569,8 @@ export function stepMove(prev: MoveState, input: MoveInput, dt: number, w: MoveW
   if ((s.mode as MoveMode) !== "splash") depenetrate(s, w, t, dt); // descend() may have splashed
   if (s.mode === "ground" && !w.wet(s.x, s.z) && overlap(w, s.x, s.z, s.y, true, t, 0) === 0) s.safe = [s.x, s.y, s.z];
   if (s.y < -8) { setMode(s, "splash"); s.modeT = 0.55; }
+  if (s.mode === "ground" && s.keep <= 0) s.slid = false;
+  s.crouch = s.mode === "ground" && input.sneak && s.dashT <= 0;
 
   // Facing: the way you travel, or the stick when turning on the spot.
   const fx = hypot(s.vx, s.vz) > 0.3 && s.mode !== "skid" ? Math.atan2(s.vx, s.vz) : steering ? Math.atan2(ix, iz) : s.facing;

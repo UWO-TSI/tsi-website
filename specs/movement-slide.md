@@ -52,6 +52,16 @@ His standing bar for movement: "feel good and seamless, not buggy ... make it fu
   - The applicant island follows the village.
 - **Multiplayer-forward:** slide is sim state and events like the rest: deterministic and the same at any frame rate.
 
+## Momentum model (David, 2026-10-01)
+> "it shouldnt be a dash and then the momentum is gone, momentum is gone only if you dont conserve it with a slide and hit ground without doing any movement combo"
+
+- **The dash adds momentum that persists.** Its burst (18 u/s) eases to `dashExit` 0.9 of itself, **16.2 u/s**, and that speed stays: it no longer fades to 0.55 on its own.
+- **Kept while you chain tech:** the air has no drag on horizontal speed (steering only); dash → slide, dash → jump, slide → jump, landing into a slide (key held), landing into a hop (Space held, or buffered), slide → glide, and sliding downhill (which gains).
+- **Lost only on plain ground:** a landing with no slide or hop, a dash ending on the ground with nothing after it, letting go of a slide. A grace of `keepGrace` **0.12 s** holds the speed first, so a slightly late slide or jump still catches it; then it bleeds back to a run or walk at `overspeedDecay` **18 u/s²** (from 16.2 to a walk in 0.48 s, to a sprint in 0.22 s).
+- **Ceilings:** `momentumCeiling` **18 u/s** on flat ground; downhill it rises by `downhillCeiling` 10 × the slope's sine; a slide over it bleeds at `ceilingBleed` 30 u/s². Every take-off is capped at the ceiling where you stand. A link adds at most `techBoost` 0.4 (a land into a slide, a slide-jump); a hop adds `hopBoost` only up to the bunny-hop's `topSpeed` 14.8 and keeps anything over it.
+- **The ruins keep the dodge's shape** (`DODGE_SHAPE` in `lib/game/combat/actions.ts`: exit 0.55, bleed 5, no grace), so the arena's dodge and its balance pass are unchanged.
+- **The lab readout** shows the carried speed and whether it is kept or bleeding (the sim's `keep` and `bleed`).
+
 ## Build order (a commit each)
 1. **Sim:** the slide and crouch modes, the slope force, every tech transition, and the ceiling.
    - Tests: entry speeds, decay on flat, gain downhill and loss uphill, dash-slide speed, slide-jump carry, land-slide, the ceiling holding, no stuck states at walls, cliff edges, ramps and water, the same path at 30/60/144 Hz.
