@@ -60,6 +60,8 @@ import {
   smoothstep,
   coastDistance,
   overlayAt,
+  ROCK,
+  WET,
   type ShoreSdf,
 } from "@/lib/game/grid";
 import { terrainMaterial, setShoreField } from "./terrainMaterials";
@@ -148,17 +150,6 @@ const emptyMesh = (): Mesh => ({ pos: [], uv: [], nrm: [], idx: [], color: [] })
 
 type Height = (x: number, z: number) => number;
 
-/**
- * Rise over run where rock starts to show through the grass, and where it is all rock. A
- * lone one-level slope (about 0.25 at its steepest) and a Slope-brush hill (a level per
- * 2.5 cells, 0.3) stay green; the steepest slope the rule allows (a level per 1.5 cells,
- * 0.5) is a rocky mountainside.
- */
-const ROCK_FROM = 0.33, ROCK_TO = 0.6;
-const ROCK_COLOR = "#8c8577";
-
-/** The wet band: sand stays dark up to WET_HOLD cells from the waterline (where the swell reaches) and dries by WET_RUN. */
-const WET_HOLD = 0.35, WET_RUN = 1.2, WET_DARK = 0.3;
 
 /** How far the bed drops below a grass bank's water at once: the river channel's edge. */
 const BANK_DIP = 0.12;
@@ -460,8 +451,8 @@ export function terrainChunks(map: IslandMap, heights: Float32Array | null, shor
         addPolygons(grass, pieces, (px, pz) => vertex(grass, h, px, pz));
 
         // Rock shows through where the ground is steep: a slope class read off the height field itself.
-        if (pieces.length > 1 && [[0, 0], [-0.5, -0.5], [0.5, -0.5], [0.5, 0.5], [-0.5, 0.5]].some(([a, b]) => steepness(h, x + a, z + b) > ROCK_FROM)) {
-          addPolygons(rock, pieces, (px, pz) => vertex(rock, h, px, pz, 0.002, [1, 1, 1, smoothstep(ROCK_FROM, ROCK_TO, steepness(h, px, pz))]));
+        if (pieces.length > 1 && [[0, 0], [-0.5, -0.5], [0.5, -0.5], [0.5, 0.5], [-0.5, 0.5]].some(([a, b]) => steepness(h, x + a, z + b) > ROCK.from)) {
+          addPolygons(rock, pieces, (px, pz) => vertex(rock, h, px, pz, 0.002, [1, 1, 1, smoothstep(ROCK.from, ROCK.to, steepness(h, px, pz))]));
         }
 
         for (const surface of OVERLAY_SURFACES) {
@@ -474,8 +465,8 @@ export function terrainChunks(map: IslandMap, heights: Float32Array | null, shor
           overlays.set(surface, m);
           const lift = OVERLAY_LIFT[surface];
           if (natural) {
-            // Sand darkens where the waves reach it: the wet band, WET_RUN cells up from the waterline.
-            const wet = surface === Surface.Sand ? (px: number, pz: number) => 1 - WET_DARK * (1 - smoothstep(WET_HOLD, WET_RUN, coastDistance(map, px, pz))) : () => 1;
+            // Sand darkens where the waves reach it: the wet band (WET), up from the waterline.
+            const wet = surface === Surface.Sand ? (px: number, pz: number) => 1 - WET.dark * (1 - smoothstep(WET.hold, WET.run, coastDistance(map, px, pz))) : () => 1;
             addPolygons(m, pieces, (px, pz) => { const w = wet(px, pz); vertex(m, h, px, pz, lift, [w, w * 0.97, w * 0.92, overlayAlpha(surface, latticeAt(map, f, px, pz))]); });
           } else {
             const built = cellPieces(map, cx, cz, [[coast, 1], [f, 1]]);
@@ -731,7 +722,7 @@ export function useTerrainMaterials(palette?: TerrainPalette): TerrainMaterials 
     const rock = soil.clone();
     rock.onBeforeCompile = soil.onBeforeCompile;
     rock.customProgramCacheKey = soil.customProgramCacheKey;
-    rock.color.set(ROCK_COLOR);
+    rock.color.set(ROCK.color);
     m.set(ROCK_LAYER, rock);
     return m;
   }, [palette]);

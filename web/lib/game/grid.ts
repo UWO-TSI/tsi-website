@@ -545,11 +545,16 @@ export function surfaceAt(map: IslandMap, cx: number, cz: number): number {
 }
 
 export function setCell(map: IslandMap, cx: number, cz: number, level: number, surface: number): void {
+  writeCell(map, cx, cz, level, surface);
+  forgetTerrain(map);
+}
+
+/** `setCell` that keeps the derived shapes: for an editor that re-derives what it touched (`refreshTerrain`). */
+export function writeCell(map: IslandMap, cx: number, cz: number, level: number, surface: number): void {
   if (!inBounds(map, cx, cz)) return;
   const i = cellIndex(map, cx, cz);
   map.levels[i] = Math.max(0, Math.min(MAX_LEVEL, level | 0));
   map.surfaces[i] = surface | 0;
-  forgetTerrain(map);
 }
 
 /**
@@ -1381,6 +1386,15 @@ const OVERLAY = {
 export const NATURAL_EDGE = 0.1;
 /** The sloping beach: sand runs down to the waterline over this many cells. */
 export const BEACH_RUN = 1.5;
+/** The wet band: sand stays dark up to `hold` cells from the waterline (where the swell reaches), dry by `run`; `dark` at the water. */
+export const WET = { hold: 0.35, run: 1.2, dark: 0.3 };
+/**
+ * Rock through the grass by slope (rise over run): from `from`, all rock by `to`. A lone
+ * one-level slope (about 0.25 at its steepest) and a Slope-brush hill (a level per 2.5
+ * cells, 0.3) stay green; the steepest slope the rule allows (a level per 1.5 cells, 0.5)
+ * is a stony mountainside.
+ */
+export const ROCK = { from: 0.33, to: 0.6, color: "#8c8577" };
 
 /** How much of an overlay covers the ground at field value `f`: a worn fade for sand and soil, a crisp edge for built ones. */
 export function overlayAlpha(surface: number, f: number): number {
@@ -1828,7 +1842,7 @@ const DT_FAR = 1e9;
  * Exact, and O(n) — unlike a chamfer approximation it has no directional bias,
  * so the foam collar is the same width on a diagonal bank as on a straight one.
  */
-function squaredDistanceTransform(
+export function squaredDistanceTransform(
   width: number,
   height: number,
   isSeed: (i: number) => boolean

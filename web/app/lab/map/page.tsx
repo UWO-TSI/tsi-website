@@ -35,7 +35,20 @@ import {
   serialiseIslandMap,
   resizeMap,
   legaliseTerraces,
-  setCell,
+  writeCell,
+  heightField,
+  cellHeightRange,
+  terrainOf,
+  refreshTerrain,
+  forgetTerrain,
+  overlayAlpha,
+  smoothstep,
+  LATTICE,
+  LEVEL_STEP,
+  OVERLAY_SURFACES,
+  NATURAL_SURFACES,
+  ROCK,
+  WET,
   levelAt,
   surfaceAt,
   isRamp,
@@ -60,9 +73,10 @@ import {
 } from "@/lib/game/villageMap";
 import { LANDMARK_IDS, LANDMARK_INFO, PROP_FOOTPRINT, TREE_SLOTS, TREE_TRUNK, objectFootprint, turn, type LandmarkId } from "@/lib/game/defaultIsland";
 import { villageHealth, type VillageHealth } from "@/lib/game/mapHealth";
+import { terrainFixtureDoc } from "@/lib/game/fixtures/terrainFixture";
 import { mapBudget } from "@/lib/game/mapBudget";
 import { classifyWater, WATER_CLASS } from "@/lib/game/fishingSpots";
-import { cellsInPolygon, nextObjectId, organicCell, snapPlacement, snapshotCells, type CellSnapshot, type OrganicOp } from "@/lib/game/painterTools";
+import { SLOPE_RUN, cellsInPolygon, cliffDab, nextObjectId, organicCell, slopeDab, snapPlacement, snapshotCells, softDab, waterDistance, type CellSnapshot, type OrganicOp } from "@/lib/game/painterTools";
 import { RESIDENT_ANCHORS, SHARED_SPACING } from "@/lib/content/residents";
 import { FURNITURE, type Furniture } from "@/lib/study/seats";
 import { DEFAULT_TABLES } from "@/lib/study/tables";
@@ -97,21 +111,23 @@ const SURFACE_NAME: Record<number, string> = {
   [Surface.Ramp]: "ramp",
 };
 
-const TOOLS = ["land", "sea", "raise", "lower", "flat", "surface", "ramp", "smooth", "grow", "shrink", "jitter", "object", "label"] as const;
+const TOOLS = ["land", "sea", "raise", "lower", "flat", "slope", "cliff", "surface", "ramp", "smooth", "grow", "shrink", "jitter", "object", "label"] as const;
 type Tool = (typeof TOOLS)[number];
-const ORGANIC: readonly Tool[] = ["smooth", "grow", "shrink", "jitter"];
+const ORGANIC: readonly Tool[] = ["slope", "cliff", "smooth", "grow", "shrink", "jitter"];
 
 const TOOL_HELP: Record<Tool, string> = {
-  land: "water → grass at level 0. The coastline brush.",
-  sea: "back to open water (river at level 0 is the sea).",
+  land: "water → grass at level 0. The brush is soft: a dab melts into the coast beside it. Rect, line, fill and lasso paint exact cells.",
+  sea: "back to open water (river at level 0 is the sea). Soft like land.",
   raise: "+1 level. Land only.",
   lower: "−1 level. Land only.",
   flat: "set an exact level. How you draw a plateau.",
   surface: "paint a surface, terrain untouched.",
   ramp: "mark a ramp cell. It climbs toward the higher neighbour.",
-  smooth: "rounds off jaggies: the 3×3 majority decides land or water, stray levels join their neighbours.",
-  grow: "spreads land into the sea and plateaus outward, one cell per stroke.",
-  shrink: "pulls coasts and plateaus back, one cell per stroke.",
+  slope: "a hill: the brush rises a level per stroke and the ground around follows, a level every 2.5 cells (walkable, never a cliff). Alt digs instead.",
+  cliff: "one kit cliff (2 levels) above where the stroke starts, flat on top. Alt cuts one down. Cross it with ramps.",
+  smooth: "blur and threshold: notches fill, spikes and stray cells go, straight and diagonal coasts stay put.",
+  grow: "spreads coasts and plateaus a cell per stroke, round (no diamonds).",
+  shrink: "pulls coasts and plateaus back a cell per stroke, round.",
   jitter: "breaks a straight coastline into small bays and headlands. Each stroke rolls new noise.",
   object: "place, select, drag. R turns (shift: 15°), Delete removes, arrows nudge, Esc deselects.",
   label: "paint a named thing of your own: fencing, hedges, a note. Terrain untouched.",
@@ -282,9 +298,118 @@ function commit() {
   REDO = [];
 }
 
-/** Stroke state for the organic brushes: the map as the stroke began, and the cells already changed. */
-let STROKE: { before: CellSnapshot; touched: Uint8Array; seed: number } | null = null;
+/**
+ * Stroke state for the organic and height brushes: the map as the stroke began, the cells
+ * already changed, the level where it began (Cliff), whether Alt is down (lower), and the
+ * distance to the sea (Slope, built on first use).
+ */
+let STROKE: { before: CellSnapshot; touched: Uint8Array; seed: number; base: number; lower: boolean; water: Float64Array | null } | null = null;
 let STROKE_SEED = 1;
+let STROKE_LOWER = false;
+function strokeAt(map: IslandMap, x: number, z: number) {
+  return (STROKE ??= { before: snapshotCells(map), touched: new Uint8Array(map.width * map.depth), seed: STROKE_SEED, base: levelAt(map, x, z), lower: STROKE_LOWER, water: null });
+}
+
+/**
+ * THE NATURAL PREVIEW (specs/terrain-blending.md §5). The terrain is drawn from
+ * the same derived fields the game builds its mesh from (`terrainOf`): the organic
+ * coast, the worn sand and soil edges, the rounded built borders, the wet band,
+ * stony steep ground, and the height field as hill shading. One pixel per
+ * lattice sample (LATTICE per cell), drawn scaled and smoothed.
+ *
+ * FAST ON 256². Edits mark the cells they touched (`touch`); a repaint re-derives
+ * only what those cells reach (`refreshTerrain`) and redraws only those pixels.
+ * A new map (undo, open, resize) rebuilds it whole.
+ */
+let RASTER: { map: IslandMap; canvas: HTMLCanvasElement; img: ImageData; stale: boolean } | null = null;
+let DIRTY: [number, number, number, number] | null = null;
+/** Everything edited since the sea and the rivers were last told apart (their colours follow a beat later). */
+let EDITED: [number, number, number, number] | null = null;
+const grow = (r: typeof DIRTY, x0: number, z0: number, x1: number, z1: number): [number, number, number, number] =>
+  r ? [Math.min(r[0], x0), Math.min(r[1], z0), Math.max(r[2], x1), Math.max(r[3], z1)] : [x0, z0, x1, z1];
+function touch(x0: number, z0: number, x1 = x0, z1 = z0) {
+  DIRTY = grow(DIRTY, x0, z0, x1, z1);
+  EDITED = grow(EDITED, x0, z0, x1, z1);
+}
+const rgb = (hex: string): [number, number, number] => [parseInt(hex.slice(1, 3), 16), parseInt(hex.slice(3, 5), 16), parseInt(hex.slice(5, 7), 16)];
+
+/** The preview's terrain, up to date with the map. Returns its canvas (map.width·LATTICE wide). */
+function terrainRaster(map: IslandMap, waterClass: Uint8Array): HTMLCanvasElement {
+  const S = LATTICE, PW = map.width * S, PD = map.depth * S;
+  let region: [number, number, number, number];
+  if (!RASTER || RASTER.map !== map) {
+    forgetTerrain(map);
+    const canvas = document.createElement("canvas");
+    canvas.width = PW;
+    canvas.height = PD;
+    // Its water colours wait for this map's sea to be told from its rivers (a beat later, `classifyWater`).
+    RASTER = { map, canvas, img: new ImageData(PW, PD), stale: true };
+    region = [0, 0, map.width - 1, map.depth - 1];
+  } else if (DIRTY) {
+    refreshTerrain(map, ...DIRTY);
+    // Everything the edit reaches: the fields' reach, and a cell more for the hill shading.
+    const m = 8;
+    region = [Math.max(0, DIRTY[0] - m), Math.max(0, DIRTY[1] - m), Math.min(map.width - 1, DIRTY[2] + m), Math.min(map.depth - 1, DIRTY[3] + m)];
+  } else return RASTER.canvas;
+  DIRTY = null;
+  const t = terrainOf(map), heights = heightField(map), LW = map.width * S + 1, HW = map.width + 1, data = RASTER.img.data;
+  const overlays = OVERLAY_SURFACES.flatMap((s) => { const f = t.overlays.get(s); return f ? [[s, f, rgb(SURFACE_FILL[s])] as const] : []; });
+  const grass = rgb(SURFACE_FILL[Surface.Grass]), rock = rgb(ROCK.color), ramp = rgb(SURFACE_FILL[Surface.Ramp]);
+  const sea = rgb(SEA_FILL), river = rgb(SURFACE_FILL[Surface.River]), shallow = rgb("#8fc3c9");
+  for (let cz = region[1]; cz <= region[3]; cz++) {
+    for (let cx = region[0]; cx <= region[2]; cx++) {
+      const s = surfaceAt(map, cx, cz), level = levelAt(map, cx, cz), cliff = needsCliff(map, cx, cz), range = cellHeightRange(map, cx, cz);
+      const deep = isWater(s) && waterClass.length === map.width * map.depth && waterClass[cz * map.width + cx] === WATER_CLASS.sea ? sea : river;
+      const a = heights[cz * HW + cx], b = heights[cz * HW + cx + 1], c = heights[(cz + 1) * HW + cx], d = heights[(cz + 1) * HW + cx + 1];
+      // The slope at each corner (central differences), eased across the cell, so the shading is smooth rather than one facet per cell.
+      const H = (ix: number, iz: number) => heights[Math.min(map.depth, Math.max(0, iz)) * HW + Math.min(map.width, Math.max(0, ix))];
+      // A side that drops a full level or more is a cliff the kit draws, not a slope: leave it out.
+      const side = (lo: number, mid: number, hi: number) => {
+        const sides = [mid - lo, hi - mid].filter((v) => Math.abs(v) < LEVEL_STEP);
+        return sides.length ? sides.reduce((x, y) => x + y, 0) / sides.length : 0;
+      };
+      const slope = (ix: number, iz: number): [number, number] => [side(H(ix - 1, iz), H(ix, iz), H(ix + 1, iz)), side(H(ix, iz - 1), H(ix, iz), H(ix, iz + 1))];
+      const ga = slope(cx, cz), gb = slope(cx + 1, cz), gc = slope(cx, cz + 1), gd = slope(cx + 1, cz + 1);
+      for (let sz = 0; sz < S; sz++) {
+        for (let sx = 0; sx < S; sx++) {
+          const i = cx * S + sx, k = cz * S + sz, p = k * LW + i, tx = (sx + 0.5) / S, tz = (sz + 0.5) / S;
+          // Ground: the level field (flat on a cliff piece's top), its slope for the shading and the rock.
+          let h = cliff ? level * LEVEL_STEP : (a * (1 - tx) + b * tx) * (1 - tz) + (c * (1 - tx) + d * tx) * tz;
+          const lerp = (j: 0 | 1) => (ga[j] * (1 - tx) + gb[j] * tx) * (1 - tz) + (gc[j] * (1 - tx) + gd[j] * tx) * tz;
+          let gx = cliff ? 0 : lerp(0), gz = cliff ? 0 : lerp(1);
+          // Beside a cliff the ground keeps to its own tier (`cellHeightRange`), as the mesh does.
+          if (range && (range[0] === range[1] || h < range[0] || h > range[1])) { h = Math.max(range[0], Math.min(range[1], h)); gx = gz = 0; }
+          let [r, g, bl] = grass;
+          const mix = (col: readonly number[], k: number) => { r += (col[0] - r) * k; g += (col[1] - g) * k; bl += (col[2] - bl) * k; };
+          mix(rock, smoothstep(ROCK.from, ROCK.to, Math.hypot(gx, gz)));
+          for (const [o, f, col] of overlays) {
+            const k = NATURAL_SURFACES.has(o) ? overlayAlpha(o, f[p]) : smoothstep(-0.03, 0.03, f[p]);
+            if (k) mix(col, k);
+            if (o === Surface.Sand && k) {
+              const inland = t.coast[p] / Math.max(Math.hypot(t.coast[p + 1] - t.coast[p], t.coast[p + LW] - t.coast[p]) * S, 0.1);
+              const w = 1 - WET.dark * k * (1 - smoothstep(WET.hold, WET.run, inland));
+              r *= w; g *= w * 0.97; bl *= w * 0.92;
+            }
+          }
+          if (isRamp(s)) [r, g, bl] = ramp;
+          // Height: lighter higher (a level a step), and lit from the top left of the raw view.
+          const lift = Math.min(0.5, (0.17 * h) / LEVEL_STEP), shade = Math.max(0.7, Math.min(1.25, 1 + (gx + gz) * 0.45));
+          r = (r + (255 - r) * lift) * shade; g = (g + (247 - g) * lift) * shade; bl = (bl + (225 - bl) * lift) * shade;
+          // Water: shallow near the shore, the sea's or the river's colour farther out; antialiased at the coast.
+          const coast = t.coast[p], land = smoothstep(-0.03, 0.03, coast);
+          if (land < 1) {
+            const depth = smoothstep(-0.02, -0.25, coast), wr = shallow[0] + (deep[0] - shallow[0]) * depth, wg = shallow[1] + (deep[1] - shallow[1]) * depth, wb = shallow[2] + (deep[2] - shallow[2]) * depth;
+            r = wr + (r - wr) * land; g = wg + (g - wg) * land; bl = wb + (bl - wb) * land;
+          }
+          const o = (k * PW + i) * 4;
+          data[o] = r; data[o + 1] = g; data[o + 2] = bl; data[o + 3] = 255;
+        }
+      }
+    }
+  }
+  RASTER.canvas.getContext("2d")!.putImageData(RASTER.img, 0, 0, region[0] * S, region[1] * S, (region[2] - region[0] + 1) * S, (region[3] - region[1] + 1) * S);
+  return RASTER.canvas;
+}
 
 const keyOf = (o: MapObject) => `${o.kind}:${o.id}`;
 /** Kinds the game turns by their yaw. Buildings face the camera (ACNH); nature takes its turn from its seed. */
@@ -368,6 +493,10 @@ export default function MapLab() {
   useEffect(() => {
     const t = setTimeout(() => {
       setHealth(villageHealth(villageOf(map, objects)));
+      // The water's colours where the edits were, now that the sea is told from the rivers again.
+      if (EDITED) DIRTY = grow(DIRTY, ...EDITED);
+      if (RASTER?.stale) { DIRTY = [0, 0, map.width - 1, map.depth - 1]; RASTER.stale = false; }
+      EDITED = null;
       setDerived({ budget: mapBudget(map), waterClass: classifyWater(map) });
     }, 250);
     return () => clearTimeout(t);
@@ -383,6 +512,12 @@ export default function MapLab() {
    * server's.
    */
   useEffect(() => {
+    // `?fixture=terrain`: the natural-terrain test island (never the shipped one), for trying the brushes.
+    if (new URLSearchParams(window.location.search).get("fixture") === "terrain") {
+      WORLD = fromDoc(terrainFixtureDoc(), "village");
+      setVersion((v) => v + 1);
+      return;
+    }
     let saved: string | null = null;
     try {
       saved = window.localStorage.getItem(PAINTER_DRAFT_KEY);
@@ -588,36 +723,20 @@ export default function MapLab() {
     };
     cellSpace();
 
-    for (let z = 0; z < D; z++) {
-      for (let x = 0; x < W; x++) {
-        const s = surfaceAt(map, x, z);
-        const l = levelAt(map, x, z);
-        ctx.fillStyle = isWater(s) && waterClass[z * W + x] === WATER_CLASS.sea ? SEA_FILL : SURFACE_FILL[s] ?? "#f0f";
-        ctx.fillRect(x, z, 1, 1);
-        // Level as brightness: higher ground reads lighter, which is the only
-        // way to see elevation on a flat map. Tuned against a screenshot, not
-        // guessed -- at 0.10 per level the level-2 plateaus were the same green
-        // as the level-0 ground and the map read as flat.
-        if (!isWater(s) && l > 0) {
-          ctx.fillStyle = `rgba(255,247,225,${Math.min(0.5, 0.17 * l)})`;
-          ctx.fillRect(x, z, 1, 1);
-        }
-      }
-    }
+    // The terrain as the game derives it (see `terrainRaster`), smoothed up to the zoom.
+    ctx.imageSmoothingEnabled = true;
+    ctx.drawImage(terrainRaster(map, waterClass), 0, 0, W, D);
+    ctx.imageSmoothingEnabled = false;
 
-    // Cliff and half-step edges, drawn as the lines they will become.
+    // Cliff edges, where the kit draws a face: the one hard line left on the map.
+    ctx.strokeStyle = "#20140c";
+    ctx.lineWidth = px(Math.max(1.5, zoom * 0.3));
+    ctx.beginPath();
     for (let z = 0; z < D; z++) {
       for (let x = 0; x < W; x++) {
         if (isWater(surfaceAt(map, x, z))) continue;
         for (const [dx, dz] of ORTHOGONAL) {
-          if (!inBounds(map, x + dx, z + dz)) continue;
-          const d = levelAt(map, x, z) - levelAt(map, x + dx, z + dz);
-          if (d <= 0) continue;
-          // Half steps get their own colour, not a fainter version of the cliff
-          // line: "where are they and how many" has to be answerable at a glance.
-          ctx.strokeStyle = d >= CLIFF_LEVELS ? "#20140c" : "#e8a13c";
-          ctx.lineWidth = px(d >= CLIFF_LEVELS ? Math.max(1.5, zoom * 0.3) : Math.max(1, zoom * 0.2));
-          ctx.beginPath();
+          if (!inBounds(map, x + dx, z + dz) || levelAt(map, x, z) - levelAt(map, x + dx, z + dz) < CLIFF_LEVELS) continue;
           const x0 = x + (dx > 0 ? 1 : 0);
           const z0 = z + (dz > 0 ? 1 : 0);
           if (dx !== 0) {
@@ -627,8 +746,12 @@ export default function MapLab() {
             ctx.moveTo(x, z0);
             ctx.lineTo(x + 1, z0);
           }
-          ctx.stroke();
         }
+      }
+    }
+    ctx.stroke();
+    for (let z = 0; z < D; z++) {
+      for (let x = 0; x < W; x++) {
         if (needsCliff(map, x, z) && !cliffPieceFor(map, x, z)) {
           ctx.fillStyle = "#ff0055";
           ctx.fillRect(x, z, 1, 1);
@@ -857,6 +980,8 @@ export default function MapLab() {
     (x: number, z: number) => {
       if (!inBounds(map, x, z)) return;
       const s = surfaceAt(map, x, z);
+      // The painter re-derives only what it touched, so it writes cells without dropping the derived shapes.
+      const put = (level: number, surface: number) => { writeCell(map, x, z, level, surface); touch(x, z); };
       switch (tool) {
         case "label":
           paintLabel(x, z);
@@ -867,48 +992,77 @@ export default function MapLab() {
         case "land":
           // Only fills water. Painting over existing ground would silently
           // erase whatever surface was there.
-          if (isWater(s)) setCell(map, x, z, 0, Surface.Grass);
+          if (isWater(s)) put(0, Surface.Grass);
           break;
         case "sea":
-          setCell(map, x, z, 0, Surface.River);
+          put(0, Surface.River);
           break;
         case "surface":
-          setCell(map, x, z, isWater(paintSurface) ? 0 : levelAt(map, x, z), paintSurface);
+          put(isWater(paintSurface) ? 0 : levelAt(map, x, z), paintSurface);
           break;
         case "ramp":
-          if (!isWater(s)) setCell(map, x, z, levelAt(map, x, z), Surface.Ramp);
+          if (!isWater(s)) put(levelAt(map, x, z), Surface.Ramp);
           break;
         case "flat":
-          if (!isWater(s)) setCell(map, x, z, paintLevel, s);
+          if (!isWater(s)) put(paintLevel, s);
           break;
         case "raise":
         case "lower": {
           if (isWater(s)) break;
           const d = tool === "raise" ? 1 : -1;
-          setCell(map, x, z, Math.min(MAX_LEVEL, Math.max(0, levelAt(map, x, z) + d)), s);
+          put(Math.min(MAX_LEVEL, Math.max(0, levelAt(map, x, z) + d)), s);
           break;
         }
+        case "slope":
+        case "cliff":
+          // A rect, line, fill or lasso of them: each cell a one-cell dab.
+          heightDab(x, z, 0);
+          break;
         case "smooth":
         case "grow":
         case "shrink":
         case "jitter": {
           // Once per cell per stroke, from the map as the stroke began.
-          if (!STROKE) STROKE = { before: snapshotCells(map), touched: new Uint8Array(map.width * map.depth), seed: STROKE_SEED };
-          const i = z * map.width + x;
-          if (STROKE.touched[i]) break;
-          STROKE.touched[i] = 1;
-          organicCell(tool as OrganicOp, map, STROKE.before, x, z, STROKE.seed);
+          const st = strokeAt(map, x, z), i = z * map.width + x;
+          if (st.touched[i]) break;
+          st.touched[i] = 1;
+          organicCell(tool as OrganicOp, map, st.before, x, z, st.seed);
+          touch(x, z);
           break;
         }
       }
     },
+    // heightDab is a plain function over module state and this render's map and tool.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [map, tool, paintSurface, paintLevel, paintLabel]
   );
+
+  /** A Slope or Cliff dab of radius r at (cx, cz), from the stroke's start. Alt (held at mousedown) lowers. */
+  function heightDab(cx: number, cz: number, r: number) {
+    const st = strokeAt(map, cx, cz), dir = st.lower ? -1 : 1;
+    if (tool === "cliff") {
+      cliffDab(map, st.before, cx, cz, r, st.base, dir);
+      touch(cx - r - 1, cz - r - 1, cx + r + 1, cz + r + 1);
+      return;
+    }
+    st.water ??= waterDistance(map, st.before);
+    slopeDab(map, st.before, cx, cz, r, dir, st.touched, st.water);
+    const reach = Math.ceil(r + 2 + SLOPE_RUN * MAX_LEVEL);
+    touch(cx - reach, cz - reach, cx + reach, cz + reach);
+  }
 
   /** One brush dab. Does not touch history; the stroke owns that. */
   const dab = useCallback(
     (cx: number, cz: number) => {
       const r = brush - 1;
+      // The height brushes and soft land/sea work on the whole round dab at once.
+      if (tool === "slope" || tool === "cliff") return heightDab(cx, cz, r);
+      if ((tool === "land" || tool === "sea") && round) {
+        const st = strokeAt(map, cx, cz), reach = Math.ceil(1.6 * r + 2);
+        softDab(map, st.before, cx, cz, r, tool === "land", st.touched);
+        touch(cx - reach, cz - reach, cx + reach, cz + reach);
+        return;
+      }
       for (let dz = -r; dz <= r; dz++) {
         for (let dx = -r; dx <= r; dx++) {
           if (round && dx * dx + dz * dz > r * r + r) continue;
@@ -916,7 +1070,8 @@ export default function MapLab() {
         }
       }
     },
-    [brush, round, paintCell]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [brush, round, paintCell, tool, map]
   );
 
   /** The rectangle two cells span, normalised so drag direction does not matter. */
@@ -1141,6 +1296,7 @@ export default function MapLab() {
             dragRef.current = c;
             setDragFrom(c);
             painting.current = true;
+            STROKE_LOWER = e.altKey;
             lastCell.current = null;
             if (shape === "lasso") {
               lasso.current = [[c.u, c.v]];
@@ -1239,6 +1395,7 @@ export default function MapLab() {
                 const { map: m } = world();
                 m.levels.fill(0);
                 m.surfaces.fill(Surface.River);
+                RASTER = null;
                 // Objects and labels go with the terrain. Leaving them behind
                 // floats every building over open water on a map that no longer
                 // has ground.
@@ -1660,6 +1817,7 @@ export default function MapLab() {
                 onClick={() => {
                   commit();
                   const moved = legaliseTerraces(map);
+                  touch(0, 0, map.width - 1, map.depth - 1);
                   setLegalised(moved);
                   bump();
                 }}
