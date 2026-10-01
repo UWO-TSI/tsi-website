@@ -98,6 +98,7 @@ import CraftingSheet, { BeachBottle, Workbench, constrainWorkshop } from "./craf
 import StudySeats from "./study/StudySeats";
 import StudyHud from "./study/StudyHud";
 import CafeInterior from "./study/CafeInterior";
+import CafeGoalSheet from "./study/CafeGoalSheet";
 import { studyHoldsPrompt } from "@/lib/study/worldStore";
 import "@/lib/game/aerialFog";
 import { CURRENT, lookFx, type LookPreset } from "@/lib/game/lookPreset";
@@ -107,7 +108,7 @@ import { useIslandEvent, type IslandEvent } from "@/lib/game/seasonalEvents";
 import styles from "./DefaultIslandWorld.module.css";
 
 type Near = "enter" | "exit" | "board" | "display" | "desk" | "shelf" | "clock" | "notice" | "catch" | "cafe" | "museum" | "ruins" | "mailbox" | "monument" | "home" | "house" | "village" | "buy" | "claim" | "donate" | "report" | "fish" | "forage" | "net" | "museum_enter" | "cafe_enter" | "curator" | "closet" | "fitting" | "oracle_enter" | "altar" | "missions" | "ruins_exit" | "lantern" | "bench" | "bed" | "trophy" | "posters" | "cocoa" | "picnic" | null;
-type Sheet = "notice" | "letters" | "journal" | "trophies" | "showcase" | "closet" | "fitting" | "oracle" | "path" | "settings" | "missions" | "tourney" | "posters" | null;
+type Sheet = "notice" | "letters" | "journal" | "trophies" | "showcase" | "closet" | "fitting" | "oracle" | "path" | "settings" | "missions" | "tourney" | "posters" | "cafe" | null;
 const PHASE_NAMES: Record<IslandPhase, string> = { dawn: "Dawn", day: "Daylight", evening: "Evening", night: "Night" };
 const CLUBHOUSE_STATIONS: InteriorStation[] = [
   { id: "board", name: "Notice board", pos: HQ_BOARD_APPROACH, action: "board", range: 2.3 },
@@ -124,11 +125,11 @@ const NEAR_LABELS: Record<Exclude<Near, null>, string> = {
   museum_enter: "Enter the museum", cafe_enter: "Enter the café", curator: "Talk to the curator", closet: "Open the closet", fitting: "Try on outfits", oracle_enter: "Enter the Oracle temple", altar: "Consult the crystal",
   home: "Take the boat home", fish: "Cast your line", forage: "Gather", net: "Swing the net", claim: "Claim your plot", donate: "Donate your first catch to the museum", report: "Report to HQ", house: "Enter your house", village: "Take the boat to the village",
   buy: `Add a room · ${ROOM_PRICE.coins} coins + ${ROOM_PRICE.materials}`,
-  cafe: "Café · Opening soon", museum: "Museum · Closed for now", ruins: "Enter the ruins", missions: "Read the mission board", ruins_exit: "Back to the village", lantern: "Pick it up",
+  cafe: "Boarded up · help reopen it at the monument", museum: "Museum · Closed for now", ruins: "Enter the ruins", missions: "Read the mission board", ruins_exit: "Back to the village", lantern: "Pick it up",
   bench: "Sit on the bench", bed: "Sleep in your bed",
   trophy: "Read the tourney board", posters: "Look at the GENESIS posters", cocoa: "Get a hot cocoa", picnic: "Join the picnic",
 };
-const CLOSED: Near[] = ["cafe", "museum", "monument"];
+const CLOSED: Near[] = ["museum", "monument"];
 /** The village bench in reach as a `tsi:sit` detail: IslandScene writes it each frame, E sits (or stands) there. */
 const benchSpot: { current: { x: number; z: number; yaw: number; seatY: number } | null } = { current: null };
 /** Distance from a point to a landmark's footprint edge. */
@@ -173,7 +174,7 @@ function villageLayout(v: Village) {
     underWharf: (x: number, z: number) => !!deck && x > deck.x0 - 0.4 && x < deck.x1 + 0.4 && z > deck.z0 - 0.4 && z < deck.z1 + 0.4,
   };
 }
-const SIGNS: Partial<Record<Landmark["id"], string>> = { cafe: "Café · Opening soon", museum: "Museum · Closed", ruins: "Ruins gate", notice: "Notices", catch: "Catch board", shop: "Shop", oracle: "Oracle temple" };
+const SIGNS: Partial<Record<Landmark["id"], string>> = { cafe: "Café · Boarded up", museum: "Museum · Closed", ruins: "Ruins gate", notice: "Notices", catch: "Catch board", shop: "Shop", oracle: "Oracle temple" };
 const BOTANICAL_TEXTURES = ["/assets/acnh/icons/flower_rose.png", "/assets/acnh/icons/flower_cosmos.png"];
 useTexture.preload(BOTANICAL_TEXTURES);
 useTexture.preload("/assets/acnh/interior/hq-parquet-albedo.png");
@@ -376,6 +377,7 @@ function VillageLandmarks({ layout, ground, opened, stage, ceremony, light }: { 
     {board && <GLBProp url="/assets/acnh/props/bulletin-board.glb" position={at(board)} />}
     {missions && <GLBProp url="/assets/acnh/props/bulletin-board.glb" position={[missions.at[0], ground(...missions.at), missions.at[1] + 0.3]} rotation={[0, missions.yaw, 0]} />}
     {wharf && <group position={[wharf.x, 0, wharf.z]} rotation={[0, wharf.yaw ?? 0, 0]}><WharfPier /></group>}
+    {cafe && opened.includes("cafe") && <Html position={[cafe.x, ground(cafe.x, cafe.z) + 3, front(cafe)]} center distanceFactor={10} zIndexRange={[3, 0]}><div className={styles.cue}>Café</div></Html>}
     {layout.landmarks.filter(l => SIGNS[l.id] && !opened.includes(l.id as WorldGoalId)).map(l => <Html key={l.id} position={[l.x, ground(l.x, l.z) + (l.half && l.half[0] > 1 ? 3.6 : 2.3), l.z - (l.half?.[1] ?? 0)]} center distanceFactor={10} zIndexRange={[3, 0]}>
       <div className={styles.cue} data-closed={!l.open}>{SIGNS[l.id]}</div>
     </Html>)}
@@ -468,8 +470,8 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   const [sheet, setSheet] = useState<Sheet>(() => (devHome.get("sheet") === "path" ? "path" : null));
   const [shopTab, setShopTab] = useState<"outfits" | "furniture" | null>(null);
   const [mapOpen, setMapOpen] = useState(true);
-  const plot = useDefaultIslandPlot();
   const progression = useProgressionWorld();
+  const plot = useDefaultIslandPlot(progression.completedGoals);
   const ceremony = useCeremony(progression.ceremonyGoal, progression.forceCeremony);
   const chapterActions = useChapterActions();
   const chapterFlags = useMemo(() => ({ claim: chapterActions.claim, donate: chapterActions.donate, report: chapterActions.report }),
@@ -552,6 +554,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   const atHome = site === "home";
   const act = useCallback((action: Near) => {
     if (action === "notice") { setSheet("notice"); return; }
+    if (action === "cafe") { setSheet("cafe"); return; }
     // The catch board's clues are the collection journal's.
     if (action === "catch") { setBagOpen(true); return; }
     if (action === "mailbox") { setSheet("letters"); return; }
@@ -760,6 +763,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       <MissionBoardSheet open={sheet === "missions"} onClose={() => setSheet(null)} gateNote={gate.open ? null : gate.reason} />
       <TourneySheet open={sheet === "tourney"} onClose={() => setSheet(null)} />
       <PostersSheet open={sheet === "posters"} onClose={() => setSheet(null)} event={islandEvent} />
+      <CafeGoalSheet open={sheet === "cafe"} onClose={() => setSheet(null)} />
       {site === "ruins" && <CombatHud player={player} />}
       {site === "ruins" ? <div className={styles.controls} data-combat><span>{[moveKeys.forward, moveKeys.left, moveKeys.back, moveKeys.right].map(k => <kbd key={k}>{keyName(k)}</kbd>)} Move</span><span>Mouse Aim</span><span>Click Attack</span><span><kbd>{keyName(moveKeys.jump)}</kbd> Jump</span><span><kbd>{keyName(moveKeys.dash)}</kbd> Dodge</span><span><kbd>1</kbd>–<kbd>4</kbd> Abilities</span><span><kbd>R</kbd> Swap</span><span><kbd>E</kbd> Interact</span></div>
       : <div className={styles.controls}><span>{[moveKeys.forward, moveKeys.left, moveKeys.back, moveKeys.right].map(k => <kbd key={k}>{keyName(k)}</kbd>)} Walk</span><span><kbd>{keyName(moveKeys.sprint)}</kbd> Run</span><span><kbd>{keyName(moveKeys.jump)}</kbd> Jump</span>{peaceful.glider && <span><kbd>{keyName(moveKeys.jump)}</kbd> again in the air Glide</span>}<span><kbd>{keyName(moveKeys.dash)}</kbd> Dash</span><span><kbd>E</kbd> Interact</span><span><kbd>Z</kbd> Zoom</span><span><kbd>{keyName(identity.settings.key_bindings.openMap)}</kbd> Map</span><span><kbd>J</kbd> Quests</span><span><kbd>{keyName(identity.settings.key_bindings.openJournal)}</kbd> Collection</span><span><kbd>{keyName(moveKeys.sneak)}</kbd> Sneak</span></div>}

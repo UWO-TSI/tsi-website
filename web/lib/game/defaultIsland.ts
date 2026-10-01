@@ -82,15 +82,15 @@ export const isCedar = (seed: number) => seed % TREE_SLOTS === 3;
 export const turn = (dx: number, dz: number, yaw = 0): [number, number] =>
   yaw ? [dx * Math.cos(yaw) + dz * Math.sin(yaw), -dx * Math.sin(yaw) + dz * Math.cos(yaw)] : [dx, dz];
 
-/** Landmarks placed on the map, in the table's order. */
-export function landmarks(v: Village = village()): Landmark[] {
+/** Landmarks placed on the map, in the table's order; `opened` lists the buildings completed club goals have opened (the café, the museum). */
+export function landmarks(v: Village = village(), opened: readonly string[] = []): Landmark[] {
   const placed = new Map(objectsOf("landmark", v).map(o => [o.id, o]));
   return LANDMARK_IDS.flatMap((id) => {
     const o = placed.get(id);
     if (!o) return [];
     const { door: _door, exit: _exit, ...info } = LANDMARK_INFO[id];
     void _door; void _exit;
-    return [{ id, x: o.x, z: o.z, ...info, ...(o.yaw ? { yaw: o.yaw } : {}) }];
+    return [{ id, x: o.x, z: o.z, ...info, open: info.open || opened.includes(id), ...(o.yaw ? { yaw: o.yaw } : {}) }];
   });
 }
 export const landmark = (id: LandmarkId, v: Village = village()): Landmark | null => landmarks(v).find(l => l.id === id) ?? null;

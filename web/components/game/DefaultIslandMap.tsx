@@ -19,7 +19,8 @@ const FILL: Partial<Record<number, string>> = {
  * the map matches the follow camera (+x on screen left). The camera faces
  * west, so north (−x) is on the right edge (row 239).
  */
-export function useDefaultIslandPlot(): MiniMapPlot {
+export function useDefaultIslandPlot(opened: readonly string[] = []): MiniMapPlot {
+  const openedKey = opened.join();
   return useMemo(() => {
     const v = village(), { map } = v, water = villageWater(v).classes;
     const runs: { x: number; z: number; w: number; fill: string }[] = [];
@@ -39,11 +40,11 @@ export function useDefaultIslandPlot(): MiniMapPlot {
     const content = <g transform="scale(-1 1)">
       {runs.map((r, i) => <rect key={i} x={r.x} y={-(r.z + 0.5)} width={r.w} height={1.02} fill={r.fill} />)}
       {deck && <rect x={deck.x0} y={-deck.z1} width={deck.x1 - deck.x0} height={deck.z1 - deck.z0} fill="#B98C60" />}
-      {landmarks(v).filter(l => l.half).map(l => <rect key={l.id} x={l.x - l.half![0]} y={-l.z - l.half![1]} width={l.half![0] * 2} height={l.half![1] * 2} rx={0.5}
+      {landmarks(v, openedKey.split(",")).filter(l => l.half).map(l => <rect key={l.id} x={l.x - l.half![0]} y={-l.z - l.half![1]} width={l.half![0] * 2} height={l.half![1] * 2} rx={0.5}
         fill={l.color} opacity={l.open ? 1 : 0.55} stroke={l.open ? "rgba(0,0,0,0.3)" : "#3b2f25"} strokeWidth={0.35} strokeDasharray={l.open ? undefined : "0.8 0.6"}>
         <title>{l.open ? l.label : `${l.label} (closed)`}</title></rect>)}
     </g>;
     return { viewBox: `${-x1} ${-z1} ${x1 - x0} ${z1 - z0}`, content, north: [-x0 - 2.5, (-z1 - z0) / 2 + 1.5], mirrorX: true,
       label: "Village map. The yellow marker shows your position; north is to the right. Dashed buildings are closed." };
-  }, []);
+  }, [openedKey]);
 }

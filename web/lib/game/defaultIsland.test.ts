@@ -114,6 +114,8 @@ describe("the live village map (web/data/village-map.json)", () => {
   it("places every landmark from ledger row 155, with the closed ones closed", () => {
     expect(landmarks().map(l => l.id).sort()).toEqual([...LANDMARK_IDS].sort());
     expect(landmarks().filter(l => !l.open).map(l => l.id).sort()).toEqual(["cafe", "museum", "ruins"]);
+    // A completed club goal opens its building (cafe-polish §3).
+    expect(landmarks(undefined, ["cafe"]).filter(l => !l.open).map(l => l.id).sort()).toEqual(["museum", "ruins"]);
   });
   it("keeps solid prop footprints on land and blocks entry from each side", () => {
     for (const prop of [...objectsOf("bench"), ...objectsOf("rock")]) {
