@@ -56,6 +56,7 @@ describe("ownership catalogue", () => {
     const items = seedItems();
     const byRef = (ref: string) => items.filter((i) => i.catalogue_ref === ref);
     for (const p of PARTS.filter((x) => x.slot !== "bangs" && x.slot !== "back" && !x.variantOf)) {
+      if (p.group === "hair") { expect(byRef(p.id), p.id).toHaveLength(0); continue; } // avatar v8: sold after the milestone-1 review
       if (p.item) { // crafted wearables: owning the crafted item unlocks the part; never sold as a wear- row
         expect([...CATALOGUE, ...CRAFTED_ITEMS].filter((c) => c.catalogue_ref === p.id).map((c) => c.slug), p.id).toEqual([p.item]);
         expect(byRef(p.id).filter((i) => i.active), p.id).toHaveLength(0);
