@@ -149,8 +149,10 @@ export const SLOPE_SPREAD = 3;
 export function heightField(map: IslandMap, spread = SLOPE_SPREAD): Float32Array {
   const W = map.width, D = map.depth, CW = W + 1;
   const out = new Float32Array(CW * (D + 1));
-  // A blurred step spans about 3 sigma; each [1 2 1] pass adds half a cell of variance per axis.
-  const passes = Math.max(1, Math.round(2 * (spread / 3) ** 2));
+  // One [1 2 1] pass per cell of spread: three give sigma 1.2 (a lone step blends over about
+  // three cells) and leave under 2% of a one-level-per-1.5-cells staircase, so a steep slope
+  // does not ripple into terraces under its own lighting.
+  const passes = Math.max(1, Math.round(spread));
   let v = Float32Array.from(map.levels), next = new Float32Array(W * D);
   const B = [1, 2, 1];
   for (let pass = 0; pass < passes; pass++) {
@@ -1643,6 +1645,17 @@ export function isGroundAtWorld(map: IslandMap, x: number, z: number): boolean {
 export function overlayAt(map: IslandMap, surface: number, x: number, z: number): number {
   const f = terrainOf(map).overlays.get(surface);
   return f ? overlayAlpha(surface, latticeAt(map, f, x, z)) : 0;
+}
+
+/**
+ * Distance from the organic coast in cells, positive inland: the coast field
+ * over its own slope. Good to about a cell and a half, which is all the beach,
+ * the wet band and the near seabed ask of it; the shore field covers the rest.
+ */
+export function coastDistance(map: IslandMap, x: number, z: number): number {
+  const { coast } = terrainOf(map), e = 0.5 / LATTICE;
+  const gx = latticeAt(map, coast, x + e, z) - latticeAt(map, coast, x - e, z), gz = latticeAt(map, coast, x, z + e) - latticeAt(map, coast, x, z - e);
+  return latticeAt(map, coast, x, z) / Math.max(Math.hypot(gx, gz) / (2 * e), 0.1);
 }
 
 /** How far the sloping beach drops the ground below its level at a world point, world units. */
