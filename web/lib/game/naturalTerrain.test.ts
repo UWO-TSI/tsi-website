@@ -1,8 +1,15 @@
 import { afterEach, describe, expect, it } from "vitest";
 import {
-  COAST, LATTICE, Surface, WATER_DROP, cellToWorldX, cellToWorldZ, createCenteredMap, forgetTerrain, heightField, isGroundAtWorld,
-  isLandCell, latticeAt, overlayAt, refreshTerrain, sampleGroundHeight, setCell, terrainOf, type IslandMap,
+  CLIFF_LEVELS, COAST, LATTICE, LEVEL_STEP, Surface, WATER_DROP, cellToWorldX, cellToWorldZ, createCenteredMap, forgetTerrain, heightField,
+  isGroundAtWorld, isLandCell, latticeAt, overlayAt, refreshTerrain, sampleGroundHeight, setCell, terrainOf, type IslandMap,
 } from "./grid";
+import { terrainFixtureMap } from "./fixtures/terrainFixture";
+import { villageOf } from "./villageMap";
+import { islandOf } from "./defaultIsland";
+import { walkTo } from "./movement/sim";
+import { fishingSpot, waterClassifier } from "./fishingSpots";
+import { terrainHealth, terrainProblems } from "./mapHealth";
+import { terrainChunks } from "@/components/game/grid/GridTerrain";
 
 /** An oval island of grass in the sea. */
 function island(w = 40, d = 40, rx = 14, rz = 11): IslandMap {
@@ -146,5 +153,60 @@ describe("the sloping beach", () => {
       expect(sampleGroundHeight(map, field, x, z - 0.01)).toBeCloseTo(sand ? -WATER_DROP : 0, 2);
       expect(sampleGroundHeight(map, field, x, z - 2.5)).toBeCloseTo(0, 3);
     }
+  });
+});
+
+describe("walking, fishing and the drawn ground agree (the synthetic island)", () => {
+  const map = terrainFixtureMap(), v = villageOf(map, [{ id: "default", kind: "spawn", x: 0, z: -2 }]), island = islandOf(v);
+
+  it("is wet exactly where the coast is water, and stands on exactly the ground the mesh draws, at its height", () => {
+    for (let z = -22; z <= 22; z += 0.37) for (let x = -31; x <= 31; x += 0.37) expect(island.wet(x, z), `${x},${z}`).toBe(!isGroundAtWorld(map, x, z));
+    // Every grass vertex the mesh draws inside a cell (not on a shared edge) sits on the walking height, on land.
+    let checked = 0;
+    for (const { surface, geometry } of terrainChunks(map, v.field)) {
+      if (surface !== Surface.Grass) continue;
+      const p = geometry.getAttribute("position");
+      for (let i = 0; i < p.count; i += 3) {
+        const x = p.getX(i), y = p.getY(i), z = p.getZ(i), fx = x - map.originX + 0.5, fz = z - map.originZ + 0.5;
+        if (Math.abs(fx - Math.round(fx)) < 0.01 || Math.abs(fz - Math.round(fz)) < 0.01) continue;
+        expect(y, `${x},${z}`).toBeCloseTo(sampleGroundHeight(map, v.field, x, z), 4);
+        expect(latticeAt(map, terrainOf(map).coast, x, z), `${x},${z}`).toBeGreaterThan(-1e-4);
+        checked++;
+      }
+      geometry.dispose();
+    }
+    expect(checked).toBeGreaterThan(1000);
+  });
+
+  it("walks up the hill and the mountain, stops at the cliff face, climbs the ramp, and never walks into the sea", () => {
+    // The steep mountain (a level per 1.5 cells) from its foot to its top.
+    const top = walkTo(island, -12, -14, -12, -6);
+    expect(Math.hypot(top.x + 12, top.z + 6)).toBeLessThan(0.5);
+    expect(top.y).toBeGreaterThan(3);
+    // Straight at the plateau's face: stopped below it. Up the ramp: on top.
+    const face = walkTo(island, 4, -8, 12, -8);
+    expect(face.y).toBeLessThan(0.1);
+    expect(face.x).toBeLessThan(7.6);
+    const ramp = walkTo(island, 12, -16.5, 12, -11);
+    expect(ramp.y).toBeCloseTo(CLIFF_LEVELS * LEVEL_STEP, 1);
+    // Out to sea from the beach: the walker stops on the sand at the waterline.
+    const shore = walkTo(island, 0, 12, 0, 30);
+    expect(isGroundAtWorld(map, shore.x, shore.z)).toBe(true);
+    expect(shore.z).toBeGreaterThan(17);
+    expect(shore.y).toBeLessThan(-WATER_DROP / 2);
+  });
+
+  it("casts from the beach into water", () => {
+    const spot = fishingSpot(map, waterClassifier(map), 0, 18);
+    expect(spot).not.toBeNull();
+    expect(isGroundAtWorld(map, ...spot!.target)).toBe(false);
+    expect(spot!.water).toBe("sea");
+  });
+
+  it("is healthy terrain: everything reachable by slopes and the ramp, cliffs drawable, mostly flat", () => {
+    const t = terrainHealth(map, [32, 30]);
+    expect(terrainProblems(t)).toEqual({});
+    expect(t.slopeCells).toBeGreaterThan(50);
+    expect(t.cliffCells).toBeGreaterThan(10);
   });
 });
