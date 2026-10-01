@@ -85,19 +85,19 @@ def beanie(pc, tuck, edge=lambda lon: 10 + 12 * math.cos(math.radians(lon))):
 
 # ================================================================ backpack
 def _pillow(pc, c, hw, hd, hh, bulge, n=16, zs=(-1.0, -0.86, -0.45, 0.0, 0.45, 0.86, 1.0), out=Vector((0, 1, 0)),
-            mat=None, sag=0.0):
+            mat=None, sag=0.0, round_=0.45, top=0.13):
     """A padded fabric body: superellipse rings stacked up, the outer face (toward `out`) puffing out most at mid
     height, the corners rounded, a soft sag fold low on the front (sag)."""
     t = Vector((0, 0, 1)).cross(out).normalized()
     rings = []
     for z in zs:
-        s = 1.0 - 0.13 * abs(z) ** 6
+        s = 1.0 - top * abs(z) ** (6 if z < 0 else 3)        # the top rounds over more than the base
         ring = []
         for k in range(n):
             a = 2 * math.pi * k / n
             ca, sa = math.cos(a), math.sin(a)
-            x = math.copysign(abs(ca) ** 0.45, ca) * hw * s
-            y = math.copysign(abs(sa) ** 0.45, sa) * hd * s
+            x = math.copysign(abs(ca) ** round_, ca) * hw * s
+            y = math.copysign(abs(sa) ** round_, sa) * hd * s
             if y > 0:
                 y += bulge * (1 - z * z) * math.cos(min(1.0, abs(x) / hw) * math.pi / 2)
                 y -= sag * math.exp(-((z + 0.45) / 0.18) ** 2) * (1 - abs(x) / hw)
@@ -132,19 +132,20 @@ def backpack(pc):
     T, CL = B.torso_pt, B.CL
     pc.region = {"Spine2": 0.7, "Spine1": 0.3}
     c = Vector((0, 0.14, 0.395))
-    _pillow(pc, c, 0.088, 0.022, 0.09, 0.012, sag=0.004, n=14)
+    _pillow(pc, c, 0.088, 0.022, 0.09, 0.022, sag=0.006, n=14, round_=0.6, top=0.3)
     # the flap: from the back of the top over the top and down the outer face, rounded at its lower edge
     pc.mat = "M_Accent"
     rows = []
     xs = [-0.08, -0.06, -0.03, 0.0, 0.03, 0.06, 0.08]
-    path = [(-0.022, 0.09), (0.0, 0.1), (0.026, 0.092), (0.039, 0.058), (0.037, 0.03)]
+    path = [(-0.022, 0.082), (0.0, 0.094), (0.03, 0.088), (0.05, 0.056), (0.048, 0.026)]
     for y, z in path:
         rows.append([c + Vector((x * (1 - 0.25 * (abs(x) / 0.08) ** 4), y + 0.003 * math.cos(x * 30), z)) for x in xs])
     n0 = pc.mark()
     pc.band([list(r) for r in zip(*rows)], closed=False, refs=[c] * (len(xs) - 1))
     pc.thicken(pc.since(n0), lambda v: v.co + (c - v.co).normalized() * 0.004)
     # the pocket: a smaller puffy pillow low on the outer face
-    _pillow(pc, c + Vector((0, 0.028, -0.048)), 0.056, 0.01, 0.032, 0.007, n=10, zs=(-1.0, -0.6, 0.0, 0.6, 1.0), mat="M_Accent")
+    _pillow(pc, c + Vector((0, 0.036, -0.05)), 0.056, 0.011, 0.032, 0.009, n=10, zs=(-1.0, -0.6, 0.0, 0.6, 1.0), mat="M_Accent",
+            round_=0.6, top=0.2)
     # a grab loop at the top
     pc.mat = "M_Trim"
     pc.tube([c + Vector((-0.02, -0.012, 0.098)), c + Vector((0, -0.014, 0.118)), c + Vector((0.02, -0.012, 0.098))],
