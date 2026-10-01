@@ -160,12 +160,9 @@ export default function ShopView({ transport = shopReadTransport }: { transport?
                 <div style={{ padding: 16 }}>
                   <h3 className="text-base font-semibold mb-1 line-clamp-2" style={{ color: "#f1ffff" }}>{p.name}</h3>
                   <div className="flex items-center gap-2">
-                    {p.price_cad != null && <span className="text-base font-bold" style={{ color: "#f1ffff" }}>${p.price_cad.toFixed(2)}</span>}
-                    {p.price_tc != null && (
-                      <span className="font-mono text-sm" style={{ color: "#ffd166" }}>
-                        {p.price_cad != null ? "or " : ""}{p.price_tc} 💎
-                      </span>
-                    )}
+                    {p.price_tc != null ? (
+                      <span className="font-mono text-sm" style={{ color: "#ffd166" }}>{p.price_tc} 💎</span>
+                    ) : p.price_cad != null && <span className="text-base font-bold" style={{ color: "#f1ffff" }}>${p.price_cad.toFixed(2)}</span>}
                   </div>
                 </div>
               </button>
@@ -203,8 +200,9 @@ export default function ShopView({ transport = shopReadTransport }: { transport?
               <div>
             <h2 id={detailTitleId} className="text-2xl font-bold mb-2" style={{ color: "var(--color-text-main)" }}>{selected.name}</h2>
             <div className="flex items-center gap-3 mb-4">
-              {selected.price_cad != null && <span className="text-2xl font-bold" style={{ color: "var(--color-text-main)" }}>${selected.price_cad.toFixed(2)}</span>}
-              {selected.price_tc != null && <span className="font-mono text-base" style={{ color: "#ffd166" }}>{selected.price_tc} 💎</span>}
+              {selected.price_tc != null ? (
+                <span className="font-mono text-base" style={{ color: "#ffd166" }}>{selected.price_tc} 💎</span>
+              ) : selected.price_cad != null && <span className="text-2xl font-bold" style={{ color: "var(--color-text-main)" }}>${selected.price_cad.toFixed(2)}</span>}
             </div>
             {selected.description && <p className="text-sm mb-6" style={{ color: "var(--color-text-soft)" }}>{selected.description}</p>}
             {selected.price_tc != null && (
