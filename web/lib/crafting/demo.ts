@@ -21,10 +21,11 @@ const ME = "00000000-0000-4000-8000-000000000001";
 export function installCraftingDemo(): void {
   installDemoFetch("crafting", "/api/", () => {
     const m = memoryCraftingStore(undefined, undefined, () => 0);
-    // Mid-game pockets: a resident taught the Lighthouse rod; two branches short of it.
+    // Mid-game pockets: residents taught the Lighthouse rod and the leaf glider (specs/glider.md); branches for one of them.
     void learnFromQuest(m.store, ME, "rod-lighthouse");
+    void learnFromQuest(m.store, ME, "glider-leaf");
     void learnFromQuest(m.store, ME, "furn-floor-lamp");
-    const pockets = { wood_branch: 4, rock_iron_nugget: 5, sea_pearl_oyster: 1, fish_black_bass: 2, rock_stone: 6, rock_clay: 2, bug_firefly: 1 };
+    const pockets = { wood_branch: 6, rock_iron_nugget: 5, sea_pearl_oyster: 1, fish_black_bass: 2, rock_stone: 6, rock_clay: 2, bug_firefly: 1, flower_windflower: 2, bug_red_dragonfly: 1 };
     for (const [key, n] of Object.entries(pockets)) m.eco.give(ME, key, n);
     m.eco.fund(ME, 1500);
     const rolls = memoryCollectionsStore(() => new Date(), m.catchDrop);

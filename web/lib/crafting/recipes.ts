@@ -58,6 +58,10 @@ export const CRAFTED_ITEMS: CatalogueEntry[] = [
   item("outfit-silk-sweater", "Silk sweater", "outfit", 300, { slot: "outfit", catalogue_ref: "outfit_silk_sweater" }),
   item("outfit-monarch-cape", "Monarch cape", "outfit", 1500, { slot: "outfit", catalogue_ref: "outfit_monarch_cape", description: "Rare. Orange and black, like October." }),
   item("outfit-koi-kimono", "Koi kimono", "outfit", 4000, { slot: "outfit", catalogue_ref: "outfit_koi_kimono", description: "Rare. Woven around a golden koi scale." }),
+  // The first movement unlock (row 245, specs/glider.md): owning it turns gliding on (lib/game/glider.ts). Written out
+  // rather than item(), whose running position would renumber the recipe cards seeded after these (115-118).
+  { slug: "glider-leaf", display_name: "Leaf glider", category: "tool", description: "Jump, then press jump again while falling and hold it to glide. Crafted at a workbench.",
+    price_coins: 3000, price_gems: null, tier: "premium", slot: null, special_pool: false, stackable: false, stock: null, catalogue_ref: "glider_leaf", sprite_url: null, position: 119 },
 ];
 
 const r = (id: string, ingredients: Record<string, number>, sources: RecipeSource[], kind: "item" | "weapon" = "item", qty = 1): Recipe =>
@@ -99,6 +103,8 @@ export const RECIPES: Recipe[] = [
   r("bow-yew", { wood_branch: 6, bug_bagworm: 2 }, ["bottle"], "weapon"),
   r("revolver-brass", { rock_iron_nugget: 3, rock_gold_nugget: 1 }, ["quest", "bottle"], "weapon"),
   r("staff-rune", { wood_branch: 4, rock_crystal: 2, fish_football_fish: 1 }, ["quest", "bottle"], "weapon"),
+  // The leaf glider (row 245), learned the way rods 4-5 are: a resident's quest or the message bottle. Last, so the seeded recipes keep their positions.
+  r("glider-leaf", { wood_branch: 6, flower_windflower: 2, bug_red_dragonfly: 1 }, ["quest", "bottle"]),
 ];
 
 /**

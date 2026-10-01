@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { advanceMove, clearSpot, createMoveSim, createMoveState, interpolated, standWorld, stepMove, topSpeed, towards, walkTo, MOVE_TUNING as T, NO_INPUT, STEP, type MoveEvent, type MoveInput, type MoveState, type MoveTuning, type MoveWorld } from "./sim";
-import { COURSE_GATES, COURSE_SPAWN, NEW_LAP, course, gateAt, lapStep, routePilot } from "./course";
+import { COURSE_GATES, COURSE_SPAWN, GLIDE_SPAWN, NEW_LAP, course, gateAt, lapStep, routePilot } from "./course";
 import { islandOf } from "../defaultIsland";
 import { villageOf, type MapObject } from "../villageMap";
 import { CLIFF_LEVELS, Surface, createCenteredMap, setCell } from "../grid";
@@ -477,6 +477,228 @@ describe("frame rate", () => {
     for (const fps of [30, 60]) {
       const p = path(fps, 0.37);
       expect(Math.hypot(p.end[0] - odd.end[0], p.end[2] - odd.end[2])).toBeLessThan(15 / fps + 0.05);
+    }
+  });
+});
+
+describe("the leaf glider (row 245)", () => {
+  const GT: MoveTuning = { ...T, glider: 1 };
+  // A 1.5u cliff top for z <= 0 (its edge at z = 0.5), low ground beyond; and the same with the sea from z >= 6.
+  const cliff = grid(12, 70, (_x, z) => [z <= 0 ? CLIFF_LEVELS : 0, G]);
+  const sea = grid(12, 70, (_x, z) => [z <= 0 ? CLIFF_LEVELS : 0, z >= 6 ? W : G]);
+  const tall = grid(12, 70, (_x, z) => [z <= 0 ? 4 * CLIFF_LEVELS : 0, G]); // 6u, steeper than the grid allows, to measure it
+  /**
+   * Walk (or sprint) to the cliff edge and jump, Space held while rising; let go at the top for a step, press it again
+   * and hold it with the stick forward. `then` can change the input once gliding (a gust, a let-go). Returns every step.
+   */
+  const glide = (w: MoveWorld, t: MoveTuning, opts: { sprint?: boolean; from?: [number, number]; edge?: number; then?: (s: MoveState, i: Partial<MoveInput>) => Partial<MoveInput> } = {}) => {
+    const steps: MoveState[] = [], [x0, z0] = opts.from ?? [0, -10], edge = opts.edge ?? 0.5;
+    let phase = 0; // 0 run, 1 rising, 2 let go, 3 pressed again
+    drive(createMoveState(x0, z0, w), w, 6, (_time, s) => {
+      const i: Partial<MoveInput> = { z: 1, sprint: opts.sprint };
+      if (phase === 0 && s.mode === "ground" && s.z >= edge - 0.2) { phase = 1; return { ...i, jump: true, jumpPressed: true }; }
+      if (phase === 1) { if (s.vy > 0) return { ...i, jump: true }; phase = 2; return i; }
+      if (phase === 2) { phase = 3; return { ...i, jump: true, jumpPressed: true }; }
+      if (phase === 3) return s.mode === "glide" && opts.then ? opts.then(s, { ...i, jump: true }) : { ...i, jump: true };
+      return i;
+    }, s => steps.push(s), t);
+    return steps;
+  };
+  const events = (steps: MoveState[]) => steps.flatMap(s => kinds(s.events));
+  const landing = (steps: MoveState[]) => steps.find((s, i) => i > 0 && s.mode === "ground" && steps[i - 1].mode !== "ground" && s.z > 0.6)!;
+
+  it("opens on a fresh press while falling, never from the held Space of a jump or a bunny-hop", () => {
+    const opened = glide(cliff, GT);
+    expect(events(opened)).toContain("glide");
+    const open = opened.find(s => s.events.some(e => e.kind === "glide"))!;
+    expect(open.mode).toBe("glide");
+    // Holding the jump's Space through the whole fall never opens it.
+    const held: string[] = [];
+    let jumped = false;
+    drive(createMoveState(0, -10, cliff), cliff, 4, (_t, s) => {
+      const press = !jumped && s.mode === "ground" && s.z >= 0.3;
+      jumped ||= press;
+      return { z: 1, jump: jumped, jumpPressed: press };
+    }, q => held.push(...kinds(q.events)), GT);
+    expect(held).toContain("jump");
+    expect(held).not.toContain("glide");
+    // A press while still rising doesn't open it either.
+    const rising: string[] = [];
+    drive(createMoveState(0, 0, flat), flat, 1.5, time => ({ jump: time < 0.05 || time >= 0.1, jumpPressed: at(time, 0) || at(time, 0.1) }), q => rising.push(...kinds(q.events)), GT);
+    expect(rising).not.toContain("glide");
+    // The held bunny-hop chain is untouched: the same hops as without the glider.
+    const chain = (t: MoveTuning) => {
+      const out: string[] = [];
+      drive(drive(createMoveState(0, 0, flat), flat, 2.5, () => ({ z: 1, sprint: true }), undefined, t), flat, 3, time => ({ z: 1, sprint: true, jump: true, jumpPressed: at(time, 0) }), q => out.push(...kinds(q.events)), t);
+      return out;
+    };
+    expect(chain(GT)).toEqual(chain(T));
+  });
+
+  it("a press that would land within the jump buffer anyway is still a buffered jump", () => {
+    // Walking off the 1.5u cliff, a press after coyote time comes too close to the ground to open: it jumps on landing.
+    const out: string[] = [];
+    let left = -1;
+    drive(createMoveState(0, -2, cliff), cliff, 1.2, (time, s) => {
+      if (left < 0 && s.mode === "air") left = time;
+      const press = left >= 0 && at(time, left + T.coyoteTime + 0.03);
+      return { z: 1, jump: press, jumpPressed: press };
+    }, q => out.push(...kinds(q.events)), GT);
+    expect(out).not.toContain("glide");
+    expect(out.slice(0, 2)).toEqual(["land", "jump"]);
+  });
+
+  it("sinks slowly while held and never gains height, even through the gust", () => {
+    for (const then of [undefined, (s: MoveState, i: Partial<MoveInput>) => ({ ...i, dashPressed: s.modeT > 0.2 && s.modeT < 0.2 + STEP })]) {
+      const steps = glide(cliff, GT, { then });
+      const gliding = steps.filter(s => s.mode === "glide");
+      expect(gliding.length).toBeGreaterThan(100);
+      for (let k = 1; k < steps.length; k++) if (steps[k].mode === "glide") expect(steps[k].y).toBeLessThanOrEqual(steps[k - 1].y + 1e-9);
+      // Settled into the sink after the open.
+      const late = gliding.filter(s => s.modeT > 0.6);
+      expect(late.length).toBeGreaterThan(30);
+      for (const s of late) expect(s.vy).toBeCloseTo(-GT.glideSink, 1);
+    }
+  });
+
+  it("clears about 10 to 12 tiles off a 1.5u cliff (14 from a sprinting long jump), a river and a short sea gap, not the island", () => {
+    const walk = landing(glide(cliff, GT)), sprint = landing(glide(cliff, GT, { sprint: true }));
+    expect(walk.z - 0.5).toBeGreaterThan(10);
+    expect(walk.z - 0.5).toBeLessThan(12.5);
+    expect(sprint.z - 0.5).toBeGreaterThan(walk.z - 0.5);
+    expect(sprint.z - 0.5).toBeLessThan(14.5);
+  });
+
+  it("steers: the heading swings round to the stick at a moderate rate, at glide speed", () => {
+    const steps = glide(tall, GT, { then: (s, i) => ({ ...i, x: s.modeT > 0.3 ? 1 : 0, z: s.modeT > 0.3 ? 0 : 1 }) });
+    const turn = steps.filter(s => s.mode === "glide" && s.modeT > 0.3);
+    const heading = (s: MoveState) => Math.atan2(s.vx, s.vz);
+    const after = (dt: number) => turn.find(s => s.modeT >= 0.3 + dt)!;
+    expect(heading(after(0.1))).toBeLessThan(Math.PI / 4); // not a snap
+    expect(heading(after(1.2))).toBeGreaterThan(Math.PI / 2 * 0.9); // round within about a second
+    expect(speedOf(after(1.2))).toBeCloseTo(GT.glideSpeed, 0);
+  });
+
+  it("lands softly from any height: no roll, no recovery, no hop", () => {
+    const out = events(glide(tall, GT, { sprint: true }));
+    expect(out.slice(out.indexOf("glide"))).toEqual(["glide", "furl", "land"]);
+    // The same drop without the glider rolls.
+    expect(events(glide(tall, T, { sprint: true }))).toContain("roll");
+  });
+
+  it("drops when you let go, and that fall lands like any other (a roll at glide speed)", () => {
+    const steps = glide(tall, GT, { then: (s, i) => ({ ...i, jump: s.modeT < 0.3 }) });
+    const out = events(steps);
+    expect(out.slice(out.indexOf("glide"), out.indexOf("glide") + 2)).toEqual(["glide", "furl"]);
+    const after = steps.find(s => s.events.some(e => e.kind === "furl"))!;
+    expect(after.mode).toBe("air");
+    expect(out.at(-1)).toBe("roll"); // ~5u down from where you let go, moving
+  });
+
+  it("Q spends the air dash as a forward gust; the glide carries on while Space is held", () => {
+    let gusted = false;
+    const steps = glide(tall, { ...GT, dashCooldown: 0 }, { then: (s, i) => ({ ...i, dashPressed: s.modeT > 0.3 && (!gusted ? (gusted = true) : s.modeT > 0.8 && s.modeT < 0.8 + STEP) }) });
+    const out = events(steps);
+    expect(out.filter(k => k === "dash")).toHaveLength(1); // one per airtime
+    const gust = steps.findIndex(s => s.events.some(e => e.kind === "dash"));
+    expect(steps[gust].mode).toBe("glide");
+    expect(speedOf(steps[gust])).toBeGreaterThan(T.dashSpeed * 0.9);
+    expect(steps[gust + Math.round(T.dashTime / STEP) + 2].mode).toBe("glide");
+    expect(landing(steps).z).toBeGreaterThan(landing(glide(tall, GT)).z + 0.8);
+  });
+
+  it("splashes over water with no land and puts you back on the bank", () => {
+    const steps = glide(sea, GT);
+    const out = events(steps);
+    expect(out).toEqual(expect.arrayContaining(["glide", "furl", "splash", "respawn"]));
+    expect(out.indexOf("furl")).toBe(out.indexOf("splash") - 1);
+    const end = steps.at(-1)!;
+    expect(sea.wet(end.x, end.z)).toBe(false);
+  });
+
+  it("catches a ledge in reach and mantles up", () => {
+    // Off the 1.5u cliff toward a 3u bank three tiles out: the glide meets its face just under the top.
+    const w = grid(12, 70, (_x, z) => [z <= 0 ? CLIFF_LEVELS : z >= 4 ? 2 * CLIFF_LEVELS : 0, G]);
+    const out = events(glide(w, GT));
+    expect(out).toEqual(expect.arrayContaining(["glide", "furl", "mantle"]));
+    expect(out.indexOf("furl")).toBe(out.indexOf("mantle") - 1);
+  });
+
+  it("follows the same path at 30, 60 and 144 Hz", () => {
+    // Inputs change on frame boundaries all three rates share (sixths of a second): run, jump at 9/6 s and hold it
+    // to 10/6, press again at 11/6 and hold, gust at 13/6, turn at 15/6, off the 6u cliff.
+    const path = (fps: number) => {
+      const sim = createMoveSim(createMoveState(0, -10.8, tall));
+      const kinds: string[] = [], frame = (sixths: number) => Math.round((sixths / 6) * fps);
+      for (let f = 0; f < fps * 6; f++) {
+        kinds.push(...advanceMove(sim, { ...NO_INPUT, z: 1, x: f >= frame(15) ? 1 : 0, jump: (f >= frame(9) && f < frame(10)) || f >= frame(11),
+          jumpPressed: f === frame(9) || f === frame(11), dashPressed: f === frame(13) }, 1 / fps, tall, GT).map(e => e.kind));
+      }
+      return { kinds, end: interpolated(sim) };
+    };
+    const ref = path(144);
+    expect(ref.kinds).toEqual(expect.arrayContaining(["glide", "dash", "furl", "land"]));
+    for (const fps of [30, 60]) {
+      const p = path(fps);
+      expect(p.kinds).toEqual(ref.kinds);
+      p.end.forEach((v, i) => expect(v).toBeCloseTo(ref.end[i], 6));
+    }
+  });
+
+  it("in the lab's glide lane: off the tower over the river, the island and the sea gap to the beach; without the leaf, short", () => {
+    const w = islandOf(course()), lane = { from: GLIDE_SPAWN, edge: 28.4 }; // water is a wall on foot: jump from the lip
+    const leaf = glide(w, GT, lane), end = leaf.at(-1)!;
+    expect(events(leaf)).not.toContain("splash");
+    expect(end.mode).toBe("ground");
+    expect(end.z).toBeGreaterThan(38.5); // the beach
+    // A jump reaches the island at most (afterwards the curved coast can steer the walk onto the causeway beside it).
+    expect(glide(w, T, lane).find(s => s.events.some(e => e.kind === "land"))!.z).toBeLessThan(34);
+    // The dev route pilot (evidence) flies it too, and with the gust.
+    for (const move of ["glide", "glide-gust"] as const) {
+      const pilot = routePilot([{ to: [-18, 28.15], move, r: 0.2 }, { to: [-18, 42], r: 0.5 }]), out: string[] = [];
+      let s = createMoveState(GLIDE_SPAWN[0], GLIDE_SPAWN[1], w);
+      for (let input = pilot(s, STEP), n = 0; input && n < 1200; input = pilot(s, STEP), n++) { s = stepMove(s, { ...NO_INPUT, ...input }, STEP, w, GT); out.push(...kinds(s.events)); }
+      expect(out, move).toEqual(expect.arrayContaining(["glide", "furl", "land", ...(move === "glide-gust" ? ["dash"] : [])]));
+      expect(out).not.toContain("splash");
+      expect(s.z, move).toBeGreaterThan(38.5);
+    }
+  });
+
+  it("never grounds on water, ends inside something or gets stuck in the glide lane, fuzzed", () => {
+    const w = islandOf(course());
+    let seed = 13;
+    const rand = () => ((seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648);
+    for (const [sx, sz] of [GLIDE_SPAWN, [-16.5, 28], [-19.5, 27.5], [-14, 33], [-18, 40]] as [number, number][]) for (let run = 0; run < 4; run++) {
+      let s = createMoveState(sx, sz, w), input: Partial<MoveInput> = {};
+      s = drive(s, w, 4, time => {
+        if (Math.round(time / STEP) % 20 === 0) {
+          const a = rand() * Math.PI * 2;
+          input = { x: Math.sin(a), z: Math.cos(a), sprint: rand() < 0.5, jump: rand() < 0.7, jumpPressed: rand() < 0.5, dashPressed: rand() < 0.2 };
+        } else input = { ...input, jumpPressed: false, dashPressed: false };
+        return input;
+      }, q => {
+        const where = `${sx},${sz} run ${run} at ${q.x.toFixed(2)},${q.z.toFixed(2)} y ${q.y.toFixed(2)} ${q.mode}`;
+        if (q.mode === "ground" || q.mode === "skid" || q.mode === "roll" || q.mode === "recover") {
+          expect(w.wet(q.x, q.z), `on water: ${where}`).toBe(false);
+          expect(w.top(q.x, q.z), `inside: ${where}`).toBeLessThanOrEqual(q.y + T.stepUp);
+        } else if (q.mode === "air" || q.mode === "glide") expect(w.top(q.x, q.z), `in the air inside: ${where}`).toBeLessThanOrEqual(q.y + 0.21);
+      }, GT);
+      s = drive(s, w, 2, () => ({}), undefined, GT);
+      let free = 0;
+      for (let a = 0; a < 8; a++) {
+        const e = drive(s, w, 0.4, () => ({ x: Math.sin((a * Math.PI) / 4), z: Math.cos((a * Math.PI) / 4) }), undefined, GT);
+        if (Math.hypot(e.x - s.x, e.z - s.z) > 0.25) free++;
+      }
+      expect(free, `stuck: ${sx},${sz} run ${run} at ${s.x.toFixed(2)},${s.z.toFixed(2)} (${s.mode})`).toBeGreaterThanOrEqual(2);
+    }
+  });
+
+  it("with the glider off (not owned, or this area), the kit is exactly as before: no glide values reach it", () => {
+    const off: MoveTuning = { ...T, glider: 0, glideSpeed: 30, glideEase: 0.1, glideSink: 0.1, glideOpen: 0.5, glideTurn: 20 };
+    for (const opts of [{}, { sprint: true }, { then: (s: MoveState, i: Partial<MoveInput>) => ({ ...i, dashPressed: true }) }]) {
+      const a = glide(tall, T, opts), b = glide(tall, off, opts);
+      expect(a.map(s => s.mode)).not.toContain("glide");
+      expect(b).toEqual(a);
     }
   });
 });

@@ -10,9 +10,9 @@ import type { FaceOverride } from "./face";
 
 export type ClipName = "Idle" | "Walk" | "Run" | "Sit" | "Study" | "Sleep" | "Fish" | "FishHold" | "Forage" | "Dig" | "Net"
   | "Wave" | "Cheer" | "Laugh" | "Sad" | "Dance" | "AttackMelee" | "AttackBow" | "AttackCast" | "DodgeRoll" | "Hit" | "Defeat" | "Trace" | "Stretch"
-  | "Jump" | "Fall" | "Land" | "Roll" | "Mantle" | "Dash" | "Skid";
+  | "Jump" | "Fall" | "Land" | "Roll" | "Mantle" | "Dash" | "Skid" | "Glide";
 /** Movement clips (lib/game/movement): quick crossfades so hops and landings read on time. */
-export const SNAPPY_CLIPS = new Set<ClipName>(["DodgeRoll", "Hit", "Jump", "Fall", "Land", "Roll", "Mantle", "Dash", "Skid"]);
+export const SNAPPY_CLIPS = new Set<ClipName>(["DodgeRoll", "Hit", "Jump", "Fall", "Land", "Roll", "Mantle", "Dash", "Skid", "Glide"]);
 
 /**
  * What the world asks of a character each frame. `speed` is ground speed in
@@ -28,7 +28,9 @@ export interface CharacterMotion { speed: number; yaw: number; lift: number; pos
   /** Seconds of talking left (a chat or speech bubble): the mouth moves until it runs out; the character counts it down. */
   talk?: number;
   /** A forced face (dialogue portraits, the avatar bench): expression, eye frame or mouth cell. */
-  face?: FaceOverride | null }
+  face?: FaceOverride | null;
+  /** The leaf glider in the right hand (specs/glider.md): its size, 0 furled (hidden) to 1 open, a little over 1 as it pops open. */
+  leaf?: number }
 
 export const isLoop = (clip: ClipName) => CLIP_BY_NAME.get(clip)?.loop ?? true;
 
