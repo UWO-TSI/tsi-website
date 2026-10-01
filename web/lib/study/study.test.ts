@@ -231,3 +231,23 @@ describe("seed", () => {
     expect(sql).toContain(["INSERT INTO study_tables (id, slug, label, location, anchor, kind, seats, position) VALUES", rows.join(",\n"), "ON CONFLICT (slug) DO NOTHING;"].join("\n"));
   });
 });
+
+describe("the café gate (row 177)", () => {
+  const cafe = DEFAULT_TABLES.filter((t) => t.location === "cafe");
+  const outdoor = DEFAULT_TABLES.filter((t) => t.location !== "cafe");
+  it("keeps café seats shut until the chapter 2 goal opens the café; outdoor tables stay open", async () => {
+    const m = memoryStudyStore(DEFAULT_TABLES, { cafeOpen: false });
+    for (const t of cafe) expect(await sit(m.store, A, { table_id: t.id, seat: 1 }, at(0)), t.slug).toMatchObject({ ok: false, status: 403, code: "cafe_closed" });
+    const closed = await getState(m.store, A, at(0));
+    expect(closed.ok && closed.data.tables.filter((t) => t.location === "cafe").map((t) => [t.closed, t.can_join])).toEqual(cafe.map(() => [true, false]));
+    expect(closed.ok && closed.data.tables.filter((t) => t.location !== "cafe").map((t) => [t.closed, t.can_join])).toEqual(outdoor.map(() => [false, true]));
+    expect(await sit(m.store, A, { table_id: outdoor[0].id, seat: 1 }, at(0))).toMatchObject({ ok: true });
+  });
+  it("opens every café seat once the goal completes", async () => {
+    const m = memoryStudyStore(DEFAULT_TABLES, { cafeOpen: false });
+    m.setCafeOpen(true);
+    expect(await sit(m.store, A, { table_id: cafe[0].id, seat: 1 }, at(0))).toMatchObject({ ok: true });
+    const open = await getState(m.store, B, at(0));
+    expect(open.ok && open.data.tables.every((t) => !t.closed)).toBe(true);
+  });
+});

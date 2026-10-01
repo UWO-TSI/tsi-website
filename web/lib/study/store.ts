@@ -54,6 +54,8 @@ export interface StudyStore {
   looks?(ids: string[]): Promise<Map<string, unknown>>;
   weekStats(weekStart: string): Promise<WeekStat[]>;
   boardOptIns(): Promise<Set<string>>;
+  /** The chapter 2 club goal (the story goal that unlocks "cafe") is complete: café tables take sitters (row 177). */
+  cafeOpen(): Promise<boolean>;
   setBoardOptIn(memberId: string, optIn: boolean): Promise<void>;
   insertChat(tableId: string, memberId: string, body: string): Promise<ChatMessage>;
   /** Visible (not hidden) messages at a table since `since`, oldest first, max `limit`. */

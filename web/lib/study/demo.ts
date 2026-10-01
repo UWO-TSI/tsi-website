@@ -1,5 +1,5 @@
 /**
- * Dev-only demo for the companion page (?demo=tables|setup|focus|break|ended):
+ * Dev-only demo for the companion page (?demo=tables|setup|focus|break|ended|closed):
  * the real service over an in-memory store, replaying the last hour minute by
  * minute (with heartbeats) so each screen shows real server-derived state.
  */
@@ -15,13 +15,15 @@ const PRIYA = "00000000-0000-4000-8000-000000000103";
 const LEO = "00000000-0000-4000-8000-000000000104";
 
 export async function studyDemo(scenario: string) {
-  const m = memoryStudyStore();
+  // "closed": before the chapter 2 goal opens the café (row 177); the seat-mates sit outdoors.
+  const closed = scenario === "closed";
+  const m = memoryStudyStore(undefined, { cafeOpen: !closed });
   for (const [id, n] of [[DEMO_ME, "You"], [MAYA, "Maya Chen"], [JORDAN, "Jordan Park"], [PRIYA, "Priya Shah"], [LEO, "Leo Martin"]]) m.name(id, n);
   const real = Date.now();
   let t = real - 60 * 60_000;
   const clock = () => new Date(t);
-  const big = DEFAULT_TABLES.find((x) => x.slug === "cafe-four-1")!.id;
-  const window1 = DEFAULT_TABLES.find((x) => x.slug === "cafe-window-1")!.id;
+  const big = DEFAULT_TABLES.find((x) => x.slug === (closed ? "plaza-picnic" : "cafe-four-1"))!.id;
+  const window1 = DEFAULT_TABLES.find((x) => x.slug === (closed ? "pier-bench" : "cafe-window-1"))!.id;
   const at = (minAgo: number) => real - minAgo * 60_000;
   const events: [number, () => Promise<unknown>][] = [
     [at(60), () => S.sit(m.store, PRIYA, { table_id: big, seat: 4 }, clock())],
