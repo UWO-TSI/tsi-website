@@ -133,7 +133,9 @@ const CLOSED: Near[] = ["cafe", "museum", "monument"];
 const benchSpot: { current: { x: number; z: number; yaw: number; seatY: number } | null } = { current: null };
 /** Distance from a point to a landmark's footprint edge. */
 const footprintDistance = (l: Landmark, x: number, z: number) => Math.hypot(Math.max(0, Math.abs(x - l.x) - (l.half?.[0] ?? 0)), Math.max(0, Math.abs(z - l.z) - (l.half?.[1] ?? 0)));
-const PROMPT_IDS: readonly Landmark["id"][] = ["notice", "catch", "cafe", "museum", "ruins", "mailbox", "monument"];
+const PROMPT_IDS: readonly Landmark["id"][] = ["notice", "catch", "museum", "ruins", "mailbox", "monument"];
+/** The café's prompt is its door's, open or boarded up (cafe-polish §2). */
+const CAFE_DOOR_RANGE = 1.4;
 type Spot = [number, number, number];
 const spot = (p: [number, number] | null): Spot | null => p && [p[0], 0, p[1]];
 const xz = (o: { x: number; z: number }): [number, number] => [o.x, o.z];
@@ -155,7 +157,7 @@ function villageLayout(v: Village) {
     benches: objectsOf("bench", v),
     lamps: objectsOf("lamp", v),
     bridges: objectsOf("bridge", v).map(o => ({ ...o, y: levelAt(v.map, worldToCellX(v.map, o.x), worldToCellZ(v.map, o.z)) * LEVEL_STEP - 0.065 })),
-    doors: { hq: landmarkPoint("hq", "door", v), oracle: landmarkPoint("oracle", "door", v), boat: landmarkPoint("wharf", "door", v) },
+    doors: { hq: landmarkPoint("hq", "door", v), oracle: landmarkPoint("oracle", "door", v), boat: landmarkPoint("wharf", "door", v), cafe: landmarkPoint("cafe", "door", v) },
     spawns: {
       start: villageSpawn(v), returned: spot(landmarkPoint("hq", "exit", v)), oracle: spot(landmarkPoint("oracle", "exit", v)),
       museum: spot(landmarkPoint("museum", "exit", v)), cafe: spot(landmarkPoint("cafe", "exit", v)), ruins: spot(landmarkPoint("ruins", "exit", v)), boat: spot(landmarkPoint("wharf", "exit", v)),
@@ -239,6 +241,7 @@ function IslandScene({ identity, level, devAt, exitFrom, peaceful, fishSpot, fis
       : within(doors.boat, 1.6) ? "home"
       : within(layout.fitting, 1.5) ? "fitting"
       : within(doors.oracle, 1.6) ? "oracle_enter"
+      : within(doors.cafe, CAFE_DOOR_RANGE) ? (progression.opened.includes("cafe") ? "cafe_enter" : "cafe")
       : within(layout.missions?.at ?? null, 1.5) ? "missions" : null;
     const b = benchSeat(player.current.x, player.current.z, 1.3, v, layout.benches);
     benchSpot.current = b && { ...b, seatY: island.ground(b.x, b.z) + BENCH_SEAT_TOP };
@@ -251,13 +254,15 @@ function IslandScene({ identity, level, devAt, exitFrom, peaceful, fishSpot, fis
       for (const l of layout.prompts) {
         // An opened goal building (boards off) no longer shows its closed prompt.
         const opened = progression.opened.includes(l.id as WorldGoalId);
-        if (opened && l.id !== "museum" && l.id !== "cafe") continue;
+        if (opened && l.id !== "museum") continue;
         const d = footprintDistance(l, player.current.x, player.current.z);
-        if (opened && d < best) { best = d; next = l.id === "cafe" ? "cafe_enter" : "museum_enter"; continue; }
+        if (opened && d < best) { best = d; next = "museum_enter"; continue; }
         if (d < best) { best = d; next = l.id === "museum" && chapter.donate ? "donate" : l.id as Near; }
       }
     }
-    if (!next && !fishing && !studyHoldsPrompt()) next = peacefulNear(island.map, layout.water, player.current.x, player.current.z, fishSpot);
+    // A study seat's prompt (or your seat) takes E: the island offers nothing while it is up.
+    if (studyHoldsPrompt()) next = null;
+    else if (!next && !fishing) next = peacefulNear(island.map, layout.water, player.current.x, player.current.z, fishSpot);
     if (near.current !== next) { near.current = next; onNear(next); }
   }, -2);
   return (

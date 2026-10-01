@@ -145,13 +145,16 @@ describe("the live village map (web/data/village-map.json)", () => {
     }
   });
   it("on the movement kit: every door is reached from its exit spot, the spawn and exits stand in the open", () => {
-    for (const id of ["hq", "oracle", "wharf"] as const) {
+    for (const id of ["hq", "oracle", "wharf", "cafe"] as const) {
       const door = landmarkPoint(id, "door"), exit = landmarkPoint(id, "exit");
       if (!door || !exit) continue;
       const s = walkTo(island, exit[0], exit[1], door[0], door[1]);
-      // The scene's prompt ranges: the clubhouse door 2, the temple and the boat 1.6.
-      expect(Math.hypot(s.x - door[0], s.z - door[1]), id).toBeLessThan(1.6);
+      // The scene's prompt ranges: the clubhouse door 2, the temple and the boat 1.6, the café 1.4.
+      expect(Math.hypot(s.x - door[0], s.z - door[1]), id).toBeLessThan(id === "cafe" ? 1.4 : 1.6);
     }
+    // Coming back out of the café you stand clear of its door prompt (cafe-polish §2).
+    const [cd, ce] = [landmarkPoint("cafe", "door")!, landmarkPoint("cafe", "exit")!];
+    expect(Math.hypot(cd[0] - ce[0], cd[1] - ce[1])).toBeGreaterThan(1.4);
     const [sx, , sz] = villageSpawn();
     const exits = (["hq", "oracle", "museum", "cafe", "ruins", "wharf"] as const).map(id => landmarkPoint(id, "exit")).filter(p => p !== null);
     for (const [x, z] of [[sx, sz], ...exits]) expect(clearSpot(island, x, z, island.ground(x, z), 0), `${x}, ${z}`).toEqual([x, z]);

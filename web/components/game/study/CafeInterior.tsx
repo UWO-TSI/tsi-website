@@ -18,13 +18,14 @@ import { CLUBHOUSE_LIGHTING } from "@/lib/game/islandLighting";
 import type { IslandPhase } from "@/lib/game/islandTime";
 import type { WorldIdentity } from "@/lib/game/identity";
 import { studySolid } from "@/lib/study/seats";
+import { studyHoldsPrompt } from "@/lib/study/worldStore";
+import { CAFE_DOOR, CAFE_EXIT_RANGE, CAFE_ROOM, CAFE_SPAWN } from "@/lib/game/cafe";
 import { standWorld } from "@/lib/game/movement/sim";
 import world from "../DefaultIslandWorld.module.css";
 
-const HALF_W = 9, HALF_D = 6;
+const { halfW: HALF_W, halfD: HALF_D } = CAFE_ROOM;
 const flat = () => 0;
-const DOOR: [number, number] = [0, -5.4];
-const SPAWN: [number, number, number] = [0, 0, -4.6];
+const SPAWN: [number, number, number] = [CAFE_SPAWN[0], 0, CAFE_SPAWN[1]];
 /** Wall board and where you stand to read it. */
 const BOARD: [number, number, number] = [-1.4, 1.28, 5.78];
 const BOARD_SPOT: [number, number] = [-1.4, 4.5];
@@ -73,7 +74,8 @@ export default function CafeInterior({ phase, player, frozen, identity, level, o
   const near = useRef<"exit" | null>(null);
   useFrame((_, delta) => {
     followInteriorCamera(camera, player.current.x, player.current.z, Math.min(delta, 0.1));
-    const next = Math.hypot(player.current.x - DOOR[0], player.current.z - DOOR[1]) < 1.4 ? "exit" : null;
+    // A study seat's prompt takes E while it is up.
+    const next = !studyHoldsPrompt() && Math.hypot(player.current.x - CAFE_DOOR[0], player.current.z - CAFE_DOOR[1]) < CAFE_EXIT_RANGE ? "exit" : null;
     if (next !== near.current) { near.current = next; onNear(next); }
   });
   return <>
