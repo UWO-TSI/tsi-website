@@ -26,9 +26,9 @@ Combat, café, movement feel and the avatar have their own specs in `specs/`.
 |---|---|---|---|
 | — | Combat polish (`specs/combat-polish.md`) | — | on main |
 | — | Café polish (`specs/cafe-polish.md`) | — | on main |
-| 1 | Movement feel (`specs/movement-feel.md`): our particle pack and particle system | combat merged (shared dash and avatar files) | running (milestone 1) |
+| 1 | Movement feel (`specs/movement-feel.md`): our particle pack and particle system | combat merged (shared dash and avatar files) | milestone 1 on main; milestone 2 after David plays it |
 | 2 | HUD frame and first login (`hud-first-login.md`) | café merged (shared HUD files) | running |
-| 3 | Living village (`living-village.md`) | 1 (particles for rain splashes, leaf bits) | queued |
+| 3 | Living village (`living-village.md`) | 1 (particles for rain splashes, leaf bits) | running |
 | 4 | Interiors (`interiors.md`) | café merged (keeper → character pattern) | queued |
 | 5 | Menus and sheets (`menus.md`) | 2 | queued |
 | 6 | Fishing (`fishing.md`) | 1 | queued |
