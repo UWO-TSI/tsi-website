@@ -32,10 +32,10 @@ const impact = (e: Pick<Enemy, "state">, r: number) => (e.state === "recover" ? 
  * Pose for one named part. `role` is the GLB node name; `side` mirrors the
  * left/right parts; `seed` staggers idle motion between instances.
  */
-export function partPose(role: string, e: Pick<Enemy, "state" | "t" | "move">, time: number, seed = 0): PartPose | null {
+export function partPose(role: string, e: Pick<Enemy, "state" | "t" | "move"> & Partial<Pick<Enemy, "wander">>, time: number, seed = 0): PartPose | null {
   const shape: AttackShape = e.move.shape, { k, r } = progress(e), hit = impact(e, r);
   const side = /_[fb]?l$/.test(role) ? 1 : /_[fb]?r$/.test(role) ? -1 : 0; // arm_l, leg_fl, leg_br…
-  const moving = e.state === "chase" || e.state === "return";
+  const moving = e.state === "chase" || e.state === "return" || (e.state === "idle" && !!e.wander && e.wander.wait <= 0); // strolling near its spawn too
   const p: PartPose = { rx: 0, ry: 0, rz: 0, dy: 0, dz: 0, sy: 1 };
   const w = ease(k);
   switch (role.replace(/_[fb]?[lr]$/, "")) {

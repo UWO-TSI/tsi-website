@@ -8,7 +8,7 @@
 import { cue, enemyTarget, floater, hurtUnits, moveSpeed, stepUnits } from "./abilities";
 import { hurtPlayer, regenEnergy, resolvePlayerShot, summonWisps } from "./actions";
 import { SLOT_IDS, type AbilityId, type CombatRuntime } from "./runtime";
-import { beamLands, DODGE, stepEnemy, strikeLands, sweptHit, type Vec } from "./sim";
+import { beamLands, DODGE, separate, stepEnemy, strikeLands, sweptHit, type Vec } from "./sim";
 
 const ABILITY_IDS: readonly AbilityId[] = [...SLOT_IDS, "swap"];
 
@@ -46,7 +46,7 @@ export function stepCombat(rt: CombatRuntime, me: Vec, dt: number, free: (x: num
   const you = { x: me.x, z: me.z, safe: p.safe, alive: p.alive };
   for (const e of [...rt.enemies]) {
     const was = e.state;
-    const ev = stepEnemy(e, enemyTarget(rt, e, you), dt, (x, z) => free(x, z, e.type.radius * 0.6));
+    const ev = stepEnemy(e, enemyTarget(rt, e, you), dt, (x, z) => free(x, z, e.type.radius * 0.6), random);
     if (was !== "windup" && e.state === "windup") cue(rt, "windup", e);
     else if (was === "active" && e.state === "recover" && e.move.stagger) cue(rt, "stagger", e);
     if (!ev) continue;
@@ -66,6 +66,7 @@ export function stepCombat(rt: CombatRuntime, me: Vec, dt: number, free: (x: num
     else if (ev.kind === "phase") floater(rt, e, 3.4, e.phase === 3 ? "Enraged" : "The guardian calls for help", "info");
     else if (ev.kind === "reset" && e.type.kind === "boss") rt.enemies = rt.enemies.filter(x => !x.summoned);
   }
+  separate(rt.enemies, dt, free);
   // Projectiles: yours hit enemies (pierce keeps going), theirs hit you or a unit.
   for (let i = rt.projectiles.length - 1; i >= 0; i--) {
     const sh = rt.projectiles[i], from = { x: sh.x, z: sh.z };

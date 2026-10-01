@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { ENEMIES } from "./data";
-import { DODGE, damageEnemy, inArc, invulnerable, spawnEnemy, stepEnemy, strikeLands, sweptHit } from "./sim";
+import { DODGE, WANDER, damageEnemy, inArc, invulnerable, spawnEnemy, stepEnemy, strikeLands, sweptHit } from "./sim";
+import { stepCombat } from "./encounter";
+import { createRuntime } from "./runtime";
 
 const run = (e: ReturnType<typeof spawnEnemy>, p: { x: number; z: number; safe?: boolean }, seconds: number, dt = 1 / 60) => {
   const events = [];
@@ -73,5 +75,39 @@ describe("enemy behaviour", () => {
     const e = spawnEnemy("w2", ENEMIES["mushroom-beast"], 0, 0);
     const events = run(e, { x: 0, z: 4.5 }, 2.5);
     expect(events[0]).toMatchObject({ kind: "spit", to: { x: 0, z: 4.5 } });
+  });
+});
+
+describe("pack AI (combat polish 5)", () => {
+  const lcg = (seed: number) => () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  it("a pack chasing you keeps a separation radius instead of stacking on one spot", () => {
+    const rt = createRuntime();
+    rt.player.safe = false; rt.player.maxHp = rt.player.hp = 1e6;
+    rt.enemies = [[-0.2, 6], [0.2, 6.1], [0, 5.8], [0.1, 6.3], [-0.1, 6.2]].map(([x, z], i) => ({ ...spawnEnemy(`f${i}`, ENEMIES["shadow-fox"], x, z), state: "chase" as const }));
+    let closest = Infinity;
+    for (let t = 0; t < 6; t += 1 / 60) {
+      stepCombat(rt, { x: 0, z: 0 }, 1 / 60, () => true, lcg(7));
+      if (t > 1.5) for (const [i, a] of rt.enemies.entries()) for (const b of rt.enemies.slice(i + 1)) closest = Math.min(closest, Math.hypot(a.x - b.x, a.z - b.z));
+    }
+    const r = ENEMIES["shadow-fox"].radius;
+    expect(closest).toBeGreaterThan(2 * r * 0.9);
+    expect(rt.enemies.every(e => Math.hypot(e.x, e.z) < 4)).toBe(true); // still on you, just not on top of each other
+  });
+  it("an idle enemy wanders a little near its spawn, and still aggroes when you come close", () => {
+    const e = spawnEnemy("c", ENEMIES["thorn-crab"], 10, 10), random = lcg(3), far = { x: 40, z: 40, safe: false, alive: true };
+    let furthest = 0, moved = 0, lastX = e.x, lastZ = e.z;
+    for (let t = 0; t < 30; t += 1 / 30) {
+      stepEnemy(e, far, 1 / 30, () => true, random);
+      furthest = Math.max(furthest, Math.hypot(e.x - 10, e.z - 10));
+      moved += Math.hypot(e.x - lastX, e.z - lastZ); lastX = e.x; lastZ = e.z;
+    }
+    expect(e.state).toBe("idle");
+    expect(moved).toBeGreaterThan(2); // it strolls, it doesn't stand still
+    expect(furthest).toBeLessThanOrEqual(WANDER.radius + 0.01);
+    stepEnemy(e, { x: e.x + 2, z: e.z, safe: false, alive: true }, 1 / 30, () => true, random);
+    expect(e.state).toBe("chase");
+    const boss = spawnEnemy("b", ENEMIES["guardian-statue"], 0, 0);
+    for (let t = 0; t < 10; t += 1 / 30) stepEnemy(boss, far, 1 / 30, () => true, random);
+    expect([boss.x, boss.z]).toEqual([0, 0]); // the guardian keeps its plinth
   });
 });

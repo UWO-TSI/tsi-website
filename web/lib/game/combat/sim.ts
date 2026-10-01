@@ -67,6 +67,8 @@ export interface Enemy {
   hp: number; state: EnemyState; t: number; facing: number;
   /** Seconds a hit holds its chase (the stagger push); a windup already under way carries on. */
   stun: number;
+  /** Idle: the spot it strolls to near its spawn, and how long it waits there first. */
+  wander: { x: number; z: number; wait: number };
   /** Where the attack was aimed when the windup began (the telegraph). */
   aim: Vec; flash: number; kx: number; kz: number; deadFor: number;
   /** The attack being telegraphed or thrown (the boss rotates through several). */
@@ -83,7 +85,7 @@ export interface Enemy {
   raised: boolean;
 }
 export function spawnEnemy(id: string, type: EnemyType, x: number, z: number): Enemy {
-  return { id, type, x, z, spawnX: x, spawnZ: z, hp: type.hp, state: "idle", t: 0, facing: Math.PI, stun: 0, aim: { x, z }, flash: 0, kx: 0, kz: 0, deadFor: 0,
+  return { id, type, x, z, spawnX: x, spawnZ: z, hp: type.hp, state: "idle", t: 0, facing: Math.PI, stun: 0, wander: { x, z, wait: 1 }, aim: { x, z }, flash: 0, kx: 0, kz: 0, deadFor: 0,
     move: type.attacks[0], phase: 1, cycle: 0, beam: Math.PI, landed: false, summoned: false,
     status: { hold: 0, slow: 0, slowFor: 0, mark: 0, markFor: 0, distract: 0 }, raised: false };
 }
@@ -99,6 +101,11 @@ export function nextMove(e: Enemy): EnemyAttack {
 }
 export const staggered = (e: Pick<Enemy, "state" | "move">) => e.state === "recover" && !!e.move.stagger;
 
+/** Idle enemies stroll (combat polish 5): to a spot within `radius` of the spawn at `speed` × their pace, then wait 1.5–4 s. */
+export const WANDER = { radius: 1.6, speed: 0.3, pause: 1.5, pauseMore: 2.5 } as const;
+/** Packs keep apart: bodies closer than their radii plus `gap` push off each other at up to `speed` u/s. */
+export const SEPARATION = { gap: 0.3, speed: 4 } as const;
+
 export type EnemyEvent =
   | { kind: "strike"; enemy: Enemy }           // melee shapes resolved now
   | { kind: "spit"; enemy: Enemy; to: Vec }    // ranged: caller spawns the projectile
@@ -112,7 +119,7 @@ export type EnemyEvent =
  * so every enemy gives up, walks home and heals (row 8). Leaving the leash
  * radius does the same.
  */
-export function stepEnemy(e: Enemy, player: Vec & { safe: boolean; alive: boolean }, dt: number, free: (x: number, z: number) => boolean = () => true): EnemyEvent | null {
+export function stepEnemy(e: Enemy, player: Vec & { safe: boolean; alive: boolean }, dt: number, free: (x: number, z: number) => boolean = () => true, random: () => number = Math.random): EnemyEvent | null {
   e.flash = Math.max(0, e.flash - dt);
   e.stun = Math.max(0, e.stun - dt);
   if (e.state === "dead") { e.deadFor += dt; return null; }
@@ -147,12 +154,20 @@ export function stepEnemy(e: Enemy, player: Vec & { safe: boolean; alive: boolea
     return d - step;
   };
   switch (e.state) {
-    case "idle":
-      if (player.alive && !player.safe && dist < e.type.aggroRadius) { e.state = "chase"; e.t = 0; e.move = nextMove(e); }
+    case "idle": {
+      if (player.alive && !player.safe && dist < e.type.aggroRadius) { e.state = "chase"; e.t = 0; e.move = nextMove(e); return null; }
+      const w = e.wander;
+      if (e.type.kind === "boss" || (w.wait -= dt) > 0) return null;
+      if (move(w.x, w.z, e.type.speed * WANDER.speed) < 0.05) {
+        const a = random() * Math.PI * 2, r = Math.sqrt(random()) * WANDER.radius;
+        w.x = e.spawnX + Math.sin(a) * r; w.z = e.spawnZ + Math.cos(a) * r; w.wait = WANDER.pause + random() * WANDER.pauseMore;
+      }
       return null;
+    }
     case "return":
       if (move(e.spawnX, e.spawnZ, e.type.speed * 1.5) < 0.05) {
         e.state = "idle"; e.hp = e.type.hp; e.facing = Math.PI; e.phase = 1; e.cycle = 0; e.move = e.type.attacks[0];
+        e.wander.x = e.spawnX; e.wander.z = e.spawnZ; e.wander.wait = WANDER.pause;
         return { kind: "reset", enemy: e };
       }
       return null;
@@ -178,6 +193,28 @@ export function stepEnemy(e: Enemy, player: Vec & { safe: boolean; alive: boolea
       e.t += dt;
       if (e.t >= a.recover) { e.state = "chase"; e.t = 0; e.move = nextMove(e); }
       return null;
+  }
+}
+
+/** Packs keep apart: each overlapping pair of live enemies eases off along the line between them (the boss stands its ground). */
+export function separate(list: Enemy[], dt: number, free: (x: number, z: number, r: number) => boolean = () => true) {
+  const step = SEPARATION.speed * dt;
+  for (let i = 0; i < list.length; i++) {
+    const a = list[i];
+    if (a.state === "dead") continue;
+    for (let j = i + 1; j < list.length; j++) {
+      const b = list[j];
+      if (b.state === "dead") continue;
+      let dx = b.x - a.x, dz = b.z - a.z, d = Math.hypot(dx, dz);
+      const min = a.type.radius + b.type.radius + SEPARATION.gap;
+      if (d >= min) continue;
+      if (d < 1e-4) { dx = Math.sin(i + j); dz = Math.cos(i + j); d = 1; } // exactly stacked: any way apart
+      const fixedA = a.type.kind === "boss", fixedB = b.type.kind === "boss";
+      if (fixedA && fixedB) continue;
+      const push = Math.min(min - d, step), ux = dx / d, uz = dz / d, ka = fixedA ? 0 : fixedB ? 1 : 0.5, kb = 1 - ka;
+      if (ka && free(a.x - ux * push * ka, a.z - uz * push * ka, a.type.radius * 0.6)) { a.x -= ux * push * ka; a.z -= uz * push * ka; }
+      if (kb && free(b.x + ux * push * kb, b.z + uz * push * kb, b.type.radius * 0.6)) { b.x += ux * push * kb; b.z += uz * push * kb; }
+    }
   }
 }
 
