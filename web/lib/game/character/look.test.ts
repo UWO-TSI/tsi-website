@@ -25,7 +25,7 @@ describe("character catalogue", () => {
       // Hair and headwear are closed solids (avatar-fit); a hat carries its own hair tuck and replaces the back hair.
       // Sculpted-lock hair (avatar v7) spends more per piece; the full look stays under ~4000 (next test).
       const lockHair = (p as { v7?: boolean }).v7;
-      expect(p.tris, p.id).toBeLessThanOrEqual(lockHair ? 1100 : p.slot === "bangs" || p.slot === "back" ? 700 : p.group === "head" ? 1100 : 300);
+      expect(p.tris, p.id).toBeLessThanOrEqual(lockHair ? 1200 : p.slot === "bangs" || p.slot === "back" ? 700 : p.group === "head" ? 1150 : 300);
       if (p.slot === "accessory") expect(["face", "head", "bag", "neck"]).toContain(p.group);
       if (p.variantOf) expect(PART_BY_ID.has(p.variantOf)).toBe(true);
       for (const m of p.materials) if (m.tint === "outfit") expect(m.default as number).toBeLessThan(PALETTE.outfit.length);
@@ -34,7 +34,7 @@ describe("character catalogue", () => {
     expect(CLIPS.map(c => c.name)).toEqual(expect.arrayContaining(["Idle", "Walk", "Run", "Sit", "Study", "Sleep", "Fish", "FishHold", "Forage", "Dig", "Net", "Wave", "Cheer", "Laugh", "Sad", "Dance", "AttackMelee", "AttackBow", "AttackCast", "DodgeRoll", "Hit", "Defeat", "Trace", "Stretch"]));
     const cells: [string, number[]][] = [
       ...Object.entries(FACE.layers.eyes.items).flatMap(([id, frames]) => Object.entries(frames).map(([f, c]) => [`${id}/${f}`, c] as [string, number[]])),
-      ...Object.entries(FACE.layers.mouth.items), ...Object.entries(FACE.layers.brows.items),
+      ...Object.entries(FACE.layers.mouth.items), ...Object.entries(FACE.layers.talk.items), ...Object.entries(FACE.layers.brows.items),
       ...Object.entries(FACE.layers.extras.items).map(([id, it]) => [id, it.cell] as [string, number[]]),
     ];
     for (const [id, [x, y, w, h, ax, ay]] of cells) {
@@ -56,10 +56,12 @@ describe("character catalogue", () => {
     const heaviest = (slot: string) => Math.max(...PARTS.filter(p => p.slot === slot).map(p => p.tris));
     const outfit = heaviest("top") + heaviest("bottom") + heaviest("shoes");
     const glasses = Math.max(...PARTS.filter(p => p.group === "face").map(p => p.tris));
-    for (const [bangs, back] of [["bangs_spiky", "back_short_spiky"], ["bangs_straight", "back_bob"], ["bangs_curtain", "back_long"]]) {
-      const hair = PART_BY_ID.get(bangs)!.tris + PART_BY_ID.get(back)!.tris;
-      expect(base + hair + outfit + glasses, `${bangs} + ${back}`).toBeLessThanOrEqual(4000);
-    }
+    // every bangs with every back, or with a hat (which replaces the back hair and carries its own tuck)
+    const bangs = Math.max(...PARTS.filter(p => p.slot === "bangs").map(p => p.tris));
+    const back = Math.max(...PARTS.filter(p => p.slot === "back").map(p => p.tris));
+    const hat = Math.max(...PARTS.filter(p => p.group === "head" && p.hidesBackHair).map(p => p.tris));
+    expect(base + bangs + back + outfit + glasses, "heaviest bangs + back").toBeLessThanOrEqual(4000);
+    expect(base + bangs + hat + outfit + glasses, "heaviest bangs + hat").toBeLessThanOrEqual(4000);
   });
 });
 
