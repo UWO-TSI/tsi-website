@@ -1,7 +1,7 @@
 # Café polish (rows 268, 269)
 
 David, 2026-10-01: "I need you to polish combat system, cafe first." He then picked:
-- **Interior:** "I'll send a reference". The reference arrived later the same day (row 270): "premium cafe. different seating options, fits 40-50 ppl", with four images in `specs/references/cafe/david/cafe-ref-01.png` to `04.png`.
+- **Interior:** "I'll send a reference". The reference arrived later the same day (row 270): "premium cafe. different seating options, fits 40-50 ppl", then "40-50 is a bit over estimate, maybe 20 ish spots", with four images in `specs/references/cafe/david/cafe-ref-01.png` to `04.png`.
 - **Building:** model the café in Blender now.
 - **Barista:** a named café owner.
 - **Movement:** walk only inside.
@@ -67,16 +67,11 @@ The café works end to end (sit, study, coins, walk-away settlement), but most o
      - About three real lights.
      - Matte everywhere except a restrained sheen on steel and glass (the look-dev glass/metal treatment).
    - **Menu-board text:** café drinks and pastries (espresso, latte, matcha latte, tea, hot chocolate, croissants, buns). No prices.
-   - **Capacity, 40–50 seats across varied seating:**
-     - window bar stools;
-     - two-seat tables;
-     - four-seat tables;
-     - booths or a couch area;
-     - a long communal table.
-
-     The room grows to fit them (today it is 18×12, so expect about 28×18) with clear walkways and the counter at the back.
+   - **Capacity: about 20 seats** (David: "maybe 20 ish spots") across varied seating: window bar stools, two-seat tables, a four-seat table, a booth or couch, and a small communal table.
+     - Today's 7 café tables already hold 19 seats. Re-type or move them first and add a table only where the mix needs it.
+     - The room grows only as much as the bar, the walkways and that mix need.
    - **Seats stay data:** `CAFE_LAYOUT` in `web/lib/study/seats.ts` plus furniture shapes.
-     - New tables are new backend rows in `DEFAULT_TABLES` (`lib/study/tables.ts`) and a new seed migration: timestamp after `20261001041452`, generated through `lib/seedMigrations.ts` / `scripts/gen-seeds.mjs`, added to the SQL smoke list.
+     - Any new table is a new backend row in `DEFAULT_TABLES` (`lib/study/tables.ts`) and a new seed migration: timestamp after `20261001041452`, generated through `lib/seedMigrations.ts` / `scripts/gen-seeds.mjs`, added to the SQL smoke list.
      - Keep the existing 7 café table ids.
      - Reuse the existing table kinds where they fit. If a new kind (bar, booth, communal) needs a schema change, do it in that migration.
    - **Models:** hand-modeled props in Blender headless (no downloads, no AI generation). Reuse existing clubhouse props only where they match the references.
