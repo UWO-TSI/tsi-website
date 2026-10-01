@@ -8,6 +8,9 @@
  * feel himself; a lap timer is the skill readout. Dev only (the /lab layout
  * 404s in production).
  *
+ * The leaf glider (specs/glider.md) has its own lane north of the lap, an
+ * "owns the leaf glider" toggle and a Glide group with presets.
+ *
  * URL: ?at=x,z starts somewhere else, ?touch=1 shows the touch controls on a
  * desktop, ?panel=0 hides the panel and the signs, ?zoom=0.6 brings the camera closer (evidence frames).
  */
@@ -33,7 +36,7 @@ import { CURRENT, lookFx } from "@/lib/game/lookPreset";
 import { useGraphicsSettings } from "@/lib/game/useGraphicsSettings";
 import { islandOf } from "@/lib/game/defaultIsland";
 import { objectsOf } from "@/lib/game/villageMap";
-import { COURSE_GATES, COURSE_SIGNS, COURSE_SPAWN, NEW_LAP, course, gateAt, lapStep, type Lap } from "@/lib/game/movement/course";
+import { COURSE_GATES, COURSE_SIGNS, COURSE_SPAWN, GLIDE_SPAWN, NEW_LAP, course, gateAt, lapStep, type Lap } from "@/lib/game/movement/course";
 import { MOVE_TUNING, createMoveState, stepMove, topSpeed, NO_INPUT, STEP, type MoveInput, type MoveTuning, type MoveWorld } from "@/lib/game/movement/sim";
 import { MOVE_ACTIONS, keyName, remapMove, useMoveKeys, useNextKey, type MoveAction } from "@/lib/game/movement/keys";
 import { useSoundUnlock } from "@/lib/game/useAudio";
@@ -58,6 +61,7 @@ const GROUPS: { name: string; keys: [keyof MoveTuning, ...Range][] }[] = [
     ["airDashLift", 0, 6, 0.25], ["dashJumpWindow", 0, 0.4, 0.01]] },
   { name: "Climb and drops", keys: [["grabReach", 0.3, 2, 0.05], ["grabRise", 0, 10, 0.5], ["mantleTime", 0.1, 1, 0.02], ["rollDrop", 0.3, 4, 0.1], ["rollSpeed", 0, 15, 0.5], ["rollTime", 0.1, 1, 0.02],
     ["recoverDrop", 0.5, 6, 0.1], ["recoverTime", 0, 1, 0.02]] },
+  { name: "Glide (leaf)", keys: [["glideSpeed", 3, 16, 0.1], ["glideSink", 0.5, 5, 0.05], ["glideEase", 0.5, 12, 0.25], ["glideOpen", 1, 20, 0.5], ["glideTurn", 0.5, 8, 0.25]] },
 ];
 const JUICE_KEYS: [keyof MoveJuice, ...Range][] = [["camLead", 0, 0.4, 0.01], ["fovKick", 0, 10, 0.5], ["dashKick", 0, 8, 0.5], ["squash", 0, 2, 0.05], ["dust", 0, 2, 0.05], ["streaks", 0, 2, 0.05]];
 /** Dash shapes to compare (row 250), about the same reach each: only the dash values change. */
@@ -67,6 +71,12 @@ const DASH_PRESETS: Record<string, Partial<MoveTuning>> = {
   Glide: { dashSpeed: 13.5, dashTime: 0.21, dashExit: 0.8, dashEase: 1, dashCooldown: 0.45, airDashLift: 1 },
   Blink: { dashSpeed: 28, dashTime: 0.16, dashExit: 0.38, dashEase: 3, dashCooldown: 0.6, airDashLift: 0 },
   "First cut": { dashSpeed: 14, dashTime: 0.18, dashExit: 0.7, dashEase: 0, dashCooldown: 0.45, airDashLift: 0 },
+};
+/** Glide shapes to compare (specs/glider.md): only the glide values change. */
+const GLIDE_PRESETS: Record<string, Partial<MoveTuning>> = {
+  Leaf: (({ glideSpeed, glideSink, glideEase, glideOpen, glideTurn }) => ({ glideSpeed, glideSink, glideEase, glideOpen, glideTurn }))(MOVE_TUNING),
+  Floaty: { glideSpeed: 8, glideSink: 1.6, glideEase: 2.5, glideOpen: 6, glideTurn: 2.5 }, // the spec's first numbers: ~15 tiles
+  Brisk: { glideSpeed: 10.5, glideSink: 2.8, glideEase: 5, glideOpen: 10, glideTurn: 3.5 },
 };
 const PRESETS: Record<string, Partial<MoveTuning>> = {
   Juicy: {},
@@ -96,6 +106,14 @@ function measure(t: MoveTuning) {
   };
   const stand = run({}, 1.5, 0.1, null), walk = run({ z: 1 }, 2, 1, null), long = run({ z: 1, sprint: true }, 4.5, 3.5, null);
   const dash = run({ z: 1 }, t.dashTime, null, 0), dashJump = run({ z: 1 }, 2, 0.1, 0.05);
+  // The glider: walk off a 1.5u cliff with a jump at its edge, Space again at the top, held, stick forward.
+  const cliff: MoveWorld = { top: (_x, z) => (z <= 0.5 ? 1.5 : 0), wet: () => false }, g = { ...t, glider: 1 };
+  let c = createMoveState(0, -3, cliff), phase = 0;
+  for (let i = 0; i < 1200 && !(phase === 3 && c.mode === "ground"); i++) {
+    const up = phase === 0 && c.z >= 0.3, press = phase === 2;
+    if (up) phase = 1; else if (phase === 1 && c.vy <= 0) phase = 2; else if (press) phase = 3;
+    c = stepMove(c, { ...NO_INPUT, z: 1, jump: phase === 1 || phase === 3, jumpPressed: up || press }, STEP, cliff, g);
+  }
   // Sprint, then hold Space: how fast the bunny-hop gets, and how soon.
   let s = createMoveState(0, 0, flat), top = 0, toTop = 0;
   for (let i = 0; i < 960; i++) {
@@ -103,7 +121,7 @@ function measure(t: MoveTuning) {
     const v = Math.hypot(s.vx, s.vz);
     if (i >= 360 && v > top + 1e-6) { top = v; toTop = (i - 360) * STEP; }
   }
-  return { jump: stand.peak, air: stand.air, walkJump: walk.distance, longJump: long.distance, dash: dash.z, dashJump: dashJump.distance, top, toTop };
+  return { jump: stand.peak, air: stand.air, walkJump: walk.distance, longJump: long.distance, dash: dash.z, dashJump: dashJump.distance, top, toTop, glide: c.z - 0.5 };
 }
 
 function tickLap(l: { lap: Lap; now: number }, p: MoveTelemetry, dt: number) {
@@ -151,10 +169,12 @@ const box: React.CSSProperties = { background: "rgba(11,14,20,0.82)", color: "#f
 export default function MoveLab() {
   const [graphics] = useGraphicsSettings();
   const params = useMemo(() => new URLSearchParams(typeof window === "undefined" ? "" : window.location.search), []);
-  const spawn = useMemo((): [number, number] => {
+  const [spawn, setSpawn] = useState((): [number, number] => {
     const at = params.get("at")?.split(",").map(Number);
     return at && at.length === 2 && at.every(Number.isFinite) ? [at[0], at[1]] : COURSE_SPAWN;
-  }, [params]);
+  });
+  // Owning the leaf glider is a flag on the sim, not a feel value: the presets leave it alone.
+  const [glider, setGlider] = useState(params.get("glider") !== "0");
   const world = useMemo(() => islandOf(course()), []);
   const [tuning, setTuning] = useState<MoveTuning>(MOVE_TUNING);
   const [juice, setJuice] = useState<MoveJuice>(MOVE_JUICE);
@@ -194,13 +214,15 @@ export default function MoveLab() {
   }, () => { setListening(null); setNote(null); });
 
   const numbers = useMemo(() => measure(tuning), [tuning]);
+  const simTuning = useMemo(() => ({ ...tuning, glider: glider ? 1 : 0 }), [tuning, glider]);
   const set = (k: keyof MoveTuning, value: number) => { setTuning(t => ({ ...t, [k]: value })); setPreset("Custom"); };
   const copy = useCallback(() => {
     void navigator.clipboard?.writeText(JSON.stringify({ move: tuning, juice }, null, 2)).then(() => setNote("Copied the tuning JSON."), () => setNote("Clipboard blocked: select the JSON below."));
   }, [tuning, juice]);
   const fmt = (s: number) => `${Math.floor(s / 60)}:${(s % 60).toFixed(2).padStart(5, "0")}`;
   const h = hud, top = topSpeed(tuning), hopBase = tuning.sprintSpeed * tuning.longJumpBoost;
-  const dashPreset = Object.keys(DASH_PRESETS).find(p => Object.entries(DASH_PRESETS[p]).every(([k, v]) => tuning[k as keyof MoveTuning] === v));
+  const presetOf = (presets: Record<string, Partial<MoveTuning>>) => Object.keys(presets).find(p => Object.entries(presets[p]).every(([k, v]) => tuning[k as keyof MoveTuning] === v));
+  const dashPreset = presetOf(DASH_PRESETS), glidePreset = presetOf(GLIDE_PRESETS);
 
   return <div style={{ position: "fixed", inset: "40px 0 0 0", background: "#0b0e14", overflow: "hidden" }}>
     <Canvas tabIndex={0} role="application" aria-label="Movement lab course" gl={{ antialias: false, powerPreference: "high-performance" }} dpr={graphics.pixelated ? 0.5 : [1, 1.5]}
@@ -208,7 +230,7 @@ export default function MoveLab() {
       shadows={graphics.shadows && !graphics.liteMode ? "percentage" : false}
       onCreated={({ gl }) => { gl.toneMapping = THREE.NeutralToneMapping; gl.outputColorSpace = THREE.SRGBColorSpace; }}>
       <Suspense fallback={null}>
-        <CourseScene key={respawn} world={world} tuning={tuning} juice={juice} spawn={spawn} telemetry={telemetry}
+        <CourseScene key={respawn} world={world} tuning={simTuning} juice={juice} spawn={spawn} telemetry={telemetry}
           timeScale={slow} lap={lap} walkSpeed={tuning.walkSpeed} lite={graphics.liteMode} shadows={graphics.shadows && !graphics.liteMode} zoom={Number(params.get("zoom")) || 1} signs={params.get("panel") !== "0"} />
         <PostFX antialias={!graphics.liteMode && !graphics.pixelated} grade={LIGHT.grade} fx={lookFx(CURRENT, !graphics.liteMode)} />
         <LookMaterials preset={CURRENT} />
@@ -238,8 +260,10 @@ export default function MoveLab() {
     </div>}
 
     <div style={{ ...box, position: "absolute", left: 12, bottom: touch ? 180 : 12, padding: "6px 10px", color: "#c9d1d6" }}>
-      {!touch && MOVE_ACTIONS.filter(a => !["forward", "left", "back", "right"].includes(a.id)).map(a => <span key={a.id} style={{ marginRight: 10 }}><kbd>{keyName(bindings[a.id])}</kbd> {a.name}{a.id === "jump" ? " (hold while sprinting: bunny-hop)" : ""}</span>)}
-      <button onClick={() => { lap.current = { lap: NEW_LAP, now: lap.current.now }; setRespawn(n => n + 1); }} style={{ marginLeft: 6, color: "#FFD166" }}>Back to start</button>
+      {!touch && MOVE_ACTIONS.filter(a => !["forward", "left", "back", "right"].includes(a.id)).map(a => <span key={a.id} style={{ marginRight: 10 }}><kbd>{keyName(bindings[a.id])}</kbd> {a.name}{a.id === "jump" ? ` (hold while sprinting: bunny-hop${glider ? "; again while falling, held: glide" : ""})` : ""}</span>)}
+      <label style={{ marginLeft: 6 }}><input type="checkbox" checked={glider} onChange={e => setGlider(e.target.checked)} /> Owns the leaf glider</label>
+      <button onClick={() => { lap.current = { lap: NEW_LAP, now: lap.current.now }; setSpawn(COURSE_SPAWN); setRespawn(n => n + 1); }} style={{ marginLeft: 6, color: "#FFD166" }}>Back to start</button>
+      <button onClick={() => { setSpawn(GLIDE_SPAWN); setRespawn(n => n + 1); }} style={{ marginLeft: 6, color: "#FFD166" }}>Glide lane</button>
     </div>
 
     {touch && <TouchControls />}
@@ -260,14 +284,16 @@ export default function MoveLab() {
       {note && <p role="status" style={{ color: "#7fd1c0", margin: "6px 0 0" }}>{note}</p>}
       <p style={{ color: "#c9d1d6", margin: "8px 0", lineHeight: 1.5 }}>
         Jump {numbers.jump.toFixed(2)}u in {numbers.air.toFixed(2)}s · walking jump {numbers.walkJump.toFixed(1)}u · long jump {numbers.longJump.toFixed(1)}u ·
-        dash {numbers.dash.toFixed(1)}u · dash jump {numbers.dashJump.toFixed(1)}u · held bunny-hop tops out at {numbers.top.toFixed(1)} u/s after {numbers.toTop.toFixed(1)}s (walk {tuning.walkSpeed}, sprint {tuning.sprintSpeed})
+        dash {numbers.dash.toFixed(1)}u · dash jump {numbers.dashJump.toFixed(1)}u · held bunny-hop tops out at {numbers.top.toFixed(1)} u/s after {numbers.toTop.toFixed(1)}s (walk {tuning.walkSpeed}, sprint {tuning.sprintSpeed}) ·
+        glide {numbers.glide.toFixed(1)} tiles off a 1.5u cliff (jump at the edge, Space again at the top)
       </p>
       {GROUPS.map(g => <fieldset key={g.name} style={{ border: "1px solid rgba(255,255,255,0.12)", borderRadius: 6, margin: "8px 0", padding: "4px 8px" }}>
         <legend style={{ color: "#FFD166" }}>{g.name}</legend>
-        {g.name === "Dash (Q)" && <div role="group" aria-label="Dash presets" style={{ display: "flex", gap: 6, flexWrap: "wrap", margin: "2px 0 6px" }}>
-          {Object.keys(DASH_PRESETS).map(p => <button key={p} aria-pressed={dashPreset === p} onClick={() => { setTuning(t => ({ ...t, ...DASH_PRESETS[p] })); setPreset("Custom"); }}
-            style={{ color: dashPreset === p ? "#0b0e14" : "#f1ffff", background: dashPreset === p ? "#FFD166" : "#1b2230", borderRadius: 4, padding: "1px 8px" }}>{p}</button>)}
-        </div>}
+        {[["Dash (Q)", DASH_PRESETS, dashPreset] as const, ["Glide (leaf)", GLIDE_PRESETS, glidePreset] as const].filter(([name]) => name === g.name).map(([name, presets, current]) =>
+          <div key={name} role="group" aria-label={`${name} presets`} style={{ display: "flex", gap: 6, flexWrap: "wrap", margin: "2px 0 6px" }}>
+            {Object.keys(presets).map(p => <button key={p} aria-pressed={current === p} onClick={() => { setTuning(t => ({ ...t, ...presets[p] })); setPreset("Custom"); }}
+              style={{ color: current === p ? "#0b0e14" : "#f1ffff", background: current === p ? "#FFD166" : "#1b2230", borderRadius: 4, padding: "1px 8px" }}>{p}</button>)}
+          </div>)}
         {g.keys.map(([k, min, max, step]) => <label key={k} style={{ display: "grid", gridTemplateColumns: "118px minmax(0, 1fr) 46px", gap: 6, alignItems: "center", margin: "3px 0" }}>
           <span>{label(k)}</span>
           <input type="range" min={min} max={max} step={step} value={tuning[k]} style={{ width: "100%", minWidth: 0 }} onChange={e => set(k, Number(e.target.value))} />

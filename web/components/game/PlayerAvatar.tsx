@@ -257,7 +257,7 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
     const state = s.state, speed = sitting ? 0 : Math.hypot(state.vx, state.vz);
     const [x, y, z] = sitting ? [sitting.x, groundHeight(sitting.x, sitting.z), sitting.z] : interpolated(s);
     const wet = world.wet(x, z), floor = wet ? world.top(x, z) - WATER_DROP : world.top(x, z), groundY = Math.min(y, floor);
-    const grounded = !!sitting || (state.mode !== "air" && state.mode !== "mantle" && state.mode !== "splash");
+    const aloft = state.mode === "air" || state.mode === "glide", grounded = !!sitting || (!aloft && state.mode !== "mantle" && state.mode !== "splash");
 
     // ── Events → clips, dust, thumps, squash (puffs grow with speed; a trailing one at a run) ──
     const back = speed > 0.1 ? 1 / speed : 0, puff = (e: MoveEvent, size: number) => {
@@ -310,7 +310,7 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
     dust.update(dt);
     // Speed lines through a dash and at a sprint; the dash cooldown ring at the feet.
     streaks.update(dt, x, y, z, state.vx, state.vz, sitting ? 0 : j.streaks * (state.dashT > 0 ? 0.4 : speed > t.walkSpeed * 1.35 ? 0.18 : 0));
-    const spent = !sitting && state.mode === "air" && state.airDashes >= t.airDashes, dashReady = !!sitting || (state.dashCd <= 0 && !spent && state.mode !== "recover");
+    const spent = !sitting && aloft && state.airDashes >= t.airDashes, dashReady = !!sitting || (state.dashCd <= 0 && !spent && state.mode !== "recover");
     ring.update(dt, x, groundY, z, spent ? 0 : 1 - state.dashCd / Math.max(0.01, t.dashCooldown), dashReady);
 
     // Squash and stretch: a spring, stretched by vertical speed in the air. Getting up eases over from the seat.
@@ -329,7 +329,7 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
       m.yaw = state.facing;
       m.lift = (y - groundY) / sy;
       m.speed = state.mode === "ground" ? Math.hypot(state.vx + (push?.x ?? 0), state.vz + (push?.z ?? 0)) : 0;
-      m.move = state.mode === "air" || state.mode === "splash" ? "Fall" : state.mode === "skid" ? "Skid" : null;
+      m.move = aloft || state.mode === "splash" ? "Fall" : state.mode === "skid" ? "Skid" : null;
     }
     m.rate = rawDelta > 0 ? dt / Math.min(rawDelta, 0.1) : 1;
     if (inCombat) {

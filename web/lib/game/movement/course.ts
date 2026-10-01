@@ -14,11 +14,16 @@
  *   bottom, right       a one-level cliff to mantle (or its ramp), a second
  *                       level on top (mantle or ramp), drops of 1.5 and 3.0,
  *                       a 5-wide pond with a 1-wide causeway
+ *   north of the top    the glide lane (specs/glider.md): a one-level tower
+ *   right corner, up    (ramp on its east side), then a 3-tile river, a
+ *                       2-tile island and a 5-tile sea gap to a beach, 10
+ *                       tiles from the tower's edge; a causeway down the
+ *                       right side walks back
  *
  * A lap starts on the brick line in the right lane, passes the four
  * checkpoints in order and ends back on the line.
  */
-import { CLIFF_LEVELS, Surface, createCenteredMap, setCell, worldToCellX, worldToCellZ, type IslandMap } from "../grid";
+import { CLIFF_LEVELS, Surface, createMap, setCell, worldToCellX, worldToCellZ, type IslandMap } from "../grid";
 import { villageOf, type MapObject, type Village } from "../villageMap";
 
 export const COURSE_SPAWN: [number, number] = [-17, -21];
@@ -47,15 +52,23 @@ export const COURSE_SIGNS: { text: string; x: number; z: number }[] = [
   { text: "Second level", x: 6, z: -21 },
   { text: "Drops", x: -1, z: -21 },
   { text: "Narrow bridge", x: -9, z: -21 },
+  { text: "Glide lane · jump off, press Space again, hold", x: -17, z: 27 },
+  { text: "River 3", x: -17, z: 30 },
+  { text: "Sea gap 5", x: -17, z: 35.5 },
 ];
+/** The glide lane: the tower's top (one level), its north edge, and the beach 10 tiles on. */
+export const GLIDE_TOWER: Rect = [-20, -16, 25, 28];
+export const GLIDE_SPAWN: [number, number] = [-18, 26];
 
 /** The course terrain: land, water, the two plateaus and their ramps. */
 export function courseMap(): IslandMap {
-  const map = createCenteredMap(48, 56);
+  const map = createMap(48, 76, -24, -28); // the lap's 48 x 56 (centred), and the glide lane north of it
   const land = (x: number, z: number) =>
-    x >= -20 && x <= 20 && z >= -24 && z <= 24 && !inside(x, z, [-13, 13, -17, 17]) // the ring around the pond
+    (x >= -20 && x <= 20 && z >= -24 && z <= 24 && !inside(x, z, [-13, 13, -17, 17]) // the ring around the pond
     && !inside(x, z, [-10, -9, 18, 23]) && !inside(x, z, [-2, 0, 18, 23]) && !inside(x, z, [8, 11, 18, 23]) // rivers, causeways on z 24
-    && !(inside(x, z, [-11, -7, -24, -18]) && z !== -21); // the narrow-bridge pond
+    && !(inside(x, z, [-11, -7, -24, -18]) && z !== -21)) // the narrow-bridge pond
+    || inside(x, z, [-20, -12, 25, 28]) || inside(x, z, [-20, -14, 32, 33]) || inside(x, z, [-20, -14, 39, 44]) // the glide lane: tower base, island, beach
+    || inside(x, z, [-21, -21, 24, 44]); // its causeway
   for (let cz = 0; cz < map.depth; cz++) for (let cx = 0; cx < map.width; cx++) {
     const x = cx + map.originX, z = cz + map.originZ;
     let level = 0, surface: number = land(x, z) ? Surface.Grass : Surface.River;
@@ -64,6 +77,8 @@ export function courseMap(): IslandMap {
       if (inside(x, z, [0, 6, -23, -19])) level = 2 * CLIFF_LEVELS; // second level, inset a tile
       if (x === -17 && z >= -17 && z <= 17) surface = Surface.Soil; // the sprint track
       if (z === -16 && x >= -20 && x <= -14) surface = Surface.Brick; // start line
+      if (inside(x, z, GLIDE_TOWER)) level = CLIFF_LEVELS; // the glide tower
+      if (x === -21) surface = Surface.Soil;
     }
     setCell(map, cx, cz, level, surface);
   }
@@ -71,7 +86,7 @@ export function courseMap(): IslandMap {
   for (const x of [-10, -9, -2, -1, 0, 8, 9, 10, 11]) setCell(map, worldToCellX(map, x), worldToCellZ(map, 24), 0, Surface.Soil);
   for (const x of [-11, -10, -9, -8, -7]) setCell(map, worldToCellX(map, x), worldToCellZ(map, -21), 0, Surface.Soil);
   // Ramps (stored at the lower level, climbing toward -x): onto the first plateau at its near edge, onto the second in its middle.
-  for (const [x, z, level] of [[12, -24, 0], [13, -24, 0], [12, -23, 0], [13, -23, 0], [7, -21, 2], [8, -21, 2], [7, -20, 2], [8, -20, 2]] as const)
+  for (const [x, z, level] of [[12, -24, 0], [13, -24, 0], [12, -23, 0], [13, -23, 0], [7, -21, 2], [8, -21, 2], [7, -20, 2], [8, -20, 2], [-15, 25, 0], [-14, 25, 0], [-15, 26, 0], [-14, 26, 0]] as const)
     setCell(map, worldToCellX(map, x), worldToCellZ(map, z), level, Surface.Ramp);
   return map;
 }

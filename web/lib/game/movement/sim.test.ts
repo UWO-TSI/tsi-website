@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { advanceMove, clearSpot, createMoveSim, createMoveState, interpolated, standWorld, stepMove, topSpeed, towards, walkTo, MOVE_TUNING as T, NO_INPUT, STEP, type MoveEvent, type MoveInput, type MoveState, type MoveTuning, type MoveWorld } from "./sim";
-import { COURSE_GATES, COURSE_SPAWN, NEW_LAP, course, gateAt, lapStep, routePilot } from "./course";
+import { COURSE_GATES, COURSE_SPAWN, GLIDE_SPAWN, NEW_LAP, course, gateAt, lapStep, routePilot } from "./course";
 import { islandOf } from "../defaultIsland";
 import { villageOf, type MapObject } from "../villageMap";
 import { CLIFF_LEVELS, Surface, createCenteredMap, setCell } from "../grid";
@@ -491,12 +491,12 @@ describe("the leaf glider (row 245)", () => {
    * Walk (or sprint) to the cliff edge and jump, Space held while rising; let go at the top for a step, press it again
    * and hold it with the stick forward. `then` can change the input once gliding (a gust, a let-go). Returns every step.
    */
-  const glide = (w: MoveWorld, t: MoveTuning, opts: { sprint?: boolean; then?: (s: MoveState, i: Partial<MoveInput>) => Partial<MoveInput> } = {}) => {
-    const steps: MoveState[] = [];
+  const glide = (w: MoveWorld, t: MoveTuning, opts: { sprint?: boolean; from?: [number, number]; edge?: number; then?: (s: MoveState, i: Partial<MoveInput>) => Partial<MoveInput> } = {}) => {
+    const steps: MoveState[] = [], [x0, z0] = opts.from ?? [0, -10], edge = opts.edge ?? 0.5;
     let phase = 0; // 0 run, 1 rising, 2 let go, 3 pressed again
-    drive(createMoveState(0, -10, w), w, 6, (_time, s) => {
+    drive(createMoveState(x0, z0, w), w, 6, (_time, s) => {
       const i: Partial<MoveInput> = { z: 1, sprint: opts.sprint };
-      if (phase === 0 && s.mode === "ground" && s.z >= 0.3) { phase = 1; return { ...i, jump: true, jumpPressed: true }; }
+      if (phase === 0 && s.mode === "ground" && s.z >= edge - 0.2) { phase = 1; return { ...i, jump: true, jumpPressed: true }; }
       if (phase === 1) { if (s.vy > 0) return { ...i, jump: true }; phase = 2; return i; }
       if (phase === 2) { phase = 3; return { ...i, jump: true, jumpPressed: true }; }
       if (phase === 3) return s.mode === "glide" && opts.then ? opts.then(s, { ...i, jump: true }) : { ...i, jump: true };
@@ -642,6 +642,44 @@ describe("the leaf glider (row 245)", () => {
       const p = path(fps);
       expect(p.kinds).toEqual(ref.kinds);
       p.end.forEach((v, i) => expect(v).toBeCloseTo(ref.end[i], 6));
+    }
+  });
+
+  it("in the lab's glide lane: off the tower over the river, the island and the sea gap to the beach; without the leaf, short", () => {
+    const w = islandOf(course()), lane = { from: GLIDE_SPAWN, edge: 28.4 }; // water is a wall on foot: jump from the lip
+    const leaf = glide(w, GT, lane), end = leaf.at(-1)!;
+    expect(events(leaf)).not.toContain("splash");
+    expect(end.mode).toBe("ground");
+    expect(end.z).toBeGreaterThan(38.5); // the beach
+    expect(glide(w, T, lane).at(-1)!.z).toBeLessThan(34); // a jump reaches the island at most
+  });
+
+  it("never grounds on water, ends inside something or gets stuck in the glide lane, fuzzed", () => {
+    const w = islandOf(course());
+    let seed = 13;
+    const rand = () => ((seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648);
+    for (const [sx, sz] of [GLIDE_SPAWN, [-16.5, 28], [-19.5, 27.5], [-14, 33], [-18, 40]] as [number, number][]) for (let run = 0; run < 4; run++) {
+      let s = createMoveState(sx, sz, w), input: Partial<MoveInput> = {};
+      s = drive(s, w, 4, time => {
+        if (Math.round(time / STEP) % 20 === 0) {
+          const a = rand() * Math.PI * 2;
+          input = { x: Math.sin(a), z: Math.cos(a), sprint: rand() < 0.5, jump: rand() < 0.7, jumpPressed: rand() < 0.5, dashPressed: rand() < 0.2 };
+        } else input = { ...input, jumpPressed: false, dashPressed: false };
+        return input;
+      }, q => {
+        const where = `${sx},${sz} run ${run} at ${q.x.toFixed(2)},${q.z.toFixed(2)} y ${q.y.toFixed(2)} ${q.mode}`;
+        if (q.mode === "ground" || q.mode === "skid" || q.mode === "roll" || q.mode === "recover") {
+          expect(w.wet(q.x, q.z), `on water: ${where}`).toBe(false);
+          expect(w.top(q.x, q.z), `inside: ${where}`).toBeLessThanOrEqual(q.y + T.stepUp);
+        } else if (q.mode === "air" || q.mode === "glide") expect(w.top(q.x, q.z), `in the air inside: ${where}`).toBeLessThanOrEqual(q.y + 0.21);
+      }, GT);
+      s = drive(s, w, 2, () => ({}), undefined, GT);
+      let free = 0;
+      for (let a = 0; a < 8; a++) {
+        const e = drive(s, w, 0.4, () => ({ x: Math.sin((a * Math.PI) / 4), z: Math.cos((a * Math.PI) / 4) }), undefined, GT);
+        if (Math.hypot(e.x - s.x, e.z - s.z) > 0.25) free++;
+      }
+      expect(free, `stuck: ${sx},${sz} run ${run} at ${s.x.toFixed(2)},${s.z.toFixed(2)} (${s.mode})`).toBeGreaterThanOrEqual(2);
     }
   });
 
