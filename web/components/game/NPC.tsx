@@ -65,7 +65,8 @@ const labelPoint = (object: THREE.Object3D, camera: THREE.Camera, size: { width:
   return [x, Math.min(y, size.height - PROMPT_CLEAR)];
 };
 
-interface Ui { root: HTMLDivElement | null; bubble: HTMLDivElement | null; text: HTMLSpanElement | null; notice: HTMLDivElement | null; plate: HTMLDivElement | null }
+/** The overhead elements, as refs: drei's Html mounts them in its own root, after the figure's effects run. */
+interface Ui { bubble: RefObject<HTMLDivElement | null>; text: RefObject<HTMLSpanElement | null>; notice: RefObject<HTMLDivElement | null>; plate: RefObject<HTMLDivElement | null> }
 /** One resident's live state, owned by its figure and driven by the residents' frame loop. */
 interface Runtime {
   id: string; seed: number; lines: readonly string[]; day: ResidentDay; gather: readonly [number, number];
@@ -200,7 +201,9 @@ export default function Residents({ personas, phase, ceremony, player, island, v
       r.chat = best;
     }
 
-    // 3. Each one's clip, facing, talk and overhead UI.
+    // 3. Each one's clip, facing, talk and overhead UI. One greeting at a time: walking into a group, the first to
+    // notice you speaks and the rest just look up.
+    let speaking = list.some(r => r.bubbleUntil > now && !r.hidden);
     for (const r of list) {
       const m = r.motion.current, pose = r.pose, g = r.group.current;
       const d = dist(p.x, p.z, r.x, r.z), stopped = r.speed < 0.05 && !r.detour, sitting = stopped && pose.seat > 0 && dist(r.x, r.z, pose.x, pose.z) < 0.05;
@@ -243,10 +246,11 @@ export default function Residents({ personas, phase, ceremony, player, island, v
 
       // Noticing you: the name and "!" show; the first time (and after a quiet spell) they say a line.
       const noticed = d < NOTICE_RANGE && !r.hidden;
-      if (noticed && !r.noticed && now >= r.bubbleNext) {
+      if (noticed && !r.noticed && now >= r.bubbleNext && !speaking) {
+        speaking = true;
         const line = r.lines[Math.floor(hash01(r.seed, Math.floor(now / 30)) * r.lines.length) % r.lines.length];
         r.bubbleUntil = now + BUBBLE_S; r.bubbleNext = now + BUBBLE_COOLDOWN_S;
-        if (r.ui.text) r.ui.text.textContent = line;
+        if (r.ui.text.current) r.ui.text.current.textContent = line;
         r.shown = "";
         m.talk = Math.min(3.2, 0.8 + line.length * 0.045);
         if (stopped && !sitting && !r.chat) m.play = "Wave";
@@ -256,9 +260,9 @@ export default function Residents({ personas, phase, ceremony, player, island, v
       }
       r.noticed = noticed;
       const bubble = r.bubbleUntil > now && !r.hidden, state = `${bubble ? "b" : ""}${noticed && !bubble ? "n" : ""}${(noticed || r.hovered) && !r.hidden ? "p" : ""}`;
-      if (state !== r.shown) {
+      if (state !== r.shown && r.ui.plate.current) {
         r.shown = state;
-        show(r.ui.bubble, bubble); show(r.ui.notice, state.includes("n")); show(r.ui.plate, state.includes("p"));
+        show(r.ui.bubble.current, bubble); show(r.ui.notice.current, state.includes("n")); show(r.ui.plate.current, state.includes("p"));
       }
     }
   }, -3);
@@ -274,12 +278,12 @@ function Figure({ persona, day, look, gather, home, seed, registry }: {
 }) {
   const group = useRef<THREE.Group>(null), visual = useRef<THREE.Group>(null);
   const motion = useRef<CharacterMotion>({ speed: 0, yaw: 0, lift: 0, pose: null, play: null });
-  const root = useRef<HTMLDivElement>(null), bubble = useRef<HTMLDivElement>(null), text = useRef<HTMLSpanElement>(null), notice = useRef<HTMLDivElement>(null), plate = useRef<HTMLDivElement>(null);
+  const bubble = useRef<HTMLDivElement>(null), text = useRef<HTMLSpanElement>(null), notice = useRef<HTMLDivElement>(null), plate = useRef<HTMLDivElement>(null);
   const runtime = useRef<Runtime | null>(null);
   useEffect(() => {
     const r: Runtime = {
       id: persona.id, seed, lines: persona.canned_dialogue?.length ? persona.canned_dialogue : FILLER_LINES, day, gather, home,
-      pose: newPose(), motion, group, visual, ui: { root: root.current, bubble: bubble.current, text: text.current, notice: notice.current, plate: plate.current },
+      pose: newPose(), motion, group, visual, ui: { bubble, text, notice, plate },
       ready: false, x: 0, z: 0, speed: 0, hidden: false, lift: 0, lag: 0, detour: null, detourAt: 0, detourGoal: [0, 0],
       want: 0, noticed: false, bubbleUntil: 0, bubbleNext: 0, shown: "-", idleKey: -1, idleVisit: -1, laughBeat: -1, chat: null, hopT: -1, hopNext: 0, greetAt: 0, hovered: false, timers: [],
     };
@@ -304,7 +308,7 @@ function Figure({ persona, day, look, gather, home, seed, registry }: {
       <Suspense fallback={null}><Character look={look} motion={motion} walkSpeed={RESIDENT_STRIDE} /></Suspense>
     </group>
     <Html calculatePosition={labelPoint} position={[0, CHARACTER_HEIGHT + 0.3, 0]} zIndexRange={[30, 0]} style={{ pointerEvents: "none" }}>
-      <div ref={root} className={s.stack}>
+      <div className={s.stack}>
         <div ref={bubble} className={s.bubble} hidden><b>{persona.display_name}</b><span ref={text} /></div>
         <div ref={notice} className={s.notice} hidden aria-hidden="true">!</div>
         <div ref={plate} className={s.plate} hidden>{persona.display_name}{persona.post && POST_LABEL[persona.post] && <small>{POST_LABEL[persona.post]}</small>}</div>
