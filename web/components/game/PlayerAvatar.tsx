@@ -112,7 +112,7 @@ type Seat = { x: number; z: number; clip: ClipName; lift: number; yaw: number };
 
 export default function PlayerAvatar({ spawnPosition, player, world, groundHeight, groundSurface, camTarget, playerName = "Player", showNameplate = true, playerLevel, member = false, combat: inCombat = false, respawn = 0, glider = false, frozen = false, desktopClickToMove = false, tuning, juice, timeScale, telemetry, walkSpeed = MOVE_TUNING.walkSpeed }: PlayerAvatarProps) {
   const anchor = useRef<THREE.Group>(null), body = useRef<THREE.Group>(null), head = useRef<THREE.Group>(null);
-  const motion = useRef<CharacterMotion>({ speed: 0, yaw: 0, lift: 0, pose: null, play: null, move: null });
+  const motion = useRef<CharacterMotion>({ speed: 0, yaw: 0, lift: 0, pose: null, play: null, move: null, afterimages: true });
   const { look } = useMyLook();
   const { camera, gl } = useThree();
   const bindings = useMoveKeys();

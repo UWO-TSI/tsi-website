@@ -49,11 +49,13 @@ class Ghost {
   // Pushed back a hair in depth, so where it still overlaps the character (the first frame) the character wins.
   readonly material = new THREE.MeshLambertMaterial({ color: "#dfe8f1", emissive: "#8ea3b8", emissiveIntensity: 0.18, transparent: true, opacity: 0, depthWrite: true, polygonOffset: true, polygonOffsetFactor: 2, polygonOffsetUnits: 2 });
   age = GHOST.life;
-  constructor(live: THREE.Skeleton, bindMatrix: THREE.Matrix4, parent: THREE.Object3D) {
+  /** Frames left to draw it unseen (opacity 0, no depth) so its shader compiles before the first dash. */
+  private warm = 1;
+  constructor(live: THREE.Skeleton, bindMatrix: THREE.Matrix4, parent: THREE.Object3D, geometries: THREE.BufferGeometry[]) {
     this.skeleton = new THREE.Skeleton(live.bones, live.boneInverses);
     this.skeleton.update = () => {};
-    this.meshes = [0, 1].map(() => {
-      const m = new THREE.SkinnedMesh(new THREE.BufferGeometry(), this.material);
+    this.meshes = geometries.map(geometry => {
+      const m = new THREE.SkinnedMesh(geometry, this.material);
       m.bind(this.skeleton, bindMatrix);
       m.frustumCulled = false;
       m.visible = false;
@@ -74,7 +76,9 @@ class Ghost {
     // Eases in while you leave it (so it never films over you), then fades.
     const k = Math.max(0, 1 - this.age / GHOST.life), inn = Math.min(1, this.age / GHOST.rise);
     this.material.opacity = GHOST.opacity * inn * k * k;
-    for (const m of this.meshes) m.visible = k > 0;
+    this.material.depthWrite = !this.warm;
+    for (const m of this.meshes) m.visible = k > 0 || this.warm > 0;
+    if (this.warm > 0) this.warm--;
   }
   dispose() { this.material.dispose(); this.skeleton.boneTexture?.dispose(); for (const m of this.meshes) m.removeFromParent(); }
 }
@@ -194,14 +198,19 @@ class Puppet {
 
   /** Leave an afterimage of the last drawn pose (the oldest of two is reused). */
   private ghost() {
-    if (this.ghosts.length < 2) this.ghosts.push(new Ghost(this.skeleton, this.body.bindMatrix, this.ghostParent));
+    this.prepareGhosts();
     const g = this.ghosts[this.ghostNext];
     this.ghostNext = (this.ghostNext + 1) % 2;
     g.snap(this.skeleton, [this.body.geometry, this.face.geometry]);
   }
 
+  private prepareGhosts() {
+    while (this.ghosts.length < 2) this.ghosts.push(new Ghost(this.skeleton, this.body.bindMatrix, this.ghostParent, [this.body.geometry, this.face.geometry]));
+  }
+
   update(delta: number, motion: CharacterMotion, walkSpeed: number) {
     let restart = false;
+    if (motion.afterimages && this.body.visible) this.prepareGhosts();
     if (motion.ghost) { motion.ghost = false; if (this.body.visible) this.ghost(); }
     for (const g of this.ghosts) g.update(delta);
     // A looping clip asked for as a one-shot (Dance) holds as a pose; moving ends any pose.

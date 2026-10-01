@@ -36,7 +36,9 @@ export interface CharacterMotion { speed: number; yaw: number; lift: number; pos
   /** Foot contacts so far (the character counts them up as Walk or Run passes each foot's contact) and the last foot, 0 left 1 right. */
   steps?: number; foot?: number;
   /** Ask for an afterimage of this frame's pose (a dash); the character clears it. */
-  ghost?: boolean }
+  ghost?: boolean;
+  /** This character leaves afterimages (the player): they are made and compiled up front, so the first dash never hitches. */
+  afterimages?: boolean }
 
 export const isLoop = (clip: ClipName) => CLIP_BY_NAME.get(clip)?.loop ?? true;
 

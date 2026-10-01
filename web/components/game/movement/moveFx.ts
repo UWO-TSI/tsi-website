@@ -126,6 +126,8 @@ export class MoveParticles {
   private readonly geometry = new THREE.InstancedBufferGeometry();
   private readonly attrs: THREE.InstancedBufferAttribute[];
   private stamp = -1;
+  /** Drawn once (empty) with the scene, so its shader compiles at load, not as the first puff hitches a frame. */
+  private warm = false;
   constructor() {
     const quad = new THREE.PlaneGeometry(1, 1);
     this.geometry.index = quad.index;
@@ -141,7 +143,7 @@ export class MoveParticles {
     this.mesh.frustumCulled = false; // placed in the shader; the pool is small
     this.mesh.receiveShadow = true;
     this.mesh.renderOrder = 3;
-    this.mesh.visible = false;
+    this.mesh.onAfterRender = () => { this.warm = true; };
   }
   /** Step and draw, once per frame: the first caller's `dt` wins (the avatar's slow motion and pauses), the rest are skipped. */
   tick(stamp: number, dt: number, camera: THREE.Camera, wind: { x: number; z: number }) {
@@ -152,7 +154,7 @@ export class MoveParticles {
     camera.getWorldDirection(camDir);
     const n = this.pool.write(camPos.x, camPos.y, camPos.z, camDir.x, camDir.y, camDir.z);
     this.geometry.instanceCount = n;
-    this.mesh.visible = n > 0;
+    this.mesh.visible = n > 0 || !this.warm;
     if (!n) return;
     for (const a of this.attrs) { a.clearUpdateRanges(); a.addUpdateRange(0, n * 4); a.needsUpdate = true; }
   }
