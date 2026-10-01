@@ -294,7 +294,7 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
           f.sq = Math.min(f.sq, -0.12 * j.squash); f.sqv = 6 * j.squash; puff(e, 0.6 + e.speed * 0.04); playSFX("jump"); break;
         case "jump": case "long": case "dashjump":
           f.sqv += 4.5 * j.squash; puff(e, 0.5 + e.speed * 0.04); playSFX("jump"); break;
-        case "glide": m.stop = true; f.leafV += 9; dust.spawn(e.x, e.y + GRIP_Y + 0.9, e.z, 1.1, true, 0.35); playSFX("blip2"); break;
+        case "glide": m.stop = true; f.leafV += 9; dust.spawn(e.x, e.y + GRIP_Y + 0.95, e.z, 0.75, true, 0.3); playSFX("blip2"); break;
         case "land":
           // A landing that launches the next hop (same step) leaves its thump to the hop; any other ends a short hop's Jump clip (no sliding feet).
           if (events[i + 1] && TAKEOFF.has(events[i + 1].kind)) break;
@@ -345,7 +345,7 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
     const sy = 1 + f.sq, sxz = 1 / Math.sqrt(sy), rx = x + f.rise.x, rz = z + f.rise.y;
     g.position.set(rx, groundY, rz);
     bd.scale.set(sxz, sy, sxz);
-    hd.position.set(rx, sitting ? groundY : y, rz);
+    hd.position.set(rx, sitting ? groundY : y + Math.min(1, f.leaf) * 0.45, rz); // the nameplate clears an open leaf
 
     // Character: yaw, lift above the ground under it, the movement state clip; a seat holds its clip.
     if (sitting) Object.assign(m, { speed: 0, yaw: sitting.yaw, lift: sitting.lift, pose: sitting.clip, move: null });

@@ -19,8 +19,8 @@ import kit  # noqa: E402
 
 OUT = os.path.join(ROOT, "web", "public", "assets", "game", "props", "leaf-glider.glb")
 ARGS = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
-C = Vector((0.23, 0.0, 0.66))                  # blade centre from the grip: over the head (grip x -0.23 in the rig)
-LENGTH, HALF_W, CUP = 0.82, 0.32, 0.11         # tip to base, half width, how far the sides droop below the midrib
+C = Vector((0.23, 0.0, 0.72))                  # blade centre from the grip: over the head (grip x -0.23 in the rig)
+LENGTH, HALF_W, CUP = 1.0, 0.4, 0.13           # tip to base, half width, how far the sides droop below the midrib
 
 bpy.ops.wm.read_factory_settings(use_empty=True)
 mats = {"M_Leaf": kit.material("M_Leaf", "#86C46A"), "M_Vein": kit.material("M_Vein", "#C8E59A"), "M_Stem": kit.material("M_Stem", "#6F9A45")}
@@ -60,7 +60,7 @@ for u0 in (0.25, 0.45, 0.65):
 
 # The stem: through the fist, out round the head, curling in under the blade.
 pc.mat = "M_Stem"
-pc.tube([(0.0, 0.0, -0.05), (0.0, 0.0, 0.08), (-0.035, 0.0, 0.3), (0.0, 0.0, 0.48), (0.1, 0.02, 0.58), (0.2, 0.04, C.z - 0.03)],
+pc.tube([(0.0, 0.0, -0.05), (0.0, 0.0, 0.08), (-0.035, 0.0, 0.3), (0.0, 0.0, 0.5), (0.1, 0.02, 0.62), (0.2, 0.04, C.z - 0.03)],
         [0.014, 0.015, 0.014, 0.013, 0.012, 0.01], sides=5, tip=False)
 
 leaf = pc.finish("leaf-glider", None, mats, sharp=50, grad=(0.82, 1.0))
