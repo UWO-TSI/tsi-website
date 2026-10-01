@@ -16,8 +16,9 @@ import { Html } from "@react-three/drei";
 import * as THREE from "three";
 import GridWorld from "../grid/GridWorld";
 import PlayerAvatar from "../PlayerAvatar";
+import Character, { type CharacterMotion } from "../character/Character";
+import { hashSeed, randomLook, seeded } from "@/lib/game/character/look";
 import { GLBProp } from "../NatureModels";
-import { InteriorKeeper } from "../interiorShared";
 import { IslandAtmosphere, useFollowCamera } from "../IslandAtmosphere";
 import { AimReticle, Blasts, EnemyInstances, FloaterProjector, PlayerAuras, Projectiles, Telegraphs, Totems, Wisps } from "./EncounterRender";
 import { BOSS_CENTER, ESCORT_PATHS, EXIT_SPOT, FETCH_SPOTS, GATE_PLAZA, RUINS_BROKEN_ARCHES, RUINS_MOAI, RUINS_PILLARS, RUINS_ROCKS, RUINS_SPAWN, RUINS_TORCHES, SURVIVE_CIRCLES, createRuins } from "@/lib/game/ruins";
@@ -48,10 +49,6 @@ const F = "/assets/acnh/furniture/";
 const TYPES = SPAWN_TABLE.map(r => r.type);
 /** Models your summons and shades can borrow (every non-boss enemy). */
 const ALLY_TYPES = TYPES.filter(t => t !== "guardian-statue");
-const ESCORTEE: Record<string, { colors: { apron: string; shirt: string }; hat: "straw" | "hood" }> = {
-  botanist: { colors: { apron: "#7a5c3e", shirt: "#e8dcc4" }, hat: "straw" },
-  scholar: { colors: { apron: "#4b3f6b", shirt: "#d9d2ec" }, hat: "hood" },
-};
 
 export function resetEncounter() {
   const rt = combat.rt;
@@ -292,11 +289,11 @@ export default function RuinsScene({ level, phase, light, look, weather, liteMod
       <Escort ground={ruins.ground} player={player} />
       <Wisps ground={ruins.ground} />
       {ALLY_TYPES.map(t => <EnemyInstances key={`ally-${t}`} typeId={t} capacity={6} ground={ruins.ground} allies />)}
+      <Projectiles ground={ruins.ground} />
+      <Totems ground={ruins.ground} />
     </Suspense>
     <Telegraphs ground={ruins.ground} />
-    <Projectiles ground={ruins.ground} />
     <Blasts ground={ruins.ground} />
-    <Totems ground={ruins.ground} />
     <PlayerAuras player={player} ground={ruins.ground} />
     <AimReticle player={player} ground={ruins.ground} />
     <FloaterProjector />
@@ -330,15 +327,22 @@ function RuneCircle({ id, circle, ground }: { id: string; circle: { x: number; z
   </mesh>;
 }
 
+/** The escorted resident on the character rig, in a resident's look (seeded by who it is, as the village's are): it faces where it walks, and you while it waits. */
 function Escort({ ground, player }: { ground: (x: number, z: number) => number; player: React.RefObject<THREE.Vector3> }) {
-  const ref = useRef<THREE.Group>(null);
-  useFrame(() => {
-    const g = ref.current, esc = combat.rt.escort; if (!g) return;
+  const ref = useRef<THREE.Group>(null), last = useRef<{ x: number; z: number } | null>(null);
+  const motion = useRef<CharacterMotion>({ speed: 0, yaw: 0, lift: 0, pose: null, play: null });
+  const who = combat.rt.mission?.def.params.escortee ?? "botanist";
+  const look = useMemo(() => randomLook(seeded(hashSeed(who))), [who]);
+  useFrame((_, delta) => {
+    const g = ref.current, esc = combat.rt.escort, m = motion.current; if (!g) return;
     g.visible = !!esc;
-    if (esc) { g.position.set(esc.x, ground(esc.x, esc.z), esc.z); g.rotation.y = Math.atan2(player.current.x - esc.x, player.current.z - esc.z); }
+    if (!esc) { last.current = null; return; }
+    const from = last.current ?? esc, step = Math.hypot(esc.x - from.x, esc.z - from.z), dt = Math.max(delta, 1e-3);
+    m.speed = THREE.MathUtils.damp(m.speed, step / dt, 12, dt); // eased: a hitstop's still frames don't flick it to idle
+    const heading = step > 1e-4 ? Math.atan2(esc.x - from.x, esc.z - from.z) : Math.atan2(player.current.x - esc.x, player.current.z - esc.z);
+    m.yaw += Math.atan2(Math.sin(heading - m.yaw), Math.cos(heading - m.yaw)) * Math.min(1, dt * (step > 1e-4 ? 10 : 4));
+    last.current = { x: esc.x, z: esc.z };
+    g.position.set(esc.x, ground(esc.x, esc.z), esc.z);
   });
-  const who = ESCORTEE[combat.rt.mission?.def.params.escortee ?? ""] ?? ESCORTEE.botanist;
-  return <group ref={ref}>
-    <InteriorKeeper position={[0, 0, 0]} rotY={0} watch={[0, 0]} colors={who.colors} hat={who.hat} playerPosRef={player as React.MutableRefObject<THREE.Vector3>} />
-  </group>;
+  return <group ref={ref}><Character look={look} motion={motion} walkSpeed={2.6} /></group>;
 }

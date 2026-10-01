@@ -12,9 +12,11 @@ import { useEffect, useMemo, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { useGLTF, useTexture } from "@react-three/drei";
 import * as THREE from "three";
-import { combat } from "@/lib/game/combat/runtime";
+import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
+import { combat, type Projectile } from "@/lib/game/combat/runtime";
 import { ENEMIES, WEAPONS } from "@/lib/game/combat/data";
 import { glow, marker, partPose, type MarkerFamily } from "@/lib/game/combat/telegraph";
+import { CAPS } from "@/lib/combat/kits";
 
 type Ground = (x: number, z: number) => number;
 const tmpM = new THREE.Matrix4(), tmpQ = new THREE.Quaternion(), tmpS = new THREE.Vector3(), tmpP = new THREE.Vector3(), tmpC = new THREE.Color(), UP = new THREE.Vector3(0, 1, 0);
@@ -192,26 +194,83 @@ export function Telegraphs({ ground, max = 24 }: { ground: Ground; max?: number 
   </group>)}</>;
 }
 
-const COLORS = { arrow: new THREE.Color("#f5e6c8"), bolt: new THREE.Color("#c9a7ff"), spit: new THREE.Color("#9be35a") };
-export function Projectiles({ ground, max = 48 }: { ground: Ground; max?: number }) {
-  const ref = useRef<THREE.InstancedMesh>(null);
-  useFrame(() => {
-    const mesh = ref.current; if (!mesh) return;
-    const list = combat.rt.projectiles.slice(0, max);
-    list.forEach((s, i) => {
-      tmpQ.setFromAxisAngle(UP, Math.atan2(s.vx, s.vz));
-      tmpS.set(s.kind === "arrow" ? 0.07 : 0.22, s.kind === "arrow" ? 0.07 : 0.22, s.kind === "arrow" ? 0.7 : 0.22);
-      tmpP.set(s.x, ground(s.x, s.z) + 0.9, s.z);
-      mesh.setMatrixAt(i, tmpM.compose(tmpP, tmpQ, tmpS));
-      mesh.setColorAt(i, COLORS[s.kind]);
-    });
-    mesh.count = list.length;
-    mesh.instanceMatrix.needsUpdate = true;
-    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+/**
+ * A static GLB (art/props-enemies) as one geometry for an instanced pool: transforms baked in, each primitive's material
+ * colour folded into its vertex colours (COLOR_0 is the model's top-light gradient). `keep` picks the meshes by material.
+ */
+function bakeModel(scene: THREE.Object3D, keep: (material: THREE.Material) => boolean = () => true): THREE.BufferGeometry {
+  scene.updateMatrixWorld(true);
+  const parts: THREE.BufferGeometry[] = [];
+  scene.traverse(o => {
+    const mesh = o as THREE.Mesh, mat = mesh.material as THREE.MeshStandardMaterial;
+    if (!mesh.isMesh || !keep(mat)) return;
+    const g = (mesh.geometry.index ? mesh.geometry.toNonIndexed() : mesh.geometry.clone()).applyMatrix4(mesh.matrixWorld);
+    const src = g.getAttribute("color"), n = g.getAttribute("position").count, col = new Float32Array(n * 3);
+    for (let i = 0; i < n; i++) { const s = src ? src.getX(i) : 1; col[i * 3] = mat.color.r * s; col[i * 3 + 1] = mat.color.g * s; col[i * 3 + 2] = mat.color.b * s; }
+    for (const k of Object.keys(g.attributes)) if (k !== "position" && k !== "normal") g.deleteAttribute(k);
+    g.setAttribute("color", new THREE.BufferAttribute(col, 3));
+    parts.push(g);
   });
-  return <instancedMesh ref={ref} args={[undefined, undefined, max]} frustumCulled={false}>
-    <boxGeometry args={[1, 1, 1]} /><meshBasicMaterial toneMapped={false} />
-  </instancedMesh>;
+  const merged = mergeGeometries(parts, false)!;
+  parts.forEach(p => p.dispose());
+  return merged;
+}
+function useBaked(url: string, keep?: (material: THREE.Material) => boolean) {
+  const { scene } = useGLTF(url);
+  const geometry = useMemo(() => bakeModel(scene, keep), [scene, keep]);
+  useEffect(() => () => geometry.dispose(), [geometry]);
+  return geometry;
+}
+
+/**
+ * Projectiles (combat polish 7): the arrow, the staff's rune shard and the spore glob, modelled in Blender
+ * (art/props-enemies/build_combat_fx.py), each trailing a short glow that fades to nothing (additive, black at its tail).
+ */
+const P = "/assets/game/props/";
+const SHOT: Record<Projectile["kind"], { model: string; scale: number; trail: THREE.Color; width: number; lit: boolean }> = {
+  arrow: { model: `${P}projectile-arrow.glb`, scale: 1.3, trail: new THREE.Color("#fff1cf"), width: 0.07, lit: true },
+  bolt: { model: `${P}projectile-bolt.glb`, scale: 1.5, trail: new THREE.Color("#a77bff"), width: 0.24, lit: false },
+  spit: { model: `${P}projectile-spit.glb`, scale: 2, trail: new THREE.Color("#8fd14f"), width: 0.22, lit: false },
+};
+const KINDS = Object.keys(SHOT) as Projectile["kind"][];
+/** A flat sliver behind the shot (local -Z), white at its head and black at its tail. */
+function trailGeometry() {
+  const g = new THREE.BufferGeometry();
+  g.setAttribute("position", new THREE.Float32BufferAttribute([-0.5, 0, 0, 0.5, 0, 0, 0, 0, -1], 3));
+  g.setAttribute("color", new THREE.Float32BufferAttribute([1, 1, 1, 1, 1, 1, 0, 0, 0], 3));
+  return g;
+}
+export function Projectiles({ ground, max = 48 }: { ground: Ground; max?: number }) {
+  return <>{KINDS.map(k => <ShotPool key={k} kind={k} ground={ground} max={max} />)}</>;
+}
+function ShotPool({ kind, ground, max }: { kind: Projectile["kind"]; ground: Ground; max: number }) {
+  const look = SHOT[kind], body = useRef<THREE.InstancedMesh>(null), tail = useRef<THREE.InstancedMesh>(null);
+  const geometry = useBaked(look.model);
+  const trail = useMemo(() => trailGeometry(), []);
+  useEffect(() => () => trail.dispose(), [trail]);
+  useFrame(() => {
+    const b = body.current, t = tail.current; if (!b || !t) return;
+    let n = 0;
+    for (const s of combat.rt.projectiles) {
+      if (s.kind !== kind || n >= max) continue;
+      const speed = Math.hypot(s.vx, s.vz);
+      tmpQ.setFromAxisAngle(UP, Math.atan2(s.vx, s.vz));
+      tmpP.set(s.x, ground(s.x, s.z) + 0.9, s.z);
+      b.setMatrixAt(n, tmpM.compose(tmpP, tmpQ, tmpS.setScalar(look.scale)));
+      t.setMatrixAt(n, tmpM.compose(tmpP, tmpQ, tmpS.set(look.width, 1, Math.min(1.4, speed * 0.06))));
+      n++;
+    }
+    b.count = t.count = n;
+    b.instanceMatrix.needsUpdate = t.instanceMatrix.needsUpdate = true;
+  });
+  return <>
+    <instancedMesh ref={body} args={[geometry, undefined, max]} frustumCulled={false}>
+      {look.lit ? <meshStandardMaterial vertexColors roughness={1} metalness={0} /> : <meshBasicMaterial vertexColors toneMapped={false} />}
+    </instancedMesh>
+    <instancedMesh ref={tail} args={[trail, undefined, max]} frustumCulled={false} renderOrder={5}>
+      <meshBasicMaterial vertexColors color={look.trail} transparent depthWrite={false} toneMapped={false} blending={THREE.AdditiveBlending} side={THREE.DoubleSide} />
+    </instancedMesh>
+  </>;
 }
 
 /** Glow-sprite units: wisps (the charm's and the kits'), bone wisps, the Illusionist's phantom. */
@@ -239,40 +298,56 @@ export function Wisps({ ground, max = 10 }: { ground: Ground; max?: number }) {
   </sprite>)}</>;
 }
 
-/** Totems (a carved post and the circle it covers, so overlaps read), tripwires (a small disc), and a ring under each of your summons: green, violet for a shade. */
+/**
+ * Totems (the carved post from art/props-enemies, its eyes and rings in the kind's colour, and the circle it covers, so
+ * overlaps read), tripwires (a small disc), and a ring under each of your summons: green, violet for a shade.
+ */
 const TOTEM_COLOR = colors({ "totem-ember": "#ff8a3d", "totem-mending": "#7dff9e", "totem-warding": "#8fd0ff", tripwire: "#ffe08a", shade: "#c9a7ff", decoy: "#d9b8ff" }), TOTEM_DEFAULT = TOTEM_COLOR["totem-mending"];
+const glowing = (m: THREE.Material) => m.name === "M_Glow", solid = (m: THREE.Material) => m.name !== "M_Glow";
 export function Totems({ ground, max = 16 }: { ground: Ground; max?: number }) {
-  const posts = useRef<(THREE.Mesh | null)[]>([]), rings = useRef<(THREE.Mesh | null)[]>([]);
+  const rings = useRef<(THREE.Mesh | null)[]>([]), post = useRef<THREE.InstancedMesh>(null), eyes = useRef<THREE.InstancedMesh>(null);
+  const postGeo = useBaked(`${P}totem.glb`, solid), glowGeo = useBaked(`${P}totem.glb`, glowing);
   const ring = useMemo(() => new THREE.RingGeometry(0.94, 1, 64).rotateX(-Math.PI / 2), []);
   const disc = useMemo(() => new THREE.CircleGeometry(1, 48).rotateX(-Math.PI / 2), []);
   useEffect(() => () => { ring.dispose(); disc.dispose(); }, [ring, disc]);
   useFrame(({ clock }) => {
-    const list = combat.rt.units.filter(u => u.source !== "weapon");
+    const list = combat.rt.units.filter(u => u.source !== "weapon"), p = post.current, e = eyes.current;
+    let posts = 0;
     for (let i = 0; i < max; i++) {
-      const post = posts.current[i], r = rings.current[i], u = list[i];
-      if (!post || !r) continue;
-      post.visible = r.visible = !!u;
+      const r = rings.current[i], u = list[i];
+      if (!r) continue;
+      r.visible = !!u;
       if (!u) continue;
       const g = ground(u.x, u.z), c = TOTEM_COLOR[u.def.key] ?? TOTEM_DEFAULT, totem = u.def.kind === "totem", area = totem || u.def.kind === "trap";
-      post.visible = totem;
       r.geometry = area ? disc : ring;
-      post.position.set(u.x, g + 0.6, u.z);
-      (post.material as THREE.MeshStandardMaterial).color.copy(c);
-      (post.material as THREE.MeshStandardMaterial).emissive.copy(c);
+      if (totem && p && e) {
+        // Face the camera (it looks along +z); the eyes and rings pulse softly with the totem's beat.
+        tmpQ.setFromAxisAngle(UP, Math.PI);
+        tmpM.compose(tmpP.set(u.x, g, u.z), tmpQ, tmpS.setScalar(1.3));
+        p.setMatrixAt(posts, tmpM); e.setMatrixAt(posts, tmpM);
+        e.setColorAt(posts, tmpC.copy(c).multiplyScalar(1.3 + 0.3 * Math.sin(clock.elapsedTime * 3 + i)));
+        posts++;
+      }
       r.position.set(u.x, g + 0.05, u.z);
       r.scale.setScalar(area ? u.def.radius! : 0.75);
       const m = r.material as THREE.MeshBasicMaterial;
       m.color.copy(c); m.opacity = totem ? 0.16 + Math.sin(clock.elapsedTime * 3 + i) * 0.04 : area ? 0.55 : 0.85;
     }
+    if (p && e) {
+      p.count = e.count = posts;
+      p.instanceMatrix.needsUpdate = e.instanceMatrix.needsUpdate = true;
+      if (e.instanceColor) e.instanceColor.needsUpdate = true;
+    }
   });
-  return <>{Array.from({ length: max }, (_, i) => <group key={i}>
-    <mesh ref={el => { posts.current[i] = el; }} visible={false}><cylinderGeometry args={[0.16, 0.24, 1.2, 8]} />
-      <meshStandardMaterial color="#ff8a3d" emissive="#ff8a3d" emissiveIntensity={0.6} roughness={0.8} /></mesh>
-    <mesh ref={el => { rings.current[i] = el; }} geometry={disc} visible={false} renderOrder={2}>
+  return <>
+    <instancedMesh ref={post} args={[postGeo, undefined, CAPS.totems]} frustumCulled={false} castShadow userData={DYNAMIC}><meshStandardMaterial vertexColors roughness={1} metalness={0} /></instancedMesh>
+    <instancedMesh ref={eyes} args={[glowGeo, undefined, CAPS.totems]} frustumCulled={false}><meshBasicMaterial vertexColors toneMapped={false} /></instancedMesh>
+    {Array.from({ length: max }, (_, i) => <mesh key={i} ref={el => { rings.current[i] = el; }} geometry={disc} visible={false} renderOrder={2}>
       <meshBasicMaterial transparent depthWrite={false} toneMapped={false} />
-    </mesh>
-  </group>)}</>;
+    </mesh>)}
+  </>;
 }
+
 
 /** On the player: a shield bubble, the raised guard's arc, and a ring while transformed (Transmuter). */
 export function PlayerAuras({ player, ground }: { player: React.RefObject<THREE.Vector3>; ground: Ground }) {
