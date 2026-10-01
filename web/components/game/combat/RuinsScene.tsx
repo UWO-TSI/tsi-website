@@ -20,7 +20,7 @@ import Character, { type CharacterMotion } from "../character/Character";
 import { hashSeed, randomLook, seeded } from "@/lib/game/character/look";
 import { GLBProp } from "../NatureModels";
 import { IslandAtmosphere, useFollowCamera } from "../IslandAtmosphere";
-import { AimReticle, Blasts, EnemyInstances, FloaterProjector, PlayerAuras, Projectiles, Telegraphs, Totems, Wisps } from "./EncounterRender";
+import { AimReticle, Blasts, EnemyBars, EnemyInstances, FloaterProjector, PlayerAuras, Projectiles, Telegraphs, Totems, Wisps } from "./EncounterRender";
 import { BOSS_CENTER, ESCORT_PATHS, EXIT_SPOT, FETCH_SPOTS, GATE_PLAZA, RUINS_BROKEN_ARCHES, RUINS_MOAI, RUINS_PILLARS, RUINS_ROCKS, RUINS_SPAWN, RUINS_TORCHES, SURVIVE_CIRCLES, createRuins } from "@/lib/game/ruins";
 import { combat, publishCombat, takeMissionQueue, type AbilityId, type CombatRuntime, type CueKind } from "@/lib/game/combat/runtime";
 import { AudioManager, type SFXName } from "@/lib/game/audio";
@@ -67,22 +67,22 @@ function traitLearned(key: string, now: number) {
   const rt = combat.rt, t = TRAITS.find(x => x.key === key);
   if (!t || !rt.kit) return;
   rt.kit.traits = { ...rt.kit.traits, [key]: Math.max(1, rt.kit.traits[key] ?? 0) };
-  rt.banner = { text: `New trait: ${t.ability.name} (${t.part}). Equip it at the Oracle.`, until: now + 6 };
+  rt.banner = { kind: "trait", title: `New trait: ${t.ability.name}`, text: `From its ${t.part}. Equip it at the Oracle.`, until: now + 6 };
   publishCombat();
 }
 
 /** Boss down: a card now, the server's roll when it answers (the kill must post first). */
 function bossVictory(eventKey: string, now: number) {
   const rt = combat.rt;
-  rt.banner = { text: "The guardian falls.", until: now + 8 };
+  rt.banner = { kind: "victory", title: "The guardian falls", text: "Counting the spoils…", until: now + 8 };
   void postKill(BOSS_DROPS.enemy, eventKey).then(k => {
     if (!k.ok) return;
     void claimBossReward(eventKey).then(r => {
       const b = combat.rt.banner;
       if (!b) return;
-      if (!r.ok) { b.text = `The guardian falls. ${r.error}`; publishCombat(); return; }
+      if (!r.ok) { b.text = r.error; publishCombat(); return; }
       const { coins, materials, weapon, rarity } = r.data.reward, w = weapon ? WEAPONS[weapon] : null;
-      b.text = `The guardian falls. +${coins} coins · ${materialsLabel(materials)}${w ? ` · ${rarity === "legendary" ? "Legendary" : "Epic"}: ${w.name}` : ""}`;
+      b.text = `+${coins} coins · ${materialsLabel(materials)}${w ? ` · ${rarity === "legendary" ? "Legendary" : "Epic"}: ${w.name}` : ""}`;
       if (w && !combat.rt.player.owned.includes(w.id)) { combat.rt.player.owned.push(w.id); combat.rt.player.durability[w.id] = w.maxDurability; }
       publishCombat();
     });
@@ -297,6 +297,7 @@ export default function RuinsScene({ level, phase, light, look, weather, liteMod
     <PlayerAuras player={player} ground={ruins.ground} />
     <AimReticle player={player} ground={ruins.ground} />
     <FloaterProjector />
+    <EnemyBars ground={ruins.ground} />
     <primitive object={dust.group} />
     <Html position={[EXIT_SPOT.x, 2.2, EXIT_SPOT.z]} center distanceFactor={10} zIndexRange={[3, 0]}><div className={styles.cue}>Gate · safe zone</div></Html>
     <PlayerAvatar spawnPosition={spawn} playerName="You" playerLevel={level} player={player}

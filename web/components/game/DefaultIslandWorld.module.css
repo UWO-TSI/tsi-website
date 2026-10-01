@@ -206,45 +206,61 @@ p.interact[data-closed="true"] { margin: 0; cursor: default; color: #6a4b2f; }
 .world :global([data-progression-sheet]), .world :global(.collection-book) { zoom: var(--tsi-text-scale, 1); max-height: calc(82vh / var(--tsi-text-scale, 1)); }
 :global(html[data-contrast="high"]) .world :global([data-progression-sheet]), :global(html[data-contrast="high"]) .world :global(.collection-book) { background: #ffffff !important; color: #000000 !important; border: 2px solid #000000 !important; }
 /* Combat HUD (ruins) */
-.combatHud { position: absolute; left: 50%; bottom: 76px; transform: translateX(-50%); display: grid; gap: 6px; width: min(640px, calc(100% - 32px)); padding: 10px 14px; border-radius: 12px; background: #1b1626d9; color: #f4eefc; font-size: 12px; z-index: 12; }
-.hpBar { position: relative; height: 16px; border-radius: 8px; background: #3b2f45; overflow: hidden; }
-.hpBar span { position: absolute; inset: 0 auto 0 0; background: linear-gradient(90deg, #e8505b, #f08a5d); transition: width 0.15s; }
-.hpBar b { position: relative; display: block; text-align: center; font: 700 11px/16px "IBM Plex Mono", monospace; }
+/* Combat HUD (ruins), in the cream UI kit (row 124). */
+.combatHud { position: absolute; left: 50%; bottom: 76px; transform: translateX(-50%); display: grid; gap: 7px; width: min(660px, calc(100% - 32px)); box-sizing: border-box; padding: 11px 14px 12px; border: 1px solid #5c746c40; border-radius: 14px 14px 5px 14px; background: #f8f7e9f2; color: #293e3b; box-shadow: 0 6px 0 #47625218, 0 12px 36px #29464118; font-size: 12px; z-index: 12; }
+.hpBar { position: relative; height: 18px; border-radius: 9px; background: #e0e6d8; box-shadow: inset 0 1px 2px #29464126; overflow: hidden; }
+.hpBar span { position: absolute; inset: 0 auto 0 0; background: linear-gradient(90deg, #ee8d6e, #f4b27e); transition: width 0.15s; }
+.hpBar b { position: relative; display: block; text-align: center; font: 700 11px/18px "IBM Plex Mono", monospace; color: #293e3b; }
 .weaponLine { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
 .weaponLine span { font-weight: 700; }
+.weaponLine small { color: #4f625b; }
 .dodgePip { margin-left: auto; opacity: 0.5; }
 .dodgePip[data-ready] { opacity: 1; }
-.dodgePip kbd, .abilityBar kbd { font: 600 10px "IBM Plex Mono", monospace; background: #f4eefc; color: #1b1626; border-radius: 3px; padding: 0 4px; }
+.dodgePip kbd { font: 600 10px "IBM Plex Mono", monospace; background: #e0e6d8; color: #293e3b; border: 1px solid #a7b59e; border-bottom-width: 2px; border-radius: 3px; padding: 0 4px; }
 .abilityBar { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
-.abilityBar li { position: relative; display: flex; gap: 6px; align-items: center; padding: 6px 8px; border-radius: 8px; background: #2e2640; overflow: hidden; }
-.abilityBar li[data-cooling] { opacity: 0.55; }
-.abilityBar li span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.abilityBar li small { margin-left: auto; opacity: 0.7; white-space: nowrap; }
-.abilityBar li[data-rune] { box-shadow: inset 0 0 0 1.5px #b48cff; }
+.abilityBar li { position: relative; display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; column-gap: 7px; align-items: center; min-height: 44px; padding: 5px 8px 5px 6px; border: 1px solid #d8cbaa; border-radius: 9px; background: #fffdf3; }
+.abilityBar li[data-cooling] .slotName { color: #6c7a73; }
+.abilityBar li[data-rune] { border-color: #b39ce6; box-shadow: inset 0 0 0 1px #b39ce6; }
+/* The radial sweep: a ring whose dark wedge is the cooldown left (--sweep), its edge turning clockwise; the key in its middle. */
+@property --sweep { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
+.sweep { grid-row: span 2; display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: conic-gradient(#426b5b calc(360deg - var(--sweep)), #293e3bb8 0); transition: --sweep 0.1s linear; }
+.sweep kbd { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: #fffdf3; color: #293e3b; font: 700 11px "IBM Plex Mono", monospace; }
+.slotName { min-width: 0; font-weight: 600; font-size: 11px; line-height: 1.2; overflow-wrap: anywhere; }
+.abilityBar li small { font: 600 10px "IBM Plex Mono", monospace; color: #607069; }
 /* A key pressed with too much cooldown left (runInputs): the slot shakes once. */
 .abilityBar li[data-denied] { animation: slotDenied 0.3s ease-out; }
 @keyframes slotDenied { 0% { transform: translateX(0); } 25% { transform: translateX(-3px); box-shadow: inset 0 0 0 2px #e8704a; } 50% { transform: translateX(3px); } 75% { transform: translateX(-1px); } 100% { transform: translateX(0); } }
 @keyframes slotDeniedStill { 0%, 60% { box-shadow: inset 0 0 0 2px #e8704a; } 100% { box-shadow: none; } }
 @media (prefers-reduced-motion: reduce) { .abilityBar li[data-denied] { animation-name: slotDeniedStill; } }
-.hpBar i { position: absolute; inset: 0 auto 0 0; background: #bfe3ffaa; mix-blend-mode: screen; }
-.kitLine { opacity: 0.8; }
+.hpBar i { position: absolute; inset: 0 auto 0 0; background: #8fc3e8a0; }
+.kitLine { color: #4f625b; }
 @media (max-width: 640px) { .abilityBar { grid-template-columns: repeat(2, 1fr); } }
-.abilityBar em { position: absolute; right: 6px; font-style: normal; font-weight: 700; }
 .safeBadge { position: absolute; top: 150px; left: 50%; transform: translateX(-50%); margin: 0; padding: 6px 12px; border-radius: 999px; background: #e7f5ea; color: #245c36; font-size: 12px; font-weight: 600; z-index: 12; }
 .missionTracker { position: absolute; left: 16px; top: 196px; display: grid; gap: 2px; max-width: 260px; padding: 10px 12px; border-radius: 10px; background: #f8f7e9f0; color: #293e3b; font-size: 12px; z-index: 12; }
 .missionTracker[data-status="complete"] { border-left: 4px solid #3d8f52; }
 .missionTracker[data-status="failed"] { border-left: 4px solid #c0463c; }
-.bossBar { position: absolute; top: 60px; left: 50%; transform: translateX(-50%); width: min(520px, calc(100% - 32px)); display: grid; gap: 4px; text-align: center; color: #fff4dc; text-shadow: 0 1px 3px #000; z-index: 12; }
-.bossBar span { height: 10px; border-radius: 5px; background: #3b2f45cc; overflow: hidden; }
-.bossBar i { display: block; height: 100%; background: linear-gradient(90deg, #7fbf6a, #c8e07a); }
-.defeat { position: absolute; left: 50%; top: 40%; transform: translate(-50%, -50%); margin: 0; padding: 16px 24px; border-radius: 12px; background: #1b1626e6; color: #fff; font-size: 16px; z-index: 30; }
+.bossBar { position: absolute; top: 60px; left: 50%; transform: translateX(-50%); width: min(520px, calc(100% - 32px)); box-sizing: border-box; display: grid; gap: 5px; padding: 8px 14px 9px; border: 1px solid #5c746c40; border-radius: 12px; background: #f8f7e9f2; color: #293e3b; text-align: center; box-shadow: 0 4px 0 #47625218; z-index: 12; }
+.bossBar b { font-size: 12px; }
+.bossBar small { font-size: 11px; color: #4f625b; }
+.bossBar span { height: 10px; border-radius: 5px; background: #e0e6d8; box-shadow: inset 0 1px 2px #29464126; overflow: hidden; }
+.bossBar i { display: block; height: 100%; background: linear-gradient(90deg, #8a6cff, #b9a3f2); transition: width 0.15s; }
+.defeat, .banner { position: absolute; left: 50%; top: 38%; transform: translate(-50%, -50%); display: grid; gap: 4px; margin: 0; padding: 14px 22px; border: 1px solid #5c746c40; border-radius: 14px; background: #f8f7e9f5; color: #293e3b; text-align: center; box-shadow: 0 6px 0 #47625218, 0 16px 40px #29464130; font-size: 15px; z-index: 30; }
+.defeat { border-left: 5px solid #c0463c; }
+.banner b { font-size: 17px; }
+.banner span { font-size: 12px; color: #4f625b; }
+.banner[data-kind="victory"] { border: 2px solid #d9a13a; box-shadow: 0 6px 0 #a87a2a40, 0 16px 40px #29464130; animation: bannerIn 0.35s ease-out; }
+.banner[data-kind="victory"] b { color: #8a5a12; }
+.banner[data-kind="trait"] { border: 2px solid #9f86e0; animation: bannerIn 0.35s ease-out; }
+.banner[data-kind="trait"] b { color: #5b3fa8; }
+@keyframes bannerIn { from { opacity: 0; transform: translate(-50%, -40%) scale(0.96); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
+@media (prefers-reduced-motion: reduce) { .banner { animation: none !important; } }
 .hurt { position: absolute; inset: 0; pointer-events: none; box-shadow: inset 0 0 0 0 #e8505b00; transition: box-shadow 0.25s; z-index: 11; }
 .hurt[data-on] { box-shadow: inset 0 0 120px 20px #e8505b88; transition: none; }
 .floaters { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 13; }
 .floater { position: absolute; left: 0; top: 0; opacity: 0; font: 800 20px "IBM Plex Mono", monospace; color: #fff6d8; text-shadow: 0 2px 0 #3a2400, 0 0 6px #000a; white-space: nowrap; will-change: transform; }
 .floater[data-kind="crit"] { color: #ffd34d; font-size: 26px; }
 .floater[data-kind="hurt"] { color: #ff6a6a; }
-.floater[data-kind="info"] { color: #cfe8ff; font-size: 13px; }
+.floater[data-kind="info"] { padding: 2px 9px; border-radius: 999px; background: #f8f7e9e8; color: #293e3b; font-size: 12px; font-weight: 700; text-shadow: none; box-shadow: 0 2px 6px #29464130; }
 /* Incantation */
 .incantation { position: absolute; right: 24px; top: 50%; transform: translateY(-50%); display: grid; gap: 8px; justify-items: center; padding: 14px 16px; border-radius: 18px; background: #1b1626e0; color: #f4eefc; z-index: 25; }
 .incantation header { display: grid; text-align: center; font-size: 14px; }
@@ -268,11 +284,11 @@ p.interact[data-closed="true"] { margin: 0; cursor: default; color: #6a4b2f; }
 .missionTemplate { justify-self: start; padding: 1px 8px; border-radius: 999px; background: #efe3cf; font: 600 10px "IBM Plex Mono", monospace; color: #6a4b2f; }
 .missionState { display: flex; gap: 8px; align-items: center; justify-content: space-between; }
 .missionList h3 { margin: 0 0 4px; font: 600 11px "IBM Plex Mono", monospace; letter-spacing: 0.06em; text-transform: uppercase; color: #607069; }
-.world .combatHud, .world .missionTracker, .world .incantation, .world .bossBar, .world .safeBadge { zoom: var(--tsi-text-scale, 1); }
-.energyBar { height: 10px; }
-.energyBar span { background: linear-gradient(90deg, #6fb7ff, #b48cff); }
-.energyBar b { font-size: 9px; line-height: 10px; }
+.world .combatHud, .world .missionTracker, .world .incantation, .world .bossBar, .world .safeBadge, .world .banner, .world .defeat { zoom: var(--tsi-text-scale, 1); }
+.energyBar { height: 15px; }
+.energyBar span { background: linear-gradient(90deg, #9cc3f2, #bfaaf2); }
+.energyBar b { font-size: 11px; line-height: 15px; }
 .abilityBar small { margin-left: auto; opacity: 0.7; font: 600 10px "IBM Plex Mono", monospace; }
-.weaponLine small[data-broken] { color: #ff9a8a; }
+.weaponLine small[data-broken] { color: #b23a2e; font-weight: 600; }
 .runeTimer { width: 320px; height: 5px; border-radius: 3px; background: #3b2f45; overflow: hidden; }
 .runeTimer span { display: block; height: 100%; background: #ffe08a; transition: width 0.1s linear; }

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { ENEMIES, MISSIONS } from "./data";
 import { BUFFER, attack, combatPush, combatTuning, createInputs, dashDodge, hurtPlayer, regenEnergy, runInputs, startDodge, triggerAbility } from "./actions";
-import { hitAmount, resolveCast } from "./abilities";
+import { FLOATERS, floater, hitAmount, resolveCast } from "./abilities";
 
 /** One hit from the equipped weapon (systems damage formula), as `attack` lands it. */
 const weaponDamage = (rt: Parameters<typeof hitAmount>[0], e: Parameters<typeof hitAmount>[1], random: () => number) => hitAmount(rt, e, { power: 1, from: e }, random);
@@ -246,5 +246,18 @@ describe("impact (combat polish 4)", () => {
     expect(fox.z).toBe(0); // held
     stepEnemy(fox, { x: 0, z: 5, safe: false, alive: true }, 0.1);
     expect(fox.z).toBeGreaterThan(0); // chasing again
+  });
+});
+
+describe("HUD pools (combat polish 8)", () => {
+  it("status words keep their own pool: a flurry of damage numbers never pushes one out", () => {
+    const rt = createRuntime(), at = { x: 0, z: 0 };
+    floater(rt, at, 1, "Dodged", "info");
+    for (let i = 0; i < 30; i++) floater(rt, at, 1, String(i), "hit");
+    expect(rt.floaters.filter(f => f.kind === "info").map(f => f.text)).toEqual(["Dodged"]);
+    expect(rt.floaters.filter(f => f.kind !== "info")).toHaveLength(FLOATERS.damage);
+    for (let i = 0; i < 6; i++) floater(rt, at, 1, `note ${i}`, "info");
+    expect(rt.floaters.filter(f => f.kind === "info").map(f => f.text)).toEqual(["note 2", "note 3", "note 4", "note 5"]);
+    expect(rt.floaters.filter(f => f.kind !== "info")).toHaveLength(FLOATERS.damage);
   });
 });

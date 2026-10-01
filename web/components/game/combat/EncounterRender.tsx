@@ -30,6 +30,7 @@ const tmpM = new THREE.Matrix4(), tmpQ = new THREE.Quaternion(), tmpS = new THRE
 function useRig(url: string) {
   const { scene } = useGLTF(url);
   return useMemo(() => {
+    const box = new THREE.Box3().setFromObject(scene);
     const nodes: { parent: number; rest: THREE.Matrix4; role: string | null }[] = [];
     const parts: { node: number; geometry: THREE.BufferGeometry; material: THREE.Material; telegraph: boolean }[] = [];
     const walk = (o: THREE.Object3D, parent: number) => {
@@ -45,7 +46,7 @@ function useRig(url: string) {
       o.children.forEach(c => walk(c, node));
     };
     walk(scene, -1);
-    return { nodes, parts };
+    return { nodes, parts, top: box.max.y };
   }, [scene]);
 }
 
@@ -65,7 +66,8 @@ export function EnemyInstances({ typeId, capacity, ground, allies = false }: { t
   /** Your summons that borrow this model (kits.ts UNITS `model`, a Necromancer's shades): tinted spirit-green or shade-violet, a little smaller. */
   allies?: boolean }) {
   const type = ENEMIES[typeId];
-  const { nodes, parts } = useRig(type.model);
+  const { nodes, parts, top } = useRig(type.model);
+  useEffect(() => { BAR_TOP[typeId] = top * type.modelScale; }, [typeId, top, type.modelScale]);
   const world = useMemo(() => nodes.map(() => new THREE.Matrix4()), [nodes]);
   const refs = useRef<(THREE.InstancedMesh | null)[]>([]);
   useFrame(({ clock }) => {
@@ -430,23 +432,61 @@ export function AimReticle({ player, ground }: { player: React.RefObject<THREE.V
   </>;
 }
 
-/** Projects runtime floaters (damage numbers) onto pooled DOM nodes registered by the HUD. */
+/** Projects runtime floaters onto pooled DOM nodes registered by the HUD: damage numbers on one pool, status words on their own. */
 export const floaterNodes: (HTMLDivElement | null)[] = [];
+export const noteNodes: (HTMLDivElement | null)[] = [];
 export function FloaterProjector() {
   const { camera, size } = useThree();
   const v = useMemo(() => new THREE.Vector3(), []);
   useFrame(() => {
     const list = combat.rt.floaters;
-    floaterNodes.forEach((node, i) => {
-      if (!node) return;
-      const f = list[list.length - 1 - i];
-      if (!f) { node.style.opacity = "0"; return; }
+    let hit = 0, note = 0;
+    for (let i = list.length - 1; i >= 0; i--) {
+      const f = list[i], info = f.kind === "info", node = info ? noteNodes[note++] : floaterNodes[hit++];
+      if (!node) continue;
       v.set(f.x, f.y + f.age * 0.9, f.z).project(camera);
       node.style.transform = `translate(${((v.x + 1) / 2) * size.width}px, ${((1 - v.y) / 2) * size.height}px) translate(-50%, -50%) scale(${f.kind === "crit" ? 1.35 : 1})`;
       node.style.opacity = String(Math.max(0, Math.min(1, 1.6 - f.age / 0.7)));
       node.dataset.kind = f.kind;
       if (node.textContent !== f.text) node.textContent = f.text;
-    });
+    }
+    for (; hit < floaterNodes.length; hit++) if (floaterNodes[hit]) floaterNodes[hit]!.style.opacity = "0";
+    for (; note < noteNodes.length; note++) if (noteNodes[note]) noteNodes[note]!.style.opacity = "0";
   });
   return null;
+}
+
+/**
+ * Small health bars over damaged ordinary enemies and elites (the guardian has its own at the top): billboards above
+ * each model (its height from EnemyInstances), coral for ordinary enemies, amber for elites.
+ */
+export const BAR_TOP: Record<string, number> = {};
+const BAR = { width: 0.8, elite: 1.2, height: 0.085, normal: new THREE.Color("#e8704a"), eliteColor: new THREE.Color("#e3a43a") };
+export function EnemyBars({ ground, max = 24 }: { ground: Ground; max?: number }) {
+  const back = useRef<THREE.InstancedMesh>(null), fill = useRef<THREE.InstancedMesh>(null);
+  const plane = useMemo(() => new THREE.PlaneGeometry(1, 1).translate(0.5, 0, 0), []);
+  useEffect(() => () => plane.dispose(), [plane]);
+  const right = useMemo(() => new THREE.Vector3(), []);
+  useFrame(({ camera }) => {
+    const b = back.current, f = fill.current; if (!b || !f) return;
+    right.set(1, 0, 0).applyQuaternion(camera.quaternion);
+    let n = 0;
+    for (const e of combat.rt.enemies) {
+      if (n >= max || e.type.kind === "boss" || e.state === "dead" || e.state === "return" || e.hp >= e.type.hp) continue;
+      const w = e.type.elite ? BAR.elite : BAR.width, k = e.hp / e.type.hp, y = ground(e.x, e.z) + e.type.hover + (BAR_TOP[e.type.id] ?? 1) + 0.25;
+      tmpP.set(e.x, y, e.z).addScaledVector(right, -w / 2);
+      b.setMatrixAt(n, tmpM.compose(tmpP, camera.quaternion, tmpS.set(w, BAR.height, 1)));
+      f.setMatrixAt(n, tmpM.compose(tmpP, camera.quaternion, tmpS.set(w * k, BAR.height * 0.62, 1)));
+      f.setColorAt(n, e.type.elite ? BAR.eliteColor : BAR.normal);
+      n++;
+    }
+    b.count = f.count = n;
+    b.visible = f.visible = n > 0;
+    b.instanceMatrix.needsUpdate = f.instanceMatrix.needsUpdate = true;
+    if (f.instanceColor) f.instanceColor.needsUpdate = true;
+  });
+  return <>
+    <instancedMesh ref={back} args={[plane, undefined, max]} frustumCulled={false} renderOrder={7}><meshBasicMaterial color="#293e3b" transparent opacity={0.6} depthTest={false} depthWrite={false} toneMapped={false} /></instancedMesh>
+    <instancedMesh ref={fill} args={[plane, undefined, max]} frustumCulled={false} renderOrder={8}><meshBasicMaterial transparent depthTest={false} depthWrite={false} toneMapped={false} /></instancedMesh>
+  </>;
 }

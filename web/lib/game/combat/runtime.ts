@@ -83,8 +83,8 @@ export interface CombatRuntime {
   escort: { x: number; z: number; hp: number; waypoint: number } | null;
   wave: { index: number; active: boolean } | null;
   bossEngaged: boolean;
-  /** A card in the middle of the screen (boss victory reward), until `until` seconds of encounter time. */
-  banner: { text: string; until: number } | null;
+  /** A card in the middle of the screen (the boss's victory and reward, a learned trait), until `until` seconds of encounter time. */
+  banner: { kind: "victory" | "trait"; title: string; text: string; until: number } | null;
   seq: number;
 }
 

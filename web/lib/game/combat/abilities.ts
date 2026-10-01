@@ -27,9 +27,14 @@ const ELEMENTS: Element[] = ["fire", "frost", "lightning"];
 const COLOR = { fire: "#ff8a3d", frost: "#8fd8ff", lightning: "#ffe36e", Arcane: "#b48cff", Ranger: "#8fd0ff", Vanguard: "#ffd27a", Warden: "#8fe39a", heal: "#9dffb0", shield: "#bfe3ff" } as const;
 const dist = (a: Vec, b: Vec) => Math.hypot(a.x - b.x, a.z - b.z);
 
+/** Damage numbers and status words ("Dodged", "Not enough energy") keep separate pools, so a flurry of hits never pushes a status out. */
+export const FLOATERS = { damage: 12, info: 4 } as const;
 export function floater(rt: CombatRuntime, at: Vec, y: number, text: string, kind: "hit" | "crit" | "hurt" | "info") {
   rt.floaters.push({ id: rt.seq++, x: at.x, y, z: at.z, text, kind, age: 0 });
-  if (rt.floaters.length > 16) rt.floaters.shift();
+  const info = kind === "info";
+  let n = 0;
+  for (const f of rt.floaters) if ((f.kind === "info") === info) n++;
+  if (n > (info ? FLOATERS.info : FLOATERS.damage)) rt.floaters.splice(rt.floaters.findIndex(f => (f.kind === "info") === info), 1);
 }
 /** A cue for the scene (sound, hitstop, shake, puff); at most 32 wait, for runs nobody drains (the balance harness). */
 export function cue(rt: CombatRuntime, kind: CueKind, at: Vec, melee = false) {

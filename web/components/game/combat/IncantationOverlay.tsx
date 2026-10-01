@@ -4,11 +4,12 @@
  * Casting mode (rows C2, 52, 53): the rune floats over the world, which keeps
  * running; the caster stands still. Each stroke shows its start point and an
  * arrow for direction; trace with mouse or trackpad (drag). Accuracy reads out
- * live; under 50% fizzles, 95%+ is empowered. Q (dodge) cancels.
+ * live; under 50% fizzles, 95%+ is empowered. The dash key (the dodge) cancels.
  */
 import { useEffect, useRef, useState } from "react";
 import { runeById, scoreTrace, strokeGuides, type Pt, type TracePt } from "@/lib/game/combat/runes";
 import type { IncantationScore } from "@/lib/game/combat/contract";
+import { keyName, useMoveKeys } from "@/lib/game/movement/keys";
 import styles from "../DefaultIslandWorld.module.css";
 
 const SIZE = 320;
@@ -17,7 +18,7 @@ const toPath = (s: (Pt | TracePt)[]) => s.map(([x, y], i) => `${i ? "L" : "M"}${
 export default function IncantationOverlay({ runeId, title, effect, onDone, onCancel }: { runeId: string; onDone: (score: IncantationScore) => void; onCancel: () => void;
   /** The kit ability being drawn (kits.ts), shown over the rune's own name. */
   title?: string; effect: string }) {
-  const rune = runeById(runeId);
+  const rune = runeById(runeId), dash = keyName(useMoveKeys().dash);
   const [strokes, setStrokes] = useState<TracePt[][]>([]);
   const [current, setCurrent] = useState<TracePt[] | null>(null);
   const [started] = useState(() => performance.now());
@@ -78,6 +79,6 @@ export default function IncantationOverlay({ runeId, title, effect, onDone, onCa
       {result ? (result.outcome === "fail" ? (left <= 0 && result.accuracy === 0 ? "Out of time · fizzled" : `Fizzled · ${Math.round(result.accuracy)}%`) : `${result.outcome === "enhanced" ? "Empowered" : "Cast"} · ${Math.round(result.accuracy)}%`)
         : shown ? `Accuracy ${Math.round(shown.accuracy)}% · stroke ${strokes.length + 1} of ${rune.strokes.length}` : `Trace from the numbered dot, following the arrow · ${rune.strokes.length} stroke${rune.strokes.length > 1 ? "s" : ""}`}
     </p>
-    <small className={styles.hint}>Under 50% fizzles · 95% and up is empowered · Q dodges and cancels</small>
+    <small className={styles.hint}>Under 50% fizzles · 95% and up is empowered · {dash} dodges and cancels</small>
   </section>;
 }
