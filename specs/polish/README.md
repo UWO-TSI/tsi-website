@@ -53,3 +53,7 @@ Combat, café, movement feel and the avatar have their own specs in `specs/`.
 4. **Shop:** a real shop interior (default), or delete `ShopInterior.tsx`. Whether the portal shop shows $ prices at all.
 5. **Fishing:** a visible line, the fish held up in the hands (row 136 said no visible props), fish shadows (rows 151, 195 said no for v1), and the reveal's style (gacha rays vs cozy).
 6. **Lamps:** he places lamps along the paths himself in the painter (rows 163, 246).
+
+## Follow-ups found along the way
+- **Combat target marker.** The white target ring under enemies is a flat ring. Replace it with a painted marker from the particle pack (movement feel).
+- **Lost palette file.** `art/props-enemies/palette_ext.json` was never committed and is lost. The weapon, enemy and prop builders that name its colours can't rebuild on a fresh checkout (`pe.py` now loads without it). Rebuild it from the shipped GLBs' material colours.
