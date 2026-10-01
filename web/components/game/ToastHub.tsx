@@ -4,6 +4,7 @@ import { useEffect, useState, type CSSProperties } from "react";
 import { createToastQueue, type GameToast } from "@/lib/game/toastQueue";
 import styles from "./ToastHub.module.css";
 
+/** `icon`: an image path, or a single emoji. */
 export function toast(text: string, icon?: string) {
   if (typeof window === "undefined") return;
   window.dispatchEvent(new CustomEvent("tsi:toast", { detail: { text, icon } }));
@@ -11,6 +12,7 @@ export function toast(text: string, icon?: string) {
 
 function ToastIcon({ src }: { src: string }) {
   const [failed, setFailed] = useState(false);
+  if (!src.startsWith("/")) return <span className={styles.icon} aria-hidden="true">{src}</span>;
   if (failed) return null;
   // eslint-disable-next-line @next/next/no-img-element
   return <img className={styles.icon} src={src} alt="" width={22} height={22} onError={() => setFailed(true)} />;

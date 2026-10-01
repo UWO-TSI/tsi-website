@@ -77,7 +77,7 @@ import DonateSheet from "./peaceful/DonateSheet";
 import { ShowcaseSheet, TrophySheet } from "./peaceful/ShowcaseSheets";
 import type { MuseumWing } from "@/lib/collections/logic";
 import FishingOverlay from "./FishingOverlay";
-import ToastHub from "./ToastHub";
+import ToastHub, { toast } from "./ToastHub";
 import CollectionBook from "./CollectionBook";
 import { usePeacefulContext } from "@/lib/game/usePeacefulContext";
 import { villageNodes } from "@/lib/game/islandNodes";
@@ -477,7 +477,6 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   const chapterActions = useChapterActions();
   const chapterFlags = useMemo(() => ({ claim: chapterActions.claim, donate: chapterActions.donate, report: chapterActions.report }),
     [chapterActions.claim, chapterActions.donate, chapterActions.report]);
-  const [actionNote, setActionNote] = useState<string | null>(null);
   useEffect(() => { if (inside === "museum" && !loadMuseumRef.current) { loadMuseumRef.current = true; loadMuseum(); } if (inside !== "museum") loadMuseumRef.current = false; }, [inside, loadMuseum]);
   const peaceful = usePeacefulContext(weather, conditions.now);
   // Audio pass (row 169 / polish-ownership item 9): the hourly music player
@@ -569,16 +568,15 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
     if (action === "trophy" || action === "posters") { setSheet(action === "trophy" ? "tourney" : "posters"); return; }
     // Winter lights and the spring picnic: a moment, not a reward (principle 3: no rewards for online activity).
     if (action === "cocoa" || action === "picnic") {
-      setActionNote(action === "cocoa" ? "A hot cocoa, extra marshmallows. The windows fog up a little." : "Petals keep landing in the teacups. Somebody brought far too many sandwiches.");
-      window.setTimeout(() => setActionNote(null), 3500);
+      toast(action === "cocoa" ? "A hot cocoa, extra marshmallows. The windows fog up a little." : "Petals keep landing in the teacups. Somebody brought far too many sandwiches.", action === "cocoa" ? "☕" : "🧺");
       return;
     }
     if (action === "lantern") { combat.rt.idol = "carried"; missionEvent(combat.rt, { type: "pickup", item: combat.rt.mission?.def.params.item ?? "old-lantern" }); publishCombat(); return; }
-    if (action === "ruins" && !gate.open) { setActionNote(gate.reason); window.setTimeout(() => setActionNote(null), 3500); return; }
+    if (action === "ruins" && !gate.open) { if (gate.reason) toast(gate.reason, "🔒"); return; }
     if (action === "buy") {
       void homeActions.buyRoom(homeActions.roomPrice() ?? ROOM_PRICE.coins).then(result => {
-        setActionNote(result.ok ? `A new room is ready. ${result.coins} coins left.` : /unauthori[sz]ed/i.test(result.error) ? "Sign in to add a room." : result.error);
-        window.setTimeout(() => setActionNote(null), 3500);
+        if (result.ok) toast(`A new room is ready. ${result.coins} coins left.`, "🏠");
+        else toast(/unauthori[sz]ed/i.test(result.error) ? "Sign in to add a room." : result.error);
       });
       return;
     }
@@ -603,8 +601,10 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
     if (action === "claim" || action === "donate" || action === "report") {
       const step = action === "claim" ? "claim_plot" : action === "donate" ? "donate_catch" : "report_hq";
       void chapterActions.run(step).then(error => {
-        setActionNote(error ?? (action === "claim" ? "Plot claimed. Your island is waiting at the end of the pier." : action === "donate" ? "Donated. The museum shell has its first exhibit." : "Chapter complete: welcome to the island."));
-        window.setTimeout(() => setActionNote(null), 3500);
+        if (error) toast(error);
+        else if (action === "claim") toast("Plot claimed. Your island is waiting at the end of the pier.", "🏡");
+        else if (action === "donate") toast("Donated. The museum shell has its first exhibit.", "🏛️");
+        else toast("Chapter complete: welcome to the island.", "🎉");
       });
       return;
     }
@@ -654,7 +654,6 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   }, [act, near, inside, atHome, decor, identity.settings]);
   return (
     <main className={styles.world} data-light={phase} data-inside={inside ?? undefined}>
-      <AudioController phase={ambientPhase} weather={weather} season={season.season} />
       <Canvas tabIndex={0} role="application" aria-label="Island walking area" style={{ zIndex: 0, imageRendering: graphics.pixelated ? "pixelated" : "auto" }} gl={{ antialias: false, powerPreference: "high-performance" }} dpr={graphics.pixelated ? 0.5 : [1, 1.5]}
         camera={{ position: [0, 10.2, -21], fov: BASE_FOV, near: 0.1, far: 120 }} shadows={castShadows ? "percentage" : false}
         onCreated={({ gl }) => { gl.info.autoReset = false; gl.toneMapping = THREE.NeutralToneMapping; gl.outputColorSpace = THREE.SRGBColorSpace; }}>
@@ -687,7 +686,11 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
         <h1>{site === "ruins" ? "The ruins" : inside === "oracle" ? "Oracle temple" : inside === "museum" ? "Museum" : inside === "cafe" ? "Café" : inside === "hq" ? "Clubhouse" : inside === "house" ? "Your house" : atHome ? "Your island" : "Tethos Island"}</h1>
         <p>{inside === "cafe" ? "Warm drinks and quiet tables. Find a seat to study." : !inside && !atHome && site === "village" && islandEvent ? `${islandEvent.goal.title} is on.` : "A little space to make our own."}</p>
       </header>
-      <button ref={optionsToggleRef} className={styles.panelToggle} aria-expanded={optionsOpen} aria-controls="island-options" onClick={() => setOptionsOpen((open) => !open)}>View options</button>
+      {/* Top-right HUD row (hud-first-login §1): sound, then the view options; panels open below it. */}
+      <div className={styles.hudRight}>
+        <AudioController phase={ambientPhase} weather={weather} season={season.season} className={styles.hudButton} />
+        <button ref={optionsToggleRef} className={styles.panelToggle} aria-expanded={optionsOpen} aria-controls="island-options" onClick={() => setOptionsOpen((open) => !open)}>View options</button>
+      </div>
       <section id="island-options" className={styles.panel} data-open={optionsOpen} aria-label="Island view and graphics" onKeyDown={(event) => {
         if (optionsOpen && event.key === "Escape" && optionsToggleRef.current?.getClientRects().length) {
           event.preventDefault();
@@ -746,7 +749,6 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
         {progression.objective.text && <p className={styles.objective} data-testid="objective"><span aria-hidden="true">◆</span> {progression.objective.text}</p>}
       </div>}
       <CeremonyConfetti active={ceremony && !inside && !atHome} />
-      {actionNote && <p className={styles.actionNote} role="status">{actionNote}</p>}
       {atHome && !decor.decorating && <button className={styles.decorateToggle} onClick={decor.toggle}><kbd>F</kbd> Decorate</button>}
       {atHome && decor.decorating && !shopTab && <DecorateSheet indoor={inside === "house"} selected={decor.selected} layout={layout}
         room={inside === "house" ? layout.rooms[roomAt(player.current.x, layout.rooms.length)] ?? null : null}

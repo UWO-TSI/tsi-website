@@ -223,7 +223,8 @@ function getMobileServerSnapshot(): boolean {
 }
 
 // ─── Component ───────────────────────────────────────────────────────────────
-export default function QuestChecklist() {
+/** `hidden`: on the member island, where the chapter objective is the guide; the signals still tick quests off. */
+export default function QuestChecklist({ hidden = false }: { hidden?: boolean }) {
   const { profile, loading } = useUser();
   const [muted] = useQuestsMuted();
   const [completed, toggle] = useCompletedQuests();
@@ -260,7 +261,7 @@ export default function QuestChecklist() {
   //   - Tier 1-3 default to muted-by-explicit-opt-out (they can re-enable via Settings).
   //     Per design principle #7: "Senior members can mute the game-feel."
   //     The mute toggle is the single source of truth; tier doesn't auto-mute.
-  if (loading) return null;
+  if (hidden || loading) return null;
   if (muted) return null;
 
   // Don't render until profile resolved — avoids flashing on logged-out pages.
