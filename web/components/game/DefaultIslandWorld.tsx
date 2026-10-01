@@ -4,6 +4,7 @@ import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type React
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Html, useProgress, useTexture } from "@react-three/drei";
 import * as THREE from "three";
+import { Map as MapIcon } from "lucide-react";
 import GridWorld from "./grid/GridWorld";
 import GridOcean from "./grid/GridOcean";
 import PlayerAvatar from "./PlayerAvatar";
@@ -747,8 +748,9 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       <CraftingSheet />
       <CollectionBook open={bagOpen} onClose={() => setBagOpen(false)} />
       {!bagOpen && <button className={styles.bagButton} onClick={() => setBagOpen(true)} aria-label="Open your collection journal"><kbd>{keyName(identity.settings.key_bindings.openJournal)}</kbd> Journal</button>}
-      {mapOpen && !inside && !atHome && site !== "ruins" && <div className={styles.minimap} data-minimap>
-        <MiniMap playerPosRef={player} plot={objectivePlot} onClose={() => setMapOpen(false)} />
+      {!inside && !atHome && site !== "ruins" && <div className={styles.minimap} data-minimap>
+        {mapOpen ? <MiniMap playerPosRef={player} plot={objectivePlot} toggleKey={identity.settings.key_bindings.openMap} onClose={() => setMapOpen(false)} />
+          : <button className={styles.mapButton} onClick={() => setMapOpen(true)} aria-label="Show the island map"><MapIcon size={17} aria-hidden /><kbd>{keyName(identity.settings.key_bindings.openMap)}</kbd> Map</button>}
         {progression.objective.text && <p className={styles.objective} data-testid="objective"><span aria-hidden="true">◆</span> {progression.objective.text}</p>}
       </div>}
       <CeremonyConfetti active={ceremony && !inside && !atHome} />

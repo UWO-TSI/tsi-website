@@ -111,7 +111,7 @@ export default function SettingsSheet({ open, onClose }: { open: boolean; onClos
       <ul className={styles.keyList}>{ABILITIES.map(a => <li key={a.id}>
         <span>{a.name}</span>
         <button aria-pressed={abilityListen === a.id} onClick={() => { setAbilityListen(a.id); setAbilityNote("Press a key (Esc to cancel)."); }}>
-          {abilityListen === a.id ? "Press a key…" : <kbd>{abilityKeys[a.id].toUpperCase()}</kbd>}
+          {abilityListen === a.id ? "Press a key…" : <kbd>{keyName(abilityKeys[a.id])}</kbd>}
         </button>
       </li>)}</ul>
       {abilityNote && <p className={styles.hint} role="status">{abilityNote}</p>}
