@@ -12,14 +12,16 @@ import { useThree, useFrame } from "@react-three/fiber";
 import { Html, useTexture } from "@react-three/drei";
 import * as THREE from "three";
 import PlayerAvatar from "../PlayerAvatar";
-import { InteriorKeeper, Piece, applyInteriorBackdrop, followInteriorCamera } from "../interiorShared";
+import { Piece, applyInteriorBackdrop, followInteriorCamera } from "../interiorShared";
+import CafeOwner from "./CafeOwner";
+import { useNPCPersonas } from "@/lib/content/loader";
 import StudySeats from "./StudySeats";
 import { CLUBHOUSE_LIGHTING } from "@/lib/game/islandLighting";
 import type { IslandPhase } from "@/lib/game/islandTime";
 import type { WorldIdentity } from "@/lib/game/identity";
 import { studySolid } from "@/lib/study/seats";
 import { studyHoldsPrompt } from "@/lib/study/worldStore";
-import { CAFE_DOOR, CAFE_EXIT_RANGE, CAFE_ROOM, CAFE_SPAWN } from "@/lib/game/cafe";
+import { CAFE_DOOR, CAFE_EXIT_RANGE, CAFE_ROOM, CAFE_SPAWN, OWNER_TALK } from "@/lib/game/cafe";
 import { standWorld } from "@/lib/game/movement/sim";
 import world from "../DefaultIslandWorld.module.css";
 
@@ -65,17 +67,22 @@ function Room({ phase }: { phase: IslandPhase }) {
 
 export default function CafeInterior({ phase, player, frozen, identity, level, onNear }: {
   phase: IslandPhase; player: React.RefObject<THREE.Vector3>; frozen: boolean; identity: WorldIdentity; level?: number;
-  onNear: (near: "exit" | null) => void;
+  onNear: (near: "exit" | "owner" | null) => void;
 }) {
   const { scene, camera } = useThree();
   const light = CLUBHOUSE_LIGHTING[phase];
   useEffect(() => applyInteriorBackdrop(scene, "#20170f"), [scene]);
   useEffect(() => { camera.position.set(SPAWN[0], 8.4, SPAWN[2] - 7.2); }, [camera]);
-  const near = useRef<"exit" | null>(null);
+  const near = useRef<"exit" | "owner" | null>(null);
+  // A Residents-editor persona on the café owner post names her and gives her lines; else the proposed defaults.
+  const { data: personas } = useNPCPersonas({ permanentOnly: true });
+  const persona = personas.find(p => p.post === "cafe_owner");
   useFrame((_, delta) => {
     followInteriorCamera(camera, player.current.x, player.current.z, Math.min(delta, 0.1));
     // A study seat's prompt takes E while it is up.
-    const next = !studyHoldsPrompt() && Math.hypot(player.current.x - CAFE_DOOR[0], player.current.z - CAFE_DOOR[1]) < CAFE_EXIT_RANGE ? "exit" : null;
+    const { x, z } = player.current;
+    const next = studyHoldsPrompt() ? null : Math.hypot(x - CAFE_DOOR[0], z - CAFE_DOOR[1]) < CAFE_EXIT_RANGE ? "exit"
+      : Math.hypot(x - OWNER_TALK.at[0], z - OWNER_TALK.at[1]) < OWNER_TALK.range ? "owner" : null;
     if (next !== near.current) { near.current = next; onNear(next); }
   });
   return <>
@@ -101,7 +108,7 @@ export default function CafeInterior({ phase, player, frozen, identity, level, o
     {/* Warm pools over the tables (no pendant meshes: the steep camera puts them in front of the seats). */}
     {[[3.8, 0.9], [-4.6, 0.9], [4.4, -3], [-6.2, -3.2]].map(([x, z]) => <pointLight key={x} color="#ffdcaa" intensity={light.ceiling * 0.4} distance={6} position={[x, 3, z]} />)}
     <Html position={[BOARD[0], 2.55, BOARD[2] - 0.2]} center distanceFactor={10} zIndexRange={[3, 0]}><div className={world.cue}>Study board</div></Html>
-    <InteriorKeeper position={[8.55, 0, -0.95]} rotY={-Math.PI / 2} watch={[7, -0.95]} colors={{ apron: "#7a4f2e", shirt: "#f3e6cf" }} hat="cap" playerPosRef={player as React.MutableRefObject<THREE.Vector3>} />
+    <CafeOwner player={player} name={persona?.display_name} lines={persona?.canned_dialogue.length ? persona.canned_dialogue : undefined} />
     <StudySeats area="cafe" player={player} board={BOARD_SPOT} />
     <PlayerAvatar spawnPosition={SPAWN} playerName={identity.display_name} playerLevel={level} member={identity.member} player={player} frozen={frozen}
       world={CAFE} groundHeight={flat} walkOnly />

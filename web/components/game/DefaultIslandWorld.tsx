@@ -99,6 +99,7 @@ import StudySeats from "./study/StudySeats";
 import StudyHud from "./study/StudyHud";
 import CafeInterior from "./study/CafeInterior";
 import CafeGoalSheet from "./study/CafeGoalSheet";
+import { CAFE_OWNER } from "@/lib/game/cafe";
 import { studyHoldsPrompt } from "@/lib/study/worldStore";
 import "@/lib/game/aerialFog";
 import { CURRENT, lookFx, type LookPreset } from "@/lib/game/lookPreset";
@@ -107,7 +108,7 @@ import { EventDecor, eventSpots, PostersSheet, TourneySheet } from "./SeasonalEv
 import { useIslandEvent, type IslandEvent } from "@/lib/game/seasonalEvents";
 import styles from "./DefaultIslandWorld.module.css";
 
-type Near = "enter" | "exit" | "board" | "display" | "desk" | "shelf" | "clock" | "notice" | "catch" | "cafe" | "museum" | "ruins" | "mailbox" | "monument" | "home" | "house" | "village" | "buy" | "claim" | "donate" | "report" | "fish" | "forage" | "net" | "museum_enter" | "cafe_enter" | "curator" | "closet" | "fitting" | "oracle_enter" | "altar" | "missions" | "ruins_exit" | "lantern" | "bench" | "bed" | "trophy" | "posters" | "cocoa" | "picnic" | null;
+type Near = "enter" | "exit" | "board" | "display" | "desk" | "shelf" | "clock" | "notice" | "catch" | "cafe" | "museum" | "ruins" | "mailbox" | "monument" | "home" | "house" | "village" | "buy" | "claim" | "donate" | "report" | "fish" | "forage" | "net" | "museum_enter" | "cafe_enter" | "curator" | "closet" | "fitting" | "oracle_enter" | "altar" | "missions" | "ruins_exit" | "lantern" | "bench" | "bed" | "trophy" | "posters" | "cocoa" | "picnic" | "owner" | null;
 type Sheet = "notice" | "letters" | "journal" | "trophies" | "showcase" | "closet" | "fitting" | "oracle" | "path" | "settings" | "missions" | "tourney" | "posters" | "cafe" | null;
 const PHASE_NAMES: Record<IslandPhase, string> = { dawn: "Dawn", day: "Daylight", evening: "Evening", night: "Night" };
 const CLUBHOUSE_STATIONS: InteriorStation[] = [
@@ -128,6 +129,7 @@ const NEAR_LABELS: Record<Exclude<Near, null>, string> = {
   cafe: "Boarded up · help reopen it at the monument", museum: "Museum · Closed for now", ruins: "Enter the ruins", missions: "Read the mission board", ruins_exit: "Back to the village", lantern: "Pick it up",
   bench: "Sit on the bench", bed: "Sleep in your bed",
   trophy: "Read the tourney board", posters: "Look at the GENESIS posters", cocoa: "Get a hot cocoa", picnic: "Join the picnic",
+  owner: `Talk to ${CAFE_OWNER.name}`,
 };
 const CLOSED: Near[] = ["museum", "monument"];
 /** The village bench in reach as a `tsi:sit` detail: IslandScene writes it each frame, E sits (or stands) there. */
@@ -555,6 +557,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   const act = useCallback((action: Near) => {
     if (action === "notice") { setSheet("notice"); return; }
     if (action === "cafe") { setSheet("cafe"); return; }
+    if (action === "owner") { window.dispatchEvent(new CustomEvent("tsi:cafe-owner-talk")); return; }
     // The catch board's clues are the collection journal's.
     if (action === "catch") { setBagOpen(true); return; }
     if (action === "mailbox") { setSheet("letters"); return; }
