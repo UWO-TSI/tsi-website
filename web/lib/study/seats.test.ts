@@ -3,6 +3,7 @@ import { DEFAULT_TABLES } from "./tables";
 import { studyLayout, WALK_AWAY_RADIUS, localSeats, nearestSeat, seatAt, seatsOf, studySolid, walkedAway } from "./seats";
 import { STUDY_CLIP, poseOf, sitDetail, studyPose } from "./worldStore";
 import type { StudyHook } from "./useStudySession";
+import { CAFE_ROOM } from "@/lib/game/cafe";
 
 describe("seat anchors (study-world §1)", () => {
   it("maps every backend table anchor to exactly its seat count, and nothing else", () => {
@@ -19,7 +20,7 @@ describe("seat anchors (study-world §1)", () => {
   it("keeps every seat standable, inside the room and apart from its neighbours", () => {
     for (const l of studyLayout()) for (const s of seatsOf(l.anchor)) {
       expect(studySolid(l.area, s.x, s.z, 0.2), `${s.anchor}#${s.seat}`).toBe(false);
-      if (l.area === "cafe") expect(Math.abs(s.x) < 8.2 && Math.abs(s.z) < 5.2).toBe(true);
+      if (l.area === "cafe") expect(Math.abs(s.x) < CAFE_ROOM.halfW - 0.3 && Math.abs(s.z) < CAFE_ROOM.halfD - 0.3, `${s.anchor}#${s.seat}`).toBe(true);
     }
     for (const area of ["cafe", "village"] as const) {
       const all = studyLayout().filter(l => l.area === area).flatMap(l => seatsOf(l.anchor));
@@ -30,7 +31,7 @@ describe("seat anchors (study-world §1)", () => {
   it("turns seats and facing with the table's yaw", () => {
     const [s1] = seatsOf("study:cafe-two-1");
     expect(s1.facing).toBeCloseTo(-Math.PI / 2); // looks across the table toward -x
-    expect(studySolid("cafe", 4.4, -3)).toBe(true); // table centre blocks
+    expect(studySolid("cafe", 3.0, 0.5)).toBe(true); // table centre blocks
   });
 
   it("offers the nearest free seat in range, skipping taken ones", () => {
@@ -72,8 +73,9 @@ describe("walk-away detection (row 80)", () => {
 
 describe("seat heights and study clips (study × character)", () => {
   it("puts each seat top at the floor plus its furniture's measured seat", () => {
-    expect(seatAt("study:cafe-four-1", 1)!.y).toBeCloseTo(0.52);
-    expect(seatAt("study:cafe-couch", 2)!.y).toBeCloseTo(0.78);
+    expect(seatAt("study:cafe-four-1", 1)!.y).toBeCloseTo(0.4);
+    expect(seatAt("study:cafe-couch", 2)!.y).toBeCloseTo(0.4);
+    expect(seatAt("study:cafe-window-1", 1)!.y).toBeCloseTo(0.6);
     const slope = (x: number, z: number) => 0.1 * x + 0.05 * z;
     const s = seatAt("study:plaza-picnic", 3, slope)!;
     expect(s.y).toBeCloseTo(slope(s.x, s.z) + 0.5);
@@ -82,7 +84,7 @@ describe("seat heights and study clips (study × character)", () => {
   it("studies in focus, stretches on a break and sits otherwise, at the seat's top and facing", () => {
     expect((["focus", "break", "seated", "ended", null] as const).map(p => STUDY_CLIP[poseOf(p)])).toEqual(["Study", "Stretch", "Sit", "Sit", "Sit"]);
     const seat = seatAt("study:cafe-two-1", 1)!;
-    expect(sitDetail(seat, "focus")).toEqual({ x: seat.x, z: seat.z, clip: "Study", seatY: 0.52, yaw: -Math.PI / 2 });
+    expect(sitDetail(seat, "focus")).toEqual({ x: seat.x, z: seat.z, clip: "Study", seatY: 0.4, yaw: -Math.PI / 2 });
     const onBreak = { session: { phase: "break" } } as unknown as StudyHook;
     expect(studyPose({ study: onBreak, near: null, seated: seat })).toEqual({ pose: "stretch", seat });
     expect(studyPose({ study: onBreak, near: null, seated: null })).toBeNull();

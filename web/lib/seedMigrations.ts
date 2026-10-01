@@ -17,6 +17,7 @@ import { craftingSeedSql, recipeDropsSql } from "./crafting/seed";
 import { combatSeedSql } from "./combat/seed";
 import { seasonalGoalsSql } from "./progression/seed";
 import { economySeedSql, eventItemsSeedSql, ownershipSeedSql } from "./wallet/seed";
+import { studyTablesSeedSql } from "./study/seed";
 
 export const MIGRATIONS = join(__dirname, "../supabase/migrations");
 
@@ -31,6 +32,8 @@ export const SEEDS: readonly Seed[] = [
   { name: "event-furniture", file: "20260929120000_seasonal_events.sql", sql: eventItemsSeedSql },
   { name: "seasonal-goals", file: "20260929120000_seasonal_events.sql", sql: seasonalGoalsSql },
   { name: "recipe-drops", file: "20260930100000_recipe_drops.sql", sql: recipeDropsSql },
+  // The study migration's hand-written seed has no markers: the first generated block (the café tables, cafe-polish §7) upserts every row.
+  { name: "study-tables", file: "20260926150500_study.sql", sql: studyTablesSeedSql },
 ];
 
 /** A generated block's first and last lines: its BEGIN and END markers. */
@@ -75,7 +78,8 @@ export function seedMigration(dir = MIGRATIONS): string | null {
   const parts = SEEDS.flatMap((seed) => {
     const next = seed.sql(), { file, block } = currentSeed(seed, dir);
     if (block === next) return [];
-    const upsert = changedRowsUpsert(block, next);
+    // A first block written by hand (no markers): diff against that migration's own INSERTs.
+    const upsert = changedRowsUpsert(block || readFileSync(join(dir, file), "utf8"), next);
     return [`-- previous block: ${file}\n${tag(seed.name)}${next}${upsert ? `\n-- The rows this change adds or edits, so they land where the insert above does nothing.\n${upsert}` : ""}`];
   });
   if (!parts.length) return null;

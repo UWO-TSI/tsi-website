@@ -99,7 +99,7 @@ import StudySeats from "./study/StudySeats";
 import StudyHud from "./study/StudyHud";
 import CafeInterior from "./study/CafeInterior";
 import CafeGoalSheet from "./study/CafeGoalSheet";
-import { CAFE_OWNER } from "@/lib/game/cafe";
+import { CAFE_GRADE, CAFE_OWNER } from "@/lib/game/cafe";
 import { studyHoldsPrompt } from "@/lib/study/worldStore";
 import "@/lib/game/aerialFog";
 import { CURRENT, lookFx, type LookPreset } from "@/lib/game/lookPreset";
@@ -552,7 +552,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   const sun = preset ? null : conditions.sun;
   const light = useMemo(() => withWeather(withSeason(islandLight(lookPreset, phase, sun), look), weather), [phase, look, weather, lookPreset, sun]);
   const conditionsLabel = `${season.season[0].toUpperCase()}${season.season.slice(1)}${Object.values(season.weights).some(w => w > 0 && w < 1) ? " (changing)" : ""} · ${weather[0].toUpperCase()}${weather.slice(1)}`;
-  const grade = inside ? CLUBHOUSE_LIGHTING[phase].grade : light.grade;
+  const grade = inside === "cafe" ? { ...CLUBHOUSE_LIGHTING[phase].grade, ...CAFE_GRADE } : inside ? CLUBHOUSE_LIGHTING[phase].grade : light.grade;
   const atHome = site === "home";
   const act = useCallback((action: Near) => {
     if (action === "notice") { setSheet("notice"); return; }

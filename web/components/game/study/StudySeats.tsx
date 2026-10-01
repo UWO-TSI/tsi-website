@@ -12,6 +12,8 @@ import { useFrame } from "@react-three/fiber";
 import { Html } from "@react-three/drei";
 import type * as THREE from "three";
 import { GLBProp } from "../NatureModels";
+import { CafeModel } from "./CafeModel";
+import type { ContactSize } from "@/lib/game/shadows";
 import Character, { CHARACTER_SCALE, type CharacterMotion } from "../character/Character";
 import { calculateCurvedHtmlPosition } from "@/lib/game/worldProjection";
 import { hashSeed, parseLook, randomLook, seeded } from "@/lib/game/character/look";
@@ -30,27 +32,31 @@ const standUp = (seat: WorldSeat) => window.dispatchEvent(new CustomEvent("tsi:s
 const sitIn = (seat: WorldSeat, phase: Mate["phase"] | undefined) => window.dispatchEvent(new CustomEvent("tsi:sit", { detail: sitDetail(seat, phase) }));
 const atSeat = (seat: WorldSeat, p: THREE.Vector3) => Math.abs(p.x - seat.x) < 0.01 && Math.abs(p.z - seat.z) < 0.01;
 
+/** The café furniture (art/cafe/build_cafe.py, one model per kind) and its soft contact shadow, in the set's own frame. */
+const CAFE_SET: Partial<Record<TableLayout["furniture"], ContactSize>> = {
+  bar: { cx: 0, cz: -0.65, rx: 0.75, rz: 0.35, height: 0, strength: 0.5 },
+  two: { cx: 0, cz: 0, rx: 1.15, rz: 0.55, height: 0, strength: 0.55 },
+  four: { cx: 0, cz: 0, rx: 0.9, rz: 1.2, height: 0, strength: 0.55 },
+  booth: { cx: 0, cz: 0, rx: 0.95, rz: 1.35, height: 0, strength: 0.6 },
+  communal: { cx: 0, cz: 0, rx: 1.45, rz: 1.1, height: 0, strength: 0.55 },
+};
+
 /**
- * Placeholder furniture per kind, from the HQ clubhouse family (tables,
- * chairs, sofa) and village props (benches, parasol). Exported for the
- * phone companion's isolated table scene (specs/companion.md deliverable 2),
- * which places one table at the origin instead of a room full of them.
+ * Furniture per kind: the café's hand-modeled sets, and outdoors the village
+ * benches and parasol. Exported for the phone companion's isolated table scene
+ * (specs/companion.md deliverable 2), which places one table at the origin.
  */
 export function TableFurniture({ t, ground }: { t: TableLayout; ground: (x: number, z: number) => number }) {
   const seats = FURNITURE[t.furniture].seats;
-  const tables = t.furniture === "four" || t.furniture === "picnic" ? [0.49, -0.49] : t.furniture === "couch" ? [] : [0];
   const y = ground(t.at[0], t.at[1]);
+  const set = CAFE_SET[t.furniture];
+  if (set) return <CafeModel name={`set-${t.furniture}`} position={[t.at[0], y, t.at[1]]} yaw={t.yaw} contact={set} />;
   return <group position={[t.at[0], y, t.at[1]]} rotation={[0, t.yaw, 0]}>
-    {tables.map(x => <GLBProp key={x} url={`${F}reading-table.glb`} position={[x, 0, 0]} scale={0.1} />)}
-    {t.furniture === "couch" ? <>
-      <GLBProp url={`${F}lounge-sofa.glb`} position={[0, 0, 0.2]} scale={0.16} rotation={[0, Math.PI, 0]} />
-      <GLBProp url={`${F}lounge-table.glb`} position={[0, 0, -1.35]} scale={0.1} />
-      <GLBProp url={`${F}lounge-tea.glb`} position={[0.3, 0.52, -1.35]} scale={0.075} />
-    </> : t.furniture === "picnic" || t.furniture === "pier"
-      ? [...new Set(seats.map(([, z]) => z))].map(z => <GLBProp key={z} url={`${P}bench-wood.glb`} position={[0, 0, z]} />)
-      : seats.map(([x, z, facing], i) => <GLBProp key={i} url={`${F}study-chair.glb`} position={[x, 0, z]} scale={0.1} rotation={[0, facing, 0]} />)}
+    {t.furniture === "picnic" && [0.49, -0.49].map(x => <GLBProp key={x} url={`${F}reading-table.glb`} position={[x, 0, 0]} scale={0.1} />)}
+    {[...new Set(seats.map(([, z]) => z))].map(z => <GLBProp key={z} url={`${P}bench-wood.glb`} position={[0, 0, z]} />)}
     {t.furniture === "pier" && <GLBProp url={`${P}beach-parasol.glb`} position={[-2.4, 0, 0.3]} />}
-    {t.furniture !== "couch" && <GLBProp url={`${F}lounge-book.glb`} position={[0.15, 0.84, 0]} scale={0.065} rotation={[0, 0.3, 0]} />}
+    {t.furniture === "pier" && <GLBProp url={`${F}reading-table.glb`} position={[0, 0, 0]} scale={0.1} />}
+    <GLBProp url={`${F}lounge-book.glb`} position={[0.15, 0.84, 0]} scale={0.065} rotation={[0, 0.3, 0]} />
   </group>;
 }
 

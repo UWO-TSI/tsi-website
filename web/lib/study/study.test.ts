@@ -5,6 +5,7 @@ import { memoryStudyStore } from "./memoryStore";
 import { advance, blockBonus, coinsFor, heartbeat, leave, start, takeBreak, resume, type StudySession } from "./rules";
 import { beat, board, breakNow, endNow, getState, lock, myStats, resumeNow, sit, startSession, topStudiers } from "./service";
 import { DEFAULT_TABLES } from "./tables";
+import { SEEDS, currentSeed } from "@/lib/seedMigrations";
 
 const T0 = Date.parse("2026-09-24T14:00:00Z");
 const at = (min: number, sec = 0) => new Date(T0 + min * 60_000 + sec * 1000);
@@ -225,10 +226,15 @@ describe("table chat (row 77)", () => {
 });
 
 describe("seed", () => {
-  it("DEFAULT_TABLES mirror 20260926150500_study.sql's study_tables seed", () => {
-    const sql = readFileSync(join(__dirname, "../../supabase/migrations/20260926150500_study.sql"), "utf8");
+  it("DEFAULT_TABLES are the newest study-tables seed block (lib/seedMigrations.ts), on the original ids", () => {
+    const { file, block } = currentSeed(SEEDS.find((x) => x.name === "study-tables")!);
     const rows = DEFAULT_TABLES.map((t) => `  ('${t.id}', '${t.slug}', '${t.label}', '${t.location}', '${t.anchor}', '${t.kind}', ${t.seats}, ${t.position})`);
-    expect(sql).toContain(["INSERT INTO study_tables (id, slug, label, location, anchor, kind, seats, position) VALUES", rows.join(",\n"), "ON CONFLICT (slug) DO NOTHING;"].join("\n"));
+    expect(block).toContain(rows.join(",\n"));
+    expect(file > "20260926150500_study.sql").toBe(true);
+    // The original 7 café table ids stay; the café holds about 20 seats (row 270).
+    const original = readFileSync(join(__dirname, "../../supabase/migrations/20260926150500_study.sql"), "utf8");
+    for (const t of DEFAULT_TABLES) expect(original).toContain(`('${t.id}', '${t.slug}'`);
+    expect(DEFAULT_TABLES.filter((t) => t.location === "cafe").reduce((n, t) => n + t.seats, 0)).toBe(20);
   });
 });
 
