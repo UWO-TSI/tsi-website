@@ -62,6 +62,13 @@ def hair_vol(lat):
     return 0.011 + 0.013 * _ss(0, 80, lat)
 
 
+def hair_outer(lat):
+    """The outer surface of the v7 sculpted-lock hair, metres above the scalp (avatar v7, David 2026-09-30: "Fuller,
+    like the sheet"): lock tops stand this high, the hats sit on it and the hat tucks and bands follow it. About
+    3.2 cm at the hairline and 4.3 cm at the crown, 2 cm down the sides (hair_vol was 1.1-2.4 cm)."""
+    return hair_vol(lat) + 0.008 + 0.011 * _ss(-10, 70, lat)
+
+
 def hairline(lon):
     """Front edge of the back caps (lat, degrees): 44 above the brow centre, down to 22 at the temples (|lon| 60),
     where the side panels start. Bangs lie on the forehead below it and tuck their roots under it."""

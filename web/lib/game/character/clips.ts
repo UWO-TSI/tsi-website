@@ -6,6 +6,7 @@
  */
 import { CLIP_BY_NAME } from "./look";
 import type { WeaponKind } from "@/lib/game/combat/contract";
+import type { FaceOverride } from "./face";
 
 export type ClipName = "Idle" | "Walk" | "Run" | "Sit" | "Study" | "Sleep" | "Fish" | "FishHold" | "Forage" | "Dig" | "Net"
   | "Wave" | "Cheer" | "Laugh" | "Sad" | "Dance" | "AttackMelee" | "AttackBow" | "AttackCast" | "DodgeRoll" | "Hit" | "Defeat" | "Trace" | "Stretch"
@@ -23,7 +24,11 @@ export interface CharacterMotion { speed: number; yaw: number; lift: number; pos
   /** Animation clock rate (slow motion in /lab/move; 1 when unset). */
   rate?: number;
   /** End the running one-shot now (a landing cuts a short hop's Jump); the character clears it. */
-  stop?: boolean }
+  stop?: boolean;
+  /** Seconds of talking left (a chat or speech bubble): the mouth moves until it runs out; the character counts it down. */
+  talk?: number;
+  /** A forced face (dialogue portraits, the avatar bench): expression, eye frame or mouth cell. */
+  face?: FaceOverride | null }
 
 export const isLoop = (clip: ClipName) => CLIP_BY_NAME.get(clip)?.loop ?? true;
 

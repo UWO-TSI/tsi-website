@@ -11,3 +11,23 @@ The v6 body and head are procedural bmesh (`art/characters/base/build_v6.py`); t
 3. **Face system: animated painted face (ACNH-style).** Eyes, brows and mouth become separate layers the engine animates without re-drawing a canvas each frame: blinks at random 2–6 s intervals, mouth frames for emotes and chat, the six expressions, all from David's picked eye and mouth sets, redrawn crisp (at least 1024 px in the creator, 512 in the world) and mapped by the new face UVs without stretch.
 4. **Pipeline.** Live Blender through the `blender` MCP (start it with `art/characters/blender_mcp_autostart.py`), with a viewport screenshot after each step; source files saved as `art/characters/v7/*.blend`; GLB export through the existing `kit.py` path so catalogue ids stay stable; `web/scripts/sync-character-assets.mjs`; engine evidence via `specs/evidence/avatar-fit/shots.mjs`.
 5. **Milestone 1 (review gate):** the new head, the face system and three hairstyles (a short one, a bob with straight bangs, a long one with curtain bangs), shipped as `.blend` files plus in-game sheets (creator close-ups, 3/4, game camera, the six expressions, a blink and a talk strip). David approves before the rest of the library (16 bangs, 12 backs) is rebuilt in the same system.
+
+## Milestone 1 status (build agent, 2026-09-30)
+Delivered for review:
+- The hand-modeled head (`art/characters/v7/head.blend`, live on `base/v7_clips.glb`).
+- The face system, drawn in the engine by `face.ts` and `faceMaterial.ts` from `art/characters/v7/face/`.
+- Three lock styles: `hair_short.blend`, `hair_bob.blend` and `hair_long.blend`, under their existing ids.
+
+The pipeline and numbers are in `art/characters/v7/README.md`. The sheets are in `specs/evidence/avatar-v7/`: open `01-styles`, `02-vs-hair-3d-set`, `05-blink-talk` and `03-vs-ref18` first. The bench is at `/lab/avatar`. Questions are in `specs/avatar-v7-questions.md`. The rest of the library (13 bangs, 9 backs) waits for David's verdict.
+
+## Full library status (build agent, 2026-09-30)
+David approved milestone 1 with three tweaks: hair "Fuller, like the sheet", sheen "Stronger glossy band", mouths "Bigger talk shapes". All three are in:
+- fuller hair with deep grooves between locks;
+- near-white lock streaks that move with the sun;
+- four bigger talk mouths, with the resting mouth kept small.
+
+The whole library (16 bangs, 12 backs) is now sculpted locks under its existing ids, in `art/characters/v7/hair_bangs.blend` and `hair_backs.blend`. `build_hair.py` is retired. Hats carry lock tucks and sit on the fuller hair; the bands rest on the lock ridges.
+
+fit_check: PASS, 0 fails, 0 flags. The worst seam over the 192 pairs is 13.2 mm, inside the 14 mm lock-groove limit. The heaviest full look (hair or hat, outfit, glasses) is 3,995 tris.
+
+Sheets are in `specs/evidence/avatar-v7/`: open `09-before-after`, `10-library-bangs`, `11-library-backs`, `12-hats` and `04-expressions` first. Numbers are in `fit-v7.txt`, the pipeline in `art/characters/v7/README.md`, and questions in `specs/avatar-v7-questions.md`.

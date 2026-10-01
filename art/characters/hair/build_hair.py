@@ -25,6 +25,13 @@ Checked by art/characters/fit_check.py.
 import bpy, json, math, os, sys
 from mathutils import Vector
 
+# Retired (avatar v7, 2026-09-30): every bangs and back id is now a sculpted-lock piece modeled in
+# art/characters/v7/hair_bangs.blend and hair_backs.blend and exported by v7/export_hair.py. Kept for history: the
+# parametric shells it built are in git before this date.
+if "--force-legacy" not in sys.argv:
+    print("build_hair.py is retired: run art/characters/v7/export_hair.py (the lock library)")
+    sys.exit(0)
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, ".."))
 import kit  # noqa: E402  (shared Piece, rig loader, export, render helpers)
@@ -286,9 +293,17 @@ catalog = {"note": "Hair library (rows 135, 191, 192). Each GLB = CharacterRig +
                    "mixamorig:Head; bind to the character skeleton by bone name. M_Hair is tinted from palette.json "
                    "hair colours. Sheet cells are the nearest reference cell on David's labelled sheets.",
            "head": "art/characters/base/head_shape.py (ref18_measurements.json)", "bangs": [], "back": []}
+# avatar v7: the sculpted-lock styles are modeled in art/characters/v7/hair_<style>.blend and exported by
+# v7/export_hair.py; this script leaves those ids (and their catalogue entries) alone
+_CAT = json.load(open(os.path.join(HERE, "..", "character_catalog.json")))
+V7_IDS = {h["id"] for h in _CAT.get("hair", []) if h.get("v7")}
+_OLD = json.load(open(os.path.join(HERE, "hair_catalog.json"))) if os.path.exists(os.path.join(HERE, "hair_catalog.json")) else {}
 objs = {}
 for slot, table in (("bangs", BANGS), ("back", BACKS)):
     for sid, name, cell, fn in table:
+        if sid in V7_IDS:
+            catalog[slot].append(next(h for h in _OLD[slot] if h["id"] == sid))
+            continue
         ob = fn().finish(sid, rig, {"M_Hair": mat}, sharp=SHARP, zrange=ZRANGE)
         tris = sum(len(p.vertices) - 2 for p in ob.data.polygons)
         objs[sid] = ob
@@ -296,7 +311,8 @@ for slot, table in (("bangs", BANGS), ("back", BACKS)):
         kit.export(ob, rig, os.path.join(HERE, slot, f"{sid}.glb"))
         print(f"HAIR {slot} {sid} tris={tris}" + ("  OVER BUDGET" if tris > MAX_TRIS else ""))
 json.dump(catalog, open(os.path.join(HERE, "hair_catalog.json"), "w"), indent=1)
-kit.update_catalog("hair", [{"id": h["id"], "slot": slot, "name": h["name"], "glb": f"hair/{h['file']}", "tris": h["tris"],
+_V7 = {h["id"]: h for h in _CAT.get("hair", []) if h.get("v7")}
+kit.update_catalog("hair", [_V7.get(h["id"]) or {"id": h["id"], "slot": slot, "name": h["name"], "glb": f"hair/{h['file']}", "tris": h["tris"],
                              "materials": [{"name": "M_Hair", "tint": "hair"}], "decalSlot": None, "hidesBackHair": False,
                              "hides": [], "sheetCell": h["sheet_cell"]} for slot in ("bangs", "back") for h in catalog[slot]])
 
@@ -326,10 +342,14 @@ if RENDER_DIR:
         bpy.ops.render.render(write_still=True)
 
     for sid, _, _, _ in BANGS:
+        if sid in V7_IDS:
+            continue
         show_only({sid, "back_bob"})
         shot(os.path.join(RENDER_DIR, f"bangs_{sid}_a.png"), 0)
         shot(os.path.join(RENDER_DIR, f"bangs_{sid}_b.png"), 35)
     for sid, _, _, _ in BACKS:
+        if sid in V7_IDS:
+            continue
         show_only({sid, "bangs_straight"})
         shot(os.path.join(RENDER_DIR, f"back_{sid}_a.png"), 30)
         shot(os.path.join(RENDER_DIR, f"back_{sid}_b.png"), 150)

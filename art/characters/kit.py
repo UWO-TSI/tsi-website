@@ -376,7 +376,7 @@ class Piece:
                 s = grad[0] + (grad[1] - grad[0]) * min(1.0, max(0.0, (loop.vert.co.z - lo) / max(hi - lo, 1e-6)))
                 loop[col] = (s, s, s, 1)
                 if uvl:
-                    loop[uvl].uv = uvs[loop.vert] if uvs else (0.5, 0.5)
+                    loop[uvl].uv = uvs.get(loop.vert, (0.5, 0.5)) if uvs else (0.5, 0.5)   # a welded vert keeps its face
         vreg = [self.vreg.get(v, self.region) for v in bm.verts]
         me = bpy.data.meshes.new(name)
         bm.to_mesh(me)
@@ -414,7 +414,8 @@ def merge_piece(pc, other):
     keep = pc.mat
     for f in other.bm.faces:
         pc.mat = other.fmat.get(f, keep)
-        pc.f([vmap[v] for v in f.verts], other.ref.get(f, HC))
+        uvs = other.fuv.get(f)
+        pc.f([vmap[v] for v in f.verts], other.ref.get(f, HC), uv=[uvs.get(v, (0.5, 0.5)) for v in f.verts] if uvs else None)
     pc.mat = keep
     other.bm.free()
 
@@ -431,7 +432,7 @@ def seam_off(lat):
     return CAP_MIN * hair_vol(lat)
 
 
-def hair_cap(bottom, vol=1.0, hem=0.009, tips=None, side=None, lons=None, top=None):
+def hair_cap(bottom, vol=1.0, hem=0.009, tips=None, side=None, lons=None, top=None, outer=None):
     """Closed crown cap on the scalp: the face window open below the hairline, sides and back down to bottom(lon) lat,
     outer surface on hair_vol x vol, tapering to seam_off at the front edge and to `hem` at the bottom edge (side =
     fixed offset for the rows above the hem, e.g. an undercut), underside tucked into the scalp. Rows: hem, two
@@ -453,7 +454,7 @@ def hair_cap(bottom, vol=1.0, hem=0.009, tips=None, side=None, lons=None, top=No
         return [bt, bt + (hl - bt) / 3, bt + (hl - bt) * 2 / 3] + up
 
     def off(lat, lon, ri):
-        v = hair_vol(lat) * vol
+        v = outer(lat) if outer else hair_vol(lat) * vol       # outer(lat): the v7 lock hair's under-cap (avatar v7)
         if ri == 0:
             return hem
         if ri in (1, 2):
@@ -471,7 +472,7 @@ def hair_cap(bottom, vol=1.0, hem=0.009, tips=None, side=None, lons=None, top=No
     grid = pc.patch(base, rows, off, skip=win, wrap=True,
                     tips=(lambda i, la, lb: None if max(abs(la), abs(lb)) < WINDOW else tips(i, la, lb, cmid(la, lb))) if tips else None)
     if not top:
-        apex = pc.hv(90, 0, hair_vol(90) * vol)
+        apex = pc.hv(90, 0, outer(90) if outer else hair_vol(90) * vol)
         for i in range(len(lons) - 1):
             pc.f([grid[i][-1], grid[i + 1][-1], apex], HC)
     pc.close_fan(pc.since(n0), lambda v: hair_point(*pc.sph[v], INNER))
@@ -531,7 +532,7 @@ def registry():
     return parts, part
 
 
-HEADWEAR_TRIS = 1100   # hats carry their own closed hair tuck and replace the back hair while worn (avatar-fit)
+HEADWEAR_TRIS = 1150   # hats carry their own hair tuck (avatar v7: sculpted locks) and replace the back hair while worn
 
 
 def build_parts(parts, rig, section, subdir, images=None, max_tris=300):

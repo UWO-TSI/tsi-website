@@ -1,6 +1,9 @@
 """Full clip set on the locked v6 body -> base/v6_clips.glb (+ the "clips" section of ../character_catalog.json).
 
-  /Applications/Blender.app/Contents/MacOS/Blender -b -P art/characters/base/build_clips.py
+  /Applications/Blender.app/Contents/MacOS/Blender -b -P art/characters/base/build_clips.py [-- head v7]
+
+With `head v7` the head is the hand-modeled V7_Head (art/characters/v7/head.blend) and the file is base/v7_clips.glb,
+which the engine loads (avatar v7); body, rig and clips are the same.
 
 Idle and Walk are v6's own actions, unchanged. Every other clip is hand-keyed here as key poses in armature space
 (rotations relative to the parent, the same convention as build_v6.apply_pose), with eased, overshooting
@@ -22,12 +25,40 @@ FPS, TAU = 30, math.tau
 bpy.ops.wm.read_factory_settings(use_empty=True)
 sc = bpy.context.scene
 sc.render.fps = FPS
+ARGS = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
+HEAD = ARGS[ARGS.index("head") + 1] if "head" in ARGS else "v6"      # v7: the hand-modeled head (art/characters/v7)
 with bpy.data.libraries.load(os.path.join(HERE, "v6.blend"), link=False) as (src, dst):
     dst.objects = list(src.objects)
     dst.actions = list(src.actions)
 for o in dst.objects:
     sc.collection.objects.link(o)
 rig = bpy.data.objects["CharacterRig"]
+HEAD_OB = "V6_Head"
+if HEAD == "v7":
+    # avatar v7 (specs/avatar-v7.md item 1): same body, rig and clips; the head is V7_Head from v7/head.blend,
+    # re-bound to this rig, with the material names the engine looks for (M_Skin, M_Face)
+    old = bpy.data.objects["V6_Head"]
+    old_face = bpy.data.materials["M_Face"]
+    bpy.data.objects.remove(old, do_unlink=True)
+    bpy.data.materials.remove(old_face)
+    before = set(bpy.data.objects)
+    with bpy.data.libraries.load(os.path.join(HERE, "..", "v7", "head.blend"), link=False) as (src, dst):
+        dst.objects = ["V7_Head"]
+    head = bpy.data.objects["V7_Head"]
+    for o in set(bpy.data.objects) - before - {head}:
+        bpy.data.objects.remove(o, do_unlink=True)          # the head file's own rig copy
+    sc.collection.objects.link(head)
+    head.parent = rig
+    head.matrix_parent_inverse.identity()
+    head.matrix_basis.identity()
+    for md in head.modifiers:
+        if md.type == "ARMATURE":
+            md.object = rig
+    face = head.data.materials[1]
+    face.name = "M_Face"
+    head.data.materials[0] = bpy.data.materials["M_Skin"]
+    HEAD_OB = "V7_Head"
+OUT_GLB = "v7_clips.glb" if HEAD == "v7" else "v6_clips.glb"
 P_ = "mixamorig:"
 BONES = {b.name[len(P_):]: b for b in rig.data.bones}
 NAMES = list(BONES)
@@ -715,7 +746,7 @@ def skid(p):
 
 
 # ================================================================ bake, ground, check
-MESHES = [bpy.data.objects[n] for n in ("V6_Body", "V6_Head")]
+MESHES = [bpy.data.objects[n] for n in ("V6_Body", HEAD_OB)]
 
 
 def apply(P):
@@ -828,12 +859,14 @@ for o in sc.objects:
 bpy.ops.object.select_all(action="SELECT")
 bpy.context.view_layer.objects.active = rig
 bpy.ops.export_scene.gltf(
-    filepath=os.path.join(HERE, "v6_clips.glb"), export_format="GLB", use_selection=True, export_yup=True,
+    filepath=os.path.join(HERE, OUT_GLB), export_format="GLB", use_selection=True, export_yup=True,
     export_normals=True, export_texcoords=True, export_vertex_color="ACTIVE", export_all_vertex_colors=False,
     export_skins=True, export_animations=True, export_animation_mode="ACTIONS", export_force_sampling=True,
     export_leaf_bone=False, export_optimize_animation_size=True)
-kit.update_catalog("base", {"glb": "base/v6.glb", "clips_glb": "base/v6_clips.glb", "fps": FPS,
-                            "note": "v6_clips.glb = the v6 base body (tee + shorts + default hair) with every clip. Sit/Study "
+kit.update_catalog("base", {"glb": "base/v6.glb", "clips_glb": f"base/{OUT_GLB}", "fps": FPS,
+                            **({"head": "v7/head.blend"} if HEAD == "v7" else {}),
+                            "note": f"{OUT_GLB} = the v6 base body (tee + shorts + default hair) with every clip"
+                                    + (", and the hand-modeled v7 head (avatar v7)" if HEAD == "v7" else "") + ". Sit/Study "
                                     "sit on a seat at seatHeight; Sleep/Defeat lie on the back with the head toward the "
                                     "character's back (+Y Blender, -Z glTF). hand = the socket that holds the weapon."})
 kit.update_catalog("clips", catalog)

@@ -1,72 +1,140 @@
 /**
- * Face texture composition (rows 132, 144, 191, 192): fill the skin tone,
- * then draw the chosen extras, brows (tinted with the hair colour), eyes and
- * mouth from the feature atlas into their face_variants.json rectangles.
- * Expressions swap eyes and/or mouth for the length of a clip (ruling 23).
+ * Animated painted face (avatar v7, rows 132, 144, 192, 254): an ACNH-style face the engine animates without
+ * redrawing a canvas. The face atlas (art/characters/v7/build_face.py) holds every feature once; the face shader
+ * draws the skin colour plus seven layer slots (blush, freckles, mole, brows, the two eyes, mouth), each an atlas
+ * cell placed at its anchor on the face canvas (the head's UVs), mirrored for the other side where the layer is.
+ * Blinking, talking and the six expressions only change which cell each slot shows and the brows' pose.
+ * Pure: FaceAnimator picks the frame, faceSlots turns it into slot data, faceMaterial.ts uploads it.
  */
-import { FACE, PALETTE, type CharacterLook, type FaceLayer } from "./look";
+import { FACE, PALETTE, type CharacterLook, type EyeFrame, type FaceCell } from "./look";
 
-export type Expression = "neutral" | "happy" | "surprised" | "sad" | "angry" | "sleepy" | "blink";
+export type Expression = "neutral" | "happy" | "surprised" | "sad" | "angry" | "sleepy";
+export const EXPRESSIONS: readonly Expression[] = ["neutral", "happy", "surprised", "sad", "angry", "sleepy"];
 
-/** Ruling 23: clip → expression; everything else is neutral with blinks. */
+/** Ruling 23: clip → expression; everything else is neutral (with blinks). */
 export const CLIP_EXPRESSION: Record<string, Expression> = {
   Laugh: "happy", Cheer: "happy", Stretch: "happy", Dance: "happy", Sad: "sad", Defeat: "sad", Hit: "surprised", Sleep: "sleepy",
   AttackMelee: "angry", AttackBow: "angry", AttackCast: "angry",
 };
-/** Which atlas cells stand in for each expression (closed "n" arcs, "> <", the half lid, open mouths). */
-export const EXPRESSION_FACE: Record<Exclude<Expression, "neutral">, { eyes?: string; mouth?: string }> = {
-  happy: { eyes: "E8.1", mouth: "M2.1" }, surprised: { mouth: "M6.1" }, sad: { eyes: "E1.2", mouth: "M4.3" },
-  angry: { eyes: "E6.1", mouth: "M2.2" }, sleepy: { eyes: "E1.6", mouth: "M3.1" }, blink: { eyes: "E8.1" },
-};
 
-export interface FaceDraw { layer: FaceLayer; id: string; src: [number, number, number, number]; dest: [number, number, number, number]; tint: string | null }
+/** What one frame of the face shows. brow = [dy (canvas units, + down), tilt (degrees, + raises the inner end)]. */
+export interface FacePose { eyes: string; eyeFrame: EyeFrame; mouth: string; brow: [number, number] }
+/** Forced parts of the face (dialogue portraits, the avatar bench, evidence captures). */
+export interface FaceOverride { expression?: Expression; eyeFrame?: EyeFrame; mouth?: string; talking?: boolean }
 
-/**
- * The draw list for one face: atlas source rect → destination rect in canvas pixels. Atlas cells are cropped to
- * their ink and drawn 1:1 at (dx, dy) inside their layer's rect on a FACE.canvas-sized face; other sizes scale.
- */
-export function faceDraws(look: CharacterLook, expression: Expression, size: number): FaceDraw[] {
-  const swap = expression === "neutral" ? {} : EXPRESSION_FACE[expression];
-  const k = size / FACE.canvas;
-  const chosen: Record<FaceLayer, string[]> = { extras: look.extras, brows: [look.brows], eyes: [swap.eyes ?? look.eyes], mouth: [swap.mouth ?? look.mouth] };
-  return FACE.compose_order.flatMap(layer => {
-    const { dest: [u0, w0], items, tint } = FACE.layers[layer];
-    return chosen[layer].filter(id => id in items).map(id => {
-      const [x, y, w, h, dx, dy] = items[id];
-      return {
-        layer, id, src: [x, y, w, h] as [number, number, number, number],
-        dest: [u0 * size + dx * k, w0 * size + dy * k, w * k, h * k] as [number, number, number, number],
-        tint: tint === "hair" ? PALETTE.hair[look.hair] : null,
-      };
-    });
-  });
+const DEPTH: Record<EyeFrame, number> = { open: 0, half: 1, closed: 2 };
+const eyeCells = (id: string) => FACE.layers.eyes.items[id] ?? FACE.layers.eyes.items[FACE.layers.eyes.default];
+/** An eye style that has blink frames (lidded eyes; the shut ones like E8.1 and "> <" E6.1 do not). */
+export const canBlink = (eyes: string) => !!eyeCells(eyes).closed;
+
+/** The resting face of an expression on a look: its eyes (or the look's), frame, mouth and brow pose. */
+export function restPose(look: CharacterLook, expression: Expression): FacePose {
+  const e = FACE.expressions[expression] ?? FACE.expressions.neutral;
+  const eyes = e.eyes ?? look.eyes;
+  return { eyes, eyeFrame: eyeCells(eyes)[e.eyeFrame] ? e.eyeFrame : "open", mouth: e.mouth ?? look.mouth, brow: [e.brow[0], e.brow[1]] };
 }
 
-/** The subset of CanvasRenderingContext2D the composer needs (tests pass a recorder). */
-export interface Ctx2D {
-  fillStyle: string | CanvasGradient | CanvasPattern; globalCompositeOperation: GlobalCompositeOperation;
-  fillRect(x: number, y: number, w: number, h: number): void; clearRect(x: number, y: number, w: number, h: number): void;
-  drawImage(image: CanvasImageSource, sx: number, sy: number, sw: number, sh: number, dx: number, dy: number, dw: number, dh: number): void;
-  drawImage(image: CanvasImageSource, dx: number, dy: number): void;
+/** The blink's frame `t` seconds after it started, or null once it is over (half, closed, half: ~0.15 s). */
+export function blinkFrame(t: number): EyeFrame | null {
+  let acc = 0;
+  for (const [frame, len] of FACE.blink.frames) {
+    acc += len;
+    if (t < acc) return frame;
+  }
+  return null;
 }
 
 /**
- * Paint one face. `scratch` is a same-size canvas used to tint white layers
- * (brows) by the hair colour without touching the skin around them.
+ * The face's clock: blinks at random 2-6 s intervals (FACE.blink), a talking mouth that steps through the larger
+ * talk cells and the resting mouth about 9 times a second in a random order that never shows the same cell twice running, emote mouths
+ * (Laugh, Cheer, Dance) that alternate their cells, and the clip's expression. One per character.
  */
-export function composeFace(ctx: Ctx2D, scratch: { ctx: Ctx2D; image: CanvasImageSource }, atlas: CanvasImageSource, look: CharacterLook, expression: Expression, size: number): void {
-  ctx.globalCompositeOperation = "source-over";
-  ctx.fillStyle = PALETTE.skin[look.skin];
-  ctx.fillRect(0, 0, size, size);
-  for (const d of faceDraws(look, expression, size)) {
-    if (!d.tint) { ctx.drawImage(atlas, ...d.src, ...d.dest); continue; }
-    const s = scratch.ctx;
-    s.globalCompositeOperation = "source-over";
-    s.clearRect(0, 0, size, size);
-    s.drawImage(atlas, ...d.src, ...d.dest);
-    s.globalCompositeOperation = "source-in";
-    s.fillStyle = d.tint;
-    s.fillRect(0, 0, size, size);
-    ctx.drawImage(scratch.image, 0, 0);
+export class FaceAnimator {
+  private t = 0;
+  private nextBlink: number;
+  private blinkStart = -1;
+  private mouthCycle: string | null = null;
+  private mouthNow: string | null = null;
+  private mouthIndex = 0;
+  private mouthUntil = 0;
+
+  constructor(private readonly rand: () => number = Math.random) {
+    this.nextBlink = this.interval();
+  }
+
+  private interval() {
+    const [a, b] = FACE.blink.interval;
+    return a + this.rand() * (b - a);
+  }
+
+  /** Advance `dt` seconds and return the frame to draw. */
+  update(dt: number, look: CharacterLook, clip: string | null, talking: boolean, override?: FaceOverride | null): FacePose {
+    this.t += dt;
+    const expression = override?.expression ?? (clip ? CLIP_EXPRESSION[clip] : undefined) ?? "neutral";
+    const pose = restPose(look, expression);
+
+    if (this.blinkStart < 0 && this.t >= this.nextBlink) this.blinkStart = this.t;
+    if (this.blinkStart >= 0) {
+      const frame = blinkFrame(this.t - this.blinkStart);
+      if (frame === null) {
+        this.blinkStart = -1;
+        this.nextBlink = this.t + this.interval();
+      } else if (canBlink(pose.eyes) && DEPTH[frame] > DEPTH[pose.eyeFrame]) pose.eyeFrame = frame;
+    }
+    if (override?.eyeFrame && eyeCells(pose.eyes)[override.eyeFrame]) pose.eyeFrame = override.eyeFrame;
+
+    const emote = clip ? FACE.emoteMouth[clip] : undefined;
+    const cycle = (override?.talking ?? talking) ? "talk" : emote ? `emote:${clip}` : null;
+    if (cycle !== this.mouthCycle) { this.mouthCycle = cycle; this.mouthNow = null; this.mouthUntil = this.t; this.mouthIndex = 0; }
+    if (cycle === "talk") {
+      if (this.t >= this.mouthUntil) {
+        const cells = [pose.mouth, ...FACE.talk.frames].filter(m => m !== this.mouthNow);
+        this.mouthNow = cells[Math.floor(this.rand() * cells.length)];
+        this.mouthUntil = this.t + (0.7 + 0.6 * this.rand()) / FACE.talk.rate;
+      }
+      pose.mouth = this.mouthNow!;
+    } else if (emote) {
+      if (this.t >= this.mouthUntil) {
+        this.mouthNow = emote.frames[this.mouthIndex++ % emote.frames.length];
+        this.mouthUntil = this.t + 1 / emote.rate;
+      }
+      pose.mouth = this.mouthNow!;
+    }
+    if (override?.mouth && (override.mouth in FACE.layers.mouth.items || override.mouth in FACE.layers.talk.items)) pose.mouth = override.mouth;
+    return pose;
   }
 }
+
+/** A layer slot for the shader. src = atlas rect as UV fractions [x, y, w, h] (top-left origin); dst = where the
+ * cell lands on the face canvas [u0, w0, u1, w1] for the canvas-left side; mirror: 0 as placed, 1 also mirrored to
+ * the other side, 2 only the mirrored copy; tint = hex multiplied into white art (brows: the hair colour);
+ * pose = [pivot u, pivot w, dy, tilt in radians] rotating the cell about its anchor. src null = the slot is off. */
+export interface FaceSlot { src: [number, number, number, number] | null; dst: [number, number, number, number]; mirror: 0 | 1 | 2; tint: string | null; pose: [number, number, number, number] }
+export const FACE_SLOT_COUNT = 7;
+const OFF: FaceSlot = { src: null, dst: [0, 0, 0, 0], mirror: 0, tint: null, pose: [0, 0, 0, 0] };
+
+function slot(cell: FaceCell, anchor: [number, number], mirror: 0 | 1 | 2, tint: string | null = null, brow: [number, number] = [0, 0]): FaceSlot {
+  const [x, y, w, h, ax, ay] = cell, [W, H] = FACE.atlas_size, k = 1 / FACE.density;
+  const u0 = anchor[0] - ax * k, w0 = anchor[1] - ay * k;
+  return { src: [x / W, y / H, w / W, h / H], dst: [u0, w0, u0 + w * k, w0 + h * k], mirror, tint, pose: [anchor[0], anchor[1], brow[0], (brow[1] * Math.PI) / 180] };
+}
+
+/** The seven slots (blush, freckles, mole, brows, right eye, left eye, mouth) for a look showing `pose`. */
+export function faceSlots(look: CharacterLook, pose: FacePose): FaceSlot[] {
+  const { extras, brows, mouth } = FACE.layers, A = FACE.anchors;
+  const extra = (id: string) => {
+    const it = extras.items[id];
+    return look.extras.includes(id) && it ? slot(it.cell, A[it.anchor], it.mirror ? 1 : 0) : OFF;
+  };
+  const eyeCell = eyeCells(pose.eyes)[pose.eyeFrame] ?? eyeCells(pose.eyes).open;
+  return [
+    extra("blush"), extra("freckles"), extra("mole"),
+    slot(brows.items[look.brows] ?? brows.items[brows.default], A.brow, 1, PALETTE.hair[look.hair], pose.brow),
+    slot(eyeCell, A.eye, 0),
+    slot(eyeCell, A.eye, 2),
+    slot(mouth.items[pose.mouth] ?? FACE.layers.talk.items[pose.mouth] ?? mouth.items[mouth.default], A.mouth, 0),
+  ];
+}
+
+/** A key for a pose (skip uniform uploads when nothing changed). */
+export const poseKey = (p: FacePose) => `${p.eyes}|${p.eyeFrame}|${p.mouth}|${p.brow[0]}|${p.brow[1]}`;

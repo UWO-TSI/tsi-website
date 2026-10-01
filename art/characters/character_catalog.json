@@ -830,7 +830,7 @@
    "slot": "accessory",
    "name": "Beanie",
    "glb": "accessories/accessory/acc_beanie.glb",
-   "tris": 842,
+   "tris": 864,
    "materials": [
     {
      "name": "M_Main",
@@ -857,7 +857,7 @@
    "slot": "accessory",
    "name": "Sun hat",
    "glb": "accessories/accessory/acc_sunhat.glb",
-   "tris": 1094,
+   "tris": 1116,
    "materials": [
     {
      "name": "M_Main",
@@ -884,7 +884,7 @@
    "slot": "accessory",
    "name": "Cap",
    "glb": "accessories/accessory/acc_cap.glb",
-   "tris": 930,
+   "tris": 952,
    "materials": [
     {
      "name": "M_Main",
@@ -911,7 +911,7 @@
    "slot": "accessory",
    "name": "Straw hat",
    "glb": "accessories/accessory/acc_straw_hat.glb",
-   "tris": 1094,
+   "tris": 1116,
    "materials": [
     {
      "name": "M_Main",
@@ -939,7 +939,7 @@
    "slot": "accessory",
    "name": "Flower crown",
    "glb": "accessories/accessory/acc_flower_crown.glb",
-   "tris": 528,
+   "tris": 624,
    "materials": [
     {
      "name": "M_Main",
@@ -973,7 +973,7 @@
    "slot": "accessory",
    "name": "Crystal circlet",
    "glb": "accessories/accessory/acc_crystal_circlet.glb",
-   "tris": 216,
+   "tris": 600,
    "materials": [
     {
      "name": "M_Main",
@@ -1093,9 +1093,10 @@
  ],
  "base": {
   "glb": "base/v6.glb",
-  "clips_glb": "base/v6_clips.glb",
+  "clips_glb": "base/v7_clips.glb",
   "fps": 30,
-  "note": "v6_clips.glb = the v6 base body (tee + shorts + default hair) with every clip. Sit/Study sit on a seat at seatHeight; Sleep/Defeat lie on the back with the head toward the character's back (+Y Blender, -Z glTF). hand = the socket that holds the weapon."
+  "head": "v7/head.blend",
+  "note": "v7_clips.glb = the v6 base body (tee + shorts + default hair) with every clip, and the hand-modeled v7 head (avatar v7). Sit/Study sit on a seat at seatHeight; Sleep/Defeat lie on the back with the head toward the character's back (+Y Blender, -Z glTF). hand = the socket that holds the weapon."
  },
  "clips": [
   {
@@ -1322,7 +1323,7 @@
    "slot": "bangs",
    "name": "Straight cut",
    "glb": "hair/bangs/bangs_straight.glb",
-   "tris": 162,
+   "tris": 586,
    "materials": [
     {
      "name": "M_Hair",
@@ -1332,14 +1333,16 @@
    "decalSlot": null,
    "hidesBackHair": false,
    "hides": [],
-   "sheetCell": "N4.2"
+   "sheetCell": "N4.2",
+   "locks": 9,
+   "v7": true
   },
   {
    "id": "bangs_straight_long",
    "slot": "bangs",
    "name": "Straight cut, long",
    "glb": "hair/bangs/bangs_straight_long.glb",
-   "tris": 162,
+   "tris": 586,
    "materials": [
     {
      "name": "M_Hair",
@@ -1349,14 +1352,16 @@
    "decalSlot": null,
    "hidesBackHair": false,
    "hides": [],
-   "sheetCell": "N3.3"
+   "sheetCell": "N3.3",
+   "locks": 9,
+   "v7": true
   },
   {
    "id": "bangs_bowl",
    "slot": "bangs",
    "name": "Rounded bowl",
    "glb": "hair/bangs/bangs_bowl.glb",
-   "tris": 126,
+   "tris": 630,
    "materials": [
     {
      "name": "M_Hair",
@@ -1366,14 +1371,16 @@
    "decalSlot": null,
    "hidesBackHair": false,
    "hides": [],
-   "sheetCell": "N4.1"
+   "sheetCell": "N4.1",
+   "locks": 9,
+   "v7": true
   },
   {
    "id": "bangs_wispy",
    "slot": "bangs",
    "name": "See-through wispy",
    "glb": "hair/bangs/bangs_wispy.glb",
-   "tris": 170,
+   "tris": 646,
    "materials": [
     {
      "name": "M_Hair",
@@ -1383,14 +1390,16 @@
    "decalSlot": null,
    "hidesBackHair": false,
    "hides": [],
-   "sheetCell": "N6.1"
+   "sheetCell": "N6.1",
+   "locks": 14,
+   "v7": true
   },
   {
    "id": "bangs_swept_l",
    "slot": "bangs",
    "name": "Side-swept left",
    "glb": "hair/bangs/bangs_swept_l.glb",
-   "tris": 162,
+   "tris": 586,
    "materials": [
     {
      "name": "M_Hair",
@@ -1400,14 +1409,16 @@
    "decalSlot": null,
    "hidesBackHair": false,
    "hides": [],
-   "sheetCell": "N2.2"
+   "sheetCell": "N2.2",
+   "locks": 9,
+   "v7": true
   },
   {
    "id": "bangs_swept_r",
    "slot": "bangs",
    "name": "Side-swept right",
    "glb": "hair/bangs/bangs_swept_r.glb",
-   "tris": 162,
+   "tris": 586,
    "materials": [
     {
      "name": "M_Hair",
@@ -1417,14 +1428,16 @@
    "decalSlot": null,
    "hidesBackHair": false,
    "hides": [],
-   "sheetCell": "N6.4"
+   "sheetCell": "N6.4",
+   "locks": 9,
+   "v7": true
   },
   {
    "id": "bangs_curtain",
    "slot": "bangs",
    "name": "Curtain",
    "glb": "hair/bangs/bangs_curtain.glb",
-   "tris": 172,
+   "tris": 560,
    "materials": [
     {
      "name": "M_Hair",
@@ -1434,14 +1447,16 @@
    "decalSlot": null,
    "hidesBackHair": false,
    "hides": [],
-   "sheetCell": "N3.2"
+   "sheetCell": "N3.2",
+   "locks": 8,
+   "v7": true
   },
   {
    "id": "bangs_curtain_long",
    "slot": "bangs",
    "name": "Curtain, long",
    "glb": "hair/bangs/bangs_curtain_long.glb",
-   "tris": 172,
+   "tris": 420,
    "materials": [
     {
      "name": "M_Hair",
@@ -1451,14 +1466,16 @@
    "decalSlot": null,
    "hidesBackHair": false,
    "hides": [],
-   "sheetCell": "N6.2"
+   "sheetCell": "N6.2",
+   "locks": 6,
+   "v7": true
   },
   {
    "id": "bangs_centre_split",
    "slot": "bangs",
    "name": "Centre split",
    "glb": "hair/bangs/bangs_centre_split.glb",
-   "tris": 164,
+   "tris": 516,
    "materials": [
     {
      "name": "M_Hair",
@@ -1468,14 +1485,16 @@
    "decalSlot": null,
    "hidesBackHair": false,
    "hides": [],
-   "sheetCell": "N1.4"
+   "sheetCell": "N1.4",
+   "locks": 8,
+   "v7": true
   },
   {
    "id": "bangs_spiky",
    "slot": "bangs",
    "name": "Spiky tufts",
    "glb": "hair/bangs/bangs_spiky.glb",
-   "tris": 162,
+   "tris": 516,
    "materials": [
     {
      "name": "M_Hair",
@@ -1485,14 +1504,16 @@
    "decalSlot": null,
    "hidesBackHair": false,
    "hides": [],
-   "sheetCell": "N4.3"
+   "sheetCell": "B6.2",
+   "locks": 8,
+   "v7": true
   },
   {
    "id": "bangs_hime",
    "slot": "bangs",
    "name": "Hime side-locks",
    "glb": "hair/bangs/bangs_hime.glb",
-   "tris": 162,
+   "tris": 634,
    "materials": [
     {
      "name": "M_Hair",
@@ -1502,14 +1523,16 @@
    "decalSlot": null,
    "hidesBackHair": false,
    "hides": [],
-   "sheetCell": "N6.3"
+   "sheetCell": "N6.3",
+   "locks": 9,
+   "v7": true
   },
   {
    "id": "bangs_choppy",
    "slot": "bangs",
    "name": "Short choppy",
    "glb": "hair/bangs/bangs_choppy.glb",
-   "tris": 194,
+   "tris": 576,
    "materials": [
     {
      "name": "M_Hair",
@@ -1519,14 +1542,16 @@
    "decalSlot": null,
    "hidesBackHair": false,
    "hides": [],
-   "sheetCell": "N1.5"
+   "sheetCell": "N1.5",
+   "locks": 10,
+   "v7": true
   },
   {
    "id": "bangs_swept_back",
    "slot": "bangs",
    "name": "Swept back",
    "glb": "hair/bangs/bangs_swept_back.glb",
-   "tris": 102,
+   "tris": 490,
    "materials": [
     {
      "name": "M_Hair",
@@ -1536,14 +1561,16 @@
    "decalSlot": null,
    "hidesBackHair": false,
    "hides": [],
-   "sheetCell": "N5.4"
+   "sheetCell": "N5.4",
+   "locks": 7,
+   "v7": true
   },
   {
    "id": "bangs_single_strand",
    "slot": "bangs",
    "name": "Short with one long strand",
    "glb": "hair/bangs/bangs_single_strand.glb",
-   "tris": 164,
+   "tris": 586,
    "materials": [
     {
      "name": "M_Hair",
@@ -1553,14 +1580,16 @@
    "decalSlot": null,
    "hidesBackHair": false,
    "hides": [],
-   "sheetCell": "N5.3"
+   "sheetCell": "N5.3",
+   "locks": 10,
+   "v7": true
   },
   {
    "id": "bangs_wavy",
    "slot": "bangs",
    "name": "Wavy swept",
    "glb": "hair/bangs/bangs_wavy.glb",
-   "tris": 162,
+   "tris": 586,
    "materials": [
     {
      "name": "M_Hair",
@@ -1570,14 +1599,16 @@
    "decalSlot": null,
    "hidesBackHair": false,
    "hides": [],
-   "sheetCell": "N3.1"
+   "sheetCell": "N3.1",
+   "locks": 9,
+   "v7": true
   },
   {
    "id": "bangs_asym_block",
    "slot": "bangs",
    "name": "Asymmetric block",
    "glb": "hair/bangs/bangs_asym_block.glb",
-   "tris": 162,
+   "tris": 586,
    "materials": [
     {
      "name": "M_Hair",
@@ -1587,14 +1618,16 @@
    "decalSlot": null,
    "hidesBackHair": false,
    "hides": [],
-   "sheetCell": "N6.5"
+   "sheetCell": "N6.5",
+   "locks": 9,
+   "v7": true
   },
   {
    "id": "back_bob",
    "slot": "back",
    "name": "Bob",
    "glb": "hair/back/back_bob.glb",
-   "tris": 386,
+   "tris": 990,
    "materials": [
     {
      "name": "M_Hair",
@@ -1604,14 +1637,17 @@
    "decalSlot": null,
    "hidesBackHair": false,
    "hides": [],
-   "sheetCell": "B2.1"
+   "sheetCell": "B2.1",
+   "locks": 9,
+   "v7": true,
+   "capFrom": -28
   },
   {
    "id": "back_wolf",
    "slot": "back",
    "name": "Wolf cut",
    "glb": "hair/back/back_wolf.glb",
-   "tris": 550,
+   "tris": 1086,
    "materials": [
     {
      "name": "M_Hair",
@@ -1621,14 +1657,17 @@
    "decalSlot": null,
    "hidesBackHair": false,
    "hides": [],
-   "sheetCell": "B4.4"
+   "sheetCell": "B4.4",
+   "locks": 15,
+   "v7": true,
+   "capFrom": -26
   },
   {
    "id": "back_long",
    "slot": "back",
    "name": "Long straight",
    "glb": "hair/back/back_long.glb",
-   "tris": 586,
+   "tris": 918,
    "materials": [
     {
      "name": "M_Hair",
@@ -1638,14 +1677,17 @@
    "decalSlot": null,
    "hidesBackHair": false,
    "hides": [],
-   "sheetCell": "B3.1"
+   "sheetCell": "B3.1",
+   "locks": 9,
+   "v7": true,
+   "capFrom": -34
   },
   {
    "id": "back_wavy_long",
    "slot": "back",
    "name": "Wavy long",
    "glb": "hair/back/back_wavy_long.glb",
-   "tris": 586,
+   "tris": 918,
    "materials": [
     {
      "name": "M_Hair",
@@ -1655,14 +1697,17 @@
    "decalSlot": null,
    "hidesBackHair": false,
    "hides": [],
-   "sheetCell": "B4.5"
+   "sheetCell": "B4.5",
+   "locks": 9,
+   "v7": true,
+   "capFrom": -34
   },
   {
    "id": "back_high_pony",
    "slot": "back",
    "name": "High ponytail",
    "glb": "hair/back/back_high_pony.glb",
-   "tris": 418,
+   "tris": 886,
    "materials": [
     {
      "name": "M_Hair",
@@ -1672,14 +1717,17 @@
    "decalSlot": null,
    "hidesBackHair": false,
    "hides": [],
-   "sheetCell": "B6.5"
+   "sheetCell": "B6.5",
+   "locks": 15,
+   "v7": true,
+   "capFrom": -20
   },
   {
    "id": "back_pigtails",
    "slot": "back",
    "name": "Low pigtails",
    "glb": "hair/back/back_pigtails.glb",
-   "tris": 450,
+   "tris": 1070,
    "materials": [
     {
      "name": "M_Hair",
@@ -1689,14 +1737,17 @@
    "decalSlot": null,
    "hidesBackHair": false,
    "hides": [],
-   "sheetCell": "B3.2"
+   "sheetCell": "B3.2",
+   "locks": 18,
+   "v7": true,
+   "capFrom": -24
   },
   {
    "id": "back_twin_buns",
    "slot": "back",
    "name": "Twin buns",
    "glb": "hair/back/back_twin_buns.glb",
-   "tris": 482,
+   "tris": 942,
    "materials": [
     {
      "name": "M_Hair",
@@ -1706,14 +1757,17 @@
    "decalSlot": null,
    "hidesBackHair": false,
    "hides": [],
-   "sheetCell": "B2.5"
+   "sheetCell": "B2.5",
+   "locks": 14,
+   "v7": true,
+   "capFrom": -28
   },
   {
    "id": "back_bun",
    "slot": "back",
    "name": "Single top bun",
    "glb": "hair/back/back_bun.glb",
-   "tris": 418,
+   "tris": 798,
    "materials": [
     {
      "name": "M_Hair",
@@ -1723,14 +1777,17 @@
    "decalSlot": null,
    "hidesBackHair": false,
    "hides": [],
-   "sheetCell": "B1.1"
+   "sheetCell": "B1.1",
+   "locks": 11,
+   "v7": true,
+   "capFrom": -32
   },
   {
    "id": "back_braid_crown",
    "slot": "back",
    "name": "Braided crown",
    "glb": "hair/back/back_braid_crown.glb",
-   "tris": 546,
+   "tris": 1110,
    "materials": [
     {
      "name": "M_Hair",
@@ -1740,14 +1797,17 @@
    "decalSlot": null,
    "hidesBackHair": false,
    "hides": [],
-   "sheetCell": "B7.2"
+   "sheetCell": "B7.2",
+   "locks": 23,
+   "v7": true,
+   "capFrom": -32
   },
   {
    "id": "back_short_spiky",
    "slot": "back",
-   "name": "Short spiky",
+   "name": "Short layered",
    "glb": "hair/back/back_short_spiky.glb",
-   "tris": 386,
+   "tris": 964,
    "materials": [
     {
      "name": "M_Hair",
@@ -1757,14 +1817,17 @@
    "decalSlot": null,
    "hidesBackHair": false,
    "hides": [],
-   "sheetCell": "B3.4"
+   "sheetCell": "B6.2",
+   "locks": 11,
+   "v7": true,
+   "capFrom": -6
   },
   {
    "id": "back_undercut",
    "slot": "back",
    "name": "Undercut",
    "glb": "hair/back/back_undercut.glb",
-   "tris": 354,
+   "tris": 690,
    "materials": [
     {
      "name": "M_Hair",
@@ -1774,14 +1837,17 @@
    "decalSlot": null,
    "hidesBackHair": false,
    "hides": [],
-   "sheetCell": "B3.5"
+   "sheetCell": "B3.5",
+   "locks": 7,
+   "v7": true,
+   "capFrom": -6.0
   },
   {
    "id": "back_bowl",
    "slot": "back",
    "name": "Bowl",
    "glb": "hair/back/back_bowl.glb",
-   "tris": 354,
+   "tris": 990,
    "materials": [
     {
      "name": "M_Hair",
@@ -1791,7 +1857,10 @@
    "decalSlot": null,
    "hidesBackHair": false,
    "hides": [],
-   "sheetCell": "B1.5"
+   "sheetCell": "B1.5",
+   "locks": 9,
+   "v7": true,
+   "capFrom": -6
   }
  ]
 }

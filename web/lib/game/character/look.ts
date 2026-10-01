@@ -8,11 +8,13 @@
  */
 import catalog from "@/data/characters/character_catalog.json";
 import palette from "@/data/characters/palette.json";
-import faceVariants from "@/data/characters/face_variants.json";
+import faceV7 from "@/data/characters/face_v7.json";
 
 export const CHARACTER_ROOT = "/assets/characters/v6/";
-export const BASE_URL = `${CHARACTER_ROOT}base/v6_clips.glb`;
-export const FACE_ATLAS_URL = `${CHARACTER_ROOT}base/v6_face_features.png`;
+/** The clip-bearing base: the v6 body with the hand-modeled v7 head (avatar v7). */
+export const BASE_URL = `${CHARACTER_ROOT}${catalog.base.clips_glb}`;
+/** The face layer atlas: 1024 px per face canvas in the creator, the 512 copy in the world (same layout). */
+export const FACE_ATLAS_URLS = { creator: `${CHARACTER_ROOT}base/${faceV7.atlas}`, world: `${CHARACTER_ROOT}base/${faceV7.atlas_world}` };
 /** Ruling 24: the crewneck carries the site's own TSI mark (public/logo.svg, rasterised by the sync script). */
 export const TSI_DECAL_URL = `${CHARACTER_ROOT}decal_tsi_mark.png`;
 
@@ -33,10 +35,29 @@ export const PART_BY_ID = new Map(PARTS.map(p => [p.id, p]));
 export const CLIPS = catalog.clips as ClipInfo[];
 export const CLIP_BY_NAME = new Map(CLIPS.map(c => [c.name, c]));
 export const PALETTE = { skin: palette.skin, hair: palette.hair, outfit: palette.outfit };
-export const FACE = faceVariants as unknown as {
-  canvas: number; atlas_size: [number, number]; compose_order: FaceLayer[];
-  /** items: atlas rect [x, y, w, h] and its place [dx, dy] (canvas px) inside the layer's dest rect. */
-  layers: Record<FaceLayer, { dest: [number, number, number, number]; default: string | null; multi: boolean; tint: "hair" | null; items: Record<string, [number, number, number, number, number, number]> }>;
+/** An atlas cell: rect [x, y, w, h] (px, top-left origin) and the point (ax, ay) in it that sits on its anchor. */
+export type FaceCell = [number, number, number, number, number, number];
+export type EyeFrame = "open" | "half" | "closed";
+/**
+ * The v7 face (art/characters/v7/build_face.py): features drawn once into atlas cells at `density` px per face
+ * canvas; the engine places each at its anchor on the face canvas (the head's UVs), mirrored for the other side
+ * on mirrored layers, and animates by switching cells (blink frames, talk and emote mouths, expressions).
+ */
+export const FACE = faceV7 as unknown as {
+  density: number; atlas_size: [number, number];
+  anchors: Record<"eye" | "brow" | "mouth" | "cheek" | "mole", [number, number]>;
+  layers: {
+    extras: { default: null; multi: true; tint: null; items: Record<string, { anchor: "cheek" | "mole"; mirror: boolean; cell: FaceCell }> };
+    brows: { default: string; anchor: "brow"; mirror: true; tint: "hair"; items: Record<string, FaceCell> };
+    eyes: { default: string; anchor: "eye"; mirror: true; tint: null; items: Record<string, Partial<Record<EyeFrame, FaceCell>> & { open: FaceCell }> };
+    mouth: { default: string; anchor: "mouth"; mirror: false; tint: null; items: Record<string, FaceCell> };
+    /** Larger open mouths shown only while talking (not creator options). */
+    talk: { default: null; anchor: "mouth"; mirror: false; tint: null; items: Record<string, FaceCell> };
+  };
+  expressions: Record<string, { eyes: string | null; eyeFrame: EyeFrame; mouth: string | null; brow: [number, number] }>;
+  blink: { interval: [number, number]; frames: [EyeFrame, number][] };
+  talk: { frames: string[]; rate: number };
+  emoteMouth: Record<string, { frames: string[]; rate: number }>;
 };
 export type FaceLayer = "extras" | "brows" | "eyes" | "mouth";
 export const partsIn = (slot: PartSlot) => PARTS.filter(p => p.slot === slot);
@@ -159,7 +180,6 @@ export function partColor(look: CharacterLook, id: string): number | null {
 
 /** Cache key for the merged body mesh (face and pose excluded). */
 export const bodyKey = (look: CharacterLook) => JSON.stringify([look.skin, look.hair, resolveParts(look).map(p => [p.id, p.tints, p.decal])]);
-export const faceKey = (look: CharacterLook) => [look.skin, look.hair, look.brows, look.eyes, look.mouth, ...look.extras].join("|");
 
 /** Small seeded PRNG (mulberry32) so residents get the same random look every visit. */
 export function seeded(seed: number): () => number {

@@ -18,10 +18,63 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, ".."))
 import kit  # noqa: E402
 from kit import body as B, hair_point, HC  # noqa: E402
-from head_shape import head_point, HEAD_Z, HRZB, EYE_LAT, EYE_LON, hair_vol  # noqa: E402
+from head_shape import head_point, HEAD_Z, HRZB, EYE_LAT, EYE_LON, hair_vol, hair_outer  # noqa: E402
+sys.path.insert(0, os.path.join(HERE, "..", "v7"))
+import locks  # noqa: E402  (avatar v7: hat tucks are sculpted locks, like every hair piece)
+import hair_styles  # noqa: E402
 
 bpy.ops.wm.read_factory_settings(use_empty=True)
+
+
+def _worn_hair():
+    """BVH of the default hair (bangs_straight + back_bob GLBs, rest pose). avatar v7: those are sculpted locks with
+    ridges ~7 mm over the library's hair volume, so bands rest on the worn hair, not on hair_vol."""
+    from mathutils.bvhtree import BVHTree
+    vs, ps = [], []
+    for rel in ("hair/bangs/bangs_straight.glb", "hair/back/back_bob.glb"):
+        before = set(bpy.data.objects)
+        bpy.ops.import_scene.gltf(filepath=os.path.join(HERE, "..", rel))
+        new = [o for o in bpy.data.objects if o not in before]
+        for o in new:
+            if o.type == "MESH" and o.modifiers:
+                base = len(vs)
+                vs.extend(o.matrix_world @ v.co for v in o.data.vertices)
+                ps.extend([base + i for i in pl.vertices] for pl in o.data.polygons)
+        for o in new:
+            bpy.data.objects.remove(o, do_unlink=True)
+    for coll in (bpy.data.meshes, bpy.data.materials, bpy.data.armatures, bpy.data.images, bpy.data.actions):
+        for d in list(coll):          # nothing imported may stay: the parts' materials must keep their exact names
+            coll.remove(d)
+    return BVHTree.FromPolygons(vs, ps)
+
+
+WORN = _worn_hair()
+
+
+def worn_top(lat, lon, dlat=3, dlon=8):
+    """Height over the scalp of the worn default hair's outer surface, the highest within +-dlat, +-dlon (a band's
+    footprint), so a band laid at that height clears every lock ridge under it."""
+    top = 0.0
+    for la in (lat - dlat, lat, lat + dlat):
+        for lo in (lon - dlon, lon - dlon / 2, lon, lon + dlon / 2, lon + dlon):
+            q = head_point(la, lo)
+            d = (q - HC).normalized()
+            t, far, o = None, 0.3, HC.copy()
+            while True:
+                loc, _, _, dist = WORN.ray_cast(o, d, far)
+                if loc is None:
+                    break
+                t = (loc - HC).length
+                o = loc + d * 1e-4
+            if t is not None:
+                top = max(top, t - (q - HC).length)
+    return top
+
+
 rig = kit.load_rig(bpy.context.scene)
+with bpy.data.libraries.load(os.path.join(HERE, "..", "v7", "head.blend"), link=False) as (_src, _dst):
+    _dst.objects = ["V7_Head"]
+HEAD_SURF = locks.Surface(_dst.objects[0])       # the v7 head the tuck locks rest on and bury their roots in
 PARTS, part = kit.registry()
 T, CL = B.torso_pt, B.CL
 WRAP = [30 * k for k in range(12)] + [360]
@@ -76,12 +129,13 @@ def glasses_square(pc):
 
 
 # ================================================================ hats (hide the back hair, carry a hair tuck)
-HAT_CLEAR = 0.004            # the inside of a hat sits this far over the hair (hair_vol; the tuck and bangs are under it)
+HAT_CLEAR = 0.004            # the inside of a hat sits this far over the hair (avatar v7: the fuller lock hair, hair_outer;
+                             # the tuck and the bangs' crown locks are under it)
 LONS = kit.CAP_LONS          # 15 deg columns: a flat quad sags less than the clearance
 
 
 def hat_in(lat):
-    return hair_vol(lat) + HAT_CLEAR
+    return hair_outer(lat) + HAT_CLEAR
 
 
 def dome(pc, edge, rows, thick, ribbon=None):
@@ -105,11 +159,15 @@ def dome(pc, edge, rows, thick, ribbon=None):
 
 
 def tuck(pc, edge):
-    """The hair under a hat: the shared back cap at bob length (sides to lat -30, nape to -40) running 16 deg up under
-    the hat's edge, closed and fitted like any back hair, so the head never reads bald under the brim and the bangs
-    tuck under it as usual. Under the crown the hat sits on hair_vol directly."""
-    t, _, _ = kit.hair_cap(lambda lon: -40 if abs(lon) >= 100 else -30, vol=1.0, top=lambda lon: edge(lon) + 16,
-                           tips=lambda i, la, lb, mid: (-48, mid, 0.008) if i % 2 == 0 and abs(mid) > 100 else None)
+    """The hair under a hat (avatar v7: sculpted locks like the library): a matte under-cap band from bob length up 16
+    deg under the hat's edge, and bob-length locks (hair_styles.tuck) whose roots are buried under the edge, so the
+    head never reads bald under the brim and the bangs run under the hat as usual."""
+    t, _, _ = kit.hair_cap(lambda lon: -40 if abs(lon) >= 100 else -30, top=lambda lon: edge(lon) + 16,
+                           outer=hair_styles.cap_outer, hem=hair_styles.CAP_FLOOR, lons=[24 * k - 180 for k in range(15)])
+    for f in t.since(0):
+        t.fuv[f] = {v: (0.0, 0.5) for v in f.verts}           # matte: no gloss band between the locks
+    for lk in hair_styles.tuck(edge):
+        locks.sweep(t, locks.lock_of_seed(lk), HEAD_SURF)
     keep = pc.mat
     for f in t.fmat:
         t.fmat[f] = "M_Hair"
@@ -227,11 +285,12 @@ def flower_crown(pc):
     """A green vine ring resting on the hair behind the hairline, with eight blossoms alternating pink and white."""
     pc.region = "head"
     lat = lambda lon: 46 + 10 * math.cos(math.radians(lon))      # behind the bangs' roots, on the cap all round
-    off = lambda lon: hair_vol(lat(lon)) + 0.004
+    off = lambda lon: max(hair_vol(lat(lon)) + 0.004, worn_top(lat(lon), lon, 2, 4) + 0.003)    # seated on the lock ridges
     pc.mat = "M_Trim"
-    pc.tube([hair_point(lat(l), l, off(l)) for l in range(0, 360, 20)], [(0.0065, 0.005)] * 18, sides=4, closed_loop=True)
-    for k, l in enumerate(range(0, 360, 45)):
+    pc.tube([hair_point(lat(l), l, off(l)) for l in range(0, 360, 12)], [(0.0065, 0.005)] * 30, sides=4, closed_loop=True)
+    for k, l0 in enumerate(range(0, 360, 45)):
         pc.mat = "M_Main" if k % 2 == 0 else "M_Accent"
+        l = max(range(l0 - 12, l0 + 13, 3), key=lambda x: worn_top(lat(x), x, 1, 2))   # each blossom sits on a lock
         c = hair_point(lat(l), l, off(l))
         blossom(pc, c, (c - HC).normalized(), r=0.026)
     pc.mat = "M_Main"
@@ -243,8 +302,9 @@ def crystal_circlet(pc):
     """A thin gold band across the brow, over the bangs, dipping to a crystal at the front with two small side stones."""
     pc.region = "head"
     lat = lambda lon: 16 + 2 * math.cos(math.radians(lon)) - 3 * max(0.0, math.cos(math.radians(lon))) ** 8
-    off = lambda lon: max(0.013, hair_vol(lat(lon)) * 1.1) + 0.004     # on the fringe at the front, the cap elsewhere
-    pc.tube([hair_point(lat(l), l, off(l)) for l in range(0, 360, 15)], [(0.0032, 0.0065)] * 24, sides=4, closed_loop=True)
+    off = lambda lon: max(max(0.013, hair_vol(lat(lon)) * 1.1) + 0.004,      # on the fringe at the front, the cap elsewhere,
+                          worn_top(lat(lon), lon, 1, 1.5) + 0.001)            # seated on the lock ridges (avatar v7)
+    pc.tube([hair_point(lat(l), l, off(l)) for l in range(0, 360, 5)], [(0.0032, 0.0065)] * 72, sides=4, closed_loop=True)
     pc.mat = "M_Accent"
     for lon, h, wd in ((0, 0.05, 0.022), (-32, 0.022, 0.012), (32, 0.022, 0.012)):
         c = hair_point(lat(lon) + (5 if lon == 0 else 0), lon, off(lon) + 0.004)

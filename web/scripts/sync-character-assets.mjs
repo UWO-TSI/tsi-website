@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 /**
  * Copies the character art the engine ships from art/characters into the web
- * app: every catalogue GLB plus the clip-bearing base body to
- * public/assets/characters/v6/, the face feature atlas next to them, the
+ * app: every catalogue GLB plus the clip-bearing base body (the catalogue's
+ * base.clips_glb: v7_clips.glb, the hand-modeled v7 head) to
+ * public/assets/characters/v6/, the v7 face layer atlases next to it, the
  * catalogue/palette/face JSON to data/characters/, and the official TSI mark
  * (public/logo.svg, ruling 24) as the crewneck decal PNG.
  *
@@ -25,9 +26,11 @@ const copy = (from, to) => { mkdirSync(dirname(to), { recursive: true }); copyFi
 const catalog = JSON.parse(readFileSync(join(art, "character_catalog.json"), "utf8"));
 const parts = [...catalog.outfits, ...catalog.accessories, ...catalog.hair];
 for (const part of parts) copy(join(art, part.glb), join(out, part.glb));
-copy(join(art, catalog.base.clips_glb), join(out, "base/v6_clips.glb"));
-copy(join(art, "base/v6_face_features.png"), join(out, "base/v6_face_features.png"));
-for (const name of ["character_catalog.json", "palette.json", "base/face_variants.json"]) copy(join(art, name), join(data, name.replace("base/", "")));
+copy(join(art, catalog.base.clips_glb), join(out, catalog.base.clips_glb));
+// avatar v7 face: the layer atlas at 1024 px per face canvas (creator) and 512 (world), animated by uniforms
+const face = JSON.parse(readFileSync(join(art, "v7/face/face_v7.json"), "utf8"));
+for (const f of [face.atlas, face.atlas_world]) copy(join(art, "v7/face", f), join(out, "base", f));
+for (const name of ["character_catalog.json", "palette.json", "v7/face/face_v7.json"]) copy(join(art, name), join(data, name.replace(/^.*\//, "")));
 
 // Crewneck decal: the site's own mark in cream on transparency, square with padding.
 const svg = readFileSync(join(web, "public/logo.svg"), "utf8").replaceAll("currentColor", "#F3E9D2");
@@ -36,4 +39,4 @@ writeFileSync(tmp, svg.replace(/<svg ([^>]*)>/, '<svg $1 preserveAspectRatio="xM
 execFileSync("rsvg-convert", ["-w", "192", "-h", "184", "-o", join(out, "decal_tsi_mark.png"), tmp]);
 execFileSync("magick", [join(out, "decal_tsi_mark.png"), "-background", "none", "-gravity", "center", "-extent", "256x256", join(out, "decal_tsi_mark.png")]);
 execFileSync("rm", [tmp]);
-console.log(`synced ${parts.length} parts, base, face atlas, 3 JSON files, TSI decal`);
+console.log(`synced ${parts.length} parts, base, 2 face atlases, 3 JSON files, TSI decal`);
