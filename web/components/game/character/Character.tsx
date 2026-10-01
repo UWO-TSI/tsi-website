@@ -210,18 +210,43 @@ function placeWeapon(model: THREE.Object3D, weapon: WeaponView, socket: THREE.Ob
   socket.add(model);
 }
 
+/** The leaf glider (art/props-enemies/build_leaf_glider.py): authored grip-at-origin for the right hand in the Glide clip. */
+export const LEAF_URL = "/assets/game/props/leaf-glider.glb";
+const gripAt = new THREE.Vector3();
+/**
+ * The leaf on the right hand: at the hand socket's position but on the character's own axes (the stem stands up past
+ * the head whatever the wrist does), sized by `motion.leaf` from the grip, so it grows out of the hand as it opens and
+ * lifts a little as it pops past full size.
+ */
+function HeldLeaf({ puppet, motion, scale }: { puppet: Puppet; motion: RefObject<CharacterMotion>; scale: number }) {
+  const { scene } = useGLTF(LEAF_URL);
+  const model = useMemo(() => tagLookClasses(scene.clone(true), LEAF_URL), [scene]);
+  useEffect(() => { model.traverse(o => { o.castShadow = true; o.userData.sunCaster = "dynamic"; }); }, [model]);
+  useFrame(() => placeLeaf(model, puppet.sockets.R, motion.current?.leaf ?? 0, scale));
+  return <primitive object={model} />;
+}
+function placeLeaf(model: THREE.Object3D, hand: THREE.Object3D, open: number, scale: number) {
+  model.visible = open > 0.01 && !!model.parent;
+  if (!model.visible) return;
+  model.parent!.worldToLocal(hand.getWorldPosition(gripAt));
+  model.position.copy(gripAt).setY(gripAt.y + Math.max(0, open - 1) * 0.6 * scale);
+  model.scale.setScalar(scale * Math.min(open, 1.15));
+}
+
 export interface CharacterProps {
   look: CharacterLook;
   motion: RefObject<CharacterMotion>;
   /** Normal walking pace for this controller (Walk plays at 1x there). */
   walkSpeed?: number;
   weapon?: WeaponView | null;
+  /** Owns the leaf glider: the leaf shows while `motion.leaf` is open. */
+  leaf?: boolean;
   /** Face atlas density: 512 px per face canvas in the world (sharp at village distance), 1024 in the creator. */
   faceSize?: number;
   scale?: number;
 }
 
-export default function Character({ look, motion, walkSpeed = 7.4, weapon = null, faceSize = 512, scale = CHARACTER_SCALE }: CharacterProps) {
+export default function Character({ look, motion, walkSpeed = 7.4, weapon = null, leaf = false, faceSize = 512, scale = CHARACTER_SCALE }: CharacterProps) {
   // While a newly chosen part loads, keep showing the previous look instead of suspending.
   const shown = useDeferredValue(look);
   const parts = useMemo(() => resolveParts(shown), [shown]);
@@ -251,6 +276,7 @@ export default function Character({ look, motion, walkSpeed = 7.4, weapon = null
   return <group ref={group}>
     <primitive object={puppet.root} scale={scale} dispose={null} />
     {weapon && <HeldWeapon puppet={puppet} weapon={weapon} />}
+    {leaf && <HeldLeaf puppet={puppet} motion={motion} scale={scale} />}
   </group>;
 }
 function dressPuppet(puppet: Puppet, look: CharacterLook, parts: ResolvedPart[], scenes: THREE.Object3D[], atlas: THREE.Texture, decalMap: THREE.Texture) {

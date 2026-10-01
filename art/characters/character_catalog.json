@@ -1315,6 +1315,12 @@
    "length": 0.4,
    "loop": true,
    "frames": 12
+  },
+  {
+   "name": "Glide",
+   "length": 2.0,
+   "loop": true,
+   "frames": 60
   }
  ],
  "hair": [

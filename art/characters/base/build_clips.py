@@ -56,6 +56,9 @@ if HEAD == "v7":
             md.object = rig
     face = head.data.materials[1]
     face.name = "M_Face"
+    for n in face.node_tree.nodes:                   # head.blend points at the avatar-v7 worktree's copy, gone since
+        if n.type == "TEX_IMAGE" and n.image:
+            n.image.filepath = os.path.join(HERE, "..", "v7", "face", "v7_face_default.png")
     head.data.materials[0] = bpy.data.materials["M_Skin"]
     HEAD_OB = "V7_Head"
 OUT_GLB = "v7_clips.glb" if HEAD == "v7" else "v6_clips.glb"
@@ -742,6 +745,21 @@ def skid(p):
     P = body(lean=16 + 2 * j, side=3 * j, crouch=0.04, nod=-4)
     legs(P, (40, -45), (70, 10), foot=10)
     balance(P, up=0.25 + 0.05 * j, fwd=-0.35)
+    return P
+
+
+GLIDE_GRIP = V(-0.23, -0.01, 0.58)            # the right hand on the leaf's stem, up beside the jaw (the arms can't reach over the head)
+
+
+@clip("Glide", 2.0, True)
+def glide(p):
+    """Hanging under the leaf glider (specs/glider.md): the right hand up on the stem, the left arm out for balance,
+    legs dangling with a slow kick, the body swaying like a pendulum under the grip."""
+    s, c = math.sin(TAU * p), math.cos(TAU * p)
+    P = body(lean=-4 + 1.5 * c, nod=-8 + 2 * c, tilt=2 * s, hips=ry(3 * s))
+    legs(P, (14 + 9 * s, 14 - 9 * s), (30 - 10 * s, 30 + 10 * s), splay=5, foot=28)
+    hand(P, "Right", GLIDE_GRIP, V(-1, 0.4, -0.4))
+    arm(P, "Left", V(0.85, 0.12, 0.42 + 0.05 * s), V(0.75, 0.05, 0.62 + 0.06 * s))
     return P
 
 

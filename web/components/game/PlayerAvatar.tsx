@@ -38,6 +38,11 @@ import { BASE_FOV, DashRing, DustPool, EVENT_CLIP, MOVE_JUICE, Streaks, TAKEOFF,
  * tsi:flower-pick, tsi:critter-catch), emotes (tsi:emote {clip}), and the encounter state when `combat` is set: there Q's dash is the
  * dodge (its i-frames), knockback and ability dashes push through the sim, and
  * a cast roots you until a dodge breaks it.
+ *
+ * `glider` (the leaf glider is owned and this scene allows it, specs/glider.md)
+ * turns the sim's glide on and puts the leaf in the right hand while gliding: it
+ * pops open, the avatar banks into turns and sways under it, faint wind lines
+ * at speed, a soft puff on landing, and the camera eases down with it.
  */
 
 interface PlayerAvatarProps {
@@ -58,6 +63,8 @@ interface PlayerAvatarProps {
   member?: boolean;
   /** Encounter: the ruins' kit (Q dodges); clips and facing follow the combat runtime; the weapon is in hand. */
   combat?: boolean;
+  /** The leaf glider: owned, and this area allows it (the village and the home island; never the ruins). */
+  glider?: boolean;
   frozen?: boolean;
   desktopClickToMove?: boolean;
   /** /lab/move: live tuning and juice, slow motion, the HUD's readout and the Walk clip's pace. */
@@ -73,11 +80,22 @@ const playSFX = (name: SFXName) => AudioManager.playSFX(name);
 /** Face a point (module scope: the react compiler freezes values reached through hooks inside component code). */
 function turnTo(s: MoveState | undefined, x: number, z: number) { if (s) s.facing = Math.atan2(x - s.x, z - s.z); }
 
+/** Bank a glider about the grip overhead (`pivotY` above the anchor), around the way it faces (module scope, see turnTo). */
+const bankAxis = new THREE.Vector3(), bankPivot = new THREE.Vector3();
+function bankAbout(group: THREE.Group, yaw: number, roll: number, pivotY: number) {
+  if (Math.abs(roll) < 1e-4) { group.quaternion.identity(); group.position.set(0, 0, 0); return; }
+  group.quaternion.setFromAxisAngle(bankAxis.set(Math.sin(yaw), 0, Math.cos(yaw)), roll);
+  bankPivot.set(0, pivotY, 0);
+  group.position.copy(bankPivot).sub(bankPivot.applyQuaternion(group.quaternion));
+}
+/** The grip's height above the feet in the Glide clip (build_clips.py GLIDE_GRIP, rig units × the character's scale). */
+const GRIP_Y = 0.58 * CHARACTER_SCALE;
+
 /** Clips that hold while seated; the seat branch owns them. */
 const SEAT_CLIPS = new Set<ClipName>(["Sit", "Study", "Stretch", "Sleep"]);
 type Seat = { x: number; z: number; clip: ClipName; lift: number; yaw: number };
 
-export default function PlayerAvatar({ spawnPosition, player, world, groundHeight, groundSurface, camTarget, playerName = "Player", showNameplate = true, playerLevel, member = false, combat: inCombat = false, frozen = false, desktopClickToMove = false, tuning, juice, timeScale, telemetry, walkSpeed = MOVE_TUNING.walkSpeed }: PlayerAvatarProps) {
+export default function PlayerAvatar({ spawnPosition, player, world, groundHeight, groundSurface, camTarget, playerName = "Player", showNameplate = true, playerLevel, member = false, combat: inCombat = false, glider = false, frozen = false, desktopClickToMove = false, tuning, juice, timeScale, telemetry, walkSpeed = MOVE_TUNING.walkSpeed }: PlayerAvatarProps) {
   const anchor = useRef<THREE.Group>(null), body = useRef<THREE.Group>(null), head = useRef<THREE.Group>(null);
   const motion = useRef<CharacterMotion>({ speed: 0, yaw: 0, lift: 0, pose: null, play: null, move: null });
   const { look } = useMyLook();
@@ -90,7 +108,10 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
   const target = useRef<{ x: number; z: number } | null>(null);
   const seat = useRef<Seat | null>(null);
   const reported = useRef<THREE.Vector3 | null>(null);
-  const fx = useRef({ sq: 0, sqv: 0, step: 0, trail: 0, stuck: 0, level: 0, punch: 0, lead: new THREE.Vector2(), pan: new THREE.Vector2(), rise: new THREE.Vector2(), focus: new THREE.Vector3(x0, 0, z0) });
+  const fx = useRef({ sq: 0, sqv: 0, step: 0, trail: 0, stuck: 0, level: 0, punch: 0, leaf: 0, leafV: 0, bank: 0, heading: 0, lead: new THREE.Vector2(), pan: new THREE.Vector2(), rise: new THREE.Vector2(), focus: new THREE.Vector3(x0, 0, z0) });
+  // The glider is a flag on the sim (never in an encounter); the lab's tuning can carry it too.
+  const kit = useMemo(() => (glider ? { ...(tuning ?? MOVE_TUNING), glider: 1 } : tuning ?? MOVE_TUNING), [tuning, glider]);
+  const leafOwned = !inCombat && kit.glider > 0;
   const dust = useMemo(() => new DustPool(), []);
   const streaks = useMemo(() => new Streaks(), []);
   const ring = useMemo(() => new DashRing(), []);
@@ -205,7 +226,7 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
     const g = anchor.current, bd = body.current, hd = head.current;
     if (!g || !bd || !hd) return;
     const p = combat.rt.player, d = dev.current, f = fx.current, m = motion.current, j = juice ?? MOVE_JUICE, st = touchStick, k = keys.current, b = bindings;
-    const t = inCombat ? combatTuning(p.speed) : tuning ?? MOVE_TUNING;
+    const t = inCombat ? combatTuning(p.speed) : kit;
     if (!sim.current || simAt.current?.[0] !== x0 || simAt.current[1] !== z0) {
       sim.current = createMoveSim(createMoveState(x0, z0, world));
       simAt.current = [x0, z0];
@@ -273,10 +294,12 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
           f.sq = Math.min(f.sq, -0.12 * j.squash); f.sqv = 6 * j.squash; puff(e, 0.6 + e.speed * 0.04); playSFX("jump"); break;
         case "jump": case "long": case "dashjump":
           f.sqv += 4.5 * j.squash; puff(e, 0.5 + e.speed * 0.04); playSFX("jump"); break;
+        case "glide": f.leafV += 9; dust.spawn(e.x, e.y + GRIP_Y + 0.9, e.z, 1.1, true, 0.35); playSFX("blip2"); break;
         case "land":
           // A landing that launches the next hop (same step) leaves its thump to the hop; any other ends a short hop's Jump clip (no sliding feet).
           if (events[i + 1] && TAKEOFF.has(events[i + 1].kind)) break;
           m.stop = true;
+          if (events[i - 1]?.kind === "furl") { puff(e, 1.1); playSFX("footstep"); break; } // the leaf sets you down: a soft puff
           if (e.drop > 0.3) {
             f.sqv -= Math.min(9, 2.5 + e.drop * 2.4) * j.squash;
             puff(e, 0.6 + e.drop * 0.35 + e.speed * 0.03);
@@ -309,7 +332,8 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
     } else f.step = 0;
     dust.update(dt);
     // Speed lines through a dash and at a sprint; the dash cooldown ring at the feet.
-    streaks.update(dt, x, y, z, state.vx, state.vz, sitting ? 0 : j.streaks * (state.dashT > 0 ? 0.4 : speed > t.walkSpeed * 1.35 ? 0.18 : 0));
+    const gliding = !sitting && state.mode === "glide";
+    streaks.update(dt, x, y, z, state.vx, state.vz, sitting ? 0 : j.streaks * (state.dashT > 0 ? 0.4 : speed > t.walkSpeed * 1.35 ? 0.18 : gliding && speed > 6 ? 0.12 : 0));
     const spent = !sitting && aloft && state.airDashes >= t.airDashes, dashReady = !!sitting || (state.dashCd <= 0 && !spent && state.mode !== "recover");
     ring.update(dt, x, groundY, z, spent ? 0 : 1 - state.dashCd / Math.max(0.01, t.dashCooldown), dashReady);
 
@@ -329,8 +353,16 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
       m.yaw = state.facing;
       m.lift = (y - groundY) / sy;
       m.speed = state.mode === "ground" ? Math.hypot(state.vx + (push?.x ?? 0), state.vz + (push?.z ?? 0)) : 0;
-      m.move = aloft || state.mode === "splash" ? "Fall" : state.mode === "skid" ? "Skid" : null;
+      m.move = gliding ? "Glide" : aloft || state.mode === "splash" ? "Fall" : state.mode === "skid" ? "Skid" : null;
     }
+    // The leaf springs open past full size (the pop) and folds away; gliding banks into turns and sways about the grip.
+    f.leafV += (((gliding ? 1 : 0) - f.leaf) * 220 - f.leafV * 15) * dt;
+    f.leaf = THREE.MathUtils.clamp(f.leaf + f.leafV * dt, 0, 1.3);
+    m.leaf = f.leaf;
+    const heading = Math.atan2(state.vx, state.vz), turn = speed > 1 && dt > 0 ? Math.atan2(Math.sin(heading - f.heading), Math.cos(heading - f.heading)) / dt : 0;
+    f.heading = heading;
+    f.bank = THREE.MathUtils.damp(f.bank, gliding ? THREE.MathUtils.clamp(-turn * 0.12, -0.3, 0.3) + 0.035 * Math.sin(state.modeT * Math.PI) : 0, 6, dt);
+    bankAbout(bd, state.facing, f.bank, y - groundY + GRIP_Y);
     m.rate = rawDelta > 0 ? dt / Math.min(rawDelta, 0.1) : 1;
     if (inCombat) {
       // Encounter: face the aim; attacks, dodges, hits, casting and defeat drive the clips.
@@ -344,7 +376,9 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
 
     // Camera focus: the avatar, a lead along its velocity, and the level it stands on. A hop never lifts the level;
     // landing on a new one, a mantle (to its top) or falling below it reframes. A respawn pans rather than cuts.
-    f.level = THREE.MathUtils.damp(f.level, !sitting && state.mode === "mantle" ? state.to[1] : grounded ? y : Math.min(f.level, y), 8, dt);
+    // Gliding, it eases down with you (no further than 1.5u below, so you stay in frame) toward the ground under you.
+    f.level = gliding ? THREE.MathUtils.damp(f.level, Math.min(f.level, Math.max(groundY, y - 1.5)), 3, dt)
+      : THREE.MathUtils.damp(f.level, !sitting && state.mode === "mantle" ? state.to[1] : grounded ? y : Math.min(f.level, y), 8, dt);
     const lead = Math.min(1.5, speed * j.camLead), dir = speed > 0.1 ? lead / speed : 0;
     f.lead.x = THREE.MathUtils.damp(f.lead.x, state.vx * dir, 3, dt);
     f.lead.y = THREE.MathUtils.damp(f.lead.y, state.vz * dir, 3, dt);
@@ -374,7 +408,7 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
       <primitive object={streaks.group} />
       <primitive object={ring.group} />
       <group ref={anchor} position={spawnPosition}>
-        <group ref={body}><PlayerCharacter look={look} motion={motion} inCombat={inCombat} walkSpeed={walkSpeed} /></group>
+        <group ref={body}><PlayerCharacter look={look} motion={motion} inCombat={inCombat} walkSpeed={walkSpeed} leaf={leafOwned} /></group>
       </group>
       <group ref={head} position={spawnPosition}>
         {showNameplate && <Html calculatePosition={calculateCurvedHtmlPosition} zIndexRange={[40, 0]}
@@ -421,7 +455,7 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
 }
 
 /** The player's character, with the equipped weapon: in hand in an encounter, across the back once the ruins gate is open (row 140). */
-function PlayerCharacter({ look, motion, inCombat, walkSpeed }: { look: CharacterLook; motion: React.RefObject<CharacterMotion>; inCombat: boolean; walkSpeed: number }) {
+function PlayerCharacter({ look, motion, inCombat, walkSpeed, leaf }: { look: CharacterLook; motion: React.RefObject<CharacterMotion>; inCombat: boolean; walkSpeed: number; leaf: boolean }) {
   useCombatVersion();
   const p = combat.rt.player, key = p.weapon, shown = inCombat ? p.alive : p.armed;
   // The same object until the weapon, or whether it shows, changes (the runtime publishes ~10×/s).
@@ -429,5 +463,5 @@ function PlayerCharacter({ look, motion, inCombat, walkSpeed }: { look: Characte
     const w = WEAPONS[key];
     return w?.model && shown ? { kind: w.kind, model: w.model, modelScale: w.modelScale, inHand: inCombat, grip: w.grip } : null;
   }, [key, shown, inCombat]);
-  return <Character look={look} motion={motion} walkSpeed={walkSpeed} weapon={weapon} />;
+  return <Character look={look} motion={motion} walkSpeed={walkSpeed} weapon={weapon} leaf={leaf} />;
 }
