@@ -339,6 +339,14 @@ class Model:
             f.material_index = i
         return new
 
+    def rot(self, faces, c, axis, angle):
+        """Turn these faces about game point c: axis 'x' (tilt toward -z), 'y' (yaw) or 'z' (roll in the x-y plane)."""
+        verts = list({v for f in faces for v in f.verts})
+        bax = {"x": "X", "y": "Z", "z": "Y"}[axis]          # game axis -> Blender axis (game z is Blender -y)
+        sgn = -1 if axis == "z" else 1
+        bmesh.ops.rotate(self.bm, verts=verts, cent=G(*c), matrix=Matrix.Rotation(sgn * angle, 3, bax))
+        return faces
+
     def finish(self):
         bm = self.bm
         bm.normal_update()

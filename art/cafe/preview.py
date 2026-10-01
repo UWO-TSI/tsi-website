@@ -90,3 +90,19 @@ if "sets" in WHAT:
     light((0, 6, -4), 2000, kind="AREA", size=8)
     cam((0, 4.5, -7.5), (0, 0.4, 0), lens=30)
     shot("sets")
+if "building" in WHAT:
+    before = set(bpy.data.objects)
+    bpy.ops.import_scene.gltf(filepath=os.path.join(K.OUT, "..", "buildings", "cafe.glb"))
+    objs = {o.name: o for o in set(bpy.data.objects) - before}
+    w.node_tree.nodes["Background"].inputs[0].default_value = (0.55, 0.7, 0.8, 1)
+    bpy.ops.mesh.primitive_plane_add(size=30)
+    sun = bpy.data.lights.new("S", "SUN"); sun.energy = 3.5
+    so = bpy.data.objects.new("S", sun); scene.collection.objects.link(so); so.rotation_euler = (math.radians(50), 0, math.radians(30))
+    for state in ("closed", "open"):
+        for n, o in objs.items():
+            if n.startswith("cafe_planks"): o.hide_render = state == "open"
+            if n.startswith("cafe_open"): o.hide_render = state == "closed"
+        cam((0, 6.5, -11.5), (0, 1.4, 0), lens=30)
+        shot(f"building-{state}")
+        cam((-6.5, 2.2, -6.5), (0, 1.5, 0), lens=28)
+        shot(f"building-{state}-34")

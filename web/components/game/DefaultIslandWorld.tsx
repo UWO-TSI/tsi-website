@@ -99,6 +99,7 @@ import StudySeats from "./study/StudySeats";
 import StudyHud from "./study/StudyHud";
 import CafeInterior from "./study/CafeInterior";
 import CafeGoalSheet from "./study/CafeGoalSheet";
+import CafeBuilding from "./study/CafeBuilding";
 import { CAFE_GRADE, CAFE_OWNER } from "@/lib/game/cafe";
 import { studyHoldsPrompt } from "@/lib/study/worldStore";
 import "@/lib/game/aerialFog";
@@ -176,7 +177,7 @@ function villageLayout(v: Village) {
     underWharf: (x: number, z: number) => !!deck && x > deck.x0 - 0.4 && x < deck.x1 + 0.4 && z > deck.z0 - 0.4 && z < deck.z1 + 0.4,
   };
 }
-const SIGNS: Partial<Record<Landmark["id"], string>> = { cafe: "Café · Boarded up", museum: "Museum · Closed", ruins: "Ruins gate", notice: "Notices", catch: "Catch board", shop: "Shop", oracle: "Oracle temple" };
+const SIGNS: Partial<Record<Landmark["id"], string>> = { museum: "Museum · Closed", ruins: "Ruins gate", notice: "Notices", catch: "Catch board", shop: "Shop", oracle: "Oracle temple" };
 const BOTANICAL_TEXTURES = ["/assets/acnh/icons/flower_rose.png", "/assets/acnh/icons/flower_cosmos.png"];
 useTexture.preload(BOTANICAL_TEXTURES);
 useTexture.preload("/assets/acnh/interior/hq-parquet-albedo.png");
@@ -367,10 +368,10 @@ function VillageLandmarks({ layout, ground, opened, stage, ceremony, light }: { 
     {shop && <group position={at(shop)}><ACNHBuilding id="shop" /></group>}
     {fitting && <GLBProp url="/assets/acnh/furniture/fitting-room.glb" position={[fitting[0], ground(...fitting), fitting[1] + 0.45]} scale={0.1} rotation={[0, Math.PI, 0]} />}
     {oracle && <group position={at(oracle)}><ACNHBuilding id="oracle" /></group>}
-    {cafe && <group position={at(cafe)}><ACNHParts parts={CHALET_VARIANTS.yellow} /></group>}
+    {cafe && <group position={at(cafe)}><CafeBuilding open={opened.includes("cafe")} light={light} /></group>}
     {museum && <group position={at(museum)}><ACNHParts parts={CHALET_VARIANTS.red} /></group>}
-    {/* Boarded doors: the existing log fence across each closed entrance. */}
-    {[cafe, museum].filter(l => l && !opened.includes(l.id as WorldGoalId)).map(l => [-0.6, 0.6].map(dx => <NatureFence key={`${l!.id}${dx}`} position={[l!.x + dx, ground(l!.x, l!.z), front(l!) - 0.35]} variant={1} />))}
+    {/* Boarded doors: the existing log fence across the museum's entrance (the café boards its own, CafeBuilding). */}
+    {[museum].filter(l => l && !opened.includes(l.id as WorldGoalId)).map(l => [-0.6, 0.6].map(dx => <NatureFence key={`${l!.id}${dx}`} position={[l!.x + dx, ground(l!.x, l!.z), front(l!) - 0.35]} variant={1} />))}
     {ruins && [-1.2, 0, 1.2].map(dz => <group key={dz} position={[ruins.x, ground(ruins.x, ruins.z + dz), ruins.z + dz]} rotation={[0, Math.PI / 2, 0]}><NatureFence position={[0, 0, 0]} variant={1} /></group>)}
     {ruins && [-1.9, 1.9].map(dz => <GLBProp key={dz} url="/assets/acnh/props/stone-lantern.glb" position={[ruins.x, ground(ruins.x, ruins.z + dz), ruins.z + dz]} />)}
     {monument && <ClubMonument position={at(monument)} stage={stage} ceremony={ceremony} />}
@@ -379,7 +380,6 @@ function VillageLandmarks({ layout, ground, opened, stage, ceremony, light }: { 
     {board && <GLBProp url="/assets/acnh/props/bulletin-board.glb" position={at(board)} />}
     {missions && <GLBProp url="/assets/acnh/props/bulletin-board.glb" position={[missions.at[0], ground(...missions.at), missions.at[1] + 0.3]} rotation={[0, missions.yaw, 0]} />}
     {wharf && <group position={[wharf.x, 0, wharf.z]} rotation={[0, wharf.yaw ?? 0, 0]}><WharfPier /></group>}
-    {cafe && opened.includes("cafe") && <Html position={[cafe.x, ground(cafe.x, cafe.z) + 3, front(cafe)]} center distanceFactor={10} zIndexRange={[3, 0]}><div className={styles.cue}>Café</div></Html>}
     {layout.landmarks.filter(l => SIGNS[l.id] && !opened.includes(l.id as WorldGoalId)).map(l => <Html key={l.id} position={[l.x, ground(l.x, l.z) + (l.half && l.half[0] > 1 ? 3.6 : 2.3), l.z - (l.half?.[1] ?? 0)]} center distanceFactor={10} zIndexRange={[3, 0]}>
       <div className={styles.cue} data-closed={!l.open}>{SIGNS[l.id]}</div>
     </Html>)}
