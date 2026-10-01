@@ -81,6 +81,12 @@ The café works end to end (sit, study, coins, walk-away settlement), but most o
      - Reuse the existing table kinds where they fit. If a new kind (bar, booth, communal) needs a schema change, do it in that migration.
    - **Models:** hand-modeled props in Blender headless (no downloads, no AI generation). Reuse existing clubhouse props only where they match the references.
    - **The owner (item 6)** works behind this bar.
+   - **Ambient patrons** (David, 2026-10-01, design principle 2: the world never feels empty):
+     - Background characters on the real rig, in varied looks, sit at free seats and sip, read or type.
+     - They thin out as real members arrive and always yield a seat a member walks up to.
+     - Client-side only; never counted as members, never on the board.
+     - Deterministic from the shared world clock, so everyone sees the same café.
+     - Cheap to draw: shared materials, no per-patron state updates.
 8. **The café building.**
    - A dedicated café modeled in Blender to match the premium interior: warm wood and glass, big windows glowing amber at night, an awning, a lightbox sign.
    - It is the village's style, not photoreal, and matte (row 264).
