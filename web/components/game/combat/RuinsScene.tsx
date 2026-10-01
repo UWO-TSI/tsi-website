@@ -21,7 +21,8 @@ import { InteriorKeeper } from "../interiorShared";
 import { IslandAtmosphere, useFollowCamera } from "../IslandAtmosphere";
 import { AimReticle, Blasts, EnemyInstances, FloaterProjector, PlayerAuras, Projectiles, Telegraphs, Totems, Wisps } from "./EncounterRender";
 import { BOSS_CENTER, ESCORT_PATHS, EXIT_SPOT, FETCH_SPOTS, GATE_PLAZA, RUINS_BROKEN_ARCHES, RUINS_MOAI, RUINS_PILLARS, RUINS_ROCKS, RUINS_SPAWN, RUINS_TORCHES, SURVIVE_CIRCLES, createRuins } from "@/lib/game/ruins";
-import { combat, publishCombat, takeMissionQueue, type AbilityId } from "@/lib/game/combat/runtime";
+import { combat, publishCombat, takeMissionQueue, type AbilityId, type CombatRuntime, type CueKind } from "@/lib/game/combat/runtime";
+import { AudioManager, type SFXName } from "@/lib/game/audio";
 import { useAbilityKeys } from "@/lib/game/movement/keys";
 import { screenOf } from "../movement/moveFx";
 import { BUFFER, createInputs, runInputs, spawnWave } from "@/lib/game/combat/actions";
@@ -30,7 +31,7 @@ import { stepCombat } from "@/lib/game/combat/encounter";
 import { claimBossReward, postKill, postMissionEvents } from "@/lib/game/combat/progression";
 import { materialsLabel } from "@/lib/game/combat/missions";
 import { ENEMIES, WEAPONS } from "@/lib/game/combat/data";
-import { inRect, spawnEnemy } from "@/lib/game/combat/sim";
+import { inRect, spawnEnemy, type Vec } from "@/lib/game/combat/sim";
 import { capacity, respawnAfter, SPAWN_TABLE, SPAWNS, WAVES } from "@/lib/game/combat/spawns";
 import { BOSS_DROPS } from "@/lib/combat/content";
 import { TRAITS } from "@/lib/combat/kits";
@@ -38,6 +39,7 @@ import { ISLAND_TERRAIN, type IslandLight } from "@/lib/game/islandLighting";
 import type { SeasonLook } from "@/lib/game/seasonalLook";
 import type { IslandWeather } from "@/lib/game/islandWeather";
 import type { IslandPhase } from "@/lib/game/islandTime";
+import type { WeaponKind } from "@/lib/game/combat/contract";
 import styles from "../DefaultIslandWorld.module.css";
 
 export type RuinsNear = "exit" | "lantern" | null;
@@ -90,6 +92,30 @@ function bossVictory(eventKey: string, now: number) {
 }
 
 const ENGAGED = new Set(["chase", "windup", "active", "recover"]);
+
+/**
+ * Combat cues on the existing CC0 set (public/audio/sfx/MANIFEST.md): [file, rate, gain]. A rate below 1 plays a file
+ * lower and longer, so one file can serve two cues. The dodge is the kit's dash sound (PlayerAvatar).
+ */
+type Sound = [SFXName, number, number];
+const CUE_SOUND: Record<Exclude<CueKind, "swing">, Sound[]> = {
+  hit: [["blip3", 0.8, 0.9]],
+  crit: [["blip3", 0.62, 1], ["click", 0.85, 0.8]],
+  hurt: [["exit", 1.35, 0.75]],
+  defeat: [["confirm", 0.75, 0.6]],
+  windup: [["blip1", 0.7, 0.4]],
+  stagger: [["exit", 0.6, 1]],
+  bossDefeat: [["enter", 0.6, 1], ["confirm", 0.6, 0.9]],
+};
+const SWING_SOUND: Record<WeaponKind, Sound> = { melee: ["footstep", 1.5, 0.7], bow: ["click", 0.7, 0.7], staff: ["blip2", 0.8, 0.5], summon: ["blip1", 1.2, 0.5] };
+const heard = new Set<CueKind>();
+/** This frame's cues as sounds: one of each kind (a crit over a hit), windups only within earshot. */
+function playCues(rt: CombatRuntime, me: Vec) {
+  heard.clear();
+  for (const c of rt.cues) if (c.kind !== "windup" || Math.hypot(c.x - me.x, c.z - me.z) < 10) heard.add(c.kind);
+  if (heard.has("crit")) heard.delete("hit");
+  for (const k of heard) for (const [name, rate, gain] of k === "swing" ? [SWING_SOUND[WEAPONS[rt.player.weapon].kind]] : CUE_SOUND[k]) AudioManager.playSFX(name, { rate, gain });
+}
 
 export default function RuinsScene({ level, phase, light, look, weather, liteMode, castShadows, zoom, player, onNear, onDefeat, start }: {
   phase: IslandPhase; light: IslandLight; look: SeasonLook; weather: IslandWeather; liteMode: boolean; castShadows: boolean; zoom: number;
@@ -166,6 +192,8 @@ export default function RuinsScene({ level, phase, light, look, weather, liteMod
     if (runInputs(rt, inp.presses, me, Math.min(rawDelta, 0.05))) publishCombat(); // a refused key pulses its slot now
     // Timers, energy, enemies, projectiles, summons and totems (lib/game/combat/encounter.ts); ability dashes and knockback push PlayerAvatar.
     stepCombat(rt, me, dt, ruins.free);
+    playCues(rt, me);
+    rt.cues.length = 0;
     // Respawn (spawn-table enemies only) once dead long enough and you're away from the spot.
     for (const [i, e] of rt.enemies.entries()) {
       const after = e.state === "dead" && !e.summoned ? respawnAfter(e.id) : 0;

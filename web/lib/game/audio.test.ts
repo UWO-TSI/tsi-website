@@ -118,6 +118,16 @@ describe("world audio lifecycle", () => {
     const manager = new AudioManagerImpl(); expect(manager.getState().volumes).toEqual({ master: 0.7, ambient: 0.6, music: 0.55, sfx: 0 });
     manager.setVolumes({ master: NaN, ambient: Infinity, sfx: 4 }); expect(manager.getState().volumes).toEqual({ master: 0.7, ambient: 0.6, music: 0.55, sfx: 1 }); manager.stop();
   });
+  it("re-pitches a one-shot by rate and keeps its gain through the sound settings (the combat cues)", () => {
+    const manager = new AudioManagerImpl(); manager.enable();
+    manager.playSFX("blip3", { rate: 0.6, gain: 0.5 });
+    const sound = FakeAudio.all[0] as FakeAudio & { playbackRate?: number; defaultPlaybackRate?: number; preservesPitch?: boolean };
+    expect([sound.playbackRate, sound.defaultPlaybackRate, sound.preservesPitch]).toEqual([0.6, 0.6, false]);
+    expect(sound.volume).toBeCloseTo(0.7 * 0.8 * 0.5);
+    manager.setMuted(true); expect(sound.volume).toBe(0);
+    manager.setMuted(false); expect(sound.volume).toBeCloseTo(0.7 * 0.8 * 0.5);
+    manager.stop();
+  });
   it("releases finished one-shots from live volume updates", () => {
     const manager = new AudioManagerImpl(); manager.enable(); manager.playSFX("confirm"); const sound = FakeAudio.all[0]; const initial = sound.volume;
     sound.onended?.(); manager.setVolumes({ master: 0 }); expect(sound.volume).toBe(initial); manager.stop();

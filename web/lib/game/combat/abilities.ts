@@ -15,7 +15,7 @@ import type { IncantationScore } from "./contract";
 import { ENEMIES } from "./data";
 import { advanceMission, type MissionEvent } from "./missions";
 import { angleDiff, BOSS, damageEnemy, facingTo, inArc, segDist, spawnEnemy, staggered, type Enemy, type Vec } from "./sim";
-import { SLOT_IDS, type Buff, type CombatRuntime, type ShotHit, type Unit } from "./runtime";
+import { SLOT_IDS, type Buff, type CombatRuntime, type CueKind, type ShotHit, type Unit } from "./runtime";
 
 /** Plan §Combat and incantation defaults: starting a drawing spends 25% of its energy, a fizzle or cancel costs a short recovery instead of the cooldown. */
 export const CAST = { start: 0.25, recovery: 1.5 } as const;
@@ -30,6 +30,11 @@ const dist = (a: Vec, b: Vec) => Math.hypot(a.x - b.x, a.z - b.z);
 export function floater(rt: CombatRuntime, at: Vec, y: number, text: string, kind: "hit" | "crit" | "hurt" | "info") {
   rt.floaters.push({ id: rt.seq++, x: at.x, y, z: at.z, text, kind, age: 0 });
   if (rt.floaters.length > 16) rt.floaters.shift();
+}
+/** A cue for the scene (sound, hitstop, shake, puff); at most 32 wait, for runs nobody drains (the balance harness). */
+export function cue(rt: CombatRuntime, kind: CueKind, at: Vec, melee = false) {
+  rt.cues.push({ kind, x: at.x, z: at.z, melee });
+  if (rt.cues.length > 32) rt.cues.shift();
 }
 export function missionEvent(rt: CombatRuntime, ev: MissionEvent) {
   if (rt.mission) rt.mission = advanceMission(rt.mission, ev);
@@ -64,7 +69,8 @@ export function moveSpeed(rt: CombatRuntime): number {
 export const distracted = (rt: CombatRuntime, e: Enemy) => e.status.distract > 0 || e.status.hold > 0 || rt.units.some(u => u.def.kind === "decoy" && dist(u, e) < e.type.aggroRadius + 3);
 
 // ── Hits ────────────────────────────────────────────────────────
-export interface HitSrc { power: number; from: Vec; stat?: Stat; tier?: number; unit?: boolean; knock?: number; status?: Status }
+/** `melee`: a weapon swing (its hits stop time for a beat). */
+export interface HitSrc { power: number; from: Vec; stat?: Stat; tier?: number; unit?: boolean; knock?: number; status?: Status; melee?: boolean }
 
 /** The passive's damage bonus for this hit (a fraction). */
 function passiveBonus(rt: CombatRuntime, e: Enemy, src: HitSrc): number {
@@ -97,7 +103,7 @@ export function strike(rt: CombatRuntime, e: Enemy, src: HitSrc, random: () => n
   const killed = damageEnemy(e, amount, src.from, src.knock ?? 0);
   if (e.flash === 0.18) floater(rt, e, 1.4 + e.type.hover, String(amount), crit ? "crit" : "hit");
   if (src.status && !killed) applyStatus(e, src.status);
-  if (!src.unit) onPlayerHit(rt, e, amount, crit, held);
+  if (!src.unit) { onPlayerHit(rt, e, amount, crit, held); cue(rt, crit ? "crit" : "hit", e, !!src.melee); }
   if (killed) onKill(rt, e);
   return amount;
 }
@@ -116,6 +122,7 @@ function onPlayerHit(rt: CombatRuntime, e: Enemy, amount: number, crit: boolean,
 
 function onKill(rt: CombatRuntime, e: Enemy) {
   rt.killQueue.push({ enemy: e.type.id, key: `kill:${e.id}:${rt.seq++}:${Date.now().toString(36)}` });
+  cue(rt, e.type.kind === "boss" ? "bossDefeat" : "defeat", e);
   missionEvent(rt, { type: "kill", enemy: e.type.id });
   const pv = passiveOf(rt), me = rt.player.last;
   if (pv?.kind === "kill_heal" && me && dist(me, e) <= (pv.cap ?? 9)) heal(rt, rt.player.maxHp * pv.value);

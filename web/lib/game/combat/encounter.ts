@@ -5,7 +5,7 @@
  * projectiles, summons and totems, effects. Inputs (aim, attack, dodge, keys),
  * missions, respawns and server sync stay with the caller.
  */
-import { enemyTarget, floater, hurtUnits, moveSpeed, stepUnits } from "./abilities";
+import { cue, enemyTarget, floater, hurtUnits, moveSpeed, stepUnits } from "./abilities";
 import { hurtPlayer, regenEnergy, resolvePlayerShot, summonWisps } from "./actions";
 import { SLOT_IDS, type AbilityId, type CombatRuntime } from "./runtime";
 import { beamLands, DODGE, stepEnemy, strikeLands, sweptHit, type Vec } from "./sim";
@@ -38,7 +38,10 @@ export function stepCombat(rt: CombatRuntime, me: Vec, dt: number, free: (x: num
   // Enemies.
   const you = { x: me.x, z: me.z, safe: p.safe, alive: p.alive };
   for (const e of [...rt.enemies]) {
+    const was = e.state;
     const ev = stepEnemy(e, enemyTarget(rt, e, you), dt, (x, z) => free(x, z, e.type.radius * 0.6));
+    if (was !== "windup" && e.state === "windup") cue(rt, "windup", e);
+    else if (was === "active" && e.state === "recover" && e.move.stagger) cue(rt, "stagger", e);
     if (!ev) continue;
     const dmg = e.move.damage;
     if (ev.kind === "strike") {

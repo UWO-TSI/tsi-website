@@ -28,7 +28,7 @@
  *   AudioManager.setMuted(bool)                   — silences all channels, keeps sliders
  *   AudioManager.setAmbience({ phase, weather, season }) — crossfade ambient, richer key
  *   AudioManager.setMusic({ block, season, override }) — crossfade the hourly music bed
- *   AudioManager.playSFX(name)                   — one-shot, overlapping safe
+ *   AudioManager.playSFX(name, { rate, gain })   — one-shot, overlapping safe; `rate` re-pitches it (the combat cues)
  *   AudioManager.playBlip()                      — random dialogue voice blip
  *   AudioManager.subscribe(listener)             — for React UI sync
  *   AudioManager.getState()
@@ -167,7 +167,7 @@ export class AudioManagerImpl {
 
   private ambientCh: TrackChannel = emptyChannel();
   private musicCh: TrackChannel = emptyChannel();
-  private oneShots = new Map<HTMLAudioElement, SFXName>();
+  private oneShots = new Map<HTMLAudioElement, { name: SFXName; gain: number }>();
 
   private missingFiles = new Set<string>();
   private warnedMissing = false;
@@ -255,7 +255,7 @@ export class AudioManagerImpl {
       if (ch.current) ch.current.volume = target * (ch.next ? 1 - ch.fadeProgress : 1);
       if (ch.next) ch.next.volume = target * ch.fadeProgress;
     }
-    for (const [sound, name] of this.oneShots) sound.volume = this.sfxTargetVolume(name);
+    for (const [sound, { name, gain }] of this.oneShots) sound.volume = Math.min(1, this.sfxTargetVolume(name) * gain);
   }
 
   private mutedGain(): number {
@@ -419,14 +419,16 @@ export class AudioManagerImpl {
     ch.raf = requestAnimationFrame(tick);
   }
 
-  playSFX(name: SFXName): void {
+  /** A one-shot. `rate` plays it faster and higher (or slower and lower) so one CC0 file can serve distinct cues; `gain` scales it. */
+  playSFX(name: SFXName, { rate = 1, gain = 1 }: { rate?: number; gain?: number } = {}): void {
     if (!this.enabled || typeof window === "undefined") return;
     const src = MANIFEST.sfx[name];
     if (this.missingFiles.has(src)) return; // already known missing
     const el = this.newAudio(false);
     if (!el) return;
-    el.volume = this.sfxTargetVolume(name);
-    this.oneShots.set(el, name);
+    el.volume = Math.min(1, this.sfxTargetVolume(name) * gain);
+    if (rate !== 1) { el.defaultPlaybackRate = el.playbackRate = rate; el.preservesPitch = false; } // loading resets playbackRate to the default
+    this.oneShots.set(el, { name, gain });
     el.onended = () => this.oneShots.delete(el);
     el.addEventListener("error", () => { if (el.error?.code === 4) this.markMissing(src); this.oneShots.delete(el); }, { once: true });
     this.playCascading(el, [src], 0);

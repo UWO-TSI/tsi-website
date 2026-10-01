@@ -25,6 +25,9 @@ export interface Unit {
 }
 export interface Buff { stat: BuffStat; value: number; t: number; onBlock?: Ability; answered?: boolean }
 export interface Floater { id: number; x: number; y: number; z: number; text: string; kind: "hit" | "crit" | "hurt" | "info"; age: number }
+/** Something the scene plays (sound, hitstop, camera shake, a puff): pushed by the pure combat code, drained every frame. */
+export type CueKind = "swing" | "hit" | "crit" | "hurt" | "defeat" | "windup" | "stagger" | "bossDefeat";
+export interface Cue { kind: CueKind; x: number; z: number; melee: boolean }
 export interface Blast { id: number; x: number; z: number; radius: number; color: string; age: number; life: number; arc?: number; rot?: number; length?: number }
 /** Four equipped ability slots (row 50) plus the weapon swap. */
 export type AbilityId = "slot1" | "slot2" | "slot3" | "slot4" | "swap";
@@ -62,7 +65,7 @@ export interface CombatRuntime {
   /** Presses refused because the slot can't be ready in time (actions.ts runInputs): the HUD pulses the slot on each. */
   denied: Record<AbilityId, number>;
   enemies: Enemy[];
-  projectiles: Projectile[]; units: Unit[]; buffs: Buff[]; floaters: Floater[]; blasts: Blast[];
+  projectiles: Projectile[]; units: Unit[]; buffs: Buff[]; floaters: Floater[]; blasts: Blast[]; cues: Cue[];
   casting: { id: number; rune: "spark" | "binding"; aim: Vec; slot: number; ability: Ability } | null;
   /** The subclass kit from /api/combat/progression: equipped abilities, capacity for summons, owned monster traits. */
   kit: { subclass: Subclass; capacity: number; traits: Record<string, number> } | null;
@@ -93,7 +96,7 @@ export function createRuntime(): CombatRuntime {
       aim: { x: 0, z: 0 }, facing: 0, hurt: 0, downFor: 0, armed: false,
       shield: 0, shieldFor: 0, dash: null, impulse: { x: 0, z: 0 }, speed: 1, still: 0, last: null },
     cooldowns: { slot1: 0, slot2: 0, slot3: 0, slot4: 0, swap: 0 }, denied: { slot1: 0, slot2: 0, slot3: 0, slot4: 0, swap: 0 },
-    enemies: [], projectiles: [], units: [], buffs: [], floaters: [], blasts: [],
+    enemies: [], projectiles: [], units: [], buffs: [], floaters: [], blasts: [], cues: [],
     casting: null, kit: null, slots: [null, null, null, null],
     passive: { element: null, target: null, stacks: 0, momentum: 0, momentumT: 0, procs: 0 }, transform: null,
     killQueue: [], mission: null, idol: "temple", escort: null, wave: null, bossEngaged: false, banner: null, seq: 1,

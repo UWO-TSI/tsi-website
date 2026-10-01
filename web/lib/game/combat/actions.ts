@@ -9,7 +9,7 @@ import { ENEMIES, WEAPONS } from "./data";
 import type { Vec } from "./sim";
 import { BOSS, DODGE, inArc, invulnerable, spawnEnemy, sweptHit, type Enemy } from "./sim";
 import { ENERGY, SLOT_IDS, type AbilityId, type CombatRuntime } from "./runtime";
-import { cancelCast, floater, mitigate, strike, summon, fireSlot } from "./abilities";
+import { cancelCast, cue, floater, mitigate, strike, summon, fireSlot } from "./abilities";
 import type { SpawnPoint } from "./spawns";
 import { FAMILY_STAT } from "@/lib/combat/kits";
 import { WEAPONS as SYSTEM_WEAPONS } from "@/lib/combat/weapons";
@@ -30,11 +30,12 @@ export function attack(rt: CombatRuntime, player: Vec, random = Math.random): bo
   if (!p.alive || p.attackCd > 0 || rt.casting || p.dash || (p.dodgeAge !== null && p.dodgeAge < DODGE.duration)) return false;
   const w = WEAPONS[p.weapon];
   p.attackCd = w.cooldown;
+  cue(rt, "swing", player);
   const dir = { x: Math.sin(p.facing), z: Math.cos(p.facing) };
   if (w.kind === "melee") {
     p.swing = 0.22;
     let landed = false;
-    for (const e of rt.enemies) if (e.state !== "dead" && inArc(player, p.facing, w.range, w.arc, e, e.type.radius)) { strike(rt, e, { power: 1, from: player, knock: 4 }, random); landed = true; }
+    for (const e of rt.enemies) if (e.state !== "dead" && inArc(player, p.facing, w.range, w.arc, e, e.type.radius)) { strike(rt, e, { power: 1, from: player, knock: 4, melee: true }, random); landed = true; }
     if (landed) wearHit(rt);
   } else if (w.kind === "bow" || w.kind === "staff") {
     const speed = w.speed ?? 12;
@@ -116,6 +117,7 @@ export function hurtPlayer(rt: CombatRuntime, amount: number, from: Vec, player:
   if (damage <= 0) return 0;
   p.hp = Math.max(0, p.hp - damage);
   floater(rt, player, 1.7, `-${damage}`, "hurt");
+  cue(rt, "hurt", player);
   if (p.hp === 0) { p.alive = false; p.downFor = 0; rt.casting = null; }
   return damage;
 }

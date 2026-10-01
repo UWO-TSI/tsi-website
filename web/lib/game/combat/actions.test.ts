@@ -196,3 +196,27 @@ describe("input buffering (combat polish 1)", () => {
     expect(rt.casting).toBeNull();
   });
 });
+
+describe("combat cues (combat polish 3): the encounter says what happened, the scene plays it", () => {
+  it("a killing swing cues the swing, the hit and the defeat; a hit taken cues the hurt", () => {
+    const rt = createRuntime();
+    rt.player.safe = false; rt.player.facing = 0;
+    rt.enemies = [spawnEnemy("a", { ...ENEMIES["shadow-fox"], hp: 5 }, 0, 1.2)];
+    attack(rt, { x: 0, z: 0 }, fixed);
+    expect(rt.cues.map(c => [c.kind, c.melee])).toEqual([["swing", false], ["hit", true], ["defeat", false]]);
+    rt.cues.length = 0;
+    hurtPlayer(rt, 10, { x: 0, z: 1 }, { x: 0, z: 0 });
+    expect(rt.cues.map(c => c.kind)).toEqual(["hurt"]);
+  });
+  it("an enemy's windup and the guardian's stagger window cue once each", () => {
+    const rt = createRuntime();
+    rt.player.safe = false;
+    const boss = spawnEnemy("b", ENEMIES["guardian-statue"], 0, 0);
+    boss.state = "chase"; boss.move = ENEMIES["guardian-statue"].attacks.find(m => m.shape === "beam")!;
+    rt.enemies = [boss];
+    const kinds: string[] = [];
+    for (let t = 0; t < 3.5; t += 1 / 60) { stepCombat(rt, { x: 0, z: 5 }, 1 / 60); kinds.push(...rt.cues.map(c => c.kind)); rt.cues.length = 0; }
+    expect(kinds.filter(k => k === "windup")).toHaveLength(1);
+    expect(kinds.filter(k => k === "stagger")).toHaveLength(1);
+  });
+});
