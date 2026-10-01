@@ -1,8 +1,10 @@
-.world { position: relative; width: 100%; height: calc(100dvh - var(--island-top, 40px)); min-height: 480px; overflow: hidden; background: #b7dce0; color: #293e3b; font-family: "IBM Plex Mono", monospace; }
-.heading { position: absolute; top: 32px; left: 36px; pointer-events: none; text-shadow: 0 1px 10px #ffffff70; }
+.world { --game-toast-bottom: 132px; position: relative; width: 100%; height: calc(100dvh - var(--island-top, 40px)); min-height: 480px; overflow: hidden; background: #b7dce0; color: #293e3b; font-family: "IBM Plex Mono", monospace; }
+.heading { position: absolute; top: 32px; left: 36px; pointer-events: none; text-shadow: 0 1px 10px #ffffff70; transition: opacity 0.6s ease 0.15s, transform 0.6s ease 0.15s; }
+/* The scene title fades out with a door fade and back in, renamed, once the next scene shows. */
+.heading[data-fading="true"] { opacity: 0; transform: translateY(-4px); transition-duration: 0.25s; transition-delay: 0s; }
 .heading h1 { margin: 0; font-size: clamp(20px, 2.4vw, 30px); font-weight: 600; letter-spacing: -1.2px; }
 .heading p { margin-top: 6px; font-size: 12px; }
-.panel { position: absolute; right: 24px; top: 28px; width: 238px; max-height: calc(100% - 100px); overflow-y: auto; padding: 17px; background: #f8f7e9f2; border: 1px solid #5c746c40; border-radius: 14px 14px 5px 14px; box-shadow: 0 6px 0 #47625218, 0 12px 36px #29464118; font-size: 12px; }
+.panel { position: absolute; right: 20px; top: 76px; width: 238px; max-height: calc(100% - 180px); z-index: 14; overflow-y: auto; padding: 17px; background: #f8f7e9f2; border: 1px solid #5c746c40; border-radius: 14px 14px 5px 14px; box-shadow: 0 6px 0 #47625218, 0 12px 36px #29464118; font-size: 12px; }
 .views { display: flex; gap: 4px; padding: 3px; background: #dfe6d6; border-radius: 8px; margin-bottom: 18px; }
 .views button { min-height: 44px; flex: 1; border: 0; background: transparent; color: #42544e; padding: 8px 4px; border-radius: 5px; font: inherit; cursor: pointer; }
 .views button[aria-pressed="true"] { background: #426b5b; color: #fffdf0; box-shadow: 0 2px 0 #294b3c; }
@@ -22,16 +24,11 @@
 .controls span { display: flex; align-items: center; gap: 5px; }
 .controls kbd { font: inherit; background: #e0e6d8; border: 1px solid #a7b59e; border-bottom-width: 2px; border-radius: 3px; padding: 2px 4px; }
 .loading { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); background: #f8f7e9; padding: 18px 24px; border-radius: 8px; font-size: 12px; }
-@media (max-width: 700px) { .heading { top: 20px; left: 18px; } .heading p { display: none; } .panel { right: 12px; top: 70px; width: 208px; padding: 12px; } .controls { gap: 10px; padding: 10px; font-size: 10px; } }
+@media (max-width: 700px) { .heading { top: 20px; left: 18px; } .heading p { display: none; } .panel { right: 12px; top: 112px; width: 208px; padding: 12px; } .controls { gap: 10px; padding: 10px; font-size: 10px; } }
 
-.panelToggle, .touchControls { display: none; }
+.touchControls { display: none; }
 .performance .toggle { margin-top: 10px; font-size: 10px; font-weight: 400; }
-@media (max-width: 700px) {
-  .panelToggle { min-height: 44px; display: block; position: absolute; top: 15px; right: 12px; padding: 9px 12px; border: 1px solid #94a796; border-radius: 6px; background: #f8f7e9; color: #293e3b; font: inherit; font-size: 11px; }
-  .panelToggle:focus-visible { outline: 3px solid #bb813f; outline-offset: 3px; }
-  .panel[data-open="false"] { display: none; }
-  .panel { top: 60px; max-height: calc(100% - 125px); overflow-y: auto; }
-}
+.panel[data-open="false"] { display: none; }
 @media (pointer: coarse), (pointer: none) {
   .controls { display: none; }
   .touchControls { display: block; position: absolute; bottom: 18px; left: 50%; transform: translateX(-50%); margin: 0; padding: 10px 14px; border-radius: 6px; background: #f8f7e9e8; white-space: nowrap; font-size: 11px; }
@@ -41,13 +38,13 @@
 .world[data-light="evening"] .heading { color: #3a3431; }
 
 /* Interaction prompt and room fade, as on the applicant island. */
-.interact { position: absolute; bottom: 78px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 9px 16px; border: 1px solid #fff8; border-radius: 999px; background: #f8f7e9f2; color: #293e3b; font: inherit; font-size: 12px; font-weight: 600; box-shadow: 0 4px 15px #29464120; cursor: pointer; }
+.interact { position: absolute; bottom: 78px; left: 50%; transform: translateX(-50%); width: max-content; max-width: calc(100% - 32px); box-sizing: border-box; display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 9px 16px; border: 1px solid #fff8; border-radius: 999px; background: #f8f7e9f2; color: #293e3b; font: inherit; font-size: 12px; font-weight: 600; box-shadow: 0 4px 15px #29464120; cursor: pointer; }
 .interact kbd { font: inherit; background: #426b5b; color: #fffdf0; border-radius: 4px; padding: 1px 6px; }
 .interact:focus-visible { outline: 3px solid #bb813f; outline-offset: 3px; }
-.fade { position: absolute; inset: 0; background: #14100c; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
-.fade[data-active="true"] { opacity: 1; }
+.fade { position: absolute; inset: 0; z-index: 40; background: #14100c; opacity: 0; pointer-events: none; transition: opacity 0.5s ease; }
+.fade[data-active="true"] { opacity: 1; transition-duration: 0.3s; }
 .cue { padding: 4px 10px; border-radius: 999px; background: #f8f7e9e0; color: #293e3b; font: 600 11px "IBM Plex Mono", monospace; white-space: nowrap; pointer-events: none; }
-@media (prefers-reduced-motion: reduce) { .fade { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .fade, .heading { transition: none; } }
 .cue[data-closed="true"] { background: #efe3cfe6; color: #6a4b2f; border: 1px dashed #a07850; }
 p.interact[data-closed="true"] { margin: 0; cursor: default; color: #6a4b2f; }
 .sheet { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(420px, calc(100% - 32px)); padding: 18px 20px; border-radius: 18px; background: #f8f7e9; color: #293e3b; border: 1px solid #5c746c40; box-shadow: 0 6px 0 #47625218, 0 16px 40px #29464130; font-size: 13px; line-height: 1.5; z-index: 20; }
@@ -60,12 +57,29 @@ p.interact[data-closed="true"] { margin: 0; cursor: default; color: #6a4b2f; }
 .objective { margin: 6px 0 0; padding: 7px 10px; border-radius: 10px; background: #f8f7e9f2; color: #293e3b; border: 1px solid #a8bdba; font-size: 11px; line-height: 1.35; box-shadow: 0 4px 14px #132e3625; }
 .objective span { color: #e8704a; }
 .minimap { position: absolute; left: 16px; bottom: 84px; width: 180px; }
-.minimap > section { position: static; width: 100%; }
+.minimap > section { position: static; width: 100%; max-width: none; }
+/* The map closed: a pill in its place to bring it back (the objective stays under it). */
+.mapButton { display: inline-flex; align-items: center; gap: 7px; min-height: 44px; padding: 0 14px; border: 1px solid #5c746c40; border-radius: 999px; background: #f8f7e9f2; color: #293e3b; font: inherit; font-size: 12px; font-weight: 600; box-shadow: 0 3px 0 #47625218, 0 6px 18px #29464118; cursor: pointer; }
+.mapButton:hover { background: #fffdf3; }
+.mapButton:focus-visible { outline: 3px solid #bb813f; outline-offset: 3px; }
+.mapButton kbd { font: inherit; background: #426b5b; color: #fffdf0; border-radius: 4px; padding: 0 5px; }
+/* First login: the minimap and the chapter 1 objective arrive after the HQ lead's greeting (hud-first-login §6). */
+.minimap[data-new] { animation: objectiveIn 0.7s cubic-bezier(0.2, 0.9, 0.3, 1.2) both; }
+.minimap[data-new] .objective { animation: objectiveGlow 2.2s ease-out 0.5s both; }
+@keyframes objectiveIn { from { opacity: 0; transform: translateY(14px) scale(0.96); } }
+@keyframes objectiveGlow { 0%, 100% { box-shadow: 0 4px 14px #132e3625; } 30% { box-shadow: 0 0 0 4px #e8704a55, 0 4px 14px #132e3625; } }
+/* The HQ lead's greeting box (the recruit kit's NPCDialogue) at the foot of the screen; its name tag in the island's sage (the portal's light theme turns the kit's navy white). */
+.greeting { --color-bg-navy: #426b5b; position: absolute; left: 50%; bottom: 40px; transform: translateX(-50%); width: min(720px, calc(100% - 32px)); z-index: 30; animation: greetingIn 0.35s ease-out both; }
+.greetingSkip { position: absolute; top: -14px; right: 22px; min-height: 32px; padding: 0 14px; border: 1px solid #5c746c40; border-radius: 999px; background: #f8f7e9; color: #4f625b; font: 600 12px "IBM Plex Mono", monospace; cursor: pointer; box-shadow: 0 2px 0 #47625218; }
+.greetingSkip:focus-visible { outline: 3px solid #bb813f; outline-offset: 3px; }
+@keyframes greetingIn { from { opacity: 0; transform: translate(-50%, 16px); } }
+@media (prefers-reduced-motion: reduce) { .minimap[data-new], .minimap[data-new] .objective, .greeting { animation: none; } }
 .objectiveMarker { animation: markerPulse 1.6s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
 @keyframes markerPulse { 50% { opacity: 0.45; } }
 @media (prefers-reduced-motion: reduce) { .objectiveMarker { animation: none; } }
 .confetti { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 15; }
-@media (max-width: 700px) { .minimap { width: 130px; bottom: 70px; } }
+/* Narrow windows: the map goes up under the Journal, so the prompt and the toast lane own the bottom; the key hints keep to one scrolling line. */
+@media (max-width: 700px) { .minimap { width: 130px; top: 198px; bottom: auto; } .controls { flex-wrap: nowrap; justify-content: flex-start; overflow-x: auto; scrollbar-width: none; } }
 
 /* Decorate panel (homes) */
 .decorate { position: absolute; right: 16px; bottom: 84px; width: 280px; max-height: calc(100% - 180px); overflow-y: auto; padding: 14px; border-radius: 16px; background: #f8f7e9f5; color: #293e3b; border: 1px solid #5c746c40; box-shadow: 0 6px 0 #47625218, 0 12px 36px #29464125; font-size: 12px; z-index: 12; }
@@ -88,7 +102,6 @@ p.interact[data-closed="true"] { margin: 0; cursor: default; color: #6a4b2f; }
 .decorateToggle kbd { font: inherit; background: #426b5b; color: #fffdf0; border-radius: 4px; padding: 1px 6px; margin-right: 4px; }
 .decorateToggle:focus-visible { outline: 3px solid #bb813f; outline-offset: 3px; }
 .world[data-inside] .heading { color: #fff4da; text-shadow: 0 2px 12px #11152a; }
-.actionNote { position: absolute; bottom: 130px; left: 50%; transform: translateX(-50%); margin: 0; padding: 8px 14px; border-radius: 12px; background: #293e3bf0; color: #fffdf0; font-size: 12px; max-width: min(460px, calc(100% - 32px)); text-align: center; z-index: 13; }
 .bagButton { position: absolute; left: 16px; top: 150px; min-height: 40px; padding: 6px 12px; border: 1px solid #a1af9b; border-radius: 999px; background: #f8f7e9f2; color: #293e3b; font: inherit; font-size: 11px; font-weight: 600; cursor: pointer; z-index: 11; }
 .bagButton kbd { font: inherit; background: #426b5b; color: #fffdf0; border-radius: 4px; padding: 0 5px; margin-right: 4px; }
 .plaque { min-width: 86px; padding: 3px 7px; border-radius: 6px; background: #3b2f25e8; color: #f6ecd6; font-size: 9px; line-height: 1.25; text-align: center; white-space: nowrap; pointer-events: none; }
@@ -187,10 +200,10 @@ p.interact[data-closed="true"] { margin: 0; cursor: default; color: #6a4b2f; }
 .sliderRow input[type="range"] { width: 100%; min-height: 28px; accent-color: #426b5b; }
 .sliderRow span { text-align: right; color: #607069; }
 /* Text size (row 220): the HUD scales, the world doesn't. */
-.world .sheet, .world .wardrobe, .world .interact, .world .controls, .world .panel, .world .bagButton, .world .actionNote, .world .heading, .world .reveal, .world .decorateToggle, .world .minimap { zoom: var(--tsi-text-scale, 1); }
+.world .sheet, .world .wardrobe, .world .interact, .world .controls, .world .panel, .world .bagButton, .world .heading, .world .reveal, .world .decorateToggle, .world .minimap { zoom: var(--tsi-text-scale, 1); }
 /* High contrast (row 220) */
 :global(html[data-contrast="high"]) .world .sheet, :global(html[data-contrast="high"]) .world .wardrobe, :global(html[data-contrast="high"]) .world .panel, :global(html[data-contrast="high"]) .world .controls { background: #ffffff; color: #000000; border: 2px solid #000000; }
-:global(html[data-contrast="high"]) .world .interact, :global(html[data-contrast="high"]) .world .bagButton, :global(html[data-contrast="high"]) .world .actionNote, :global(html[data-contrast="high"]) .world .cue { background: #000000; color: #ffffff; border: 2px solid #ffffff; }
+:global(html[data-contrast="high"]) .world .interact, :global(html[data-contrast="high"]) .world .bagButton, :global(html[data-contrast="high"]) .world .cue { background: #000000; color: #ffffff; border: 2px solid #ffffff; }
 :global(html[data-contrast="high"]) .world .interact kbd { background: #ffe14d; color: #000000; }
 :global(html[data-contrast="high"]) .world kbd { background: #ffffff; color: #000000; border: 1px solid #000000; }
 :global(html[data-contrast="high"]) .world .hint, :global(html[data-contrast="high"]) .world small { color: #000000; }
@@ -284,6 +297,10 @@ p.interact[data-closed="true"] { margin: 0; cursor: default; color: #6a4b2f; }
 .missionTemplate { justify-self: start; padding: 1px 8px; border-radius: 999px; background: #efe3cf; font: 600 10px "IBM Plex Mono", monospace; color: #6a4b2f; }
 .missionState { display: flex; gap: 8px; align-items: center; justify-content: space-between; }
 .missionList h3 { margin: 0 0 4px; font: 600 11px "IBM Plex Mono", monospace; letter-spacing: 0.06em; text-transform: uppercase; color: #607069; }
+/* The ruins: the prompt and the toast lane stack above the combat HUD (bottom 76px, about 140px tall). */
+.world[data-site="ruins"] { --game-toast-bottom: 284px; }
+.world[data-site="ruins"] .interact { bottom: 228px; }
+@media (max-width: 640px) { .world[data-site="ruins"] { --game-toast-bottom: 340px; } .world[data-site="ruins"] .interact { bottom: 284px; } }
 .world .combatHud, .world .missionTracker, .world .incantation, .world .bossBar, .world .safeBadge, .world .banner, .world .defeat { zoom: var(--tsi-text-scale, 1); }
 .energyBar { height: 15px; }
 .energyBar span { background: linear-gradient(90deg, #9cc3f2, #bfaaf2); }

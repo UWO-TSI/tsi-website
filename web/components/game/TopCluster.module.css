@@ -1,0 +1,38 @@
+/* Top cluster (hud-first-login §2): cream chips and round buttons in the UI kit (row 124), top right. */
+.cluster { position: absolute; top: 20px; right: 20px; display: flex; align-items: center; gap: 8px; z-index: 14; font-family: "IBM Plex Mono", monospace; color: #293e3b; zoom: var(--tsi-text-scale, 1); }
+.chips, .buttons { display: flex; align-items: center; gap: 8px; }
+.chip { position: relative; display: flex; align-items: center; gap: 7px; height: 44px; box-sizing: border-box; padding: 0 14px; border: 1px solid #5c746c40; border-radius: 999px; background: #f8f7e9f2; box-shadow: 0 3px 0 #47625218, 0 6px 18px #29464118; font-size: 14px; white-space: nowrap; }
+.chip b { font-weight: 700; font-variant-numeric: tabular-nums; }
+.chip small { font-size: 12px; font-weight: 600; color: #607069; }
+.coin { font-size: 17px; line-height: 1; }
+.level { font-size: 13px; }
+.xpBar { width: 64px; height: 8px; border-radius: 99px; background: #e0e6d8; box-shadow: inset 0 1px 2px #29464126; overflow: hidden; }
+.xpBar i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #80af67, #a8cf7e); transform-origin: left; transition: transform 0.7s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.clock { display: grid; line-height: 1.15; }
+.clock b { font-size: 14px; }
+.clock small { font-size: 12px; }
+.button { position: relative; width: 44px; height: 44px; display: grid; place-items: center; padding: 0; border: 1px solid #5c746c40; border-radius: 999px; background: #f8f7e9f2; color: #293e3b; font: inherit; box-shadow: 0 3px 0 #47625218, 0 6px 18px #29464118; cursor: pointer; }
+.button:hover { background: #fffdf3; }
+.button:focus-visible { outline: 3px solid #bb813f; outline-offset: 3px; }
+.button[data-sound="off"] { color: #8a5a12; animation: soundAsk 2.4s ease-in-out infinite; }
+@keyframes soundAsk { 50% { box-shadow: 0 3px 0 #47625218, 0 0 0 7px #ffd16633; } }
+.badge { position: absolute; top: -5px; right: -5px; min-width: 20px; height: 20px; box-sizing: border-box; padding: 0 5px; display: grid; place-items: center; border-radius: 99px; background: #e8704a; color: #fffdf3; border: 2px solid #f8f7e9; font-size: 11px; font-weight: 700; animation: badgeIn 0.35s cubic-bezier(0.3, 1.6, 0.5, 1); }
+@keyframes badgeIn { from { transform: scale(0.3); opacity: 0; } }
+/* A gain: the chip glows once and the amount floats up from it. */
+.chip[data-ping] { animation: chipPing 0.9s ease-out; }
+.chip[data-levelup] .level { color: #8a5a12; }
+@keyframes chipPing { 0% { box-shadow: 0 3px 0 #47625218, 0 0 0 0 #ffd166aa; } 40% { box-shadow: 0 3px 0 #47625218, 0 0 0 6px #ffd16655; background: #fffbe0; } 100% { box-shadow: 0 3px 0 #47625218, 0 6px 18px #29464118; } }
+.gain { position: absolute; top: 100%; right: 10px; margin-top: 4px; padding: 2px 8px; border-radius: 99px; background: #426b5b; color: #fffdf0; font-size: 12px; font-style: normal; font-weight: 700; white-space: nowrap; pointer-events: none; animation: gainFloat 1.6s ease-out forwards; }
+@keyframes gainFloat { 0% { opacity: 0; transform: translateY(-6px); } 15% { opacity: 1; transform: none; } 75% { opacity: 1; } 100% { opacity: 0; transform: translateY(4px); } }
+.srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
+/* Phones: the buttons beside the title, the chips on a row under them. */
+@media (max-width: 700px) {
+  .cluster { top: 14px; right: 12px; flex-direction: column-reverse; align-items: flex-end; gap: 8px; }
+  .chips, .buttons { gap: 6px; }
+  .chip { height: 40px; padding: 0 11px; font-size: 13px; }
+  .button { width: 40px; height: 40px; }
+  .xpBar { width: 44px; }
+}
+:global(html[data-contrast="high"]) .chip, :global(html[data-contrast="high"]) .button { background: #ffffff; color: #000000; border: 2px solid #000000; }
+:global(html[data-contrast="high"]) .chip small { color: #000000; }
+@media (prefers-reduced-motion: reduce) { .chip[data-ping], .button[data-sound="off"], .badge { animation: none; } .gain { animation-duration: 0.01s; animation-delay: 1.5s; } .xpBar i { transition: none; } }

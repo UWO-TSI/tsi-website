@@ -1,6 +1,7 @@
 "use client";
 
 import { type ReactNode, useState, useRef, useCallback } from "react";
+import { usePathname } from "next/navigation";
 import { Menu } from "lucide-react";
 import Sidebar from "@/components/portal/Sidebar";
 import { UserProvider } from "@/components/portal/UserContext";
@@ -45,6 +46,8 @@ export default function MemberDashboardShell({ children }: { children: ReactNode
   }, []);
 
   const sidebarVisible = revealed || pinned;
+  // The member island (/student/dashboard) is full-screen: no portal menu over its title, no portal quest bubble.
+  const island = usePathname()?.replace(/\/+$/, "") === "/student/dashboard";
 
   return (
     <UserProvider>
@@ -53,8 +56,8 @@ export default function MemberDashboardShell({ children }: { children: ReactNode
           className="fixed inset-0 z-50 flex"
           style={{ background: "var(--color-bg-main)" }}
         >
-          {/* Hamburger button — always visible, top-left. Hover or click. */}
-          <button
+          {/* Hamburger button — top-left on portal pages. Hover or click. */}
+          {!island && <button
             aria-label={pinned ? "Unpin menu" : "Open menu"}
             className="hidden md:flex fixed items-center justify-center"
             style={{
@@ -75,7 +78,7 @@ export default function MemberDashboardShell({ children }: { children: ReactNode
             onClick={togglePin}
           >
             <Menu style={{ width: "20px", height: "20px" }} />
-          </button>
+          </button>}
 
           {/* Desktop sidebar — slides in/out, only mounted on md+ */}
           <div
@@ -96,7 +99,7 @@ export default function MemberDashboardShell({ children }: { children: ReactNode
           </div>
 
           {/* Mobile hamburger button (separate — tap behavior) */}
-          <button
+          {!island && <button
             aria-label="Open menu"
             className="md:hidden fixed flex items-center justify-center"
             style={{
@@ -113,7 +116,7 @@ export default function MemberDashboardShell({ children }: { children: ReactNode
             onClick={() => setMobileOpen(true)}
           >
             <Menu style={{ width: "24px", height: "24px" }} />
-          </button>
+          </button>}
 
           {/* Mobile sidebar overlay */}
           {mobileOpen && (
@@ -141,7 +144,7 @@ export default function MemberDashboardShell({ children }: { children: ReactNode
           </main>
 
           {/* R3-1: Onboarding quest checklist (floating, opt-in, mute via Settings → Appearance) */}
-          <QuestChecklist />
+          <QuestChecklist hidden={island} />
 
           {/* R3-2: apply stored theme on every portal page load, not just Settings */}
           <ThemeInit />
