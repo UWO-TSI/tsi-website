@@ -71,10 +71,11 @@ def bow(pc):
         pc.tube(path, [(0.0022, 0.009), (0.002, 0.01), (0.0018, 0.011)], sides=4, tip=False, up=Z)
         nb = path[-1]                                          # the notch: the ribbon's end cut into a point
         pc.tube([nb, nb + Vector((sx * 0.004, -0.009, -0.001))], [(0.0016, 0.009), (0.0012, 0.003)], sides=4, tip=False, up=Z)
+    sink = Vector((0, 0, -0.004))                              # its back rests on the hair
     for f in pc.since(n0):                                     # sized like hair-3d-set's bow: about a third of the head
-        pc.ref[f] = Vector(pc.ref[f]) * BOW_SCALE
+        pc.ref[f] = Vector(pc.ref[f]) * BOW_SCALE + sink
     for v in {v for f in pc.since(n0) for v in f.verts}:
-        v.co *= BOW_SCALE
+        v.co = v.co * BOW_SCALE + sink
 
 
 def scrunchie(pc, n=28, sides=6):

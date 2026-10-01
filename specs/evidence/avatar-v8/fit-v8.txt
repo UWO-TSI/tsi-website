@@ -1,0 +1,29 @@
+Fit check, avatar v8 milestone 1 (art/characters/fit_check.py --json). Metres; the body is 1 m tall.
+Verdict: PASS, 0 fails, 0 flags.
+
+piece                 tris  air max  outer med  roots exposed  dive max
+bangs_straight         732      0.0     0.0232              0       0.0
+back_bob              1170      0.0     0.0303              0       0.0
+bangs_curtain          672      0.0     0.0233              0       0.0
+back_long             1182      0.0     0.0301              0       0.0
+bangs_spiky            696      0.0     0.0238              0       0.0
+back_short_spiky      1014      0.0     0.0302              0       0.0
+bangs_curls            672   0.0039     0.0349              0       0.0
+back_afro             1182      0.0     0.0789              0       0.0
+bangs_braids           432      0.0     0.0091              0    0.0007
+back_box_braids       1182      0.0     0.0216              0       0.0
+
+seam: default pair 0.0, worst 0.0138 (bangs_curls+back_high_pony), median over 16x pairs 0.0053; limit 0.014 for lock pairs
+
+headwear (air max / poke max / rise median):
+  acc_beanie            0.0/0.0/0.0123
+  acc_sunhat            0.0/0.0/0.0084
+  acc_cap               0.0/0.0/0.0084
+  acc_straw_hat         0.0/0.0/0.0092
+  acc_flower_crown      0.0085/0.0/0.0085
+  acc_crystal_circlet   0.0067/0.0/0.0046
+
+hair accessories on every style that has one of their anchors (float gap max / share sunk in max):
+  hacc_claw_clip   16 placements  0.0002/0.323
+  hacc_bow         15 placements  0.0021/0.165
+  hacc_scrunchie    6 placements  0.0002/0.5

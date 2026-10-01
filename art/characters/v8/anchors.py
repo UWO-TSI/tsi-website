@@ -48,6 +48,22 @@ def _outer_hit(tree, d):
         o = loc + d * 1e-4
 
 
+def _radius(tree, p, axis, guess):
+    """The gathered hair's actual radius round its axis at p: the median distance to the piece's surface over eight
+    rays square to the axis, taken toward the full side (the 75th percentile: a wrapping accessory clears the tail,
+    one on top sits on it); the seed's guess when the rays find nothing."""
+    a = axis.orthogonal().normalized()
+    b = axis.cross(a)
+    ds = []
+    for k in range(8):
+        ang = math.tau * k / 8
+        loc, _, _, dist = tree.ray_cast(p, a * math.cos(ang) + b * math.sin(ang), 0.08)
+        if loc is not None:
+            ds.append(dist)
+    ds.sort()
+    return round(max(0.01, min(0.05, ds[(3 * len(ds)) // 4])), 4) if len(ds) >= 4 else guess
+
+
 def anchors_of(pid, ob):
     """{name: [placement, ...]} for the catalogue: one built piece (mesh object in rest pose, Blender world space)."""
     return {name: [to_gltf(m, r) for m, r in places] for name, places in frames_of(pid, ob).items()}
@@ -83,7 +99,7 @@ def frames_of(pid, ob):
                 z = _out(p)
                 if abs(z.dot(t)) > 0.85:
                     z = UP
-                places.append(_frame(p, -t, z, r))
+                places.append(_frame(p, -t, z, _radius(tree, p, t, r)))
             elif sp[0] == "bun":
                 _, lat, lon, r = sp
                 n = _out(head_point(lat, lon))

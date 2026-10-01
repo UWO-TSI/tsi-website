@@ -15,6 +15,8 @@ GLB (base/v7_clips.glb: the hand-modeled v7 head; v6_clips.glb before avatar v7)
             hair_vol they are fitted to), how far its outside rises over that hair, hair poking out through it,
             open edges
   glasses   lens centre vs the painted centre of every eye variant, front view
+  hair acc  (avatar v8) every hair accessory on every back piece (with the default bangs) that has one of its anchors,
+            placed as the engine does: how far it floats off the hair, and how much of it sinks into the hair
   face      stretch of the face texture on the head where features are painted (worst linear stretch and
             anisotropy of the UV chart), how far round the head the eyes reach (azimuth; also the angle between the
             surface normal under any eye pixel and straight ahead)
@@ -68,6 +70,8 @@ LIMITS = {
                                     # round, so both eyes stay on the face in 3/4 view (v6 shipped 63)
     "lock_roots_exposed": 0,       # lock root-ring vertices not buried in the head or other hair
     "lock_dive_max": 0.002,        # m: how deep a lock's outward-facing surface goes under the skin past its root zone
+    "hair_acc_gap_max": 0.004,     # avatar v8: a hair accessory on any style's anchor rests on the hair (no air under it)
+    "hair_acc_inside_max": 0.5,    # and at most half of it sinks into the hair (a clip's teeth and a scrunchie's grip do)
 }
 FH = HRZT
 DEFAULT_BANGS, DEFAULT_BACK = "bangs_straight", "back_bob"
@@ -679,6 +683,45 @@ for part in CAT["accessories"]:
     print(f"HEADWEAR {part['id']:20s} open={open_e:3d} gap max={headwear[part['id']]['gap']['max']} "
           f"med={headwear[part['id']]['gap']['median']} rise max={headwear[part['id']]['rise']['max']} poke={headwear[part['id']]['poke_max']}")
 
+# ================================================================ hair accessories (avatar v8): seated on every style's anchors
+def placed_verts(part, at):
+    """The accessory's vertices placed on one anchor placement as the engine does (rig.anchorMatrices), Blender space."""
+    from mathutils import Matrix, Quaternion
+    groups, _, _ = load_glb(os.path.join(HERE, part["glb"]))
+    vs = [v for g in groups.values() for v in g[0]]
+    px, py, pz, qx, qy, qz, qw, r = at
+    C = Matrix(((1, 0, 0, 0), (0, 0, 1, 0), (0, -1, 0, 0), (0, 0, 0, 1)))          # Blender -> glTF: (x, z, -y)
+    m = Matrix.Translation((px, py, pz)) @ Quaternion((qw, qx, qy, qz)).to_matrix().to_4x4()
+    m = m @ (Matrix.Scale(r / part["wrap"], 4) if part.get("wrap") else Matrix.Translation((0, r, 0)))
+    m = C.transposed() @ m @ C
+    return [m @ v for v in vs]
+
+
+hair_acc = {}
+HAIR_BY_ID = {h["id"]: h for h in CAT["hair"]}
+for part in (a for a in CAT["accessories"] if a.get("group") == "hair"):
+    worst_gap, worst_in, n_on, where = 0.0, 0.0, 0, None
+    for back in (h for h in CAT["hair"] if h["slot"] == "back"):
+        bangs = HAIR_BY_ID[DEFAULT_BANGS]
+        name = next((k for k in part["sits"] if back.get("anchors", {}).get(k) or bangs.get("anchors", {}).get(k)), None)
+        if name is None:
+            continue                                   # the style lacks every anchor it sits on: hidden by design
+        places = back.get("anchors", {}).get(name) or bangs["anchors"][name]
+        hair_bvh, _ = bvh_of({**{f"b{k}": v for k, v in load_glb(os.path.join(HERE, back["glb"]))[0].items()},
+                              **{f"f{k}": v for k, v in load_glb(os.path.join(HERE, bangs["glb"]))[0].items()}})
+        for at in places:
+            vs = placed_verts(part, at)
+            gap = min(hair_bvh.find_nearest(v)[3] for v in vs)              # how far it floats off the hair
+            inn = sum(1 for v in vs if inside(hair_bvh, v)) / len(vs)        # how much of it is swallowed
+            n_on += 1
+            if os.environ.get("FIT_DEBUG"):
+                print("  HACC", part["id"], back["id"], name, round(gap, 4), round(inn, 3))
+            if gap > worst_gap or inn > worst_in:
+                where = back["id"]
+            worst_gap, worst_in = max(worst_gap, gap), max(worst_in, inn)
+    hair_acc[part["id"]] = {"placements": n_on, "gap_max": round(worst_gap, 4), "inside_max": round(worst_in, 3), "worst_on": where}
+    print(f"HAIRACC {part['id']:16s} placements={n_on} gap max={round(worst_gap, 4)} inside max={round(worst_in, 3)} worst on {where}")
+
 # ================================================================ verdict
 fails, flags = [], []    # flags: findings reported for the next pass, not gate failures
 
@@ -709,12 +752,15 @@ for pid, r in glasses.items():
 for pid, r in lock_report.items():
     check("roots_exposed", r["roots_exposed"], LIMITS["lock_roots_exposed"], pid)
     check("dive_max", r["dive_max"], LIMITS["lock_dive_max"], pid)
+for pid, r in hair_acc.items():
+    check("gap_max", r["gap_max"], LIMITS["hair_acc_gap_max"], pid)
+    check("inside_max", r["inside_max"], LIMITS["hair_acc_inside_max"], pid)
 check("stretch_max", face["stretch_max"], LIMITS["face_stretch_max"], "face")
 check("aniso_max", face["aniso_max"], LIMITS["face_aniso_max"], "face")
 check("eye_reach_lon_deg", face["eye_reach_lon_deg"], LIMITS["eye_reach_lon_max_deg"], "face")
 
 report = {"limits": LIMITS, "face": face, "seam": seam, "hair": hair, "locks": lock_report, "headwear": headwear,
-          "glasses": glasses, "fails": fails, "flags": flags}
+          "glasses": glasses, "hair_accessories": hair_acc, "fails": fails, "flags": flags}
 print("FACE", json.dumps(face))
 print("SEAM", json.dumps(seam))
 if OUT_JSON:
