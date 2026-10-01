@@ -107,9 +107,9 @@ export function EnemyInstances({ typeId, capacity, ground, allies = false }: { t
         const mesh = refs.current[pi];
         if (!mesh) return;
         mesh.setMatrixAt(i, world[part.node]);
-        // Telegraph parts: their glow. Others: hit flash (bright), windup tint (warm), home-walk (faded).
+        // Telegraph parts: their glow. Others: hit flash (bright enough to read on the dark fox too), windup tint (warm), home-walk (faded).
         if (part.telegraph) tmpC.setScalar(lit + e.flash * 4);
-        else if (e.flash > 0) tmpC.setScalar(1 + e.flash * 10);
+        else if (e.flash > 0) tmpC.setScalar(1 + e.flash * 22);
         else if (e.state === "windup") tmpC.setRGB(1.15, 0.95, 0.9);
         else if (e.state === "return") tmpC.setRGB(0.7, 0.75, 0.9);
         else tmpC.setScalar(1);
