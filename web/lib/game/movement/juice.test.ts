@@ -20,7 +20,8 @@ describe("the ground under the feet", () => {
     expect(groundUnder(Surface.Stone, 0, dry, 0, 0)).toBe("stone");
     expect(groundUnder(Surface.Brick, 0, dry, 0, 0)).toBe("stone");
     expect(groundUnder(Surface.Wood, 0, dry, 0, 0)).toBe("wood");
-    expect(groundUnder(Surface.River, 0, dry, 0, 0)).toBe("water");
+    expect(groundUnder(Surface.River, 0, () => true, 0, 0)).toBe("water");
+    expect(groundUnder(Surface.River, 0, dry, 0, 0)).toBe("wood"); // a deck over the water
     expect(groundUnder(Surface.Sand, 0, dry, 0, 0)).toBe("sand");
     // The sea a little over half a tile to the east: wet sand; two tiles away: dry.
     const sea = (x: number) => x > 0.6;
@@ -28,7 +29,7 @@ describe("the ground under the feet", () => {
     expect(groundUnder(Surface.Sand, 0, sea, -1.5, 0)).toBe("sand");
     expect(groundUnder(Surface.Grass, 0.8, dry, 0, 0)).toBe("snow");
     expect(groundUnder(Surface.Wood, 0.8, dry, 0, 0)).toBe("wood");
-    expect(groundUnder(undefined, 0, dry, 0, 0)).toBe("grass");
+    expect(groundUnder(undefined, 0, dry, 0, 0)).toBe("soil");
   });
 });
 
@@ -36,7 +37,7 @@ describe("what each move throws", () => {
   it("footsteps: flecks on grass, a sand kick, a snow puff, a puff on soil; nothing on boards or stone but the sound", () => {
     const step = (g: Parameters<typeof footstep>[1], rain = false) => { const p = new ParticlePool(64); const sound = footstep(p, g, 1, 0, 2, 0, 7, rain); return { sound, sprites: thrown(p) }; };
     expect(step("grass").sprites).toContain("grass");
-    expect(step("sand").sprites).toEqual(["sand"]);
+    expect(step("sand").sprites).toEqual(["dust", "sand"]);
     expect(step("snow").sprites[0]).toBe("snow");
     expect(step("soil").sprites).toEqual(["dust"]);
     expect(step("wood")).toEqual({ sound: { name: "blip4", rate: 1, gain: 0.7 }, sprites: [] });

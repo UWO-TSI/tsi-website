@@ -298,7 +298,7 @@ export default function RuinsScene({ level, phase, light, look, weather, liteMod
     <EnemyBars ground={ruins.ground} />
     <Html position={[EXIT_SPOT.x, 2.2, EXIT_SPOT.z]} center distanceFactor={10} zIndexRange={[3, 0]}><div className={styles.cue}>Gate · safe zone</div></Html>
     <PlayerAvatar spawnPosition={spawn} playerName="You" playerLevel={level} player={player}
-      world={ruins.world} groundHeight={ruins.ground} camTarget={focus} combat respawn={respawn} />
+      world={ruins.world} groundHeight={ruins.ground} groundSurface={ruins.surface} camTarget={focus} combat respawn={respawn} />
   </>;
 }
 

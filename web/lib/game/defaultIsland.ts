@@ -1,5 +1,5 @@
 import {
-  CLIFF_LEVELS, isGroundAtWorld, levelAt, rampRun, sampleGroundHeight, surfaceAt, worldToCellX, worldToCellZ,
+  CLIFF_LEVELS, drawnSurfaceAt, isGroundAtWorld, levelAt, rampRun, sampleGroundHeight, worldToCellX, worldToCellZ,
 } from "./grid";
 import { FURNITURE, studySolid, type Furniture } from "@/lib/study/seats";
 import { objectsOf, village, villageSpawnPoint, type MapObject, type Village } from "./villageMap";
@@ -201,7 +201,7 @@ export interface VillageIsland {
 export function islandOf(v: Village): VillageIsland {
   const { map, field } = v;
   const ground = (x: number, z: number) => sampleGroundHeight(map, field, x, z);
-  const surface = (x: number, z: number) => surfaceAt(map, worldToCellX(map, x), worldToCellZ(map, z));
+  const surface = (x: number, z: number) => drawnSurfaceAt(map, x, z);
   const decks = [wharfDeck(v), ...bridgeDecks(v)].filter(d => d !== null);
   const solids = landmarks(v).filter(l => l.half);
   const props = propsOf(v).flatMap(o => {

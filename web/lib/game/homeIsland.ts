@@ -1,7 +1,6 @@
 import {
   createCenteredMap, setCell, Surface, heightField, sampleGroundHeight,
-  worldToCellX, worldToCellZ, isGroundAtWorld, surfaceAt,
-} from "./grid";
+  isGroundAtWorld, drawnSurfaceAt } from "./grid";
 import { cellsOf, type PlacedItem } from "@/lib/homes/layout";
 import { standWorld, type MoveWorld } from "./movement/sim";
 import { TREE_TRUNK } from "./defaultIsland";
@@ -35,7 +34,7 @@ export function createHomeIsland() {
   }
   const field = heightField(map);
   const ground = (x: number, z: number) => sampleGroundHeight(map, field, x, z);
-  const surface = (x: number, z: number) => surfaceAt(map, worldToCellX(map, x), worldToCellZ(map, z));
+  const surface = (x: number, z: number) => drawnSurfaceAt(map, x, z);
   /** Fixed obstacles only: water, house, mailbox, trees, dock sign. */
   const fixedFree = (x: number, z: number) => isGroundAtWorld(map, x, z)
     && !inRect(x, z, HOUSE.x, HOUSE.z, HOUSE.halfW, HOUSE.halfD)

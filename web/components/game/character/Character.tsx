@@ -38,7 +38,7 @@ const bodies = refCache<THREE.BufferGeometry>();
 const decals = new Map<string, THREE.BufferGeometry>();
 
 /** A dash's afterimage (specs/movement-feel.md): how long it lasts and how strong it starts. Faint, short, matte. */
-const GHOST = { life: 0.18, opacity: 0.3 };
+const GHOST = { life: 0.2, opacity: 0.17, rise: 0.04 };
 /**
  * A frozen copy of the pose: the body and face drawn again with the bone matrices of one frame. The skeleton never
  * updates (its matrices are copied in); attached binding cancels the mesh's own transform, so it stays where it was.
@@ -46,7 +46,8 @@ const GHOST = { life: 0.18, opacity: 0.3 };
 class Ghost {
   readonly skeleton: THREE.Skeleton;
   readonly meshes: THREE.SkinnedMesh[];
-  readonly material = new THREE.MeshLambertMaterial({ color: "#e6eef5", emissive: "#a9bccd", emissiveIntensity: 0.3, transparent: true, opacity: 0, depthWrite: true });
+  // Pushed back a hair in depth, so where it still overlaps the character (the first frame) the character wins.
+  readonly material = new THREE.MeshLambertMaterial({ color: "#dfe8f1", emissive: "#8ea3b8", emissiveIntensity: 0.18, transparent: true, opacity: 0, depthWrite: true, polygonOffset: true, polygonOffsetFactor: 2, polygonOffsetUnits: 2 });
   age = GHOST.life;
   constructor(live: THREE.Skeleton, bindMatrix: THREE.Matrix4, parent: THREE.Object3D) {
     this.skeleton = new THREE.Skeleton(live.bones, live.boneInverses);
@@ -70,8 +71,9 @@ class Ghost {
   }
   update(delta: number) {
     this.age += delta;
-    const k = Math.max(0, 1 - this.age / GHOST.life);
-    this.material.opacity = GHOST.opacity * k * k;
+    // Eases in while you leave it (so it never films over you), then fades.
+    const k = Math.max(0, 1 - this.age / GHOST.life), inn = Math.min(1, this.age / GHOST.rise);
+    this.material.opacity = GHOST.opacity * inn * k * k;
     for (const m of this.meshes) m.visible = k > 0;
   }
   dispose() { this.material.dispose(); this.skeleton.boneTexture?.dispose(); for (const m of this.meshes) m.removeFromParent(); }

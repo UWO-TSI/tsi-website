@@ -4,7 +4,7 @@
  * every wall), with a safe gate plaza, the outer wild area, the inner temple
  * and the boss chamber. World +x is screen-left, +z is up the screen.
  */
-import { createCenteredMap, heightField, isGroundAtWorld, levelAt, sampleGroundHeight, setCell, Surface, worldToCellX, worldToCellZ } from "./grid";
+import { createCenteredMap, heightField, isGroundAtWorld, levelAt, sampleGroundHeight, setCell, Surface, worldToCellX, worldToCellZ, drawnSurfaceAt } from "./grid";
 import type { Rect, Vec } from "./combat/sim";
 import { standWorld } from "./movement/sim";
 
@@ -81,5 +81,7 @@ export function createRuins() {
     && !SOLID.some(s => Math.hypot(s.x - x, s.z - z) < s.r + r);
   /** The canyon for the movement sim: its walls (cliff tops included) and the props are walls of any height. */
   const world = standWorld(ground, (x, z) => free(x, z, 0), (x, z) => !isGroundAtWorld(map, x, z));
-  return { map, ground, free, world };
+  /** The drawn surface underfoot (stone plaza, brick boss floor, the soil path, grass): the kit's footsteps and dust. */
+  const surface = (x: number, z: number) => drawnSurfaceAt(map, x, z);
+  return { map, ground, free, world, surface };
 }

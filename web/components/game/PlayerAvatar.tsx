@@ -7,7 +7,6 @@ import * as THREE from "three";
 import { liveIslandWeather } from "@/lib/game/islandWeather";
 import { AudioManager, type SFXName } from "@/lib/game/audio";
 import { WORLD_SNOW } from "@/lib/game/modelMaterials";
-import { worldWind } from "@/lib/game/worldFx";
 import { getCameraForwardXZ } from "@/lib/game/cameraBasis";
 import { bindGameKeys } from "@/lib/game/keyboardInput";
 import { WATER_DROP } from "@/lib/game/grid";
@@ -24,7 +23,7 @@ import { WEAPONS } from "@/lib/game/combat/data";
 import { STUCK_TIME, advanceMove, clearSpot, createMoveSim, createMoveState, interpolated, topSpeed, towards, MOVE_TUNING, NO_INPUT, type MoveEvent, type MoveInput, type MoveSim, type MoveState, type MoveTuning, type MoveWorld } from "@/lib/game/movement/sim";
 import { useMoveKeys } from "@/lib/game/movement/keys";
 import { routePilot, type RouteStep } from "@/lib/game/movement/course";
-import { BASE_FOV, EVENT_CLIP, MOVE_JUICE, TAKEOFF, applyFov, screenOf, touchStick, useMoveParticles, type MoveJuice, type MoveTelemetry } from "./movement/moveFx";
+import { BASE_FOV, EVENT_CLIP, MOVE_JUICE, TAKEOFF, applyFov, liveWind, screenOf, touchStick, useMoveParticles, type MoveJuice, type MoveTelemetry } from "./movement/moveFx";
 import { cooldownWisp, dashBurst, dashReady as dashBack, footstep, groundUnder, handPuff, landKind, landing, leafBits, puffRing, scuff, settle, splash, streak, takeoff, trail, type GroundKind } from "@/lib/game/movement/juice";
 
 /**
@@ -91,7 +90,7 @@ function groundAt(surface: ((x: number, z: number) => number) | undefined, world
 /** The jump's anticipation: the body stays crouched on the ground this long (seconds) while the sim already rises, then springs after it. */
 const ANTIC = 0.06;
 /** Streaks through a dash, a step apart (s); fainter ones at top speed. */
-const STREAK_EVERY = 0.035, FAST_STREAK_EVERY = 0.1;
+const STREAK_EVERY = 0.05, FAST_STREAK_EVERY = 0.12;
 
 /** Face a point (module scope: the react compiler freezes values reached through hooks inside component code). */
 function turnTo(s: MoveState | undefined, x: number, z: number) { if (s) s.facing = Math.atan2(x - s.x, z - s.z); }
@@ -234,8 +233,11 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
       /** Where the avatar is on the page (evidence crops), and the camera (evidence: no lag, no bob). */
       screen: () => (sim.current ? screenOf(interpolated(sim.current), camera, gl.domElement) : null),
       camera: () => camera.position.toArray(),
+      /** Particles alive in the scene's movement system, and the ground under the avatar (evidence labels). */
+      particles: () => particles.pool.alive,
+      ground: () => { const s = sim.current?.state; return s ? groundAt(groundSurface, world, s.x, s.z) : null; },
     } });
-  }, [world, camera, gl]);
+  }, [world, camera, gl, particles, groundSurface]);
 
   useFrame((_state, rawDelta) => {
     const g = anchor.current, bd = body.current, hd = head.current;
@@ -320,6 +322,7 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
           m.stop = true;
           const g = groundAt(groundSurface, world, e.x, e.z);
           if (events[i - 1]?.kind === "furl") { puffRing(pool, g, e.x, e.y, e.z, j.landing); playSFX("footstep"); break; } // the leaf sets you down: a soft puff
+          if (e.drop < 0.15) break; // a lip too small to feel: no landing at all
           const kind = landKind(e.drop);
           landing(pool, g, kind, e.x, e.y, e.z, state.vx, state.vz, j.landing);
           if (kind === "tap") { f.sqv -= 1.5 * j.squash; playSFX("footstep", 1.2, 0.5); break; }
@@ -342,7 +345,7 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
           dashBurst(pool, g, aloft, e.x, e.y, e.z, groundY, state.dashX, state.dashZ, j.dashBurst);
           // Faint afterimages: the pose you left, and one more a moment in.
           if (j.afterimage > 0) { m.ghost = true; f.ghostT = 0.07; }
-          for (let k = 0; k < 3; k++) streak(pool, e.x, e.y, e.z, groundY, state.dashX, state.dashZ, state.dashSpeed, f.streakK++, 0.9 * j.streaks);
+          for (let k = 0; k < 2; k++) streak(pool, e.x, e.y, e.z, groundY, state.dashX, state.dashZ, state.dashSpeed, f.streakK++, j.streaks);
           f.streakT = STREAK_EVERY; f.cdT = 0;
           playSFX("blip4", aloft ? 1.2 : 1); break;
         }
@@ -383,7 +386,7 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
       const dashing = state.dashT > 0, faint = sprinting ? 0.3 : gliding && speed > 6 ? 0.22 : 0;
       if (dashing || faint > 0) {
         f.streakT = dashing ? STREAK_EVERY : FAST_STREAK_EVERY;
-        streak(pool, x, y, z, groundY, state.vx / speed, state.vz / speed, speed, f.streakK++, (dashing ? 0.75 : faint) * j.streaks);
+        streak(pool, x, y, z, groundY, state.vx / speed, state.vz / speed, speed, f.streakK++, (dashing ? 0.85 : faint) * j.streaks);
       }
     }
     if (f.ghostT > 0 && (f.ghostT -= dt) <= 0 && state.dashT > 0) m.ghost = true;
@@ -397,7 +400,7 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
     }
     if (dashReady && !f.ready && !sitting) dashBack(pool, x, y, z, j.cooldown);
     f.ready = dashReady;
-    particles.tick(_state.clock.elapsedTime, dt, camera, worldWind(liveIslandWeather()));
+    particles.tick(_state.clock.elapsedTime, dt, camera, liveWind());
 
     // Squash and stretch: a spring, stretched by vertical speed in the air, held in the anticipation crouch, which then
     // springs into the stretch. The drawn body trails the sim's rise through the crouch and catches up. Getting up eases over from the seat.

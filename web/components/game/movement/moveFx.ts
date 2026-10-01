@@ -13,7 +13,8 @@ import { PACK, PACK_COLS, PACK_ROWS, PACK_URL, type SpriteName } from "@/lib/gam
 import { ParticlePool } from "@/lib/game/fx/particles";
 import { liveIslandWeather } from "@/lib/game/islandWeather";
 import type { MoveEvent } from "@/lib/game/movement/sim";
-import { worldWind } from "@/lib/game/worldFx";
+import { worldWind, type WorldWind } from "@/lib/game/worldFx";
+import type { IslandWeather } from "@/lib/game/islandWeather";
 
 /** Feel values on the renderer's side, tuned next to the sim's in /lab/move. */
 export const MOVE_JUICE = {
@@ -84,7 +85,7 @@ else if (face > 1.5 && face < 2.5) { axX = normalize(iD.xyz); axY = normalize(cr
 `;
 const PLACE_VERTEX = `float pc = cos(iB.z), ps = sin(iB.z);
 vec2 lp = position.xy * iB.xy;
-if (face > 2.5) lp.y += 0.5 * iB.y;
+if (face > 2.5) lp.y += 0.3 * iB.y; // standing: the painted ground line (0.2 up the cell) on the point
 vec3 transformed = pCentre + axX * (lp.x * pc - lp.y * ps) + axY * (lp.x * ps + lp.y * pc);
 vAbove = onGround ? 10.0 : transformed.y - iA.w;
 vTint = iC;
@@ -158,6 +159,14 @@ export class MoveParticles {
   dispose() { this.geometry.dispose(); }
 }
 
+let windOf: IslandWeather | null = null, wind: WorldWind = worldWind("clear");
+/** The shared world wind for the live weather (one object per weather change, none per frame). */
+export function liveWind(): WorldWind {
+  const w = liveIslandWeather();
+  if (w !== windOf) { windOf = w; wind = worldWind(w); }
+  return wind;
+}
+
 const SHARED = new WeakMap<THREE.Object3D, { fx: MoveParticles; users: number }>();
 /** The scene's movement particles: one system per scene however many avatars (and the ruins) throw into it. */
 export function useMoveParticles(): MoveParticles {
@@ -173,7 +182,7 @@ export function useMoveParticles(): MoveParticles {
     return () => { if (--e.users === 0) { scene.remove(e.fx.mesh); e.fx.pool.clear(); e.fx.dispose(); } };
   }, [scene]);
   // Steps at real time unless an avatar already stepped it this frame (its slow motion and dev pauses win).
-  useFrame((state, delta) => fx.tick(state.clock.elapsedTime, Math.min(delta, 0.1), state.camera, worldWind(liveIslandWeather())));
+  useFrame((state, delta) => fx.tick(state.clock.elapsedTime, Math.min(delta, 0.1), state.camera, liveWind()));
   return fx;
 }
 
