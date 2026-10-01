@@ -830,10 +830,10 @@ def glide(p):
 
 
 # ================================================================ crouch and the slide (specs/movement-slide.md, row 274)
-CROUCH = 0.12                                 # the crouch's hip drop (rig m): low, knees out, sneaking
+CROUCH = 0.15                                 # the crouch's hip drop (rig m): low, knees out, sneaking
 
 
-def crouch_body(breath=0.0, bob=0.0, lean=26.0, side=0.0, twist=0.0):
+def crouch_body(breath=0.0, bob=0.0, lean=32.0, side=0.0, twist=0.0):
     """Hips down, leaning in, the head kept level (looking ahead, not at the feet); `breath` lifts the chest."""
     P = body(crouch=CROUCH - bob - 0.003 * breath, lean=lean + 1.2 * breath, side=side, twist=twist)
     for sd, sx in SIDES:
@@ -846,11 +846,11 @@ def crouch_hands(P, swing=0.0, breath=0.0):
     """Hands loose and low in front of the knees, swinging a little against the step."""
     for sd, sx in SIDES:
         k = swing * sx
-        hand(P, sd, P.head("Hips") + V(sx * 0.105, -0.11 - 0.035 * k, 0.03 + 0.012 * abs(k) + 0.004 * breath), V(sx * 0.7, 0.4, -1))
+        hand(P, sd, P.head("Hips") + V(sx * 0.11, -0.14 - 0.035 * k, 0.04 + 0.012 * abs(k) + 0.004 * breath), V(sx * 0.7, 0.4, -1))
     return P
 
 
-@clip("CrouchIdle", 2.0, True)
+@clip("CrouchIdle", 2.0, True, ground="frame", ground_w=lambda p: 0.0)   # lifted only where a toe would dip under
 def crouch_idle(p):
     """Crouched still: a slow breath (the chest and shoulders rise), a little weight shift side to side."""
     b, w = math.sin(TAU * p), math.sin(TAU * p + 1.1)
@@ -863,7 +863,7 @@ def crouch_idle(p):
 STRIDE, LIFT = 0.075, 0.05                    # crouch-walk step reach either side of the hip (rig m) and foot lift
 
 
-@clip("CrouchWalk", 0.8, True)
+@clip("CrouchWalk", 0.8, True, ground="frame", ground_w=lambda p: 0.0)
 def crouch_walk(p):
     """Tiptoeing low: short careful steps, the foot lifted high and set down, hips bobbing at each footfall, hands low
     and swinging against the legs. The left foot comes down at p = 0, the right at 0.5 (measured contacts)."""
@@ -877,13 +877,13 @@ def crouch_walk(p):
             y, z = STRIDE - 2 * STRIDE * EASE["io"](u), LIFT * math.sin(math.pi * u) ** 0.8
         ankles[sd] = ANKLE[sd] + V(sx * 0.012, y, z)
     c2 = math.cos(2 * TAU * p)
-    P = crouch_body(bob=0.008 * (1 + c2) / 2, lean=28, side=2.5 * math.sin(TAU * p), twist=7 * math.sin(TAU * p))
+    P = crouch_body(bob=0.008 * (1 + c2) / 2, lean=34, side=2.5 * math.sin(TAU * p), twist=7 * math.sin(TAU * p))
     crouch_hands(P, swing=math.sin(TAU * p))
     plant(P, ankles=ankles, knees_out=0.45)
     for (sd, sx), ph in zip(SIDES, (0.0, 0.5)):                  # the lifted foot's toes hang a little
         q = (p + ph) % 1
         if q >= 0.55:
-            P.world(f"{sd}Foot", rx(28 * math.sin(math.pi * (q - 0.55) / 0.45)))
+            P.world(f"{sd}Foot", rx(26 * math.sin(math.pi * (q - 0.55) / 0.45) ** 2))
     return P
 
 
