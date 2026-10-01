@@ -97,11 +97,15 @@ const STREAK_EVERY = 0.05, FAST_STREAK_EVERY = 0.12;
 /** Face a point (module scope: the react compiler freezes values reached through hooks inside component code). */
 function turnTo(s: MoveState | undefined, x: number, z: number) { if (s) s.facing = Math.atan2(x - s.x, z - s.z); }
 
-/** Bank a glider about the grip overhead (`pivotY` above the anchor), around the way it faces (module scope, see turnTo). */
-const bankAxis = new THREE.Vector3(), bankPivot = new THREE.Vector3();
-function bankAbout(group: THREE.Group, yaw: number, roll: number, pivotY: number) {
-  if (Math.abs(roll) < 1e-4) { group.quaternion.identity(); group.position.set(0, 0, 0); return; }
+/**
+ * Bank the body about a pivot `pivotY` above the anchor (a glider's grip overhead, a slide's seat on the ground): `roll`
+ * about the way it faces (into a turn), `pitch` about its side (a slide lies back deeper with speed). Module scope, see turnTo.
+ */
+const bankAxis = new THREE.Vector3(), bankPivot = new THREE.Vector3(), pitchQ = new THREE.Quaternion();
+function bankAbout(group: THREE.Group, yaw: number, roll: number, pivotY: number, pitch = 0) {
+  if (Math.abs(roll) < 1e-4 && Math.abs(pitch) < 1e-4) { group.quaternion.identity(); group.position.set(0, 0, 0); return; }
   group.quaternion.setFromAxisAngle(bankAxis.set(Math.sin(yaw), 0, Math.cos(yaw)), roll);
+  group.quaternion.multiply(pitchQ.setFromAxisAngle(bankAxis.set(Math.cos(yaw), 0, -Math.sin(yaw)), pitch));
   bankPivot.set(0, pivotY, 0);
   group.position.copy(bankPivot).sub(bankPivot.applyQuaternion(group.quaternion));
 }
@@ -127,7 +131,7 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
   const target = useRef<{ x: number; z: number } | null>(null);
   const seat = useRef<Seat | null>(null);
   const reported = useRef<THREE.Vector3 | null>(null);
-  const fx = useRef({ sq: 0, sqv: 0, steps: 0, trail: 0, stuck: 0, level: 0, punch: 0, leaf: 0, leafV: 0, bank: 0, heading: 0, lead: new THREE.Vector2(), pan: new THREE.Vector2(), rise: new THREE.Vector2(), focus: new THREE.Vector3(x0, 0, z0),
+  const fx = useRef({ sq: 0, sqv: 0, steps: 0, trail: 0, stuck: 0, level: 0, punch: 0, leaf: 0, leafV: 0, bank: 0, pitch: 0, sliding: false, heading: 0, lead: new THREE.Vector2(), pan: new THREE.Vector2(), rise: new THREE.Vector2(), focus: new THREE.Vector3(x0, 0, z0),
     // Juice timers (specs/movement-feel.md): anticipation, the Air pose, the camera dip, streaks, afterimages, the cooldown wind.
     antic: 0, anticY: 0, jumped: false, vy0: 6, fallT: 0, dip: 0, dipV: 0, streakT: 0, streakK: 0, ghostT: 0, dashT: 0, cdT: 0, wispT: 0, ready: true });
   // The glider is a flag on the sim (never in an encounter); the lab's tuning can carry it too.
@@ -314,6 +318,11 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
           f.sq = Math.min(f.sq, -0.12 * j.squash); f.sqv = 6 * j.squash;
           takeoff(pool, groundAt(groundSurface, world, e.x, e.z), e.x, e.y, e.z, state.vx, state.vz, j.takeoff, true);
           f.jumped = true; f.vy0 = Math.max(2, state.vy); f.fallT = 0; playSFX("jump"); break;
+        case "slidejump":
+          // Out of the slide: its own gather (SlideJump), no anticipation hold.
+          f.sqv += 4 * j.squash;
+          f.jumped = true; f.vy0 = Math.max(2, state.vy); f.fallT = 0; playSFX("jump"); break;
+        case "stand": if (!m.play) m.play = state.crouch ? "SlideStand" : "SlideUp"; break;
         case "jump": case "long": case "dashjump":
           // Anticipation, visual only: the body holds a crouch on the ground for a few frames while the sim rises, then springs.
           if (j.anticipation > 0) { f.antic = ANTIC; f.anticY = e.y; f.sq = -0.14 * j.squash * j.anticipation; f.sqv = 0; } else f.sqv += 4.5 * j.squash;
@@ -360,7 +369,7 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
           handPuff(pool, groundAt(groundSurface, world, tx, tz), (e.x + tx) / 2, ty, (e.z + tz) / 2, j.landing);
           playSFX("blip1"); break;
         }
-        case "bonk": f.sqv -= 3 * j.squash; playSFX("footstep"); break;
+        case "bonk": f.sqv -= 3 * j.squash; playSFX("footstep"); if (f.sliding) m.play = "SlideBonk"; break;
         case "splash": splash(pool, e.x, e.y + 0.02, e.z, j.landing); playSFX("blip5"); break;
         case "respawn": puffRing(pool, groundAt(groundSurface, world, e.x, e.z), e.x, e.y, e.z); playSFX("blip3"); f.pan.set(f.focus.x - x - f.lead.x, f.focus.z - z - f.lead.y); break;
       }
@@ -371,8 +380,9 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
       f.steps = m.steps;
       if (!sitting && state.mode === "ground" && speed > 0.6 && state.dashT <= 0) {
         const side = m.foot === 0 ? 0.1 : -0.1, a = state.facing, px = x + Math.cos(a) * side + Math.sin(a) * 0.05, pz = z - Math.sin(a) * side + Math.cos(a) * 0.05;
-        const sound = footstep(pool, groundAt(groundSurface, world, px, pz), px, groundY, pz, state.vx, state.vz, rain, j.footsteps);
-        playSFX(sound.name, sound.rate, sound.gain);
+        // Crouch-walking tiptoes: half the dust and a softer step.
+        const soft = state.crouch ? 0.5 : 1, sound = footstep(pool, groundAt(groundSurface, world, px, pz), px, groundY, pz, state.vx, state.vz, rain, j.footsteps * soft);
+        playSFX(sound.name, sound.rate, sound.gain * soft);
       }
     }
     // Dust along the ground while skidding (and its scuff), rolling or dashing.
@@ -431,16 +441,21 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
       // In the air the Air pose follows vertical speed (rise, apex tuck, fall, reaching for the ground); a long fall bicycles.
       f.fallT = state.mode === "air" && state.vy < 0 ? f.fallT + dt : 0;
       m.air = airPhase(state.vy, f.vy0, f.jumped);
-      m.move = gliding ? "Glide" : state.mode === "splash" || (state.mode === "air" && f.fallT > 0.6) ? "Fall" : state.mode === "air" ? "Air" : state.mode === "skid" ? "Skid" : null;
+      m.move = gliding ? "Glide" : state.mode === "splash" || (state.mode === "air" && f.fallT > 0.6) ? "Fall" : state.mode === "air" ? "Air" : state.mode === "skid" ? "Skid"
+        : state.mode === "slide" ? "Slide" : state.crouch ? (speed > 0.3 ? "CrouchWalk" : "CrouchIdle") : null;
     }
+    f.sliding = !sitting && state.mode === "slide";
     // The leaf springs open past full size (the pop) and folds away; gliding banks into turns and sways about the grip.
     f.leafV += (((gliding ? 1 : 0) - f.leaf) * 220 - f.leafV * 15) * dt;
     f.leaf = THREE.MathUtils.clamp(f.leaf + f.leafV * dt, 0, 1.3);
     m.leaf = f.leaf;
     const heading = Math.atan2(state.vx, state.vz), turn = speed > 1 && dt > 0 ? Math.atan2(Math.sin(heading - f.heading), Math.cos(heading - f.heading)) / dt : 0;
     f.heading = heading;
-    f.bank = THREE.MathUtils.damp(f.bank, gliding ? THREE.MathUtils.clamp(-turn * 0.12, -0.3, 0.3) + 0.035 * Math.sin(state.modeT * Math.PI) : 0, 6, dt);
-    bankAbout(bd, state.facing, f.bank, y - groundY + GRIP_Y);
+    // Gliding banks into turns and sways about the grip; sliding leans into the steer and lies back deeper the faster it goes (about the seat on the ground).
+    const deep = f.sliding ? THREE.MathUtils.clamp((speed - t.walkSpeed * t.slideEnterAt) / Math.max(1, t.momentumCeiling - t.walkSpeed * t.slideEnterAt), 0, 1) : 0;
+    f.bank = THREE.MathUtils.damp(f.bank, gliding ? THREE.MathUtils.clamp(-turn * 0.12, -0.3, 0.3) + 0.035 * Math.sin(state.modeT * Math.PI) : f.sliding ? THREE.MathUtils.clamp(-turn * 0.09, -0.24, 0.24) : 0, 6, dt);
+    f.pitch = THREE.MathUtils.damp(f.pitch, -0.12 * deep, 5, dt);
+    bankAbout(bd, state.facing, f.bank, gliding ? y - groundY + GRIP_Y : 0.05, f.pitch);
     m.rate = rawDelta > 0 ? dt / Math.min(rawDelta, 0.1) : 1;
     if (inCombat) {
       // Encounter: face the way you move, the aim when standing or attacking (combatFacing); attacks, dodges, hits, casting and defeat drive the clips.

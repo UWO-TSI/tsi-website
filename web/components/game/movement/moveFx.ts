@@ -208,4 +208,6 @@ export function screenOf([x, y, z]: [number, number, number], camera: THREE.Came
 }
 
 /** One-shot clip per event (the character plays it once over locomotion). */
-export const EVENT_CLIP: Partial<Record<MoveEvent["kind"], ClipName>> = { jump: "Jump", hop: "Jump", long: "Jump", dashjump: "Jump", roll: "Roll", mantle: "Mantle", dash: "Dash", recover: "LandHeavy" };
+export const EVENT_CLIP: Partial<Record<MoveEvent["kind"], ClipName>> = { jump: "Jump", hop: "Jump", long: "Jump", dashjump: "Jump", roll: "Roll", mantle: "Mantle", dash: "Dash", recover: "LandHeavy",
+  // The slide (specs/movement-slide.md): a drop from the run; a sharper, lower one out of a dash or a landing; the spring out. Its exits are by state (PlayerAvatar).
+  slide: "SlideIn", dashslide: "SlideInDash", landslide: "SlideInDash", slidejump: "SlideJump" };

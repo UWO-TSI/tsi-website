@@ -16,7 +16,7 @@ import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js
 import { BASE_URL, FACE_ATLAS_URLS, PALETTE, TSI_DECAL_URL, CLIP_BY_NAME, bodyKey, resolveParts, type CharacterLook, type ResolvedPart } from "@/lib/game/character/look";
 import { FaceAnimator, faceSlots, poseKey } from "@/lib/game/character/face";
 import { createFaceMaterial, MATTE, prepareFaceAtlas, type FaceMaterial } from "@/lib/game/character/faceMaterial";
-import { SNAPPY_CLIPS, WEAPON_HAND, contactCrossed, isLoop, resolveClip, tempo, type CharacterMotion, type ClipName } from "@/lib/game/character/clips";
+import { WEAPON_HAND, contactCrossed, crossfade, isLoop, resolveClip, tempo, type CharacterMotion, type ClipName } from "@/lib/game/character/clips";
 import { adoptPrimitive, materialName, mergeLook, refCache, skinnedPrimitives } from "@/lib/game/character/rig";
 import type { WeaponGrip, WeaponKind } from "@/lib/game/combat/contract";
 import { tagLookClasses } from "@/lib/game/modelMaterials";
@@ -191,7 +191,7 @@ class Puppet {
     next.reset().setLoop(loop ? THREE.LoopRepeat : THREE.LoopOnce, Infinity);
     next.clampWhenFinished = !loop;
     next.setEffectiveWeight(1).play();
-    if (this.action && this.action !== next) this.action.crossFadeTo(next, SNAPPY_CLIPS.has(name) ? 0.06 : 0.16, false);
+    if (this.action && this.action !== next) this.action.crossFadeTo(next, crossfade(this.clip, name), false);
     this.action = next;
     this.clip = name;
   }
