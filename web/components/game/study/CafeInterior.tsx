@@ -11,7 +11,8 @@
  * `tsi:sit` works; the wall board opens the top-studiers sheet.
  *
  * Dev (evidence): `?cafecam=x,y,z,lx,ly,lz[&fov=60]` holds the camera at a
- * reference's angle, which also shows the ceiling the game camera cuts away.
+ * reference's angle, which also shows the ceiling the game camera cuts away;
+ * `?cafeat=x,z` starts the walk there (beside a patron, to watch them yield).
  */
 import { Suspense, useEffect, useMemo, useRef } from "react";
 import { useThree, useFrame } from "@react-three/fiber";
@@ -77,11 +78,9 @@ function Outside({ phase }: { phase: IslandPhase }) {
 /** Module scope (the react compiler forbids writing through hook values): the dollhouse cut and the dev camera's lens. */
 const cutAway = (ceiling: THREE.Object3D | undefined, camera: THREE.Camera) => { if (ceiling) ceiling.visible = camera.position.y < CAFE_ROOM.ceiling - 0.05; };
 function setFov(camera: THREE.Camera, fov: number) {
-  if (!(camera instanceof THREE.PerspectiveCamera)) return 0;
-  const was = camera.fov;
+  if (!(camera instanceof THREE.PerspectiveCamera) || camera.fov === fov) return;
   camera.fov = fov;
   camera.updateProjectionMatrix();
-  return was;
 }
 
 /** The room: shell, bar and décor in one model; the ceiling layer only for a camera below the ceiling. */
@@ -115,18 +114,19 @@ export default function CafeInterior({ phase, player, frozen, identity, level, o
     const q = new URLSearchParams(window.location.search), v = q.get("cafecam")?.split(",").map(Number);
     return v?.length === 6 && v.every(Number.isFinite) ? { at: v.slice(0, 3) as [number, number, number], look: v.slice(3) as [number, number, number], fov: Number(q.get("fov")) || 0 } : null;
   }, []);
-  useEffect(() => { camera.position.set(SPAWN[0], 8.4, SPAWN[2] - 7.2); }, [camera]);
-  useEffect(() => {
-    if (!devCam?.fov) return;
-    const was = setFov(camera, devCam.fov);
-    return () => { setFov(camera, was); };
-  }, [camera, devCam]);
+  const spawn = useMemo((): [number, number, number] => {
+    if (process.env.NODE_ENV === "production" || typeof window === "undefined") return SPAWN;
+    const v = new URLSearchParams(window.location.search).get("cafeat")?.split(",").map(Number);
+    return v?.length === 2 && v.every(Number.isFinite) ? [v[0], 0, v[1]] : SPAWN;
+  }, []);
+  useEffect(() => { camera.position.set(spawn[0], 8.4, spawn[2] - 7.2); }, [camera, spawn]);
   const near = useRef<"exit" | "owner" | null>(null);
   // A Residents-editor persona on the café owner post names her and gives her lines; else the proposed defaults.
   const { data: personas } = useNPCPersonas({ permanentOnly: true });
   const persona = personas.find(p => p.post === "cafe_owner");
   useFrame((_, delta) => {
-    if (devCam) { camera.position.set(...devCam.at); camera.lookAt(...devCam.look); }
+    // After PlayerAvatar's frame (its movement feel sets the lens every frame).
+    if (devCam) { camera.position.set(...devCam.at); camera.lookAt(...devCam.look); if (devCam.fov) setFov(camera, devCam.fov); }
     else followInteriorCamera(camera, player.current.x, player.current.z, Math.min(delta, 0.1));
     // A study seat's prompt takes E while it is up.
     const { x, z } = player.current;
@@ -143,7 +143,7 @@ export default function CafeInterior({ phase, player, frozen, identity, level, o
     <CafeOwner player={player} name={persona?.display_name} lines={persona?.canned_dialogue.length ? persona.canned_dialogue : undefined} />
     <StudySeats area="cafe" player={player} board={CAFE_BOARD.spot} />
     <CafePatrons player={player} />
-    <PlayerAvatar spawnPosition={SPAWN} playerName={identity.display_name} playerLevel={level} member={identity.member} player={player} frozen={frozen}
+    <PlayerAvatar spawnPosition={spawn} playerName={identity.display_name} playerLevel={level} member={identity.member} player={player} frozen={frozen}
       world={CAFE} groundHeight={flat} walkOnly />
   </>;
 }
