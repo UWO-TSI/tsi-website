@@ -21,7 +21,7 @@ import { combat, useCombatValue } from "@/lib/game/combat/runtime";
 import { combatFacing, combatPush, combatTuning, dashDodge } from "@/lib/game/combat/actions";
 import { WEAPONS } from "@/lib/game/combat/data";
 import { STUCK_TIME, advanceMove, clearSpot, createMoveSim, createMoveState, interpolated, topSpeed, towards, MOVE_TUNING, NO_INPUT, type MoveEvent, type MoveInput, type MoveSim, type MoveState, type MoveTuning, type MoveWorld } from "@/lib/game/movement/sim";
-import { useMoveKeys } from "@/lib/game/movement/keys";
+import { crouchKey, useKeyboardLocked, useMoveKeys } from "@/lib/game/movement/keys";
 import { routePilot, type RouteStep } from "@/lib/game/movement/course";
 import { BASE_FOV, EVENT_CLIP, MOVE_JUICE, TAKEOFF, applyFov, liveWind, screenOf, touchStick, useMoveParticles, type MoveJuice, type MoveTelemetry } from "./movement/moveFx";
 import { cooldownWisp, dashBurst, dashReady as dashBack, footstep, groundUnder, handPuff, landKind, landing, leafBits, puffRing, scuff, settle, splash, streak, takeoff, trail, type GroundKind } from "@/lib/game/movement/juice";
@@ -117,7 +117,9 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
   const motion = useRef<CharacterMotion>({ speed: 0, yaw: 0, lift: 0, pose: null, play: null, move: null, afterimages: true });
   const { look } = useMyLook();
   const { camera, gl } = useThree();
-  const bindings = useMoveKeys();
+  const bindings = useMoveKeys(), locked = useKeyboardLocked();
+  // Crouch/slide: Ctrl on macOS, C elsewhere (Ctrl there only in fullscreen with the keyboard locked).
+  const crouch = crouchKey(bindings, locked);
   const [x0, , z0] = spawnPosition;
   const sim = useRef<MoveSim | null>(null), simAt = useRef<[number, number, number] | null>(null);
   const keys = useRef<Record<string, boolean>>({});
@@ -145,18 +147,19 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
   useEffect(() => {
     if (frozen) return;
     const b = bindings, walk = [b.forward, b.left, b.back, b.right];
-    return bindGameKeys({ keys: keys.current, accepted: Object.values(b),
+    return bindGameKeys({ keys: keys.current, accepted: [...Object.values(b).filter(k => k !== b.crouch), crouch].filter(Boolean),
       onReset: () => { target.current = null; },
       onPress: (e) => {
         const k = e.key.toLowerCase();
-        if (k === b.jump || k === b.dash) e.preventDefault();
+        // Ctrl with a game key is play (crouch/slide): no browser shortcut, where a page can stop one.
+        if (k === b.jump || k === b.dash || e.ctrlKey) e.preventDefault();
         if (e.repeat) return;
         if (k === b.jump) presses.current.jump = true;
         if (k === b.dash) presses.current.dash = true;
         if (walk.includes(k)) target.current = null;
       },
     });
-  }, [bindings, frozen]);
+  }, [bindings, crouch, frozen]);
 
   // Tap-to-walk: touch only (refinement 2026-07-22: on fine pointers WASD is the verb and misclicks kept sending you walking).
   const raycaster = useRef(new THREE.Raycaster());
@@ -284,7 +287,7 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
       if (d.pilot && dt > 0 && !piloted) d.pilot = null;
       const input: MoveInput = piloted ?? (live ? {
         x: goal ? goal.x : fwdX * iz - fwdZ * ix, z: goal ? goal.z : fwdZ * iz + fwdX * ix,
-        sprint: !walkOnly && (!!k[b.sprint] || (!keyed && tilt > 0.92)), sneak: !!k[b.sneak],
+        sprint: !walkOnly && (!!k[b.sprint] || (!keyed && tilt > 0.92)), sneak: (!!crouch && !!k[crouch]) || st.crouch,
         jump: !walkOnly && (!!k[b.jump] || st.jump), jumpPressed, dashPressed,
       } : { ...NO_INPUT, dashPressed: !frozen && !down && dashPressed });
       if (inCombat) { input.push = push; if (p.aimHold > 0 || Math.hypot(s.state.vx, s.state.vz) < 0.6) s.state.facing = p.facing; } // attacking or standing: the kit turns from your facing (a dash with no stick goes that way)

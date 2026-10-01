@@ -67,7 +67,7 @@ import type { Family } from "@/lib/oracle/engine";
 import type { ResultView } from "@/lib/oracle/service";
 import { setFamily, useWorldIdentity, type WorldIdentity } from "@/lib/game/identity";
 import { actionForKey } from "@/lib/identity/settings";
-import { keyName, useAbilityKeys, useMoveKeys } from "@/lib/game/movement/keys";
+import { crouchKey, keyName, useAbilityKeys, useKeyboardLocked, useMoveKeys } from "@/lib/game/movement/keys";
 import { useCoarsePointer } from "@/lib/game/useMediaQuery";
 import TouchControls from "./movement/TouchControls";
 import MuseumInterior from "./peaceful/MuseumInterior";
@@ -524,7 +524,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   const greeting = typeof welcome === "number" ? welcome : null;
   // Arriving or being greeted: the player holds still, so no prompt and no key hints.
   const welcoming = welcome === "arriving" || greeting !== null;
-  const moveKeys = useMoveKeys(), abilityKeys = useAbilityKeys();
+  const moveKeys = useMoveKeys(), abilityKeys = useAbilityKeys(), crouch = crouchKey(moveKeys, useKeyboardLocked());
   const touch = useCoarsePointer() || devHome.get("touch") === "1";
   const [reveal, setReveal] = useState<{ family: Family; type: string; startedAt: number } | null>(null);
   // Bumped by the Oracle's path sheet after a subclass, loadout or stat change so the encounter re-reads them.
@@ -850,10 +850,10 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       <PostersSheet open={sheet === "posters"} onClose={() => setSheet(null)} event={islandEvent} />
       <CafeGoalSheet open={sheet === "cafe"} onClose={() => setSheet(null)} />
       {site === "ruins" && <CombatHud player={player} />}
-      {welcoming ? null : site === "ruins" ? <div className={styles.controls} data-combat><span>{[moveKeys.forward, moveKeys.left, moveKeys.back, moveKeys.right].map(k => <kbd key={k}>{keyName(k)}</kbd>)} Move</span><span>Mouse Aim</span><span>Click Attack</span><span><kbd>{keyName(moveKeys.jump)}</kbd> Jump</span><span><kbd>{keyName(moveKeys.dash)}</kbd> Dodge</span><span>{SLOT_IDS.map(s => <kbd key={s}>{keyName(abilityKeys[s])}</kbd>)} Abilities</span><span><kbd>{keyName(abilityKeys.swap)}</kbd> Swap</span><span><kbd>E</kbd> Interact</span></div>
+      {welcoming ? null : site === "ruins" ? <div className={styles.controls} data-combat><span>{[moveKeys.forward, moveKeys.left, moveKeys.back, moveKeys.right].map(k => <kbd key={k}>{keyName(k)}</kbd>)} Move</span><span>Mouse Aim</span><span>Click Attack</span><span><kbd>{keyName(moveKeys.jump)}</kbd> Jump</span><span><kbd>{keyName(moveKeys.dash)}</kbd> Dodge</span>{crouch && <span><kbd>{keyName(crouch)}</kbd> Slide</span>}<span>{SLOT_IDS.map(s => <kbd key={s}>{keyName(abilityKeys[s])}</kbd>)} Abilities</span><span><kbd>{keyName(abilityKeys.swap)}</kbd> Swap</span><span><kbd>E</kbd> Interact</span></div>
       // Indoors you walk (cafe-polish §4): no run, jump, dash, zoom or map.
       : inside ? <div className={styles.controls}><span>{[moveKeys.forward, moveKeys.left, moveKeys.back, moveKeys.right].map(k => <kbd key={k}>{keyName(k)}</kbd>)} Walk</span><span><kbd>E</kbd> Interact</span><span><kbd>J</kbd> Quests</span><span><kbd>{keyName(identity.settings.key_bindings.openJournal)}</kbd> Collection</span></div>
-      : <div className={styles.controls}><span>{[moveKeys.forward, moveKeys.left, moveKeys.back, moveKeys.right].map(k => <kbd key={k}>{keyName(k)}</kbd>)} Walk</span><span><kbd>{keyName(moveKeys.sprint)}</kbd> Run</span><span><kbd>{keyName(moveKeys.jump)}</kbd> Jump</span>{peaceful.glider && <span><kbd>{keyName(moveKeys.jump)}</kbd> again in the air Glide</span>}<span><kbd>{keyName(moveKeys.dash)}</kbd> Dash</span><span><kbd>E</kbd> Interact</span><span><kbd>Z</kbd> Zoom</span><span><kbd>{keyName(identity.settings.key_bindings.openMap)}</kbd> Map</span><span><kbd>J</kbd> Quests</span><span><kbd>{keyName(identity.settings.key_bindings.openJournal)}</kbd> Collection</span><span><kbd>{keyName(moveKeys.sneak)}</kbd> Sneak</span></div>}
+      : <div className={styles.controls}><span>{[moveKeys.forward, moveKeys.left, moveKeys.back, moveKeys.right].map(k => <kbd key={k}>{keyName(k)}</kbd>)} Walk</span><span><kbd>{keyName(moveKeys.sprint)}</kbd> Run</span><span><kbd>{keyName(moveKeys.jump)}</kbd> Jump</span>{peaceful.glider && <span><kbd>{keyName(moveKeys.jump)}</kbd> again in the air Glide</span>}<span><kbd>{keyName(moveKeys.dash)}</kbd> Dash</span><span><kbd>E</kbd> Interact</span><span><kbd>Z</kbd> Zoom</span><span><kbd>{keyName(identity.settings.key_bindings.openMap)}</kbd> Map</span><span><kbd>J</kbd> Quests</span><span><kbd>{keyName(identity.settings.key_bindings.openJournal)}</kbd> Collection</span>{crouch && <span><kbd>{keyName(crouch)}</kbd> Crouch, at speed slide</span>}</div>}
       {/* Clear of the minimap (left) and the audio widget (bottom right). */}
       {touch && (!inside || inside === "cafe") && <TouchControls left={212} bottom={64} walkOnly={inside === "cafe"} />}
       <p className={styles.touchControls}>Tap the ground to move</p>

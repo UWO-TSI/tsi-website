@@ -14,13 +14,15 @@ export function bindGameKeys({ keys, accepted, onPress, onReset, windowTarget = 
   documentTarget?: InputDocument;
 }) {
   const allowed = new Set(accepted);
+  // Ctrl bound as a game key (crouch/slide on macOS, or in fullscreen with the keyboard locked): Ctrl with a game key is play, not a shortcut.
+  const ctrlKey = allowed.has("control");
   const reset = () => {
     Object.keys(keys).forEach((key) => { keys[key] = false; });
     onReset?.();
   };
   const down = (event: Event) => {
     const e = event as KeyboardEvent;
-    if (documentTarget.hidden || isGameControlTarget(documentTarget.activeElement) || e.metaKey || e.ctrlKey || e.altKey) {
+    if (documentTarget.hidden || isGameControlTarget(documentTarget.activeElement) || e.metaKey || (e.ctrlKey && !ctrlKey) || e.altKey) {
       reset();
       return;
     }

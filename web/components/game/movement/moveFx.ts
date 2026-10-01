@@ -37,9 +37,9 @@ export type MoveJuice = typeof MOVE_JUICE;
 /** The follow camera's field of view at a walk (the Canvases' camera); speed and dashes widen it from here. */
 export const BASE_FOV = 48;
 
-/** Touch intent (screen space: x right, z up the screen) and presses waiting for the sim; TouchControls writes it, the avatar reads it. */
-export interface StickInput { x: number; z: number; jump: boolean; jumpPressed: boolean; dashPressed: boolean }
-export const touchStick: StickInput = { x: 0, z: 0, jump: false, jumpPressed: false, dashPressed: false };
+/** Touch intent (screen space: x right, z up the screen) and presses waiting for the sim; TouchControls writes it, the avatar reads it. `crouch`: the Slide button held. */
+export interface StickInput { x: number; z: number; jump: boolean; jumpPressed: boolean; dashPressed: boolean; crouch: boolean }
+export const touchStick: StickInput = { x: 0, z: 0, jump: false, jumpPressed: false, dashPressed: false, crouch: false };
 
 /** What the HUD reads (a few times a second). */
 export interface MoveTelemetry { x: number; y: number; z: number; speed: number; mode: string; hops: number; dashReady: boolean; long: boolean }

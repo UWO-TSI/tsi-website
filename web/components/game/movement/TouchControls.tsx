@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import { touchStick as stick } from "./moveFx";
 
-/** Touch (specs/movement.md "Controls"): a joystick (push to the rim to sprint) and jump and dash buttons, into the avatar's touch stick; `left`/`bottom` clear a HUD. */
+/** Touch (specs/movement.md "Controls"): a joystick (push to the rim to sprint) and jump, dash and slide buttons, into the avatar's touch stick; `left`/`bottom` clear a HUD. Slide is held: crouch at a walk, slide at speed (specs/movement-slide.md). */
 export default function TouchControls({ left = 24, bottom = 28, walkOnly = false }: { left?: number; bottom?: number; walkOnly?: boolean }) {
   const base = useRef<HTMLDivElement>(null), knob = useRef<HTMLDivElement>(null);
   // The knob moves through its style, not state: pointermove fires far more often than a render is worth.
@@ -18,12 +18,13 @@ export default function TouchControls({ left = 24, bottom = 28, walkOnly = false
   };
   const end = () => { stick.x = stick.z = 0; setKnob(0, 0); };
   // Unmounted mid-press (entering a building): let go, or the avatar walks or hops on its own when it comes back.
-  useEffect(() => () => { stick.x = stick.z = 0; stick.jump = stick.jumpPressed = stick.dashPressed = false; }, []);
-  // Jump is also held (a held jump goes higher); a dash is a press.
-  const button = (kind: "jump" | "dash", text: string, size: number) => (
+  useEffect(() => () => { stick.x = stick.z = 0; stick.jump = stick.jumpPressed = stick.dashPressed = stick.crouch = false; }, []);
+  // Jump and slide are also held (a held jump goes higher, a held slide keeps sliding); a dash is a press.
+  const up = () => { stick.jump = false; stick.crouch = false; };
+  const button = (kind: "jump" | "dash" | "slide", text: string, size: number) => (
     <button aria-label={text} style={{ width: size, height: size, borderRadius: "50%", border: "2px solid rgba(255,255,255,0.5)", background: "rgba(15,15,16,0.45)", color: "#fff", font: "700 14px ui-monospace, Menlo, monospace", touchAction: "none" }}
-      onPointerDown={e => { e.preventDefault(); if (kind === "jump") stick.jump = stick.jumpPressed = true; else stick.dashPressed = true; }}
-      onPointerUp={() => { stick.jump = false; }} onPointerCancel={() => { stick.jump = false; }} onPointerLeave={() => { stick.jump = false; }}>{text}</button>
+      onPointerDown={e => { e.preventDefault(); if (kind === "jump") stick.jump = stick.jumpPressed = true; else if (kind === "slide") stick.crouch = true; else stick.dashPressed = true; }}
+      onPointerUp={up} onPointerCancel={up} onPointerLeave={up}>{text}</button>
   );
   return <>
     <div ref={base} data-testid="touch-stick" onPointerDown={e => { (e.target as HTMLElement).setPointerCapture(e.pointerId); move(e); }} onPointerMove={e => { if (e.buttons) move(e); }} onPointerUp={end} onPointerCancel={end}
@@ -31,7 +32,7 @@ export default function TouchControls({ left = 24, bottom = 28, walkOnly = false
       <div ref={knob} style={{ position: "absolute", left: 66 - 26, top: 66 - 26, width: 52, height: 52, borderRadius: "50%", background: "rgba(255,255,255,0.7)", pointerEvents: "none" }} />
     </div>
     <div style={{ position: "absolute", right: 24, bottom, display: "flex", gap: 14, alignItems: "flex-end", zIndex: 20 }}>
-      {!walkOnly && <>{button("dash", "Dash", 64)}{button("jump", "Jump", 84)}</>}
+      {!walkOnly && <>{button("slide", "Slide", 60)}{button("dash", "Dash", 64)}{button("jump", "Jump", 84)}</>}
     </div>
   </>;
 }
