@@ -481,6 +481,8 @@ export function stepMove(prev: MoveState, input: MoveInput, dt: number, w: MoveW
       s.dashCarry = t.dashJumpWindow;
       s.airMax = Math.max(s.airMax, v);
       if (s.mode === "ground") s.keep = t.keepGrace;
+      // The crouch key held through the burst: straight into the slide at the speed the dash keeps.
+      if (s.mode === "ground" && input.sneak && v > t.walkSpeed * t.slideEnterAt) startSlide(s, "dashslide", v);
     }
   } else if (s.mode === "ground") {
     const target = mag * (input.sneak ? t.sneakSpeed : input.sprint ? t.sprintSpeed : t.walkSpeed);
@@ -502,6 +504,7 @@ export function stepMove(prev: MoveState, input: MoveInput, dt: number, w: MoveW
     } else {
       const k = Math.exp(-t.stopResponse * dt);
       s.vx *= k; s.vz *= k;
+      s.bleed = speed > t.walkSpeed; // letting go at speed sheds the momentum too
       if (hypot(s.vx, s.vz) < 0.02) s.vx = s.vz = 0;
     }
   } else if (s.mode === "skid") {

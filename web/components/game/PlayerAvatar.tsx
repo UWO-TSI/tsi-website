@@ -426,7 +426,7 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
       }
     }
     if (f.ghostT > 0 && (f.ghostT -= dt) <= 0 && state.dashT > 0) m.ghost = true;
-    if (f.dashT > 0 && state.dashT <= 0 && grounded && !sitting) settle(pool, groundAt(groundSurface, world, x, z), x, groundY, z, j.dashBurst);
+    if (f.dashT > 0 && state.dashT <= 0 && grounded && !sitting && state.mode !== "slide") settle(pool, groundAt(groundSurface, world, x, z), x, groundY, z, j.dashBurst); // into a slide: its own spray
     f.dashT = state.dashT;
     // The dash cooldown as wind at the heels: a wisp circling the feet that gathers as it fills, lifting away with a glint when it's back.
     const spent = !sitting && aloft && state.airDashes >= t.airDashes, dashReady = !!sitting || (state.dashCd <= 0 && !spent && state.mode !== "recover");

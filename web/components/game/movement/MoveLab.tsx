@@ -119,9 +119,9 @@ function measure(t: MoveTuning) {
     for (let i = 0; i < Math.round(seconds / STEP); i++) {
       const time = i * STEP;
       if (jumpAt !== null && Math.abs(time - jumpAt) < STEP / 2) z0 = s.z;
-      // Space held from the press; sprint only up to the takeoff, or the landing would bunny-hop on.
+      // Space held from the press while rising, let go coming down; sprint only up to the takeoff: the landing must not bunny-hop on.
       const sprint = !!setup.sprint && (jumpAt === null || time < jumpAt + STEP);
-      s = stepMove(s, { ...NO_INPUT, ...setup, sprint, jump: jumpAt !== null && time >= jumpAt, jumpPressed: jumpAt !== null && Math.abs(time - jumpAt) < STEP / 2, dashPressed: dashAt !== null && Math.abs(time - dashAt) < STEP / 2 }, STEP, flat, t);
+      s = stepMove(s, { ...NO_INPUT, ...setup, sprint, jump: jumpAt !== null && time >= jumpAt && (s.mode !== "air" || s.vy > 0), jumpPressed: jumpAt !== null && Math.abs(time - jumpAt) < STEP / 2, dashPressed: dashAt !== null && Math.abs(time - dashAt) < STEP / 2 }, STEP, flat, t);
       top = Math.max(top, Math.hypot(s.vx, s.vz));
       if (jumpAt !== null && time >= jumpAt) {
         if (s.mode === "air") { air += STEP; peak = Math.max(peak, s.y); } else if (air > 0 && landed === null) landed = s.z - z0;

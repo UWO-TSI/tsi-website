@@ -35,6 +35,8 @@ async function open(url) {
   await page.waitForSelector("canvas", { timeout: 240000 });
   for (let quiet = 0; quiet < 3;) { await page.waitForTimeout(1000); quiet = await page.evaluate(() => !!window.__move?.sim?.current && !document.querySelector('[role="status"]')?.textContent?.includes("Preparing")) ? quiet + 1 : 0; }
   await page.waitForTimeout(5000);
+  // The lab's key line (bottom left) stays out of the crops.
+  await page.evaluate(() => { const b = [...document.querySelectorAll("button")].find(x => x.textContent === "Back to start"); if (b?.parentElement) b.parentElement.style.display = "none"; });
 }
 const LAB = "/lab/move?panel=0&zoom=0.6";
 const state = () => page.evaluate(() => { const s = window.__move.sim.current.state; return { x: s.x, y: s.y, z: s.z, vx: s.vx, vy: s.vy, vz: s.vz, mode: s.mode, modeT: s.modeT, dashT: s.dashT, crouch: s.crouch, keep: s.keep, bleed: s.bleed, events: s.events.map(e => e.kind) }; });
@@ -54,8 +56,9 @@ const label = s => `${speed(s)} u/s  ${s.dashT > 0 ? "dash" : s.mode}${s.crouch 
  * `until(s)` (then `after` more), at most `max` frames spread evenly (but every frame with an event kept), cropped
  * round the avatar.
  */
-async function strip(name, { url = LAB, at, facing, route, from, until, after = 2, max = 8, step = 0.04, limit = 8, cols = 4, w = 420, h = 320, geometry = "280x213+3+3" }) {
+async function strip(name, { url = LAB, at, facing, route, from, until, after = 2, max = 8, step = 0.04, limit = 8, cols = 4, w = 420, h = 320, geometry = "280x213+3+3", prep = null }) {
   await open(url);
+  if (prep) await page.evaluate(prep);
   await page.evaluate(([x, z, f]) => { window.__move.teleport(x, z, f); window.__move.pause(); }, [at[0], at[1], facing]);
   await page.waitForTimeout(1500);
   await page.evaluate(r => window.__move.autopilot(r), route);
@@ -93,14 +96,14 @@ const MOVES = {
   "dash-slide": { at: [-7, 25.5], facing: S, route: [{ to: [1, 25.5], sprint: true, move: "dash", r: 0.4 }, { to: [19, 25.5], crouch: true }],
     from: s => s.x > 0.4, until: s => s.mode === "slide" && s.modeT > 0.5, after: 0, step: 0.04, max: 12 },
   // Down the long ramp from the shelf's run-up (going up the screen): faster on the slope, a long run out.
-  "slide-downhill": { at: [3, 27.6], facing: 0, route: [{ to: [3, 35.5], sprint: true }, { to: [3, 58], crouch: true }],
-    from: s => s.mode === "slide" && s.z > 35.8, until: s => s.z > 44, after: 0, step: 0.06, max: 10, label: true },
+  "slide-downhill": { url: "/lab/move?panel=0", at: [3, 27.6], facing: 0, route: [{ to: [3, 35.5], sprint: true }, { to: [3, 58], crouch: true }],
+    from: s => s.mode === "slide" && s.z > 35.8, until: s => s.z > 45, after: 0, step: 0.06, max: 10, cols: 5, w: 520, h: 420, geometry: "250x202+3+3" },
   // The dash-slide straight to the 7-tile water gap: dash, slide, the slide-jump at the brick lip, landing into a slide.
   "slide-jump-gap": { url: "/lab/move?panel=0&zoom=0.8", at: [17.5, 27.5], facing: 0, route: [{ to: [17.5, 40], sprint: true, move: "dash", r: 0.4 }, { to: [17.5, 44.2], crouch: true, move: "jump", r: 0.35 }, { to: [17.5, 56] }],
     from: s => s.z > 41.5, until: s => s.z > 52.6, after: 1, step: 0.04, max: 12, w: 460, h: 360, geometry: "300x235+3+3" },
-  // Running off the west run-up block's 1.5u edge with the slide held: no roll, straight into a slide at speed.
-  "land-slide": { at: [6.5, 27.5], facing: 0, route: [{ to: [6.5, 34], sprint: true }, { to: [6.5, 45], crouch: true }],
-    from: s => s.z > 35.6, until: s => s.mode === "slide" && s.modeT > 0.25 && s.y < 0.1, after: 0, step: 0.035, max: 12 },
+  // A dash-slide off the west run-up block's 1.5u edge: the speed carries into the air and the landing goes straight into a slide (no roll).
+  "land-slide": { at: [6.5, 27.5], facing: 0, route: [{ to: [6.5, 32.6], sprint: true, move: "dash", r: 0.4 }, { to: [6.5, 50], crouch: true }],
+    from: s => s.z > 35.6, until: s => s.mode === "slide" && s.modeT > 0.25 && s.y < 0.1, after: 0, step: 0.03, max: 12 },
   // The ramp launch: up the tower, dash, slide down its ramp and off the lip, out over the striped field, into a slide.
   "ramp-launch": { url: "/lab/move?panel=0&zoom=0.8", at: [10, 27.5], facing: 0, route: [{ to: [10, 33.5], sprint: true, move: "dash", r: 0.3 }, { to: [10, 40.4], crouch: true }, { to: [10, 56], crouch: true }],
     from: s => s.z > 35.5, until: s => s.mode === "slide" && s.y < 0.1 && s.modeT > 0.15, after: 0, step: 0.045, max: 12, w: 460, h: 360, geometry: "300x235+3+3" },
@@ -118,20 +121,28 @@ if (!ONLY || ONLY.has("tuning-panel")) {
   await page.evaluate(() => { window.__move.teleport(17.5, 27.5, 0); });
   await page.waitForTimeout(1200);
   await page.evaluate(() => window.__move.autopilot([{ to: [17.5, 31], sprint: true, move: "dash", r: 0.4 }, { to: [17.5, 34.6], crouch: true, move: "jump", r: 0.4 }, { to: [17.5, 43.9], crouch: true, move: "jump", r: 0.35 }, { to: [17.5, 56], sprint: true }]));
-  await page.waitForTimeout(3300);
-  await page.screenshot({ path: `${TMP}/hud.png`, clip: { x: 0, y: 40, width: 260, height: 300 } });
-  // Scroll the panel to the Slide and Momentum groups.
+  // Mid-chain (kept, gold), then after the plain landing (bleeding, coral), with the trace of the last 3 s.
+  await page.waitForTimeout(1500);
+  await page.screenshot({ path: `${TMP}/hud-kept.png`, clip: { x: 0, y: 40, width: 340, height: 260 } });
+  await page.waitForTimeout(950);
+  await page.screenshot({ path: `${TMP}/hud-bleed.png`, clip: { x: 0, y: 40, width: 340, height: 260 } });
+  // The panel's numbers, then the Slide and Momentum groups.
+  await page.screenshot({ path: `${TMP}/panel-top.png`, clip: { x: W - 360, y: 40, width: 360, height: 300 } });
   await page.evaluate(() => { const p = document.querySelector('[data-testid="move-panel"]'); const g = [...p.querySelectorAll("legend")].find(l => l.textContent === "Slide"); g?.scrollIntoView({ block: "start" }); });
   await page.waitForTimeout(400);
-  await page.screenshot({ path: `${TMP}/panel.png`, clip: { x: W - 360, y: 40, width: 360, height: H - 40 } });
-  execFileSync("magick", [`${TMP}/hud.png`, `${TMP}/panel.png`, "-background", "#0b0e14", "-gravity", "north", "+append", "-quality", "80", `${OUT}/tuning-panel.webp`]);
+  await page.screenshot({ path: `${TMP}/panel.png`, clip: { x: W - 360, y: 40, width: 360, height: 420 } });
+  execFileSync("magick", ["(", `${TMP}/hud-kept.png`, `${TMP}/hud-bleed.png`, "-background", "#0b0e14", "-append", ")", "(", `${TMP}/panel-top.png`, `${TMP}/panel.png`, "-background", "#0b0e14", "-append", ")", "-background", "#0b0e14", "-gravity", "north", "+append", "-quality", "80", `${OUT}/tuning-panel.webp`]);
   console.log("wrote", `${OUT}/tuning-panel.webp`);
 }
 
-/** The slide in the game: the village's south beach (sand spray), the home island, the ruins (no i-frames). */
-const GAME = { village: "/lab/island?time=day&weather=clear&season=summer&zoom=0.7", home: "/lab/island?time=day&weather=clear&season=summer&home=1&zoom=0.7", ruins: "/lab/island?time=day&weather=clear&season=summer&ruins=1&combat=demo&zoom=0.8" };
+/** The slide in the game, on open ground in each (lib/game scans): the village (z -10), the home island (z -1), the ruins' long north corridor (x 0). */
+const GAME = { village: "/lab/island?time=day&weather=clear&season=summer&zoom=0.7", home: "/lab/island?time=day&weather=clear&season=summer&home=1&zoom=0.7", ruins: "/lab/island?time=day&weather=clear&season=summer&ruins=1&zoom=0.8" };
 const AREAS = {
-  "village": { url: GAME.village, at: [-9, -17.3], facing: S, route: [{ to: [-2, -17.3], sprint: true, r: 0.5 }, { to: [8, -17.3], crouch: true }], from: s => s.mode === "slide", until: s => s.mode === "slide" && s.modeT > 0.7, after: 0, step: 0.06, max: 8 },
+  "village": { url: GAME.village, at: [-18, -10], facing: S, route: [{ to: [-9, -10], sprint: true, r: 0.5 }, { to: [12, -10], crouch: true }], from: s => s.mode === "slide", until: s => s.events.includes("stand") || (s.mode === "ground" && s.crouch), after: 2, step: 0.08, max: 10 },
+  "home": { url: GAME.home, at: [-11, -1], facing: S, route: [{ to: [-3, -1], sprint: true, r: 0.5 }, { to: [11, -1], crouch: true }], from: s => s.mode === "slide", until: s => s.events.includes("stand") || (s.mode === "ground" && s.crouch), after: 2, step: 0.08, max: 10 },
+  // The ruins with the wild enemies cleared and the combat HUD hidden (it sits over the avatar's feet in a crop): a slide, no i-frames.
+  "ruins": { url: GAME.ruins, at: [0, -30], facing: 0, route: [{ to: [0, -19], sprint: true, r: 0.5 }, { to: [0, 12], crouch: true }], from: s => s.mode === "slide", until: s => s.events.includes("stand") || (s.mode === "ground" && s.crouch), after: 2, step: 0.08, max: 10,
+    prep: () => { const rt = window.__combat?.rt; if (rt) { rt.enemies = []; rt.projectiles = []; } const hud = document.querySelector('[aria-label="Combat status"]'); if (hud) hud.style.display = "none"; } },
 };
 for (const [name, move] of Object.entries(AREAS)) if (!ONLY || ONLY.has(name)) await strip(name, move);
 
@@ -140,7 +151,7 @@ if (!ONLY || ONLY.has("fps")) {
   const lines = [];
   for (const [where, url, at, route] of [
     ["lab", "/lab/move?panel=0", [17.5, 27.5], [{ to: [17.5, 31], sprint: true, move: "dash", r: 0.4 }, { to: [17.5, 34.6], crouch: true, move: "jump", r: 0.4 }, { to: [17.5, 43.9], crouch: true, move: "jump", r: 0.35 }, { to: [17.5, 56], crouch: true }]],
-    ["village", GAME.village.replace("&zoom=0.7", ""), [-9, -17.3], [{ to: [-2, -17.3], sprint: true, r: 0.5 }, { to: [8, -17.3], crouch: true }, { to: [-8, -17.3], sprint: true, move: "dash", r: 0.5 }, { to: [-14, -17.3], crouch: true }]],
+    ["village", GAME.village.replace("&zoom=0.7", ""), [-18, -10], [{ to: [-9, -10], sprint: true, r: 0.5 }, { to: [8, -10], crouch: true }, { to: [-6, -10], sprint: true, move: "dash", r: 0.5 }, { to: [-18, -10], crouch: true }]],
   ]) {
     await open(url);
     await page.evaluate(([x, z]) => window.__move.teleport(x, z, 0), at);

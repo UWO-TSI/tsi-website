@@ -238,7 +238,7 @@ const SLIDE_FLECKS: Recipe = { ...STEP_FLECKS, count: [2, 2], speed: [1.2, 2], s
 const SLIDE_SAND: Recipe = { ...STEP_SAND, count: [1, 2], size: [0.7, 0.85], speed: [1.2, 1.9], spread: 1.1, up: [0.9, 1.5] };
 const SLIDE_SNOW: Recipe = { ...STEP_SNOW, count: [1, 2], speed: [1, 1.6], spread: 1.2, up: [0.6, 1] };
 const SLIDE_SCUFF: Recipe = { ...SCUFF, life: [0.9, 1.1], size: [0.5, 0.6], alpha: 0.45 };
-const SLIDE_BURST: Recipe = { ...DASH_KICK, count: [6, 7], speed: [2.2, 3.6], spread: 1.1, up: [0.3, 0.8], size: [0.6, 0.78] };
+const SLIDE_BURST: Recipe = { ...DASH_KICK, count: [3, 4], speed: [2.4, 3.6], spread: 1.3, up: [0.25, 0.6], size: [0.38, 0.5], alpha: 0.7 };
 const SLIDE_POP: Recipe = { ...RING, count: [7, 8], speed: [1.8, 2.6], size: [0.6, 0.72], life: [0.42, 0.52] };
 const SLIDE_SPRAY: Partial<Record<GroundKind, Recipe>> = { grass: SLIDE_FLECKS, sand: SLIDE_SAND, wetSand: SLIDE_SAND, snow: SLIDE_SNOW };
 
