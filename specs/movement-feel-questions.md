@@ -40,3 +40,25 @@ Wired from the 10 existing files, re-pitched per ground with `playSFX(name, { ra
 
 ## 8. Residents
 The pack and the system take any avatar's events (multiplayer-forward); only your avatar throws them today. Should residents kick up footstep dust too (they already count foot contacts)? Assumed yes for milestone 2, quieter.
+
+# Milestone 2: questions for David
+
+## 9. The feet still slide at full speed (stride matching)
+Measured on the rig: at normal speed a planted foot moves 0.64 u/s in the Walk clip, 2.12 in Run and 0.44 in the crouch walk. Walking is 7.4 u/s, so planting the feet would take about 23 steps a second, which reads as a blur.
+**Built:** the cadence follows speed in proportion (down to a slow amble), walk, run and crouch-walk hand over on the same foot, and the run holds down to 1.15× walking pace so it never flickers between the two.
+**Options:** keep it (assumed: the island's quick walk is the feel you tuned); slow the walk toward 4 to 5 u/s; or new walk and run clips with longer strides (the chibi's legs limit how long).
+
+## 10. Footprints
+**Built:** on sand, wet sand and snow, for you and the residents, from each step; 7 s on sand, 11 in wet sand, 12 in snow. Not from landings or slides (slides leave scuffs). Should landings print too?
+
+## 11. Residents' dust
+**Built:** residents' steps throw the ground's dust at 0.6 of yours, with no sound (a crowd of them would clatter).
+
+## 12. Body lean and the head looking along the travel
+From deliverable 4 ("a lean into acceleration and turns, and the head looks along the travel"): not in milestone 2's list, so not built. Want it next?
+
+## 13. Sounds still missing (milestone 2)
+A skid scrape, a splash in three sizes, a roll's soft thump, the glider's leaf rustle and a wind loop, a hand grab on a ledge. Wired meanwhile from the set: skid `footstep` 0.7 plus 1.15 quiet; mantle `blip1` plus `footstep` 1.3; splash `blip5` at 1.25, 1, 0.8 by size; roll `footstep` 0.8 and 0.9; glide set-down `footstep` 1.05.
+
+## 14. The afterimage
+**Fixed:** it no longer films over you dashing away from the camera. A held weapon or the leaf can still sit behind a fading afterimage for a tenth of a second (they are drawn with the world); say if you see it.
