@@ -2,7 +2,7 @@
 
 /**
  * /lab/avatar: the avatar v7 bench (specs/avatar-v7.md item 5). The real runtime Character (v7 head, sculpted-lock
- * hair with its sheen, the animated painted face) under the character creator's camera and lights, in a grid of
+ * hair, the animated painted face) under the character creator's camera and lights, in a grid of
  * cells that each force a look, a turn and a face frame, so review sheets and the blink/talk strips are
  * deterministic. Dev-only via the lab layout.
  *

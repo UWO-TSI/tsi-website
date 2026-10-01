@@ -15,7 +15,7 @@ import * as THREE from "three";
 import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js";
 import { BASE_URL, FACE_ATLAS_URLS, PALETTE, TSI_DECAL_URL, CLIP_BY_NAME, bodyKey, resolveParts, type CharacterLook, type ResolvedPart } from "@/lib/game/character/look";
 import { FaceAnimator, faceSlots, poseKey } from "@/lib/game/character/face";
-import { createFaceMaterial, patchHairSheen, prepareFaceAtlas, type FaceMaterial } from "@/lib/game/character/faceMaterial";
+import { createFaceMaterial, MATTE, prepareFaceAtlas, type FaceMaterial } from "@/lib/game/character/faceMaterial";
 import { SNAPPY_CLIPS, WEAPON_HAND, isLoop, resolveClip, tempo, type CharacterMotion, type ClipName } from "@/lib/game/character/clips";
 import { adoptPrimitive, materialName, mergeLook, refCache, skinnedPrimitives } from "@/lib/game/character/rig";
 import type { WeaponGrip, WeaponKind } from "@/lib/game/combat/contract";
@@ -32,9 +32,8 @@ const CONTACT = { cx: 0, cz: 0, rx: 0.4, rz: 0.34, height: CHARACTER_HEIGHT, str
 type Gltf = { scene: THREE.Object3D; animations: THREE.AnimationClip[] };
 // Double-sided: clothes, hoods and capes are open shells whose insides show (hair and hats are closed solids, whose
 // tucked undersides stay behind the head). The shadow pass keeps back faces only, as for a front-sided material.
-// Sculpted-lock hair draws its sheen band here (hairSheen attribute, faceMaterial.ts).
-const BODY_MATERIAL = patchHairSheen(new THREE.MeshStandardMaterial({ name: "CharacterBody", vertexColors: true, roughness: 0.85, metalness: 0, side: THREE.DoubleSide, shadowSide: THREE.BackSide }));
-let decalMaterial: THREE.MeshStandardMaterial | null = null;
+const BODY_MATERIAL = new THREE.MeshPhysicalMaterial({ name: "CharacterBody", vertexColors: true, ...MATTE, side: THREE.DoubleSide, shadowSide: THREE.BackSide });
+let decalMaterial: THREE.MeshPhysicalMaterial | null = null;
 const bodies = refCache<THREE.BufferGeometry>();
 const decals = new Map<string, THREE.BufferGeometry>();
 
@@ -105,7 +104,7 @@ class Puppet {
         const prim = skinnedPrimitives(scenes[decalPart]).find(m => materialName(m) === "M_Decal");
         if (prim && !decals.has(id)) decals.set(id, adoptPrimitive(prim, new Map(this.bones.map((b, i) => [b.name, i])), null));
         this.decal.geometry = decals.get(id) ?? this.decal.geometry;
-        decalMaterial ??= new THREE.MeshStandardMaterial({ name: "CharacterDecal", map: decalMap, alphaTest: 0.5, roughness: 0.85, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+        decalMaterial ??= new THREE.MeshPhysicalMaterial({ name: "CharacterDecal", map: decalMap, alphaTest: 0.5, ...MATTE, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
         this.decal.material = decalMaterial;
       }
     }
