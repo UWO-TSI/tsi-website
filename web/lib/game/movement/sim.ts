@@ -12,7 +12,9 @@
  * ground (ramps and blended half steps included), a prop's top, or Infinity for
  * a building or trunk. `wet(x, z)` is water with no land: a wall on foot, a
  * splash from the air that puts you back where you last stood (swimming is a
- * later unlock, row 245). The body is a 0.2-radius column sampled at nine
+ * later unlock, row 245). With `glider` on (the leaf glider, specs/glider.md)
+ * a fresh Space press while falling opens a slow, steerable glide that always
+ * sets you down softly. The body is a 0.2-radius column sampled at nine
  * points, the walker's clearance probes, and no step ends with more of it
  * inside something than it started with, so nothing can leave it stuck.
  */
@@ -68,13 +70,21 @@ export const MOVE_TUNING = {
   recoverDrop: 2.6,
   recoverTime: 0.28,
   stepUp: 0.3,
+  // The leaf glider (specs/glider.md): 1 = owned and allowed here; 0 is the kit without it, exactly.
+  glider: 0,
+  glideSpeed: 8, // the speed a held stick eases toward
+  glideEase: 4, // how fast the speed you opened with eases to it (1/s)
+  glideSink: 2.1, // u/s down, never up: a jump off a 1.5u cliff glides about 12 tiles
+  glideOpen: 8, // how fast the fall brakes to the sink as the leaf opens (1/s)
+  glideTurn: 2.5, // heading ease toward the stick (1/s)
 };
 export type MoveTuning = typeof MOVE_TUNING;
 /** The fastest the kit goes for more than a moment: a long jump plus a full bunny-hop chain. A dash-jump carries no more. */
 export const topSpeed = (t: MoveTuning) => t.sprintSpeed * t.longJumpBoost + t.hopChainMax * t.hopBoost;
 
-export type MoveMode = "ground" | "air" | "skid" | "roll" | "recover" | "mantle" | "splash";
-export type MoveEventKind = "jump" | "hop" | "long" | "dashjump" | "land" | "roll" | "recover" | "dash" | "skid" | "mantle" | "splash" | "respawn" | "bonk";
+export type MoveMode = "ground" | "air" | "skid" | "roll" | "recover" | "mantle" | "splash" | "glide";
+/** `glide` opens the leaf; `furl` closes it, whatever ended the glide (let go, landed, a ledge, water). */
+export type MoveEventKind = "jump" | "hop" | "long" | "dashjump" | "land" | "roll" | "recover" | "dash" | "skid" | "mantle" | "splash" | "respawn" | "bonk" | "glide" | "furl";
 export interface MoveEvent { kind: MoveEventKind; x: number; y: number; z: number; speed: number; drop: number }
 
 /**
@@ -141,7 +151,10 @@ function overlap(w: MoveWorld, x: number, z: number, y: number, foot: boolean, t
 function emit(s: MoveState, kind: MoveEventKind, drop = 0) {
   s.events.push({ kind, x: s.x, y: s.y, z: s.z, speed: hypot(s.vx, s.vz), drop });
 }
-function setMode(s: MoveState, mode: MoveMode) { s.mode = mode; s.modeT = 0; }
+function setMode(s: MoveState, mode: MoveMode) {
+  if (s.mode === "glide" && mode !== "glide") emit(s, "furl");
+  s.mode = mode; s.modeT = 0;
+}
 
 /**
  * Move the body by (dx, dz) in ≤ 0.1u pieces, sliding along what it meets. On
@@ -230,6 +243,13 @@ function jump(s: MoveState, t: MoveTuning, input: MoveInput, chained: boolean) {
 }
 
 function land(s: MoveState, t: MoveTuning, input: MoveInput, y: number) {
+  if (s.mode === "glide") {
+    // The leaf sets you down: never a roll, a recovery or a hop, from any height.
+    s.y = y; s.vy = 0; s.airDashes = 0; s.dashT = 0; s.cut = false; s.long = false; s.hops = 0; s.buffer = 0;
+    setMode(s, "ground");
+    emit(s, "land");
+    return;
+  }
   const drop = s.topY - y, speed = hypot(s.vx, s.vz);
   s.y = y; s.vy = 0; s.airDashes = 0; s.dashT = 0; s.cut = false; s.long = false;
   emit(s, "land", drop);
@@ -254,6 +274,12 @@ function ledge(s: MoveState, w: MoveWorld, t: MoveTuning, dx: number, dz: number
   const tx = s.x + dx * (edge + R + 0.06), tz = s.z + dz * (edge + R + 0.06);
   if (w.wet(tx, tz) || Math.abs(w.top(tx, tz) - top) > 0.05 || overlap(w, tx, tz, top, true, t, 0) > 0) return null;
   return [tx, top, tz];
+}
+
+/** Seconds until this fall meets the ground under the body: a press closer than the jump buffer is a buffered jump, not the glider. */
+function timeToGround(s: MoveState, w: MoveWorld, t: MoveTuning, held: boolean) {
+  const h = s.y - w.top(s.x, s.z), g = gravity(s, t, held), v = -s.vy;
+  return h > 0 ? (Math.sqrt(v * v + 2 * g * h) - v) / g : 0;
 }
 
 /** Fall to `y`: land on what is under the centre, catch a bank or ledge just missed, or splash. */
@@ -320,11 +346,19 @@ export function stepMove(prev: MoveState, input: MoveInput, dt: number, w: MoveW
     return s;
   }
 
-  // ── Dash (Q): on the ground, or once in the air ──────────────────
-  if (input.dashPressed && s.mode !== "recover" && s.dashCd <= 0 && (s.mode !== "air" || s.airDashes < t.airDashes)) {
+  // ── Glider: letting go of Space drops you (a gust ends with it) ──
+  if (s.mode === "glide" && !input.jump) {
+    setMode(s, "air");
+    s.cut = true; s.topY = s.y; s.dashT = 0; s.airMax = hypot(s.vx, s.vz);
+  }
+
+  // ── Dash (Q): on the ground, or once in the air (gliding: a forward gust, no lift) ──
+  const aloft = s.mode === "air" || s.mode === "glide";
+  if (input.dashPressed && s.mode !== "recover" && s.dashCd <= 0 && (!aloft || s.airDashes < t.airDashes)) {
     // The stick's way (camera-relative), or the way you face; the burst eases out to dashExit of itself, or to the speed you came in with.
     const [dx, dz] = steering ? [ix, iz] : [Math.sin(s.facing), Math.cos(s.facing)], entry = Math.max(0, s.vx * dx + s.vz * dz);
     if (s.mode === "air") { s.airDashes++; s.vy = t.airDashLift; s.topY = s.y; }
+    else if (s.mode === "glide") s.airDashes++;
     else setMode(s, "ground");
     s.dashX = dx; s.dashZ = dz; s.facing = Math.atan2(dx, dz);
     s.dashSpeed = Math.max(t.dashSpeed, entry);
@@ -336,6 +370,13 @@ export function stepMove(prev: MoveState, input: MoveInput, dt: number, w: MoveW
 
   // ── Jump: from the ground, a skid, a roll, or within coyote time ─
   if (s.buffer > 0 && ((onFoot(s) && s.mode !== "recover") || (s.mode === "air" && s.coyote > 0))) jump(s, t, input, false);
+
+  // ── Glider: a fresh press while falling opens the leaf, unless you would land within the jump buffer anyway ──
+  if (t.glider > 0 && input.jumpPressed && s.mode === "air" && s.vy <= 0 && s.dashT <= 0 && timeToGround(s, w, t, input.jump) > t.jumpBuffer) {
+    setMode(s, "glide");
+    s.buffer = 0; s.coyote = 0; s.cut = false; s.long = false; s.hops = 0; s.topY = s.y;
+    emit(s, "glide");
+  }
 
   // ── Horizontal speed ─────────────────────────────────────────────
   const speed = hypot(s.vx, s.vz);
@@ -384,10 +425,16 @@ export function stepMove(prev: MoveState, input: MoveInput, dt: number, w: MoveW
     // Steer toward the stick at the takeoff speed, or your walking (sneaking) pace if that was slower.
     const k = 1 - Math.exp(-t.groundResponse * t.airControl * dt), cap = Math.max(s.airMax, input.sneak ? t.sneakSpeed : t.walkSpeed) * mag;
     s.vx += (ix * cap - s.vx) * k; s.vz += (iz * cap - s.vz) * k;
+  } else if (s.mode === "glide") {
+    // The speed you opened with eases to glideSpeed (scaled by the stick; none drifts to a stop) and the heading swings round to the stick.
+    const sp = t.glideSpeed * mag + (speed - t.glideSpeed * mag) * Math.exp(-t.glideEase * dt);
+    if (steering && speed < 0.5) { s.vx = ix * sp; s.vz = iz * sp; }
+    else if (steering) steer(s, ix, iz, t.glideTurn, dt, sp);
+    else if (speed > 1e-6) { s.vx *= sp / speed; s.vz *= sp / speed; }
   }
 
   // ── Ledge: pushing into a wall within reach, not rising fast ─────
-  if (s.mode === "air" && s.vy <= t.grabRise) {
+  if ((s.mode === "air" || s.mode === "glide") && s.vy <= t.grabRise) {
     const [dx, dz] = s.dashT > 0 ? [s.dashX, s.dashZ] : mag > 0.3 ? [ix, iz] : [0, 0];
     const to = dx || dz ? ledge(s, w, t, dx, dz) : null;
     if (to) {
@@ -414,6 +461,12 @@ export function stepMove(prev: MoveState, input: MoveInput, dt: number, w: MoveW
     const g = s.dashT > 0 ? 0 : gravity(s, t, input.jump), y = s.y + s.vy * dt - 0.5 * g * dt * dt;
     s.vy = Math.max(-t.maxFallSpeed, s.vy - g * dt);
     s.topY = Math.max(s.topY, y);
+    descend(s, w, t, input, y);
+  } else if (s.mode === "glide") {
+    // The leaf brakes the fall to a slow sink and never lifts you; it comes down like a fall (land, a just-missed bank, or a splash).
+    s.vy = -t.glideSink + (s.vy + t.glideSink) * Math.exp(-t.glideOpen * dt);
+    const y = s.y + s.vy * dt;
+    s.topY = y;
     descend(s, w, t, input, y);
   }
   if ((s.mode as MoveMode) !== "splash") depenetrate(s, w, t, dt); // descend() may have splashed
