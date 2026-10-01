@@ -303,19 +303,21 @@ def m_line(L, pts, r=0.0055, taper_ends=True):
     L.paint(L.stroke(c, rr), C_LINE)
 
 
-def m_open(L, hw, h, top=0.0, teeth=True, fangs=False, dark=False, tongue=True):
-    top_pts = bez([P0(-hw, -h * 0.4), P0(0, -h * 0.4 + top), P0(hw, -h * 0.4)], 12)
-    bot_pts = bez([P0(hw, -h * 0.4), P0(hw * 0.9, h * 0.75), P0(-hw * 0.9, h * 0.75), P0(-hw, -h * 0.4)], 20)
+def m_open(L, hw, h, top=0.0, teeth=True, fangs=False, dark=False, tongue=True, dy=0.0):
+    def P(x, y):
+        return P0(x, y + dy)
+    top_pts = bez([P(-hw, -h * 0.4), P(0, -h * 0.4 + top), P(hw, -h * 0.4)], 12)
+    bot_pts = bez([P(hw, -h * 0.4), P(hw * 0.9, h * 0.75), P(-hw * 0.9, h * 0.75), P(-hw, -h * 0.4)], 20)
     shape = L.poly(top_pts + bot_pts[1:-1])
     L.paint(shape, C_DARKM if dark else C_PINK)
     if tongue:
-        L.paint(shape & L.ellipse(*P0(0, h * 0.5), hw * 0.6, h * 0.35), C_INNER if not dark else C_TONGUE)
+        L.paint(shape & L.ellipse(*P(0, h * 0.5), hw * 0.6, h * 0.35), C_INNER if not dark else C_TONGUE)
     if teeth:
-        L.paint(shape & (L.V < MY - h * 0.4 + top + 0.008) & (np.abs(L.U - MX) < hw * 0.45), C_WHITE)
+        L.paint(shape & (L.V < MY + dy - h * 0.4 + top + 0.008) & (np.abs(L.U - MX) < hw * 0.45), C_WHITE)
     if fangs:
         for sx in (-1, 1):
-            L.paint(shape & L.poly([P0(sx * hw * 0.62, -h * 0.4 + top * 0.5), P0(sx * hw * 0.42, -h * 0.4 + top * 0.8),
-                                    P0(sx * hw * 0.54, -h * 0.4 + 0.013)]), C_WHITE)
+            L.paint(shape & L.poly([P(sx * hw * 0.62, -h * 0.4 + top * 0.5), P(sx * hw * 0.42, -h * 0.4 + top * 0.8),
+                                    P(sx * hw * 0.54, -h * 0.4 + 0.013)]), C_WHITE)
     L.paint(L.stroke(top_pts + bot_pts[1:], 0.0042), C_LINE)
 
 
@@ -441,13 +443,16 @@ for r in range(1, 10):
 
 
 # talk frames (David, 2026-09-30: "Bigger talk shapes"): larger open mouths while talking, in the picks' own style
-# (M3.1's open oval, M6.1's oval with teeth, M2.1's open smile) at 1.3-1.5x; the resting mouth stays the look's own
+# (M3.1's open oval, M6.1's oval with teeth, M2.1's open smile); the resting mouth stays the look's own. The mouth
+# sits where the face turns under towards the chin, so the camera sees it about half as tall as drawn: the talk cells
+# are drawn about 1.7x taller than those picks' proportions and grow upwards (dy < 0), keeping their lower edge above
+# the jaw line.
 TALK_CELLS = {
-    "T1": lambda L: m_oval(L, 0.024, 0.03),                                           # M3.1 x ~1.35
-    "T2": lambda L: (m_oval(L, 0.034, 0.038),
-                     L.paint(L.ellipse(*P0(0, 0), 0.029, 0.033) & (L.V < MY - 0.016), C_WHITE)),   # M6.1 x ~1.4
-    "T3": lambda L: m_open(L, 0.064, 0.056, 0.006),                                   # M2.1 x ~1.3
-    "T4": lambda L: m_open(L, 0.052, 0.034, 0.003, teeth=False),                      # a half-open M2.1
+    "T1": lambda L: m_oval(L, 0.026, 0.046, dy=-0.010),                              # M3.1's open oval
+    "T2": lambda L: (m_oval(L, 0.036, 0.056, dy=-0.010),
+                     L.paint(L.ellipse(*P0(0, -0.010), 0.031, 0.051) & (L.V < MY - 0.010 - 0.026), C_WHITE)),   # M6.1
+    "T3": lambda L: m_open(L, 0.064, 0.088, 0.008, dy=-0.022),                      # M2.1's open smile, wide open
+    "T4": lambda L: m_open(L, 0.054, 0.058, 0.004, teeth=False, dy=-0.012),         # half open
 }
 
 
